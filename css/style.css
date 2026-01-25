@@ -23,6 +23,13 @@ body {
   pointer-events: none;
 }
 
+#mapContainer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
 .texture-overlay {
   mix-blend-mode: color-burn;
   opacity: 0.6;

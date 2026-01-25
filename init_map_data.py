@@ -63,6 +63,7 @@ ADMIN1_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
 EXTENSION_COUNTRIES = {"RU", "UA", "BY", "MD"}
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
+ARCTIC_BOUNDS = (-180.0, 25.0, 180.0, 72.0)
 
 
 def fetch_geojson(url: str) -> dict:
@@ -169,8 +170,22 @@ def round_geometries(gdf: gpd.GeoDataFrame, precision: int = 4) -> gpd.GeoDataFr
     return gdf
 
 
+def clip_to_arctic_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame:
+    try:
+        gdf = gdf.to_crs("EPSG:4326")
+        bbox_geom = box(*ARCTIC_BOUNDS)
+        clipped = gpd.clip(gdf, bbox_geom)
+        if clipped.empty:
+            print(f"Arctic clip produced empty result for {label}; keeping original.")
+            return gdf
+        return clipped
+    except Exception as exc:
+        print(f"Arctic clip skipped for {label}: {exc}")
+        return gdf
+
+
 def despeckle_hybrid(
-    gdf: gpd.GeoDataFrame, area_km2: float = 50.0, tolerance: float = 0.01
+    gdf: gpd.GeoDataFrame, area_km2: float = 500.0, tolerance: float = 0.05
 ) -> gpd.GeoDataFrame:
     if gdf.empty or "id" not in gdf.columns:
         return gdf
@@ -184,6 +199,13 @@ def despeckle_hybrid(
         areas = proj.geometry.area / 1_000_000.0
         keep = areas >= area_km2
         filtered = exploded.loc[keep].copy()
+        dropped = int((~keep).sum())
+        kept = int(keep.sum())
+        total = int(len(keep))
+        print(
+            f"Despeckle: dropped {dropped} polygons < {area_km2:.0f} km^2 "
+            f"(kept {kept} of {total})."
+        )
     except Exception as exc:
         print(f"Despeckle failed, keeping original hybrid: {exc}")
         return gdf
@@ -259,6 +281,7 @@ def clip_borders(gdf: gpd.GeoDataFrame, land: gpd.GeoDataFrame) -> gpd.GeoDataFr
 def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     admin1 = fetch_ne_zip(ADMIN1_URL, "admin1")
     admin1 = admin1.to_crs("EPSG:4326")
+    admin1 = clip_to_arctic_bounds(admin1, "admin1")
 
     name_col = pick_column(admin1, ["adm0_name", "admin", "admin0_name"])
     iso_col = pick_column(admin1, ["iso_a2", "adm0_a2", "iso_3166_1_"])
@@ -308,7 +331,7 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         admin1["name"] = admin1["name_en"]
 
     admin1 = admin1[["id", "name", "cntr_code", "geometry"]].copy()
-    admin1["geometry"] = admin1.geometry.simplify(tolerance=0.01, preserve_topology=True)
+    admin1["geometry"] = admin1.geometry.simplify(tolerance=0.05, preserve_topology=True)
     return admin1
 
 
@@ -390,9 +413,10 @@ def save_outputs(
 def main() -> None:
     data = fetch_geojson(URL)
     gdf = build_geodataframe(data)
+    gdf = clip_to_arctic_bounds(gdf, "nuts")
     filtered = filter_countries(gdf)
     filtered = filtered.copy()
-    filtered["geometry"] = filtered.geometry.simplify(tolerance=0.01, preserve_topology=True)
+    filtered["geometry"] = filtered.geometry.simplify(tolerance=0.05, preserve_topology=True)
     rivers = fetch_ne_zip(RIVERS_URL, "rivers")
     rivers_clipped = clip_to_land_bounds(rivers, filtered, "rivers")
     borders = fetch_ne_zip(BORDERS_URL, "borders")
@@ -441,11 +465,17 @@ def main() -> None:
         pd.concat([nuts_hybrid, extension_hybrid], ignore_index=True),
         crs="EPSG:4326",
     )
-    final_hybrid = despeckle_hybrid(hybrid, area_km2=50.0, tolerance=0.01)
+    final_hybrid = despeckle_hybrid(hybrid, area_km2=500.0, tolerance=0.05)
+    final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("")
+    missing_mask = final_hybrid["cntr_code"].str.len() == 0
+    if missing_mask.any() and "id" in final_hybrid.columns:
+        final_hybrid.loc[missing_mask, "cntr_code"] = final_hybrid.loc[
+            missing_mask, "id"
+        ].astype(str).str[:2]
     borders_combined = clip_to_bounds(borders, hybrid.total_bounds, "borders combined")
     borders_combined = borders_combined.copy()
     borders_combined["geometry"] = borders_combined.geometry.simplify(
-        tolerance=0.01, preserve_topology=True
+        tolerance=0.05, preserve_topology=True
     )
 
     script_dir = Path(__file__).resolve().parent

@@ -4,9 +4,10 @@
   - lineCanvas: outlines, borders, rivers, physical/urban overlays
 
   Data is WGS84 (EPSG:4326), projected with d3.geoMercator().
-  Includes freeze-and-drag bitmap caching and viewport culling.
+  Uses debounced vector rendering (no bitmap scaling) + viewport culling.
 */
 
+const mapContainer = document.getElementById("mapContainer");
 const colorCanvas = document.getElementById("colorCanvas");
 const lineCanvas = document.getElementById("lineCanvas");
 const colorCtx = colorCanvas.getContext("2d");
@@ -15,16 +16,6 @@ const textureOverlay = document.getElementById("textureOverlay");
 
 const hitCanvas = document.createElement("canvas");
 const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
-
-const colorStaticCanvas = document.createElement("canvas");
-const colorStaticCtx = colorStaticCanvas.getContext("2d");
-const lineStaticCanvas = document.createElement("canvas");
-const lineStaticCtx = lineStaticCanvas.getContext("2d");
-
-const dragColorCanvas = document.createElement("canvas");
-const dragColorCtx = dragColorCanvas.getContext("2d");
-const dragLineCanvas = document.createElement("canvas");
-const dragLineCtx = dragLineCanvas.getContext("2d");
 
 let landData = null;
 let riversData = null;
@@ -49,8 +40,6 @@ let showRivers = true;
 let recentColors = [];
 let updateRecentUI = null;
 let updateSwatchUIFn = null;
-let isDragging = false;
-let dragStartTransform = null;
 
 const countryPalette = {
   DE: "#5d7cba",
@@ -73,14 +62,14 @@ const boundsPath = d3.geoPath(projection);
 const colorPath = d3.geoPath(projection, colorCtx);
 const linePath = d3.geoPath(projection, lineCtx);
 const hitPath = d3.geoPath(projection, hitCtx);
-const colorStaticPath = d3.geoPath(projection, colorStaticCtx);
-const lineStaticPath = d3.geoPath(projection, lineStaticCtx);
 
 const landIndex = new Map();
 const idToKey = new Map();
 const keyToId = new Map();
 
 const TINY_AREA = 6;
+let zoomRaf = null;
+let isInteracting = false;
 
 function setCanvasSize() {
   dpr = window.devicePixelRatio || 1;
@@ -96,14 +85,6 @@ function setCanvasSize() {
   lineCanvas.height = scaledH;
   hitCanvas.width = scaledW;
   hitCanvas.height = scaledH;
-  colorStaticCanvas.width = scaledW;
-  colorStaticCanvas.height = scaledH;
-  lineStaticCanvas.width = scaledW;
-  lineStaticCanvas.height = scaledH;
-  dragColorCanvas.width = scaledW;
-  dragColorCanvas.height = scaledH;
-  dragLineCanvas.width = scaledW;
-  dragLineCanvas.height = scaledH;
 }
 
 function fitProjection() {
@@ -130,165 +111,44 @@ function isFeatureVisible(feature, k) {
   return !(maxX < 0 || maxY < 0 || minX > width || minY > height);
 }
 
-function cacheDragFrames() {
-  dragColorCtx.setTransform(1, 0, 0, 1, 0, 0);
-  dragColorCtx.clearRect(0, 0, dragColorCanvas.width, dragColorCanvas.height);
-  dragColorCtx.drawImage(colorCanvas, 0, 0);
-
-  dragLineCtx.setTransform(1, 0, 0, 1, 0, 0);
-  dragLineCtx.clearRect(0, 0, dragLineCanvas.width, dragLineCanvas.height);
-  dragLineCtx.drawImage(lineCanvas, 0, 0);
+function renderQuick() {
+  return;
 }
 
-function drawCachedPan() {
-  if (!dragStartTransform) return;
-  const dx = zoomTransform.x - dragStartTransform.x;
-  const dy = zoomTransform.y - dragStartTransform.y;
+function renderFull() {
+  if (!landData) return;
+  const k = zoomTransform.k;
+  if (mapContainer) {
+    mapContainer.style.transform = "none";
+  }
 
   colorCtx.setTransform(1, 0, 0, 1, 0, 0);
   colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
-  setDprTransform(colorCtx);
-  colorCtx.translate(dx, dy);
-  colorCtx.drawImage(dragColorCanvas, 0, 0, width, height);
-
-  lineCtx.setTransform(1, 0, 0, 1, 0, 0);
-  lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-  setDprTransform(lineCtx);
-  lineCtx.translate(dx, dy);
-  lineCtx.drawImage(dragLineCanvas, 0, 0, width, height);
-}
-
-function renderColorStatic() {
-  if (!landData) return;
-  const k = zoomTransform.k;
-  colorStaticCtx.setTransform(1, 0, 0, 1, 0, 0);
-  colorStaticCtx.clearRect(0, 0, colorStaticCanvas.width, colorStaticCanvas.height);
-  setDprTransform(colorStaticCtx);
+  applyTransform(colorCtx);
 
   if (oceanData) {
-    colorStaticCtx.beginPath();
-    colorStaticPath(oceanData);
-    colorStaticCtx.fillStyle = "#b3d9ff";
-    colorStaticCtx.fill();
+    colorCtx.beginPath();
+    colorPath(oceanData);
+    colorCtx.fillStyle = "#b3d9ff";
+    colorCtx.fill();
   }
 
   if (landBgData) {
-    colorStaticCtx.beginPath();
-    colorStaticPath(landBgData);
-    colorStaticCtx.fillStyle = "#e0e0e0";
-    colorStaticCtx.fill();
+    colorCtx.beginPath();
+    colorPath(landBgData);
+    colorCtx.fillStyle = "#e0e0e0";
+    colorCtx.fill();
   }
 
-  colorStaticCtx.fillStyle = "#d9d9d9";
+  colorCtx.fillStyle = "#d9d9d9";
   for (const feature of landData.features) {
     if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
       continue;
     }
-    colorStaticCtx.beginPath();
-    colorStaticPath(feature);
-    colorStaticCtx.fill();
+    colorCtx.beginPath();
+    colorPath(feature);
+    colorCtx.fill();
   }
-}
-
-function renderLineStatic() {
-  if (!landData) return;
-  const k = zoomTransform.k;
-  lineStaticCtx.setTransform(1, 0, 0, 1, 0, 0);
-  lineStaticCtx.clearRect(0, 0, lineStaticCanvas.width, lineStaticCanvas.height);
-  setDprTransform(lineStaticCtx);
-  lineStaticCtx.lineJoin = "round";
-  lineStaticCtx.lineCap = "round";
-
-  if (showPhysical && physicalData) {
-    for (const feature of physicalData.features) {
-      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
-        continue;
-      }
-      const featureType = feature.properties?.featurecla;
-      if (featureType === "Range/Mountain") {
-        lineStaticCtx.globalAlpha = 0.6;
-        lineStaticCtx.strokeStyle = "#5c4033";
-        lineStaticCtx.lineWidth = 1.2 / k;
-        lineStaticCtx.setLineDash([4 / k, 4 / k]);
-        lineStaticCtx.beginPath();
-        lineStaticPath(feature);
-        lineStaticCtx.stroke();
-        lineStaticCtx.setLineDash([]);
-
-        if (k >= 1.4) {
-          const name = feature.properties?.name || feature.properties?.name_en;
-          if (name) {
-            const [x, y] = lineStaticPath.centroid(feature);
-            if (Number.isFinite(x) && Number.isFinite(y)) {
-              lineStaticCtx.globalAlpha = 0.7;
-              lineStaticCtx.fillStyle = "#5c4033";
-              lineStaticCtx.font = "10px Georgia, serif";
-              lineStaticCtx.fillText(name, x, y);
-            }
-          }
-        }
-      } else if (featureType === "Forest") {
-        lineStaticCtx.globalAlpha = 0.1;
-        lineStaticCtx.fillStyle = "#2e6b4f";
-        lineStaticCtx.beginPath();
-        lineStaticPath(feature);
-        lineStaticCtx.fill();
-      } else if (featureType === "Plain" || featureType === "Delta") {
-        lineStaticCtx.globalAlpha = 0.08;
-        lineStaticCtx.fillStyle = "#d8caa3";
-        lineStaticCtx.beginPath();
-        lineStaticPath(feature);
-        lineStaticCtx.fill();
-      }
-    }
-  }
-
-  if (showUrban && urbanData) {
-    lineStaticCtx.save();
-    lineStaticCtx.globalAlpha = 0.2;
-    lineStaticCtx.fillStyle = "#333333";
-    for (const feature of urbanData.features) {
-      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
-        continue;
-      }
-      lineStaticCtx.beginPath();
-      lineStaticPath(feature);
-      lineStaticCtx.fill();
-    }
-    lineStaticCtx.restore();
-  }
-
-  if (bordersData) {
-    lineStaticCtx.beginPath();
-    lineStaticPath(bordersData);
-    lineStaticCtx.strokeStyle = "#111111";
-    lineStaticCtx.lineWidth = 1.6 / k;
-    lineStaticCtx.stroke();
-  }
-
-  if (showRivers && riversData) {
-    lineStaticCtx.beginPath();
-    lineStaticPath(riversData);
-    lineStaticCtx.strokeStyle = "#3498db";
-    lineStaticCtx.lineWidth = 1 / k;
-    lineStaticCtx.stroke();
-  }
-
-  // Land outline on top for crisp edges
-  lineStaticCtx.beginPath();
-  lineStaticPath(landData);
-  lineStaticCtx.strokeStyle = "#999999";
-  lineStaticCtx.lineWidth = 0.5 / k;
-  lineStaticCtx.stroke();
-}
-
-function renderColorLayerFull() {
-  if (!landData) return;
-  const k = zoomTransform.k;
-  colorCtx.setTransform(1, 0, 0, 1, 0, 0);
-  colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
-  applyTransform(colorCtx);
-  colorCtx.drawImage(colorStaticCanvas, 0, 0, width, height);
 
   for (const feature of landData.features) {
     const id = feature.properties?.id || feature.properties?.NUTS_ID;
@@ -301,16 +161,100 @@ function renderColorLayerFull() {
     colorPath(feature);
     colorCtx.fill();
   }
-}
 
-function drawLineLayer() {
-  if (!landData) return;
-  const k = zoomTransform.k;
   lineCtx.setTransform(1, 0, 0, 1, 0, 0);
   lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
   applyTransform(lineCtx);
-  lineCtx.drawImage(lineStaticCanvas, 0, 0, width, height);
+  lineCtx.lineJoin = "round";
+  lineCtx.lineCap = "round";
 
+  if (showPhysical && physicalData) {
+    for (const feature of physicalData.features) {
+      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+        continue;
+      }
+      const featureType = feature.properties?.featurecla;
+      if (featureType === "Range/Mountain") {
+        lineCtx.globalAlpha = 0.6;
+        lineCtx.strokeStyle = "#5c4033";
+        lineCtx.lineWidth = 1.2 / k;
+        lineCtx.setLineDash([4 / k, 4 / k]);
+        lineCtx.beginPath();
+        linePath(feature);
+        lineCtx.stroke();
+        lineCtx.setLineDash([]);
+
+        if (k >= 1.4) {
+          const name = feature.properties?.name || feature.properties?.name_en;
+          if (name) {
+            const [x, y] = linePath.centroid(feature);
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+              lineCtx.globalAlpha = 0.7;
+              lineCtx.fillStyle = "#5c4033";
+              lineCtx.font = "10px Georgia, serif";
+              lineCtx.fillText(name, x, y);
+            }
+          }
+        }
+      } else if (featureType === "Forest") {
+        lineCtx.globalAlpha = 0.1;
+        lineCtx.fillStyle = "#2e6b4f";
+        lineCtx.beginPath();
+        linePath(feature);
+        lineCtx.fill();
+      } else if (featureType === "Plain" || featureType === "Delta") {
+        lineCtx.globalAlpha = 0.08;
+        lineCtx.fillStyle = "#d8caa3";
+        lineCtx.beginPath();
+        linePath(feature);
+        lineCtx.fill();
+      }
+    }
+  }
+
+  if (showUrban && urbanData) {
+    lineCtx.save();
+    lineCtx.globalAlpha = 0.2;
+    lineCtx.fillStyle = "#333333";
+    for (const feature of urbanData.features) {
+      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+        continue;
+      }
+      lineCtx.beginPath();
+      linePath(feature);
+      lineCtx.fill();
+    }
+    lineCtx.restore();
+  }
+
+  if (bordersData) {
+    lineCtx.beginPath();
+    linePath(bordersData);
+    lineCtx.strokeStyle = "#111111";
+    lineCtx.lineWidth = 1.6 / k;
+    lineCtx.stroke();
+  }
+
+  if (showRivers && riversData) {
+    lineCtx.beginPath();
+    linePath(riversData);
+    lineCtx.strokeStyle = "#3498db";
+    lineCtx.lineWidth = 1 / k;
+    lineCtx.stroke();
+  }
+
+  lineCtx.beginPath();
+  linePath(landData);
+  lineCtx.strokeStyle = "#999999";
+  lineCtx.lineWidth = 0.5 / k;
+  lineCtx.stroke();
+
+  drawHover();
+  drawHidden();
+}
+
+function drawHover() {
+  const k = zoomTransform.k;
   if (hoveredId && landIndex.has(hoveredId)) {
     const feature = landIndex.get(hoveredId);
     if (!((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k))) {
@@ -349,12 +293,8 @@ function drawHidden() {
   hitCtx.restore();
 }
 
-function renderAll() {
-  renderColorStatic();
-  renderColorLayerFull();
-  renderLineStatic();
-  drawLineLayer();
-  drawHidden();
+function scheduleQuickRender() {
+  return;
 }
 
 function buildIndex() {
@@ -383,10 +323,11 @@ function getFeatureIdFromEvent(event) {
 
 function handleMouseMove(event) {
   if (!landData) return;
+  if (isInteracting) return;
   const id = getFeatureIdFromEvent(event);
   if (id !== hoveredId) {
     hoveredId = id;
-    drawLineLayer();
+    drawHover();
   }
 }
 
@@ -409,8 +350,7 @@ function handleClick(event) {
 
   if (currentTool === "eraser") {
     delete colors[id];
-    renderColorLayerFull();
-    drawLineLayer();
+    renderFull();
   } else if (currentTool === "eyedropper") {
     const picked = colors[id];
     if (picked) {
@@ -480,7 +420,7 @@ function setupUI() {
         swatch.classList.remove("ring-2", "ring-slate-900");
       }
     });
-    if (customColor) {
+    if (document.getElementById("customColor")) {
       customColor.value = selectedColor;
       customColor.classList.toggle("ring-2", !matched);
       customColor.classList.toggle("ring-slate-900", !matched);
@@ -546,7 +486,7 @@ function setupUI() {
     });
   }
 
-  if (textureSelect && textureOverlay) {
+  if (textureOverlay && textureSelect) {
     const applyTexture = (value) => {
       textureOverlay.className = `texture-overlay decorative-layer absolute inset-0 texture-${value}`;
     };
@@ -559,24 +499,21 @@ function setupUI() {
   if (toggleUrban) {
     toggleUrban.addEventListener("change", (event) => {
       showUrban = event.target.checked;
-      renderLineStatic();
-      drawLineLayer();
+      renderFull();
     });
   }
 
   if (togglePhysical) {
     togglePhysical.addEventListener("change", (event) => {
       showPhysical = event.target.checked;
-      renderLineStatic();
-      drawLineLayer();
+      renderFull();
     });
   }
 
   if (toggleRivers) {
     toggleRivers.addEventListener("change", (event) => {
       showRivers = event.target.checked;
-      renderLineStatic();
-      drawLineLayer();
+      renderFull();
     });
   }
 
@@ -592,16 +529,14 @@ function setupUI() {
           colors[id] = color;
         }
       }
-      renderColorLayerFull();
-      drawLineLayer();
+      renderFull();
     });
   }
 
   if (presetClear) {
     presetClear.addEventListener("click", () => {
       Object.keys(colors).forEach((key) => delete colors[key]);
-      renderColorLayerFull();
-      drawLineLayer();
+      renderFull();
     });
   }
 
@@ -613,7 +548,7 @@ function setupUI() {
 function handleResize() {
   setCanvasSize();
   fitProjection();
-  renderAll();
+  renderFull();
 }
 
 async function loadData() {
@@ -638,7 +573,7 @@ async function loadData() {
 
     buildIndex();
     fitProjection();
-    renderAll();
+    renderFull();
   } catch (error) {
     console.error("Failed to load GeoJSON:", error);
   }
@@ -648,28 +583,21 @@ const zoom = d3
   .zoom()
   .scaleExtent([1, 8])
   .on("start", () => {
-    isDragging = true;
-    dragStartTransform = zoomTransform;
-    cacheDragFrames();
+    isInteracting = true;
   })
   .on("zoom", (event) => {
-    const newTransform = event.transform;
-    const scaleChanged = newTransform.k !== zoomTransform.k;
-    zoomTransform = newTransform;
-    if (isDragging && !scaleChanged) {
-      drawCachedPan();
-    } else {
-      renderColorStatic();
-      renderColorLayerFull();
-      renderLineStatic();
-      drawLineLayer();
+    zoomTransform = event.transform;
+    if (mapContainer) {
+      mapContainer.style.transform = `translate(${zoomTransform.x}px, ${zoomTransform.y}px) scale(${zoomTransform.k})`;
     }
   })
   .on("end", (event) => {
     zoomTransform = event.transform;
-    isDragging = false;
-    dragStartTransform = null;
-    renderAll();
+    isInteracting = false;
+    if (mapContainer) {
+      mapContainer.style.transform = "none";
+    }
+    renderFull();
   });
 
 d3.select(colorCanvas).call(zoom);

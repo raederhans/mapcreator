@@ -187,9 +187,11 @@
       </aside>
 
       <main class="relative flex-1 bg-slate-100">
-        <canvas id="colorCanvas" class="map-layer"></canvas>
-        <canvas id="lineCanvas" class="map-layer map-layer-top"></canvas>
-        <div id="textureOverlay" class="texture-overlay decorative-layer absolute inset-0"></div>
+        <div id="mapContainer">
+          <canvas id="colorCanvas" class="map-layer"></canvas>
+          <canvas id="lineCanvas" class="map-layer map-layer-top"></canvas>
+          <div id="textureOverlay" class="texture-overlay decorative-layer absolute inset-0"></div>
+        </div>
       </main>
     </div>
 
