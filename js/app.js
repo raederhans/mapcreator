@@ -1,17 +1,30 @@
 /*
-  Canvas rendering pipeline with hidden-canvas hit detection.
-  Data is already in EPSG:3035, so we use geoIdentity + fitSize to map
-  metric coordinates directly into the canvas. We apply zoom/pan via
-  d3.zoom transforms on the canvas contexts (both visible and hidden).
+  Dual-canvas rendering pipeline:
+  - colorCanvas: background + fills
+  - lineCanvas: outlines, borders, rivers, physical/urban overlays
+
+  Data is WGS84 (EPSG:4326), projected with d3.geoMercator().
+  Includes freeze-and-drag bitmap caching and viewport culling.
 */
 
-const canvas = document.getElementById("mapCanvas");
-const context = canvas.getContext("2d");
+const colorCanvas = document.getElementById("colorCanvas");
+const lineCanvas = document.getElementById("lineCanvas");
+const colorCtx = colorCanvas.getContext("2d");
+const lineCtx = lineCanvas.getContext("2d");
+const textureOverlay = document.getElementById("textureOverlay");
 
 const hitCanvas = document.createElement("canvas");
-const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
-const staticCanvas = document.createElement("canvas");
-const staticContext = staticCanvas.getContext("2d");
+const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
+
+const colorStaticCanvas = document.createElement("canvas");
+const colorStaticCtx = colorStaticCanvas.getContext("2d");
+const lineStaticCanvas = document.createElement("canvas");
+const lineStaticCtx = lineStaticCanvas.getContext("2d");
+
+const dragColorCanvas = document.createElement("canvas");
+const dragColorCtx = dragColorCanvas.getContext("2d");
+const dragLineCanvas = document.createElement("canvas");
+const dragLineCtx = dragLineCanvas.getContext("2d");
 
 let landData = null;
 let riversData = null;
@@ -36,6 +49,8 @@ let showRivers = true;
 let recentColors = [];
 let updateRecentUI = null;
 let updateSwatchUIFn = null;
+let isDragging = false;
+let dragStartTransform = null;
 
 const countryPalette = {
   DE: "#5d7cba",
@@ -47,33 +62,57 @@ const countryPalette = {
   LU: "#8b572a",
   AT: "#417505",
   CH: "#d0021b",
+  UA: "#6b8fd6",
+  BY: "#9b5de5",
+  MD: "#f28482",
+  RU: "#4a4e69",
 };
 
-const projection = d3.geoIdentity().reflectY(true);
-const path = d3.geoPath(projection, context);
-const hitPath = d3.geoPath(projection, hitContext);
-const staticPath = d3.geoPath(projection, staticContext);
+const projection = d3.geoMercator();
+const boundsPath = d3.geoPath(projection);
+const colorPath = d3.geoPath(projection, colorCtx);
+const linePath = d3.geoPath(projection, lineCtx);
+const hitPath = d3.geoPath(projection, hitCtx);
+const colorStaticPath = d3.geoPath(projection, colorStaticCtx);
+const lineStaticPath = d3.geoPath(projection, lineStaticCtx);
 
 const landIndex = new Map();
 const idToKey = new Map();
 const keyToId = new Map();
 
+const TINY_AREA = 6;
+
 function setCanvasSize() {
   dpr = window.devicePixelRatio || 1;
-  width = canvas.clientWidth || window.innerWidth;
-  height = canvas.clientHeight || window.innerHeight;
+  width = colorCanvas.clientWidth || window.innerWidth;
+  height = colorCanvas.clientHeight || window.innerHeight;
 
-  canvas.width = Math.floor(width * dpr);
-  canvas.height = Math.floor(height * dpr);
-  hitCanvas.width = Math.floor(width * dpr);
-  hitCanvas.height = Math.floor(height * dpr);
-  staticCanvas.width = Math.floor(width * dpr);
-  staticCanvas.height = Math.floor(height * dpr);
+  const scaledW = Math.floor(width * dpr);
+  const scaledH = Math.floor(height * dpr);
+
+  colorCanvas.width = scaledW;
+  colorCanvas.height = scaledH;
+  lineCanvas.width = scaledW;
+  lineCanvas.height = scaledH;
+  hitCanvas.width = scaledW;
+  hitCanvas.height = scaledH;
+  colorStaticCanvas.width = scaledW;
+  colorStaticCanvas.height = scaledH;
+  lineStaticCanvas.width = scaledW;
+  lineStaticCanvas.height = scaledH;
+  dragColorCanvas.width = scaledW;
+  dragColorCanvas.height = scaledH;
+  dragLineCanvas.width = scaledW;
+  dragLineCanvas.height = scaledH;
 }
 
 function fitProjection() {
   if (!landData) return;
   projection.fitSize([width, height], landData);
+}
+
+function setDprTransform(ctx) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 function applyTransform(ctx) {
@@ -82,162 +121,239 @@ function applyTransform(ctx) {
   ctx.scale(zoomTransform.k, zoomTransform.k);
 }
 
-function setDprTransform(ctx) {
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+function isFeatureVisible(feature, k) {
+  const bounds = boundsPath.bounds(feature);
+  const minX = bounds[0][0] * k + zoomTransform.x;
+  const minY = bounds[0][1] * k + zoomTransform.y;
+  const maxX = bounds[1][0] * k + zoomTransform.x;
+  const maxY = bounds[1][1] * k + zoomTransform.y;
+  return !(maxX < 0 || maxY < 0 || minX > width || minY > height);
 }
 
-function renderStatic() {
+function cacheDragFrames() {
+  dragColorCtx.setTransform(1, 0, 0, 1, 0, 0);
+  dragColorCtx.clearRect(0, 0, dragColorCanvas.width, dragColorCanvas.height);
+  dragColorCtx.drawImage(colorCanvas, 0, 0);
+
+  dragLineCtx.setTransform(1, 0, 0, 1, 0, 0);
+  dragLineCtx.clearRect(0, 0, dragLineCanvas.width, dragLineCanvas.height);
+  dragLineCtx.drawImage(lineCanvas, 0, 0);
+}
+
+function drawCachedPan() {
+  if (!dragStartTransform) return;
+  const dx = zoomTransform.x - dragStartTransform.x;
+  const dy = zoomTransform.y - dragStartTransform.y;
+
+  colorCtx.setTransform(1, 0, 0, 1, 0, 0);
+  colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
+  setDprTransform(colorCtx);
+  colorCtx.translate(dx, dy);
+  colorCtx.drawImage(dragColorCanvas, 0, 0, width, height);
+
+  lineCtx.setTransform(1, 0, 0, 1, 0, 0);
+  lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+  setDprTransform(lineCtx);
+  lineCtx.translate(dx, dy);
+  lineCtx.drawImage(dragLineCanvas, 0, 0, width, height);
+}
+
+function renderColorStatic() {
   if (!landData) return;
-  staticContext.setTransform(1, 0, 0, 1, 0, 0);
-  staticContext.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
-  setDprTransform(staticContext);
+  const k = zoomTransform.k;
+  colorStaticCtx.setTransform(1, 0, 0, 1, 0, 0);
+  colorStaticCtx.clearRect(0, 0, colorStaticCanvas.width, colorStaticCanvas.height);
+  setDprTransform(colorStaticCtx);
 
   if (oceanData) {
-    staticContext.beginPath();
-    staticPath(oceanData);
-    staticContext.fillStyle = "#b3d9ff";
-    staticContext.fill();
+    colorStaticCtx.beginPath();
+    colorStaticPath(oceanData);
+    colorStaticCtx.fillStyle = "#b3d9ff";
+    colorStaticCtx.fill();
   }
 
   if (landBgData) {
-    staticContext.beginPath();
-    staticPath(landBgData);
-    staticContext.fillStyle = "#e0e0e0";
-    staticContext.fill();
+    colorStaticCtx.beginPath();
+    colorStaticPath(landBgData);
+    colorStaticCtx.fillStyle = "#e0e0e0";
+    colorStaticCtx.fill();
   }
 
-  if (showUrban && urbanData) {
-    staticContext.save();
-    staticContext.globalAlpha = 0.2;
-    staticContext.fillStyle = "#333333";
-    staticContext.beginPath();
-    staticPath(urbanData);
-    staticContext.fill();
-    staticContext.restore();
-  }
-}
-
-function drawLand() {
-  context.beginPath();
-  path(landData);
-  context.fillStyle = "#d9d9d9";
-  context.fill();
+  colorStaticCtx.fillStyle = "#d9d9d9";
   for (const feature of landData.features) {
-    const id = feature.properties?.NUTS_ID;
-    if (id && colors[id]) {
-      context.fillStyle = colors[id];
-      context.beginPath();
-      path(feature);
-      context.fill();
+    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+      continue;
     }
+    colorStaticCtx.beginPath();
+    colorStaticPath(feature);
+    colorStaticCtx.fill();
   }
-  context.beginPath();
-  path(landData);
-  context.strokeStyle = "#999999";
-  context.lineWidth = 0.5;
-  context.stroke();
 }
 
-function drawHidden() {
-  hitContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-  hitContext.clearRect(0, 0, width, height);
-  hitContext.save();
-  hitContext.translate(zoomTransform.x, zoomTransform.y);
-  hitContext.scale(zoomTransform.k, zoomTransform.k);
-
-  for (const feature of landData.features) {
-    const id = feature.properties?.NUTS_ID;
-    const key = idToKey.get(id);
-    if (!key) continue;
-    const r = (key >> 16) & 255;
-    const g = (key >> 8) & 255;
-    const b = key & 255;
-    hitContext.fillStyle = `rgb(${r},${g},${b})`;
-    hitContext.beginPath();
-    hitPath(feature);
-    hitContext.fill();
-  }
-
-  hitContext.restore();
-}
-
-function draw() {
+function renderLineStatic() {
   if (!landData) return;
-
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  applyTransform(context);
-  context.drawImage(staticCanvas, 0, 0, width, height);
-
-  drawLand();
+  const k = zoomTransform.k;
+  lineStaticCtx.setTransform(1, 0, 0, 1, 0, 0);
+  lineStaticCtx.clearRect(0, 0, lineStaticCanvas.width, lineStaticCanvas.height);
+  setDprTransform(lineStaticCtx);
+  lineStaticCtx.lineJoin = "round";
+  lineStaticCtx.lineCap = "round";
 
   if (showPhysical && physicalData) {
-    context.save();
     for (const feature of physicalData.features) {
+      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+        continue;
+      }
       const featureType = feature.properties?.featurecla;
       if (featureType === "Range/Mountain") {
-        context.globalAlpha = 0.6;
-        context.strokeStyle = "#5c4033";
-        context.lineWidth = 1.2;
-        context.setLineDash([4, 4]);
-        context.beginPath();
-        path(feature);
-        context.stroke();
-        context.setLineDash([]);
+        lineStaticCtx.globalAlpha = 0.6;
+        lineStaticCtx.strokeStyle = "#5c4033";
+        lineStaticCtx.lineWidth = 1.2 / k;
+        lineStaticCtx.setLineDash([4 / k, 4 / k]);
+        lineStaticCtx.beginPath();
+        lineStaticPath(feature);
+        lineStaticCtx.stroke();
+        lineStaticCtx.setLineDash([]);
 
-        if (zoomTransform.k >= 1.4) {
+        if (k >= 1.4) {
           const name = feature.properties?.name || feature.properties?.name_en;
           if (name) {
-            const [x, y] = path.centroid(feature);
+            const [x, y] = lineStaticPath.centroid(feature);
             if (Number.isFinite(x) && Number.isFinite(y)) {
-              context.fillStyle = "#5c4033";
-              context.globalAlpha = 0.7;
-              context.font = "10px Georgia, serif";
-              context.fillText(name, x, y);
+              lineStaticCtx.globalAlpha = 0.7;
+              lineStaticCtx.fillStyle = "#5c4033";
+              lineStaticCtx.font = "10px Georgia, serif";
+              lineStaticCtx.fillText(name, x, y);
             }
           }
         }
       } else if (featureType === "Forest") {
-        context.globalAlpha = 0.1;
-        context.fillStyle = "#2e6b4f";
-        context.beginPath();
-        path(feature);
-        context.fill();
+        lineStaticCtx.globalAlpha = 0.1;
+        lineStaticCtx.fillStyle = "#2e6b4f";
+        lineStaticCtx.beginPath();
+        lineStaticPath(feature);
+        lineStaticCtx.fill();
       } else if (featureType === "Plain" || featureType === "Delta") {
-        context.globalAlpha = 0.08;
-        context.fillStyle = "#d8caa3";
-        context.beginPath();
-        path(feature);
-        context.fill();
+        lineStaticCtx.globalAlpha = 0.08;
+        lineStaticCtx.fillStyle = "#d8caa3";
+        lineStaticCtx.beginPath();
+        lineStaticPath(feature);
+        lineStaticCtx.fill();
       }
     }
-    context.restore();
+  }
+
+  if (showUrban && urbanData) {
+    lineStaticCtx.save();
+    lineStaticCtx.globalAlpha = 0.2;
+    lineStaticCtx.fillStyle = "#333333";
+    for (const feature of urbanData.features) {
+      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+        continue;
+      }
+      lineStaticCtx.beginPath();
+      lineStaticPath(feature);
+      lineStaticCtx.fill();
+    }
+    lineStaticCtx.restore();
   }
 
   if (bordersData) {
-    context.beginPath();
-    path(bordersData);
-    context.strokeStyle = "#111111";
-    context.lineWidth = 1.6;
-    context.stroke();
+    lineStaticCtx.beginPath();
+    lineStaticPath(bordersData);
+    lineStaticCtx.strokeStyle = "#111111";
+    lineStaticCtx.lineWidth = 1.6 / k;
+    lineStaticCtx.stroke();
   }
 
   if (showRivers && riversData) {
-    context.beginPath();
-    path(riversData);
-    context.strokeStyle = "#3498db";
-    context.lineWidth = 1;
-    context.stroke();
+    lineStaticCtx.beginPath();
+    lineStaticPath(riversData);
+    lineStaticCtx.strokeStyle = "#3498db";
+    lineStaticCtx.lineWidth = 1 / k;
+    lineStaticCtx.stroke();
   }
+
+  // Land outline on top for crisp edges
+  lineStaticCtx.beginPath();
+  lineStaticPath(landData);
+  lineStaticCtx.strokeStyle = "#999999";
+  lineStaticCtx.lineWidth = 0.5 / k;
+  lineStaticCtx.stroke();
+}
+
+function renderColorLayerFull() {
+  if (!landData) return;
+  const k = zoomTransform.k;
+  colorCtx.setTransform(1, 0, 0, 1, 0, 0);
+  colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
+  applyTransform(colorCtx);
+  colorCtx.drawImage(colorStaticCanvas, 0, 0, width, height);
+
+  for (const feature of landData.features) {
+    const id = feature.properties?.id || feature.properties?.NUTS_ID;
+    if (!id || !colors[id]) continue;
+    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+      continue;
+    }
+    colorCtx.fillStyle = colors[id];
+    colorCtx.beginPath();
+    colorPath(feature);
+    colorCtx.fill();
+  }
+}
+
+function drawLineLayer() {
+  if (!landData) return;
+  const k = zoomTransform.k;
+  lineCtx.setTransform(1, 0, 0, 1, 0, 0);
+  lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+  applyTransform(lineCtx);
+  lineCtx.drawImage(lineStaticCanvas, 0, 0, width, height);
 
   if (hoveredId && landIndex.has(hoveredId)) {
-    context.beginPath();
-    path(landIndex.get(hoveredId));
-    context.strokeStyle = "#f1c40f";
-    context.lineWidth = 2;
-    context.stroke();
+    const feature = landIndex.get(hoveredId);
+    if (!((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k))) {
+      lineCtx.beginPath();
+      linePath(feature);
+      lineCtx.strokeStyle = "#f1c40f";
+      lineCtx.lineWidth = 2 / k;
+      lineCtx.stroke();
+    }
+  }
+}
+
+function drawHidden() {
+  if (!landData) return;
+  hitCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  hitCtx.clearRect(0, 0, width, height);
+  hitCtx.save();
+  hitCtx.translate(zoomTransform.x, zoomTransform.y);
+  hitCtx.scale(zoomTransform.k, zoomTransform.k);
+  const k = zoomTransform.k;
+
+  for (const feature of landData.features) {
+    const id = feature.properties?.id || feature.properties?.NUTS_ID;
+    const key = idToKey.get(id);
+    if (!key) continue;
+    if (!isFeatureVisible(feature, k)) continue;
+    const r = (key >> 16) & 255;
+    const g = (key >> 8) & 255;
+    const b = key & 255;
+    hitCtx.fillStyle = `rgb(${r},${g},${b})`;
+    hitCtx.beginPath();
+    hitPath(feature);
+    hitCtx.fill();
   }
 
+  hitCtx.restore();
+}
+
+function renderAll() {
+  renderColorStatic();
+  renderColorLayerFull();
+  renderLineStatic();
+  drawLineLayer();
   drawHidden();
 }
 
@@ -247,7 +363,7 @@ function buildIndex() {
   keyToId.clear();
 
   landData.features.forEach((feature, index) => {
-    const id = feature.properties?.NUTS_ID || `feature-${index}`;
+    const id = feature.properties?.id || feature.properties?.NUTS_ID || `feature-${index}`;
     landIndex.set(id, feature);
     const key = index + 1;
     idToKey.set(id, key);
@@ -256,10 +372,10 @@ function buildIndex() {
 }
 
 function getFeatureIdFromEvent(event) {
-  const rect = canvas.getBoundingClientRect();
+  const rect = colorCanvas.getBoundingClientRect();
   const x = (event.clientX - rect.left) * dpr;
   const y = (event.clientY - rect.top) * dpr;
-  const pixel = hitContext.getImageData(x, y, 1, 1).data;
+  const pixel = hitCtx.getImageData(x, y, 1, 1).data;
   const key = (pixel[0] << 16) | (pixel[1] << 8) | pixel[2];
   if (!key) return null;
   return keyToId.get(key) || null;
@@ -270,17 +386,31 @@ function handleMouseMove(event) {
   const id = getFeatureIdFromEvent(event);
   if (id !== hoveredId) {
     hoveredId = id;
-    draw();
+    drawLineLayer();
   }
+}
+
+function paintSingleRegion(feature, color) {
+  colorCtx.save();
+  applyTransform(colorCtx);
+  colorCtx.fillStyle = color;
+  colorCtx.beginPath();
+  colorPath(feature);
+  colorCtx.fill();
+  colorCtx.restore();
 }
 
 function handleClick(event) {
   if (!landData) return;
   const id = getFeatureIdFromEvent(event);
   if (!id) return;
+  const feature = landIndex.get(id);
+  if (!feature) return;
 
   if (currentTool === "eraser") {
     delete colors[id];
+    renderColorLayerFull();
+    drawLineLayer();
   } else if (currentTool === "eyedropper") {
     const picked = colors[id];
     if (picked) {
@@ -292,8 +422,8 @@ function handleClick(event) {
   } else {
     colors[id] = selectedColor;
     addRecentColor(selectedColor);
+    paintSingleRegion(feature, selectedColor);
   }
-  draw();
 }
 
 function addRecentColor(color) {
@@ -316,7 +446,6 @@ function setupUI() {
   const exportBtn = document.getElementById("exportBtn");
   const exportFormat = document.getElementById("exportFormat");
   const textureSelect = document.getElementById("textureSelect");
-  const textureOverlay = document.getElementById("textureOverlay");
   const toggleUrban = document.getElementById("toggleUrban");
   const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
@@ -401,7 +530,13 @@ function setupUI() {
     exportBtn.addEventListener("click", () => {
       const format = exportFormat.value === "jpg" ? "image/jpeg" : "image/png";
       const extension = exportFormat.value === "jpg" ? "jpg" : "png";
-      const dataUrl = canvas.toDataURL(format, 0.92);
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = colorCanvas.width;
+      exportCanvas.height = colorCanvas.height;
+      const exportCtx = exportCanvas.getContext("2d");
+      exportCtx.drawImage(colorCanvas, 0, 0);
+      exportCtx.drawImage(lineCanvas, 0, 0);
+      const dataUrl = exportCanvas.toDataURL(format, 0.92);
       const link = document.createElement("a");
       link.href = dataUrl;
       link.download = `map_snapshot.${extension}`;
@@ -424,22 +559,24 @@ function setupUI() {
   if (toggleUrban) {
     toggleUrban.addEventListener("change", (event) => {
       showUrban = event.target.checked;
-      renderStatic();
-      draw();
+      renderLineStatic();
+      drawLineLayer();
     });
   }
 
   if (togglePhysical) {
     togglePhysical.addEventListener("change", (event) => {
       showPhysical = event.target.checked;
-      draw();
+      renderLineStatic();
+      drawLineLayer();
     });
   }
 
   if (toggleRivers) {
     toggleRivers.addEventListener("change", (event) => {
       showRivers = event.target.checked;
-      draw();
+      renderLineStatic();
+      drawLineLayer();
     });
   }
 
@@ -447,22 +584,24 @@ function setupUI() {
     presetPolitical.addEventListener("click", () => {
       if (!landData) return;
       for (const feature of landData.features) {
-        const id = feature.properties?.NUTS_ID;
-        const cntr = feature.properties?.CNTR_CODE;
+        const id = feature.properties?.id || feature.properties?.NUTS_ID;
+        const cntr = feature.properties?.cntr_code || feature.properties?.CNTR_CODE;
         if (!id || !cntr) continue;
         const color = countryPalette[cntr];
         if (color) {
           colors[id] = color;
         }
       }
-      draw();
+      renderColorLayerFull();
+      drawLineLayer();
     });
   }
 
   if (presetClear) {
     presetClear.addEventListener("click", () => {
       Object.keys(colors).forEach((key) => delete colors[key]);
-      draw();
+      renderColorLayerFull();
+      drawLineLayer();
     });
   }
 
@@ -474,16 +613,15 @@ function setupUI() {
 function handleResize() {
   setCanvasSize();
   fitProjection();
-  renderStatic();
-  draw();
+  renderAll();
 }
 
 async function loadData() {
   try {
     const [land, rivers, borders, ocean, landBg, urban, physical] = await Promise.all([
-      d3.json("data/europe_test_nuts3.geojson"),
+      d3.json("data/europe_final_optimized.geojson"),
       d3.json("data/europe_rivers.geojson"),
-      d3.json("data/europe_countries.geojson"),
+      d3.json("data/europe_countries_combined.geojson"),
       d3.json("data/europe_ocean.geojson"),
       d3.json("data/europe_land_bg.geojson"),
       d3.json("data/europe_urban.geojson"),
@@ -500,8 +638,7 @@ async function loadData() {
 
     buildIndex();
     fitProjection();
-    renderStatic();
-    draw();
+    renderAll();
   } catch (error) {
     console.error("Failed to load GeoJSON:", error);
   }
@@ -510,20 +647,43 @@ async function loadData() {
 const zoom = d3
   .zoom()
   .scaleExtent([1, 8])
-  .on("zoom", (event) => {
-    zoomTransform = event.transform;
-    draw();
+  .on("start", () => {
+    isDragging = true;
+    dragStartTransform = zoomTransform;
+    cacheDragFrames();
   })
-  .on("end", () => {
-    renderStatic();
-    draw();
+  .on("zoom", (event) => {
+    const newTransform = event.transform;
+    const scaleChanged = newTransform.k !== zoomTransform.k;
+    zoomTransform = newTransform;
+    if (isDragging && !scaleChanged) {
+      drawCachedPan();
+    } else {
+      renderColorStatic();
+      renderColorLayerFull();
+      renderLineStatic();
+      drawLineLayer();
+    }
+  })
+  .on("end", (event) => {
+    zoomTransform = event.transform;
+    isDragging = false;
+    dragStartTransform = null;
+    renderAll();
   });
 
-d3.select(canvas).call(zoom);
+d3.select(colorCanvas).call(zoom);
 
-canvas.addEventListener("mousemove", handleMouseMove);
-canvas.addEventListener("click", handleClick);
+colorCanvas.addEventListener("mousemove", handleMouseMove);
+colorCanvas.addEventListener("click", handleClick);
 window.addEventListener("resize", handleResize);
+
+colorCanvas.style.pointerEvents = "auto";
+lineCanvas.style.pointerEvents = "none";
+if (textureOverlay) {
+  textureOverlay.style.pointerEvents = "none";
+}
+colorCanvas.style.touchAction = "none";
 
 setupUI();
 handleResize();
