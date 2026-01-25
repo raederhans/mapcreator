@@ -54,6 +54,8 @@ RIVERS_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_rivers_l
 BORDERS_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_countries.zip"
 OCEAN_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_ocean.zip"
 LAND_BG_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_land.zip"
+URBAN_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_urban_areas.zip"
+PHYSICAL_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_geography_regions_polys.zip"
 
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
@@ -167,6 +169,8 @@ def save_outputs(
     borders: gpd.GeoDataFrame,
     ocean: gpd.GeoDataFrame,
     land_bg: gpd.GeoDataFrame,
+    urban: gpd.GeoDataFrame,
+    physical: gpd.GeoDataFrame,
     output_dir: Path,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -175,6 +179,8 @@ def save_outputs(
     borders_path = output_dir / "europe_countries.geojson"
     ocean_path = output_dir / "europe_ocean.geojson"
     land_bg_path = output_dir / "europe_land_bg.geojson"
+    urban_path = output_dir / "europe_urban.geojson"
+    physical_path = output_dir / "europe_physical.geojson"
     preview_path = output_dir / "preview.png"
 
     print(f"Saving GeoJSON to {geojson_path}...")
@@ -192,10 +198,18 @@ def save_outputs(
     print(f"Saving land background GeoJSON to {land_bg_path}...")
     land_bg.to_file(land_bg_path, driver="GeoJSON")
 
+    print(f"Saving urban GeoJSON to {urban_path}...")
+    urban.to_file(urban_path, driver="GeoJSON")
+
+    print(f"Saving physical regions GeoJSON to {physical_path}...")
+    physical.to_file(physical_path, driver="GeoJSON")
+
     print(f"Saving preview image to {preview_path}...")
     fig, ax = plt.subplots(figsize=(8, 8))
     ocean.plot(ax=ax, color="#b3d9ff")
     land_bg.plot(ax=ax, linewidth=0, color="#e0e0e0")
+    physical.plot(ax=ax, linewidth=0.6, edgecolor="#5c4033", facecolor="none")
+    urban.plot(ax=ax, linewidth=0, color="#333333", alpha=0.2)
     land.plot(ax=ax, linewidth=0.3, edgecolor="#999999", color="#d0d0d0")
     borders.plot(ax=ax, linewidth=1.2, edgecolor="#000000", facecolor="none")
     rivers.plot(ax=ax, linewidth=0.8, color="#3498db")
@@ -216,10 +230,31 @@ def main() -> None:
     ocean_clipped = clip_to_land_bounds(ocean, filtered, "ocean")
     land_bg = fetch_ne_zip(LAND_BG_URL, "land")
     land_bg_clipped = clip_to_land_bounds(land_bg, filtered, "land background")
+    urban = fetch_ne_zip(URBAN_URL, "urban")
+    urban_clipped = clip_to_land_bounds(urban, filtered, "urban")
+    physical = fetch_ne_zip(PHYSICAL_URL, "physical")
+    physical_clipped = clip_to_land_bounds(physical, filtered, "physical")
+    if "featurecla" in physical_clipped.columns:
+        keep_classes = {"Range/Mountain", "Forest", "Plain", "Delta"}
+        physical_filtered = physical_clipped[physical_clipped["featurecla"].isin(keep_classes)].copy()
+        if physical_filtered.empty:
+            print("Physical regions filter returned empty dataset, keeping all clipped features.")
+            physical_filtered = physical_clipped
+    else:
+        physical_filtered = physical_clipped
 
     script_dir = Path(__file__).resolve().parent
     output_dir = script_dir / "data"
-    save_outputs(filtered, rivers_clipped, borders_clipped, ocean_clipped, land_bg_clipped, output_dir)
+    save_outputs(
+        filtered,
+        rivers_clipped,
+        borders_clipped,
+        ocean_clipped,
+        land_bg_clipped,
+        urban_clipped,
+        physical_filtered,
+        output_dir,
+    )
 
     print("Done.")
 

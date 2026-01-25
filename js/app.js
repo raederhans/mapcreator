@@ -16,6 +16,8 @@ let riversData = null;
 let bordersData = null;
 let oceanData = null;
 let landBgData = null;
+let urbanData = null;
+let physicalData = null;
 
 let width = 0;
 let height = 0;
@@ -26,6 +28,9 @@ let selectedColor = "#1f3a5f";
 let currentTool = "fill";
 let hoveredId = null;
 let zoomTransform = d3.zoomIdentity;
+let showUrban = true;
+let showPhysical = true;
+let showRivers = true;
 
 const projection = d3.geoIdentity().reflectY(true);
 const path = d3.geoPath(projection, context);
@@ -124,6 +129,42 @@ function draw() {
 
   drawLand();
 
+  if (showPhysical && physicalData) {
+    context.save();
+    context.globalAlpha = 0.5;
+    context.strokeStyle = "#5c4033";
+    context.lineWidth = 1;
+    context.setLineDash([2, 2]);
+    context.beginPath();
+    path(physicalData);
+    context.stroke();
+    context.setLineDash([]);
+
+    if (zoomTransform.k >= 1.5) {
+      context.globalAlpha = 0.6;
+      context.fillStyle = "#5c4033";
+      context.font = "10px Georgia, serif";
+      for (const feature of physicalData.features) {
+        const name = feature.properties?.name || feature.properties?.name_en;
+        if (!name) continue;
+        const [x, y] = path.centroid(feature);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        context.fillText(name, x, y);
+      }
+    }
+    context.restore();
+  }
+
+  if (showUrban && urbanData) {
+    context.save();
+    context.globalAlpha = 0.2;
+    context.fillStyle = "#333333";
+    context.beginPath();
+    path(urbanData);
+    context.fill();
+    context.restore();
+  }
+
   if (bordersData) {
     context.beginPath();
     path(bordersData);
@@ -132,7 +173,7 @@ function draw() {
     context.stroke();
   }
 
-  if (riversData) {
+  if (showRivers && riversData) {
     context.beginPath();
     path(riversData);
     context.strokeStyle = "#3498db";
@@ -204,6 +245,11 @@ function setupUI() {
   const customColor = document.getElementById("customColor");
   const exportBtn = document.getElementById("exportBtn");
   const exportFormat = document.getElementById("exportFormat");
+  const textureSelect = document.getElementById("textureSelect");
+  const textureOverlay = document.getElementById("textureOverlay");
+  const toggleUrban = document.getElementById("toggleUrban");
+  const togglePhysical = document.getElementById("togglePhysical");
+  const toggleRivers = document.getElementById("toggleRivers");
 
   function updateSwatchUI() {
     let matched = false;
@@ -268,6 +314,37 @@ function setupUI() {
     });
   }
 
+  if (textureSelect && textureOverlay) {
+    const applyTexture = (value) => {
+      textureOverlay.className = `pointer-events-none absolute inset-0 texture-${value}`;
+    };
+    applyTexture(textureSelect.value);
+    textureSelect.addEventListener("change", (event) => {
+      applyTexture(event.target.value);
+    });
+  }
+
+  if (toggleUrban) {
+    toggleUrban.addEventListener("change", (event) => {
+      showUrban = event.target.checked;
+      draw();
+    });
+  }
+
+  if (togglePhysical) {
+    togglePhysical.addEventListener("change", (event) => {
+      showPhysical = event.target.checked;
+      draw();
+    });
+  }
+
+  if (toggleRivers) {
+    toggleRivers.addEventListener("change", (event) => {
+      showRivers = event.target.checked;
+      draw();
+    });
+  }
+
   updateSwatchUI();
   updateToolUI();
 }
@@ -280,12 +357,14 @@ function handleResize() {
 
 async function loadData() {
   try {
-    const [land, rivers, borders, ocean, landBg] = await Promise.all([
+    const [land, rivers, borders, ocean, landBg, urban, physical] = await Promise.all([
       d3.json("data/europe_test_nuts3.geojson"),
       d3.json("data/europe_rivers.geojson"),
       d3.json("data/europe_countries.geojson"),
       d3.json("data/europe_ocean.geojson"),
       d3.json("data/europe_land_bg.geojson"),
+      d3.json("data/europe_urban.geojson"),
+      d3.json("data/europe_physical.geojson"),
     ]);
 
     landData = land;
@@ -293,6 +372,8 @@ async function loadData() {
     bordersData = borders;
     oceanData = ocean;
     landBgData = landBg;
+    urbanData = urban;
+    physicalData = physical;
 
     buildIndex();
     fitProjection();

@@ -98,11 +98,44 @@
           <div class="rounded-lg border border-slate-200 p-4 text-xs text-slate-500">
             Tip: Scroll to zoom and drag to pan. Hover highlights counties.
           </div>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Texture</div>
+            <label class="mt-3 block text-xs font-semibold uppercase tracking-wide text-slate-500" for="textureSelect">
+              Overlay
+            </label>
+            <select
+              id="textureSelect"
+              class="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              <option value="none">Clean (None)</option>
+              <option value="paper" selected>Old Paper</option>
+              <option value="canvas">Canvas</option>
+              <option value="grid">Grid</option>
+            </select>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Layer Toggles</div>
+            <label class="mt-3 flex items-center gap-2 text-sm text-slate-700">
+              <input id="toggleUrban" type="checkbox" class="h-4 w-4 rounded border-slate-300" checked />
+              Urban Areas
+            </label>
+            <label class="mt-2 flex items-center gap-2 text-sm text-slate-700">
+              <input id="togglePhysical" type="checkbox" class="h-4 w-4 rounded border-slate-300" checked />
+              Physical Regions (Mountains/etc)
+            </label>
+            <label class="mt-2 flex items-center gap-2 text-sm text-slate-700">
+              <input id="toggleRivers" type="checkbox" class="h-4 w-4 rounded border-slate-300" checked />
+              Rivers
+            </label>
+          </div>
         </div>
       </aside>
 
       <main class="relative flex-1 bg-slate-100">
         <canvas id="mapCanvas" class="h-full w-full"></canvas>
+        <div id="textureOverlay" class="pointer-events-none absolute inset-0"></div>
       </main>
     </div>
 
