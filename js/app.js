@@ -10,6 +10,8 @@ const context = canvas.getContext("2d");
 
 const hitCanvas = document.createElement("canvas");
 const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
+const staticCanvas = document.createElement("canvas");
+const staticContext = staticCanvas.getContext("2d");
 
 let landData = null;
 let riversData = null;
@@ -31,10 +33,26 @@ let zoomTransform = d3.zoomIdentity;
 let showUrban = true;
 let showPhysical = true;
 let showRivers = true;
+let recentColors = [];
+let updateRecentUI = null;
+let updateSwatchUIFn = null;
+
+const countryPalette = {
+  DE: "#5d7cba",
+  FR: "#4a90e2",
+  IT: "#50e3c2",
+  PL: "#f5a623",
+  NL: "#7ed321",
+  BE: "#bd10e0",
+  LU: "#8b572a",
+  AT: "#417505",
+  CH: "#d0021b",
+};
 
 const projection = d3.geoIdentity().reflectY(true);
 const path = d3.geoPath(projection, context);
 const hitPath = d3.geoPath(projection, hitContext);
+const staticPath = d3.geoPath(projection, staticContext);
 
 const landIndex = new Map();
 const idToKey = new Map();
@@ -49,6 +67,8 @@ function setCanvasSize() {
   canvas.height = Math.floor(height * dpr);
   hitCanvas.width = Math.floor(width * dpr);
   hitCanvas.height = Math.floor(height * dpr);
+  staticCanvas.width = Math.floor(width * dpr);
+  staticCanvas.height = Math.floor(height * dpr);
 }
 
 function fitProjection() {
@@ -60,6 +80,41 @@ function applyTransform(ctx) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.translate(zoomTransform.x, zoomTransform.y);
   ctx.scale(zoomTransform.k, zoomTransform.k);
+}
+
+function setDprTransform(ctx) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function renderStatic() {
+  if (!landData) return;
+  staticContext.setTransform(1, 0, 0, 1, 0, 0);
+  staticContext.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
+  setDprTransform(staticContext);
+
+  if (oceanData) {
+    staticContext.beginPath();
+    staticPath(oceanData);
+    staticContext.fillStyle = "#b3d9ff";
+    staticContext.fill();
+  }
+
+  if (landBgData) {
+    staticContext.beginPath();
+    staticPath(landBgData);
+    staticContext.fillStyle = "#e0e0e0";
+    staticContext.fill();
+  }
+
+  if (showUrban && urbanData) {
+    staticContext.save();
+    staticContext.globalAlpha = 0.2;
+    staticContext.fillStyle = "#333333";
+    staticContext.beginPath();
+    staticPath(urbanData);
+    staticContext.fill();
+    staticContext.restore();
+  }
 }
 
 function drawLand() {
@@ -112,56 +167,50 @@ function draw() {
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.clearRect(0, 0, canvas.width, canvas.height);
   applyTransform(context);
-
-  if (oceanData) {
-    context.beginPath();
-    path(oceanData);
-    context.fillStyle = "#b3d9ff";
-    context.fill();
-  }
-
-  if (landBgData) {
-    context.beginPath();
-    path(landBgData);
-    context.fillStyle = "#e0e0e0";
-    context.fill();
-  }
+  context.drawImage(staticCanvas, 0, 0, width, height);
 
   drawLand();
 
   if (showPhysical && physicalData) {
     context.save();
-    context.globalAlpha = 0.5;
-    context.strokeStyle = "#5c4033";
-    context.lineWidth = 1;
-    context.setLineDash([2, 2]);
-    context.beginPath();
-    path(physicalData);
-    context.stroke();
-    context.setLineDash([]);
+    for (const feature of physicalData.features) {
+      const featureType = feature.properties?.featurecla;
+      if (featureType === "Range/Mountain") {
+        context.globalAlpha = 0.6;
+        context.strokeStyle = "#5c4033";
+        context.lineWidth = 1.2;
+        context.setLineDash([4, 4]);
+        context.beginPath();
+        path(feature);
+        context.stroke();
+        context.setLineDash([]);
 
-    if (zoomTransform.k >= 1.5) {
-      context.globalAlpha = 0.6;
-      context.fillStyle = "#5c4033";
-      context.font = "10px Georgia, serif";
-      for (const feature of physicalData.features) {
-        const name = feature.properties?.name || feature.properties?.name_en;
-        if (!name) continue;
-        const [x, y] = path.centroid(feature);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-        context.fillText(name, x, y);
+        if (zoomTransform.k >= 1.4) {
+          const name = feature.properties?.name || feature.properties?.name_en;
+          if (name) {
+            const [x, y] = path.centroid(feature);
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+              context.fillStyle = "#5c4033";
+              context.globalAlpha = 0.7;
+              context.font = "10px Georgia, serif";
+              context.fillText(name, x, y);
+            }
+          }
+        }
+      } else if (featureType === "Forest") {
+        context.globalAlpha = 0.1;
+        context.fillStyle = "#2e6b4f";
+        context.beginPath();
+        path(feature);
+        context.fill();
+      } else if (featureType === "Plain" || featureType === "Delta") {
+        context.globalAlpha = 0.08;
+        context.fillStyle = "#d8caa3";
+        context.beginPath();
+        path(feature);
+        context.fill();
       }
     }
-    context.restore();
-  }
-
-  if (showUrban && urbanData) {
-    context.save();
-    context.globalAlpha = 0.2;
-    context.fillStyle = "#333333";
-    context.beginPath();
-    path(urbanData);
-    context.fill();
     context.restore();
   }
 
@@ -232,10 +281,31 @@ function handleClick(event) {
 
   if (currentTool === "eraser") {
     delete colors[id];
+  } else if (currentTool === "eyedropper") {
+    const picked = colors[id];
+    if (picked) {
+      selectedColor = picked;
+      if (typeof updateSwatchUIFn === "function") {
+        updateSwatchUIFn();
+      }
+    }
   } else {
     colors[id] = selectedColor;
+    addRecentColor(selectedColor);
   }
   draw();
+}
+
+function addRecentColor(color) {
+  if (!color) return;
+  recentColors = recentColors.filter((value) => value !== color);
+  recentColors.unshift(color);
+  if (recentColors.length > 5) {
+    recentColors = recentColors.slice(0, 5);
+  }
+  if (typeof updateRecentUI === "function") {
+    updateRecentUI();
+  }
 }
 
 function setupUI() {
@@ -250,6 +320,26 @@ function setupUI() {
   const toggleUrban = document.getElementById("toggleUrban");
   const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
+  const recentContainer = document.getElementById("recentColors");
+  const presetPolitical = document.getElementById("presetPolitical");
+  const presetClear = document.getElementById("presetClear");
+
+  function renderRecentColors() {
+    if (!recentContainer) return;
+    recentContainer.innerHTML = "";
+    recentColors.forEach((color) => {
+      const btn = document.createElement("button");
+      btn.className = "color-swatch h-8 w-8 rounded-md border border-slate-200";
+      btn.dataset.color = color;
+      btn.style.background = color;
+      btn.addEventListener("click", () => {
+        selectedColor = color;
+        updateSwatchUI();
+      });
+      recentContainer.appendChild(btn);
+    });
+  }
+  updateRecentUI = renderRecentColors;
 
   function updateSwatchUI() {
     let matched = false;
@@ -267,9 +357,16 @@ function setupUI() {
       customColor.classList.toggle("ring-slate-900", !matched);
     }
   }
+  updateSwatchUIFn = updateSwatchUI;
 
   function updateToolUI() {
-    currentToolLabel.textContent = currentTool === "eraser" ? "Eraser" : "Fill";
+    if (currentTool === "eraser") {
+      currentToolLabel.textContent = "Eraser";
+    } else if (currentTool === "eyedropper") {
+      currentToolLabel.textContent = "Eyedropper";
+    } else {
+      currentToolLabel.textContent = "Fill";
+    }
     toolButtons.forEach((button) => {
       const isActive = button.dataset.tool === currentTool;
       button.classList.toggle("bg-slate-900", isActive);
@@ -316,7 +413,7 @@ function setupUI() {
 
   if (textureSelect && textureOverlay) {
     const applyTexture = (value) => {
-      textureOverlay.className = `pointer-events-none absolute inset-0 texture-${value}`;
+      textureOverlay.className = `texture-overlay decorative-layer absolute inset-0 texture-${value}`;
     };
     applyTexture(textureSelect.value);
     textureSelect.addEventListener("change", (event) => {
@@ -327,6 +424,7 @@ function setupUI() {
   if (toggleUrban) {
     toggleUrban.addEventListener("change", (event) => {
       showUrban = event.target.checked;
+      renderStatic();
       draw();
     });
   }
@@ -345,6 +443,30 @@ function setupUI() {
     });
   }
 
+  if (presetPolitical) {
+    presetPolitical.addEventListener("click", () => {
+      if (!landData) return;
+      for (const feature of landData.features) {
+        const id = feature.properties?.NUTS_ID;
+        const cntr = feature.properties?.CNTR_CODE;
+        if (!id || !cntr) continue;
+        const color = countryPalette[cntr];
+        if (color) {
+          colors[id] = color;
+        }
+      }
+      draw();
+    });
+  }
+
+  if (presetClear) {
+    presetClear.addEventListener("click", () => {
+      Object.keys(colors).forEach((key) => delete colors[key]);
+      draw();
+    });
+  }
+
+  renderRecentColors();
   updateSwatchUI();
   updateToolUI();
 }
@@ -352,6 +474,7 @@ function setupUI() {
 function handleResize() {
   setCanvasSize();
   fitProjection();
+  renderStatic();
   draw();
 }
 
@@ -377,6 +500,7 @@ async function loadData() {
 
     buildIndex();
     fitProjection();
+    renderStatic();
     draw();
   } catch (error) {
     console.error("Failed to load GeoJSON:", error);
@@ -388,6 +512,10 @@ const zoom = d3
   .scaleExtent([1, 8])
   .on("zoom", (event) => {
     zoomTransform = event.transform;
+    draw();
+  })
+  .on("end", () => {
+    renderStatic();
     draw();
   });
 

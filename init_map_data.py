@@ -232,6 +232,11 @@ def main() -> None:
     land_bg_clipped = clip_to_land_bounds(land_bg, filtered, "land background")
     urban = fetch_ne_zip(URBAN_URL, "urban")
     urban_clipped = clip_to_land_bounds(urban, filtered, "urban")
+    # Aggressively simplify urban geometry to reduce render cost
+    urban_clipped = urban_clipped.copy()
+    urban_clipped["geometry"] = urban_clipped.geometry.simplify(
+        tolerance=2000, preserve_topology=True
+    )
     physical = fetch_ne_zip(PHYSICAL_URL, "physical")
     physical_clipped = clip_to_land_bounds(physical, filtered, "physical")
     if "featurecla" in physical_clipped.columns:
@@ -242,6 +247,14 @@ def main() -> None:
             physical_filtered = physical_clipped
     else:
         physical_filtered = physical_clipped
+    # Simplify physical regions to reduce vertex count
+    physical_filtered = physical_filtered.copy()
+    physical_filtered["geometry"] = physical_filtered.geometry.simplify(
+        tolerance=5000, preserve_topology=True
+    )
+    # Preserve key metadata for styling/labels
+    keep_cols = ["name", "name_en", "featurecla", "geometry"]
+    physical_filtered = physical_filtered[[col for col in keep_cols if col in physical_filtered.columns]]
 
     script_dir = Path(__file__).resolve().parent
     output_dir = script_dir / "data"

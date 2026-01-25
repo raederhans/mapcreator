@@ -17,30 +17,34 @@ body {
   height: 100%;
 }
 
-#textureOverlay {
-  mix-blend-mode: multiply;
-  opacity: 0.35;
+.texture-overlay {
+  mix-blend-mode: color-burn;
+  opacity: 0.6;
   background-size: 320px 320px;
 }
 
-#textureOverlay.texture-none {
+.decorative-layer {
+  pointer-events: none;
+}
+
+.texture-overlay.texture-none {
   background: none;
   opacity: 0;
 }
 
-#textureOverlay.texture-paper {
+.texture-overlay.texture-paper {
   background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC45IiBudW1PY3RhdmVzPSI0IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbHRlcj0idXJsKCNuKSIgb3BhY2l0eT0iMC4zNSIvPjwvc3ZnPg==");
   background-size: 260px 260px;
 }
 
-#textureOverlay.texture-canvas {
+.texture-overlay.texture-canvas {
   background-image:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0, rgba(0, 0, 0, 0.07) 1px, transparent 1px, transparent 3px),
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0, rgba(0, 0, 0, 0.05) 1px, transparent 1px, transparent 4px);
   background-size: 8px 8px;
 }
 
-#textureOverlay.texture-grid {
+.texture-overlay.texture-grid {
   background-image:
     linear-gradient(rgba(0, 0, 0, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 0, 0, 0.12) 1px, transparent 1px);
