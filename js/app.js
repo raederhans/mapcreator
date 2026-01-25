@@ -55,6 +55,37 @@ const countryPalette = {
   BY: "#9b5de5",
   MD: "#f28482",
   RU: "#4a4e69",
+  ES: "#e74c3c",
+  PT: "#9b59b6",
+  CZ: "#3498db",
+  SK: "#1abc9c",
+  HU: "#e67e22",
+  RO: "#2ecc71",
+  BG: "#f39c12",
+  HR: "#16a085",
+  SI: "#27ae60",
+  EE: "#2980b9",
+  LV: "#8e44ad",
+  LT: "#c0392b",
+  FI: "#d35400",
+  SE: "#7f8c8d",
+  NO: "#34495e",
+  DK: "#95a5a6",
+  IE: "#1e8449",
+  UK: "#5d6d7e",
+  GB: "#5d6d7e",
+  GR: "#148f77",
+  CY: "#d68910",
+  MT: "#a93226",
+  TR: "#b03a2e",
+  RS: "#6c3483",
+  BA: "#1a5276",
+  ME: "#117a65",
+  AL: "#b9770e",
+  MK: "#7d3c98",
+  XK: "#2e4053",
+  IS: "#5499c7",
+  LI: "#45b39d",
 };
 
 const projection = d3.geoMercator();
@@ -68,7 +99,10 @@ const idToKey = new Map();
 const keyToId = new Map();
 
 const TINY_AREA = 6;
-let zoomRaf = null;
+const MOUSE_THROTTLE_MS = 16;
+let lastMouseMoveTime = 0;
+let hitCanvasDirty = true;
+let zoomRenderScheduled = false;
 let isInteracting = false;
 
 function setCanvasSize() {
@@ -102,12 +136,12 @@ function applyTransform(ctx) {
   ctx.scale(zoomTransform.k, zoomTransform.k);
 }
 
-function isFeatureVisible(feature, k) {
+function pathBoundsInScreen(feature, transform) {
   const bounds = boundsPath.bounds(feature);
-  const minX = bounds[0][0] * k + zoomTransform.x;
-  const minY = bounds[0][1] * k + zoomTransform.y;
-  const maxX = bounds[1][0] * k + zoomTransform.x;
-  const maxY = bounds[1][1] * k + zoomTransform.y;
+  const minX = bounds[0][0] * transform.k + transform.x;
+  const minY = bounds[0][1] * transform.k + transform.y;
+  const maxX = bounds[1][0] * transform.k + transform.x;
+  const maxY = bounds[1][1] * transform.k + transform.y;
   return !(maxX < 0 || maxY < 0 || minX > width || minY > height);
 }
 
@@ -118,9 +152,6 @@ function renderQuick() {
 function renderFull() {
   if (!landData) return;
   const k = zoomTransform.k;
-  if (mapContainer) {
-    mapContainer.style.transform = "none";
-  }
 
   colorCtx.setTransform(1, 0, 0, 1, 0, 0);
   colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
@@ -142,7 +173,7 @@ function renderFull() {
 
   colorCtx.fillStyle = "#d9d9d9";
   for (const feature of landData.features) {
-    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
       continue;
     }
     colorCtx.beginPath();
@@ -153,7 +184,7 @@ function renderFull() {
   for (const feature of landData.features) {
     const id = feature.properties?.id || feature.properties?.NUTS_ID;
     if (!id || !colors[id]) continue;
-    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
       continue;
     }
     colorCtx.fillStyle = colors[id];
@@ -170,7 +201,7 @@ function renderFull() {
 
   if (showPhysical && physicalData) {
     for (const feature of physicalData.features) {
-      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
         continue;
       }
       const featureType = feature.properties?.featurecla;
@@ -217,7 +248,7 @@ function renderFull() {
     lineCtx.globalAlpha = 0.2;
     lineCtx.fillStyle = "#333333";
     for (const feature of urbanData.features) {
-      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k)) {
+      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
         continue;
       }
       lineCtx.beginPath();
@@ -250,14 +281,14 @@ function renderFull() {
   lineCtx.stroke();
 
   drawHover();
-  drawHidden();
+  markHitDirty();
 }
 
 function drawHover() {
   const k = zoomTransform.k;
   if (hoveredId && landIndex.has(hoveredId)) {
     const feature = landIndex.get(hoveredId);
-    if (!((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !isFeatureVisible(feature, k))) {
+    if (!((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform))) {
       lineCtx.beginPath();
       linePath(feature);
       lineCtx.strokeStyle = "#f1c40f";
@@ -267,20 +298,21 @@ function drawHover() {
   }
 }
 
+function markHitDirty() {
+  hitCanvasDirty = true;
+}
+
 function drawHidden() {
-  if (!landData) return;
+  if (!landData || !hitCanvasDirty) return;
+  hitCanvasDirty = false;
   hitCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   hitCtx.clearRect(0, 0, width, height);
-  hitCtx.save();
-  hitCtx.translate(zoomTransform.x, zoomTransform.y);
-  hitCtx.scale(zoomTransform.k, zoomTransform.k);
-  const k = zoomTransform.k;
 
   for (const feature of landData.features) {
     const id = feature.properties?.id || feature.properties?.NUTS_ID;
     const key = idToKey.get(id);
     if (!key) continue;
-    if (!isFeatureVisible(feature, k)) continue;
+    if (!pathBoundsInScreen(feature, zoomTransform)) continue;
     const r = (key >> 16) & 255;
     const g = (key >> 8) & 255;
     const b = key & 255;
@@ -289,8 +321,6 @@ function drawHidden() {
     hitPath(feature);
     hitCtx.fill();
   }
-
-  hitCtx.restore();
 }
 
 function scheduleQuickRender() {
@@ -312,9 +342,14 @@ function buildIndex() {
 }
 
 function getFeatureIdFromEvent(event) {
-  const rect = colorCanvas.getBoundingClientRect();
-  const x = (event.clientX - rect.left) * dpr;
-  const y = (event.clientY - rect.top) * dpr;
+  const [sx, sy] = d3.pointer(event, colorCanvas);
+  const [mx, my] = zoomTransform.invert([sx, sy]);
+  const x = Math.round(mx * dpr);
+  const y = Math.round(my * dpr);
+  if (x < 0 || y < 0 || x >= hitCanvas.width || y >= hitCanvas.height) {
+    return null;
+  }
+  drawHidden();
   const pixel = hitCtx.getImageData(x, y, 1, 1).data;
   const key = (pixel[0] << 16) | (pixel[1] << 8) | pixel[2];
   if (!key) return null;
@@ -322,6 +357,9 @@ function getFeatureIdFromEvent(event) {
 }
 
 function handleMouseMove(event) {
+  const now = performance.now();
+  if (now - lastMouseMoveTime < MOUSE_THROTTLE_MS) return;
+  lastMouseMoveTime = now;
   if (!landData) return;
   if (isInteracting) return;
   const id = getFeatureIdFromEvent(event);
@@ -587,16 +625,17 @@ const zoom = d3
   })
   .on("zoom", (event) => {
     zoomTransform = event.transform;
-    if (mapContainer) {
-      mapContainer.style.transform = `translate(${zoomTransform.x}px, ${zoomTransform.y}px) scale(${zoomTransform.k})`;
+    if (!zoomRenderScheduled) {
+      zoomRenderScheduled = true;
+      requestAnimationFrame(() => {
+        renderFull();
+        zoomRenderScheduled = false;
+      });
     }
   })
   .on("end", (event) => {
     zoomTransform = event.transform;
     isInteracting = false;
-    if (mapContainer) {
-      mapContainer.style.transform = "none";
-    }
     renderFull();
   });
 

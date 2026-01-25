@@ -63,7 +63,15 @@ ADMIN1_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
 EXTENSION_COUNTRIES = {"RU", "UA", "BY", "MD"}
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
-ARCTIC_BOUNDS = (-180.0, 25.0, 180.0, 72.0)
+EUROPE_BOUNDS = (-25.0, 34.0, 70.0, 72.0)
+
+# Simplification tolerances (WGS84 degrees)
+SIMPLIFY_NUTS3 = 0.002
+SIMPLIFY_ADMIN1 = 0.02
+SIMPLIFY_BORDERS = 0.005
+SIMPLIFY_BACKGROUND = 0.03
+SIMPLIFY_URBAN = 0.01
+SIMPLIFY_PHYSICAL = 0.02
 
 
 def fetch_geojson(url: str) -> dict:
@@ -170,22 +178,35 @@ def round_geometries(gdf: gpd.GeoDataFrame, precision: int = 4) -> gpd.GeoDataFr
     return gdf
 
 
-def clip_to_arctic_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame:
+def clip_to_europe_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame:
+    minx, miny, maxx, maxy = EUROPE_BOUNDS
+    bbox_geom = box(minx, miny, maxx, maxy)
     try:
         gdf = gdf.to_crs("EPSG:4326")
-        bbox_geom = box(*ARCTIC_BOUNDS)
         clipped = gpd.clip(gdf, bbox_geom)
         if clipped.empty:
-            print(f"Arctic clip produced empty result for {label}; keeping original.")
+            print(f"Europe clip produced empty result for {label}; keeping original.")
             return gdf
         return clipped
     except Exception as exc:
-        print(f"Arctic clip skipped for {label}: {exc}")
-        return gdf
+        print(f"Europe clip failed for {label}, attempting to fix geometries...")
+        try:
+            if hasattr(gdf.geometry, "make_valid"):
+                gdf = gdf.set_geometry(gdf.geometry.make_valid())
+            else:
+                gdf = gdf.set_geometry(gdf.geometry.buffer(0))
+            clipped = gpd.clip(gdf, bbox_geom)
+        except Exception as fix_exc:
+            print(f"Europe clip skipped for {label}: {fix_exc}")
+            return gdf
+        if clipped.empty:
+            print(f"Europe clip produced empty result for {label}; keeping original.")
+            return gdf
+        return clipped
 
 
 def despeckle_hybrid(
-    gdf: gpd.GeoDataFrame, area_km2: float = 500.0, tolerance: float = 0.05
+    gdf: gpd.GeoDataFrame, area_km2: float = 500.0, tolerance: float = SIMPLIFY_NUTS3
 ) -> gpd.GeoDataFrame:
     if gdf.empty or "id" not in gdf.columns:
         return gdf
@@ -281,7 +302,7 @@ def clip_borders(gdf: gpd.GeoDataFrame, land: gpd.GeoDataFrame) -> gpd.GeoDataFr
 def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     admin1 = fetch_ne_zip(ADMIN1_URL, "admin1")
     admin1 = admin1.to_crs("EPSG:4326")
-    admin1 = clip_to_arctic_bounds(admin1, "admin1")
+    admin1 = clip_to_europe_bounds(admin1, "admin1")
 
     name_col = pick_column(admin1, ["adm0_name", "admin", "admin0_name"])
     iso_col = pick_column(admin1, ["iso_a2", "adm0_a2", "iso_3166_1_"])
@@ -315,7 +336,7 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     if code_col is None:
         admin1["adm1_code"] = (
-            admin1.get("name", "adm1").astype(str) + "_" + admin1[iso_col].astype(str)
+            admin1[iso_col].astype(str) + "_" + admin1.get("name", "adm1").astype(str)
         )
         code_col = "adm1_code"
 
@@ -331,7 +352,9 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         admin1["name"] = admin1["name_en"]
 
     admin1 = admin1[["id", "name", "cntr_code", "geometry"]].copy()
-    admin1["geometry"] = admin1.geometry.simplify(tolerance=0.05, preserve_topology=True)
+    admin1["geometry"] = admin1.geometry.simplify(
+        tolerance=SIMPLIFY_ADMIN1, preserve_topology=True
+    )
     return admin1
 
 
@@ -413,25 +436,41 @@ def save_outputs(
 def main() -> None:
     data = fetch_geojson(URL)
     gdf = build_geodataframe(data)
-    gdf = clip_to_arctic_bounds(gdf, "nuts")
+    gdf = clip_to_europe_bounds(gdf, "nuts")
     filtered = filter_countries(gdf)
     filtered = filtered.copy()
-    filtered["geometry"] = filtered.geometry.simplify(tolerance=0.05, preserve_topology=True)
+    filtered["geometry"] = filtered.geometry.simplify(
+        tolerance=SIMPLIFY_NUTS3, preserve_topology=True
+    )
     rivers = fetch_ne_zip(RIVERS_URL, "rivers")
+    rivers = clip_to_europe_bounds(rivers, "rivers")
     rivers_clipped = clip_to_land_bounds(rivers, filtered, "rivers")
     borders = fetch_ne_zip(BORDERS_URL, "borders")
+    borders = clip_to_europe_bounds(borders, "borders")
     ocean = fetch_ne_zip(OCEAN_URL, "ocean")
+    ocean = clip_to_europe_bounds(ocean, "ocean")
     ocean_clipped = clip_to_land_bounds(ocean, filtered, "ocean")
+    ocean_clipped = ocean_clipped.copy()
+    ocean_clipped["geometry"] = ocean_clipped.geometry.simplify(
+        tolerance=SIMPLIFY_BACKGROUND, preserve_topology=True
+    )
     land_bg = fetch_ne_zip(LAND_BG_URL, "land")
+    land_bg = clip_to_europe_bounds(land_bg, "land background")
     land_bg_clipped = clip_to_land_bounds(land_bg, filtered, "land background")
+    land_bg_clipped = land_bg_clipped.copy()
+    land_bg_clipped["geometry"] = land_bg_clipped.geometry.simplify(
+        tolerance=SIMPLIFY_BACKGROUND, preserve_topology=True
+    )
     urban = fetch_ne_zip(URBAN_URL, "urban")
+    urban = clip_to_europe_bounds(urban, "urban")
     urban_clipped = clip_to_land_bounds(urban, filtered, "urban")
     # Aggressively simplify urban geometry to reduce render cost
     urban_clipped = urban_clipped.copy()
     urban_clipped["geometry"] = urban_clipped.geometry.simplify(
-        tolerance=0.05, preserve_topology=True
+        tolerance=SIMPLIFY_URBAN, preserve_topology=True
     )
     physical = fetch_ne_zip(PHYSICAL_URL, "physical")
+    physical = clip_to_europe_bounds(physical, "physical")
     physical_clipped = clip_to_land_bounds(physical, filtered, "physical")
     if "featurecla" in physical_clipped.columns:
         keep_classes = {"Range/Mountain", "Forest", "Plain", "Delta"}
@@ -444,7 +483,7 @@ def main() -> None:
     # Simplify physical regions to reduce vertex count
     physical_filtered = physical_filtered.copy()
     physical_filtered["geometry"] = physical_filtered.geometry.simplify(
-        tolerance=0.05, preserve_topology=True
+        tolerance=SIMPLIFY_PHYSICAL, preserve_topology=True
     )
     # Preserve key metadata for styling/labels
     keep_cols = ["name", "name_en", "featurecla", "geometry"]
@@ -465,17 +504,26 @@ def main() -> None:
         pd.concat([nuts_hybrid, extension_hybrid], ignore_index=True),
         crs="EPSG:4326",
     )
-    final_hybrid = despeckle_hybrid(hybrid, area_km2=500.0, tolerance=0.05)
+    final_hybrid = despeckle_hybrid(hybrid, area_km2=500.0, tolerance=SIMPLIFY_NUTS3)
+    def extract_country_code(id_val: object) -> str:
+        s = str(id_val)
+        if "_" in s:
+            parts = s.split("_")
+            for part in parts:
+                if len(part) == 2 and part.isupper():
+                    return part
+        return s[:2].upper() if len(s) >= 2 else ""
+
     final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("")
     missing_mask = final_hybrid["cntr_code"].str.len() == 0
     if missing_mask.any() and "id" in final_hybrid.columns:
         final_hybrid.loc[missing_mask, "cntr_code"] = final_hybrid.loc[
             missing_mask, "id"
-        ].astype(str).str[:2]
+        ].apply(extract_country_code)
     borders_combined = clip_to_bounds(borders, hybrid.total_bounds, "borders combined")
     borders_combined = borders_combined.copy()
     borders_combined["geometry"] = borders_combined.geometry.simplify(
-        tolerance=0.05, preserve_topology=True
+        tolerance=SIMPLIFY_BORDERS, preserve_topology=True
     )
 
     script_dir = Path(__file__).resolve().parent
