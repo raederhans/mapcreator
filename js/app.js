@@ -952,7 +952,7 @@ async function loadData() {
 
 const zoom = d3
   .zoom()
-  .scaleExtent([1, 8])
+  .scaleExtent([1, 50])
   .on("start", () => {
     isInteracting = true;
   })
