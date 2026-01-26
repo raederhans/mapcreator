@@ -211,7 +211,12 @@ function pathBoundsInScreen(feature, transform) {
 }
 
 function getFeatureId(feature) {
-  return feature?.properties?.id || feature?.properties?.NUTS_ID || null;
+  return (
+    feature?.properties?.id ||
+    feature?.properties?.NUTS_ID ||
+    feature?.id ||
+    null
+  );
 }
 
 function getColorsHash() {
@@ -390,22 +395,43 @@ function renderLineLayer() {
 
   lineCtx.globalAlpha = 1;
 
-  const dynamicBorders = getDynamicBorders();
-  if (dynamicBorders) {
-    lineCtx.beginPath();
-    linePath(dynamicBorders);
-    lineCtx.strokeStyle = "#111111";
-    lineCtx.lineWidth = 0.8 / k;
-    lineCtx.stroke();
-  }
+  if (topology && topology.objects?.political) {
+    const political = topology.objects.political;
+    const stateColors = colors;
 
-  const coastlines = getCoastlines();
-  if (coastlines) {
-    lineCtx.beginPath();
-    linePath(coastlines);
-    lineCtx.strokeStyle = "#333333";
-    lineCtx.lineWidth = 1.2 / k;
-    lineCtx.stroke();
+    const coastlines = topojson.mesh(topology, political, (a, b) => a === b);
+    if (coastlines) {
+      lineCtx.beginPath();
+      linePath(coastlines);
+      lineCtx.strokeStyle = "#333333";
+      lineCtx.lineWidth = 1.2 / k;
+      lineCtx.stroke();
+    }
+
+    const gridLines = topojson.mesh(topology, political, (a, b) => a !== b);
+    if (gridLines) {
+      lineCtx.beginPath();
+      linePath(gridLines);
+      lineCtx.strokeStyle = "#e2e8f0";
+      lineCtx.lineWidth = 0.5 / k;
+      lineCtx.stroke();
+    }
+
+    const dynamicBorders = topojson.mesh(topology, political, (a, b) => {
+      if (a === b) return false;
+      const idA = getFeatureId(a);
+      const idB = getFeatureId(b);
+      const colorA = idA ? stateColors[idA] : null;
+      const colorB = idB ? stateColors[idB] : null;
+      return colorA !== colorB || !colorA || !colorB;
+    });
+    if (dynamicBorders) {
+      lineCtx.beginPath();
+      linePath(dynamicBorders);
+      lineCtx.strokeStyle = "#475569";
+      lineCtx.lineWidth = 1.0 / k;
+      lineCtx.stroke();
+    }
   }
 
   if (showRivers && riversData) {
