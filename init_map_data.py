@@ -44,7 +44,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import requests
-from shapely.geometry import box
+from shapely.geometry import Point, box
 from shapely.ops import transform
 
 
@@ -54,6 +54,7 @@ URL = (
 )
 RIVERS_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_rivers_lake_centerlines.zip"
 BORDERS_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_countries.zip"
+BORDER_LINES_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_boundary_lines_land.zip"
 OCEAN_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_ocean.zip"
 LAND_BG_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_land.zip"
 URBAN_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_urban_areas.zip"
@@ -69,9 +70,21 @@ EUROPE_BOUNDS = (-25.0, 34.0, 70.0, 72.0)
 SIMPLIFY_NUTS3 = 0.002
 SIMPLIFY_ADMIN1 = 0.02
 SIMPLIFY_BORDERS = 0.005
+SIMPLIFY_BORDER_LINES = 0.003
 SIMPLIFY_BACKGROUND = 0.03
 SIMPLIFY_URBAN = 0.01
 SIMPLIFY_PHYSICAL = 0.02
+
+VIP_POINTS = [
+    ("Malta", (14.3754, 35.9375)),
+    ("Isle of Wight", (-1.3047, 50.6938)),
+    ("Ibiza", (1.4206, 38.9067)),
+    ("Menorca", (4.1105, 39.9496)),
+    ("Rugen", (13.3915, 54.4174)),
+    ("Bornholm", (14.9141, 55.127)),
+    ("Jersey", (-2.1312, 49.2144)),
+    ("Aland Islands", (19.9156, 60.1785)),
+]
 
 
 def fetch_geojson(url: str) -> dict:
@@ -176,6 +189,82 @@ def round_geometries(gdf: gpd.GeoDataFrame, precision: int = 4) -> gpd.GeoDataFr
         lambda geom: transform(_rounder, geom) if geom is not None else geom
     )
     return gdf
+
+
+def build_border_lines() -> gpd.GeoDataFrame:
+    border_lines = fetch_ne_zip(BORDER_LINES_URL, "border_lines")
+    border_lines = clip_to_europe_bounds(border_lines, "border lines")
+    border_lines = border_lines.copy()
+    border_lines["geometry"] = border_lines.geometry.simplify(
+        tolerance=SIMPLIFY_BORDER_LINES, preserve_topology=True
+    )
+    return border_lines
+
+
+def smart_island_cull(
+    gdf: gpd.GeoDataFrame, group_col: str, threshold_km2: float = 1000.0
+) -> gpd.GeoDataFrame:
+    if gdf.empty or "geometry" not in gdf.columns:
+        return gdf
+
+    exploded = gdf.explode(index_parts=False, ignore_index=True)
+    if exploded.empty:
+        return gdf
+
+    exploded = exploded.copy()
+    try:
+        projected = exploded.to_crs("EPSG:3035")
+        exploded["area_km2"] = projected.geometry.area / 1_000_000.0
+    except Exception as exc:
+        print(f"Smart cull area calc failed, keeping original: {exc}")
+        return gdf
+
+    vip_points = [Point(lon, lat) for _, (lon, lat) in VIP_POINTS]
+    try:
+        exploded_ll = exploded.to_crs("EPSG:4326")
+        exploded["vip_keep"] = exploded_ll.geometry.apply(
+            lambda geom: any(geom.intersects(pt) for pt in vip_points)
+            if geom is not None
+            else False
+        )
+    except Exception as exc:
+        print(f"Smart cull VIP check failed, continuing without whitelist: {exc}")
+        exploded["vip_keep"] = False
+
+    if group_col in exploded.columns:
+        exploded["largest_keep"] = (
+            exploded.groupby(group_col)["area_km2"].transform("max")
+            == exploded["area_km2"]
+        )
+    else:
+        exploded["largest_keep"] = False
+
+    exploded["keep"] = (
+        exploded["largest_keep"]
+        | exploded["vip_keep"]
+        | (exploded["area_km2"] >= threshold_km2)
+    )
+
+    filtered = exploded.loc[exploded["keep"]].copy()
+    if filtered.empty:
+        print("Smart cull removed all geometries; keeping original.")
+        return gdf
+
+    helper_cols = ["area_km2", "vip_keep", "largest_keep", "keep"]
+    filtered = filtered.drop(columns=[col for col in helper_cols if col in filtered.columns])
+
+    if group_col in filtered.columns:
+        aggfunc = {
+            col: "first"
+            for col in filtered.columns
+            if col not in ("geometry", group_col)
+        }
+        dissolved = filtered.dissolve(by=group_col, aggfunc=aggfunc)
+        dissolved = dissolved.reset_index()
+        dissolved = dissolved.set_crs(gdf.crs)
+        return dissolved
+
+    return filtered.reset_index(drop=True)
 
 
 def clip_to_europe_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame:
@@ -358,10 +447,85 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return admin1
 
 
+def build_balkan_fallback(
+    existing: gpd.GeoDataFrame, admin0: gpd.GeoDataFrame | None = None
+) -> gpd.GeoDataFrame:
+    if admin0 is None:
+        admin0 = fetch_ne_zip(BORDERS_URL, "admin0_balkan")
+    admin0 = admin0.to_crs("EPSG:4326")
+    admin0 = clip_to_europe_bounds(admin0, "balkan fallback")
+
+    iso_col = pick_column(
+        admin0,
+        ["iso_a2", "ISO_A2", "adm0_a2", "ADM0_A2", "iso_3166_1_", "ISO_3166_1_"],
+    )
+    name_col = pick_column(admin0, ["ADMIN", "admin", "NAME", "name", "NAME_EN", "name_en"])
+    if not iso_col and not name_col:
+        print("Admin0 dataset missing ISO/name columns; Balkan fallback skipped.")
+        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
+
+    existing_codes = set()
+    if existing is not None and "cntr_code" in existing.columns:
+        existing_codes = set(
+            existing["cntr_code"]
+            .dropna()
+            .astype(str)
+            .str.upper()
+            .unique()
+        )
+
+    wanted = {"BA", "XK"}
+    missing = wanted - existing_codes
+    if not missing:
+        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
+
+    balkan = admin0[admin0[iso_col].isin(missing)].copy() if iso_col else admin0.iloc[0:0].copy()
+    if name_col:
+        if "XK" in missing:
+            kosovo_mask = admin0[name_col].str.contains("Kosovo", case=False, na=False)
+            balkan = pd.concat([balkan, admin0[kosovo_mask]], ignore_index=True)
+        if "BA" in missing:
+            bosnia_mask = admin0[name_col].str.contains("Bosnia", case=False, na=False)
+            balkan = pd.concat([balkan, admin0[bosnia_mask]], ignore_index=True)
+    if balkan.empty:
+        print("Balkan fallback found no matching admin0 features.")
+        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
+
+    def resolve_balkan_code(row: pd.Series) -> str:
+        if iso_col:
+            raw = str(row.get(iso_col, "")).upper()
+            if len(raw) == 2 and raw.isalpha() and raw != "-99":
+                return raw
+        if name_col:
+            name_val = str(row.get(name_col, "")).lower()
+            if "kosovo" in name_val:
+                return "XK"
+            if "bosnia" in name_val:
+                return "BA"
+        return ""
+
+    balkan["cntr_code"] = balkan.apply(resolve_balkan_code, axis=1)
+    balkan = balkan[balkan["cntr_code"].isin(missing)].copy()
+    if balkan.empty:
+        print("Balkan fallback found no usable BA/XK features.")
+        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
+
+    if name_col:
+        balkan["name"] = balkan[name_col].astype(str)
+    else:
+        balkan["name"] = balkan["cntr_code"]
+    balkan["id"] = balkan["cntr_code"].astype(str) + "_" + balkan["name"].astype(str)
+    balkan = balkan[["id", "name", "cntr_code", "geometry"]].copy()
+    balkan["geometry"] = balkan.geometry.simplify(
+        tolerance=SIMPLIFY_ADMIN1, preserve_topology=True
+    )
+    return balkan
+
+
 def save_outputs(
     land: gpd.GeoDataFrame,
     rivers: gpd.GeoDataFrame,
-    borders: gpd.GeoDataFrame,
+    border_lines: gpd.GeoDataFrame,
     ocean: gpd.GeoDataFrame,
     land_bg: gpd.GeoDataFrame,
     urban: gpd.GeoDataFrame,
@@ -384,7 +548,7 @@ def save_outputs(
 
     land_out = round_geometries(land)
     rivers_out = round_geometries(rivers)
-    borders_out = round_geometries(borders)
+    borders_out = round_geometries(border_lines)
     ocean_out = round_geometries(ocean)
     land_bg_out = round_geometries(land_bg)
     urban_out = round_geometries(urban)
@@ -447,6 +611,7 @@ def main() -> None:
     rivers_clipped = clip_to_land_bounds(rivers, filtered, "rivers")
     borders = fetch_ne_zip(BORDERS_URL, "borders")
     borders = clip_to_europe_bounds(borders, "borders")
+    border_lines = build_border_lines()
     ocean = fetch_ne_zip(OCEAN_URL, "ocean")
     ocean = clip_to_europe_bounds(ocean, "ocean")
     ocean_clipped = clip_to_land_bounds(ocean, filtered, "ocean")
@@ -504,34 +669,76 @@ def main() -> None:
         pd.concat([nuts_hybrid, extension_hybrid], ignore_index=True),
         crs="EPSG:4326",
     )
-    final_hybrid = despeckle_hybrid(hybrid, area_km2=500.0, tolerance=SIMPLIFY_NUTS3)
+    balkan_fallback = build_balkan_fallback(hybrid, admin0=borders)
+    if not balkan_fallback.empty:
+        hybrid = gpd.GeoDataFrame(
+            pd.concat([hybrid, balkan_fallback], ignore_index=True),
+            crs="EPSG:4326",
+        )
+    final_hybrid = smart_island_cull(hybrid, group_col="id", threshold_km2=1000.0)
+
     def extract_country_code(id_val: object) -> str:
         s = str(id_val)
         if "_" in s:
             parts = s.split("_")
             for part in parts:
-                if len(part) == 2 and part.isupper():
+                if len(part) == 2 and part.isalpha() and part.isupper():
                     return part
-        return s[:2].upper() if len(s) >= 2 else ""
+        prefix = s[:2]
+        if len(prefix) == 2 and prefix.isalpha() and prefix.isupper():
+            return prefix
+        return ""
 
-    final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("")
-    missing_mask = final_hybrid["cntr_code"].str.len() == 0
+    final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("").astype(str).str.strip()
+    final_hybrid.loc[final_hybrid["cntr_code"] == "", "cntr_code"] = None
+    missing_mask = final_hybrid["cntr_code"].isna()
     if missing_mask.any() and "id" in final_hybrid.columns:
         final_hybrid.loc[missing_mask, "cntr_code"] = final_hybrid.loc[
             missing_mask, "id"
         ].apply(extract_country_code)
-    borders_combined = clip_to_bounds(borders, hybrid.total_bounds, "borders combined")
-    borders_combined = borders_combined.copy()
-    borders_combined["geometry"] = borders_combined.geometry.simplify(
-        tolerance=SIMPLIFY_BORDERS, preserve_topology=True
+    final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("").astype(str).str.strip()
+    final_hybrid.loc[final_hybrid["cntr_code"] == "", "cntr_code"] = None
+
+    missing_mask = final_hybrid["cntr_code"].isna()
+    if missing_mask.any():
+        borders_ll = borders.to_crs("EPSG:4326")
+        code_col = pick_column(
+            borders_ll,
+            ["iso_a2", "ISO_A2", "adm0_a2", "ADM0_A2", "iso_3166_1_", "ISO_3166_1_"],
+        )
+        if not code_col:
+            print("Borders dataset missing ISO A2 column; spatial join skipped.")
+        else:
+            try:
+                missing = final_hybrid.loc[missing_mask].copy()
+                joined = gpd.sjoin(
+                    missing,
+                    borders_ll[[code_col, "geometry"]],
+                    how="left",
+                    predicate="intersects",
+                )
+                filled = joined[code_col]
+                filled = filled.where(~filled.isin(["-99", "", None]))
+                filled = filled.groupby(level=0).first()
+                final_hybrid.loc[filled.index, "cntr_code"] = filled
+            except Exception as exc:
+                print(f"Spatial join failed: {exc}")
+
+    final_hybrid["cntr_code"] = (
+        final_hybrid["cntr_code"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.upper()
     )
+    final_hybrid.loc[final_hybrid["cntr_code"] == "", "cntr_code"] = None
 
     script_dir = Path(__file__).resolve().parent
     output_dir = script_dir / "data"
     save_outputs(
         filtered,
         rivers_clipped,
-        borders_combined,
+        border_lines,
         ocean_clipped,
         land_bg_clipped,
         urban_clipped,
@@ -541,6 +748,7 @@ def main() -> None:
         output_dir,
     )
 
+    print(f"Features with missing CNTR_CODE: {final_hybrid['cntr_code'].isnull().sum()}")
     print("Done.")
 
 

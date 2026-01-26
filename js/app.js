@@ -87,6 +87,54 @@ const countryPalette = {
   IS: "#5499c7",
   LI: "#45b39d",
 };
+const defaultCountryPalette = { ...countryPalette };
+
+const countryNames = {
+  DE: "Germany",
+  FR: "France",
+  IT: "Italy",
+  PL: "Poland",
+  NL: "Netherlands",
+  BE: "Belgium",
+  LU: "Luxembourg",
+  AT: "Austria",
+  CH: "Switzerland",
+  UA: "Ukraine",
+  BY: "Belarus",
+  MD: "Moldova",
+  RU: "Russia",
+  ES: "Spain",
+  PT: "Portugal",
+  CZ: "Czechia",
+  SK: "Slovakia",
+  HU: "Hungary",
+  RO: "Romania",
+  BG: "Bulgaria",
+  HR: "Croatia",
+  SI: "Slovenia",
+  EE: "Estonia",
+  LV: "Latvia",
+  LT: "Lithuania",
+  FI: "Finland",
+  SE: "Sweden",
+  NO: "Norway",
+  DK: "Denmark",
+  IE: "Ireland",
+  UK: "United Kingdom",
+  GB: "United Kingdom",
+  GR: "Greece",
+  CY: "Cyprus",
+  MT: "Malta",
+  TR: "Turkey",
+  RS: "Serbia",
+  BA: "Bosnia and Herzegovina",
+  ME: "Montenegro",
+  AL: "Albania",
+  MK: "North Macedonia",
+  XK: "Kosovo",
+  IS: "Iceland",
+  LI: "Liechtenstein",
+};
 
 const projection = d3.geoMercator();
 const boundsPath = d3.geoPath(projection);
@@ -262,7 +310,7 @@ function renderFull() {
     lineCtx.beginPath();
     linePath(bordersData);
     lineCtx.strokeStyle = "#111111";
-    lineCtx.lineWidth = 1.6 / k;
+    lineCtx.lineWidth = 0.8 / k;
     lineCtx.stroke();
   }
 
@@ -379,6 +427,42 @@ function paintSingleRegion(feature, color) {
   colorCtx.restore();
 }
 
+function getCountryCode(feature) {
+  const code =
+    feature.properties?.cntr_code ||
+    feature.properties?.CNTR_CODE ||
+    feature.properties?.CNTR ||
+    "";
+  return code ? String(code).toUpperCase() : "";
+}
+
+function applyCountryColor(code, color) {
+  if (!landData) return;
+  const target = String(code || "").toUpperCase();
+  if (!target) return;
+  for (const feature of landData.features) {
+    const id = feature.properties?.id || feature.properties?.NUTS_ID;
+    if (!id) continue;
+    if (getCountryCode(feature) !== target) continue;
+    colors[id] = color;
+  }
+  renderFull();
+}
+
+function applyPaletteToMap() {
+  if (!landData) return;
+  for (const feature of landData.features) {
+    const id = feature.properties?.id || feature.properties?.NUTS_ID;
+    if (!id) continue;
+    const code = getCountryCode(feature);
+    const color = countryPalette[code];
+    if (color) {
+      colors[id] = color;
+    }
+  }
+  renderFull();
+}
+
 function handleClick(event) {
   if (!landData) return;
   const id = getFeatureIdFromEvent(event);
@@ -414,6 +498,67 @@ function addRecentColor(color) {
   if (typeof updateRecentUI === "function") {
     updateRecentUI();
   }
+}
+
+function setupRightSidebar() {
+  const list = document.getElementById("countryList");
+  if (!list) return;
+  const searchInput = document.getElementById("countrySearch");
+  const resetBtn = document.getElementById("resetCountryColors");
+
+  const entries = Object.keys(countryNames)
+    .map((code) => ({ code, name: countryNames[code] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const renderList = () => {
+    const term = (searchInput?.value || "").trim().toLowerCase();
+    list.innerHTML = "";
+    entries.forEach(({ code, name }) => {
+      if (term) {
+        const match =
+          name.toLowerCase().includes(term) || code.toLowerCase().includes(term);
+        if (!match) return;
+      }
+      const row = document.createElement("div");
+      row.className =
+        "flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2";
+
+      const label = document.createElement("div");
+      label.className = "text-sm font-medium text-slate-700";
+      label.textContent = `${name} (${code})`;
+
+      const input = document.createElement("input");
+      input.type = "color";
+      input.value = countryPalette[code] || defaultCountryPalette[code] || "#cccccc";
+      input.className =
+        "h-8 w-10 cursor-pointer rounded-md border border-slate-300 bg-white";
+      input.addEventListener("change", (event) => {
+        const value = event.target.value;
+        countryPalette[code] = value;
+        applyCountryColor(code, value);
+      });
+
+      row.appendChild(label);
+      row.appendChild(input);
+      list.appendChild(row);
+    });
+  };
+
+  if (searchInput) {
+    searchInput.addEventListener("input", renderList);
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      Object.keys(defaultCountryPalette).forEach((code) => {
+        countryPalette[code] = defaultCountryPalette[code];
+      });
+      applyPaletteToMap();
+      renderList();
+    });
+  }
+
+  renderList();
 }
 
 function setupUI() {
@@ -557,17 +702,7 @@ function setupUI() {
 
   if (presetPolitical) {
     presetPolitical.addEventListener("click", () => {
-      if (!landData) return;
-      for (const feature of landData.features) {
-        const id = feature.properties?.id || feature.properties?.NUTS_ID;
-        const cntr = feature.properties?.cntr_code || feature.properties?.CNTR_CODE;
-        if (!id || !cntr) continue;
-        const color = countryPalette[cntr];
-        if (color) {
-          colors[id] = color;
-        }
-      }
-      renderFull();
+      applyPaletteToMap();
     });
   }
 
@@ -653,5 +788,6 @@ if (textureOverlay) {
 colorCanvas.style.touchAction = "none";
 
 setupUI();
+setupRightSidebar();
 handleResize();
 loadData();
