@@ -13,6 +13,7 @@ const lineCanvas = document.getElementById("lineCanvas");
 const colorCtx = colorCanvas.getContext("2d");
 const lineCtx = lineCanvas.getContext("2d");
 const textureOverlay = document.getElementById("textureOverlay");
+const tooltip = document.getElementById("tooltip");
 
 const hitCanvas = document.createElement("canvas");
 const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
@@ -537,6 +538,19 @@ function handleMouseMove(event) {
   if (id !== hoveredId) {
     hoveredId = id;
     drawHover();
+  }
+
+  if (!tooltip) return;
+  if (id && landIndex.has(id)) {
+    const feature = landIndex.get(id);
+    const name = feature?.properties?.name || "Unknown Region";
+    const code = (feature?.properties?.cntr_code || "").toUpperCase();
+    tooltip.textContent = code ? `${name} (${code})` : name;
+    tooltip.style.left = `${event.clientX + 12}px`;
+    tooltip.style.top = `${event.clientY + 12}px`;
+    tooltip.style.opacity = "1";
+  } else {
+    tooltip.style.opacity = "0";
   }
 }
 
