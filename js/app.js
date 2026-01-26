@@ -18,6 +18,17 @@ const tooltip = document.getElementById("tooltip");
 const hitCanvas = document.createElement("canvas");
 const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
 
+let locales = { ui: {}, geo: {} };
+window.currentLanguage = window.currentLanguage || "en";
+try {
+  const storedLang = localStorage.getItem("map_lang");
+  if (storedLang) {
+    window.currentLanguage = storedLang;
+  }
+} catch (error) {
+  console.warn("Language preference not available:", error);
+}
+
 let topology = null;
 let landData = null;
 let riversData = null;
@@ -41,9 +52,26 @@ let showRivers = true;
 let cachedBorders = null;
 let cachedColorsHash = null;
 let cachedCoastlines = null;
+const styleConfig = {
+  internalBorders: {
+    color: "#cccccc",
+    opacity: 1,
+    width: 0.5,
+  },
+  empireBorders: {
+    color: "#000000",
+    width: 1.0,
+  },
+  coastlines: {
+    color: "#333333",
+    width: 1.2,
+  },
+};
 let recentColors = [];
 let updateRecentUI = null;
 let updateSwatchUIFn = null;
+let updateToolUIFn = null;
+let renderCountryListFn = null;
 
 const countryPalette = {
   DE: "#5d7cba",
@@ -140,6 +168,17 @@ const countryNames = {
   LI: "Liechtenstein",
 };
 
+const countryPresets = {
+  FR: [
+    { name: "Vichy France (1940)", ids: [] },
+    { name: "Burgundy (TNO)", ids: [] },
+  ],
+  DE: [
+    { name: "Prussia (1871)", ids: [] },
+    { name: "Bavaria", ids: [] },
+  ],
+};
+
 const projection = d3.geoMercator();
 const boundsPath = d3.geoPath(projection);
 const colorPath = d3.geoPath(projection, colorCtx);
@@ -156,6 +195,58 @@ let lastMouseMoveTime = 0;
 let hitCanvasDirty = true;
 let zoomRenderScheduled = false;
 let isInteracting = false;
+
+function t(key, type = "geo") {
+  if (!key) return "";
+  if (window.currentLanguage === "zh") {
+    return locales?.[type]?.[key]?.zh || key;
+  }
+  return key;
+}
+
+function applyUiTranslations() {
+  const uiMap = [
+    ["labelCurrentToolTitle", "Current Tool"],
+    ["toolFillBtn", "Fill"],
+    ["toolEraserBtn", "Eraser"],
+    ["toolEyedropperBtn", "Eyedropper"],
+    ["labelRecent", "Recent"],
+    ["labelColorPalette", "Color Palette"],
+    ["labelCustomColor", "Custom"],
+    ["labelExportMap", "Export Map"],
+    ["labelExportFormat", "Format"],
+    ["exportBtn", "Download Snapshot"],
+    ["labelMapPresets", "Map Presets"],
+    ["labelPresetPolitical", "Auto-Fill Countries"],
+    ["presetClear", "Clear Map"],
+    ["labelCountrySearch", "Search Countries"],
+    ["labelCountryColors", "Country Colors"],
+    ["resetCountryColors", "Reset Country Colors"],
+  ];
+
+  uiMap.forEach(([id, label]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = t(label, "ui");
+    }
+  });
+
+  if (typeof updateToolUIFn === "function") {
+    updateToolUIFn();
+  }
+}
+
+function toggleLanguage() {
+  const nextLang = window.currentLanguage === "zh" ? "en" : "zh";
+  window.currentLanguage = nextLang;
+  try {
+    localStorage.setItem("map_lang", nextLang);
+  } catch (error) {
+    console.warn("Unable to persist language preference:", error);
+  }
+  applyUiTranslations();
+  setupRightSidebar();
+}
 
 function setCanvasSize() {
   dpr = window.devicePixelRatio || 1;
@@ -402,19 +493,21 @@ function renderLineLayer() {
 
     const coastlines = topojson.mesh(topology, political, (a, b) => a === b);
     if (coastlines) {
+      lineCtx.globalAlpha = 1;
       lineCtx.beginPath();
       linePath(coastlines);
-      lineCtx.strokeStyle = "#333333";
-      lineCtx.lineWidth = 1.2 / k;
+      lineCtx.strokeStyle = styleConfig.coastlines.color;
+      lineCtx.lineWidth = styleConfig.coastlines.width / k;
       lineCtx.stroke();
     }
 
     const gridLines = topojson.mesh(topology, political, (a, b) => a !== b);
     if (gridLines) {
+      lineCtx.globalAlpha = styleConfig.internalBorders.opacity;
       lineCtx.beginPath();
       linePath(gridLines);
-      lineCtx.strokeStyle = "#e2e8f0";
-      lineCtx.lineWidth = 0.5 / k;
+      lineCtx.strokeStyle = styleConfig.internalBorders.color;
+      lineCtx.lineWidth = styleConfig.internalBorders.width / k;
       lineCtx.stroke();
     }
 
@@ -427,10 +520,11 @@ function renderLineLayer() {
       return colorA !== colorB || !colorA || !colorB;
     });
     if (dynamicBorders) {
+      lineCtx.globalAlpha = 1;
       lineCtx.beginPath();
       linePath(dynamicBorders);
-      lineCtx.strokeStyle = "#475569";
-      lineCtx.lineWidth = 1.0 / k;
+      lineCtx.strokeStyle = styleConfig.empireBorders.color;
+      lineCtx.lineWidth = styleConfig.empireBorders.width / k;
       lineCtx.stroke();
     }
   }
@@ -543,7 +637,8 @@ function handleMouseMove(event) {
   if (!tooltip) return;
   if (id && landIndex.has(id)) {
     const feature = landIndex.get(id);
-    const name = feature?.properties?.name || "Unknown Region";
+    const rawName = feature?.properties?.name || "Unknown Region";
+    const name = t(rawName, "geo");
     const code = (feature?.properties?.cntr_code || "").toUpperCase();
     tooltip.textContent = code ? `${name} (${code})` : name;
     tooltip.style.left = `${event.clientX + 12}px`;
@@ -649,25 +744,46 @@ function setupRightSidebar() {
   const resetBtn = document.getElementById("resetCountryColors");
 
   const entries = Object.keys(countryNames)
-    .map((code) => ({ code, name: countryNames[code] }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map((code) => {
+      const name = countryNames[code];
+      return { code, name, displayName: t(name, "geo") };
+    })
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  const expanded = new Set();
 
   const renderList = () => {
     const term = (searchInput?.value || "").trim().toLowerCase();
     list.innerHTML = "";
-    entries.forEach(({ code, name }) => {
-      if (term) {
-        const match =
-          name.toLowerCase().includes(term) || code.toLowerCase().includes(term);
-        if (!match) return;
+
+    entries.forEach(({ code, name, displayName }) => {
+      const presets = countryPresets[code] || [];
+      const countryMatch =
+        !term ||
+        name.toLowerCase().includes(term) ||
+        displayName.toLowerCase().includes(term) ||
+        code.toLowerCase().includes(term);
+      const presetMatch = term
+        ? presets.some((preset) =>
+            preset.name.toLowerCase().includes(term)
+          )
+        : false;
+
+      if (!countryMatch && !presetMatch) return;
+      if (presetMatch) {
+        expanded.add(code);
       }
+
       const row = document.createElement("div");
       row.className =
         "flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2";
 
       const label = document.createElement("div");
       label.className = "text-sm font-medium text-slate-700";
-      label.textContent = `${name} (${code})`;
+      label.textContent = `${displayName} (${code})`;
+
+      const controls = document.createElement("div");
+      controls.className = "flex items-center gap-2";
 
       const input = document.createElement("input");
       input.type = "color";
@@ -680,24 +796,68 @@ function setupRightSidebar() {
         applyCountryColor(code, value);
       });
 
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className =
+        "rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-100";
+      toggle.textContent = expanded.has(code) ? "▾" : "▸";
+      toggle.addEventListener("click", () => {
+        if (expanded.has(code)) {
+          expanded.delete(code);
+        } else {
+          expanded.add(code);
+        }
+        renderList();
+      });
+
+      controls.appendChild(input);
+      controls.appendChild(toggle);
+
       row.appendChild(label);
-      row.appendChild(input);
+      row.appendChild(controls);
       list.appendChild(row);
+
+      if (presets.length > 0 && expanded.has(code)) {
+        const child = document.createElement("div");
+        child.className = "ml-2 space-y-2 pb-2";
+        presets.forEach((preset) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className =
+            "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
+          btn.textContent = `Apply ${preset.name}`;
+          btn.addEventListener("click", () => {
+            console.log(`Apply ${preset.name}`);
+          });
+          child.appendChild(btn);
+        });
+        list.appendChild(child);
+      }
     });
   };
 
-  if (searchInput) {
-    searchInput.addEventListener("input", renderList);
+  renderCountryListFn = renderList;
+
+  if (searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener("input", () => {
+      if (typeof renderCountryListFn === "function") {
+        renderCountryListFn();
+      }
+    });
+    searchInput.dataset.bound = "true";
   }
 
-  if (resetBtn) {
+  if (resetBtn && !resetBtn.dataset.bound) {
     resetBtn.addEventListener("click", () => {
       Object.keys(defaultCountryPalette).forEach((code) => {
         countryPalette[code] = defaultCountryPalette[code];
       });
       applyPaletteToMap();
-      renderList();
+      if (typeof renderCountryListFn === "function") {
+        renderCountryListFn();
+      }
     });
+    resetBtn.dataset.bound = "true";
   }
 
   renderList();
@@ -717,6 +877,20 @@ function setupUI() {
   const recentContainer = document.getElementById("recentColors");
   const presetPolitical = document.getElementById("presetPolitical");
   const presetClear = document.getElementById("presetClear");
+  const internalBorderColor = document.getElementById("internalBorderColor");
+  const internalBorderOpacity = document.getElementById("internalBorderOpacity");
+  const internalBorderWidth = document.getElementById("internalBorderWidth");
+  const empireBorderColor = document.getElementById("empireBorderColor");
+  const empireBorderWidth = document.getElementById("empireBorderWidth");
+  const coastlineColor = document.getElementById("coastlineColor");
+  const coastlineWidth = document.getElementById("coastlineWidth");
+  const toggleLang = document.getElementById("btnToggleLang");
+
+  // Value display elements
+  const internalBorderOpacityValue = document.getElementById("internalBorderOpacityValue");
+  const internalBorderWidthValue = document.getElementById("internalBorderWidthValue");
+  const empireBorderWidthValue = document.getElementById("empireBorderWidthValue");
+  const coastlineWidthValue = document.getElementById("coastlineWidthValue");
 
   function renderRecentColors() {
     if (!recentContainer) return;
@@ -755,11 +929,11 @@ function setupUI() {
 
   function updateToolUI() {
     if (currentTool === "eraser") {
-      currentToolLabel.textContent = "Eraser";
+      currentToolLabel.textContent = t("Eraser", "ui");
     } else if (currentTool === "eyedropper") {
-      currentToolLabel.textContent = "Eyedropper";
+      currentToolLabel.textContent = t("Eyedropper", "ui");
     } else {
-      currentToolLabel.textContent = "Fill";
+      currentToolLabel.textContent = t("Fill", "ui");
     }
     toolButtons.forEach((button) => {
       const isActive = button.dataset.tool === currentTool;
@@ -769,6 +943,7 @@ function setupUI() {
       button.classList.toggle("text-slate-700", !isActive);
     });
   }
+  updateToolUIFn = updateToolUI;
 
   swatches.forEach((swatch) => {
     swatch.addEventListener("click", () => {
@@ -790,6 +965,11 @@ function setupUI() {
       updateToolUI();
     });
   });
+
+  if (toggleLang && !toggleLang.dataset.bound) {
+    toggleLang.addEventListener("click", toggleLanguage);
+    toggleLang.dataset.bound = "true";
+  }
 
   if (exportBtn && exportFormat) {
     exportBtn.addEventListener("click", () => {
@@ -856,9 +1036,74 @@ function setupUI() {
     });
   }
 
+  // Internal Borders controls
+  if (internalBorderColor) {
+    internalBorderColor.addEventListener("input", (event) => {
+      styleConfig.internalBorders.color = event.target.value;
+      renderFull();
+    });
+  }
+  if (internalBorderOpacity) {
+    internalBorderOpacity.addEventListener("input", (event) => {
+      const value = Number(event.target.value) / 100;
+      styleConfig.internalBorders.opacity = Number.isFinite(value) ? value : 1;
+      if (internalBorderOpacityValue) {
+        internalBorderOpacityValue.textContent = `${event.target.value}%`;
+      }
+      renderFull();
+    });
+  }
+  if (internalBorderWidth) {
+    internalBorderWidth.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      styleConfig.internalBorders.width = Number.isFinite(value) ? value : 0.5;
+      if (internalBorderWidthValue) {
+        internalBorderWidthValue.textContent = value.toFixed(1);
+      }
+      renderFull();
+    });
+  }
+
+  // Empire Borders controls
+  if (empireBorderColor) {
+    empireBorderColor.addEventListener("input", (event) => {
+      styleConfig.empireBorders.color = event.target.value;
+      renderFull();
+    });
+  }
+  if (empireBorderWidth) {
+    empireBorderWidth.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      styleConfig.empireBorders.width = Number.isFinite(value) ? value : 1.0;
+      if (empireBorderWidthValue) {
+        empireBorderWidthValue.textContent = value.toFixed(1);
+      }
+      renderFull();
+    });
+  }
+
+  // Coastline controls
+  if (coastlineColor) {
+    coastlineColor.addEventListener("input", (event) => {
+      styleConfig.coastlines.color = event.target.value;
+      renderFull();
+    });
+  }
+  if (coastlineWidth) {
+    coastlineWidth.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      styleConfig.coastlines.width = Number.isFinite(value) ? value : 1.2;
+      if (coastlineWidthValue) {
+        coastlineWidthValue.textContent = value.toFixed(1);
+      }
+      renderFull();
+    });
+  }
+
   renderRecentColors();
   updateSwatchUI();
   updateToolUI();
+  applyUiTranslations();
 }
 
 function handleResize() {
@@ -869,8 +1114,19 @@ function handleResize() {
 
 async function loadData() {
   try {
-    console.log("Loading TopoJSON data...");
-    topology = await d3.json("data/europe_topology.json");
+    console.log("Loading TopoJSON + locales...");
+    const [topo, localeData] = await Promise.all([
+      d3.json("data/europe_topology.json"),
+      d3.json("data/locales.json").catch((err) => {
+        console.warn("Locales file missing or invalid, using defaults.", err);
+        return { ui: {}, geo: {} };
+      }),
+    ]);
+    topology = topo;
+    locales = localeData || { ui: {}, geo: {} };
+    console.log("Test Translation:", t("Germany", "geo"));
+    applyUiTranslations();
+    setupRightSidebar();
 
     if (!topology) {
       console.error("CRITICAL: TopoJSON file loaded but is null/undefined");

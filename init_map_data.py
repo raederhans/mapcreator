@@ -68,8 +68,6 @@ COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
 EXTENSION_COUNTRIES = {"RU", "UA", "BY", "MD"}
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
 EUROPE_BOUNDS = (-25.0, 34.0, 70.0, 72.0)
-DRILL_DOWN_DEPTS = ["57", "67", "68", "54", "88", "73", "74", "06"]
-REMOVE_NUTS_IDS = ["FRF31", "FRF11", "FRF12", "FRF33", "FRF34", "FRK27", "FRK28", "FRL03"]
 
 # Simplification tolerances (WGS84 degrees)
 SIMPLIFY_NUTS3 = 0.002
@@ -196,87 +194,47 @@ def round_geometries(gdf: gpd.GeoDataFrame, precision: int = 4) -> gpd.GeoDataFr
     return gdf
 
 
-def fetch_france_arrondissements() -> gpd.GeoDataFrame:
+def apply_holistic_replacements(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    if main_gdf.empty:
+        return main_gdf
+    if "cntr_code" not in main_gdf.columns:
+        print("[Holistic] cntr_code missing; skipping France replacement.")
+        return main_gdf
+
+    base = main_gdf[main_gdf["cntr_code"].astype(str).str.upper() != "FR"].copy()
+    print(f"  [Holistic] Features after removing FR: {len(base)}")
+
     print("Downloading France arrondissements...")
     try:
-        gdf = gpd.read_file(FR_ARR_URL)
+        fr_gdf = gpd.read_file(FR_ARR_URL)
     except Exception as exc:
         print(f"Failed to read France arrondissements: {exc}")
         raise SystemExit(1) from exc
 
-    if gdf.empty:
+    if fr_gdf.empty:
         print("Arrondissements GeoDataFrame is empty.")
         raise SystemExit(1)
 
-    if gdf.crs is None:
-        gdf = gdf.set_crs("EPSG:4326", allow_override=True)
-    if gdf.crs.to_epsg() != 4326:
-        gdf = gdf.to_crs("EPSG:4326")
+    if fr_gdf.crs is None:
+        fr_gdf = fr_gdf.set_crs("EPSG:4326", allow_override=True)
+    if fr_gdf.crs.to_epsg() != 4326:
+        fr_gdf = fr_gdf.to_crs("EPSG:4326")
 
-    code_col = pick_column(
-        gdf,
-        [
-            "code",
-            "code_insee",
-            "code_arr",
-            "code_arrond",
-            "code_arrondissement",
-            "code_arrondissements",
-            "code_dept",
-            "code_dep",
-            "code_depart",
-            "code_departement",
-            "codeDepartement",
-        ],
-    )
-    name_col = pick_column(gdf, ["nom", "name", "nom_arr", "nom_arrond"])
-
-    if not code_col:
-        print("Arrondissements dataset missing code column.")
-        raise SystemExit(1)
-    if not name_col:
-        print("Arrondissements dataset missing name column.")
+    if "code" not in fr_gdf.columns or "nom" not in fr_gdf.columns:
+        print("Arrondissements dataset missing expected columns: code/nom.")
         raise SystemExit(1)
 
-    code_series = gdf[code_col].astype(str)
-    mask = code_series.str.startswith(tuple(DRILL_DOWN_DEPTS))
-    filtered = gdf.loc[mask].copy()
-    if filtered.empty:
-        print("Arrondissements filter returned empty dataset.")
-        raise SystemExit(1)
-
-    filtered["id"] = "FR_ARR_" + filtered[code_col].astype(str)
-    filtered["name"] = filtered[name_col].astype(str)
-    filtered["cntr_code"] = "FR"
-    filtered = filtered[["id", "name", "cntr_code", "geometry"]].copy()
-    filtered["geometry"] = filtered.geometry.simplify(
+    fr_gdf = fr_gdf.copy()
+    fr_gdf["id"] = "FR_ARR_" + fr_gdf["code"].astype(str)
+    fr_gdf["name"] = fr_gdf["nom"].astype(str)
+    fr_gdf["cntr_code"] = "FR"
+    fr_gdf = fr_gdf[["id", "name", "cntr_code", "geometry"]].copy()
+    fr_gdf["geometry"] = fr_gdf.geometry.simplify(
         tolerance=SIMPLIFY_NUTS3, preserve_topology=True
     )
-    return filtered
 
-
-def surgical_replace(
-    main_hybrid: gpd.GeoDataFrame, replacements: gpd.GeoDataFrame
-) -> gpd.GeoDataFrame:
-    if main_hybrid.empty:
-        return main_hybrid
-    trimmed = main_hybrid.copy()
-    if "id" not in trimmed.columns:
-        print("[Surgical] No id column found; skipping cut.")
-        combined = pd.concat([trimmed, replacements], ignore_index=True)
-        return gpd.GeoDataFrame(combined, crs=main_hybrid.crs)
-
-    print(f"  [Surgical] Features before cut: {len(trimmed)}")
-    trimmed["id"] = trimmed["id"].astype(str)
-    remove_ids = [str(val) for val in REMOVE_NUTS_IDS]
-    trimmed = trimmed[~trimmed["id"].isin(remove_ids)].copy()
-    print(f"  [Surgical] Features after cut: {len(trimmed)}")
-
-    replacements = replacements.copy()
-    if "id" in replacements.columns:
-        replacements["id"] = replacements["id"].astype(str)
-    combined = pd.concat([trimmed, replacements], ignore_index=True)
-    return gpd.GeoDataFrame(combined, crs=main_hybrid.crs)
+    combined = pd.concat([base, fr_gdf], ignore_index=True)
+    return gpd.GeoDataFrame(combined, crs=main_gdf.crs)
 
 
 def build_border_lines() -> gpd.GeoDataFrame:
@@ -834,12 +792,7 @@ def main() -> None:
             pd.concat([hybrid, balkan_fallback], ignore_index=True),
             crs="EPSG:4326",
         )
-    arrondissements = fetch_france_arrondissements()
-    print(
-        "  [Surgical] Sample IDs before cut:",
-        hybrid["id"].astype(str).head(5).tolist() if "id" in hybrid.columns else "missing",
-    )
-    hybrid = surgical_replace(hybrid, arrondissements)
+    hybrid = apply_holistic_replacements(hybrid)
     final_hybrid = smart_island_cull(hybrid, group_col="id", threshold_km2=1000.0)
 
     def extract_country_code(id_val: object) -> str:

@@ -1,601 +1,850 @@
-# Phase 3: France Surgical Refinement Plan
+# Phase 3.5: France Surgical Refinement & Tree-Based Preset UI
 
-**Document Version:** 1.0
-**Phase:** Surgical Refinement - Historical Border Accuracy
-**Objective:** Enable sub-département (Arrondissement) granularity for accurate 1871 and 1860 border reconstruction
+**Document Version:** 2.0
+**Phase:** Advanced Refinement + UI Framework
+**Objective:** Enable sub-département (Arrondissement) granularity for Vichy France, TNO Burgundy, and Alsace-Lorraine scenarios; implement tree-based preset menu
 
 ---
 
 ## Executive Summary
 
-Current NUTS-3 (Département) granularity cannot accurately represent two critical historical borders:
+This document expands the surgical refinement strategy to support three major historical scenarios:
 
-1. **1871 Treaty of Frankfurt**: Germany annexed Alsace-Lorraine, but the border did NOT follow modern département boundaries. The Territoire de Belfort (now dept. 90) remained French, carved from Haut-Rhin.
+1. **Treaty of Frankfurt (1871)**: Alsace-Lorraine annexation (existing)
+2. **Vichy France (1940-1944)**: The Demarcation Line between Occupied and Free France
+3. **TNO Burgundy**: Alternative history scenario following the Seine River
 
-2. **1860 Treaty of Turin**: France acquired Savoy and Nice from Sardinia-Piedmont. While these largely follow modern département lines, arrondissement-level control allows precise county/district simulation.
+Additionally, this document specifies a **Tree-Based Preset Menu** for the right sidebar, enabling hierarchical organization of historical presets under their parent modern countries.
 
-**Solution**: Implement a "drill-down" layer system that surgically replaces target départements with their constituent arrondissements.
-
----
-
-## Section 1: Data Source
-
-### 1.1 Primary Dataset
-
-**Source**: [gregoiredavid/france-geojson](https://github.com/gregoiredavid/france-geojson) (GitHub)
-
-**Direct Download URL**:
-```
-https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/arrondissements.geojson
-```
-
-**Properties per Feature**:
-| Property | Description | Example |
-|----------|-------------|---------|
-| `code` | Arrondissement INSEE code (5 digits) | `"57001"` |
-| `nom` | French name | `"Boulay-Moselle"` |
-
-**Coordinate System**: WGS84 (EPSG:4326) - Compatible with existing pipeline
-
-**License**: IGN Admin Express Open License (Licence Ouverte)
-
-**File Size**: ~2.5 MB (simplified version)
-
-### 1.2 Code Structure
-
-The arrondissement `code` encodes the parent département:
-```
-Code Format: DDAAA
-  DD  = Département number (01-95, 2A, 2B, 97x)
-  AAA = Arrondissement index within département (001-00n)
-
-Examples:
-  57001 → Moselle (57), Arrondissement de Boulay-Moselle
-  67001 → Bas-Rhin (67), Arrondissement de Haguenau-Wissembourg
-  06001 → Alpes-Maritimes (06), Arrondissement de Grasse
-```
-
-### 1.3 Alternative Sources (Backup)
-
-| Source | URL | Notes |
-|--------|-----|-------|
-| France GeoJSON Portal | https://france-geojson.gregoiredavid.fr/ | Web interface, individual downloads |
-| data.gouv.fr | https://www.data.gouv.fr/fr/datasets/contours-des-arrondissements-francais-issus-dosm/ | Official govt, requires processing |
-| OpenStreetMap | Overpass API | Most detailed, requires extraction |
+**Total Départements to Drill-Down**: 26 (up from 8)
 
 ---
 
-## Section 2: Surgical Target List
+## Section 1: Complete Data Lists
 
-### 2.1 Treaty of Frankfurt (1871) - Alsace-Lorraine
-
-The German Empire annexed most of Alsace and the Moselle portion of Lorraine. The border was NOT a clean département boundary.
-
-**Target Départements (NUTS-3 IDs)**:
-
-| Dept. | Name | NUTS-3 ID | Reason |
-|-------|------|-----------|--------|
-| 57 | Moselle | FRF31 | Entirely annexed to Germany |
-| 67 | Bas-Rhin | FRF11 | Entirely annexed to Germany |
-| 68 | Haut-Rhin | FRF12 | Mostly annexed; **Belfort remained French** |
-| 54 | Meurthe-et-Moselle | FRF33 | Partially annexed (Château-Salins area) |
-| 88 | Vosges | FRF34 | Small western strip annexed |
-
-**Critical Historical Note**:
-- The Territoire de Belfort (modern dept. 90) was carved from Haut-Rhin and remained French
-- Modern Meurthe-et-Moselle (54) is a post-1871 amalgamation; parts went to Germany
-- Arrondissement-level granularity allows precise reconstruction of the Reichsland Elsaß-Lothringen
-
-**Arrondissements to Identify (1871 German Side)**:
-```
-# Moselle (57) - ALL annexed
-57001, 57002, 57003, 57004, 57005, 57006, 57007, 57008, 57009
-
-# Bas-Rhin (67) - ALL annexed
-67001, 67002, 67003, 67004, 67005
-
-# Haut-Rhin (68) - ALL EXCEPT Belfort region (now dept 90)
-68001, 68002, 68003, 68004, 68005, 68006
-
-# Meurthe-et-Moselle (54) - PARTIAL
-# Only Château-Salins and Sarrebourg areas (requires research)
-
-# Vosges (88) - Small strip only
-# Schirmeck/Saales area (requires research)
-```
-
-### 2.2 Treaty of Turin (1860) - Savoy & Nice
-
-France acquired the Duchy of Savoy and County of Nice from the Kingdom of Sardinia.
-
-**Target Départements (NUTS-3 IDs)**:
-
-| Dept. | Name | NUTS-3 ID | Reason |
-|-------|------|-----------|--------|
-| 73 | Savoie | FRK27 | Former Duchy of Savoy (southern) |
-| 74 | Haute-Savoie | FRK28 | Former Duchy of Savoy (northern) |
-| 06 | Alpes-Maritimes | FRL06 | Former County of Nice + annexed Provençal areas |
-
-**Historical Note**:
-- The 1860 border largely follows modern département boundaries
-- Arrondissement granularity allows showing the Chablais/Faucigny plebiscite zones
-- Nice area shows distinct Italian cultural zone vs. interior Provençal areas
-
-### 2.3 Complete Surgical Target List
+### 1.1 DRILL_DOWN_DEPTS (Python)
 
 ```python
-SURGICAL_TARGETS = {
-    # Treaty of Frankfurt (1871)
-    "FRF31",  # Moselle (57)
+# Départements requiring arrondissement-level granularity
+DRILL_DOWN_DEPTS = [
+    # === Alsace-Lorraine (Treaty of Frankfurt 1871) ===
+    "06",  # Alpes-Maritimes (also Savoy-Nice)
+    "54",  # Meurthe-et-Moselle
+    "57",  # Moselle
+    "67",  # Bas-Rhin
+    "68",  # Haut-Rhin
+    "73",  # Savoie (Savoy-Nice)
+    "74",  # Haute-Savoie (Savoy-Nice)
+    "88",  # Vosges
+
+    # === Vichy France Demarcation Line ===
+    "01",  # Ain
+    "03",  # Allier
+    "16",  # Charente
+    "18",  # Cher
+    "24",  # Dordogne
+    "33",  # Gironde
+    "37",  # Indre-et-Loire
+    "39",  # Jura
+    "40",  # Landes
+    "41",  # Loir-et-Cher
+    "64",  # Pyrénées-Atlantiques
+    "71",  # Saône-et-Loire
+    "86",  # Vienne
+
+    # === TNO Burgundy (Seine River Line) ===
+    "27",  # Eure
+    "76",  # Seine-Maritime
+    "77",  # Seine-et-Marne
+    "78",  # Yvelines
+    "95",  # Val-d'Oise
+]
+```
+
+### 1.2 REMOVE_NUTS_IDS (Python)
+
+```python
+# NUTS-3 IDs to remove (replaced by arrondissements)
+REMOVE_NUTS_IDS = [
+    # === Alsace-Lorraine + Savoy-Nice ===
+    "FRL03",  # Alpes-Maritimes (06)
+    "FRF31",  # Meurthe-et-Moselle (54)
+    "FRF33",  # Moselle (57)
     "FRF11",  # Bas-Rhin (67)
     "FRF12",  # Haut-Rhin (68)
-    "FRF33",  # Meurthe-et-Moselle (54)
-    "FRF34",  # Vosges (88)
-
-    # Treaty of Turin (1860)
     "FRK27",  # Savoie (73)
     "FRK28",  # Haute-Savoie (74)
-    "FRL06",  # Alpes-Maritimes (06)
-}
+    "FRF34",  # Vosges (88)
 
-# Mapping: département number → NUTS-3 ID
-DEPT_TO_NUTS = {
-    "57": "FRF31",
-    "67": "FRF11",
-    "68": "FRF12",
-    "54": "FRF33",
-    "88": "FRF34",
-    "73": "FRK27",
-    "74": "FRK28",
-    "06": "FRL06",
-}
+    # === Vichy France Demarcation Line ===
+    "FRK21",  # Ain (01)
+    "FRK11",  # Allier (03)
+    "FRI31",  # Charente (16)
+    "FRB01",  # Cher (18)
+    "FRI11",  # Dordogne (24)
+    "FRI12",  # Gironde (33)
+    "FRB04",  # Indre-et-Loire (37)
+    "FRC22",  # Jura (39)
+    "FRI13",  # Landes (40)
+    "FRB05",  # Loir-et-Cher (41)
+    "FRI15",  # Pyrénées-Atlantiques (64)
+    "FRC13",  # Saône-et-Loire (71)
+    "FRI34",  # Vienne (86)
+
+    # === TNO Burgundy (Seine River Line) ===
+    "FRD21",  # Eure (27)
+    "FRD22",  # Seine-Maritime (76)
+    "FR102",  # Seine-et-Marne (77)
+    "FR103",  # Yvelines (78)
+    "FR108",  # Val-d'Oise (95)
+]
 ```
+
+### 1.3 Département → NUTS-3 Mapping Reference
+
+| Dept | Name | NUTS-3 | Scenario |
+|------|------|--------|----------|
+| 01 | Ain | FRK21 | Vichy |
+| 03 | Allier | FRK11 | Vichy |
+| 06 | Alpes-Maritimes | FRL03 | Savoy-Nice |
+| 16 | Charente | FRI31 | Vichy |
+| 18 | Cher | FRB01 | Vichy |
+| 24 | Dordogne | FRI11 | Vichy |
+| 27 | Eure | FRD21 | Burgundy |
+| 33 | Gironde | FRI12 | Vichy |
+| 37 | Indre-et-Loire | FRB04 | Vichy |
+| 39 | Jura | FRC22 | Vichy |
+| 40 | Landes | FRI13 | Vichy |
+| 41 | Loir-et-Cher | FRB05 | Vichy |
+| 54 | Meurthe-et-Moselle | FRF31 | Alsace-Lorraine |
+| 57 | Moselle | FRF33 | Alsace-Lorraine |
+| 64 | Pyrénées-Atlantiques | FRI15 | Vichy |
+| 67 | Bas-Rhin | FRF11 | Alsace-Lorraine |
+| 68 | Haut-Rhin | FRF12 | Alsace-Lorraine |
+| 71 | Saône-et-Loire | FRC13 | Vichy |
+| 73 | Savoie | FRK27 | Savoy-Nice |
+| 74 | Haute-Savoie | FRK28 | Savoy-Nice |
+| 76 | Seine-Maritime | FRD22 | Burgundy |
+| 77 | Seine-et-Marne | FR102 | Burgundy |
+| 78 | Yvelines | FR103 | Burgundy |
+| 86 | Vienne | FRI34 | Vichy |
+| 88 | Vosges | FRF34 | Alsace-Lorraine |
+| 95 | Val-d'Oise | FR108 | Burgundy |
 
 ---
 
-## Section 3: Implementation Plan
+## Section 2: Historical Scenario Definitions
 
-### 3.1 Python Pipeline Modifications (`init_map_data.py`)
+### 2.1 Treaty of Frankfurt (1871)
 
-#### 3.1.1 New Constant Definitions
+**Context**: Germany annexed Alsace and most of Lorraine after the Franco-Prussian War.
 
-Add after existing URL constants:
+**German Territory** (Reichsland Elsaß-Lothringen):
+- All of Moselle (57)
+- All of Bas-Rhin (67)
+- All of Haut-Rhin (68) EXCEPT Belfort area
+- Parts of Meurthe-et-Moselle (54) - Château-Salins area
+- Small strip of Vosges (88) - Schirmeck/Saales
 
-```python
-# France Arrondissements (drill-down layer for historical accuracy)
-FRANCE_ARROND_URL = (
-    "https://raw.githubusercontent.com/gregoiredavid/france-geojson/"
-    "master/arrondissements.geojson"
-)
+**Remained French**:
+- Territoire de Belfort (carved from Haut-Rhin, now dept 90)
+- Most of Meurthe-et-Moselle (merged with remnants of Meurthe)
 
-# NUTS-3 IDs requiring arrondissement replacement
-SURGICAL_NUTS3_IDS = {
-    "FRF31", "FRF11", "FRF12", "FRF33", "FRF34",  # Alsace-Lorraine
-    "FRK27", "FRK28", "FRL06",                     # Savoy-Nice
-}
+### 2.2 Vichy France Demarcation Line (1940-1944)
 
-# Department code → NUTS-3 ID mapping (for ID generation)
-DEPT_TO_NUTS3 = {
-    "57": "FRF31", "67": "FRF11", "68": "FRF12",
-    "54": "FRF33", "88": "FRF34", "73": "FRK27",
-    "74": "FRK28", "06": "FRL06",
-}
+**Context**: After the Fall of France, the country was divided into German-occupied Zone Nord and the nominally independent Zone Libre (Vichy France).
+
+**Demarcation Line Path** (approximate):
+```
+Atlantic Coast (near Royan) →
+Through Charente (16) →
+Vienne (86) - split →
+Indre-et-Loire (37) - northern tip occupied →
+Loir-et-Cher (41) - split along Cher River →
+Cher (18) - split →
+Allier (03) - split →
+Saône-et-Loire (71) - split →
+Jura (39) - split →
+Ain (01) - split →
+Swiss Border
 ```
 
-#### 3.1.2 New Function: `fetch_france_arrondissements()`
+**Key Split Départements** (requiring arrondissement granularity):
+| Dept | Occupied Arrondissements | Free Arrondissements |
+|------|-------------------------|---------------------|
+| 16 (Charente) | Confolens (partial) | Angoulême, Cognac |
+| 18 (Cher) | Vierzon | Bourges, Saint-Amand |
+| 37 (Indre-et-Loire) | Chinon (partial) | Tours, Loches |
+| 41 (Loir-et-Cher) | Blois (north) | Vendôme, Romorantin |
+| 71 (Saône-et-Loire) | Chalon (north) | Mâcon, Autun |
+| 39 (Jura) | Dole | Lons-le-Saunier, Saint-Claude |
+| 01 (Ain) | Bourg-en-Bresse (partial) | Belley, Nantua, Gex |
 
-```python
-def fetch_france_arrondissements() -> gpd.GeoDataFrame:
-    """
-    Download France arrondissements from gregoiredavid/france-geojson.
-    Filter to only surgical target départements.
-    """
-    print("Downloading France arrondissements...")
-    try:
-        response = requests.get(FRANCE_ARROND_URL, timeout=(10, 60))
-        response.raise_for_status()
-        data = response.json()
-    except requests.RequestException as exc:
-        print(f"France arrondissements download failed: {exc}")
-        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
+**Fully Occupied** (German Zone):
+- Gironde (33) - Atlantic Wall
+- Landes (40) - Atlantic Wall
+- Pyrénées-Atlantiques (64) - Atlantic Wall
+- Dordogne (24) - Occupied zone
 
-    gdf = gpd.GeoDataFrame.from_features(data.get("features", []))
-    if gdf.empty:
-        print("France arrondissements GeoDataFrame is empty.")
-        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
+### 2.3 TNO Burgundy (Alternative History)
 
-    gdf = gdf.set_crs("EPSG:4326", allow_override=True)
+**Context**: The New Order: Last Days of Europe mod depicts an SS state called "Burgundy" controlling northeastern France along the Seine River.
 
-    # Extract département code from arrondissement code (first 2-3 chars)
-    def get_dept_code(code: str) -> str:
-        code = str(code)
-        if code.startswith(("2A", "2B")):
-            return code[:2]
-        # Handle overseas (97x) and standard (01-95)
-        if code.startswith("97"):
-            return code[:3]
-        return code[:2].lstrip("0") if len(code) >= 2 else code
+**Burgundian Territory** (approximate):
+- Seine-Maritime (76) - Rouen area
+- Eure (27) - Vernon area
+- Yvelines (78) - western Île-de-France
+- Val-d'Oise (95) - northern Île-de-France
+- Seine-et-Marne (77) - eastern Île-de-France
+- Plus parts of Picardy, Champagne, Burgundy proper
 
-    gdf["dept_code"] = gdf["code"].apply(get_dept_code)
-
-    # Filter to surgical targets only
-    target_depts = set(DEPT_TO_NUTS3.keys())
-    gdf = gdf[gdf["dept_code"].isin(target_depts)].copy()
-
-    if gdf.empty:
-        print("No arrondissements matched surgical targets.")
-        return gpd.GeoDataFrame(columns=["id", "name", "cntr_code", "geometry"], crs="EPSG:4326")
-
-    # Build standardized ID: FR_ARR_{code}
-    gdf["id"] = "FR_ARR_" + gdf["code"].astype(str)
-    gdf["name"] = gdf["nom"]
-    gdf["cntr_code"] = "FR"
-    # Store parent NUTS-3 for replacement logic
-    gdf["parent_nuts3"] = gdf["dept_code"].map(DEPT_TO_NUTS3)
-
-    # Simplify geometry to match NUTS-3 level of detail
-    gdf["geometry"] = gdf.geometry.simplify(tolerance=SIMPLIFY_NUTS3, preserve_topology=True)
-
-    print(f"Loaded {len(gdf)} arrondissements for {len(target_depts)} target départements.")
-    return gdf[["id", "name", "cntr_code", "parent_nuts3", "geometry"]].copy()
-```
-
-#### 3.1.3 New Function: `surgical_replace()`
-
-```python
-def surgical_replace(
-    main_gdf: gpd.GeoDataFrame,
-    drill_gdf: gpd.GeoDataFrame,
-    target_parent_ids: set[str],
-) -> gpd.GeoDataFrame:
-    """
-    Replace target regions in main_gdf with drill-down features from drill_gdf.
-
-    Args:
-        main_gdf: Primary political layer (NUTS-3 hybrid)
-        drill_gdf: Drill-down layer (arrondissements) with 'parent_nuts3' column
-        target_parent_ids: Set of NUTS-3 IDs to replace (e.g., {"FRF31", "FRF11"})
-
-    Returns:
-        New GeoDataFrame with targets replaced by drill-down features
-    """
-    if drill_gdf.empty or "parent_nuts3" not in drill_gdf.columns:
-        print("Surgical replace: drill_gdf empty or missing parent_nuts3; returning main unchanged.")
-        return main_gdf
-
-    # Identify features to remove from main_gdf
-    remove_mask = main_gdf["id"].isin(target_parent_ids)
-    removed_count = remove_mask.sum()
-
-    if removed_count == 0:
-        print(f"Surgical replace: No matching features found for {target_parent_ids}")
-        return main_gdf
-
-    # Keep non-target features
-    retained = main_gdf[~remove_mask].copy()
-
-    # Filter drill_gdf to only replacement targets
-    replacements = drill_gdf[drill_gdf["parent_nuts3"].isin(target_parent_ids)].copy()
-
-    # Drop parent_nuts3 column (not needed in final output)
-    if "parent_nuts3" in replacements.columns:
-        replacements = replacements.drop(columns=["parent_nuts3"])
-
-    # Combine
-    result = gpd.GeoDataFrame(
-        pd.concat([retained, replacements], ignore_index=True),
-        crs=main_gdf.crs,
-    )
-
-    print(f"Surgical replace: Removed {removed_count} NUTS-3 features, added {len(replacements)} arrondissements.")
-    return result
-```
-
-#### 3.1.4 Update `main()` Function
-
-Add after `final_hybrid` is built, before `save_outputs()`:
-
-```python
-    # === SURGICAL REFINEMENT: France Arrondissements ===
-    france_arrond = fetch_france_arrondissements()
-    if not france_arrond.empty:
-        final_hybrid = surgical_replace(
-            main_gdf=final_hybrid,
-            drill_gdf=france_arrond,
-            target_parent_ids=SURGICAL_NUTS3_IDS,
-        )
-```
-
-### 3.2 Frontend Modifications (`js/app.js`)
-
-#### 3.2.1 Increase Zoom Capability
-
-Current zoom likely uses `scaleExtent([1, 8])`. Update to support higher zoom for arrondissement detail:
-
-```javascript
-// Find existing zoom behavior definition (likely near d3.zoom())
-const zoom = d3.zoom()
-    .scaleExtent([1, 50])  // Increased from [1, 8] to [1, 50]
-    .on("zoom", handleZoom);
-```
-
-#### 3.2.2 Add Zoom Level Indicator (Optional Enhancement)
-
-```javascript
-// In renderFull() or separate function:
-function updateZoomIndicator() {
-    const k = zoomTransform.k;
-    const level = k >= 20 ? "District" : k >= 8 ? "Detailed" : k >= 3 ? "Regional" : "Overview";
-    // Update UI element if exists
-    const indicator = document.getElementById("zoom-level");
-    if (indicator) {
-        indicator.textContent = `${level} (${k.toFixed(1)}x)`;
-    }
-}
-```
-
-#### 3.2.3 ID Pattern Recognition (Hit Detection)
-
-The new arrondissement IDs follow pattern `FR_ARR_XXXXX`. Update any ID-based logic:
-
-```javascript
-function getCountryFromId(id) {
-    if (!id) return null;
-    // Handle arrondissement IDs
-    if (id.startsWith("FR_ARR_")) {
-        return "FR";
-    }
-    // Existing NUTS-3 logic
-    if (id.length >= 2 && /^[A-Z]{2}/.test(id)) {
-        return id.substring(0, 2);
-    }
-    // Admin-1 fallback (e.g., "RU_Moscow Oblast")
-    if (id.includes("_")) {
-        const prefix = id.split("_")[0];
-        if (prefix.length === 2) return prefix;
-    }
-    return null;
-}
-```
-
-### 3.3 Index.html Modifications
-
-No changes required for basic functionality. Optional: Add zoom indicator element:
-
-```html
-<div id="zoom-level" class="zoom-indicator"></div>
-```
-
-With CSS:
-```css
-.zoom-indicator {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: monospace;
-}
-```
+**Seine River as Approximate Border**:
+The arrondissement boundaries along the Seine allow drawing this fictional border.
 
 ---
 
-## Section 4: Data Validation Strategy
+## Section 3: Tree-Based Preset Menu Architecture
 
-### 4.1 Python Validation
+### 3.1 Data Structure (JavaScript)
 
-Add to `main()` after surgical replacement:
-
-```python
-    # Validate surgical replacement
-    france_ids = [f for f in final_hybrid["id"] if str(f).startswith("FR_ARR_")]
-    france_nuts = [f for f in final_hybrid["id"] if str(f).startswith("FR") and not str(f).startswith("FR_ARR_")]
-    print(f"France features: {len(france_nuts)} NUTS-3, {len(france_ids)} Arrondissements")
-
-    # Check for overlap (should be zero if surgical replace worked)
-    overlap = set(france_ids) & SURGICAL_NUTS3_IDS
-    if overlap:
-        print(f"WARNING: Surgical targets still present: {overlap}")
-```
-
-### 4.2 Browser Console Validation
+Add to `js/app.js` after `countryNames`:
 
 ```javascript
-// After loadData()
-function validateSurgicalRefinement() {
-    const arrondFeatures = landData.features.filter(f =>
-        f.properties?.id?.startsWith("FR_ARR_")
-    );
-    const frNutsFeatures = landData.features.filter(f => {
-        const id = f.properties?.id;
-        return id?.startsWith("FR") && !id?.startsWith("FR_ARR_");
-    });
-
-    console.log(`France: ${frNutsFeatures.length} NUTS-3, ${arrondFeatures.length} Arrondissements`);
-
-    // Expected: ~85 NUTS-3 (France total) - 8 (replaced) + ~35 arrondissements
-    // Rough total: ~112 France features
-}
-```
-
----
-
-## Section 5: Historical Border Presets (Future Phase)
-
-### 5.1 Proposed Presets
-
-Once arrondissement granularity is available, add historical border presets:
-
-```javascript
-const HISTORICAL_PRESETS = {
-    "1871_alsace_lorraine": {
-        name: "German Empire (1871-1918)",
-        description: "Alsace-Lorraine as annexed by Treaty of Frankfurt",
+/**
+ * Tree structure for country presets
+ * Each country can have multiple historical presets
+ * Presets contain region IDs (NUTS-3 or FR_ARR_*) and their colors
+ */
+const countryPresets = {
+  DE: {
+    name: "Germany",
+    presets: [
+      {
+        id: "de_prussia",
+        name: "Prussia (1871)",
+        description: "Kingdom of Prussia borders",
+        regions: {}, // TODO: Populate with region IDs
+      },
+      {
+        id: "de_bavaria",
+        name: "Bavaria",
+        description: "Kingdom of Bavaria borders",
+        regions: {},
+      },
+      {
+        id: "de_saxony",
+        name: "Saxony",
+        description: "Kingdom of Saxony borders",
+        regions: {},
+      },
+      {
+        id: "de_alsace_lorraine",
+        name: "Alsace-Lorraine (1871-1918)",
+        description: "Reichsland Elsaß-Lothringen",
         regions: {
-            // All Moselle arrondissements
-            "FR_ARR_57001": "#000000", // German colors
-            "FR_ARR_57002": "#000000",
-            // ... etc
-        }
-    },
-    "1860_savoy_nice": {
-        name: "Kingdom of Sardinia (pre-1860)",
-        description: "Savoy and Nice before French annexation",
+          // Moselle arrondissements
+          "FR_ARR_57001": "#1a1a1a",
+          "FR_ARR_57002": "#1a1a1a",
+          "FR_ARR_57003": "#1a1a1a",
+          "FR_ARR_57004": "#1a1a1a",
+          "FR_ARR_57005": "#1a1a1a",
+          "FR_ARR_57006": "#1a1a1a",
+          "FR_ARR_57007": "#1a1a1a",
+          "FR_ARR_57008": "#1a1a1a",
+          "FR_ARR_57009": "#1a1a1a",
+          // Bas-Rhin arrondissements
+          "FR_ARR_67001": "#1a1a1a",
+          "FR_ARR_67002": "#1a1a1a",
+          "FR_ARR_67003": "#1a1a1a",
+          "FR_ARR_67004": "#1a1a1a",
+          "FR_ARR_67005": "#1a1a1a",
+          // Haut-Rhin arrondissements (except Belfort)
+          "FR_ARR_68001": "#1a1a1a",
+          "FR_ARR_68002": "#1a1a1a",
+          "FR_ARR_68003": "#1a1a1a",
+          "FR_ARR_68004": "#1a1a1a",
+          "FR_ARR_68005": "#1a1a1a",
+          // TODO: Add partial Meurthe-et-Moselle, Vosges
+        },
+      },
+    ],
+  },
+  FR: {
+    name: "France",
+    presets: [
+      {
+        id: "fr_vichy",
+        name: "Vichy France (1940-1944)",
+        description: "Zone Libre - Unoccupied France",
+        regions: {}, // TODO: Populate with Free Zone arrondissements
+      },
+      {
+        id: "fr_occupied",
+        name: "German-Occupied France (1940-1944)",
+        description: "Zone Nord - German Military Administration",
+        regions: {}, // TODO: Populate with Occupied Zone arrondissements
+      },
+      {
+        id: "fr_burgundy_tno",
+        name: "Burgundy (TNO)",
+        description: "SS Ordensstaat Burgund - Alternative History",
+        regions: {}, // TODO: Populate with Seine River line regions
+      },
+      {
+        id: "fr_occitania",
+        name: "Occitania",
+        description: "Historical Occitan cultural region",
+        regions: {},
+      },
+      {
+        id: "fr_savoy",
+        name: "Savoy (pre-1860)",
+        description: "Duchy of Savoy before French annexation",
         regions: {
-            "FR_ARR_73001": "#0055A4", // Sardinian blue
-            // ... etc
-        }
-    }
+          "FR_ARR_73001": "#0055A4",
+          "FR_ARR_73002": "#0055A4",
+          "FR_ARR_73003": "#0055A4",
+          "FR_ARR_74001": "#0055A4",
+          "FR_ARR_74002": "#0055A4",
+          "FR_ARR_74003": "#0055A4",
+          "FR_ARR_74004": "#0055A4",
+        },
+      },
+    ],
+  },
+  IT: {
+    name: "Italy",
+    presets: [
+      {
+        id: "it_papal_states",
+        name: "Papal States",
+        description: "Pre-unification Papal territories",
+        regions: {},
+      },
+      {
+        id: "it_two_sicilies",
+        name: "Kingdom of Two Sicilies",
+        description: "Southern Italian kingdom",
+        regions: {},
+      },
+      {
+        id: "it_sardinia",
+        name: "Kingdom of Sardinia",
+        description: "Piedmont-Sardinia including Savoy/Nice",
+        regions: {},
+      },
+    ],
+  },
+  PL: {
+    name: "Poland",
+    presets: [
+      {
+        id: "pl_congress",
+        name: "Congress Poland",
+        description: "Russian-controlled Poland (1815-1915)",
+        regions: {},
+      },
+      {
+        id: "pl_interwar",
+        name: "Interwar Poland (1918-1939)",
+        description: "Second Polish Republic",
+        regions: {},
+      },
+    ],
+  },
+  RU: {
+    name: "Russia",
+    presets: [
+      {
+        id: "ru_imperial",
+        name: "Imperial Russia",
+        description: "Russian Empire European territories",
+        regions: {},
+      },
+    ],
+  },
+  AT: {
+    name: "Austria",
+    presets: [
+      {
+        id: "at_habsburg",
+        name: "Habsburg Monarchy",
+        description: "Austrian Empire territories",
+        regions: {},
+      },
+    ],
+  },
+  // Add more countries as needed...
 };
 ```
 
-### 5.2 Implementation Notes
+### 3.2 UI Rendering (JavaScript)
 
-- Presets require mapping historical territories to modern arrondissement codes
-- Some historical boundaries don't align perfectly with arrondissements
-- Consider adding a "fuzzy boundary" visual effect for approximate borders
+Replace `setupRightSidebar()` in `js/app.js`:
 
----
+```javascript
+function setupRightSidebar() {
+  const list = document.getElementById("countryList");
+  if (!list) return;
+  const searchInput = document.getElementById("countrySearch");
+  const resetBtn = document.getElementById("resetCountryColors");
 
-## Section 6: Risk Assessment
+  // Get all countries (both with and without presets)
+  const allCountryCodes = Object.keys(countryNames).sort((a, b) =>
+    countryNames[a].localeCompare(countryNames[b])
+  );
 
-### 6.1 Data Quality Risks
+  const renderList = () => {
+    const term = (searchInput?.value || "").trim().toLowerCase();
+    list.innerHTML = "";
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| gregoiredavid repo becomes unavailable | High | Cache locally in `data/` or use backup source |
-| Arrondissement codes change | Medium | Pin to specific commit hash |
-| Geometry precision mismatch | Low | Simplify to match NUTS-3 tolerance |
+    allCountryCodes.forEach((code) => {
+      const name = countryNames[code];
+      const presetData = countryPresets[code];
+      const hasPresets = presetData && presetData.presets && presetData.presets.length > 0;
 
-### 6.2 Performance Risks
+      // Filter by search term
+      if (term) {
+        const matchesCountry = name.toLowerCase().includes(term) || code.toLowerCase().includes(term);
+        const matchesPreset = hasPresets && presetData.presets.some(
+          (p) => p.name.toLowerCase().includes(term) || p.description?.toLowerCase().includes(term)
+        );
+        if (!matchesCountry && !matchesPreset) return;
+      }
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Increased feature count | Medium | Only replace 8 NUTS-3 with ~35 arrondissements |
-| Larger TopoJSON file | Low | Arrondissements are smaller, fewer vertices |
-| Hit detection slowdown | Low | Index structure handles extra features |
+      // Country container
+      const container = document.createElement("div");
+      container.className = "country-tree-node rounded-lg border border-slate-200 bg-slate-50 overflow-hidden";
 
-### 6.3 Historical Accuracy Risks
+      // Country header row
+      const header = document.createElement("div");
+      header.className = "flex items-center justify-between gap-2 px-3 py-2 bg-slate-100";
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Arrondissement boundaries changed since 1871 | High | Cross-reference historical maps |
-| Modern Territoire de Belfort (90) not in source | Medium | Manual geometry or note in documentation |
+      // Left side: expand button + name
+      const leftGroup = document.createElement("div");
+      leftGroup.className = "flex items-center gap-2";
 
----
+      // Expand/collapse button (only if has presets)
+      if (hasPresets) {
+        const expandBtn = document.createElement("button");
+        expandBtn.className = "expand-btn w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-transform duration-200";
+        expandBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
+        expandBtn.setAttribute("aria-expanded", "false");
+        expandBtn.addEventListener("click", () => {
+          const isExpanded = expandBtn.getAttribute("aria-expanded") === "true";
+          expandBtn.setAttribute("aria-expanded", !isExpanded);
+          expandBtn.style.transform = isExpanded ? "rotate(0deg)" : "rotate(90deg)";
+          presetList.style.display = isExpanded ? "none" : "block";
+        });
+        leftGroup.appendChild(expandBtn);
+      } else {
+        // Spacer for alignment
+        const spacer = document.createElement("div");
+        spacer.className = "w-5";
+        leftGroup.appendChild(spacer);
+      }
 
-## Section 7: Testing Checklist
+      // Country name
+      const label = document.createElement("div");
+      label.className = "text-sm font-medium text-slate-700";
+      label.textContent = `${name} (${code})`;
+      leftGroup.appendChild(label);
 
-### 7.1 Python Pipeline
+      // Right side: color picker
+      const input = document.createElement("input");
+      input.type = "color";
+      input.value = countryPalette[code] || defaultCountryPalette[code] || "#cccccc";
+      input.className = "h-7 w-9 cursor-pointer rounded border border-slate-300 bg-white";
+      input.title = `Set base color for ${name}`;
+      input.addEventListener("change", (event) => {
+        const value = event.target.value;
+        countryPalette[code] = value;
+        applyCountryColor(code, value);
+      });
 
-- [ ] `init_map_data.py` runs without errors
-- [ ] Arrondissement download succeeds
-- [ ] Exactly 8 NUTS-3 features replaced
-- [ ] ~35 arrondissement features added
-- [ ] TopoJSON file size remains < 3 MB
-- [ ] No duplicate IDs in output
-- [ ] All features have valid `cntr_code`
+      header.appendChild(leftGroup);
+      header.appendChild(input);
+      container.appendChild(header);
 
-### 7.2 Frontend Rendering
+      // Preset list (hidden by default)
+      const presetList = document.createElement("div");
+      presetList.className = "preset-list border-t border-slate-200 bg-white";
+      presetList.style.display = "none";
 
-- [ ] Map loads successfully
-- [ ] Arrondissements visible at zoom level 10+
-- [ ] Click on arrondissement applies color
-- [ ] Hover shows correct name/ID
-- [ ] Country fill ("Auto-Fill") includes arrondissements
-- [ ] Zoom to level 50 works smoothly
-- [ ] No gaps between arrondissements and neighboring features
+      if (hasPresets) {
+        presetData.presets.forEach((preset) => {
+          const presetRow = document.createElement("div");
+          presetRow.className = "flex items-center justify-between gap-2 px-3 py-2 pl-8 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0";
 
-### 7.3 Historical Validation
+          const presetInfo = document.createElement("div");
+          presetInfo.className = "flex-1 min-w-0";
 
-- [ ] Can color Alsace-Lorraine (1871 border) distinctly
-- [ ] Belfort area remains separately colorable (French)
-- [ ] Savoy/Nice can be colored as Sardinian territory
-- [ ] Border follows known historical maps
+          const presetName = document.createElement("div");
+          presetName.className = "text-sm font-medium text-slate-600 truncate";
+          presetName.textContent = preset.name;
 
----
+          const presetDesc = document.createElement("div");
+          presetDesc.className = "text-xs text-slate-400 truncate";
+          presetDesc.textContent = preset.description || "";
 
-## Appendix A: Arrondissement Reference
+          presetInfo.appendChild(presetName);
+          presetInfo.appendChild(presetDesc);
 
-### A.1 Moselle (57) - 9 Arrondissements
+          const applyBtn = document.createElement("button");
+          applyBtn.className = "shrink-0 px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors";
+          applyBtn.textContent = "Apply";
+          applyBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            applyPreset(preset);
+          });
 
-| Code | Name | 1871 Status |
-|------|------|-------------|
-| 57001 | Boulay-Moselle | German |
-| 57002 | Château-Salins | German |
-| 57003 | Forbach-Bouzonville | German |
-| 57004 | Metz | German |
-| 57005 | Sarrebourg | German |
-| 57006 | Sarreguemines | German |
-| 57007 | Thionville-Est | German |
-| 57008 | Thionville-Ouest | German |
-| 57009 | [Additional] | German |
+          presetRow.appendChild(presetInfo);
+          presetRow.appendChild(applyBtn);
+          presetList.appendChild(presetRow);
+        });
+      }
 
-### A.2 Bas-Rhin (67) - 5 Arrondissements
+      container.appendChild(presetList);
+      list.appendChild(container);
+    });
+  };
 
-| Code | Name | 1871 Status |
-|------|------|-------------|
-| 67001 | Haguenau-Wissembourg | German |
-| 67002 | Molsheim | German |
-| 67003 | Saverne | German |
-| 67004 | Sélestat-Erstein | German |
-| 67005 | Strasbourg | German |
+  if (searchInput) {
+    searchInput.addEventListener("input", renderList);
+  }
 
-### A.3 Haut-Rhin (68) - 6 Arrondissements
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      Object.keys(defaultCountryPalette).forEach((code) => {
+        countryPalette[code] = defaultCountryPalette[code];
+      });
+      applyPaletteToMap();
+      renderList();
+    });
+  }
 
-| Code | Name | 1871 Status |
-|------|------|-------------|
-| 68001 | Altkirch | German |
-| 68002 | Colmar-Ribeauvillé | German |
-| 68003 | Guebwiller | German |
-| 68004 | Mulhouse | German |
-| 68005 | Thann-Cernay | German |
-| 68006 | [Additional] | German |
+  renderList();
+}
 
-*Note: Belfort area (now dept. 90) was carved out and remained French*
+/**
+ * Apply a historical preset to the map
+ * @param {Object} preset - Preset object with regions map
+ */
+function applyPreset(preset) {
+  if (!preset || !preset.regions) {
+    console.warn("Preset has no regions defined:", preset?.name);
+    return;
+  }
 
----
+  const regionCount = Object.keys(preset.regions).length;
+  if (regionCount === 0) {
+    console.warn(`Preset "${preset.name}" has empty regions. TODO: Populate region IDs.`);
+    alert(`Preset "${preset.name}" is not yet configured.\n\nRegion IDs need to be populated.`);
+    return;
+  }
 
-## Appendix B: Quick Reference Commands
+  // Apply colors to specified regions
+  Object.entries(preset.regions).forEach(([regionId, color]) => {
+    colors[regionId] = color;
+  });
 
-### Download and Inspect Data
-
-```bash
-# Download arrondissements
-curl -o data/france_arrondissements.geojson \
-  "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/arrondissements.geojson"
-
-# Count features
-python -c "import json; d=json.load(open('data/france_arrondissements.geojson')); print(len(d['features']))"
-
-# Filter to target départements
-python -c "
-import json
-d = json.load(open('data/france_arrondissements.geojson'))
-targets = {'57','67','68','54','88','73','74','06'}
-filtered = [f for f in d['features'] if f['properties']['code'][:2] in targets or f['properties']['code'][:2].lstrip('0') in targets]
-print(f'Target arrondissements: {len(filtered)}')
-for f in filtered:
-    print(f\"  {f['properties']['code']}: {f['properties']['nom']}\")
-"
+  invalidateBorderCache();
+  renderFull();
+  console.log(`Applied preset: ${preset.name} (${regionCount} regions)`);
+}
 ```
 
-### Verify TopoJSON Output
+### 3.3 Updated HTML (index.html)
+
+Update the right sidebar section:
+
+```html
+<aside
+  id="rightSidebar"
+  class="w-[280px] shrink-0 border-l border-slate-200 bg-white p-6 max-h-screen overflow-y-auto"
+>
+  <div class="space-y-5">
+    <div>
+      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="countrySearch">
+        Search Countries & Presets
+      </label>
+      <input
+        id="countrySearch"
+        type="text"
+        placeholder="Search..."
+        class="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+      />
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Countries & Presets</div>
+        <div class="group relative">
+          <svg class="h-4 w-4 text-slate-400 cursor-help" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
+            <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+          </svg>
+          <div class="absolute right-0 z-10 mt-2 w-56 rounded-md bg-slate-900 px-3 py-2 text-xs text-white opacity-0 transition group-hover:opacity-100 pointer-events-none">
+            Click arrow to expand historical presets. Use color picker for base country color.
+          </div>
+        </div>
+      </div>
+      <div
+        id="countryList"
+        class="mt-3 max-h-[60vh] space-y-2 overflow-y-auto pr-1"
+      ></div>
+    </div>
+
+    <button
+      id="resetCountryColors"
+      class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+    >
+      Reset All Colors
+    </button>
+  </div>
+</aside>
+```
+
+### 3.4 CSS Additions (css/style.css)
+
+```css
+/* Tree node expansion animation */
+.expand-btn {
+  transition: transform 0.2s ease-in-out;
+}
+
+.country-tree-node {
+  transition: box-shadow 0.15s ease;
+}
+
+.country-tree-node:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.preset-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Smooth preset list appearance */
+.preset-list[style*="block"] {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+---
+
+## Section 4: Python Pipeline Updates
+
+### 4.1 Update Constants in `init_map_data.py`
+
+Replace the existing constants:
+
+```python
+# France Arrondissements URL
+FR_ARR_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/arrondissements.geojson"
+
+# Départements requiring arrondissement-level granularity
+DRILL_DOWN_DEPTS = [
+    # Alsace-Lorraine + Savoy-Nice (8)
+    "06", "54", "57", "67", "68", "73", "74", "88",
+    # Vichy France Demarcation Line (13)
+    "01", "03", "16", "18", "24", "33", "37", "39", "40", "41", "64", "71", "86",
+    # TNO Burgundy Seine River Line (5)
+    "27", "76", "77", "78", "95",
+]
+
+# NUTS-3 IDs to remove (replaced by arrondissements)
+REMOVE_NUTS_IDS = [
+    # Alsace-Lorraine + Savoy-Nice
+    "FRL03", "FRF31", "FRF33", "FRF11", "FRF12", "FRK27", "FRK28", "FRF34",
+    # Vichy France Demarcation Line
+    "FRK21", "FRK11", "FRI31", "FRB01", "FRI11", "FRI12", "FRB04", "FRC22",
+    "FRI13", "FRB05", "FRI15", "FRC13", "FRI34",
+    # TNO Burgundy Seine River Line
+    "FRD21", "FRD22", "FR102", "FR103", "FR108",
+]
+```
+
+### 4.2 Expected Feature Counts
+
+| Category | NUTS-3 Removed | Arrondissements Added | Net Change |
+|----------|----------------|----------------------|------------|
+| Alsace-Lorraine | 5 | ~25 | +20 |
+| Savoy-Nice | 3 | ~15 | +12 |
+| Vichy Line | 13 | ~40 | +27 |
+| Burgundy/Seine | 5 | ~15 | +10 |
+| **Total** | **26** | **~95** | **+69** |
+
+---
+
+## Section 5: TODO - Preset Region Population
+
+### 5.1 Alsace-Lorraine (1871) - HIGH PRIORITY
+
+**Task**: Map arrondissement codes to German/French control
+
+```javascript
+// TODO: Research which arrondissements were in Reichsland
+const alsaceLorraineGerman = {
+  // Moselle - ALL German
+  "FR_ARR_57001": "#1a1a1a", // Boulay-Moselle
+  "FR_ARR_57002": "#1a1a1a", // Château-Salins
+  "FR_ARR_57003": "#1a1a1a", // Forbach-Bouzonville
+  "FR_ARR_57004": "#1a1a1a", // Metz
+  "FR_ARR_57005": "#1a1a1a", // Sarrebourg
+  "FR_ARR_57006": "#1a1a1a", // Sarreguemines
+  "FR_ARR_57007": "#1a1a1a", // Thionville-Est
+  "FR_ARR_57008": "#1a1a1a", // Thionville-Ouest
+  // Bas-Rhin - ALL German
+  // ... to be populated
+  // Haut-Rhin - ALL EXCEPT Belfort
+  // ... to be populated
+  // Meurthe-et-Moselle - PARTIAL
+  // ... to be researched
+};
+```
+
+### 5.2 Vichy Demarcation Line (1940) - HIGH PRIORITY
+
+**Task**: Map arrondissements to Occupied/Free zones
+
+```javascript
+// TODO: Research demarcation line at arrondissement level
+const vichyOccupied = {
+  // Gironde - Occupied (Atlantic Wall)
+  // Landes - Occupied (Atlantic Wall)
+  // Pyrénées-Atlantiques - Occupied (Atlantic Wall)
+  // Charente - Split
+  // Cher - Split along Cher River
+  // ... to be populated
+};
+
+const vichyFree = {
+  // Southern portions of split départements
+  // ... to be populated
+};
+```
+
+### 5.3 TNO Burgundy - MEDIUM PRIORITY
+
+**Task**: Define Seine River boundary
+
+```javascript
+// TODO: Define fictional Burgundy territory
+const tnoBurgundy = {
+  // Seine-Maritime - Rouen area
+  // Eure - Vernon area
+  // Parts of Île-de-France
+  // ... to be researched from TNO sources
+};
+```
+
+---
+
+## Section 6: Testing Checklist
+
+### 6.1 Python Pipeline
+
+- [ ] `init_map_data.py` runs without errors with expanded DRILL_DOWN_DEPTS
+- [ ] All 26 NUTS-3 features removed
+- [ ] ~95 arrondissement features added
+- [ ] TopoJSON file size < 4 MB
+- [ ] No ID collisions
+- [ ] All features have valid `cntr_code = "FR"`
+
+### 6.2 Frontend UI
+
+- [ ] Tree menu renders all countries
+- [ ] Expand/collapse arrows work
+- [ ] Search filters both countries and presets
+- [ ] Color pickers update country colors
+- [ ] "Apply" buttons trigger `applyPreset()`
+- [ ] Empty presets show warning alert
+
+### 6.3 Preset Functionality
+
+- [ ] Alsace-Lorraine preset colors correct regions
+- [ ] Vichy preset colors demarcation line regions
+- [ ] Clear map removes all preset colors
+- [ ] Preset application triggers border recalculation
+
+---
+
+## Appendix A: Arrondissement Code Reference
+
+### A.1 Vichy Line Départements
+
+**01 - Ain** (Demarcation Line runs through):
+- 01001 Bourg-en-Bresse (split)
+- 01002 Gex (Free Zone)
+- 01003 Nantua (Free Zone)
+- 01004 Belley (Free Zone)
+
+**18 - Cher** (Split along Cher River):
+- 18001 Bourges (Free Zone)
+- 18002 Saint-Amand-Montrond (Free Zone)
+- 18003 Vierzon (Occupied Zone)
+
+**41 - Loir-et-Cher** (Split):
+- 41001 Blois (split - north occupied)
+- 41002 Romorantin-Lanthenay (Free Zone)
+- 41003 Vendôme (Occupied Zone)
+
+### A.2 Seine Line Départements (TNO Burgundy)
+
+**77 - Seine-et-Marne**:
+- 77001 Fontainebleau
+- 77002 Meaux
+- 77003 Melun
+- 77004 Provins
+- 77005 Torcy
+
+**78 - Yvelines**:
+- 78001 Mantes-la-Jolie
+- 78002 Rambouillet
+- 78003 Saint-Germain-en-Laye
+- 78004 Versailles
+
+---
+
+## Appendix B: Quick Verification Commands
 
 ```bash
-# Check object counts
+# Count features by type after regeneration
 python -c "
 import json
 t = json.load(open('data/europe_topology.json'))
 pol = t['objects']['political']['geometries']
-arr = [g for g in pol if g['properties'].get('id','').startswith('FR_ARR_')]
-print(f'Total political: {len(pol)}, Arrondissements: {len(arr)}')
+arr = [g for g in pol if str(g['properties'].get('id','')).startswith('FR_ARR_')]
+fr_nuts = [g for g in pol if str(g['properties'].get('id','')).startswith('FR') and not str(g['properties'].get('id','')).startswith('FR_ARR_')]
+print(f'France NUTS-3: {len(fr_nuts)}')
+print(f'France Arrondissements: {len(arr)}')
+print(f'Total political: {len(pol)}')
+"
+
+# List all arrondissement IDs
+python -c "
+import json
+t = json.load(open('data/europe_topology.json'))
+pol = t['objects']['political']['geometries']
+arr_ids = sorted([g['properties']['id'] for g in pol if str(g['properties'].get('id','')).startswith('FR_ARR_')])
+for aid in arr_ids:
+    print(aid)
 "
 ```
 
 ---
 
-*End of France Surgical Refinement Plan*
+*End of Phase 3.5 Specification*

@@ -1,0 +1,6838 @@
+{
+  "ui": {
+    "Fill": {
+      "en": "Fill",
+      "zh": "[ZH] Fill"
+    },
+    "Eraser": {
+      "en": "Eraser",
+      "zh": "[ZH] Eraser"
+    },
+    "Export Map": {
+      "en": "Export Map",
+      "zh": "[ZH] Export Map"
+    },
+    "Download Snapshot": {
+      "en": "Download Snapshot",
+      "zh": "[ZH] Download Snapshot"
+    },
+    "Auto-Fill Countries": {
+      "en": "Auto-Fill Countries",
+      "zh": "[ZH] Auto-Fill Countries"
+    },
+    "Clear Map": {
+      "en": "Clear Map",
+      "zh": "[ZH] Clear Map"
+    },
+    "Country Colors": {
+      "en": "Country Colors",
+      "zh": "[ZH] Country Colors"
+    },
+    "Reset Colors": {
+      "en": "Reset Colors",
+      "zh": "[ZH] Reset Colors"
+    }
+  },
+  "geo": {
+    "A Coruña": {
+      "en": "A Coruña",
+      "zh": "[ZH] A Coruña"
+    },
+    "Aargau": {
+      "en": "Aargau",
+      "zh": "[ZH] Aargau"
+    },
+    "Aberdeen City and Aberdeenshire": {
+      "en": "Aberdeen City and Aberdeenshire",
+      "zh": "[ZH] Aberdeen City and Aberdeenshire"
+    },
+    "Achterhoek": {
+      "en": "Achterhoek",
+      "zh": "[ZH] Achterhoek"
+    },
+    "Adana": {
+      "en": "Adana",
+      "zh": "[ZH] Adana"
+    },
+    "Adygey": {
+      "en": "Adygey",
+      "zh": "[ZH] Adygey"
+    },
+    "Adıyaman": {
+      "en": "Adıyaman",
+      "zh": "[ZH] Adıyaman"
+    },
+    "Afyonkarahisar": {
+      "en": "Afyonkarahisar",
+      "zh": "[ZH] Afyonkarahisar"
+    },
+    "Agder": {
+      "en": "Agder",
+      "zh": "[ZH] Agder"
+    },
+    "Agglomeratie Haarlem": {
+      "en": "Agglomeratie Haarlem",
+      "zh": "[ZH] Agglomeratie Haarlem"
+    },
+    "Agglomeratie Leiden en Bollenstreek": {
+      "en": "Agglomeratie Leiden en Bollenstreek",
+      "zh": "[ZH] Agglomeratie Leiden en Bollenstreek"
+    },
+    "Agglomeratie ’s-Gravenhage": {
+      "en": "Agglomeratie ’s-Gravenhage",
+      "zh": "[ZH] Agglomeratie ’s-Gravenhage"
+    },
+    "Agrigento": {
+      "en": "Agrigento",
+      "zh": "[ZH] Agrigento"
+    },
+    "Ahrweiler": {
+      "en": "Ahrweiler",
+      "zh": "[ZH] Ahrweiler"
+    },
+    "Aichach-Friedberg": {
+      "en": "Aichach-Friedberg",
+      "zh": "[ZH] Aichach-Friedberg"
+    },
+    "Aisne": {
+      "en": "Aisne",
+      "zh": "[ZH] Aisne"
+    },
+    "Aksaray": {
+      "en": "Aksaray",
+      "zh": "[ZH] Aksaray"
+    },
+    "Alb-Donau-Kreis": {
+      "en": "Alb-Donau-Kreis",
+      "zh": "[ZH] Alb-Donau-Kreis"
+    },
+    "Alba": {
+      "en": "Alba",
+      "zh": "[ZH] Alba"
+    },
+    "Albacete": {
+      "en": "Albacete",
+      "zh": "[ZH] Albacete"
+    },
+    "Albertville": {
+      "en": "Albertville",
+      "zh": "[ZH] Albertville"
+    },
+    "Alentejo Central": {
+      "en": "Alentejo Central",
+      "zh": "[ZH] Alentejo Central"
+    },
+    "Alentejo Litoral": {
+      "en": "Alentejo Litoral",
+      "zh": "[ZH] Alentejo Litoral"
+    },
+    "Alessandria": {
+      "en": "Alessandria",
+      "zh": "[ZH] Alessandria"
+    },
+    "Algarve": {
+      "en": "Algarve",
+      "zh": "[ZH] Algarve"
+    },
+    "Alicante/Alacant": {
+      "en": "Alicante/Alacant",
+      "zh": "[ZH] Alicante/Alacant"
+    },
+    "Alkmaar en omgeving": {
+      "en": "Alkmaar en omgeving",
+      "zh": "[ZH] Alkmaar en omgeving"
+    },
+    "Almería": {
+      "en": "Almería",
+      "zh": "[ZH] Almería"
+    },
+    "Alpes-de-Haute-Provence": {
+      "en": "Alpes-de-Haute-Provence",
+      "zh": "[ZH] Alpes-de-Haute-Provence"
+    },
+    "Altenburger Land": {
+      "en": "Altenburger Land",
+      "zh": "[ZH] Altenburger Land"
+    },
+    "Altenkirchen (Westerwald)": {
+      "en": "Altenkirchen (Westerwald)",
+      "zh": "[ZH] Altenkirchen (Westerwald)"
+    },
+    "Altkirch": {
+      "en": "Altkirch",
+      "zh": "[ZH] Altkirch"
+    },
+    "Altmarkkreis Salzwedel": {
+      "en": "Altmarkkreis Salzwedel",
+      "zh": "[ZH] Altmarkkreis Salzwedel"
+    },
+    "Alto Alentejo": {
+      "en": "Alto Alentejo",
+      "zh": "[ZH] Alto Alentejo"
+    },
+    "Alto Minho": {
+      "en": "Alto Minho",
+      "zh": "[ZH] Alto Minho"
+    },
+    "Alto Tâmega": {
+      "en": "Alto Tâmega",
+      "zh": "[ZH] Alto Tâmega"
+    },
+    "Altötting": {
+      "en": "Altötting",
+      "zh": "[ZH] Altötting"
+    },
+    "Alytaus apskritis": {
+      "en": "Alytaus apskritis",
+      "zh": "[ZH] Alytaus apskritis"
+    },
+    "Alzey-Worms": {
+      "en": "Alzey-Worms",
+      "zh": "[ZH] Alzey-Worms"
+    },
+    "Amasya": {
+      "en": "Amasya",
+      "zh": "[ZH] Amasya"
+    },
+    "Amberg, Kreisfreie Stadt": {
+      "en": "Amberg, Kreisfreie Stadt",
+      "zh": "[ZH] Amberg, Kreisfreie Stadt"
+    },
+    "Amberg-Sulzbach": {
+      "en": "Amberg-Sulzbach",
+      "zh": "[ZH] Amberg-Sulzbach"
+    },
+    "Ammerland": {
+      "en": "Ammerland",
+      "zh": "[ZH] Ammerland"
+    },
+    "Ancona": {
+      "en": "Ancona",
+      "zh": "[ZH] Ancona"
+    },
+    "Andelys": {
+      "en": "Andelys",
+      "zh": "[ZH] Andelys"
+    },
+    "Anenii Noi": {
+      "en": "Anenii Noi",
+      "zh": "[ZH] Anenii Noi"
+    },
+    "Angoulême": {
+      "en": "Angoulême",
+      "zh": "[ZH] Angoulême"
+    },
+    "Angus and Dundee City": {
+      "en": "Angus and Dundee City",
+      "zh": "[ZH] Angus and Dundee City"
+    },
+    "Anhalt-Bitterfeld": {
+      "en": "Anhalt-Bitterfeld",
+      "zh": "[ZH] Anhalt-Bitterfeld"
+    },
+    "Ankara": {
+      "en": "Ankara",
+      "zh": "[ZH] Ankara"
+    },
+    "Annecy": {
+      "en": "Annecy",
+      "zh": "[ZH] Annecy"
+    },
+    "Ansbach, Kreisfreie Stadt": {
+      "en": "Ansbach, Kreisfreie Stadt",
+      "zh": "[ZH] Ansbach, Kreisfreie Stadt"
+    },
+    "Ansbach, Landkreis": {
+      "en": "Ansbach, Landkreis",
+      "zh": "[ZH] Ansbach, Landkreis"
+    },
+    "Antalya": {
+      "en": "Antalya",
+      "zh": "[ZH] Antalya"
+    },
+    "Antrim and Newtownabbey": {
+      "en": "Antrim and Newtownabbey",
+      "zh": "[ZH] Antrim and Newtownabbey"
+    },
+    "Appenzell Ausserrhoden": {
+      "en": "Appenzell Ausserrhoden",
+      "zh": "[ZH] Appenzell Ausserrhoden"
+    },
+    "Appenzell Innerrhoden": {
+      "en": "Appenzell Innerrhoden",
+      "zh": "[ZH] Appenzell Innerrhoden"
+    },
+    "Araba/Álava": {
+      "en": "Araba/Álava",
+      "zh": "[ZH] Araba/Álava"
+    },
+    "Arad": {
+      "en": "Arad",
+      "zh": "[ZH] Arad"
+    },
+    "Arcachon": {
+      "en": "Arcachon",
+      "zh": "[ZH] Arcachon"
+    },
+    "Ardahan": {
+      "en": "Ardahan",
+      "zh": "[ZH] Ardahan"
+    },
+    "Ardennes": {
+      "en": "Ardennes",
+      "zh": "[ZH] Ardennes"
+    },
+    "Ards and North Down": {
+      "en": "Ards and North Down",
+      "zh": "[ZH] Ards and North Down"
+    },
+    "Ardèche": {
+      "en": "Ardèche",
+      "zh": "[ZH] Ardèche"
+    },
+    "Arezzo": {
+      "en": "Arezzo",
+      "zh": "[ZH] Arezzo"
+    },
+    "Argenteuil": {
+      "en": "Argenteuil",
+      "zh": "[ZH] Argenteuil"
+    },
+    "Argeş": {
+      "en": "Argeş",
+      "zh": "[ZH] Argeş"
+    },
+    "Ariège": {
+      "en": "Ariège",
+      "zh": "[ZH] Ariège"
+    },
+    "Arkhangel'sk": {
+      "en": "Arkhangel'sk",
+      "zh": "[ZH] Arkhangel'sk"
+    },
+    "Armagh City, Banbridge and Craigavon": {
+      "en": "Armagh City, Banbridge and Craigavon",
+      "zh": "[ZH] Armagh City, Banbridge and Craigavon"
+    },
+    "Arnhem/Nijmegen": {
+      "en": "Arnhem/Nijmegen",
+      "zh": "[ZH] Arnhem/Nijmegen"
+    },
+    "Arr. Aalst": {
+      "en": "Arr. Aalst",
+      "zh": "[ZH] Arr. Aalst"
+    },
+    "Arr. Antwerpen": {
+      "en": "Arr. Antwerpen",
+      "zh": "[ZH] Arr. Antwerpen"
+    },
+    "Arr. Arlon": {
+      "en": "Arr. Arlon",
+      "zh": "[ZH] Arr. Arlon"
+    },
+    "Arr. Ath": {
+      "en": "Arr. Ath",
+      "zh": "[ZH] Arr. Ath"
+    },
+    "Arr. Bastogne": {
+      "en": "Arr. Bastogne",
+      "zh": "[ZH] Arr. Bastogne"
+    },
+    "Arr. Brugge": {
+      "en": "Arr. Brugge",
+      "zh": "[ZH] Arr. Brugge"
+    },
+    "Arr. Charleroi": {
+      "en": "Arr. Charleroi",
+      "zh": "[ZH] Arr. Charleroi"
+    },
+    "Arr. Dendermonde": {
+      "en": "Arr. Dendermonde",
+      "zh": "[ZH] Arr. Dendermonde"
+    },
+    "Arr. Diksmuide": {
+      "en": "Arr. Diksmuide",
+      "zh": "[ZH] Arr. Diksmuide"
+    },
+    "Arr. Dinant": {
+      "en": "Arr. Dinant",
+      "zh": "[ZH] Arr. Dinant"
+    },
+    "Arr. Eeklo": {
+      "en": "Arr. Eeklo",
+      "zh": "[ZH] Arr. Eeklo"
+    },
+    "Arr. Gent": {
+      "en": "Arr. Gent",
+      "zh": "[ZH] Arr. Gent"
+    },
+    "Arr. Halle-Vilvoorde": {
+      "en": "Arr. Halle-Vilvoorde",
+      "zh": "[ZH] Arr. Halle-Vilvoorde"
+    },
+    "Arr. Hasselt": {
+      "en": "Arr. Hasselt",
+      "zh": "[ZH] Arr. Hasselt"
+    },
+    "Arr. Huy": {
+      "en": "Arr. Huy",
+      "zh": "[ZH] Arr. Huy"
+    },
+    "Arr. Ieper": {
+      "en": "Arr. Ieper",
+      "zh": "[ZH] Arr. Ieper"
+    },
+    "Arr. Kortrijk": {
+      "en": "Arr. Kortrijk",
+      "zh": "[ZH] Arr. Kortrijk"
+    },
+    "Arr. La Louvière": {
+      "en": "Arr. La Louvière",
+      "zh": "[ZH] Arr. La Louvière"
+    },
+    "Arr. Leuven": {
+      "en": "Arr. Leuven",
+      "zh": "[ZH] Arr. Leuven"
+    },
+    "Arr. Liège": {
+      "en": "Arr. Liège",
+      "zh": "[ZH] Arr. Liège"
+    },
+    "Arr. Maaseik": {
+      "en": "Arr. Maaseik",
+      "zh": "[ZH] Arr. Maaseik"
+    },
+    "Arr. Marche-en-Famenne": {
+      "en": "Arr. Marche-en-Famenne",
+      "zh": "[ZH] Arr. Marche-en-Famenne"
+    },
+    "Arr. Mechelen": {
+      "en": "Arr. Mechelen",
+      "zh": "[ZH] Arr. Mechelen"
+    },
+    "Arr. Mons": {
+      "en": "Arr. Mons",
+      "zh": "[ZH] Arr. Mons"
+    },
+    "Arr. Namur": {
+      "en": "Arr. Namur",
+      "zh": "[ZH] Arr. Namur"
+    },
+    "Arr. Neufchâteau": {
+      "en": "Arr. Neufchâteau",
+      "zh": "[ZH] Arr. Neufchâteau"
+    },
+    "Arr. Nivelles": {
+      "en": "Arr. Nivelles",
+      "zh": "[ZH] Arr. Nivelles"
+    },
+    "Arr. Oostende": {
+      "en": "Arr. Oostende",
+      "zh": "[ZH] Arr. Oostende"
+    },
+    "Arr. Oudenaarde": {
+      "en": "Arr. Oudenaarde",
+      "zh": "[ZH] Arr. Oudenaarde"
+    },
+    "Arr. Philippeville": {
+      "en": "Arr. Philippeville",
+      "zh": "[ZH] Arr. Philippeville"
+    },
+    "Arr. Roeselare": {
+      "en": "Arr. Roeselare",
+      "zh": "[ZH] Arr. Roeselare"
+    },
+    "Arr. Sint-Niklaas": {
+      "en": "Arr. Sint-Niklaas",
+      "zh": "[ZH] Arr. Sint-Niklaas"
+    },
+    "Arr. Soignies": {
+      "en": "Arr. Soignies",
+      "zh": "[ZH] Arr. Soignies"
+    },
+    "Arr. Thuin": {
+      "en": "Arr. Thuin",
+      "zh": "[ZH] Arr. Thuin"
+    },
+    "Arr. Tielt": {
+      "en": "Arr. Tielt",
+      "zh": "[ZH] Arr. Tielt"
+    },
+    "Arr. Tongeren": {
+      "en": "Arr. Tongeren",
+      "zh": "[ZH] Arr. Tongeren"
+    },
+    "Arr. Tournai-Mouscron": {
+      "en": "Arr. Tournai-Mouscron",
+      "zh": "[ZH] Arr. Tournai-Mouscron"
+    },
+    "Arr. Turnhout": {
+      "en": "Arr. Turnhout",
+      "zh": "[ZH] Arr. Turnhout"
+    },
+    "Arr. Verviers — communes francophones": {
+      "en": "Arr. Verviers — communes francophones",
+      "zh": "[ZH] Arr. Verviers — communes francophones"
+    },
+    "Arr. Veurne": {
+      "en": "Arr. Veurne",
+      "zh": "[ZH] Arr. Veurne"
+    },
+    "Arr. Virton": {
+      "en": "Arr. Virton",
+      "zh": "[ZH] Arr. Virton"
+    },
+    "Arr. Waremme": {
+      "en": "Arr. Waremme",
+      "zh": "[ZH] Arr. Waremme"
+    },
+    "Arr. de Bruxelles-Capitale/Arr. Brussel-Hoofdstad": {
+      "en": "Arr. de Bruxelles-Capitale/Arr. Brussel-Hoofdstad",
+      "zh": "[ZH] Arr. de Bruxelles-Capitale/Arr. Brussel-Hoofdstad"
+    },
+    "Artvin": {
+      "en": "Artvin",
+      "zh": "[ZH] Artvin"
+    },
+    "Aschaffenburg, Kreisfreie Stadt": {
+      "en": "Aschaffenburg, Kreisfreie Stadt",
+      "zh": "[ZH] Aschaffenburg, Kreisfreie Stadt"
+    },
+    "Aschaffenburg, Landkreis": {
+      "en": "Aschaffenburg, Landkreis",
+      "zh": "[ZH] Aschaffenburg, Landkreis"
+    },
+    "Ascoli Piceno": {
+      "en": "Ascoli Piceno",
+      "zh": "[ZH] Ascoli Piceno"
+    },
+    "Asti": {
+      "en": "Asti",
+      "zh": "[ZH] Asti"
+    },
+    "Astrakhan'": {
+      "en": "Astrakhan'",
+      "zh": "[ZH] Astrakhan'"
+    },
+    "Asturias": {
+      "en": "Asturias",
+      "zh": "[ZH] Asturias"
+    },
+    "Aube": {
+      "en": "Aube",
+      "zh": "[ZH] Aube"
+    },
+    "Aude": {
+      "en": "Aude",
+      "zh": "[ZH] Aude"
+    },
+    "Augsburg, Kreisfreie Stadt": {
+      "en": "Augsburg, Kreisfreie Stadt",
+      "zh": "[ZH] Augsburg, Kreisfreie Stadt"
+    },
+    "Augsburg, Landkreis": {
+      "en": "Augsburg, Landkreis",
+      "zh": "[ZH] Augsburg, Landkreis"
+    },
+    "Aurich": {
+      "en": "Aurich",
+      "zh": "[ZH] Aurich"
+    },
+    "Autun": {
+      "en": "Autun",
+      "zh": "[ZH] Autun"
+    },
+    "Außerfern": {
+      "en": "Außerfern",
+      "zh": "[ZH] Außerfern"
+    },
+    "Ave": {
+      "en": "Ave",
+      "zh": "[ZH] Ave"
+    },
+    "Avellino": {
+      "en": "Avellino",
+      "zh": "[ZH] Avellino"
+    },
+    "Aveyron": {
+      "en": "Aveyron",
+      "zh": "[ZH] Aveyron"
+    },
+    "Aydın": {
+      "en": "Aydın",
+      "zh": "[ZH] Aydın"
+    },
+    "Ağrı": {
+      "en": "Ağrı",
+      "zh": "[ZH] Ağrı"
+    },
+    "Bacău": {
+      "en": "Bacău",
+      "zh": "[ZH] Bacău"
+    },
+    "Bad Dürkheim": {
+      "en": "Bad Dürkheim",
+      "zh": "[ZH] Bad Dürkheim"
+    },
+    "Bad Kissingen": {
+      "en": "Bad Kissingen",
+      "zh": "[ZH] Bad Kissingen"
+    },
+    "Bad Kreuznach": {
+      "en": "Bad Kreuznach",
+      "zh": "[ZH] Bad Kreuznach"
+    },
+    "Bad Tölz-Wolfratshausen": {
+      "en": "Bad Tölz-Wolfratshausen",
+      "zh": "[ZH] Bad Tölz-Wolfratshausen"
+    },
+    "Badajoz": {
+      "en": "Badajoz",
+      "zh": "[ZH] Badajoz"
+    },
+    "Baden-Baden, Stadtkreis": {
+      "en": "Baden-Baden, Stadtkreis",
+      "zh": "[ZH] Baden-Baden, Stadtkreis"
+    },
+    "Baixo Alentejo": {
+      "en": "Baixo Alentejo",
+      "zh": "[ZH] Baixo Alentejo"
+    },
+    "Balıkesir": {
+      "en": "Balıkesir",
+      "zh": "[ZH] Balıkesir"
+    },
+    "Bamberg, Kreisfreie Stadt": {
+      "en": "Bamberg, Kreisfreie Stadt",
+      "zh": "[ZH] Bamberg, Kreisfreie Stadt"
+    },
+    "Bamberg, Landkreis": {
+      "en": "Bamberg, Landkreis",
+      "zh": "[ZH] Bamberg, Landkreis"
+    },
+    "Banskobystrický kraj": {
+      "en": "Banskobystrický kraj",
+      "zh": "[ZH] Banskobystrický kraj"
+    },
+    "Baranya": {
+      "en": "Baranya",
+      "zh": "[ZH] Baranya"
+    },
+    "Barcelona": {
+      "en": "Barcelona",
+      "zh": "[ZH] Barcelona"
+    },
+    "Bari": {
+      "en": "Bari",
+      "zh": "[ZH] Bari"
+    },
+    "Barking & Dagenham and Havering": {
+      "en": "Barking & Dagenham and Havering",
+      "zh": "[ZH] Barking & Dagenham and Havering"
+    },
+    "Barletta-Andria-Trani": {
+      "en": "Barletta-Andria-Trani",
+      "zh": "[ZH] Barletta-Andria-Trani"
+    },
+    "Barnet": {
+      "en": "Barnet",
+      "zh": "[ZH] Barnet"
+    },
+    "Barnim": {
+      "en": "Barnim",
+      "zh": "[ZH] Barnim"
+    },
+    "Barnsley, Doncaster and Rotherham": {
+      "en": "Barnsley, Doncaster and Rotherham",
+      "zh": "[ZH] Barnsley, Doncaster and Rotherham"
+    },
+    "Bartın": {
+      "en": "Bartın",
+      "zh": "[ZH] Bartın"
+    },
+    "Basarabeasca": {
+      "en": "Basarabeasca",
+      "zh": "[ZH] Basarabeasca"
+    },
+    "Basel-Landschaft": {
+      "en": "Basel-Landschaft",
+      "zh": "[ZH] Basel-Landschaft"
+    },
+    "Basel-Stadt": {
+      "en": "Basel-Stadt",
+      "zh": "[ZH] Basel-Stadt"
+    },
+    "Bashkortostan": {
+      "en": "Bashkortostan",
+      "zh": "[ZH] Bashkortostan"
+    },
+    "Bath and North East Somerset, North Somerset and South Gloucestershire": {
+      "en": "Bath and North East Somerset, North Somerset and South Gloucestershire",
+      "zh": "[ZH] Bath and North East Somerset, North Somerset and South Gloucestershire"
+    },
+    "Batman": {
+      "en": "Batman",
+      "zh": "[ZH] Batman"
+    },
+    "Bautzen": {
+      "en": "Bautzen",
+      "zh": "[ZH] Bautzen"
+    },
+    "Bayburt": {
+      "en": "Bayburt",
+      "zh": "[ZH] Bayburt"
+    },
+    "Bayonne": {
+      "en": "Bayonne",
+      "zh": "[ZH] Bayonne"
+    },
+    "Bayreuth, Kreisfreie Stadt": {
+      "en": "Bayreuth, Kreisfreie Stadt",
+      "zh": "[ZH] Bayreuth, Kreisfreie Stadt"
+    },
+    "Bayreuth, Landkreis": {
+      "en": "Bayreuth, Landkreis",
+      "zh": "[ZH] Bayreuth, Landkreis"
+    },
+    "Bedford": {
+      "en": "Bedford",
+      "zh": "[ZH] Bedford"
+    },
+    "Beira Baixa": {
+      "en": "Beira Baixa",
+      "zh": "[ZH] Beira Baixa"
+    },
+    "Beiras e Serra da Estrela": {
+      "en": "Beiras e Serra da Estrela",
+      "zh": "[ZH] Beiras e Serra da Estrela"
+    },
+    "Belfast": {
+      "en": "Belfast",
+      "zh": "[ZH] Belfast"
+    },
+    "Belgorod": {
+      "en": "Belgorod",
+      "zh": "[ZH] Belgorod"
+    },
+    "Belley": {
+      "en": "Belley",
+      "zh": "[ZH] Belley"
+    },
+    "Belluno": {
+      "en": "Belluno",
+      "zh": "[ZH] Belluno"
+    },
+    "Bender": {
+      "en": "Bender",
+      "zh": "[ZH] Bender"
+    },
+    "Benevento": {
+      "en": "Benevento",
+      "zh": "[ZH] Benevento"
+    },
+    "Berat": {
+      "en": "Berat",
+      "zh": "[ZH] Berat"
+    },
+    "Berchtesgadener Land": {
+      "en": "Berchtesgadener Land",
+      "zh": "[ZH] Berchtesgadener Land"
+    },
+    "Bergamo": {
+      "en": "Bergamo",
+      "zh": "[ZH] Bergamo"
+    },
+    "Bergerac": {
+      "en": "Bergerac",
+      "zh": "[ZH] Bergerac"
+    },
+    "Bergstraße": {
+      "en": "Bergstraße",
+      "zh": "[ZH] Bergstraße"
+    },
+    "Berkshire": {
+      "en": "Berkshire",
+      "zh": "[ZH] Berkshire"
+    },
+    "Berlin": {
+      "en": "Berlin",
+      "zh": "[ZH] Berlin"
+    },
+    "Bern": {
+      "en": "Bern",
+      "zh": "[ZH] Bern"
+    },
+    "Bernay": {
+      "en": "Bernay",
+      "zh": "[ZH] Bernay"
+    },
+    "Bernkastel-Wittlich": {
+      "en": "Bernkastel-Wittlich",
+      "zh": "[ZH] Bernkastel-Wittlich"
+    },
+    "Bexley and Greenwich": {
+      "en": "Bexley and Greenwich",
+      "zh": "[ZH] Bexley and Greenwich"
+    },
+    "Bezirk Verviers — Deutschsprachige Gemeinschaft": {
+      "en": "Bezirk Verviers — Deutschsprachige Gemeinschaft",
+      "zh": "[ZH] Bezirk Verviers — Deutschsprachige Gemeinschaft"
+    },
+    "Bialski": {
+      "en": "Bialski",
+      "zh": "[ZH] Bialski"
+    },
+    "Białostocki": {
+      "en": "Białostocki",
+      "zh": "[ZH] Białostocki"
+    },
+    "Biberach": {
+      "en": "Biberach",
+      "zh": "[ZH] Biberach"
+    },
+    "Bielefeld, Kreisfreie Stadt": {
+      "en": "Bielefeld, Kreisfreie Stadt",
+      "zh": "[ZH] Bielefeld, Kreisfreie Stadt"
+    },
+    "Biella": {
+      "en": "Biella",
+      "zh": "[ZH] Biella"
+    },
+    "Bielski": {
+      "en": "Bielski",
+      "zh": "[ZH] Bielski"
+    },
+    "Bihor": {
+      "en": "Bihor",
+      "zh": "[ZH] Bihor"
+    },
+    "Bilecik": {
+      "en": "Bilecik",
+      "zh": "[ZH] Bilecik"
+    },
+    "Bingöl": {
+      "en": "Bingöl",
+      "zh": "[ZH] Bingöl"
+    },
+    "Birkenfeld": {
+      "en": "Birkenfeld",
+      "zh": "[ZH] Birkenfeld"
+    },
+    "Birmingham": {
+      "en": "Birmingham",
+      "zh": "[ZH] Birmingham"
+    },
+    "Bistriţa-Năsăud": {
+      "en": "Bistriţa-Năsăud",
+      "zh": "[ZH] Bistriţa-Năsăud"
+    },
+    "Bitlis": {
+      "en": "Bitlis",
+      "zh": "[ZH] Bitlis"
+    },
+    "Bizkaia": {
+      "en": "Bizkaia",
+      "zh": "[ZH] Bizkaia"
+    },
+    "Bjelovarsko-bilogorska županija": {
+      "en": "Bjelovarsko-bilogorska županija",
+      "zh": "[ZH] Bjelovarsko-bilogorska županija"
+    },
+    "Blackburn with Darwen": {
+      "en": "Blackburn with Darwen",
+      "zh": "[ZH] Blackburn with Darwen"
+    },
+    "Blackpool": {
+      "en": "Blackpool",
+      "zh": "[ZH] Blackpool"
+    },
+    "Blaye": {
+      "en": "Blaye",
+      "zh": "[ZH] Blaye"
+    },
+    "Blekinge län": {
+      "en": "Blekinge län",
+      "zh": "[ZH] Blekinge län"
+    },
+    "Blois": {
+      "en": "Blois",
+      "zh": "[ZH] Blois"
+    },
+    "Bludenz-Bregenzer Wald": {
+      "en": "Bludenz-Bregenzer Wald",
+      "zh": "[ZH] Bludenz-Bregenzer Wald"
+    },
+    "Bochum, Kreisfreie Stadt": {
+      "en": "Bochum, Kreisfreie Stadt",
+      "zh": "[ZH] Bochum, Kreisfreie Stadt"
+    },
+    "Bodenseekreis": {
+      "en": "Bodenseekreis",
+      "zh": "[ZH] Bodenseekreis"
+    },
+    "Bologna": {
+      "en": "Bologna",
+      "zh": "[ZH] Bologna"
+    },
+    "Bolu": {
+      "en": "Bolu",
+      "zh": "[ZH] Bolu"
+    },
+    "Bolzano-Bozen": {
+      "en": "Bolzano-Bozen",
+      "zh": "[ZH] Bolzano-Bozen"
+    },
+    "Bonn, Kreisfreie Stadt": {
+      "en": "Bonn, Kreisfreie Stadt",
+      "zh": "[ZH] Bonn, Kreisfreie Stadt"
+    },
+    "Bonneville": {
+      "en": "Bonneville",
+      "zh": "[ZH] Bonneville"
+    },
+    "Bordeaux": {
+      "en": "Bordeaux",
+      "zh": "[ZH] Bordeaux"
+    },
+    "Border": {
+      "en": "Border",
+      "zh": "[ZH] Border"
+    },
+    "Borken": {
+      "en": "Borken",
+      "zh": "[ZH] Borken"
+    },
+    "Bornholm": {
+      "en": "Bornholm",
+      "zh": "[ZH] Bornholm"
+    },
+    "Borsod-Abaúj-Zemplén": {
+      "en": "Borsod-Abaúj-Zemplén",
+      "zh": "[ZH] Borsod-Abaúj-Zemplén"
+    },
+    "Bosnia and Herzegovina": {
+      "en": "Bosnia and Herzegovina",
+      "zh": "[ZH] Bosnia and Herzegovina"
+    },
+    "Botoşani": {
+      "en": "Botoşani",
+      "zh": "[ZH] Botoşani"
+    },
+    "Bottrop, Kreisfreie Stadt": {
+      "en": "Bottrop, Kreisfreie Stadt",
+      "zh": "[ZH] Bottrop, Kreisfreie Stadt"
+    },
+    "Bouches-du-Rhône": {
+      "en": "Bouches-du-Rhône",
+      "zh": "[ZH] Bouches-du-Rhône"
+    },
+    "Bourg-en-Bresse": {
+      "en": "Bourg-en-Bresse",
+      "zh": "[ZH] Bourg-en-Bresse"
+    },
+    "Bourges": {
+      "en": "Bourges",
+      "zh": "[ZH] Bourges"
+    },
+    "Bournemouth, Christchurch and Poole": {
+      "en": "Bournemouth, Christchurch and Poole",
+      "zh": "[ZH] Bournemouth, Christchurch and Poole"
+    },
+    "Bradford": {
+      "en": "Bradford",
+      "zh": "[ZH] Bradford"
+    },
+    "Brandenburg an der Havel, Kreisfreie Stadt": {
+      "en": "Brandenburg an der Havel, Kreisfreie Stadt",
+      "zh": "[ZH] Brandenburg an der Havel, Kreisfreie Stadt"
+    },
+    "Bratislavský kraj": {
+      "en": "Bratislavský kraj",
+      "zh": "[ZH] Bratislavský kraj"
+    },
+    "Braunschweig, Kreisfreie Stadt": {
+      "en": "Braunschweig, Kreisfreie Stadt",
+      "zh": "[ZH] Braunschweig, Kreisfreie Stadt"
+    },
+    "Braşov": {
+      "en": "Braşov",
+      "zh": "[ZH] Braşov"
+    },
+    "Breckland and South Norfolk": {
+      "en": "Breckland and South Norfolk",
+      "zh": "[ZH] Breckland and South Norfolk"
+    },
+    "Breisgau-Hochschwarzwald": {
+      "en": "Breisgau-Hochschwarzwald",
+      "zh": "[ZH] Breisgau-Hochschwarzwald"
+    },
+    "Bremen, Kreisfreie Stadt": {
+      "en": "Bremen, Kreisfreie Stadt",
+      "zh": "[ZH] Bremen, Kreisfreie Stadt"
+    },
+    "Bremerhaven, Kreisfreie Stadt": {
+      "en": "Bremerhaven, Kreisfreie Stadt",
+      "zh": "[ZH] Bremerhaven, Kreisfreie Stadt"
+    },
+    "Brent": {
+      "en": "Brent",
+      "zh": "[ZH] Brent"
+    },
+    "Brescia": {
+      "en": "Brescia",
+      "zh": "[ZH] Brescia"
+    },
+    "Brest": {
+      "en": "Brest",
+      "zh": "[ZH] Brest"
+    },
+    "Briceni": {
+      "en": "Briceni",
+      "zh": "[ZH] Briceni"
+    },
+    "Bridgend and Neath Port Talbot": {
+      "en": "Bridgend and Neath Port Talbot",
+      "zh": "[ZH] Bridgend and Neath Port Talbot"
+    },
+    "Briey": {
+      "en": "Briey",
+      "zh": "[ZH] Briey"
+    },
+    "Brighton and Hove": {
+      "en": "Brighton and Hove",
+      "zh": "[ZH] Brighton and Hove"
+    },
+    "Brindisi": {
+      "en": "Brindisi",
+      "zh": "[ZH] Brindisi"
+    },
+    "Bristol, City of": {
+      "en": "Bristol, City of",
+      "zh": "[ZH] Bristol, City of"
+    },
+    "Brodsko-posavska županija": {
+      "en": "Brodsko-posavska županija",
+      "zh": "[ZH] Brodsko-posavska županija"
+    },
+    "Bromley": {
+      "en": "Bromley",
+      "zh": "[ZH] Bromley"
+    },
+    "Bryansk": {
+      "en": "Bryansk",
+      "zh": "[ZH] Bryansk"
+    },
+    "Brăila": {
+      "en": "Brăila",
+      "zh": "[ZH] Brăila"
+    },
+    "Buckinghamshire CC": {
+      "en": "Buckinghamshire CC",
+      "zh": "[ZH] Buckinghamshire CC"
+    },
+    "Bucureşti": {
+      "en": "Bucureşti",
+      "zh": "[ZH] Bucureşti"
+    },
+    "Budapest": {
+      "en": "Budapest",
+      "zh": "[ZH] Budapest"
+    },
+    "Burdur": {
+      "en": "Burdur",
+      "zh": "[ZH] Burdur"
+    },
+    "Burgenlandkreis": {
+      "en": "Burgenlandkreis",
+      "zh": "[ZH] Burgenlandkreis"
+    },
+    "Burgos": {
+      "en": "Burgos",
+      "zh": "[ZH] Burgos"
+    },
+    "Bursa": {
+      "en": "Bursa",
+      "zh": "[ZH] Bursa"
+    },
+    "Buzău": {
+      "en": "Buzău",
+      "zh": "[ZH] Buzău"
+    },
+    "Bydgosko-toruński": {
+      "en": "Bydgosko-toruński",
+      "zh": "[ZH] Bydgosko-toruński"
+    },
+    "Byen København": {
+      "en": "Byen København",
+      "zh": "[ZH] Byen København"
+    },
+    "Bytomski": {
+      "en": "Bytomski",
+      "zh": "[ZH] Bytomski"
+    },
+    "Bács-Kiskun": {
+      "en": "Bács-Kiskun",
+      "zh": "[ZH] Bács-Kiskun"
+    },
+    "Békés": {
+      "en": "Békés",
+      "zh": "[ZH] Békés"
+    },
+    "Böblingen": {
+      "en": "Böblingen",
+      "zh": "[ZH] Böblingen"
+    },
+    "Börde": {
+      "en": "Börde",
+      "zh": "[ZH] Börde"
+    },
+    "Bălţi": {
+      "en": "Bălţi",
+      "zh": "[ZH] Bălţi"
+    },
+    "Cagliari": {
+      "en": "Cagliari",
+      "zh": "[ZH] Cagliari"
+    },
+    "Cahul": {
+      "en": "Cahul",
+      "zh": "[ZH] Cahul"
+    },
+    "Caithness & Sutherland and Ross & Cromarty": {
+      "en": "Caithness & Sutherland and Ross & Cromarty",
+      "zh": "[ZH] Caithness & Sutherland and Ross & Cromarty"
+    },
+    "Calderdale and Kirklees": {
+      "en": "Calderdale and Kirklees",
+      "zh": "[ZH] Calderdale and Kirklees"
+    },
+    "Caltanissetta": {
+      "en": "Caltanissetta",
+      "zh": "[ZH] Caltanissetta"
+    },
+    "Calvados": {
+      "en": "Calvados",
+      "zh": "[ZH] Calvados"
+    },
+    "Calw": {
+      "en": "Calw",
+      "zh": "[ZH] Calw"
+    },
+    "Cambridgeshire CC": {
+      "en": "Cambridgeshire CC",
+      "zh": "[ZH] Cambridgeshire CC"
+    },
+    "Camden and City of London": {
+      "en": "Camden and City of London",
+      "zh": "[ZH] Camden and City of London"
+    },
+    "Camenca": {
+      "en": "Camenca",
+      "zh": "[ZH] Camenca"
+    },
+    "Campobasso": {
+      "en": "Campobasso",
+      "zh": "[ZH] Campobasso"
+    },
+    "Cantabria": {
+      "en": "Cantabria",
+      "zh": "[ZH] Cantabria"
+    },
+    "Cantal": {
+      "en": "Cantal",
+      "zh": "[ZH] Cantal"
+    },
+    "Cantemir": {
+      "en": "Cantemir",
+      "zh": "[ZH] Cantemir"
+    },
+    "Caraş-Severin": {
+      "en": "Caraş-Severin",
+      "zh": "[ZH] Caraş-Severin"
+    },
+    "Cardiff and Vale of Glamorgan": {
+      "en": "Cardiff and Vale of Glamorgan",
+      "zh": "[ZH] Cardiff and Vale of Glamorgan"
+    },
+    "Caserta": {
+      "en": "Caserta",
+      "zh": "[ZH] Caserta"
+    },
+    "Castellón/Castelló": {
+      "en": "Castellón/Castelló",
+      "zh": "[ZH] Castellón/Castelló"
+    },
+    "Catania": {
+      "en": "Catania",
+      "zh": "[ZH] Catania"
+    },
+    "Catanzaro": {
+      "en": "Catanzaro",
+      "zh": "[ZH] Catanzaro"
+    },
+    "Causeni": {
+      "en": "Causeni",
+      "zh": "[ZH] Causeni"
+    },
+    "Causeway Coast and Glens": {
+      "en": "Causeway Coast and Glens",
+      "zh": "[ZH] Causeway Coast and Glens"
+    },
+    "Celle": {
+      "en": "Celle",
+      "zh": "[ZH] Celle"
+    },
+    "Central Bedfordshire": {
+      "en": "Central Bedfordshire",
+      "zh": "[ZH] Central Bedfordshire"
+    },
+    "Central Hampshire": {
+      "en": "Central Hampshire",
+      "zh": "[ZH] Central Hampshire"
+    },
+    "Central Valleys": {
+      "en": "Central Valleys",
+      "zh": "[ZH] Central Valleys"
+    },
+    "Ceuta": {
+      "en": "Ceuta",
+      "zh": "[ZH] Ceuta"
+    },
+    "Chalon-sur-Saône": {
+      "en": "Chalon-sur-Saône",
+      "zh": "[ZH] Chalon-sur-Saône"
+    },
+    "Cham": {
+      "en": "Cham",
+      "zh": "[ZH] Cham"
+    },
+    "Chambéry": {
+      "en": "Chambéry",
+      "zh": "[ZH] Chambéry"
+    },
+    "Charente-Maritime": {
+      "en": "Charente-Maritime",
+      "zh": "[ZH] Charente-Maritime"
+    },
+    "Charolles": {
+      "en": "Charolles",
+      "zh": "[ZH] Charolles"
+    },
+    "Chechnya": {
+      "en": "Chechnya",
+      "zh": "[ZH] Chechnya"
+    },
+    "Chelyabinsk": {
+      "en": "Chelyabinsk",
+      "zh": "[ZH] Chelyabinsk"
+    },
+    "Chemnitz, Kreisfreie Stadt": {
+      "en": "Chemnitz, Kreisfreie Stadt",
+      "zh": "[ZH] Chemnitz, Kreisfreie Stadt"
+    },
+    "Cherkasy": {
+      "en": "Cherkasy",
+      "zh": "[ZH] Cherkasy"
+    },
+    "Chernihiv": {
+      "en": "Chernihiv",
+      "zh": "[ZH] Chernihiv"
+    },
+    "Chernivtsi": {
+      "en": "Chernivtsi",
+      "zh": "[ZH] Chernivtsi"
+    },
+    "Cheshire East": {
+      "en": "Cheshire East",
+      "zh": "[ZH] Cheshire East"
+    },
+    "Cheshire West and Chester": {
+      "en": "Cheshire West and Chester",
+      "zh": "[ZH] Cheshire West and Chester"
+    },
+    "Chełmsko-zamojski": {
+      "en": "Chełmsko-zamojski",
+      "zh": "[ZH] Chełmsko-zamojski"
+    },
+    "Chieti": {
+      "en": "Chieti",
+      "zh": "[ZH] Chieti"
+    },
+    "Chinon": {
+      "en": "Chinon",
+      "zh": "[ZH] Chinon"
+    },
+    "Chişinău": {
+      "en": "Chişinău",
+      "zh": "[ZH] Chişinău"
+    },
+    "Chojnicki": {
+      "en": "Chojnicki",
+      "zh": "[ZH] Chojnicki"
+    },
+    "Chorley and West Lancashire": {
+      "en": "Chorley and West Lancashire",
+      "zh": "[ZH] Chorley and West Lancashire"
+    },
+    "Chuvash": {
+      "en": "Chuvash",
+      "zh": "[ZH] Chuvash"
+    },
+    "Châtellerault": {
+      "en": "Châtellerault",
+      "zh": "[ZH] Châtellerault"
+    },
+    "Ciechanowski": {
+      "en": "Ciechanowski",
+      "zh": "[ZH] Ciechanowski"
+    },
+    "Cimişlia": {
+      "en": "Cimişlia",
+      "zh": "[ZH] Cimişlia"
+    },
+    "City of Minsk": {
+      "en": "City of Minsk",
+      "zh": "[ZH] City of Minsk"
+    },
+    "City of St. Petersburg": {
+      "en": "City of St. Petersburg",
+      "zh": "[ZH] City of St. Petersburg"
+    },
+    "Ciudad Real": {
+      "en": "Ciudad Real",
+      "zh": "[ZH] Ciudad Real"
+    },
+    "Clackmannanshire and Fife": {
+      "en": "Clackmannanshire and Fife",
+      "zh": "[ZH] Clackmannanshire and Fife"
+    },
+    "Cloppenburg": {
+      "en": "Cloppenburg",
+      "zh": "[ZH] Cloppenburg"
+    },
+    "Cluj": {
+      "en": "Cluj",
+      "zh": "[ZH] Cluj"
+    },
+    "Coburg, Kreisfreie Stadt": {
+      "en": "Coburg, Kreisfreie Stadt",
+      "zh": "[ZH] Coburg, Kreisfreie Stadt"
+    },
+    "Coburg, Landkreis": {
+      "en": "Coburg, Landkreis",
+      "zh": "[ZH] Coburg, Landkreis"
+    },
+    "Cochem-Zell": {
+      "en": "Cochem-Zell",
+      "zh": "[ZH] Cochem-Zell"
+    },
+    "Coesfeld": {
+      "en": "Coesfeld",
+      "zh": "[ZH] Coesfeld"
+    },
+    "Cognac": {
+      "en": "Cognac",
+      "zh": "[ZH] Cognac"
+    },
+    "Colmar-Ribeauvillé": {
+      "en": "Colmar-Ribeauvillé",
+      "zh": "[ZH] Colmar-Ribeauvillé"
+    },
+    "Como": {
+      "en": "Como",
+      "zh": "[ZH] Como"
+    },
+    "Comrat": {
+      "en": "Comrat",
+      "zh": "[ZH] Comrat"
+    },
+    "Confolens": {
+      "en": "Confolens",
+      "zh": "[ZH] Confolens"
+    },
+    "Constanţa": {
+      "en": "Constanţa",
+      "zh": "[ZH] Constanţa"
+    },
+    "Conwy and Denbighshire": {
+      "en": "Conwy and Denbighshire",
+      "zh": "[ZH] Conwy and Denbighshire"
+    },
+    "Cornwall and Isles of Scilly": {
+      "en": "Cornwall and Isles of Scilly",
+      "zh": "[ZH] Cornwall and Isles of Scilly"
+    },
+    "Corrèze": {
+      "en": "Corrèze",
+      "zh": "[ZH] Corrèze"
+    },
+    "Corse-du-Sud": {
+      "en": "Corse-du-Sud",
+      "zh": "[ZH] Corse-du-Sud"
+    },
+    "Cosenza": {
+      "en": "Cosenza",
+      "zh": "[ZH] Cosenza"
+    },
+    "Cottbus, Kreisfreie Stadt": {
+      "en": "Cottbus, Kreisfreie Stadt",
+      "zh": "[ZH] Cottbus, Kreisfreie Stadt"
+    },
+    "Covasna": {
+      "en": "Covasna",
+      "zh": "[ZH] Covasna"
+    },
+    "Coventry": {
+      "en": "Coventry",
+      "zh": "[ZH] Coventry"
+    },
+    "Cremona": {
+      "en": "Cremona",
+      "zh": "[ZH] Cremona"
+    },
+    "Creuse": {
+      "en": "Creuse",
+      "zh": "[ZH] Creuse"
+    },
+    "Crimea": {
+      "en": "Crimea",
+      "zh": "[ZH] Crimea"
+    },
+    "Criuleni": {
+      "en": "Criuleni",
+      "zh": "[ZH] Criuleni"
+    },
+    "Crotone": {
+      "en": "Crotone",
+      "zh": "[ZH] Crotone"
+    },
+    "Croydon": {
+      "en": "Croydon",
+      "zh": "[ZH] Croydon"
+    },
+    "Csongrád": {
+      "en": "Csongrád",
+      "zh": "[ZH] Csongrád"
+    },
+    "Cuenca": {
+      "en": "Cuenca",
+      "zh": "[ZH] Cuenca"
+    },
+    "Cuneo": {
+      "en": "Cuneo",
+      "zh": "[ZH] Cuneo"
+    },
+    "Cuxhaven": {
+      "en": "Cuxhaven",
+      "zh": "[ZH] Cuxhaven"
+    },
+    "Częstochowski": {
+      "en": "Częstochowski",
+      "zh": "[ZH] Częstochowski"
+    },
+    "Cáceres": {
+      "en": "Cáceres",
+      "zh": "[ZH] Cáceres"
+    },
+    "Cádiz": {
+      "en": "Cádiz",
+      "zh": "[ZH] Cádiz"
+    },
+    "Cávado": {
+      "en": "Cávado",
+      "zh": "[ZH] Cávado"
+    },
+    "Córdoba": {
+      "en": "Córdoba",
+      "zh": "[ZH] Córdoba"
+    },
+    "Côte-d’Or": {
+      "en": "Côte-d’Or",
+      "zh": "[ZH] Côte-d’Or"
+    },
+    "Côtes-d’Armor": {
+      "en": "Côtes-d’Armor",
+      "zh": "[ZH] Côtes-d’Armor"
+    },
+    "Călăraşi": {
+      "en": "Călăraşi",
+      "zh": "[ZH] Călăraşi"
+    },
+    "Călărași": {
+      "en": "Călărași",
+      "zh": "[ZH] Călărași"
+    },
+    "Dachau": {
+      "en": "Dachau",
+      "zh": "[ZH] Dachau"
+    },
+    "Dagestan": {
+      "en": "Dagestan",
+      "zh": "[ZH] Dagestan"
+    },
+    "Dahme-Spreewald": {
+      "en": "Dahme-Spreewald",
+      "zh": "[ZH] Dahme-Spreewald"
+    },
+    "Dalarnas län": {
+      "en": "Dalarnas län",
+      "zh": "[ZH] Dalarnas län"
+    },
+    "Darlington": {
+      "en": "Darlington",
+      "zh": "[ZH] Darlington"
+    },
+    "Darmstadt, Kreisfreie Stadt": {
+      "en": "Darmstadt, Kreisfreie Stadt",
+      "zh": "[ZH] Darmstadt, Kreisfreie Stadt"
+    },
+    "Darmstadt-Dieburg": {
+      "en": "Darmstadt-Dieburg",
+      "zh": "[ZH] Darmstadt-Dieburg"
+    },
+    "Dax": {
+      "en": "Dax",
+      "zh": "[ZH] Dax"
+    },
+    "Deggendorf": {
+      "en": "Deggendorf",
+      "zh": "[ZH] Deggendorf"
+    },
+    "Delft en Westland": {
+      "en": "Delft en Westland",
+      "zh": "[ZH] Delft en Westland"
+    },
+    "Delfzijl en omgeving": {
+      "en": "Delfzijl en omgeving",
+      "zh": "[ZH] Delfzijl en omgeving"
+    },
+    "Delmenhorst, Kreisfreie Stadt": {
+      "en": "Delmenhorst, Kreisfreie Stadt",
+      "zh": "[ZH] Delmenhorst, Kreisfreie Stadt"
+    },
+    "Denizli": {
+      "en": "Denizli",
+      "zh": "[ZH] Denizli"
+    },
+    "Derby": {
+      "en": "Derby",
+      "zh": "[ZH] Derby"
+    },
+    "Derry City and Strabane": {
+      "en": "Derry City and Strabane",
+      "zh": "[ZH] Derry City and Strabane"
+    },
+    "Dessau-Roßlau, Kreisfreie Stadt": {
+      "en": "Dessau-Roßlau, Kreisfreie Stadt",
+      "zh": "[ZH] Dessau-Roßlau, Kreisfreie Stadt"
+    },
+    "Deux-Sèvres": {
+      "en": "Deux-Sèvres",
+      "zh": "[ZH] Deux-Sèvres"
+    },
+    "Devon CC": {
+      "en": "Devon CC",
+      "zh": "[ZH] Devon CC"
+    },
+    "Dibër": {
+      "en": "Dibër",
+      "zh": "[ZH] Dibër"
+    },
+    "Diepholz": {
+      "en": "Diepholz",
+      "zh": "[ZH] Diepholz"
+    },
+    "Dieppe": {
+      "en": "Dieppe",
+      "zh": "[ZH] Dieppe"
+    },
+    "Dillingen a.d. Donau": {
+      "en": "Dillingen a.d. Donau",
+      "zh": "[ZH] Dillingen a.d. Donau"
+    },
+    "Dingolfing-Landau": {
+      "en": "Dingolfing-Landau",
+      "zh": "[ZH] Dingolfing-Landau"
+    },
+    "Dithmarschen": {
+      "en": "Dithmarschen",
+      "zh": "[ZH] Dithmarschen"
+    },
+    "Diyarbakır": {
+      "en": "Diyarbakır",
+      "zh": "[ZH] Diyarbakır"
+    },
+    "Dnipropetrovs'k": {
+      "en": "Dnipropetrovs'k",
+      "zh": "[ZH] Dnipropetrovs'k"
+    },
+    "Dole": {
+      "en": "Dole",
+      "zh": "[ZH] Dole"
+    },
+    "Dolj": {
+      "en": "Dolj",
+      "zh": "[ZH] Dolj"
+    },
+    "Donau-Ries": {
+      "en": "Donau-Ries",
+      "zh": "[ZH] Donau-Ries"
+    },
+    "Donduseni": {
+      "en": "Donduseni",
+      "zh": "[ZH] Donduseni"
+    },
+    "Donets'k": {
+      "en": "Donets'k",
+      "zh": "[ZH] Donets'k"
+    },
+    "Donnersbergkreis": {
+      "en": "Donnersbergkreis",
+      "zh": "[ZH] Donnersbergkreis"
+    },
+    "Dorset": {
+      "en": "Dorset",
+      "zh": "[ZH] Dorset"
+    },
+    "Dortmund, Kreisfreie Stadt": {
+      "en": "Dortmund, Kreisfreie Stadt",
+      "zh": "[ZH] Dortmund, Kreisfreie Stadt"
+    },
+    "Doubs": {
+      "en": "Doubs",
+      "zh": "[ZH] Doubs"
+    },
+    "Douro": {
+      "en": "Douro",
+      "zh": "[ZH] Douro"
+    },
+    "Dresden, Kreisfreie Stadt": {
+      "en": "Dresden, Kreisfreie Stadt",
+      "zh": "[ZH] Dresden, Kreisfreie Stadt"
+    },
+    "Drochia": {
+      "en": "Drochia",
+      "zh": "[ZH] Drochia"
+    },
+    "Drôme": {
+      "en": "Drôme",
+      "zh": "[ZH] Drôme"
+    },
+    "Dublin": {
+      "en": "Dublin",
+      "zh": "[ZH] Dublin"
+    },
+    "Dubrovačko-neretvanska županija": {
+      "en": "Dubrovačko-neretvanska županija",
+      "zh": "[ZH] Dubrovačko-neretvanska županija"
+    },
+    "Dudley": {
+      "en": "Dudley",
+      "zh": "[ZH] Dudley"
+    },
+    "Duisburg, Kreisfreie Stadt": {
+      "en": "Duisburg, Kreisfreie Stadt",
+      "zh": "[ZH] Duisburg, Kreisfreie Stadt"
+    },
+    "Dumfries & Galloway": {
+      "en": "Dumfries & Galloway",
+      "zh": "[ZH] Dumfries & Galloway"
+    },
+    "Durham CC": {
+      "en": "Durham CC",
+      "zh": "[ZH] Durham CC"
+    },
+    "Durrës": {
+      "en": "Durrës",
+      "zh": "[ZH] Durrës"
+    },
+    "Dâmboviţa": {
+      "en": "Dâmboviţa",
+      "zh": "[ZH] Dâmboviţa"
+    },
+    "Düren": {
+      "en": "Düren",
+      "zh": "[ZH] Düren"
+    },
+    "Düsseldorf, Kreisfreie Stadt": {
+      "en": "Düsseldorf, Kreisfreie Stadt",
+      "zh": "[ZH] Düsseldorf, Kreisfreie Stadt"
+    },
+    "Düzce": {
+      "en": "Düzce",
+      "zh": "[ZH] Düzce"
+    },
+    "Ealing": {
+      "en": "Ealing",
+      "zh": "[ZH] Ealing"
+    },
+    "East Ayrshire and North Ayrshire mainland": {
+      "en": "East Ayrshire and North Ayrshire mainland",
+      "zh": "[ZH] East Ayrshire and North Ayrshire mainland"
+    },
+    "East Cumbria": {
+      "en": "East Cumbria",
+      "zh": "[ZH] East Cumbria"
+    },
+    "East Derbyshire": {
+      "en": "East Derbyshire",
+      "zh": "[ZH] East Derbyshire"
+    },
+    "East Dunbartonshire, West Dunbartonshire and Helensburgh & Lomond": {
+      "en": "East Dunbartonshire, West Dunbartonshire and Helensburgh & Lomond",
+      "zh": "[ZH] East Dunbartonshire, West Dunbartonshire and Helensburgh & Lomond"
+    },
+    "East Kent": {
+      "en": "East Kent",
+      "zh": "[ZH] East Kent"
+    },
+    "East Lancashire": {
+      "en": "East Lancashire",
+      "zh": "[ZH] East Lancashire"
+    },
+    "East Lothian and Midlothian": {
+      "en": "East Lothian and Midlothian",
+      "zh": "[ZH] East Lothian and Midlothian"
+    },
+    "East Merseyside": {
+      "en": "East Merseyside",
+      "zh": "[ZH] East Merseyside"
+    },
+    "East Riding of Yorkshire": {
+      "en": "East Riding of Yorkshire",
+      "zh": "[ZH] East Riding of Yorkshire"
+    },
+    "East Surrey": {
+      "en": "East Surrey",
+      "zh": "[ZH] East Surrey"
+    },
+    "East Sussex CC": {
+      "en": "East Sussex CC",
+      "zh": "[ZH] East Sussex CC"
+    },
+    "Ebersberg": {
+      "en": "Ebersberg",
+      "zh": "[ZH] Ebersberg"
+    },
+    "Edinburgh, City of": {
+      "en": "Edinburgh, City of",
+      "zh": "[ZH] Edinburgh, City of"
+    },
+    "Edineţ": {
+      "en": "Edineţ",
+      "zh": "[ZH] Edineţ"
+    },
+    "Edirne": {
+      "en": "Edirne",
+      "zh": "[ZH] Edirne"
+    },
+    "Eichsfeld": {
+      "en": "Eichsfeld",
+      "zh": "[ZH] Eichsfeld"
+    },
+    "Eichstätt": {
+      "en": "Eichstätt",
+      "zh": "[ZH] Eichstätt"
+    },
+    "Eifelkreis Bitburg-Prüm": {
+      "en": "Eifelkreis Bitburg-Prüm",
+      "zh": "[ZH] Eifelkreis Bitburg-Prüm"
+    },
+    "Eisenach, Kreisfreie Stadt": {
+      "en": "Eisenach, Kreisfreie Stadt",
+      "zh": "[ZH] Eisenach, Kreisfreie Stadt"
+    },
+    "Eivissa y Formentera": {
+      "en": "Eivissa y Formentera",
+      "zh": "[ZH] Eivissa y Formentera"
+    },
+    "Elazığ": {
+      "en": "Elazığ",
+      "zh": "[ZH] Elazığ"
+    },
+    "Elbasan": {
+      "en": "Elbasan",
+      "zh": "[ZH] Elbasan"
+    },
+    "Elbe-Elster": {
+      "en": "Elbe-Elster",
+      "zh": "[ZH] Elbe-Elster"
+    },
+    "Elbląski": {
+      "en": "Elbląski",
+      "zh": "[ZH] Elbląski"
+    },
+    "Emden, Kreisfreie Stadt": {
+      "en": "Emden, Kreisfreie Stadt",
+      "zh": "[ZH] Emden, Kreisfreie Stadt"
+    },
+    "Emmendingen": {
+      "en": "Emmendingen",
+      "zh": "[ZH] Emmendingen"
+    },
+    "Emsland": {
+      "en": "Emsland",
+      "zh": "[ZH] Emsland"
+    },
+    "Enfield": {
+      "en": "Enfield",
+      "zh": "[ZH] Enfield"
+    },
+    "Enna": {
+      "en": "Enna",
+      "zh": "[ZH] Enna"
+    },
+    "Ennepe-Ruhr-Kreis": {
+      "en": "Ennepe-Ruhr-Kreis",
+      "zh": "[ZH] Ennepe-Ruhr-Kreis"
+    },
+    "Enzkreis": {
+      "en": "Enzkreis",
+      "zh": "[ZH] Enzkreis"
+    },
+    "Erding": {
+      "en": "Erding",
+      "zh": "[ZH] Erding"
+    },
+    "Erfurt, Kreisfreie Stadt": {
+      "en": "Erfurt, Kreisfreie Stadt",
+      "zh": "[ZH] Erfurt, Kreisfreie Stadt"
+    },
+    "Erlangen, Kreisfreie Stadt": {
+      "en": "Erlangen, Kreisfreie Stadt",
+      "zh": "[ZH] Erlangen, Kreisfreie Stadt"
+    },
+    "Erlangen-Höchstadt": {
+      "en": "Erlangen-Höchstadt",
+      "zh": "[ZH] Erlangen-Höchstadt"
+    },
+    "Erzgebirgskreis": {
+      "en": "Erzgebirgskreis",
+      "zh": "[ZH] Erzgebirgskreis"
+    },
+    "Erzincan": {
+      "en": "Erzincan",
+      "zh": "[ZH] Erzincan"
+    },
+    "Erzurum": {
+      "en": "Erzurum",
+      "zh": "[ZH] Erzurum"
+    },
+    "Eskişehir": {
+      "en": "Eskişehir",
+      "zh": "[ZH] Eskişehir"
+    },
+    "Essen, Kreisfreie Stadt": {
+      "en": "Essen, Kreisfreie Stadt",
+      "zh": "[ZH] Essen, Kreisfreie Stadt"
+    },
+    "Essex Haven Gateway": {
+      "en": "Essex Haven Gateway",
+      "zh": "[ZH] Essex Haven Gateway"
+    },
+    "Essex Thames Gateway": {
+      "en": "Essex Thames Gateway",
+      "zh": "[ZH] Essex Thames Gateway"
+    },
+    "Esslingen": {
+      "en": "Esslingen",
+      "zh": "[ZH] Esslingen"
+    },
+    "Essonne": {
+      "en": "Essonne",
+      "zh": "[ZH] Essonne"
+    },
+    "Etelä-Karjala": {
+      "en": "Etelä-Karjala",
+      "zh": "[ZH] Etelä-Karjala"
+    },
+    "Etelä-Pohjanmaa": {
+      "en": "Etelä-Pohjanmaa",
+      "zh": "[ZH] Etelä-Pohjanmaa"
+    },
+    "Etelä-Savo": {
+      "en": "Etelä-Savo",
+      "zh": "[ZH] Etelä-Savo"
+    },
+    "Eure-et-Loir": {
+      "en": "Eure-et-Loir",
+      "zh": "[ZH] Eure-et-Loir"
+    },
+    "Euskirchen": {
+      "en": "Euskirchen",
+      "zh": "[ZH] Euskirchen"
+    },
+    "Ełcki": {
+      "en": "Ełcki",
+      "zh": "[ZH] Ełcki"
+    },
+    "Falkirk": {
+      "en": "Falkirk",
+      "zh": "[ZH] Falkirk"
+    },
+    "Fejér": {
+      "en": "Fejér",
+      "zh": "[ZH] Fejér"
+    },
+    "Fermanagh and Omagh": {
+      "en": "Fermanagh and Omagh",
+      "zh": "[ZH] Fermanagh and Omagh"
+    },
+    "Fermo": {
+      "en": "Fermo",
+      "zh": "[ZH] Fermo"
+    },
+    "Ferrara": {
+      "en": "Ferrara",
+      "zh": "[ZH] Ferrara"
+    },
+    "Fier": {
+      "en": "Fier",
+      "zh": "[ZH] Fier"
+    },
+    "Finistère": {
+      "en": "Finistère",
+      "zh": "[ZH] Finistère"
+    },
+    "Firenze": {
+      "en": "Firenze",
+      "zh": "[ZH] Firenze"
+    },
+    "Flensburg, Kreisfreie Stadt": {
+      "en": "Flensburg, Kreisfreie Stadt",
+      "zh": "[ZH] Flensburg, Kreisfreie Stadt"
+    },
+    "Flevoland": {
+      "en": "Flevoland",
+      "zh": "[ZH] Flevoland"
+    },
+    "Flintshire and Wrexham": {
+      "en": "Flintshire and Wrexham",
+      "zh": "[ZH] Flintshire and Wrexham"
+    },
+    "Floreşti": {
+      "en": "Floreşti",
+      "zh": "[ZH] Floreşti"
+    },
+    "Foggia": {
+      "en": "Foggia",
+      "zh": "[ZH] Foggia"
+    },
+    "Fontainebleau": {
+      "en": "Fontainebleau",
+      "zh": "[ZH] Fontainebleau"
+    },
+    "Forbach-Boulay-Moselle": {
+      "en": "Forbach-Boulay-Moselle",
+      "zh": "[ZH] Forbach-Boulay-Moselle"
+    },
+    "Forchheim": {
+      "en": "Forchheim",
+      "zh": "[ZH] Forchheim"
+    },
+    "Forlì-Cesena": {
+      "en": "Forlì-Cesena",
+      "zh": "[ZH] Forlì-Cesena"
+    },
+    "Frankenthal (Pfalz), Kreisfreie Stadt": {
+      "en": "Frankenthal (Pfalz), Kreisfreie Stadt",
+      "zh": "[ZH] Frankenthal (Pfalz), Kreisfreie Stadt"
+    },
+    "Frankfurt (Oder), Kreisfreie Stadt": {
+      "en": "Frankfurt (Oder), Kreisfreie Stadt",
+      "zh": "[ZH] Frankfurt (Oder), Kreisfreie Stadt"
+    },
+    "Frankfurt am Main, Kreisfreie Stadt": {
+      "en": "Frankfurt am Main, Kreisfreie Stadt",
+      "zh": "[ZH] Frankfurt am Main, Kreisfreie Stadt"
+    },
+    "Freiburg": {
+      "en": "Freiburg",
+      "zh": "[ZH] Freiburg"
+    },
+    "Freiburg im Breisgau, Stadtkreis": {
+      "en": "Freiburg im Breisgau, Stadtkreis",
+      "zh": "[ZH] Freiburg im Breisgau, Stadtkreis"
+    },
+    "Freising": {
+      "en": "Freising",
+      "zh": "[ZH] Freising"
+    },
+    "Freudenstadt": {
+      "en": "Freudenstadt",
+      "zh": "[ZH] Freudenstadt"
+    },
+    "Freyung-Grafenau": {
+      "en": "Freyung-Grafenau",
+      "zh": "[ZH] Freyung-Grafenau"
+    },
+    "Friesland (DE)": {
+      "en": "Friesland (DE)",
+      "zh": "[ZH] Friesland (DE)"
+    },
+    "Frosinone": {
+      "en": "Frosinone",
+      "zh": "[ZH] Frosinone"
+    },
+    "Fulda": {
+      "en": "Fulda",
+      "zh": "[ZH] Fulda"
+    },
+    "Fyn": {
+      "en": "Fyn",
+      "zh": "[ZH] Fyn"
+    },
+    "Fürstenfeldbruck": {
+      "en": "Fürstenfeldbruck",
+      "zh": "[ZH] Fürstenfeldbruck"
+    },
+    "Fürth, Kreisfreie Stadt": {
+      "en": "Fürth, Kreisfreie Stadt",
+      "zh": "[ZH] Fürth, Kreisfreie Stadt"
+    },
+    "Fürth, Landkreis": {
+      "en": "Fürth, Landkreis",
+      "zh": "[ZH] Fürth, Landkreis"
+    },
+    "Făleşti": {
+      "en": "Făleşti",
+      "zh": "[ZH] Făleşti"
+    },
+    "Galaţi": {
+      "en": "Galaţi",
+      "zh": "[ZH] Galaţi"
+    },
+    "Gard": {
+      "en": "Gard",
+      "zh": "[ZH] Gard"
+    },
+    "Garmisch-Partenkirchen": {
+      "en": "Garmisch-Partenkirchen",
+      "zh": "[ZH] Garmisch-Partenkirchen"
+    },
+    "Gaziantep": {
+      "en": "Gaziantep",
+      "zh": "[ZH] Gaziantep"
+    },
+    "Gdański": {
+      "en": "Gdański",
+      "zh": "[ZH] Gdański"
+    },
+    "Gelsenkirchen, Kreisfreie Stadt": {
+      "en": "Gelsenkirchen, Kreisfreie Stadt",
+      "zh": "[ZH] Gelsenkirchen, Kreisfreie Stadt"
+    },
+    "Genova": {
+      "en": "Genova",
+      "zh": "[ZH] Genova"
+    },
+    "Genève": {
+      "en": "Genève",
+      "zh": "[ZH] Genève"
+    },
+    "Gera, Kreisfreie Stadt": {
+      "en": "Gera, Kreisfreie Stadt",
+      "zh": "[ZH] Gera, Kreisfreie Stadt"
+    },
+    "Germersheim": {
+      "en": "Germersheim",
+      "zh": "[ZH] Germersheim"
+    },
+    "Gers": {
+      "en": "Gers",
+      "zh": "[ZH] Gers"
+    },
+    "Gex": {
+      "en": "Gex",
+      "zh": "[ZH] Gex"
+    },
+    "Gießen, Landkreis": {
+      "en": "Gießen, Landkreis",
+      "zh": "[ZH] Gießen, Landkreis"
+    },
+    "Gifhorn": {
+      "en": "Gifhorn",
+      "zh": "[ZH] Gifhorn"
+    },
+    "Gipuzkoa": {
+      "en": "Gipuzkoa",
+      "zh": "[ZH] Gipuzkoa"
+    },
+    "Giresun": {
+      "en": "Giresun",
+      "zh": "[ZH] Giresun"
+    },
+    "Girona": {
+      "en": "Girona",
+      "zh": "[ZH] Girona"
+    },
+    "Giurgiu": {
+      "en": "Giurgiu",
+      "zh": "[ZH] Giurgiu"
+    },
+    "Gjirokastër": {
+      "en": "Gjirokastër",
+      "zh": "[ZH] Gjirokastër"
+    },
+    "Glarus": {
+      "en": "Glarus",
+      "zh": "[ZH] Glarus"
+    },
+    "Glasgow City": {
+      "en": "Glasgow City",
+      "zh": "[ZH] Glasgow City"
+    },
+    "Gliwicki": {
+      "en": "Gliwicki",
+      "zh": "[ZH] Gliwicki"
+    },
+    "Glodeni": {
+      "en": "Glodeni",
+      "zh": "[ZH] Glodeni"
+    },
+    "Gloucestershire": {
+      "en": "Gloucestershire",
+      "zh": "[ZH] Gloucestershire"
+    },
+    "Gomel": {
+      "en": "Gomel",
+      "zh": "[ZH] Gomel"
+    },
+    "Gorenjska": {
+      "en": "Gorenjska",
+      "zh": "[ZH] Gorenjska"
+    },
+    "Gorizia": {
+      "en": "Gorizia",
+      "zh": "[ZH] Gorizia"
+    },
+    "Goriška": {
+      "en": "Goriška",
+      "zh": "[ZH] Goriška"
+    },
+    "Gorj": {
+      "en": "Gorj",
+      "zh": "[ZH] Gorj"
+    },
+    "Gorzowski": {
+      "en": "Gorzowski",
+      "zh": "[ZH] Gorzowski"
+    },
+    "Goslar": {
+      "en": "Goslar",
+      "zh": "[ZH] Goslar"
+    },
+    "Gotha": {
+      "en": "Gotha",
+      "zh": "[ZH] Gotha"
+    },
+    "Gotlands län": {
+      "en": "Gotlands län",
+      "zh": "[ZH] Gotlands län"
+    },
+    "Gozo and Comino/Għawdex u Kemmuna": {
+      "en": "Gozo and Comino/Għawdex u Kemmuna",
+      "zh": "[ZH] Gozo and Comino/Għawdex u Kemmuna"
+    },
+    "Grad Zagreb": {
+      "en": "Grad Zagreb",
+      "zh": "[ZH] Grad Zagreb"
+    },
+    "Grafschaft Bentheim": {
+      "en": "Grafschaft Bentheim",
+      "zh": "[ZH] Grafschaft Bentheim"
+    },
+    "Granada": {
+      "en": "Granada",
+      "zh": "[ZH] Granada"
+    },
+    "Grasse": {
+      "en": "Grasse",
+      "zh": "[ZH] Grasse"
+    },
+    "Graubünden": {
+      "en": "Graubünden",
+      "zh": "[ZH] Graubünden"
+    },
+    "Graz": {
+      "en": "Graz",
+      "zh": "[ZH] Graz"
+    },
+    "Greater Manchester North East": {
+      "en": "Greater Manchester North East",
+      "zh": "[ZH] Greater Manchester North East"
+    },
+    "Greater Manchester North West": {
+      "en": "Greater Manchester North West",
+      "zh": "[ZH] Greater Manchester North West"
+    },
+    "Greater Manchester South East": {
+      "en": "Greater Manchester South East",
+      "zh": "[ZH] Greater Manchester South East"
+    },
+    "Greater Manchester South West": {
+      "en": "Greater Manchester South West",
+      "zh": "[ZH] Greater Manchester South West"
+    },
+    "Greiz": {
+      "en": "Greiz",
+      "zh": "[ZH] Greiz"
+    },
+    "Grigoriopol": {
+      "en": "Grigoriopol",
+      "zh": "[ZH] Grigoriopol"
+    },
+    "Grodno": {
+      "en": "Grodno",
+      "zh": "[ZH] Grodno"
+    },
+    "Groot-Amsterdam": {
+      "en": "Groot-Amsterdam",
+      "zh": "[ZH] Groot-Amsterdam"
+    },
+    "Groot-Rijnmond": {
+      "en": "Groot-Rijnmond",
+      "zh": "[ZH] Groot-Rijnmond"
+    },
+    "Grosseto": {
+      "en": "Grosseto",
+      "zh": "[ZH] Grosseto"
+    },
+    "Groß-Gerau": {
+      "en": "Groß-Gerau",
+      "zh": "[ZH] Groß-Gerau"
+    },
+    "Grudziądzki": {
+      "en": "Grudziądzki",
+      "zh": "[ZH] Grudziądzki"
+    },
+    "Guadalajara": {
+      "en": "Guadalajara",
+      "zh": "[ZH] Guadalajara"
+    },
+    "Gwent Valleys": {
+      "en": "Gwent Valleys",
+      "zh": "[ZH] Gwent Valleys"
+    },
+    "Gwynedd": {
+      "en": "Gwynedd",
+      "zh": "[ZH] Gwynedd"
+    },
+    "Győr-Moson-Sopron": {
+      "en": "Győr-Moson-Sopron",
+      "zh": "[ZH] Győr-Moson-Sopron"
+    },
+    "Gävleborgs län": {
+      "en": "Gävleborgs län",
+      "zh": "[ZH] Gävleborgs län"
+    },
+    "Göppingen": {
+      "en": "Göppingen",
+      "zh": "[ZH] Göppingen"
+    },
+    "Görlitz": {
+      "en": "Görlitz",
+      "zh": "[ZH] Görlitz"
+    },
+    "Göttingen": {
+      "en": "Göttingen",
+      "zh": "[ZH] Göttingen"
+    },
+    "Gümüşhane": {
+      "en": "Gümüşhane",
+      "zh": "[ZH] Gümüşhane"
+    },
+    "Günzburg": {
+      "en": "Günzburg",
+      "zh": "[ZH] Günzburg"
+    },
+    "Gütersloh": {
+      "en": "Gütersloh",
+      "zh": "[ZH] Gütersloh"
+    },
+    "Hackney and Newham": {
+      "en": "Hackney and Newham",
+      "zh": "[ZH] Hackney and Newham"
+    },
+    "Hagen, Kreisfreie Stadt": {
+      "en": "Hagen, Kreisfreie Stadt",
+      "zh": "[ZH] Hagen, Kreisfreie Stadt"
+    },
+    "Haguenau-Wissembourg": {
+      "en": "Haguenau-Wissembourg",
+      "zh": "[ZH] Haguenau-Wissembourg"
+    },
+    "Hajdú-Bihar": {
+      "en": "Hajdú-Bihar",
+      "zh": "[ZH] Hajdú-Bihar"
+    },
+    "Hakkari": {
+      "en": "Hakkari",
+      "zh": "[ZH] Hakkari"
+    },
+    "Hallands län": {
+      "en": "Hallands län",
+      "zh": "[ZH] Hallands län"
+    },
+    "Halle (Saale), Kreisfreie Stadt": {
+      "en": "Halle (Saale), Kreisfreie Stadt",
+      "zh": "[ZH] Halle (Saale), Kreisfreie Stadt"
+    },
+    "Hamburg": {
+      "en": "Hamburg",
+      "zh": "[ZH] Hamburg"
+    },
+    "Hameln-Pyrmont": {
+      "en": "Hameln-Pyrmont",
+      "zh": "[ZH] Hameln-Pyrmont"
+    },
+    "Hamm, Kreisfreie Stadt": {
+      "en": "Hamm, Kreisfreie Stadt",
+      "zh": "[ZH] Hamm, Kreisfreie Stadt"
+    },
+    "Harburg": {
+      "en": "Harburg",
+      "zh": "[ZH] Harburg"
+    },
+    "Harghita": {
+      "en": "Harghita",
+      "zh": "[ZH] Harghita"
+    },
+    "Haringey and Islington": {
+      "en": "Haringey and Islington",
+      "zh": "[ZH] Haringey and Islington"
+    },
+    "Harrow and Hillingdon": {
+      "en": "Harrow and Hillingdon",
+      "zh": "[ZH] Harrow and Hillingdon"
+    },
+    "Hartlepool and Stockton-on-Tees": {
+      "en": "Hartlepool and Stockton-on-Tees",
+      "zh": "[ZH] Hartlepool and Stockton-on-Tees"
+    },
+    "Harz": {
+      "en": "Harz",
+      "zh": "[ZH] Harz"
+    },
+    "Hatay": {
+      "en": "Hatay",
+      "zh": "[ZH] Hatay"
+    },
+    "Haute-Corse": {
+      "en": "Haute-Corse",
+      "zh": "[ZH] Haute-Corse"
+    },
+    "Haute-Garonne": {
+      "en": "Haute-Garonne",
+      "zh": "[ZH] Haute-Garonne"
+    },
+    "Haute-Loire": {
+      "en": "Haute-Loire",
+      "zh": "[ZH] Haute-Loire"
+    },
+    "Haute-Marne": {
+      "en": "Haute-Marne",
+      "zh": "[ZH] Haute-Marne"
+    },
+    "Haute-Saône": {
+      "en": "Haute-Saône",
+      "zh": "[ZH] Haute-Saône"
+    },
+    "Haute-Vienne": {
+      "en": "Haute-Vienne",
+      "zh": "[ZH] Haute-Vienne"
+    },
+    "Hautes-Alpes": {
+      "en": "Hautes-Alpes",
+      "zh": "[ZH] Hautes-Alpes"
+    },
+    "Hautes-Pyrénées": {
+      "en": "Hautes-Pyrénées",
+      "zh": "[ZH] Hautes-Pyrénées"
+    },
+    "Hauts-de-Seine": {
+      "en": "Hauts-de-Seine",
+      "zh": "[ZH] Hauts-de-Seine"
+    },
+    "Havelland": {
+      "en": "Havelland",
+      "zh": "[ZH] Havelland"
+    },
+    "Havre": {
+      "en": "Havre",
+      "zh": "[ZH] Havre"
+    },
+    "Haßberge": {
+      "en": "Haßberge",
+      "zh": "[ZH] Haßberge"
+    },
+    "Heart of Essex": {
+      "en": "Heart of Essex",
+      "zh": "[ZH] Heart of Essex"
+    },
+    "Heidekreis": {
+      "en": "Heidekreis",
+      "zh": "[ZH] Heidekreis"
+    },
+    "Heidelberg, Stadtkreis": {
+      "en": "Heidelberg, Stadtkreis",
+      "zh": "[ZH] Heidelberg, Stadtkreis"
+    },
+    "Heidenheim": {
+      "en": "Heidenheim",
+      "zh": "[ZH] Heidenheim"
+    },
+    "Heilbronn, Landkreis": {
+      "en": "Heilbronn, Landkreis",
+      "zh": "[ZH] Heilbronn, Landkreis"
+    },
+    "Heilbronn, Stadtkreis": {
+      "en": "Heilbronn, Stadtkreis",
+      "zh": "[ZH] Heilbronn, Stadtkreis"
+    },
+    "Heinsberg": {
+      "en": "Heinsberg",
+      "zh": "[ZH] Heinsberg"
+    },
+    "Helmstedt": {
+      "en": "Helmstedt",
+      "zh": "[ZH] Helmstedt"
+    },
+    "Helsinki-Uusimaa": {
+      "en": "Helsinki-Uusimaa",
+      "zh": "[ZH] Helsinki-Uusimaa"
+    },
+    "Herefordshire, County of": {
+      "en": "Herefordshire, County of",
+      "zh": "[ZH] Herefordshire, County of"
+    },
+    "Herford": {
+      "en": "Herford",
+      "zh": "[ZH] Herford"
+    },
+    "Herne, Kreisfreie Stadt": {
+      "en": "Herne, Kreisfreie Stadt",
+      "zh": "[ZH] Herne, Kreisfreie Stadt"
+    },
+    "Hersfeld-Rotenburg": {
+      "en": "Hersfeld-Rotenburg",
+      "zh": "[ZH] Hersfeld-Rotenburg"
+    },
+    "Hertfordshire": {
+      "en": "Hertfordshire",
+      "zh": "[ZH] Hertfordshire"
+    },
+    "Herzogtum Lauenburg": {
+      "en": "Herzogtum Lauenburg",
+      "zh": "[ZH] Herzogtum Lauenburg"
+    },
+    "Het Gooi en Vechtstreek": {
+      "en": "Het Gooi en Vechtstreek",
+      "zh": "[ZH] Het Gooi en Vechtstreek"
+    },
+    "Heves": {
+      "en": "Heves",
+      "zh": "[ZH] Heves"
+    },
+    "Hildburghausen": {
+      "en": "Hildburghausen",
+      "zh": "[ZH] Hildburghausen"
+    },
+    "Hildesheim": {
+      "en": "Hildesheim",
+      "zh": "[ZH] Hildesheim"
+    },
+    "Hlavní město Praha": {
+      "en": "Hlavní město Praha",
+      "zh": "[ZH] Hlavní město Praha"
+    },
+    "Hochsauerlandkreis": {
+      "en": "Hochsauerlandkreis",
+      "zh": "[ZH] Hochsauerlandkreis"
+    },
+    "Hochtaunuskreis": {
+      "en": "Hochtaunuskreis",
+      "zh": "[ZH] Hochtaunuskreis"
+    },
+    "Hof, Kreisfreie Stadt": {
+      "en": "Hof, Kreisfreie Stadt",
+      "zh": "[ZH] Hof, Kreisfreie Stadt"
+    },
+    "Hof, Landkreis": {
+      "en": "Hof, Landkreis",
+      "zh": "[ZH] Hof, Landkreis"
+    },
+    "Hohenlohekreis": {
+      "en": "Hohenlohekreis",
+      "zh": "[ZH] Hohenlohekreis"
+    },
+    "Holzminden": {
+      "en": "Holzminden",
+      "zh": "[ZH] Holzminden"
+    },
+    "Hounslow and Richmond upon Thames": {
+      "en": "Hounslow and Richmond upon Thames",
+      "zh": "[ZH] Hounslow and Richmond upon Thames"
+    },
+    "Huelva": {
+      "en": "Huelva",
+      "zh": "[ZH] Huelva"
+    },
+    "Huesca": {
+      "en": "Huesca",
+      "zh": "[ZH] Huesca"
+    },
+    "Hunedoara": {
+      "en": "Hunedoara",
+      "zh": "[ZH] Hunedoara"
+    },
+    "Hérault": {
+      "en": "Hérault",
+      "zh": "[ZH] Hérault"
+    },
+    "Hîncesti": {
+      "en": "Hîncesti",
+      "zh": "[ZH] Hîncesti"
+    },
+    "Höfuðborgarsvæði": {
+      "en": "Höfuðborgarsvæði",
+      "zh": "[ZH] Höfuðborgarsvæði"
+    },
+    "Höxter": {
+      "en": "Höxter",
+      "zh": "[ZH] Höxter"
+    },
+    "IJmond": {
+      "en": "IJmond",
+      "zh": "[ZH] IJmond"
+    },
+    "Ialomiţa": {
+      "en": "Ialomiţa",
+      "zh": "[ZH] Ialomiţa"
+    },
+    "Ialoveni": {
+      "en": "Ialoveni",
+      "zh": "[ZH] Ialoveni"
+    },
+    "Iaşi": {
+      "en": "Iaşi",
+      "zh": "[ZH] Iaşi"
+    },
+    "Ilfov": {
+      "en": "Ilfov",
+      "zh": "[ZH] Ilfov"
+    },
+    "Ille-et-Vilaine": {
+      "en": "Ille-et-Vilaine",
+      "zh": "[ZH] Ille-et-Vilaine"
+    },
+    "Ilm-Kreis": {
+      "en": "Ilm-Kreis",
+      "zh": "[ZH] Ilm-Kreis"
+    },
+    "Imperia": {
+      "en": "Imperia",
+      "zh": "[ZH] Imperia"
+    },
+    "Indre": {
+      "en": "Indre",
+      "zh": "[ZH] Indre"
+    },
+    "Ingolstadt, Kreisfreie Stadt": {
+      "en": "Ingolstadt, Kreisfreie Stadt",
+      "zh": "[ZH] Ingolstadt, Kreisfreie Stadt"
+    },
+    "Ingush": {
+      "en": "Ingush",
+      "zh": "[ZH] Ingush"
+    },
+    "Innlandet": {
+      "en": "Innlandet",
+      "zh": "[ZH] Innlandet"
+    },
+    "Innsbruck": {
+      "en": "Innsbruck",
+      "zh": "[ZH] Innsbruck"
+    },
+    "Innviertel": {
+      "en": "Innviertel",
+      "zh": "[ZH] Innviertel"
+    },
+    "Inowrocławski": {
+      "en": "Inowrocławski",
+      "zh": "[ZH] Inowrocławski"
+    },
+    "Inverclyde, East Renfrewshire and Renfrewshire": {
+      "en": "Inverclyde, East Renfrewshire and Renfrewshire",
+      "zh": "[ZH] Inverclyde, East Renfrewshire and Renfrewshire"
+    },
+    "Inverness & Nairn and Moray, Badenoch & Strathspey": {
+      "en": "Inverness & Nairn and Moray, Badenoch & Strathspey",
+      "zh": "[ZH] Inverness & Nairn and Moray, Badenoch & Strathspey"
+    },
+    "Isernia": {
+      "en": "Isernia",
+      "zh": "[ZH] Isernia"
+    },
+    "Isle of Anglesey": {
+      "en": "Isle of Anglesey",
+      "zh": "[ZH] Isle of Anglesey"
+    },
+    "Isle of Wight": {
+      "en": "Isle of Wight",
+      "zh": "[ZH] Isle of Wight"
+    },
+    "Isparta": {
+      "en": "Isparta",
+      "zh": "[ZH] Isparta"
+    },
+    "Istarska županija": {
+      "en": "Istarska županija",
+      "zh": "[ZH] Istarska županija"
+    },
+    "Isère": {
+      "en": "Isère",
+      "zh": "[ZH] Isère"
+    },
+    "Ivano-Frankivs'k": {
+      "en": "Ivano-Frankivs'k",
+      "zh": "[ZH] Ivano-Frankivs'k"
+    },
+    "Ivanovo": {
+      "en": "Ivanovo",
+      "zh": "[ZH] Ivanovo"
+    },
+    "Iğdır": {
+      "en": "Iğdır",
+      "zh": "[ZH] Iğdır"
+    },
+    "Jan Mayen": {
+      "en": "Jan Mayen",
+      "zh": "[ZH] Jan Mayen"
+    },
+    "Jaén": {
+      "en": "Jaén",
+      "zh": "[ZH] Jaén"
+    },
+    "Jeleniogórski": {
+      "en": "Jeleniogórski",
+      "zh": "[ZH] Jeleniogórski"
+    },
+    "Jena, Kreisfreie Stadt": {
+      "en": "Jena, Kreisfreie Stadt",
+      "zh": "[ZH] Jena, Kreisfreie Stadt"
+    },
+    "Jerichower Land": {
+      "en": "Jerichower Land",
+      "zh": "[ZH] Jerichower Land"
+    },
+    "Jihomoravský kraj": {
+      "en": "Jihomoravský kraj",
+      "zh": "[ZH] Jihomoravský kraj"
+    },
+    "Jihočeský kraj": {
+      "en": "Jihočeský kraj",
+      "zh": "[ZH] Jihočeský kraj"
+    },
+    "Jugovzhodna Slovenija": {
+      "en": "Jugovzhodna Slovenija",
+      "zh": "[ZH] Jugovzhodna Slovenija"
+    },
+    "Jura": {
+      "en": "Jura",
+      "zh": "[ZH] Jura"
+    },
+    "Jász-Nagykun-Szolnok": {
+      "en": "Jász-Nagykun-Szolnok",
+      "zh": "[ZH] Jász-Nagykun-Szolnok"
+    },
+    "Jämtlands län": {
+      "en": "Jämtlands län",
+      "zh": "[ZH] Jämtlands län"
+    },
+    "Jönköpings län": {
+      "en": "Jönköpings län",
+      "zh": "[ZH] Jönköpings län"
+    },
+    "Kabardin-Balkar": {
+      "en": "Kabardin-Balkar",
+      "zh": "[ZH] Kabardin-Balkar"
+    },
+    "Kahramanmaraş": {
+      "en": "Kahramanmaraş",
+      "zh": "[ZH] Kahramanmaraş"
+    },
+    "Kainuu": {
+      "en": "Kainuu",
+      "zh": "[ZH] Kainuu"
+    },
+    "Kaiserslautern, Kreisfreie Stadt": {
+      "en": "Kaiserslautern, Kreisfreie Stadt",
+      "zh": "[ZH] Kaiserslautern, Kreisfreie Stadt"
+    },
+    "Kaiserslautern, Landkreis": {
+      "en": "Kaiserslautern, Landkreis",
+      "zh": "[ZH] Kaiserslautern, Landkreis"
+    },
+    "Kaliningrad": {
+      "en": "Kaliningrad",
+      "zh": "[ZH] Kaliningrad"
+    },
+    "Kaliski": {
+      "en": "Kaliski",
+      "zh": "[ZH] Kaliski"
+    },
+    "Kalmar län": {
+      "en": "Kalmar län",
+      "zh": "[ZH] Kalmar län"
+    },
+    "Kalmyk": {
+      "en": "Kalmyk",
+      "zh": "[ZH] Kalmyk"
+    },
+    "Kaluga": {
+      "en": "Kaluga",
+      "zh": "[ZH] Kaluga"
+    },
+    "Kanta-Häme": {
+      "en": "Kanta-Häme",
+      "zh": "[ZH] Kanta-Häme"
+    },
+    "Karabük": {
+      "en": "Karabük",
+      "zh": "[ZH] Karabük"
+    },
+    "Karachay-Cherkess": {
+      "en": "Karachay-Cherkess",
+      "zh": "[ZH] Karachay-Cherkess"
+    },
+    "Karaman": {
+      "en": "Karaman",
+      "zh": "[ZH] Karaman"
+    },
+    "Karelia": {
+      "en": "Karelia",
+      "zh": "[ZH] Karelia"
+    },
+    "Karlovarský kraj": {
+      "en": "Karlovarský kraj",
+      "zh": "[ZH] Karlovarský kraj"
+    },
+    "Karlovačka županija": {
+      "en": "Karlovačka županija",
+      "zh": "[ZH] Karlovačka županija"
+    },
+    "Karlsruhe, Landkreis": {
+      "en": "Karlsruhe, Landkreis",
+      "zh": "[ZH] Karlsruhe, Landkreis"
+    },
+    "Karlsruhe, Stadtkreis": {
+      "en": "Karlsruhe, Stadtkreis",
+      "zh": "[ZH] Karlsruhe, Stadtkreis"
+    },
+    "Kars": {
+      "en": "Kars",
+      "zh": "[ZH] Kars"
+    },
+    "Kassel, Kreisfreie Stadt": {
+      "en": "Kassel, Kreisfreie Stadt",
+      "zh": "[ZH] Kassel, Kreisfreie Stadt"
+    },
+    "Kassel, Landkreis": {
+      "en": "Kassel, Landkreis",
+      "zh": "[ZH] Kassel, Landkreis"
+    },
+    "Kastamonu": {
+      "en": "Kastamonu",
+      "zh": "[ZH] Kastamonu"
+    },
+    "Katowicki": {
+      "en": "Katowicki",
+      "zh": "[ZH] Katowicki"
+    },
+    "Kaufbeuren, Kreisfreie Stadt": {
+      "en": "Kaufbeuren, Kreisfreie Stadt",
+      "zh": "[ZH] Kaufbeuren, Kreisfreie Stadt"
+    },
+    "Kauno apskritis": {
+      "en": "Kauno apskritis",
+      "zh": "[ZH] Kauno apskritis"
+    },
+    "Kayseri": {
+      "en": "Kayseri",
+      "zh": "[ZH] Kayseri"
+    },
+    "Kelheim": {
+      "en": "Kelheim",
+      "zh": "[ZH] Kelheim"
+    },
+    "Kempten (Allgäu), Kreisfreie Stadt": {
+      "en": "Kempten (Allgäu), Kreisfreie Stadt",
+      "zh": "[ZH] Kempten (Allgäu), Kreisfreie Stadt"
+    },
+    "Kensington & Chelsea and Hammersmith & Fulham": {
+      "en": "Kensington & Chelsea and Hammersmith & Fulham",
+      "zh": "[ZH] Kensington & Chelsea and Hammersmith & Fulham"
+    },
+    "Kent Thames Gateway": {
+      "en": "Kent Thames Gateway",
+      "zh": "[ZH] Kent Thames Gateway"
+    },
+    "Kesk-Eesti": {
+      "en": "Kesk-Eesti",
+      "zh": "[ZH] Kesk-Eesti"
+    },
+    "Keski-Pohjanmaa": {
+      "en": "Keski-Pohjanmaa",
+      "zh": "[ZH] Keski-Pohjanmaa"
+    },
+    "Keski-Suomi": {
+      "en": "Keski-Suomi",
+      "zh": "[ZH] Keski-Suomi"
+    },
+    "Khanty-Mansiy": {
+      "en": "Khanty-Mansiy",
+      "zh": "[ZH] Khanty-Mansiy"
+    },
+    "Kharkiv": {
+      "en": "Kharkiv",
+      "zh": "[ZH] Kharkiv"
+    },
+    "Kherson": {
+      "en": "Kherson",
+      "zh": "[ZH] Kherson"
+    },
+    "Khmel'nyts'kyy": {
+      "en": "Khmel'nyts'kyy",
+      "zh": "[ZH] Khmel'nyts'kyy"
+    },
+    "Kiel, Kreisfreie Stadt": {
+      "en": "Kiel, Kreisfreie Stadt",
+      "zh": "[ZH] Kiel, Kreisfreie Stadt"
+    },
+    "Kielecki": {
+      "en": "Kielecki",
+      "zh": "[ZH] Kielecki"
+    },
+    "Kiev": {
+      "en": "Kiev",
+      "zh": "[ZH] Kiev"
+    },
+    "Kiev City": {
+      "en": "Kiev City",
+      "zh": "[ZH] Kiev City"
+    },
+    "Kilis": {
+      "en": "Kilis",
+      "zh": "[ZH] Kilis"
+    },
+    "Kingston upon Hull, City of": {
+      "en": "Kingston upon Hull, City of",
+      "zh": "[ZH] Kingston upon Hull, City of"
+    },
+    "Kirde-Eesti": {
+      "en": "Kirde-Eesti",
+      "zh": "[ZH] Kirde-Eesti"
+    },
+    "Kirov": {
+      "en": "Kirov",
+      "zh": "[ZH] Kirov"
+    },
+    "Kirovohrad": {
+      "en": "Kirovohrad",
+      "zh": "[ZH] Kirovohrad"
+    },
+    "Kitzingen": {
+      "en": "Kitzingen",
+      "zh": "[ZH] Kitzingen"
+    },
+    "Klagenfurt-Villach": {
+      "en": "Klagenfurt-Villach",
+      "zh": "[ZH] Klagenfurt-Villach"
+    },
+    "Klaipėdos apskritis": {
+      "en": "Klaipėdos apskritis",
+      "zh": "[ZH] Klaipėdos apskritis"
+    },
+    "Kleve": {
+      "en": "Kleve",
+      "zh": "[ZH] Kleve"
+    },
+    "Koblenz, Kreisfreie Stadt": {
+      "en": "Koblenz, Kreisfreie Stadt",
+      "zh": "[ZH] Koblenz, Kreisfreie Stadt"
+    },
+    "Kocaeli": {
+      "en": "Kocaeli",
+      "zh": "[ZH] Kocaeli"
+    },
+    "Komi": {
+      "en": "Komi",
+      "zh": "[ZH] Komi"
+    },
+    "Komárom-Esztergom": {
+      "en": "Komárom-Esztergom",
+      "zh": "[ZH] Komárom-Esztergom"
+    },
+    "Koniński": {
+      "en": "Koniński",
+      "zh": "[ZH] Koniński"
+    },
+    "Konstanz": {
+      "en": "Konstanz",
+      "zh": "[ZH] Konstanz"
+    },
+    "Konya": {
+      "en": "Konya",
+      "zh": "[ZH] Konya"
+    },
+    "Kop van Noord-Holland": {
+      "en": "Kop van Noord-Holland",
+      "zh": "[ZH] Kop van Noord-Holland"
+    },
+    "Koprivničko-križevačka županija": {
+      "en": "Koprivničko-križevačka županija",
+      "zh": "[ZH] Koprivničko-križevačka županija"
+    },
+    "Korcë": {
+      "en": "Korcë",
+      "zh": "[ZH] Korcë"
+    },
+    "Koroška": {
+      "en": "Koroška",
+      "zh": "[ZH] Koroška"
+    },
+    "Kosovo": {
+      "en": "Kosovo",
+      "zh": "[ZH] Kosovo"
+    },
+    "Kostroma": {
+      "en": "Kostroma",
+      "zh": "[ZH] Kostroma"
+    },
+    "Koszaliński": {
+      "en": "Koszaliński",
+      "zh": "[ZH] Koszaliński"
+    },
+    "Košický kraj": {
+      "en": "Košický kraj",
+      "zh": "[ZH] Košický kraj"
+    },
+    "Kraj Vysočina": {
+      "en": "Kraj Vysočina",
+      "zh": "[ZH] Kraj Vysočina"
+    },
+    "Krakowski": {
+      "en": "Krakowski",
+      "zh": "[ZH] Krakowski"
+    },
+    "Krapinsko-zagorska županija": {
+      "en": "Krapinsko-zagorska županija",
+      "zh": "[ZH] Krapinsko-zagorska županija"
+    },
+    "Krasnodar": {
+      "en": "Krasnodar",
+      "zh": "[ZH] Krasnodar"
+    },
+    "Krefeld, Kreisfreie Stadt": {
+      "en": "Krefeld, Kreisfreie Stadt",
+      "zh": "[ZH] Krefeld, Kreisfreie Stadt"
+    },
+    "Kronach": {
+      "en": "Kronach",
+      "zh": "[ZH] Kronach"
+    },
+    "Kronobergs län": {
+      "en": "Kronobergs län",
+      "zh": "[ZH] Kronobergs län"
+    },
+    "Krośnieński": {
+      "en": "Krośnieński",
+      "zh": "[ZH] Krośnieński"
+    },
+    "Královéhradecký kraj": {
+      "en": "Královéhradecký kraj",
+      "zh": "[ZH] Královéhradecký kraj"
+    },
+    "Kukës": {
+      "en": "Kukës",
+      "zh": "[ZH] Kukës"
+    },
+    "Kulmbach": {
+      "en": "Kulmbach",
+      "zh": "[ZH] Kulmbach"
+    },
+    "Kursk": {
+      "en": "Kursk",
+      "zh": "[ZH] Kursk"
+    },
+    "Kurzeme": {
+      "en": "Kurzeme",
+      "zh": "[ZH] Kurzeme"
+    },
+    "Kusel": {
+      "en": "Kusel",
+      "zh": "[ZH] Kusel"
+    },
+    "Kyffhäuserkreis": {
+      "en": "Kyffhäuserkreis",
+      "zh": "[ZH] Kyffhäuserkreis"
+    },
+    "Kymenlaakso": {
+      "en": "Kymenlaakso",
+      "zh": "[ZH] Kymenlaakso"
+    },
+    "Köln, Kreisfreie Stadt": {
+      "en": "Köln, Kreisfreie Stadt",
+      "zh": "[ZH] Köln, Kreisfreie Stadt"
+    },
+    "Københavns omegn": {
+      "en": "Københavns omegn",
+      "zh": "[ZH] Københavns omegn"
+    },
+    "Kütahya": {
+      "en": "Kütahya",
+      "zh": "[ZH] Kütahya"
+    },
+    "Kırklareli": {
+      "en": "Kırklareli",
+      "zh": "[ZH] Kırklareli"
+    },
+    "Kırıkkale": {
+      "en": "Kırıkkale",
+      "zh": "[ZH] Kırıkkale"
+    },
+    "Kırşehir": {
+      "en": "Kırşehir",
+      "zh": "[ZH] Kırşehir"
+    },
+    "L'viv": {
+      "en": "L'viv",
+      "zh": "[ZH] L'viv"
+    },
+    "La Rioja": {
+      "en": "La Rioja",
+      "zh": "[ZH] La Rioja"
+    },
+    "La Spezia": {
+      "en": "La Spezia",
+      "zh": "[ZH] La Spezia"
+    },
+    "Lahn-Dill-Kreis": {
+      "en": "Lahn-Dill-Kreis",
+      "zh": "[ZH] Lahn-Dill-Kreis"
+    },
+    "Lambeth": {
+      "en": "Lambeth",
+      "zh": "[ZH] Lambeth"
+    },
+    "Lancaster and Wyre": {
+      "en": "Lancaster and Wyre",
+      "zh": "[ZH] Lancaster and Wyre"
+    },
+    "Landau in der Pfalz, Kreisfreie Stadt": {
+      "en": "Landau in der Pfalz, Kreisfreie Stadt",
+      "zh": "[ZH] Landau in der Pfalz, Kreisfreie Stadt"
+    },
+    "Landkreis Rostock": {
+      "en": "Landkreis Rostock",
+      "zh": "[ZH] Landkreis Rostock"
+    },
+    "Landsberg am Lech": {
+      "en": "Landsberg am Lech",
+      "zh": "[ZH] Landsberg am Lech"
+    },
+    "Landsbyggð": {
+      "en": "Landsbyggð",
+      "zh": "[ZH] Landsbyggð"
+    },
+    "Landshut, Kreisfreie Stadt": {
+      "en": "Landshut, Kreisfreie Stadt",
+      "zh": "[ZH] Landshut, Kreisfreie Stadt"
+    },
+    "Landshut, Landkreis": {
+      "en": "Landshut, Landkreis",
+      "zh": "[ZH] Landshut, Landkreis"
+    },
+    "Langon": {
+      "en": "Langon",
+      "zh": "[ZH] Langon"
+    },
+    "Lappi": {
+      "en": "Lappi",
+      "zh": "[ZH] Lappi"
+    },
+    "Latgale": {
+      "en": "Latgale",
+      "zh": "[ZH] Latgale"
+    },
+    "Latina": {
+      "en": "Latina",
+      "zh": "[ZH] Latina"
+    },
+    "Lecce": {
+      "en": "Lecce",
+      "zh": "[ZH] Lecce"
+    },
+    "Lecco": {
+      "en": "Lecco",
+      "zh": "[ZH] Lecco"
+    },
+    "Leeds": {
+      "en": "Leeds",
+      "zh": "[ZH] Leeds"
+    },
+    "Leer": {
+      "en": "Leer",
+      "zh": "[ZH] Leer"
+    },
+    "Legnicko-głogowski": {
+      "en": "Legnicko-głogowski",
+      "zh": "[ZH] Legnicko-głogowski"
+    },
+    "Leicester": {
+      "en": "Leicester",
+      "zh": "[ZH] Leicester"
+    },
+    "Leicestershire CC and Rutland": {
+      "en": "Leicestershire CC and Rutland",
+      "zh": "[ZH] Leicestershire CC and Rutland"
+    },
+    "Leipzig": {
+      "en": "Leipzig",
+      "zh": "[ZH] Leipzig"
+    },
+    "Leipzig, Kreisfreie Stadt": {
+      "en": "Leipzig, Kreisfreie Stadt",
+      "zh": "[ZH] Leipzig, Kreisfreie Stadt"
+    },
+    "Leningrad": {
+      "en": "Leningrad",
+      "zh": "[ZH] Leningrad"
+    },
+    "Leova": {
+      "en": "Leova",
+      "zh": "[ZH] Leova"
+    },
+    "Lesparre-Médoc": {
+      "en": "Lesparre-Médoc",
+      "zh": "[ZH] Lesparre-Médoc"
+    },
+    "Leszczyński": {
+      "en": "Leszczyński",
+      "zh": "[ZH] Leszczyński"
+    },
+    "Leverkusen, Kreisfreie Stadt": {
+      "en": "Leverkusen, Kreisfreie Stadt",
+      "zh": "[ZH] Leverkusen, Kreisfreie Stadt"
+    },
+    "Lewisham and Southwark": {
+      "en": "Lewisham and Southwark",
+      "zh": "[ZH] Lewisham and Southwark"
+    },
+    "Lezhë": {
+      "en": "Lezhë",
+      "zh": "[ZH] Lezhë"
+    },
+    "Lezíria do Tejo": {
+      "en": "Lezíria do Tejo",
+      "zh": "[ZH] Lezíria do Tejo"
+    },
+    "León": {
+      "en": "León",
+      "zh": "[ZH] León"
+    },
+    "Liberecký kraj": {
+      "en": "Liberecký kraj",
+      "zh": "[ZH] Liberecký kraj"
+    },
+    "Libourne": {
+      "en": "Libourne",
+      "zh": "[ZH] Libourne"
+    },
+    "Lichtenfels": {
+      "en": "Lichtenfels",
+      "zh": "[ZH] Lichtenfels"
+    },
+    "Liechtenstein": {
+      "en": "Liechtenstein",
+      "zh": "[ZH] Liechtenstein"
+    },
+    "Liezen": {
+      "en": "Liezen",
+      "zh": "[ZH] Liezen"
+    },
+    "Limburg-Weilburg": {
+      "en": "Limburg-Weilburg",
+      "zh": "[ZH] Limburg-Weilburg"
+    },
+    "Lincolnshire": {
+      "en": "Lincolnshire",
+      "zh": "[ZH] Lincolnshire"
+    },
+    "Lindau (Bodensee)": {
+      "en": "Lindau (Bodensee)",
+      "zh": "[ZH] Lindau (Bodensee)"
+    },
+    "Linz-Wels": {
+      "en": "Linz-Wels",
+      "zh": "[ZH] Linz-Wels"
+    },
+    "Lipetsk": {
+      "en": "Lipetsk",
+      "zh": "[ZH] Lipetsk"
+    },
+    "Lippe": {
+      "en": "Lippe",
+      "zh": "[ZH] Lippe"
+    },
+    "Lisburn and Castlereagh": {
+      "en": "Lisburn and Castlereagh",
+      "zh": "[ZH] Lisburn and Castlereagh"
+    },
+    "Liverpool": {
+      "en": "Liverpool",
+      "zh": "[ZH] Liverpool"
+    },
+    "Livorno": {
+      "en": "Livorno",
+      "zh": "[ZH] Livorno"
+    },
+    "Ličko-senjska županija": {
+      "en": "Ličko-senjska županija",
+      "zh": "[ZH] Ličko-senjska županija"
+    },
+    "Lleida": {
+      "en": "Lleida",
+      "zh": "[ZH] Lleida"
+    },
+    "Lochaber, Skye & Lochalsh, Arran & Cumbrae and Argyll & Bute": {
+      "en": "Lochaber, Skye & Lochalsh, Arran & Cumbrae and Argyll & Bute",
+      "zh": "[ZH] Lochaber, Skye & Lochalsh, Arran & Cumbrae and Argyll & Bute"
+    },
+    "Loches": {
+      "en": "Loches",
+      "zh": "[ZH] Loches"
+    },
+    "Lodi": {
+      "en": "Lodi",
+      "zh": "[ZH] Lodi"
+    },
+    "Loire": {
+      "en": "Loire",
+      "zh": "[ZH] Loire"
+    },
+    "Loire-Atlantique": {
+      "en": "Loire-Atlantique",
+      "zh": "[ZH] Loire-Atlantique"
+    },
+    "Loiret": {
+      "en": "Loiret",
+      "zh": "[ZH] Loiret"
+    },
+    "Lons-le-Saunier": {
+      "en": "Lons-le-Saunier",
+      "zh": "[ZH] Lons-le-Saunier"
+    },
+    "Lot": {
+      "en": "Lot",
+      "zh": "[ZH] Lot"
+    },
+    "Lot-et-Garonne": {
+      "en": "Lot-et-Garonne",
+      "zh": "[ZH] Lot-et-Garonne"
+    },
+    "Louhans": {
+      "en": "Louhans",
+      "zh": "[ZH] Louhans"
+    },
+    "Lozère": {
+      "en": "Lozère",
+      "zh": "[ZH] Lozère"
+    },
+    "Lubelski": {
+      "en": "Lubelski",
+      "zh": "[ZH] Lubelski"
+    },
+    "Lucca": {
+      "en": "Lucca",
+      "zh": "[ZH] Lucca"
+    },
+    "Ludwigsburg": {
+      "en": "Ludwigsburg",
+      "zh": "[ZH] Ludwigsburg"
+    },
+    "Ludwigshafen am Rhein, Kreisfreie Stadt": {
+      "en": "Ludwigshafen am Rhein, Kreisfreie Stadt",
+      "zh": "[ZH] Ludwigshafen am Rhein, Kreisfreie Stadt"
+    },
+    "Ludwigslust-Parchim": {
+      "en": "Ludwigslust-Parchim",
+      "zh": "[ZH] Ludwigslust-Parchim"
+    },
+    "Lugo": {
+      "en": "Lugo",
+      "zh": "[ZH] Lugo"
+    },
+    "Luhans'k": {
+      "en": "Luhans'k",
+      "zh": "[ZH] Luhans'k"
+    },
+    "Lungau": {
+      "en": "Lungau",
+      "zh": "[ZH] Lungau"
+    },
+    "Lunéville": {
+      "en": "Lunéville",
+      "zh": "[ZH] Lunéville"
+    },
+    "Luton": {
+      "en": "Luton",
+      "zh": "[ZH] Luton"
+    },
+    "Luxembourg": {
+      "en": "Luxembourg",
+      "zh": "[ZH] Luxembourg"
+    },
+    "Luzern": {
+      "en": "Luzern",
+      "zh": "[ZH] Luzern"
+    },
+    "Lääne-Eesti": {
+      "en": "Lääne-Eesti",
+      "zh": "[ZH] Lääne-Eesti"
+    },
+    "Lõuna-Eesti": {
+      "en": "Lõuna-Eesti",
+      "zh": "[ZH] Lõuna-Eesti"
+    },
+    "Lörrach": {
+      "en": "Lörrach",
+      "zh": "[ZH] Lörrach"
+    },
+    "Lübeck, Kreisfreie Stadt": {
+      "en": "Lübeck, Kreisfreie Stadt",
+      "zh": "[ZH] Lübeck, Kreisfreie Stadt"
+    },
+    "Lüchow-Dannenberg": {
+      "en": "Lüchow-Dannenberg",
+      "zh": "[ZH] Lüchow-Dannenberg"
+    },
+    "Lüneburg, Landkreis": {
+      "en": "Lüneburg, Landkreis",
+      "zh": "[ZH] Lüneburg, Landkreis"
+    },
+    "L’Aquila": {
+      "en": "L’Aquila",
+      "zh": "[ZH] L’Aquila"
+    },
+    "Macerata": {
+      "en": "Macerata",
+      "zh": "[ZH] Macerata"
+    },
+    "Madrid": {
+      "en": "Madrid",
+      "zh": "[ZH] Madrid"
+    },
+    "Magdeburg, Kreisfreie Stadt": {
+      "en": "Magdeburg, Kreisfreie Stadt",
+      "zh": "[ZH] Magdeburg, Kreisfreie Stadt"
+    },
+    "Main-Kinzig-Kreis": {
+      "en": "Main-Kinzig-Kreis",
+      "zh": "[ZH] Main-Kinzig-Kreis"
+    },
+    "Main-Spessart": {
+      "en": "Main-Spessart",
+      "zh": "[ZH] Main-Spessart"
+    },
+    "Main-Tauber-Kreis": {
+      "en": "Main-Tauber-Kreis",
+      "zh": "[ZH] Main-Tauber-Kreis"
+    },
+    "Main-Taunus-Kreis": {
+      "en": "Main-Taunus-Kreis",
+      "zh": "[ZH] Main-Taunus-Kreis"
+    },
+    "Maine-et-Loire": {
+      "en": "Maine-et-Loire",
+      "zh": "[ZH] Maine-et-Loire"
+    },
+    "Mainz, Kreisfreie Stadt": {
+      "en": "Mainz, Kreisfreie Stadt",
+      "zh": "[ZH] Mainz, Kreisfreie Stadt"
+    },
+    "Mainz-Bingen": {
+      "en": "Mainz-Bingen",
+      "zh": "[ZH] Mainz-Bingen"
+    },
+    "Malatya": {
+      "en": "Malatya",
+      "zh": "[ZH] Malatya"
+    },
+    "Mallorca": {
+      "en": "Mallorca",
+      "zh": "[ZH] Mallorca"
+    },
+    "Malta": {
+      "en": "Malta",
+      "zh": "[ZH] Malta"
+    },
+    "Manche": {
+      "en": "Manche",
+      "zh": "[ZH] Manche"
+    },
+    "Manchester": {
+      "en": "Manchester",
+      "zh": "[ZH] Manchester"
+    },
+    "Manisa": {
+      "en": "Manisa",
+      "zh": "[ZH] Manisa"
+    },
+    "Mannheim, Stadtkreis": {
+      "en": "Mannheim, Stadtkreis",
+      "zh": "[ZH] Mannheim, Stadtkreis"
+    },
+    "Mansfeld-Südharz": {
+      "en": "Mansfeld-Südharz",
+      "zh": "[ZH] Mansfeld-Südharz"
+    },
+    "Mantes-la-Jolie": {
+      "en": "Mantes-la-Jolie",
+      "zh": "[ZH] Mantes-la-Jolie"
+    },
+    "Mantova": {
+      "en": "Mantova",
+      "zh": "[ZH] Mantova"
+    },
+    "Maramureş": {
+      "en": "Maramureş",
+      "zh": "[ZH] Maramureş"
+    },
+    "Marburg-Biedenkopf": {
+      "en": "Marburg-Biedenkopf",
+      "zh": "[ZH] Marburg-Biedenkopf"
+    },
+    "Mardin": {
+      "en": "Mardin",
+      "zh": "[ZH] Mardin"
+    },
+    "Marijampolės apskritis": {
+      "en": "Marijampolės apskritis",
+      "zh": "[ZH] Marijampolės apskritis"
+    },
+    "Mariy-El": {
+      "en": "Mariy-El",
+      "zh": "[ZH] Mariy-El"
+    },
+    "Marne": {
+      "en": "Marne",
+      "zh": "[ZH] Marne"
+    },
+    "Massa-Carrara": {
+      "en": "Massa-Carrara",
+      "zh": "[ZH] Massa-Carrara"
+    },
+    "Matera": {
+      "en": "Matera",
+      "zh": "[ZH] Matera"
+    },
+    "Mayen-Koblenz": {
+      "en": "Mayen-Koblenz",
+      "zh": "[ZH] Mayen-Koblenz"
+    },
+    "Mayenne": {
+      "en": "Mayenne",
+      "zh": "[ZH] Mayenne"
+    },
+    "Meaux": {
+      "en": "Meaux",
+      "zh": "[ZH] Meaux"
+    },
+    "Mecklenburgische Seenplatte": {
+      "en": "Mecklenburgische Seenplatte",
+      "zh": "[ZH] Mecklenburgische Seenplatte"
+    },
+    "Medway": {
+      "en": "Medway",
+      "zh": "[ZH] Medway"
+    },
+    "Mehedinţi": {
+      "en": "Mehedinţi",
+      "zh": "[ZH] Mehedinţi"
+    },
+    "Meißen": {
+      "en": "Meißen",
+      "zh": "[ZH] Meißen"
+    },
+    "Melilla": {
+      "en": "Melilla",
+      "zh": "[ZH] Melilla"
+    },
+    "Melun": {
+      "en": "Melun",
+      "zh": "[ZH] Melun"
+    },
+    "Memmingen, Kreisfreie Stadt": {
+      "en": "Memmingen, Kreisfreie Stadt",
+      "zh": "[ZH] Memmingen, Kreisfreie Stadt"
+    },
+    "Menorca": {
+      "en": "Menorca",
+      "zh": "[ZH] Menorca"
+    },
+    "Mersin": {
+      "en": "Mersin",
+      "zh": "[ZH] Mersin"
+    },
+    "Merton, Kingston upon Thames and Sutton": {
+      "en": "Merton, Kingston upon Thames and Sutton",
+      "zh": "[ZH] Merton, Kingston upon Thames and Sutton"
+    },
+    "Merzig-Wadern": {
+      "en": "Merzig-Wadern",
+      "zh": "[ZH] Merzig-Wadern"
+    },
+    "Messina": {
+      "en": "Messina",
+      "zh": "[ZH] Messina"
+    },
+    "Mettmann": {
+      "en": "Mettmann",
+      "zh": "[ZH] Mettmann"
+    },
+    "Metz": {
+      "en": "Metz",
+      "zh": "[ZH] Metz"
+    },
+    "Meuse": {
+      "en": "Meuse",
+      "zh": "[ZH] Meuse"
+    },
+    "Međimurska županija": {
+      "en": "Međimurska županija",
+      "zh": "[ZH] Međimurska županija"
+    },
+    "Miasto Kraków": {
+      "en": "Miasto Kraków",
+      "zh": "[ZH] Miasto Kraków"
+    },
+    "Miasto Poznań": {
+      "en": "Miasto Poznań",
+      "zh": "[ZH] Miasto Poznań"
+    },
+    "Miasto Szczecin": {
+      "en": "Miasto Szczecin",
+      "zh": "[ZH] Miasto Szczecin"
+    },
+    "Miasto Warszawa": {
+      "en": "Miasto Warszawa",
+      "zh": "[ZH] Miasto Warszawa"
+    },
+    "Miasto Wrocław": {
+      "en": "Miasto Wrocław",
+      "zh": "[ZH] Miasto Wrocław"
+    },
+    "Miasto Łódź": {
+      "en": "Miasto Łódź",
+      "zh": "[ZH] Miasto Łódź"
+    },
+    "Mid Kent": {
+      "en": "Mid Kent",
+      "zh": "[ZH] Mid Kent"
+    },
+    "Mid Lancashire": {
+      "en": "Mid Lancashire",
+      "zh": "[ZH] Mid Lancashire"
+    },
+    "Mid Ulster": {
+      "en": "Mid Ulster",
+      "zh": "[ZH] Mid Ulster"
+    },
+    "Mid and East Antrim": {
+      "en": "Mid and East Antrim",
+      "zh": "[ZH] Mid and East Antrim"
+    },
+    "Mid-East": {
+      "en": "Mid-East",
+      "zh": "[ZH] Mid-East"
+    },
+    "Mid-West": {
+      "en": "Mid-West",
+      "zh": "[ZH] Mid-West"
+    },
+    "Midden-Limburg": {
+      "en": "Midden-Limburg",
+      "zh": "[ZH] Midden-Limburg"
+    },
+    "Midden-Noord-Brabant": {
+      "en": "Midden-Noord-Brabant",
+      "zh": "[ZH] Midden-Noord-Brabant"
+    },
+    "Midland": {
+      "en": "Midland",
+      "zh": "[ZH] Midland"
+    },
+    "Miesbach": {
+      "en": "Miesbach",
+      "zh": "[ZH] Miesbach"
+    },
+    "Milano": {
+      "en": "Milano",
+      "zh": "[ZH] Milano"
+    },
+    "Miltenberg": {
+      "en": "Miltenberg",
+      "zh": "[ZH] Miltenberg"
+    },
+    "Milton Keynes": {
+      "en": "Milton Keynes",
+      "zh": "[ZH] Milton Keynes"
+    },
+    "Minden-Lübbecke": {
+      "en": "Minden-Lübbecke",
+      "zh": "[ZH] Minden-Lübbecke"
+    },
+    "Minsk": {
+      "en": "Minsk",
+      "zh": "[ZH] Minsk"
+    },
+    "Mittelburgenland": {
+      "en": "Mittelburgenland",
+      "zh": "[ZH] Mittelburgenland"
+    },
+    "Mittelsachsen": {
+      "en": "Mittelsachsen",
+      "zh": "[ZH] Mittelsachsen"
+    },
+    "Modena": {
+      "en": "Modena",
+      "zh": "[ZH] Modena"
+    },
+    "Mogilev": {
+      "en": "Mogilev",
+      "zh": "[ZH] Mogilev"
+    },
+    "Molsheim": {
+      "en": "Molsheim",
+      "zh": "[ZH] Molsheim"
+    },
+    "Monmouthshire and Newport": {
+      "en": "Monmouthshire and Newport",
+      "zh": "[ZH] Monmouthshire and Newport"
+    },
+    "Mont-de-Marsan": {
+      "en": "Mont-de-Marsan",
+      "zh": "[ZH] Mont-de-Marsan"
+    },
+    "Montluçon": {
+      "en": "Montluçon",
+      "zh": "[ZH] Montluçon"
+    },
+    "Montmorillon": {
+      "en": "Montmorillon",
+      "zh": "[ZH] Montmorillon"
+    },
+    "Monza e della Brianza": {
+      "en": "Monza e della Brianza",
+      "zh": "[ZH] Monza e della Brianza"
+    },
+    "Moravskoslezský kraj": {
+      "en": "Moravskoslezský kraj",
+      "zh": "[ZH] Moravskoslezský kraj"
+    },
+    "Morbihan": {
+      "en": "Morbihan",
+      "zh": "[ZH] Morbihan"
+    },
+    "Mordovia": {
+      "en": "Mordovia",
+      "zh": "[ZH] Mordovia"
+    },
+    "Moskovskaya": {
+      "en": "Moskovskaya",
+      "zh": "[ZH] Moskovskaya"
+    },
+    "Moskva": {
+      "en": "Moskva",
+      "zh": "[ZH] Moskva"
+    },
+    "Mostviertel-Eisenwurzen": {
+      "en": "Mostviertel-Eisenwurzen",
+      "zh": "[ZH] Mostviertel-Eisenwurzen"
+    },
+    "Moulins": {
+      "en": "Moulins",
+      "zh": "[ZH] Moulins"
+    },
+    "Mulhouse": {
+      "en": "Mulhouse",
+      "zh": "[ZH] Mulhouse"
+    },
+    "Murcia": {
+      "en": "Murcia",
+      "zh": "[ZH] Murcia"
+    },
+    "Mureş": {
+      "en": "Mureş",
+      "zh": "[ZH] Mureş"
+    },
+    "Murmansk": {
+      "en": "Murmansk",
+      "zh": "[ZH] Murmansk"
+    },
+    "Muğla": {
+      "en": "Muğla",
+      "zh": "[ZH] Muğla"
+    },
+    "Muş": {
+      "en": "Muş",
+      "zh": "[ZH] Muş"
+    },
+    "Mykolayiv": {
+      "en": "Mykolayiv",
+      "zh": "[ZH] Mykolayiv"
+    },
+    "Málaga": {
+      "en": "Málaga",
+      "zh": "[ZH] Málaga"
+    },
+    "Mâcon": {
+      "en": "Mâcon",
+      "zh": "[ZH] Mâcon"
+    },
+    "Märkisch-Oderland": {
+      "en": "Märkisch-Oderland",
+      "zh": "[ZH] Märkisch-Oderland"
+    },
+    "Märkischer Kreis": {
+      "en": "Märkischer Kreis",
+      "zh": "[ZH] Märkischer Kreis"
+    },
+    "Médio Tejo": {
+      "en": "Médio Tejo",
+      "zh": "[ZH] Médio Tejo"
+    },
+    "Mönchengladbach, Kreisfreie Stadt": {
+      "en": "Mönchengladbach, Kreisfreie Stadt",
+      "zh": "[ZH] Mönchengladbach, Kreisfreie Stadt"
+    },
+    "Møre og Romsdal": {
+      "en": "Møre og Romsdal",
+      "zh": "[ZH] Møre og Romsdal"
+    },
+    "Mühldorf a. Inn": {
+      "en": "Mühldorf a. Inn",
+      "zh": "[ZH] Mühldorf a. Inn"
+    },
+    "Mühlviertel": {
+      "en": "Mühlviertel",
+      "zh": "[ZH] Mühlviertel"
+    },
+    "Mülheim an der Ruhr, Kreisfreie Stadt": {
+      "en": "Mülheim an der Ruhr, Kreisfreie Stadt",
+      "zh": "[ZH] Mülheim an der Ruhr, Kreisfreie Stadt"
+    },
+    "München, Kreisfreie Stadt": {
+      "en": "München, Kreisfreie Stadt",
+      "zh": "[ZH] München, Kreisfreie Stadt"
+    },
+    "München, Landkreis": {
+      "en": "München, Landkreis",
+      "zh": "[ZH] München, Landkreis"
+    },
+    "Münster, Kreisfreie Stadt": {
+      "en": "Münster, Kreisfreie Stadt",
+      "zh": "[ZH] Münster, Kreisfreie Stadt"
+    },
+    "Na h-Eileanan Siar (Western Isles)": {
+      "en": "Na h-Eileanan Siar (Western Isles)",
+      "zh": "[ZH] Na h-Eileanan Siar (Western Isles)"
+    },
+    "Nancy": {
+      "en": "Nancy",
+      "zh": "[ZH] Nancy"
+    },
+    "Nantua": {
+      "en": "Nantua",
+      "zh": "[ZH] Nantua"
+    },
+    "Napoli": {
+      "en": "Napoli",
+      "zh": "[ZH] Napoli"
+    },
+    "Navarra": {
+      "en": "Navarra",
+      "zh": "[ZH] Navarra"
+    },
+    "Neamţ": {
+      "en": "Neamţ",
+      "zh": "[ZH] Neamţ"
+    },
+    "Neckar-Odenwald-Kreis": {
+      "en": "Neckar-Odenwald-Kreis",
+      "zh": "[ZH] Neckar-Odenwald-Kreis"
+    },
+    "Nenets": {
+      "en": "Nenets",
+      "zh": "[ZH] Nenets"
+    },
+    "Neu-Ulm": {
+      "en": "Neu-Ulm",
+      "zh": "[ZH] Neu-Ulm"
+    },
+    "Neuburg-Schrobenhausen": {
+      "en": "Neuburg-Schrobenhausen",
+      "zh": "[ZH] Neuburg-Schrobenhausen"
+    },
+    "Neuchâtel": {
+      "en": "Neuchâtel",
+      "zh": "[ZH] Neuchâtel"
+    },
+    "Neufchâteau": {
+      "en": "Neufchâteau",
+      "zh": "[ZH] Neufchâteau"
+    },
+    "Neumarkt i. d. OPf.": {
+      "en": "Neumarkt i. d. OPf.",
+      "zh": "[ZH] Neumarkt i. d. OPf."
+    },
+    "Neumünster, Kreisfreie Stadt": {
+      "en": "Neumünster, Kreisfreie Stadt",
+      "zh": "[ZH] Neumünster, Kreisfreie Stadt"
+    },
+    "Neunkirchen": {
+      "en": "Neunkirchen",
+      "zh": "[ZH] Neunkirchen"
+    },
+    "Neustadt a. d. Aisch-Bad Windsheim": {
+      "en": "Neustadt a. d. Aisch-Bad Windsheim",
+      "zh": "[ZH] Neustadt a. d. Aisch-Bad Windsheim"
+    },
+    "Neustadt a. d. Waldnaab": {
+      "en": "Neustadt a. d. Waldnaab",
+      "zh": "[ZH] Neustadt a. d. Waldnaab"
+    },
+    "Neustadt an der Weinstraße, Kreisfreie Stadt": {
+      "en": "Neustadt an der Weinstraße, Kreisfreie Stadt",
+      "zh": "[ZH] Neustadt an der Weinstraße, Kreisfreie Stadt"
+    },
+    "Neuwied": {
+      "en": "Neuwied",
+      "zh": "[ZH] Neuwied"
+    },
+    "Nevşehir": {
+      "en": "Nevşehir",
+      "zh": "[ZH] Nevşehir"
+    },
+    "Newry, Mourne and Down": {
+      "en": "Newry, Mourne and Down",
+      "zh": "[ZH] Newry, Mourne and Down"
+    },
+    "Nice": {
+      "en": "Nice",
+      "zh": "[ZH] Nice"
+    },
+    "Nidwalden": {
+      "en": "Nidwalden",
+      "zh": "[ZH] Nidwalden"
+    },
+    "Niederösterreich-Süd": {
+      "en": "Niederösterreich-Süd",
+      "zh": "[ZH] Niederösterreich-Süd"
+    },
+    "Nienburg (Weser)": {
+      "en": "Nienburg (Weser)",
+      "zh": "[ZH] Nienburg (Weser)"
+    },
+    "Nisporeni": {
+      "en": "Nisporeni",
+      "zh": "[ZH] Nisporeni"
+    },
+    "Nitriansky kraj": {
+      "en": "Nitriansky kraj",
+      "zh": "[ZH] Nitriansky kraj"
+    },
+    "Nizhegorod": {
+      "en": "Nizhegorod",
+      "zh": "[ZH] Nizhegorod"
+    },
+    "Nièvre": {
+      "en": "Nièvre",
+      "zh": "[ZH] Nièvre"
+    },
+    "Niğde": {
+      "en": "Niğde",
+      "zh": "[ZH] Niğde"
+    },
+    "Nontron": {
+      "en": "Nontron",
+      "zh": "[ZH] Nontron"
+    },
+    "Noord-Drenthe": {
+      "en": "Noord-Drenthe",
+      "zh": "[ZH] Noord-Drenthe"
+    },
+    "Noord-Friesland": {
+      "en": "Noord-Friesland",
+      "zh": "[ZH] Noord-Friesland"
+    },
+    "Noord-Limburg": {
+      "en": "Noord-Limburg",
+      "zh": "[ZH] Noord-Limburg"
+    },
+    "Noord-Overijssel": {
+      "en": "Noord-Overijssel",
+      "zh": "[ZH] Noord-Overijssel"
+    },
+    "Noordoost-Noord-Brabant": {
+      "en": "Noordoost-Noord-Brabant",
+      "zh": "[ZH] Noordoost-Noord-Brabant"
+    },
+    "Nord": {
+      "en": "Nord",
+      "zh": "[ZH] Nord"
+    },
+    "Nordburgenland": {
+      "en": "Nordburgenland",
+      "zh": "[ZH] Nordburgenland"
+    },
+    "Nordfriesland": {
+      "en": "Nordfriesland",
+      "zh": "[ZH] Nordfriesland"
+    },
+    "Nordhausen": {
+      "en": "Nordhausen",
+      "zh": "[ZH] Nordhausen"
+    },
+    "Nordjylland": {
+      "en": "Nordjylland",
+      "zh": "[ZH] Nordjylland"
+    },
+    "Nordland": {
+      "en": "Nordland",
+      "zh": "[ZH] Nordland"
+    },
+    "Nordsachsen": {
+      "en": "Nordsachsen",
+      "zh": "[ZH] Nordsachsen"
+    },
+    "Nordsjælland": {
+      "en": "Nordsjælland",
+      "zh": "[ZH] Nordsjælland"
+    },
+    "Nordwestmecklenburg": {
+      "en": "Nordwestmecklenburg",
+      "zh": "[ZH] Nordwestmecklenburg"
+    },
+    "Norrbottens län": {
+      "en": "Norrbottens län",
+      "zh": "[ZH] Norrbottens län"
+    },
+    "North Hampshire": {
+      "en": "North Hampshire",
+      "zh": "[ZH] North Hampshire"
+    },
+    "North Lanarkshire": {
+      "en": "North Lanarkshire",
+      "zh": "[ZH] North Lanarkshire"
+    },
+    "North Northamptonshire": {
+      "en": "North Northamptonshire",
+      "zh": "[ZH] North Northamptonshire"
+    },
+    "North Nottinghamshire": {
+      "en": "North Nottinghamshire",
+      "zh": "[ZH] North Nottinghamshire"
+    },
+    "North Ossetia": {
+      "en": "North Ossetia",
+      "zh": "[ZH] North Ossetia"
+    },
+    "North Yorkshire CC": {
+      "en": "North Yorkshire CC",
+      "zh": "[ZH] North Yorkshire CC"
+    },
+    "North and North East Lincolnshire": {
+      "en": "North and North East Lincolnshire",
+      "zh": "[ZH] North and North East Lincolnshire"
+    },
+    "Northeim": {
+      "en": "Northeim",
+      "zh": "[ZH] Northeim"
+    },
+    "Northumberland": {
+      "en": "Northumberland",
+      "zh": "[ZH] Northumberland"
+    },
+    "North and West Norfolk": {
+      "en": "North and West Norfolk",
+      "zh": "[ZH] North and West Norfolk"
+    },
+    "Norwich and East Norfolk": {
+      "en": "Norwich and East Norfolk",
+      "zh": "[ZH] Norwich and East Norfolk"
+    },
+    "Nottingham": {
+      "en": "Nottingham",
+      "zh": "[ZH] Nottingham"
+    },
+    "Novara": {
+      "en": "Novara",
+      "zh": "[ZH] Novara"
+    },
+    "Novgorod": {
+      "en": "Novgorod",
+      "zh": "[ZH] Novgorod"
+    },
+    "Nowosądecki": {
+      "en": "Nowosądecki",
+      "zh": "[ZH] Nowosądecki"
+    },
+    "Nowotarski": {
+      "en": "Nowotarski",
+      "zh": "[ZH] Nowotarski"
+    },
+    "Nuoro": {
+      "en": "Nuoro",
+      "zh": "[ZH] Nuoro"
+    },
+    "Nyski": {
+      "en": "Nyski",
+      "zh": "[ZH] Nyski"
+    },
+    "Nógrád": {
+      "en": "Nógrád",
+      "zh": "[ZH] Nógrád"
+    },
+    "Nürnberg, Kreisfreie Stadt": {
+      "en": "Nürnberg, Kreisfreie Stadt",
+      "zh": "[ZH] Nürnberg, Kreisfreie Stadt"
+    },
+    "Nürnberger Land": {
+      "en": "Nürnberger Land",
+      "zh": "[ZH] Nürnberger Land"
+    },
+    "Obalno-kraška": {
+      "en": "Obalno-kraška",
+      "zh": "[ZH] Obalno-kraška"
+    },
+    "Oberallgäu": {
+      "en": "Oberallgäu",
+      "zh": "[ZH] Oberallgäu"
+    },
+    "Oberbergischer Kreis": {
+      "en": "Oberbergischer Kreis",
+      "zh": "[ZH] Oberbergischer Kreis"
+    },
+    "Oberhausen, Kreisfreie Stadt": {
+      "en": "Oberhausen, Kreisfreie Stadt",
+      "zh": "[ZH] Oberhausen, Kreisfreie Stadt"
+    },
+    "Oberhavel": {
+      "en": "Oberhavel",
+      "zh": "[ZH] Oberhavel"
+    },
+    "Oberkärnten": {
+      "en": "Oberkärnten",
+      "zh": "[ZH] Oberkärnten"
+    },
+    "Oberspreewald-Lausitz": {
+      "en": "Oberspreewald-Lausitz",
+      "zh": "[ZH] Oberspreewald-Lausitz"
+    },
+    "Obwalden": {
+      "en": "Obwalden",
+      "zh": "[ZH] Obwalden"
+    },
+    "Ocniţa": {
+      "en": "Ocniţa",
+      "zh": "[ZH] Ocniţa"
+    },
+    "Odenwaldkreis": {
+      "en": "Odenwaldkreis",
+      "zh": "[ZH] Odenwaldkreis"
+    },
+    "Oder-Spree": {
+      "en": "Oder-Spree",
+      "zh": "[ZH] Oder-Spree"
+    },
+    "Odessa": {
+      "en": "Odessa",
+      "zh": "[ZH] Odessa"
+    },
+    "Oeste": {
+      "en": "Oeste",
+      "zh": "[ZH] Oeste"
+    },
+    "Offenbach am Main, Kreisfreie Stadt": {
+      "en": "Offenbach am Main, Kreisfreie Stadt",
+      "zh": "[ZH] Offenbach am Main, Kreisfreie Stadt"
+    },
+    "Offenbach, Landkreis": {
+      "en": "Offenbach, Landkreis",
+      "zh": "[ZH] Offenbach, Landkreis"
+    },
+    "Oise": {
+      "en": "Oise",
+      "zh": "[ZH] Oise"
+    },
+    "Oldenburg (Oldenburg), Kreisfreie Stadt": {
+      "en": "Oldenburg (Oldenburg), Kreisfreie Stadt",
+      "zh": "[ZH] Oldenburg (Oldenburg), Kreisfreie Stadt"
+    },
+    "Oldenburg, Landkreis": {
+      "en": "Oldenburg, Landkreis",
+      "zh": "[ZH] Oldenburg, Landkreis"
+    },
+    "Olomoucký kraj": {
+      "en": "Olomoucký kraj",
+      "zh": "[ZH] Olomoucký kraj"
+    },
+    "Oloron-Sainte-Marie": {
+      "en": "Oloron-Sainte-Marie",
+      "zh": "[ZH] Oloron-Sainte-Marie"
+    },
+    "Olpe": {
+      "en": "Olpe",
+      "zh": "[ZH] Olpe"
+    },
+    "Olsztyński": {
+      "en": "Olsztyński",
+      "zh": "[ZH] Olsztyński"
+    },
+    "Olt": {
+      "en": "Olt",
+      "zh": "[ZH] Olt"
+    },
+    "Oost-Groningen": {
+      "en": "Oost-Groningen",
+      "zh": "[ZH] Oost-Groningen"
+    },
+    "Oost-Zuid-Holland": {
+      "en": "Oost-Zuid-Holland",
+      "zh": "[ZH] Oost-Zuid-Holland"
+    },
+    "Opolski": {
+      "en": "Opolski",
+      "zh": "[ZH] Opolski"
+    },
+    "Ordu": {
+      "en": "Ordu",
+      "zh": "[ZH] Ordu"
+    },
+    "Orel": {
+      "en": "Orel",
+      "zh": "[ZH] Orel"
+    },
+    "Orenburg": {
+      "en": "Orenburg",
+      "zh": "[ZH] Orenburg"
+    },
+    "Orhei": {
+      "en": "Orhei",
+      "zh": "[ZH] Orhei"
+    },
+    "Oristano": {
+      "en": "Oristano",
+      "zh": "[ZH] Oristano"
+    },
+    "Orkney Islands": {
+      "en": "Orkney Islands",
+      "zh": "[ZH] Orkney Islands"
+    },
+    "Orne": {
+      "en": "Orne",
+      "zh": "[ZH] Orne"
+    },
+    "Ortenaukreis": {
+      "en": "Ortenaukreis",
+      "zh": "[ZH] Ortenaukreis"
+    },
+    "Osječko-baranjska županija": {
+      "en": "Osječko-baranjska županija",
+      "zh": "[ZH] Osječko-baranjska županija"
+    },
+    "Oslo": {
+      "en": "Oslo",
+      "zh": "[ZH] Oslo"
+    },
+    "Osmaniye": {
+      "en": "Osmaniye",
+      "zh": "[ZH] Osmaniye"
+    },
+    "Osnabrück, Kreisfreie Stadt": {
+      "en": "Osnabrück, Kreisfreie Stadt",
+      "zh": "[ZH] Osnabrück, Kreisfreie Stadt"
+    },
+    "Osnabrück, Landkreis": {
+      "en": "Osnabrück, Landkreis",
+      "zh": "[ZH] Osnabrück, Landkreis"
+    },
+    "Osrednjeslovenska": {
+      "en": "Osrednjeslovenska",
+      "zh": "[ZH] Osrednjeslovenska"
+    },
+    "Ostalbkreis": {
+      "en": "Ostalbkreis",
+      "zh": "[ZH] Ostalbkreis"
+    },
+    "Ostallgäu": {
+      "en": "Ostallgäu",
+      "zh": "[ZH] Ostallgäu"
+    },
+    "Osterholz": {
+      "en": "Osterholz",
+      "zh": "[ZH] Osterholz"
+    },
+    "Ostholstein": {
+      "en": "Ostholstein",
+      "zh": "[ZH] Ostholstein"
+    },
+    "Ostprignitz-Ruppin": {
+      "en": "Ostprignitz-Ruppin",
+      "zh": "[ZH] Ostprignitz-Ruppin"
+    },
+    "Ostrołęcki": {
+      "en": "Ostrołęcki",
+      "zh": "[ZH] Ostrołęcki"
+    },
+    "Oststeiermark": {
+      "en": "Oststeiermark",
+      "zh": "[ZH] Oststeiermark"
+    },
+    "Osttirol": {
+      "en": "Osttirol",
+      "zh": "[ZH] Osttirol"
+    },
+    "Ourense": {
+      "en": "Ourense",
+      "zh": "[ZH] Ourense"
+    },
+    "Overig Groningen": {
+      "en": "Overig Groningen",
+      "zh": "[ZH] Overig Groningen"
+    },
+    "Overig Zeeland": {
+      "en": "Overig Zeeland",
+      "zh": "[ZH] Overig Zeeland"
+    },
+    "Oxfordshire": {
+      "en": "Oxfordshire",
+      "zh": "[ZH] Oxfordshire"
+    },
+    "Oświęcimski": {
+      "en": "Oświęcimski",
+      "zh": "[ZH] Oświęcimski"
+    },
+    "Paderborn": {
+      "en": "Paderborn",
+      "zh": "[ZH] Paderborn"
+    },
+    "Padova": {
+      "en": "Padova",
+      "zh": "[ZH] Padova"
+    },
+    "Palencia": {
+      "en": "Palencia",
+      "zh": "[ZH] Palencia"
+    },
+    "Palermo": {
+      "en": "Palermo",
+      "zh": "[ZH] Palermo"
+    },
+    "Panevėžio apskritis": {
+      "en": "Panevėžio apskritis",
+      "zh": "[ZH] Panevėžio apskritis"
+    },
+    "Pardubický kraj": {
+      "en": "Pardubický kraj",
+      "zh": "[ZH] Pardubický kraj"
+    },
+    "Paris": {
+      "en": "Paris",
+      "zh": "[ZH] Paris"
+    },
+    "Parma": {
+      "en": "Parma",
+      "zh": "[ZH] Parma"
+    },
+    "Pas-de-Calais": {
+      "en": "Pas-de-Calais",
+      "zh": "[ZH] Pas-de-Calais"
+    },
+    "Passau, Kreisfreie Stadt": {
+      "en": "Passau, Kreisfreie Stadt",
+      "zh": "[ZH] Passau, Kreisfreie Stadt"
+    },
+    "Passau, Landkreis": {
+      "en": "Passau, Landkreis",
+      "zh": "[ZH] Passau, Landkreis"
+    },
+    "Pau": {
+      "en": "Pau",
+      "zh": "[ZH] Pau"
+    },
+    "Pavia": {
+      "en": "Pavia",
+      "zh": "[ZH] Pavia"
+    },
+    "Peine": {
+      "en": "Peine",
+      "zh": "[ZH] Peine"
+    },
+    "Penza": {
+      "en": "Penza",
+      "zh": "[ZH] Penza"
+    },
+    "Perm'": {
+      "en": "Perm'",
+      "zh": "[ZH] Perm'"
+    },
+    "Perth & Kinross and Stirling": {
+      "en": "Perth & Kinross and Stirling",
+      "zh": "[ZH] Perth & Kinross and Stirling"
+    },
+    "Perugia": {
+      "en": "Perugia",
+      "zh": "[ZH] Perugia"
+    },
+    "Pesaro e Urbino": {
+      "en": "Pesaro e Urbino",
+      "zh": "[ZH] Pesaro e Urbino"
+    },
+    "Pescara": {
+      "en": "Pescara",
+      "zh": "[ZH] Pescara"
+    },
+    "Pest": {
+      "en": "Pest",
+      "zh": "[ZH] Pest"
+    },
+    "Peterborough": {
+      "en": "Peterborough",
+      "zh": "[ZH] Peterborough"
+    },
+    "Pfaffenhofen a. d. Ilm": {
+      "en": "Pfaffenhofen a. d. Ilm",
+      "zh": "[ZH] Pfaffenhofen a. d. Ilm"
+    },
+    "Pforzheim, Stadtkreis": {
+      "en": "Pforzheim, Stadtkreis",
+      "zh": "[ZH] Pforzheim, Stadtkreis"
+    },
+    "Piacenza": {
+      "en": "Piacenza",
+      "zh": "[ZH] Piacenza"
+    },
+    "Pierīga": {
+      "en": "Pierīga",
+      "zh": "[ZH] Pierīga"
+    },
+    "Pilski": {
+      "en": "Pilski",
+      "zh": "[ZH] Pilski"
+    },
+    "Pinneberg": {
+      "en": "Pinneberg",
+      "zh": "[ZH] Pinneberg"
+    },
+    "Pinzgau-Pongau": {
+      "en": "Pinzgau-Pongau",
+      "zh": "[ZH] Pinzgau-Pongau"
+    },
+    "Piotrkowski": {
+      "en": "Piotrkowski",
+      "zh": "[ZH] Piotrkowski"
+    },
+    "Pirkanmaa": {
+      "en": "Pirkanmaa",
+      "zh": "[ZH] Pirkanmaa"
+    },
+    "Pirmasens, Kreisfreie Stadt": {
+      "en": "Pirmasens, Kreisfreie Stadt",
+      "zh": "[ZH] Pirmasens, Kreisfreie Stadt"
+    },
+    "Pisa": {
+      "en": "Pisa",
+      "zh": "[ZH] Pisa"
+    },
+    "Pistoia": {
+      "en": "Pistoia",
+      "zh": "[ZH] Pistoia"
+    },
+    "Plymouth": {
+      "en": "Plymouth",
+      "zh": "[ZH] Plymouth"
+    },
+    "Plzeňský kraj": {
+      "en": "Plzeňský kraj",
+      "zh": "[ZH] Plzeňský kraj"
+    },
+    "Plön": {
+      "en": "Plön",
+      "zh": "[ZH] Plön"
+    },
+    "Podravska": {
+      "en": "Podravska",
+      "zh": "[ZH] Podravska"
+    },
+    "Pohjanmaa": {
+      "en": "Pohjanmaa",
+      "zh": "[ZH] Pohjanmaa"
+    },
+    "Pohjois-Karjala": {
+      "en": "Pohjois-Karjala",
+      "zh": "[ZH] Pohjois-Karjala"
+    },
+    "Pohjois-Pohjanmaa": {
+      "en": "Pohjois-Pohjanmaa",
+      "zh": "[ZH] Pohjois-Pohjanmaa"
+    },
+    "Pohjois-Savo": {
+      "en": "Pohjois-Savo",
+      "zh": "[ZH] Pohjois-Savo"
+    },
+    "Poitiers": {
+      "en": "Poitiers",
+      "zh": "[ZH] Poitiers"
+    },
+    "Poltava": {
+      "en": "Poltava",
+      "zh": "[ZH] Poltava"
+    },
+    "Pomurska": {
+      "en": "Pomurska",
+      "zh": "[ZH] Pomurska"
+    },
+    "Pontevedra": {
+      "en": "Pontevedra",
+      "zh": "[ZH] Pontevedra"
+    },
+    "Pontoise": {
+      "en": "Pontoise",
+      "zh": "[ZH] Pontoise"
+    },
+    "Pordenone": {
+      "en": "Pordenone",
+      "zh": "[ZH] Pordenone"
+    },
+    "Portsmouth": {
+      "en": "Portsmouth",
+      "zh": "[ZH] Portsmouth"
+    },
+    "Posavska": {
+      "en": "Posavska",
+      "zh": "[ZH] Posavska"
+    },
+    "Potenza": {
+      "en": "Potenza",
+      "zh": "[ZH] Potenza"
+    },
+    "Potsdam, Kreisfreie Stadt": {
+      "en": "Potsdam, Kreisfreie Stadt",
+      "zh": "[ZH] Potsdam, Kreisfreie Stadt"
+    },
+    "Potsdam-Mittelmark": {
+      "en": "Potsdam-Mittelmark",
+      "zh": "[ZH] Potsdam-Mittelmark"
+    },
+    "Powys": {
+      "en": "Powys",
+      "zh": "[ZH] Powys"
+    },
+    "Poznański": {
+      "en": "Poznański",
+      "zh": "[ZH] Poznański"
+    },
+    "Požeško-slavonska županija": {
+      "en": "Požeško-slavonska županija",
+      "zh": "[ZH] Požeško-slavonska županija"
+    },
+    "Prahova": {
+      "en": "Prahova",
+      "zh": "[ZH] Prahova"
+    },
+    "Prato": {
+      "en": "Prato",
+      "zh": "[ZH] Prato"
+    },
+    "Prešovský kraj": {
+      "en": "Prešovský kraj",
+      "zh": "[ZH] Prešovský kraj"
+    },
+    "Prignitz": {
+      "en": "Prignitz",
+      "zh": "[ZH] Prignitz"
+    },
+    "Primorsko-goranska županija": {
+      "en": "Primorsko-goranska županija",
+      "zh": "[ZH] Primorsko-goranska županija"
+    },
+    "Primorsko-notranjska": {
+      "en": "Primorsko-notranjska",
+      "zh": "[ZH] Primorsko-notranjska"
+    },
+    "Provins": {
+      "en": "Provins",
+      "zh": "[ZH] Provins"
+    },
+    "Przemyski": {
+      "en": "Przemyski",
+      "zh": "[ZH] Przemyski"
+    },
+    "Pskov": {
+      "en": "Pskov",
+      "zh": "[ZH] Pskov"
+    },
+    "Puy-de-Dôme": {
+      "en": "Puy-de-Dôme",
+      "zh": "[ZH] Puy-de-Dôme"
+    },
+    "Puławski": {
+      "en": "Puławski",
+      "zh": "[ZH] Puławski"
+    },
+    "Pyrénées-Orientales": {
+      "en": "Pyrénées-Orientales",
+      "zh": "[ZH] Pyrénées-Orientales"
+    },
+    "Päijät-Häme": {
+      "en": "Päijät-Häme",
+      "zh": "[ZH] Päijät-Häme"
+    },
+    "Périgueux": {
+      "en": "Périgueux",
+      "zh": "[ZH] Périgueux"
+    },
+    "Põhja-Eesti": {
+      "en": "Põhja-Eesti",
+      "zh": "[ZH] Põhja-Eesti"
+    },
+    "Płocki": {
+      "en": "Płocki",
+      "zh": "[ZH] Płocki"
+    },
+    "Radomski": {
+      "en": "Radomski",
+      "zh": "[ZH] Radomski"
+    },
+    "Ragusa": {
+      "en": "Ragusa",
+      "zh": "[ZH] Ragusa"
+    },
+    "Rambouillet": {
+      "en": "Rambouillet",
+      "zh": "[ZH] Rambouillet"
+    },
+    "Rastatt": {
+      "en": "Rastatt",
+      "zh": "[ZH] Rastatt"
+    },
+    "Ravenna": {
+      "en": "Ravenna",
+      "zh": "[ZH] Ravenna"
+    },
+    "Ravensburg": {
+      "en": "Ravensburg",
+      "zh": "[ZH] Ravensburg"
+    },
+    "Recklinghausen": {
+      "en": "Recklinghausen",
+      "zh": "[ZH] Recklinghausen"
+    },
+    "Redbridge and Waltham Forest": {
+      "en": "Redbridge and Waltham Forest",
+      "zh": "[ZH] Redbridge and Waltham Forest"
+    },
+    "Regen": {
+      "en": "Regen",
+      "zh": "[ZH] Regen"
+    },
+    "Regensburg, Kreisfreie Stadt": {
+      "en": "Regensburg, Kreisfreie Stadt",
+      "zh": "[ZH] Regensburg, Kreisfreie Stadt"
+    },
+    "Regensburg, Landkreis": {
+      "en": "Regensburg, Landkreis",
+      "zh": "[ZH] Regensburg, Landkreis"
+    },
+    "Reggio di Calabria": {
+      "en": "Reggio di Calabria",
+      "zh": "[ZH] Reggio di Calabria"
+    },
+    "Reggio nell’Emilia": {
+      "en": "Reggio nell’Emilia",
+      "zh": "[ZH] Reggio nell’Emilia"
+    },
+    "Region Hannover": {
+      "en": "Region Hannover",
+      "zh": "[ZH] Region Hannover"
+    },
+    "Regionalverband Saarbrücken": {
+      "en": "Regionalverband Saarbrücken",
+      "zh": "[ZH] Regionalverband Saarbrücken"
+    },
+    "Região de Aveiro": {
+      "en": "Região de Aveiro",
+      "zh": "[ZH] Região de Aveiro"
+    },
+    "Região de Coimbra": {
+      "en": "Região de Coimbra",
+      "zh": "[ZH] Região de Coimbra"
+    },
+    "Região de Leiria": {
+      "en": "Região de Leiria",
+      "zh": "[ZH] Região de Leiria"
+    },
+    "Rems-Murr-Kreis": {
+      "en": "Rems-Murr-Kreis",
+      "zh": "[ZH] Rems-Murr-Kreis"
+    },
+    "Remscheid, Kreisfreie Stadt": {
+      "en": "Remscheid, Kreisfreie Stadt",
+      "zh": "[ZH] Remscheid, Kreisfreie Stadt"
+    },
+    "Rendsburg-Eckernförde": {
+      "en": "Rendsburg-Eckernförde",
+      "zh": "[ZH] Rendsburg-Eckernförde"
+    },
+    "Reutlingen": {
+      "en": "Reutlingen",
+      "zh": "[ZH] Reutlingen"
+    },
+    "Rezina": {
+      "en": "Rezina",
+      "zh": "[ZH] Rezina"
+    },
+    "Rhein-Erft-Kreis": {
+      "en": "Rhein-Erft-Kreis",
+      "zh": "[ZH] Rhein-Erft-Kreis"
+    },
+    "Rhein-Hunsrück-Kreis": {
+      "en": "Rhein-Hunsrück-Kreis",
+      "zh": "[ZH] Rhein-Hunsrück-Kreis"
+    },
+    "Rhein-Kreis Neuss": {
+      "en": "Rhein-Kreis Neuss",
+      "zh": "[ZH] Rhein-Kreis Neuss"
+    },
+    "Rhein-Lahn-Kreis": {
+      "en": "Rhein-Lahn-Kreis",
+      "zh": "[ZH] Rhein-Lahn-Kreis"
+    },
+    "Rhein-Neckar-Kreis": {
+      "en": "Rhein-Neckar-Kreis",
+      "zh": "[ZH] Rhein-Neckar-Kreis"
+    },
+    "Rhein-Pfalz-Kreis": {
+      "en": "Rhein-Pfalz-Kreis",
+      "zh": "[ZH] Rhein-Pfalz-Kreis"
+    },
+    "Rhein-Sieg-Kreis": {
+      "en": "Rhein-Sieg-Kreis",
+      "zh": "[ZH] Rhein-Sieg-Kreis"
+    },
+    "Rheingau-Taunus-Kreis": {
+      "en": "Rheingau-Taunus-Kreis",
+      "zh": "[ZH] Rheingau-Taunus-Kreis"
+    },
+    "Rheinisch-Bergischer Kreis": {
+      "en": "Rheinisch-Bergischer Kreis",
+      "zh": "[ZH] Rheinisch-Bergischer Kreis"
+    },
+    "Rheintal-Bodenseegebiet": {
+      "en": "Rheintal-Bodenseegebiet",
+      "zh": "[ZH] Rheintal-Bodenseegebiet"
+    },
+    "Rhône": {
+      "en": "Rhône",
+      "zh": "[ZH] Rhône"
+    },
+    "Rhön-Grabfeld": {
+      "en": "Rhön-Grabfeld",
+      "zh": "[ZH] Rhön-Grabfeld"
+    },
+    "Rieti": {
+      "en": "Rieti",
+      "zh": "[ZH] Rieti"
+    },
+    "Rimini": {
+      "en": "Rimini",
+      "zh": "[ZH] Rimini"
+    },
+    "Rivne": {
+      "en": "Rivne",
+      "zh": "[ZH] Rivne"
+    },
+    "Rize": {
+      "en": "Rize",
+      "zh": "[ZH] Rize"
+    },
+    "Rogaland": {
+      "en": "Rogaland",
+      "zh": "[ZH] Rogaland"
+    },
+    "Roma": {
+      "en": "Roma",
+      "zh": "[ZH] Roma"
+    },
+    "Romorantin-Lanthenay": {
+      "en": "Romorantin-Lanthenay",
+      "zh": "[ZH] Romorantin-Lanthenay"
+    },
+    "Rosenheim, Kreisfreie Stadt": {
+      "en": "Rosenheim, Kreisfreie Stadt",
+      "zh": "[ZH] Rosenheim, Kreisfreie Stadt"
+    },
+    "Rosenheim, Landkreis": {
+      "en": "Rosenheim, Landkreis",
+      "zh": "[ZH] Rosenheim, Landkreis"
+    },
+    "Rostock, Kreisfreie Stadt": {
+      "en": "Rostock, Kreisfreie Stadt",
+      "zh": "[ZH] Rostock, Kreisfreie Stadt"
+    },
+    "Rostov": {
+      "en": "Rostov",
+      "zh": "[ZH] Rostov"
+    },
+    "Rotenburg (Wümme)": {
+      "en": "Rotenburg (Wümme)",
+      "zh": "[ZH] Rotenburg (Wümme)"
+    },
+    "Roth": {
+      "en": "Roth",
+      "zh": "[ZH] Roth"
+    },
+    "Rottal-Inn": {
+      "en": "Rottal-Inn",
+      "zh": "[ZH] Rottal-Inn"
+    },
+    "Rottweil": {
+      "en": "Rottweil",
+      "zh": "[ZH] Rottweil"
+    },
+    "Rouen": {
+      "en": "Rouen",
+      "zh": "[ZH] Rouen"
+    },
+    "Rovigo": {
+      "en": "Rovigo",
+      "zh": "[ZH] Rovigo"
+    },
+    "Ryazan'": {
+      "en": "Ryazan'",
+      "zh": "[ZH] Ryazan'"
+    },
+    "Rybnicki": {
+      "en": "Rybnicki",
+      "zh": "[ZH] Rybnicki"
+    },
+    "Rzeszowski": {
+      "en": "Rzeszowski",
+      "zh": "[ZH] Rzeszowski"
+    },
+    "Rîşcani": {
+      "en": "Rîşcani",
+      "zh": "[ZH] Rîşcani"
+    },
+    "Rīga": {
+      "en": "Rīga",
+      "zh": "[ZH] Rīga"
+    },
+    "Saale-Holzland-Kreis": {
+      "en": "Saale-Holzland-Kreis",
+      "zh": "[ZH] Saale-Holzland-Kreis"
+    },
+    "Saale-Orla-Kreis": {
+      "en": "Saale-Orla-Kreis",
+      "zh": "[ZH] Saale-Orla-Kreis"
+    },
+    "Saalekreis": {
+      "en": "Saalekreis",
+      "zh": "[ZH] Saalekreis"
+    },
+    "Saalfeld-Rudolstadt": {
+      "en": "Saalfeld-Rudolstadt",
+      "zh": "[ZH] Saalfeld-Rudolstadt"
+    },
+    "Saarlouis": {
+      "en": "Saarlouis",
+      "zh": "[ZH] Saarlouis"
+    },
+    "Saarpfalz-Kreis": {
+      "en": "Saarpfalz-Kreis",
+      "zh": "[ZH] Saarpfalz-Kreis"
+    },
+    "Saint-Amand-Montrond": {
+      "en": "Saint-Amand-Montrond",
+      "zh": "[ZH] Saint-Amand-Montrond"
+    },
+    "Saint-Claude": {
+      "en": "Saint-Claude",
+      "zh": "[ZH] Saint-Claude"
+    },
+    "Saint-Dié-des-Vosges": {
+      "en": "Saint-Dié-des-Vosges",
+      "zh": "[ZH] Saint-Dié-des-Vosges"
+    },
+    "Saint-Germain-en-Laye": {
+      "en": "Saint-Germain-en-Laye",
+      "zh": "[ZH] Saint-Germain-en-Laye"
+    },
+    "Saint-Jean-de-Maurienne": {
+      "en": "Saint-Jean-de-Maurienne",
+      "zh": "[ZH] Saint-Jean-de-Maurienne"
+    },
+    "Saint-Julien-en-Genevois": {
+      "en": "Saint-Julien-en-Genevois",
+      "zh": "[ZH] Saint-Julien-en-Genevois"
+    },
+    "Sakarya": {
+      "en": "Sakarya",
+      "zh": "[ZH] Sakarya"
+    },
+    "Salamanca": {
+      "en": "Salamanca",
+      "zh": "[ZH] Salamanca"
+    },
+    "Salerno": {
+      "en": "Salerno",
+      "zh": "[ZH] Salerno"
+    },
+    "Salzburg und Umgebung": {
+      "en": "Salzburg und Umgebung",
+      "zh": "[ZH] Salzburg und Umgebung"
+    },
+    "Salzgitter, Kreisfreie Stadt": {
+      "en": "Salzgitter, Kreisfreie Stadt",
+      "zh": "[ZH] Salzgitter, Kreisfreie Stadt"
+    },
+    "Salzlandkreis": {
+      "en": "Salzlandkreis",
+      "zh": "[ZH] Salzlandkreis"
+    },
+    "Samara": {
+      "en": "Samara",
+      "zh": "[ZH] Samara"
+    },
+    "Samsun": {
+      "en": "Samsun",
+      "zh": "[ZH] Samsun"
+    },
+    "Sandomiersko-jędrzejowski": {
+      "en": "Sandomiersko-jędrzejowski",
+      "zh": "[ZH] Sandomiersko-jędrzejowski"
+    },
+    "Sandwell": {
+      "en": "Sandwell",
+      "zh": "[ZH] Sandwell"
+    },
+    "Sankt Pölten": {
+      "en": "Sankt Pölten",
+      "zh": "[ZH] Sankt Pölten"
+    },
+    "Saratov": {
+      "en": "Saratov",
+      "zh": "[ZH] Saratov"
+    },
+    "Sarcelles": {
+      "en": "Sarcelles",
+      "zh": "[ZH] Sarcelles"
+    },
+    "Sarlat-la-Canéda": {
+      "en": "Sarlat-la-Canéda",
+      "zh": "[ZH] Sarlat-la-Canéda"
+    },
+    "Sarrebourg-Château-Salins": {
+      "en": "Sarrebourg-Château-Salins",
+      "zh": "[ZH] Sarrebourg-Château-Salins"
+    },
+    "Sarreguemines": {
+      "en": "Sarreguemines",
+      "zh": "[ZH] Sarreguemines"
+    },
+    "Sarthe": {
+      "en": "Sarthe",
+      "zh": "[ZH] Sarthe"
+    },
+    "Sassari": {
+      "en": "Sassari",
+      "zh": "[ZH] Sassari"
+    },
+    "Satakunta": {
+      "en": "Satakunta",
+      "zh": "[ZH] Satakunta"
+    },
+    "Satu Mare": {
+      "en": "Satu Mare",
+      "zh": "[ZH] Satu Mare"
+    },
+    "Saverne": {
+      "en": "Saverne",
+      "zh": "[ZH] Saverne"
+    },
+    "Savinjska": {
+      "en": "Savinjska",
+      "zh": "[ZH] Savinjska"
+    },
+    "Savona": {
+      "en": "Savona",
+      "zh": "[ZH] Savona"
+    },
+    "Schaffhausen": {
+      "en": "Schaffhausen",
+      "zh": "[ZH] Schaffhausen"
+    },
+    "Schaumburg": {
+      "en": "Schaumburg",
+      "zh": "[ZH] Schaumburg"
+    },
+    "Schleswig-Flensburg": {
+      "en": "Schleswig-Flensburg",
+      "zh": "[ZH] Schleswig-Flensburg"
+    },
+    "Schmalkalden-Meiningen": {
+      "en": "Schmalkalden-Meiningen",
+      "zh": "[ZH] Schmalkalden-Meiningen"
+    },
+    "Schwabach, Kreisfreie Stadt": {
+      "en": "Schwabach, Kreisfreie Stadt",
+      "zh": "[ZH] Schwabach, Kreisfreie Stadt"
+    },
+    "Schwalm-Eder-Kreis": {
+      "en": "Schwalm-Eder-Kreis",
+      "zh": "[ZH] Schwalm-Eder-Kreis"
+    },
+    "Schwandorf": {
+      "en": "Schwandorf",
+      "zh": "[ZH] Schwandorf"
+    },
+    "Schwarzwald-Baar-Kreis": {
+      "en": "Schwarzwald-Baar-Kreis",
+      "zh": "[ZH] Schwarzwald-Baar-Kreis"
+    },
+    "Schweinfurt, Kreisfreie Stadt": {
+      "en": "Schweinfurt, Kreisfreie Stadt",
+      "zh": "[ZH] Schweinfurt, Kreisfreie Stadt"
+    },
+    "Schweinfurt, Landkreis": {
+      "en": "Schweinfurt, Landkreis",
+      "zh": "[ZH] Schweinfurt, Landkreis"
+    },
+    "Schwerin, Kreisfreie Stadt": {
+      "en": "Schwerin, Kreisfreie Stadt",
+      "zh": "[ZH] Schwerin, Kreisfreie Stadt"
+    },
+    "Schwyz": {
+      "en": "Schwyz",
+      "zh": "[ZH] Schwyz"
+    },
+    "Schwäbisch Hall": {
+      "en": "Schwäbisch Hall",
+      "zh": "[ZH] Schwäbisch Hall"
+    },
+    "Scottish Borders": {
+      "en": "Scottish Borders",
+      "zh": "[ZH] Scottish Borders"
+    },
+    "Sefton": {
+      "en": "Sefton",
+      "zh": "[ZH] Sefton"
+    },
+    "Segeberg": {
+      "en": "Segeberg",
+      "zh": "[ZH] Segeberg"
+    },
+    "Segovia": {
+      "en": "Segovia",
+      "zh": "[ZH] Segovia"
+    },
+    "Seine-Saint-Denis": {
+      "en": "Seine-Saint-Denis",
+      "zh": "[ZH] Seine-Saint-Denis"
+    },
+    "Sevastopol": {
+      "en": "Sevastopol",
+      "zh": "[ZH] Sevastopol"
+    },
+    "Sevilla": {
+      "en": "Sevilla",
+      "zh": "[ZH] Sevilla"
+    },
+    "Sheffield": {
+      "en": "Sheffield",
+      "zh": "[ZH] Sheffield"
+    },
+    "Shetland Islands": {
+      "en": "Shetland Islands",
+      "zh": "[ZH] Shetland Islands"
+    },
+    "Shkodër": {
+      "en": "Shkodër",
+      "zh": "[ZH] Shkodër"
+    },
+    "Shropshire CC": {
+      "en": "Shropshire CC",
+      "zh": "[ZH] Shropshire CC"
+    },
+    "Sibiu": {
+      "en": "Sibiu",
+      "zh": "[ZH] Sibiu"
+    },
+    "Siedlecki": {
+      "en": "Siedlecki",
+      "zh": "[ZH] Siedlecki"
+    },
+    "Siegen-Wittgenstein": {
+      "en": "Siegen-Wittgenstein",
+      "zh": "[ZH] Siegen-Wittgenstein"
+    },
+    "Siena": {
+      "en": "Siena",
+      "zh": "[ZH] Siena"
+    },
+    "Sieradzki": {
+      "en": "Sieradzki",
+      "zh": "[ZH] Sieradzki"
+    },
+    "Sigmaringen": {
+      "en": "Sigmaringen",
+      "zh": "[ZH] Sigmaringen"
+    },
+    "Siirt": {
+      "en": "Siirt",
+      "zh": "[ZH] Siirt"
+    },
+    "Sinop": {
+      "en": "Sinop",
+      "zh": "[ZH] Sinop"
+    },
+    "Siracusa": {
+      "en": "Siracusa",
+      "zh": "[ZH] Siracusa"
+    },
+    "Sisačko-moslavačka županija": {
+      "en": "Sisačko-moslavačka županija",
+      "zh": "[ZH] Sisačko-moslavačka županija"
+    },
+    "Sivas": {
+      "en": "Sivas",
+      "zh": "[ZH] Sivas"
+    },
+    "Skierniewicki": {
+      "en": "Skierniewicki",
+      "zh": "[ZH] Skierniewicki"
+    },
+    "Skåne län": {
+      "en": "Skåne län",
+      "zh": "[ZH] Skåne län"
+    },
+    "Smolensk": {
+      "en": "Smolensk",
+      "zh": "[ZH] Smolensk"
+    },
+    "Soest": {
+      "en": "Soest",
+      "zh": "[ZH] Soest"
+    },
+    "Solihull": {
+      "en": "Solihull",
+      "zh": "[ZH] Solihull"
+    },
+    "Solingen, Kreisfreie Stadt": {
+      "en": "Solingen, Kreisfreie Stadt",
+      "zh": "[ZH] Solingen, Kreisfreie Stadt"
+    },
+    "Solothurn": {
+      "en": "Solothurn",
+      "zh": "[ZH] Solothurn"
+    },
+    "Somerset": {
+      "en": "Somerset",
+      "zh": "[ZH] Somerset"
+    },
+    "Somme": {
+      "en": "Somme",
+      "zh": "[ZH] Somme"
+    },
+    "Somogy": {
+      "en": "Somogy",
+      "zh": "[ZH] Somogy"
+    },
+    "Sondrio": {
+      "en": "Sondrio",
+      "zh": "[ZH] Sondrio"
+    },
+    "Sonneberg": {
+      "en": "Sonneberg",
+      "zh": "[ZH] Sonneberg"
+    },
+    "Soria": {
+      "en": "Soria",
+      "zh": "[ZH] Soria"
+    },
+    "Soroca": {
+      "en": "Soroca",
+      "zh": "[ZH] Soroca"
+    },
+    "Sosnowiecki": {
+      "en": "Sosnowiecki",
+      "zh": "[ZH] Sosnowiecki"
+    },
+    "South Ayrshire": {
+      "en": "South Ayrshire",
+      "zh": "[ZH] South Ayrshire"
+    },
+    "South Hampshire": {
+      "en": "South Hampshire",
+      "zh": "[ZH] South Hampshire"
+    },
+    "South Lanarkshire": {
+      "en": "South Lanarkshire",
+      "zh": "[ZH] South Lanarkshire"
+    },
+    "South Nottinghamshire": {
+      "en": "South Nottinghamshire",
+      "zh": "[ZH] South Nottinghamshire"
+    },
+    "South Teesside": {
+      "en": "South Teesside",
+      "zh": "[ZH] South Teesside"
+    },
+    "South West Wales": {
+      "en": "South West Wales",
+      "zh": "[ZH] South West Wales"
+    },
+    "South and West Derbyshire": {
+      "en": "South and West Derbyshire",
+      "zh": "[ZH] South and West Derbyshire"
+    },
+    "South-East": {
+      "en": "South-East",
+      "zh": "[ZH] South-East"
+    },
+    "South-West": {
+      "en": "South-West",
+      "zh": "[ZH] South-West"
+    },
+    "Southampton": {
+      "en": "Southampton",
+      "zh": "[ZH] Southampton"
+    },
+    "Southend-on-Sea": {
+      "en": "Southend-on-Sea",
+      "zh": "[ZH] Southend-on-Sea"
+    },
+    "Speyer, Kreisfreie Stadt": {
+      "en": "Speyer, Kreisfreie Stadt",
+      "zh": "[ZH] Speyer, Kreisfreie Stadt"
+    },
+    "Splitsko-dalmatinska županija": {
+      "en": "Splitsko-dalmatinska županija",
+      "zh": "[ZH] Splitsko-dalmatinska županija"
+    },
+    "Spree-Neiße": {
+      "en": "Spree-Neiße",
+      "zh": "[ZH] Spree-Neiße"
+    },
+    "St. Gallen": {
+      "en": "St. Gallen",
+      "zh": "[ZH] St. Gallen"
+    },
+    "St. Wendel": {
+      "en": "St. Wendel",
+      "zh": "[ZH] St. Wendel"
+    },
+    "Stade": {
+      "en": "Stade",
+      "zh": "[ZH] Stade"
+    },
+    "Staffordshire CC": {
+      "en": "Staffordshire CC",
+      "zh": "[ZH] Staffordshire CC"
+    },
+    "Starnberg": {
+      "en": "Starnberg",
+      "zh": "[ZH] Starnberg"
+    },
+    "Starogardzki": {
+      "en": "Starogardzki",
+      "zh": "[ZH] Starogardzki"
+    },
+    "Stavropol'": {
+      "en": "Stavropol'",
+      "zh": "[ZH] Stavropol'"
+    },
+    "Steinburg": {
+      "en": "Steinburg",
+      "zh": "[ZH] Steinburg"
+    },
+    "Steinfurt": {
+      "en": "Steinfurt",
+      "zh": "[ZH] Steinfurt"
+    },
+    "Stendal": {
+      "en": "Stendal",
+      "zh": "[ZH] Stendal"
+    },
+    "Steyr-Kirchdorf": {
+      "en": "Steyr-Kirchdorf",
+      "zh": "[ZH] Steyr-Kirchdorf"
+    },
+    "Stockholms län": {
+      "en": "Stockholms län",
+      "zh": "[ZH] Stockholms län"
+    },
+    "Stoke-on-Trent": {
+      "en": "Stoke-on-Trent",
+      "zh": "[ZH] Stoke-on-Trent"
+    },
+    "Stormarn": {
+      "en": "Stormarn",
+      "zh": "[ZH] Stormarn"
+    },
+    "Strasbourg": {
+      "en": "Strasbourg",
+      "zh": "[ZH] Strasbourg"
+    },
+    "Straubing, Kreisfreie Stadt": {
+      "en": "Straubing, Kreisfreie Stadt",
+      "zh": "[ZH] Straubing, Kreisfreie Stadt"
+    },
+    "Straubing-Bogen": {
+      "en": "Straubing-Bogen",
+      "zh": "[ZH] Straubing-Bogen"
+    },
+    "Străşeni": {
+      "en": "Străşeni",
+      "zh": "[ZH] Străşeni"
+    },
+    "Stuttgart, Stadtkreis": {
+      "en": "Stuttgart, Stadtkreis",
+      "zh": "[ZH] Stuttgart, Stadtkreis"
+    },
+    "Städteregion Aachen": {
+      "en": "Städteregion Aachen",
+      "zh": "[ZH] Städteregion Aachen"
+    },
+    "Stîngă Nistrului": {
+      "en": "Stîngă Nistrului",
+      "zh": "[ZH] Stîngă Nistrului"
+    },
+    "Středočeský kraj": {
+      "en": "Středočeský kraj",
+      "zh": "[ZH] Středočeský kraj"
+    },
+    "Suceava": {
+      "en": "Suceava",
+      "zh": "[ZH] Suceava"
+    },
+    "Sud Sardegna": {
+      "en": "Sud Sardegna",
+      "zh": "[ZH] Sud Sardegna"
+    },
+    "Suffolk": {
+      "en": "Suffolk",
+      "zh": "[ZH] Suffolk"
+    },
+    "Suhl, Kreisfreie Stadt": {
+      "en": "Suhl, Kreisfreie Stadt",
+      "zh": "[ZH] Suhl, Kreisfreie Stadt"
+    },
+    "Sumy": {
+      "en": "Sumy",
+      "zh": "[ZH] Sumy"
+    },
+    "Sunderland": {
+      "en": "Sunderland",
+      "zh": "[ZH] Sunderland"
+    },
+    "Suwalski": {
+      "en": "Suwalski",
+      "zh": "[ZH] Suwalski"
+    },
+    "Sverdlovsk": {
+      "en": "Sverdlovsk",
+      "zh": "[ZH] Sverdlovsk"
+    },
+    "Swansea": {
+      "en": "Swansea",
+      "zh": "[ZH] Swansea"
+    },
+    "Swindon": {
+      "en": "Swindon",
+      "zh": "[ZH] Swindon"
+    },
+    "Sydjylland": {
+      "en": "Sydjylland",
+      "zh": "[ZH] Sydjylland"
+    },
+    "Szabolcs-Szatmár-Bereg": {
+      "en": "Szabolcs-Szatmár-Bereg",
+      "zh": "[ZH] Szabolcs-Szatmár-Bereg"
+    },
+    "Szczecinecko-pyrzycki": {
+      "en": "Szczecinecko-pyrzycki",
+      "zh": "[ZH] Szczecinecko-pyrzycki"
+    },
+    "Szczeciński": {
+      "en": "Szczeciński",
+      "zh": "[ZH] Szczeciński"
+    },
+    "Sächsische Schweiz-Osterzgebirge": {
+      "en": "Sächsische Schweiz-Osterzgebirge",
+      "zh": "[ZH] Sächsische Schweiz-Osterzgebirge"
+    },
+    "Sélestat-Erstein": {
+      "en": "Sélestat-Erstein",
+      "zh": "[ZH] Sélestat-Erstein"
+    },
+    "Sîngerei": {
+      "en": "Sîngerei",
+      "zh": "[ZH] Sîngerei"
+    },
+    "Södermanlands län": {
+      "en": "Södermanlands län",
+      "zh": "[ZH] Södermanlands län"
+    },
+    "Sömmerda": {
+      "en": "Sömmerda",
+      "zh": "[ZH] Sömmerda"
+    },
+    "Südburgenland": {
+      "en": "Südburgenland",
+      "zh": "[ZH] Südburgenland"
+    },
+    "Südliche Weinstraße": {
+      "en": "Südliche Weinstraße",
+      "zh": "[ZH] Südliche Weinstraße"
+    },
+    "Südwestpfalz": {
+      "en": "Südwestpfalz",
+      "zh": "[ZH] Südwestpfalz"
+    },
+    "Sălaj": {
+      "en": "Sălaj",
+      "zh": "[ZH] Sălaj"
+    },
+    "Słupski": {
+      "en": "Słupski",
+      "zh": "[ZH] Słupski"
+    },
+    "Tambov": {
+      "en": "Tambov",
+      "zh": "[ZH] Tambov"
+    },
+    "Taraclia": {
+      "en": "Taraclia",
+      "zh": "[ZH] Taraclia"
+    },
+    "Taranto": {
+      "en": "Taranto",
+      "zh": "[ZH] Taranto"
+    },
+    "Tarn": {
+      "en": "Tarn",
+      "zh": "[ZH] Tarn"
+    },
+    "Tarn-et-Garonne": {
+      "en": "Tarn-et-Garonne",
+      "zh": "[ZH] Tarn-et-Garonne"
+    },
+    "Tarnobrzeski": {
+      "en": "Tarnobrzeski",
+      "zh": "[ZH] Tarnobrzeski"
+    },
+    "Tarnowski": {
+      "en": "Tarnowski",
+      "zh": "[ZH] Tarnowski"
+    },
+    "Tarragona": {
+      "en": "Tarragona",
+      "zh": "[ZH] Tarragona"
+    },
+    "Tatarstan": {
+      "en": "Tatarstan",
+      "zh": "[ZH] Tatarstan"
+    },
+    "Tauragės apskritis": {
+      "en": "Tauragės apskritis",
+      "zh": "[ZH] Tauragės apskritis"
+    },
+    "Tekirdağ": {
+      "en": "Tekirdağ",
+      "zh": "[ZH] Tekirdağ"
+    },
+    "Teleneşti": {
+      "en": "Teleneşti",
+      "zh": "[ZH] Teleneşti"
+    },
+    "Teleorman": {
+      "en": "Teleorman",
+      "zh": "[ZH] Teleorman"
+    },
+    "Telford and Wrekin": {
+      "en": "Telford and Wrekin",
+      "zh": "[ZH] Telford and Wrekin"
+    },
+    "Teltow-Fläming": {
+      "en": "Teltow-Fläming",
+      "zh": "[ZH] Teltow-Fläming"
+    },
+    "Telšių apskritis": {
+      "en": "Telšių apskritis",
+      "zh": "[ZH] Telšių apskritis"
+    },
+    "Teramo": {
+      "en": "Teramo",
+      "zh": "[ZH] Teramo"
+    },
+    "Terni": {
+      "en": "Terni",
+      "zh": "[ZH] Terni"
+    },
+    "Ternopil'": {
+      "en": "Ternopil'",
+      "zh": "[ZH] Ternopil'"
+    },
+    "Terras de Trás-os-Montes": {
+      "en": "Terras de Trás-os-Montes",
+      "zh": "[ZH] Terras de Trás-os-Montes"
+    },
+    "Territoire de Belfort": {
+      "en": "Territoire de Belfort",
+      "zh": "[ZH] Territoire de Belfort"
+    },
+    "Teruel": {
+      "en": "Teruel",
+      "zh": "[ZH] Teruel"
+    },
+    "Thann-Guebwiller": {
+      "en": "Thann-Guebwiller",
+      "zh": "[ZH] Thann-Guebwiller"
+    },
+    "Thionville": {
+      "en": "Thionville",
+      "zh": "[ZH] Thionville"
+    },
+    "Thonon-les-Bains": {
+      "en": "Thonon-les-Bains",
+      "zh": "[ZH] Thonon-les-Bains"
+    },
+    "Thurgau": {
+      "en": "Thurgau",
+      "zh": "[ZH] Thurgau"
+    },
+    "Thurrock": {
+      "en": "Thurrock",
+      "zh": "[ZH] Thurrock"
+    },
+    "Ticino": {
+      "en": "Ticino",
+      "zh": "[ZH] Ticino"
+    },
+    "Timiş": {
+      "en": "Timiş",
+      "zh": "[ZH] Timiş"
+    },
+    "Tiranë": {
+      "en": "Tiranë",
+      "zh": "[ZH] Tiranë"
+    },
+    "Tiroler Oberland": {
+      "en": "Tiroler Oberland",
+      "zh": "[ZH] Tiroler Oberland"
+    },
+    "Tiroler Unterland": {
+      "en": "Tiroler Unterland",
+      "zh": "[ZH] Tiroler Unterland"
+    },
+    "Tirschenreuth": {
+      "en": "Tirschenreuth",
+      "zh": "[ZH] Tirschenreuth"
+    },
+    "Tokat": {
+      "en": "Tokat",
+      "zh": "[ZH] Tokat"
+    },
+    "Toledo": {
+      "en": "Toledo",
+      "zh": "[ZH] Toledo"
+    },
+    "Tolna": {
+      "en": "Tolna",
+      "zh": "[ZH] Tolna"
+    },
+    "Torbay": {
+      "en": "Torbay",
+      "zh": "[ZH] Torbay"
+    },
+    "Torcy": {
+      "en": "Torcy",
+      "zh": "[ZH] Torcy"
+    },
+    "Torino": {
+      "en": "Torino",
+      "zh": "[ZH] Torino"
+    },
+    "Toul": {
+      "en": "Toul",
+      "zh": "[ZH] Toul"
+    },
+    "Tours": {
+      "en": "Tours",
+      "zh": "[ZH] Tours"
+    },
+    "Tower Hamlets": {
+      "en": "Tower Hamlets",
+      "zh": "[ZH] Tower Hamlets"
+    },
+    "Trabzon": {
+      "en": "Trabzon",
+      "zh": "[ZH] Trabzon"
+    },
+    "Transcarpathia": {
+      "en": "Transcarpathia",
+      "zh": "[ZH] Transcarpathia"
+    },
+    "Transnistria": {
+      "en": "Transnistria",
+      "zh": "[ZH] Transnistria"
+    },
+    "Trapani": {
+      "en": "Trapani",
+      "zh": "[ZH] Trapani"
+    },
+    "Traunstein": {
+      "en": "Traunstein",
+      "zh": "[ZH] Traunstein"
+    },
+    "Traunviertel": {
+      "en": "Traunviertel",
+      "zh": "[ZH] Traunviertel"
+    },
+    "Trento": {
+      "en": "Trento",
+      "zh": "[ZH] Trento"
+    },
+    "Trenčiansky kraj": {
+      "en": "Trenčiansky kraj",
+      "zh": "[ZH] Trenčiansky kraj"
+    },
+    "Treviso": {
+      "en": "Treviso",
+      "zh": "[ZH] Treviso"
+    },
+    "Trier, Kreisfreie Stadt": {
+      "en": "Trier, Kreisfreie Stadt",
+      "zh": "[ZH] Trier, Kreisfreie Stadt"
+    },
+    "Trier-Saarburg": {
+      "en": "Trier-Saarburg",
+      "zh": "[ZH] Trier-Saarburg"
+    },
+    "Trieste": {
+      "en": "Trieste",
+      "zh": "[ZH] Trieste"
+    },
+    "Trnavský kraj": {
+      "en": "Trnavský kraj",
+      "zh": "[ZH] Trnavský kraj"
+    },
+    "Troms og Finnmark": {
+      "en": "Troms og Finnmark",
+      "zh": "[ZH] Troms og Finnmark"
+    },
+    "Trójmiejski": {
+      "en": "Trójmiejski",
+      "zh": "[ZH] Trójmiejski"
+    },
+    "Trøndelag": {
+      "en": "Trøndelag",
+      "zh": "[ZH] Trøndelag"
+    },
+    "Tula": {
+      "en": "Tula",
+      "zh": "[ZH] Tula"
+    },
+    "Tulcea": {
+      "en": "Tulcea",
+      "zh": "[ZH] Tulcea"
+    },
+    "Tunceli": {
+      "en": "Tunceli",
+      "zh": "[ZH] Tunceli"
+    },
+    "Tuttlingen": {
+      "en": "Tuttlingen",
+      "zh": "[ZH] Tuttlingen"
+    },
+    "Tver'": {
+      "en": "Tver'",
+      "zh": "[ZH] Tver'"
+    },
+    "Twente": {
+      "en": "Twente",
+      "zh": "[ZH] Twente"
+    },
+    "Tyneside": {
+      "en": "Tyneside",
+      "zh": "[ZH] Tyneside"
+    },
+    "Tyski": {
+      "en": "Tyski",
+      "zh": "[ZH] Tyski"
+    },
+    "Tâmega e Sousa": {
+      "en": "Tâmega e Sousa",
+      "zh": "[ZH] Tâmega e Sousa"
+    },
+    "Tübingen, Landkreis": {
+      "en": "Tübingen, Landkreis",
+      "zh": "[ZH] Tübingen, Landkreis"
+    },
+    "Uckermark": {
+      "en": "Uckermark",
+      "zh": "[ZH] Uckermark"
+    },
+    "Udine": {
+      "en": "Udine",
+      "zh": "[ZH] Udine"
+    },
+    "Udmurt": {
+      "en": "Udmurt",
+      "zh": "[ZH] Udmurt"
+    },
+    "Uelzen": {
+      "en": "Uelzen",
+      "zh": "[ZH] Uelzen"
+    },
+    "Ul'yanovsk": {
+      "en": "Ul'yanovsk",
+      "zh": "[ZH] Ul'yanovsk"
+    },
+    "Ulm, Stadtkreis": {
+      "en": "Ulm, Stadtkreis",
+      "zh": "[ZH] Ulm, Stadtkreis"
+    },
+    "Ungheni": {
+      "en": "Ungheni",
+      "zh": "[ZH] Ungheni"
+    },
+    "Unna": {
+      "en": "Unna",
+      "zh": "[ZH] Unna"
+    },
+    "Unstrut-Hainich-Kreis": {
+      "en": "Unstrut-Hainich-Kreis",
+      "zh": "[ZH] Unstrut-Hainich-Kreis"
+    },
+    "Unterallgäu": {
+      "en": "Unterallgäu",
+      "zh": "[ZH] Unterallgäu"
+    },
+    "Unterkärnten": {
+      "en": "Unterkärnten",
+      "zh": "[ZH] Unterkärnten"
+    },
+    "Uppsala län": {
+      "en": "Uppsala län",
+      "zh": "[ZH] Uppsala län"
+    },
+    "Uri": {
+      "en": "Uri",
+      "zh": "[ZH] Uri"
+    },
+    "Utenos apskritis": {
+      "en": "Utenos apskritis",
+      "zh": "[ZH] Utenos apskritis"
+    },
+    "Utrecht": {
+      "en": "Utrecht",
+      "zh": "[ZH] Utrecht"
+    },
+    "Uşak": {
+      "en": "Uşak",
+      "zh": "[ZH] Uşak"
+    },
+    "Val-de-Marne": {
+      "en": "Val-de-Marne",
+      "zh": "[ZH] Val-de-Marne"
+    },
+    "Valais": {
+      "en": "Valais",
+      "zh": "[ZH] Valais"
+    },
+    "Valencia/València": {
+      "en": "Valencia/València",
+      "zh": "[ZH] Valencia/València"
+    },
+    "Valladolid": {
+      "en": "Valladolid",
+      "zh": "[ZH] Valladolid"
+    },
+    "Valle d’Aosta/Vallée d’Aoste": {
+      "en": "Valle d’Aosta/Vallée d’Aoste",
+      "zh": "[ZH] Valle d’Aosta/Vallée d’Aoste"
+    },
+    "Van": {
+      "en": "Van",
+      "zh": "[ZH] Van"
+    },
+    "Var": {
+      "en": "Var",
+      "zh": "[ZH] Var"
+    },
+    "Varaždinska županija": {
+      "en": "Varaždinska županija",
+      "zh": "[ZH] Varaždinska županija"
+    },
+    "Varese": {
+      "en": "Varese",
+      "zh": "[ZH] Varese"
+    },
+    "Varsinais-Suomi": {
+      "en": "Varsinais-Suomi",
+      "zh": "[ZH] Varsinais-Suomi"
+    },
+    "Vas": {
+      "en": "Vas",
+      "zh": "[ZH] Vas"
+    },
+    "Vaslui": {
+      "en": "Vaslui",
+      "zh": "[ZH] Vaslui"
+    },
+    "Vaucluse": {
+      "en": "Vaucluse",
+      "zh": "[ZH] Vaucluse"
+    },
+    "Vaud": {
+      "en": "Vaud",
+      "zh": "[ZH] Vaud"
+    },
+    "Vechta": {
+      "en": "Vechta",
+      "zh": "[ZH] Vechta"
+    },
+    "Veluwe": {
+      "en": "Veluwe",
+      "zh": "[ZH] Veluwe"
+    },
+    "Vendée": {
+      "en": "Vendée",
+      "zh": "[ZH] Vendée"
+    },
+    "Vendôme": {
+      "en": "Vendôme",
+      "zh": "[ZH] Vendôme"
+    },
+    "Venezia": {
+      "en": "Venezia",
+      "zh": "[ZH] Venezia"
+    },
+    "Verbano-Cusio-Ossola": {
+      "en": "Verbano-Cusio-Ossola",
+      "zh": "[ZH] Verbano-Cusio-Ossola"
+    },
+    "Vercelli": {
+      "en": "Vercelli",
+      "zh": "[ZH] Vercelli"
+    },
+    "Verden": {
+      "en": "Verden",
+      "zh": "[ZH] Verden"
+    },
+    "Verona": {
+      "en": "Verona",
+      "zh": "[ZH] Verona"
+    },
+    "Versailles": {
+      "en": "Versailles",
+      "zh": "[ZH] Versailles"
+    },
+    "Vest- og Sydsjælland": {
+      "en": "Vest- og Sydsjælland",
+      "zh": "[ZH] Vest- og Sydsjælland"
+    },
+    "Vestfold og Telemark": {
+      "en": "Vestfold og Telemark",
+      "zh": "[ZH] Vestfold og Telemark"
+    },
+    "Vestjylland": {
+      "en": "Vestjylland",
+      "zh": "[ZH] Vestjylland"
+    },
+    "Vestland": {
+      "en": "Vestland",
+      "zh": "[ZH] Vestland"
+    },
+    "Veszprém": {
+      "en": "Veszprém",
+      "zh": "[ZH] Veszprém"
+    },
+    "Vibo Valentia": {
+      "en": "Vibo Valentia",
+      "zh": "[ZH] Vibo Valentia"
+    },
+    "Vicenza": {
+      "en": "Vicenza",
+      "zh": "[ZH] Vicenza"
+    },
+    "Vichy": {
+      "en": "Vichy",
+      "zh": "[ZH] Vichy"
+    },
+    "Vidzeme": {
+      "en": "Vidzeme",
+      "zh": "[ZH] Vidzeme"
+    },
+    "Viersen": {
+      "en": "Viersen",
+      "zh": "[ZH] Viersen"
+    },
+    "Vierzon": {
+      "en": "Vierzon",
+      "zh": "[ZH] Vierzon"
+    },
+    "Viken": {
+      "en": "Viken",
+      "zh": "[ZH] Viken"
+    },
+    "Vilniaus apskritis": {
+      "en": "Vilniaus apskritis",
+      "zh": "[ZH] Vilniaus apskritis"
+    },
+    "Vinnytsya": {
+      "en": "Vinnytsya",
+      "zh": "[ZH] Vinnytsya"
+    },
+    "Virovitičko-podravska županija": {
+      "en": "Virovitičko-podravska županija",
+      "zh": "[ZH] Virovitičko-podravska županija"
+    },
+    "Viseu Dão Lafões": {
+      "en": "Viseu Dão Lafões",
+      "zh": "[ZH] Viseu Dão Lafões"
+    },
+    "Vitebsk": {
+      "en": "Vitebsk",
+      "zh": "[ZH] Vitebsk"
+    },
+    "Viterbo": {
+      "en": "Viterbo",
+      "zh": "[ZH] Viterbo"
+    },
+    "Vladimir": {
+      "en": "Vladimir",
+      "zh": "[ZH] Vladimir"
+    },
+    "Vlorë": {
+      "en": "Vlorë",
+      "zh": "[ZH] Vlorë"
+    },
+    "Vogelsbergkreis": {
+      "en": "Vogelsbergkreis",
+      "zh": "[ZH] Vogelsbergkreis"
+    },
+    "Vogtlandkreis": {
+      "en": "Vogtlandkreis",
+      "zh": "[ZH] Vogtlandkreis"
+    },
+    "Volgograd": {
+      "en": "Volgograd",
+      "zh": "[ZH] Volgograd"
+    },
+    "Vologda": {
+      "en": "Vologda",
+      "zh": "[ZH] Vologda"
+    },
+    "Volyn": {
+      "en": "Volyn",
+      "zh": "[ZH] Volyn"
+    },
+    "Voronezh": {
+      "en": "Voronezh",
+      "zh": "[ZH] Voronezh"
+    },
+    "Vorpommern-Greifswald": {
+      "en": "Vorpommern-Greifswald",
+      "zh": "[ZH] Vorpommern-Greifswald"
+    },
+    "Vorpommern-Rügen": {
+      "en": "Vorpommern-Rügen",
+      "zh": "[ZH] Vorpommern-Rügen"
+    },
+    "Vrancea": {
+      "en": "Vrancea",
+      "zh": "[ZH] Vrancea"
+    },
+    "Vukovarsko-srijemska županija": {
+      "en": "Vukovarsko-srijemska županija",
+      "zh": "[ZH] Vukovarsko-srijemska županija"
+    },
+    "Vulkaneifel": {
+      "en": "Vulkaneifel",
+      "zh": "[ZH] Vulkaneifel"
+    },
+    "Vâlcea": {
+      "en": "Vâlcea",
+      "zh": "[ZH] Vâlcea"
+    },
+    "Värmlands län": {
+      "en": "Värmlands län",
+      "zh": "[ZH] Värmlands län"
+    },
+    "Västerbottens län": {
+      "en": "Västerbottens län",
+      "zh": "[ZH] Västerbottens län"
+    },
+    "Västernorrlands län": {
+      "en": "Västernorrlands län",
+      "zh": "[ZH] Västernorrlands län"
+    },
+    "Västmanlands län": {
+      "en": "Västmanlands län",
+      "zh": "[ZH] Västmanlands län"
+    },
+    "Västra Götalands län": {
+      "en": "Västra Götalands län",
+      "zh": "[ZH] Västra Götalands län"
+    },
+    "Wakefield": {
+      "en": "Wakefield",
+      "zh": "[ZH] Wakefield"
+    },
+    "Waldeck-Frankenberg": {
+      "en": "Waldeck-Frankenberg",
+      "zh": "[ZH] Waldeck-Frankenberg"
+    },
+    "Waldshut": {
+      "en": "Waldshut",
+      "zh": "[ZH] Waldshut"
+    },
+    "Waldviertel": {
+      "en": "Waldviertel",
+      "zh": "[ZH] Waldviertel"
+    },
+    "Walsall": {
+      "en": "Walsall",
+      "zh": "[ZH] Walsall"
+    },
+    "Wandsworth": {
+      "en": "Wandsworth",
+      "zh": "[ZH] Wandsworth"
+    },
+    "Warendorf": {
+      "en": "Warendorf",
+      "zh": "[ZH] Warendorf"
+    },
+    "Warrington": {
+      "en": "Warrington",
+      "zh": "[ZH] Warrington"
+    },
+    "Warszawski wschodni": {
+      "en": "Warszawski wschodni",
+      "zh": "[ZH] Warszawski wschodni"
+    },
+    "Warszawski zachodni": {
+      "en": "Warszawski zachodni",
+      "zh": "[ZH] Warszawski zachodni"
+    },
+    "Wartburgkreis": {
+      "en": "Wartburgkreis",
+      "zh": "[ZH] Wartburgkreis"
+    },
+    "Warwickshire": {
+      "en": "Warwickshire",
+      "zh": "[ZH] Warwickshire"
+    },
+    "Wałbrzyski": {
+      "en": "Wałbrzyski",
+      "zh": "[ZH] Wałbrzyski"
+    },
+    "Weiden i. d. Opf, Kreisfreie Stadt": {
+      "en": "Weiden i. d. Opf, Kreisfreie Stadt",
+      "zh": "[ZH] Weiden i. d. Opf, Kreisfreie Stadt"
+    },
+    "Weilheim-Schongau": {
+      "en": "Weilheim-Schongau",
+      "zh": "[ZH] Weilheim-Schongau"
+    },
+    "Weimar, Kreisfreie Stadt": {
+      "en": "Weimar, Kreisfreie Stadt",
+      "zh": "[ZH] Weimar, Kreisfreie Stadt"
+    },
+    "Weimarer Land": {
+      "en": "Weimarer Land",
+      "zh": "[ZH] Weimarer Land"
+    },
+    "Weinviertel": {
+      "en": "Weinviertel",
+      "zh": "[ZH] Weinviertel"
+    },
+    "Weißenburg-Gunzenhausen": {
+      "en": "Weißenburg-Gunzenhausen",
+      "zh": "[ZH] Weißenburg-Gunzenhausen"
+    },
+    "Werra-Meißner-Kreis": {
+      "en": "Werra-Meißner-Kreis",
+      "zh": "[ZH] Werra-Meißner-Kreis"
+    },
+    "Wesel": {
+      "en": "Wesel",
+      "zh": "[ZH] Wesel"
+    },
+    "Wesermarsch": {
+      "en": "Wesermarsch",
+      "zh": "[ZH] Wesermarsch"
+    },
+    "West": {
+      "en": "West",
+      "zh": "[ZH] West"
+    },
+    "West Cumbria": {
+      "en": "West Cumbria",
+      "zh": "[ZH] West Cumbria"
+    },
+    "West Essex": {
+      "en": "West Essex",
+      "zh": "[ZH] West Essex"
+    },
+    "West Kent": {
+      "en": "West Kent",
+      "zh": "[ZH] West Kent"
+    },
+    "West Lothian": {
+      "en": "West Lothian",
+      "zh": "[ZH] West Lothian"
+    },
+    "West Northamptonshire": {
+      "en": "West Northamptonshire",
+      "zh": "[ZH] West Northamptonshire"
+    },
+    "West Surrey": {
+      "en": "West Surrey",
+      "zh": "[ZH] West Surrey"
+    },
+    "West Sussex (North East)": {
+      "en": "West Sussex (North East)",
+      "zh": "[ZH] West Sussex (North East)"
+    },
+    "West Sussex (South West)": {
+      "en": "West Sussex (South West)",
+      "zh": "[ZH] West Sussex (South West)"
+    },
+    "West- und Südsteiermark": {
+      "en": "West- und Südsteiermark",
+      "zh": "[ZH] West- und Südsteiermark"
+    },
+    "West-Noord-Brabant": {
+      "en": "West-Noord-Brabant",
+      "zh": "[ZH] West-Noord-Brabant"
+    },
+    "Westerwaldkreis": {
+      "en": "Westerwaldkreis",
+      "zh": "[ZH] Westerwaldkreis"
+    },
+    "Westliche Obersteiermark": {
+      "en": "Westliche Obersteiermark",
+      "zh": "[ZH] Westliche Obersteiermark"
+    },
+    "Westminster": {
+      "en": "Westminster",
+      "zh": "[ZH] Westminster"
+    },
+    "Wetteraukreis": {
+      "en": "Wetteraukreis",
+      "zh": "[ZH] Wetteraukreis"
+    },
+    "Wien": {
+      "en": "Wien",
+      "zh": "[ZH] Wien"
+    },
+    "Wiener Umland/Nordteil": {
+      "en": "Wiener Umland/Nordteil",
+      "zh": "[ZH] Wiener Umland/Nordteil"
+    },
+    "Wiener Umland/Südteil": {
+      "en": "Wiener Umland/Südteil",
+      "zh": "[ZH] Wiener Umland/Südteil"
+    },
+    "Wiesbaden, Kreisfreie Stadt": {
+      "en": "Wiesbaden, Kreisfreie Stadt",
+      "zh": "[ZH] Wiesbaden, Kreisfreie Stadt"
+    },
+    "Wilhelmshaven, Kreisfreie Stadt": {
+      "en": "Wilhelmshaven, Kreisfreie Stadt",
+      "zh": "[ZH] Wilhelmshaven, Kreisfreie Stadt"
+    },
+    "Wiltshire CC": {
+      "en": "Wiltshire CC",
+      "zh": "[ZH] Wiltshire CC"
+    },
+    "Wirral": {
+      "en": "Wirral",
+      "zh": "[ZH] Wirral"
+    },
+    "Wittenberg": {
+      "en": "Wittenberg",
+      "zh": "[ZH] Wittenberg"
+    },
+    "Wittmund": {
+      "en": "Wittmund",
+      "zh": "[ZH] Wittmund"
+    },
+    "Wolfenbüttel": {
+      "en": "Wolfenbüttel",
+      "zh": "[ZH] Wolfenbüttel"
+    },
+    "Wolfsburg, Kreisfreie Stadt": {
+      "en": "Wolfsburg, Kreisfreie Stadt",
+      "zh": "[ZH] Wolfsburg, Kreisfreie Stadt"
+    },
+    "Wolverhampton": {
+      "en": "Wolverhampton",
+      "zh": "[ZH] Wolverhampton"
+    },
+    "Worcestershire": {
+      "en": "Worcestershire",
+      "zh": "[ZH] Worcestershire"
+    },
+    "Worms, Kreisfreie Stadt": {
+      "en": "Worms, Kreisfreie Stadt",
+      "zh": "[ZH] Worms, Kreisfreie Stadt"
+    },
+    "Wrocławski": {
+      "en": "Wrocławski",
+      "zh": "[ZH] Wrocławski"
+    },
+    "Wunsiedel i. Fichtelgebirge": {
+      "en": "Wunsiedel i. Fichtelgebirge",
+      "zh": "[ZH] Wunsiedel i. Fichtelgebirge"
+    },
+    "Wuppertal, Kreisfreie Stadt": {
+      "en": "Wuppertal, Kreisfreie Stadt",
+      "zh": "[ZH] Wuppertal, Kreisfreie Stadt"
+    },
+    "Würzburg, Kreisfreie Stadt": {
+      "en": "Würzburg, Kreisfreie Stadt",
+      "zh": "[ZH] Würzburg, Kreisfreie Stadt"
+    },
+    "Würzburg, Landkreis": {
+      "en": "Würzburg, Landkreis",
+      "zh": "[ZH] Würzburg, Landkreis"
+    },
+    "Włocławski": {
+      "en": "Włocławski",
+      "zh": "[ZH] Włocławski"
+    },
+    "Yalova": {
+      "en": "Yalova",
+      "zh": "[ZH] Yalova"
+    },
+    "Yaroslavl'": {
+      "en": "Yaroslavl'",
+      "zh": "[ZH] Yaroslavl'"
+    },
+    "Yonne": {
+      "en": "Yonne",
+      "zh": "[ZH] Yonne"
+    },
+    "York": {
+      "en": "York",
+      "zh": "[ZH] York"
+    },
+    "Yozgat": {
+      "en": "Yozgat",
+      "zh": "[ZH] Yozgat"
+    },
+    "Zaanstreek": {
+      "en": "Zaanstreek",
+      "zh": "[ZH] Zaanstreek"
+    },
+    "Zadarska županija": {
+      "en": "Zadarska županija",
+      "zh": "[ZH] Zadarska županija"
+    },
+    "Zagrebačka županija": {
+      "en": "Zagrebačka županija",
+      "zh": "[ZH] Zagrebačka županija"
+    },
+    "Zala": {
+      "en": "Zala",
+      "zh": "[ZH] Zala"
+    },
+    "Zamora": {
+      "en": "Zamora",
+      "zh": "[ZH] Zamora"
+    },
+    "Zaporizhzhya": {
+      "en": "Zaporizhzhya",
+      "zh": "[ZH] Zaporizhzhya"
+    },
+    "Zaragoza": {
+      "en": "Zaragoza",
+      "zh": "[ZH] Zaragoza"
+    },
+    "Zasavska": {
+      "en": "Zasavska",
+      "zh": "[ZH] Zasavska"
+    },
+    "Zeeuwsch-Vlaanderen": {
+      "en": "Zeeuwsch-Vlaanderen",
+      "zh": "[ZH] Zeeuwsch-Vlaanderen"
+    },
+    "Zemgale": {
+      "en": "Zemgale",
+      "zh": "[ZH] Zemgale"
+    },
+    "Zhytomyr": {
+      "en": "Zhytomyr",
+      "zh": "[ZH] Zhytomyr"
+    },
+    "Zielonogórski": {
+      "en": "Zielonogórski",
+      "zh": "[ZH] Zielonogórski"
+    },
+    "Zlínský kraj": {
+      "en": "Zlínský kraj",
+      "zh": "[ZH] Zlínský kraj"
+    },
+    "Zollernalbkreis": {
+      "en": "Zollernalbkreis",
+      "zh": "[ZH] Zollernalbkreis"
+    },
+    "Zonguldak": {
+      "en": "Zonguldak",
+      "zh": "[ZH] Zonguldak"
+    },
+    "Zug": {
+      "en": "Zug",
+      "zh": "[ZH] Zug"
+    },
+    "Zuid-Limburg": {
+      "en": "Zuid-Limburg",
+      "zh": "[ZH] Zuid-Limburg"
+    },
+    "Zuidoost-Drenthe": {
+      "en": "Zuidoost-Drenthe",
+      "zh": "[ZH] Zuidoost-Drenthe"
+    },
+    "Zuidoost-Friesland": {
+      "en": "Zuidoost-Friesland",
+      "zh": "[ZH] Zuidoost-Friesland"
+    },
+    "Zuidoost-Noord-Brabant": {
+      "en": "Zuidoost-Noord-Brabant",
+      "zh": "[ZH] Zuidoost-Noord-Brabant"
+    },
+    "Zuidoost-Zuid-Holland": {
+      "en": "Zuidoost-Zuid-Holland",
+      "zh": "[ZH] Zuidoost-Zuid-Holland"
+    },
+    "Zuidwest-Drenthe": {
+      "en": "Zuidwest-Drenthe",
+      "zh": "[ZH] Zuidwest-Drenthe"
+    },
+    "Zuidwest-Friesland": {
+      "en": "Zuidwest-Friesland",
+      "zh": "[ZH] Zuidwest-Friesland"
+    },
+    "Zuidwest-Gelderland": {
+      "en": "Zuidwest-Gelderland",
+      "zh": "[ZH] Zuidwest-Gelderland"
+    },
+    "Zuidwest-Overijssel": {
+      "en": "Zuidwest-Overijssel",
+      "zh": "[ZH] Zuidwest-Overijssel"
+    },
+    "Zweibrücken, Kreisfreie Stadt": {
+      "en": "Zweibrücken, Kreisfreie Stadt",
+      "zh": "[ZH] Zweibrücken, Kreisfreie Stadt"
+    },
+    "Zwickau": {
+      "en": "Zwickau",
+      "zh": "[ZH] Zwickau"
+    },
+    "Zürich": {
+      "en": "Zürich",
+      "zh": "[ZH] Zürich"
+    },
+    "Área Metropolitana de Lisboa": {
+      "en": "Área Metropolitana de Lisboa",
+      "zh": "[ZH] Área Metropolitana de Lisboa"
+    },
+    "Área Metropolitana do Porto": {
+      "en": "Área Metropolitana do Porto",
+      "zh": "[ZH] Área Metropolitana do Porto"
+    },
+    "Ávila": {
+      "en": "Ávila",
+      "zh": "[ZH] Ávila"
+    },
+    "Åland": {
+      "en": "Åland",
+      "zh": "[ZH] Åland"
+    },
+    "Çanakkale": {
+      "en": "Çanakkale",
+      "zh": "[ZH] Çanakkale"
+    },
+    "Çankırı": {
+      "en": "Çankırı",
+      "zh": "[ZH] Çankırı"
+    },
+    "Çorum": {
+      "en": "Çorum",
+      "zh": "[ZH] Çorum"
+    },
+    "Épinal": {
+      "en": "Épinal",
+      "zh": "[ZH] Épinal"
+    },
+    "Évreux": {
+      "en": "Évreux",
+      "zh": "[ZH] Évreux"
+    },
+    "Örebro län": {
+      "en": "Örebro län",
+      "zh": "[ZH] Örebro län"
+    },
+    "Östergötlands län": {
+      "en": "Östergötlands län",
+      "zh": "[ZH] Östergötlands län"
+    },
+    "Östliche Obersteiermark": {
+      "en": "Östliche Obersteiermark",
+      "zh": "[ZH] Östliche Obersteiermark"
+    },
+    "Østjylland": {
+      "en": "Østjylland",
+      "zh": "[ZH] Østjylland"
+    },
+    "Østsjælland": {
+      "en": "Østsjælland",
+      "zh": "[ZH] Østsjælland"
+    },
+    "Ústecký kraj": {
+      "en": "Ústecký kraj",
+      "zh": "[ZH] Ústecký kraj"
+    },
+    "İstanbul": {
+      "en": "İstanbul",
+      "zh": "[ZH] İstanbul"
+    },
+    "İzmir": {
+      "en": "İzmir",
+      "zh": "[ZH] İzmir"
+    },
+    "Łomżyński": {
+      "en": "Łomżyński",
+      "zh": "[ZH] Łomżyński"
+    },
+    "Łódzki": {
+      "en": "Łódzki",
+      "zh": "[ZH] Łódzki"
+    },
+    "Świecki": {
+      "en": "Świecki",
+      "zh": "[ZH] Świecki"
+    },
+    "Şanlıurfa": {
+      "en": "Şanlıurfa",
+      "zh": "[ZH] Şanlıurfa"
+    },
+    "Şoldăneşti": {
+      "en": "Şoldăneşti",
+      "zh": "[ZH] Şoldăneşti"
+    },
+    "Şırnak": {
+      "en": "Şırnak",
+      "zh": "[ZH] Şırnak"
+    },
+    "Šiaulių apskritis": {
+      "en": "Šiaulių apskritis",
+      "zh": "[ZH] Šiaulių apskritis"
+    },
+    "Šibensko-kninska županija": {
+      "en": "Šibensko-kninska županija",
+      "zh": "[ZH] Šibensko-kninska županija"
+    },
+    "Żyrardowski": {
+      "en": "Żyrardowski",
+      "zh": "[ZH] Żyrardowski"
+    },
+    "Žilinský kraj": {
+      "en": "Žilinský kraj",
+      "zh": "[ZH] Žilinský kraj"
+    },
+    "Ștefan Vodă": {
+      "en": "Ștefan Vodă",
+      "zh": "[ZH] Ștefan Vodă"
+    },
+    "Άνδρος, Θήρα, Κέα, Μήλος, Μύκονος, Νάξος, Πάρος, Σύρος, Τήνος": {
+      "en": "Άνδρος, Θήρα, Κέα, Μήλος, Μύκονος, Νάξος, Πάρος, Σύρος, Τήνος",
+      "zh": "[ZH] Άνδρος, Θήρα, Κέα, Μήλος, Μύκονος, Νάξος, Πάρος, Σύρος, Τήνος"
+    },
+    "Άρτα, Πρέβεζα": {
+      "en": "Άρτα, Πρέβεζα",
+      "zh": "[ZH] Άρτα, Πρέβεζα"
+    },
+    "Έβρος": {
+      "en": "Έβρος",
+      "zh": "[ZH] Έβρος"
+    },
+    "Αιτωλοακαρνανία": {
+      "en": "Αιτωλοακαρνανία",
+      "zh": "[ZH] Αιτωλοακαρνανία"
+    },
+    "Ανατολική Αττική": {
+      "en": "Ανατολική Αττική",
+      "zh": "[ZH] Ανατολική Αττική"
+    },
+    "Αργολίδα, Αρκαδία": {
+      "en": "Αργολίδα, Αρκαδία",
+      "zh": "[ZH] Αργολίδα, Αρκαδία"
+    },
+    "Αχαΐα": {
+      "en": "Αχαΐα",
+      "zh": "[ZH] Αχαΐα"
+    },
+    "Βοιωτία": {
+      "en": "Βοιωτία",
+      "zh": "[ZH] Βοιωτία"
+    },
+    "Βόρειος Τομέας Αθηνών": {
+      "en": "Βόρειος Τομέας Αθηνών",
+      "zh": "[ZH] Βόρειος Τομέας Αθηνών"
+    },
+    "Γρεβενά, Κοζάνη": {
+      "en": "Γρεβενά, Κοζάνη",
+      "zh": "[ZH] Γρεβενά, Κοζάνη"
+    },
+    "Δράμα": {
+      "en": "Δράμα",
+      "zh": "[ZH] Δράμα"
+    },
+    "Δυτική Αττική": {
+      "en": "Δυτική Αττική",
+      "zh": "[ZH] Δυτική Αττική"
+    },
+    "Δυτικός Τομέας Αθηνών": {
+      "en": "Δυτικός Τομέας Αθηνών",
+      "zh": "[ZH] Δυτικός Τομέας Αθηνών"
+    },
+    "Ευρυτανία": {
+      "en": "Ευρυτανία",
+      "zh": "[ZH] Ευρυτανία"
+    },
+    "Εύβοια": {
+      "en": "Εύβοια",
+      "zh": "[ZH] Εύβοια"
+    },
+    "Ζάκυνθος": {
+      "en": "Ζάκυνθος",
+      "zh": "[ZH] Ζάκυνθος"
+    },
+    "Ηλεία": {
+      "en": "Ηλεία",
+      "zh": "[ZH] Ηλεία"
+    },
+    "Ημαθία": {
+      "en": "Ημαθία",
+      "zh": "[ZH] Ημαθία"
+    },
+    "Ηράκλειο": {
+      "en": "Ηράκλειο",
+      "zh": "[ZH] Ηράκλειο"
+    },
+    "Θάσος, Καβάλα": {
+      "en": "Θάσος, Καβάλα",
+      "zh": "[ZH] Θάσος, Καβάλα"
+    },
+    "Θεσπρωτία": {
+      "en": "Θεσπρωτία",
+      "zh": "[ZH] Θεσπρωτία"
+    },
+    "Θεσσαλονίκη": {
+      "en": "Θεσσαλονίκη",
+      "zh": "[ZH] Θεσσαλονίκη"
+    },
+    "Ιθάκη, Κεφαλληνία": {
+      "en": "Ιθάκη, Κεφαλληνία",
+      "zh": "[ZH] Ιθάκη, Κεφαλληνία"
+    },
+    "Ικαρία, Σάμος": {
+      "en": "Ικαρία, Σάμος",
+      "zh": "[ZH] Ικαρία, Σάμος"
+    },
+    "Ιωάννινα": {
+      "en": "Ιωάννινα",
+      "zh": "[ZH] Ιωάννινα"
+    },
+    "Κάλυμνος, Κάρπαθος – Ηρωική Νήσος Κάσος, Κως, Ρόδος": {
+      "en": "Κάλυμνος, Κάρπαθος – Ηρωική Νήσος Κάσος, Κως, Ρόδος",
+      "zh": "[ZH] Κάλυμνος, Κάρπαθος – Ηρωική Νήσος Κάσος, Κως, Ρόδος"
+    },
+    "Κέρκυρα": {
+      "en": "Κέρκυρα",
+      "zh": "[ZH] Κέρκυρα"
+    },
+    "Καρδίτσα, Τρίκαλα": {
+      "en": "Καρδίτσα, Τρίκαλα",
+      "zh": "[ZH] Καρδίτσα, Τρίκαλα"
+    },
+    "Καστοριά": {
+      "en": "Καστοριά",
+      "zh": "[ZH] Καστοριά"
+    },
+    "Κεντρικός Τομέας Αθηνών": {
+      "en": "Κεντρικός Τομέας Αθηνών",
+      "zh": "[ZH] Κεντρικός Τομέας Αθηνών"
+    },
+    "Κιλκίς": {
+      "en": "Κιλκίς",
+      "zh": "[ZH] Κιλκίς"
+    },
+    "Κορινθία": {
+      "en": "Κορινθία",
+      "zh": "[ZH] Κορινθία"
+    },
+    "Κύπρος": {
+      "en": "Κύπρος",
+      "zh": "[ZH] Κύπρος"
+    },
+    "Λάρισα": {
+      "en": "Λάρισα",
+      "zh": "[ZH] Λάρισα"
+    },
+    "Λέσβος, Λήμνος": {
+      "en": "Λέσβος, Λήμνος",
+      "zh": "[ZH] Λέσβος, Λήμνος"
+    },
+    "Λακωνία, Μεσσηνία": {
+      "en": "Λακωνία, Μεσσηνία",
+      "zh": "[ZH] Λακωνία, Μεσσηνία"
+    },
+    "Λασίθι": {
+      "en": "Λασίθι",
+      "zh": "[ZH] Λασίθι"
+    },
+    "Λευκάδα": {
+      "en": "Λευκάδα",
+      "zh": "[ZH] Λευκάδα"
+    },
+    "Μαγνησία, Σποράδες": {
+      "en": "Μαγνησία, Σποράδες",
+      "zh": "[ZH] Μαγνησία, Σποράδες"
+    },
+    "Νότιος Τομέας Αθηνών": {
+      "en": "Νότιος Τομέας Αθηνών",
+      "zh": "[ZH] Νότιος Τομέας Αθηνών"
+    },
+    "Ξάνθη": {
+      "en": "Ξάνθη",
+      "zh": "[ZH] Ξάνθη"
+    },
+    "Πέλλα": {
+      "en": "Πέλλα",
+      "zh": "[ZH] Πέλλα"
+    },
+    "Πειραιάς, Νήσοι": {
+      "en": "Πειραιάς, Νήσοι",
+      "zh": "[ZH] Πειραιάς, Νήσοι"
+    },
+    "Πιερία": {
+      "en": "Πιερία",
+      "zh": "[ZH] Πιερία"
+    },
+    "Ρέθυμνο": {
+      "en": "Ρέθυμνο",
+      "zh": "[ZH] Ρέθυμνο"
+    },
+    "Ροδόπη": {
+      "en": "Ροδόπη",
+      "zh": "[ZH] Ροδόπη"
+    },
+    "Σέρρες": {
+      "en": "Σέρρες",
+      "zh": "[ZH] Σέρρες"
+    },
+    "Φθιώτιδα": {
+      "en": "Φθιώτιδα",
+      "zh": "[ZH] Φθιώτιδα"
+    },
+    "Φλώρινα": {
+      "en": "Φλώρινα",
+      "zh": "[ZH] Φλώρινα"
+    },
+    "Φωκίδα": {
+      "en": "Φωκίδα",
+      "zh": "[ZH] Φωκίδα"
+    },
+    "Χίος": {
+      "en": "Χίος",
+      "zh": "[ZH] Χίος"
+    },
+    "Χαλκιδική": {
+      "en": "Χαλκιδική",
+      "zh": "[ZH] Χαλκιδική"
+    },
+    "Χανιά": {
+      "en": "Χανιά",
+      "zh": "[ZH] Χανιά"
+    },
+    "Јабланичка област": {
+      "en": "Јабланичка област",
+      "zh": "[ZH] Јабланичка област"
+    },
+    "Југозападен": {
+      "en": "Југозападен",
+      "zh": "[ZH] Југозападен"
+    },
+    "Југоисточен": {
+      "en": "Југоисточен",
+      "zh": "[ZH] Југоисточен"
+    },
+    "Јужнобанатска област": {
+      "en": "Јужнобанатска област",
+      "zh": "[ZH] Јужнобанатска област"
+    },
+    "Јужнобачка област": {
+      "en": "Јужнобачка област",
+      "zh": "[ZH] Јужнобачка област"
+    },
+    "Београдска област": {
+      "en": "Београдска област",
+      "zh": "[ZH] Београдска област"
+    },
+    "Благоевград": {
+      "en": "Благоевград",
+      "zh": "[ZH] Благоевград"
+    },
+    "Борска област": {
+      "en": "Борска област",
+      "zh": "[ZH] Борска област"
+    },
+    "Браничевска област": {
+      "en": "Браничевска област",
+      "zh": "[ZH] Браничевска област"
+    },
+    "Бургас": {
+      "en": "Бургас",
+      "zh": "[ZH] Бургас"
+    },
+    "Вардарски": {
+      "en": "Вардарски",
+      "zh": "[ZH] Вардарски"
+    },
+    "Варна": {
+      "en": "Варна",
+      "zh": "[ZH] Варна"
+    },
+    "Велико Търново": {
+      "en": "Велико Търново",
+      "zh": "[ZH] Велико Търново"
+    },
+    "Видин": {
+      "en": "Видин",
+      "zh": "[ZH] Видин"
+    },
+    "Враца": {
+      "en": "Враца",
+      "zh": "[ZH] Враца"
+    },
+    "Габрово": {
+      "en": "Габрово",
+      "zh": "[ZH] Габрово"
+    },
+    "Добрич": {
+      "en": "Добрич",
+      "zh": "[ZH] Добрич"
+    },
+    "Западнобачка област": {
+      "en": "Западнобачка област",
+      "zh": "[ZH] Западнобачка област"
+    },
+    "Зајечарска област": {
+      "en": "Зајечарска област",
+      "zh": "[ZH] Зајечарска област"
+    },
+    "Златиборска област": {
+      "en": "Златиборска област",
+      "zh": "[ZH] Златиборска област"
+    },
+    "Источен": {
+      "en": "Источен",
+      "zh": "[ZH] Источен"
+    },
+    "Колубарска област": {
+      "en": "Колубарска област",
+      "zh": "[ZH] Колубарска област"
+    },
+    "Кърджали": {
+      "en": "Кърджали",
+      "zh": "[ZH] Кърджали"
+    },
+    "Кюстендил": {
+      "en": "Кюстендил",
+      "zh": "[ZH] Кюстендил"
+    },
+    "Ловеч": {
+      "en": "Ловеч",
+      "zh": "[ZH] Ловеч"
+    },
+    "Мачванска област": {
+      "en": "Мачванска област",
+      "zh": "[ZH] Мачванска област"
+    },
+    "Монтана": {
+      "en": "Монтана",
+      "zh": "[ZH] Монтана"
+    },
+    "Моравичка област": {
+      "en": "Моравичка област",
+      "zh": "[ZH] Моравичка област"
+    },
+    "Нишавска област": {
+      "en": "Нишавска област",
+      "zh": "[ZH] Нишавска област"
+    },
+    "Пазарджик": {
+      "en": "Пазарджик",
+      "zh": "[ZH] Пазарджик"
+    },
+    "Пелагониски": {
+      "en": "Пелагониски",
+      "zh": "[ZH] Пелагониски"
+    },
+    "Перник": {
+      "en": "Перник",
+      "zh": "[ZH] Перник"
+    },
+    "Пиротска област": {
+      "en": "Пиротска област",
+      "zh": "[ZH] Пиротска област"
+    },
+    "Плевен": {
+      "en": "Плевен",
+      "zh": "[ZH] Плевен"
+    },
+    "Пловдив": {
+      "en": "Пловдив",
+      "zh": "[ZH] Пловдив"
+    },
+    "Подунавска област": {
+      "en": "Подунавска област",
+      "zh": "[ZH] Подунавска област"
+    },
+    "Полошки": {
+      "en": "Полошки",
+      "zh": "[ZH] Полошки"
+    },
+    "Поморавска област": {
+      "en": "Поморавска област",
+      "zh": "[ZH] Поморавска област"
+    },
+    "Пчињска област": {
+      "en": "Пчињска област",
+      "zh": "[ZH] Пчињска област"
+    },
+    "Разград": {
+      "en": "Разград",
+      "zh": "[ZH] Разград"
+    },
+    "Расинска област": {
+      "en": "Расинска област",
+      "zh": "[ZH] Расинска област"
+    },
+    "Рашка област": {
+      "en": "Рашка област",
+      "zh": "[ZH] Рашка област"
+    },
+    "Русе": {
+      "en": "Русе",
+      "zh": "[ZH] Русе"
+    },
+    "Севернобанатска област": {
+      "en": "Севернобанатска област",
+      "zh": "[ZH] Севернобанатска област"
+    },
+    "Севернобачка област": {
+      "en": "Севернобачка област",
+      "zh": "[ZH] Севернобачка област"
+    },
+    "Североисточен": {
+      "en": "Североисточен",
+      "zh": "[ZH] Североисточен"
+    },
+    "Силистра": {
+      "en": "Силистра",
+      "zh": "[ZH] Силистра"
+    },
+    "Скопски": {
+      "en": "Скопски",
+      "zh": "[ZH] Скопски"
+    },
+    "Сливен": {
+      "en": "Сливен",
+      "zh": "[ZH] Сливен"
+    },
+    "Смолян": {
+      "en": "Смолян",
+      "zh": "[ZH] Смолян"
+    },
+    "София": {
+      "en": "София",
+      "zh": "[ZH] София"
+    },
+    "София (столица)": {
+      "en": "София (столица)",
+      "zh": "[ZH] София (столица)"
+    },
+    "Средњобанатска област": {
+      "en": "Средњобанатска област",
+      "zh": "[ZH] Средњобанатска област"
+    },
+    "Сремска област": {
+      "en": "Сремска област",
+      "zh": "[ZH] Сремска област"
+    },
+    "Стара Загора": {
+      "en": "Стара Загора",
+      "zh": "[ZH] Стара Загора"
+    },
+    "Топличка област": {
+      "en": "Топличка област",
+      "zh": "[ZH] Топличка област"
+    },
+    "Търговище": {
+      "en": "Търговище",
+      "zh": "[ZH] Търговище"
+    },
+    "Хасково": {
+      "en": "Хасково",
+      "zh": "[ZH] Хасково"
+    },
+    "Црна Гора": {
+      "en": "Црна Гора",
+      "zh": "[ZH] Црна Гора"
+    },
+    "Шумадијска област": {
+      "en": "Шумадијска област",
+      "zh": "[ZH] Шумадијска област"
+    },
+    "Шумен": {
+      "en": "Шумен",
+      "zh": "[ZH] Шумен"
+    },
+    "Ямбол": {
+      "en": "Ямбол",
+      "zh": "[ZH] Ямбол"
+    }
+  }
+}
