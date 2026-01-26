@@ -1,37 +1,37 @@
 import json
-import sys
-import subprocess
 from pathlib import Path
 
-
-UI_LABELS = [
-    "Fill",
-    "Eraser",
-    "Export Map",
-    "Download Snapshot",
-    "Auto-Fill Countries",
-    "Clear Map",
-    "Country Colors",
-    "Reset Colors",
-]
+from geo_seeds import EUROPE_GEO_SEEDS
 
 
-def ensure_googletrans():
-    try:
-        import googletrans  # noqa: F401
-        return True
-    except Exception:
-        pass
-
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "googletrans==4.0.0-rc1"],
-            check=True,
-        )
-        import googletrans  # noqa: F401
-        return True
-    except Exception:
-        return False
+MANUAL_UI_DICT = {
+    "Fill": "填充",
+    "Eraser": "橡皮擦",
+    "Eyedropper": "吸管",
+    "Export Map": "导出地图",
+    "Download Snapshot": "下载截图",
+    "Auto-Fill Countries": "自动填充国家",
+    "Clear Map": "清空地图",
+    "Country Colors": "国家配色",
+    "Reset Country Colors": "重置颜色",
+    "Reset Colors": "重置颜色",
+    "Search...": "搜索...",
+    "Search Countries": "搜索国家",
+    "Search countries": "搜索国家",
+    "Current Tool": "当前工具",
+    "Recent": "最近使用",
+    "Color Palette": "调色板",
+    "Custom": "自定义",
+    "Texture": "纹理",
+    "Overlay": "覆盖层",
+    "Map Style": "地图样式",
+    "Internal Borders": "内部边界",
+    "Empire Borders": "帝国边界",
+    "Coastlines": "海岸线",
+    "Width": "宽度",
+    "Opacity": "不透明度",
+    "Format": "格式",
+}
 
 
 def load_geo_names(topo_path: Path):
@@ -64,36 +64,58 @@ def load_geo_names(topo_path: Path):
     return sorted(names)
 
 
-def translate_items(items, translator):
-    translations = {}
-    if not items:
-        return translations
-
+def load_existing_locales(path: Path):
+    if not path.exists():
+        return {"ui": {}, "geo": {}}
     try:
-        results = translator.translate(items, dest="zh")
-        if not isinstance(results, list):
-            results = [results]
-        for src, res in zip(items, results):
-            translations[src] = res.text if res and res.text else f"[ZH] {src}"
-        for src in items:
-            if src not in translations:
-                translations[src] = f"[ZH] {src}"
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        ui = data.get("ui") if isinstance(data, dict) else {}
+        geo = data.get("geo") if isinstance(data, dict) else {}
+        return {"ui": ui or {}, "geo": geo or {}}
     except Exception:
-        for src in items:
-            translations[src] = f"[ZH] {src}"
-
-    return translations
+        return {"ui": {}, "geo": {}}
 
 
-def build_locale_payload(geo_names, ui_labels, translator):
-    ui_trans = translate_items(ui_labels, translator)
-    geo_trans = translate_items(geo_names, translator)
+def merge_ui(existing_ui):
+    keys = set(existing_ui.keys()) | set(MANUAL_UI_DICT.keys())
+    merged = {}
+    for key in sorted(keys):
+        if key in MANUAL_UI_DICT:
+            zh = MANUAL_UI_DICT[key]
+        else:
+            zh = existing_ui.get(key, {}).get("zh", key)
+        en = existing_ui.get(key, {}).get("en", key)
+        merged[key] = {"en": en, "zh": zh}
+    return merged
 
-    payload = {
-        "ui": {k: {"en": k, "zh": ui_trans.get(k, f"[ZH] {k}")} for k in ui_labels},
-        "geo": {k: {"en": k, "zh": geo_trans.get(k, f"[ZH] {k}")} for k in geo_names},
-    }
-    return payload
+
+def normalize_existing_geo(existing_geo):
+    normalized = {}
+    for key, value in existing_geo.items():
+        if isinstance(value, dict):
+            en = value.get("en", key)
+            zh = value.get("zh", key)
+        else:
+            en = key
+            zh = str(value)
+        normalized[key] = {"en": en, "zh": zh}
+    return normalized
+
+
+def merge_geo(geo_names, existing_geo):
+    merged = normalize_existing_geo(existing_geo)
+
+    for name in geo_names:
+        if name in merged:
+            continue
+        if name in EUROPE_GEO_SEEDS:
+            zh = EUROPE_GEO_SEEDS[name]
+        else:
+            zh = f"[TODO] {name}"
+        merged[name] = {"en": name, "zh": zh}
+
+    return {k: merged[k] for k in sorted(merged.keys())}
 
 
 def main():
@@ -102,32 +124,18 @@ def main():
     output_path = base_dir / "data" / "locales.json"
 
     geo_names = load_geo_names(topo_path)
-    ui_labels = list(UI_LABELS)
+    existing = load_existing_locales(output_path)
 
-    has_translator = ensure_googletrans()
-    translator = None
-    if has_translator:
-        try:
-            from googletrans import Translator
+    ui_payload = merge_ui(existing.get("ui", {}))
+    geo_payload = merge_geo(geo_names, existing.get("geo", {}))
 
-            translator = Translator()
-        except Exception:
-            translator = None
-
-    if translator is None:
-        class FallbackTranslator:
-            def translate(self, items, dest="zh"):
-                return [type("R", (), {"text": f"[ZH] {item}"}) for item in items]
-
-        translator = FallbackTranslator()
-
-    payload = build_locale_payload(geo_names, ui_labels, translator)
+    payload = {"ui": ui_payload, "geo": geo_payload}
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    print(f"OK: Extracted {len(geo_names)} geographical names and {len(ui_labels)} UI labels.")
+    print(f"OK: Extracted {len(geo_names)} geographical names and {len(ui_payload)} UI labels.")
     print(f"Saved locales to: {output_path}")
 
 
