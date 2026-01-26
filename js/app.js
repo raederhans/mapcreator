@@ -17,9 +17,9 @@ const textureOverlay = document.getElementById("textureOverlay");
 const hitCanvas = document.createElement("canvas");
 const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
 
+let topology = null;
 let landData = null;
 let riversData = null;
-let bordersData = null;
 let oceanData = null;
 let landBgData = null;
 let urbanData = null;
@@ -37,6 +37,9 @@ let zoomTransform = d3.zoomIdentity;
 let showUrban = true;
 let showPhysical = true;
 let showRivers = true;
+let cachedBorders = null;
+let cachedColorsHash = null;
+let cachedCoastlines = null;
 let recentColors = [];
 let updateRecentUI = null;
 let updateSwatchUIFn = null;
@@ -155,8 +158,15 @@ let isInteracting = false;
 
 function setCanvasSize() {
   dpr = window.devicePixelRatio || 1;
-  width = colorCanvas.clientWidth || window.innerWidth;
-  height = colorCanvas.clientHeight || window.innerHeight;
+
+  // Get dimensions from parent container if canvas has no size yet
+  const container = mapContainer || colorCanvas.parentElement;
+  width = colorCanvas.clientWidth || container?.clientWidth || window.innerWidth;
+  height = colorCanvas.clientHeight || container?.clientHeight || window.innerHeight;
+
+  // Ensure minimum dimensions
+  if (width < 100) width = window.innerWidth - 580; // Account for sidebars
+  if (height < 100) height = window.innerHeight;
 
   const scaledW = Math.floor(width * dpr);
   const scaledH = Math.floor(height * dpr);
@@ -170,7 +180,14 @@ function setCanvasSize() {
 }
 
 function fitProjection() {
-  if (!landData) return;
+  if (!landData || !landData.features || landData.features.length === 0) {
+    console.warn("fitProjection: No land data available");
+    return;
+  }
+  if (width <= 0 || height <= 0) {
+    console.warn("fitProjection: Invalid dimensions", { width, height });
+    return;
+  }
   projection.fitSize([width, height], landData);
 }
 
@@ -193,11 +210,59 @@ function pathBoundsInScreen(feature, transform) {
   return !(maxX < 0 || maxY < 0 || minX > width || minY > height);
 }
 
+function getFeatureId(feature) {
+  return feature?.properties?.id || feature?.properties?.NUTS_ID || null;
+}
+
+function getColorsHash() {
+  const entries = Object.entries(colors).sort((a, b) => a[0].localeCompare(b[0]));
+  return JSON.stringify(entries);
+}
+
+function invalidateBorderCache() {
+  cachedBorders = null;
+  cachedColorsHash = null;
+}
+
+function getDynamicBorders() {
+  if (!topology || !topology.objects?.political) return null;
+  const currentHash = getColorsHash();
+  if (cachedBorders && cachedColorsHash === currentHash) {
+    return cachedBorders;
+  }
+
+  cachedBorders = topojson.mesh(
+    topology,
+    topology.objects.political,
+    (a, b) => {
+      if (!b) return false;
+      const idA = getFeatureId(a);
+      const idB = getFeatureId(b);
+      const colorA = idA ? colors[idA] : null;
+      const colorB = idB ? colors[idB] : null;
+      return !colorA || !colorB || colorA !== colorB;
+    }
+  );
+  cachedColorsHash = currentHash;
+  return cachedBorders;
+}
+
+function getCoastlines() {
+  if (cachedCoastlines) return cachedCoastlines;
+  if (!topology || !topology.objects?.political) return null;
+  cachedCoastlines = topojson.mesh(
+    topology,
+    topology.objects.political,
+    (a, b) => !b
+  );
+  return cachedCoastlines;
+}
+
 function renderQuick() {
   return;
 }
 
-function renderFull() {
+function renderColorLayer() {
   if (!landData) return;
   const k = zoomTransform.k;
 
@@ -221,7 +286,10 @@ function renderFull() {
 
   colorCtx.fillStyle = "#d9d9d9";
   for (const feature of landData.features) {
-    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
+    if (
+      (k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) ||
+      !pathBoundsInScreen(feature, zoomTransform)
+    ) {
       continue;
     }
     colorCtx.beginPath();
@@ -230,9 +298,12 @@ function renderFull() {
   }
 
   for (const feature of landData.features) {
-    const id = feature.properties?.id || feature.properties?.NUTS_ID;
+    const id = getFeatureId(feature);
     if (!id || !colors[id]) continue;
-    if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
+    if (
+      (k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) ||
+      !pathBoundsInScreen(feature, zoomTransform)
+    ) {
       continue;
     }
     colorCtx.fillStyle = colors[id];
@@ -240,6 +311,11 @@ function renderFull() {
     colorPath(feature);
     colorCtx.fill();
   }
+}
+
+function renderLineLayer() {
+  if (!landData) return;
+  const k = zoomTransform.k;
 
   lineCtx.setTransform(1, 0, 0, 1, 0, 0);
   lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
@@ -249,7 +325,10 @@ function renderFull() {
 
   if (showPhysical && physicalData) {
     for (const feature of physicalData.features) {
-      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
+      if (
+        (k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) ||
+        !pathBoundsInScreen(feature, zoomTransform)
+      ) {
         continue;
       }
       const featureType = feature.properties?.featurecla;
@@ -296,7 +375,10 @@ function renderFull() {
     lineCtx.globalAlpha = 0.2;
     lineCtx.fillStyle = "#333333";
     for (const feature of urbanData.features) {
-      if ((k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) || !pathBoundsInScreen(feature, zoomTransform)) {
+      if (
+        (k < 2 && boundsPath.area(feature) * k * k < TINY_AREA) ||
+        !pathBoundsInScreen(feature, zoomTransform)
+      ) {
         continue;
       }
       lineCtx.beginPath();
@@ -306,11 +388,23 @@ function renderFull() {
     lineCtx.restore();
   }
 
-  if (bordersData) {
+  lineCtx.globalAlpha = 1;
+
+  const dynamicBorders = getDynamicBorders();
+  if (dynamicBorders) {
     lineCtx.beginPath();
-    linePath(bordersData);
+    linePath(dynamicBorders);
     lineCtx.strokeStyle = "#111111";
     lineCtx.lineWidth = 0.8 / k;
+    lineCtx.stroke();
+  }
+
+  const coastlines = getCoastlines();
+  if (coastlines) {
+    lineCtx.beginPath();
+    linePath(coastlines);
+    lineCtx.strokeStyle = "#333333";
+    lineCtx.lineWidth = 1.2 / k;
     lineCtx.stroke();
   }
 
@@ -322,14 +416,13 @@ function renderFull() {
     lineCtx.stroke();
   }
 
-  lineCtx.beginPath();
-  linePath(landData);
-  lineCtx.strokeStyle = "#999999";
-  lineCtx.lineWidth = 0.5 / k;
-  lineCtx.stroke();
-
   drawHover();
   markHitDirty();
+}
+
+function renderFull() {
+  renderColorLayer();
+  renderLineLayer();
 }
 
 function drawHover() {
@@ -353,8 +446,11 @@ function markHitDirty() {
 function drawHidden() {
   if (!landData || !hitCanvasDirty) return;
   hitCanvasDirty = false;
-  hitCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  hitCtx.clearRect(0, 0, width, height);
+
+  // CRITICAL: Apply same transform as visible canvas (DPR + zoom)
+  hitCtx.setTransform(1, 0, 0, 1, 0, 0);
+  hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+  applyTransform(hitCtx);
 
   for (const feature of landData.features) {
     const id = feature.properties?.id || feature.properties?.NUTS_ID;
@@ -391,9 +487,10 @@ function buildIndex() {
 
 function getFeatureIdFromEvent(event) {
   const [sx, sy] = d3.pointer(event, colorCanvas);
-  const [mx, my] = zoomTransform.invert([sx, sy]);
-  const x = Math.round(mx * dpr);
-  const y = Math.round(my * dpr);
+  // Hidden canvas now uses same transform as visible canvas
+  // Just scale screen coords by DPR to get pixel coords
+  const x = Math.round(sx * dpr);
+  const y = Math.round(sy * dpr);
   if (x < 0 || y < 0 || x >= hitCanvas.width || y >= hitCanvas.height) {
     return null;
   }
@@ -446,6 +543,7 @@ function applyCountryColor(code, color) {
     if (getCountryCode(feature) !== target) continue;
     colors[id] = color;
   }
+  invalidateBorderCache();
   renderFull();
 }
 
@@ -460,6 +558,7 @@ function applyPaletteToMap() {
       colors[id] = color;
     }
   }
+  invalidateBorderCache();
   renderFull();
 }
 
@@ -472,6 +571,7 @@ function handleClick(event) {
 
   if (currentTool === "eraser") {
     delete colors[id];
+    invalidateBorderCache();
     renderFull();
   } else if (currentTool === "eyedropper") {
     const picked = colors[id];
@@ -485,6 +585,8 @@ function handleClick(event) {
     colors[id] = selectedColor;
     addRecentColor(selectedColor);
     paintSingleRegion(feature, selectedColor);
+    invalidateBorderCache();
+    renderLineLayer();
   }
 }
 
@@ -709,6 +811,7 @@ function setupUI() {
   if (presetClear) {
     presetClear.addEventListener("click", () => {
       Object.keys(colors).forEach((key) => delete colors[key]);
+      invalidateBorderCache();
       renderFull();
     });
   }
@@ -726,29 +829,84 @@ function handleResize() {
 
 async function loadData() {
   try {
-    const [land, rivers, borders, ocean, landBg, urban, physical] = await Promise.all([
-      d3.json("data/europe_final_optimized.geojson"),
-      d3.json("data/europe_rivers.geojson"),
-      d3.json("data/europe_countries_combined.geojson"),
-      d3.json("data/europe_ocean.geojson"),
-      d3.json("data/europe_land_bg.geojson"),
-      d3.json("data/europe_urban.geojson"),
-      d3.json("data/europe_physical.geojson"),
-    ]);
+    console.log("Loading TopoJSON data...");
+    topology = await d3.json("data/europe_topology.json");
 
-    landData = land;
-    riversData = rivers;
-    bordersData = borders;
-    oceanData = ocean;
-    landBgData = landBg;
-    urbanData = urban;
-    physicalData = physical;
+    if (!topology) {
+      console.error("CRITICAL: TopoJSON file loaded but is null/undefined");
+      return;
+    }
+
+    console.log("TopoJSON loaded. Type:", topology.type);
+    console.log("Available objects:", Object.keys(topology.objects || {}));
+    console.log("Total arcs:", topology.arcs?.length || 0);
+
+    // Defensive extraction with fallback checks
+    const objects = topology.objects || {};
+
+    if (!objects.political) {
+      console.error("CRITICAL: 'political' object missing from TopoJSON");
+      console.log("Available keys:", Object.keys(objects));
+      return;
+    }
+
+    landData = topojson.feature(topology, objects.political);
+    console.log("Political features:", landData?.features?.length || 0);
+
+    if (objects.rivers) {
+      riversData = topojson.feature(topology, objects.rivers);
+      console.log("Rivers features:", riversData?.features?.length || 0);
+    }
+
+    if (objects.ocean) {
+      oceanData = topojson.feature(topology, objects.ocean);
+      console.log("Ocean features:", oceanData?.features?.length || 0);
+    }
+
+    if (objects.land) {
+      landBgData = topojson.feature(topology, objects.land);
+      console.log("Land background features:", landBgData?.features?.length || 0);
+    }
+
+    if (objects.urban) {
+      urbanData = topojson.feature(topology, objects.urban);
+      console.log("Urban features:", urbanData?.features?.length || 0);
+    }
+
+    if (objects.physical) {
+      physicalData = topojson.feature(topology, objects.physical);
+      console.log("Physical features:", physicalData?.features?.length || 0);
+    }
+
+    cachedCoastlines = null;
+    invalidateBorderCache();
+
+    // Validate properties
+    const sample = landData.features?.[0]?.properties;
+    if (sample) {
+      console.log("Sample feature properties:", Object.keys(sample));
+      if (!sample.id) {
+        console.error("CRITICAL: 'id' property missing from TopoJSON features!");
+      }
+      if (!sample.cntr_code && !sample.CNTR_CODE) {
+        console.warn("WARNING: 'cntr_code' property may be missing");
+      }
+    } else {
+      console.error("CRITICAL: No features found in political layer!");
+      return;
+    }
 
     buildIndex();
+    console.log("Index built. Entries:", landIndex.size);
+
     fitProjection();
+    console.log("Projection fitted. Scale:", projection.scale());
+
     renderFull();
+    console.log("Initial render complete.");
   } catch (error) {
-    console.error("Failed to load GeoJSON:", error);
+    console.error("Failed to load TopoJSON:", error);
+    console.error("Stack trace:", error.stack);
   }
 }
 
@@ -786,6 +944,13 @@ if (textureOverlay) {
   textureOverlay.style.pointerEvents = "none";
 }
 colorCanvas.style.touchAction = "none";
+
+// Verify topojson-client is loaded
+if (typeof topojson === "undefined") {
+  console.error("CRITICAL: topojson-client library not loaded! Check script tag in index.html");
+} else {
+  console.log("topojson-client loaded successfully");
+}
 
 setupUI();
 setupRightSidebar();

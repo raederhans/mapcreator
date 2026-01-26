@@ -1,6 +1,7 @@
 """Initialize and prepare NUTS-3 map data for Map Creator."""
 from __future__ import annotations
 
+import math
 import sys
 import subprocess
 import tempfile
@@ -38,12 +39,13 @@ def ensure_packages(packages: Iterable[str]) -> None:
         raise SystemExit(exc.returncode) from exc
 
 
-ensure_packages(["geopandas", "matplotlib", "mapclassify", "requests", "shapely"])
+ensure_packages(["geopandas", "matplotlib", "mapclassify", "requests", "shapely", "topojson"])
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import requests
+import topojson as tp
 from shapely.geometry import Point, box
 from shapely.ops import transform
 
@@ -535,15 +537,6 @@ def save_outputs(
     output_dir: Path,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    geojson_path = output_dir / "europe_test_nuts3.geojson"
-    rivers_path = output_dir / "europe_rivers.geojson"
-    borders_path = output_dir / "europe_countries_combined.geojson"
-    ocean_path = output_dir / "europe_ocean.geojson"
-    land_bg_path = output_dir / "europe_land_bg.geojson"
-    urban_path = output_dir / "europe_urban.geojson"
-    physical_path = output_dir / "europe_physical.geojson"
-    hybrid_path = output_dir / "europe_full_hybrid.geojson"
-    final_path = output_dir / "europe_final_optimized.geojson"
     preview_path = output_dir / "preview.png"
 
     land_out = round_geometries(land)
@@ -553,35 +546,6 @@ def save_outputs(
     land_bg_out = round_geometries(land_bg)
     urban_out = round_geometries(urban)
     physical_out = round_geometries(physical)
-    hybrid_out = round_geometries(hybrid)
-    final_out = round_geometries(final)
-
-    print(f"Saving GeoJSON to {geojson_path}...")
-    land_out.to_file(geojson_path, driver="GeoJSON")
-
-    print(f"Saving rivers GeoJSON to {rivers_path}...")
-    rivers_out.to_file(rivers_path, driver="GeoJSON")
-
-    print(f"Saving borders GeoJSON to {borders_path}...")
-    borders_out.to_file(borders_path, driver="GeoJSON")
-
-    print(f"Saving ocean GeoJSON to {ocean_path}...")
-    ocean_out.to_file(ocean_path, driver="GeoJSON")
-
-    print(f"Saving land background GeoJSON to {land_bg_path}...")
-    land_bg_out.to_file(land_bg_path, driver="GeoJSON")
-
-    print(f"Saving urban GeoJSON to {urban_path}...")
-    urban_out.to_file(urban_path, driver="GeoJSON")
-
-    print(f"Saving physical regions GeoJSON to {physical_path}...")
-    physical_out.to_file(physical_path, driver="GeoJSON")
-
-    print(f"Saving hybrid GeoJSON to {hybrid_path}...")
-    hybrid_out.to_file(hybrid_path, driver="GeoJSON")
-
-    print(f"Saving final optimized GeoJSON to {final_path}...")
-    final_out.to_file(final_path, driver="GeoJSON")
 
     print(f"Saving preview image to {preview_path}...")
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -596,6 +560,115 @@ def save_outputs(
     fig.savefig(preview_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
+
+def build_topology(
+    political: gpd.GeoDataFrame,
+    ocean: gpd.GeoDataFrame,
+    land: gpd.GeoDataFrame,
+    urban: gpd.GeoDataFrame,
+    physical: gpd.GeoDataFrame,
+    rivers: gpd.GeoDataFrame,
+    output_path: Path,
+    quantization: int = 100_000,
+) -> None:
+    print("Building TopoJSON topology...")
+
+    def has_valid_bounds(gdf: gpd.GeoDataFrame) -> bool:
+        if gdf.empty:
+            return False
+        bounds = gdf.total_bounds
+        if len(bounds) != 4:
+            return False
+        minx, miny, maxx, maxy = bounds
+        if not all(map(math.isfinite, [minx, miny, maxx, maxy])):
+            return False
+        if maxx - minx <= 0 or maxy - miny <= 0:
+            return False
+        return True
+
+    def prune_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        keep_cols = ["id", "name", "cntr_code", "geometry"]
+        existing = [col for col in keep_cols if col in gdf.columns]
+        if "geometry" not in existing:
+            existing.append("geometry")
+        gdf = gdf[existing].copy()
+        gdf = gdf.fillna("")
+        return gdf
+
+    def scrub_geometry(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        if gdf.empty:
+            return gdf
+        gdf = gdf[gdf.geometry.notna()]
+        gdf = gdf[~gdf.geometry.is_empty]
+        if hasattr(gdf.geometry, "is_valid"):
+            gdf = gdf[gdf.geometry.is_valid]
+        return gdf
+
+    candidates = [
+        ("political", political),
+        ("ocean", ocean),
+        ("land", land),
+        ("urban", urban),
+        ("physical", physical),
+        ("rivers", rivers),
+    ]
+
+    layer_names: list[str] = []
+    layer_gdfs: list[gpd.GeoDataFrame] = []
+    for name, gdf in candidates:
+        gdf = gdf.to_crs("EPSG:4326")
+        gdf = prune_columns(gdf)
+        gdf = scrub_geometry(gdf)
+        gdf = round_geometries(gdf)
+        if not has_valid_bounds(gdf):
+            if name == "political":
+                print("Political layer is empty or invalid; cannot build topology.")
+                raise SystemExit(1)
+            print(f"Skipping empty/invalid layer: {name}")
+            continue
+        layer_names.append(name)
+        layer_gdfs.append(gdf)
+
+    def build_topo(prequantize_value):
+        return tp.Topology(
+            layer_gdfs,
+            object_name=layer_names,
+            prequantize=prequantize_value,
+            topology=True,
+            presimplify=False,
+            toposimplify=False,
+            shared_coords=True,
+        ).to_json()
+
+    try:
+        topo_json = build_topo(quantization)
+        if "NaN" in topo_json:
+            raise ValueError("Generated TopoJSON contains NaN")
+    except Exception as exc:
+        print(f"TopoJSON build failed with quantization; retrying without quantization: {exc}")
+        topo_json = build_topo(False)
+        if "NaN" in topo_json:
+            raise ValueError("Generated TopoJSON contains NaN")
+
+    output_path.write_text(topo_json, encoding="utf-8")
+
+    try:
+        import json
+
+        topo_dict = json.loads(topo_json)
+        political_obj = topo_dict.get("objects", {}).get("political", {})
+        geometries = political_obj.get("geometries", [])
+        if geometries:
+            sample = geometries[0].get("properties", {})
+            missing = [key for key in ("id", "cntr_code") if key not in sample]
+            if missing:
+                print(f"WARNING: TopoJSON missing properties: {missing}")
+        print(f"TopoJSON saved to {output_path}")
+        print(f"  - Objects: {list(topo_dict.get('objects', {}).keys())}")
+        print(f"  - Total arcs: {len(topo_dict.get('arcs', []))}")
+    except Exception as exc:
+        print(f"TopoJSON saved to {output_path}")
+        print(f"TopoJSON validation skipped: {exc}")
 
 def main() -> None:
     data = fetch_geojson(URL)
@@ -746,6 +819,18 @@ def main() -> None:
         hybrid,
         final_hybrid,
         output_dir,
+    )
+
+    topology_path = output_dir / "europe_topology.json"
+    build_topology(
+        political=final_hybrid,
+        ocean=ocean_clipped,
+        land=land_bg_clipped,
+        urban=urban_clipped,
+        physical=physical_filtered,
+        rivers=rivers_clipped,
+        output_path=topology_path,
+        quantization=100_000,
     )
 
     print(f"Features with missing CNTR_CODE: {final_hybrid['cntr_code'].isnull().sum()}")
