@@ -43,7 +43,34 @@ let height = 0;
 let dpr = window.devicePixelRatio || 1;
 
 const colors = {};
-let selectedColor = "#1f3a5f";
+const PALETTE_THEMES = {
+  "HOI4 Vanilla": [
+    "#871818", "#d62828", "#f77f00", "#fcbf49",
+    "#3e5c76", "#1d3557", "#457b9d", "#a8dadc",
+    "#333333", "#5c5c5c", "#8a8a8a", "#4f772d",
+    "#8c2f39", "#9e2a2b", "#b23a48", "#6d597a",
+  ],
+  "TNO (The New Order)": [
+    "#420420", "#5e0d0d", "#2a2a2a", "#0f0f0f",
+    "#00f7ff", "#00d9ff", "#00ff9d", "#ccff00",
+    "#ff0055", "#ffcc00", "#8a2be2", "#2e8b57",
+    "#adb5bd", "#6c757d", "#495057", "#343a40",
+  ],
+  "Kaiserreich": [
+    "#7b1113", "#a31621", "#bf1a2f", "#e01e37",
+    "#2d6a4f", "#40916c", "#52b788", "#74c69d",
+    "#14213d", "#fca311", "#e5e5e5", "#ffffff",
+    "#ffb703", "#fb8500", "#8e9aaf", "#cbc0d3",
+  ],
+  "Red Flood (Avant-Garde)": [
+    "#ff0000", "#ffaa00", "#ffff00", "#00ff00",
+    "#00ffff", "#0000ff", "#ff00ff", "#9d4edd",
+    "#240046", "#3c096c", "#5a189a", "#7b2cbf",
+    "#10002b", "#000000", "#ffffff", "#ff5400",
+  ],
+};
+let currentPaletteTheme = "HOI4 Vanilla";
+let selectedColor = PALETTE_THEMES[currentPaletteTheme][0];
 let currentTool = "fill";
 let hoveredId = null;
 let zoomTransform = d3.zoomIdentity;
@@ -745,13 +772,6 @@ function renderColorLayer() {
   colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
   applyTransform(colorCtx);
 
-  if (oceanData) {
-    colorCtx.beginPath();
-    colorPath(oceanData);
-    colorCtx.fillStyle = "#b3d9ff";
-    colorCtx.fill();
-  }
-
   if (landBgData) {
     colorCtx.beginPath();
     colorPath(landBgData);
@@ -1136,6 +1156,36 @@ function addRecentColor(color) {
   }
 }
 
+function renderPalette(themeName) {
+  console.log("Rendering palette:", themeName);
+  const palette = PALETTE_THEMES[themeName];
+  const paletteGrid = document.getElementById("paletteGrid");
+  if (!paletteGrid || !palette) return;
+  currentPaletteTheme = themeName;
+  paletteGrid.innerHTML = "";
+
+  palette.forEach((color) => {
+    const btn = document.createElement("button");
+    btn.className = "color-swatch h-8 w-8 rounded-md border border-slate-200";
+    btn.dataset.color = color;
+    btn.style.background = color;
+    btn.addEventListener("click", () => {
+      selectedColor = color;
+      if (typeof updateSwatchUIFn === "function") {
+        updateSwatchUIFn();
+      }
+    });
+    paletteGrid.appendChild(btn);
+  });
+
+  if (!palette.includes(selectedColor) && palette.length > 0) {
+    selectedColor = palette[0];
+  }
+  if (typeof updateSwatchUIFn === "function") {
+    updateSwatchUIFn();
+  }
+}
+
 function setupRightSidebar() {
   const list = document.getElementById("countryList");
   if (!list) return;
@@ -1393,7 +1443,6 @@ function setupRightSidebar() {
 }
 
 function setupUI() {
-  const swatches = document.querySelectorAll(".color-swatch");
   const toolButtons = document.querySelectorAll(".tool-button");
   const currentToolLabel = document.getElementById("currentTool");
   const customColor = document.getElementById("customColor");
@@ -1414,6 +1463,7 @@ function setupUI() {
   const coastlineColor = document.getElementById("coastlineColor");
   const coastlineWidth = document.getElementById("coastlineWidth");
   const toggleLang = document.getElementById("btnToggleLang");
+  const themeSelect = document.getElementById("themeSelect");
   const referenceImageInput = document.getElementById("referenceImageInput");
   const referenceOpacity = document.getElementById("referenceOpacity");
   const referenceScale = document.getElementById("referenceScale");
@@ -1449,6 +1499,7 @@ function setupUI() {
 
   function updateSwatchUI() {
     let matched = false;
+    const swatches = document.querySelectorAll(".color-swatch");
     swatches.forEach((swatch) => {
       if (swatch.dataset.color === selectedColor) {
         swatch.classList.add("ring-2", "ring-slate-900");
@@ -1487,13 +1538,6 @@ function setupUI() {
     });
   }
   updateToolUIFn = updateToolUI;
-
-  swatches.forEach((swatch) => {
-    swatch.addEventListener("click", () => {
-      selectedColor = swatch.dataset.color;
-      updateSwatchUI();
-    });
-  });
 
   if (customColor) {
     customColor.addEventListener("input", (event) => {
@@ -1576,6 +1620,13 @@ function setupUI() {
       Object.keys(colors).forEach((key) => delete colors[key]);
       invalidateBorderCache();
       renderFull();
+    });
+  }
+
+  if (themeSelect) {
+    themeSelect.value = currentPaletteTheme;
+    themeSelect.addEventListener("change", (event) => {
+      renderPalette(event.target.value);
     });
   }
 
@@ -1731,6 +1782,7 @@ function setupUI() {
     });
   }
 
+  renderPalette("HOI4 Vanilla");
   renderRecentColors();
   updateSwatchUI();
   updateToolUI();
@@ -1839,7 +1891,7 @@ async function loadData() {
 
 const zoom = d3
   .zoom()
-  .scaleExtent([1, 50])
+  .scaleExtent([0.5, 8])
   .on("start", () => {
     isInteracting = true;
   })

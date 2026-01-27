@@ -70,32 +70,16 @@
             <div id="lblPalette" class="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Color Palette
             </div>
-            <div class="mt-3 grid grid-cols-6 gap-2">
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#1f3a5f" style="background:#1f3a5f"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#2e5d6f" style="background:#2e5d6f"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#3b6c7a" style="background:#3b6c7a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#546a7b" style="background:#546a7b"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#6c7a89" style="background:#6c7a89"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#7f8c8d" style="background:#7f8c8d"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#6b7b4b" style="background:#6b7b4b"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#7d8b5a" style="background:#7d8b5a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#8f9e6a" style="background:#8f9e6a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#a2a97a" style="background:#a2a97a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#b2b58a" style="background:#b2b58a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#c2c29a" style="background:#c2c29a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#9b5e4b" style="background:#9b5e4b"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#a7694f" style="background:#a7694f"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#b07554" style="background:#b07554"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#b8835a" style="background:#b8835a"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#c09264" style="background:#c09264"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#c8a06e" style="background:#c8a06e"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#805353" style="background:#805353"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#8b5f5f" style="background:#8b5f5f"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#956b6b" style="background:#956b6b"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#a07777" style="background:#a07777"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#aa8383" style="background:#aa8383"></button>
-              <button class="color-swatch h-8 w-8 rounded-md border border-slate-200" data-color="#b48f8f" style="background:#b48f8f"></button>
-            </div>
+            <select
+              id="themeSelect"
+              class="mt-3 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              <option value="HOI4 Vanilla">HOI4 Vanilla</option>
+              <option value="TNO (The New Order)">TNO (The New Order)</option>
+              <option value="Kaiserreich">Kaiserreich</option>
+              <option value="Red Flood (Avant-Garde)">Red Flood (Avant-Garde)</option>
+            </select>
+            <div id="paletteGrid" class="color-grid mt-3 grid grid-cols-6 gap-2"></div>
             <div class="mt-3 flex items-center gap-3">
               <label
                 id="lblCustom"

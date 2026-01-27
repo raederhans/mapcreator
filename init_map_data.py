@@ -66,9 +66,9 @@ FR_ARR_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/mas
 PL_POWIATY_URL = "https://raw.githubusercontent.com/jusuff/PolandGeoJson/main/data/poland.counties.json"
 
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
-EXTENSION_COUNTRIES = {"RU", "UA", "BY", "MD"}
+EXTENSION_COUNTRIES = {"RU", "UA", "BY", "MD", "KZ", "UZ", "TM", "KG", "TJ"}
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
-EUROPE_BOUNDS = (-25.0, 34.0, 70.0, 72.0)
+EUROPE_BOUNDS = (-25.0, 30.0, 180.0, 83.0)
 
 # Simplification tolerances (WGS84 degrees)
 SIMPLIFY_NUTS3 = 0.002
@@ -526,13 +526,6 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     ru_mask = admin1[iso_col].isin({"RU"}) | admin1[name_col].isin({"Russia"})
     ru = admin1[ru_mask].copy()
     rest = admin1[~ru_mask].copy()
-    if not ru.empty:
-        ural_bbox = box(-180, -90, 60, 90)
-        try:
-            ru = gpd.clip(ru, ural_bbox)
-        except Exception:
-            ru = ru.set_geometry(ru.geometry.buffer(0))
-            ru = gpd.clip(ru, ural_bbox)
 
     admin1 = gpd.GeoDataFrame(pd.concat([rest, ru], ignore_index=True), crs="EPSG:4326")
 

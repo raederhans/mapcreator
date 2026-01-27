@@ -28,6 +28,7 @@ body {
   inset: 0;
   transform-origin: 0 0;
   will-change: transform;
+  background-color: #b3d9ff;
 }
 
 .texture-overlay {
@@ -74,4 +75,10 @@ body {
     linear-gradient(90deg, rgba(0, 0, 0, 0.12) 1px, transparent 1px);
   background-size: 32px 32px;
   opacity: 0.2;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
 }
