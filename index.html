@@ -333,11 +333,52 @@
               </div>
             </div>
           </details>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reference Image</div>
+            <input
+              id="referenceImageInput"
+              type="file"
+              accept="image/*"
+              class="mt-3 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700"
+            />
+            <div class="mt-4 space-y-3 text-xs text-slate-600">
+              <div>
+                <div class="flex items-center justify-between">
+                  <label for="referenceOpacity">Opacity</label>
+                  <span id="referenceOpacityValue" class="text-slate-500">60%</span>
+                </div>
+                <input id="referenceOpacity" type="range" min="0" max="100" value="60" class="mt-1 w-full" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between">
+                  <label for="referenceScale">Scale</label>
+                  <span id="referenceScaleValue" class="text-slate-500">1.00×</span>
+                </div>
+                <input id="referenceScale" type="range" min="0.2" max="3.0" step="0.01" value="1.00" class="mt-1 w-full" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between">
+                  <label for="referenceOffsetX">Offset X</label>
+                  <span id="referenceOffsetXValue" class="text-slate-500">0px</span>
+                </div>
+                <input id="referenceOffsetX" type="range" min="-1000" max="1000" step="1" value="0" class="mt-1 w-full" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between">
+                  <label for="referenceOffsetY">Offset Y</label>
+                  <span id="referenceOffsetYValue" class="text-slate-500">0px</span>
+                </div>
+                <input id="referenceOffsetY" type="range" min="-1000" max="1000" step="1" value="0" class="mt-1 w-full" />
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
 
       <main class="relative flex-1 bg-slate-100">
         <div id="mapContainer">
+          <img id="referenceImage" class="reference-image" alt="" />
           <canvas id="colorCanvas" class="map-layer"></canvas>
           <canvas id="lineCanvas" class="map-layer map-layer-top"></canvas>
           <div id="textureOverlay" class="texture-overlay decorative-layer absolute inset-0"></div>
@@ -370,84 +411,7 @@
               Historical Presets
             </div>
             <p class="mt-1 text-xs text-slate-400">Click to fill regions with active color</p>
-            <div id="presetTree" class="mt-3 space-y-1">
-              <!-- Germany -->
-              <details class="group">
-                <summary class="cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                  Germany
-                </summary>
-                <div class="ml-6 mt-1 space-y-1">
-                  <button onclick="applyPreset('DE', 0)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Bavaria</button>
-                  <button onclick="applyPreset('DE', 1)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Saxony</button>
-                  <button onclick="applyPreset('DE', 2)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Prussia (Eastern Core)</button>
-                  <button onclick="applyPreset('DE', 3)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Schleswig-Holstein</button>
-                </div>
-              </details>
-              <!-- France -->
-              <details class="group">
-                <summary class="cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                  France
-                </summary>
-                <div class="ml-6 mt-1 space-y-1">
-                  <button onclick="applyPreset('FR', 0)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Alsace-Lorraine (1871)</button>
-                  <button onclick="applyPreset('FR', 1)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Brittany</button>
-                  <button onclick="applyPreset('FR', 2)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Savoy & Nice (pre-1860)</button>
-                  <button onclick="applyPreset('FR', 3)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">TNO Burgundy (SS State)</button>
-                </div>
-              </details>
-              <!-- Italy -->
-              <details class="group">
-                <summary class="cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                  Italy
-                </summary>
-                <div class="ml-6 mt-1 space-y-1">
-                  <button onclick="applyPreset('IT', 0)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Kingdom of Two Sicilies</button>
-                  <button onclick="applyPreset('IT', 1)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Papal States (Lazio)</button>
-                  <button onclick="applyPreset('IT', 2)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Sardinia-Piedmont</button>
-                  <button onclick="applyPreset('IT', 3)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Lombardy-Venetia</button>
-                  <button onclick="applyPreset('IT', 4)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Grand Duchy of Tuscany</button>
-                </div>
-              </details>
-              <!-- United Kingdom -->
-              <details class="group">
-                <summary class="cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                  United Kingdom
-                </summary>
-                <div class="ml-6 mt-1 space-y-1">
-                  <button onclick="applyPreset('UK', 0)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Scotland</button>
-                  <button onclick="applyPreset('UK', 1)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Wales</button>
-                  <button onclick="applyPreset('UK', 2)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Northern Ireland</button>
-                </div>
-              </details>
-              <!-- Russia -->
-              <details class="group">
-                <summary class="cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                  Russia
-                </summary>
-                <div class="ml-6 mt-1 space-y-1">
-                  <button onclick="applyPreset('RU', 0)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Moscow Region</button>
-                  <button onclick="applyPreset('RU', 1)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">St. Petersburg Region</button>
-                  <button onclick="applyPreset('RU', 2)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">TNO WRRF (Approximate)</button>
-                  <button onclick="applyPreset('RU', 3)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">TNO Komi (Approximate)</button>
-                  <button onclick="applyPreset('RU', 4)" class="block w-full text-left rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">Caucasus</button>
-                </div>
-              </details>
-            </div>
+            <div id="presetTree" class="mt-3 space-y-2"></div>
           </div>
 
           <div>

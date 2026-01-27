@@ -14,6 +14,7 @@ const colorCtx = colorCanvas.getContext("2d");
 const lineCtx = lineCanvas.getContext("2d");
 const textureOverlay = document.getElementById("textureOverlay");
 const tooltip = document.getElementById("tooltip");
+const referenceImage = document.getElementById("referenceImage");
 
 const hitCanvas = document.createElement("canvas");
 const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
@@ -52,6 +53,13 @@ let showRivers = true;
 let cachedBorders = null;
 let cachedColorsHash = null;
 let cachedCoastlines = null;
+let referenceImageUrl = null;
+const referenceImageState = {
+  opacity: 0.6,
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0,
+};
 const styleConfig = {
   internalBorders: {
     color: "#cccccc",
@@ -72,6 +80,14 @@ let updateRecentUI = null;
 let updateSwatchUIFn = null;
 let updateToolUIFn = null;
 let renderCountryListFn = null;
+let renderPresetTreeFn = null;
+let isEditingPreset = false;
+let editingPresetRef = null;
+let editingPresetIds = new Set();
+const PRESET_STORAGE_KEY = "custom_presets";
+let customPresets = {};
+let presetsState = {};
+const expandedPresetCountries = new Set();
 
 const countryPalette = {
   DE: "#5d7cba",
@@ -391,9 +407,124 @@ const countryPresets = {
   ],
 };
 
+function loadCustomPresets() {
+  try {
+    const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.warn("Unable to load custom presets:", error);
+    return {};
+  }
+}
+
+function mergePresets(base, custom) {
+  const merged = {};
+  Object.keys(base || {}).forEach((code) => {
+    merged[code] = (base[code] || []).map((preset) => ({
+      name: preset.name,
+      ids: Array.isArray(preset.ids) ? [...preset.ids] : [],
+    }));
+  });
+  Object.keys(custom || {}).forEach((code) => {
+    if (!merged[code]) merged[code] = [];
+    const customEntries = Array.isArray(custom[code]) ? custom[code] : [];
+    customEntries.forEach((entry) => {
+      if (!entry || !entry.name) return;
+      const idx = merged[code].findIndex((preset) => preset.name === entry.name);
+      const ids = Array.isArray(entry.ids) ? [...entry.ids] : [];
+      if (idx >= 0) {
+        merged[code][idx] = { name: entry.name, ids };
+      } else {
+        merged[code].push({ name: entry.name, ids });
+      }
+    });
+  });
+  return merged;
+}
+
+function saveCustomPresets() {
+  try {
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(customPresets));
+  } catch (error) {
+    console.warn("Unable to save custom presets:", error);
+  }
+}
+
+function upsertCustomPreset(code, name, ids) {
+  if (!customPresets[code]) customPresets[code] = [];
+  const idx = customPresets[code].findIndex((preset) => preset.name === name);
+  const entry = { name, ids: [...ids] };
+  if (idx >= 0) {
+    customPresets[code][idx] = entry;
+  } else {
+    customPresets[code].push(entry);
+  }
+  saveCustomPresets();
+  presetsState = mergePresets(countryPresets, customPresets);
+}
+
+function initPresetState() {
+  customPresets = loadCustomPresets();
+  presetsState = mergePresets(countryPresets, customPresets);
+}
+
+function startPresetEdit(code, presetIndex) {
+  const presets = presetsState[code] || [];
+  const preset = presets[presetIndex];
+  if (!preset) return;
+  isEditingPreset = true;
+  editingPresetRef = { code, presetIndex };
+  editingPresetIds = new Set(preset.ids || []);
+  if (typeof updateToolUIFn === "function") {
+    updateToolUIFn();
+  }
+  renderFull();
+  if (typeof renderPresetTreeFn === "function") {
+    renderPresetTreeFn();
+  }
+}
+
+function stopPresetEdit() {
+  isEditingPreset = false;
+  editingPresetRef = null;
+  editingPresetIds = new Set();
+  if (typeof updateToolUIFn === "function") {
+    updateToolUIFn();
+  }
+  renderFull();
+  if (typeof renderPresetTreeFn === "function") {
+    renderPresetTreeFn();
+  }
+}
+
+function togglePresetRegion(id) {
+  if (!isEditingPreset || !id) return;
+  if (editingPresetIds.has(id)) {
+    editingPresetIds.delete(id);
+  } else {
+    editingPresetIds.add(id);
+  }
+  renderFull();
+}
+
+async function copyPresetIds(ids) {
+  const payload = JSON.stringify(ids || [], null, 2);
+  try {
+    await navigator.clipboard.writeText(payload);
+    console.log("Preset IDs copied to clipboard.");
+  } catch (error) {
+    console.warn("Clipboard unavailable, logging IDs instead.", error);
+    console.log(payload);
+  }
+}
+
+initPresetState();
+
 // Apply a preset to color regions
 function applyPreset(countryCode, presetIndex, color) {
-  const presets = countryPresets[countryCode];
+  const presets = presetsState[countryCode];
   if (!presets || !presets[presetIndex]) {
     console.warn(`Preset not found: ${countryCode}[${presetIndex}]`);
     return;
@@ -784,6 +915,22 @@ function renderLineLayer() {
     lineCtx.stroke();
   }
 
+  if (isEditingPreset && editingPresetIds.size > 0) {
+    lineCtx.save();
+    lineCtx.globalAlpha = 0.9;
+    lineCtx.strokeStyle = "#f97316";
+    lineCtx.lineWidth = 2 / k;
+    for (const id of editingPresetIds) {
+      const feature = landIndex.get(id);
+      if (!feature) continue;
+      if (!pathBoundsInScreen(feature, zoomTransform)) continue;
+      lineCtx.beginPath();
+      linePath(feature);
+      lineCtx.stroke();
+    }
+    lineCtx.restore();
+  }
+
   drawHover();
   markHitDirty();
 }
@@ -951,6 +1098,11 @@ function handleClick(event) {
   const feature = landIndex.get(id);
   if (!feature) return;
 
+  if (isEditingPreset) {
+    togglePresetRegion(id);
+    return;
+  }
+
   if (currentTool === "eraser") {
     delete colors[id];
     invalidateBorderCache();
@@ -987,6 +1139,7 @@ function addRecentColor(color) {
 function setupRightSidebar() {
   const list = document.getElementById("countryList");
   if (!list) return;
+  const presetTree = document.getElementById("presetTree");
   const searchInput = document.getElementById("countrySearch");
   const resetBtn = document.getElementById("resetCountryColors");
 
@@ -998,13 +1151,14 @@ function setupRightSidebar() {
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   const expanded = new Set();
+  const getSearchTerm = () => (searchInput?.value || "").trim().toLowerCase();
 
   const renderList = () => {
-    const term = (searchInput?.value || "").trim().toLowerCase();
+    const term = getSearchTerm();
     list.innerHTML = "";
 
     entries.forEach(({ code, name, displayName }) => {
-      const presets = countryPresets[code] || [];
+      const presets = presetsState[code] || [];
       const countryMatch =
         !term ||
         name.toLowerCase().includes(term) ||
@@ -1067,14 +1221,14 @@ function setupRightSidebar() {
       if (presets.length > 0 && expanded.has(code)) {
         const child = document.createElement("div");
         child.className = "ml-2 space-y-2 pb-2";
-        presets.forEach((preset) => {
+        presets.forEach((preset, presetIndex) => {
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className =
             "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
           btn.textContent = `Apply ${preset.name}`;
           btn.addEventListener("click", () => {
-            console.log(`Apply ${preset.name}`);
+            applyPreset(code, presetIndex);
           });
           child.appendChild(btn);
         });
@@ -1085,10 +1239,137 @@ function setupRightSidebar() {
 
   renderCountryListFn = renderList;
 
+  const renderPresetTree = () => {
+    if (!presetTree) return;
+    const term = getSearchTerm();
+    presetTree.innerHTML = "";
+
+    entries.forEach(({ code, name, displayName }) => {
+      const presets = presetsState[code] || [];
+      if (!presets.length) return;
+
+      const countryMatch =
+        !term ||
+        name.toLowerCase().includes(term) ||
+        displayName.toLowerCase().includes(term) ||
+        code.toLowerCase().includes(term);
+      const presetMatch = term
+        ? presets.some((preset) => preset.name.toLowerCase().includes(term))
+        : false;
+
+      if (!countryMatch && !presetMatch) return;
+      if (presetMatch) {
+        expandedPresetCountries.add(code);
+      }
+
+      const details = document.createElement("details");
+      details.className = "group";
+      details.open = expandedPresetCountries.has(code) || presetMatch;
+      details.addEventListener("toggle", () => {
+        if (details.open) {
+          expandedPresetCountries.add(code);
+        } else {
+          expandedPresetCountries.delete(code);
+        }
+      });
+
+      const summary = document.createElement("summary");
+      summary.className =
+        "cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100";
+      summary.innerHTML =
+        '<svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+      const label = document.createElement("span");
+      label.textContent = `${displayName} (${code})`;
+      summary.appendChild(label);
+      details.appendChild(summary);
+
+      const child = document.createElement("div");
+      child.className = "ml-6 mt-1 space-y-1";
+      presets.forEach((preset, index) => {
+        const row = document.createElement("div");
+        row.className =
+          "flex items-center justify-between gap-2 rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-100";
+
+        const nameBtn = document.createElement("button");
+        nameBtn.type = "button";
+        nameBtn.className = "flex-1 text-left";
+        nameBtn.textContent = preset.name;
+        nameBtn.addEventListener("click", () => {
+          applyPreset(code, index);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "flex items-center gap-2";
+
+        const isEditingThis =
+          isEditingPreset &&
+          editingPresetRef &&
+          editingPresetRef.code === code &&
+          editingPresetRef.presetIndex === index;
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "text-[11px] text-slate-500 hover:text-slate-700";
+        editBtn.textContent = isEditingThis ? "Cancel" : "✏️ Edit";
+        editBtn.addEventListener("click", () => {
+          if (isEditingThis) {
+            stopPresetEdit();
+          } else {
+            startPresetEdit(code, index);
+          }
+        });
+
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className =
+          "text-[11px] text-slate-500 hover:text-slate-700";
+        saveBtn.textContent = "💾 Save";
+        if (!isEditingThis) {
+          saveBtn.classList.add("hidden");
+        }
+        saveBtn.addEventListener("click", () => {
+          if (!isEditingThis) return;
+          const ids = Array.from(editingPresetIds);
+          const activePreset = presetsState[code]?.[index];
+          if (activePreset) {
+            activePreset.ids = ids;
+            upsertCustomPreset(code, activePreset.name, ids);
+          }
+          stopPresetEdit();
+        });
+
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "text-[11px] text-slate-500 hover:text-slate-700";
+        copyBtn.textContent = "📋 Copy";
+        copyBtn.addEventListener("click", () => {
+          const ids = isEditingThis ? Array.from(editingPresetIds) : preset.ids;
+          copyPresetIds(ids || []);
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(saveBtn);
+        actions.appendChild(copyBtn);
+
+        row.appendChild(nameBtn);
+        row.appendChild(actions);
+        child.appendChild(row);
+      });
+
+      details.appendChild(child);
+      presetTree.appendChild(details);
+    });
+  };
+
+  renderPresetTreeFn = renderPresetTree;
+
   if (searchInput && !searchInput.dataset.bound) {
     searchInput.addEventListener("input", () => {
       if (typeof renderCountryListFn === "function") {
         renderCountryListFn();
+      }
+      if (typeof renderPresetTreeFn === "function") {
+        renderPresetTreeFn();
       }
     });
     searchInput.dataset.bound = "true";
@@ -1108,6 +1389,7 @@ function setupRightSidebar() {
   }
 
   renderList();
+  renderPresetTree();
 }
 
 function setupUI() {
@@ -1132,12 +1414,21 @@ function setupUI() {
   const coastlineColor = document.getElementById("coastlineColor");
   const coastlineWidth = document.getElementById("coastlineWidth");
   const toggleLang = document.getElementById("btnToggleLang");
+  const referenceImageInput = document.getElementById("referenceImageInput");
+  const referenceOpacity = document.getElementById("referenceOpacity");
+  const referenceScale = document.getElementById("referenceScale");
+  const referenceOffsetX = document.getElementById("referenceOffsetX");
+  const referenceOffsetY = document.getElementById("referenceOffsetY");
 
   // Value display elements
   const internalBorderOpacityValue = document.getElementById("internalBorderOpacityValue");
   const internalBorderWidthValue = document.getElementById("internalBorderWidthValue");
   const empireBorderWidthValue = document.getElementById("empireBorderWidthValue");
   const coastlineWidthValue = document.getElementById("coastlineWidthValue");
+  const referenceOpacityValue = document.getElementById("referenceOpacityValue");
+  const referenceScaleValue = document.getElementById("referenceScaleValue");
+  const referenceOffsetXValue = document.getElementById("referenceOffsetXValue");
+  const referenceOffsetYValue = document.getElementById("referenceOffsetYValue");
 
   function renderRecentColors() {
     if (!recentContainer) return;
@@ -1175,7 +1466,9 @@ function setupUI() {
   updateSwatchUIFn = updateSwatchUI;
 
   function updateToolUI() {
-    if (currentTool === "eraser") {
+    if (isEditingPreset) {
+      currentToolLabel.textContent = "Editing Preset";
+    } else if (currentTool === "eraser") {
       currentToolLabel.textContent = t("Eraser", "ui");
     } else if (currentTool === "eyedropper") {
       currentToolLabel.textContent = t("Eyedropper", "ui");
@@ -1184,6 +1477,9 @@ function setupUI() {
     }
     toolButtons.forEach((button) => {
       const isActive = button.dataset.tool === currentTool;
+      button.disabled = isEditingPreset;
+      button.classList.toggle("opacity-50", isEditingPreset);
+      button.classList.toggle("cursor-not-allowed", isEditingPreset);
       button.classList.toggle("bg-slate-900", isActive);
       button.classList.toggle("text-white", isActive);
       button.classList.toggle("bg-white", !isActive);
@@ -1344,6 +1640,94 @@ function setupUI() {
         coastlineWidthValue.textContent = value.toFixed(1);
       }
       renderFull();
+    });
+  }
+
+  const applyReferenceStyles = () => {
+    if (!referenceImage) return;
+    referenceImage.style.opacity = String(referenceImageState.opacity);
+    referenceImage.style.transform = `translate(${referenceImageState.offsetX}px, ${referenceImageState.offsetY}px) scale(${referenceImageState.scale})`;
+  };
+
+  if (referenceImageInput) {
+    referenceImageInput.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (!referenceImage) return;
+      if (!file) {
+        if (referenceImageUrl) {
+          URL.revokeObjectURL(referenceImageUrl);
+          referenceImageUrl = null;
+        }
+        referenceImage.src = "";
+        referenceImage.style.opacity = "0";
+        return;
+      }
+      if (referenceImageUrl) {
+        URL.revokeObjectURL(referenceImageUrl);
+      }
+      referenceImageUrl = URL.createObjectURL(file);
+      referenceImage.src = referenceImageUrl;
+      applyReferenceStyles();
+    });
+  }
+
+  if (referenceOpacity) {
+    referenceImageState.opacity = Number(referenceOpacity.value) / 100;
+    if (referenceOpacityValue) {
+      referenceOpacityValue.textContent = `${referenceOpacity.value}%`;
+    }
+    referenceOpacity.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      referenceImageState.opacity = Number.isFinite(value) ? value / 100 : 0.6;
+      if (referenceOpacityValue) {
+        referenceOpacityValue.textContent = `${event.target.value}%`;
+      }
+      applyReferenceStyles();
+    });
+  }
+
+  if (referenceScale) {
+    referenceImageState.scale = Number(referenceScale.value);
+    if (referenceScaleValue) {
+      referenceScaleValue.textContent = `${Number(referenceScale.value).toFixed(2)}×`;
+    }
+    referenceScale.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      referenceImageState.scale = Number.isFinite(value) ? value : 1;
+      if (referenceScaleValue) {
+        referenceScaleValue.textContent = `${referenceImageState.scale.toFixed(2)}×`;
+      }
+      applyReferenceStyles();
+    });
+  }
+
+  if (referenceOffsetX) {
+    referenceImageState.offsetX = Number(referenceOffsetX.value);
+    if (referenceOffsetXValue) {
+      referenceOffsetXValue.textContent = `${referenceOffsetX.value}px`;
+    }
+    referenceOffsetX.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      referenceImageState.offsetX = Number.isFinite(value) ? value : 0;
+      if (referenceOffsetXValue) {
+        referenceOffsetXValue.textContent = `${referenceImageState.offsetX}px`;
+      }
+      applyReferenceStyles();
+    });
+  }
+
+  if (referenceOffsetY) {
+    referenceImageState.offsetY = Number(referenceOffsetY.value);
+    if (referenceOffsetYValue) {
+      referenceOffsetYValue.textContent = `${referenceOffsetY.value}px`;
+    }
+    referenceOffsetY.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      referenceImageState.offsetY = Number.isFinite(value) ? value : 0;
+      if (referenceOffsetYValue) {
+        referenceOffsetYValue.textContent = `${referenceImageState.offsetY}px`;
+      }
+      applyReferenceStyles();
     });
   }
 

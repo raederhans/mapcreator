@@ -40,6 +40,17 @@ body {
   pointer-events: none;
 }
 
+#referenceImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  max-height: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .texture-overlay.texture-none {
   background: none;
   opacity: 0;
