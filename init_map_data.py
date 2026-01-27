@@ -66,7 +66,21 @@ FR_ARR_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/mas
 PL_POWIATY_URL = "https://raw.githubusercontent.com/jusuff/PolandGeoJson/main/data/poland.counties.json"
 
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
-EXTENSION_COUNTRIES = {"RU", "UA", "BY", "MD", "KZ", "UZ", "TM", "KG", "TJ"}
+EXTENSION_COUNTRIES = {
+    "RU",
+    "UA",
+    "BY",
+    "MD",
+    "KZ",
+    "UZ",
+    "TM",
+    "KG",
+    "TJ",
+    "GE",
+    "AM",
+    "AZ",
+    "MN",
+}
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
 EUROPE_BOUNDS = (-25.0, 30.0, 180.0, 83.0)
 
@@ -516,7 +530,18 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     admin1 = admin1[
         admin1[iso_col].isin(EXTENSION_COUNTRIES)
-        | admin1[name_col].isin({"Russia", "Ukraine", "Belarus", "Moldova"})
+        | admin1[name_col].isin(
+            {
+                "Russia",
+                "Ukraine",
+                "Belarus",
+                "Moldova",
+                "Georgia",
+                "Armenia",
+                "Azerbaijan",
+                "Mongolia",
+            }
+        )
     ].copy()
 
     if admin1.empty:

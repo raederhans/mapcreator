@@ -130,6 +130,10 @@ const countryPalette = {
   BY: "#9b5de5",
   MD: "#f28482",
   RU: "#4a4e69",
+  GE: "#a23e48",
+  AM: "#2a9d8f",
+  AZ: "#f4a261",
+  MN: "#577590",
   ES: "#e74c3c",
   PT: "#9b59b6",
   CZ: "#3498db",
@@ -178,6 +182,10 @@ const countryNames = {
   BY: "Belarus",
   MD: "Moldova",
   RU: "Russia",
+  GE: "Georgia",
+  AM: "Armenia",
+  AZ: "Azerbaijan",
+  MN: "Mongolia",
   ES: "Spain",
   PT: "Portugal",
   CZ: "Czechia",
@@ -698,6 +706,13 @@ function applyTransform(ctx) {
   ctx.scale(zoomTransform.k, zoomTransform.k);
 }
 
+function absoluteClear(ctx, canvas) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
 function pathBoundsInScreen(feature, transform) {
   const bounds = boundsPath.bounds(feature);
   const minX = bounds[0][0] * transform.k + transform.x;
@@ -768,8 +783,7 @@ function renderColorLayer() {
   if (!landData) return;
   const k = zoomTransform.k;
 
-  colorCtx.setTransform(1, 0, 0, 1, 0, 0);
-  colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
+  absoluteClear(colorCtx, colorCanvas);
   applyTransform(colorCtx);
 
   if (landBgData) {
@@ -812,8 +826,7 @@ function renderLineLayer() {
   if (!landData) return;
   const k = zoomTransform.k;
 
-  lineCtx.setTransform(1, 0, 0, 1, 0, 0);
-  lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+  absoluteClear(lineCtx, lineCanvas);
   applyTransform(lineCtx);
   lineCtx.lineJoin = "round";
   lineCtx.lineCap = "round";
@@ -983,8 +996,7 @@ function drawHidden() {
   hitCanvasDirty = false;
 
   // CRITICAL: Apply same transform as visible canvas (DPR + zoom)
-  hitCtx.setTransform(1, 0, 0, 1, 0, 0);
-  hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+  absoluteClear(hitCtx, hitCanvas);
   applyTransform(hitCtx);
 
   for (const feature of landData.features) {
@@ -1162,13 +1174,13 @@ function renderPalette(themeName) {
   const paletteGrid = document.getElementById("paletteGrid");
   if (!paletteGrid || !palette) return;
   currentPaletteTheme = themeName;
-  paletteGrid.innerHTML = "";
+  paletteGrid.replaceChildren();
 
   palette.forEach((color) => {
     const btn = document.createElement("button");
-    btn.className = "color-swatch h-8 w-8 rounded-md border border-slate-200";
+    btn.className = "color-swatch";
     btn.dataset.color = color;
-    btn.style.background = color;
+    btn.style.backgroundColor = color;
     btn.addEventListener("click", () => {
       selectedColor = color;
       if (typeof updateSwatchUIFn === "function") {
@@ -1482,12 +1494,12 @@ function setupUI() {
 
   function renderRecentColors() {
     if (!recentContainer) return;
-    recentContainer.innerHTML = "";
+    recentContainer.replaceChildren();
     recentColors.forEach((color) => {
       const btn = document.createElement("button");
-      btn.className = "color-swatch h-8 w-8 rounded-md border border-slate-200";
+      btn.className = "color-swatch";
       btn.dataset.color = color;
-      btn.style.background = color;
+      btn.style.backgroundColor = color;
       btn.addEventListener("click", () => {
         selectedColor = color;
         updateSwatchUI();
