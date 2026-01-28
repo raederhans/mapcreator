@@ -23,6 +23,8 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 DEFAULT_CHINA_ADM2 = DATA_DIR / "china_adm2.geojson"
 DEFAULT_FR_ARR = DATA_DIR / "france_arrondissements.geojson"
 DEFAULT_PL_POW = DATA_DIR / "poland_powiaty.geojson"
+DEFAULT_RUS_ADM2 = DATA_DIR / "geoBoundaries-RUS-ADM2.geojson"
+DEFAULT_UKR_ADM2 = DATA_DIR / "geoBoundaries-UKR-ADM2.geojson"
 NE_ADMIN1_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_states_provinces.zip"
 
 DEFAULT_NE_ADM1_CANDIDATES = [
@@ -34,6 +36,9 @@ DEFAULT_NE_ADM1_CANDIDATES = [
 
 CN_NAME_COLS = ["name_en", "name", "name_long", "name_local", "gn_name", "namealt"]
 CN_TYPE_COLS = ["type_en", "type", "adm1_type", "name_type"]
+ADMIN1_NAME_COLS = ["name_en", "name", "name_long", "name_local", "gn_name", "namealt"]
+ADMIN1_ISO_COLS = ["iso_a2", "adm0_a2", "iso_3166_1_", "iso_3166_1_alpha_2"]
+ADMIN1_ADM0_COLS = ["admin", "adm0_name", "admin0_name"]
 
 POLAND_VOIVODESHIPS = {
     "02": "Lower Silesian",
@@ -167,6 +172,16 @@ def pick_column(columns, candidates):
     return None
 
 
+def filter_admin1_by_iso(adm1, iso_code, fallback_names=None):
+    iso_col = pick_column(adm1.columns, ADMIN1_ISO_COLS)
+    if iso_col:
+        return adm1[adm1[iso_col] == iso_code].copy()
+    name_col = pick_column(adm1.columns, ADMIN1_ADM0_COLS + ADMIN1_NAME_COLS)
+    if name_col and fallback_names:
+        return adm1[adm1[name_col].isin(fallback_names)].copy()
+    return adm1.copy()
+
+
 def ensure_crs(gdf, epsg=4326):
     if gdf.crs is None:
         gdf = gdf.set_crs(f"EPSG:{epsg}", allow_override=True)
@@ -286,6 +301,53 @@ def build_china_groups(adm2_path: Path, adm1_path: Path):
     return groups, labels
 
 
+def build_admin2_groups(adm2_path: Path, adm1_path: Path, iso_code: str, child_prefix: str, country_names=None):
+    adm2 = gpd.read_file(adm2_path)
+    if "shapeID" not in adm2.columns:
+        raise ValueError(f"{iso_code} ADM2 missing shapeID column.")
+    adm2 = ensure_crs(adm2)
+    centroids = centroid_points(adm2)
+
+    adm1 = gpd.read_file(adm1_path)
+    adm1 = ensure_crs(adm1)
+    adm1_country = filter_admin1_by_iso(adm1, iso_code, fallback_names=country_names)
+
+    name_col = pick_column(adm1_country.columns, ADMIN1_NAME_COLS)
+    if not name_col:
+        raise ValueError(f"{iso_code} ADM1 missing name columns.")
+
+    adm1_country = adm1_country[[name_col, "geometry"]].copy()
+    joined = gpd.sjoin(centroids, adm1_country, how="left", predicate="within")
+
+    if joined[name_col].isna().any():
+        try:
+            missing = joined[name_col].isna()
+            nearest = gpd.sjoin_nearest(
+                centroids.loc[missing].copy(),
+                adm1_country,
+                how="left",
+                distance_col="distance",
+            )
+            joined.loc[missing, name_col] = nearest[name_col].values
+        except Exception:
+            pass
+
+    groups = defaultdict(list)
+    labels = {}
+
+    for _, row in joined.iterrows():
+        region = row.get(name_col)
+        if not region or str(region).strip() == "":
+            continue
+        group_id = f"{child_prefix}_{slugify(region)}"
+        child_id = f"{child_prefix}_RAY_{row['shapeID']}"
+        groups[group_id].append(child_id)
+        if group_id not in labels:
+            labels[group_id] = str(region)
+
+    return groups, labels
+
+
 def build_poland_groups(powiat_path: Path):
     gdf = gpd.read_file(powiat_path)
     if "terc" not in gdf.columns:
@@ -348,6 +410,8 @@ def main():
         adm1_path = download_admin1_to_data(DATA_DIR)
     fr_path = DEFAULT_FR_ARR
     pl_path = DEFAULT_PL_POW
+    ru_path = DEFAULT_RUS_ADM2
+    ua_path = DEFAULT_UKR_ADM2
 
     if not adm2_path.exists():
         raise SystemExit(f"Missing {adm2_path}")
@@ -355,10 +419,28 @@ def main():
         raise SystemExit(f"Missing {fr_path}")
     if not pl_path.exists():
         raise SystemExit(f"Missing {pl_path}")
+    if not ru_path.exists():
+        raise SystemExit(f"Missing {ru_path}")
+    if not ua_path.exists():
+        raise SystemExit(f"Missing {ua_path}")
     if not adm1_path:
         raise SystemExit("Could not find ne_10m_admin_1_states_provinces in data/.")
 
     cn_groups, cn_labels = build_china_groups(adm2_path, adm1_path)
+    ru_groups, ru_labels = build_admin2_groups(
+        ru_path,
+        adm1_path,
+        "RU",
+        "RU",
+        country_names=["Russia"],
+    )
+    ua_groups, ua_labels = build_admin2_groups(
+        ua_path,
+        adm1_path,
+        "UA",
+        "UA",
+        country_names=["Ukraine"],
+    )
     pl_groups, pl_labels = build_poland_groups(pl_path)
     fr_groups, fr_labels = build_france_groups(fr_path)
 
@@ -366,6 +448,8 @@ def main():
     labels = {}
     for source_groups, source_labels in [
         (cn_groups, cn_labels),
+        (ru_groups, ru_labels),
+        (ua_groups, ua_labels),
         (pl_groups, pl_labels),
         (fr_groups, fr_labels),
     ]:

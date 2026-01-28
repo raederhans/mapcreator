@@ -19,3 +19,6 @@ Thumbs.db
 # *.zip
 # *.geojson
 # (Keep europe_topology.json as it's the build output we need)
+
+# Ignore large raw GeoJSON sources
+data/geoBoundaries-*.geojson

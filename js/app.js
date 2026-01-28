@@ -82,6 +82,7 @@ let showRivers = true;
 let cachedBorders = null;
 let cachedColorsHash = null;
 let cachedCoastlines = null;
+let cachedGridLines = null;
 let referenceImageUrl = null;
 const referenceImageState = {
   opacity: 0.6,
@@ -808,15 +809,17 @@ function getColorsHash() {
 function invalidateBorderCache() {
   cachedBorders = null;
   cachedColorsHash = null;
+  rebuildDynamicBorders();
 }
 
-function getDynamicBorders() {
-  if (!topology || !topology.objects?.political) return null;
-  const currentHash = getColorsHash();
-  if (cachedBorders && cachedColorsHash === currentHash) {
-    return cachedBorders;
+function rebuildDynamicBorders() {
+  if (!topology || !topology.objects?.political) {
+    cachedBorders = null;
+    cachedColorsHash = null;
+    return;
   }
-
+  const currentHash = getColorsHash();
+  if (cachedBorders && cachedColorsHash === currentHash) return;
   cachedBorders = topojson.mesh(
     topology,
     topology.objects.political,
@@ -830,18 +833,36 @@ function getDynamicBorders() {
     }
   );
   cachedColorsHash = currentHash;
+}
+
+function getDynamicBorders() {
   return cachedBorders;
 }
 
-function getCoastlines() {
-  if (cachedCoastlines) return cachedCoastlines;
-  if (!topology || !topology.objects?.political) return null;
+function rebuildStaticMeshes() {
+  if (!topology || !topology.objects?.political) {
+    cachedCoastlines = null;
+    cachedGridLines = null;
+    return;
+  }
   cachedCoastlines = topojson.mesh(
     topology,
     topology.objects.political,
     (a, b) => !b
   );
+  cachedGridLines = topojson.mesh(
+    topology,
+    topology.objects.political,
+    (a, b) => a !== b
+  );
+}
+
+function getCoastlines() {
   return cachedCoastlines;
+}
+
+function getGridLines() {
+  return cachedGridLines;
 }
 
 function renderQuick() {
@@ -968,10 +989,7 @@ function renderLineLayer() {
   lineCtx.globalAlpha = 1;
 
   if (topology && topology.objects?.political) {
-    const political = topology.objects.political;
-    const stateColors = colors;
-
-    const coastlines = topojson.mesh(topology, political, (a, b) => a === b);
+    const coastlines = getCoastlines();
     if (coastlines) {
       lineCtx.globalAlpha = 1;
       lineCtx.beginPath();
@@ -981,7 +999,7 @@ function renderLineLayer() {
       lineCtx.stroke();
     }
 
-    const gridLines = topojson.mesh(topology, political, (a, b) => a !== b);
+    const gridLines = getGridLines();
     if (gridLines) {
       lineCtx.globalAlpha = styleConfig.internalBorders.opacity;
       lineCtx.beginPath();
@@ -991,14 +1009,7 @@ function renderLineLayer() {
       lineCtx.stroke();
     }
 
-    const dynamicBorders = topojson.mesh(topology, political, (a, b) => {
-      if (a === b) return false;
-      const idA = getFeatureId(a);
-      const idB = getFeatureId(b);
-      const colorA = idA ? stateColors[idA] : null;
-      const colorB = idB ? stateColors[idB] : null;
-      return colorA !== colorB || !colorA || !colorB;
-    });
+    const dynamicBorders = getDynamicBorders();
     if (dynamicBorders) {
       lineCtx.globalAlpha = 1;
       lineCtx.beginPath();
@@ -2038,6 +2049,8 @@ async function loadData() {
     }
 
     cachedCoastlines = null;
+    cachedGridLines = null;
+    rebuildStaticMeshes();
     invalidateBorderCache();
 
     // Validate properties

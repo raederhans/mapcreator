@@ -69,11 +69,18 @@ CHINA_CITY_URL = (
     "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/CHN/ADM2/"
     "geoBoundaries-CHN-ADM2.geojson"
 )
+RUS_ADM2_URL = (
+    "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/RUS/ADM2/"
+    "geoBoundaries-RUS-ADM2.geojson"
+)
+UKR_ADM2_URL = (
+    "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/UKR/ADM2/"
+    "geoBoundaries-UKR-ADM2.geojson"
+)
 
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
 EXTENSION_COUNTRIES = {
     "RU",
-    "UA",
     "BY",
     "MD",
     "KZ",
@@ -102,6 +109,8 @@ SIMPLIFY_BACKGROUND = 0.03
 SIMPLIFY_URBAN = 0.01
 SIMPLIFY_PHYSICAL = 0.02
 SIMPLIFY_CHINA = 0.01
+SIMPLIFY_RU_UA = 0.025
+URAL_LONGITUDE = 60.0
 
 VIP_POINTS = [
     ("Malta", (14.3754, 35.9375)),
@@ -506,6 +515,106 @@ def apply_china_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(combined, crs=main_gdf.crs)
 
 
+def _rep_longitudes(gdf: gpd.GeoDataFrame) -> pd.Series:
+    gdf_ll = gdf
+    if gdf_ll.crs is None:
+        gdf_ll = gdf_ll.set_crs("EPSG:4326", allow_override=True)
+    elif gdf_ll.crs.to_epsg() != 4326:
+        gdf_ll = gdf_ll.to_crs("EPSG:4326")
+    reps = gdf_ll.geometry.representative_point()
+    return reps.x
+
+
+def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    if main_gdf.empty:
+        return main_gdf
+    if "cntr_code" not in main_gdf.columns:
+        print("[RU/UA] cntr_code missing; skipping replacement.")
+        return main_gdf
+
+    base = main_gdf[
+        ~main_gdf["cntr_code"].astype(str).str.upper().isin({"RU", "UA"})
+    ].copy()
+
+    # Russia: keep Admin-1 east of the Urals
+    ru_admin1 = main_gdf[main_gdf["cntr_code"].astype(str).str.upper() == "RU"].copy()
+    if not ru_admin1.empty:
+        ru_admin1["__rep_lon"] = _rep_longitudes(ru_admin1)
+        ru_east = ru_admin1[ru_admin1["__rep_lon"] >= URAL_LONGITUDE].copy()
+        ru_east = ru_east.drop(columns=["__rep_lon"])
+    else:
+        ru_east = ru_admin1
+
+    # Russia: replace west with ADM2
+    print("Downloading Russia ADM2 (geoBoundaries)...")
+    ru_gdf = fetch_or_load_geojson(
+        RUS_ADM2_URL,
+        "geoBoundaries-RUS-ADM2.geojson",
+        fallback_urls=[
+            "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/RUS/ADM2/geoBoundaries-RUS-ADM2.geojson"
+        ],
+    )
+    if ru_gdf.empty:
+        print("Russia ADM2 GeoDataFrame is empty.")
+        raise SystemExit(1)
+    if ru_gdf.crs is None:
+        ru_gdf = ru_gdf.set_crs("EPSG:4326", allow_override=True)
+    if ru_gdf.crs.to_epsg() != 4326:
+        ru_gdf = ru_gdf.to_crs("EPSG:4326")
+    if "shapeID" not in ru_gdf.columns or "shapeName" not in ru_gdf.columns:
+        raise ValueError(
+            "Russia ADM2 dataset missing expected columns: shapeID/shapeName. "
+            f"Available: {ru_gdf.columns.tolist()}"
+        )
+    ru_gdf = ru_gdf.copy()
+    ru_gdf["__rep_lon"] = _rep_longitudes(ru_gdf)
+    ru_gdf = ru_gdf[ru_gdf["__rep_lon"] < URAL_LONGITUDE].copy()
+    ru_gdf = ru_gdf.drop(columns=["__rep_lon"])
+    ru_gdf["id"] = "RU_RAY_" + ru_gdf["shapeID"].astype(str)
+    ru_gdf["name"] = ru_gdf["shapeName"].astype(str)
+    ru_gdf["cntr_code"] = "RU"
+    ru_gdf = ru_gdf[["id", "name", "cntr_code", "geometry"]].copy()
+    ru_gdf["geometry"] = ru_gdf.geometry.simplify(
+        tolerance=SIMPLIFY_RU_UA, preserve_topology=True
+    )
+
+    # Ukraine: full ADM2 replacement
+    print("Downloading Ukraine ADM2 (geoBoundaries)...")
+    ua_gdf = fetch_or_load_geojson(
+        UKR_ADM2_URL,
+        "geoBoundaries-UKR-ADM2.geojson",
+        fallback_urls=[
+            "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/UKR/ADM2/geoBoundaries-UKR-ADM2.geojson"
+        ],
+    )
+    if ua_gdf.empty:
+        print("Ukraine ADM2 GeoDataFrame is empty.")
+        raise SystemExit(1)
+    if ua_gdf.crs is None:
+        ua_gdf = ua_gdf.set_crs("EPSG:4326", allow_override=True)
+    if ua_gdf.crs.to_epsg() != 4326:
+        ua_gdf = ua_gdf.to_crs("EPSG:4326")
+    if "shapeID" not in ua_gdf.columns or "shapeName" not in ua_gdf.columns:
+        raise ValueError(
+            "Ukraine ADM2 dataset missing expected columns: shapeID/shapeName. "
+            f"Available: {ua_gdf.columns.tolist()}"
+        )
+    ua_gdf = ua_gdf.copy()
+    ua_gdf["id"] = "UA_RAY_" + ua_gdf["shapeID"].astype(str)
+    ua_gdf["name"] = ua_gdf["shapeName"].astype(str)
+    ua_gdf["cntr_code"] = "UA"
+    ua_gdf = ua_gdf[["id", "name", "cntr_code", "geometry"]].copy()
+    ua_gdf["geometry"] = ua_gdf.geometry.simplify(
+        tolerance=SIMPLIFY_RU_UA, preserve_topology=True
+    )
+
+    combined = pd.concat([base, ru_east, ru_gdf, ua_gdf], ignore_index=True)
+    print(
+        f"🇷🇺/🇺🇦 RU/UA Replacement: RU west ADM2 {len(ru_gdf)}, RU east Admin1 {len(ru_east)}, UA ADM2 {len(ua_gdf)}."
+    )
+    return gpd.GeoDataFrame(combined, crs=main_gdf.crs)
+
+
 def build_border_lines() -> gpd.GeoDataFrame:
     border_lines = fetch_ne_zip(BORDER_LINES_URL, "border_lines")
     border_lines = clip_to_europe_bounds(border_lines, "border lines")
@@ -717,14 +826,13 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         raise SystemExit(1)
 
     admin1 = admin1[
-        admin1[iso_col].isin(EXTENSION_COUNTRIES)
-        | admin1[name_col].isin(
-            {
-                "Russia",
-                "Ukraine",
-                "Belarus",
-                "Moldova",
-                "Georgia",
+          admin1[iso_col].isin(EXTENSION_COUNTRIES)
+          | admin1[name_col].isin(
+              {
+                  "Russia",
+                  "Belarus",
+                  "Moldova",
+                  "Georgia",
                 "Armenia",
                 "Azerbaijan",
                 "Mongolia",
@@ -1070,6 +1178,7 @@ def main() -> None:
             crs="EPSG:4326",
         )
     hybrid = apply_holistic_replacements(hybrid)
+    hybrid = apply_russia_ukraine_replacement(hybrid)
     hybrid = apply_poland_replacement(hybrid)
     hybrid = apply_china_replacement(hybrid)
     final_hybrid = smart_island_cull(hybrid, group_col="id", threshold_km2=1000.0)
