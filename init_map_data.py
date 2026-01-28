@@ -63,6 +63,7 @@ URBAN_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_urban_are
 PHYSICAL_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_geography_regions_polys.zip"
 ADMIN1_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_states_provinces.zip"
 FR_ARR_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/arrondissements.geojson"
+FR_ARR_FALLBACK_URL = "https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/arrondissements.geojson"
 PL_POWIATY_URL = "https://raw.githubusercontent.com/jusuff/PolandGeoJson/main/data/poland.counties.json"
 CHINA_CITY_URL = (
     "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/CHN/ADM2/"
@@ -157,6 +158,87 @@ def fetch_ne_zip(url: str, label: str) -> gpd.GeoDataFrame:
     return gdf
 
 
+def _build_mirror_urls(url: str) -> list[str]:
+    mirrors: list[str] = []
+    if "raw.githubusercontent.com" in url:
+        mirrors.append(f"https://mirror.ghproxy.com/{url}")
+        raw_path = url.replace("https://raw.githubusercontent.com/", "")
+        parts = raw_path.split("/", 3)
+        if len(parts) == 4:
+            user, repo, branch, path = parts
+            mirrors.append(f"https://cdn.jsdelivr.net/gh/{user}/{repo}@{branch}/{path}")
+    elif "github.com" in url and "/raw/" in url:
+        mirrors.append(f"https://mirror.ghproxy.com/{url}")
+        gh_path = url.replace("https://github.com/", "")
+        parts = gh_path.split("/", 4)
+        if len(parts) >= 5 and parts[2] == "raw":
+            user, repo, _, branch, path = parts[0], parts[1], parts[2], parts[3], parts[4]
+            mirrors.append(f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}")
+            mirrors.append(f"https://cdn.jsdelivr.net/gh/{user}/{repo}@{branch}/{path}")
+    return mirrors
+
+
+def fetch_or_load_geojson(url: str, filename: str, fallback_urls: list[str] | None = None) -> gpd.GeoDataFrame:
+    script_dir = Path(__file__).resolve().parent
+    cache_dir = script_dir / "data"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / filename
+
+    if cache_path.exists():
+        print(f"   [Cache] Loading {filename} from local file...")
+        try:
+            return gpd.read_file(cache_path)
+        except Exception as exc:
+            print(f"Failed to read cached {filename}: {exc}")
+            raise SystemExit(1) from exc
+
+    print(f"   [Download] Fetching {filename} from remote...")
+    sources = [url]
+    if fallback_urls:
+        sources.extend(fallback_urls)
+    for source in list(sources):
+        sources.extend(_build_mirror_urls(source))
+    # Deduplicate while preserving order
+    seen = set()
+    unique_sources = []
+    for source in sources:
+        if source in seen:
+            continue
+        seen.add(source)
+        unique_sources.append(source)
+
+    def download_with_retries(source: str, attempts: int = 3) -> bool:
+        for attempt in range(1, attempts + 1):
+            try:
+                response = requests.get(
+                    source,
+                    timeout=(10, 60),
+                    headers={"User-Agent": "MapCreator/1.0"},
+                )
+                response.raise_for_status()
+                cache_path.write_bytes(response.content)
+                return True
+            except requests.RequestException as exc:
+                print(f"   [Download] {source} attempt {attempt}/{attempts} failed: {exc}")
+        return False
+
+    downloaded = False
+    for source in unique_sources:
+        if download_with_retries(source):
+            downloaded = True
+            break
+
+    if not downloaded:
+        print(f"Failed to download {filename} from all sources.")
+        raise SystemExit(1)
+
+    try:
+        return gpd.read_file(cache_path)
+    except Exception as exc:
+        print(f"Failed to read downloaded {filename}: {exc}")
+        raise SystemExit(1) from exc
+
+
 def build_geodataframe(data: dict) -> gpd.GeoDataFrame:
     print("Parsing GeoJSON into GeoDataFrame...")
     gdf = gpd.GeoDataFrame.from_features(data.get("features", []))
@@ -228,12 +310,11 @@ def apply_holistic_replacements(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     base = main_gdf[main_gdf["cntr_code"].astype(str).str.upper() != "FR"].copy()
     print(f"  [Holistic] Features after removing FR: {len(base)}")
 
-    print("Downloading France arrondissements...")
-    try:
-        fr_gdf = gpd.read_file(FR_ARR_URL)
-    except Exception as exc:
-        print(f"Failed to read France arrondissements: {exc}")
-        raise SystemExit(1) from exc
+    fr_gdf = fetch_or_load_geojson(
+        FR_ARR_URL,
+        "france_arrondissements.geojson",
+        fallback_urls=[FR_ARR_FALLBACK_URL],
+    )
 
     if fr_gdf.empty:
         print("Arrondissements GeoDataFrame is empty.")
@@ -271,11 +352,13 @@ def apply_poland_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     base = main_gdf[main_gdf["cntr_code"].astype(str).str.upper() != "PL"].copy()
 
     print("Downloading Poland powiaty...")
-    try:
-        pl_gdf = gpd.read_file(PL_POWIATY_URL)
-    except Exception as exc:
-        print(f"Failed to read Poland powiaty: {exc}")
-        raise SystemExit(1) from exc
+    pl_gdf = fetch_or_load_geojson(
+        PL_POWIATY_URL,
+        "poland_powiaty.geojson",
+        fallback_urls=[
+            "https://cdn.jsdelivr.net/gh/jusuff/PolandGeoJson@main/data/poland.counties.json"
+        ],
+    )
 
     if pl_gdf.empty:
         print("Powiaty GeoDataFrame is empty.")
@@ -337,11 +420,14 @@ def apply_china_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     base = main_gdf[main_gdf["cntr_code"].astype(str).str.upper() != "CN"].copy()
 
     print("Downloading China ADM2 (geoBoundaries)...")
-    try:
-        cn_gdf = gpd.read_file(CHINA_CITY_URL)
-    except Exception as exc:
-        print(f"Failed to read China ADM2 GeoJSON: {exc}")
-        raise SystemExit(1) from exc
+    cn_gdf = fetch_or_load_geojson(
+        CHINA_CITY_URL,
+        "china_adm2.geojson",
+        fallback_urls=[
+            "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/CHN/ADM2/geoBoundaries-CHN-ADM2.geojson",
+            "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/CHN/ADM2/geoBoundaries-CHN-ADM2.geojson",
+        ],
+    )
 
     if cn_gdf.empty:
         print("China city GeoDataFrame is empty.")
