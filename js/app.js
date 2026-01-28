@@ -37,6 +37,8 @@ let oceanData = null;
 let landBgData = null;
 let urbanData = null;
 let physicalData = null;
+let hierarchyData = null;
+let hierarchyGroupsByCode = new Map();
 
 let width = 0;
 let height = 0;
@@ -515,6 +517,61 @@ function initPresetState() {
   presetsState = mergePresets(countryPresets, customPresets);
 }
 
+function processHierarchyData(data) {
+  hierarchyData = data || null;
+  hierarchyGroupsByCode = new Map();
+  if (!hierarchyData || !hierarchyData.groups) return;
+  const labels = hierarchyData.labels || {};
+  Object.entries(hierarchyData.groups).forEach(([groupId, children]) => {
+    const code = groupId.split("_")[0];
+    if (!code) return;
+    const list = hierarchyGroupsByCode.get(code) || [];
+    list.push({
+      id: groupId,
+      label: labels[groupId] || groupId,
+      children: Array.isArray(children) ? children : [],
+    });
+    hierarchyGroupsByCode.set(code, list);
+  });
+  hierarchyGroupsByCode.forEach((groups) => {
+    groups.sort((a, b) => a.label.localeCompare(b.label));
+  });
+}
+
+function getHierarchyGroupsForCode(code) {
+  if (!code) return [];
+  if (hierarchyGroupsByCode.size > 0) {
+    return hierarchyGroupsByCode.get(code) || [];
+  }
+  if (!hierarchyData || !hierarchyData.groups) return [];
+  const labels = hierarchyData.labels || {};
+  const groups = [];
+  Object.entries(hierarchyData.groups).forEach(([groupId, children]) => {
+    if (!groupId.startsWith(`${code}_`)) return;
+    const label =
+      labels[groupId] ||
+      groupId.replace(`${code}_`, "").replace(/_/g, " ");
+    groups.push({
+      id: groupId,
+      label,
+      children: Array.isArray(children) ? children : [],
+    });
+  });
+  groups.sort((a, b) => a.label.localeCompare(b.label));
+  return groups;
+}
+
+function applyHierarchyGroup(group, color) {
+  if (!group || !group.children) return;
+  const colorToApply = color || selectedColor;
+  group.children.forEach((id) => {
+    colors[id] = colorToApply;
+  });
+  invalidateBorderCache();
+  renderFull();
+  addRecentColor(colorToApply);
+}
+
 function startPresetEdit(code, presetIndex) {
   const presets = presetsState[code] || [];
   const preset = presets[presetIndex];
@@ -604,6 +661,8 @@ const hitPath = d3.geoPath(projection, hitCtx);
 const landIndex = new Map();
 const idToKey = new Map();
 const keyToId = new Map();
+let spatialIndex = null;
+let spatialItems = [];
 
 const TINY_AREA = 6;
 const MOUSE_THROTTLE_MS = 16;
@@ -1028,6 +1087,39 @@ function scheduleQuickRender() {
   return;
 }
 
+function buildSpatialIndex() {
+  spatialItems = [];
+  spatialIndex = null;
+  if (!landData || !landData.features) return;
+
+  for (const feature of landData.features) {
+    const id = getFeatureId(feature);
+    if (!id) continue;
+    const bounds = boundsPath.bounds(feature);
+    const minX = bounds[0][0];
+    const minY = bounds[0][1];
+    const maxX = bounds[1][0];
+    const maxY = bounds[1][1];
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) continue;
+    spatialItems.push({
+      id,
+      feature,
+      minX,
+      minY,
+      maxX,
+      maxY,
+      cx: (minX + maxX) / 2,
+      cy: (minY + maxY) / 2,
+    });
+  }
+
+  spatialIndex = d3
+    .quadtree()
+    .x((d) => d.cx)
+    .y((d) => d.cy)
+    .addAll(spatialItems);
+}
+
 function buildIndex() {
   landIndex.clear();
   idToKey.clear();
@@ -1043,19 +1135,40 @@ function buildIndex() {
 }
 
 function getFeatureIdFromEvent(event) {
+  if (!landData) return null;
   const [sx, sy] = d3.pointer(event, colorCanvas);
-  // Hidden canvas now uses same transform as visible canvas
-  // Just scale screen coords by DPR to get pixel coords
-  const x = Math.round(sx * dpr);
-  const y = Math.round(sy * dpr);
-  if (x < 0 || y < 0 || x >= hitCanvas.width || y >= hitCanvas.height) {
-    return null;
+  const px = (sx - zoomTransform.x) / zoomTransform.k;
+  const py = (sy - zoomTransform.y) / zoomTransform.k;
+  if (!Number.isFinite(px) || !Number.isFinite(py)) return null;
+
+  const lonLat = projection.invert([px, py]);
+  if (!lonLat) return null;
+
+  const candidates = [];
+  if (spatialIndex) {
+    spatialIndex.visit((node, x0, y0, x1, y1) => {
+      if (px < x0 || px > x1 || py < y0 || py > y1) return true;
+      if (!node.length) {
+        let current = node;
+        do {
+          const d = current.data;
+          if (d && px >= d.minX && px <= d.maxX && py >= d.minY && py <= d.maxY) {
+            candidates.push(d);
+          }
+          current = current.next;
+        } while (current);
+      }
+      return false;
+    });
   }
-  drawHidden();
-  const pixel = hitCtx.getImageData(x, y, 1, 1).data;
-  const key = (pixel[0] << 16) | (pixel[1] << 8) | pixel[2];
-  if (!key) return null;
-  return keyToId.get(key) || null;
+
+  for (const candidate of candidates) {
+    if (d3.geoContains(candidate.feature, lonLat)) {
+      return candidate.id;
+    }
+  }
+
+  return null;
 }
 
 function handleMouseMove(event) {
@@ -1231,6 +1344,7 @@ function setupRightSidebar() {
 
     entries.forEach(({ code, name, displayName }) => {
       const presets = presetsState[code] || [];
+      const hierarchyGroups = getHierarchyGroupsForCode(code);
       const countryMatch =
         !term ||
         name.toLowerCase().includes(term) ||
@@ -1241,9 +1355,17 @@ function setupRightSidebar() {
             preset.name.toLowerCase().includes(term)
           )
         : false;
+      const hierarchyMatch = term
+        ? hierarchyGroups.some((group) =>
+            group.label.toLowerCase().includes(term)
+          )
+        : false;
 
-      if (!countryMatch && !presetMatch) return;
+      if (!countryMatch && !presetMatch && !hierarchyMatch) return;
       if (presetMatch) {
+        expanded.add(code);
+      }
+      if (hierarchyMatch) {
         expanded.add(code);
       }
 
@@ -1269,42 +1391,72 @@ function setupRightSidebar() {
         applyCountryColor(code, value);
       });
 
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className =
-        "rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-100";
-      toggle.textContent = expanded.has(code) ? "▾" : "▸";
-      toggle.addEventListener("click", () => {
-        if (expanded.has(code)) {
-          expanded.delete(code);
-        } else {
-          expanded.add(code);
-        }
-        renderList();
-      });
+      const hasChildren = presets.length > 0 || hierarchyGroups.length > 0;
+      if (hasChildren) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className =
+          "rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-100";
+        toggle.textContent = expanded.has(code) ? "▾" : "▸";
+        toggle.addEventListener("click", () => {
+          if (expanded.has(code)) {
+            expanded.delete(code);
+          } else {
+            expanded.add(code);
+          }
+          renderList();
+        });
+        controls.appendChild(toggle);
+      }
 
       controls.appendChild(input);
-      controls.appendChild(toggle);
 
       row.appendChild(label);
       row.appendChild(controls);
       list.appendChild(row);
 
-      if (presets.length > 0 && expanded.has(code)) {
-        const child = document.createElement("div");
-        child.className = "ml-2 space-y-2 pb-2";
-        presets.forEach((preset, presetIndex) => {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className =
-            "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
-          btn.textContent = `Apply ${preset.name}`;
-          btn.addEventListener("click", () => {
-            applyPreset(code, presetIndex);
+      if (expanded.has(code)) {
+        if (hierarchyGroups.length > 0) {
+          const child = document.createElement("div");
+          child.className = "ml-2 space-y-2 pb-2";
+          const header = document.createElement("div");
+          header.className = "px-2 text-[10px] uppercase tracking-wide text-slate-400";
+          header.textContent = "--- Provinces/Regions ---";
+          child.appendChild(header);
+          hierarchyGroups.forEach((group) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+              "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
+            btn.textContent = group.label;
+            btn.addEventListener("click", () => {
+              applyHierarchyGroup(group, selectedColor);
+            });
+            child.appendChild(btn);
           });
-          child.appendChild(btn);
-        });
-        list.appendChild(child);
+          list.appendChild(child);
+        }
+
+        if (presets.length > 0) {
+          const child = document.createElement("div");
+          child.className = "ml-2 space-y-2 pb-2";
+          const header = document.createElement("div");
+          header.className = "px-2 text-[10px] uppercase tracking-wide text-slate-400";
+          header.textContent = "--- Presets ---";
+          child.appendChild(header);
+          presets.forEach((preset, presetIndex) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+              "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
+            btn.textContent = `Apply ${preset.name}`;
+            btn.addEventListener("click", () => {
+              applyPreset(code, presetIndex);
+            });
+            child.appendChild(btn);
+          });
+          list.appendChild(child);
+        }
       }
     });
   };
@@ -1814,21 +1966,27 @@ function setupUI() {
 function handleResize() {
   setCanvasSize();
   fitProjection();
+  buildSpatialIndex();
   renderFull();
 }
 
 async function loadData() {
   try {
     console.log("Loading TopoJSON + locales...");
-    const [topo, localeData] = await Promise.all([
+    const [topo, localeData, hierarchy] = await Promise.all([
       d3.json("data/europe_topology.json"),
       d3.json("data/locales.json").catch((err) => {
         console.warn("Locales file missing or invalid, using defaults.", err);
         return { ui: {}, geo: {} };
       }),
+      d3.json("data/hierarchy.json").catch((err) => {
+        console.warn("Hierarchy file missing or invalid, using defaults.", err);
+        return null;
+      }),
     ]);
     topology = topo;
     locales = localeData || { ui: {}, geo: {} };
+    processHierarchyData(hierarchy);
     console.log("Test Translation:", t("Germany", "geo"));
     applyUiTranslations();
     setupRightSidebar();
@@ -1901,6 +2059,7 @@ async function loadData() {
     console.log("Index built. Entries:", landIndex.size);
 
     fitProjection();
+    buildSpatialIndex();
     console.log("Projection fitted. Scale:", projection.scale());
 
     renderFull();
