@@ -29,6 +29,7 @@ function updateUIText() {
     ["lblCountrySearch", "Search Countries"],
     ["lblCountryColors", "Country Colors"],
     ["resetCountryColors", "Reset Country Colors"],
+    ["lblSpecialZones", "Special Zones"],
   ];
 
   uiMap.forEach(([id, label]) => {

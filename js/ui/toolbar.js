@@ -45,6 +45,7 @@ function initToolbar({ render } = {}) {
   const toggleUrban = document.getElementById("toggleUrban");
   const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
+  const toggleSpecialZones = document.getElementById("toggleSpecialZones");
   const recentContainer = document.getElementById("recentColors");
   const presetPolitical = document.getElementById("presetPolitical");
   const presetClear = document.getElementById("presetClear");
@@ -200,6 +201,14 @@ function initToolbar({ render } = {}) {
   if (toggleRivers) {
     toggleRivers.addEventListener("change", (event) => {
       state.showRivers = event.target.checked;
+      if (render) render();
+    });
+  }
+
+  if (toggleSpecialZones) {
+    toggleSpecialZones.checked = state.showSpecialZones;
+    toggleSpecialZones.addEventListener("change", (event) => {
+      state.showSpecialZones = event.target.checked;
       if (render) render();
     });
   }

@@ -23,6 +23,7 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 DEFAULT_CHINA_ADM2 = DATA_DIR / "china_adm2.geojson"
 DEFAULT_FR_ARR = DATA_DIR / "france_arrondissements.geojson"
 DEFAULT_PL_POW = DATA_DIR / "poland_powiaty.geojson"
+DEFAULT_IND_ADM2 = DATA_DIR / "geoBoundaries-IND-ADM2.geojson"
 DEFAULT_RUS_ADM2 = DATA_DIR / "geoBoundaries-RUS-ADM2.geojson"
 DEFAULT_UKR_ADM2 = DATA_DIR / "geoBoundaries-UKR-ADM2.geojson"
 NE_ADMIN1_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_states_provinces.zip"
@@ -355,6 +356,59 @@ def build_admin2_groups(adm2_path: Path, adm1_path: Path, iso_code: str, child_p
     return groups, labels
 
 
+def build_india_groups(adm2_path: Path, adm1_path: Path | None = None):
+    gdf = gpd.read_file(adm2_path)
+    if "shapeID" not in gdf.columns:
+        raise ValueError("India ADM2 missing shapeID column.")
+
+    if "adm1_name" in gdf.columns:
+        gdf = gdf.copy()
+        gdf["adm1_name"] = gdf["adm1_name"].fillna("").astype(str)
+    else:
+        gdf = gdf.copy()
+        gdf["adm1_name"] = ""
+
+    needs_join = gdf["adm1_name"].str.strip().eq("").all()
+    if needs_join and adm1_path:
+        try:
+            adm1 = gpd.read_file(adm1_path)
+            adm1 = ensure_crs(adm1)
+            iso_col = pick_column(adm1.columns, ADMIN1_ISO_COLS)
+            name_col = pick_column(adm1.columns, ADMIN1_NAME_COLS)
+            admin_col = pick_column(adm1.columns, ADMIN1_ADM0_COLS)
+
+            if name_col:
+                if iso_col:
+                    adm1 = adm1[adm1[iso_col] == "IN"].copy()
+                elif admin_col:
+                    adm1 = adm1[adm1[admin_col].str.contains("India", case=False, na=False)].copy()
+
+                if not adm1.empty:
+                    adm1 = adm1[[name_col, "geometry"]].copy()
+                    joined = gpd.sjoin(gdf, adm1, how="left", predicate="intersects")
+                    if name_col in joined.columns and not joined[name_col].isna().all():
+                        name_map = joined[name_col].groupby(level=0).first()
+                        gdf["adm1_name"] = gdf.index.to_series().map(name_map).fillna(gdf["adm1_name"])
+        except Exception:
+            pass
+
+    groups = defaultdict(list)
+    labels = {}
+
+    for _, row in gdf.iterrows():
+        region = str(row.get("adm1_name", "")).strip()
+        if not region:
+            region = "Other"
+        group_id = f"IN_{slugify(region)}"
+        child_id = f"IN_ADM2_{row['shapeID']}"
+        if child_id not in groups[group_id]:
+            groups[group_id].append(child_id)
+        if group_id not in labels:
+            labels[group_id] = f"IN - {region}"
+
+    return groups, labels
+
+
 def build_russia_groups_hybrid(adm2_path: Path, adm1_path: Path):
     adm2 = gpd.read_file(adm2_path)
     if "shapeID" not in adm2.columns:
@@ -506,6 +560,7 @@ def main():
         adm1_path = download_admin1_to_data(DATA_DIR)
     fr_path = DEFAULT_FR_ARR
     pl_path = DEFAULT_PL_POW
+    ind_path = DEFAULT_IND_ADM2
     ru_path = DEFAULT_RUS_ADM2
     ua_path = DEFAULT_UKR_ADM2
 
@@ -515,6 +570,8 @@ def main():
         raise SystemExit(f"Missing {fr_path}")
     if not pl_path.exists():
         raise SystemExit(f"Missing {pl_path}")
+    if not ind_path.exists():
+        raise SystemExit(f"Missing {ind_path}")
     if not ru_path.exists():
         raise SystemExit(f"Missing {ru_path}")
     if not ua_path.exists():
@@ -527,6 +584,7 @@ def main():
         ru_path,
         adm1_path,
     )
+    ind_groups, ind_labels = build_india_groups(ind_path, adm1_path=adm1_path)
     ua_groups, ua_labels = build_admin2_groups(
         ua_path,
         adm1_path,
@@ -542,6 +600,7 @@ def main():
     for source_groups, source_labels in [
         (cn_groups, cn_labels),
         (ru_groups, ru_labels),
+        (ind_groups, ind_labels),
         (ua_groups, ua_labels),
         (pl_groups, pl_labels),
         (fr_groups, fr_labels),

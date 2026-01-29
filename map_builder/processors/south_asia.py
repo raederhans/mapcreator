@@ -5,7 +5,8 @@ import geopandas as gpd
 import pandas as pd
 
 from map_builder import config as cfg
-from map_builder.io.fetch import fetch_or_load_geojson
+from map_builder.geo.utils import pick_column
+from map_builder.io.fetch import fetch_ne_zip, fetch_or_load_geojson
 
 
 def _rep_points(gdf: gpd.GeoDataFrame) -> gpd.GeoSeries:
@@ -48,10 +49,50 @@ def apply_south_asia_replacement(hybrid_gdf: gpd.GeoDataFrame, land_gdf: gpd.Geo
             f"Available: {ind_gdf.columns.tolist()}"
         )
 
+    ind_gdf["adm1_name"] = ""
+
     # Island cull using representative points (Andaman/Nicobar + Lakshadweep)
     reps = _rep_points(ind_gdf)
     keep_mask = ~((reps.x > 88.0) & (reps.y < 15.0)) & ~((reps.x < 75.0) & (reps.y < 14.0))
     ind_gdf = ind_gdf.loc[keep_mask].copy()
+
+    # Spatial join ADM2 -> ADM1 to derive state names
+    try:
+        print("[South Asia] Loading India ADM1 for hierarchy names...")
+        adm1 = fetch_ne_zip(cfg.ADMIN1_URL, "admin1_india")
+        if not adm1.empty:
+            adm1 = adm1.to_crs("EPSG:4326")
+            iso_col = pick_column(adm1, ["iso_a2", "adm0_a2", "iso_3166_1_", "iso_3166_1_alpha_2"])
+            name_col = pick_column(
+                adm1,
+                ["name", "name_en", "name_long", "name_local", "gn_name", "namealt"],
+            )
+            admin_col = pick_column(adm1, ["admin", "adm0_name", "admin0_name"])
+
+            if name_col:
+                if iso_col:
+                    adm1 = adm1[adm1[iso_col] == "IN"].copy()
+                elif admin_col:
+                    adm1 = adm1[adm1[admin_col].str.contains("India", case=False, na=False)].copy()
+
+                if not adm1.empty:
+                    adm1 = adm1[[name_col, "geometry"]].copy()
+                    joined = gpd.sjoin(ind_gdf, adm1, how="left", predicate="intersects")
+                    if name_col in joined.columns and not joined[name_col].isna().all():
+                        name_map = joined[name_col].groupby(level=0).first()
+                        ind_gdf["adm1_name"] = (
+                            ind_gdf.index.to_series().map(name_map).fillna(ind_gdf["adm1_name"])
+                        )
+                    else:
+                        print("[South Asia] ADM1 join returned no matches; adm1_name left empty.")
+                else:
+                    print("[South Asia] ADM1 filter returned empty; adm1_name left empty.")
+            else:
+                print("[South Asia] ADM1 name column missing; adm1_name left empty.")
+        else:
+            print("[South Asia] ADM1 GeoDataFrame empty; adm1_name left empty.")
+    except Exception as exc:
+        print(f"[South Asia] ADM1 join failed; adm1_name left empty: {exc}")
 
     # Clip India against China geometry to avoid overlaps
     china_geom = None
@@ -77,7 +118,7 @@ def apply_south_asia_replacement(hybrid_gdf: gpd.GeoDataFrame, land_gdf: gpd.Geo
     ind_gdf["id"] = "IN_ADM2_" + ind_gdf["shapeID"].astype(str)
     ind_gdf["name"] = ind_gdf["shapeName"].astype(str)
     ind_gdf["cntr_code"] = "IN"
-    ind_gdf = ind_gdf[["id", "name", "cntr_code", "geometry"]].copy()
+    ind_gdf = ind_gdf[["id", "name", "cntr_code", "adm1_name", "geometry"]].copy()
 
     combined = pd.concat([base, ind_gdf], ignore_index=True)
     print(f"[South Asia] India ADM2 loaded: {len(ind_gdf)} features.")

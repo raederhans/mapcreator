@@ -50,13 +50,14 @@ from map_builder.geo.utils import (
     pick_column,
     smart_island_cull,
 )
-from map_builder.io.fetch import fetch_ne_zip
+from map_builder.io.fetch import fetch_ne_zip, fetch_or_load_geojson
 from map_builder.processors.admin1 import build_extension_admin1, extract_country_code
 from map_builder.processors.china import apply_china_replacement
 from map_builder.processors.france import apply_holistic_replacements
 from map_builder.processors.poland import apply_poland_replacement
 from map_builder.processors.russia_ukraine import apply_russia_ukraine_replacement
 from map_builder.processors.south_asia import apply_south_asia_replacement
+from map_builder.processors.special_zones import build_special_zones
 from map_builder.outputs.save import save_outputs
 from tools import generate_hierarchy, translate_manager
 
@@ -376,6 +377,34 @@ def main() -> None:
     hybrid = apply_russia_ukraine_replacement(hybrid)
     hybrid = apply_poland_replacement(hybrid)
     hybrid = apply_china_replacement(hybrid)
+    special_zones = gpd.GeoDataFrame(
+        columns=["id", "name", "type", "label", "claimants", "cntr_code", "geometry"],
+        crs="EPSG:4326",
+    )
+    try:
+        print("Downloading India ADM2 (raw) for special zones...")
+        india_raw = fetch_or_load_geojson(
+            cfg.IND_ADM2_URL,
+            cfg.IND_ADM2_FILENAME,
+            fallback_urls=cfg.IND_ADM2_FALLBACK_URLS,
+        )
+        if india_raw.empty:
+            print("[Special Zones] India ADM2 GeoDataFrame is empty; skipping disputed zone.")
+        else:
+            if india_raw.crs is None:
+                india_raw = india_raw.set_crs("EPSG:4326", allow_override=True)
+            if india_raw.crs.to_epsg() != 4326:
+                india_raw = india_raw.to_crs("EPSG:4326")
+            china_gdf = hybrid[
+                hybrid["cntr_code"].astype(str).str.upper() == "CN"
+            ].copy()
+            special_zones = build_special_zones(china_gdf, india_raw)
+            if special_zones.empty:
+                print("[Special Zones] No special zones were generated.")
+            else:
+                print(f"[Special Zones] Generated {len(special_zones)} special zones.")
+    except Exception as exc:
+        print(f"[Special Zones] Failed to build special zones; continuing without: {exc}")
     hybrid = apply_south_asia_replacement(hybrid, land_bg_clipped)
     final_hybrid = smart_island_cull(hybrid, group_col="id", threshold_km2=1000.0)
 
@@ -447,6 +476,7 @@ def main() -> None:
         urban=urban_clipped,
         physical=physical_filtered,
         rivers=rivers_clipped,
+        special_zones=special_zones,
         output_path=topology_path,
         quantization=100_000,
     )

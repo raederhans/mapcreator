@@ -92,6 +92,8 @@ EXTENSION_COUNTRIES = {
     "BT",
     "MM",
     "LK",
+    "PK",
+    "BD",
 }
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
 EUROPE_BOUNDS = (-25.0, 5.0, 180.0, 83.0)

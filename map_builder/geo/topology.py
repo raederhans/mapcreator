@@ -18,6 +18,7 @@ def build_topology(
     physical: gpd.GeoDataFrame,
     rivers: gpd.GeoDataFrame,
     output_path,
+    special_zones: gpd.GeoDataFrame | None = None,
     quantization: int = 100_000,
 ) -> None:
     print("Building TopoJSON topology...")
@@ -35,8 +36,11 @@ def build_topology(
             return False
         return True
 
-    def prune_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        keep_cols = ["id", "name", "cntr_code", "geometry"]
+    def prune_columns(gdf: gpd.GeoDataFrame, layer_name: str) -> gpd.GeoDataFrame:
+        if layer_name == "special_zones":
+            keep_cols = ["id", "name", "label", "type", "claimants", "cntr_code", "geometry"]
+        else:
+            keep_cols = ["id", "name", "cntr_code", "geometry"]
         existing = [col for col in keep_cols if col in gdf.columns]
         if "geometry" not in existing:
             existing.append("geometry")
@@ -53,20 +57,24 @@ def build_topology(
             gdf = gdf[gdf.geometry.is_valid]
         return gdf
 
-    candidates = [
-        ("political", political),
-        ("ocean", ocean),
-        ("land", land),
-        ("urban", urban),
-        ("physical", physical),
-        ("rivers", rivers),
-    ]
+    candidates = [("political", political)]
+    if special_zones is not None:
+        candidates.append(("special_zones", special_zones))
+    candidates.extend(
+        [
+            ("ocean", ocean),
+            ("land", land),
+            ("urban", urban),
+            ("physical", physical),
+            ("rivers", rivers),
+        ]
+    )
 
     layer_names: list[str] = []
     layer_gdfs: list[gpd.GeoDataFrame] = []
     for name, gdf in candidates:
         gdf = gdf.to_crs("EPSG:4326")
-        gdf = prune_columns(gdf)
+        gdf = prune_columns(gdf, name)
         gdf = scrub_geometry(gdf)
         gdf = round_geometries(gdf)
         if not has_valid_bounds(gdf):

@@ -65,6 +65,9 @@ async function bootstrap() {
 
     state.landData = globalThis.topojson.feature(state.topology, objects.political);
 
+    if (objects.special_zones) {
+      state.specialZonesData = globalThis.topojson.feature(state.topology, objects.special_zones);
+    }
     if (objects.rivers) {
       state.riversData = globalThis.topojson.feature(state.topology, objects.rivers);
     }

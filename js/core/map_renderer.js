@@ -11,6 +11,9 @@ let colorCtx = null;
 let lineCtx = null;
 let hitCanvas = null;
 let hitCtx = null;
+let specialZonesSvg = null;
+let specialZonesGroup = null;
+let specialZonesPath = null;
 
 let projection = null;
 let boundsPath = null;
@@ -100,6 +103,132 @@ function applyTransform(ctx) {
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   ctx.translate(state.zoomTransform.x, state.zoomTransform.y);
   ctx.scale(state.zoomTransform.k, state.zoomTransform.k);
+}
+
+function buildSpecialZonePatterns(defs) {
+  defs.select("#pattern-disputed").remove();
+  defs.select("#pattern-wasteland").remove();
+  const disputed = defs
+    .append("pattern")
+    .attr("id", "pattern-disputed")
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 6)
+    .attr("height", 6)
+    .attr("patternTransform", "rotate(45)");
+  disputed
+    .append("line")
+    .attr("x1", 0)
+    .attr("y1", 0)
+    .attr("x2", 0)
+    .attr("y2", 6)
+    .attr("stroke", "#f97316")
+    .attr("stroke-width", 1)
+    .attr("stroke-opacity", 0.7);
+
+  const wasteland = defs
+    .append("pattern")
+    .attr("id", "pattern-wasteland")
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 6)
+    .attr("height", 6);
+  wasteland
+    .append("path")
+    .attr("d", "M0 0 L6 6 M6 0 L0 6")
+    .attr("stroke", "#39ff14")
+    .attr("stroke-width", 1)
+    .attr("stroke-opacity", 0.65);
+}
+
+function initSpecialZonesSvg() {
+  if (!mapContainer || !globalThis.d3) return;
+  let svgNode = document.getElementById("specialZonesSvg");
+  if (!svgNode) {
+    svgNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgNode.setAttribute("id", "specialZonesSvg");
+    svgNode.classList.add("map-layer", "map-layer-top");
+    svgNode.style.pointerEvents = "none";
+    if (lineCanvas && mapContainer.contains(lineCanvas)) {
+      mapContainer.insertBefore(svgNode, lineCanvas);
+    } else {
+      mapContainer.appendChild(svgNode);
+    }
+  }
+  specialZonesSvg = globalThis.d3.select(svgNode);
+  specialZonesSvg
+    .attr("width", state.width)
+    .attr("height", state.height)
+    .style("position", "absolute")
+    .style("inset", "0");
+
+  let defs = specialZonesSvg.select("defs");
+  if (defs.empty()) {
+    defs = specialZonesSvg.append("defs");
+  }
+  buildSpecialZonePatterns(defs);
+
+  specialZonesGroup = specialZonesSvg.select("g.special-zones-layer");
+  if (specialZonesGroup.empty()) {
+    specialZonesGroup = specialZonesSvg.append("g").attr("class", "special-zones-layer");
+  }
+  specialZonesPath = globalThis.d3.geoPath(projection);
+}
+
+function resizeSpecialZonesSvg() {
+  if (!specialZonesSvg) return;
+  specialZonesSvg.attr("width", state.width).attr("height", state.height);
+}
+
+function getSpecialZoneFill(feature) {
+  const zoneType = feature?.properties?.type || "";
+  if (zoneType === "disputed") return "url(#pattern-disputed)";
+  if (zoneType === "wasteland") return "url(#pattern-wasteland)";
+  return "none";
+}
+
+function getSpecialZoneStroke(feature) {
+  const zoneType = feature?.properties?.type || "";
+  if (zoneType === "disputed") return "#f97316";
+  if (zoneType === "wasteland") return "#dc2626";
+  return "#111827";
+}
+
+function updateSpecialZonesPaths() {
+  if (!specialZonesGroup || !specialZonesPath) return;
+  const features = state.specialZonesData?.features || [];
+  if (!features.length) {
+    specialZonesGroup.selectAll("path.special-zone").remove();
+    return;
+  }
+  const selection = specialZonesGroup
+    .selectAll("path.special-zone")
+    .data(features, (d, i) => d?.properties?.id || `special-zone-${i}`);
+
+  selection
+    .enter()
+    .append("path")
+    .attr("class", "special-zone")
+    .attr("fill", (d) => getSpecialZoneFill(d))
+    .attr("stroke", (d) => getSpecialZoneStroke(d))
+    .attr("stroke-width", 1.1)
+    .attr("vector-effect", "non-scaling-stroke")
+    .attr("opacity", 0.85)
+    .merge(selection)
+    .attr("d", specialZonesPath)
+    .attr("fill", (d) => getSpecialZoneFill(d))
+    .attr("stroke", (d) => getSpecialZoneStroke(d));
+
+  selection.exit().remove();
+}
+
+function renderSpecialZones() {
+  if (!specialZonesGroup) return;
+  if (!state.showSpecialZones) {
+    specialZonesGroup.attr("display", "none");
+    return;
+  }
+  specialZonesGroup.attr("display", null);
+  const t = state.zoomTransform;
+  specialZonesGroup.attr("transform", `translate(${t.x},${t.y}) scale(${t.k})`);
 }
 
 function renderColorLayer() {
@@ -272,6 +401,7 @@ function renderLineLayer() {
 
 function render() {
   renderColorLayer();
+  renderSpecialZones();
   renderLineLayer();
 }
 
@@ -501,6 +631,7 @@ function setCanvasSize() {
   lineCanvas.height = scaledH;
   hitCanvas.width = scaledW;
   hitCanvas.height = scaledH;
+  resizeSpecialZonesSvg();
 }
 
 function fitProjection() {
@@ -519,6 +650,7 @@ function handleResize() {
   setCanvasSize();
   fitProjection();
   buildSpatialIndex();
+  updateSpecialZonesPaths();
   render();
 }
 
@@ -559,6 +691,9 @@ export function initMap({ containerId = "mapContainer" } = {}) {
   if (state.landData) {
     fitProjection();
   }
+
+  initSpecialZonesSvg();
+  updateSpecialZonesPaths();
 
   buildIndex();
   buildSpatialIndex();
@@ -608,6 +743,7 @@ export function setMapData() {
   rebuildStaticMeshes();
   invalidateBorderCache();
   fitProjection();
+  updateSpecialZonesPaths();
 }
 
 export { render, rebuildStaticMeshes, invalidateBorderCache };
