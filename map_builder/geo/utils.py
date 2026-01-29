@@ -44,17 +44,17 @@ def round_geometries(gdf: gpd.GeoDataFrame, precision: int = 4) -> gpd.GeoDataFr
 
 
 def clip_to_europe_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame:
-    minx, miny, maxx, maxy = cfg.EUROPE_BOUNDS
+    minx, miny, maxx, maxy = cfg.MAP_BOUNDS
     bbox_geom = box(minx, miny, maxx, maxy)
     try:
         gdf = gdf.to_crs("EPSG:4326")
         clipped = gpd.clip(gdf, bbox_geom)
         if clipped.empty:
-            print(f"Europe clip produced empty result for {label}; keeping original.")
+            print(f"Map bounds clip produced empty result for {label}; keeping original.")
             return gdf
         return clipped
     except Exception:
-        print(f"Europe clip failed for {label}, attempting to fix geometries...")
+        print(f"Map bounds clip failed for {label}, attempting to fix geometries...")
         try:
             if hasattr(gdf.geometry, "make_valid"):
                 gdf = gdf.set_geometry(gdf.geometry.make_valid())
@@ -62,10 +62,10 @@ def clip_to_europe_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame
                 gdf = gdf.set_geometry(gdf.geometry.buffer(0))
             clipped = gpd.clip(gdf, bbox_geom)
         except Exception as fix_exc:
-            print(f"Europe clip skipped for {label}: {fix_exc}")
+            print(f"Map bounds clip skipped for {label}: {fix_exc}")
             return gdf
         if clipped.empty:
-            print(f"Europe clip produced empty result for {label}; keeping original.")
+            print(f"Map bounds clip produced empty result for {label}; keeping original.")
             return gdf
         return clipped
 

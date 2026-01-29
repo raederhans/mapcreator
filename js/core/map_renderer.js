@@ -289,49 +289,18 @@ function renderLineLayer() {
       if ((k < 2 && boundsPath.area(feature) * k * k < state.TINY_AREA) || !pathBoundsInScreen(feature)) {
         continue;
       }
-      const featureType = feature.properties?.featurecla;
-      if (featureType === "Range/Mountain") {
-        lineCtx.globalAlpha = 0.6;
-        lineCtx.strokeStyle = "#5c4033";
-        lineCtx.lineWidth = 1.2 / k;
-        lineCtx.setLineDash([4 / k, 4 / k]);
-        lineCtx.beginPath();
-        linePath(feature);
-        lineCtx.stroke();
-        lineCtx.setLineDash([]);
-
-        if (k >= 1.4) {
-          const name = feature.properties?.name || feature.properties?.name_en;
-          if (name) {
-            const [x, y] = linePath.centroid(feature);
-            if (Number.isFinite(x) && Number.isFinite(y)) {
-              lineCtx.globalAlpha = 0.7;
-              lineCtx.fillStyle = "#5c4033";
-              lineCtx.font = "10px Georgia, serif";
-              lineCtx.fillText(name, x, y);
-            }
-          }
-        }
-      } else if (featureType === "Forest") {
-        lineCtx.globalAlpha = 0.1;
-        lineCtx.fillStyle = "#2e6b4f";
-        lineCtx.beginPath();
-        linePath(feature);
-        lineCtx.fill();
-      } else if (featureType === "Plain" || featureType === "Delta") {
-        lineCtx.globalAlpha = 0.08;
-        lineCtx.fillStyle = "#d8caa3";
-        lineCtx.beginPath();
-        linePath(feature);
-        lineCtx.fill();
-      }
+      lineCtx.globalAlpha = 0.15;
+      lineCtx.fillStyle = "#ffffff";
+      lineCtx.beginPath();
+      linePath(feature);
+      lineCtx.fill();
     }
   }
 
   if (state.showUrban && state.urbanData) {
     lineCtx.save();
     lineCtx.globalAlpha = 0.2;
-    lineCtx.fillStyle = "#333333";
+    lineCtx.fillStyle = "#999999";
     for (const feature of state.urbanData.features) {
       if ((k < 2 && boundsPath.area(feature) * k * k < state.TINY_AREA) || !pathBoundsInScreen(feature)) {
         continue;

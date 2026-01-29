@@ -96,7 +96,7 @@ EXTENSION_COUNTRIES = {
     "BD",
 }
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
-EUROPE_BOUNDS = (-25.0, 5.0, 180.0, 83.0)
+MAP_BOUNDS = (-25.0, 5.0, 180.0, 83.0)
 
 # Simplification tolerances (WGS84 degrees)
 SIMPLIFY_NUTS3 = 0.002

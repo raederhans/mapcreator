@@ -51,6 +51,7 @@ from map_builder.geo.utils import (
     smart_island_cull,
 )
 from map_builder.io.fetch import fetch_ne_zip, fetch_or_load_geojson
+from map_builder.io.readers import load_physical, load_rivers, load_urban
 from map_builder.processors.admin1 import build_extension_admin1, extract_country_code
 from map_builder.processors.china import apply_china_replacement
 from map_builder.processors.france import apply_holistic_replacements
@@ -304,9 +305,7 @@ def main() -> None:
     filtered["geometry"] = filtered.geometry.simplify(
         tolerance=cfg.SIMPLIFY_NUTS3, preserve_topology=True
     )
-    rivers = fetch_ne_zip(cfg.RIVERS_URL, "rivers")
-    rivers = clip_to_europe_bounds(rivers, "rivers")
-    rivers_clipped = clip_to_land_bounds(rivers, filtered, "rivers")
+    rivers_clipped = load_rivers()
     borders = fetch_ne_zip(cfg.BORDERS_URL, "borders")
     borders = clip_to_europe_bounds(borders, "borders")
     border_lines = build_border_lines()
@@ -324,32 +323,32 @@ def main() -> None:
     land_bg_clipped["geometry"] = land_bg_clipped.geometry.simplify(
         tolerance=cfg.SIMPLIFY_BACKGROUND, preserve_topology=True
     )
-    urban = fetch_ne_zip(cfg.URBAN_URL, "urban")
-    urban = clip_to_europe_bounds(urban, "urban")
-    urban_clipped = clip_to_land_bounds(urban, filtered, "urban")
+    urban_clipped = load_urban()
     # Aggressively simplify urban geometry to reduce render cost
     urban_clipped = urban_clipped.copy()
     urban_clipped["geometry"] = urban_clipped.geometry.simplify(
         tolerance=cfg.SIMPLIFY_URBAN, preserve_topology=True
     )
-    physical = fetch_ne_zip(cfg.PHYSICAL_URL, "physical")
-    physical = clip_to_europe_bounds(physical, "physical")
-    physical_clipped = clip_to_land_bounds(physical, filtered, "physical")
-    if "featurecla" in physical_clipped.columns:
-        keep_classes = {"Range/Mountain", "Forest", "Plain", "Delta"}
-        physical_filtered = physical_clipped[physical_clipped["featurecla"].isin(keep_classes)].copy()
-        if physical_filtered.empty:
-            print("Physical regions filter returned empty dataset, keeping all clipped features.")
-            physical_filtered = physical_clipped
-    else:
-        physical_filtered = physical_clipped
+    physical_filtered = load_physical()
+    if physical_filtered.empty:
+        print("Physical regions filter returned empty dataset, keeping all clipped features.")
+        physical_filtered = fetch_ne_zip(cfg.PHYSICAL_URL, "physical")
+        physical_filtered = clip_to_europe_bounds(physical_filtered, "physical")
     # Simplify physical regions to reduce vertex count
     physical_filtered = physical_filtered.copy()
     physical_filtered["geometry"] = physical_filtered.geometry.simplify(
         tolerance=cfg.SIMPLIFY_PHYSICAL, preserve_topology=True
     )
     # Preserve key metadata for styling/labels
-    keep_cols = ["name", "name_en", "featurecla", "geometry"]
+    keep_cols = [
+        "name",
+        "name_en",
+        "NAME",
+        "NAME_EN",
+        "featurecla",
+        "FEATURECLA",
+        "geometry",
+    ]
     physical_filtered = physical_filtered[[col for col in keep_cols if col in physical_filtered.columns]]
 
     # Build hybrid interactive layer (NUTS-3 + Admin-1 extension)

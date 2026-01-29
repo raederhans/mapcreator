@@ -20,6 +20,7 @@ if not defined PYTHON_CMD (
 )
 
 echo [INFO] Regenerating Map Data...
+if exist data\\*.json del /Q data\\*.json
 %PYTHON_CMD% init_map_data.py
 if errorlevel 1 (
   echo.
