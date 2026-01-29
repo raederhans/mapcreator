@@ -1,0 +1,479 @@
+// Sidebar UI (Phase 13)
+import { state, countryNames, countryPresets, PRESET_STORAGE_KEY, defaultCountryPalette } from "../core/state.js";
+import { invalidateBorderCache } from "../core/map_renderer.js";
+import { applyCountryColor, resetCountryColors } from "../core/logic.js";
+import { t } from "./i18n.js";
+
+function loadCustomPresets() {
+  try {
+    const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.warn("Unable to load custom presets:", error);
+    return {};
+  }
+}
+
+function mergePresets(base, custom) {
+  const merged = {};
+  Object.keys(base || {}).forEach((code) => {
+    merged[code] = (base[code] || []).map((preset) => ({
+      name: preset.name,
+      ids: Array.isArray(preset.ids) ? [...preset.ids] : [],
+    }));
+  });
+  Object.keys(custom || {}).forEach((code) => {
+    if (!merged[code]) merged[code] = [];
+    const customEntries = Array.isArray(custom[code]) ? custom[code] : [];
+    customEntries.forEach((entry) => {
+      if (!entry || !entry.name) return;
+      const idx = merged[code].findIndex((preset) => preset.name === entry.name);
+      const ids = Array.isArray(entry.ids) ? [...entry.ids] : [];
+      if (idx >= 0) {
+        merged[code][idx] = { name: entry.name, ids };
+      } else {
+        merged[code].push({ name: entry.name, ids });
+      }
+    });
+  });
+  return merged;
+}
+
+function saveCustomPresets() {
+  try {
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(state.customPresets));
+  } catch (error) {
+    console.warn("Unable to save custom presets:", error);
+  }
+}
+
+function upsertCustomPreset(code, name, ids) {
+  if (!state.customPresets[code]) state.customPresets[code] = [];
+  const idx = state.customPresets[code].findIndex((preset) => preset.name === name);
+  const entry = { name, ids: [...ids] };
+  if (idx >= 0) {
+    state.customPresets[code][idx] = entry;
+  } else {
+    state.customPresets[code].push(entry);
+  }
+  saveCustomPresets();
+  state.presetsState = mergePresets(countryPresets, state.customPresets);
+}
+
+function initPresetState() {
+  state.customPresets = loadCustomPresets();
+  state.presetsState = mergePresets(countryPresets, state.customPresets);
+}
+
+function getHierarchyGroupsForCode(code) {
+  if (!code) return [];
+  if (state.hierarchyGroupsByCode.size > 0) {
+    return state.hierarchyGroupsByCode.get(code) || [];
+  }
+  if (!state.hierarchyData || !state.hierarchyData.groups) return [];
+  const labels = state.hierarchyData.labels || {};
+  const groups = [];
+  Object.entries(state.hierarchyData.groups).forEach(([groupId, children]) => {
+    if (!groupId.startsWith(`${code}_`)) return;
+    const label = labels[groupId] || groupId.replace(`${code}_`, "").replace(/_/g, " ");
+    groups.push({
+      id: groupId,
+      label,
+      children: Array.isArray(children) ? children : [],
+    });
+  });
+  groups.sort((a, b) => a.label.localeCompare(b.label));
+  return groups;
+}
+
+function applyHierarchyGroup(group, color, render) {
+  if (!group || !group.children) return;
+  const colorToApply = color || state.selectedColor;
+  group.children.forEach((id) => {
+    state.colors[id] = colorToApply;
+  });
+  invalidateBorderCache();
+  if (render) render();
+  addRecentColor(colorToApply);
+}
+
+function addRecentColor(color) {
+  if (!color) return;
+  state.recentColors = state.recentColors.filter((value) => value !== color);
+  state.recentColors.unshift(color);
+  if (state.recentColors.length > 5) {
+    state.recentColors = state.recentColors.slice(0, 5);
+  }
+  if (typeof state.updateRecentUI === "function") {
+    state.updateRecentUI();
+  }
+}
+
+function applyPreset(countryCode, presetIndex, color, render) {
+  const presets = state.presetsState[countryCode];
+  if (!presets || !presets[presetIndex]) {
+    console.warn(`Preset not found: ${countryCode}[${presetIndex}]`);
+    return;
+  }
+
+  const preset = presets[presetIndex];
+  const colorToApply = color || state.selectedColor;
+
+  preset.ids.forEach((id) => {
+    state.colors[id] = colorToApply;
+  });
+
+  invalidateBorderCache();
+  if (render) render();
+
+  if (!state.recentColors.includes(colorToApply)) {
+    state.recentColors.unshift(colorToApply);
+    if (state.recentColors.length > 8) state.recentColors.pop();
+    if (typeof state.updateRecentUI === "function") state.updateRecentUI();
+  }
+
+  console.log(`Applied preset "${preset.name}" with ${preset.ids.length} regions`);
+}
+
+function startPresetEdit(code, presetIndex, render) {
+  const presets = state.presetsState[code] || [];
+  const preset = presets[presetIndex];
+  if (!preset) return;
+  state.isEditingPreset = true;
+  state.editingPresetRef = { code, presetIndex };
+  state.editingPresetIds = new Set(preset.ids || []);
+  if (typeof state.updateToolUIFn === "function") {
+    state.updateToolUIFn();
+  }
+  if (render) render();
+  if (typeof state.renderPresetTreeFn === "function") {
+    state.renderPresetTreeFn();
+  }
+}
+
+function stopPresetEdit(render) {
+  state.isEditingPreset = false;
+  state.editingPresetRef = null;
+  state.editingPresetIds = new Set();
+  if (typeof state.updateToolUIFn === "function") {
+    state.updateToolUIFn();
+  }
+  if (render) render();
+  if (typeof state.renderPresetTreeFn === "function") {
+    state.renderPresetTreeFn();
+  }
+}
+
+function togglePresetRegion(id, render) {
+  if (!state.isEditingPreset || !id) return;
+  if (state.editingPresetIds.has(id)) {
+    state.editingPresetIds.delete(id);
+  } else {
+    state.editingPresetIds.add(id);
+  }
+  if (render) render();
+}
+
+async function copyPresetIds(ids) {
+  const payload = JSON.stringify(ids || [], null, 2);
+  try {
+    await navigator.clipboard.writeText(payload);
+    console.log("Preset IDs copied to clipboard.");
+  } catch (error) {
+    console.warn("Clipboard unavailable, logging IDs instead.", error);
+    console.log(payload);
+  }
+}
+
+function initSidebar({ render } = {}) {
+  const list = document.getElementById("countryList");
+  if (!list) return;
+  const presetTree = document.getElementById("presetTree");
+  const searchInput = document.getElementById("countrySearch");
+  const resetBtn = document.getElementById("resetCountryColors");
+
+  const entries = Object.keys(countryNames)
+    .map((code) => {
+      const name = countryNames[code];
+      return { code, name, displayName: t(name, "geo") };
+    })
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  const expanded = new Set();
+  const getSearchTerm = () => (searchInput?.value || "").trim().toLowerCase();
+
+  const renderList = () => {
+    const term = getSearchTerm();
+    list.innerHTML = "";
+
+    entries.forEach(({ code, name, displayName }) => {
+      const presets = state.presetsState[code] || [];
+      const hierarchyGroups = getHierarchyGroupsForCode(code);
+      const countryMatch =
+        !term ||
+        name.toLowerCase().includes(term) ||
+        displayName.toLowerCase().includes(term) ||
+        code.toLowerCase().includes(term);
+      const presetMatch = term
+        ? presets.some((preset) => preset.name.toLowerCase().includes(term))
+        : false;
+      const hierarchyMatch = term
+        ? hierarchyGroups.some((group) => group.label.toLowerCase().includes(term))
+        : false;
+
+      if (!countryMatch && !presetMatch && !hierarchyMatch) return;
+      if (presetMatch) {
+        expanded.add(code);
+      }
+      if (hierarchyMatch) {
+        expanded.add(code);
+      }
+
+      const row = document.createElement("div");
+      row.className =
+        "flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2";
+
+      const label = document.createElement("div");
+      label.className = "text-sm font-medium text-slate-700";
+      label.textContent = `${displayName} (${code})`;
+
+      const controls = document.createElement("div");
+      controls.className = "flex items-center gap-2";
+
+      const input = document.createElement("input");
+      input.type = "color";
+      input.value = state.countryPalette[code] || defaultCountryPalette[code] || "#cccccc";
+      input.className =
+        "h-8 w-10 cursor-pointer rounded-md border border-slate-300 bg-white";
+      input.addEventListener("change", (event) => {
+        const value = event.target.value;
+        state.countryPalette[code] = value;
+        applyCountryColor(code, value, render);
+      });
+
+      const hasChildren = presets.length > 0 || hierarchyGroups.length > 0;
+      if (hasChildren) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className =
+          "rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-100";
+        toggle.textContent = expanded.has(code) ? "▾" : "▸";
+        toggle.addEventListener("click", () => {
+          if (expanded.has(code)) {
+            expanded.delete(code);
+          } else {
+            expanded.add(code);
+          }
+          renderList();
+        });
+        controls.appendChild(toggle);
+      }
+
+      controls.appendChild(input);
+
+      row.appendChild(label);
+      row.appendChild(controls);
+      list.appendChild(row);
+
+      if (expanded.has(code)) {
+        if (hierarchyGroups.length > 0) {
+          const child = document.createElement("div");
+          child.className = "ml-2 space-y-2 pb-2";
+          const header = document.createElement("div");
+          header.className = "px-2 text-[10px] uppercase tracking-wide text-slate-400";
+          header.textContent = "--- Provinces/Regions ---";
+          child.appendChild(header);
+          hierarchyGroups.forEach((group) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+              "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
+            btn.textContent = group.label;
+            btn.addEventListener("click", () => {
+              applyHierarchyGroup(group, state.selectedColor, render);
+            });
+            child.appendChild(btn);
+          });
+          list.appendChild(child);
+        }
+
+        if (presets.length > 0) {
+          const child = document.createElement("div");
+          child.className = "ml-2 space-y-2 pb-2";
+          const header = document.createElement("div");
+          header.className = "px-2 text-[10px] uppercase tracking-wide text-slate-400";
+          header.textContent = "--- Presets ---";
+          child.appendChild(header);
+          presets.forEach((preset, presetIndex) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+              "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-100";
+            btn.textContent = `Apply ${preset.name}`;
+            btn.addEventListener("click", () => {
+              applyPreset(code, presetIndex, state.selectedColor, render);
+            });
+            child.appendChild(btn);
+          });
+          list.appendChild(child);
+        }
+      }
+    });
+  };
+
+  state.renderCountryListFn = renderList;
+
+  const renderPresetTree = () => {
+    if (!presetTree) return;
+    const term = getSearchTerm();
+    presetTree.innerHTML = "";
+
+    entries.forEach(({ code, name, displayName }) => {
+      const presets = state.presetsState[code] || [];
+      if (!presets.length) return;
+
+      const countryMatch =
+        !term ||
+        name.toLowerCase().includes(term) ||
+        displayName.toLowerCase().includes(term) ||
+        code.toLowerCase().includes(term);
+      const presetMatch = term
+        ? presets.some((preset) => preset.name.toLowerCase().includes(term))
+        : false;
+
+      if (!countryMatch && !presetMatch) return;
+      if (presetMatch) {
+        state.expandedPresetCountries.add(code);
+      }
+
+      const details = document.createElement("details");
+      details.className = "group";
+      details.open = state.expandedPresetCountries.has(code) || presetMatch;
+      details.addEventListener("toggle", () => {
+        if (details.open) {
+          state.expandedPresetCountries.add(code);
+        } else {
+          state.expandedPresetCountries.delete(code);
+        }
+      });
+
+      const summary = document.createElement("summary");
+      summary.className =
+        "cursor-pointer list-none flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100";
+      summary.innerHTML =
+        '<svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+      const label = document.createElement("span");
+      label.textContent = `${displayName} (${code})`;
+      summary.appendChild(label);
+      details.appendChild(summary);
+
+      const child = document.createElement("div");
+      child.className = "ml-6 mt-1 space-y-1";
+      presets.forEach((preset, index) => {
+        const row = document.createElement("div");
+        row.className =
+          "flex items-center justify-between gap-2 rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-100";
+
+        const nameBtn = document.createElement("button");
+        nameBtn.type = "button";
+        nameBtn.className = "flex-1 text-left";
+        nameBtn.textContent = preset.name;
+        nameBtn.addEventListener("click", () => {
+          applyPreset(code, index, state.selectedColor, render);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "flex items-center gap-2";
+
+        const isEditingThis =
+          state.isEditingPreset &&
+          state.editingPresetRef &&
+          state.editingPresetRef.code === code &&
+          state.editingPresetRef.presetIndex === index;
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "text-[11px] text-slate-500 hover:text-slate-700";
+        editBtn.textContent = isEditingThis ? "Cancel" : "Edit";
+        editBtn.addEventListener("click", () => {
+          if (isEditingThis) {
+            stopPresetEdit(render);
+          } else {
+            startPresetEdit(code, index, render);
+          }
+        });
+
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className = "text-[11px] text-slate-500 hover:text-slate-700";
+        saveBtn.textContent = "Save";
+        if (!isEditingThis) {
+          saveBtn.classList.add("hidden");
+        }
+        saveBtn.addEventListener("click", () => {
+          if (!isEditingThis) return;
+          const ids = Array.from(state.editingPresetIds);
+          const activePreset = state.presetsState[code]?.[index];
+          if (activePreset) {
+            activePreset.ids = ids;
+            upsertCustomPreset(code, activePreset.name, ids);
+          }
+          stopPresetEdit(render);
+        });
+
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "text-[11px] text-slate-500 hover:text-slate-700";
+        copyBtn.textContent = "Copy";
+        copyBtn.addEventListener("click", () => {
+          const ids = isEditingThis ? Array.from(state.editingPresetIds) : preset.ids;
+          copyPresetIds(ids || []);
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(saveBtn);
+        actions.appendChild(copyBtn);
+
+        row.appendChild(nameBtn);
+        row.appendChild(actions);
+        child.appendChild(row);
+      });
+
+      details.appendChild(child);
+      presetTree.appendChild(details);
+    });
+  };
+
+  state.renderPresetTreeFn = renderPresetTree;
+
+  if (searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener("input", () => {
+      if (typeof state.renderCountryListFn === "function") {
+        state.renderCountryListFn();
+      }
+      if (typeof state.renderPresetTreeFn === "function") {
+        state.renderPresetTreeFn();
+      }
+    });
+    searchInput.dataset.bound = "true";
+  }
+
+  if (resetBtn && !resetBtn.dataset.bound) {
+    resetBtn.addEventListener("click", () => {
+      resetCountryColors();
+      if (typeof state.renderCountryListFn === "function") {
+        state.renderCountryListFn();
+      }
+    });
+    resetBtn.dataset.bound = "true";
+  }
+
+  renderList();
+  renderPresetTree();
+
+  globalThis.togglePresetRegion = (id) => togglePresetRegion(id, render);
+}
+
+export { initSidebar, initPresetState };

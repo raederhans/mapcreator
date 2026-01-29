@@ -28,15 +28,6 @@ if errorlevel 1 (
   exit /b %errorlevel%
 )
 
-echo [INFO] Syncing translations...
-%PYTHON_CMD% tools\translate_manager.py
-if errorlevel 1 (
-  echo.
-  echo [ERROR] Translation sync failed. See errors above.
-  pause
-  exit /b %errorlevel%
-)
-
 echo [SUCCESS] Data Ready. Opening Browser...
 start "" "http://localhost:8000"
 
