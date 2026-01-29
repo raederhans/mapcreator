@@ -322,6 +322,22 @@
       "en": "Akushinsky District",
       "zh": "[TODO] Akushinsky District"
     },
+    "Al-Anbar": {
+      "en": "Al-Anbar",
+      "zh": "[TODO] Al-Anbar"
+    },
+    "Al-Basrah": {
+      "en": "Al-Basrah",
+      "zh": "[TODO] Al-Basrah"
+    },
+    "Al-Muthannia": {
+      "en": "Al-Muthannia",
+      "zh": "[TODO] Al-Muthannia"
+    },
+    "Al-Qādisiyyah": {
+      "en": "Al-Qādisiyyah",
+      "zh": "[TODO] Al-Qādisiyyah"
+    },
     "Alagirsky District": {
       "en": "Alagirsky District",
       "zh": "[TODO] Alagirsky District"
@@ -361,6 +377,10 @@
     "Albi": {
       "en": "Albi",
       "zh": "Albi"
+    },
+    "Alborz": {
+      "en": "Alborz",
+      "zh": "[TODO] Alborz"
     },
     "Aleksinsky District": {
       "en": "Aleksinsky District",
@@ -537,6 +557,10 @@
     "Amvrosiivka": {
       "en": "Amvrosiivka",
       "zh": "[TODO] Amvrosiivka"
+    },
+    "An-Najaf": {
+      "en": "An-Najaf",
+      "zh": "[TODO] An-Najaf"
     },
     "Ananiv": {
       "en": "Ananiv",
@@ -846,6 +870,10 @@
       "en": "Arbazhsky District",
       "zh": "[TODO] Arbazhsky District"
     },
+    "Arbil": {
+      "en": "Arbil",
+      "zh": "[TODO] Arbil"
+    },
     "Arbuzynka": {
       "en": "Arbuzynka",
       "zh": "[TODO] Arbuzynka"
@@ -865,6 +893,10 @@
     "Ardatovsky District, Republic of Mordovia": {
       "en": "Ardatovsky District, Republic of Mordovia",
       "zh": "[TODO] Ardatovsky District, Republic of Mordovia"
+    },
+    "Ardebil": {
+      "en": "Ardebil",
+      "zh": "[TODO] Ardebil"
     },
     "Ardonsky District": {
       "en": "Ardonsky District",
@@ -1138,6 +1170,10 @@
       "en": "Arzgirsky District",
       "zh": "[TODO] Arzgirsky District"
     },
+    "As-Sulaymaniyah": {
+      "en": "As-Sulaymaniyah",
+      "zh": "[TODO] As-Sulaymaniyah"
+    },
     "Aschaffenburg, Kreisfreie Stadt": {
       "en": "Aschaffenburg, Kreisfreie Stadt",
       "zh": "Aschaffenburg, Kreisfreie Stadt"
@@ -1185,6 +1221,10 @@
     "Asturias": {
       "en": "Asturias",
       "zh": "Asturias"
+    },
+    "At-Ta'mim": {
+      "en": "At-Ta'mim",
+      "zh": "[TODO] At-Ta'mim"
     },
     "Atkarsky District": {
       "en": "Atkarsky District",
@@ -1334,6 +1374,10 @@
       "en": "Babayurtovsky District",
       "zh": "[TODO] Babayurtovsky District"
     },
+    "Babil": {
+      "en": "Babil",
+      "zh": "[TODO] Babil"
+    },
     "Babushkinsky District": {
       "en": "Babushkinsky District",
       "zh": "[TODO] Babushkinsky District"
@@ -1374,9 +1418,17 @@
       "en": "Badajoz",
       "zh": "Badajoz"
     },
+    "Badakhshan": {
+      "en": "Badakhshan",
+      "zh": "[TODO] Badakhshan"
+    },
     "Baden-Baden, Stadtkreis": {
       "en": "Baden-Baden, Stadtkreis",
       "zh": "Baden-Baden, Stadtkreis"
+    },
+    "Badghis": {
+      "en": "Badghis",
+      "zh": "[TODO] Badghis"
     },
     "Badongxian": {
       "en": "Badongxian",
@@ -1385,6 +1437,14 @@
     "Bagayevsky District": {
       "en": "Bagayevsky District",
       "zh": "[TODO] Bagayevsky District"
+    },
+    "Baghdad": {
+      "en": "Baghdad",
+      "zh": "[TODO] Baghdad"
+    },
+    "Baghlan": {
+      "en": "Baghlan",
+      "zh": "[TODO] Baghlan"
     },
     "Bagnères-de-Bigorre": {
       "en": "Bagnères-de-Bigorre",
@@ -1522,6 +1582,10 @@
       "en": "Balkan",
       "zh": "[TODO] Balkan"
     },
+    "Balkh": {
+      "en": "Balkh",
+      "zh": "[TODO] Balkh"
+    },
     "Balta": {
       "en": "Balta",
       "zh": "[TODO] Balta"
@@ -1557,6 +1621,10 @@
     "Bamberg, Landkreis": {
       "en": "Bamberg, Landkreis",
       "zh": "Bamberg, Landkreis"
+    },
+    "Bamyan": {
+      "en": "Bamyan",
+      "zh": "[TODO] Bamyan"
     },
     "Bangbu": {
       "en": "Bangbu",
@@ -2886,6 +2954,10 @@
       "en": "Busan",
       "zh": "[TODO] Busan"
     },
+    "Bushehr": {
+      "en": "Bushehr",
+      "zh": "[TODO] Bushehr"
+    },
     "Busk": {
       "en": "Busk",
       "zh": "[TODO] Busk"
@@ -3153,6 +3225,10 @@
     "Chahaeryouyizhongqi": {
       "en": "Chahaeryouyizhongqi",
       "zh": "[TODO] Chahaeryouyizhongqi"
+    },
+    "Chahar Mahall and Bakhtiari": {
+      "en": "Chahar Mahall and Bakhtiari",
+      "zh": "[TODO] Chahar Mahall and Bakhtiari"
     },
     "Chalingxian": {
       "en": "Chalingxian",
@@ -4714,6 +4790,10 @@
       "en": "Dezhoushi",
       "zh": "[TODO] Dezhoushi"
     },
+    "Dhi-Qar": {
+      "en": "Dhi-Qar",
+      "zh": "[TODO] Dhi-Qar"
+    },
     "Dianbaxian": {
       "en": "Dianbaxian",
       "zh": "[TODO] Dianbaxian"
@@ -4749,6 +4829,10 @@
     "Digorsky District": {
       "en": "Digorsky District",
       "zh": "[TODO] Digorsky District"
+    },
+    "Dihok": {
+      "en": "Dihok",
+      "zh": "[TODO] Dihok"
     },
     "Dijon": {
       "en": "Dijon",
@@ -4829,6 +4913,10 @@
     "Diveyevsky District": {
       "en": "Diveyevsky District",
       "zh": "[TODO] Diveyevsky District"
+    },
+    "Diyala": {
+      "en": "Diyala",
+      "zh": "[TODO] Diyala"
     },
     "Diyarbakır": {
       "en": "Diyarbakır",
@@ -5350,6 +5438,10 @@
       "en": "East Ayrshire and North Ayrshire mainland",
       "zh": "East Ayrshire and North Ayrshire mainland"
     },
+    "East Azarbaijan": {
+      "en": "East Azarbaijan",
+      "zh": "[TODO] East Azarbaijan"
+    },
     "East Cumbria": {
       "en": "East Cumbria",
       "zh": "East Cumbria"
@@ -5598,6 +5690,10 @@
       "en": "Erzurum",
       "zh": "Erzurum"
     },
+    "Esfahan": {
+      "en": "Esfahan",
+      "zh": "[TODO] Esfahan"
+    },
     "Eskişehir": {
       "en": "Eskişehir",
       "zh": "Eskişehir"
@@ -5697,6 +5793,18 @@
     "Fanxian": {
       "en": "Fanxian",
       "zh": "[TODO] Fanxian"
+    },
+    "Farah": {
+      "en": "Farah",
+      "zh": "[TODO] Farah"
+    },
+    "Fars": {
+      "en": "Fars",
+      "zh": "[TODO] Fars"
+    },
+    "Faryab": {
+      "en": "Faryab",
+      "zh": "[TODO] Faryab"
     },
     "Fastiv": {
       "en": "Fastiv",
@@ -6530,6 +6638,14 @@
       "en": "Gex",
       "zh": "Gex"
     },
+    "Ghazni": {
+      "en": "Ghazni",
+      "zh": "[TODO] Ghazni"
+    },
+    "Ghor": {
+      "en": "Ghor",
+      "zh": "[TODO] Ghor"
+    },
     "Giaginsky District": {
       "en": "Giaginsky District",
       "zh": "[TODO] Giaginsky District"
@@ -6545,6 +6661,10 @@
     "Gifu": {
       "en": "Gifu",
       "zh": "[TODO] Gifu"
+    },
+    "Gilan": {
+      "en": "Gilan",
+      "zh": "[TODO] Gilan"
     },
     "Gipuzkoa": {
       "en": "Gipuzkoa",
@@ -6605,6 +6725,10 @@
     "Glushkovsky District": {
       "en": "Glushkovsky District",
       "zh": "[TODO] Glushkovsky District"
+    },
+    "Golestan": {
+      "en": "Golestan",
+      "zh": "[TODO] Golestan"
     },
     "Gomel": {
       "en": "Gomel",
@@ -7346,6 +7470,10 @@
       "en": "Halych",
       "zh": "[TODO] Halych"
     },
+    "Hamadan": {
+      "en": "Hamadan",
+      "zh": "[TODO] Hamadan"
+    },
     "Hamburg": {
       "en": "Hamburg",
       "zh": "Hamburg"
@@ -7810,6 +7938,14 @@
       "en": "Hildesheim",
       "zh": "Hildesheim"
     },
+    "Hilmand": {
+      "en": "Hilmand",
+      "zh": "[TODO] Hilmand"
+    },
+    "Hirat": {
+      "en": "Hirat",
+      "zh": "[TODO] Hirat"
+    },
     "Hiroshima": {
       "en": "Hiroshima",
       "zh": "[TODO] Hiroshima"
@@ -7905,6 +8041,10 @@
     "Hongzexian": {
       "en": "Hongzexian",
       "zh": "[TODO] Hongzexian"
+    },
+    "Hormozgan": {
+      "en": "Hormozgan",
+      "zh": "[TODO] Hormozgan"
     },
     "Hornostaivka": {
       "en": "Hornostaivka",
@@ -8482,6 +8622,10 @@
       "en": "Ikryaninsky District",
       "zh": "[TODO] Ikryaninsky District"
     },
+    "Ilam": {
+      "en": "Ilam",
+      "zh": "[TODO] Ilam"
+    },
     "Ileksky District": {
       "en": "Ileksky District",
       "zh": "[TODO] Ileksky District"
@@ -8741,6 +8885,10 @@
     "Jaworzno": {
       "en": "Jaworzno",
       "zh": "[TODO] Jaworzno"
+    },
+    "Jawzjan": {
+      "en": "Jawzjan",
+      "zh": "[TODO] Jawzjan"
     },
     "Jaén": {
       "en": "Jaén",
@@ -9566,6 +9714,10 @@
       "en": "Kabardin-Balkar",
       "zh": "Kabardin-Balkar"
     },
+    "Kabul": {
+      "en": "Kabul",
+      "zh": "[TODO] Kabul"
+    },
     "Kadomsky District": {
       "en": "Kadomsky District",
       "zh": "[TODO] Kadomsky District"
@@ -9810,6 +9962,10 @@
       "en": "Kanashsky District",
       "zh": "[TODO] Kanashsky District"
     },
+    "Kandahar": {
+      "en": "Kandahar",
+      "zh": "[TODO] Kandahar"
+    },
     "Kanevskoy District": {
       "en": "Kanevskoy District",
       "zh": "[TODO] Kanevskoy District"
@@ -9866,6 +10022,10 @@
       "en": "Kaohsiung City",
       "zh": "[TODO] Kaohsiung City"
     },
+    "Kapisa": {
+      "en": "Kapisa",
+      "zh": "[TODO] Kapisa"
+    },
     "Karabudakhkentsky District": {
       "en": "Karabudakhkentsky District",
       "zh": "[TODO] Karabudakhkentsky District"
@@ -9909,6 +10069,10 @@
     "Karaman": {
       "en": "Karaman",
       "zh": "Karaman"
+    },
+    "Karbala'": {
+      "en": "Karbala'",
+      "zh": "[TODO] Karbala'"
     },
     "Kardymovsky District": {
       "en": "Kardymovsky District",
@@ -10130,6 +10294,14 @@
       "en": "Kepingxian",
       "zh": "[TODO] Kepingxian"
     },
+    "Kerman": {
+      "en": "Kerman",
+      "zh": "[TODO] Kerman"
+    },
+    "Kermanshah": {
+      "en": "Kermanshah",
+      "zh": "[TODO] Kermanshah"
+    },
     "Keshanxian": {
       "en": "Keshanxian",
       "zh": "[TODO] Keshanxian"
@@ -10270,6 +10442,10 @@
       "en": "Khoroshiv",
       "zh": "[TODO] Khoroshiv"
     },
+    "Khost": {
+      "en": "Khost",
+      "zh": "[TODO] Khost"
+    },
     "Khotyn": {
       "en": "Khotyn",
       "zh": "[TODO] Khotyn"
@@ -10289,6 +10465,10 @@
     "Khust": {
       "en": "Khust",
       "zh": "[TODO] Khust"
+    },
+    "Khuzestan": {
+      "en": "Khuzestan",
+      "zh": "[TODO] Khuzestan"
     },
     "Khvalynsky District": {
       "en": "Khvalynsky District",
@@ -10550,6 +10730,10 @@
       "en": "Kodyma",
       "zh": "[TODO] Kodyma"
     },
+    "Kohgiluyeh and Buyer Ahmad": {
+      "en": "Kohgiluyeh and Buyer Ahmad",
+      "zh": "[TODO] Kohgiluyeh and Buyer Ahmad"
+    },
     "Kokhma": {
       "en": "Kokhma",
       "zh": "[TODO] Kokhma"
@@ -10665,6 +10849,10 @@
     "Korcë": {
       "en": "Korcë",
       "zh": "Korcë"
+    },
+    "Kordestan": {
+      "en": "Kordestan",
+      "zh": "[TODO] Kordestan"
     },
     "Korenevsky District": {
       "en": "Korenevsky District",
@@ -11178,6 +11366,14 @@
       "en": "Kumyonsky District",
       "zh": "[TODO] Kumyonsky District"
     },
+    "Kunar": {
+      "en": "Kunar",
+      "zh": "[TODO] Kunar"
+    },
+    "Kunduz": {
+      "en": "Kunduz",
+      "zh": "[TODO] Kunduz"
+    },
     "Kungursky District": {
       "en": "Kungursky District",
       "zh": "[TODO] Kungursky District"
@@ -11393,6 +11589,10 @@
     "Lagansky District": {
       "en": "Lagansky District",
       "zh": "[TODO] Lagansky District"
+    },
+    "Laghman": {
+      "en": "Laghman",
+      "zh": "[TODO] Laghman"
     },
     "Lahdenpohja District": {
       "en": "Lahdenpohja District",
@@ -12530,6 +12730,10 @@
       "en": "Lodève",
       "zh": "Lodève"
     },
+    "Logar": {
+      "en": "Logar",
+      "zh": "[TODO] Logar"
+    },
     "Lokachi": {
       "en": "Lokachi",
       "zh": "[TODO] Lokachi"
@@ -12673,6 +12877,10 @@
     "Lopatinsky District": {
       "en": "Lopatinsky District",
       "zh": "[TODO] Lopatinsky District"
+    },
+    "Lorestan": {
+      "en": "Lorestan",
+      "zh": "[TODO] Lorestan"
     },
     "Lori": {
       "en": "Lori",
@@ -13406,6 +13614,10 @@
       "en": "Mariy-El",
       "zh": "Mariy-El"
     },
+    "Markazi": {
+      "en": "Markazi",
+      "zh": "[TODO] Markazi"
+    },
     "Markivka": {
       "en": "Markivka",
       "zh": "[TODO] Markivka"
@@ -13482,9 +13694,17 @@
       "en": "Maynsky District",
       "zh": "[TODO] Maynsky District"
     },
+    "Maysan": {
+      "en": "Maysan",
+      "zh": "[TODO] Maysan"
+    },
     "Maysky District": {
       "en": "Maysky District",
       "zh": "[TODO] Maysky District"
+    },
+    "Mazandaran": {
+      "en": "Mazandaran",
+      "zh": "[TODO] Mazandaran"
     },
     "Meaux": {
       "en": "Meaux",
@@ -14490,6 +14710,10 @@
       "en": "Nanfengxian",
       "zh": "[TODO] Nanfengxian"
     },
+    "Nangarhar": {
+      "en": "Nangarhar",
+      "zh": "[TODO] Nangarhar"
+    },
     "Nangong": {
       "en": "Nangong",
       "zh": "[TODO] Nangong"
@@ -14950,9 +15174,17 @@
       "en": "Nimaxian",
       "zh": "[TODO] Nimaxian"
     },
+    "Nimroz": {
+      "en": "Nimroz",
+      "zh": "[TODO] Nimroz"
+    },
     "Nimuxian": {
       "en": "Nimuxian",
       "zh": "[TODO] Nimuxian"
+    },
+    "Ninawa": {
+      "en": "Ninawa",
+      "zh": "[TODO] Ninawa"
     },
     "Ninganxian": {
       "en": "Ninganxian",
@@ -15197,6 +15429,10 @@
     "North Kazakhstan": {
       "en": "North Kazakhstan",
       "zh": "[TODO] North Kazakhstan"
+    },
+    "North Khorasan": {
+      "en": "North Khorasan",
+      "zh": "[TODO] North Khorasan"
     },
     "North Lanarkshire": {
       "en": "North Lanarkshire",
@@ -15457,6 +15693,10 @@
     "Nurimanovsky District": {
       "en": "Nurimanovsky District",
       "zh": "[TODO] Nurimanovsky District"
+    },
+    "Nuristan": {
+      "en": "Nuristan",
+      "zh": "[TODO] Nuristan"
     },
     "Nurlatsky District": {
       "en": "Nurlatsky District",
@@ -15982,6 +16222,14 @@
       "en": "Padova",
       "zh": "Padova"
     },
+    "Paktika": {
+      "en": "Paktika",
+      "zh": "[TODO] Paktika"
+    },
+    "Paktya": {
+      "en": "Paktya",
+      "zh": "[TODO] Paktya"
+    },
     "Palaiseau": {
       "en": "Palaiseau",
       "zh": "Palaiseau"
@@ -16085,6 +16333,10 @@
     "Parthenay": {
       "en": "Parthenay",
       "zh": "Parthenay"
+    },
+    "Parwan": {
+      "en": "Parwan",
+      "zh": "[TODO] Parwan"
     },
     "Passau, Kreisfreie Stadt": {
       "en": "Passau, Kreisfreie Stadt",
@@ -17138,6 +17390,10 @@
       "en": "Qazax",
       "zh": "[TODO] Qazax"
     },
+    "Qazvin": {
+      "en": "Qazvin",
+      "zh": "[TODO] Qazvin"
+    },
     "Qianan": {
       "en": "Qianan",
       "zh": "[TODO] Qianan"
@@ -17474,6 +17730,10 @@
       "en": "Qobustan",
       "zh": "[TODO] Qobustan"
     },
+    "Qom": {
+      "en": "Qom",
+      "zh": "[TODO] Qom"
+    },
     "Qostanay": {
       "en": "Qostanay",
       "zh": "[TODO] Qostanay"
@@ -17685,6 +17945,10 @@
     "Ravensburg": {
       "en": "Ravensburg",
       "zh": "Ravensburg"
+    },
+    "Razavi Khorasan": {
+      "en": "Razavi Khorasan",
+      "zh": "[TODO] Razavi Khorasan"
     },
     "Recklinghausen": {
       "en": "Recklinghausen",
@@ -18430,6 +18694,10 @@
       "en": "Saky",
       "zh": "[TODO] Saky"
     },
+    "Sala ad-Din": {
+      "en": "Sala ad-Din",
+      "zh": "[TODO] Sala ad-Din"
+    },
     "Salamanca": {
       "en": "Salamanca",
       "zh": "Salamanca"
@@ -18457,6 +18725,10 @@
     "Salzlandkreis": {
       "en": "Salzlandkreis",
       "zh": "Salzlandkreis"
+    },
+    "Samangan": {
+      "en": "Samangan",
+      "zh": "[TODO] Samangan"
     },
     "Samara": {
       "en": "Samara",
@@ -18581,6 +18853,10 @@
     "Sarcelles": {
       "en": "Sarcelles",
       "zh": "Sarcelles"
+    },
+    "Sari Pul": {
+      "en": "Sari Pul",
+      "zh": "[TODO] Sari Pul"
     },
     "Sarlat-la-Canéda": {
       "en": "Sarlat-la-Canéda",
@@ -18785,6 +19061,10 @@
     "Semiluksky District": {
       "en": "Semiluksky District",
       "zh": "[TODO] Semiluksky District"
+    },
+    "Semnan": {
+      "en": "Semnan",
+      "zh": "[TODO] Semnan"
     },
     "Sengileyevsky District": {
       "en": "Sengileyevsky District",
@@ -19778,6 +20058,10 @@
       "en": "Sishuixian",
       "zh": "[TODO] Sishuixian"
     },
+    "Sistan and Baluchestan": {
+      "en": "Sistan and Baluchestan",
+      "zh": "[TODO] Sistan and Baluchestan"
+    },
     "Sivas": {
       "en": "Sivas",
       "zh": "Sivas"
@@ -20077,6 +20361,10 @@
     "South Kazakhstan": {
       "en": "South Kazakhstan",
       "zh": "[TODO] South Kazakhstan"
+    },
+    "South Khorasan": {
+      "en": "South Khorasan",
+      "zh": "[TODO] South Khorasan"
     },
     "South Lanarkshire": {
       "en": "South Lanarkshire",
@@ -20890,6 +21178,10 @@
       "en": "Taizhoushi",
       "zh": "[TODO] Taizhoushi"
     },
+    "Takhar": {
+      "en": "Takhar",
+      "zh": "[TODO] Takhar"
+    },
     "Takhtamukaysky District": {
       "en": "Takhtamukaysky District",
       "zh": "[TODO] Takhtamukaysky District"
@@ -21081,6 +21373,10 @@
     "Tbilissky District": {
       "en": "Tbilissky District",
       "zh": "[TODO] Tbilissky District"
+    },
+    "Tehran": {
+      "en": "Tehran",
+      "zh": "[TODO] Tehran"
     },
     "Tekeshixian": {
       "en": "Tekeshixian",
@@ -22142,6 +22438,10 @@
       "en": "Urus-Martanovsky District",
       "zh": "[TODO] Urus-Martanovsky District"
     },
+    "Uruzgan": {
+      "en": "Uruzgan",
+      "zh": "[TODO] Uruzgan"
+    },
     "Urvansky District": {
       "en": "Urvansky District",
       "zh": "[TODO] Urvansky District"
@@ -23114,6 +23414,10 @@
       "en": "Wanzaixian",
       "zh": "[TODO] Wanzaixian"
     },
+    "Wardak": {
+      "en": "Wardak",
+      "zh": "[TODO] Wardak"
+    },
     "Warendorf": {
       "en": "Warendorf",
       "zh": "Warendorf"
@@ -23141,6 +23445,10 @@
     "Warwickshire": {
       "en": "Warwickshire",
       "zh": "Warwickshire"
+    },
+    "Wasit": {
+      "en": "Wasit",
+      "zh": "[TODO] Wasit"
     },
     "Wałbrzych": {
       "en": "Wałbrzych",
@@ -23337,6 +23645,10 @@
     "West": {
       "en": "West",
       "zh": "West"
+    },
+    "West Azarbaijan": {
+      "en": "West Azarbaijan",
+      "zh": "[TODO] West Azarbaijan"
     },
     "West Cumbria": {
       "en": "West Cumbria",
@@ -24866,6 +25178,10 @@
       "en": "Yavoriv",
       "zh": "[TODO] Yavoriv"
     },
+    "Yazd": {
+      "en": "Yazd",
+      "zh": "[TODO] Yazd"
+    },
     "Yechengxian": {
       "en": "Yechengxian",
       "zh": "[TODO] Yechengxian"
@@ -25698,6 +26014,10 @@
       "en": "Zabrze",
       "zh": "[TODO] Zabrze"
     },
+    "Zabul": {
+      "en": "Zabul",
+      "zh": "[TODO] Zabul"
+    },
     "Zachepylivka": {
       "en": "Zachepylivka",
       "zh": "[TODO] Zachepylivka"
@@ -25757,6 +26077,10 @@
     "Zamość": {
       "en": "Zamość",
       "zh": "[TODO] Zamość"
+    },
+    "Zanjan": {
+      "en": "Zanjan",
+      "zh": "[TODO] Zanjan"
     },
     "Zaoksky District": {
       "en": "Zaoksky District",
