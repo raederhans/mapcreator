@@ -259,7 +259,7 @@ function initSidebar({ render } = {}) {
         toggle.type = "button";
         toggle.className =
           "rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-100";
-        toggle.textContent = expanded.has(code) ? "▾" : "▸";
+        toggle.textContent = expanded.has(code) ? "v" : ">";
         toggle.addEventListener("click", () => {
           if (expanded.has(code)) {
             expanded.delete(code);

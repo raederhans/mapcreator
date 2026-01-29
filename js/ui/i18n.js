@@ -69,4 +69,19 @@ function initTranslations() {
   updateUIText();
 }
 
-export { t, initTranslations, toggleLanguage, updateUIText };
+function getTooltipText(feature) {
+  if (!feature) return "";
+  const rawName =
+    feature?.properties?.name ||
+    feature?.properties?.name_en ||
+    feature?.properties?.NAME ||
+    "Unknown Region";
+  const name = t(rawName, "geo");
+  const code = (feature?.properties?.cntr_code || "").toUpperCase();
+  const label = state.currentLanguage === "zh" ? "区域" : "Region";
+  if (!name && !code) return label;
+  if (code) return `${label}: ${name} (${code})`;
+  return `${label}: ${name}`;
+}
+
+export { t, initTranslations, toggleLanguage, updateUIText, getTooltipText };

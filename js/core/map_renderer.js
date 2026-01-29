@@ -1,6 +1,6 @@
 // Rendering engine (Phase 13)
 import { state } from "./state.js";
-import { t } from "../ui/i18n.js";
+import { getTooltipText } from "../ui/i18n.js";
 
 let mapContainer = null;
 let colorCanvas = null;
@@ -415,10 +415,8 @@ function handleMouseMove(event) {
   if (!tooltip) return;
   if (id && state.landIndex.has(id)) {
     const feature = state.landIndex.get(id);
-    const rawName = feature?.properties?.name || "Unknown Region";
-    const name = t(rawName, "geo");
-    const code = (feature?.properties?.cntr_code || "").toUpperCase();
-    tooltip.textContent = code ? `${name} (${code})` : name;
+    const text = getTooltipText(feature);
+    tooltip.textContent = text;
     tooltip.style.left = `${event.clientX + 12}px`;
     tooltip.style.top = `${event.clientY + 12}px`;
     tooltip.style.opacity = "1";
