@@ -50,80 +50,9 @@ import topojson as tp
 from shapely.geometry import Point, box
 from shapely.ops import transform
 
+import config as cfg
 from tools import generate_hierarchy, translate_manager
 
-URL = (
-    "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/"
-    "NUTS_RG_10M_2021_3035_LEVL_3.geojson"
-)
-RIVERS_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_rivers_lake_centerlines.zip"
-BORDERS_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_countries.zip"
-BORDER_LINES_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_boundary_lines_land.zip"
-OCEAN_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_ocean.zip"
-LAND_BG_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_land.zip"
-URBAN_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_urban_areas.zip"
-PHYSICAL_URL = "https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_geography_regions_polys.zip"
-ADMIN1_URL = "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_states_provinces.zip"
-FR_ARR_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/arrondissements.geojson"
-FR_ARR_FALLBACK_URL = "https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/arrondissements.geojson"
-PL_POWIATY_URL = "https://raw.githubusercontent.com/jusuff/PolandGeoJson/main/data/poland.counties.json"
-CHINA_CITY_URL = (
-    "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/CHN/ADM2/"
-    "geoBoundaries-CHN-ADM2.geojson"
-)
-RUS_ADM2_URL = (
-    "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/RUS/ADM2/"
-    "geoBoundaries-RUS-ADM2.geojson"
-)
-UKR_ADM2_URL = (
-    "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/UKR/ADM2/"
-    "geoBoundaries-UKR-ADM2.geojson"
-)
-
-COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
-EXTENSION_COUNTRIES = {
-    "RU",
-    "BY",
-    "MD",
-    "KZ",
-    "UZ",
-    "TM",
-    "KG",
-    "TJ",
-    "GE",
-    "AM",
-    "AZ",
-    "MN",
-    "JP",
-    "KR",
-    "KP",
-    "TW",
-}
-EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
-EUROPE_BOUNDS = (-25.0, 10.0, 180.0, 83.0)
-
-# Simplification tolerances (WGS84 degrees)
-SIMPLIFY_NUTS3 = 0.002
-SIMPLIFY_ADMIN1 = 0.02
-SIMPLIFY_BORDERS = 0.005
-SIMPLIFY_BORDER_LINES = 0.003
-SIMPLIFY_BACKGROUND = 0.03
-SIMPLIFY_URBAN = 0.01
-SIMPLIFY_PHYSICAL = 0.02
-SIMPLIFY_CHINA = 0.01
-SIMPLIFY_RU_UA = 0.025
-URAL_LONGITUDE = 60.0
-
-VIP_POINTS = [
-    ("Malta", (14.3754, 35.9375)),
-    ("Isle of Wight", (-1.3047, 50.6938)),
-    ("Ibiza", (1.4206, 38.9067)),
-    ("Menorca", (4.1105, 39.9496)),
-    ("Rugen", (13.3915, 54.4174)),
-    ("Bornholm", (14.9141, 55.127)),
-    ("Jersey", (-2.1312, 49.2144)),
-    ("Aland Islands", (19.9156, 60.1785)),
-]
 
 
 def fetch_geojson(url: str) -> dict:
@@ -227,7 +156,13 @@ def fetch_or_load_geojson(url: str, filename: str, fallback_urls: list[str] | No
                     headers={"User-Agent": "MapCreator/1.0"},
                 )
                 response.raise_for_status()
-                cache_path.write_bytes(response.content)
+                content = response.content
+                try:
+                    json.loads(content.decode("utf-8"))
+                except Exception as exc:
+                    print(f"[ERROR] Downloaded data is not valid JSON: {exc}")
+                    continue
+                cache_path.write_bytes(content)
                 return True
             except requests.RequestException as exc:
                 print(f"   [Download] {source} attempt {attempt}/{attempts} failed: {exc}")
@@ -267,7 +202,7 @@ def filter_countries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     print("Filtering NUTS-3 to Europe...")
     filtered = gdf.copy()
     if "NUTS_ID" in filtered.columns:
-        mask = ~filtered["NUTS_ID"].str.startswith(EXCLUDED_NUTS_PREFIXES)
+        mask = ~filtered["NUTS_ID"].str.startswith(cfg.EXCLUDED_NUTS_PREFIXES)
         filtered = filtered[mask]
     else:
         print("Column NUTS_ID not found; overseas prefix filter skipped.")
@@ -322,9 +257,9 @@ def apply_holistic_replacements(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     print(f"  [Holistic] Features after removing FR: {len(base)}")
 
     fr_gdf = fetch_or_load_geojson(
-        FR_ARR_URL,
-        "france_arrondissements.geojson",
-        fallback_urls=[FR_ARR_FALLBACK_URL],
+        cfg.FR_ARR_URL,
+        cfg.FR_ARR_FILENAME,
+        fallback_urls=cfg.FR_ARR_FALLBACK_URLS,
     )
 
     if fr_gdf.empty:
@@ -346,7 +281,7 @@ def apply_holistic_replacements(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     fr_gdf["cntr_code"] = "FR"
     fr_gdf = fr_gdf[["id", "name", "cntr_code", "geometry"]].copy()
     fr_gdf["geometry"] = fr_gdf.geometry.simplify(
-        tolerance=SIMPLIFY_NUTS3, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_NUTS3, preserve_topology=True
     )
 
     combined = pd.concat([base, fr_gdf], ignore_index=True)
@@ -364,11 +299,9 @@ def apply_poland_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     print("Downloading Poland powiaty...")
     pl_gdf = fetch_or_load_geojson(
-        PL_POWIATY_URL,
-        "poland_powiaty.geojson",
-        fallback_urls=[
-            "https://cdn.jsdelivr.net/gh/jusuff/PolandGeoJson@main/data/poland.counties.json"
-        ],
+        cfg.PL_POWIATY_URL,
+        cfg.PL_POWIATY_FILENAME,
+        fallback_urls=cfg.PL_POWIATY_FALLBACK_URLS,
     )
 
     if pl_gdf.empty:
@@ -414,7 +347,7 @@ def apply_poland_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     pl_gdf = pl_gdf.drop(columns=["temp_area"])
     pl_gdf = pl_gdf[["id", "name", "cntr_code", "geometry"]].copy()
     pl_gdf["geometry"] = pl_gdf.geometry.simplify(
-        tolerance=SIMPLIFY_NUTS3, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_NUTS3, preserve_topology=True
     )
 
     combined = pd.concat([base, pl_gdf], ignore_index=True)
@@ -433,12 +366,9 @@ def apply_china_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     print("Downloading China ADM2 (geoBoundaries)...")
     cn_gdf = fetch_or_load_geojson(
-        CHINA_CITY_URL,
-        "china_adm2.geojson",
-        fallback_urls=[
-            "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/CHN/ADM2/geoBoundaries-CHN-ADM2.geojson",
-            "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/CHN/ADM2/geoBoundaries-CHN-ADM2.geojson",
-        ],
+        cfg.CHINA_CITY_URL,
+        cfg.CHINA_ADM2_FILENAME,
+        fallback_urls=cfg.CHINA_CITY_FALLBACK_URLS,
     )
 
     if cn_gdf.empty:
@@ -506,7 +436,7 @@ def apply_china_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     # Aggressive simplification for geoBoundaries (high-res) to avoid huge files.
     cn_gdf["geometry"] = cn_gdf.geometry.simplify(
-        tolerance=SIMPLIFY_CHINA, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_CHINA, preserve_topology=True
     )
     cn_gdf["id"] = "CN_CITY_" + cn_gdf[id_col].astype(str)
     cn_gdf["name"] = cn_gdf[name_col].astype(str)
@@ -544,7 +474,7 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
     ru_admin1 = main_gdf[main_gdf["cntr_code"].astype(str).str.upper() == "RU"].copy()
     if not ru_admin1.empty:
         ru_admin1["__rep_lon"] = _rep_longitudes(ru_admin1)
-        ru_east = ru_admin1[ru_admin1["__rep_lon"] >= URAL_LONGITUDE].copy()
+        ru_east = ru_admin1[ru_admin1["__rep_lon"] >= cfg.URAL_LONGITUDE].copy()
         ru_east = ru_east.drop(columns=["__rep_lon"])
     else:
         ru_east = ru_admin1
@@ -552,11 +482,9 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
     # Russia: replace west with ADM2
     print("Downloading Russia ADM2 (geoBoundaries)...")
     ru_gdf = fetch_or_load_geojson(
-        RUS_ADM2_URL,
-        "geoBoundaries-RUS-ADM2.geojson",
-        fallback_urls=[
-            "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/RUS/ADM2/geoBoundaries-RUS-ADM2.geojson"
-        ],
+        cfg.RUS_ADM2_URL,
+        cfg.RUS_ADM2_FILENAME,
+        fallback_urls=cfg.RUS_ADM2_FALLBACK_URLS,
     )
     if ru_gdf.empty:
         print("Russia ADM2 GeoDataFrame is empty.")
@@ -578,24 +506,22 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
         )
     ru_gdf = ru_gdf.copy()
     ru_gdf["__rep_lon"] = _rep_longitudes(ru_gdf)
-    ru_gdf = ru_gdf[ru_gdf["__rep_lon"] < URAL_LONGITUDE].copy()
+    ru_gdf = ru_gdf[ru_gdf["__rep_lon"] < cfg.URAL_LONGITUDE].copy()
     ru_gdf = ru_gdf.drop(columns=["__rep_lon"])
     ru_gdf["id"] = "RU_RAY_" + ru_gdf["shapeID"].astype(str)
     ru_gdf["name"] = ru_gdf["shapeName"].astype(str)
     ru_gdf["cntr_code"] = "RU"
     ru_gdf = ru_gdf[["id", "name", "cntr_code", "geometry"]].copy()
     ru_gdf["geometry"] = ru_gdf.geometry.simplify(
-        tolerance=SIMPLIFY_RU_UA, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_RU_UA, preserve_topology=True
     )
 
     # Ukraine: full ADM2 replacement
     print("Downloading Ukraine ADM2 (geoBoundaries)...")
     ua_gdf = fetch_or_load_geojson(
-        UKR_ADM2_URL,
-        "geoBoundaries-UKR-ADM2.geojson",
-        fallback_urls=[
-            "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/UKR/ADM2/geoBoundaries-UKR-ADM2.geojson"
-        ],
+        cfg.UKR_ADM2_URL,
+        cfg.UKR_ADM2_FILENAME,
+        fallback_urls=cfg.UKR_ADM2_FALLBACK_URLS,
     )
     if ua_gdf.empty:
         print("Ukraine ADM2 GeoDataFrame is empty.")
@@ -615,7 +541,7 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
     ua_gdf["cntr_code"] = "UA"
     ua_gdf = ua_gdf[["id", "name", "cntr_code", "geometry"]].copy()
     ua_gdf["geometry"] = ua_gdf.geometry.simplify(
-        tolerance=SIMPLIFY_RU_UA, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_RU_UA, preserve_topology=True
     )
 
     combined = pd.concat([base, ru_east, ru_gdf, ua_gdf], ignore_index=True)
@@ -626,11 +552,11 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
 
 
 def build_border_lines() -> gpd.GeoDataFrame:
-    border_lines = fetch_ne_zip(BORDER_LINES_URL, "border_lines")
+    border_lines = fetch_ne_zip(cfg.BORDER_LINES_URL, "border_lines")
     border_lines = clip_to_europe_bounds(border_lines, "border lines")
     border_lines = border_lines.copy()
     border_lines["geometry"] = border_lines.geometry.simplify(
-        tolerance=SIMPLIFY_BORDER_LINES, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_BORDER_LINES, preserve_topology=True
     )
     return border_lines
 
@@ -653,7 +579,7 @@ def smart_island_cull(
         print(f"Smart cull area calc failed, keeping original: {exc}")
         return gdf
 
-    vip_points = [Point(lon, lat) for _, (lon, lat) in VIP_POINTS]
+    vip_points = [Point(lon, lat) for _, (lon, lat) in cfg.VIP_POINTS]
     try:
         exploded_ll = exploded.to_crs("EPSG:4326")
         exploded["vip_keep"] = exploded_ll.geometry.apply(
@@ -702,7 +628,7 @@ def smart_island_cull(
 
 
 def clip_to_europe_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame:
-    minx, miny, maxx, maxy = EUROPE_BOUNDS
+    minx, miny, maxx, maxy = cfg.EUROPE_BOUNDS
     bbox_geom = box(minx, miny, maxx, maxy)
     try:
         gdf = gdf.to_crs("EPSG:4326")
@@ -729,7 +655,7 @@ def clip_to_europe_bounds(gdf: gpd.GeoDataFrame, label: str) -> gpd.GeoDataFrame
 
 
 def despeckle_hybrid(
-    gdf: gpd.GeoDataFrame, area_km2: float = 500.0, tolerance: float = SIMPLIFY_NUTS3
+    gdf: gpd.GeoDataFrame, area_km2: float = 500.0, tolerance: float = cfg.SIMPLIFY_NUTS3
 ) -> gpd.GeoDataFrame:
     if gdf.empty or "id" not in gdf.columns:
         return gdf
@@ -823,7 +749,7 @@ def clip_borders(gdf: gpd.GeoDataFrame, land: gpd.GeoDataFrame) -> gpd.GeoDataFr
 
 
 def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    admin1 = fetch_ne_zip(ADMIN1_URL, "admin1")
+    admin1 = fetch_ne_zip(cfg.ADMIN1_URL, "admin1")
     admin1 = admin1.to_crs("EPSG:4326")
     admin1 = clip_to_europe_bounds(admin1, "admin1")
 
@@ -836,7 +762,7 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         raise SystemExit(1)
 
     admin1 = admin1[
-          admin1[iso_col].isin(EXTENSION_COUNTRIES)
+          admin1[iso_col].isin(cfg.EXTENSION_COUNTRIES)
           | admin1[name_col].isin(
               {
                   "Russia",
@@ -883,7 +809,7 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     admin1 = admin1[["id", "name", "cntr_code", "geometry"]].copy()
     admin1["geometry"] = admin1.geometry.simplify(
-        tolerance=SIMPLIFY_ADMIN1, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_ADMIN1, preserve_topology=True
     )
     return admin1
 
@@ -892,7 +818,7 @@ def build_balkan_fallback(
     existing: gpd.GeoDataFrame, admin0: gpd.GeoDataFrame | None = None
 ) -> gpd.GeoDataFrame:
     if admin0 is None:
-        admin0 = fetch_ne_zip(BORDERS_URL, "admin0_balkan")
+        admin0 = fetch_ne_zip(cfg.BORDERS_URL, "admin0_balkan")
     admin0 = admin0.to_crs("EPSG:4326")
     admin0 = clip_to_europe_bounds(admin0, "balkan fallback")
 
@@ -958,7 +884,7 @@ def build_balkan_fallback(
     balkan["id"] = balkan["cntr_code"].astype(str) + "_" + balkan["name"].astype(str)
     balkan = balkan[["id", "name", "cntr_code", "geometry"]].copy()
     balkan["geometry"] = balkan.geometry.simplify(
-        tolerance=SIMPLIFY_ADMIN1, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_ADMIN1, preserve_topology=True
     )
     return balkan
 
@@ -1110,43 +1036,43 @@ def build_topology(
         print(f"TopoJSON validation skipped: {exc}")
 
 def main() -> None:
-    data = fetch_geojson(URL)
+    data = fetch_geojson(cfg.URL)
     gdf = build_geodataframe(data)
     gdf = clip_to_europe_bounds(gdf, "nuts")
     filtered = filter_countries(gdf)
     filtered = filtered.copy()
     filtered["geometry"] = filtered.geometry.simplify(
-        tolerance=SIMPLIFY_NUTS3, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_NUTS3, preserve_topology=True
     )
-    rivers = fetch_ne_zip(RIVERS_URL, "rivers")
+    rivers = fetch_ne_zip(cfg.RIVERS_URL, "rivers")
     rivers = clip_to_europe_bounds(rivers, "rivers")
     rivers_clipped = clip_to_land_bounds(rivers, filtered, "rivers")
-    borders = fetch_ne_zip(BORDERS_URL, "borders")
+    borders = fetch_ne_zip(cfg.BORDERS_URL, "borders")
     borders = clip_to_europe_bounds(borders, "borders")
     border_lines = build_border_lines()
-    ocean = fetch_ne_zip(OCEAN_URL, "ocean")
+    ocean = fetch_ne_zip(cfg.OCEAN_URL, "ocean")
     ocean = clip_to_europe_bounds(ocean, "ocean")
     ocean_clipped = clip_to_land_bounds(ocean, filtered, "ocean")
     ocean_clipped = ocean_clipped.copy()
     ocean_clipped["geometry"] = ocean_clipped.geometry.simplify(
-        tolerance=SIMPLIFY_BACKGROUND, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_BACKGROUND, preserve_topology=True
     )
-    land_bg = fetch_ne_zip(LAND_BG_URL, "land")
+    land_bg = fetch_ne_zip(cfg.LAND_BG_URL, "land")
     land_bg = clip_to_europe_bounds(land_bg, "land background")
     land_bg_clipped = clip_to_land_bounds(land_bg, filtered, "land background")
     land_bg_clipped = land_bg_clipped.copy()
     land_bg_clipped["geometry"] = land_bg_clipped.geometry.simplify(
-        tolerance=SIMPLIFY_BACKGROUND, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_BACKGROUND, preserve_topology=True
     )
-    urban = fetch_ne_zip(URBAN_URL, "urban")
+    urban = fetch_ne_zip(cfg.URBAN_URL, "urban")
     urban = clip_to_europe_bounds(urban, "urban")
     urban_clipped = clip_to_land_bounds(urban, filtered, "urban")
     # Aggressively simplify urban geometry to reduce render cost
     urban_clipped = urban_clipped.copy()
     urban_clipped["geometry"] = urban_clipped.geometry.simplify(
-        tolerance=SIMPLIFY_URBAN, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_URBAN, preserve_topology=True
     )
-    physical = fetch_ne_zip(PHYSICAL_URL, "physical")
+    physical = fetch_ne_zip(cfg.PHYSICAL_URL, "physical")
     physical = clip_to_europe_bounds(physical, "physical")
     physical_clipped = clip_to_land_bounds(physical, filtered, "physical")
     if "featurecla" in physical_clipped.columns:
@@ -1160,7 +1086,7 @@ def main() -> None:
     # Simplify physical regions to reduce vertex count
     physical_filtered = physical_filtered.copy()
     physical_filtered["geometry"] = physical_filtered.geometry.simplify(
-        tolerance=SIMPLIFY_PHYSICAL, preserve_topology=True
+        tolerance=cfg.SIMPLIFY_PHYSICAL, preserve_topology=True
     )
     # Preserve key metadata for styling/labels
     keep_cols = ["name", "name_en", "featurecla", "geometry"]
@@ -1226,12 +1152,13 @@ def main() -> None:
             print("Borders dataset missing ISO A2 column; spatial join skipped.")
         else:
             try:
-                missing = final_hybrid.loc[missing_mask].copy()
+                missing = final_hybrid.loc[missing_mask].copy().to_crs("EPSG:4326")
+                missing["geometry"] = missing.geometry.representative_point()
                 joined = gpd.sjoin(
                     missing,
                     borders_ll[[code_col, "geometry"]],
                     how="left",
-                    predicate="intersects",
+                    predicate="within",
                 )
                 filled = joined[code_col]
                 filled = filled.where(~filled.isin(["-99", "", None]))
