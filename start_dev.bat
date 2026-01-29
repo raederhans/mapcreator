@@ -31,7 +31,7 @@ if errorlevel 1 (
 echo [SUCCESS] Data Ready. Opening Browser...
 start "" "http://localhost:8000"
 
-echo [INFO] Starting Server on Port 8000...
-%PYTHON_CMD% -m http.server 8000
+echo [INFO] Starting Server on Port 8000 (IPv4)...
+%PYTHON_CMD% -m http.server 8000 --bind 127.0.0.1
 
 endlocal

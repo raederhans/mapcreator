@@ -56,6 +56,7 @@ from map_builder.processors.china import apply_china_replacement
 from map_builder.processors.france import apply_holistic_replacements
 from map_builder.processors.poland import apply_poland_replacement
 from map_builder.processors.russia_ukraine import apply_russia_ukraine_replacement
+from map_builder.processors.south_asia import apply_south_asia_replacement
 from map_builder.outputs.save import save_outputs
 from tools import generate_hierarchy, translate_manager
 
@@ -375,6 +376,7 @@ def main() -> None:
     hybrid = apply_russia_ukraine_replacement(hybrid)
     hybrid = apply_poland_replacement(hybrid)
     hybrid = apply_china_replacement(hybrid)
+    hybrid = apply_south_asia_replacement(hybrid, land_bg_clipped)
     final_hybrid = smart_island_cull(hybrid, group_col="id", threshold_km2=1000.0)
 
     final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("").astype(str).str.strip()

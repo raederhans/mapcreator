@@ -50,6 +50,10 @@ def build_extension_admin1(land: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
                 "South Korea",
                 "North Korea",
                 "Taiwan",
+                "Nepal",
+                "Bhutan",
+                "Myanmar",
+                "Sri Lanka",
             }
         )
     ].copy()

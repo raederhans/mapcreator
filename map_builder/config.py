@@ -49,12 +49,22 @@ UKR_ADM2_FALLBACK_URLS = [
     "geoBoundaries-UKR-ADM2.geojson",
 ]
 
+IND_ADM2_URL = (
+    "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/IND/ADM2/"
+    "geoBoundaries-IND-ADM2.geojson"
+)
+IND_ADM2_FALLBACK_URLS = [
+    "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/IND/ADM2/"
+    "geoBoundaries-IND-ADM2.geojson",
+]
+
 # Local filenames (cache)
 FR_ARR_FILENAME = "france_arrondissements.geojson"
 PL_POWIATY_FILENAME = "poland_powiaty.geojson"
 CHINA_ADM2_FILENAME = "china_adm2.geojson"
 RUS_ADM2_FILENAME = "geoBoundaries-RUS-ADM2.geojson"
 UKR_ADM2_FILENAME = "geoBoundaries-UKR-ADM2.geojson"
+IND_ADM2_FILENAME = "geoBoundaries-IND-ADM2.geojson"
 
 # Geography configuration
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
@@ -78,9 +88,13 @@ EXTENSION_COUNTRIES = {
     "KR",
     "KP",
     "TW",
+    "NP",
+    "BT",
+    "MM",
+    "LK",
 }
 EXCLUDED_NUTS_PREFIXES = ("FRY", "PT2", "PT3", "ES7")
-EUROPE_BOUNDS = (-25.0, 10.0, 180.0, 83.0)
+EUROPE_BOUNDS = (-25.0, 5.0, 180.0, 83.0)
 
 # Simplification tolerances (WGS84 degrees)
 SIMPLIFY_NUTS3 = 0.002
@@ -92,6 +106,7 @@ SIMPLIFY_URBAN = 0.01
 SIMPLIFY_PHYSICAL = 0.02
 SIMPLIFY_CHINA = 0.01
 SIMPLIFY_RU_UA = 0.025
+SIMPLIFY_INDIA = 0.015
 URAL_LONGITUDE = 60.0
 
 VIP_POINTS = [
