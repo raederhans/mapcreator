@@ -1,7 +1,17 @@
 import json
 from pathlib import Path
 
-from geo_seeds import EUROPE_GEO_SEEDS
+try:
+    # Attempt absolute import (for when running from root via init_map_data.py)
+    from tools.geo_seeds import EUROPE_GEO_SEEDS
+except ImportError:
+    try:
+        # Attempt local import (for when running script directly from tools/ dir)
+        from geo_seeds import EUROPE_GEO_SEEDS
+    except ImportError:
+        raise ImportError(
+            "Could not import geo_seeds. Ensure execution from root or tools/ directory."
+        )
 
 
 MANUAL_UI_DICT = {

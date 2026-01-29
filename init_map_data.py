@@ -1,6 +1,7 @@
 """Initialize and prepare NUTS-3 map data for Map Creator."""
 from __future__ import annotations
 
+import json
 import math
 import sys
 import subprocess
@@ -49,6 +50,7 @@ import topojson as tp
 from shapely.geometry import Point, box
 from shapely.ops import transform
 
+from tools import generate_hierarchy, translate_manager
 
 URL = (
     "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/"
@@ -375,7 +377,8 @@ def apply_poland_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     print(f"   [Debug] Poland Columns: {pl_gdf.columns.tolist()}")
     if not pl_gdf.empty:
-        print(f"   [Debug] First row sample: {pl_gdf.iloc[0].to_dict()}")
+        sample = pl_gdf.iloc[0].drop(labels=["geometry"], errors="ignore").to_dict()
+        print(f"   [Debug] First row sample: {json.dumps(sample, ensure_ascii=True)}")
 
     pl_gdf = pl_gdf.copy()
     try:
@@ -415,7 +418,7 @@ def apply_poland_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     )
 
     combined = pd.concat([base, pl_gdf], ignore_index=True)
-    print(f"🇵🇱 Poland Replacement: Loaded {len(pl_gdf)} counties (Goal: ~380).")
+    print(f"[Poland] Replacement: Loaded {len(pl_gdf)} counties (Goal: ~380).")
     return gpd.GeoDataFrame(combined, crs=main_gdf.crs)
 
 
@@ -444,7 +447,8 @@ def apply_china_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     print(f"   [Debug] China Columns: {cn_gdf.columns.tolist()}")
     if not cn_gdf.empty:
-        print(f"   [Debug] First row sample: {cn_gdf.iloc[0].to_dict()}")
+        sample = cn_gdf.iloc[0].drop(labels=["geometry"], errors="ignore").to_dict()
+        print(f"   [Debug] First row sample: {json.dumps(sample, ensure_ascii=True)}")
 
     cn_gdf = cn_gdf.copy()
     try:
@@ -511,7 +515,7 @@ def apply_china_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     cn_gdf = cn_gdf[["id", "name", "cntr_code", "geometry"]].copy()
 
     combined = pd.concat([base, cn_gdf], ignore_index=True)
-    print(f"🇨🇳 China Replacement: Loaded {len(cn_gdf)} city regions.")
+    print(f"[China] Replacement: Loaded {len(cn_gdf)} city regions.")
     return gpd.GeoDataFrame(combined, crs=main_gdf.crs)
 
 
@@ -561,6 +565,12 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
         ru_gdf = ru_gdf.set_crs("EPSG:4326", allow_override=True)
     if ru_gdf.crs.to_epsg() != 4326:
         ru_gdf = ru_gdf.to_crs("EPSG:4326")
+    # Clip to prevent dateline wrapping artifacts (keep Russia in Eastern Hemisphere)
+    clip_box = box(-20.0, 0.0, 179.99, 90.0)
+    try:
+        ru_gdf = gpd.clip(ru_gdf, clip_box)
+    except Exception as exc:
+        print(f"RU ADM2 clip failed; continuing without clip: {exc}")
     if "shapeID" not in ru_gdf.columns or "shapeName" not in ru_gdf.columns:
         raise ValueError(
             "Russia ADM2 dataset missing expected columns: shapeID/shapeName. "
@@ -610,7 +620,7 @@ def apply_russia_ukraine_replacement(main_gdf: gpd.GeoDataFrame) -> gpd.GeoDataF
 
     combined = pd.concat([base, ru_east, ru_gdf, ua_gdf], ignore_index=True)
     print(
-        f"🇷🇺/🇺🇦 RU/UA Replacement: RU west ADM2 {len(ru_gdf)}, RU east Admin1 {len(ru_east)}, UA ADM2 {len(ua_gdf)}."
+        f"[RU/UA] Replacement: RU west ADM2 {len(ru_gdf)}, RU east Admin1 {len(ru_east)}, UA ADM2 {len(ua_gdf)}."
     )
     return gpd.GeoDataFrame(combined, crs=main_gdf.crs)
 
@@ -1265,6 +1275,12 @@ def main() -> None:
         output_path=topology_path,
         quantization=100_000,
     )
+
+    print("[INFO] Generating Hierarchy Data....")
+    generate_hierarchy.main()
+
+    print("[INFO] Syncing Translations....")
+    translate_manager.main()
 
     print(f"Features with missing CNTR_CODE: {final_hybrid['cntr_code'].isnull().sum()}")
     print("Done.")

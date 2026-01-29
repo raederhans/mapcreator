@@ -39,6 +39,8 @@ CN_TYPE_COLS = ["type_en", "type", "adm1_type", "name_type"]
 ADMIN1_NAME_COLS = ["name_en", "name", "name_long", "name_local", "gn_name", "namealt"]
 ADMIN1_ISO_COLS = ["iso_a2", "adm0_a2", "iso_3166_1_", "iso_3166_1_alpha_2"]
 ADMIN1_ADM0_COLS = ["admin", "adm0_name", "admin0_name"]
+ADMIN1_ID_COLS = ["adm1_code", "gn_id", "id"]
+URAL_LONGITUDE = 60.0
 
 POLAND_VOIVODESHIPS = {
     "02": "Lower Silesian",
@@ -200,6 +202,11 @@ def centroid_points(gdf, epsg=3857):
     projected["geometry"] = projected.geometry.centroid
     return projected.to_crs(original_crs)
 
+def representative_longitudes(gdf):
+    gdf = ensure_crs(gdf)
+    reps = gdf.geometry.representative_point()
+    return reps.x
+
 
 def slugify(text):
     cleaned = re.sub(r"[^A-Za-z0-9]+", "_", str(text).strip())
@@ -348,6 +355,95 @@ def build_admin2_groups(adm2_path: Path, adm1_path: Path, iso_code: str, child_p
     return groups, labels
 
 
+def build_russia_groups_hybrid(adm2_path: Path, adm1_path: Path):
+    adm2 = gpd.read_file(adm2_path)
+    if "shapeID" not in adm2.columns:
+        raise ValueError("RU ADM2 missing shapeID column.")
+    adm2 = ensure_crs(adm2)
+
+    try:
+        rep_lon = representative_longitudes(adm2)
+        adm2_west = adm2.loc[rep_lon < URAL_LONGITUDE].copy()
+    except Exception:
+        adm2_west = adm2.copy()
+
+    adm1 = gpd.read_file(adm1_path)
+    adm1 = ensure_crs(adm1)
+    adm1_country = filter_admin1_by_iso(adm1, "RU", fallback_names=["Russia"])
+
+    name_col = pick_column(adm1_country.columns, ADMIN1_NAME_COLS)
+    if not name_col:
+        raise ValueError("RU ADM1 missing name columns.")
+
+    groups = defaultdict(list)
+    labels = {}
+
+    if not adm2_west.empty:
+        centroids = centroid_points(adm2_west)
+        adm1_join = adm1_country[[name_col, "geometry"]].copy()
+        joined = gpd.sjoin(centroids, adm1_join, how="left", predicate="within")
+
+        if joined[name_col].isna().any():
+            try:
+                missing = joined[name_col].isna()
+                nearest = gpd.sjoin_nearest(
+                    centroids.loc[missing].copy(),
+                    adm1_join,
+                    how="left",
+                    distance_col="distance",
+                )
+                joined.loc[missing, name_col] = nearest[name_col].values
+            except Exception:
+                pass
+
+        for _, row in joined.iterrows():
+            region = row.get(name_col)
+            if not region or str(region).strip() == "":
+                continue
+            group_id = f"RU_{slugify(region)}"
+            child_id = f"RU_RAY_{row['shapeID']}"
+            if child_id not in groups[group_id]:
+                groups[group_id].append(child_id)
+            if group_id not in labels:
+                labels[group_id] = str(region)
+
+    try:
+        rep_lon_adm1 = representative_longitudes(adm1_country)
+        adm1_east = adm1_country.loc[rep_lon_adm1 >= URAL_LONGITUDE].copy()
+    except Exception:
+        adm1_east = adm1_country.copy()
+
+    if not adm1_east.empty:
+        id_col = pick_column(adm1_east.columns, ADMIN1_ID_COLS)
+        if not id_col:
+            iso_col = pick_column(adm1_east.columns, ADMIN1_ISO_COLS)
+            adm1_east = adm1_east.copy()
+            if iso_col:
+                adm1_east["adm1_code"] = (
+                    adm1_east[iso_col].astype(str)
+                    + "_"
+                    + adm1_east[name_col].astype(str)
+                )
+            else:
+                adm1_east["adm1_code"] = "RU_" + adm1_east[name_col].astype(str)
+            id_col = "adm1_code"
+
+        for _, row in adm1_east.iterrows():
+            region = row.get(name_col)
+            if not region or str(region).strip() == "":
+                continue
+            child_id = str(row.get(id_col, "")).strip()
+            if not child_id:
+                continue
+            group_id = f"RU_{slugify(region)}"
+            if child_id not in groups[group_id]:
+                groups[group_id].append(child_id)
+            if group_id not in labels:
+                labels[group_id] = str(region)
+
+    return groups, labels
+
+
 def build_poland_groups(powiat_path: Path):
     gdf = gpd.read_file(powiat_path)
     if "terc" not in gdf.columns:
@@ -427,12 +523,9 @@ def main():
         raise SystemExit("Could not find ne_10m_admin_1_states_provinces in data/.")
 
     cn_groups, cn_labels = build_china_groups(adm2_path, adm1_path)
-    ru_groups, ru_labels = build_admin2_groups(
+    ru_groups, ru_labels = build_russia_groups_hybrid(
         ru_path,
         adm1_path,
-        "RU",
-        "RU",
-        country_names=["Russia"],
     )
     ua_groups, ua_labels = build_admin2_groups(
         ua_path,
