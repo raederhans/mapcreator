@@ -437,7 +437,7 @@ export const state = {
       width: 0.5,
     },
     empireBorders: {
-      color: "#000000",
+      color: "#666666",
       width: 1.0,
     },
     coastlines: {

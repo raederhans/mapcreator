@@ -241,11 +241,11 @@ function renderColorLayer() {
   if (state.landBgData) {
     colorCtx.beginPath();
     colorPath(state.landBgData);
-    colorCtx.fillStyle = "#e0e0e0";
+    colorCtx.fillStyle = "#e4e4e4";
     colorCtx.fill();
   }
 
-  colorCtx.fillStyle = "#d9d9d9";
+  colorCtx.fillStyle = "#d6d6d6";
   for (const feature of state.landData.features) {
     if ((k < 2 && boundsPath.area(feature) * k * k < state.TINY_AREA) || !pathBoundsInScreen(feature)) {
       continue;
@@ -276,6 +276,13 @@ function renderLineLayer() {
   applyTransform(lineCtx);
   lineCtx.lineJoin = "round";
   lineCtx.lineCap = "round";
+  const internalOpacityBase = k < 2 ? 0.3 : k < 4 ? 0.6 : 0.85;
+  const internalWidth =
+    (state.styleConfig.internalBorders.width * (k < 3 ? 0.6 : 1.6)) / k;
+  const empireWidth =
+    (state.styleConfig.empireBorders.width * (k < 2 ? 1.5 : 1.2)) / k;
+  const coastlineWidth =
+    (state.styleConfig.coastlines.width * (k < 2 ? 0.9 : 1.1)) / k;
 
   if (state.showPhysical && state.physicalData) {
     for (const feature of state.physicalData.features) {
@@ -345,17 +352,18 @@ function renderLineLayer() {
       lineCtx.beginPath();
       linePath(coastlines);
       lineCtx.strokeStyle = state.styleConfig.coastlines.color;
-      lineCtx.lineWidth = state.styleConfig.coastlines.width / k;
+      lineCtx.lineWidth = coastlineWidth;
       lineCtx.stroke();
     }
 
     const gridLines = state.cachedGridLines;
     if (gridLines) {
-      lineCtx.globalAlpha = state.styleConfig.internalBorders.opacity;
+      lineCtx.globalAlpha =
+        state.styleConfig.internalBorders.opacity * internalOpacityBase;
       lineCtx.beginPath();
       linePath(gridLines);
       lineCtx.strokeStyle = state.styleConfig.internalBorders.color;
-      lineCtx.lineWidth = state.styleConfig.internalBorders.width / k;
+      lineCtx.lineWidth = internalWidth;
       lineCtx.stroke();
     }
 
@@ -366,7 +374,7 @@ function renderLineLayer() {
       lineCtx.beginPath();
       linePath(dynamicBorders);
       lineCtx.strokeStyle = state.styleConfig.empireBorders.color;
-      lineCtx.lineWidth = state.styleConfig.empireBorders.width / k;
+      lineCtx.lineWidth = empireWidth;
       lineCtx.stroke();
     }
   }
@@ -702,7 +710,7 @@ export function initMap({ containerId = "mapContainer" } = {}) {
 
   const zoom = globalThis.d3
     .zoom()
-    .scaleExtent([0.5, 8])
+    .scaleExtent([1, 50])
     .on("start", () => {
       state.isInteracting = true;
     })
