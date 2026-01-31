@@ -4,3 +4,5 @@ mapclassify
 requests
 shapely
 topojson
+pandas
+scipy
