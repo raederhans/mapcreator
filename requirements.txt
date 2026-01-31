@@ -1,0 +1,6 @@
+geopandas
+matplotlib
+mapclassify
+requests
+shapely
+topojson
