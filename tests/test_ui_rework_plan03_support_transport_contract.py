@@ -37,6 +37,70 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertNotIn("Use Frontline after you apply a scenario. This section combines", content)
         self.assertNotIn("lblExportInfoTooltip", content)
 
+
+    def test_left_sidebar_typography_and_redundant_copy_contract(self):
+        index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+
+        for token in [
+            'id="scenarioStatus" class="body-text visually-hidden"',
+            'id="scenarioAuditHint" class="body-text visually-hidden hidden"',
+        ]:
+            self.assertIn(token, index_content)
+
+        for removed in [
+            'id="appearanceLayerFilter"',
+            'id="lblAppearanceFilter"',
+            'id="lblTextureInfo"',
+            'Apply a subtle overlay texture for a vintage map feel.',
+            'id="cityPointsPresetDensityGroupHint"',
+            'id="cityPointsMarkerDensityHint"',
+            'id="cityPointsLabelDensityHint"',
+            'id="cityPointsAdvancedHint"',
+        ]:
+            self.assertNotIn(removed, index_content)
+
+        for token in [
+            "#leftSidebar {",
+            "--left-panel-font-section: 0.86rem;",
+            "--left-panel-font-control: 0.74rem;",
+            "#leftSidebar .toggle-label,",
+            "#leftSidebar .palette-library-title,",
+            "#appearancePanelLayers .appearance-subsection-stack,",
+            "#appearancePanelTexture > .space-y-3",
+            ".appearance-control-card {",
+            ".appearance-ocean-grid {",
+            ".appearance-day-night-stack {",
+            "#appearancePanelLayers .appearance-mini-section .ml-5 {",
+            ".city-points-toggle-card,",
+            ".rivers-toggle-card,",
+            ".transport-family-body > section,",
+            ".transport-family-section {",
+        ]:
+            self.assertIn(token, css_content)
+
+        for token in [
+            'class="appearance-control-card" aria-labelledby="lblOceanSurfaceCard"',
+            'id="lblOceanStyleCard" class="appearance-control-card-title"',
+            'id="lblOceanTextureCard" class="appearance-control-card-title"',
+            'class="toggle-label appearance-day-night-card"',
+            'class="mode-toggle-row appearance-day-night-mode-row"',
+            'id="cityPointsHelpTooltip" class="info-tooltip"',
+            'id="lblCityPointsStyleGroup" class="appearance-control-card-title"',
+            'id="lblCityPointsLabelGroup" class="appearance-control-card-title"',
+            'id="lblRiversStrokeGroup" class="appearance-control-card-title"',
+            'id="lblRiversOutlineGroup" class="appearance-control-card-title"',
+            'class="transport-master-toggle-card"',
+        ]:
+            self.assertIn(token, index_content)
+
+    def test_river_dash_style_applies_to_outline_and_core_strokes(self):
+        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+        self.assertIn("const resolvedDashPattern = dashPattern.map((value) => value / scale);", renderer_content)
+        self.assertGreaterEqual(renderer_content.count("context.setLineDash(resolvedDashPattern);"), 2)
+        self.assertIn('dashStyle: String(cfg.dashStyle || "solid"),', renderer_content)
+        self.assertIn("dashPattern: resolvedDashPattern,", renderer_content)
+
     def test_transport_shell_uses_phase03_titles_and_status_contract(self):
         content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         required_tokens = [

@@ -122,6 +122,7 @@ export function createAppearanceControlsController({
   const cityPointsMarkerDensity = document.getElementById("cityPointsMarkerDensity");
   const cityPointsMarkerDensityHint = document.getElementById("cityPointsMarkerDensityHint");
   const cityPointsLabelDensity = document.getElementById("cityPointsLabelDensity");
+  const cityPointsLabelDensityHint = document.getElementById("cityPointsLabelDensityHint");
   const cityPointsColor = document.getElementById("cityPointsColor");
   const cityPointsCapitalColor = document.getElementById("cityPointsCapitalColor");
   const cityPointsOpacity = document.getElementById("cityPointsOpacity");

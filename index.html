@@ -71,8 +71,8 @@
           <details class="card sidebar-details-card" aria-labelledby="lblScenario">
             <summary id="lblScenario" class="section-header">Scenario</summary>
             <div class="sidebar-details-body">
-              <div id="scenarioStatus" class="body-text">No scenario active</div>
-              <div id="scenarioAuditHint" class="body-text mt-2 hidden">Coverage report unavailable</div>
+              <div id="scenarioStatus" class="body-text visually-hidden">No scenario active</div>
+              <div id="scenarioAuditHint" class="body-text visually-hidden hidden">Coverage report unavailable</div>
               <label id="lblScenarioSelect" class="section-header-block mt-3" for="scenarioSelect">Scenario</label>
               <select id="scenarioSelect" name="scenario-select" autocomplete="off" class="select-input mt-2">
                 <option id="optScenarioNone" value="">None</option>
@@ -172,69 +172,86 @@
                 aria-labelledby="appearanceTabOcean"
               >
                 <h2 id="lblOcean" class="section-header">Ocean</h2>
-                <div class="space-y-3 mt-3">
-                  <div class="flex items-center justify-between gap-3">
-                    <label id="lblOceanFillColor" class="range-label" for="oceanFillColor">Fill Color</label>
-                    <input id="oceanFillColor" type="color" value="#aadaff" class="color-input" />
-                  </div>
-                  <label class="toggle-label">
-                    <input id="lakeLinkToOcean" type="checkbox" class="checkbox-input" checked />
-                    <span id="lblLakeLinkToOcean" data-i18n="Link Lakes To Ocean">Link Lakes To Ocean</span>
-                  </label>
-                  <div class="flex items-center justify-between gap-3">
-                    <label id="lblLakeFillColor" class="range-label" for="lakeFillColor" data-i18n="Lake Fill Color">Lake Fill Color</label>
-                    <input id="lakeFillColor" type="color" value="#aadaff" class="color-input" />
-                  </div>
-                  <div id="oceanCoastalAccentRow" class="space-y-2 hidden">
-                    <label class="toggle-label">
-                      <input id="oceanCoastalAccentToggle" type="checkbox" class="checkbox-input" checked />
-                      <span id="lblOceanCoastalAccent">Coastal Accent</span>
-                    </label>
-                    <p id="oceanCoastalAccentHint" class="sidebar-tool-hint">
-                      Available only in the TNO 1962 scenario.
-                    </p>
-                  </div>
-                  <label class="toggle-label">
-                    <input id="oceanAdvancedStylesToggle" type="checkbox" class="checkbox-input" />
-                    <span id="lblOceanAdvancedStylesToggle">Experimental Bathymetry</span>
-                  </label>
-                  <p id="oceanAdvancedStylesHint" class="sidebar-tool-hint">
-                    Enable data-driven bathymetry presets for testing. May reduce pan and zoom performance.
-                  </p>
-                  <div>
-                    <div class="range-row">
-                      <label id="lblOceanStyle" class="range-label" for="oceanStyleSelect">Style</label>
+                <div class="appearance-ocean-grid mt-3">
+                  <section class="appearance-control-card" aria-labelledby="lblOceanSurfaceCard">
+                    <h3 id="lblOceanSurfaceCard" class="appearance-control-card-title">Surface Colors</h3>
+                    <div class="appearance-control-card-stack">
+                      <div class="flex items-center justify-between gap-3">
+                        <label id="lblOceanFillColor" class="range-label" for="oceanFillColor">Fill Color</label>
+                        <input id="oceanFillColor" type="color" value="#aadaff" class="color-input" />
+                      </div>
+                      <label class="toggle-label">
+                        <input id="lakeLinkToOcean" type="checkbox" class="checkbox-input" checked />
+                        <span id="lblLakeLinkToOcean" data-i18n="Link Lakes To Ocean">Link Lakes To Ocean</span>
+                      </label>
+                      <div class="flex items-center justify-between gap-3">
+                        <label id="lblLakeFillColor" class="range-label" for="lakeFillColor" data-i18n="Lake Fill Color">Lake Fill Color</label>
+                        <input id="lakeFillColor" type="color" value="#aadaff" class="color-input" />
+                      </div>
+                      <div id="oceanCoastalAccentRow" class="space-y-2 hidden">
+                        <label class="toggle-label">
+                          <input id="oceanCoastalAccentToggle" type="checkbox" class="checkbox-input" checked />
+                          <span id="lblOceanCoastalAccent">Coastal Accent</span>
+                        </label>
+                        <p id="oceanCoastalAccentHint" class="sidebar-tool-hint">
+                          Available only in the TNO 1962 scenario.
+                        </p>
+                      </div>
                     </div>
-                    <select id="oceanStyleSelect" class="select-input mt-2">
-                      <option id="optOceanFlat" value="flat" selected>Flat Blue</option>
-                      <option id="optOceanBathymetrySoft" value="bathymetry_soft" disabled>Bathymetry Soft</option>
-                      <option id="optOceanBathymetryContours" value="bathymetry_contours" disabled>Bathymetry Contours</option>
-                    </select>
-                    <p id="oceanStylePresetHint" class="sidebar-tool-hint mt-2">
-                      Flat Blue keeps the ocean fill clean with no bathymetry overlay.
-                    </p>
-                  </div>
-                  <div>
-                    <div class="range-row">
-                      <label id="lblOceanOpacity" class="range-label" for="oceanTextureOpacity">Opacity</label>
-                      <span id="oceanTextureOpacityValue" class="range-value">72%</span>
+                  </section>
+
+                  <section class="appearance-control-card" aria-labelledby="lblOceanStyleCard">
+                    <h3 id="lblOceanStyleCard" class="appearance-control-card-title">Bathymetry Style</h3>
+                    <div class="appearance-control-card-stack">
+                      <label class="toggle-label">
+                        <input id="oceanAdvancedStylesToggle" type="checkbox" class="checkbox-input" />
+                        <span id="lblOceanAdvancedStylesToggle">Experimental Bathymetry</span>
+                      </label>
+                      <p id="oceanAdvancedStylesHint" class="sidebar-tool-hint">
+                        Enable data-driven bathymetry presets for testing. May reduce pan and zoom performance.
+                      </p>
+                      <div>
+                        <div class="range-row">
+                          <label id="lblOceanStyle" class="range-label" for="oceanStyleSelect">Style</label>
+                        </div>
+                        <select id="oceanStyleSelect" class="select-input mt-2">
+                          <option id="optOceanFlat" value="flat" selected>Flat Blue</option>
+                          <option id="optOceanBathymetrySoft" value="bathymetry_soft" disabled>Bathymetry Soft</option>
+                          <option id="optOceanBathymetryContours" value="bathymetry_contours" disabled>Bathymetry Contours</option>
+                        </select>
+                        <p id="oceanStylePresetHint" class="sidebar-tool-hint mt-2">
+                          Flat Blue keeps the ocean fill clean with no bathymetry overlay.
+                        </p>
+                      </div>
                     </div>
-                    <input id="oceanTextureOpacity" type="range" min="0" max="100" value="72" class="range-input" />
-                  </div>
-                  <div>
-                    <div class="range-row">
-                      <label id="lblOceanScale" class="range-label" for="oceanTextureScale">Scale</label>
-                      <span id="oceanTextureScaleValue" class="range-value">1.00x</span>
+                  </section>
+
+                  <section class="appearance-control-card" aria-labelledby="lblOceanTextureCard">
+                    <h3 id="lblOceanTextureCard" class="appearance-control-card-title">Texture Tuning</h3>
+                    <div class="appearance-control-card-stack">
+                      <div>
+                        <div class="range-row">
+                          <label id="lblOceanOpacity" class="range-label" for="oceanTextureOpacity">Opacity</label>
+                          <span id="oceanTextureOpacityValue" class="range-value">72%</span>
+                        </div>
+                        <input id="oceanTextureOpacity" type="range" min="0" max="100" value="72" class="range-input" />
+                      </div>
+                      <div>
+                        <div class="range-row">
+                          <label id="lblOceanScale" class="range-label" for="oceanTextureScale">Scale</label>
+                          <span id="oceanTextureScaleValue" class="range-value">1.00x</span>
+                        </div>
+                        <input id="oceanTextureScale" type="range" min="60" max="240" step="1" value="100" class="range-input" />
+                      </div>
+                      <div>
+                        <div class="range-row">
+                          <label id="lblOceanContourStrength" class="range-label" for="oceanContourStrength">Contour Strength</label>
+                          <span id="oceanContourStrengthValue" class="range-value">75%</span>
+                        </div>
+                        <input id="oceanContourStrength" type="range" min="0" max="100" value="75" class="range-input" />
+                      </div>
                     </div>
-                    <input id="oceanTextureScale" type="range" min="60" max="240" step="1" value="100" class="range-input" />
-                  </div>
-                  <div>
-                    <div class="range-row">
-                      <label id="lblOceanContourStrength" class="range-label" for="oceanContourStrength">Contour Strength</label>
-                      <span id="oceanContourStrengthValue" class="range-value">75%</span>
-                    </div>
-                    <input id="oceanContourStrength" type="range" min="0" max="100" value="75" class="range-input" />
-                  </div>
+                  </section>
                   <details id="oceanBathymetryDebugDetails" class="appearance-mini-section dev-only">
                     <summary id="lblOceanBathymetryDebug" class="section-header">Bathymetry Debug</summary>
                     <div class="space-y-3 mt-3">
@@ -417,19 +434,6 @@
                 hidden
               >
                 <h2 id="lblContextLayers" class="section-header">Context Layers</h2>
-                <div class="appearance-filter-row mt-3">
-                  <label id="lblAppearanceFilter" class="visually-hidden" for="appearanceLayerFilter" data-i18n="Filter context layers">Filter context layers</label>
-                  <input
-                    id="appearanceLayerFilter"
-                    type="text"
-                    name="appearance-layer-filter"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder="Filter layers..."
-                    data-i18n-placeholder="Filter layers..."
-                    class="input appearance-filter-input"
-                  />
-                </div>
                 <div class="appearance-subsection-stack mt-3">
                   <details class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="physical regions terrain atlas terrain contours">
                     <summary id="lblPhysicalPanel" class="section-header">Physical Regions</summary>
@@ -709,18 +713,24 @@
                   <details class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="city points capitals labels">
                     <summary id="lblCityPointsPanel" class="section-header">City Points</summary>
                     <div class="mt-3 city-points-panel">
-                      <label class="toggle-label mt-2">
-                        <input id="toggleCityPoints" type="checkbox" class="checkbox-input" checked />
-                        <span id="lblCityPointsLayer">City Points</span>
-                      </label>
+                      <div class="city-points-toggle-card">
+                        <label class="toggle-label">
+                          <input id="toggleCityPoints" type="checkbox" class="checkbox-input" checked />
+                          <span id="lblCityPointsLayer">City Points</span>
+                        </label>
+                        <span class="summary-info-trigger city-points-help-trigger" tabindex="0" role="button" aria-label="City points help" data-i18n-aria-label="City points help">
+                          <svg class="summary-info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
+                            <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                          </svg>
+                          <span id="cityPointsHelpTooltip" class="info-tooltip" data-i18n="Pick a restrained style, then tune marker density and label density for the current map scale.">Pick a restrained style, then tune marker density and label density for the current map scale.</span>
+                        </span>
+                      </div>
                       <div class="city-points-panel-body ml-5">
                         <div class="city-points-panel-stack">
-                          <section class="appearance-prop-group city-points-control-group">
-                            <div class="city-points-control-group-head">
-                              <h4 id="lblCityPointsPresetDensityGroup" class="city-points-control-group-title" data-i18n="Preset & Density">Preset &amp; Density</h4>
-                              <p id="cityPointsPresetDensityGroupHint" class="city-points-control-group-hint" data-i18n="Choose a restrained map treatment first, then tune how many point markers and labels are allowed to surface.">Choose a restrained map treatment first, then tune how many point markers and labels are allowed to surface.</p>
-                            </div>
-                            <div class="space-y-3">
+                          <section class="appearance-control-card city-points-style-card" aria-labelledby="lblCityPointsStyleGroup">
+                            <h4 id="lblCityPointsStyleGroup" class="appearance-control-card-title" data-i18n="Style">Style</h4>
+                            <div class="appearance-control-card-stack">
                               <div>
                                 <div class="range-row">
                                   <label id="lblCityPointsStylePreset" class="range-label" for="cityPointsTheme">Style Preset</label>
@@ -732,7 +742,6 @@
                                   <option id="optCityPointsThemeSlateBlue" value="slate_blue">Slate Blue</option>
                                   <option id="optCityPointsThemeIvoryOutline" value="ivory_outline">Ivory Outline</option>
                                 </select>
-                                <p id="cityPointsThemeHint" class="panel-hint mt-2" data-i18n="Five muted presets tuned for political maps, atlas views, and historical overlays.">Five muted presets tuned for political maps, atlas views, and historical overlays.</p>
                               </div>
                               <div>
                                 <div class="range-row">
@@ -747,8 +756,20 @@
                                   <span id="cityPointsMarkerDensityValue" class="range-value">1.00x</span>
                                 </div>
                                 <input id="cityPointsMarkerDensity" type="range" min="0.50" max="2.00" step="0.05" value="1.00" class="range-input" />
-                                <p id="cityPointsMarkerDensityHint" class="panel-hint mt-2" data-i18n="Controls how many point markers can appear across the current viewport before labels are considered.">Controls how many point markers can appear across the current viewport before labels are considered.</p>
                               </div>
+                              <div>
+                                <div class="range-row">
+                                  <label id="lblCityPointsOpacity" class="range-label" for="cityPointsOpacity">Point Opacity</label>
+                                  <span id="cityPointsOpacityValue" class="range-value">94%</span>
+                                </div>
+                                <input id="cityPointsOpacity" type="range" min="0" max="100" value="94" class="range-input" />
+                              </div>
+                            </div>
+                          </section>
+
+                          <section class="appearance-control-card city-points-label-card" aria-labelledby="lblCityPointsLabelGroup">
+                            <h4 id="lblCityPointsLabelGroup" class="appearance-control-card-title" data-i18n="Labels">Labels</h4>
+                            <div class="appearance-control-card-stack">
                               <div>
                                 <div class="range-row">
                                   <label id="lblCityPointsLabelDensity" class="range-label" for="cityPointsLabelDensity">Label Density</label>
@@ -758,14 +779,6 @@
                                   <option id="optCityLabelDensityBalanced" value="balanced" selected>Balanced</option>
                                   <option id="optCityLabelDensityDense" value="dense">Dense</option>
                                 </select>
-                                <p id="cityPointsLabelDensityHint" class="panel-hint mt-2" data-i18n="Controls how many labels can appear per viewport once cities are already eligible to render.">Controls how many labels can appear per viewport once cities are already eligible to render.</p>
-                              </div>
-                              <div>
-                                <div class="range-row">
-                                  <label id="lblCityPointsOpacity" class="range-label" for="cityPointsOpacity">Point Opacity</label>
-                                  <span id="cityPointsOpacityValue" class="range-value">94%</span>
-                                </div>
-                                <input id="cityPointsOpacity" type="range" min="0" max="100" value="94" class="range-input" />
                               </div>
                               <div class="city-points-toggle-stack">
                                 <label class="toggle-label">
@@ -783,7 +796,6 @@
                           <details class="appearance-mini-section appearance-mini-section-subtle city-points-advanced">
                             <summary id="lblCityPointsAdvanced" class="section-header">Advanced</summary>
                             <div class="space-y-3 mt-3">
-                              <p id="cityPointsAdvancedHint" class="panel-hint city-points-advanced-hint" data-i18n="Fine-tune colors and label size once the preset and density feel close.">Fine-tune colors and label size once the preset and density feel close.</p>
                               <div class="flex items-center justify-between gap-3">
                                 <label id="lblCityPointsColor" class="range-label" for="cityPointsColor">Point Color</label>
                                 <input id="cityPointsColor" type="color" value="#2f343a" class="color-input" />
@@ -808,50 +820,65 @@
 
                   <details class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="rivers waterways">
                     <summary id="lblRiversPanel" class="section-header">Rivers</summary>
-                    <div class="mt-3">
-                      <label class="toggle-label mt-2">
-                        <input id="toggleRivers" type="checkbox" class="checkbox-input" checked />
-                        <span id="lblRiversLayer">Rivers</span>
-                      </label>
-                      <div class="ml-5 space-y-2">
-                        <div class="flex items-center justify-between gap-3">
-                          <label id="lblRiversColor" class="range-label" for="riversColor">Color</label>
-                          <input id="riversColor" type="color" value="#3b82f6" class="color-input" />
-                        </div>
-                        <div>
-                          <div class="range-row">
-                            <label id="lblRiversOpacity" class="range-label" for="riversOpacity">Opacity</label>
-                            <span id="riversOpacityValue" class="range-value">88%</span>
-                          </div>
-                          <input id="riversOpacity" type="range" min="0" max="100" value="88" class="range-input" />
-                        </div>
-                        <div>
-                          <div class="range-row">
-                            <label id="lblRiversWidth" class="range-label" for="riversWidth">Width</label>
-                            <span id="riversWidthValue" class="range-value">0.50</span>
-                          </div>
-                          <input id="riversWidth" type="range" min="0.2" max="4.0" step="0.05" value="0.50" class="range-input" />
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                          <label id="lblRiversOutlineColor" class="range-label" for="riversOutlineColor">Outline Color</label>
-                          <input id="riversOutlineColor" type="color" value="#e2efff" class="color-input" />
-                        </div>
-                        <div>
-                          <div class="range-row">
-                            <label id="lblRiversOutlineWidth" class="range-label" for="riversOutlineWidth">Outline Width</label>
-                            <span id="riversOutlineWidthValue" class="range-value">0.25</span>
-                          </div>
-                          <input id="riversOutlineWidth" type="range" min="0.0" max="3.0" step="0.05" value="0.25" class="range-input" />
-                        </div>
-                        <div>
-                          <div class="range-row">
-                            <label id="lblRiversDashStyle" class="range-label" for="riversDashStyle">Dash</label>
-                          </div>
-                          <select id="riversDashStyle" class="select-input mt-2">
-                            <option id="optRiversDashSolid" value="solid" selected>Solid</option>
-                            <option id="optRiversDashDashed" value="dashed">Dashed</option>
-                            <option id="optRiversDashDotted" value="dotted">Dotted</option>
-                          </select>
+                    <div class="mt-3 rivers-panel">
+                      <div class="rivers-toggle-card">
+                        <label class="toggle-label">
+                          <input id="toggleRivers" type="checkbox" class="checkbox-input" checked />
+                          <span id="lblRiversLayer">Rivers</span>
+                        </label>
+                      </div>
+                      <div class="rivers-panel-body ml-5">
+                        <div class="rivers-panel-stack">
+                          <section class="appearance-control-card rivers-stroke-card" aria-labelledby="lblRiversStrokeGroup">
+                            <h4 id="lblRiversStrokeGroup" class="appearance-control-card-title" data-i18n="River Stroke">River Stroke</h4>
+                            <div class="appearance-control-card-stack">
+                              <div class="flex items-center justify-between gap-3">
+                                <label id="lblRiversColor" class="range-label" for="riversColor">Color</label>
+                                <input id="riversColor" type="color" value="#3b82f6" class="color-input" />
+                              </div>
+                              <div>
+                                <div class="range-row">
+                                  <label id="lblRiversOpacity" class="range-label" for="riversOpacity">Opacity</label>
+                                  <span id="riversOpacityValue" class="range-value">88%</span>
+                                </div>
+                                <input id="riversOpacity" type="range" min="0" max="100" value="88" class="range-input" />
+                              </div>
+                              <div>
+                                <div class="range-row">
+                                  <label id="lblRiversWidth" class="range-label" for="riversWidth">Width</label>
+                                  <span id="riversWidthValue" class="range-value">0.50</span>
+                                </div>
+                                <input id="riversWidth" type="range" min="0.2" max="4.0" step="0.05" value="0.50" class="range-input" />
+                              </div>
+                            </div>
+                          </section>
+
+                          <section class="appearance-control-card rivers-outline-card" aria-labelledby="lblRiversOutlineGroup">
+                            <h4 id="lblRiversOutlineGroup" class="appearance-control-card-title" data-i18n="Outline & Dash">Outline &amp; Dash</h4>
+                            <div class="appearance-control-card-stack">
+                              <div class="flex items-center justify-between gap-3">
+                                <label id="lblRiversOutlineColor" class="range-label" for="riversOutlineColor">Outline Color</label>
+                                <input id="riversOutlineColor" type="color" value="#e2efff" class="color-input" />
+                              </div>
+                              <div>
+                                <div class="range-row">
+                                  <label id="lblRiversOutlineWidth" class="range-label" for="riversOutlineWidth">Outline Width</label>
+                                  <span id="riversOutlineWidthValue" class="range-value">0.25</span>
+                                </div>
+                                <input id="riversOutlineWidth" type="range" min="0.0" max="3.0" step="0.05" value="0.25" class="range-input" />
+                              </div>
+                              <div>
+                                <div class="range-row">
+                                  <label id="lblRiversDashStyle" class="range-label" for="riversDashStyle">Dash</label>
+                                </div>
+                                <select id="riversDashStyle" class="select-input mt-2">
+                                  <option id="optRiversDashSolid" value="solid" selected>Solid</option>
+                                  <option id="optRiversDashDashed" value="dashed">Dashed</option>
+                                  <option id="optRiversDashDotted" value="dotted">Dotted</option>
+                                </select>
+                              </div>
+                            </div>
+                          </section>
                         </div>
                       </div>
                     </div>
@@ -869,13 +896,13 @@
                 hidden
               >
                 <h2 id="lblDayNightPanel" class="section-header">Day / Night</h2>
-                <div class="space-y-3 mt-3">
-                  <label class="toggle-label">
+                <div class="appearance-day-night-stack mt-3">
+                  <label class="toggle-label appearance-day-night-card">
                     <input id="dayNightEnabled" type="checkbox" class="checkbox-input" />
                     <span id="lblDayNightEnabled">Enable Day / Night Cycle</span>
                   </label>
 
-                  <div class="mode-toggle-row" role="group" aria-label="Day and night mode" data-i18n-aria-label="Day and night mode">
+                  <div class="mode-toggle-row appearance-day-night-mode-row" role="group" aria-label="Day and night mode" data-i18n-aria-label="Day and night mode">
                     <button
                       id="dayNightModeManualBtn"
                       type="button"
@@ -896,7 +923,7 @@
                     </button>
                   </div>
 
-                  <div id="dayNightManualControls">
+                  <div id="dayNightManualControls" class="appearance-day-night-card">
                     <div class="range-row">
                       <label id="lblDayNightTime" class="range-label" for="dayNightManualTime">UTC Time</label>
                       <span id="dayNightManualTimeValue" class="range-value">12:00 UTC</span>
@@ -912,15 +939,15 @@
                     />
                   </div>
 
-                  <div id="dayNightUtcStatus" class="day-night-status hidden" aria-live="polite">
+                  <div id="dayNightUtcStatus" class="day-night-status appearance-day-night-card hidden" aria-live="polite">
                     <div id="dayNightCurrentTime" class="day-night-status-value">12:00 UTC</div>
                     <div id="dayNightModeHint" class="parent-border-empty mt-2">
                       Live UTC sync updates once per minute.
                     </div>
                   </div>
 
-                  <div>
-                    <label class="toggle-label mt-2">
+                  <div class="appearance-day-night-card">
+                    <label class="toggle-label">
                       <input id="dayNightCityLightsEnabled" type="checkbox" class="checkbox-input" checked />
                       <span id="lblDayNightCityLights">City Lights</span>
                     </label>
@@ -946,7 +973,7 @@
                     </div>
                   </div>
 
-                  <details class="appearance-mini-section">
+                  <details class="appearance-mini-section appearance-day-night-advanced">
                     <summary id="lblDayNightAdvanced" class="section-header">Advanced</summary>
                     <div class="space-y-2 mt-3">
                       <div>
@@ -1105,17 +1132,7 @@
               >
                 <h2 id="lblTexture" class="section-header">Texture</h2>
                 <div class="space-y-3 mt-3">
-                  <div class="flex items-center justify-between">
-                    <h3 id="lblTextureInfo" class="section-header" data-i18n="Texture Overlay">Texture Overlay</h3>
-                    <div class="relative info-trigger">
-                      <svg class="info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
-                        <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-                      </svg>
-                      <div class="info-tooltip" style="width: 220px;" data-i18n="Apply a subtle overlay texture for a vintage map feel.">Apply a subtle overlay texture for a vintage map feel.</div>
-                    </div>
-                  </div>
-                  <label id="lblOverlay" class="section-header-block mt-2" for="textureSelect">Overlay</label>
+                  <label id="lblOverlay" class="section-header-block" for="textureSelect">Overlay</label>
                   <select id="textureSelect" class="select-input mt-2">
                     <option id="optTextureNone" value="none" selected>Clean</option>
                     <option id="optTexturePaper" value="paper">Old Paper</option>
@@ -1308,10 +1325,12 @@
               >
                 <h2 id="lblTransportPanel" class="section-header">Transport</h2>
                 <div class="appearance-panel-body appearance-panel-body-transport mt-3">
-                  <label class="toggle-label">
-                    <input id="transportAppearanceMasterToggle" type="checkbox" class="checkbox-input" />
-                    <span id="lblTransportAppearanceMasterToggle" data-i18n="Show Transport Overview">Show Transport Overview</span>
-                  </label>
+                  <div class="transport-master-toggle-card">
+                    <label class="toggle-label">
+                      <input id="transportAppearanceMasterToggle" type="checkbox" class="checkbox-input" />
+                      <span id="lblTransportAppearanceMasterToggle" data-i18n="Show Transport Overview">Show Transport Overview</span>
+                    </label>
+                  </div>
 
                   <div id="transportAppearanceFamilies" class="appearance-subsection-stack transport-family-stack mt-3">
                     <details id="transportAirportCard" class="appearance-mini-section transport-family-section">

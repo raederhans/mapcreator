@@ -1342,3 +1342,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 2026-04-29 - runtime-only shell 要在生成源头清旧行，并让 hint 穿过 coarse/startup
 - Arctic shell 这类 runtime-only helper 不能只靠数量判断成功；旧 numeric id、缺 owner/controller hint、coarse chunk 白名单丢字段都会让第一屏显示失去归属颜色。
 - 稳定合同应同时覆盖 source staging、runtime topology、startup bundle、coarse/detail chunks，并让 strict checker 拒绝缺 hint 的 runtime-only shell。
+
+### 2026-04-30 - UI hint removal must keep optional DOM bindings declared
+- 删除可选提示文案节点时，controller 里对应的 getElementById 变量仍要声明为可空；否则 render UI 会 ReferenceError，启动流程可能卡在 scenario boot 末段。

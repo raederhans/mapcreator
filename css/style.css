@@ -1024,6 +1024,14 @@ input[type="checkbox"].checkbox-input {
   gap: 12px;
 }
 
+.color-library-card .palette-library-header-row {
+  padding-right: 0;
+}
+
+.color-library-card .palette-library-toggle-btn {
+  margin-right: -2px;
+}
+
 .palette-library-header-copy {
   min-width: 0;
 }
@@ -1135,6 +1143,7 @@ input[type="checkbox"].checkbox-input {
   height: var(--palette-library-list-min-block);
   max-height: var(--palette-library-list-max-block);
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -1229,6 +1238,8 @@ input[type="checkbox"].checkbox-input {
   gap: 10px;
   align-items: start;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-btn);
@@ -1326,6 +1337,122 @@ input[type="checkbox"].checkbox-input {
   color: var(--text-primary);
   cursor: pointer;
   padding: 4px 0;
+}
+
+#leftSidebar {
+  --left-panel-font-section: 0.86rem;
+  --left-panel-font-card-title: 0.78rem;
+  --left-panel-font-control: 0.74rem;
+  --left-panel-font-meta: 0.68rem;
+  --left-panel-font-label: 0.66rem;
+  --left-panel-line-control: 1.36;
+}
+
+#leftSidebar .sidebar-details-body,
+#leftSidebar .appearance-stack,
+#leftSidebar .palette-library,
+#leftSidebar .special-zone-editor-card {
+  font-size: var(--left-panel-font-control);
+  line-height: var(--left-panel-line-control);
+}
+
+#leftSidebar .section-header {
+  font-size: var(--left-panel-font-section);
+  line-height: 1.32;
+}
+
+#leftSidebar .appearance-mini-section > summary.section-header,
+#leftSidebar .section-header-block,
+#leftSidebar .palette-library-section-title {
+  font-size: var(--left-panel-font-card-title);
+  line-height: 1.28;
+}
+
+#leftSidebar .range-label,
+#leftSidebar .range-value,
+#leftSidebar .toggle-label,
+#leftSidebar .palette-library-row,
+#leftSidebar .palette-library-empty,
+#leftSidebar .parent-border-empty,
+#leftSidebar .panel-hint,
+#leftSidebar .sidebar-tool-hint {
+  font-size: var(--left-panel-font-control);
+  line-height: var(--left-panel-line-control);
+}
+
+#leftSidebar .sidebar-shell-heading,
+#leftSidebar .palette-library-section-count,
+#leftSidebar .palette-library-subtitle {
+  font-size: var(--left-panel-font-meta);
+  line-height: 1.34;
+}
+
+#leftSidebar .palette-library-title,
+#leftSidebar .mode-toggle-btn,
+#leftSidebar .btn-secondary,
+#leftSidebar .btn-primary {
+  font-size: var(--left-panel-font-control);
+}
+
+#leftSidebar .palette-library-meta,
+#leftSidebar .palette-library-title,
+#leftSidebar .palette-library-subtitle {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#leftSidebar .palette-library-meta,
+#leftSidebar .palette-library-title,
+#leftSidebar .palette-library-subtitle {
+  display: block;
+}
+
+#leftSidebar .palette-library-meta {
+  overflow: hidden;
+  text-align: left;
+}
+
+#leftSidebar .palette-library-subtitle {
+  overflow-wrap: anywhere;
+}
+
+#leftSidebar .btn-secondary,
+#leftSidebar .btn-primary {
+  min-height: 34px;
+  padding: 8px 11px;
+  border-radius: 12px;
+}
+
+#leftSidebar .input,
+#leftSidebar .select-input {
+  padding: 9px 11px;
+  font-size: var(--left-panel-font-control);
+  line-height: var(--left-panel-line-control);
+}
+
+#leftSidebar [aria-labelledby="lblScenario"] .section-header-block,
+#leftSidebar [aria-labelledby="lblScenario"] .sidebar-equal-actions {
+  margin-top: 8px;
+}
+
+#leftSidebar [aria-labelledby="lblScenario"] .select-input {
+  margin-top: 6px;
+}
+
+#leftSidebar .appearance-tab-panel {
+  padding: 16px;
+}
+
+#leftSidebar .appearance-tab-panel > .section-header {
+  margin-bottom: 12px;
+}
+
+#leftSidebar .appearance-tab-panel > .mt-3,
+#leftSidebar .appearance-tab-panel > .space-y-3,
+#leftSidebar .appearance-tab-panel > .appearance-subsection-stack,
+#leftSidebar .appearance-tab-panel > .appearance-ocean-grid,
+#leftSidebar .appearance-tab-panel > .appearance-day-night-stack {
+  margin-top: 0;
 }
 
 .appearance-stack {
@@ -1426,7 +1553,7 @@ details.appearance-subsection > *:not(summary),
 .appearance-subsection-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .appearance-mini-section-subtle {
@@ -1456,6 +1583,97 @@ details.appearance-subsection > *:not(summary),
 
 .appearance-filter-input {
   width: 100%;
+}
+
+#appearancePanelLayers .appearance-subsection-stack,
+#appearancePanelTexture > .space-y-3 {
+  margin-top: 10px;
+}
+
+.appearance-control-card {
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.appearance-control-card-title {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-size: var(--left-panel-font-card-title, 0.78rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.appearance-control-card-stack,
+.appearance-ocean-grid,
+.appearance-day-night-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.appearance-control-card-stack {
+  gap: 12px;
+}
+
+.appearance-ocean-grid {
+  gap: 12px;
+}
+
+.appearance-day-night-stack {
+  gap: 14px;
+}
+
+.appearance-day-night-card {
+  padding: 11px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.appearance-day-night-card > .ml-5 {
+  margin-left: 0;
+  margin-top: 12px;
+}
+
+#appearancePanelDayNight .appearance-day-night-mode-row {
+  gap: 10px;
+}
+
+.appearance-day-night-advanced > .space-y-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.appearance-day-night-advanced > .space-y-2 > * + * {
+  margin-top: 0;
+}
+
+#appearancePanelLayers .appearance-mini-section > *:not(summary) {
+  padding: 2px 12px 15px;
+}
+
+#appearancePanelLayers .appearance-mini-section > *:not(summary) > .mt-3 {
+  margin-top: 0;
+}
+
+#appearancePanelLayers .appearance-mini-section .ml-5 {
+  margin-left: 0;
+}
+
+#appearancePanelLayers .appearance-mini-section .ml-5.space-y-2,
+#appearancePanelLayers .city-points-panel-body,
+#appearancePanelLayers .rivers-panel-body {
+  margin-top: 11px;
+  padding: 11px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+#appearancePanelLayers .appearance-mini-section .toggle-label.mt-2 {
+  margin-top: 0;
 }
 
 .appearance-prop-group {
@@ -1505,7 +1723,30 @@ details.appearance-subsection > *:not(summary),
 .transport-family-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+
+.transport-family-section {
+  border-color: rgba(15, 23, 42, 0.1);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.transport-family-section > summary {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(245, 248, 252, 0.58));
+}
+
+.transport-family-body > section,
+.transport-workbench-reminder-card {
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.transport-family-body > section.space-y-2 > * + *,
+.transport-family-body > section.space-y-3 > * + * {
+  margin-top: 10px;
 }
 
 .transport-family-section-disabled {
@@ -1549,17 +1790,20 @@ details.appearance-subsection > *:not(summary),
   line-height: 1.45;
 }
 
-.city-points-panel-body {
+.city-points-panel-body,
+.rivers-panel-body {
   margin-top: 12px;
 }
 
-.city-points-panel-stack {
+.city-points-panel-stack,
+.rivers-panel-stack {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.city-points-control-group {
+.city-points-control-group,
+.rivers-control-group {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1588,23 +1832,52 @@ details.appearance-subsection > *:not(summary),
   line-height: 1.45;
 }
 
+.city-points-toggle-card,
+.rivers-toggle-card,
+.transport-master-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.city-points-help-trigger:focus-visible {
+  outline: 2px solid rgba(0, 47, 167, 0.28);
+  outline-offset: 2px;
+}
+
+.city-points-help-trigger:focus-visible .info-tooltip {
+  opacity: 1;
+}
+
 .city-points-toggle-stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 11px;
+  background: rgba(245, 248, 252, 0.68);
 }
 
-.city-points-panel .range-label {
+.city-points-panel .range-label,
+.rivers-panel .range-label {
   font-size: 0.79rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.city-points-panel .range-value {
+.city-points-panel .range-value,
+.rivers-panel .range-value {
   font-size: 0.75rem;
 }
 
-.city-points-panel .select-input {
+.city-points-panel .select-input,
+.rivers-panel .select-input {
   padding: 10px 12px;
   font-size: 0.82rem;
 }
@@ -2186,7 +2459,10 @@ body:not(.developer-mode) .dev-only {
 }
 
 .sidebar-details-body {
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .sidebar-equal-actions {
@@ -5760,6 +6036,51 @@ body.counter-editor-modal-open {
   line-height: 1.32;
 }
 
+#countryInspectorSection .toggle-label,
+#selectedCountryActionsSection .toggle-label,
+#specialRegionInspectorSection .toggle-label,
+#waterInspectorSection .toggle-label {
+  font-size: var(--inspector-font-control);
+  line-height: var(--inspector-line-control);
+}
+
+#countryInspectorSection .sidebar-field-label,
+#selectedCountryActionsSection .sidebar-field-label,
+#specialRegionInspectorSection .sidebar-field-label,
+#waterInspectorSection .sidebar-field-label {
+  font-size: var(--inspector-font-label);
+  line-height: 1.22;
+}
+
+#countryInspectorSection .sidebar-tool-hint,
+#selectedCountryActionsSection .sidebar-tool-hint,
+#specialRegionInspectorSection .sidebar-tool-hint,
+#waterInspectorSection .sidebar-tool-hint,
+#countryInspectorSection .sidebar-empty-copy,
+#selectedCountryActionsSection .sidebar-empty-copy,
+#specialRegionInspectorSection .sidebar-empty-copy,
+#waterInspectorSection .sidebar-empty-copy {
+  font-size: var(--inspector-font-meta);
+  line-height: 1.38;
+}
+
+#countryInspectorSection .sidebar-empty-copy.is-title,
+#selectedCountryActionsSection .sidebar-empty-copy.is-title,
+#specialRegionInspectorSection .sidebar-empty-copy.is-title,
+#waterInspectorSection .sidebar-empty-copy.is-title {
+  font-size: var(--inspector-font-card-title);
+  line-height: var(--inspector-line-card-title);
+}
+
+#countryInspectorSection .select-input,
+#selectedCountryActionsSection .select-input,
+#specialRegionInspectorSection .select-input,
+#waterInspectorSection .select-input {
+  padding: 9px 11px;
+  font-size: var(--inspector-font-control);
+  line-height: var(--inspector-line-control);
+}
+
 #selectedCountryActionsSection[open] {
   max-height: min(68vh, 640px);
   overflow: hidden;
@@ -5819,6 +6140,10 @@ body.counter-editor-modal-open {
   margin-top: 10px;
 }
 
+#specialRegionInspectorSection.is-empty-scenario-panel .inspector-panel-body {
+  min-height: 96px;
+}
+
 #waterRegionList.inspector-scroll {
   margin-top: 16px;
   max-height: 18vh;
@@ -5827,7 +6152,7 @@ body.counter-editor-modal-open {
 
 #specialRegionList.inspector-scroll {
   margin-top: 16px;
-  max-height: 16vh;
+  max-height: 18vh;
   gap: 10px;
 }
 
@@ -8255,6 +8580,14 @@ button.scenario-action-card:hover {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+#countryInspectorSection .inspector-color-value,
+#selectedCountryActionsSection .inspector-color-value,
+#specialRegionInspectorSection .inspector-color-value,
+#waterInspectorSection .inspector-color-value {
+  font-size: var(--inspector-font-card-title);
+  line-height: var(--inspector-line-card-title);
 }
 
 .inspector-color-native-input {

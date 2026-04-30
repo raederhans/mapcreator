@@ -204,6 +204,200 @@ test("project support panels and inspector search stay polished and inset", asyn
   expect(searchMetrics.inputBorderLeft).toBe("0px");
 });
 
+
+test("left sidebar scenario and appearance panels keep compact hierarchy", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+
+  await page.evaluate(() => {
+    const scenario = document.querySelector('[aria-labelledby="lblScenario"]');
+    const appearance = document.querySelector('[aria-labelledby="appearanceSectionHeading labelMapStyle"]');
+    const special = document.querySelector('#specialZonePopover');
+    if (scenario instanceof HTMLDetailsElement) scenario.open = true;
+    if (appearance instanceof HTMLDetailsElement) appearance.open = true;
+    if (special instanceof HTMLDetailsElement) special.open = true;
+  });
+
+  await expect(page.locator('#appearanceLayerFilter')).toHaveCount(0);
+  await expect(page.locator('#lblTextureInfo')).toHaveCount(0);
+  await expect(page.locator('#appearancePanelTexture .info-trigger')).toHaveCount(0);
+
+  const activateAppearanceTab = async (tabSelector, panelSelector) => {
+    await page.locator(tabSelector).click();
+    await expect(page.locator(panelSelector)).toBeVisible();
+  };
+
+  await activateAppearanceTab('#appearanceTabOcean', '#appearancePanelOcean');
+  await expect(page.locator('#appearancePanelOcean .appearance-control-card')).toHaveCount(3);
+  const oceanLayout = await page.evaluate(() => {
+    const panel = document.querySelector('#appearancePanelOcean')?.getBoundingClientRect();
+    const cards = [...document.querySelectorAll('#appearancePanelOcean .appearance-control-card')]
+      .map((element) => element.getBoundingClientRect());
+    return {
+      cardCount: cards.length,
+      firstInset: panel && cards[0] ? cards[0].left - panel.left : 0,
+      firstRightGap: panel && cards[0] ? panel.right - cards[0].right : 0,
+      firstGap: cards[1] ? cards[1].top - cards[0].bottom : 0,
+    };
+  });
+  await activateAppearanceTab('#appearanceTabBorders', '#appearancePanelBorders');
+  await activateAppearanceTab('#appearanceTabLayers', '#appearancePanelLayers');
+  await page.evaluate(() => {
+    const physical = document.querySelector('#appearancePanelLayers .appearance-mini-section');
+    const cityPoints = document.querySelector('#appearancePanelLayers [data-appearance-filter-label="city points capitals labels"]');
+    const rivers = document.querySelector('#appearancePanelLayers [data-appearance-filter-label="rivers waterways"]');
+    if (physical instanceof HTMLDetailsElement) physical.open = true;
+    if (cityPoints instanceof HTMLDetailsElement) cityPoints.open = true;
+    if (rivers instanceof HTMLDetailsElement) rivers.open = true;
+  });
+  await expect(page.locator('#cityPointsPresetDensityGroupHint')).toHaveCount(0);
+  await expect(page.locator('#cityPointsMarkerDensityHint')).toHaveCount(0);
+  await expect(page.locator('#cityPointsLabelDensityHint')).toHaveCount(0);
+  await expect(page.locator('#cityPointsHelpTooltip')).toContainText('Pick a restrained style');
+  await expect(page.locator('#appearancePanelLayers .city-points-toggle-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelLayers .city-points-style-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelLayers .city-points-label-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelLayers .rivers-toggle-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelLayers .rivers-stroke-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelLayers .rivers-outline-card')).toHaveCount(1);
+  await page.locator('#riversDashStyle').selectOption('dashed');
+  const riverDashState = await page.evaluate(async () => {
+    const stateModuleUrl = new URL('./js/core/state.js', globalThis.location.href).toString();
+    const stateModule = await import(stateModuleUrl);
+    return {
+      dashStyle: stateModule?.state?.styleConfig?.rivers?.dashStyle || '',
+    };
+  });
+  expect(riverDashState.dashStyle).toBe('dashed');
+  const layerLayout = await page.evaluate(() => {
+    const details = document.querySelector('#appearancePanelLayers .appearance-mini-section')?.getBoundingClientRect();
+    const content = document.querySelector('#appearancePanelLayers .appearance-mini-section .ml-5.space-y-2')?.getBoundingClientRect();
+    const cityToggle = document.querySelector('#appearancePanelLayers .city-points-toggle-card')?.getBoundingClientRect();
+    const riverGap = (() => {
+      const cards = [...document.querySelectorAll('#appearancePanelLayers .rivers-panel-stack > .appearance-control-card')]
+        .map((element) => element.getBoundingClientRect());
+      return cards[1] ? cards[1].top - cards[0].bottom : 0;
+    })();
+    return {
+      contentInset: details && content ? content.left - details.left : 0,
+      contentRightGap: details && content ? details.right - content.right : 0,
+      contentWidthDelta: details && content ? details.width - content.width : 0,
+      cityTogglePaddingTop: cityToggle ? Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelLayers .city-points-toggle-card')).paddingTop) : 0,
+      riverGap,
+    };
+  });
+  await activateAppearanceTab('#appearanceTabDayNight', '#appearancePanelDayNight');
+  const dayNightLayout = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('#appearancePanelDayNight .appearance-day-night-card')]
+      .filter((element) => getComputedStyle(element).display !== 'none')
+      .map((element) => element.getBoundingClientRect());
+    const gaps = cards.slice(1).map((card, index) => card.top - cards[index].bottom);
+    const firstCard = document.querySelector('#appearancePanelDayNight .appearance-day-night-card');
+    const modeRow = document.querySelector('#appearancePanelDayNight .appearance-day-night-mode-row');
+    return {
+      cardCount: cards.length,
+      minGap: gaps.length ? Math.min(...gaps) : 0,
+      cardPaddingTop: firstCard ? Number.parseFloat(getComputedStyle(firstCard).paddingTop) : 0,
+      modeGap: modeRow ? Number.parseFloat(getComputedStyle(modeRow).gap) : 0,
+    };
+  });
+  await activateAppearanceTab('#appearanceTabTexture', '#appearancePanelTexture');
+  await activateAppearanceTab('#appearanceTabTransport', '#appearancePanelTransport');
+  const transportLayout = await page.evaluate(() => {
+    const families = [...document.querySelectorAll('#appearancePanelTransport .transport-family-section')];
+    const childCards = [...document.querySelectorAll('#appearancePanelTransport .transport-family-body > section')];
+    const firstFamily = families[0]?.getBoundingClientRect();
+    const firstChild = childCards[0]?.getBoundingClientRect();
+    return {
+      familyCount: families.length,
+      childCardCount: childCards.length,
+      familyRadius: families[0] ? Number.parseFloat(getComputedStyle(families[0]).borderRadius) : 0,
+      childInset: firstFamily && firstChild ? firstChild.left - firstFamily.left : 0,
+      masterTogglePaddingTop: Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelTransport .transport-master-toggle-card')).paddingTop || '0'),
+    };
+  });
+  await activateAppearanceTab('#appearanceTabTexture', '#appearancePanelTexture');
+
+  const metrics = await page.evaluate(() => {
+    const rectToObject = (rect) => rect ? {
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    } : null;
+    const fontSize = (selector) => {
+      const element = document.querySelector(selector);
+      return element ? Number.parseFloat(getComputedStyle(element).fontSize) : 0;
+    };
+    const leftSidebar = document.querySelector('#leftSidebar');
+    const leftRect = leftSidebar?.getBoundingClientRect();
+    const visibleOverflow = [...document.querySelectorAll('#leftSidebar *')].filter((element) => {
+      const style = getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = element.getBoundingClientRect();
+      return leftRect && rect.width > 0 && rect.height > 0 && (rect.left < leftRect.left - 1 || rect.right > leftRect.right + 1);
+    }).map((element) => element.id || element.className || element.tagName).slice(0, 10);
+    return {
+      scenarioStatusRect: rectToObject(document.querySelector('#scenarioStatus')?.getBoundingClientRect()),
+      scenarioAuditRect: rectToObject(document.querySelector('#scenarioAuditHint')?.getBoundingClientRect()),
+      scenarioBodyHeight: document.querySelector('[aria-labelledby="lblScenario"] .sidebar-details-body')?.getBoundingClientRect().height || 0,
+      sectionTitle: fontSize('#labelMapStyle'),
+      oceanToggle: fontSize('#appearancePanelOcean .toggle-label'),
+      borderSummary: fontSize('#appearancePanelBorders .appearance-mini-section > summary'),
+      borderLabel: fontSize('#appearancePanelBorders .range-label'),
+      textureLabel: fontSize('#appearancePanelTexture .section-header-block'),
+      textureSelect: fontSize('#textureSelect'),
+      specialSelect: fontSize('#specialZoneTypeSelect'),
+      specialLabel: fontSize('#specialZonePopover .range-label'),
+      paletteTitle: fontSize('#paletteLibraryList .palette-library-title'),
+      paletteSubtitle: fontSize('#paletteLibraryList .palette-library-subtitle'),
+      layersStackTop: document.querySelector('#appearancePanelLayers .appearance-subsection-stack')?.getBoundingClientRect().top || 0,
+      layersTitleBottom: document.querySelector('#lblContextLayers')?.getBoundingClientRect().bottom || 0,
+      textureFirstControlTop: document.querySelector('#lblOverlay')?.getBoundingClientRect().top || 0,
+      textureTitleBottom: document.querySelector('#lblTexture')?.getBoundingClientRect().bottom || 0,
+      scenarioArrowRight: document.querySelector('[aria-labelledby="lblScenario"] > summary')?.getBoundingClientRect().right || 0,
+      colorToggleRight: document.querySelector('#paletteLibraryToggle')?.getBoundingClientRect().right || 0,
+      visibleOverflow,
+    };
+  });
+
+  expect(metrics.scenarioStatusRect.height).toBeLessThanOrEqual(1);
+  expect(metrics.scenarioAuditRect.height).toBeLessThanOrEqual(1);
+  expect(metrics.scenarioBodyHeight).toBeLessThan(230);
+  expect(metrics.sectionTitle).toBeGreaterThan(metrics.oceanToggle);
+  expect(metrics.sectionTitle).toBeGreaterThan(metrics.borderSummary);
+  expect(metrics.borderSummary).toBeGreaterThanOrEqual(metrics.borderLabel);
+  expect(Math.abs(metrics.oceanToggle - metrics.textureSelect)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(metrics.specialSelect - metrics.textureSelect)).toBeLessThanOrEqual(0.5);
+  expect(metrics.paletteTitle).toBeGreaterThan(metrics.paletteSubtitle);
+  expect(metrics.textureFirstControlTop - metrics.textureTitleBottom).toBeLessThan(24);
+  expect(metrics.layersStackTop - metrics.layersTitleBottom).toBeLessThan(24);
+  expect(Math.abs(metrics.colorToggleRight - metrics.scenarioArrowRight)).toBeLessThanOrEqual(3);
+  expect(oceanLayout.cardCount).toBe(3);
+  expect(oceanLayout.firstInset).toBeGreaterThanOrEqual(12);
+  expect(oceanLayout.firstRightGap).toBeGreaterThanOrEqual(12);
+  expect(oceanLayout.firstGap).toBeGreaterThanOrEqual(10);
+  expect(layerLayout.contentInset).toBeLessThanOrEqual(14);
+  expect(layerLayout.contentRightGap).toBeGreaterThanOrEqual(10);
+  expect(layerLayout.contentWidthDelta).toBeLessThanOrEqual(28);
+  expect(layerLayout.cityTogglePaddingTop).toBeGreaterThanOrEqual(9);
+  expect(layerLayout.riverGap).toBeGreaterThanOrEqual(10);
+  expect(dayNightLayout.cardCount).toBeGreaterThanOrEqual(3);
+  expect(dayNightLayout.minGap).toBeGreaterThanOrEqual(12);
+  expect(dayNightLayout.cardPaddingTop).toBeGreaterThanOrEqual(10);
+  expect(dayNightLayout.modeGap).toBeGreaterThanOrEqual(10);
+  expect(transportLayout.familyCount).toBe(4);
+  expect(transportLayout.childCardCount).toBeGreaterThanOrEqual(11);
+  expect(transportLayout.familyRadius).toBeGreaterThanOrEqual(14);
+  expect(transportLayout.childInset).toBeGreaterThanOrEqual(10);
+  expect(transportLayout.masterTogglePaddingTop).toBeGreaterThanOrEqual(9);
+  expect(metrics.visibleOverflow).toEqual([]);
+});
+
 test("phase 03 support surfaces restore the requested view from URL", async ({ page }) => {
   test.setTimeout(240_000);
   await gotoApp(page, "/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1&view=reference", { waitUntil: "domcontentloaded" });

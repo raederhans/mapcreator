@@ -95,6 +95,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
     def test_country_inspector_hierarchy_uses_polished_compact_stack(self):
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
         sidebar_content = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")
+        water_special_content = (REPO_ROOT / "js" / "ui" / "sidebar" / "water_special_region_controller.js").read_text(encoding="utf-8")
 
         for token in [
             "#countryInspectorSection,",
@@ -117,6 +118,9 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "--inspector-font-control: 0.74rem;",
             "font-size: var(--inspector-font-control);",
             "font-size: var(--inspector-font-card-title, 0.78rem);",
+            "#specialRegionInspectorSection .toggle-label,",
+            "#waterInspectorSection .select-input {",
+            "#specialRegionInspectorSection.is-empty-scenario-panel .inspector-panel-body {",
             "#selectedCountryActionsSection #presetTree.inspector-scroll {",
             "overflow: visible;",
             "scrollbar-gutter: stable;",
@@ -149,6 +153,13 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn("#countryInspectorColorRow {", css_content)
         self.assertIn("#countryList .country-select-row button:hover", css_content)
         self.assertIn("#specialRegionInspectorSection .inspector-detail-section", css_content)
+        for token in [
+            "const hasVisibleSpecialRegions = hasActiveScenario && getVisibleSpecialFeatures().length > 0;",
+            "!!runtimeState.showScenarioReliefOverlays",
+            'specialRegionInspectorSection.classList.toggle("hidden", !hasActiveScenario);',
+            'specialRegionInspectorSection.classList.toggle("is-empty-scenario-panel", hasActiveScenario && !hasScenarioInspectorContent);',
+        ]:
+            self.assertIn(token, water_special_content)
         self.assertIn("#projectLegendSection,", css_content)
         self.assertIn("#inspectorUtilitiesSection,", css_content)
         self.assertIn("#diagnosticsSection {", css_content)

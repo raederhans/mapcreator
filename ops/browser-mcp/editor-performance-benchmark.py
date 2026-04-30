@@ -30,6 +30,13 @@ LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES = {
     "worker",
     "unknown",
 }
+LONG_TASK_SUBOWNER_SCHEMA = "mc_long_task_subowner_v1"
+LONG_TASK_UNKNOWN_SUBOWNERS = {
+    "",
+    "unknown",
+    "unknown-browser",
+    "unknown-chunk",
+}
 BROWSER_OPEN_TIMEOUT_SEC = 45
 OPEN_BROWSER_CANDIDATES = ("msedge", "chromium")
 WRAPPER_BACKEND = "wrapper"
@@ -1333,6 +1340,31 @@ def summarize_distribution(values: list[float]) -> dict:
     }
 
 
+def is_actionable_long_task_subowner(value: object) -> bool:
+    subowner = str(value or "").strip()
+    return bool(subowner) and subowner not in LONG_TASK_UNKNOWN_SUBOWNERS and not subowner.startswith("unknown-")
+
+
+def summarize_subowner_values(values_by_owner: dict[str, list[float]], *, field: str) -> dict[str, float | None]:
+    summary: dict[str, float | None] = {}
+    for owner, values in values_by_owner.items():
+      finite_values = [value for value in values if math.isfinite(value)]
+      if not finite_values:
+        summary[owner] = None
+      elif field == "p50":
+        summary[owner] = percentile(finite_values, 0.5)
+      else:
+        summary[owner] = max(finite_values)
+    return summary
+
+
+def add_count(target: dict[str, int], key: object, amount: int = 1) -> None:
+    normalized_key = str(key or "").strip()
+    if not normalized_key:
+      return
+    target[normalized_key] = target.get(normalized_key, 0) + max(0, int(amount))
+
+
 def iter_perf_metric_maps(node: object, path: str = ""):
     if isinstance(node, dict):
       for key, value in node.items():
@@ -1658,6 +1690,26 @@ def summarize_fill_action_metric(suite: dict, key: str) -> dict:
     )
 
 
+def has_reportable_long_task_attribution(attribution: dict) -> bool:
+    if not isinstance(attribution, dict):
+      return False
+    tasks = attribution.get("tasks") if isinstance(attribution.get("tasks"), list) else []
+    for task in tasks:
+      if not isinstance(task, dict):
+        continue
+      duration = as_finite_number(task.get("durationMs"))
+      if duration is not None and duration > 750:
+        return True
+    for key in ("categoryCounts", "subOwnerCounts"):
+      counts = attribution.get(key) if isinstance(attribution.get(key), dict) else {}
+      if any(int(as_finite_number(count) or 0) > 0 for count in counts.values()):
+        return True
+    return any(
+      int(as_finite_number(attribution.get(key)) or 0) > 0
+      for key in ("unknownLongTaskCount", "unknownSubOwnerCount")
+    )
+
+
 def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
     probe = suite.get("repeatedZoomRegions") if isinstance(suite.get("repeatedZoomRegions"), dict) else {}
     regions = probe.get("regions") if isinstance(probe.get("regions"), dict) else {}
@@ -1676,6 +1728,16 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
     missing_long_task_evidence_count = 0
     missing_long_task_confidence_count = 0
     unknown_long_task_top_owner_count = 0
+    long_task_subowner_counts: dict[str, int] = {}
+    long_task_subowner_values: dict[str, list[float]] = {}
+    long_task_idle_wait_owner_counts: dict[str, int] = {}
+    long_task_idle_wait_owner_values: dict[str, list[float]] = {}
+    unknown_long_task_subowner_count = 0
+    unknown_long_task_top_subowner_count = 0
+    missing_long_task_subowner_evidence_count = 0
+    missing_long_task_subowner_confidence_count = 0
+    long_task_top_subowner_evidence: dict | None = None
+    long_task_top_subowner_duration = -1.0
     for region_id, region_payload in regions.items():
       if not isinstance(region_payload, dict):
         continue
@@ -1708,6 +1770,16 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
         unknown_long_task_count += int(as_finite_number(cycle.get("unknownLongTaskCount")) or as_finite_number(cycle_long_task_attribution.get("unknownLongTaskCount")) or 0)
         if str(cycle_long_task_attribution.get("topOwner") or "").strip() == "unknown":
           unknown_long_task_top_owner_count += 1
+        if has_reportable_long_task_attribution(cycle_long_task_attribution) and not is_actionable_long_task_subowner(cycle_long_task_attribution.get("topSubOwner")):
+          unknown_long_task_top_subowner_count += 1
+        idle_wait_owner_counts = cycle_long_task_attribution.get("idleWaitOwnerCounts") if isinstance(cycle_long_task_attribution.get("idleWaitOwnerCounts"), dict) else {}
+        for owner, count in idle_wait_owner_counts.items():
+          add_count(long_task_idle_wait_owner_counts, owner, int(as_finite_number(count) or 0))
+        idle_wait_owner_max = cycle_long_task_attribution.get("idleWaitOwnerMaxMs") if isinstance(cycle_long_task_attribution.get("idleWaitOwnerMaxMs"), dict) else {}
+        for owner, duration in idle_wait_owner_max.items():
+          numeric_duration = as_finite_number(duration)
+          if numeric_duration is not None:
+            long_task_idle_wait_owner_values.setdefault(str(owner or ""), []).append(numeric_duration)
         cycle_long_tasks = cycle_long_task_attribution.get("tasks") if isinstance(cycle_long_task_attribution.get("tasks"), list) else []
         for task in cycle_long_tasks:
           if not isinstance(task, dict):
@@ -1725,10 +1797,29 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
           confidence = str(task.get("confidence") or "").strip()
           if confidence not in {"low", "medium", "high"}:
             missing_long_task_confidence_count += 1
+          subowner = str(task.get("subOwner") or "").strip()
+          add_count(long_task_subowner_counts, subowner or "unknown")
+          if duration is not None:
+            long_task_subowner_values.setdefault(subowner or "unknown", []).append(duration)
+          if not is_actionable_long_task_subowner(subowner):
+            unknown_long_task_subowner_count += 1
+          subowner_evidence = task.get("subOwnerEvidence")
+          if not isinstance(subowner_evidence, dict) or not subowner_evidence.get("matchReason"):
+            missing_long_task_subowner_evidence_count += 1
+          elif duration is not None and duration > long_task_top_subowner_duration:
+            long_task_top_subowner_duration = duration
+            long_task_top_subowner_evidence = subowner_evidence
+          subowner_confidence = str(task.get("subOwnerConfidence") or "").strip()
+          if subowner_confidence not in {"low", "medium", "high"}:
+            missing_long_task_subowner_confidence_count += 1
         category_counts = cycle_long_task_attribution.get("categoryCounts") if isinstance(cycle_long_task_attribution.get("categoryCounts"), dict) else {}
         for category, count in category_counts.items():
           category_key = str(category or "unknown")
           long_task_category_counts[category_key] = long_task_category_counts.get(category_key, 0) + int(as_finite_number(count) or 0)
+        if not cycle_long_tasks:
+          subowner_counts = cycle_long_task_attribution.get("subOwnerCounts") if isinstance(cycle_long_task_attribution.get("subOwnerCounts"), dict) else {}
+          for subowner, count in subowner_counts.items():
+            add_count(long_task_subowner_counts, subowner, int(as_finite_number(count) or 0))
         pass_attribution = cycle.get("passAttribution") if isinstance(cycle.get("passAttribution"), dict) else {}
         passes = pass_attribution.get("passes") if isinstance(pass_attribution.get("passes"), dict) else {}
         for pass_name, pass_entry in passes.items():
@@ -1749,12 +1840,30 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
       region_missing_evidence_count = 0
       region_missing_confidence_count = 0
       region_unknown_top_owner_count = 0
+      region_subowner_counts: dict[str, int] = {}
+      region_subowner_values: dict[str, list[float]] = {}
+      region_idle_wait_owner_counts: dict[str, int] = {}
+      region_idle_wait_owner_values: dict[str, list[float]] = {}
+      region_unknown_subowner_count = 0
+      region_unknown_top_subowner_count = 0
+      region_missing_subowner_evidence_count = 0
+      region_missing_subowner_confidence_count = 0
       for entry in region_long_task_attribution:
         if not isinstance(entry, dict):
           continue
         region_unknown_long_task_count += int(as_finite_number(entry.get("unknownLongTaskCount")) or 0)
         if str(entry.get("topOwner") or "").strip() == "unknown":
           region_unknown_top_owner_count += 1
+        if has_reportable_long_task_attribution(entry) and not is_actionable_long_task_subowner(entry.get("topSubOwner")):
+          region_unknown_top_subowner_count += 1
+        entry_idle_wait_owner_counts = entry.get("idleWaitOwnerCounts") if isinstance(entry.get("idleWaitOwnerCounts"), dict) else {}
+        for owner, count in entry_idle_wait_owner_counts.items():
+          add_count(region_idle_wait_owner_counts, owner, int(as_finite_number(count) or 0))
+        entry_idle_wait_owner_max = entry.get("idleWaitOwnerMaxMs") if isinstance(entry.get("idleWaitOwnerMaxMs"), dict) else {}
+        for owner, duration in entry_idle_wait_owner_max.items():
+          numeric_duration = as_finite_number(duration)
+          if numeric_duration is not None:
+            region_idle_wait_owner_values.setdefault(str(owner or ""), []).append(numeric_duration)
         entry_tasks = entry.get("tasks") if isinstance(entry.get("tasks"), list) else []
         for task in entry_tasks:
           if not isinstance(task, dict):
@@ -1772,10 +1881,26 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
           confidence = str(task.get("confidence") or "").strip()
           if confidence not in {"low", "medium", "high"}:
             region_missing_confidence_count += 1
+          subowner = str(task.get("subOwner") or "").strip()
+          add_count(region_subowner_counts, subowner or "unknown")
+          if duration is not None:
+            region_subowner_values.setdefault(subowner or "unknown", []).append(duration)
+          if not is_actionable_long_task_subowner(subowner):
+            region_unknown_subowner_count += 1
+          subowner_evidence = task.get("subOwnerEvidence")
+          if not isinstance(subowner_evidence, dict) or not subowner_evidence.get("matchReason"):
+            region_missing_subowner_evidence_count += 1
+          subowner_confidence = str(task.get("subOwnerConfidence") or "").strip()
+          if subowner_confidence not in {"low", "medium", "high"}:
+            region_missing_subowner_confidence_count += 1
         entry_counts = entry.get("categoryCounts") if isinstance(entry.get("categoryCounts"), dict) else {}
         for category, count in entry_counts.items():
           category_key = str(category or "unknown")
           region_category_counts[category_key] = region_category_counts.get(category_key, 0) + int(as_finite_number(count) or 0)
+        if not entry_tasks:
+          entry_subowner_counts = entry.get("subOwnerCounts") if isinstance(entry.get("subOwnerCounts"), dict) else {}
+          for subowner, count in entry_subowner_counts.items():
+            add_count(region_subowner_counts, subowner, int(as_finite_number(count) or 0))
       if not region_long_task_attribution:
         for cycle in cycles:
           if not isinstance(cycle, dict):
@@ -1784,6 +1909,16 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
           region_unknown_long_task_count += int(as_finite_number(cycle.get("unknownLongTaskCount")) or as_finite_number(cycle_long_task_attribution.get("unknownLongTaskCount")) or 0)
           if str(cycle_long_task_attribution.get("topOwner") or "").strip() == "unknown":
             region_unknown_top_owner_count += 1
+          if has_reportable_long_task_attribution(cycle_long_task_attribution) and not is_actionable_long_task_subowner(cycle_long_task_attribution.get("topSubOwner")):
+            region_unknown_top_subowner_count += 1
+          cycle_idle_wait_owner_counts = cycle_long_task_attribution.get("idleWaitOwnerCounts") if isinstance(cycle_long_task_attribution.get("idleWaitOwnerCounts"), dict) else {}
+          for owner, count in cycle_idle_wait_owner_counts.items():
+            add_count(region_idle_wait_owner_counts, owner, int(as_finite_number(count) or 0))
+          cycle_idle_wait_owner_max = cycle_long_task_attribution.get("idleWaitOwnerMaxMs") if isinstance(cycle_long_task_attribution.get("idleWaitOwnerMaxMs"), dict) else {}
+          for owner, duration in cycle_idle_wait_owner_max.items():
+            numeric_duration = as_finite_number(duration)
+            if numeric_duration is not None:
+              region_idle_wait_owner_values.setdefault(str(owner or ""), []).append(numeric_duration)
           cycle_tasks = cycle_long_task_attribution.get("tasks") if isinstance(cycle_long_task_attribution.get("tasks"), list) else []
           for task in cycle_tasks:
             if not isinstance(task, dict):
@@ -1801,10 +1936,26 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
             confidence = str(task.get("confidence") or "").strip()
             if confidence not in {"low", "medium", "high"}:
               region_missing_confidence_count += 1
+            subowner = str(task.get("subOwner") or "").strip()
+            add_count(region_subowner_counts, subowner or "unknown")
+            if duration is not None:
+              region_subowner_values.setdefault(subowner or "unknown", []).append(duration)
+            if not is_actionable_long_task_subowner(subowner):
+              region_unknown_subowner_count += 1
+            subowner_evidence = task.get("subOwnerEvidence")
+            if not isinstance(subowner_evidence, dict) or not subowner_evidence.get("matchReason"):
+              region_missing_subowner_evidence_count += 1
+            subowner_confidence = str(task.get("subOwnerConfidence") or "").strip()
+            if subowner_confidence not in {"low", "medium", "high"}:
+              region_missing_subowner_confidence_count += 1
           entry_counts = cycle_long_task_attribution.get("categoryCounts") if isinstance(cycle_long_task_attribution.get("categoryCounts"), dict) else {}
           for category, count in entry_counts.items():
             category_key = str(category or "unknown")
             region_category_counts[category_key] = region_category_counts.get(category_key, 0) + int(as_finite_number(count) or 0)
+          if not cycle_tasks:
+            cycle_subowner_counts = cycle_long_task_attribution.get("subOwnerCounts") if isinstance(cycle_long_task_attribution.get("subOwnerCounts"), dict) else {}
+            for subowner, count in cycle_subowner_counts.items():
+              add_count(region_subowner_counts, subowner, int(as_finite_number(count) or 0))
       region_summaries[str(region_id)] = {
         "cycleCount": len(cycles),
         "firstIdleAfterLastWheelMs": summarize_distribution(cycle_idle_values),
@@ -1814,24 +1965,44 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
         "memoryDelta": memory_delta,
         "passAttributionSchema": region_payload.get("passAttributionSchema") or probe.get("passAttributionSchema"),
         "longTaskAttribution": {
+          "schema": "mc_long_task_attribution_v1",
+          "subOwnerSchema": LONG_TASK_SUBOWNER_SCHEMA,
           "unknownLongTaskCount": region_unknown_long_task_count,
+          "unknownSubOwnerCount": region_unknown_subowner_count,
           "categoryCounts": region_category_counts,
+          "subOwnerCounts": region_subowner_counts,
+          "subOwnerMaxMs": summarize_subowner_values(region_subowner_values, field="max"),
+          "subOwnerP50Ms": summarize_subowner_values(region_subowner_values, field="p50"),
           "topOwner": max(region_category_counts, key=region_category_counts.get) if region_category_counts else None,
+          "topSubOwner": max(region_subowner_counts, key=region_subowner_counts.get) if region_subowner_counts else None,
+          "idleWaitOwnerCounts": region_idle_wait_owner_counts,
+          "idleWaitOwnerMaxMs": summarize_subowner_values(region_idle_wait_owner_values, field="max"),
+          "topIdleWaitOwner": max(region_idle_wait_owner_counts, key=region_idle_wait_owner_counts.get) if region_idle_wait_owner_counts else "",
           "gate": {
             "schema": "mc_long_task_attribution_gate_v1",
+            "subOwnerSchema": LONG_TASK_SUBOWNER_SCHEMA,
             "passed": (
               region_unknown_long_task_count == 0
               and region_invalid_category_count == 0
               and region_missing_evidence_count == 0
               and region_missing_confidence_count == 0
               and region_unknown_top_owner_count == 0
+              and region_unknown_subowner_count <= 1
+              and region_missing_subowner_evidence_count == 0
+              and region_missing_subowner_confidence_count == 0
+              and region_unknown_top_subowner_count == 0
             ),
             "taskCount": region_task_count,
             "unknownLongTaskCount": region_unknown_long_task_count,
             "unknownTopOwnerCount": region_unknown_top_owner_count,
+            "unknownSubOwnerCount": region_unknown_subowner_count,
+            "unknownTopSubOwnerCount": region_unknown_top_subowner_count,
             "invalidCategoryCount": region_invalid_category_count,
             "missingEvidenceCount": region_missing_evidence_count,
             "missingConfidenceCount": region_missing_confidence_count,
+            "missingSubOwnerEvidenceCount": region_missing_subowner_evidence_count,
+            "missingSubOwnerConfidenceCount": region_missing_subowner_confidence_count,
+            "topSubOwnerActionable": is_actionable_long_task_subowner(max(region_subowner_counts, key=region_subowner_counts.get) if region_subowner_counts else ""),
             "allowedCategories": sorted(LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES),
           },
         },
@@ -1860,25 +2031,47 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
           "distribution": summarize_distribution(max_long_values),
           "attribution": {
             "schema": "mc_long_task_attribution_v1",
+            "subOwnerSchema": LONG_TASK_SUBOWNER_SCHEMA,
             "thresholdMs": 750,
             "unknownLongTaskCount": unknown_long_task_count,
+            "unknownSubOwnerCount": unknown_long_task_subowner_count,
             "categoryCounts": long_task_category_counts,
+            "subOwnerCounts": long_task_subowner_counts,
+            "subOwnerMaxMs": summarize_subowner_values(long_task_subowner_values, field="max"),
+            "subOwnerP50Ms": summarize_subowner_values(long_task_subowner_values, field="p50"),
             "topOwner": max(long_task_category_counts, key=long_task_category_counts.get) if long_task_category_counts else None,
+            "topSubOwner": max(long_task_subowner_counts, key=long_task_subowner_counts.get) if long_task_subowner_counts else None,
+            "topSubOwnerEvidence": long_task_top_subowner_evidence,
+            "idleWaitOwnerCounts": long_task_idle_wait_owner_counts,
+            "idleWaitOwnerMaxMs": summarize_subowner_values(long_task_idle_wait_owner_values, field="max"),
+            "topIdleWaitOwner": max(long_task_idle_wait_owner_counts, key=long_task_idle_wait_owner_counts.get) if long_task_idle_wait_owner_counts else "",
             "gate": {
               "schema": "mc_long_task_attribution_gate_v1",
+              "subOwnerSchema": LONG_TASK_SUBOWNER_SCHEMA,
               "passed": (
                 unknown_long_task_count == 0
                 and invalid_long_task_category_count == 0
                 and missing_long_task_evidence_count == 0
                 and missing_long_task_confidence_count == 0
                 and unknown_long_task_top_owner_count == 0
+                and unknown_long_task_subowner_count <= 1
+                and missing_long_task_subowner_evidence_count == 0
+                and missing_long_task_subowner_confidence_count == 0
+                and unknown_long_task_top_subowner_count == 0
               ),
               "taskCount": long_task_attribution_task_count,
               "unknownLongTaskCount": unknown_long_task_count,
               "unknownTopOwnerCount": unknown_long_task_top_owner_count,
+              "unknownSubOwnerCount": unknown_long_task_subowner_count,
+              "unknownTopSubOwnerCount": unknown_long_task_top_subowner_count,
               "invalidCategoryCount": invalid_long_task_category_count,
               "missingEvidenceCount": missing_long_task_evidence_count,
               "missingConfidenceCount": missing_long_task_confidence_count,
+              "missingSubOwnerEvidenceCount": missing_long_task_subowner_evidence_count,
+              "missingSubOwnerConfidenceCount": missing_long_task_subowner_confidence_count,
+              "topSubOwnerActionable": is_actionable_long_task_subowner(max(long_task_subowner_counts, key=long_task_subowner_counts.get) if long_task_subowner_counts else ""),
+              "shortArtifactPassed": bool(probe.get("shortArtifactPass", True)),
+              "fullArtifactPassed": bool(probe.get("fullArtifactPass", True)),
               "allowedCategories": sorted(LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES),
             },
           },
@@ -1888,6 +2081,10 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
         },
         "passAttribution": pass_attribution_summary,
         "blackPixelClassification": black_classification_counts,
+        "artifactPassMarkers": {
+          "shortArtifactPass": bool(probe.get("shortArtifactPass", True)),
+          "fullArtifactPass": bool(probe.get("fullArtifactPass", True)),
+        },
         "regions": region_summaries,
       },
     }
@@ -3347,13 +3544,100 @@ async (page) => {{
     return String(state.activeScenarioId || '');
   }});
 
-  const isMetricFreshForLongTask = (metricRecordedAt, taskStartTime, taskDurationMs, sampleContext = null) => {{
+  const SUBOWNER_SCHEMA = 'mc_long_task_subowner_v1';
+  const UNKNOWN_SUBOWNERS = new Set(['unknown', 'unknown-browser', 'unknown-chunk']);
+  const ACTIONABLE_SUBOWNER_PATTERN = /^(render-pass|scheduler|worker):[^:]+$/;
+
+  const taskWallWindow = (taskStartTime, taskDurationMs, sampleContext = null, toleranceMs = 250) => {{
     const timeOrigin = Math.max(0, Number(sampleContext?.timeOrigin || 0));
+    const startTime = Math.max(0, Number(taskStartTime || 0));
+    const durationMs = Math.max(0, Number(taskDurationMs || 0));
+    if (!timeOrigin) return null;
+    return {{
+      start: timeOrigin + startTime - toleranceMs,
+      end: timeOrigin + startTime + durationMs + toleranceMs,
+    }};
+  }};
+
+  const metricMatchesTask = (metricRecordedAt, taskStartTime, taskDurationMs, sampleContext = null, toleranceMs = 250) => {{
     const recordedAt = Math.max(0, Number(metricRecordedAt || 0));
-    if (!timeOrigin || !recordedAt) return true;
-    const taskWallStart = timeOrigin + Math.max(0, Number(taskStartTime || 0));
-    const taskWallEnd = taskWallStart + Math.max(0, Number(taskDurationMs || 0));
-    return recordedAt >= taskWallStart - 500 && recordedAt <= taskWallEnd + 1500;
+    const window = taskWallWindow(taskStartTime, taskDurationMs, sampleContext, toleranceMs);
+    if (!window || !recordedAt) return true;
+    return recordedAt >= window.start && recordedAt <= window.end;
+  }};
+
+  const sampleEpochMs = (sampleContext = null) => {{
+    const timeOrigin = Math.max(0, Number(sampleContext?.timeOrigin || 0));
+    const sampledAt = Math.max(0, Number(sampleContext?.sampledAt || 0));
+    return timeOrigin && sampledAt ? timeOrigin + sampledAt : sampledAt;
+  }};
+
+  const isMetricFreshForLongTask = (metricRecordedAt, taskStartTime, taskDurationMs, sampleContext = null) => {{
+    return metricMatchesTask(metricRecordedAt, taskStartTime, taskDurationMs, sampleContext, 250);
+  }};
+
+  const makeSubOwnerEvidence = ({{ metricName = '', metricDurationMs = 0, metricRecordedAt = 0, taskStartTime = 0, taskDurationMs = 0, sampleContext = null, matchReason = '', renderPass = '', sampleLabel = '' }} = {{}}) => {{
+    const window = taskWallWindow(taskStartTime, taskDurationMs, sampleContext, 250);
+    const evidence = {{
+      metricName: String(metricName || ''),
+      metricDurationMs: Number(Number(metricDurationMs || 0).toFixed(3)),
+      metricRecordedAt: Math.max(0, Number(metricRecordedAt || 0)),
+      taskWindowMs: window ? [Number(window.start.toFixed(3)), Number(window.end.toFixed(3))] : [],
+      matchReason: String(matchReason || ''),
+    }};
+    if (renderPass) evidence.renderPass = String(renderPass);
+    if (sampleLabel || sampleContext?.label) evidence.sampleLabel = String(sampleLabel || sampleContext?.label || '');
+    return evidence;
+  }};
+
+  const makeLongTaskResult = ({{ entry, durationMs, startTime, category, evidence, confidence, attribution, subOwner, subOwnerEvidence, subOwnerConfidence = '', idleWaitOwner = '', idleWaitEvidence = null }} = {{}}) => ({{
+    name: String(entry?.name || ''),
+    durationMs,
+    startTime,
+    category,
+    evidence: Array.isArray(evidence) && evidence.length ? evidence : ['missing-attribution-evidence'],
+    confidence,
+    attribution: Array.isArray(attribution) ? attribution : [],
+    subOwner: String(subOwner || 'unknown'),
+    subOwnerEvidence: subOwnerEvidence && typeof subOwnerEvidence === 'object'
+      ? subOwnerEvidence
+      : makeSubOwnerEvidence({{ taskStartTime: startTime, taskDurationMs: durationMs, sampleContext: null, matchReason: 'missing-subowner-evidence' }}),
+    subOwnerConfidence: subOwnerConfidence || confidence || 'low',
+    idleWaitOwner: String(idleWaitOwner || ''),
+    idleWaitEvidence: idleWaitEvidence && typeof idleWaitEvidence === 'object' ? idleWaitEvidence : null,
+  }});
+
+  const metricEntry = (metricName, value, subOwner, matchReason, renderPass = '') => {{
+    if (!value || typeof value !== 'object') return null;
+    const details = value.details && typeof value.details === 'object' ? value.details : {{}};
+    return {{
+      metricName,
+      subOwner,
+      matchReason,
+      renderPass,
+      durationMs: Math.max(0, Number(value.durationMs || details.durationMs || 0)),
+      reason: String(value.reason || details.reason || value.source || details.source || ''),
+      recordedAt: Math.max(0, Number(value.recordedAt || details.recordedAt || 0)),
+      raw: value,
+    }};
+  }};
+
+  const classifyIdleWaitOwner = (sampleContext = null, classifiedTasks = []) => {{
+    const idleMs = Math.max(0, Number(sampleContext?.firstIdleAfterLastWheelMs || 0));
+    if (idleMs <= 750) return {{ owner: '', evidence: null }};
+    const taskTotal = classifiedTasks.reduce((sum, task) => sum + Math.max(0, Number(task.durationMs || 0)), 0);
+    const owner = taskTotal >= idleMs * 0.5 ? 'long-task-blocked-idle' : 'wait-idle-poll';
+    return {{
+      owner,
+      evidence: {{
+        metricName: 'firstIdleAfterLastWheelMs',
+        metricDurationMs: Number(idleMs.toFixed(3)),
+        metricRecordedAt: sampleEpochMs(sampleContext),
+        taskWindowMs: [],
+        matchReason: owner === 'wait-idle-poll' ? 'idle-wait-gap-without-dominant-long-task' : 'idle-wait-dominated-by-long-task-total',
+        sampleLabel: String(sampleContext?.label || ''),
+      }},
+    }};
   }};
 
   const classifyLongTask = (entry, passAttribution = null, renderMetrics = null, sampleContext = null) => {{
@@ -3369,7 +3653,7 @@ async (page) => {{
         name,
         durationMs: Math.max(0, Number(value?.durationMs || 0)),
         recordedAt: Math.max(0, Number(value?.recordedAt || value?.details?.recordedAt || 0)),
-        metricName: String(value?.metricName || ''),
+        metricName: String(value?.metricName || name || ''),
       }}))
       .filter((value) => value.durationMs > 0)
       .filter((value) => isMetricFreshForLongTask(value.recordedAt, startTime, durationMs, sampleContext))
@@ -3378,55 +3662,95 @@ async (page) => {{
     if (topPass && (topPass.durationMs >= 500 || topPass.durationMs >= durationMs * 0.35)) {{
       evidence.push(`${{topPass.name}}=${{Number(topPass.durationMs.toFixed(3))}}ms`);
       if (topPass.metricName) evidence.push(`metric=${{topPass.metricName}}`);
-      return {{
-        name: String(entry?.name || ''),
+      return makeLongTaskResult({{
+        entry,
         durationMs,
         startTime,
         category: 'render-pass',
         evidence,
         confidence: topPass.durationMs >= 750 || topPass.durationMs >= durationMs * 0.6 ? 'high' : 'medium',
         attribution,
-      }};
+        subOwner: `render-pass:${{topPass.name}}`,
+        subOwnerEvidence: makeSubOwnerEvidence({{
+          metricName: topPass.metricName || topPass.name,
+          metricDurationMs: topPass.durationMs,
+          metricRecordedAt: topPass.recordedAt,
+          taskStartTime: startTime,
+          taskDurationMs: durationMs,
+          sampleContext,
+          matchReason: 'dominant-render-pass-overlap',
+          renderPass: topPass.name,
+        }}),
+        subOwnerConfidence: topPass.durationMs >= 750 || topPass.durationMs >= durationMs * 0.6 ? 'high' : 'medium',
+      }});
     }}
-    const promotionMetrics = [
-      renderMetrics?.scenarioChunkPromotionVisualStage,
-      renderMetrics?.zoomEndToChunkVisibleMs,
-      renderMetrics?.chunkMergeMs,
-      renderMetrics?.chunkSelectionMs,
-    ].filter((value) => value && typeof value === 'object');
-    const topPromotion = promotionMetrics
-      .map((value) => ({{
-        durationMs: Math.max(0, Number(value.durationMs || 0)),
-        reason: String(value.reason || value.details?.reason || value.source || ''),
-        recordedAt: Math.max(0, Number(value.recordedAt || value.details?.recordedAt || 0)),
-      }}))
-      .filter((value) => isMetricFreshForLongTask(value.recordedAt, startTime, durationMs, sampleContext))
+    const promotionMetricSpecs = [
+      ['chunkSelectionMs', renderMetrics?.chunkSelectionMs, 'selection', 'chunk-selection-overlap'],
+      ['chunkLoadMs', renderMetrics?.chunkLoadMs, 'load', 'chunk-load-overlap'],
+      ['chunkMergeMs', renderMetrics?.chunkMergeMs, 'merge', 'chunk-merge-overlap'],
+      ['chunkPromotionCommitInfraMs', renderMetrics?.chunkPromotionCommitInfraMs, 'commit-infra', 'chunk-commit-infra-overlap'],
+      ['scenarioChunkPromotionInfraStage', renderMetrics?.scenarioChunkPromotionInfraStage, 'commit-infra', 'promotion-infra-stage-overlap'],
+      ['chunkPromotionCommitVisualMs', renderMetrics?.chunkPromotionCommitVisualMs, 'commit-visual', 'chunk-commit-visual-overlap'],
+      ['chunkPromotionVisualMs', renderMetrics?.chunkPromotionVisualMs, 'commit-visual', 'chunk-visual-overlap'],
+      ['scenarioChunkPromotionVisualStage', renderMetrics?.scenarioChunkPromotionVisualStage, 'commit-visual', 'promotion-visual-stage-overlap'],
+      ['politicalChunkPromotionMs', renderMetrics?.politicalChunkPromotionMs, 'commit-visual', 'political-promotion-overlap'],
+      ['scenarioChunkSecondaryRegionIndexesSync', renderMetrics?.scenarioChunkSecondaryRegionIndexesSync, 'secondary-sync', 'secondary-region-index-sync-overlap'],
+      ['buildSecondarySpatialIndex', renderMetrics?.buildSecondarySpatialIndex, 'secondary-sync', 'secondary-spatial-index-overlap'],
+      ['scenarioChunkPromotionRenderLocked', renderMetrics?.scenarioChunkPromotionRenderLocked, 'render-lock-flush', 'promotion-render-lock-overlap'],
+      ['postCommitReplayCount', renderMetrics?.postCommitReplayCount, 'post-commit-replay', 'post-commit-replay-overlap'],
+    ];
+    const topPromotion = promotionMetricSpecs
+      .map(([name, value, subOwner, matchReason]) => metricEntry(name, value, subOwner, matchReason))
+      .filter(Boolean)
+      .filter((value) => metricMatchesTask(value.recordedAt, startTime, durationMs, sampleContext, 250))
       .sort((left, right) => right.durationMs - left.durationMs)[0] || null;
     if (topPromotion && (topPromotion.durationMs >= 350 || topPromotion.durationMs >= durationMs * 0.25)) {{
-      evidence.push(`chunkMetric=${{Number(topPromotion.durationMs.toFixed(3))}}ms`);
+      evidence.push(`chunkMetric=${{topPromotion.metricName}}:${{Number(topPromotion.durationMs.toFixed(3))}}ms`);
       if (topPromotion.reason) evidence.push(`reason=${{topPromotion.reason}}`);
-      return {{
-        name: String(entry?.name || ''),
+      return makeLongTaskResult({{
+        entry,
         durationMs,
         startTime,
         category: 'chunk-promotion',
         evidence,
         confidence: topPromotion.durationMs >= durationMs * 0.5 ? 'high' : 'medium',
         attribution,
-      }};
+        subOwner: topPromotion.subOwner,
+        subOwnerEvidence: makeSubOwnerEvidence({{
+          metricName: topPromotion.metricName,
+          metricDurationMs: topPromotion.durationMs,
+          metricRecordedAt: topPromotion.recordedAt,
+          taskStartTime: startTime,
+          taskDurationMs: durationMs,
+          sampleContext,
+          matchReason: topPromotion.matchReason,
+        }}),
+        subOwnerConfidence: topPromotion.durationMs >= durationMs * 0.5 ? 'high' : 'medium',
+      }});
     }}
     const schedulerDepth = Number(renderMetrics?.frameSchedulerQueueDepth?.total ?? renderMetrics?.frameSchedulerQueueDepth?.details?.total ?? renderMetrics?.frameSchedulerQueueDepth?.count ?? renderMetrics?.frameSchedulerQueueDepth?.details?.count ?? 0);
     if (schedulerDepth > 0) {{
       evidence.push(`frameSchedulerQueueDepth=${{schedulerDepth}}`);
-      return {{
-        name: String(entry?.name || ''),
+      return makeLongTaskResult({{
+        entry,
         durationMs,
         startTime,
         category: 'scheduler',
         evidence,
         confidence: 'medium',
         attribution,
-      }};
+        subOwner: `scheduler:queue-depth`,
+        subOwnerEvidence: makeSubOwnerEvidence({{
+          metricName: 'frameSchedulerQueueDepth',
+          metricDurationMs: schedulerDepth,
+          metricRecordedAt: renderMetrics?.frameSchedulerQueueDepth?.recordedAt || renderMetrics?.frameSchedulerQueueDepth?.details?.recordedAt || 0,
+          taskStartTime: startTime,
+          taskDurationMs: durationMs,
+          sampleContext,
+          matchReason: 'scheduler-queue-depth-observed',
+        }}),
+        subOwnerConfidence: 'medium',
+      }});
     }}
     const workerMetrics = passAttribution?.politicalRasterWorker || {{}};
     const workerAccepted = Number(workerMetrics.acceptedCount?.count || workerMetrics.acceptedCount?.details?.count || workerMetrics.acceptedCount?.durationMs || 0);
@@ -3436,15 +3760,50 @@ async (page) => {{
       evidence.push(`workerRoundTrip=${{Number(workerRoundTrip.toFixed(3))}}ms`);
       evidence.push(`workerAccepted=${{workerAccepted}}`);
       evidence.push(`workerFallback=${{workerFallback}}`);
-      return {{
-        name: String(entry?.name || ''),
+      return makeLongTaskResult({{
+        entry,
         durationMs,
         startTime,
         category: 'worker',
         evidence,
         confidence: workerRoundTrip >= durationMs * 0.25 ? 'medium' : 'low',
         attribution,
-      }};
+        subOwner: 'worker:political-raster',
+        subOwnerEvidence: makeSubOwnerEvidence({{
+          metricName: 'politicalRasterWorker.roundTripMs',
+          metricDurationMs: workerRoundTrip,
+          metricRecordedAt: workerMetrics.roundTripMs?.recordedAt || 0,
+          taskStartTime: startTime,
+          taskDurationMs: durationMs,
+          sampleContext,
+          matchReason: 'worker-protocol-metric-observed',
+        }}),
+        subOwnerConfidence: workerRoundTrip >= durationMs * 0.25 ? 'medium' : 'low',
+      }});
+    }}
+    const renderMetricsText = JSON.stringify(renderMetrics || {{}});
+    if (renderMetricsText.includes('zoom-settle-bench-restore') || String(sampleContext?.label || '').includes('restore')) {{
+      evidence.push('zoom-settle-bench-restore');
+      return makeLongTaskResult({{
+        entry,
+        durationMs,
+        startTime,
+        category: 'browser',
+        evidence,
+        confidence: 'medium',
+        attribution,
+        subOwner: 'benchmark-restore',
+        subOwnerEvidence: makeSubOwnerEvidence({{
+          metricName: 'renderMetrics.zoom-settle-bench-restore',
+          metricDurationMs: durationMs,
+          metricRecordedAt: sampleEpochMs(sampleContext),
+          taskStartTime: startTime,
+          taskDurationMs: durationMs,
+          sampleContext,
+          matchReason: 'restore-invalidation-observed',
+        }}),
+        subOwnerConfidence: 'medium',
+      }});
     }}
     if (attribution.length) {{
       const browserEvidence = attribution
@@ -3452,25 +3811,69 @@ async (page) => {{
         .map((item) => [item.name, item.entryType, item.containerName, item.containerSrc].filter(Boolean).join(':'))
         .filter(Boolean);
       evidence.push(...browserEvidence);
-      return {{
-        name: String(entry?.name || ''),
+      return makeLongTaskResult({{
+        entry,
         durationMs,
         startTime,
         category: 'browser',
         evidence: evidence.length ? evidence : ['performance-observer-attribution'],
         confidence: 'low',
         attribution,
-      }};
+        subOwner: 'browser-composite',
+        subOwnerEvidence: makeSubOwnerEvidence({{
+          metricName: 'PerformanceObserver.attribution',
+          metricDurationMs: durationMs,
+          metricRecordedAt: sampleEpochMs(sampleContext),
+          taskStartTime: startTime,
+          taskDurationMs: durationMs,
+          sampleContext,
+          matchReason: 'browser-attribution-without-app-metric-match',
+        }}),
+        subOwnerConfidence: 'low',
+      }});
     }}
-    return {{
-      name: String(entry?.name || ''),
+    return makeLongTaskResult({{
+      entry,
       durationMs,
       startTime,
       category: 'unknown',
       evidence: ['no-pass-or-browser-attribution'],
       confidence: 'low',
       attribution,
-    }};
+      subOwner: 'unknown',
+      subOwnerEvidence: makeSubOwnerEvidence({{
+        metricName: 'unknown',
+        metricDurationMs: durationMs,
+        metricRecordedAt: sampleEpochMs(sampleContext),
+        taskStartTime: startTime,
+        taskDurationMs: durationMs,
+        sampleContext,
+        matchReason: 'no-subowner-match',
+      }}),
+      subOwnerConfidence: 'low',
+    }});
+  }};
+
+  const summarizeSubOwnerValues = (classifiedTasks = []) => {{
+    const buckets = classifiedTasks.reduce((acc, task) => {{
+      const key = String(task.subOwner || 'unknown');
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(Math.max(0, Number(task.durationMs || 0)));
+      return acc;
+    }}, {{}});
+    const maxMs = {{}};
+    const p50Ms = {{}};
+    Object.entries(buckets).forEach(([key, values]) => {{
+      const sorted = values.slice().sort((a, b) => a - b);
+      maxMs[key] = sorted[sorted.length - 1] || 0;
+      p50Ms[key] = sorted[Math.floor(sorted.length / 2)] || 0;
+    }});
+    return {{ maxMs, p50Ms }};
+  }};
+
+  const isActionableSubOwner = (subOwner = '') => {{
+    const value = String(subOwner || '').trim();
+    return !!value && !UNKNOWN_SUBOWNERS.has(value) && (value.includes(':') || !value.startsWith('unknown-'));
   }};
 
   const buildLongTaskAttribution = (tasks = [], passAttribution = null, renderMetrics = null, sampleContext = null) => {{
@@ -3478,17 +3881,43 @@ async (page) => {{
       .map((entry) => classifyLongTask(entry, passAttribution, renderMetrics, sampleContext))
       .filter((entry) => entry.durationMs > 750)
       .sort((left, right) => right.durationMs - left.durationMs);
+    const idleWait = classifyIdleWaitOwner(sampleContext, classifiedTasks);
     const categoryCounts = classifiedTasks.reduce((counts, task) => {{
       counts[task.category] = (counts[task.category] || 0) + 1;
       return counts;
     }}, {{}});
+    const subOwnerCounts = classifiedTasks.reduce((counts, task) => {{
+      const key = String(task.subOwner || 'unknown');
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }}, {{}});
+    const subOwnerStats = summarizeSubOwnerValues(classifiedTasks);
     const topOwner = classifiedTasks[0]?.category || '';
+    const topSubOwner = classifiedTasks[0]?.subOwner || '';
+    const missingSubOwnerEvidenceCount = classifiedTasks.filter((task) => !task.subOwnerEvidence || typeof task.subOwnerEvidence !== 'object' || !String(task.subOwnerEvidence.matchReason || '')).length;
+    const missingSubOwnerConfidenceCount = classifiedTasks.filter((task) => !['low', 'medium', 'high'].includes(String(task.subOwnerConfidence || ''))).length;
+    const unknownSubOwnerCount = classifiedTasks.filter((task) => UNKNOWN_SUBOWNERS.has(String(task.subOwner || 'unknown')) || String(task.subOwner || '').startsWith('unknown-')).length;
+    const idleWaitOwnerCounts = idleWait.owner ? {{ [idleWait.owner]: 1 }} : {{}};
     return {{
       schema: 'mc_long_task_attribution_v1',
+      subOwnerSchema: SUBOWNER_SCHEMA,
       thresholdMs: 750,
       unknownLongTaskCount: Number(categoryCounts.unknown || 0),
+      unknownSubOwnerCount,
       topOwner,
+      topSubOwner,
+      topSubOwnerEvidence: classifiedTasks[0]?.subOwnerEvidence || null,
       categoryCounts,
+      subOwnerCounts,
+      subOwnerMaxMs: subOwnerStats.maxMs,
+      subOwnerP50Ms: subOwnerStats.p50Ms,
+      idleWaitOwnerCounts,
+      idleWaitOwnerMaxMs: idleWait.owner ? {{ [idleWait.owner]: Number(Math.max(0, Number(sampleContext?.firstIdleAfterLastWheelMs || 0)).toFixed(3)) }} : {{}},
+      topIdleWaitOwner: idleWait.owner || '',
+      idleWaitEvidence: idleWait.evidence,
+      missingSubOwnerEvidenceCount,
+      missingSubOwnerConfidenceCount,
+      topSubOwnerActionable: isActionableSubOwner(topSubOwner),
       tasks: classifiedTasks,
     }};
   }};

@@ -915,6 +915,8 @@ async function loadExplicitVariant({
   d3Client,
   variant,
 } = {}) {
+  // 显式 variant 属于“用户已经指定要哪一套 topology”，
+  // 这里直接走单份加载，不再混入 coarse/detail 的组合逻辑。
   const tried = new Set();
   const candidates = [];
   const enqueue = (url) => {
@@ -944,6 +946,8 @@ async function loadDetailTopologyWithFallback({
   detailSource,
   candidateKeys = null,
 } = {}) {
+  // detail 数据常因为构建差异、缓存或场景包不完整而缺一份；
+  // 这里顺序探测候选源，尽量把“请求哪份、最后实际用了哪份”保留下来。
   const orderedKeys = Array.from(new Set([
     ...(Array.isArray(candidateKeys) ? candidateKeys : []),
     detailSource?.key,
@@ -1017,6 +1021,8 @@ async function loadTopologyBundle({
     : await loadTopologyUrlWithMetrics(d3Client, topologyUrl, "primary");
   const topologyPrimary = topologyPrimaryResult.topology;
 
+  // primary coarse topology 是启动必需的基底；
+  // detail 只是后续增强层，所以任何“关掉 detail / 延迟 detail”的路径都不能阻塞 primary 出图。
   if (!detailLayerEnabled) {
     console.info("[data_loader] detail_layer=off detected. Running coarse-only primary topology.");
     return {
@@ -1107,6 +1113,9 @@ export async function loadStartupBootArtifacts({
     localesUrl,
     geoAliasesUrl,
   });
+  // startup boot 只准备“首屏马上要用”的基础资产：
+  // primary topology + startup 级本地化。
+  // 真正的 detail/runtime 数据仍然交给后续完整加载链处理。
   const startupBootCacheState = createDefaultStartupBootCacheState(
     useStartupCache && isStartupCacheEnabled()
   );
@@ -1188,6 +1197,7 @@ export async function loadStartupBootArtifacts({
 
   if ((!topologyPrimary || !locales || !geoAliases) && workerEnabled) {
     try {
+      // worker 只补 cache 没命中的那部分，避免主线程首屏同时做 JSON parse。
       startupWorkerUsed = true;
       const workerResult = await loadBaseStartupViaWorker({
         topologyUrl,
@@ -1233,6 +1243,7 @@ export async function loadStartupBootArtifacts({
 
   if (topologyCacheKey && topologyPrimary && startupBootCacheState.baseTopology !== "hit") {
     startupBootCacheState.baseTopology = "write-pending";
+    // cache 写回放到后台做，不让首屏加载再多等一次 IO。
     void writeStartupCacheEntry({
       kind: "startup-base-topology",
       cacheKey: topologyCacheKey,
@@ -1304,6 +1315,9 @@ export async function loadDeferredDetailBundle({
     ...DETAIL_SOURCE_FALLBACK_ORDER,
   ].filter((key) => key && Object.prototype.hasOwnProperty.call(DETAIL_SOURCES, key))));
 
+  // deferred bundle 是启动后补细节的第二阶段：
+  // 一边补 detail topology，一边补 runtime political overlay，
+  // 两者都允许单独失败，不把整次补细节链直接炸掉。
   const [{ topology: topologyDetail, sourceKey: detailSourceUsed }, runtimePoliticalTopology] =
     await Promise.all([
       loadDetailTopologyWithFallback({
@@ -1356,6 +1370,9 @@ export async function loadMapData({
     localesUrl,
     geoAliasesUrl,
   });
+  // 这里是完整数据装配入口：
+  // 把 startup boot、topology、localization、城市、context layers、palette 等来源并发拉齐，
+  // 最后再统一拼成运行时需要的 map data 包。
   const shouldUseStartupBootPath =
     normalizeLocaleLevel(localeLevel) === "startup" && (useStartupWorker || useStartupCache);
   const startupBootArtifactsPromise = startupBootArtifactsOverride
@@ -1492,6 +1509,8 @@ export async function loadMapData({
   ));
   const runtimePoliticalPromise = Promise.all([startupBootArtifactsPromise, topologyBundlePromise]).then(
     ([startupBootArtifacts, topologyBundle]) => {
+      // 启动已经带了 scenario bootstrap，或者当前明确走 deferred detail，
+      // 就不要在首轮完整加载里再抢跑 runtime political。
       if (startupBootArtifacts?.hasScenarioRuntimeBootstrap || topologyBundle.detailDeferred) {
         return null;
       }

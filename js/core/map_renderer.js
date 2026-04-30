@@ -11851,6 +11851,7 @@ function drawRiversLayer(k, { interactive = false } = {}) {
   const outlineWidth = clamp(Number.isFinite(Number(cfg.outlineWidth)) ? Number(cfg.outlineWidth) : 0.25, 0, 3);
   const dashPattern = getDashPattern(cfg.dashStyle, widthBase);
   const scale = Math.max(0.0001, k);
+  const resolvedDashPattern = dashPattern.map((value) => value / scale);
   const zoomStyle = getRiverZoomStyleFactors(k);
   const visibleEntries = [];
 
@@ -11867,7 +11868,7 @@ function drawRiversLayer(k, { interactive = false } = {}) {
     context.strokeStyle = outlineColor;
     context.lineCap = "round";
     context.lineJoin = "round";
-    context.setLineDash([]);
+    context.setLineDash(resolvedDashPattern);
     visibleEntries.forEach(({ feature, profile }) => {
       const resolvedOutlineWidth = outlineWidth
         * zoomStyle.outlineWidthFactor
@@ -11890,7 +11891,7 @@ function drawRiversLayer(k, { interactive = false } = {}) {
   context.strokeStyle = color;
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.setLineDash(dashPattern);
+  context.setLineDash(resolvedDashPattern);
   visibleEntries.forEach(({ feature, profile }) => {
     const resolvedCoreWidth = widthBase
       * zoomStyle.coreWidthFactor
@@ -11913,6 +11914,8 @@ function drawRiversLayer(k, { interactive = false } = {}) {
     coreWidthFactor: zoomStyle.coreWidthFactor,
     outlineWidthFactor: zoomStyle.outlineWidthFactor,
     outlineAlphaFactor: zoomStyle.outlineAlphaFactor,
+    dashStyle: String(cfg.dashStyle || "solid"),
+    dashPattern: resolvedDashPattern,
     interactive: !!interactive,
     skipped: false,
   });

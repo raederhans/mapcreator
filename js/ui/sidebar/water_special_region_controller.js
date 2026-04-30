@@ -782,14 +782,17 @@ export function createWaterSpecialRegionController({
       .sort((a, b) => getSpecialFeatureDisplayName(a).localeCompare(getSpecialFeatureDisplayName(b)));
 
   const renderSpecialRegionInspectorUi = () => {
-    const hasScenarioSpecialRegions = !!runtimeState.activeScenarioId && (runtimeState.specialRegionsById?.size || 0) > 0;
-    const hasScenarioReliefOverlays =
-      !!runtimeState.activeScenarioId &&
+    const hasActiveScenario = !!runtimeState.activeScenarioId;
+    const hasVisibleSpecialRegions = hasActiveScenario && getVisibleSpecialFeatures().length > 0;
+    const hasVisibleReliefOverlays =
+      hasActiveScenario &&
+      !!runtimeState.showScenarioReliefOverlays &&
       (Array.isArray(runtimeState.scenarioReliefOverlaysData?.features) ? runtimeState.scenarioReliefOverlaysData.features.length : 0) > 0;
-    const hasScenarioInspectorContent = hasScenarioSpecialRegions || hasScenarioReliefOverlays;
+    const hasScenarioInspectorContent = hasVisibleSpecialRegions || hasVisibleReliefOverlays;
     const selectedSpecialRegionId = ensureSelectedSpecialRegion();
     if (specialRegionInspectorSection) {
-      specialRegionInspectorSection.classList.toggle("hidden", !hasScenarioInspectorContent);
+      specialRegionInspectorSection.classList.toggle("hidden", !hasActiveScenario);
+      specialRegionInspectorSection.classList.toggle("is-empty-scenario-panel", hasActiveScenario && !hasScenarioInspectorContent);
     }
     if (scenarioSpecialRegionVisibilityToggle) {
       scenarioSpecialRegionVisibilityToggle.checked = !!runtimeState.showScenarioSpecialRegions;
@@ -1090,7 +1093,14 @@ export function createWaterSpecialRegionController({
         runtimeState.hoveredSpecialRegionId = null;
       }
       if (runtimeState.showScenarioSpecialRegions) {
-        void ensureActiveScenarioOptionalLayerLoaded("special", { renderNow: true });
+        void ensureActiveScenarioOptionalLayerLoaded("special", { renderNow: true })
+          .then(() => {
+            renderSpecialRegionList();
+            if (render) render();
+          })
+          .catch(() => {
+            renderSpecialRegionInspectorUi();
+          });
       }
       markDirty("toggle-scenario-special-regions");
       renderSpecialRegionInspectorUi();

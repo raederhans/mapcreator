@@ -945,6 +945,8 @@ function applyOwnershipToFeatureIds(
   const before = captureHistoryState({
     sovereigntyFeatureIds: normalizedTargetIds,
   });
+  // ownership 写入不是单纯改颜色：
+  // 它会触发 sovereignty、边界和历史记录三条链，所以这里先过滤可见 feature，再按批次提交。
   const changed = setFeatureOwnerCodes(normalizedTargetIds, normalizedOwnerCode);
   if (changed > 0) {
     refreshResolvedColorsForFeatures(normalizedTargetIds, { renderNow: false });
@@ -1026,6 +1028,9 @@ function applyScenarioOwnerControllerAssignments(
     scenarioControllerFeatureIds: targetIds,
   });
 
+  // scenario 模式下 owner / controller 允许分离，
+  // 但两者必须在同一笔 sidebar 事务里写入并统一推高 revision，
+  // 否则 UI、diff 计数和边界重算会短暂看到半更新状态。
   runtimeState.scenarioControllersByFeatureId = runtimeState.scenarioControllersByFeatureId || {};
   const ownerFeatureIdsByCode = new Map();
   const changedFeatureIds = new Set();
@@ -1426,6 +1431,9 @@ function applyExplicitOwnershipTransfer(
 function initSidebar({ render } = {}) {
   const list = document.getElementById("countryList");
   if (!list) return;
+  // sidebar.js 仍然是右侧工作区的总装壳层：
+  // 负责建宿主 DOM、接 runtime hooks、编排多个子 controller，
+  // 具体的国家检查器、战略面板、水域面板等细节则下沉到 owner 文件。
   const presetTree = document.getElementById("presetTree");
   const searchInput = document.getElementById("countrySearch");
   const resetBtn = document.getElementById("resetCountryColors");
@@ -3101,6 +3109,8 @@ function initSidebar({ render } = {}) {
     .map((details) => details.id)
     .join(",");
   const syncRightSidebarUrlState = () => {
+    // 右侧栏 URL 状态只记录“当前标签页 + 展开的 section + support view”，
+    // 不记录更细的局部表单状态，避免刷新链接过长也避免 restore 语义失真。
     replaceUiUrlParams((params) => {
       const scopeValue = getScopeParamForTab(runtimeState.ui?.rightSidebarTab || "inspector");
       params.set(UI_URL_STATE_KEYS.scope, scopeValue);
@@ -3117,6 +3127,8 @@ function initSidebar({ render } = {}) {
   };
   const restoreRightSidebarUrlState = () => {
     if (!globalThis.URLSearchParams || !globalThis.location) return "";
+    // restore 只做“把壳层切回同一个工作区入口”，
+    // 具体 guide/reference/export 的打开动作仍交给各自 owner 去完成。
     const params = new globalThis.URLSearchParams(globalThis.location.search || "");
     const scopeValue = String(params.get(UI_URL_STATE_KEYS.scope) || "").trim().toLowerCase();
     const viewValue = String(params.get(UI_URL_STATE_KEYS.view) || "").trim().toLowerCase();
@@ -3303,6 +3315,8 @@ function initSidebar({ render } = {}) {
   const updateScenarioInspectorLayout = () => {
     const isScenarioMode = !!runtimeState.activeScenarioId;
     const scenarioDefaultsKey = String(runtimeState.activeScenarioId || "__base__");
+    // 切场景时只重置由 scenario 接管的 disclosure，
+    // project/diagnostics 这类全局工具区继续保留独立壳层身份。
     if (scenarioDefaultsKey !== lastScenarioInspectorDefaultsKey) {
       collapseScenarioManagedSections();
       lastScenarioInspectorDefaultsKey = scenarioDefaultsKey;

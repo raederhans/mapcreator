@@ -152,7 +152,15 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("attribution: Array.from(entry.attribution || [])", script)
         self.assertIn("mc_long_task_attribution_v1", script)
         self.assertIn("mc_long_task_attribution_gate_v1", script)
+        self.assertIn("mc_long_task_subowner_v1", script)
         self.assertIn("LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES", script)
+        self.assertIn("subOwner", script)
+        self.assertIn("subOwnerCounts", script)
+        self.assertIn("unknownSubOwnerCount", script)
+        self.assertIn("missingSubOwnerEvidenceCount", script)
+        self.assertIn("topSubOwnerActionable", script)
+        self.assertIn("shortArtifactPassed", script)
+        self.assertIn("fullArtifactPassed", script)
         self.assertIn("category: 'render-pass'", script)
         self.assertIn("unknownLongTaskCount", script)
         self.assertIn("evidence: ['no-pass-or-browser-attribution']", script)
@@ -164,6 +172,10 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("fallbackCount: Number(source.fallbackCount || 0)", script)
         self.assertIn("const sampleRegions = [", script)
         self.assertIn("sampleContext.drawImage(canvas, sourceX, sourceY", script)
+        self.assertIn("const sampleEpochMs = (sampleContext = null) =>", script)
+        self.assertIn("return timeOrigin && sampledAt ? timeOrigin + sampledAt : sampledAt;", script)
+        self.assertNotIn("metricRecordedAt: sampleContext?.sampledAt || 0", script)
+        self.assertNotIn("metricRecordedAt: Math.max(0, Number(sampleContext?.sampledAt || 0))", script)
 
     def test_repeated_zoom_regions_metric_summarizes_degradation_black_longtask_and_memory(self):
         benchmark = load_editor_benchmark_module()
@@ -198,6 +210,16 @@ class PerfGateContractTest(unittest.TestCase):
                                     "tasks": [
                                         {
                                             "category": "render-pass",
+                                            "subOwner": "render-pass:politicalBg",
+                                            "subOwnerEvidence": {
+                                                "metricName": "politicalBg",
+                                                "metricDurationMs": 900,
+                                                "metricRecordedAt": 1000,
+                                                "taskWindowMs": [900, 1900],
+                                                "matchReason": "dominant-render-pass-overlap",
+                                                "renderPass": "politicalBg",
+                                            },
+                                            "subOwnerConfidence": "high",
                                             "durationMs": 900,
                                             "startTime": 123,
                                             "evidence": ["politicalBg=900ms"],
@@ -224,6 +246,15 @@ class PerfGateContractTest(unittest.TestCase):
                                     "tasks": [
                                         {
                                             "category": "unknown",
+                                            "subOwner": "unknown",
+                                            "subOwnerEvidence": {
+                                                "metricName": "unknown",
+                                                "metricDurationMs": 800,
+                                                "metricRecordedAt": 1200,
+                                                "taskWindowMs": [1000, 1800],
+                                                "matchReason": "no-subowner-match",
+                                            },
+                                            "subOwnerConfidence": "low",
                                             "durationMs": 800,
                                             "startTime": 456,
                                             "evidence": ["no-pass-or-browser-attribution"],
@@ -256,17 +287,155 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertEqual(metric["details"]["regions"]["europe"]["degradation"]["ratio"], 1.25)
         self.assertEqual(metric["details"]["passAttribution"]["politicalBg"]["max"], 18)
         self.assertEqual(metric["details"]["longTask"]["attribution"]["schema"], "mc_long_task_attribution_v1")
+        self.assertEqual(metric["details"]["longTask"]["attribution"]["subOwnerSchema"], "mc_long_task_subowner_v1")
         self.assertEqual(metric["details"]["longTask"]["attribution"]["unknownLongTaskCount"], 1)
         self.assertEqual(metric["details"]["longTask"]["attribution"]["categoryCounts"]["render-pass"], 1)
         self.assertEqual(metric["details"]["longTask"]["attribution"]["categoryCounts"]["unknown"], 1)
+        self.assertEqual(metric["details"]["longTask"]["attribution"]["subOwnerCounts"]["render-pass:politicalBg"], 1)
+        self.assertEqual(metric["details"]["longTask"]["attribution"]["subOwnerCounts"]["unknown"], 1)
         self.assertFalse(metric["details"]["longTask"]["attribution"]["gate"]["passed"])
         self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["unknownLongTaskCount"], 1)
         self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["unknownTopOwnerCount"], 1)
+        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["unknownSubOwnerCount"], 1)
+        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["missingSubOwnerEvidenceCount"], 0)
+        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["missingSubOwnerConfidenceCount"], 0)
         self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["invalidCategoryCount"], 0)
         self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["unknownLongTaskCount"], 1)
+        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["subOwnerSchema"], "mc_long_task_subowner_v1")
+        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["subOwnerCounts"]["render-pass:politicalBg"], 1)
+        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["subOwnerCounts"]["unknown"], 1)
+        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]["unknownSubOwnerCount"], 1)
         self.assertFalse(metric["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]["passed"])
         self.assertEqual(metric["details"]["blackPixelClassification"]["normal"], 1)
         self.assertEqual(metric["details"]["blackPixelClassification"]["dark-content-candidate"], 1)
+
+    def test_repeated_zoom_regions_longtask_subowners_pass_when_all_tasks_are_owned(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "passAttributionSchema": "mc_pass_attribution_v1",
+                "cyclesPerRegion": 1,
+                "wheelsPerCycle": 1,
+                "shortArtifactPass": True,
+                "fullArtifactPass": True,
+                "regions": {
+                    "europe": {
+                        "cycles": [
+                            {
+                                "firstIdleAfterLastWheelMs": 100,
+                                "longTaskAttribution": {
+                                    "schema": "mc_long_task_attribution_v1",
+                                    "subOwnerSchema": "mc_long_task_subowner_v1",
+                                    "unknownLongTaskCount": 0,
+                                    "unknownSubOwnerCount": 0,
+                                    "topOwner": "render-pass",
+                                    "topSubOwner": "render-pass:politicalBg",
+                                    "categoryCounts": {"render-pass": 1},
+                                    "subOwnerCounts": {"render-pass:politicalBg": 1},
+                                    "tasks": [
+                                        {
+                                            "category": "render-pass",
+                                            "subOwner": "render-pass:politicalBg",
+                                            "subOwnerEvidence": {
+                                                "metricName": "politicalBg",
+                                                "metricDurationMs": 900,
+                                                "metricRecordedAt": 1000,
+                                                "taskWindowMs": [900, 1900],
+                                                "matchReason": "dominant-render-pass-overlap",
+                                                "renderPass": "politicalBg",
+                                            },
+                                            "subOwnerConfidence": "high",
+                                            "durationMs": 900,
+                                            "startTime": 123,
+                                            "evidence": ["politicalBg=900ms"],
+                                            "confidence": "high",
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "degradation": {"ratio": 1.0},
+                        "maxLongTaskMs": 900,
+                    }
+                },
+            },
+        }
+
+        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+        attribution = metric["details"]["longTask"]["attribution"]
+
+        self.assertEqual(attribution["subOwnerSchema"], "mc_long_task_subowner_v1")
+        self.assertEqual(attribution["subOwnerCounts"]["render-pass:politicalBg"], 1)
+        self.assertTrue(attribution["gate"]["passed"])
+        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 0)
+        self.assertEqual(attribution["gate"]["missingSubOwnerEvidenceCount"], 0)
+        self.assertEqual(attribution["gate"]["missingSubOwnerConfidenceCount"], 0)
+        self.assertTrue(attribution["gate"]["topSubOwnerActionable"])
+        self.assertTrue(metric["details"]["artifactPassMarkers"]["shortArtifactPass"])
+        self.assertTrue(metric["details"]["artifactPassMarkers"]["fullArtifactPass"])
+
+    def test_repeated_zoom_regions_without_long_tasks_does_not_fail_top_subowner_gate(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "passAttributionSchema": "mc_pass_attribution_v1",
+                "cyclesPerRegion": 1,
+                "wheelsPerCycle": 1,
+                "shortArtifactPass": True,
+                "fullArtifactPass": True,
+                "regions": {
+                    "europe": {
+                        "cycles": [
+                            {
+                                "firstIdleAfterLastWheelMs": 80,
+                                "longTaskAttribution": {
+                                    "schema": "mc_long_task_attribution_v1",
+                                    "subOwnerSchema": "mc_long_task_subowner_v1",
+                                    "thresholdMs": 750,
+                                    "unknownLongTaskCount": 0,
+                                    "unknownSubOwnerCount": 0,
+                                    "topOwner": "",
+                                    "topSubOwner": "",
+                                    "categoryCounts": {},
+                                    "subOwnerCounts": {},
+                                    "tasks": [],
+                                },
+                            }
+                        ],
+                        "degradation": {"ratio": 1.0},
+                        "maxLongTaskMs": 0,
+                    }
+                },
+            },
+        }
+
+        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+        attribution = metric["details"]["longTask"]["attribution"]
+        region_attribution = metric["details"]["regions"]["europe"]["longTaskAttribution"]
+
+        self.assertTrue(attribution["gate"]["passed"])
+        self.assertEqual(attribution["gate"]["taskCount"], 0)
+        self.assertEqual(attribution["gate"]["unknownTopSubOwnerCount"], 0)
+        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 0)
+        self.assertTrue(region_attribution["gate"]["passed"])
+        self.assertEqual(region_attribution["gate"]["taskCount"], 0)
+        self.assertEqual(region_attribution["gate"]["unknownTopSubOwnerCount"], 0)
 
     def test_repeated_zoom_regions_metric_requires_active_scenario_match(self):
         benchmark = load_editor_benchmark_module()

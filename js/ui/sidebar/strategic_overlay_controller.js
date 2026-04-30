@@ -231,6 +231,8 @@ export function createStrategicOverlayController({
     refreshStrategicOverlayUI({ scopes });
   };
   const scheduleStrategicOverlayRefresh = (scope = "all") => {
+    // strategic overlay 的多个控件经常在同一轮操作里一起变脏，
+    // 这里先聚合 scope，再压到下一帧统一刷新，避免连续改 state 时重复刷整块 sidebar。
     normalizeStrategicOverlayRefreshScopes(scope).forEach((scopeKey) => pendingStrategicOverlayRefreshScopes.add(scopeKey));
     if (pendingStrategicOverlayRefreshHandle !== null) {
       return;
@@ -277,6 +279,8 @@ export function createStrategicOverlayController({
 
   const applyFrontlineAnnotationViewPatch = (patch = {}, dirtyReason = "frontline-overlay") => {
     const before = captureHistoryState({ strategicOverlay: true });
+    // frontline 配置最终都落到 annotationView，
+    // 这样渲染、历史记录和 UI 都围绕同一份状态工作。
     state.annotationView = normalizeAnnotationView({
       ...(state.annotationView || {}),
       ...(patch && typeof patch === "object" ? patch : {}),
@@ -347,6 +351,8 @@ export function createStrategicOverlayController({
     const nextIsOpen = !!nextOpen;
     state.strategicOverlayUi.modalOpen = nextIsOpen;
     state.strategicOverlayUi.modalSection = section === "counter" ? "counter" : "line";
+    // 工作台 modal 和 counter editor modal 不能同时抢焦点；
+    // 这里把两者的开关关系集中收口，避免 sidebar / overlay / body class 各自漂移。
     if (nextIsOpen && !wasOpen) {
       setCounterEditorModalState(false, { restoreFocus: false });
     } else if (!nextIsOpen && wasOpen) {
@@ -398,6 +404,8 @@ export function createStrategicOverlayController({
         selectEl.disabled = !!disabled;
       }
     };
+    // 所有 strategic 子面板都走同一个 scoped refresh 入口。
+    // 这样外层只要声明“哪块脏了”，而不是分别记住几十个局部刷新函数。
     ensureStrategicOverlayUiState();
     if (hasStrategicOverlayScope(normalizedScopes, "frontlineControls")) {
       recordStrategicOverlayPerfCounter("frontlineControls");

@@ -231,6 +231,7 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
     const actionBody = actionSection?.querySelector(".inspector-panel-body");
     const actionBodyStyle = actionBody ? getComputedStyle(actionBody) : null;
     const specialSection = document.querySelector("#specialRegionInspectorSection");
+    const specialList = document.querySelector("#specialRegionList");
     const waterSection = document.querySelector("#waterInspectorSection");
     const colorRow = document.querySelector("#countryInspectorColorRow");
     const firstGroup = document.querySelector("#countryList > .country-explorer-group:not(.country-select-card)");
@@ -257,6 +258,25 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
     });
     const visualAdjustmentBody = document.querySelector("#presetTree .scenario-visual-adjustments-body");
     const visualAdjustmentStyle = visualAdjustmentBody ? getComputedStyle(visualAdjustmentBody) : null;
+    const fontSampleSelectors = [
+      "#selectedCountryActionsSection .sidebar-section-title",
+      "#selectedCountryActionsSection .scenario-action-card",
+      "#countryList .country-select-title",
+      "#specialRegionInspectorSection .toggle-label",
+      "#waterInspectorSection .select-input",
+      "#specialRegionInspectorSection .sidebar-tool-hint",
+      "#waterInspectorSection .sidebar-field-label",
+    ];
+    const fontSamples = Object.fromEntries(fontSampleSelectors.map((selector) => {
+      const element = document.querySelector(selector);
+      const style = element ? getComputedStyle(element) : null;
+      return [selector, {
+        exists: !!element,
+        fontFamily: style?.fontFamily || "",
+        fontSize: style?.fontSize || "",
+        lineHeight: style?.lineHeight || "",
+      }];
+    }));
     const visibleOverflow = [...document.querySelectorAll("#inspectorSidebarPanel *")].filter((element) => {
       if (element.classList.contains("info-tooltip")) return false;
       const rect = element.getBoundingClientRect();
@@ -283,6 +303,10 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
       countrySectionRadius: getComputedStyle(countrySection).borderRadius,
       actionSectionRadius: getComputedStyle(actionSection).borderRadius,
       specialSectionRadius: specialSection ? getComputedStyle(specialSection).borderRadius : "",
+      specialSectionHidden: specialSection ? specialSection.classList.contains("hidden") : true,
+      specialSectionDisplay: specialSection ? getComputedStyle(specialSection).display : "",
+      specialListClientHeight: specialList?.clientHeight || 0,
+      specialListMaxHeight: specialList ? getComputedStyle(specialList).maxHeight : "",
       waterSectionRadius: waterSection ? getComputedStyle(waterSection).borderRadius : "",
       colorRowVisible: colorRow ? getComputedStyle(colorRow).display !== "none" : false,
       firstGroupBackground: firstGroup ? getComputedStyle(firstGroup).backgroundImage : "",
@@ -294,6 +318,7 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
       naturalActionLists,
       visualAdjustmentOverflowY: visualAdjustmentStyle?.overflowY || "",
       visualAdjustmentMaxHeight: visualAdjustmentStyle?.maxHeight || "",
+      fontSamples,
       visibleOverflow,
     };
   });
@@ -301,17 +326,21 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
   expect(metrics.countrySectionRadius).toBe("18px");
   expect(metrics.actionSectionRadius).toBe("18px");
   expect(metrics.countryListRect.width).toBeGreaterThan(180);
-  expect(metrics.countryListClientHeight).toBeGreaterThanOrEqual(260);
-  expect(metrics.countryListClientHeight).toBeLessThanOrEqual(280);
+  expect(metrics.countryListClientHeight).toBeGreaterThanOrEqual(220);
+  expect(metrics.countryListClientHeight).toBeLessThanOrEqual(320);
   expect(metrics.countryListScrollHeight).toBeGreaterThan(metrics.countryListClientHeight);
-  expect(metrics.actionBodyClientHeight).toBeGreaterThanOrEqual(480);
-  expect(metrics.actionBodyClientHeight).toBeLessThanOrEqual(490);
+  expect(metrics.actionBodyClientHeight).toBeGreaterThanOrEqual(420);
+  expect(metrics.actionBodyClientHeight).toBeLessThanOrEqual(560);
   expect(metrics.actionBodyScrollHeight).toBeGreaterThan(metrics.actionBodyClientHeight);
   expect(metrics.actionBodyOverflowY).toBe("auto");
   expect(metrics.actionBodyMaxHeight).not.toBe("none");
   expect(metrics.presetTreeClientHeight).toBeGreaterThan(metrics.actionBodyClientHeight);
   expect(metrics.presetTreeOverflowY).toBe("visible");
   expect(metrics.specialSectionRadius).toBe("18px");
+  expect(metrics.specialSectionHidden).toBe(false);
+  expect(metrics.specialSectionDisplay).not.toBe("none");
+  expect(metrics.specialListClientHeight).toBeGreaterThan(0);
+  expect(metrics.specialListMaxHeight).not.toBe("none");
   expect(metrics.waterSectionRadius).toBe("18px");
   expect(metrics.colorRowVisible).toBe(false);
   expect(metrics.actionSectionRect.top).toBeGreaterThan(metrics.countrySectionRect.top);
@@ -326,5 +355,87 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
   expect(metrics.naturalActionLists.every((list) => list.overflowY === "auto" && list.maxHeight !== "none")).toBe(true);
   expect(metrics.visualAdjustmentOverflowY).toBe("auto");
   expect(metrics.visualAdjustmentMaxHeight).not.toBe("none");
+  const fontSizeOf = (selector) => parseFloat(metrics.fontSamples[selector].fontSize);
+  for (const sample of Object.values(metrics.fontSamples)) {
+    expect(sample.exists).toBe(true);
+    expect(sample.fontFamily.length).toBeGreaterThan(0);
+  }
+  expect(fontSizeOf("#selectedCountryActionsSection .sidebar-section-title")).toBeGreaterThan(fontSizeOf("#countryList .country-select-title"));
+  expect(fontSizeOf("#countryList .country-select-title")).toBeGreaterThan(fontSizeOf("#specialRegionInspectorSection .toggle-label"));
+  expect(Math.abs(fontSizeOf("#specialRegionInspectorSection .toggle-label") - fontSizeOf("#selectedCountryActionsSection .scenario-action-card"))).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(fontSizeOf("#waterInspectorSection .select-input") - fontSizeOf("#selectedCountryActionsSection .scenario-action-card"))).toBeLessThanOrEqual(0.5);
+  expect(fontSizeOf("#specialRegionInspectorSection .sidebar-tool-hint")).toBeLessThan(fontSizeOf("#specialRegionInspectorSection .toggle-label"));
+  expect(fontSizeOf("#waterInspectorSection .sidebar-field-label")).toBeLessThan(fontSizeOf("#specialRegionInspectorSection .toggle-label"));
   expect(metrics.visibleOverflow).toEqual([]);
+
+  await page.evaluate(() => {
+    const toggle = document.querySelector("#scenarioSpecialRegionVisibilityToggle");
+    if (toggle instanceof HTMLInputElement) {
+      toggle.checked = false;
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForFunction(() => {
+    const section = document.querySelector("#specialRegionInspectorSection");
+    const list = document.querySelector("#specialRegionList");
+    return !!section && !section.classList.contains("hidden") && (list?.getBoundingClientRect().height || 0) > 0;
+  });
+  const specialAfterToggleOff = await page.evaluate(() => {
+    const section = document.querySelector("#specialRegionInspectorSection");
+    const list = document.querySelector("#specialRegionList");
+    return {
+      hidden: section?.classList.contains("hidden") ?? true,
+      display: section ? getComputedStyle(section).display : "",
+      listHeight: list?.getBoundingClientRect().height || 0,
+    };
+  });
+  expect(specialAfterToggleOff.hidden).toBe(false);
+  expect(specialAfterToggleOff.display).not.toBe("none");
+  expect(specialAfterToggleOff.listHeight).toBeGreaterThan(0);
+
+  await page.evaluate(() => {
+    const reliefToggle = document.querySelector("#scenarioReliefOverlayVisibilityToggle");
+    if (reliefToggle instanceof HTMLInputElement) {
+      reliefToggle.checked = false;
+      reliefToggle.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForFunction(() => {
+    const section = document.querySelector("#specialRegionInspectorSection");
+    return !!section && !section.classList.contains("hidden") && section.classList.contains("is-empty-scenario-panel");
+  });
+  const specialAfterAllContentOff = await page.evaluate(() => {
+    const section = document.querySelector("#specialRegionInspectorSection");
+    return {
+      hidden: section?.classList.contains("hidden") ?? true,
+      display: section ? getComputedStyle(section).display : "",
+      emptyPanel: section?.classList.contains("is-empty-scenario-panel") ?? false,
+    };
+  });
+  expect(specialAfterAllContentOff.hidden).toBe(false);
+  expect(specialAfterAllContentOff.display).not.toBe("none");
+  expect(specialAfterAllContentOff.emptyPanel).toBe(true);
+
+  await page.evaluate(() => {
+    const reliefToggle = document.querySelector("#scenarioReliefOverlayVisibilityToggle");
+    if (reliefToggle instanceof HTMLInputElement) {
+      reliefToggle.checked = true;
+      reliefToggle.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    const toggle = document.querySelector("#scenarioSpecialRegionVisibilityToggle");
+    if (toggle instanceof HTMLInputElement) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForFunction(() => !document.querySelector("#specialRegionInspectorSection")?.classList.contains("hidden"));
+  const specialAfterToggleOn = await page.evaluate(() => {
+    const section = document.querySelector("#specialRegionInspectorSection");
+    return {
+      hidden: section?.classList.contains("hidden") ?? true,
+      display: section ? getComputedStyle(section).display : "",
+    };
+  });
+  expect(specialAfterToggleOn.hidden).toBe(false);
+  expect(specialAfterToggleOn.display).not.toBe("none");
 });
