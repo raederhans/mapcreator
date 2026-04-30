@@ -16,6 +16,7 @@ import {
 } from "../core/scenario_resources.js";
 import { syncScenarioLocalizationState } from "../core/scenario_localization_state.js";
 import {
+  SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS,
   SCENARIO_STARTUP_GEO_ALIASES_FILENAME,
   SCENARIO_STARTUP_LOCALES_FILENAME,
 } from "../core/scenario/locale_asset_contract.js";
@@ -403,6 +404,41 @@ export function createStartupDataPipelineOwner({
     return results;
   }
 
+  function findScenarioRegistryEntry(registry, scenarioId) {
+    const normalizedId = String(scenarioId || "").trim();
+    if (!normalizedId) return null;
+    return (Array.isArray(registry?.scenarios) ? registry.scenarios : [])
+      .find((entry) => String(entry?.scenario_id || "").trim() === normalizedId) || null;
+  }
+
+  async function loadStartupScenarioManifestFromRegistry({
+    d3Client,
+    scenarioRegistryPromise,
+    scenarioId,
+  } = {}) {
+    const registry = await scenarioRegistryPromise;
+    const entry = findScenarioRegistryEntry(registry, scenarioId);
+    const manifestUrl = String(entry?.manifest_url || "").trim();
+    if (!manifestUrl) return null;
+    if (!d3Client || typeof d3Client.json !== "function") {
+      throw new Error("d3.json is not available for startup scenario manifest loading.");
+    }
+    return d3Client.json(manifestUrl);
+  }
+
+  function resolveStartupBundleUrlFromManifest(manifest, language, scenarioId) {
+    if (!manifest) {
+      return getStartupBundleUrl(scenarioId, language);
+    }
+    const normalizedLanguage = String(language || "en").trim().toLowerCase() === "zh" ? "zh" : "en";
+    const languageField = SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS[normalizedLanguage];
+    return String(
+      manifest?.[languageField]
+      || manifest?.startup_bundle_url
+      || ""
+    ).trim();
+  }
+
   /**
    * Startup阶段：场景引导解析。
    * 位置：base-data 入口，早于基础拓扑注入与场景 apply。
@@ -410,9 +446,7 @@ export function createStartupDataPipelineOwner({
    */
   function resolveStartupScenarioBootstrap({ d3Client } = {}) {
     const configuredDefaultScenarioId = getConfiguredDefaultScenarioId();
-    const scenarioRegistryPromise = configuredDefaultScenarioId
-      ? Promise.resolve(null)
-      : loadScenarioRegistry({ d3Client });
+    const scenarioRegistryPromise = loadScenarioRegistry({ d3Client });
     const registryDefaultScenarioIdPromise = configuredDefaultScenarioId
       ? Promise.resolve(configuredDefaultScenarioId)
       : scenarioRegistryPromise.then((registry) => {
@@ -429,9 +463,24 @@ export function createStartupDataPipelineOwner({
     startBootMetric?.("scenario-bundle");
     const startupBundleResultPromise = requestedDefaultScenarioIdPromise
       .then(async (defaultScenarioId) => {
-        const startupBundleUrl = getStartupBundleUrl(defaultScenarioId, startupBundleLanguage);
+        const startupScenarioManifest = await loadStartupScenarioManifestFromRegistry({
+          d3Client,
+          scenarioRegistryPromise,
+          scenarioId: defaultScenarioId,
+        });
+        const startupBundleUrl = resolveStartupBundleUrlFromManifest(
+          startupScenarioManifest,
+          startupBundleLanguage,
+          defaultScenarioId
+        );
         if (!startupBundleUrl) {
-          throw new Error("Default startup scenario bundle URL could not be resolved.");
+          return {
+            ok: false,
+            skipped: true,
+            scenarioId: defaultScenarioId,
+            source: "manifest-no-startup-bundle",
+            manifest: startupScenarioManifest,
+          };
         }
         const startupBundleResult = await loadStartupBundleViaWorker({
           startupBundleUrl,
@@ -530,19 +579,29 @@ export function createStartupDataPipelineOwner({
     startupFallbackScenarioId,
     startupBundleResultPromise,
   } = {}) {
+    const startupBundleResult = await startupBundleResultPromise;
+    const useScenarioStartupSupport = startupBundleResult?.ok === true;
+    const startupScenarioLocalesUrl = getStartupScenarioSupportUrl(
+      startupFallbackScenarioId,
+      SCENARIO_STARTUP_LOCALES_FILENAME
+    );
+    const startupScenarioGeoAliasesUrl = getStartupScenarioSupportUrl(
+      startupFallbackScenarioId,
+      SCENARIO_STARTUP_GEO_ALIASES_FILENAME
+    );
     return loadMapData({
       currentLanguage: state.currentLanguage || "en",
       d3Client,
       includeCityData: false,
       includeContextLayers: ["urban"],
       localeLevel: "startup",
-      localesUrl: getStartupScenarioSupportUrl(startupFallbackScenarioId, SCENARIO_STARTUP_LOCALES_FILENAME),
-      geoAliasesUrl: getStartupScenarioSupportUrl(startupFallbackScenarioId, SCENARIO_STARTUP_GEO_ALIASES_FILENAME),
+      localesUrl: startupScenarioLocalesUrl || null,
+      geoAliasesUrl: startupScenarioGeoAliasesUrl || null,
       useStartupWorker: true,
       useStartupCache: true,
-      startupBootArtifactsOverride: startupBundleResultPromise.then((result) => (
-        result.ok ? result.startupBootArtifactsOverride : null
-      )),
+      startupBootArtifactsOverride: Promise.resolve(
+        useScenarioStartupSupport ? startupBundleResult.startupBootArtifactsOverride : null
+      ),
     });
   }
 

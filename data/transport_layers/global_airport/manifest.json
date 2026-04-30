@@ -1,0 +1,63 @@
+{
+  "adapter_id": "global_airport_natural_earth_v1",
+  "family": "airport",
+  "geometry_kind": "point",
+  "country": "world",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T16:11:00.377042Z",
+  "recipe_path": "data/transport_layers/global_airport/source_recipe.manual.json",
+  "paths": {
+    "preview": {
+      "airports": "data/transport_layers/global_airport/airports.preview.geojson"
+    },
+    "full": {
+      "airports": "data/transport_layers/global_airport/airports.geojson"
+    },
+    "build_audit": "data/transport_layers/global_airport/build_audit.json"
+  },
+  "source_signature": {
+    "natural_earth": {
+      "filename": ".runtime/source-cache/transport/global/natural_earth/ne_10m_airports.zip",
+      "size_bytes": 290778,
+      "sha256": "a29e335cb67e1e4c131ded1772e0d7074cf1c677bd27d25cf2f2c440c27d7db3",
+      "url": "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_airports.zip"
+    }
+  },
+  "recipe_version": "natural_earth_10m_airports_v5_0_0",
+  "feature_counts": {
+    "preview": {
+      "airports": 886
+    },
+    "full": {
+      "airports": 893
+    }
+  },
+  "build_command": "python tools/build_global_transport_points.py --family airport",
+  "runtime_consumer": "transport_overview_airport",
+  "source_policy": "natural_earth_public_domain_checked_in_v1",
+  "distribution_tier": "single_pack",
+  "coverage_scope": "world",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "airports": "data/transport_layers/global_airport/airports.preview.geojson"
+        },
+        "full": {
+          "airports": "data/transport_layers/global_airport/airports.geojson"
+        }
+      },
+      "feature_counts": {
+        "preview": {
+          "airports": 886
+        },
+        "full": {
+          "airports": 893
+        }
+      }
+    }
+  }
+}

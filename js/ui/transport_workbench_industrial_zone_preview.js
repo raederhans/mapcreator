@@ -570,6 +570,9 @@ async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
       }
       startAuditLoad(manifest);
       const packPath = getPackPath(manifest, variantId, mode);
+      if (!packPath) {
+        throw new Error(`Missing industrial_zones pack path for ${variantId}/${mode}.`);
+      }
       const response = await fetch(packPath, { cache: "no-cache" });
       if (!response.ok) {
         throw new Error(`Failed to load industrial_zones pack (${variantId}/${mode}): ${response.status}`);

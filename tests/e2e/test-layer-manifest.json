@@ -87,6 +87,13 @@
       "ownerHint": "ui-shell"
     },
     {
+      "specPath": "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "primaryLayer": "regression",
+      "executionMode": "browser",
+      "domain": "scenario-runtime",
+      "ownerHint": "scenario-runtime"
+    },
+    {
       "specPath": "tests/e2e/physical_layer_regression.spec.js",
       "primaryLayer": "regression",
       "executionMode": "browser",

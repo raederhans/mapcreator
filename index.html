@@ -27,6 +27,7 @@
         } catch (_error) {
           queryOverride = "";
         }
+        if (queryOverride) return;
         const defaultScenario = queryOverride || document
           .querySelector('meta[name="default-scenario"]')
           ?.getAttribute("content");

@@ -1,0 +1,18 @@
+{
+  "version": "natural_earth_10m_ports_v5_0_0",
+  "family": "port",
+  "source": {
+    "id": "natural_earth_10m_ports",
+    "url": "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_ports.zip",
+    "citation": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/",
+    "license": "public domain",
+    "layer_name": "ne_10m_ports"
+  },
+  "outputs": [
+    "ports.geojson",
+    "ports.preview.geojson",
+    "manifest.json",
+    "build_audit.json"
+  ],
+  "runtime_consumer": "transport_overview_port"
+}

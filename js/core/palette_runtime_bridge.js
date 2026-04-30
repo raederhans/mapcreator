@@ -49,6 +49,55 @@ function getRuntimeBridgePaletteColor(entry) {
   );
 }
 
+function hashRuntimeBridgeString(value) {
+  const input = normalizeRuntimeBridgeTag(value);
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function hslChannelToRgb(p, q, t) {
+  let channel = t;
+  if (channel < 0) channel += 1;
+  if (channel > 1) channel -= 1;
+  if (channel < 1 / 6) return p + (q - p) * 6 * channel;
+  if (channel < 1 / 2) return q;
+  if (channel < 2 / 3) return p + (q - p) * (2 / 3 - channel) * 6;
+  return p;
+}
+
+function hslToRuntimeBridgeHex(hue, saturation, lightness) {
+  const h = (((Number(hue) || 0) % 360) + 360) % 360 / 360;
+  const s = Math.min(Math.max(Number(saturation) || 0, 0), 1);
+  const l = Math.min(Math.max(Number(lightness) || 0, 0), 1);
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const channels = [
+    hslChannelToRgb(p, q, h + 1 / 3),
+    hslChannelToRgb(p, q, h),
+    hslChannelToRgb(p, q, h - 1 / 3),
+  ];
+  return `#${channels
+    .map((channel) => Math.round(channel * 255).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function buildDeterministicRuntimeBridgeColor(tag) {
+  const hash = hashRuntimeBridgeString(tag);
+  const hue = hash % 360;
+  const saturation = 0.52 + ((hash >>> 8) % 12) / 100;
+  const lightness = 0.43 + ((hash >>> 16) % 10) / 100;
+  return hslToRuntimeBridgeHex(hue, saturation, lightness);
+}
+
+function getRuntimeBridgePaletteTagColor(tag, palettePack) {
+  const entries = palettePack?.entries && typeof palettePack.entries === "object" ? palettePack.entries : {};
+  return getRuntimeBridgePaletteColor(entries[normalizeRuntimeBridgeTag(tag)]);
+}
+
 function getRuntimeBridgeCountryIso2(tag, countryEntry, paletteMap) {
   const mappedEntry = paletteMap?.mapped?.[tag];
   const mappedIso2 = getRuntimeBridgeMappedIso2(mappedEntry);
@@ -123,9 +172,57 @@ function buildScenarioRuntimeDefaultTagColors(
   };
 }
 
+function buildScenarioOwnerColorMapDetails(
+  countryMap,
+  {
+    palettePack = null,
+    paletteMap = null,
+    seedColorByTag = {},
+    fallbackColorByTag = {},
+  } = {}
+) {
+  const colorByIso2 = buildRuntimeDefaultColorsByIso2(palettePack, paletteMap, {
+    fallbackColorByTag,
+  });
+  const byTag = {};
+  const generatedTags = [];
+  Object.entries(countryMap || {}).forEach(([rawTag, rawEntry]) => {
+    const tag = normalizeRuntimeBridgeTag(rawTag);
+    if (!tag) return;
+    const entry = rawEntry && typeof rawEntry === "object" ? rawEntry : {};
+    const ownColor = normalizeRuntimeBridgeHex(
+      seedColorByTag?.[tag]
+      || fallbackColorByTag?.[tag]
+      || entry.color_hex
+      || entry.colorHex
+    );
+    const paletteTagColor = getRuntimeBridgePaletteTagColor(tag, palettePack);
+    const iso2 = getRuntimeBridgeCountryIso2(tag, entry, paletteMap);
+    const bridgedColor = iso2 ? normalizeRuntimeBridgeHex(colorByIso2[iso2]) : "";
+    const generatedColor = ownColor || paletteTagColor || bridgedColor
+      ? ""
+      : buildDeterministicRuntimeBridgeColor(tag);
+    byTag[tag] = ownColor || paletteTagColor || bridgedColor || generatedColor;
+    if (generatedColor) {
+      generatedTags.push(tag);
+    }
+  });
+  return {
+    byTag,
+    generatedTags,
+  };
+}
+
+function buildScenarioOwnerColorMap(countryMap, options = {}) {
+  return buildScenarioOwnerColorMapDetails(countryMap, options).byTag;
+}
+
 export {
+  buildDeterministicRuntimeBridgeColor,
   buildRuntimeDefaultColorsByIso2,
   buildRuntimeDefaultTagByIso2,
+  buildScenarioOwnerColorMap,
+  buildScenarioOwnerColorMapDetails,
   buildScenarioRuntimeDefaultTagColors,
   getRuntimeBridgeMappedIso2,
   normalizeRuntimeBridgeHex,

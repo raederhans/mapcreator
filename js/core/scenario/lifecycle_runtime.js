@@ -216,6 +216,7 @@ function createScenarioLifecycleRuntime({
     runtimeState.activeScenarioMeshPack = null;
     runtimeState.scenarioCountriesByTag = {};
     runtimeState.scenarioFixedOwnerColors = {};
+    runtimeState.scenarioGeneratedColorTags = [];
     runtimeState.scenarioRuntimeTopologyData = null;
     runtimeState.scenarioRuntimeTopologyVersionTag = "";
     runtimeState.scenarioPoliticalChunkData = null;

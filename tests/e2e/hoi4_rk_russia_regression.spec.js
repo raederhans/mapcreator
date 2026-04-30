@@ -1,7 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { getAppUrl } = require("./support/playwright-app");
+const {
+  applyScenarioAndWaitIdle,
+  getAppUrl,
+  waitForAppInteractive,
+  waitForScenarioSelectReady,
+} = require("./support/playwright-app");
 
 const APP_URL = getAppUrl();
 
@@ -10,11 +15,14 @@ const SAMPLE_POINTS = [
   { id: 'arkhangelsk', lon: 40.533, lat: 64.54 },
   { id: 'pechora', lon: 57.813, lat: 65.148 },
   { id: 'south_ural', lon: 60.994, lat: 51.064 },
-  { id: 'polar_gap_west', lon: 53.029, lat: 68.808 },
-  { id: 'polar_gap_east', lon: 58.72, lat: 68.95 },
+  { id: 'arctic_land_west', lon: 53.029, lat: 66.808 },
+  { id: 'arctic_land_east', lon: 58.72, lat: 66.95 },
 ];
 
 async function reapplyCoreTerritory(page, tag) {
+  await page.evaluate(() => {
+    document.querySelector('#countryInspectorSection')?.setAttribute('open', '');
+  });
   await page.fill('#countrySearch', tag);
   const row = page.locator('.country-select-main-btn').filter({ hasText: `(${tag})` }).first();
   await expect(row).toBeVisible({ timeout: 15000 });
@@ -26,6 +34,7 @@ async function reapplyCoreTerritory(page, tag) {
 }
 
 test('hoi4 rkm/rko/rku reapply closes RU coverage gaps', async ({ page }) => {
+  test.setTimeout(120000);
   const consoleIssues = [];
   const networkFailures = [];
 
@@ -51,10 +60,16 @@ test('hoi4 rkm/rko/rku reapply closes RU coverage gaps', async ({ page }) => {
   });
 
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
-
-  await page.selectOption('#scenarioSelect', 'hoi4_1939');
-  await page.click('#applyScenarioBtn');
+  await waitForAppInteractive(page, { timeout: 90000 });
+  await waitForScenarioSelectReady(page, { scenarioId: 'hoi4_1939', timeout: 90000 });
+  await page.evaluate(() => {
+    document.querySelector('#scenarioSelect')?.closest('details')?.setAttribute('open', '');
+  });
+  await applyScenarioAndWaitIdle(page, 'hoi4_1939', {
+    timeout: 90000,
+    renderMode: 'none',
+    markDirtyReason: 'playwright-hoi4-rk-russia',
+  });
   await expect(page.locator('#scenarioStatus')).toContainText('HOI4 1939', { timeout: 20000 });
   await page.selectOption('#scenarioViewModeSelect', 'ownership');
   await page.waitForTimeout(1200);

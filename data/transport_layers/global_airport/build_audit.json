@@ -1,0 +1,17 @@
+{
+  "adapter_id": "global_airport_natural_earth_v1",
+  "generated_at": "2026-04-30T16:11:00.377042Z",
+  "source_signature": {
+    "natural_earth": {
+      "filename": ".runtime/source-cache/transport/global/natural_earth/ne_10m_airports.zip",
+      "size_bytes": 290778,
+      "sha256": "a29e335cb67e1e4c131ded1772e0d7074cf1c677bd27d25cf2f2c440c27d7db3",
+      "url": "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_airports.zip"
+    }
+  },
+  "summary": {
+    "feature_count": 893,
+    "preview_feature_count": 886,
+    "coverage_scope": "world"
+  }
+}

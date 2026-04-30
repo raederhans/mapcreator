@@ -220,6 +220,7 @@ function bootstrapDeferredUi(renderApp) {
 }
 
 async function rollbackStartupScenarioToBaseMap() {
+  // 启动失败后的“继续进入基础地图”只负责撤销已激活场景；完整回滚仍由 scenario_manager 的 clear/apply 链路持有。
   if (!String(runtimeState.activeScenarioId || "").trim()) {
     return false;
   }
@@ -255,6 +256,7 @@ function schedulePostReadyHydration() {
     return;
   }
   postReadyHydrationScheduled = true;
+  // ready 之后再补齐完整本地化与场景 bundle，保证首屏先可见；调度器负责等待交互空窗，避免和用户第一轮缩放抢主线程。
   schedulePostReadyTask("post-ready-localization-hydration", () => (
     ensureFullLocalizationDataReady({ reason: "post-ready-idle", renderNow: true }).catch((error) => {
       console.warn("[boot] Deferred full localization hydration failed during idle scheduling.", error);
@@ -315,6 +317,7 @@ function flushPendingScenarioChunkRefreshAfterReady(reason = "post-ready") {
     && !loadState.pendingPromotion
   );
   if (shouldSeedFirstReadyFlush) {
+    // 首次 ready 可能早于 chunk runtime 的 selection 初始化；这里补一个显式 pending reason，让 chunk owner 统一执行 first-ready 刷新。
     loadState.pendingReason = normalizedReason;
     loadState.pendingDelayMs = 0;
   }
@@ -326,6 +329,7 @@ function flushPendingScenarioChunkRefreshAfterReady(reason = "post-ready") {
 }
 
 function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state") {
+  // ready 是启动链的交接点：同步完成可交互指标与首轮 chunk flush；detail promotion 单独调度，交互基础设施和数据补水进入 post-ready 任务。
   checkpointBootMetric("time-to-interactive");
   checkpointBootMetric("first-interactive");
   completeBootSequenceLogging();
@@ -776,6 +780,7 @@ function scheduleDeferredDetailPromotion(renderDispatcher) {
 }
 
 async function finalizeReadyState(renderDispatcher) {
+  // 只在这里决定进入 ready、readonly 等待 detail，或先建 coarse 交互层；上游 bootstrap 只提供当前场景和 renderDispatcher。
   const shouldEnterStartupReadonly = (
     !!String(runtimeState.activeScenarioId || "").trim()
     && runtimeState.startupInteractionMode === "readonly"
@@ -789,6 +794,7 @@ async function finalizeReadyState(renderDispatcher) {
     shouldEnterStartupReadonly
     && startupBootstrapStrategy === "chunked-coarse-first";
   if (shouldUseChunkedCoarseStartup) {
+    // chunked-coarse-first 已有可点击粗粒度政治层，先建 basic hit 基础设施再放行 ready，完整交互设施继续延后。
     setBootState("interaction-infra", {
       blocking: true,
       progress: Math.max(Number(runtimeState.bootProgress) || 0, getBootProgressWindow("detail-promotion").min),
@@ -814,6 +820,7 @@ async function finalizeReadyState(renderDispatcher) {
     return;
   }
   if (shouldEnterStartupReadonly) {
+    // 非 chunked 的 deferred detail 需要维持启动遮罩和 readonly 状态，等待 detail promotion 解锁后再进入完整交互。
     setStartupReadonlyState(true, {
       reason: "detail-promotion",
       unlockInFlight: false,
@@ -873,6 +880,7 @@ async function bootstrap() {
   try {
     bindBeforeUnload();
     // Phase: 加载基础拓扑 | Input: 启动配置与 bootstrap 资源 promise | Output: startupBaseData + 已注入基础 state 字段。
+    // 这一段只建立 base runtimeState 与启动 bundle promise，不应用场景；场景写入必须等 map shell 与 render boundary 建好之后执行。
     setBootState("base-data");
     startBootMetric("base-data");
     const d3Client = globalThis.d3;
@@ -958,6 +966,7 @@ async function bootstrap() {
     startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
 
     // Phase: 应用启动场景 | Input: scenarioBundlePromise + UI bootstrap promise | Output: active scenario state + source/recovery metadata。
+    // UI bootstrap 与 scenario apply 并行启动，但 post-scenario UI replay 必须等 UI 绑定完成，避免控件用旧状态覆盖刚应用的场景。
     const startupScenarioBoot = getStartupScenarioBootOwner();
     const {
       defaultScenarioBundle,
@@ -989,6 +998,7 @@ async function bootstrap() {
       source: scenarioBundleSource,
     });
   } catch (error) {
+    // 启动失败路径保持最小可恢复面：清 apply 标志、回放 UI 状态，再按是否已有 base map 决定能否继续。
     let deferredUiBootstrapError = null;
     if (startupUiBootstrapPromise && !startupUiBootstrapAwaited) {
       try {

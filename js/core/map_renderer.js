@@ -367,8 +367,9 @@ const RENDER_PHASE_INTERACTING = "interacting";
 const RENDER_PHASE_SETTLING = "settling";
 const RENDER_SETTLE_DURATION_MS = 200;
 const RENDER_SETTLE_DURATION_MS_MIN = 120;
-const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS = 700;
-const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS_MIN = 260;
+const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS = 420;
+const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS_MIN = 180;
+const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;
 const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MIN = 0.06;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MAX = 0.85;
@@ -378,6 +379,7 @@ const CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO = 0.35;
 const CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD = 2;
 const CONTEXT_BASE_BUCKET_LOW_MAX = 1.4;
 const CONTEXT_BASE_BUCKET_MID_MAX = 2.5;
+const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;
 const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT = 24;
 const SCENARIO_WATER_CACHE_MODE_PARAM = "water_cache_mode";
 const SCENARIO_WATER_CACHE_MODE_ALT_PARAM = "scenario_water_cache_mode";
@@ -2148,6 +2150,7 @@ function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTra
   cache.lastGoodFrame.selectionVersion = identity.selectionVersion;
   cache.lastGoodFrame.contextFlagSignature = identity.contextFlagSignature;
   cache.lastGoodFrame.topologyRevision = identity.topologyRevision;
+  cache.lastGoodFrame.colorRevision = identity.colorRevision;
   cache.lastGoodFrame.dpr = identity.dpr;
   cache.lastGoodFrame.pixelWidth = identity.pixelWidth;
   cache.lastGoodFrame.pixelHeight = identity.pixelHeight;
@@ -2273,6 +2276,9 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
   }
   if (Number(frame.topologyRevision || 0) !== identity.topologyRevision) {
     return reject("topology-revision-mismatch");
+  }
+  if (Number(frame.colorRevision || 0) !== identity.colorRevision) {
+    return reject("color-revision-mismatch");
   }
   if (frame.stale && staleAgeMs > CONTINUITY_FRAME_MAX_STALE_AGE_MS) {
     return reject("stale-age-limit");
@@ -2692,6 +2698,7 @@ function getScenarioSpecialVisualRevisionToken() {
     runtimeState.activeScenarioId || "",
     `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
     `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
+    `special-ref:${getObjectIdentityToken(runtimeState.scenarioSpecialRegionsData, "scenario-special")}`,
     `special-count:${getFeatureCollectionFeatureCount(runtimeState.scenarioSpecialRegionsData)}`,
     `special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}`,
     runtimeState.showScenarioSpecialRegions ? "scenario-special:on" : "scenario-special:off",
@@ -3360,9 +3367,14 @@ function drawPolygonLinePattern(bounds, {
   context.restore();
 }
 
-function drawScenarioReliefOverlaysLayer(k) {
+function drawScenarioReliefOverlaysLayer(k, {
+  reliefFeatures = null,
+  cacheMode = "direct",
+} = {}) {
   const startedAt = nowMs();
-  const overlays = getEffectiveScenarioReliefOverlayFeatures();
+  const overlays = Array.isArray(reliefFeatures)
+    ? reliefFeatures
+    : getEffectiveScenarioReliefOverlayFeatures();
   if (!overlays.length) {
     collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
       featureCount: 0,
@@ -3375,10 +3387,10 @@ function drawScenarioReliefOverlaysLayer(k) {
       renderedCount: 0,
       skipped: true,
       reason: "no-overlays",
-      cacheMode: "direct",
+      cacheMode,
       signature: getScenarioReliefVisualRevisionToken(),
     });
-    return;
+    return 0;
   }
   if (!runtimeState.showScenarioReliefOverlays) {
     collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
@@ -3392,10 +3404,10 @@ function drawScenarioReliefOverlaysLayer(k) {
       renderedCount: 0,
       skipped: true,
       reason: "disabled",
-      cacheMode: "direct",
+      cacheMode,
       signature: getScenarioReliefVisualRevisionToken(),
     });
-    return;
+    return 0;
   }
   if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING || runtimeState.renderPhase === RENDER_PHASE_SETTLING) {
     collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
@@ -3409,10 +3421,10 @@ function drawScenarioReliefOverlaysLayer(k) {
       renderedCount: 0,
       skipped: true,
       reason: runtimeState.renderPhase,
-      cacheMode: "direct",
+      cacheMode,
       signature: getScenarioReliefVisualRevisionToken(),
     });
-    return;
+    return 0;
   }
   let renderedCount = 0;
   overlays.forEach((feature) => {
@@ -3489,9 +3501,83 @@ function drawScenarioReliefOverlaysLayer(k) {
     featureCount: overlays.length,
     renderedCount,
     skipped: false,
-    cacheMode: "direct",
+    cacheMode,
     signature: getScenarioReliefVisualRevisionToken(),
   });
+  return renderedCount;
+}
+
+function renderScenarioReliefOverlaysLayerToCache(currentTransform, reliefFeatures) {
+  const layerEntry = getContextScenarioLayerCacheEntry("relief");
+  const layerCanvas = ensureContextScenarioLayerCanvas("relief");
+  const layerContext = layerCanvas.getContext("2d");
+  if (!layerContext) {
+    layerEntry.signature = "";
+    layerEntry.referenceTransform = null;
+    layerEntry.renderedCount = 0;
+    return 0;
+  }
+  const layout = getRenderPassLayout("contextScenario");
+  let renderedCount = 0;
+  withRenderTarget(layerContext, () => {
+    const layerK = prepareTargetContext(layerContext, currentTransform, layout);
+    renderedCount = drawScenarioReliefOverlaysLayer(layerK, {
+      reliefFeatures,
+      cacheMode: "redraw",
+    });
+  });
+  layerEntry.signature = getScenarioReliefVisualRevisionToken();
+  layerEntry.referenceTransform = cloneZoomTransform(currentTransform);
+  layerEntry.renderedCount = renderedCount;
+  return renderedCount;
+}
+
+function drawScenarioReliefOverlaysPass(k) {
+  const overlays = getEffectiveScenarioReliefOverlayFeatures();
+  if (
+    !overlays.length
+    || !runtimeState.showScenarioReliefOverlays
+    || runtimeState.renderPhase === RENDER_PHASE_INTERACTING
+    || runtimeState.renderPhase === RENDER_PHASE_SETTLING
+  ) {
+    drawScenarioReliefOverlaysLayer(k, { reliefFeatures: overlays, cacheMode: "direct" });
+    return;
+  }
+
+  const currentTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+  const reliefLayerEntry = getContextScenarioLayerCacheEntry("relief");
+  const reliefVisualRevision = getScenarioReliefVisualRevisionToken();
+  const canReuseReliefLayer = (
+    shouldEnableContextScenarioTransformReuse()
+    && reliefLayerEntry.signature === reliefVisualRevision
+    && !!reliefLayerEntry.canvas
+    && !!reliefLayerEntry.referenceTransform
+  );
+  if (canReuseReliefLayer && drawCachedContextScenarioLayer("relief", currentTransform)) {
+    const renderedCount = Number(reliefLayerEntry.renderedCount || 0);
+    collectContextMetric("contextScenarioLayerCacheHit", 0, {
+      layer: "relief",
+      renderedCount,
+    });
+    collectContextMetric("contextScenarioLayerRelief", 0, {
+      featureCount: overlays.length,
+      renderedCount,
+      skipped: false,
+      cacheMode: "reuse",
+      signature: reliefVisualRevision,
+    });
+    return;
+  }
+
+  collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+    layer: "relief",
+    reason: reliefLayerEntry.signature === reliefVisualRevision ? "transform" : "signature",
+    signatureChanged: reliefLayerEntry.signature !== reliefVisualRevision,
+  });
+  renderScenarioReliefOverlaysLayerToCache(currentTransform, overlays);
+  if (!drawCachedContextScenarioLayer("relief", currentTransform)) {
+    drawScenarioReliefOverlaysLayer(k, { reliefFeatures: overlays, cacheMode: "direct" });
+  }
 }
 
 function extractCountryCodeFromId(value) {
@@ -4190,7 +4276,7 @@ function completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStar
     passCount: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses.length : 0,
   });
   return requestRendererRender("exact-after-settle", {
-    flush: false,
+    flush: true,
     fallback: () => render(),
   });
 }
@@ -4248,7 +4334,9 @@ function prepareExactAfterSettlePassesInSlices(generation, plan) {
       label: `exact-after-settle-pass-${passName}`,
       generation,
       dedupe: true,
-      deferOnContinuousInput: true,
+      // The exact refresh already waits for the settle quiet window; another
+      // continuous-input defer can push final sharpness past the interaction SLA.
+      deferOnContinuousInput: false,
     });
   };
 
@@ -4752,16 +4840,16 @@ function getContextScenarioReuseDecision(transform = runtimeState.zoomTransform 
   const delta = getTransformReuseDelta(transform, referenceTransform);
   const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
   const crossesZoomBucket = currentBucket !== referenceBucket;
-  const maxDistancePx = getContextBaseReuseMaxDistancePx();
+  const maxDistancePx = Math.max(
+    getContextBaseReuseMaxDistancePx(),
+    CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX,
+  );
   const reachesReuseFrameLimit = reuseFrameCount >= CONTEXT_SCENARIO_REUSE_FRAME_LIMIT;
   const shouldExactRefresh =
-    crossesZoomBucket
-    || delta.distancePx > maxDistancePx
+    delta.distancePx > maxDistancePx
     || reachesReuseFrameLimit;
   let reason = "transform-reuse";
-  if (crossesZoomBucket) {
-    reason = "zoom-bucket-change";
-  } else if (delta.distancePx > maxDistancePx) {
+  if (delta.distancePx > maxDistancePx) {
     reason = "distance-threshold";
   } else if (reachesReuseFrameLimit) {
     reason = "reuse-frame-limit";
@@ -5956,6 +6044,7 @@ function scheduleRenderPhaseIdle() {
       "promotion-started",
       "promotion-in-flight",
       "promotion-scheduled",
+      "refresh-started",
     ].includes(String(pendingChunkRefreshStatus || ""));
     if (shouldStartExactAfterSettleFastPath()) {
       if (promotionWorkActive) {
@@ -18278,6 +18367,28 @@ function drawScenarioSpecialRegionOverlaysLayer(k, { specialFeatures = [] } = {}
   return renderedSpecialCount;
 }
 
+function renderScenarioSpecialRegionOverlaysLayerToCache(currentTransform, specialFeatures) {
+  const layerEntry = getContextScenarioLayerCacheEntry("special");
+  const layerCanvas = ensureContextScenarioLayerCanvas("special");
+  const layerContext = layerCanvas.getContext("2d");
+  if (!layerContext) {
+    layerEntry.signature = "";
+    layerEntry.referenceTransform = null;
+    layerEntry.renderedCount = 0;
+    return 0;
+  }
+  const layout = getRenderPassLayout("contextScenario");
+  let renderedSpecialCount = 0;
+  withRenderTarget(layerContext, () => {
+    const layerK = prepareTargetContext(layerContext, currentTransform, layout);
+    renderedSpecialCount = drawScenarioSpecialRegionOverlaysLayer(layerK, { specialFeatures });
+  });
+  layerEntry.signature = getScenarioSpecialVisualRevisionToken();
+  layerEntry.referenceTransform = cloneZoomTransform(currentTransform);
+  layerEntry.renderedCount = renderedSpecialCount;
+  return renderedSpecialCount;
+}
+
 function drawScenarioRegionOverlaysPass(k) {
   const startedAt = nowMs();
   const showWater = !!runtimeState.showWaterRegions;
@@ -18293,6 +18404,7 @@ function drawScenarioRegionOverlaysPass(k) {
   let waterCoverageAlgo = "disabled";
   let waterVisibleCoverageRatio = 0;
   let waterPrevRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
+  let specialCacheMode = "disabled";
   if (!showWater && !showSpecial) {
     collectContextMetric("contextScenarioLayerWater", 0, {
       featureCount: 0,
@@ -18435,11 +18547,39 @@ function drawScenarioRegionOverlaysPass(k) {
   }
 
   if (showSpecial) {
-    renderedSpecialCount = drawScenarioSpecialRegionOverlaysLayer(k, { specialFeatures });
+    const currentTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+    const specialLayerEntry = getContextScenarioLayerCacheEntry("special");
+    const specialVisualRevision = getScenarioSpecialVisualRevisionToken();
+    const canReuseSpecialLayer = (
+      shouldEnableContextScenarioTransformReuse()
+      && specialLayerEntry.signature === specialVisualRevision
+      && !!specialLayerEntry.canvas
+      && !!specialLayerEntry.referenceTransform
+    );
+    if (canReuseSpecialLayer && drawCachedContextScenarioLayer("special", currentTransform)) {
+      specialCacheMode = "reuse";
+      renderedSpecialCount = Number(specialLayerEntry.renderedCount || 0);
+      collectContextMetric("contextScenarioLayerCacheHit", 0, {
+        layer: "special",
+        renderedCount: renderedSpecialCount,
+      });
+    } else {
+      specialCacheMode = "redraw";
+      collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+        layer: "special",
+        reason: specialLayerEntry.signature === specialVisualRevision ? "transform" : "signature",
+        signatureChanged: specialLayerEntry.signature !== specialVisualRevision,
+      });
+      renderedSpecialCount = renderScenarioSpecialRegionOverlaysLayerToCache(currentTransform, specialFeatures);
+      if (!drawCachedContextScenarioLayer("special", currentTransform)) {
+        specialCacheMode = "direct";
+        renderedSpecialCount = drawScenarioSpecialRegionOverlaysLayer(k, { specialFeatures });
+      }
+    }
     collectContextMetric("contextScenarioLayerSpecial", 0, {
       featureCount: specialFeatures.length,
       renderedCount: renderedSpecialCount,
-      cacheMode: "direct",
+      cacheMode: specialCacheMode,
       signature: getScenarioSpecialVisualRevisionToken(),
     });
   } else {
@@ -18465,6 +18605,7 @@ function drawScenarioRegionOverlaysPass(k) {
     waterCacheMode,
     waterCacheStrategyMode,
     waterCacheStrategySource,
+    specialCacheMode,
     skipped: false,
   });
 }
@@ -18630,7 +18771,7 @@ function drawContextScenarioPass(k, { interactive = false } = {}) {
   beginContextMetricSession();
   try {
     drawScenarioRegionOverlaysPass(k);
-    drawScenarioReliefOverlaysLayer(k);
+    drawScenarioReliefOverlaysPass(k);
   } finally {
     endContextMetricSession();
   }
@@ -18932,8 +19073,8 @@ function composeCachedPasses(passNames, currentTransform = runtimeState.zoomTran
 }
 
 
-function canDrawTransformedPass(passName, cache = getRenderPassCacheState()) {
-  if (cache.dirty?.[passName]) return false;
+function canDrawTransformedPass(passName, cache = getRenderPassCacheState(), { allowDirty = false } = {}) {
+  if (cache.dirty?.[passName] && !allowDirty) return false;
   if (!cache.canvases?.[passName]) return false;
   return !!getPassReferenceTransform(passName);
 }
@@ -18943,7 +19084,7 @@ function canBuildInteractionComposite(cache = getRenderPassCacheState()) {
 }
 
 function buildInteractionComposite(currentTransform, timings) {
-  if (!context?.canvas || !canBuildInteractionComposite()) return false;
+  if (!context?.canvas || !canBuildInteractionComposite(getRenderPassCacheState())) return false;
   const cache = getRenderPassCacheState();
   const compositeCanvas = ensureInteractionCompositeCanvas();
   const compositeContext = compositeCanvas.getContext("2d");
@@ -19118,14 +19259,23 @@ function renderExportPassesToCanvas(passNames) {
   return exportCanvas;
 }
 
-function composeTransformedFrameToBuffer(currentTransform, transformedPasses, { interactiveBorders = false } = {}) {
+function composeTransformedFrameToBuffer(
+  currentTransform,
+  transformedPasses,
+  { interactiveBorders = false, useInteractionComposite = true } = {},
+) {
   const bufferCanvas = ensureCompositeBufferCanvas();
   const bufferContext = bufferCanvas.getContext("2d");
   if (!bufferContext) return false;
   resetCanvasContext(bufferContext, bufferCanvas.width, bufferCanvas.height);
   let ok = false;
   withRenderTarget(bufferContext, () => {
-    ok = drawInteractionComposite(currentTransform)
+    const interactionOk = useInteractionComposite
+      ? drawInteractionComposite(currentTransform)
+      : composeRenderPassesToTarget(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES, currentTransform, {
+        requireAllPasses: true,
+      }).ok;
+    ok = interactionOk
       && transformedPasses.every((passName) => drawTransformedPass(passName, currentTransform));
     if (!ok) return;
     if (!drawInteractionBorderSnapshot(currentTransform)) {
@@ -19150,23 +19300,39 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
   const transformedPasses = TRANSFORMED_FRAME_PASS_NAMES.filter((passName) =>
     !INTERACTION_COMPOSITE_PASS_NAMES.includes(passName) && passName !== "labels"
   );
+  const allowDirtyFastFrame =
+    runtimeState.renderPhase === RENDER_PHASE_SETTLING
+    || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
+  const dirtyFastFramePassNames = allowDirtyFastFrame
+    ? TRANSFORMED_FRAME_PASS_NAMES.filter((passName) => !!cache.dirty?.[passName])
+    : [];
   // Preflight avoids clearing the visible canvas when a cached pass is missing.
-  if (TRANSFORMED_FRAME_PASS_NAMES.some((passName) => !canDrawTransformedPass(passName, cache))) {
+  if (TRANSFORMED_FRAME_PASS_NAMES.some((passName) => !canDrawTransformedPass(passName, cache, {
+    allowDirty: allowDirtyFastFrame,
+  }))) {
     return false;
   }
   const canReuseComposite = canDrawInteractionComposite(currentTransform, cache);
   const canBuildCompositeNow = runtimeState.renderPhase !== RENDER_PHASE_INTERACTING;
-  const compositeReady = canReuseComposite || (canBuildCompositeNow && buildInteractionComposite(currentTransform, timings));
+  const canDrawDirtyInteractionPasses = allowDirtyFastFrame
+    && !canReuseComposite
+    && INTERACTION_COMPOSITE_PASS_NAMES.every((passName) => canDrawTransformedPass(passName, cache, {
+      allowDirty: true,
+    }));
+  const compositeReady = canReuseComposite
+    || (canBuildCompositeNow && buildInteractionComposite(currentTransform, timings))
+    || canDrawDirtyInteractionPasses;
   if (!compositeReady) {
     recordRenderPerfMetric("interactionCompositeUnavailable", 0, {
       phase: String(runtimeState.renderPhase || ""),
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       deferredBuild: !canBuildCompositeNow,
+      allowDirtyFastFrame,
       reason: cache.interactionComposite?.rejectedReason || "missing-interaction-composite",
     });
     return false;
   }
-  if (!canDrawInteractionComposite(currentTransform, cache)) {
+  if (!canDrawDirtyInteractionPasses && !canDrawInteractionComposite(currentTransform, cache)) {
     return false;
   }
   if (
@@ -19182,13 +19348,27 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
       zoomEndedAt: Number(runtimeState.zoomGestureEndedAt || 0),
     });
   }
+  if (canDrawDirtyInteractionPasses) {
+    timings.usedDirtyInteractionPasses = true;
+    recordRenderPerfMetric("dirtyInteractionPassFastFrame", 0, {
+      phase: String(runtimeState.renderPhase || ""),
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      reason: cache.interactionComposite?.rejectedReason || "dirty-interaction-passes",
+    });
+  }
+  if (dirtyFastFramePassNames.length) {
+    timings.usedDirtyFastFramePasses = dirtyFastFramePassNames.join(",");
+  }
   const drewAll = composeTransformedFrameToBuffer(currentTransform, transformedPasses, {
     interactiveBorders,
+    useInteractionComposite: !canDrawDirtyInteractionPasses,
   });
   if (!drewAll) {
     recordRenderPerfMetric("transformedFrameBufferComposeFailure", 0, {
       phase: String(runtimeState.renderPhase || ""),
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      allowDirtyFastFrame,
+      usedDirtyInteractionPasses: canDrawDirtyInteractionPasses,
     });
     return false;
   }
@@ -19301,8 +19481,23 @@ function drawCanvas() {
   if (drewFrame && !usedBaseVisibleFallback && !keptPreviousPixels) {
     markFirstVisibleFramePainted(usedLastGoodFallback ? "last-good-frame" : (useTransformedFrame ? "fast-frame" : "exact-frame"));
   }
-  if (drewFrame && !usedLastGoodFallback && !usedBaseVisibleFallback && (!useTransformedFrame || runtimeState.renderPhase !== RENDER_PHASE_INTERACTING)) {
+  const usedDirtyFastFramePasses = typeof frameTimings.usedDirtyFastFramePasses === "string"
+    && frameTimings.usedDirtyFastFramePasses.length > 0;
+  if (
+    drewFrame
+    && !usedLastGoodFallback
+    && !usedBaseVisibleFallback
+    && !usedDirtyFastFramePasses
+    && (!useTransformedFrame || runtimeState.renderPhase !== RENDER_PHASE_INTERACTING)
+  ) {
     captureLastGoodFrame(useTransformedFrame ? "fast-frame" : "exact-frame", runtimeState.zoomTransform);
+  } else if (drewFrame && usedDirtyFastFramePasses) {
+    recordRenderPerfMetric("lastGoodFrameCaptureSkipped", 0, {
+      reason: "dirty-fast-frame",
+      dirtyPasses: frameTimings.usedDirtyFastFramePasses,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      phase: String(runtimeState.renderPhase || ""),
+    });
   }
   if (drewExactFrame) {
     finalizePendingExactAfterSettleRefreshAfterPaint();
@@ -19511,11 +19706,14 @@ function prepareDeferredExactContextPassesInSlices(passNames, plan = {}, refresh
       });
       enqueueNextPass(index + 1);
     }, {
-      priority: "normal",
+      priority: "high",
       label: `deferred-exact-context-pass-${passName}`,
       generation: Number(plan.controllerGeneration || 0),
       dedupe: true,
-      deferOnContinuousInput: true,
+      // This work is already scheduled after settle and guarded by the exact
+      // identity. Letting continuous-input heuristics defer it again can strand
+      // the queue during repeated wheel probes.
+      deferOnContinuousInput: false,
     });
     if (taskHandle) {
       deferredExactContextRefreshTaskHandles.add(taskHandle);
@@ -19544,7 +19742,7 @@ function scheduleDeferredExactContextRefresh(plan = {}) {
     }
     prepareDeferredExactContextPassesInSlices(targetPasses, plan, refreshVersion);
   }, {
-    timeout: 180,
+    timeout: DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS,
   });
   recordRenderPerfMetric("deferredExactContextRefreshScheduled", 0, {
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
@@ -19574,7 +19772,10 @@ function enqueueExactAfterSettleSegment(generation, label, task) {
     label: `exact-after-settle-${label}`,
     generation,
     dedupe: true,
-    deferOnContinuousInput: true,
+    // The timeout quiet window already separates exact work from active wheel
+    // input. Running the queued segment promptly avoids repeated probes waiting
+    // on stale continuous-input signals.
+    deferOnContinuousInput: false,
   });
 }
 

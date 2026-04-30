@@ -496,6 +496,10 @@ export function createTransportWorkbenchPointPreviewController(definition) {
             return aliasPack;
           }
         }
+        if (!packPath) {
+          const variantPrefix = variantId ? `${variantId}/` : "";
+          throw new Error(`Missing ${definition.familyId} pack path for ${variantPrefix}${mode}.`);
+        }
         const response = await fetch(packPath, { cache: "no-cache" });
         if (!response.ok) {
           const variantPrefix = variantId ? `${variantId}/` : "";

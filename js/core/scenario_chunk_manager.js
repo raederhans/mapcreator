@@ -3,6 +3,7 @@ const DEFAULT_RENDER_BUDGET_HINTS = Object.freeze({
   max_optional_chunks: 3,
   min_required_chunks: 1,
   max_required_estimated_path_cost: 520000,
+  max_required_byte_size: 0,
   detail_zoom_threshold: 1.7,
 });
 
@@ -156,30 +157,64 @@ function sortChunksForSelection(chunks, focusCountry = "", viewportBbox = [-180,
 }
 
 export function normalizeScenarioRenderBudgetHints(rawHints = {}) {
+  const maxRequiredChunks = clampNumber(
+    rawHints.max_required_chunks,
+    1,
+    24,
+    DEFAULT_RENDER_BUDGET_HINTS.max_required_chunks
+  );
+  const minRequiredChunks = clampNumber(
+    rawHints.min_required_chunks,
+    1,
+    24,
+    DEFAULT_RENDER_BUDGET_HINTS.min_required_chunks
+  );
+  const maxPoliticalRequiredChunks = clampNumber(
+    rawHints.max_required_political_chunks ?? rawHints.political_max_required_chunks,
+    1,
+    24,
+    Math.min(maxRequiredChunks * 2, 12)
+  );
+  const minPoliticalRequiredChunks = clampNumber(
+    rawHints.min_required_political_chunks ?? rawHints.political_min_required_chunks,
+    1,
+    24,
+    Math.max(1, maxRequiredChunks, minRequiredChunks)
+  );
   return {
-    max_required_chunks: clampNumber(
-      rawHints.max_required_chunks,
-      1,
-      24,
-      DEFAULT_RENDER_BUDGET_HINTS.max_required_chunks
-    ),
+    max_required_chunks: maxRequiredChunks,
     max_optional_chunks: clampNumber(
       rawHints.max_optional_chunks,
       0,
       12,
       DEFAULT_RENDER_BUDGET_HINTS.max_optional_chunks
     ),
-    min_required_chunks: clampNumber(
-      rawHints.min_required_chunks,
-      1,
-      24,
-      DEFAULT_RENDER_BUDGET_HINTS.min_required_chunks
-    ),
+    min_required_chunks: minRequiredChunks,
     max_required_estimated_path_cost: clampNumber(
       rawHints.max_required_estimated_path_cost ?? rawHints.max_required_path_cost,
       0,
       5000000,
       DEFAULT_RENDER_BUDGET_HINTS.max_required_estimated_path_cost
+    ),
+    max_required_byte_size: clampNumber(
+      rawHints.max_required_byte_size ?? rawHints.max_required_bytes,
+      0,
+      200000000,
+      DEFAULT_RENDER_BUDGET_HINTS.max_required_byte_size
+    ),
+    max_required_political_chunks: maxPoliticalRequiredChunks,
+    min_required_political_chunks: minPoliticalRequiredChunks,
+    max_required_political_estimated_path_cost: clampNumber(
+      rawHints.max_required_political_estimated_path_cost ?? rawHints.political_max_required_path_cost,
+      0,
+      5000000,
+      rawHints.max_required_estimated_path_cost ?? rawHints.max_required_path_cost ?? DEFAULT_RENDER_BUDGET_HINTS.max_required_estimated_path_cost
+    ),
+    max_required_political_byte_size: clampNumber(
+      rawHints.max_required_political_byte_size ?? rawHints.political_max_required_bytes,
+      0,
+      200000000,
+      rawHints.max_required_byte_size ?? rawHints.max_required_bytes ?? DEFAULT_RENDER_BUDGET_HINTS.max_required_byte_size
     ),
     detail_zoom_threshold: clampNumber(
       rawHints.detail_zoom_threshold,
@@ -194,27 +229,35 @@ function takeRequiredChunksWithinCostBudget(orderedChunks = [], {
   countBudget = 0,
   minCount = 1,
   estimatedPathCostBudget = 0,
+  byteSizeBudget = 0,
 } = {}) {
   const countLimit = Math.max(0, Math.floor(Number(countBudget || 0)));
   if (!countLimit) return [];
   const minimum = Math.max(0, Math.min(countLimit, Math.floor(Number(minCount || 0))));
   const costLimit = Math.max(0, Number(estimatedPathCostBudget || 0));
+  const byteLimit = Math.max(0, Number(byteSizeBudget || 0));
   const selected = [];
   let selectedCost = 0;
+  let selectedBytes = 0;
 
   orderedChunks.forEach((chunk) => {
     if (selected.length >= countLimit) return;
     const nextCost = Math.max(0, Number(chunk?.estimatedPathCost || chunk?.featureCount || 0));
+    const nextBytes = Math.max(0, Number(chunk?.byteSize || 0));
     const overCostBudget = costLimit > 0 && selected.length >= minimum && selectedCost + nextCost > costLimit;
-    if (overCostBudget) return;
+    const overByteBudget = byteLimit > 0 && selected.length >= minimum && selectedBytes + nextBytes > byteLimit;
+    if (overCostBudget || overByteBudget) return;
     selected.push(chunk);
     selectedCost += nextCost;
+    selectedBytes += nextBytes;
   });
 
   orderedChunks.forEach((chunk) => {
     if (selected.length >= Math.min(minimum, orderedChunks.length)) return;
     if (selected.some((entry) => entry.id === chunk.id)) return;
     selected.push(chunk);
+    selectedCost += Math.max(0, Number(chunk?.estimatedPathCost || chunk?.featureCount || 0));
+    selectedBytes += Math.max(0, Number(chunk?.byteSize || 0));
   });
 
   return selected;
@@ -369,7 +412,7 @@ export function selectScenarioChunks({
   const visibleLayerSet = new Set((Array.isArray(visibleLayers) ? visibleLayers : []).map((value) => String(value || "").trim().toLowerCase()));
   visibleLayerSet.forEach((layerKey) => {
     const requiredBudget = layerKey === "political"
-      ? Math.min(hints.max_required_chunks * 2, 12)
+      ? hints.max_required_political_chunks
       : hints.max_required_chunks;
     const optionalBudget = layerKey === "political" ? 0 : hints.max_optional_chunks;
     const candidates = resolveLayerChunksForZoom({
@@ -397,9 +440,14 @@ export function selectScenarioChunks({
     const requiredForLayer = takeRequiredChunksWithinCostBudget(prioritizedRequired, {
       countBudget: requiredBudget,
       minCount: layerKey === "political"
-        ? Math.min(requiredBudget, Math.max(1, hints.max_required_chunks, hints.min_required_chunks))
+        ? Math.min(requiredBudget, hints.min_required_political_chunks)
         : Math.min(requiredBudget, hints.min_required_chunks),
-      estimatedPathCostBudget: hints.max_required_estimated_path_cost,
+      estimatedPathCostBudget: layerKey === "political"
+        ? hints.max_required_political_estimated_path_cost
+        : hints.max_required_estimated_path_cost,
+      byteSizeBudget: layerKey === "political"
+        ? hints.max_required_political_byte_size
+        : hints.max_required_byte_size,
     });
     required.push(...requiredForLayer);
     if (optionalBudget > 0) {

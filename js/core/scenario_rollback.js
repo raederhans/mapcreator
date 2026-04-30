@@ -19,6 +19,7 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "activeScenarioManifest",
   "scenarioCountriesByTag",
   "scenarioFixedOwnerColors",
+  "scenarioGeneratedColorTags",
   "activeScenarioMeshPack",
   "defaultRuntimePoliticalTopology",
   "scenarioRuntimeTopologyData",
@@ -130,6 +131,7 @@ function captureScenarioRuntimeSnapshot() {
     activeScenarioManifest: cloneScenarioStateValue(runtimeState.activeScenarioManifest),
     scenarioCountriesByTag: cloneScenarioStateValue(runtimeState.scenarioCountriesByTag),
     scenarioFixedOwnerColors: cloneScenarioStateValue(runtimeState.scenarioFixedOwnerColors),
+    scenarioGeneratedColorTags: cloneScenarioStateValue(runtimeState.scenarioGeneratedColorTags),
     activeScenarioMeshPack: cloneScenarioStateValue(runtimeState.activeScenarioMeshPack),
     defaultRuntimePoliticalTopology: cloneScenarioStateValue(runtimeState.defaultRuntimePoliticalTopology),
     scenarioRuntimeTopologyData: cloneScenarioStateValue(runtimeState.scenarioRuntimeTopologyData),
@@ -260,6 +262,7 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   runtimeState.activeScenarioManifest = cloneScenarioStateValue(snapshot.activeScenarioManifest);
   runtimeState.scenarioCountriesByTag = cloneScenarioStateValue(snapshot.scenarioCountriesByTag);
   runtimeState.scenarioFixedOwnerColors = cloneScenarioStateValue(snapshot.scenarioFixedOwnerColors);
+  runtimeState.scenarioGeneratedColorTags = cloneScenarioStateValue(snapshot.scenarioGeneratedColorTags) || [];
   runtimeState.activeScenarioMeshPack = cloneScenarioStateValue(snapshot.activeScenarioMeshPack);
   runtimeState.defaultRuntimePoliticalTopology = cloneScenarioStateValue(snapshot.defaultRuntimePoliticalTopology);
   runtimeState.scenarioRuntimeTopologyData = cloneScenarioStateValue(snapshot.scenarioRuntimeTopologyData);

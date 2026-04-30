@@ -64,6 +64,7 @@ export function createDefaultScenarioDataHealth(minRatio = 0.7) {
     runtimeFeatureCount: 0,
     ratio: 1,
     minRatio: Number(minRatio) || 0.7,
+    generatedColorTags: [],
     warning: "",
     severity: "",
   };
@@ -209,6 +210,7 @@ export function createDefaultScenarioRuntimeState({
     activeScenarioManifest: null,
     scenarioCountriesByTag: {},
     scenarioFixedOwnerColors: {},
+    scenarioGeneratedColorTags: [],
     scenarioBaselineHash: "",
     scenarioBaselineOwnersByFeatureId: {},
     scenarioControllersByFeatureId: {},

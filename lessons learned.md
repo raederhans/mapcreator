@@ -301,17 +301,9 @@
 - 只把背景色塞进 cache key，能避免错复用，但挡不住旧 sprite 常驻内存；只做 revision clear，又会把不同背景错误复用成同一张 sprite。
 - 最稳的最小方案是：cache key 带背景签名，cache 生命周期跟 `colorRevision` 绑定清空。
 
-### 59. ����Ӿ����ⱨ��ʱ��������û���ֳ� helper ��д�õ�û�ӵ����� draw/sprite ·��
-- ��� city marker �ı�������Ӧ������ȫû���߼������� getCityMarkerRenderStyle() �Ѿ����ڣ�ȴû�нӽ� getCityMarkerSprite()��
-- ���ȵ����·�������ҡ��Ѵ��ڵ�δ���ߡ��� helper���پ���Ҫ��Ҫ����һ���㷨�������Ķ���С��Ҳ�������׷ֲ���ڶ����߼���
-
-### 60. defer �͵�����·����ȱ�� pending���ٵ�״̬�˳��� flush��Ҫ�����������˳��߽���
-- ��� exact-after-settle �����ⲻ������ pending ��ǣ����� deferExactAfterSettle �� true ��� false �Ժ�û���ٲ�һ�� flush��
-- ���ȵ������ǣ�defer �׶�ֻ�����ѹ pending������������ flush Ҫ���ڡ�����̬�˳����Ǹ���ȷʱ�̣�������������̬�ڲ��������ԡ�
-
-### 60. ���� defer ״̬ʱ������ pending �ĵ��ȣ������ڽ�� defer ��ͬһ�������ϲ�һ�� flush
-- ��� chunked scenario �� exact-after-settle ����˵����ֻ�� defer �ڼ� mark pending������ defer ��������̲� flush���ͻ��ˢ�¿�����һ�ν����� ready �¼���
-- ���ȵ������ǣ��ڽ�� defer ���Ǹ��տڵ㣬�ٲ�һ�� guarded flush�����ҷŵ���һ���¼�ѭ��ִ�У�����ͬһ����ջ���˲ʱ״̬�ְ��������л� deferred��
+### 3. defer / exact-after-settle 只负责冲刷真实 pending，退出 defer 后要补一次受控 flush
+- 这次 exact-after-settle 的根因不是渲染本身，而是 defer 期间只标记了 pending，却没有在 defer 结束时补一轮明确 flush。
+- 更稳的做法是：defer 阶段只积压真实 pending；退出 defer 时再补一次 guarded flush，并把 promotion visual / infra 继续拆成分阶段提交，不要在同一轮里同步把所有工作一起做完。
 
 ### 24. contour publish artifacts 不能在生成失败时静默写空文件
 - terrain contour 这类 runtime 关键发布产物，一旦 builder 失败或结果为空，必须直接 fail build；继续写空 topo 只会把 pipeline 错误伪装成前端“偶发缺层”。
@@ -325,26 +317,9 @@
 - `loadMapData(includeContextLayers=false)` 这种首屏参数并不代表相关资源不会很快在 ready 后被补拉；如果只看 boot loader，很容易误判真正的性能回归位置。
 - 更稳的做法是同时检查：startup flags、post-ready task、以及交互入口上的按需加载调用点，再决定该把大资源延后到哪一拍。
 
-### 61. �� context layer ��Լʱ���ȿ� external pack �ܲ��ܽӹܣ��پ���Ҫ��Ҫ��д checked-in topology
-- ��� urban adaptive ȱʧ��ֱ�Ӹ����� checked-in topology ��� urban Ԫ���ݹ�ʱ����ֻҪ��д topology���Ϳ��ܰ� political feature �����ͱ߽�һ���ƫ��
-- ���ȵ����·���ǣ�ֻ�� external urban GeoJSON ��Լ����������ʱ��ʽ���� external layer����ҪΪ����һ�� context layer��˳���ؽ����� topology��
-- focused e2e ��Ҫ�������뵱ǰ bug �޹ص� locale/hidden-city/warning ���ԣ���������ʵ�޸���������
-
-### 62. external context layer �� owner id ���ܰ󶨵� shell/country id��Ҫֱ�Ӱ�����ʱ landIndex �� feature id
-- ��� urban adaptive �� P1 �����ǰ� country_owner_id ������� FR��CY ���� shell id������Ⱦ������ɫ�õ��� runtime political feature id���� AFG-1741����
-- ���ȵ������ǣ�����Ҫ��ǰ��ͨ�� state.landIndex.get(ownerId) ȡ������ɫ/���ε� external layer�����ɽ׶ξͱ������ runtime topology �� properties.id �ռ䣬�����Ƕ��� primary shell��
-
-### 59. �� pending chunk promotion ������ exact-after-settle��ֻ���á�������족���������ɲ���ʱ�䡱�����ϳ�
-- ����������޸�˵������� chunk promotion ֻ�ܵ� quiet window + exact ��ɺ�����أ��û����ȿ�����֡����ͣ�ֺ�Ҫ�ٳ�һ��ͬ�����߳��ػ
-- ���ȵ����·���ǣ�idle fast frame �����ύ promotion visual stage��exact �� mesh/spatial/hit ���� infra stage ���Ӻ� idle ���롣
-
-### 60. ��ν chunked ���ֻ��ǰ��� `yield` һ�Σ��м���������ͬ��ѭ���������ϻ�����������
-- `buildIndexChunked()` / `buildSpatialIndexChunked()` ���֤�����ٷ�Ƭֻ���õ���ջ�ÿ������ܼ������̶߳��ᡣ
-- �������õ������ǰ� feature slice ��Ƭ����Ҫʱ���ھֲ��������ۻ���������һ���� commit�������̨�ؽ����̰�ǰ̨����״̬Ū�ɰ��Ʒ��
-
-### 61. ֻҪ promotion ���ذ� topology/context source��`ensureLayerDataFromTopology()` �ͱ������� visual stage
-- ��� latest urban �޸��� `urban` source contract �̶��ɡ�startup ���ڿ��� + external ���� + adaptive �����ˡ������Ϊ�����ܰ� context source �ذ�Ų�� infra stage���ͻ��Ȱѻ����е��� topology���� `urbanData/urbanLayerCapability` ��ͣ�ھ�Դ��
-- ���ȵı߽��ǣ�visual stage ����� topology/context source �ذ󶨣��������Ƶ��� mesh��spatial��hit��full color �����ؽ������� source ѡ������
+### 27. external context layer 优先走 external pack 和 runtime feature id，不要为了补数据去回写 checked-in topology
+- 这次 urban adaptive 的关键不是“缺一份 topology”，而是 external layer 的 owner 语义和运行态 feature id 没对齐。
+- 更稳的做法是：优先让 external pack 接管数据，owner 直接对齐 runtime `properties.id` / `landIndex` 命中的 feature id；不要为了补 context layer 去回写 checked-in topology。
 
 ## 2026-04-11 - chunk refresh / startup ready
 
@@ -364,30 +339,6 @@
 - 如果一个 UI 从 sidebar popover 升级成全屏 modal，但 DOM 还留在 sidebar / details / utility shell 里面，那么一旦父层被 `visibility:hidden`、`opacity` 或 drawer 状态影响，modal 本体也会一起被吞掉。
 - 更稳的最短路径是把 modal/backdrop 直接放到顶层，并让它自己管理 z-index、焦点和退出逻辑，不再借用 drawer scrim。
 
-### 63. �Ӿ��ع���Բ�Ҫ�ѡ������Թ�ϵ��д��Ӳ���ԣ�����д���Ա߽��Ŀ���������
-- ��� historical 1930s ҹ����ǿʱ���ɲ��԰� `historical` ǿ��ѹ�� `modern` ֮�£�����һ�����������ͻᱻ�����лع顣
-- ���ȵ������ǣ��á������������� / ���������� / ���и������ / Ŀ������������ǡ���Լ���Ӿ���Ϊ����Ҫ�ѡ��������һ�ַ�������д������Լ��
-
-### 41. Physical layer regressions need one���漶���ԣ���Ҫֻ�� render pass / regex ��Լ
-- ��� atlas ���߼��ϱ����õ��Ӿ��ϼ�����ʧ�������⣬����Դ���������ץ��ס�����벹һ����С���ز����飬ֱ����֤ atlas �򿪺�����ı��ˣ�����û��ǿ������������ɫ��
-### 42. �������ؼ��Ӿ���ʾ�� deferred pass Ų��ʱ��Ҫͬʱ��� staged apply ��֧
-- ĳ�㼴ʹ�㼶�Ŷ��ˣ�ֻҪ�������� `deferContextBasePass` ���� staged warmup ��֧��س��������Ի��ȶ�ȱʧ���� render pass ����ʱ������ͬ����� defer ��֧�Ƿ񻹱����ò����С��֡���ơ�
-
-### 64. �����ü���Ǩ�Ʋ�Ҫ����ͨ�� normalize �ﷴ���ط�
-- �� cityPoints.radius ����ֻ������ʷ�浵����ϵͳʱǨ��һ�ε��ֶΣ����ֱ��д��ͨ�� normalize���ͻ���ÿ�ξֲ� patch / UI ����ʱ���������㣬����µ�����״̬��Ⱦ��
-- ���ȵ������ǣ���ʽ�������ȣ����ֶ�ֻ��ȱ�����ֶ�ʱ����һ����Ǩ�ƣ�֮��ʹ�����ʱ�ṹ���Ƴ���
-
-### 65. canvas ��ǩ�ػ�ع����ȶ��ԡ��ػ淢�� + Ŀ���ǩ״̬������Ҫ�� fillText hook ��Ψһ֤��
-- fillText/strokeText hook �ʺ�ץ����û�л��������Գ���· i18n redraw ���������ӿڡ���ѡ��ǩ������Ӱ�����ࡣ
-- ���ȵ����·���ǣ�ͬʱ���� drawLabelsPass.recordedAt ǰ������ǰ�����л��ɹ���Ŀ�� feature ��������ʾ��ǩ�Ѹ��£��ı� hook ֻ��Ϊ�ӷ�֤�ݡ�
-
-### 66. ������ locales ������ʱ inline i18n ����˫�����Ư��
-- ��� 57 �� UI key �Ѿ��� js/ui/i18n.js �������ģ��� 	ranslate_manager û�и������ǣ��������� data/locales.json ʱ�Ի��˳�Ӣ�Ļ������
-- ���ȵ������ǣ���������ʱ fallback���� sync/build Ҳ����� inline translation ����������Դ֮һ������ͬһ������д��ȴι������ʽ���
-
-### 67. i18n audit ���� JS �ַ���ʱ��Ҫ�Ƚ��� \uXXXX ���ж��ǲ��ǿɷ����İ�
-- �� \u00D7��\u25B6��\u2699 ����ͼ�꣬������Ƚ��룬�ͻᱻ���гɴ���ĸ��δ�����ַ�����
-- ���ȵ������ǣ��Ȱ� Unicode escape ��ԭ����ʵ�ַ������߿ɼ��İ�/�Ƿ��� token �жϡ�
 
 ### 66. 海域计划不能只验 geometry valid / ID 一致，必须补 probe coverage + seam 检查
 - 这次 Baltic / Celtic-Irish 的漏区说明：只看 `water_regions.geojson` 合法、`scenario_water` 和 runtime ID 对齐，仍然会把 Gulf of Riga、Severn Estuary 这类真实缺口放过去。
@@ -415,20 +366,9 @@
 ### 71. Inspector 的批量动作必须默认绑定当前可见过滤结果，并且先给影响数量预览
 - 这次 Water Inspector 升级如果直接对“同组/同类型全量对象”落色，很容易误伤几十个海域；尤其 open ocean 和 marine_macro 混在一起时最危险。
 - 更稳的做法是：批量 scope 只作用于当前过滤后可见的候选集，并在提交前明确展示影响数量和样例名称。
-### 72. �� clone �꺣���е��ٷ�Դʱ��������ͬʱ�ų��� global base id
-- ��� `Black Sea / Yellow Sea / East China Sea / Bay of Bengal / Andaman Sea / Java Sea / Banda Sea` ���ֻ�ĳ� SeaVoX/IHO source��������ʽ�ų���Ӧ `marine_*` base��������ͻ�ͬʱ������ global ˮ����¹ٷ�ˮ������ͬ������
-- ���ȵ����·���ǣ�������ˮ���� `exclude_base_ids`������ `TNO_EXCLUDED_BASE_WATER_REGION_IDS` һ��Խ�ȥ������ source/runtime �����������˫�ݺ���
-
-### 73. Inspector e2e �ȱ�֤ section ��򿪣��ٶ��Խṹ��Ԫ���ݣ���Ҫ�� hint ������
-- ��� `#waterRegionSearch` һֱ fill ��ʱ����������򲻴��ڣ����� `waterInspectorSection` Ĭ��ûչ�����������Ȼ�� DOM �ﵫ���ɼ���
-- ���ȵ������ǣ����� helper ����ʽ�� details section���ٶ� `waterInspectorMetaList` ��� `ID / Type / Group / Parent / Source` �����ԣ�`DetailHint` ֻ�ʺ���ժҪ�����ʺ����ȶ�������Լ��
-
-### 74. ���� seam ��ԼҪ����ʵ���ڹ�ϵд�����ܰ������е� family �ṹӲ��
-- ��� `Liaodong Wan` ʵ��Ӧ�ù��� `Bo Hai` �£�����ֱ�ӹ� `Yellow Sea`��`Andaman ? Singapore`��`Banda ? Halmahera` Ҳ����ֱ�����ڣ������������� seam ֻ������ٻع顣
-- ���ȵ������ǣ����ô������ bounds ȷ�� parent/adjacency����д seam pair������������΢��ʱ����С�����ݲ�� topo ��������Ҫ�� 1e-5 ����ķ�ҵ��쵱����ʵ©����
-### 75. ���� Pacific / Indian ��������ʱ��parent subtract �� open-ocean clipping ����һ�𲹣�ȱһ��ͻ����˫����
-- ��� Sea of Japan © subtract �Լ����� detail��South China Sea © subtract Singapore/Java��Molucca Sea © subtract Celebes/Halmahera��ͬʱһ���� SeaVoX ��������д `clip_open_ocean_ids`�����ͬһƬˮ��ͬʱ���и������ open ocean��
-- ���ȵ����·���ǣ�ÿ�¼�һ����������ʱ��ͬ����� 3 ���£������Ƿ� subtract������ sibling �Ƿ� subtract���Ƿ���Ҫ��ʽ `clip_open_ocean_ids`��������Щ pair ֱ��д�� contract test��
+### 72. 水域专题接入官方 source 时，要把 base-id 排除、seam 断言和 open-ocean clipping 同波次收口
+- 这次多片海域细化说明：如果只接入新的官方 source，却不同时排除重叠 `marine_*` base id，同一片水域会被 source 和 global base 双重覆盖。
+- 更稳的做法是：新 source 接入时同步维护 `exclude_base_ids`，并让 seam / parent-subtract / `clip_open_ocean_ids` 一起按真实邻接关系落地，不要把 family 结构硬写成唯一真相。
 
 ## 2026-04-12 - landing page /app split
 
@@ -1204,10 +1144,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ## 2026-04-23 - TNO startup / runtime topology 收口
 
-### 1. `flushPending=true` 本身就是显式启动信号，不能再依赖历史 `pendingReason`
-- 这次 ready handoff 会遇到“第一次进入 ready，但前面没留下 `pendingReason`”的状态；如果 `executeScenarioChunkRefreshNow()` 还要求 `hasPendingReason`，首个 refresh 仍会被短路成 `noop`。
-- 更稳的最短路径是：把 `flushPending` 视为直接允许提交的一次性信号，只在 `!flushPending && !hasPendingReason` 时才短路。
-
 ### 2. runtime topology stage 返回 full state 时，要把 water stage artifact 一起带回
 - 这次 `build_runtime_topology_state()` 只回传 runtime extra payload，漏掉了 `water_stage_metadata` 等 water stage key，`write_runtime_topology_stage_checkpoints()` 会直接在 checkpoint 写回时报 `KeyError`。
 - 更稳的最短路径是：`full_state` 直接做 `{**countries_state, **water_state}`，再叠加 runtime topology 额外产物。
@@ -1345,3 +1281,29 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ### 2026-04-30 - UI hint removal must keep optional DOM bindings declared
 - 删除可选提示文案节点时，controller 里对应的 getElementById 变量仍要声明为可空；否则 render UI 会 ReferenceError，启动流程可能卡在 scenario boot 末段。
+
+### 2026-04-30 - 留档和 automation memory 必须从最终验证口径回写
+- 补写留档时不能沿用中途候选文件清单；最终记录必须以实际改动文件和已执行验证命令为准。
+- automation memory 只写短摘要、实际验证结果和运行时长，避免把旧上下文里的错误事实固化。
+
+### 2026-04-30 - transport 全局化要同时切 loader、发布 allowlist 和生成源
+- transport toggle 的可见范围由 `data_loader`、checked-in pack、Pages allowlist 三处共同决定；只改其中一处会让本地或部署继续吃旧区域数据。
+- workbench family preview 和主地图 transport overview 是两条数据面；排查范围问题时要先确认用户看到的是哪条入口，再改对应真相源。
+
+### 2026-04-30 - transport workbench pack path 必须在 fetch 前显式校验
+- manifest helper 返回空路径时，浏览器会把 `fetch("")` 当成当前页面请求，后续错误会表现成误导性的 JSON 或加载失败；preview loader 应在 pack path 为空时直接报出缺失的 manifest 键。
+
+### 15. 启动期预加载不能凭路径猜场景资产
+- 场景级 startup bundle 和 startup locale 必须以 manifest 字段为准。
+- URL query 只适合选择默认场景，不适合让 HTML 早期脚本猜 `startup.bundle.*` 路径；否则轻量场景会在主逻辑接管前先产生 404。
+
+### 2026-04-30 - scenario owner color map 要同时有最终颜色和缺色诊断
+- 补缺色时不能只让地图变得可见；generatedTags 这类诊断也要进入 runtime health，避免真实数据缺口被稳定生成色盖住。
+- 场景显式色、palette tag、ISO2 bridge、deterministic generated color 应集中在一个 resolver 顺序里，并用 TNO mixed-policy 单测防止 palette bridge 反向覆盖场景色。
+
+### 47. Interaction benchmark idle must include runtime chunk work
+- Render phase idle is not enough for repeated interaction benchmarks; chunk promotion, post-commit replay, and post-ready interaction infrastructure can still be active.
+- The stable measurement boundary is: render idle + exact-after-settle idle + runtime chunk idle + post-ready infra idle. Otherwise the next cycle can inherit hidden work and produce misleading long-task attribution.
+
+### 2026-04-30 - Pages allowlist 要覆盖 manifest 的所有运行时目标
+- 只复制 manifest 和 preview pack 仍会在 workbench 放大或切 variant 时 404；发布清单要直接校验 manifest `full` 路径在 dist 中存在。

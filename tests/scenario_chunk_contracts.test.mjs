@@ -213,6 +213,61 @@ test("chunk cost budget limits high-cost required detail tail", () => {
   assert.equal(selection.selectedEstimatedPathCostSum, 10);
 });
 
+test("political byte budget limits cold required detail tail", () => {
+  const makePoliticalChunk = (id, byteSize) => ({
+    id,
+    url: `${id}.json`,
+    layer: "political",
+    lod: "detail",
+    bounds: [-1, -1, 1, 1],
+    minZoom: 0,
+    maxZoom: 99,
+    priority: 0,
+    countryCodes: [],
+    estimatedPathCost: 10,
+    byteSize,
+    coordCount: 10,
+    partCount: 1,
+    featureCount: 1,
+  });
+  const selection = selectScenarioChunks({
+    scenarioId: "tno_1962",
+    chunkRegistry: {
+      byLayer: {
+        political: [
+          makePoliticalChunk("center-a", 5),
+          makePoliticalChunk("center-b", 5),
+          makePoliticalChunk("center-c", 5),
+        ],
+      },
+    },
+    zoom: 10,
+    viewportBbox: [-10, -10, 10, 10],
+    visibleLayers: ["political"],
+    renderBudgetHints: {
+      max_required_chunks: 6,
+      max_required_political_chunks: 6,
+      min_required_political_chunks: 2,
+      max_optional_chunks: 0,
+      max_required_political_byte_size: 11,
+    },
+  });
+
+  assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["center-a", "center-b"]);
+  assert.equal(selection.selectedByteCountSum, 10);
+});
+
+test("tno render budget sets political cold selection caps", () => {
+  const manifest = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "manifest.json"));
+  const hints = manifest.render_budget_hints || {};
+
+  assert.equal(hints.max_required_political_chunks, 6);
+  assert.equal(hints.min_required_political_chunks, 1);
+  assert.ok(hints.max_required_political_estimated_path_cost > 0);
+  assert.ok(hints.max_required_political_byte_size > 0);
+  assert.ok(hints.max_required_political_byte_size <= 12_000_000);
+});
+
 test("exact-after-settle keeps scenario overlays on the contextScenario reuse path", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const rendererRuntimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
@@ -222,20 +277,28 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const politicalRasterWorkerSource = readRepoFile("js", "workers", "political_raster.worker.js");
   const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
   const chunkManagerSource = readRepoFile("js", "core", "scenario_chunk_manager.js");
+  const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
+  const bundleLoaderSource = readRepoFile("js", "core", "scenario", "bundle_loader.js");
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
   const interactionRecoveryBlockedBody =
     rendererSource.match(/function isInteractionRecoveryBlocked\(\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body || "";
 
   const contract = {
     drawContextScenarioPassKeepsScenarioOverlayBoundary:
-      /function drawContextScenarioPass\(k, \{ interactive = false \} = \{\}\) \{[\s\S]*?drawScenarioRegionOverlaysPass\(k\);[\s\S]*?drawScenarioReliefOverlaysLayer\(k\);[\s\S]*?recordRenderPerfMetric\("drawContextScenarioPass"/.test(rendererSource),
+      /function drawContextScenarioPass\(k, \{ interactive = false \} = \{\}\) \{[\s\S]*?drawScenarioRegionOverlaysPass\(k\);[\s\S]*?drawScenarioReliefOverlaysPass\(k\);[\s\S]*?recordRenderPerfMetric\("drawContextScenarioPass"/.test(rendererSource),
     signatureOnlyContextScenarioInvalidationUsesTransformReuse:
       /passName === "contextScenario"[\s\S]*?shouldEnableContextScenarioTransformReuse\(\)[\s\S]*?cache\.dirty\[passName\] = false;[\s\S]*?recordRenderPerfMetric\("contextScenarioReuseSkipped", 0, \{/.test(rendererSource),
     contextScenarioKeepsLayerMetrics:
       rendererSource.includes('"contextScenarioLayerWater"')
       && rendererSource.includes('"contextScenarioLayerSpecial"')
+      && rendererSource.includes('renderScenarioSpecialRegionOverlaysLayerToCache')
+      && rendererSource.includes('getContextScenarioLayerCacheEntry("special")')
       && rendererSource.includes('"contextScenarioLayerRelief"')
+      && rendererSource.includes('renderScenarioReliefOverlaysLayerToCache')
+      && rendererSource.includes('getContextScenarioLayerCacheEntry("relief")')
       && rendererSource.includes('recordRenderPerfMetric("contextScenarioSignatureChanged"'),
+    contextScenarioSpecialSignatureTracksPayloadIdentity:
+      /function getScenarioSpecialVisualRevisionToken\(\) \{[\s\S]*?special-ref:\$\{getObjectIdentityToken\(runtimeState\.scenarioSpecialRegionsData, "scenario-special"\)\}[\s\S]*?special-count:\$\{getFeatureCollectionFeatureCount\(runtimeState\.scenarioSpecialRegionsData\)\}/.test(rendererSource),
     interactionMetricsKeepDirectActionAndHitRankDurations:
       rendererSource.includes('recordInteractionDurationMetric("interactionActionDuration"')
       && /function rankCandidates\(candidates, lonLat, \{ eventType = "unknown", targetType = "unknown" \} = \{\}\) \{[\s\S]*?recordInteractionDurationMetric\("interactionHitRankDuration"[\s\S]*?candidateCount: candidates\.length,[\s\S]*?geoContainsCount,[\s\S]*?containsGeoCount:[\s\S]*?eventType,[\s\S]*?targetType,/.test(rendererSource),
@@ -259,7 +322,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     interactionCompositeUsesSingleMainPassCache:
       rendererSource.includes("const INTERACTION_COMPOSITE_PASS_NAMES = [")
       && rendererSource.includes('recordRenderPerfMetric("interactionCompositeBuild"')
-      && /function composeTransformedFrameToBuffer\(currentTransform, transformedPasses,[\s\S]*?drawInteractionComposite\(currentTransform\)[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(rendererSource),
+      && /function composeTransformedFrameToBuffer\([\s\S]*?useInteractionComposite = true[\s\S]*?drawInteractionComposite\(currentTransform\)[\s\S]*?composeRenderPassesToTarget\(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(rendererSource),
     continuityFrameSkipsBaseFillDuringInteraction:
       rendererSource.includes("const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;")
       && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?cache\.lastGoodFrame\.stale = true;[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
@@ -280,7 +343,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererRuntimeStateSource.includes("function isExactAfterSettleGenerationCurrentState(")
       && /function getExactAfterSettleControllerState\(\) \{[\s\S]*?ensureExactAfterSettleControllerState\(runtimeState\);/.test(rendererSource)
       && /function applyScheduledExactAfterSettleRefreshPlan\(generation, plan\) \{[\s\S]*?phase: "applying"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshApply"[\s\S]*?prepareExactAfterSettlePassesInSlices\(generation, plan\);/.test(rendererSource)
-      && /function completeScheduledExactAfterSettleRefreshPlan\(generation, plan, passStartedAt\) \{[\s\S]*?phase: "awaiting-paint"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshPasses"[\s\S]*?requestRendererRender\("exact-after-settle"/.test(rendererSource),
+      && /function completeScheduledExactAfterSettleRefreshPlan\(generation, plan, passStartedAt\) \{[\s\S]*?phase: "awaiting-paint"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshPasses"[\s\S]*?requestRendererRender\("exact-after-settle", \{[\s\S]*?flush: true/.test(rendererSource),
     exactAfterSettleFinalizesAfterExactCompose:
       /function drawCanvas\(\) \{[\s\S]*?drewExactFrame = composeCachedPasses\(RENDER_PASS_NAMES\);[\s\S]*?if \(drewExactFrame\) \{[\s\S]*?finalizePendingExactAfterSettleRefreshAfterPaint\(\);/.test(rendererSource)
       && /function finalizePendingExactAfterSettleRefreshAfterPaint\(\) \{[\s\S]*?isExactAfterSettleIdentityCurrent\(controller\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshWaitForPaint"[\s\S]*?finalizeExactAfterSettleRefreshPlan\(plan\);[\s\S]*?recordRenderPerfMetric\("settleExactRefreshFinalize"/.test(rendererSource)
@@ -339,6 +402,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !rendererSource.includes('flushInteractionRender(kind);'),
     exactAfterSettleDefersContextPassesAfterCriticalPaint:
       rendererSource.includes("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set")
+      && rendererSource.includes("const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;")
       && rendererSource.includes('"contextBase",')
       && rendererSource.includes('"contextScenario",')
       && (() => {
@@ -354,12 +418,14 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function cancelDeferredExactContextRefresh\(\) \{[\s\S]*?deferredExactContextRefreshVersion \+= 1;[\s\S]*?deferredExactContextRefreshTaskHandles\.forEach[\s\S]*?handle\.cancel\(\);[\s\S]*?deferredExactContextRefreshTaskHandles\.clear\(\);/.test(rendererSource)
       && /function isDeferredExactContextRefreshCurrent\(refreshVersion, plan = \{\}\) \{[\s\S]*?deferredExactContextRefreshVersion[\s\S]*?isExactAfterSettleIdentityCurrent\(identity\)/.test(rendererSource)
       && /function prepareDeferredExactContextPassesInSlices\(passNames, plan = \{\}, refreshVersion = deferredExactContextRefreshVersion\) \{[\s\S]*?!isDeferredExactContextRefreshCurrent\(refreshVersion, plan\)[\s\S]*?deferredExactContextRefreshTaskHandles\.delete\(taskHandle\)[\s\S]*?prepareIdleRenderPassDefinition\(passName, drawFn, transform, timings, cache\)/.test(rendererSource)
-      && /function scheduleDeferredExactContextRefresh\(plan = \{\}\) \{[\s\S]*?const refreshVersion = Number\(deferredExactContextRefreshVersion \|\| 0\);[\s\S]*?plan\.deferredExactContextIdentity = getExactAfterSettleIdentity\(\);[\s\S]*?!isDeferredExactContextRefreshCurrent\(refreshVersion, plan\)[\s\S]*?prepareDeferredExactContextPassesInSlices\(targetPasses, plan, refreshVersion\)/.test(rendererSource),
+      && /function scheduleDeferredExactContextRefresh\(plan = \{\}\) \{[\s\S]*?const refreshVersion = Number\(deferredExactContextRefreshVersion \|\| 0\);[\s\S]*?plan\.deferredExactContextIdentity = getExactAfterSettleIdentity\(\);[\s\S]*?!isDeferredExactContextRefreshCurrent\(refreshVersion, plan\)[\s\S]*?prepareDeferredExactContextPassesInSlices\(targetPasses, plan, refreshVersion\)[\s\S]*?timeout: DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS/.test(rendererSource),
     exactAfterSettleUsesFrameScheduler:
       frameSchedulerSource.includes("export function enqueueFrameTask")
       && /import \{ enqueueFrameTask(?:, getFrameSchedulerQueueLength)? \} from "\.\/frame_scheduler\.js";/.test(rendererSource)
       && /function enqueueExactAfterSettleSegment\(generation, label, task\) \{[\s\S]*?enqueueFrameTask/.test(rendererSource)
       && /scheduleExactAfterSettleRefresh[\s\S]*?enqueueExactAfterSettleSegment\(generation, "Prepare"[\s\S]*?enqueueExactAfterSettleSegment\(generation, "Apply"/.test(rendererSource),
+    exactAfterSettleWaitsForRefreshStartedChunkWork:
+      /const promotionWorkActive = \[[\s\S]*?"promotion-scheduled",[\s\S]*?"refresh-started",[\s\S]*?\]\.includes\(String\(pendingChunkRefreshStatus \|\| ""\)\);/.test(rendererSource),
     frameSchedulerQueueMetricsReportedPerPriority:
       frameSchedulerSource.includes("HIGH_PRIORITY_MIN_PER_DRAIN = 1")
       && frameSchedulerSource.includes("byLabelGeneration = false")
@@ -367,8 +433,9 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /export function getFrameSchedulerQueueLength\(\{ byPriority = false, byLabelGeneration = false \} = \{\}\) \{[\s\S]*?high:[\s\S]*?normal:[\s\S]*?low:[\s\S]*?total:/.test(frameSchedulerSource)
       && /function render\(\) \{[\s\S]*?getFrameSchedulerQueueLength\(\{ byPriority: true, byLabelGeneration: true \}\);[\s\S]*?recordRenderPerfMetric\("frameSchedulerQueueDepth", 0, frameSchedulerQueue\);/.test(rendererSource),
     exactAfterSettleDedupesByGeneration:
-      /function enqueueExactAfterSettleSegment\(generation, label, task\) \{[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: true/.test(rendererSource)
-      && /label: `exact-after-settle-pass-\$\{passName\}`,[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: true/.test(rendererSource),
+      /function enqueueExactAfterSettleSegment\(generation, label, task\) \{[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(rendererSource)
+      && /label: `exact-after-settle-pass-\$\{passName\}`,[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(rendererSource)
+      && /priority: "high",[\s\S]*?label: `deferred-exact-context-pass-\$\{passName\}`,[\s\S]*?generation: Number\(plan\.controllerGeneration \|\| 0\),[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(rendererSource),
     buildHitCanvasReportsVisibleAndGridCandidateCounts:
       rendererSource.includes("lastHitCanvasBuildStats")
       && rendererSource.includes("visibleItemCount")
@@ -401,14 +468,24 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes("function getRuntimeChunkSelectionVersion()")
       && rendererSource.includes("function getVisibleContextFlagSignature()")
       && /function getVisibleFrameIdentity[\s\S]*?selectionVersion: getRuntimeChunkSelectionVersion\(\)[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)/.test(rendererSource)
-      && /function getInteractionCompositeRejectReason[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch/.test(rendererSource)
-      && /function drawLastGoodFrameFallback[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch/.test(rendererSource)
+      && /function getInteractionCompositeRejectReason[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(rendererSource)
+      && /function captureLastGoodFrame[\s\S]*?cache\.lastGoodFrame\.colorRevision = identity\.colorRevision/.test(rendererSource)
+      && /function drawLastGoodFrameFallback[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(rendererSource)
       && rendererRuntimeStateSource.includes("selectionVersion: 0")
       && rendererRuntimeStateSource.includes('contextFlagSignature: ""'),
     exactAfterSettleFreshnessIdentityIncludesContextFlags:
       /function getExactAfterSettleIdentity\(\)[\s\S]*?selectionVersion:[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)[\s\S]*?transformBucket: getTransformBucketSignature\(\)/.test(rendererSource)
       && /function assignExactAfterSettleIdentity[\s\S]*?controller\.contextFlagSignature = identity\.contextFlagSignature/.test(rendererSource)
       && /function isExactAfterSettleIdentityCurrent[\s\S]*?String\(controller\.contextFlagSignature \|\| ""\) === identity\.contextFlagSignature/.test(rendererSource),
+    contextScenarioReuseUsesScenarioDistanceBudget:
+      rendererSource.includes("const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;")
+      && /function getContextScenarioReuseDecision[\s\S]*?Math\.max\([\s\S]*?getContextBaseReuseMaxDistancePx\(\),[\s\S]*?CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX[\s\S]*?\)[\s\S]*?const shouldExactRefresh =[\s\S]*?delta\.distancePx > maxDistancePx[\s\S]*?reachesReuseFrameLimit/.test(rendererSource),
+    settlingFastFrameCanUseDirtyCachedPassesWithoutDirtyComposite:
+      /function canDrawTransformedPass\(passName, cache = getRenderPassCacheState\(\), \{ allowDirty = false \} = \{\}\) \{[\s\S]*?cache\.dirty\?\.\[passName\] && !allowDirty/.test(rendererSource)
+      && /function canBuildInteractionComposite\(cache = getRenderPassCacheState\(\)\) \{[\s\S]*?canDrawTransformedPass\(passName, cache\)/.test(rendererSource)
+      && /function buildInteractionComposite\(currentTransform, timings\) \{[\s\S]*?canBuildInteractionComposite\(getRenderPassCacheState\(\)\)/.test(rendererSource)
+      && /function drawTransformedFrameFromCaches[\s\S]*?const allowDirtyFastFrame =[\s\S]*?runtimeState\.renderPhase === RENDER_PHASE_SETTLING[\s\S]*?runtimeState\.deferExactAfterSettle[\s\S]*?const dirtyFastFramePassNames = allowDirtyFastFrame[\s\S]*?canDrawTransformedPass\(passName, cache, \{[\s\S]*?allowDirty: allowDirtyFastFrame[\s\S]*?const canDrawDirtyInteractionPasses = allowDirtyFastFrame[\s\S]*?allowDirty: true[\s\S]*?buildInteractionComposite\(currentTransform, timings\)[\s\S]*?useInteractionComposite: !canDrawDirtyInteractionPasses/.test(rendererSource)
+      && /function drawCanvas[\s\S]*?usedDirtyFastFramePasses[\s\S]*?!usedDirtyFastFramePasses[\s\S]*?captureLastGoodFrame[\s\S]*?lastGoodFrameCaptureSkipped/.test(rendererSource),
     politicalRasterWorkerProtocolDefaultsOff:
       politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 2")
       && politicalRasterWorkerClientSource.includes("political_raster_worker")
@@ -455,12 +532,24 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && chunkManagerSource.includes("selectedFeatureCountSum")
       && chunkManagerSource.includes("selectedEstimatedPathCostSum")
       && chunkManagerSource.includes("max_required_estimated_path_cost")
+      && chunkManagerSource.includes("max_required_byte_size")
+      && chunkManagerSource.includes("max_required_political_chunks")
+      && chunkManagerSource.includes("min_required_political_chunks")
+      && chunkManagerSource.includes("max_required_political_estimated_path_cost")
+      && chunkManagerSource.includes("max_required_political_byte_size")
       && chunkManagerSource.includes("takeRequiredChunksWithinCostBudget"),
     focusCountryOverrideHasTtlAndIsConsumed:
       chunkRuntimeSource.includes("FOCUS_COUNTRY_OVERRIDE_TTL_MS")
       && chunkRuntimeSource.includes("focusCountryOverrideExpiresAt")
       && chunkRuntimeSource.includes("consumeScenarioChunkFocusCountryOverride(loadState)")
       && chunkRuntimeSource.includes("clearScenarioChunkFocusCountryOverride(loadState)"),
+    chunkedFullBundleUsesBootstrapRuntimeTopology:
+      bundleRuntimeSource.includes("const runtimeTopologyLevel = requestedBundleLevel === \"bootstrap\" || runtimeShell?.detailChunkManifestUrl")
+      && /const runtimeTopologyUrl = String\([\s\S]*?runtimeTopologyLevel === "bootstrap"[\s\S]*?runtimeShell\?\.startupTopologyUrl[\s\S]*?manifest\.runtime_topology_url/.test(bundleRuntimeSource)
+      && /assembleScenarioBundle\([\s\S]*?runtimeTopologyUrl,[\s\S]*?runtimeTopologyLevel,[\s\S]*?geoLocalePatchDescriptor/.test(bundleRuntimeSource)
+      && /function loadScenarioRuntimeTopologyForBundle\([\s\S]*?runtimeTopologyLevel = requestedBundleLevel[\s\S]*?requestedRuntimeTopologyLevel === "bootstrap"[\s\S]*?loadScenarioRuntimeBootstrapViaWorker/.test(bundleLoaderSource)
+      && /decodeRuntimeChunkViaWorker\(\{ runtimeTopologyUrl \}\)/.test(bundleLoaderSource)
+      && /topologyLevel: runtimeTopologyLevel === "bootstrap" \? "bootstrap" : "full"/.test(bundleLoaderSource),
   };
 
   Object.entries(contract).forEach(([label, ok]) => {
@@ -828,11 +917,12 @@ test("frame scheduler defers high tasks for discrete input and dedupes label gen
   const originalNavigator = globalThis.navigator;
   const calls = [];
   let discreteInputPending = true;
+  let continuousInputPending = true;
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: {
       scheduling: {
-        isInputPending: ({ includeContinuous } = {}) => includeContinuous ? true : discreteInputPending,
+        isInputPending: ({ includeContinuous } = {}) => includeContinuous ? continuousInputPending : discreteInputPending,
       },
     },
   });
@@ -843,17 +933,21 @@ test("frame scheduler defers high tasks for discrete input and dedupes label gen
     scheduler.enqueueFrameTask(() => {
       calls.push("deduped-again");
     }, { priority: "high", label: "exact-after-settle-Apply", generation: 42, dedupe: true });
+    scheduler.enqueueFrameTask(() => {
+      calls.push("deferred-context");
+    }, { priority: "high", label: "deferred-exact-context-pass-contextScenario", generation: 43, dedupe: true });
     const queued = scheduler.getFrameSchedulerQueueLength({ byPriority: true, byLabelGeneration: true });
-    assert.equal(queued.high, 1);
+    assert.equal(queued.high, 2);
     assert.equal(queued.byLabelGeneration["exact-after-settle-Apply:42"], 1);
+    assert.equal(queued.byLabelGeneration["deferred-exact-context-pass-contextScenario:43"], 1);
 
     scheduler.runFrameTasks(8);
     assert.deepEqual(calls, []);
-    assert.equal(scheduler.getFrameSchedulerQueueLength({ byPriority: true }).high, 1);
+    assert.equal(scheduler.getFrameSchedulerQueueLength({ byPriority: true }).high, 2);
 
     discreteInputPending = false;
     scheduler.runFrameTasks(8);
-    assert.deepEqual(calls, ["deduped"]);
+    assert.deepEqual(calls, ["deduped", "deferred-context"]);
     assert.equal(scheduler.getFrameSchedulerQueueLength({ byPriority: true }).total, 0);
   } finally {
     Object.defineProperty(globalThis, "navigator", {

@@ -649,6 +649,8 @@ function buildCountryColorTree(entries) {
   const unanchoredScenarioGroups = new Map();
   const orderedTopLevelGroups = [];
 
+  // inspector 分组树只决定右侧列表怎么归类和排序；真正的国家数据仍来自 scenario/meta。
+  // 有 anchor 的 scenario 分组会插到指定 continent 前，避免把 TNO 这类虚拟区域写成真实 continent。
   const pushTopLevelGroup = (groupMeta) => {
     if (!groupMeta?.id || topLevelOrder.has(groupMeta.id)) return;
     topLevelOrder.set(groupMeta.id, orderedTopLevelGroups.length);
@@ -1028,6 +1030,8 @@ function applyScenarioOwnerControllerAssignments(
     scenarioControllerFeatureIds: targetIds,
   });
 
+  // 这是 sidebar 内唯一同时写 owner/controller 的批量入口；
+  // 视觉覆盖不要走到这里，否则颜色预览会变成真实政治状态修改。
   // scenario 模式下 owner / controller 允许分离，
   // 但两者必须在同一笔 sidebar 事务里写入并统一推高 revision，
   // 否则 UI、diff 计数和边界重算会短暂看到半更新状态。
@@ -3610,6 +3614,8 @@ function initSidebar({ render } = {}) {
     const inspectorGroupAnchorId = inspectorGroupMeta.anchorId;
     const topLevelGroupId = inspectorGroupId || continentId;
     const topLevelGroupLabel = inspectorGroupLabel || continentLabel;
+    // inspector 状态把 lookup/preset/grouping code 分开保存：
+    // 列表分组、预设读取和详情展示可能各自指向不同来源，不能在这里合并成一个 code。
     return {
       ...entry,
       fallbackIndex,
@@ -4915,6 +4921,8 @@ function initSidebar({ render } = {}) {
     const body = document.createElement("div");
     body.className = "scenario-visual-adjustments-body";
 
+    // Color Only 面板面向视觉颜色调整，主要写入 runtimeState.visualOverrides。
+    // 它可以复用 preset/hierarchy 的目标选择，但不得触发 owner/controller、边界或 diff 计数链。
     const note = document.createElement("p");
     note.className = "scenario-action-hint";
     note.textContent = t(

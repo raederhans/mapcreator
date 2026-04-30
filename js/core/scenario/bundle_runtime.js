@@ -311,8 +311,14 @@ function createScenarioBundleRuntimeController({
       const priorBundle = !forceReload && cachedBundle ? cachedBundle : null;
       const geoLocalePatchDescriptor = getScenarioGeoLocalePatchDescriptor(manifest);
       const runtimeShell = normalizeScenarioRuntimeShell(manifest);
+      // Chunked runtime scenarios keep the apply/startup political topology on the
+      // lightweight bootstrap shell. Detail topology is promoted by chunk runtime
+      // after interaction demand, which keeps exact-after-settle redraw bounded.
+      const runtimeTopologyLevel = requestedBundleLevel === "bootstrap" || runtimeShell?.detailChunkManifestUrl
+        ? "bootstrap"
+        : "full";
       const runtimeTopologyUrl = String(
-        requestedBundleLevel === "bootstrap"
+        runtimeTopologyLevel === "bootstrap"
           ? runtimeShell?.startupTopologyUrl || manifest.runtime_bootstrap_topology_url || manifest.runtime_topology_url || ""
           : manifest.runtime_topology_url || runtimeShell?.startupTopologyUrl || manifest.runtime_bootstrap_topology_url || ""
       ).trim();
@@ -349,6 +355,7 @@ function createScenarioBundleRuntimeController({
         manifest,
         runtimeShell,
         runtimeTopologyUrl,
+        runtimeTopologyLevel,
         geoLocalePatchDescriptor,
         scenarioBootstrapCoreCacheKey,
         scenarioBootstrapLocaleCacheKey,
@@ -377,6 +384,7 @@ function createScenarioBundleRuntimeController({
         priorBundle,
         runtimeShell,
         runtimeTopologyUrl,
+        runtimeTopologyLevel,
         geoLocalePatchDescriptor,
       });
       void countriesResult;

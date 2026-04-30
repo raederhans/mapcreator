@@ -143,9 +143,22 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("mergedLayerPayloadCacheLayerCount", script)
         self.assertIn("includeHeavyMetrics: false", script)
         self.assertIn("includeHeavyMetrics: true", script)
+        self.assertIn("includeBlackPixels: false", script)
+        self.assertIn("const includeBlackPixels = payload.includeBlackPixels !== false;", script)
+        self.assertIn("blackPixelRatio: blackPixelSamples?.ratio ?? null", script)
+        self.assertIn("payload.includeBlackPixels === false ? null", script)
         self.assertIn("const readIdleState = async () => page.evaluate", script)
+        self.assertIn("const chunkState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === 'object'", script)
+        self.assertIn("chunkState.promotionCommitInFlight", script)
+        self.assertIn("chunkState.pendingPostCommitRefresh", script)
+        self.assertIn("chunkActive: !!snapshot.chunkActive", script)
+        self.assertIn("const postReadyActive = !!state.interactionInfrastructureBuildInFlight", script)
+        self.assertIn("postReadyActive: !!snapshot.postReadyActive", script)
         self.assertIn("timedOut: !snapshot.settled", script)
         self.assertIn("firstIdleAfterLastWheelMs = idleState?.timedOut", script)
+        self.assertIn("const attributionSampleContext = {{", script)
+        self.assertIn("firstIdleAfterLastWheelMs,", script)
+        self.assertIn("attributionSampleContext,", script)
         self.assertIn("result.finalReset = await waitForIdle(7000)", script)
         self.assertIn("activeScenarioId: await readActiveScenarioId()", script)
         self.assertIn("result.activeScenarioId = await readActiveScenarioId()", script)
@@ -162,8 +175,20 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("shortArtifactPassed", script)
         self.assertIn("fullArtifactPassed", script)
         self.assertIn("category: 'render-pass'", script)
+        self.assertIn("schedulerMetric=${{schedulerEntry.metricName}}", script)
+        self.assertIn("scheduler-duration-overlap", script)
+        self.assertIn("scheduler:deferred-exact-context-pass", script)
+        self.assertIn("scheduler-label-observed", script)
+        self.assertRegex(
+            script,
+            r"const schedulerEntry = metricEntry\([\s\S]*?schedulerDeferredExactLabel \? 'scheduler:deferred-exact-context-pass' : 'scheduler:queue-depth'[\s\S]*?schedulerDeferredExactLabel \? 'scheduler-label-observed' : 'scheduler-duration-overlap'[\s\S]*?\);[\s\S]*?schedulerEntry\.durationMs >= 350 \|\| schedulerEntry\.durationMs >= durationMs \* 0\.25",
+        )
+        self.assertIn("partial-render-pass-overlap", script)
+        self.assertNotIn("if (schedulerDepth > 0) {{", script)
+        self.assertIn("hasMeaningfulBrowserAttribution", script)
+        self.assertNotIn("if (attribution.length) {{", script)
         self.assertIn("unknownLongTaskCount", script)
-        self.assertIn("evidence: ['no-pass-or-browser-attribution']", script)
+        self.assertIn("evidence: evidence.length ? [...evidence, 'no-pass-or-browser-attribution'] : ['no-pass-or-browser-attribution']", script)
         self.assertIn('"git", "rev-parse", "HEAD"', script)
         self.assertIn('SCENARIO_IDS = ["none", "hoi4_1939", "tno_1962"]', script)
         self.assertIn('"politicalRasterWorker": political_raster_worker', script)
@@ -436,6 +461,244 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertTrue(region_attribution["gate"]["passed"])
         self.assertEqual(region_attribution["gate"]["taskCount"], 0)
         self.assertEqual(region_attribution["gate"]["unknownTopSubOwnerCount"], 0)
+
+    def test_repeated_zoom_regions_missing_artifact_markers_stay_unknown(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "regions": {},
+            },
+        }
+
+        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+
+        selfIsNone = self.assertIsNone
+        selfIsNone(metric["details"]["artifactPassMarkers"]["shortArtifactPass"])
+        selfIsNone(metric["details"]["artifactPassMarkers"]["fullArtifactPass"])
+        selfIsNone(metric["details"]["longTask"]["attribution"]["gate"]["shortArtifactPassed"])
+        selfIsNone(metric["details"]["longTask"]["attribution"]["gate"]["fullArtifactPassed"])
+
+    def test_repeated_zoom_regions_artifact_markers_require_real_booleans(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "shortArtifactPass": "false",
+                "fullArtifactPass": "0",
+                "regions": {},
+            },
+        }
+
+        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+
+        self.assertIsNone(metric["details"]["artifactPassMarkers"]["shortArtifactPass"])
+        self.assertIsNone(metric["details"]["artifactPassMarkers"]["fullArtifactPass"])
+        self.assertIsNone(metric["details"]["longTask"]["attribution"]["gate"]["shortArtifactPassed"])
+        self.assertIsNone(metric["details"]["longTask"]["attribution"]["gate"]["fullArtifactPassed"])
+
+    def test_repeated_zoom_regions_naked_subowner_is_not_actionable(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "regions": {
+                    "europe": {
+                        "cycles": [
+                            {
+                                "firstIdleAfterLastWheelMs": 100,
+                                "longTaskAttribution": {
+                                    "schema": "mc_long_task_attribution_v1",
+                                    "unknownLongTaskCount": 0,
+                                    "topOwner": "chunk-promotion",
+                                    "topSubOwner": "post-commit-replay",
+                                    "categoryCounts": {"chunk-promotion": 1},
+                                    "subOwnerCounts": {"post-commit-replay": 1},
+                                    "tasks": [
+                                        {
+                                            "category": "chunk-promotion",
+                                            "subOwner": "post-commit-replay",
+                                            "subOwnerEvidence": {"matchReason": "legacy-naked-subowner"},
+                                            "subOwnerConfidence": "medium",
+                                            "durationMs": 900,
+                                            "evidence": ["chunkMetric=zoomEndToChunkVisibleMs:900ms"],
+                                            "confidence": "medium",
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "degradation": {"ratio": 1.0},
+                        "maxLongTaskMs": 900,
+                    }
+                },
+            },
+        }
+
+        attribution = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]["details"]["longTask"]["attribution"]
+
+        self.assertFalse(attribution["gate"]["passed"])
+        self.assertFalse(attribution["gate"]["topSubOwnerActionable"])
+        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 1)
+        self.assertEqual(attribution["gate"]["unknownTopSubOwnerCount"], 1)
+
+    def test_repeated_zoom_regions_uses_aggregate_gate_when_tasks_are_truncated(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "regions": {
+                    "europe": {
+                        "cycles": [],
+                        "longTaskAttribution": [
+                            {
+                                "schema": "mc_long_task_attribution_v1",
+                                "subOwnerSchema": "mc_long_task_subowner_v1",
+                                "unknownLongTaskCount": 2,
+                                "topOwner": "unknown",
+                                "topSubOwner": "unknown",
+                                "categoryCounts": {"unknown": 2},
+                                "subOwnerCounts": {"unknown": 2},
+                                "subOwnerMaxMs": {"unknown": 1200},
+                                "gate": {
+                                    "schema": "mc_long_task_attribution_gate_v1",
+                                    "taskCount": 25,
+                                    "unknownLongTaskCount": 2,
+                                    "unknownTopOwnerCount": 1,
+                                    "unknownSubOwnerCount": 2,
+                                    "unknownTopSubOwnerCount": 1,
+                                    "invalidCategoryCount": 0,
+                                    "missingEvidenceCount": 0,
+                                    "missingConfidenceCount": 0,
+                                    "missingSubOwnerEvidenceCount": 0,
+                                    "missingSubOwnerConfidenceCount": 0,
+                                },
+                                "tasks": [
+                                    {
+                                        "category": "render-pass",
+                                        "subOwner": "render-pass:politicalBg",
+                                        "subOwnerEvidence": {"matchReason": "dominant-render-pass-overlap"},
+                                        "subOwnerConfidence": "high",
+                                        "durationMs": 800,
+                                        "evidence": ["politicalBg=800ms"],
+                                        "confidence": "high",
+                                    }
+                                ],
+                            }
+                        ],
+                        "degradation": {"ratio": 1.0},
+                        "maxLongTaskMs": 1200,
+                    }
+                },
+            },
+        }
+
+        region_gate = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]
+
+        self.assertFalse(region_gate["passed"])
+        self.assertEqual(region_gate["taskCount"], 25)
+        self.assertEqual(region_gate["unknownLongTaskCount"], 2)
+        self.assertEqual(region_gate["unknownSubOwnerCount"], 2)
+
+    def test_repeated_zoom_regions_aggregate_gate_sums_region_unknowns(self):
+        benchmark = load_editor_benchmark_module()
+
+        def cycle_with_unknown(render_duration, unknown_duration):
+            return {
+                "firstIdleAfterLastWheelMs": 100,
+                "longTaskAttribution": {
+                    "schema": "mc_long_task_attribution_v1",
+                    "subOwnerSchema": "mc_long_task_subowner_v1",
+                    "unknownLongTaskCount": 1,
+                    "unknownSubOwnerCount": 1,
+                    "topOwner": "render-pass",
+                    "topSubOwner": "render-pass:contextScenario",
+                    "categoryCounts": {"render-pass": 1, "unknown": 1},
+                    "subOwnerCounts": {"render-pass:contextScenario": 1, "unknown": 1},
+                    "tasks": [
+                        {
+                            "category": "render-pass",
+                            "subOwner": "render-pass:contextScenario",
+                            "subOwnerEvidence": {"matchReason": "dominant-render-pass-overlap"},
+                            "subOwnerConfidence": "high",
+                            "durationMs": render_duration,
+                            "evidence": ["contextScenario=900ms"],
+                            "confidence": "high",
+                        },
+                        {
+                            "category": "unknown",
+                            "subOwner": "unknown",
+                            "subOwnerEvidence": {"matchReason": "no-subowner-match"},
+                            "subOwnerConfidence": "low",
+                            "durationMs": unknown_duration,
+                            "evidence": ["no-pass-or-browser-attribution"],
+                            "confidence": "low",
+                        },
+                    ],
+                },
+            }
+
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "repeatedZoomRegions": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
+                "regions": {
+                    "europe": {
+                        "cycles": [cycle_with_unknown(1000, 800)],
+                        "degradation": {"ratio": 1.0},
+                        "maxLongTaskMs": 1000,
+                    },
+                    "east_asia": {
+                        "cycles": [cycle_with_unknown(1100, 850)],
+                        "degradation": {"ratio": 1.0},
+                        "maxLongTaskMs": 1100,
+                    },
+                },
+            },
+        }
+
+        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+        attribution = metric["details"]["longTask"]["attribution"]
+
+        self.assertFalse(attribution["gate"]["passed"])
+        self.assertEqual(attribution["gate"]["unknownLongTaskCount"], 2)
+        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 2)
+        self.assertTrue(metric["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]["passed"])
+        self.assertTrue(metric["details"]["regions"]["east_asia"]["longTaskAttribution"]["gate"]["passed"])
 
     def test_repeated_zoom_regions_metric_requires_active_scenario_match(self):
         benchmark = load_editor_benchmark_module()

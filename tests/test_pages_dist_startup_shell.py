@@ -195,6 +195,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
             "app/data/europe_topology.na_v2.json",
             "app/data/transport_layers/global_road/catalog.json",
+            "app/data/transport_layers/global_airport/airports.geojson",
+            "app/data/transport_layers/global_port/ports.geojson",
+            "app/data/transport_layers/japan_airport/airports.geojson",
+            "app/data/transport_layers/japan_port/ports.core.geojson",
+            "app/data/transport_layers/japan_port/ports.expanded.geojson",
+            "app/data/transport_layers/japan_port/ports.geojson",
             "app/data/transport_layers/japan_road/roads.preview.topo.json",
             "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
         ):
@@ -213,6 +219,32 @@ class PagesDistStartupShellTest(unittest.TestCase):
         ):
             with self.subTest(excluded_path=excluded_path):
                 self.assertNotIn(excluded_path, paths)
+
+    def test_dist_manifest_keeps_japan_point_workbench_full_pack_targets(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+
+        for manifest_relative_path in (
+            "data/transport_layers/japan_airport/manifest.json",
+            "data/transport_layers/japan_port/manifest.json",
+        ):
+            manifest = json.loads((REPO_ROOT / manifest_relative_path).read_text(encoding="utf-8"))
+            path_sections = [manifest.get("paths", {})]
+            variants = manifest.get("variants", {})
+            if isinstance(variants, dict):
+                path_sections.extend(
+                    variant.get("paths", {}) for variant in variants.values() if isinstance(variant, dict)
+                )
+
+            for path_section in path_sections:
+                full_paths = path_section.get("full", {})
+                if not isinstance(full_paths, dict):
+                    continue
+                for runtime_path in full_paths.values():
+                    with self.subTest(manifest=manifest_relative_path, runtime_path=runtime_path):
+                        self.assertIn(f"app/{runtime_path}", dist_paths)
 
     def test_deploy_dist_artifact_preserves_nojekyll(self) -> None:
         workflow_lines = VERIFY_SHARED_WORKFLOW.read_text(encoding="utf-8").splitlines()

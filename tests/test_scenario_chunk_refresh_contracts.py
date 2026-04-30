@@ -296,6 +296,20 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn('reason: replayReason,', self.scenario_chunk_runtime_source)
         self.assertNotIn('clearPendingScenarioChunkRefresh(loadState);\n        return "promotion-commit-in-flight";', self.scenario_chunk_runtime_source)
 
+    def test_zoom_end_priority_can_advance_during_settling(self):
+        self.assertRegex(
+            self.scenario_chunk_runtime_source,
+            re.compile(
+                r'function shouldDeferScenarioChunkRefreshFor\(\{ allowZoomEndSettling = false \} = \{\}\) \{[\s\S]*?'
+                r'const renderPhase = String\(runtimeState\.renderPhase \|\| "idle"\);[\s\S]*?'
+                r'const renderPhaseBlocksRefresh = renderPhase !== "idle" && !\(allowZoomEndSettling && renderPhase === "settling"\);[\s\S]*?'
+                r'\|\| renderPhaseBlocksRefresh',
+                re.S,
+            ),
+        )
+        self.assertIn("const allowZoomEndSettling = shouldZoomEndPromoteImmediately(bundle, reason);", self.scenario_chunk_runtime_source)
+        self.assertIn("shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })", self.scenario_chunk_runtime_source)
+        self.assertIn("shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })", self.scenario_chunk_runtime_source)
 
     def test_zoom_end_detail_chunks_are_protected_through_exact_settle_replay(self):
         self.assertIn("function protectZoomEndChunks(loadState, chunkIds = [], {", self.scenario_chunk_runtime_source)

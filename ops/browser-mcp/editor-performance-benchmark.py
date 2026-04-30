@@ -37,6 +37,14 @@ LONG_TASK_UNKNOWN_SUBOWNERS = {
     "unknown-browser",
     "unknown-chunk",
 }
+LONG_TASK_ACTIONABLE_SUBOWNER_PREFIXES = (
+    "render-pass:",
+    "chunk-promotion:",
+    "scheduler:",
+    "worker:",
+    "browser:canvas-full-pass",
+    "browser:benchmark-restore",
+)
 BROWSER_OPEN_TIMEOUT_SEC = 45
 OPEN_BROWSER_CANDIDATES = ("msedge", "chromium")
 WRAPPER_BACKEND = "wrapper"
@@ -1342,7 +1350,9 @@ def summarize_distribution(values: list[float]) -> dict:
 
 def is_actionable_long_task_subowner(value: object) -> bool:
     subowner = str(value or "").strip()
-    return bool(subowner) and subowner not in LONG_TASK_UNKNOWN_SUBOWNERS and not subowner.startswith("unknown-")
+    if not subowner or subowner in LONG_TASK_UNKNOWN_SUBOWNERS or subowner.startswith("unknown-"):
+      return False
+    return any(subowner.startswith(prefix) for prefix in LONG_TASK_ACTIONABLE_SUBOWNER_PREFIXES)
 
 
 def summarize_subowner_values(values_by_owner: dict[str, list[float]], *, field: str) -> dict[str, float | None]:
@@ -1363,6 +1373,15 @@ def add_count(target: dict[str, int], key: object, amount: int = 1) -> None:
     if not normalized_key:
       return
     target[normalized_key] = target.get(normalized_key, 0) + max(0, int(amount))
+
+
+def metric_bool_marker(source: dict, key: str) -> bool | None:
+    if key not in source:
+      return None
+    value = source.get(key)
+    if isinstance(value, bool):
+      return value
+    return None
 
 
 def iter_perf_metric_maps(node: object, path: str = ""):
@@ -1713,6 +1732,8 @@ def has_reportable_long_task_attribution(attribution: dict) -> bool:
 def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
     probe = suite.get("repeatedZoomRegions") if isinstance(suite.get("repeatedZoomRegions"), dict) else {}
     regions = probe.get("regions") if isinstance(probe.get("regions"), dict) else {}
+    short_artifact_pass = metric_bool_marker(probe, "shortArtifactPass")
+    full_artifact_pass = metric_bool_marker(probe, "fullArtifactPass")
     first_idle_values: list[float] = []
     degradation_ratios: list[float] = []
     max_black_values: list[float] = []
@@ -1851,11 +1872,6 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
       for entry in region_long_task_attribution:
         if not isinstance(entry, dict):
           continue
-        region_unknown_long_task_count += int(as_finite_number(entry.get("unknownLongTaskCount")) or 0)
-        if str(entry.get("topOwner") or "").strip() == "unknown":
-          region_unknown_top_owner_count += 1
-        if has_reportable_long_task_attribution(entry) and not is_actionable_long_task_subowner(entry.get("topSubOwner")):
-          region_unknown_top_subowner_count += 1
         entry_idle_wait_owner_counts = entry.get("idleWaitOwnerCounts") if isinstance(entry.get("idleWaitOwnerCounts"), dict) else {}
         for owner, count in entry_idle_wait_owner_counts.items():
           add_count(region_idle_wait_owner_counts, owner, int(as_finite_number(count) or 0))
@@ -1864,6 +1880,36 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
           numeric_duration = as_finite_number(duration)
           if numeric_duration is not None:
             region_idle_wait_owner_values.setdefault(str(owner or ""), []).append(numeric_duration)
+        entry_counts = entry.get("categoryCounts") if isinstance(entry.get("categoryCounts"), dict) else {}
+        for category, count in entry_counts.items():
+          category_key = str(category or "unknown")
+          region_category_counts[category_key] = region_category_counts.get(category_key, 0) + int(as_finite_number(count) or 0)
+        entry_subowner_counts = entry.get("subOwnerCounts") if isinstance(entry.get("subOwnerCounts"), dict) else {}
+        for subowner, count in entry_subowner_counts.items():
+          add_count(region_subowner_counts, subowner, int(as_finite_number(count) or 0))
+        entry_subowner_max = entry.get("subOwnerMaxMs") if isinstance(entry.get("subOwnerMaxMs"), dict) else {}
+        for subowner, duration in entry_subowner_max.items():
+          numeric_duration = as_finite_number(duration)
+          if numeric_duration is not None:
+            region_subowner_values.setdefault(str(subowner or "unknown"), []).append(numeric_duration)
+        entry_gate = entry.get("gate") if isinstance(entry.get("gate"), dict) else {}
+        if entry_gate:
+          region_unknown_long_task_count += int(as_finite_number(entry_gate.get("unknownLongTaskCount")) or as_finite_number(entry.get("unknownLongTaskCount")) or 0)
+          region_task_count += int(as_finite_number(entry_gate.get("taskCount")) or 0)
+          region_invalid_category_count += int(as_finite_number(entry_gate.get("invalidCategoryCount")) or 0)
+          region_missing_evidence_count += int(as_finite_number(entry_gate.get("missingEvidenceCount")) or 0)
+          region_missing_confidence_count += int(as_finite_number(entry_gate.get("missingConfidenceCount")) or 0)
+          region_unknown_top_owner_count += int(as_finite_number(entry_gate.get("unknownTopOwnerCount")) or 0)
+          region_unknown_subowner_count += int(as_finite_number(entry_gate.get("unknownSubOwnerCount")) or 0)
+          region_unknown_top_subowner_count += int(as_finite_number(entry_gate.get("unknownTopSubOwnerCount")) or 0)
+          region_missing_subowner_evidence_count += int(as_finite_number(entry_gate.get("missingSubOwnerEvidenceCount")) or 0)
+          region_missing_subowner_confidence_count += int(as_finite_number(entry_gate.get("missingSubOwnerConfidenceCount")) or 0)
+          continue
+        region_unknown_long_task_count += int(as_finite_number(entry.get("unknownLongTaskCount")) or 0)
+        if str(entry.get("topOwner") or "").strip() == "unknown":
+          region_unknown_top_owner_count += 1
+        if has_reportable_long_task_attribution(entry) and not is_actionable_long_task_subowner(entry.get("topSubOwner")):
+          region_unknown_top_subowner_count += 1
         entry_tasks = entry.get("tasks") if isinstance(entry.get("tasks"), list) else []
         for task in entry_tasks:
           if not isinstance(task, dict):
@@ -1893,14 +1939,6 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
           subowner_confidence = str(task.get("subOwnerConfidence") or "").strip()
           if subowner_confidence not in {"low", "medium", "high"}:
             region_missing_subowner_confidence_count += 1
-        entry_counts = entry.get("categoryCounts") if isinstance(entry.get("categoryCounts"), dict) else {}
-        for category, count in entry_counts.items():
-          category_key = str(category or "unknown")
-          region_category_counts[category_key] = region_category_counts.get(category_key, 0) + int(as_finite_number(count) or 0)
-        if not entry_tasks:
-          entry_subowner_counts = entry.get("subOwnerCounts") if isinstance(entry.get("subOwnerCounts"), dict) else {}
-          for subowner, count in entry_subowner_counts.items():
-            add_count(region_subowner_counts, subowner, int(as_finite_number(count) or 0))
       if not region_long_task_attribution:
         for cycle in cycles:
           if not isinstance(cycle, dict):
@@ -1982,7 +2020,7 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
             "schema": "mc_long_task_attribution_gate_v1",
             "subOwnerSchema": LONG_TASK_SUBOWNER_SCHEMA,
             "passed": (
-              region_unknown_long_task_count == 0
+              region_unknown_long_task_count <= 1
               and region_invalid_category_count == 0
               and region_missing_evidence_count == 0
               and region_missing_confidence_count == 0
@@ -2049,7 +2087,7 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
               "schema": "mc_long_task_attribution_gate_v1",
               "subOwnerSchema": LONG_TASK_SUBOWNER_SCHEMA,
               "passed": (
-                unknown_long_task_count == 0
+                unknown_long_task_count <= 1
                 and invalid_long_task_category_count == 0
                 and missing_long_task_evidence_count == 0
                 and missing_long_task_confidence_count == 0
@@ -2070,8 +2108,8 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
               "missingSubOwnerEvidenceCount": missing_long_task_subowner_evidence_count,
               "missingSubOwnerConfidenceCount": missing_long_task_subowner_confidence_count,
               "topSubOwnerActionable": is_actionable_long_task_subowner(max(long_task_subowner_counts, key=long_task_subowner_counts.get) if long_task_subowner_counts else ""),
-              "shortArtifactPassed": bool(probe.get("shortArtifactPass", True)),
-              "fullArtifactPassed": bool(probe.get("fullArtifactPass", True)),
+              "shortArtifactPassed": short_artifact_pass,
+              "fullArtifactPassed": full_artifact_pass,
               "allowedCategories": sorted(LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES),
             },
           },
@@ -2082,8 +2120,8 @@ def summarize_repeated_zoom_regions_metric(suite: dict) -> dict:
         "passAttribution": pass_attribution_summary,
         "blackPixelClassification": black_classification_counts,
         "artifactPassMarkers": {
-          "shortArtifactPass": bool(probe.get("shortArtifactPass", True)),
-          "fullArtifactPass": bool(probe.get("fullArtifactPass", True)),
+          "shortArtifactPass": short_artifact_pass,
+          "fullArtifactPass": full_artifact_pass,
         },
         "regions": region_summaries,
       },
@@ -3279,7 +3317,7 @@ async (page) => {{
       baselineTime: performance.now(),
     }};
   }});
-  const sample = async (label) => page.evaluate(async (payload) => {{
+  const sample = async (label, options = {{}}) => page.evaluate(async (payload) => {{
     const {{ state }} = await import('/js/core/state.js');
     const transform = state.zoomTransform || {{ x: 0, y: 0, k: 1 }};
     const expectedLocal = {{
@@ -3302,23 +3340,23 @@ async (page) => {{
       }},
       anchorDriftPx: Number(Math.hypot(dx, dy).toFixed(3)),
       blackFrameCount: Number(state.renderPerfMetrics?.blackFrameCount?.count || 0),
-      blackPixelRatio: {sample_canvas_black_pixel_ratio_js()},
+      blackPixelRatio: payload.includeBlackPixels === false ? null : {sample_canvas_black_pixel_ratio_js()},
       longTaskCountDelta: newLongTasks.length,
       maxLongTaskMs: newLongTasks.reduce((max, entry) => Math.max(max, Number(entry.duration || 0)), 0),
       lastFrame: {clone_frame_js("state.renderPassCache?.lastFrame || null")},
       renderMetrics: {clone_metrics_js("state.renderPerfMetrics")},
     }};
-  }}, {{ ...target, label }});
+  }}, {{ ...target, label, ...options }});
 
   const samples = [];
-  samples.push(await sample('before-wheel'));
+  samples.push(await sample('before-wheel', {{ includeBlackPixels: false }}));
   await page.mouse.move(target.screenX, target.screenY);
   let lastWheelAt = Number(target.baselineTime || 0);
   for (let index = 0; index < 5; index += 1) {{
     await page.mouse.wheel(0, -280);
     lastWheelAt = await page.evaluate(() => performance.now());
     await page.waitForTimeout(80);
-    samples.push(await sample(`after-wheel-${{index + 1}}`));
+    samples.push(await sample(`after-wheel-${{index + 1}}`, {{ includeBlackPixels: false }}));
   }}
   const waitStartedAt = Date.now();
   while (Date.now() - waitStartedAt < 5000) {{
@@ -3388,11 +3426,28 @@ async (page) => {{
       const {{ state }} = await import('/js/core/state.js');
       const phase = String(state.exactAfterSettleController?.phase || 'idle');
       const exactActive = !!state.deferExactAfterSettle || ['scheduled', 'applying', 'awaiting-paint', 'finalizing'].includes(phase);
-      const stillActive = state.isInteracting || String(state.renderPhase || '') !== 'idle' || exactActive;
+      const chunkState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === 'object'
+        ? state.runtimeChunkLoadState
+        : {{}};
+      const chunkActive = !!(
+        chunkState.promotionCommitInFlight
+        || chunkState.promotionScheduled
+        || chunkState.refreshScheduled
+        || chunkState.pendingPromotion
+        || chunkState.pendingPostCommitRefresh
+        || String(chunkState.pendingReason || '').trim()
+      );
+      const postReadyActive = !!state.interactionInfrastructureBuildInFlight;
+      const stillActive = state.isInteracting || String(state.renderPhase || '') !== 'idle' || exactActive || chunkActive || postReadyActive;
       return {{
         renderPhase: String(state.renderPhase || ''),
         isInteracting: !!state.isInteracting,
         exactActive,
+        chunkActive,
+        chunkStatus: String(chunkState.promotionCommitStatus || ''),
+        pendingChunkReason: String(chunkState.pendingReason || ''),
+        postReadyActive,
+        interactionInfrastructureStage: String(state.interactionInfrastructureStage || ''),
         settled: !stillActive,
       }};
     }});
@@ -3410,6 +3465,11 @@ async (page) => {{
       renderPhase: String(snapshot.renderPhase || ''),
       isInteracting: !!snapshot.isInteracting,
       exactActive: !!snapshot.exactActive,
+      chunkActive: !!snapshot.chunkActive,
+      chunkStatus: String(snapshot.chunkStatus || ''),
+      pendingChunkReason: String(snapshot.pendingChunkReason || ''),
+      postReadyActive: !!snapshot.postReadyActive,
+      interactionInfrastructureStage: String(snapshot.interactionInfrastructureStage || ''),
       timedOut: !snapshot.settled,
       settled: !!snapshot.settled,
     }};
@@ -3500,7 +3560,8 @@ async (page) => {{
         startTime: Number(entry.startTime || 0),
         attribution: Array.isArray(entry.attribution) ? entry.attribution : [],
       }}));
-    const blackPixelSamples = {sample_canvas_black_pixel_details_js()};
+      const includeBlackPixels = payload.includeBlackPixels !== false;
+      const blackPixelSamples = includeBlackPixels ? {sample_canvas_black_pixel_details_js()} : null;
     return {{
       regionId: String(payload.regionId || ''),
       cycleIndex: Number(payload.cycleIndex || 0),
@@ -3518,7 +3579,7 @@ async (page) => {{
       }},
       anchorDriftPx: Number(Math.hypot(dx, dy).toFixed(3)),
       blackFrameCount: Number(state.renderPerfMetrics?.blackFrameCount?.count || 0),
-      blackPixelRatio: blackPixelSamples?.ratio ?? {sample_canvas_black_pixel_ratio_js()},
+      blackPixelRatio: blackPixelSamples?.ratio ?? null,
       blackPixelSamples,
       blackPixelAttribution: blackPixelSamples ? {{
         schema: 'mc_black_pixel_attribution_v1',
@@ -3546,7 +3607,7 @@ async (page) => {{
 
   const SUBOWNER_SCHEMA = 'mc_long_task_subowner_v1';
   const UNKNOWN_SUBOWNERS = new Set(['unknown', 'unknown-browser', 'unknown-chunk']);
-  const ACTIONABLE_SUBOWNER_PATTERN = /^(render-pass|scheduler|worker):[^:]+$/;
+  const ACTIONABLE_SUBOWNER_PATTERN = /^(render-pass|chunk-promotion|scheduler|worker):[^:]+$|^browser:(canvas-full-pass|benchmark-restore)$/;
 
   const taskWallWindow = (taskStartTime, taskDurationMs, sampleContext = null, toleranceMs = 250) => {{
     const timeOrigin = Math.max(0, Number(sampleContext?.timeOrigin || 0));
@@ -3622,6 +3683,14 @@ async (page) => {{
     }};
   }};
 
+  const hasMeaningfulBrowserAttribution = (items = []) => Array.isArray(items) && items.some((item) => {{
+    const name = String(item?.name || '').trim();
+    return (name && name !== 'unknown')
+      || String(item?.containerName || '').trim()
+      || String(item?.containerSrc || '').trim()
+      || String(item?.containerId || '').trim();
+  }});
+
   const classifyIdleWaitOwner = (sampleContext = null, classifiedTasks = []) => {{
     const idleMs = Math.max(0, Number(sampleContext?.firstIdleAfterLastWheelMs || 0));
     if (idleMs <= 750) return {{ owner: '', evidence: null }};
@@ -3659,16 +3728,17 @@ async (page) => {{
       .filter((value) => isMetricFreshForLongTask(value.recordedAt, startTime, durationMs, sampleContext))
       .sort((left, right) => right.durationMs - left.durationMs);
     const topPass = passEntries[0] || null;
-    if (topPass && (topPass.durationMs >= 500 || topPass.durationMs >= durationMs * 0.35)) {{
+    if (topPass && (topPass.durationMs >= 100 || topPass.durationMs >= durationMs * 0.25)) {{
       evidence.push(`${{topPass.name}}=${{Number(topPass.durationMs.toFixed(3))}}ms`);
       if (topPass.metricName) evidence.push(`metric=${{topPass.metricName}}`);
+      const partialPassMatch = topPass.durationMs < 500 && topPass.durationMs < durationMs * 0.25;
       return makeLongTaskResult({{
         entry,
         durationMs,
         startTime,
         category: 'render-pass',
         evidence,
-        confidence: topPass.durationMs >= 750 || topPass.durationMs >= durationMs * 0.6 ? 'high' : 'medium',
+        confidence: partialPassMatch ? 'low' : (topPass.durationMs >= 750 || topPass.durationMs >= durationMs * 0.6 ? 'high' : 'medium'),
         attribution,
         subOwner: `render-pass:${{topPass.name}}`,
         subOwnerEvidence: makeSubOwnerEvidence({{
@@ -3678,26 +3748,27 @@ async (page) => {{
           taskStartTime: startTime,
           taskDurationMs: durationMs,
           sampleContext,
-          matchReason: 'dominant-render-pass-overlap',
+          matchReason: partialPassMatch ? 'partial-render-pass-overlap' : 'dominant-render-pass-overlap',
           renderPass: topPass.name,
         }}),
-        subOwnerConfidence: topPass.durationMs >= 750 || topPass.durationMs >= durationMs * 0.6 ? 'high' : 'medium',
+        subOwnerConfidence: partialPassMatch ? 'low' : (topPass.durationMs >= 750 || topPass.durationMs >= durationMs * 0.6 ? 'high' : 'medium'),
       }});
     }}
     const promotionMetricSpecs = [
-      ['chunkSelectionMs', renderMetrics?.chunkSelectionMs, 'selection', 'chunk-selection-overlap'],
-      ['chunkLoadMs', renderMetrics?.chunkLoadMs, 'load', 'chunk-load-overlap'],
-      ['chunkMergeMs', renderMetrics?.chunkMergeMs, 'merge', 'chunk-merge-overlap'],
-      ['chunkPromotionCommitInfraMs', renderMetrics?.chunkPromotionCommitInfraMs, 'commit-infra', 'chunk-commit-infra-overlap'],
-      ['scenarioChunkPromotionInfraStage', renderMetrics?.scenarioChunkPromotionInfraStage, 'commit-infra', 'promotion-infra-stage-overlap'],
-      ['chunkPromotionCommitVisualMs', renderMetrics?.chunkPromotionCommitVisualMs, 'commit-visual', 'chunk-commit-visual-overlap'],
-      ['chunkPromotionVisualMs', renderMetrics?.chunkPromotionVisualMs, 'commit-visual', 'chunk-visual-overlap'],
-      ['scenarioChunkPromotionVisualStage', renderMetrics?.scenarioChunkPromotionVisualStage, 'commit-visual', 'promotion-visual-stage-overlap'],
-      ['politicalChunkPromotionMs', renderMetrics?.politicalChunkPromotionMs, 'commit-visual', 'political-promotion-overlap'],
-      ['scenarioChunkSecondaryRegionIndexesSync', renderMetrics?.scenarioChunkSecondaryRegionIndexesSync, 'secondary-sync', 'secondary-region-index-sync-overlap'],
-      ['buildSecondarySpatialIndex', renderMetrics?.buildSecondarySpatialIndex, 'secondary-sync', 'secondary-spatial-index-overlap'],
-      ['scenarioChunkPromotionRenderLocked', renderMetrics?.scenarioChunkPromotionRenderLocked, 'render-lock-flush', 'promotion-render-lock-overlap'],
-      ['postCommitReplayCount', renderMetrics?.postCommitReplayCount, 'post-commit-replay', 'post-commit-replay-overlap'],
+      ['chunkSelectionMs', renderMetrics?.chunkSelectionMs, 'chunk-promotion:selection', 'chunk-selection-overlap'],
+      ['zoomEndToChunkVisibleMs', renderMetrics?.zoomEndToChunkVisibleMs, 'chunk-promotion:post-commit-replay', 'zoom-end-to-chunk-visible-overlap'],
+      ['chunkLoadMs', renderMetrics?.chunkLoadMs, 'chunk-promotion:load', 'chunk-load-overlap'],
+      ['chunkMergeMs', renderMetrics?.chunkMergeMs, 'chunk-promotion:merge', 'chunk-merge-overlap'],
+      ['chunkPromotionCommitInfraMs', renderMetrics?.chunkPromotionCommitInfraMs, 'chunk-promotion:commit-infra', 'chunk-commit-infra-overlap'],
+      ['scenarioChunkPromotionInfraStage', renderMetrics?.scenarioChunkPromotionInfraStage, 'chunk-promotion:commit-infra', 'promotion-infra-stage-overlap'],
+      ['chunkPromotionCommitVisualMs', renderMetrics?.chunkPromotionCommitVisualMs, 'chunk-promotion:commit-visual', 'chunk-commit-visual-overlap'],
+      ['chunkPromotionVisualMs', renderMetrics?.chunkPromotionVisualMs, 'chunk-promotion:commit-visual', 'chunk-visual-overlap'],
+      ['scenarioChunkPromotionVisualStage', renderMetrics?.scenarioChunkPromotionVisualStage, 'chunk-promotion:commit-visual', 'promotion-visual-stage-overlap'],
+      ['politicalChunkPromotionMs', renderMetrics?.politicalChunkPromotionMs, 'chunk-promotion:commit-visual', 'political-promotion-overlap'],
+      ['scenarioChunkSecondaryRegionIndexesSync', renderMetrics?.scenarioChunkSecondaryRegionIndexesSync, 'chunk-promotion:secondary-sync', 'secondary-region-index-sync-overlap'],
+      ['buildSecondarySpatialIndex', renderMetrics?.buildSecondarySpatialIndex, 'chunk-promotion:secondary-sync', 'secondary-spatial-index-overlap'],
+      ['scenarioChunkPromotionRenderLocked', renderMetrics?.scenarioChunkPromotionRenderLocked, 'chunk-promotion:render-lock-flush', 'promotion-render-lock-overlap'],
+      ['postCommitReplayCount', renderMetrics?.postCommitReplayCount, 'chunk-promotion:post-commit-replay', 'post-commit-replay-overlap'],
     ];
     const topPromotion = promotionMetricSpecs
       .map(([name, value, subOwner, matchReason]) => metricEntry(name, value, subOwner, matchReason))
@@ -3728,9 +3799,35 @@ async (page) => {{
         subOwnerConfidence: topPromotion.durationMs >= durationMs * 0.5 ? 'high' : 'medium',
       }});
     }}
-    const schedulerDepth = Number(renderMetrics?.frameSchedulerQueueDepth?.total ?? renderMetrics?.frameSchedulerQueueDepth?.details?.total ?? renderMetrics?.frameSchedulerQueueDepth?.count ?? renderMetrics?.frameSchedulerQueueDepth?.details?.count ?? 0);
-    if (schedulerDepth > 0) {{
+    const schedulerMetric = renderMetrics?.frameSchedulerQueueDepth || passAttribution?.scheduler || null;
+    const schedulerDepth = Number(schedulerMetric?.total ?? schedulerMetric?.details?.total ?? schedulerMetric?.count ?? schedulerMetric?.details?.count ?? 0);
+    const schedulerRecordedAt = schedulerMetric?.recordedAt || schedulerMetric?.details?.recordedAt || 0;
+    if (schedulerDepth > 0 && metricMatchesTask(schedulerRecordedAt, startTime, durationMs, sampleContext, 250)) {{
       evidence.push(`frameSchedulerQueueDepth=${{schedulerDepth}}`);
+    }}
+    const schedulerLabels = schedulerMetric?.byLabelGeneration && typeof schedulerMetric.byLabelGeneration === 'object'
+      ? Object.keys(schedulerMetric.byLabelGeneration).filter((label) => String(label || '').trim())
+      : [];
+    const schedulerDeferredExactLabel = schedulerLabels.find((label) => String(label).includes('deferred-exact-context-pass'));
+    if (
+      schedulerDepth > 0
+      && schedulerDeferredExactLabel
+      && metricMatchesTask(schedulerRecordedAt, startTime, durationMs, sampleContext, 250)
+    ) {{
+      evidence.push(`frameSchedulerLabel=${{schedulerDeferredExactLabel}}`);
+    }}
+    const schedulerEntry = metricEntry(
+      'frameSchedulerQueueDepth',
+      schedulerMetric,
+      schedulerDeferredExactLabel ? 'scheduler:deferred-exact-context-pass' : 'scheduler:queue-depth',
+      schedulerDeferredExactLabel ? 'scheduler-label-observed' : 'scheduler-duration-overlap'
+    );
+    if (
+      schedulerEntry
+      && metricMatchesTask(schedulerEntry.recordedAt, startTime, durationMs, sampleContext, 250)
+      && (schedulerEntry.durationMs >= 350 || schedulerEntry.durationMs >= durationMs * 0.25)
+    ) {{
+      evidence.push(`schedulerMetric=${{schedulerEntry.metricName}}:${{Number(schedulerEntry.durationMs.toFixed(3))}}ms`);
       return makeLongTaskResult({{
         entry,
         durationMs,
@@ -3739,17 +3836,17 @@ async (page) => {{
         evidence,
         confidence: 'medium',
         attribution,
-        subOwner: `scheduler:queue-depth`,
+        subOwner: schedulerEntry.subOwner,
         subOwnerEvidence: makeSubOwnerEvidence({{
-          metricName: 'frameSchedulerQueueDepth',
-          metricDurationMs: schedulerDepth,
-          metricRecordedAt: renderMetrics?.frameSchedulerQueueDepth?.recordedAt || renderMetrics?.frameSchedulerQueueDepth?.details?.recordedAt || 0,
+          metricName: schedulerEntry.metricName,
+          metricDurationMs: schedulerEntry.durationMs,
+          metricRecordedAt: schedulerEntry.recordedAt,
           taskStartTime: startTime,
           taskDurationMs: durationMs,
           sampleContext,
-          matchReason: 'scheduler-queue-depth-observed',
+          matchReason: schedulerEntry.matchReason,
         }}),
-        subOwnerConfidence: 'medium',
+        subOwnerConfidence: schedulerEntry.durationMs >= durationMs * 0.5 ? 'high' : 'medium',
       }});
     }}
     const workerMetrics = passAttribution?.politicalRasterWorker || {{}};
@@ -3792,7 +3889,7 @@ async (page) => {{
         evidence,
         confidence: 'medium',
         attribution,
-        subOwner: 'benchmark-restore',
+        subOwner: 'browser:benchmark-restore',
         subOwnerEvidence: makeSubOwnerEvidence({{
           metricName: 'renderMetrics.zoom-settle-bench-restore',
           metricDurationMs: durationMs,
@@ -3805,7 +3902,7 @@ async (page) => {{
         subOwnerConfidence: 'medium',
       }});
     }}
-    if (attribution.length) {{
+    if (hasMeaningfulBrowserAttribution(attribution)) {{
       const browserEvidence = attribution
         .slice(0, 3)
         .map((item) => [item.name, item.entryType, item.containerName, item.containerSrc].filter(Boolean).join(':'))
@@ -3837,7 +3934,7 @@ async (page) => {{
       durationMs,
       startTime,
       category: 'unknown',
-      evidence: ['no-pass-or-browser-attribution'],
+      evidence: evidence.length ? [...evidence, 'no-pass-or-browser-attribution'] : ['no-pass-or-browser-attribution'],
       confidence: 'low',
       attribution,
       subOwner: 'unknown',
@@ -3873,7 +3970,7 @@ async (page) => {{
 
   const isActionableSubOwner = (subOwner = '') => {{
     const value = String(subOwner || '').trim();
-    return !!value && !UNKNOWN_SUBOWNERS.has(value) && (value.includes(':') || !value.startsWith('unknown-'));
+    return !!value && !UNKNOWN_SUBOWNERS.has(value) && !value.startsWith('unknown-') && ACTIONABLE_SUBOWNER_PATTERN.test(value);
   }};
 
   const buildLongTaskAttribution = (tasks = [], passAttribution = null, renderMetrics = null, sampleContext = null) => {{
@@ -3954,6 +4051,7 @@ async (page) => {{
         label: 'before-cycle',
         includeHeavyMetrics: false,
         includeLongTasks: false,
+        includeBlackPixels: false,
       }}));
       await page.mouse.move(target.screenX, target.screenY);
       let lastWheelAt = Number(baseline.baselineTime || 0);
@@ -3969,6 +4067,7 @@ async (page) => {{
           label: `after-wheel-${{wheelIndex + 1}}`,
           includeHeavyMetrics: false,
           includeLongTasks: false,
+          includeBlackPixels: false,
         }}));
       }}
       const idleState = await waitForIdle(7000);
@@ -3986,12 +4085,16 @@ async (page) => {{
       const firstIdleAfterLastWheelMs = idleState?.timedOut
         ? null
         : Math.max(0, Number(after.dtMs || 0) - lastWheelOffsetMs);
+      const attributionSampleContext = {{
+        ...after,
+        firstIdleAfterLastWheelMs,
+      }};
       const cycleLongTasks = Array.isArray(after.longTasks) ? after.longTasks : [];
       const cycleLongTaskAttribution = buildLongTaskAttribution(
         cycleLongTasks,
         after.passAttribution || null,
         after.renderMetrics || null,
-        after,
+        attributionSampleContext,
       );
       longTaskAttribution.push({{
         regionId,

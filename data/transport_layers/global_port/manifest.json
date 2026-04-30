@@ -1,0 +1,63 @@
+{
+  "adapter_id": "global_port_natural_earth_v1",
+  "family": "port",
+  "geometry_kind": "point",
+  "country": "world",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T16:11:01.345937Z",
+  "recipe_path": "data/transport_layers/global_port/source_recipe.manual.json",
+  "paths": {
+    "preview": {
+      "ports": "data/transport_layers/global_port/ports.preview.geojson"
+    },
+    "full": {
+      "ports": "data/transport_layers/global_port/ports.geojson"
+    },
+    "build_audit": "data/transport_layers/global_port/build_audit.json"
+  },
+  "source_signature": {
+    "natural_earth": {
+      "filename": ".runtime/source-cache/transport/global/natural_earth/ne_10m_ports.zip",
+      "size_bytes": 51824,
+      "sha256": "1824cccd897a6c2ad546abbaf1f3545d51cff4bddfbda40244a1ad1ab1e4371d",
+      "url": "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_ports.zip"
+    }
+  },
+  "recipe_version": "natural_earth_10m_ports_v5_0_0",
+  "feature_counts": {
+    "preview": {
+      "ports": 819
+    },
+    "full": {
+      "ports": 1081
+    }
+  },
+  "build_command": "python tools/build_global_transport_points.py --family port",
+  "runtime_consumer": "transport_overview_port",
+  "source_policy": "natural_earth_public_domain_checked_in_v1",
+  "distribution_tier": "single_pack",
+  "coverage_scope": "world",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "ports": "data/transport_layers/global_port/ports.preview.geojson"
+        },
+        "full": {
+          "ports": "data/transport_layers/global_port/ports.geojson"
+        }
+      },
+      "feature_counts": {
+        "preview": {
+          "ports": 819
+        },
+        "full": {
+          "ports": 1081
+        }
+      }
+    }
+  }
+}

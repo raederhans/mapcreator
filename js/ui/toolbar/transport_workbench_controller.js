@@ -1,5 +1,5 @@
 // Transport workbench controller.
-// 这个模块负责 transport workbench 的状态归一、面板渲染、预览联动和内部事件绑定。
+// 这个模块负责 transport workbench 当前的状态归一、面板渲染、预览联动和内部事件绑定，尚不声明完整应用链所有权。
 // toolbar.js 继续保留全局 overlay 协调、URL restore、顶层 chrome 和其他 support surface 的仲裁。
 
 import {
@@ -578,6 +578,8 @@ function ensureTransportWorkbenchUiState() {
   if (!runtimeState.transportWorkbenchUi || typeof runtimeState.transportWorkbenchUi !== "object") {
     runtimeState.transportWorkbenchUi = {};
   }
+  // transportWorkbenchUi 是工作台的本地编辑态；这里统一补齐 shape，
+  // 避免渲染、预览和 inspect 面板各自猜默认值。
   runtimeState.transportWorkbenchUi.open = !!runtimeState.transportWorkbenchUi.open;
   runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
   runtimeState.transportWorkbenchUi.sampleCountry = "Japan";
@@ -599,6 +601,8 @@ function ensureTransportWorkbenchUiState() {
   if (!runtimeState.transportWorkbenchUi.displayConfigs || typeof runtimeState.transportWorkbenchUi.displayConfigs !== "object") {
     runtimeState.transportWorkbenchUi.displayConfigs = {};
   }
+  // familyConfigs 管每个 family 的业务过滤/样式；displayConfigs 只管密度类图层的展示语言。
+  // 两者分开归一化，正式应用和 preview 才能共享同一份 resolved config。
   runtimeState.transportWorkbenchUi.familyConfigs.road = normalizeRoadTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.road);
   runtimeState.transportWorkbenchUi.familyConfigs.rail = normalizeRailTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.rail);
   runtimeState.transportWorkbenchUi.familyConfigs.airport = normalizeAirportTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.airport);
@@ -1370,6 +1374,7 @@ export function createTransportWorkbenchController({
 
   const getTransportWorkbenchWorkingConfig = (familyId, { baseline = false } = {}) => {
     ensureTransportWorkbenchUiState();
+    // baseline 只给按住 Compare 时的临时预览使用，不能回写 familyConfigs。
     if (baseline) {
       return TRANSPORT_WORKBENCH_BASELINE_CONFIGS[familyId]
         ? JSON.parse(JSON.stringify(TRANSPORT_WORKBENCH_BASELINE_CONFIGS[familyId]))
@@ -1405,6 +1410,7 @@ export function createTransportWorkbenchController({
       return familyConfig;
     }
     const resolvedDisplayConfig = normalizeTransportWorkbenchDisplayConfig(displayConfig, familyId);
+    // live preview 只认一份扁平 config；这里把 displayConfig 的分层字段映射回旧 preview 合约。
     return {
       ...(familyConfig || {}),
       displayConfig: resolvedDisplayConfig,
@@ -1543,6 +1549,7 @@ export function createTransportWorkbenchController({
     } else if (familyId === "logistics_hubs") {
       runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs = normalizeLogisticsHubTransportWorkbenchConfig(current);
     }
+    // 控件改动先落到工作台 state，再即时刷新预览；这里不直接改 renderer 的正式图层状态。
     markDirty("transport-workbench-config");
     const nextContext = getTransportWorkbenchRenderContext();
     renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
@@ -2909,6 +2916,7 @@ export function createTransportWorkbenchController({
     const compareHeld = !!uiState.compareHeld && !!family.supportsDetailedControls;
     const familyConfig = getTransportWorkbenchWorkingConfig(family.id, { baseline: compareHeld });
     const displayConfig = getTransportWorkbenchDisplayConfig(family.id, { baseline: compareHeld });
+    // context 是 shell、lens、inspect 和 preview 的共同输入，避免四处重复读取 runtimeState。
     const config = buildTransportWorkbenchResolvedConfig(family.id, familyConfig, displayConfig);
     return {
       uiState,
@@ -2940,6 +2948,7 @@ export function createTransportWorkbenchController({
       .then(() => {
         resizeTransportWorkbenchCarrier();
         syncTransportWorkbenchPreviewControls();
+        // preview family 自己消费 resolved config；controller 只负责递送配置和同步 inspector。
         if (isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
           return renderTransportWorkbenchFamilyPreview(context.family.id, context.config).then(() => {
             const viewState = getTransportWorkbenchCarrierViewState() || {};

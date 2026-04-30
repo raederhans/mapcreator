@@ -62,6 +62,8 @@
     "build:global-transport-roads": "python tools/build_global_transport_roads.py",
     "build:global-transport-rail": "python tools/build_global_transport_rail.py",
     "build:global-transport-road-catalog": "python tools/build_global_transport_catalogs.py --family road",
+    "build:global-transport-airports": "python tools/build_global_transport_points.py --family airport",
+    "build:global-transport-ports": "python tools/build_global_transport_points.py --family port",
     "verify:perf-gate-contract": "python -m unittest tests.test_perf_gate_contract -q",
     "bench:editor-performance": "python ops/browser-mcp/editor-performance-benchmark.py --out .runtime/output/perf/editor-performance-benchmark.json --screenshot-dir .runtime/browser/mcp-artifacts/perf"
   },

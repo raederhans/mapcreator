@@ -95,8 +95,8 @@ function validateManifest() {
   const seenSpecPaths = new Set();
 
   ensure(manifest?.scope === "tests/e2e/*.spec.js", `Unexpected manifest scope: ${manifest?.scope}`);
-  ensure(specs.length === 44, `Manifest must contain 44 specs, found ${specs.length}.`);
-  ensure(repoSpecs.length === 44, `Repository currently exposes ${repoSpecs.length} Playwright specs under tests/e2e.`);
+  ensure(specs.length === 45, `Manifest must contain 45 specs, found ${specs.length}.`);
+  ensure(repoSpecs.length === 45, `Repository currently exposes ${repoSpecs.length} Playwright specs under tests/e2e.`);
 
   for (const spec of specs) {
     ensure(typeof spec?.specPath === "string" && spec.specPath.startsWith("tests/e2e/"), `Invalid specPath: ${spec?.specPath}`);

@@ -86,7 +86,11 @@ TRANSPORT_METADATA_FILE_NAMES = {
     "provenance.json",
 }
 TRANSPORT_SMALL_DIRECT_RUNTIME_FILES = {
+    "data/transport_layers/global_airport/airports.geojson",
+    "data/transport_layers/global_port/ports.geojson",
     "data/transport_layers/japan_airport/airports.geojson",
+    "data/transport_layers/japan_port/ports.core.geojson",
+    "data/transport_layers/japan_port/ports.expanded.geojson",
     "data/transport_layers/japan_port/ports.geojson",
 }
 

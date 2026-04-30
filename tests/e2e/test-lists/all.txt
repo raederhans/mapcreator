@@ -10,6 +10,7 @@ hoi4_1939_ui_smoke.spec.js
 hoi4_rk_russia_regression.spec.js
 interaction_funnel_contract.spec.js
 main_shell_i18n.spec.js
+non_1962_runtime_matrix.spec.js
 physical_layer_regression.spec.js
 physical_layer_runtime_contract.spec.js
 project_save_load_roundtrip.spec.js

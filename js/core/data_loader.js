@@ -40,8 +40,8 @@ const GLOBAL_ROAD_CATALOG_URL = "data/transport_layers/global_road/catalog.json"
 let globalRoadContextCollectionsPromise = null;
 let globalRailContextCollectionsPromise = null;
 const CONTEXT_LAYER_PACKS = {
-  airports: { url: "data/transport_layers/japan_airport/airports.geojson", format: "geojson" },
-  ports: { url: "data/transport_layers/japan_port/ports.geojson", format: "geojson" },
+  airports: { url: "data/transport_layers/global_airport/airports.geojson", format: "geojson" },
+  ports: { url: "data/transport_layers/global_port/ports.geojson", format: "geojson" },
   physical: { url: "data/europe_physical.geojson", format: "geojson" },
   urban: { url: "data/europe_urban.geojson", format: "geojson" },
   physical_semantics: {

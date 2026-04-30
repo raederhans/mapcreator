@@ -25,3 +25,8 @@
 - 本轮只增加中文注释，没有改动运行时行为。
 - 注释仍然集中在跨模块边界和时序语义，没有向短小函数扩散。
 - 子代理静态筛选结论与主线程实际落点一致，范围选择合理。
+
+2026-04-30 留档纠错补记：
+- 后续核对确认，另一个误留在 `docs/active/comment-annotation-2026-04-30/` 的目录只是归档后的纠错残留，不是新的 active 任务。
+- 纠正后的实际补注释文件为：`js/main.js`、`js/core/scenario_manager.js`、`js/ui/sidebar.js`、`js/ui/toolbar/transport_workbench_controller.js`。
+- 纠正后的验证仍为四个目标文件分别通过 `node --check`。

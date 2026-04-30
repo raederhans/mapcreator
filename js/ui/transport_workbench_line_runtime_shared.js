@@ -14,10 +14,16 @@ function createInitialLoadState() {
 
 export function getTransportWorkbenchPackPath(manifest, mode, key) {
   const modePaths = manifest?.paths?.[mode];
+  let packPath = "";
   if (modePaths && typeof modePaths === "object") {
-    return modePaths[key] || "";
+    packPath = modePaths[key] || "";
+  } else {
+    packPath = manifest?.paths?.[key] || "";
   }
-  return manifest?.paths?.[key] || "";
+  if (!packPath) {
+    throw new Error(`Transport workbench manifest is missing ${mode}/${key} pack path.`);
+  }
+  return packPath;
 }
 
 export function createTransportWorkbenchLinePackRuntime(definition) {

@@ -198,7 +198,11 @@
   "render_budget_hints": {
     "max_required_chunks": 6,
     "max_optional_chunks": 3,
-    "detail_zoom_threshold": 1.7
+    "detail_zoom_threshold": 1.7,
+    "max_required_political_chunks": 6,
+    "min_required_political_chunks": 1,
+    "max_required_political_estimated_path_cost": 260000,
+    "max_required_political_byte_size": 12000000
   },
   "startup_bundle_url_en": "data/scenarios/tno_1962/startup.bundle.en.json",
   "startup_bundle_url_zh": "data/scenarios/tno_1962/startup.bundle.zh.json"

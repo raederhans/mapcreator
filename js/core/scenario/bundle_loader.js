@@ -648,13 +648,15 @@ async function loadScenarioRuntimeTopologyForBundle({
   d3Client,
   scenarioId,
   requestedBundleLevel,
+  runtimeTopologyLevel = requestedBundleLevel,
   runtimeTopologyUrl,
 } = {}) {
-  const runtimeLabel = requestedBundleLevel === "bootstrap" ? "runtime_bootstrap_topology" : "runtime_topology";
+  const requestedRuntimeTopologyLevel = runtimeTopologyLevel === "bootstrap" ? "bootstrap" : "full";
+  const runtimeLabel = requestedRuntimeTopologyLevel === "bootstrap" ? "runtime_bootstrap_topology" : "runtime_topology";
   const allowWorkerDecode = !!runtimeTopologyUrl && shouldUseStartupWorker();
   if (allowWorkerDecode) {
     try {
-      const workerResult = requestedBundleLevel === "bootstrap"
+      const workerResult = requestedRuntimeTopologyLevel === "bootstrap"
         ? await loadScenarioRuntimeBootstrapViaWorker({ runtimeTopologyUrl })
         : await decodeRuntimeChunkViaWorker({ runtimeTopologyUrl });
       return {
@@ -662,7 +664,7 @@ async function loadScenarioRuntimeTopologyForBundle({
         value: workerResult.runtimePoliticalTopology || null,
         metrics: workerResult.metrics?.runtimePoliticalTopology || workerResult.metrics || null,
         reason: workerResult.runtimePoliticalTopology
-          ? (requestedBundleLevel === "bootstrap" ? "worker-bootstrap" : "worker-full")
+          ? (requestedRuntimeTopologyLevel === "bootstrap" ? "worker-bootstrap" : "worker-full")
           : "empty",
         errorMessage: "",
         runtimePoliticalMeta: workerResult.runtimePoliticalMeta || null,
@@ -700,6 +702,7 @@ function createScenarioBundleAssembler({
     priorBundle = null,
     runtimeShell = normalizeScenarioRuntimeShell(manifest),
     runtimeTopologyUrl = "",
+    runtimeTopologyLevel = requestedBundleLevel,
     geoLocalePatchDescriptor = getScenarioGeoLocalePatchDescriptor(manifest),
   } = {}) {
     const [
@@ -739,6 +742,7 @@ function createScenarioBundleAssembler({
         d3Client,
         scenarioId: targetId,
         requestedBundleLevel,
+        runtimeTopologyLevel,
         runtimeTopologyUrl,
       }),
       loadOptionalScenarioResource(d3Client, geoLocalePatchDescriptor?.url, {
@@ -817,6 +821,7 @@ function createScenarioBundleAssembler({
             errorMessage: runtimeTopologyResult.errorMessage,
             metrics: runtimeTopologyResult.metrics || null,
             url: runtimeTopologyUrl,
+            topologyLevel: runtimeTopologyLevel === "bootstrap" ? "bootstrap" : "full",
           },
           geo_locale_patch: {
             ok: !!geoLocalePatchResult.ok,

@@ -283,3 +283,75 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Final `npm run perf:baseline` refreshed `docs/perf/baseline_2026-04-20.json/.md`.
 - [x] Final `npm run perf:gate` passed against `docs/perf/baseline_2026-04-20.json`.
 - [x] Final static review result recorded: static reviewer approved prior blockers; self-review found no simpler safe path than bounded cost-aware chunk selection plus stale-work cancellation. Folder remains active because worker raster and political/background full-pass work are still future slices.
+
+## 2026-04-30 C0 subowner attribution gate
+- [x] 修正 `scheduler:queue-depth` 弱证据归因。
+- [x] 补 perf gate contract 静态断言。
+- [x] 运行 `python -m py_compile ops/browser-mcp/editor-performance-benchmark.py tests/test_perf_gate_contract.py`。
+- [x] 运行 `python -m unittest tests.test_perf_gate_contract -q`。
+- [ ] 运行 `npm run verify:perf-gate-contract`。
+- [ ] 重跑 short repeated zoom artifact。
+- [ ] 重跑 full repeated zoom artifact。
+- [ ] 解析 C0 gate，确认 topSubOwner 可作为下一阶段优化入口。
+- [x] 收紧 weak browser attribution guard，unknown-only browser attribution 进入 unknown。
+- [x] 收紧 actionable subowner 规则，chunk subowner 统一 namespaced。
+- [x] 修正 missing short/full artifact markers 默认真值问题。
+- [x] 补 truncated task aggregate gate、missing marker、naked subowner targeted tests。
+- [x] 运行 `npm run verify:perf-gate-contract`，17 tests passed。
+- [x] 重跑 short artifact：`.runtime/output/perf/next-latency-audit-short.json`，C0 gate passed。
+- [ ] 重跑 full artifact：`.runtime/output/perf/next-latency-audit-full.json`。
+
+## 2026-04-30 C0/C1 continuation checklist
+- [x] Strict artifact boolean marker parsing.
+- [x] Attribution sample context carries `firstIdleAfterLastWheelMs`.
+- [x] Skip intermediate repeated-zoom black-pixel sampling while preserving final classification.
+- [x] Extend existing perf gate and scenario chunk contracts.
+- [x] Revert unhelpful scheduled-chunk-before-exact renderer experiment.
+- [x] Run `node --check js/core/map_renderer.js`.
+- [x] Run `python -m py_compile ops/browser-mcp/editor-performance-benchmark.py tests/test_perf_gate_contract.py`.
+- [x] Run `npm run test:node:scenario-chunk-contracts`.
+- [x] Run `npm run verify:perf-gate-contract` with 19 tests.
+- [x] Rerun short artifact after contract changes.
+- [ ] Finish full closeout artifact after latest changes.
+- [ ] Decide next implementation boundary for chunk promotion queueing.
+- [ ] Run perf baseline and perf gate after full artifact.
+- [x] Implement zoom-end priority settling path and `refresh-started` exact gate.
+- [x] Short artifact confirms repeated idle/long-task and wheel targets now pass in 1-cycle probe.
+- [ ] Full c10 closeout artifact confirms 8-cycle repeated zoom targets.
+- [x] Fix scheduler label attribution blocker from static review.
+- [x] Cover deferred exact continuous-input draining in scenario chunk contract.
+- [x] Short c13 artifact passes core acceptance thresholds.
+- [ ] Full c14 artifact confirms 8-cycle acceptance thresholds.
+
+## 2026-04-30 C1/C2 continued closeout
+- [x] Add relief contextScenario layer cache.
+- [x] Add special overlay payload identity to contextScenario cache signature.
+- [x] Separate deferred exact context delay from context-base enhancement delay.
+- [x] Add contextScenario-specific reuse distance budget.
+- [x] Allow settling/defer-exact fast frames to reuse dirty cached passes while exact refresh remains scheduled.
+- [x] Run `node --check js/core/map_renderer.js`.
+- [x] Run `npm run test:node:scenario-chunk-contracts`.
+- [x] Run `python -m unittest tests.test_perf_gate_contract tests.test_scenario_chunk_refresh_contracts -q`.
+- [x] Short c23 artifact passes repeated idle, long-task, wheel, black-frame, and finalSharpness targets.
+- [x] Full c24 artifact completed.
+- [ ] Full c24 artifact passes repeated absolute idle/long-task targets.
+- [x] `npm run perf:baseline` completed.
+- [ ] `npm run perf:gate` passes after latest renderer changes.
+- [ ] Next root-cause pass: identify why full 5-wheel/8-cycle runs still fall back to exact settling frames despite dirty-cache fast-frame allowance.
+
+## 2026-04-30 C2/C3 Ralph continuation checklist
+- [x] Fix dirty fast-frame so it cannot build a reusable `interactionComposite` from dirty passes.
+- [x] Prevent dirty fast frames from becoming `lastGoodFrame` continuity fallback sources.
+- [x] Add `colorRevision` to `lastGoodFrame` freshness checks.
+- [x] Make repeated-zoom idle waits include chunk promotion/post-commit and post-ready infrastructure work.
+- [x] Flush exact-after-settle compose after exact pass prep to reduce finalSharpness latency.
+- [x] Run `node --check js/core/map_renderer.js`.
+- [x] Run `python -m py_compile ops/browser-mcp/editor-performance-benchmark.py`.
+- [x] Run `npm run test:node:scenario-chunk-contracts`.
+- [x] Run `python -m unittest tests.test_perf_gate_contract tests.test_scenario_chunk_refresh_contracts -q`.
+- [x] Rerun short artifact c29 and confirm short targets pass.
+- [x] Rerun full artifact c30 and isolate the remaining full blocker.
+- [x] Run `npm run perf:baseline` after full artifact.
+- [x] Run `npm run perf:gate` after baseline refresh.
+- [ ] Full repeated-zoom max <= 3500ms and maxLongTask <= 750ms. Current blocker: first cold US East political detail payload load/parse, topSubOwner `chunk-promotion:post-commit-replay`.
+- [ ] Decide and implement next boundary: detail chunk worker parse/off-main-thread path or explicit high-value political detail prewarm policy.

@@ -15,6 +15,8 @@ const colorResolverModule = await import(`data:text/javascript;charset=utf-8,${e
 const {
   buildRuntimeDefaultColorsByIso2,
   buildRuntimeDefaultTagByIso2,
+  buildScenarioOwnerColorMap,
+  buildScenarioOwnerColorMapDetails,
   buildScenarioRuntimeDefaultTagColors,
 } = runtimeBridge;
 const {
@@ -190,6 +192,107 @@ test("normalizeColorStateForRender sanitizes mirrors and resolved colors togethe
   assert.deepEqual(colorRuntimeState.countryBaseColors, { AAA: "#aabbcc" });
   assert.deepEqual(colorRuntimeState.featureOverrides, { feature_1: "#ddeeff" });
   assert.deepEqual(colorRuntimeState.colors, { feature_2: "#abcdef" });
+});
+
+test("buildScenarioOwnerColorMap keeps scenario colors before palette and generates missing tag colors", () => {
+  const firstDetails = buildScenarioOwnerColorMapDetails(
+    {
+      GER: { color_hex: "#111111", base_iso2: "DE", lookup_iso2: "DE" },
+      USA: { base_iso2: "US", lookup_iso2: "US" },
+      ABC: { display_name: "No Palette Country" },
+    },
+    {
+      palettePack: {
+        entries: {
+          GER: { map_hex: "#222222" },
+          USA: { map_hex: "#333333" },
+        },
+      },
+      paletteMap: {
+        mapped: {
+          GER: { iso2: "DE" },
+          USA: { iso2: "US" },
+        },
+      },
+    },
+  );
+  const first = firstDetails.byTag;
+  const second = buildScenarioOwnerColorMap(
+    {
+      ABC: { display_name: "No Palette Country" },
+    },
+    {
+      palettePack: { entries: {} },
+      paletteMap: { mapped: {} },
+    },
+  );
+
+  assert.equal(first.GER, "#111111");
+  assert.equal(first.USA, "#333333");
+  assert.match(first.ABC, /^#[0-9a-f]{6}$/);
+  assert.equal(second.ABC, first.ABC);
+  assert.deepEqual(firstDetails.generatedTags, ["ABC"]);
+});
+
+test("buildScenarioOwnerColorMapDetails preserves TNO mixed-policy explicit colors", () => {
+  const details = buildScenarioOwnerColorMapDetails(
+    {
+      CHI: { color_hex: "#ce9f61", base_iso2: "CN", lookup_iso2: "CN" },
+      MAN: { color_hex: "#a80043", base_iso2: "CN", lookup_iso2: "CN" },
+      GNG: { color_hex: "#7a2e41", base_iso2: "CN", lookup_iso2: "CN" },
+      RAJ: { color_hex: "#cc5668", base_iso2: "IN", lookup_iso2: "IN" },
+      FRI: { color_hex: "#2a62a2", base_iso2: "IN", lookup_iso2: "IN" },
+      RKM: { color_hex: "#4f4554", base_iso2: "RU", lookup_iso2: "RU" },
+      SVR: { color_hex: "#8c6e7c", base_iso2: "RU", lookup_iso2: "RU" },
+    },
+    {
+      palettePack: {
+        entries: {
+          CHI: { map_hex: "#000001" },
+          FRI: { map_hex: "#000002" },
+          SVR: { map_hex: "#000003" },
+        },
+      },
+      paletteMap: {
+        mapped: {
+          CHI: { iso2: "CN" },
+          MAN: { iso2: "CN", expose_as_runtime_default: false },
+          GNG: { iso2: "CN", expose_as_runtime_default: false },
+          FRI: { iso2: "IN" },
+          SVR: { iso2: "RU" },
+        },
+      },
+    },
+  );
+
+  assert.deepEqual(details.byTag, {
+    CHI: "#ce9f61",
+    MAN: "#a80043",
+    GNG: "#7a2e41",
+    RAJ: "#cc5668",
+    FRI: "#2a62a2",
+    RKM: "#4f4554",
+    SVR: "#8c6e7c",
+  });
+  assert.deepEqual(details.generatedTags, []);
+});
+
+test("checked-in non-1962 scenarios declare HOI4 palette and complete colors", async () => {
+  const scenarioIds = ["blank_base", "hoi4_1936", "hoi4_1939", "modern_world"];
+  for (const scenarioId of scenarioIds) {
+    const manifest = JSON.parse(
+      await readFile(new URL(`../data/scenarios/${scenarioId}/manifest.json`, import.meta.url), "utf8"),
+    );
+    const countriesPayload = JSON.parse(
+      await readFile(new URL(`../data/scenarios/${scenarioId}/countries.json`, import.meta.url), "utf8"),
+    );
+    const missingColorTags = Object.entries(countriesPayload.countries || {})
+      .filter(([, entry]) => !/^#[0-9a-f]{6}$/i.test(String(entry?.color_hex || "").trim()))
+      .map(([tag]) => tag);
+
+    assert.equal(manifest.palette_id, "hoi4_vanilla", `${scenarioId} palette_id`);
+    assert.deepEqual(missingColorTags, [], `${scenarioId} missing color_hex tags`);
+  }
 });
 
 test("resolveFeatureColor reports canonical color source before compatibility mirrors", () => {

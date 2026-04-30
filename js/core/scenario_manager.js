@@ -207,6 +207,7 @@ function normalizeScenarioViewMode(value) {
 }
 
 function canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId) {
+  // 复用只接受“同一场景、完整 bundle、当前 runtime 已完整激活”的情况；startup readonly 和半水合状态继续走正常 apply 链路。
   if (!normalizedScenarioId || normalizeScenarioId(runtimeState.activeScenarioId) !== normalizedScenarioId) {
     return false;
   }
@@ -413,6 +414,7 @@ function createScenarioBootstrapBundleFromCache({
   geoLocalePatchDescriptor,
   runtimeTopologyUrl,
 } = {}) {
+  // 持久化 startup cache 只保存启动必需 payload；这里把它重新包装成标准 bundle 形状，后续 apply pipeline 才能复用同一入口。
   const runtimeShell = normalizeScenarioRuntimeShell(manifest);
   const runtimePoliticalMeta = normalizeStartupBundleRuntimePoliticalMeta(cachedPayload?.runtimePoliticalMeta || null);
   const runtimeFeatureIds = Array.isArray(runtimePoliticalMeta?.featureIds)
@@ -567,6 +569,7 @@ function setScenarioViewMode(
 }
 
 async function ensureScenarioDetailTopologyLoaded({ applyMapData = true } = {}) {
+  // detail promotion 是 scenario apply 前后的共享边界：优先交给 render_boundary，只有它无法处理时才在这里补载 detail bundle。
   const syncScenarioReadyUiAfterPromotion = () => {
     refreshScenarioDataHealth({
       showWarningToast: false,
@@ -659,6 +662,7 @@ const {
   prepareScenarioApplyState,
   applyPreparedScenarioState,
 } = createScenarioApplyPipeline({
+  // prepare 负责解码并构造 staged state，apply 负责集中提交 runtimeState；这个分界把主要运行时写入推迟到 apply，便于 apply 失败后按 rollback 恢复旧场景。
   runtimeState: state,
   countryNames,
   normalizeScenarioId,
@@ -727,6 +731,7 @@ async function applyScenarioBundle(
   let staged = null;
   let topologyDecodeMs = 0;
   try {
+    // apply 主链顺序固定：先 stage、再一次性提交 runtimeState、再跑 post-apply 副作用和一致性检查。
     const topologyDecodeStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     staged = await prepareScenarioApplyState(bundle, { syncPalette, interactionLevel });
     topologyDecodeMs = (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - topologyDecodeStartedAt;
@@ -863,6 +868,7 @@ async function applyScenarioBundle(
       applyMs: (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt,
     });
   } catch (error) {
+    // rollback 只恢复 apply 前快照；若快照恢复或恢复后一致性检查失败，进入 fatal recovery，阻止 UI 继续操作半提交状态。
     let rollbackRestoreError = null;
     try {
       restoreScenarioApplyRollbackSnapshot(rollbackSnapshot, {
@@ -931,6 +937,7 @@ async function applyScenarioById(
 
   runtimeState.scenarioApplyInFlight = true;
   activeScenarioApplyPromise = (async () => {
+    // 同一时刻只允许一个 scenario apply；UI 先同步为“加载中”，finally 再同步结束态，避免控件读到中间状态。
     syncScenarioUi();
     const bundle = await loadScenarioBundle(normalizedScenarioId, { bundleLevel: "full" });
     await applyScenarioBundle(bundle, {

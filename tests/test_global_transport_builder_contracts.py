@@ -20,9 +20,12 @@ GLOBAL_ROAD_CATALOG = REPO_ROOT / 'data' / 'transport_layers' / 'global_road' / 
 GLOBAL_RAIL_CATALOG = REPO_ROOT / 'data' / 'transport_layers' / 'global_rail' / 'catalog.json'
 GLOBAL_ROAD_SHARD_ROOT = REPO_ROOT / 'data' / 'transport_layers' / 'global_road' / 'shards'
 GLOBAL_RAIL_REGION_ROOT = REPO_ROOT / 'data' / 'transport_layers' / 'global_rail' / 'regions'
+GLOBAL_AIRPORT_ROOT = REPO_ROOT / 'data' / 'transport_layers' / 'global_airport'
+GLOBAL_PORT_ROOT = REPO_ROOT / 'data' / 'transport_layers' / 'global_port'
 GLOBAL_TRANSPORT_CATALOG_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_catalogs.py'
 ROAD_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_roads.py'
 RAIL_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_rail.py'
+POINT_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_points.py'
 COMMON_HELPER = REPO_ROOT / 'map_builder' / 'overture_transport_common.py'
 
 
@@ -38,6 +41,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
             GLOBAL_TRANSPORT_CATALOG_BUILDER,
             ROAD_BUILDER,
             RAIL_BUILDER,
+            POINT_BUILDER,
             COMMON_HELPER,
         ):
             self.assertTrue(path.exists(), path.as_posix())
@@ -57,7 +61,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertEqual(payload.get('primary_source', {}).get('subtype'), 'rail')
 
     def test_builders_emit_checked_in_manifest_contract(self) -> None:
-        for builder in (ROAD_BUILDER, RAIL_BUILDER):
+        for builder in (ROAD_BUILDER, RAIL_BUILDER, POINT_BUILDER):
             content = builder.read_text(encoding='utf-8')
             self.assertIn('finalize_transport_manifest', content)
             self.assertIn('distribution_tier', content)
@@ -757,6 +761,62 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         payload = json.loads(sample_station_path.read_text(encoding='utf-8'))
         self.assertEqual(payload.get('type'), 'FeatureCollection')
         self.assertEqual(payload.get('features'), [])
+
+    def test_airport_port_runtime_loader_uses_global_point_packs(self) -> None:
+        data_loader_content = (REPO_ROOT / "js" / "core" / "data_loader.js").read_text(encoding="utf-8")
+        pages_dist_content = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
+
+        self.assertIn("data/transport_layers/global_airport/airports.geojson", data_loader_content)
+        self.assertIn("data/transport_layers/global_port/ports.geojson", data_loader_content)
+        self.assertNotIn("data/transport_layers/japan_airport/airports.geojson", data_loader_content)
+        self.assertNotIn("data/transport_layers/japan_port/ports.geojson", data_loader_content)
+        self.assertIn("data/transport_layers/global_airport/airports.geojson", pages_dist_content)
+        self.assertIn("data/transport_layers/global_port/ports.geojson", pages_dist_content)
+        self.assertIn("data/transport_layers/japan_airport/airports.geojson", pages_dist_content)
+        self.assertIn("data/transport_layers/japan_port/ports.core.geojson", pages_dist_content)
+        self.assertIn("data/transport_layers/japan_port/ports.expanded.geojson", pages_dist_content)
+        self.assertIn("data/transport_layers/japan_port/ports.geojson", pages_dist_content)
+
+    def test_global_airport_port_point_packs_have_world_scope_contract(self) -> None:
+        cases = (
+            ("airport", GLOBAL_AIRPORT_ROOT, "airports"),
+            ("port", GLOBAL_PORT_ROOT, "ports"),
+        )
+        japan_bbox = {"lon_min": 122.0, "lon_max": 154.0, "lat_min": 20.0, "lat_max": 46.0}
+
+        for family, root, pack_key in cases:
+            with self.subTest(family=family):
+                full_path = root / f"{pack_key}.geojson"
+                preview_path = root / f"{pack_key}.preview.geojson"
+                manifest_path = root / "manifest.json"
+                recipe_path = root / "source_recipe.manual.json"
+                for path in (full_path, preview_path, manifest_path, recipe_path):
+                    self.assertTrue(path.exists(), path.as_posix())
+
+                payload = json.loads(full_path.read_text(encoding="utf-8"))
+                features = payload.get("features", [])
+                self.assertGreater(len(features), 100)
+                self.assertTrue(
+                    any(
+                        not (
+                            japan_bbox["lon_min"] <= feature["geometry"]["coordinates"][0] <= japan_bbox["lon_max"]
+                            and japan_bbox["lat_min"] <= feature["geometry"]["coordinates"][1] <= japan_bbox["lat_max"]
+                        )
+                        for feature in features
+                    )
+                )
+
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                self.assertEqual(manifest.get("coverage_scope"), "world")
+                self.assertEqual(manifest.get("family"), family)
+                self.assertEqual(manifest.get("geometry_kind"), "point")
+                self.assertEqual(manifest.get("country"), "world")
+                self.assertEqual(manifest.get("feature_counts", {}).get("full", {}).get(pack_key), len(features))
+
+                recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+                self.assertEqual(recipe.get("family"), family)
+                self.assertEqual(recipe.get("source", {}).get("license"), "public domain")
+                self.assertIn("naturalearth", recipe.get("source", {}).get("url", ""))
 
     def test_port_renderer_default_reveal_floor_keeps_regional_ports_visible(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')

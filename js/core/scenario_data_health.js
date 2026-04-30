@@ -13,6 +13,18 @@ function getPoliticalGeometryCount(topology) {
   return Array.isArray(geometries) ? geometries.length : 0;
 }
 
+function getFeatureCollectionCount(collection) {
+  return Array.isArray(collection?.features) ? collection.features.length : 0;
+}
+
+function getScenarioHealthRuntimeFeatureCount() {
+  return Math.max(
+    getFeatureCollectionCount(runtimeState.landDataFull),
+    getPoliticalGeometryCount(runtimeState.runtimePoliticalTopology),
+    getFeatureCollectionCount(runtimeState.landData)
+  );
+}
+
 function hasUsablePoliticalTopology(topology, { minFeatures = DETAIL_POLITICAL_MIN_FEATURES } = {}) {
   return getPoliticalGeometryCount(topology) >= Math.max(1, Number(minFeatures) || 1);
 }
@@ -22,7 +34,7 @@ function evaluateScenarioDataHealth(
   { minRatio = SCENARIO_DETAIL_MIN_RATIO_STRICT } = {}
 ) {
   const expectedFeatureCount = Number(manifest?.summary?.feature_count || 0);
-  const runtimeFeatureCount = Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0;
+  const runtimeFeatureCount = getScenarioHealthRuntimeFeatureCount();
   const ratio = expectedFeatureCount > 0 ? runtimeFeatureCount / expectedFeatureCount : 1;
   const normalizedMinRatio = Math.min(Math.max(Number(minRatio) || SCENARIO_DETAIL_MIN_RATIO_STRICT, 0.1), 1);
   let warning = "";
@@ -40,6 +52,9 @@ function evaluateScenarioDataHealth(
     runtimeFeatureCount,
     ratio,
     minRatio: normalizedMinRatio,
+    generatedColorTags: Array.isArray(runtimeState.scenarioGeneratedColorTags)
+      ? [...runtimeState.scenarioGeneratedColorTags]
+      : [],
     warning,
     severity,
   };

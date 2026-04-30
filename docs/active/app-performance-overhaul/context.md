@@ -359,3 +359,73 @@ pm run bench:editor-performance。
   - `npm run perf:baseline` refreshed `docs/perf/baseline_2026-04-20.json/.md`.
   - `npm run perf:gate` passed against `docs/perf/baseline_2026-04-20.json`.
   - Static reviewer rechecked prior blockers and found no remaining blocker. First-principles self-review kept the active folder open because future worker raster and political/background full-pass work remain.
+
+## 2026-04-30 C0 long-task subowner attribution continuation
+- 继续执行 Ralph/Ultrawork 计划，主线程负责 live benchmark；子代理只做静态复核。
+- 发现 full artifact 将 24-27s long task 归到 `scheduler:queue-depth`，但证据只有 `frameSchedulerQueueDepth=1` / `metricDurationMs=1`，属于弱证据过度归因。
+- 已把 scheduler 归因改为：queue depth 只作为辅助 evidence；只有 scheduler metric 自身 duration 达到 `>=350ms` 或覆盖 task `>=25%` 时才成为 `scheduler:queue-depth` owner。
+- 已补 perf gate contract 静态断言，防止恢复 `if (schedulerDepth > 0)` 这类弱归因规则。
+- Static reviewer found three C0 contract gaps: weak browser attribution, overly loose actionable subowner detection, and missing short/full artifact markers defaulting to true.
+- Applied second C0 contract pass: meaningful browser attribution guard, namespaced chunk/browser actionable subowners, artifact markers now remain `null` when absent, and region summaries trust embedded aggregate gate counts when displayed tasks are truncated.
+- Targeted contract coverage is now 17 tests and `npm run verify:perf-gate-contract` passes.
+- Short C0 artifact after attribution tightening: gate passed, taskCount=7, unknownLongTaskCount=1, topSubOwner=`render-pass:contextScenario`, region gates passed. Current measured bottleneck remains absolute idle/long-task latency: repeated p50=10930.4ms, max=23632.4ms, long-task p50=9388ms, max=11339ms, black classification normal, wheel blackFrameDelta=0.
+
+## 2026-04-30 C0/C1 continuation after subowner gate
+- Implemented benchmark-side C0 hardening beyond the first pass: artifact boolean markers now accept only real booleans; string values such as "false" and "0" stay unknown instead of becoming truthy.
+- Repeated zoom long-task attribution now passes `firstIdleAfterLastWheelMs` into the attribution context before classification. This exposes `topIdleWaitOwner=long-task-blocked-idle` when idle wait is dominated by accumulated long tasks.
+- Repeated zoom probe now skips black-pixel canvas reads for `before-cycle` and intermediate wheel samples. The final after-idle sample still records black-pixel classification for visual safety.
+- Extended existing tests instead of creating a new test system: perf gate contract now covers strict artifact markers, aggregate unknown counts across regions, attribution sample context, and reduced intermediate black-pixel sampling; scenario chunk contracts now verify frame scheduler label-generation visibility for deferred exact context passes.
+- Tried a renderer experiment that treated `scheduleScenarioChunkRefreshFn()` status `scheduled` as active promotion work before exact-after-settle. Short benchmark did not improve and reused stale settle metrics, so the experiment was reverted.
+- Latest short artifact after reverting that experiment: `.runtime/output/perf/next-latency-audit-short.json`; C0 attribution gate passed, `unknownLongTaskCount=1`, `topIdleWaitOwner=long-task-blocked-idle`, black classification stayed normal, `blackFrameDelta=0`, `finalSharpness=780.6ms`.
+- Current blocker for acceptance metrics is absolute latency: repeated idle p50 `10468.6ms`, max `21527.0ms`, long-task p50 `8804.0ms`, max `10198.0ms`, wheel duration `2356.4ms`, wheel maxLongTask `1926.0ms`.
+- Current top owners are split between low-confidence `render-pass:contextScenario` overlap and `chunk-promotion:post-commit-replay`; `scenarioChunkPromotionVisualStage.queueMs` reaches about 9-10s in first-cycle region probes, so the next safe optimization needs to focus on chunk promotion queueing/commit timing. This crosses the original A2 write-boundary list because the runtime owner is `js/core/scenario/chunk_runtime.js`, so the boundary mismatch is recorded here before widening code changes.
+- Full closeout benchmark started in background-log mode: `.runtime/tmp/next-latency-audit-full-c7.out.log` / `.runtime/tmp/next-latency-audit-full-c7.err.log`, output `.runtime/output/perf/next-latency-audit-full.json`.
+- Full closeout benchmark c7 was stopped after it stalled at `wheel anchor scenario=tno_1962` for several minutes with no new log progress. No full artifact from c7 should be treated as current evidence.
+- Full closeout benchmark c7 was stopped before completion because the implementation boundary is widening to `js/core/scenario/chunk_runtime.js`; continuing that run would mix old and new runtime behavior.
+- Short benchmark c8 after adding zoom-end deferred retry stalled at `wheel anchor scenario=tno_1962`; this makes the retry change unsafe in its current form and it was removed before final verification.
+- Implemented safe zoom-end promotion ordering: `shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })` permits zoom-end priority refresh to advance during `settling` while keeping boot/apply/startup/active interaction blockers. `scheduleRenderPhaseIdle()` now treats `refresh-started` as active chunk work so exact-after-settle does not immediately steal the lane.
+- Short artifact after this fix: repeated idle p50 `453.9ms`, max `455.0ms`; repeated long-task p50 `63.0ms`, max `73.0ms`; C0 gate passed with `taskCount=0`; TNO wheel duration `505.9ms`, maxLongTask `136.0ms`, `blackFrameDelta=0`; black classifications all normal. `finalSharpness=1402.7ms` remains above the 900ms target and is the next metric to verify on full closeout.
+- Full closeout benchmark c10 started in background-log mode: `.runtime/tmp/next-latency-audit-full-c10.out.log` / `.runtime/tmp/next-latency-audit-full-c10.err.log`, output `.runtime/output/perf/next-latency-audit-full.json`.
+- Full c10 after zoom-end settling fix stalled at `wheel anchor scenario=tno_1962` while using a reused current TNO browser state. The latest successful short artifact remains the valid current perf evidence; full closeout needs a fresh browser/session retry after the benchmark hang is isolated.
+- Addressed static review blocker: scheduler deferred-exact labels are now auxiliary evidence and only become scheduler-owned long tasks through the same duration/coverage gate as scheduler queue metrics. Deferred exact context tasks now use high priority with `deferOnContinuousInput:false`, matching the intended continuous-input draining behavior.
+- Short artifact c13 after review fix: repeated idle p50 `455.4ms`, max `455.9ms`; repeated long-task p50/max `0.0ms`; C0 gate passed with `taskCount=0`; TNO wheel duration `370.4ms`, maxLongTask `0.0ms`, `blackFrameDelta=0`; `finalSharpness=767ms`.
+- Full closeout benchmark c14 started after c13 passed: `.runtime/tmp/next-latency-audit-full-c14.out.log` / `.runtime/tmp/next-latency-audit-full-c14.err.log`.
+- 2026-04-30 continuation after c14/c24:
+  - Full c14/c18/c20 showed repeated 8-cycle idle still dominated by exact redraw during `settling`; `lastFrame.phase=settling` with exact timings showed `contextBase` ~1.1s and `contextScenario` ~0.39s, so the real blocker was fast-frame preflight rejecting dirty cached passes and falling back to exact frame during settling.
+  - Implemented contextScenario layer safety/freshness fixes: relief overlay layer cache, special overlay payload identity in `getScenarioSpecialVisualRevisionToken()`, contextScenario distance budget, and delayed deferred exact context scheduling.
+  - Implemented settling fast-frame fix: `canDrawTransformedPass(..., { allowDirty })` now allows dirty cached passes only during settling / deferred exact fast frames. Exact-after-settle still owns fresh redraw after interaction.
+  - Short c23 artifact now passes core targets: repeated idle p50 388.1ms, max 456.5ms; repeated maxLongTask 0ms; wheel firstIdleAfterLast 447.5ms; wheel maxLongTask 0ms; blackFrameDelta 0; finalSharpness 882.7ms.
+  - Full c24 artifact still fails repeated absolute target: all-region p50 3128.85ms, max 4927.4ms, maxLongTask 3211ms, top owner remains `render-pass:contextScenario`. This means another settling exact fallback path is still active in full 5-wheel/8-cycle runs.
+  - `npm run perf:baseline` passed and refreshed docs/perf baseline. `npm run perf:gate` failed after the refreshed baseline with `tno_1962.renderSampleMedianMs current=1123.9ms baseline=869.1ms limit=1086.4ms ratio=1.25`.
+
+## 2026-04-30 C2/C3 fresh Ralph closeout evidence
+- Addressed static reviewer blocker in `interactionComposite` / dirty fast-frame path:
+  - `buildInteractionComposite()` again builds only from clean passes, so dirty cached passes cannot be stamped with a fresh selection/topology/context identity.
+  - Dirty interaction passes are composed directly into the temporary fast frame only during settling / deferred exact fast-frame mode.
+  - Dirty fast frames now skip `lastGoodFrame` capture, and `lastGoodFrame` reuse also checks `colorRevision`.
+- Tightened benchmark idle detection: repeated-zoom `waitForIdle()` now waits for runtime chunk promotion/refresh/post-commit work and post-ready interaction infrastructure, so the baseline for each cycle starts from a real idle state.
+- Reduced final-sharpness lag by flushing the exact-after-settle compose after all exact passes are ready. This keeps the sliced pass prep but avoids an extra delayed RAF before finalizing exact refresh.
+- Fresh targeted verification after these changes:
+  - `node --check js/core/map_renderer.js` passed.
+  - `python -m py_compile ops/browser-mcp/editor-performance-benchmark.py` passed.
+  - `npm run test:node:scenario-chunk-contracts` passed: 14/14.
+  - `python -m unittest tests.test_perf_gate_contract tests.test_scenario_chunk_refresh_contracts -q` passed: 49 tests.
+- Fresh short artifact c29: `.runtime/output/perf/next-latency-audit-short.json`.
+  - repeated idle p50/max: `455.3ms` / `456.3ms`.
+  - repeated maxLongTask: `0ms`; unknownLongTaskCount: `0`; black classification: all `normal`.
+  - TNO wheel firstIdleAfterLast/maxLongTask/blackFrameDelta: `372.1ms` / `0ms` / `0`.
+  - settleExactRefresh/finalSharpness: `556.2ms` / `756ms`.
+- Fresh full artifact c30: `.runtime/output/perf/next-latency-audit-full.json`.
+  - Europe p50/max/maxLongTask: `399.2ms` / `472.6ms` / `0ms`.
+  - US East p50/max/maxLongTask: `467.3ms` / `5152.0ms` / `2611ms`.
+  - East Asia p50/max/maxLongTask: `398.7ms` / `472.4ms` / `0ms`.
+  - all-region p50/max: `399.45ms` / `5152.0ms`; black classification: 24/24 `normal`; unknownLongTaskCount: `1`.
+  - full settleExactRefresh/finalSharpness: `584.3ms` / `786.8ms`.
+  - Remaining full blocker is the first cold US East cycle: top owner `chunk-promotion`, topSubOwner `chunk-promotion:post-commit-replay`, `zoomEndToChunkVisibleMs=2090.8ms`, selected payload about `30.8MB` across 9 required political chunks. This is now a chunk payload cold-load/parse problem, not a contextScenario exact-frame fallback problem.
+- Closeout perf commands after c30:
+  - `npm run perf:baseline` passed and refreshed `docs/perf/baseline_2026-04-20.json/.md`.
+  - `npm run perf:gate` passed against the refreshed baseline.
+- Current phase status:
+  - Short artifact, black-frame, wheel, finalSharpness, and perf gate are green.
+  - Full repeated-zoom absolute max and maxLongTask remain red because of cold political detail chunk load for US East.
+  - Next implementation boundary should be chunk payload cold-load strategy: either worker/off-main-thread parse for detail chunks, or an explicit scenario-level prewarm policy for high-value political detail payloads. This crosses beyond the current renderer/full-pass slice.

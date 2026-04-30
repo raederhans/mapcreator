@@ -2,6 +2,8 @@
 // 这个模块只负责“准备 staged apply runtimeState”和“把 staged runtimeState 落到 runtime runtimeState”。
 // scenario_manager.js 继续保留事务协调、回滚、post-apply、入口控制。
 
+import { buildScenarioOwnerColorMapDetails } from "./palette_runtime_bridge.js";
+
 function createScenarioApplyPipeline({
   runtimeState,
   countryNames,
@@ -148,6 +150,7 @@ function createScenarioApplyPipeline({
     runtimeState.sovereigntyInitialized = false;
     runtimeState.visualOverrides = {};
     runtimeState.featureOverrides = {};
+    runtimeState.scenarioGeneratedColorTags = [...(staged.scenarioGeneratedColorTags || [])];
     const fixedOwnerColors = { ...staged.scenarioColorMap };
     if (staged.coarseColorMap && typeof staged.coarseColorMap === "object") {
       Object.entries(staged.coarseColorMap).forEach(([iso2, color]) => {
@@ -377,10 +380,14 @@ function createScenarioApplyPipeline({
     const seedScenarioColorMap = startupApplySeed?.scenario_color_map && typeof startupApplySeed.scenario_color_map === "object"
       ? { ...startupApplySeed.scenario_color_map }
       : {};
-    const scenarioColorMap = {
-      ...seedScenarioColorMap,
-      ...getScenarioFixedOwnerColors(countryMap),
-    };
+    const fixedScenarioCountryColors = getScenarioFixedOwnerColors(countryMap);
+    const scenarioColorDetails = buildScenarioOwnerColorMapDetails(countryMap, {
+      palettePack: runtimeState.activePalettePack,
+      paletteMap: runtimeState.activePaletteMap,
+      seedColorByTag: seedScenarioColorMap,
+      fallbackColorByTag: fixedScenarioCountryColors,
+    });
+    const scenarioColorMap = scenarioColorDetails.byTag;
     const coarseColorMap = buildScenarioCoarseColorMap({
       startupApplySeed,
       countryMap,
@@ -427,6 +434,7 @@ function createScenarioApplyPipeline({
         : (bundle.cityOverridesPayload || null),
       scenarioNameMap,
       scenarioColorMap,
+      scenarioGeneratedColorTags: scenarioColorDetails.generatedTags,
       coarseColorMap,
       scenarioOwnerBackfill,
       resolvedOwners,

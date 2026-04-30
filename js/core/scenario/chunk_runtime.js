@@ -475,14 +475,16 @@ function createScenarioChunkRuntimeController({
     return Number.isFinite(zoom) && zoom >= Number(hints.detail_zoom_threshold || 0);
   }
 
-  function shouldDeferScenarioChunkRefreshFor() {
+  function shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling = false } = {}) {
+    const renderPhase = String(runtimeState.renderPhase || "idle");
+    const renderPhaseBlocksRefresh = renderPhase !== "idle" && !(allowZoomEndSettling && renderPhase === "settling");
     return !!(
       runtimeState.bootBlocking
       || runtimeState.scenarioApplyInFlight
       || runtimeState.startupReadonly
       || runtimeState.startupReadonlyUnlockInFlight
       || runtimeState.isInteracting
-      || String(runtimeState.renderPhase || "idle") !== "idle"
+      || renderPhaseBlocksRefresh
     );
   }
 
@@ -1549,7 +1551,8 @@ function createScenarioChunkRuntimeController({
     const bundle = getCachedScenarioBundle(scenarioId);
     if (!bundle || !scenarioBundleUsesChunkedLayer(bundle)) return null;
     const loadState = ensureRuntimeChunkLoadState();
-    if (shouldDeferScenarioChunkRefreshFor()) {
+    const allowZoomEndSettling = shouldZoomEndPromoteImmediately(bundle, reason);
+    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })) {
       markPendingScenarioChunkRefresh(reason);
       if (loadState.selectionVersion <= 0 && !runtimeState.activeScenarioChunks?.loadedChunkIds?.length) {
         setScenarioChunkShellStatus("loading", loadState);
@@ -1807,7 +1810,7 @@ function createScenarioChunkRuntimeController({
     loadState.promotionRetryCount = 0;
     loadState.lastPromotionRetryAt = 0;
     setScenarioChunkShellStatus("loading", loadState);
-    if (shouldDeferScenarioChunkRefreshFor()) {
+    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })) {
       markPendingScenarioChunkRefresh(reason);
       return selection;
     }
@@ -1880,7 +1883,7 @@ function createScenarioChunkRuntimeController({
       };
       return "promotion-commit-in-flight";
     }
-    if (shouldDeferScenarioChunkRefreshFor()) {
+    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })) {
       markPendingScenarioChunkRefresh(nextReason, nextDelayMs);
       return "deferred";
     }
@@ -1903,7 +1906,7 @@ function createScenarioChunkRuntimeController({
     loadState.refreshTimerId = globalThis.setTimeout(() => {
       loadState.refreshTimerId = null;
       loadState.refreshScheduled = false;
-      if (shouldDeferScenarioChunkRefreshFor()) {
+      if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })) {
         markPendingScenarioChunkRefresh(nextReason, nextDelayMs);
         return;
       }
