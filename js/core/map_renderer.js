@@ -24222,7 +24222,7 @@ function getScenarioChunkPromotionTargetPasses({
 } = {}) {
   const targetPasses = new Set();
   if (hasPoliticalChange) {
-    ["political", "contextBase", "borders", "labels"].forEach((passName) => targetPasses.add(passName));
+    ["political", "contextBase", "contextMarkers", "borders", "labels"].forEach((passName) => targetPasses.add(passName));
   }
   (Array.isArray(changedLayerKeys) ? changedLayerKeys : []).forEach((layerKey) => {
     const normalized = String(layerKey || "").trim().toLowerCase();
@@ -24269,6 +24269,7 @@ function scheduleDeferredScenarioChunkPromotionInfraRefresh({
   suppressRender = false,
   promotionVersion = scenarioChunkPromotionVersion,
   hasPoliticalGeometryChange = false,
+  primaryDerivedStateReady = false,
   refreshOpeningOwnerBorders = true,
 } = {}) {
   cancelDeferredScenarioChunkPromotionInfraRefresh();
@@ -24279,6 +24280,7 @@ function scheduleDeferredScenarioChunkPromotionInfraRefresh({
       suppressRender,
       promotionVersion,
       hasPoliticalGeometryChange,
+      primaryDerivedStateReady,
       refreshOpeningOwnerBorders,
     });
   }, {
@@ -24291,6 +24293,7 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
   suppressRender = false,
   promotionVersion = scenarioChunkPromotionVersion,
   hasPoliticalGeometryChange = false,
+  primaryDerivedStateReady = false,
   refreshOpeningOwnerBorders = true,
 } = {}) {
   if (promotionVersion !== scenarioChunkPromotionVersion) {
@@ -24302,6 +24305,7 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
       suppressRender,
       promotionVersion,
       hasPoliticalGeometryChange,
+      primaryDerivedStateReady,
       refreshOpeningOwnerBorders,
     });
     return false;
@@ -24313,6 +24317,7 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
       suppressRender,
       promotionVersion,
       hasPoliticalGeometryChange,
+      primaryDerivedStateReady,
       refreshOpeningOwnerBorders,
     });
     return false;
@@ -24320,17 +24325,20 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
   const startedAt = nowMs();
   const previousInteractionInfrastructureStage = String(runtimeState.interactionInfrastructureStage || "");
   let restoredInteractionInfrastructureState = false;
-  let yieldCount = 1;
+  let yieldCount = 0;
   try {
-    buildIndex();
-    await yieldToMain();
-    if (promotionVersion !== scenarioChunkPromotionVersion) {
-      return false;
+    if (!primaryDerivedStateReady) {
+      buildIndex();
+      await yieldToMain();
+      yieldCount += 1;
+      if (promotionVersion !== scenarioChunkPromotionVersion) {
+        return false;
+      }
+      await buildSpatialIndexChunked({
+        includeSecondary: false,
+        keepReady: true,
+      });
     }
-    await buildSpatialIndexChunked({
-      includeSecondary: false,
-      keepReady: true,
-    });
     setInteractionInfrastructureState(previousInteractionInfrastructureStage || "basic-ready", {
       ready: true,
       inFlight: false,
@@ -24372,18 +24380,21 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
       suppressRender: !!suppressRender,
       promotionVersion,
       hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
     });
     recordRenderPerfMetric("chunkPromotionInfraMs", infraDurationMs, {
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       suppressRender: !!suppressRender,
       promotionVersion,
       hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
     });
     recordInteractionRecoveryTaskMetric(taskKey, infraDurationMs, {
       reason: String(reason || "scenario-chunk-promotion"),
       suppressRender: !!suppressRender,
       promotionVersion,
       hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
       refreshOpeningOwnerBorders: refreshOpeningOwnerBorders !== false,
       yieldCount,
     });
@@ -24427,6 +24438,15 @@ function refreshMapDataForScenarioChunkPromotion({
   if (hasPoliticalChange) {
     ensureLayerDataFromTopology();
     rebuildPoliticalLandCollections();
+    // political chunk promotion 首帧必须和 scenario apply 一样，先把 primary derived state 收回一致：
+    // landIndex / 主 spatial grid / resolved colors / runtime political meta 都要先于 render 完成，
+    // deferred infra 再只接 secondary indexes、hit canvas 和重 mesh。
+    rebuildRuntimeDerivedState({
+      includeRuntimePoliticalMeta: true,
+      scheduleUiMode: "deferred",
+      buildSpatial: true,
+      includeSecondarySpatial: false,
+    });
   }
   resetExactRefreshOptimizationState();
   resetVisibleInternalBorderMeshSignature();
@@ -24441,10 +24461,10 @@ function refreshMapDataForScenarioChunkPromotion({
       selectionVersion: Math.max(0, Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0)),
       promotionVersion: scenarioChunkPromotionVersion,
       hasPoliticalGeometryChange: hasPoliticalChange,
+      primaryDerivedStateReady: hasPoliticalChange,
     };
   }
   if (hasPoliticalChange) {
-    refreshResolvedColorsForFeatures(politicalFeatureIds, { renderNow: false });
     clearDeferredInternalBorderMeshCaches();
     scheduleDeferredHeavyBorderMeshes();
   }
@@ -24493,6 +24513,7 @@ function refreshMapDataForScenarioChunkPromotion({
       suppressRender,
       promotionVersion: scenarioChunkPromotionVersion,
       hasPoliticalGeometryChange: hasPoliticalChange,
+      primaryDerivedStateReady: hasPoliticalChange,
       refreshOpeningOwnerBorders: !shouldRefreshOpeningOwnerBordersInVisual,
     });
   }

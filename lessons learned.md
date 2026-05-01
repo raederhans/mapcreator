@@ -1317,3 +1317,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 更稳的做法是：列表文件用 `--changed-files-list`，单个路径用普通参数或 `--changed-file`；CI artifact 生成前先跑 selector `--check`，确保 route metadata 已经通过 schema 校验。
 ### 2026-05-01 - runtime topology source identity
 - runtime topology 的 source sha 要同时进入 runtime tag、startup persistent cache key、builder wrapper 和 strict checker；只改前端 identity 会让旧 cache 或重建入口继续产生过期包。
+
+### 2026-05-01 - worktree runtime verification and TNO chunk metadata drift
+- 在 Windows worktree 里跑 Playwright 时，可以先用主仓 `node_modules` + `NODE_PATH` 做最小验证；如果用例长时间只打印 `Running ...` 没有断言输出，就应尽快停止，把它当成环境型噪声而不是继续卡住主线程。
+- `tools/patch_tno_1962_bundle.py --stage chunk_assets` 依赖的 checkpoint 必须已经有同源 `runtime_topology.topo.json`；只有 water-stage checkpoint 会在 chunk rebuild 时暴露 `source/runtime/chunks` 的真实 id 漂移。

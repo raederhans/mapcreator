@@ -665,6 +665,11 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function getCoastlineDecisionSignature\(decision = null\) \{[\s\S]*?String\(decision\.scenarioSurfaceVersionSignal \|\| ""\)/.test(rendererSource),
     chunkPromotionSkipsDeferredInfraWhenSecondaryIndexesAlreadySynced:
       /const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes\(\{[\s\S]*?const shouldSkipDeferredInfraRefresh = synchronizedSecondaryRegionIndexes && !hasPoliticalChange;[\s\S]*?if \(shouldSkipDeferredInfraRefresh\) \{[\s\S]*?scheduleHitCanvasBuildIfNeeded\(\{[\s\S]*?\}\);[\s\S]*?\} else \{[\s\S]*?scheduleDeferredScenarioChunkPromotionInfraRefresh\(\{/.test(rendererSource),
+    chunkPromotionVisualStageReusesPrimaryDerivedStateRebuild:
+      /function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?if \(hasPoliticalChange\) \{[\s\S]*?"contextMarkers"[\s\S]*?"labels"/.test(rendererSource)
+      &&
+      /function refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?if \(hasPoliticalChange\) \{[\s\S]*?ensureLayerDataFromTopology\(\);[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?scheduleUiMode: "deferred",[\s\S]*?buildSpatial: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(rendererSource)
+      && /async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?primaryDerivedStateReady = false,[\s\S]*?if \(!primaryDerivedStateReady\) \{[\s\S]*?buildIndex\(\);[\s\S]*?await buildSpatialIndexChunked\(\{[\s\S]*?includeSecondary: false,[\s\S]*?keepReady: true,[\s\S]*?\}\);/.test(rendererSource),
     scenarioApplyCommitsPreparedScenarioWaterPayloadOnly:
       /runtimeState\.scenarioWaterRegionsData = staged\.scenarioWaterRegionsFromTopology \|\| null;/.test(scenarioApplyPipelineSource),
   };
