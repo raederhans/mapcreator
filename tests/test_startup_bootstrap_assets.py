@@ -23,6 +23,10 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _sha256_path(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 class StartupBootstrapAssetsTest(unittest.TestCase):
     def test_build_bootstrap_runtime_topology_keeps_runtime_shell_only(self) -> None:
         full_topology = {
@@ -95,11 +99,11 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
         self.assertGreater(len(legacy_bootstrap["arcs"]), 0)
         startup_shell_path = scenario_dir / "startup.runtime_shell.topo.json"
         startup_shell = json.loads(startup_shell_path.read_text(encoding="utf-8"))
-        self.assertNotIn("political", startup_shell["objects"])
+        self.assertIn("political", startup_shell["objects"])
+        self.assertGreater(len(startup_shell["objects"]["political"]["geometries"]), 0)
         for object_name in ("land_mask", "context_land_mask", "scenario_water"):
             self.assertIn(object_name, startup_shell["objects"])
         startup_shell_sha = hashlib.sha256(startup_shell_path.read_bytes()).hexdigest()
-        legacy_bootstrap_sha = hashlib.sha256((scenario_dir / "runtime_topology.bootstrap.topo.json").read_bytes()).hexdigest()
 
         for language in build_startup_bundle.SUPPORTED_LANGUAGES:
             bundle_path = scenario_dir / f"startup.bundle.{language}.json"
@@ -111,12 +115,21 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
             self.assertEqual(bundle["scenario_id"], "hoi4_1939")
             self.assertEqual(bundle["scenario"]["bootstrap_strategy"], build_startup_bundle.STARTUP_BOOTSTRAP_STRATEGY)
             self.assertEqual(bundle["source"]["runtime_bootstrap_topology_sha256"], startup_shell_sha)
-            self.assertNotEqual(bundle["source"]["runtime_bootstrap_topology_sha256"], legacy_bootstrap_sha)
             self.assertEqual(bundle["manifest_subset"]["startup_topology_url"], manifest["startup_topology_url"])
             runtime_objects = bundle["scenario"]["runtime_topology_bootstrap"]["objects"]
+            self.assertIn("political", runtime_objects)
+            self.assertGreater(len(runtime_objects["political"]["geometries"]), 0)
             for object_name in ("land_mask", "context_land_mask", "scenario_water"):
                 self.assertIn(object_name, runtime_objects)
             self.assertGreater(len(bundle["scenario"]["runtime_political_meta"]["featureIds"]), 0)
+
+    def test_chunked_startup_bundle_builders_pass_detail_manifest_source(self) -> None:
+        hoi4_builder = (Path(__file__).resolve().parents[1] / "tools" / "build_hoi4_scenario.py").read_text(encoding="utf-8")
+        tno_builder = (Path(__file__).resolve().parents[1] / "tools" / "patch_tno_1962_bundle.py").read_text(encoding="utf-8")
+
+        self.assertIn("detail_chunk_manifest_path=detail_chunk_manifest_path if detail_chunk_manifest_path.exists() else None", hoi4_builder)
+        self.assertIn('scenario_dir / "detail_chunks.manifest.json"', tno_builder)
+        self.assertIn("detail_chunk_manifest_path=(", tno_builder)
 
     def test_tno_1962_checked_in_startup_bundle_includes_arctic_shell(self) -> None:
         scenario_dir = Path(__file__).resolve().parents[1] / "data" / "scenarios" / "tno_1962"
@@ -461,6 +474,18 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
                 output_zh_path=output_zh_path,
                 report_path=report_path,
             )
+
+            generated_manifest = json.loads(scenario_manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                generated_manifest["source"],
+                {
+                    "base_topology_sha256": _sha256_path(topology_primary_path),
+                    "runtime_topology_sha256": _sha256_path(full_runtime_topology_path),
+                    "runtime_bootstrap_topology_sha256": _sha256_path(runtime_bootstrap_topology_path),
+                },
+            )
+            bundle_payload = json.loads(output_en_path.read_text(encoding="utf-8"))
+            self.assertEqual(bundle_payload["manifest_subset"]["source"], generated_manifest["source"])
 
             report = result["report"]
             self.assertIn("consumer_matrix", report)

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createScenarioLifecycleRuntime } from "../js/core/scenario/lifecycle_runtime.js";
+import { createScenarioApplyPipeline } from "../js/core/scenario_apply_pipeline.js";
 
 function createLifecycleRuntime(runtimeState, overrides = {}) {
   return createScenarioLifecycleRuntime({
@@ -127,6 +128,153 @@ function createBaseState(overrides = {}) {
     ...overrides,
   };
 }
+
+test("scenario apply staging rejects unrenderable political runtime topology before commit", async () => {
+  const runtimeState = createBaseState({ activeScenarioId: "previous" });
+  const pipeline = createScenarioApplyPipeline({
+    runtimeState,
+    countryNames: {},
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    scenarioSupportsChunkedRuntime: () => false,
+    scenarioBundleUsesChunkedLayer: () => false,
+    scenarioBundleHasChunkedData: () => false,
+    ensureScenarioDetailTopologyLoaded: async () => true,
+    hasUsablePoliticalTopology: () => true,
+    scenarioNeedsDetailTopology: () => false,
+    getScenarioDisplayName: () => "Sample",
+    getScenarioTargetPaletteId: () => "default",
+    hasActiveScenarioPaletteLoaded: () => true,
+    applyActivePaletteState: () => {},
+    setActivePaletteSource: async () => true,
+    getScenarioDefaultCountryCode: () => "AAA",
+    getScenarioMapSemanticMode: () => "political",
+    buildScenarioReleasableIndex: () => ({}),
+    getScenarioReleasableCountries: () => ({}),
+    normalizeScenarioCoreMap: (value) => value || {},
+    normalizeScenarioDistrictGroupsPayload: () => null,
+    getActiveScenarioMergedChunkLayerPayload: () => undefined,
+    getScenarioDecodedCollection: () => null,
+    getScenarioTopologyFeatureCollection: () => null,
+    getScenarioNameMap: () => ({ AAA: "Alpha" }),
+    getMissingScenarioNameTags: () => [],
+    getScenarioFixedOwnerColors: () => ({ AAA: "#111111" }),
+    buildHoi4FarEastSovietOwnerBackfill: () => ({}),
+    buildScenarioRuntimeVersionTag: () => "sample:sha",
+    mergeReleasableCatalogs: () => null,
+    buildScenarioDistrictGroupByFeatureId: () => new Map(),
+    syncScenarioLocalizationState: () => {},
+    applyBlankScenarioPresentationDefaults: () => {},
+    setScenarioAuditUiState: () => {},
+    getScenarioBaselineHashFromBundle: () => "baseline",
+    markLegacyColorStateDirty: () => {},
+    syncScenarioInspectorSelection: () => {},
+    disableScenarioParentBorders: () => {},
+    applyScenarioPaintMode: () => {},
+    syncScenarioOceanFillForActivation: () => {},
+    applyScenarioPerformanceHints: () => {},
+    scheduleScenarioChunkRefresh: () => {},
+    resetScenarioChunkRuntimeState: () => {},
+    ensureRuntimeChunkLoadState: () => ({}),
+    recalculateScenarioOwnerControllerDiffCount: () => {},
+    hasRenderableScenarioPoliticalTopology: () => false,
+    normalizeScenarioFeatureCollection: (value) => value,
+    cloneScenarioStateValue: (value) => value,
+  });
+
+  await assert.rejects(
+    pipeline.prepareScenarioApplyState({
+      manifest: { scenario_id: "sample" },
+      countriesPayload: { countries: { AAA: { display_name: "Alpha", color_hex: "#111111" } } },
+      ownersPayload: { owners: { "1": "AAA" } },
+      controllersPayload: { controllers: { "1": "AAA" } },
+      coresPayload: { cores: { "1": ["AAA"] } },
+      runtimeTopologyPayload: {
+        type: "Topology",
+        objects: { political: { type: "GeometryCollection", geometries: [] } },
+        arcs: [],
+      },
+    }, { syncPalette: false }),
+    /runtime topology is not renderable/,
+  );
+  assert.equal(runtimeState.activeScenarioId, "previous");
+  assert.equal(runtimeState.scenarioRuntimeTopologyData?.id, "scenario-runtime");
+});
+
+test("blank scenario apply preserves explicit empty runtime topology", async () => {
+  const defaultTopology = { objects: { political: { default: true } } };
+  const runtimeState = createBaseState({
+    activeScenarioId: "",
+    defaultRuntimePoliticalTopology: defaultTopology,
+    runtimePoliticalTopology: defaultTopology,
+  });
+  const emptyBlankTopology = {
+    type: "Topology",
+    objects: { political: { type: "GeometryCollection", geometries: [] } },
+    arcs: [],
+  };
+  const pipeline = createScenarioApplyPipeline({
+    runtimeState,
+    countryNames: {},
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    scenarioSupportsChunkedRuntime: () => false,
+    scenarioBundleUsesChunkedLayer: () => false,
+    scenarioBundleHasChunkedData: () => false,
+    ensureScenarioDetailTopologyLoaded: async () => true,
+    hasUsablePoliticalTopology: () => true,
+    scenarioNeedsDetailTopology: () => false,
+    getScenarioDisplayName: () => "Blank",
+    getScenarioTargetPaletteId: () => "default",
+    hasActiveScenarioPaletteLoaded: () => true,
+    applyActivePaletteState: () => {},
+    setActivePaletteSource: async () => true,
+    getScenarioDefaultCountryCode: () => "",
+    getScenarioMapSemanticMode: () => "blank",
+    buildScenarioReleasableIndex: () => ({}),
+    getScenarioReleasableCountries: () => ({}),
+    normalizeScenarioCoreMap: (value) => value || {},
+    normalizeScenarioDistrictGroupsPayload: () => null,
+    getActiveScenarioMergedChunkLayerPayload: () => undefined,
+    getScenarioDecodedCollection: () => null,
+    getScenarioTopologyFeatureCollection: () => null,
+    getScenarioNameMap: () => ({}),
+    getMissingScenarioNameTags: () => [],
+    getScenarioFixedOwnerColors: () => ({}),
+    buildHoi4FarEastSovietOwnerBackfill: () => ({}),
+    buildScenarioRuntimeVersionTag: () => "blank:sha",
+    mergeReleasableCatalogs: () => null,
+    buildScenarioDistrictGroupByFeatureId: () => new Map(),
+    syncScenarioLocalizationState: () => {},
+    applyBlankScenarioPresentationDefaults: () => {},
+    setScenarioAuditUiState: () => {},
+    getScenarioBaselineHashFromBundle: () => "blank-baseline",
+    markLegacyColorStateDirty: () => {},
+    syncScenarioInspectorSelection: () => {},
+    disableScenarioParentBorders: () => {},
+    applyScenarioPaintMode: () => {},
+    syncScenarioOceanFillForActivation: () => {},
+    applyScenarioPerformanceHints: () => {},
+    scheduleScenarioChunkRefresh: () => {},
+    resetScenarioChunkRuntimeState: () => {},
+    ensureRuntimeChunkLoadState: () => ({}),
+    recalculateScenarioOwnerControllerDiffCount: () => {},
+    hasRenderableScenarioPoliticalTopology: () => false,
+    normalizeScenarioFeatureCollection: (value) => value,
+    cloneScenarioStateValue: (value) => value,
+  });
+
+  const staged = await pipeline.prepareScenarioApplyState({
+    manifest: { scenario_id: "blank_base", map_mode: "blank" },
+    countriesPayload: { countries: {} },
+    ownersPayload: { owners: {} },
+    controllersPayload: { controllers: {} },
+    coresPayload: { cores: {} },
+    runtimeTopologyPayload: emptyBlankTopology,
+  }, { syncPalette: false });
+  pipeline.applyPreparedScenarioState({ manifest: { scenario_id: "blank_base", map_mode: "blank" } }, staged);
+
+  assert.equal(runtimeState.activeScenarioId, "blank_base");
+  assert.equal(runtimeState.runtimePoliticalTopology, emptyBlankTopology);
+});
 
 test("clearActiveScenario restores deferred coarse baseline when detail topology is still pending", () => {
   const runtimeState = createBaseState({

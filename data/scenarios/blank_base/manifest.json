@@ -63,5 +63,9 @@
   },
   "city_overrides_url": "data/scenarios/blank_base/city_overrides.json",
   "capital_hints_url": "data/scenarios/blank_base/capital_hints.json",
-  "runtime_topology_url": "data/scenarios/blank_base/runtime_topology.topo.json"
+  "runtime_topology_url": "data/scenarios/blank_base/runtime_topology.topo.json",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
+  }
 }

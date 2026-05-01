@@ -93,9 +93,13 @@ function createScenarioApplyPipeline({
     runtimeState.scenarioCountriesByTag = staged.countryMap;
     runtimeState.activeScenarioMeshPack = bundle.meshPackPayload || null;
     runtimeState.scenarioRuntimeTopologyData = staged.runtimeTopologyPayload;
-    runtimeState.runtimePoliticalTopology = hasRenderableScenarioPoliticalTopology(staged.runtimeTopologyPayload)
-      ? staged.runtimeTopologyPayload
-      : (runtimeState.defaultRuntimePoliticalTopology || runtimeState.runtimePoliticalTopology || null);
+    runtimeState.runtimePoliticalTopology = staged.mapSemanticMode === "blank"
+      ? (staged.runtimeTopologyPayload || null)
+      : (
+        hasRenderableScenarioPoliticalTopology(staged.runtimeTopologyPayload)
+          ? staged.runtimeTopologyPayload
+          : (runtimeState.defaultRuntimePoliticalTopology || runtimeState.runtimePoliticalTopology || null)
+      );
     runtimeState.scenarioPoliticalChunkData = scenarioSupportsChunkedRuntime(bundle)
       ? null
       : (
@@ -338,6 +342,19 @@ function createScenarioApplyPipeline({
       ...releasableCountries,
     };
     const runtimeTopologyPayload = bundle.runtimeTopologyPayload || null;
+    if (
+      mapSemanticMode !== "blank"
+      && (
+        !runtimeTopologyPayload
+        || !Array.isArray(runtimeTopologyPayload?.objects?.political?.geometries)
+        || runtimeTopologyPayload.objects.political.geometries.length === 0
+        || !hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload)
+      )
+    ) {
+      throw new Error(
+        `Scenario "${scenarioId}" runtime topology is not renderable: objects.political.geometries is required.`
+      );
+    }
     const runtimeVersionTag = runtimeTopologyPayload
       ? buildScenarioRuntimeVersionTag(bundle, runtimeTopologyPayload)
       : "";

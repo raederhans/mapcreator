@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_RESOURCES = REPO_ROOT / "js" / "core" / "scenario_resources.js"
 SCENARIO_STARTUP_HYDRATION = REPO_ROOT / "js" / "core" / "scenario" / "startup_hydration.js"
 SCENARIO_CHUNK_RUNTIME = REPO_ROOT / "js" / "core" / "scenario" / "chunk_runtime.js"
+SCENARIO_RUNTIME_STATE = REPO_ROOT / "js" / "core" / "state" / "scenario_runtime_state.js"
 
 
 class StartupHydrationBoundaryContractTest(unittest.TestCase):
@@ -52,13 +53,15 @@ class StartupHydrationBoundaryContractTest(unittest.TestCase):
 
     def test_health_gate_retry_and_result_shape_stay_stable(self):
         content = SCENARIO_STARTUP_HYDRATION.read_text(encoding="utf-8")
+        runtime_state_content = SCENARIO_RUNTIME_STATE.read_text(encoding="utf-8")
 
         self.assertIn("ok: true, attemptedRetry: false, degradedWaterOverlay: false, report: null", content)
         self.assertIn("forceReload: true,", content)
         self.assertIn('bundleLevel: "full"', content)
         self.assertIn("hydrateActiveScenarioBundle(refreshedBundle, { renderNow: false });", content)
         self.assertIn('attemptedRetry ? "retry-recovered" : "ok"', content)
-        self.assertIn('"owner-feature-mismatch"', content)
+        self.assertIn("SCENARIO_HYDRATION_HEALTH_REASONS.ownerFeatureMismatch", content)
+        self.assertIn('ownerFeatureMismatch: "owner-feature-mismatch"', runtime_state_content)
         self.assertIn("`runtime-overlay-${waterConsistency.reason}`", content)
 
     def test_merged_payload_and_topology_fallback_boundary_stays_stable(self):

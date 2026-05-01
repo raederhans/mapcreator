@@ -292,6 +292,7 @@ def ensure_geo_locale_patch_inputs(scenario_output_dir: Path, scenario_id: str) 
 def build_startup_assets_for_scenario(scenario_output_dir: Path, report_dir: Path) -> dict:
     support_report_path = report_dir / "startup_support_assets.report.json"
     bundle_report_path = report_dir / "startup_bundle.report.json"
+    detail_chunk_manifest_path = scenario_output_dir / "detail_chunks.manifest.json"
     build_startup_bootstrap_assets(
         base_topology_path=PROJECT_ROOT / "data" / "europe_topology.json",
         full_locales_path=PROJECT_ROOT / "data" / "locales.json",
@@ -319,6 +320,7 @@ def build_startup_assets_for_scenario(scenario_output_dir: Path, report_dir: Pat
         geo_locale_patch_zh_path=scenario_output_dir / SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE["zh"],
         output_en_path=scenario_output_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
         output_zh_path=scenario_output_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["zh"],
+        detail_chunk_manifest_path=detail_chunk_manifest_path if detail_chunk_manifest_path.exists() else None,
         report_path=bundle_report_path,
     )
 

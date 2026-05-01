@@ -55,6 +55,15 @@ function normalizeCacheKeyPart(value, fallback = "") {
   return text || fallback;
 }
 
+function getScenarioSourceShaCacheKeyParts(source = null) {
+  const payload = source && typeof source === "object" ? source : {};
+  return [
+    `sourceRuntime=${normalizeCacheKeyPart(payload.runtime_topology_sha256, "missing-runtime-sha")}`,
+    `sourceBootstrap=${normalizeCacheKeyPart(payload.runtime_bootstrap_topology_sha256, "missing-bootstrap-sha")}`,
+    `sourceChunks=${normalizeCacheKeyPart(payload.detail_chunk_manifest_sha256, "no-detail-chunks-sha")}`,
+  ];
+}
+
 function normalizeCacheKind(kind) {
   const normalized = normalizeText(kind);
   if (Object.values(STARTUP_CACHE_KINDS).includes(normalized)) {
@@ -270,6 +279,7 @@ export function createStartupScenarioBootstrapCacheKey({
     `generated=${normalizeCacheKeyPart(manifest?.generated_at, "unknown")}`,
     `lang=${normalizeCacheKeyPart(currentLanguage, "en")}`,
     `runtime=${normalizeCacheKeyPart(runtimeBootstrapTopologyUrl, "unknown")}`,
+    ...getScenarioSourceShaCacheKeyParts(manifest?.source),
     `patch=${normalizeCacheKeyPart(geoLocalePatchUrl, "none")}`,
   ].join("|");
 }
@@ -292,6 +302,7 @@ export function createStartupScenarioBootstrapCoreCacheKey({
     `baseline=${normalizeCacheKeyPart(manifest?.baseline_hash, "no-baseline")}`,
     `generated=${normalizeCacheKeyPart(manifest?.generated_at, "unknown")}`,
     `runtime=${normalizeCacheKeyPart(runtimeBootstrapTopologyUrl, "unknown")}`,
+    ...getScenarioSourceShaCacheKeyParts(manifest?.source),
   ].join("|");
 }
 
@@ -344,6 +355,7 @@ export function createSerializableStartupScenarioBootstrapPayload({
   geoLocalePatchPayload = null,
   runtimeTopologyPayload = null,
   runtimePoliticalMeta = null,
+  source = null,
 } = {}) {
   const featureIds = Array.isArray(runtimePoliticalMeta?.featureIds)
     ? runtimePoliticalMeta.featureIds
@@ -358,6 +370,7 @@ export function createSerializableStartupScenarioBootstrapPayload({
     geoLocalePatchPayload: clonePlainObject(geoLocalePatchPayload),
     runtimeTopologyPayload: clonePlainObject(runtimeTopologyPayload),
     runtimePoliticalMeta: compactRuntimePoliticalMeta(runtimePoliticalMeta),
+    source: clonePlainObject(source),
   };
 }
 
@@ -370,6 +383,7 @@ export function createSerializableStartupScenarioBootstrapCorePayload({
   coresPayload = null,
   runtimeTopologyPayload = null,
   runtimePoliticalMeta = null,
+  source = null,
 } = {}) {
   const featureIds = Array.isArray(runtimePoliticalMeta?.featureIds)
     ? runtimePoliticalMeta.featureIds
@@ -383,6 +397,7 @@ export function createSerializableStartupScenarioBootstrapCorePayload({
     coresPayload: compactIndexedCoreAssignmentPayload(coresPayload, featureIds),
     runtimeTopologyPayload: clonePlainObject(runtimeTopologyPayload),
     runtimePoliticalMeta: compactRuntimePoliticalMeta(runtimePoliticalMeta),
+    source: clonePlainObject(source),
   };
 }
 

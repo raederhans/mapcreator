@@ -69,5 +69,9 @@
   },
   "city_overrides_url": "data/scenarios/modern_world/city_overrides.json",
   "capital_hints_url": "data/scenarios/modern_world/capital_hints.json",
-  "runtime_topology_url": "data/scenarios/modern_world/runtime_topology.topo.json"
+  "runtime_topology_url": "data/scenarios/modern_world/runtime_topology.topo.json",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "runtime_topology_sha256": "e921316a40986aa2e4df738adf5f8ead156fbdc01714a3b930652c1a214412a0"
+  }
 }

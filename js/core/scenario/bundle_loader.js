@@ -174,6 +174,31 @@ function normalizeScenarioRuntimeTopologyPayload(payload) {
   return payload;
 }
 
+function normalizeScenarioSourceMetadata(source) {
+  const payload = source && typeof source === "object" ? source : {};
+  const next = {};
+  [
+    "base_topology_sha256",
+    "runtime_topology_sha256",
+    "runtime_bootstrap_topology_sha256",
+    "detail_chunk_manifest_sha256",
+  ].forEach((key) => {
+    const value = String(payload[key] || "").trim();
+    if (value) {
+      next[key] = value;
+    }
+  });
+  return next;
+}
+
+function attachScenarioSourceMetadataToManifest(manifest, source) {
+  const normalizedSource = normalizeScenarioSourceMetadata(source);
+  if (Object.keys(normalizedSource).length) {
+    manifest.source = normalizedSource;
+  }
+  return normalizedSource;
+}
+
 function normalizeScenarioRuntimePoliticalMeta(meta) {
   return normalizeStartupBundleRuntimePoliticalMeta(meta);
 }
@@ -417,6 +442,10 @@ function createScenarioBootstrapBundleFromCache({
   const runtimeShell = normalizeScenarioRuntimeShell(manifest);
   const runtimeTopologyPayload = normalizeScenarioRuntimeTopologyPayload(cachedCorePayload?.runtimeTopologyPayload);
   const runtimePoliticalMeta = normalizeScenarioRuntimePoliticalMeta(cachedCorePayload?.runtimePoliticalMeta || null);
+  const source = attachScenarioSourceMetadataToManifest(
+    manifest,
+    cachedCorePayload?.source || manifest?.source || null
+  );
   const runtimeFeatureIds = Array.isArray(runtimePoliticalMeta?.featureIds)
     ? runtimePoliticalMeta.featureIds
     : [];
@@ -424,6 +453,7 @@ function createScenarioBootstrapBundleFromCache({
     ...(priorBundle && typeof priorBundle === "object" ? priorBundle : {}),
     meta,
     manifest,
+    source,
     bundleLevel,
     runtimeShell,
     chunkRegistry: priorBundle?.chunkRegistry || null,
@@ -549,6 +579,7 @@ async function createStartupScenarioBundleFromPayload({
       || ""
     ).trim(),
   };
+  const source = attachScenarioSourceMetadataToManifest(manifest, payload?.source || manifestSubset.source || null);
   const runtimeTopologyPayload = normalizeScenarioRuntimeTopologyPayload(payload?.scenario?.runtime_topology_bootstrap);
   const normalizedRuntimePoliticalMeta = normalizeScenarioRuntimePoliticalMeta(
     runtimePoliticalMeta || payload?.scenario?.runtime_political_meta || null
@@ -574,6 +605,7 @@ async function createStartupScenarioBundleFromPayload({
       manifest_url: "",
     },
     manifest,
+    source,
     bootstrapStrategy,
     bundleLevel: "bootstrap",
     runtimeShell: normalizeScenarioRuntimeShell(manifest),
@@ -774,10 +806,14 @@ function createScenarioBundleAssembler({
       }),
     ]);
 
-    const bundle = {
+  const bundle = {
       ...(priorBundle && typeof priorBundle === "object" ? priorBundle : {}),
       meta,
       manifest,
+      source: attachScenarioSourceMetadataToManifest(
+        manifest,
+        manifest?.source || priorBundle?.source || null
+      ),
       bundleLevel: requestedBundleLevel,
       runtimeShell,
       chunkRegistry: priorBundle?.chunkRegistry || null,

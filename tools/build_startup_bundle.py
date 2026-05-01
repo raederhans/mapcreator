@@ -642,6 +642,20 @@ def build_startup_apply_seed(
     }
 
 
+def build_manifest_source_metadata(source_metadata: dict) -> dict:
+    manifest_source_fields = (
+        "base_topology_sha256",
+        "runtime_topology_sha256",
+        "runtime_bootstrap_topology_sha256",
+        "detail_chunk_manifest_sha256",
+    )
+    return {
+        key: source_metadata[key]
+        for key in manifest_source_fields
+        if source_metadata.get(key)
+    }
+
+
 def build_startup_bundle_payload(
     *,
     language: str,
@@ -654,6 +668,7 @@ def build_startup_bundle_payload(
     owners_path: Path,
     controllers_path: Path,
     cores_path: Path,
+    detail_chunk_manifest_path: Path | None = None,
 ) -> dict:
     scenario_id = _normalize_text(scenario_manifest.get("scenario_id"))
     if not scenario_id:
@@ -678,7 +693,22 @@ def build_startup_bundle_payload(
     manifest_subset["baseline_hash"] = _normalize_text(scenario_manifest.get("baseline_hash"))
     manifest_subset["generated_at"] = _normalize_text(scenario_manifest.get("generated_at"))
     manifest_subset["startup_bundle_version"] = STARTUP_BUNDLE_VERSION
+    source_metadata = {
+        "data_manifest_version": data_manifest.get("version"),
+        "data_manifest_generated_at": _normalize_text(data_manifest.get("generated_at")),
+        "base_topology_sha256": _sha256_path(topology_primary_path),
+        "runtime_topology_sha256": _sha256_path(full_runtime_topology_path),
+        "runtime_bootstrap_topology_sha256": _sha256_path(runtime_bootstrap_topology_path),
+        "countries_sha256": _sha256_path(countries_path),
+        "owners_sha256": _sha256_path(owners_path),
+        "controllers_sha256": _sha256_path(controllers_path),
+        "cores_sha256": _sha256_path(cores_path),
+    }
+    if detail_chunk_manifest_path is not None and detail_chunk_manifest_path.is_file():
+        source_metadata["detail_chunk_manifest_sha256"] = _sha256_path(detail_chunk_manifest_path)
+
     manifest_subset["startup_bootstrap_strategy"] = STARTUP_BOOTSTRAP_STRATEGY
+    manifest_subset["source"] = build_manifest_source_metadata(source_metadata)
 
     return {
         "version": STARTUP_BUNDLE_VERSION,
@@ -686,17 +716,7 @@ def build_startup_bundle_payload(
         "language": language,
         "generated_at": _normalize_text(scenario_manifest.get("generated_at")),
         "baseline_hash": _normalize_text(scenario_manifest.get("baseline_hash")),
-        "source": {
-            "data_manifest_version": data_manifest.get("version"),
-            "data_manifest_generated_at": _normalize_text(data_manifest.get("generated_at")),
-            "base_topology_sha256": _sha256_path(topology_primary_path),
-            "runtime_topology_sha256": _sha256_path(full_runtime_topology_path),
-            "runtime_bootstrap_topology_sha256": _sha256_path(runtime_bootstrap_topology_path),
-            "countries_sha256": _sha256_path(countries_path),
-            "owners_sha256": _sha256_path(owners_path),
-            "controllers_sha256": _sha256_path(controllers_path),
-            "cores_sha256": _sha256_path(cores_path),
-        },
+        "source": source_metadata,
         "manifest_subset": manifest_subset,
         "base": {
             "topology_primary": slim_topology_primary,
@@ -1128,6 +1148,7 @@ def build_startup_bundles(
     geo_locale_patch_zh_path: Path,
     output_en_path: Path,
     output_zh_path: Path,
+    detail_chunk_manifest_path: Path | None = None,
     report_path: Path | None = None,
 ) -> dict:
     scenario_manifest = _read_json(scenario_manifest_path)
@@ -1156,6 +1177,7 @@ def build_startup_bundles(
             topology_primary_path=topology_primary_path,
             full_runtime_topology_path=full_runtime_topology_path,
             runtime_bootstrap_topology_path=runtime_bootstrap_topology_path,
+            detail_chunk_manifest_path=detail_chunk_manifest_path,
             countries_path=countries_path,
             owners_path=owners_path,
             controllers_path=controllers_path,
@@ -1171,6 +1193,16 @@ def build_startup_bundles(
             trailing_newline=True,
         )
         gzip_paths_by_language[language] = write_gzip_sidecar(payload, output_paths_by_language[language])
+
+    manifest_source = build_manifest_source_metadata(payload_by_language[SUPPORTED_LANGUAGES[0]]["source"])
+    scenario_manifest["source"] = manifest_source
+    write_json_atomic(
+        scenario_manifest_path,
+        scenario_manifest,
+        ensure_ascii=False,
+        indent=2,
+        trailing_newline=True,
+    )
 
     report = build_startup_bundle_report(
         payload_by_language=payload_by_language,
@@ -1208,6 +1240,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--full-runtime-topology", required=True)
     parser.add_argument("--runtime-bootstrap-topology", required=True)
+    parser.add_argument("--detail-chunk-manifest", default="")
     parser.add_argument("--countries", required=True)
     parser.add_argument("--owners", required=True)
     parser.add_argument("--controllers", required=True)
@@ -1230,6 +1263,7 @@ def main() -> None:
         geo_aliases_path=Path(args.geo_aliases).resolve(),
         full_runtime_topology_path=Path(args.full_runtime_topology).resolve(),
         runtime_bootstrap_topology_path=Path(args.runtime_bootstrap_topology).resolve(),
+        detail_chunk_manifest_path=Path(args.detail_chunk_manifest).resolve() if _normalize_text(args.detail_chunk_manifest) else None,
         countries_path=Path(args.countries).resolve(),
         owners_path=Path(args.owners).resolve(),
         controllers_path=Path(args.controllers).resolve(),

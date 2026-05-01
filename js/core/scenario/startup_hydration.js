@@ -12,6 +12,7 @@ import {
   hasStartupReadonlyReason,
 } from "../state/boot_state.js";
 import {
+  SCENARIO_HYDRATION_HEALTH_REASONS,
   resetScenarioHydrationOverlayState,
   setHydratedScenarioRuntimeTopologyState,
   setScenarioHydrationHealthGateState,
@@ -73,7 +74,39 @@ function createScenarioStartupHydrationController({
   }
 
   function hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload) {
-    return !!getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political");
+    const geometries = runtimeTopologyPayload?.objects?.political?.geometries;
+    return Array.isArray(geometries)
+      && geometries.length > 0
+      && !!getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political");
+  }
+
+  function normalizeScenarioSourceMetadata(source) {
+    return source && typeof source === "object" ? source : {};
+  }
+
+  function getRequiredRuntimeSourceShaKeys(bundle) {
+    const isBootstrap = String(bundle?.bundleLevel || "").trim().toLowerCase() === "bootstrap";
+    const chunked = !!String(bundle?.manifest?.detail_chunk_manifest_url || "").trim();
+    const keys = [
+      isBootstrap || chunked
+        ? "runtime_bootstrap_topology_sha256"
+        : "runtime_topology_sha256",
+    ];
+    if (chunked) {
+      keys.push("detail_chunk_manifest_sha256");
+    }
+    return keys;
+  }
+
+  function getScenarioRuntimeSourceShaStatus(bundle) {
+    const source = normalizeScenarioSourceMetadata(bundle?.source);
+    const missingKeys = getRequiredRuntimeSourceShaKeys(bundle)
+      .filter((key) => !String(source[key] || "").trim());
+    return {
+      ok: missingKeys.length === 0,
+      missingKeys,
+      source,
+    };
   }
 
   async function ensureScenarioGeoLocalePatchForLanguage(
@@ -149,9 +182,20 @@ function createScenarioStartupHydrationController({
       || bundle?.meta?.scenario_id
       || state.activeScenarioId
     ) || "scenario";
-    const baselineHash = String(bundle?.manifest?.baseline_hash || bundle?.ownersPayload?.baseline_hash || "").trim();
-    const runtimeFeatureCount = getScenarioRuntimePoliticalFeatureCount(runtimeTopologyPayload, bundle?.runtimePoliticalMeta || null);
-    return `${scenarioId}:${baselineHash || "no-baseline"}:${runtimeFeatureCount}`;
+    void runtimeTopologyPayload;
+    const sourceStatus = getScenarioRuntimeSourceShaStatus(bundle);
+    if (!sourceStatus.ok) {
+      return `${scenarioId}:${SCENARIO_HYDRATION_HEALTH_REASONS.missingRuntimeSourceSha}:${sourceStatus.missingKeys.join("+")}`;
+    }
+    const isBootstrap = String(bundle?.bundleLevel || "").trim().toLowerCase() === "bootstrap";
+    const chunked = !!String(bundle?.manifest?.detail_chunk_manifest_url || "").trim();
+    const topologySha = isBootstrap || chunked
+      ? String(sourceStatus.source.runtime_bootstrap_topology_sha256 || "").trim()
+      : String(sourceStatus.source.runtime_topology_sha256 || "").trim();
+    const chunkManifestSha = chunked
+      ? `:${String(sourceStatus.source.detail_chunk_manifest_sha256 || "").trim()}`
+      : "";
+    return `${scenarioId}:${topologySha}${chunkManifestSha}`;
   }
 
   function collectFeatureIdsFromCollection(collection) {
@@ -193,6 +237,7 @@ function createScenarioStartupHydrationController({
     }
     const runtimeTopologyPayload =
       normalizeScenarioRuntimeTopologyPayload(bundle.runtimeTopologyPayload) || state.scenarioRuntimeTopologyData || null;
+    const mapSemanticMode = String(bundle?.manifest?.map_mode || "").trim().toLowerCase();
     const runtimeMergedLayerPayloads = getScenarioRuntimeMergedLayerPayloads(bundle);
     const mergedWaterPayload = hasScenarioMergedLayerPayload(runtimeMergedLayerPayloads, "water")
       ? runtimeMergedLayerPayloads.water || null
@@ -212,10 +257,32 @@ function createScenarioStartupHydrationController({
     let scenarioOverlayChanged = false;
     let contextBaseChanged = false;
     if (runtimeTopologyPayload) {
+      if (mapSemanticMode !== "blank" && !hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload)) {
+        setScenarioHydrationHealthGateState(state, {
+          status: "fatal",
+          reason: SCENARIO_HYDRATION_HEALTH_REASONS.runtimeTopologyUnrenderable,
+          checkedAt: Date.now(),
+          attemptedRetry: false,
+          ownerFeatureOverlapRatio: 0,
+          ownerFeatureOverlapCount: 0,
+          ownerFeatureRenderedCount: 0,
+          degradedWaterOverlay: false,
+        });
+        const handled = callRuntimeHook(state, "setStartupReadonlyStateFn", true, {
+          reason: "scenario-health-gate",
+          unlockInFlight: false,
+        });
+        if (handled === undefined) {
+          state.startupReadonly = true;
+          state.startupReadonlyReason = "scenario-health-gate";
+          state.startupReadonlyUnlockInFlight = false;
+        }
+        syncScenarioUi();
+        syncCountryUi({ renderNow: false });
+        return false;
+      }
       const runtimeVersionTag = buildScenarioRuntimeVersionTag(bundle, runtimeTopologyPayload);
-      const nextRuntimePoliticalTopology = hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload)
-        ? runtimeTopologyPayload
-        : (state.defaultRuntimePoliticalTopology || state.runtimePoliticalTopology || null);
+      const nextRuntimePoliticalTopology = runtimeTopologyPayload;
       const nextScenarioLandMaskData =
         getScenarioDecodedCollection(bundle, "scenarioLandMaskData")
         || getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "land_mask")
@@ -422,12 +489,26 @@ function createScenarioStartupHydrationController({
             renderedFeatureCount < ownerFeatureCoverageMinFeatures
             || effectiveOverlapRatio >= ownerFeatureCoverageMinRatio
           ),
-      reason: forcedMismatch ? "owner-feature-mismatch" : "ok",
+      reason: forcedMismatch
+        ? SCENARIO_HYDRATION_HEALTH_REASONS.ownerFeatureMismatch
+        : SCENARIO_HYDRATION_HEALTH_REASONS.ok,
     };
   }
 
   function evaluateScenarioOverlayConsistency({ phase = "deferred" } = {}) {
     const runtimeTag = String(state.scenarioRuntimeTopologyVersionTag || "").trim();
+    if (runtimeTag.includes(SCENARIO_HYDRATION_HEALTH_REASONS.missingRuntimeSourceSha)) {
+      return {
+        healthy: false,
+        reason: SCENARIO_HYDRATION_HEALTH_REASONS.missingRuntimeSourceSha,
+        runtimeTag,
+        overlayTags: {
+          water: String(state.scenarioWaterOverlayVersionTag || "").trim(),
+          landMask: String(state.scenarioLandMaskVersionTag || "").trim(),
+          contextLandMask: String(state.scenarioContextLandMaskVersionTag || "").trim(),
+        },
+      };
+    }
     const forcedMaskMismatch =
       (phase === "startup" && consumeScenarioTestHook("forceStartupHealthGateMaskMismatchOnce"))
       || (phase !== "startup" && consumeScenarioTestHook("forceHydrationHealthGateMaskMismatchOnce"));
@@ -481,7 +562,7 @@ function createScenarioStartupHydrationController({
     }
     return {
       healthy: true,
-      reason: "ok",
+      reason: SCENARIO_HYDRATION_HEALTH_REASONS.ok,
       runtimeTag,
       overlayTags: {
         water: overlayChecks[0].overlayTag,
@@ -518,7 +599,7 @@ function createScenarioStartupHydrationController({
       if (ok) {
         setScenarioHydrationHealthGateState(state, {
           status: "ok",
-          reason: "ok",
+          reason: SCENARIO_HYDRATION_HEALTH_REASONS.ok,
           checkedAt: Date.now(),
           attemptedRetry: false,
           ownerFeatureOverlapRatio: report.overlapRatio,
@@ -577,7 +658,7 @@ function createScenarioStartupHydrationController({
       }
       setScenarioHydrationHealthGateState(state, {
         status: "degraded",
-        reason: "owner-feature-mismatch",
+        reason: SCENARIO_HYDRATION_HEALTH_REASONS.ownerFeatureMismatch,
         checkedAt: Date.now(),
         attemptedRetry,
         ownerFeatureOverlapRatio: report.overlapRatio,
@@ -626,7 +707,9 @@ function createScenarioStartupHydrationController({
     );
     setScenarioHydrationHealthGateState(state, {
       status: "degraded",
-      reason: !report.healthy ? "owner-feature-mismatch" : `runtime-overlay-${waterConsistency.reason}`,
+      reason: !report.healthy
+        ? SCENARIO_HYDRATION_HEALTH_REASONS.ownerFeatureMismatch
+        : `runtime-overlay-${waterConsistency.reason}`,
       checkedAt: Date.now(),
       attemptedRetry,
       ownerFeatureOverlapRatio: report.overlapRatio,
@@ -655,6 +738,7 @@ function createScenarioStartupHydrationController({
     hydrateActiveScenarioBundle,
     buildScenarioRuntimeVersionTag,
     hasRenderableScenarioPoliticalTopology,
+    getScenarioRuntimeSourceShaStatus,
     evaluateScenarioHydrationHealthGateState,
     enforceScenarioHydrationHealthGate,
   };

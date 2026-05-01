@@ -10,34 +10,11 @@ import {
 } from "./scenario/scenario_renderer_bridge.js";
 import {
   loadDeferredDetailBundle,
-  loadMeasuredJsonResource,
   normalizeCityText,
-  normalizeScenarioCityOverridesPayload,
-  normalizeScenarioGeoLocalePatchPayload,
 } from "./data_loader.js";
-import {
-  createSerializableStartupScenarioBootstrapPayload,
-  createStartupScenarioBootstrapCacheKey,
-  isStartupCacheEnabled,
-  readStartupCacheEntry,
-  writeStartupCacheEntry,
-} from "./startup_cache.js";
-import {
-  normalizeIndexedCoreAssignmentPayload,
-  normalizeIndexedTagAssignmentPayload,
-  normalizeRuntimePoliticalMeta as normalizeStartupBundleRuntimePoliticalMeta,
-} from "./startup_bundle_compaction.js";
-import {
-  decodeRuntimeChunkViaWorker,
-  loadScenarioRuntimeBootstrapViaWorker,
-  shouldUseStartupWorker,
-} from "./startup_worker_client.js";
 import {
   getVisibleScenarioChunkLayers,
   mergeScenarioChunkPayloads,
-  normalizeScenarioChunkManifest,
-  normalizeScenarioContextLodManifest,
-  normalizeScenarioRenderBudgetHints,
   selectScenarioChunks,
 } from "./scenario_chunk_manager.js";
 import {
@@ -110,24 +87,13 @@ import {
   createScenarioApplyPipeline,
 } from "./scenario_apply_pipeline.js";
 import {
-  cacheBust,
   getSearchParams,
   shouldBypassScenarioCache,
-  normalizeScenarioBundleLevel,
-  getScenarioBundleHydrationRank,
   scenarioBundleSatisfiesLevel,
   normalizeScenarioCoreTag,
   normalizeScenarioCoreValue,
   normalizeScenarioCoreMap as sharedNormalizeScenarioCoreMap,
-  loadScenarioJsonWithTimeout as sharedLoadScenarioJsonWithTimeout,
-  loadScenarioJsonResourceWithTimeout as sharedLoadScenarioJsonResourceWithTimeout,
-  validateScenarioRequiredResourcePayload,
-  loadRequiredScenarioResource as sharedLoadRequiredScenarioResource,
-  loadOptionalScenarioResource as sharedLoadOptionalScenarioResource,
-  loadMeasuredRequiredScenarioResource as sharedLoadMeasuredRequiredScenarioResource,
   normalizeScenarioId,
-  normalizeScenarioLanguage,
-  getScenarioGeoLocalePatchDescriptor as sharedGetScenarioGeoLocalePatchDescriptor,
   cloneScenarioStateValue,
 } from "./scenario/shared.js";
 import {
@@ -162,30 +128,6 @@ let activeScenarioApplyPromise = null;
 
 function normalizeScenarioCoreMap(rawMap) {
   return sharedNormalizeScenarioCoreMap(rawMap, { normalizeFeatureText: normalizeCityText });
-}
-
-function loadScenarioJsonWithTimeout(d3Client, url, options = {}) {
-  return sharedLoadScenarioJsonWithTimeout(loadMeasuredJsonResource, d3Client, url, options);
-}
-
-function loadScenarioJsonResourceWithTimeout(d3Client, url, options = {}) {
-  return sharedLoadScenarioJsonResourceWithTimeout(loadMeasuredJsonResource, d3Client, url, options);
-}
-
-async function loadRequiredScenarioResource(d3Client, url, options = {}) {
-  return sharedLoadRequiredScenarioResource(loadMeasuredJsonResource, d3Client, url, options);
-}
-
-async function loadOptionalScenarioResource(d3Client, url, options = {}) {
-  return sharedLoadOptionalScenarioResource(loadMeasuredJsonResource, d3Client, url, options);
-}
-
-async function loadMeasuredRequiredScenarioResource(d3Client, url, options = {}) {
-  return sharedLoadMeasuredRequiredScenarioResource(loadMeasuredJsonResource, d3Client, url, options);
-}
-
-function getScenarioGeoLocalePatchDescriptor(manifest, language = runtimeState.currentLanguage) {
-  return sharedGetScenarioGeoLocalePatchDescriptor(manifest, language);
 }
 
 function getScenarioTargetPaletteId(manifest) {
@@ -403,142 +345,6 @@ function getCachedScenarioBundle(scenarioId = runtimeState.activeScenarioId) {
   const normalizedScenarioId = normalizeScenarioId(scenarioId);
   if (!normalizedScenarioId) return null;
   return runtimeState.scenarioBundleCacheById?.[normalizedScenarioId] || null;
-}
-
-function createScenarioBootstrapBundleFromCache({
-  priorBundle,
-  meta,
-  manifest,
-  bundleLevel,
-  cachedPayload,
-  geoLocalePatchDescriptor,
-  runtimeTopologyUrl,
-} = {}) {
-  // 持久化 startup cache 只保存启动必需 payload；这里把它重新包装成标准 bundle 形状，后续 apply pipeline 才能复用同一入口。
-  const runtimeShell = normalizeScenarioRuntimeShell(manifest);
-  const runtimePoliticalMeta = normalizeStartupBundleRuntimePoliticalMeta(cachedPayload?.runtimePoliticalMeta || null);
-  const runtimeFeatureIds = Array.isArray(runtimePoliticalMeta?.featureIds)
-    ? runtimePoliticalMeta.featureIds
-    : [];
-  const bundle = {
-    ...(priorBundle && typeof priorBundle === "object" ? priorBundle : {}),
-    meta,
-    manifest,
-    bundleLevel,
-    runtimeShell,
-    chunkRegistry: priorBundle?.chunkRegistry || null,
-    contextLodManifest: priorBundle?.contextLodManifest || null,
-    runtimeMetaPayload: priorBundle?.runtimeMetaPayload || null,
-    meshPackPayload: priorBundle?.meshPackPayload || null,
-    chunkPayloadCacheById: {
-      ...(priorBundle?.chunkPayloadCacheById || {}),
-    },
-    chunkPayloadPromisesById: {},
-    chunkPreloaded: !!priorBundle?.chunkPreloaded,
-    countriesPayload: cachedPayload?.countriesPayload || null,
-    ownersPayload: normalizeIndexedTagAssignmentPayload(cachedPayload?.ownersPayload, runtimeFeatureIds, "owners"),
-    controllersPayload: normalizeIndexedTagAssignmentPayload(cachedPayload?.controllersPayload, runtimeFeatureIds, "controllers"),
-    coresPayload: normalizeIndexedCoreAssignmentPayload(cachedPayload?.coresPayload, runtimeFeatureIds),
-    waterRegionsPayload: priorBundle?.waterRegionsPayload || null,
-    specialRegionsPayload: priorBundle?.specialRegionsPayload || null,
-    reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
-    cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
-    geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(cachedPayload?.geoLocalePatchPayload),
-    geoLocalePatchPayloadsByLanguage: {
-      ...(priorBundle?.geoLocalePatchPayloadsByLanguage || {}),
-    },
-    runtimeTopologyPayload: normalizeScenarioRuntimeTopologyPayload(cachedPayload?.runtimeTopologyPayload),
-    runtimePoliticalMeta,
-    runtimeDecodedCollections: priorBundle?.runtimeDecodedCollections || null,
-    releasableCatalog: priorBundle?.releasableCatalog || null,
-    districtGroupsPayload: priorBundle?.districtGroupsPayload || null,
-    auditPayload: priorBundle?.auditPayload || null,
-    optionalLayerPromises: {
-      ...(priorBundle?.optionalLayerPromises || {}),
-    },
-    optionalLayerSettledByKey: {
-      ...(priorBundle?.optionalLayerSettledByKey || {}),
-    },
-    loadDiagnostics: {
-      optionalResources: {
-        runtime_topology: {
-          ok: !!cachedPayload?.runtimeTopologyPayload,
-          reason: "persistent-cache-hit",
-          errorMessage: "",
-          metrics: null,
-          url: runtimeTopologyUrl,
-        },
-        geo_locale_patch: {
-          ok: !!cachedPayload?.geoLocalePatchPayload,
-          reason: "persistent-cache-hit",
-          errorMessage: "",
-          language: geoLocalePatchDescriptor?.language,
-          localeSpecific: !!geoLocalePatchDescriptor?.localeSpecific,
-          metrics: null,
-        },
-      },
-      requiredResources: {
-        manifest: null,
-        countries: null,
-        owners: null,
-        controllers: null,
-        cores: null,
-      },
-      bundleLevel,
-      persistentCacheHit: true,
-    },
-  };
-  if (bundle.geoLocalePatchPayload) {
-    if (geoLocalePatchDescriptor?.localeSpecific) {
-      bundle.geoLocalePatchPayloadsByLanguage[geoLocalePatchDescriptor.language] = bundle.geoLocalePatchPayload;
-    } else {
-      bundle.geoLocalePatchPayloadsByLanguage.en = bundle.geoLocalePatchPayload;
-      bundle.geoLocalePatchPayloadsByLanguage.zh = bundle.geoLocalePatchPayload;
-    }
-  }
-  return bundle;
-}
-
-async function loadScenarioRuntimeTopologyForBundle({
-  d3Client,
-  scenarioId,
-  requestedBundleLevel,
-  runtimeTopologyUrl,
-} = {}) {
-  // bootstrap uses startup bundle decode path, full uses full bundle decode path.
-  const runtimeLabel = requestedBundleLevel === "bootstrap" ? "runtime_bootstrap_topology" : "runtime_topology";
-  const allowWorkerDecode = !!runtimeTopologyUrl && shouldUseStartupWorker();
-  if (allowWorkerDecode) {
-    try {
-      const workerResult = requestedBundleLevel === "bootstrap"
-        ? await loadScenarioRuntimeBootstrapViaWorker({ runtimeTopologyUrl })
-        : await decodeRuntimeChunkViaWorker({ runtimeTopologyUrl });
-      return {
-        ok: !!workerResult.runtimePoliticalTopology,
-        value: workerResult.runtimePoliticalTopology || null,
-        metrics: workerResult.metrics?.runtimePoliticalTopology || workerResult.metrics || null,
-        reason: workerResult.runtimePoliticalTopology
-          ? (requestedBundleLevel === "bootstrap" ? "worker-bootstrap" : "worker-full")
-          : "empty",
-        errorMessage: "",
-        runtimePoliticalMeta: workerResult.runtimePoliticalMeta || null,
-        decodedCollections: workerResult.decodedCollections || null,
-        workerMetrics: workerResult.metrics || null,
-      };
-    } catch (error) {
-      console.warn(`[scenario] Startup worker failed for ${runtimeLabel} of "${scenarioId}", falling back to main thread.`, error);
-    }
-  }
-  // startup bundle worker path keeps legacy fallback on main-thread resource loading.
-  const fallbackResult = await loadOptionalScenarioResource(d3Client, runtimeTopologyUrl, {
-    scenarioId,
-    resourceLabel: runtimeLabel,
-  });
-  return {
-    ...fallbackResult,
-    runtimePoliticalMeta: null,
-    decodedCollections: null,
-  };
 }
 
 function setScenarioViewMode(
@@ -1075,4 +881,3 @@ export {
   resetToScenarioBaseline,
   setScenarioViewMode,
 };
-

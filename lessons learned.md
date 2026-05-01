@@ -1315,3 +1315,5 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 37. 测试路由 selector 要把“列表文件”和“变更文件”分成两个入口
 - 如果 `--changed-files` 同时可能表示列表文件和单个变更文件，agent 很容易把源码内容当成 changed file 列表，推荐结果会严重失真。
 - 更稳的做法是：列表文件用 `--changed-files-list`，单个路径用普通参数或 `--changed-file`；CI artifact 生成前先跑 selector `--check`，确保 route metadata 已经通过 schema 校验。
+### 2026-05-01 - runtime topology source identity
+- runtime topology 的 source sha 要同时进入 runtime tag、startup persistent cache key、builder wrapper 和 strict checker；只改前端 identity 会让旧 cache 或重建入口继续产生过期包。

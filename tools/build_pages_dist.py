@@ -188,6 +188,11 @@ def build_editor_dist(editor_entry: Path) -> None:
 def copy_scenario_runtime_data() -> None:
     source_dir = ROOT / "data" / "scenarios"
     destination_dir = APP_DIST_ROOT / "data" / "scenarios"
+    chunked_full_topology_excludes = set()
+    for manifest_path in source_dir.glob("*/manifest.json"):
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and str(payload.get("detail_chunk_manifest_url") or "").strip():
+            chunked_full_topology_excludes.add(manifest_path.parent.relative_to(source_dir) / "runtime_topology.topo.json")
 
     def should_copy_file(relative_path: Path, _source_file: Path) -> bool:
         parts = set(relative_path.parts)
@@ -195,7 +200,7 @@ def copy_scenario_runtime_data() -> None:
             return False
         if relative_path.name in SCENARIO_EXCLUDED_FILE_NAMES:
             return False
-        if relative_path in SCENARIO_EXCLUDED_RELATIVE_FILES:
+        if relative_path in SCENARIO_EXCLUDED_RELATIVE_FILES or relative_path in chunked_full_topology_excludes:
             return False
         return True
 
@@ -252,6 +257,93 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
                 gzip_path.write_bytes(gzip.compress(bundle_bytes, mtime=0))
 
 
+def _dist_path_for_app_url(url: str) -> Path:
+    value = str(url or "").strip()
+    path = (APP_DIST_ROOT / value).resolve()
+    try:
+        path.relative_to(APP_DIST_ROOT.resolve())
+    except ValueError as exc:
+        raise ValueError(f"Pages dist URL must stay under app dist root: {value}") from exc
+    return path
+
+
+def _require_dist_url(url: str, *, source: str, missing: list[str], required: bool = False) -> None:
+    if not url:
+        if required:
+            missing.append(f"{source}: <empty>")
+        return
+    if not _dist_path_for_app_url(url).is_file():
+        missing.append(f"{source}: {url}")
+
+
+def validate_dist_scenario_startup_urls() -> None:
+    """Fail Pages builds when published scenario metadata points at absent files."""
+    scenarios_dir = APP_DIST_ROOT / "data" / "scenarios"
+    index_path = scenarios_dir / "index.json"
+    if not index_path.is_file():
+        raise FileNotFoundError("Pages dist is missing scenario index: app/data/scenarios/index.json")
+    payload = json.loads(index_path.read_text(encoding="utf-8"))
+    scenarios = payload.get("scenarios") if isinstance(payload, dict) else []
+    missing: list[str] = []
+    if not isinstance(scenarios, list):
+        raise ValueError("Pages dist scenario index must contain a scenarios list.")
+    for entry in scenarios:
+        if not isinstance(entry, dict):
+            continue
+        scenario_id = str(entry.get("scenario_id") or "").strip() or "unknown"
+        manifest_url = str(entry.get("manifest_url") or "").strip()
+        _require_dist_url(manifest_url, source=f"{scenario_id}.manifest_url", missing=missing, required=True)
+        manifest_path = _dist_path_for_app_url(manifest_url)
+        if not manifest_path.is_file():
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict):
+            continue
+        for field_name in (
+            "startup_bundle_url_en",
+            "startup_bundle_url_zh",
+            "runtime_bootstrap_topology_url",
+            "startup_topology_url",
+            "detail_chunk_manifest_url",
+        ):
+            value = str(manifest.get(field_name) or "").strip()
+            if value:
+                _require_dist_url(value, source=f"{scenario_id}.manifest.{field_name}", missing=missing)
+        for field_name, value in list(manifest.items()):
+            if field_name.endswith("_url") and isinstance(value, str) and value.startswith("data/scenarios/"):
+                _require_dist_url(value, source=f"{scenario_id}.manifest.{field_name}", missing=missing)
+        detail_manifest_url = str(manifest.get("detail_chunk_manifest_url") or "").strip()
+        detail_manifest_path = _dist_path_for_app_url(detail_manifest_url)
+        if detail_manifest_path.is_file():
+            detail_manifest = json.loads(detail_manifest_path.read_text(encoding="utf-8"))
+            chunks = detail_manifest.get("chunks") if isinstance(detail_manifest, dict) else []
+            if isinstance(chunks, list):
+                for chunk in chunks:
+                    if isinstance(chunk, dict):
+                        _require_dist_url(
+                            str(chunk.get("url") or "").strip(),
+                            source=f"{scenario_id}.detail_chunk[{chunk.get('id', '')}]",
+                            missing=missing,
+                        )
+        for language in ("en", "zh"):
+            bundle_url = str(manifest.get(f"startup_bundle_url_{language}") or "").strip()
+            bundle_path = _dist_path_for_app_url(bundle_url)
+            if not bundle_path.is_file():
+                continue
+            bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+            manifest_subset = bundle.get("manifest_subset") if isinstance(bundle, dict) else None
+            if not isinstance(manifest_subset, dict):
+                continue
+            for field_name, value in list(manifest_subset.items()):
+                if field_name.endswith("_url") and isinstance(value, str) and value.startswith("data/scenarios/"):
+                    _require_dist_url(value, source=f"{scenario_id}.startup_bundle_{language}.{field_name}", missing=missing)
+    if missing:
+        raise FileNotFoundError(
+            "Pages dist scenario metadata references unpublished files:\n"
+            + "\n".join(f"- {item}" for item in missing[:50])
+        )
+
+
 def copy_transport_runtime_data() -> None:
     source_dir = ROOT / "data" / "transport_layers"
     destination_dir = APP_DIST_ROOT / "data" / "transport_layers"
@@ -280,6 +372,7 @@ def copy_runtime_data() -> None:
         copy_tree_contents(ROOT / "data" / directory_name, APP_DIST_ROOT / "data" / directory_name)
     copy_scenario_runtime_data()
     copy_transport_runtime_data()
+    validate_dist_scenario_startup_urls()
 
 
 def write_nojekyll() -> None:

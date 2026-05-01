@@ -2,6 +2,191 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createScenarioStartupHydrationController } from "../js/core/scenario/startup_hydration.js";
+import {
+  createStartupScenarioBootstrapCacheKey,
+  createStartupScenarioBootstrapCoreCacheKey,
+} from "../js/core/startup_cache.js";
+
+function createMinimalHydrationController(state, overrides = {}) {
+  return createScenarioStartupHydrationController({
+    state,
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeScenarioRuntimeTopologyPayload: (value) => value,
+    normalizeScenarioGeoLocalePatchPayload: (value) => value,
+    normalizeFeatureText: (value) => String(value || "").trim(),
+    normalizeScenarioFeatureCollection: (value) => value,
+    getScenarioRuntimePoliticalFeatureCount: () => 1,
+    getScenarioDecodedCollection: () => null,
+    getScenarioRuntimeMergedLayerPayloads: () => ({}),
+    hasScenarioMergedLayerPayload: () => false,
+    areScenarioFeatureCollectionsEquivalent: () => true,
+    applyScenarioPoliticalChunkPayload: () => false,
+    loadOptionalScenarioResource: async () => null,
+    getScenarioGeoLocalePatchDescriptor: () => ({ url: "", language: "en", localeSpecific: false }),
+    getLoadScenarioBundle: () => async () => null,
+    syncScenarioLocalizationState: () => {},
+    syncCountryUi: () => {},
+    syncScenarioUi: () => {},
+    setScenarioAuditUiState: () => {},
+    mergeReleasableCatalogs: () => null,
+    buildScenarioDistrictGroupByFeatureId: () => new Map(),
+    buildScenarioReleasableIndex: () => null,
+    invalidateContextLayerVisualStateBatch: () => {},
+    invalidateOceanWaterInteractionVisualState: () => {},
+    refreshColorState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {},
+    refreshScenarioOpeningOwnerBorders: () => false,
+    flushRenderBoundary: () => {},
+    enterScenarioFatalRecovery: () => {},
+    consumeScenarioTestHook: () => false,
+    t: (value) => value,
+    showToast: () => {},
+    ...overrides,
+  });
+}
+
+test("runtime version tag is driven by source sha metadata", () => {
+  const { buildScenarioRuntimeVersionTag } = createMinimalHydrationController({ activeScenarioId: "sample" });
+  const topology = { objects: { political: { geometries: [{ properties: { id: "A" } }] } } };
+
+  assert.notEqual(
+    buildScenarioRuntimeVersionTag({
+      manifest: { scenario_id: "sample", baseline_hash: "same" },
+      bundleLevel: "full",
+      source: { runtime_topology_sha256: "sha-a" },
+    }, topology),
+    buildScenarioRuntimeVersionTag({
+      manifest: { scenario_id: "sample", baseline_hash: "same" },
+      bundleLevel: "full",
+      source: { runtime_topology_sha256: "sha-b" },
+    }, topology),
+  );
+  assert.equal(
+    buildScenarioRuntimeVersionTag({
+      manifest: { scenario_id: "sample", detail_chunk_manifest_url: "data/scenarios/sample/detail_chunks.manifest.json" },
+      bundleLevel: "full",
+      source: {
+        runtime_bootstrap_topology_sha256: "bootstrap-sha",
+        detail_chunk_manifest_sha256: "chunk-sha",
+      },
+    }, topology),
+    "sample:bootstrap-sha:chunk-sha",
+  );
+});
+
+test("missing runtime source sha enters hydration health gate", () => {
+  const state = {
+    activeScenarioId: "sample",
+    landData: { type: "FeatureCollection", features: [] },
+    sovereigntyByFeatureId: {},
+    scenarioRuntimeTopologyVersionTag: "sample:missing-runtime-source-sha:runtime_topology_sha256",
+  };
+  const { evaluateScenarioHydrationHealthGateState } = createMinimalHydrationController(state);
+
+  const result = evaluateScenarioHydrationHealthGateState();
+
+  assert.equal(result.ok, false);
+  assert.equal(result.overlayConsistency.reason, "missing-runtime-source-sha");
+});
+
+test("startup hydration marks unrenderable runtime topology as fatal and keeps readonly", () => {
+  const state = {
+    activeScenarioId: "sample",
+    startupReadonly: false,
+    startupReadonlyReason: "",
+    startupReadonlyUnlockInFlight: false,
+    scenarioHydrationHealthGate: null,
+  };
+  const { hydrateActiveScenarioBundle } = createMinimalHydrationController(state);
+
+  const hydrated = hydrateActiveScenarioBundle({
+    manifest: { scenario_id: "sample" },
+    runtimeTopologyPayload: {
+      type: "Topology",
+      objects: { political: { type: "GeometryCollection", geometries: [] } },
+      arcs: [],
+    },
+  });
+
+  assert.equal(hydrated, false);
+  assert.equal(state.startupReadonly, true);
+  assert.equal(state.startupReadonlyReason, "scenario-health-gate");
+  assert.equal(state.scenarioHydrationHealthGate.status, "fatal");
+  assert.equal(state.scenarioHydrationHealthGate.reason, "scenario-runtime-topology-unrenderable");
+});
+
+test("startup hydration allows blank scenario runtime topology shells", () => {
+  const state = {
+    activeScenarioId: "blank_base",
+    startupReadonly: false,
+    scenarioHydrationHealthGate: null,
+    scenarioPoliticalChunkData: null,
+    defaultReleasableCatalog: null,
+  };
+  const { hydrateActiveScenarioBundle } = createMinimalHydrationController(state);
+  const blankTopology = {
+    type: "Topology",
+    objects: { political: { type: "GeometryCollection", geometries: [] } },
+    arcs: [],
+  };
+
+  const hydrated = hydrateActiveScenarioBundle({
+    manifest: { scenario_id: "blank_base", map_mode: "blank" },
+    source: { runtime_topology_sha256: "blank-runtime" },
+    bundleLevel: "full",
+    runtimeTopologyPayload: blankTopology,
+  });
+
+  assert.equal(hydrated, true);
+  assert.equal(state.startupReadonly, false);
+  assert.equal(state.scenarioHydrationHealthGate, null);
+  assert.equal(state.runtimePoliticalTopology, blankTopology);
+});
+
+test("startup scenario cache keys change when source sha metadata changes", () => {
+  const common = {
+    scenarioRegistry: { version: 1 },
+    scenarioId: "sample",
+    bundleLevel: "bootstrap",
+    runtimeBootstrapTopologyUrl: "data/scenarios/sample/startup.runtime_shell.topo.json",
+  };
+  const manifestA = {
+    version: 2,
+    baseline_hash: "same",
+    generated_at: "same",
+    source: {
+      runtime_topology_sha256: "full-a",
+      runtime_bootstrap_topology_sha256: "boot-a",
+      detail_chunk_manifest_sha256: "chunks-a",
+    },
+  };
+  const manifestB = {
+    ...manifestA,
+    source: {
+      ...manifestA.source,
+      runtime_bootstrap_topology_sha256: "boot-b",
+    },
+  };
+
+  assert.notEqual(
+    createStartupScenarioBootstrapCoreCacheKey({ ...common, manifest: manifestA }),
+    createStartupScenarioBootstrapCoreCacheKey({ ...common, manifest: manifestB }),
+  );
+  assert.notEqual(
+    createStartupScenarioBootstrapCacheKey({
+      ...common,
+      manifest: manifestA,
+      currentLanguage: "en",
+      geoLocalePatchUrl: "data/scenarios/sample/geo_locale_patch.en.json",
+    }),
+    createStartupScenarioBootstrapCacheKey({
+      ...common,
+      manifest: manifestB,
+      currentLanguage: "en",
+      geoLocalePatchUrl: "data/scenarios/sample/geo_locale_patch.en.json",
+    }),
+  );
+});
 
 test("startup hydration refreshes opening owner borders when full mesh pack arrives", () => {
   const calls = [];

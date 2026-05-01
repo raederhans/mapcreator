@@ -36,6 +36,19 @@ function createScenarioBundleRuntimeController({
 } = {}) {
   const bundleLoadPromisesByKey = new Map();
   const normalizeBundleLoadKeyPart = (value, fallback = "") => String(value ?? fallback).trim() || fallback;
+  const normalizeSourceShaMetadata = (source = null) => {
+    const payload = source && typeof source === "object" ? source : {};
+    return {
+      runtime_topology_sha256: normalizeBundleLoadKeyPart(payload.runtime_topology_sha256),
+      runtime_bootstrap_topology_sha256: normalizeBundleLoadKeyPart(payload.runtime_bootstrap_topology_sha256),
+      detail_chunk_manifest_sha256: normalizeBundleLoadKeyPart(payload.detail_chunk_manifest_sha256),
+    };
+  };
+  const sourceShaMetadataMatches = (left = null, right = null) => {
+    const normalizedLeft = normalizeSourceShaMetadata(left);
+    const normalizedRight = normalizeSourceShaMetadata(right);
+    return Object.keys(normalizedLeft).every((key) => normalizedLeft[key] === normalizedRight[key]);
+  };
 
   function buildBundleLoadKey({
     targetId,
@@ -88,6 +101,12 @@ function createScenarioBundleRuntimeController({
           runtimePoliticalMeta: coreEntry?.payload?.runtimePoliticalMeta || null,
         })
       ) {
+        if (!sourceShaMetadataMatches(manifest?.source, coreEntry?.payload?.source)) {
+          if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
+            state.startupBootCacheState.scenarioBootstrap = "miss-source-sha";
+          }
+          return null;
+        }
         if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
           state.startupBootCacheState.scenarioBootstrap = "hit";
         }
@@ -207,6 +226,7 @@ function createScenarioBundleRuntimeController({
             coresPayload: bundle.coresPayload,
             runtimeTopologyPayload: bundle.runtimeTopologyPayload,
             runtimePoliticalMeta: bundle.runtimePoliticalMeta,
+            source: bundle.source || bundle.manifest?.source || null,
           }),
           keyParts: {
             scenarioId: targetId,

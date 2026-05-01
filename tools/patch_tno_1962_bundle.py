@@ -11584,6 +11584,11 @@ def build_startup_bundle_assets_stage(
                 geo_locale_patch_zh_path=checkpoint_dir / CHECKPOINT_GEO_LOCALE_ZH_FILENAME,
                 output_en_path=checkpoint_dir / CHECKPOINT_STARTUP_BUNDLE_EN_FILENAME,
                 output_zh_path=checkpoint_dir / CHECKPOINT_STARTUP_BUNDLE_ZH_FILENAME,
+                detail_chunk_manifest_path=(
+                    scenario_dir / "detail_chunks.manifest.json"
+                    if (scenario_dir / "detail_chunks.manifest.json").exists()
+                    else None
+                ),
                 report_path=STARTUP_BUNDLE_REPORT_PATH,
             )
             _record_checkpoint_stage_outputs(

@@ -251,6 +251,45 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     with self.subTest(manifest=manifest_relative_path, runtime_path=runtime_path):
                         self.assertIn(f"app/{runtime_path}", dist_paths)
 
+    def test_dist_scenario_manifests_reference_only_published_runtime_files(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+        scenario_manifest_paths = sorted(
+            path for path in dist_paths
+            if path.startswith("app/data/scenarios/") and path.endswith("/manifest.json")
+        )
+        self.assertGreater(len(scenario_manifest_paths), 0)
+        checked_urls = 0
+        for manifest_path in scenario_manifest_paths:
+            manifest = json.loads((REPO_ROOT / "dist" / manifest_path).read_text(encoding="utf-8"))
+            with self.subTest(manifest_path=manifest_path):
+                for key, value in manifest.items():
+                    if key.endswith("_url") and isinstance(value, str) and value.startswith("data/scenarios/"):
+                        checked_urls += 1
+                        self.assertIn(f"app/{value}", dist_paths)
+                detail_manifest_url = manifest.get("detail_chunk_manifest_url")
+                if isinstance(detail_manifest_url, str) and detail_manifest_url:
+                    detail_manifest = json.loads((REPO_ROOT / "dist" / "app" / detail_manifest_url).read_text(encoding="utf-8"))
+                    for chunk in detail_manifest.get("chunks", []):
+                        chunk_url = chunk.get("url") if isinstance(chunk, dict) else ""
+                        if isinstance(chunk_url, str) and chunk_url:
+                            checked_urls += 1
+                            self.assertIn(f"app/{chunk_url}", dist_paths)
+                for language in ("en", "zh"):
+                    bundle_url = manifest.get(f"startup_bundle_url_{language}")
+                    if not isinstance(bundle_url, str) or not bundle_url:
+                        continue
+                    bundle = json.loads((REPO_ROOT / "dist" / "app" / bundle_url).read_text(encoding="utf-8"))
+                    manifest_subset = bundle.get("manifest_subset")
+                    self.assertIsInstance(manifest_subset, dict)
+                    for key, value in manifest_subset.items():
+                        if key.endswith("_url") and isinstance(value, str) and value.startswith("data/scenarios/"):
+                            checked_urls += 1
+                            self.assertIn(f"app/{value}", dist_paths)
+        self.assertGreater(checked_urls, 0)
+
     def test_pages_scenario_metadata_strips_unpublished_audit_urls(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenarios_dir = Path(tmp_dir) / "data" / "scenarios"
@@ -314,6 +353,25 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 "data/scenarios/sample_scenario/countries.json",
             )
             self.assertEqual(gzip_bundle_payload, bundle_payload)
+
+    def test_pages_scenario_url_probe_rejects_empty_manifest_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            previous_app_dist_root = build_pages_dist.APP_DIST_ROOT
+            app_dist_root = Path(tmp_dir) / "app"
+            scenarios_dir = app_dist_root / "data" / "scenarios"
+            scenarios_dir.mkdir(parents=True)
+            (scenarios_dir / "index.json").write_text(
+                json.dumps({"version": 1, "scenarios": [{"scenario_id": "broken", "manifest_url": ""}]}),
+                encoding="utf-8",
+            )
+            build_pages_dist.APP_DIST_ROOT = app_dist_root
+            try:
+                with self.assertRaises(FileNotFoundError) as raised:
+                    build_pages_dist.validate_dist_scenario_startup_urls()
+            finally:
+                build_pages_dist.APP_DIST_ROOT = previous_app_dist_root
+
+            self.assertIn("broken.manifest_url: <empty>", str(raised.exception))
 
     def test_deploy_dist_artifact_preserves_nojekyll(self) -> None:
         workflow_lines = VERIFY_SHARED_WORKFLOW.read_text(encoding="utf-8").splitlines()

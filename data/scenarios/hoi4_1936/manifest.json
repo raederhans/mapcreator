@@ -114,5 +114,10 @@
   "runtime_bootstrap_topology_url": "data/scenarios/hoi4_1936/runtime_topology.bootstrap.topo.json",
   "startup_topology_url": "data/scenarios/hoi4_1936/runtime_topology.bootstrap.topo.json",
   "city_overrides_url": "data/scenarios/hoi4_1936/city_overrides.json",
-  "capital_hints_url": "data/scenarios/hoi4_1936/capital_hints.json"
+  "capital_hints_url": "data/scenarios/hoi4_1936/capital_hints.json",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "runtime_topology_sha256": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53",
+    "runtime_bootstrap_topology_sha256": "4333347ee031e5e94212d3bfb9e87d643a2dca7128f1f6c027617b6020d25b73"
+  }
 }

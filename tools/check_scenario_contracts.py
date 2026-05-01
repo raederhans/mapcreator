@@ -493,6 +493,179 @@ def _load_required_local_json(path: Path, errors: list[str]) -> dict | None:
         return None
 
 
+def _sha256_path(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _resolve_scenario_url(target_dir: Path, url: object, errors: list[str], field_name: str) -> Path | None:
+    value = str(url or "").strip()
+    if not value:
+        errors.append(f"manifest.{field_name} is required in strict mode.")
+        return None
+    path = (PROJECT_ROOT / value).resolve()
+    try:
+        path.relative_to(PROJECT_ROOT.resolve())
+    except ValueError:
+        errors.append(f"manifest.{field_name} must stay under the repository root. Found {value!r}.")
+        return None
+    expected_prefix = f"data/scenarios/{target_dir.name}/"
+    if not PurePosixPath(value).as_posix().startswith(expected_prefix):
+        errors.append(f"manifest.{field_name} must point inside {expected_prefix}. Found {value!r}.")
+        return None
+    if not path.is_file():
+        errors.append(f"manifest.{field_name} points to a missing file: {value}")
+        return None
+    return path
+
+
+def _collect_feature_ids_from_geojson(path: Path, errors: list[str]) -> set[str]:
+    payload = _load_required_local_json(path, errors)
+    if payload is None:
+        return set()
+    features = payload.get("features")
+    if not isinstance(features, list):
+        errors.append(f"chunk payload must be a FeatureCollection with features at {path}.")
+        return set()
+    ids: set[str] = set()
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        props = feature.get("properties") if isinstance(feature.get("properties"), dict) else {}
+        # Detail GeoJSON may use top-level numeric feature ids for transport
+        # order, while properties.id carries the runtime topology identity.
+        feature_id = str(props.get("id") or feature.get("id") or "").strip()
+        if feature_id:
+            ids.add(feature_id)
+    return ids
+
+
+def _validate_source_metadata(
+    target_dir: Path,
+    manifest: dict,
+    errors: list[str],
+    *,
+    runtime_topology_path: Path,
+    bootstrap_topology_path: Path | None,
+    detail_chunk_manifest_path: Path | None,
+) -> None:
+    source = manifest.get("source")
+    if not isinstance(source, dict):
+        errors.append("manifest.source must be an object in strict mode.")
+        return
+    required_sha_fields = ["base_topology_sha256", "runtime_topology_sha256"]
+    if bootstrap_topology_path is not None:
+        required_sha_fields.append("runtime_bootstrap_topology_sha256")
+    if detail_chunk_manifest_path is not None:
+        required_sha_fields.append("detail_chunk_manifest_sha256")
+    missing = [field for field in required_sha_fields if not str(source.get(field) or "").strip()]
+    if missing:
+        errors.append(f"manifest.source is missing required sha fields in strict mode: {missing}.")
+    base_topology_path = PROJECT_ROOT / "data" / "europe_topology.json"
+    actual_by_field = {
+        "runtime_topology_sha256": _sha256_path(runtime_topology_path),
+    }
+    if base_topology_path.exists():
+        actual_by_field["base_topology_sha256"] = _sha256_path(base_topology_path)
+    else:
+        errors.append(f"base topology source file is missing in strict mode: {base_topology_path}.")
+    if bootstrap_topology_path is not None:
+        actual_by_field["runtime_bootstrap_topology_sha256"] = _sha256_path(bootstrap_topology_path)
+    if detail_chunk_manifest_path is not None:
+        actual_by_field["detail_chunk_manifest_sha256"] = _sha256_path(detail_chunk_manifest_path)
+    for field, actual_sha in actual_by_field.items():
+        expected_sha = str(source.get(field) or "").strip()
+        if expected_sha and expected_sha != actual_sha:
+            errors.append(
+                f"manifest.source.{field} must match the checked-in artifact sha. "
+                f"manifest={expected_sha} actual={actual_sha}."
+            )
+
+
+def _validate_runtime_shell_topology(
+    path: Path,
+    errors: list[str],
+    field_name: str,
+    manifest: dict,
+    *,
+    require_overlay_shell_objects: bool,
+) -> None:
+    payload = _load_required_local_json(path, errors)
+    if payload is None:
+        return
+    objects = payload.get("objects")
+    if not isinstance(objects, dict):
+        errors.append(f"{field_name} payload must contain objects at {path}.")
+        return
+    if str(manifest.get("map_mode") or "").strip().lower() != "blank":
+        political_geometries = objects.get("political", {}).get("geometries") if isinstance(objects.get("political"), dict) else None
+        if not isinstance(political_geometries, list) or not political_geometries:
+            errors.append(f"{field_name} must contain non-empty objects.political.geometries in strict mode.")
+    if require_overlay_shell_objects:
+        for object_name in ("land_mask", "context_land_mask", "scenario_water"):
+            if object_name not in objects:
+                errors.append(f"{field_name} must contain objects.{object_name} in strict mode.")
+
+
+def _validate_detail_chunk_manifest(
+    target_dir: Path,
+    detail_manifest_path: Path,
+    runtime_feature_ids: set[str],
+    errors: list[str],
+) -> None:
+    payload = _load_required_local_json(detail_manifest_path, errors)
+    if payload is None:
+        return
+    chunks = payload.get("chunks")
+    if not isinstance(chunks, list) or not chunks:
+        errors.append("detail_chunks.manifest.json must contain a non-empty chunks list in strict mode.")
+        return
+    seen_ids: set[str] = set()
+    duplicate_ids: list[str] = []
+    political_ids: set[str] = set()
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            errors.append("detail_chunks.manifest.json chunks entries must be objects.")
+            continue
+        chunk_id = str(chunk.get("id") or "").strip()
+        if not chunk_id:
+            errors.append("detail chunk entry is missing id.")
+            continue
+        if chunk_id in seen_ids:
+            duplicate_ids.append(chunk_id)
+        seen_ids.add(chunk_id)
+        chunk_url = str(chunk.get("url") or "").strip()
+        chunk_path = _resolve_scenario_url(target_dir, chunk_url, errors, f"detail_chunk[{chunk_id}].url")
+        if chunk_path is None:
+            continue
+        expected_byte_size = chunk.get("byte_size")
+        try:
+            expected_byte_size_int = int(expected_byte_size)
+        except (TypeError, ValueError):
+            errors.append(f"detail chunk {chunk_id} byte_size must be an integer.")
+            expected_byte_size_int = None
+        if expected_byte_size_int is not None and expected_byte_size_int != chunk_path.stat().st_size:
+            errors.append(
+                f"detail chunk {chunk_id} byte_size must match file size. "
+                f"manifest={expected_byte_size_int} actual={chunk_path.stat().st_size}."
+            )
+        if str(chunk.get("layer") or "").strip() == "political":
+            political_ids.update(_collect_feature_ids_from_geojson(chunk_path, errors))
+    if duplicate_ids:
+        errors.append(f"detail chunk ids must be unique. Duplicates: {sorted(set(duplicate_ids))[:10]}.")
+    illegal_chunk_ids = sorted(political_ids - runtime_feature_ids)
+    if illegal_chunk_ids:
+        errors.append(
+            "political detail chunk feature ids must belong to full runtime political ids. "
+            f"Sample: {illegal_chunk_ids[:10]}."
+        )
+
+
 def _extract_runtime_political_feature_ids(runtime_payload: dict, errors: list[str], runtime_path: Path) -> set[str]:
     objects = runtime_payload.get("objects")
     if not isinstance(objects, dict):
@@ -615,6 +788,56 @@ def validate_strict_bundle_contract(
         )
 
     runtime_feature_ids = _extract_runtime_political_feature_ids(runtime_payload, errors, target_dir / "runtime_topology.topo.json")
+    runtime_topology_path = target_dir / "runtime_topology.topo.json"
+    bootstrap_topology_path = None
+    source_bootstrap_topology_path = None
+    detail_chunk_manifest_path = None
+    runtime_bootstrap_url = str(manifest.get("runtime_bootstrap_topology_url") or "").strip()
+    startup_topology_url = str(manifest.get("startup_topology_url") or "").strip()
+    detail_chunk_manifest_url = str(manifest.get("detail_chunk_manifest_url") or "").strip()
+    has_startup_bundle_urls = any(
+        str(manifest.get(field_name) or "").strip()
+        for field_name in ("startup_bundle_url_en", "startup_bundle_url_zh")
+    )
+    require_overlay_shell_objects = bool(detail_chunk_manifest_url or has_startup_bundle_urls)
+    if runtime_bootstrap_url:
+        bootstrap_topology_path = _resolve_scenario_url(target_dir, runtime_bootstrap_url, errors, "runtime_bootstrap_topology_url")
+        if bootstrap_topology_path is not None:
+            _validate_runtime_shell_topology(
+                bootstrap_topology_path,
+                errors,
+                "runtime_bootstrap_topology_url",
+                manifest,
+                require_overlay_shell_objects=False,
+            )
+            source_bootstrap_topology_path = bootstrap_topology_path
+    if startup_topology_url:
+        startup_topology_path = _resolve_scenario_url(target_dir, startup_topology_url, errors, "startup_topology_url")
+        if startup_topology_path is not None:
+            _validate_runtime_shell_topology(
+                startup_topology_path,
+                errors,
+                "startup_topology_url",
+                manifest,
+                require_overlay_shell_objects=require_overlay_shell_objects,
+            )
+            source_bootstrap_topology_path = startup_topology_path
+    if detail_chunk_manifest_url:
+        detail_chunk_manifest_path = _resolve_scenario_url(target_dir, detail_chunk_manifest_url, errors, "detail_chunk_manifest_url")
+        if detail_chunk_manifest_path is not None:
+            _validate_detail_chunk_manifest(target_dir, detail_chunk_manifest_path, runtime_feature_ids, errors)
+    if detail_chunk_manifest_url and (not runtime_bootstrap_url or not startup_topology_url):
+        errors.append(
+            "chunked scenario manifests must define runtime_bootstrap_topology_url and startup_topology_url in strict mode."
+        )
+    _validate_source_metadata(
+        target_dir,
+        manifest,
+        errors,
+        runtime_topology_path=runtime_topology_path,
+        bootstrap_topology_path=source_bootstrap_topology_path,
+        detail_chunk_manifest_path=detail_chunk_manifest_path,
+    )
     missing_runtime_ids = sorted(owner_ids - runtime_feature_ids)
     if missing_runtime_ids:
         errors.append(

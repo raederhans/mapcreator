@@ -205,5 +205,11 @@
     "max_required_political_byte_size": 12000000
   },
   "startup_bundle_url_en": "data/scenarios/tno_1962/startup.bundle.en.json",
-  "startup_bundle_url_zh": "data/scenarios/tno_1962/startup.bundle.zh.json"
+  "startup_bundle_url_zh": "data/scenarios/tno_1962/startup.bundle.zh.json",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "runtime_topology_sha256": "9ea46d951d006811959476e7cdc835c376c043164ce5c5f333cb32b612eb1ab0",
+    "runtime_bootstrap_topology_sha256": "f69cd22bea65d6bb0145dbf515e1ef6f7d3a77113b62a6f0c44bfe00e2ba40e8",
+    "detail_chunk_manifest_sha256": "0d4e5d385ea970ad6acfc5588998eca175ad87c6811bd7b1e3c0a6c7f73d6bee"
+  }
 }

@@ -126,5 +126,11 @@
   "startup_bootstrap_strategy": "chunked-coarse-first",
   "geo_locale_patch_url": "data/scenarios/hoi4_1939/geo_locale_patch.json",
   "geo_locale_patch_url_en": "data/scenarios/hoi4_1939/geo_locale_patch.en.json",
-  "geo_locale_patch_url_zh": "data/scenarios/hoi4_1939/geo_locale_patch.zh.json"
+  "geo_locale_patch_url_zh": "data/scenarios/hoi4_1939/geo_locale_patch.zh.json",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "runtime_topology_sha256": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53",
+    "runtime_bootstrap_topology_sha256": "2cfbb70e2febcb403bdb75ce263a5639df26b14d917abf87bfd20ee6b6f819c6",
+    "detail_chunk_manifest_sha256": "2a99827cdbb964f202bf7243d797fe60e4fd73a69ef2504c57b5154875c90e0f"
+  }
 }

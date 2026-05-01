@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -17,6 +18,10 @@ from tools.check_scenario_contracts import (
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _sha256_path(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _build_minimal_manifest(
@@ -135,19 +140,26 @@ def _write_strict_bundle_files(
     controllers_payload = controllers if controllers is not None else {"F-1": "AAA", "F-2": "AAA"}
     cores_payload = cores if cores is not None else {"F-1": ["AAA"], "F-2": ["AAA"]}
     runtime_ids = runtime_feature_ids if runtime_feature_ids is not None else ["F-1", "F-2"]
+    project_root = scenario_dir.parents[2]
+    base_topology_path = project_root / "data" / "europe_topology.json"
+    if not base_topology_path.exists():
+        _write_json(
+            base_topology_path,
+            {
+                "type": "Topology",
+                "objects": {},
+                "arcs": [],
+            },
+        )
 
     manifest_path = scenario_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest["summary"] = {
-        **(manifest.get("summary") or {}),
-        "feature_count": manifest_feature_count if manifest_feature_count is not None else len(owners_payload),
-    }
-    _write_json(manifest_path, manifest)
     _write_json(scenario_dir / "owners.by_feature.json", {"owners": owners_payload})
     _write_json(scenario_dir / "controllers.by_feature.json", {"controllers": controllers_payload})
     _write_json(scenario_dir / "cores.by_feature.json", {"cores": cores_payload})
+    runtime_topology_path = scenario_dir / "runtime_topology.topo.json"
     _write_json(
-        scenario_dir / "runtime_topology.topo.json",
+        runtime_topology_path,
         {
             "type": "Topology",
             "objects": {
@@ -166,6 +178,17 @@ def _write_strict_bundle_files(
             "arcs": [],
         },
     )
+    manifest["summary"] = {
+        **(manifest.get("summary") or {}),
+        "feature_count": manifest_feature_count if manifest_feature_count is not None else len(owners_payload),
+    }
+    runtime_topology_sha = _sha256_path(runtime_topology_path)
+    manifest["source"] = {
+        **(manifest.get("source") or {}),
+        "base_topology_sha256": _sha256_path(base_topology_path),
+        "runtime_topology_sha256": runtime_topology_sha,
+    }
+    _write_json(manifest_path, manifest)
 
 
 class ScenarioContractTest(unittest.TestCase):
@@ -580,6 +603,72 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertTrue(any("must store arrays for every feature" in error for error in errors))
             self.assertTrue(any("feature_count must equal owners feature count" in error for error in errors))
             self.assertTrue(any("may only exceed the feature maps with shell fallback ids" in error for error in errors))
+
+    def test_validate_scenario_contract_strict_mode_rejects_unrenderable_bootstrap_shell(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "strict_shell")
+            _write_strict_bundle_files(
+                scenario_dir,
+                owners={"F-1": "AAA"},
+                controllers={"F-1": "AAA"},
+                cores={"F-1": ["AAA"]},
+                runtime_feature_ids=["F-1"],
+                manifest_feature_count=1,
+            )
+            shell_path = scenario_dir / "runtime_topology.bootstrap.topo.json"
+            _write_json(
+                shell_path,
+                {
+                    "type": "Topology",
+                    "objects": {
+                        "land_mask": {"type": "GeometryCollection", "geometries": []},
+                        "context_land_mask": {"type": "GeometryCollection", "geometries": []},
+                        "scenario_water": {"type": "GeometryCollection", "geometries": []},
+                    },
+                    "arcs": [],
+                },
+            )
+            manifest_path = scenario_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["runtime_bootstrap_topology_url"] = "data/scenarios/strict_shell/runtime_topology.bootstrap.topo.json"
+            manifest["startup_topology_url"] = "data/scenarios/strict_shell/runtime_topology.bootstrap.topo.json"
+            manifest["source"]["runtime_bootstrap_topology_sha256"] = _sha256_path(shell_path)
+            _write_json(manifest_path, manifest)
+
+            try:
+                errors, warnings = validate_scenario_contract(scenario_dir, {}, strict=True)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(warnings, [])
+            self.assertTrue(
+                any("must contain non-empty objects.political.geometries" in error for error in errors)
+            )
+
+    def test_validate_scenario_contract_strict_mode_rejects_base_topology_sha_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "strict_source")
+            _write_strict_bundle_files(scenario_dir)
+            manifest_path = scenario_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["source"]["base_topology_sha256"] = "0" * 64
+            _write_json(manifest_path, manifest)
+
+            try:
+                errors, warnings = validate_scenario_contract(scenario_dir, {}, strict=True)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(warnings, [])
+            self.assertTrue(
+                any("manifest.source.base_topology_sha256 must match" in error for error in errors)
+            )
 
     def test_validate_scenario_contract_strict_mode_rejects_unreviewed_geo_locale_collisions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

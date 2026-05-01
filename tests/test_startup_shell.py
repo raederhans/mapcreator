@@ -42,6 +42,9 @@ class StartupShellTest(unittest.TestCase):
             REPO_ROOT / "js" / "core" / "scenario_post_apply_effects.js"
         ).read_text(encoding="utf-8")
         scenario_manager_js = (REPO_ROOT / "js" / "core" / "scenario_manager.js").read_text(encoding="utf-8")
+        scenario_bundle_loader_js = (
+            REPO_ROOT / "js" / "core" / "scenario" / "bundle_loader.js"
+        ).read_text(encoding="utf-8")
 
         self.assertIn('import { initPresetState } from "./core/preset_state.js";', main_js)
         self.assertNotRegex(main_js, r'import\s+\{\s*initSidebar')
@@ -82,8 +85,10 @@ class StartupShellTest(unittest.TestCase):
         self.assertIn('await ensureChunkedScenarioFirstFrameReady({ bundle, scenarioId });', scenario_post_apply_effects_js)
         self.assertIn('runtimeState.countryNames = staged.mapSemanticMode === "blank"', scenario_apply_pipeline_js)
         self.assertIn(': { ...staged.scenarioNameMap };', scenario_apply_pipeline_js)
-        self.assertIn('normalizeIndexedTagAssignmentPayload', scenario_manager_js)
-        self.assertIn('normalizeIndexedCoreAssignmentPayload', scenario_manager_js)
+        self.assertNotIn('normalizeIndexedTagAssignmentPayload', scenario_manager_js)
+        self.assertNotIn('normalizeIndexedCoreAssignmentPayload', scenario_manager_js)
+        self.assertIn('normalizeIndexedTagAssignmentPayload', scenario_bundle_loader_js)
+        self.assertIn('normalizeIndexedCoreAssignmentPayload', scenario_bundle_loader_js)
         self.assertIn('consumeStartupSupportKeyUsageAuditReport', startup_bootstrap_support_js)
         self.assertIn('/__dev/startup-support/key-usage-report', startup_bootstrap_support_js)
         self.assertIn('STARTUP_SUPPORT_AUDIT_PARAM', startup_bootstrap_support_js)

@@ -83,6 +83,13 @@ export function createDefaultScenarioHydrationHealthGate() {
   };
 }
 
+export const SCENARIO_HYDRATION_HEALTH_REASONS = Object.freeze({
+  ok: "ok",
+  ownerFeatureMismatch: "owner-feature-mismatch",
+  missingRuntimeSourceSha: "missing-runtime-source-sha",
+  runtimeTopologyUnrenderable: "scenario-runtime-topology-unrenderable",
+});
+
 export function setHydratedScenarioRuntimeTopologyState(
   target,
   {
