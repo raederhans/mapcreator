@@ -65,6 +65,30 @@ jobs:
         if: inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke'
         run: npm ci
 
+      - name: Explain verification selector
+        if: inputs.profile == 'pr-fast'
+        shell: bash
+        run: |
+          mkdir -p .runtime/tmp .runtime/reports/generated
+          changed_files=.runtime/tmp/verification-selector-changed-files.txt
+          : > "$changed_files"
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}" || true
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > "$changed_files" || true
+          else
+            git diff --name-only HEAD^ HEAD > "$changed_files" || true
+          fi
+          node tools/select_verification_targets.mjs --check
+          node tools/select_verification_targets.mjs --changed-files-list "$changed_files" --json-out .runtime/reports/generated/verification-selector-explain.json --md-out .runtime/reports/generated/verification-selector-explain.md
+
+      - name: Upload verification selector explain
+        if: always() && inputs.profile == 'pr-fast'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verification-selector-explain
+          if-no-files-found: ignore
+          path: .runtime/reports/generated/verification-selector-explain.*
+
       - name: Cache Playwright browsers
         if: (inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

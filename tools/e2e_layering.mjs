@@ -2,10 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import process from "node:process";
+import { buildE2eRoutes } from "./test_route_registry.mjs";
 
 const REPO_ROOT = process.cwd();
 const MANIFEST_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-layer-manifest.json");
 const TEST_LIST_DIR = path.join(REPO_ROOT, "tests", "e2e", "test-lists");
+const RUNTIME_TEST_LIST_DIR = path.join(REPO_ROOT, ".runtime", "tests", "e2e-lists");
 const PLAYWRIGHT_CLI = path.join(REPO_ROOT, "node_modules", "@playwright", "test", "cli.js");
 const VALID_LAYERS = new Set(["smoke", "contract", "regression", "feature"]);
 const VALID_EXECUTION_MODES = new Set(["browser", "hybrid", "static-contract"]);
@@ -131,17 +133,26 @@ function validateManifest() {
   return { specs, expectedLists };
 }
 
-function writeTestLists() {
+function writeLayerTestLists(outputDir = TEST_LIST_DIR) {
   const { specs, expectedLists } = validateManifest();
-  fs.mkdirSync(TEST_LIST_DIR, { recursive: true });
+  fs.mkdirSync(outputDir, { recursive: true });
 
   for (const layer of LAYER_ORDER) {
     const entries = expectedLists.get(layer);
-    const filePath = path.join(TEST_LIST_DIR, `${layer}.txt`);
+    const filePath = path.join(outputDir, `${layer}.txt`);
     fs.writeFileSync(filePath, `${entries.join("\n")}\n`, "utf8");
   }
 
   return specs.length;
+}
+
+function writeFilteredTestList(name, specs) {
+  validateManifest();
+  fs.mkdirSync(RUNTIME_TEST_LIST_DIR, { recursive: true });
+  const filePath = path.join(RUNTIME_TEST_LIST_DIR, `${name}.txt`);
+  const entries = specs.map((spec) => toTestListEntry(spec.specPath)).sort();
+  fs.writeFileSync(filePath, `${entries.join("\n")}\n`, "utf8");
+  return filePath;
 }
 
 function checkGeneratedTestLists() {
@@ -164,9 +175,9 @@ function checkGeneratedTestLists() {
 
 function runLayer(layer, extraArgs) {
   ensure(LAYER_ORDER.includes(layer), `Unknown layer: ${layer}`);
-  writeTestLists();
+  writeLayerTestLists(RUNTIME_TEST_LIST_DIR);
 
-  const testListPath = path.join(TEST_LIST_DIR, `${layer}.txt`);
+  const testListPath = path.join(RUNTIME_TEST_LIST_DIR, `${layer}.txt`);
   const cliArgs = [PLAYWRIGHT_CLI, "test", `--test-list=${testListPath}`, "--reporter=list"];
 
   // smoke 的 workers / retries 约束只在脚本层实现，不改全局 Playwright 配置。
@@ -188,12 +199,50 @@ function runLayer(layer, extraArgs) {
   process.exit(1);
 }
 
+
+function specsForField(field, value) {
+  const { specs } = validateManifest();
+  const matches = specs.filter((spec) => spec[field] === value);
+  ensure(matches.length > 0, `No E2E specs found for ${field}=${value}.`);
+  return matches;
+}
+
+function listSpecsForField(field, value) {
+  const matches = specsForField(field, value);
+  for (const spec of matches) {
+    console.log(`${spec.specPath}	${spec.primaryLayer}	${spec.domain}	${spec.ownerHint}`);
+  }
+}
+
+function runSpecs(name, specs, extraArgs) {
+  const testListPath = writeFilteredTestList(name, specs);
+  const cliArgs = [PLAYWRIGHT_CLI, "test", `--test-list=${testListPath}`, "--reporter=list", "--workers=1", "--retries=0", ...extraArgs];
+  const result = spawnSync(process.execPath, cliArgs, {
+    stdio: "inherit",
+    cwd: REPO_ROOT,
+  });
+
+  if (typeof result.status === "number") {
+    process.exit(result.status);
+  }
+
+  process.exit(1);
+}
+
+function explainSpec(specPath) {
+  validateManifest();
+  const normalizedPath = toRepoPath(specPath);
+  const route = buildE2eRoutes().find((candidate) => candidate.sourceRef === normalizedPath);
+  ensure(route, `No E2E route found for ${normalizedPath}.`);
+  console.log(JSON.stringify(route, null, 2));
+}
+
 function main() {
   const [, , command, maybeLayer, ...restArgs] = process.argv;
 
   switch (command) {
     case "generate": {
-      const count = writeTestLists();
+      const count = writeLayerTestLists(TEST_LIST_DIR);
       console.log(`Generated ${LAYER_ORDER.length} test lists from ${count} manifest entries.`);
       return;
     }
@@ -206,9 +255,28 @@ function main() {
       runLayer(maybeLayer, extraArgs);
       return;
     }
+    case "list-domain":
+      listSpecsForField("domain", maybeLayer);
+      return;
+    case "run-domain": {
+      const extraArgs = restArgs[0] === "--" ? restArgs.slice(1) : restArgs;
+      runSpecs(`domain-${maybeLayer}`, specsForField("domain", maybeLayer), extraArgs);
+      return;
+    }
+    case "list-owner":
+      listSpecsForField("ownerHint", maybeLayer);
+      return;
+    case "run-owner": {
+      const extraArgs = restArgs[0] === "--" ? restArgs.slice(1) : restArgs;
+      runSpecs(`owner-${maybeLayer}`, specsForField("ownerHint", maybeLayer), extraArgs);
+      return;
+    }
+    case "explain":
+      explainSpec(maybeLayer);
+      return;
   }
 
-  throw new Error("Usage: node tools/e2e_layering.mjs <generate|check|run <layer>>");
+  throw new Error("Usage: node tools/e2e_layering.mjs <generate|check|run <layer>|list-domain <domain>|run-domain <domain>|list-owner <owner>|run-owner <owner>|explain <specPath>>");
 }
 
 main();

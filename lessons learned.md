@@ -1311,3 +1311,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 2026-04-30 - 发布态元数据必须和 allowlist 同步
 - Pages 排除大体积诊断或本地专用 runtime 文件时，要同步清理 dist 中 manifest/index 的 URL 字段，并用测试校验 URL 不指向缺失文件。
 - 严格场景合同要同时检查 runtime topology 与 owners/controllers/cores keyset，避免旧 feature map 靠缺失 topology 长期隐藏。
+
+### 37. 测试路由 selector 要把“列表文件”和“变更文件”分成两个入口
+- 如果 `--changed-files` 同时可能表示列表文件和单个变更文件，agent 很容易把源码内容当成 changed file 列表，推荐结果会严重失真。
+- 更稳的做法是：列表文件用 `--changed-files-list`，单个路径用普通参数或 `--changed-file`；CI artifact 生成前先跑 selector `--check`，确保 route metadata 已经通过 schema 校验。
