@@ -122,6 +122,8 @@ function normalizeScenarioImportAudit(
   } = {}
 ) {
   if (!rawAudit || typeof rawAudit !== "object") return null;
+  // import audit 不是业务内容，而是“这个存档和当前 scenario baseline 是否还是同一条世界线”的对账单。
+  // 字段不完整就直接丢弃，避免半旧半新的审计信息误导后续导入判断。
   const normalizedScenarioId = String(rawAudit.scenarioId || scenarioId || "").trim();
   const normalizedSavedVersion = Number(rawAudit.savedVersion || savedVersion || 1) || 1;
   const normalizedCurrentVersion = Number(rawAudit.currentVersion || currentVersion || normalizedSavedVersion || 1) || 1;
@@ -180,6 +182,8 @@ function normalizeManualSpecialZoneGeometry(rawGeometry) {
   if (!rawGeometry || typeof rawGeometry !== "object") return null;
   const geometryType = String(rawGeometry.type || "").trim();
   if (geometryType !== "Polygon" && geometryType !== "MultiPolygon") return null;
+  // 手工 special zone 来自项目文件，必须在导入边界做预算裁剪；
+  // 否则异常大的坐标集合会把问题一路带进运行时编辑链。
   const coordinateBudget = { remaining: MAX_MANUAL_SPECIAL_ZONE_COORDINATES_PER_FEATURE };
 
   if (geometryType === "Polygon") {
@@ -398,6 +402,8 @@ function normalizeUnitCounters(rawCounters) {
 class FileManager {
   static exportProject(appState) {
     if (!appState) return;
+    // export 的职责是把当前 runtimeState 收敛成稳定 schema。
+    // 这里宁可集中做一次 normalize，也不要让读取方承担多套历史字段和 UI 派生状态。
     const payload = {
       schemaVersion: 20,
       countryBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
@@ -519,6 +525,8 @@ class FileManager {
         }
         data = migrateImportedProjectData(data);
 
+        // import 是旧 schema、缺省字段和 UI/场景派生状态重新归一化的唯一入口。
+        // 回调拿到的必须已经是可直接进入运行时的稳定形态，避免把兼容判断分散到各个调用点。
         // Backward compatibility: v1 only had `colors`.
         if (data.colors && !data.featureOverrides && !data.countryBaseColors) {
           data.featureOverrides = data.colors;

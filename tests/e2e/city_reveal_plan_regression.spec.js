@@ -11,6 +11,7 @@ const IGNORED_CONSOLE_PATTERNS = [
   /\[scenario\] Applying bundle without confirmed detail promotion/i,
   /\[scenario\] Detail visibility gate triggered for tno_1962/i,
   /\[map_renderer\] scenario_owner_only borders unavailable for scenario=tno_1962/i,
+  /^\[map_renderer\] Removed 2 D3-unsafe water geometry part\(s\): marine_arctic_ocean, marine_southern_ocean$/,
   /startup\.bundle\.en\.json\.gz was preloaded using link preload but not used/i,
   /europe_topology\.json was preloaded using link preload but not used/i,
 ];

@@ -1317,3 +1317,11 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 更稳的做法是：列表文件用 `--changed-files-list`，单个路径用普通参数或 `--changed-file`；CI artifact 生成前先跑 selector `--check`，确保 route metadata 已经通过 schema 校验。
 ### 2026-05-01 - runtime topology source identity
 - runtime topology 的 source sha 要同时进入 runtime tag、startup persistent cache key、builder wrapper 和 strict checker；只改前端 identity 会让旧 cache 或重建入口继续产生过期包。
+
+### 2026-05-01 - E2E 视觉采样要等真实 canvas 稳定
+- 去掉固定 sleep 后，视觉类 E2E 要同时等待 scenario apply、chunk promotion、exact-after-settle、zoom/render timer 和双帧 RAF；只等 renderPhase idle 会在整域顺序里采到前一轮残留帧。
+- canvas 采样点要把 CSS 坐标换算到 backing canvas 尺寸，否则高 DPR/缩放下亮度断言会测错区域。
+
+### 2026-05-01 - comment-only 任务也要先核对换行风格
+- `apply_patch` 后如果 `git diff --numstat` 突然显示整文件大面积替换，先检查是不是 LF/CRLF 漂移，不要急着把噪音 diff 留在提交里。
+- 对老文件补注释时，最终要回到仓库原本的换行风格，再做语法校验和留档回写。

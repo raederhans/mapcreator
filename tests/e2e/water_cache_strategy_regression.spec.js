@@ -1,7 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
+const {
+  gotoApp,
+  waitForAppInteractive,
+  waitForScenarioApplyIdle,
+  waitForRenderIdle,
+} = require("./support/playwright-app");
 
 test.setTimeout(120_000);
 
@@ -18,21 +23,11 @@ function getPathForWaterCacheMode(mode) {
 }
 
 async function waitForScenarioManagerIdle(page) {
-  await page.waitForFunction(async () => {
-    const { state } = await import("/js/core/state.js");
-    return !state.scenarioApplyInFlight
-      && !state.startupReadonly
-      && !state.startupReadonlyUnlockInFlight;
-  }, { timeout: 120_000 });
+  await waitForScenarioApplyIdle(page, { timeout: 120_000 });
 }
 
 async function waitForStableExactRender(page, { timeout = 30_000 } = {}) {
-  await page.waitForFunction(async () => {
-    const { state } = await import("/js/core/state.js");
-    return String(state.renderPhase || "") === "idle"
-      && !state.deferExactAfterSettle
-      && !state.exactAfterSettleHandle;
-  }, { timeout });
+  await waitForRenderIdle(page, { timeout });
 }
 
 async function ensureScenario(page, scenarioId, label) {
@@ -57,7 +52,8 @@ async function ensureScenario(page, scenarioId, label) {
   }
 
   await expect(page.locator("#scenarioStatus")).toContainText(label, { timeout: 20_000 });
-  await page.waitForTimeout(800);
+  await waitForScenarioApplyIdle(page, { scenarioId, timeout: 120_000 });
+  await waitForRenderIdle(page, { scenarioId, timeout: 120_000 });
 }
 
 async function ensureWaterInspectorOpen(page) {
@@ -78,7 +74,7 @@ async function dragMap(page, { dx = 180, dy = 28, steps = 8 } = {}) {
   await page.mouse.down();
   await page.mouse.move(startX + dx, startY + dy, { steps });
   await page.mouse.up();
-  await page.waitForTimeout(700);
+  await waitForRenderIdle(page, { timeout: 30_000 });
 }
 
 async function zoomMap(page, percent) {
@@ -86,7 +82,7 @@ async function zoomMap(page, percent) {
     const { setZoomPercent } = await import("/js/core/map_renderer.js");
     setZoomPercent(targetPercent);
   }, percent);
-  await page.waitForTimeout(800);
+  await waitForRenderIdle(page, { timeout: 30_000 });
 }
 
 async function selectWaterRegionByName(page, searchValue, expectedName) {
@@ -141,17 +137,27 @@ async function hoverWaterFeatureOnMap(page, featureId) {
     throw new Error(`Unable to compute map hover point for feature ${featureId}`);
   }
 
-  await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 6 });
-  await page.waitForTimeout(500);
+  await expect.poll(async () => {
+    await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 2 });
+    return page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const current = state.hoveredWaterRegionId;
+    return current ? String(current) : null;
+    });
+  }, { timeout: 30_000 }).toBe(featureId);
+  await waitForRenderIdle(page, { timeout: 30_000 });
 }
 
-async function toggleOpenOceanSwitch(page) {
-  const toggle = page.locator("#toggleOpenOceanRegions");
-  await expect(toggle).toBeVisible();
-  await toggle.click();
-  await page.waitForTimeout(400);
-  await toggle.click();
-  await page.waitForTimeout(500);
+async function enableOpenOceanInteraction(page) {
+  await ensureWaterInspectorOpen(page);
+  const selectToggle = page.locator("#waterInspectorOpenOceanSelectToggle");
+  const paintToggle = page.locator("#waterInspectorOpenOceanPaintToggle");
+  await expect(selectToggle).toBeVisible();
+  await expect(paintToggle).toBeVisible();
+
+  await selectToggle.setChecked(true);
+  await paintToggle.setChecked(true);
+  await waitForRenderIdle(page, { timeout: 30_000 });
 }
 
 async function readWaterRuntimeSnapshot(page) {
@@ -212,7 +218,7 @@ for (const mode of WATER_CACHE_MODES) {
     const afterHover = await readWaterRuntimeSnapshot(page);
     exactRefreshTimeline.push(afterHover.contextScenarioExactRefreshCount);
 
-    await toggleOpenOceanSwitch(page);
+    await enableOpenOceanInteraction(page);
     await waitForStableExactRender(page);
     const afterToggle = await readWaterRuntimeSnapshot(page);
     exactRefreshTimeline.push(afterToggle.contextScenarioExactRefreshCount);

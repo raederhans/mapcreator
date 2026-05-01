@@ -83,6 +83,10 @@ export function createStartupDataPipelineOwner({
   state,
   helpers = {},
 } = {}) {
+  // 这个 owner 只负责“启动期把数据送进 state”：
+  // - base 资源首屏注入
+  // - ready 之后按需补齐完整本地化 / 场景 bundle / context layers
+  // 真正的地图渲染、场景 apply 和 ready 解锁仍由其他 owner 持有。
   const {
     checkpointBootMetric,
     finishBootMetric,
@@ -310,6 +314,8 @@ export function createStartupDataPipelineOwner({
     requestedLayerNames,
     { reason = "manual", renderNow = true } = {}
   ) {
+    // 这里把“已在 topology 内的层”和“需要额外请求的 deferred pack”统一成同一个调用面，
+    // 上层不必关心某个图层究竟来自首屏拓扑还是后续外部资源。
     const layerNames = expandDeferredContextLayerNames(requestedLayerNames);
     const results = {};
     const pendingEntries = [];
@@ -445,6 +451,10 @@ export function createStartupDataPipelineOwner({
    * 状态副作用字段：返回启动 promise 组合，驱动后续 scenarioBundle/source 选择与 fallback 路径。
    */
   function resolveStartupScenarioBootstrap({ d3Client } = {}) {
+    // 启动场景有两条来源：
+    // 1) 优先走 startup bundle worker，尽量把首屏所需数据一次带齐；
+    // 2) 若 bundle 缺失或 contract 不达标，则回退到 legacy bootstrap bundle。
+    // 返回 promise 组而不是直接 await，是为了让主启动链能并行准备 registry、bundle 和 fallback 信息。
     const configuredDefaultScenarioId = getConfiguredDefaultScenarioId();
     const scenarioRegistryPromise = loadScenarioRegistry({ d3Client });
     const registryDefaultScenarioIdPromise = configuredDefaultScenarioId
@@ -618,6 +628,8 @@ export function createStartupDataPipelineOwner({
     persistViewSettingsFn,
     startupBaseData,
   } = {}) {
+    // 这里是启动链真正把 base payload 落到 runtimeState 的收口点。
+    // 后续模块不该重复猜测这些字段来自哪里，而应通过这里注册的 hook 继续按需补齐。
     const {
       topology,
       topologyPrimary,

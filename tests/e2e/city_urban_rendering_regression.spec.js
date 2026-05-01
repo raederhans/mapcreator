@@ -1,7 +1,13 @@
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
+const {
+  gotoApp,
+  waitForAppInteractive,
+  waitForShellReady,
+  waitForScenarioApplyIdle,
+  waitForRenderIdle,
+} = require("./support/playwright-app");
 
 test.setTimeout(90_000);
 const IGNORED_CONSOLE_PATTERNS = [
@@ -48,13 +54,7 @@ async function setInputValue(page, id, value) {
 }
 
 async function waitForMapReady(page) {
-  await page.waitForFunction(() => {
-    const select = document.querySelector("#scenarioSelect");
-    const canvas = Array.from(document.querySelectorAll("canvas"))
-      .find((entry) => entry.width >= 200 && entry.height >= 120 && getComputedStyle(entry).display !== "none");
-    return !!select && select.querySelectorAll("option").length > 0 && !!canvas;
-  });
-  await page.waitForTimeout(1500);
+  await waitForShellReady(page, { timeout: 30_000 });
 }
 
 async function ensureScenario(page, scenarioId, label) {
@@ -74,7 +74,8 @@ async function ensureScenario(page, scenarioId, label) {
     }
   }
   await expect(page.locator("#scenarioStatus")).toContainText(label, { timeout: 20000 });
-  await page.waitForTimeout(800);
+  await waitForScenarioApplyIdle(page, { scenarioId, timeout: 30_000 });
+  await waitForRenderIdle(page, { scenarioId, timeout: 30_000 });
 }
 
 async function captureCanvasSample(page) {
@@ -117,12 +118,7 @@ async function flushPendingRender(page) {
 }
 
 async function waitForStableExactRender(page, { timeout = 20_000 } = {}) {
-  await page.waitForFunction(async () => {
-    const { state } = await import("/js/core/state.js");
-    return String(state.renderPhase || "") === "idle"
-      && !state.deferExactAfterSettle
-      && !state.exactAfterSettleHandle;
-  }, { timeout });
+  await waitForRenderIdle(page, { timeout });
 }
 
 async function waitForCityLayerVisibility(page, visible, { timeout = 20_000 } = {}) {

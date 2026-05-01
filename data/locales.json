@@ -464,6 +464,10 @@
       "en": "Bathymetry Soft emphasizes depth bands while keeping contours subtle.",
       "zh": "柔和测深预设强调深度色带，等高线仅作辅助。"
     },
+    "Bathymetry Style": {
+      "en": "Bathymetry Style",
+      "zh": "测深样式"
+    },
     "Belarus hybrid": {
       "en": "Belarus hybrid",
       "zh": "白俄罗斯混合拓扑"
@@ -5276,6 +5280,10 @@
       "en": "Suppress short primary",
       "zh": "抑制短初级"
     },
+    "Surface Colors": {
+      "en": "Surface Colors",
+      "zh": "表面颜色"
+    },
     "Switch between the official review track and the open publishable track without blending them.": {
       "en": "Switch between the official review track and the open publishable track without blending them.",
       "zh": "在官方评论轨道和开放可发布轨道之间切换，而不混合它们。"
@@ -5371,6 +5379,10 @@
     "Texture Overlay": {
       "en": "Texture Overlay",
       "zh": "纹理覆盖"
+    },
+    "Texture Tuning": {
+      "en": "Texture Tuning",
+      "zh": "纹理调节"
     },
     "The control deck now binds the new display schema on the right side while the left column stays contextual.": {
       "en": "The control deck now binds the new display schema on the right side while the left column stays contextual.",

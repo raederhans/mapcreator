@@ -182,6 +182,8 @@ function createScenarioStartupHydrationController({
       || bundle?.meta?.scenario_id
       || state.activeScenarioId
     ) || "scenario";
+    // version tag 不是给用户看的版本号，而是 hydration / overlay / chunk 刷新链共享的“同一份 runtime 壳层身份标记”。
+    // 这里优先拼 source sha，避免不同来源但同场景 id 的旧 overlay 被误当作可复用状态。
     void runtimeTopologyPayload;
     const sourceStatus = getScenarioRuntimeSourceShaStatus(bundle);
     if (!sourceStatus.ok) {
@@ -257,6 +259,8 @@ function createScenarioStartupHydrationController({
     let scenarioOverlayChanged = false;
     let contextBaseChanged = false;
     if (runtimeTopologyPayload) {
+      // 这里先用 runtime topology 定住“壳层真相”，再决定各类 overlay 是否复用缓存、是否需要刷新版本标签。
+      // 顺序不能反过来，否则 water / land mask 这类派生层会拿到和当前 runtime 壳层不一致的身份标记。
       if (mapSemanticMode !== "blank" && !hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload)) {
         setScenarioHydrationHealthGateState(state, {
           status: "fatal",
@@ -587,6 +591,8 @@ function createScenarioStartupHydrationController({
     reason = "post-ready",
     autoRetry = true,
   } = {}) {
+    // health gate 的目标不是“尽量兜住”，而是尽快判断当前 runtime 壳层是否还能支撑后续编辑。
+    // 能通过就放行；一次强制重载能修复就立即收口；仍然失败就显式进入 fatal recovery。
     const scenarioId = normalizeScenarioId(state.activeScenarioId);
     if (!scenarioId) {
       return { ok: true, attemptedRetry: false, degradedWaterOverlay: false, report: null };

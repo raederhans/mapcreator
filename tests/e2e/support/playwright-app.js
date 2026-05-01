@@ -75,6 +75,34 @@ async function readBootStateSnapshot(page) {
   }
 }
 
+async function readRuntimeIdleSnapshot(page) {
+  try {
+    await primeStateRef(page);
+    return await page.evaluate(() => {
+      const state = globalThis.__playwrightStateRef || {};
+      const loadState = state.runtimeChunkLoadState || {};
+      return {
+        activeScenarioId: String(state.activeScenarioId || ""),
+        renderPhase: String(state.renderPhase || ""),
+        scenarioApplyInFlight: !!state.scenarioApplyInFlight,
+        startupReadonlyUnlockInFlight: !!state.startupReadonlyUnlockInFlight,
+        chunkIdle: {
+          pendingPromotion: !!loadState.pendingPromotion,
+          promotionScheduled: !!loadState.promotionScheduled,
+          refreshScheduled: !!loadState.refreshScheduled,
+          promotionCommitInFlight: !!loadState.promotionCommitInFlight,
+          pendingVisualPromotion: !!loadState.pendingVisualPromotion,
+          pendingInfraPromotion: !!loadState.pendingInfraPromotion,
+        },
+      };
+    });
+  } catch (error) {
+    return {
+      snapshotError: String(error?.message || error),
+    };
+  }
+}
+
 async function waitForAppInteractive(page, { timeout = 90_000 } = {}) {
   try {
     await primeStateRef(page);
@@ -89,7 +117,7 @@ async function waitForAppInteractive(page, { timeout = 90_000 } = {}) {
         && !state.scenarioApplyInFlight
         && !state.startupReadonlyUnlockInFlight
       );
-    }, { timeout });
+    }, undefined, { timeout });
   } catch (error) {
     const snapshot = await readBootStateSnapshot(page);
     const detail = JSON.stringify(snapshot);
@@ -99,6 +127,131 @@ async function waitForAppInteractive(page, { timeout = 90_000 } = {}) {
     wrapped.cause = error;
     throw wrapped;
   }
+}
+
+async function waitForShellReady(page, { timeout = 90_000, requireCanvas = false } = {}) {
+  try {
+    await primeStateRef(page);
+    await page.waitForFunction(({ requireCanvas: shouldRequireCanvas }) => {
+      const state = globalThis.__playwrightStateRef || null;
+      if (!state) return false;
+      if (String(state.bootError || "").trim()) {
+        throw new Error(`[playwright-app] bootError=${state.bootError}`);
+      }
+      const overlay = document.querySelector("#bootOverlay");
+      const scenarioSelect = document.querySelector("#scenarioSelect");
+      const canvas = Array.from(document.querySelectorAll("canvas"))
+        .find((entry) => entry.width >= 200
+          && entry.height >= 120
+          && globalThis.getComputedStyle(entry).display !== "none");
+      return (
+        state.bootBlocking === false
+        && !state.scenarioApplyInFlight
+        && !state.startupReadonlyUnlockInFlight
+        && !document.body?.classList?.contains("app-booting")
+        && (!overlay || overlay.classList.contains("hidden"))
+        && !!scenarioSelect
+        && scenarioSelect.querySelectorAll("option").length > 0
+        && (!shouldRequireCanvas || !!canvas)
+      );
+    }, { requireCanvas: !!requireCanvas }, { timeout });
+  } catch (error) {
+    const [bootSnapshot, idleSnapshot] = await Promise.all([
+      readBootStateSnapshot(page),
+      readRuntimeIdleSnapshot(page),
+    ]);
+    const wrapped = new Error(
+      `[playwright-app] waitForShellReady timed out after ${timeout}ms. Snapshot: ${JSON.stringify({
+        boot: bootSnapshot,
+        idle: idleSnapshot,
+      })}`
+    );
+    wrapped.cause = error;
+    throw wrapped;
+  }
+}
+
+async function waitForScenarioApplyIdle(page, { scenarioId = "", timeout = 120_000 } = {}) {
+  const expectedScenarioId = String(scenarioId || "").trim();
+  try {
+    await primeStateRef(page);
+    await page.waitForFunction((targetScenarioId) => {
+      const state = globalThis.__playwrightStateRef || null;
+      const applyState = globalThis.__playwrightScenarioApplyState || null;
+      if (applyState?.targetScenarioId === targetScenarioId && String(applyState?.error || "").trim()) {
+        throw new Error(`[playwright-app] scenario apply failed: ${applyState.error}`);
+      }
+      if (!state) return false;
+      const scenarioStable = !targetScenarioId || String(state.activeScenarioId || "") === targetScenarioId;
+      return (
+        scenarioStable
+        && !state.scenarioApplyInFlight
+        && !state.startupReadonlyUnlockInFlight
+      );
+    }, expectedScenarioId, { timeout });
+  } catch (error) {
+    const snapshot = await readRuntimeIdleSnapshot(page);
+    const wrapped = new Error(
+      `[playwright-app] waitForScenarioApplyIdle timed out after ${timeout}ms. Snapshot: ${JSON.stringify(snapshot)}`
+    );
+    wrapped.cause = error;
+    throw wrapped;
+  }
+}
+
+async function waitForChunkIdle(page, { timeout = 120_000 } = {}) {
+  try {
+    await primeStateRef(page);
+    await page.waitForFunction(() => {
+      const state = globalThis.__playwrightStateRef || null;
+      const loadState = state?.runtimeChunkLoadState || {};
+      return !!state
+        && !loadState.pendingPromotion
+        && !loadState.promotionScheduled
+        && !loadState.refreshScheduled
+        && !loadState.promotionCommitInFlight
+        && !loadState.pendingVisualPromotion
+        && !loadState.pendingInfraPromotion;
+    }, undefined, { timeout });
+  } catch (error) {
+    const snapshot = await readRuntimeIdleSnapshot(page);
+    const wrapped = new Error(
+      `[playwright-app] waitForChunkIdle timed out after ${timeout}ms. Snapshot: ${JSON.stringify(snapshot)}`
+    );
+    wrapped.cause = error;
+    throw wrapped;
+  }
+}
+
+async function waitForRenderIdle(page, { scenarioId = "", timeout = 120_000 } = {}) {
+  await waitForScenarioApplyIdle(page, { scenarioId, timeout });
+  await waitForChunkIdle(page, { timeout });
+  await page.waitForFunction(() => {
+    const state = globalThis.__playwrightStateRef || null;
+    return !!state
+      && String(state.renderPhase || "idle") === "idle"
+      && !state.deferExactAfterSettle
+      && !state.exactAfterSettleHandle
+      && !state.zoomRenderScheduled
+      && !state.pendingZoomTransform
+      && !state.renderPhaseTimerId;
+  }, undefined, { timeout });
+  // 两帧 RAF 可以让 canvas 合成落到稳定帧，再做亮度采样。
+  await page.evaluate(() => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+  await waitForScenarioApplyIdle(page, { scenarioId, timeout });
+  await waitForChunkIdle(page, { timeout });
+  await page.waitForFunction(() => {
+    const state = globalThis.__playwrightStateRef || null;
+    return !!state
+      && String(state.renderPhase || "idle") === "idle"
+      && !state.deferExactAfterSettle
+      && !state.exactAfterSettleHandle
+      && !state.zoomRenderScheduled
+      && !state.pendingZoomTransform
+      && !state.renderPhaseTimerId;
+  }, undefined, { timeout });
 }
 
 async function waitForScenarioSelectReady(page, { scenarioId = "tno_1962", timeout = 90_000 } = {}) {
@@ -188,7 +341,7 @@ async function expectScenarioInteractive(page, { scenarioId, timeout = 120_000 }
   await page.waitForFunction(() => {
     const state = globalThis.__playwrightStateRef || null;
     return !!state && !state.scenarioApplyInFlight;
-  }, { timeout });
+  }, undefined, { timeout });
 }
 
 async function expectPollScenarioId(page, { scenarioId, timeout = 120_000 } = {}) {
@@ -338,6 +491,10 @@ module.exports = {
   readBootStateSnapshot,
   primeStateRef,
   primeInteractionFunnelDebugRef,
+  waitForShellReady,
+  waitForScenarioApplyIdle,
+  waitForChunkIdle,
+  waitForRenderIdle,
   waitForScenarioSelectReady,
   waitForScenarioReadyGate,
   readSmokeFailureSnapshot,

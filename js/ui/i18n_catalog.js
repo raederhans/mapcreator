@@ -22,6 +22,9 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Parchment Sepia": { zh: "\u7eb8\u9762\u68d5\u8910", en: "Parchment Sepia" },
   "Slate Blue": { zh: "\u77f3\u677f\u84dd", en: "Slate Blue" },
   "Ivory Outline": { zh: "\u8c61\u7259\u63cf\u8fb9", en: "Ivory Outline" },
+  "Surface Colors": { zh: "\u8868\u9762\u989c\u8272", en: "Surface Colors" },
+  "Bathymetry Style": { zh: "\u6d4b\u6df1\u6837\u5f0f", en: "Bathymetry Style" },
+  "Texture Tuning": { zh: "\u7eb9\u7406\u8c03\u8282", en: "Texture Tuning" },
   "Preset & Density": { zh: "\u9884\u8bbe\u4e0e\u5bc6\u5ea6", en: "Preset & Density" },
   "Choose a restrained map treatment first, then tune how many point markers and labels are allowed to surface.": {
     zh: "\u5148\u9009\u62e9\u4e00\u5957\u66f4\u514b\u5236\u7684\u5730\u56fe\u98ce\u683c\uff0c\u518d\u8c03\u6574\u5141\u8bb8\u51fa\u73b0\u7684\u57ce\u5e02\u70b9\u548c\u6807\u7b7e\u6570\u91cf\u3002",
