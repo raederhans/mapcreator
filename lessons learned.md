@@ -1333,3 +1333,30 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - worker 级 shared boot 只清 localStorage 和显示开关还不够；像 worldCitiesData、scenarioCityOverridesData 这种会被 spec 直接改写的集合，必须在 prepare 结束后抓干净快照，并在 reset 时整份恢复。
 - page.waitForFunction 的超时参数要放第三个位置；写成第二个参数只会把 timeout 当成 page-function 入参，长 shared-boot 用例会悄悄退回默认 30 秒。
 - verification selector 面对生产 JS 文件时，优先补精确 sourceRef 路由，再用小白名单 fallback 收口；单靠宽 domain 规则容易把 heavy 套件一起拉进来。
+
+## 2026-05-01 - 测试系统 agent 可操作性审计
+
+### 1. selector explain artifact 要同时暴露输入 diff 和展开后的 spec 集合
+- 只有推荐命令而没有 changed-files 输入与 domain -> spec 展开，agent 很难判断这次是 route 漏挂、diff 取空，还是确实没有相关测试。
+- 更稳的最短路径是把 changed-files 文本和 .runtime/tests/e2e-lists 一起作为 explain artifact 上传。
+
+### 2. 名字带 test 的 adaptive runner 必须把 dry-run 和 execute 明确分开
+- test:adaptive 这类入口如果默认只做 dry-run，agent 很容易把 resolved commands 误读成已经完成验证。
+- 更稳的最短路径是把 dry-run/execute 语义写进命令名、usage 和自检合同，并让 runner 自身改动命中 execute-path contract。
+### 44. Scenario chunk validator must check reverse coverage and per-chunk ownership
+- 只校验 chunk ids 属于 runtime ids，会放过真实 chunk 污染；还要校验 runtime ids 被 chunk union 完整覆盖、每个 country chunk 的国家归属正确、manifest 元数据等于真实 payload。
+- startup、bootstrap、runtime、chunk 四套入口并存时，生成链要钉住唯一真相源，否则 checked-in 资产和重建产物会静默分叉。
+
+## 2026-05-01 - test routing source-of-truth and import-safe tooling
+
+### 1. pr-fast 路由和 workflow 要共用同一份可执行真相源
+- `test:node:*` 这类集合一旦在 package、route registry、workflow 各写一份，很快就会漂移。
+- 更稳的路径是让 workflow 直接按当前脚本集合执行，route registry 只负责声明语义和 sourceRef。
+
+### 2. 可导入的工具脚本必须显式区分 library mode 和 CLI mode
+- 只要结构测试或别的工具会 import 一个脚本，就要用 `isMainModule` 守住 `main()`。
+- 否则 read-only import 也会偷偷读 git 状态、写 `.runtime` 报告，排查成本会很高。
+
+### 3. helper 影响面很宽时，selector 输出顺序要优先 child-safe 合同
+- `tests/e2e/support/*` 改动会经 import graph 命中大量 spec。
+- 先把 cheap structural contract 放到推荐列表最前面，agent 才能先跑最有信息量的短验证，再决定要不要进 main-thread E2E。

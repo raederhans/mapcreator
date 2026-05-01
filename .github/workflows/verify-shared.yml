@@ -78,8 +78,8 @@ jobs:
           else
             git diff --name-only HEAD^ HEAD > "$changed_files" || true
           fi
-          node tools/build_test_import_graph.mjs
           npm run verify:test-import-graph
+          node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json
           node tools/select_verification_targets.mjs --check
           node tools/select_verification_targets.mjs --changed-files-list "$changed_files" --json-out .runtime/reports/generated/verification-selector-explain.json --md-out .runtime/reports/generated/verification-selector-explain.md
           npm run verify:test-timeout-inventory
@@ -92,8 +92,10 @@ jobs:
           if-no-files-found: ignore
           path: |
             .runtime/reports/generated/verification-selector-explain.*
+            .runtime/reports/generated/test-import-graph.json
             .runtime/reports/generated/test-timeout-inventory.*
             .runtime/reports/generated/test-import-graph-summary.*
+            .runtime/tmp/verification-selector-changed-files.txt
             tests/e2e/test-import-graph.json
 
       - name: Cache Playwright browsers
@@ -139,21 +141,45 @@ jobs:
         run: >
           python -m unittest
           tests.test_app_entry_resolver
+          tests.test_main_deferred_detail_promotion_boundary_contract
+          tests.test_scenario_chunk_refresh_contracts
+          tests.test_scenario_renderer_bridge_boundary_contract
           tests.test_map_renderer_interaction_border_snapshot_orchestration_contract
           tests.test_perf_gate_contract
           tests.test_startup_shell
           -q
 
+      - name: Run node fast contracts
+        if: inputs.profile == 'pr-fast'
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+
+          const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+          const testScripts = Object.keys(packageJson.scripts)
+            .filter((name) => name.startsWith('test:node:'))
+            .sort();
+
+          for (const name of testScripts) {
+            console.log(`Running ${name}`);
+            const result = spawnSync('npm', ['run', name], { stdio: 'inherit' });
+            if ((result.status ?? 1) !== 0) {
+              process.exit(result.status ?? 1);
+            }
+          }
+          EOF
+
       - name: Run renderer split node behavior tests
-        if: inputs.profile == 'full' || inputs.profile == 'pr-fast'
+        if: inputs.profile == 'full'
         run: npm run test:node:renderer-splits
 
       - name: Run scenario chunk static contracts
-        if: inputs.profile == 'full' || inputs.profile == 'pr-fast'
+        if: inputs.profile == 'full'
         run: npm run test:node:scenario-chunk-contracts
 
       - name: Run physical layer static contracts
-        if: inputs.profile == 'full' || inputs.profile == 'pr-fast'
+        if: inputs.profile == 'full'
         run: npm run test:node:physical-layer-contracts
 
       - name: Verify E2E layer manifest

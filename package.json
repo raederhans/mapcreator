@@ -58,6 +58,8 @@
     "test:e2e:layer:feature": "node tools/e2e_layering.mjs run feature",
     "test:e2e:layer:all": "node tools/e2e_layering.mjs run all",
     "test:adaptive": "node tools/run_adaptive_tests.mjs",
+    "test:adaptive:execute": "node tools/run_adaptive_tests.mjs --execute",
+    "test:adaptive:execute:main-thread": "node tools/run_adaptive_tests.mjs --execute --include-main-thread",
     "verify:test:e2e-layers": "node tools/e2e_layering.mjs check",
     "verify:test-timeout-inventory": "node tools/test_timeout_inventory.mjs",
     "verify:test-import-graph": "node tools/check_test_import_graph.mjs",

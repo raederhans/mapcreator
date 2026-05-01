@@ -6,6 +6,7 @@ export const REPO_ROOT = process.cwd();
 export const E2E_MANIFEST_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-layer-manifest.json");
 export const PYTHON_HEAVY_GROUPS_PATH = path.join(REPO_ROOT, "tests", "heavy_dependency_groups.json");
 export const PACKAGE_JSON_PATH = path.join(REPO_ROOT, "package.json");
+const REPO_JS_EXTENSIONS = [".js", ".mjs"];
 
 export const ROUTE_SCHEMA_FIELDS = [
   "id",
@@ -36,19 +37,11 @@ export const COSTS = Object.freeze(["fast", "contract", "heavy"]);
 export const LAYERS = Object.freeze(["smoke", "contract", "regression", "feature", "heavy"]);
 export const CI_PROFILES = Object.freeze(["pr-fast", "pr-smoke", "full", "deploy-minimal", "perf-pr-gate", "scenario-contract-matrix"]);
 
-const NODE_CONTRACT_SCRIPT_NAMES = [
-  "test:node:renderer-splits",
-  "test:node:scenario-chunk-contracts",
-  "test:node:physical-layer-contracts",
-  "test:node:palette-runtime-bridge",
-  "test:node:perf-probe-snapshot-behavior",
-];
-
 const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:e2e-layer-manifest",
     commandRef: "verify:test:e2e-layers",
-    sourceRef: "tools/e2e_layering.mjs,tests/e2e/test-layer-manifest.json",
+    sourceRef: "tools/e2e_layering.mjs,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -60,7 +53,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:verification-selector",
     commandRef: "node tools/select_verification_targets.mjs --check",
-    sourceRef: "tools/select_verification_targets.mjs,tools/test_route_registry.mjs",
+    sourceRef: "tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -72,19 +65,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:test-import-graph",
     commandRef: "verify:test-import-graph",
-    sourceRef: "tools/build_test_import_graph.mjs,tools/check_test_import_graph.mjs,tests/e2e/test-import-graph.json",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:adaptive-test-runner",
-    commandRef: "node tools/run_adaptive_tests.mjs --changed-file tools/select_verification_targets.mjs --dry-run",
-    sourceRef: "tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tests/e2e/test-import-graph.json",
+    sourceRef: "tools/build_test_import_graph.mjs,tools/check_test_import_graph.mjs,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -96,7 +77,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:playwright-observability",
     commandRef: "python -m unittest tests.test_e2e_structural_tooling -q",
-    sourceRef: "playwright.config.cjs,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs",
+    sourceRef: "playwright.config.cjs,tests/e2e/support/fixtures.js,tests/e2e/support/playwright-app.js,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "playwright-observability",
     ownerHint: "test-infra",
     layer: "contract",
@@ -113,6 +94,42 @@ const INFRASTRUCTURE_ROUTES = [
     ownerHint: "perf-runtime",
     layer: "contract",
     cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "infra:test-timeout-inventory",
+    commandRef: "verify:test-timeout-inventory",
+    sourceRef: "tools/test_timeout_inventory.mjs,tests/e2e/test-layer-manifest.json,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    domain: "playwright-observability",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "infra:test-console-allowlist",
+    commandRef: "verify:test-console-allowlist",
+    sourceRef: "tools/check_console_allowlist_decay.mjs,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    domain: "playwright-observability",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "infra:test-timeout-guardrails",
+    commandRef: "verify:test-timeout-guardrails",
+    sourceRef: "tools/check_test_timeout_guardrails.mjs,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    domain: "playwright-observability",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
     resourceLocks: [],
     executionOwner: "child-safe",
     ciProfile: "pr-fast",
@@ -152,6 +169,30 @@ const INFRASTRUCTURE_ROUTES = [
     resourceLocks: ["scenario-data", ".runtime-output"],
     executionOwner: "main-thread",
     ciProfile: "scenario-contract-matrix",
+  },
+  {
+    id: "infra:scenario-contracts-strict-pr-fast",
+    commandRef: "verify:scenario-contracts:strict",
+    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962,.github/workflows/verify-shared.yml",
+    domain: "scenario-contracts",
+    ownerHint: "scenario-runtime",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: ["scenario-data", ".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "infra:scenario-contracts-strict-full",
+    commandRef: "verify:scenario-contracts:strict",
+    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962,.github/workflows/verify-shared.yml",
+    domain: "scenario-contracts",
+    ownerHint: "scenario-runtime",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: ["scenario-data", ".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "full",
   },
   {
     id: "infra:scenario-builder",
@@ -238,6 +279,100 @@ export function toRepoPath(value) {
   return value.split(path.sep).join("/");
 }
 
+function fileExists(repoPath) {
+  return fs.existsSync(path.join(REPO_ROOT, repoPath));
+}
+
+function resolveRelativeFile(baseRepoPath, specifier) {
+  const resolvedBase = toRepoPath(path.posix.normalize(path.posix.join(path.posix.dirname(baseRepoPath), specifier)));
+  const candidates = [];
+  if (/\.[A-Za-z0-9]+$/.test(resolvedBase)) {
+    candidates.push(resolvedBase);
+  } else {
+    for (const extension of REPO_JS_EXTENSIONS) {
+      candidates.push(`${resolvedBase}${extension}`);
+    }
+    for (const extension of REPO_JS_EXTENSIONS) {
+      candidates.push(path.posix.join(resolvedBase, `index${extension}`));
+    }
+  }
+  return candidates.find((candidate) => fileExists(candidate)) || null;
+}
+
+function resolveRepoSpecifier(baseRepoPath, specifier) {
+  const value = String(specifier || "").trim();
+  if (!value) return null;
+  if (value.startsWith(".")) {
+    const relativeResolved = resolveRelativeFile(baseRepoPath, value);
+    if (relativeResolved) {
+      return relativeResolved;
+    }
+    if (value.startsWith("./js/") || value.startsWith("./tests/")) {
+      const repoRootResolved = toRepoPath(value.slice(2));
+      return fileExists(repoRootResolved) ? repoRootResolved : null;
+    }
+    return null;
+  }
+  if (value.startsWith("/")) {
+    const normalized = toRepoPath(value.slice(1));
+    return fileExists(normalized) ? normalized : null;
+  }
+  return null;
+}
+
+function extractSpecifiers(content) {
+  const specifiers = new Set();
+  const expressions = [
+    /require\(\s*["']([^"']+)["']\s*\)/g,
+    /from\s*["']([^"']+)["']/g,
+    /import\(\s*["']([^"']+)["']\s*\)/g,
+    /new URL\(\s*["']([^"']+)["']/g,
+  ];
+  for (const expression of expressions) {
+    for (const match of content.matchAll(expression)) {
+      specifiers.add(String(match[1] || "").trim());
+    }
+  }
+  return [...specifiers];
+}
+
+function extractCommandPaths(command, extensionPattern) {
+  return [...command.matchAll(new RegExp(`tests\\/[\\w./-]+\\.${extensionPattern}`, "g"))]
+    .map((match) => match[0]);
+}
+
+function collectFileDependencies(baseRepoPath) {
+  const absolutePath = path.join(REPO_ROOT, baseRepoPath);
+  if (!fs.existsSync(absolutePath)) {
+    return [];
+  }
+  const content = fs.readFileSync(absolutePath, "utf8");
+  return uniqueValues(
+    extractSpecifiers(content)
+      .map((specifier) => resolveRepoSpecifier(baseRepoPath, specifier))
+      .filter(Boolean),
+  ).sort();
+}
+
+function resolveNodeRouteDomain(scriptName, sourceRefs) {
+  const haystack = `${scriptName},${sourceRefs.join(",")}`;
+  if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";
+  if (haystack.includes("startup")) return "startup";
+  if (haystack.includes("scenario") || haystack.includes("lifecycle_runtime")) return "scenario-runtime";
+  if (haystack.includes("physical") || haystack.includes("map_layer")) return "map-layer";
+  if (haystack.includes("palette")) return "palette-runtime";
+  if (haystack.includes("perf")) return "perf";
+  if (haystack.includes("border_mesh") || haystack.includes("renderer")) return "renderer-runtime";
+  return "renderer-runtime";
+}
+
+function resolveDevE2eDomain(specPaths) {
+  const haystack = specPaths.join(",");
+  if (haystack.includes("tno_ready_state")) return "tno-startup";
+  if (haystack.includes("scenario_chunk")) return "scenario-runtime";
+  return "dev-workspace";
+}
+
 function moduleNameFromPythonPath(sourceRef) {
   return sourceRef.replace(/\.py$/, "").split("/").join(".");
 }
@@ -257,7 +392,7 @@ export function buildE2eRoutes() {
   const specs = Array.isArray(manifest?.specs) ? manifest.specs : [];
   return specs.map((spec) => ({
     id: `e2e:${spec.specPath}`,
-    commandRef: `node tools/e2e_layering.mjs run-domain ${spec.domain}`,
+    commandRef: `node tools/e2e_layering.mjs run-spec ${spec.specPath}`,
     sourceRef: spec.specPath,
     domain: spec.domain,
     ownerHint: spec.ownerHint,
@@ -271,31 +406,50 @@ export function buildE2eRoutes() {
 
 export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
   const scripts = packageJson.scripts || {};
-  return NODE_CONTRACT_SCRIPT_NAMES.filter((name) => scripts[name]).map((name) => {
-    const command = scripts[name];
-    const sourceRefs = [...command.matchAll(/tests\/[\w./-]+\.mjs/g)].map((match) => match[0]);
-    const domain = name.includes("perf")
-      ? "perf"
-      : name.includes("physical-layer")
-        ? "map-layer"
-        : name.includes("scenario-chunk")
-          ? "scenario-runtime"
-          : name.includes("palette")
-            ? "palette-runtime"
-            : "renderer-runtime";
-    return {
-      id: `node:${name}`,
-      commandRef: name,
-      sourceRef: sourceRefs.join(","),
-      domain,
-      ownerHint: domain,
-      layer: "contract",
-      cost: "fast",
-      resourceLocks: [],
-      executionOwner: "child-safe",
-      ciProfile: "pr-fast",
-    };
-  });
+  return Object.entries(scripts)
+    .filter(([name]) => name.startsWith("test:node:"))
+    .map(([name, command]) => {
+      const testFiles = extractCommandPaths(command, "mjs");
+      const sourceRefs = uniqueValues([
+        ...testFiles,
+        ...testFiles.flatMap((testFile) => collectFileDependencies(testFile)),
+      ]);
+      const domain = resolveNodeRouteDomain(name, sourceRefs);
+      return {
+        id: `node:${name}`,
+        commandRef: name,
+        sourceRef: sourceRefs.join(","),
+        domain,
+        ownerHint: domain,
+        layer: "contract",
+        cost: "fast",
+        resourceLocks: [],
+        executionOwner: "child-safe",
+        ciProfile: "pr-fast",
+      };
+    });
+}
+
+export function buildDirectE2EScriptRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
+  const scripts = packageJson.scripts || {};
+  return Object.entries(scripts)
+    .filter(([name]) => name.startsWith("test:e2e:dev:"))
+    .map(([name, command]) => {
+      const specPaths = extractCommandPaths(command, "spec\\.js");
+      const domain = resolveDevE2eDomain(specPaths);
+      return {
+        id: `direct-e2e:${name}`,
+        commandRef: name,
+        sourceRef: specPaths.join(","),
+        domain,
+        ownerHint: domain,
+        layer: "heavy",
+        cost: "heavy",
+        resourceLocks: ["browser-dev-server", "playwright-browser", ".runtime-output"],
+        executionOwner: "main-thread",
+        ciProfile: "full",
+      };
+    });
 }
 
 export function buildPythonRoutes() {
@@ -331,7 +485,13 @@ export function buildPythonRoutes() {
 }
 
 export function buildRouteIndex() {
-  return [...INFRASTRUCTURE_ROUTES, ...buildE2eRoutes(), ...buildNodeRoutes(), ...buildPythonRoutes()];
+  return [
+    ...INFRASTRUCTURE_ROUTES,
+    ...buildE2eRoutes(),
+    ...buildDirectE2EScriptRoutes(),
+    ...buildNodeRoutes(),
+    ...buildPythonRoutes(),
+  ];
 }
 
 export function summarizeRoutes(routes) {

@@ -2,16 +2,28 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { buildRecommendation } from "./select_verification_targets.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.md");
+const DEFAULT_DISCOVERY_COMMANDS = [
+  ["diff", "--name-only", "--diff-filter=ACMRD", "-z"],
+  ["diff", "--name-only", "--cached", "--diff-filter=ACMRD", "-z"],
+  ["ls-files", "--others", "--exclude-standard", "-z"],
+];
+const HISTORY_DISCOVERY_COMMANDS = [
+  ["diff", "--name-only", "origin/main...HEAD", "--diff-filter=ACMRD", "-z"],
+  ["diff", "--name-only", "HEAD^", "HEAD", "--diff-filter=ACMRD", "-z"],
+];
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const args = {
     changedFiles: [],
     dryRun: true,
+    includeBranchHistory: false,
+    includeMainThread: false,
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
   };
@@ -25,6 +37,8 @@ function parseArgs(argv) {
       args.changedFiles.push(...values);
     } else if (token === "--dry-run") args.dryRun = true;
     else if (token === "--execute") args.dryRun = false;
+    else if (token === "--include-branch-history") args.includeBranchHistory = true;
+    else if (token === "--include-main-thread") args.includeMainThread = true;
     else if (token === "--json-out") args.jsonOut = argv[++index];
     else if (token === "--md-out") args.mdOut = argv[++index];
     else args.changedFiles.push(token);
@@ -32,28 +46,34 @@ function parseArgs(argv) {
   return args;
 }
 
-function discoverChangedFiles() {
+export function parseGitPathOutput(output) {
+  return String(output || "")
+    .split("\0")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => value.replace(/^"(.*)"$/, "$1"));
+}
+
+function runGitPathCommand(gitArgs, runner = spawnSync) {
+  return runner("git", ["-c", "core.quotepath=false", ...gitArgs], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    shell: false,
+  });
+}
+
+export function discoverChangedFiles({
+  runner = spawnSync,
+  includeBranchHistory = false,
+} = {}) {
   const discovered = new Set();
-  const candidates = [
-    ["diff", "--name-only"],
-    ["diff", "--name-only", "--cached"],
-    ["ls-files", "--others", "--exclude-standard"],
-    ["origin/main...HEAD"],
-    ["HEAD^", "HEAD"],
-  ];
-  for (const candidateArgs of candidates) {
-    const gitArgs = candidateArgs[0] === "diff"
-      ? candidateArgs
-      : candidateArgs[0] === "ls-files"
-        ? candidateArgs
-        : ["diff", "--name-only", ...candidateArgs];
-    const result = spawnSync("git", gitArgs, {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-      shell: false,
-    });
+  const commands = includeBranchHistory
+    ? [...DEFAULT_DISCOVERY_COMMANDS, ...HISTORY_DISCOVERY_COMMANDS]
+    : DEFAULT_DISCOVERY_COMMANDS;
+  for (const gitArgs of commands) {
+    const result = runGitPathCommand(gitArgs, runner);
     if (result.status === 0) {
-      const files = String(result.stdout || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const files = parseGitPathOutput(result.stdout);
       for (const file of files) {
         discovered.add(file);
       }
@@ -90,18 +110,42 @@ function commandToProcess(commandRef) {
   };
 }
 
-function renderMarkdown(report, executionResults) {
+export function buildExecutionPlan(report, { includeMainThread = false } = {}) {
+  const childSafeCommands = [...new Set((report.childAgentStaticTasks || []).map((entry) => entry.commandRef))]
+    .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
+  const mainThreadCommands = [...new Set((report.mainThreadSerialVerification || []).map((entry) => entry.commandRef))]
+    .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
+  return {
+    childSafeCommands,
+    mainThreadCommands,
+    commandsToRun: includeMainThread ? [...childSafeCommands, ...mainThreadCommands] : childSafeCommands,
+    blockedMainThreadCommands: includeMainThread ? [] : mainThreadCommands,
+  };
+}
+
+function renderMarkdown(report, executionResults, executionPlan = null) {
   const lines = [
     "# test-adaptive-selection",
+    "",
+    `- mode: ${report.adaptiveMode}`,
+    `- discoveryMode: ${report.discoveryMode}`,
     "",
     "## Changed files",
     ...(report.changedFiles.length ? report.changedFiles.map((file) => `- ${file}`) : ["- none"]),
     "",
+    "## Unmatched changed files",
+    ...((report.unmatchedChangedFiles || []).length ? report.unmatchedChangedFiles.map((file) => `- ${file}`) : ["- none"]),
+    "",
     "## Recommended commands",
     ...(report.recommendedCommands.length
-      ? report.recommendedCommands.map((entry) => `- ${entry.commandRef} (${entry.executionOwner}; ${entry.reason})`)
+      ? report.recommendedCommands.map((entry) => `- ${entry.commandRef} (${entry.executionOwners.join("+")}; ${entry.reason})`)
       : ["- none"]),
   ];
+  if (executionPlan) {
+    lines.push("", "## Execution plan");
+    lines.push(...(executionPlan.commandsToRun.length ? executionPlan.commandsToRun.map((commandRef) => `- run: ${commandRef}`) : ["- run: none"]));
+    lines.push(...(executionPlan.blockedMainThreadCommands.length ? executionPlan.blockedMainThreadCommands.map((commandRef) => `- blocked-main-thread: ${commandRef}`) : ["- blocked-main-thread: none"]));
+  }
   if (executionResults) {
     lines.push("", "## Execution results");
     lines.push(...executionResults.map((entry) => `- ${entry.commandRef}: exit=${entry.exitCode}`));
@@ -109,31 +153,45 @@ function renderMarkdown(report, executionResults) {
   return `${lines.join("\n")}\n`;
 }
 
-function writeOutputs(report, args, executionResults = null) {
+function writeOutputs(report, args, executionResults = null, executionPlan = null) {
   fs.mkdirSync(path.dirname(args.jsonOut), { recursive: true });
-  fs.writeFileSync(args.jsonOut, `${JSON.stringify({ ...report, executionResults }, null, 2)}\n`, "utf8");
+  fs.writeFileSync(args.jsonOut, `${JSON.stringify({ ...report, executionResults, executionPlan }, null, 2)}\n`, "utf8");
   fs.mkdirSync(path.dirname(args.mdOut), { recursive: true });
-  fs.writeFileSync(args.mdOut, renderMarkdown(report, executionResults), "utf8");
+  fs.writeFileSync(args.mdOut, renderMarkdown(report, executionResults, executionPlan), "utf8");
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const changedFiles = args.changedFiles.length ? args.changedFiles : discoverChangedFiles();
-  const report = buildRecommendation(changedFiles);
+  const changedFiles = args.changedFiles.length
+    ? args.changedFiles
+    : discoverChangedFiles({ includeBranchHistory: args.includeBranchHistory });
+  const report = {
+    ...buildRecommendation(changedFiles),
+    adaptiveMode: args.dryRun ? "dry-run" : "execute",
+    discoveryMode: args.changedFiles.length
+      ? "explicit-input"
+      : args.includeBranchHistory
+        ? "workspace-plus-history"
+        : "workspace-only",
+  };
   if (args.dryRun) {
     writeOutputs(report, args);
-    console.log(`Adaptive selection resolved ${report.recommendedCommands.length} commands (dry-run).`);
+    console.log(`Adaptive selection planned ${report.recommendedCommands.length} commands (dry-run only; no verification executed).`);
     return;
   }
 
-  const orderedCommands = [
-    ...report.childAgentStaticTasks.map((entry) => entry.commandRef),
-    ...report.mainThreadSerialVerification.map((entry) => entry.commandRef),
-  ];
-  const uniqueCommands = [...new Set(orderedCommands)]
-    .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
+  const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
+  if (executionPlan.blockedMainThreadCommands.length > 0) {
+    writeOutputs(report, args, null, executionPlan);
+    console.error(
+      `Adaptive selection found ${executionPlan.blockedMainThreadCommands.length} main-thread commands. `
+      + "Re-run with --include-main-thread after reserving the live test lane.",
+    );
+    process.exit(2);
+  }
+
   const executionResults = [];
-  for (const commandRef of uniqueCommands) {
+  for (const commandRef of executionPlan.commandsToRun) {
     const command = commandToProcess(commandRef);
     if (!command) continue;
     const result = spawnSync(command.bin, command.args, {
@@ -145,18 +203,23 @@ function main() {
     const exitCode = typeof result.status === "number" ? result.status : 1;
     executionResults.push({ commandRef, exitCode });
     if (exitCode !== 0) {
-      writeOutputs(report, args, executionResults);
+      writeOutputs(report, args, executionResults, executionPlan);
       process.exit(exitCode);
     }
   }
-  spawnSync("node", ["tools/test_timing_summary.mjs"], {
-    cwd: REPO_ROOT,
-    stdio: "inherit",
-    shell: false,
-    encoding: "utf8",
-  });
-  writeOutputs(report, args, executionResults);
+  if (executionPlan.commandsToRun.length > 0) {
+    spawnSync("node", ["tools/test_timing_summary.mjs"], {
+      cwd: REPO_ROOT,
+      stdio: "inherit",
+      shell: false,
+      encoding: "utf8",
+    });
+  }
+  writeOutputs(report, args, executionResults, executionPlan);
   console.log(`Adaptive selection executed ${executionResults.length} commands.`);
 }
 
-main();
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMainModule) {
+  main();
+}

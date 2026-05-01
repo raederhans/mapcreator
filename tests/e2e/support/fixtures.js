@@ -404,11 +404,21 @@ const test = base.test.extend({
     let resetSnapshot = null;
     let resetIssues = [];
     let resetError = null;
+    let failureArtifactWritten = false;
 
     try {
       await use(page);
     } finally {
       const failed = testInfo.status !== testInfo.expectedStatus;
+      if (failed) {
+        try {
+          const failureSnapshot = await readFailureContextSnapshot(page, DEFAULT_FAILURE_SELECTORS);
+          await writeFailureContextArtifact(testInfo, failureSnapshot);
+          failureArtifactWritten = true;
+        } catch (error) {
+          resetError = error;
+        }
+      }
       try {
         await clearPageEventListeners(page);
         await resetSharedCityRuntimeState(page, { storageKeys, timeout: resetTimeout });
@@ -427,7 +437,7 @@ const test = base.test.extend({
         resetError = error;
       }
 
-      if (failed || resetError) {
+      if (!failureArtifactWritten && resetError) {
         const failureSnapshot = await readFailureContextSnapshot(page, DEFAULT_FAILURE_SELECTORS);
         await writeFailureContextArtifact(testInfo, failureSnapshot);
       }

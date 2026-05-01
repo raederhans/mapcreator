@@ -83,7 +83,7 @@ function routeMatchesImportGraph(route, changedFile, importGraph) {
   if (!Array.isArray(affectedSpecs) || !affectedSpecs.length) {
     return false;
   }
-  return route.id.startsWith("e2e:") && affectedSpecs.includes(route.sourceRef);
+  return (route.id.startsWith("e2e:") || route.id.startsWith("direct-e2e:")) && affectedSpecs.includes(route.sourceRef);
 }
 
 function routeMatchesChangedFile(route, changedFile, importGraph = null) {
@@ -92,10 +92,15 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
 
   if (changedFile === "package.json" || changedFile === "package-lock.json") {
     return route.id.startsWith("node:")
+      || route.id.startsWith("direct-e2e:")
       || route.id === "infra:e2e-layer-manifest"
       || route.id === "infra:verification-selector"
       || route.id === "infra:playwright-observability"
-      || route.id === "infra:adaptive-test-runner";
+      || route.id === "infra:test-import-graph"
+      || route.id === "infra:test-timeout-inventory"
+      || route.id === "infra:test-console-allowlist"
+      || route.id === "infra:test-timeout-guardrails"
+      || route.id === "infra:perf-gate-contract";
   }
 
   if (changedFile === "tools/e2e_layering.mjs" || changedFile === "tests/e2e/test-layer-manifest.json") {
@@ -147,6 +152,126 @@ function uniqueByCommand(routes) {
   return result;
 }
 
+function expandedSpecsForCommand(commandRef, allRoutes) {
+  const normalized = String(commandRef || "").trim();
+  if (!normalized) return [];
+  const runSpecPrefix = "node tools/e2e_layering.mjs run-spec ";
+  const runDomainPrefix = "node tools/e2e_layering.mjs run-domain ";
+  const runOwnerPrefix = "node tools/e2e_layering.mjs run-owner ";
+  if (normalized.startsWith(runSpecPrefix)) {
+    return [normalized.slice(runSpecPrefix.length).trim()].filter(Boolean);
+  }
+  if (normalized.startsWith(runDomainPrefix)) {
+    const domain = normalized.slice(runDomainPrefix.length).trim();
+    return [...new Set(
+      allRoutes
+        .filter((route) => route.id.startsWith("e2e:") && route.domain === domain)
+        .map((route) => route.sourceRef),
+    )].sort();
+  }
+  if (normalized.startsWith(runOwnerPrefix)) {
+    const ownerHint = normalized.slice(runOwnerPrefix.length).trim();
+    return [...new Set(
+      allRoutes
+        .filter((route) => route.id.startsWith("e2e:") && route.ownerHint === ownerHint)
+        .map((route) => route.sourceRef),
+    )].sort();
+  }
+  return [...new Set(
+    allRoutes
+      .filter((route) => route.commandRef === normalized)
+      .flatMap((route) => routeSourceRefs(route).filter((sourceRef) => sourceRef.endsWith(".spec.js"))),
+  )].sort();
+}
+
+function commandEntryPriority(entry) {
+  const childSafe = entry.executionOwners.every((owner) => owner === "child-safe");
+  return [
+    childSafe ? 0 : 1,
+    entry.resourceLocks.length,
+    entry.expandedSpecs.length,
+    entry.commandRef,
+  ];
+}
+
+function compareCommandEntries(left, right) {
+  const [leftOwnerRank, leftLockCount, leftSpecCount, leftCommand] = commandEntryPriority(left);
+  const [rightOwnerRank, rightLockCount, rightSpecCount, rightCommand] = commandEntryPriority(right);
+  return leftOwnerRank - rightOwnerRank
+    || leftLockCount - rightLockCount
+    || leftSpecCount - rightSpecCount
+    || leftCommand.localeCompare(rightCommand);
+}
+
+function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
+  const byCommand = new Map();
+  for (const route of routes) {
+    const existing = byCommand.get(route.commandRef) || {
+      commandRef: route.commandRef,
+      domains: new Set(),
+      ownerHints: new Set(),
+      resourceLocks: new Set(),
+      executionOwners: new Set(),
+      ciProfiles: new Set(),
+      routeIds: new Set(),
+      expandedSpecs: new Set(expandedSpecsForCommand(route.commandRef, allRoutes)),
+      matchedFiles: new Set(),
+    };
+    existing.domains.add(route.domain);
+    existing.ownerHints.add(route.ownerHint);
+    existing.executionOwners.add(route.executionOwner);
+    existing.ciProfiles.add(route.ciProfile);
+    existing.routeIds.add(route.id);
+    for (const lock of route.resourceLocks) {
+      existing.resourceLocks.add(lock);
+    }
+    byCommand.set(route.commandRef, existing);
+  }
+  return [...byCommand.values()]
+    .map((entry) => ({
+      commandRef: entry.commandRef,
+      domains: [...entry.domains].sort(),
+      ownerHints: [...entry.ownerHints].sort(),
+      resourceLocks: [...entry.resourceLocks].sort(),
+      executionOwners: [...entry.executionOwners].sort(),
+      ciProfiles: [...entry.ciProfiles].sort(),
+      routeIds: [...entry.routeIds].sort(),
+      expandedSpecs: [...entry.expandedSpecs].sort(),
+      matchedFiles: [...entry.matchedFiles].sort(),
+    }))
+    .sort(compareCommandEntries);
+}
+
+function summarizeImpactedDomains(commandEntries) {
+  const byDomain = new Map();
+  for (const entry of commandEntries) {
+    for (const domain of entry.domains) {
+      const current = byDomain.get(domain) || {
+        domain,
+        commandCount: 0,
+        ownerHints: new Set(),
+        expandedSpecs: new Set(),
+      };
+      current.commandCount += 1;
+      for (const ownerHint of entry.ownerHints) {
+        current.ownerHints.add(ownerHint);
+      }
+      for (const specPath of entry.expandedSpecs) {
+        current.expandedSpecs.add(specPath);
+      }
+      byDomain.set(domain, current);
+    }
+  }
+  return [...byDomain.values()]
+    .map((entry) => ({
+      domain: entry.domain,
+      commandCount: entry.commandCount,
+      ownerHints: [...entry.ownerHints].sort(),
+      specCount: entry.expandedSpecs.size,
+    }))
+    .sort((left, right) => right.commandCount - left.commandCount || left.domain.localeCompare(right.domain));
+}
+
 function skippedHeavyRoutes(allRoutes, selectedRoutes) {
   const selectedCommands = new Set(selectedRoutes.map((route) => route.commandRef));
   const skipped = allRoutes
@@ -163,41 +288,99 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   validateRouteIndex(allRoutes);
   const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
   const importGraph = readImportGraph();
-  const matchedRoutes = allRoutes.filter((route) => normalizedChangedFiles.some((file) => routeMatchesChangedFile(route, file, importGraph)));
-  const commandRoutes = uniqueByCommand(matchedRoutes).sort((a, b) => a.commandRef.localeCompare(b.commandRef));
-  const childSafeRoutes = commandRoutes.filter((route) => route.executionOwner === "child-safe");
-  const mainThreadRoutes = commandRoutes.filter((route) => route.executionOwner === "main-thread");
-  const ciOnlyRoutes = commandRoutes.filter((route) => route.executionOwner === "ci-only");
+  const matchedRoutesByFile = normalizedChangedFiles.map((file) => ({
+    changedFile: file,
+    routes: allRoutes.filter((route) => routeMatchesChangedFile(route, file, importGraph)),
+  }));
+  const matchedRoutes = matchedRoutesByFile.flatMap((entry) => entry.routes);
+  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes);
+  for (const entry of matchedRoutesByFile) {
+    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes);
+    entry.commandEntries = perFileCommandEntries;
+  }
+  const childSafeRoutes = commandEntries.filter((entry) => entry.executionOwners.every((owner) => owner === "child-safe"));
+  const mainThreadRoutes = commandEntries.filter((entry) => entry.executionOwners.includes("main-thread"));
+  const ciOnlyRoutes = commandEntries.filter((entry) => entry.executionOwners.every((owner) => owner === "ci-only"));
+  const unmatchedChangedFiles = matchedRoutesByFile
+    .filter((entry) => entry.routes.length === 0)
+    .map((entry) => entry.changedFile);
 
   return {
     schemaVersion: 1,
     changedFiles: normalizedChangedFiles,
     importGraphLoaded: !!importGraph,
-    recommendedCommands: commandRoutes.map((route) => ({
-      commandRef: route.commandRef,
-      reason: `matches ${route.domain}/${route.ownerHint}`,
-      domain: route.domain,
-      ownerHint: route.ownerHint,
-      resourceLocks: route.resourceLocks,
-      executionOwner: route.executionOwner,
-      ciProfile: route.ciProfile,
+    recommendedCommands: commandEntries.map((entry) => ({
+      commandRef: entry.commandRef,
+      reason: `matches ${entry.domains.join("+")}/${entry.ownerHints.join("+")}`,
+      domains: entry.domains,
+      ownerHints: entry.ownerHints,
+      resourceLocks: entry.resourceLocks,
+      executionOwners: entry.executionOwners,
+      ciProfiles: entry.ciProfiles,
+      expandedSpecs: entry.expandedSpecs,
+      routeIds: entry.routeIds,
     })),
-    coveredDomains: [...new Set(commandRoutes.map((route) => route.domain))].sort(),
-    coveredOwners: [...new Set(commandRoutes.map((route) => route.ownerHint))].sort(),
-    resourceLocks: [...new Set(commandRoutes.flatMap((route) => route.resourceLocks))].sort(),
-    executionOwners: [...new Set(commandRoutes.map((route) => route.executionOwner))].sort(),
-    childAgentStaticTasks: childSafeRoutes.map((route) => ({ commandRef: route.commandRef, reason: `short ${route.layer} route` })),
-    mainThreadSerialVerification: mainThreadRoutes.map((route) => ({ commandRef: route.commandRef, resourceLocks: route.resourceLocks })),
-    ciOnlyVerification: ciOnlyRoutes.map((route) => ({ commandRef: route.commandRef, reason: "reserved for CI profile" })),
-    skippedHeavyTests: skippedHeavyRoutes(allRoutes, commandRoutes),
+    coveredDomains: [...new Set(commandEntries.flatMap((entry) => entry.domains))].sort(),
+    coveredOwners: [...new Set(commandEntries.flatMap((entry) => entry.ownerHints))].sort(),
+    resourceLocks: [...new Set(commandEntries.flatMap((entry) => entry.resourceLocks))].sort(),
+    executionOwners: [...new Set(commandEntries.flatMap((entry) => entry.executionOwners))].sort(),
+    childAgentStaticTasks: childSafeRoutes.map((entry) => ({
+      commandRef: entry.commandRef,
+      reason: "short contract route",
+      expandedSpecs: entry.expandedSpecs,
+    })),
+    mainThreadSerialVerification: mainThreadRoutes.map((entry) => ({
+      commandRef: entry.commandRef,
+      resourceLocks: entry.resourceLocks,
+      expandedSpecs: entry.expandedSpecs,
+    })),
+    ciOnlyVerification: ciOnlyRoutes.map((entry) => ({ commandRef: entry.commandRef, reason: "reserved for CI profile" })),
+    matchedByFile: matchedRoutesByFile.map((entry) => ({
+      changedFile: entry.changedFile,
+      matchedRouteIds: entry.routes.map((route) => route.id).sort(),
+      recommendedCommands: entry.commandEntries.map((commandEntry) => ({
+        commandRef: commandEntry.commandRef,
+        domains: commandEntry.domains,
+        ownerHints: commandEntry.ownerHints,
+        expandedSpecs: commandEntry.expandedSpecs,
+      })),
+    })),
+    impactedDomains: summarizeImpactedDomains(commandEntries),
+    unmatchedChangedFiles,
+    skippedHeavyTests: skippedHeavyRoutes(allRoutes, matchedRoutes),
   };
 }
 
 function renderMarkdown(report) {
   const lines = ["# Verification selector explain", "", "## Changed files"];
   lines.push(...(report.changedFiles.length ? report.changedFiles.map((file) => `- ${file}`) : ["- none"]));
+  lines.push("", "## Matched by changed file");
+  for (const entry of report.matchedByFile || []) {
+    lines.push(`- ${entry.changedFile}`);
+    if (!entry.recommendedCommands.length) {
+      lines.push("  - no matched commands");
+      continue;
+    }
+    for (const command of entry.recommendedCommands) {
+      lines.push(`  - ${command.commandRef} (${command.domains.join("+")}/${command.ownerHints.join("+")})`);
+      if (command.expandedSpecs.length) {
+        lines.push(...command.expandedSpecs.map((specPath) => `    - ${specPath}`));
+      }
+    }
+  }
+  lines.push("", "## Unmatched changed files");
+  lines.push(...(report.unmatchedChangedFiles.length ? report.unmatchedChangedFiles.map((file) => `- ${file}`) : ["- none"]));
+  lines.push("", "## Impacted domains");
+  lines.push(...((report.impactedDomains || []).length
+    ? report.impactedDomains.map((entry) => `- ${entry.domain}: commands=${entry.commandCount}, specs=${entry.specCount}, owners=${entry.ownerHints.join("+")}`)
+    : ["- none"]));
   lines.push("", "## Recommended commands");
-  lines.push(...(report.recommendedCommands.length ? report.recommendedCommands.map((route) => `- ${route.commandRef} (${route.executionOwner}; ${route.domain}/${route.ownerHint})`) : ["- none"]));
+  lines.push(...(report.recommendedCommands.length ? report.recommendedCommands.map((route) => {
+    const ownerText = route.executionOwners.join("+") || "unknown-owner";
+    const routeText = route.domains.join("+") || "unknown-domain";
+    const specCount = route.expandedSpecs.length ? `; specs=${route.expandedSpecs.length}` : "";
+    return `- ${route.commandRef} (${ownerText}; ${routeText}${specCount})`;
+  }) : ["- none"]));
   lines.push("", "## Resource locks");
   lines.push(...(report.resourceLocks.length ? report.resourceLocks.map((lock) => `- ${lock}`) : ["- none"]));
   lines.push("", "## Main-thread serial verification");
@@ -227,10 +410,23 @@ function listRoutes() {
 
 function explainRoute(target) {
   const routes = buildRouteIndex();
+  const route = routes.find((candidate) => candidate.id === target);
+  if (route) {
+    console.log(JSON.stringify(route, null, 2));
+    return;
+  }
   const normalizedTarget = target ? normalizeChangedFiles([target])[0] : "";
-  const route = routes.find((candidate) => candidate.id === target || routeSourceRefs(candidate).includes(normalizedTarget));
-  if (!route) throw new Error(`No route found for ${target}`);
-  console.log(JSON.stringify(route, null, 2));
+  const recommendation = buildRecommendation([target], routes);
+  const targetExists = normalizedTarget ? fs.existsSync(path.join(REPO_ROOT, normalizedTarget)) : false;
+  if (targetExists && recommendation.recommendedCommands.length > 0) {
+    console.log(JSON.stringify({
+      mode: "recommendation-fallback",
+      target,
+      recommendation,
+    }, null, 2));
+    return;
+  }
+  throw new Error(`No route found for ${target}`);
 }
 
 function main() {

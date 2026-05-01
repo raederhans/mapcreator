@@ -212,6 +212,13 @@ function specsForField(field, value) {
   return matches;
 }
 
+function specsForSpecPath(specPath) {
+  const normalizedPath = toRepoPath(specPath);
+  const matches = specsForField("specPath", normalizedPath);
+  ensure(matches.length === 1, `Expected exactly one E2E spec for ${normalizedPath}.`);
+  return matches;
+}
+
 function listSpecsForField(field, value) {
   const matches = specsForField(field, value);
   for (const spec of matches) {
@@ -281,12 +288,19 @@ function main() {
       runSpecs(`owner-${maybeLayer}`, specsForField("ownerHint", maybeLayer), extraArgs);
       return;
     }
+    case "run-spec": {
+      const extraArgs = restArgs[0] === "--" ? restArgs.slice(1) : restArgs;
+      const matches = specsForSpecPath(maybeLayer);
+      const specName = path.posix.basename(matches[0].specPath, ".spec.js");
+      runSpecs(`spec-${specName}`, matches, extraArgs);
+      return;
+    }
     case "explain":
       explainSpec(maybeLayer);
       return;
   }
 
-  throw new Error("Usage: node tools/e2e_layering.mjs <generate|check|run <layer>|list-domain <domain>|run-domain <domain>|list-owner <owner>|run-owner <owner>|explain <specPath>>");
+  throw new Error("Usage: node tools/e2e_layering.mjs <generate|check|run <layer>|list-domain <domain>|run-domain <domain>|list-owner <owner>|run-owner <owner>|run-spec <specPath>|explain <specPath>>");
 }
 
 main();

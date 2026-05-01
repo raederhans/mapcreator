@@ -15,6 +15,12 @@ const {
 } = require("./playwright-project-import");
 const { getWebServerConfig } = require("./playwright-web-server");
 
+// Readiness ladder for E2E callers:
+// 1. waitForAppInteractive -> boot 主流程结束，可开始读 runtime state。
+// 2. waitForShellReady -> shell 控件和 canvas 就绪，可开始 UI 交互。
+// 3. waitForScenarioReadyGate / waitForScenarioApplyIdle -> 场景切换稳定。
+// 4. waitForRenderIdle -> render/chunk/exact-after-settle 全部稳定，可做视觉采样。
+
 async function primeStateRef(page) {
   // Playwright `waitForFunction(async ...)` only waits on the returned Promise object itself,
   // so shared ready gates pin the live singleton state onto `globalThis` first and then poll
