@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tempfile
@@ -81,13 +82,24 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
         self.assertEqual(manifest["startup_bundle_url_zh"], "data/scenarios/hoi4_1939/startup.bundle.zh.json")
         self.assertEqual(manifest["startup_bundle_version"], build_startup_bundle.STARTUP_BUNDLE_VERSION)
         self.assertEqual(manifest["startup_bootstrap_strategy"], build_startup_bundle.STARTUP_BOOTSTRAP_STRATEGY)
+        self.assertEqual(
+            manifest["runtime_bootstrap_topology_url"],
+            "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
+        )
+        self.assertEqual(
+            manifest["startup_topology_url"],
+            "data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
+        )
         legacy_bootstrap = json.loads((scenario_dir / "runtime_topology.bootstrap.topo.json").read_text(encoding="utf-8"))
         self.assertGreater(len(legacy_bootstrap["objects"]["political"]["geometries"]), 0)
         self.assertGreater(len(legacy_bootstrap["arcs"]), 0)
-        startup_shell = json.loads((scenario_dir / "startup.runtime_shell.topo.json").read_text(encoding="utf-8"))
+        startup_shell_path = scenario_dir / "startup.runtime_shell.topo.json"
+        startup_shell = json.loads(startup_shell_path.read_text(encoding="utf-8"))
         self.assertNotIn("political", startup_shell["objects"])
         for object_name in ("land_mask", "context_land_mask", "scenario_water"):
             self.assertIn(object_name, startup_shell["objects"])
+        startup_shell_sha = hashlib.sha256(startup_shell_path.read_bytes()).hexdigest()
+        legacy_bootstrap_sha = hashlib.sha256((scenario_dir / "runtime_topology.bootstrap.topo.json").read_bytes()).hexdigest()
 
         for language in build_startup_bundle.SUPPORTED_LANGUAGES:
             bundle_path = scenario_dir / f"startup.bundle.{language}.json"
@@ -98,6 +110,9 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
             bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
             self.assertEqual(bundle["scenario_id"], "hoi4_1939")
             self.assertEqual(bundle["scenario"]["bootstrap_strategy"], build_startup_bundle.STARTUP_BOOTSTRAP_STRATEGY)
+            self.assertEqual(bundle["source"]["runtime_bootstrap_topology_sha256"], startup_shell_sha)
+            self.assertNotEqual(bundle["source"]["runtime_bootstrap_topology_sha256"], legacy_bootstrap_sha)
+            self.assertEqual(bundle["manifest_subset"]["startup_topology_url"], manifest["startup_topology_url"])
             runtime_objects = bundle["scenario"]["runtime_topology_bootstrap"]["objects"]
             for object_name in ("land_mask", "context_land_mask", "scenario_water"):
                 self.assertIn(object_name, runtime_objects)

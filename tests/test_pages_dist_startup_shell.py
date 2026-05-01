@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import re
 import unittest
+import gzip
 import json
+import tempfile
 from pathlib import Path
+
+from tools import build_pages_dist
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -212,6 +216,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/ETOPO_2022_v1_60s_N90W180_surface.tif",
             "app/data/scenarios/tno_1962/derived/marine_regions_named_waters.snapshot.geojson",
             "app/data/scenarios/tno_1962/audit.json",
+            "app/data/scenarios/modern_world/runtime_topology.topo.json",
             "app/data/i18n/locales_baseline.json",
             "app/data/transport_layers/global_road/shards/w120_w090/roads.topo.json",
             "app/data/transport_layers/japan_road/roads.topo.json",
@@ -245,6 +250,70 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 for runtime_path in full_paths.values():
                     with self.subTest(manifest=manifest_relative_path, runtime_path=runtime_path):
                         self.assertIn(f"app/{runtime_path}", dist_paths)
+
+    def test_pages_scenario_metadata_strips_unpublished_audit_urls(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenarios_dir = Path(tmp_dir) / "data" / "scenarios"
+            scenario_dir = scenarios_dir / "sample_scenario"
+            scenario_dir.mkdir(parents=True)
+            (scenarios_dir / "index.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "scenarios": [
+                            {
+                                "scenario_id": "sample_scenario",
+                                "manifest_url": "data/scenarios/sample_scenario/manifest.json",
+                                "audit_url": "data/scenarios/sample_scenario/audit.json",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (scenario_dir / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "scenario_id": "sample_scenario",
+                        "audit_url": "data/scenarios/sample_scenario/audit.json",
+                        "countries_url": "data/scenarios/sample_scenario/countries.json",
+                        "runtime_topology_url": "data/scenarios/sample_scenario/runtime_topology.topo.json",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            bundle_payload = {
+                "scenario_id": "sample_scenario",
+                "manifest_subset": {
+                    "scenario_id": "sample_scenario",
+                    "audit_url": "data/scenarios/sample_scenario/audit.json",
+                    "runtime_topology_url": "data/scenarios/sample_scenario/runtime_topology.topo.json",
+                    "countries_url": "data/scenarios/sample_scenario/countries.json",
+                },
+            }
+            bundle_path = scenario_dir / "startup.bundle.en.json"
+            bundle_bytes = json.dumps(bundle_payload, separators=(",", ":")).encode("utf-8")
+            bundle_path.write_bytes(bundle_bytes)
+            (scenario_dir / "startup.bundle.en.json.gz").write_bytes(gzip.compress(bundle_bytes, mtime=0))
+
+            build_pages_dist.strip_scenario_publish_audit_urls(scenarios_dir)
+
+            index_payload = json.loads((scenarios_dir / "index.json").read_text(encoding="utf-8"))
+            manifest_payload = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+            bundle_payload = json.loads(bundle_path.read_text(encoding="utf-8"))
+            gzip_bundle_payload = json.loads(gzip.decompress((scenario_dir / "startup.bundle.en.json.gz").read_bytes()))
+
+            self.assertNotIn("audit_url", index_payload["scenarios"][0])
+            self.assertNotIn("audit_url", manifest_payload)
+            self.assertNotIn("runtime_topology_url", manifest_payload)
+            self.assertEqual(manifest_payload["countries_url"], "data/scenarios/sample_scenario/countries.json")
+            self.assertNotIn("audit_url", bundle_payload["manifest_subset"])
+            self.assertNotIn("runtime_topology_url", bundle_payload["manifest_subset"])
+            self.assertEqual(
+                bundle_payload["manifest_subset"]["countries_url"],
+                "data/scenarios/sample_scenario/countries.json",
+            )
+            self.assertEqual(gzip_bundle_payload, bundle_payload)
 
     def test_deploy_dist_artifact_preserves_nojekyll(self) -> None:
         workflow_lines = VERIFY_SHARED_WORKFLOW.read_text(encoding="utf-8").splitlines()

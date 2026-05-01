@@ -29,14 +29,14 @@
   "cores_url": "data/scenarios/modern_world/cores.by_feature.json",
   "audit_url": "data/scenarios/modern_world/audit.json",
   "summary": {
-    "feature_count": 11724,
+    "feature_count": 11294,
     "owner_count": 174,
     "controller_count": 174,
     "quality_counts": {
-      "direct_country_copy": 11724
+      "direct_country_copy": 11294
     },
     "source_counts": {
-      "canonical_baseline": 11724
+      "canonical_baseline": 11294
     },
     "approximate_count": 0,
     "manual_reviewed_feature_count": 0,
@@ -68,5 +68,6 @@
     }
   },
   "city_overrides_url": "data/scenarios/modern_world/city_overrides.json",
-  "capital_hints_url": "data/scenarios/modern_world/capital_hints.json"
+  "capital_hints_url": "data/scenarios/modern_world/capital_hints.json",
+  "runtime_topology_url": "data/scenarios/modern_world/runtime_topology.topo.json"
 }

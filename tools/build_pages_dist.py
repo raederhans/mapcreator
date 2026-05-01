@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import json
 import shutil
 import sys
@@ -77,6 +78,9 @@ DATA_RUNTIME_DIRS = (
 )
 SCENARIO_EXCLUDED_DIR_NAMES = {"derived"}
 SCENARIO_EXCLUDED_FILE_NAMES = {"audit.json"}
+SCENARIO_EXCLUDED_RELATIVE_FILES = {
+    Path("modern_world") / "runtime_topology.topo.json",
+}
 TRANSPORT_METADATA_FILE_NAMES = {
     "catalog.json",
     "manifest.json",
@@ -191,9 +195,61 @@ def copy_scenario_runtime_data() -> None:
             return False
         if relative_path.name in SCENARIO_EXCLUDED_FILE_NAMES:
             return False
+        if relative_path in SCENARIO_EXCLUDED_RELATIVE_FILES:
+            return False
         return True
 
     copy_tree_filtered(source_dir, destination_dir, should_copy_file)
+    strip_scenario_publish_audit_urls(destination_dir)
+
+
+def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
+    """Keep Pages metadata aligned with the runtime allowlist.
+
+    Scenario `audit.json` files and selected heavyweight local-only topology
+    files stay available in the repository. Pages excludes them to keep the
+    deploy artifact small, so published metadata must not advertise those URLs.
+    """
+
+    def strip_unpublished_manifest_urls(payload: dict) -> bool:
+        changed = False
+        if "audit_url" in payload:
+            payload.pop("audit_url", None)
+            changed = True
+        runtime_topology_url = payload.get("runtime_topology_url")
+        if isinstance(runtime_topology_url, str) and not (APP_DIST_ROOT / runtime_topology_url).is_file():
+            payload.pop("runtime_topology_url", None)
+            changed = True
+        return changed
+
+    index_path = scenarios_dir / "index.json"
+    if index_path.is_file():
+        payload = json.loads(index_path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict):
+            scenarios = payload.get("scenarios")
+            if isinstance(scenarios, list):
+                for scenario in scenarios:
+                    if isinstance(scenario, dict):
+                        scenario.pop("audit_url", None)
+            payload.pop("audit_url", None)
+            index_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    for manifest_path in scenarios_dir.glob("*/manifest.json"):
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and strip_unpublished_manifest_urls(payload):
+            manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    for bundle_path in scenarios_dir.glob("*/startup.bundle.*.json"):
+        payload = json.loads(bundle_path.read_text(encoding="utf-8"))
+        manifest_subset = payload.get("manifest_subset") if isinstance(payload, dict) else None
+        if not isinstance(manifest_subset, dict):
+            continue
+        if strip_unpublished_manifest_urls(manifest_subset):
+            bundle_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            bundle_path.write_bytes(bundle_bytes)
+            gzip_path = bundle_path.with_suffix(bundle_path.suffix + ".gz")
+            if gzip_path.is_file():
+                gzip_path.write_bytes(gzip.compress(bundle_bytes, mtime=0))
 
 
 def copy_transport_runtime_data() -> None:

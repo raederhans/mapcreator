@@ -571,7 +571,7 @@ def main() -> int:
         f"data/scenarios/{args.scenario_id}/runtime_topology.bootstrap.topo.json"
     )
     manifest_payload["startup_topology_url"] = (
-        f"data/scenarios/{args.scenario_id}/runtime_topology.bootstrap.topo.json"
+        f"data/scenarios/{args.scenario_id}/startup.runtime_shell.topo.json"
     )
     for language, field_name in SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS.items():
         manifest_payload[field_name] = (

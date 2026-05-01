@@ -1307,3 +1307,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ### 2026-04-30 - Pages allowlist 要覆盖 manifest 的所有运行时目标
 - 只复制 manifest 和 preview pack 仍会在 workbench 放大或切 variant 时 404；发布清单要直接校验 manifest `full` 路径在 dist 中存在。
+
+### 2026-04-30 - 发布态元数据必须和 allowlist 同步
+- Pages 排除大体积诊断或本地专用 runtime 文件时，要同步清理 dist 中 manifest/index 的 URL 字段，并用测试校验 URL 不指向缺失文件。
+- 严格场景合同要同时检查 runtime topology 与 owners/controllers/cores keyset，避免旧 feature map 靠缺失 topology 长期隐藏。

@@ -108,7 +108,7 @@
   },
   "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
   "runtime_bootstrap_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
-  "startup_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
+  "startup_topology_url": "data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
   "city_overrides_url": "data/scenarios/hoi4_1939/city_overrides.json",
   "capital_hints_url": "data/scenarios/hoi4_1939/capital_hints.json",
   "detail_chunk_manifest_url": "data/scenarios/hoi4_1939/detail_chunks.manifest.json",

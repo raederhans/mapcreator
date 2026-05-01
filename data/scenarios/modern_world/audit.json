@@ -3,14 +3,14 @@
   "scenario_id": "modern_world",
   "generated_at": "2026-03-09T14:09:29.123Z",
   "summary": {
-    "feature_count": 11724,
+    "feature_count": 11294,
     "owner_count": 174,
     "controller_count": 174,
     "quality_counts": {
-      "direct_country_copy": 11724
+      "direct_country_copy": 11294
     },
     "source_counts": {
-      "canonical_baseline": 11724
+      "canonical_baseline": 11294
     },
     "blocker_count": 0,
     "owner_controller_split_feature_count": 0
@@ -18,10 +18,33 @@
   "diagnostics": {
     "source": "generated_from_canonical_baseline",
     "note": "Canonical modern-world baseline with vanilla palette colors.",
-    "detail_topology_feature_count": 11724,
+    "detail_topology_feature_count": 11294,
     "primary_country_count": 209,
     "canonical_country_count": 174,
     "palette_id": "hoi4_vanilla",
-    "baseline_hash": "a73e75303316cfc765d79e953be2d64eea2ebdcc3f8ffca27a12d2136d02120b"
+    "baseline_hash": "a73e75303316cfc765d79e953be2d64eea2ebdcc3f8ffca27a12d2136d02120b",
+    "removed_stale_assignment_count": 430,
+    "removed_stale_assignment_sample": [
+      "RUS+99?",
+      "RUS-2167",
+      "RUS-2379",
+      "RUS-2380",
+      "RUS-2382",
+      "RUS-2386",
+      "RUS-2396",
+      "RUS-2397",
+      "RUS-2398",
+      "RUS-2399",
+      "RUS-2400",
+      "RUS-2401",
+      "RUS-2402",
+      "RUS-2403",
+      "RUS-2602",
+      "RUS-2603",
+      "RUS-2605",
+      "RUS-2606",
+      "RUS-2610",
+      "RUS-2612"
+    ]
   }
 }
