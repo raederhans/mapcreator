@@ -63,7 +63,11 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'const resolvedPoliticalFeatureIds = Array\.isArray\(politicalFeatureIds\) && politicalFeatureIds\.length\s*\? Array\.from\(new Set\(politicalFeatureIds\)\)\s*: Array\.from\(new Set\(\[\s*\.\.\.previousFeatureIds,\s*\.\.\.nextFeatureIds,\s*\]\)\)',
+                r'const resolvedPoliticalFeatureIds = Array\.from\(new Set\(\[\s*'
+                r'\.\.\.\(Array\.isArray\(politicalFeatureIds\) \? politicalFeatureIds : \[\]\),\s*'
+                r'\.\.\.previousFeatureIds,\s*'
+                r'\.\.\.nextFeatureIds,\s*'
+                r'\]\)\)',
                 re.S,
             ),
         )
@@ -395,6 +399,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         start = self.map_renderer_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
         end = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
         promotion_infra_source = self.map_renderer_source[start:end]
+        self.assertIn("primaryDerivedStateReady = false,", promotion_infra_source)
         self.assertIn('if (hasPoliticalGeometryChange) {', promotion_infra_source)
         self.assertIn('ensureSovereigntyState();', promotion_infra_source)
         self.assertIn('if (refreshOpeningOwnerBorders !== false) {', promotion_infra_source)
@@ -402,7 +407,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn('invalidateBorderCache();', promotion_infra_source)
         self.assertNotIn('rebuildStaticMeshes();', promotion_infra_source)
 
-    def test_political_chunk_promotion_clears_stale_internal_border_meshes_before_visual_render(self):
+    def test_political_chunk_promotion_rebuilds_primary_runtime_state_before_visual_render(self):
         helper_start = self.map_renderer_source.index("function clearDeferredInternalBorderMeshCaches(")
         helper_end = self.map_renderer_source.index("function buildDetailAdmMeshSignature", helper_start)
         helper_source = self.map_renderer_source[helper_start:helper_end]
@@ -423,7 +428,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             promotion_source,
             re.compile(
-                r'if \(hasPoliticalChange\) \{\s*refreshResolvedColorsForFeatures\(politicalFeatureIds, \{ renderNow: false \}\);\s*clearDeferredInternalBorderMeshCaches\(\);\s*scheduleDeferredHeavyBorderMeshes\(\);\s*\}',
+                r'if \(hasPoliticalChange\) \{\s*ensureLayerDataFromTopology\(\);\s*rebuildPoliticalLandCollections\(\);[\s\S]*?'
+                r'rebuildRuntimeDerivedState\(\{\s*includeRuntimePoliticalMeta: true,\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);\s*\}'
+                r'[\s\S]*?if \(hasPoliticalChange\) \{\s*clearDeferredInternalBorderMeshCaches\(\);\s*scheduleDeferredHeavyBorderMeshes\(\);\s*\}',
                 re.S,
             ),
         )
@@ -469,7 +476,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             infra_source,
             re.compile(
-                r'if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{\s*scheduleDeferredScenarioChunkPromotionInfraRefresh\(\{\s*reason,\s*suppressRender,\s*promotionVersion,\s*hasPoliticalGeometryChange,\s*refreshOpeningOwnerBorders,\s*\}\);',
+                r'if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{\s*scheduleDeferredScenarioChunkPromotionInfraRefresh\(\{\s*reason,\s*suppressRender,\s*promotionVersion,\s*hasPoliticalGeometryChange,\s*primaryDerivedStateReady,\s*refreshOpeningOwnerBorders,\s*\}\);',
                 re.S,
             ),
         )

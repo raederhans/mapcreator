@@ -1325,3 +1325,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 2026-05-01 - comment-only 任务也要先核对换行风格
 - `apply_patch` 后如果 `git diff --numstat` 突然显示整文件大面积替换，先检查是不是 LF/CRLF 漂移，不要急着把噪音 diff 留在提交里。
 - 对老文件补注释时，最终要回到仓库原本的换行风格，再做语法校验和留档回写。
+
+### 2026-05-01 - worktree runtime verification and TNO chunk metadata drift
+- 在 Windows worktree 里跑 Playwright 时，可以先用主仓 `node_modules` + `NODE_PATH` 做最小验证；如果用例长时间只打印 `Running ...` 没有断言输出，就应尽快停止，把它当成环境型噪声而不是继续卡住主线程。
+- `tools/patch_tno_1962_bundle.py --stage chunk_assets` 依赖的 checkpoint 必须已经有同源 `runtime_topology.topo.json`；只有 water-stage checkpoint 会在 chunk rebuild 时暴露 `source/runtime/chunks` 的真实 id 漂移。
+

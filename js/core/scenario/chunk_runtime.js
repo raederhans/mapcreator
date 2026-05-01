@@ -909,12 +909,11 @@ function createScenarioChunkRuntimeController({
       return false;
     }
     runtimeState.scenarioPoliticalChunkData = normalizedPayload || null;
-    const resolvedPoliticalFeatureIds = Array.isArray(politicalFeatureIds) && politicalFeatureIds.length
-      ? Array.from(new Set(politicalFeatureIds))
-      : Array.from(new Set([
-        ...previousFeatureIds,
-        ...nextFeatureIds,
-      ]));
+    const resolvedPoliticalFeatureIds = Array.from(new Set([
+      ...(Array.isArray(politicalFeatureIds) ? politicalFeatureIds : []),
+      ...previousFeatureIds,
+      ...nextFeatureIds,
+    ]));
     refreshMapDataForScenarioChunkPromotion({
       suppressRender: !renderNow,
       reason,

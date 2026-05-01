@@ -40,11 +40,30 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             self.renderer_content,
         )
 
-    def test_chunk_promotion_infra_keeps_index_then_spatial_then_secondary_schedule(self):
+    def test_chunk_promotion_visual_stage_reuses_primary_derived_state_rebuild(self):
         self.assertRegex(
             self.renderer_content,
             re.compile(
-                r'buildIndex\(\);\s*await yieldToMain\(\);\s*if \(promotionVersion !== scenarioChunkPromotionVersion\) \{\s*return false;\s*\}\s*await buildSpatialIndexChunked\(\{\s*includeSecondary: false,\s*keepReady: true,\s*\}\);[\s\S]*?if \(promotionVersion !== scenarioChunkPromotionVersion\) \{\s*return false;\s*\}\s*scheduleSecondarySpatialIndexBuild\(\{',
+                r'function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?if \(hasPoliticalChange\) \{\s*\["political", "contextBase", "contextMarkers", "borders", "labels"\]',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            self.renderer_content,
+            re.compile(
+                r'if \(hasPoliticalChange\) \{\s*ensureLayerDataFromTopology\(\);\s*rebuildPoliticalLandCollections\(\);[\s\S]*?'
+                r'rebuildRuntimeDerivedState\(\{\s*includeRuntimePoliticalMeta: true,\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);',
+                re.S,
+            ),
+        )
+
+    def test_chunk_promotion_infra_skips_primary_rebuild_when_visual_stage_is_ready(self):
+        self.assertRegex(
+            self.renderer_content,
+            re.compile(
+                r'async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?primaryDerivedStateReady = false,[\s\S]*?'
+                r'if \(!primaryDerivedStateReady\) \{\s*buildIndex\(\);\s*await yieldToMain\(\);[\s\S]*?await buildSpatialIndexChunked\(\{\s*includeSecondary: false,\s*keepReady: true,\s*\}\);\s*\}[\s\S]*?'
+                r'scheduleSecondarySpatialIndexBuild\(\{',
                 re.S,
             ),
         )
@@ -90,7 +109,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         end = self.renderer_content.index("function drawHitCanvasWithMetric", start)
         draw_hit_canvas = self.renderer_content[start:end]
 
-        self.assertIn("if (visibleSpatialItems === null) {", draw_hit_canvas)
+        self.assertIn("if (visibleSpatialItemsResult === null) {", draw_hit_canvas)
         self.assertIn("runtimeState.hitCanvasDirty = true;", draw_hit_canvas)
         self.assertIn('recordRenderPerfMetric("hitCanvasSpatialIndexUnavailable"', draw_hit_canvas)
         self.assertNotIn("runtimeState.landData.features.forEach", draw_hit_canvas)
