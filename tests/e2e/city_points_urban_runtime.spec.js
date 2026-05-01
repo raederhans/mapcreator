@@ -1,14 +1,33 @@
 const fs = require("fs");
 const path = require("path");
-const { test, expect } = require("@playwright/test");
-const { getAppUrl, waitForAppInteractive } = require("./support/playwright-app");
+const {
+  test,
+  expect,
+  prepareSharedCityRuntimeState,
+} = require("./support/fixtures");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(90_000);
-const APP_URL = getAppUrl();
-const VIEW_SETTINGS_STORAGE_KEY = "map_view_settings_v1";
-const IGNORED_CONSOLE_PATTERNS = [
-  /\[map_renderer\] Scenario political background merge fallback engaged:/i,
-];
+const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
+const SHARED_CITY_POINTS_VIEW_SETTINGS = {
+  schemaVersion: 1,
+  cityPoints: {
+    show: true,
+    style: {
+      theme: "atlas_ink",
+      radius: 6.8,
+      markerScale: 1.14,
+      markerDensity: 0.72,
+      labelDensity: "dense",
+      color: "#2f343a",
+      capitalColor: "#9f9072",
+      opacity: 0.94,
+      showLabels: true,
+      labelSize: 11,
+      showCapitalOverlay: true,
+    },
+  },
+};
 
 async function activateAppearanceTab(page, tabId, panelId) {
   await page.evaluate(({ targetTabId }) => {
@@ -264,51 +283,12 @@ test("city points runtime bridge exposes preset + point-density controls and syn
     });
   });
 
-  await page.addInitScript((storageKey) => {
-    localStorage.setItem(storageKey, JSON.stringify({
-      schemaVersion: 1,
-      cityPoints: {
-        show: true,
-        style: {
-          theme: "atlas_ink",
-          radius: 6.8,
-          markerScale: 1.14,
-          markerDensity: 0.72,
-          labelDensity: "dense",
-          color: "#2f343a",
-          capitalColor: "#9f9072",
-          opacity: 0.94,
-          showLabels: true,
-          labelSize: 11,
-          showCapitalOverlay: true,
-        },
-      },
-    }));
-  }, VIEW_SETTINGS_STORAGE_KEY);
-
-  await page.goto(APP_URL, { waitUntil: "domcontentloaded" });
-  await waitForAppInteractive(page);
-
-  await page.waitForFunction(() => {
-    const select = document.querySelector("#scenarioSelect");
-    return !!select && !!select.querySelector('option[value="tno_1962"]');
+  await prepareSharedCityRuntimeState(page, {
+    scenarioId: "tno_1962",
+    scenarioApplyReason: "city-points-urban-runtime",
+    viewSettingsPayload: SHARED_CITY_POINTS_VIEW_SETTINGS,
+    timeout: 120_000,
   });
-
-  const initialScenarioId = await page.evaluate(async () => {
-    const { state } = await import("/js/core/state.js");
-    return String(state.activeScenarioId || "");
-  });
-  if (initialScenarioId !== "tno_1962") {
-    await page.selectOption("#scenarioSelect", "tno_1962");
-    const applyButton = page.locator("#applyScenarioBtn");
-    const applyVisible = await applyButton.isVisible();
-    const applyEnabled = applyVisible ? await applyButton.isEnabled() : false;
-    if (applyVisible && applyEnabled) {
-      await page.click("#applyScenarioBtn");
-    }
-    await expect(page.locator("#scenarioStatus")).toContainText("TNO 1962", { timeout: 20000 });
-    await page.waitForTimeout(1200);
-  }
 
   await activateAppearanceTab(page, "appearanceTabLayers", "appearancePanelLayers");
   await expect(page.locator("#cityPointsMarkerScale")).toHaveValue("1.15");

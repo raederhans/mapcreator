@@ -2,11 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
 const { getAppUrl } = require("./support/playwright-app");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 const APP_URL = getAppUrl();
-const IGNORED_CONSOLE_PATTERNS = [
-  /\[map_renderer\] Scenario political background merge fallback engaged:/i,
-];
+const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
 test.setTimeout(120000);
 

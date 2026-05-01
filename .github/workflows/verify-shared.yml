@@ -78,8 +78,11 @@ jobs:
           else
             git diff --name-only HEAD^ HEAD > "$changed_files" || true
           fi
+          node tools/build_test_import_graph.mjs
+          npm run verify:test-import-graph
           node tools/select_verification_targets.mjs --check
           node tools/select_verification_targets.mjs --changed-files-list "$changed_files" --json-out .runtime/reports/generated/verification-selector-explain.json --md-out .runtime/reports/generated/verification-selector-explain.md
+          npm run verify:test-timeout-inventory
 
       - name: Upload verification selector explain
         if: always() && inputs.profile == 'pr-fast'
@@ -87,7 +90,11 @@ jobs:
         with:
           name: verification-selector-explain
           if-no-files-found: ignore
-          path: .runtime/reports/generated/verification-selector-explain.*
+          path: |
+            .runtime/reports/generated/verification-selector-explain.*
+            .runtime/reports/generated/test-timeout-inventory.*
+            .runtime/reports/generated/test-import-graph-summary.*
+            tests/e2e/test-import-graph.json
 
       - name: Cache Playwright browsers
         if: (inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke'
@@ -153,6 +160,16 @@ jobs:
         if: inputs.profile == 'pr-fast'
         run: npm run verify:test:e2e-layers
 
+      - name: Verify test infra guardrails
+        if: inputs.profile == 'pr-fast'
+        run: |
+          npm run verify:test-console-allowlist
+          npm run verify:test-timeout-guardrails
+
+      - name: Run test infra structural contracts
+        if: inputs.profile == 'pr-fast'
+        run: python -m unittest tests.test_e2e_structural_tooling -q
+
       - name: Run strict TNO scenario contract gate
         if: inputs.profile == 'full' || inputs.profile == 'pr-fast'
         run: python tools/check_scenario_contracts.py --strict --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.strict_contract_report.json
@@ -160,6 +177,22 @@ jobs:
       - name: Run smoke E2E
         if: (inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke'
         run: npm run test:e2e:smoke
+
+      - name: Write smoke timing summary
+        if: always() && ((inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke')
+        run: npm run verify:test-timing-summary
+
+      - name: Upload smoke timing and failure-context artifacts
+        if: always() && ((inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smoke-timing-and-failure-context
+          if-no-files-found: ignore
+          path: |
+            .runtime/reports/test-timings.ndjson
+            .runtime/reports/generated/test-timings-summary.json
+            .runtime/reports/generated/failure-context-index.ndjson
+            .runtime/tests/playwright/**/failure-context.json
 
       - name: Upload deploy dist artifact
         if: inputs.profile == 'deploy-minimal'

@@ -7,6 +7,7 @@ import {
   refreshMapDataForScenarioApply,
   setMapData,
 } from "../core/scenario/scenario_renderer_bridge.js";
+import { refreshScenarioShellOverlays } from "../core/scenario_shell_overlay.js";
 import { getDeferredPromotionDelay } from "./startup_bootstrap_support.js";
 
 const MAX_FORCED_STARTUP_INFRA_RETRIES = 2;
@@ -178,6 +179,11 @@ export function createDeferredDetailPromotionOwner({
       runtimeState.detailPromotionCompleted = true;
       runtimeState.detailSourceRequested = detailSourceUsed || runtimeState.detailSourceRequested;
 
+      refreshScenarioShellOverlays({
+        renderNow: false,
+        borderReason: "detail-promotion",
+        refreshOpeningOwnerBorders: false,
+      });
       console.info(
         `[main] Detail promotion applied. source=${runtimeState.detailSourceRequested}, mode=${runtimeState.topologyBundleMode}.`
       );

@@ -1,0 +1,2261 @@
+{
+  "schemaVersion": 1,
+  "graphMode": "artifact-only",
+  "summary": {
+    "specCount": 47,
+    "nodeCount": 58,
+    "reverseIndexKeyCount": 77,
+    "topSharedDependencies": [
+      {
+        "dependency": "js/core/interaction_funnel.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "js/core/map_renderer.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "js/core/scenario_dispatcher.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "js/core/state.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "js/ui/sidebar.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/playwright-app-paths.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/playwright-app.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/playwright-frontline-panel.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/playwright-project-import.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/playwright-web-server.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/startup-paths.js",
+        "specCount": 47
+      },
+      {
+        "dependency": "tests/e2e/support/playwright-selectors.js",
+        "specCount": 9
+      },
+      {
+        "dependency": "tests/e2e/support/expectations/console-allowlist.js",
+        "specCount": 7
+      },
+      {
+        "dependency": "js/bootstrap/startup_bootstrap_support.js",
+        "specCount": 5
+      },
+      {
+        "dependency": "js/core/state/ui_state.js",
+        "specCount": 5
+      },
+      {
+        "dependency": "tests/e2e/support/fixtures.js",
+        "specCount": 5
+      },
+      {
+        "dependency": "js/core/scenario_manager.js",
+        "specCount": 4
+      },
+      {
+        "dependency": "js/core/render_boundary.js",
+        "specCount": 3
+      },
+      {
+        "dependency": "js/core/scenario_resources.js",
+        "specCount": 3
+      },
+      {
+        "dependency": "js/ui/transport_workbench_carrier.js",
+        "specCount": 3
+      }
+    ]
+  },
+  "specs": {
+    "tests/e2e/city_label_i18n_redraw.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_lights_layer_regression.spec.js": {
+      "directDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_marker_visibility_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_points_urban_runtime.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_reveal_plan_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_urban_rendering_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev/tno_ready_state_contract.dev.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev_workspace_i18n.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_localization_state.js",
+        "js/core/state.js",
+        "js/ui/dev_workspace.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_localization_state.js",
+        "js/core/state.js",
+        "js/ui/dev_workspace.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_localization_state.js",
+        "js/core/state.js",
+        "js/ui/dev_workspace.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev_workspace_render_boundary.spec.js": {
+      "directDependencies": [
+        "js/core/render_boundary.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/hoi4_1939_ui_smoke.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/hoi4_rk_russia_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/interaction_funnel_contract.spec.js": {
+      "directDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/main_shell_i18n.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/non_1962_runtime_matrix.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/physical_layer_regression.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/physical_layer_runtime_contract.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/project_save_load_roundtrip.spec.js": {
+      "directDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/review_regressions.spec.js": {
+      "directDependencies": [
+        "js/core/data_loader.js",
+        "js/core/startup_cache.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/data_loader.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/startup_cache.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/data_loader.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/startup_cache.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/river_layer_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_apply_concurrency.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_apply_resilience.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_blank_exit.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_boundary_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_controls_dispatcher_contract.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_shell_overlay_contract.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/shortcut_history_render_boundary.spec.js": {
+      "directDependencies": [
+        "js/core/history_manager.js",
+        "js/core/render_boundary.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/history_manager.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/history_manager.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/sidebar_default_collapse.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/startup_bundle_recovery_contract.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_editing.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_frontline.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_roundtrip.spec.js": {
+      "directDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/texture_overlay_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_1962_ui_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_named_water_rendering.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_open_ocean_rendering.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_startup_visible_context_layers_contract.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_industrial_variants.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_label_rotation.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_port_coverage_tiers.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/ui_contract_foundation.spec.js": {
+      "directDependencies": [
+        "js/ui/ui_contract.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/ui_contract.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/ui_contract.js"
+      ]
+    },
+    "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/ui_rework_support_transport_hardening.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/water_cache_strategy_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    }
+  },
+  "reverseIndex": {
+    "js/bootstrap/startup_bootstrap_support.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "js/core/data_loader.js": [
+      "tests/e2e/review_regressions.spec.js"
+    ],
+    "js/core/dirty_state.js": [
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js"
+    ],
+    "js/core/history_manager.js": [
+      "tests/e2e/shortcut_history_render_boundary.spec.js"
+    ],
+    "js/core/interaction_funnel.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/map_renderer.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/render_boundary.js": [
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js"
+    ],
+    "js/core/scenario_dispatcher.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/scenario_localization_state.js": [
+      "tests/e2e/dev_workspace_i18n.spec.js"
+    ],
+    "js/core/scenario_manager.js": [
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js"
+    ],
+    "js/core/scenario_resources.js": [
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js"
+    ],
+    "js/core/sovereignty_manager.js": [
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js"
+    ],
+    "js/core/startup_cache.js": [
+      "tests/e2e/review_regressions.spec.js"
+    ],
+    "js/core/state.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/state/ui_state.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "js/ui/dev_workspace.js": [
+      "tests/e2e/dev_workspace_i18n.spec.js"
+    ],
+    "js/ui/i18n.js": [
+      "tests/e2e/scenario_apply_concurrency.spec.js"
+    ],
+    "js/ui/sidebar.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/ui/transport_workbench_carrier.js": [
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
+    ],
+    "js/ui/transport_workbench_family_preview.js": [
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
+    ],
+    "js/ui/ui_contract.js": [
+      "tests/e2e/ui_contract_foundation.spec.js"
+    ],
+    "tests/e2e/city_label_i18n_redraw.spec.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js"
+    ],
+    "tests/e2e/city_lights_layer_regression.spec.js": [
+      "tests/e2e/city_lights_layer_regression.spec.js"
+    ],
+    "tests/e2e/city_marker_visibility_regression.spec.js": [
+      "tests/e2e/city_marker_visibility_regression.spec.js"
+    ],
+    "tests/e2e/city_points_urban_runtime.spec.js": [
+      "tests/e2e/city_points_urban_runtime.spec.js"
+    ],
+    "tests/e2e/city_reveal_plan_regression.spec.js": [
+      "tests/e2e/city_reveal_plan_regression.spec.js"
+    ],
+    "tests/e2e/city_urban_rendering_regression.spec.js": [
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "tests/e2e/dev_workspace_i18n.spec.js": [
+      "tests/e2e/dev_workspace_i18n.spec.js"
+    ],
+    "tests/e2e/dev_workspace_render_boundary.spec.js": [
+      "tests/e2e/dev_workspace_render_boundary.spec.js"
+    ],
+    "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js": [
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
+    ],
+    "tests/e2e/dev/tno_ready_state_contract.dev.spec.js": [
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js"
+    ],
+    "tests/e2e/hoi4_1939_ui_smoke.spec.js": [
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js"
+    ],
+    "tests/e2e/hoi4_rk_russia_regression.spec.js": [
+      "tests/e2e/hoi4_rk_russia_regression.spec.js"
+    ],
+    "tests/e2e/interaction_funnel_contract.spec.js": [
+      "tests/e2e/interaction_funnel_contract.spec.js"
+    ],
+    "tests/e2e/main_shell_i18n.spec.js": [
+      "tests/e2e/main_shell_i18n.spec.js"
+    ],
+    "tests/e2e/non_1962_runtime_matrix.spec.js": [
+      "tests/e2e/non_1962_runtime_matrix.spec.js"
+    ],
+    "tests/e2e/physical_layer_regression.spec.js": [
+      "tests/e2e/physical_layer_regression.spec.js"
+    ],
+    "tests/e2e/physical_layer_runtime_contract.spec.js": [
+      "tests/e2e/physical_layer_runtime_contract.spec.js"
+    ],
+    "tests/e2e/project_save_load_roundtrip.spec.js": [
+      "tests/e2e/project_save_load_roundtrip.spec.js"
+    ],
+    "tests/e2e/review_regressions.spec.js": [
+      "tests/e2e/review_regressions.spec.js"
+    ],
+    "tests/e2e/river_layer_regression.spec.js": [
+      "tests/e2e/river_layer_regression.spec.js"
+    ],
+    "tests/e2e/scenario_apply_concurrency.spec.js": [
+      "tests/e2e/scenario_apply_concurrency.spec.js"
+    ],
+    "tests/e2e/scenario_apply_resilience.spec.js": [
+      "tests/e2e/scenario_apply_resilience.spec.js"
+    ],
+    "tests/e2e/scenario_blank_exit.spec.js": [
+      "tests/e2e/scenario_blank_exit.spec.js"
+    ],
+    "tests/e2e/scenario_boundary_regression.spec.js": [
+      "tests/e2e/scenario_boundary_regression.spec.js"
+    ],
+    "tests/e2e/scenario_controls_dispatcher_contract.spec.js": [
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js"
+    ],
+    "tests/e2e/scenario_shell_overlay_contract.spec.js": [
+      "tests/e2e/scenario_shell_overlay_contract.spec.js"
+    ],
+    "tests/e2e/shortcut_history_render_boundary.spec.js": [
+      "tests/e2e/shortcut_history_render_boundary.spec.js"
+    ],
+    "tests/e2e/sidebar_default_collapse.spec.js": [
+      "tests/e2e/sidebar_default_collapse.spec.js"
+    ],
+    "tests/e2e/startup_bundle_recovery_contract.spec.js": [
+      "tests/e2e/startup_bundle_recovery_contract.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js": [
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_editing.spec.js": [
+      "tests/e2e/strategic_overlay_editing.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_frontline.spec.js": [
+      "tests/e2e/strategic_overlay_frontline.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_roundtrip.spec.js": [
+      "tests/e2e/strategic_overlay_roundtrip.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js": [
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_smoke.spec.js": [
+      "tests/e2e/strategic_overlay_smoke.spec.js"
+    ],
+    "tests/e2e/support/expectations/console-allowlist.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/river_layer_regression.spec.js"
+    ],
+    "tests/e2e/support/fixtures.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-app-paths.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-app.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-frontline-panel.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-project-import.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-selectors.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js"
+    ],
+    "tests/e2e/support/playwright-web-server.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/startup-paths.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_frontline.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/texture_overlay_regression.spec.js": [
+      "tests/e2e/texture_overlay_regression.spec.js"
+    ],
+    "tests/e2e/tno_1962_ui_smoke.spec.js": [
+      "tests/e2e/tno_1962_ui_smoke.spec.js"
+    ],
+    "tests/e2e/tno_named_water_rendering.spec.js": [
+      "tests/e2e/tno_named_water_rendering.spec.js"
+    ],
+    "tests/e2e/tno_open_ocean_rendering.spec.js": [
+      "tests/e2e/tno_open_ocean_rendering.spec.js"
+    ],
+    "tests/e2e/tno_startup_visible_context_layers_contract.spec.js": [
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js"
+    ],
+    "tests/e2e/transport_workbench_industrial_variants.spec.js": [
+      "tests/e2e/transport_workbench_industrial_variants.spec.js"
+    ],
+    "tests/e2e/transport_workbench_label_rotation.spec.js": [
+      "tests/e2e/transport_workbench_label_rotation.spec.js"
+    ],
+    "tests/e2e/transport_workbench_port_coverage_tiers.spec.js": [
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
+    ],
+    "tests/e2e/ui_contract_foundation.spec.js": [
+      "tests/e2e/ui_contract_foundation.spec.js"
+    ],
+    "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js": [
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js"
+    ],
+    "tests/e2e/ui_rework_support_transport_hardening.spec.js": [
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js"
+    ],
+    "tests/e2e/water_cache_strategy_regression.spec.js": [
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ]
+  },
+  "unresolved": []
+}

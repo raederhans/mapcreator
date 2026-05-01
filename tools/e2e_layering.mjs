@@ -156,7 +156,7 @@ function writeFilteredTestList(name, specs) {
 }
 
 function checkGeneratedTestLists() {
-  const { expectedLists } = validateManifest();
+  const { specs, expectedLists } = validateManifest();
   for (const layer of LAYER_ORDER) {
     const filePath = path.join(TEST_LIST_DIR, `${layer}.txt`);
     ensure(fs.existsSync(filePath), `Missing generated test list: ${toRepoPath(path.relative(REPO_ROOT, filePath))}`);
@@ -171,6 +171,11 @@ function checkGeneratedTestLists() {
       `Generated test list mismatch for ${layer}.`
     );
   }
+  return {
+    specCount: specs.length,
+    smokeSpecs: FIXED_SMOKE_SPECS,
+    directScriptTargetCount: KNOWN_DIRECT_E2E_SCRIPT_TARGETS.size,
+  };
 }
 
 function runLayer(layer, extraArgs) {
@@ -178,7 +183,7 @@ function runLayer(layer, extraArgs) {
   writeLayerTestLists(RUNTIME_TEST_LIST_DIR);
 
   const testListPath = path.join(RUNTIME_TEST_LIST_DIR, `${layer}.txt`);
-  const cliArgs = [PLAYWRIGHT_CLI, "test", `--test-list=${testListPath}`, "--reporter=list"];
+  const cliArgs = [PLAYWRIGHT_CLI, "test", `--test-list=${testListPath}`];
 
   // smoke 的 workers / retries 约束只在脚本层实现，不改全局 Playwright 配置。
   if (layer === "smoke") {
@@ -216,7 +221,7 @@ function listSpecsForField(field, value) {
 
 function runSpecs(name, specs, extraArgs) {
   const testListPath = writeFilteredTestList(name, specs);
-  const cliArgs = [PLAYWRIGHT_CLI, "test", `--test-list=${testListPath}`, "--reporter=list", "--workers=1", "--retries=0", ...extraArgs];
+  const cliArgs = [PLAYWRIGHT_CLI, "test", `--test-list=${testListPath}`, "--workers=1", "--retries=0", ...extraArgs];
   const result = spawnSync(process.execPath, cliArgs, {
     stdio: "inherit",
     cwd: REPO_ROOT,
@@ -247,7 +252,12 @@ function main() {
       return;
     }
     case "check":
-      checkGeneratedTestLists();
+      {
+        const summary = checkGeneratedTestLists();
+        console.log(`Smoke specs: ${summary.smokeSpecs.join(", ")}`);
+        console.log(`Known direct E2E script targets: ${summary.directScriptTargetCount}`);
+        console.log(`Manifest spec count: ${summary.specCount}`);
+      }
       console.log("E2E layer manifest coverage check passed.");
       return;
     case "run": {

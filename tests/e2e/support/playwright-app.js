@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const {
   DEFAULT_APP_PATH,
   DEFAULT_OPEN_PATH,
@@ -292,12 +294,65 @@ async function readSelectorSnapshot(page, selectors = []) {
   }), selectors);
 }
 
-async function readSmokeFailureSnapshot(page, selectors = []) {
+async function readDomFingerprint(page, selectors = []) {
+  try {
+    return await page.evaluate((selectorList) => {
+      const overlay = document.querySelector("#bootOverlay");
+      const canvases = Array.from(document.querySelectorAll("canvas")).map((canvas) => ({
+        id: String(canvas.id || ""),
+        width: Number(canvas.width || 0),
+        height: Number(canvas.height || 0),
+        visible: globalThis.getComputedStyle(canvas).display !== "none",
+      }));
+      return {
+        bodyAppBooting: !!document.body?.classList?.contains("app-booting"),
+        bootOverlay: {
+          exists: !!overlay,
+          hidden: !!overlay?.classList?.contains("hidden"),
+          ariaBusy: String(overlay?.getAttribute("aria-busy") || ""),
+          ariaHidden: String(overlay?.getAttribute("aria-hidden") || ""),
+        },
+        canvasCount: canvases.length,
+        canvases,
+        selectors: selectorList.map((selector) => {
+          const element = document.querySelector(selector);
+          if (!element) {
+            return {
+              selector,
+              exists: false,
+              visible: false,
+              text: "",
+            };
+          }
+          const style = globalThis.getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return {
+            selector,
+            exists: true,
+            visible: style.visibility !== "hidden"
+              && style.display !== "none"
+              && Number(rect.width) > 0
+              && Number(rect.height) > 0,
+            text: String(element.textContent || "").trim().slice(0, 200),
+          };
+        }),
+      };
+    }, selectors);
+  } catch (error) {
+    return {
+      snapshotError: String(error?.message || error),
+    };
+  }
+}
+
+async function readFailureContextSnapshot(page, selectors = []) {
   try {
     await primeStateRef(page);
-    const [bootState, selectorState, activeScenarioId] = await Promise.all([
+    const [bootState, idleState, selectorState, domFingerprint, activeScenarioId] = await Promise.all([
       readBootStateSnapshot(page),
+      readRuntimeIdleSnapshot(page),
       readSelectorSnapshot(page, selectors),
+      readDomFingerprint(page, selectors),
       page.evaluate(() => {
         const state = globalThis.__playwrightStateRef || null;
         return String(state?.activeScenarioId || "");
@@ -305,19 +360,51 @@ async function readSmokeFailureSnapshot(page, selectors = []) {
     ]);
     return {
       bootState,
+      idleState,
       activeScenarioId,
       selectors: selectorState,
+      domFingerprint,
     };
   } catch (error) {
     return {
       snapshotError: String(error?.message || error),
       activeScenarioId: "",
       selectors: [],
+      domFingerprint: {
+        snapshotError: "failure-context capture failed",
+      },
       bootState: {
-        snapshotError: "smoke snapshot capture failed",
+        snapshotError: "failure-context capture failed",
+      },
+      idleState: {
+        snapshotError: "failure-context capture failed",
       },
     };
   }
+}
+
+async function readSmokeFailureSnapshot(page, selectors = []) {
+  const snapshot = await readFailureContextSnapshot(page, selectors);
+  return snapshot;
+}
+
+async function writeFailureContextArtifact(testInfo, snapshot, {
+  fileName = "failure-context.json",
+  attachmentName = "failure-context",
+} = {}) {
+  if (!testInfo?.outputDir) {
+    return null;
+  }
+  const outputPath = path.join(testInfo.outputDir, fileName);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  if (typeof testInfo.attach === "function") {
+    await testInfo.attach(attachmentName, {
+      path: outputPath,
+      contentType: "application/json",
+    });
+  }
+  return outputPath;
 }
 
 async function waitForScenarioReadyGate(page, {
@@ -497,7 +584,10 @@ module.exports = {
   waitForRenderIdle,
   waitForScenarioSelectReady,
   waitForScenarioReadyGate,
+  readDomFingerprint,
+  readFailureContextSnapshot,
   readSmokeFailureSnapshot,
+  writeFailureContextArtifact,
   applyScenarioAndWaitIdle,
   waitForProjectImportSettled,
   beginProjectImportWatch,

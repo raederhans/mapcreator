@@ -4,7 +4,9 @@ const {
   primeStateRef,
   waitForAppInteractive,
   readSmokeFailureSnapshot,
+  writeFailureContextArtifact,
 } = require("./support/playwright-app");
+const { mergeSmokeFailureSelectors } = require("./support/playwright-selectors");
 
 async function readShellSnapshot(page) {
   return page.evaluate(() => {
@@ -34,16 +36,11 @@ test("main shell static i18n updates key shell labels", async ({ page }, testInf
       languageButtonText: "EN / ZH",
     });
   } catch (error) {
-    const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, [
-      "#bootOverlay",
-      "#leftPanelToggle",
-      "#rightPanelToggle",
-      "#btnToggleLang",
-    ]);
-    await testInfo.attach("smoke-failure-snapshot", {
-      body: JSON.stringify(smokeFailureSnapshot, null, 2),
-      contentType: "application/json",
-    });
+    const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, mergeSmokeFailureSelectors(
+      "bootShell",
+      "mainShell",
+    ));
+    await writeFailureContextArtifact(testInfo, smokeFailureSnapshot);
     throw error;
   }
 });

@@ -2,14 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
 const { getAppUrl, waitForAppInteractive } = require("./support/playwright-app");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(120_000);
 
 const APP_URL = getAppUrl();
 const VIEW_SETTINGS_STORAGE_KEY = "map_view_settings_v1";
-const IGNORED_CONSOLE_PATTERNS = [
-  /\[map_renderer\] Scenario political background merge fallback engaged:/i,
-];
+const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
 function countChangedPixels(left, right, threshold = 14) {
   const limit = Math.min(left.length, right.length);

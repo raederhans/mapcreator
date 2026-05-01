@@ -5,7 +5,9 @@ const {
   gotoApp,
   waitForScenarioReadyGate,
   readSmokeFailureSnapshot,
+  writeFailureContextArtifact,
 } = require("./support/playwright-app");
+const { mergeSmokeFailureSelectors } = require("./support/playwright-selectors");
 
 test.setTimeout(120000);
 const HOI4_SMOKE_PATH = '/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1&default_scenario=hoi4_1939';
@@ -99,17 +101,12 @@ test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
       screenshot: shotPath,
     }, null, 2));
   } catch (error) {
-    const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, [
-      "#bootOverlay",
-      "#scenarioSelect",
-      "#scenarioStatus",
-      "#scenarioViewModeSelect",
-      "#scenarioAuditHint",
-    ]);
-    await testInfo.attach("smoke-failure-snapshot", {
-      body: JSON.stringify(smokeFailureSnapshot, null, 2),
-      contentType: "application/json",
-    });
+    const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, mergeSmokeFailureSelectors(
+      "bootShell",
+      "scenarioShell",
+      "hoi4ScenarioAudit",
+    ));
+    await writeFailureContextArtifact(testInfo, smokeFailureSnapshot);
     throw error;
   }
 });

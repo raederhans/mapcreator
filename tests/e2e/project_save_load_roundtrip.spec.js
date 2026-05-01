@@ -1,11 +1,39 @@
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { gotoApp, readBootStateSnapshot, waitForAppInteractive } = require("./support/playwright-app");
+const {
+  gotoApp,
+  readBootStateSnapshot,
+  readFailureContextSnapshot,
+  waitForAppInteractive,
+  writeFailureContextArtifact,
+} = require("./support/playwright-app");
+
+const PROJECT_FAILURE_SELECTORS = [
+  "#bootOverlay",
+  "#scenarioSelect",
+  "#scenarioStatus",
+  "#downloadProjectBtn",
+  "#projectFileInput",
+];
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
+
+test.afterEach(async ({ page }, testInfo) => {
+  if (!page || testInfo.status === testInfo.expectedStatus) {
+    return;
+  }
+  try {
+    const failureContext = await readFailureContextSnapshot(page, PROJECT_FAILURE_SELECTORS);
+    await writeFailureContextArtifact(testInfo, failureContext);
+  } catch (error) {
+    await writeFailureContextArtifact(testInfo, {
+      snapshotError: String(error?.message || error),
+    });
+  }
+});
 
 function logProjectSaveLoadStep(step, extra = null) {
   const payload = extra ? ` ${JSON.stringify(extra)}` : "";

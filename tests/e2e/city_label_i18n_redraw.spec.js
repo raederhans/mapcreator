@@ -1,13 +1,14 @@
-const { test, expect } = require("@playwright/test");
-const { getAppUrl, waitForAppInteractive } = require("./support/playwright-app");
+const {
+  test,
+  expect,
+  prepareSharedCityRuntimeState,
+} = require("./support/fixtures");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(90_000);
-const APP_URL = getAppUrl();
 const EN_LABEL = "Asteria";
 const ZH_LABEL = "°¢²â³Ç";
-const IGNORED_CONSOLE_PATTERNS = [
-  /\[map_renderer\] Scenario political background merge fallback engaged:/i,
-];
+const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
 async function ensureScenario(page, scenarioId, label) {
   await page.waitForFunction((targetScenarioId) => {
@@ -91,53 +92,6 @@ async function waitForLabelDraw(page, label) {
   }, label, { timeout: 20_000 });
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const globalKey = "__e2eCityLabelDraws";
-    if (!Array.isArray(globalThis[globalKey])) {
-      globalThis[globalKey] = [];
-    }
-    globalThis.__resetE2ECityLabelDraws = () => {
-      globalThis[globalKey] = [];
-    };
-    if (globalThis.__e2eCityLabelDrawHookInstalled) {
-      return;
-    }
-    globalThis.__e2eCityLabelDrawHookInstalled = true;
-    const pushEntry = (kind, text) => {
-      if (typeof text !== "string") {
-        return;
-      }
-      const trimmed = text.trim();
-      if (!trimmed) {
-        return;
-      }
-      const next = Array.isArray(globalThis[globalKey]) ? globalThis[globalKey] : [];
-      next.push({ kind, text: trimmed, recordedAt: Date.now() });
-      if (next.length > 200) {
-        next.splice(0, next.length - 200);
-      }
-      globalThis[globalKey] = next;
-    };
-    const patchMethod = (methodName) => {
-      const proto = globalThis.CanvasRenderingContext2D?.prototype;
-      if (!proto) {
-        return;
-      }
-      const original = proto[methodName];
-      if (typeof original !== "function") {
-        return;
-      }
-      proto[methodName] = function patchedCityLabelDraw(text, ...rest) {
-        pushEntry(methodName, text);
-        return original.call(this, text, ...rest);
-      };
-    };
-    patchMethod("fillText");
-    patchMethod("strokeText");
-  });
-});
-
 test("language toggle redraws city labels immediately without needing pan or zoom", async ({ page }) => {
   const consoleIssues = [];
   const networkFailures = [];
@@ -168,12 +122,14 @@ test("language toggle redraws city labels immediately without needing pan or zoo
     });
   });
 
-  await page.goto(APP_URL, { waitUntil: "domcontentloaded" });
-  await waitForAppInteractive(page);
-  await ensureScenario(page, "tno_1962", "TNO 1962");
-  await ensureBaseCityDataLoaded(page);
-  await setZoomPercent(page, 320);
-  await waitForStableExactRender(page);
+  await prepareSharedCityRuntimeState(page, {
+    scenarioId: "tno_1962",
+    scenarioApplyReason: "city-label-i18n-redraw",
+    loadBaseCityDataReason: "e2e-city-label-i18n",
+    zoomPercent: 320,
+    installLabelDrawHook: true,
+    timeout: 120_000,
+  });
   await ensureLanguage(page, "en");
 
   const targetCityId = await page.evaluate(async ({ enLabel, zhLabel }) => {

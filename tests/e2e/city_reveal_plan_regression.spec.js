@@ -1,20 +1,9 @@
-const { test, expect } = require("@playwright/test");
-const { getAppUrl, waitForAppInteractive } = require("./support/playwright-app");
+const { test, expect, prepareSharedCityRuntimeState } = require("./support/fixtures");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(120_000);
 
-const IGNORED_CONSOLE_PATTERNS = [
-  /\[map_renderer\] Scenario political background merge fallback engaged:/i,
-  /\[physical\] global_physical_semantics\.topo\.json unavailable or deferred/i,
-  /\[physical\] global_contours\.major\.topo\.json unavailable or deferred/i,
-  /\[physical\] global_contours\.minor\.topo\.json unavailable or deferred/i,
-  /\[scenario\] Applying bundle without confirmed detail promotion/i,
-  /\[scenario\] Detail visibility gate triggered for tno_1962/i,
-  /\[map_renderer\] scenario_owner_only borders unavailable for scenario=tno_1962/i,
-  /^\[map_renderer\] Removed 2 D3-unsafe water geometry part\(s\): marine_arctic_ocean, marine_southern_ocean$/,
-  /startup\.bundle\.en\.json\.gz was preloaded using link preload but not used/i,
-  /europe_topology\.json was preloaded using link preload but not used/i,
-];
+const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
 const ALLOWED_DEFERRED_SCENARIO_HYDRATION_WARNING_PATTERNS = [
   /\[boot\] Failed to hydrate active scenario bundle\. reason=post-ready-idle/i,
@@ -92,6 +81,19 @@ function shouldIgnoreConsoleIssue(text = "") {
     || isAllowedCityRevealLaneWarning(text);
 }
 
+async function prepareCityRevealState(page, {
+  reason,
+  zoomPercent,
+} = {}) {
+  await prepareSharedCityRuntimeState(page, {
+    scenarioId: "tno_1962",
+    scenarioApplyReason: "city-reveal-plan-regression",
+    loadBaseCityDataReason: reason,
+    zoomPercent,
+    timeout: 120_000,
+  });
+}
+
 test("city reveal plan keeps capital coverage stable across low-zoom pan", async ({ page }) => {
   const consoleIssues = [];
   const networkFailures = [];
@@ -120,11 +122,10 @@ test("city reveal plan keeps capital coverage stable across low-zoom pan", async
     });
   });
 
-  await page.goto(getAppUrl(), { waitUntil: "domcontentloaded" });
-  await waitForAppInteractive(page);
-  await ensureScenario(page, "tno_1962");
-  await ensureBaseCityDataLoaded(page);
-  await setZoomPercent(page, 140);
+  await prepareCityRevealState(page, {
+    reason: "e2e-city-reveal-plan-regression",
+    zoomPercent: 140,
+  });
 
   const runtime = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -266,12 +267,10 @@ test("point density changes marker budgets while label density only changes labe
     });
   });
 
-  await page.goto(getAppUrl(), { waitUntil: "domcontentloaded" });
-  await waitForAppInteractive(page);
-  await ensureScenario(page, "tno_1962");
-  await ensureBaseCityDataLoaded(page, "e2e-city-marker-density-regression");
-  await setZoomPercent(page, 320);
-  await waitForStableExactRender(page);
+  await prepareCityRevealState(page, {
+    reason: "e2e-city-marker-density-regression",
+    zoomPercent: 320,
+  });
 
   const runtime = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -386,12 +385,10 @@ test("p3 city labels stay capital-only and respect the small early label budget"
     });
   });
 
-  await page.goto(getAppUrl(), { waitUntil: "domcontentloaded" });
-  await waitForAppInteractive(page);
-  await ensureScenario(page, "tno_1962");
-  await ensureBaseCityDataLoaded(page, "e2e-city-label-budget-regression");
-  await setZoomPercent(page, 200);
-  await waitForStableExactRender(page);
+  await prepareCityRevealState(page, {
+    reason: "e2e-city-label-budget-regression",
+    zoomPercent: 200,
+  });
 
   const runtime = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");

@@ -3,9 +3,12 @@ const path = require("path");
 const { test, expect } = require("@playwright/test");
 const {
   gotoApp,
-  waitForScenarioReadyGate,
+  waitForScenarioApplyIdle,
+  waitForShellReady,
   readSmokeFailureSnapshot,
+  writeFailureContextArtifact,
 } = require("./support/playwright-app");
+const { mergeSmokeFailureSelectors } = require("./support/playwright-selectors");
 
 test.setTimeout(120000);
 const SCENARIO_ID = 'tno_1962';
@@ -89,10 +92,8 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
       const { state } = await import('/js/core/state.js');
       return String(state.activeScenarioId || '');
     });
-    await waitForScenarioReadyGate(page, {
-      scenarioId: SCENARIO_ID,
-      timeout: 120_000,
-    });
+    await waitForShellReady(page, { timeout: 120_000 });
+    await waitForScenarioApplyIdle(page, { scenarioId: SCENARIO_ID, timeout: 120_000 });
     await expect(page.locator('#scenarioStatus')).toContainText('TNO 1962', { timeout: 20000 });
     await expect.poll(() => page.locator('#scenarioSelect').inputValue(), { timeout: 20000 }).toBe(SCENARIO_ID);
 
@@ -192,17 +193,12 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
       screenshot: shotPath,
     }, null, 2));
   } catch (error) {
-    const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, [
-      "#bootOverlay",
-      "#scenarioSelect",
-      "#scenarioStatus",
-      "#scenarioViewModeSelect",
-      "#countrySearch",
-    ]);
-    await testInfo.attach("smoke-failure-snapshot", {
-      body: JSON.stringify(smokeFailureSnapshot, null, 2),
-      contentType: "application/json",
-    });
+    const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, mergeSmokeFailureSelectors(
+      "bootShell",
+      "scenarioShell",
+      "tnoScenarioAudit",
+    ));
+    await writeFailureContextArtifact(testInfo, smokeFailureSnapshot);
     throw error;
   }
 });

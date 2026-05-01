@@ -1,9 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { buildRouteIndex, summarizeRoutes, validateRouteIndex, toRepoPath } from "./test_route_registry.mjs";
 
 const REPO_ROOT = process.cwd();
+const IMPORT_GRAPH_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-import-graph.json");
+const BOOTSTRAP_FALLBACK_ROUTE_IDS = new Set([
+  "e2e:tests/e2e/city_label_i18n_redraw.spec.js",
+  "e2e:tests/e2e/startup_bundle_recovery_contract.spec.js",
+  "e2e:tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+  "python:tests.test_app_entry_resolver",
+  "python:tests.test_startup_shell",
+]);
 
 function parseArgs(argv) {
   const args = { command: "recommend", changedFiles: [], jsonOut: null, mdOut: null, format: "text" };
@@ -62,11 +71,31 @@ function isDirectRouteMatch(route, changedFile) {
   });
 }
 
-function routeMatchesChangedFile(route, changedFile) {
+function readImportGraph() {
+  if (!fs.existsSync(IMPORT_GRAPH_PATH)) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(IMPORT_GRAPH_PATH, "utf8"));
+}
+
+function routeMatchesImportGraph(route, changedFile, importGraph) {
+  const affectedSpecs = importGraph?.reverseIndex?.[changedFile];
+  if (!Array.isArray(affectedSpecs) || !affectedSpecs.length) {
+    return false;
+  }
+  return route.id.startsWith("e2e:") && affectedSpecs.includes(route.sourceRef);
+}
+
+function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   if (isDirectRouteMatch(route, changedFile)) return true;
+  if (routeMatchesImportGraph(route, changedFile, importGraph)) return true;
 
   if (changedFile === "package.json" || changedFile === "package-lock.json") {
-    return route.id.startsWith("node:") || route.id === "infra:e2e-layer-manifest" || route.id === "infra:verification-selector";
+    return route.id.startsWith("node:")
+      || route.id === "infra:e2e-layer-manifest"
+      || route.id === "infra:verification-selector"
+      || route.id === "infra:playwright-observability"
+      || route.id === "infra:adaptive-test-runner";
   }
 
   if (changedFile === "tools/e2e_layering.mjs" || changedFile === "tests/e2e/test-layer-manifest.json") {
@@ -87,6 +116,10 @@ function routeMatchesChangedFile(route, changedFile) {
 
   if (changedFile.startsWith("tests/") && changedFile.endsWith(".mjs")) {
     return route.id === "infra:verification-selector" || isDirectRouteMatch(route, changedFile);
+  }
+
+  if (changedFile.startsWith("js/bootstrap/")) {
+    return BOOTSTRAP_FALLBACK_ROUTE_IDS.has(route.id);
   }
 
   if (changedFile.startsWith("js/") && changedFile.includes("city")) return route.domain === "city-runtime";
@@ -129,7 +162,8 @@ function skippedHeavyRoutes(allRoutes, selectedRoutes) {
 function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   validateRouteIndex(allRoutes);
   const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
-  const matchedRoutes = allRoutes.filter((route) => normalizedChangedFiles.some((file) => routeMatchesChangedFile(route, file)));
+  const importGraph = readImportGraph();
+  const matchedRoutes = allRoutes.filter((route) => normalizedChangedFiles.some((file) => routeMatchesChangedFile(route, file, importGraph)));
   const commandRoutes = uniqueByCommand(matchedRoutes).sort((a, b) => a.commandRef.localeCompare(b.commandRef));
   const childSafeRoutes = commandRoutes.filter((route) => route.executionOwner === "child-safe");
   const mainThreadRoutes = commandRoutes.filter((route) => route.executionOwner === "main-thread");
@@ -138,6 +172,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   return {
     schemaVersion: 1,
     changedFiles: normalizedChangedFiles,
+    importGraphLoaded: !!importGraph,
     recommendedCommands: commandRoutes.map((route) => ({
       commandRef: route.commandRef,
       reason: `matches ${route.domain}/${route.ownerHint}`,
@@ -223,4 +258,13 @@ function main() {
   }
 }
 
-main();
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMainModule) {
+  main();
+}
+
+export {
+  buildRecommendation,
+  normalizeChangedFiles,
+  routeMatchesChangedFile,
+};

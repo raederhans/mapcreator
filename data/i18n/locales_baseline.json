@@ -3659,6 +3659,102 @@
     "防守线": {
       "en": "防守线",
       "zh": "防守线"
+    },
+    "Arrows and markers.": {
+      "en": "Arrows and markers.",
+      "zh": "箭头与标记。"
+    },
+    "Choose type and draw.": {
+      "en": "Choose type and draw.",
+      "zh": "选择类型后开始绘制。"
+    },
+    "City points help": {
+      "en": "City points help",
+      "zh": "城市点位帮助"
+    },
+    "Derived frontlines on.": {
+      "en": "Derived frontlines on.",
+      "zh": "已开启衍生前线。"
+    },
+    "Drawing path.": {
+      "en": "Drawing path.",
+      "zh": "正在绘制路径。"
+    },
+    "Drawing vertices.": {
+      "en": "Drawing vertices.",
+      "zh": "正在绘制顶点。"
+    },
+    "Edit vertices and style.": {
+      "en": "Edit vertices and style.",
+      "zh": "编辑顶点和样式。"
+    },
+    "Graphic selected.": {
+      "en": "Graphic selected.",
+      "zh": "已选图形。"
+    },
+    "Line selected.": {
+      "en": "Line selected.",
+      "zh": "已选线条。"
+    },
+    "Map pieces.": {
+      "en": "Map pieces.",
+      "zh": "地图棋子。"
+    },
+    "Outline & Dash": {
+      "en": "Outline & Dash",
+      "zh": "轮廓与虚线"
+    },
+    "Overlay off.": {
+      "en": "Overlay off.",
+      "zh": "覆盖层已关闭。"
+    },
+    "Pick a restrained style, then tune marker density and label density for the current map scale.": {
+      "en": "Pick a restrained style, then tune marker density and label density for the current map scale.",
+      "zh": "先选一种更克制的样式，再按当前地图比例调整标记密度和标签密度。"
+    },
+    "Plan lines.": {
+      "en": "Plan lines.",
+      "zh": "规划线条。"
+    },
+    "Preview layers, format, and resolution before export.": {
+      "en": "Preview layers, format, and resolution before export.",
+      "zh": "导出前先预览图层、格式和分辨率。"
+    },
+    "Project-local battle planning tools.": {
+      "en": "Project-local battle planning tools.",
+      "zh": "项目内战役规划工具。"
+    },
+    "Related Governments": {
+      "en": "Related Governments",
+      "zh": "相关政府"
+    },
+    "River Stroke": {
+      "en": "River Stroke",
+      "zh": "河流描边"
+    },
+    "Scenario frontline workspace.": {
+      "en": "Scenario frontline workspace.",
+      "zh": "场景前线工作区。"
+    },
+    "Scenario required.": {
+      "en": "Scenario required.",
+      "zh": "需要先应用场景。"
+    },
+    "Search symbols.": {
+      "en": "Search symbols.",
+      "zh": "搜索符号。"
+    },
+    "Short code or SIDC.": {
+      "en": "Short code or SIDC.",
+      "zh": "简码或 SIDC。"
+    },
+    "Start drawing or select a line.": {
+      "en": "Start drawing or select a line.",
+      "zh": "开始绘制或选择一条线。"
+    },
+    "Style and labels.": {
+      "en": "Style and labels.",
+      "zh": "样式与标签。"
     }
   },
   "geo": {

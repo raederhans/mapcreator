@@ -7,8 +7,8 @@
 - Targeted Python tests pass.
 
 ## Batch 1 steps
-- [ ] Inspect existing generation and tests.
-- [ ] Patch source/build contracts.
-- [ ] Update checked-in generated metadata only where evidence proves drift.
-- [ ] Run targeted tests and strict contract where relevant.
-- [ ] Review for simpler safer path.
+- [x] Inspect existing generation and tests.
+- [x] Patch source/build contracts.
+- [x] Update checked-in generated metadata only where evidence proves drift.
+- [x] Run targeted tests and strict contract where relevant.
+- [x] Review for simpler safer path.

@@ -70,6 +70,42 @@ const INFRASTRUCTURE_ROUTES = [
     ciProfile: "pr-fast",
   },
   {
+    id: "infra:test-import-graph",
+    commandRef: "verify:test-import-graph",
+    sourceRef: "tools/build_test_import_graph.mjs,tools/check_test_import_graph.mjs,tests/e2e/test-import-graph.json",
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "infra:adaptive-test-runner",
+    commandRef: "node tools/run_adaptive_tests.mjs --changed-file tools/select_verification_targets.mjs --dry-run",
+    sourceRef: "tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tests/e2e/test-import-graph.json",
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "infra:playwright-observability",
+    commandRef: "python -m unittest tests.test_e2e_structural_tooling -q",
+    sourceRef: "playwright.config.cjs,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs",
+    domain: "playwright-observability",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "infra:perf-gate-contract",
     commandRef: "verify:perf-gate-contract",
     sourceRef: "ops/browser-mcp/editor-performance-benchmark.py,tools/perf/run_baseline.mjs",
@@ -138,6 +174,18 @@ const PYTHON_FAST_CONTRACTS = [
     sourceRef: "tests/test_app_entry_resolver.py",
     domain: "startup",
     ownerHint: "startup-runtime",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
+    id: "python:tests.deferred_detail_promotion_contracts",
+    commandRef: "python -m unittest tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract -q",
+    sourceRef: "js/bootstrap/deferred_detail_promotion.js,tests/test_main_deferred_detail_promotion_boundary_contract.py,tests/test_scenario_chunk_refresh_contracts.py,tests/test_scenario_renderer_bridge_boundary_contract.py",
+    domain: "scenario-runtime",
+    ownerHint: "deferred-detail-promotion",
     layer: "contract",
     cost: "contract",
     resourceLocks: [],
@@ -338,6 +386,7 @@ export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH)) 
     route.commandRef in scripts ||
     route.commandRef.startsWith("node tools/e2e_layering.mjs ") ||
     route.commandRef.startsWith("node tools/select_verification_targets.mjs ") ||
+    route.commandRef.startsWith("node tools/run_adaptive_tests.mjs ") ||
     route.commandRef.startsWith("python -m unittest ") ||
     route.commandRef.startsWith("python tools/");
   if (!knownCommand) {

@@ -1,19 +1,14 @@
 const fs = require("fs");
 const path = require("path");
-const { test, expect } = require("@playwright/test");
+const { test, expect, prepareSharedCityRuntimeState } = require("./support/fixtures");
 const {
-  gotoApp,
-  waitForAppInteractive,
-  waitForShellReady,
   waitForScenarioApplyIdle,
   waitForRenderIdle,
 } = require("./support/playwright-app");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(90_000);
-const IGNORED_CONSOLE_PATTERNS = [
-  /\[map_renderer\] Scenario political background merge fallback engaged:/i,
-  /was preloaded using link preload but not used within a few seconds from the window's load event/i,
-];
+const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
 function countChangedPixels(left, right, threshold = 14) {
   const limit = Math.min(left.length, right.length);
@@ -54,7 +49,11 @@ async function setInputValue(page, id, value) {
 }
 
 async function waitForMapReady(page) {
-  await waitForShellReady(page, { timeout: 30_000 });
+  await prepareSharedCityRuntimeState(page, {
+    scenarioId: "tno_1962",
+    scenarioApplyReason: "city-urban-rendering-regression",
+    timeout: 30_000,
+  });
 }
 
 async function ensureScenario(page, scenarioId, label) {
@@ -209,10 +208,7 @@ test("city and urban rendering regression smoke ignores legacy radius live tweak
     });
   });
 
-  await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForMapReady(page);
-  await ensureScenario(page, "tno_1962", "TNO 1962");
-  await waitForAppInteractive(page);
   await waitForStableExactRender(page);
   consoleIssues.length = 0;
   networkFailures.length = 0;
