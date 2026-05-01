@@ -8218,6 +8218,67 @@
           ]
         ]
       }
+    },
+    {
+      "id": 60,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_SBA_043",
+        "name": "Russia Shell Fallback SBA",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "SBA",
+        "scenario_shell_controller_hint": "SBA",
+        "source_fragment_count": 107.0,
+        "source_fragment_area": 0.110268,
+        "retained_fragment_area": 0.007286,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              94.60354603546034,
+              55.59358392583927
+            ],
+            [
+              94.17154171541716,
+              55.5901122491225
+            ],
+            [
+              94.69714697146975,
+              55.56060299702996
+            ],
+            [
+              94.60354603546034,
+              55.59358392583927
+            ]
+          ]
+        ]
+      }
     }
   ]
 }

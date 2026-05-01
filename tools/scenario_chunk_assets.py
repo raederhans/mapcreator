@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 from typing import Any
 
+from map_builder.contracts import normalize_scenario_contract_tag
 from map_builder.io.writers import write_json_atomic
 from shapely import make_valid
 from shapely.geometry import LineString, MultiLineString, mapping, shape
@@ -65,9 +66,9 @@ def _normalize_relative_url(raw_url: Any) -> str:
 
 
 def _feature_id(feature: dict[str, Any], fallback_index: int) -> str:
-    value = feature.get("id")
+    value = (feature.get("properties") or {}).get("id")
     if value is None:
-        value = (feature.get("properties") or {}).get("id")
+        value = feature.get("id")
     text = str(value or "").strip()
     return text or f"feature-{fallback_index}"
 
@@ -107,6 +108,21 @@ def _feature_country_code(feature: dict[str, Any]) -> str:
     return ""
 
 
+def _load_owner_map(scenario_dir: Path) -> dict[str, str]:
+    owners_payload_path = scenario_dir / "owners.by_feature.json"
+    if not owners_payload_path.exists():
+        return {}
+    owners_payload = json.loads(owners_payload_path.read_text(encoding="utf-8"))
+    owners = owners_payload.get("owners") if isinstance(owners_payload, dict) else None
+    if not isinstance(owners, dict):
+        return {}
+    return {
+        str(feature_id).strip(): normalize_scenario_contract_tag(owner_tag)
+        for feature_id, owner_tag in owners.items()
+        if str(feature_id).strip() and normalize_scenario_contract_tag(owner_tag)
+    }
+
+
 def _feature_properties(feature: dict[str, Any]) -> dict[str, Any]:
     props = feature.get("properties") if isinstance(feature, dict) else None
     return props if isinstance(props, dict) else {}
@@ -116,6 +132,30 @@ def _feature_identity(feature: dict[str, Any], fallback_index: int = 0) -> str:
     props = _feature_properties(feature)
     preferred = str(props.get("id") or "").strip()
     return preferred or _feature_id(feature, fallback_index)
+
+
+def _resolve_feature_owner_bucket(
+    feature: dict[str, Any],
+    *,
+    scenario_dir: Path,
+    owners_by_feature_id: dict[str, str],
+    fallback_index: int,
+) -> str:
+    feature_id = _feature_identity(feature, fallback_index)
+    owner_tag = normalize_scenario_contract_tag(owners_by_feature_id.get(feature_id))
+    if owner_tag:
+        return owner_tag
+    props = _feature_properties(feature)
+    if str(props.get("scenario_helper_kind") or "").strip() == "shell_fallback":
+        shell_hint = normalize_scenario_contract_tag(props.get("scenario_shell_owner_hint"))
+        if shell_hint:
+            return shell_hint
+        raise ValueError(
+            f"shell_fallback feature {feature_id} is missing scenario_shell_owner_hint in {scenario_dir}."
+        )
+    raise ValueError(
+        f"feature {feature_id} is missing owners.by_feature ownership in {scenario_dir}."
+    )
 
 
 def _is_antarctic_sector_feature(feature: dict[str, Any]) -> bool:
@@ -680,6 +720,8 @@ def _build_chunk_payloads_for_feature_collection(
                     for index, feature in enumerate(features)
                     if _feature_id(feature, index) in selected_feature_ids
                 ]
+                payload_features = chunk_payload.get("features") if isinstance(chunk_payload, dict) else None
+                payload_feature_count = len(payload_features) if isinstance(payload_features, list) else 0
                 chunk_country_codes = sorted({
                     country_code
                     for feature in selected_features
@@ -706,7 +748,7 @@ def _build_chunk_payloads_for_feature_collection(
                     "max_zoom": spec["max_zoom"],
                     "bounds": bounds,
                     "priority": 100 if layer_key == "political" and spec["lod"] == "coarse" else (90 if layer_key == "political" else (1 if spec["lod"] == "coarse" else 2)),
-                    "feature_count": len(selected_feature_ids),
+                    "feature_count": payload_feature_count,
                     **chunk_cost_summary,
                     "data_format": "geojson",
                     "global_coverage": bool(spec["global_coverage"]),
@@ -748,10 +790,11 @@ def _build_political_chunk_payloads(
 ) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
     all_chunks: list[dict[str, Any]] = []
     lod_layers: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    owners_by_feature_id = _load_owner_map(scenario_dir)
 
     startup_feature_collection = _topology_object_to_feature_collection(startup_topology_payload, "political")
     runtime_feature_collection = _topology_object_to_feature_collection(runtime_topology_payload, "political")
-    coarse_feature_collection = startup_feature_collection or runtime_feature_collection
+    coarse_feature_collection = runtime_feature_collection or startup_feature_collection
     if coarse_feature_collection:
         chunks, lod_entries = _build_chunk_payloads_for_feature_collection(
             scenario_id=scenario_id,
@@ -771,9 +814,14 @@ def _build_political_chunk_payloads(
         feature_groups: dict[str, list[tuple[str, dict[str, Any], list[float]]]] = defaultdict(list)
         for index, feature in enumerate(runtime_feature_collection.get("features") or []):
             feature_id = _feature_id(feature, index)
-            country_code = _feature_country_code(feature) or "misc"
-            feature_groups[country_code].append((feature_id, feature, _feature_bounds(feature)))
-        for country_code, entries in sorted(feature_groups.items()):
+            owner_bucket = _resolve_feature_owner_bucket(
+                feature,
+                scenario_dir=scenario_dir,
+                owners_by_feature_id=owners_by_feature_id,
+                fallback_index=index,
+            )
+            feature_groups[owner_bucket].append((feature_id, feature, _feature_bounds(feature)))
+        for owner_bucket, entries in sorted(feature_groups.items()):
             if not entries:
                 continue
             selected_feature_ids = {feature_id for feature_id, _feature, _bounds in entries}
@@ -784,7 +832,9 @@ def _build_political_chunk_payloads(
                 max(entry_bounds[3] for _feature_id, _feature, entry_bounds in entries),
             ]
             chunk_payload = _slice_feature_collection(runtime_feature_collection, selected_feature_ids)
-            chunk_id = f"political.detail.country.{country_code.lower()}"
+            payload_features = chunk_payload.get("features") if isinstance(chunk_payload, dict) else None
+            payload_feature_count = len(payload_features) if isinstance(payload_features, list) else 0
+            chunk_id = f"political.detail.country.{owner_bucket.lower()}"
             chunk_filename = f"{chunk_id}.json"
             chunk_path = chunks_dir / chunk_filename
             _write_json(chunk_path, chunk_payload)
@@ -798,11 +848,11 @@ def _build_political_chunk_payloads(
                 "max_zoom": 99.0,
                 "bounds": bounds,
                 "priority": 95,
-                "feature_count": len(selected_feature_ids),
+                "feature_count": payload_feature_count,
                 **chunk_cost_summary,
                 "data_format": "geojson",
                 "global_coverage": False,
-                "country_codes": [country_code] if country_code != "misc" else [],
+                "country_codes": [owner_bucket],
             })
             lod_layers["political"].append({
                 "lod": "detail",

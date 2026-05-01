@@ -1,0 +1,23 @@
+{
+  "builder_version": "scenario-data-governance-v1",
+  "chunk_count": 0,
+  "contract_version": "2026-05-01.v1",
+  "durations": {},
+  "environment": {},
+  "feature_count": 11294,
+  "generated_at": "2026-03-09T14:09:29.123Z",
+  "input_sha": {
+    "city_overrides.json": "c57f32a9ad585749e645e4c75eae3e91dac0881e63c27f76095128236958b826",
+    "controllers.by_feature.json": "69d2c1a7c744a86a445ee4e5f6fcab654f79462dd6c67e84b4e853ef97bba199",
+    "cores.by_feature.json": "36ff09957feafc4548b0aff5f23939d503be94f833db0fe59bb060b6aa2bd288",
+    "countries.json": "aba91efe6e49dc22f2798b1c1efcf83860442c89b8262c18c12a414782db94d6",
+    "owners.by_feature.json": "f2305cbebfebb6b83080cd38b0efa8f33341a6d456f87db8f20f7c88fe903e60",
+    "runtime_topology.topo.json": "e921316a40986aa2e4df738adf5f8ead156fbdc01714a3b930652c1a214412a0"
+  },
+  "output_sha": {},
+  "profile": "lightweight_base",
+  "report_paths": {},
+  "scenario_id": "modern_world",
+  "snapshot_fingerprint": "9308f5de199ca793b3a942a4bf77b82bc8c6fe4e654c33012e646cc8a8ab5171",
+  "water_count": 0
+}

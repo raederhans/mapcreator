@@ -6791,6 +6791,75 @@
           ]
         ]
       }
+    },
+    {
+      "id": 65,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_TYM_048",
+        "name": "Russia Shell Fallback TYM",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "TYM",
+        "scenario_shell_controller_hint": "TYM",
+        "source_fragment_count": 110.0,
+        "source_fragment_area": 0.145688,
+        "retained_fragment_area": 0.008799,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              63.06723067230672,
+              54.10597045270454
+            ],
+            [
+              62.85842858428586,
+              54.11812132121322
+            ],
+            [
+              62.59562595625957,
+              54.07472536225363
+            ],
+            [
+              62.58122581225814,
+              54.04521611016109
+            ],
+            [
+              62.628026280262816,
+              54.06778200882009
+            ],
+            [
+              63.06723067230672,
+              54.10597045270454
+            ]
+          ]
+        ]
+      }
     }
   ]
 }

@@ -1,12 +1,16 @@
 {
-  "version": 2,
-  "scenario_id": "blank_base",
-  "display_name": "Blank Map",
-  "bookmark_name": "Blank Map",
-  "bookmark_description": "Editable blank map canvas with no pre-assigned ownership, controllers, or cores.",
+  "audit_url": "data/scenarios/blank_base/audit.json",
+  "baseline_hash": "c120ba87ebdb2c02072278b5135adede583e4c26babedcd2afdd3f97452badea",
   "bookmark_date": "2026.1.1.12",
+  "bookmark_description": "Editable blank map canvas with no pre-assigned ownership, controllers, or cores.",
+  "bookmark_name": "Blank Map",
+  "capital_hints_url": "data/scenarios/blank_base/capital_hints.json",
+  "city_overrides_url": "data/scenarios/blank_base/city_overrides.json",
+  "controllers_url": "data/scenarios/blank_base/controllers.by_feature.json",
+  "cores_url": "data/scenarios/blank_base/cores.by_feature.json",
+  "countries_url": "data/scenarios/blank_base/countries.json",
   "default_country": "US",
-  "map_mode": "blank",
+  "display_name": "Blank Map",
   "featured_tags": [
     "US",
     "CN",
@@ -15,57 +19,55 @@
     "GB",
     "FR"
   ],
-  "palette_id": "hoi4_vanilla",
-  "baseline_hash": "c120ba87ebdb2c02072278b5135adede583e4c26babedcd2afdd3f97452badea",
-  "countries_url": "data/scenarios/blank_base/countries.json",
-  "owners_url": "data/scenarios/blank_base/owners.by_feature.json",
-  "controllers_url": "data/scenarios/blank_base/controllers.by_feature.json",
-  "cores_url": "data/scenarios/blank_base/cores.by_feature.json",
-  "audit_url": "data/scenarios/blank_base/audit.json",
-  "summary": {
-    "feature_count": 0,
-    "owner_count": 0,
-    "controller_count": 0,
-    "quality_counts": {
-      "blank_canvas": 0
-    },
-    "source_counts": {
-      "blank_canvas": 0
-    },
-    "approximate_count": 0,
-    "manual_reviewed_feature_count": 0,
-    "geometry_blocker_count": 0,
-    "critical_unresolved_count": 0,
-    "synthetic_owner_feature_count": 0,
-    "synthetic_count": 0,
-    "changed_feature_count": 11724,
-    "failed_region_check_count": 0,
-    "topology_blocker_count": 0,
-    "scenario_rule_blocker_count": 0,
-    "blocker_count": 0,
-    "owner_controller_split_feature_count": 0,
-    "controller_rule_count": 0,
-    "critical_region_check_count": 0,
-    "manual_reviewed_region_count": 0
-  },
   "generated_at": "2026-03-09T14:09:29.123Z",
+  "map_mode": "blank",
+  "owners_url": "data/scenarios/blank_base/owners.by_feature.json",
+  "palette_id": "hoi4_vanilla",
   "performance_hints": {
-    "render_profile_default": "balanced",
     "dynamic_borders_default": false,
+    "render_profile_default": "balanced",
     "scenario_relief_overlays_default": false,
-    "water_regions_default": false,
-    "special_regions_default": false
+    "special_regions_default": false,
+    "water_regions_default": false
+  },
+  "runtime_topology_url": "data/scenarios/blank_base/runtime_topology.topo.json",
+  "scenario_contract_profile": "lightweight_base",
+  "scenario_id": "blank_base",
+  "snapshot_fingerprint": "750d1d51cdb42096cae3a280f9ee65ba958d01a0bf4ac7d876147ed344484d53",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
   },
   "style_defaults": {
     "ocean": {
       "fillColor": "#2d4769"
     }
   },
-  "city_overrides_url": "data/scenarios/blank_base/city_overrides.json",
-  "capital_hints_url": "data/scenarios/blank_base/capital_hints.json",
-  "runtime_topology_url": "data/scenarios/blank_base/runtime_topology.topo.json",
-  "source": {
-    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
-  }
+  "summary": {
+    "approximate_count": 0,
+    "blocker_count": 0,
+    "changed_feature_count": 11724,
+    "controller_count": 0,
+    "controller_rule_count": 0,
+    "critical_region_check_count": 0,
+    "critical_unresolved_count": 0,
+    "failed_region_check_count": 0,
+    "feature_count": 0,
+    "geometry_blocker_count": 0,
+    "manual_reviewed_feature_count": 0,
+    "manual_reviewed_region_count": 0,
+    "owner_controller_split_feature_count": 0,
+    "owner_count": 0,
+    "quality_counts": {
+      "blank_canvas": 0
+    },
+    "scenario_rule_blocker_count": 0,
+    "source_counts": {
+      "blank_canvas": 0
+    },
+    "synthetic_count": 0,
+    "synthetic_owner_feature_count": 0,
+    "topology_blocker_count": 0
+  },
+  "version": 2
 }

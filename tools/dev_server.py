@@ -73,6 +73,12 @@ from tools.app_entry_resolver import (
     resolve_editor_entry_path,
     resolve_landing_entry_path,
 )
+from tools.check_scenario_contracts import (
+    _apply_safe_repairs as apply_safe_scenario_contract_repairs,
+    collect_duplicate_scenario_dirs as collect_duplicate_scenario_contract_dirs,
+    discover_scenario_dirs as discover_scenario_contract_dirs,
+    inspect_scenario_contract as inspect_scenario_contract_report,
+)
 
 # Define the range of ports to try
 PORT_START = 8000
@@ -90,6 +96,9 @@ COLOR_HEX_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 INSPECTOR_GROUP_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$")
 GZIP_STATIC_SUFFIXES = (".json", ".geojson", ".topo.json")
 DEFAULT_OPEN_PATH = "/app/"
+SCENARIO_DIAGNOSTICS_ROUTE_RE = re.compile(r"^/api/scenario-diagnostics/(?P<scenario_id>[A-Za-z0-9_-]+)$")
+SCENARIO_DIAGNOSTICS_PREVIEW_ROUTE_RE = re.compile(r"^/api/scenario-diagnostics/(?P<scenario_id>[A-Za-z0-9_-]+)/preview-repair$")
+SCENARIO_DIAGNOSTICS_APPLY_ROUTE_RE = re.compile(r"^/api/scenario-diagnostics/(?P<scenario_id>[A-Za-z0-9_-]+)/apply-approved-repair$")
 
 
 class DevServerTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -225,6 +234,113 @@ def _validate_color_hex(color_hex: object) -> str:
             status=400,
         )
     return normalized_color.lower()
+
+
+def load_scenario_diagnostics_report(scenario_id: object) -> dict[str, object]:
+    normalized_scenario_id = _normalize_text(scenario_id)
+    if not normalized_scenario_id:
+        raise DevServerError("missing_scenario_id", "Scenario id is required.", status=400)
+    scenario_dir = ROOT / "data" / "scenarios" / normalized_scenario_id
+    if not scenario_dir.is_dir():
+        raise DevServerError(
+            "scenario_not_found",
+            f'Scenario "{normalized_scenario_id}" was not found.',
+            status=404,
+        )
+    scenarios_root = ROOT / "data" / "scenarios"
+    duplicate_dirs = collect_duplicate_scenario_contract_dirs(
+        discover_scenario_contract_dirs(scenarios_root, [])
+    )
+    return inspect_scenario_contract_report(
+        scenario_dir.resolve(),
+        duplicate_dirs,
+        strict=True,
+    )
+
+
+def preview_scenario_safe_repair(scenario_id: object) -> dict[str, object]:
+    report = load_scenario_diagnostics_report(scenario_id)
+    preview = {
+        "safeRepairAvailable": bool(report.get("safe_fixable")),
+        "approvalRequired": bool(report.get("risky_fixes_required") or report.get("forbidden_violations")),
+        "safeFixPlan": [
+            "geo_locale_patch_inputs",
+            "startup_support_assets",
+            "chunk_assets",
+            "startup_bundles",
+            "build_snapshot",
+            "audit_sync",
+            "manifest_source_sync",
+        ],
+        "violations": report.get("violations", []),
+    }
+    return {
+        "scenarioId": str(report.get("scenario_id") or _normalize_text(scenario_id)),
+        "report": report,
+        "preview": preview,
+    }
+
+
+def apply_approved_scenario_repair(
+    scenario_id: object,
+    *,
+    operator: object = "",
+    approval_note: object = "",
+) -> dict[str, object]:
+    report = load_scenario_diagnostics_report(scenario_id)
+    normalized_scenario_id = str(report.get("scenario_id") or _normalize_text(scenario_id))
+    if report.get("risky_fixes_required") or report.get("forbidden_violations"):
+        raise DevServerError(
+            "risky_repair_not_supported",
+            "This scenario still has risky or forbidden violations. The local approval path only executes safe repairs.",
+            status=409,
+        )
+    scenario_dir = ROOT / "data" / "scenarios" / normalized_scenario_id
+    report_dir = ROOT / ".runtime" / "reports" / "generated" / "scenarios" / normalized_scenario_id
+    report_dir.mkdir(parents=True, exist_ok=True)
+    diagnostics_report_path = report_dir / "scenario-diagnostics.report.json"
+    applied_fixes = apply_safe_scenario_contract_repairs(
+        scenario_dir.resolve(),
+        report_path=diagnostics_report_path,
+    )
+    updated_report = load_scenario_diagnostics_report(normalized_scenario_id)
+    if (
+        str(updated_report.get("status") or "").strip().lower() != "ok"
+        or updated_report.get("errors")
+        or updated_report.get("violations")
+    ):
+        raise DevServerError(
+            "safe_repair_incomplete",
+            "Safe repair completed, but scenario diagnostics still fail.",
+            status=409,
+            details={
+                "scenarioId": normalized_scenario_id,
+                "violations": updated_report.get("violations") or [],
+                "errors": updated_report.get("errors") or [],
+            },
+        )
+    approval_dir = report_dir / "repair-approvals"
+    approval_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = _now_iso().replace(":", "").replace("-", "")
+    approval_path = approval_dir / f"{timestamp}.json"
+    approval_payload = {
+        "scenario_id": normalized_scenario_id,
+        "applied_at": _now_iso(),
+        "operator": _normalize_text(operator) or "local-dev",
+        "approval_note": _normalize_text(approval_note),
+        "repair_type": "safe_write_repair",
+        "risk_class": "safe",
+        "safe_fixes_applied": applied_fixes,
+        "snapshot_fingerprint": str(updated_report.get("snapshot_fingerprint") or ""),
+        "violation_count": len(updated_report.get("violations") or []),
+    }
+    write_json_atomic(approval_path, approval_payload, ensure_ascii=False, indent=2, trailing_newline=True)
+    return {
+        "scenarioId": normalized_scenario_id,
+        "appliedFixes": applied_fixes,
+        "approvalLogPath": str(approval_path),
+        "report": updated_report,
+    }
 
 
 def _normalize_optional_int(value: object) -> int | None:
@@ -2577,6 +2693,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        route = urlparse(self.path or "").path
+        diagnostics_match = SCENARIO_DIAGNOSTICS_ROUTE_RE.fullmatch(route)
+        if diagnostics_match:
+            try:
+                self._validate_same_origin_request()
+                response = load_scenario_diagnostics_report(diagnostics_match.group("scenario_id"))
+                self._send_json(200, response)
+            except DevServerError as exc:
+                self._send_json(exc.status or 400, {
+                    "error": exc.code or "scenario_diagnostics_failed",
+                    "message": str(exc),
+                })
+            except Exception as exc:  # pragma: no cover - safety net
+                self._send_json(500, {
+                    "error": "scenario_diagnostics_failed",
+                    "message": f"Unexpected scenario diagnostics failure: {exc}",
+                })
+            return
         if self._maybe_redirect_app_root():
             return
         if self._maybe_send_gzip_static(head_only=False):
@@ -2607,6 +2741,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             self._validate_same_origin_request()
             payload = self._read_json_body()
+            diagnostics_preview_match = SCENARIO_DIAGNOSTICS_PREVIEW_ROUTE_RE.fullmatch(route)
+            if diagnostics_preview_match:
+                response = preview_scenario_safe_repair(diagnostics_preview_match.group("scenario_id"))
+                self._send_json(200, response)
+                return
+            diagnostics_apply_match = SCENARIO_DIAGNOSTICS_APPLY_ROUTE_RE.fullmatch(route)
+            if diagnostics_apply_match:
+                response = apply_approved_scenario_repair(
+                    diagnostics_apply_match.group("scenario_id"),
+                    operator=payload.get("operator"),
+                    approval_note=payload.get("approvalNote"),
+                )
+                self._send_json(200, response)
+                return
             if route == "/__dev/scenario/tag/create":
                 response = save_scenario_tag_create_payload(
                     payload.get("scenarioId"),

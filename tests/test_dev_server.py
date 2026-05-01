@@ -2323,5 +2323,76 @@ class DevServerTest(unittest.TestCase):
         )
 
 
+class ScenarioDiagnosticsApiHelperTest(unittest.TestCase):
+    def test_load_scenario_diagnostics_report_reads_checked_in_tno_contract(self) -> None:
+        report = dev_server.load_scenario_diagnostics_report("tno_1962")
+        self.assertEqual(report["scenario_id"], "tno_1962")
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["profile"], "tno_full")
+        self.assertTrue(str(report.get("snapshot_fingerprint") or "").strip())
+
+    def test_preview_scenario_safe_repair_exposes_preview_metadata(self) -> None:
+        preview = dev_server.preview_scenario_safe_repair("tno_1962")
+        self.assertEqual(preview["scenarioId"], "tno_1962")
+        self.assertIn("report", preview)
+        self.assertIn("preview", preview)
+        self.assertIn("safeFixPlan", preview["preview"])
+
+    def test_apply_approved_scenario_repair_writes_approval_log(self) -> None:
+        result = dev_server.apply_approved_scenario_repair(
+            "blank_base",
+            operator="test-user",
+            approval_note="verify safe repair hook",
+        )
+        self.assertEqual(result["scenarioId"], "blank_base")
+        approval_log_path = Path(result["approvalLogPath"])
+        self.assertTrue(approval_log_path.exists())
+        approval_payload = json.loads(approval_log_path.read_text(encoding="utf-8"))
+        self.assertEqual(approval_payload["operator"], "test-user")
+        self.assertEqual(approval_payload["risk_class"], "safe")
+
+    def test_apply_approved_scenario_repair_rejects_incomplete_repair_without_approval_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            (root / "data" / "scenarios" / "blank_base").mkdir(parents=True, exist_ok=True)
+            initial_report = {
+                "scenario_id": "blank_base",
+                "status": "ok",
+                "errors": [],
+                "violations": [],
+                "risky_fixes_required": [],
+                "forbidden_violations": [],
+            }
+            failed_report = {
+                "scenario_id": "blank_base",
+                "status": "failed",
+                "errors": ["still failing"],
+                "violations": [{"message": "still failing", "fix_class": "safe"}],
+                "risky_fixes_required": [],
+                "forbidden_violations": [],
+            }
+            with mock.patch.object(dev_server, "ROOT", root):
+                with mock.patch.object(
+                    dev_server,
+                    "load_scenario_diagnostics_report",
+                    side_effect=[initial_report, failed_report],
+                ):
+                    with mock.patch.object(
+                        dev_server,
+                        "apply_safe_scenario_contract_repairs",
+                        return_value=["startup_bundles"],
+                    ):
+                        with self.assertRaises(dev_server.DevServerError) as exc_info:
+                            dev_server.apply_approved_scenario_repair(
+                                "blank_base",
+                                operator="test-user",
+                                approval_note="should fail",
+                            )
+
+            self.assertEqual(exc_info.exception.code, "safe_repair_incomplete")
+            approval_dir = root / ".runtime" / "reports" / "generated" / "scenarios" / "blank_base" / "repair-approvals"
+            self.assertFalse(approval_dir.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

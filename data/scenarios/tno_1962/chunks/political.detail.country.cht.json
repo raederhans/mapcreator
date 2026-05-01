@@ -9794,6 +9794,107 @@
           ]
         ]
       }
+    },
+    {
+      "id": 22,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_CHT_005",
+        "name": "Russia Shell Fallback CHT",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "CHT",
+        "scenario_shell_controller_hint": "CHT",
+        "source_fragment_count": 146.0,
+        "source_fragment_area": 0.172862,
+        "retained_fragment_area": 0.022981,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              115.72135721357216,
+              49.8896190801908
+            ],
+            [
+              115.47295472954733,
+              49.919128332283336
+            ],
+            [
+              115.22455224552249,
+              49.98856186661867
+            ],
+            [
+              115.00855008550087,
+              50.16388154081541
+            ],
+            [
+              114.8321483214832,
+              50.22463588335883
+            ],
+            [
+              114.71334713347136,
+              50.23505091350914
+            ],
+            [
+              115.01215012150124,
+              50.14305148051481
+            ],
+            [
+              115.0841508415084,
+              50.05625956259563
+            ],
+            [
+              115.26415264152644,
+              49.952109261092616
+            ],
+            [
+              115.37215372153725,
+              49.917392493924936
+            ],
+            [
+              115.44415444154441,
+              49.90003411034111
+            ],
+            [
+              115.73215732157325,
+              49.882675726757256
+            ],
+            [
+              115.89415894158941,
+              49.945165907659074
+            ],
+            [
+              115.72135721357216,
+              49.8896190801908
+            ]
+          ]
+        ]
+      }
     }
   ]
 }

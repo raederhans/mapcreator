@@ -89,6 +89,76 @@ export function createProjectSupportDiagnosticsController({
     return list;
   };
 
+  const fetchScenarioDiagnosticsReport = async (scenarioId, { preview = false } = {}) => {
+    const url = preview
+      ? `/api/scenario-diagnostics/${encodeURIComponent(scenarioId)}/preview-repair`
+      : `/api/scenario-diagnostics/${encodeURIComponent(scenarioId)}`;
+    const response = await fetch(url, {
+      method: preview ? "POST" : "GET",
+      headers: preview ? { "Content-Type": "application/json" } : undefined,
+      body: preview ? JSON.stringify({ scenarioId }) : undefined,
+      credentials: "same-origin",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(String(payload?.message || payload?.error || "Scenario diagnostics request failed."));
+    }
+    return payload;
+  };
+
+  const renderScenarioDiagnosticsSummary = (diagnosticsReport, diagnosticsPreview) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "mt-4 flex flex-col gap-2";
+    const header = document.createElement("div");
+    header.className = "section-header-block";
+    header.textContent = t("Scenario diagnostics", "ui");
+    wrapper.appendChild(header);
+    if (!diagnosticsReport || typeof diagnosticsReport !== "object") {
+      wrapper.appendChild(createEmptyNote(t("No diagnostics loaded", "ui")));
+      return wrapper;
+    }
+    wrapper.appendChild(createAuditValueRow(t("Profile", "ui"), diagnosticsReport.profile || "unknown"));
+    wrapper.appendChild(createAuditValueRow(
+      t("Snapshot", "ui"),
+      String(diagnosticsReport.snapshot_fingerprint || "").slice(0, 12) || "missing"
+    ));
+    wrapper.appendChild(createAuditValueRow(
+      t("Safe fixes", "ui"),
+      diagnosticsPreview?.preview?.safeRepairAvailable ? t("Available", "ui") : t("None", "ui")
+    ));
+    wrapper.appendChild(createAuditValueRow(
+      t("Risky fixes", "ui"),
+      Array.isArray(diagnosticsReport.risky_fixes_required) ? diagnosticsReport.risky_fixes_required.length : 0
+    ));
+    wrapper.appendChild(createAuditValueRow(
+      t("Forbidden", "ui"),
+      Array.isArray(diagnosticsReport.forbidden_violations) ? diagnosticsReport.forbidden_violations.length : 0
+    ));
+    wrapper.appendChild(createAuditValueRow(
+      t("Owner bucket mismatches", "ui"),
+      diagnosticsReport.owner_bucket_mismatch_count ?? 0
+    ));
+    wrapper.appendChild(createAuditValueRow(
+      t("Coverage gaps", "ui"),
+      diagnosticsReport.reverse_coverage_gap_count ?? 0
+    ));
+    const violations = Array.isArray(diagnosticsReport.violations) ? diagnosticsReport.violations.slice(0, 8) : [];
+    wrapper.appendChild(createAuditList(violations, (item) => {
+      const row = document.createElement("div");
+      row.className = "flex flex-col gap-1";
+      row.appendChild(Object.assign(document.createElement("span"), {
+        className: "inspector-mini-label",
+        textContent: String(item?.fix_class || "info"),
+      }));
+      row.appendChild(Object.assign(document.createElement("span"), {
+        className: "body-text",
+        textContent: String(item?.message || ""),
+      }));
+      return row;
+    }));
+    return wrapper;
+  };
+
   const renderScenarioAuditSummary = (auditPayload, manifestSummary = {}) => {
     const summary = getScenarioAuditSummary(auditPayload);
     const container = document.createElement("div");
@@ -304,11 +374,17 @@ export function createProjectSupportDiagnosticsController({
 
     const activeScenarioId = String(state.activeScenarioId || "").trim();
     const auditUi = state.scenarioAuditUi || {};
+    const diagnosticsUi = state.scenarioDiagnosticsUi || {};
     const activeAuditLoaded =
       !!activeScenarioId &&
       auditUi.loadedForScenarioId === activeScenarioId &&
       state.scenarioAudit &&
       typeof state.scenarioAudit === "object";
+    const activeDiagnosticsLoaded =
+      !!activeScenarioId &&
+      diagnosticsUi.loadedForScenarioId === activeScenarioId &&
+      state.scenarioDiagnostics &&
+      typeof state.scenarioDiagnostics === "object";
     const manifestSummary =
       state.activeScenarioManifest?.summary && typeof state.activeScenarioManifest.summary === "object"
         ? state.activeScenarioManifest.summary
@@ -329,6 +405,21 @@ export function createProjectSupportDiagnosticsController({
 
     scenarioAuditSection.appendChild(title);
     scenarioAuditSection.appendChild(hint);
+
+    const appendScenarioDiagnosticsStatus = () => {
+      if (diagnosticsUi.loading) {
+        scenarioAuditSection.appendChild(createEmptyNote(t("Loading diagnostics…", "ui")));
+      } else if (diagnosticsUi.errorMessage) {
+        const diagnosticsError = document.createElement("div");
+        diagnosticsError.className = "inspector-mini-label mt-3";
+        diagnosticsError.textContent = `${t("Unable to load diagnostics", "ui")}: ${diagnosticsUi.errorMessage}`;
+        scenarioAuditSection.appendChild(diagnosticsError);
+      } else if (activeDiagnosticsLoaded) {
+        scenarioAuditSection.appendChild(
+          renderScenarioDiagnosticsSummary(state.scenarioDiagnostics, state.scenarioDiagnosticsPreview)
+        );
+      }
+    };
 
     if (!activeScenarioId) {
       scenarioAuditSection.appendChild(createEmptyNote(t("No scenario active", "ui")));
@@ -358,6 +449,53 @@ export function createProjectSupportDiagnosticsController({
     });
     actions.appendChild(loadButton);
 
+    const diagnosticsButton = document.createElement("button");
+    diagnosticsButton.type = "button";
+    diagnosticsButton.className = activeDiagnosticsLoaded ? "btn-secondary" : "btn-primary";
+    diagnosticsButton.disabled = !!diagnosticsUi.loading;
+    diagnosticsButton.textContent = t(activeDiagnosticsLoaded ? "Hide Diagnostics" : "Load Diagnostics", "ui");
+    diagnosticsButton.addEventListener("click", async () => {
+      if (activeDiagnosticsLoaded) {
+        state.scenarioDiagnostics = null;
+        state.scenarioDiagnosticsPreview = null;
+        state.scenarioDiagnosticsUi = {
+          loading: false,
+          errorMessage: "",
+          loadedForScenarioId: "",
+        };
+        renderScenarioAuditPanel();
+        return;
+      }
+      state.scenarioDiagnosticsUi = {
+        loading: true,
+        errorMessage: "",
+        loadedForScenarioId: activeScenarioId,
+      };
+      renderScenarioAuditPanel();
+      try {
+        const report = await fetchScenarioDiagnosticsReport(activeScenarioId);
+        const previewPayload = await fetchScenarioDiagnosticsReport(activeScenarioId, { preview: true });
+        state.scenarioDiagnostics = report;
+        state.scenarioDiagnosticsPreview = previewPayload;
+        state.scenarioDiagnosticsUi = {
+          loading: false,
+          errorMessage: "",
+          loadedForScenarioId: activeScenarioId,
+        };
+      } catch (error) {
+        console.error("Failed to load scenario diagnostics:", error);
+        state.scenarioDiagnostics = null;
+        state.scenarioDiagnosticsPreview = null;
+        state.scenarioDiagnosticsUi = {
+          loading: false,
+          errorMessage: String(error?.message || error || ""),
+          loadedForScenarioId: activeScenarioId,
+        };
+      }
+      renderScenarioAuditPanel();
+    });
+    actions.appendChild(diagnosticsButton);
+
     if (!activeAuditLoaded) {
       if (auditUi.loading) {
         scenarioAuditSection.appendChild(createEmptyNote(t("Loading audit details…", "ui")));
@@ -370,6 +508,7 @@ export function createProjectSupportDiagnosticsController({
         detail.textContent = auditUi.errorMessage;
         scenarioAuditSection.appendChild(detail);
       }
+      appendScenarioDiagnosticsStatus();
       scenarioAuditSection.appendChild(actions);
       return;
     }
@@ -387,6 +526,7 @@ export function createProjectSupportDiagnosticsController({
     scenarioAuditSection.appendChild(renderScenarioCriticalChecks(state.scenarioAudit));
     scenarioAuditSection.appendChild(renderScenarioAuditBlockers(state.scenarioAudit));
     scenarioAuditSection.appendChild(renderScenarioAuditTopologySummary(state.scenarioAudit));
+    appendScenarioDiagnosticsStatus();
     scenarioAuditSection.appendChild(actions);
   };
 

@@ -1,28 +1,16 @@
 {
-  "version": 1,
-  "scenario_id": "modern_world",
-  "generated_at": "2026-03-09T14:09:29.123Z",
-  "summary": {
+  "artifact_counts": {
+    "chunk_count": 0,
     "feature_count": 11294,
-    "owner_count": 174,
-    "controller_count": 174,
-    "quality_counts": {
-      "direct_country_copy": 11294
-    },
-    "source_counts": {
-      "canonical_baseline": 11294
-    },
-    "blocker_count": 0,
-    "owner_controller_split_feature_count": 0
+    "water_count": 0
   },
   "diagnostics": {
-    "source": "generated_from_canonical_baseline",
-    "note": "Canonical modern-world baseline with vanilla palette colors.",
-    "detail_topology_feature_count": 11294,
-    "primary_country_count": 209,
-    "canonical_country_count": 174,
-    "palette_id": "hoi4_vanilla",
     "baseline_hash": "a73e75303316cfc765d79e953be2d64eea2ebdcc3f8ffca27a12d2136d02120b",
+    "canonical_country_count": 174,
+    "detail_topology_feature_count": 11294,
+    "note": "Canonical modern-world baseline with vanilla palette colors.",
+    "palette_id": "hoi4_vanilla",
+    "primary_country_count": 209,
     "removed_stale_assignment_count": 430,
     "removed_stale_assignment_sample": [
       "RUS+99?",
@@ -45,6 +33,45 @@
       "RUS-2606",
       "RUS-2610",
       "RUS-2612"
-    ]
-  }
+    ],
+    "source": "generated_from_canonical_baseline"
+  },
+  "generated_at": "2026-03-09T14:09:29.123Z",
+  "owner_bucket_mismatch_count": 0,
+  "profile": "lightweight_base",
+  "reverse_coverage_gap_count": 0,
+  "scenario_id": "modern_world",
+  "snapshot_fingerprint": "9308f5de199ca793b3a942a4bf77b82bc8c6fe4e654c33012e646cc8a8ab5171",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "build_snapshot_sha256": "2793eeb45d9cfe3ea949c3b1aecc8f845cb4862526a545a7bbcc3f00a5c0b5b2",
+    "runtime_topology_sha256": "e921316a40986aa2e4df738adf5f8ead156fbdc01714a3b930652c1a214412a0"
+  },
+  "summary": {
+    "approximate_count": 0,
+    "blocker_count": 0,
+    "changed_feature_count": 0,
+    "controller_count": 174,
+    "controller_rule_count": 0,
+    "critical_region_check_count": 0,
+    "critical_unresolved_count": 0,
+    "failed_region_check_count": 0,
+    "feature_count": 11294,
+    "geometry_blocker_count": 0,
+    "manual_reviewed_feature_count": 0,
+    "manual_reviewed_region_count": 0,
+    "owner_controller_split_feature_count": 0,
+    "owner_count": 174,
+    "quality_counts": {
+      "direct_country_copy": 11294
+    },
+    "scenario_rule_blocker_count": 0,
+    "source_counts": {
+      "canonical_baseline": 11294
+    },
+    "synthetic_count": 0,
+    "synthetic_owner_feature_count": 0,
+    "topology_blocker_count": 0
+  },
+  "version": 1
 }

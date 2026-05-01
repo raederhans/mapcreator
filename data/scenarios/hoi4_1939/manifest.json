@@ -1,11 +1,18 @@
 {
-  "version": 2,
-  "scenario_id": "hoi4_1939",
-  "display_name": "HOI4 1939",
-  "bookmark_name": "BLITZKRIEG_NAME",
-  "bookmark_description": "BLITZKRIEG_DESC",
+  "audit_url": "data/scenarios/hoi4_1939/audit.json",
+  "baseline_hash": "0cbd7d4131516139b0ecabf8c63a0e017245c6ae079798fd80c8a338763568bf",
   "bookmark_date": "1939.8.14.12",
+  "bookmark_description": "BLITZKRIEG_DESC",
+  "bookmark_name": "BLITZKRIEG_NAME",
+  "capital_hints_url": "data/scenarios/hoi4_1939/capital_hints.json",
+  "city_overrides_url": "data/scenarios/hoi4_1939/city_overrides.json",
+  "context_lod_manifest": "data/scenarios/hoi4_1939/context_lod.manifest.json",
+  "controllers_url": "data/scenarios/hoi4_1939/controllers.by_feature.json",
+  "cores_url": "data/scenarios/hoi4_1939/cores.by_feature.json",
+  "countries_url": "data/scenarios/hoi4_1939/countries.json",
   "default_country": "GER",
+  "detail_chunk_manifest_url": "data/scenarios/hoi4_1939/detail_chunks.manifest.json",
+  "display_name": "HOI4 1939",
   "featured_tags": [
     "FRA",
     "USA",
@@ -55,82 +62,77 @@
     "PER",
     "PHI"
   ],
-  "palette_id": "hoi4_vanilla",
-  "baseline_hash": "0cbd7d4131516139b0ecabf8c63a0e017245c6ae079798fd80c8a338763568bf",
-  "countries_url": "data/scenarios/hoi4_1939/countries.json",
-  "owners_url": "data/scenarios/hoi4_1939/owners.by_feature.json",
-  "controllers_url": "data/scenarios/hoi4_1939/controllers.by_feature.json",
-  "cores_url": "data/scenarios/hoi4_1939/cores.by_feature.json",
-  "audit_url": "data/scenarios/hoi4_1939/audit.json",
-  "summary": {
-    "feature_count": 22502,
-    "owner_count": 115,
-    "controller_count": 117,
-    "quality_counts": {
-      "approx_existing_geometry": 452,
-      "direct_country_copy": 5524,
-      "manual_reviewed": 16526
-    },
-    "source_counts": {
-      "direct_active_owner": 5524,
-      "fallback_mapped_tag": 18,
-      "manual_rule": 16960
-    },
-    "approximate_count": 452,
-    "manual_reviewed_feature_count": 16526,
-    "geometry_blocker_count": 0,
-    "critical_unresolved_count": 0,
-    "synthetic_owner_feature_count": 18,
-    "synthetic_count": 18,
-    "changed_feature_count": 16978,
-    "failed_region_check_count": 4,
-    "topology_blocker_count": 0,
-    "scenario_rule_blocker_count": 0,
-    "blocker_count": 0,
-    "owner_controller_split_feature_count": 606,
-    "controller_rule_count": 8,
-    "critical_region_check_count": 13,
-    "manual_reviewed_region_count": 13,
-    "belarus_hybrid_feature_count": 35
-  },
   "generated_at": "2026-04-05T14:41:47.388433+00:00",
+  "geo_locale_patch_url": "data/scenarios/hoi4_1939/geo_locale_patch.json",
+  "geo_locale_patch_url_en": "data/scenarios/hoi4_1939/geo_locale_patch.en.json",
+  "geo_locale_patch_url_zh": "data/scenarios/hoi4_1939/geo_locale_patch.zh.json",
+  "mesh_pack_url": "data/scenarios/hoi4_1939/mesh_pack.json",
+  "owners_url": "data/scenarios/hoi4_1939/owners.by_feature.json",
+  "palette_id": "hoi4_vanilla",
   "performance_hints": {
-    "render_profile_default": "balanced",
     "dynamic_borders_default": false,
+    "render_profile_default": "balanced",
     "scenario_relief_overlays_default": false,
-    "water_regions_default": false,
-    "special_regions_default": false
+    "special_regions_default": false,
+    "water_regions_default": false
   },
+  "render_budget_hints": {
+    "detail_zoom_threshold": 1.7,
+    "max_optional_chunks": 3,
+    "max_required_chunks": 6
+  },
+  "runtime_bootstrap_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
+  "runtime_meta_url": "data/scenarios/hoi4_1939/runtime_meta.json",
+  "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
+  "scenario_contract_profile": "hoi4_chunked",
+  "scenario_id": "hoi4_1939",
+  "snapshot_fingerprint": "041be56543fd17c18f90eca8bcbd4b47e088fce32fdf8874c4bc8850486f439a",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "detail_chunk_manifest_sha256": "5a2e4d606db8c5992cdfe83388258ea3aeeafb28599a8f0aec1dd750e91646d7",
+    "runtime_bootstrap_topology_sha256": "dc80343e62fef541652c973957e4a69248d2bc611e1d04463fbd57d6e48f8cbd",
+    "runtime_topology_sha256": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53"
+  },
+  "startup_bootstrap_strategy": "chunked-coarse-first",
+  "startup_bundle_url_en": "data/scenarios/hoi4_1939/startup.bundle.en.json",
+  "startup_bundle_url_zh": "data/scenarios/hoi4_1939/startup.bundle.zh.json",
+  "startup_bundle_version": 5,
+  "startup_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
   "style_defaults": {
     "ocean": {
       "fillColor": "#2d4769"
     }
   },
-  "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
-  "runtime_bootstrap_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
-  "startup_topology_url": "data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
-  "city_overrides_url": "data/scenarios/hoi4_1939/city_overrides.json",
-  "capital_hints_url": "data/scenarios/hoi4_1939/capital_hints.json",
-  "detail_chunk_manifest_url": "data/scenarios/hoi4_1939/detail_chunks.manifest.json",
-  "runtime_meta_url": "data/scenarios/hoi4_1939/runtime_meta.json",
-  "mesh_pack_url": "data/scenarios/hoi4_1939/mesh_pack.json",
-  "context_lod_manifest": "data/scenarios/hoi4_1939/context_lod.manifest.json",
-  "render_budget_hints": {
-    "max_required_chunks": 6,
-    "max_optional_chunks": 3,
-    "detail_zoom_threshold": 1.7
+  "summary": {
+    "approximate_count": 452,
+    "belarus_hybrid_feature_count": 35,
+    "blocker_count": 0,
+    "changed_feature_count": 16978,
+    "controller_count": 117,
+    "controller_rule_count": 8,
+    "critical_region_check_count": 13,
+    "critical_unresolved_count": 0,
+    "failed_region_check_count": 4,
+    "feature_count": 22502,
+    "geometry_blocker_count": 0,
+    "manual_reviewed_feature_count": 16526,
+    "manual_reviewed_region_count": 13,
+    "owner_controller_split_feature_count": 606,
+    "owner_count": 115,
+    "quality_counts": {
+      "approx_existing_geometry": 452,
+      "direct_country_copy": 5524,
+      "manual_reviewed": 16526
+    },
+    "scenario_rule_blocker_count": 0,
+    "source_counts": {
+      "direct_active_owner": 5524,
+      "fallback_mapped_tag": 18,
+      "manual_rule": 16960
+    },
+    "synthetic_count": 18,
+    "synthetic_owner_feature_count": 18,
+    "topology_blocker_count": 0
   },
-  "startup_bundle_url_en": "data/scenarios/hoi4_1939/startup.bundle.en.json",
-  "startup_bundle_url_zh": "data/scenarios/hoi4_1939/startup.bundle.zh.json",
-  "startup_bundle_version": 5,
-  "startup_bootstrap_strategy": "chunked-coarse-first",
-  "geo_locale_patch_url": "data/scenarios/hoi4_1939/geo_locale_patch.json",
-  "geo_locale_patch_url_en": "data/scenarios/hoi4_1939/geo_locale_patch.en.json",
-  "geo_locale_patch_url_zh": "data/scenarios/hoi4_1939/geo_locale_patch.zh.json",
-  "source": {
-    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "runtime_topology_sha256": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53",
-    "runtime_bootstrap_topology_sha256": "2cfbb70e2febcb403bdb75ce263a5639df26b14d917abf87bfd20ee6b6f819c6",
-    "detail_chunk_manifest_sha256": "2a99827cdbb964f202bf7243d797fe60e4fd73a69ef2504c57b5154875c90e0f"
-  }
+  "version": 2
 }

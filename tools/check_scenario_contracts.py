@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -15,10 +16,29 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from map_builder import config as cfg
 from map_builder.contracts import (
+    SCENARIO_BUILD_SNAPSHOT_FILENAME,
+    SCENARIO_BUILDER_VERSION,
+    SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME,
+    SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
+    SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+    SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
+    SCENARIO_CONTRACT_VERSION,
     SCENARIO_GEO_LOCALE_PATCH_MANIFEST_FIELD,
+    SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE,
     SCENARIO_GEO_LOCALE_PATCH_MANIFEST_LANGUAGE_FIELDS,
+    SCENARIO_PROFILE_LIGHTWEIGHT_BASE,
+    SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE,
+    SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS,
     SCENARIO_STRICT_REQUIRED_FILENAMES,
+    build_scenario_snapshot_payload,
+    normalize_scenario_contract_tag,
+    resolve_scenario_contract_profile,
+    sha256_path,
 )
+from map_builder.io.writers import write_json_atomic
+from tools.build_startup_bootstrap_assets import build_startup_bootstrap_assets
+from tools.build_startup_bundle import build_startup_bundles
+from tools.scenario_chunk_assets import build_and_write_scenario_chunk_assets
 
 DEFAULT_SCENARIOS_ROOT = PROJECT_ROOT / "data/scenarios"
 IGNORED_DIR_NAMES = {"expectations"}
@@ -80,6 +100,11 @@ def parse_args() -> argparse.Namespace:
         help="Enable strict bundle/runtime validation for publish-ready scenario or checkpoint directories.",
     )
     parser.add_argument(
+        "--write-safe",
+        action="store_true",
+        help="Apply safe derived-asset repairs, then rerun validation and require a zero-diff second repair pass.",
+    )
+    parser.add_argument(
         "--report-path",
         default="",
         help="Optional JSON report output path. Writes a structured validation report when provided.",
@@ -97,13 +122,26 @@ def create_repair_tracks() -> dict[str, Any]:
 
 
 def build_scenario_report(scenario_dir: Path, strict: bool) -> dict[str, Any]:
+    profile = resolve_scenario_contract_profile(scenario_dir.name)
     return {
         "scenario_id": scenario_dir.name,
         "scenario_dir": str(scenario_dir),
+        "profile": profile.profile_id,
+        "gate_mode": profile.gate_mode,
         "strict_mode": strict,
         "status": "ok",
         "errors": [],
         "warnings": [],
+        "violations": [],
+        "snapshot_fingerprint": "",
+        "safe_fixable": False,
+        "safe_fixes_applied": [],
+        "risky_fixes_required": [],
+        "forbidden_violations": [],
+        "idempotent": True,
+        "artifact_counts": {},
+        "owner_bucket_mismatch_count": 0,
+        "reverse_coverage_gap_count": 0,
         "repair_tracks": create_repair_tracks(),
     }
 
@@ -125,6 +163,477 @@ def has_value(value: object) -> bool:
     if isinstance(value, (list, dict, tuple, set)):
         return bool(value)
     return True
+
+
+def write_json(path: Path, payload: object) -> None:
+    stable_payload = json.loads(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+    write_json_atomic(
+        path,
+        stable_payload,
+        ensure_ascii=False,
+        indent=2,
+        trailing_newline=True,
+    )
+
+
+def _load_optional_json(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    payload = load_json(path)
+    return payload if isinstance(payload, dict) else None
+
+
+def _minimal_geo_locale_patch_payload(scenario_id: str, generated_at: str) -> dict[str, Any]:
+    return {
+        "version": 1,
+        "scenario_id": scenario_id,
+        "generated_at": generated_at,
+        "geo": {},
+    }
+
+
+def _build_language_geo_locale_patch(base_payload: dict[str, Any], language: str) -> dict[str, Any]:
+    geo = base_payload.get("geo") if isinstance(base_payload.get("geo"), dict) else {}
+    return {
+        "version": base_payload.get("version", 1),
+        "scenario_id": str(base_payload.get("scenario_id") or "").strip(),
+        "generated_at": str(base_payload.get("generated_at") or "").strip(),
+        "language": language,
+        "geo": {
+            feature_id: dict(entry)
+            for feature_id, entry in geo.items()
+            if isinstance(entry, dict) and entry.get(language)
+        },
+    }
+
+
+def _ensure_geo_locale_patch_inputs(
+    scenario_dir: Path,
+    *,
+    scenario_id: str,
+    generated_at: str,
+) -> dict[str, Path]:
+    base_path = scenario_dir / "geo_locale_patch.json"
+    base_payload = _load_optional_json(base_path) or _minimal_geo_locale_patch_payload(scenario_id, generated_at)
+    base_payload["scenario_id"] = scenario_id
+    base_payload["generated_at"] = generated_at
+    if not isinstance(base_payload.get("geo"), dict):
+        base_payload["geo"] = {}
+    write_json(base_path, base_payload)
+    language_paths = {
+        language: scenario_dir / filename
+        for language, filename in SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE.items()
+    }
+    for language, path in language_paths.items():
+        write_json(path, _build_language_geo_locale_patch(base_payload, language))
+    return {
+        "base": base_path,
+        **{language: path for language, path in language_paths.items()},
+    }
+
+
+def _load_layer_payloads_from_manifest(manifest: dict[str, Any]) -> dict[str, dict[str, Any] | None]:
+    layer_payloads: dict[str, dict[str, Any] | None] = {}
+    for layer_key, raw_url in {
+        "water": manifest.get("water_regions_url"),
+        "special": manifest.get("special_regions_url"),
+        "relief": manifest.get("relief_overlays_url"),
+        "cities": manifest.get("city_overrides_url"),
+    }.items():
+        value = str(raw_url or "").strip()
+        if not value:
+            continue
+        path = (PROJECT_ROOT / value).resolve()
+        if path.exists():
+            payload = load_json(path)
+            if isinstance(payload, dict):
+                layer_payloads[layer_key] = payload
+    return layer_payloads
+
+
+def _count_feature_collection_features(path: Path) -> int:
+    payload = _load_optional_json(path)
+    features = payload.get("features") if isinstance(payload, dict) else None
+    return len(features) if isinstance(features, list) else 0
+
+
+def _count_runtime_political_features(path: Path) -> int:
+    payload = _load_optional_json(path)
+    if not isinstance(payload, dict):
+        return 0
+    geometries = (
+        payload.get("objects", {})
+        .get("political", {})
+        .get("geometries", [])
+    )
+    return len(geometries) if isinstance(geometries, list) else 0
+
+
+def _count_detail_chunks(path: Path) -> int:
+    payload = _load_optional_json(path)
+    chunks = payload.get("chunks") if isinstance(payload, dict) else None
+    return len(chunks) if isinstance(chunks, list) else 0
+
+
+def _collect_snapshot_inputs(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+) -> dict[str, str]:
+    paths = {
+        "countries.json": scenario_dir / "countries.json",
+        "owners.by_feature.json": scenario_dir / "owners.by_feature.json",
+        "controllers.by_feature.json": scenario_dir / "controllers.by_feature.json",
+        "cores.by_feature.json": scenario_dir / "cores.by_feature.json",
+        "water_regions.geojson": scenario_dir / "water_regions.geojson",
+        "runtime_topology.topo.json": scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
+        "geo_locale_patch.json": scenario_dir / "geo_locale_patch.json",
+    }
+    manifest_input_fields = {
+        "special_regions_url": "special_regions.geojson",
+        "relief_overlays_url": "relief_overlays.geojson",
+        "city_overrides_url": "city_overrides.json",
+    }
+    for field_name, label in manifest_input_fields.items():
+        raw_url = str(manifest.get(field_name) or "").strip()
+        if not raw_url:
+            continue
+        candidate_path = PROJECT_ROOT.joinpath(*PurePosixPath(raw_url).parts)
+        paths[label] = candidate_path
+    input_sha: dict[str, str] = {}
+    for name, path in paths.items():
+        if path.exists():
+            input_sha[name] = _sha256_path(path)
+    return input_sha
+
+
+def _collect_snapshot_outputs(
+    scenario_dir: Path,
+    profile_id: str,
+) -> dict[str, str]:
+    candidate_paths = {
+        "runtime_topology.bootstrap.topo.json": scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME,
+        "detail_chunks.manifest.json": scenario_dir / "detail_chunks.manifest.json",
+        "context_lod.manifest.json": scenario_dir / "context_lod.manifest.json",
+        "runtime_meta.json": scenario_dir / "runtime_meta.json",
+        "mesh_pack.json": scenario_dir / "mesh_pack.json",
+        "locales.startup.json": scenario_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
+        "geo_aliases.startup.json": scenario_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+        SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"]: scenario_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
+        f"{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE['en']}.gz": scenario_dir / f"{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE['en']}.gz",
+        SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["zh"]: scenario_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["zh"],
+        f"{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE['zh']}.gz": scenario_dir / f"{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE['zh']}.gz",
+    }
+    output_sha: dict[str, str] = {}
+    for name, path in candidate_paths.items():
+        if path.exists():
+            output_sha[name] = _sha256_path(path)
+    if profile_id == SCENARIO_PROFILE_LIGHTWEIGHT_BASE.profile_id:
+        return output_sha
+    return output_sha
+
+
+def _compose_snapshot_payload(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+    *,
+    report_paths: dict[str, object] | None = None,
+) -> dict[str, Any]:
+    scenario_id = str(manifest.get("scenario_id") or scenario_dir.name).strip() or scenario_dir.name
+    profile = resolve_scenario_contract_profile(scenario_id)
+    runtime_path = scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME
+    water_path = scenario_dir / "water_regions.geojson"
+    detail_chunk_manifest_path = scenario_dir / "detail_chunks.manifest.json"
+    summary = manifest.get("summary") if isinstance(manifest.get("summary"), dict) else {}
+    feature_count = int(summary.get("feature_count") or _count_runtime_political_features(runtime_path) or 0)
+    snapshot_payload = build_scenario_snapshot_payload(
+        scenario_id=scenario_id,
+        profile_id=profile.profile_id,
+        input_sha=_collect_snapshot_inputs(scenario_dir, manifest),
+        output_sha=_collect_snapshot_outputs(scenario_dir, profile.profile_id),
+        feature_count=feature_count,
+        water_count=_count_feature_collection_features(water_path),
+        chunk_count=_count_detail_chunks(detail_chunk_manifest_path),
+        generated_at=str(manifest.get("generated_at") or "").strip(),
+        # build_snapshot.json is checked in with scenario data, so machine-local
+        # paths stay out of the persisted payload.
+        environment={},
+        durations={},
+        report_paths={},
+        contract_version=SCENARIO_CONTRACT_VERSION,
+        builder_version=SCENARIO_BUILDER_VERSION,
+    )
+    return snapshot_payload
+
+
+def _build_snapshot_for_scenario(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+    *,
+    report_paths: dict[str, object] | None = None,
+) -> dict[str, Any]:
+    snapshot_payload = _compose_snapshot_payload(
+        scenario_dir,
+        manifest,
+        report_paths=report_paths,
+    )
+    snapshot_path = scenario_dir / SCENARIO_BUILD_SNAPSHOT_FILENAME
+    write_json(snapshot_path, snapshot_payload)
+    return snapshot_payload
+
+
+def _refresh_audit_payload(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+    *,
+    snapshot_payload: dict[str, Any],
+    owner_bucket_mismatch_count: int = 0,
+    reverse_coverage_gap_count: int = 0,
+) -> dict[str, Any]:
+    audit_path = scenario_dir / "audit.json"
+    audit_payload = _load_optional_json(audit_path) or {"version": 1}
+    audit_payload["scenario_id"] = str(manifest.get("scenario_id") or scenario_dir.name).strip()
+    audit_payload["generated_at"] = str(manifest.get("generated_at") or "").strip()
+    audit_payload["profile"] = snapshot_payload.get("profile")
+    audit_payload["snapshot_fingerprint"] = snapshot_payload.get("snapshot_fingerprint")
+    audit_payload["source"] = {
+        **(manifest.get("source") if isinstance(manifest.get("source"), dict) else {}),
+        "build_snapshot_sha256": _sha256_path(scenario_dir / SCENARIO_BUILD_SNAPSHOT_FILENAME),
+    }
+    audit_payload["summary"] = copy.deepcopy(
+        manifest.get("summary") if isinstance(manifest.get("summary"), dict) else {}
+    )
+    audit_payload["artifact_counts"] = {
+        "feature_count": snapshot_payload.get("feature_count", 0),
+        "water_count": snapshot_payload.get("water_count", 0),
+        "chunk_count": snapshot_payload.get("chunk_count", 0),
+    }
+    audit_payload["owner_bucket_mismatch_count"] = int(owner_bucket_mismatch_count)
+    audit_payload["reverse_coverage_gap_count"] = int(reverse_coverage_gap_count)
+    write_json(audit_path, audit_payload)
+    return audit_payload
+
+
+def _apply_safe_repairs(
+    scenario_dir: Path,
+    *,
+    report_path: Path | None = None,
+) -> list[str]:
+    manifest_path = scenario_dir / "manifest.json"
+    manifest = load_json(manifest_path)
+    scenario_id = str(manifest.get("scenario_id") or scenario_dir.name).strip() or scenario_dir.name
+    profile = resolve_scenario_contract_profile(scenario_id)
+    generated_at = str(manifest.get("generated_at") or "").strip()
+    if not generated_at:
+        raise ValueError("manifest.generated_at is required for --write-safe repairs.")
+    runtime_topology_path = scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME
+    if not runtime_topology_path.exists():
+        raise FileNotFoundError(f"Missing runtime topology for safe repair: {runtime_topology_path}")
+
+    safe_fixes_applied: list[str] = []
+    geo_patch_required = bool(
+        profile.expect_startup_assets
+        or str(manifest.get(SCENARIO_GEO_LOCALE_PATCH_MANIFEST_FIELD) or "").strip()
+        or any(str(manifest.get(field_name) or "").strip() for field_name in SCENARIO_GEO_LOCALE_PATCH_MANIFEST_LANGUAGE_FIELDS.values())
+    )
+    geo_patch_paths: dict[str, Path] = {}
+    if geo_patch_required:
+        geo_patch_paths = _ensure_geo_locale_patch_inputs(
+            scenario_dir,
+            scenario_id=scenario_id,
+            generated_at=generated_at,
+        )
+        safe_fixes_applied.append("geo_locale_patch_inputs")
+
+    runtime_topology_url = str(
+        manifest.get("runtime_topology_url")
+        or f"data/scenarios/{scenario_id}/{SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME}"
+    ).strip()
+    manifest["runtime_topology_url"] = runtime_topology_url
+
+    if profile.expect_runtime_bootstrap or profile.expect_startup_assets:
+        runtime_bootstrap_path = scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME
+        startup_support_whitelist_path = scenario_dir / "derived" / "startup_support_whitelist.json"
+        build_startup_bootstrap_assets(
+            base_topology_path=PROJECT_ROOT / profile.startup_support_base_topology,
+            full_locales_path=PROJECT_ROOT / "data/locales.json",
+            full_geo_aliases_path=PROJECT_ROOT / "data/geo_aliases.json",
+            full_runtime_topology_path=runtime_topology_path,
+            scenario_geo_patch_path=geo_patch_paths["base"],
+            runtime_bootstrap_output_path=runtime_bootstrap_path,
+            startup_locales_output_path=scenario_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
+            startup_geo_aliases_output_path=scenario_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+            startup_support_whitelist_path=(
+                startup_support_whitelist_path if startup_support_whitelist_path.exists() else None
+            ),
+        )
+        runtime_bootstrap_url = f"data/scenarios/{scenario_id}/{SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME}"
+        manifest["runtime_bootstrap_topology_url"] = runtime_bootstrap_url
+        manifest["startup_topology_url"] = runtime_bootstrap_url
+        safe_fixes_applied.append("startup_support_assets")
+
+    if geo_patch_required:
+        for language, field_name in SCENARIO_GEO_LOCALE_PATCH_MANIFEST_LANGUAGE_FIELDS.items():
+            manifest[field_name] = f"data/scenarios/{scenario_id}/{SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE[language]}"
+        manifest[SCENARIO_GEO_LOCALE_PATCH_MANIFEST_FIELD] = f"data/scenarios/{scenario_id}/geo_locale_patch.json"
+    manifest["audit_url"] = str(manifest.get("audit_url") or f"data/scenarios/{scenario_id}/audit.json").strip()
+    layer_payloads = _load_layer_payloads_from_manifest(manifest)
+    if profile.expect_chunk_assets:
+        runtime_bootstrap_payload = load_json(scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME)
+        runtime_topology_payload = load_json(runtime_topology_path)
+        build_and_write_scenario_chunk_assets(
+            scenario_dir=scenario_dir,
+            manifest_payload=manifest,
+            layer_payloads=layer_payloads,
+            startup_topology_payload=runtime_bootstrap_payload,
+            runtime_topology_payload=runtime_topology_payload,
+            startup_topology_url=str(manifest.get("startup_topology_url") or "").strip(),
+            runtime_topology_url=runtime_topology_url,
+            generated_at=generated_at,
+        )
+        safe_fixes_applied.append("chunk_assets")
+
+    if profile.expect_startup_assets:
+        for language, field_name in SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS.items():
+            manifest[field_name] = f"data/scenarios/{scenario_id}/{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE[language]}"
+        write_json(manifest_path, manifest)
+        build_startup_bundles(
+            scenario_manifest_path=manifest_path,
+            data_manifest_path=PROJECT_ROOT / "data/manifest.json",
+            topology_primary_path=PROJECT_ROOT / "data/europe_topology.json",
+            startup_locales_path=scenario_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
+            geo_aliases_path=scenario_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+            full_runtime_topology_path=runtime_topology_path,
+            runtime_bootstrap_topology_path=scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME,
+            countries_path=scenario_dir / "countries.json",
+            owners_path=scenario_dir / "owners.by_feature.json",
+            controllers_path=scenario_dir / "controllers.by_feature.json",
+            cores_path=scenario_dir / "cores.by_feature.json",
+            geo_locale_patch_en_path=geo_patch_paths["en"],
+            geo_locale_patch_zh_path=geo_patch_paths["zh"],
+            output_en_path=scenario_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
+            output_zh_path=scenario_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["zh"],
+            detail_chunk_manifest_path=(scenario_dir / "detail_chunks.manifest.json")
+            if (scenario_dir / "detail_chunks.manifest.json").exists()
+            else None,
+            report_path=None,
+        )
+        safe_fixes_applied.append("startup_bundles")
+
+    manifest["scenario_contract_profile"] = profile.profile_id
+    manifest["source"] = {
+        **(manifest.get("source") if isinstance(manifest.get("source"), dict) else {}),
+        "base_topology_sha256": _sha256_path(PROJECT_ROOT / "data" / "europe_topology.json"),
+        "runtime_topology_sha256": _sha256_path(runtime_topology_path),
+    }
+    runtime_bootstrap_path = scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME
+    if runtime_bootstrap_path.exists():
+        manifest["source"]["runtime_bootstrap_topology_sha256"] = _sha256_path(runtime_bootstrap_path)
+    detail_chunk_manifest_path = scenario_dir / "detail_chunks.manifest.json"
+    if detail_chunk_manifest_path.exists():
+        manifest["source"]["detail_chunk_manifest_sha256"] = _sha256_path(detail_chunk_manifest_path)
+
+    write_json(manifest_path, manifest)
+    snapshot_payload = _build_snapshot_for_scenario(
+        scenario_dir,
+        manifest,
+        report_paths={"validation_report": str(report_path) if report_path else ""},
+    )
+    manifest["snapshot_fingerprint"] = snapshot_payload["snapshot_fingerprint"]
+    write_json(manifest_path, manifest)
+    _refresh_audit_payload(scenario_dir, manifest, snapshot_payload=snapshot_payload)
+    safe_fixes_applied.extend(["build_snapshot", "audit_sync", "manifest_source_sync"])
+    return safe_fixes_applied
+
+
+def _capture_safe_repair_hashes(scenario_dir: Path) -> dict[str, str]:
+    tracked_paths = [
+        "manifest.json",
+        "audit.json",
+        SCENARIO_BUILD_SNAPSHOT_FILENAME,
+        "geo_locale_patch.json",
+        SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE["en"],
+        SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE["zh"],
+        SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME,
+        SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
+        SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+        SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
+        f"{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE['en']}.gz",
+        SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["zh"],
+        f"{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE['zh']}.gz",
+        "detail_chunks.manifest.json",
+        "context_lod.manifest.json",
+        "runtime_meta.json",
+        "mesh_pack.json",
+    ]
+    hashes: dict[str, str] = {}
+    for relative_path in tracked_paths:
+        path = scenario_dir / relative_path
+        if path.exists():
+            hashes[relative_path.replace("\\", "/")] = _sha256_path(path)
+    chunks_dir = scenario_dir / "chunks"
+    if chunks_dir.exists():
+        for chunk_path in sorted(chunks_dir.rglob("*.json")):
+            hashes[str(chunk_path.relative_to(scenario_dir)).replace("\\", "/")] = _sha256_path(chunk_path)
+    return hashes
+
+
+def _classify_violation(message: str) -> str:
+    risky_markers = (
+        "owners/controllers feature keysets",
+        "owners/cores feature keysets",
+        "runtime_topology is missing feature ids",
+        "missing owners.by_feature ownership",
+        "missing scenario_shell_owner_hint",
+        "owner/controller hints",
+    )
+    if any(marker in message for marker in risky_markers):
+        return "risky"
+    safe_markers = (
+        "detail chunk",
+        "detail political feature",
+        "detail political chunk union",
+        "political detail chunk feature ids",
+        "runtime_bootstrap_topology_url",
+        "startup_topology_url",
+        "startup_bundle_url",
+        "detail_chunks.manifest.json",
+        "audit.json",
+        "build_snapshot.json",
+        "manifest.source.",
+        "manifest.summary.feature_count",
+        "startup bundle",
+        "startup support",
+    )
+    if any(marker in message for marker in safe_markers):
+        return "safe"
+    return "forbidden"
+
+
+def _materialize_violation_report(report: dict[str, Any]) -> None:
+    violations: list[dict[str, Any]] = []
+    risky: list[str] = []
+    forbidden: list[str] = []
+    safe_count = 0
+    for index, error in enumerate(report.get("errors", []), start=1):
+        fix_class = _classify_violation(str(error))
+        if fix_class == "safe":
+            safe_count += 1
+        elif fix_class == "risky":
+            risky.append(str(error))
+        else:
+            forbidden.append(str(error))
+        violations.append(
+            {
+                "index": index,
+                "severity": "error",
+                "fix_class": fix_class,
+                "message": str(error),
+            }
+        )
+    report["violations"] = violations
+    report["safe_fixable"] = safe_count > 0 and not risky and not forbidden
+    report["risky_fixes_required"] = risky
+    report["forbidden_violations"] = forbidden
 
 
 def discover_scenario_dirs(scenarios_root: Path, explicit_dirs: list[str]) -> list[Path]:
@@ -524,6 +1033,65 @@ def _resolve_scenario_url(target_dir: Path, url: object, errors: list[str], fiel
     return path
 
 
+def _required_profile_filenames(profile_id: str, manifest: dict[str, Any]) -> list[str]:
+    profile = resolve_scenario_contract_profile(profile_id)
+    required = list(SCENARIO_STRICT_REQUIRED_FILENAMES)
+    if profile.expect_runtime_bootstrap or str(manifest.get("runtime_bootstrap_topology_url") or "").strip():
+        required.append(SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME)
+    if profile.expect_chunk_assets or str(manifest.get("detail_chunk_manifest_url") or "").strip():
+        required.append("detail_chunks.manifest.json")
+    if profile.expect_startup_assets or any(
+        str(manifest.get(field_name) or "").strip()
+        for field_name in SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS.values()
+    ):
+        required.extend(
+            [
+                SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
+                SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+                SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
+                SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["zh"],
+            ]
+        )
+    if str(manifest.get("audit_url") or "").strip():
+        required.append("audit.json")
+    required.append(SCENARIO_BUILD_SNAPSHOT_FILENAME)
+    return sorted(dict.fromkeys(required))
+
+
+def _parse_detail_chunk_bucket(chunk_id: str) -> str:
+    prefix = "political.detail.country."
+    if not str(chunk_id or "").startswith(prefix):
+        return ""
+    return normalize_scenario_contract_tag(str(chunk_id)[len(prefix):])
+
+
+def _resolve_detail_feature_owner_bucket(
+    feature: dict[str, Any],
+    owners_by_feature_id: dict[str, str],
+    errors: list[str],
+    *,
+    chunk_id: str,
+) -> tuple[str, str]:
+    props = feature.get("properties") if isinstance(feature.get("properties"), dict) else {}
+    feature_id = str(props.get("id") or feature.get("id") or "").strip()
+    if not feature_id:
+        errors.append(f"detail chunk {chunk_id} contains a political feature without properties.id.")
+        return "", ""
+    owner_tag = normalize_scenario_contract_tag(owners_by_feature_id.get(feature_id))
+    if owner_tag:
+        return feature_id, owner_tag
+    if str(props.get("scenario_helper_kind") or "").strip() == "shell_fallback":
+        shell_hint = normalize_scenario_contract_tag(props.get("scenario_shell_owner_hint"))
+        if shell_hint:
+            return feature_id, shell_hint
+        errors.append(
+            f"detail chunk {chunk_id} feature {feature_id} is shell_fallback but missing scenario_shell_owner_hint."
+        )
+        return feature_id, ""
+    errors.append(f"detail chunk {chunk_id} feature {feature_id} is missing owners.by_feature ownership.")
+    return feature_id, ""
+
+
 def _collect_feature_ids_from_geojson(path: Path, errors: list[str]) -> set[str]:
     payload = _load_required_local_json(path, errors)
     if payload is None:
@@ -587,6 +1155,85 @@ def _validate_source_metadata(
             )
 
 
+def _validate_build_snapshot(
+    target_dir: Path,
+    manifest: dict[str, Any],
+    errors: list[str],
+) -> dict[str, Any] | None:
+    snapshot_path = target_dir / SCENARIO_BUILD_SNAPSHOT_FILENAME
+    snapshot_payload = _load_required_local_json(snapshot_path, errors)
+    if snapshot_payload is None:
+        return None
+    expected_snapshot = _compose_snapshot_payload(target_dir, manifest)
+    expected_fingerprint = str(expected_snapshot.get("snapshot_fingerprint") or "").strip()
+    actual_fingerprint = str(snapshot_payload.get("snapshot_fingerprint") or "").strip()
+    if actual_fingerprint != expected_fingerprint:
+        errors.append(
+            "build_snapshot.json snapshot_fingerprint must match current scenario artifacts. "
+            f"snapshot={actual_fingerprint} actual={expected_fingerprint}."
+        )
+    for field_name in (
+        "scenario_id",
+        "profile",
+        "contract_version",
+        "builder_version",
+        "feature_count",
+        "water_count",
+        "chunk_count",
+    ):
+        if snapshot_payload.get(field_name) != expected_snapshot.get(field_name):
+            errors.append(
+                f"build_snapshot.json field {field_name} must match the current scenario contract snapshot."
+            )
+    for map_name in ("input_sha", "output_sha"):
+        actual_map = snapshot_payload.get(map_name)
+        expected_map = expected_snapshot.get(map_name)
+        if actual_map != expected_map:
+            errors.append(
+                f"build_snapshot.json field {map_name} must match the current scenario artifact shas."
+            )
+    return snapshot_payload
+
+
+def _validate_startup_bundle_sources(
+    target_dir: Path,
+    manifest: dict[str, Any],
+    errors: list[str],
+) -> None:
+    manifest_source = manifest.get("source") if isinstance(manifest.get("source"), dict) else {}
+    for language, field_name in SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS.items():
+        bundle_url = str(manifest.get(field_name) or "").strip()
+        if not bundle_url:
+            continue
+        bundle_path = _resolve_scenario_url(target_dir, bundle_url, errors, field_name)
+        if bundle_path is None:
+            continue
+        bundle_payload = _load_required_local_json(bundle_path, errors)
+        if bundle_payload is None:
+            continue
+        bundle_source_raw = bundle_payload.get("source")
+        if not isinstance(bundle_source_raw, dict):
+            errors.append(f"startup bundle {language} must include a source object.")
+            continue
+        bundle_source = bundle_source_raw
+        for source_field in (
+            "runtime_topology_sha256",
+            "runtime_bootstrap_topology_sha256",
+            "detail_chunk_manifest_sha256",
+        ):
+            manifest_sha = str(manifest_source.get(source_field) or "").strip()
+            bundle_sha = str(bundle_source.get(source_field) or "").strip()
+            if manifest_sha and not bundle_sha:
+                errors.append(
+                    f"startup bundle {language} source.{source_field} must be present when manifest.source.{source_field} is set."
+                )
+                continue
+            if manifest_sha and bundle_sha != manifest_sha:
+                errors.append(
+                    f"startup bundle {language} source.{source_field} must match manifest.source.{source_field}."
+                )
+
+
 def _validate_runtime_shell_topology(
     path: Path,
     errors: list[str],
@@ -616,18 +1263,27 @@ def _validate_detail_chunk_manifest(
     target_dir: Path,
     detail_manifest_path: Path,
     runtime_feature_ids: set[str],
+    owners_by_feature_id: dict[str, str],
     errors: list[str],
-) -> None:
+) -> dict[str, int]:
     payload = _load_required_local_json(detail_manifest_path, errors)
     if payload is None:
-        return
+        return {
+            "owner_bucket_mismatch_count": 0,
+            "reverse_coverage_gap_count": 0,
+        }
     chunks = payload.get("chunks")
     if not isinstance(chunks, list) or not chunks:
         errors.append("detail_chunks.manifest.json must contain a non-empty chunks list in strict mode.")
-        return
+        return {
+            "owner_bucket_mismatch_count": 0,
+            "reverse_coverage_gap_count": 0,
+        }
     seen_ids: set[str] = set()
     duplicate_ids: list[str] = []
     political_ids: set[str] = set()
+    feature_to_chunk: dict[str, str] = {}
+    owner_bucket_mismatch_count = 0
     for chunk in chunks:
         if not isinstance(chunk, dict):
             errors.append("detail_chunks.manifest.json chunks entries must be objects.")
@@ -654,8 +1310,67 @@ def _validate_detail_chunk_manifest(
                 f"detail chunk {chunk_id} byte_size must match file size. "
                 f"manifest={expected_byte_size_int} actual={chunk_path.stat().st_size}."
             )
-        if str(chunk.get("layer") or "").strip() == "political":
-            political_ids.update(_collect_feature_ids_from_geojson(chunk_path, errors))
+        if (
+            str(chunk.get("layer") or "").strip() == "political"
+            and str(chunk.get("lod") or "").strip() == "detail"
+        ):
+            chunk_payload = _load_required_local_json(chunk_path, errors)
+            if chunk_payload is None:
+                continue
+            features = chunk_payload.get("features")
+            if not isinstance(features, list):
+                errors.append(f"detail chunk {chunk_id} must be a FeatureCollection with features.")
+                continue
+            expected_feature_count = chunk.get("feature_count")
+            try:
+                expected_feature_count_int = int(expected_feature_count)
+            except (TypeError, ValueError):
+                errors.append(f"detail chunk {chunk_id} feature_count must be an integer.")
+                expected_feature_count_int = None
+            if expected_feature_count_int is not None and expected_feature_count_int != len(features):
+                errors.append(
+                    f"detail chunk {chunk_id} feature_count must match payload feature length. "
+                    f"manifest={expected_feature_count_int} actual={len(features)}."
+                )
+            chunk_bucket = _parse_detail_chunk_bucket(chunk_id)
+            manifest_country_codes = [
+                normalize_scenario_contract_tag(code)
+                for code in (chunk.get("country_codes") or [])
+                if normalize_scenario_contract_tag(code)
+            ]
+            if chunk_bucket and manifest_country_codes and chunk_bucket not in manifest_country_codes:
+                errors.append(
+                    f"detail chunk {chunk_id} country_codes must include the chunk owner bucket {chunk_bucket}."
+                )
+            for feature in features:
+                if not isinstance(feature, dict):
+                    continue
+                feature_id, owner_bucket = _resolve_detail_feature_owner_bucket(
+                    feature,
+                    owners_by_feature_id,
+                    errors,
+                    chunk_id=chunk_id,
+                )
+                if not feature_id:
+                    continue
+                if chunk_bucket and owner_bucket and owner_bucket != chunk_bucket:
+                    owner_bucket_mismatch_count += 1
+                    errors.append(
+                        f"detail chunk {chunk_id} feature {feature_id} must stay in owner bucket {owner_bucket}."
+                    )
+                if manifest_country_codes and owner_bucket and owner_bucket not in manifest_country_codes:
+                    owner_bucket_mismatch_count += 1
+                    errors.append(
+                        f"detail chunk {chunk_id} feature {feature_id} owner bucket {owner_bucket} "
+                        "must match manifest country_codes."
+                    )
+                if feature_id in feature_to_chunk and feature_to_chunk[feature_id] != chunk_id:
+                    errors.append(
+                        f"detail political feature {feature_id} appears in multiple chunks: "
+                        f"{feature_to_chunk[feature_id]} and {chunk_id}."
+                    )
+                feature_to_chunk[feature_id] = chunk_id
+                political_ids.add(feature_id)
     if duplicate_ids:
         errors.append(f"detail chunk ids must be unique. Duplicates: {sorted(set(duplicate_ids))[:10]}.")
     illegal_chunk_ids = sorted(political_ids - runtime_feature_ids)
@@ -664,6 +1379,16 @@ def _validate_detail_chunk_manifest(
             "political detail chunk feature ids must belong to full runtime political ids. "
             f"Sample: {illegal_chunk_ids[:10]}."
         )
+    reverse_coverage_gap_count = len(runtime_feature_ids - political_ids)
+    if reverse_coverage_gap_count:
+        errors.append(
+            "detail political chunk union must cover runtime political ids. "
+            f"Missing sample: {sorted(runtime_feature_ids - political_ids)[:10]}."
+        )
+    return {
+        "owner_bucket_mismatch_count": owner_bucket_mismatch_count,
+        "reverse_coverage_gap_count": reverse_coverage_gap_count,
+    }
 
 
 def _extract_runtime_political_feature_ids(runtime_payload: dict, errors: list[str], runtime_path: Path) -> set[str]:
@@ -701,18 +1426,23 @@ def validate_strict_bundle_contract(
     target_dir: Path,
     errors: list[str],
     repair_tracks: dict[str, Any] | None = None,
+    report: dict[str, Any] | None = None,
 ) -> None:
+    manifest = _load_required_local_json(target_dir / "manifest.json", errors)
+    if manifest is None:
+        return
+    required_filenames = _required_profile_filenames(target_dir.name, manifest)
     required_payloads = {
         filename: _load_required_local_json(target_dir / filename, errors)
-        for filename in SCENARIO_STRICT_REQUIRED_FILENAMES
+        for filename in required_filenames
+        if filename.endswith(".json")
     }
-    if any(payload is None for payload in required_payloads.values()):
+    if any(required_payloads.get(filename) is None for filename in SCENARIO_STRICT_REQUIRED_FILENAMES):
         return
-    manifest = required_payloads["manifest.json"]
     owners_payload = required_payloads["owners.by_feature.json"]
     controllers_payload = required_payloads["controllers.by_feature.json"]
     cores_payload = required_payloads["cores.by_feature.json"]
-    runtime_payload = required_payloads["runtime_topology.topo.json"]
+    runtime_payload = required_payloads[SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME]
 
     owners = owners_payload.get("owners")
     controllers = controllers_payload.get("controllers")
@@ -737,6 +1467,12 @@ def validate_strict_bundle_contract(
     owner_ids = {str(feature_id).strip() for feature_id in owners.keys() if str(feature_id).strip()}
     controller_ids = {str(feature_id).strip() for feature_id in controllers.keys() if str(feature_id).strip()}
     core_ids = {str(feature_id).strip() for feature_id in cores.keys() if str(feature_id).strip()}
+    if report is not None:
+        report["artifact_counts"] = {
+            "owner_features": len(owner_ids),
+            "controller_features": len(controller_ids),
+            "core_features": len(core_ids),
+        }
     if owner_ids != controller_ids:
         controller_only_ids = sorted(controller_ids - owner_ids)
         owner_only_ids = sorted(owner_ids - controller_ids)
@@ -825,7 +1561,20 @@ def validate_strict_bundle_contract(
     if detail_chunk_manifest_url:
         detail_chunk_manifest_path = _resolve_scenario_url(target_dir, detail_chunk_manifest_url, errors, "detail_chunk_manifest_url")
         if detail_chunk_manifest_path is not None:
-            _validate_detail_chunk_manifest(target_dir, detail_chunk_manifest_path, runtime_feature_ids, errors)
+            detail_chunk_metrics = _validate_detail_chunk_manifest(
+                target_dir,
+                detail_chunk_manifest_path,
+                runtime_feature_ids,
+                {
+                    str(feature_id).strip(): normalize_scenario_contract_tag(owner_tag)
+                    for feature_id, owner_tag in owners.items()
+                    if str(feature_id).strip() and normalize_scenario_contract_tag(owner_tag)
+                },
+                errors,
+            )
+            if report is not None:
+                report["owner_bucket_mismatch_count"] = int(detail_chunk_metrics["owner_bucket_mismatch_count"])
+                report["reverse_coverage_gap_count"] = int(detail_chunk_metrics["reverse_coverage_gap_count"])
     if detail_chunk_manifest_url and (not runtime_bootstrap_url or not startup_topology_url):
         errors.append(
             "chunked scenario manifests must define runtime_bootstrap_topology_url and startup_topology_url in strict mode."
@@ -838,6 +1587,7 @@ def validate_strict_bundle_contract(
         bootstrap_topology_path=source_bootstrap_topology_path,
         detail_chunk_manifest_path=detail_chunk_manifest_path,
     )
+    _validate_startup_bundle_sources(target_dir, manifest, errors)
     missing_runtime_ids = sorted(owner_ids - runtime_feature_ids)
     if missing_runtime_ids:
         errors.append(
@@ -889,6 +1639,28 @@ def validate_strict_bundle_contract(
             "runtime-only Arctic shell features must be coalesced shell_fallback geometry with owner/controller hints in strict mode. "
             f"Sample: {shell_runtime_only_contract_errors[:10]}."
         )
+    snapshot_payload = _validate_build_snapshot(target_dir, manifest, errors)
+    if snapshot_payload is not None and report is not None:
+        report["snapshot_fingerprint"] = str(snapshot_payload.get("snapshot_fingerprint") or "").strip()
+    audit_url = str(manifest.get("audit_url") or "").strip()
+    if audit_url:
+        audit_path = _resolve_scenario_url(target_dir, audit_url, errors, "audit_url")
+        if audit_path is not None:
+            audit_payload = _load_required_local_json(audit_path, errors)
+            if audit_payload is not None:
+                expected_fingerprint = str((snapshot_payload or {}).get("snapshot_fingerprint") or "").strip()
+                actual_fingerprint = str(audit_payload.get("snapshot_fingerprint") or "").strip()
+                if not actual_fingerprint:
+                    errors.append("audit.json must expose snapshot_fingerprint when manifest.audit_url is declared.")
+                elif expected_fingerprint and actual_fingerprint != expected_fingerprint:
+                    errors.append(
+                        "audit.json snapshot_fingerprint must match build_snapshot.json. "
+                        f"audit={actual_fingerprint} snapshot={expected_fingerprint}."
+                    )
+                manifest_summary = manifest.get("summary") if isinstance(manifest.get("summary"), dict) else {}
+                audit_summary = audit_payload.get("summary") if isinstance(audit_payload.get("summary"), dict) else {}
+                if audit_summary != manifest_summary:
+                    errors.append("audit.json summary must match manifest.summary for derived scenario artifacts.")
 
 
 def validate_publish_bundle_dir(target_dir: Path) -> list[str]:
@@ -939,8 +1711,9 @@ def inspect_scenario_contract(
     validate_internal_authoring_inputs(expected_scenario_id, errors)
     validate_locale_patch(expected_scenario_id, manifest, errors, warnings, strict=strict, repair_tracks=repair_tracks)
     if strict:
-        validate_strict_bundle_contract(scenario_dir, errors, repair_tracks=repair_tracks)
+        validate_strict_bundle_contract(scenario_dir, errors, repair_tracks=repair_tracks, report=report)
     report["status"] = "failed" if errors else "ok"
+    _materialize_violation_report(report)
     return report
 
 
@@ -1027,6 +1800,8 @@ def write_validation_report(report_path: Path, reports: list[dict[str, Any]], st
 
 def main() -> int:
     args = parse_args()
+    if args.write_safe and not args.strict:
+        raise SystemExit("--write-safe requires --strict.")
     scenarios_root = Path(args.scenarios_root).resolve()
     scenario_dirs = discover_scenario_dirs(scenarios_root, args.scenario_dir)
     if not scenario_dirs:
@@ -1036,7 +1811,56 @@ def main() -> int:
     any_errors = False
     reports: list[dict[str, Any]] = []
     for scenario_dir in scenario_dirs:
+        safe_fixes_applied: list[str] = []
+        idempotent = True
+        if args.write_safe:
+            pre_repair_report = build_scenario_report(scenario_dir, args.strict)
+            _materialize_violation_report(pre_repair_report)
+            if pre_repair_report.get("risky_fixes_required") or pre_repair_report.get("forbidden_violations"):
+                pre_repair_report["errors"].append(
+                    "safe repair blocked: scenario has risky or forbidden violations."
+                )
+                pre_repair_report["status"] = "failed"
+                reports.append(pre_repair_report)
+                any_errors = True
+                print(f"[scenario-contract] FAILED {scenario_dir.name}")
+                for error in pre_repair_report["errors"]:
+                    print(f"- {error}")
+                continue
+            before_second_pass = {}
+            try:
+                safe_fixes_applied = _apply_safe_repairs(
+                    scenario_dir,
+                    report_path=Path(args.report_path).resolve() if args.report_path else None,
+                )
+                before_second_pass = _capture_safe_repair_hashes(scenario_dir)
+                second_pass_fixes = _apply_safe_repairs(
+                    scenario_dir,
+                    report_path=Path(args.report_path).resolve() if args.report_path else None,
+                )
+                after_second_pass = _capture_safe_repair_hashes(scenario_dir)
+                idempotent = before_second_pass == after_second_pass
+                if second_pass_fixes and second_pass_fixes != safe_fixes_applied:
+                    safe_fixes_applied = list(dict.fromkeys([*safe_fixes_applied, *second_pass_fixes]))
+            except Exception as exc:
+                report = build_scenario_report(scenario_dir, args.strict)
+                report["errors"].append(f"safe repair failed: {exc}")
+                report["status"] = "failed"
+                report["idempotent"] = False
+                _materialize_violation_report(report)
+                reports.append(report)
+                any_errors = True
+                print(f"[scenario-contract] FAILED {scenario_dir.name}")
+                print(f"- safe repair failed: {exc}")
+                continue
+
         report = inspect_scenario_contract(scenario_dir, duplicate_scenario_dirs, strict=args.strict)
+        report["safe_fixes_applied"] = safe_fixes_applied
+        report["idempotent"] = idempotent
+        if args.write_safe and not idempotent:
+            report["errors"].append("safe repair second pass produced additional file diffs.")
+            report["status"] = "failed"
+            _materialize_violation_report(report)
         reports.append(report)
         errors = list(report["errors"])
         warnings = list(report["warnings"])

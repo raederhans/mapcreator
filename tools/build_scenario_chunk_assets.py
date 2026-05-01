@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from map_builder.contracts import sha256_path
 from map_builder.io.writers import write_json_atomic
 from tools.scenario_chunk_assets import build_and_write_scenario_chunk_assets
 
@@ -59,9 +60,8 @@ def main() -> int:
             runtime_topology_payload = _read_json(runtime_topology_path)
     startup_topology_payload = None
     startup_topology_url = str(
-        manifest_payload.get("startup_topology_url")
-        or manifest_payload.get("runtime_bootstrap_topology_url")
-        or manifest_payload.get("runtime_topology_url")
+        manifest_payload.get("runtime_bootstrap_topology_url")
+        or manifest_payload.get("startup_topology_url")
         or ""
     ).strip()
     if startup_topology_url:
@@ -80,6 +80,12 @@ def main() -> int:
         generated_at=str(manifest_payload.get("generated_at") or "").strip(),
         default_startup_topology_url=args.default_startup_topology_url,
     )
+    detail_chunk_manifest_path = scenario_dir / "detail_chunks.manifest.json"
+    if detail_chunk_manifest_path.exists():
+        manifest_payload["source"] = {
+            **(manifest_payload.get("source") if isinstance(manifest_payload.get("source"), dict) else {}),
+            "detail_chunk_manifest_sha256": sha256_path(detail_chunk_manifest_path),
+        }
     write_json_atomic(manifest_path, manifest_payload, ensure_ascii=False, indent=2, trailing_newline=True)
     print(f"[scenario-chunks] Wrote chunk assets for {scenario_dir.name}")
     return 0

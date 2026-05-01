@@ -4826,6 +4826,79 @@
           ]
         ]
       }
+    },
+    {
+      "id": 32,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_KOM_015",
+        "name": "Russia Shell Fallback KOM",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "KOM",
+        "scenario_shell_controller_hint": "KOM",
+        "source_fragment_count": 9.0,
+        "source_fragment_area": 0.022931,
+        "retained_fragment_area": 0.004271,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              51.039510395103946,
+              61.733244199441984
+            ],
+            [
+              51.21591215912159,
+              61.710678300783016
+            ],
+            [
+              51.179911799118,
+              61.73498003780038
+            ],
+            [
+              51.23031230312304,
+              61.76101761317612
+            ],
+            [
+              51.20511205112052,
+              61.75754593645935
+            ],
+            [
+              51.21591215912159,
+              61.767960966609664
+            ],
+            [
+              51.039510395103946,
+              61.733244199441984
+            ]
+          ]
+        ]
+      }
     }
   ]
 }

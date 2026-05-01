@@ -4355,6 +4355,71 @@
           ]
         ]
       }
+    },
+    {
+      "id": 29,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_IRK_012",
+        "name": "Russia Shell Fallback IRK",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "IRK",
+        "scenario_shell_controller_hint": "IRK",
+        "source_fragment_count": 115.0,
+        "source_fragment_area": 0.116517,
+        "retained_fragment_area": 0.007408,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              99.58959589595895,
+              51.901455737557384
+            ],
+            [
+              99.52119521195215,
+              51.967417595175945
+            ],
+            [
+              99.32319323193235,
+              51.95873840338403
+            ],
+            [
+              99.42399423994243,
+              51.932700828008265
+            ],
+            [
+              99.58959589595895,
+              51.901455737557384
+            ]
+          ]
+        ]
+      }
     }
   ]
 }

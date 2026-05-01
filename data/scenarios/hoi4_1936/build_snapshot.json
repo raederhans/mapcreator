@@ -1,0 +1,36 @@
+{
+  "builder_version": "scenario-data-governance-v1",
+  "chunk_count": 123,
+  "contract_version": "2026-05-01.v1",
+  "durations": {},
+  "environment": {},
+  "feature_count": 22502,
+  "generated_at": "2026-04-04T02:45:46.798067+00:00",
+  "input_sha": {
+    "city_overrides.json": "20c0f7edd3b5aa7e62e5ed7e04407bbe921f581c8711f1233bfc6a44b80e8c7c",
+    "controllers.by_feature.json": "34c4335c04af87c0e67713d99902252e76d406ad9f24ff88cdadf9ba79358a4e",
+    "cores.by_feature.json": "7d3a5d121836147249539d0303e30a6e1ff605d710d61e7ec913cd077f99ba86",
+    "countries.json": "cd0b1625545a5ba0b1494eccbf56b7e46e77572addd290b546763e24be75fbe2",
+    "geo_locale_patch.json": "14d7f72268de5006a47ae6ddffa887ffc395b377ce48513024602a929dcf1a64",
+    "owners.by_feature.json": "1351992020d5c55e619eb0172baebbba80973c4d46b86320476693e4e051381f",
+    "runtime_topology.topo.json": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53"
+  },
+  "output_sha": {
+    "context_lod.manifest.json": "37d4173e9ddf81e87ef5b54fae72f8fdb9919b752e1affbe902184f59be90c91",
+    "detail_chunks.manifest.json": "9b1cbf43890070502a31c81c082a0054337256959d8d6a2c732c55453f6aaa25",
+    "geo_aliases.startup.json": "c130235273d1ea6b83f39b7995940df82031976f65755fdaadf6f1727baaddc0",
+    "locales.startup.json": "5ad4f90d402b7fa512a8577419fe9e83f1b14b4195710c688d752ed474c07be0",
+    "mesh_pack.json": "a68c54cfdc0626be11c93dacb0054b6d312a77d0efe2e1014c3a4391d1496261",
+    "runtime_meta.json": "989c6b02b7b88f27a18b73d9873aaf852ec946a5e020297b2abecd9bfb656c4e",
+    "runtime_topology.bootstrap.topo.json": "dc80343e62fef541652c973957e4a69248d2bc611e1d04463fbd57d6e48f8cbd",
+    "startup.bundle.en.json": "0e075c22c779915f95e2fc55ce85cb6e0332e88017fdeb6cc5eddbf1af6bf534",
+    "startup.bundle.en.json.gz": "c26f8d2925ecf3e3eec8fc6b5c56a0b73c5453480c770875bc98111f0649c024",
+    "startup.bundle.zh.json": "3aa26aa1678b6c406922c12651a3980a75d0c2fa5a29498503c6faad7158d6c5",
+    "startup.bundle.zh.json.gz": "94eaccec74649e8a6a386c70135ba35f7844244f6da04e9a6c5b0dcf13e0dd35"
+  },
+  "profile": "hoi4_chunked",
+  "report_paths": {},
+  "scenario_id": "hoi4_1936",
+  "snapshot_fingerprint": "862f76e141767dddb5a8e1f0257d0850b34e32935a753c3ddeb1e7d473bc3385",
+  "water_count": 0
+}

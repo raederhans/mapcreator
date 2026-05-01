@@ -1,27 +1,54 @@
 {
-  "version": 1,
-  "scenario_id": "blank_base",
-  "generated_at": "2026-03-09T14:09:29.123Z",
-  "summary": {
+  "artifact_counts": {
+    "chunk_count": 0,
     "feature_count": 0,
-    "owner_count": 0,
+    "water_count": 0
+  },
+  "diagnostics": {
+    "baseline_hash": "c120ba87ebdb2c02072278b5135adede583e4c26babedcd2afdd3f97452badea",
+    "canonical_country_count": 174,
+    "detail_topology_feature_count": 0,
+    "note": "Editable blank map canvas with no pre-assigned ownership, controllers, or cores.",
+    "palette_id": "hoi4_vanilla",
+    "primary_country_count": 209,
+    "source": "generated_blank_canvas"
+  },
+  "generated_at": "2026-03-09T14:09:29.123Z",
+  "owner_bucket_mismatch_count": 0,
+  "profile": "lightweight_base",
+  "reverse_coverage_gap_count": 0,
+  "scenario_id": "blank_base",
+  "snapshot_fingerprint": "750d1d51cdb42096cae3a280f9ee65ba958d01a0bf4ac7d876147ed344484d53",
+  "source": {
+    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "build_snapshot_sha256": "bb1aebee09a806ff732f4e273354d2c2768bcc589707e91867287bb70b408085",
+    "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
+  },
+  "summary": {
+    "approximate_count": 0,
+    "blocker_count": 0,
+    "changed_feature_count": 11724,
     "controller_count": 0,
+    "controller_rule_count": 0,
+    "critical_region_check_count": 0,
+    "critical_unresolved_count": 0,
+    "failed_region_check_count": 0,
+    "feature_count": 0,
+    "geometry_blocker_count": 0,
+    "manual_reviewed_feature_count": 0,
+    "manual_reviewed_region_count": 0,
+    "owner_controller_split_feature_count": 0,
+    "owner_count": 0,
     "quality_counts": {
       "blank_canvas": 0
     },
+    "scenario_rule_blocker_count": 0,
     "source_counts": {
       "blank_canvas": 0
     },
-    "blocker_count": 0,
-    "owner_controller_split_feature_count": 0
+    "synthetic_count": 0,
+    "synthetic_owner_feature_count": 0,
+    "topology_blocker_count": 0
   },
-  "diagnostics": {
-    "source": "generated_blank_canvas",
-    "note": "Editable blank map canvas with no pre-assigned ownership, controllers, or cores.",
-    "detail_topology_feature_count": 0,
-    "primary_country_count": 209,
-    "canonical_country_count": 174,
-    "palette_id": "hoi4_vanilla",
-    "baseline_hash": "c120ba87ebdb2c02072278b5135adede583e4c26babedcd2afdd3f97452badea"
-  }
+  "version": 1
 }

@@ -1360,3 +1360,32 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 3. helper 影响面很宽时，selector 输出顺序要优先 child-safe 合同
 - `tests/e2e/support/*` 改动会经 import graph 命中大量 spec。
 - 先把 cheap structural contract 放到推荐列表最前面，agent 才能先跑最有信息量的短验证，再决定要不要进 main-thread E2E。
+
+## 2026-05-01 - scenario data governance / strict repair
+
+### 48. scenario chunk 分桶和 manifest 计数必须统一以 `properties.id` 为 runtime identity
+- 这次 detail chunk 串桶的根因，是 chunk builder 某些路径先拿了顶层 `feature.id`，而 slice / validator 走的是 `properties.id`，同一 feature 在不同阶段被当成了两个人。
+- 更稳的做法是：chunk 选择、owner bucket、manifest metrics、validator 全链只认 `properties.id`；顶层 `feature.id` 只保留为诊断字段。
+
+### 49. snapshot / startup bundle / manifest 之间不能形成自引用哈希环
+- 只要 startup bundle 把 `manifest.snapshot_fingerprint` 再打包回 `manifest_subset`，下一次 rebuild 就会把自己的哈希重新带回输入，`--write-safe` 永远过不了二次零 diff。
+- 最稳的做法是：snapshot 只锚定 canonical inputs + derived outputs，bundle manifest subset 排除 `snapshot_fingerprint` 这类会回流的字段。
+
+## 2026-05-01 - 外观算法审计与 Transport Workbench 视觉核对
+
+### 1. 视觉对比截图前要先重置其余 appearance 开关
+- texture / dayNight / transport / city points 会叠在同一张图上；如果不先回到干净基线，再切单个 family，截图很容易把别的图层噪声误判成当前效果。
+- 更稳的做法是：每轮对比前先显式重置无关 appearance state，再截图目标图层。
+
+### 2. Workbench 状态文案要直接绑定 runtime capability
+- `layers` 面板这类说明文字如果手写在 HTML 或 descriptor 里，很快会和真实 live preview capability 漂移。
+- 更稳的做法是从 family registry / live preview capability 单一真相源生成文案或至少生成状态片段。
+
+
+### 48. checked-in snapshot 必须只记录稳定事实，同时覆盖所有真实发布产物
+- `build_snapshot.json` 一旦进仓库，`environment`、`report_paths` 这类机器路径就必须清空或稳定化；否则跨机器重建会出现假 drift。
+- 同时，像 `water_regions.geojson`、startup bundle `.json.gz` sidecar 这类真实输入/输出也要进入 snapshot 或 zero-diff gate，否则会漏掉真实漂移。
+
+### 49. approval log 只能写在 strict 复验通过之后
+- repair API 先执行 safe repair，再重新读取 strict report；只有 `status=ok` 且没有残余 violations/errors，才允许写 approval log。
+- 这样 diagnostics 面板和审批留痕才会保持同一套真相源。

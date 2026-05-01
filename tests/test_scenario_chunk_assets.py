@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -10,7 +11,7 @@ import geopandas as gpd
 from shapely.geometry import Polygon
 from topojson import Topology
 
-from tools import scenario_chunk_assets
+from tools import build_scenario_chunk_assets, scenario_chunk_assets
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -173,7 +174,7 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 owner_mesh,
             )
 
-    def test_political_detail_chunks_keep_atl_synthetic_features_in_atl_bucket(self) -> None:
+    def test_political_detail_chunks_follow_owner_buckets_for_atl_synthetic_features(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "tno_1962"
             scenario_dir.mkdir(parents=True, exist_ok=True)
@@ -241,13 +242,20 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 generated_at="2026-04-23T00:00:00Z",
             )
 
-            atl_chunk = json.loads((scenario_dir / "chunks" / "political.detail.country.atl.json").read_text(encoding="utf-8"))
+            ita_chunk = json.loads((scenario_dir / "chunks" / "political.detail.country.ita.json").read_text(encoding="utf-8"))
             self.assertEqual(
-                sorted(feature["properties"]["id"] for feature in atl_chunk["features"]),
-                ["ATLISL_adriatica_corfu", "ATLSHL_adriatica_4"],
+                [feature["properties"]["id"] for feature in ita_chunk["features"]],
+                ["ATLISL_adriatica_corfu"],
             )
-            manifest_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.detail.country.atl")
-            self.assertEqual(manifest_chunk["country_codes"], ["ATL"])
+            gre_chunk = json.loads((scenario_dir / "chunks" / "political.detail.country.gre.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                [feature["properties"]["id"] for feature in gre_chunk["features"]],
+                ["ATLSHL_adriatica_4"],
+            )
+            ita_manifest_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.detail.country.ita")
+            gre_manifest_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.detail.country.gre")
+            self.assertEqual(ita_manifest_chunk["country_codes"], ["ITA"])
+            self.assertEqual(gre_manifest_chunk["country_codes"], ["GRE"])
 
     def test_political_coarse_falls_back_to_runtime_topology_when_startup_shell_has_no_political(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -333,6 +341,93 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                     "scenario_shell_controller_hint",
                     "scenario_shell_owner_hint",
                 ],
+            )
+
+    def test_standalone_chunk_builder_syncs_detail_chunk_manifest_source_sha(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_root = Path(tmp_dir)
+            scenario_dir = temp_root / "data" / "scenarios" / "tno_1962"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            runtime_political_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "AAA-1",
+                        "name": "Alpha",
+                        "cntr_code": "AAA",
+                        "admin1_group": "Alpha Group",
+                        "detail_tier": "adm2",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "geometry": _square(0, 0),
+                    }
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            runtime_topology_payload = Topology(
+                [runtime_political_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+            startup_shell_payload = {
+                "type": "Topology",
+                "objects": {
+                    "political": runtime_topology_payload["objects"]["political"],
+                    "land_mask": {"type": "GeometryCollection", "geometries": []},
+                    "context_land_mask": {"type": "GeometryCollection", "geometries": []},
+                    "scenario_water": {"type": "GeometryCollection", "geometries": []},
+                },
+                "arcs": runtime_topology_payload.get("arcs", []),
+            }
+            runtime_topology_path = scenario_dir / "runtime_topology.topo.json"
+            runtime_topology_path.write_text(json.dumps(runtime_topology_payload), encoding="utf-8")
+            startup_topology_path = scenario_dir / "runtime_topology.bootstrap.topo.json"
+            startup_topology_path.write_text(json.dumps(startup_shell_payload), encoding="utf-8")
+            (scenario_dir / "owners.by_feature.json").write_text(
+                json.dumps({"owners": {"AAA-1": "AAA"}}),
+                encoding="utf-8",
+            )
+            manifest_path = scenario_dir / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "scenario_id": "tno_1962",
+                        "generated_at": "2026-05-01T00:00:00Z",
+                        "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
+                        "runtime_bootstrap_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
+                        "source": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            previous_project_root = build_scenario_chunk_assets.PROJECT_ROOT
+            build_scenario_chunk_assets.PROJECT_ROOT = temp_root
+            try:
+                with patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "build_scenario_chunk_assets.py",
+                        "--scenario-dir",
+                        str(scenario_dir),
+                    ],
+                ):
+                    exit_code = build_scenario_chunk_assets.main()
+            finally:
+                build_scenario_chunk_assets.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(exit_code, 0)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            detail_manifest_path = scenario_dir / "detail_chunks.manifest.json"
+            self.assertEqual(
+                manifest["source"]["detail_chunk_manifest_sha256"],
+                build_scenario_chunk_assets.sha256_path(detail_manifest_path),
             )
 
     def test_water_coarse_is_minified_without_trimming_runtime_fields(self) -> None:

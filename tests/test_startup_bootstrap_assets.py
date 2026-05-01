@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
 import json
 import re
 import tempfile
@@ -92,15 +93,13 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
         )
         self.assertEqual(
             manifest["startup_topology_url"],
-            "data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
+            "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
         )
-        legacy_bootstrap = json.loads((scenario_dir / "runtime_topology.bootstrap.topo.json").read_text(encoding="utf-8"))
-        self.assertGreater(len(legacy_bootstrap["objects"]["political"]["geometries"]), 0)
-        self.assertGreater(len(legacy_bootstrap["arcs"]), 0)
-        startup_shell_path = scenario_dir / "startup.runtime_shell.topo.json"
+        startup_shell_path = scenario_dir / "runtime_topology.bootstrap.topo.json"
         startup_shell = json.loads(startup_shell_path.read_text(encoding="utf-8"))
         self.assertIn("political", startup_shell["objects"])
         self.assertGreater(len(startup_shell["objects"]["political"]["geometries"]), 0)
+        self.assertGreater(len(startup_shell["arcs"]), 0)
         for object_name in ("land_mask", "context_land_mask", "scenario_water"):
             self.assertIn(object_name, startup_shell["objects"])
         startup_shell_sha = hashlib.sha256(startup_shell_path.read_bytes()).hexdigest()
@@ -486,6 +485,14 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
             )
             bundle_payload = json.loads(output_en_path.read_text(encoding="utf-8"))
             self.assertEqual(bundle_payload["manifest_subset"]["source"], generated_manifest["source"])
+            self.assertEqual(
+                (output_en_path.with_suffix(".json.gz")).read_bytes(),
+                gzip.compress(
+                    json.dumps(bundle_payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
+                    compresslevel=9,
+                    mtime=0,
+                ),
+            )
 
             report = result["report"]
             self.assertIn("consumer_matrix", report)

@@ -1,0 +1,39 @@
+{
+  "builder_version": "scenario-data-governance-v1",
+  "chunk_count": 188,
+  "contract_version": "2026-05-01.v1",
+  "durations": {},
+  "environment": {},
+  "feature_count": 12811,
+  "generated_at": "2026-04-13T01:45:34Z",
+  "input_sha": {
+    "city_overrides.json": "09fc51ca8b8e0e7df28ddc0fa121f05964f0d55df6a342a16c110ecc7fddb7da",
+    "controllers.by_feature.json": "c2d7297abfafe249ce7120a4de1d67b8cb15da96c14ae29bc4f1f21e5dcc2fb0",
+    "cores.by_feature.json": "126a17cf054157d8a3a1c22ff3c229cc25abe2bcf9fa8daea3e756ed3c6d8e17",
+    "countries.json": "24d8b04660936341b1a2c51fb8221747c96530daae37b7f790e49f2605af4e50",
+    "geo_locale_patch.json": "2ed160584fd4141a8a86cb0f455d821edb118550da30ccea4a0b63c2ff16546e",
+    "owners.by_feature.json": "424e34eefed6055c1335223e83218d5380cc6eda302306a42415533828fb6720",
+    "relief_overlays.geojson": "2908305546e477521195d1efb978467163df022e1dbe4aca592420b97298a7ff",
+    "runtime_topology.topo.json": "9ea46d951d006811959476e7cdc835c376c043164ce5c5f333cb32b612eb1ab0",
+    "special_regions.geojson": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c",
+    "water_regions.geojson": "1140e087f2946ff00d684d9727af91e32f76f8eedf0f700f78106678f5a337b3"
+  },
+  "output_sha": {
+    "context_lod.manifest.json": "1ad4ecdf5a5bd81a8857d0d39622d9d97d5055ecae047888f4053f5a69b8517c",
+    "detail_chunks.manifest.json": "a6927da7500007be7d3129393a3ad957846bf6b9eef95d4a50ba9267f4121267",
+    "geo_aliases.startup.json": "4087b200237be216c8a79ee39d5dc367a452e588ea4ea3647c40ea975a1b440c",
+    "locales.startup.json": "30b7219fdd90e43c99aa62fff194aa7bda4bdc1e5eeeaa7802eb697fbe8bf15d",
+    "mesh_pack.json": "ba4b753b5caaf0c1c208a71347bf3ffeaa46680b3f4b084b2ec1ea0ef661c08c",
+    "runtime_meta.json": "32bda97553c4a6a5660ba85530757431276274689dfed75343cb4552f6800de7",
+    "runtime_topology.bootstrap.topo.json": "27365dbff68d420415e0ad91afd38ac33fbc70f02d614fe8c45e10023b6be20a",
+    "startup.bundle.en.json": "aded17dda9a98165e20bc648d5c9386ca28113ec18d12b593a9d7ff7194020e1",
+    "startup.bundle.en.json.gz": "b75186d52610127c2021859997da120d5100614cab89d81704d93e7071e70ce5",
+    "startup.bundle.zh.json": "9b26f1ef3890b98c9eff9294cedf49785a82453b912426793a552cc8bc5f4c92",
+    "startup.bundle.zh.json.gz": "1db3876c5c125db753cb8ddee6349a831bfef330595e55b952e6b53aa1479c94"
+  },
+  "profile": "tno_full",
+  "report_paths": {},
+  "scenario_id": "tno_1962",
+  "snapshot_fingerprint": "eefd19b8b362c9bdb97489c8755b59a0dd1f583ed9afb623130f4418d40a41b8",
+  "water_count": 123
+}

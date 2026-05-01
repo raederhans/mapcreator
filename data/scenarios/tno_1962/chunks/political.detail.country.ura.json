@@ -1020,6 +1020,63 @@
       }
     },
     {
+      "id": 10010,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_RAY_50074027B75983799969403",
+        "name": "Khanty-Mansiysk Urban Okrug",
+        "cntr_code": "RU",
+        "__source": "detail"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              68.98568985689857,
+              61.0024562505625
+            ],
+            [
+              68.97848978489785,
+              60.948645261452626
+            ],
+            [
+              69.09369093690938,
+              60.91740017100172
+            ],
+            [
+              69.28449284492845,
+              60.95732445324454
+            ],
+            [
+              69.29889298892991,
+              61.009399603996044
+            ],
+            [
+              69.41769417694178,
+              61.009399603996044
+            ],
+            [
+              69.25209252092523,
+              61.113549905499056
+            ],
+            [
+              68.93168931689317,
+              61.05800307803078
+            ],
+            [
+              68.93293496525988,
+              61.056721760938316
+            ],
+            [
+              68.98568985689857,
+              61.0024562505625
+            ]
+          ]
+        ]
+      }
+    },
+    {
       "id": 10014,
       "type": "Feature",
       "properties": {
@@ -2490,6 +2547,71 @@
             [
               67.76167761677618,
               62.7070495184952
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": 66,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_URA_049",
+        "name": "Russia Shell Fallback URA",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "URA",
+        "scenario_shell_controller_hint": "URA",
+        "source_fragment_count": 18.0,
+        "source_fragment_area": 0.028149,
+        "retained_fragment_area": 0.006821,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              65.66285662856629,
+              64.5574532085321
+            ],
+            [
+              66.19926199261994,
+              64.59043413734138
+            ],
+            [
+              65.3748537485375,
+              64.5557173701737
+            ],
+            [
+              65.7060570605706,
+              64.54009482494824
+            ],
+            [
+              65.66285662856629,
+              64.5574532085321
             ]
           ]
         ]

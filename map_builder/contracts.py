@@ -8,7 +8,11 @@ across entry scripts.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 ARTIFACT_CLASS_SOURCE = "source"
 ARTIFACT_CLASS_MANUAL = "manual"
@@ -40,6 +44,18 @@ class ScenarioCheckpointArtifact:
     state_key: str
     filename: str
     payload_kind: str = "json"
+
+
+@dataclass(frozen=True)
+class ScenarioContractProfile:
+    profile_id: str
+    gate_mode: str
+    expect_runtime_topology: bool
+    expect_runtime_bootstrap: bool
+    expect_chunk_assets: bool
+    expect_startup_assets: bool
+    expect_audit: bool
+    startup_support_base_topology: str
 
 
 DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
@@ -373,6 +389,9 @@ SCENARIO_PUBLISH_SCOPES = (
 
 SCENARIO_CHECKPOINT_STAGE_METADATA_FILENAME = "stage_metadata.json"
 SCENARIO_CHECKPOINT_WATER_STAGE_METADATA_FILENAME = "water_stage_metadata.json"
+SCENARIO_BUILD_SNAPSHOT_FILENAME = "build_snapshot.json"
+SCENARIO_CONTRACT_VERSION = "2026-05-01.v1"
+SCENARIO_BUILDER_VERSION = "scenario-data-governance-v1"
 SCENARIO_CHECKPOINT_POLITICAL_FILENAME = "scenario_political.geojson"
 SCENARIO_CHECKPOINT_WATER_SEED_FILENAME = "scenario_water_seed.geojson"
 SCENARIO_CHECKPOINT_WATER_FILENAME = "water_regions.geojson"
@@ -511,8 +530,102 @@ SCENARIO_STRICT_REQUIRED_FILENAMES = (
     SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
 )
 
+SCENARIO_PROFILE_TNO_FULL = ScenarioContractProfile(
+    profile_id="tno_full",
+    gate_mode="hard",
+    expect_runtime_topology=True,
+    expect_runtime_bootstrap=True,
+    expect_chunk_assets=True,
+    expect_startup_assets=True,
+    expect_audit=True,
+    startup_support_base_topology="data/europe_topology.na_v2.json",
+)
+SCENARIO_PROFILE_HOI4_CHUNKED = ScenarioContractProfile(
+    profile_id="hoi4_chunked",
+    gate_mode="shadow",
+    expect_runtime_topology=True,
+    expect_runtime_bootstrap=True,
+    expect_chunk_assets=True,
+    expect_startup_assets=True,
+    expect_audit=True,
+    startup_support_base_topology="data/europe_topology.json",
+)
+SCENARIO_PROFILE_LIGHTWEIGHT_BASE = ScenarioContractProfile(
+    profile_id="lightweight_base",
+    gate_mode="shadow",
+    expect_runtime_topology=True,
+    expect_runtime_bootstrap=False,
+    expect_chunk_assets=False,
+    expect_startup_assets=False,
+    expect_audit=True,
+    startup_support_base_topology="data/europe_topology.json",
+)
+
 
 def resolve_scenario_publish_filenames(scope: str) -> tuple[str, ...]:
     if scope not in SCENARIO_PUBLISH_FILENAMES_BY_SCOPE:
         raise ValueError(f"Unsupported publish scope: {scope}")
     return SCENARIO_PUBLISH_FILENAMES_BY_SCOPE[scope]
+
+
+def normalize_scenario_contract_tag(raw_value: object) -> str:
+    text = "".join(ch for ch in str(raw_value or "").strip().upper() if ch.isalnum())
+    return text
+
+
+def resolve_scenario_contract_profile(scenario_id: str) -> ScenarioContractProfile:
+    normalized = str(scenario_id or "").strip().lower()
+    if normalized == "tno_1962":
+        return SCENARIO_PROFILE_TNO_FULL
+    if normalized.startswith("hoi4_"):
+        return SCENARIO_PROFILE_HOI4_CHUNKED
+    if normalized in {"blank_base", "modern_world"}:
+        return SCENARIO_PROFILE_LIGHTWEIGHT_BASE
+    return SCENARIO_PROFILE_LIGHTWEIGHT_BASE
+
+
+def sha256_json_stable(payload: object) -> str:
+    stable_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(stable_json.encode("utf-8")).hexdigest()
+
+
+def sha256_path(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def build_scenario_snapshot_payload(
+    *,
+    scenario_id: str,
+    profile_id: str,
+    input_sha: dict[str, str],
+    output_sha: dict[str, str],
+    feature_count: int,
+    water_count: int,
+    chunk_count: int,
+    generated_at: str,
+    environment: dict[str, object] | None = None,
+    durations: dict[str, object] | None = None,
+    report_paths: dict[str, object] | None = None,
+    contract_version: str = SCENARIO_CONTRACT_VERSION,
+    builder_version: str = SCENARIO_BUILDER_VERSION,
+) -> dict[str, object]:
+    stable_payload = {
+        "scenario_id": scenario_id,
+        "profile": profile_id,
+        "contract_version": contract_version,
+        "builder_version": builder_version,
+        "input_sha": dict(sorted((input_sha or {}).items())),
+        "output_sha": dict(sorted((output_sha or {}).items())),
+        "feature_count": int(feature_count),
+        "water_count": int(water_count),
+        "chunk_count": int(chunk_count),
+    }
+    snapshot_fingerprint = sha256_json_stable(stable_payload)
+    return {
+        **stable_payload,
+        "snapshot_fingerprint": snapshot_fingerprint,
+        "generated_at": generated_at,
+        "environment": environment or {},
+        "durations": durations or {},
+        "report_paths": report_paths or {},
+    }

@@ -202,7 +202,11 @@ def _sha256_path(path: Path) -> str:
 
 def _gzip_size(payload: object) -> int:
     raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    return len(gzip.compress(raw, compresslevel=9))
+    return len(_gzip_bytes(raw))
+
+
+def _gzip_bytes(raw: bytes) -> bytes:
+    return gzip.compress(raw, compresslevel=9, mtime=0)
 
 
 def _json_size_bytes(payload: object) -> int:
@@ -565,7 +569,7 @@ def prune_startup_geo_aliases(geo_aliases_payload: dict, required_geo_keys: set[
 def write_gzip_sidecar(payload: object, output_path: Path) -> Path:
     gzip_path = output_path.with_suffix(f"{output_path.suffix}.gz")
     raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    gzip_path.write_bytes(gzip.compress(raw, compresslevel=9))
+    gzip_path.write_bytes(_gzip_bytes(raw))
     return gzip_path
 
 
@@ -693,6 +697,7 @@ def build_startup_bundle_payload(
     manifest_subset["baseline_hash"] = _normalize_text(scenario_manifest.get("baseline_hash"))
     manifest_subset["generated_at"] = _normalize_text(scenario_manifest.get("generated_at"))
     manifest_subset["startup_bundle_version"] = STARTUP_BUNDLE_VERSION
+    manifest_subset.pop("snapshot_fingerprint", None)
     source_metadata = {
         "data_manifest_version": data_manifest.get("version"),
         "data_manifest_generated_at": _normalize_text(data_manifest.get("generated_at")),
@@ -1183,22 +1188,24 @@ def build_startup_bundles(
             controllers_path=controllers_path,
             cores_path=cores_path,
         )
-        payload_by_language[language] = payload
+        stable_payload = json.loads(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+        payload_by_language[language] = stable_payload
         write_json_atomic(
             output_paths_by_language[language],
-            payload,
+            stable_payload,
             ensure_ascii=False,
             indent=None,
             separators=(",", ":"),
             trailing_newline=True,
         )
-        gzip_paths_by_language[language] = write_gzip_sidecar(payload, output_paths_by_language[language])
+        gzip_paths_by_language[language] = write_gzip_sidecar(stable_payload, output_paths_by_language[language])
 
     manifest_source = build_manifest_source_metadata(payload_by_language[SUPPORTED_LANGUAGES[0]]["source"])
     scenario_manifest["source"] = manifest_source
+    stable_manifest = json.loads(json.dumps(scenario_manifest, ensure_ascii=False, sort_keys=True))
     write_json_atomic(
         scenario_manifest_path,
-        scenario_manifest,
+        stable_manifest,
         ensure_ascii=False,
         indent=2,
         trailing_newline=True,

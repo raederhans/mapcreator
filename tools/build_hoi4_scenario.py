@@ -299,7 +299,7 @@ def build_startup_assets_for_scenario(scenario_output_dir: Path, report_dir: Pat
         full_geo_aliases_path=PROJECT_ROOT / "data" / "geo_aliases.json",
         full_runtime_topology_path=scenario_output_dir / "runtime_topology.topo.json",
         scenario_geo_patch_path=scenario_output_dir / SCENARIO_CHECKPOINT_GEO_LOCALE_FILENAME,
-        runtime_bootstrap_output_path=scenario_output_dir / "startup.runtime_shell.topo.json",
+        runtime_bootstrap_output_path=scenario_output_dir / "runtime_topology.bootstrap.topo.json",
         startup_locales_output_path=scenario_output_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
         startup_geo_aliases_output_path=scenario_output_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
         report_path=support_report_path,
@@ -311,7 +311,7 @@ def build_startup_assets_for_scenario(scenario_output_dir: Path, report_dir: Pat
         startup_locales_path=scenario_output_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
         geo_aliases_path=scenario_output_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
         full_runtime_topology_path=scenario_output_dir / "runtime_topology.topo.json",
-        runtime_bootstrap_topology_path=scenario_output_dir / "startup.runtime_shell.topo.json",
+        runtime_bootstrap_topology_path=scenario_output_dir / "runtime_topology.bootstrap.topo.json",
         countries_path=scenario_output_dir / "countries.json",
         owners_path=scenario_output_dir / "owners.by_feature.json",
         controllers_path=scenario_output_dir / "controllers.by_feature.json",
@@ -573,7 +573,7 @@ def main() -> int:
         f"data/scenarios/{args.scenario_id}/runtime_topology.bootstrap.topo.json"
     )
     manifest_payload["startup_topology_url"] = (
-        f"data/scenarios/{args.scenario_id}/startup.runtime_shell.topo.json"
+        f"data/scenarios/{args.scenario_id}/runtime_topology.bootstrap.topo.json"
     )
     for language, field_name in SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS.items():
         manifest_payload[field_name] = (

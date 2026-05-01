@@ -6108,6 +6108,165 @@
           ]
         ]
       }
+    },
+    {
+      "id": 64,
+      "type": "Feature",
+      "properties": {
+        "id": "RU_ARCTIC_FB_TOM_047",
+        "name": "Russia Shell Fallback TOM",
+        "cntr_code": "RU",
+        "admin1_group": null,
+        "detail_tier": "scenario_runtime_shell",
+        "__source": "detail",
+        "scenario_id": "tno_1962",
+        "scenario_helper_kind": "shell_fallback",
+        "scenario_shell_owner_hint": "TOM",
+        "scenario_shell_controller_hint": "TOM",
+        "source_fragment_count": 185.0,
+        "source_fragment_area": 0.702469,
+        "retained_fragment_area": 0.158461,
+        "interactive": false,
+        "render_as_base_geography": false,
+        "region_id": null,
+        "region_group": null,
+        "atl_surface_kind": null,
+        "atl_region_group": null,
+        "atl_geometry_role": null,
+        "atl_join_mode": null,
+        "owner_tag": null,
+        "synthetic_owner": null,
+        "donor_state_ids": null,
+        "donor_state_names": null,
+        "donor_province_ids": null,
+        "donor_state_id": null,
+        "donor_state_name": null,
+        "donor_province_id": null,
+        "assignment_source": null,
+        "source_standard": null,
+        "atl_subbasin_id": null
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                74.58014580145803,
+                72.88774149041491
+              ],
+              [
+                74.61614616146161,
+                72.8998923589236
+              ],
+              [
+                74.41094410944109,
+                72.9311374493745
+              ],
+              [
+                74.2057420574206,
+                72.99189179191792
+              ],
+              [
+                74.65214652146523,
+                72.99709930699306
+              ],
+              [
+                74.65214652146523,
+                72.97453340833407
+              ],
+              [
+                74.68814688146881,
+                73.07868370983711
+              ],
+              [
+                74.97614976149762,
+                73.06132532625325
+              ],
+              [
+                74.22014220142202,
+                73.11340047700476
+              ],
+              [
+                74.13734137341373,
+                73.06306116461165
+              ],
+              [
+                74.11214112141121,
+                73.0266085590856
+              ],
+              [
+                74.13734137341373,
+                73.00751433714338
+              ],
+              [
+                74.50814508145083,
+                72.89642068220682
+              ],
+              [
+                74.58014580145803,
+                72.88774149041491
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                76.47736477364776,
+                79.63841686616867
+              ],
+              [
+                76.27216272162724,
+                79.60717177571776
+              ],
+              [
+                76.12816128161285,
+                79.64188854288544
+              ],
+              [
+                76.27216272162724,
+                79.64188854288544
+              ],
+              [
+                76.2361623616236,
+                79.65924692646927
+              ],
+              [
+                76.05616056160562,
+                79.64188854288544
+              ],
+              [
+                76.16416164161643,
+                79.57245500855008
+              ],
+              [
+                76.63216632166325,
+                79.55509662496625
+              ],
+              [
+                76.70416704167042,
+                79.52037985779857
+              ],
+              [
+                76.63216632166325,
+                79.4856630906309
+              ],
+              [
+                77.60417604176041,
+                79.50302147421475
+              ],
+              [
+                76.61416614166143,
+                79.62626599765998
+              ],
+              [
+                76.47736477364776,
+                79.63841686616867
+              ]
+            ]
+          ]
+        ]
+      }
     }
   ]
 }

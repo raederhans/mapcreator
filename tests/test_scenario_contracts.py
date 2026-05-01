@@ -4,7 +4,9 @@ import hashlib
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
+from unittest import mock
 
 from tools import check_scenario_contracts
 from tools.check_scenario_contracts import (
@@ -189,6 +191,14 @@ def _write_strict_bundle_files(
         "runtime_topology_sha256": runtime_topology_sha,
     }
     _write_json(manifest_path, manifest)
+    snapshot_payload = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+    manifest["snapshot_fingerprint"] = snapshot_payload["snapshot_fingerprint"]
+    _write_json(manifest_path, manifest)
+    check_scenario_contracts._refresh_audit_payload(
+        scenario_dir,
+        manifest,
+        snapshot_payload=snapshot_payload,
+    )
 
 
 class ScenarioContractTest(unittest.TestCase):
@@ -669,6 +679,204 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertTrue(
                 any("manifest.source.base_topology_sha256 must match" in error for error in errors)
             )
+
+    def test_capture_safe_repair_hashes_tracks_startup_bundle_gzip_sidecars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "data" / "scenarios" / "hash_capture"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            for filename in (
+                "startup.bundle.en.json.gz",
+                "startup.bundle.zh.json.gz",
+            ):
+                (scenario_dir / filename).write_bytes(b"gzip-sidecar")
+
+            hashes = check_scenario_contracts._capture_safe_repair_hashes(scenario_dir)
+
+            self.assertIn("startup.bundle.en.json.gz", hashes)
+            self.assertIn("startup.bundle.zh.json.gz", hashes)
+
+    def test_build_snapshot_fingerprint_changes_when_water_regions_payload_drifts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "snapshot_water")
+            _write_strict_bundle_files(scenario_dir)
+            water_regions_path = scenario_dir / "water_regions.geojson"
+            _write_json(
+                water_regions_path,
+                {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "properties": {"id": "WATER-1", "name": "Alpha Sea"},
+                            "geometry": {
+                                "type": "Polygon",
+                                "coordinates": [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]],
+                            },
+                        }
+                    ],
+                },
+            )
+            manifest_path = scenario_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+            try:
+                first_snapshot = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+                _write_json(
+                    water_regions_path,
+                    {
+                        "type": "FeatureCollection",
+                        "features": [
+                            {
+                                "type": "Feature",
+                                "properties": {"id": "WATER-1", "name": "Beta Sea"},
+                                "geometry": {
+                                    "type": "Polygon",
+                                    "coordinates": [[[0, 0], [3, 0], [3, 1], [0, 1], [0, 0]]],
+                                },
+                            }
+                        ],
+                    },
+                )
+                second_snapshot = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(first_snapshot["water_count"], 1)
+            self.assertEqual(second_snapshot["water_count"], 1)
+            self.assertNotEqual(
+                first_snapshot["snapshot_fingerprint"],
+                second_snapshot["snapshot_fingerprint"],
+            )
+
+    def test_collect_snapshot_inputs_includes_chunk_source_layer_urls(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "snapshot_layers")
+            _write_json(scenario_dir / "special_regions.geojson", {"type": "FeatureCollection", "features": []})
+            _write_json(scenario_dir / "relief_overlays.geojson", {"type": "FeatureCollection", "features": []})
+            _write_json(scenario_dir / "city_overrides.json", {"type": "city_overrides", "featureCollection": {"features": []}})
+            manifest = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+            manifest["special_regions_url"] = "data/scenarios/snapshot_layers/special_regions.geojson"
+            manifest["relief_overlays_url"] = "data/scenarios/snapshot_layers/relief_overlays.geojson"
+            manifest["city_overrides_url"] = "data/scenarios/snapshot_layers/city_overrides.json"
+
+            try:
+                input_sha = check_scenario_contracts._collect_snapshot_inputs(scenario_dir, manifest)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertIn("special_regions.geojson", input_sha)
+            self.assertIn("relief_overlays.geojson", input_sha)
+            self.assertIn("city_overrides.json", input_sha)
+
+    def test_validate_startup_bundle_sources_rejects_missing_source_sha(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "strict_startup_source")
+            bundle_payload = {
+                "scenario_id": "strict_startup_source",
+                "source": {
+                    "runtime_bootstrap_topology_sha256": "b" * 64,
+                },
+            }
+            _write_json(scenario_dir / "startup.bundle.en.json", bundle_payload)
+            _write_json(scenario_dir / "startup.bundle.zh.json", bundle_payload)
+            manifest = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+            manifest["startup_bundle_url_en"] = "data/scenarios/strict_startup_source/startup.bundle.en.json"
+            manifest["startup_bundle_url_zh"] = "data/scenarios/strict_startup_source/startup.bundle.zh.json"
+            manifest["source"] = {
+                "runtime_topology_sha256": "a" * 64,
+                "runtime_bootstrap_topology_sha256": "b" * 64,
+            }
+            errors: list[str] = []
+
+            try:
+                check_scenario_contracts._validate_startup_bundle_sources(scenario_dir, manifest, errors)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertTrue(
+                any(
+                    "startup bundle en source.runtime_topology_sha256 must be present" in error
+                    for error in errors
+                )
+            )
+
+    def test_classify_violation_marks_owner_hint_failures_as_risky(self) -> None:
+        self.assertEqual(
+            check_scenario_contracts._classify_violation(
+                "detail chunk political.detail.country.aaa feature AAA-1 is missing owners.by_feature ownership."
+            ),
+            "risky",
+        )
+        self.assertEqual(
+            check_scenario_contracts._classify_violation(
+                "runtime-only Arctic shell features must be coalesced shell_fallback geometry with owner/controller hints in strict mode. "
+                "Sample: ['RU_ARCTIC_FB_001']."
+            ),
+            "risky",
+        )
+
+    def test_materialize_violation_report_disables_safe_fixable_when_risky_errors_exist(self) -> None:
+        report = {
+            "errors": [
+                "detail chunk political.detail.country.aaa feature AAA-1 is missing owners.by_feature ownership.",
+                "startup bundle en source.runtime_topology_sha256 must match manifest.source.runtime_topology_sha256.",
+            ]
+        }
+
+        check_scenario_contracts._materialize_violation_report(report)
+
+        self.assertFalse(report["safe_fixable"])
+        self.assertTrue(report["risky_fixes_required"])
+
+    def test_write_safe_main_blocks_risky_repairs_before_apply(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            scenario_dir = tmp_root / "data" / "scenarios" / "risky_scenario"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            args = Namespace(
+                write_safe=True,
+                strict=True,
+                scenarios_root=str((tmp_root / "data" / "scenarios").resolve()),
+                scenario_dir=[str(scenario_dir.resolve())],
+                report_path="",
+            )
+            initial_report = {
+                "scenario_id": "risky_scenario",
+                "scenario_dir": str(scenario_dir),
+                "status": "failed",
+                "errors": [
+                    "detail chunk political.detail.country.aaa feature AAA-1 is missing owners.by_feature ownership."
+                ],
+                "warnings": [],
+                "repair_tracks": {},
+                "snapshot_fingerprint": "",
+            }
+
+            with mock.patch.object(check_scenario_contracts, "parse_args", return_value=args):
+                with mock.patch.object(check_scenario_contracts, "discover_scenario_dirs", return_value=[scenario_dir]):
+                    with mock.patch.object(check_scenario_contracts, "collect_duplicate_scenario_dirs", return_value={}):
+                        with mock.patch.object(
+                            check_scenario_contracts,
+                            "build_scenario_report",
+                            return_value=dict(initial_report),
+                        ):
+                            with mock.patch.object(
+                                check_scenario_contracts,
+                                "_apply_safe_repairs",
+                                side_effect=AssertionError("safe repairs should stay blocked"),
+                            ):
+                                exit_code = check_scenario_contracts.main()
+
+            self.assertEqual(exit_code, 1)
 
     def test_validate_scenario_contract_strict_mode_rejects_unreviewed_geo_locale_collisions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
