@@ -5,7 +5,9 @@
 import {
   state as runtimeState,
   createDefaultTransportWorkbenchDisplayConfig,
+  normalizeTransportOverviewStyleConfig,
   normalizeTransportWorkbenchDisplayConfig,
+  normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
 import { markDirty } from "../../core/dirty_state.js";
 import { t } from "../i18n.js";
@@ -37,8 +39,17 @@ import {
 import {
   isTransportWorkbenchLivePreviewFamily,
   isTransportWorkbenchManifestOnlyRuntimeFamily,
+  listTransportWorkbenchRuntimeFamilyIds,
   listTransportWorkbenchWarmupPlans,
 } from "../transport_workbench_family_registry.js";
+import {
+  TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY,
+  getTransportCapabilityApplyCompatibility,
+  getTransportCapabilityDefaultOverviewConfig,
+  getTransportWorkbenchOverviewBridgeSupport,
+  normalizeTransportOverviewVisualMode,
+  resolveTransportOverviewPatchFromWorkbench,
+} from "../../core/transport_capability_registry.js";
 import {
   getTransportWorkbenchManifestDefaultVariantId,
   getTransportWorkbenchManifestVariantMeta,
@@ -78,6 +89,7 @@ const TRANSPORT_WORKBENCH_FAMILY_IDS = new Set(TRANSPORT_WORKBENCH_FAMILIES.map(
 const TRANSPORT_WORKBENCH_SORTABLE_LAYER_IDS = TRANSPORT_WORKBENCH_FAMILIES
   .filter((family) => family.id !== "layers")
   .map((family) => family.id);
+const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportWorkbenchRuntimeFamilyIds();
 
 function formatTransportWorkbenchSlugLabel(value) {
   return String(value || "")
@@ -575,17 +587,18 @@ function normalizeLogisticsHubTransportWorkbenchConfig(value) {
 }
 
 function ensureTransportWorkbenchUiState() {
-  if (!runtimeState.transportWorkbenchUi || typeof runtimeState.transportWorkbenchUi !== "object") {
-    runtimeState.transportWorkbenchUi = {};
+  const previousUiState = runtimeState.transportWorkbenchUi;
+  const normalizedUiState = normalizeTransportWorkbenchUiState(previousUiState);
+  if (!previousUiState || typeof previousUiState !== "object") {
+    runtimeState.transportWorkbenchUi = normalizedUiState;
+  } else {
+    Object.assign(previousUiState, normalizedUiState);
+    runtimeState.transportWorkbenchUi = previousUiState;
   }
   // transportWorkbenchUi 是工作台的本地编辑态；这里统一补齐 shape，
   // 避免渲染、预览和 inspect 面板各自猜默认值。
   runtimeState.transportWorkbenchUi.open = !!runtimeState.transportWorkbenchUi.open;
   runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-  runtimeState.transportWorkbenchUi.sampleCountry = "Japan";
-  runtimeState.transportWorkbenchUi.previewMode = "bounded_zoom_pan";
-  runtimeState.transportWorkbenchUi.previewAssetId = "japan_carrier_v3";
-  runtimeState.transportWorkbenchUi.previewInteractionMode = "bounded_zoom_pan";
   if (!runtimeState.transportWorkbenchUi.previewCamera || typeof runtimeState.transportWorkbenchUi.previewCamera !== "object") {
     runtimeState.transportWorkbenchUi.previewCamera = {};
   }
@@ -611,7 +624,7 @@ function ensureTransportWorkbenchUiState() {
   runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities = normalizeEnergyFacilityTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities);
   runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones = normalizeIndustrialTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones);
   runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs = normalizeLogisticsHubTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs);
-  ["road", "rail", "airport", "port", "mineral_resources", "energy_facilities", "industrial_zones", "logistics_hubs"].forEach((familyId) => {
+  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
     runtimeState.transportWorkbenchUi.displayConfigs[familyId] = normalizeTransportWorkbenchDisplayConfig(
       runtimeState.transportWorkbenchUi.displayConfigs[familyId],
       familyId
@@ -625,7 +638,7 @@ function ensureTransportWorkbenchUiState() {
   if (!runtimeState.transportWorkbenchUi.sectionOpen || typeof runtimeState.transportWorkbenchUi.sectionOpen !== "object") {
     runtimeState.transportWorkbenchUi.sectionOpen = {};
   }
-  ["road", "rail", "airport", "port", "mineral_resources", "energy_facilities", "industrial_zones", "logistics_hubs"].forEach((familyId) => {
+  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
     const defaults = TRANSPORT_WORKBENCH_SECTION_DEFAULTS[familyId];
     const source = runtimeState.transportWorkbenchUi.sectionOpen[familyId] && typeof runtimeState.transportWorkbenchUi.sectionOpen[familyId] === "object"
       ? runtimeState.transportWorkbenchUi.sectionOpen[familyId]
@@ -642,16 +655,9 @@ function ensureTransportWorkbenchUiState() {
 
 function resetTransportWorkbenchSectionState() {
   ensureTransportWorkbenchUiState();
-  runtimeState.transportWorkbenchUi.sectionOpen = {
-    road: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.road },
-    rail: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.rail },
-    airport: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.airport },
-    port: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.port },
-    mineral_resources: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.mineral_resources },
-    energy_facilities: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.energy_facilities },
-    industrial_zones: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.industrial_zones },
-    logistics_hubs: { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS.logistics_hubs },
-  };
+  runtimeState.transportWorkbenchUi.sectionOpen = Object.fromEntries(
+    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.map((familyId) => [familyId, { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS[familyId] }])
+  );
 }
 
 const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {
@@ -703,9 +709,9 @@ const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {
     {
       key: "labels",
       title: "Labels",
-      description: "road_labels remains a separate pack focused on motorway and national refs.",
+      description: "Reference labels stay in a dedicated pack focused on motorway and national route numbers.",
       controls: [
-        { type: "toggle", key: "showRefs", label: "Show refs", description: "Turns road_labels on or off." },
+        { type: "toggle", key: "showRefs", label: "Show refs", description: "Turns road reference labels on or off." },
         { type: "multi", key: "refClasses", label: "Ref classes", options: ROAD_REF_CLASS_OPTIONS, description: "Primary is now available. Lower classes stay visible in UI but disabled until data lands." },
         { type: "select", key: "labelDensityPreset", label: "Label density", description: "Controls how aggressively refs fill the corridor.", options: TRANSPORT_WORKBENCH_LABEL_DENSITY_OPTIONS },
         { type: "toggle", key: "allowPrimaryRefsAtHighZoom", label: "Allow primary refs at high zoom", description: "Primary refs stay gated until closer inspection." },
@@ -730,7 +736,7 @@ const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {
         { type: "range", key: "trunkWidth", label: "Trunk width", description: "Screen-space width for trunk strokes.", min: 1.1, max: 3.8, step: 0.05, unit: "px" },
         { type: "range", key: "primaryWidth", label: "Primary width", description: "Screen-space width for primary strokes.", min: 0.55, max: 2.8, step: 0.05, unit: "px" },
         { type: "range", key: "baseOpacity", label: "Base opacity", description: "Overall road line opacity.", min: 40, max: 100, step: 1, unit: "%" },
-        { type: "range", key: "refOpacity", label: "Ref opacity", description: "Overall road_labels opacity.", min: 30, max: 100, step: 1, unit: "%" },
+        { type: "range", key: "refOpacity", label: "Ref opacity", description: "Overall road reference-label opacity.", min: 30, max: 100, step: 1, unit: "%" },
       ],
     },
     { key: "diagnostics", title: "Diagnostics", description: "Explain rule intent only. Do not fabricate pack statistics.", kind: "diagnostics" },
@@ -798,7 +804,7 @@ const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {
     {
       key: "style",
       title: "Style",
-      description: "These controls style only the future rail overlay shell.",
+      description: "These controls style the live rail preview and the shared rail overview bridge.",
       controls: [
         { type: "range", key: "lineOpacity", label: "Line opacity", description: "Overall rail line opacity.", min: 40, max: 100, step: 1, unit: "%" },
         { type: "range", key: "stationOpacity", label: "Station opacity", description: "Overall major-station opacity.", min: 35, max: 100, step: 1, unit: "%" },
@@ -1205,6 +1211,7 @@ export function createTransportWorkbenchController({
   let transportWorkbenchPreviewLastViewKey = "";
   let transportWorkbenchPreviewWarmupScheduled = false;
   let transportWorkbenchDraggedLayerId = "";
+  let transportWorkbenchRenderGeneration = 0;
 
   const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
     if (!transportWorkbenchSectionHelpPopover) return;
@@ -1421,7 +1428,7 @@ export function createTransportWorkbenchController({
       aggregationCellSizePx: Number(resolvedDisplayConfig.aggregation.thresholds?.cellSizePx || 44),
       aggregationClusterRadiusPx: Number(resolvedDisplayConfig.aggregation.thresholds?.clusterRadiusPx || 48),
       labelBudget: Number(resolvedDisplayConfig.labels?.budget || 8),
-      labelSeparation: Number(resolvedDisplayConfig.labels?.separationStrength || 0.65),
+      labelSeparation: Number(resolvedDisplayConfig.labels?.separationStrength || 1),
       labelLevel: mapTransportWorkbenchMaxLevelToLabelLevel(resolvedDisplayConfig.labels?.maxLevel),
       labelAllowAggregation: !!resolvedDisplayConfig.labels?.allowAggregation,
       dominantCategoryThreshold: Number(resolvedDisplayConfig.labels?.dominantCategoryThreshold || 0.62),
@@ -1436,6 +1443,91 @@ export function createTransportWorkbenchController({
   };
 
   const getTransportWorkbenchConfigSignature = (config) => JSON.stringify(config || {});
+
+  const getTransportOverviewVisualModeFromState = () => normalizeTransportOverviewVisualMode(
+    runtimeState.styleConfig?.transportOverview?.visualMode,
+    "distribution",
+  );
+
+  const getTransportWorkbenchApplyButtonState = (familyId) => {
+    const compatibility = getTransportCapabilityApplyCompatibility(familyId);
+    const familyConfig = runtimeState.transportWorkbenchUi?.familyConfigs?.[familyId] || {};
+    if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.mainMapBridge) {
+      const bridgeSupport = getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfig);
+      if (!bridgeSupport.supported) {
+        return {
+          compatibility,
+          enabled: false,
+          label: t("Workbench preview only", "ui"),
+          reason: t("Workbench preview only", "ui"),
+        };
+      }
+      return {
+        compatibility,
+        enabled: true,
+        label: t("Apply to Main Map", "ui"),
+        reason: "",
+      };
+    }
+    if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.localBoard) {
+      return {
+        compatibility,
+        enabled: false,
+        label: t("Workbench-only family", "ui"),
+        reason: t("Workbench-only family", "ui"),
+      };
+    }
+    return {
+      compatibility,
+      enabled: false,
+      label: t("Workbench preview only", "ui"),
+      reason: t("Workbench preview only", "ui"),
+    };
+  };
+
+  const applyTransportWorkbenchFamilyToMainMap = async (context) => {
+    const currentOverviewConfig = normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {});
+    const patch = resolveTransportOverviewPatchFromWorkbench(
+      context.family.id,
+      runtimeState.transportWorkbenchUi?.familyConfigs?.[context.family.id] || {},
+      {
+        currentOverviewConfig: currentOverviewConfig?.[context.family.id] || getTransportCapabilityDefaultOverviewConfig(context.family.id),
+        currentVisualMode: getTransportOverviewVisualModeFromState(),
+      },
+    );
+    if (!patch) return false;
+    if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
+      runtimeState.styleConfig = {};
+    }
+    runtimeState.styleConfig.transportOverview = {
+      ...currentOverviewConfig,
+      visualMode: patch.visualMode,
+      [context.family.id]: {
+        ...(currentOverviewConfig?.[context.family.id] || {}),
+        ...(patch.familyConfig || {}),
+      },
+    };
+    runtimeState.showTransport = true;
+    if (patch.visibilityField) {
+      runtimeState[patch.visibilityField] = true;
+    }
+    const dataLayerKeys = Array.isArray(patch.dataLayerKeys) ? patch.dataLayerKeys : [];
+    try {
+      if (dataLayerKeys.length && typeof runtimeState.ensureContextLayerDataFn === "function") {
+        await runtimeState.ensureContextLayerDataFn(
+          dataLayerKeys.length === 1 ? dataLayerKeys[0] : dataLayerKeys,
+          { reason: "transport-workbench-apply", renderNow: false },
+        );
+      }
+    } finally {
+      runtimeState.updateTransportAppearanceUIFn?.();
+      markDirty("transport-workbench-apply");
+      if (typeof runtimeState.renderNowFn === "function") {
+        runtimeState.renderNowFn("transport-workbench-apply");
+      }
+    }
+    return true;
+  };
 
   const formatTransportWorkbenchManifestTimestamp = (value) => {
     const text = String(value || "").trim();
@@ -2491,7 +2583,7 @@ export function createTransportWorkbenchController({
           ["Classes", formatTransportWorkbenchOptionLabels(config.class, RAIL_CLASS_OPTIONS)],
           ["Stations", config.showMajorStations ? `${config.importanceThreshold} threshold` : "Hidden"],
           ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for railways + rail_stations_major Japan packs") : "Loading Japan rail pack"],
+          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for the Japan rail lines and major-station packs") : "Loading Japan rail pack"],
         ];
       } else if (family.id === "airport" && previewSnapshot?.status === "ready") {
         const selected = previewSnapshot.selected;
@@ -2619,7 +2711,7 @@ export function createTransportWorkbenchController({
         rows = [
           ["Labels", config.showLabels ? "Enabled" : "Hidden"],
           ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for mineral_resources Japan pack manifest") : "Loading Japan mineral resource pack"],
+          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for the Japan mineral resource pack manifest") : "Loading Japan mineral resource pack"],
         ];
       } else if (family.id === "energy_facilities" && previewSnapshot?.status === "ready") {
         const selected = previewSnapshot.selected;
@@ -2668,7 +2760,7 @@ export function createTransportWorkbenchController({
           ["Statuses", formatTransportWorkbenchOptionLabels(config.statuses, ENERGY_STATUS_OPTIONS)],
           ["Labels", config.showLabels ? "Enabled" : "Hidden"],
           ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for energy_facilities Japan pack manifest") : "Loading Japan energy facility pack"],
+          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for the Japan energy facility pack manifest") : "Loading Japan energy facility pack"],
         ];
       } else if (
         family.id === "industrial_zones"
@@ -2928,7 +3020,14 @@ export function createTransportWorkbenchController({
     };
   };
 
+  const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) => (
+    renderGeneration === transportWorkbenchRenderGeneration
+    && !!runtimeState.transportWorkbenchUi?.open
+    && normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi?.activeFamily) === familyId
+  );
+
   const refreshTransportWorkbenchPreview = (context, { allowCarrierPrep = true } = {}) => {
+    const renderGeneration = ++transportWorkbenchRenderGeneration;
     if (!context.isOpen) {
       clearAllTransportWorkbenchFamilyPreviews();
       return Promise.resolve(null);
@@ -2946,11 +3045,19 @@ export function createTransportWorkbenchController({
       : Promise.resolve();
     return prepareCarrier
       .then(() => {
+        if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
+          return null;
+        }
         resizeTransportWorkbenchCarrier();
         syncTransportWorkbenchPreviewControls();
         // preview family 自己消费 resolved config；controller 只负责递送配置和同步 inspector。
         if (isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
-          return renderTransportWorkbenchFamilyPreview(context.family.id, context.config).then(() => {
+          return renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {
+            isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),
+          }).then(() => {
+            if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
+              return null;
+            }
             const viewState = getTransportWorkbenchCarrierViewState() || {};
             transportWorkbenchPreviewLastViewKey = [
               Number(viewState.scale || 1).toFixed(4),
@@ -2963,15 +3070,22 @@ export function createTransportWorkbenchController({
           });
         }
         clearAllTransportWorkbenchFamilyPreviews();
-        renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
+        if (isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
+          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
+        }
         return null;
       })
       .catch((error) => {
+        if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
+          return null;
+        }
         console.error("[transport-workbench] Failed to prepare Japan carrier preview.", error);
         if (!isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
           clearAllTransportWorkbenchFamilyPreviews();
         }
-        renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
+        if (isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
+          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
+        }
         return null;
       });
   };
@@ -2996,7 +3110,8 @@ export function createTransportWorkbenchController({
           : uiState.previewMode;
     transportWorkbenchPreviewTitle.textContent = family.id === "layers"
       ? t(family.previewTitle, "ui")
-      : t("Japan preview", "ui");
+      : (uiState.sampleCountry === "Japan" ? t("Japan preview", "ui") : `${uiState.sampleCountry} preview`);
+    const applyButtonState = getTransportWorkbenchApplyButtonState(family.id);
     if (transportWorkbenchCompareBtn) {
       transportWorkbenchCompareBtn.disabled = !family.supportsDetailedControls;
       transportWorkbenchCompareBtn.setAttribute("aria-disabled", family.supportsDetailedControls ? "false" : "true");
@@ -3007,7 +3122,7 @@ export function createTransportWorkbenchController({
     }
     if (transportWorkbenchCompareStatus) {
       transportWorkbenchCompareStatus.textContent = !family.supportsDetailedControls
-        ? t("Baseline unavailable for this family", "ui")
+        ? (family.id === "layers" ? t("Local layer board", "ui") : t("Workbench runtime state", "ui"))
         : compareHeld
           ? t("Baseline preview", "ui")
           : t("Live working state", "ui");
@@ -3032,8 +3147,10 @@ export function createTransportWorkbenchController({
     });
     renderTransportWorkbenchInspectorTabs(family, context.config || uiState.familyConfigs?.[family.id] || {}, compareHeld);
     if (transportWorkbenchApplyBtn) {
-      transportWorkbenchApplyBtn.disabled = true;
-      transportWorkbenchApplyBtn.setAttribute("aria-disabled", "true");
+      transportWorkbenchApplyBtn.disabled = !applyButtonState.enabled;
+      transportWorkbenchApplyBtn.setAttribute("aria-disabled", applyButtonState.enabled ? "false" : "true");
+      transportWorkbenchApplyBtn.textContent = applyButtonState.label;
+      transportWorkbenchApplyBtn.title = applyButtonState.reason || applyButtonState.label;
     }
   };
 
@@ -3088,7 +3205,7 @@ export function createTransportWorkbenchController({
       return;
     }
     ensureTransportWorkbenchUiState();
-    const uiState = runtimeState.transportWorkbenchUi;
+    let uiState = runtimeState.transportWorkbenchUi;
     const wasOpen = !!uiState.open;
     const willOpen = !!nextOpen;
     if (willOpen === wasOpen && !willOpen) {
@@ -3113,6 +3230,8 @@ export function createTransportWorkbenchController({
         rememberOverlayTrigger(transportWorkbenchOverlay, trigger);
       }
     }
+    // section reset 可能补齐最新 uiState 结构，这里统一回读当前对象后再落 open 状态。
+    uiState = runtimeState.transportWorkbenchUi;
     uiState.open = willOpen;
     renderTransportWorkbenchUi();
     if (typeof runtimeState.syncFacilityInfoCardVisibilityFn === "function") {
@@ -3127,6 +3246,7 @@ export function createTransportWorkbenchController({
       cancelAnimationFrame(transportWorkbenchPreviewViewSyncRaf);
       transportWorkbenchPreviewViewSyncRaf = 0;
     }
+    transportWorkbenchRenderGeneration += 1;
     transportWorkbenchPreviewLastViewKey = "";
     destroyAllTransportWorkbenchFamilyPreviews();
     destroyTransportWorkbenchCarrier();
@@ -3162,7 +3282,7 @@ export function createTransportWorkbenchController({
     setTransportWorkbenchCarrierViewChangeListener(() => {
       scheduleTransportWorkbenchPreviewViewSync();
     });
-    ["road", "rail", "airport", "port", "mineral_resources", "energy_facilities", "industrial_zones", "logistics_hubs"].forEach((familyId) => {
+    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
       setTransportWorkbenchFamilyPreviewSelectionListener(familyId, () => {
         const context = getTransportWorkbenchRenderContext();
         if (!context.isOpen || context.family.id !== familyId) {
@@ -3261,6 +3381,21 @@ export function createTransportWorkbenchController({
         transportWorkbenchRotateBtn.dataset.bound = "true";
       }
 
+      if (transportWorkbenchApplyBtn && !transportWorkbenchApplyBtn.dataset.bound) {
+        transportWorkbenchApplyBtn.addEventListener("click", async () => {
+          const context = getTransportWorkbenchRenderContext();
+          const applyState = getTransportWorkbenchApplyButtonState(context.family.id);
+          if (!applyState.enabled) return;
+          try {
+            await applyTransportWorkbenchFamilyToMainMap(context);
+          } catch (error) {
+            console.error(`[transport-workbench] Failed to apply ${context.family.id} to the main map.`, error);
+          }
+          renderTransportWorkbenchShell(getTransportWorkbenchRenderContext());
+        });
+        transportWorkbenchApplyBtn.dataset.bound = "true";
+      }
+
       transportWorkbenchFamilyTabs.forEach((button) => {
         if (!button || button.dataset.bound === "true") return;
         button.addEventListener("click", () => {
@@ -3315,4 +3450,3 @@ export function createTransportWorkbenchController({
     renderTransportWorkbenchUi,
   };
 }
-

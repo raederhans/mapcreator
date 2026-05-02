@@ -1,5 +1,7 @@
 const { test, expect } = require("@playwright/test");
-const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
+const { gotoApp, waitForAppInteractive, waitForRenderIdle } = require("./support/playwright-app");
+
+const TNO_TRANSPORT_READY_PATH = "/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1&default_scenario=tno_1962";
 
 
 async function expectSupportPopoverVisibility(page, { guide, reference, export: exportVisible }) {
@@ -545,13 +547,13 @@ test("phase 03 transport compare runtime strings localize across live states", a
 
   await layersTab.click();
   await expect(compareBtn).toHaveText("Baseline unavailable");
-  await expect(compareStatus).toHaveText("Baseline unavailable for this family");
+  await expect(compareStatus).toHaveText("Local layer board");
 
   await page.evaluate(() => {
     document.getElementById("btnToggleLang")?.click();
   });
   await expect(compareBtn).toHaveText("\u57fa\u7ebf\u4e0d\u53ef\u7528");
-  await expect(compareStatus).toHaveText("\u8fd9\u4e2a\u5bb6\u65cf\u6ca1\u6709\u53ef\u7528\u57fa\u7ebf");
+  await expect(compareStatus).toHaveText("\u672c\u5730\u56fe\u5c42\u6392\u5e8f\u677f");
 
   await roadTab.click();
   await expect(compareBtn).toHaveText("\u6bd4\u8f83\u57fa\u7ebf");
@@ -562,6 +564,135 @@ test("phase 03 transport compare runtime strings localize across live states", a
   await expect(compareStatus).toHaveText("\u57fa\u7ebf\u9884\u89c8\u4e2d");
   await page.keyboard.up("Enter");
   await expect(compareStatus).toHaveText("\u5f53\u524d\u5de5\u4f5c\u72b6\u6001");
+});
+
+test("transport visual mode and apply bridge stay aligned across appearance and workbench", async ({ page }) => {
+  test.setTimeout(240_000);
+  await gotoApp(page, TNO_TRANSPORT_READY_PATH, { waitUntil: "domcontentloaded" });
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 240_000 });
+
+  await page.evaluate(() => {
+    const appearance = document.querySelector('[aria-labelledby="appearanceSectionHeading labelMapStyle"]');
+    const portCard = document.querySelector('#transportPortCard');
+    if (appearance instanceof HTMLDetailsElement) appearance.open = true;
+    if (portCard instanceof HTMLDetailsElement) portCard.open = true;
+  });
+  await page.locator("#appearanceTabTransport").click();
+
+  await page.locator("#transportAppearanceMasterToggle").uncheck();
+  await expect(page.locator("#transportVisualMode")).toBeDisabled();
+  await page.locator("#togglePorts").check();
+  await expect(page.locator("#transportAppearanceMasterToggle")).toBeChecked();
+  await expect(page.locator("#transportVisualMode")).toBeEnabled();
+  await page.locator("#transportVisualMode").selectOption("network");
+
+  await expect.poll(async () => page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    return {
+      visualMode: String(state.styleConfig?.transportOverview?.visualMode || ""),
+      showTransport: !!state.showTransport,
+      showPorts: !!state.showPorts,
+    };
+  }), { timeout: 30_000 }).toMatchObject({
+    visualMode: "network",
+    showTransport: true,
+    showPorts: true,
+  });
+
+  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
+  await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
+
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+
+  await page.locator('[data-transport-family="airport"]').click();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+  await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    state.transportWorkbenchUi.familyConfigs.airport.airportTypes = [
+      "company_managed",
+      "national",
+      "specific_local",
+      "local",
+      "other",
+      "shared",
+    ];
+    state.transportWorkbenchUi.familyConfigs.airport.statuses = [
+      "active",
+      "paused",
+      "unknown",
+    ];
+    state.refreshTransportWorkbenchUiFn?.();
+  });
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeEnabled();
+
+  await page.locator('[data-transport-family="layers"]').click();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench-only family");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+  await expect(page.locator("#transportWorkbenchCompareStatus")).toHaveText("Local layer board");
+
+  await page.locator('[data-transport-family="mineral_resources"]').click();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+
+  await page.locator('[data-transport-family="port"]').click();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeEnabled();
+
+  await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    state.transportWorkbenchUi.familyConfigs.port.managerTypes = ["1"];
+    state.refreshTransportWorkbenchUiFn?.();
+  });
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+
+  await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    state.transportWorkbenchUi.familyConfigs.port.managerTypes = ["1", "2", "3", "4", "5"];
+    state.transportWorkbenchUi.familyConfigs.port.showLabels = false;
+    state.transportWorkbenchUi.familyConfigs.port.baseOpacity = 74;
+    state.transportWorkbenchUi.displayConfigs.port.coverage = "expanded";
+    state.refreshTransportWorkbenchUiFn?.();
+  });
+  await page.locator("#transportWorkbenchApplyBtn").click();
+
+  await expect.poll(async () => page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const portConfig = state.styleConfig?.transportOverview?.port || {};
+    return {
+      visualMode: String(state.styleConfig?.transportOverview?.visualMode || ""),
+      showTransport: !!state.showTransport,
+      showPorts: !!state.showPorts,
+      labelsEnabled: !!portConfig.labelsEnabled,
+      scopeLinkMode: String(portConfig.scopeLinkMode || ""),
+      hasPortsData: Array.isArray(state.portsData?.features) && state.portsData.features.length > 0,
+      visualModeControl: String(document.querySelector("#transportVisualMode")?.value || ""),
+    };
+  }), { timeout: 30_000 }).toMatchObject({
+    visualMode: "network",
+    showTransport: true,
+    showPorts: true,
+    labelsEnabled: false,
+    scopeLinkMode: "linked",
+    hasPortsData: true,
+    visualModeControl: "network",
+  });
+
+  const appliedConfig = await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const portConfig = state.styleConfig?.transportOverview?.port || {};
+    return {
+      opacity: Number(portConfig.opacity || 0),
+      importanceThreshold: String(portConfig.importanceThreshold || ""),
+      coverageReach: Number(portConfig.coverageReach || 0),
+    };
+  });
+  expect(appliedConfig.opacity).toBeCloseTo(0.74, 1);
+  expect(appliedConfig.importanceThreshold).toBe("secondary");
+  expect(appliedConfig.coverageReach).toBeGreaterThan(0.35);
 });
 
 

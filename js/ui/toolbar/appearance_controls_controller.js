@@ -10,6 +10,11 @@ import {
   normalizeUrbanStyleConfig,
   resolveLinkedTransportOverviewScopeAndThreshold,
 } from "../../core/state.js";
+import {
+  normalizeTransportOverviewVisualMode,
+  resolveTransportOverviewLineStrategy,
+  resolveTransportOverviewPointStrategy,
+} from "../../core/transport_capability_registry.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { captureHistoryState, pushHistoryEntry } from "../../core/history_manager.js";
 
@@ -227,6 +232,7 @@ export function createAppearanceControlsController({
   const parentBorderEmpty = document.getElementById("parentBorderEmpty");
 
   const transportAppearanceMasterToggle = document.getElementById("transportAppearanceMasterToggle");
+  const transportVisualMode = document.getElementById("transportVisualMode");
   const transportAirportCard = document.getElementById("transportAirportCard");
   const transportPortCard = document.getElementById("transportPortCard");
   const transportRailCard = document.getElementById("transportRailCard");
@@ -933,6 +939,11 @@ export function createAppearanceControlsController({
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
+  const getTransportAppearanceVisualMode = () => normalizeTransportOverviewVisualMode(
+    getTransportAppearanceConfig().visualMode,
+    "distribution",
+  );
+
   const getEffectiveTransportScopeState = (familyId, familyConfig) => (
     familyConfig.scopeLinkMode === "manual"
       ? {
@@ -942,74 +953,54 @@ export function createAppearanceControlsController({
       : resolveLinkedTransportOverviewScopeAndThreshold(familyId, familyConfig.coverageReach)
   );
 
-  const getTransportScopeThresholdRank = (familyId, scope) => {
-    const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
-    const normalizedScope = String(scope || "").trim().toLowerCase();
-    if (normalizedFamilyId === "airport") {
-      if (normalizedScope === "international") return 3;
-      if (normalizedScope === "all_civil") return 1;
-      return 2;
-    }
-    if (normalizedFamilyId === "port") {
-      if (normalizedScope === "core") return 3;
-      if (normalizedScope === "expanded") return 1;
-      return 2;
-    }
-    if (normalizedFamilyId === "rail") return normalizedScope === "mainline_only" ? 1 : 2;
-    if (normalizedFamilyId === "road") return normalizedScope === "motorway_only" ? 1 : 2;
-    return 1;
-  };
-
-  const getTransportImportanceThresholdRank = (threshold) => {
-    const normalized = String(threshold || "").trim().toLowerCase();
-    if (normalized === "primary") return 3;
-    if (normalized === "secondary") return 2;
-    return 1;
-  };
-
   const getTransportFamilyFilteredCount = (familyId, familyConfig, effectiveScope) => {
+    const visualMode = getTransportAppearanceVisualMode();
+    const scale = Number(runtimeState.zoomTransform?.k || 1);
     if (familyId === "rail") {
       const features = Array.isArray(runtimeState.railwaysData?.features) ? runtimeState.railwaysData.features : null;
       if (!features) return null;
-      const scopeThreshold = getTransportScopeThresholdRank(familyId, effectiveScope.scope);
-      const revealThreshold = String(effectiveScope.importanceThreshold || "").trim().toLowerCase() === "primary"
-        ? 1
-        : String(effectiveScope.importanceThreshold || "").trim().toLowerCase() === "secondary"
-          ? 2
-          : 3;
+      const strategy = resolveTransportOverviewLineStrategy(
+        familyId,
+        { ...familyConfig, ...effectiveScope },
+        { scale, visualMode },
+      );
       return features.filter((feature) => {
         const properties = feature?.properties || {};
         const lineClass = String(properties.class || "").trim().toLowerCase();
         const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
-        if (revealRank > revealThreshold) return false;
-        if (scopeThreshold <= 1 && lineClass !== "mainline") return false;
+        if (revealRank > strategy.maximumRevealRank) return false;
+        if (strategy.minimumScopeRank <= 1 && lineClass !== "mainline") return false;
         return lineClass === "mainline" || lineClass === "regional";
       }).length;
     }
     if (familyId === "road") {
       const features = Array.isArray(runtimeState.roadsData?.features) ? runtimeState.roadsData.features : null;
       if (!features) return null;
-      const scopeThreshold = getTransportScopeThresholdRank(familyId, effectiveScope.scope);
-      const revealThreshold = String(effectiveScope.importanceThreshold || "").trim().toLowerCase() === "primary" ? 1 : 2;
+      const strategy = resolveTransportOverviewLineStrategy(
+        familyId,
+        { ...familyConfig, ...effectiveScope },
+        { scale, visualMode },
+      );
       return features.filter((feature) => {
         const properties = feature?.properties || {};
         const roadClass = String(properties.class || "").trim().toLowerCase();
         const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (roadClass === "motorway" ? 1 : 2))));
-        if (revealRank > revealThreshold) return false;
-        if (scopeThreshold <= 1 && roadClass !== "motorway") return false;
+        if (revealRank > strategy.maximumRevealRank) return false;
+        if (strategy.minimumScopeRank <= 1 && roadClass !== "motorway") return false;
         return roadClass === "motorway" || roadClass === "trunk";
       }).length;
     }
     const collection = familyId === "port" ? runtimeState.portsData : runtimeState.airportsData;
     const features = Array.isArray(collection?.features) ? collection.features : null;
     if (!features) return null;
-    const minimumImportanceRank = Math.max(
-      getTransportScopeThresholdRank(familyId, effectiveScope.scope),
-      getTransportImportanceThresholdRank(effectiveScope.importanceThreshold),
+    const strategy = resolveTransportOverviewPointStrategy(
+      familyId,
+      { ...familyConfig, ...effectiveScope },
+      { scale, visualMode },
     );
     return features.filter((feature) => {
       const importanceRank = Math.max(1, Math.round(Number(feature?.properties?.importance_rank || 1)));
-      return importanceRank >= minimumImportanceRank;
+      return importanceRank >= strategy.thresholdRank;
     }).length;
   };
 
@@ -1039,8 +1030,6 @@ export function createAppearanceControlsController({
   const setTransportAppearanceGroupEnabled = (container, enabled) => {
     if (!(container instanceof HTMLElement)) return;
     container.classList.toggle("opacity-60", !enabled);
-    container.classList.toggle("pointer-events-none", !enabled);
-    container.setAttribute("aria-disabled", enabled ? "false" : "true");
   };
 
   const renderTransportAppearanceUi = () => {
@@ -1049,6 +1038,7 @@ export function createAppearanceControlsController({
     const portConfig = transportConfig.port || {};
     const railConfig = transportConfig.rail || {};
     const roadConfig = transportConfig.road || {};
+    const visualMode = normalizeTransportOverviewVisualMode(transportConfig.visualMode, "distribution");
     const transportEnabled = runtimeState.showTransport !== false;
     const airportScopeState = getEffectiveTransportScopeState("airport", airportConfig);
     const portScopeState = getEffectiveTransportScopeState("port", portConfig);
@@ -1056,6 +1046,7 @@ export function createAppearanceControlsController({
     const roadScopeState = getEffectiveTransportScopeState("road", roadConfig);
 
     if (transportAppearanceMasterToggle) transportAppearanceMasterToggle.checked = transportEnabled;
+    if (transportVisualMode) transportVisualMode.value = visualMode;
 
     if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportConfig.visualStrength ?? 0.56) * 100));
     if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportConfig.visualStrength ?? 0.56);
@@ -1072,6 +1063,7 @@ export function createAppearanceControlsController({
     if (airportThresholdResolved) airportThresholdResolved.textContent = t(formatTransportThresholdLabel(airportScopeState.importanceThreshold), "ui");
     if (airportScope) airportScope.value = String(airportConfig.scope || "major_civil");
     if (airportImportanceThreshold) airportImportanceThreshold.value = String(airportConfig.importanceThreshold || "secondary");
+    if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;
     if (transportAirportSummaryMeta) {
       transportAirportSummaryMeta.textContent = buildTransportFamilySummaryText("airport", transportEnabled, !!runtimeState.showAirports, airportConfig, airportScopeState);
     }
@@ -1091,6 +1083,7 @@ export function createAppearanceControlsController({
     if (portThresholdResolved) portThresholdResolved.textContent = t(formatTransportThresholdLabel(portScopeState.importanceThreshold), "ui");
     if (portTier) portTier.value = String(portConfig.scope || "regional");
     if (portImportanceThreshold) portImportanceThreshold.value = String(portConfig.importanceThreshold || "secondary");
+    if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;
     if (transportPortSummaryMeta) {
       transportPortSummaryMeta.textContent = buildTransportFamilySummaryText("port", transportEnabled, !!runtimeState.showPorts, portConfig, portScopeState);
     }
@@ -1141,12 +1134,16 @@ export function createAppearanceControlsController({
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
       railVisualStrength, railOpacity, railPrimaryColor, railLabelsEnabled, railLabelDensity,
-      railScopeLinked, railScope, railImportanceThreshold, toggleRail,
+      railScopeLinked, railScope, railImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
       roadVisualStrength, roadOpacity, roadPrimaryColor, roadScopeLinked, roadScope,
-      roadImportanceThreshold, toggleRoad,
+      roadImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
+    [toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {
+      if (control) control.disabled = false;
+    });
+    if (transportVisualMode) transportVisualMode.disabled = !transportEnabled;
 
     const airportManual = String(airportConfig.scopeLinkMode || "linked") === "manual";
     const portManual = String(portConfig.scopeLinkMode || "linked") === "manual";
@@ -1340,10 +1337,23 @@ export function createAppearanceControlsController({
       transportAppearanceMasterToggle.dataset.bound = "true";
     }
 
+    if (transportVisualMode && !transportVisualMode.dataset.bound) {
+      transportVisualMode.addEventListener("change", (event) => {
+        getTransportAppearanceConfig().visualMode = normalizeTransportOverviewVisualMode(
+          event.target.value || "distribution",
+          "distribution",
+        );
+        renderTransportAppearanceUi();
+        renderDirty("transport-visual-mode");
+      });
+      transportVisualMode.dataset.bound = "true";
+    }
+
     if (toggleAirports && !toggleAirports.dataset.bound) {
       toggleAirports.checked = !!runtimeState.showAirports;
       toggleAirports.addEventListener("change", (event) => {
         runtimeState.showAirports = !!event.target.checked;
+        if (runtimeState.showAirports && runtimeState.showTransport === false) runtimeState.showTransport = true;
         if (runtimeState.showAirports) {
           releaseDeferredContextForTransportToggle("toggle-airports");
         }
@@ -1360,6 +1370,7 @@ export function createAppearanceControlsController({
       togglePorts.checked = !!runtimeState.showPorts;
       togglePorts.addEventListener("change", (event) => {
         runtimeState.showPorts = !!event.target.checked;
+        if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;
         if (runtimeState.showPorts) {
           releaseDeferredContextForTransportToggle("toggle-ports");
         }

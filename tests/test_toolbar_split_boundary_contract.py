@@ -237,6 +237,18 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("function normalizeTransportWorkbenchInspectorTab", toolbar_content)
         self.assertNotIn("function normalizeRoadTransportWorkbenchConfig", toolbar_content)
         self.assertNotIn("function ensureTransportWorkbenchUiState", toolbar_content)
+        self.assertIn("normalizeTransportWorkbenchUiState,", owner_content)
+        self.assertIn("listTransportWorkbenchRuntimeFamilyIds,", owner_content)
+        self.assertIn("const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportWorkbenchRuntimeFamilyIds();", owner_content)
+        self.assertIn("Object.assign(previousUiState, normalizedUiState);", owner_content)
+        self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", owner_content)
+        self.assertIn("let transportWorkbenchRenderGeneration = 0;", owner_content)
+        self.assertIn("const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) =>", owner_content)
+        self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", owner_content)
+        self.assertIn("isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),", owner_content)
+        self.assertIn("const applyTransportWorkbenchFamilyToMainMap = async (context) => {", owner_content)
+        self.assertIn("await runtimeState.ensureContextLayerDataFn(", owner_content)
+        self.assertIn('transportWorkbenchApplyBtn.addEventListener("click", async () => {', owner_content)
 
     def test_toolbar_keeps_transport_workbench_facade_and_surface_coordination_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -270,6 +282,14 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const applyAppearanceFilter = () => {", toolbar_content)
         self.assertNotIn("function renderRecentColors()", toolbar_content)
         self.assertNotIn("function renderParentBorderCountryList()", toolbar_content)
+        self.assertIn("if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;", owner_content)
+        self.assertIn("if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;", owner_content)
+        self.assertIn("airportLabelMode, airportScopeLinked, airportScope, airportImportanceThreshold,", owner_content)
+        self.assertIn("portLabelMode, portScopeLinked, portTier, portImportanceThreshold,", owner_content)
+        self.assertIn("if (runtimeState.showAirports && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
+        self.assertIn("if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
+        self.assertIn("[toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {", owner_content)
+        self.assertIn("if (control) control.disabled = false;", owner_content)
 
     def test_toolbar_keeps_appearance_facade_and_state_registration_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")

@@ -666,14 +666,17 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_rail_runtime_loader_uses_catalog_not_eager_pack(self) -> None:
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         appearance_controller_content = (
             REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
         ).read_text(encoding='utf-8')
         self.assertIn('data/transport_layers/global_rail/catalog.json', data_loader_content)
         self.assertNotIn('data/transport_layers/global_rail/railways.topo.json', data_loader_content)
         self.assertNotIn('data/transport_layers/global_rail/rail_stations_major.geojson', data_loader_content)
-        self.assertIn('EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES = new Set(["roads", "railways", "rail_stations_major"])', data_loader_content)
+        self.assertIn('listTransportOverviewCapabilityFamilyIds()', data_loader_content)
+        self.assertIn('getTransportOverviewDataLayerKeys(familyId)', data_loader_content)
         self.assertIn('EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES.has(name)', data_loader_content)
+        self.assertIn('rail: Object.freeze(["railways", "rail_stations_major"])', registry_content)
         default_eager_section = data_loader_content.split('if (includeContextLayers === true) {', 1)[1].split('}', 1)[0]
         self.assertIn('Object.keys(CONTEXT_LAYER_PACKS)', default_eager_section)
         self.assertNotIn('EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES', default_eager_section)
@@ -734,9 +737,12 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_road_renderer_uses_road_scope_threshold_helper(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
-        self.assertIn('function getTransportRoadScopeThreshold(scope)', renderer_content)
-        self.assertIn('return normalized === "motorway_only" ? 1 : 2;', renderer_content)
-        self.assertIn('const minimumScopeRank = getTransportRoadScopeThreshold(roadConfig.scope);', renderer_content)
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
+        self.assertIn('export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}, { scale = 1, visualMode = "distribution" } = {})', registry_content)
+        self.assertIn('if (normalizedFamilyId === "road") {', registry_content)
+        self.assertIn('return normalizedScope === "motorway_only" ? 1 : 2;', registry_content)
+        self.assertIn('const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {', renderer_content)
+        self.assertIn('const minimumScopeRank = strategy.minimumScopeRank;', renderer_content)
 
     def test_road_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
@@ -746,9 +752,11 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('return 3;', renderer_content)
 
     def test_rail_transport_overview_default_primary_color_is_dark(self) -> None:
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         state_defaults_content = (REPO_ROOT / 'js' / 'core' / 'state_defaults.js').read_text(encoding='utf-8')
-        self.assertIn('case "rail":', state_defaults_content)
-        self.assertIn('primaryColor: "#0f172a"', state_defaults_content)
+        self.assertIn('rail: Object.freeze({', registry_content)
+        self.assertIn('primaryColor: "#0f172a"', registry_content)
+        self.assertIn('getTransportCapabilityDefaultOverviewConfig', state_defaults_content)
 
     def test_rail_stations_placeholder_sidecars_remain_real_empty_collections(self) -> None:
         sample_station_path = (
@@ -820,16 +828,17 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_port_renderer_default_reveal_floor_keeps_regional_ports_visible(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         port_payload = json.loads((REPO_ROOT / 'data' / 'transport_layers' / 'japan_port' / 'ports.geojson').read_text(encoding='utf-8'))
         max_importance_rank = max(
             int(round(float(feature.get('properties', {}).get('importance_rank') or 1)))
             for feature in port_payload.get('features', [])
         )
         self.assertEqual(max_importance_rank, 2)
-        self.assertIn('function getTransportPortZoomRevealFloor(scale)', renderer_content)
-        self.assertIn('return Math.max(1, 2 - getTransportOverviewZoomRevealAllowance(scale));', renderer_content)
-        self.assertIn('Math.max(getTransportPortScopeThreshold(portConfig.scope), getTransportPortZoomRevealFloor(k))', renderer_content)
-        self.assertIn('getTransportPortZoomRevealFloor(k)', renderer_content)
+        self.assertIn('function resolveTransportOverviewPointWorldFloor(familyId, visualMode)', registry_content)
+        self.assertIn('if (familyId === "port") return 2;', registry_content)
+        self.assertIn('const strategy = resolveTransportOverviewPointStrategy("port", portConfig, {', renderer_content)
+        self.assertIn('thresholdRank: strategy.thresholdRank,', renderer_content)
 
     def test_rail_runtime_loader_keeps_station_collection_shape_even_when_empty(self) -> None:
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')

@@ -23,6 +23,9 @@ import {
   normalizeTransportWorkbenchUiState,
   normalizeUrbanStyleConfig,
 } from "../state_defaults.js";
+import { listTransportRuntimeCapabilityFamilyIds } from "../transport_capability_registry.js";
+
+const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportRuntimeCapabilityFamilyIds();
 
 export function createDefaultManualSpecialZonesState() {
   return {
@@ -37,6 +40,7 @@ export function createDefaultTransportWorkbenchUiState() {
     activeFamily: "road",
     activeInspectorTab: "inspect",
     sampleCountry: "Japan",
+    previewCarrierId: "japan",
     previewMode: "bounded_zoom_pan",
     previewAssetId: "japan_carrier_v3",
     previewInteractionMode: "bounded_zoom_pan",
@@ -46,37 +50,14 @@ export function createDefaultTransportWorkbenchUiState() {
       translateY: 0,
     },
     compareHeld: false,
-    layerOrder: [
-      "road",
-      "rail",
-      "airport",
-      "port",
-      "mineral_resources",
-      "energy_facilities",
-      "industrial_zones",
-      "logistics_hubs",
-    ],
-    familyConfigs: {
-      road: {},
-      rail: {},
-      airport: {},
-      port: {},
-      mineral_resources: {},
-      energy_facilities: {},
-      industrial_zones: {},
-      logistics_hubs: {},
-    },
+    layerOrder: [...TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS],
+    familyConfigs: Object.fromEntries(
+      TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.map((familyId) => [familyId, {}])
+    ),
     displayConfigs: createDefaultTransportWorkbenchDisplayConfigs(),
-    sectionOpen: {
-      road: {},
-      rail: {},
-      airport: {},
-      port: {},
-      mineral_resources: {},
-      energy_facilities: {},
-      industrial_zones: {},
-      logistics_hubs: {},
-    },
+    sectionOpen: Object.fromEntries(
+      TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.map((familyId) => [familyId, {}])
+    ),
     shellPhase: "road-live-preview",
     restoreLeftDrawer: false,
     restoreRightDrawer: false,
@@ -114,18 +95,18 @@ export function createDefaultStyleConfig() {
       width: 1.1,
     },
     ocean: {
-      preset: "flat",
+      preset: "bathymetry_soft",
       fillColor: "#aadaff",
-      opacity: 0.72,
-      scale: 1,
-      contourStrength: 0.75,
-      experimentalAdvancedStyles: false,
+      opacity: 0.82,
+      scale: 1.14,
+      contourStrength: 0.34,
+      experimentalAdvancedStyles: true,
       coastalAccentEnabled: true,
-      shallowBandFadeEndZoom: 2.8,
-      midBandFadeEndZoom: 3.4,
-      deepBandFadeEndZoom: 4.2,
-      scenarioSyntheticContourFadeEndZoom: 3.0,
-      scenarioShallowContourFadeEndZoom: 3.4,
+      shallowBandFadeEndZoom: 2.5,
+      midBandFadeEndZoom: 3.0,
+      deepBandFadeEndZoom: 3.8,
+      scenarioSyntheticContourFadeEndZoom: 2.7,
+      scenarioShallowContourFadeEndZoom: 3.1,
     },
     lakes: createDefaultLakeStyleConfig(),
     cityPoints: {

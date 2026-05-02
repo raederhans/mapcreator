@@ -1389,3 +1389,11 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 49. approval log 只能写在 strict 复验通过之后
 - repair API 先执行 safe repair，再重新读取 strict report；只有 `status=ok` 且没有残余 violations/errors，才允许写 approval log。
 - 这样 diagnostics 面板和审批留痕才会保持同一套真相源。
+
+### 48. UI state normalize 不能在运行中频繁替换顶层对象，否则开关状态会写回旧引用
+- 这次 transport workbench overlay 打不开，根因是 `ensureTransportWorkbenchUiState()` 每次都重建 `transportWorkbenchUi`，而 `setTransportWorkbenchState()` 先拿旧引用、再在 reset 链里触发二次 normalize，最后把 `open=true` 写回旧对象。
+- 更稳的做法是保留顶层 state 对象 identity，只把规范化结果 `Object.assign` 回当前对象；这样事件链、render 链和 restore 链读到的都是同一份 live state。
+
+### 49. family toggle 和 master toggle 要分清职责：master 关掉时，family toggle 仍要保留可点入口
+- transport appearance 这次真正想保留的是“先关 master，再点某个 family toggle 自动拉起 master”的快速入口；如果把 family toggle 也跟着整体 disabled，E2E 和真实交互都会卡住。
+- 更稳的做法是：family toggle 永远可点，其他细分控件跟随 master disabled；视觉降显可以留给容器样式，交互入口不要一起锁死。

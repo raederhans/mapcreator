@@ -1,24 +1,26 @@
 // Transport workbench copy and descriptor catalog.
 // Controller code imports these data-only contracts and keeps rendering/event logic local.
 
-export const TRANSPORT_WORKBENCH_FAMILIES = [
-  {
-    id: "road",
+import {
+  getTransportCapabilityFamilyMetadata,
+  listTransportCapabilityFamilyIds,
+} from "../../core/transport_capability_registry.js";
+
+const TRANSPORT_WORKBENCH_FAMILY_COPY = Object.freeze({
+  road: Object.freeze({
     label: "Road",
     title: "Road workbench",
     lensTitle: "Japan road adapter",
     lensBody: "Japan road now loads a real preview pack built from Geofabrik geometry with N06 motorway hardening.",
-    lensNext: "The live slice stays on motorway, trunk, primary, and road_labels. Links are carried for review but stay filtered by default.",
+    lensNext: "The live slice stays on motorway, trunk, primary, and dedicated reference labels. Links are carried for review but stay filtered by default.",
     previewTitle: "Road carrier",
     previewCaption: "The carrier now shows real Japan road geometry. Use the left column to stress the rules and the inspector to verify real segments and refs.",
     inspectorTitle: "Road inspector",
     inspectorBody: "The inspector now reads from the live Japan road preview pack and reports why a segment is shown, hidden, or conflict-marked.",
     inspectorEmptyTitle: "No road feature selected",
     inspectorEmptyBody: "Click a road segment or ref label in the carrier to inspect real source, class, and hardening details.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "rail",
+  }),
+  rail: Object.freeze({
     label: "Rail",
     title: "Rail workbench",
     lensTitle: "Japan rail adapter",
@@ -30,10 +32,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "This side switches to real Japan rail line and station inspection as soon as the deferred packs exist. Until then it reports the pending contract instead of inventing sample data.",
     inspectorEmptyTitle: "No rail feature selected",
     inspectorEmptyBody: "Click a rail line or major station in the carrier to inspect the real source, class, and station importance data.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "airport",
+  }),
+  airport: Object.freeze({
     label: "Airport",
     title: "Airport workbench",
     lensTitle: "Airport facility lens",
@@ -45,10 +45,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "The inspector now reads directly from the live Japan airport pack and preserves the original Japanese source fields.",
     inspectorEmptyTitle: "No airport selected",
     inspectorEmptyBody: "Click an airport point or label in the carrier to inspect the live source attributes.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "port",
+  }),
+  port: Object.freeze({
     label: "Port",
     title: "Port workbench",
     lensTitle: "Port facility lens",
@@ -60,10 +58,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "The inspector now reads directly from the live Japan port pack and keeps internal-trial release constraints visible.",
     inspectorEmptyTitle: "No port selected",
     inspectorEmptyBody: "Click a port point or label in the carrier to inspect the live source attributes.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "mineral_resources",
+  }),
+  mineral_resources: Object.freeze({
     label: "Mineral Resources",
     title: "Mineral resource workbench",
     lensTitle: "Mineral resource lens",
@@ -75,10 +71,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "This side now reads directly from the live mineral point pack and keeps pack governance visible without inventing a synthetic mineral score.",
     inspectorEmptyTitle: "No mineral site selected",
     inspectorEmptyBody: "Click a mineral point or label in the carrier to inspect the live source attributes.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "energy_facilities",
+  }),
+  energy_facilities: Object.freeze({
     label: "Energy Facilities",
     title: "Energy facility workbench",
     lensTitle: "Energy facility lens",
@@ -90,10 +84,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "This side now reads directly from the live energy facility pack and keeps subtype availability, status, and source governance visible.",
     inspectorEmptyTitle: "No energy facility selected",
     inspectorEmptyBody: "Click an energy point or label in the carrier to inspect the live source attributes.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "industrial_zones",
+  }),
+  industrial_zones: Object.freeze({
     label: "Industrial Land",
     title: "Industrial land workbench",
     lensTitle: "Industrial land lens",
@@ -105,10 +97,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "This side now reports the active industrial-land variant, source lineage, build counts, and the selected polygon attributes without inventing one merged polygon truth.",
     inspectorEmptyTitle: "No industrial polygon selected",
     inspectorEmptyBody: "Click an industrial polygon in the carrier to inspect its active variant, source member, and site attributes.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "logistics_hubs",
+  }),
+  logistics_hubs: Object.freeze({
     label: "Logistics Hubs",
     title: "Logistics hub workbench",
     lensTitle: "Logistics supplement lens",
@@ -120,10 +110,8 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "This side reads directly from the live P31 logistics-hub pack and keeps the internal-first source constraints visible.",
     inspectorEmptyTitle: "No logistics hub selected",
     inspectorEmptyBody: "Click a logistics hub point in the carrier to inspect its live source attributes.",
-    supportsDetailedControls: true,
-  },
-  {
-    id: "layers",
+  }),
+  layers: Object.freeze({
     label: "Layers",
     title: "Layer order board",
     lensTitle: "Transport layer order",
@@ -135,8 +123,23 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
     inspectorBody: "The inspector mirrors the current local layer order so later family renderers can consume it directly.",
     inspectorEmptyTitle: "Layer order ready",
     inspectorEmptyBody: "Reorder the 8 transport families in the center board. This order currently stays local to the Transport workbench.",
-  },
-];
+  }),
+});
+
+function createTransportWorkbenchFamilyDescriptor(familyId) {
+  const copy = TRANSPORT_WORKBENCH_FAMILY_COPY[familyId];
+  if (!copy) {
+    throw new Error(`Missing transport workbench family copy for ${familyId}`);
+  }
+  return Object.freeze({
+    ...getTransportCapabilityFamilyMetadata(familyId),
+    ...copy,
+  });
+}
+
+export const TRANSPORT_WORKBENCH_FAMILIES = Object.freeze(
+  listTransportCapabilityFamilyIds().map(createTransportWorkbenchFamilyDescriptor)
+);
 
 export const ROAD_CLASS_OPTIONS = [
   { value: "motorway", label: "Motorway" },
@@ -312,7 +315,7 @@ export const TRANSPORT_WORKBENCH_DATA_CONTRACTS = {
     geometrySource: "OSM / Geofabrik Japan",
     hardeningSource: "N06 motorway identity",
     governance: "Local-source-only pack build with reproducible inputs, explicit diagnostics, and UTF-8-first Japanese text handling.",
-    pendingStatus: "Load on demand from roads + road_labels Japan packs",
+    pendingStatus: "Loads on demand from the Japan road geometry and reference-label packs",
   },
   rail: {
     country: "Japan",
@@ -322,7 +325,7 @@ export const TRANSPORT_WORKBENCH_DATA_CONTRACTS = {
     geometrySource: "Official active network",
     hardeningSource: "OSM lifecycle / gap patch",
     governance: "Local-source-only pack build with UTF-8-first MLIT ingestion, CP932 fallback, repo-versioned overrides, and explicit diagnostics.",
-    pendingStatus: "Waiting for railways + rail_stations_major Japan packs",
+    pendingStatus: "Waiting for the Japan rail lines and major-station packs",
   },
   airport: {
     country: "Japan",
@@ -352,7 +355,7 @@ export const TRANSPORT_WORKBENCH_DATA_CONTRACTS = {
     geometrySource: "Official mineral resource distribution point source",
     hardeningSource: "Manual resource class normalization",
     governance: "Local static pack with UTF-8 storage, CP932 source decode, explicit four-islands clipping, and repo-versioned class normalization.",
-    pendingStatus: "Waiting for mineral_resources Japan pack manifest",
+    pendingStatus: "Waiting for the Japan mineral resource pack manifest",
   },
   energy_facilities: {
     country: "Japan",
@@ -362,7 +365,7 @@ export const TRANSPORT_WORKBENCH_DATA_CONTRACTS = {
     geometrySource: "Official energy facility point source",
     hardeningSource: "Facility subtype and status normalization",
     governance: "Local static pack for verified MLIT power-plant subtypes, with broader energy categories kept in a reference-only subtype catalog until their source chain is approved.",
-    pendingStatus: "Waiting for energy_facilities Japan pack manifest",
+    pendingStatus: "Waiting for the Japan energy facility pack manifest",
   },
   industrial_zones: {
     country: "Japan",
@@ -372,7 +375,7 @@ export const TRANSPORT_WORKBENCH_DATA_CONTRACTS = {
     geometrySource: "Official L05 polygons + source-separated OSM industrial polygons",
     hardeningSource: "Variant split and source lineage governance",
     governance: "Dual-track polygon family. L05 stays internal-only, OSM stays publishable, and the two tracks are not merged into one synthetic geometry layer.",
-    pendingStatus: "Waiting for industrial_zones Japan pack manifest",
+    pendingStatus: "Waiting for the Japan industrial land pack manifest",
   },
   logistics_hubs: {
     country: "Japan",

@@ -14,6 +14,10 @@ import {
   loadBaseStartupViaWorker,
   shouldUseStartupWorker,
 } from "./startup_worker_client.js";
+import {
+  getTransportOverviewDataLayerKeys,
+  listTransportOverviewCapabilityFamilyIds,
+} from "./transport_capability_registry.js";
 
 const TOPOLOGY_VARIANT_URLS = {
   highres: "data/europe_topology.highres.json",
@@ -60,7 +64,11 @@ const CONTEXT_LAYER_PACKS = {
     objectName: "contours",
   },
 };
-const EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES = new Set(["roads", "railways", "rail_stations_major"]);
+const EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES = new Set(
+  listTransportOverviewCapabilityFamilyIds()
+    .flatMap((familyId) => getTransportOverviewDataLayerKeys(familyId))
+    .filter((layerName) => layerName && !Object.prototype.hasOwnProperty.call(CONTEXT_LAYER_PACKS, layerName))
+);
 const PALETTE_REGISTRY_URL = "data/palettes/index.json";
 const RELEASABLE_CATALOG_URL = "data/releasables/hoi4_vanilla.internal.phase1.catalog.json";
 const RENDER_PROFILES = new Set(["auto", "balanced", "full"]);

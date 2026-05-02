@@ -551,13 +551,16 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     runtime.selectionChangeListener?.(buildSnapshot(runtime));
   }
 
-  async function render(config = {}) {
+  async function render(config = {}, options = {}) {
     ensureRootGroups(runtime);
     runtime.lastRenderedConfig = { ...(config || {}) };
     runtime.renderedConfigSignature = "";
     const scale = getCurrentScale();
     const targetMode = shouldUseFullPack(config, definition, scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
     const pack = await loadPack(targetMode, config);
+    if (typeof options.isCurrent === "function" && !options.isCurrent()) {
+      return null;
+    }
     if (!pack) {
       runtime.activeVariantId = null;
       clearGroups(runtime);

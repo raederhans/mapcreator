@@ -1,5 +1,13 @@
 // Centralized app state (Phase 13 scaffold)
 
+import {
+  TRANSPORT_OVERVIEW_CAPABILITY_FAMILY_IDS,
+  TRANSPORT_RUNTIME_CAPABILITY_FAMILY_IDS,
+  getTransportCapabilityDefaultOverviewConfig,
+  normalizeTransportOverviewVisualMode,
+  resolveLinkedTransportOverviewScopeAndThreshold as resolveLinkedTransportOverviewScopeAndThresholdFromRegistry,
+} from "./transport_capability_registry.js";
+
 const PALETTE_THEMES = {
   "HOI4 Vanilla": [
     "#871818", "#d62828", "#f77f00", "#fcbf49",
@@ -883,7 +891,7 @@ function normalizeCityLayerStyleConfig(rawConfig) {
   };
 }
 
-const TRANSPORT_OVERVIEW_FAMILY_IDS = Object.freeze(["airport", "port", "rail", "road"]);
+const TRANSPORT_OVERVIEW_FAMILY_IDS = TRANSPORT_OVERVIEW_CAPABILITY_FAMILY_IDS;
 const TRANSPORT_OVERVIEW_LABEL_DENSITIES = Object.freeze(["sparse", "balanced", "dense"]);
 const TRANSPORT_OVERVIEW_SCOPE_LINK_MODES = Object.freeze(["linked", "manual"]);
 
@@ -924,25 +932,7 @@ function mapLegacyTransportScopeToCoverageReach(familyId, value, fallback = 0.5)
 }
 
 function resolveLinkedTransportOverviewScopeAndThreshold(familyId, coverageReach = 0.5) {
-  const reach = clampUnitInterval(coverageReach, 0.5);
-  switch (String(familyId || "").trim().toLowerCase()) {
-    case "airport":
-      if (reach >= 0.74) return { scope: "all_civil", importanceThreshold: "all" };
-      if (reach >= 0.36) return { scope: "major_civil", importanceThreshold: "secondary" };
-      return { scope: "international", importanceThreshold: "primary" };
-    case "port":
-      if (reach >= 0.74) return { scope: "expanded", importanceThreshold: "all" };
-      if (reach >= 0.36) return { scope: "regional", importanceThreshold: "secondary" };
-      return { scope: "core", importanceThreshold: "primary" };
-    case "rail":
-      if (reach >= 0.58) return { scope: "mainline_plus_regional", importanceThreshold: "secondary" };
-      return { scope: "mainline_only", importanceThreshold: "primary" };
-    case "road":
-      if (reach >= 0.58) return { scope: "motorway_trunk", importanceThreshold: "secondary" };
-      return { scope: "motorway_only", importanceThreshold: "primary" };
-    default:
-      return { scope: "default", importanceThreshold: "secondary" };
-  }
+  return resolveLinkedTransportOverviewScopeAndThresholdFromRegistry(familyId, coverageReach);
 }
 
 function normalizeTransportOverviewScopeLinkMode(value, fallback = "linked") {
@@ -952,73 +942,23 @@ function normalizeTransportOverviewScopeLinkMode(value, fallback = "linked") {
 }
 
 function createDefaultTransportOverviewFamilyConfig(familyId) {
-  const linked = resolveLinkedTransportOverviewScopeAndThreshold(familyId, familyId === "airport" || familyId === "port" ? 0.5 : 0.2);
-  switch (String(familyId || "").trim().toLowerCase()) {
-    case "airport":
-      return {
-        opacity: 0.82,
-        visualStrength: 0.56,
-        primaryColor: "#1d4ed8",
-        labelsEnabled: true,
-        labelDensity: "balanced",
-        labelMode: "both",
-        coverageReach: 0.5,
-        scopeLinkMode: "linked",
-        scope: linked.scope,
-        importanceThreshold: linked.importanceThreshold,
-      };
-    case "port":
-      return {
-        opacity: 0.78,
-        visualStrength: 0.54,
-        primaryColor: "#b45309",
-        labelsEnabled: true,
-        labelDensity: "balanced",
-        labelMode: "mixed",
-        coverageReach: 0.5,
-        scopeLinkMode: "linked",
-        scope: linked.scope,
-        importanceThreshold: linked.importanceThreshold,
-      };
-    case "rail":
-      return {
-        opacity: 0.72,
-        visualStrength: 0.5,
-        primaryColor: "#0f172a",
-        labelsEnabled: false,
-        labelDensity: "sparse",
-        labelMode: "name",
-        coverageReach: 0.2,
-        scopeLinkMode: "linked",
-        scope: linked.scope,
-        importanceThreshold: linked.importanceThreshold,
-      };
-    case "road":
-      return {
-        opacity: 0.72,
-        visualStrength: 0.5,
-        primaryColor: "#374151",
-        labelsEnabled: false,
-        labelDensity: "sparse",
-        labelMode: "ref",
-        coverageReach: 0.2,
-        scopeLinkMode: "linked",
-        scope: linked.scope,
-        importanceThreshold: linked.importanceThreshold,
-      };
-    default:
-      return {
-        opacity: 0.65,
-        visualStrength: 0.5,
-        labelsEnabled: false,
-        labelDensity: "balanced",
-        labelMode: "name",
-        coverageReach: 0.5,
-        scopeLinkMode: "linked",
-        scope: "default",
-        importanceThreshold: "secondary",
-      };
+  const defaults = getTransportCapabilityDefaultOverviewConfig(familyId);
+  if (defaults) {
+    return {
+      ...defaults,
+    };
   }
+  return {
+    opacity: 0.65,
+    visualStrength: 0.5,
+    labelsEnabled: false,
+    labelDensity: "balanced",
+    labelMode: "name",
+    coverageReach: 0.5,
+    scopeLinkMode: "linked",
+    scope: "default",
+    importanceThreshold: "secondary",
+  };
 }
 
 function normalizeTransportOverviewLabelDensity(value, fallback = "balanced") {
@@ -1084,36 +1024,42 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
 }
 
 function createDefaultTransportOverviewStyleConfig() {
-  return Object.fromEntries(
-    TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
-      familyId,
-      createDefaultTransportOverviewFamilyConfig(familyId),
-    ]),
-  );
+  return {
+    visualMode: "distribution",
+    ...Object.fromEntries(
+      TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
+        familyId,
+        createDefaultTransportOverviewFamilyConfig(familyId),
+      ]),
+    ),
+  };
 }
 
 function normalizeTransportOverviewStyleConfig(rawConfig) {
   const source = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
-  return Object.fromEntries(
-    TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
-      familyId,
-      normalizeTransportOverviewFamilyConfig(source[familyId], familyId),
-    ]),
-  );
+  return {
+    visualMode: normalizeTransportOverviewVisualMode(source.visualMode, "distribution"),
+    ...Object.fromEntries(
+      TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
+        familyId,
+        normalizeTransportOverviewFamilyConfig(source[familyId], familyId),
+      ]),
+    ),
+  };
 }
 
 function createDefaultTextureStyleConfig() {
   return {
     mode: "none",
-    opacity: 0.88,
+    opacity: 0.58,
     sphereClip: true,
     paper: {
       assetId: "paper_vintage_01",
       scale: 1,
-      warmth: 0.62,
-      grain: 0.34,
-      wear: 0.26,
-      vignette: 0.18,
+      warmth: 0.52,
+      grain: 0.22,
+      wear: 0.18,
+      vignette: 0.10,
       blendMode: "multiply",
     },
     graticule: {
@@ -1222,18 +1168,18 @@ function createDefaultDayNightStyleConfig() {
     enabled: false,
     mode: "manual",
     manualUtcMinutes: 12 * 60,
-    shadowOpacity: 0.28,
-    twilightWidthDeg: 10,
+    shadowOpacity: 0.18,
+    twilightWidthDeg: 6,
     cityLightsEnabled: true,
     cityLightsStyle: "modern",
-    cityLightsIntensity: 0.78,
-    cityLightsTextureOpacity: 0.32,
-    cityLightsCorridorStrength: 0.18,
-    cityLightsCoreSharpness: 0.54,
+    cityLightsIntensity: 0.7,
+    cityLightsTextureOpacity: 0.24,
+    cityLightsCorridorStrength: 0.12,
+    cityLightsCoreSharpness: 0.58,
     cityLightsPopulationBoostEnabled: true,
-    cityLightsPopulationBoostStrength: 0.9,
-    historicalCityLightsDensity: 1.25,
-    historicalCityLightsSecondaryRetention: 0.55,
+    cityLightsPopulationBoostStrength: 0.82,
+    historicalCityLightsDensity: 1.12,
+    historicalCityLightsSecondaryRetention: 0.46,
   };
 }
 
@@ -1337,16 +1283,7 @@ function normalizeAnnotationView(rawConfig) {
   };
 }
 
-const TRANSPORT_WORKBENCH_FAMILY_IDS = Object.freeze([
-  "road",
-  "rail",
-  "airport",
-  "port",
-  "mineral_resources",
-  "energy_facilities",
-  "industrial_zones",
-  "logistics_hubs",
-]);
+const TRANSPORT_WORKBENCH_FAMILY_IDS = TRANSPORT_RUNTIME_CAPABILITY_FAMILY_IDS;
 
 const TRANSPORT_WORKBENCH_MODE_IDS = new Set(["inspect", "aggregate", "density"]);
 const TRANSPORT_WORKBENCH_PRESET_IDS = new Set([
@@ -1430,7 +1367,7 @@ function createDefaultTransportWorkbenchDisplayConfig(familyId) {
     labels: {
       maxLevel: 2,
       budget: 8,
-      separationStrength: 0.65,
+      separationStrength: 1,
       allowAggregation: true,
       dominantCategoryThreshold: 0.62,
       mixedCategoryMode: "summary",
@@ -1531,8 +1468,8 @@ function normalizeTransportWorkbenchDisplayConfig(rawConfig, familyId) {
       budget: clamp(Math.round(toFiniteNumber(rawLabels.budget, defaults.labels.budget)), 0, 64),
       separationStrength: clamp(
         toFiniteNumber(rawLabels.separationStrength, defaults.labels.separationStrength),
-        0,
-        1
+        0.7,
+        1.8
       ),
       allowAggregation: rawLabels.allowAggregation === undefined
         ? defaults.labels.allowAggregation
@@ -1574,6 +1511,10 @@ function normalizeTransportWorkbenchUiState(rawUi) {
   const rawPreviewCamera = raw.previewCamera && typeof raw.previewCamera === "object" ? raw.previewCamera : {};
   const familyConfigs = raw.familyConfigs && typeof raw.familyConfigs === "object" ? { ...raw.familyConfigs } : {};
   const sectionOpen = raw.sectionOpen && typeof raw.sectionOpen === "object" ? { ...raw.sectionOpen } : {};
+  const previewCarrierId = String(raw.previewCarrierId || "japan").trim().toLowerCase() || "japan";
+  const defaultPreviewAssetId = `${previewCarrierId}_carrier_v3`;
+  const sampleCountry = String(raw.sampleCountry || (previewCarrierId === "japan" ? "Japan" : "")).trim()
+    || (previewCarrierId === "japan" ? "Japan" : previewCarrierId);
   return {
     open: !!raw.open,
     activeFamily: raw.activeFamily === "layers" || TRANSPORT_WORKBENCH_FAMILY_IDS.includes(raw.activeFamily)
@@ -1582,9 +1523,10 @@ function normalizeTransportWorkbenchUiState(rawUi) {
     activeInspectorTab: ["inspect", "display", "aggregation", "labels", "coverage", "data"].includes(String(raw.activeInspectorTab || "").trim().toLowerCase())
       ? String(raw.activeInspectorTab || "").trim().toLowerCase()
       : "inspect",
-    sampleCountry: "Japan",
+    sampleCountry,
+    previewCarrierId,
     previewMode: "bounded_zoom_pan",
-    previewAssetId: "japan_carrier_v3",
+    previewAssetId: String(raw.previewAssetId || defaultPreviewAssetId).trim() || defaultPreviewAssetId,
     previewInteractionMode: "bounded_zoom_pan",
     previewCamera: {
       scale: toFiniteNumber(rawPreviewCamera.scale, 1) || 1,

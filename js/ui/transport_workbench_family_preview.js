@@ -164,14 +164,14 @@ export function getTransportWorkbenchFamilyPreviewSnapshot(familyId, config) {
   return handler.getSnapshot(config);
 }
 
-export async function renderTransportWorkbenchFamilyPreview(familyId, config) {
+export async function renderTransportWorkbenchFamilyPreview(familyId, config, options = {}) {
   const handler = getFamilyHandler(familyId);
   if (!handler?.render) return null;
   Object.entries(FAMILY_PREVIEW_HANDLERS).forEach(([candidateFamilyId, candidateHandler]) => {
     if (candidateFamilyId === familyId) return;
     candidateHandler.clear?.();
   });
-  return handler.render(config);
+  return handler.render(config, options);
 }
 
 export async function warmTransportWorkbenchFamilyPreview(familyId, options = {}) {

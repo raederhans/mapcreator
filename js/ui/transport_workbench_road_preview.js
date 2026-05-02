@@ -626,14 +626,16 @@ function renderRoads(config) {
   return getJapanRoadPreviewSnapshot(config);
 }
 
-function startBackgroundFullPackLoad() {
+function startBackgroundFullPackLoad(options = {}) {
   lineRuntime.startBackgroundFullPackLoad({
     onAuditReady() {
+      if (typeof options.isCurrent === "function" && !options.isCurrent()) return;
       if (runtime.loadState.status === "ready" && runtime.lastRenderedConfig) {
         emitSelectionChange();
       }
     },
     onHydrated() {
+      if (typeof options.isCurrent === "function" && !options.isCurrent()) return;
       if (!runtime.lastRenderedConfig || !rootGroup) return;
       renderRoads(runtime.lastRenderedConfig);
       emitSelectionChange();
@@ -645,9 +647,15 @@ export function setJapanRoadPreviewSelectionListener(listener) {
   lineRuntime.setSelectionListener(listener);
 }
 
-export async function renderJapanRoadPreview(config) {
+export async function renderJapanRoadPreview(config, options = {}) {
   await loadJapanRoadPack(PACK_MODE_PREVIEW);
-  startBackgroundFullPackLoad();
+  if (typeof options.isCurrent === "function" && !options.isCurrent()) {
+    return null;
+  }
+  startBackgroundFullPackLoad(options);
+  if (typeof options.isCurrent === "function" && !options.isCurrent()) {
+    return null;
+  }
   return renderRoads(config);
 }
 

@@ -1333,6 +1333,22 @@
                     </label>
                   </div>
 
+                  <section id="transportVisualModeControls" class="appearance-control-card transport-visual-mode-card mt-3" aria-labelledby="lblTransportVisualMode">
+                    <div class="appearance-control-card-stack">
+                      <div>
+                        <div class="range-row">
+                          <label id="lblTransportVisualMode" class="range-label" for="transportVisualMode" data-i18n="Transport Visual Mode">Transport Visual Mode</label>
+                        </div>
+                        <select id="transportVisualMode" class="select-input mt-2">
+                          <option id="optTransportVisualModeDistribution" value="distribution" selected data-i18n="Distribution">Distribution</option>
+                          <option id="optTransportVisualModeNetwork" value="network" data-i18n="Network">Network</option>
+                          <option id="optTransportVisualModeCoverage" value="coverage" data-i18n="Coverage">Coverage</option>
+                        </select>
+                      </div>
+                      <p id="transportVisualModeHint" class="sidebar-tool-hint" data-i18n="Choose whether transport emphasizes distribution, network structure, or coverage reach.">Choose whether transport emphasizes distribution, network structure, or coverage reach.</p>
+                    </div>
+                  </section>
+
                   <div id="transportAppearanceFamilies" class="appearance-subsection-stack transport-family-stack mt-3">
                     <details id="transportAirportCard" class="appearance-mini-section transport-family-section">
                       <summary class="section-header transport-family-summary">
@@ -2634,7 +2650,7 @@
                       <div class="transport-workbench-layer-order-header">
                         <div class="transport-workbench-layer-order-kicker" data-i18n="Layer Order">Layer Order</div>
                         <h4 class="transport-workbench-layer-order-title" data-i18n="Reorder transport layers">Reorder transport layers</h4>
-                        <p class="transport-workbench-layer-order-text" data-i18n="Drag rows to define the future draw order. Only the road family is live right now, so the rest stay as structural placeholders.">Drag rows to define the future draw order. Only the road family is live right now, so the rest stay as structural placeholders.</p>
+                        <p class="transport-workbench-layer-order-text" data-i18n="Drag rows to define transport layer order. Availability follows the selected family and current runtime data.">Drag rows to define transport layer order. Availability follows the selected family and current runtime data.</p>
                       </div>
                       <div id="transportWorkbenchLayerOrderList" class="transport-workbench-layer-order-list" role="list"></div>
                     </div>

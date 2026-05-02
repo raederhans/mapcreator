@@ -7,6 +7,8 @@ SCENARIO_RESOURCES = REPO_ROOT / "js" / "core" / "scenario_resources.js"
 SCENARIO_STARTUP_HYDRATION = REPO_ROOT / "js" / "core" / "scenario" / "startup_hydration.js"
 SCENARIO_CHUNK_RUNTIME = REPO_ROOT / "js" / "core" / "scenario" / "chunk_runtime.js"
 SCENARIO_RUNTIME_STATE = REPO_ROOT / "js" / "core" / "state" / "scenario_runtime_state.js"
+SCENARIO_SHELL_OVERLAY = REPO_ROOT / "js" / "core" / "scenario_shell_overlay.js"
+MAP_RENDERER = REPO_ROOT / "js" / "core" / "map_renderer.js"
 
 
 class StartupHydrationBoundaryContractTest(unittest.TestCase):
@@ -88,6 +90,19 @@ class StartupHydrationBoundaryContractTest(unittest.TestCase):
         self.assertIn("mergedCitiesPayload !== undefined", content)
         self.assertIn("bundle.cityOverridesPayload || null", content)
         self.assertIn("hasScenarioMergedLayerPayload(mergedLayerPayloads, layerKey)", chunk_runtime_content)
+
+    def test_owner_border_shell_hint_path_stays_wired(self):
+        content = SCENARIO_STARTUP_HYDRATION.read_text(encoding="utf-8")
+        shell_overlay_content = SCENARIO_SHELL_OVERLAY.read_text(encoding="utf-8")
+        renderer_content = MAP_RENDERER.read_text(encoding="utf-8")
+
+        self.assertIn("state.activeScenarioMeshPack?.meshes?.opening_owner_borders", content)
+        self.assertIn("refreshScenarioOpeningOwnerBorders({", content)
+        self.assertIn('reason: "scenario-hydrate-opening"', content)
+        self.assertIn("scenarioAutoShellOwnerByFeatureId", shell_overlay_content)
+        self.assertIn('reason: borderReason ? `${borderReason}:opening` : "scenario-shell-opening"', shell_overlay_content)
+        self.assertIn("feature?.properties?.scenario_shell_owner_hint", renderer_content)
+        self.assertIn("shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode", renderer_content)
 
     def test_geo_locale_patch_and_blank_defaults_stay_stable(self):
         content = SCENARIO_STARTUP_HYDRATION.read_text(encoding="utf-8")

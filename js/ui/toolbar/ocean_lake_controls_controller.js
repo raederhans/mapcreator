@@ -152,10 +152,10 @@ export function createOceanLakeControlsController({
       oceanStyleSelect.value = state.styleConfig.ocean.preset || "flat";
     }
     if (oceanTextureOpacity) {
-      oceanTextureOpacity.value = String(Math.round(clamp(state.styleConfig.ocean.opacity || 0.72, 0, 1) * 100));
+      oceanTextureOpacity.value = String(Math.round(clamp(state.styleConfig.ocean.opacity || 0.82, 0, 1) * 100));
     }
     if (oceanTextureOpacityValue) {
-      oceanTextureOpacityValue.textContent = `${Math.round(clamp(state.styleConfig.ocean.opacity || 0.72, 0, 1) * 100)}%`;
+      oceanTextureOpacityValue.textContent = `${Math.round(clamp(state.styleConfig.ocean.opacity || 0.82, 0, 1) * 100)}%`;
     }
     if (oceanTextureScale) {
       oceanTextureScale.value = String(Math.round(clamp(state.styleConfig.ocean.scale || 1, 0.6, 2.4) * 100));
@@ -164,10 +164,10 @@ export function createOceanLakeControlsController({
       oceanTextureScaleValue.textContent = `${clamp(state.styleConfig.ocean.scale || 1, 0.6, 2.4).toFixed(2)}x`;
     }
     if (oceanContourStrength) {
-      oceanContourStrength.value = String(Math.round(clamp(state.styleConfig.ocean.contourStrength || 0.75, 0, 1) * 100));
+      oceanContourStrength.value = String(Math.round(clamp(state.styleConfig.ocean.contourStrength || 0.34, 0, 1) * 100));
     }
     if (oceanContourStrengthValue) {
-      oceanContourStrengthValue.textContent = `${Math.round(clamp(state.styleConfig.ocean.contourStrength || 0.75, 0, 1) * 100)}%`;
+      oceanContourStrengthValue.textContent = `${Math.round(clamp(state.styleConfig.ocean.contourStrength || 0.34, 0, 1) * 100)}%`;
     }
     if (oceanStylePresetHint) {
       oceanStylePresetHint.textContent = getOceanPresetHint(state.styleConfig.ocean.preset || "flat");
@@ -263,20 +263,20 @@ export function createOceanLakeControlsController({
       }
     };
 
-    syncZoomSlider(oceanShallowFadeEndZoom, oceanShallowFadeEndZoomValue, state.styleConfig.ocean.shallowBandFadeEndZoom || 2.8, 2.1, 4.8);
-    syncZoomSlider(oceanMidFadeEndZoom, oceanMidFadeEndZoomValue, state.styleConfig.ocean.midBandFadeEndZoom || 3.4, 2.7, 5.2);
-    syncZoomSlider(oceanDeepFadeEndZoom, oceanDeepFadeEndZoomValue, state.styleConfig.ocean.deepBandFadeEndZoom || 4.2, 3.3, 6);
+    syncZoomSlider(oceanShallowFadeEndZoom, oceanShallowFadeEndZoomValue, state.styleConfig.ocean.shallowBandFadeEndZoom || 2.5, 2.1, 4.8);
+    syncZoomSlider(oceanMidFadeEndZoom, oceanMidFadeEndZoomValue, state.styleConfig.ocean.midBandFadeEndZoom || 3.0, 2.7, 5.2);
+    syncZoomSlider(oceanDeepFadeEndZoom, oceanDeepFadeEndZoomValue, state.styleConfig.ocean.deepBandFadeEndZoom || 3.8, 3.3, 6);
     syncZoomSlider(
       oceanScenarioSyntheticContourFadeEndZoom,
       oceanScenarioSyntheticContourFadeEndZoomValue,
-      state.styleConfig.ocean.scenarioSyntheticContourFadeEndZoom || 3.0,
+      state.styleConfig.ocean.scenarioSyntheticContourFadeEndZoom || 2.7,
       2.1,
       4.6
     );
     syncZoomSlider(
       oceanScenarioShallowContourFadeEndZoom,
       oceanScenarioShallowContourFadeEndZoomValue,
-      state.styleConfig.ocean.scenarioShallowContourFadeEndZoom || 3.4,
+      state.styleConfig.ocean.scenarioShallowContourFadeEndZoom || 3.1,
       2.5,
       5
     );
@@ -386,7 +386,7 @@ export function createOceanLakeControlsController({
 
     bindOceanVisualInput(oceanTextureOpacity, (event, commitNow) => {
       const value = Number(event.target.value);
-      state.styleConfig.ocean.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.72, 0, 1);
+      state.styleConfig.ocean.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.82, 0, 1);
       if (oceanTextureOpacityValue) {
         oceanTextureOpacityValue.textContent = `${event.target.value}%`;
       }
@@ -412,7 +412,7 @@ export function createOceanLakeControlsController({
 
     bindOceanVisualInput(oceanContourStrength, (event, commitNow) => {
       const value = Number(event.target.value);
-      state.styleConfig.ocean.contourStrength = clamp(Number.isFinite(value) ? value / 100 : 0.75, 0, 1);
+      state.styleConfig.ocean.contourStrength = clamp(Number.isFinite(value) ? value / 100 : 0.34, 0, 1);
       if (oceanContourStrengthValue) {
         oceanContourStrengthValue.textContent = `${event.target.value}%`;
       }

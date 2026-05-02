@@ -20,6 +20,11 @@ import {
   state as runtimeState,
 } from "./state.js";
 import {
+  normalizeTransportOverviewVisualMode,
+  resolveTransportOverviewLineStrategy,
+  resolveTransportOverviewPointStrategy,
+} from "./transport_capability_registry.js";
+import {
   createDefaultOperationGraphicsEditorState,
   createDefaultOperationalLineEditorState,
   createDefaultSpecialZoneEditorState,
@@ -342,21 +347,21 @@ const BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_START_ZOOM = 2.4;
 const BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_END_ZOOM = 3.4;
 const BATHYMETRY_PRESET_PROFILES = Object.freeze({
   bathymetry_soft: Object.freeze({
-    defaultOpacity: 0.78,
-    defaultScale: 1.08,
-    defaultContourStrength: 0.30,
-    bandAlphaBase: 0.54,
-    contourAlphaBase: 0.12,
+    defaultOpacity: 0.84,
+    defaultScale: 1.16,
+    defaultContourStrength: 0.34,
+    bandAlphaBase: 0.62,
+    contourAlphaBase: 0.14,
     contourLineWidthBase: 0.30,
     contourLineWidthScale: 0.35,
     skipAlternateContourDepths: true,
   }),
   bathymetry_contours: Object.freeze({
-    defaultOpacity: 0.62,
-    defaultScale: 0.95,
-    defaultContourStrength: 0.95,
-    bandAlphaBase: 0.22,
-    contourAlphaBase: 0.52,
+    defaultOpacity: 0.56,
+    defaultScale: 1.02,
+    defaultContourStrength: 0.86,
+    bandAlphaBase: 0.18,
+    contourAlphaBase: 0.46,
     contourLineWidthBase: 0.95,
     contourLineWidthScale: 1.25,
     skipAlternateContourDepths: false,
@@ -6881,16 +6886,18 @@ function resolveOwnerBorderCode(entity, ownershipContext = {}) {
   const shellControllerByFeatureId = ownershipContext?.shellControllerByFeatureId || {};
   const scenarioActive = !!ownershipContext?.scenarioActive;
   const useFrontline = scenarioActive && String(ownershipContext?.viewMode || "ownership") === "frontline";
+  const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
+  const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
   if (!featureId) {
     return canonicalCountryCode(fallbackCode);
   }
   const isScenarioShell = isScenarioShellFeature(feature, featureId);
   return canonicalCountryCode(
     (useFrontline ? controllerByFeatureId?.[featureId] : "")
-    || (useFrontline && isScenarioShell ? shellControllerByFeatureId?.[featureId] : "")
+    || (useFrontline && isScenarioShell ? (shellControllerByFeatureId?.[featureId] || shellControllerHintCode) : "")
     || ownershipByFeatureId?.[featureId]
     || (!isScenarioShell ? fallbackCode : "")
-    || (isScenarioShell ? shellOwnerByFeatureId?.[featureId] : "")
+    || (isScenarioShell ? (shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode) : "")
     || ""
   );
 }
@@ -9911,10 +9918,10 @@ function getOceanStyleConfig() {
   const preset = normalizeOceanPreset(ocean.preset);
   return {
     preset,
-    opacity: clamp(Number.isFinite(Number(ocean.opacity)) ? Number(ocean.opacity) : 0.72, 0, 1),
-    scale: clamp(Number.isFinite(Number(ocean.scale)) ? Number(ocean.scale) : 1, 0.6, 2.4),
+    opacity: clamp(Number.isFinite(Number(ocean.opacity)) ? Number(ocean.opacity) : 0.82, 0, 1),
+    scale: clamp(Number.isFinite(Number(ocean.scale)) ? Number(ocean.scale) : 1.14, 0.6, 2.4),
     contourStrength: clamp(
-      Number.isFinite(Number(ocean.contourStrength)) ? Number(ocean.contourStrength) : 0.75,
+      Number.isFinite(Number(ocean.contourStrength)) ? Number(ocean.contourStrength) : 0.34,
       0,
       1
     ),
@@ -10899,6 +10906,15 @@ function warnMissingPhysicalContextOnce(key, message) {
   console.warn(message);
 }
 
+function getDeferredContextLayerLoadState(layerName) {
+  return String(runtimeState.contextLayerLoadStateByName?.[layerName] || "idle").trim().toLowerCase();
+}
+
+function shouldReportDeferredContextLayerGap(layerName) {
+  const loadState = getDeferredContextLayerLoadState(layerName);
+  return loadState === "loaded" || loadState === "error";
+}
+
 function getPhysicalAtlasClass(feature) {
   const props = feature?.properties || {};
   return String(props.atlas_class || props.atlasClass || "").trim();
@@ -10912,6 +10928,9 @@ function getPhysicalAtlasLayer(feature) {
 function getResolvedPhysicalAtlasCollection() {
   if (Array.isArray(runtimeState.physicalSemanticsData?.features) && runtimeState.physicalSemanticsData.features.length > 0) {
     return runtimeState.physicalSemanticsData;
+  }
+  if (!shouldReportDeferredContextLayerGap("physical_semantics")) {
+    return null;
   }
   warnMissingPhysicalContextOnce(
     "physical-semantics-missing",
@@ -11442,15 +11461,17 @@ function drawPhysicalAtlasLayer(k, { interactive = false, clipAlreadyApplied = f
 
   const atlasCollection = getResolvedPhysicalAtlasCollection();
   if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
-    warnMissingPhysicalContextOnce(
-      "physical-atlas-missing",
-      "[physical] Atlas semantics unavailable; skipping physical atlas fill."
-    );
+    if (shouldReportDeferredContextLayerGap("physical_semantics")) {
+      warnMissingPhysicalContextOnce(
+        "physical-atlas-missing",
+        "[physical] Atlas semantics unavailable; skipping physical atlas fill."
+      );
+    }
     collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
       featureCount: 0,
       interactive: !!interactive,
       skipped: true,
-      reason: "no-data",
+      reason: shouldReportDeferredContextLayerGap("physical_semantics") ? "no-data" : "pending-deferred-context",
       maskSource: maskInfo.maskSource,
       maskFeatureCount: maskInfo.maskFeatureCount,
       maskArcRefEstimate: maskInfo.maskArcRefEstimate,
@@ -11568,17 +11589,19 @@ function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied =
   }
 
   if (!Array.isArray(runtimeState.physicalContourMajorData?.features) || runtimeState.physicalContourMajorData.features.length === 0) {
-    warnMissingPhysicalContextOnce(
-      "physical-contours-major-missing",
-      "[physical] global_contours.major.topo.json unavailable or deferred; skipping terrain contours."
-    );
+    if (shouldReportDeferredContextLayerGap("physical_contours_major")) {
+      warnMissingPhysicalContextOnce(
+        "physical-contours-major-missing",
+        "[physical] global_contours.major.topo.json unavailable or deferred; skipping terrain contours."
+      );
+    }
     collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
       featureCount: 0,
       majorFeatureCount: 0,
       minorFeatureCount: 0,
       interactive: !!interactive,
       skipped: true,
-      reason: "no-data",
+      reason: shouldReportDeferredContextLayerGap("physical_contours_major") ? "no-data" : "pending-deferred-context",
       maskSource: maskInfo.maskSource,
       maskFeatureCount: maskInfo.maskFeatureCount,
       maskArcRefEstimate: maskInfo.maskArcRefEstimate,
@@ -11655,10 +11678,12 @@ function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied =
         maxFeatures: dynamicMinorMaxFeatures,
       });
     } else {
+      if (shouldReportDeferredContextLayerGap("physical_contours_minor")) {
         warnMissingPhysicalContextOnce(
           "physical-contours-minor-missing",
           "[physical] global_contours.minor.topo.json unavailable or deferred; skipping minor contours."
         );
+      }
     }
   }
 
@@ -13933,6 +13958,10 @@ function getTransportOverviewStyleConfig() {
   return runtimeState.styleConfig.transportOverview;
 }
 
+function getTransportOverviewVisualMode() {
+  return normalizeTransportOverviewVisualMode(getTransportOverviewStyleConfig().visualMode, "distribution");
+}
+
 function getTransportOverviewFamilyConfig(familyId) {
   const config = getTransportOverviewStyleConfig();
   return config?.[familyId] || {};
@@ -14352,26 +14381,25 @@ function drawAirportsLayer(k, { interactive = false } = {}) {
   const airportConfig = getTransportOverviewFamilyConfig("airport");
   const labelZoomConfig = getTransportOverviewLabelZoomConfig("airport", airportConfig.labelDensity);
   const visualStyle = getTransportOverviewAirportVisualStyle(airportConfig.primaryColor, airportConfig.visualStrength);
-  const zoomAllowance = getTransportOverviewZoomRevealAllowance(k);
-  const revealFloor = Math.max(getTransportAirportScopeThreshold(airportConfig.scope), 3 - zoomAllowance);
+  const strategy = resolveTransportOverviewPointStrategy("airport", airportConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
   drawContextFacilityPointLayer("drawAirportsLayer", runtimeState.airportsData, k, {
     familyId: "airport",
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showAirports,
-    thresholdRank: Math.max(
-      getTransportOverviewImportanceThresholdRank(airportConfig.importanceThreshold),
-      revealFloor,
-    ),
+    thresholdRank: strategy.thresholdRank,
     shape: "diamond",
     fillStyle: visualStyle.fillStyle,
     strokeStyle: visualStyle.strokeStyle,
     labelColor: visualStyle.labelColor,
-    opacity: airportConfig.opacity,
-    labelsEnabled: airportConfig.labelsEnabled,
+    opacity: clamp(Number(airportConfig.opacity ?? 0.68), 0, 1) * strategy.opacityMultiplier,
+    labelsEnabled: strategy.labelsEnabled,
     nationalLabelScale: labelZoomConfig.nationalLabelScale,
     regionalLabelScale: labelZoomConfig.regionalLabelScale,
-    radiusScale: visualStyle.radiusScale,
-    strokeScale: visualStyle.strokeScale,
+    radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
+    strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
     hoverScale: visualStyle.hoverScale,
     highlightStroke: visualStyle.highlightStroke,
     getLabelText: (properties) => getTransportOverviewAirportLabelText(properties, airportConfig.labelMode),
@@ -14382,25 +14410,25 @@ function drawPortsLayer(k, { interactive = false } = {}) {
   const portConfig = getTransportOverviewFamilyConfig("port");
   const labelZoomConfig = getTransportOverviewLabelZoomConfig("port", portConfig.labelDensity);
   const visualStyle = getTransportOverviewPortVisualStyle(portConfig.primaryColor, portConfig.visualStrength);
-  const revealFloor = Math.max(getTransportPortScopeThreshold(portConfig.scope), getTransportPortZoomRevealFloor(k));
+  const strategy = resolveTransportOverviewPointStrategy("port", portConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
   drawContextFacilityPointLayer("drawPortsLayer", runtimeState.portsData, k, {
     familyId: "port",
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showPorts,
-    thresholdRank: Math.max(
-      getTransportOverviewImportanceThresholdRank(portConfig.importanceThreshold),
-      revealFloor,
-    ),
+    thresholdRank: strategy.thresholdRank,
     shape: "square",
     fillStyle: visualStyle.fillStyle,
     strokeStyle: visualStyle.strokeStyle,
     labelColor: visualStyle.labelColor,
-    opacity: portConfig.opacity,
-    labelsEnabled: portConfig.labelsEnabled,
+    opacity: clamp(Number(portConfig.opacity ?? 0.64), 0, 1) * strategy.opacityMultiplier,
+    labelsEnabled: strategy.labelsEnabled,
     nationalLabelScale: labelZoomConfig.nationalLabelScale,
     regionalLabelScale: labelZoomConfig.regionalLabelScale,
-    radiusScale: visualStyle.radiusScale,
-    strokeScale: visualStyle.strokeScale,
+    radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
+    strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
     hoverScale: visualStyle.hoverScale,
     highlightStroke: visualStyle.highlightStroke,
     getLabelText: (properties) => getTransportOverviewPortLabelText(properties, portConfig.labelMode),
@@ -14446,8 +14474,12 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
     return;
   }
   const railConfig = getTransportOverviewFamilyConfig("rail");
-  const minimumScopeRank = getTransportRailScopeThreshold(railConfig.scope);
-  const maximumRevealRank = getTransportRailRevealRankThreshold(railConfig.importanceThreshold);
+  const strategy = resolveTransportOverviewLineStrategy("rail", railConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  const minimumScopeRank = strategy.minimumScopeRank;
+  const maximumRevealRank = strategy.maximumRevealRank;
   const visualStyle = getTransportOverviewRailVisualStyle(railConfig.primaryColor, railConfig.visualStrength);
   const featuresByClass = {
     regional: [],
@@ -14498,9 +14530,9 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
       fillStyle: visualStyle.regionalStroke,
       strokeStyle: mixCanvasColors(visualStyle.regionalStroke, "#ffffff", 0.7) || "#ffffff",
       labelColor: visualStyle.mainlineStroke,
-      opacity: clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * 0.9,
+      opacity: clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * 0.9 * strategy.opacityMultiplier,
       labelsEnabled: false,
-      radiusScale: 0.92,
+      radiusScale: 0.92 * Math.max(0.88, strategy.widthMultiplier * 0.92),
       strokeScale: 0.95,
       hoverScale: 1.1,
       highlightStroke: "#ffffff",
@@ -14517,7 +14549,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
     });
   }
   const labelZoomConfig = getTransportOverviewLabelZoomConfig("rail", railConfig.labelDensity);
-  const labelsEnabled = !!railConfig.labelsEnabled;
+  const labelsEnabled = !!railConfig.labelsEnabled && strategy.labelsEnabled;
   const visibleLabelEntries = [];
   if (labelsEnabled) {
     const gridSize = getTransportRailLabelGridSize(railConfig.labelDensity);
@@ -14551,9 +14583,9 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
   const drawFeatureSet = (features, strokeStyle, lineWidth, opacity) => {
     if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
     context.save();
-    context.globalAlpha = clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * opacity;
+    context.globalAlpha = clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * opacity * strategy.opacityMultiplier;
     context.strokeStyle = strokeStyle;
-    context.lineWidth = lineWidth / Math.max(0.0001, Number(k || 1));
+    context.lineWidth = (lineWidth * strategy.widthMultiplier) / Math.max(0.0001, Number(k || 1));
     context.lineCap = "round";
     context.lineJoin = "round";
     features.forEach((feature) => {
@@ -14642,8 +14674,12 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
     return;
   }
   const roadConfig = getTransportOverviewFamilyConfig("road");
-  const minimumScopeRank = getTransportRoadScopeThreshold(roadConfig.scope);
-  const maximumRevealRank = getTransportRoadRevealRankThreshold(roadConfig.importanceThreshold);
+  const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  const minimumScopeRank = strategy.minimumScopeRank;
+  const maximumRevealRank = strategy.maximumRevealRank;
   const visualStyle = getTransportOverviewRoadVisualStyle(roadConfig.primaryColor, roadConfig.visualStrength);
   const featuresByClass = {
     trunk: [],
@@ -14677,9 +14713,9 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
   const drawFeatureSet = (features, strokeStyle, lineWidth, opacity) => {
     if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
     context.save();
-    context.globalAlpha = clamp(Number(roadConfig.opacity ?? 0.72), 0, 1) * opacity;
+    context.globalAlpha = clamp(Number(roadConfig.opacity ?? 0.72), 0, 1) * opacity * strategy.opacityMultiplier;
     context.strokeStyle = strokeStyle;
-    context.lineWidth = lineWidth / Math.max(0.0001, Number(k || 1));
+    context.lineWidth = (lineWidth * strategy.widthMultiplier) / Math.max(0.0001, Number(k || 1));
     context.lineCap = "round";
     context.lineJoin = "round";
     features.forEach((feature) => {

@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 STARTUP_SCENARIO_BOOT_JS = REPO_ROOT / "js" / "bootstrap" / "startup_scenario_boot.js"
+DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail_promotion.js"
 
 
 class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
@@ -33,6 +34,20 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn("runtimeState.scenarioApplyInFlight = true;", owner_content)
         self.assertIn("runtimeState.scenarioApplyInFlight = false;", owner_content)
 
+    def test_startup_apply_keeps_detail_health_and_toasts_deferred(self):
+        owner_content = STARTUP_SCENARIO_BOOT_JS.read_text(encoding="utf-8")
+        deferred_content = DEFERRED_DETAIL_PROMOTION_JS.read_text(encoding="utf-8")
+
+        self.assertEqual(owner_content.count("showToastOnComplete: false,"), 2)
+        self.assertNotIn("refreshScenarioDataHealth", owner_content)
+        self.assertIn("function syncScenarioReadyUiAfterDetailPromotion()", deferred_content)
+        self.assertIn("showWarningToast: false,", deferred_content)
+        self.assertIn("showErrorToast: false,", deferred_content)
+        self.assertLess(
+            deferred_content.index("runtimeState.detailPromotionCompleted = true;"),
+            deferred_content.index("syncScenarioReadyUiAfterDetailPromotion();"),
+        )
+
     def test_main_keeps_bootstrap_entry_and_ready_state_facade(self):
         donor_content = MAIN_JS.read_text(encoding="utf-8")
 
@@ -44,6 +59,18 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn("await finalizeReadyState(renderDispatcher);", donor_content)
         self.assertIsNone(re.search(r"await applyScenarioBundleCommand\s*\(", donor_content))
         self.assertIsNone(re.search(r"defaultScenarioBundle\s*=\s*await loadScenarioBundle\s*\(", donor_content))
+
+    def test_main_keeps_deferred_physical_atlas_and_contour_pending_paths(self):
+        donor_content = MAIN_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function schedulePostReadyDeferredContextWarmup()", donor_content)
+        self.assertIn("requestedLayerNames.push(\"physical-set\");", donor_content)
+        self.assertIn("requestedContourLayerNames.push(\"physical-contours-set\");", donor_content)
+        self.assertIn("schedulePostReadyTask(\"post-ready-context-warmup\"", donor_content)
+        self.assertIn("schedulePostReadyTask(\"post-ready-contour-warmup\"", donor_content)
+        self.assertIn("ensureContextLayerDataReady(requestedContourLayerNames, {", donor_content)
+        self.assertIn('reason: "post-ready-contours"', donor_content)
+        self.assertIn("pendingTaskKeys,", donor_content)
 
 
 if __name__ == "__main__":

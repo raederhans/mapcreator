@@ -368,9 +368,15 @@ export function createBorderDrawOwner({
         ? [state.cachedScenarioOpeningOwnerBorders]
         : null;
     let empireMeshes = dynamicOwnerMeshes || state.cachedCountryBorders;
+    const shouldReportScenarioOwnerOnlyGap =
+      !state.scenarioApplyInFlight
+      && !state.startupReadonly
+      && !state.startupReadonlyUnlockInFlight
+      && !state.detailPromotionInFlight
+      && !!state.detailPromotionCompleted;
     if (scenarioOwnerOnlyBorders) {
       empireMeshes = dynamicOwnerMeshes || openingOwnerMeshes || null;
-      if (!dynamicOwnerMeshes && !openingOwnerMeshes && state.cachedCountryBorders?.length) {
+      if (!dynamicOwnerMeshes && !openingOwnerMeshes && state.cachedCountryBorders?.length && shouldReportScenarioOwnerOnlyGap) {
         const scenarioId = String(state.activeScenarioId || "").trim() || "(unknown)";
         const warnings = getScenarioOwnerOnlyCanonicalFallbackWarnings();
         if (!warnings.has(scenarioId)) {

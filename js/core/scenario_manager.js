@@ -633,7 +633,13 @@ async function applyScenarioBundle(
         }
       });
     }
-    if (dataHealth.warning) {
+    const shouldExposeDetailVisibilityWarning =
+      !!dataHealth.warning
+      && !bundle?.loadDiagnostics?.startupBundle
+      && !runtimeState.startupReadonly
+      && !runtimeState.startupReadonlyUnlockInFlight
+      && !runtimeState.detailPromotionInFlight;
+    if (shouldExposeDetailVisibilityWarning) {
       console.warn(
         `[scenario] Detail visibility gate triggered for ${staged.scenarioId}: runtime=${dataHealth.runtimeFeatureCount}, expected=${dataHealth.expectedFeatureCount}, ratio=${dataHealth.ratio.toFixed(3)} (min=${dataHealth.minRatio}).`
       );

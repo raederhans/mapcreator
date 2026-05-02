@@ -274,9 +274,14 @@ async function runPostScenarioApplyEffects({
         console.warn(`[scenario] Optional layer visibility sync failed for "${scenarioId}".`, error);
       });
   }
+  const shouldExposeScenarioDataHealthSignals =
+    !bundle?.loadDiagnostics?.startupBundle
+    && !runtimeState.startupReadonly
+    && !runtimeState.startupReadonlyUnlockInFlight
+    && !runtimeState.detailPromotionInFlight;
   const dataHealth = refreshScenarioDataHealth({
-    showWarningToast: true,
-    showErrorToast: true,
+    showWarningToast: shouldExposeScenarioDataHealthSignals,
+    showErrorToast: shouldExposeScenarioDataHealthSignals,
   });
   syncCountryUi({ renderNow: useSingleFinalRender ? true : (renderNow && !suppressRender) });
   return {

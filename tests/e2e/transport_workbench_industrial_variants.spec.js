@@ -2,15 +2,12 @@ const { test, expect } = require("@playwright/test");
 const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
 
 async function openTransportWorkbench(page) {
-  await page.evaluate(async () => {
-    const { state } = await import("/js/core/state.js");
-    state.openTransportWorkbenchFn?.();
-  });
-  await page.waitForSelector(".transport-workbench-carrier-screen-labels", { timeout: 120000 });
+  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
   await page.waitForFunction(() => {
-    const panel = document.querySelector(".transport-workbench-overlay");
+    const panel = document.querySelector("#transportWorkbenchOverlay");
     return !!panel && panel.getAttribute("aria-hidden") === "false";
   }, { timeout: 120000 });
+  await page.waitForSelector(".transport-workbench-carrier-screen-labels", { timeout: 120000 });
 }
 
 test("transport workbench industrial variants load from the shared manifest contract", async ({ page }) => {

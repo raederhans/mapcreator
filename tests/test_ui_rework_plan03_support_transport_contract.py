@@ -113,6 +113,38 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         for token in required_tokens:
             self.assertIn(token, content)
 
+    def test_appearance_transport_visual_mode_dom_and_controller_contract(self):
+        index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js").read_text(encoding="utf-8")
+        state_defaults_content = (REPO_ROOT / "js" / "core" / "state_defaults.js").read_text(encoding="utf-8")
+        registry_content = (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
+
+        for token in [
+            'id="transportVisualModeControls" class="appearance-control-card transport-visual-mode-card mt-3" aria-labelledby="lblTransportVisualMode"',
+            'id="lblTransportVisualMode" class="range-label" for="transportVisualMode" data-i18n="Transport Visual Mode"',
+            'id="transportVisualMode" class="select-input mt-2"',
+            'id="optTransportVisualModeDistribution" value="distribution" selected data-i18n="Distribution"',
+            'id="optTransportVisualModeNetwork" value="network" data-i18n="Network"',
+            'id="optTransportVisualModeCoverage" value="coverage" data-i18n="Coverage"',
+            'id="transportVisualModeHint" class="sidebar-tool-hint" data-i18n="Choose whether transport emphasizes distribution, network structure, or coverage reach."',
+        ]:
+            self.assertIn(token, index_content)
+
+        for token in [
+            'const transportVisualMode = document.getElementById("transportVisualMode");',
+            'const getTransportAppearanceVisualMode = () => normalizeTransportOverviewVisualMode(',
+            'if (transportVisualMode) transportVisualMode.value = visualMode;',
+            'if (transportVisualMode) transportVisualMode.disabled = !transportEnabled;',
+            'transportVisualMode.addEventListener("change", (event) => {',
+            'getTransportAppearanceConfig().visualMode = normalizeTransportOverviewVisualMode(',
+            'renderDirty("transport-visual-mode");',
+        ]:
+            self.assertIn(token, controller_content)
+
+        self.assertIn('visualMode: "distribution",', state_defaults_content)
+        self.assertIn('visualMode: normalizeTransportOverviewVisualMode(source.visualMode, "distribution"),', state_defaults_content)
+        self.assertIn('TRANSPORT_OVERVIEW_VISUAL_MODES = Object.freeze(["distribution", "network", "coverage"])', registry_content)
+
     def test_toolbar_drops_legacy_transport_info_renderer_and_uses_new_copy(self):
         toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js").read_text(encoding="utf-8")

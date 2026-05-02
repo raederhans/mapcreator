@@ -1304,6 +1304,14 @@
       "en": "Coverage",
       "zh": "覆盖范围"
     },
+    "Distribution": {
+      "en": "Distribution",
+      "zh": "分布"
+    },
+    "Network": {
+      "en": "Network",
+      "zh": "网络"
+    },
     "Coverage Reach": {
       "en": "Coverage Reach",
       "zh": "覆盖范围"
@@ -1684,9 +1692,9 @@
       "en": "Draft Overrides",
       "zh": "草稿覆盖"
     },
-    "Drag rows to define the future draw order. Only the road family is live right now, so the rest stay as structural placeholders.": {
-      "en": "Drag rows to define the future draw order. Only the road family is live right now, so the rest stay as structural placeholders.",
-      "zh": "拖动行来定义未来的绘制顺序。目前只有道路系列处于活动状态，因此其余部分仍作为结构占位符。"
+    "Drag rows to define transport layer order. Availability follows the selected family and current runtime data.": {
+      "en": "Drag rows to define transport layer order. Availability follows the selected family and current runtime data.",
+      "zh": "拖动各行来定义 transport 图层顺序。当前可用性会跟随所选 family 和运行时数据。"
     },
     "Drag white handles to move vertices, click midpoint pips to insert, then remove the selected vertex if needed.": {
       "en": "Drag white handles to move vertices, click midpoint pips to insert, then remove the selected vertex if needed.",
@@ -2888,10 +2896,6 @@
       "en": "Load a supported family to inspect live parameters, preview controls, and map application rules.",
       "zh": "加载一个已接入的家族后，就能查看实时参数、预览控件和地图应用规则。"
     },
-    "Load on demand from roads + road_labels Japan packs": {
-      "en": "Load on demand from roads + road_labels Japan packs",
-      "zh": "从道路 + road_labels 日本 包按需加载"
-    },
     "Loading HOI4 unit icon library...": {
       "en": "Loading HOI4 unit icon library...",
       "zh": "正在加载钢铁雄心4单位图标库..."
@@ -3724,10 +3728,6 @@
       "en": "Overall road line opacity.",
       "zh": "整体道路线不透明度。"
     },
-    "Overall road_labels opacity.": {
-      "en": "Overall road_labels opacity.",
-      "zh": "总体道路标签不透明度。"
-    },
     "Overlay": {
       "en": "Overlay",
       "zh": "覆盖层"
@@ -4359,10 +4359,6 @@
     "Road": {
       "en": "Road",
       "zh": "路"
-    },
-    "Road and rail are the only Japan families with detailed controls right now. This family keeps only its reserved shell.": {
-      "en": "Road and rail are the only Japan families with detailed controls right now. This family keeps only its reserved shell.",
-      "zh": "当前只有道路和铁路两个日本类别具备详细控件。这个类别只保留预留外壳。"
     },
     "Road carrier": {
       "en": "Road carrier",
@@ -5424,10 +5420,6 @@
       "en": "These controls style only the airport overlay shell.",
       "zh": "这些控件仅设置机场覆盖层外壳的样式。"
     },
-    "These controls style only the future rail overlay shell.": {
-      "en": "These controls style only the future rail overlay shell.",
-      "zh": "这些控件仅设计未来轨道覆盖外壳的样式。"
-    },
     "These controls style only the port overlay shell.": {
       "en": "These controls style only the port overlay shell.",
       "zh": "这些控件只调整港口叠加层外壳的样式。"
@@ -5548,6 +5540,10 @@
       "en": "Transport families",
       "zh": "交通类别"
     },
+    "Transport Visual Mode": {
+      "en": "Transport Visual Mode",
+      "zh": "运输视觉模式"
+    },
     "Transport guide": {
       "en": "Transport guide",
       "zh": "运输指南"
@@ -5559,6 +5555,26 @@
     "Transport workbench": {
       "en": "Transport workbench",
       "zh": "运输工作台"
+    },
+    "Choose whether transport emphasizes distribution, network structure, or coverage reach.": {
+      "en": "Choose whether transport emphasizes distribution, network structure, or coverage reach.",
+      "zh": "选择 transport 更强调分布、网络骨架还是覆盖范围。"
+    },
+    "Workbench preview only": {
+      "en": "Workbench preview only",
+      "zh": "仅工作台预览"
+    },
+    "Workbench runtime state": {
+      "en": "Workbench runtime state",
+      "zh": "工作台运行时状态"
+    },
+    "Workbench-only family": {
+      "en": "Workbench-only family",
+      "zh": "仅工作台 family"
+    },
+    "Local layer board": {
+      "en": "Local layer board",
+      "zh": "本地图层排序板"
     },
     "Tropical Rainforest": {
       "en": "Tropical Rainforest",
@@ -5587,10 +5603,6 @@
     "Turn the major station layer on or off.": {
       "en": "Turn the major station layer on or off.",
       "zh": "打开或关闭主站图层。"
-    },
-    "Turns road_labels on or off.": {
-      "en": "Turns road_labels on or off.",
-      "zh": "打开或关闭 road_labels。"
     },
     "Twilight Width": {
       "en": "Twilight Width",
@@ -5752,10 +5764,6 @@
       "en": "Use the bottom command bar for fast entry, or start drawing here for the selected line type.",
       "zh": "可使用底部命令栏快速开始，或在此为所选线型开始绘制。"
     },
-    "Use the center board to sort the seven transport families. Left stays as context only, while the right deck owns all tuning.": {
-      "en": "Use the center board to sort the seven transport families. Left stays as context only, while the right deck owns all tuning.",
-      "zh": "使用中心板对七个运输系列进行排序。左侧仅作为上下文，而右侧面板则拥有所有调整。"
-    },
     "Use the gear button for the full counter editor.": {
       "en": "Use the gear button for the full counter editor.",
       "zh": "使用完整计数器编辑器的齿轮按钮。"
@@ -5840,29 +5848,13 @@
       "en": "Waiting for airports Japan pack",
       "zh": "等待机场日本包"
     },
-    "Waiting for energy_facilities Japan pack manifest": {
-      "en": "Waiting for energy_facilities Japan pack manifest",
-      "zh": "等待 energy_facility 日本 包清单"
-    },
-    "Waiting for industrial_zones Japan pack manifest": {
-      "en": "Waiting for industrial_zones Japan pack manifest",
-      "zh": "等待 Industrial_zones 日本 包装清单"
-    },
     "Waiting for logistics_hubs Japan pack": {
       "en": "Waiting for logistics_hubs Japan pack",
       "zh": "等待物流_hubs日本包"
     },
-    "Waiting for mineral_resources Japan pack manifest": {
-      "en": "Waiting for mineral_resources Japan pack manifest",
-      "zh": "等待 Mineral_resources 日本 包清单"
-    },
     "Waiting for ports Japan pack": {
       "en": "Waiting for ports Japan pack",
       "zh": "等待港口日本包"
-    },
-    "Waiting for railways + rail_stations_major Japan packs": {
-      "en": "Waiting for railways + rail_stations_major Japan packs",
-      "zh": "等待铁路+铁路_车站_日本主要包"
     },
     "Warlord / regional tag": {
       "en": "Warlord / regional tag",
@@ -6056,10 +6048,6 @@
       "en": "regions",
       "zh": "个区域"
     },
-    "road_labels remains a separate pack focused on motorway and national refs.": {
-      "en": "road_labels remains a separate pack focused on motorway and national refs.",
-      "zh": "road_labels 仍然是一个单独的包，专注于高速公路和国家参考。"
-    },
     "{count} features selected.": {
       "en": "{count} features selected.",
       "zh": "已选择 {count} 个地块。"
@@ -6175,6 +6163,58 @@
     "Style and labels.": {
       "en": "Style and labels.",
       "zh": "样式与标签。"
+    },
+    "This family stays live in the workbench, and its main-map bridge follows its current capability.": {
+      "en": "This family stays live in the workbench, and its main-map bridge follows its current capability.",
+      "zh": "这个 family 会继续在工作台中保持 live，主地图桥接能力则按当前 capability 决定。"
+    },
+    "These controls style the live rail preview and the shared rail overview bridge.": {
+      "en": "These controls style the live rail preview and the shared rail overview bridge.",
+      "zh": "这些控件会同时调整 live 铁路预览和共享铁路总览桥接。"
+    },
+    "Use the center board to reorder the 8 transport families. The left column provides context, and the right column mirrors the current state.": {
+      "en": "Use the center board to reorder the 8 transport families. The left column provides context, and the right column mirrors the current state.",
+      "zh": "使用中间排序板调整 8 个 transport families 的绘制顺序。左侧负责上下文，右侧负责状态查看。"
+    },
+    "Drag rows to define the transport layer order. Live transport families stay available here, and the board remains local to the workbench.": {
+      "en": "Drag rows to define the transport layer order. Live transport families stay available here, and the board remains local to the workbench.",
+      "zh": "拖动各行来定义 transport 图层顺序。已启用的 transport families 会在这里保持可用，这个排序板仍只作用于工作台。"
+    },
+    "Loads on demand from the Japan road geometry and reference-label packs": {
+      "en": "Loads on demand from the Japan road geometry and reference-label packs",
+      "zh": "按需加载日本道路几何和参考标签数据包。"
+    },
+    "Overall road reference-label opacity.": {
+      "en": "Overall road reference-label opacity.",
+      "zh": "道路参考标签的整体不透明度。"
+    },
+    "Turns road reference labels on or off.": {
+      "en": "Turns road reference labels on or off.",
+      "zh": "打开或关闭道路参考标签。"
+    },
+    "Reference labels stay in a dedicated pack focused on motorway and national route numbers.": {
+      "en": "Reference labels stay in a dedicated pack focused on motorway and national route numbers.",
+      "zh": "参考标签保持在独立数据包中，重点覆盖高速公路和国家级路线编号。"
+    },
+    "Waiting for the Japan rail lines and major-station packs": {
+      "en": "Waiting for the Japan rail lines and major-station packs",
+      "zh": "等待日本铁路线路和主要车站数据包。"
+    },
+    "Waiting for the Japan mineral resource pack manifest": {
+      "en": "Waiting for the Japan mineral resource pack manifest",
+      "zh": "等待日本矿产资源数据包清单。"
+    },
+    "Waiting for the Japan energy facility pack manifest": {
+      "en": "Waiting for the Japan energy facility pack manifest",
+      "zh": "等待日本能源设施数据包清单。"
+    },
+    "Waiting for the Japan industrial land pack manifest": {
+      "en": "Waiting for the Japan industrial land pack manifest",
+      "zh": "等待日本工业用地数据包清单。"
+    },
+    "The live slice stays on motorway, trunk, primary, and dedicated reference labels. Links are carried for review but stay filtered by default.": {
+      "en": "The live slice stays on motorway, trunk, primary, and dedicated reference labels. Links are carried for review but stay filtered by default.",
+      "zh": "当前 live 预览聚焦高速公路、主干道、一级道路和独立参考标签。连接线会保留给审查使用，但默认继续过滤。"
     }
   },
   "geo": {

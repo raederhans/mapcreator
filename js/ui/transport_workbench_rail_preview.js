@@ -679,14 +679,16 @@ function renderRail(config) {
   return getJapanRailPreviewSnapshot(config);
 }
 
-function startBackgroundFullPackLoad() {
+function startBackgroundFullPackLoad(options = {}) {
   lineRuntime.startBackgroundFullPackLoad({
     onAuditReady() {
+      if (typeof options.isCurrent === "function" && !options.isCurrent()) return;
       if ((runtime.loadState.status === "ready" || runtime.loadState.status === "pending") && runtime.lastRenderedConfig) {
         emitSelectionChange();
       }
     },
     onHydrated(pack) {
+      if (typeof options.isCurrent === "function" && !options.isCurrent()) return;
       if (!pack || !runtime.lastRenderedConfig || !rootGroup) return;
       renderRail(runtime.lastRenderedConfig);
       emitSelectionChange();
@@ -698,10 +700,16 @@ export function setJapanRailPreviewSelectionListener(listener) {
   lineRuntime.setSelectionListener(listener);
 }
 
-export async function renderJapanRailPreview(config) {
+export async function renderJapanRailPreview(config, options = {}) {
   await loadJapanRailPack(PACK_MODE_PREVIEW);
+  if (typeof options.isCurrent === "function" && !options.isCurrent()) {
+    return null;
+  }
   if (runtime.loadState.status === "ready") {
-    startBackgroundFullPackLoad();
+    startBackgroundFullPackLoad(options);
+  }
+  if (typeof options.isCurrent === "function" && !options.isCurrent()) {
+    return null;
   }
   return renderRail(config);
 }
