@@ -172,6 +172,17 @@ export function setBaseCityDataPromise(target, promise = null) {
   return target.baseCityDataPromise;
 }
 
+export function setCustomPresets(target, presets = {}) {
+  if (!target || typeof target !== "object") {
+    return {};
+  }
+  target.customPresets =
+    presets && typeof presets === "object" && !Array.isArray(presets)
+      ? { ...presets }
+      : {};
+  return target.customPresets;
+}
+
 export function commitBaseCitySupportData(
   target,
   result,

@@ -195,6 +195,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             ".nojekyll",
             "app/js/main.js",
             "app/data/scenarios/index.json",
+            "app/data/runtime_asset_registry.json",
+            "app/data/country_feature_policies.json",
+            "app/data/city_lights/historical_1930_entries.json",
             "app/data/scenarios/tno_1962/startup.bundle.en.json",
             "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
             "app/data/europe_topology.na_v2.json",
@@ -221,6 +224,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/transport_layers/global_road/shards/w120_w090/roads.topo.json",
             "app/data/transport_layers/japan_road/roads.topo.json",
             "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.geojson",
+            "app/data/europe_topology.highres.json",
+            "app/data/europe_topology.json.bak",
+            "app/data/europe_topology.na_v1.json",
         ):
             with self.subTest(excluded_path=excluded_path):
                 self.assertNotIn(excluded_path, paths)

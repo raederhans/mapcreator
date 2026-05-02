@@ -10,6 +10,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 HISTORY_MANAGER_JS = REPO_ROOT / "js" / "core" / "history_manager.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 INTERACTION_FUNNEL_UI_SYNC_JS = REPO_ROOT / "js" / "core" / "interaction_funnel" / "ui_sync.js"
+I18N_JS = REPO_ROOT / "js" / "ui" / "i18n.js"
 
 
 class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
@@ -89,6 +90,17 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('syncProjectImportUiStateHelper', interaction_funnel_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.RENDER_WATER_REGION_LIST);', interaction_funnel_ui_sync_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.RENDER_SPECIAL_REGION_LIST);', interaction_funnel_ui_sync_content)
+
+    def test_water_and_special_tooltips_do_not_fabricate_country_codes_from_feature_ids(self):
+        content = I18N_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function getTooltipFeatureCountryCode(feature, { useIdFallback = false } = {}) {", content)
+        self.assertIn("return normalizeTooltipCountryCode(getSharedFeatureCountryCode(feature, { useIdFallback }));", content)
+        self.assertIn("const code = getTooltipFeatureCountryCode(feature);", content)
+        self.assertIn(
+            'const countryCode = scenarioBaselineCode || getTooltipFeatureCountryCode(feature, { useIdFallback: true });',
+            content,
+        )
 
 
 if __name__ == "__main__":

@@ -134,11 +134,14 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
         lifecycle_content = SCENARIO_LIFECYCLE_RUNTIME.read_text(encoding="utf-8")
 
         self.assertIn("prepareScenarioActivationContext(bundle)", content)
+        self.assertIn("buildScenarioActivationCommitState(bundle, staged)", content)
+        self.assertIn("runScenarioActivationPreCommitPhase(bundle, staged)", content)
         self.assertIn("commitScenarioActivationState(bundle, staged)", content)
+        self.assertIn("runScenarioActivationPostCommitPhase(bundle, staged)", content)
         self.assertIn("commitScenarioChunkRuntimeState(bundle, staged)", content)
         self.assertIn("prepareScenarioApplyState", content)
         self.assertIn("applyPreparedScenarioState", content)
-        self.assertIn("commitScenarioActivationRuntimeState(runtimeState, {", content)
+        self.assertIn("commitScenarioActivationRuntimeState(runtimeState, nextRuntimeState);", content)
         self.assertNotIn("runtimeState.scenarioRuntimeTopologyData =", content)
         self.assertNotIn("runtimeState.scenarioBaselineOwnersByFeatureId =", content)
         self.assertNotIn('runtimeState.countryNames = staged.mapSemanticMode', content)
@@ -154,6 +157,42 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
         self.assertIn("disableScenarioParentBorders();", content)
         self.assertIn("applyScenarioPaintMode();", content)
         self.assertNotIn('./scenario_apply_pipeline.js', lifecycle_content)
+
+    def test_apply_pipeline_names_pre_commit_commit_post_commit_order(self):
+        content = SCENARIO_APPLY_PIPELINE.read_text(encoding="utf-8")
+        match = re.search(
+            r"function\s+applyPreparedScenarioState\(bundle,\s*staged\)\s*\{(?P<body>[\s\S]*?)\n  \}",
+            content,
+        )
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertRegex(
+            body,
+            r"runScenarioActivationPreCommitPhase\(bundle,\s*staged\);"
+            r"[\s\S]*commitScenarioActivationState\(bundle,\s*staged\);"
+            r"[\s\S]*runScenarioActivationPostCommitPhase\(bundle,\s*staged\);",
+        )
+
+    def test_commit_scenario_activation_runtime_state_stays_pure_state_commit(self):
+        state_content = SCENARIO_RUNTIME_STATE.read_text(encoding="utf-8")
+        start = state_content.index("export function commitScenarioActivationRuntimeState(target, nextState = {}) {")
+        end = state_content.index("\nexport function setScenarioHydrationHealthGateState", start)
+        body = state_content[start:end]
+        side_effect_calls = [
+            "syncScenarioLocalizationState",
+            "applyBlankScenarioPresentationDefaults",
+            "setScenarioAuditUiState",
+            "markLegacyColorStateDirty",
+            "syncScenarioInspectorSelection",
+            "disableScenarioParentBorders",
+            "applyScenarioPaintMode",
+            "syncScenarioOceanFillForActivation",
+            "applyScenarioPerformanceHints",
+            "commitScenarioChunkRuntimeState",
+            "recalculateScenarioOwnerControllerDiffCount",
+        ]
+        for call_name in side_effect_calls:
+            self.assertNotIn(call_name, body)
 
 
 if __name__ == "__main__":

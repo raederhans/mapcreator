@@ -7,8 +7,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import init_map_data
+from map_builder import base_stage
 from map_builder import build_orchestrator
 from map_builder import country_feature_policies
+from map_builder import validation_schema
 from map_builder import config as cfg
 from map_builder.processors import config_subdivisions
 from tools import build_na_detail_topology
@@ -269,6 +271,184 @@ class BuildOrchestratorTest(unittest.TestCase):
             self.assertNotIn("write_build_stage_cache", ordered_names)
             self.assertNotIn("write_timings_json", ordered_names)
 
+    def test_init_base_stage_wrappers_preserve_cache_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            output_path = output_dir / "artifact.json"
+            output_path.write_text("{}", encoding="utf-8")
+
+            signature = init_map_data._compute_stage_signature(
+                stage_name="contract",
+                inputs=[output_path],
+                extra={"mode": "test"},
+            )
+            self.assertEqual(
+                signature,
+                base_stage.compute_stage_signature(
+                    stage_name="contract",
+                    inputs=[output_path],
+                    extra={"mode": "test"},
+                ),
+            )
+
+            cache_payload: dict[str, dict] = {}
+            init_map_data._update_stage_cache(
+                cache_payload=cache_payload,
+                stage_name="contract",
+                signature=signature,
+                outputs=[output_path],
+            )
+            self.assertTrue(
+                init_map_data._should_skip_stage(
+                    cache_payload=cache_payload,
+                    stage_name="contract",
+                    signature=signature,
+                    outputs=[output_path],
+                )
+            )
+
+            init_map_data._write_build_stage_cache(output_dir, cache_payload)
+            self.assertEqual(init_map_data._load_build_stage_cache(output_dir), cache_payload)
+
+    def test_init_primary_topology_wrapper_delegates_to_stage_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            script_dir = root / "scripts"
+            output_dir = root / "data"
+            timings_root = root / "timings"
+            stage_timings: dict[str, dict] = {}
+            build_stage_cache: dict[str, dict] = {}
+            expected = {"world_cities": [], "missing_cntr_code_count": 0}
+
+            with patch.object(
+                init_map_data.primary_topology_stage,
+                "run_primary_topology_bundle",
+                return_value=expected,
+            ) as primary_mock:
+                result = init_map_data.build_primary_topology_bundle(
+                    script_dir,
+                    output_dir,
+                    stage_timings=stage_timings,
+                    build_stage_cache=build_stage_cache,
+                    timings_root=timings_root,
+                )
+
+            self.assertIs(result, expected)
+            primary_mock.assert_called_once()
+            primary_call = primary_mock.call_args
+            self.assertEqual(primary_call.args, (script_dir, output_dir))
+            self.assertIs(primary_call.kwargs["stage_timings"], stage_timings)
+            self.assertIs(primary_call.kwargs["build_stage_cache"], build_stage_cache)
+            self.assertEqual(primary_call.kwargs["timings_root"], timings_root)
+            self.assertIs(primary_call.kwargs["stage_ops"], init_map_data)
+
+    def test_init_detail_topology_wrappers_delegate_to_stage_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            script_dir = root / "scripts"
+            output_dir = root / "data"
+            timings_root = root / "timings"
+            stage_timings: dict[str, dict] = {}
+            build_stage_cache: dict[str, dict] = {}
+
+            with patch.object(init_map_data.detail_topology_stage, "run_ru_city_detail_topology") as ru_mock:
+                init_map_data.build_ru_city_detail_topology(
+                    script_dir,
+                    output_dir,
+                    stage_timings=stage_timings,
+                    build_stage_cache=build_stage_cache,
+                    timings_root=timings_root,
+                )
+
+            ru_mock.assert_called_once()
+            ru_call = ru_mock.call_args
+            self.assertEqual(ru_call.args, (script_dir, output_dir))
+            self.assertIs(ru_call.kwargs["stage_timings"], stage_timings)
+            self.assertIs(ru_call.kwargs["build_stage_cache"], build_stage_cache)
+            self.assertEqual(ru_call.kwargs["timings_root"], timings_root)
+            self.assertEqual(ru_call.kwargs["project_root"], init_map_data.PROJECT_ROOT)
+            self.assertEqual(ru_call.kwargs["init_map_data_path"], Path(init_map_data.__file__))
+            self.assertIs(ru_call.kwargs["fetch_or_load_geojson_func"], init_map_data.fetch_or_load_geojson)
+            self.assertIs(ru_call.kwargs["compute_stage_signature_func"], init_map_data._compute_stage_signature)
+            self.assertIs(ru_call.kwargs["should_skip_stage_func"], init_map_data._should_skip_stage)
+            self.assertIs(ru_call.kwargs["update_stage_cache_func"], init_map_data._update_stage_cache)
+            self.assertIs(ru_call.kwargs["record_stage_timing_func"], init_map_data._record_stage_timing)
+            self.assertIs(ru_call.kwargs["read_optional_json_func"], init_map_data._read_optional_json)
+
+            with patch.object(init_map_data.detail_topology_stage, "run_na_detail_topology") as na_mock:
+                init_map_data.build_na_detail_topology(
+                    script_dir,
+                    output_dir,
+                    stage_timings=stage_timings,
+                    build_stage_cache=build_stage_cache,
+                    timings_root=timings_root,
+                )
+
+            na_mock.assert_called_once()
+            na_call = na_mock.call_args
+            self.assertEqual(na_call.args, (script_dir, output_dir))
+            self.assertIs(na_call.kwargs["stage_timings"], stage_timings)
+            self.assertIs(na_call.kwargs["build_stage_cache"], build_stage_cache)
+            self.assertEqual(na_call.kwargs["timings_root"], timings_root)
+            self.assertEqual(na_call.kwargs["project_root"], init_map_data.PROJECT_ROOT)
+            self.assertEqual(na_call.kwargs["init_map_data_path"], Path(init_map_data.__file__))
+            self.assertIs(na_call.kwargs["compute_stage_signature_func"], init_map_data._compute_stage_signature)
+            self.assertIs(na_call.kwargs["should_skip_stage_func"], init_map_data._should_skip_stage)
+            self.assertIs(na_call.kwargs["update_stage_cache_func"], init_map_data._update_stage_cache)
+            self.assertIs(na_call.kwargs["record_stage_timing_func"], init_map_data._record_stage_timing)
+            self.assertIs(na_call.kwargs["read_optional_json_func"], init_map_data._read_optional_json)
+            self.assertIs(na_call.kwargs["candidate_topology_path_func"], init_map_data._candidate_topology_path)
+            self.assertIs(
+                na_call.kwargs["promote_candidate_topology_if_safe_func"],
+                init_map_data._promote_candidate_topology_if_safe,
+            )
+
+    def test_init_runtime_political_topology_wrapper_delegates_to_stage_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            script_dir = root / "scripts"
+            output_dir = root / "data"
+            timings_root = root / "timings"
+            stage_timings: dict[str, dict] = {}
+            build_stage_cache: dict[str, dict] = {}
+
+            with patch.object(
+                init_map_data.runtime_political_topology_stage,
+                "run_runtime_political_topology",
+            ) as runtime_mock:
+                init_map_data.build_runtime_political_topology(
+                    script_dir,
+                    output_dir,
+                    stage_timings=stage_timings,
+                    build_stage_cache=build_stage_cache,
+                    timings_root=timings_root,
+                )
+
+            runtime_mock.assert_called_once()
+            runtime_call = runtime_mock.call_args
+            self.assertEqual(runtime_call.args, (script_dir, output_dir))
+            self.assertIs(runtime_call.kwargs["stage_timings"], stage_timings)
+            self.assertIs(runtime_call.kwargs["build_stage_cache"], build_stage_cache)
+            self.assertEqual(runtime_call.kwargs["timings_root"], timings_root)
+            self.assertEqual(runtime_call.kwargs["project_root"], init_map_data.PROJECT_ROOT)
+            self.assertEqual(runtime_call.kwargs["init_map_data_path"], Path(init_map_data.__file__))
+            self.assertIs(runtime_call.kwargs["compute_stage_signature_func"], init_map_data._compute_stage_signature)
+            self.assertIs(runtime_call.kwargs["should_skip_stage_func"], init_map_data._should_skip_stage)
+            self.assertIs(runtime_call.kwargs["update_stage_cache_func"], init_map_data._update_stage_cache)
+            self.assertIs(runtime_call.kwargs["record_stage_timing_func"], init_map_data._record_stage_timing)
+            self.assertIs(runtime_call.kwargs["read_optional_json_func"], init_map_data._read_optional_json)
+            self.assertIs(runtime_call.kwargs["candidate_topology_path_func"], init_map_data._candidate_topology_path)
+            self.assertIs(
+                runtime_call.kwargs["promote_candidate_topology_if_safe_func"],
+                init_map_data._promote_candidate_topology_if_safe,
+            )
+
+    def test_validation_schema_owner_matches_orchestrator_stage_contract(self) -> None:
+        self.assertEqual(
+            validation_schema.REQUIRED_CONTRACT_STAGE_NAMES,
+            build_orchestrator.REQUIRED_CONTRACT_STAGE_NAMES,
+        )
+        validation_schema.assert_init_map_data_stage_alignment()
 
     def test_init_config_subdivision_wrapper_delegates_to_processor_owner(self) -> None:
         sentinel = object()
@@ -286,6 +466,7 @@ class BuildOrchestratorTest(unittest.TestCase):
     def test_subdivision_protected_countries_come_from_policy_table(self) -> None:
         policies = country_feature_policies.load_country_feature_policies()
 
+        self.assertEqual(policies["schema_version"], 2)
         self.assertEqual(
             config_subdivisions.SUBDIVISION_PROTECTED_COUNTRIES,
             frozenset(policies["subdivision_protected_countries"]),
@@ -332,11 +513,15 @@ class BuildOrchestratorTest(unittest.TestCase):
         fake_args = Namespace(mode="detail", strict=False, timings_json=None)
 
         with patch.object(init_map_data, "parse_args", return_value=fake_args), patch.object(
+            init_map_data.validation_schema,
+            "assert_init_map_data_stage_alignment",
+        ) as schema_mock, patch.object(
             init_map_data.build_orchestrator,
             "run",
         ) as run_mock:
             init_map_data.main()
 
+        schema_mock.assert_called_once_with()
         run_mock.assert_called_once()
         call_args = run_mock.call_args
         self.assertIs(call_args.args[0], fake_args)

@@ -12,6 +12,7 @@ DATA_LOADER = REPO_ROOT / "js" / "core" / "data_loader.js"
 RUNTIME_ASSET_REGISTRY_SOURCE = REPO_ROOT / "data" / "runtime_asset_registry.json"
 RUNTIME_ASSET_REGISTRY_JS = REPO_ROOT / "js" / "core" / "runtime_asset_registry.js"
 HISTORICAL_1930_CITY_LIGHTS_ASSET = REPO_ROOT / "js" / "core" / "city_lights_historical_1930_asset.js"
+HISTORICAL_1930_CITY_LIGHTS_ENTRIES = REPO_ROOT / "data" / "city_lights" / "historical_1930_entries.json"
 
 
 def _resolve_manifest_output_path(relative_path: str) -> Path:
@@ -57,8 +58,38 @@ class DataManifestContractTest(unittest.TestCase):
         self.assertIn('../../data/runtime_asset_registry.json', registry_source)
         self.assertIn('resolveDataAssetUrl', registry_source)
         self.assertIn('resolveScenarioRegistryUrl', registry_source)
+        self.assertIn('resolveCountryFeaturePoliciesUrl', registry_source)
         self.assertIn('resolveTransportManifestUrl', registry_source)
         self.assertIn('./runtime_asset_registry.js', loader_source)
+        self.assertEqual(
+            assets.get("city_lights:historical_1930:entries", {}).get("url"),
+            "data/city_lights/historical_1930_entries.json",
+        )
+        self.assertEqual(
+            source_registry.get("city_lights", {}).get("historical_1930", {}).get("entries_key"),
+            "city_lights:historical_1930:entries",
+        )
+        self.assertEqual(
+            assets.get("country_feature_policies", {}).get("url"),
+            "data/country_feature_policies.json",
+        )
+        self.assertEqual(source_registry.get("country_feature_policies_key"), "country_feature_policies")
+        self.assertEqual(assets.get("world_cities", {}).get("url"), "data/world_cities.geojson")
+        self.assertEqual(assets.get("context_layer:physical", {}).get("url"), "data/europe_physical.geojson")
+        self.assertEqual(assets.get("transport_catalog:road", {}).get("url"), "data/transport_layers/global_road/catalog.json")
+        self.assertIn('resolveDataAssetUrl("world_cities")', loader_source)
+        self.assertIn('resolveDataAssetUrl("context_layer:physical")', loader_source)
+        self.assertIn('resolveDataAssetUrl("transport_catalog:road")', loader_source)
+        self.assertNotIn("topology:detail:highres", assets)
+        self.assertNotIn("topology:detail:legacy_bak", assets)
+        self.assertNotIn("topology:detail:na_v1", assets)
+        self.assertNotIn("topology:detail:na_v2", assets)
+        self.assertIn('highres: "data/europe_topology.highres.json"', loader_source)
+        self.assertIn('legacy_bak: "data/europe_topology.json.bak"', loader_source)
+        self.assertIn('na_v1: "data/europe_topology.na_v1.json"', loader_source)
+        self.assertIn('na_v2: "data/europe_topology.na_v2.json"', loader_source)
+        self.assertNotIn('const GLOBAL_ROAD_CATALOG_URL = "data/transport_layers/global_road/catalog.json";', loader_source)
+        self.assertNotIn('const PALETTE_REGISTRY_URL = "data/palettes/index.json";', loader_source)
 
         for asset_key, metadata in assets.items():
             expected_url = metadata.get("url")
@@ -75,10 +106,20 @@ class DataManifestContractTest(unittest.TestCase):
         asset_source = HISTORICAL_1930_CITY_LIGHTS_ASSET.read_text(encoding="utf-8")
         self.assertIn('sourceKey: "city_lights:historical_1930:source"', asset_source)
         self.assertIn('exclusionsKey: "city_lights:historical_1930:exclusions"', asset_source)
+        self.assertIn('entriesKey: "city_lights:historical_1930:entries"', asset_source)
         self.assertIn('sourceRefParts: ["data", "world_cities.geojson"]', asset_source)
         self.assertIn('exclusionsRefParts: ["data", "historical_city_lights_1930_exclusions.json"]', asset_source)
+        self.assertIn('entriesRefParts: ["data", "city_lights/historical_1930_entries.json"]', asset_source)
+        self.assertIn('historical_1930_entries.json', asset_source)
+        self.assertNotIn("population: 35676000", asset_source)
         self.assertNotIn("file:///", asset_source)
         self.assertNotIn("C:/", asset_source)
+
+        entries_payload = json.loads(HISTORICAL_1930_CITY_LIGHTS_ENTRIES.read_text(encoding="utf-8"))
+        self.assertEqual(entries_payload.get("asset_key"), "city_lights:historical_1930:entries")
+        self.assertEqual(entries_payload.get("family_id"), "historical_1930")
+        self.assertEqual(entries_payload.get("stats", {}).get("entryCount"), 1580)
+        self.assertEqual(len(entries_payload.get("entries") or []), 1580)
 
 
 if __name__ == "__main__":

@@ -1,33 +1,31 @@
 # Maintainability / Stability Roadmap Execution Plan
 
 ## Goal
-按照《可维护性 / 稳定性整治路线图 v1》完成当前仓库的基线对齐、owner seam 收口、测试门禁补强和大件拆分准备。
+按 2026-05-02 最新后续计划，把 maintainability / stability 路线重新拉回 active，并持续做到真实剩余项完成。
 
 ## Constraints
-- 主线程独占 live browser、E2E、perf gate、长测试。
-- 共享文件 `index.html`、`css/style.css`、`js/ui/toolbar.js` 只能串行集成。
-- 优先最短路径修复，避免新依赖、避免多层 fallback、避免扩大无关范围。
-- 每完成一个阶段都要回写 drift ledger、任务清单和验证证据。
+- 主线程独占 live browser、E2E、长测试、build 轮询。
+- 共享文件 `index.html`、`css/style.css`、`js/ui/toolbar.js` 继续串行集成。
+- 优先最小 diff，避免新依赖、避免 fallback 叠层、避免扩大无关范围。
+- live code 是唯一真相源；旧归档只保留历史参考价值。
 
 ## Acceptance
-- 阶段 0 到阶段 8 的目标全部完成，且有对应验证证据。
-- 运行时 URL 查询入口统一到 manifest + data_loader。
-- state 写入口 guardrail 通过，试点 owner API 接管目标写口。
-- Python country gate / processor chain seam 完成单一 owner 收口。
-- transport capability/apply bridge、FeatureNormalizer、政策表外部化、scenario transaction seam 都完成。
-- 最终 review、查 bug、第一性原理复盘完成，留档齐全。
+- Batch 0 到 Batch 3 的真实剩余项全部完成，并有新鲜验证证据。
+- `docs/active/maintainability-stability-roadmap/` 成为唯一工作留档。
+- 结束前完成 review、查 bug、第一性原理复核、lessons learned 回写。
 
 ## Task List
-- [x] 阶段 0：基线对齐与 drift ledger
-- [x] 阶段 1：资源路径统一与绝对路径清理
-- [x] 阶段 2：state 写入口守卫与小切片试点
-- [x] 阶段 3：Python country gate seam
-- [x] 阶段 4：processor chain seam 与 subdivisions 收口
-- [x] 阶段 5：transport capability / apply bridge 收口
-- [x] 阶段 6：FeatureNormalizer 与颜色/渲染门禁补强
-- [x] 阶段 7：政策表外部化
-- [x] 阶段 8：scenario 事务化与 map_renderer 渐进瘦身
+- [x] Batch 0.1：恢复 active 留档并重新核对 live code
+- [x] Batch 0.2：修复 Pages dist 漏发 `runtime_asset_registry.json`
+- [x] Batch 0.3：确认 transport 当前 `road/rail` 为 preview-only，并修正留档口径
+- [x] Batch 1.1：state guardrail ratchet（87 -> 83）
+- [x] Batch 1.2：JS/Python 共读 `country_feature_policies.json` v2
+- [x] Batch 1.3：feature identity 主路径迁移 + worker 共享 helper 收口
+- [x] Batch 2.1：city lights historical 1930 entries 外部化
+- [x] Batch 2.2：runtime asset registry 第二波主路径收口
+- [x] Batch 2.3：颜色与渲染主动防线
+- [x] Batch 3.1：scenario `preCommit -> commit -> postCommit` seam
+- [x] Batch 3.2：transport preview registry config-driven factory
+- [x] Batch 3.3：`map_renderer.js` 渐进瘦身
+- [x] Batch 3.4：`init_map_data.py` stage 化
 - [x] 最终验证、review、复盘、归档
-
-## Drift Ledger Pointer
-- `docs/active/maintainability-stability-roadmap/task.md`

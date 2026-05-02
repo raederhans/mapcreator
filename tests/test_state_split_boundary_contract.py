@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATE_JS = REPO_ROOT / "js" / "core" / "state.js"
 STATE_DEFAULTS_JS = REPO_ROOT / "js" / "core" / "state_defaults.js"
+COUNTRY_FEATURE_POLICIES_JS = REPO_ROOT / "js" / "core" / "country_feature_policies.js"
 STATE_CATALOG_JS = REPO_ROOT / "js" / "core" / "state_catalog.js"
 STATE_INDEX_JS = REPO_ROOT / "js" / "core" / "state" / "index.js"
 STATE_CONFIG_JS = REPO_ROOT / "js" / "core" / "state" / "config.js"
@@ -46,9 +47,13 @@ class StateSplitBoundaryContractTest(unittest.TestCase):
     def test_state_defaults_owns_constants_and_normalizers(self):
         donor_content = STATE_JS.read_text(encoding="utf-8")
         owner_content = STATE_DEFAULTS_JS.read_text(encoding="utf-8")
+        policy_content = COUNTRY_FEATURE_POLICIES_JS.read_text(encoding="utf-8")
 
-        self.assertIn("const PALETTE_THEMES = {", owner_content)
-        self.assertIn("const countryPalette = {", owner_content)
+        self.assertIn('} from "./country_feature_policies.js";', owner_content)
+        self.assertIn('../../data/country_feature_policies.json', policy_content)
+        self.assertIn("const COUNTRY_FEATURE_POLICIES = countryFeaturePolicies || {};", policy_content)
+        self.assertIn("const PALETTE_THEMES = paletteDisplay.themes || {};", policy_content)
+        self.assertIn("const countryPalette = { ...(paletteDisplay.countryPalette || {}) };", policy_content)
         self.assertIn("function normalizePhysicalStyleConfig(rawConfig)", owner_content)
         self.assertIn("function normalizeTextureStyleConfig(rawConfig)", owner_content)
         self.assertIn("function normalizeDayNightStyleConfig(rawConfig)", owner_content)
@@ -76,6 +81,7 @@ class StateSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("bindStateCompatSurface(state);", content)
         self.assertIn("normalizeMapSemanticMode", defaults_content)
         self.assertIn("countryPalette,", content)
+        self.assertIn("detailOverlaySupportTiers,", content)
 
     def test_state_catalog_owns_catalog_state_factories(self):
         donor_content = STATE_JS.read_text(encoding="utf-8")

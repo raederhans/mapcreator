@@ -32,6 +32,11 @@ export function resolveScenarioRegistryUrl() {
   return resolveDataAssetUrl(scenarioRegistryKey);
 }
 
+export function resolveCountryFeaturePoliciesUrl() {
+  const policyKey = normalizeRuntimeAssetKey(RUNTIME_ASSET_REGISTRY?.country_feature_policies_key || "country_feature_policies");
+  return resolveDataAssetUrl(policyKey);
+}
+
 export function resolveTransportManifestUrl(familyId) {
   const normalizedFamilyId = normalizeRuntimeAssetKey(familyId);
   const assetKey = TRANSPORT_MANIFEST_ASSET_KEYS[normalizedFamilyId];

@@ -129,7 +129,15 @@ else:  # pragma: no cover - palettes mode does not touch GIS stack
     box = None
     unary_union = None
 
-from map_builder import build_orchestrator, config as cfg
+from map_builder import (
+    base_stage,
+    build_orchestrator,
+    config as cfg,
+    detail_topology_stage,
+    primary_topology_stage,
+    runtime_political_topology_stage,
+    validation_schema,
+)
 from map_builder.contracts import DATA_ARTIFACT_SPECS_BY_PATH
 from map_builder.runtime_asset_registry import load_runtime_asset_registry
 
@@ -227,7 +235,7 @@ else:  # pragma: no cover - palettes mode avoids GIS/runtime build imports
 PROJECT_ROOT = Path(__file__).resolve().parent
 D3_VENDOR_PATH = PROJECT_ROOT / 'vendor' / 'd3.v7.min.js'
 TOPOJSON_VENDOR_PATH = PROJECT_ROOT / 'vendor' / 'topojson-client.min.js'
-BUILD_STAGE_CACHE_FILENAME = ".build_stage_cache.json"
+BUILD_STAGE_CACHE_FILENAME = base_stage.BUILD_STAGE_CACHE_FILENAME
 MODERN_CITY_LIGHTS_ASSET_PATH = PROJECT_ROOT / "js" / "core" / "city_lights_modern_asset.js"
 HISTORICAL_1930_CITY_LIGHTS_ASSET_PATH = PROJECT_ROOT / "js" / "core" / "city_lights_historical_1930_asset.js"
 
@@ -745,37 +753,25 @@ def build_antarctic_sectors(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     )
     return combined
 
-try:
-    import resource
-except Exception:  # pragma: no cover - unavailable on some platforms
-    resource = None
-
-
 def _get_peak_memory_mb() -> float | None:
-    if resource is None:
-        return None
-    try:
-        usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    except Exception:
-        return None
-    if sys.platform == "darwin":
-        return round(float(usage) / (1024 * 1024), 2)
-    return round(float(usage) / 1024, 2)
+    return base_stage.get_peak_memory_mb()
 
 
 def _record_stage_timing(timings: dict[str, dict], stage_name: str, start_time: float, **extra: object) -> None:
-    payload = {
-        "wall_time_sec": round(time.perf_counter() - start_time, 3),
-        "peak_memory_mb": _get_peak_memory_mb(),
-    }
-    payload.update(extra)
-    timings[stage_name] = payload
+    base_stage.record_stage_timing(timings, stage_name, start_time, **extra)
 
 
 def _write_timings_json(path: Path | None, timings: dict[str, dict]) -> None:
-    if path is None:
-        return
-    write_json_atomic(path, timings, ensure_ascii=False, indent=2)
+    base_stage.write_timings_json(
+        path,
+        timings,
+        write_json_atomic_func=lambda target, payload: write_json_atomic(
+            target,
+            payload,
+            ensure_ascii=False,
+            indent=2,
+        ),
+    )
 
 
 def _candidate_topology_path(path: Path) -> Path:
@@ -934,29 +930,29 @@ def _read_optional_json(path: Path | None) -> dict | None:
 
 
 def _describe_path_state(path: Path) -> dict[str, object]:
-    if not path.exists():
-        return {
-            "path": str(path),
-            "exists": False,
-        }
-    stat = path.stat()
-    return {
-        "path": str(path),
-        "exists": True,
-        "size": int(stat.st_size),
-        "mtime_ns": int(stat.st_mtime_ns),
-    }
+    return base_stage.describe_path_state(path)
 
 
 def _load_build_stage_cache(output_dir: Path) -> dict[str, dict]:
-    cache_path = output_dir / BUILD_STAGE_CACHE_FILENAME
-    payload = read_json_optional(cache_path, default={})
-    return payload if isinstance(payload, dict) else {}
+    return base_stage.load_build_stage_cache(
+        output_dir,
+        read_json_optional_func=lambda target: read_json_optional(target, default={}),
+        filename=BUILD_STAGE_CACHE_FILENAME,
+    )
 
 
 def _write_build_stage_cache(output_dir: Path, cache_payload: dict[str, dict]) -> None:
-    cache_path = output_dir / BUILD_STAGE_CACHE_FILENAME
-    write_json_atomic(cache_path, cache_payload, ensure_ascii=False, indent=2)
+    base_stage.write_build_stage_cache(
+        output_dir,
+        cache_payload,
+        write_json_atomic_func=lambda target, payload: write_json_atomic(
+            target,
+            payload,
+            ensure_ascii=False,
+            indent=2,
+        ),
+        filename=BUILD_STAGE_CACHE_FILENAME,
+    )
 
 
 def _compute_stage_signature(
@@ -965,14 +961,11 @@ def _compute_stage_signature(
     inputs: Iterable[Path] = (),
     extra: dict[str, object] | None = None,
 ) -> str:
-    payload = {
-        "stage": stage_name,
-        "inputs": [_describe_path_state(Path(path)) for path in inputs],
-        "extra": extra or {},
-    }
-    return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
-    ).hexdigest()
+    return base_stage.compute_stage_signature(
+        stage_name=stage_name,
+        inputs=inputs,
+        extra=extra,
+    )
 
 
 def _should_skip_stage(
@@ -982,11 +975,12 @@ def _should_skip_stage(
     signature: str,
     outputs: Iterable[Path],
 ) -> bool:
-    record = cache_payload.get(stage_name)
-    output_paths = [Path(path) for path in outputs]
-    if not output_paths or any(not path.exists() for path in output_paths):
-        return False
-    return isinstance(record, dict) and record.get("signature") == signature
+    return base_stage.should_skip_stage(
+        cache_payload=cache_payload,
+        stage_name=stage_name,
+        signature=signature,
+        outputs=outputs,
+    )
 
 
 def _update_stage_cache(
@@ -996,11 +990,12 @@ def _update_stage_cache(
     signature: str,
     outputs: Iterable[Path],
 ) -> None:
-    cache_payload[stage_name] = {
-        "signature": signature,
-        "outputs": [_describe_path_state(Path(path)) for path in outputs],
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
+    base_stage.update_stage_cache(
+        cache_payload=cache_payload,
+        stage_name=stage_name,
+        signature=signature,
+        outputs=outputs,
+    )
 
 
 def cull_small_geometries(
@@ -1679,94 +1674,21 @@ def build_ru_city_detail_topology(
     build_stage_cache: dict[str, dict] | None = None,
     timings_root: Path | None = None,
 ) -> None:
-    stage_name = "ru_city_detail_topology"
-    stage_start = time.perf_counter()
-    source_topology = output_dir / "europe_topology.json.bak"
-    if not source_topology.exists():
-        print(
-            "[RU City Detail] Skipped: source detail topology not found at "
-            f"{source_topology}."
-        )
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, reason="missing-source")
-        return
-
-    patch_script = script_dir / "tools" / "patch_ru_city_detail.py"
-    if not patch_script.exists():
-        print(f"[RU City Detail] Skipped: patch script missing at {patch_script}.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, reason="missing-script")
-        return
-
-    ru_adm2_path = output_dir / cfg.RUS_ADM2_FILENAME
-    if not ru_adm2_path.exists():
-        print("[RU City Detail] Downloading Russia ADM2 (geoBoundaries)...")
-        fetch_or_load_geojson(
-            cfg.RUS_ADM2_URL,
-            cfg.RUS_ADM2_FILENAME,
-            fallback_urls=cfg.RUS_ADM2_FALLBACK_URLS,
-        )
-
-    output_path = output_dir / "europe_topology.highres.json"
-    signature = _compute_stage_signature(
-        stage_name=stage_name,
-        inputs=[
-            Path(__file__),
-            patch_script,
-            source_topology,
-            ru_adm2_path,
-            PROJECT_ROOT / "map_builder" / "config.py",
-        ],
-        extra={"output": str(output_path)},
+    detail_topology_stage.run_ru_city_detail_topology(
+        script_dir,
+        output_dir,
+        stage_timings=stage_timings,
+        build_stage_cache=build_stage_cache,
+        timings_root=timings_root,
+        project_root=PROJECT_ROOT,
+        init_map_data_path=Path(__file__),
+        fetch_or_load_geojson_func=fetch_or_load_geojson,
+        compute_stage_signature_func=_compute_stage_signature,
+        should_skip_stage_func=_should_skip_stage,
+        update_stage_cache_func=_update_stage_cache,
+        record_stage_timing_func=_record_stage_timing,
+        read_optional_json_func=_read_optional_json,
     )
-    if build_stage_cache is not None and _should_skip_stage(
-        cache_payload=build_stage_cache,
-        stage_name=stage_name,
-        signature=signature,
-        outputs=[output_path],
-    ):
-        print("[RU City Detail] Skipped: cache hit.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, cache_hit=True)
-        return
-
-    child_timings_path = timings_root / f"{stage_name}.json" if timings_root is not None else None
-    cmd = [
-        sys.executable,
-        str(patch_script),
-        "--source-topology",
-        str(source_topology),
-        "--output-topology",
-        str(output_path),
-        "--ru-adm2",
-        str(ru_adm2_path),
-    ]
-    if child_timings_path is not None:
-        child_timings_path.parent.mkdir(parents=True, exist_ok=True)
-        cmd.extend(["--timings-json", str(child_timings_path)])
-    print("[RU City Detail] Building patched detail topology...")
-    try:
-        subprocess.check_call(cmd, cwd=script_dir)
-    except subprocess.CalledProcessError as exc:
-        print(f"[RU City Detail] Failed to patch detail topology: {exc}")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, failed=True)
-        return
-    if build_stage_cache is not None:
-        _update_stage_cache(
-            cache_payload=build_stage_cache,
-            stage_name=stage_name,
-            signature=signature,
-            outputs=[output_path],
-        )
-    if stage_timings is not None:
-        _record_stage_timing(
-            stage_timings,
-            stage_name,
-            stage_start,
-            skipped=False,
-            child_timings=_read_optional_json(child_timings_path),
-        )
 
 
 def build_na_detail_topology(
@@ -1777,101 +1699,22 @@ def build_na_detail_topology(
     build_stage_cache: dict[str, dict] | None = None,
     timings_root: Path | None = None,
 ) -> None:
-    stage_name = "detail_topology"
-    stage_start = time.perf_counter()
-    primary_topology = output_dir / "europe_topology.json"
-    source_topology = output_dir / "europe_topology.highres.json"
-    if not source_topology.exists():
-        source_topology = output_dir / "europe_topology.json.bak"
-    if not source_topology.exists():
-        print("[Detail Bundle] Skipped: no source detail topology found.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, reason="missing-source")
-        return
-
-    patch_script = script_dir / "tools" / "build_na_detail_topology.py"
-    if not patch_script.exists():
-        print(f"[Detail Bundle] Skipped: patch script missing at {patch_script}.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, reason="missing-script")
-        return
-
-    output_path = output_dir / "europe_topology.na_v2.json"
-    candidate_path = _candidate_topology_path(output_path)
-    signature = _compute_stage_signature(
-        stage_name=stage_name,
-        inputs=[
-            Path(__file__),
-            patch_script,
-            source_topology,
-            PROJECT_ROOT / "map_builder" / "config.py",
-            PROJECT_ROOT / "map_builder" / "geo" / "local_canonicalization.py",
-            PROJECT_ROOT / "map_builder" / "processors" / "detail_shell_coverage.py",
-            PROJECT_ROOT / "map_builder" / "processors" / "russia_ukraine.py",
-        ],
-        extra={"output": str(output_path)},
+    detail_topology_stage.run_na_detail_topology(
+        script_dir,
+        output_dir,
+        stage_timings=stage_timings,
+        build_stage_cache=build_stage_cache,
+        timings_root=timings_root,
+        project_root=PROJECT_ROOT,
+        init_map_data_path=Path(__file__),
+        compute_stage_signature_func=_compute_stage_signature,
+        should_skip_stage_func=_should_skip_stage,
+        update_stage_cache_func=_update_stage_cache,
+        record_stage_timing_func=_record_stage_timing,
+        read_optional_json_func=_read_optional_json,
+        candidate_topology_path_func=_candidate_topology_path,
+        promote_candidate_topology_if_safe_func=_promote_candidate_topology_if_safe,
     )
-    if build_stage_cache is not None and _should_skip_stage(
-        cache_payload=build_stage_cache,
-        stage_name=stage_name,
-        signature=signature,
-        outputs=[output_path],
-    ):
-        print("[Detail Bundle] Skipped: cache hit.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, cache_hit=True)
-        return
-
-    child_timings_path = timings_root / f"{stage_name}.json" if timings_root is not None else None
-    cmd = [
-        sys.executable,
-        str(patch_script),
-        "--source-topology",
-        str(source_topology),
-        "--output-topology",
-        str(candidate_path),
-    ]
-    if child_timings_path is not None:
-        child_timings_path.parent.mkdir(parents=True, exist_ok=True)
-        cmd.extend(["--timings-json", str(child_timings_path)])
-    print("[Detail Bundle] Building enriched detail topology...")
-    try:
-        subprocess.check_call(cmd, cwd=script_dir)
-    except subprocess.CalledProcessError as exc:
-        print(f"[Detail Bundle] Failed to build enriched detail topology: {exc}")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, failed=True)
-        return
-    try:
-        if primary_topology.exists():
-            _promote_candidate_topology_if_safe(
-                stage_label="Detail Bundle",
-                primary_topology_path=primary_topology,
-                candidate_path=candidate_path,
-                output_path=output_path,
-            )
-        elif candidate_path.exists():
-            shutil.copy2(candidate_path, output_path)
-            print("[Detail Bundle] Promoted candidate without baseline comparison.")
-    except BaseException:
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, failed=True, gate_failed=True)
-        raise
-    if build_stage_cache is not None:
-        _update_stage_cache(
-            cache_payload=build_stage_cache,
-            stage_name=stage_name,
-            signature=signature,
-            outputs=[output_path],
-        )
-    if stage_timings is not None:
-        _record_stage_timing(
-            stage_timings,
-            stage_name,
-            stage_start,
-            skipped=False,
-            child_timings=_read_optional_json(child_timings_path),
-        )
 
 
 def build_runtime_political_topology(
@@ -1882,103 +1725,22 @@ def build_runtime_political_topology(
     build_stage_cache: dict[str, dict] | None = None,
     timings_root: Path | None = None,
 ) -> None:
-    stage_name = "runtime_political_topology"
-    stage_start = time.perf_counter()
-    primary_topology = output_dir / "europe_topology.json"
-    detail_topology = output_dir / "europe_topology.na_v2.json"
-    runtime_script = script_dir / "tools" / "build_runtime_political_topology.py"
-
-    if not primary_topology.exists():
-        print("[Runtime Political] Skipped: primary topology not found.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, reason="missing-primary")
-        return
-    if not runtime_script.exists():
-        print(f"[Runtime Political] Skipped: script missing at {runtime_script}.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, reason="missing-script")
-        return
-
-    output_path = output_dir / "europe_topology.runtime_political_v1.json"
-    candidate_path = _candidate_topology_path(output_path)
-    ru_overrides_path = output_dir / "ru_city_overrides.geojson"
-    signature = _compute_stage_signature(
-        stage_name=stage_name,
-        inputs=[
-            Path(__file__),
-            runtime_script,
-            primary_topology,
-            detail_topology,
-            ru_overrides_path,
-            PROJECT_ROOT / "map_builder" / "config.py",
-            PROJECT_ROOT / "map_builder" / "geo" / "local_canonicalization.py",
-            PROJECT_ROOT / "map_builder" / "processors" / "detail_shell_coverage.py",
-        ],
-        extra={"output": str(output_path)},
+    runtime_political_topology_stage.run_runtime_political_topology(
+        script_dir,
+        output_dir,
+        stage_timings=stage_timings,
+        build_stage_cache=build_stage_cache,
+        timings_root=timings_root,
+        project_root=PROJECT_ROOT,
+        init_map_data_path=Path(__file__),
+        compute_stage_signature_func=_compute_stage_signature,
+        should_skip_stage_func=_should_skip_stage,
+        update_stage_cache_func=_update_stage_cache,
+        record_stage_timing_func=_record_stage_timing,
+        read_optional_json_func=_read_optional_json,
+        candidate_topology_path_func=_candidate_topology_path,
+        promote_candidate_topology_if_safe_func=_promote_candidate_topology_if_safe,
     )
-    if build_stage_cache is not None and _should_skip_stage(
-        cache_payload=build_stage_cache,
-        stage_name=stage_name,
-        signature=signature,
-        outputs=[output_path],
-    ):
-        print("[Runtime Political] Skipped: cache hit.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, cache_hit=True)
-        return
-
-    child_timings_path = timings_root / f"{stage_name}.json" if timings_root is not None else None
-    cmd = [
-        sys.executable,
-        str(runtime_script),
-        "--primary-topology",
-        str(primary_topology),
-        "--detail-topology",
-        str(detail_topology),
-        "--ru-overrides",
-        str(ru_overrides_path),
-        "--output-topology",
-        str(candidate_path),
-    ]
-    if child_timings_path is not None:
-        child_timings_path.parent.mkdir(parents=True, exist_ok=True)
-        cmd.extend(["--timings-json", str(child_timings_path)])
-    print("[Runtime Political] Building unified runtime political topology...")
-    try:
-        subprocess.check_call(cmd, cwd=script_dir)
-    except subprocess.CalledProcessError as exc:
-        print(f"[Runtime Political] Failed to build unified runtime topology: {exc}")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, failed=True)
-        return
-    try:
-        _promote_candidate_topology_if_safe(
-            stage_label="Runtime Political",
-            primary_topology_path=primary_topology,
-            candidate_path=candidate_path,
-            output_path=output_path,
-            detail_topology_path=detail_topology,
-            override_path=ru_overrides_path,
-        )
-    except BaseException:
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, failed=True, gate_failed=True)
-        raise
-    if build_stage_cache is not None:
-        _update_stage_cache(
-            cache_payload=build_stage_cache,
-            stage_name=stage_name,
-            signature=signature,
-            outputs=[output_path],
-        )
-    if stage_timings is not None:
-        _record_stage_timing(
-            stage_timings,
-            stage_name,
-            stage_start,
-            skipped=False,
-            child_timings=_read_optional_json(child_timings_path),
-        )
 
 
 def run_hierarchy_locale_stage(
@@ -3524,313 +3286,14 @@ def build_primary_topology_bundle(
     build_stage_cache: dict[str, dict] | None = None,
     timings_root: Path | None = None,
 ) -> dict[str, object]:
-    del script_dir, build_stage_cache, timings_root
-    borders = fetch_ne_zip(cfg.BORDERS_URL, "borders")
-    borders = clip_to_map_bounds(borders, "borders")
-    primary_pipeline_start = time.perf_counter()
-
-    if getattr(cfg, "GLOBAL_SKELETON_MODE", False):
-        filtered = filter_countries(borders)
-        filtered = filtered.copy()
-        filtered["geometry"] = filtered.geometry.simplify(
-            tolerance=cfg.SIMPLIFY_BORDERS, preserve_topology=True
-        )
-    else:
-        data = fetch_geojson(cfg.URL)
-        gdf = build_geodataframe(data)
-        gdf = clip_to_map_bounds(gdf, "nuts")
-        filtered = filter_countries(gdf)
-        filtered = filtered.copy()
-        filtered["geometry"] = filtered.geometry.simplify(
-            tolerance=cfg.SIMPLIFY_NUTS3, preserve_topology=True
-        )
-    filtered = build_antarctic_sectors(filtered)
-    validate_political_schema(filtered, "Political Filter")
-
-    rivers_clipped = load_rivers()
-    border_lines = build_border_lines()
-    ocean = fetch_ne_zip(cfg.OCEAN_URL, "ocean")
-    ocean = clip_to_map_bounds(ocean, "ocean")
-    marine_polys = fetch_ne_zip(cfg.MARINE_POLYS_URL, "marine polygons")
-    marine_polys = clip_to_map_bounds(marine_polys, "marine polygons")
-    lakes = fetch_ne_zip(cfg.LAKES_URL, "lakes")
-    lakes = clip_to_map_bounds(lakes, "lakes")
-    land_bg = fetch_ne_zip(cfg.LAND_BG_URL, "land")
-    land_bg = clip_to_map_bounds(land_bg, "land background")
-    ocean = ensure_ocean_coverage(
-        ocean,
-        land_bg,
-        target_bounds=getattr(cfg, "MAP_BOUNDS", cfg.GLOBAL_BOUNDS),
-        stage_label="initial",
-    )
-
-    # Keep raw ocean geometry until political bounds are finalized to avoid early bbox clipping artifacts.
-    ocean_clipped = ocean.copy()
-    ocean_clipped["geometry"] = ocean_clipped.geometry.simplify(
-        tolerance=cfg.SIMPLIFY_BACKGROUND, preserve_topology=True
-    )
-    # Keep raw land background geometry until political bounds are finalized.
-    land_bg_clipped = land_bg.copy()
-    land_bg_clipped["geometry"] = land_bg_clipped.geometry.simplify(
-        tolerance=cfg.SIMPLIFY_BACKGROUND, preserve_topology=True
-    )
-    water_regions = build_water_regions(marine_polys, lakes)
-    water_regions["geometry"] = water_regions.geometry.simplify(
-        tolerance=cfg.SIMPLIFY_BACKGROUND, preserve_topology=True
-    )
-    urban_clipped = load_urban()
-    urban_clipped = urban_clipped.copy()
-    urban_clipped["geometry"] = urban_clipped.geometry.simplify(
-        tolerance=cfg.SIMPLIFY_URBAN, preserve_topology=True
-    )
-    physical_filtered = load_physical()
-    if physical_filtered.empty:
-        print("Physical regions filter returned empty dataset, keeping all clipped features.")
-        physical_filtered = fetch_ne_zip(cfg.PHYSICAL_URL, "physical")
-        physical_filtered = clip_to_map_bounds(physical_filtered, "physical")
-    physical_filtered = physical_filtered.copy()
-    physical_filtered["geometry"] = physical_filtered.geometry.simplify(
-        tolerance=cfg.SIMPLIFY_PHYSICAL, preserve_topology=True
-    )
-    keep_cols = [
-        "name",
-        "name_en",
-        "NAME",
-        "NAME_EN",
-        "featurecla",
-        "FEATURECLA",
-        "geometry",
-    ]
-    physical_filtered = physical_filtered[[col for col in keep_cols if col in physical_filtered.columns]]
-
-    nuts_hybrid = filtered.copy()
-    special_zones = gpd.GeoDataFrame(
-        columns=["id", "name", "type", "label", "claimants", "cntr_code", "geometry"],
-        crs="EPSG:4326",
-    )
-    hybrid = nuts_hybrid.copy()
-
-    if not getattr(cfg, "GLOBAL_SKELETON_MODE", False):
-        extension_hybrid = build_extension_admin1(filtered)
-        hybrid = gpd.GeoDataFrame(
-            pd.concat([nuts_hybrid, extension_hybrid], ignore_index=True),
-            crs="EPSG:4326",
-        )
-        balkan_fallback = build_balkan_fallback(hybrid, admin0=borders)
-        if not balkan_fallback.empty:
-            hybrid = gpd.GeoDataFrame(
-                pd.concat([hybrid, balkan_fallback], ignore_index=True),
-                crs="EPSG:4326",
-            )
-        hybrid = apply_holistic_replacements(hybrid)
-        hybrid = apply_denmark_border_detail(hybrid)
-        hybrid = apply_russia_ukraine_replacement(hybrid)
-        hybrid = apply_poland_replacement(hybrid)
-        hybrid = apply_china_replacement(hybrid)
-        hybrid = apply_south_asia_replacement(hybrid, land_bg_clipped)
-        hybrid = apply_north_america_replacement(hybrid)
-
-    try:
-        print("Downloading India ADM2 (raw) for special zones...")
-        india_raw = fetch_or_load_geojson(
-            cfg.IND_ADM2_URL,
-            cfg.IND_ADM2_FILENAME,
-            fallback_urls=cfg.IND_ADM2_FALLBACK_URLS,
-        )
-        if india_raw.empty:
-            print("[Special Zones] India ADM2 GeoDataFrame is empty; skipping disputed zone.")
-        else:
-            if india_raw.crs is None:
-                india_raw = india_raw.set_crs("EPSG:4326", allow_override=True)
-            if india_raw.crs.to_epsg() != 4326:
-                india_raw = india_raw.to_crs("EPSG:4326")
-            china_gdf = hybrid[hybrid["cntr_code"].astype(str).str.upper() == "CN"].copy()
-            special_zones = build_special_zones(china_gdf, india_raw)
-            if special_zones.empty:
-                print("[Special Zones] No special zones were generated.")
-            else:
-                print(f"[Special Zones] Generated {len(special_zones)} special zones.")
-    except Exception as exc:
-        print(f"[Special Zones] Failed to build special zones; continuing without: {exc}")
-
-    final_hybrid = hybrid.copy()
-    final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("").astype(str).str.strip()
-    final_hybrid.loc[final_hybrid["cntr_code"] == "", "cntr_code"] = None
-    missing_mask = final_hybrid["cntr_code"].isna()
-    if missing_mask.any() and "id" in final_hybrid.columns:
-        final_hybrid.loc[missing_mask, "cntr_code"] = final_hybrid.loc[missing_mask, "id"].apply(
-            extract_country_code
-        )
-    final_hybrid["cntr_code"] = final_hybrid["cntr_code"].fillna("").astype(str).str.strip()
-    final_hybrid.loc[final_hybrid["cntr_code"] == "", "cntr_code"] = None
-
-    missing_mask = final_hybrid["cntr_code"].isna()
-    if missing_mask.any():
-        borders_ll = borders.to_crs("EPSG:4326")
-        code_col = pick_column(
-            borders_ll,
-            ["iso_a2", "ISO_A2", "adm0_a2", "ADM0_A2", "iso_3166_1_", "ISO_3166_1_"],
-        )
-        if not code_col:
-            print("Borders dataset missing ISO A2 column; spatial join skipped.")
-        else:
-            try:
-                missing = final_hybrid.loc[missing_mask].copy().to_crs("EPSG:4326")
-                missing["geometry"] = missing.geometry.representative_point()
-                joined = gpd.sjoin(
-                    missing,
-                    borders_ll[[code_col, "geometry"]],
-                    how="left",
-                    predicate="within",
-                )
-                filled = joined[code_col]
-                filled = filled.where(~filled.isin(["-99", "", None]))
-                filled = filled.groupby(level=0).first()
-                final_hybrid.loc[filled.index, "cntr_code"] = filled
-            except Exception as exc:
-                print(f"Spatial join failed: {exc}")
-
-    final_hybrid["cntr_code"] = (
-        final_hybrid["cntr_code"].fillna("").astype(str).str.strip().str.upper()
-    )
-    final_hybrid.loc[final_hybrid["cntr_code"] == "", "cntr_code"] = None
-    if getattr(cfg, "ENABLE_SUBDIVISION_ENRICHMENT", False):
-        final_hybrid = apply_config_subdivisions(final_hybrid)
-
-    try:
-        hybrid_bounds = final_hybrid.to_crs("EPSG:4326").total_bounds
-        if (
-            len(hybrid_bounds) == 4
-            and all(math.isfinite(v) for v in hybrid_bounds)
-            and hybrid_bounds[2] > hybrid_bounds[0]
-            and hybrid_bounds[3] > hybrid_bounds[1]
-        ):
-            ocean_clipped = clip_to_bounds(ocean_clipped, hybrid_bounds, "ocean")
-            land_bg_clipped = clip_to_bounds(land_bg_clipped, hybrid_bounds, "land background")
-            water_regions = clip_to_bounds(water_regions, hybrid_bounds, "water regions")
-    except Exception as exc:
-        print(f"Background layer clip-to-political-bounds skipped: {exc}")
-
-    ocean_clipped = ensure_ocean_coverage(
-        ocean_clipped,
-        land_bg_clipped,
-        target_bounds=getattr(cfg, "MAP_BOUNDS", cfg.GLOBAL_BOUNDS),
-        stage_label="pre-topology",
-    )
-
-    filtered_group_col = "id" if "id" in filtered.columns else "NUTS_ID"
-    filtered = cull_small_geometries(filtered, "land", group_col=filtered_group_col)
-    ocean_clipped = cull_small_geometries(ocean_clipped, "ocean")
-    land_bg_clipped = cull_small_geometries(land_bg_clipped, "land background")
-    water_regions = cull_small_geometries(water_regions, "water regions", group_col="id")
-    urban_clipped = cull_small_geometries(urban_clipped, "urban")
-    physical_filtered = cull_small_geometries(physical_filtered, "physical")
-    hybrid = cull_small_geometries(hybrid, "hybrid", group_col="id")
-    final_hybrid = cull_small_geometries(final_hybrid, "political", group_col="id")
-    special_zones = cull_small_geometries(special_zones, "special zones", group_col="id")
-    urban_clipped = assign_stable_urban_area_ids(urban_clipped)
-    urban_clipped = assign_urban_country_owners(urban_clipped, final_hybrid)
-
-    target_bounds = getattr(cfg, "MAP_BOUNDS", cfg.GLOBAL_BOUNDS)
-    log_layer_coverage("political", final_hybrid, target_bounds)
-    log_layer_coverage("ocean", ocean_clipped, target_bounds)
-    log_layer_coverage("land", land_bg_clipped, target_bounds)
-    log_layer_coverage("water_regions", water_regions, target_bounds)
-    log_layer_coverage("urban", urban_clipped, target_bounds)
-    log_layer_coverage("physical", physical_filtered, target_bounds)
-    log_layer_coverage("rivers", rivers_clipped, target_bounds)
-    log_layer_coverage("special_zones", special_zones, target_bounds)
-
-    print("[INFO] Building derived physical atlas semantics and contour assets....")
-    physical_semantics, contour_major, contour_minor = build_and_save_physical_context_layers(
-        physical_filtered,
+    return primary_topology_stage.run_primary_topology_bundle(
+        script_dir,
         output_dir,
+        stage_timings=stage_timings,
+        build_stage_cache=build_stage_cache,
+        timings_root=timings_root,
+        stage_ops=sys.modules[__name__],
     )
-    log_layer_coverage("physical_semantics", physical_semantics, target_bounds)
-    log_layer_coverage("contours_major", contour_major, target_bounds)
-    log_layer_coverage("contours_minor", contour_minor, target_bounds)
-
-    if "id" in final_hybrid.columns:
-        final_hybrid["id"] = final_hybrid["id"].fillna("").astype(str).str.strip()
-        empty_id_mask = final_hybrid["id"] == ""
-        if empty_id_mask.any():
-            for idx in final_hybrid.index[empty_id_mask]:
-                cc = str(final_hybrid.loc[idx, "cntr_code"] or "UNK").upper()
-                final_hybrid.loc[idx, "id"] = f"{cc}_{idx}"
-            print(f"[ID Fix] Filled {empty_id_mask.sum()} empty IDs")
-        seen: dict[str, int] = {}
-        dup_count = 0
-        for idx in final_hybrid.index:
-            fid = final_hybrid.loc[idx, "id"]
-            if fid in seen:
-                seen[fid] += 1
-                final_hybrid.loc[idx, "id"] = f"{fid}__d{seen[fid]}"
-                dup_count += 1
-            else:
-                seen[fid] = 0
-        if dup_count:
-            print(f"[ID Fix] De-duplicated {dup_count} IDs")
-        print(f"[ID Validation] {len(final_hybrid)} features, {final_hybrid['id'].nunique()} unique IDs")
-    else:
-        print("[ID Validation] WARNING: 'id' column missing from final_hybrid!")
-
-    world_cities_start = time.perf_counter()
-    print("[INFO] Building global city assets....")
-    world_cities = build_world_cities(
-        political=final_hybrid,
-        urban=urban_clipped,
-    )
-    city_aliases = build_city_aliases_payload(world_cities)
-    if stage_timings is not None:
-        _record_stage_timing(
-            stage_timings,
-            "world_cities",
-            world_cities_start,
-            city_count=len(world_cities),
-            alias_count=city_aliases.get("alias_count"),
-        )
-
-    save_outputs(
-        filtered,
-        rivers_clipped,
-        border_lines,
-        ocean_clipped,
-        water_regions,
-        land_bg_clipped,
-        urban_clipped,
-        physical_filtered,
-        hybrid,
-        final_hybrid,
-        world_cities,
-        city_aliases,
-        output_dir,
-    )
-
-    city_lights_assets_start = time.perf_counter()
-    build_city_lights_assets(output_dir)
-    if stage_timings is not None:
-        _record_stage_timing(stage_timings, "city_lights_assets", city_lights_assets_start)
-
-    topology_path = output_dir / "europe_topology.json"
-    build_topology(
-        political=final_hybrid,
-        ocean=ocean_clipped,
-        land=land_bg_clipped,
-        urban=urban_clipped,
-        physical=physical_filtered,
-        rivers=rivers_clipped,
-        special_zones=special_zones,
-        water_regions=water_regions,
-        output_path=topology_path,
-        quantization=cfg.TOPOLOGY_QUANTIZATION,
-    )
-    if stage_timings is not None:
-        _record_stage_timing(stage_timings, "primary_topology_bundle", primary_pipeline_start)
-    return {
-        "final_hybrid": final_hybrid,
-        "world_cities": world_cities,
-        "missing_cntr_code_count": int(final_hybrid["cntr_code"].isnull().sum()),
-    }
 
 
 
@@ -3838,6 +3301,7 @@ def main() -> None:
     args = parse_args()
     script_dir = Path(__file__).resolve().parent
     output_dir = script_dir / "data"
+    validation_schema.assert_init_map_data_stage_alignment()
     build_orchestrator.run(args, script_dir, output_dir, stage_ops=sys.modules[__name__])
 
 

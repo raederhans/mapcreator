@@ -7,18 +7,45 @@ const runtimeBridge = await import(`data:text/javascript;charset=utf-8,${encodeU
 const stateDefaultsSource = await readFile(new URL("../js/core/state_defaults.js", import.meta.url), "utf8");
 const transportCapabilityRegistrySource = await readFile(new URL("../js/core/transport_capability_registry.js", import.meta.url), "utf8");
 const transportCapabilityRegistryDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transportCapabilityRegistrySource)}`;
-const patchedStateDefaultsSource = stateDefaultsSource.replace("./transport_capability_registry.js", transportCapabilityRegistryDataUrl);
+const countryFeaturePoliciesSource = await readFile(new URL("../js/core/country_feature_policies.js", import.meta.url), "utf8");
+const countryFeaturePoliciesJsonSource = await readFile(new URL("../data/country_feature_policies.json", import.meta.url), "utf8");
+const countryFeaturePoliciesJsonDataUrl = `data:application/json,${encodeURIComponent(countryFeaturePoliciesJsonSource)}`;
+const patchedCountryFeaturePoliciesSource = countryFeaturePoliciesSource.replace(
+  "../../data/country_feature_policies.json",
+  countryFeaturePoliciesJsonDataUrl,
+);
+const countryFeaturePoliciesDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(patchedCountryFeaturePoliciesSource)}`;
+const patchedStateDefaultsSource = stateDefaultsSource
+  .replace("./transport_capability_registry.js", transportCapabilityRegistryDataUrl)
+  .replace("./country_feature_policies.js", countryFeaturePoliciesDataUrl);
 const stateDefaultsDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(patchedStateDefaultsSource)}`;
 const colorStateSource = await readFile(new URL("../js/core/state/color_state.js", import.meta.url), "utf8");
 const patchedColorStateSource = colorStateSource.replace("../state_defaults.js", stateDefaultsDataUrl);
 const colorStateModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(patchedColorStateSource)}`);
 const colorResolverSource = await readFile(new URL("../js/core/color_resolver.js", import.meta.url), "utf8");
 const colorResolverModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(colorResolverSource)}`);
+const colorManagerModule = await import(new URL("../js/core/color_manager.js", import.meta.url));
 const countryCodeAliasesSource = await readFile(new URL("../js/core/country_code_aliases.js", import.meta.url), "utf8");
 const countryCodeAliasesDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(countryCodeAliasesSource)}`;
+const featureIdentitySharedSource = await readFile(new URL("../js/core/feature_identity_shared.js", import.meta.url), "utf8");
+const featureIdentitySharedDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(featureIdentitySharedSource)}`;
 const featureIdentitySource = await readFile(new URL("../js/core/feature_identity.js", import.meta.url), "utf8");
-const patchedFeatureIdentitySource = featureIdentitySource.replace("./country_code_aliases.js", countryCodeAliasesDataUrl);
+const patchedFeatureIdentitySource = featureIdentitySource
+  .replace("./feature_identity_shared.js", featureIdentitySharedDataUrl)
+  .replace("./country_code_aliases.js", countryCodeAliasesDataUrl);
 const featureIdentityModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(patchedFeatureIdentitySource)}`);
+const startupWorkerSource = await readFile(new URL("../js/workers/startup_boot.worker.js", import.meta.url), "utf8");
+const startupWorkerHelperStart = startupWorkerSource.indexOf("const COUNTRY_CODE_ALIASES");
+const startupWorkerHelperEnd = startupWorkerSource.indexOf("async function fetchJsonResource", startupWorkerHelperStart);
+const startupWorkerHelperSource = `${featureIdentitySharedSource}
+${startupWorkerSource.slice(startupWorkerHelperStart, startupWorkerHelperEnd)}
+export {
+  getFeatureId,
+  getFeatureCountryCodeNormalized,
+};`;
+const startupWorkerFeatureIdentityModule = await import(
+  `data:text/javascript;charset=utf-8,${encodeURIComponent(startupWorkerHelperSource)}`
+);
 
 const {
   buildRuntimeDefaultColorsByIso2,
@@ -36,7 +63,12 @@ const {
   bumpColorRevision,
 } = colorStateModule;
 const { resolveFeatureColor } = colorResolverModule;
+const { ColorManager } = colorManagerModule;
 const { getCountryCode, getFeatureId, getStableKey } = featureIdentityModule;
+const {
+  getFeatureId: getStartupWorkerFeatureId,
+  getFeatureCountryCodeNormalized,
+} = startupWorkerFeatureIdentityModule;
 
 test("buildRuntimeDefaultTagByIso2 keeps one exposed bridge per iso2", () => {
   assert.deepEqual(
@@ -203,6 +235,30 @@ test("normalizeColorStateForRender sanitizes mirrors and resolved colors togethe
   assert.deepEqual(colorRuntimeState.colors, { feature_2: "#abcdef" });
 });
 
+test("color manager cache signature is stable across object key order", () => {
+  const left = ColorManager.getOwnerColorCacheSignature({
+    featureIds: ["B", "A"],
+    sovereigntyByFeatureId: { B: "FR", A: "DE" },
+    fixedOwnerColors: { FR: "#112233", DE: "#445566" },
+    canonicalCountryByFeatureId: { B: "FR", A: "DE" },
+  });
+  const right = ColorManager.getOwnerColorCacheSignature({
+    featureIds: ["B", "A"],
+    sovereigntyByFeatureId: { A: "DE", B: "FR" },
+    fixedOwnerColors: { DE: "#445566", FR: "#112233" },
+    canonicalCountryByFeatureId: { A: "DE", B: "FR" },
+  });
+
+  assert.equal(left, right);
+});
+
+test("color manager normalizes palette candidates into valid six-digit hex colors", () => {
+  assert.equal(ColorManager.normalizeHexColor("#abc"), "#aabbcc");
+  assert.equal(ColorManager.normalizeHexColor("#A1B2C3"), "#a1b2c3");
+  assert.equal(ColorManager.normalizeHexColor("bad"), null);
+  assert.match(ColorManager.getPoliticalFallbackColor("test-token", 3), /^#[0-9a-f]{6}$/);
+});
+
 test("feature identity helper normalizes ids, country codes, and stable keys from shared fallback chains", () => {
   const feature = {
     id: "GB-001",
@@ -218,6 +274,38 @@ test("feature identity helper normalizes ids, country codes, and stable keys fro
   assert.equal(getStableKey(feature), "stable::gb-001");
   assert.equal(getCountryCode({ id: "RU_shell_01", properties: {} }), "RU");
   assert.equal(getCountryCode({ id: "ZZ_001", properties: {} }), "");
+});
+
+test("startup worker feature identity helpers stay aligned with shared main-thread rules", () => {
+  const samples = [
+    {
+      id: "GB-001",
+      properties: {
+        NUTS_ID: "GB-ALT",
+        iso_a2: "uk",
+      },
+    },
+    {
+      id: "CITY::washington",
+      properties: {
+        countryCode: "us",
+        stableKey: "city::washington",
+      },
+    },
+    {
+      id: "RU_shell_01",
+      properties: {},
+    },
+    {
+      id: "ZZ_001",
+      properties: {},
+    },
+  ];
+
+  for (const feature of samples) {
+    assert.equal(getStartupWorkerFeatureId(feature), getFeatureId(feature));
+    assert.equal(getFeatureCountryCodeNormalized(feature), getCountryCode(feature));
+  }
 });
 
 test("buildScenarioOwnerColorMap keeps scenario colors before palette and generates missing tag colors", () => {

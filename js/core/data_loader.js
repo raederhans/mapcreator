@@ -1,4 +1,4 @@
-﻿// Data loading helpers (Phase 13 scaffold)
+// Data loading helpers (Phase 13 scaffold)
 
 import {
   createSerializableStartupBaseTopologyPayload,
@@ -18,53 +18,57 @@ import {
   getTransportOverviewDataLayerKeys,
   listTransportOverviewCapabilityFamilyIds,
 } from "./transport_capability_registry.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getStableKey as getSharedFeatureStableKey,
+} from "./feature_identity.js";
+import {
+  resolveDataAssetUrl,
+} from "./runtime_asset_registry.js";
 export {
   resolveDataAssetUrl,
   resolveScenarioRegistryUrl,
   resolveTransportManifestUrl,
 } from "./runtime_asset_registry.js";
 
-const TOPOLOGY_VARIANT_URLS = {
+// 这些 detail topology fallback 仍是 data_loader 的本地实现细节。
+// runtime_asset_registry 只登记真正走 Pages dist 发布契约的共享 runtime 资源，
+// 避免 registry 暗示 highres / legacy_bak / na_v1 这些未发布文件在部署版可用。
+const TOPOLOGY_VARIANT_URLS = Object.freeze({
   highres: "data/europe_topology.highres.json",
   legacy_bak: "data/europe_topology.json.bak",
   na_v1: "data/europe_topology.na_v1.json",
   na_v2: "data/europe_topology.na_v2.json",
-};
-
-const DETAIL_SOURCES = {
-  highres: "data/europe_topology.highres.json",
-  legacy_bak: "data/europe_topology.json.bak",
-  na_v1: "data/europe_topology.na_v1.json",
-  na_v2: "data/europe_topology.na_v2.json",
-};
+});
+const DETAIL_SOURCES = { ...TOPOLOGY_VARIANT_URLS };
 const DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "highres"];
-const WORLD_CITIES_URLS = ["data/world_cities.geojson", "data/world_cities.json"];
-const CITY_ALIASES_URLS = ["data/city_aliases.json"];
-const RU_CITY_OVERRIDES_URL = "data/ru_city_overrides.geojson";
-const SPECIAL_ZONES_URL = "data/special_zones.geojson";
-const RUNTIME_POLITICAL_URL = "data/europe_topology.runtime_political_v1.json";
-const GLOBAL_RIVERS_CONTEXT_PACK_URL = "data/global_rivers.geojson";
-const GLOBAL_RAIL_CATALOG_URL = "data/transport_layers/global_rail/catalog.json";
-const GLOBAL_ROAD_CATALOG_URL = "data/transport_layers/global_road/catalog.json";
+const WORLD_CITIES_URLS = [resolveDataAssetUrl("world_cities"), "data/world_cities.json"];
+const CITY_ALIASES_URLS = [resolveDataAssetUrl("city_aliases")];
+const RU_CITY_OVERRIDES_URL = resolveDataAssetUrl("ru_city_overrides");
+const SPECIAL_ZONES_URL = resolveDataAssetUrl("special_zones");
+const RUNTIME_POLITICAL_URL = resolveDataAssetUrl("runtime_political_topology");
+const GLOBAL_RIVERS_CONTEXT_PACK_URL = resolveDataAssetUrl("context_layer:rivers");
+const GLOBAL_RAIL_CATALOG_URL = resolveDataAssetUrl("transport_catalog:rail");
+const GLOBAL_ROAD_CATALOG_URL = resolveDataAssetUrl("transport_catalog:road");
 let globalRoadContextCollectionsPromise = null;
 let globalRailContextCollectionsPromise = null;
 const CONTEXT_LAYER_PACKS = {
-  airports: { url: "data/transport_layers/global_airport/airports.geojson", format: "geojson" },
-  ports: { url: "data/transport_layers/global_port/ports.geojson", format: "geojson" },
-  physical: { url: "data/europe_physical.geojson", format: "geojson" },
-  urban: { url: "data/europe_urban.geojson", format: "geojson" },
+  airports: { url: resolveDataAssetUrl("context_layer:airports"), format: "geojson" },
+  ports: { url: resolveDataAssetUrl("context_layer:ports"), format: "geojson" },
+  physical: { url: resolveDataAssetUrl("context_layer:physical"), format: "geojson" },
+  urban: { url: resolveDataAssetUrl("context_layer:urban"), format: "geojson" },
   physical_semantics: {
-    url: "data/global_physical_semantics.topo.json",
+    url: resolveDataAssetUrl("context_layer:physical_semantics"),
     format: "topology",
     objectName: "physical_semantics",
   },
   physical_contours_major: {
-    url: "data/global_contours.major.topo.json",
+    url: resolveDataAssetUrl("context_layer:physical_contours_major"),
     format: "topology",
     objectName: "contours",
   },
   physical_contours_minor: {
-    url: "data/global_contours.minor.topo.json",
+    url: resolveDataAssetUrl("context_layer:physical_contours_minor"),
     format: "topology",
     objectName: "contours",
   },
@@ -74,8 +78,8 @@ const EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES = new Set(
     .flatMap((familyId) => getTransportOverviewDataLayerKeys(familyId))
     .filter((layerName) => layerName && !Object.prototype.hasOwnProperty.call(CONTEXT_LAYER_PACKS, layerName))
 );
-const PALETTE_REGISTRY_URL = "data/palettes/index.json";
-const RELEASABLE_CATALOG_URL = "data/releasables/hoi4_vanilla.internal.phase1.catalog.json";
+const PALETTE_REGISTRY_URL = resolveDataAssetUrl("palette_registry");
+const RELEASABLE_CATALOG_URL = resolveDataAssetUrl("releasable_catalog");
 const RENDER_PROFILES = new Set(["auto", "balanced", "full"]);
 
 function asArray(value) {
@@ -140,7 +144,7 @@ function normalizeCityFeature(feature, index, { sourceLabel = "world_cities" } =
   );
   if (!id) return null;
 
-  const stableKey = normalizeCityText(props.stable_key || props.locale_key || props.localeKey || `city::${id}`);
+  const stableKey = normalizeCityText(getSharedFeatureStableKey(feature, { fallback: `city::${id}`, useIdFallback: false }));
   const localeEntry = getCityLocaleEntry(props, id);
   const population = parseFiniteNumber(
     props.population || props.pop || props.population_est || props.populationEstimate,
@@ -198,9 +202,7 @@ function normalizeCityFeature(feature, index, { sourceLabel = "world_cities" } =
   const urbanMatchId = normalizeCityText(
     props.urban_match_id || props.urbanMatchId || props.urban_area_id || props.urbanAreaId
   );
-  const countryCode = normalizeCityText(
-    props.cntr_code || props.country_code || props.countryCode || props.iso_a2 || props.ISO_A2
-  ).toUpperCase();
+  const countryCode = getSharedFeatureCountryCode(feature);
 
   return {
     ...feature,
@@ -460,7 +462,7 @@ function buildCityLocalizationPatch({ cityCollection = null, cityAliases = null 
 
   asArray(cityCollection?.features).forEach((feature) => {
     const props = feature?.properties || {};
-    const stableKey = normalizeCityText(props.__city_stable_key || props.stable_key || props.id || feature?.id);
+    const stableKey = normalizeCityText(getSharedFeatureStableKey(feature));
     if (!stableKey) return;
     const localeEntry = getCityLocaleEntry(props.__city_locale || props, stableKey);
     if (localeEntry) {

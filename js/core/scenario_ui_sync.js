@@ -1,25 +1,13 @@
 import {
   STATE_BUS_EVENTS,
-  createDefaultScenarioAuditUiState,
+  ensureScenarioAuditUiState as ensureScenarioAuditUiStateCatalog,
   emitStateBusEvent,
 } from "./state/index.js";
 import { state as runtimeState } from "./state.js";
 import { flushRenderBoundary } from "./render_boundary.js";
 
 export function ensureScenarioAuditUiState() {
-  if (!runtimeState.scenarioAuditUi || typeof runtimeState.scenarioAuditUi !== "object") {
-    runtimeState.scenarioAuditUi = createDefaultScenarioAuditUiState();
-  }
-  if (typeof runtimeState.scenarioAuditUi.loading !== "boolean") {
-    runtimeState.scenarioAuditUi.loading = false;
-  }
-  if (typeof runtimeState.scenarioAuditUi.loadedForScenarioId !== "string") {
-    runtimeState.scenarioAuditUi.loadedForScenarioId = "";
-  }
-  if (typeof runtimeState.scenarioAuditUi.errorMessage !== "string") {
-    runtimeState.scenarioAuditUi.errorMessage = "";
-  }
-  return runtimeState.scenarioAuditUi;
+  return ensureScenarioAuditUiStateCatalog(runtimeState);
 }
 
 export function setScenarioAuditUiState(partial = {}) {

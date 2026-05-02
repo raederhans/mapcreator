@@ -2,14 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const assetSource = await readFile(
-  new URL("../js/core/city_lights_historical_1930_asset.js", import.meta.url),
-  "utf8"
-);
-const assetModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(assetSource)}`);
+const assetUrl = new URL("../js/core/city_lights_historical_1930_asset.js", import.meta.url);
+const entriesUrl = new URL("../data/city_lights/historical_1930_entries.json", import.meta.url);
+const assetSource = await readFile(assetUrl, "utf8");
+const entriesPayload = JSON.parse(await readFile(entriesUrl, "utf8"));
+const assetModule = await import(assetUrl.href);
 const {
   HISTORICAL_1930_CITY_LIGHTS_ENTRIES,
+  HISTORICAL_1930_CITY_LIGHTS_SOURCE,
   HISTORICAL_1930_CITY_LIGHTS_STATS,
+  loadHistorical1930CityLightsEntries,
 } = assetModule;
 
 function findCity(nameAscii, countryCode) {
@@ -19,12 +21,20 @@ function findCity(nameAscii, countryCode) {
 }
 
 test("historical 1930 city lights asset exposes calibrated exports", () => {
+  assert.equal(HISTORICAL_1930_CITY_LIGHTS_SOURCE.entriesKey, "city_lights:historical_1930:entries");
+  assert.deepEqual(HISTORICAL_1930_CITY_LIGHTS_SOURCE.entriesRefParts, ["data", "city_lights/historical_1930_entries.json"]);
   assert.equal(typeof HISTORICAL_1930_CITY_LIGHTS_STATS, "object");
   assert.equal(HISTORICAL_1930_CITY_LIGHTS_STATS.calibrationVersion, "balanced-2026-04");
   assert.ok(Array.isArray(HISTORICAL_1930_CITY_LIGHTS_ENTRIES));
+  assert.equal(typeof loadHistorical1930CityLightsEntries, "function");
+  assert.ok(Array.isArray(entriesPayload.entries));
   assert.ok(HISTORICAL_1930_CITY_LIGHTS_ENTRIES.length >= 1450);
   assert.ok(HISTORICAL_1930_CITY_LIGHTS_ENTRIES.length <= 1800);
+  assert.equal(entriesPayload.entries.length, 1580);
   assert.equal(HISTORICAL_1930_CITY_LIGHTS_STATS.entryCount, HISTORICAL_1930_CITY_LIGHTS_ENTRIES.length);
+  assert.deepEqual(entriesPayload.stats, HISTORICAL_1930_CITY_LIGHTS_STATS);
+  assert.ok(!assetSource.includes("population: 35676000"));
+  assert.ok(assetSource.includes("historical_1930_entries.json"));
 });
 
 test("historical 1930 city light entries keep legal render fields", () => {

@@ -1,70 +1,129 @@
 # Maintainability / Stability Roadmap Task Ledger
 
-## Drift Ledger
+## Active Drift Ledger
 
 ### 环境噪音
 - `.omx/metrics.json`：环境运行噪音，不计入本轮业务改动。
 
-### PRD drift
-- [x] 路线图里的“road/rail apply bridge 当前仍未开通”仍是 live 缺口。
-  - 现象：`js/core/transport_capability_registry.js` 虽然把 `road/rail/airport/port` 标成 `main_map_bridge`，但 `getTransportWorkbenchOverviewBridgeSupport(...)` 仍对 `road/rail` 直接返回 `supported: false`；`js/ui/toolbar/transport_workbench_controller.js` 因此继续把 road/rail 的 Apply 按钮压成 preview-only。
-  - owner：阶段 5
-  - 处理：阶段 5 打开 road/rail 的真实 bridge 支持，并同步修正对应测试。
-  - 结果：已修复；`tests.test_transport_workbench_manifest_runtime_contract` 现在要求 road/rail `supported: true` 并通过。
+### Batch 0 已收口
+- [x] Pages dist 漏发 `runtime_asset_registry.json`
+  - 处理：`tools/build_pages_dist.py` 发布 `runtime_asset_registry.json`，`tests/test_pages_dist_startup_shell.py` 钉住 dist manifest。
+  - 结果：`python tools/build_pages_dist.py`、`python -m unittest tests.test_pages_dist_startup_shell -v` 通过。
 
-### test drift
-- [x] `tests.test_transport_facility_interactions_contract` 仍断言旧 owner 位置的 `primaryColor`。
-  - 现象：`python -m unittest tests.test_transport_facility_interactions_contract -v` 失败在 `test_state_and_i18n_cover_transport_primary_color_and_more_fields`，断言 `state.js` 内存在 `primaryColor: "#1d4ed8"` / `"#b45309"`；当前真实 owner 已在 `js/core/transport_capability_registry.js`。
-  - owner：阶段 5
-  - 处理：改测试去钉真实 registry owner，并同步检查 i18n / appearance controller 合同。
-  - 结果：已修复；contract 改为钉 `js/core/transport_capability_registry.js` 的真实 owner。
+- [x] maintainability 路线图已恢复为 active 任务
+  - 处理：`docs/archive/maintainability-stability-roadmap/` 恢复为 `docs/active/maintainability-stability-roadmap/`，后续统一在本目录继续迭代。
 
-### state guardrail drift
-- [x] `node tools/check_state_write_allowlist.mjs` 当前红灯。
-  - 现象：Unexpected direct state write files 为 `js/ui/sidebar/project_support_diagnostics_controller.js` 和 `tests/e2e/support/fixtures.js`。
-  - owner：阶段 2
-  - 处理：前者收进 diagnostics owner helper；后者需要评估 guardrail 扫描范围或给测试 fixture 合法写口。
-  - 结果：已修复；guardrail 现在覆盖 `state/runtimeState/appState` alias，主线程复跑全绿。
+- [x] transport 当前产品口径重新冻结
+  - 处理：live code 与 contract 统一确认 `road/rail` 继续 preview-only，`airport/port` 继续条件开放。
+  - 结果：`tests.test_transport_workbench_manifest_runtime_contract`、`tests.test_transport_facility_interactions_contract` 通过。
+
+### Batch 1 已收口
+- [x] state guardrail ratchet
+  - 处理：`preset_state.js`、`interaction_funnel/ui_sync.js`、`scenario_owner_metrics.js`、`scenario_ui_sync.js` 改走 owner helper。
+  - 结果：`node tools/check_state_write_allowlist.mjs` 输出 `83 tracked files`。
+
+- [x] JS/Python 共读 policy table v2
+  - 处理：
+    - `data/country_feature_policies.json` 升到 `schema_version: 2`
+    - 新增 `js/core/country_feature_policies.js`
+    - `map_builder/country_feature_policies.py` 支持 display policy
+    - `country_feature_policies.json` 纳入 `runtime_asset_registry.json`
+  - 结果：`tests.test_country_feature_policies_contract`、`tests.test_data_manifest_contract` 通过。
+
+- [x] feature identity 主路径迁移
+  - 处理：
+    - 主线程 `data_loader.js`、`logic.js`、`i18n.js`、`map_renderer.js` 统一走 shared helper
+    - 新增 `js/core/feature_identity_shared.js`
+    - `startup_boot.worker.js` 改成委托共享 helper，只保留 worker alias 适配
+  - 结果：`tests/feature_identity_shared.node.test.mjs`、`tests/palette_runtime_bridge.node.test.mjs` 通过。
+
+### Batch 2 当前状态
+- [x] historical 1930 city lights 外部化
+  - 处理：
+    - `tools/build_city_lights_historical_1930_asset.py` 输出 metadata JS + entries JSON
+    - `js/core/city_lights_historical_1930_asset.js` 只保留 metadata + loader
+    - 新增 `data/city_lights/historical_1930_entries.json`
+  - 结果：`tests/city_lights_asset_contract.test.mjs`、`tests.test_data_manifest_contract`、`tests.test_pages_dist_startup_shell` 通过。
+
+- [x] runtime asset registry 第二波主路径收口
+  - 处理：
+    - registry 吸收 world cities、city aliases、runtime political、context layers、transport catalogs/manifests、city lights entries、country feature policies
+    - `js/core/data_loader.js` 改走 `resolveDataAssetUrl(...)`
+    - 未发布的 detail topology 变体明确留在 `data_loader.js` 本地常量，避免 Pages 部署版出现缺文件路径
+  - 结果：manifest 与 Pages dist 口径一致，`python tools/build_pages_dist.py` 当前体积 `947.20 MiB`。
+
+- [x] 颜色与渲染主动防线
+  - 已完成：
+    - `tests/palette_runtime_bridge.node.test.mjs` 已补 color manager cache signature / hex normalization
+    - `tests/physical_layer_contracts.test.mjs`、`tests/scenario_chunk_contracts.test.mjs`、`tests/river_layer_contracts.test.mjs` 已覆盖 physical / political raster / river 主路径
+    - targeted Playwright 中 `physical_layer_regression.spec.js` 已通过
+    - `river_layer_regression.spec.js` 已拆成 3 条 targeted test，并补上：
+      - startup preload warning allowlist
+      - render-idle 等待链
+      - 首次 fresh page subset 重新应用校验
+  - 结果：
+    - `node node_modules/@playwright/test/cli.js test tests/e2e/river_layer_regression.spec.js --workers=1 --retries=0`
+    - `3 passed (5.3m)`，日志：`.runtime/tests/playwright/batch23-river-split-fix4.out.log`
+
+### Batch 3 当前状态
+- [x] scenario transaction seam
+  - 处理：`js/core/scenario_apply_pipeline.js` 已拆成 `preCommit -> commit -> postCommit`。
+  - 结果：`tests.test_scenario_manager_boundary_contract`、`tests/scenario_lifecycle_runtime_behavior.test.mjs` 通过。
+
+- [x] transport preview registry config-driven factory
+  - 处理：`js/ui/transport_workbench_family_preview.js` 改为 registry config + factory dispatch。
+  - 结果：`tests.test_transport_workbench_manifest_runtime_contract` 通过，road/rail 仍 preview-only。
+
+- [x] `map_renderer.js` 渐进瘦身
+  - 已完成：
+    - `js/core/renderer/city_label_owner.js`
+    - `js/core/renderer/color_resolution_strategy.js`
+    - `js/core/renderer/render_pipeline_passes.js`
+    - `js/core/renderer/render_cache_owner.js`
+
+- [x] `init_map_data.py` stage 化
+  - 已完成：
+    - `map_builder/base_stage.py`
+    - `map_builder/validation_schema.py`
+    - `map_builder/detail_topology_stage.py`
+    - `map_builder/runtime_political_topology_stage.py`
+    - `map_builder/primary_topology_stage.py`
 
 ## Verification Evidence
-- `git status --short`
-  - ` M .omx/metrics.json`
-  - `?? docs/active/maintainability-stability-roadmap/`
+- `python tools/build_pages_dist.py`
+  - passed: total size `947.20 MiB`
+- `python -m unittest tests.test_pages_dist_startup_shell -v`
+  - passed
+- `python -m unittest tests.test_transport_workbench_manifest_runtime_contract tests.test_transport_facility_interactions_contract -v`
+  - passed
 - `node tools/check_state_write_allowlist.mjs`
-  - failed: `js/ui/sidebar/project_support_diagnostics_controller.js`
-  - failed: `tests/e2e/support/fixtures.js`
-- `python -m unittest tests.test_transport_facility_interactions_contract -v`
-  - failed: stale assertion on `primaryColor` in `state.js`
-- `node tools/e2e_layering.mjs check`
+  - passed: `State write allowlist passed with 83 tracked files.`
+- `python -m unittest tests.test_country_feature_policies_contract tests.test_data_manifest_contract -v`
   - passed
-- `rg -n -S 'file:///C:/Users/raede/Desktop|data/.+\\.(json|geojson)' js`
-  - 现在只剩 `js/core/data_loader.js`
-- `python tools/check_transport_workbench_manifests.py --root data/transport_layers`
-  - passed: `[transport-contract] OK`
-- `python tools/check_scenario_contracts.py --strict`
-  - passed: `blank_base / hoi4_1936 / hoi4_1939 / modern_world / tno_1962`
-- `python -m unittest tests.test_global_transport_builder_contracts tests.test_data_manifest_contract tests.test_local_canonicalization tests.test_build_orchestrator tests.test_state_write_guardrail_contract tests.test_transport_facility_interactions_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_scenario_manager_boundary_contract tests.test_map_renderer_border_mesh_owner_boundary_contract -v`
-  - passed: `Ran 105 tests ... OK`
-- `python -m unittest tests.test_data_manifest_contract tests.test_build_orchestrator tests.test_local_canonicalization tests.test_startup_shell tests.test_scenario_manager_boundary_contract tests.test_map_renderer_border_mesh_owner_boundary_contract -v`
-  - passed: `Ran 31 tests ... OK`
-- `python -m unittest tests.test_global_transport_builder_contracts tests.test_state_write_guardrail_contract tests.test_transport_facility_interactions_contract tests.test_transport_workbench_manifest_runtime_contract -v`
-  - passed: `Ran 77 tests ... OK`
-- `node --test tests/scenario_runtime_state_behavior.test.mjs tests/scenario_lifecycle_runtime_behavior.test.mjs tests/border_mesh_owner_behavior.test.mjs tests/palette_runtime_bridge.node.test.mjs tests/renderer_runtime_state_behavior.test.mjs`
-  - passed: `31/31`
-- `node --test tests/startup_hydration_behavior.test.mjs tests/scenario_runtime_state_behavior.test.mjs tests/scenario_lifecycle_runtime_behavior.test.mjs tests/border_mesh_owner_behavior.test.mjs tests/palette_runtime_bridge.node.test.mjs tests/renderer_runtime_state_behavior.test.mjs`
-  - passed: `40/40`
-- `node --test tests/startup_hydration_behavior.test.mjs`
-  - passed: `9/9`
-- `python -m unittest tests.test_startup_shell -v`
-  - passed: `2/2`
-- `node --check js/core/runtime_asset_registry.js js/core/data_loader.js js/core/startup_cache.js js/core/map_renderer.js js/core/sovereignty_manager.js js/core/unit_counter_icon_libraries.js js/ui/transport_workbench_carrier.js`
+- `node --test tests/feature_identity_shared.node.test.mjs`
   - passed
-- `python -m py_compile init_map_data.py map_builder/config.py map_builder/contracts.py map_builder/runtime_asset_registry.py map_builder/country_feature_policies.py map_builder/processors/config_subdivisions.py map_builder/geo/local_canonicalization.py tests/test_build_orchestrator.py tests/test_data_manifest_contract.py tests/test_startup_shell.py`
+- `node --test tests/palette_runtime_bridge.node.test.mjs`
   - passed
+- `python -m unittest tests.test_build_orchestrator -v`
+  - passed: `21 tests OK`
+- `node --test tests/city_lights_asset_contract.test.mjs tests/palette_runtime_bridge.node.test.mjs tests/scenario_runtime_state_behavior.test.mjs tests/scenario_lifecycle_runtime_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs tests/physical_layer_contracts.test.mjs tests/scenario_chunk_contracts.test.mjs`
+  - passed
+- `python -m unittest tests.test_map_renderer_city_label_owner_boundary_contract -v`
+  - passed
+- `python -m unittest tests.test_map_renderer_color_resolution_strategy_boundary_contract -v`
+  - passed
+- `python -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract tests.test_map_renderer_render_cache_owner_boundary_contract -v`
+  - passed
+- `node --test tests/feature_identity_shared.node.test.mjs tests/city_lights_asset_contract.test.mjs tests/palette_runtime_bridge.node.test.mjs tests/river_layer_contracts.test.mjs tests/physical_layer_contracts.test.mjs tests/scenario_runtime_state_behavior.test.mjs tests/scenario_lifecycle_runtime_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs tests/scenario_chunk_contracts.test.mjs`
+  - passed: `60 tests OK`
+- `node --test tests/river_layer_contracts.test.mjs`
+  - passed: `2 tests OK`
+- `node node_modules/@playwright/test/cli.js test tests/e2e/river_layer_regression.spec.js --workers=1 --retries=0`
+  - passed: `3 passed (5.3m)`，日志：`.runtime/tests/playwright/batch23-river-split-fix4.out.log`
 
 ## Notes
-- 所有阶段共享这一份 ledger，后续逐条更新 owner、现象、修复阶段、验证结果。
-- 阶段 7 当前 live code 已有的增长型静态规则 owner 已收进 `country_feature_policies.json`；后续若新增 Antarctica / color / UI scale 规则扩张，继续沿同一 policy-table 模式推进。
-- review/critic 发现的两个必须修问题都已收掉：
-  - runtime asset registry 现在由 `data/runtime_asset_registry.json` 单点生成，并通过 `js/core/runtime_asset_registry.js` 给 JS 使用
-  - `map_builder/config.py` 不再硬编码 protected subdivision countries
+- 本任务留档已归入 `docs/archive/maintainability-stability-roadmap/`。
+- 子代理中途生成的额外 docs 目录不作为正式 task 载体，收尾时统一并回到本目录。
+- `map_renderer.js` 当前可验收为四个 owner extraction 完成；后续真正瘦身空间留给后续批次。
+- `init_map_data.py` 当前可验收为 stage seam 完成；兼容 wrapper 仍保留在入口壳层。
+- 最终复核、lessons learned 回写、active -> archive 归档均已完成。

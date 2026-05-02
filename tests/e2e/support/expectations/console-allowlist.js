@@ -202,6 +202,16 @@ const CONSOLE_ALLOWLIST = Object.freeze([
     justification: "City-urban regression still tolerates preload-not-used browser warning.",
     pattern: /was preloaded using link preload but not used within a few seconds from the window's load event/i,
   },
+  {
+    id: "river-layer:startup-bundle-preload-unused",
+    scope: "spec",
+    specPaths: ["tests/e2e/river_layer_regression.spec.js"],
+    addedAt: "2026-05-02",
+    expiresAt: "2026-08-01",
+    ownerHint: "map-city",
+    justification: "River layer regression still tolerates the startup bundle preload-not-used browser warning while boot remains intentionally deferred.",
+    pattern: /startup\.bundle\.en\.json\.gz was preloaded using link preload but not used/i,
+  },
 ]);
 
 function normalizeSpecPath(specPath) {

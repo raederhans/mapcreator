@@ -3,21 +3,16 @@ import { state as runtimeState, countryPalette, defaultCountryPalette } from "./
 import { captureHistoryState, pushHistoryEntry } from "./history_manager.js";
 import { syncResolvedDefaultCountryPalette } from "./palette_manager.js";
 import { refreshColorState, refreshResolvedColorsForOwners } from "./map_renderer.js";
-import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import { getCountryCode as getSharedFeatureCountryCode, normalizeFeatureCountryCode } from "./feature_identity.js";
 import { markLegacyColorStateDirty } from "./sovereignty_manager.js";
 const state = runtimeState;
 
 function normalizeCountryCode(rawCode) {
-  return normalizeCountryCodeAlias(rawCode);
+  return normalizeFeatureCountryCode(rawCode);
 }
 
 function getCountryCode(feature) {
-  const code =
-    feature.properties?.cntr_code ||
-    feature.properties?.CNTR_CODE ||
-    feature.properties?.CNTR ||
-    "";
-  return normalizeCountryCode(code);
+  return getSharedFeatureCountryCode(feature);
 }
 
 function applyCountryColor(code, color) {

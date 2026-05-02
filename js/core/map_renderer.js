@@ -58,7 +58,6 @@ import {
   HISTORICAL_1930_CITY_LIGHTS_ENTRIES,
 } from "./city_lights_historical_1930_asset.js";
 import { ColorManager } from "./color_manager.js";
-import { resolveFeatureColor } from "./color_resolver.js";
 import {
   getCountryCode as getSharedFeatureCountryCode,
   getFeatureId as getSharedFeatureId,
@@ -109,6 +108,8 @@ import {
   dispatchMapDoubleClick,
 } from "./interaction_funnel.js";
 import { createUrbanCityPolicyOwner } from "./renderer/urban_city_policy.js";
+import { createCityLabelOwner } from "./renderer/city_label_owner.js";
+import { createColorResolutionStrategyOwner } from "./renderer/color_resolution_strategy.js";
 import { createStrategicOverlayHelpersOwner } from "./renderer/strategic_overlay_helpers.js";
 import { createStrategicOverlayRuntimeOwner } from "./renderer/strategic_overlay_runtime_owner.js";
 import { createPoliticalCollectionOwner } from "./renderer/political_collection_owner.js";
@@ -119,6 +120,8 @@ import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
 import { createBorderDrawOwner } from "./renderer/border_draw_owner.js";
 import { createInteractionBorderSnapshotOwner } from "./renderer/interaction_border_snapshot_owner.js";
 import { createSpatialIndexRuntimeOwner } from "./renderer/spatial_index_runtime_owner.js";
+import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
+import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import {
   buildFacilityInfoCardBody,
   buildFacilityInfoCardFieldSections,
@@ -993,6 +996,8 @@ const cityLayerCache = {
 };
 // --- owner 初始化区：集中持有 owner 单例引用，并在 getter 中按需延迟创建。 ---
 let urbanCityPolicyOwner = null;
+let cityLabelOwner = null;
+let colorResolutionStrategyOwner = null;
 let strategicOverlayHelpersOwner = null;
 let strategicOverlayRuntimeOwner = null;
 let politicalCollectionOwner = null;
@@ -1003,6 +1008,8 @@ let borderMeshOwner = null;
 let borderDrawOwner = null;
 let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
+let renderPipelinePassesOwner = null;
+let renderCacheOwner = null;
 
 // --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
 function getStrategicOverlayHelpersOwner() {
@@ -1096,6 +1103,56 @@ function getUrbanCityPolicyOwner() {
   });
   return urbanCityPolicyOwner;
 }
+
+function getCityLabelOwner() {
+  if (cityLabelOwner) {
+    return cityLabelOwner;
+  }
+  cityLabelOwner = createCityLabelOwner({
+    constants: { textureLabelSerifStack: TEXTURE_LABEL_SERIF_STACK },
+    getters: {
+      getContext: () => context,
+      getViewportSize: () => ({ width: runtimeState.width, height: runtimeState.height }),
+    },
+    helpers: {
+      buildCityLabelPlacementCandidates,
+      clamp,
+      formatCityMapLabel,
+      getCityDisplayLabel,
+      getCityLabelMinZoom,
+      getCityLabelRenderStyle,
+      getCityMarkerSizePx,
+      getCityVisualCapitalState,
+    },
+  });
+  return cityLabelOwner;
+}
+
+const drawCityLabelsFromEntries = (...args) => getCityLabelOwner().drawCityLabelsFromEntries(...args);
+
+function getColorResolutionStrategyOwner() {
+  if (colorResolutionStrategyOwner) {
+    return colorResolutionStrategyOwner;
+  }
+  colorResolutionStrategyOwner = createColorResolutionStrategyOwner({
+    state: runtimeState,
+    helpers: {
+      canonicalCountryCode,
+      getFeatureCountryCodeNormalized,
+      getFeatureId,
+      getOceanBaseFillColor,
+      getSafeCanvasColor,
+      isAntarcticSectorFeature,
+      isAtlantropaSeaFeature,
+      isScenarioShellFeature,
+      normalizeMapSemanticMode,
+    },
+  });
+  return colorResolutionStrategyOwner;
+}
+
+const getDisplayOwnerCode = (...args) => getColorResolutionStrategyOwner().getDisplayOwnerCode(...args);
+const getResolvedFeatureColor = (...args) => getColorResolutionStrategyOwner().getResolvedFeatureColor(...args);
 
 function getPoliticalCollectionOwner() {
   if (politicalCollectionOwner) {
@@ -1360,6 +1417,81 @@ function getSpatialIndexRuntimeOwner() {
   return spatialIndexRuntimeOwner;
 }
 
+function getRenderCacheOwner() {
+  if (renderCacheOwner) {
+    return renderCacheOwner;
+  }
+  renderCacheOwner = createRenderCacheOwner({
+    state,
+    constants: {
+      interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
+      renderPassNames: RENDER_PASS_NAMES,
+      renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+      transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,
+    },
+    getters: {
+      getContext: () => context,
+    },
+    helpers: {
+      cloneZoomTransform,
+      ensureRenderPassCacheState,
+      getTransformSignature,
+      getVisibleFrameIdentity,
+      invalidateInteractionComposite,
+    },
+  });
+  return renderCacheOwner;
+}
+
+function getRenderPipelinePassesOwner() {
+  if (renderPipelinePassesOwner) {
+    return renderPipelinePassesOwner;
+  }
+  renderPipelinePassesOwner = createRenderPipelinePassesOwner({
+    state,
+    constants: {
+      exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
+    },
+    drawPasses: {
+      drawBackgroundPass,
+      drawPhysicalBasePass,
+      drawPoliticalPass,
+      drawContextBasePass,
+      drawContextScenarioPass,
+      drawEffectsPass,
+      drawLineEffectsPass,
+      drawDayNightPass,
+      drawBordersPass,
+      drawContextMarkersPass,
+      drawTextureLabelEffectsPass,
+      drawLabelsPass,
+    },
+    helpers: {
+      detectContextScenarioReasonMismatch,
+      getContextBaseReuseDecision,
+      getContextScenarioReuseDecision,
+      getExactAfterSettleControllerState,
+      getPassReferenceTransform,
+      getRenderPassCacheState,
+      getRenderPassSignature,
+      incrementPerfCounter,
+      rebuildResolvedColors,
+      recordRenderPerfMetric,
+      renderPassToCache,
+      shouldEnableContextBaseTransformReuse,
+      shouldEnableContextScenarioTransformReuse,
+      shouldStartExactAfterSettleFastPath,
+      tryPartialPoliticalPassRepaint,
+    },
+  });
+  return renderPipelinePassesOwner;
+}
+
+const getIdleRenderPassDefinitions = (...args) => getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(...args);
+const prepareIdleRenderPassDefinition = (...args) =>
+  getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(...args);
+const ensureIdleRenderPasses = (...args) => getRenderPipelinePassesOwner().ensureIdleRenderPasses(...args);
+
 // --- 注释锚点：缓存状态（cache state）章节 ---
 // --- 注释锚点：pass-through facade 章节 ---
 // --- 注释锚点：实际渲染实现（render implementation）章节 ---
@@ -1438,10 +1570,7 @@ function isPerfOverlayEnabled() {
 }
 
 function getRenderPassCacheState() {
-  return ensureRenderPassCacheState(state, {
-    cloneZoomTransform,
-    renderPassNames: RENDER_PASS_NAMES,
-  });
+  return getRenderCacheOwner().getRenderPassCacheState();
 }
 
 function getStrategicOverlayRuntimeOwner() {
@@ -1986,156 +2115,36 @@ function invalidateOceanCoastalAccentVisualState(reason = "ocean-coastal-accent"
   clearRenderPassReferenceTransforms("borders");
 }
 
-function getRenderPassOverscanRatio(passName) {
-  return TRANSFORM_REUSED_RENDER_PASS_NAMES.has(passName)
-    ? RENDER_PASS_OVERSCAN_RATIO_PER_SIDE
-    : 0;
-}
-
-function buildRenderPassLayout(passName) {
-  const dpr = Math.max(runtimeState.dpr || 1, 1);
-  const logicalWidth = Math.max(1, Number(runtimeState.width || 1));
-  const logicalHeight = Math.max(1, Number(runtimeState.height || 1));
-  const overscanRatio = getRenderPassOverscanRatio(passName);
-  const offsetX = overscanRatio > 0 ? Math.ceil(logicalWidth * overscanRatio) : 0;
-  const offsetY = overscanRatio > 0 ? Math.ceil(logicalHeight * overscanRatio) : 0;
-  const paddedWidth = logicalWidth + offsetX * 2;
-  const paddedHeight = logicalHeight + offsetY * 2;
-  return {
-    offsetX,
-    offsetY,
-    logicalWidth,
-    logicalHeight,
-    paddedWidth,
-    paddedHeight,
-    pixelWidth: Math.max(1, Math.floor(paddedWidth * dpr)),
-    pixelHeight: Math.max(1, Math.floor(paddedHeight * dpr)),
-    dpr,
-  };
-}
-
 function getRenderPassLayout(passName) {
-  const cache = getRenderPassCacheState();
-  const layout = buildRenderPassLayout(passName);
-  cache.layouts[passName] = layout;
-  return layout;
+  return getRenderCacheOwner().getRenderPassLayout(passName);
 }
 
 function resizeRenderPassCanvases() {
-  const cache = getRenderPassCacheState();
-  RENDER_PASS_NAMES.forEach((passName) => {
-    const layout = getRenderPassLayout(passName);
-    const canvas = cache.canvases?.[passName];
-    if (!canvas) return;
-    if (canvas.width !== layout.pixelWidth) canvas.width = layout.pixelWidth;
-    if (canvas.height !== layout.pixelHeight) canvas.height = layout.pixelHeight;
-  });
+  return getRenderCacheOwner().resizeRenderPassCanvases();
 }
 
 function ensureRenderPassCanvas(passName) {
-  const cache = getRenderPassCacheState();
-  if (!cache.canvases[passName]) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
-    cache.canvases[passName] = canvas;
-  }
-  resizeRenderPassCanvases();
-  return cache.canvases[passName];
+  return getRenderCacheOwner().ensureRenderPassCanvas(passName);
 }
 
 function ensureLastGoodFrameCanvas() {
-  const cache = getRenderPassCacheState();
-  if (!cache.lastGoodFrame.canvas) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
-    cache.lastGoodFrame.canvas = canvas;
-  }
-  const targetCanvas = cache.lastGoodFrame.canvas;
-  const width = Math.max(1, Number(context?.canvas?.width || 1));
-  const height = Math.max(1, Number(context?.canvas?.height || 1));
-  if (targetCanvas.width !== width) targetCanvas.width = width;
-  if (targetCanvas.height !== height) targetCanvas.height = height;
-  return targetCanvas;
+  return getRenderCacheOwner().ensureLastGoodFrameCanvas();
 }
 
 function ensureInteractionCompositeCanvas() {
-  const cache = getRenderPassCacheState();
-  if (!cache.interactionComposite.canvas) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
-    cache.interactionComposite.canvas = canvas;
-  }
-  const targetCanvas = cache.interactionComposite.canvas;
-  const width = Math.max(1, Number(context?.canvas?.width || 1));
-  const height = Math.max(1, Number(context?.canvas?.height || 1));
-  if (targetCanvas.width !== width) targetCanvas.width = width;
-  if (targetCanvas.height !== height) targetCanvas.height = height;
-  cache.interactionComposite.layout = {
-    pixelWidth: width,
-    pixelHeight: height,
-    dpr: Math.max(1, Number(runtimeState.dpr || 1)),
-  };
-  return targetCanvas;
+  return getRenderCacheOwner().ensureInteractionCompositeCanvas();
 }
 
 function ensureCompositeBufferCanvas() {
-  const cache = getRenderPassCacheState();
-  if (!cache.compositeBuffer?.canvas) {
-    cache.compositeBuffer = cache.compositeBuffer && typeof cache.compositeBuffer === "object"
-      ? cache.compositeBuffer
-      : {};
-    const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
-    cache.compositeBuffer.canvas = canvas;
-  }
-  const targetCanvas = cache.compositeBuffer.canvas;
-  const width = Math.max(1, Number(context?.canvas?.width || 1));
-  const height = Math.max(1, Number(context?.canvas?.height || 1));
-  if (targetCanvas.width !== width) targetCanvas.width = width;
-  if (targetCanvas.height !== height) targetCanvas.height = height;
-  return targetCanvas;
+  return getRenderCacheOwner().ensureCompositeBufferCanvas();
 }
 
 function getInteractionCompositeSignature(cache = getRenderPassCacheState()) {
-  return INTERACTION_COMPOSITE_PASS_NAMES.map((passName) => [
-    passName,
-    String(cache.signatures?.[passName] || ""),
-    getTransformSignature(getPassReferenceTransform(passName)),
-  ].join("@")).join("|");
-}
-
-function getInteractionCompositeRejectReason(composite, currentTransform, cache = getRenderPassCacheState()) {
-  if (!composite?.valid) return "invalid";
-  if (!composite.canvas || !composite.referenceTransform) return "missing-canvas-or-transform";
-  if (composite.signature !== getInteractionCompositeSignature(cache)) return "signature-mismatch";
-  const identity = getVisibleFrameIdentity(currentTransform);
-  if (String(composite.scenarioId || "") !== identity.scenarioId) return "scenario-mismatch";
-  if (Number(composite.selectionVersion || 0) !== identity.selectionVersion) return "selection-version-mismatch";
-  if (String(composite.contextFlagSignature || "") !== identity.contextFlagSignature) return "context-flag-mismatch";
-  if (Number(composite.topologyRevision || 0) !== identity.topologyRevision) return "topology-revision-mismatch";
-  if (Math.abs(Number(composite.dpr || 1) - identity.dpr) > 0.01) return "dpr-mismatch";
-  if (Number(composite.pixelWidth || 0) !== identity.pixelWidth || Number(composite.pixelHeight || 0) !== identity.pixelHeight) {
-    return "canvas-size-mismatch";
-  }
-  if (Number(composite.colorRevision || 0) !== identity.colorRevision) return "color-revision-mismatch";
-  return "";
+  return getRenderCacheOwner().getInteractionCompositeSignature(cache);
 }
 
 function canDrawInteractionComposite(currentTransform, cache = getRenderPassCacheState()) {
-  const composite = cache.interactionComposite || {};
-  const rejectReason = getInteractionCompositeRejectReason(composite, currentTransform, cache);
-  if (!rejectReason) return true;
-  if (composite && typeof composite === "object") {
-    composite.rejectedReason = rejectReason;
-  }
-  if (rejectReason !== "invalid") {
-    invalidateInteractionComposite(rejectReason);
-  }
-  return false;
+  return getRenderCacheOwner().canDrawInteractionComposite(currentTransform, cache);
 }
 
 function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
@@ -3584,19 +3593,6 @@ function drawScenarioReliefOverlaysPass(k) {
   }
 }
 
-function extractCountryCodeFromId(value) {
-  const text = String(value || "").trim().toUpperCase();
-  if (!text) return "";
-
-  const prefix = text.split(/[-_]/)[0];
-  if (/^[A-Z]{2,3}$/.test(prefix)) {
-    return prefix;
-  }
-
-  const alphaPrefix = prefix.match(/^[A-Z]{2,3}/);
-  return alphaPrefix ? alphaPrefix[0] : "";
-}
-
 function getFeatureCountryCodeNormalized(feature) {
   return canonicalCountryCode(getSharedFeatureCountryCode(feature));
 }
@@ -4689,17 +4685,11 @@ function shouldUseDirectScenarioWaterDraw(signals) {
 }
 
 function getPassReferenceTransform(passName) {
-  const cache = getRenderPassCacheState();
-  if (cache.referenceTransforms?.[passName]) {
-    return cloneZoomTransform(cache.referenceTransforms[passName]);
-  }
-  return cache.referenceTransform ? cloneZoomTransform(cache.referenceTransform) : null;
+  return getRenderCacheOwner().getPassReferenceTransform(passName);
 }
 
 function setPassReferenceTransform(passName, transform) {
-  const cache = getRenderPassCacheState();
-  cache.referenceTransforms[passName] = cloneZoomTransform(transform);
-  cache.referenceTransform = cloneZoomTransform(transform);
+  return getRenderCacheOwner().setPassReferenceTransform(passName, transform);
 }
 
 function getTransformReuseDelta(currentTransform, referenceTransform) {
@@ -6076,59 +6066,6 @@ function flushPendingScenarioChunkRefreshAfterExact(reason = "exact-after-settle
       flushPending: true,
     });
   }, 0);
-}
-
-function getDisplayOwnerCode(feature, id) {
-  const resolvedId = String(id || "").trim() || getFeatureId(feature);
-  if (isAntarcticSectorFeature(feature, resolvedId)) {
-    return "";
-  }
-  const mapSemanticMode = normalizeMapSemanticMode(runtimeState.mapSemanticMode);
-  const isScenarioShell = isScenarioShellFeature(feature, resolvedId);
-  const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
-  const shellOwnerCode = String(
-    runtimeState.scenarioAutoShellOwnerByFeatureId?.[resolvedId] || shellOwnerHintCode || ""
-  ).trim().toUpperCase();
-  const directOwnerCode = canonicalCountryCode(runtimeState.sovereigntyByFeatureId?.[resolvedId] || "");
-  if (mapSemanticMode === "blank") {
-    if (!runtimeState.activeScenarioId || String(runtimeState.scenarioViewMode || "ownership") !== "frontline") {
-      return isScenarioShell ? (directOwnerCode || shellOwnerCode || "") : directOwnerCode;
-    }
-    const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
-    const shellControllerCode = String(
-      runtimeState.scenarioAutoShellControllerByFeatureId?.[resolvedId] || shellControllerHintCode || ""
-    ).trim().toUpperCase();
-    const directControllerCode = canonicalCountryCode(runtimeState.scenarioControllersByFeatureId?.[resolvedId] || "");
-    return isScenarioShell
-      ? (directControllerCode || shellControllerCode || directOwnerCode || shellOwnerCode || "")
-      : (directControllerCode || directOwnerCode || "");
-  }
-  const fallbackOwnerCode = getFeatureCountryCodeNormalized(feature);
-  const ownershipOwnerCode = isScenarioShell
-    ? (directOwnerCode || shellOwnerCode || "")
-    : (directOwnerCode || fallbackOwnerCode || "");
-  if (!runtimeState.activeScenarioId || String(runtimeState.scenarioViewMode || "ownership") !== "frontline") {
-    return ownershipOwnerCode;
-  }
-  const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
-  const shellControllerCode = String(
-    runtimeState.scenarioAutoShellControllerByFeatureId?.[resolvedId] || shellControllerHintCode || ""
-  ).trim().toUpperCase();
-  const directControllerCode = canonicalCountryCode(runtimeState.scenarioControllersByFeatureId?.[resolvedId] || "");
-  return isScenarioShell
-    ? (directControllerCode || shellControllerCode || ownershipOwnerCode || "")
-    : (directControllerCode || ownershipOwnerCode || "");
-}
-
-function getResolvedFeatureColor(feature, id) {
-  return resolveFeatureColor(id, {
-    state: runtimeState,
-    feature,
-    getSafeColor: getSafeCanvasColor,
-    isOceanFeature: isAtlantropaSeaFeature,
-    getOceanBaseFillColor,
-    getOwnerCode: getDisplayOwnerCode,
-  }).color;
 }
 
 function rebuildResolvedColors() {
@@ -13726,15 +13663,6 @@ function isFacilityDetailsSurfaceActive(familyId = "") {
   return workbenchOverlay instanceof HTMLElement && !workbenchOverlay.classList.contains("hidden");
 }
 
-function doScreenBoxesOverlap(a, b) {
-  return (
-    a.x < (b.x + b.w)
-    && (a.x + a.w) > b.x
-    && a.y < (b.y + b.h)
-    && (a.y + a.h) > b.y
-  );
-}
-
 function getCityLayerRenderState(k, { interactive = false, cacheHoverEntries = false } = {}) {
   const cityCollection = getEffectiveCityCollection();
   const featureCount = getFeatureCollectionFeatureCount(cityCollection);
@@ -13818,70 +13746,6 @@ function drawCityMarkersFromEntries(markerEntries, { config, scale, opacity, int
     context.drawImage(sprite.canvas, drawX, drawY, drawWidth, drawHeight);
   });
   context.restore();
-}
-
-function drawCityLabelsFromEntries(labelEntries, { config, scale } = {}) {
-  if (!Array.isArray(labelEntries) || !labelEntries.length) return 0;
-  let labelCount = 0;
-  const fontPx = clamp((Number(config?.labelSize) || 11) - 1, 7, 23);
-  context.save();
-  context.globalAlpha = 1;
-  context.textBaseline = "middle";
-  context.lineJoin = "round";
-  const occupiedBoxes = [];
-  labelEntries.forEach((entry) => {
-    const visualEntry = getCityVisualCapitalState(entry, config)
-      ? entry
-      : { ...entry, isCapital: false, markerSizePx: null };
-    context.font = `${visualEntry.isCapital ? 600 : 400} ${fontPx / scale}px ${TEXTURE_LABEL_SERIF_STACK}`;
-    const fullText = getCityDisplayLabel(visualEntry.feature);
-    const text = formatCityMapLabel(fullText, {
-      entry: visualEntry,
-      context,
-      config,
-      scale,
-    });
-    const labelMinZoom = getCityLabelMinZoom(visualEntry, config);
-    if (!text || !entry.screenPoint || scale < labelMinZoom) return;
-    const markerSizePx = Number(visualEntry.markerSizePx || getCityMarkerSizePx(visualEntry, config));
-    const offsetPx = Math.max(7, markerSizePx + 4);
-    const verticalOffsetPx = Math.max(fontPx + 2, markerSizePx + 6);
-    const metrics = context.measureText(text);
-    const candidates = buildCityLabelPlacementCandidates(visualEntry, {
-      textWidthPx: metrics.width * scale,
-      fontPx,
-      scale,
-      offsetPx,
-      verticalOffsetPx,
-    });
-    const acceptedPlacement = candidates.find(({ box }) => (
-      !(box.x > runtimeState.width + 24
-      || box.y > runtimeState.height + 24
-      || (box.x + box.w) < -24
-      || (box.y + box.h) < -24)
-      && !occupiedBoxes.some((occupied) => doScreenBoxesOverlap(box, occupied))
-    ));
-    if (!acceptedPlacement) {
-      return;
-    }
-    occupiedBoxes.push(acceptedPlacement.box);
-    entry.acceptedLabelPlacement = acceptedPlacement.id;
-    labelCount += 1;
-    const labelStyle = getCityLabelRenderStyle(visualEntry, config);
-    context.textAlign = acceptedPlacement.textAlign;
-    context.shadowColor = labelStyle.shadowColor;
-    context.shadowBlur = Math.max(1.1, fontPx * labelStyle.shadowBlurFactor) / scale;
-    context.shadowOffsetX = 0;
-    context.shadowOffsetY = Math.max(0.5, fontPx * labelStyle.shadowOffsetYFactor) / scale;
-    context.lineWidth = Math.max(0.9, fontPx * labelStyle.strokeWidthFactor) / scale;
-    context.strokeStyle = labelStyle.strokeStyle;
-    context.strokeText(text, acceptedPlacement.drawX, acceptedPlacement.drawY);
-    context.fillStyle = labelStyle.fillStyle;
-    context.fillText(text, acceptedPlacement.drawX, acceptedPlacement.drawY);
-    entry.labelContrastMode = labelStyle.usesLightLabel ? "light" : "default";
-  });
-  context.restore();
-  return labelCount;
 }
 
 function drawCityPointsLayer(k, { interactive = false } = {}) {
@@ -18889,137 +18753,6 @@ function renderPassToCache(passName, drawFn, transform, timings) {
   }
 }
 
-function getIdleRenderPassDefinitions() {
-  return [
-    ["background", (k) => drawBackgroundPass(k)],
-    ["physicalBase", (k) => drawPhysicalBasePass(k)],
-    ["political", (k) => drawPoliticalPass(k)],
-    ["contextBase", (k) => drawContextBasePass(k)],
-    ["contextScenario", (k) => drawContextScenarioPass(k)],
-    ["effects", (k) => drawEffectsPass(k)],
-    ["lineEffects", (k) => drawLineEffectsPass(k)],
-    ["dayNight", (k) => drawDayNightPass(k)],
-    ["borders", (k) => drawBordersPass(k)],
-    ["contextMarkers", (k) => drawContextMarkersPass(k)],
-    ["textureLabels", (k) => drawTextureLabelEffectsPass(k)],
-    ["labels", (k) => drawLabelsPass(k)],
-  ];
-}
-
-function shouldDeferExactAfterSettlePassForCriticalPaint(passName, cache = getRenderPassCacheState()) {
-  if (!EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName)) return false;
-  const controller = getExactAfterSettleControllerState();
-  if (!controller || String(controller.phase || "") !== "awaiting-paint") return false;
-  if (!cache.canvases?.[passName]) return false;
-  if (!getPassReferenceTransform(passName)) return false;
-  return true;
-}
-
-function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache = getRenderPassCacheState()) {
-    const nextSignature = getRenderPassSignature(passName, transform);
-    if (cache.signatures[passName] !== nextSignature) {
-      cache.dirty[passName] = true;
-      if (!cache.reasons[passName] || cache.reasons[passName] === "init") {
-        cache.reasons[passName] = "signature";
-      }
-      if (passName === "contextScenario") {
-        recordRenderPerfMetric("contextScenarioSignatureChanged", 0, {
-          activeScenarioId: String(runtimeState.activeScenarioId || ""),
-          previousSignature: String(cache.signatures[passName] || ""),
-          nextSignature,
-        });
-      }
-    }
-    if (
-      passName === "contextBase"
-      && shouldEnableContextBaseTransformReuse()
-      && !runtimeState.deferExactAfterSettle
-      && shouldStartExactAfterSettleFastPath()
-    ) {
-      const reuseDecision = getContextBaseReuseDecision(transform);
-      if (reuseDecision.enabled && reuseDecision.shouldExactRefresh) {
-        cache.dirty[passName] = true;
-        cache.reasons[passName] = reuseDecision.reason || "context-base-threshold";
-      }
-    }
-    if (
-      passName === "contextScenario"
-      && shouldEnableContextScenarioTransformReuse()
-      && cache.dirty[passName]
-      && String(cache.reasons[passName] || "") === "signature"
-    ) {
-      const reuseDecision = getContextScenarioReuseDecision(transform);
-      if (reuseDecision.enabled && reuseDecision.shouldExactRefresh) {
-        cache.dirty[passName] = true;
-        cache.reasons.contextScenario = "signature";
-        incrementPerfCounter("contextScenarioExactRefreshCount");
-        recordRenderPerfMetric("contextScenarioExactRefresh", 0, {
-          activeScenarioId: String(runtimeState.activeScenarioId || ""),
-          reason: reuseDecision.reason,
-          scaleRatio: reuseDecision.scaleRatio,
-          distancePx: reuseDecision.distancePx,
-          maxDistancePx: reuseDecision.maxDistancePx,
-          zoomBucket: reuseDecision.zoomBucket,
-          referenceZoomBucket: reuseDecision.referenceZoomBucket,
-          crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
-          reuseFrameCount: reuseDecision.reuseFrameCount,
-          reuseFrameLimit: reuseDecision.reuseFrameLimit,
-        });
-      } else {
-        cache.dirty[passName] = false;
-        cache.counters.contextScenarioReuseCount = Math.max(
-          0,
-          Number(cache.counters.contextScenarioReuseCount || 0) + 1,
-        );
-        recordRenderPerfMetric("contextScenarioReuseSkipped", 0, {
-          activeScenarioId: String(runtimeState.activeScenarioId || ""),
-          reason: reuseDecision.reason || "transform-reuse",
-          transformK: Number(transform?.k || runtimeState.zoomTransform?.k || 1),
-          scaleRatio: reuseDecision.scaleRatio,
-          distancePx: reuseDecision.distancePx,
-          maxDistancePx: reuseDecision.maxDistancePx,
-          zoomBucket: reuseDecision.zoomBucket,
-          referenceZoomBucket: reuseDecision.referenceZoomBucket,
-          reuseFrameCount: reuseDecision.reuseFrameCount,
-          reuseFrameLimit: reuseDecision.reuseFrameLimit,
-        });
-      }
-    }
-    if (!cache.dirty[passName]) return;
-    if (shouldDeferExactAfterSettlePassForCriticalPaint(passName, cache)) {
-      recordRenderPerfMetric("settleExactRefreshDeferredPass", 0, {
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        passName,
-        reason: String(cache.reasons?.[passName] || "dirty"),
-        controllerPhase: String(getExactAfterSettleControllerState()?.phase || ""),
-      });
-      return;
-    }
-    if (
-      passName === "political"
-      && tryPartialPoliticalPassRepaint(transform, nextSignature, timings)
-    ) {
-      return;
-    }
-    renderPassToCache(passName, drawFn, transform, timings);
-}
-
-function ensureIdleRenderPasses(timings) {
-  const transform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
-  const cache = getRenderPassCacheState();
-  if (runtimeState.legacyColorStateDirty) {
-    rebuildResolvedColors();
-  }
-  getIdleRenderPassDefinitions().forEach(([passName, drawFn]) => {
-    prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
-  });
-  if (Number.isFinite(timings.contextBase) || Number.isFinite(timings.contextScenario)) {
-    timings.context =
-      Math.max(0, Number(timings.contextBase || 0))
-      + Math.max(0, Number(timings.contextScenario || 0));
-  }
-  detectContextScenarioReasonMismatch({ cache, renderPerf: runtimeState.renderPerfMetrics || {} });
-}
 
 function resetCanvasContext(targetContext, width, height) {
   if (!targetContext) return;

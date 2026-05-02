@@ -280,6 +280,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
   const bundleLoaderSource = readRepoFile("js", "core", "scenario", "bundle_loader.js");
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
+  const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
+  const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
   const interactionRecoveryBlockedBody =
     rendererSource.match(/function isInteractionRecoveryBlocked\(\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body || "";
 
@@ -287,7 +289,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     drawContextScenarioPassKeepsScenarioOverlayBoundary:
       /function drawContextScenarioPass\(k, \{ interactive = false \} = \{\}\) \{[\s\S]*?drawScenarioRegionOverlaysPass\(k\);[\s\S]*?drawScenarioReliefOverlaysPass\(k\);[\s\S]*?recordRenderPerfMetric\("drawContextScenarioPass"/.test(rendererSource),
     signatureOnlyContextScenarioInvalidationUsesTransformReuse:
-      /passName === "contextScenario"[\s\S]*?shouldEnableContextScenarioTransformReuse\(\)[\s\S]*?cache\.dirty\[passName\] = false;[\s\S]*?recordRenderPerfMetric\("contextScenarioReuseSkipped", 0, \{/.test(rendererSource),
+      /passName === "contextScenario"[\s\S]*?shouldEnableContextScenarioTransformReuse\(\)[\s\S]*?cache\.dirty\[passName\] = false;[\s\S]*?recordRenderPerfMetric\("contextScenarioReuseSkipped", 0, \{/.test(renderPipelinePassesSource)
+      && /shouldEnableContextScenarioTransformReuse,/.test(rendererSource),
     contextScenarioKeepsLayerMetrics:
       rendererSource.includes('"contextScenarioLayerWater"')
       && rendererSource.includes('"contextScenarioLayerSpecial"')
@@ -296,7 +299,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('"contextScenarioLayerRelief"')
       && rendererSource.includes('renderScenarioReliefOverlaysLayerToCache')
       && rendererSource.includes('getContextScenarioLayerCacheEntry("relief")')
-      && rendererSource.includes('recordRenderPerfMetric("contextScenarioSignatureChanged"'),
+      && renderPipelinePassesSource.includes('recordRenderPerfMetric("contextScenarioSignatureChanged"'),
     contextScenarioSpecialSignatureTracksPayloadIdentity:
       /function getScenarioSpecialVisualRevisionToken\(\) \{[\s\S]*?special-ref:\$\{getObjectIdentityToken\(runtimeState\.scenarioSpecialRegionsData, "scenario-special"\)\}[\s\S]*?special-count:\$\{getFeatureCollectionFeatureCount\(runtimeState\.scenarioSpecialRegionsData\)\}/.test(rendererSource),
     interactionMetricsKeepDirectActionAndHitRankDurations:
@@ -409,8 +412,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
         const deferredPassSet = rendererSource.match(/const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
         return !deferredPassSet.includes('"background"') && !deferredPassSet.includes('"physicalBase"');
       })()
-      && /function shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache = getRenderPassCacheState\(\)\) \{[\s\S]*?String\(controller\.phase \|\| ""\) !== "awaiting-paint"[\s\S]*?getPassReferenceTransform\(passName\)/.test(rendererSource)
-      && /function prepareIdleRenderPassDefinition[\s\S]*?shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshDeferredPass"/.test(rendererSource)
+      && /function shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache = getRenderPassCacheState\(\)\) \{[\s\S]*?String\(controller\.phase \|\| ""\) !== "awaiting-paint"[\s\S]*?getPassReferenceTransform\(passName\)/.test(renderPipelinePassesSource)
+      && /function prepareIdleRenderPassDefinition[\s\S]*?shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshDeferredPass"/.test(renderPipelinePassesSource)
       && /function applyExactAfterSettleRefreshPlan[\s\S]*?plan\.deferredExactTargetPasses[\s\S]*?EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES\.has\(passName\)[\s\S]*?plan\.exactTargetPasses[\s\S]*?!EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES\.has\(passName\)/.test(rendererSource)
       && /function scheduleDeferredExactContextRefresh\(plan = \{\}\)[\s\S]*?prepareDeferredExactContextPassesInSlices[\s\S]*?recordRenderPerfMetric\("deferredExactContextRefreshScheduled"/.test(rendererSource)
       && rendererSource.includes("let deferredExactContextRefreshVersion = 0;")
@@ -468,7 +471,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes("function getRuntimeChunkSelectionVersion()")
       && rendererSource.includes("function getVisibleContextFlagSignature()")
       && /function getVisibleFrameIdentity[\s\S]*?selectionVersion: getRuntimeChunkSelectionVersion\(\)[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)/.test(rendererSource)
-      && /function getInteractionCompositeRejectReason[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(rendererSource)
+      && /function getInteractionCompositeRejectReason[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(renderCacheOwnerSource)
       && /function captureLastGoodFrame[\s\S]*?cache\.lastGoodFrame\.colorRevision = identity\.colorRevision/.test(rendererSource)
       && /function drawLastGoodFrameFallback[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(rendererSource)
       && rendererRuntimeStateSource.includes("selectionVersion: 0")
@@ -501,7 +504,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && politicalRasterWorkerSource.includes('type: "ERROR"')
       && politicalRasterWorkerSource.includes("taskId"),
     exactComposeUsesCompositeBuffer:
-      /function ensureCompositeBufferCanvas\(\) \{[\s\S]*?cache\.compositeBuffer\.canvas = canvas;/.test(rendererSource)
+      /function ensureCompositeBufferCanvas\(\) \{[\s\S]*?cache\.compositeBuffer\.canvas = canvas;/.test(renderCacheOwnerSource)
       && /function composeCachedPasses[\s\S]*?const bufferCanvas = ensureCompositeBufferCanvas\(\);[\s\S]*?composeRenderPassesToTarget\(bufferContext, passNames, currentTransform,[\s\S]*?requireAllPasses: true[\s\S]*?blitCompositeBufferToMain\(bufferCanvas\);/.test(rendererSource)
       && /function blitCompositeBufferToMain\(bufferCanvas\) \{[\s\S]*?context\.globalCompositeOperation = "copy";[\s\S]*?context\.drawImage\(bufferCanvas, 0, 0\);[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(rendererSource),
     coarsePrewarmDoesNotOverwriteActiveDetailChunks:
@@ -671,7 +674,8 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       /function refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?if \(hasPoliticalChange\) \{[\s\S]*?ensureLayerDataFromTopology\(\);[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?scheduleUiMode: "deferred",[\s\S]*?buildSpatial: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(rendererSource)
       && /async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?primaryDerivedStateReady = false,[\s\S]*?if \(!primaryDerivedStateReady\) \{[\s\S]*?buildIndex\(\);[\s\S]*?await buildSpatialIndexChunked\(\{[\s\S]*?includeSecondary: false,[\s\S]*?keepReady: true,[\s\S]*?\}\);/.test(rendererSource),
     scenarioApplyCommitsPreparedScenarioWaterPayloadOnly:
-      /runtimeState\.scenarioWaterRegionsData = staged\.scenarioWaterRegionsFromTopology \|\| null;/.test(scenarioApplyPipelineSource),
+      /function buildScenarioActivationCommitState\(bundle,\s*staged\) \{[\s\S]*?const scenarioWaterRegionsData = staged\.scenarioWaterRegionsFromTopology \|\| null;[\s\S]*?scenarioWaterRegionsData,/.test(scenarioApplyPipelineSource)
+      && /commitScenarioActivationRuntimeState\(runtimeState,\s*nextRuntimeState\);/.test(scenarioApplyPipelineSource),
   };
 
   Object.entries(checks).forEach(([label, ok]) => {
@@ -860,6 +864,28 @@ test("political raster worker result currentness includes viewport", async () =>
     ),
     false,
   );
+});
+
+test("political raster renderer request identity includes viewport and pass signature", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const workerClientSource = readRepoFile("js", "core", "political_raster_worker_client.js");
+  const workerSource = readRepoFile("js", "workers", "political_raster.worker.js");
+  const drawStart = rendererSource.indexOf("function drawPoliticalPass");
+  const drawEnd = rendererSource.indexOf("function drawScenarioRegionOverlaysPass", drawStart);
+  const drawSource = drawStart >= 0 && drawEnd > drawStart
+    ? rendererSource.slice(drawStart, drawEnd)
+    : "";
+
+  assert.ok(drawSource.includes("const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();"));
+  assert.ok(/createPoliticalRasterWorkerIdentity\(\{[\s\S]*?selectionVersion: Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?topologyRevision: Number\(runtimeState\.topologyRevision \|\| 0\),[\s\S]*?colorRevision: Number\(runtimeState\.colorRevision \|\| 0\),[\s\S]*?transformBucket: getTransformBucketSignature\(transform\),[\s\S]*?dpr: Number\(runtimeState\.dpr \|\| 1\),/.test(drawSource));
+  assert.ok(/viewport: \{[\s\S]*?width: canvasWidth,[\s\S]*?height: canvasHeight,[\s\S]*?right: canvasWidth,[\s\S]*?bottom: canvasHeight,[\s\S]*?\}/.test(drawSource));
+  assert.ok(drawSource.includes('passSignature: getRenderPassSignature("political", transform),'));
+  assert.ok(/requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: workerIdentity,[\s\S]*?canvasPxWidth: Math\.max\(0, Math\.round\(canvasWidth \* Number\(runtimeState\.dpr \|\| 1\)\)\),[\s\S]*?canvasPxHeight: Math\.max\(0, Math\.round\(canvasHeight \* Number\(runtimeState\.dpr \|\| 1\)\)\),/.test(drawSource));
+  assert.ok(/function normalizeViewportIdentity\(viewport = null\)[\s\S]*?\["x", "y", "width", "height", "left", "top", "right", "bottom"\]/.test(workerClientSource));
+  assert.ok(/String\(request\.passSignature \|\| ""\) === String\(current\.passSignature \|\| ""\)/.test(workerClientSource));
+  assert.ok(/normalizeViewportIdentity\(request\.viewport\) === normalizeViewportIdentity\(current\.viewport\)/.test(workerClientSource));
+  assert.ok(workerSource.includes("passSignature: String(identity.passSignature || \"\")"));
+  assert.ok(workerSource.includes("viewport: identity.viewport || null"));
 });
 
 test("frame scheduler keeps high-priority exact slices draining under continuous input pressure", async () => {

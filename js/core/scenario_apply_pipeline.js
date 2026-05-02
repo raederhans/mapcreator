@@ -81,7 +81,7 @@ function createScenarioApplyPipeline({
     };
   }
 
-  function commitScenarioActivationState(bundle, staged) {
+  function buildScenarioActivationCommitState(bundle, staged) {
     const runtimePoliticalTopology = staged.mapSemanticMode === "blank"
       ? (staged.runtimeTopologyPayload || null)
       : (
@@ -101,19 +101,7 @@ function createScenarioApplyPipeline({
     const scenarioContextLandMaskData = staged.scenarioContextLandMaskFromTopology || null;
     const scenarioWaterRegionsData = staged.scenarioWaterRegionsFromTopology || null;
     const scenarioDistrictGroupByFeatureId = buildScenarioDistrictGroupByFeatureId(staged.districtGroupsPayload);
-    syncScenarioLocalizationState({
-      cityOverridesPayload: staged.mapSemanticMode === "blank" ? null : (staged.scenarioCityOverridesPayload || null),
-      geoLocalePatchPayload: staged.mapSemanticMode === "blank" ? null : (bundle.geoLocalePatchPayload || null),
-    });
-    if (staged.mapSemanticMode === "blank") {
-      applyBlankScenarioPresentationDefaults({ resetLocalization: false });
-    }
     const releasableCatalog = mergeReleasableCatalogs(runtimeState.defaultReleasableCatalog, bundle.releasableCatalog);
-    setScenarioAuditUiState({
-      loading: false,
-      loadedForScenarioId: bundle.auditPayload ? staged.scenarioId : "",
-      errorMessage: "",
-    });
     const fixedOwnerColors = { ...staged.scenarioColorMap };
     if (staged.coarseColorMap && typeof staged.coarseColorMap === "object") {
       Object.entries(staged.coarseColorMap).forEach(([iso2, color]) => {
@@ -122,7 +110,7 @@ function createScenarioApplyPipeline({
         }
       });
     }
-    commitScenarioActivationRuntimeState(runtimeState, {
+    return {
       scenarioParentBorderEnabledBeforeActivate:
         cloneScenarioStateValue(staged.scenarioParentBorderEnabledBeforeActivate),
       scenarioDisplaySettingsBeforeActivate:
@@ -181,8 +169,39 @@ function createScenarioApplyPipeline({
       selectedSpecialRegionId: "",
       hoveredWaterRegionId: null,
       hoveredSpecialRegionId: null,
+    };
+  }
+
+  function runScenarioActivationPreCommitPhase(bundle, staged) {
+    syncScenarioLocalizationState({
+      cityOverridesPayload: staged.mapSemanticMode === "blank" ? null : (staged.scenarioCityOverridesPayload || null),
+      geoLocalePatchPayload: staged.mapSemanticMode === "blank" ? null : (bundle.geoLocalePatchPayload || null),
     });
+    if (staged.mapSemanticMode === "blank") {
+      applyBlankScenarioPresentationDefaults({ resetLocalization: false });
+    }
+    setScenarioAuditUiState({
+      loading: false,
+      loadedForScenarioId: bundle.auditPayload ? staged.scenarioId : "",
+      errorMessage: "",
+    });
+  }
+
+  function commitScenarioActivationState(bundle, staged) {
+    const nextRuntimeState = buildScenarioActivationCommitState(bundle, staged);
+    commitScenarioActivationRuntimeState(runtimeState, nextRuntimeState);
+    return nextRuntimeState;
+  }
+
+  function runScenarioActivationPostCommitPhase(bundle, staged) {
     markLegacyColorStateDirty();
+    syncScenarioInspectorSelection(runtimeState.activeSovereignCode);
+    disableScenarioParentBorders();
+    applyScenarioPaintMode();
+    syncScenarioOceanFillForActivation(bundle.manifest);
+    applyScenarioPerformanceHints(bundle.manifest);
+    commitScenarioChunkRuntimeState(bundle, staged);
+    recalculateScenarioOwnerControllerDiffCount();
   }
 
   function commitScenarioChunkRuntimeState(bundle, staged) {
@@ -474,15 +493,9 @@ function createScenarioApplyPipeline({
   }
 
   function applyPreparedScenarioState(bundle, staged) {
+    runScenarioActivationPreCommitPhase(bundle, staged);
     commitScenarioActivationState(bundle, staged);
-    syncScenarioInspectorSelection(runtimeState.activeSovereignCode);
-
-    disableScenarioParentBorders();
-    applyScenarioPaintMode();
-    syncScenarioOceanFillForActivation(bundle.manifest);
-    applyScenarioPerformanceHints(bundle.manifest);
-    commitScenarioChunkRuntimeState(bundle, staged);
-    recalculateScenarioOwnerControllerDiffCount();
+    runScenarioActivationPostCommitPhase(bundle, staged);
   }
 
   return {

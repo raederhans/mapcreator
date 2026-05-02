@@ -6,6 +6,7 @@ import {
   legacyDefaultCountryPalette,
   countryNames,
   countryPresets,
+  detailOverlaySupportTiers,
 } from "./state_defaults.js";
 import {
   createDefaultStateCatalog,
@@ -76,6 +77,7 @@ export const state = {
   legacyDefaultCountryPalette,
   countryNames,
   countryPresets,
+  detailOverlaySupportTiers,
 
   ...createDefaultSpatialIndexState(),
   ...createDefaultRendererTransientRuntimeState(),

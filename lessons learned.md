@@ -1407,3 +1407,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 51. startup locale 文案改了以后，要同步刷新 scenario snapshot / manifest / audit
 - 这次 strict contract 红灯的根因，是三个场景的 `locales.startup.json` 已更新，但 `build_snapshot.json`、`manifest.json`、`audit.json` 还停在旧 fingerprint。
 - 更稳的做法是：文案进入 checked-in startup artifacts 后，立刻跑 scoped `check_scenario_contracts.py --strict --write-safe`，把场景派生产物一起收口。
+
+### 52. fresh-page 的 context-layer 回归先等 live subset 接管，再读 renderPerfMetrics
+- 这次 river targeted Playwright 的真实根因，是 fresh page 第一轮采样会继续读到全量 rivers metric；只靠固定 sleep 或直接读 `drawRiversLayer` 指标会把上一帧当成当前 subset。
+- 更稳的做法是：先确认 `state.riversData.features.length` 已等于目标 subset，再跑 `waitForRenderIdle()`，最后才读取 metric 和截图。
+- startup bundle preload browser warning 这类已知噪音要按 spec scoped allowlist 记录，避免把真实 console 问题和浏览器提示混在一起。

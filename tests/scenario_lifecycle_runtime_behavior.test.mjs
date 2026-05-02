@@ -207,6 +207,7 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     defaultRuntimePoliticalTopology: defaultTopology,
     runtimePoliticalTopology: defaultTopology,
   });
+  const phaseEvents = [];
   const emptyBlankTopology = {
     type: "Topology",
     objects: { political: { type: "GeometryCollection", geometries: [] } },
@@ -243,20 +244,20 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     buildScenarioRuntimeVersionTag: () => "blank:sha",
     mergeReleasableCatalogs: () => null,
     buildScenarioDistrictGroupByFeatureId: () => new Map(),
-    syncScenarioLocalizationState: () => {},
-    applyBlankScenarioPresentationDefaults: () => {},
-    setScenarioAuditUiState: () => {},
+    syncScenarioLocalizationState: () => phaseEvents.push(`pre:localization:${runtimeState.activeScenarioId}`),
+    applyBlankScenarioPresentationDefaults: () => phaseEvents.push(`pre:blank:${runtimeState.activeScenarioId}`),
+    setScenarioAuditUiState: () => phaseEvents.push(`pre:audit:${runtimeState.activeScenarioId}`),
     getScenarioBaselineHashFromBundle: () => "blank-baseline",
-    markLegacyColorStateDirty: () => {},
-    syncScenarioInspectorSelection: () => {},
-    disableScenarioParentBorders: () => {},
-    applyScenarioPaintMode: () => {},
-    syncScenarioOceanFillForActivation: () => {},
-    applyScenarioPerformanceHints: () => {},
+    markLegacyColorStateDirty: () => phaseEvents.push(`post:legacy:${runtimeState.activeScenarioId}`),
+    syncScenarioInspectorSelection: (code) => phaseEvents.push(`post:inspector:${runtimeState.activeScenarioId}:${code}`),
+    disableScenarioParentBorders: () => phaseEvents.push(`post:borders:${runtimeState.activeScenarioId}`),
+    applyScenarioPaintMode: () => phaseEvents.push(`post:paint:${runtimeState.activeScenarioId}`),
+    syncScenarioOceanFillForActivation: () => phaseEvents.push(`post:ocean:${runtimeState.activeScenarioId}`),
+    applyScenarioPerformanceHints: () => phaseEvents.push(`post:performance:${runtimeState.activeScenarioId}`),
     scheduleScenarioChunkRefresh: () => {},
-    resetScenarioChunkRuntimeState: () => {},
+    resetScenarioChunkRuntimeState: () => phaseEvents.push(`post:chunks:${runtimeState.activeScenarioId}`),
     ensureRuntimeChunkLoadState: () => ({}),
-    recalculateScenarioOwnerControllerDiffCount: () => {},
+    recalculateScenarioOwnerControllerDiffCount: () => phaseEvents.push(`post:diff:${runtimeState.activeScenarioId}`),
     hasRenderableScenarioPoliticalTopology: () => false,
     normalizeScenarioFeatureCollection: (value) => value,
     cloneScenarioStateValue: (value) => value,
@@ -274,6 +275,19 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
 
   assert.equal(runtimeState.activeScenarioId, "blank_base");
   assert.equal(runtimeState.runtimePoliticalTopology, emptyBlankTopology);
+  assert.deepEqual(phaseEvents, [
+    "pre:localization:",
+    "pre:blank:",
+    "pre:audit:",
+    "post:legacy:blank_base",
+    "post:inspector:blank_base:",
+    "post:borders:blank_base",
+    "post:paint:blank_base",
+    "post:ocean:blank_base",
+    "post:performance:blank_base",
+    "post:chunks:blank_base",
+    "post:diff:blank_base",
+  ]);
 });
 
 test("clearActiveScenario restores deferred coarse baseline when detail topology is still pending", () => {

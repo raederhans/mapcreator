@@ -1,13 +1,23 @@
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { getAppUrl } = require("./support/playwright-app");
+const {
+  getAppUrl,
+  waitForAppInteractive,
+  waitForShellReady,
+  waitForScenarioApplyIdle,
+  waitForRenderIdle,
+} = require("./support/playwright-app");
 const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 const APP_URL = getAppUrl();
+const SCENARIO_ID = "tno_1962";
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
-test.setTimeout(120000);
+// 这条回归会串行切 10+ 组 zoom/subset 组合并抓多张真实截图。
+// 当前主线程渲染与截图链路在本机稳定需要 2 分钟以上，所以把预算放宽到 4 分钟，
+// 继续让断言负责功能正确性，避免测试在完成前被统一超时截断。
+test.setTimeout(240000);
 
 function countChangedPixels(left, right, threshold = 12) {
   const limit = Math.min(left.length, right.length);
@@ -120,7 +130,7 @@ async function setZoomPercent(page, percent) {
     const { setZoomPercent } = await import('/js/core/map_renderer.js');
     setZoomPercent(targetPercent);
   }, percent);
-  await page.waitForTimeout(500);
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
 }
 
 async function readZoomState(page) {
@@ -149,6 +159,16 @@ async function readRiverRenderMetric(page) {
       skipped: !!direct.skipped,
       reason: String(direct.reason || ''),
     } : null;
+  });
+}
+
+async function readRiverDataState(page) {
+  return page.evaluate(async () => {
+    const { state } = await import('/js/core/state.js');
+    return {
+      featureCount: Array.isArray(state.riversData?.features) ? state.riversData.features.length : 0,
+      showRivers: !!state.showRivers,
+    };
   });
 }
 
@@ -231,9 +251,25 @@ async function measureRiverInk(page, {
 }) {
   await setZoomPercent(page, zoomPercent);
   const zoomState = await readZoomState(page);
-  await setRiverSubset(page, subsetName);
+  const subsetState = await setRiverSubset(page, subsetName);
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+  let riverDataState = await readRiverDataState(page);
+  if (riverDataState.featureCount !== subsetState.total) {
+    await setRiverSubset(page, subsetName);
+    await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+    riverDataState = await readRiverDataState(page);
+  }
+  expect(riverDataState.featureCount).toBe(subsetState.total);
   await setCheckbox(page, 'toggleRivers', true);
-  await page.waitForTimeout(350);
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+  const expectedZoomBucket = bucketForZoomPercent(zoomPercent);
+  await expect.poll(async () => readRiverRenderMetric(page), {
+    timeout: 8000,
+  }).toMatchObject({
+    featureCount: subsetState.total,
+    zoomBucket: expectedZoomBucket,
+    skipped: false,
+  });
   const renderMetric = await readRiverRenderMetric(page);
 
   const riversOn = await captureCanvasSample(page);
@@ -251,13 +287,14 @@ async function measureRiverInk(page, {
   }
 
   await setCheckbox(page, 'toggleRivers', false);
-  await page.waitForTimeout(250);
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
   const riversOff = await captureCanvasSample(page);
 
   const changedPixels = countChangedPixels(riversOff.pixels, riversOn.pixels, 12);
   const luminanceDelta = computeLuminanceDelta(riversOff.pixels, riversOn.pixels);
 
   return {
+    subsetState,
     zoomState,
     renderMetric,
     changedPixels,
@@ -268,7 +305,7 @@ async function measureRiverInk(page, {
   };
 }
 
-test('river layer zoom and class gating regression', async ({ page }) => {
+function attachRiverIssueTrackers(page) {
   const consoleIssues = [];
   const networkFailures = [];
   const pageErrors = [];
@@ -303,13 +340,80 @@ test('river layer zoom and class gating regression', async ({ page }) => {
     });
   });
 
+  return {
+    consoleIssues,
+    networkFailures,
+    pageErrors,
+  };
+}
+
+async function beginRiverRegression(page) {
+  const trackers = attachRiverIssueTrackers(page);
+
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+  await waitForAppInteractive(page, { timeout: 120_000 });
+  await waitForShellReady(page, { timeout: 120_000, requireCanvas: true });
   await waitForMapReady(page);
+  await ensureScenario(page, SCENARIO_ID);
+  await waitForScenarioApplyIdle(page, { scenarioId: SCENARIO_ID, timeout: 120_000 });
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 120_000 });
   await snapshotOriginalRivers(page);
 
-  consoleIssues.length = 0;
-  networkFailures.length = 0;
-  pageErrors.length = 0;
+  trackers.consoleIssues.length = 0;
+  trackers.networkFailures.length = 0;
+  trackers.pageErrors.length = 0;
+  return trackers;
+}
+
+async function restoreRiverRegressionState(page, { captureFinalScreenshot = false } = {}) {
+  const finalRiverState = await page.evaluate(async () => {
+    const { state } = await import('/js/core/state.js');
+    return {
+      showRivers: !!state.showRivers,
+      riverCount: Array.isArray(state.riversData?.features) ? state.riversData.features.length : 0,
+      zoomPercent: Math.round(Math.max(0.01, Number(state.zoomTransform?.k) || 1) * 100),
+    };
+  });
+
+  await page.evaluate(async () => {
+    const { state } = await import('/js/core/state.js');
+    const source = window.__riverRegressionOriginalRiversData || state.riversData;
+    state.riversData = source;
+    state.topologyRevision = Number(state.topologyRevision || 0) + 1;
+    state.renderNowFn?.();
+  });
+  await setCheckbox(page, 'toggleRivers', true);
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+
+  let finalScreenshotPath = '';
+  if (captureFinalScreenshot) {
+    finalScreenshotPath = path.join(
+      '.runtime',
+      'browser',
+      'mcp-artifacts',
+      'screenshots',
+      'river_layer_regression_final.png'
+    );
+    fs.mkdirSync(path.dirname(finalScreenshotPath), { recursive: true });
+    await page.screenshot({ path: finalScreenshotPath, fullPage: true });
+  }
+
+  expect(finalRiverState.showRivers).toBe(false);
+  expect(finalRiverState.riverCount).toBeGreaterThan(0);
+  return {
+    finalRiverState,
+    finalScreenshotPath,
+  };
+}
+
+function expectNoRiverRuntimeIssues(trackers) {
+  expect(trackers.pageErrors).toEqual([]);
+  expect(trackers.consoleIssues).toEqual([]);
+  expect(trackers.networkFailures).toEqual([]);
+}
+
+test('river layer major and mid-tier zoom gating regression', async ({ page }) => {
+  const trackers = await beginRiverRegression(page);
 
   const riverMajorLow = await measureRiverInk(page, {
     zoomPercent: 100,
@@ -392,6 +496,53 @@ test('river layer zoom and class gating regression', async ({ page }) => {
   expect(riverMidTierMid.changedPixels).toBeGreaterThan(20);
   expect(riverMidTierHigh.changedPixels).toBeGreaterThan(10);
 
+  const { finalRiverState } = await restoreRiverRegressionState(page);
+  expectNoRiverRuntimeIssues(trackers);
+
+  console.log(JSON.stringify({
+    riverMajorLow: {
+      zoomState: riverMajorLow.zoomState,
+      renderMetric: riverMajorLow.renderMetric,
+      changedPixels: riverMajorLow.changedPixels,
+      luminanceDelta: riverMajorLow.luminanceDelta,
+      screenshot: riverMajorLow.screenshot,
+    },
+    riverMajorMid: {
+      zoomState: riverMajorMid.zoomState,
+      renderMetric: riverMajorMid.renderMetric,
+      changedPixels: riverMajorMid.changedPixels,
+      luminanceDelta: riverMajorMid.luminanceDelta,
+      screenshot: riverMajorMid.screenshot,
+    },
+    riverMajorHigh: {
+      zoomState: riverMajorHigh.zoomState,
+      renderMetric: riverMajorHigh.renderMetric,
+      changedPixels: riverMajorHigh.changedPixels,
+      luminanceDelta: riverMajorHigh.luminanceDelta,
+      screenshot: riverMajorHigh.screenshot,
+    },
+    riverMidTierLow: {
+      renderMetric: riverMidTierLow.renderMetric,
+      changedPixels: riverMidTierLow.changedPixels,
+      luminanceDelta: riverMidTierLow.luminanceDelta,
+    },
+    riverMidTierMid: {
+      renderMetric: riverMidTierMid.renderMetric,
+      changedPixels: riverMidTierMid.changedPixels,
+      luminanceDelta: riverMidTierMid.luminanceDelta,
+    },
+    riverMidTierHigh: {
+      renderMetric: riverMidTierHigh.renderMetric,
+      changedPixels: riverMidTierHigh.changedPixels,
+      luminanceDelta: riverMidTierHigh.luminanceDelta,
+    },
+    finalRiverState,
+  }, null, 2));
+});
+
+test('river layer lake and intermittent zoom gating regression', async ({ page }) => {
+  const trackers = await beginRiverRegression(page);
+
   const lakeLow = await measureRiverInk(page, {
     zoomPercent: 100,
     subsetName: 'lake-centerline',
@@ -448,146 +599,94 @@ test('river layer zoom and class gating regression', async ({ page }) => {
   expect(intermittentMid.renderMetric.visibleFeatureCount).toBe(0);
   expect(intermittentHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
 
-  expect(canalLow.renderMetric.visibleFeatureCount).toBe(0);
-  expect(canalMid.renderMetric.visibleFeatureCount).toBe(0);
-  expect(canalHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
-
-  const finalRiverState = await page.evaluate(async () => {
-    const { state } = await import('/js/core/state.js');
-    return {
-      showRivers: !!state.showRivers,
-      riverCount: Array.isArray(state.riversData?.features) ? state.riversData.features.length : 0,
-      zoomPercent: Math.round(Math.max(0.01, Number(state.zoomTransform?.k) || 1) * 100),
-    };
-  });
-
-  expect(finalRiverState.showRivers).toBe(false);
-  expect(finalRiverState.riverCount).toBeGreaterThan(0);
-
-  await page.evaluate(async () => {
-    const { state } = await import('/js/core/state.js');
-    const source = window.__riverRegressionOriginalRiversData || state.riversData;
-    state.riversData = source;
-    state.topologyRevision = Number(state.topologyRevision || 0) + 1;
-    state.renderNowFn?.();
-  });
-  await setCheckbox(page, 'toggleRivers', true);
-  await page.waitForTimeout(700);
-
-  const finalScreenshotPath = path.join(
-    '.runtime',
-    'browser',
-    'mcp-artifacts',
-    'screenshots',
-    'river_layer_regression_final.png'
-  );
-  fs.mkdirSync(path.dirname(finalScreenshotPath), { recursive: true });
-  await page.screenshot({ path: finalScreenshotPath, fullPage: true });
-
-  expect(pageErrors).toEqual([]);
-  expect(consoleIssues).toEqual([]);
-  expect(networkFailures).toEqual([]);
+  const { finalRiverState } = await restoreRiverRegressionState(page);
+  expectNoRiverRuntimeIssues(trackers);
 
   console.log(JSON.stringify({
-    riverMajorLow: {
-      zoomState: riverMajorLow.zoomState,
-      renderMetric: riverMajorLow.renderMetric,
-      changedPixels: riverMajorLow.changedPixels,
-      luminanceDelta: riverMajorLow.luminanceDelta,
-      screenshot: riverMajorLow.screenshot,
-    },
-    riverMajorMid: {
-      zoomState: riverMajorMid.zoomState,
-      renderMetric: riverMajorMid.renderMetric,
-      changedPixels: riverMajorMid.changedPixels,
-      luminanceDelta: riverMajorMid.luminanceDelta,
-      screenshot: riverMajorMid.screenshot,
-    },
-    riverMajorHigh: {
-      zoomState: riverMajorHigh.zoomState,
-      renderMetric: riverMajorHigh.renderMetric,
-      changedPixels: riverMajorHigh.changedPixels,
-      luminanceDelta: riverMajorHigh.luminanceDelta,
-      screenshot: riverMajorHigh.screenshot,
-    },
-    riverMidTierLow: {
-      renderMetric: riverMidTierLow.renderMetric,
-      changedPixels: riverMidTierLow.changedPixels,
-      luminanceDelta: riverMidTierLow.luminanceDelta,
-      screenshot: riverMidTierLow.screenshot,
-    },
-    riverMidTierMid: {
-      renderMetric: riverMidTierMid.renderMetric,
-      changedPixels: riverMidTierMid.changedPixels,
-      luminanceDelta: riverMidTierMid.luminanceDelta,
-      screenshot: riverMidTierMid.screenshot,
-    },
-    riverMidTierHigh: {
-      renderMetric: riverMidTierHigh.renderMetric,
-      changedPixels: riverMidTierHigh.changedPixels,
-      luminanceDelta: riverMidTierHigh.luminanceDelta,
-      screenshot: riverMidTierHigh.screenshot,
-    },
     lakeLow: {
       renderMetric: lakeLow.renderMetric,
       changedPixels: lakeLow.changedPixels,
       luminanceDelta: lakeLow.luminanceDelta,
-      screenshot: lakeLow.screenshot,
     },
     lakeMid: {
       renderMetric: lakeMid.renderMetric,
       changedPixels: lakeMid.changedPixels,
       luminanceDelta: lakeMid.luminanceDelta,
-      screenshot: lakeMid.screenshot,
     },
     lakeHigh: {
       renderMetric: lakeHigh.renderMetric,
       changedPixels: lakeHigh.changedPixels,
       luminanceDelta: lakeHigh.luminanceDelta,
-      screenshot: lakeHigh.screenshot,
     },
     intermittentLow: {
       renderMetric: intermittentLow.renderMetric,
       changedPixels: intermittentLow.changedPixels,
       luminanceDelta: intermittentLow.luminanceDelta,
-      screenshot: intermittentLow.screenshot,
     },
     intermittentMid: {
       renderMetric: intermittentMid.renderMetric,
       changedPixels: intermittentMid.changedPixels,
       luminanceDelta: intermittentMid.luminanceDelta,
-      screenshot: intermittentMid.screenshot,
     },
     intermittentHigh: {
       renderMetric: intermittentHigh.renderMetric,
       changedPixels: intermittentHigh.changedPixels,
       luminanceDelta: intermittentHigh.luminanceDelta,
-      screenshot: intermittentHigh.screenshot,
     },
+    finalRiverState,
+  }, null, 2));
+});
+
+test('river layer canal zoom gating regression', async ({ page }) => {
+  const trackers = await beginRiverRegression(page);
+
+  const canalLow = await measureRiverInk(page, {
+    zoomPercent: 100,
+    subsetName: 'canal',
+    label: 'river_layer_regression_canal_low',
+  });
+  const canalMid = await measureRiverInk(page, {
+    zoomPercent: 150,
+    subsetName: 'canal',
+    label: 'river_layer_regression_canal_mid',
+  });
+  const canalHigh = await measureRiverInk(page, {
+    zoomPercent: 260,
+    subsetName: 'canal',
+    label: 'river_layer_regression_canal_high',
+  });
+
+  expect(canalLow.renderMetric.visibleFeatureCount).toBe(0);
+  expect(canalMid.renderMetric.visibleFeatureCount).toBe(0);
+  expect(canalHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
+
+  const { finalRiverState, finalScreenshotPath } = await restoreRiverRegressionState(page, {
+    captureFinalScreenshot: true,
+  });
+  expectNoRiverRuntimeIssues(trackers);
+
+  console.log(JSON.stringify({
     canalLow: {
       renderMetric: canalLow.renderMetric,
       changedPixels: canalLow.changedPixels,
       luminanceDelta: canalLow.luminanceDelta,
-      screenshot: canalLow.screenshot,
     },
     canalMid: {
       renderMetric: canalMid.renderMetric,
       changedPixels: canalMid.changedPixels,
       luminanceDelta: canalMid.luminanceDelta,
-      screenshot: canalMid.screenshot,
     },
     canalHigh: {
       renderMetric: canalHigh.renderMetric,
       changedPixels: canalHigh.changedPixels,
       luminanceDelta: canalHigh.luminanceDelta,
-      screenshot: canalHigh.screenshot,
     },
     finalRiverState,
     finalScreenshot: finalScreenshotPath,
-    consoleIssueCount: consoleIssues.length,
-    networkFailureCount: networkFailures.length,
-    pageErrors,
-    consoleIssues,
-    networkFailures,
+    consoleIssueCount: trackers.consoleIssues.length,
+    networkFailureCount: trackers.networkFailures.length,
+    pageErrors: trackers.pageErrors,
+    consoleIssues: trackers.consoleIssues,
+    networkFailures: trackers.networkFailures,
   }, null, 2));
 });

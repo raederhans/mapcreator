@@ -120,6 +120,7 @@ class LocalCanonicalizationTest(unittest.TestCase):
     def test_country_gate_policy_constants_come_from_policy_table(self) -> None:
         policies = country_feature_policies.load_country_feature_policies()["country_gate"]
         support_tiers = policies["support_tiers"]
+        display_tiers = country_feature_policies.load_country_feature_policies()["display"]["detailOverlaySupportTiers"]
 
         self.assertEqual(
             local_canonicalization.LOCAL_CANONICAL_COUNTRY_CODES,
@@ -136,6 +137,11 @@ class LocalCanonicalizationTest(unittest.TestCase):
         self.assertEqual(
             local_canonicalization.ORDER_OF_MAGNITUDE_IMPROVEMENT_COUNTRIES,
             tuple(support_tiers["order_of_magnitude_improvement_countries"]),
+        )
+        self.assertEqual(display_tiers, support_tiers)
+        self.assertEqual(
+            country_feature_policies.display_detail_overlay_support_tier_codes("strict_gap_target_countries"),
+            tuple(support_tiers["strict_gap_target_countries"]),
         )
 
     def test_intersect_feature_geometry_reports_country_code_and_feature_id(self) -> None:

@@ -1,5 +1,6 @@
 import { PRESET_STORAGE_KEY, state as runtimeState } from "./state.js";
 import { rebuildPresetState } from "./releasable_manager.js";
+import { setCustomPresets } from "./state/content_state.js";
 const state = runtimeState;
 
 function loadCustomPresets() {
@@ -15,7 +16,7 @@ function loadCustomPresets() {
 }
 
 function initPresetState() {
-  runtimeState.customPresets = loadCustomPresets();
+  setCustomPresets(runtimeState, loadCustomPresets());
   rebuildPresetState();
 }
 

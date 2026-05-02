@@ -75,6 +75,25 @@ export function setScenarioAuditState(target, scenarioAudit = null) {
   return target.scenarioAudit;
 }
 
+export function ensureScenarioAuditUiState(target) {
+  if (!target || typeof target !== "object") {
+    return createDefaultScenarioAuditUiState();
+  }
+  if (!target.scenarioAuditUi || typeof target.scenarioAuditUi !== "object") {
+    target.scenarioAuditUi = createDefaultScenarioAuditUiState();
+  }
+  if (typeof target.scenarioAuditUi.loading !== "boolean") {
+    target.scenarioAuditUi.loading = false;
+  }
+  if (typeof target.scenarioAuditUi.loadedForScenarioId !== "string") {
+    target.scenarioAuditUi.loadedForScenarioId = "";
+  }
+  if (typeof target.scenarioAuditUi.errorMessage !== "string") {
+    target.scenarioAuditUi.errorMessage = "";
+  }
+  return target.scenarioAuditUi;
+}
+
 export function setScenarioDiagnosticsState(
   target,
   {

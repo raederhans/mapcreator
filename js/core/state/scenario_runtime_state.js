@@ -151,12 +151,28 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   return target;
 }
 
+export function setScenarioImportAudit(target, scenarioImportAudit = null) {
+  if (!target || typeof target !== "object") {
+    return null;
+  }
+  target.scenarioImportAudit = scenarioImportAudit || null;
+  return target.scenarioImportAudit;
+}
+
+export function setScenarioOwnerControllerDiffCount(target, value = 0) {
+  if (!target || typeof target !== "object") {
+    return 0;
+  }
+  target.scenarioOwnerControllerDiffCount = Number(value) || 0;
+  return target.scenarioOwnerControllerDiffCount;
+}
+
 export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   if (!target || typeof target !== "object") {
     return null;
   }
-  // 这是 scenario apply 的全量 activation commit helper。
-  // 调用方要先在 pipeline 里准备好完整 snapshot，再一次性提交到 runtimeState。
+  // 这里只做纯 runtimeState 字段提交。
+  // preCommit / postCommit 副作用由 scenario_apply_pipeline.js 显式排序。
   const requiredKeys = [
     "activeScenarioId",
     "scenarioBorderMode",
@@ -204,7 +220,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   target.releasableCatalog = nextState.releasableCatalog || null;
   target.scenarioReleasableIndex = nextState.scenarioReleasableIndex || null;
   target.scenarioAudit = nextState.scenarioAudit || null;
-  target.scenarioImportAudit = nextState.scenarioImportAudit || null;
+  setScenarioImportAudit(target, nextState.scenarioImportAudit || null);
   target.scenarioBaselineHash = String(nextState.scenarioBaselineHash || "");
   target.scenarioBaselineOwnersByFeatureId = { ...(nextState.scenarioBaselineOwnersByFeatureId || {}) };
   target.scenarioControllersByFeatureId = { ...(nextState.scenarioControllersByFeatureId || {}) };
@@ -214,6 +230,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   target.scenarioBaselineCoresByFeatureId = { ...(nextState.scenarioBaselineCoresByFeatureId || {}) };
   target.scenarioShellOverlayRevision = Number(nextState.scenarioShellOverlayRevision) || 0;
   target.scenarioControllerRevision = Number(nextState.scenarioControllerRevision) || 0;
+  setScenarioOwnerControllerDiffCount(target, nextState.scenarioOwnerControllerDiffCount || 0);
   target.scenarioViewMode = String(nextState.scenarioViewMode || "ownership");
   target.countryNames = { ...(nextState.countryNames || {}) };
   target.sovereigntyByFeatureId = { ...(nextState.sovereigntyByFeatureId || {}) };

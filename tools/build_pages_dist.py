@@ -49,6 +49,8 @@ REQUIRED_DIST_FILES = (
 )
 DATA_RUNTIME_FILES = (
     "manifest.json",
+    "runtime_asset_registry.json",
+    "country_feature_policies.json",
     "europe_topology.json",
     "europe_topology.na_v2.json",
     "hierarchy.json",
@@ -69,6 +71,7 @@ DATA_RUNTIME_FILES = (
     "historical_city_lights_1930_exclusions.json",
 )
 DATA_RUNTIME_DIRS = (
+    "city_lights",
     "feature-migrations",
     "palette-maps",
     "palettes",

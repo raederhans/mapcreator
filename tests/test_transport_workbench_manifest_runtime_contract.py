@@ -10,6 +10,8 @@ INDUSTRIAL_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_industria
 POINT_PREVIEW_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_shared.js"
 POINT_DENSITY_HELPERS_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_density_helpers.js"
 LINE_RUNTIME_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_line_runtime_shared.js"
+FAMILY_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_preview.js"
+FAMILY_REGISTRY_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_registry.js"
 TRANSPORT_CAPABILITY_REGISTRY_JS = REPO_ROOT / "js" / "core" / "transport_capability_registry.js"
 STATE_DEFAULTS_JS = REPO_ROOT / "js" / "core" / "state_defaults.js"
 UI_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "ui_state.js"
@@ -119,6 +121,23 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertLess(point_content.index("if (!packPath)"), point_content.index("fetch(packPath"))
         self.assertLess(industrial_content.index("if (!packPath)"), industrial_content.index("fetch(packPath"))
         self.assertIn("Transport workbench manifest is missing ${mode}/${key} pack path.", line_content)
+
+
+    def test_family_preview_dispatch_is_config_driven(self) -> None:
+        preview_content = FAMILY_PREVIEW_JS.read_text(encoding="utf-8")
+        registry_content = FAMILY_REGISTRY_JS.read_text(encoding="utf-8")
+
+        self.assertIn("createPreviewHandler", preview_content)
+        self.assertIn("getTransportWorkbenchFamilyPreviewConfig", preview_content)
+        self.assertIn("listTransportWorkbenchFamilyPreviewConfigs", preview_content)
+        self.assertIn("PREVIEW_MODULES_BY_KEY", preview_content)
+        self.assertNotIn("FAMILY_PREVIEW_HANDLERS", preview_content)
+        self.assertIn("TRANSPORT_WORKBENCH_FAMILY_PREVIEW_EXPORTS", registry_content)
+        self.assertIn("previewOnly: true", registry_content)
+        self.assertIn('moduleKey: "road"', registry_content)
+        self.assertIn('moduleKey: "rail"', registry_content)
+        self.assertIn("export function getTransportWorkbenchFamilyPreviewConfig", registry_content)
+        self.assertIn("export function listTransportWorkbenchFamilyPreviewConfigs", registry_content)
 
     def test_apply_bridge_only_accepts_main_map_expressible_workbench_filters(self) -> None:
         registry_content = TRANSPORT_CAPABILITY_REGISTRY_JS.read_text(encoding="utf-8")

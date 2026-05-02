@@ -6,6 +6,89 @@
       "role": "build_manifest",
       "description": "Build output manifest consumed by startup cache and runtime asset hashing."
     },
+    "country_feature_policies": {
+      "url": "data/country_feature_policies.json",
+      "role": "country_feature_policies",
+      "description": "Shared JS/Python display and gating policy table for country features."
+    },
+    "world_cities": {
+      "url": "data/world_cities.geojson",
+      "role": "world_cities"
+    },
+    "city_aliases": {
+      "url": "data/city_aliases.json",
+      "role": "city_aliases"
+    },
+    "ru_city_overrides": {
+      "url": "data/ru_city_overrides.geojson",
+      "role": "city_overrides"
+    },
+    "special_zones": {
+      "url": "data/special_zones.geojson",
+      "role": "special_zones"
+    },
+    "runtime_political_topology": {
+      "url": "data/europe_topology.runtime_political_v1.json",
+      "role": "runtime_political_topology"
+    },
+    "context_layer:rivers": {
+      "url": "data/global_rivers.geojson",
+      "role": "context_layer",
+      "family_id": "rivers"
+    },
+    "context_layer:airports": {
+      "url": "data/transport_layers/global_airport/airports.geojson",
+      "role": "context_layer",
+      "family_id": "airports"
+    },
+    "context_layer:ports": {
+      "url": "data/transport_layers/global_port/ports.geojson",
+      "role": "context_layer",
+      "family_id": "ports"
+    },
+    "context_layer:physical": {
+      "url": "data/europe_physical.geojson",
+      "role": "context_layer",
+      "family_id": "physical"
+    },
+    "context_layer:urban": {
+      "url": "data/europe_urban.geojson",
+      "role": "context_layer",
+      "family_id": "urban"
+    },
+    "context_layer:physical_semantics": {
+      "url": "data/global_physical_semantics.topo.json",
+      "role": "context_layer",
+      "family_id": "physical_semantics"
+    },
+    "context_layer:physical_contours_major": {
+      "url": "data/global_contours.major.topo.json",
+      "role": "context_layer",
+      "family_id": "physical_contours_major"
+    },
+    "context_layer:physical_contours_minor": {
+      "url": "data/global_contours.minor.topo.json",
+      "role": "context_layer",
+      "family_id": "physical_contours_minor"
+    },
+    "transport_catalog:rail": {
+      "url": "data/transport_layers/global_rail/catalog.json",
+      "role": "transport_catalog",
+      "family_id": "rail"
+    },
+    "transport_catalog:road": {
+      "url": "data/transport_layers/global_road/catalog.json",
+      "role": "transport_catalog",
+      "family_id": "road"
+    },
+    "palette_registry": {
+      "url": "data/palettes/index.json",
+      "role": "palette_registry"
+    },
+    "releasable_catalog": {
+      "url": "data/releasables/hoi4_vanilla.internal.phase1.catalog.json",
+      "role": "releasable_catalog"
+    },
     "scenario_registry": {
       "url": "data/scenarios/index.json",
       "role": "scenario_registry",
@@ -76,6 +159,11 @@
       "role": "city_lights_asset",
       "family_id": "historical_1930"
     },
+    "city_lights:historical_1930:entries": {
+      "url": "data/city_lights/historical_1930_entries.json",
+      "role": "city_lights_entries",
+      "family_id": "historical_1930"
+    },
     "city_lights:historical_1930:source": {
       "url": "data/world_cities.geojson",
       "role": "city_lights_source",
@@ -101,8 +189,10 @@
   "city_lights": {
     "historical_1930": {
       "asset_key": "city_lights:historical_1930:asset",
+      "entries_key": "city_lights:historical_1930:entries",
       "source_key": "city_lights:historical_1930:source",
       "exclusions_key": "city_lights:historical_1930:exclusions"
     }
-  }
+  },
+  "country_feature_policies_key": "country_feature_policies"
 }

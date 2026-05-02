@@ -1,6 +1,9 @@
 /* global importScripts, self */
 
-importScripts(new URL("../../vendor/topojson-client.min.js", self.location.href).href);
+importScripts(
+  new URL("../core/feature_identity_shared.js", self.location.href).href,
+  new URL("../../vendor/topojson-client.min.js", self.location.href).href
+);
 
 const MESSAGE_TYPES = Object.freeze({
   LOAD_BASE_STARTUP: "LOAD_BASE_STARTUP",
@@ -18,62 +21,26 @@ const COUNTRY_CODE_ALIASES = Object.freeze({
   UK: "GB",
   EL: "GR",
 });
+const FEATURE_IDENTITY = globalThis.__scenarioForgeFeatureIdentityShared;
 
-function nowMs() {
-  return typeof performance !== "undefined" && typeof performance.now === "function"
-    ? performance.now()
-    : Date.now();
+if (!FEATURE_IDENTITY) {
+  throw new Error("[startup_worker] Feature identity shared helper failed to initialize.");
 }
 
-function normalizeCountryCodeAlias(rawCode) {
-  const code = String(rawCode || "").trim().toUpperCase().replace(/[^A-Z]/g, "");
+function normalizeWorkerCountryCodeAlias(rawCode) {
+  const code = FEATURE_IDENTITY.defaultCountryCodeNormalizer(rawCode);
   if (!code) return "";
   return COUNTRY_CODE_ALIASES[code] || code;
 }
 
-function extractCountryCodeFromId(value) {
-  const text = String(value || "").trim().toUpperCase();
-  if (!text) return "";
-  const prefix = text.split(/[-_]/)[0];
-  if (/^[A-Z]{2,3}$/.test(prefix)) {
-    return prefix;
-  }
-  const alphaPrefix = prefix.match(/^[A-Z]{2,3}/);
-  return alphaPrefix ? alphaPrefix[0] : "";
-}
-
 function getFeatureId(feature) {
-  const raw =
-    feature?.properties?.id ??
-    feature?.properties?.NUTS_ID ??
-    feature?.id;
-  if (raw === null || raw === undefined) return null;
-  const text = String(raw).trim();
-  return text.length > 0 ? text : null;
+  return FEATURE_IDENTITY.getFeatureId(feature) || null;
 }
 
 function getFeatureCountryCodeNormalized(feature) {
-  const props = feature?.properties || {};
-  const direct = (
-    props.cntr_code ||
-    props.CNTR_CODE ||
-    props.iso_a2 ||
-    props.ISO_A2 ||
-    props.iso_a2_eh ||
-    props.ISO_A2_EH ||
-    props.adm0_a2 ||
-    props.ADM0_A2 ||
-    ""
-  );
-  const normalizedDirect = normalizeCountryCodeAlias(direct);
-  if (/^[A-Z]{2,3}$/.test(normalizedDirect) && normalizedDirect !== "ZZ" && normalizedDirect !== "XX") {
-    return normalizedDirect;
-  }
-  return normalizeCountryCodeAlias(
-    extractCountryCodeFromId(props.id) ||
-    extractCountryCodeFromId(props.NUTS_ID) ||
-    extractCountryCodeFromId(feature?.id)
-  );
+  return FEATURE_IDENTITY.getCountryCode(feature, {
+    normalizeAlias: normalizeWorkerCountryCodeAlias,
+  });
 }
 
 function asFeatureLike(entity) {
@@ -92,6 +59,12 @@ function getEntityFeatureId(entity) {
 function getEntityCountryCode(entity) {
   const featureLike = asFeatureLike(entity);
   return featureLike ? getFeatureCountryCodeNormalized(featureLike) : "";
+}
+
+function nowMs() {
+  return typeof performance !== "undefined" && typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
 }
 
 async function fetchJsonResource(url, label) {
@@ -265,13 +238,13 @@ function normalizeRuntimePoliticalMetaPayload(meta) {
   const canonicalCountryByFeatureId = {};
   if (Array.isArray(meta.canonicalCountryByIndex)) {
     featureIds.forEach((featureId, index) => {
-      canonicalCountryByFeatureId[featureId] = normalizeCountryCodeAlias(meta.canonicalCountryByIndex[index]);
+      canonicalCountryByFeatureId[featureId] = normalizeWorkerCountryCodeAlias(meta.canonicalCountryByIndex[index]);
     });
   } else if (meta.canonicalCountryByFeatureId && typeof meta.canonicalCountryByFeatureId === "object") {
     Object.entries(meta.canonicalCountryByFeatureId).forEach(([featureId, countryCode]) => {
       const normalizedFeatureId = String(featureId || "").trim();
       if (!normalizedFeatureId) return;
-      canonicalCountryByFeatureId[normalizedFeatureId] = normalizeCountryCodeAlias(countryCode);
+      canonicalCountryByFeatureId[normalizedFeatureId] = normalizeWorkerCountryCodeAlias(countryCode);
       if (!(normalizedFeatureId in featureIndexById)) {
         featureIndexById[normalizedFeatureId] = featureIds.length;
         featureIds.push(normalizedFeatureId);

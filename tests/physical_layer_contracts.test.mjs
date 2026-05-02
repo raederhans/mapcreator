@@ -15,6 +15,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
   const startupDataPipelineSource = readRepoFile("js", "bootstrap", "startup_data_pipeline.js");
   const appearanceControllerSource = readRepoFile("js", "ui", "toolbar", "appearance_controls_controller.js");
   const interactionFunnelSource = readRepoFile("js", "core", "interaction_funnel.js");
+  const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
 
   const physicalBaseStart = rendererSource.indexOf("function drawPhysicalBasePass");
   const physicalBaseEnd = rendererSource.indexOf("function drawPhysicalAtlasLayer");
@@ -52,7 +53,8 @@ test("physical layer source contracts stay wired to the expected renderer and st
     hasSafeBlendFallback:
       /return VALID_BLEND_MODES\.has\(mode\) \? mode : safeFallback;/.test(rendererSource),
     hasPhysicalBasePass:
-      /\["physicalBase", \(k\) => drawPhysicalBasePass\(k\)\]/.test(rendererSource),
+      /\["physicalBase", \(k\) => drawPhysicalBasePass\(k\)\]/.test(renderPipelinePassesSource)
+      && /drawPhysicalBasePass,/.test(rendererSource),
     hasPhysicalReliefOverlayHelper:
       /function drawPhysicalReliefOverlayLayer\(k, \{ interactive = false, clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
     reliefOverlayBlendClamp:
@@ -144,4 +146,29 @@ test("physical layer source contracts stay wired to the expected renderer and st
   Object.entries(checks).forEach(([label, ok]) => {
     assert.equal(ok, true, label);
   });
+});
+
+test("physical layer runtime assets stay publishable through registry and Pages allowlist", () => {
+  const registry = JSON.parse(readRepoFile("data", "runtime_asset_registry.json"));
+  const manifest = JSON.parse(readRepoFile("data", "manifest.json"));
+  const dataLoaderSource = readRepoFile("js", "core", "data_loader.js");
+  const pagesDistSource = readRepoFile("tools", "build_pages_dist.py");
+
+  const expectedAssets = {
+    "context_layer:physical": "data/europe_physical.geojson",
+    "context_layer:physical_semantics": "data/global_physical_semantics.topo.json",
+    "context_layer:physical_contours_major": "data/global_contours.major.topo.json",
+    "context_layer:physical_contours_minor": "data/global_contours.minor.topo.json",
+  };
+
+  Object.entries(expectedAssets).forEach(([assetKey, assetPath]) => {
+    assert.equal(registry.assets?.[assetKey]?.url, assetPath, assetKey);
+    assert.equal(manifest.runtime_asset_registry?.assets?.[assetKey]?.url, assetPath, assetKey);
+    assert.ok(pagesDistSource.includes(`"${assetPath.replace("data/", "")}"`), assetPath);
+  });
+
+  assert.ok(dataLoaderSource.includes('resolveDataAssetUrl("context_layer:physical")'));
+  assert.ok(dataLoaderSource.includes('resolveDataAssetUrl("context_layer:physical_semantics")'));
+  assert.ok(dataLoaderSource.includes('resolveDataAssetUrl("context_layer:physical_contours_major")'));
+  assert.ok(dataLoaderSource.includes('resolveDataAssetUrl("context_layer:physical_contours_minor")'));
 });

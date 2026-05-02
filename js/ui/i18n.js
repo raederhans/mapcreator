@@ -3,7 +3,10 @@ import { state as runtimeState } from "../core/state.js";
 import { callRuntimeHook, callRuntimeHooks } from "../core/state/index.js";
 import { UI_COPY_CATALOG } from "./i18n_catalog.js";
 import { normalizeCountryCodeAlias } from "../core/country_code_aliases.js";
-import { getCountryCode as getSharedFeatureCountryCode } from "../core/feature_identity.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "../core/feature_identity.js";
 import { getScenarioCountryDisplayName } from "../core/scenario_country_display.js";
 const state = runtimeState;
 
@@ -169,9 +172,8 @@ function getSafeRawFeatureLabel(candidates = []) {
 }
 
 function isUsFeature(feature) {
-  const props = feature?.properties || {};
-  const featureId = String(props.id || feature?.id || "").trim();
-  const countryCode = String(props.cntr_code || "").trim().toUpperCase();
+  const featureId = getSharedFeatureId(feature);
+  const countryCode = getSharedFeatureCountryCode(feature);
   return countryCode === "US" || featureId.startsWith("US_");
 }
 
@@ -882,31 +884,15 @@ function initTranslations() {
 }
 
 function getTooltipFeatureId(feature) {
-  const raw =
-    feature?.properties?.id ??
-    feature?.properties?.NUTS_ID ??
-    feature?.id;
-  if (raw === null || raw === undefined) return "";
-  return String(raw).trim();
+  return getSharedFeatureId(feature);
 }
 
 function normalizeTooltipCountryCode(rawCode) {
   return normalizeCountryCodeAlias(rawCode);
 }
 
-function extractTooltipCountryCodeFromId(value) {
-  const text = String(value || "").trim().toUpperCase();
-  if (!text) return "";
-  const prefix = text.split(/[-_]/)[0];
-  if (/^[A-Z]{2,3}$/.test(prefix)) {
-    return prefix;
-  }
-  const alphaPrefix = prefix.match(/^[A-Z]{2,3}/);
-  return alphaPrefix ? alphaPrefix[0] : "";
-}
-
-function getTooltipFeatureCountryCode(feature) {
-  return normalizeTooltipCountryCode(getSharedFeatureCountryCode(feature));
+function getTooltipFeatureCountryCode(feature, { useIdFallback = false } = {}) {
+  return normalizeTooltipCountryCode(getSharedFeatureCountryCode(feature, { useIdFallback }));
 }
 
 function getTooltipRegionName(feature, fallback) {
@@ -929,7 +915,7 @@ function getTooltipCountryContext(feature) {
   const scenarioBaselineCode = runtimeState.activeScenarioId
     ? normalizeTooltipCountryCode(runtimeState.scenarioBaselineOwnersByFeatureId?.[featureId] || "")
     : "";
-  const countryCode = scenarioBaselineCode || getTooltipFeatureCountryCode(feature);
+  const countryCode = scenarioBaselineCode || getTooltipFeatureCountryCode(feature, { useIdFallback: true });
   const rawCountryName =
     getScenarioCountryDisplayName(runtimeState.scenarioCountriesByTag?.[countryCode]) ||
     runtimeState.countryNames?.[countryCode] ||
