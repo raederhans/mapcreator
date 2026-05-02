@@ -3,13 +3,13 @@ import {
   compactIndexedTagAssignmentPayload,
   compactRuntimePoliticalMeta,
 } from "./startup_bundle_compaction.js";
+import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
 
 const STARTUP_CACHE_DB_NAME = "mapcreator-startup-cache";
 const STARTUP_CACHE_DB_VERSION = 1;
 const STARTUP_CACHE_STORE_NAME = "entries";
 const STARTUP_CACHE_KIND_INDEX = "by_kind";
 const STARTUP_CACHE_UPDATED_AT_INDEX = "by_updated_at";
-const DEFAULT_BUILD_MANIFEST_URL = "data/manifest.json";
 const BUILD_MANIFEST_PROXY_OUTPUT_BY_URL = {};
 
 export const BOOT_CACHE_SCHEMA_VERSION = 3;
@@ -160,8 +160,12 @@ export function isStartupCacheEnabled(search = null) {
   return !shouldBypassStartupCache(search);
 }
 
+function getDefaultBuildManifestUrl() {
+  return resolveDataAssetUrl("build_manifest");
+}
+
 export async function loadBuildManifest({
-  manifestUrl = DEFAULT_BUILD_MANIFEST_URL,
+  manifestUrl = "",
   fetchImpl = globalThis.fetch,
   forceReload = false,
 } = {}) {
@@ -171,13 +175,14 @@ export async function loadBuildManifest({
   if (typeof fetchImpl !== "function") {
     throw new Error("[startup_cache] fetch is not available for build manifest loading.");
   }
-  buildManifestPromise = fetchImpl(manifestUrl, {
+  const resolvedManifestUrl = String(manifestUrl || getDefaultBuildManifestUrl()).trim();
+  buildManifestPromise = fetchImpl(resolvedManifestUrl, {
     cache: "default",
     credentials: "same-origin",
   })
     .then(async (response) => {
       if (!response.ok) {
-        throw new Error(`[startup_cache] Failed to load build manifest at ${manifestUrl} (${response.status} ${response.statusText}).`);
+        throw new Error(`[startup_cache] Failed to load build manifest at ${resolvedManifestUrl} (${response.status} ${response.statusText}).`);
       }
       return response.json();
     })

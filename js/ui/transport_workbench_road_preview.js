@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
@@ -12,7 +13,7 @@ import {
 } from "./transport_workbench_line_runtime_shared.js";
 
 
-const MANIFEST_URL = "data/transport_layers/japan_road/manifest.json";
+const MANIFEST_URL = resolveTransportManifestUrl("road");
 const ROAD_STYLE_PRESETS = {
   corridor: {
     motorway: { stroke: "#cf5d35", width: 2.8 },

@@ -14,6 +14,14 @@ export function createDefaultScenarioAuditUiState() {
   };
 }
 
+export function createDefaultScenarioDiagnosticsUiState() {
+  return {
+    loading: false,
+    loadedForScenarioId: "",
+    errorMessage: "",
+  };
+}
+
 export function createDefaultStateCatalog() {
   return {
     defaultReleasableCatalog: null,
@@ -24,6 +32,9 @@ export function createDefaultStateCatalog() {
     releasableBoundaryVariantByTag: {},
     scenarioAudit: null,
     scenarioAuditUi: createDefaultScenarioAuditUiState(),
+    scenarioDiagnostics: null,
+    scenarioDiagnosticsPreview: null,
+    scenarioDiagnosticsUi: createDefaultScenarioDiagnosticsUiState(),
   };
 }
 
@@ -62,4 +73,27 @@ export function setScenarioAuditState(target, scenarioAudit = null) {
   }
   target.scenarioAudit = scenarioAudit || null;
   return target.scenarioAudit;
+}
+
+export function setScenarioDiagnosticsState(
+  target,
+  {
+    report = null,
+    preview = null,
+    ui = null,
+  } = {},
+) {
+  if (!target || typeof target !== "object") {
+    return null;
+  }
+  target.scenarioDiagnostics = report || null;
+  target.scenarioDiagnosticsPreview = preview || null;
+  target.scenarioDiagnosticsUi = ui && typeof ui === "object"
+    ? {
+        loading: !!ui.loading,
+        errorMessage: String(ui.errorMessage || ""),
+        loadedForScenarioId: String(ui.loadedForScenarioId || ""),
+      }
+    : createDefaultScenarioDiagnosticsUiState();
+  return target.scenarioDiagnostics;
 }

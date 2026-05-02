@@ -1,19 +1,34 @@
 const fs = require("fs");
 const path = require("path");
 
-const STATE_MEMBER_ASSIGN_RE = /\bstate\.(?<key>[A-Za-z_$][\w$]*)\s*=(?!=)/g;
-const STATE_MEMBER_COMPOUND_ASSIGN_RE = /\bstate\.(?<key>[A-Za-z_$][\w$]*)\s*(?:\|\|=|&&=|\?\?=|>>>=|<<=|>>=|\+=|-=|\*=|\/=|%=|\|=|&=|\^=)/g;
-const STATE_OBJECT_ASSIGN_RE = /\bObject\.assign\s*\(\s*state\s*,/g;
+const STATE_ROOT_IDENTIFIERS = Object.freeze(["state", "runtimeState", "appState"]);
+const STATE_ROOT_IDENTIFIER_PATTERN = STATE_ROOT_IDENTIFIERS.join("|");
+const STATE_MEMBER_ASSIGN_RE = new RegExp(
+  `\\b(?<root>${STATE_ROOT_IDENTIFIER_PATTERN})\\.(?<key>[A-Za-z_$][\\w$]*)\\s*=(?!=)`,
+  "g",
+);
+const STATE_MEMBER_COMPOUND_ASSIGN_RE = new RegExp(
+  `\\b(?<root>${STATE_ROOT_IDENTIFIER_PATTERN})\\.(?<key>[A-Za-z_$][\\w$]*)\\s*(?:\\|\\|=|&&=|\\?\\?=|>>>=|<<=|>>=|\\+=|-=|\\*=|\\/=|%=|\\|=|&=|\\^=)`,
+  "g",
+);
+const STATE_OBJECT_ASSIGN_RE = new RegExp(
+  `\\bObject\\.assign\\s*\\(\\s*(?<root>${STATE_ROOT_IDENTIFIER_PATTERN})\\s*,`,
+  "g",
+);
 
 function normalizeRelativePath(filePath) {
   return String(filePath || "").replace(/\\/g, "/");
+}
+
+function isStateRootIdentifierName(name) {
+  return STATE_ROOT_IDENTIFIERS.includes(String(name || ""));
 }
 
 function isDirectStateMemberExpression(node) {
   return (
     node?.type === "MemberExpression"
     && node.object?.type === "Identifier"
-    && node.object.name === "state"
+    && isStateRootIdentifierName(node.object.name)
   );
 }
 
@@ -29,7 +44,7 @@ function isDirectStateWriteNode(node) {
       && node.callee.property?.type === "Identifier"
       && node.callee.property.name === "assign"
       && node.arguments?.[0]?.type === "Identifier"
-      && node.arguments[0].name === "state"
+      && isStateRootIdentifierName(node.arguments[0].name)
     );
   }
   return false;
@@ -39,15 +54,19 @@ function isIdentifierBoundaryCharacter(character) {
   return !character || !/[A-Za-z0-9_$]/.test(character);
 }
 
-function readComputedStateAssignment(content = "", startIndex = 0) {
+function readComputedStateAssignment(content = "", startIndex = 0, rootName = "state") {
   const start = Number(startIndex) || 0;
-  if (content.slice(start, start + 5) !== "state") {
+  const normalizedRootName = String(rootName || "");
+  if (!isStateRootIdentifierName(normalizedRootName)) {
+    return null;
+  }
+  if (content.slice(start, start + normalizedRootName.length) !== normalizedRootName) {
     return null;
   }
   if (!isIdentifierBoundaryCharacter(content[start - 1])) {
     return null;
   }
-  let cursor = start + 5;
+  let cursor = start + normalizedRootName.length;
   while (/\s/.test(content[cursor] || "")) {
     cursor += 1;
   }
@@ -113,11 +132,14 @@ function scanComputedStateAssignments(content = "") {
   const violations = [];
   let cursor = 0;
   while (cursor < content.length) {
-    const nextStateIndex = content.indexOf("state", cursor);
-    if (nextStateIndex < 0) {
+    const nextMatch = STATE_ROOT_IDENTIFIERS
+      .map((rootName) => ({ rootName, index: content.indexOf(rootName, cursor) }))
+      .filter((entry) => entry.index >= 0)
+      .sort((left, right) => left.index - right.index || right.rootName.length - left.rootName.length)[0];
+    if (!nextMatch) {
       break;
     }
-    const violation = readComputedStateAssignment(content, nextStateIndex);
+    const violation = readComputedStateAssignment(content, nextMatch.index, nextMatch.rootName);
     if (violation) {
       violations.push({
         type: violation.type,
@@ -128,7 +150,7 @@ function scanComputedStateAssignments(content = "") {
       cursor = violation.nextIndex;
       continue;
     }
-    cursor = nextStateIndex + 5;
+    cursor = nextMatch.index + nextMatch.rootName.length;
   }
   return violations;
 }
@@ -142,6 +164,7 @@ function scanContentForStateWrites(content = "") {
       type: "member-assign",
       key: match.groups?.key || "",
       index: match.index,
+      root: match.groups?.root || "state",
       text: match[0],
     });
   }
@@ -152,6 +175,7 @@ function scanContentForStateWrites(content = "") {
       type: "member-compound-assign",
       key: match.groups?.key || "",
       index: match.index,
+      root: match.groups?.root || "state",
       text: match[0],
     });
   }
@@ -164,6 +188,7 @@ function scanContentForStateWrites(content = "") {
       type: "object-assign",
       key: "",
       index: match.index,
+      root: match.groups?.root || "state",
       text: match[0],
     });
   }
@@ -217,11 +242,13 @@ function createRule({ allowlistPath } = {}) {
 }
 
 module.exports = {
+  STATE_ROOT_IDENTIFIERS,
   STATE_MEMBER_ASSIGN_RE,
   STATE_MEMBER_COMPOUND_ASSIGN_RE,
   STATE_OBJECT_ASSIGN_RE,
   createRule,
   isDirectStateWriteNode,
+  isStateRootIdentifierName,
   loadAllowlist,
   normalizeRelativePath,
   scanContentForStateWrites,

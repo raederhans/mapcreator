@@ -43,12 +43,7 @@ from map_builder.processors.global_basic_admin1 import apply_global_basic_admin1
 from map_builder.processors.north_america import apply_north_america_replacement
 from map_builder.processors.russia_ukraine import apply_russia_ukraine_replacement
 
-try:
-    from init_map_data import apply_config_subdivisions
-    APPLY_CONFIG_SUBDIVISIONS_IMPORT_ERROR = None
-except BaseException as exc:  # pragma: no cover - optional build-time dependency chain
-    apply_config_subdivisions = None
-    APPLY_CONFIG_SUBDIVISIONS_IMPORT_ERROR = exc
+from map_builder.processors.config_subdivisions import apply_config_subdivisions
 
 try:
     import resource
@@ -66,6 +61,24 @@ US_OVERLAP_RATIO_THRESHOLD = 1e-4
 US_ABSOLUTE_OVERLAP_AREA_M2 = 1000.0
 URBAN_CORRUPT_BOUNDS_WIDTH_DEG = 300.0
 URBAN_CORRUPT_BOUNDS_HEIGHT_DEG = 150.0
+
+DETAIL_POLITICAL_PROCESSOR_CHAIN = (
+    ("north_america", apply_north_america_replacement),
+    ("africa_admin1", apply_africa_admin1_replacement),
+    ("global_basic_admin1", apply_global_basic_admin1_replacement),
+    ("denmark_border_detail", apply_denmark_border_detail),
+    ("cz_sk_border_detail", apply_cz_sk_border_detail),
+    ("belarus", apply_belarus_replacement),
+    ("russia_ukraine", apply_russia_ukraine_replacement),
+    ("au_city_overrides", apply_au_city_overrides),
+)
+
+
+def _apply_detail_political_processor_chain(political: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    patched = political
+    for _processor_name, processor in DETAIL_POLITICAL_PROCESSOR_CHAIN:
+        patched = processor(patched)
+    return patched
 
 
 def _get_peak_memory_mb() -> float | None:
@@ -1005,26 +1018,13 @@ def main() -> None:
     )
 
     patch_start = time.perf_counter()
-    patched_political = apply_north_america_replacement(layers["political"])
-    patched_political = apply_africa_admin1_replacement(patched_political)
-    patched_political = apply_global_basic_admin1_replacement(patched_political)
-    patched_political = apply_denmark_border_detail(patched_political)
-    patched_political = apply_cz_sk_border_detail(patched_political)
-    patched_political = apply_belarus_replacement(patched_political)
-    patched_political = apply_russia_ukraine_replacement(patched_political)
-    patched_political = apply_au_city_overrides(patched_political)
+    patched_political = _apply_detail_political_processor_chain(layers["political"])
     patched_political = _clip_ru_managed_detail_to_land(
         patched_political,
         layers.get("land"),
     )
     if getattr(cfg, "ENABLE_SUBDIVISION_ENRICHMENT", False):
-        if callable(apply_config_subdivisions):
-            patched_political = apply_config_subdivisions(patched_political)
-        else:
-            print(
-                "[Detail patch] Subdivision enrichment skipped: "
-                f"{APPLY_CONFIG_SUBDIVISIONS_IMPORT_ERROR}"
-            )
+        patched_political = apply_config_subdivisions(patched_political)
     patched_political = _repair_political_metadata(patched_political)
     patched_political = _repair_political_geometries(patched_political)
     canonicalize_start = time.perf_counter()

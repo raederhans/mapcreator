@@ -8,6 +8,10 @@ from unittest.mock import patch
 
 import init_map_data
 from map_builder import build_orchestrator
+from map_builder import country_feature_policies
+from map_builder import config as cfg
+from map_builder.processors import config_subdivisions
+from tools import build_na_detail_topology
 
 
 class _FakeStageOps:
@@ -264,6 +268,65 @@ class BuildOrchestratorTest(unittest.TestCase):
             ordered_names = [call[0] for call in ops.calls]
             self.assertNotIn("write_build_stage_cache", ordered_names)
             self.assertNotIn("write_timings_json", ordered_names)
+
+
+    def test_init_config_subdivision_wrapper_delegates_to_processor_owner(self) -> None:
+        sentinel = object()
+
+        with patch.object(init_map_data, "_processor_apply_config_subdivisions", return_value="done") as apply_mock:
+            result = init_map_data.apply_config_subdivisions(sentinel)
+
+        self.assertEqual(result, "done")
+        apply_mock.assert_called_once_with(sentinel)
+
+    def test_configured_subdivision_country_codes_excludes_protected_processors(self) -> None:
+        with patch.object(config_subdivisions.cfg, "SUBDIVISIONS", {"JP", "RU", "cn", "GB"}):
+            self.assertEqual(config_subdivisions.configured_subdivision_country_codes(), {"GB", "JP"})
+
+    def test_subdivision_protected_countries_come_from_policy_table(self) -> None:
+        policies = country_feature_policies.load_country_feature_policies()
+
+        self.assertEqual(
+            config_subdivisions.SUBDIVISION_PROTECTED_COUNTRIES,
+            frozenset(policies["subdivision_protected_countries"]),
+        )
+
+    def test_topology_admin1_hierarchy_uses_policy_backed_protected_countries(self) -> None:
+        protected = frozenset(country_feature_policies.load_country_feature_policies()["subdivision_protected_countries"])
+
+        self.assertTrue(protected.isdisjoint(cfg.TOPOLOGY_ADMIN1_HIERARCHY_CODES))
+
+    def test_detail_political_processor_chain_keeps_current_order_explicit(self) -> None:
+        self.assertEqual(
+            [name for name, _processor in build_na_detail_topology.DETAIL_POLITICAL_PROCESSOR_CHAIN],
+            [
+                "north_america",
+                "africa_admin1",
+                "global_basic_admin1",
+                "denmark_border_detail",
+                "cz_sk_border_detail",
+                "belarus",
+                "russia_ukraine",
+                "au_city_overrides",
+            ],
+        )
+
+    def test_detail_political_processor_chain_runs_in_declared_order(self) -> None:
+        calls: list[str] = []
+
+        def make_processor(name: str):
+            def _processor(value):
+                calls.append(name)
+                return f"{value}>{name}"
+
+            return _processor
+
+        chain = (("first", make_processor("first")), ("second", make_processor("second")))
+        with patch.object(build_na_detail_topology, "DETAIL_POLITICAL_PROCESSOR_CHAIN", chain):
+            result = build_na_detail_topology._apply_detail_political_processor_chain("start")
+
+        self.assertEqual(calls, ["first", "second"])
+        self.assertEqual(result, "start>first>second")
 
     def test_init_main_delegates_to_build_orchestrator_run(self) -> None:
         fake_args = Namespace(mode="detail", strict=False, timings_json=None)

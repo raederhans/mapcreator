@@ -1,4 +1,8 @@
 // Color assignment manager for region and political auto-fill.
+import {
+  getCountryCode as getFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "./feature_identity.js";
 
 class ColorManager {
   static regionPalette = [
@@ -47,26 +51,11 @@ class ColorManager {
   }
 
   static getFeatureId(item, fallbackIndex) {
-    if (!item) return `feature-${fallbackIndex}`;
-    return (
-      item?.properties?.id ||
-      item?.properties?.NUTS_ID ||
-      item?.id ||
-      `feature-${fallbackIndex}`
-    );
+    return getSharedFeatureId(item, { fallback: `feature-${fallbackIndex}` });
   }
 
   static getCountryCode(item, fallbackIndex) {
-    const props = item?.properties || {};
-    const raw =
-      props.cntr_code ||
-      props.CNTR_CODE ||
-      props.iso_a2 ||
-      props.ISO_A2 ||
-      props.adm0_a2 ||
-      props.ADM0_A2 ||
-      "";
-    const code = String(raw || "").trim().toUpperCase();
+    const code = getFeatureCountryCode(item, { useIdFallback: false });
     if (code) return code;
     return `feature-${fallbackIndex}`;
   }

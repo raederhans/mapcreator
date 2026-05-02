@@ -125,6 +125,12 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
 
         self.assertIn('if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {', registry_content)
+        road_rail_section = registry_content.split('if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {', 1)[1].split(
+            'if (normalizedFamilyId === "airport")',
+            1,
+        )[0]
+        self.assertIn("supported: false", road_rail_section)
+        self.assertIn("overview renderer 真正吃同一份 pack contract", road_rail_section)
         self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.airportTypes, supportedValues.airportTypes)', registry_content)
         self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.statuses, supportedValues.statuses)', registry_content)
         self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.legalDesignations, supportedValues.legalDesignations)', registry_content)

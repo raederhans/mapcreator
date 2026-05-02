@@ -18,6 +18,11 @@ import {
   getTransportOverviewDataLayerKeys,
   listTransportOverviewCapabilityFamilyIds,
 } from "./transport_capability_registry.js";
+export {
+  resolveDataAssetUrl,
+  resolveScenarioRegistryUrl,
+  resolveTransportManifestUrl,
+} from "./runtime_asset_registry.js";
 
 const TOPOLOGY_VARIANT_URLS = {
   highres: "data/europe_topology.highres.json",

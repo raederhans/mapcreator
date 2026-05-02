@@ -1,5 +1,9 @@
 import { state as runtimeState } from "./state.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "./feature_identity.js";
 const state = runtimeState;
 
 export function canonicalScenarioCountryCode(rawCode) {
@@ -18,32 +22,11 @@ export function extractScenarioCountryCodeFromId(value) {
 }
 
 export function getRuntimeGeometryFeatureId(geometry) {
-  const props = geometry?.properties || {};
-  return String(props.id || geometry?.id || "").trim();
+  return getSharedFeatureId(geometry, { fallback: "" });
 }
 
 export function getScenarioRuntimeGeometryCountryCode(geometry) {
-  const props = geometry?.properties || {};
-  const direct = (
-    props.cntr_code ||
-    props.CNTR_CODE ||
-    props.iso_a2 ||
-    props.ISO_A2 ||
-    props.iso_a2_eh ||
-    props.ISO_A2_EH ||
-    props.adm0_a2 ||
-    props.ADM0_A2 ||
-    ""
-  );
-  const normalizedDirect = canonicalScenarioCountryCode(direct);
-  if (/^[A-Z]{2,3}$/.test(normalizedDirect) && normalizedDirect !== "ZZ" && normalizedDirect !== "XX") {
-    return normalizedDirect;
-  }
-  return canonicalScenarioCountryCode(
-    extractScenarioCountryCodeFromId(props.id) ||
-    extractScenarioCountryCodeFromId(props.NUTS_ID) ||
-    extractScenarioCountryCodeFromId(geometry?.id)
-  );
+  return canonicalScenarioCountryCode(getSharedFeatureCountryCode(geometry));
 }
 
 export function getScenarioEffectiveOwnerCodeByFeatureId(featureId) {

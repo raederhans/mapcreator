@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
@@ -21,7 +22,8 @@ import {
 
 const PACK_MODE_PREVIEW = "preview";
 const PACK_MODE_FULL = "full";
-const MANIFEST_URL = "data/transport_layers/japan_industrial_zones/manifest.json";
+
+const MANIFEST_URL = resolveTransportManifestUrl("industrial_zones");
 const PACK_KEY = "industrial_zones";
 const INTERNAL_LABEL_THRESHOLD = 1.2;
 const OPEN_LABEL_THRESHOLD = 1.32;

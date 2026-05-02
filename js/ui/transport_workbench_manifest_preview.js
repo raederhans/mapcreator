@@ -1,8 +1,10 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
+
 const MANIFEST_URLS = {
-  mineral_resources: "data/transport_layers/japan_mineral_resources/manifest.json",
-  energy_facilities: "data/transport_layers/japan_energy_facilities/manifest.json",
-  industrial_zones: "data/transport_layers/japan_industrial_zones/manifest.json",
-  logistics_hubs: "data/transport_layers/japan_logistics_hubs/manifest.json",
+  mineral_resources: resolveTransportManifestUrl("mineral_resources"),
+  energy_facilities: resolveTransportManifestUrl("energy_facilities"),
+  industrial_zones: resolveTransportManifestUrl("industrial_zones"),
+  logistics_hubs: resolveTransportManifestUrl("logistics_hubs"),
 };
 
 const MANIFEST_ONLY_FAMILIES = new Set(Object.keys(MANIFEST_URLS));

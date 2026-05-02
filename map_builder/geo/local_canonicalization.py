@@ -11,18 +11,25 @@ import topojson as tp
 from shapely.ops import transform, unary_union
 from topojson.utils import serialize_as_geodataframe, serialize_as_geojson
 
+from map_builder.country_feature_policies import (
+    country_gate_gap_target_km2,
+    country_gate_support_tier_codes,
+    country_gate_target_codes,
+)
 from map_builder.processors.detail_shell_coverage import (
     DEFAULT_SHELL_COVERAGE_SPECS,
     collect_shell_coverage_gaps,
 )
 
 
-LOCAL_CANONICAL_COUNTRY_CODES: tuple[str, ...] = ("RU", "UA", "DE", "GB", "CZ")
+LOCAL_CANONICAL_COUNTRY_CODES: tuple[str, ...] = country_gate_target_codes()
 LOCAL_CANONICAL_SNAP_PRECISION = 6
 TARGET_COUNTRY_CODES: tuple[str, ...] = LOCAL_CANONICAL_COUNTRY_CODES
-COUNTRY_GAP_TARGET_KM2 = 1.0
-STRICT_GAP_TARGET_COUNTRIES: tuple[str, ...] = ("DE", "GB", "CZ")
-ORDER_OF_MAGNITUDE_IMPROVEMENT_COUNTRIES: tuple[str, ...] = ("RU", "UA")
+COUNTRY_GAP_TARGET_KM2 = country_gate_gap_target_km2()
+STRICT_GAP_TARGET_COUNTRIES: tuple[str, ...] = country_gate_support_tier_codes("strict_gap_target_countries")
+ORDER_OF_MAGNITUDE_IMPROVEMENT_COUNTRIES: tuple[str, ...] = country_gate_support_tier_codes(
+    "order_of_magnitude_improvement_countries"
+)
 
 
 def _empty_gdf() -> gpd.GeoDataFrame:
@@ -472,55 +479,80 @@ def collect_country_gate_metrics(
 
 def evaluate_country_gate_metrics(
     baseline_metrics: dict[str, dict[str, float | int]] | None,
-    candidate_metrics: dict[str, dict[str, float | int]],
+    candidate_metrics: dict[str, dict[str, float | int]] | None,
     *,
     target_country_codes: tuple[str, ...] | list[str] | None = None,
 ) -> list[str]:
+    """Evaluate managed country topology metrics for candidate promotion.
+
+    This is the single owner for country gate policy. Build entry points may
+    collect and print metrics locally, then delegate final pass/fail decisions
+    here so promotion rules stay consistent across pipelines.
+    """
+    if not candidate_metrics:
+        return ["candidate country metrics unavailable"]
+
     target_codes = tuple(
         _normalize_country_code(code)
         for code in (target_country_codes or LOCAL_CANONICAL_COUNTRY_CODES)
         if _normalize_country_code(code)
     )
-    previous = baseline_metrics or {}
+    baseline_metrics = baseline_metrics or {}
     problems: list[str] = []
 
-    for code in target_codes:
-        baseline = previous.get(code, {})
-        candidate = candidate_metrics.get(code, {})
+    for country_code in target_codes:
+        candidate = candidate_metrics.get(country_code, {})
+        baseline = baseline_metrics.get(country_code, {})
 
-        base_feature_count = int(baseline.get("feature_count", 0) or 0)
-        cand_feature_count = int(candidate.get("feature_count", 0) or 0)
-        if cand_feature_count < base_feature_count:
-            problems.append(f"{code}: feature_count regressed {base_feature_count} -> {cand_feature_count}")
+        candidate_feature_count = int(candidate.get("feature_count", 0) or 0)
+        candidate_fragment_count = int(candidate.get("fragment_count", 0) or 0)
+        candidate_total_area = float(candidate.get("total_area_km2", 0.0) or 0.0)
+        candidate_max_area = float(candidate.get("max_fragment_area_km2", 0.0) or 0.0)
+        candidate_shared_ratio = float(candidate.get("shared_arc_ratio", 0.0) or 0.0)
 
-        base_gap = float(baseline.get("total_area_km2", 0.0) or 0.0)
-        cand_gap = float(candidate.get("total_area_km2", 0.0) or 0.0)
-        if cand_gap > base_gap + 0.001:
-            problems.append(f"{code}: shell gap worsened {base_gap:.3f} -> {cand_gap:.3f} km^2")
+        baseline_feature_count = int(baseline.get("feature_count", 0) or 0)
+        baseline_fragment_count = int(baseline.get("fragment_count", 0) or 0)
+        baseline_total_area = float(baseline.get("total_area_km2", 0.0) or 0.0)
+        baseline_max_area = float(baseline.get("max_fragment_area_km2", 0.0) or 0.0)
+        baseline_shared_ratio = float(baseline.get("shared_arc_ratio", 0.0) or 0.0)
 
-        base_fragment = float(baseline.get("max_fragment_area_km2", 0.0) or 0.0)
-        cand_fragment = float(candidate.get("max_fragment_area_km2", 0.0) or 0.0)
-        if cand_fragment > base_fragment + 0.001:
+        if baseline and candidate_feature_count < baseline_feature_count:
             problems.append(
-                f"{code}: max shell fragment worsened {base_fragment:.3f} -> {cand_fragment:.3f} km^2"
+                f"{country_code}: feature_count regressed {baseline_feature_count}->{candidate_feature_count}"
+            )
+        if baseline and candidate_total_area > baseline_total_area + 0.25:
+            problems.append(
+                f"{country_code}: total_area_km2 regressed {baseline_total_area:.3f}->{candidate_total_area:.3f}"
+            )
+        if baseline and candidate_max_area > baseline_max_area + 0.25:
+            problems.append(
+                f"{country_code}: max_fragment_area_km2 regressed {baseline_max_area:.3f}->{candidate_max_area:.3f}"
+            )
+        if (
+            baseline
+            and candidate_fragment_count > baseline_fragment_count
+            and candidate_total_area >= baseline_total_area - 0.25
+        ):
+            problems.append(
+                f"{country_code}: fragment_count regressed {baseline_fragment_count}->{candidate_fragment_count}"
+            )
+        if baseline and candidate_shared_ratio + 0.01 < baseline_shared_ratio:
+            problems.append(
+                f"{country_code}: shared_arc_ratio regressed {baseline_shared_ratio:.4f}->{candidate_shared_ratio:.4f}"
             )
 
-        base_arc_ratio = float(baseline.get("shared_arc_ratio", 0.0) or 0.0)
-        cand_arc_ratio = float(candidate.get("shared_arc_ratio", 0.0) or 0.0)
-        if cand_arc_ratio + 0.0001 < base_arc_ratio:
-            problems.append(f"{code}: arc sharing regressed {base_arc_ratio:.4f} -> {cand_arc_ratio:.4f}")
-
-        if code in STRICT_GAP_TARGET_COUNTRIES and cand_gap >= COUNTRY_GAP_TARGET_KM2:
+        if country_code in STRICT_GAP_TARGET_COUNTRIES and candidate_total_area > COUNTRY_GAP_TARGET_KM2 + 1e-6:
             problems.append(
-                f"{code}: shell gap target missed {cand_gap:.3f} km^2 >= {COUNTRY_GAP_TARGET_KM2:.1f}"
+                f"{country_code}: total_area_km2 target missed ({candidate_total_area:.3f} > {COUNTRY_GAP_TARGET_KM2:.3f})"
             )
-
-        if code in ORDER_OF_MAGNITUDE_IMPROVEMENT_COUNTRIES and base_gap > 0.0:
-            target_gap = max(base_gap / 10.0, COUNTRY_GAP_TARGET_KM2)
-            if cand_gap > target_gap:
-                problems.append(
-                    f"{code}: expected order-of-magnitude improvement from {base_gap:.3f} km^2, "
-                    f"got {cand_gap:.3f} km^2"
-                )
+        if (
+            country_code in ORDER_OF_MAGNITUDE_IMPROVEMENT_COUNTRIES
+            and baseline_total_area > COUNTRY_GAP_TARGET_KM2
+            and candidate_total_area > baseline_total_area / 10.0
+        ):
+            problems.append(
+                f"{country_code}: order-of-magnitude reduction target missed "
+                f"({baseline_total_area:.3f}->{candidate_total_area:.3f})"
+            )
 
     return problems

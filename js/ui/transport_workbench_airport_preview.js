@@ -1,8 +1,9 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import { createTransportWorkbenchPointPreviewController } from "./transport_workbench_point_preview_shared.js";
 
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "airport",
-  manifestUrl: "data/transport_layers/japan_airport/manifest.json",
+  manifestUrl: resolveTransportManifestUrl("airport"),
   packKey: "airports",
   selectionType: "airport",
   fullPackScaleThreshold: 1.18,

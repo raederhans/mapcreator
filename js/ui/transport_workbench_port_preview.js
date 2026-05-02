@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import { createTransportWorkbenchPointPreviewController } from "./transport_workbench_point_preview_shared.js";
 import {
   getTransportWorkbenchManifestVariantMeta,
@@ -15,7 +16,7 @@ function getCoverageVariantMeta(manifest, variantId) {
 
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "port",
-  manifestUrl: "data/transport_layers/japan_port/manifest.json",
+  manifestUrl: resolveTransportManifestUrl("port"),
   packKey: "ports",
   selectionType: "port",
   fullPackScaleThreshold: 1.18,

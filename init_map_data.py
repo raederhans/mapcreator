@@ -131,6 +131,7 @@ else:  # pragma: no cover - palettes mode does not touch GIS stack
 
 from map_builder import build_orchestrator, config as cfg
 from map_builder.contracts import DATA_ARTIFACT_SPECS_BY_PATH
+from map_builder.runtime_asset_registry import load_runtime_asset_registry
 
 if REQUESTED_MODE != "palettes":
     from map_builder.cities import (
@@ -143,6 +144,7 @@ if REQUESTED_MODE != "palettes":
     from map_builder.geo.local_canonicalization import (
         LOCAL_CANONICAL_COUNTRY_CODES,
         collect_topology_country_metrics,
+        evaluate_country_gate_metrics,
     )
     from map_builder.geo.topology import build_topology, _repair_geometry, _extract_country_code_from_id
     from map_builder.geo.utils import (
@@ -161,6 +163,10 @@ if REQUESTED_MODE != "palettes":
     from map_builder.io.writers import write_json_atomic
     from map_builder.processors.admin1 import build_extension_admin1, extract_country_code
     from map_builder.processors.china import apply_china_replacement
+    from map_builder.processors.config_subdivisions import (
+        apply_config_subdivisions as _processor_apply_config_subdivisions,
+        load_subdivision_admin1_context as _processor_load_subdivision_admin1_context,
+    )
     from map_builder.processors.detail_shell_coverage import (
         DEFAULT_SHELL_COVERAGE_SPECS,
         SHELL_COVERAGE_MIN_AREA_KM2,
@@ -194,6 +200,8 @@ else:  # pragma: no cover - palettes mode avoids GIS/runtime build imports
     build_extension_admin1 = None
     extract_country_code = None
     apply_china_replacement = None
+    _processor_apply_config_subdivisions = None
+    _processor_load_subdivision_admin1_context = None
     DEFAULT_SHELL_COVERAGE_SPECS = {}
     SHELL_COVERAGE_MIN_AREA_KM2 = 1.0
     collect_shell_coverage_gaps = None
@@ -214,6 +222,7 @@ else:  # pragma: no cover - palettes mode avoids GIS/runtime build imports
     write_json_atomic = _write_json_atomic_light
     LOCAL_CANONICAL_COUNTRY_CODES = ()
     collect_topology_country_metrics = None
+    evaluate_country_gate_metrics = None
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 D3_VENDOR_PATH = PROJECT_ROOT / 'vendor' / 'd3.v7.min.js'
@@ -836,72 +845,6 @@ def _collect_country_gate_metrics(
     )
 
 
-def _evaluate_country_gate_metrics(
-    baseline_metrics: dict[str, dict[str, float | int]] | None,
-    candidate_metrics: dict[str, dict[str, float | int]] | None,
-) -> list[str]:
-    if not candidate_metrics:
-        return ["candidate country metrics unavailable"]
-
-    problems: list[str] = []
-    baseline_metrics = baseline_metrics or {}
-    for country_code in LOCAL_CANONICAL_COUNTRY_CODES:
-        candidate = candidate_metrics.get(country_code, {})
-        baseline = baseline_metrics.get(country_code, {})
-
-        candidate_feature_count = int(candidate.get("feature_count", 0) or 0)
-        candidate_fragment_count = int(candidate.get("fragment_count", 0) or 0)
-        candidate_total_area = float(candidate.get("total_area_km2", 0.0) or 0.0)
-        candidate_max_area = float(candidate.get("max_fragment_area_km2", 0.0) or 0.0)
-        candidate_shared_ratio = float(candidate.get("shared_arc_ratio", 0.0) or 0.0)
-
-        baseline_feature_count = int(baseline.get("feature_count", 0) or 0)
-        baseline_fragment_count = int(baseline.get("fragment_count", 0) or 0)
-        baseline_total_area = float(baseline.get("total_area_km2", 0.0) or 0.0)
-        baseline_max_area = float(baseline.get("max_fragment_area_km2", 0.0) or 0.0)
-        baseline_shared_ratio = float(baseline.get("shared_arc_ratio", 0.0) or 0.0)
-
-        if baseline and candidate_feature_count < baseline_feature_count:
-            problems.append(
-                f"{country_code}: feature_count regressed {baseline_feature_count}->{candidate_feature_count}"
-            )
-        if baseline and candidate_total_area > baseline_total_area + 0.25:
-            problems.append(
-                f"{country_code}: total_area_km2 regressed {baseline_total_area:.3f}->{candidate_total_area:.3f}"
-            )
-        if baseline and candidate_max_area > baseline_max_area + 0.25:
-            problems.append(
-                f"{country_code}: max_fragment_area_km2 regressed {baseline_max_area:.3f}->{candidate_max_area:.3f}"
-            )
-        if (
-            baseline
-            and candidate_fragment_count > baseline_fragment_count
-            and candidate_total_area >= baseline_total_area - 0.25
-        ):
-            problems.append(
-                f"{country_code}: fragment_count regressed {baseline_fragment_count}->{candidate_fragment_count}"
-            )
-        if baseline and candidate_shared_ratio + 0.01 < baseline_shared_ratio:
-            problems.append(
-                f"{country_code}: shared_arc_ratio regressed {baseline_shared_ratio:.4f}->{candidate_shared_ratio:.4f}"
-            )
-
-        if country_code in {"DE", "GB", "CZ"} and candidate_total_area > SHELL_COVERAGE_MIN_AREA_KM2 + 1e-6:
-            problems.append(
-                f"{country_code}: total_area_km2 target missed ({candidate_total_area:.3f} > {SHELL_COVERAGE_MIN_AREA_KM2:.3f})"
-            )
-        if (
-            country_code in {"RU", "UA"}
-            and baseline_total_area > SHELL_COVERAGE_MIN_AREA_KM2
-            and candidate_total_area > baseline_total_area / 10.0
-        ):
-            problems.append(
-                f"{country_code}: order-of-magnitude reduction target missed "
-                f"({baseline_total_area:.3f}->{candidate_total_area:.3f})"
-            )
-
-    return problems
-
 
 def _promote_candidate_topology_if_safe(
     *,
@@ -968,7 +911,14 @@ def _promote_candidate_topology_if_safe(
         )
         _summarize_country_gate_metrics(f"{stage_label} baseline", baseline_metrics)
 
-    gate_problems = _evaluate_country_gate_metrics(baseline_metrics, candidate_metrics)
+    if evaluate_country_gate_metrics is None:
+        gate_problems = ["country gate evaluator unavailable"]
+    else:
+        gate_problems = evaluate_country_gate_metrics(
+            baseline_metrics,
+            candidate_metrics,
+            target_country_codes=LOCAL_CANONICAL_COUNTRY_CODES,
+        )
     if gate_problems:
         raise SystemExit(f"{stage_label}: candidate gate failed: {'; '.join(gate_problems)}")
 
@@ -2186,164 +2136,18 @@ def build_balkan_fallback(
 
 
 def load_subdivision_admin1_context(subdivision_codes: set[str]) -> gpd.GeoDataFrame:
-    if not subdivision_codes:
+    if _processor_load_subdivision_admin1_context is None:
         return gpd.GeoDataFrame(
             columns=["__iso", "__admin1_name", "__name_local", "__constituent_country", "geometry"],
             crs="EPSG:4326",
         )
-
-    admin1 = fetch_ne_zip(cfg.ADMIN1_URL, "admin1_subdivisions")
-    admin1 = admin1.to_crs("EPSG:4326")
-    admin1 = clip_to_map_bounds(admin1, "admin1 subdivisions")
-
-    iso_col = pick_column(admin1, ["iso_a2", "adm0_a2", "iso_3166_1_", "ISO_A2", "ADM0_A2"])
-    name_col = pick_column(admin1, ["name", "name_en", "gn_name", "NAME", "NAME_EN"])
-    name_local_col = pick_column(admin1, ["name_ja", "NAME_JA", "name_local", "NAME_LOCAL"])
-    geonunit_col = pick_column(admin1, ["geonunit", "GEONUNIT", "geounit", "GEOUNIT"])
-
-    if not iso_col or not name_col:
-        print("[Subdivisions] Admin1 context missing ISO/name columns; enrichment skipped.")
-        return gpd.GeoDataFrame(
-            columns=["__iso", "__admin1_name", "__name_local", "__constituent_country", "geometry"],
-            crs="EPSG:4326",
-        )
-
-    admin1 = admin1.copy()
-    admin1["__iso"] = admin1[iso_col].fillna("").astype(str).str.upper().str.strip()
-    if "GB" in subdivision_codes:
-        wanted = set(subdivision_codes) | {"UK"}
-    else:
-        wanted = set(subdivision_codes)
-    admin1 = admin1[admin1["__iso"].isin(wanted)].copy()
-    if admin1.empty:
-        print("[Subdivisions] No Admin1 rows matched configured subdivision countries.")
-        return gpd.GeoDataFrame(
-            columns=["__iso", "__admin1_name", "__name_local", "__constituent_country", "geometry"],
-            crs="EPSG:4326",
-        )
-
-    admin1["__admin1_name"] = admin1[name_col].fillna("").astype(str).str.strip()
-    admin1 = admin1[admin1["__admin1_name"] != ""].copy()
-    admin1["__iso"] = admin1["__iso"].replace({"UK": "GB"})
-
-    admin1["__name_local"] = None
-    if name_local_col and name_local_col in admin1.columns:
-        admin1["__name_local"] = admin1[name_local_col].fillna("").astype(str).str.strip()
-        admin1.loc[admin1["__name_local"] == "", "__name_local"] = None
-
-    admin1["__constituent_country"] = None
-    if geonunit_col and geonunit_col in admin1.columns:
-        admin1["__constituent_country"] = admin1[geonunit_col].fillna("").astype(str).str.strip()
-        admin1.loc[admin1["__constituent_country"] == "", "__constituent_country"] = None
-
-    admin1 = admin1[["__iso", "__admin1_name", "__name_local", "__constituent_country", "geometry"]].copy()
-    return gpd.GeoDataFrame(admin1, crs="EPSG:4326")
+    return _processor_load_subdivision_admin1_context(subdivision_codes)
 
 
 def apply_config_subdivisions(hybrid: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    if hybrid is None or hybrid.empty or "cntr_code" not in hybrid.columns:
+    if _processor_apply_config_subdivisions is None:
         return hybrid
-
-    configured = {
-        str(code).upper().strip()
-        for code in getattr(cfg, "SUBDIVISIONS", set())
-        if str(code).strip()
-    }
-    if not configured:
-        return hybrid
-
-    # These countries already have dedicated replacement processors later in the pipeline.
-    protected = {"CN", "RU", "IN", "PL", "FR"}
-    subdivision_codes = configured - protected
-    if not subdivision_codes:
-        return hybrid
-
-    context = load_subdivision_admin1_context(subdivision_codes)
-    if context.empty:
-        print("[Subdivisions] No Admin1 context features were built.")
-        return hybrid
-
-    enriched = hybrid.copy()
-    if "admin1_group" not in enriched.columns:
-        enriched["admin1_group"] = None
-    if "name_local" not in enriched.columns:
-        enriched["name_local"] = None
-    if "constituent_country" not in enriched.columns:
-        enriched["constituent_country"] = None
-
-    country_codes = enriched["cntr_code"].fillna("").astype(str).str.upper().str.strip()
-
-    for iso in sorted(subdivision_codes):
-        iso_codes = {"GB", "UK"} if iso == "GB" else {iso}
-        detail_mask = country_codes.isin(iso_codes)
-        if not detail_mask.any():
-            print(f"[Subdivisions] Enrich {iso} skipped: no matching detailed geometries.")
-            continue
-
-        iso_context = context[context["__iso"].isin({"GB"} if iso == "GB" else {iso})].copy()
-        if iso_context.empty:
-            print(f"[Subdivisions] Enrich {iso} skipped: no Admin1 context geometries found.")
-            continue
-
-        targets = enriched.loc[detail_mask].copy().to_crs("EPSG:4326")
-        targets["geometry"] = targets.geometry.representative_point()
-        iso_context = iso_context.to_crs("EPSG:4326")
-        try:
-            joined = gpd.sjoin(
-                targets,
-                iso_context,
-                how="left",
-                predicate="within",
-            )
-        except Exception as exc:
-            print(f"[Subdivisions] Enrich {iso} spatial join failed: {exc}")
-            continue
-
-        group_source_col = "__constituent_country" if iso == "GB" else "__admin1_name"
-        group_series = joined[group_source_col].groupby(level=0).first()
-
-        missing_groups = group_series.fillna("").astype(str).str.strip().eq("")
-        if missing_groups.any():
-            try:
-                nearest = gpd.sjoin_nearest(
-                    targets.loc[missing_groups].copy(),
-                    iso_context,
-                    how="left",
-                    distance_col="distance",
-                )
-                nearest_groups = nearest[group_source_col].groupby(level=0).first()
-                group_series.loc[nearest_groups.index] = nearest_groups
-            except Exception as exc:
-                print(f"[Subdivisions] Enrich {iso} nearest join fallback failed: {exc}")
-
-        group_series = group_series.fillna("").astype(str).str.strip()
-        group_series = group_series[group_series != ""]
-        if group_series.empty:
-            print(f"[Subdivisions] Enrich {iso} produced no admin1_group assignments.")
-            continue
-
-        enriched.loc[group_series.index, "admin1_group"] = group_series
-
-        if iso == "JP":
-            local_series = joined["__name_local"].groupby(level=0).first()
-            local_series = local_series.fillna("").astype(str).str.strip()
-            local_series = local_series[local_series != ""]
-            if not local_series.empty:
-                enriched.loc[local_series.index, "name_local"] = local_series
-
-        if iso == "GB":
-            const_series = joined["__constituent_country"].groupby(level=0).first()
-            const_series = const_series.fillna("").astype(str).str.strip()
-            const_series = const_series[const_series != ""]
-            if not const_series.empty:
-                enriched.loc[const_series.index, "constituent_country"] = const_series
-
-        print(
-            f"[Subdivisions] Enriched {iso}: mapped {len(group_series)} detailed geometries to admin1_group."
-        )
-
-    return enriched
-
+    return _processor_apply_config_subdivisions(hybrid)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build Scenario Forge data artifacts.")
@@ -3185,6 +2989,7 @@ def write_data_manifest(output_dir: Path) -> Path:
         "version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "outputs": outputs,
+        "runtime_asset_registry": load_runtime_asset_registry(),
     }
     manifest_path = output_dir / "manifest.json"
     write_json_atomic(manifest_path, manifest, ensure_ascii=False, indent=2)

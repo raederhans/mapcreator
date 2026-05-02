@@ -64,6 +64,38 @@ export function createDefaultTransportWorkbenchUiState() {
   };
 }
 
+
+export function applyTransportWorkbenchOverviewState(target, patch = {}) {
+  if (!target || typeof target !== "object" || !patch || typeof patch !== "object") {
+    return null;
+  }
+  if (!target.styleConfig || typeof target.styleConfig !== "object") {
+    target.styleConfig = {};
+  }
+  const currentOverviewConfig = normalizeTransportOverviewStyleConfig(
+    target.styleConfig.transportOverview || {},
+  );
+  const familyId = String(patch.familyId || "").trim();
+  const nextOverviewConfig = {
+    ...currentOverviewConfig,
+    visualMode: patch.visualMode,
+  };
+  if (familyId) {
+    nextOverviewConfig[familyId] = {
+      ...(currentOverviewConfig[familyId] || {}),
+      ...(patch.familyConfig || {}),
+    };
+  }
+  // Workbench apply may only publish the normalized overview fields that the
+  // main map renderer already understands; workbench-only preview controls stay local.
+  target.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(nextOverviewConfig);
+  target.showTransport = true;
+  if (patch.visibilityField) {
+    target[patch.visibilityField] = true;
+  }
+  return target.styleConfig.transportOverview;
+}
+
 export function createDefaultReferenceImageState() {
   return {
     opacity: 0.6,

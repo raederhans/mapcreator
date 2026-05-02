@@ -15,6 +15,7 @@ import {
 import {
   loadDeferredDetailBundle,
   loadMeasuredJsonResource,
+  resolveScenarioRegistryUrl,
   normalizeCityText,
   normalizeScenarioCityOverridesPayload,
   normalizeScenarioGeoLocalePatchPayload,
@@ -124,7 +125,6 @@ import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 
 const state = runtimeState;
-const SCENARIO_REGISTRY_URL = "data/scenarios/index.json";
 const SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "highres"];
 const SCENARIO_FATAL_RECOVERY_CODE = "SCENARIO_FATAL_RECOVERY";
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_INTERACTING = 180;
@@ -210,7 +210,7 @@ function getScenarioDecodedCollection(bundle, collectionKey) {
  */
 const loadScenarioRegistry = createScenarioRegistryLoader({
   state,
-  scenarioRegistryUrl: SCENARIO_REGISTRY_URL,
+  scenarioRegistryUrl: resolveScenarioRegistryUrl(),
   loadScenarioJsonWithTimeout,
 });
 

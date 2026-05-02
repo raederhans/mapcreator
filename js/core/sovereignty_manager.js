@@ -5,9 +5,14 @@ import {
   state as runtimeState,
 } from "./state.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "./feature_identity.js";
+import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
 const state = runtimeState;
 
-const FEATURE_MIGRATION_URLS = ["data/feature-migrations/by_hybrid_v1.json"];
+const FEATURE_MIGRATION_URLS = [resolveDataAssetUrl("feature_migrations:by_hybrid_v1")];
 let featureMigrationMapPromise = null;
 
 function markLegacyColorStateDirty() {
@@ -36,20 +41,7 @@ function hasFeatureOwnershipMap(entries) {
 }
 
 function getCanonicalCountryCodeForFeature(feature) {
-  if (!feature) return "";
-  const props = feature.properties || {};
-  const direct = (
-    props.cntr_code ||
-    props.CNTR_CODE ||
-    props.iso_a2 ||
-    props.ISO_A2 ||
-    props.iso_a2_eh ||
-    props.ISO_A2_EH ||
-    props.adm0_a2 ||
-    props.ADM0_A2 ||
-    ""
-  );
-  return normalizeOwnerCode(direct);
+  return getSharedFeatureCountryCode(feature, { useIdFallback: false }) || "";
 }
 
 function isScenarioShellLikeFeature(feature, featureId = "") {
@@ -73,14 +65,7 @@ function shouldExcludeScenarioPoliticalFeature(feature, featureId = "") {
 }
 
 function getFeatureId(featureOrId) {
-  if (!featureOrId) return "";
-  if (typeof featureOrId === "string") return featureOrId.trim();
-  return String(
-    featureOrId?.properties?.id ??
-      featureOrId?.properties?.NUTS_ID ??
-      featureOrId?.id ??
-      ""
-  ).trim();
+  return getSharedFeatureId(featureOrId, { fallback: "" });
 }
 
 function seedSovereigntyFromLandData(featureCollection) {

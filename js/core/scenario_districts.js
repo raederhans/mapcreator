@@ -1,4 +1,5 @@
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import { getCountryCode as getSharedFeatureCountryCode } from "./feature_identity.js";
 
 function normalizeGeoCountryCode(rawValue) {
   const normalized = normalizeCountryCodeAlias(rawValue);
@@ -13,27 +14,7 @@ function extractCountryCodeFromFeatureId(rawValue) {
 }
 
 function resolveFeatureGeoCountryCode(feature) {
-  const props = feature?.properties || {};
-  const direct = (
-    props.cntr_code ||
-    props.CNTR_CODE ||
-    props.iso_a2 ||
-    props.ISO_A2 ||
-    props.iso_a2_eh ||
-    props.ISO_A2_EH ||
-    props.adm0_a2 ||
-    props.ADM0_A2 ||
-    ""
-  );
-  const normalizedDirect = normalizeGeoCountryCode(direct);
-  if (normalizedDirect && normalizedDirect !== "ZZ" && normalizedDirect !== "XX") {
-    return normalizedDirect;
-  }
-  return normalizeGeoCountryCode(
-    extractCountryCodeFromFeatureId(props.id)
-    || extractCountryCodeFromFeatureId(props.NUTS_ID)
-    || extractCountryCodeFromFeatureId(feature?.id)
-  );
+  return normalizeGeoCountryCode(getSharedFeatureCountryCode(feature));
 }
 
 function normalizeScenarioDistrictTag(rawValue) {

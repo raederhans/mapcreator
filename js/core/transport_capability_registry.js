@@ -449,6 +449,10 @@ export function getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfi
     };
   }
   if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {
+    // 这两条线当前 still use Japan-only preview manifests, while the main-map
+    // overview path consumes global context layers and a coarser patch schema.
+    // 先把 Apply gate 继续关着，等 overview renderer 真正吃同一份 pack contract
+    // 再开放 bridge，避免 workbench 看到的结果和主地图落盘结果不一致。
     return {
       supported: false,
       compatibility,

@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import { createTransportWorkbenchPointPreviewController } from "./transport_workbench_point_preview_shared.js";
 
 function getMineralGroupColor(group) {
@@ -35,7 +36,7 @@ function getMineralGroupKey(feature) {
 
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "mineral_resources",
-  manifestUrl: "data/transport_layers/japan_mineral_resources/manifest.json",
+  manifestUrl: resolveTransportManifestUrl("mineral_resources"),
   packKey: "mineral_resources",
   selectionType: "mineral_resource",
   fullPackScaleThreshold: 1.24,

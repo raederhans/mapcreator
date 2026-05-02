@@ -1,6 +1,7 @@
-const DEFAULT_ASSET_URL = "data/transport_layers/japan_corridor/carrier.json";
-
+import { resolveDataAssetUrl } from "../core/runtime_asset_registry.js";
 import { t } from "./i18n.js";
+
+const DEFAULT_ASSET_URL = resolveDataAssetUrl("transport_carrier:japan_corridor");
 
 const COLOR_TOKENS = {
   sea: "#d8e4ed",

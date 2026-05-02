@@ -41,14 +41,22 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
 const { scanContentForStateWrites } = require('./tools/eslint-rules/no-direct-state-mutation.js');
 const samples = {
   member: 'state.foo = 1;',
+  runtimeMember: 'runtimeState.foo = 1;',
+  appMember: 'appState.foo = 1;',
   memberOrAssign: 'state.foo ||= payload;',
+  runtimeMemberOrAssign: 'runtimeState.foo ||= payload;',
+  appMemberOrAssign: 'appState.foo ||= payload;',
   memberNullishAssign: 'state.foo ??= payload;',
   memberPlusAssign: 'state.foo += 1;',
   computed: 'state[key] = payload;',
+  runtimeComputed: 'runtimeState[key] = payload;',
+  appComputed: 'appState[key] = payload;',
   computedWithSpace: 'state [key] = payload;',
   computedNested: 'state[keys[index]] = payload;',
   computedOrAssign: 'state[key] ||= payload;',
   objectAssign: 'Object.assign(state, payload);',
+  runtimeObjectAssign: 'Object.assign(runtimeState, payload);',
+  appObjectAssign: 'Object.assign(appState, payload);',
 };
 for (const [name, source] of Object.entries(samples)) {
   const matches = scanContentForStateWrites(source);

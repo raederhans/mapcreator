@@ -3,6 +3,7 @@ import { state as runtimeState } from "../core/state.js";
 import { callRuntimeHook, callRuntimeHooks } from "../core/state/index.js";
 import { UI_COPY_CATALOG } from "./i18n_catalog.js";
 import { normalizeCountryCodeAlias } from "../core/country_code_aliases.js";
+import { getCountryCode as getSharedFeatureCountryCode } from "../core/feature_identity.js";
 import { getScenarioCountryDisplayName } from "../core/scenario_country_display.js";
 const state = runtimeState;
 
@@ -905,28 +906,7 @@ function extractTooltipCountryCodeFromId(value) {
 }
 
 function getTooltipFeatureCountryCode(feature) {
-  const props = feature?.properties || {};
-  const direct = (
-    props.cntr_code ||
-    props.CNTR_CODE ||
-    props.iso_a2 ||
-    props.ISO_A2 ||
-    props.iso_a2_eh ||
-    props.ISO_A2_EH ||
-    props.adm0_a2 ||
-    props.ADM0_A2 ||
-    ""
-  );
-  const normalizedDirect = normalizeTooltipCountryCode(direct);
-  if (/^[A-Z]{2,3}$/.test(normalizedDirect) && normalizedDirect !== "ZZ" && normalizedDirect !== "XX") {
-    return normalizedDirect;
-  }
-
-  return normalizeTooltipCountryCode(
-    extractTooltipCountryCodeFromId(props.id) ||
-    extractTooltipCountryCodeFromId(props.NUTS_ID) ||
-    extractTooltipCountryCodeFromId(feature?.id)
-  );
+  return normalizeTooltipCountryCode(getSharedFeatureCountryCode(feature));
 }
 
 function getTooltipRegionName(feature, fallback) {

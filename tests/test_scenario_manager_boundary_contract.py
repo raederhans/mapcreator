@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_MANAGER = REPO_ROOT / "js" / "core" / "scenario_manager.js"
 SCENARIO_APPLY_PIPELINE = REPO_ROOT / "js" / "core" / "scenario_apply_pipeline.js"
+SCENARIO_RUNTIME_STATE = REPO_ROOT / "js" / "core" / "state" / "scenario_runtime_state.js"
 SCENARIO_LIFECYCLE_RUNTIME = REPO_ROOT / "js" / "core" / "scenario" / "lifecycle_runtime.js"
 
 
@@ -47,13 +48,10 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
     def test_active_scenario_country_names_do_not_fall_back_to_global_map(self):
         content = SCENARIO_APPLY_PIPELINE.read_text(encoding="utf-8")
 
-        self.assertIn('runtimeState.countryNames = staged.mapSemanticMode === "blank"', content)
-        self.assertIn('? { ...countryNames }', content)
-        self.assertIn(': { ...staged.scenarioNameMap };', content)
-        self.assertNotIn(
-            "runtimeState.countryNames = {\n      ...countryNames,\n      ...staged.scenarioNameMap,\n    };",
-            content,
-        )
+        self.assertIn('countryNames: staged.mapSemanticMode === "blank"', content)
+        self.assertIn("? countryNames", content)
+        self.assertIn(": staged.scenarioNameMap,", content)
+        self.assertNotIn("countryNames: {\n        ...countryNames,\n        ...staged.scenarioNameMap,\n      },", content)
 
     def test_scenario_manager_keeps_transaction_coordinator_role(self):
         content = SCENARIO_MANAGER.read_text(encoding="utf-8")
@@ -132,6 +130,7 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
 
     def test_apply_pipeline_owner_moves_to_new_module(self):
         content = SCENARIO_APPLY_PIPELINE.read_text(encoding="utf-8")
+        state_content = SCENARIO_RUNTIME_STATE.read_text(encoding="utf-8")
         lifecycle_content = SCENARIO_LIFECYCLE_RUNTIME.read_text(encoding="utf-8")
 
         self.assertIn("prepareScenarioActivationContext(bundle)", content)
@@ -139,14 +138,18 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
         self.assertIn("commitScenarioChunkRuntimeState(bundle, staged)", content)
         self.assertIn("prepareScenarioApplyState", content)
         self.assertIn("applyPreparedScenarioState", content)
-        self.assertIn("runtimeState.scenarioRuntimeTopologyData =", content)
-        self.assertIn("runtimeState.scenarioBaselineOwnersByFeatureId =", content)
-        self.assertIn('runtimeState.countryNames = staged.mapSemanticMode', content)
+        self.assertIn("commitScenarioActivationRuntimeState(runtimeState, {", content)
+        self.assertNotIn("runtimeState.scenarioRuntimeTopologyData =", content)
+        self.assertNotIn("runtimeState.scenarioBaselineOwnersByFeatureId =", content)
+        self.assertNotIn('runtimeState.countryNames = staged.mapSemanticMode', content)
         self.assertIn("runtimeState.scheduleScenarioChunkRefreshFn =", content)
         self.assertIn("syncScenarioLocalizationState({", content)
         self.assertIn("resetScenarioChunkRuntimeState(", content)
         self.assertNotIn("runtimeState.defaultRuntimePoliticalTopology =", content)
         self.assertNotIn('./scenario_manager.js', content)
+        self.assertIn("export function commitScenarioActivationRuntimeState(target, nextState = {}) {", state_content)
+        self.assertIn("setHydratedScenarioRuntimeTopologyState(target, {", state_content)
+        self.assertIn("setScenarioRuntimeOptionalLayerState(target, {", state_content)
         self.assertIn("syncScenarioInspectorSelection(runtimeState.activeSovereignCode);", content)
         self.assertIn("disableScenarioParentBorders();", content)
         self.assertIn("applyScenarioPaintMode();", content)

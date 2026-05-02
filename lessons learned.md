@@ -1397,3 +1397,13 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 49. family toggle 和 master toggle 要分清职责：master 关掉时，family toggle 仍要保留可点入口
 - transport appearance 这次真正想保留的是“先关 master，再点某个 family toggle 自动拉起 master”的快速入口；如果把 family toggle 也跟着整体 disabled，E2E 和真实交互都会卡住。
 - 更稳的做法是：family toggle 永远可点，其他细分控件跟随 master disabled；视觉降显可以留给容器样式，交互入口不要一起锁死。
+
+## 2026-05-02 - maintainability / stability roadmap
+
+### 50. runtime asset registry 要有单一数据源，底层 cache 不能反向依赖 data loader
+- 这次 `startup_cache.js` 为了拿 `build_manifest` URL 反向 import `data_loader.js`，很快就形成了底层 cache -> 上层 loader -> cache 的循环依赖。
+- 更稳的做法是：把 runtime asset registry 抽成单独的 leaf module 或 JSON source，`startup_cache`、`data_loader`、manifest 生成都只读这一份。
+
+### 51. startup locale 文案改了以后，要同步刷新 scenario snapshot / manifest / audit
+- 这次 strict contract 红灯的根因，是三个场景的 `locales.startup.json` 已更新，但 `build_snapshot.json`、`manifest.json`、`audit.json` 还停在旧 fingerprint。
+- 更稳的做法是：文案进入 checked-in startup artifacts 后，立刻跑 scoped `check_scenario_contracts.py --strict --write-safe`，把场景派生产物一起收口。

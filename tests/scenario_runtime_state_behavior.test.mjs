@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  commitScenarioActivationRuntimeState,
   createDefaultScenarioRuntimeState,
 } from "../js/core/state/scenario_runtime_state.js";
 import {
@@ -45,6 +46,77 @@ test("scenario runtime factory returns fresh nested objects and maps", () => {
   assert.deepEqual(second.runtimeChunkLoadState.zoomEndProtectedChunkIds, []);
   assert.equal(second.scenarioDistrictGroupByFeatureId.size, 0);
   assert.equal(second.scenarioHydrationHealthGate.status, "idle");
+});
+
+test("scenario activation commit helper centralizes staged runtime writes", () => {
+  const runtimeState = createDefaultScenarioRuntimeState();
+  const districtGroupByFeatureId = new Map([["A", "group-a"]]);
+
+  commitScenarioActivationRuntimeState(runtimeState, {
+    scenarioParentBorderEnabledBeforeActivate: { FR: true },
+    scenarioDisplaySettingsBeforeActivate: { renderProfile: "balanced" },
+    scenarioOceanFillBeforeActivate: "#123456",
+    activeScenarioId: "tno_1962",
+    scenarioBorderMode: "scenario_owner_only",
+    activeScenarioManifest: { scenario_id: "tno_1962" },
+    mapSemanticMode: "ownership",
+    scenarioCountriesByTag: { FRA: { name: "France" } },
+    activeScenarioMeshPack: { meshes: {} },
+    scenarioRuntimeTopologyData: { id: "runtime-topology" },
+    runtimePoliticalTopology: { id: "political-topology" },
+    scenarioPoliticalChunkData: { political: true },
+    runtimePoliticalMetaSeed: { featureIds: ["A"] },
+    runtimePoliticalFeatureCollectionSeed: { features: [] },
+    scenarioLandMaskData: { id: "land-mask" },
+    scenarioContextLandMaskData: { id: "context-land-mask" },
+    scenarioWaterRegionsData: { id: "water-regions" },
+    scenarioRuntimeTopologyVersionTag: "runtime-v1",
+    scenarioLandMaskVersionTag: "land-v1",
+    scenarioContextLandMaskVersionTag: "context-v1",
+    scenarioWaterOverlayVersionTag: "water-v1",
+    scenarioSpecialRegionsData: { id: "special-regions" },
+    scenarioReliefOverlaysData: { id: "relief-overlays" },
+    scenarioReliefOverlayRevision: 4,
+    scenarioDistrictGroupsData: { groups: [] },
+    scenarioDistrictGroupByFeatureId: districtGroupByFeatureId,
+    releasableCatalog: { ids: ["FRA"] },
+    scenarioReleasableIndex: { FRA: true },
+    scenarioAudit: { ok: true },
+    scenarioImportAudit: null,
+    scenarioBaselineHash: "baseline-sha",
+    scenarioBaselineOwnersByFeatureId: { A: "FRA" },
+    scenarioControllersByFeatureId: { A: "FRA" },
+    scenarioAutoShellOwnerByFeatureId: {},
+    scenarioAutoShellControllerByFeatureId: {},
+    scenarioBaselineControllersByFeatureId: { A: "FRA" },
+    scenarioBaselineCoresByFeatureId: { A: ["FRA"] },
+    scenarioShellOverlayRevision: 2,
+    scenarioControllerRevision: 3,
+    scenarioViewMode: "ownership",
+    countryNames: { FRA: "France" },
+    sovereigntyByFeatureId: { A: "FRA" },
+    sovereigntyInitialized: false,
+    visualOverrides: {},
+    featureOverrides: {},
+    scenarioGeneratedColorTags: ["FRA"],
+    scenarioFixedOwnerColors: { FRA: "#0055aa" },
+    sovereignBaseColors: { FRA: "#0055aa" },
+    countryBaseColors: { FRA: "#0055aa" },
+    activeSovereignCode: "FRA",
+    selectedWaterRegionId: "",
+    selectedSpecialRegionId: "",
+    hoveredWaterRegionId: null,
+    hoveredSpecialRegionId: null,
+  });
+
+  assert.equal(runtimeState.activeScenarioId, "tno_1962");
+  assert.equal(runtimeState.scenarioBorderMode, "scenario_owner_only");
+  assert.equal(runtimeState.scenarioRuntimeTopologyVersionTag, "runtime-v1");
+  assert.equal(runtimeState.scenarioReliefOverlayRevision, 4);
+  assert.equal(runtimeState.scenarioDistrictGroupByFeatureId.get("A"), "group-a");
+  assert.deepEqual(runtimeState.scenarioGeneratedColorTags, ["FRA"]);
+  assert.deepEqual(runtimeState.scenarioFixedOwnerColors, { FRA: "#0055aa" });
+  assert.equal(runtimeState.activeSovereignCode, "FRA");
 });
 
 test("zoom-end detail chunk protection is one-shot and selection scoped", () => {

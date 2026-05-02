@@ -144,6 +144,20 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         description="Published locale bundle for UI and geo labels.",
     ),
     DataArtifactSpec(
+        path="country_feature_policies.json",
+        role="country_feature_policies",
+        artifact_class=ARTIFACT_CLASS_MANUAL,
+        owner="data/country_feature_policies.json",
+        description="Manual country policy table for subdivision protection and country gate thresholds.",
+    ),
+    DataArtifactSpec(
+        path="runtime_asset_registry.json",
+        role="runtime_asset_registry",
+        artifact_class=ARTIFACT_CLASS_MANUAL,
+        owner="data/runtime_asset_registry.json",
+        description="Manual runtime asset registry shared by JS resolvers and build manifest generation.",
+    ),
+    DataArtifactSpec(
         path="palettes/index.json",
         role="palette_registry",
         artifact_class=ARTIFACT_CLASS_PUBLISH,

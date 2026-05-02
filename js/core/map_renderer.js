@@ -60,6 +60,11 @@ import {
 import { ColorManager } from "./color_manager.js";
 import { resolveFeatureColor } from "./color_resolver.js";
 import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "./feature_identity.js";
+import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
+import {
   createPoliticalRasterWorkerIdentity,
   ensurePoliticalRasterWorkerMetrics,
   requestPoliticalRasterWorkerPass,
@@ -533,7 +538,7 @@ const OCEAN_MASK_MODE_TOPOLOGY = "topology_ocean";
 const OCEAN_MASK_MODE_SPHERE_MINUS_LAND = "sphere_minus_land";
 const OCEAN_MASK_MODE_BATHYMETRY = "bathymetry_features";
 const OCEAN_MASK_MIN_QUALITY = 0.35;
-const GLOBAL_BATHYMETRY_TOPOLOGY_URL = "data/global_bathymetry.topo.json";
+const GLOBAL_BATHYMETRY_TOPOLOGY_URL = resolveDataAssetUrl("bathymetry:global_topology");
 const BATHYMETRY_BANDS_OBJECT_NAME = "bathymetry_bands";
 const BATHYMETRY_CONTOURS_OBJECT_NAME = "bathymetry_contours";
 const BATHYMETRY_MAX_REFERENCE_DEPTH_M = 6000;
@@ -3019,13 +3024,7 @@ function getColorByCanonicalCountryCode(colorMap, canonicalCode) {
 }
 
 function getFeatureId(feature) {
-  const raw =
-    feature?.properties?.id ??
-    feature?.properties?.NUTS_ID ??
-    feature?.id;
-  if (raw === null || raw === undefined) return null;
-  const text = String(raw).trim();
-  return text.length > 0 ? text : null;
+  return getSharedFeatureId(feature) || null;
 }
 
 function getWaterRegionName(feature) {
@@ -3599,28 +3598,7 @@ function extractCountryCodeFromId(value) {
 }
 
 function getFeatureCountryCodeNormalized(feature) {
-  const props = feature?.properties || {};
-  const direct = (
-    props.cntr_code ||
-    props.CNTR_CODE ||
-    props.iso_a2 ||
-    props.ISO_A2 ||
-    props.iso_a2_eh ||
-    props.ISO_A2_EH ||
-    props.adm0_a2 ||
-    props.ADM0_A2 ||
-    ""
-  );
-  const normalizedDirect = canonicalCountryCode(direct);
-  if (/^[A-Z]{2,3}$/.test(normalizedDirect) && normalizedDirect !== "ZZ" && normalizedDirect !== "XX") {
-    return normalizedDirect;
-  }
-
-  return canonicalCountryCode(
-    extractCountryCodeFromId(props.id) ||
-    extractCountryCodeFromId(props.NUTS_ID) ||
-    extractCountryCodeFromId(feature?.id)
-  );
+  return canonicalCountryCode(getSharedFeatureCountryCode(feature));
 }
 
 function getFeatureCountryCode(feature) {
@@ -20339,44 +20317,6 @@ function resetUnitCounterEditorState({ preserveSelection = false, preserveCounte
   ensureUnitCounterEditorState();
 }
 
-function getFrontlineOwnershipContext() {
-  return {
-    ownershipByFeatureId: runtimeState.sovereigntyByFeatureId,
-    controllerByFeatureId: runtimeState.scenarioControllersByFeatureId,
-    shellOwnerByFeatureId: runtimeState.scenarioAutoShellOwnerByFeatureId,
-    shellControllerByFeatureId: runtimeState.scenarioAutoShellControllerByFeatureId,
-    scenarioActive: !!runtimeState.activeScenarioId,
-    viewMode: "frontline",
-  };
-}
-
-function getFrontlineMesh() {
-  if (
-    !runtimeState.activeScenarioId
-    || !runtimeState.annotationView?.frontlineEnabled
-    || !runtimeState.runtimePoliticalTopology?.objects?.political
-  ) {
-    runtimeState.cachedFrontlineMesh = null;
-    runtimeState.cachedFrontlineMeshHash = "";
-    return null;
-  }
-  const nextHash = [
-    `scenario:${String(runtimeState.activeScenarioId || "")}`,
-    `ctrl:${Number(runtimeState.scenarioControllerRevision || 0)}`,
-    `shell:${Number(runtimeState.scenarioShellOverlayRevision || 0)}`,
-    `sov:${Number(runtimeState.sovereigntyRevision || 0)}`,
-  ].join("|");
-  if (runtimeState.cachedFrontlineMesh && runtimeState.cachedFrontlineMeshHash === nextHash) {
-    return runtimeState.cachedFrontlineMesh;
-  }
-  runtimeState.cachedFrontlineMesh = buildDynamicOwnerBorderMesh(
-    runtimeState.runtimePoliticalTopology,
-    getFrontlineOwnershipContext()
-  );
-  runtimeState.cachedFrontlineMeshHash = nextHash;
-  return runtimeState.cachedFrontlineMesh;
-}
-
 function getProjectedPoint(coord) {
   const projected = projection?.(coord);
   if (!Array.isArray(projected) || projected.length < 2) return null;
@@ -20478,7 +20418,7 @@ function getFrontlineLabelAnchors() {
   const object = topology?.objects?.political;
   const geometries = Array.isArray(object?.geometries) ? object.geometries : [];
   const neighbors = Array.isArray(runtimeState.runtimeNeighborGraph) ? runtimeState.runtimeNeighborGraph : [];
-  const ownershipContext = getFrontlineOwnershipContext();
+  const ownershipContext = getBorderMeshOwner().getFrontlineOwnershipContext();
   const anchors = [];
   const seenPairs = new Set();
 
@@ -20858,7 +20798,7 @@ function renderFrontlineOverlay() {
     frontlineLabelsGroup.attr("aria-hidden", "true");
     return;
   }
-  const mesh = getFrontlineMesh();
+  const mesh = getBorderMeshOwner().getFrontlineMesh();
   const hasMesh = !!mesh && Array.isArray(mesh.coordinates) && mesh.coordinates.length > 0;
   if (!hasMesh) {
     frontlineOverlayGroup.selectAll("*").remove();

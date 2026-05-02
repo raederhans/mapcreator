@@ -6,6 +6,7 @@ import {
   state as runtimeState,
   createDefaultTransportWorkbenchDisplayConfig,
   normalizeTransportOverviewStyleConfig,
+  applyTransportWorkbenchOverviewState,
   normalizeTransportWorkbenchDisplayConfig,
   normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
@@ -1496,21 +1497,10 @@ export function createTransportWorkbenchController({
       },
     );
     if (!patch) return false;
-    if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
-      runtimeState.styleConfig = {};
-    }
-    runtimeState.styleConfig.transportOverview = {
-      ...currentOverviewConfig,
-      visualMode: patch.visualMode,
-      [context.family.id]: {
-        ...(currentOverviewConfig?.[context.family.id] || {}),
-        ...(patch.familyConfig || {}),
-      },
-    };
-    runtimeState.showTransport = true;
-    if (patch.visibilityField) {
-      runtimeState[patch.visibilityField] = true;
-    }
+    applyTransportWorkbenchOverviewState(runtimeState, {
+      ...patch,
+      familyId: context.family.id,
+    });
     const dataLayerKeys = Array.isArray(patch.dataLayerKeys) ? patch.dataLayerKeys : [];
     try {
       if (dataLayerKeys.length && typeof runtimeState.ensureContextLayerDataFn === "function") {

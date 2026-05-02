@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
@@ -11,7 +12,7 @@ import {
   PACK_MODE_PREVIEW,
 } from "./transport_workbench_line_runtime_shared.js";
 
-const MANIFEST_URL = "data/transport_layers/japan_rail/manifest.json";
+const MANIFEST_URL = resolveTransportManifestUrl("rail");
 const LINE_CLASS_PRIORITY = {
   service: 1,
   branch: 2,

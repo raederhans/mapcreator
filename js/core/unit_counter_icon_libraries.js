@@ -1,4 +1,6 @@
-const HOI4_UNIT_COUNTER_MANIFEST_URL = "data/unit_counter_libraries/hoi4/manifest.json";
+import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
+
+const HOI4_UNIT_COUNTER_MANIFEST_URL = resolveDataAssetUrl("unit_counter_manifest:hoi4");
 const HOI4_UNIT_COUNTER_REVIEW_DRAFT_STORAGE_KEY = "mapcreator_hoi4_unit_icon_review_v1";
 
 /** @typedef {{ small: string|null, large: string|null, ship: string|null }} Hoi4UnitIconVariantSet */

@@ -5,6 +5,7 @@ import {
   loadLocalizationData,
   normalizeRequestedContextLayerNames,
   loadMapData,
+  resolveScenarioRegistryUrl,
 } from "../core/data_loader.js";
 import {
   createStartupScenarioBundleFromPayload,
@@ -462,7 +463,7 @@ export function createStartupDataPipelineOwner({
       : scenarioRegistryPromise.then((registry) => {
         const defaultScenarioId = String(registry?.default_scenario_id || "").trim();
         if (!defaultScenarioId) {
-          throw new Error("Default scenario is not configured in data/scenarios/index.json.");
+          throw new Error(`Default scenario is not configured in ${resolveScenarioRegistryUrl()}.`);
         }
         return defaultScenarioId;
       });

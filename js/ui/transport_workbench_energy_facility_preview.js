@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import { createTransportWorkbenchPointPreviewController } from "./transport_workbench_point_preview_shared.js";
 
 function getEnergySubtypeFill(subtype) {
@@ -13,7 +14,7 @@ function getEnergySubtypeFill(subtype) {
 
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "energy_facilities",
-  manifestUrl: "data/transport_layers/japan_energy_facilities/manifest.json",
+  manifestUrl: resolveTransportManifestUrl("energy_facilities"),
   packKey: "energy_facilities",
   selectionType: "energy_facility",
   fullPackScaleThreshold: 1.14,

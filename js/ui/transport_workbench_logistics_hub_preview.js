@@ -1,3 +1,4 @@
+import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import { createTransportWorkbenchPointPreviewController } from "./transport_workbench_point_preview_shared.js";
 
 function getLogisticsHubLabel(categoryValue) {
@@ -13,7 +14,7 @@ function getLogisticsHubLabel(categoryValue) {
 
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "logistics_hubs",
-  manifestUrl: "data/transport_layers/japan_logistics_hubs/manifest.json",
+  manifestUrl: resolveTransportManifestUrl("logistics_hubs"),
   packKey: "logistics_hubs",
   selectionType: "logistics_hub",
   fullPackScaleThreshold: 1.14,

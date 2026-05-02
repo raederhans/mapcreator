@@ -3,7 +3,7 @@ export function createRendererAssetUrlPolicyOwner({
   constants = {},
 } = {}) {
   const {
-    globalBathymetryTopologyUrl = "data/global_bathymetry.topo.json",
+    globalBathymetryTopologyUrl = "",
   } = constants;
 
   const invalidBathymetryUrlWarnings = new Set();

@@ -1,5 +1,7 @@
 # Centralized configuration for map data pipeline.
 
+from map_builder.country_feature_policies import subdivision_protected_countries
+
 # Data source URLs
 URL = (
     "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/"
@@ -617,9 +619,10 @@ GLOBAL_BASIC_SPECIAL_SOURCES = {
     },
 }
 GLOBAL_BASIC_PASSTHROUGH_COUNTRIES = {"MC", "MO", "EH"}
+SUBDIVISION_PROTECTED_COUNTRIES = subdivision_protected_countries()
 TOPOLOGY_ADMIN1_HIERARCHY_CODES = (
     set(DETAIL_PARENT_SUBDIVISIONS)
-    | (set(SUBDIVISIONS) - {"CN", "RU", "IN", "PL", "FR"})
+    | (set(SUBDIVISIONS) - SUBDIVISION_PROTECTED_COUNTRIES)
     | set(AFRICA_BASIC_NE_COUNTRIES.keys())
     | set(AFRICA_BASIC_GB_OVERRIDES.keys())
     | set(GLOBAL_BASIC_NE_COUNTRY_RULES.keys())

@@ -1,3 +1,5 @@
+import { setScenarioDiagnosticsState } from "../../core/state.js";
+
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
  * - scenario audit panel rendering and load/hide actions
@@ -456,41 +458,39 @@ export function createProjectSupportDiagnosticsController({
     diagnosticsButton.textContent = t(activeDiagnosticsLoaded ? "Hide Diagnostics" : "Load Diagnostics", "ui");
     diagnosticsButton.addEventListener("click", async () => {
       if (activeDiagnosticsLoaded) {
-        state.scenarioDiagnostics = null;
-        state.scenarioDiagnosticsPreview = null;
-        state.scenarioDiagnosticsUi = {
-          loading: false,
-          errorMessage: "",
-          loadedForScenarioId: "",
-        };
+        setScenarioDiagnosticsState(state);
         renderScenarioAuditPanel();
         return;
       }
-      state.scenarioDiagnosticsUi = {
-        loading: true,
-        errorMessage: "",
-        loadedForScenarioId: activeScenarioId,
-      };
+      setScenarioDiagnosticsState(state, {
+        ui: {
+          loading: true,
+          errorMessage: "",
+          loadedForScenarioId: activeScenarioId,
+        },
+      });
       renderScenarioAuditPanel();
       try {
         const report = await fetchScenarioDiagnosticsReport(activeScenarioId);
         const previewPayload = await fetchScenarioDiagnosticsReport(activeScenarioId, { preview: true });
-        state.scenarioDiagnostics = report;
-        state.scenarioDiagnosticsPreview = previewPayload;
-        state.scenarioDiagnosticsUi = {
-          loading: false,
-          errorMessage: "",
-          loadedForScenarioId: activeScenarioId,
-        };
+        setScenarioDiagnosticsState(state, {
+          report,
+          preview: previewPayload,
+          ui: {
+            loading: false,
+            errorMessage: "",
+            loadedForScenarioId: activeScenarioId,
+          },
+        });
       } catch (error) {
         console.error("Failed to load scenario diagnostics:", error);
-        state.scenarioDiagnostics = null;
-        state.scenarioDiagnosticsPreview = null;
-        state.scenarioDiagnosticsUi = {
-          loading: false,
-          errorMessage: String(error?.message || error || ""),
-          loadedForScenarioId: activeScenarioId,
-        };
+        setScenarioDiagnosticsState(state, {
+          ui: {
+            loading: false,
+            errorMessage: String(error?.message || error || ""),
+            loadedForScenarioId: activeScenarioId,
+          },
+        });
       }
       renderScenarioAuditPanel();
     });

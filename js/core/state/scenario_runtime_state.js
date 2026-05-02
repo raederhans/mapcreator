@@ -151,6 +151,89 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   return target;
 }
 
+export function commitScenarioActivationRuntimeState(target, nextState = {}) {
+  if (!target || typeof target !== "object") {
+    return null;
+  }
+  // 这是 scenario apply 的全量 activation commit helper。
+  // 调用方要先在 pipeline 里准备好完整 snapshot，再一次性提交到 runtimeState。
+  const requiredKeys = [
+    "activeScenarioId",
+    "scenarioBorderMode",
+    "countryNames",
+    "scenarioBaselineOwnersByFeatureId",
+    "sovereigntyByFeatureId",
+  ];
+  requiredKeys.forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(nextState, key)) {
+      throw new Error(`[scenario_runtime_state] commitScenarioActivationRuntimeState missing required key: ${key}`);
+    }
+  });
+  target.scenarioParentBorderEnabledBeforeActivate =
+    nextState.scenarioParentBorderEnabledBeforeActivate || null;
+  target.scenarioDisplaySettingsBeforeActivate =
+    nextState.scenarioDisplaySettingsBeforeActivate || null;
+  target.scenarioOceanFillBeforeActivate = String(nextState.scenarioOceanFillBeforeActivate || "");
+  target.activeScenarioId = String(nextState.activeScenarioId || "");
+  target.scenarioBorderMode = String(nextState.scenarioBorderMode || "canonical");
+  target.activeScenarioManifest = nextState.activeScenarioManifest || null;
+  target.mapSemanticMode = String(nextState.mapSemanticMode || "");
+  target.scenarioCountriesByTag = nextState.scenarioCountriesByTag || {};
+  setHydratedScenarioRuntimeTopologyState(target, {
+    runtimeTopologyData: nextState.scenarioRuntimeTopologyData || null,
+    runtimePoliticalTopology: nextState.runtimePoliticalTopology || null,
+    runtimePoliticalMetaSeed: nextState.runtimePoliticalMetaSeed || null,
+    runtimePoliticalFeatureCollectionSeed: nextState.runtimePoliticalFeatureCollectionSeed || null,
+    scenarioLandMaskData: nextState.scenarioLandMaskData || null,
+    scenarioContextLandMaskData: nextState.scenarioContextLandMaskData || null,
+    scenarioWaterRegionsData: nextState.scenarioWaterRegionsData || null,
+    scenarioRuntimeTopologyVersionTag: nextState.scenarioRuntimeTopologyVersionTag || "",
+    scenarioLandMaskVersionTag: nextState.scenarioLandMaskVersionTag || "",
+    scenarioContextLandMaskVersionTag: nextState.scenarioContextLandMaskVersionTag || "",
+    scenarioWaterOverlayVersionTag: nextState.scenarioWaterOverlayVersionTag || "",
+    scenarioSpecialRegionsData: nextState.scenarioSpecialRegionsData || null,
+  });
+  setScenarioRuntimeOptionalLayerState(target, {
+    activeScenarioMeshPack: nextState.activeScenarioMeshPack || null,
+    scenarioPoliticalChunkData: nextState.scenarioPoliticalChunkData || null,
+    scenarioDistrictGroupsData: nextState.scenarioDistrictGroupsData || null,
+    scenarioDistrictGroupByFeatureId: nextState.scenarioDistrictGroupByFeatureId,
+    scenarioReliefOverlaysData: nextState.scenarioReliefOverlaysData || null,
+  });
+  target.scenarioReliefOverlayRevision = Number(nextState.scenarioReliefOverlayRevision) || 0;
+  target.releasableCatalog = nextState.releasableCatalog || null;
+  target.scenarioReleasableIndex = nextState.scenarioReleasableIndex || null;
+  target.scenarioAudit = nextState.scenarioAudit || null;
+  target.scenarioImportAudit = nextState.scenarioImportAudit || null;
+  target.scenarioBaselineHash = String(nextState.scenarioBaselineHash || "");
+  target.scenarioBaselineOwnersByFeatureId = { ...(nextState.scenarioBaselineOwnersByFeatureId || {}) };
+  target.scenarioControllersByFeatureId = { ...(nextState.scenarioControllersByFeatureId || {}) };
+  target.scenarioAutoShellOwnerByFeatureId = { ...(nextState.scenarioAutoShellOwnerByFeatureId || {}) };
+  target.scenarioAutoShellControllerByFeatureId = { ...(nextState.scenarioAutoShellControllerByFeatureId || {}) };
+  target.scenarioBaselineControllersByFeatureId = { ...(nextState.scenarioBaselineControllersByFeatureId || {}) };
+  target.scenarioBaselineCoresByFeatureId = { ...(nextState.scenarioBaselineCoresByFeatureId || {}) };
+  target.scenarioShellOverlayRevision = Number(nextState.scenarioShellOverlayRevision) || 0;
+  target.scenarioControllerRevision = Number(nextState.scenarioControllerRevision) || 0;
+  target.scenarioViewMode = String(nextState.scenarioViewMode || "ownership");
+  target.countryNames = { ...(nextState.countryNames || {}) };
+  target.sovereigntyByFeatureId = { ...(nextState.sovereigntyByFeatureId || {}) };
+  target.sovereigntyInitialized = !!nextState.sovereigntyInitialized;
+  target.visualOverrides = { ...(nextState.visualOverrides || {}) };
+  target.featureOverrides = { ...(nextState.featureOverrides || {}) };
+  target.scenarioGeneratedColorTags = Array.isArray(nextState.scenarioGeneratedColorTags)
+    ? [...nextState.scenarioGeneratedColorTags]
+    : [];
+  target.scenarioFixedOwnerColors = { ...(nextState.scenarioFixedOwnerColors || {}) };
+  target.sovereignBaseColors = { ...(nextState.sovereignBaseColors || {}) };
+  target.countryBaseColors = { ...(nextState.countryBaseColors || {}) };
+  target.activeSovereignCode = String(nextState.activeSovereignCode || "");
+  target.selectedWaterRegionId = String(nextState.selectedWaterRegionId || "");
+  target.selectedSpecialRegionId = String(nextState.selectedSpecialRegionId || "");
+  target.hoveredWaterRegionId = nextState.hoveredWaterRegionId ?? null;
+  target.hoveredSpecialRegionId = nextState.hoveredSpecialRegionId ?? null;
+  return target;
+}
+
 export function setScenarioHydrationHealthGateState(target, nextState = {}) {
   if (!target || typeof target !== "object") {
     return createDefaultScenarioHydrationHealthGate();

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-04-11T03:25:39.742898+00:00",
+  "generated_at": "2026-05-02T15:02:23.716273+00:00",
   "outputs": {
     "europe_topology.json": {
       "role": "primary_topology",
@@ -201,11 +201,27 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8631198,
-      "sha256": "cbe8f12f75afffaa7295d15b0a59f50cbbfd603b2f1f1a848b44367b0a042ac0",
+      "size_bytes": 8636554,
+      "sha256": "17e3fe68ba8005441d54b1e3a8b7d6b9641b1bcc23f4f40f6ff2f0e7e3d5bc00",
       "type": "locales",
       "geo_entry_count": 72641,
-      "ui_entry_count": 992
+      "ui_entry_count": 1554
+    },
+    "country_feature_policies.json": {
+      "role": "country_feature_policies",
+      "artifact_class": "manual",
+      "owner": "data/country_feature_policies.json",
+      "description": "Manual country policy table for subdivision protection and country gate thresholds.",
+      "size_bytes": 341,
+      "sha256": "b2c5ab0fa44f1c4d80045ccfe8932fdd46ccde51edd376255bfb4ab54be7366d"
+    },
+    "runtime_asset_registry.json": {
+      "role": "runtime_asset_registry",
+      "artifact_class": "manual",
+      "owner": "data/runtime_asset_registry.json",
+      "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
+      "size_bytes": 3901,
+      "sha256": "7e34080fe777a6814fa2236819a07aac67073c09666808a86f9dce3e1d5cf946"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -299,8 +315,8 @@
       "sha256": "1ad3accade87602e2e39f7b49e8befa5d43aeaffb84b964a8f03d519638122f4",
       "type": "palette_map",
       "palette_id": "tno",
-      "mapped_count": 118,
-      "unmapped_count": 393
+      "mapped_count": 163,
+      "unmapped_count": 348
     },
     "palette-maps/red_flood.map.json": {
       "role": "palette_map",
@@ -350,8 +366,8 @@
       "type": "palette_audit",
       "palette_id": "tno",
       "entry_count": 511,
-      "mapped_count": 118,
-      "unmapped_count": 393
+      "mapped_count": 163,
+      "unmapped_count": 348
     },
     "palette-maps/red_flood.audit.json": {
       "role": "palette_audit",
@@ -392,18 +408,127 @@
       "artifact_class": "publish",
       "owner": "init_map_data.city_lights_assets",
       "description": "Generated 1930 historical city lights runtime asset.",
-      "size_bytes": 283760,
-      "sha256": "dafee508085b5487763f6af8e61b46f8e28e5288ca4b3e75732ec8f0e89933dc",
+      "size_bytes": 283721,
+      "sha256": "32d03b12eb17129d70ba144589abeffe9d6495cb1d8ebfac8513fc4c5912ae1c",
       "type": "historical_1930_city_lights_asset",
       "stats": {
-        "entryCount": 1456,
+        "entryCount": 1580,
         "countryCapitalCount": 230,
-        "adminCapitalCount": 1144,
+        "adminCapitalCount": 1267,
         "excludedCount": 6,
         "populationThreshold": 1200000,
         "adminCapitalPopulationThreshold": 400000,
+        "calibrationVersion": "balanced-2026-04",
         "maxWeight": 1.0,
-        "meanWeight": 0.5632
+        "meanWeight": 0.5864
+      }
+    }
+  },
+  "runtime_asset_registry": {
+    "schema_version": 1,
+    "assets": {
+      "build_manifest": {
+        "url": "data/manifest.json",
+        "role": "build_manifest",
+        "description": "Build output manifest consumed by startup cache and runtime asset hashing."
+      },
+      "scenario_registry": {
+        "url": "data/scenarios/index.json",
+        "role": "scenario_registry",
+        "description": "Runtime scenario registry consumed by scenario boot and scenario picker flows."
+      },
+      "transport_manifest:road": {
+        "url": "data/transport_layers/japan_road/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "road"
+      },
+      "transport_manifest:rail": {
+        "url": "data/transport_layers/japan_rail/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "rail"
+      },
+      "transport_manifest:airport": {
+        "url": "data/transport_layers/japan_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "airport"
+      },
+      "transport_manifest:port": {
+        "url": "data/transport_layers/japan_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "port"
+      },
+      "transport_manifest:mineral_resources": {
+        "url": "data/transport_layers/japan_mineral_resources/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "mineral_resources"
+      },
+      "transport_manifest:energy_facilities": {
+        "url": "data/transport_layers/japan_energy_facilities/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "energy_facilities"
+      },
+      "transport_manifest:industrial_zones": {
+        "url": "data/transport_layers/japan_industrial_zones/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "industrial_zones"
+      },
+      "transport_manifest:logistics_hubs": {
+        "url": "data/transport_layers/japan_logistics_hubs/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "logistics_hubs"
+      },
+      "transport_carrier:japan_corridor": {
+        "url": "data/transport_layers/japan_corridor/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "japan_corridor"
+      },
+      "bathymetry:global_topology": {
+        "url": "data/global_bathymetry.topo.json",
+        "role": "bathymetry_topology",
+        "family_id": "global"
+      },
+      "feature_migrations:by_hybrid_v1": {
+        "url": "data/feature-migrations/by_hybrid_v1.json",
+        "role": "feature_migration_table",
+        "family_id": "hybrid_v1"
+      },
+      "unit_counter_manifest:hoi4": {
+        "url": "data/unit_counter_libraries/hoi4/manifest.json",
+        "role": "unit_counter_manifest",
+        "family_id": "hoi4"
+      },
+      "city_lights:historical_1930:asset": {
+        "url": "js/core/city_lights_historical_1930_asset.js",
+        "role": "city_lights_asset",
+        "family_id": "historical_1930"
+      },
+      "city_lights:historical_1930:source": {
+        "url": "data/world_cities.geojson",
+        "role": "city_lights_source",
+        "family_id": "historical_1930"
+      },
+      "city_lights:historical_1930:exclusions": {
+        "url": "data/historical_city_lights_1930_exclusions.json",
+        "role": "city_lights_source",
+        "family_id": "historical_1930"
+      }
+    },
+    "scenario_registry_key": "scenario_registry",
+    "transport_manifest_keys": {
+      "road": "transport_manifest:road",
+      "rail": "transport_manifest:rail",
+      "airport": "transport_manifest:airport",
+      "port": "transport_manifest:port",
+      "mineral_resources": "transport_manifest:mineral_resources",
+      "energy_facilities": "transport_manifest:energy_facilities",
+      "industrial_zones": "transport_manifest:industrial_zones",
+      "logistics_hubs": "transport_manifest:logistics_hubs"
+    },
+    "city_lights": {
+      "historical_1930": {
+        "asset_key": "city_lights:historical_1930:asset",
+        "source_key": "city_lights:historical_1930:source",
+        "exclusions_key": "city_lights:historical_1930:exclusions"
       }
     }
   }

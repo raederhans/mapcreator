@@ -151,7 +151,7 @@
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "eefd19b8b362c9bdb97489c8755b59a0dd1f583ed9afb623130f4418d40a41b8",
+  "snapshot_fingerprint": "7120f239a7f389967b0adcf305f836047d9f18870da8e7219ee32b12361564e0",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "detail_chunk_manifest_sha256": "a6927da7500007be7d3129393a3ad957846bf6b9eef95d4a50ba9267f4121267",

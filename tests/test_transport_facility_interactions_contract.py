@@ -98,7 +98,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
 
     def test_state_and_i18n_cover_transport_primary_color_and_more_fields(self):
         state_content = (
-            (REPO_ROOT / "js" / "core" / "state.js").read_text(encoding="utf-8")
+            (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
             + "\n"
             + (REPO_ROOT / "js" / "core" / "state_defaults.js").read_text(encoding="utf-8")
         )

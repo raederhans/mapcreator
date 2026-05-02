@@ -1,0 +1,11 @@
+{
+  "subdivision_protected_countries": ["CN", "FR", "IN", "PL", "RU"],
+  "country_gate": {
+    "target_country_codes": ["RU", "UA", "DE", "GB", "CZ"],
+    "country_gap_target_km2": 1.0,
+    "support_tiers": {
+      "strict_gap_target_countries": ["DE", "GB", "CZ"],
+      "order_of_magnitude_improvement_countries": ["RU", "UA"]
+    }
+  }
+}

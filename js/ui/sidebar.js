@@ -64,6 +64,7 @@ import {
   setFeatureOwnerCodes,
   markLegacyColorStateDirty,
 } from "../core/sovereignty_manager.js";
+import { getCountryCode as getSharedFeatureCountryCode } from "../core/feature_identity.js";
 import { markDirty } from "../core/dirty_state.js";
 import {
   getResolvedReleasableBoundaryVariant,
@@ -142,15 +143,13 @@ function extractCountryCodeFromId(value) {
 
 function getCountryCodeFromProps(props = {}, fallbackId = "") {
   return normalizeCountryCode(
-    props.cntr_code ||
-      props.CNTR_CODE ||
-      props.iso_a2 ||
-      props.ISO_A2 ||
-      props.iso_a2_eh ||
-      props.ISO_A2_EH ||
-      props.adm0_a2 ||
-      props.ADM0_A2 ||
-      extractCountryCodeFromId(props.id || props.NUTS_ID || fallbackId)
+    getSharedFeatureCountryCode(
+      {
+        id: fallbackId,
+        properties: props,
+      },
+      { useIdFallback: true },
+    )
   );
 }
 
@@ -5566,6 +5565,5 @@ function initSidebar({ render } = {}) {
 }
 
 export { initSidebar };
-
 
 
