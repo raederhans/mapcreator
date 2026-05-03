@@ -1,0 +1,540 @@
+import {
+  normalizeMapSemanticMode,
+  normalizePhysicalStyleConfig,
+  normalizeTextureMode,
+  state as runtimeState,
+} from "./state.js";
+import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "./feature_identity.js";
+import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
+const state = runtimeState;
+
+const FEATURE_MIGRATION_URLS = [resolveDataAssetUrl("feature_migrations:by_hybrid_v1")];
+let featureMigrationMapPromise = null;
+
+function markLegacyColorStateDirty() {
+  runtimeState.legacyColorStateDirty = true;
+}
+
+function normalizeOwnerCode(rawCode) {
+  return normalizeCountryCodeAlias(rawCode);
+}
+
+function normalizeFeatureOwnershipMap(entries) {
+  const source =
+    entries && typeof entries === "object" && !Array.isArray(entries) ? entries : {};
+  const normalized = {};
+  Object.entries(source).forEach(([featureId, ownerCode]) => {
+    const id = String(featureId || "").trim();
+    const code = normalizeOwnerCode(ownerCode);
+    if (!id || !code) return;
+    normalized[id] = code;
+  });
+  return normalized;
+}
+
+function hasFeatureOwnershipMap(entries) {
+  return !!entries && typeof entries === "object" && !Array.isArray(entries);
+}
+
+function getCanonicalCountryCodeForFeature(feature) {
+  return getSharedFeatureCountryCode(feature, { useIdFallback: false }) || "";
+}
+
+function isScenarioShellLikeFeature(feature, featureId = "") {
+  const candidate = getFeatureId(feature) || String(featureId || "").trim();
+  if (!candidate) return false;
+  if (String(candidate).toUpperCase().includes("_FB_")) return true;
+  return String(feature?.properties?.name || "").toLowerCase().includes("shell fallback");
+}
+
+function isAntarcticSectorLikeFeature(feature, featureId = "") {
+  const candidate = (getFeatureId(feature) || String(featureId || "").trim()).toUpperCase();
+  if (!candidate) return false;
+  const detailTier = String(feature?.properties?.detail_tier || "").trim().toLowerCase();
+  if (detailTier !== "antarctic_sector") return false;
+  const countryCode = getCanonicalCountryCodeForFeature(feature);
+  return countryCode === "AQ" || candidate.startsWith("AQ_");
+}
+
+function shouldExcludeScenarioPoliticalFeature(feature, featureId = "") {
+  return isScenarioShellLikeFeature(feature, featureId) || isAntarcticSectorLikeFeature(feature, featureId);
+}
+
+function getFeatureId(featureOrId) {
+  return getSharedFeatureId(featureOrId, { fallback: "" });
+}
+
+function seedSovereigntyFromLandData(featureCollection) {
+  const next = {};
+  const features = Array.isArray(featureCollection?.features) ? featureCollection.features : [];
+  features.forEach((feature) => {
+    const id = getFeatureId(feature);
+    const code = getCanonicalCountryCodeForFeature(feature);
+    if (!id || !code || shouldExcludeScenarioPoliticalFeature(feature, id)) return;
+    next[id] = code;
+  });
+  return next;
+}
+
+function migrateLegacyColorState() {
+  if (runtimeState.legacyColorStateDirty === false) {
+    return;
+  }
+  runtimeState.sovereignBaseColors = {
+    ...(runtimeState.countryBaseColors || {}),
+    ...(runtimeState.sovereignBaseColors || {}),
+  };
+  runtimeState.visualOverrides = {
+    ...(runtimeState.featureOverrides || {}),
+    ...(runtimeState.visualOverrides || {}),
+  };
+  runtimeState.legacyColorStateDirty = false;
+}
+
+function ensureOwnerIndexMaps() {
+  if (!(runtimeState.ownerToFeatureIds instanceof Map)) {
+    runtimeState.ownerToFeatureIds = new Map();
+  }
+}
+
+function rebuildOwnerIndex() {
+  ensureOwnerIndexMaps();
+  runtimeState.ownerToFeatureIds.clear();
+  Object.entries(runtimeState.sovereigntyByFeatureId || {}).forEach(([id, ownerCode]) => {
+    const code = normalizeOwnerCode(ownerCode);
+    const feature = runtimeState.landIndex?.get(id);
+    if (shouldExcludeScenarioPoliticalFeature(feature, id)) return;
+    if (!id || !code) return;
+    const bucket = runtimeState.ownerToFeatureIds.get(code) || new Set();
+    bucket.add(id);
+    runtimeState.ownerToFeatureIds.set(code, bucket);
+  });
+}
+
+function ensureSovereigntyState({ force = false } = {}) {
+  migrateLegacyColorState();
+  runtimeState.sovereignBaseColors = runtimeState.sovereignBaseColors || {};
+  runtimeState.visualOverrides = runtimeState.visualOverrides || {};
+  runtimeState.sovereigntyByFeatureId = runtimeState.sovereigntyByFeatureId || {};
+  runtimeState.mapSemanticMode = normalizeMapSemanticMode(runtimeState.mapSemanticMode);
+
+  if (runtimeState.sovereigntyInitialized && !force) {
+    ensureOwnerIndexMaps();
+    return runtimeState.sovereigntyByFeatureId;
+  }
+
+  if (runtimeState.mapSemanticMode === "blank") {
+    runtimeState.sovereigntyByFeatureId = { ...runtimeState.sovereigntyByFeatureId };
+  } else {
+    const seeded = seedSovereigntyFromLandData(runtimeState.landData);
+    runtimeState.sovereigntyByFeatureId = {
+      ...seeded,
+      ...runtimeState.sovereigntyByFeatureId,
+    };
+  }
+  runtimeState.sovereigntyInitialized = true;
+  rebuildOwnerIndex();
+  return runtimeState.sovereigntyByFeatureId;
+}
+
+function getFeatureOwnerCode(featureOrId, { skipEnsure = true } = {}) {
+  const id = getFeatureId(featureOrId);
+  if (!id) return "";
+  if (!skipEnsure) {
+    ensureSovereigntyState();
+  }
+  const direct = normalizeOwnerCode(runtimeState.sovereigntyByFeatureId?.[id] || "");
+  if (direct) return direct;
+  const feature = typeof featureOrId === "string" ? runtimeState.landIndex?.get(id) : featureOrId;
+  return getCanonicalCountryCodeForFeature(feature);
+}
+
+function touchSovereigntyRevision() {
+  runtimeState.sovereigntyRevision = (Number(runtimeState.sovereigntyRevision) || 0) + 1;
+}
+
+function updateOwnerIndexForMove(featureId, prevOwnerCode, nextOwnerCode) {
+  ensureOwnerIndexMaps();
+  const prevCode = normalizeOwnerCode(prevOwnerCode);
+  const nextCode = normalizeOwnerCode(nextOwnerCode);
+  if (prevCode) {
+    const prevBucket = runtimeState.ownerToFeatureIds.get(prevCode);
+    if (prevBucket instanceof Set) {
+      prevBucket.delete(featureId);
+      if (prevBucket.size === 0) {
+        runtimeState.ownerToFeatureIds.delete(prevCode);
+      }
+    }
+  }
+  if (nextCode) {
+    const nextBucket = runtimeState.ownerToFeatureIds.get(nextCode) || new Set();
+    nextBucket.add(featureId);
+    runtimeState.ownerToFeatureIds.set(nextCode, nextBucket);
+  }
+}
+
+function setFeatureOwnerCode(featureId, ownerCode) {
+  const id = getFeatureId(featureId);
+  const code = normalizeOwnerCode(ownerCode);
+  if (!id || !code) return false;
+  const landIndex = runtimeState.landIndex instanceof Map ? runtimeState.landIndex : null;
+  if (landIndex && landIndex.size > 0 && !landIndex.has(id)) {
+    // Ignore writes for features that are not currently present in the loaded map topology.
+    return false;
+  }
+  if (shouldExcludeScenarioPoliticalFeature(landIndex?.get(id), id)) {
+    return false;
+  }
+  ensureSovereigntyState();
+  const prev = getFeatureOwnerCode(id, { skipEnsure: true });
+  if (prev === code) return false;
+  runtimeState.sovereigntyByFeatureId[id] = code;
+  updateOwnerIndexForMove(id, prev, code);
+  touchSovereigntyRevision();
+  return true;
+}
+
+function setFeatureOwnerCodes(featureIds, ownerCode) {
+  ensureSovereigntyState();
+  const ids = Array.isArray(featureIds) ? featureIds : [];
+  let changed = 0;
+  ids.forEach((featureId) => {
+    if (setFeatureOwnerCode(featureId, ownerCode)) {
+      changed += 1;
+    }
+  });
+  return changed;
+}
+
+function resetFeatureOwnerCode(featureId) {
+  const id = getFeatureId(featureId);
+  if (!id) return false;
+  ensureSovereigntyState();
+  const feature = runtimeState.landIndex?.get(id);
+  if (shouldExcludeScenarioPoliticalFeature(feature, id)) return false;
+  const canonical = getCanonicalCountryCodeForFeature(feature);
+  if (!canonical) return false;
+  const prev = getFeatureOwnerCode(id, { skipEnsure: true });
+  if (prev === canonical) return false;
+  runtimeState.sovereigntyByFeatureId[id] = canonical;
+  updateOwnerIndexForMove(id, prev, canonical);
+  touchSovereigntyRevision();
+  return true;
+}
+
+function resetFeatureOwnerCodes(featureIds) {
+  ensureSovereigntyState();
+  const ids = Array.isArray(featureIds) ? featureIds : [];
+  let changed = 0;
+  ids.forEach((featureId) => {
+    if (resetFeatureOwnerCode(featureId)) {
+      changed += 1;
+    }
+  });
+  return changed;
+}
+
+function resetAllFeatureOwnersToCanonical() {
+  runtimeState.mapSemanticMode = "political";
+  runtimeState.sovereigntyByFeatureId = seedSovereigntyFromLandData(runtimeState.landData);
+  runtimeState.sovereigntyInitialized = true;
+  rebuildOwnerIndex();
+  touchSovereigntyRevision();
+}
+
+function getFeatureIdsForOwner(ownerCode) {
+  ensureOwnerIndexMaps();
+  const code = normalizeOwnerCode(ownerCode);
+  if (!code) return [];
+  const bucket = runtimeState.ownerToFeatureIds.get(code);
+  if (!(bucket instanceof Set)) return [];
+  return Array.from(bucket);
+}
+
+function migrateImportedProjectData(data) {
+  const payload = data && typeof data === "object" ? { ...data } : {};
+  const hasScenarioControllerMap = hasFeatureOwnershipMap(payload.scenarioControllersByFeatureId);
+  payload.sovereignBaseColors =
+    payload.sovereignBaseColors && typeof payload.sovereignBaseColors === "object"
+      ? payload.sovereignBaseColors
+      : payload.countryBaseColors && typeof payload.countryBaseColors === "object"
+        ? payload.countryBaseColors
+        : {};
+  payload.visualOverrides =
+    payload.visualOverrides && typeof payload.visualOverrides === "object"
+      ? payload.visualOverrides
+      : payload.featureOverrides && typeof payload.featureOverrides === "object"
+        ? payload.featureOverrides
+        : {};
+  payload.sovereigntyByFeatureId = normalizeFeatureOwnershipMap(payload.sovereigntyByFeatureId);
+  if (hasScenarioControllerMap) {
+    payload.scenarioControllersByFeatureId =
+      payload.scenarioControllersByFeatureId
+      && typeof payload.scenarioControllersByFeatureId === "object"
+      && !Array.isArray(payload.scenarioControllersByFeatureId)
+        ? normalizeFeatureOwnershipMap(payload.scenarioControllersByFeatureId)
+        : null;
+  }
+  payload.paintMode =
+    payload.paintMode === "sovereignty" ? "sovereignty" : "visual";
+  payload.mapSemanticMode = normalizeMapSemanticMode(payload.mapSemanticMode);
+  payload.activeSovereignCode = normalizeOwnerCode(payload.activeSovereignCode || "");
+  payload.dynamicBordersDirty = !!payload.dynamicBordersDirty;
+  payload.dynamicBordersDirtyReason = String(payload.dynamicBordersDirtyReason || "");
+  if (!payload.styleConfig || typeof payload.styleConfig !== "object") {
+    payload.styleConfig = {};
+  }
+  if (payload.styleConfig.textureMode && !payload.styleConfig.texture) {
+    payload.styleConfig.texture = { mode: payload.styleConfig.textureMode };
+  }
+  if (payload.styleConfig.texture && typeof payload.styleConfig.texture === "object") {
+    payload.styleConfig.texture = {
+      ...payload.styleConfig.texture,
+      mode: normalizeTextureMode(payload.styleConfig.texture.mode),
+    };
+  }
+  payload.styleConfig.physical = normalizePhysicalStyleConfig(payload.styleConfig.physical);
+  return payload;
+}
+
+async function loadFeatureMigrationMap({ fetchImpl = globalThis.fetch } = {}) {
+  if (featureMigrationMapPromise) {
+    return featureMigrationMapPromise;
+  }
+  featureMigrationMapPromise = (async () => {
+    if (typeof fetchImpl !== "function") {
+      return {};
+    }
+    const merged = {};
+    for (const url of FEATURE_MIGRATION_URLS) {
+      try {
+        const response = await fetchImpl(url, { cache: "no-store" });
+        if (!response?.ok) {
+          console.warn(`Unable to load feature migration asset: ${url} (${response?.status || "n/a"})`);
+          continue;
+        }
+        const payload = await response.json();
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+          continue;
+        }
+        Object.entries(payload).forEach(([legacyId, successorIds]) => {
+          if (!legacyId || !Array.isArray(successorIds)) return;
+          merged[String(legacyId).trim()] = successorIds
+            .map((value) => String(value || "").trim())
+            .filter(Boolean);
+        });
+      } catch (error) {
+        console.warn(`Failed to load feature migration asset ${url}:`, error);
+      }
+    }
+    return merged;
+  })();
+  return featureMigrationMapPromise;
+}
+
+function remapFeatureScopedEntries(entries, validFeatureIds, migrationMap) {
+  const source = entries && typeof entries === "object" ? entries : {};
+  const remapped = {};
+  let droppedCount = 0;
+  let migratedSourceCount = 0;
+  let expandedEntryCount = 0;
+
+  Object.entries(source).forEach(([featureId, value]) => {
+    const id = String(featureId || "").trim();
+    if (!id || !validFeatureIds.has(id)) return;
+    remapped[id] = value;
+  });
+
+  Object.entries(source).forEach(([featureId, value]) => {
+    const id = String(featureId || "").trim();
+    if (!id || validFeatureIds.has(id)) return;
+    const successorIds = Array.isArray(migrationMap?.[id]) ? migrationMap[id] : [];
+    const validSuccessors = successorIds.filter((successorId) => validFeatureIds.has(successorId));
+    if (!validSuccessors.length) {
+      droppedCount += 1;
+      return;
+    }
+    migratedSourceCount += 1;
+    validSuccessors.forEach((successorId) => {
+      if (successorId in remapped) return;
+      remapped[successorId] = value;
+      expandedEntryCount += 1;
+    });
+  });
+
+  return {
+    remapped,
+    droppedCount,
+    migratedSourceCount,
+    expandedEntryCount,
+  };
+}
+
+function shouldIgnoreInvalidFeatureScopedId(featureId) {
+  const id = String(featureId || "").trim();
+  if (!id) return true;
+  const upper = id.toUpperCase();
+  if (upper.includes("_FB_")) return true;
+  if (upper.startsWith("AQ_")) return true;
+  return false;
+}
+
+function partitionFeatureScopedEntries(entries, validFeatureIds) {
+  const source = entries && typeof entries === "object" ? entries : {};
+  const retained = {};
+  let needsMigration = false;
+  Object.entries(source).forEach(([featureId, value]) => {
+    const id = String(featureId || "").trim();
+    if (!id) return;
+    if (validFeatureIds.has(id)) {
+      retained[id] = value;
+      return;
+    }
+    if (shouldIgnoreInvalidFeatureScopedId(id)) {
+      return;
+    }
+    needsMigration = true;
+  });
+  return {
+    retained,
+    needsMigration,
+  };
+}
+
+async function migrateFeatureScopedProjectDataToCurrentTopology(
+  data,
+  { fetchImpl = globalThis.fetch, validFeatureIds = null, landData = null } = {}
+) {
+  const payload = data && typeof data === "object" ? { ...data } : {};
+  const hasScenarioControllerMap = hasFeatureOwnershipMap(payload.scenarioControllersByFeatureId);
+  const normalizedValidFeatureIds = (() => {
+    if (validFeatureIds instanceof Set) {
+      return new Set(Array.from(validFeatureIds).map((value) => String(value || "").trim()).filter(Boolean));
+    }
+    if (Array.isArray(validFeatureIds)) {
+      return new Set(validFeatureIds.map((value) => String(value || "").trim()).filter(Boolean));
+    }
+    const features = Array.isArray(landData?.features) ? landData.features : [];
+    if (!features.length) {
+      return null;
+    }
+    return new Set(features.map((feature) => getFeatureId(feature)).filter(Boolean));
+  })();
+  if (!normalizedValidFeatureIds?.size) {
+    return payload;
+  }
+
+  const sovereigntyPartition = partitionFeatureScopedEntries(
+    payload.sovereigntyByFeatureId,
+    normalizedValidFeatureIds
+  );
+  const scenarioControllerPartition = partitionFeatureScopedEntries(
+    payload.scenarioControllersByFeatureId,
+    normalizedValidFeatureIds
+  );
+  const nextVisualOverrides = payload.visualOverrides || payload.featureOverrides || {};
+  const visualPartition = partitionFeatureScopedEntries(nextVisualOverrides, normalizedValidFeatureIds);
+  if (
+    !sovereigntyPartition.needsMigration
+    && !scenarioControllerPartition.needsMigration
+    && !visualPartition.needsMigration
+  ) {
+    payload.sovereigntyByFeatureId = { ...sovereigntyPartition.retained };
+    if (hasScenarioControllerMap) {
+      payload.scenarioControllersByFeatureId = { ...scenarioControllerPartition.retained };
+    } else {
+      delete payload.scenarioControllersByFeatureId;
+    }
+    payload.visualOverrides = { ...visualPartition.retained };
+    payload.featureOverrides = { ...payload.visualOverrides };
+    return payload;
+  }
+
+  const migrationMap = await loadFeatureMigrationMap({ fetchImpl });
+  if (!migrationMap || typeof migrationMap !== "object") {
+    payload.sovereigntyByFeatureId = { ...sovereigntyPartition.retained };
+    if (hasScenarioControllerMap) {
+      payload.scenarioControllersByFeatureId = { ...scenarioControllerPartition.retained };
+    } else {
+      delete payload.scenarioControllersByFeatureId;
+    }
+    payload.visualOverrides = { ...visualPartition.retained };
+    payload.featureOverrides = { ...payload.visualOverrides };
+    return payload;
+  }
+
+  const sovereigntyMigration = remapFeatureScopedEntries(
+    payload.sovereigntyByFeatureId,
+    normalizedValidFeatureIds,
+    migrationMap
+  );
+  const scenarioControllerMigration = remapFeatureScopedEntries(
+    payload.scenarioControllersByFeatureId,
+    normalizedValidFeatureIds,
+    migrationMap
+  );
+  const visualMigration = remapFeatureScopedEntries(
+    payload.visualOverrides || payload.featureOverrides,
+    normalizedValidFeatureIds,
+    migrationMap
+  );
+
+  payload.sovereigntyByFeatureId = sovereigntyMigration.remapped;
+  if (hasScenarioControllerMap) {
+    payload.scenarioControllersByFeatureId = scenarioControllerMigration.remapped;
+  } else {
+    delete payload.scenarioControllersByFeatureId;
+  }
+  payload.visualOverrides = visualMigration.remapped;
+  payload.featureOverrides = { ...visualMigration.remapped };
+
+  const migratedTotal =
+    sovereigntyMigration.migratedSourceCount
+    + scenarioControllerMigration.migratedSourceCount
+    + visualMigration.migratedSourceCount;
+  const droppedTotal =
+    sovereigntyMigration.droppedCount
+    + scenarioControllerMigration.droppedCount
+    + visualMigration.droppedCount;
+  if (migratedTotal || droppedTotal) {
+    console.info(
+      "[Project Import] Feature migration applied.",
+      {
+        migratedEntries: migratedTotal,
+        droppedEntries: droppedTotal,
+        sovereigntyExpanded: sovereigntyMigration.expandedEntryCount,
+        controllerExpanded: scenarioControllerMigration.expandedEntryCount,
+        visualExpanded: visualMigration.expandedEntryCount,
+      }
+    );
+  }
+  return payload;
+}
+
+export {
+  normalizeOwnerCode,
+  normalizeFeatureOwnershipMap,
+  hasFeatureOwnershipMap,
+  getCanonicalCountryCodeForFeature,
+  getFeatureId,
+  shouldExcludeScenarioPoliticalFeature,
+  seedSovereigntyFromLandData,
+  ensureSovereigntyState,
+  rebuildOwnerIndex,
+  getFeatureOwnerCode,
+  setFeatureOwnerCode,
+  setFeatureOwnerCodes,
+  resetFeatureOwnerCode,
+  resetFeatureOwnerCodes,
+  resetAllFeatureOwnersToCanonical,
+  getFeatureIdsForOwner,
+  markLegacyColorStateDirty,
+  migrateLegacyColorState,
+  migrateImportedProjectData,
+  migrateFeatureScopedProjectDataToCurrentTopology,
+};
+

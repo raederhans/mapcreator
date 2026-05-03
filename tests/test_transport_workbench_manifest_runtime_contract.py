@@ -11,6 +11,7 @@ POINT_PREVIEW_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_p
 POINT_DENSITY_HELPERS_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_density_helpers.js"
 LINE_RUNTIME_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_line_runtime_shared.js"
 FAMILY_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_preview.js"
+MANIFEST_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_manifest_preview.js"
 FAMILY_REGISTRY_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_registry.js"
 TRANSPORT_CAPABILITY_REGISTRY_JS = REPO_ROOT / "js" / "core" / "transport_capability_registry.js"
 STATE_DEFAULTS_JS = REPO_ROOT / "js" / "core" / "state_defaults.js"
@@ -118,9 +119,26 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
         line_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
 
-        self.assertLess(point_content.index("if (!packPath)"), point_content.index("fetch(packPath"))
-        self.assertLess(industrial_content.index("if (!packPath)"), industrial_content.index("fetch(packPath"))
+        self.assertLess(point_content.index("if (!packPath)"), point_content.index("getTransportAsset(packPath"))
+        self.assertLess(industrial_content.index("if (!packPath)"), industrial_content.index("getTransportAsset(packPath"))
         self.assertIn("Transport workbench manifest is missing ${mode}/${key} pack path.", line_content)
+
+    def test_preview_gets_route_through_data_service(self) -> None:
+        point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
+        industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+        line_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
+        manifest_content = MANIFEST_PREVIEW_JS.read_text(encoding="utf-8")
+
+        self.assertIn("../core/data_service.js", point_content)
+        self.assertIn("getTransportAsset", point_content)
+        self.assertIn("../core/data_service.js", industrial_content)
+        self.assertIn("getTransportAsset", industrial_content)
+        self.assertIn("../core/data_service.js", line_content)
+        self.assertIn("loadTransportAsset", line_content)
+        self.assertIn("../core/data_service.js", manifest_content)
+        self.assertIn("getTransportAsset", manifest_content)
+        self.assertNotIn("fetch(packPath", point_content)
+        self.assertNotIn("fetch(packPath", industrial_content)
 
 
     def test_family_preview_dispatch_is_config_driven(self) -> None:

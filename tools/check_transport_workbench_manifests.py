@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from map_builder.transport_workbench_contracts import validate_transport_manifest
+from tools.build_data_catalog import collect_transport_path_contract_errors
 
 
 DEFAULT_ROOT = PROJECT_ROOT / "data" / "transport_layers"
@@ -71,6 +72,7 @@ def inspect_transport_manifests(manifest_paths: list[Path]) -> list[dict[str, An
                 source_label=str(path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
             )
         )
+        errors.extend(collect_transport_path_contract_errors(manifest, path))
         reports.append(
             {
                 "manifest_path": str(path.relative_to(PROJECT_ROOT)).replace("\\", "/"),

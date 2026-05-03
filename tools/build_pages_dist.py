@@ -45,9 +45,11 @@ REQUIRED_DIST_FILES = (
     "app/index.html",
     ".nojekyll",
     "app/js/main.js",
+    "app/data/CATALOG.json",
     "app/data/scenarios/index.json",
 )
 DATA_RUNTIME_FILES = (
+    "CATALOG.json",
     "manifest.json",
     "runtime_asset_registry.json",
     "country_feature_policies.json",

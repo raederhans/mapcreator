@@ -121,6 +121,52 @@ class DataManifestContractTest(unittest.TestCase):
         self.assertEqual(entries_payload.get("stats", {}).get("entryCount"), 1580)
         self.assertEqual(len(entries_payload.get("entries") or []), 1580)
 
+    def test_topology_outputs_expose_schema_and_zoom_metadata(self) -> None:
+        manifest = json.loads(DATA_MANIFEST.read_text(encoding="utf-8"))
+        outputs = manifest.get("outputs") or {}
+        expected = {
+            "europe_topology.json": {
+                "schema_ref": "schema://topology/political_bundle_v1",
+                "simplification": "coarse_publish_v1",
+                "target_zoom_range": [0.0, 1.7],
+            },
+            "europe_topology.na_v1.json": {
+                "schema_ref": "schema://topology/detail_political_bundle_v1",
+                "simplification": "detail_publish_legacy_v1",
+                "target_zoom_range": [1.7, 20.0],
+            },
+            "europe_topology.na_v2.json": {
+                "schema_ref": "schema://topology/detail_political_bundle_v2",
+                "simplification": "detail_publish_v2",
+                "target_zoom_range": [1.7, 20.0],
+            },
+            "europe_topology.runtime_political_v1.json": {
+                "schema_ref": "schema://topology/runtime_political_v1",
+                "simplification": "runtime_projection_v1",
+                "target_zoom_range": [1.7, 20.0],
+            },
+            "global_physical_semantics.topo.json": {
+                "schema_ref": "schema://topology/physical_semantics_v1",
+                "simplification": "semantic_dissolve_v1",
+                "target_zoom_range": [0.0, 20.0],
+            },
+            "global_contours.major.topo.json": {
+                "schema_ref": "schema://topology/terrain_contours_major_v1",
+                "simplification": "contour_major_publish_v1",
+                "target_zoom_range": [0.0, 20.0],
+            },
+            "global_contours.minor.topo.json": {
+                "schema_ref": "schema://topology/terrain_contours_minor_v1",
+                "simplification": "contour_minor_publish_v1",
+                "target_zoom_range": [0.0, 20.0],
+            },
+        }
+
+        for relative_path, metadata in expected.items():
+            self.assertEqual(outputs.get(relative_path, {}).get("schema_ref"), metadata["schema_ref"], relative_path)
+            self.assertEqual(outputs.get(relative_path, {}).get("simplification"), metadata["simplification"], relative_path)
+            self.assertEqual(outputs.get(relative_path, {}).get("target_zoom_range"), metadata["target_zoom_range"], relative_path)
+
 
 if __name__ == "__main__":
     unittest.main()

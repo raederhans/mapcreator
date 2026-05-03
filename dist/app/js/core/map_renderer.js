@@ -1,0 +1,24452 @@
+// Hybrid canvas + SVG rendering engine.
+// 这个文件仍是渲染主控壳层：owner/facade 已经拆到子模块，但跨子系统的调度、
+// runtime 句柄和 render pass 编排还集中留在这里。后续修改优先下沉到对应 owner，
+// 只有真正跨域的 orchestration 才继续放在本文件。
+import {
+  bumpColorRevision,
+  normalizeCityLayerStyleConfig,
+  normalizeColorStateForRender,
+  normalizeDayNightStyleConfig,
+  normalizeLakeStyleConfig,
+  normalizeMapSemanticMode,
+  normalizePhysicalStyleConfig,
+  normalizeTransportOverviewStyleConfig,
+  normalizeTextureMode,
+  normalizeTextureStyleConfig,
+  normalizeUrbanStyleConfig,
+  PHYSICAL_ATLAS_PALETTE,
+  replaceResolvedColorsState,
+  setResolvedColorForFeature,
+  state as runtimeState,
+} from "./state.js";
+import {
+  normalizeTransportOverviewVisualMode,
+  resolveTransportOverviewLineStrategy,
+  resolveTransportOverviewPointStrategy,
+} from "./transport_capability_registry.js";
+import {
+  createDefaultOperationGraphicsEditorState,
+  createDefaultOperationalLineEditorState,
+  createDefaultSpecialZoneEditorState,
+  createDefaultUnitCounterEditorState,
+} from "./state/strategic_overlay_state.js";
+import {
+  createDefaultProjectedBoundsCacheState,
+  createDefaultProjectedBoundsDiagnostics,
+  createDefaultExactAfterSettleControllerState,
+  ensureExactAfterSettleControllerState,
+  ensureRenderPassCacheState,
+  ensureSidebarPerfState,
+  ensureSphericalFeatureDiagnosticsCache as ensureSphericalFeatureDiagnosticsCacheState,
+  isExactAfterSettleControllerActiveState,
+  isExactAfterSettleGenerationCurrentState,
+  resetExactAfterSettleControllerState,
+  resetProjectedBoundsCacheState as resetProjectedBoundsRuntimeCacheState,
+  setInteractionInfrastructureStateFields,
+} from "./state/renderer_runtime_state.js";
+import {
+  MODERN_CITY_LIGHTS_BASE_THRESHOLD,
+  MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD,
+  MODERN_CITY_LIGHTS_GRID,
+  MODERN_CITY_LIGHTS_GRID_HEIGHT,
+  MODERN_CITY_LIGHTS_STATS,
+  MODERN_CITY_LIGHTS_GRID_WIDTH,
+  MODERN_CITY_LIGHTS_STEP_LAT_DEG,
+  MODERN_CITY_LIGHTS_STEP_LON_DEG,
+} from "./city_lights_modern_asset.js";
+import {
+  HISTORICAL_1930_CITY_LIGHTS_ENTRIES,
+} from "./city_lights_historical_1930_asset.js";
+import { ColorManager } from "./color_manager.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+} from "./feature_identity.js";
+import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
+import {
+  createPoliticalRasterWorkerIdentity,
+  ensurePoliticalRasterWorkerMetrics,
+  requestPoliticalRasterWorkerPass,
+} from "./political_raster_worker_client.js";
+import { LegendManager } from "./legend_manager.js";
+import { captureHistoryState, pushHistoryEntry } from "./history_manager.js";
+import {
+  getPreferredGeoLabel,
+  getStrictGeoLabel,
+  getTooltipText,
+  renderTooltipText,
+  t,
+} from "../ui/i18n.js";
+import { showToast } from "../ui/toast.js";
+import { markDirty } from "./dirty_state.js";
+import { perfIsEnabled, recordRenderSample } from "./perf_probe.js";
+import { getScenarioCountryDisplayName } from "./scenario_country_display.js";
+import {
+  ensureSovereigntyState,
+  getFeatureOwnerCode,
+  getFeatureIdsForOwner,
+  markLegacyColorStateDirty,
+  migrateLegacyColorState,
+  setFeatureOwnerCodes,
+  resetFeatureOwnerCodes,
+} from "./sovereignty_manager.js";
+import { COUNTRY_CODE_ALIASES, normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import {
+  DEFAULT_UNIT_COUNTER_PRESET_ID,
+  getUnitCounterIconPathById,
+  getUnitCounterEchelonLabel,
+  getUnitCounterPresetById,
+  normalizeUnitCounterSizeToken,
+  UNIT_COUNTER_SCREEN_SIZE,
+} from "./unit_counter_presets.js";
+import { enqueueFrameTask, getFrameSchedulerQueueLength } from "./frame_scheduler.js";
+import { flushRenderBoundary, getRenderBoundaryDebugState, requestRender } from "./render_boundary.js";
+import { registerRuntimeHook } from "./state/index.js";
+import {
+  bindInteractionFunnel,
+  dispatchMapClick,
+  dispatchMapDoubleClick,
+} from "./interaction_funnel.js";
+import { createUrbanCityPolicyOwner } from "./renderer/urban_city_policy.js";
+import { createCityLabelOwner } from "./renderer/city_label_owner.js";
+import { createColorResolutionStrategyOwner } from "./renderer/color_resolution_strategy.js";
+import { createStrategicOverlayHelpersOwner } from "./renderer/strategic_overlay_helpers.js";
+import { createStrategicOverlayRuntimeOwner } from "./renderer/strategic_overlay_runtime_owner.js";
+import { createPoliticalCollectionOwner } from "./renderer/political_collection_owner.js";
+import { createContextLayerResolverOwner } from "./renderer/context_layer_resolver.js";
+import { createRendererAssetUrlPolicyOwner } from "./renderer/asset_url_policy.js";
+import { createFacilitySurfaceOwner } from "./renderer/facility_surface.js";
+import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
+import { createBorderDrawOwner } from "./renderer/border_draw_owner.js";
+import { createInteractionBorderSnapshotOwner } from "./renderer/interaction_border_snapshot_owner.js";
+import { createSpatialIndexRuntimeOwner } from "./renderer/spatial_index_runtime_owner.js";
+import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
+import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
+import {
+  buildFacilityInfoCardBody,
+  buildFacilityInfoCardFieldSections,
+  buildFacilityInfoCardTitle,
+  buildFacilityTooltipText,
+  buildInteractiveLandData,
+  canPreferUrbanDetailCollection,
+  canRenderUrbanCollection,
+  collectCountryCoverageStats,
+  composePoliticalFeatureCollections,
+  composePoliticalFeatures,
+  computeLayerCoverageScore,
+  configureDataRuntimeFacade,
+  createUrbanLayerCapability,
+  ensureLayerDataFromTopology,
+  getDesiredBathymetryTopologyUrl,
+  getLayerFeatureCollection,
+  getPoliticalFeatureCollection,
+  getScenarioBathymetryTopologyUrl,
+  getUrbanFeatureGeoBounds,
+  getUrbanLayerCapability,
+  mergeOverrideFeatures,
+  normalizeFeatureGeometry,
+  pickBestLayerSource,
+  resolveContextLayerData,
+} from "./map_renderer/facade_data_runtime.js";
+import {
+  buildCountryParentBorderMeshes,
+  buildDetailAdmBorderMesh,
+  buildDynamicOwnerBorderMesh,
+  buildGlobalCoastlineMesh,
+  buildGlobalCountryBorderMesh,
+  buildOwnerBorderMesh,
+  buildSourceBorderMeshes,
+  configureBorderRuntimeFacade,
+  countUnresolvedOwnerBorderEntities,
+  getSourceCountrySets,
+  resolveCoastlineTopologySource,
+  simplifyCoastlineMesh,
+} from "./map_renderer/facade_border_runtime.js";
+import {
+  buildIndex,
+  buildIndexChunked,
+  buildSpatialIndex,
+  buildSpatialIndexChunked,
+  configureSpatialRuntimeFacade,
+} from "./map_renderer/facade_spatial_runtime.js";
+import {
+  appendOperationGraphicVertexFromEvent,
+  appendOperationalLineVertexFromEvent,
+  appendSpecialZoneVertexFromEvent,
+  cancelActiveStrategicInteractionModes,
+  cancelOperationGraphicDraw,
+  cancelOperationalLineDraw,
+  cancelSpecialZoneDraw,
+  cancelUnitCounterPlacement,
+  configureOverlayRuntimeFacade,
+  deleteSelectedManualSpecialZone,
+  deleteSelectedOperationGraphic,
+  deleteSelectedOperationGraphicVertex,
+  deleteSelectedOperationalLine,
+  deleteSelectedUnitCounter,
+  finishOperationGraphicDraw,
+  finishOperationalLineDraw,
+  finishSpecialZoneDraw,
+  getUnitCounterPreviewData,
+  placeUnitCounterFromEvent,
+  resolveUnitCounterNationForPlacement,
+  selectOperationGraphicById,
+  selectOperationalLineById,
+  selectSpecialZoneById,
+  selectUnitCounterById,
+  startOperationGraphicDraw,
+  startOperationalLineDraw,
+  startSpecialZoneDraw,
+  startUnitCounterPlacement,
+  syncOperationalLineAttachedCounterIds,
+  undoOperationGraphicVertex,
+  undoOperationalLineVertex,
+  undoSpecialZoneVertex,
+  updateSelectedOperationGraphic,
+  updateSelectedOperationalLine,
+  updateSelectedUnitCounter,
+} from "./map_renderer/facade_overlay_runtime.js";
+const state = runtimeState;
+
+const DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT = 78;
+const DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT = 74;
+const DEFAULT_UNIT_COUNTER_BASE_FILL = "#f4f0e6";
+const UNIT_COUNTER_STATS_PRESETS = Object.freeze({
+  elite: Object.freeze({ organizationPct: 94, equipmentPct: 92 }),
+  regular: Object.freeze({ organizationPct: 82, equipmentPct: 78 }),
+  worn: Object.freeze({ organizationPct: 68, equipmentPct: 62 }),
+  understrength: Object.freeze({ organizationPct: 58, equipmentPct: 48 }),
+  improvised: Object.freeze({ organizationPct: 47, equipmentPct: 42 }),
+});
+
+// 这些句柄共同描述当前唯一活跃的地图渲染现场。
+// startup / scenario apply / renderer re-init 时需要成组维护，
+// 否则很容易出现“旧 DOM 句柄 + 新 runtimeState”混搭的问题。
+let mapContainer = null;
+let mapCanvas = null;
+let hitCanvas = null;
+let mapSvg = null;
+let interactionRect = null;
+let tooltip = null;
+let context = null;
+let hitContext = null;
+
+let projection = null;
+let pathSVG = null;
+let pathCanvas = null;
+let pathHitCanvas = null;
+let zoomBehavior = null;
+let interactionInfrastructureBasicPromise = null;
+let interactionInfrastructureFullPromise = null;
+let activeContextMetricSession = null;
+let lastHitCanvasBuildStats = null;
+
+let viewportGroup = null;
+let strategicDefs = null;
+let frontlineOverlayGroup = null;
+let frontlineLabelsGroup = null;
+let operationalLinesGroup = null;
+let operationGraphicsGroup = null;
+let operationGraphicsEditorGroup = null;
+let unitCountersGroup = null;
+let specialZonesGroup = null;
+let specialZoneEditorGroup = null;
+let hoverGroup = null;
+let devSelectionGroup = null;
+let inspectorHighlightGroup = null;
+let legendGroup = null;
+let legendItemsGroup = null;
+let legendBackground = null;
+let lastLegendKey = null;
+let brushSession = null;
+let suppressNextClickAfterBrush = false;
+let lastDetailToastToken = "";
+let lastDetailToastAt = 0;
+let lastSpecialZonesOverlaySignature = "";
+let lastFrontlineOverlaySignature = "";
+let lastOperationalLinesOverlaySignature = "";
+let lastOperationGraphicsOverlaySignature = "";
+let lastUnitCountersOverlaySignature = "";
+let lastInspectorOverlaySignature = "";
+let lastHoverOverlaySignature = "";
+let lastDevSelectionOverlaySignature = "";
+let lastScenarioWaterRenderedCount = 0;
+
+const PROJECTION_PRECISION = 0.1;
+const PATH_POINT_RADIUS = 2;
+const VIEWPORT_CULL_OVERSCAN_PX = 96;
+const MAP_PAN_PADDING_PX = 50;
+const PROJECTION_FIT_PADDING_RATIO = 0.04;
+const MIN_ZOOM_SCALE = 0.35;
+const MAX_ZOOM_SCALE = 50;
+const OCEAN_FILL_COLOR = "#aadaff";
+const LAND_FILL_COLOR = "#f0f0f0";
+const SPECIAL_REGION_FALLBACK_FILL = "#d6c19a";
+const SPECIAL_REGION_FALLBACK_STROKE = "#8d6f47";
+const UNIFIED_WATER_STROKE_COLOR = "rgba(62, 96, 138, 0)";
+const UNIFIED_WATER_FILL_OPACITY = 1;
+const RELIEF_SALT_FILL_COLOR = "rgba(222, 203, 170, 0.22)";
+const RELIEF_SALT_STROKE_COLOR = "rgba(128, 100, 63, 0.55)";
+const RELIEF_ATLANTROPA_SALT_FILL_COLOR = "rgba(0, 0, 0, 0)";
+const RELIEF_ATLANTROPA_SALT_STROKE_COLOR = "rgba(148, 163, 184, 0.22)";
+const RELIEF_SHORELINE_COLOR = "rgba(109, 84, 50, 0.78)";
+const RELIEF_CONTOUR_COLOR = "rgba(176, 148, 103, 0.6)";
+const RELIEF_ATLANTROPA_SHORELINE_COLOR = "rgba(148, 163, 184, 0.36)";
+const RELIEF_ATLANTROPA_CONTOUR_COLOR = "rgba(148, 163, 184, 0.18)";
+const RELIEF_SWAMP_FILL_COLOR = "rgba(128, 150, 114, 0.28)";
+const RELIEF_SWAMP_STROKE_COLOR = "rgba(88, 108, 76, 0.68)";
+const RELIEF_LAKE_SHORELINE_COLOR = "rgba(214, 232, 244, 0.92)";
+const RELIEF_DAM_APPROACH_COLOR = "rgba(102, 86, 62, 0.8)";
+const TNO_COASTAL_ACCENT_COLOR = "rgba(214, 232, 244, 0.88)";
+const GIANT_FEATURE_CULL_RATIO = 0.95;
+const GIANT_FEATURE_ALLOWLIST = new Set(["RU", "CA", "CN", "US", "AQ", "ATA"]);
+const HIGH_FREQUENCY_COUNTRY_DETAIL_WHITELIST = new Set(["US", "CN", "RU", "JP", "DE", "GB", "FR", "IN", "BR", "CA"]);
+const INTERACTIVE_AGGREGATE_TIER_FILTERS = {
+  GB: new Set(["nuts1_basic"]),
+  GR: new Set(["adm1_basic"]),
+};
+const WRAP_ARTIFACT_WIDTH_RATIO = 0.9;
+const WRAP_ARTIFACT_HEIGHT_RATIO = 0.3;
+const WRAP_ARTIFACT_AREA_RATIO = 0.35;
+const WRAP_ARTIFACT_ASPECT_MIN = 1.6;
+const HIT_GRID_TARGET_COLS = 24;
+const HIT_GRID_MIN_CELL_PX = 32;
+const HIT_GRID_MAX_CELL_PX = 96;
+const HIT_SNAP_RADIUS_PX = 8;
+const HIT_SNAP_RADIUS_HOVER_PX = 0;
+const HIT_SNAP_RADIUS_CLICK_PX = 3;
+const HIT_MAX_CELLS_PER_ITEM = 400;
+const HIT_MODE_PARAM = "hit_mode";
+const HIT_MODES = new Set(["auto", "canvas", "spatial"]);
+const COASTLINE_LOD_LOW_ZOOM_MAX = 1.8;
+const COASTLINE_LOD_MID_ZOOM_MAX = 3.2;
+const COASTLINE_SIMPLIFY_MID_EPSILON = 0.09;
+const COASTLINE_SIMPLIFY_LOW_EPSILON = 0.22;
+const COASTLINE_SIMPLIFY_MID_MIN_LENGTH = 0.2;
+const COASTLINE_SIMPLIFY_LOW_MIN_LENGTH = 0.45;
+const COASTLINE_SIMPLIFY_LATITUDE_SCALE_MAX = 2.8;
+const COASTLINE_SIMPLIFY_MIN_COS_LAT = 0.35;
+const COASTLINE_EFFECTIVE_AREA_MULTIPLIER = 0.5;
+const COASTLINE_VIEW_SIMPLIFY_LOW_MIN_DISTANCE_PX = 1.8;
+const COASTLINE_VIEW_SIMPLIFY_MID_MIN_DISTANCE_PX = 1.1;
+const COASTLINE_VIEW_SIMPLIFY_COLLINEAR_ANGLE_DEG = 10;
+const COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW = 0.0016;
+const COASTLINE_ACCENT_DENSITY_THRESHOLD_MID = 0.0022;
+const COASTLINE_ACCENT_DENSITY_ALPHA_LOW = 0.68;
+const COASTLINE_ACCENT_DENSITY_ALPHA_MID = 0.82;
+const COASTLINE_ACCENT_DENSITY_WIDTH_SCALE = 0.9;
+const COASTLINE_OVERLAY_ATLANTROPA_ALPHA = 0.42;
+const COASTLINE_OVERLAY_ATLANTROPA_ALPHA_INTERACTIVE = 0.30;
+const COASTLINE_OVERLAY_DENSITY_ALPHA_LOW = 0.78;
+const COASTLINE_OVERLAY_DENSITY_ALPHA_MID = 0.86;
+const COASTLINE_ACCENT_MIN_WIDTH_PX = 0.85;
+const COASTLINE_ACCENT_OVERLAY_MIN_WIDTH_PX = 0.95;
+const BATHYMETRY_SHALLOW_DEPTH_MAX_M = 200;
+const BATHYMETRY_MID_DEPTH_MAX_M = 500;
+const BATHYMETRY_BAND_SHALLOW_FADE_START_ZOOM = 2.0;
+const BATHYMETRY_BAND_SHALLOW_FADE_END_ZOOM = 2.8;
+const BATHYMETRY_BAND_MID_FADE_START_ZOOM = 2.6;
+const BATHYMETRY_BAND_MID_FADE_END_ZOOM = 3.4;
+const BATHYMETRY_BAND_DEEP_FADE_START_ZOOM = COASTLINE_LOD_MID_ZOOM_MAX;
+const BATHYMETRY_BAND_DEEP_FADE_END_ZOOM = 4.2;
+const BATHYMETRY_SCENARIO_SYNTHETIC_CONTOUR_FADE_START_ZOOM = 2.0;
+const BATHYMETRY_SCENARIO_SYNTHETIC_CONTOUR_FADE_END_ZOOM = 3.0;
+const BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_START_ZOOM = 2.4;
+const BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_END_ZOOM = 3.4;
+const BATHYMETRY_PRESET_PROFILES = Object.freeze({
+  bathymetry_soft: Object.freeze({
+    defaultOpacity: 0.84,
+    defaultScale: 1.16,
+    defaultContourStrength: 0.34,
+    bandAlphaBase: 0.62,
+    contourAlphaBase: 0.14,
+    contourLineWidthBase: 0.30,
+    contourLineWidthScale: 0.35,
+    skipAlternateContourDepths: true,
+  }),
+  bathymetry_contours: Object.freeze({
+    defaultOpacity: 0.56,
+    defaultScale: 1.02,
+    defaultContourStrength: 0.86,
+    bandAlphaBase: 0.18,
+    contourAlphaBase: 0.46,
+    contourLineWidthBase: 0.95,
+    contourLineWidthScale: 1.25,
+    skipAlternateContourDepths: false,
+  }),
+});
+const RENDER_PHASE_IDLE = "idle";
+const RENDER_PHASE_INTERACTING = "interacting";
+const RENDER_PHASE_SETTLING = "settling";
+const RENDER_SETTLE_DURATION_MS = 200;
+const RENDER_SETTLE_DURATION_MS_MIN = 120;
+const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS = 420;
+const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS_MIN = 180;
+const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;
+const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;
+const ZOOM_SETTLE_ADAPTIVE_DELTA_MIN = 0.06;
+const ZOOM_SETTLE_ADAPTIVE_DELTA_MAX = 0.85;
+const CONTEXT_BASE_REUSE_MIN_DISTANCE_PX = 320;
+const CONTEXT_BASE_REUSE_MAX_DISTANCE_PX = 640;
+const CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO = 0.35;
+const CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD = 2;
+const CONTEXT_BASE_BUCKET_LOW_MAX = 1.4;
+const CONTEXT_BASE_BUCKET_MID_MAX = 2.5;
+const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;
+const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT = 24;
+const SCENARIO_WATER_CACHE_MODE_PARAM = "water_cache_mode";
+const SCENARIO_WATER_CACHE_MODE_ALT_PARAM = "scenario_water_cache_mode";
+const SCENARIO_WATER_CACHE_MODES = new Set(["adaptive", "reuse", "redraw", "direct"]);
+const SCENARIO_WATER_COVERAGE_ALGO_PARAM = "water_cache_coverage_algo";
+const SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM = "scenario_water_cache_coverage_algo";
+const SCENARIO_WATER_COVERAGE_ALGOS = new Set(["legacy", "grid"]);
+const SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS = 64;
+const SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS = 36;
+const SCENARIO_WATER_COVERAGE_GRID_MAX_DPR = 3;
+const SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX = 24;
+const SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX = 0.2;
+const SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX = 28;
+const CONTOUR_ZOOM_STYLE_PROFILES = Object.freeze({
+  low: Object.freeze({
+    majorIntervalMultiplier: 3,
+    majorOpacityMultiplier: 0.42,
+    majorWidthMultiplier: 0.78,
+    majorMinScreenSpanPx: 22,
+    minorVisible: false,
+    minorOpacityMultiplier: 0,
+    minorWidthMultiplier: 0,
+    minorIntervalMultiplier: 3,
+    minorMinScreenSpanPx: 22,
+    minorMaxFeaturesBase: 0,
+    minorMaxFeaturesPerMajor: 0,
+    minorMaxFeaturesHardCap: 0,
+  }),
+  mid: Object.freeze({
+    majorIntervalMultiplier: 2,
+    majorOpacityMultiplier: 0.72,
+    majorWidthMultiplier: 0.88,
+    majorMinScreenSpanPx: 12,
+    minorVisible: true,
+    minorOpacityMultiplier: 0.55,
+    minorWidthMultiplier: 0.82,
+    minorIntervalMultiplier: 2,
+    minorMinScreenSpanPx: 18,
+    minorMaxFeaturesBase: 900,
+    minorMaxFeaturesPerMajor: 1.8,
+    minorMaxFeaturesHardCap: 3000,
+  }),
+  high: Object.freeze({
+    majorIntervalMultiplier: 1,
+    majorOpacityMultiplier: 1,
+    majorWidthMultiplier: 1,
+    majorMinScreenSpanPx: 0,
+    minorVisible: true,
+    minorOpacityMultiplier: 1,
+    minorWidthMultiplier: 1,
+    minorIntervalMultiplier: 1,
+    minorMinScreenSpanPx: 8,
+    minorMaxFeaturesBase: 1800,
+    minorMaxFeaturesPerMajor: 2.8,
+    minorMaxFeaturesHardCap: 6400,
+  }),
+});
+const RIVER_LOW_MAX_SCALERANK = 5;
+const RIVER_MID_MAX_SCALERANK = 7;
+const RIVER_ZOOM_STYLE_FACTORS = {
+  low: {
+    coreWidthFactor: 1.2,
+    outlineWidthFactor: 0.85,
+    outlineAlphaFactor: 0.6,
+  },
+  mid: {
+    coreWidthFactor: 1,
+    outlineWidthFactor: 0.7,
+    outlineAlphaFactor: 0.7,
+  },
+  high: {
+    coreWidthFactor: 0.75,
+    outlineWidthFactor: 0.35,
+    outlineAlphaFactor: 0.45,
+  },
+};
+const RIVER_CLASS_STYLE_FACTORS = {
+  river: {
+    widthFactor: 1,
+    opacityFactor: 1,
+    outlineFactor: 1,
+  },
+  intermittent: {
+    widthFactor: 0.8,
+    opacityFactor: 0.7,
+    outlineFactor: 0.5,
+  },
+  lakeCenterline: {
+    widthFactor: 0.72,
+    opacityFactor: 0.55,
+    outlineFactor: 0,
+  },
+  canal: {
+    widthFactor: 0.72,
+    opacityFactor: 0.6,
+    outlineFactor: 0,
+  },
+  unknown: {
+    widthFactor: 1,
+    opacityFactor: 1,
+    outlineFactor: 1,
+  },
+};
+const INTERNAL_BORDER_PROVINCE_MIN_ALPHA = 0.30;
+const INTERNAL_BORDER_LOCAL_MIN_ALPHA = 0.22;
+const INTERNAL_BORDER_PROVINCE_MIN_WIDTH = 0.52;
+const INTERNAL_BORDER_LOCAL_MIN_WIDTH = 0.36;
+const INTERNAL_BORDER_LOCAL_ALPHA_SCALE = 0.60;
+const INTERNAL_BORDER_LOCAL_WIDTH_SCALE = 0.75;
+const INTERNAL_BORDER_AUTO_DARK = "#ffffff";
+const INTERNAL_BORDER_AUTO_LIGHT = "#111827";
+const CONTOUR_HOST_FILL_FALLBACK_RADIUS = 24;
+const DETAIL_ADM_BORDER_COLOR = "#888888";
+const DETAIL_ADM_BORDER_MIN_ALPHA = 0.24;
+const DETAIL_ADM_BORDER_MAX_ALPHA = 0.34;
+const DETAIL_ADM_BORDER_MIN_WIDTH = 0.30;
+const DETAIL_ADM_BORDER_TARGET_MIN_ALPHA = 0.12;
+const DETAIL_ADM_BORDER_TARGET_MAX_ALPHA = 0.18;
+const DETAIL_ADM_BORDER_ALPHA_SCALE = 0.70;
+const DETAIL_ADM_BORDER_WIDTH_SCALE = 0.70;
+const LOCAL_BORDERS_MIN_ZOOM = 2.0;
+const DETAIL_ADM_BORDERS_MIN_ZOOM = 2.4;
+const PROVINCE_BORDERS_FADE_START_ZOOM = 1.1;
+const PROVINCE_BORDERS_TRANSITION_END_ZOOM = 2.0;
+const PROVINCE_BORDERS_FAR_ALPHA = 0.10;
+const PROVINCE_BORDERS_TRANSITION_ALPHA = 0.38;
+const PROVINCE_BORDERS_FAR_WIDTH_MAX_ZOOM = 1.5;
+const PROVINCE_BORDERS_FAR_WIDTH_SCALE = 0.75;
+const PROVINCE_BORDERS_NEAR_ZOOM_START = 2.2;
+const PROVINCE_BORDERS_NEAR_ALPHA_SCALE = 0.86;
+const PROVINCE_BORDERS_NEAR_WIDTH_SCALE = 0.90;
+const PARENT_BORDER_MIN_COVERAGE = 0.70;
+const PARENT_BORDER_MAX_DOMINANT_SHARE = 0.90;
+const PARENT_BORDER_MIN_RENDERABLE_GROUPS = 2;
+const GB_PARENT_MIN_GROUPS = 20;
+const GB_NUTS1_GROUP_MIN = 10;
+const GB_NUTS1_PREFIX_LENGTH = 3;
+const GB_ID_PATTERN_RE = /^[A-Z]{2}[A-Z0-9]{3}$/;
+const DE_STATE_GROUP_MIN = 12;
+const DE_STATE_GROUP_MAX = 20;
+const DE_CITY_STATES = new Set(["Berlin", "Hamburg", "Bremen"]);
+const BOUNDARY_DEFAULT_LINE_JOIN = "round";
+const BOUNDARY_DEFAULT_LINE_CAP = "round";
+const BOUNDARY_DEFAULT_MITER_LIMIT = 2.4;
+const OCEAN_MASK_MODE_TOPOLOGY = "topology_ocean";
+const OCEAN_MASK_MODE_SPHERE_MINUS_LAND = "sphere_minus_land";
+const OCEAN_MASK_MODE_BATHYMETRY = "bathymetry_features";
+const OCEAN_MASK_MIN_QUALITY = 0.35;
+const GLOBAL_BATHYMETRY_TOPOLOGY_URL = resolveDataAssetUrl("bathymetry:global_topology");
+const BATHYMETRY_BANDS_OBJECT_NAME = "bathymetry_bands";
+const BATHYMETRY_CONTOURS_OBJECT_NAME = "bathymetry_contours";
+const BATHYMETRY_MAX_REFERENCE_DEPTH_M = 6000;
+const CONTEXT_LAYER_MIN_SCORE = 0.08;
+const CONTEXT_BREAKDOWN_METRIC_NAMES = new Set([
+  "drawPhysicalReliefOverlayLayer",
+  "drawPhysicalAtlasLayer",
+  "drawPhysicalContourLayer",
+  "drawCityPointsLayer",
+  "drawAirportsLayer",
+  "drawPortsLayer",
+  "drawRoadsLayer",
+  "drawRailwaysLayer",
+  "drawUrbanLayer",
+  "drawRiversLayer",
+  "drawScenarioRegionOverlaysPass",
+  "drawScenarioWaterFillLayer",
+  "drawScenarioSpecialRegionOverlaysLayer",
+  "drawScenarioReliefOverlaysLayer",
+  "contextScenarioLayerWater",
+  "contextScenarioLayerSpecial",
+  "contextScenarioLayerRelief",
+  "contextScenarioLayerCacheHit",
+  "contextScenarioLayerCacheMiss",
+]);
+const LAYER_DIAG_PREFIX = "[layer-resolver]";
+const DEFAULT_SPECIAL_ZONE_TYPE = "custom";
+const DEFAULT_OPERATION_GRAPHIC_KIND = "attack";
+const DEFAULT_OPERATIONAL_LINE_KIND = "frontline";
+const DEFAULT_UNIT_COUNTER_RENDERER = "game";
+const DEFAULT_MILSTD_SIDC = "130310001412110000000000000000";
+const STRATEGIC_LINE_LABEL_FONT = "\"IBM Plex Sans\", \"Segoe UI\", sans-serif";
+const OPERATION_GRAPHIC_STYLE_PRESETS = ["attack", "retreat", "supply", "naval", "encirclement", "theater"];
+const OPERATIONAL_LINE_STYLE_PRESETS = ["frontline", "offensive_line", "spearhead_line", "defensive_line"];
+const STRATEGIC_COUNTER_ATTACHMENT_KIND = "operational-line";
+const milsymbolSvgUriCache = new Map();
+const DEFAULT_OPERATION_GRAPHIC_OPACITY = 0.96;
+const DEFAULT_OPERATION_GRAPHIC_WIDTH = 4.4;
+const DEFAULT_UNIT_COUNTER_SIDC = "130310001412110000000000000000";
+const UNIT_COUNTER_MILSTD_SIZE_BY_TOKEN = Object.freeze({
+  small: 12,
+  medium: 14,
+  large: 18,
+});
+const UNIT_COUNTER_SIDC_ALIASES = Object.freeze({
+  INF: DEFAULT_UNIT_COUNTER_SIDC,
+  ARMORED: "130310001712110000000000000000",
+  ARM: "130310001712110000000000000000",
+  HQ: "100310001712110000000000000000",
+  ART: "130320000000000000000000000000",
+});
+const PAPER_TEXTURE_BASE_TILE_SIZE = 512;
+const PAPER_NOISE_TILE_SIZE = 192;
+const TEXTURE_LABEL_SERIF_STACK = "\"Libre Baskerville\", \"Palatino Linotype\", Georgia, serif";
+const CITY_MARKER_THEME_GRAPHITE = "classic_graphite";
+const CITY_REVEAL_PROFILE_HYBRID = "hybrid_country_budget";
+const CITY_LABEL_DARK_BACKGROUND_LUMINANCE = 0.34;
+const CITY_COUNTRY_TIER_RANK = {
+  A: 5,
+  B: 4,
+  C: 3,
+  D: 2,
+  E: 1,
+};
+const CITY_COUNTRY_CLASS_RANK = Object.freeze({
+  global_core: 6,
+  regional_core: 5,
+  local_actor: 4,
+  fragmented_actor: 3,
+  micro: 2,
+  micro_subject: 1,
+});
+const CITY_COUNTRY_CLASS_WEIGHT = Object.freeze({
+  global_core: 1.36,
+  regional_core: 1.2,
+  local_actor: 1.02,
+  fragmented_actor: 1.12,
+  micro: 0.86,
+  micro_subject: 0.74,
+});
+const CITY_SCENARIO_EXCLUDED_TAGS = new Set(["AFA", "RFA"]);
+const CITY_WARLORD_SCENARIO_TAGS = new Set([
+  // Russia warlord/fragmentation bloc
+  "ALT", "BKR", "BRY", "CHT", "GOR", "IRK", "KOM", "KRS", "NOV", "OMS", "OUR", "PRM", "RSF",
+  "RUR", "SAM", "SBA", "SVR", "TAT", "TOM", "TYM", "URA", "VOL", "VYT", "WRS", "YAK", "ZLT",
+  // China warlord/clique bloc
+  "GXC", "GUI", "PRC", "QMA", "RGC", "SIC", "SIK", "XIK", "XSM",
+]);
+const CITY_PRIMARY_POWER_TAGS = new Set(["USA", "GER", "JAP"]);
+const CITY_SECONDARY_POWER_TAGS = new Set(["ITA", "ENG", "FRA", "CAN", "BRA", "BRG", "RKM", "RKO", "RKU"]);
+const CITY_MARKER_THEME_TOKENS = {
+  classic_graphite: {
+    fillTop: "rgba(126, 134, 143, 0.99)",
+    fillMid: "rgba(86, 94, 102, 0.99)",
+    fillBottom: "rgba(42, 48, 55, 0.99)",
+    rimDark: "rgba(15, 21, 28, 0.44)",
+    stroke: "rgba(202, 193, 176, 0.54)",
+    highlight: "rgba(244, 247, 250, 0.22)",
+    specular: "rgba(230, 236, 241, 0.14)",
+    baseShadow: "rgba(11, 17, 23, 0.26)",
+    capitalAccent: "rgba(175, 161, 126, 0.96)",
+    capitalHighlight: "rgba(246, 236, 208, 0.42)",
+    label: "rgba(56, 52, 46, 0.92)",
+    capitalLabel: "rgba(74, 67, 56, 0.96)",
+    halo: "rgba(255, 252, 245, 0.08)",
+    shadow: "rgba(20, 24, 31, 0.18)",
+  },
+  atlas_ink: {
+    fillTop: "rgba(150, 173, 194, 0.99)",
+    fillMid: "rgba(95, 122, 150, 0.99)",
+    fillBottom: "rgba(45, 67, 95, 0.99)",
+    rimDark: "rgba(16, 26, 37, 0.44)",
+    stroke: "rgba(218, 224, 228, 0.58)",
+    highlight: "rgba(242, 248, 255, 0.26)",
+    specular: "rgba(233, 241, 252, 0.18)",
+    baseShadow: "rgba(10, 19, 28, 0.24)",
+    capitalAccent: "rgba(214, 183, 126, 0.96)",
+    capitalHighlight: "rgba(252, 236, 199, 0.46)",
+    label: "rgba(42, 57, 76, 0.94)",
+    capitalLabel: "rgba(72, 64, 44, 0.96)",
+    halo: "rgba(247, 251, 255, 0.11)",
+    shadow: "rgba(17, 24, 35, 0.2)",
+  },
+  parchment_sepia: {
+    fillTop: "rgba(203, 180, 149, 0.99)",
+    fillMid: "rgba(158, 126, 92, 0.99)",
+    fillBottom: "rgba(103, 78, 54, 0.99)",
+    rimDark: "rgba(42, 31, 22, 0.42)",
+    stroke: "rgba(240, 226, 200, 0.56)",
+    highlight: "rgba(255, 247, 231, 0.24)",
+    specular: "rgba(247, 237, 216, 0.16)",
+    baseShadow: "rgba(26, 19, 14, 0.23)",
+    capitalAccent: "rgba(171, 105, 63, 0.96)",
+    capitalHighlight: "rgba(248, 210, 163, 0.46)",
+    label: "rgba(88, 61, 37, 0.94)",
+    capitalLabel: "rgba(110, 70, 42, 0.96)",
+    halo: "rgba(255, 247, 234, 0.08)",
+    shadow: "rgba(34, 25, 18, 0.18)",
+  },
+  slate_blue: {
+    fillTop: "rgba(162, 177, 196, 0.99)",
+    fillMid: "rgba(106, 123, 149, 0.99)",
+    fillBottom: "rgba(59, 74, 99, 0.99)",
+    rimDark: "rgba(20, 28, 41, 0.42)",
+    stroke: "rgba(226, 232, 240, 0.56)",
+    highlight: "rgba(246, 249, 255, 0.24)",
+    specular: "rgba(236, 242, 252, 0.16)",
+    baseShadow: "rgba(14, 19, 28, 0.24)",
+    capitalAccent: "rgba(214, 184, 118, 0.96)",
+    capitalHighlight: "rgba(252, 238, 201, 0.44)",
+    label: "rgba(48, 58, 77, 0.94)",
+    capitalLabel: "rgba(71, 64, 49, 0.96)",
+    halo: "rgba(248, 251, 255, 0.1)",
+    shadow: "rgba(19, 24, 33, 0.18)",
+  },
+  ivory_outline: {
+    fillTop: "rgba(252, 249, 242, 0.99)",
+    fillMid: "rgba(235, 227, 211, 0.99)",
+    fillBottom: "rgba(199, 189, 171, 0.99)",
+    rimDark: "rgba(39, 45, 54, 0.42)",
+    stroke: "rgba(58, 67, 79, 0.62)",
+    highlight: "rgba(255, 255, 255, 0.34)",
+    specular: "rgba(255, 255, 255, 0.2)",
+    baseShadow: "rgba(12, 17, 24, 0.2)",
+    capitalAccent: "rgba(142, 101, 60, 0.96)",
+    capitalHighlight: "rgba(244, 214, 164, 0.48)",
+    label: "rgba(70, 63, 53, 0.96)",
+    capitalLabel: "rgba(88, 64, 42, 0.98)",
+    halo: "rgba(255, 255, 255, 0.12)",
+    shadow: "rgba(20, 24, 31, 0.16)",
+  },
+};
+
+const bathymetryTopologyCacheByUrl = new Map();
+const bathymetryLoadPromiseByUrl = new Map();
+const bathymetryLoadFailureByUrl = new Set();
+const CITY_MARKER_SIZE_LIMITS_PX = {
+  minor: 10,
+  regional: 14,
+  major: 18,
+  capital: 22,
+};
+const CITY_MARKER_BASE_SIZES_PX = {
+  minor: 5.8,
+  regional: 7.7,
+  major: 10.4,
+};
+const CITY_LABEL_DENSITY_BUDGETS = {
+  sparse: { P4: 16, P5: 32 },
+  balanced: { P4: 24, P5: 48 },
+  dense: { P4: 32, P5: 64 },
+};
+const CITY_LABEL_MAX_WIDTH_PX = {
+  sparse: { capital: 212, major: 186, regional: 164, minor: 150 },
+  balanced: { capital: 188, major: 166, regional: 148, minor: 134 },
+  dense: { capital: 166, major: 148, regional: 132, minor: 120 },
+};
+const CITY_LABEL_PLACEMENT_ORDER = [
+  "right",
+  "left",
+  "upper-right",
+  "lower-right",
+  "upper-left",
+  "lower-left",
+];
+const CITY_ADMIN_LABEL_PATTERNS = [
+  /\bcounty\b/giu,
+  /\bdistrict\b/giu,
+  /\boblast\b/giu,
+  /\bokrug\b/giu,
+  /\braion\b/giu,
+  /\bmunicipality\b/giu,
+  /\bgovernorate\b/giu,
+  /городской округ/giu,
+  /район/giu,
+  /область/giu,
+];
+const CITY_ADMIN_LABEL_REJECT_PATTERNS = [
+  /\bcounty\b/iu,
+  /\bdistrict\b/iu,
+  /\boblast\b/iu,
+  /\bokrug\b/iu,
+  /\braion\b/iu,
+  /городской округ/iu,
+  /район/iu,
+  /область/iu,
+];
+const CITY_REVEAL_PHASES = [
+  { id: "P0", minScale: 0, maxScale: 1.15, markerBudget: 18, labelBudget: 0 },
+  { id: "P1", minScale: 1.15, maxScale: 1.45, markerBudget: 28, labelBudget: 0 },
+  { id: "P2", minScale: 1.45, maxScale: 1.9, markerBudget: 42, labelBudget: 0 },
+  { id: "P3", minScale: 1.9, maxScale: 2.45, markerBudget: 72, labelBudget: 8 },
+  { id: "P4", minScale: 2.45, maxScale: 3.05, markerBudget: 110, labelBudget: 24 },
+  { id: "P5", minScale: 3.05, maxScale: Infinity, markerBudget: 170, labelBudget: 48 },
+];
+const CITY_MARKER_QUOTAS_BY_PHASE = Object.freeze({
+  P0: Object.freeze({ A: 1, B: 0, C: 0, D: 0, E: 0 }),
+  P1: Object.freeze({ A: 1, B: 1, C: 1, D: 1, E: 1 }),
+  P2: Object.freeze({ A: 3, B: 1, C: 1, D: 1, E: 1 }),
+  P3: Object.freeze({ A: 4, B: 2, C: 1, D: 1, E: 1 }),
+  P4: Object.freeze({ A: 6, B: 4, C: 2, D: 1, E: 1 }),
+  P5: Object.freeze({ A: 8, B: 6, C: 4, D: 2, E: 1 }),
+});
+const CITY_PRIORITY_COUNTRY_RESERVE_SHARE_BY_PHASE = Object.freeze({
+  P0: 0.5,
+  P1: 0.5,
+  P2: 0.3,
+  P3: 0.3,
+  P4: 0,
+  P5: 0,
+});
+const GRATICULE_SAMPLE_DEGREES = 2;
+const PAPER_TEXTURE_ASSET_URLS = {
+  paper_vintage_01: new URL("../../vendor/textures/paper_vintage_01.svg", import.meta.url).href,
+};
+// Keep this list empty by default. Polygon winding issues are repaired dynamically.
+const KNOWN_BAD_FEATURE_IDS = new Set();
+const DEBUG_MODES = new Set(["PROD", "GEOMETRY", "ARTIFACTS", "ISLANDS", "ID_HASH"]);
+const COLOR_HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const COLOR_FUNC_RE = /^(?:rgb|rgba|hsl|hsla)\([^)]*\)$/i;
+const COLOR_NAME_RE = /^[a-z]+$/i;
+const RENDER_DIAG_PARAM = "render_diag";
+const PERF_OVERLAY_PARAM = "perf_overlay";
+const DAY_NIGHT_CLOCK_INTERVAL_MS = 15_000;
+export const RENDER_PASS_NAMES = [
+  "background",
+  "physicalBase",
+  "political",
+  "contextBase",
+  "contextScenario",
+  "effects",
+  "lineEffects",
+  "contextMarkers",
+  "dayNight",
+  "borders",
+  "textureLabels",
+  "labels",
+];
+const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([
+  "background",
+  "physicalBase",
+  "political",
+  "contextBase",
+  "contextScenario",
+  "effects",
+  "lineEffects",
+  "contextMarkers",
+  "dayNight",
+]);
+const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set([
+  "contextBase",
+]);
+const INTERACTION_COMPOSITE_PASS_NAMES = [
+  "background",
+  "physicalBase",
+  "political",
+  "contextBase",
+  "contextScenario",
+  "effects",
+  "lineEffects",
+  "contextMarkers",
+  "dayNight",
+];
+const TRANSFORMED_FRAME_PASS_NAMES = [
+  "background",
+  "physicalBase",
+  "political",
+  "contextBase",
+  "contextScenario",
+  "effects",
+  "lineEffects",
+  "contextMarkers",
+  "dayNight",
+  "textureLabels",
+  "labels",
+];
+const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([
+  "contextBase",
+  "contextScenario",
+  "contextMarkers",
+  "textureLabels",
+  "labels",
+]);
+const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE = 0.15;
+const POLITICAL_PARTIAL_REPAINT_FEATURE_THRESHOLD = 48;
+const POLITICAL_PARTIAL_REPAINT_CANDIDATE_THRESHOLD = 160;
+const POLITICAL_PARTIAL_REPAINT_VIEWPORT_COVERAGE_MAX = 0.18;
+const POLITICAL_PARTIAL_REPAINT_SYNC_BUILD_CANDIDATE_MAX = 96;
+const POLITICAL_PARTIAL_REPAINT_SYNC_BUILD_MISS_MAX = 96;
+const POLITICAL_PARTIAL_REPAINT_PAD_PX = 4;
+const POLITICAL_PATH_WARMUP_OVERSCAN_PX = 96;
+const POLITICAL_PATH_WARMUP_QUEUE_MAX = 512;
+const POLITICAL_PATH_WARMUP_MAX_FEATURES_PER_SLICE = 24;
+const POLITICAL_PATH_WARMUP_CPU_BUDGET_MS = 4;
+const POLITICAL_PATH_WARMUP_TIMEOUT_MS = 24;
+const HEAVY_SCENARIO_STAGED_APPLY_FEATURE_THRESHOLD = 12000;
+const STAGED_CONTEXT_BASE_TIMEOUT_MS = 180;
+const STAGED_HIT_CANVAS_TIMEOUT_MS = 260;
+const CHUNKED_INDEX_BUILD_SLICE_SIZE = 1200;
+const CHUNKED_SPATIAL_BUILD_SLICE_SIZE = 900;
+const HOVER_INTERACTION_METRIC_SAMPLE_RATE = 10;
+const HOVER_INTERACTION_SLOW_SAMPLE_MS = 8;
+let debugMode = "PROD";
+let islandNeighborsCache = {
+  topologyRef: null,
+  objectRef: null,
+  count: 0,
+  neighbors: [],
+};
+const textureAssetCache = new Map();
+const texturePatternCache = new Map();
+const textureGeometryCache = new Map();
+const textureNoiseTileCache = new Map();
+const modernCityLightsGeometryCache = {
+  projectionKey: "",
+  baseEntries: [],
+  corridorEntries: [],
+};
+const modernCityLightsPopulationBoostCache = {
+  cityCollection: null,
+  urbanCollection: null,
+  cityLayerRevision: -1,
+  scenarioId: "",
+  urbanEntries: [],
+  cityEntries: [],
+};
+const historicalCityLightsDerivedGlowCache = {
+  key: "",
+  entries: [],
+};
+const HISTORICAL_DERIVED_GLOW_MIN_WEIGHT = 0.62;
+const HISTORICAL_DERIVED_GLOW_MAX_ENTRIES = 520;
+const layerResolverCache = {
+  primaryRef: null,
+  detailRef: null,
+  bundleMode: null,
+  contextRevision: 0,
+  waterRegionsDataToken: "",
+};
+const objectIdentityTokenCache = new WeakMap();
+let nextObjectIdentityToken = 1;
+let admin0MergedCache = {
+  topologyRef: null,
+  featureCount: 0,
+  entries: [],
+};
+let staticMeshCache = {
+  primaryRef: null,
+  detailRef: null,
+  runtimeRef: null,
+  bundleMode: "",
+  activeScenarioId: "",
+  scenarioBorderMode: "",
+  scenarioViewMode: "",
+  sourceCountriesSignature: "",
+  coastlineDecisionSignature: "",
+  snapshot: null,
+};
+let countryDominantFillColorCache = {
+  colorRevision: -1,
+  scenarioViewMode: "",
+  activeScenarioId: "",
+  result: new Map(),
+};
+let contourHostFillColorCache = new WeakMap();
+let staticMeshSourceCountries = {
+  primary: new Set(),
+  detail: new Set(),
+};
+let scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState();
+let physicalLandClipPathCache = {
+  key: "",
+  path: null,
+};
+const SCENARIO_BACKGROUND_MERGE_MAX_AREA = Math.PI * 2;
+const SPHERICAL_GEOMETRY_MAX_AREA = Math.PI * 2;
+const SCENARIO_COASTLINE_MAX_AREA_DELTA_RATIO = 0.02;
+const SCENARIO_COASTLINE_MAX_INTERIOR_RING_RATIO = 0.25;
+const SCENARIO_COASTLINE_MAX_INTERIOR_RING_COUNT = 500;
+const suspiciousScenarioBackgroundMergeWarnings = new Set();
+const scenarioOwnerOnlyCanonicalFallbackWarnings = new Set();
+const missingPhysicalContextWarnings = new Set();
+const waterSphericalSanitizationWarnings = new Set();
+const sphericalGeometryDiagnosticsByObject = new WeakMap();
+const safeWaterRegionGeometryPartsByFeature = new WeakMap();
+const sanitizedWaterRegionFeatureByFeature = new WeakMap();
+let scenarioWaterPartPathCache = new WeakMap();
+let scenarioWaterFeaturePathCache = new WeakMap();
+const renderDiag = {
+  enabled: false,
+  seenKeys: new Set(),
+  skippedByReason: new Map(),
+  skippedByCountry: new Map(),
+  sampleByReason: new Map(),
+};
+const rewoundFeatureLogKeys = new Set();
+const urbanGeoCentroidCache = new WeakMap();
+let cityAnchorCache = new WeakMap();
+const urbanFeatureIndexCache = {
+  sourceRef: null,
+  byId: new Map(),
+};
+const cityLayerCache = {
+  baseRef: null,
+  scenarioRef: null,
+  scenarioCountriesRef: null,
+  scenarioId: "",
+  cityLayerRevision: -1,
+  scenarioControllerRevision: -1,
+  sovereigntyRevision: -1,
+  merged: null,
+};
+// --- owner 初始化区：集中持有 owner 单例引用，并在 getter 中按需延迟创建。 ---
+let urbanCityPolicyOwner = null;
+let cityLabelOwner = null;
+let colorResolutionStrategyOwner = null;
+let strategicOverlayHelpersOwner = null;
+let strategicOverlayRuntimeOwner = null;
+let politicalCollectionOwner = null;
+let contextLayerResolverOwner = null;
+let rendererAssetUrlPolicyOwner = null;
+let facilitySurfaceOwner = null;
+let borderMeshOwner = null;
+let borderDrawOwner = null;
+let interactionBorderSnapshotOwner = null;
+let spatialIndexRuntimeOwner = null;
+let renderPipelinePassesOwner = null;
+let renderCacheOwner = null;
+
+// --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
+function getStrategicOverlayHelpersOwner() {
+  if (strategicOverlayHelpersOwner) {
+    return strategicOverlayHelpersOwner;
+  }
+  strategicOverlayHelpersOwner = createStrategicOverlayHelpersOwner({
+    state,
+    constants: {
+      defaultUnitCounterBaseFill: DEFAULT_UNIT_COUNTER_BASE_FILL,
+      strategicLineLabelFont: STRATEGIC_LINE_LABEL_FONT,
+    },
+    groupGetters: {
+      getOperationalLinesGroup: () => operationalLinesGroup,
+      getOperationGraphicsGroup: () => operationGraphicsGroup,
+      getUnitCountersGroup: () => unitCountersGroup,
+      getSpecialZonesGroup: () => specialZonesGroup,
+      getSpecialZoneEditorGroup: () => specialZoneEditorGroup,
+    },
+    helpers: {
+      renderStrategicDefs,
+      ensureOperationalLineEditorState,
+      getOperationalLinePreset,
+      projectStrategicPoints,
+      createOperationGraphicPath,
+      getOperationGraphicLabelAnchor,
+      selectOperationalLineById,
+      getOperationGraphicPreset,
+      selectOperationGraphicById,
+      renderOperationGraphicsEditorOverlay,
+      ensureUnitCounterEditorState,
+      getProjectedPoint,
+      getUnitCounterRenderEntries,
+      getUnitCounterCardModel,
+      getUnitCounterRenderScale,
+      getUnitCounterSlotOffset,
+      compareUnitCounterRenderOrder,
+      getUnitCounterNodeTransform,
+      getUnitCounterIconPath,
+      updateSpecialZonesPaths,
+      renderSpecialZoneEditorOverlay,
+      getEffectiveSpecialZonesFeatureCollection,
+    },
+  });
+  return strategicOverlayHelpersOwner;
+}
+
+function getUrbanCityPolicyOwner() {
+  if (urbanCityPolicyOwner) {
+    return urbanCityPolicyOwner;
+  }
+  urbanCityPolicyOwner = createUrbanCityPolicyOwner({
+    state,
+    caches: {
+      cityLayerCache,
+      urbanFeatureIndexCache,
+    },
+    helpers: {
+      compareCityRevealEntries,
+      defaultCityCountryClassRank: CITY_COUNTRY_CLASS_RANK.micro,
+      defaultCityCountryTierRank: CITY_COUNTRY_TIER_RANK.D,
+      getCityAnchor,
+      getCityCanonicalId,
+      getCityCapitalScore,
+      getCityCountryGroupKey,
+      getCityCountryProfileIndex,
+      getCityEffectiveMinZoom,
+      getCityFeatureAliases,
+      getCityFeatureKey,
+      getCityInterpolatedMarkerBudget,
+      getCityInterpolatedMarkerQuota,
+      getCityInterpolatedRevealBucket,
+      getCityLabelBudget,
+      getCityLabelMinZoom,
+      getCityMarkerDensityMultiplier,
+      getCityMarkerSizePx,
+      getCityPriorityCountryReserveBudget,
+      getCityPriorityCountryReserveRank,
+      getCityRevealPhase,
+      getCityScreenPoint,
+      getCitySortWeight,
+      getCityTier,
+      getCityTierWeight,
+      getCityViewportCenterDistanceNorm,
+      getDefaultCityMinZoomForTier,
+      getUrbanFeatureStableId,
+      isCityAnchorInViewport,
+      isCityLabelEligibleForPhase,
+      isCityScenarioTagExcludedFromReveal,
+    },
+  });
+  return urbanCityPolicyOwner;
+}
+
+function getCityLabelOwner() {
+  if (cityLabelOwner) {
+    return cityLabelOwner;
+  }
+  cityLabelOwner = createCityLabelOwner({
+    constants: { textureLabelSerifStack: TEXTURE_LABEL_SERIF_STACK },
+    getters: {
+      getContext: () => context,
+      getViewportSize: () => ({ width: runtimeState.width, height: runtimeState.height }),
+    },
+    helpers: {
+      buildCityLabelPlacementCandidates,
+      clamp,
+      formatCityMapLabel,
+      getCityDisplayLabel,
+      getCityLabelMinZoom,
+      getCityLabelRenderStyle,
+      getCityMarkerSizePx,
+      getCityVisualCapitalState,
+    },
+  });
+  return cityLabelOwner;
+}
+
+const drawCityLabelsFromEntries = (...args) => getCityLabelOwner().drawCityLabelsFromEntries(...args);
+
+function getColorResolutionStrategyOwner() {
+  if (colorResolutionStrategyOwner) {
+    return colorResolutionStrategyOwner;
+  }
+  colorResolutionStrategyOwner = createColorResolutionStrategyOwner({
+    state: runtimeState,
+    helpers: {
+      canonicalCountryCode,
+      getFeatureCountryCodeNormalized,
+      getFeatureId,
+      getOceanBaseFillColor,
+      getSafeCanvasColor,
+      isAntarcticSectorFeature,
+      isAtlantropaSeaFeature,
+      isScenarioShellFeature,
+      normalizeMapSemanticMode,
+    },
+  });
+  return colorResolutionStrategyOwner;
+}
+
+const getDisplayOwnerCode = (...args) => getColorResolutionStrategyOwner().getDisplayOwnerCode(...args);
+const getResolvedFeatureColor = (...args) => getColorResolutionStrategyOwner().getResolvedFeatureColor(...args);
+
+function getPoliticalCollectionOwner() {
+  if (politicalCollectionOwner) {
+    return politicalCollectionOwner;
+  }
+  politicalCollectionOwner = createPoliticalCollectionOwner({
+    state,
+    constants: {
+      highFrequencyCountryDetailWhitelist: HIGH_FREQUENCY_COUNTRY_DETAIL_WHITELIST,
+      interactiveAggregateTierFilters: INTERACTIVE_AGGREGATE_TIER_FILTERS,
+    },
+    helpers: {
+      getDetailTier,
+      getFeatureCountryCodeNormalized,
+      getFeatureId,
+      isPoliticalInteractionRenderableFeature,
+      isRenderDiagEnabled: () => renderDiag.enabled,
+    },
+  });
+  return politicalCollectionOwner;
+}
+
+function getContextLayerResolverOwner() {
+  if (contextLayerResolverOwner) {
+    return contextLayerResolverOwner;
+  }
+  contextLayerResolverOwner = createContextLayerResolverOwner({
+    runtimeState: state,
+    caches: {
+      layerResolverCache,
+    },
+    constants: {
+      contextLayerMinScore: CONTEXT_LAYER_MIN_SCORE,
+      layerDiagPrefix: LAYER_DIAG_PREFIX,
+      urbanCorruptBoundsHeightDeg: URBAN_CORRUPT_BOUNDS_HEIGHT_DEG,
+      urbanCorruptBoundsWidthDeg: URBAN_CORRUPT_BOUNDS_WIDTH_DEG,
+    },
+    helpers: {
+      clamp,
+      ensureBathymetryDataAvailability,
+      getContextLayerStableSourceToken,
+      getUrbanFeatureOwnerId,
+      getUrbanFeatureStableId,
+      resetScenarioWaterCacheAdaptiveState,
+    },
+  });
+  return contextLayerResolverOwner;
+}
+
+function getRendererAssetUrlPolicyOwner() {
+  if (rendererAssetUrlPolicyOwner) {
+    return rendererAssetUrlPolicyOwner;
+  }
+  rendererAssetUrlPolicyOwner = createRendererAssetUrlPolicyOwner({
+    state,
+    constants: {
+      globalBathymetryTopologyUrl: GLOBAL_BATHYMETRY_TOPOLOGY_URL,
+    },
+  });
+  return rendererAssetUrlPolicyOwner;
+}
+
+function getFacilitySurfaceOwner() {
+  if (facilitySurfaceOwner) {
+    return facilitySurfaceOwner;
+  }
+  facilitySurfaceOwner = createFacilitySurfaceOwner({
+    helpers: {
+      renderTooltipText,
+      t,
+    },
+  });
+  return facilitySurfaceOwner;
+}
+
+function getBorderMeshOwner() {
+  if (borderMeshOwner) {
+    return borderMeshOwner;
+  }
+  borderMeshOwner = createBorderMeshOwner({
+    state,
+    constants: {
+      coastlineEffectiveAreaMultiplier: COASTLINE_EFFECTIVE_AREA_MULTIPLIER,
+      scenarioCoastlineMaxAreaDeltaRatio: SCENARIO_COASTLINE_MAX_AREA_DELTA_RATIO,
+      scenarioCoastlineMaxInteriorRingCount: SCENARIO_COASTLINE_MAX_INTERIOR_RING_COUNT,
+      scenarioCoastlineMaxInteriorRingRatio: SCENARIO_COASTLINE_MAX_INTERIOR_RING_RATIO,
+    },
+    helpers: {
+      asFeatureLike,
+      canonicalCountryCode,
+      clearPendingDynamicBorderTimer,
+      ensureSovereigntyState,
+      getAdmin1Group,
+      getEntityCountryCode,
+      getEntityBorderMeshCountryCode,
+      getFeatureCountryCodeNormalized,
+      getFeatureBorderMeshCountryCodeNormalized,
+      getFeatureId,
+      getLatitudeAdjustedSimplifyEpsilon,
+      getLineLength,
+      getParentGroupForEntity,
+      incrementPerfCounter,
+      invalidateRenderPasses,
+      isDynamicBordersEnabled,
+      isAdmDetailTier,
+      isUsableMesh,
+      isWorldBounds,
+      nowMs,
+      publishScenarioCoastlineDecision,
+      recordRenderPerfMetric,
+      resolveOwnerBorderCode,
+      sanitizePolyline,
+      shouldExcludeOwnerBorderEntity,
+      shouldExcludePoliticalInteractionFeature,
+      simplifyPolylineEffectiveArea,
+      getStaticMeshSourceCountries: () => staticMeshSourceCountries,
+      getScenarioSurfaceVersionSignal,
+      updateDynamicBorderStatusUI,
+    },
+  });
+  return borderMeshOwner;
+}
+
+function getBorderDrawOwner() {
+  if (borderDrawOwner) {
+    return borderDrawOwner;
+  }
+  borderDrawOwner = createBorderDrawOwner({
+    state,
+    constants: {
+      boundaryDefaultLineCap: BOUNDARY_DEFAULT_LINE_CAP,
+      boundaryDefaultLineJoin: BOUNDARY_DEFAULT_LINE_JOIN,
+      boundaryDefaultMiterLimit: BOUNDARY_DEFAULT_MITER_LIMIT,
+      coastlineLodLowZoomMax: COASTLINE_LOD_LOW_ZOOM_MAX,
+      coastlineLodMidZoomMax: COASTLINE_LOD_MID_ZOOM_MAX,
+      coastlineViewSimplifyCollinearAngleDeg: COASTLINE_VIEW_SIMPLIFY_COLLINEAR_ANGLE_DEG,
+      coastlineViewSimplifyLowMinDistancePx: COASTLINE_VIEW_SIMPLIFY_LOW_MIN_DISTANCE_PX,
+      coastlineViewSimplifyMidMinDistancePx: COASTLINE_VIEW_SIMPLIFY_MID_MIN_DISTANCE_PX,
+      detailAdmBorderAlphaScale: DETAIL_ADM_BORDER_ALPHA_SCALE,
+      detailAdmBorderColor: DETAIL_ADM_BORDER_COLOR,
+      detailAdmBorderMinWidth: DETAIL_ADM_BORDER_MIN_WIDTH,
+      detailAdmBorderTargetMaxAlpha: DETAIL_ADM_BORDER_TARGET_MAX_ALPHA,
+      detailAdmBorderTargetMinAlpha: DETAIL_ADM_BORDER_TARGET_MIN_ALPHA,
+      detailAdmBorderWidthScale: DETAIL_ADM_BORDER_WIDTH_SCALE,
+      detailAdmBordersMinZoom: DETAIL_ADM_BORDERS_MIN_ZOOM,
+      internalBorderLocalAlphaScale: INTERNAL_BORDER_LOCAL_ALPHA_SCALE,
+      internalBorderLocalMinAlpha: INTERNAL_BORDER_LOCAL_MIN_ALPHA,
+      internalBorderLocalMinWidth: INTERNAL_BORDER_LOCAL_MIN_WIDTH,
+      internalBorderLocalWidthScale: INTERNAL_BORDER_LOCAL_WIDTH_SCALE,
+      internalBorderProvinceMinAlpha: INTERNAL_BORDER_PROVINCE_MIN_ALPHA,
+      internalBorderProvinceMinWidth: INTERNAL_BORDER_PROVINCE_MIN_WIDTH,
+      localBordersMinZoom: LOCAL_BORDERS_MIN_ZOOM,
+      provinceBordersFadeStartZoom: PROVINCE_BORDERS_FADE_START_ZOOM,
+      provinceBordersFarAlpha: PROVINCE_BORDERS_FAR_ALPHA,
+      provinceBordersFarWidthMaxZoom: PROVINCE_BORDERS_FAR_WIDTH_MAX_ZOOM,
+      provinceBordersFarWidthScale: PROVINCE_BORDERS_FAR_WIDTH_SCALE,
+      provinceBordersNearAlphaScale: PROVINCE_BORDERS_NEAR_ALPHA_SCALE,
+      provinceBordersNearWidthScale: PROVINCE_BORDERS_NEAR_WIDTH_SCALE,
+      provinceBordersNearZoomStart: PROVINCE_BORDERS_NEAR_ZOOM_START,
+      provinceBordersTransitionAlpha: PROVINCE_BORDERS_TRANSITION_ALPHA,
+      provinceBordersTransitionEndZoom: PROVINCE_BORDERS_TRANSITION_END_ZOOM,
+    },
+    getters: {
+      getContext: () => context,
+      getPathCanvas: () => pathCanvas,
+      getProjection: () => projection,
+      getDetailAdmMeshBuildState: () => detailAdmMeshBuildState,
+      getScenarioOwnerOnlyCanonicalFallbackWarnings: () => scenarioOwnerOnlyCanonicalFallbackWarnings,
+      getVisibleInternalBorderMeshSignature: () => visibleInternalBorderMeshSignature,
+    },
+    helpers: {
+      buildCountryParentBorderMeshes,
+      buildDetailAdmMeshSignature,
+      clamp,
+      drawTnoCoastalAccentLayer,
+      getCoastlineCollectionForZoom,
+      getInternalBorderStrokeColor,
+      getSafeCanvasColor,
+      getVisibleCountryCodesForBorderMeshes,
+      isUsableMesh,
+      isDynamicBordersEnabled,
+      sanitizePolyline,
+      scheduleDeferredHeavyBorderMeshes,
+      setDetailAdmMeshBuildState: (nextState) => {
+        detailAdmMeshBuildState = nextState;
+      },
+      setVisibleInternalBorderMeshSignature: (signature) => {
+        visibleInternalBorderMeshSignature = signature;
+      },
+      syncStaticMeshSnapshot,
+    },
+  });
+  return borderDrawOwner;
+}
+
+function getInteractionBorderSnapshotOwner() {
+  if (interactionBorderSnapshotOwner) {
+    return interactionBorderSnapshotOwner;
+  }
+  interactionBorderSnapshotOwner = createInteractionBorderSnapshotOwner({
+    state,
+    constants: {
+      renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+    },
+    getters: {
+      getContext: () => context,
+      getRenderPassCacheState,
+    },
+    helpers: {
+      cloneZoomTransform,
+      drawBordersPass,
+      incrementPerfCounter,
+      invalidateInteractionBorderSnapshotFacade: (reason) => invalidateInteractionBorderSnapshot(reason),
+      nowMs,
+      prepareTargetContext,
+      recordRenderPerfMetric,
+      withRenderTarget,
+    },
+  });
+  return interactionBorderSnapshotOwner;
+}
+
+function getSpatialIndexRuntimeOwner() {
+  if (spatialIndexRuntimeOwner) {
+    return spatialIndexRuntimeOwner;
+  }
+  spatialIndexRuntimeOwner = createSpatialIndexRuntimeOwner({
+    state,
+    constants: {
+      chunkedIndexBuildSliceSize: CHUNKED_INDEX_BUILD_SLICE_SIZE,
+      chunkedSpatialBuildSliceSize: CHUNKED_SPATIAL_BUILD_SLICE_SIZE,
+    },
+    getters: {
+      getPathSvg: () => pathSVG,
+    },
+    helpers: {
+      rebuildAuxiliaryRegionIndexes,
+      getLogicalCanvasDimensions,
+      computeProjectedFeatureBounds,
+      getProjectedFeatureBounds,
+      getResolvedFeatureColor,
+      shouldSkipFeature,
+      queueIndexUiRefresh,
+      finalizeIndexBuildEffects,
+      getFeatureId,
+      getFeatureCountryCodeNormalized,
+      getFeatureBorderMeshCountryCodeNormalized,
+      shouldExcludePoliticalInteractionFeature,
+      shouldExcludePoliticalVisualFeature,
+      buildSpatialGrid,
+      nowMs,
+      recordRenderPerfMetric,
+      setInteractionInfrastructureState,
+      yieldToMain,
+      getEffectiveWaterRegionFeatures,
+      getEffectiveSpecialRegionFeatures,
+      collectFeatureHitGeometries: collectSafeWaterRegionGeometryParts,
+      computeProjectedGeoBounds,
+      shouldExcludeWaterHitGeometry,
+    },
+  });
+  return spatialIndexRuntimeOwner;
+}
+
+function getRenderCacheOwner() {
+  if (renderCacheOwner) {
+    return renderCacheOwner;
+  }
+  renderCacheOwner = createRenderCacheOwner({
+    state,
+    constants: {
+      interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
+      renderPassNames: RENDER_PASS_NAMES,
+      renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+      transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,
+    },
+    getters: {
+      getContext: () => context,
+    },
+    helpers: {
+      cloneZoomTransform,
+      ensureRenderPassCacheState,
+      getTransformSignature,
+      getVisibleFrameIdentity,
+      invalidateInteractionComposite,
+    },
+  });
+  return renderCacheOwner;
+}
+
+function getRenderPipelinePassesOwner() {
+  if (renderPipelinePassesOwner) {
+    return renderPipelinePassesOwner;
+  }
+  renderPipelinePassesOwner = createRenderPipelinePassesOwner({
+    state,
+    constants: {
+      exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
+    },
+    drawPasses: {
+      drawBackgroundPass,
+      drawPhysicalBasePass,
+      drawPoliticalPass,
+      drawContextBasePass,
+      drawContextScenarioPass,
+      drawEffectsPass,
+      drawLineEffectsPass,
+      drawDayNightPass,
+      drawBordersPass,
+      drawContextMarkersPass,
+      drawTextureLabelEffectsPass,
+      drawLabelsPass,
+    },
+    helpers: {
+      detectContextScenarioReasonMismatch,
+      getContextBaseReuseDecision,
+      getContextScenarioReuseDecision,
+      getExactAfterSettleControllerState,
+      getPassReferenceTransform,
+      getRenderPassCacheState,
+      getRenderPassSignature,
+      incrementPerfCounter,
+      rebuildResolvedColors,
+      recordRenderPerfMetric,
+      renderPassToCache,
+      shouldEnableContextBaseTransformReuse,
+      shouldEnableContextScenarioTransformReuse,
+      shouldStartExactAfterSettleFastPath,
+      tryPartialPoliticalPassRepaint,
+    },
+  });
+  return renderPipelinePassesOwner;
+}
+
+const getIdleRenderPassDefinitions = (...args) => getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(...args);
+const prepareIdleRenderPassDefinition = (...args) =>
+  getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(...args);
+const ensureIdleRenderPasses = (...args) => getRenderPipelinePassesOwner().ensureIdleRenderPasses(...args);
+
+// --- 注释锚点：缓存状态（cache state）章节 ---
+// --- 注释锚点：pass-through facade 章节 ---
+// --- 注释锚点：实际渲染实现（render implementation）章节 ---
+
+const cityCountryProfileCache = new WeakMap();
+const cityMarkerSpriteCache = new Map();
+let cityMarkerSpriteCacheColorRevision = -1;
+let visibleCityHoverEntries = [];
+const visibleFacilityHoverEntriesByFamily = {
+  airport: [],
+  port: [],
+};
+let hoveredFacilityEntry = null;
+let selectedFacilityEntry = null;
+let facilityInfoCard = null;
+let facilityInfoCardTitle = null;
+let facilityInfoCardBody = null;
+let facilityInfoCardZoomBtn = null;
+let facilityInfoCardCloseBtn = null;
+let facilityInfoCardMoreBtn = null;
+let facilityInfoCardExpanded = false;
+let facilityInfoCardAnchor = null;
+let dayNightClockTimerId = null;
+let lastDayNightClockToken = "";
+let pendingIndexUiRefreshHandle = null;
+let pendingIndexUiRefreshState = null;
+let deferredIndexUiRefreshHandle = null;
+let deferredIndexUiRefreshState = null;
+let pendingSidebarRefreshHandle = null;
+let pendingSidebarRefreshState = null;
+let hoverOverlayRenderRafHandle = null;
+let secondarySpatialBuildHandle = null;
+let pendingSecondarySpatialBuildReasons = new Set();
+let pendingScenarioChunkFlushAfterExactHandle = null;
+let deferredHeavyBorderMeshHandle = null;
+let deferredContextBaseEnhancementHandle = null;
+let deferredExactContextRefreshHandle = null;
+let deferredExactContextRefreshVersion = 0;
+const deferredExactContextRefreshTaskHandles = new Set();
+let deferredScenarioChunkPromotionInfraHandle = null;
+let scenarioChunkPromotionVersion = 0;
+let deferContextBaseEnhancements = false;
+let detailAdmMeshBuildState = {
+  signature: "",
+  status: "idle",
+};
+let visibleInternalBorderMeshSignature = "";
+let visibleBorderCountryCodesCache = {
+  signature: "",
+  codes: new Set(),
+};
+let contourVisibleSetCache = {
+  major: { collectionRef: null, key: "", features: [] },
+  minor: { collectionRef: null, key: "", features: [] },
+};
+
+function readSearchParam(name) {
+  const search = globalThis?.location?.search || "";
+  if (!search || !globalThis.URLSearchParams) return "";
+  try {
+    const params = new globalThis.URLSearchParams(search);
+    return String(params.get(name) || "").trim().toLowerCase();
+  } catch (_error) {
+    return "";
+  }
+}
+
+function isRenderDiagEnabled() {
+  const raw = readSearchParam(RENDER_DIAG_PARAM);
+  return ["1", "true", "yes", "on"].includes(raw);
+}
+
+function isPerfOverlayEnabled() {
+  const raw = readSearchParam(PERF_OVERLAY_PARAM);
+  return ["1", "true", "yes", "on"].includes(raw);
+}
+
+function getRenderPassCacheState() {
+  return getRenderCacheOwner().getRenderPassCacheState();
+}
+
+function getStrategicOverlayRuntimeOwner() {
+  if (strategicOverlayRuntimeOwner) {
+    return strategicOverlayRuntimeOwner;
+  }
+  strategicOverlayRuntimeOwner = createStrategicOverlayRuntimeOwner({
+    state,
+    constants: {
+      defaultOperationGraphicKind: DEFAULT_OPERATION_GRAPHIC_KIND,
+      defaultOperationalLineKind: DEFAULT_OPERATIONAL_LINE_KIND,
+      defaultSpecialZoneType: DEFAULT_SPECIAL_ZONE_TYPE,
+      defaultCounterAttachmentKind: STRATEGIC_COUNTER_ATTACHMENT_KIND,
+      defaultHitSnapRadiusClickPx: HIT_SNAP_RADIUS_CLICK_PX,
+      defaultUnitCounterEquipmentPct: DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT,
+      defaultUnitCounterMilstdSidc: DEFAULT_MILSTD_SIDC,
+      defaultUnitCounterOrganizationPct: DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT,
+      defaultUnitCounterPresetId: DEFAULT_UNIT_COUNTER_PRESET_ID,
+      defaultUnitCounterRenderer: DEFAULT_UNIT_COUNTER_RENDERER,
+    },
+    helpers: {
+      assignUnitCounterEditorFromCounter,
+      canonicalCountryCode,
+      captureHistoryState,
+      commitHistoryEntry,
+      ensureManualSpecialZoneCounter,
+      ensureOperationGraphicCounter,
+      ensureOperationGraphicsEditorState,
+      ensureOperationalLineCounter,
+      ensureOperationalLineEditorState,
+      ensureSpecialZoneEditorState,
+      ensureUnitCounterCounter,
+      ensureUnitCounterEditorState,
+      getDisplayOwnerCode,
+      getFeatureOwnerCode,
+      getHitFromEvent,
+      getMapLonLatFromEvent,
+      getManualSpecialZoneFeatures,
+      getNormalizedUnitCounterCombatState,
+      getOperationGraphicById,
+      getOperationGraphicMinPoints,
+      getOperationalLineById,
+      getOperationalLineMinPoints,
+      getUnitCounterCardModel,
+      getUnitCounterPresetById,
+      markDirty,
+      normalizeOperationGraphicOpacity,
+      normalizeOperationGraphicStroke,
+      normalizeOperationGraphicStylePreset,
+      normalizeOperationGraphicWidth,
+      normalizeOperationalLineStylePreset,
+      normalizeUnitCounterBaseFillColor,
+      normalizeUnitCounterNationSource,
+      normalizeUnitCounterSizeToken,
+      normalizeUnitCounterStatPercent,
+      normalizeUnitCounterStatsPresetId,
+      renderNow: () => {
+        if (context) render();
+      },
+      renderOperationGraphicsIfNeeded,
+      renderSpecialZoneEditorOverlay,
+      resetUnitCounterEditorState,
+      showToast,
+      t,
+      updateSpecialZoneEditorUI,
+      updateStrategicOverlayUi,
+    },
+  });
+  return strategicOverlayRuntimeOwner;
+}
+
+configureDataRuntimeFacade({
+  getPoliticalCollectionOwner,
+  getContextLayerResolverOwner,
+  getRendererAssetUrlPolicyOwner,
+  getFacilitySurfaceOwner,
+});
+
+configureBorderRuntimeFacade({
+  getBorderMeshOwner,
+});
+
+configureSpatialRuntimeFacade({
+  getSpatialIndexRuntimeOwner,
+});
+
+configureOverlayRuntimeFacade({
+  getStrategicOverlayRuntimeOwner,
+});
+
+function getSidebarPerfState() {
+  return ensureSidebarPerfState(state);
+}
+
+function resetProjectedBoundsCacheState() {
+  resetProjectedBoundsRuntimeCacheState(state);
+}
+
+function ensureSphericalFeatureDiagnosticsCache() {
+  return ensureSphericalFeatureDiagnosticsCacheState(state);
+}
+
+function ensureRenderPerfMetrics() {
+  if (!runtimeState.renderPerfMetrics || typeof runtimeState.renderPerfMetrics !== "object") {
+    runtimeState.renderPerfMetrics = {};
+  }
+  return runtimeState.renderPerfMetrics;
+}
+
+function recordRenderPerfMetric(name, durationMs, details = {}) {
+  const metrics = ensureRenderPerfMetrics();
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+  const nextEntry = {
+    durationMs: Math.max(0, Number(durationMs) || 0),
+    recordedAt: Date.now(),
+    ...details,
+  };
+  metrics[normalizedName] = nextEntry;
+  globalThis.__renderPerfMetrics = metrics;
+  return nextEntry;
+}
+
+function beginContextMetricSession() {
+  activeContextMetricSession = {
+    metrics: {},
+  };
+}
+
+function collectContextMetric(name, durationMs, details = {}) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+  const nextEntry = {
+    durationMs: Math.max(0, Number(durationMs) || 0),
+    recordedAt: Date.now(),
+    ...details,
+  };
+  if (!activeContextMetricSession?.metrics) {
+    return recordRenderPerfMetric(normalizedName, nextEntry.durationMs, details);
+  }
+  const existingEntry = activeContextMetricSession.metrics[normalizedName];
+  if (!existingEntry) {
+    activeContextMetricSession.metrics[normalizedName] = {
+      ...nextEntry,
+      callCount: 1,
+    };
+    return activeContextMetricSession.metrics[normalizedName];
+  }
+  activeContextMetricSession.metrics[normalizedName] = {
+    ...existingEntry,
+    ...details,
+    durationMs: Math.max(0, Number(existingEntry.durationMs || 0) + nextEntry.durationMs),
+    recordedAt: nextEntry.recordedAt,
+    callCount: Math.max(1, Number(existingEntry.callCount || 1) + 1),
+  };
+  return activeContextMetricSession.metrics[normalizedName];
+}
+
+function endContextMetricSession() {
+  const session = activeContextMetricSession;
+  activeContextMetricSession = null;
+  const metrics = ensureRenderPerfMetrics();
+  const breakdown = metrics.contextBreakdown && typeof metrics.contextBreakdown === "object"
+    ? { ...metrics.contextBreakdown }
+    : {};
+  const sessionMetrics = session?.metrics && typeof session.metrics === "object" ? session.metrics : {};
+  Object.entries(sessionMetrics).forEach(([name, entry]) => {
+    if (!entry || typeof entry !== "object") return;
+    const { durationMs, ...details } = entry;
+    const recordedEntry = recordRenderPerfMetric(name, durationMs, details);
+    if (CONTEXT_BREAKDOWN_METRIC_NAMES.has(name) && recordedEntry) {
+      breakdown[name] = { ...recordedEntry };
+    }
+  });
+  metrics.contextBreakdown = breakdown;
+  globalThis.__renderPerfMetrics = metrics;
+  return breakdown;
+}
+
+function resetContextBreakdownForExactFrame() {
+  const metrics = ensureRenderPerfMetrics();
+  metrics.contextBreakdown = {};
+  globalThis.__renderPerfMetrics = metrics;
+}
+
+function incrementPerfCounter(counterName, amount = 1) {
+  const cache = getRenderPassCacheState();
+  cache.counters[counterName] = (Number(cache.counters[counterName]) || 0) + Number(amount || 0);
+}
+
+function recordInteractionDurationMetric(name, durationMs, details = {}) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+  const normalizedEventType = String(details.eventType || "unknown").trim().toLowerCase() || "unknown";
+  const normalizedDuration = Math.max(0, Number(durationMs) || 0);
+  const counterName = `${normalizedName}Count`;
+  incrementPerfCounter(counterName);
+  const callCount = Number(getRenderPassCacheState().counters[counterName] || 0);
+  const isHoverMetric = normalizedEventType === "hover";
+  const isSlowHoverMetric = isHoverMetric && normalizedDuration >= HOVER_INTERACTION_SLOW_SAMPLE_MS;
+  const shouldRecord = !isHoverMetric
+    || isSlowHoverMetric
+    || callCount % HOVER_INTERACTION_METRIC_SAMPLE_RATE === 0;
+  if (!shouldRecord) return null;
+  return recordRenderPerfMetric(normalizedName, normalizedDuration, {
+    ...details,
+    eventType: normalizedEventType,
+    sampleRate: isHoverMetric ? HOVER_INTERACTION_METRIC_SAMPLE_RATE : 1,
+    slowSample: isSlowHoverMetric,
+    callCount,
+  });
+}
+
+function recordUiRefreshMetric(name, details = {}) {
+  recordRenderPerfMetric(name, 0, {
+    recordedAt: Date.now(),
+    ...details,
+  });
+}
+
+function unwrapRuntimeHookResult(result) {
+  if (Array.isArray(result)) {
+    return result.find((entry) => entry && typeof entry === "object") || null;
+  }
+  return result && typeof result === "object" ? result : null;
+}
+
+function resolveContextScenarioReasonSnapshot({
+  cache = getRenderPassCacheState(),
+  renderPerf = runtimeState.renderPerfMetrics || {},
+} = {}) {
+  const cacheReason = String(cache.reasons?.contextScenario || "").trim();
+  const perfReason = String(renderPerf.contextScenarioExactRefresh?.reason || renderPerf.contextScenarioReuseSkipped?.reason || "").trim();
+  const displayReason = cacheReason || perfReason || "-";
+  return {
+    cacheReason: cacheReason || "-",
+    perfReason: perfReason || "-",
+    displayReason,
+    mismatch: Boolean(cacheReason && perfReason && cacheReason !== perfReason),
+  };
+}
+
+function detectContextScenarioReasonMismatch({
+  cache = getRenderPassCacheState(),
+  renderPerf = runtimeState.renderPerfMetrics || {},
+} = {}) {
+  const reasonSnapshot = resolveContextScenarioReasonSnapshot({ cache, renderPerf });
+  if (!reasonSnapshot.mismatch) {
+    cache.contextScenarioReasonMismatchSignature = "";
+    return reasonSnapshot;
+  }
+  const signature = `${reasonSnapshot.cacheReason}::${reasonSnapshot.perfReason}`;
+  if (cache.contextScenarioReasonMismatchSignature !== signature) {
+    cache.contextScenarioReasonMismatchSignature = signature;
+    incrementPerfCounter("contextScenarioReasonMismatchWarnings");
+    recordRenderPerfMetric("contextScenarioReasonMismatchWarning", 0, {
+      cacheReason: reasonSnapshot.cacheReason,
+      perfReason: reasonSnapshot.perfReason,
+      warningCount: Number(cache.counters.contextScenarioReasonMismatchWarnings || 0),
+    });
+  }
+  return reasonSnapshot;
+}
+
+function resetScenarioWaterCacheAdaptiveState(reason = "water-adaptive-state-reset") {
+  lastScenarioWaterRenderedCount = 0;
+  incrementPerfCounter("waterAdaptiveStateResetCount");
+  const metrics = ensureRenderPerfMetrics();
+  const previousCount = Math.max(0, Number(metrics.waterAdaptiveStateResetCount?.count || 0));
+  metrics.waterAdaptiveStateResetCount = {
+    count: previousCount + 1,
+    reason: String(reason || "water-adaptive-state-reset"),
+    recordedAt: Date.now(),
+  };
+  globalThis.__renderPerfMetrics = metrics;
+}
+
+function stableJson(value) {
+  try {
+    return JSON.stringify(value ?? null);
+  } catch (_error) {
+    return "";
+  }
+}
+
+function cloneZoomTransform(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  return {
+    x: Number(transform?.x || 0),
+    y: Number(transform?.y || 0),
+    k: Math.max(0.0001, Number(transform?.k || 1)),
+  };
+}
+
+function getTransformSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const normalized = cloneZoomTransform(transform);
+  return [
+    normalized.x.toFixed(3),
+    normalized.y.toFixed(3),
+    normalized.k.toFixed(4),
+    Number(runtimeState.width || 0),
+    Number(runtimeState.height || 0),
+    Number(runtimeState.dpr || 1).toFixed(2),
+  ].join("|");
+}
+
+function noteRenderAction(label, startedAt = null) {
+  const cache = getRenderPassCacheState();
+  cache.lastAction = String(label || "").trim();
+  cache.lastActionAt = Date.now();
+  const lastFrame = cache.lastFrame && typeof cache.lastFrame === "object" ? cache.lastFrame : null;
+  cache.lastActionFrame = lastFrame
+    ? {
+      phase: lastFrame.phase,
+      totalMs: Number(lastFrame.totalMs || 0),
+      timings: { ...(lastFrame.timings || {}) },
+      transform: cloneZoomTransform(lastFrame.transform),
+    }
+    : null;
+  if (Number.isFinite(startedAt)) {
+    cache.lastActionDurationMs = Math.max(0, nowMs() - Number(startedAt));
+    recordInteractionDurationMetric("interactionActionDuration", cache.lastActionDurationMs, {
+      actionLabel: cache.lastAction,
+      eventType: "action",
+    });
+  }
+}
+
+const LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES = new Set(["political", "contextBase", "contextScenario", "effects"]);
+
+function getRuntimeChunkSelectionVersion() {
+  const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
+    ? runtimeState.runtimeChunkLoadState
+    : null;
+  return Math.max(0, Number(loadState?.selectionVersion || 0));
+}
+
+function getVisibleContextFlagSignature() {
+  return [
+    `view:${String(runtimeState.scenarioViewMode || "ownership")}`,
+    `profile:${String(runtimeState.renderProfile || "auto")}`,
+    runtimeState.showPhysical ? "physical:on" : "physical:off",
+    runtimeState.showUrban ? "urban:on" : "urban:off",
+    runtimeState.showRivers ? "rivers:on" : "rivers:off",
+    runtimeState.showWaterRegions ? "water:on" : "water:off",
+    runtimeState.showOpenOceanRegions ? "open-ocean:on" : "open-ocean:off",
+    runtimeState.showScenarioSpecialRegions ? "special:on" : "special:off",
+    runtimeState.showScenarioReliefOverlays ? "relief:on" : "relief:off",
+    runtimeState.showCityPoints ? "cities:on" : "cities:off",
+    runtimeState.showTransport ? "transport:on" : "transport:off",
+    runtimeState.showRoad ? "road:on" : "road:off",
+    runtimeState.showAirports ? "airports:on" : "airports:off",
+    runtimeState.showPorts ? "ports:on" : "ports:off",
+    runtimeState.showRail ? "rail:on" : "rail:off",
+    runtimeState.deferContextBasePass ? "context-base:deferred" : "context-base:ready",
+    `context-rev:${Number(runtimeState.contextLayerRevision || 0)}`,
+    `city-rev:${Number(runtimeState.cityLayerRevision || 0)}`,
+  ].join("|");
+}
+
+function getVisibleFrameIdentity(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  return {
+    scenarioId: String(runtimeState.activeScenarioId || ""),
+    selectionVersion: getRuntimeChunkSelectionVersion(),
+    topologyRevision: Math.max(0, Number(runtimeState.topologyRevision || 0)),
+    dpr: Math.max(1, Number(runtimeState.dpr || 1)),
+    pixelWidth: Math.max(1, Number(context?.canvas?.width || 1)),
+    pixelHeight: Math.max(1, Number(context?.canvas?.height || 1)),
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    contextFlagSignature: getVisibleContextFlagSignature(),
+    transformBucket: getTransformBucketSignature(transform),
+    transform: cloneZoomTransform(transform),
+  };
+}
+
+function clearLastGoodFrame(reason = "clear") {
+  const cache = getRenderPassCacheState();
+  if (!cache.lastGoodFrame || typeof cache.lastGoodFrame !== "object") return;
+  cache.lastGoodFrame.valid = false;
+  cache.lastGoodFrame.stale = false;
+  cache.lastGoodFrame.referenceTransform = null;
+  cache.lastGoodFrame.invalidatedAt = Date.now();
+  cache.lastGoodFrame.reason = String(reason || "clear");
+  cache.lastGoodFrame.staleReason = "";
+  cache.lastGoodFrame.rejectedReason = "";
+}
+
+function invalidateLastGoodFrame(reason = "visual-invalidation") {
+  const cache = getRenderPassCacheState();
+  if (!cache.lastGoodFrame || !cache.lastGoodFrame.valid) return;
+  cache.lastGoodFrame.stale = true;
+  cache.lastGoodFrame.invalidatedAt = Date.now();
+  cache.lastGoodFrame.staleReason = String(reason || "visual-invalidation");
+  cache.lastGoodFrame.reason = String(reason || "visual-invalidation");
+  recordRenderPerfMetric("continuityFrameMarkedStale", 0, {
+    reason: cache.lastGoodFrame.staleReason,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+}
+
+function invalidateInteractionComposite(reason = "interaction-composite-invalidation") {
+  const cache = getRenderPassCacheState();
+  if (!cache.interactionComposite || typeof cache.interactionComposite !== "object") return;
+  cache.interactionComposite.valid = false;
+  cache.interactionComposite.referenceTransform = null;
+  cache.interactionComposite.signature = "";
+  cache.interactionComposite.reason = String(reason || "interaction-composite-invalidation");
+  cache.interactionComposite.rejectedReason = String(reason || "interaction-composite-invalidation");
+}
+
+function invalidateRenderPasses(passNames, reason = "unspecified") {
+  const cache = getRenderPassCacheState();
+  const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
+  const targetPassNames = rawTargetPassNames.flatMap((passName) => {
+    if (passName === "context") {
+      return ["contextBase", "contextScenario"];
+    }
+    return [passName];
+  });
+  targetPassNames.forEach((passName) => {
+    if (!passName || !RENDER_PASS_NAMES.includes(passName)) return;
+    cache.dirty[passName] = true;
+    cache.reasons[passName] = String(reason || "unspecified");
+  });
+  if (targetPassNames.some((passName) => LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES.has(passName))) {
+    invalidateLastGoodFrame(reason);
+  }
+  if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
+    invalidateInteractionComposite(reason);
+  }
+  if (
+    targetPassNames.includes("political")
+    && !["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))
+  ) {
+    cache.partialPoliticalDirtyIds.clear();
+    invalidatePoliticalPathCache(reason);
+  }
+  if (targetPassNames.includes("borders")) {
+    invalidateInteractionBorderSnapshot(reason);
+  }
+}
+
+function invalidateAllRenderPasses(reason = "unspecified") {
+  invalidateRenderPasses(RENDER_PASS_NAMES, reason);
+}
+
+function releaseDeferredContextBasePass(reason = "deferred-context-release") {
+  const normalizedReason = String(reason || "deferred-context-release").trim() || "deferred-context-release";
+  if (!runtimeState.deferContextBasePass) {
+    return false;
+  }
+  const hadStagedContextBaseHandle = !!runtimeState.stagedContextBaseHandle;
+  runtimeState.deferContextBasePass = false;
+  cancelDeferredWork(runtimeState.stagedContextBaseHandle);
+  runtimeState.stagedContextBaseHandle = null;
+  if (hadStagedContextBaseHandle && runtimeState.deferHitCanvasBuild) {
+    scheduleStagedHitCanvasWarmup(nowMs(), Number(runtimeState.stagedMapDataToken || 0));
+  }
+  invalidateRenderPasses(["contextBase", "contextMarkers"], normalizedReason);
+  clearRenderPassReferenceTransforms(["contextBase", "contextMarkers"]);
+  requestRendererRender(normalizedReason, {
+    flush: true,
+    fallback: () => {
+      if (context) render();
+    },
+  });
+  recordRenderPerfMetric("releaseDeferredContextBasePass", 0, {
+    canceledStagedContextBase: hadStagedContextBaseHandle,
+    released: true,
+    reason: normalizedReason,
+  });
+  return true;
+}
+
+registerRuntimeHook(runtimeState, "releaseDeferredContextBasePassFn", releaseDeferredContextBasePass);
+
+function isBootInteractionReady() {
+  return String(runtimeState.bootPhase || "").trim().toLowerCase() === "ready" && !runtimeState.bootBlocking;
+}
+
+function clearRenderPassReferenceTransforms(passNames = null) {
+  const cache = getRenderPassCacheState();
+  if (!passNames) {
+    cache.referenceTransform = null;
+    cache.referenceTransforms = {};
+    cache.contextScenarioLayerCache = {};
+    invalidateInteractionComposite("clear-reference-transform");
+    invalidateInteractionBorderSnapshot("clear-reference-transform");
+    invalidatePoliticalPathCache("clear-reference-transform");
+    return;
+  }
+  const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
+  const targetPassNames = rawTargetPassNames.flatMap((passName) => {
+    if (passName === "context") {
+      return ["contextBase", "contextScenario"];
+    }
+    return [passName];
+  });
+  targetPassNames.forEach((passName) => {
+    if (!passName) return;
+    delete cache.referenceTransforms[passName];
+  });
+  cache.referenceTransform = null;
+  if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
+    invalidateInteractionComposite("clear-reference-transform");
+  }
+  if (targetPassNames.includes("political")) {
+    invalidatePoliticalPathCache("clear-reference-transform");
+  }
+  if (targetPassNames.includes("borders")) {
+    invalidateInteractionBorderSnapshot("clear-reference-transform");
+  }
+}
+
+function invalidateOceanVisualState(reason = "ocean-visual") {
+  cancelExactAfterSettleRefresh({ clearDefer: true });
+  invalidateRenderPasses(["background", "physicalBase", "political", "contextBase", "contextScenario"], reason);
+  clearRenderPassReferenceTransforms(["background", "physicalBase", "political", "contextBase", "contextScenario", "effects", "lineEffects", "contextMarkers", "dayNight", "textureLabels"]);
+}
+
+function invalidateOceanBackgroundVisualState(reason = "ocean-background") {
+  cancelExactAfterSettleRefresh({ clearDefer: true });
+  invalidateRenderPasses("background", reason);
+  clearRenderPassReferenceTransforms("background");
+}
+
+function invalidateOceanTextureVisualState(reason = "ocean-texture") {
+  cancelExactAfterSettleRefresh({ clearDefer: true });
+  invalidateRenderPasses(["background", "physicalBase", "effects"], reason);
+  clearRenderPassReferenceTransforms(["background", "physicalBase", "effects"]);
+}
+
+function invalidateOceanWaterInteractionVisualState(reason = "ocean-water-interaction") {
+  resetScenarioWaterCacheAdaptiveState(reason);
+  cancelExactAfterSettleRefresh({ clearDefer: true });
+  invalidateRenderPasses(["background", "physicalBase", "contextScenario"], reason);
+  clearRenderPassReferenceTransforms(["background", "physicalBase", "contextScenario"]);
+}
+
+function invalidateOceanCoastalAccentVisualState(reason = "ocean-coastal-accent") {
+  cancelExactAfterSettleRefresh({ clearDefer: true });
+  invalidateRenderPasses("borders", reason);
+  clearRenderPassReferenceTransforms("borders");
+}
+
+function getRenderPassLayout(passName) {
+  return getRenderCacheOwner().getRenderPassLayout(passName);
+}
+
+function resizeRenderPassCanvases() {
+  return getRenderCacheOwner().resizeRenderPassCanvases();
+}
+
+function ensureRenderPassCanvas(passName) {
+  return getRenderCacheOwner().ensureRenderPassCanvas(passName);
+}
+
+function ensureLastGoodFrameCanvas() {
+  return getRenderCacheOwner().ensureLastGoodFrameCanvas();
+}
+
+function ensureInteractionCompositeCanvas() {
+  return getRenderCacheOwner().ensureInteractionCompositeCanvas();
+}
+
+function ensureCompositeBufferCanvas() {
+  return getRenderCacheOwner().ensureCompositeBufferCanvas();
+}
+
+function getInteractionCompositeSignature(cache = getRenderPassCacheState()) {
+  return getRenderCacheOwner().getInteractionCompositeSignature(cache);
+}
+
+function canDrawInteractionComposite(currentTransform, cache = getRenderPassCacheState()) {
+  return getRenderCacheOwner().canDrawInteractionComposite(currentTransform, cache);
+}
+
+function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  if (!context?.canvas) return false;
+  const targetCanvas = ensureLastGoodFrameCanvas();
+  const targetContext = targetCanvas.getContext("2d");
+  if (!targetContext) return false;
+  targetContext.setTransform(1, 0, 0, 1, 0, 0);
+  targetContext.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+  targetContext.drawImage(context.canvas, 0, 0);
+  const cache = getRenderPassCacheState();
+  const identity = getVisibleFrameIdentity(transform);
+  cache.lastGoodFrame.referenceTransform = cloneZoomTransform(transform);
+  cache.lastGoodFrame.capturedAt = Date.now();
+  cache.lastGoodFrame.invalidatedAt = 0;
+  cache.lastGoodFrame.valid = true;
+  cache.lastGoodFrame.stale = false;
+  cache.lastGoodFrame.reason = String(reason || "frame");
+  cache.lastGoodFrame.staleReason = "";
+  cache.lastGoodFrame.rejectedReason = "";
+  cache.lastGoodFrame.scenarioId = identity.scenarioId;
+  cache.lastGoodFrame.selectionVersion = identity.selectionVersion;
+  cache.lastGoodFrame.contextFlagSignature = identity.contextFlagSignature;
+  cache.lastGoodFrame.topologyRevision = identity.topologyRevision;
+  cache.lastGoodFrame.colorRevision = identity.colorRevision;
+  cache.lastGoodFrame.dpr = identity.dpr;
+  cache.lastGoodFrame.pixelWidth = identity.pixelWidth;
+  cache.lastGoodFrame.pixelHeight = identity.pixelHeight;
+  return true;
+}
+
+function noteBlackFrame(reason = "unknown") {
+  incrementPerfCounter("blackFrameCount");
+  const cache = getRenderPassCacheState();
+  const count = Number(cache.counters.blackFrameCount || 0);
+  ensureRenderPerfMetrics().blackFrameCount = {
+    count,
+    reason: String(reason || "unknown"),
+    recordedAt: Date.now(),
+  };
+}
+
+function noteMissingVisibleFrame(reason = "unknown") {
+  incrementPerfCounter("missingVisibleFrameCount");
+  const cache = getRenderPassCacheState();
+  const count = Number(cache.counters.missingVisibleFrameCount || 0);
+  recordRenderPerfMetric("missingVisibleFrameCount", 0, {
+    count,
+    reason: String(reason || "unknown"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+}
+
+function noteMissingVisibleFrameSkippedDuringInteraction(reason = "unknown") {
+  incrementPerfCounter("missingVisibleFrameSkippedDuringInteraction");
+  const cache = getRenderPassCacheState();
+  const count = Number(cache.counters.missingVisibleFrameSkippedDuringInteraction || 0);
+  recordRenderPerfMetric("missingVisibleFrameSkippedDuringInteraction", 0, {
+    count,
+    reason: String(reason || "unknown"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    phase: String(runtimeState.renderPhase || ""),
+  });
+}
+
+function markFirstVisibleFramePainted(reason = "visible-frame") {
+  if (runtimeState.firstVisibleFramePainted) return;
+  runtimeState.firstVisibleFramePainted = true;
+  recordRenderPerfMetric("firstVisibleFramePainted", 0, {
+    reason: String(reason || "visible-frame"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+}
+
+function resetFirstVisibleFramePainted(reason = "visible-frame-reset") {
+  runtimeState.firstVisibleFramePainted = false;
+  recordRenderPerfMetric("firstVisibleFramePaintedReset", 0, {
+    reason: String(reason || "visible-frame-reset"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+}
+
+function canDrawBaseVisibleFrameFallback() {
+  return !runtimeState.firstVisibleFramePainted || !Array.isArray(runtimeState.landData?.features) || runtimeState.landData.features.length === 0;
+}
+
+function drawBaseVisibleFrameFallback(reason = "base-fill") {
+  if (!context?.canvas) return false;
+  if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING && runtimeState.firstVisibleFramePainted) {
+    noteMissingVisibleFrameSkippedDuringInteraction(`${reason}-skipped-during-interaction`);
+    return false;
+  }
+  if (!canDrawBaseVisibleFrameFallback()) {
+    return false;
+  }
+  resetMainCanvas();
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.fillStyle = getOceanBaseFillColor();
+  context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+  context.restore();
+  noteMissingVisibleFrame(reason);
+  return true;
+}
+
+function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const cache = getRenderPassCacheState();
+  const fallbackCanvas = cache.lastGoodFrame?.canvas;
+  const referenceTransform = cache.lastGoodFrame?.referenceTransform;
+  const frame = cache.lastGoodFrame || {};
+  if (!fallbackCanvas || !frame.valid || !referenceTransform) {
+    return false;
+  }
+  const identity = getVisibleFrameIdentity(currentTransform);
+  const staleSince = frame.stale && Number(frame.invalidatedAt || 0) > 0
+    ? Number(frame.invalidatedAt || 0)
+    : Number(frame.capturedAt || 0);
+  const staleAgeMs = Math.max(0, Date.now() - staleSince);
+  const reject = (reason) => {
+    frame.rejectedReason = String(reason || "unknown");
+    recordRenderPerfMetric("continuityFrameRejected", 0, {
+      reason: frame.rejectedReason,
+      staleAgeMs,
+      activeScenarioId: identity.scenarioId,
+    });
+    return false;
+  };
+  if (String(frame.scenarioId || "") !== identity.scenarioId) {
+    return reject("scenario-mismatch");
+  }
+  if (Number(frame.selectionVersion || 0) !== identity.selectionVersion) {
+    return reject("selection-version-mismatch");
+  }
+  if (String(frame.contextFlagSignature || "") !== identity.contextFlagSignature) {
+    return reject("context-flag-mismatch");
+  }
+  if (Number(frame.pixelWidth || 0) !== identity.pixelWidth || Number(frame.pixelHeight || 0) !== identity.pixelHeight) {
+    return reject("canvas-size-mismatch");
+  }
+  if (Math.abs(Number(frame.dpr || 1) - identity.dpr) > 0.01) {
+    recordRenderPerfMetric("continuityFrameRelaxedReuse", 0, {
+      reasons: "dpr-mismatch",
+      staleAgeMs,
+      activeScenarioId: identity.scenarioId,
+      frameDpr: Number(frame.dpr || 1),
+      currentDpr: identity.dpr,
+    });
+  }
+  if (Number(frame.topologyRevision || 0) !== identity.topologyRevision) {
+    return reject("topology-revision-mismatch");
+  }
+  if (Number(frame.colorRevision || 0) !== identity.colorRevision) {
+    return reject("color-revision-mismatch");
+  }
+  if (frame.stale && staleAgeMs > CONTINUITY_FRAME_MAX_STALE_AGE_MS) {
+    return reject("stale-age-limit");
+  }
+  const current = cloneZoomTransform(currentTransform);
+  const reference = cloneZoomTransform(referenceTransform);
+  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
+  const dx = current.x - (reference.x * scaleRatio);
+  const dy = current.y - (reference.y * scaleRatio);
+  resetMainCanvas();
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
+  context.scale(scaleRatio, scaleRatio);
+  context.drawImage(fallbackCanvas, 0, 0);
+  context.restore();
+  incrementPerfCounter("lastGoodFrameReuses");
+  if (frame.stale) {
+    incrementPerfCounter("continuityFrameReuses");
+  }
+  recordRenderPerfMetric("dragVisibleStaleFrameMs", staleAgeMs, {
+    phase: runtimeState.renderPhase,
+    reason: String(frame.reason || "last-good-frame"),
+    stale: !!frame.stale,
+    staleReason: String(frame.staleReason || ""),
+  });
+  if (frame.stale) {
+    recordRenderPerfMetric("continuityFrameStaleAgeMs", staleAgeMs, {
+      reason: String(frame.staleReason || frame.reason || "continuity-frame"),
+      activeScenarioId: identity.scenarioId,
+    });
+  }
+  return true;
+}
+
+function buildInteractionBorderSnapshotLayout() {
+  return getInteractionBorderSnapshotOwner().buildInteractionBorderSnapshotLayout();
+}
+
+function getInteractionBorderSnapshotState() {
+  return getInteractionBorderSnapshotOwner().getInteractionBorderSnapshotState();
+}
+
+function ensureInteractionBorderSnapshotCanvas() {
+  return getInteractionBorderSnapshotOwner().ensureInteractionBorderSnapshotCanvas();
+}
+
+function getPoliticalPassStaticSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  return [
+    getTransformSignature(transform),
+    runtimeState.topologyRevision || 0,
+    `ocean-fill:${getOceanBaseFillColor()}`,
+    debugMode,
+    runtimeState.topologyBundleMode || "single",
+  ].join("::");
+}
+
+function getPoliticalPathCacheSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  return [
+    getPoliticalPassStaticSignature(transform),
+    getProjectionRenderSignature(),
+    getViewportRenderSignature(),
+    String(runtimeState.activeScenarioId || ""),
+    String(runtimeState.scenarioViewMode || "ownership"),
+    Number(runtimeState.sovereigntyRevision || 0),
+    Number(runtimeState.scenarioControllerRevision || 0),
+    Number(runtimeState.scenarioShellOverlayRevision || 0),
+  ].join("::");
+}
+
+function cancelPoliticalPathWarmup(reason = "unspecified") {
+  const cache = getRenderPassCacheState();
+  const hadWork =
+    !!cache.politicalPathWarmupHandle
+    || (Array.isArray(cache.politicalPathWarmupQueue) && cache.politicalPathWarmupQueue.length > 0)
+    || !!cache.politicalPathWarmupSignature;
+  if (cache.politicalPathWarmupHandle) {
+    cancelDeferredWork(cache.politicalPathWarmupHandle);
+  }
+  cache.politicalPathWarmupHandle = null;
+  cache.politicalPathWarmupQueue = [];
+  cache.politicalPathWarmupSignature = "";
+  cache.politicalPathWarmupReason = String(reason || "unspecified");
+  if (hadWork) {
+    incrementPerfCounter("politicalPathWarmupCancels");
+  }
+}
+
+function invalidatePoliticalPathCache(reason = "unspecified") {
+  const cache = getRenderPassCacheState();
+  cancelPoliticalPathWarmup(reason);
+  if (cache.politicalPathCache instanceof Map) {
+    cache.politicalPathCache.clear();
+  } else {
+    cache.politicalPathCache = new Map();
+  }
+  cache.politicalPathCacheSignature = "";
+  cache.politicalPathCacheTransform = null;
+  cache.politicalPathCacheReason = String(reason || "unspecified");
+}
+
+function getPoliticalPathCacheHandle(
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  { resetIfMismatch = false } = {},
+) {
+  const cache = getRenderPassCacheState();
+  const signature = getPoliticalPathCacheSignature(transform);
+  const valid =
+    cache.politicalPathCache instanceof Map
+    && cache.politicalPathCacheSignature === signature
+    && areZoomTransformsEquivalent(cache.politicalPathCacheTransform, transform);
+  if (valid) {
+    return {
+      cache,
+      signature,
+      valid: true,
+      map: cache.politicalPathCache,
+    };
+  }
+  if (resetIfMismatch) {
+    if (!(cache.politicalPathCache instanceof Map)) {
+      cache.politicalPathCache = new Map();
+    } else {
+      cache.politicalPathCache.clear();
+    }
+    cache.politicalPathCacheSignature = signature;
+    cache.politicalPathCacheTransform = cloneZoomTransform(transform);
+    cache.politicalPathCacheReason = "prepared";
+  }
+  return {
+    cache,
+    signature,
+    valid: resetIfMismatch,
+    map: cache.politicalPathCache instanceof Map ? cache.politicalPathCache : new Map(),
+  };
+}
+
+function buildPoliticalFeaturePathEntry(feature) {
+  if (!feature?.geometry || !globalThis.Path2D || typeof pathSVG !== "function") {
+    return null;
+  }
+  try {
+    const pathString = pathSVG(feature);
+    if (!pathString) return null;
+    return {
+      path: new globalThis.Path2D(pathString),
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+function getPoliticalFeaturePathEntry(
+  feature,
+  {
+    featureId = null,
+    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+    allowBuild = false,
+    countMiss = false,
+    countBuild = false,
+  } = {},
+) {
+  const resolvedId = featureId || getFeatureId(feature);
+  if (!resolvedId) return null;
+  const handle = getPoliticalPathCacheHandle(transform, { resetIfMismatch: allowBuild });
+  if (!handle.valid || !(handle.map instanceof Map)) {
+    if (countMiss) incrementPerfCounter("politicalPartialPathCacheMisses");
+    return null;
+  }
+  const cachedEntry = handle.map.get(resolvedId);
+  if (cachedEntry?.path) {
+    return cachedEntry;
+  }
+  if (countMiss) incrementPerfCounter("politicalPartialPathCacheMisses");
+  if (!allowBuild) {
+    return null;
+  }
+  const builtEntry = buildPoliticalFeaturePathEntry(feature);
+  if (!builtEntry?.path) {
+    return null;
+  }
+  handle.map.set(resolvedId, builtEntry);
+  if (countBuild) incrementPerfCounter("politicalPathCacheBuild");
+  return builtEntry;
+}
+
+function collectWarmupCandidateItems(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const viewportWidth = Math.max(1, Number(runtimeState.width || 1));
+  const viewportHeight = Math.max(1, Number(runtimeState.height || 1));
+  const overscan = Math.max(0, Number(POLITICAL_PATH_WARMUP_OVERSCAN_PX || 0));
+  const viewportRect = {
+    minX: -overscan,
+    minY: -overscan,
+    maxX: viewportWidth + overscan,
+    maxY: viewportHeight + overscan,
+  };
+  const projectedViewportRect = screenRectToProjectedRect(viewportRect, transform);
+  if (!projectedViewportRect) return null;
+  const candidateResult = collectLandSpatialItemsForProjectedRects([projectedViewportRect]);
+  if (!candidateResult || candidateResult.overflow) {
+    return null;
+  }
+  const normalizedTransform = cloneZoomTransform(transform);
+  const centerX = ((viewportWidth / 2) - normalizedTransform.x) / normalizedTransform.k;
+  const centerY = ((viewportHeight / 2) - normalizedTransform.y) / normalizedTransform.k;
+  return candidateResult.items
+    .map((item) => ({
+      ...item,
+      warmupDistance: Math.hypot(
+        (((Number(item?.minX || 0) + Number(item?.maxX || 0)) / 2) - centerX),
+        (((Number(item?.minY || 0) + Number(item?.maxY || 0)) / 2) - centerY),
+      ),
+    }))
+    .sort((left, right) => {
+      const distanceDelta = Number(left?.warmupDistance || 0) - Number(right?.warmupDistance || 0);
+      if (Math.abs(distanceDelta) > 0.001) return distanceDelta;
+      return (left?.drawOrder ?? 0) - (right?.drawOrder ?? 0);
+    })
+    .slice(0, POLITICAL_PATH_WARMUP_QUEUE_MAX);
+}
+
+function runPoliticalPathWarmupSlice(deadline = null) {
+  const cache = getRenderPassCacheState();
+  cache.politicalPathWarmupHandle = null;
+  if (
+    runtimeState.renderPhase !== RENDER_PHASE_IDLE
+    || runtimeState.deferExactAfterSettle
+    || cache.dirty?.political
+  ) {
+    cancelPoliticalPathWarmup("warmup-non-idle");
+    return false;
+  }
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+  const expectedSignature = getPoliticalPathCacheSignature(transform);
+  if (
+    cache.politicalPathWarmupSignature !== expectedSignature
+    || (
+      cache.politicalPathCacheSignature
+      && cache.politicalPathCacheSignature !== expectedSignature
+    )
+  ) {
+    invalidatePoliticalPathCache("warmup-signature-mismatch");
+    return false;
+  }
+  if (!Array.isArray(cache.politicalPathWarmupQueue) || !cache.politicalPathWarmupQueue.length) {
+    cache.politicalPathWarmupQueue = [];
+    cache.politicalPathWarmupSignature = "";
+    return false;
+  }
+  const handle = getPoliticalPathCacheHandle(transform, { resetIfMismatch: true });
+  if (!handle.valid || !(handle.map instanceof Map)) {
+    invalidatePoliticalPathCache("warmup-handle-invalid");
+    return false;
+  }
+  const startedAt = nowMs();
+  let processedCount = 0;
+  let builtCount = 0;
+  while (cache.politicalPathWarmupQueue.length > 0) {
+    if (processedCount >= POLITICAL_PATH_WARMUP_MAX_FEATURES_PER_SLICE) break;
+    if (processedCount > 0 && (nowMs() - startedAt) >= POLITICAL_PATH_WARMUP_CPU_BUDGET_MS) break;
+    if (
+      processedCount > 0
+      && deadline
+      && typeof deadline.timeRemaining === "function"
+      && deadline.timeRemaining() <= 0
+    ) {
+      break;
+    }
+    const nextItem = cache.politicalPathWarmupQueue.shift();
+    if (!nextItem?.id || !nextItem?.feature) continue;
+    processedCount += 1;
+    if (handle.map.get(nextItem.id)?.path) continue;
+    const pathEntry = getPoliticalFeaturePathEntry(nextItem.feature, {
+      featureId: nextItem.id,
+      transform,
+      allowBuild: true,
+      countBuild: true,
+    });
+    if (pathEntry?.path) {
+      builtCount += 1;
+      incrementPerfCounter("politicalPathWarmupBuild");
+    }
+  }
+  incrementPerfCounter("politicalPathWarmupSlices");
+  const durationMs = nowMs() - startedAt;
+  recordRenderPerfMetric("politicalPathWarmupSlice", durationMs, {
+    builtCount,
+    processedCount,
+    remainingCount: cache.politicalPathWarmupQueue.length,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    transformK: Number(transform?.k || 1),
+  });
+  recordRenderPerfMetric("politicalPathWarmup", durationMs, {
+    builtCount,
+    processedCount,
+    remainingCount: cache.politicalPathWarmupQueue.length,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    transformK: Number(transform?.k || 1),
+  });
+  if (cache.politicalPathWarmupQueue.length > 0) {
+    cache.politicalPathWarmupHandle = scheduleDeferredWork(runPoliticalPathWarmupSlice, {
+      timeout: POLITICAL_PATH_WARMUP_TIMEOUT_MS,
+    });
+  } else {
+    cache.politicalPathWarmupSignature = "";
+  }
+  return builtCount > 0;
+}
+
+function schedulePoliticalPathWarmup(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const cache = getRenderPassCacheState();
+  if (
+    runtimeState.renderPhase !== RENDER_PHASE_IDLE
+    || runtimeState.deferExactAfterSettle
+    || cache.dirty?.political
+  ) {
+    return false;
+  }
+  const signature = getPoliticalPathCacheSignature(transform);
+  const candidateItems = collectWarmupCandidateItems(transform);
+  if (!Array.isArray(candidateItems)) {
+    cancelPoliticalPathWarmup("warmup-spatial-unavailable");
+    return false;
+  }
+  const handle = getPoliticalPathCacheHandle(transform, { resetIfMismatch: false });
+  const cacheMap = handle.valid && handle.map instanceof Map ? handle.map : null;
+  const queue = candidateItems.filter((item) => item?.id && item?.feature && !cacheMap?.get(item.id)?.path);
+  if (!queue.length) {
+    cancelPoliticalPathWarmup("warmup-complete");
+    return false;
+  }
+  if (cache.politicalPathWarmupHandle) {
+    cancelDeferredWork(cache.politicalPathWarmupHandle);
+  }
+  cache.politicalPathWarmupHandle = null;
+  cache.politicalPathWarmupQueue = queue;
+  cache.politicalPathWarmupSignature = signature;
+  cache.politicalPathWarmupReason = "scheduled";
+  cache.politicalPathWarmupHandle = scheduleDeferredWork(runPoliticalPathWarmupSlice, {
+    timeout: POLITICAL_PATH_WARMUP_TIMEOUT_MS,
+  });
+  return true;
+}
+
+function invalidateInteractionBorderSnapshot(reason = "unspecified") {
+  // 入口负责编排 snapshot 生命周期与时机，像素细节由 owner 实现。
+  return getInteractionBorderSnapshotOwner().invalidateInteractionBorderSnapshot(reason);
+}
+
+function captureInteractionBorderSnapshot(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  // 入口负责编排 snapshot 生命周期与时机，像素细节由 owner 实现。
+  return getInteractionBorderSnapshotOwner().captureInteractionBorderSnapshot(transform);
+}
+
+function drawInteractionBorderSnapshot(currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity) {
+  // 入口负责编排 snapshot 生命周期与时机，像素细节由 owner 实现。
+  return getInteractionBorderSnapshotOwner().drawInteractionBorderSnapshot(currentTransform);
+}
+
+function getScenarioRuntimeTopologySignatureToken() {
+  const runtimeTopology = runtimeState.scenarioRuntimeTopologyData || runtimeState.runtimePoliticalTopology || null;
+  return [
+    estimateTopologyObjectArcRefs(runtimeTopology, "political") ?? "na",
+    estimateTopologyObjectArcRefs(runtimeTopology, "land_mask") ?? "na",
+    estimateTopologyObjectArcRefs(runtimeTopology, "context_land_mask") ?? "na",
+    estimateTopologyObjectArcRefs(runtimeTopology, "scenario_water") ?? "na",
+    estimateTopologyObjectArcRefs(runtimeTopology, "scenario_special_land") ?? "na",
+  ].join("|");
+}
+
+function getScenarioDetailPhaseSignatureToken() {
+  return [
+    String(runtimeState.topologyBundleMode || "single"),
+    runtimeState.detailPromotionCompleted ? "detail-ready" : "detail-pending",
+    runtimeState.detailPromotionInFlight ? "detail-in-flight" : "detail-idle",
+  ].join("/");
+}
+
+function isScenarioWaterTopologyExclusiveMode() {
+  return String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962";
+}
+
+function getScenarioSurfaceVersionSignal() {
+  const maskInfo = getPhysicalLandMaskInfo();
+  const runtimeTopologyRef = runtimeState.scenarioRuntimeTopologyData || runtimeState.runtimePoliticalTopology || null;
+  const effectiveWaterFeatureCount = getEffectiveWaterRegionFeatures().length;
+  return [
+    runtimeState.activeScenarioId || "",
+    `runtime-tag:${String(runtimeState.scenarioRuntimeTopologyVersionTag || "").trim() || `${getObjectIdentityToken(runtimeTopologyRef, "scenario-runtime-topology")}:${getScenarioRuntimeTopologySignatureToken()}`}`,
+    `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
+    `mask-tag:${String(runtimeState.scenarioContextLandMaskVersionTag || runtimeState.scenarioLandMaskVersionTag || "").trim() || `${maskInfo.maskSource}:${getObjectIdentityToken(maskInfo.collection, "scenario-mask")}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`}`,
+    `water-ref:${getObjectIdentityToken(runtimeState.scenarioWaterRegionsData, "scenario-water")}`,
+    `water-tag:${String(runtimeState.scenarioWaterOverlayVersionTag || "").trim() || `features:${effectiveWaterFeatureCount}`}`,
+  ].join("|");
+}
+
+function getScenarioWaterVisualRevisionToken() {
+  const effectiveWaterFeatureCount = getEffectiveWaterRegionFeatures().length;
+  return [
+    getScenarioSurfaceVersionSignal(),
+    `water-effective:${effectiveWaterFeatureCount}`,
+    `water-scenario:${getFeatureCollectionFeatureCount(runtimeState.scenarioWaterRegionsData)}`,
+    `water-overrides:${stableJson(runtimeState.waterRegionOverrides || {})}`,
+    runtimeState.showWaterRegions ? "scenario-water:on" : "scenario-water:off",
+    runtimeState.showOpenOceanRegions ? "open-ocean:on" : "open-ocean:off",
+    runtimeState.allowOpenOceanSelect ? "open-ocean-select:on" : "open-ocean-select:off",
+    runtimeState.allowOpenOceanPaint ? "open-ocean-paint:on" : "open-ocean-paint:off",
+    `ocean-fill:${getOceanBaseFillColor()}`,
+    `lake-fill:${getLakeBaseFillColor()}`,
+    `lake-style:${stableJson(getLakeStyleConfig())}`,
+  ].join("|");
+}
+
+function getScenarioSpecialVisualRevisionToken() {
+  return [
+    runtimeState.topologyRevision || 0,
+    runtimeState.activeScenarioId || "",
+    `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
+    `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
+    `special-ref:${getObjectIdentityToken(runtimeState.scenarioSpecialRegionsData, "scenario-special")}`,
+    `special-count:${getFeatureCollectionFeatureCount(runtimeState.scenarioSpecialRegionsData)}`,
+    `special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}`,
+    runtimeState.showScenarioSpecialRegions ? "scenario-special:on" : "scenario-special:off",
+  ].join("|");
+}
+
+function getScenarioReliefVisualRevisionToken() {
+  return [
+    runtimeState.topologyRevision || 0,
+    runtimeState.activeScenarioId || "",
+    Number(runtimeState.scenarioReliefOverlayRevision || 0),
+    `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
+    `relief-count:${getFeatureCollectionFeatureCount(runtimeState.scenarioReliefOverlaysData)}`,
+    runtimeState.showScenarioReliefOverlays ? "scenario-relief:on" : "scenario-relief:off",
+  ].join("|");
+}
+
+function getScenarioOverlaySignatureToken() {
+  return [
+    String(runtimeState.topologyBundleMode || "single"),
+    runtimeState.detailPromotionCompleted ? "detail-ready" : "detail-pending",
+    runtimeState.detailPromotionInFlight ? "detail-in-flight" : "detail-idle",
+    `water:${getScenarioWaterVisualRevisionToken()}`,
+    `special:${getScenarioSpecialVisualRevisionToken()}`,
+    `relief:${getScenarioReliefVisualRevisionToken()}`,
+  ].join("|");
+}
+
+function getRenderPassTransformSignature(passName, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  if (
+    VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES.has(passName)
+    && shouldEnableContextBaseTransformReuse()
+  ) {
+    return [
+      "transform-reuse",
+      getViewportRenderSignature(),
+      Number(Number(runtimeState.dpr || 1).toFixed(2)),
+    ].join("::");
+  }
+  return getTransformSignature(transform);
+}
+
+function getRenderPassSignature(passName, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const transformSignature = getRenderPassTransformSignature(passName, transform);
+  if (passName === "background") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.oceanMaskMode || "topology_ocean",
+      Number(runtimeState.oceanMaskQuality || 1).toFixed(3),
+      stableJson(runtimeState.styleConfig?.ocean || {}),
+    ].join("::");
+  }
+  if (passName === "physicalBase") {
+    const maskInfo = getPhysicalLandMaskInfo();
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.showPhysical ? "physical:on" : "physical:off",
+      `mask:${maskInfo.maskSource}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`,
+      `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
+      stableJson(normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical || {})),
+    ].join("::");
+  }
+  if (passName === "political") {
+    return [
+      runtimeState.colorRevision || 0,
+      getPoliticalPassStaticSignature(transform),
+    ].join("::");
+  }
+  if (passName === "effects") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      stableJson(normalizeTextureStyleConfig(runtimeState.styleConfig?.texture || {})),
+    ].join("::");
+  }
+  if (passName === "lineEffects") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      stableJson(normalizeTextureStyleConfig(runtimeState.styleConfig?.texture || {})),
+    ].join("::");
+  }
+  if (passName === "contextBase") {
+    const maskInfo = getPhysicalLandMaskInfo();
+    const zoomBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
+    const baseSignatureParts = [
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.deferContextBasePass ? "context-base:deferred" : "context-base:ready",
+      `bucket:${zoomBucket}`,
+      runtimeState.showPhysical ? "physical:on" : "physical:off",
+      runtimeState.showUrban ? "urban:on" : "urban:off",
+      runtimeState.showRivers ? "rivers:on" : "rivers:off",
+      `context:${Number(runtimeState.contextLayerRevision || 0)}`,
+      `context-colors:${shouldRefreshContextBaseForColorChanges() ? Number(runtimeState.colorRevision || 0) : 0}`,
+      `mask:${maskInfo.maskSource}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`,
+      `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
+      String(runtimeState.renderProfile || "auto"),
+      stableJson(normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical || {})),
+      stableJson(normalizeUrbanStyleConfig(runtimeState.styleConfig?.urban || {})),
+      stableJson(runtimeState.styleConfig?.rivers || {}),
+    ];
+    if (shouldEnableContextBaseTransformReuse()) {
+      return [
+        getViewportRenderSignature(),
+        "context-base-transform-reuse",
+        ...baseSignatureParts,
+      ].join("::");
+    }
+    return [
+      transformSignature,
+      ...baseSignatureParts,
+    ].join("::");
+  }
+  if (passName === "contextMarkers") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.deferContextBasePass ? "context-markers:deferred" : "context-markers:ready",
+      runtimeState.showCityPoints ? "cities:on" : "cities:off",
+      runtimeState.showTransport ? "transport:on" : "transport:off",
+      runtimeState.showRoad ? "road:on" : "road:off",
+      runtimeState.showAirports ? "airports:on" : "airports:off",
+      runtimeState.showPorts ? "ports:on" : "ports:off",
+      runtimeState.showRail ? "rail:on" : "rail:off",
+      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
+      `colors:${Number(runtimeState.colorRevision || 0)}`,
+      `context:${Number(runtimeState.contextLayerRevision || 0)}`,
+      stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
+      stableJson(normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {})),
+    ].join("::");
+  }
+  if (passName === "contextScenario") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.scenarioReliefOverlayRevision || 0,
+      `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
+      `scenario-overlays:${getScenarioOverlaySignatureToken()}`,
+      runtimeState.showWaterRegions ? "scenario-water:on" : "scenario-water:off",
+      runtimeState.showOpenOceanRegions ? "open-ocean:on" : "open-ocean:off",
+      runtimeState.showScenarioSpecialRegions ? "scenario-special:on" : "scenario-special:off",
+      runtimeState.showScenarioReliefOverlays ? "scenario-relief:on" : "scenario-relief:off",
+      `ocean-fill:${getOceanBaseFillColor()}`,
+      `lake-fill:${getLakeBaseFillColor()}`,
+      `lake-style:${stableJson(getLakeStyleConfig())}`,
+    ].join("::");
+  }
+  if (passName === "textureLabels") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      stableJson(normalizeTextureStyleConfig(runtimeState.styleConfig?.texture || {})),
+    ].join("::");
+  }
+  if (passName === "dayNight") {
+    const dayNightConfig = getDayNightStyleConfig();
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      stableJson(dayNightConfig),
+      getDayNightSignatureClockToken(dayNightConfig),
+    ].join("::");
+  }
+  if (passName === "labels") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.showCityPoints ? "cities:on" : "cities:off",
+      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
+      `colors:${Number(runtimeState.colorRevision || 0)}`,
+      stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
+    ].join("::");
+  }
+  if (passName === "borders") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.colorRevision || 0,
+      runtimeState.cachedDynamicBordersHash || "",
+      runtimeState.sovereigntyRevision || 0,
+      runtimeState.scenarioControllerRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.scenarioBorderMode || "canonical",
+      runtimeState.scenarioViewMode || "ownership",
+      stableJson(runtimeState.parentBorderEnabledByCountry || {}),
+      stableJson(runtimeState.styleConfig?.internalBorders || {}),
+      stableJson(runtimeState.styleConfig?.empireBorders || {}),
+      stableJson(runtimeState.styleConfig?.coastlines || {}),
+      stableJson(runtimeState.styleConfig?.parentBorders || {}),
+    ].join("::");
+  }
+  return transformSignature;
+}
+
+function resolveHitMode() {
+  const raw = readSearchParam(HIT_MODE_PARAM);
+  if (!raw) return "auto";
+  if (!HIT_MODES.has(raw)) return "auto";
+  return raw;
+}
+
+function isDynamicBordersEnabled() {
+  if (!runtimeState.runtimePoliticalTopology?.objects?.political || !globalThis.topojson) {
+    return false;
+  }
+  const raw = readSearchParam("dynamic_borders");
+  if (!raw) return runtimeState.dynamicBordersEnabled !== false;
+  return !["0", "false", "off", "no"].includes(raw);
+}
+
+function isSovereigntyModeActive() {
+  return String(runtimeState.paintMode || "visual").toLowerCase() === "sovereignty";
+}
+
+function clearPendingDynamicBorderTimer() {
+  if (runtimeState.pendingDynamicBorderTimerId) {
+    globalThis.clearTimeout(runtimeState.pendingDynamicBorderTimerId);
+    runtimeState.pendingDynamicBorderTimerId = null;
+  }
+}
+
+function updateDynamicBorderStatusUI() {
+  if (typeof runtimeState.updateDynamicBorderStatusUIFn === "function") {
+    runtimeState.updateDynamicBorderStatusUIFn();
+  }
+}
+
+function markDynamicBordersDirty(reason = "") {
+  if (!isDynamicBordersEnabled()) {
+    runtimeState.dynamicBordersDirty = false;
+    runtimeState.dynamicBordersDirtyReason = "";
+    updateDynamicBorderStatusUI();
+    return;
+  }
+  runtimeState.dynamicBordersDirty = true;
+  runtimeState.dynamicBordersDirtyReason = String(reason || "").trim();
+  updateDynamicBorderStatusUI();
+}
+
+function resetRenderDiagnostics() {
+  renderDiag.enabled = isRenderDiagEnabled();
+  renderDiag.seenKeys = new Set();
+  renderDiag.skippedByReason = new Map();
+  renderDiag.skippedByCountry = new Map();
+  renderDiag.sampleByReason = new Map();
+  runtimeState.projectedBoundsDiagnostics = createDefaultProjectedBoundsDiagnostics();
+  if (!renderDiag.enabled) {
+    delete globalThis.__mapRenderDiag;
+  } else {
+    globalThis.__mapRenderDiag = {
+      enabled: true,
+      skippedTotal: 0,
+      skippedByReason: {},
+      skippedByCountry: {},
+      sampleByReason: {},
+    };
+    console.info(`[map_renderer] ${RENDER_DIAG_PARAM}=1 enabled. Collecting skip diagnostics.`);
+  }
+}
+
+function recordSkipDiagnostic(feature, decision) {
+  if (!renderDiag.enabled || !decision?.skip) return;
+  const featureId = decision.featureId || getFeatureId(feature) || "(unknown)";
+  const reason = decision.reason || "unknown";
+  const country = decision.countryCode || getFeatureCountryCodeNormalized(feature) || "UNK";
+  const key = `${reason}::${featureId}`;
+  if (renderDiag.seenKeys.has(key)) return;
+  renderDiag.seenKeys.add(key);
+
+  renderDiag.skippedByReason.set(reason, (renderDiag.skippedByReason.get(reason) || 0) + 1);
+  renderDiag.skippedByCountry.set(country, (renderDiag.skippedByCountry.get(country) || 0) + 1);
+
+  const reasonSamples = renderDiag.sampleByReason.get(reason) || [];
+  if (reasonSamples.length < 30) {
+    reasonSamples.push({
+      id: featureId,
+      country,
+      name: String(feature?.properties?.name || "").trim(),
+      bounds: decision.bounds || null,
+    });
+    renderDiag.sampleByReason.set(reason, reasonSamples);
+  }
+
+  globalThis.__mapRenderDiag = {
+    enabled: true,
+    skippedTotal: renderDiag.seenKeys.size,
+    skippedByReason: Object.fromEntries(renderDiag.skippedByReason.entries()),
+    skippedByCountry: Object.fromEntries(renderDiag.skippedByCountry.entries()),
+    sampleByReason: Object.fromEntries(renderDiag.sampleByReason.entries()),
+  };
+}
+
+function canonicalCountryCode(rawCode) {
+  return normalizeCountryCodeAlias(rawCode);
+}
+
+function getColorByCanonicalCountryCode(colorMap, canonicalCode) {
+  if (!colorMap || !canonicalCode) return null;
+  if (colorMap[canonicalCode]) return colorMap[canonicalCode];
+  for (const [alias, canonical] of Object.entries(COUNTRY_CODE_ALIASES)) {
+    if (canonical === canonicalCode && colorMap[alias]) {
+      return colorMap[alias];
+    }
+  }
+  return null;
+}
+
+function getFeatureId(feature) {
+  return getSharedFeatureId(feature) || null;
+}
+
+function getWaterRegionName(feature) {
+  const rawName =
+    feature?.properties?.label ||
+    feature?.properties?.name ||
+    feature?.properties?.name_en ||
+    feature?.properties?.NAME ||
+    "Water Region";
+  return String(rawName || "").trim() || "Water Region";
+}
+
+function getWaterRegionType(feature) {
+  return String(feature?.properties?.water_type || "water_region").trim().toLowerCase();
+}
+
+function isAtlantropaOceanMergedWaterRegion(feature) {
+  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") return false;
+  return String(feature?.properties?.region_group || "").trim().toLowerCase() === "mediterranean";
+}
+
+function isBaseGeographyScenarioFeature(feature) {
+  return feature?.properties?.render_as_base_geography === true;
+}
+
+function isOpenOceanWaterRegion(feature) {
+  return getWaterRegionType(feature) === "ocean";
+}
+
+function isMacroOceanWaterRegion(feature) {
+  if (!feature) return false;
+  return (
+    isOpenOceanWaterRegion(feature)
+    || String(feature?.properties?.region_group || "").trim().toLowerCase() === "ocean_macro"
+  );
+}
+
+function isOpenOceanSelectionEnabled() {
+  return !!runtimeState.allowOpenOceanSelect || (!!runtimeState.showOpenOceanRegions && !runtimeState.allowOpenOceanPaint);
+}
+
+function isOpenOceanPaintEnabled() {
+  return !!runtimeState.allowOpenOceanPaint || (!!runtimeState.showOpenOceanRegions && !runtimeState.allowOpenOceanSelect);
+}
+
+function isWaterRegionRenderable(feature) {
+  if (!feature) return false;
+  if (isBaseGeographyScenarioFeature(feature)) {
+    return true;
+  }
+  return feature?.properties?.interactive !== false;
+}
+
+function isWaterRegionEnabled(feature) {
+  if (!feature) return false;
+  if (isBaseGeographyScenarioFeature(feature)) {
+    return true;
+  }
+  if (isOpenOceanWaterRegion(feature)) {
+    return isOpenOceanSelectionEnabled() || isOpenOceanPaintEnabled();
+  }
+  return feature?.properties?.interactive !== false;
+}
+
+function getWaterRegionDefaultStyle(feature) {
+  return getUnifiedWaterBaseStyle(feature);
+}
+
+function getWaterRegionColor(id) {
+  const resolvedId = String(id || "").trim();
+  return (
+    getSafeCanvasColor(runtimeState.waterRegionOverrides?.[resolvedId], null) ||
+    getWaterRegionDefaultStyle(runtimeState.waterRegionsById?.get(resolvedId)).fill
+  );
+}
+
+function isScenarioWaterRegion(feature) {
+  return !!String(feature?.properties?.scenario_id || "").trim();
+}
+
+function getScenarioExcludedWaterRegionIds() {
+  const ids = runtimeState.activeScenarioManifest?.excluded_water_region_ids;
+  if (!Array.isArray(ids) || !ids.length) return new Set();
+  return new Set(
+    ids
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+  );
+}
+
+function getScenarioExcludedWaterRegionGroups() {
+  const groups = runtimeState.activeScenarioManifest?.excluded_water_region_groups;
+  if (!Array.isArray(groups) || !groups.length) return new Set();
+  return new Set(
+    groups
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+function isWaterRegionExcludedByScenario(feature) {
+  if (!feature || isScenarioWaterRegion(feature)) return false;
+  if (isAtlantropaOceanMergedWaterRegion(feature)) return true;
+  const excludedIds = getScenarioExcludedWaterRegionIds();
+  const featureId = String(feature?.properties?.id || "").trim();
+  if (featureId && excludedIds.has(featureId)) {
+    return true;
+  }
+  const excludedGroups = getScenarioExcludedWaterRegionGroups();
+  const regionGroup = String(feature?.properties?.region_group || "").trim().toLowerCase();
+  return !!(regionGroup && excludedGroups.has(regionGroup));
+}
+
+function getEffectiveWaterRegionFeatures() {
+  const scenarioFeatures = Array.isArray(runtimeState.scenarioWaterRegionsData?.features)
+    ? runtimeState.scenarioWaterRegionsData.features
+    : [];
+  if (isScenarioWaterTopologyExclusiveMode()) {
+    return sanitizeWaterRegionFeatures(scenarioFeatures.filter((feature) => !isWaterRegionExcludedByScenario(feature)));
+  }
+  return sanitizeWaterRegionFeatures([
+    ...(Array.isArray(runtimeState.waterRegionsData?.features) ? runtimeState.waterRegionsData.features : []),
+    ...scenarioFeatures,
+  ].filter((feature) => !isWaterRegionExcludedByScenario(feature)));
+}
+
+function getSpecialRegionName(feature) {
+  const rawName =
+    feature?.properties?.label ||
+    feature?.properties?.name ||
+    feature?.properties?.name_en ||
+    feature?.properties?.NAME ||
+    "Special Region";
+  return String(rawName || "").trim() || "Special Region";
+}
+
+function getSpecialRegionType(feature) {
+  return String(feature?.properties?.special_type || "special_region").trim().toLowerCase();
+}
+
+function isSpecialRegionEnabled(feature) {
+  if (!feature) return false;
+  if (!runtimeState.activeScenarioId) return false;
+  if (!runtimeState.showScenarioSpecialRegions && !isBaseGeographyScenarioFeature(feature)) return false;
+  return feature?.properties?.interactive !== false;
+}
+
+function getSpecialRegionDefaultStyle(feature) {
+  const specialType = getSpecialRegionType(feature);
+  if (specialType === "salt_flat") {
+    return {
+      fill: "#d7c6a3",
+      stroke: "#8b6f49",
+      opacity: 0.9,
+    };
+  }
+  if (specialType === "wasteland") {
+    return {
+      fill: "#bf8f74",
+      stroke: "#7d4e3d",
+      opacity: 0.9,
+    };
+  }
+  return {
+    fill: SPECIAL_REGION_FALLBACK_FILL,
+    stroke: SPECIAL_REGION_FALLBACK_STROKE,
+    opacity: 0.88,
+  };
+}
+
+function getSpecialRegionColor(id, feature = null) {
+  const resolvedId = String(id || "").trim();
+  const override = getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);
+  if (override) return override;
+  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(resolvedId)).fill;
+}
+
+function getSpecialRegionStrokeColor(feature) {
+  return getSpecialRegionDefaultStyle(feature).stroke;
+}
+
+function getSpecialRegionOpacity(feature, id) {
+  const resolvedId = String(id || "").trim();
+  if (Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)) {
+    return 1;
+  }
+  return getSpecialRegionDefaultStyle(feature).opacity;
+}
+
+function getEffectiveSpecialRegionFeatures() {
+  return Array.isArray(runtimeState.scenarioSpecialRegionsData?.features)
+    ? runtimeState.scenarioSpecialRegionsData.features
+    : [];
+}
+
+function getEffectiveScenarioReliefOverlayFeatures() {
+  return Array.isArray(runtimeState.scenarioReliefOverlaysData?.features)
+    ? runtimeState.scenarioReliefOverlaysData.features
+    : [];
+}
+
+function getReliefOverlayKind(feature) {
+  return String(feature?.properties?.overlay_kind || "").trim().toLowerCase();
+}
+
+function isAtlantropaReliefOverlayFeature(feature) {
+  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") {
+    return false;
+  }
+  return String(feature?.properties?.id || "").trim().toLowerCase().startsWith("atlantropa_");
+}
+
+function isReliefOverlayEnabled(feature) {
+  if (!feature) return false;
+  if (!runtimeState.activeScenarioId) return false;
+  if (!runtimeState.showScenarioReliefOverlays) return false;
+  if (isAtlantropaReliefOverlayFeature(feature)) {
+    if (!runtimeState.detailPromotionCompleted) return false;
+    if (String(runtimeState.topologyBundleMode || "").trim().toLowerCase() !== "composite") return false;
+  }
+  if (isBaseGeographyScenarioFeature(feature)) return true;
+  return feature?.properties?.interactive !== false;
+}
+
+function isTnoCoastalAccentEnabled() {
+  return String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962"
+    && runtimeState.styleConfig?.ocean?.coastalAccentEnabled !== false;
+}
+
+function getScenarioCoastalAccentOverlayFeatures() {
+  if (!isTnoCoastalAccentEnabled()) return [];
+  return getEffectiveScenarioReliefOverlayFeatures().filter((feature) => {
+    const kind = getReliefOverlayKind(feature);
+    return kind === "new_shoreline" || kind === "lake_shoreline";
+  });
+}
+
+function getAtlantropaAccentSuppressionFeatures() {
+  if (!isTnoCoastalAccentEnabled()) return [];
+  return Array.isArray(runtimeState.activeBathymetryBandsData?.features)
+    ? runtimeState.activeBathymetryBandsData.features.filter((feature) => {
+      if (String(feature?.properties?._bathymetrySource || "").trim().toLowerCase() !== "scenario") {
+        return false;
+      }
+      if (!isAtlantropaBathymetryFeature(feature)) return false;
+      return pathBoundsInScreen(feature);
+    })
+    : [];
+}
+
+function getReliefOverlayStyle(feature) {
+  const kind = getReliefOverlayKind(feature);
+  const isAtlantropaRelief = isAtlantropaReliefOverlayFeature(feature);
+  switch (kind) {
+    case "salt_flat_texture":
+      if (isAtlantropaRelief) {
+        return {
+          fill: RELIEF_ATLANTROPA_SALT_FILL_COLOR,
+          stroke: RELIEF_ATLANTROPA_SALT_STROKE_COLOR,
+          lineWidth: 0.55,
+          fillAlpha: 1,
+        };
+      }
+      return {
+        fill: RELIEF_SALT_FILL_COLOR,
+        stroke: RELIEF_SALT_STROKE_COLOR,
+        lineWidth: 0.7,
+        fillAlpha: 1,
+      };
+    case "new_shoreline":
+      return {
+        fill: null,
+        stroke: isAtlantropaRelief ? RELIEF_ATLANTROPA_SHORELINE_COLOR : RELIEF_SHORELINE_COLOR,
+        lineWidth: isAtlantropaRelief ? 1.1 : 1.35,
+      };
+    case "drained_basin_contour":
+      return {
+        fill: null,
+        stroke: isAtlantropaRelief ? RELIEF_ATLANTROPA_CONTOUR_COLOR : RELIEF_CONTOUR_COLOR,
+        lineWidth: isAtlantropaRelief ? 0.8 : 1,
+      };
+    case "swamp_margin":
+      return {
+        fill: RELIEF_SWAMP_FILL_COLOR,
+        stroke: RELIEF_SWAMP_STROKE_COLOR,
+        lineWidth: 0.8,
+        fillAlpha: 1,
+      };
+    case "lake_shoreline":
+      return {
+        fill: null,
+        stroke: RELIEF_LAKE_SHORELINE_COLOR,
+        lineWidth: 1.4,
+      };
+    case "dam_approach":
+      return {
+        fill: null,
+        stroke: RELIEF_DAM_APPROACH_COLOR,
+        lineWidth: 1.1,
+      };
+    default:
+      return {
+        fill: null,
+        stroke: RELIEF_SALT_STROKE_COLOR,
+        lineWidth: 1,
+      };
+  }
+}
+
+function drawPolygonLinePattern(bounds, {
+  color = RELIEF_SALT_STROKE_COLOR,
+  spacing = 10,
+  angleDeg = -18,
+  lineWidth = 0.6,
+  alpha = 0.45,
+} = {}) {
+  if (!bounds) return;
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxY - bounds.minY;
+  if (!(width > 0 && height > 0)) return;
+  const diagonal = Math.sqrt(width * width + height * height);
+  const radians = angleDeg * (Math.PI / 180);
+  const dx = Math.cos(radians);
+  const dy = Math.sin(radians);
+  const nx = -dy;
+  const ny = dx;
+  const centerX = (bounds.minX + bounds.maxX) * 0.5;
+  const centerY = (bounds.minY + bounds.maxY) * 0.5;
+  const extent = diagonal * 0.9;
+  context.save();
+  context.globalAlpha = alpha;
+  context.strokeStyle = color;
+  context.lineWidth = lineWidth;
+  for (let offset = -extent; offset <= extent; offset += Math.max(4, spacing)) {
+    const startX = centerX + nx * offset - dx * diagonal;
+    const startY = centerY + ny * offset - dy * diagonal;
+    const endX = centerX + nx * offset + dx * diagonal;
+    const endY = centerY + ny * offset + dy * diagonal;
+    context.beginPath();
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
+    context.stroke();
+  }
+  context.restore();
+}
+
+function drawScenarioReliefOverlaysLayer(k, {
+  reliefFeatures = null,
+  cacheMode = "direct",
+} = {}) {
+  const startedAt = nowMs();
+  const overlays = Array.isArray(reliefFeatures)
+    ? reliefFeatures
+    : getEffectiveScenarioReliefOverlayFeatures();
+  if (!overlays.length) {
+    collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "no-overlays",
+    });
+    collectContextMetric("contextScenarioLayerRelief", 0, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "no-overlays",
+      cacheMode,
+      signature: getScenarioReliefVisualRevisionToken(),
+    });
+    return 0;
+  }
+  if (!runtimeState.showScenarioReliefOverlays) {
+    collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
+      featureCount: overlays.length,
+      renderedCount: 0,
+      skipped: true,
+      reason: "disabled",
+    });
+    collectContextMetric("contextScenarioLayerRelief", 0, {
+      featureCount: overlays.length,
+      renderedCount: 0,
+      skipped: true,
+      reason: "disabled",
+      cacheMode,
+      signature: getScenarioReliefVisualRevisionToken(),
+    });
+    return 0;
+  }
+  if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING || runtimeState.renderPhase === RENDER_PHASE_SETTLING) {
+    collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
+      featureCount: overlays.length,
+      renderedCount: 0,
+      skipped: true,
+      reason: runtimeState.renderPhase,
+    });
+    collectContextMetric("contextScenarioLayerRelief", 0, {
+      featureCount: overlays.length,
+      renderedCount: 0,
+      skipped: true,
+      reason: runtimeState.renderPhase,
+      cacheMode,
+      signature: getScenarioReliefVisualRevisionToken(),
+    });
+    return 0;
+  }
+  let renderedCount = 0;
+  overlays.forEach((feature) => {
+    if (!isReliefOverlayEnabled(feature)) return;
+    if (!pathBoundsInScreen(feature)) return;
+    const style = getReliefOverlayStyle(feature);
+    const kind = getReliefOverlayKind(feature);
+    if (kind === "new_shoreline" || kind === "lake_shoreline") return;
+    const bounds = getPathBounds(feature);
+    if (!bounds) return;
+    const geometryType = String(feature?.geometry?.type || "").trim();
+    if ((geometryType === "Polygon" || geometryType === "MultiPolygon") && style.fill) {
+      context.beginPath();
+      pathCanvas(feature);
+      context.save();
+      context.globalAlpha = style.fillAlpha ?? 1;
+      context.fillStyle = style.fill;
+      context.fill();
+      context.clip();
+      if (kind === "salt_flat_texture") {
+        drawPolygonLinePattern(bounds, {
+          color: style.stroke,
+          spacing: 11 / Math.max(0.3, Math.min(4, k)),
+          angleDeg: -16,
+          lineWidth: (style.lineWidth || 0.7) / Math.max(0.0001, k),
+          alpha: 0.55,
+        });
+        drawPolygonLinePattern(bounds, {
+          color: style.stroke,
+          spacing: 19 / Math.max(0.3, Math.min(4, k)),
+          angleDeg: 12,
+          lineWidth: 0.45 / Math.max(0.0001, k),
+          alpha: 0.25,
+        });
+      } else if (kind === "swamp_margin") {
+        drawPolygonLinePattern(bounds, {
+          color: style.stroke,
+          spacing: 8 / Math.max(0.3, Math.min(4, k)),
+          angleDeg: 82,
+          lineWidth: 0.5 / Math.max(0.0001, k),
+          alpha: 0.4,
+        });
+        drawPolygonLinePattern(bounds, {
+          color: "rgba(90, 140, 180, 0.8)",
+          spacing: 14 / Math.max(0.3, Math.min(4, k)),
+          angleDeg: 0,
+          lineWidth: 0.35 / Math.max(0.0001, k),
+          alpha: 0.22,
+        });
+      }
+      context.restore();
+    }
+    context.beginPath();
+    pathCanvas(feature);
+    context.save();
+    if (kind === "dam_approach") {
+      context.setLineDash([3 / Math.max(0.0001, k), 2 / Math.max(0.0001, k)]);
+    }
+    context.strokeStyle = style.stroke;
+    context.lineWidth = (style.lineWidth || 1) / Math.max(0.0001, k);
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.stroke();
+    context.restore();
+    renderedCount += 1;
+  });
+  collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
+    featureCount: overlays.length,
+    renderedCount,
+    skipped: false,
+    phase: runtimeState.renderPhase,
+  });
+  collectContextMetric("contextScenarioLayerRelief", 0, {
+    featureCount: overlays.length,
+    renderedCount,
+    skipped: false,
+    cacheMode,
+    signature: getScenarioReliefVisualRevisionToken(),
+  });
+  return renderedCount;
+}
+
+function renderScenarioReliefOverlaysLayerToCache(currentTransform, reliefFeatures) {
+  const layerEntry = getContextScenarioLayerCacheEntry("relief");
+  const layerCanvas = ensureContextScenarioLayerCanvas("relief");
+  const layerContext = layerCanvas.getContext("2d");
+  if (!layerContext) {
+    layerEntry.signature = "";
+    layerEntry.referenceTransform = null;
+    layerEntry.renderedCount = 0;
+    return 0;
+  }
+  const layout = getRenderPassLayout("contextScenario");
+  let renderedCount = 0;
+  withRenderTarget(layerContext, () => {
+    const layerK = prepareTargetContext(layerContext, currentTransform, layout);
+    renderedCount = drawScenarioReliefOverlaysLayer(layerK, {
+      reliefFeatures,
+      cacheMode: "redraw",
+    });
+  });
+  layerEntry.signature = getScenarioReliefVisualRevisionToken();
+  layerEntry.referenceTransform = cloneZoomTransform(currentTransform);
+  layerEntry.renderedCount = renderedCount;
+  return renderedCount;
+}
+
+function drawScenarioReliefOverlaysPass(k) {
+  const overlays = getEffectiveScenarioReliefOverlayFeatures();
+  if (
+    !overlays.length
+    || !runtimeState.showScenarioReliefOverlays
+    || runtimeState.renderPhase === RENDER_PHASE_INTERACTING
+    || runtimeState.renderPhase === RENDER_PHASE_SETTLING
+  ) {
+    drawScenarioReliefOverlaysLayer(k, { reliefFeatures: overlays, cacheMode: "direct" });
+    return;
+  }
+
+  const currentTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+  const reliefLayerEntry = getContextScenarioLayerCacheEntry("relief");
+  const reliefVisualRevision = getScenarioReliefVisualRevisionToken();
+  const canReuseReliefLayer = (
+    shouldEnableContextScenarioTransformReuse()
+    && reliefLayerEntry.signature === reliefVisualRevision
+    && !!reliefLayerEntry.canvas
+    && !!reliefLayerEntry.referenceTransform
+  );
+  if (canReuseReliefLayer && drawCachedContextScenarioLayer("relief", currentTransform)) {
+    const renderedCount = Number(reliefLayerEntry.renderedCount || 0);
+    collectContextMetric("contextScenarioLayerCacheHit", 0, {
+      layer: "relief",
+      renderedCount,
+    });
+    collectContextMetric("contextScenarioLayerRelief", 0, {
+      featureCount: overlays.length,
+      renderedCount,
+      skipped: false,
+      cacheMode: "reuse",
+      signature: reliefVisualRevision,
+    });
+    return;
+  }
+
+  collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+    layer: "relief",
+    reason: reliefLayerEntry.signature === reliefVisualRevision ? "transform" : "signature",
+    signatureChanged: reliefLayerEntry.signature !== reliefVisualRevision,
+  });
+  renderScenarioReliefOverlaysLayerToCache(currentTransform, overlays);
+  if (!drawCachedContextScenarioLayer("relief", currentTransform)) {
+    drawScenarioReliefOverlaysLayer(k, { reliefFeatures: overlays, cacheMode: "direct" });
+  }
+}
+
+function getFeatureCountryCodeNormalized(feature) {
+  return canonicalCountryCode(getSharedFeatureCountryCode(feature));
+}
+
+function getFeatureCountryCode(feature) {
+  return getFeatureCountryCodeNormalized(feature);
+}
+
+function getFeatureBorderMeshCountryCodeNormalized(feature) {
+  const featureId = getFeatureId(feature);
+  return canonicalCountryCode(
+    getDisplayOwnerCode(feature, featureId)
+    || getFeatureCountryCodeNormalized(feature)
+    || ""
+  );
+}
+
+function getFeatureInteractionCountryCodeNormalized(feature, featureId = null) {
+  const resolvedId = String(featureId || "").trim() || getFeatureId(feature);
+  return canonicalCountryCode(
+    getDisplayOwnerCode(feature, resolvedId)
+    || getFeatureCountryCodeNormalized(feature)
+    || ""
+  );
+}
+
+function getAtlantropaSurfaceKind(feature) {
+  return String(feature?.properties?.atl_surface_kind || "").trim().toLowerCase();
+}
+
+function isAtlantropaSeaFeature(feature) {
+  return getFeatureCountryCodeNormalized(feature) === "ATL"
+    && getAtlantropaSurfaceKind(feature) === "sea";
+}
+
+function getAtlantropaSeaPoliticalFillColor() {
+  return getOceanBaseFillColor();
+}
+
+function getAtlantropaSeaPoliticalStrokeColor() {
+  return UNIFIED_WATER_STROKE_COLOR;
+}
+
+function getMediterraneanAtlantropaBounds() {
+  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") return null;
+  const cache = runtimeState.mediterraneanAtlantropaBoundsCache || {};
+  const featureCount = Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0;
+  if (
+    cache.scenarioId === runtimeState.activeScenarioId &&
+    cache.topologyRevision === Number(runtimeState.topologyRevision || 0) &&
+    cache.featureCount === featureCount &&
+    Array.isArray(cache.bounds)
+  ) {
+    return cache.bounds;
+  }
+  if (!Array.isArray(runtimeState.landData?.features) || !runtimeState.landData.features.length || !globalThis.d3?.geoBounds) {
+    return null;
+  }
+  const atlFeatures = runtimeState.landData.features.filter((feature) => getFeatureCountryCodeNormalized(feature) === "ATL");
+  if (!atlFeatures.length) return null;
+  try {
+    const bounds = globalThis.d3.geoBounds({
+      type: "FeatureCollection",
+      features: atlFeatures,
+    });
+    runtimeState.mediterraneanAtlantropaBoundsCache = {
+      scenarioId: runtimeState.activeScenarioId || "",
+      topologyRevision: Number(runtimeState.topologyRevision || 0),
+      featureCount,
+      bounds,
+    };
+    return bounds;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function isPointerInsideMediterraneanAtlantropaBounds(pointer) {
+  const bounds = getMediterraneanAtlantropaBounds();
+  if (!bounds || !Array.isArray(bounds) || bounds.length !== 2) return false;
+  const lon = Number(pointer?.lonLat?.[0]);
+  const lat = Number(pointer?.lonLat?.[1]);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return false;
+  const [[minLon, minLat], [maxLon, maxLat]] = bounds;
+  return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
+}
+
+function shouldSuppressOpenOceanHit(candidate, pointer) {
+  if (!candidate?.item?.feature || !isOpenOceanWaterRegion(candidate.item.feature)) return false;
+  return isPointerInsideMediterraneanAtlantropaBounds(pointer);
+}
+
+function getFeatureRegionTag(feature) {
+  const props = feature?.properties || {};
+  return (
+    props.subregion ||
+    props.SUBREGION ||
+    props.mapcolor7 ||
+    props.MAPCOLOR7 ||
+    props.mapcolor8 ||
+    props.MAPCOLOR8 ||
+    props.mapcolor9 ||
+    props.MAPCOLOR9 ||
+    props.region_un ||
+    props.REGION_UN ||
+    props.region_wb ||
+    props.REGION_WB ||
+    props.continent ||
+    props.CONTINENT ||
+    props.cntr_code ||
+    props.CNTR_CODE ||
+    "Unknown"
+  );
+}
+
+function isProbablyCanvasColor(value) {
+  if (typeof value !== "string") return false;
+  const candidate = value.trim();
+  if (!candidate || candidate.includes("var(")) return false;
+  if (COLOR_HEX_RE.test(candidate)) {
+    return true;
+  }
+  if (!COLOR_FUNC_RE.test(candidate) && !COLOR_NAME_RE.test(candidate)) {
+    return false;
+  }
+  if (globalThis.CSS?.supports) {
+    return globalThis.CSS.supports("color", candidate);
+  }
+  return false;
+}
+
+function getSafeCanvasColor(value, fallback) {
+  if (isProbablyCanvasColor(value)) {
+    return String(value).trim();
+  }
+  return fallback;
+}
+
+function parseCanvasColorChannels(value) {
+  const candidate = String(value || "").trim();
+  if (!candidate) return null;
+
+  const normalizedHex = ColorManager.normalizeHexColor(candidate);
+  if (normalizedHex) {
+    const rgb = ColorManager.hexToRgb(normalizedHex);
+    return rgb ? { ...rgb, a: 1 } : null;
+  }
+
+  const rgbMatch = /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*([0-9.]+)\s*)?\)$/iu.exec(candidate);
+  if (!rgbMatch) return null;
+  return {
+    r: clamp(Number(rgbMatch[1]) || 0, 0, 255),
+    g: clamp(Number(rgbMatch[2]) || 0, 0, 255),
+    b: clamp(Number(rgbMatch[3]) || 0, 0, 255),
+    a: clamp(rgbMatch[4] === undefined ? 1 : (Number(rgbMatch[4]) || 0), 0, 1),
+  };
+}
+
+function getCanvasColorRelativeLuminance(value) {
+  const channels = parseCanvasColorChannels(value);
+  if (!channels) return null;
+  const r = ColorManager.srgbToLinear(channels.r / 255);
+  const g = ColorManager.srgbToLinear(channels.g / 255);
+  const b = ColorManager.srgbToLinear(channels.b / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function mixCanvasColors(baseColor, targetColor, amount) {
+  const base = parseCanvasColorChannels(baseColor);
+  const target = parseCanvasColorChannels(targetColor);
+  if (!base || !target) return null;
+  const mix = clamp(Number(amount) || 0, 0, 1);
+  return ColorManager.rgbToHex(
+    base.r + ((target.r - base.r) * mix),
+    base.g + ((target.g - base.g) * mix),
+    base.b + ((target.b - base.b) * mix),
+  );
+}
+
+function buildCountryDominantFillColorMap() {
+  const cacheMatches =
+    countryDominantFillColorCache.colorRevision === Number(runtimeState.colorRevision || 0)
+    && countryDominantFillColorCache.scenarioViewMode === String(runtimeState.scenarioViewMode || "ownership")
+    && countryDominantFillColorCache.activeScenarioId === String(runtimeState.activeScenarioId || "");
+  if (cacheMatches && countryDominantFillColorCache.result instanceof Map) {
+    return countryDominantFillColorCache.result;
+  }
+
+  const countsByCountry = new Map();
+  getFullLandDataFeatures().forEach((feature, index) => {
+    const countryCode = getFeatureCountryCodeNormalized(feature);
+    const id = getFeatureId(feature) || `feature-${index}`;
+    if (!countryCode || !id || shouldExcludePoliticalVisualFeature(feature, id)) return;
+    const color = getSafeCanvasColor(runtimeState.colors?.[id], null) || getResolvedFeatureColor(feature, id);
+    if (!color) return;
+    const countryCounts = countsByCountry.get(countryCode) || new Map();
+    countryCounts.set(color, (countryCounts.get(color) || 0) + 1);
+    countsByCountry.set(countryCode, countryCounts);
+  });
+
+  const result = new Map();
+  countsByCountry.forEach((countryCounts, countryCode) => {
+    let bestColor = "";
+    let bestCount = -1;
+    countryCounts.forEach((count, color) => {
+      if (count <= bestCount) return;
+      bestColor = color;
+      bestCount = count;
+    });
+    if (bestColor) {
+      result.set(countryCode, bestColor);
+    }
+  });
+
+  countryDominantFillColorCache = {
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    scenarioViewMode: String(runtimeState.scenarioViewMode || "ownership"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    result,
+  };
+  return result;
+}
+
+function getInternalBorderStrokeColor(countryCode, fallbackColor) {
+  const colorMode = String(runtimeState.styleConfig?.internalBorders?.colorMode || "auto").trim().toLowerCase();
+  const manualColor = getSafeCanvasColor(runtimeState.styleConfig?.internalBorders?.color, fallbackColor || "#cccccc");
+  if (colorMode === "manual") {
+    return manualColor;
+  }
+  const dominantFillColor = buildCountryDominantFillColorMap().get(canonicalCountryCode(countryCode));
+  const luminance = getCanvasColorRelativeLuminance(dominantFillColor);
+  if (!Number.isFinite(luminance)) {
+    return manualColor;
+  }
+  const targetColor = luminance >= 0.42 ? INTERNAL_BORDER_AUTO_LIGHT : INTERNAL_BORDER_AUTO_DARK;
+  return mixCanvasColors(dominantFillColor, targetColor, luminance >= 0.42 ? 0.78 : 0.72)
+    || targetColor
+    || manualColor;
+}
+
+function getContourZoomStyleProfile(k) {
+  const zoomBucket = getContextBaseZoomBucketId(k);
+  return CONTOUR_ZOOM_STYLE_PROFILES[zoomBucket] || CONTOUR_ZOOM_STYLE_PROFILES.high;
+}
+
+function getContourFeatureHostFillColor(feature) {
+  if (!feature || !runtimeState.spatialItems?.length || !projection) return null;
+  const cacheKey = [
+    Number(runtimeState.colorRevision || 0),
+    String(runtimeState.activeScenarioId || ""),
+    String(runtimeState.scenarioViewMode || "ownership"),
+  ].join("::");
+  const cached = contourHostFillColorCache.get(feature);
+  if (cached?.key === cacheKey) {
+    return cached.color;
+  }
+
+  const geographicCentroid = getFeatureGeoCentroid(feature);
+  const projectedCentroid = pathCanvas?.centroid
+    ? pathCanvas.centroid(feature)
+    : (Array.isArray(geographicCentroid) ? projection(geographicCentroid) : null);
+  const resolveFromRadius = (radiusProj = 0) => {
+    if (
+      !Array.isArray(projectedCentroid)
+      || projectedCentroid.length < 2
+      || !projectedCentroid.every((value) => Number.isFinite(Number(value)))
+      || !Array.isArray(geographicCentroid)
+    ) {
+      return null;
+    }
+    const ranked = rankCandidates(
+      collectGridCandidates(projectedCentroid[0], projectedCentroid[1], radiusProj),
+      geographicCentroid,
+    );
+    const match = ranked.find((candidate) => candidate.containsGeo) || ranked[0];
+    const hostFeature = match?.item?.feature || null;
+    const hostFeatureId = String(match?.item?.featureId || getFeatureId(hostFeature) || "").trim();
+    if (!hostFeature || !hostFeatureId) return null;
+    return (
+      getSafeCanvasColor(runtimeState.colors?.[hostFeatureId], null)
+      || getSafeCanvasColor(getResolvedFeatureColor(hostFeature, hostFeatureId), null)
+    );
+  };
+
+  const color = resolveFromRadius(0) || resolveFromRadius(CONTOUR_HOST_FILL_FALLBACK_RADIUS);
+  contourHostFillColorCache.set(feature, {
+    key: cacheKey,
+    color,
+  });
+  return color;
+}
+
+function getAdaptiveContourStrokeColor(feature, baseColor) {
+  const safeBaseColor = getSafeCanvasColor(baseColor, "#665241") || "#665241";
+  const hostFillColor = getContourFeatureHostFillColor(feature);
+  const luminance = getCanvasColorRelativeLuminance(hostFillColor);
+  if (!Number.isFinite(luminance)) {
+    return safeBaseColor;
+  }
+  const targetColor = luminance >= 0.42 ? "#111827" : "#ffffff";
+  const mixAmount = luminance >= 0.42 ? 0.58 : 0.74;
+  return mixCanvasColors(safeBaseColor, targetColor, mixAmount) || targetColor || safeBaseColor;
+}
+
+function sanitizeColorMap(input) {
+  const sanitized = {};
+  if (!input || typeof input !== "object") return sanitized;
+
+  for (const [rawId, rawColor] of Object.entries(input)) {
+    const id = String(rawId || "").trim();
+    if (!id) continue;
+    const color = getSafeCanvasColor(rawColor, null);
+    if (!color) continue;
+    sanitized[id] = color;
+  }
+
+  return sanitized;
+}
+
+function sanitizeCountryColorMap(input) {
+  const sanitized = {};
+  if (!input || typeof input !== "object") return sanitized;
+
+  for (const [rawCode, rawColor] of Object.entries(input)) {
+    const code = canonicalCountryCode(rawCode);
+    if (!code) continue;
+    const color = getSafeCanvasColor(rawColor, null);
+    if (!color) continue;
+    sanitized[code] = color;
+  }
+
+  return sanitized;
+}
+
+function normalizeDebugMode(modeName) {
+  const normalized = String(modeName || "PROD").trim().toUpperCase();
+  return DEBUG_MODES.has(normalized) ? normalized : "PROD";
+}
+
+function stringHash(input) {
+  const text = String(input || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function createScenarioPoliticalBackgroundCacheState(overrides = {}) {
+  return {
+    runtimeRef: null,
+    scenarioId: "",
+    viewMode: "ownership",
+    oceanFillColor: "",
+    sovereigntyRevision: 0,
+    controllerRevision: 0,
+    shellRevision: 0,
+    colorRevision: 0,
+    topologyRevision: 0,
+    canvasWidth: 0,
+    canvasHeight: 0,
+    transformSignature: "",
+    colorSignature: "",
+    cacheKey: "",
+    fullPassCacheKey: "",
+    fullPassPathCacheSignature: "",
+    fullPassTransformSignature: "",
+    fullPassColorSignature: "",
+    fullPassGroupCount: 0,
+    fullPassEntryCount: 0,
+    fullPassReusedPathCount: 0,
+    fullPassBuiltPathCount: 0,
+    fullPassPathlessEntryCount: 0,
+    fullPassGroups: [],
+    entries: [],
+    ...overrides,
+  };
+}
+
+function hashToColor(token) {
+  const hue = stringHash(token) % 360;
+  return `hsl(${hue}, 70%, 58%)`;
+}
+
+function getIslandNeighborGraph() {
+  const object = runtimeState.topology?.objects?.political;
+  const geometries = object?.geometries || [];
+  if (!object || !Array.isArray(geometries) || geometries.length === 0) {
+    return [];
+  }
+
+  if (
+    islandNeighborsCache.topologyRef === runtimeState.topology &&
+    islandNeighborsCache.objectRef === object &&
+    islandNeighborsCache.count === geometries.length &&
+    Array.isArray(islandNeighborsCache.neighbors)
+  ) {
+    return islandNeighborsCache.neighbors;
+  }
+
+  let neighbors = [];
+  if (
+    Array.isArray(object.computed_neighbors) &&
+    object.computed_neighbors.length === geometries.length
+  ) {
+    neighbors = object.computed_neighbors;
+  } else if (globalThis.topojson?.neighbors) {
+    try {
+      neighbors = globalThis.topojson.neighbors(geometries) || [];
+    } catch (error) {
+      neighbors = [];
+    }
+  }
+
+  if (!Array.isArray(neighbors) || neighbors.length !== geometries.length) {
+    neighbors = new Array(geometries.length).fill(null).map(() => []);
+  }
+
+  islandNeighborsCache = {
+    topologyRef: runtimeState.topology,
+    objectRef: object,
+    count: geometries.length,
+    neighbors,
+  };
+  return neighbors;
+}
+
+function setDebugMode(modeName) {
+  const nextMode = normalizeDebugMode(modeName);
+  if (debugMode === nextMode) return;
+  debugMode = nextMode;
+  runtimeState.debugMode = nextMode;
+  invalidateRenderPasses(["political", "borders"], "debug-mode");
+  if (pathSVG) {
+    buildSpatialIndex();
+  }
+  if (context) {
+    render();
+  }
+}
+
+function prepareTargetContext(
+  targetContext,
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  layout = null,
+) {
+  if (!targetContext?.canvas) return 1;
+  const width = targetContext.canvas.width;
+  const height = targetContext.canvas.height;
+  const normalized = cloneZoomTransform(transform);
+  const offsetX = Number(layout?.offsetX || 0);
+  const offsetY = Number(layout?.offsetY || 0);
+  targetContext.setTransform(1, 0, 0, 1, 0, 0);
+  targetContext.clearRect(0, 0, width, height);
+  targetContext.globalCompositeOperation = "source-over";
+  targetContext.globalAlpha = 1;
+  targetContext.shadowBlur = 0;
+  targetContext.filter = "none";
+  targetContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
+  targetContext.translate(offsetX, offsetY);
+  targetContext.translate(normalized.x, normalized.y);
+  targetContext.scale(normalized.k, normalized.k);
+  return normalized.k;
+}
+
+function withRenderTarget(targetContext, callback) {
+  if (!targetContext || typeof callback !== "function") return undefined;
+  const previousContext = context;
+  const previousPathCanvas = pathCanvas;
+  context = targetContext;
+  pathCanvas = globalThis.d3.geoPath(projection, targetContext).pointRadius(PATH_POINT_RADIUS);
+  try {
+    return callback();
+  } finally {
+    context = previousContext;
+    pathCanvas = previousPathCanvas;
+  }
+}
+
+function getPassCounterNames(passName) {
+  if (passName === "background") return ["backgroundPassRenders"];
+  if (passName === "physicalBase") return ["contextPassRenders", "physicalBasePassRenders"];
+  if (passName === "political") return ["politicalPassRenders"];
+  if (passName === "effects") return ["effectsPassRenders"];
+  if (passName === "contextBase") return ["contextPassRenders", "contextBasePassRenders"];
+  if (passName === "contextScenario") return ["contextPassRenders", "contextScenarioPassRenders"];
+  if (passName === "lineEffects") return ["effectsPassRenders"];
+  if (passName === "contextMarkers") return ["contextPassRenders", "contextBasePassRenders"];
+  if (passName === "dayNight") return ["dayNightPassRenders"];
+  if (passName === "borders") return ["borderPassRenders"];
+  if (passName === "textureLabels") return ["labelPassRenders"];
+  if (passName === "labels") return ["labelPassRenders"];
+  return [];
+}
+
+function recordPassTiming(timings, passName, startedAt) {
+  if (!timings || !passName) return;
+  timings[passName] = Math.max(0, nowMs() - startedAt);
+}
+
+function getLogicalCanvasDimensions() {
+  const dpr = Math.max(runtimeState.dpr || 1, 1);
+  const widthFromCanvas = context?.canvas?.width ? context.canvas.width / dpr : 0;
+  const heightFromCanvas = context?.canvas?.height ? context.canvas.height / dpr : 0;
+  const width = Math.max(runtimeState.width || 0, widthFromCanvas || 0, 1);
+  const height = Math.max(runtimeState.height || 0, heightFromCanvas || 0, 1);
+  return [width, height];
+}
+
+function nowMs() {
+  if (globalThis.performance?.now) {
+    return globalThis.performance.now();
+  }
+  return Date.now();
+}
+
+function scheduleDeferredWork(callback, { timeout = 0 } = {}) {
+  if (typeof callback !== "function") return null;
+  if (typeof globalThis.requestIdleCallback === "function") {
+    return {
+      type: "idle",
+      id: globalThis.requestIdleCallback(callback, {
+        timeout: Math.max(0, Number(timeout) || 0),
+      }),
+    };
+  }
+  return {
+    type: "timeout",
+    id: globalThis.setTimeout(callback, Math.max(0, Number(timeout) || 0)),
+  };
+}
+
+function cancelDeferredWork(handle) {
+  if (!handle || typeof handle !== "object") return;
+  if (handle.type === "idle" && typeof globalThis.cancelIdleCallback === "function") {
+    globalThis.cancelIdleCallback(handle.id);
+    return;
+  }
+  if (typeof globalThis.clearTimeout === "function") {
+    globalThis.clearTimeout(handle.id);
+  }
+}
+
+function clearStagedMapDataTasks() {
+  cancelDeferredWork(runtimeState.stagedContextBaseHandle);
+  cancelDeferredWork(runtimeState.stagedHitCanvasHandle);
+  cancelDeferredWork(secondarySpatialBuildHandle);
+  cancelDeferredWork(deferredScenarioChunkPromotionInfraHandle);
+  runtimeState.stagedContextBaseHandle = null;
+  runtimeState.stagedHitCanvasHandle = null;
+  secondarySpatialBuildHandle = null;
+  pendingSecondarySpatialBuildReasons.clear();
+  deferredScenarioChunkPromotionInfraHandle = null;
+  scenarioChunkPromotionVersion = 0;
+}
+
+function getExactAfterSettleControllerState() {
+  return ensureExactAfterSettleControllerState(runtimeState);
+}
+
+function getTransformBucketSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const k = Math.round(Number(transform?.k || 1) * 100);
+  const x = Math.round(Number(transform?.x || 0) / 64);
+  const y = Math.round(Number(transform?.y || 0) / 64);
+  return `${k}:${x}:${y}`;
+}
+
+function getExactAfterSettleIdentity() {
+  const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
+    ? runtimeState.runtimeChunkLoadState
+    : null;
+  return {
+    scenarioId: String(runtimeState.activeScenarioId || ""),
+    selectionVersion: Number(loadState?.selectionVersion || 0),
+    topologyRevision: Number(runtimeState.topologyRevision || 0),
+    dpr: Math.max(1, Number(runtimeState.dpr || 1)),
+    pixelWidth: Math.max(1, Number(context?.canvas?.width || 1)),
+    pixelHeight: Math.max(1, Number(context?.canvas?.height || 1)),
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    contextFlagSignature: getVisibleContextFlagSignature(),
+    zoomToken: Number(runtimeState.zoomGestureEndedAt || 0),
+    transformBucket: getTransformBucketSignature(),
+  };
+}
+
+function assignExactAfterSettleIdentity(controller, identity = getExactAfterSettleIdentity()) {
+  controller.scenarioId = identity.scenarioId;
+  controller.selectionVersion = identity.selectionVersion;
+  controller.topologyRevision = identity.topologyRevision;
+  controller.dpr = identity.dpr;
+  controller.pixelWidth = identity.pixelWidth;
+  controller.pixelHeight = identity.pixelHeight;
+  controller.colorRevision = identity.colorRevision;
+  controller.contextFlagSignature = identity.contextFlagSignature;
+  controller.zoomToken = identity.zoomToken;
+  controller.transformBucket = identity.transformBucket;
+}
+
+function isExactAfterSettleIdentityCurrent(controller) {
+  if (!controller || typeof controller !== "object") return false;
+  const identity = getExactAfterSettleIdentity();
+  return String(controller.scenarioId || "") === identity.scenarioId
+    && Number(controller.selectionVersion || 0) === identity.selectionVersion
+    && Number(controller.topologyRevision || 0) === identity.topologyRevision
+    && Math.abs(Number(controller.dpr || 1) - identity.dpr) <= 0.01
+    && Number(controller.pixelWidth || 0) === identity.pixelWidth
+    && Number(controller.pixelHeight || 0) === identity.pixelHeight
+    && Number(controller.colorRevision || 0) === identity.colorRevision
+    && String(controller.contextFlagSignature || "") === identity.contextFlagSignature
+    && Number(controller.zoomToken || 0) === identity.zoomToken
+    && String(controller.transformBucket || "") === identity.transformBucket;
+}
+
+function resetExactAfterSettleController(reason = "reset", generation = null) {
+  return resetExactAfterSettleControllerState(runtimeState, { reason, generation });
+}
+
+function beginExactAfterSettleControllerSchedule(scheduleStartedAt) {
+  const controller = getExactAfterSettleControllerState();
+  const nextGeneration = Number(controller.generation || 0) + 1;
+  Object.assign(controller, createDefaultExactAfterSettleControllerState(), {
+    generation: nextGeneration,
+    phase: "scheduled",
+    startedAt: scheduleStartedAt,
+    scheduledAt: scheduleStartedAt,
+    reason: "scheduled",
+  });
+  assignExactAfterSettleIdentity(controller);
+  return controller;
+}
+
+function isExactAfterSettleGenerationCurrent(generation, phase = "") {
+  return isExactAfterSettleGenerationCurrentState(runtimeState, generation, phase);
+}
+
+function isExactAfterSettleControllerActive() {
+  return isExactAfterSettleControllerActiveState(runtimeState);
+}
+
+function completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt) {
+  if (!isExactAfterSettleGenerationCurrent(generation, "applying")) {
+    return false;
+  }
+  const controller = getExactAfterSettleControllerState();
+  if (!isExactAfterSettleIdentityCurrent(controller)) {
+    resetExactAfterSettleController("pass-complete-identity-mismatch", generation);
+    return false;
+  }
+  const applyFinishedAt = nowMs();
+  Object.assign(controller, {
+    phase: "awaiting-paint",
+    applyFinishedAt,
+    reason: "awaiting-paint",
+  });
+  recordRenderPerfMetric("settleExactRefreshPasses", Math.max(0, applyFinishedAt - passStartedAt), {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    generation,
+    contextBaseRefreshed: !!plan.exactRefreshApplied,
+    targetPasses: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : [],
+    passCount: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses.length : 0,
+  });
+  return requestRendererRender("exact-after-settle", {
+    flush: true,
+    fallback: () => render(),
+  });
+}
+
+function prepareExactAfterSettlePassesInSlices(generation, plan) {
+  const controller = getExactAfterSettleControllerState();
+  if (!isExactAfterSettleGenerationCurrent(generation, "applying")) {
+    return false;
+  }
+  if (!isExactAfterSettleIdentityCurrent(controller)) {
+    resetExactAfterSettleController("pass-start-identity-mismatch", generation);
+    return false;
+  }
+  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+  const targetPasses = new Set(Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : []);
+  const definitions = getIdleRenderPassDefinitions()
+    .filter(([passName]) => !targetPasses.size || targetPasses.has(passName));
+  const timings = {};
+  const cache = getRenderPassCacheState();
+  const passStartedAt = nowMs();
+  if (runtimeState.legacyColorStateDirty) {
+    rebuildResolvedColors();
+  }
+
+  const enqueueNextPass = (index) => {
+    if (index >= definitions.length) {
+      completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt);
+      return;
+    }
+    const [passName, drawFn] = definitions[index];
+    enqueueFrameTask(() => {
+      const passStart = nowMs();
+      const activeController = getExactAfterSettleControllerState();
+      if (!isExactAfterSettleGenerationCurrent(generation, "applying")) return;
+      if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+        resetExactAfterSettleController(`${passName}-phase-interrupted`, generation);
+        return;
+      }
+      if (!isExactAfterSettleIdentityCurrent(activeController)) {
+        resetExactAfterSettleController(`${passName}-identity-mismatch`, generation);
+        return;
+      }
+      prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
+      recordRenderPerfMetric("settleExactRefreshPass", Math.max(0, nowMs() - passStart), {
+        activeScenarioId: String(runtimeState.activeScenarioId || ""),
+        generation,
+        passName,
+        index,
+        targetPasses: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : [],
+        passCount: definitions.length,
+      });
+      enqueueNextPass(index + 1);
+    }, {
+      priority: "high",
+      label: `exact-after-settle-pass-${passName}`,
+      generation,
+      dedupe: true,
+      // The exact refresh already waits for the settle quiet window; another
+      // continuous-input defer can push final sharpness past the interaction SLA.
+      deferOnContinuousInput: false,
+    });
+  };
+
+  enqueueNextPass(0);
+  return true;
+}
+
+function applyScheduledExactAfterSettleRefreshPlan(generation, plan) {
+  if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) {
+    return false;
+  }
+  const controller = getExactAfterSettleControllerState();
+  const applyStartedAt = nowMs();
+  Object.assign(controller, {
+    phase: "applying",
+    pendingPlan: plan,
+    applyStartedAt,
+    reason: "applying",
+  });
+  assignExactAfterSettleIdentity(controller);
+  plan.controllerGeneration = generation;
+  applyExactAfterSettleRefreshPlan(plan);
+  recordRenderPerfMetric("settleExactRefreshApply", Math.max(0, nowMs() - applyStartedAt), {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    generation,
+    contextBaseRefreshed: !!plan.exactRefreshApplied,
+  });
+  return prepareExactAfterSettlePassesInSlices(generation, plan);
+}
+
+function finalizePendingExactAfterSettleRefreshAfterPaint() {
+  const controller = runtimeState.exactAfterSettleController;
+  if (!controller || typeof controller !== "object" || String(controller.phase || "") !== "awaiting-paint") {
+    return false;
+  }
+  const generation = Number(controller.generation || 0);
+  if (!isExactAfterSettleIdentityCurrent(controller)) {
+    resetExactAfterSettleController("identity-mismatch", generation);
+    return false;
+  }
+  const plan = controller.pendingPlan;
+  if (!plan || typeof plan !== "object") {
+    resetExactAfterSettleController("missing-plan", generation);
+    return false;
+  }
+  const finalizeStartedAt = nowMs();
+  controller.phase = "finalizing";
+  controller.reason = "finalizing";
+  recordRenderPerfMetric("settleExactRefreshWaitForPaint", Math.max(0, finalizeStartedAt - Number(controller.applyFinishedAt || controller.applyStartedAt || controller.startedAt || finalizeStartedAt)), {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    generation,
+  });
+  finalizeExactAfterSettleRefreshPlan(plan);
+  recordRenderPerfMetric("settleExactRefreshFinalize", Math.max(0, nowMs() - finalizeStartedAt), {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    generation,
+  });
+  resetExactAfterSettleController("finalized", generation);
+  return true;
+}
+
+function abortPendingExactAfterSettleRefreshAfterPaint(reason = "exact-compose-failed") {
+  const controller = runtimeState.exactAfterSettleController;
+  if (!controller || typeof controller !== "object" || String(controller.phase || "") !== "awaiting-paint") {
+    return false;
+  }
+  const generation = Number(controller.generation || 0);
+  recordRenderPerfMetric("settleExactRefreshAbortAfterPaintFailure", 0, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    generation,
+    reason: String(reason || "exact-compose-failed"),
+    controllerPhase: String(controller.phase || ""),
+    deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
+  });
+  resetExactAfterSettleController(`abort-${reason}`, generation);
+  return true;
+}
+
+function cancelExactAfterSettleRefresh({ clearDefer = true } = {}) {
+  cancelDeferredExactContextRefresh();
+  cancelDeferredWork(runtimeState.exactAfterSettleHandle);
+  runtimeState.exactAfterSettleHandle = null;
+  resetExactAfterSettleController(clearDefer ? "cancel" : "reschedule");
+  if (clearDefer) {
+    runtimeState.deferExactAfterSettle = false;
+    runtimeState.pendingExactPoliticalFastFrame = false;
+  }
+}
+
+function isHeavyScenarioStagedApplyCandidate() {
+  const landCount = Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0;
+  return !!runtimeState.activeScenarioId && landCount >= HEAVY_SCENARIO_STAGED_APPLY_FEATURE_THRESHOLD;
+}
+
+function getViewportRenderSignature() {
+  return [
+    Math.round(Number(runtimeState.width || 0)),
+    Math.round(Number(runtimeState.height || 0)),
+    Number(Number(runtimeState.dpr || 1).toFixed(2)),
+  ].join("|");
+}
+
+function getProjectionRenderSignature() {
+  if (!projection || typeof projection.scale !== "function" || typeof projection.translate !== "function") {
+    return "projection:na";
+  }
+  const translate = projection.translate() || [0, 0];
+  return [
+    Number(Number(projection.scale() || 0).toFixed(3)),
+    Number(Number(translate[0] || 0).toFixed(3)),
+    Number(Number(translate[1] || 0).toFixed(3)),
+  ].join("|");
+}
+
+function getContextBaseZoomBucketId(k = runtimeState.zoomTransform?.k || 1) {
+  const normalized = Math.max(0.0001, Number(k || 1));
+  if (normalized < CONTEXT_BASE_BUCKET_LOW_MAX) return "low";
+  if (normalized < CONTEXT_BASE_BUCKET_MID_MAX) return "mid";
+  return "high";
+}
+
+function getContextBaseReuseMaxDistancePx() {
+  const viewportMin = Math.max(1, Math.min(Number(runtimeState.width || 0), Number(runtimeState.height || 0)));
+  const scaled = viewportMin * CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO;
+  return Math.max(
+    CONTEXT_BASE_REUSE_MIN_DISTANCE_PX,
+    Math.min(CONTEXT_BASE_REUSE_MAX_DISTANCE_PX, scaled)
+  );
+}
+
+function resetPhysicalLandClipPathCache() {
+  physicalLandClipPathCache.key = "";
+  physicalLandClipPathCache.path = null;
+}
+
+function shouldEnableContextBaseTransformReuse() {
+  return (
+    String(runtimeState.renderProfile || "auto") === "balanced"
+    && isHeavyScenarioStagedApplyCandidate()
+    && !!runtimeState.activeScenarioId
+  );
+}
+
+function shouldEnableContextScenarioTransformReuse() {
+  return String(runtimeState.renderProfile || "auto") === "balanced" && !!runtimeState.activeScenarioId;
+}
+
+function normalizeScenarioWaterCacheStrategyMode(rawMode) {
+  const normalized = String(rawMode || "").trim().toLowerCase();
+  return SCENARIO_WATER_CACHE_MODES.has(normalized) ? normalized : "";
+}
+
+function getFirstValidScenarioWaterCacheStrategyMode(...rawModes) {
+  for (let index = 0; index < rawModes.length; index += 1) {
+    const mode = normalizeScenarioWaterCacheStrategyMode(rawModes[index]);
+    if (mode) return mode;
+  }
+  return "";
+}
+
+function getForcedScenarioWaterCacheMode() {
+  const queryMode = getFirstValidScenarioWaterCacheStrategyMode(
+    readSearchParam(SCENARIO_WATER_CACHE_MODE_PARAM),
+    readSearchParam(SCENARIO_WATER_CACHE_MODE_ALT_PARAM)
+  );
+  if (queryMode) {
+    return {
+      mode: queryMode,
+      source: "query-param",
+    };
+  }
+
+  const profileMode = runtimeState.renderProfile && typeof runtimeState.renderProfile === "object"
+    ? getFirstValidScenarioWaterCacheStrategyMode(
+      runtimeState.renderProfile.waterCacheMode,
+      runtimeState.renderProfile.scenarioWaterCacheMode
+    )
+    : "";
+  if (profileMode) {
+    return {
+      mode: profileMode,
+      source: "render-profile",
+    };
+  }
+
+  const stateMode = getFirstValidScenarioWaterCacheStrategyMode(
+    runtimeState.scenarioWaterCacheMode,
+    runtimeState.waterCacheMode
+  );
+  if (stateMode) {
+    return {
+      mode: stateMode,
+      source: "state",
+    };
+  }
+
+  return {
+    mode: "adaptive",
+    source: "default",
+  };
+}
+
+function normalizeScenarioWaterCoverageAlgo(rawValue) {
+  const normalized = String(rawValue || "").trim().toLowerCase();
+  return SCENARIO_WATER_COVERAGE_ALGOS.has(normalized) ? normalized : "";
+}
+
+function getFirstValidScenarioWaterCoverageAlgo(...rawValues) {
+  for (let index = 0; index < rawValues.length; index += 1) {
+    const algo = normalizeScenarioWaterCoverageAlgo(rawValues[index]);
+    if (algo) return algo;
+  }
+  return "";
+}
+
+function getForcedScenarioWaterCoverageAlgo() {
+  const queryAlgo = getFirstValidScenarioWaterCoverageAlgo(
+    readSearchParam(SCENARIO_WATER_COVERAGE_ALGO_PARAM),
+    readSearchParam(SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM)
+  );
+  if (queryAlgo) {
+    return {
+      algo: queryAlgo,
+      source: "query-param",
+    };
+  }
+
+  const profileAlgo = runtimeState.renderProfile && typeof runtimeState.renderProfile === "object"
+    ? getFirstValidScenarioWaterCoverageAlgo(
+      runtimeState.renderProfile.waterCacheCoverageAlgo,
+      runtimeState.renderProfile.scenarioWaterCacheCoverageAlgo
+    )
+    : "";
+  if (profileAlgo) {
+    return {
+      algo: profileAlgo,
+      source: "render-profile",
+    };
+  }
+
+  const stateAlgo = getFirstValidScenarioWaterCoverageAlgo(
+    runtimeState.waterCacheCoverageAlgo,
+    runtimeState.scenarioWaterCacheCoverageAlgo
+  );
+  if (stateAlgo) {
+    return {
+      algo: stateAlgo,
+      source: "state",
+    };
+  }
+
+  return {
+    algo: "grid",
+    source: "default",
+  };
+}
+
+function getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures = []) {
+  const viewportWidth = Math.max(1, Number(runtimeState.width || 0));
+  const viewportHeight = Math.max(1, Number(runtimeState.height || 0));
+  const viewportArea = viewportWidth * viewportHeight;
+  if (!(viewportArea > 0)) return 0;
+  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+  let clippedArea = 0;
+  (Array.isArray(waterFeatures) ? waterFeatures : []).forEach((feature) => {
+    collectSafeWaterRegionGeometryParts(feature).forEach((part) => {
+      const bounds = computeProjectedGeoBounds(part);
+      if (!bounds) return;
+      const minX = bounds.minX * transform.k + transform.x;
+      const minY = bounds.minY * transform.k + transform.y;
+      const maxX = bounds.maxX * transform.k + transform.x;
+      const maxY = bounds.maxY * transform.k + transform.y;
+      if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
+      const clippedWidth = Math.max(0, Math.min(maxX, viewportWidth) - Math.max(minX, 0));
+      const clippedHeight = Math.max(0, Math.min(maxY, viewportHeight) - Math.max(minY, 0));
+      if (!(clippedWidth > 0 && clippedHeight > 0)) return;
+      clippedArea += clippedWidth * clippedHeight;
+    });
+  });
+  return Math.max(0, Math.min(1, clippedArea / viewportArea));
+}
+
+function getScenarioWaterVisibleCoverageRatioGrid(waterFeatures = []) {
+  const viewportWidth = Math.max(1, Number(runtimeState.width || 0));
+  const viewportHeight = Math.max(1, Number(runtimeState.height || 0));
+  if (!(viewportWidth > 0 && viewportHeight > 0)) return 0;
+  const dpr = Math.max(1, Math.min(SCENARIO_WATER_COVERAGE_GRID_MAX_DPR, Number(globalThis.devicePixelRatio || 1)));
+  const gridColumns = Math.max(1, Math.round(SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS * dpr));
+  const gridRows = Math.max(1, Math.round(SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS * dpr));
+  const totalCellCount = gridColumns * gridRows;
+  if (!(totalCellCount > 0)) return 0;
+  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+  const covered = new Uint8Array(totalCellCount);
+  let coveredCount = 0;
+  const safeWaterFeatures = Array.isArray(waterFeatures) ? waterFeatures : [];
+  for (const feature of safeWaterFeatures) {
+    if (coveredCount >= totalCellCount) break;
+    for (const part of collectSafeWaterRegionGeometryParts(feature)) {
+      if (coveredCount >= totalCellCount) break;
+      const bounds = computeProjectedGeoBounds(part);
+      if (!bounds) continue;
+      const minX = bounds.minX * transform.k + transform.x;
+      const minY = bounds.minY * transform.k + transform.y;
+      const maxX = bounds.maxX * transform.k + transform.x;
+      const maxY = bounds.maxY * transform.k + transform.y;
+      if (![minX, minY, maxX, maxY].every(Number.isFinite)) continue;
+      const clippedMinX = Math.max(0, Math.min(minX, viewportWidth));
+      const clippedMinY = Math.max(0, Math.min(minY, viewportHeight));
+      const clippedMaxX = Math.max(0, Math.min(maxX, viewportWidth));
+      const clippedMaxY = Math.max(0, Math.min(maxY, viewportHeight));
+      if (!(clippedMaxX > clippedMinX && clippedMaxY > clippedMinY)) continue;
+
+      const colStart = Math.max(0, Math.min(gridColumns - 1, Math.floor((clippedMinX / viewportWidth) * gridColumns)));
+      const colEnd = Math.max(0, Math.min(
+        gridColumns - 1,
+        Math.ceil((clippedMaxX / viewportWidth) * gridColumns) - 1
+      ));
+      const rowStart = Math.max(0, Math.min(gridRows - 1, Math.floor((clippedMinY / viewportHeight) * gridRows)));
+      const rowEnd = Math.max(0, Math.min(
+        gridRows - 1,
+        Math.ceil((clippedMaxY / viewportHeight) * gridRows) - 1
+      ));
+      if (colEnd < colStart || rowEnd < rowStart) continue;
+
+      for (let row = rowStart; row <= rowEnd; row += 1) {
+        const rowOffset = row * gridColumns;
+        for (let col = colStart; col <= colEnd; col += 1) {
+          const cellIndex = rowOffset + col;
+          if (covered[cellIndex]) continue;
+          covered[cellIndex] = 1;
+          coveredCount += 1;
+          if (coveredCount >= totalCellCount) break;
+        }
+        if (coveredCount >= totalCellCount) break;
+      }
+    }
+  }
+  return Math.max(0, Math.min(1, coveredCount / totalCellCount));
+}
+
+function getScenarioWaterVisibleCoverageRatio(waterFeatures = [], options = {}) {
+  const algo = normalizeScenarioWaterCoverageAlgo(options?.algo) || getForcedScenarioWaterCoverageAlgo().algo;
+  if (algo === "legacy") return getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures);
+  return getScenarioWaterVisibleCoverageRatioGrid(waterFeatures);
+}
+
+function getScenarioWaterCacheComplexitySignals(waterFeatures = []) {
+  const featureCount = Array.isArray(waterFeatures) ? waterFeatures.length : 0;
+  const coverageAlgoDecision = getForcedScenarioWaterCoverageAlgo();
+  const visibleCoverageRatio = getScenarioWaterVisibleCoverageRatio(waterFeatures, { algo: coverageAlgoDecision.algo });
+  const previousRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
+  return {
+    featureCount,
+    visibleCoverageRatio: Number(visibleCoverageRatio.toFixed(4)),
+    previousRenderedCount,
+    waterCoverageAlgo: coverageAlgoDecision.algo,
+    waterCoverageAlgoSource: coverageAlgoDecision.source,
+  };
+}
+
+function shouldUseDirectScenarioWaterDraw(signals) {
+  return (
+    Number(signals?.featureCount || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX
+    && Number(signals?.visibleCoverageRatio || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX
+    && Number(signals?.previousRenderedCount || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX
+  );
+}
+
+function getPassReferenceTransform(passName) {
+  return getRenderCacheOwner().getPassReferenceTransform(passName);
+}
+
+function setPassReferenceTransform(passName, transform) {
+  return getRenderCacheOwner().setPassReferenceTransform(passName, transform);
+}
+
+function getTransformReuseDelta(currentTransform, referenceTransform) {
+  const current = cloneZoomTransform(currentTransform);
+  const reference = cloneZoomTransform(referenceTransform);
+  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
+  const dx = current.x - (reference.x * scaleRatio);
+  const dy = current.y - (reference.y * scaleRatio);
+  const distancePx = Math.hypot(dx, dy);
+  return {
+    current,
+    reference,
+    scaleRatio,
+    dx,
+    dy,
+    distancePx,
+  };
+}
+
+function getContextBaseReuseDecision(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const referenceTransform = getPassReferenceTransform("contextBase");
+  const currentBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
+  if (!shouldEnableContextBaseTransformReuse()) {
+    return {
+      enabled: false,
+      shouldExactRefresh: true,
+      reason: "reuse-disabled",
+      scaleRatio: 1,
+      distancePx: 0,
+      zoomBucket: currentBucket,
+      referenceZoomBucket: currentBucket,
+      crossesMinorContourThreshold: false,
+      referenceTransform,
+    };
+  }
+  if (!referenceTransform) {
+    return {
+      enabled: true,
+      shouldExactRefresh: true,
+      reason: "no-reference-transform",
+      scaleRatio: 1,
+      distancePx: 0,
+      zoomBucket: currentBucket,
+      referenceZoomBucket: "",
+      crossesMinorContourThreshold: false,
+      referenceTransform: null,
+    };
+  }
+  const delta = getTransformReuseDelta(transform, referenceTransform);
+  const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
+  const crossesMinorContourThreshold =
+    (delta.reference.k < CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD && delta.current.k >= CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD)
+    || (delta.reference.k >= CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD && delta.current.k < CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD);
+  const crossesZoomBucket = currentBucket !== referenceBucket;
+  const maxDistancePx = getContextBaseReuseMaxDistancePx();
+  const shouldExactRefresh =
+    crossesZoomBucket
+    || delta.distancePx > maxDistancePx
+    || crossesMinorContourThreshold;
+  let reason = "transform-reuse";
+  if (crossesZoomBucket) {
+    reason = "zoom-bucket-change";
+  } else if (delta.distancePx > maxDistancePx) {
+    reason = "distance-threshold";
+  } else if (crossesMinorContourThreshold) {
+    reason = "minor-contour-threshold";
+  }
+  return {
+    enabled: true,
+    shouldExactRefresh,
+    reason,
+    scaleRatio: Number(delta.scaleRatio.toFixed(4)),
+    distancePx: Number(delta.distancePx.toFixed(2)),
+    maxDistancePx: Number(maxDistancePx.toFixed(2)),
+    zoomBucket: currentBucket,
+    referenceZoomBucket: referenceBucket,
+    crossesZoomBucket,
+    crossesMinorContourThreshold,
+    referenceTransform,
+    currentTransform: delta.current,
+  };
+}
+
+function getContextScenarioReuseDecision(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const cache = getRenderPassCacheState();
+  const referenceTransform = getPassReferenceTransform("contextScenario");
+  const currentBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
+  const reuseFrameCount = Math.max(0, Number(cache.counters?.contextScenarioReuseCount || 0));
+  if (!shouldEnableContextScenarioTransformReuse()) {
+    return {
+      enabled: false,
+      shouldExactRefresh: true,
+      reason: "reuse-disabled",
+      scaleRatio: 1,
+      distancePx: 0,
+      maxDistancePx: getContextBaseReuseMaxDistancePx(),
+      zoomBucket: currentBucket,
+      referenceZoomBucket: currentBucket,
+      crossesZoomBucket: false,
+      reuseFrameCount,
+      reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
+      referenceTransform,
+    };
+  }
+  if (!referenceTransform) {
+    return {
+      enabled: true,
+      shouldExactRefresh: true,
+      reason: "no-reference-transform",
+      scaleRatio: 1,
+      distancePx: 0,
+      maxDistancePx: getContextBaseReuseMaxDistancePx(),
+      zoomBucket: currentBucket,
+      referenceZoomBucket: "",
+      crossesZoomBucket: false,
+      reuseFrameCount,
+      reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
+      referenceTransform: null,
+    };
+  }
+  const delta = getTransformReuseDelta(transform, referenceTransform);
+  const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
+  const crossesZoomBucket = currentBucket !== referenceBucket;
+  const maxDistancePx = Math.max(
+    getContextBaseReuseMaxDistancePx(),
+    CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX,
+  );
+  const reachesReuseFrameLimit = reuseFrameCount >= CONTEXT_SCENARIO_REUSE_FRAME_LIMIT;
+  const shouldExactRefresh =
+    delta.distancePx > maxDistancePx
+    || reachesReuseFrameLimit;
+  let reason = "transform-reuse";
+  if (delta.distancePx > maxDistancePx) {
+    reason = "distance-threshold";
+  } else if (reachesReuseFrameLimit) {
+    reason = "reuse-frame-limit";
+  }
+  return {
+    enabled: true,
+    shouldExactRefresh,
+    reason,
+    scaleRatio: Number(delta.scaleRatio.toFixed(4)),
+    distancePx: Number(delta.distancePx.toFixed(2)),
+    maxDistancePx: Number(maxDistancePx.toFixed(2)),
+    zoomBucket: currentBucket,
+    referenceZoomBucket: referenceBucket,
+    crossesZoomBucket,
+    reuseFrameCount,
+    reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
+    referenceTransform,
+    currentTransform: delta.current,
+  };
+}
+
+function shouldStartExactAfterSettleFastPath() {
+  if (!shouldEnableContextBaseTransformReuse()) return false;
+  if (runtimeState.deferContextBasePass) return false;
+  const requiredPasses = [
+    "background",
+    "physicalBase",
+    "political",
+    "contextBase",
+    "contextScenario",
+    "effects",
+    "lineEffects",
+    "contextMarkers",
+    "dayNight",
+    "textureLabels",
+  ];
+  return requiredPasses.every((passName) => {
+    const cache = getRenderPassCacheState();
+    return !!cache.canvases?.[passName] && !!getPassReferenceTransform(passName);
+  });
+}
+
+function ensureProjectedBoundsCache() {
+  if (!(runtimeState.projectedBoundsById instanceof Map)) {
+    runtimeState.projectedBoundsById = createDefaultProjectedBoundsCacheState().projectedBoundsById;
+  }
+  return runtimeState.projectedBoundsById;
+}
+
+function clearProjectedBoundsCache() {
+  ensureProjectedBoundsCache().clear();
+  scenarioWaterPartPathCache = new WeakMap();
+  scenarioWaterFeaturePathCache = new WeakMap();
+}
+
+function isLineGeometryType(geometryType) {
+  return geometryType === "LineString" || geometryType === "MultiLineString";
+}
+
+function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
+  const geometryType = String(feature?.geometry?.type || "").trim() || "Unknown";
+  const diagnostics = runtimeState.projectedBoundsDiagnostics && typeof runtimeState.projectedBoundsDiagnostics === "object"
+    ? runtimeState.projectedBoundsDiagnostics
+    : { total: 0, byGeometryType: {}, byReason: {} };
+  diagnostics.total = Math.max(0, Number(diagnostics.total || 0) + 1);
+  diagnostics.byGeometryType = diagnostics.byGeometryType && typeof diagnostics.byGeometryType === "object"
+    ? diagnostics.byGeometryType
+    : {};
+  diagnostics.byReason = diagnostics.byReason && typeof diagnostics.byReason === "object"
+    ? diagnostics.byReason
+    : {};
+  diagnostics.byGeometryType[geometryType] = Math.max(
+    0,
+    Number(diagnostics.byGeometryType[geometryType] || 0) + 1,
+  );
+  diagnostics.byReason[reason] = Math.max(
+    0,
+    Number(diagnostics.byReason[reason] || 0) + 1,
+  );
+  runtimeState.projectedBoundsDiagnostics = diagnostics;
+  recordRenderPerfMetric("projectedBoundsDiagnostics", 0, {
+    total: diagnostics.total,
+    byGeometryType: { ...diagnostics.byGeometryType },
+    byReason: { ...diagnostics.byReason },
+    lastGeometryType: geometryType,
+    lastReason: reason,
+  });
+}
+
+function computeProjectedFeatureBounds(feature) {
+  return computeProjectedGeoBounds(feature);
+}
+
+function computeProjectedGeoBounds(geoObject) {
+  const pathRef = pathCanvas || pathSVG;
+  if (!pathRef || !geoObject) return null;
+
+  let bounds = null;
+  try {
+    bounds = pathRef.bounds(geoObject);
+  } catch (error) {
+    return null;
+  }
+
+  if (!bounds || bounds.length !== 2) return null;
+  const minX = bounds[0][0];
+  const minY = bounds[0][1];
+  const maxX = bounds[1][0];
+  const maxY = bounds[1][1];
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
+
+  const featureWidth = maxX - minX;
+  const featureHeight = maxY - minY;
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: featureWidth,
+    height: featureHeight,
+    area: Math.max(0, featureWidth) * Math.max(0, featureHeight),
+  };
+}
+
+function normalizeGeoObjectForSphericalDiagnostics(geoObject) {
+  if (!geoObject || typeof geoObject !== "object") return null;
+  const objectType = String(geoObject.type || "").trim();
+  if (objectType === "Feature" || objectType === "FeatureCollection" || objectType === "Sphere") {
+    return geoObject;
+  }
+  if (objectType) {
+    return {
+      type: "Feature",
+      properties: {},
+      geometry: geoObject,
+    };
+  }
+  return null;
+}
+
+function getSphericalGeometryDiagnostics(geoObject) {
+  const normalizedGeoObject = normalizeGeoObjectForSphericalDiagnostics(geoObject);
+  if (!normalizedGeoObject || !globalThis.d3?.geoArea || !globalThis.d3?.geoBounds) {
+    return null;
+  }
+  if (sphericalGeometryDiagnosticsByObject.has(geoObject)) {
+    return sphericalGeometryDiagnosticsByObject.get(geoObject) || null;
+  }
+
+  try {
+    const area = Number(globalThis.d3.geoArea(normalizedGeoObject));
+    const bounds = globalThis.d3.geoBounds(normalizedGeoObject);
+    const diagnostics = {
+      area,
+      bounds,
+      isWorldBounds: isWorldBounds(bounds),
+      hasExcessiveSphereArea: Number.isFinite(area) && area > SPHERICAL_GEOMETRY_MAX_AREA,
+    };
+    diagnostics.invalid = diagnostics.isWorldBounds || diagnostics.hasExcessiveSphereArea;
+    sphericalGeometryDiagnosticsByObject.set(geoObject, diagnostics);
+    return diagnostics;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function isSphericalGeometryUnsafe(geoObject) {
+  return !!getSphericalGeometryDiagnostics(geoObject)?.invalid;
+}
+
+function collectPolygonalGeometryParts(geometry) {
+  if (!geometry || typeof geometry !== "object") return [];
+  const geometryType = String(geometry.type || "");
+  if (geometryType === "Polygon") {
+    return [geometry];
+  }
+  if (geometryType === "MultiPolygon") {
+    const coordinates = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+    return coordinates
+      .filter((partCoordinates) => Array.isArray(partCoordinates) && partCoordinates.length > 0)
+      .map((partCoordinates) => ({
+        type: "Polygon",
+        coordinates: partCoordinates,
+      }));
+  }
+  if (geometryType === "GeometryCollection") {
+    return (Array.isArray(geometry.geometries) ? geometry.geometries : [])
+      .flatMap((partGeometry) => collectPolygonalGeometryParts(partGeometry));
+  }
+  return [];
+}
+
+function collectFeatureHitGeometries(feature) {
+  const geometry = feature?.geometry;
+  const polygonParts = collectPolygonalGeometryParts(geometry);
+  return polygonParts.length ? polygonParts : (geometry ? [geometry] : []);
+}
+
+function buildWaterRegionFeatureFromParts(feature, parts) {
+  const safeParts = Array.isArray(parts) ? parts : [];
+  if (!feature || !safeParts.length) return null;
+  if (safeParts.length === 1) {
+    return {
+      ...feature,
+      geometry: safeParts[0],
+    };
+  }
+  return {
+    ...feature,
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: safeParts
+        .filter((part) => String(part?.type || "") === "Polygon" && Array.isArray(part.coordinates))
+        .map((part) => part.coordinates),
+    },
+  };
+}
+
+function collectSafeWaterRegionGeometryPartsInfo(feature) {
+  if (!feature || typeof feature !== "object") {
+    return { parts: [], rawCount: 0, removedCount: 0 };
+  }
+  if (safeWaterRegionGeometryPartsByFeature.has(feature)) {
+    return safeWaterRegionGeometryPartsByFeature.get(feature);
+  }
+  const rawParts = collectFeatureHitGeometries(feature);
+  const safeParts = [];
+  let removedCount = 0;
+  rawParts.forEach((part) => {
+    if (isSphericalGeometryUnsafe(part)) {
+      removedCount += 1;
+      return;
+    }
+    safeParts.push(part);
+  });
+  const info = {
+    parts: safeParts,
+    rawCount: rawParts.length,
+    removedCount,
+  };
+  safeWaterRegionGeometryPartsByFeature.set(feature, info);
+  return info;
+}
+
+function collectSafeWaterRegionGeometryParts(feature) {
+  return collectSafeWaterRegionGeometryPartsInfo(feature).parts;
+}
+
+function shouldExcludeWaterHitGeometry(hitGeometry) {
+  return isSphericalGeometryUnsafe(hitGeometry);
+}
+
+function sanitizeWaterRegionFeature(feature) {
+  if (!feature || typeof feature !== "object") return null;
+  if (sanitizedWaterRegionFeatureByFeature.has(feature)) {
+    return sanitizedWaterRegionFeatureByFeature.get(feature);
+  }
+  const partInfo = collectSafeWaterRegionGeometryPartsInfo(feature);
+  const sanitized = partInfo.removedCount > 0
+    ? buildWaterRegionFeatureFromParts(feature, partInfo.parts)
+    : feature;
+  sanitizedWaterRegionFeatureByFeature.set(feature, sanitized);
+  return sanitized;
+}
+
+function sanitizeWaterRegionFeatures(features = []) {
+  const sanitizedFeatures = [];
+  const changedFeatureIds = [];
+  let removedPartCount = 0;
+  (Array.isArray(features) ? features : []).forEach((feature) => {
+    const sanitized = sanitizeWaterRegionFeature(feature);
+    const partInfo = collectSafeWaterRegionGeometryPartsInfo(feature);
+    if (partInfo.removedCount > 0) {
+      const featureId = getFeatureId(feature);
+      if (featureId) changedFeatureIds.push(featureId);
+      removedPartCount += partInfo.removedCount;
+    }
+    if (sanitized) sanitizedFeatures.push(sanitized);
+  });
+  if (removedPartCount > 0) {
+    const uniqueIds = Array.from(new Set(changedFeatureIds)).sort();
+    recordRenderPerfMetric("waterSphericalSanitization", 0, {
+      removedPartCount,
+      featureIds: uniqueIds,
+    });
+    const warningKey = `${runtimeState.activeScenarioId || ""}:${uniqueIds.join(",")}:${removedPartCount}`;
+    if (!waterSphericalSanitizationWarnings.has(warningKey)) {
+      waterSphericalSanitizationWarnings.add(warningKey);
+      console.warn(
+        `[map_renderer] Removed ${removedPartCount} D3-unsafe water geometry part(s): ${uniqueIds.join(", ")}`
+      );
+    }
+  }
+  return sanitizedFeatures;
+}
+
+function rebuildProjectedBoundsCache() {
+  clearProjectedBoundsCache();
+  const cache = ensureProjectedBoundsCache();
+  if (runtimeState.landData?.features?.length) {
+    runtimeState.landData.features.forEach((feature) => {
+      const featureId = getFeatureId(feature);
+      if (!featureId) return;
+      const bounds = computeProjectedFeatureBounds(feature);
+      if (!bounds) return;
+      cache.set(featureId, bounds);
+    });
+  }
+  if (runtimeState.riversData?.features?.length) {
+    runtimeState.riversData.features.forEach((feature) => {
+      const featureId = getFeatureId(feature);
+      if (!featureId) return;
+      const bounds = computeProjectedFeatureBounds(feature);
+      if (!bounds) return;
+      cache.set(featureId, bounds);
+    });
+  }
+}
+
+function getProjectedFeatureBounds(feature, { featureId = null, allowCompute = true } = {}) {
+  const resolvedFeatureId = featureId || getFeatureId(feature);
+  if (resolvedFeatureId) {
+    const cache = ensureProjectedBoundsCache();
+    if (cache.has(resolvedFeatureId)) {
+      return cache.get(resolvedFeatureId) || null;
+    }
+    if (!allowCompute) return null;
+    const computed = computeProjectedFeatureBounds(feature);
+    if (computed) {
+      cache.set(resolvedFeatureId, computed);
+    }
+    return computed;
+  }
+
+  if (!allowCompute) return null;
+  return computeProjectedFeatureBounds(feature);
+}
+
+function mergeProjectedBounds(boundsList = []) {
+  const bounds = (Array.isArray(boundsList) ? boundsList : []).filter(Boolean);
+  if (!bounds.length) return null;
+  const minX = Math.min(...bounds.map((entry) => Number(entry.minX)));
+  const minY = Math.min(...bounds.map((entry) => Number(entry.minY)));
+  const maxX = Math.max(...bounds.map((entry) => Number(entry.maxX)));
+  const maxY = Math.max(...bounds.map((entry) => Number(entry.maxY)));
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+    return null;
+  }
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
+  };
+}
+
+function isKnownBadFeatureId(featureId) {
+  if (!featureId) return false;
+  return KNOWN_BAD_FEATURE_IDS.has(String(featureId));
+}
+
+function isAdmin0ShellFeature(feature, featureId) {
+  const candidate = String(
+    feature?.properties?.id ?? featureId ?? feature?.id ?? ""
+  ).trim().toUpperCase();
+  if (/^[A-Z]{2,3}$/.test(candidate)) {
+    return true;
+  }
+  const detailTier = String(feature?.properties?.detail_tier || "").trim().toLowerCase();
+  return detailTier === "antarctic_sector" && candidate.startsWith("AQ_");
+}
+
+function isScenarioShellFeature(feature, featureId = null) {
+  if (String(feature?.properties?.scenario_helper_kind || "").trim().toLowerCase() === "shell_fallback") {
+    return true;
+  }
+  const candidate = String(
+    feature?.properties?.id ?? featureId ?? feature?.id ?? ""
+  ).trim().toUpperCase();
+  if (candidate.startsWith("RU_ARCTIC_FB_")) return true;
+  return String(feature?.properties?.name || "").toLowerCase().includes("shell fallback");
+}
+
+function getAtlantropaGeometryRole(feature) {
+  return String(feature?.properties?.atl_geometry_role || "").trim().toLowerCase();
+}
+
+function getAtlantropaJoinMode(feature) {
+  return String(feature?.properties?.atl_join_mode || "").trim().toLowerCase();
+}
+
+function isAntarcticSectorFeature(feature, featureId = null) {
+  const candidate = String(
+    feature?.properties?.id ?? featureId ?? feature?.id ?? ""
+  ).trim().toUpperCase();
+  if (!candidate) return false;
+  const countryCode = getFeatureCountryCodeNormalized(feature);
+  const detailTier = String(feature?.properties?.detail_tier || "").trim().toLowerCase();
+  return detailTier === "antarctic_sector" && (countryCode === "AQ" || candidate.startsWith("AQ_"));
+}
+
+function isAtlantropaSupportHelperFeature(feature, featureId = null) {
+  const candidate = String(
+    feature?.properties?.id ?? featureId ?? feature?.id ?? ""
+  ).trim().toUpperCase();
+  if (
+    candidate.startsWith("ATLSHL_")
+    || candidate.startsWith("ATLWLD_")
+    || candidate.startsWith("ATLSEA_FILL_")
+  ) {
+    return true;
+  }
+  const geometryRole = getAtlantropaGeometryRole(feature);
+  const joinMode = getAtlantropaJoinMode(feature);
+  return (
+    geometryRole === "shore_seal"
+    || geometryRole === "sea_completion"
+    || geometryRole === "donor_sea"
+    || joinMode === "gap_fill"
+    || joinMode === "boolean_weld"
+  );
+}
+
+function isAtlantropaVisualSupportHelperFeature(feature, featureId = null) {
+  const candidate = String(
+    feature?.properties?.id ?? featureId ?? feature?.id ?? ""
+  ).trim().toUpperCase();
+  if (
+    candidate.startsWith("ATLSHL_")
+    || candidate.startsWith("ATLWLD_")
+    || candidate.startsWith("ATLSEA_FILL_")
+  ) {
+    return true;
+  }
+  const geometryRole = getAtlantropaGeometryRole(feature);
+  const joinMode = getAtlantropaJoinMode(feature);
+  return (
+    geometryRole === "shore_seal"
+    || geometryRole === "sea_completion"
+    || geometryRole === "donor_sea"
+    || joinMode === "gap_fill"
+  );
+}
+
+function isPoliticalVisualRenderableFeature(feature, featureId = null) {
+  if (!feature) return false;
+  if (isAntarcticSectorFeature(feature, featureId)) return false;
+  if (isBaseGeographyScenarioFeature(feature)) return false;
+  if (isAtlantropaVisualSupportHelperFeature(feature, featureId)) return false;
+  return true;
+}
+
+function shouldExcludePoliticalVisualFeature(feature, featureId = null) {
+  return !isPoliticalVisualRenderableFeature(feature, featureId);
+}
+
+function isPoliticalInteractionRenderableFeature(feature, featureId = null) {
+  if (!isPoliticalVisualRenderableFeature(feature, featureId)) return false;
+  if (isScenarioShellFeature(feature, featureId)) return false;
+  if (feature?.properties?.interactive === false) return false;
+  if (isAtlantropaSupportHelperFeature(feature, featureId)) return false;
+  return true;
+}
+
+function shouldExcludePoliticalInteractionFeature(feature, featureId = null) {
+  return !isPoliticalInteractionRenderableFeature(feature, featureId);
+}
+
+function isGiantFeature(feature, canvasWidth, canvasHeight, boundsOverride = null) {
+  const bounds = boundsOverride || getProjectedFeatureBounds(feature);
+  if (!bounds) return false;
+  return (
+    bounds.width > canvasWidth * GIANT_FEATURE_CULL_RATIO &&
+    bounds.height > canvasHeight * GIANT_FEATURE_CULL_RATIO
+  );
+}
+
+function isProjectedWrapArtifact(feature, canvasWidth, canvasHeight, boundsOverride = null) {
+  const bounds = boundsOverride || getProjectedFeatureBounds(feature);
+  if (!bounds) return false;
+  if (canvasWidth <= 0 || canvasHeight <= 0) return false;
+
+  const widthRatio = bounds.width / canvasWidth;
+  const heightRatio = bounds.height / canvasHeight;
+  const areaRatio = bounds.area / (canvasWidth * canvasHeight);
+  const aspectRatio = bounds.width / Math.max(bounds.height, 1);
+
+  if (
+    widthRatio >= WRAP_ARTIFACT_WIDTH_RATIO &&
+    heightRatio >= WRAP_ARTIFACT_HEIGHT_RATIO
+  ) {
+    return true;
+  }
+
+  return (
+    widthRatio >= WRAP_ARTIFACT_WIDTH_RATIO * 0.92 &&
+    areaRatio >= WRAP_ARTIFACT_AREA_RATIO &&
+    aspectRatio >= WRAP_ARTIFACT_ASPECT_MIN
+  );
+}
+
+function evaluateSkipFeature(feature, canvasWidth, canvasHeight, { forceProd = false } = {}) {
+  if (!forceProd && debugMode !== "PROD") {
+    return { skip: false, reason: null, featureId: getFeatureId(feature), countryCode: "" };
+  }
+
+  const featureId = getFeatureId(feature);
+  if (isKnownBadFeatureId(featureId)) {
+    return {
+      skip: true,
+      reason: "known_bad_id",
+      featureId,
+      countryCode: getFeatureCountryCodeNormalized(feature),
+      bounds: null,
+    };
+  }
+
+  const bounds = getProjectedFeatureBounds(feature, { featureId });
+  const countryCode = getFeatureCountryCodeNormalized(feature);
+  if (!bounds) {
+    return {
+      skip: false,
+      reason: null,
+      featureId,
+      countryCode,
+      bounds: null,
+    };
+  }
+
+  const isTrustedAdmin0Shell =
+    GIANT_FEATURE_ALLOWLIST.has(countryCode) &&
+    isAdmin0ShellFeature(feature, featureId);
+  const spherical = getSphericalFeatureDiagnostics(feature, { featureId });
+  if (spherical?.invalid && !isTrustedAdmin0Shell) {
+    return {
+      skip: true,
+      reason: spherical.isWorldBounds ? "world_bounds" : "spherical_area",
+      featureId,
+      countryCode,
+      bounds,
+    };
+  }
+
+  const giant = isGiantFeature(feature, canvasWidth, canvasHeight, bounds);
+  const wrapArtifact = isProjectedWrapArtifact(feature, canvasWidth, canvasHeight, bounds);
+  if (!giant && !wrapArtifact) {
+    return {
+      skip: false,
+      reason: null,
+      featureId,
+      countryCode: getFeatureCountryCodeNormalized(feature),
+      bounds,
+    };
+  }
+
+  if (isTrustedAdmin0Shell) {
+    return {
+      skip: false,
+      reason: null,
+      featureId,
+      countryCode,
+      bounds,
+    };
+  }
+
+  let reason = "skip_unknown";
+  if (giant && wrapArtifact) reason = "giant_wrap_artifact";
+  else if (giant) reason = "giant_feature";
+  else if (wrapArtifact) reason = "wrap_artifact";
+
+  return {
+    skip: true,
+    reason,
+    featureId,
+    countryCode,
+    bounds,
+  };
+}
+
+function shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd = false } = {}) {
+  const decision = evaluateSkipFeature(feature, canvasWidth, canvasHeight, { forceProd });
+  recordSkipDiagnostic(feature, decision);
+  return Boolean(decision.skip);
+}
+
+function getRenderableLandFeatures(canvasWidth, canvasHeight, { forceProd = false } = {}) {
+  if (!runtimeState.landData?.features?.length) return [];
+  return runtimeState.landData.features.filter(
+    (feature) => !shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd })
+  );
+}
+
+function isWorldBounds(bounds) {
+  return !!(
+    Array.isArray(bounds) &&
+    bounds.length === 2 &&
+    Array.isArray(bounds[0]) &&
+    Array.isArray(bounds[1]) &&
+    Math.abs(Number(bounds[0][0]) + 180) < 1e-9 &&
+    Math.abs(Number(bounds[0][1]) + 90) < 1e-9 &&
+    Math.abs(Number(bounds[1][0]) - 180) < 1e-9 &&
+    Math.abs(Number(bounds[1][1]) - 90) < 1e-9
+  );
+}
+
+function getSphericalFeatureDiagnostics(feature, { featureId = null, allowCompute = true } = {}) {
+  const resolvedFeatureId = featureId || getFeatureId(feature);
+  const diagnosticsCache = ensureSphericalFeatureDiagnosticsCache();
+  if (resolvedFeatureId && diagnosticsCache.has(resolvedFeatureId)) {
+    return diagnosticsCache.get(resolvedFeatureId) || null;
+  }
+  if (!allowCompute || !globalThis.d3?.geoArea || !globalThis.d3?.geoBounds || !feature?.geometry) {
+    return null;
+  }
+
+  const diagnostics = getSphericalGeometryDiagnostics(feature);
+  if (resolvedFeatureId && diagnostics) {
+    ensureSphericalFeatureDiagnosticsCache().set(resolvedFeatureId, diagnostics);
+  }
+  return diagnostics;
+}
+
+function getMaxDprForProfile(renderProfile) {
+  const profile = String(renderProfile || "auto").trim().toLowerCase();
+  const deviceDpr = Math.max(1, Number(globalThis.devicePixelRatio) || 1);
+  const baseMaxDpr = profile === "full"
+    ? deviceDpr
+    : profile === "balanced"
+      ? 1.5
+      : 1.25;
+  const stage = String(runtimeState.dprStage || "idle").toLowerCase();
+  if (stage === "interactive") {
+    const scale = Math.min(1, Math.max(0.5, Number(runtimeState.dprInteractiveScale) || 0.72));
+    return Math.max(1, baseMaxDpr * scale);
+  }
+  return baseMaxDpr;
+}
+
+function updateDprStage(nextStage = "idle", { force = false } = {}) {
+  const normalizedStage = String(nextStage || "idle").toLowerCase() === "interactive"
+    ? "interactive"
+    : "idle";
+  if (!force && runtimeState.dprStage === normalizedStage) {
+    return false;
+  }
+  runtimeState.dprStage = normalizedStage;
+  runtimeState.dprLastStageSwitchAt = nowMs();
+  return true;
+}
+
+function rebuildPoliticalLandCollections() {
+  const startedAt = nowMs();
+  const primaryTopology = runtimeState.topologyPrimary || runtimeState.topology;
+  const detailTopology = runtimeState.topologyBundleMode === "composite" ? runtimeState.topologyDetail : null;
+  const overrideCollection = runtimeState.topologyBundleMode === "composite" ? runtimeState.ruCityOverrides : null;
+  const runtimeTopology = runtimeState.topologyBundleMode === "composite" ? runtimeState.runtimePoliticalTopology : null;
+  const scenarioPoliticalChunkCollection = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+    ? runtimeState.scenarioPoliticalChunkData
+    : null;
+
+  let fullCollection = runtimeState.landDataFull || runtimeState.landData || null;
+  if (runtimeTopology?.objects?.political && globalThis.topojson) {
+    const runtimeCollection = getPoliticalFeatureCollection(runtimeTopology, "runtime");
+    fullCollection = scenarioPoliticalChunkCollection
+      ? composePoliticalFeatureCollections(runtimeCollection, scenarioPoliticalChunkCollection)
+      : runtimeCollection;
+  } else if (primaryTopology?.objects?.political && globalThis.topojson) {
+    fullCollection = runtimeState.topologyBundleMode === "composite"
+      ? composePoliticalFeatures(primaryTopology, detailTopology, overrideCollection)
+      : getPoliticalFeatureCollection(primaryTopology, "primary");
+  }
+
+  const interactiveCollection = buildInteractiveLandData(fullCollection);
+  runtimeState.landDataFull = fullCollection;
+  runtimeState.landData = interactiveCollection;
+  runtimeState.debugCountryCoverage = collectCountryCoverageStats(
+    Array.isArray(fullCollection?.features) ? fullCollection.features : []
+  );
+
+  const fullCount = Array.isArray(fullCollection?.features) ? fullCollection.features.length : 0;
+  const interactiveCount = Array.isArray(interactiveCollection?.features) ? interactiveCollection.features.length : 0;
+  if (interactiveCount < fullCount) {
+    console.info(
+      `[map_renderer] Interactive land filter removed ${fullCount - interactiveCount} aggregate support tier features.`
+    );
+  }
+
+  recordRenderPerfMetric("rebuildPoliticalLandCollections", nowMs() - startedAt, {
+    fullFeatureCount: fullCount,
+    interactiveFeatureCount: interactiveCount,
+  });
+  return { fullCollection, interactiveCollection };
+}
+
+function clearRenderPhaseTimer() {
+  if (runtimeState.renderPhaseTimerId) {
+    globalThis.clearTimeout(runtimeState.renderPhaseTimerId);
+    runtimeState.renderPhaseTimerId = null;
+  }
+}
+
+function clamp01(value) {
+  return Math.min(1, Math.max(0, Number(value) || 0));
+}
+
+function getAdaptiveSettleProfile(scaleDelta = Number(runtimeState.zoomGestureScaleDelta || 0)) {
+  const normalizedDelta = clamp01(
+    (Math.max(0, Number(scaleDelta) || 0) - ZOOM_SETTLE_ADAPTIVE_DELTA_MIN)
+    / Math.max(0.0001, ZOOM_SETTLE_ADAPTIVE_DELTA_MAX - ZOOM_SETTLE_ADAPTIVE_DELTA_MIN)
+  );
+  return {
+    scaleDelta: Math.max(0, Number(scaleDelta) || 0),
+    normalizedDelta,
+    settleDurationMs: Math.round(
+      RENDER_SETTLE_DURATION_MS_MIN
+      + ((RENDER_SETTLE_DURATION_MS - RENDER_SETTLE_DURATION_MS_MIN) * normalizedDelta)
+    ),
+    exactQuietWindowMs: Math.round(
+      EXACT_AFTER_SETTLE_QUIET_WINDOW_MS_MIN
+      + ((EXACT_AFTER_SETTLE_QUIET_WINDOW_MS - EXACT_AFTER_SETTLE_QUIET_WINDOW_MS_MIN) * normalizedDelta)
+    ),
+  };
+}
+
+function setRenderPhase(phase) {
+  const previousPhase = runtimeState.renderPhase;
+  runtimeState.renderPhase = phase;
+  runtimeState.phaseEnteredAt = nowMs();
+  runtimeState.isInteracting = phase === RENDER_PHASE_INTERACTING;
+  if (phase !== RENDER_PHASE_IDLE) {
+    cancelPoliticalPathWarmup(`phase-${phase}`);
+  }
+  if (previousPhase !== phase && (previousPhase === RENDER_PHASE_IDLE || phase === RENDER_PHASE_IDLE)) {
+    runtimeState.hoverOverlayDirty = true;
+  }
+  if (phase === RENDER_PHASE_IDLE && runtimeState.pendingDayNightRefresh) {
+    runtimeState.pendingDayNightRefresh = false;
+    invalidateRenderPasses("dayNight", "day-night-clock-deferred");
+  }
+  const dprStageChanged = phase === RENDER_PHASE_INTERACTING
+    ? updateDprStage("interactive")
+    : updateDprStage("idle");
+  if (dprStageChanged) {
+    setCanvasSize({
+      reason: `phase-${phase}-dpr-stage`,
+      targetPassesOnDprChange: ["political", "contextBase", "borders"],
+    });
+  }
+}
+
+function isInteractionRecoveryBlocked() {
+  return (
+    runtimeState.renderPhase !== RENDER_PHASE_IDLE
+    || runtimeState.isInteracting
+    || isExactAfterSettleControllerActive()
+    || !!runtimeState.activeInteractionRecoveryTaskKey
+  );
+}
+
+function isInteractionRecoverySettled({ quietMs = 600 } = {}) {
+  if (isInteractionRecoveryBlocked() || runtimeState.deferExactAfterSettle) {
+    return false;
+  }
+  const currentMs = nowMs();
+  const phaseEnteredAt = Number(runtimeState.phaseEnteredAt || 0);
+  const zoomEndedAt = Number(runtimeState.zoomGestureEndedAt || 0);
+  const idleForMs = phaseEnteredAt > 0 ? currentMs - phaseEnteredAt : Number.POSITIVE_INFINITY;
+  const zoomQuietForMs = zoomEndedAt > 0 ? currentMs - zoomEndedAt : Number.POSITIVE_INFINITY;
+  const requiredQuietMs = Math.max(0, Number(quietMs) || 0);
+  return idleForMs >= requiredQuietMs && zoomQuietForMs >= requiredQuietMs;
+}
+
+function beginInteractionRecoveryTask(taskKey) {
+  const normalizedTaskKey = String(taskKey || "interaction-recovery").trim() || "interaction-recovery";
+  if (runtimeState.activeInteractionRecoveryTaskKey) {
+    recordRenderPerfMetric("interactionRecoveryTaskBlocked", 0, {
+      taskKey: normalizedTaskKey,
+      activeTaskKey: String(runtimeState.activeInteractionRecoveryTaskKey || ""),
+    });
+    return false;
+  }
+  runtimeState.activeInteractionRecoveryTaskKey = normalizedTaskKey;
+  runtimeState.activeInteractionRecoveryTaskStartedAt = nowMs();
+  recordRenderPerfMetric("interactionRecoveryTaskStarted", 0, {
+    taskKey: normalizedTaskKey,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+  return true;
+}
+
+function endInteractionRecoveryTask(taskKey) {
+  const normalizedTaskKey = String(taskKey || "interaction-recovery").trim() || "interaction-recovery";
+  if (runtimeState.activeInteractionRecoveryTaskKey === normalizedTaskKey) {
+    runtimeState.activeInteractionRecoveryTaskKey = "";
+    runtimeState.activeInteractionRecoveryTaskStartedAt = 0;
+  }
+}
+
+function getInteractionRecoveryChunkState() {
+  const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
+    ? runtimeState.runtimeChunkLoadState
+    : {};
+  return {
+    shellStatus: String(loadState.shellStatus || ""),
+    hasPendingPromotion: !!loadState.pendingPromotion,
+    hasPendingVisualPromotion: !!loadState.pendingVisualPromotion,
+    hasPendingInfraPromotion: !!loadState.pendingInfraPromotion,
+    pendingReason: String(loadState.pendingReason || ""),
+    promotionRetryCount: Math.max(0, Number(loadState.promotionRetryCount || 0)),
+  };
+}
+
+function recordInteractionRecoveryTaskMetric(taskKey, durationMs, details = {}, { benchmarkInteraction = true } = {}) {
+  const normalizedTaskKey = String(taskKey || "interaction-recovery").trim() || "interaction-recovery";
+  const chunkState = getInteractionRecoveryChunkState();
+  const taskMetricName = benchmarkInteraction ? "interactionRecoveryTaskMs" : "postReadyInteractionInfrastructureTaskMs";
+  const windowMetricName = benchmarkInteraction ? "interactionRecoveryWindowMs" : "postReadyInteractionInfrastructureWindowMs";
+  const entry = recordRenderPerfMetric(taskMetricName, durationMs, {
+    taskKey: normalizedTaskKey,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    renderPhase: String(runtimeState.renderPhase || ""),
+    isInteracting: !!runtimeState.isInteracting,
+    deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
+    interactionInfrastructureBuildInFlight: !!runtimeState.interactionInfrastructureBuildInFlight,
+    activeInteractionRecoveryTaskKey: String(runtimeState.activeInteractionRecoveryTaskKey || ""),
+    hitCanvasBuildScheduled: !!runtimeState.hitCanvasBuildScheduled,
+    ...chunkState,
+    ...details,
+  });
+  recordRenderPerfMetric(windowMetricName, Math.max(0, nowMs() - Number(runtimeState.zoomGestureEndedAt || nowMs())), {
+    taskKey: normalizedTaskKey,
+    chunkState,
+    activePostReadyTaskKey: String(runtimeState.activePostReadyTaskKey || ""),
+    postReadyPendingTaskCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.pendingTaskCount || 0)),
+  });
+  return entry;
+}
+
+function markOverlaysDirty({
+  frontline = false,
+  operationalLines = false,
+  operationGraphics = false,
+  unitCounters = false,
+  specialZones = false,
+  inspector = false,
+  hover = false,
+} = {}) {
+  if (frontline) {
+    runtimeState.frontlineOverlayDirty = true;
+  }
+  if (operationalLines) {
+    runtimeState.operationalLinesDirty = true;
+  }
+  if (operationGraphics) {
+    runtimeState.operationGraphicsDirty = true;
+  }
+  if (unitCounters) {
+    runtimeState.unitCountersDirty = true;
+  }
+  if (specialZones) {
+    runtimeState.specialZonesOverlayDirty = true;
+  }
+  if (inspector) {
+    runtimeState.inspectorOverlayDirty = true;
+  }
+  if (hover) {
+    runtimeState.hoverOverlayDirty = true;
+  }
+}
+
+function markAllOverlaysDirty() {
+  markOverlaysDirty({
+    frontline: true,
+    operationalLines: true,
+    operationGraphics: true,
+    unitCounters: true,
+    specialZones: true,
+    inspector: true,
+    hover: true,
+  });
+}
+
+function getOperationalLinesOverlaySignature() {
+  return [
+    getOverlayProjectionSignature(),
+    Number(runtimeState.dirtyRevision || 0),
+    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
+    Array.isArray(runtimeState.operationalLines) ? runtimeState.operationalLines.length : 0,
+    !!runtimeState.operationalLineEditor?.active ? "1" : "0",
+    Array.isArray(runtimeState.operationalLineEditor?.points) ? runtimeState.operationalLineEditor.points.length : 0,
+    String(runtimeState.operationalLineEditor?.selectedId || ""),
+  ].join("::");
+}
+
+function getOverlayProjectionSignature() {
+  return [
+    Number(runtimeState.topologyRevision || 0),
+    getProjectionRenderSignature(),
+  ].join("::");
+}
+
+function getSpecialZonesOverlaySignature() {
+  return [
+    getOverlayProjectionSignature(),
+    Number(runtimeState.dirtyRevision || 0),
+    runtimeState.showSpecialZones ? "1" : "0",
+    Array.isArray(runtimeState.scenarioSpecialRegionsData?.features) ? runtimeState.scenarioSpecialRegionsData.features.length : 0,
+    Array.isArray(runtimeState.manualSpecialZones?.features) ? runtimeState.manualSpecialZones.features.length : 0,
+    !!runtimeState.specialZoneEditor?.active ? "1" : "0",
+    String(runtimeState.specialZoneEditor?.selectedId || ""),
+    String(runtimeState.specialZoneEditor?.zoneType || ""),
+    String(runtimeState.specialZoneEditor?.label || ""),
+    Array.isArray(runtimeState.specialZoneEditor?.vertices) ? runtimeState.specialZoneEditor.vertices.length : 0,
+  ].join("::");
+}
+
+function getFrontlineOverlaySignature() {
+  return [
+    getOverlayProjectionSignature(),
+    String(runtimeState.activeScenarioId || ""),
+    Number(runtimeState.scenarioControllerRevision || 0),
+    Number(runtimeState.scenarioShellOverlayRevision || 0),
+    Number(runtimeState.sovereigntyRevision || 0),
+    runtimeState.annotationView?.frontlineEnabled ? "1" : "0",
+    String(runtimeState.annotationView?.frontlineStyle || "clean"),
+    runtimeState.annotationView?.showFrontlineLabels ? "1" : "0",
+    String(runtimeState.annotationView?.labelPlacementMode || "midpoint"),
+    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
+  ].join("::");
+}
+
+function getOperationGraphicsOverlaySignature() {
+  return [
+    getOverlayProjectionSignature(),
+    Number(runtimeState.dirtyRevision || 0),
+    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
+    Array.isArray(runtimeState.operationGraphics) ? runtimeState.operationGraphics.length : 0,
+    !!runtimeState.operationGraphicsEditor?.active ? "1" : "0",
+    Array.isArray(runtimeState.operationGraphicsEditor?.points) ? runtimeState.operationGraphicsEditor.points.length : 0,
+    String(runtimeState.operationGraphicsEditor?.selectedId || ""),
+  ].join("::");
+}
+
+function getUnitCountersOverlaySignature() {
+  return [
+    getOverlayProjectionSignature(),
+    Number(runtimeState.dirtyRevision || 0),
+    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
+    Array.isArray(runtimeState.unitCounters) ? runtimeState.unitCounters.length : 0,
+    String(runtimeState.annotationView?.unitRendererDefault || DEFAULT_UNIT_COUNTER_RENDERER),
+    runtimeState.annotationView?.showUnitLabels ? "1" : "0",
+    !!runtimeState.unitCounterEditor?.active ? "1" : "0",
+    String(runtimeState.unitCounterEditor?.selectedId || ""),
+  ].join("::");
+}
+
+function getInspectorOverlaySignature() {
+  return [
+    getOverlayProjectionSignature(),
+    String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase(),
+    Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
+  ].join("::");
+}
+
+function getHoverOverlaySignature() {
+  const activeFacilityEntry = getActiveFacilityHighlightEntry();
+  return [
+    getOverlayProjectionSignature(),
+    String(runtimeState.renderPhase || RENDER_PHASE_IDLE),
+    String(runtimeState.hoveredId || ""),
+    String(runtimeState.hoveredWaterRegionId || ""),
+    String(runtimeState.hoveredSpecialRegionId || ""),
+    buildFacilityEntryKey(activeFacilityEntry),
+    Number(activeFacilityEntry?.screenPoint?.[0] || 0).toFixed(1),
+    Number(activeFacilityEntry?.screenPoint?.[1] || 0).toFixed(1),
+  ].join("::");
+}
+
+function getDevSelectionOverlaySignature() {
+  const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
+    ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  return [
+    getOverlayProjectionSignature(),
+    orderedIds.join("|"),
+    Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
+  ].join("::");
+}
+
+function renderSpecialZonesIfNeeded({ force = false } = {}) {
+  const nextSignature = getSpecialZonesOverlaySignature();
+  if (!force && !runtimeState.specialZonesOverlayDirty && nextSignature === lastSpecialZonesOverlaySignature) {
+    return;
+  }
+  renderSpecialZones();
+  runtimeState.specialZonesOverlayDirty = false;
+  lastSpecialZonesOverlaySignature = nextSignature;
+}
+
+function renderFrontlineOverlayIfNeeded({ force = false } = {}) {
+  if (!force && !runtimeState.frontlineOverlayDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    return;
+  }
+  const nextSignature = getFrontlineOverlaySignature();
+  if (!force && !runtimeState.frontlineOverlayDirty && nextSignature === lastFrontlineOverlaySignature) {
+    return;
+  }
+  renderFrontlineOverlay();
+  runtimeState.frontlineOverlayDirty = false;
+  lastFrontlineOverlaySignature = nextSignature;
+}
+
+function renderOperationGraphicsIfNeeded({ force = false } = {}) {
+  if (!force && !runtimeState.operationGraphicsDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    return;
+  }
+  const nextSignature = getOperationGraphicsOverlaySignature();
+  if (!force && !runtimeState.operationGraphicsDirty && nextSignature === lastOperationGraphicsOverlaySignature) {
+    return;
+  }
+  renderOperationGraphicsOverlay();
+  runtimeState.operationGraphicsDirty = false;
+  lastOperationGraphicsOverlaySignature = nextSignature;
+}
+
+function renderOperationalLinesIfNeeded({ force = false } = {}) {
+  if (!force && !runtimeState.operationalLinesDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    return;
+  }
+  const nextSignature = getOperationalLinesOverlaySignature();
+  if (!force && !runtimeState.operationalLinesDirty && nextSignature === lastOperationalLinesOverlaySignature) {
+    return;
+  }
+  renderOperationalLinesOverlay();
+  runtimeState.operationalLinesDirty = false;
+  lastOperationalLinesOverlaySignature = nextSignature;
+}
+
+function renderUnitCountersIfNeeded({ force = false } = {}) {
+  if (!force && !runtimeState.unitCountersDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    return;
+  }
+  const nextSignature = getUnitCountersOverlaySignature();
+  if (!force && !runtimeState.unitCountersDirty && nextSignature === lastUnitCountersOverlaySignature) {
+    return;
+  }
+  renderUnitCountersOverlay();
+  runtimeState.unitCountersDirty = false;
+  lastUnitCountersOverlaySignature = nextSignature;
+}
+
+function renderInspectorHighlightOverlayIfNeeded({ force = false } = {}) {
+  const nextSignature = getInspectorOverlaySignature();
+  if (!force && !runtimeState.inspectorOverlayDirty && nextSignature === lastInspectorOverlaySignature) {
+    return;
+  }
+  renderInspectorHighlightOverlay();
+  runtimeState.inspectorOverlayDirty = false;
+  lastInspectorOverlaySignature = nextSignature;
+}
+
+function renderHoverOverlayIfNeeded({ force = false, eventType = "hover" } = {}) {
+  const nextSignature = getHoverOverlaySignature();
+  if (!force && !runtimeState.hoverOverlayDirty && nextSignature === lastHoverOverlaySignature) {
+    return;
+  }
+  const startedAt = nowMs();
+  renderHoverOverlay();
+  runtimeState.hoverOverlayDirty = false;
+  lastHoverOverlaySignature = nextSignature;
+  recordInteractionDurationMetric("interactionHoverOverlayDuration", nowMs() - startedAt, {
+    eventType,
+    force: !!force,
+  });
+}
+
+function cancelScheduledHoverOverlayRender() {
+  if (hoverOverlayRenderRafHandle === null || hoverOverlayRenderRafHandle === undefined) {
+    hoverOverlayRenderRafHandle = null;
+    return;
+  }
+  if (typeof globalThis.cancelAnimationFrame === "function") {
+    globalThis.cancelAnimationFrame(hoverOverlayRenderRafHandle);
+  } else {
+    globalThis.clearTimeout(hoverOverlayRenderRafHandle);
+  }
+  hoverOverlayRenderRafHandle = null;
+}
+
+function scheduleHoverOverlayRender() {
+  if (hoverOverlayRenderRafHandle !== null && hoverOverlayRenderRafHandle !== undefined) {
+    return;
+  }
+  const callback = () => {
+    hoverOverlayRenderRafHandle = null;
+    renderHoverOverlayIfNeeded({ eventType: "hover" });
+  };
+  hoverOverlayRenderRafHandle = typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame(callback)
+    : globalThis.setTimeout(callback, 0);
+}
+
+function renderDevSelectionOverlay() {
+  if (!devSelectionGroup || !pathSVG) return;
+  const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
+    ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  const data = orderedIds
+    .map((featureId) => runtimeState.landIndex?.get(featureId) || null)
+    .filter(Boolean);
+
+  const selection = devSelectionGroup
+    .selectAll("path.dev-selected-feature")
+    .data(data, (feature, index) => getFeatureId(feature) || `dev-selection-${index}`);
+
+  selection
+    .enter()
+    .append("path")
+    .attr("class", "dev-selected-feature")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(selection)
+    .attr("d", pathSVG)
+    .attr("fill", "rgba(14, 165, 233, 0.14)")
+    .attr("stroke", "rgba(14, 165, 233, 0.94)")
+    .attr("stroke-width", 1.8);
+
+  selection.exit().remove();
+  devSelectionGroup
+    .attr("aria-hidden", data.length ? "false" : "true")
+    .attr("aria-label", data.length ? `Development selection overlay (${data.length})` : "Development selection overlay");
+}
+
+function renderDevSelectionOverlayIfNeeded({ force = false } = {}) {
+  const nextSignature = getDevSelectionOverlaySignature();
+  if (!force && !runtimeState.devSelectionOverlayDirty && nextSignature === lastDevSelectionOverlaySignature) {
+    return;
+  }
+  renderDevSelectionOverlay();
+  runtimeState.devSelectionOverlayDirty = false;
+  lastDevSelectionOverlaySignature = nextSignature;
+}
+
+function applyTooltipState(nextState = null) {
+  if (!tooltip) return;
+  const visible = !!nextState?.visible;
+  const text = visible ? String(nextState?.text || "") : "";
+  tooltip.textContent = text;
+  tooltip.style.opacity = visible ? "1" : "0";
+  tooltip.style.transform = visible
+    ? `translate3d(${Math.round(Number(nextState?.x || 0))}px, ${Math.round(Number(nextState?.y || 0))}px, 0)`
+    : "translate3d(-9999px, -9999px, 0)";
+}
+
+function queueTooltipUpdate(nextState = null) {
+  runtimeState.tooltipPendingState = nextState && typeof nextState === "object"
+    ? { ...nextState }
+    : { visible: false };
+  if (runtimeState.tooltipRafHandle) {
+    return;
+  }
+  runtimeState.tooltipRafHandle = globalThis.requestAnimationFrame(() => {
+    runtimeState.tooltipRafHandle = null;
+    const pendingState = runtimeState.tooltipPendingState;
+    runtimeState.tooltipPendingState = null;
+    applyTooltipState(pendingState);
+  });
+}
+
+function scheduleRenderPhaseIdle() {
+  clearRenderPhaseTimer();
+  const settleProfile = getAdaptiveSettleProfile();
+  runtimeState.adaptiveSettleProfile = settleProfile;
+  runtimeState.renderPhaseTimerId = globalThis.setTimeout(() => {
+    runtimeState.renderPhaseTimerId = null;
+    setRenderPhase(RENDER_PHASE_IDLE);
+    const pendingChunkRefreshStatus = typeof runtimeState.scheduleScenarioChunkRefreshFn === "function"
+      ? runtimeState.scheduleScenarioChunkRefreshFn({
+        reason: "render-phase-idle",
+        delayMs: 0,
+        flushPending: true,
+      })
+      : "noop";
+    const promotionWorkActive = [
+      "promotion-committed",
+      "promotion-commit-started",
+      "promotion-commit-in-flight",
+      "promotion-started",
+      "promotion-in-flight",
+      "promotion-scheduled",
+      "refresh-started",
+    ].includes(String(pendingChunkRefreshStatus || ""));
+    if (shouldStartExactAfterSettleFastPath()) {
+      if (promotionWorkActive) {
+        return;
+      }
+      runtimeState.deferExactAfterSettle = true;
+      render();
+      scheduleExactAfterSettleRefresh(settleProfile);
+      return;
+    }
+    render();
+  }, settleProfile.settleDurationMs);
+}
+
+function flushPendingScenarioChunkRefreshAfterExact(reason = "exact-after-settle") {
+  if (pendingScenarioChunkFlushAfterExactHandle) {
+    globalThis.clearTimeout(pendingScenarioChunkFlushAfterExactHandle);
+    pendingScenarioChunkFlushAfterExactHandle = null;
+  }
+  if (typeof runtimeState.scheduleScenarioChunkRefreshFn !== "function") {
+    return;
+  }
+  const loadState = runtimeState.runtimeChunkLoadState;
+  const hasPendingPromotion = !!loadState?.pendingPromotion;
+  const hasPendingReason = !!String(loadState?.pendingReason || "").trim();
+  if (!hasPendingPromotion && !hasPendingReason) {
+    return;
+  }
+  pendingScenarioChunkFlushAfterExactHandle = globalThis.setTimeout(() => {
+    pendingScenarioChunkFlushAfterExactHandle = null;
+    if (typeof runtimeState.scheduleScenarioChunkRefreshFn !== "function") {
+      return;
+    }
+    const nextLoadState = runtimeState.runtimeChunkLoadState;
+    const stillHasPendingPromotion = !!nextLoadState?.pendingPromotion;
+    const stillHasPendingReason = !!String(nextLoadState?.pendingReason || "").trim();
+    if (!stillHasPendingPromotion && !stillHasPendingReason) {
+      return;
+    }
+    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
+      return;
+    }
+    runtimeState.scheduleScenarioChunkRefreshFn({
+      reason,
+      delayMs: 0,
+      flushPending: true,
+    });
+  }, 0);
+}
+
+function rebuildResolvedColors() {
+  const startedAt = nowMs();
+  migrateLegacyColorState();
+  ensureSovereigntyState();
+  normalizeColorStateForRender(state, {
+    sanitizeColorMap,
+    sanitizeCountryColorMap,
+  });
+
+  const nextColors = {};
+  if (!runtimeState.landData?.features?.length) {
+    replaceResolvedColorsState(state, nextColors);
+    recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
+      featureCount: 0,
+    });
+    return nextColors;
+  }
+
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  runtimeState.landData.features.forEach((feature, index) => {
+    const id = getFeatureId(feature) || `feature-${index}`;
+    if (!id) return;
+    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) return;
+    const resolved = getResolvedFeatureColor(feature, id);
+    if (resolved) {
+      nextColors[id] = resolved;
+    }
+  });
+
+  replaceResolvedColorsState(state, nextColors);
+  bumpColorRevision(state);
+  invalidateRenderPasses(["physicalBase", "political", "contextBase"], "rebuild-colors");
+  recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
+    featureCount: Object.keys(nextColors).length,
+  });
+  return nextColors;
+}
+
+function shouldRefreshContextBaseContoursForColorChanges() {
+  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
+  return !!(
+    runtimeState.showPhysical
+    && cfg.mode !== "atlas_only"
+    && Array.isArray(runtimeState.physicalContourMajorData?.features)
+    && runtimeState.physicalContourMajorData.features.length > 0
+  );
+}
+
+function shouldRefreshContextBaseUrbanForColorChanges() {
+  const urbanConfig = normalizeUrbanStyleConfig(runtimeState.styleConfig?.urban || {});
+  const capability = runtimeState.urbanLayerCapability || getUrbanLayerCapability(runtimeState.urbanData);
+  return !!runtimeState.showUrban
+    && Array.isArray(runtimeState.urbanData?.features)
+    && runtimeState.urbanData.features.length > 0
+    && getEffectiveUrbanMode(urbanConfig, capability) === "adaptive";
+}
+
+function shouldRefreshContextBaseForColorChanges() {
+  return shouldRefreshContextBaseContoursForColorChanges()
+    || shouldRefreshContextBaseUrbanForColorChanges();
+}
+
+function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}) {
+  migrateLegacyColorState();
+  ensureSovereigntyState();
+  const cache = getRenderPassCacheState();
+
+  const ids = Array.isArray(featureIds)
+    ? Array.from(new Set(featureIds.map((value) => String(value || "").trim()).filter(Boolean)))
+    : [];
+  ids.forEach((id) => {
+    const feature = runtimeState.landIndex?.get(id);
+    if (!feature) {
+      setResolvedColorForFeature(state, id, null);
+      return;
+    }
+    const resolved = getResolvedFeatureColor(feature, id);
+    setResolvedColorForFeature(state, id, resolved);
+    cache.partialPoliticalDirtyIds.add(id);
+  });
+
+  bumpColorRevision(state);
+  invalidateRenderPasses("political", "refresh-colors");
+  invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");
+  if (shouldRefreshContextBaseForColorChanges()) {
+    invalidateRenderPasses("contextBase", "refresh-colors-context-base");
+  }
+
+  if (renderNow && context) {
+    requestRendererRender("refresh-colors", {
+      flush: false,
+      fallback: () => render(),
+    });
+  }
+}
+
+function refreshResolvedColorsForOwners(ownerCodes, { renderNow = false } = {}) {
+  const codes = Array.isArray(ownerCodes) ? ownerCodes : [];
+  const ids = [];
+  codes.forEach((ownerCode) => {
+    getFeatureIdsForOwner(ownerCode).forEach((id) => ids.push(id));
+  });
+  refreshResolvedColorsForFeatures(ids, { renderNow });
+}
+
+function refreshColorState({ renderNow = true } = {}) {
+  const startedAt = nowMs();
+  normalizeColorStateForRender(state, {
+    sanitizeColorMap,
+    sanitizeCountryColorMap,
+  });
+  rebuildResolvedColors();
+  invalidateRenderPasses("contextScenario", "refresh-colors");
+  recordRenderPerfMetric("refreshColorState", nowMs() - startedAt, {
+    renderNow: !!renderNow,
+    featureCount: Object.keys(runtimeState.colors || {}).length,
+  });
+  if (renderNow && context) {
+    render();
+  }
+}
+
+function pathBoundsInScreen(feature) {
+  if (!pathSVG) return false;
+  const geometryType = String(feature?.geometry?.type || "").trim();
+  const bounds = getProjectedFeatureBounds(feature, { allowCompute: false }) || getProjectedFeatureBounds(feature);
+  if (!bounds) {
+    recordProjectedBoundsDiagnostic(feature, "missing-bounds");
+    return isLineGeometryType(geometryType);
+  }
+  const minX = bounds.minX * runtimeState.zoomTransform.k + runtimeState.zoomTransform.x;
+  const minY = bounds.minY * runtimeState.zoomTransform.k + runtimeState.zoomTransform.y;
+  const maxX = bounds.maxX * runtimeState.zoomTransform.k + runtimeState.zoomTransform.x;
+  const maxY = bounds.maxY * runtimeState.zoomTransform.k + runtimeState.zoomTransform.y;
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+    recordProjectedBoundsDiagnostic(feature, "non-finite-screen-bounds");
+    return isLineGeometryType(geometryType);
+  }
+
+  const overscan = Math.max(
+    VIEWPORT_CULL_OVERSCAN_PX,
+    Math.min(runtimeState.width, runtimeState.height) * 0.08
+  );
+
+  return !(
+    maxX < -overscan ||
+    maxY < -overscan ||
+    minX > runtimeState.width + overscan ||
+    minY > runtimeState.height + overscan
+  );
+}
+
+function projectedGeoBoundsInScreen(bounds) {
+  if (!bounds) return false;
+  const minX = bounds.minX * runtimeState.zoomTransform.k + runtimeState.zoomTransform.x;
+  const minY = bounds.minY * runtimeState.zoomTransform.k + runtimeState.zoomTransform.y;
+  const maxX = bounds.maxX * runtimeState.zoomTransform.k + runtimeState.zoomTransform.x;
+  const maxY = bounds.maxY * runtimeState.zoomTransform.k + runtimeState.zoomTransform.y;
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return false;
+  const overscan = Math.max(
+    VIEWPORT_CULL_OVERSCAN_PX,
+    Math.min(runtimeState.width, runtimeState.height) * 0.08
+  );
+  return !(
+    maxX < -overscan ||
+    maxY < -overscan ||
+    minX > runtimeState.width + overscan ||
+    minY > runtimeState.height + overscan
+  );
+}
+
+function getContourViewportScreenBounds() {
+  const overscan = Math.max(
+    VIEWPORT_CULL_OVERSCAN_PX,
+    Math.min(runtimeState.width, runtimeState.height) * 0.08
+  );
+  const minX = -overscan;
+  const minY = -overscan;
+  const maxX = Number(runtimeState.width || 0) + overscan;
+  const maxY = Number(runtimeState.height || 0) + overscan;
+  return {
+    x: minX,
+    y: minY,
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+  };
+}
+
+function getContourVisibleSetCacheKey(collection, {
+  k = runtimeState.zoomTransform?.k || 1,
+  lowReliefCutoff = 0,
+  intervalM = 0,
+  excludeIntervalM = 0,
+  minScreenSpanPx = 0,
+  maxFeatures = 0,
+} = {}) {
+  return [
+    Number(runtimeState.topologyRevision || 0),
+    getContextBaseZoomBucketId(k),
+    getTransformSignature(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity),
+    getViewportRenderSignature(),
+    Array.isArray(collection?.features) ? collection.features.length : 0,
+    Number(lowReliefCutoff || 0).toFixed(2),
+    Number(intervalM || 0).toFixed(2),
+    Number(excludeIntervalM || 0).toFixed(2),
+    Number(minScreenSpanPx || 0).toFixed(2),
+    Number(maxFeatures || 0),
+  ].join("|");
+}
+
+function getContourVisibleFeatures(
+  collection,
+  {
+    cacheSlot = "major",
+    k = runtimeState.zoomTransform?.k || 1,
+    lowReliefCutoff = 0,
+    intervalM = 0,
+    excludeIntervalM = 0,
+    minScreenSpanPx = 0,
+    maxFeatures = 0,
+  } = {},
+) {
+  if (!Array.isArray(collection?.features) || collection.features.length === 0) return [];
+  const cacheKey = getContourVisibleSetCacheKey(collection, {
+    k,
+    lowReliefCutoff,
+    intervalM,
+    excludeIntervalM,
+    minScreenSpanPx,
+    maxFeatures,
+  });
+  const cacheEntry = contourVisibleSetCache[cacheSlot];
+  if (
+    cacheEntry?.collectionRef === collection
+    && cacheEntry.key === cacheKey
+    && Array.isArray(cacheEntry.features)
+  ) {
+    return cacheEntry.features;
+  }
+
+  const viewportBounds = getContourViewportScreenBounds();
+  const visibleRecords = [];
+  collection.features.forEach((feature) => {
+    const elevation = Number(feature?.properties?.elevation_m);
+    if (Number.isFinite(elevation) && elevation < lowReliefCutoff) return;
+    if (intervalM > 0 && Number.isFinite(elevation) && elevation % intervalM !== 0) return;
+    if (excludeIntervalM > 0 && Number.isFinite(elevation) && elevation % excludeIntervalM === 0) return;
+
+    const screenBounds = getFeatureScreenBounds(feature, { allowCompute: false }) || getFeatureScreenBounds(feature);
+    if (!screenBounds) {
+      if (minScreenSpanPx <= 0 && isLineGeometryType(String(feature?.geometry?.type || "").trim())) {
+        visibleRecords.push({ feature, elevation, span: 0 });
+      }
+      return;
+    }
+    if (!rectsIntersect(screenBounds, viewportBounds)) return;
+    const span = Math.max(Number(screenBounds.width || 0), Number(screenBounds.height || 0));
+    if (minScreenSpanPx > 0 && !(span >= minScreenSpanPx)) return;
+    visibleRecords.push({ feature, elevation, span });
+  });
+
+  if (maxFeatures > 0 && visibleRecords.length > maxFeatures) {
+    const scored = visibleRecords.map(({ feature, elevation, span }) => {
+      const elevationScore = Number.isFinite(elevation) ? elevation : 0;
+      return {
+        feature,
+        score: elevationScore * 1.15 + span * 34,
+      };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    const visibleFeatures = scored.slice(0, maxFeatures).map((entry) => entry.feature);
+    contourVisibleSetCache[cacheSlot] = {
+      collectionRef: collection,
+      key: cacheKey,
+      features: visibleFeatures,
+    };
+    return visibleFeatures;
+  }
+
+  const visibleFeatures = visibleRecords.map((entry) => entry.feature);
+  contourVisibleSetCache[cacheSlot] = {
+    collectionRef: collection,
+    key: cacheKey,
+    features: visibleFeatures,
+  };
+  return visibleFeatures;
+}
+
+const URBAN_CORRUPT_BOUNDS_WIDTH_DEG = 300;
+const URBAN_CORRUPT_BOUNDS_HEIGHT_DEG = 150;
+
+function invalidateContextLayerVisualState(layerName, reason = "context-layer-loaded", { renderNow = true } = {}) {
+  return invalidateContextLayerVisualStateBatch([layerName], reason, { renderNow });
+}
+
+function invalidateContextLayerVisualStateBatch(layerNames, reason = "context-layer-loaded", { renderNow = true } = {}) {
+  layerResolverCache.primaryRef = null;
+  layerResolverCache.detailRef = null;
+  layerResolverCache.bundleMode = null;
+  layerResolverCache.contextRevision = Number.NaN;
+  layerResolverCache.waterRegionsDataToken = "";
+  const targetPasses = new Set(["contextBase"]);
+  const normalizedLayerNames = Array.isArray(layerNames) ? layerNames : [layerNames];
+  normalizedLayerNames.forEach((layerName) => {
+    const normalized = String(layerName || "").trim().toLowerCase();
+    if (normalized === "physical" || normalized === "physical_semantics") {
+      targetPasses.add("physicalBase");
+      targetPasses.add("dayNight");
+    }
+    if (normalized === "urban") {
+      targetPasses.add("dayNight");
+    }
+  });
+  const resolvedPasses = Array.from(targetPasses);
+  invalidateRenderPasses(resolvedPasses, reason);
+  clearRenderPassReferenceTransforms(resolvedPasses);
+  if (renderNow) {
+    requestRendererRender(`context-layer-visual:${reason}`, { flush: true });
+  }
+}
+
+function createCanvasElement() {
+  const canvas = document.createElement("canvas");
+  canvas.id = "map-canvas";
+  canvas.className = "map-layer";
+  canvas.style.position = "absolute";
+  canvas.style.inset = "0";
+  canvas.style.display = "block";
+  canvas.style.zIndex = "0";
+  return canvas;
+}
+
+function createHitCanvasElement() {
+  const canvas = document.createElement("canvas");
+  canvas.id = "map-hit-canvas";
+  canvas.width = 1;
+  canvas.height = 1;
+  return canvas;
+}
+
+function createSvgElement() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("id", "map-svg");
+  svg.classList.add("map-layer", "map-layer-top");
+  svg.style.position = "absolute";
+  svg.style.inset = "0";
+  svg.style.display = "block";
+  svg.style.zIndex = "1";
+  svg.style.pointerEvents = "none";
+  return svg;
+}
+
+function ensureHybridLayers() {
+  const legacySpecialZones = document.getElementById("specialZonesSvg");
+  if (legacySpecialZones) legacySpecialZones.remove();
+  const legacyLegend = document.getElementById("legendSvg");
+  if (legacyLegend) legacyLegend.remove();
+
+  const legacyColorCanvas = document.getElementById("colorCanvas");
+  const legacyLineCanvas = document.getElementById("lineCanvas");
+
+  mapCanvas = mapContainer.querySelector("#map-canvas");
+  if (!mapCanvas) {
+    mapCanvas = createCanvasElement();
+    const anchor = legacyColorCanvas || legacyLineCanvas || null;
+    if (anchor && mapContainer.contains(anchor)) {
+      mapContainer.insertBefore(mapCanvas, anchor);
+    } else {
+      mapContainer.appendChild(mapCanvas);
+    }
+  }
+  mapCanvas.style.display = "block";
+  mapCanvas.style.zIndex = "0";
+
+  if (legacyColorCanvas && legacyColorCanvas !== mapCanvas) {
+    legacyColorCanvas.style.display = "none";
+    legacyColorCanvas.style.pointerEvents = "none";
+  }
+  if (legacyLineCanvas) {
+    legacyLineCanvas.style.display = "none";
+    legacyLineCanvas.style.pointerEvents = "none";
+  }
+
+  mapSvg = mapContainer.querySelector("#map-svg");
+  if (!mapSvg) {
+    mapSvg = createSvgElement();
+    mapContainer.appendChild(mapSvg);
+  }
+  mapSvg.style.display = "block";
+  mapSvg.style.zIndex = "1";
+
+  const svg = globalThis.d3.select(mapSvg);
+  svg.style("pointer-events", "none");
+
+  viewportGroup = svg.select("g.viewport-layer");
+  if (viewportGroup.empty()) {
+    viewportGroup = svg.append("g").attr("class", "viewport-layer");
+  }
+  viewportGroup.style("pointer-events", "none");
+
+  strategicDefs = svg.select("defs.strategic-overlay-defs");
+  if (strategicDefs.empty()) {
+    strategicDefs = svg.append("defs").attr("class", "strategic-overlay-defs");
+  }
+
+  frontlineOverlayGroup = viewportGroup.select("g.frontline-overlay-layer");
+  if (frontlineOverlayGroup.empty()) {
+    frontlineOverlayGroup = viewportGroup.append("g").attr("class", "frontline-overlay-layer");
+  }
+  frontlineOverlayGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Strategic frontline overlay")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  frontlineLabelsGroup = viewportGroup.select("g.frontline-labels-layer");
+  if (frontlineLabelsGroup.empty()) {
+    frontlineLabelsGroup = viewportGroup.append("g").attr("class", "frontline-labels-layer");
+  }
+  frontlineLabelsGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Strategic frontline labels")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  operationalLinesGroup = viewportGroup.select("g.operational-lines-layer");
+  if (operationalLinesGroup.empty()) {
+    operationalLinesGroup = viewportGroup.append("g").attr("class", "operational-lines-layer");
+  }
+  operationalLinesGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Operational lines")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  operationGraphicsGroup = viewportGroup.select("g.operation-graphics-layer");
+  if (operationGraphicsGroup.empty()) {
+    operationGraphicsGroup = viewportGroup.append("g").attr("class", "operation-graphics-layer");
+  }
+  operationGraphicsGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Strategic operation graphics")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  operationGraphicsEditorGroup = viewportGroup.select("g.operation-graphics-editor-layer");
+  if (operationGraphicsEditorGroup.empty()) {
+    operationGraphicsEditorGroup = viewportGroup.append("g").attr("class", "operation-graphics-editor-layer");
+  }
+  operationGraphicsEditorGroup
+    .style("pointer-events", "all")
+    .attr("role", "img")
+    .attr("aria-label", "Strategic operation graphics editor")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  unitCountersGroup = viewportGroup.select("g.unit-counters-layer");
+  if (unitCountersGroup.empty()) {
+    unitCountersGroup = viewportGroup.append("g").attr("class", "unit-counters-layer");
+  }
+  unitCountersGroup
+    .style("pointer-events", "all")
+    .attr("role", "img")
+    .attr("aria-label", "Strategic unit counters")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  specialZonesGroup = viewportGroup.select("g.special-zones-layer");
+  if (specialZonesGroup.empty()) {
+    specialZonesGroup = viewportGroup.append("g").attr("class", "special-zones-layer");
+  }
+  specialZonesGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Special zones overlay")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  specialZoneEditorGroup = viewportGroup.select("g.special-zone-editor-layer");
+  if (specialZoneEditorGroup.empty()) {
+    specialZoneEditorGroup = viewportGroup.append("g").attr("class", "special-zone-editor-layer");
+  }
+  specialZoneEditorGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Special zone drawing overlay")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  hoverGroup = viewportGroup.select("g.hover-layer");
+  if (hoverGroup.empty()) {
+    hoverGroup = viewportGroup.append("g").attr("class", "hover-layer");
+  }
+  hoverGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Hovered region outline overlay")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  devSelectionGroup = viewportGroup.select("g.dev-selection-layer");
+  if (devSelectionGroup.empty()) {
+    devSelectionGroup = viewportGroup.append("g").attr("class", "dev-selection-layer");
+  }
+  devSelectionGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Development selection overlay")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  inspectorHighlightGroup = viewportGroup.select("g.inspector-highlight-layer");
+  if (inspectorHighlightGroup.empty()) {
+    inspectorHighlightGroup = viewportGroup.append("g").attr("class", "inspector-highlight-layer");
+  }
+  inspectorHighlightGroup
+    .style("pointer-events", "none")
+    .attr("role", "img")
+    .attr("aria-label", "Inspector highlight overlay")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false");
+
+  legendGroup = svg.select("g.legend-group");
+  if (legendGroup.empty()) {
+    legendGroup = svg.append("g").attr("class", "legend-group");
+  }
+  legendGroup.style("pointer-events", "none");
+
+  legendBackground = legendGroup.select("rect.legend-bg");
+  if (legendBackground.empty()) {
+    legendBackground = legendGroup
+      .append("rect")
+      .attr("class", "legend-bg")
+      .attr("fill", "rgba(255,255,255,0.85)")
+      .attr("stroke", "#d1d5db")
+      .attr("stroke-width", 1)
+      .attr("rx", 8)
+      .attr("ry", 8);
+  }
+
+  legendItemsGroup = legendGroup.select("g.legend-items");
+  if (legendItemsGroup.empty()) {
+    legendItemsGroup = legendGroup.append("g").attr("class", "legend-items");
+  }
+
+  interactionRect = svg.select("rect.interaction-layer");
+  if (interactionRect.empty()) {
+    interactionRect = svg
+      .append("rect")
+      .attr("class", "interaction-layer")
+      .attr("fill", "transparent");
+  }
+  interactionRect
+    .style("pointer-events", "all")
+    // Keep the global hit surface behind editor overlays so midpoint/vertex handles can win hit-testing.
+    .lower();
+}
+
+function setCanvasSize({
+  reason = "resize",
+  targetPassesOnDprChange = null,
+} = {}) {
+  if (!mapCanvas || !mapSvg) return;
+
+  const previousWidth = Number(runtimeState.width || 0);
+  const previousHeight = Number(runtimeState.height || 0);
+  const previousDpr = Number(runtimeState.dpr || 1);
+  const deviceDpr = Math.max(Number(globalThis.devicePixelRatio || 1), 1);
+  runtimeState.dpr = Math.min(deviceDpr, getMaxDprForProfile(runtimeState.renderProfile));
+  const rect = mapContainer?.getBoundingClientRect?.();
+  const measuredWidth = rect?.width || mapContainer?.clientWidth || globalThis.innerWidth;
+  const measuredHeight = rect?.height || mapContainer?.clientHeight || globalThis.innerHeight;
+
+  runtimeState.width = Math.round(measuredWidth);
+  runtimeState.height = Math.round(measuredHeight);
+
+  if (runtimeState.width < 100) runtimeState.width = Math.max(100, globalThis.innerWidth - 580);
+  if (runtimeState.height < 100) runtimeState.height = Math.max(100, globalThis.innerHeight);
+
+  const scaledW = Math.floor(runtimeState.width * runtimeState.dpr);
+  const scaledH = Math.floor(runtimeState.height * runtimeState.dpr);
+  const sizeChanged = previousWidth !== runtimeState.width || previousHeight !== runtimeState.height;
+  const dprChanged = Math.abs(previousDpr - runtimeState.dpr) >= 0.01;
+  if (!sizeChanged && !dprChanged) {
+    return;
+  }
+
+  mapCanvas.width = scaledW;
+  mapCanvas.height = scaledH;
+  mapCanvas.style.width = `${runtimeState.width}px`;
+  mapCanvas.style.height = `${runtimeState.height}px`;
+  if (hitCanvas) {
+    hitCanvas.width = scaledW;
+    hitCanvas.height = scaledH;
+  }
+  resizeRenderPassCanvases();
+  invalidateInteractionComposite(reason || "resize");
+  texturePatternCache.clear();
+  textureNoiseTileCache.clear();
+  clearProjectedBoundsCache();
+  runtimeState.hitCanvasDirty = true;
+  if (sizeChanged) {
+    invalidateAllRenderPasses(reason || "resize");
+  } else {
+    const passes = Array.isArray(targetPassesOnDprChange) && targetPassesOnDprChange.length
+      ? targetPassesOnDprChange
+      : RENDER_PASS_NAMES;
+    invalidateRenderPasses(passes, reason || "dpr-change");
+    clearRenderPassReferenceTransforms(passes);
+  }
+
+  const svg = globalThis.d3.select(mapSvg);
+  svg.attr("width", runtimeState.width).attr("height", runtimeState.height);
+  interactionRect.attr("x", 0).attr("y", 0).attr("width", runtimeState.width).attr("height", runtimeState.height);
+}
+
+function rebuildDynamicBorders() {
+  return getBorderMeshOwner().rebuildDynamicBorders();
+}
+
+function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
+  clearPendingDynamicBorderTimer();
+  if (!isDynamicBordersEnabled()) {
+    runtimeState.dynamicBordersDirty = false;
+    runtimeState.dynamicBordersDirtyReason = "";
+    updateDynamicBorderStatusUI();
+    return false;
+  }
+  if (reason) {
+    runtimeState.dynamicBordersDirtyReason = String(reason);
+  }
+  rebuildDynamicBorders();
+  if (renderNow && context) {
+    render();
+  }
+  return true;
+}
+
+function refreshScenarioOpeningOwnerBorders({ renderNow = false, reason = "" } = {}) {
+  const built = getBorderMeshOwner().refreshScenarioOpeningOwnerBorders(reason);
+  if (renderNow && context) {
+    render();
+  }
+  return built;
+}
+
+function scheduleDynamicBorderRecompute(reason = "", delayMs = 150) {
+  markDynamicBordersDirty(reason);
+  clearPendingDynamicBorderTimer();
+  runtimeState.pendingDynamicBorderTimerId = globalThis.setTimeout(() => {
+    runtimeState.pendingDynamicBorderTimerId = null;
+    recomputeDynamicBordersNow({ renderNow: true, reason });
+  }, Math.max(0, Number(delayMs) || 0));
+}
+
+function isUsableMesh(mesh) {
+  return !!(mesh && Array.isArray(mesh.coordinates) && mesh.coordinates.length > 0);
+}
+
+function getAdmin1Group(entity) {
+  const value = entity?.properties?.admin1_group;
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function getDetailTier(entity) {
+  const value = entity?.properties?.detail_tier;
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function isAdmDetailTier(entity) {
+  return getDetailTier(entity).toLowerCase().startsWith("adm2");
+}
+
+function asFeatureLike(entity) {
+  if (!entity) return null;
+  return {
+    id: entity.id,
+    properties: entity.properties || {},
+  };
+}
+
+function getEntityFeatureId(entity) {
+  const featureLike = asFeatureLike(entity);
+  return featureLike ? getFeatureId(featureLike) : null;
+}
+
+function getEntityCountryCode(entity) {
+  const featureLike = asFeatureLike(entity);
+  return featureLike ? getFeatureCountryCodeNormalized(featureLike) : "";
+}
+
+function getEntityBorderMeshCountryCode(entity) {
+  const featureLike = asFeatureLike(entity);
+  return featureLike ? getFeatureBorderMeshCountryCodeNormalized(featureLike) : "";
+}
+
+function getEntityOwnerCode(entity) {
+  const featureId = getEntityFeatureId(entity);
+  if (!featureId) return "";
+  return getDisplayOwnerCode(asFeatureLike(entity), featureId);
+}
+
+function shouldExcludeOwnerBorderEntity(entity, { excludeSea = false } = {}) {
+  if (!entity) return false;
+  const feature = asFeatureLike(entity);
+  if (shouldExcludePoliticalVisualFeature(feature)) return true;
+  if (!excludeSea) return false;
+  return isAtlantropaSeaFeature(feature);
+}
+
+function resolveOwnerBorderCode(entity, ownershipContext = {}) {
+  const feature = asFeatureLike(entity);
+  if (shouldExcludePoliticalVisualFeature(feature)) {
+    return "";
+  }
+  const featureId = getEntityFeatureId(entity);
+  const fallbackCode = getEntityCountryCode(entity) || "";
+  const ownershipByFeatureId = ownershipContext?.ownershipByFeatureId || {};
+  const controllerByFeatureId = ownershipContext?.controllerByFeatureId || {};
+  const shellOwnerByFeatureId = ownershipContext?.shellOwnerByFeatureId || {};
+  const shellControllerByFeatureId = ownershipContext?.shellControllerByFeatureId || {};
+  const scenarioActive = !!ownershipContext?.scenarioActive;
+  const useFrontline = scenarioActive && String(ownershipContext?.viewMode || "ownership") === "frontline";
+  const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
+  const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
+  if (!featureId) {
+    return canonicalCountryCode(fallbackCode);
+  }
+  const isScenarioShell = isScenarioShellFeature(feature, featureId);
+  return canonicalCountryCode(
+    (useFrontline ? controllerByFeatureId?.[featureId] : "")
+    || (useFrontline && isScenarioShell ? (shellControllerByFeatureId?.[featureId] || shellControllerHintCode) : "")
+    || ownershipByFeatureId?.[featureId]
+    || (!isScenarioShell ? fallbackCode : "")
+    || (isScenarioShell ? (shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode) : "")
+    || ""
+  );
+}
+
+function getFullLandDataFeatures() {
+  if (Array.isArray(runtimeState.landDataFull?.features) && runtimeState.landDataFull.features.length) {
+    return runtimeState.landDataFull.features;
+  }
+  return Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features : [];
+}
+
+function getCountryFeatureEntriesMap() {
+  const byCountry = new Map();
+  const features = getFullLandDataFeatures();
+  features.forEach((feature) => {
+    const id = getFeatureId(feature);
+    const countryCode = getFeatureCountryCodeNormalized(feature);
+    if (!id || !countryCode || shouldExcludePoliticalInteractionFeature(feature, id)) return;
+    const list = byCountry.get(countryCode) || [];
+    list.push({ id, feature });
+    byCountry.set(countryCode, list);
+  });
+  return byCountry;
+}
+
+function evaluateCountryGroupingCandidate(countryCode, source, featureEntries, featureToGroup) {
+  if (!featureEntries?.length || !(featureToGroup instanceof Map) || !featureToGroup.size) return null;
+
+  const groupCounts = new Map();
+  let groupedCount = 0;
+  featureEntries.forEach(({ id }) => {
+    const group = featureToGroup.get(id);
+    if (!group) return;
+    groupedCount += 1;
+    groupCounts.set(group, (groupCounts.get(group) || 0) + 1);
+  });
+
+  if (!groupedCount || !groupCounts.size) return null;
+
+  const totalCount = featureEntries.length;
+  const groupSizes = Array.from(groupCounts.values());
+  const renderableGroupCount = groupSizes.filter((count) => count >= 2).length;
+  const coverage = totalCount > 0 ? groupedCount / totalCount : 0;
+  const dominantShare = groupedCount > 0 ? Math.max(...groupSizes) / groupedCount : 1;
+
+  return {
+    countryCode,
+    source,
+    featureToGroup,
+    groupCounts,
+    totalCount,
+    groupedCount,
+    groupCount: renderableGroupCount,
+    groupCountTotal: groupCounts.size,
+    coverage,
+    dominantShare,
+    accepted:
+      renderableGroupCount >= PARENT_BORDER_MIN_RENDERABLE_GROUPS &&
+      coverage >= PARENT_BORDER_MIN_COVERAGE &&
+      dominantShare <= PARENT_BORDER_MAX_DOMINANT_SHARE,
+  };
+}
+
+function buildHierarchyGroupingCandidate(countryCode, featureEntries) {
+  const groups = runtimeState.hierarchyData?.groups;
+  if (!groups || typeof groups !== "object") return null;
+
+  const idSet = new Set(featureEntries.map((entry) => entry.id));
+  const featureToGroup = new Map();
+  Object.entries(groups).forEach(([groupId, children]) => {
+    const groupCountry = canonicalCountryCode(String(groupId || "").split("_")[0]);
+    if (!groupCountry || groupCountry !== countryCode) return;
+    if (!Array.isArray(children)) return;
+    children.forEach((child) => {
+      const childId = String(child || "").trim();
+      if (!childId || !idSet.has(childId)) return;
+      if (!featureToGroup.has(childId)) {
+        featureToGroup.set(childId, groupId);
+      }
+    });
+  });
+
+  return evaluateCountryGroupingCandidate(countryCode, "hierarchy", featureEntries, featureToGroup);
+}
+
+function buildAdmin1GroupingCandidate(countryCode, featureEntries) {
+  const featureToGroup = new Map();
+  featureEntries.forEach(({ id, feature }) => {
+    const group = getAdmin1Group(feature);
+    if (!group) return;
+    featureToGroup.set(id, group);
+  });
+  return evaluateCountryGroupingCandidate(countryCode, "admin1_group", featureEntries, featureToGroup);
+}
+
+function buildScenarioDistrictGroupingCandidate(countryCode, featureEntries) {
+  const districtCountry = runtimeState.scenarioDistrictGroupsData?.countries?.[countryCode];
+  if (!districtCountry || typeof districtCountry !== "object") return null;
+  const idSet = new Set(featureEntries.map((entry) => entry.id));
+  const featureToGroup = new Map();
+  Object.entries(districtCountry.districts && typeof districtCountry.districts === "object" ? districtCountry.districts : {})
+    .forEach(([districtId, rawDistrict]) => {
+      const normalizedDistrictId = String(rawDistrict?.id || rawDistrict?.district_id || districtId || "").trim();
+      if (!normalizedDistrictId) return;
+      const featureIds = Array.isArray(rawDistrict?.feature_ids) ? rawDistrict.feature_ids : [];
+      featureIds.forEach((featureId) => {
+        const normalizedFeatureId = String(featureId || "").trim();
+        if (!normalizedFeatureId || !idSet.has(normalizedFeatureId)) return;
+        if (!featureToGroup.has(normalizedFeatureId)) {
+          featureToGroup.set(normalizedFeatureId, normalizedDistrictId);
+        }
+      });
+    });
+  if (!featureToGroup.size) {
+    return {
+      countryCode,
+      source: "scenario_district",
+      featureToGroup,
+      groupCounts: new Map(),
+      totalCount: featureEntries.length,
+      groupedCount: 0,
+      groupCount: 0,
+      groupCountTotal: 0,
+      coverage: 0,
+      dominantShare: 1,
+      accepted: false,
+      forcedRule: "scenario_district",
+    };
+  }
+  return {
+    ...evaluateCountryGroupingCandidate(countryCode, "scenario_district", featureEntries, featureToGroup),
+    forcedRule: "scenario_district",
+  };
+}
+
+function buildIdPrefixGroupingCandidate(countryCode, featureEntries, prefixLength) {
+  const length = Number(prefixLength);
+  if (!Number.isFinite(length) || length < 3) return null;
+
+  const featureToGroup = new Map();
+  let validIds = 0;
+  featureEntries.forEach(({ id }) => {
+    const text = String(id || "").trim().toUpperCase();
+    if (!GB_ID_PATTERN_RE.test(text)) return;
+    validIds += 1;
+    featureToGroup.set(id, text.slice(0, length));
+  });
+
+  if (!featureToGroup.size || !featureEntries.length) return null;
+  const idPatternCoverage = validIds / featureEntries.length;
+  if (idPatternCoverage < 0.95) return null;
+
+  const candidate = evaluateCountryGroupingCandidate(countryCode, "id_prefix", featureEntries, featureToGroup);
+  if (!candidate) return null;
+  return {
+    ...candidate,
+    prefixLength: length,
+    idPatternCoverage,
+  };
+}
+
+function isGermanStateLevelCandidate(candidate) {
+  if (!candidate || candidate.source !== "admin1_group") return false;
+  if (candidate.groupCountTotal < DE_STATE_GROUP_MIN || candidate.groupCountTotal > DE_STATE_GROUP_MAX) {
+    return false;
+  }
+  const groups = new Set(candidate.groupCounts ? Array.from(candidate.groupCounts.keys()) : []);
+  return Array.from(DE_CITY_STATES).every((name) => groups.has(name));
+}
+
+function isBritishConstituentGroupingCandidate(candidate) {
+  if (!candidate || candidate.source !== "hierarchy") return false;
+  if (candidate.coverage < PARENT_BORDER_MIN_COVERAGE) return false;
+  if (candidate.groupCount < 4) return false;
+  const groups = new Set(candidate.groupCounts ? Array.from(candidate.groupCounts.keys()) : []);
+  return (
+    groups.has("GB_England")
+    && groups.has("GB_Scotland")
+    && groups.has("GB_Wales")
+    && groups.has("GB_Northern_Ireland")
+  );
+}
+
+function isBritishNuts1GroupingCandidate(candidate) {
+  if (!candidate || candidate.source !== "id_prefix") return false;
+  if (candidate.prefixLength !== GB_NUTS1_PREFIX_LENGTH) return false;
+  if (candidate.coverage < PARENT_BORDER_MIN_COVERAGE) return false;
+  return candidate.groupCountTotal >= GB_NUTS1_GROUP_MIN;
+}
+
+function resolveCountryParentGroupingCandidate(countryCode, featureEntries) {
+  if (!countryCode || !featureEntries?.length) return null;
+
+  const scenarioDistrictCandidate = buildScenarioDistrictGroupingCandidate(countryCode, featureEntries);
+  if (scenarioDistrictCandidate) {
+    return scenarioDistrictCandidate;
+  }
+  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962") {
+    return null;
+  }
+
+  const hierarchyCandidate = buildHierarchyGroupingCandidate(countryCode, featureEntries);
+  const adminCandidate = buildAdmin1GroupingCandidate(countryCode, featureEntries);
+
+  if (countryCode === "DE") {
+    if (adminCandidate && isGermanStateLevelCandidate(adminCandidate)) {
+      return {
+        ...adminCandidate,
+        accepted: true,
+        forcedRule: "de_state_level",
+      };
+    }
+    if (hierarchyCandidate?.accepted) return hierarchyCandidate;
+    if (adminCandidate?.accepted) return adminCandidate;
+    return null;
+  }
+
+  if (countryCode === "GB") {
+    const britishLeafEntries = featureEntries.filter(({ id }) =>
+      GB_ID_PATTERN_RE.test(String(id || "").trim().toUpperCase())
+    );
+    const nuts1Candidate = buildIdPrefixGroupingCandidate(
+      countryCode,
+      britishLeafEntries,
+      GB_NUTS1_PREFIX_LENGTH
+    );
+    if (isBritishNuts1GroupingCandidate(nuts1Candidate)) {
+      return {
+        ...nuts1Candidate,
+        accepted: true,
+        forcedRule: "gb_nuts1",
+      };
+    }
+    if (isBritishConstituentGroupingCandidate(hierarchyCandidate)) {
+      return {
+        ...hierarchyCandidate,
+        accepted: true,
+        forcedRule: "gb_constituent_countries",
+      };
+    }
+    const hierarchyFineEnough =
+      hierarchyCandidate?.accepted &&
+      Math.max(hierarchyCandidate.groupCount, hierarchyCandidate.groupCountTotal) >= GB_PARENT_MIN_GROUPS;
+    if (hierarchyFineEnough) return hierarchyCandidate;
+
+    const idPrefixCandidate = [
+      buildIdPrefixGroupingCandidate(countryCode, britishLeafEntries, 4),
+    ].find(
+      (candidate) =>
+        candidate?.accepted &&
+        Math.max(candidate.groupCount, candidate.groupCountTotal) >= GB_PARENT_MIN_GROUPS
+    );
+    if (idPrefixCandidate) return idPrefixCandidate;
+    return null;
+  }
+
+  if (hierarchyCandidate?.accepted) return hierarchyCandidate;
+  if (adminCandidate?.accepted) return adminCandidate;
+  return null;
+}
+
+function syncParentBorderEnabledByCountry(supportedCountries) {
+  const prev = runtimeState.parentBorderEnabledByCountry && typeof runtimeState.parentBorderEnabledByCountry === "object"
+    ? runtimeState.parentBorderEnabledByCountry
+    : {};
+  const next = {};
+  supportedCountries.forEach((countryCode) => {
+    next[countryCode] = !!prev[countryCode];
+  });
+  runtimeState.parentBorderEnabledByCountry = next;
+}
+
+function refreshParentBorderSupport() {
+  const byCountry = getCountryFeatureEntriesMap();
+  const supported = [];
+  const meta = {};
+  const featureToGroup = new Map();
+
+  byCountry.forEach((featureEntries, countryCode) => {
+    const candidate = resolveCountryParentGroupingCandidate(countryCode, featureEntries);
+    if (!candidate) return;
+
+    candidate.featureToGroup.forEach((group, featureId) => {
+      featureToGroup.set(featureId, group);
+    });
+    if (candidate.accepted) {
+      supported.push(countryCode);
+    }
+    meta[countryCode] = {
+      source: candidate.source,
+      groupCount: candidate.groupCountTotal,
+      coverage: Number(candidate.coverage.toFixed(3)),
+      dominantShare: Number(candidate.dominantShare.toFixed(3)),
+      prefixLength: candidate.prefixLength || null,
+      idPatternCoverage: Number.isFinite(candidate.idPatternCoverage)
+        ? Number(candidate.idPatternCoverage.toFixed(3))
+        : null,
+    };
+  });
+
+  supported.sort((a, b) => a.localeCompare(b));
+  runtimeState.parentGroupByFeatureId = featureToGroup;
+  runtimeState.parentBorderMetaByCountry = meta;
+  runtimeState.parentBorderSupportedCountries = supported;
+  syncParentBorderEnabledByCountry(supported);
+
+  if (typeof runtimeState.updateParentBorderCountryListFn === "function") {
+    runtimeState.updateParentBorderCountryListFn();
+  }
+}
+
+function getParentGroupForEntity(entity) {
+  const featureId = getEntityFeatureId(entity);
+  if (!featureId || !runtimeState.parentGroupByFeatureId) return "";
+  const group = runtimeState.parentGroupByFeatureId.get(featureId);
+  if (group === null || group === undefined) return "";
+  return String(group).trim();
+}
+
+function resetContourHostFillColorCache() {
+  contourHostFillColorCache = new WeakMap();
+}
+function resetExactRefreshOptimizationState() {
+  resetContourHostFillColorCache();
+  resetContourVisibleSetCache();
+  cancelDeferredContextBaseEnhancement({ resetFlag: true });
+  detailAdmMeshBuildState = {
+    signature: "",
+    status: "idle",
+  };
+}
+
+function resetContourVisibleSetCache() {
+  contourVisibleSetCache = {
+    major: { collectionRef: null, key: "", features: [] },
+    minor: { collectionRef: null, key: "", features: [] },
+  };
+}
+
+function cancelDeferredContextBaseEnhancement({ resetFlag = false } = {}) {
+  cancelDeferredWork(deferredContextBaseEnhancementHandle);
+  deferredContextBaseEnhancementHandle = null;
+  if (resetFlag) {
+    deferContextBaseEnhancements = false;
+  }
+}
+
+function shouldDeferContextBaseEnhancementsForExactRefresh(
+  reuseDecision = null,
+  forceExactContextBaseRefresh = false,
+) {
+  const resolvedReuseDecision =
+    reuseDecision && typeof reuseDecision === "object"
+      ? reuseDecision
+      : null;
+  if (!resolvedReuseDecision && !forceExactContextBaseRefresh) {
+    return false;
+  }
+  return !!(
+    resolvedReuseDecision?.crossesZoomBucket
+    || (
+      Number.isFinite(Number(resolvedReuseDecision?.distancePx))
+      && Number.isFinite(Number(resolvedReuseDecision?.maxDistancePx))
+      && Number(resolvedReuseDecision.distancePx) > Number(resolvedReuseDecision.maxDistancePx)
+    )
+    || String(resolvedReuseDecision?.zoomBucket || "") === "high"
+  );
+}
+
+function scheduleDeferredContextBaseEnhancements() {
+  cancelDeferredContextBaseEnhancement();
+  deferredContextBaseEnhancementHandle = scheduleDeferredWork(() => {
+    deferredContextBaseEnhancementHandle = null;
+    if (!deferContextBaseEnhancements) {
+      return;
+    }
+    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
+      scheduleDeferredContextBaseEnhancements();
+      return;
+    }
+    deferContextBaseEnhancements = false;
+    invalidateRenderPasses(["contextBase", "labels"], "context-base-enhancement");
+    render();
+  }, {
+    timeout: 180,
+  });
+}
+
+function setStaticMeshSourceCountries(sourceCountries = {}) {
+  staticMeshSourceCountries = {
+    primary: sourceCountries.primary instanceof Set ? new Set(sourceCountries.primary) : new Set(),
+    detail: sourceCountries.detail instanceof Set ? new Set(sourceCountries.detail) : new Set(),
+  };
+}
+
+function resetVisibleInternalBorderMeshSignature() {
+  visibleInternalBorderMeshSignature = "";
+  visibleBorderCountryCodesCache = {
+    signature: "",
+    codes: new Set(),
+  };
+}
+
+function resetDetailAdmMeshBuildState() {
+  detailAdmMeshBuildState = {
+    signature: "",
+    status: "idle",
+  };
+}
+
+function syncStaticMeshSnapshot() {
+  staticMeshCache.snapshot = captureStaticMeshSnapshot();
+}
+
+function clearDeferredInternalBorderMeshCaches({ syncSnapshot = true } = {}) {
+  setStaticMeshSourceCountries(getSourceCountrySets());
+  runtimeState.cachedProvinceBorders = [];
+  runtimeState.cachedProvinceBordersByCountry = new Map();
+  runtimeState.cachedLocalBorders = [];
+  runtimeState.cachedLocalBordersByCountry = new Map();
+  runtimeState.cachedDetailAdmBorders = [];
+  runtimeState.cachedGridLines = [];
+  resetVisibleInternalBorderMeshSignature();
+  resetDetailAdmMeshBuildState();
+  if (syncSnapshot && staticMeshCache.snapshot) {
+    syncStaticMeshSnapshot();
+  }
+}
+
+function buildDetailAdmMeshSignature(visibleCountryCodes = new Set(), k = runtimeState.zoomTransform?.k || 1) {
+  const detailCountries = Array.from(staticMeshSourceCountries.detail || new Set())
+    .filter((countryCode) => visibleCountryCodes.has(countryCode))
+    .sort((left, right) => left.localeCompare(right));
+  return {
+    detailCountries,
+    signature: [
+      Number(runtimeState.topologyRevision || 0),
+      String(getContextBaseZoomBucketId(k)),
+      ...detailCountries,
+    ].join("|"),
+  };
+}
+
+function getVisibleCountryCodesForBorderMeshes() {
+  const viewportBounds = getProjectedViewportBounds({ overscanPx: VIEWPORT_CULL_OVERSCAN_PX * 0.5 });
+  if (!viewportBounds) {
+    return new Set();
+  }
+  const signature = [
+    Number(runtimeState.topologyRevision || 0),
+    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
+    Number(viewportBounds.minX || 0).toFixed(1),
+    Number(viewportBounds.minY || 0).toFixed(1),
+    Number(viewportBounds.maxX || 0).toFixed(1),
+    Number(viewportBounds.maxY || 0).toFixed(1),
+    Array.isArray(runtimeState.spatialItems) ? runtimeState.spatialItems.length : 0,
+  ].join("|");
+  if (visibleBorderCountryCodesCache.signature === signature) {
+    return new Set(visibleBorderCountryCodesCache.codes);
+  }
+  const visible = new Set();
+  const minX = Number(viewportBounds.minX);
+  const minY = Number(viewportBounds.minY);
+  const maxX = Number(viewportBounds.maxX);
+  const maxY = Number(viewportBounds.maxY);
+  (runtimeState.spatialItems || []).forEach((item) => {
+    const countryCode = canonicalCountryCode(item?.borderMeshCountryCode || item?.countryCode || "");
+    if (!countryCode || visible.has(countryCode)) return;
+    if (item.maxX < minX || item.maxY < minY || item.minX > maxX || item.minY > maxY) {
+      return;
+    }
+    visible.add(countryCode);
+  });
+  visibleBorderCountryCodesCache = {
+    signature,
+    codes: new Set(visible),
+  };
+  return visible;
+}
+
+function ensureCountrySourceBorderMeshes(countryCode, {
+  includeProvince = true,
+  includeLocal = true,
+} = {}) {
+  const normalizedCode = canonicalCountryCode(countryCode);
+  if (!normalizedCode || !globalThis.topojson) return;
+  const needsProvince = includeProvince && !runtimeState.cachedProvinceBordersByCountry?.has(normalizedCode);
+  const needsLocal = includeLocal && !runtimeState.cachedLocalBordersByCountry?.has(normalizedCode);
+  if (!needsProvince && !needsLocal) {
+    return;
+  }
+
+  const nextProvinceMeshes = [];
+  const nextLocalMeshes = [];
+  const sources = [
+    { key: "detail", topology: runtimeState.topologyDetail },
+    { key: "primary", topology: runtimeState.topologyPrimary || runtimeState.topology },
+  ];
+  sources.forEach(({ key, topology }) => {
+    if (!topology?.objects?.political) return;
+    if (!staticMeshSourceCountries[key]?.has(normalizedCode)) return;
+    const meshes = buildSourceBorderMeshes(topology, new Set([normalizedCode]));
+    if (!meshes) return;
+    if (needsProvince) {
+      const provinceMeshes = meshes.provinceMeshesByCountry?.get(normalizedCode) || [];
+      provinceMeshes.forEach((mesh) => {
+        if (isUsableMesh(mesh)) {
+          nextProvinceMeshes.push(mesh);
+          runtimeState.cachedProvinceBorders.push(mesh);
+        }
+      });
+    }
+    if (needsLocal) {
+      const localMeshes = meshes.localMeshesByCountry?.get(normalizedCode) || [];
+      localMeshes.forEach((mesh) => {
+        if (isUsableMesh(mesh)) {
+          nextLocalMeshes.push(mesh);
+          runtimeState.cachedLocalBorders.push(mesh);
+        }
+      });
+    }
+  });
+  if (needsProvince) {
+    runtimeState.cachedProvinceBordersByCountry.set(normalizedCode, nextProvinceMeshes);
+  }
+  if (needsLocal) {
+    runtimeState.cachedLocalBordersByCountry.set(normalizedCode, nextLocalMeshes);
+    runtimeState.cachedGridLines = [...(runtimeState.cachedLocalBorders || [])];
+  }
+}
+
+function cancelDeferredHeavyBorderMeshes() {
+  cancelDeferredWork(deferredHeavyBorderMeshHandle);
+  deferredHeavyBorderMeshHandle = null;
+}
+
+function scheduleDeferredHeavyBorderMeshes() {
+  cancelDeferredHeavyBorderMeshes();
+  deferredHeavyBorderMeshHandle = scheduleDeferredWork(() => {
+    deferredHeavyBorderMeshHandle = null;
+    if (!isInteractionRecoverySettled({ quietMs: 900 })) {
+      scheduleDeferredHeavyBorderMeshes();
+      return;
+    }
+    const taskKey = "deferred-heavy-border-meshes";
+    if (!beginInteractionRecoveryTask(taskKey)) {
+      scheduleDeferredHeavyBorderMeshes();
+      return;
+    }
+    const startedAt = nowMs();
+    try {
+      const visibleCountryCodes = getVisibleCountryCodesForBorderMeshes();
+      if (!visibleCountryCodes.size) return;
+      const currentZoom = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+      const includeProvince = currentZoom >= PROVINCE_BORDERS_TRANSITION_END_ZOOM;
+      const includeLocal = currentZoom >= LOCAL_BORDERS_MIN_ZOOM;
+      const detailAdmMeta = currentZoom >= DETAIL_ADM_BORDERS_MIN_ZOOM
+        ? buildDetailAdmMeshSignature(visibleCountryCodes, currentZoom)
+        : { detailCountries: [], signature: "" };
+      const includeDetailAdm =
+        currentZoom >= DETAIL_ADM_BORDERS_MIN_ZOOM
+        && detailAdmMeta.detailCountries.length > 0
+        && (
+          detailAdmMeshBuildState.signature !== detailAdmMeta.signature
+          || detailAdmMeshBuildState.status === "idle"
+        );
+      if (!includeProvince && !includeLocal && !includeDetailAdm) return;
+      let changed = false;
+      let snapshotChanged = false;
+      visibleCountryCodes.forEach((countryCode) => {
+        const hadProvince = runtimeState.cachedProvinceBordersByCountry?.has(countryCode);
+        const hadLocal = runtimeState.cachedLocalBordersByCountry?.has(countryCode);
+        ensureCountrySourceBorderMeshes(countryCode, {
+          includeProvince,
+          includeLocal,
+        });
+        if ((includeProvince && !hadProvince && runtimeState.cachedProvinceBordersByCountry?.has(countryCode))
+          || (includeLocal && !hadLocal && runtimeState.cachedLocalBordersByCountry?.has(countryCode))) {
+          changed = true;
+          snapshotChanged = true;
+        }
+      });
+      if (includeDetailAdm) {
+        const previousDetailAdmStatus = String(detailAdmMeshBuildState.status || "idle");
+        const detailAdmMesh = buildDetailAdmBorderMesh(runtimeState.topologyDetail, new Set(detailAdmMeta.detailCountries));
+        if (isUsableMesh(detailAdmMesh)) {
+          runtimeState.cachedDetailAdmBorders = [detailAdmMesh];
+          detailAdmMeshBuildState = {
+            signature: detailAdmMeta.signature,
+            status: "ready",
+          };
+          changed = true;
+          snapshotChanged = true;
+        } else {
+          detailAdmMeshBuildState = {
+            signature: detailAdmMeta.signature,
+            status: "empty",
+          };
+          snapshotChanged =
+            snapshotChanged
+            || previousDetailAdmStatus !== "empty"
+            || runtimeState.cachedDetailAdmBorders.length > 0;
+        }
+      }
+      if (snapshotChanged) {
+        syncStaticMeshSnapshot();
+      }
+      if (changed) {
+        invalidateRenderPasses("borders", "deferred-country-border-meshes");
+        render();
+      }
+      recordInteractionRecoveryTaskMetric(taskKey, nowMs() - startedAt, {
+        visibleCountryCount: visibleCountryCodes.size,
+        changed,
+        includeProvince,
+        includeLocal,
+        includeDetailAdm,
+        yieldCount: 0,
+      });
+    } finally {
+      endInteractionRecoveryTask(taskKey);
+    }
+  }, {
+    timeout: 360,
+  });
+}
+
+function serializeCountrySetSignature(countrySet) {
+  return Array.from(countrySet || []).sort((left, right) => left.localeCompare(right)).join(",");
+}
+
+function getSourceCountriesSignature(sourceCountries = {}) {
+  return [
+    `primary:${serializeCountrySetSignature(sourceCountries.primary)}`,
+    `detail:${serializeCountrySetSignature(sourceCountries.detail)}`,
+  ].join("|");
+}
+
+function getCoastlineDecisionSignature(decision = null) {
+  if (!decision || typeof decision !== "object") {
+    return "";
+  }
+  return [
+    String(decision.scenarioSurfaceVersionSignal || ""),
+    String(decision.source || ""),
+    String(decision.reason || ""),
+    String(decision.scenarioId || ""),
+    String(decision.primaryObjectName || ""),
+    String(decision.runtimeObjectName || ""),
+    String(decision.meshMode || ""),
+    Number(decision.primaryFeatureCount || 0),
+    Number(decision.runtimeFeatureCount || 0),
+    Number(decision.primaryPolygonPartCount || 0),
+    Number(decision.runtimePolygonPartCount || 0),
+    Number(decision.primaryInteriorRingCount || 0),
+    Number(decision.runtimeInteriorRingCount || 0),
+    Number(decision.runtimeInteriorRingRatio || 0),
+    Number(decision.areaDeltaRatio || 0),
+  ].join("|");
+}
+
+function captureStaticMeshSnapshot() {
+  return {
+    cachedCountryBorders: [...(runtimeState.cachedCountryBorders || [])],
+    cachedProvinceBorders: [...(runtimeState.cachedProvinceBorders || [])],
+    cachedProvinceBordersByCountry: new Map(runtimeState.cachedProvinceBordersByCountry || []),
+    cachedLocalBorders: [...(runtimeState.cachedLocalBorders || [])],
+    cachedLocalBordersByCountry: new Map(runtimeState.cachedLocalBordersByCountry || []),
+    cachedDetailAdmBorders: [...(runtimeState.cachedDetailAdmBorders || [])],
+    cachedCoastlines: [...(runtimeState.cachedCoastlines || [])],
+    cachedCoastlinesHigh: [...(runtimeState.cachedCoastlinesHigh || [])],
+    cachedCoastlinesMid: [...(runtimeState.cachedCoastlinesMid || [])],
+    cachedCoastlinesLow: [...(runtimeState.cachedCoastlinesLow || [])],
+    cachedParentBordersByCountry: new Map(runtimeState.cachedParentBordersByCountry || []),
+    cachedGridLines: [...(runtimeState.cachedGridLines || [])],
+    parentGroupByFeatureId: new Map(runtimeState.parentGroupByFeatureId || []),
+    parentBorderMetaByCountry: { ...(runtimeState.parentBorderMetaByCountry || {}) },
+    parentBorderSupportedCountries: [...(runtimeState.parentBorderSupportedCountries || [])],
+    detailAdmMeshBuildState: { ...(detailAdmMeshBuildState || { signature: "", status: "idle" }) },
+  };
+}
+
+function restoreStaticMeshSnapshot(snapshot) {
+  if (!snapshot) return;
+  runtimeState.cachedCountryBorders = [...(snapshot.cachedCountryBorders || [])];
+  runtimeState.cachedProvinceBorders = [...(snapshot.cachedProvinceBorders || [])];
+  runtimeState.cachedProvinceBordersByCountry = new Map(snapshot.cachedProvinceBordersByCountry || []);
+  runtimeState.cachedLocalBorders = [...(snapshot.cachedLocalBorders || [])];
+  runtimeState.cachedLocalBordersByCountry = new Map(snapshot.cachedLocalBordersByCountry || []);
+  runtimeState.cachedDetailAdmBorders = [...(snapshot.cachedDetailAdmBorders || [])];
+  runtimeState.cachedCoastlines = [...(snapshot.cachedCoastlines || [])];
+  runtimeState.cachedCoastlinesHigh = [...(snapshot.cachedCoastlinesHigh || [])];
+  runtimeState.cachedCoastlinesMid = [...(snapshot.cachedCoastlinesMid || [])];
+  runtimeState.cachedCoastlinesLow = [...(snapshot.cachedCoastlinesLow || [])];
+  runtimeState.cachedParentBordersByCountry = new Map(snapshot.cachedParentBordersByCountry || []);
+  runtimeState.cachedGridLines = [...(snapshot.cachedGridLines || [])];
+  runtimeState.parentGroupByFeatureId = new Map(snapshot.parentGroupByFeatureId || []);
+  runtimeState.parentBorderMetaByCountry = { ...(snapshot.parentBorderMetaByCountry || {}) };
+  runtimeState.parentBorderSupportedCountries = [...(snapshot.parentBorderSupportedCountries || [])];
+  detailAdmMeshBuildState = snapshot.detailAdmMeshBuildState && typeof snapshot.detailAdmMeshBuildState === "object"
+    ? {
+      signature: String(snapshot.detailAdmMeshBuildState.signature || ""),
+      status: String(snapshot.detailAdmMeshBuildState.status || "idle"),
+    }
+    : { signature: "", status: "idle" };
+  syncParentBorderEnabledByCountry(runtimeState.parentBorderSupportedCountries);
+}
+
+function publishScenarioCoastlineDecision(decision) {
+  if (!decision || typeof decision !== "object") return decision;
+  const publicDecision = { ...decision };
+  delete publicDecision.topology;
+  recordRenderPerfMetric("resolveScenarioCoastlineSource", 0, publicDecision);
+  globalThis.__mapCoastlineDiag = publicDecision;
+  if (renderDiag.enabled) {
+    globalThis.__mapRenderDiag = {
+      ...(globalThis.__mapRenderDiag || { enabled: true }),
+      coastline: publicDecision,
+    };
+  }
+  return decision;
+}
+
+function getLineLength(line) {
+  if (!Array.isArray(line) || line.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < line.length; i += 1) {
+    const prev = line[i - 1];
+    const curr = line[i];
+    if (!prev || !curr) continue;
+    total += Math.hypot(curr[0] - prev[0], curr[1] - prev[1]);
+  }
+  return total;
+}
+
+function getSqPointToSegmentDistance(point, start, end) {
+  const vx = end[0] - start[0];
+  const vy = end[1] - start[1];
+  const wx = point[0] - start[0];
+  const wy = point[1] - start[1];
+  const lengthSq = vx * vx + vy * vy;
+  if (lengthSq <= 0) {
+    return wx * wx + wy * wy;
+  }
+  let t = (wx * vx + wy * vy) / lengthSq;
+  t = clamp(t, 0, 1);
+  const projX = start[0] + t * vx;
+  const projY = start[1] + t * vy;
+  const dx = point[0] - projX;
+  const dy = point[1] - projY;
+  return dx * dx + dy * dy;
+}
+
+function simplifyPolylineRDP(points, epsilon) {
+  if (!Array.isArray(points) || points.length <= 2) {
+    return Array.isArray(points) ? points.slice() : [];
+  }
+
+  const eps = Math.max(0, Number(epsilon) || 0);
+  if (eps <= 0) {
+    return points.slice();
+  }
+
+  const sqEps = eps * eps;
+  const keep = new Array(points.length).fill(false);
+  keep[0] = true;
+  keep[points.length - 1] = true;
+
+  const stack = [[0, points.length - 1]];
+  while (stack.length > 0) {
+    const [startIdx, endIdx] = stack.pop();
+    let maxSqDist = -1;
+    let splitIdx = -1;
+    const start = points[startIdx];
+    const end = points[endIdx];
+    for (let i = startIdx + 1; i < endIdx; i += 1) {
+      const sqDist = getSqPointToSegmentDistance(points[i], start, end);
+      if (sqDist > maxSqDist) {
+        maxSqDist = sqDist;
+        splitIdx = i;
+      }
+    }
+
+    if (splitIdx >= 0 && maxSqDist > sqEps) {
+      keep[splitIdx] = true;
+      stack.push([startIdx, splitIdx], [splitIdx, endIdx]);
+    }
+  }
+
+  const result = [];
+  for (let i = 0; i < points.length; i += 1) {
+    if (keep[i]) {
+      result.push(points[i]);
+    }
+  }
+  return result.length >= 2 ? result : points.slice(0, 2);
+}
+
+function sanitizePolyline(line) {
+  if (!Array.isArray(line)) return [];
+  const result = [];
+  line.forEach((point) => {
+    if (!Array.isArray(point) || point.length < 2) return;
+    const x = Number(point[0]);
+    const y = Number(point[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const prev = result[result.length - 1];
+    if (prev && prev[0] === x && prev[1] === y) return;
+    result.push([x, y]);
+  });
+  return result;
+}
+
+function getPolylineMeanAbsLatitude(line) {
+  if (!Array.isArray(line) || !line.length) return 0;
+  let total = 0;
+  let count = 0;
+  line.forEach((point) => {
+    const lat = Number(point?.[1]);
+    if (!Number.isFinite(lat)) return;
+    total += Math.abs(lat);
+    count += 1;
+  });
+  return count > 0 ? total / count : 0;
+}
+
+function getLatitudeAdjustedSimplifyEpsilon(baseEpsilon, line) {
+  const epsilon = Math.max(0, Number(baseEpsilon) || 0);
+  if (!(epsilon > 0)) return 0;
+  const meanAbsLatitude = getPolylineMeanAbsLatitude(line);
+  const cosLatitude = Math.cos((meanAbsLatitude * Math.PI) / 180);
+  const safeCosLatitude = clamp(Math.abs(cosLatitude), COASTLINE_SIMPLIFY_MIN_COS_LAT, 1);
+  const scale = clamp(1 / safeCosLatitude, 1, COASTLINE_SIMPLIFY_LATITUDE_SCALE_MAX);
+  return epsilon * scale;
+}
+
+function getTriangleArea(points, aIndex, bIndex, cIndex) {
+  const a = points[aIndex];
+  const b = points[bIndex];
+  const c = points[cIndex];
+  if (!a || !b || !c) return Infinity;
+  return Math.abs(
+    (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1])) * 0.5
+  );
+}
+
+function pushMinHeap(heap, entry) {
+  heap.push(entry);
+  let index = heap.length - 1;
+  while (index > 0) {
+    const parentIndex = Math.floor((index - 1) / 2);
+    if (heap[parentIndex][0] <= heap[index][0]) break;
+    [heap[parentIndex], heap[index]] = [heap[index], heap[parentIndex]];
+    index = parentIndex;
+  }
+}
+
+function popMinHeap(heap) {
+  if (!heap.length) return null;
+  const first = heap[0];
+  const last = heap.pop();
+  if (heap.length && last) {
+    heap[0] = last;
+    let index = 0;
+    while (true) {
+      const leftIndex = index * 2 + 1;
+      const rightIndex = leftIndex + 1;
+      let smallestIndex = index;
+      if (leftIndex < heap.length && heap[leftIndex][0] < heap[smallestIndex][0]) {
+        smallestIndex = leftIndex;
+      }
+      if (rightIndex < heap.length && heap[rightIndex][0] < heap[smallestIndex][0]) {
+        smallestIndex = rightIndex;
+      }
+      if (smallestIndex === index) break;
+      [heap[index], heap[smallestIndex]] = [heap[smallestIndex], heap[index]];
+      index = smallestIndex;
+    }
+  }
+  return first;
+}
+
+function simplifyPolylineEffectiveArea(points, areaThreshold) {
+  if (!Array.isArray(points) || points.length <= 2) {
+    return Array.isArray(points) ? points.slice() : [];
+  }
+  const threshold = Math.max(0, Number(areaThreshold) || 0);
+  if (!(threshold > 0)) return points.slice();
+
+  const length = points.length;
+  const previous = new Array(length);
+  const next = new Array(length);
+  const removed = new Array(length).fill(false);
+  const areas = new Array(length).fill(Infinity);
+  const heap = [];
+
+  for (let index = 0; index < length; index += 1) {
+    previous[index] = index - 1;
+    next[index] = index + 1 < length ? index + 1 : -1;
+  }
+
+  const updateArea = (index) => {
+    if (index <= 0 || index >= length - 1 || removed[index]) return;
+    const prevIndex = previous[index];
+    const nextIndex = next[index];
+    if (prevIndex < 0 || nextIndex < 0 || removed[prevIndex] || removed[nextIndex]) {
+      areas[index] = Infinity;
+      return;
+    }
+    const area = getTriangleArea(points, prevIndex, index, nextIndex);
+    areas[index] = area;
+    pushMinHeap(heap, [area, index]);
+  };
+
+  for (let index = 1; index < length - 1; index += 1) {
+    updateArea(index);
+  }
+
+  while (heap.length) {
+    const entry = popMinHeap(heap);
+    if (!entry) break;
+    const [area, index] = entry;
+    if (removed[index] || area !== areas[index]) continue;
+    if (area > threshold) break;
+    const prevIndex = previous[index];
+    const nextIndex = next[index];
+    if (prevIndex < 0 || nextIndex < 0) continue;
+    removed[index] = true;
+    next[prevIndex] = nextIndex;
+    previous[nextIndex] = prevIndex;
+    updateArea(prevIndex);
+    updateArea(nextIndex);
+  }
+
+  const simplified = [];
+  for (let index = 0; index < length; index += 1) {
+    if (!removed[index]) simplified.push(points[index]);
+  }
+  return simplified.length >= 2 ? simplified : points.slice(0, 2);
+}
+
+function rebuildStaticMeshes({
+  refreshOpeningOwnerBorders = true,
+} = {}) {
+  const startedAt = nowMs();
+  cancelDeferredHeavyBorderMeshes();
+  resetVisibleInternalBorderMeshSignature();
+  if (!globalThis.topojson) {
+    staticMeshCache.snapshot = null;
+    setStaticMeshSourceCountries();
+    runtimeState.cachedCountryBorders = [];
+    runtimeState.cachedProvinceBorders = [];
+    runtimeState.cachedProvinceBordersByCountry = new Map();
+    runtimeState.cachedLocalBorders = [];
+    runtimeState.cachedLocalBordersByCountry = new Map();
+    runtimeState.cachedDetailAdmBorders = [];
+    runtimeState.cachedCoastlines = [];
+    runtimeState.cachedCoastlinesHigh = [];
+    runtimeState.cachedCoastlinesMid = [];
+    runtimeState.cachedCoastlinesLow = [];
+    runtimeState.cachedParentBordersByCountry = new Map();
+    runtimeState.cachedGridLines = [];
+    runtimeState.parentGroupByFeatureId = new Map();
+    runtimeState.parentBorderMetaByCountry = {};
+    runtimeState.parentBorderSupportedCountries = [];
+    syncParentBorderEnabledByCountry([]);
+    if (typeof runtimeState.updateParentBorderCountryListFn === "function") {
+      runtimeState.updateParentBorderCountryListFn();
+    }
+    recordRenderPerfMetric("rebuildStaticMeshes", nowMs() - startedAt, {
+      hasTopojson: false,
+      countryMeshes: 0,
+      coastlineMeshes: 0,
+    });
+    return;
+  }
+
+  const sourceCountries = getSourceCountrySets();
+  setStaticMeshSourceCountries(sourceCountries);
+  const coastlineSourceDecision = resolveCoastlineTopologySource();
+  const sourceCountriesSignature = getSourceCountriesSignature(sourceCountries);
+  const coastlineDecisionSignature = getCoastlineDecisionSignature(coastlineSourceDecision);
+  const primaryTopology = runtimeState.topologyPrimary || runtimeState.topology;
+  const detailTopology = runtimeState.topologyDetail || null;
+  const runtimeTopology = runtimeState.runtimePoliticalTopology || null;
+  const cacheMatches =
+    staticMeshCache.primaryRef === primaryTopology &&
+    staticMeshCache.detailRef === detailTopology &&
+    staticMeshCache.runtimeRef === runtimeTopology &&
+    staticMeshCache.bundleMode === String(runtimeState.topologyBundleMode || "") &&
+    staticMeshCache.activeScenarioId === String(runtimeState.activeScenarioId || "") &&
+    staticMeshCache.scenarioBorderMode === String(runtimeState.scenarioBorderMode || "") &&
+    staticMeshCache.scenarioViewMode === String(runtimeState.scenarioViewMode || "") &&
+    staticMeshCache.sourceCountriesSignature === sourceCountriesSignature &&
+    staticMeshCache.coastlineDecisionSignature === coastlineDecisionSignature &&
+    staticMeshCache.snapshot;
+  if (cacheMatches) {
+    restoreStaticMeshSnapshot(staticMeshCache.snapshot);
+    const currentZoom = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+    if (currentZoom >= DETAIL_ADM_BORDERS_MIN_ZOOM) {
+      const detailAdmMeta = buildDetailAdmMeshSignature(getVisibleCountryCodesForBorderMeshes(), currentZoom);
+      detailAdmMeshBuildState = {
+        signature: detailAdmMeta.signature,
+        status: runtimeState.cachedDetailAdmBorders.length
+          ? "ready"
+          : (detailAdmMeta.detailCountries.length ? "idle" : "empty"),
+      };
+    } else {
+      detailAdmMeshBuildState = {
+        signature: "",
+        status: "idle",
+      };
+    }
+    if (typeof runtimeState.updateParentBorderCountryListFn === "function") {
+      runtimeState.updateParentBorderCountryListFn();
+    }
+    recordRenderPerfMetric("rebuildStaticMeshes", nowMs() - startedAt, {
+      hasTopojson: true,
+      cacheHit: true,
+      countryMeshes: runtimeState.cachedCountryBorders.length,
+      provinceMeshes: runtimeState.cachedProvinceBorders.length,
+      localMeshes: runtimeState.cachedLocalBorders.length,
+      coastlineMeshes: runtimeState.cachedCoastlines.length,
+      coastlineSource: String(coastlineSourceDecision?.source || "primary"),
+      coastlineReason: String(coastlineSourceDecision?.reason || ""),
+    });
+    return;
+  }
+
+  runtimeState.cachedCountryBorders = [];
+  runtimeState.cachedProvinceBorders = [];
+  runtimeState.cachedProvinceBordersByCountry = new Map();
+  runtimeState.cachedLocalBorders = [];
+  runtimeState.cachedLocalBordersByCountry = new Map();
+  runtimeState.cachedDetailAdmBorders = [];
+  runtimeState.cachedCoastlines = [];
+  runtimeState.cachedCoastlinesHigh = [];
+  runtimeState.cachedCoastlinesMid = [];
+  runtimeState.cachedCoastlinesLow = [];
+  runtimeState.cachedParentBordersByCountry = new Map();
+  runtimeState.cachedGridLines = [];
+  runtimeState.parentGroupByFeatureId = new Map();
+  runtimeState.parentBorderMetaByCountry = {};
+  runtimeState.parentBorderSupportedCountries = [];
+  refreshParentBorderSupport();
+
+  if (Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1)) >= DETAIL_ADM_BORDERS_MIN_ZOOM) {
+    const visibleCountryCodes = getVisibleCountryCodesForBorderMeshes();
+    const detailCountries = new Set(
+      [...(sourceCountries.detail || new Set())].filter((countryCode) => visibleCountryCodes.has(countryCode))
+    );
+    const detailAdmMesh = buildDetailAdmBorderMesh(runtimeState.topologyDetail, detailCountries);
+    if (isUsableMesh(detailAdmMesh)) {
+      runtimeState.cachedDetailAdmBorders.push(detailAdmMesh);
+      detailAdmMeshBuildState = {
+        signature: buildDetailAdmMeshSignature(visibleCountryCodes, runtimeState.zoomTransform?.k || 1).signature,
+        status: "ready",
+      };
+    } else {
+      detailAdmMeshBuildState = {
+        signature: buildDetailAdmMeshSignature(visibleCountryCodes, runtimeState.zoomTransform?.k || 1).signature,
+        status: detailCountries.size ? "empty" : "empty",
+      };
+    }
+  } else {
+    detailAdmMeshBuildState = {
+      signature: "",
+      status: "idle",
+    };
+  }
+
+  const unifiedBorderTopology =
+    runtimeState.topologyBundleMode === "composite" && runtimeTopology?.objects?.political
+      ? runtimeTopology
+      : primaryTopology;
+  const countryMesh = buildGlobalCountryBorderMesh(unifiedBorderTopology);
+  if (isUsableMesh(countryMesh)) {
+    runtimeState.cachedCountryBorders.push(countryMesh);
+  }
+
+  const coastlineMesh = buildGlobalCoastlineMesh(coastlineSourceDecision || primaryTopology);
+  if (isUsableMesh(coastlineMesh)) {
+    runtimeState.cachedCoastlines.push(coastlineMesh);
+    runtimeState.cachedCoastlinesHigh.push(coastlineMesh);
+
+    const coastlineMid = simplifyCoastlineMesh(coastlineMesh, {
+      epsilon: COASTLINE_SIMPLIFY_MID_EPSILON,
+      minLength: COASTLINE_SIMPLIFY_MID_MIN_LENGTH,
+    });
+    const coastlineLow = simplifyCoastlineMesh(coastlineMesh, {
+      epsilon: COASTLINE_SIMPLIFY_LOW_EPSILON,
+      minLength: COASTLINE_SIMPLIFY_LOW_MIN_LENGTH,
+    });
+
+    if (isUsableMesh(coastlineMid)) {
+      runtimeState.cachedCoastlinesMid.push(coastlineMid);
+    } else {
+      runtimeState.cachedCoastlinesMid.push(coastlineMesh);
+    }
+    if (isUsableMesh(coastlineLow)) {
+      runtimeState.cachedCoastlinesLow.push(coastlineLow);
+    } else if (isUsableMesh(coastlineMid)) {
+      runtimeState.cachedCoastlinesLow.push(coastlineMid);
+    } else {
+      runtimeState.cachedCoastlinesLow.push(coastlineMesh);
+    }
+  }
+
+  // Province/local border meshes are viewport- and zoom-dependent. Building them
+  // synchronously here turns startup and chunk promotion into a per-country
+  // topojson.mesh fanout; the draw owner schedules them when the zoom level
+  // actually needs them.
+  if (
+    refreshOpeningOwnerBorders !== false
+    &&
+    runtimeState.activeScenarioId
+    && runtimeState.scenarioBorderMode === "scenario_owner_only"
+    && String(runtimeState.scenarioViewMode || "ownership") === "ownership"
+  ) {
+    refreshScenarioOpeningOwnerBorders({
+      renderNow: false,
+      reason: "rebuild-static-meshes:opening",
+    });
+  }
+
+  // Backward compatibility: expose local boundaries as "grid lines".
+  runtimeState.cachedGridLines = [...(runtimeState.cachedLocalBorders || [])];
+  staticMeshCache = {
+    primaryRef: primaryTopology,
+    detailRef: detailTopology,
+    runtimeRef: runtimeTopology,
+    bundleMode: String(runtimeState.topologyBundleMode || ""),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    scenarioBorderMode: String(runtimeState.scenarioBorderMode || ""),
+    scenarioViewMode: String(runtimeState.scenarioViewMode || ""),
+    sourceCountriesSignature,
+    coastlineDecisionSignature,
+    snapshot: captureStaticMeshSnapshot(),
+  };
+  recordRenderPerfMetric("rebuildStaticMeshes", nowMs() - startedAt, {
+    hasTopojson: true,
+    cacheHit: false,
+    countryMeshes: runtimeState.cachedCountryBorders.length,
+    provinceMeshes: runtimeState.cachedProvinceBorders.length,
+    localMeshes: runtimeState.cachedLocalBorders.length,
+    coastlineMeshes: runtimeState.cachedCoastlines.length,
+    coastlineSource: String(coastlineSourceDecision?.source || "primary"),
+    coastlineReason: String(coastlineSourceDecision?.reason || ""),
+  });
+  scheduleDeferredHeavyBorderMeshes();
+}
+
+function invalidateBorderCache() {
+  const startedAt = nowMs();
+  rebuildDynamicBorders();
+  invalidateRenderPasses("borders", "border-cache");
+  recordRenderPerfMetric("invalidateBorderCache", nowMs() - startedAt, {
+    dynamicBorderCount: Array.isArray(runtimeState.dynamicBorderFeatures) ? runtimeState.dynamicBorderFeatures.length : 0,
+  });
+}
+
+function createHitResult(overrides = {}) {
+  return {
+    id: null,
+    countryCode: null,
+    runtimeCountryCode: null,
+    targetType: null,
+    feature: null,
+    hitSource: "none",
+    bboxArea: Infinity,
+    viaSnap: false,
+    strict: false,
+    distancePx: Infinity,
+    ...overrides,
+  };
+}
+
+function keyToHitColor(key) {
+  const value = Math.max(0, Math.min(0xffffff, Number(key) || 0));
+  const r = value & 255;
+  const g = (value >> 8) & 255;
+  const b = (value >> 16) & 255;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function hitColorToKey(pixel) {
+  if (!pixel || pixel.length < 3) return 0;
+  return (pixel[0] || 0) | ((pixel[1] || 0) << 8) | ((pixel[2] || 0) << 16);
+}
+
+function drawHitCanvas() {
+  if (!hitContext || !pathHitCanvas || !runtimeState.landData?.features?.length) {
+    runtimeState.hitCanvasDirty = false;
+    runtimeState.hitCanvasTopologyRevision = 0;
+    lastHitCanvasBuildStats = null;
+    return false;
+  }
+
+  const width = hitCanvas?.width || 0;
+  const height = hitCanvas?.height || 0;
+  if (width <= 0 || height <= 0) {
+    runtimeState.hitCanvasDirty = false;
+    runtimeState.hitCanvasTopologyRevision = 0;
+    lastHitCanvasBuildStats = null;
+    return false;
+  }
+
+  const t = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
+  const k = Math.max(0.0001, t.k || 1);
+
+  hitContext.save();
+  hitContext.setTransform(1, 0, 0, 1, 0, 0);
+  hitContext.clearRect(0, 0, width, height);
+  hitContext.globalCompositeOperation = "source-over";
+  hitContext.globalAlpha = 1;
+  hitContext.filter = "none";
+  hitContext.shadowBlur = 0;
+  hitContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
+  hitContext.translate(t.x, t.y);
+  hitContext.scale(k, k);
+
+  const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats();
+  if (visibleSpatialItemsResult === null) {
+    hitContext.restore();
+    runtimeState.hitCanvasDirty = true;
+    lastHitCanvasBuildStats = null;
+    recordRenderPerfMetric("hitCanvasSpatialIndexUnavailable", 0, {
+      reason: "spatial-index-unavailable",
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+    return false;
+  }
+  const visibleSpatialItems = visibleSpatialItemsResult.items;
+  let drawnItemCount = 0;
+  visibleSpatialItems.forEach((item) => {
+    const key = runtimeState.idToKey.get(item.id);
+    if (!key || !item?.feature) return;
+    if (shouldExcludePoliticalInteractionFeature(item.feature, item.id)) return;
+    hitContext.beginPath();
+    pathHitCanvas(item.feature);
+    hitContext.fillStyle = keyToHitColor(key);
+    hitContext.fill();
+    drawnItemCount += 1;
+  });
+
+  hitContext.restore();
+  runtimeState.hitCanvasDirty = false;
+  runtimeState.hitCanvasTopologyRevision = Number(runtimeState.topologyRevision || 0);
+  lastHitCanvasBuildStats = {
+    ...visibleSpatialItemsResult.stats,
+    visibleItemCount: visibleSpatialItems.length,
+    drawnItemCount,
+    globalCount: Number(visibleSpatialItemsResult.stats?.globalCandidateCount || 0),
+    spatialItemCount: Array.isArray(runtimeState.spatialItems) ? runtimeState.spatialItems.length : 0,
+  };
+  incrementPerfCounter("hitCanvasRenders");
+  return true;
+}
+
+function drawHitCanvasWithMetric(details = {}) {
+  const startedAt = nowMs();
+  const built = drawHitCanvas();
+  recordRenderPerfMetric("buildHitCanvas", nowMs() - startedAt, {
+    built: !!built,
+    dirtyBefore: true,
+    ...(lastHitCanvasBuildStats || {}),
+    ...details,
+  });
+  return built;
+}
+
+function scheduleHitCanvasBuildIfNeeded({ reason = "idle-render" } = {}) {
+  if (!hitContext || !pathHitCanvas || !runtimeState.hitCanvasDirty) return false;
+  if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    return false;
+  }
+  if (runtimeState.hitCanvasBuildScheduled) {
+    return false;
+  }
+  runtimeState.hitCanvasBuildScheduled = scheduleDeferredWork(() => {
+    runtimeState.hitCanvasBuildScheduled = null;
+    if (!hitContext || !pathHitCanvas || !runtimeState.hitCanvasDirty) return;
+    if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) return;
+    drawHitCanvasWithMetric({
+      mode: "deferred",
+      reason,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+  }, {
+    timeout: STAGED_HIT_CANVAS_TIMEOUT_MS,
+  });
+  return false;
+}
+
+function ensureHitCanvasUpToDate({ force = false } = {}) {
+  if (!hitContext || !pathHitCanvas) return false;
+  if (!force && !runtimeState.hitCanvasDirty) return true;
+  if (!force) {
+    scheduleHitCanvasBuildIfNeeded({ reason: "lazy-hit-validation" });
+    return false;
+  }
+  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
+  runtimeState.hitCanvasBuildScheduled = null;
+  return drawHitCanvasWithMetric({
+    mode: "forced",
+    reason: "strict-validation",
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+}
+
+function isHitCanvasCurrent() {
+  return (
+    !runtimeState.hitCanvasDirty
+    && Number(runtimeState.hitCanvasTopologyRevision || 0) === Number(runtimeState.topologyRevision || 0)
+  );
+}
+
+function getHitResultFromCanvas(event) {
+  if (!mapSvg || !hitContext || !runtimeState.keyToId?.size || !globalThis.d3?.pointer) {
+    return createHitResult();
+  }
+  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  if (![sx, sy].every(Number.isFinite)) return createHitResult();
+  const px = Math.max(0, Math.min((hitCanvas?.width || 1) - 1, Math.round(sx * runtimeState.dpr)));
+  const py = Math.max(0, Math.min((hitCanvas?.height || 1) - 1, Math.round(sy * runtimeState.dpr)));
+
+  let pixel = null;
+  try {
+    pixel = hitContext.getImageData(px, py, 1, 1).data;
+  } catch (_error) {
+    return createHitResult();
+  }
+
+  const key = hitColorToKey(pixel);
+  if (!key) return createHitResult();
+  const id = runtimeState.keyToId.get(key);
+  if (!id) return createHitResult();
+  const feature = runtimeState.landIndex.get(id);
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  if (
+    !feature
+    || shouldExcludePoliticalInteractionFeature(feature, id)
+    || shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })
+  ) {
+    return createHitResult();
+  }
+  return createHitResult({
+    id,
+    countryCode: getFeatureInteractionCountryCodeNormalized(feature, id),
+    runtimeCountryCode: getFeatureCountryCodeNormalized(feature),
+    targetType: "land",
+    feature,
+    hitSource: "canvas",
+    bboxArea: Number(runtimeState.spatialItemsById?.get(id)?.bboxArea || Infinity),
+    viaSnap: false,
+    strict: true,
+    distancePx: 0,
+  });
+}
+
+function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } = {}) {
+  if (
+    runtimeState.renderPhase !== RENDER_PHASE_IDLE
+    || (!isHitCanvasCurrent() && !ensureHitCanvasUpToDate({ force: !!forceBuild }))
+    || !isHitCanvasCurrent()
+  ) {
+    return createHitResult();
+  }
+  const hit = getHitResultFromCanvas(event);
+  if (!hit.id) return hit;
+  if (!strictIds?.size || strictIds.has(hit.id)) return hit;
+  return createHitResult();
+}
+
+function getSpatialBucketKey(col, row) {
+  return `${col},${row}`;
+}
+
+function getBBoxDistanceToPoint(item, px, py) {
+  const dx = px < item.minX ? item.minX - px : px > item.maxX ? px - item.maxX : 0;
+  const dy = py < item.minY ? item.minY - py : py > item.maxY ? py - item.maxY : 0;
+  return Math.hypot(dx, dy);
+}
+
+function buildSpatialGrid(items, canvasWidth, canvasHeight) {
+  const width = Math.max(1, canvasWidth || 1);
+  const height = Math.max(1, canvasHeight || 1);
+  const cellSize = clamp(
+    Math.round(width / HIT_GRID_TARGET_COLS),
+    HIT_GRID_MIN_CELL_PX,
+    HIT_GRID_MAX_CELL_PX
+  );
+  const cols = Math.max(1, Math.ceil(width / cellSize));
+  const rows = Math.max(1, Math.ceil(height / cellSize));
+  const grid = new Map();
+  const globals = [];
+  const itemsById = new Map();
+
+  const pushToCell = (col, row, item) => {
+    const key = getSpatialBucketKey(col, row);
+    if (!grid.has(key)) {
+      grid.set(key, []);
+    }
+    grid.get(key).push(item);
+  };
+
+  items.forEach((item) => {
+    if (!item?.id) return;
+    itemsById.set(item.id, item);
+    const c0 = clamp(Math.floor(item.minX / cellSize), 0, cols - 1);
+    const c1 = clamp(Math.floor(item.maxX / cellSize), 0, cols - 1);
+    const r0 = clamp(Math.floor(item.minY / cellSize), 0, rows - 1);
+    const r1 = clamp(Math.floor(item.maxY / cellSize), 0, rows - 1);
+    const covered = (c1 - c0 + 1) * (r1 - r0 + 1);
+
+    if (covered > HIT_MAX_CELLS_PER_ITEM) {
+      globals.push(item);
+      return;
+    }
+
+    for (let row = r0; row <= r1; row += 1) {
+      for (let col = c0; col <= c1; col += 1) {
+        pushToCell(col, row, item);
+      }
+    }
+  });
+
+  runtimeState.spatialGrid = grid;
+  runtimeState.spatialGridMeta = {
+    cellSize,
+    cols,
+    rows,
+    width,
+    height,
+    globals,
+  };
+  runtimeState.spatialItemsById = itemsById;
+}
+
+function collectGridCandidates(px, py, radiusProj = 0) {
+  const meta = runtimeState.spatialGridMeta;
+  if (!meta || !runtimeState.spatialGrid) return [];
+  const { cellSize, cols, rows, globals } = meta;
+  if (!cellSize || cols <= 0 || rows <= 0) return [];
+
+  const radius = Math.max(0, radiusProj || 0);
+  const minX = px - radius;
+  const maxX = px + radius;
+  const minY = py - radius;
+  const maxY = py + radius;
+  const c0 = clamp(Math.floor(minX / cellSize), 0, cols - 1);
+  const c1 = clamp(Math.floor(maxX / cellSize), 0, cols - 1);
+  const r0 = clamp(Math.floor(minY / cellSize), 0, rows - 1);
+  const r1 = clamp(Math.floor(maxY / cellSize), 0, rows - 1);
+
+  const buckets = [];
+  for (let row = r0; row <= r1; row += 1) {
+    for (let col = c0; col <= c1; col += 1) {
+      const key = getSpatialBucketKey(col, row);
+      const bucket = runtimeState.spatialGrid.get(key);
+      if (bucket?.length) {
+        buckets.push(bucket);
+      }
+    }
+  }
+
+  const seen = new Set();
+  const candidates = [];
+  const strict = radius <= 0;
+
+  const maybePush = (item) => {
+    if (!item?.id || seen.has(item.id)) return;
+    if (shouldExcludePoliticalInteractionFeature(item.feature, item.id)) return;
+    seen.add(item.id);
+    const distanceProj = getBBoxDistanceToPoint(item, px, py);
+    if (strict) {
+      if (distanceProj > 0) return;
+    } else if (distanceProj > radius) {
+      return;
+    }
+    candidates.push({ item, distanceProj });
+  };
+
+  buckets.forEach((bucket) => {
+    bucket.forEach(maybePush);
+  });
+  globals?.forEach(maybePush);
+
+  return candidates;
+}
+
+function getProjectedViewportBounds({
+  overscanPx = Math.max(
+    VIEWPORT_CULL_OVERSCAN_PX,
+    Math.min(runtimeState.width || 0, runtimeState.height || 0) * 0.08
+  ),
+} = {}) {
+  const width = Number(runtimeState.width) || 0;
+  const height = Number(runtimeState.height) || 0;
+  const t = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  const k = Math.max(0.0001, Number(t.k) || 1);
+  if (width <= 0 || height <= 0) return null;
+  const minX = (-Number(t.x || 0) - overscanPx) / k;
+  const minY = (-Number(t.y || 0) - overscanPx) / k;
+  const maxX = (width - Number(t.x || 0) + overscanPx) / k;
+  const maxY = (height - Number(t.y || 0) + overscanPx) / k;
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
+  return {
+    minX: Math.min(minX, maxX),
+    minY: Math.min(minY, maxY),
+    maxX: Math.max(minX, maxX),
+    maxY: Math.max(minY, maxY),
+  };
+}
+
+function doesSpatialItemIntersectProjectedViewport(item, viewportBounds) {
+  if (!item || !viewportBounds) return false;
+  return !(
+    item.maxX < viewportBounds.minX ||
+    item.maxY < viewportBounds.minY ||
+    item.minX > viewportBounds.maxX ||
+    item.minY > viewportBounds.maxY
+  );
+}
+
+function collectVisibleLandSpatialItemsWithStats() {
+  const meta = runtimeState.spatialGridMeta;
+  const grid = runtimeState.spatialGrid;
+  if (!meta || !grid || !Array.isArray(runtimeState.spatialItems)) return null;
+  const { cellSize, cols, rows, globals } = meta;
+  if (!cellSize || cols <= 0 || rows <= 0) return null;
+  const viewportBounds = getProjectedViewportBounds();
+  if (!viewportBounds) return null;
+  const c0 = clamp(Math.floor(viewportBounds.minX / cellSize), 0, cols - 1);
+  const c1 = clamp(Math.floor(viewportBounds.maxX / cellSize), 0, cols - 1);
+  const r0 = clamp(Math.floor(viewportBounds.minY / cellSize), 0, rows - 1);
+  const r1 = clamp(Math.floor(viewportBounds.maxY / cellSize), 0, rows - 1);
+  const visibleItems = [];
+  const seen = new Set();
+  let cellCandidateCount = 0;
+  let visitedCellCount = 0;
+  const globalCandidateCount = Number.isFinite(Number(globals?.length))
+    ? Number(globals.length)
+    : Math.max(0, Number(globals?.size || 0));
+  const maybePush = (item) => {
+    if (!item?.id || seen.has(item.id)) return;
+    seen.add(item.id);
+    if (shouldExcludePoliticalVisualFeature(item.feature, item.id)) return;
+    if (!doesSpatialItemIntersectProjectedViewport(item, viewportBounds)) return;
+    visibleItems.push(item);
+  };
+  for (let row = r0; row <= r1; row += 1) {
+    for (let col = c0; col <= c1; col += 1) {
+      const bucket = grid.get(getSpatialBucketKey(col, row));
+      visitedCellCount += 1;
+      cellCandidateCount += Array.isArray(bucket) ? bucket.length : 0;
+      bucket?.forEach(maybePush);
+    }
+  }
+  globals?.forEach(maybePush);
+  visibleItems.sort((left, right) => (left?.drawOrder ?? 0) - (right?.drawOrder ?? 0));
+  return {
+    items: visibleItems,
+    stats: {
+      cellCandidateCount,
+      globalCandidateCount,
+      visitedCellCount,
+      cellSpan: {
+        colStart: c0,
+        colEnd: c1,
+        rowStart: r0,
+        rowEnd: r1,
+        cols: Math.max(0, c1 - c0 + 1),
+        rows: Math.max(0, r1 - r0 + 1),
+      },
+    },
+  };
+}
+
+function collectVisibleLandSpatialItems() {
+  const result = collectVisibleLandSpatialItemsWithStats();
+  return result ? result.items : null;
+}
+
+function collectWaterGridCandidates(px, py, radiusProj = 0) {
+  const meta = runtimeState.waterSpatialGridMeta;
+  const grid = runtimeState.waterSpatialGrid;
+  if (!meta || !grid) return [];
+  const { cellSize, cols, rows, globals } = meta;
+  if (!cellSize || cols <= 0 || rows <= 0) return [];
+
+  const radius = Math.max(0, radiusProj || 0);
+  const minX = px - radius;
+  const maxX = px + radius;
+  const minY = py - radius;
+  const maxY = py + radius;
+  const c0 = clamp(Math.floor(minX / cellSize), 0, cols - 1);
+  const c1 = clamp(Math.floor(maxX / cellSize), 0, cols - 1);
+  const r0 = clamp(Math.floor(minY / cellSize), 0, rows - 1);
+  const r1 = clamp(Math.floor(maxY / cellSize), 0, rows - 1);
+
+  const buckets = [];
+  for (let row = r0; row <= r1; row += 1) {
+    for (let col = c0; col <= c1; col += 1) {
+      const key = getSpatialBucketKey(col, row);
+      const bucket = grid.get(key);
+      if (bucket?.length) {
+        buckets.push(bucket);
+      }
+    }
+  }
+
+  const seen = new Set();
+  const candidates = [];
+  const strict = radius <= 0;
+
+  const maybePush = (item) => {
+    if (!item?.id || seen.has(item.id)) return;
+    if (!isWaterRegionEnabled(item.feature)) return;
+    seen.add(item.id);
+    const distanceProj = getBBoxDistanceToPoint(item, px, py);
+    if (strict) {
+      if (distanceProj > 0) return;
+    } else if (distanceProj > radius) {
+      return;
+    }
+    candidates.push({ item, distanceProj });
+  };
+
+  buckets.forEach((bucket) => {
+    bucket.forEach(maybePush);
+  });
+  globals?.forEach(maybePush);
+
+  return candidates;
+}
+
+function collectSpecialGridCandidates(px, py, radiusProj = 0) {
+  const meta = runtimeState.specialSpatialGridMeta;
+  const grid = runtimeState.specialSpatialGrid;
+  if (!meta || !grid) return [];
+  const { cellSize, cols, rows, globals } = meta;
+  if (!cellSize || cols <= 0 || rows <= 0) return [];
+
+  const radius = Math.max(0, radiusProj || 0);
+  const minX = px - radius;
+  const maxX = px + radius;
+  const minY = py - radius;
+  const maxY = py + radius;
+  const c0 = clamp(Math.floor(minX / cellSize), 0, cols - 1);
+  const c1 = clamp(Math.floor(maxX / cellSize), 0, cols - 1);
+  const r0 = clamp(Math.floor(minY / cellSize), 0, rows - 1);
+  const r1 = clamp(Math.floor(maxY / cellSize), 0, rows - 1);
+
+  const buckets = [];
+  for (let row = r0; row <= r1; row += 1) {
+    for (let col = c0; col <= c1; col += 1) {
+      const key = getSpatialBucketKey(col, row);
+      const bucket = grid.get(key);
+      if (bucket?.length) {
+        buckets.push(bucket);
+      }
+    }
+  }
+
+  const seen = new Set();
+  const candidates = [];
+  const strict = radius <= 0;
+
+  const maybePush = (item) => {
+    if (!item?.id || seen.has(item.id) || !isSpecialRegionEnabled(item.feature)) return;
+    seen.add(item.id);
+    const distanceProj = getBBoxDistanceToPoint(item, px, py);
+    if (strict) {
+      if (distanceProj > 0) return;
+    } else if (distanceProj > radius) {
+      return;
+    }
+    candidates.push({ item, distanceProj });
+  };
+
+  buckets.forEach((bucket) => {
+    bucket.forEach(maybePush);
+  });
+  globals?.forEach(maybePush);
+
+  return candidates;
+}
+
+function rankCandidates(candidates, lonLat, { eventType = "unknown", targetType = "unknown" } = {}) {
+  if (!Array.isArray(candidates) || !candidates.length) return [];
+
+  const startedAt = nowMs();
+  let geoContainsCount = 0;
+  const ranked = candidates.map((candidate) => {
+    const feature = candidate.item?.feature;
+    const hitGeometry = candidate.item?.hitGeometry || feature;
+    let containsGeo = false;
+    if (hitGeometry && lonLat && globalThis.d3?.geoContains) {
+      geoContainsCount += 1;
+      try {
+        containsGeo = !!globalThis.d3.geoContains(hitGeometry, lonLat);
+      } catch (error) {
+        containsGeo = false;
+      }
+    }
+    const source = String(candidate.item?.source || feature?.properties?.__source || "primary");
+    const sourceRank = source === "detail" ? 0 : 1;
+    const bboxArea = Number.isFinite(candidate.item?.bboxArea)
+      ? candidate.item.bboxArea
+      : Math.max(0, (candidate.item.maxX - candidate.item.minX) * (candidate.item.maxY - candidate.item.minY));
+    return {
+      ...candidate,
+      containsGeo,
+      sourceRank,
+      bboxArea,
+    };
+  });
+
+  ranked.sort((a, b) => {
+    if (a.containsGeo !== b.containsGeo) return a.containsGeo ? -1 : 1;
+    if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
+    if (a.bboxArea !== b.bboxArea) return a.bboxArea - b.bboxArea;
+    if (a.distanceProj !== b.distanceProj) return a.distanceProj - b.distanceProj;
+    return String(a.item?.id || "").localeCompare(String(b.item?.id || ""));
+  });
+
+  if (eventType !== "unknown" || targetType !== "unknown") {
+    recordInteractionDurationMetric("interactionHitRankDuration", nowMs() - startedAt, {
+      candidateCount: candidates.length,
+      geoContainsCount,
+      containsGeoCount: ranked.filter((candidate) => candidate.containsGeo).length,
+      eventType,
+      targetType,
+    });
+  }
+
+  return ranked;
+}
+
+function findFirstContainingCandidate(candidates, lonLat, { eventType = "hover", targetType = "unknown" } = {}) {
+  if (!Array.isArray(candidates) || !candidates.length) return null;
+  const startedAt = nowMs();
+  let geoContainsCount = 0;
+  const ordered = candidates
+    .map((candidate) => {
+      const feature = candidate.item?.feature;
+      const source = String(candidate.item?.source || feature?.properties?.__source || "primary");
+      const bboxArea = Number.isFinite(candidate.item?.bboxArea)
+        ? candidate.item.bboxArea
+        : Math.max(0, (candidate.item.maxX - candidate.item.minX) * (candidate.item.maxY - candidate.item.minY));
+      return {
+        ...candidate,
+        sourceRank: source === "detail" ? 0 : 1,
+        bboxArea,
+      };
+    })
+    .sort((a, b) => {
+      if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
+      if (a.bboxArea !== b.bboxArea) return a.bboxArea - b.bboxArea;
+      if (a.distanceProj !== b.distanceProj) return a.distanceProj - b.distanceProj;
+      return String(a.item?.id || "").localeCompare(String(b.item?.id || ""));
+    });
+  for (const candidate of ordered) {
+    const feature = candidate.item?.feature;
+    const hitGeometry = candidate.item?.hitGeometry || feature;
+    if (!hitGeometry || !lonLat || !globalThis.d3?.geoContains) continue;
+    geoContainsCount += 1;
+    try {
+      if (globalThis.d3.geoContains(hitGeometry, lonLat)) {
+        recordInteractionDurationMetric("interactionHitRankDuration", nowMs() - startedAt, {
+          candidateCount: candidates.length,
+          geoContainsCount,
+          containsGeoCount: 1,
+          eventType,
+          targetType,
+          fastPath: "hover-first-containing",
+        });
+        return {
+          ...candidate,
+          containsGeo: true,
+        };
+      }
+    } catch (_error) {
+      // Ignore malformed geometry and continue with the next candidate.
+    }
+  }
+  recordInteractionDurationMetric("interactionHitRankDuration", nowMs() - startedAt, {
+    candidateCount: candidates.length,
+    geoContainsCount,
+    containsGeoCount: 0,
+    eventType,
+    targetType,
+    fastPath: "hover-first-containing",
+  });
+  return null;
+}
+
+function getPointerProjectionPosition(event) {
+  if (!mapSvg || !projection || !globalThis.d3) return null;
+  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  const transform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
+  const zoomK = Math.max(0.0001, transform?.k || 1);
+  const px = (sx - (transform?.x || 0)) / zoomK;
+  const py = (sy - (transform?.y || 0)) / zoomK;
+  if (!Number.isFinite(px) || !Number.isFinite(py)) return null;
+  const lonLat = projection.invert([px, py]);
+  if (!lonLat) return null;
+  return {
+    px,
+    py,
+    lonLat,
+    zoomK,
+  };
+}
+
+function toHitResult(candidate, { viaSnap = false, strict = false, zoomK = 1, targetType = "land" } = {}) {
+  const resolvedId = String(candidate?.item?.featureId || candidate?.item?.id || "").trim();
+  if (!resolvedId) return createHitResult();
+  const feature = candidate.item.feature || null;
+  const runtimeCountryCode = canonicalCountryCode(
+    candidate.item.countryCode
+    || getFeatureCountryCodeNormalized(feature)
+    || ""
+  );
+  const interactionCountryCode = feature
+    ? getFeatureInteractionCountryCodeNormalized(feature, resolvedId)
+    : canonicalCountryCode(candidate.item.interactionCountryCode || candidate.item.borderMeshCountryCode || runtimeCountryCode || "");
+  return createHitResult({
+    id: resolvedId,
+    countryCode: interactionCountryCode || runtimeCountryCode,
+    runtimeCountryCode,
+    targetType,
+    feature,
+    hitSource: "spatial",
+    bboxArea: Number(candidate.bboxArea || candidate.item.bboxArea || Infinity),
+    viaSnap,
+    strict,
+    distancePx: candidate.distanceProj * zoomK,
+  });
+}
+
+function shouldPreferWaterHit(landHit, waterHit, { eventType = "unknown" } = {}) {
+  if (!waterHit?.id) return false;
+  if (eventType === "hover" && isMacroOceanWaterRegion(waterHit.feature)) {
+    return false;
+  }
+  if (!landHit?.id) return true;
+  const waterType = getWaterRegionType(waterHit.feature);
+  if (["lake", "inland_sea", "strait", "chokepoint"].includes(waterType)) {
+    return true;
+  }
+  const landArea = Number(landHit.bboxArea || Infinity);
+  const waterArea = Number(waterHit.bboxArea || Infinity);
+  if (waterHit.strict && Number.isFinite(waterArea) && Number.isFinite(landArea) && waterArea < landArea * 0.2) {
+    return true;
+  }
+  return false;
+}
+
+function collectInteractionHitMetricDetails(
+  pointer,
+  { enableSnap = true, snapPx = HIT_SNAP_RADIUS_PX, eventType = "unknown", resolvedHit = null } = {}
+) {
+  if (!pointer) {
+    return {
+      eventType,
+      specialCandidateCount: 0,
+      landStrictCandidateCount: 0,
+      landSnapCandidateCount: 0,
+      waterStrictCandidateCount: 0,
+      waterSnapCandidateCount: 0,
+      resolvedTargetType: String(resolvedHit?.targetType || "empty"),
+    };
+  }
+  const snapRadiusPx = Number.isFinite(Number(snapPx))
+    ? Math.max(0, Number(snapPx))
+    : HIT_SNAP_RADIUS_PX;
+  const radiusProj = enableSnap && snapRadiusPx > 0
+    ? snapRadiusPx / Math.max(0.0001, pointer.zoomK)
+    : 0;
+  const specialStrict = collectSpecialGridCandidates(pointer.px, pointer.py, 0);
+  const specialSnap = radiusProj > 0 ? collectSpecialGridCandidates(pointer.px, pointer.py, radiusProj) : [];
+  const landStrict = collectGridCandidates(pointer.px, pointer.py, 0);
+  const landSnap = radiusProj > 0 ? collectGridCandidates(pointer.px, pointer.py, radiusProj) : [];
+  const waterStrict = collectWaterGridCandidates(pointer.px, pointer.py, 0);
+  const waterSnap = radiusProj > 0 ? collectWaterGridCandidates(pointer.px, pointer.py, radiusProj) : [];
+  return {
+    eventType,
+    specialCandidateCount: Math.max(specialStrict.length, specialSnap.length),
+    landStrictCandidateCount: landStrict.length,
+    landSnapCandidateCount: landSnap.length,
+    waterStrictCandidateCount: waterStrict.length,
+    waterSnapCandidateCount: waterSnap.length,
+    resolvedTargetType: String(resolvedHit?.targetType || "empty"),
+  };
+}
+
+function recordInteractionHitMetrics(pointer, options = {}) {
+  if (options.eventType === "hover") {
+    incrementPerfCounter("interactionHitCandidateCount", options.resolvedHit?.id ? 1 : 0);
+    if (options.resolvedHit?.hitSource === "canvas") {
+      incrementPerfCounter("interactionHitCanvasPreferredCount");
+    }
+    return;
+  }
+  const details = collectInteractionHitMetricDetails(pointer, options);
+  const totalCandidates =
+    details.specialCandidateCount
+    + details.landStrictCandidateCount
+    + details.landSnapCandidateCount
+    + details.waterStrictCandidateCount
+    + details.waterSnapCandidateCount;
+  incrementPerfCounter("interactionHitCandidateCount", totalCandidates);
+  if (options.resolvedHit?.hitSource === "canvas") {
+    incrementPerfCounter("interactionHitCanvasPreferredCount");
+  }
+  recordRenderPerfMetric("interactionHitCandidateCount", 0, {
+    ...details,
+    totalCandidateCount: totalCandidates,
+  });
+  recordRenderPerfMetric("interactionHitResolvedPath", 0, {
+    ...details,
+    hitSource: String(options.resolvedHit?.hitSource || "none"),
+    viaSnap: !!options.resolvedHit?.viaSnap,
+    strict: !!options.resolvedHit?.strict,
+  });
+  if (options.resolvedHit?.hitSource === "canvas") {
+    recordRenderPerfMetric("interactionHitCanvasPreferredCount", 0, details);
+  }
+}
+
+function getLandHitFromPointer(
+  event,
+  pointer,
+  { enableSnap = true, snapPx = HIT_SNAP_RADIUS_PX, eventType = "unknown" } = {}
+) {
+  if (!runtimeState.landData || !runtimeState.spatialItems?.length) return createHitResult();
+  const hitMode = resolveHitMode();
+  if (hitMode === "canvas" && eventType !== "compat") {
+    const hitFromCanvas = getValidatedCanvasHit(event, null, {
+      forceBuild: eventType === "click" || eventType === "dblclick",
+    });
+    if (hitFromCanvas.id) {
+      return hitFromCanvas;
+    }
+  }
+
+  const strictCandidates = collectGridCandidates(pointer.px, pointer.py, 0);
+  if (eventType === "hover" && !enableSnap) {
+    const strictHoverHit = findFirstContainingCandidate(strictCandidates, pointer.lonLat, { eventType, targetType: "land" });
+    return strictHoverHit
+      ? toHitResult(strictHoverHit, {
+        viaSnap: false,
+        strict: true,
+        zoomK: pointer.zoomK,
+        targetType: "land",
+      })
+      : createHitResult();
+  }
+  const strictRanked = rankCandidates(strictCandidates, pointer.lonLat, { eventType, targetType: "land" });
+  if (strictRanked.length > 0) {
+    const strictContainsGeo = strictRanked.find((candidate) => candidate.containsGeo);
+    if (strictContainsGeo) {
+      if (hitMode === "auto" && eventType !== "compat") {
+        const strictIds = new Set(strictRanked.map((candidate) => candidate.item.id));
+        const strictMatchCount = strictRanked.filter((candidate) => candidate.containsGeo).length;
+        const hitFromCanvas = getValidatedCanvasHit(event, strictIds, {
+          forceBuild:
+            strictMatchCount > 1
+            && (eventType === "click" || eventType === "dblclick" || eventType === "compat"),
+        });
+        if (hitFromCanvas.id === strictContainsGeo.item.id) {
+          return hitFromCanvas;
+        }
+      }
+      return toHitResult(strictContainsGeo, {
+        viaSnap: false,
+        strict: true,
+        zoomK: pointer.zoomK,
+        targetType: "land",
+      });
+    }
+  }
+
+  if (!enableSnap) return createHitResult();
+
+  const snapRadiusPx = Number.isFinite(Number(snapPx))
+    ? Math.max(0, Number(snapPx))
+    : HIT_SNAP_RADIUS_PX;
+  const radiusProj = snapRadiusPx / pointer.zoomK;
+  if (radiusProj <= 0) return createHitResult();
+
+  const snapCandidates = collectGridCandidates(pointer.px, pointer.py, radiusProj);
+  const snapRanked = rankCandidates(snapCandidates, pointer.lonLat, { eventType, targetType: "land" });
+  if (!snapRanked.length) return createHitResult();
+
+  const chosen = snapRanked.find((candidate) => candidate.containsGeo);
+  if (!chosen) return createHitResult();
+  return toHitResult(chosen, {
+    viaSnap: true,
+    strict: false,
+    zoomK: pointer.zoomK,
+    targetType: "land",
+  });
+}
+
+function getWaterHitFromPointer(
+  pointer,
+  { enableSnap = true, snapPx = HIT_SNAP_RADIUS_PX, eventType = "unknown" } = {}
+) {
+  if (!runtimeState.showWaterRegions) return createHitResult();
+  if (!runtimeState.waterSpatialItems?.length) {
+    if (runtimeState.waterRegionsById?.size) {
+      scheduleSecondarySpatialIndexBuild({
+        reason: "water-hit-demand",
+      });
+    }
+    return createHitResult();
+  }
+
+  const strictCandidates = collectWaterGridCandidates(pointer.px, pointer.py, 0);
+  if (eventType === "hover" && !enableSnap) {
+    const strictHoverHit = findFirstContainingCandidate(strictCandidates, pointer.lonLat, { eventType, targetType: "water" });
+    if (!strictHoverHit) return createHitResult();
+    if (isMacroOceanWaterRegion(strictHoverHit.item?.feature)) return createHitResult();
+    if (shouldSuppressOpenOceanHit(strictHoverHit, pointer)) return createHitResult();
+    return toHitResult(strictHoverHit, {
+      viaSnap: false,
+      strict: true,
+      zoomK: pointer.zoomK,
+      targetType: "water",
+    });
+  }
+  const strictRanked = rankCandidates(strictCandidates, pointer.lonLat, { eventType, targetType: "water" });
+  const strictHit = strictRanked.find((candidate) => candidate.containsGeo);
+  if (strictHit) {
+    if (eventType === "hover" && isMacroOceanWaterRegion(strictHit.item?.feature)) {
+      return createHitResult();
+    }
+    if (shouldSuppressOpenOceanHit(strictHit, pointer)) {
+      return createHitResult();
+    }
+    return toHitResult(strictHit, {
+      viaSnap: false,
+      strict: true,
+      zoomK: pointer.zoomK,
+      targetType: "water",
+    });
+  }
+
+  if (!enableSnap) return createHitResult();
+
+  const snapRadiusPx = Number.isFinite(Number(snapPx))
+    ? Math.max(0, Number(snapPx))
+    : HIT_SNAP_RADIUS_PX;
+  const radiusProj = snapRadiusPx / pointer.zoomK;
+  if (radiusProj <= 0) return createHitResult();
+
+  const snapCandidates = collectWaterGridCandidates(pointer.px, pointer.py, radiusProj);
+  const snapRanked = rankCandidates(snapCandidates, pointer.lonLat, { eventType, targetType: "water" });
+  const chosen = snapRanked.find((candidate) => candidate.containsGeo);
+  if (!chosen) return createHitResult();
+  if (eventType === "hover" && isMacroOceanWaterRegion(chosen.item?.feature)) {
+    return createHitResult();
+  }
+  if (shouldSuppressOpenOceanHit(chosen, pointer)) {
+    return createHitResult();
+  }
+  return toHitResult(chosen, {
+    viaSnap: true,
+    strict: false,
+    zoomK: pointer.zoomK,
+    targetType: "water",
+  });
+}
+
+function getSpecialHitFromPointer(
+  pointer,
+  { enableSnap = true, snapPx = HIT_SNAP_RADIUS_PX, eventType = "unknown" } = {}
+) {
+  if (!runtimeState.showScenarioSpecialRegions) return createHitResult();
+  if (!runtimeState.specialSpatialItems?.length) {
+    if (runtimeState.specialRegionsById?.size) {
+      scheduleSecondarySpatialIndexBuild({
+        reason: "special-hit-demand",
+      });
+    }
+    return createHitResult();
+  }
+
+  const strictCandidates = collectSpecialGridCandidates(pointer.px, pointer.py, 0);
+  if (eventType === "hover" && !enableSnap) {
+    const strictHoverHit = findFirstContainingCandidate(strictCandidates, pointer.lonLat, { eventType, targetType: "special" });
+    return strictHoverHit
+      ? toHitResult(strictHoverHit, {
+        viaSnap: false,
+        strict: true,
+        zoomK: pointer.zoomK,
+        targetType: "special",
+      })
+      : createHitResult();
+  }
+  const strictRanked = rankCandidates(strictCandidates, pointer.lonLat, { eventType, targetType: "special" });
+  const strictHit = strictRanked.find((candidate) => candidate.containsGeo);
+  if (strictHit) {
+    return toHitResult(strictHit, {
+      viaSnap: false,
+      strict: true,
+      zoomK: pointer.zoomK,
+      targetType: "special",
+    });
+  }
+
+  if (!enableSnap) return createHitResult();
+
+  const snapRadiusPx = Number.isFinite(Number(snapPx))
+    ? Math.max(0, Number(snapPx))
+    : HIT_SNAP_RADIUS_PX;
+  const radiusProj = snapRadiusPx / pointer.zoomK;
+  if (radiusProj <= 0) return createHitResult();
+
+  const snapCandidates = collectSpecialGridCandidates(pointer.px, pointer.py, radiusProj);
+  const snapRanked = rankCandidates(snapCandidates, pointer.lonLat, { eventType, targetType: "special" });
+  const chosen = snapRanked.find((candidate) => candidate.containsGeo);
+  if (!chosen) return createHitResult();
+  return toHitResult(chosen, {
+    viaSnap: true,
+    strict: false,
+    zoomK: pointer.zoomK,
+    targetType: "special",
+  });
+}
+
+function cancelPendingIndexUiRefresh() {
+  if (deferredIndexUiRefreshHandle !== null && deferredIndexUiRefreshHandle !== undefined) {
+    if (typeof globalThis.cancelAnimationFrame === "function") {
+      globalThis.cancelAnimationFrame(deferredIndexUiRefreshHandle);
+    } else {
+      globalThis.clearTimeout(deferredIndexUiRefreshHandle);
+    }
+    deferredIndexUiRefreshHandle = null;
+  }
+  deferredIndexUiRefreshState = null;
+  if (pendingIndexUiRefreshHandle === null || pendingIndexUiRefreshHandle === undefined) {
+    pendingIndexUiRefreshState = null;
+    return;
+  }
+  if (typeof globalThis.cancelAnimationFrame === "function") {
+    globalThis.cancelAnimationFrame(pendingIndexUiRefreshHandle);
+  } else {
+    globalThis.clearTimeout(pendingIndexUiRefreshHandle);
+  }
+  pendingIndexUiRefreshHandle = null;
+  pendingIndexUiRefreshState = null;
+}
+
+function flushPendingIndexUiRefresh() {
+  const pending = pendingIndexUiRefreshState;
+  pendingIndexUiRefreshHandle = null;
+  pendingIndexUiRefreshState = null;
+  if (!pending) return;
+  const refreshedScopes = [];
+  if (pending.renderCountryList && typeof runtimeState.renderCountryListFn === "function") {
+    runtimeState.renderCountryListFn();
+    refreshedScopes.push("country");
+  }
+  if (pending.renderWaterRegionList && typeof runtimeState.renderWaterRegionListFn === "function") {
+    runtimeState.renderWaterRegionListFn();
+    refreshedScopes.push("water");
+  }
+  if (pending.renderSpecialRegionList && typeof runtimeState.renderSpecialRegionListFn === "function") {
+    runtimeState.renderSpecialRegionListFn();
+    refreshedScopes.push("special");
+  }
+  if (refreshedScopes.length) {
+    recordUiRefreshMetric("uiIndexFullRefresh", {
+      scope: refreshedScopes.length === 1 ? refreshedScopes[0] : "mixed",
+      refreshMode: "full",
+      fullRefreshReason: "full-index-rebuild",
+      refreshedScopes,
+    });
+  }
+}
+
+function scheduleIndexUiRefresh({
+  renderCountryList = false,
+  renderWaterRegionList = false,
+  renderSpecialRegionList = false,
+} = {}) {
+  pendingIndexUiRefreshState = {
+    renderCountryList: !!(pendingIndexUiRefreshState?.renderCountryList || renderCountryList),
+    renderWaterRegionList: !!(pendingIndexUiRefreshState?.renderWaterRegionList || renderWaterRegionList),
+    renderSpecialRegionList: !!(pendingIndexUiRefreshState?.renderSpecialRegionList || renderSpecialRegionList),
+  };
+  if (pendingIndexUiRefreshHandle !== null && pendingIndexUiRefreshHandle !== undefined) {
+    return;
+  }
+  const callback = () => {
+    flushPendingIndexUiRefresh();
+  };
+  pendingIndexUiRefreshHandle = typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame(callback)
+    : globalThis.setTimeout(callback, 0);
+}
+
+function flushDeferredIndexUiRefresh() {
+  const pending = deferredIndexUiRefreshState;
+  deferredIndexUiRefreshHandle = null;
+  deferredIndexUiRefreshState = null;
+  if (!pending) return;
+  scheduleIndexUiRefresh(pending);
+}
+
+function scheduleIndexUiRefreshAfterCoarseFrame({
+  renderCountryList = false,
+  renderWaterRegionList = false,
+  renderSpecialRegionList = false,
+} = {}) {
+  deferredIndexUiRefreshState = {
+    renderCountryList: !!(deferredIndexUiRefreshState?.renderCountryList || renderCountryList),
+    renderWaterRegionList: !!(deferredIndexUiRefreshState?.renderWaterRegionList || renderWaterRegionList),
+    renderSpecialRegionList: !!(deferredIndexUiRefreshState?.renderSpecialRegionList || renderSpecialRegionList),
+  };
+  if (deferredIndexUiRefreshHandle !== null && deferredIndexUiRefreshHandle !== undefined) {
+    return;
+  }
+  const callback = () => {
+    flushDeferredIndexUiRefresh();
+  };
+  deferredIndexUiRefreshHandle = typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame(callback)
+    : globalThis.setTimeout(callback, 0);
+}
+
+function queueIndexUiRefresh(
+  refreshOptions,
+  scheduleUiMode = "immediate",
+) {
+  if (scheduleUiMode === "none") {
+    return;
+  }
+  if (scheduleUiMode === "deferred") {
+    scheduleIndexUiRefreshAfterCoarseFrame(refreshOptions);
+    return;
+  }
+  scheduleIndexUiRefresh(refreshOptions);
+}
+
+function normalizeSidebarRefreshIds(values) {
+  return Array.isArray(values)
+    ? values.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+}
+
+function normalizeSidebarRefreshOwnerCodes(values) {
+  return Array.isArray(values)
+    ? values.map((value) => canonicalCountryCode(value)).filter(Boolean)
+    : [];
+}
+
+function refreshWaterRegionSidebarRowsNow(regionIds = [], { refreshInspector = true } = {}) {
+  const changedIds = normalizeSidebarRefreshIds(regionIds);
+  if (changedIds.length && typeof runtimeState.refreshWaterRegionListRowsFn === "function") {
+    const result = unwrapRuntimeHookResult(runtimeState.refreshWaterRegionListRowsFn({
+      regionIds: changedIds,
+      refreshInspector,
+    }));
+    const refreshMode = result?.refreshMode === "full" ? "full" : "row";
+    recordUiRefreshMetric(refreshMode === "row" ? "uiSidebarRowRefresh" : "uiSidebarFullRefresh", {
+      scope: "water",
+      changedIds,
+      refreshMode,
+      fullRefreshReason: refreshMode === "full" ? String(result?.fullRefreshReason || "unstable-row-owner") : undefined,
+      refreshInspector,
+    });
+    return;
+  }
+  if (typeof runtimeState.renderWaterRegionListFn === "function") {
+    runtimeState.renderWaterRegionListFn();
+    recordUiRefreshMetric("uiSidebarFullRefresh", {
+      scope: "water",
+      changedIds,
+      refreshMode: "full",
+      fullRefreshReason: changedIds.length ? "hook-unavailable" : "missing-changed-ids",
+    });
+  }
+}
+
+function refreshSpecialRegionSidebarRowsNow(regionIds = [], { refreshInspector = true } = {}) {
+  const changedIds = normalizeSidebarRefreshIds(regionIds);
+  if (changedIds.length && typeof runtimeState.refreshSpecialRegionListRowsFn === "function") {
+    const result = unwrapRuntimeHookResult(runtimeState.refreshSpecialRegionListRowsFn({
+      regionIds: changedIds,
+      refreshInspector,
+    }));
+    const refreshMode = result?.refreshMode === "full" ? "full" : "row";
+    recordUiRefreshMetric(refreshMode === "row" ? "uiSidebarRowRefresh" : "uiSidebarFullRefresh", {
+      scope: "special",
+      changedIds,
+      refreshMode,
+      fullRefreshReason: refreshMode === "full" ? String(result?.fullRefreshReason || "unstable-row-owner") : undefined,
+      refreshInspector,
+    });
+    return;
+  }
+  if (typeof runtimeState.renderSpecialRegionListFn === "function") {
+    runtimeState.renderSpecialRegionListFn();
+    recordUiRefreshMetric("uiSidebarFullRefresh", {
+      scope: "special",
+      changedIds,
+      refreshMode: "full",
+      fullRefreshReason: changedIds.length ? "hook-unavailable" : "missing-changed-ids",
+    });
+  }
+}
+
+function cancelPendingSidebarRefresh() {
+  if (pendingSidebarRefreshHandle === null || pendingSidebarRefreshHandle === undefined) {
+    pendingSidebarRefreshState = null;
+    return;
+  }
+  if (typeof globalThis.cancelAnimationFrame === "function") {
+    globalThis.cancelAnimationFrame(pendingSidebarRefreshHandle);
+  } else {
+    globalThis.clearTimeout(pendingSidebarRefreshHandle);
+  }
+  pendingSidebarRefreshHandle = null;
+  pendingSidebarRefreshState = null;
+}
+
+function flushPendingSidebarRefresh() {
+  const pending = pendingSidebarRefreshState;
+  pendingSidebarRefreshHandle = null;
+  pendingSidebarRefreshState = null;
+  if (!pending) return;
+  const countryCodes = Array.from(
+    new Set([
+      ...collectCountryCodesForFeatureIds(pending.featureIds),
+      ...pending.ownerCodes,
+    ])
+  );
+  const hasWaterRows = pending.waterRegionIds.length > 0;
+  const hasSpecialRows = pending.specialRegionIds.length > 0;
+  const hasCountryInspectorImpact = hasSelectedOrActiveCountryImpact(countryCodes);
+  const shouldRefreshPresetTree = !!pending.refreshPresetTree && hasCountryInspectorImpact;
+  if (hasWaterRows) {
+    if (typeof runtimeState.refreshWaterRegionListRowsFn === "function") {
+      const result = unwrapRuntimeHookResult(runtimeState.refreshWaterRegionListRowsFn({
+        regionIds: pending.waterRegionIds,
+        refreshInspector: true,
+      }));
+      const refreshMode = result?.refreshMode === "full" ? "full" : "row";
+      recordUiRefreshMetric(refreshMode === "row" ? "uiSidebarRowRefresh" : "uiSidebarFullRefresh", {
+        scope: "water",
+        changedIds: pending.waterRegionIds.slice(),
+        refreshMode,
+        fullRefreshReason: refreshMode === "full" ? String(result?.fullRefreshReason || "unstable-row-owner") : undefined,
+      });
+    } else if (typeof runtimeState.renderWaterRegionListFn === "function") {
+      runtimeState.renderWaterRegionListFn();
+      recordUiRefreshMetric("uiSidebarFullRefresh", {
+        scope: "water",
+        changedIds: pending.waterRegionIds.slice(),
+        refreshMode: "full",
+        fullRefreshReason: "hook-unavailable",
+      });
+    }
+  }
+  if (hasSpecialRows) {
+    if (typeof runtimeState.refreshSpecialRegionListRowsFn === "function") {
+      const result = unwrapRuntimeHookResult(runtimeState.refreshSpecialRegionListRowsFn({
+        regionIds: pending.specialRegionIds,
+        refreshInspector: true,
+      }));
+      const refreshMode = result?.refreshMode === "full" ? "full" : "row";
+      recordUiRefreshMetric(refreshMode === "row" ? "uiSidebarRowRefresh" : "uiSidebarFullRefresh", {
+        scope: "special",
+        changedIds: pending.specialRegionIds.slice(),
+        refreshMode,
+        fullRefreshReason: refreshMode === "full" ? String(result?.fullRefreshReason || "unstable-row-owner") : undefined,
+      });
+    } else if (typeof runtimeState.renderSpecialRegionListFn === "function") {
+      runtimeState.renderSpecialRegionListFn();
+      recordUiRefreshMetric("uiSidebarFullRefresh", {
+        scope: "special",
+        changedIds: pending.specialRegionIds.slice(),
+        refreshMode: "full",
+        fullRefreshReason: "hook-unavailable",
+      });
+    }
+  }
+  if (typeof runtimeState.refreshCountryListRowsFn === "function") {
+    runtimeState.refreshCountryListRowsFn({
+      countryCodes,
+      refreshInspector: hasCountryInspectorImpact,
+      refreshPresetTree: shouldRefreshPresetTree,
+    });
+    if (countryCodes.length > 0 || shouldRefreshPresetTree) {
+      recordUiRefreshMetric("uiSidebarRowRefresh", {
+        scope: "country",
+        changedIds: countryCodes,
+        refreshMode: "row",
+        refreshInspector: hasCountryInspectorImpact,
+        refreshPresetTree: shouldRefreshPresetTree,
+      });
+    }
+    return;
+  }
+  if (typeof runtimeState.renderCountryListFn === "function" && (countryCodes.length > 0 || shouldRefreshPresetTree)) {
+    runtimeState.renderCountryListFn();
+    recordUiRefreshMetric("uiSidebarFullRefresh", {
+      scope: "country",
+      changedIds: countryCodes,
+      refreshMode: "full",
+      fullRefreshReason: "hook-unavailable",
+      refreshPresetTree: shouldRefreshPresetTree,
+    });
+  }
+  if (shouldRefreshPresetTree && typeof runtimeState.renderPresetTreeFn === "function") {
+    runtimeState.renderPresetTreeFn();
+  }
+}
+
+function scheduleSidebarRefresh({
+  featureIds = [],
+  waterRegionIds = [],
+  specialRegionIds = [],
+  ownerCodes = [],
+  refreshPresetTree = false,
+} = {}) {
+  pendingSidebarRefreshState = {
+    featureIds: Array.from(new Set([
+      ...(pendingSidebarRefreshState?.featureIds || []),
+      ...normalizeSidebarRefreshIds(featureIds),
+    ])),
+    waterRegionIds: Array.from(new Set([
+      ...(pendingSidebarRefreshState?.waterRegionIds || []),
+      ...normalizeSidebarRefreshIds(waterRegionIds),
+    ])),
+    specialRegionIds: Array.from(new Set([
+      ...(pendingSidebarRefreshState?.specialRegionIds || []),
+      ...normalizeSidebarRefreshIds(specialRegionIds),
+    ])),
+    ownerCodes: Array.from(new Set([
+      ...(pendingSidebarRefreshState?.ownerCodes || []),
+      ...normalizeSidebarRefreshOwnerCodes(ownerCodes),
+    ])),
+    refreshPresetTree: !!(pendingSidebarRefreshState?.refreshPresetTree || refreshPresetTree),
+  };
+  if (pendingSidebarRefreshHandle !== null && pendingSidebarRefreshHandle !== undefined) {
+    return;
+  }
+  const callback = () => {
+    flushPendingSidebarRefresh();
+  };
+  pendingSidebarRefreshHandle = typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame(callback)
+    : globalThis.setTimeout(callback, 0);
+}
+
+function setInteractionInfrastructureState(
+  stage,
+  {
+    ready = null,
+    inFlight = null,
+  } = {}
+) {
+  setInteractionInfrastructureStateFields(state, stage, {
+    ready,
+    inFlight,
+  });
+}
+
+function getInteractionInfrastructureStageRank(stage = runtimeState.interactionInfrastructureStage) {
+  const normalized = String(stage || "idle").trim().toLowerCase();
+  if (normalized === "ready") return 2;
+  if (normalized === "basic-ready") return 1;
+  return 0;
+}
+
+async function yieldToMain() {
+  if (typeof globalThis.scheduler?.yield === "function") {
+    await globalThis.scheduler.yield();
+    return;
+  }
+  await new Promise((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
+}
+
+function rebuildAuxiliaryRegionIndexes() {
+  runtimeState.waterRegionsById = new Map();
+  runtimeState.specialRegionsById = new Map();
+
+  getEffectiveWaterRegionFeatures().forEach((feature) => {
+    const id = getFeatureId(feature);
+    if (!id) return;
+    runtimeState.waterRegionsById.set(id, feature);
+  });
+
+  getEffectiveSpecialRegionFeatures().forEach((feature) => {
+    const id = getFeatureId(feature);
+    if (!id) return;
+    runtimeState.specialRegionsById.set(id, feature);
+  });
+
+  if (runtimeState.selectedWaterRegionId && !runtimeState.waterRegionsById.has(runtimeState.selectedWaterRegionId)) {
+    runtimeState.selectedWaterRegionId = "";
+  } else if (runtimeState.selectedWaterRegionId) {
+    const selectedFeature = runtimeState.waterRegionsById.get(runtimeState.selectedWaterRegionId);
+    if (!isWaterRegionEnabled(selectedFeature)) {
+      runtimeState.selectedWaterRegionId = "";
+    }
+  }
+
+  if (runtimeState.selectedSpecialRegionId && !runtimeState.specialRegionsById.has(runtimeState.selectedSpecialRegionId)) {
+    runtimeState.selectedSpecialRegionId = "";
+  } else if (runtimeState.selectedSpecialRegionId) {
+    const selectedFeature = runtimeState.specialRegionsById.get(runtimeState.selectedSpecialRegionId);
+    if (!isSpecialRegionEnabled(selectedFeature)) {
+      runtimeState.selectedSpecialRegionId = "";
+    }
+  }
+}
+
+function finalizeIndexBuildEffects() {
+  runtimeState.devSelectionOverlayDirty = true;
+  notifyDevWorkspace();
+  runtimeState.hitCanvasDirty = true;
+}
+
+function adoptRuntimePoliticalMeta(payload) {
+  const featureIds = Array.isArray(payload?.featureIds) ? payload.featureIds : [];
+  const featureIndexById = payload?.featureIndexById && typeof payload.featureIndexById === "object"
+    ? payload.featureIndexById
+    : {};
+  const canonicalCountryByFeatureId =
+    payload?.canonicalCountryByFeatureId && typeof payload.canonicalCountryByFeatureId === "object"
+      ? payload.canonicalCountryByFeatureId
+      : {};
+  const neighborGraph = Array.isArray(payload?.neighborGraph) ? payload.neighborGraph : [];
+  runtimeState.runtimeFeatureIndexById = new Map(Object.entries(featureIndexById));
+  runtimeState.runtimeFeatureIds = featureIds.slice();
+  runtimeState.runtimeNeighborGraph = neighborGraph.slice();
+  runtimeState.runtimeCanonicalCountryByFeatureId = { ...canonicalCountryByFeatureId };
+}
+
+function buildRuntimePoliticalMetaFallback() {
+  runtimeState.runtimeFeatureIndexById = new Map();
+  runtimeState.runtimeFeatureIds = [];
+  runtimeState.runtimeNeighborGraph = [];
+  runtimeState.runtimeCanonicalCountryByFeatureId = {};
+
+  const geometries = runtimeState.runtimePoliticalTopology?.objects?.political?.geometries || [];
+  if (!Array.isArray(geometries) || !geometries.length) return;
+
+  const neighbors = Array.isArray(runtimeState.runtimePoliticalTopology?.objects?.political?.computed_neighbors)
+    ? runtimeState.runtimePoliticalTopology.objects.political.computed_neighbors
+    : [];
+
+  geometries.forEach((geometry, index) => {
+    const id = getEntityFeatureId(geometry);
+    if (!id) return;
+    runtimeState.runtimeFeatureIds.push(id);
+    runtimeState.runtimeFeatureIndexById.set(id, index);
+    runtimeState.runtimeCanonicalCountryByFeatureId[id] = getEntityCountryCode(geometry);
+  });
+  runtimeState.runtimeNeighborGraph =
+    Array.isArray(neighbors) && neighbors.length === geometries.length
+      ? neighbors
+      : new Array(geometries.length).fill(null).map(() => []);
+}
+
+function buildRuntimePoliticalMeta() {
+  const seed = runtimeState.runtimePoliticalMetaSeed;
+  const geometries = runtimeState.runtimePoliticalTopology?.objects?.political?.geometries || [];
+  const seedMatches = Array.isArray(seed?.featureIds) && seed.featureIds.length === geometries.length;
+  if (seedMatches) {
+    adoptRuntimePoliticalMeta(seed);
+    runtimeState.runtimePoliticalMetaReadyFromWorker = true;
+    runtimeState.runtimePoliticalMetaSeed = null;
+    return;
+  }
+  buildRuntimePoliticalMetaFallback();
+  runtimeState.runtimePoliticalMetaReadyFromWorker = false;
+  runtimeState.runtimePoliticalMetaSeed = null;
+}
+
+const resetSecondarySpatialIndexState = (...args) =>
+  getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState(...args);
+
+const buildSecondarySpatialIndexes = (...args) =>
+  getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes(...args);
+
+function scheduleSecondarySpatialIndexBuild({
+  timeout = 320,
+  reason = "deferred-secondary-spatial",
+} = {}) {
+  const normalizedReason = String(reason || "deferred-secondary-spatial").trim() || "deferred-secondary-spatial";
+  const hadPendingBuild = secondarySpatialBuildHandle !== null && secondarySpatialBuildHandle !== undefined;
+  pendingSecondarySpatialBuildReasons.add(normalizedReason);
+  if (!hadPendingBuild) {
+    incrementPerfCounter("interactionSecondaryIndexDemandCount");
+    recordRenderPerfMetric("interactionSecondaryIndexDemandCount", 0, {
+      reason: normalizedReason,
+      pendingReasonCount: pendingSecondarySpatialBuildReasons.size,
+    });
+  }
+  cancelDeferredWork(secondarySpatialBuildHandle);
+  secondarySpatialBuildHandle = scheduleDeferredWork(() => {
+    secondarySpatialBuildHandle = null;
+    if (!isInteractionRecoverySettled({ quietMs: 800 })) {
+      scheduleSecondarySpatialIndexBuild({ timeout, reason: normalizedReason });
+      return;
+    }
+    const taskKey = "secondary-spatial-index";
+    if (!beginInteractionRecoveryTask(taskKey)) {
+      scheduleSecondarySpatialIndexBuild({ timeout, reason: normalizedReason });
+      return;
+    }
+    const reasons = Array.from(pendingSecondarySpatialBuildReasons);
+    pendingSecondarySpatialBuildReasons.clear();
+    const startedAt = nowMs();
+    try {
+      resetSecondarySpatialIndexState();
+      buildSecondarySpatialIndexes({
+        allowComputeMissingBounds: true,
+      });
+      runtimeState.hitCanvasDirty = true;
+      scheduleHitCanvasBuildIfNeeded({
+        reason: `${normalizedReason}-hit-canvas`,
+      });
+      recordRenderPerfMetric("buildSecondarySpatialIndex", nowMs() - startedAt, {
+        reason: reasons.join(",") || normalizedReason,
+        reasons,
+        waterItems: runtimeState.waterSpatialItems.length,
+        specialItems: runtimeState.specialSpatialItems.length,
+      });
+      recordInteractionRecoveryTaskMetric(taskKey, nowMs() - startedAt, {
+        reason: reasons.join(",") || normalizedReason,
+        reasonCount: reasons.length,
+        waterItems: runtimeState.waterSpatialItems.length,
+        specialItems: runtimeState.specialSpatialItems.length,
+        yieldCount: 0,
+      });
+    } finally {
+      endInteractionRecoveryTask(taskKey);
+    }
+  }, { timeout });
+}
+
+function syncScenarioSecondaryRegionIndexes({
+  changedLayerKeys = [],
+  reason = "scenario-chunk-promotion",
+} = {}) {
+  const normalizedLayerKeys = new Set(
+    (Array.isArray(changedLayerKeys) ? changedLayerKeys : [])
+      .map((layerKey) => String(layerKey || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const hasWaterChange = normalizedLayerKeys.has("water");
+  const hasSpecialChange = normalizedLayerKeys.has("special");
+  if (!hasWaterChange && !hasSpecialChange) {
+    return false;
+  }
+  if (isInteractionRecoveryBlocked()) {
+    return false;
+  }
+  const startedAt = nowMs();
+  rebuildAuxiliaryRegionIndexes();
+  resetSecondarySpatialIndexState();
+  buildSecondarySpatialIndexes({
+    allowComputeMissingBounds: true,
+  });
+  queueIndexUiRefresh({
+    renderWaterRegionList: hasWaterChange,
+    renderSpecialRegionList: hasSpecialChange,
+  });
+  runtimeState.hitCanvasDirty = true;
+  recordRenderPerfMetric("scenarioChunkSecondaryRegionIndexesSync", nowMs() - startedAt, {
+    reason,
+    waterItems: runtimeState.waterSpatialItems.length,
+    specialItems: runtimeState.specialSpatialItems.length,
+    hasWaterChange,
+    hasSpecialChange,
+  });
+  return true;
+}
+
+function rebuildRuntimeDerivedState({
+  includeRuntimePoliticalMeta = false,
+  scheduleUiMode = "immediate",
+  buildSpatial = true,
+  includeSecondarySpatial = true,
+} = {}) {
+  if (includeRuntimePoliticalMeta) {
+    buildRuntimePoliticalMeta();
+  }
+
+  ensureSovereigntyState();
+  migrateLegacyColorState();
+  normalizeColorStateForRender(state, {
+    sanitizeColorMap,
+    sanitizeCountryColorMap,
+  });
+
+  clearProjectedBoundsCache();
+  const projectedBoundsCache = ensureProjectedBoundsCache();
+  const nextColors = {};
+  getSpatialIndexRuntimeOwner().rebuildRuntimePrimaryIndex({
+    projectedBoundsCache,
+    collectResolvedColor(id, resolvedColor) {
+      nextColors[id] = resolvedColor;
+    },
+  });
+
+  replaceResolvedColorsState(state, nextColors);
+  bumpColorRevision(state);
+  invalidateRenderPasses(["physicalBase", "political", "contextBase"], "rebuild-colors");
+  queueIndexUiRefresh({
+    renderCountryList: true,
+    renderWaterRegionList: true,
+    renderSpecialRegionList: true,
+  }, scheduleUiMode);
+  finalizeIndexBuildEffects();
+
+  if (buildSpatial) {
+    buildSpatialIndex({
+      includeSecondary: includeSecondarySpatial,
+      allowComputeMissingBounds: false,
+    });
+  }
+  return nextColors;
+}
+
+async function buildHitCanvasAfterStartup({ keepReady = false } = {}) {
+  setInteractionInfrastructureState("building-hit-canvas", {
+    ready: keepReady ? true : false,
+    inFlight: true,
+  });
+  await yieldToMain();
+  ensureHitCanvasUpToDate({ force: true });
+  await yieldToMain();
+}
+
+async function buildBasicInteractionInfrastructureAfterStartup({
+  chunked = true,
+} = {}) {
+  if (getInteractionInfrastructureStageRank() >= 1 && !runtimeState.interactionInfrastructureBuildInFlight) {
+    return true;
+  }
+  if (interactionInfrastructureBasicPromise) {
+    return interactionInfrastructureBasicPromise;
+  }
+  interactionInfrastructureBasicPromise = (async () => {
+    setInteractionInfrastructureState("deferred-startup", {
+      ready: false,
+      inFlight: true,
+    });
+    try {
+      runtimeState.deferHitCanvasBuild = false;
+      if (chunked) {
+        await buildIndexChunked({ scheduleUiMode: "deferred" });
+        await buildSpatialIndexChunked({
+          includeSecondary: false,
+        });
+      } else {
+        buildIndex({ scheduleUiMode: "deferred" });
+        buildSpatialIndex({
+          includeSecondary: false,
+        });
+      }
+      setInteractionInfrastructureState("basic-ready", {
+        ready: true,
+        inFlight: false,
+      });
+      return true;
+    } catch (error) {
+      setInteractionInfrastructureState("error", {
+        ready: false,
+        inFlight: false,
+      });
+      throw error;
+    } finally {
+      interactionInfrastructureBasicPromise = null;
+    }
+  })();
+  return interactionInfrastructureBasicPromise;
+}
+
+async function buildFullInteractionInfrastructureAfterStartup({
+  chunked = true,
+  buildHitCanvas = true,
+} = {}) {
+  if (getInteractionInfrastructureStageRank() >= 2 && !runtimeState.interactionInfrastructureBuildInFlight) {
+    return true;
+  }
+  if (interactionInfrastructureFullPromise) {
+    return interactionInfrastructureFullPromise;
+  }
+  interactionInfrastructureFullPromise = (async () => {
+    await buildBasicInteractionInfrastructureAfterStartup({ chunked });
+    setInteractionInfrastructureState("building-spatial", {
+      ready: true,
+      inFlight: true,
+    });
+    try {
+      const recoveryStartedAt = nowMs();
+      let yieldCount = 0;
+      while (isInteractionRecoveryBlocked()) {
+        yieldCount += 1;
+        await yieldToMain();
+      }
+      ensureSovereigntyState({ force: true });
+      yieldCount += 1;
+      await yieldToMain();
+      rebuildResolvedColors();
+      yieldCount += 1;
+      await yieldToMain();
+      if (chunked) {
+        await buildSpatialIndexChunked({
+          includeSecondary: false,
+          keepReady: true,
+        });
+      } else {
+        buildSpatialIndex({
+          includeSecondary: false,
+        });
+      }
+      scheduleSecondarySpatialIndexBuild({
+        reason: chunked ? "startup-deferred-secondary-spatial" : "startup-secondary-spatial",
+      });
+      if (buildHitCanvas) {
+        if (chunked) {
+          await buildHitCanvasAfterStartup({ keepReady: true });
+        } else {
+          ensureHitCanvasUpToDate({ force: true });
+        }
+      } else if (runtimeState.hitCanvasDirty) {
+        scheduleHitCanvasBuildIfNeeded({
+          reason: chunked ? "startup-deferred-hit-canvas" : "startup-hit-canvas",
+        });
+      }
+      setInteractionInfrastructureState("ready", {
+        ready: true,
+        inFlight: false,
+      });
+      recordInteractionRecoveryTaskMetric("post-ready-full-interaction-infra", nowMs() - recoveryStartedAt, {
+        chunked: !!chunked,
+        buildHitCanvas: !!buildHitCanvas,
+        yieldCount,
+      }, { benchmarkInteraction: false });
+      return true;
+    } catch (error) {
+      setInteractionInfrastructureState("basic-ready", {
+        ready: true,
+        inFlight: false,
+      });
+      throw error;
+    } finally {
+      interactionInfrastructureFullPromise = null;
+    }
+  })();
+  return interactionInfrastructureFullPromise;
+}
+
+async function buildInteractionInfrastructureAfterStartup({
+  chunked = true,
+  buildHitCanvas = true,
+  mode = "full",
+} = {}) {
+  if (String(mode || "full").trim().toLowerCase() === "basic") {
+    return buildBasicInteractionInfrastructureAfterStartup({ chunked });
+  }
+  return buildFullInteractionInfrastructureAfterStartup({
+    chunked,
+    buildHitCanvas,
+  });
+}
+
+function getHitFromEvent(
+  event,
+  { enableSnap = true, snapPx = HIT_SNAP_RADIUS_PX, eventType = "unknown" } = {}
+) {
+  if ((!runtimeState.landData || !runtimeState.spatialItems?.length) && !runtimeState.waterSpatialItems?.length && !runtimeState.specialSpatialItems?.length) {
+    return createHitResult();
+  }
+  const pointer = getPointerProjectionPosition(event);
+  if (!pointer) return createHitResult();
+  const specialHit = getSpecialHitFromPointer(pointer, {
+    enableSnap,
+    snapPx,
+    eventType,
+  });
+  let resolvedHit = specialHit;
+  if (!resolvedHit.id) {
+    const landHit = getLandHitFromPointer(event, pointer, {
+      enableSnap,
+      snapPx,
+      eventType,
+    });
+    const waterHit = getWaterHitFromPointer(pointer, {
+      enableSnap,
+      snapPx,
+      eventType,
+    });
+    if (waterHit.id && isScenarioWaterRegion(waterHit.feature) && eventType !== "hover") {
+      resolvedHit = waterHit;
+    } else if (shouldPreferWaterHit(landHit, waterHit, { eventType })) {
+      resolvedHit = waterHit;
+    } else if (landHit.id) {
+      resolvedHit = landHit;
+    } else if (waterHit.id) {
+      resolvedHit = waterHit;
+    } else {
+      resolvedHit = createHitResult();
+    }
+  }
+  recordInteractionHitMetrics(pointer, {
+    enableSnap,
+    snapPx,
+    eventType,
+    resolvedHit,
+  });
+  return resolvedHit;
+}
+
+function getFeatureIdFromEvent(event) {
+  const hit = getHitFromEvent(event, {
+    enableSnap: true,
+    snapPx: HIT_SNAP_RADIUS_PX,
+    eventType: "compat",
+  });
+  return hit.id;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+const drawMeshCollection = (...args) => getBorderDrawOwner().drawMeshCollection(...args);
+
+const declutterProjectedPolyline = (...args) => getBorderDrawOwner().declutterProjectedPolyline(...args);
+
+const getProjectedPolylineMetrics = (...args) => getBorderDrawOwner().getProjectedPolylineMetrics(...args);
+
+const buildRenderableBoundaryMesh = (...args) => getBorderDrawOwner().buildRenderableBoundaryMesh(...args);
+
+const getViewportAwareCoastlineCollection = (...args) =>
+  getBorderDrawOwner().getViewportAwareCoastlineCollection(...args);
+
+const getBoundaryMeshTransform = (...args) => getBorderDrawOwner().getBoundaryMeshTransform(...args);
+
+function getProjectedLineDensityStats(line) {
+  const sanitized = sanitizePolyline(line);
+  if (sanitized.length < 2 || !projection) {
+    return { pointCount: 0, bboxArea: Infinity, density: 0 };
+  }
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let pointCount = 0;
+  sanitized.forEach((point) => {
+    const projected = projection(point);
+    if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
+    pointCount += 1;
+    minX = Math.min(minX, projected[0]);
+    minY = Math.min(minY, projected[1]);
+    maxX = Math.max(maxX, projected[0]);
+    maxY = Math.max(maxY, projected[1]);
+  });
+  if (!(pointCount > 1)) {
+    return { pointCount, bboxArea: Infinity, density: 0 };
+  }
+  const bboxArea = Math.max(1, (maxX - minX) * (maxY - minY));
+  return {
+    pointCount,
+    bboxArea,
+    density: pointCount / bboxArea,
+  };
+}
+
+function drawHierarchicalBorders(k, { interactive = false } = {}) {
+  // 入口负责编排边界绘制阶段与参数，笔触/采样等细节由 owner 实现。
+  return getBorderDrawOwner().drawHierarchicalBorders(k, { interactive });
+}
+
+function normalizeOceanPreset(value) {
+  const candidate = String(value || "flat").trim().toLowerCase();
+  if (
+    candidate === "flat" ||
+    candidate === "bathymetry_soft" ||
+    candidate === "bathymetry_contours"
+  ) {
+    return candidate;
+  }
+  return "flat";
+}
+
+function getBathymetryPresetProfile(preset = "flat") {
+  return BATHYMETRY_PRESET_PROFILES[normalizeOceanPreset(preset)] || null;
+}
+
+function getBathymetryPresetStyleDefaults(preset = "flat") {
+  const profile = getBathymetryPresetProfile(preset);
+  if (!profile) return null;
+  return {
+    opacity: profile.defaultOpacity,
+    scale: profile.defaultScale,
+    contourStrength: profile.defaultContourStrength,
+  };
+}
+
+function getOceanStyleConfig() {
+  const ocean = runtimeState.styleConfig?.ocean || {};
+  const preset = normalizeOceanPreset(ocean.preset);
+  return {
+    preset,
+    opacity: clamp(Number.isFinite(Number(ocean.opacity)) ? Number(ocean.opacity) : 0.82, 0, 1),
+    scale: clamp(Number.isFinite(Number(ocean.scale)) ? Number(ocean.scale) : 1.14, 0.6, 2.4),
+    contourStrength: clamp(
+      Number.isFinite(Number(ocean.contourStrength)) ? Number(ocean.contourStrength) : 0.34,
+      0,
+      1
+    ),
+    bathymetryProfile: getBathymetryPresetProfile(preset),
+    experimentalAdvancedStyles: ocean.experimentalAdvancedStyles === true,
+    coastalAccentEnabled: isTnoCoastalAccentEnabled(),
+  };
+}
+
+function getOceanBaseFillColor() {
+  return getSafeCanvasColor(runtimeState.styleConfig?.ocean?.fillColor, OCEAN_FILL_COLOR) || OCEAN_FILL_COLOR;
+}
+
+function getLakeStyleConfig() {
+  runtimeState.styleConfig = runtimeState.styleConfig && typeof runtimeState.styleConfig === "object" ? runtimeState.styleConfig : {};
+  runtimeState.styleConfig.lakes = normalizeLakeStyleConfig(runtimeState.styleConfig.lakes);
+  return runtimeState.styleConfig.lakes;
+}
+
+function getLakeBaseFillColor() {
+  const lakeStyle = getLakeStyleConfig();
+  if (lakeStyle.linkedToOcean) {
+    return getOceanBaseFillColor();
+  }
+  return getSafeCanvasColor(lakeStyle.fillColor, getOceanBaseFillColor()) || getOceanBaseFillColor();
+}
+
+function getUnifiedWaterBaseStyle(feature) {
+  const waterType = getWaterRegionType(feature);
+  return {
+    fill: waterType === "lake" ? getLakeBaseFillColor() : getOceanBaseFillColor(),
+    stroke: UNIFIED_WATER_STROKE_COLOR,
+    opacity: UNIFIED_WATER_FILL_OPACITY,
+  };
+}
+
+function getWaterRegionDefaultFillColorById(id) {
+  return getWaterRegionDefaultStyle(runtimeState.waterRegionsById?.get(String(id || "").trim())).fill;
+}
+
+function getPathBounds(shape) {
+  if (!pathCanvas || !shape) return null;
+  try {
+    const bounds = pathCanvas.bounds(shape);
+    if (!bounds || bounds.length !== 2) return null;
+    const minX = bounds[0][0];
+    const minY = bounds[0][1];
+    const maxX = bounds[1][0];
+    const maxY = bounds[1][1];
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
+    if (maxX <= minX || maxY <= minY) return null;
+    return { minX, minY, maxX, maxY };
+  } catch (error) {
+    return null;
+  }
+}
+
+function getBoundsArea(bounds) {
+  if (!bounds) return 0;
+  return Math.max(0, bounds.maxX - bounds.minX) * Math.max(0, bounds.maxY - bounds.minY);
+}
+
+function doesOceanStyleRequireBathymetry(oceanStyle = getOceanStyleConfig()) {
+  return !!(
+    oceanStyle?.experimentalAdvancedStyles
+    && String(oceanStyle?.preset || "flat").trim().toLowerCase() !== "flat"
+  );
+}
+
+function clearBathymetryStateSlot(slot) {
+  if (slot === "scenario") {
+    runtimeState.scenarioBathymetryTopologyData = null;
+    runtimeState.scenarioBathymetryBandsData = null;
+    runtimeState.scenarioBathymetryContoursData = null;
+    runtimeState.scenarioBathymetryTopologyUrl = "";
+    return;
+  }
+  runtimeState.globalBathymetryTopologyData = null;
+  runtimeState.globalBathymetryBandsData = null;
+  runtimeState.globalBathymetryContoursData = null;
+  runtimeState.globalBathymetryTopologyUrl = "";
+}
+
+function disableActiveBathymetryState() {
+  runtimeState.activeBathymetryBandsData = null;
+  runtimeState.activeBathymetryContoursData = null;
+  runtimeState.activeBathymetrySource = "none";
+  runtimeState.activeBathymetryTopologyUrl = "";
+}
+
+function setBathymetryStateSlot(slot, url, entry) {
+  if (slot === "scenario") {
+    runtimeState.scenarioBathymetryTopologyData = entry?.topology || null;
+    runtimeState.scenarioBathymetryBandsData = entry?.bands || null;
+    runtimeState.scenarioBathymetryContoursData = entry?.contours || null;
+    runtimeState.scenarioBathymetryTopologyUrl = String(url || "");
+    return;
+  }
+  runtimeState.globalBathymetryTopologyData = entry?.topology || null;
+  runtimeState.globalBathymetryBandsData = entry?.bands || null;
+  runtimeState.globalBathymetryContoursData = entry?.contours || null;
+  runtimeState.globalBathymetryTopologyUrl = String(url || "");
+}
+
+function cloneBathymetryFeatureWithSource(feature, source) {
+  if (!feature || typeof feature !== "object") return null;
+  return {
+    ...feature,
+    properties: {
+      ...(feature.properties || {}),
+      _bathymetrySource: source,
+    },
+  };
+}
+
+function buildBathymetryFeatureCollection(features) {
+  const nextFeatures = Array.isArray(features) ? features.filter(Boolean) : [];
+  if (!nextFeatures.length) return null;
+  return {
+    type: "FeatureCollection",
+    features: nextFeatures,
+  };
+}
+
+function mergeBathymetryFeatureCollections(scenarioCollection, globalCollection) {
+  const scenarioFeatures = Array.isArray(scenarioCollection?.features)
+    ? scenarioCollection.features.map((feature) => cloneBathymetryFeatureWithSource(feature, "scenario"))
+    : [];
+  const globalFeatures = Array.isArray(globalCollection?.features)
+    ? globalCollection.features.map((feature) => cloneBathymetryFeatureWithSource(feature, "global"))
+    : [];
+  return buildBathymetryFeatureCollection([...scenarioFeatures, ...globalFeatures]);
+}
+
+function syncActiveBathymetryState() {
+  const scenarioUrl = getScenarioBathymetryTopologyUrl();
+  const globalUrl = getDesiredBathymetryTopologyUrl("global");
+  const scenarioReady =
+    !!runtimeState.activeScenarioId &&
+    !!scenarioUrl &&
+    runtimeState.scenarioBathymetryTopologyUrl === scenarioUrl &&
+    (!!runtimeState.scenarioBathymetryBandsData || !!runtimeState.scenarioBathymetryContoursData);
+  const globalReady =
+    !!globalUrl &&
+    runtimeState.globalBathymetryTopologyUrl === globalUrl &&
+    (!!runtimeState.globalBathymetryBandsData || !!runtimeState.globalBathymetryContoursData);
+
+  if (scenarioReady && globalReady) {
+    runtimeState.activeBathymetryBandsData = mergeBathymetryFeatureCollections(
+      runtimeState.scenarioBathymetryBandsData,
+      runtimeState.globalBathymetryBandsData
+    );
+    runtimeState.activeBathymetryContoursData = mergeBathymetryFeatureCollections(
+      runtimeState.scenarioBathymetryContoursData,
+      runtimeState.globalBathymetryContoursData
+    );
+    runtimeState.activeBathymetrySource = "merged";
+    runtimeState.activeBathymetryTopologyUrl = `${scenarioUrl}|${globalUrl}`;
+    return;
+  }
+  if (scenarioReady) {
+    runtimeState.activeBathymetryBandsData = mergeBathymetryFeatureCollections(runtimeState.scenarioBathymetryBandsData, null);
+    runtimeState.activeBathymetryContoursData = mergeBathymetryFeatureCollections(runtimeState.scenarioBathymetryContoursData, null);
+    runtimeState.activeBathymetrySource = "scenario";
+    runtimeState.activeBathymetryTopologyUrl = scenarioUrl;
+    return;
+  }
+  if (globalReady) {
+    runtimeState.activeBathymetryBandsData = mergeBathymetryFeatureCollections(null, runtimeState.globalBathymetryBandsData);
+    runtimeState.activeBathymetryContoursData = mergeBathymetryFeatureCollections(null, runtimeState.globalBathymetryContoursData);
+    runtimeState.activeBathymetrySource = "global";
+    runtimeState.activeBathymetryTopologyUrl = globalUrl;
+    return;
+  }
+  runtimeState.activeBathymetryBandsData = null;
+  runtimeState.activeBathymetryContoursData = null;
+  runtimeState.activeBathymetrySource = "none";
+  runtimeState.activeBathymetryTopologyUrl = "";
+}
+
+function getCachedBathymetryEntry(url) {
+  if (!url) return null;
+  const entry = bathymetryTopologyCacheByUrl.get(url);
+  return entry && typeof entry === "object" ? entry : null;
+}
+
+function normalizeBathymetryTopologyEntry(url, topology) {
+  if (!topology || typeof topology !== "object") {
+    return null;
+  }
+  const bands = getLayerFeatureCollection(topology, BATHYMETRY_BANDS_OBJECT_NAME);
+  const contours = getLayerFeatureCollection(topology, BATHYMETRY_CONTOURS_OBJECT_NAME);
+  if (!Array.isArray(bands?.features) && !Array.isArray(contours?.features)) {
+    return null;
+  }
+  return {
+    url,
+    topology,
+    bands: Array.isArray(bands?.features) ? bands : null,
+    contours: Array.isArray(contours?.features) ? contours : null,
+  };
+}
+
+function warnBathymetryLoadFailureOnce(url, error) {
+  if (!url || bathymetryLoadFailureByUrl.has(url)) return;
+  bathymetryLoadFailureByUrl.add(url);
+  const message = error instanceof Error ? error.message : String(error || "Unknown error");
+  console.warn(`[bathymetry] Failed to load ${url}: ${message}`);
+}
+
+function applyResolvedBathymetryEntry(slot, url, entry) {
+  if (!url || getDesiredBathymetryTopologyUrl(slot) !== url) {
+    return false;
+  }
+  setBathymetryStateSlot(slot, url, entry);
+  syncActiveBathymetryState();
+  return true;
+}
+
+async function loadBathymetryTopology(url, { slot = "global" } = {}) {
+  const normalizedUrl = String(url || "").trim();
+  if (!normalizedUrl || !getRendererAssetUrlPolicyOwner().isDesiredBathymetryUrl(slot, normalizedUrl)) {
+    return null;
+  }
+  const response = await fetch(normalizedUrl, { cache: "default" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  const payload = await response.json();
+  const entry = normalizeBathymetryTopologyEntry(normalizedUrl, payload);
+  if (!entry) {
+    throw new Error("Missing bathymetry_bands / bathymetry_contours objects");
+  }
+  bathymetryTopologyCacheByUrl.set(normalizedUrl, entry);
+  applyResolvedBathymetryEntry(slot, normalizedUrl, entry);
+  invalidateOceanVisualState(`bathymetry-loaded:${slot}`);
+  if (context) {
+    render();
+  }
+  return entry;
+}
+
+function scheduleBathymetryTopologyLoad(url, { slot = "global" } = {}) {
+  if (!url) {
+    clearBathymetryStateSlot(slot);
+    syncActiveBathymetryState();
+    return;
+  }
+  const cached = getCachedBathymetryEntry(url);
+  if (cached) {
+    applyResolvedBathymetryEntry(slot, url, cached);
+    return;
+  }
+  if (bathymetryLoadFailureByUrl.has(url) || bathymetryLoadPromiseByUrl.has(url)) {
+    return;
+  }
+  const loadPromise = loadBathymetryTopology(url, { slot })
+    .catch((error) => {
+      warnBathymetryLoadFailureOnce(url, error);
+      if (getDesiredBathymetryTopologyUrl(slot) === url) {
+        clearBathymetryStateSlot(slot);
+        syncActiveBathymetryState();
+      }
+      return null;
+    })
+    .finally(() => {
+      bathymetryLoadPromiseByUrl.delete(url);
+    });
+  bathymetryLoadPromiseByUrl.set(url, loadPromise);
+}
+
+function ensureBathymetryDataAvailability({ required = doesOceanStyleRequireBathymetry() } = {}) {
+  if (!required) {
+    disableActiveBathymetryState();
+    return false;
+  }
+  const globalUrl = getDesiredBathymetryTopologyUrl("global");
+  if (globalUrl) {
+    scheduleBathymetryTopologyLoad(globalUrl, { slot: "global" });
+  } else {
+    clearBathymetryStateSlot("global");
+  }
+  const scenarioUrl = getScenarioBathymetryTopologyUrl();
+  if (runtimeState.activeScenarioId && scenarioUrl) {
+    scheduleBathymetryTopologyLoad(scenarioUrl, { slot: "scenario" });
+  } else {
+    clearBathymetryStateSlot("scenario");
+  }
+  syncActiveBathymetryState();
+  return true;
+}
+
+function getBathymetryFeatureCollections() {
+  return {
+    bands: Array.isArray(runtimeState.activeBathymetryBandsData?.features) ? runtimeState.activeBathymetryBandsData : null,
+    contours: Array.isArray(runtimeState.activeBathymetryContoursData?.features) ? runtimeState.activeBathymetryContoursData : null,
+    scenarioCoverage: Array.isArray(runtimeState.scenarioBathymetryBandsData?.features) ? runtimeState.scenarioBathymetryBandsData : null,
+  };
+}
+
+function getBathymetryFeatureDepthMax(feature) {
+  const rawValue = Number(
+    feature?.properties?.depth_max_m ??
+    feature?.properties?.depth_m ??
+    feature?.properties?.max_depth_m ??
+    0
+  );
+  return Number.isFinite(rawValue) ? Math.max(0, Math.abs(rawValue)) : 0;
+}
+
+function interpolateRgbChannels(startRgb, endRgb, ratio) {
+  const tRatio = clamp(Number(ratio) || 0, 0, 1);
+  return {
+    r: Math.round(startRgb.r + (endRgb.r - startRgb.r) * tRatio),
+    g: Math.round(startRgb.g + (endRgb.g - startRgb.g) * tRatio),
+    b: Math.round(startRgb.b + (endRgb.b - startRgb.b) * tRatio),
+  };
+}
+
+function getBathymetryBaseRgb() {
+  const oceanChannels = parseCanvasColorChannels(getOceanBaseFillColor());
+  if (oceanChannels) {
+    return {
+      r: oceanChannels.r,
+      g: oceanChannels.g,
+      b: oceanChannels.b,
+    };
+  }
+  return { r: 170, g: 218, b: 255 };
+}
+
+function isAtlantropaBathymetryFeature(feature) {
+  return String(feature?.properties?.region_group || "").trim().toLowerCase().startsWith("atlantropa_");
+}
+
+function getBathymetryVisualModifiers(feature) {
+  const source = String(feature?.properties?._bathymetrySource || "").trim().toLowerCase();
+  const mode = String(feature?.properties?.bathymetry_mode || "").trim().toLowerCase();
+  const depthMax = getBathymetryFeatureDepthMax(feature);
+  if (source !== "scenario" || !isAtlantropaBathymetryFeature(feature)) {
+    return {
+      bandBrightness: 1,
+      bandAlpha: 1,
+      contourBrightness: 1,
+      contourAlpha: 1,
+    };
+  }
+
+  if (mode === "synthetic") {
+    const shallowScale = depthMax <= 150 ? 0.92 : 1;
+    return {
+      bandBrightness: 0.7 * shallowScale,
+      bandAlpha: 0.62 * shallowScale,
+      contourBrightness: 0.64 * shallowScale,
+      contourAlpha: 0.56 * shallowScale,
+    };
+  }
+
+  const shallowScale = depthMax <= 150 ? 0.95 : 1;
+  return {
+    bandBrightness: 0.88 * shallowScale,
+    bandAlpha: 0.8 * shallowScale,
+    contourBrightness: 0.86 * shallowScale,
+    contourAlpha: 0.8 * shallowScale,
+  };
+}
+
+function getBathymetryBandFillStyle(feature, oceanStyle) {
+  const profile = oceanStyle.bathymetryProfile || getBathymetryPresetProfile(oceanStyle.preset);
+  const baseRgb = getBathymetryBaseRgb();
+  const shallowRgb = interpolateRgbChannels(baseRgb, { r: 226, g: 242, b: 255 }, 0.88);
+  const deepRgb = interpolateRgbChannels(baseRgb, { r: 12, g: 47, b: 86 }, 0.78);
+  const depthRatioRaw = getBathymetryFeatureDepthMax(feature) / BATHYMETRY_MAX_REFERENCE_DEPTH_M;
+  const scaledDepthRatio = clamp(
+    Math.pow(clamp(depthRatioRaw, 0, 1), 1 / Math.max(0.45, oceanStyle.scale)),
+    0,
+    1
+  );
+  const visualModifiers = getBathymetryVisualModifiers(feature);
+  const fillRgb = interpolateRgbChannels(
+    baseRgb,
+    interpolateRgbChannels(shallowRgb, deepRgb, scaledDepthRatio),
+    visualModifiers.bandBrightness
+  );
+  const alphaBase = profile?.bandAlphaBase ?? 0.42;
+  const alpha = clamp(
+    oceanStyle.opacity
+      * (alphaBase + scaledDepthRatio * 0.2 + (1 - scaledDepthRatio) * 0.1 + oceanStyle.contourStrength * 0.1)
+      * visualModifiers.bandAlpha,
+    0,
+    0.96
+  );
+  return toRgbaString(fillRgb, alpha);
+}
+
+function getBathymetryContourStrokeStyle(feature, oceanStyle) {
+  const profile = oceanStyle.bathymetryProfile || getBathymetryPresetProfile(oceanStyle.preset);
+  const baseRgb = getBathymetryBaseRgb();
+  const depthRatioRaw = getBathymetryFeatureDepthMax(feature) / BATHYMETRY_MAX_REFERENCE_DEPTH_M;
+  const scaledDepthRatio = clamp(depthRatioRaw, 0, 1);
+  const visualModifiers = getBathymetryVisualModifiers(feature);
+  const strokeRgb = interpolateRgbChannels(
+    baseRgb,
+    interpolateRgbChannels(
+      { r: 204, g: 228, b: 246 },
+      { r: 58, g: 101, b: 144 },
+      scaledDepthRatio
+    ),
+    visualModifiers.contourBrightness
+  );
+  const alphaBase = profile?.contourAlphaBase ?? 0.28;
+  const alpha = clamp(
+    oceanStyle.opacity
+      * (alphaBase + oceanStyle.contourStrength * 0.46 + scaledDepthRatio * 0.08)
+      * visualModifiers.contourAlpha,
+    0,
+    0.92
+  );
+  return toRgbaString(strokeRgb, alpha);
+}
+
+function sortBathymetryFeaturesForFill(collection) {
+  if (!Array.isArray(collection?.features)) return [];
+  return [...collection.features].sort((a, b) => getBathymetryFeatureDepthMax(b) - getBathymetryFeatureDepthMax(a));
+}
+
+function getBathymetryTuningConfig() {
+  const ocean = runtimeState.styleConfig?.ocean || {};
+  const shallowBandFadeEndZoom = clamp(
+    Number.isFinite(Number(ocean.shallowBandFadeEndZoom)) ? Number(ocean.shallowBandFadeEndZoom) : BATHYMETRY_BAND_SHALLOW_FADE_END_ZOOM,
+    BATHYMETRY_BAND_SHALLOW_FADE_START_ZOOM + 0.1,
+    4.8
+  );
+  const midBandFadeEndZoom = clamp(
+    Number.isFinite(Number(ocean.midBandFadeEndZoom)) ? Number(ocean.midBandFadeEndZoom) : BATHYMETRY_BAND_MID_FADE_END_ZOOM,
+    BATHYMETRY_BAND_MID_FADE_START_ZOOM + 0.1,
+    5.2
+  );
+  const deepBandFadeEndZoom = clamp(
+    Number.isFinite(Number(ocean.deepBandFadeEndZoom)) ? Number(ocean.deepBandFadeEndZoom) : BATHYMETRY_BAND_DEEP_FADE_END_ZOOM,
+    BATHYMETRY_BAND_DEEP_FADE_START_ZOOM + 0.1,
+    6
+  );
+  const scenarioSyntheticContourFadeEndZoom = clamp(
+    Number.isFinite(Number(ocean.scenarioSyntheticContourFadeEndZoom))
+      ? Number(ocean.scenarioSyntheticContourFadeEndZoom)
+      : BATHYMETRY_SCENARIO_SYNTHETIC_CONTOUR_FADE_END_ZOOM,
+    BATHYMETRY_SCENARIO_SYNTHETIC_CONTOUR_FADE_START_ZOOM + 0.1,
+    4.6
+  );
+  const scenarioShallowContourFadeEndZoom = clamp(
+    Number.isFinite(Number(ocean.scenarioShallowContourFadeEndZoom))
+      ? Number(ocean.scenarioShallowContourFadeEndZoom)
+      : BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_END_ZOOM,
+    BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_START_ZOOM + 0.1,
+    5
+  );
+  return {
+    shallowBandFadeEndZoom,
+    midBandFadeEndZoom,
+    deepBandFadeEndZoom,
+    scenarioSyntheticContourFadeEndZoom,
+    scenarioShallowContourFadeEndZoom,
+  };
+}
+
+function getZoomFadeFactor(k, fadeStartZoom, fadeEndZoom) {
+  if (!(k >= fadeStartZoom)) {
+    return 1;
+  }
+  if (k >= fadeEndZoom) {
+    return 0;
+  }
+  return clamp(
+    1 - (k - fadeStartZoom) / Math.max(0.0001, fadeEndZoom - fadeStartZoom),
+    0,
+    1
+  );
+}
+
+function getBathymetryBandVisibilityConfig(feature, k) {
+  const tuning = getBathymetryTuningConfig();
+  const depthMax = getBathymetryFeatureDepthMax(feature);
+  if (depthMax <= BATHYMETRY_SHALLOW_DEPTH_MAX_M) {
+    return { alpha: getZoomFadeFactor(k, BATHYMETRY_BAND_SHALLOW_FADE_START_ZOOM, tuning.shallowBandFadeEndZoom) };
+  }
+  if (depthMax <= BATHYMETRY_MID_DEPTH_MAX_M) {
+    return { alpha: getZoomFadeFactor(k, BATHYMETRY_BAND_MID_FADE_START_ZOOM, tuning.midBandFadeEndZoom) };
+  }
+  return { alpha: getZoomFadeFactor(k, BATHYMETRY_BAND_DEEP_FADE_START_ZOOM, tuning.deepBandFadeEndZoom) };
+}
+
+function drawBathymetryBands(collection, oceanStyle) {
+  const zoomK = Number(runtimeState.zoomTransform?.k) || 1;
+  const features = sortBathymetryFeaturesForFill(collection);
+  features.forEach((feature) => {
+    const visibilityConfig = getBathymetryBandVisibilityConfig(feature, zoomK);
+    if (visibilityConfig.alpha <= 0) return;
+    context.save();
+    context.globalAlpha *= visibilityConfig.alpha;
+    context.beginPath();
+    pathCanvas(feature);
+    context.fillStyle = getBathymetryBandFillStyle(feature, oceanStyle);
+    context.fill();
+    context.restore();
+  });
+}
+
+function buildVisibleBathymetryContourDepthSet(collection, oceanStyle) {
+  const profile = oceanStyle.bathymetryProfile || getBathymetryPresetProfile(oceanStyle.preset);
+  if (!profile?.skipAlternateContourDepths || !Array.isArray(collection?.features)) {
+    return null;
+  }
+  const uniqueDepths = [...new Set(collection.features.map((feature) => getBathymetryFeatureDepthMax(feature)))]
+    .filter((depth) => depth > 0)
+    .sort((a, b) => a - b);
+  if (!uniqueDepths.length) return null;
+  return new Set(uniqueDepths.filter((_, index) => index % 2 === 0));
+}
+
+function getBathymetryContourVisibilityConfig(feature, k) {
+  const tuning = getBathymetryTuningConfig();
+  const source = String(feature?.properties?._bathymetrySource || "").trim().toLowerCase();
+  if (source !== "scenario") {
+    return { alpha: 1 };
+  }
+  const mode = String(feature?.properties?.bathymetry_mode || "").trim().toLowerCase();
+  if (mode === "synthetic") {
+    return {
+      alpha: getZoomFadeFactor(
+        k,
+        BATHYMETRY_SCENARIO_SYNTHETIC_CONTOUR_FADE_START_ZOOM,
+        tuning.scenarioSyntheticContourFadeEndZoom
+      ),
+    };
+  }
+  if (getBathymetryFeatureDepthMax(feature) <= BATHYMETRY_SHALLOW_DEPTH_MAX_M) {
+    return {
+      alpha: getZoomFadeFactor(
+        k,
+        BATHYMETRY_SCENARIO_SHALLOW_CONTOUR_FADE_START_ZOOM,
+        tuning.scenarioShallowContourFadeEndZoom
+      ),
+    };
+  }
+  return { alpha: 1 };
+}
+
+function drawBathymetryContours(collection, oceanStyle) {
+  if (!Array.isArray(collection?.features) || !collection.features.length) return;
+  const zoomK = Number(runtimeState.zoomTransform?.k) || 1;
+  const profile = oceanStyle.bathymetryProfile || getBathymetryPresetProfile(oceanStyle.preset);
+  const lineWidthBase = (profile?.contourLineWidthBase ?? 0.45)
+    + oceanStyle.contourStrength * (profile?.contourLineWidthScale ?? 0.75);
+  const visibleDepths = buildVisibleBathymetryContourDepthSet(collection, oceanStyle);
+  collection.features.forEach((feature) => {
+    if (visibleDepths && !visibleDepths.has(getBathymetryFeatureDepthMax(feature))) {
+      return;
+    }
+    const visibilityConfig = getBathymetryContourVisibilityConfig(feature, zoomK);
+    if (visibilityConfig.alpha <= 0) return;
+    context.save();
+    context.globalAlpha *= visibilityConfig.alpha;
+    context.beginPath();
+    pathCanvas(feature);
+    context.strokeStyle = getBathymetryContourStrokeStyle(feature, oceanStyle);
+    context.lineWidth = lineWidthBase;
+    context.stroke();
+    context.restore();
+  });
+}
+
+function getBathymetryCollectionBySource(collection, source) {
+  if (!Array.isArray(collection?.features)) return null;
+  return buildBathymetryFeatureCollection(
+    collection.features.filter((feature) => String(feature?.properties?._bathymetrySource || "") === source)
+  );
+}
+
+function getCoastlineCollectionForZoom(k) {
+  if (k < COASTLINE_LOD_LOW_ZOOM_MAX) {
+    return runtimeState.cachedCoastlinesLow?.length ? runtimeState.cachedCoastlinesLow : runtimeState.cachedCoastlines;
+  }
+  if (k < COASTLINE_LOD_MID_ZOOM_MAX) {
+    return runtimeState.cachedCoastlinesMid?.length ? runtimeState.cachedCoastlinesMid : runtimeState.cachedCoastlines;
+  }
+  return runtimeState.cachedCoastlinesHigh?.length ? runtimeState.cachedCoastlinesHigh : runtimeState.cachedCoastlines;
+}
+
+function getTnoCoastalAccentLineWidth(k, { interactive = false, overlay = false } = {}) {
+  const baseWidth = overlay
+    ? 1.22 / Math.max(0.0001, k)
+    : (interactive ? 1.05 : 1.28) / Math.max(0.0001, k);
+  if (k < COASTLINE_LOD_MID_ZOOM_MAX) {
+    return baseWidth;
+  }
+  return Math.max(baseWidth, overlay ? COASTLINE_ACCENT_OVERLAY_MIN_WIDTH_PX : COASTLINE_ACCENT_MIN_WIDTH_PX);
+}
+
+function isAtlantropaScenarioShorelineOverlay(feature) {
+  if (getReliefOverlayKind(feature) !== "new_shoreline") return false;
+  return String(feature?.properties?.parent_id || "").trim().toLowerCase().startsWith("atlantropa_");
+}
+
+function getFeatureProjectedDensity(feature) {
+  const geometry = feature?.geometry;
+  if (!geometry) return 0;
+  const lines = geometry.type === "LineString"
+    ? [geometry.coordinates]
+    : geometry.type === "MultiLineString"
+      ? geometry.coordinates
+      : [];
+  let maxDensity = 0;
+  lines.forEach((line) => {
+    const density = getProjectedLineDensityStats(line).density;
+    if (density > maxDensity) {
+      maxDensity = density;
+    }
+  });
+  return maxDensity;
+}
+
+function buildCoastalAccentStrokeBuckets(entries) {
+  const buckets = new Map();
+  entries.forEach((entry) => {
+    if (!entry?.geometry) return;
+    const alpha = clamp(Number(entry.alpha) || 0, 0, 1);
+    const lineWidth = Math.max(0, Number(entry.lineWidth) || 0);
+    if (!(alpha > 0) || !(lineWidth > 0)) return;
+    const key = `${alpha.toFixed(4)}|${lineWidth.toFixed(4)}`;
+    const bucket = buckets.get(key) || {
+      alpha,
+      lineWidth,
+      geometries: [],
+    };
+    bucket.geometries.push(entry.geometry);
+    buckets.set(key, bucket);
+  });
+  return [...buckets.values()];
+}
+
+function drawCoastalAccentStrokeBuckets(entries, { clipAtlantropa = false } = {}) {
+  if (!context || !Array.isArray(entries) || !entries.length) return;
+  const buckets = buildCoastalAccentStrokeBuckets(entries);
+  if (!buckets.length) return;
+  buckets.forEach((bucket) => {
+    context.save();
+    if (clipAtlantropa) {
+      clipOutAtlantropaAccentRegions();
+    }
+    context.strokeStyle = TNO_COASTAL_ACCENT_COLOR;
+    context.globalAlpha = bucket.alpha;
+    context.lineWidth = bucket.lineWidth;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.beginPath();
+    bucket.geometries.forEach((geometry) => {
+      pathCanvas(geometry);
+    });
+    context.stroke();
+    context.restore();
+  });
+}
+
+function getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive = false } = {}) {
+  const isAtlantropa = isAtlantropaScenarioShorelineOverlay(feature);
+  let alpha = interactive ? 0.38 : 0.62;
+  if (isAtlantropa) {
+    alpha = interactive
+      ? COASTLINE_OVERLAY_ATLANTROPA_ALPHA_INTERACTIVE
+      : COASTLINE_OVERLAY_ATLANTROPA_ALPHA;
+    if (k < COASTLINE_LOD_MID_ZOOM_MAX) {
+      const densityThreshold = k < COASTLINE_LOD_LOW_ZOOM_MAX
+        ? COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW
+        : COASTLINE_ACCENT_DENSITY_THRESHOLD_MID;
+      const densityAlpha = k < COASTLINE_LOD_LOW_ZOOM_MAX
+        ? COASTLINE_OVERLAY_DENSITY_ALPHA_LOW
+        : COASTLINE_OVERLAY_DENSITY_ALPHA_MID;
+      if (getFeatureProjectedDensity(feature) > densityThreshold) {
+        alpha *= densityAlpha;
+      }
+    }
+  }
+  return {
+    alpha,
+    lineWidth: getTnoCoastalAccentLineWidth(k, { interactive, overlay: true }),
+  };
+}
+
+function clipOutAtlantropaAccentRegions() {
+  const suppressionFeatures = getAtlantropaAccentSuppressionFeatures();
+  if (!suppressionFeatures.length || !context) return false;
+  const canvasWidth = Number(runtimeState.width) || context.canvas?.width || 0;
+  const canvasHeight = Number(runtimeState.height) || context.canvas?.height || 0;
+  if (!(canvasWidth > 0) || !(canvasHeight > 0)) return false;
+  context.beginPath();
+  context.rect(0, 0, canvasWidth, canvasHeight);
+  suppressionFeatures.forEach((feature) => {
+    if (!feature?.geometry) return;
+    pathCanvas(feature);
+  });
+  try {
+    context.clip("evenodd");
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function drawScenarioCoastalAccentOverlays(k, { interactive = false } = {}) {
+  const shorelineFeatures = getScenarioCoastalAccentOverlayFeatures();
+  if (!shorelineFeatures.length) return;
+  const entries = [];
+  shorelineFeatures.forEach((feature) => {
+    if (!pathBoundsInScreen(feature)) return;
+    const visualConfig = getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive });
+    entries.push({
+      geometry: feature,
+      alpha: visualConfig.alpha,
+      lineWidth: visualConfig.lineWidth,
+    });
+  });
+  drawCoastalAccentStrokeBuckets(entries);
+}
+
+function drawTnoCoastalAccentLayer(k, { interactive = false } = {}) {
+  if (!context || !isTnoCoastalAccentEnabled()) return;
+  const coastlineDecision = resolveCoastlineTopologySource();
+  const usesScenarioCoastlineSource = coastlineDecision?.source === "scenario";
+  const coastlineCollection = interactive
+    ? getCoastlineCollectionForZoom(k)
+    : getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
+  const coastlineWidth = getTnoCoastalAccentLineWidth(k, { interactive });
+  const densityThreshold = k < COASTLINE_LOD_LOW_ZOOM_MAX
+    ? COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW
+    : k < COASTLINE_LOD_MID_ZOOM_MAX
+      ? COASTLINE_ACCENT_DENSITY_THRESHOLD_MID
+      : Infinity;
+  const entries = [];
+  coastlineCollection.forEach((mesh) => {
+    if (!isUsableMesh(mesh)) return;
+    mesh.coordinates.forEach((line) => {
+      const densityStats = interactive
+        ? { density: 0 }
+        : getProjectedLineDensityStats(line);
+      const densityScale = densityStats.density > densityThreshold
+        ? (k < COASTLINE_LOD_LOW_ZOOM_MAX ? COASTLINE_ACCENT_DENSITY_ALPHA_LOW : COASTLINE_ACCENT_DENSITY_ALPHA_MID)
+        : 1;
+      entries.push({
+        geometry: {
+        type: "LineString",
+        coordinates: line,
+        },
+        alpha: (interactive ? 0.28 : 0.4) * densityScale,
+        lineWidth: coastlineWidth * (densityScale < 1 ? COASTLINE_ACCENT_DENSITY_WIDTH_SCALE : 1),
+      });
+    });
+  });
+  drawCoastalAccentStrokeBuckets(entries, { clipAtlantropa: !usesScenarioCoastlineSource });
+  if (!usesScenarioCoastlineSource) {
+    drawScenarioCoastalAccentOverlays(k, { interactive });
+  }
+}
+
+function resolveOceanMask() {
+  let mode = OCEAN_MASK_MODE_SPHERE_MINUS_LAND;
+  let quality = 0;
+
+  const sphereBounds = getPathBounds({ type: "Sphere" });
+  const sphereArea = getBoundsArea(sphereBounds);
+
+  if (runtimeState.oceanData) {
+    const oceanBounds = getPathBounds(runtimeState.oceanData);
+    const oceanArea = getBoundsArea(oceanBounds);
+    if (sphereArea > 0 && oceanArea > 0) {
+      quality = clamp(oceanArea / sphereArea, 0, 1);
+    } else if (oceanArea > 0) {
+      quality = 1;
+    }
+  }
+
+  if (runtimeState.oceanData && quality >= OCEAN_MASK_MIN_QUALITY) {
+    mode = OCEAN_MASK_MODE_TOPOLOGY;
+  }
+
+  runtimeState.oceanMaskMode = mode;
+  runtimeState.oceanMaskQuality = quality;
+  return { mode, quality };
+}
+
+function applyOceanClipMask(maskMode) {
+  const startedAt = nowMs();
+  context.beginPath();
+  if (maskMode === OCEAN_MASK_MODE_TOPOLOGY && runtimeState.oceanData) {
+    pathCanvas(runtimeState.oceanData);
+    context.clip();
+    recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
+      applied: true,
+      maskMode,
+      maskSource: "oceanData",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.oceanData),
+      maskArcRefEstimate: estimateTopologyObjectArcRefs(runtimeState.topologyPrimary || runtimeState.topology, "ocean"),
+    });
+    return;
+  }
+
+  pathCanvas({ type: "Sphere" });
+  const maskInfo = getPhysicalLandMaskInfo();
+  const landMask = maskInfo.collection;
+
+  if (landMask) {
+    pathCanvas(landMask);
+    try {
+      context.clip("evenodd");
+    } catch (error) {
+      context.clip();
+    }
+    recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
+      applied: true,
+      maskMode,
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return;
+  }
+
+  if (runtimeState.oceanData) {
+    context.beginPath();
+    pathCanvas(runtimeState.oceanData);
+    context.clip();
+    recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
+      applied: true,
+      maskMode,
+      maskSource: "oceanDataWithoutUsableLandMask",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.oceanData),
+      maskArcRefEstimate: estimateTopologyObjectArcRefs(runtimeState.topologyPrimary || runtimeState.topology, "ocean"),
+      rejectedMaskToken: maskInfo.maskQualityToken || "",
+    });
+    return;
+  }
+
+  context.clip();
+  recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
+    applied: true,
+    maskMode,
+    maskSource: "sphere-only",
+    maskFeatureCount: 0,
+    maskArcRefEstimate: null,
+  });
+}
+
+function applyBathymetryCoverageExclusionMask(coverageCollection) {
+  if (!Array.isArray(coverageCollection?.features) || !coverageCollection.features.length) return;
+  context.beginPath();
+  pathCanvas({ type: "Sphere" });
+  pathCanvas(coverageCollection);
+  try {
+    context.clip("evenodd");
+  } catch (error) {
+    context.clip();
+  }
+}
+
+function drawOceanStyle() {
+  if (!context || !pathCanvas) return;
+  const oceanStyle = getOceanStyleConfig();
+  const bathymetryRequired = doesOceanStyleRequireBathymetry(oceanStyle);
+  ensureBathymetryDataAvailability({
+    required: bathymetryRequired,
+  });
+  if (!oceanStyle.experimentalAdvancedStyles) {
+    runtimeState.oceanMaskMode = OCEAN_MASK_MODE_TOPOLOGY;
+    runtimeState.oceanMaskQuality = 0;
+    return;
+  }
+  if (oceanStyle.preset === "flat") {
+    runtimeState.oceanMaskMode = OCEAN_MASK_MODE_TOPOLOGY;
+    runtimeState.oceanMaskQuality = 0;
+    return;
+  }
+  const bathymetryData = getBathymetryFeatureCollections();
+  const hasBands = Array.isArray(bathymetryData.bands?.features) && bathymetryData.bands.features.length > 0;
+  const hasContours =
+    Array.isArray(bathymetryData.contours?.features) && bathymetryData.contours.features.length > 0;
+  if (!hasBands && !hasContours) {
+    runtimeState.oceanMaskMode = OCEAN_MASK_MODE_TOPOLOGY;
+    runtimeState.oceanMaskQuality = 0;
+    return;
+  }
+
+  const { mode: clipMaskMode } = resolveOceanMask();
+  const globalBands = getBathymetryCollectionBySource(bathymetryData.bands, "global");
+  const scenarioBands = getBathymetryCollectionBySource(bathymetryData.bands, "scenario");
+  const globalContours = getBathymetryCollectionBySource(bathymetryData.contours, "global");
+  const scenarioContours = getBathymetryCollectionBySource(bathymetryData.contours, "scenario");
+  const scenarioCoverage = bathymetryData.scenarioCoverage;
+
+  context.save();
+  applyOceanClipMask(clipMaskMode);
+  if (Array.isArray(globalBands?.features) && globalBands.features.length) {
+    context.save();
+    applyBathymetryCoverageExclusionMask(scenarioCoverage);
+    drawBathymetryBands(globalBands, oceanStyle);
+    context.restore();
+  }
+  if (Array.isArray(scenarioBands?.features) && scenarioBands.features.length) {
+    drawBathymetryBands(scenarioBands, oceanStyle);
+  }
+  if (Array.isArray(globalContours?.features) && globalContours.features.length) {
+    context.save();
+    applyBathymetryCoverageExclusionMask(scenarioCoverage);
+    drawBathymetryContours(globalContours, oceanStyle);
+    context.restore();
+  }
+  if (Array.isArray(scenarioContours?.features) && scenarioContours.features.length) {
+    drawBathymetryContours(scenarioContours, oceanStyle);
+  }
+  context.restore();
+  runtimeState.oceanMaskMode = OCEAN_MASK_MODE_BATHYMETRY;
+  runtimeState.oceanMaskQuality = 1;
+}
+
+const VALID_BLEND_MODES = new Set([
+  "source-over",
+  "source-in",
+  "source-out",
+  "source-atop",
+  "destination-over",
+  "destination-in",
+  "destination-out",
+  "destination-atop",
+  "lighter",
+  "copy",
+  "xor",
+  "multiply",
+  "screen",
+  "overlay",
+  "darken",
+  "lighten",
+  "color-dodge",
+  "color-burn",
+  "hard-light",
+  "soft-light",
+  "difference",
+  "exclusion",
+  "hue",
+  "saturation",
+  "color",
+  "luminosity",
+]);
+
+function getSafeBlendMode(value, fallback = "source-over") {
+  const normalizedFallback = String(fallback || "source-over").trim().toLowerCase();
+  const safeFallback = VALID_BLEND_MODES.has(normalizedFallback) ? normalizedFallback : "source-over";
+  const mode = String(value || "").trim().toLowerCase();
+  return VALID_BLEND_MODES.has(mode) ? mode : safeFallback;
+}
+
+function getDashPattern(styleName, baseWidth = 1) {
+  const style = String(styleName || "solid").trim().toLowerCase();
+  if (style === "dashed") {
+    return [Math.max(2, baseWidth * 4), Math.max(2, baseWidth * 2.4)];
+  }
+  if (style === "dotted") {
+    return [Math.max(1, baseWidth * 1.2), Math.max(2, baseWidth * 2.1)];
+  }
+  return [];
+}
+
+function estimateProjectedAreaPx(feature, zoomScale) {
+  const bounds = getProjectedFeatureBounds(feature);
+  if (!bounds) return 0;
+  const area = Math.max(0, bounds.width * bounds.height);
+  const scale = Math.max(0.1, Number(zoomScale) || 1);
+  return area * scale * scale;
+}
+
+function warnMissingPhysicalContextOnce(key, message) {
+  if (missingPhysicalContextWarnings.has(key)) return;
+  missingPhysicalContextWarnings.add(key);
+  console.warn(message);
+}
+
+function getDeferredContextLayerLoadState(layerName) {
+  return String(runtimeState.contextLayerLoadStateByName?.[layerName] || "idle").trim().toLowerCase();
+}
+
+function shouldReportDeferredContextLayerGap(layerName) {
+  const loadState = getDeferredContextLayerLoadState(layerName);
+  return loadState === "loaded" || loadState === "error";
+}
+
+function getPhysicalAtlasClass(feature) {
+  const props = feature?.properties || {};
+  return String(props.atlas_class || props.atlasClass || "").trim();
+}
+
+function getPhysicalAtlasLayer(feature) {
+  const props = feature?.properties || {};
+  return String(props.atlas_layer || props.atlasLayer || "relief_base").trim().toLowerCase();
+}
+
+function getResolvedPhysicalAtlasCollection() {
+  if (Array.isArray(runtimeState.physicalSemanticsData?.features) && runtimeState.physicalSemanticsData.features.length > 0) {
+    return runtimeState.physicalSemanticsData;
+  }
+  if (!shouldReportDeferredContextLayerGap("physical_semantics")) {
+    return null;
+  }
+  warnMissingPhysicalContextOnce(
+    "physical-semantics-missing",
+    "[physical] global_physical_semantics.topo.json unavailable or deferred; disabling physical atlas instead of using the old fallback."
+  );
+  return null;
+}
+
+function getPhysicalPresetId(cfg) {
+  const preset = String(cfg?.preset || "balanced").trim().toLowerCase();
+  if (preset === "political_clean" || preset === "terrain_rich") {
+    return preset;
+  }
+  return "balanced";
+}
+
+function getPhysicalPresetRenderProfile(cfg) {
+  const preset = getPhysicalPresetId(cfg);
+  if (preset === "political_clean") {
+    return {
+      preset,
+      reliefOpacityMultiplier: 0.38,
+      reliefOverlayOpacityRatio: 0.7,
+      reliefOverlayOpacityCap: 0.05,
+      semanticOpacityMultiplier: 0.2,
+      reliefBlendFallback: "source-over",
+      semanticBlendMode: "source-over",
+      majorContourOpacityMultiplier: 0.92,
+      minorContourOpacityRatio: 0.52,
+      minorContourMinZoom: 2.6,
+    };
+  }
+  if (preset === "terrain_rich") {
+    return {
+      preset,
+      reliefOpacityMultiplier: 1,
+      reliefOverlayOpacityRatio: 0.25,
+      reliefOverlayOpacityCap: 0.18,
+      semanticOpacityMultiplier: 0.72,
+      reliefBlendFallback: "soft-light",
+      semanticBlendMode: "source-over",
+      majorContourOpacityMultiplier: 1.55,
+      minorContourOpacityRatio: 0.8,
+      minorContourMinZoom: 1.2,
+    };
+  }
+  return {
+    preset: "balanced",
+    reliefOpacityMultiplier: 0.72,
+    reliefOverlayOpacityRatio: 0.55,
+    reliefOverlayOpacityCap: 0.12,
+    semanticOpacityMultiplier: 0.42,
+    reliefBlendFallback: "source-over",
+    semanticBlendMode: "source-over",
+    majorContourOpacityMultiplier: 1.22,
+    minorContourOpacityRatio: 0.68,
+    minorContourMinZoom: 1.6,
+  };
+}
+
+function getAtlasFeatureAlphaMultiplier(atlasClass, cfg) {
+  const normalized = String(atlasClass || "").trim().toLowerCase();
+  if (normalized === "mountain_high_relief") return 1.18;
+  if (normalized === "mountain_hills") return 1.02;
+  if (normalized === "desert_bare") return 1.1;
+  if (normalized === "rainforest" || normalized === "rainforest_tropical") {
+    return clamp(0.72 + cfg.rainforestEmphasis * 0.38, 0.2, 1.2);
+  }
+  if (normalized === "forest" || normalized === "forest_temperate") return 0.95;
+  if (normalized === "upland_plateau") return 0.9;
+  if (normalized === "badlands_canyon") return 0.98;
+  if (normalized === "basin_lowlands") return 0.76;
+  if (normalized === "plains_lowlands") return 0.68;
+  if (normalized === "grassland_steppe") return 0.8;
+  if (normalized === "wetlands_delta") return 0.92;
+  if (normalized === "tundra_ice") return 0.85;
+  return 1;
+}
+
+function countTopologyArcRefs(arcs) {
+  if (Number.isInteger(arcs)) return 1;
+  if (!Array.isArray(arcs)) return 0;
+  return arcs.reduce((sum, entry) => sum + countTopologyArcRefs(entry), 0);
+}
+
+function estimateTopologyObjectArcRefs(topology, objectName) {
+  const object = topology?.objects?.[objectName];
+  if (!object || typeof object !== "object") return null;
+  if (Array.isArray(object.geometries)) {
+    const total = object.geometries.reduce(
+      (sum, geometry) => sum + countTopologyArcRefs(geometry?.arcs),
+      0
+    );
+    return total > 0 ? total : null;
+  }
+  const total = countTopologyArcRefs(object.arcs);
+  return total > 0 ? total : null;
+}
+
+function getFeatureCollectionFeatureCount(collection) {
+  return Array.isArray(collection?.features) ? collection.features.length : 0;
+}
+
+function getObjectIdentityToken(value, prefix = "obj") {
+  if (!value || (typeof value !== "object" && typeof value !== "function")) return `${prefix}:none`;
+  let token = objectIdentityTokenCache.get(value);
+  if (!token) {
+    token = `${prefix}:${nextObjectIdentityToken++}`;
+    objectIdentityTokenCache.set(value, token);
+  }
+  return token;
+}
+
+function getContextLayerStableSourceToken(layerName, collection, {
+  primaryTopology = null,
+  detailTopology = null,
+  externalCollection = null,
+  source = "",
+} = {}) {
+  const normalizedLayerName = String(layerName || "").trim().toLowerCase();
+  const normalizedSource = String(source || "").trim().toLowerCase();
+  const featureCount = getFeatureCollectionFeatureCount(collection);
+  const primaryObject = primaryTopology?.objects?.[normalizedLayerName] || null;
+  const detailObject = detailTopology?.objects?.[normalizedLayerName] || null;
+
+  if (normalizedSource === "primary") {
+    return [
+      "src:primary",
+      getObjectIdentityToken(primaryTopology, "topology"),
+      getObjectIdentityToken(primaryObject, "topology-object"),
+      `features:${featureCount}`,
+    ].join("|");
+  }
+  if (normalizedSource === "detail") {
+    return [
+      "src:detail",
+      getObjectIdentityToken(detailTopology, "topology"),
+      getObjectIdentityToken(detailObject, "topology-object"),
+      `features:${featureCount}`,
+    ].join("|");
+  }
+  if (normalizedSource === "external") {
+    const externalRef = externalCollection || collection;
+    return [
+      "src:external",
+      getObjectIdentityToken(externalRef, "external-layer"),
+      `features:${featureCount}`,
+    ].join("|");
+  }
+  return [
+    "src:other",
+    getObjectIdentityToken(collection, "layer-collection"),
+    `features:${featureCount}`,
+  ].join("|");
+}
+
+function createPhysicalLandMaskInfo({
+  collection = null,
+  maskSource = "none",
+  maskFeatureCount = 0,
+  maskArcRefEstimate = null,
+  maskQualityToken = "unchecked",
+} = {}) {
+  return {
+    collection,
+    maskSource,
+    maskFeatureCount,
+    maskArcRefEstimate,
+    maskQualityToken,
+  };
+}
+
+function getPhysicalLandMaskCandidateQuality(collection, maskSource) {
+  if (!Array.isArray(collection?.features) || !collection.features.length) {
+    return { usable: false, token: "empty" };
+  }
+  const diagnostics = getSphericalGeometryDiagnostics(collection);
+  if (diagnostics?.invalid) {
+    const token = diagnostics.isWorldBounds ? "world-bounds" : "sphere-area";
+    recordRenderPerfMetric("physicalLandMaskRejected", 0, {
+      maskSource,
+      reason: token,
+      area: diagnostics.area,
+      bounds: diagnostics.bounds,
+      featureCount: getFeatureCollectionFeatureCount(collection),
+    });
+    return { usable: false, token };
+  }
+  return { usable: true, token: diagnostics ? "d3-valid" : "d3-unavailable" };
+}
+
+function getFirstUsablePhysicalLandMaskInfo(candidates = []) {
+  const rejected = [];
+  for (const candidate of candidates) {
+    const quality = getPhysicalLandMaskCandidateQuality(candidate.collection, candidate.maskSource);
+    if (quality.usable) {
+      return createPhysicalLandMaskInfo({
+        ...candidate,
+        maskQualityToken: quality.token,
+      });
+    }
+    if (candidate.maskSource !== "none") {
+      rejected.push(`${candidate.maskSource}:${quality.token}`);
+    }
+  }
+  return createPhysicalLandMaskInfo({
+    collection: null,
+    maskSource: rejected.length ? `none:${rejected.join(",")}` : "none",
+    maskFeatureCount: 0,
+    maskArcRefEstimate: null,
+    maskQualityToken: rejected.length ? `rejected:${rejected.join(",")}` : "none",
+  });
+}
+
+function getPhysicalLandMaskInfo() {
+  const primaryTopology = runtimeState.topologyPrimary || runtimeState.topology;
+  const detailTopology = runtimeState.topologyDetail;
+  const landSource = String(runtimeState.contextLayerSourceByName?.land || "").trim().toLowerCase();
+  const candidates = [];
+  if (Array.isArray(runtimeState.scenarioContextLandMaskData?.features) && runtimeState.scenarioContextLandMaskData.features.length) {
+    candidates.push({
+      collection: runtimeState.scenarioContextLandMaskData,
+      maskSource: "scenarioContextLandMask",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.scenarioContextLandMaskData),
+      maskArcRefEstimate: estimateTopologyObjectArcRefs(runtimeState.scenarioRuntimeTopologyData, "context_land_mask")
+        ?? estimateTopologyObjectArcRefs(runtimeState.scenarioRuntimeTopologyData, "land_mask")
+        ?? estimateTopologyObjectArcRefs(runtimeState.scenarioRuntimeTopologyData, "land"),
+    });
+  }
+  if (Array.isArray(runtimeState.scenarioLandMaskData?.features) && runtimeState.scenarioLandMaskData.features.length) {
+    candidates.push({
+      collection: runtimeState.scenarioLandMaskData,
+      maskSource: "scenarioLandMask",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.scenarioLandMaskData),
+      maskArcRefEstimate:
+        estimateTopologyObjectArcRefs(runtimeState.scenarioRuntimeTopologyData, "land_mask")
+        ?? estimateTopologyObjectArcRefs(runtimeState.scenarioRuntimeTopologyData, "land"),
+    });
+  }
+  if (Array.isArray(runtimeState.landBgData?.features) && runtimeState.landBgData.features.length) {
+    const topology = landSource === "detail" ? detailTopology : primaryTopology;
+    candidates.push({
+      collection: runtimeState.landBgData,
+      maskSource: "landBgData",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.landBgData),
+      maskArcRefEstimate: estimateTopologyObjectArcRefs(topology, "land"),
+    });
+  }
+  if (Array.isArray(runtimeState.landDataFull?.features) && runtimeState.landDataFull.features.length) {
+    const topology = runtimeState.runtimePoliticalTopology?.objects?.political
+      ? runtimeState.runtimePoliticalTopology
+      : (primaryTopology || null);
+    candidates.push({
+      collection: runtimeState.landDataFull,
+      maskSource: "landDataFull",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.landDataFull),
+      maskArcRefEstimate: estimateTopologyObjectArcRefs(topology, "political"),
+    });
+  }
+  if (Array.isArray(runtimeState.landData?.features) && runtimeState.landData.features.length) {
+    const topology = runtimeState.runtimePoliticalTopology?.objects?.political
+      ? runtimeState.runtimePoliticalTopology
+      : (primaryTopology || null);
+    candidates.push({
+      collection: runtimeState.landData,
+      maskSource: "landData",
+      maskFeatureCount: getFeatureCollectionFeatureCount(runtimeState.landData),
+      maskArcRefEstimate: estimateTopologyObjectArcRefs(topology, "political"),
+    });
+  }
+  return getFirstUsablePhysicalLandMaskInfo(candidates);
+}
+
+function getPhysicalLandMask() {
+  return getPhysicalLandMaskInfo().collection;
+}
+
+function getPhysicalLandClipCacheKey(maskInfo) {
+  return [
+    getProjectionRenderSignature(),
+    `scenario-surface:${getScenarioSurfaceVersionSignal()}`,
+  ].join("::");
+}
+
+function getPhysicalLandClipPath(maskInfo, landMask) {
+  if (!globalThis.Path2D || !globalThis.d3 || typeof globalThis.d3.geoPath !== "function") {
+    return { path: null, cacheHit: false, cacheKey: "", pathType: "canvas-path" };
+  }
+  const cacheKey = getPhysicalLandClipCacheKey(maskInfo);
+  if (physicalLandClipPathCache.key === cacheKey && physicalLandClipPathCache.path) {
+    return {
+      path: physicalLandClipPathCache.path,
+      cacheHit: true,
+      cacheKey,
+      pathType: "path2d-cache",
+    };
+  }
+  try {
+    const pathString = globalThis.d3.geoPath(projection).pointRadius(PATH_POINT_RADIUS)(landMask);
+    if (!pathString) {
+      return { path: null, cacheHit: false, cacheKey, pathType: "canvas-path" };
+    }
+    const path = new globalThis.Path2D(pathString);
+    physicalLandClipPathCache.key = cacheKey;
+    physicalLandClipPathCache.path = path;
+    return {
+      path,
+      cacheHit: false,
+      cacheKey,
+      pathType: "path2d-cache",
+    };
+  } catch (_error) {
+    return { path: null, cacheHit: false, cacheKey, pathType: "canvas-path" };
+  }
+}
+
+function applyPhysicalLandClipMask() {
+  const startedAt = nowMs();
+  const maskInfo = getPhysicalLandMaskInfo();
+  const landMask = maskInfo.collection;
+  if (!landMask) {
+    collectContextMetric("applyPhysicalLandClipMask", nowMs() - startedAt, {
+      applied: false,
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+      reason: "no-mask",
+    });
+    return false;
+  }
+  const clipPath = getPhysicalLandClipPath(maskInfo, landMask);
+  if (clipPath.path) {
+    context.clip(clipPath.path);
+  } else {
+    context.beginPath();
+    pathCanvas(landMask);
+    context.clip();
+  }
+  collectContextMetric("applyPhysicalLandClipMask", nowMs() - startedAt, {
+    applied: true,
+    maskSource: maskInfo.maskSource,
+    maskFeatureCount: maskInfo.maskFeatureCount,
+    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    cacheHit: !!clipPath.cacheHit,
+    pathType: clipPath.pathType,
+  });
+  return true;
+}
+
+function drawPhysicalAtlasCollectionLayer(
+  atlasCollection,
+  layerName,
+  cfg,
+  {
+    baseOpacity = 1,
+    blendMode = "source-over",
+    clipAlreadyApplied = false,
+  } = {}
+) {
+  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
+    return 0;
+  }
+  let renderedCount = 0;
+  context.save();
+  if (!clipAlreadyApplied) {
+    applyPhysicalLandClipMask();
+  }
+  context.globalCompositeOperation = blendMode;
+  atlasCollection.features.forEach((feature) => {
+    const atlasClass = getPhysicalAtlasClass(feature);
+    if (!atlasClass || cfg.atlasClassVisibility?.[atlasClass] === false) return;
+    if (getPhysicalAtlasLayer(feature) !== layerName) return;
+    if (!pathBoundsInScreen(feature)) return;
+    const fillColor = getSafeCanvasColor(PHYSICAL_ATLAS_PALETTE[atlasClass], null);
+    if (!fillColor) return;
+    context.globalAlpha = clamp(
+      baseOpacity * getAtlasFeatureAlphaMultiplier(atlasClass, cfg),
+      0,
+      1
+    );
+    context.fillStyle = fillColor;
+    context.beginPath();
+    pathCanvas(feature);
+    context.fill();
+    renderedCount += 1;
+  });
+  context.restore();
+  return renderedCount;
+}
+
+function getPhysicalReliefOverlayBlendMode(cfg, presetProfile) {
+  const requestedMode = getSafeBlendMode(cfg?.blendMode, presetProfile?.reliefBlendFallback || "source-over");
+  if (requestedMode === "overlay" || requestedMode === "multiply") {
+    return "soft-light";
+  }
+  return requestedMode;
+}
+
+function drawPhysicalReliefOverlayLayer(k, { interactive = false, clipAlreadyApplied = false } = {}) {
+  const startedAt = nowMs();
+  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
+  const presetProfile = getPhysicalPresetRenderProfile(cfg);
+  const maskInfo = getPhysicalLandMaskInfo();
+  if (!runtimeState.showPhysical || cfg.mode === "contours_only") {
+    collectContextMetric("drawPhysicalReliefOverlayLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !runtimeState.showPhysical ? "hidden" : "contours-only",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return 0;
+  }
+
+  const atlasCollection = getResolvedPhysicalAtlasCollection();
+  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
+    collectContextMetric("drawPhysicalReliefOverlayLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "no-data",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return 0;
+  }
+
+  const baseReliefOpacity = clamp(
+    cfg.opacity
+      * cfg.atlasOpacity
+      * (interactive ? 0.7 : 1)
+      * cfg.atlasIntensity
+      * presetProfile.reliefOpacityMultiplier,
+    0,
+    1
+  );
+  const overlayOpacity = clamp(
+    baseReliefOpacity * Number(presetProfile.reliefOverlayOpacityRatio || 0),
+    0,
+    Number(presetProfile.reliefOverlayOpacityCap ?? 1)
+  );
+  const renderedCount = drawPhysicalAtlasCollectionLayer(atlasCollection, "relief_base", cfg, {
+    baseOpacity: overlayOpacity,
+    blendMode: getPhysicalReliefOverlayBlendMode(cfg, presetProfile),
+    clipAlreadyApplied,
+  });
+  collectContextMetric("drawPhysicalReliefOverlayLayer", nowMs() - startedAt, {
+    featureCount: atlasCollection.features.length,
+    renderedCount,
+    interactive: !!interactive,
+    skipped: renderedCount === 0,
+    reason: renderedCount === 0 ? "no-relief-overlay" : "",
+    maskSource: maskInfo.maskSource,
+    maskFeatureCount: maskInfo.maskFeatureCount,
+    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+  });
+  return renderedCount;
+}
+
+function drawPhysicalBasePass(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
+  const maskInfo = getPhysicalLandMaskInfo();
+  if (!runtimeState.showPhysical || cfg.mode === "contours_only") {
+    collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !runtimeState.showPhysical ? "hidden" : "contours-only",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return;
+  }
+
+  const atlasCollection = getResolvedPhysicalAtlasCollection();
+  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
+    collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "no-data",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return;
+  }
+
+  const renderedCount = drawPhysicalAtlasLayer(k, { interactive });
+  collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
+    featureCount: atlasCollection.features.length,
+    renderedCount,
+    interactive: !!interactive,
+    skipped: renderedCount === 0,
+    reason: renderedCount === 0 ? "no-semantic-overlay" : "",
+    maskSource: maskInfo.maskSource,
+    maskFeatureCount: maskInfo.maskFeatureCount,
+    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+  });
+}
+
+function drawPhysicalAtlasLayer(k, { interactive = false, clipAlreadyApplied = false } = {}) {
+  const startedAt = nowMs();
+  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
+  const presetProfile = getPhysicalPresetRenderProfile(cfg);
+  const maskInfo = getPhysicalLandMaskInfo();
+  if (!runtimeState.showPhysical || cfg.mode === "contours_only") {
+    collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !runtimeState.showPhysical ? "hidden" : "contours-only",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return 0;
+  }
+
+  const atlasCollection = getResolvedPhysicalAtlasCollection();
+  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
+    if (shouldReportDeferredContextLayerGap("physical_semantics")) {
+      warnMissingPhysicalContextOnce(
+        "physical-atlas-missing",
+        "[physical] Atlas semantics unavailable; skipping physical atlas fill."
+      );
+    }
+    collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: shouldReportDeferredContextLayerGap("physical_semantics") ? "no-data" : "pending-deferred-context",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return 0;
+  }
+  const renderedCount = drawPhysicalAtlasCollectionLayer(atlasCollection, "semantic_overlay", cfg, {
+    baseOpacity: clamp(
+      cfg.opacity * cfg.atlasOpacity * (interactive ? 0.7 : 1) * cfg.atlasIntensity * presetProfile.semanticOpacityMultiplier,
+      0,
+      1
+    ),
+    blendMode: getSafeBlendMode(cfg.blendMode, presetProfile.semanticBlendMode),
+    clipAlreadyApplied,
+  });
+  collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
+    featureCount: atlasCollection.features.length,
+    renderedCount,
+    interactive: !!interactive,
+    skipped: renderedCount === 0,
+    reason: renderedCount === 0 ? "no-semantic-overlay" : "",
+    maskSource: maskInfo.maskSource,
+    maskFeatureCount: maskInfo.maskFeatureCount,
+    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+  });
+  return renderedCount;
+}
+
+function drawContourCollection(
+  collection,
+  {
+    cacheSlot = "major",
+    color,
+    colorResolver = null,
+    opacity,
+    width,
+    k,
+    interactive = false,
+    lowReliefCutoff = 0,
+    intervalM = 0,
+    excludeIntervalM = 0,
+    minScreenSpanPx = 0,
+    maxFeatures = 0,
+  } = {}
+) {
+  if (!Array.isArray(collection?.features) || collection.features.length === 0) {
+    return { drewAny: false, renderedCount: 0, selectedCount: 0 };
+  }
+  const visibleFeatures = getContourVisibleFeatures(collection, {
+    cacheSlot,
+    k,
+    lowReliefCutoff,
+    intervalM,
+    excludeIntervalM,
+    minScreenSpanPx,
+    maxFeatures,
+  });
+  if (!visibleFeatures.length) return { drewAny: false, renderedCount: 0, selectedCount: 0 };
+  const scale = Math.max(0.0001, k);
+  context.globalAlpha = interactive ? Math.min(opacity, 0.22) : opacity;
+  context.strokeStyle = color;
+  context.lineWidth = width / scale;
+  context.lineJoin = "round";
+  context.lineCap = "round";
+
+  const strokeBatches = new Map();
+  visibleFeatures.forEach((feature) => {
+    const strokeColor = typeof colorResolver === "function"
+      ? getSafeCanvasColor(colorResolver(feature), color)
+      : color;
+    if (!strokeColor) return;
+    if (!strokeBatches.has(strokeColor)) {
+      strokeBatches.set(strokeColor, []);
+    }
+    strokeBatches.get(strokeColor).push(feature);
+  });
+
+  let drewAny = false;
+  let renderedCount = 0;
+  strokeBatches.forEach((features, strokeColor) => {
+    if (!Array.isArray(features) || !features.length) return;
+    context.strokeStyle = strokeColor;
+    context.beginPath();
+    features.forEach((feature) => {
+      pathCanvas(feature);
+    });
+    context.stroke();
+    drewAny = true;
+    renderedCount += features.length;
+  });
+  return {
+    drewAny,
+    renderedCount,
+    selectedCount: visibleFeatures.length,
+  };
+}
+
+function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied = false } = {}) {
+  const startedAt = nowMs();
+  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
+  const presetProfile = getPhysicalPresetRenderProfile(cfg);
+  const zoomProfile = getContourZoomStyleProfile(k);
+  const maskInfo = getPhysicalLandMaskInfo();
+  if (!runtimeState.showPhysical || cfg.mode === "atlas_only") {
+    collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !runtimeState.showPhysical ? "hidden" : "atlas-only",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return;
+  }
+
+  if (!Array.isArray(runtimeState.physicalContourMajorData?.features) || runtimeState.physicalContourMajorData.features.length === 0) {
+    if (shouldReportDeferredContextLayerGap("physical_contours_major")) {
+      warnMissingPhysicalContextOnce(
+        "physical-contours-major-missing",
+        "[physical] global_contours.major.topo.json unavailable or deferred; skipping terrain contours."
+      );
+    }
+    collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      majorFeatureCount: 0,
+      minorFeatureCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: shouldReportDeferredContextLayerGap("physical_contours_major") ? "no-data" : "pending-deferred-context",
+      maskSource: maskInfo.maskSource,
+      maskFeatureCount: maskInfo.maskFeatureCount,
+      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+    });
+    return;
+  }
+
+  const contourColor = getSafeCanvasColor(cfg.contourColor, "#6b5947");
+  const majorLowReliefCutoff = clamp(Number(cfg.contourMajorLowReliefCutoffM) || 0, 0, 2000);
+  const minorLowReliefCutoff = clamp(Number(cfg.contourMinorLowReliefCutoffM) || 0, 0, 2000);
+  const majorOpacity = clamp(
+    cfg.opacity * cfg.contourOpacity * presetProfile.majorContourOpacityMultiplier * zoomProfile.majorOpacityMultiplier,
+    0,
+    1
+  );
+  const minorOpacity = clamp(
+    majorOpacity * presetProfile.minorContourOpacityRatio * zoomProfile.minorOpacityMultiplier,
+    0,
+    1
+  );
+  const resolveContourColor = (feature) => getAdaptiveContourStrokeColor(feature, contourColor);
+  const majorInterval = clamp(
+    (clamp(Number(cfg.contourMajorIntervalM) || 500, 500, 2000) * zoomProfile.majorIntervalMultiplier),
+    500,
+    6000,
+  );
+  const minorInterval = clamp(
+    (clamp(Number(cfg.contourMinorIntervalM) || 100, 100, 1000) * zoomProfile.minorIntervalMultiplier),
+    100,
+    3000,
+  );
+
+  context.save();
+  if (!clipAlreadyApplied) {
+    applyPhysicalLandClipMask();
+  }
+  context.globalCompositeOperation = "source-over";
+
+  const majorDrawResult = drawContourCollection(runtimeState.physicalContourMajorData, {
+    cacheSlot: "major",
+    color: contourColor,
+    colorResolver: resolveContourColor,
+    opacity: majorOpacity,
+    width: clamp((Number(cfg.contourMajorWidth) || 0.8) * zoomProfile.majorWidthMultiplier, 0.2, 3),
+    k,
+    interactive,
+    lowReliefCutoff: majorLowReliefCutoff,
+    intervalM: majorInterval,
+    minScreenSpanPx: zoomProfile.majorMinScreenSpanPx,
+  });
+
+  if (cfg.contourMinorVisible && zoomProfile.minorVisible && k >= presetProfile.minorContourMinZoom) {
+    if (Array.isArray(runtimeState.physicalContourMinorData?.features) && runtimeState.physicalContourMinorData.features.length > 0) {
+      const dynamicMinorMaxFeatures = clamp(
+        Math.round(
+          Number(zoomProfile.minorMaxFeaturesBase || 0)
+          + Number(majorDrawResult?.selectedCount || 0) * Number(zoomProfile.minorMaxFeaturesPerMajor || 0)
+        ),
+        0,
+        Number(zoomProfile.minorMaxFeaturesHardCap || 0) || 100000
+      );
+      drawContourCollection(runtimeState.physicalContourMinorData, {
+        cacheSlot: "minor",
+        color: contourColor,
+        colorResolver: resolveContourColor,
+        opacity: minorOpacity,
+        width: clamp((Number(cfg.contourMinorWidth) || 0.45) * zoomProfile.minorWidthMultiplier, 0.1, 2),
+        k,
+        interactive,
+        lowReliefCutoff: minorLowReliefCutoff,
+        intervalM: minorInterval,
+        excludeIntervalM: majorInterval,
+        minScreenSpanPx: zoomProfile.minorMinScreenSpanPx,
+        maxFeatures: dynamicMinorMaxFeatures,
+      });
+    } else {
+      if (shouldReportDeferredContextLayerGap("physical_contours_minor")) {
+        warnMissingPhysicalContextOnce(
+          "physical-contours-minor-missing",
+          "[physical] global_contours.minor.topo.json unavailable or deferred; skipping minor contours."
+        );
+      }
+    }
+  }
+
+  context.restore();
+  collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
+    featureCount:
+      getFeatureCollectionFeatureCount(runtimeState.physicalContourMajorData)
+      + getFeatureCollectionFeatureCount(runtimeState.physicalContourMinorData),
+    majorFeatureCount: getFeatureCollectionFeatureCount(runtimeState.physicalContourMajorData),
+    minorFeatureCount: getFeatureCollectionFeatureCount(runtimeState.physicalContourMinorData),
+    interactive: !!interactive,
+    skipped: false,
+    maskSource: maskInfo.maskSource,
+    maskFeatureCount: maskInfo.maskFeatureCount,
+    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+  });
+}
+
+function shouldForceExactContextBaseRefresh(reuseDecision = null) {
+  if (!runtimeState.showPhysical) return false;
+  if (runtimeState.bootBlocking || runtimeState.scenarioApplyInFlight || runtimeState.startupReadonly || runtimeState.startupReadonlyUnlockInFlight) {
+    return false;
+  }
+  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
+  if (!(cfg.mode === "atlas_only" || cfg.mode === "contours_only" || cfg.mode === "atlas_and_contours")) {
+    return false;
+  }
+  const cache = getRenderPassCacheState();
+  if (cache.dirty?.physicalBase || cache.dirty?.contextBase) {
+    return true;
+  }
+  const resolvedReuseDecision =
+    reuseDecision && typeof reuseDecision === "object"
+      ? reuseDecision
+      : getContextBaseReuseDecision();
+  return !!(resolvedReuseDecision?.crossesMinorContourThreshold || resolvedReuseDecision?.crossesZoomBucket);
+}
+
+function getPhysicalExactRefreshPasses() {
+  const passes = runtimeState.showPhysical
+    ? ["physicalBase", "political", "contextBase", "borders"]
+    : ["political", "contextBase", "borders"];
+  return passes;
+}
+
+function getUrbanFeatureOwnerId(feature) {
+  const props = feature?.properties || {};
+  return String(
+    props.country_owner_id ||
+    props.countryOwnerId ||
+    ""
+  ).trim();
+}
+
+function getUrbanHostFillColor(feature) {
+  const ownerFeatureId = getUrbanFeatureOwnerId(feature);
+  if (!ownerFeatureId) return null;
+  const hostFeature = runtimeState.landIndex?.get(ownerFeatureId);
+  if (!hostFeature) return null;
+  return (
+    getSafeCanvasColor(runtimeState.colors?.[ownerFeatureId], null) ||
+    getSafeCanvasColor(getResolvedFeatureColor(hostFeature, ownerFeatureId), null)
+  );
+}
+
+function computeUrbanAdaptivePaintFromHostColor(backgroundColor, config = {}) {
+  if (!backgroundColor) return null;
+  const luminance = getCanvasColorRelativeLuminance(backgroundColor);
+  if (!Number.isFinite(luminance)) return null;
+
+  const strength = clamp(Number(config.adaptiveStrength) || 0, 0, 1);
+  const toneBias = clamp(Number(config.toneBias) || 0, -0.3, 0.3);
+  const lightenBias = Math.max(toneBias, 0);
+  const deepenBias = Math.max(-toneBias, 0);
+  const isDark = luminance <= 0.30;
+  const isLight = luminance >= 0.62;
+
+  const tintEnabled = !!config.adaptiveTintEnabled;
+  const tintColor = getSafeCanvasColor(config.adaptiveTintColor, null);
+  const tintStrength = clamp(Number(config.adaptiveTintStrength) || 0, 0, 0.5);
+  const applyTintOverlay = (baseColor, channelStrength = 1) => {
+    if (!tintEnabled || !tintColor || tintStrength <= 0) return baseColor;
+    return mixCanvasColors(baseColor, tintColor, clamp(tintStrength * channelStrength, 0, 0.5));
+  };
+
+  if (isDark) {
+    const fillColor = mixCanvasColors(
+      backgroundColor,
+      "#f4efe3",
+      clamp(0.48 + (strength * 0.18) + (lightenBias * 0.56) - (deepenBias * 0.24), 0.18, 0.96)
+    );
+    const strokeColor = mixCanvasColors(
+      backgroundColor,
+      "#fff9ef",
+      clamp(0.66 + (strength * 0.14) + (lightenBias * 0.44) - (deepenBias * 0.18), 0.24, 0.98)
+    );
+    return {
+      fillColor: applyTintOverlay(fillColor, 1),
+      strokeColor: applyTintOverlay(strokeColor, 0.72),
+    };
+  }
+  if (isLight) {
+    const fillColor = mixCanvasColors(
+      backgroundColor,
+      "#20252b",
+      clamp(0.42 + (strength * 0.16) + (deepenBias * 0.34) - (lightenBias * 0.28), 0.16, 0.94)
+    );
+    const strokeColor = mixCanvasColors(
+      backgroundColor,
+      "#0f1419",
+      clamp(0.62 + (strength * 0.12) + (deepenBias * 0.26) - (lightenBias * 0.18), 0.22, 0.96)
+    );
+    return {
+      fillColor: applyTintOverlay(fillColor, 1),
+      strokeColor: applyTintOverlay(strokeColor, 0.72),
+    };
+  }
+  const targetFill = luminance < 0.48 ? "#ede7da" : "#272d34";
+  const targetStroke = luminance < 0.48 ? "#fff7ec" : "#10151a";
+  const fillColor = mixCanvasColors(
+    backgroundColor,
+    targetFill,
+    clamp(0.46 + (strength * 0.16) + (luminance < 0.48 ? (lightenBias * 0.42) - (deepenBias * 0.18) : (deepenBias * 0.26) - (lightenBias * 0.22)), 0.18, 0.95)
+  );
+  const strokeColor = mixCanvasColors(
+    backgroundColor,
+    targetStroke,
+    clamp(0.66 + (strength * 0.12) + (luminance < 0.48 ? (lightenBias * 0.3) - (deepenBias * 0.14) : (deepenBias * 0.22) - (lightenBias * 0.16)), 0.24, 0.97)
+  );
+  return {
+    fillColor: applyTintOverlay(fillColor, 1),
+    strokeColor: applyTintOverlay(strokeColor, 0.72),
+  };
+}
+
+function getUrbanAdaptivePaint(feature, config = {}) {
+  const backgroundColor = getUrbanHostFillColor(feature);
+  return computeUrbanAdaptivePaintFromHostColor(backgroundColor, config);
+}
+
+function getEffectiveUrbanMode(config = {}, capability = runtimeState.urbanLayerCapability) {
+  return config?.mode === "adaptive" && capability?.adaptiveAvailable ? "adaptive" : "manual";
+}
+
+function drawUrbanLayer(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  if (!runtimeState.showUrban || !runtimeState.urbanData?.features?.length) {
+    collectContextMetric("drawUrbanLayer", nowMs() - startedAt, {
+      featureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),
+      interactive: !!interactive,
+      skipped: true,
+      reason: !runtimeState.showUrban ? "hidden" : "no-data",
+    });
+    return;
+  }
+  const cfg = normalizeUrbanStyleConfig(runtimeState.styleConfig?.urban || {});
+  const capability = runtimeState.urbanLayerCapability || getUrbanLayerCapability(runtimeState.urbanData);
+  const effectiveMode = getEffectiveUrbanMode(cfg, capability);
+  const manualColor = getSafeCanvasColor(cfg.color, "#4b5563");
+  const fillOpacity = clamp(Number.isFinite(Number(cfg.fillOpacity)) ? Number(cfg.fillOpacity) : 0.34, 0, 1);
+  const strokeOpacity = clamp(Number.isFinite(Number(cfg.strokeOpacity)) ? Number(cfg.strokeOpacity) : 0.25, 0, 1);
+  const minAreaPx = clamp(Number.isFinite(Number(cfg.minAreaPx)) ? Number(cfg.minAreaPx) : 1, 1, 80);
+  const blendMode = effectiveMode === "manual"
+    ? getSafeBlendMode(cfg.blendMode, "multiply")
+    : "source-over";
+  const strokeWidth = clamp(0.85 / Math.max(Math.sqrt(Math.max(Number(k) || 1, 1)), 1), 0.3, 0.85);
+
+  context.save();
+  context.globalCompositeOperation = blendMode;
+  runtimeState.urbanData.features.forEach((feature) => {
+    if (estimateProjectedAreaPx(feature, k) < minAreaPx) return;
+    if (!pathBoundsInScreen(feature)) return;
+    const adaptivePaint = effectiveMode === "adaptive" ? getUrbanAdaptivePaint(feature, cfg) : null;
+    const fillColor = getSafeCanvasColor(adaptivePaint?.fillColor, manualColor);
+    const outlineColor = getSafeCanvasColor(adaptivePaint?.strokeColor, null);
+    if (!fillColor) return;
+    context.beginPath();
+    pathCanvas(feature);
+    context.fillStyle = fillColor;
+    context.globalAlpha = interactive ? Math.min(fillOpacity, 0.15) : fillOpacity;
+    context.fill();
+    if (effectiveMode === "adaptive" && outlineColor) {
+      context.strokeStyle = outlineColor;
+      context.lineWidth = strokeWidth;
+      context.globalAlpha = interactive ? Math.min(strokeOpacity, 0.18) : strokeOpacity;
+      context.stroke();
+    }
+  });
+
+  context.restore();
+  collectContextMetric("drawUrbanLayer", nowMs() - startedAt, {
+    featureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),
+    interactive: !!interactive,
+    skipped: false,
+    mode: effectiveMode,
+    requestedMode: cfg.mode,
+    adaptiveAvailable: !!capability?.adaptiveAvailable,
+  });
+}
+
+function getRiverZoomStyleFactors(k) {
+  return RIVER_ZOOM_STYLE_FACTORS[getContextBaseZoomBucketId(k)] || RIVER_ZOOM_STYLE_FACTORS.mid;
+}
+
+function getRiverClassKind(feature) {
+  const props = feature?.properties || {};
+  const featureClass = String(props.featurecla || props.FEATURECLA || "").trim().toLowerCase();
+  switch (featureClass) {
+    case "river":
+      return "river";
+    case "river (intermittent)":
+      return "intermittent";
+    case "lake centerline":
+      return "lakeCenterline";
+    case "canal":
+      return "canal";
+    default:
+      return "unknown";
+  }
+}
+
+function getRiverVisibilityProfile(feature, k) {
+  const props = feature?.properties || {};
+  const zoomBucket = getContextBaseZoomBucketId(k);
+  const classKind = getRiverClassKind(feature);
+  const scalerank = clamp(
+    Math.round(Number(props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+    0,
+    12,
+  );
+  const minZoom = Number(props.min_zoom ?? props.minZoom);
+  let visible = false;
+
+  if (zoomBucket === "low") {
+    visible = classKind === "river" && scalerank <= RIVER_LOW_MAX_SCALERANK;
+  } else if (zoomBucket === "mid") {
+    visible = classKind === "river"
+      && (
+        scalerank <= RIVER_MID_MAX_SCALERANK
+        || (
+          scalerank === RIVER_MID_MAX_SCALERANK + 1
+          && Number.isFinite(minZoom)
+          && minZoom <= 5
+        )
+      );
+  } else {
+    visible = classKind !== "unknown";
+  }
+
+  const classStyle = RIVER_CLASS_STYLE_FACTORS[classKind] || RIVER_CLASS_STYLE_FACTORS.unknown;
+  return {
+    visible,
+    zoomBucket,
+    classKind,
+    scalerank,
+    minZoom: Number.isFinite(minZoom) ? minZoom : null,
+    widthFactor: classStyle.widthFactor,
+    opacityFactor: classStyle.opacityFactor,
+    outlineFactor: classStyle.outlineFactor,
+  };
+}
+
+function drawRiversLayer(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  if (!runtimeState.showRivers || !runtimeState.riversData?.features?.length) {
+    collectContextMetric("drawRiversLayer", nowMs() - startedAt, {
+      featureCount: getFeatureCollectionFeatureCount(runtimeState.riversData),
+      interactive: !!interactive,
+      skipped: true,
+      reason: !runtimeState.showRivers ? "hidden" : "no-data",
+    });
+    return;
+  }
+  const cfg = runtimeState.styleConfig?.rivers || {};
+  const color = getSafeCanvasColor(cfg.color, "#3b82f6");
+  const opacity = clamp(Number.isFinite(Number(cfg.opacity)) ? Number(cfg.opacity) : 0.88, 0, 1);
+  const widthBase = clamp(Number.isFinite(Number(cfg.width)) ? Number(cfg.width) : 0.5, 0.2, 4);
+  const outlineColor = getSafeCanvasColor(cfg.outlineColor, "#e2efff");
+  const outlineWidth = clamp(Number.isFinite(Number(cfg.outlineWidth)) ? Number(cfg.outlineWidth) : 0.25, 0, 3);
+  const dashPattern = getDashPattern(cfg.dashStyle, widthBase);
+  const scale = Math.max(0.0001, k);
+  const resolvedDashPattern = dashPattern.map((value) => value / scale);
+  const zoomStyle = getRiverZoomStyleFactors(k);
+  const visibleEntries = [];
+
+  runtimeState.riversData.features.forEach((feature) => {
+    if (!pathBoundsInScreen(feature)) return;
+    const profile = getRiverVisibilityProfile(feature, k);
+    if (!profile.visible) return;
+    visibleEntries.push({ feature, profile });
+  });
+
+  context.save();
+
+  if (outlineWidth > 0) {
+    context.strokeStyle = outlineColor;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.setLineDash(resolvedDashPattern);
+    visibleEntries.forEach(({ feature, profile }) => {
+      const resolvedOutlineWidth = outlineWidth
+        * zoomStyle.outlineWidthFactor
+        * profile.outlineFactor;
+      if (!(resolvedOutlineWidth > 0)) return;
+      const resolvedCoreWidth = widthBase
+        * zoomStyle.coreWidthFactor
+        * profile.widthFactor;
+      const outlineAlpha = opacity
+        * zoomStyle.outlineAlphaFactor
+        * profile.opacityFactor;
+      context.globalAlpha = interactive ? Math.min(outlineAlpha * 0.7, 0.65) : Math.min(outlineAlpha, 0.95);
+      context.lineWidth = (resolvedCoreWidth + resolvedOutlineWidth * 2) / scale;
+      context.beginPath();
+      pathCanvas(feature);
+      context.stroke();
+    });
+  }
+
+  context.strokeStyle = color;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.setLineDash(resolvedDashPattern);
+  visibleEntries.forEach(({ feature, profile }) => {
+    const resolvedCoreWidth = widthBase
+      * zoomStyle.coreWidthFactor
+      * profile.widthFactor;
+    context.globalAlpha = interactive
+      ? Math.min(opacity * profile.opacityFactor, 0.78)
+      : opacity * profile.opacityFactor;
+    context.lineWidth = resolvedCoreWidth / scale;
+    context.beginPath();
+    pathCanvas(feature);
+    context.stroke();
+  });
+  context.setLineDash([]);
+
+  context.restore();
+  collectContextMetric("drawRiversLayer", nowMs() - startedAt, {
+    featureCount: getFeatureCollectionFeatureCount(runtimeState.riversData),
+    visibleFeatureCount: visibleEntries.length,
+    zoomBucket: getContextBaseZoomBucketId(k),
+    coreWidthFactor: zoomStyle.coreWidthFactor,
+    outlineWidthFactor: zoomStyle.outlineWidthFactor,
+    outlineAlphaFactor: zoomStyle.outlineAlphaFactor,
+    dashStyle: String(cfg.dashStyle || "solid"),
+    dashPattern: resolvedDashPattern,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function getCityFeatureKey(feature, fallbackKey = "") {
+  const props = feature?.properties || {};
+  return String(
+    props.__city_stable_key
+    || props.stable_key
+    || props.__city_id
+    || props.id
+    || feature?.id
+    || fallbackKey
+    || ""
+  ).trim();
+}
+
+function getCityFeatureAliases(feature, key = "") {
+  const props = feature?.properties || {};
+  const aliases = new Set([
+    key,
+    props.__city_stable_key,
+    props.stable_key,
+    props.__city_id,
+    props.id,
+    props.name,
+    props.label,
+    props.name_en,
+    props.label_en,
+    props.name_zh,
+    props.label_zh,
+  ].filter(Boolean).map((value) => String(value).trim()));
+  const extraAliases = Array.isArray(props.__city_aliases) ? props.__city_aliases : [];
+  extraAliases.forEach((value) => {
+    const alias = String(value || "").trim();
+    if (alias) aliases.add(alias);
+  });
+  return Array.from(aliases);
+}
+
+function normalizeCityLabelComparisonValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function getCityRawLanguageLabel(feature, language = runtimeState.currentLanguage) {
+  const props = feature?.properties || {};
+  if (String(language || "en").trim().toLowerCase() === "zh") {
+    return String(props.label_zh || props.name_zh || props.label_cn || props.name_cn || "").trim();
+  }
+  return String(props.label_en || props.name_en || props.label || props.name || "").trim();
+}
+
+function getCityOverrideDisplayLabel(feature) {
+  const props = feature?.properties || {};
+  if (!props.__city_has_display_name_override) {
+    return "";
+  }
+  const displayName = props.__city_display_name_override && typeof props.__city_display_name_override === "object"
+    ? props.__city_display_name_override
+    : {};
+  return String(
+    runtimeState.currentLanguage === "zh"
+      ? (displayName.zh || "")
+      : (displayName.en || "")
+  ).trim();
+}
+
+function getCityBaseLocalizedLabel(feature, { strict = false } = {}) {
+  const props = feature?.properties || {};
+  const baseCandidates = [
+    props.__city_stable_key,
+    props.stable_key,
+    props.__city_id,
+    props.id,
+    props.name,
+    props.label,
+    props.name_en,
+    props.label_en,
+    props.name_zh,
+    props.label_zh,
+  ];
+  const aliases = Array.isArray(props.__city_aliases) ? props.__city_aliases : [];
+  return strict
+    ? getStrictGeoLabel([...baseCandidates, ...aliases], "")
+    : getPreferredGeoLabel([...baseCandidates, ...aliases], "");
+}
+
+function isAdministrativeCityLabelCandidate(label = "") {
+  const normalizedLabel = String(label || "").trim();
+  if (!normalizedLabel) return false;
+  return CITY_ADMIN_LABEL_REJECT_PATTERNS.some((pattern) => pattern.test(normalizedLabel));
+}
+
+function getCityHostFeatureDisplayLabel(feature) {
+  const props = feature?.properties || {};
+  const hostFeatureId = String(props.__city_host_feature_id || "").trim();
+  if (!hostFeatureId) return "";
+  const hostLabel = getStrictGeoLabel(hostFeatureId, "");
+  if (!hostLabel || isAdministrativeCityLabelCandidate(hostLabel)) {
+    return "";
+  }
+  return hostLabel;
+}
+
+function getCityRawFallbackLabel(feature) {
+  const props = feature?.properties || {};
+  const currentLanguageLabel = getCityRawLanguageLabel(feature, runtimeState.currentLanguage);
+  if (currentLanguageLabel) {
+    return currentLanguageLabel;
+  }
+  const alternateLanguageLabel = getCityRawLanguageLabel(feature, runtimeState.currentLanguage === "zh" ? "en" : "zh");
+  if (alternateLanguageLabel) {
+    return alternateLanguageLabel;
+  }
+  const localeEntry = props.__city_locale && typeof props.__city_locale === "object" ? props.__city_locale : {};
+  return String(
+    runtimeState.currentLanguage === "zh"
+      ? (localeEntry.zh || localeEntry.en || props.label_zh || props.name_zh || props.label || props.name || props.__city_id || feature?.id || "")
+      : (localeEntry.en || localeEntry.zh || props.label_en || props.name_en || props.label || props.name || props.__city_id || feature?.id || "")
+  ).trim();
+}
+
+function getCityDisplayLabel(feature) {
+  const props = feature?.properties || {};
+  const overrideLabel = getCityOverrideDisplayLabel(feature);
+  if (overrideLabel) {
+    return overrideLabel;
+  }
+  const baseStrict = getCityBaseLocalizedLabel(feature, { strict: true });
+  const baseFallback = getCityBaseLocalizedLabel(feature);
+  const rawCurrentLanguageLabel = getCityRawLanguageLabel(feature, runtimeState.currentLanguage);
+  const rawFallback = getCityRawFallbackLabel(feature);
+  const hostFeatureLabel = getCityHostFeatureDisplayLabel(feature);
+  const prefersLocalizedFallback = !!props.__city_has_display_name_override;
+  const hostComparison = normalizeCityLabelComparisonValue(hostFeatureLabel);
+  const baseComparison = normalizeCityLabelComparisonValue(
+    baseStrict || (prefersLocalizedFallback ? baseFallback : rawCurrentLanguageLabel) || (prefersLocalizedFallback ? rawCurrentLanguageLabel : baseFallback) || rawFallback
+  );
+  if (hostComparison && hostComparison !== baseComparison) {
+    return hostFeatureLabel;
+  }
+  if (baseStrict) {
+    return baseStrict;
+  }
+  if (prefersLocalizedFallback) {
+    if (baseFallback) {
+      return baseFallback;
+    }
+    if (rawCurrentLanguageLabel) {
+      return rawCurrentLanguageLabel;
+    }
+  } else {
+    if (rawCurrentLanguageLabel) {
+      return rawCurrentLanguageLabel;
+    }
+    if (baseFallback) {
+      return baseFallback;
+    }
+  }
+  return rawFallback;
+}
+
+function cleanCityMapLabelText(label = "") {
+  const rawLabel = String(label || "").trim();
+  if (!rawLabel) return "";
+  let cleaned = rawLabel
+    .replace(/\s*\(([^)]*)\)\s*/g, " ")
+    .replace(/\s*,\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  CITY_ADMIN_LABEL_PATTERNS.forEach((pattern) => {
+    cleaned = cleaned.replace(pattern, " ").replace(/\s+/g, " ").trim();
+  });
+  cleaned = cleaned.replace(/^[\s,;:-]+|[\s,;:-]+$/g, "").trim();
+  return cleaned.length >= 3 ? cleaned : rawLabel;
+}
+
+function isCjkText(value = "") {
+  return /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(String(value || ""));
+}
+
+function abbreviateCityMapLabel(label = "") {
+  const rawLabel = String(label || "").trim();
+  if (!rawLabel || isCjkText(rawLabel) || !/[\s-]/u.test(rawLabel)) {
+    return rawLabel;
+  }
+  const segments = rawLabel.split(/([\s-]+)/u);
+  let wordIndex = 0;
+  return segments.map((segment) => {
+    if (!segment || /^[\s-]+$/u.test(segment)) {
+      return segment;
+    }
+    wordIndex += 1;
+    if (wordIndex === 1) {
+      return segment;
+    }
+    const firstGlyph = Array.from(segment)[0] || "";
+    return firstGlyph ? `${firstGlyph}.` : segment;
+  }).join("").replace(/\s+/g, " ").trim();
+}
+
+function truncateCityLabelToWidth(text = "", maxWidthPx = 0, measureWidth = () => 0) {
+  const rawText = String(text || "").trim();
+  if (!rawText) return "";
+  if (measureWidth(rawText) <= maxWidthPx) {
+    return rawText;
+  }
+  const glyphs = Array.from(rawText);
+  if (glyphs.length <= 4) {
+    return rawText;
+  }
+  let truncated = rawText;
+  while (glyphs.length > 4) {
+    glyphs.pop();
+    truncated = `${glyphs.join("")}\u2026`;
+    if (measureWidth(truncated) <= maxWidthPx) {
+      return truncated;
+    }
+  }
+  return truncated;
+}
+
+function getCityMapLabelMaxWidth(entry, config = {}) {
+  const densityKey = String(config.labelDensity || "balanced").trim().toLowerCase();
+  const widthTable = CITY_LABEL_MAX_WIDTH_PX[densityKey] || CITY_LABEL_MAX_WIDTH_PX.balanced;
+  const widthKey = entry?.isCapital ? "capital" : (String(entry?.cityTier || "minor").trim().toLowerCase());
+  return Number(widthTable[widthKey] || widthTable.minor || 132);
+}
+
+function formatCityMapLabel(fullLabel, { entry = null, context: labelContext = null, config = {}, scale = 1 } = {}) {
+  const rawLabel = String(fullLabel || "").trim();
+  if (!rawLabel || !labelContext?.measureText) {
+    return rawLabel;
+  }
+  const maxWidthPx = getCityMapLabelMaxWidth(entry, config);
+  const measureWidth = (candidate) => Number(labelContext.measureText(String(candidate || "")).width || 0) * scale;
+  const cleanedLabel = cleanCityMapLabelText(rawLabel);
+  if (cleanedLabel && measureWidth(cleanedLabel) <= maxWidthPx) {
+    return cleanedLabel;
+  }
+  const abbreviatedLabel = abbreviateCityMapLabel(cleanedLabel || rawLabel);
+  if (abbreviatedLabel && measureWidth(abbreviatedLabel) <= maxWidthPx) {
+    return abbreviatedLabel;
+  }
+  return truncateCityLabelToWidth(abbreviatedLabel || cleanedLabel || rawLabel, maxWidthPx, measureWidth);
+}
+
+function getCityCanonicalId(feature) {
+  const props = feature?.properties || {};
+  return String(props.__city_id || props.id || feature?.id || "").trim();
+}
+
+function getCityTier(feature) {
+  const props = feature?.properties || {};
+  const tier = String(props.__city_base_tier || props.base_tier || props.baseTier || "").trim().toLowerCase();
+  if (tier === "major" || tier === "regional" || tier === "minor") {
+    return tier;
+  }
+  return "minor";
+}
+
+function getCityTierWeight(feature) {
+  switch (getCityTier(feature)) {
+    case "major":
+      return 3;
+    case "regional":
+      return 2;
+    default:
+      return 1;
+  }
+}
+
+function getDefaultCityMinZoomForTier(tier) {
+  switch (String(tier || "").trim().toLowerCase()) {
+    case "major":
+      return 0.8;
+    case "regional":
+      return 1.6;
+    default:
+      return 2.9;
+  }
+}
+
+function getCityEffectiveMinZoom(feature) {
+  const props = feature?.properties || {};
+  const explicit = Number(props.__city_min_zoom ?? props.min_zoom ?? props.minZoom);
+  if (Number.isFinite(explicit)) return explicit;
+  return getDefaultCityMinZoomForTier(getCityTier(feature));
+}
+
+function getUrbanFeatureStableId(feature) {
+  const directId = String(feature?.id ?? "").trim();
+  if (directId) return directId;
+  const props = feature?.properties || {};
+  const lowercasePropId = String(props.id ?? "").trim();
+  if (lowercasePropId) return lowercasePropId;
+  return String(props.ID ?? "").trim();
+}
+
+const getUrbanFeatureIndex = (...args) => getUrbanCityPolicyOwner().getUrbanFeatureIndex(...args);
+
+const getCityUrbanRuntimeInfo = (...args) => getUrbanCityPolicyOwner().getCityUrbanRuntimeInfo(...args);
+
+function getCityRadiusMultiplier(feature) {
+  switch (getCityTier(feature)) {
+    case "major":
+      return 1.45;
+    case "regional":
+      return 1.1;
+    default:
+      return 0.85;
+  }
+}
+
+function getCityCapitalScore(feature) {
+  const props = feature?.properties || {};
+  if (props.__city_is_country_capital) return 3;
+  if (props.__city_is_admin_capital) return 2;
+  if (props.__city_is_capital) return 1;
+  return 0;
+}
+
+function getCitySortWeight(feature) {
+  const props = feature?.properties || {};
+  const population = Math.max(0, Number(props.__city_population || 0));
+  return (
+    (props.__city_is_capital ? 2_000_000_000 : 0)
+    + (getCityTierWeight(feature) * 250_000_000)
+    + population
+  );
+}
+
+function getCityMarkerThemeTokens(config = {}) {
+  const themeKey = String(config.theme || CITY_MARKER_THEME_GRAPHITE).trim().toLowerCase();
+  const baseTokens = CITY_MARKER_THEME_TOKENS[themeKey] || CITY_MARKER_THEME_TOKENS.classic_graphite;
+  const pointColor = getSafeCanvasColor(config.color, baseTokens.fillMid);
+  const capitalColor = getSafeCanvasColor(config.capitalColor, baseTokens.capitalAccent);
+  return {
+    ...baseTokens,
+    fillTop: mixCanvasColors(baseTokens.fillTop, pointColor, 0.34) || pointColor,
+    fillMid: mixCanvasColors(baseTokens.fillMid, pointColor, 0.84) || pointColor,
+    fillBottom: mixCanvasColors(baseTokens.fillBottom, pointColor, 0.9) || pointColor,
+    stroke: mixCanvasColors(baseTokens.stroke, pointColor, 0.2) || baseTokens.stroke,
+    capitalAccent: mixCanvasColors(baseTokens.capitalAccent, capitalColor, 0.92) || capitalColor,
+    capitalHighlight: mixCanvasColors(baseTokens.capitalHighlight, capitalColor, 0.32) || baseTokens.capitalHighlight,
+    capitalLabel: mixCanvasColors(baseTokens.capitalLabel, capitalColor, 0.18) || baseTokens.capitalLabel,
+  };
+}
+
+function getCityCountryGroupKey(feature) {
+  const props = feature?.properties || {};
+  const scenarioTag = getCityScenarioTag(feature);
+  if (scenarioTag) return `tag:${scenarioTag}`;
+  const countryCode = String(props.__city_country_code || props.country_code || "").trim().toUpperCase();
+  if (countryCode) return `cc:${countryCode}`;
+  const hostFeatureId = String(props.__city_host_feature_id || props.host_feature_id || "").trim();
+  if (hostFeatureId) return `host:${hostFeatureId}`;
+  return `city:${getCityCanonicalId(feature) || getCityFeatureKey(feature)}`;
+}
+
+function getScenarioFeaturedTagSet() {
+  return new Set(
+    Array.isArray(runtimeState.activeScenarioManifest?.featured_tags)
+      ? runtimeState.activeScenarioManifest.featured_tags
+        .map((value) => String(value || "").trim().toUpperCase())
+        .filter(Boolean)
+      : []
+  );
+}
+
+function getCityCountryTierFromScenarioRecord(profile, record, { defaultCountry = "", featuredTags = new Set() } = {}) {
+  if (!record || typeof record !== "object") return "";
+  const tag = String(profile?.scenarioTag || "").trim().toUpperCase();
+  const entryKind = String(record.entry_kind || record.entryKind || "").trim().toLowerCase();
+  const controllerFeatureCount = Math.max(
+    0,
+    Number(record.controller_feature_count ?? record.controllerFeatureCount ?? 0) || 0
+  );
+  const isFeatured = !!record.featured || featuredTags.has(tag);
+  if (entryKind === "controller_only" || controllerFeatureCount <= 0) {
+    return "E";
+  }
+  if (
+    tag === defaultCountry
+    || (isFeatured && controllerFeatureCount >= 40)
+    || (!isFeatured && controllerFeatureCount >= 150)
+  ) {
+    return "A";
+  }
+  if ((isFeatured && controllerFeatureCount < 40) || (!isFeatured && controllerFeatureCount >= 40)) {
+    return "B";
+  }
+  if (controllerFeatureCount >= 12) return "C";
+  if (controllerFeatureCount >= 1) return "D";
+  return "E";
+}
+
+function getCityCountryVisibilityClass(profile, record, { defaultCountry = "", featuredTags = new Set() } = {}) {
+  const tag = String(profile?.scenarioTag || "").trim().toUpperCase();
+  const controllerFeatureCount = Math.max(
+    0,
+    Number(record?.controller_feature_count ?? record?.controllerFeatureCount ?? 0) || 0
+  );
+  const profileFeatureCount = Math.max(0, Number(profile?.featureCount || 0));
+  const isFeatured = !!record?.featured || featuredTags.has(tag) || tag === defaultCountry;
+  const isScenarioOnly = !!record?.scenario_only;
+  const parentOwnerTag = String(record?.parent_owner_tag || record?.parentOwnerTag || "").trim().toUpperCase();
+  const entryKind = String(record?.entry_kind || record?.entryKind || "").trim().toLowerCase();
+  const isSubject = !!parentOwnerTag || entryKind === "scenario_subject";
+  if (isSubject) return "micro_subject";
+  if (CITY_WARLORD_SCENARIO_TAGS.has(tag)) {
+    return "fragmented_actor";
+  }
+  if (isFeatured || controllerFeatureCount >= 120 || profileFeatureCount >= 200) return "global_core";
+  if (controllerFeatureCount >= 40 || profileFeatureCount >= 80) return "regional_core";
+  if (controllerFeatureCount >= 8 || profileFeatureCount >= 16) return "local_actor";
+  if (isScenarioOnly && controllerFeatureCount >= 1 && !parentOwnerTag && profileFeatureCount <= 18) {
+    return "fragmented_actor";
+  }
+  return "micro";
+}
+
+function isCityScenarioTagExcludedFromReveal(tag = "") {
+  const normalized = String(tag || "").trim().toUpperCase();
+  return normalized ? CITY_SCENARIO_EXCLUDED_TAGS.has(normalized) : false;
+}
+
+function getCityFixedPowerCalibration(tag = "") {
+  const normalized = String(tag || "").trim().toUpperCase();
+  if (CITY_PRIMARY_POWER_TAGS.has(normalized)) {
+    return {
+      className: "global_core",
+      classWeightBias: 0.42,
+      minQuotaFloorBoost: 2,
+    };
+  }
+  if (CITY_SECONDARY_POWER_TAGS.has(normalized)) {
+    return {
+      className: "regional_core",
+      classWeightBias: 0.22,
+      minQuotaFloorBoost: 1,
+    };
+  }
+  return null;
+}
+
+function normalizeCityCountryVisibilityClass(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(CITY_COUNTRY_CLASS_WEIGHT, normalized)
+    ? normalized
+    : "";
+}
+
+function getCityCountryRevealOverride(record = null) {
+  const tag = String(record?.tag || "").trim().toUpperCase();
+  const fixedPower = getCityFixedPowerCalibration(tag);
+  if (!record || typeof record !== "object") {
+    return fixedPower || {
+      className: "",
+      classWeightBias: 0,
+      minQuotaFloorBoost: 0,
+    };
+  }
+  const className = normalizeCityCountryVisibilityClass(
+    record.city_reveal_class
+    || record.cityRevealClass
+    || record.city_visibility_class
+    || record.cityVisibilityClass
+  ) || String(fixedPower?.className || "");
+  const classWeightBias = clamp(
+    Number(record.city_reveal_weight_bias ?? record.cityRevealWeightBias ?? fixedPower?.classWeightBias ?? 0) || 0,
+    -0.35,
+    0.75
+  );
+  const minQuotaFloorBoost = clamp(
+    Math.round(Number(record.city_reveal_min_floor_boost ?? record.cityRevealMinFloorBoost ?? fixedPower?.minQuotaFloorBoost ?? 0) || 0),
+    0,
+    3
+  );
+  return {
+    className,
+    classWeightBias,
+    minQuotaFloorBoost,
+  };
+}
+
+function getFallbackCityCountryTier(profile) {
+  const maxPopulation = Math.max(0, Number(profile?.maxPopulation || 0));
+  if ((profile?.hasCountryCapital && maxPopulation >= 2_500_000) || maxPopulation >= 5_000_000) {
+    return "A";
+  }
+  if (profile?.hasCountryCapital || maxPopulation >= 1_500_000) {
+    return "B";
+  }
+  if (maxPopulation >= 350_000) {
+    return "C";
+  }
+  if ((profile?.featureCount || 0) > 0) {
+    return "D";
+  }
+  return "E";
+}
+
+function getCityCountryProfileIndex(cityCollection) {
+  if (!cityCollection?.features?.length) {
+    return new Map();
+  }
+  const cached = cityCountryProfileCache.get(cityCollection);
+  if (cached) {
+    return cached;
+  }
+
+  const profiles = new Map();
+  cityCollection.features.forEach((feature) => {
+    const props = feature?.properties || {};
+    const groupKey = getCityCountryGroupKey(feature);
+    let profile = profiles.get(groupKey);
+    if (!profile) {
+      profile = {
+        groupKey,
+        scenarioTag: getCityScenarioTag(feature),
+        countryCode: String(props.__city_country_code || props.country_code || "").trim().toUpperCase(),
+        featureCount: 0,
+        hasCapital: false,
+        hasCountryCapital: false,
+        maxPopulation: 0,
+        maxTierWeight: 0,
+        controllerFeatureCount: 0,
+        countryClass: "micro",
+        classWeightBias: 0,
+        minQuotaFloorBoost: 0,
+      };
+      profiles.set(groupKey, profile);
+    }
+    profile.featureCount += 1;
+    profile.hasCapital = profile.hasCapital || !!props.__city_is_capital;
+    profile.hasCountryCapital = profile.hasCountryCapital || !!props.__city_is_country_capital;
+    profile.maxPopulation = Math.max(profile.maxPopulation, Math.max(0, Number(props.__city_population || 0)));
+    profile.maxTierWeight = Math.max(profile.maxTierWeight, getCityTierWeight(feature));
+  });
+
+  const featuredTags = getScenarioFeaturedTagSet();
+  const defaultCountry = String(runtimeState.activeScenarioManifest?.default_country || "")
+    .trim()
+    .toUpperCase();
+  profiles.forEach((profile) => {
+    const record = profile.scenarioTag ? runtimeState.scenarioCountriesByTag?.[profile.scenarioTag] : null;
+    const revealOverride = getCityCountryRevealOverride(record);
+    const isDefaultCountry = !!profile.scenarioTag && profile.scenarioTag === defaultCountry;
+    const isFeaturedCountry = !!record?.featured || featuredTags.has(profile.scenarioTag);
+    const isPrimaryPower = CITY_PRIMARY_POWER_TAGS.has(profile.scenarioTag);
+    const isSecondaryPower = CITY_SECONDARY_POWER_TAGS.has(profile.scenarioTag);
+    profile.controllerFeatureCount = Math.max(
+      0,
+      Number(record?.controller_feature_count ?? record?.controllerFeatureCount ?? profile.featureCount ?? 0) || 0
+    );
+    profile.countryTier = getCityCountryTierFromScenarioRecord(profile, record, {
+      defaultCountry,
+      featuredTags,
+    }) || getFallbackCityCountryTier(profile);
+    profile.countryClass = revealOverride.className || getCityCountryVisibilityClass(profile, record, {
+      defaultCountry,
+      featuredTags,
+    });
+    profile.countryClassRank = CITY_COUNTRY_CLASS_RANK[profile.countryClass] || 0;
+    profile.classWeightBias = Number(revealOverride.classWeightBias || 0);
+    profile.minQuotaFloorBoost = Number(revealOverride.minQuotaFloorBoost || 0);
+    profile.countryTierRank = CITY_COUNTRY_TIER_RANK[profile.countryTier] || 0;
+    profile.isDefaultCountry = isDefaultCountry;
+    profile.isFeaturedCountry = isFeaturedCountry;
+    profile.isPrimaryPower = isPrimaryPower;
+    profile.isSecondaryPower = isSecondaryPower;
+    profile.isPriorityCountry = (
+      isDefaultCountry
+      || isPrimaryPower
+      || isSecondaryPower
+    );
+  });
+
+  cityCountryProfileCache.set(cityCollection, profiles);
+  return profiles;
+}
+
+function getCityRevealPhase(scale) {
+  const normalizedScale = Math.max(0.0001, Number(scale || 1));
+  return CITY_REVEAL_PHASES.find((phase) => normalizedScale >= phase.minScale && normalizedScale < phase.maxScale)
+    || CITY_REVEAL_PHASES[CITY_REVEAL_PHASES.length - 1];
+}
+
+function getCityRevealPhaseIndex(scale) {
+  const phase = getCityRevealPhase(scale);
+  const index = CITY_REVEAL_PHASES.findIndex((entry) => entry.id === phase.id);
+  return Math.max(0, index);
+}
+
+function getCityRevealPhaseInterpolation(scale) {
+  const phaseIndex = getCityRevealPhaseIndex(scale);
+  const currentPhase = CITY_REVEAL_PHASES[phaseIndex] || CITY_REVEAL_PHASES[0];
+  const nextPhase = CITY_REVEAL_PHASES[Math.min(CITY_REVEAL_PHASES.length - 1, phaseIndex + 1)] || currentPhase;
+  if (!nextPhase || nextPhase.id === currentPhase.id || !Number.isFinite(nextPhase.minScale)) {
+    return { phaseIndex, currentPhase, nextPhase: currentPhase, t: 0 };
+  }
+  const minScale = Number(currentPhase.minScale || 0);
+  const maxScale = Number(nextPhase.minScale || currentPhase.maxScale || minScale);
+  const span = Math.max(0.0001, maxScale - minScale);
+  const t = clamp((Number(scale || 1) - minScale) / span, 0, 1);
+  return { phaseIndex, currentPhase, nextPhase, t };
+}
+
+function getCityRevealBucket(entry, phaseId) {
+  const countryTier = String(entry?.countryTier || "D").trim().toUpperCase();
+  const cityTier = String(entry?.cityTier || "minor").trim().toLowerCase();
+  const isCapital = !!entry?.isCapital;
+  switch (String(phaseId || "P0")) {
+    case "P0":
+      return countryTier === "A" && isCapital ? 0 : Number.POSITIVE_INFINITY;
+    case "P1":
+      if ((countryTier === "A" || countryTier === "B") && isCapital) return 0;
+      if ((countryTier === "C" || countryTier === "D") && isCapital) return 1;
+      if (countryTier === "E" && isCapital) return 2;
+      return Number.POSITIVE_INFINITY;
+    case "P2":
+      if ((countryTier === "A" || countryTier === "B") && isCapital) return 0;
+      if ((countryTier === "C" || countryTier === "D") && isCapital) return 1;
+      if (countryTier === "E" && isCapital) return 2;
+      if (countryTier === "A" && cityTier === "major") return 3;
+      return Number.POSITIVE_INFINITY;
+    case "P3":
+      if ((countryTier === "A" || countryTier === "B") && isCapital) return 0;
+      if ((countryTier === "C" || countryTier === "D") && isCapital) return 1;
+      if (countryTier === "E" && isCapital) return 2;
+      if (countryTier === "A" && cityTier === "major") return 3;
+      if (countryTier === "B" && cityTier === "major") return 4;
+      return Number.POSITIVE_INFINITY;
+    case "P4":
+      if ((countryTier === "A" || countryTier === "B") && isCapital) return 0;
+      if ((countryTier === "C" || countryTier === "D") && isCapital) return 1;
+      if (countryTier === "E" && isCapital) return 2;
+      if (countryTier === "A" && cityTier === "major") return 3;
+      if (countryTier === "B" && cityTier === "major") return 4;
+      if ((countryTier === "A" || countryTier === "B" || countryTier === "C") && (cityTier === "regional" || cityTier === "major")) {
+        return 5;
+      }
+      return Number.POSITIVE_INFINITY;
+    case "P5":
+    default:
+      if ((countryTier === "A" || countryTier === "B") && isCapital) return 0;
+      if ((countryTier === "C" || countryTier === "D") && isCapital) return 1;
+      if (countryTier === "E" && isCapital) return 2;
+      if (cityTier === "major") return 3;
+      if (cityTier === "regional") return 4;
+      if (countryTier !== "E" && cityTier === "minor") return 5;
+      return Number.POSITIVE_INFINITY;
+  }
+}
+
+function getCityInterpolatedRevealBucket(entry, scale) {
+  const { currentPhase, nextPhase, t } = getCityRevealPhaseInterpolation(scale);
+  const currentBucket = getCityRevealBucket(entry, currentPhase.id);
+  if (!nextPhase || nextPhase.id === currentPhase.id) {
+    return currentBucket;
+  }
+  const nextBucket = getCityRevealBucket(entry, nextPhase.id);
+  if (Number.isFinite(currentBucket) && Number.isFinite(nextBucket)) {
+    return currentBucket + ((nextBucket - currentBucket) * t);
+  }
+  if (!Number.isFinite(currentBucket) && Number.isFinite(nextBucket)) {
+    const seed = `${String(entry?.cityId || "")}:${currentPhase.id}:${nextPhase.id}`;
+    const threshold = clamp(0.7 + (getSignedHashUnit(seed) * 0.12), 0.58, 0.82);
+    return t >= threshold ? nextBucket + ((1 - t) * 0.5) : Number.POSITIVE_INFINITY;
+  }
+  return currentBucket;
+}
+
+function getCityMarkerQuotaForTier(phaseId, countryTier) {
+  const quotaTable = CITY_MARKER_QUOTAS_BY_PHASE[String(phaseId || "P0")] || CITY_MARKER_QUOTAS_BY_PHASE.P0;
+  return quotaTable[String(countryTier || "D").trim().toUpperCase()] ?? 0;
+}
+
+function getCityMarkerDensityMultiplier(config = {}) {
+  return clamp(Number(config.markerDensity) || 1, 0.5, 2);
+}
+
+function scaleCityMarkerQuota(baseQuota, markerDensity) {
+  const normalizedQuota = Math.max(0, Number(baseQuota) || 0);
+  const normalizedDensity = clamp(Number(markerDensity) || 1, 0.5, 2);
+  if (normalizedQuota <= 0) return 0;
+  const scaledQuota = normalizedQuota * normalizedDensity;
+  if (normalizedDensity < 1) {
+    const flooredQuota = Math.floor(scaledQuota);
+    if (normalizedQuota >= 1 && scaledQuota > 0) {
+      return Math.max(1, flooredQuota);
+    }
+    return flooredQuota;
+  }
+  return Math.ceil(scaledQuota);
+}
+
+function getCitySizeQuotaFloor(entry, scale, markerDensity = 1) {
+  const featureCount = Math.max(0, Number(entry?.countryFeatureCount || 0));
+  const controllerFeatureCount = Math.max(0, Number(entry?.countryControllerFeatureCount || featureCount));
+  const maxPopulation = Math.max(0, Number(entry?.countryMaxPopulation || 0));
+  const countryClass = String(entry?.countryClass || "micro").trim().toLowerCase();
+  const classWeight = clamp(
+    Number(CITY_COUNTRY_CLASS_WEIGHT[countryClass] || CITY_COUNTRY_CLASS_WEIGHT.micro)
+      + Number(entry?.countryClassWeightBias || 0),
+    0.55,
+    2.1
+  );
+  const minQuotaFloorBoost = clamp(Number(entry?.countryMinQuotaFloorBoost || 0) || 0, 0, 3);
+  const normalizedDensity = clamp(Number(markerDensity) || 1, 0.5, 2);
+  const scaleFactor = clamp((Math.max(0.0001, Number(scale || 1)) - 1.05) / 2.3, 0, 1);
+  const featureBoost = featureCount >= 220 ? 3
+    : featureCount >= 120 ? 2
+      : featureCount >= 60 ? 1
+        : 0;
+  const controllerBoost = controllerFeatureCount >= 160 ? 2
+    : controllerFeatureCount >= 50 ? 1
+      : 0;
+  const populationBoost = maxPopulation >= 8_000_000 ? 1
+    : maxPopulation >= 3_000_000 ? 0.5
+      : 0;
+  const coarseFloor = Math.floor((featureBoost + controllerBoost + populationBoost) * classWeight * scaleFactor * normalizedDensity);
+  return clamp(coarseFloor + minQuotaFloorBoost, 0, 6);
+}
+
+function buildCityViewportCountryStats(candidateEntries = []) {
+  const statsByCountry = new Map();
+  let totalCandidates = 0;
+  candidateEntries.forEach((entry) => {
+    totalCandidates += 1;
+    const countryKey = String(entry?.countryKey || "").trim();
+    if (!countryKey) return;
+    let stat = statsByCountry.get(countryKey);
+    if (!stat) {
+      stat = { visibleCount: 0, capitalCount: 0 };
+      statsByCountry.set(countryKey, stat);
+    }
+    stat.visibleCount += 1;
+    if (entry?.isCapital) stat.capitalCount += 1;
+  });
+  return { statsByCountry, totalCandidates };
+}
+
+function getCityViewportQuotaMultiplier(entry, viewportStats = null) {
+  if (!viewportStats || !(viewportStats.statsByCountry instanceof Map)) return 1;
+  const countryKey = String(entry?.countryKey || "").trim();
+  if (!countryKey) return 1;
+  const stat = viewportStats.statsByCountry.get(countryKey);
+  if (!stat) return 1;
+  const total = Math.max(1, Number(viewportStats.totalCandidates || 0));
+  const share = clamp((Number(stat.visibleCount || 0) / total) * 12, 0, 1);
+  const spreadBoost = 0.9 + (Math.sqrt(share) * 0.28);
+  const capitalBoost = Number(stat.capitalCount || 0) > 0 ? 0.06 : 0;
+  return clamp(spreadBoost + capitalBoost, 0.85, 1.32);
+}
+
+function getCityInterpolatedMarkerQuota(entry, scale, markerDensity = 1, viewportStats = null) {
+  const { currentPhase, nextPhase, t } = getCityRevealPhaseInterpolation(scale);
+  const countryTier = String(entry?.countryTier || "D").trim().toUpperCase();
+  const fromQuota = Number(getCityMarkerQuotaForTier(currentPhase.id, countryTier) || 0);
+  const toQuota = Number(getCityMarkerQuotaForTier(nextPhase.id, countryTier) || fromQuota);
+  const interpolated = fromQuota + ((toQuota - fromQuota) * t);
+  return scaleCityMarkerQuota(interpolated, markerDensity);
+}
+
+function getCityInterpolatedMarkerBudget(scale, markerDensity = 1) {
+  const { currentPhase, nextPhase, t } = getCityRevealPhaseInterpolation(scale);
+  const fromBudget = Math.max(0, Number(currentPhase?.markerBudget || 0));
+  const toBudget = Math.max(0, Number(nextPhase?.markerBudget || fromBudget));
+  const interpolated = fromBudget + ((toBudget - fromBudget) * t);
+  return Math.max(0, Math.round(interpolated * clamp(Number(markerDensity) || 1, 0.5, 2)));
+}
+
+function getCityRevealCompetitionBand(phaseId = "") {
+  if (phaseId === "P0" || phaseId === "P1") return "low";
+  if (phaseId === "P2" || phaseId === "P3") return "mid";
+  return "high";
+}
+
+function getCityCountryClassScore(entry) {
+  const className = String(entry?.countryClass || "micro").trim().toLowerCase();
+  const rank = Number(entry?.countryClassRank || CITY_COUNTRY_CLASS_RANK[className] || 0);
+  const bias = clamp(Number(entry?.countryClassWeightBias || 0) || 0, -0.35, 0.75);
+  return rank + bias;
+}
+
+function getCityPriorityCountryReserveBudget(scale, markerBudget) {
+  const normalizedBudget = Math.max(0, Number(markerBudget) || 0);
+  if (normalizedBudget <= 0) return 0;
+  const { currentPhase, nextPhase, t } = getCityRevealPhaseInterpolation(scale);
+  const fromShare = Number(CITY_PRIORITY_COUNTRY_RESERVE_SHARE_BY_PHASE[currentPhase.id] || 0);
+  const toShare = Number(CITY_PRIORITY_COUNTRY_RESERVE_SHARE_BY_PHASE[nextPhase.id] || fromShare);
+  const share = clamp(fromShare + ((toShare - fromShare) * t), 0, 0.5);
+  return Math.min(normalizedBudget, Math.max(0, Math.round(normalizedBudget * share)));
+}
+
+function getCityPriorityCountryReserveRank(entry) {
+  let score = 0;
+  if (entry?.isDefaultCountry) score += 600;
+  if (entry?.isPrimaryPower) score += 520;
+  if (entry?.isFeaturedCountry) score += 360;
+  if (entry?.isSecondaryPower) score += 260;
+  score += Number(entry?.countryTierRank || 0) * 24;
+  score += getCityCountryClassScore(entry) * 8;
+  if (entry?.feature?.properties?.__city_is_country_capital) score += 18;
+  return score;
+}
+
+function getCityViewportCenterDistanceNorm(entry) {
+  const point = Array.isArray(entry?.screenPoint) ? entry.screenPoint : null;
+  if (!point || point.length < 2) return 1;
+  const centerX = Number(runtimeState.width || 0) * 0.5;
+  const centerY = Number(runtimeState.height || 0) * 0.5;
+  const maxDistance = Math.max(1, Math.hypot(centerX + 48, centerY + 48));
+  return clamp(Math.hypot(Number(point[0] || 0) - centerX, Number(point[1] || 0) - centerY) / maxDistance, 0, 1);
+}
+
+function compareCityRevealEntries(left, right, phaseId = "P0") {
+  const leftBucket = Number(left?.revealBucket ?? Number.POSITIVE_INFINITY);
+  const rightBucket = Number(right?.revealBucket ?? Number.POSITIVE_INFINITY);
+  if (leftBucket !== rightBucket) return leftBucket - rightBucket;
+  const competitionBand = getCityRevealCompetitionBand(phaseId);
+  const leftCountryRank = Number(left?.countryTierRank || 0);
+  const rightCountryRank = Number(right?.countryTierRank || 0);
+  const leftTierWeight = Number(left?.cityTierWeight || 0);
+  const rightTierWeight = Number(right?.cityTierWeight || 0);
+  const leftPopulation = Math.max(0, Number(left?.population || 0));
+  const rightPopulation = Math.max(0, Number(right?.population || 0));
+  const leftCenterDistance = Number(left?.centerDistanceNorm ?? 1);
+  const rightCenterDistance = Number(right?.centerDistanceNorm ?? 1);
+  const leftCountryClassScore = getCityCountryClassScore(left);
+  const rightCountryClassScore = getCityCountryClassScore(right);
+
+  if (competitionBand === "low") {
+    if (!!left?.isPriorityCountry !== !!right?.isPriorityCountry) return left?.isPriorityCountry ? -1 : 1;
+    if (leftCountryRank !== rightCountryRank) return rightCountryRank - leftCountryRank;
+    if (leftCountryClassScore !== rightCountryClassScore) return rightCountryClassScore - leftCountryClassScore;
+  } else {
+    if (!!left?.isCapital !== !!right?.isCapital) return left?.isCapital ? -1 : 1;
+    if (leftTierWeight !== rightTierWeight) return rightTierWeight - leftTierWeight;
+    if (leftPopulation !== rightPopulation) return rightPopulation - leftPopulation;
+    if (leftCenterDistance !== rightCenterDistance) return leftCenterDistance - rightCenterDistance;
+    if (competitionBand === "mid") {
+      if (leftCountryRank !== rightCountryRank) return rightCountryRank - leftCountryRank;
+      if (leftCountryClassScore !== rightCountryClassScore) return rightCountryClassScore - leftCountryClassScore;
+      if (!!left?.isPriorityCountry !== !!right?.isPriorityCountry) return left?.isPriorityCountry ? -1 : 1;
+    } else {
+      if (leftCountryClassScore !== rightCountryClassScore) return rightCountryClassScore - leftCountryClassScore;
+      if (leftCountryRank !== rightCountryRank) return rightCountryRank - leftCountryRank;
+      if (!!left?.isPriorityCountry !== !!right?.isPriorityCountry) return left?.isPriorityCountry ? -1 : 1;
+    }
+  }
+  if (!!left?.isCapital !== !!right?.isCapital) return left?.isCapital ? -1 : 1;
+  if (leftTierWeight !== rightTierWeight) return rightTierWeight - leftTierWeight;
+  if (leftPopulation !== rightPopulation) return rightPopulation - leftPopulation;
+  if (leftCenterDistance !== rightCenterDistance) return leftCenterDistance - rightCenterDistance;
+  return String(left?.cityId || "").localeCompare(String(right?.cityId || ""));
+}
+
+function getCityLabelBudget(phase, config = {}) {
+  const densityKey = String(config.labelDensity || "balanced").trim().toLowerCase();
+  const budgetTable = CITY_LABEL_DENSITY_BUDGETS[densityKey] || CITY_LABEL_DENSITY_BUDGETS.balanced;
+  const phaseId = String(phase?.id || "");
+  if (Object.prototype.hasOwnProperty.call(budgetTable, phaseId)) {
+    return Math.max(0, Number(budgetTable[phaseId] || 0));
+  }
+  return Math.max(0, Number(phase?.labelBudget || 0));
+}
+
+function isCityLabelEligibleForPhase(entry, phaseId) {
+  const cityTier = String(entry?.cityTier || "minor").trim().toLowerCase();
+  if (String(phaseId || "P0") === "P3") {
+    return !!entry?.isCapital;
+  }
+  if (String(phaseId || "P0") === "P4") {
+    return !!entry?.isCapital || cityTier === "major";
+  }
+  if (String(phaseId || "P0") === "P5") {
+    return true;
+  }
+  return false;
+}
+
+function getCityLabelMinZoom(entry, config = {}) {
+  const configuredMinZoom = Number(config?.labelMinZoom || 1.9);
+  if (entry?.isCapital) {
+    return configuredMinZoom;
+  }
+  return Math.max(configuredMinZoom, Number(entry?.minZoom || 0));
+}
+
+function getCityMarkerSizePx(entry, config = {}) {
+  const cityTier = String(entry?.cityTier || "minor").trim().toLowerCase();
+  const markerScale = clamp(Number(config.markerScale) || 1, 0.75, 2.5);
+  const baseSize = CITY_MARKER_BASE_SIZES_PX[cityTier] || CITY_MARKER_BASE_SIZES_PX.minor;
+  const hardLimit = CITY_MARKER_SIZE_LIMITS_PX[cityTier] || CITY_MARKER_SIZE_LIMITS_PX.minor;
+  const capitalLimit = entry?.isCapital ? CITY_MARKER_SIZE_LIMITS_PX.capital : hardLimit;
+  const boostedSize = entry?.isCapital ? baseSize * 1.08 : baseSize;
+  return Math.min(capitalLimit, boostedSize * markerScale);
+}
+
+function createCityMarkerSpriteCanvas(width, height) {
+  if (typeof OffscreenCanvas === "function") {
+    return new OffscreenCanvas(width, height);
+  }
+  if (typeof document !== "undefined" && typeof document.createElement === "function") {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  }
+  return null;
+}
+
+function getCityMarkerVisualSpec(entry, config = {}) {
+  const sizePx = Math.max(4, Number(entry?.markerSizePx || getCityMarkerSizePx(entry, config)));
+  const cityTier = String(entry?.cityTier || "minor").trim().toLowerCase();
+  const tierScale = cityTier === "major" ? 1.18 : cityTier === "regional" ? 1 : 0.84;
+  const discRadius = Math.max(3.2, sizePx * (cityTier === "major" ? 0.62 : cityTier === "regional" ? 0.56 : 0.5));
+  const discHeight = Math.max(3.4, sizePx * (cityTier === "major" ? 0.66 : cityTier === "regional" ? 0.58 : 0.5));
+  const widthPx = Math.max(18, Math.ceil(discRadius * 2.8 * tierScale));
+  const heightPx = Math.max(16, Math.ceil((discHeight * 1.9) + (sizePx * 0.34)));
+  const capitalTopExtra = entry?.isCapital ? Math.ceil(sizePx * 0.86) : 0;
+  return {
+    sizePx,
+    cityTier,
+    discRadius,
+    discHeight,
+    widthPx,
+    heightPx,
+    capitalTopExtra,
+  };
+}
+
+function renderCityMarkerSprite(spriteContext, spec, tokens, entry) {
+  const { sizePx, discRadius, discHeight, widthPx, heightPx, capitalTopExtra } = spec;
+  const cx = widthPx / 2;
+  const centerY = capitalTopExtra + Math.max(discHeight + (sizePx * 0.26), (heightPx * 0.56));
+  const topY = centerY - discHeight;
+  const bottomY = centerY + discHeight;
+  const baseShadowY = centerY + (discHeight * 0.78);
+  const bodyGradient = spriteContext.createLinearGradient(0, topY, 0, bottomY);
+  bodyGradient.addColorStop(0, tokens.fillTop);
+  bodyGradient.addColorStop(0.55, tokens.fillMid || tokens.fillTop);
+  bodyGradient.addColorStop(1, tokens.fillBottom);
+
+  spriteContext.save();
+  spriteContext.lineJoin = "round";
+  spriteContext.lineCap = "round";
+
+  spriteContext.beginPath();
+  spriteContext.ellipse(cx, baseShadowY, discRadius * 0.98, Math.max(1.5, discHeight * 0.46), 0, 0, Math.PI * 2);
+  spriteContext.fillStyle = tokens.baseShadow;
+  spriteContext.fill();
+
+  spriteContext.beginPath();
+  spriteContext.ellipse(cx, centerY, discRadius, discHeight, 0, 0, Math.PI * 2);
+  spriteContext.fillStyle = bodyGradient;
+  spriteContext.fill();
+  spriteContext.strokeStyle = tokens.stroke;
+  spriteContext.lineWidth = Math.max(1, sizePx * 0.08);
+  spriteContext.stroke();
+
+  spriteContext.save();
+  spriteContext.globalCompositeOperation = "multiply";
+  const rimGradient = spriteContext.createLinearGradient(cx, centerY - discHeight, cx, centerY + discHeight);
+  rimGradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+  rimGradient.addColorStop(0.58, "rgba(0, 0, 0, 0)");
+  rimGradient.addColorStop(1, tokens.rimDark || tokens.fillBottom);
+  spriteContext.beginPath();
+  spriteContext.ellipse(cx, centerY, discRadius, discHeight, 0, 0, Math.PI * 2);
+  spriteContext.fillStyle = rimGradient;
+  spriteContext.fill();
+  spriteContext.restore();
+
+  spriteContext.save();
+  spriteContext.globalCompositeOperation = "screen";
+  spriteContext.beginPath();
+  spriteContext.ellipse(cx - (discRadius * 0.18), centerY - (discHeight * 0.36), discRadius * 0.52, discHeight * 0.3, -0.25, 0, Math.PI * 2);
+  spriteContext.fillStyle = tokens.highlight;
+  spriteContext.fill();
+  spriteContext.beginPath();
+  spriteContext.ellipse(cx + (discRadius * 0.08), centerY - (discHeight * 0.1), discRadius * 0.78, discHeight * 0.52, 0, Math.PI, Math.PI * 2);
+  spriteContext.fillStyle = tokens.specular || tokens.highlight;
+  spriteContext.fill();
+  spriteContext.restore();
+
+  if (entry?.isCapital) {
+    const crownY = topY - (sizePx * 0.18);
+    const crownRadiusX = Math.min(CITY_MARKER_SIZE_LIMITS_PX.capital * 0.34, discRadius * 0.76);
+    const crownRadiusY = Math.max(1.6, crownRadiusX * 0.34);
+    spriteContext.beginPath();
+    spriteContext.ellipse(cx, crownY, crownRadiusX, crownRadiusY, 0, 0, Math.PI * 2);
+    spriteContext.strokeStyle = tokens.capitalAccent;
+    spriteContext.lineWidth = Math.max(1.4, sizePx * 0.11);
+    spriteContext.stroke();
+
+    spriteContext.save();
+    spriteContext.globalCompositeOperation = "screen";
+    spriteContext.beginPath();
+    spriteContext.ellipse(cx, crownY - (crownRadiusY * 0.1), crownRadiusX * 0.74, crownRadiusY * 0.55, 0, 0, Math.PI);
+    spriteContext.strokeStyle = tokens.capitalHighlight;
+    spriteContext.lineWidth = Math.max(1, sizePx * 0.06);
+    spriteContext.stroke();
+    spriteContext.restore();
+
+    spriteContext.beginPath();
+    spriteContext.moveTo(cx - crownRadiusX * 0.7, crownY);
+    spriteContext.lineTo(cx - crownRadiusX * 0.28, crownY - crownRadiusY * 1.2);
+    spriteContext.lineTo(cx, crownY - crownRadiusY * 0.35);
+    spriteContext.lineTo(cx + crownRadiusX * 0.28, crownY - crownRadiusY * 1.2);
+    spriteContext.lineTo(cx + crownRadiusX * 0.7, crownY);
+    spriteContext.strokeStyle = tokens.capitalHighlight;
+    spriteContext.lineWidth = Math.max(1, sizePx * 0.055);
+    spriteContext.stroke();
+  }
+
+  spriteContext.restore();
+  return {
+    anchorX: widthPx / 2,
+    anchorY: centerY + discHeight + Math.max(2, sizePx * 0.18),
+  };
+}
+
+function getCityMarkerSprite(entry, config = {}) {
+  const colorRevision = Number(runtimeState.colorRevision || 0);
+  if (cityMarkerSpriteCacheColorRevision !== colorRevision) {
+    cityMarkerSpriteCache.clear();
+    cityMarkerSpriteCacheColorRevision = colorRevision;
+  }
+  const spec = getCityMarkerVisualSpec(entry, config);
+  const sizePx = spec.sizePx;
+  const themeKey = String(config.theme || CITY_MARKER_THEME_GRAPHITE).trim().toLowerCase();
+  const baseColorKey = String(config.color || "");
+  const capitalColorKey = String(config.capitalColor || "");
+  const markerStyle = getCityMarkerRenderStyle(entry, config);
+  const backgroundKey = markerStyle.backgroundColor || "none";
+  const spriteKey = [
+    themeKey,
+    String(entry?.cityTier || "minor"),
+    entry?.isCapital ? "capital" : "regular",
+    sizePx.toFixed(2),
+    baseColorKey,
+    capitalColorKey,
+    backgroundKey,
+  ].join("|");
+  if (cityMarkerSpriteCache.has(spriteKey)) {
+    return cityMarkerSpriteCache.get(spriteKey);
+  }
+
+  const tokens = markerStyle.tokens;
+  const canvas = createCityMarkerSpriteCanvas(spec.widthPx, spec.heightPx + spec.capitalTopExtra);
+  const sprite = {
+    canvas,
+    width: spec.widthPx,
+    height: spec.heightPx + spec.capitalTopExtra,
+    anchorX: spec.widthPx / 2,
+    anchorY: spec.heightPx + spec.capitalTopExtra - Math.max(2, sizePx * 0.12),
+  };
+  if (!canvas) {
+    cityMarkerSpriteCache.set(spriteKey, sprite);
+    return sprite;
+  }
+
+  const spriteContext = canvas.getContext("2d");
+  if (!spriteContext) {
+    cityMarkerSpriteCache.set(spriteKey, sprite);
+    return sprite;
+  }
+
+  const anchor = renderCityMarkerSprite(spriteContext, spec, tokens, entry);
+  sprite.anchorX = anchor.anchorX;
+  sprite.anchorY = anchor.anchorY;
+  cityMarkerSpriteCache.set(spriteKey, sprite);
+  return sprite;
+}
+
+const buildCityRevealPlan = (...args) => getUrbanCityPolicyOwner().buildCityRevealPlan(...args);
+
+const getCityScenarioTag = (...args) => getUrbanCityPolicyOwner().getCityScenarioTag(...args);
+
+const doesScenarioCountryHideCityPoints = (...args) =>
+  getUrbanCityPolicyOwner().doesScenarioCountryHideCityPoints(...args);
+
+const getEffectiveCityCollection = (...args) => getUrbanCityPolicyOwner().getEffectiveCityCollection(...args);
+
+function getCityAnchor(feature) {
+  if (!feature || !projection) return null;
+  const cached = cityAnchorCache.get(feature);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  let anchor = null;
+  const geometry = feature.geometry;
+  if (geometry?.type === "Point" && Array.isArray(geometry.coordinates) && geometry.coordinates.length >= 2) {
+    const projected = projection(geometry.coordinates);
+    if (Array.isArray(projected) && projected.every((value) => Number.isFinite(Number(value)))) {
+      anchor = projected;
+    }
+  } else if (geometry?.type === "MultiPoint" && Array.isArray(geometry.coordinates) && geometry.coordinates.length) {
+    const projectedPoints = geometry.coordinates
+      .map((coords) => projection(coords))
+      .filter((point) => Array.isArray(point) && point.every((value) => Number.isFinite(Number(value))));
+    if (projectedPoints.length) {
+      const [sumX, sumY] = projectedPoints.reduce(
+        (acc, point) => [acc[0] + Number(point[0]), acc[1] + Number(point[1])],
+        [0, 0]
+      );
+      anchor = [sumX / projectedPoints.length, sumY / projectedPoints.length];
+    }
+  }
+
+  if (!anchor && pathCanvas?.centroid) {
+    const centroid = pathCanvas.centroid(feature);
+    if (Array.isArray(centroid) && centroid.every((value) => Number.isFinite(Number(value)))) {
+      anchor = centroid;
+    }
+  }
+
+  if (!anchor && globalThis.d3?.geoCentroid) {
+    const geoCentroid = globalThis.d3.geoCentroid(feature);
+    const projected = Array.isArray(geoCentroid) ? projection(geoCentroid) : null;
+    if (Array.isArray(projected) && projected.every((value) => Number.isFinite(Number(value)))) {
+      anchor = projected;
+    }
+  }
+
+  cityAnchorCache.set(feature, anchor);
+  return anchor;
+}
+
+function getCityScreenPoint(anchor, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  if (!Array.isArray(anchor) || anchor.length < 2) return null;
+  const scale = Math.max(0.0001, Number(transform?.k || 1));
+  const x = Number(anchor[0]);
+  const y = Number(anchor[1]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return [
+    (x * scale) + Number(transform?.x || 0),
+    (y * scale) + Number(transform?.y || 0),
+  ];
+}
+
+function getCityGeoCoordinates(feature) {
+  const geometry = feature?.geometry;
+  if (geometry?.type === "Point" && Array.isArray(geometry.coordinates) && geometry.coordinates.length >= 2) {
+    const lon = Number(geometry.coordinates[0]);
+    const lat = Number(geometry.coordinates[1]);
+    if (Number.isFinite(lon) && Number.isFinite(lat)) {
+      return [normalizeLongitude(lon), clamp(lat, -89.999, 89.999)];
+    }
+  }
+  if (geometry?.type === "MultiPoint" && Array.isArray(geometry.coordinates) && geometry.coordinates.length) {
+    const points = geometry.coordinates
+      .map((coords) => [Number(coords?.[0]), Number(coords?.[1])])
+      .filter((coords) => coords.every((value) => Number.isFinite(value)));
+    if (points.length) {
+      const sums = points.reduce((acc, coords) => [acc[0] + coords[0], acc[1] + coords[1]], [0, 0]);
+      return [
+        normalizeLongitude(sums[0] / points.length),
+        clamp(sums[1] / points.length, -89.999, 89.999),
+      ];
+    }
+  }
+  return getFeatureGeoCentroid(feature);
+}
+
+function buildCityLabelPlacementCandidates(entry, {
+  textWidthPx,
+  fontPx,
+  scale,
+  offsetPx,
+  verticalOffsetPx,
+}) {
+  if (!entry?.screenPoint || !entry?.anchor) return [];
+  const widthPx = Math.max(1, Number(textWidthPx || 0));
+  const heightPx = fontPx + 4;
+  const halfHeightPx = heightPx * 0.5;
+  const placements = {
+    right: {
+      textAlign: "left",
+      dxPx: offsetPx,
+      dyPx: 0,
+      boxX: entry.screenPoint[0] + offsetPx - 2,
+      boxY: entry.screenPoint[1] - halfHeightPx,
+    },
+    left: {
+      textAlign: "right",
+      dxPx: -offsetPx,
+      dyPx: 0,
+      boxX: entry.screenPoint[0] - offsetPx - widthPx - 4,
+      boxY: entry.screenPoint[1] - halfHeightPx,
+    },
+    "upper-right": {
+      textAlign: "left",
+      dxPx: offsetPx,
+      dyPx: -verticalOffsetPx,
+      boxX: entry.screenPoint[0] + offsetPx - 2,
+      boxY: entry.screenPoint[1] - verticalOffsetPx - halfHeightPx,
+    },
+    "lower-right": {
+      textAlign: "left",
+      dxPx: offsetPx,
+      dyPx: verticalOffsetPx,
+      boxX: entry.screenPoint[0] + offsetPx - 2,
+      boxY: entry.screenPoint[1] + verticalOffsetPx - halfHeightPx,
+    },
+    "upper-left": {
+      textAlign: "right",
+      dxPx: -offsetPx,
+      dyPx: -verticalOffsetPx,
+      boxX: entry.screenPoint[0] - offsetPx - widthPx - 4,
+      boxY: entry.screenPoint[1] - verticalOffsetPx - halfHeightPx,
+    },
+    "lower-left": {
+      textAlign: "right",
+      dxPx: -offsetPx,
+      dyPx: verticalOffsetPx,
+      boxX: entry.screenPoint[0] - offsetPx - widthPx - 4,
+      boxY: entry.screenPoint[1] + verticalOffsetPx - halfHeightPx,
+    },
+  };
+  return CITY_LABEL_PLACEMENT_ORDER
+    .map((placementId) => {
+      const candidate = placements[placementId];
+      if (!candidate) return null;
+      return {
+        id: placementId,
+        textAlign: candidate.textAlign,
+        drawX: entry.anchor[0] + (candidate.dxPx / scale),
+        drawY: entry.anchor[1] + (candidate.dyPx / scale),
+        box: {
+          x: candidate.boxX,
+          y: candidate.boxY,
+          w: widthPx + 6,
+          h: heightPx,
+        },
+      };
+    })
+    .filter(Boolean);
+}
+
+function isCityAnchorInViewport(anchor, { padding = 24, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity } = {}) {
+  const screenPoint = getCityScreenPoint(anchor, transform);
+  if (!screenPoint) return false;
+  return (
+    screenPoint[0] >= -padding
+    && screenPoint[0] <= runtimeState.width + padding
+    && screenPoint[1] >= -padding
+    && screenPoint[1] <= runtimeState.height + padding
+  );
+}
+
+function getCityCapitalDescriptor(entry) {
+  if (entry?.feature?.properties?.__city_is_country_capital) {
+    return runtimeState.currentLanguage === "zh" ? "\u9996\u90fd" : "Capital";
+  }
+  if (entry?.feature?.properties?.__city_is_admin_capital) {
+    return runtimeState.currentLanguage === "zh" ? "\u884c\u653f\u4e2d\u5fc3" : "Administrative capital";
+  }
+  return "";
+}
+
+function getCityTooltipText(entry) {
+  const fullLabel = getCityDisplayLabel(entry?.feature);
+  const props = entry?.feature?.properties || {};
+  const hostFeatureId = String(props.__city_host_feature_id || "").trim();
+  const hostFeature = hostFeatureId ? runtimeState.landIndex?.get(hostFeatureId) : null;
+  const countryCode = String(
+    (hostFeature ? getDisplayOwnerCode(hostFeature, hostFeatureId) : "")
+      || props.__city_scenario_tag
+      || props.__city_country_code
+      || props.country_code
+      || ""
+  ).trim().toUpperCase();
+  const rawCountryName =
+    getScenarioCountryDisplayName(runtimeState.scenarioCountriesByTag?.[countryCode])
+    || runtimeState.countryNames?.[countryCode]
+    || countryCode;
+  const countryDisplayName = rawCountryName ? (t(rawCountryName, "geo") || rawCountryName) : "";
+  const lines = [fullLabel];
+  const capitalDescriptor = getCityCapitalDescriptor(entry);
+  if (capitalDescriptor) {
+    lines.push(capitalDescriptor);
+  }
+  if (countryDisplayName) {
+    lines.push(countryCode ? `${countryDisplayName} (${countryCode})` : countryDisplayName);
+  }
+  return renderTooltipText({ lines: lines.filter(Boolean) });
+}
+
+function getCityLabelBackgroundColor(entry) {
+  const props = entry?.feature?.properties || entry?.properties || {};
+  const hostFeatureId = String(props.__city_host_feature_id || props.host_feature_id || "").trim();
+  const hostFeature = hostFeatureId ? runtimeState.landIndex?.get(hostFeatureId) : null;
+  if (hostFeature && hostFeatureId) {
+    return (
+      getSafeCanvasColor(runtimeState.colors?.[hostFeatureId], null) ||
+      getSafeCanvasColor(getResolvedFeatureColor(hostFeature, hostFeatureId), null)
+    );
+  }
+
+  const countryCode = String(
+    props.__city_scenario_tag ||
+    props.__city_country_code ||
+    props.country_code ||
+    props.cntr_code ||
+    ""
+  ).trim().toUpperCase();
+  if (!countryCode) return null;
+  return (
+    getSafeCanvasColor(runtimeState.sovereignBaseColors?.[countryCode], null) ||
+    getSafeCanvasColor(runtimeState.countryBaseColors?.[countryCode], null)
+  );
+}
+
+function getCityBackgroundPaintInfo(entry) {
+  const backgroundColor = getCityLabelBackgroundColor(entry) || "";
+  const luminance = getCanvasColorRelativeLuminance(backgroundColor);
+  const usesLightContrast = Number.isFinite(luminance) && luminance < CITY_LABEL_DARK_BACKGROUND_LUMINANCE;
+  return {
+    backgroundColor,
+    luminance,
+    usesLightContrast,
+  };
+}
+
+function getCityLabelRenderStyle(entry, config = {}) {
+  const tokens = getCityMarkerThemeTokens(config);
+  const backgroundInfo = getCityBackgroundPaintInfo(entry);
+  const { backgroundColor, luminance } = backgroundInfo;
+  const usesLightLabel = backgroundInfo.usesLightContrast;
+
+  if (!usesLightLabel) {
+    return {
+      fillStyle: entry?.isCapital ? tokens.capitalLabel : tokens.label,
+      strokeStyle: "rgba(255, 252, 245, 0.22)",
+      shadowColor: tokens.shadow,
+      strokeWidthFactor: 0.1,
+      shadowBlurFactor: 0.12,
+      shadowOffsetYFactor: 0.04,
+      usesLightLabel: false,
+      backgroundColor: backgroundColor || "",
+      luminance,
+    };
+  }
+
+  return {
+    fillStyle: entry?.isCapital ? "rgba(248, 245, 238, 0.98)" : "rgba(243, 240, 233, 0.96)",
+    strokeStyle: "rgba(12, 16, 24, 0.46)",
+    shadowColor: "rgba(6, 9, 14, 0.34)",
+    strokeWidthFactor: 0.18,
+    shadowBlurFactor: 0.18,
+    shadowOffsetYFactor: 0.05,
+    usesLightLabel: true,
+    backgroundColor: backgroundColor || "",
+    luminance,
+  };
+}
+
+function getCityMarkerRenderStyle(entry, config = {}) {
+  const baseTokens = getCityMarkerThemeTokens(config);
+  const backgroundInfo = getCityBackgroundPaintInfo(entry);
+  const { backgroundColor, luminance, usesLightContrast } = backgroundInfo;
+  if (!usesLightContrast || !backgroundColor) {
+    return {
+      tokens: baseTokens,
+      backgroundColor,
+      luminance,
+      usesLightContrast: false,
+      adapted: false,
+    };
+  }
+
+  const adaptiveBase = computeUrbanAdaptivePaintFromHostColor(backgroundColor, {
+    adaptiveStrength: 1,
+    toneBias: 0.08,
+  });
+  const adaptiveStroke = adaptiveBase?.strokeColor || mixCanvasColors(backgroundColor, "#fff8ef", 0.78) || baseTokens.stroke;
+  return {
+    tokens: {
+      ...baseTokens,
+      rimDark: mixCanvasColors(baseTokens.rimDark, adaptiveStroke, 0.44) || baseTokens.rimDark,
+      stroke: mixCanvasColors(baseTokens.stroke, adaptiveStroke, 0.54) || baseTokens.stroke,
+      highlight: mixCanvasColors(baseTokens.highlight, "#ffffff", 0.14) || baseTokens.highlight,
+      specular: mixCanvasColors(baseTokens.specular, "#ffffff", 0.1) || baseTokens.specular,
+      halo: mixCanvasColors(baseTokens.halo, adaptiveStroke, 0.16) || baseTokens.halo,
+    },
+    backgroundColor,
+    luminance,
+    usesLightContrast: true,
+    adapted: true,
+  };
+}
+
+function getCityVisualCapitalState(entry, config = {}) {
+  return !!entry?.isCapital && config.showCapitalOverlay !== false;
+}
+
+function getCityHoverRadiusPx(entry) {
+  return Math.max(7, Number(entry?.markerSizePx || 0) * 0.92 + (entry?.isCapital ? 2.4 : 1.4));
+}
+
+function cacheVisibleCityHoverEntries(entries = []) {
+  visibleCityHoverEntries = Array.isArray(entries)
+    ? entries
+      .filter((entry) => Array.isArray(entry?.screenPoint) && entry.screenPoint.length >= 2)
+      .map((entry) => ({
+        ...entry,
+        hoverRadiusPx: getCityHoverRadiusPx(entry),
+        tooltipText: getCityTooltipText(entry),
+      }))
+    : [];
+}
+
+function getHoveredCityEntryFromEvent(event) {
+  const startedAt = nowMs();
+  const eventType = String(event?.type || "hover").toLowerCase() === "mousemove" ? "hover" : String(event?.type || "unknown").toLowerCase();
+  if (!visibleCityHoverEntries.length || !mapSvg || !globalThis.d3?.pointer) {
+    recordInteractionDurationMetric("interactionHoverCityProbeDuration", nowMs() - startedAt, {
+      eventType,
+      entryCount: visibleCityHoverEntries.length,
+      hit: false,
+      skipped: true,
+    });
+    return null;
+  }
+  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  if (![sx, sy].every(Number.isFinite)) {
+    recordInteractionDurationMetric("interactionHoverCityProbeDuration", nowMs() - startedAt, {
+      eventType,
+      entryCount: visibleCityHoverEntries.length,
+      hit: false,
+      skipped: true,
+    });
+    return null;
+  }
+  let bestEntry = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  visibleCityHoverEntries.forEach((entry) => {
+    const [entryX, entryY] = entry.screenPoint || [];
+    if (![entryX, entryY].every(Number.isFinite)) {
+      return;
+    }
+    const threshold = Math.max(6, Number(entry.hoverRadiusPx || 0));
+    const distance = Math.hypot(sx - entryX, sy - entryY);
+    if (distance <= threshold && distance < bestDistance) {
+      bestDistance = distance;
+      bestEntry = entry;
+    }
+  });
+  recordInteractionDurationMetric("interactionHoverCityProbeDuration", nowMs() - startedAt, {
+    eventType,
+    entryCount: visibleCityHoverEntries.length,
+    hit: !!bestEntry,
+  });
+  return bestEntry;
+}
+
+function isCityEntryEligibleForLandHit(entry, hit) {
+  if (!entry || hit?.targetType !== "land") {
+    return false;
+  }
+  const hostFeatureId = String(
+    entry?.feature?.properties?.__city_host_feature_id
+    || entry?.feature?.properties?.host_feature_id
+    || ""
+  ).trim();
+  return !!hostFeatureId && hostFeatureId === String(hit?.id || "").trim();
+}
+
+function getHoveredCityTooltipEntry(event, hit) {
+  const entry = getHoveredCityEntryFromEvent(event);
+  return isCityEntryEligibleForLandHit(entry, hit) ? entry : null;
+}
+
+function listVisibleFacilityHoverEntries() {
+  return [
+    ...(Array.isArray(visibleFacilityHoverEntriesByFamily.airport) ? visibleFacilityHoverEntriesByFamily.airport : []),
+    ...(Array.isArray(visibleFacilityHoverEntriesByFamily.port) ? visibleFacilityHoverEntriesByFamily.port : []),
+  ];
+}
+
+function buildFacilityEntryKey(entry) {
+  const familyId = String(entry?.familyId || "").trim().toLowerCase();
+  const stableId = String(entry?.stableId || "").trim();
+  if (!familyId || !stableId) return "";
+  return `${familyId}:${stableId}`;
+}
+
+function clearFacilityHoverEntries(familyId = "") {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  if (normalizedFamilyId && Object.prototype.hasOwnProperty.call(visibleFacilityHoverEntriesByFamily, normalizedFamilyId)) {
+    visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = [];
+  }
+  if (normalizedFamilyId && hoveredFacilityEntry?.familyId === normalizedFamilyId) {
+    hoveredFacilityEntry = null;
+    runtimeState.hoverOverlayDirty = true;
+  }
+  if (normalizedFamilyId && selectedFacilityEntry?.familyId === normalizedFamilyId) {
+    selectedFacilityEntry = null;
+    applyFacilityInfoCardState(null);
+    runtimeState.hoverOverlayDirty = true;
+  }
+}
+
+function setVisibleFacilityHoverEntries(familyId = "", entries = []) {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  if (!normalizedFamilyId || !Object.prototype.hasOwnProperty.call(visibleFacilityHoverEntriesByFamily, normalizedFamilyId)) {
+    return;
+  }
+  visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = Array.isArray(entries) ? entries : [];
+  const nextEntriesByKey = new Map(
+    listVisibleFacilityHoverEntries()
+      .map((entry) => [buildFacilityEntryKey(entry), entry])
+      .filter(([key]) => !!key)
+  );
+  const hoveredKey = buildFacilityEntryKey(hoveredFacilityEntry);
+  const selectedKey = buildFacilityEntryKey(selectedFacilityEntry);
+  if (hoveredKey) {
+    const nextHoveredEntry = nextEntriesByKey.get(hoveredKey) || null;
+    if (nextHoveredEntry) {
+      hoveredFacilityEntry = nextHoveredEntry;
+      runtimeState.hoverOverlayDirty = true;
+    } else {
+      hoveredFacilityEntry = null;
+      runtimeState.hoverOverlayDirty = true;
+    }
+  }
+  if (selectedKey) {
+    const nextSelectedEntry = nextEntriesByKey.get(selectedKey) || null;
+    if (nextSelectedEntry) {
+      selectedFacilityEntry = nextSelectedEntry;
+      applyFacilityInfoCardState(nextSelectedEntry);
+      runtimeState.hoverOverlayDirty = true;
+    } else {
+      selectedFacilityEntry = null;
+      applyFacilityInfoCardState(null);
+      runtimeState.hoverOverlayDirty = true;
+    }
+  }
+}
+
+function getFacilityHoverRadiusPx(entry) {
+  return Math.max(8, Number(entry?.markerRadiusPx || 0) + 5);
+}
+
+function getHoveredFacilityEntryFromEvent(event) {
+  const startedAt = nowMs();
+  const eventType = String(event?.type || "hover").toLowerCase() === "mousemove" ? "hover" : String(event?.type || "unknown").toLowerCase();
+  if (!mapSvg || !globalThis.d3?.pointer) {
+    recordInteractionDurationMetric("interactionHoverFacilityProbeDuration", nowMs() - startedAt, {
+      eventType,
+      entryCount: 0,
+      hit: false,
+      skipped: true,
+    });
+    return null;
+  }
+  const entries = listVisibleFacilityHoverEntries();
+  if (!entries.length) {
+    recordInteractionDurationMetric("interactionHoverFacilityProbeDuration", nowMs() - startedAt, {
+      eventType,
+      entryCount: 0,
+      hit: false,
+      skipped: true,
+    });
+    return null;
+  }
+  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  if (![sx, sy].every(Number.isFinite)) {
+    recordInteractionDurationMetric("interactionHoverFacilityProbeDuration", nowMs() - startedAt, {
+      eventType,
+      entryCount: entries.length,
+      hit: false,
+      skipped: true,
+    });
+    return null;
+  }
+  let bestEntry = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  entries.forEach((entry) => {
+    const [entryX, entryY] = entry?.screenPoint || [];
+    if (![entryX, entryY].every(Number.isFinite)) {
+      return;
+    }
+    const threshold = Math.max(6, Number(entry?.hoverRadiusPx || 0));
+    const distance = Math.hypot(sx - entryX, sy - entryY);
+    if (distance <= threshold && distance < bestDistance) {
+      bestDistance = distance;
+      bestEntry = entry;
+    }
+  });
+  recordInteractionDurationMetric("interactionHoverFacilityProbeDuration", nowMs() - startedAt, {
+    eventType,
+    entryCount: entries.length,
+    hit: !!bestEntry,
+  });
+  return bestEntry;
+}
+
+function applyFacilityInfoCardState(entry, anchor = null) {
+  if (!facilityInfoCard || !facilityInfoCardTitle || !facilityInfoCardBody || !facilityInfoCardZoomBtn || !facilityInfoCardMoreBtn) {
+    return;
+  }
+  if (!entry) {
+    selectedFacilityEntry = null;
+    facilityInfoCardExpanded = false;
+    facilityInfoCardAnchor = null;
+    getFacilitySurfaceOwner().applyFacilityInfoCardState(null, {
+      expanded: false,
+      previousAnchor: null,
+      dom: {
+        facilityInfoCard,
+        facilityInfoCardBody,
+        facilityInfoCardMoreBtn,
+        facilityInfoCardTitle,
+        facilityInfoCardZoomBtn,
+      },
+      entryKey: "",
+    });
+    return;
+  }
+  selectedFacilityEntry = entry;
+  facilityInfoCardAnchor = anchor && Number.isFinite(Number(anchor?.x)) && Number.isFinite(Number(anchor?.y))
+    ? { x: Number(anchor.x), y: Number(anchor.y) }
+    : (facilityInfoCardAnchor || { x: 24, y: 24 });
+  const cardState = getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {
+    anchor,
+    expanded: facilityInfoCardExpanded,
+    previousAnchor: facilityInfoCardAnchor,
+    dom: {
+      facilityInfoCard,
+      facilityInfoCardBody,
+      facilityInfoCardMoreBtn,
+      facilityInfoCardTitle,
+      facilityInfoCardZoomBtn,
+    },
+    entryKey: buildFacilityEntryKey(entry),
+  });
+  facilityInfoCardAnchor = cardState.anchor;
+}
+
+function setMapInteractionCursor(nextCursor = "") {
+  if (!interactionRect) return;
+  interactionRect.style("cursor", nextCursor || null);
+}
+
+function getActiveFacilityHighlightEntry() {
+  return hoveredFacilityEntry || selectedFacilityEntry || null;
+}
+
+function zoomToFacilityEntry(entry, { targetScale = 4.8, durationMs = 420 } = {}) {
+  if (!entry?.coordinates || !projection || !interactionRect || !zoomBehavior || !globalThis.d3) {
+    return;
+  }
+  const projected = projection(entry.coordinates);
+  if (!Array.isArray(projected) || !projected.every(Number.isFinite)) {
+    return;
+  }
+  const nextScale = Math.max(MIN_ZOOM_SCALE, Math.min(MAX_ZOOM_SCALE, Number(targetScale) || 4.8));
+  const nextTransform = globalThis.d3.zoomIdentity
+    .translate(runtimeState.width / 2, runtimeState.height / 2)
+    .scale(nextScale)
+    .translate(-projected[0], -projected[1]);
+  globalThis.d3
+    .select(interactionRect.node())
+    .transition()
+    .duration(durationMs)
+    .call(zoomBehavior.transform, nextTransform);
+}
+
+function syncFacilityInfoCardVisibility() {
+  if (!selectedFacilityEntry) {
+    return;
+  }
+  if (isFacilityDetailsSurfaceActive(selectedFacilityEntry.familyId)) {
+    return;
+  }
+  hoveredFacilityEntry = null;
+  applyFacilityInfoCardState(null);
+  runtimeState.hoverOverlayDirty = true;
+  renderHoverOverlayIfNeeded({ eventType: "facility-card-visibility" });
+  queueTooltipUpdate({ visible: false });
+  setMapInteractionCursor("");
+}
+
+function isFacilityDetailsSurfaceActive(familyId = "") {
+  const transportPanel = document.getElementById("appearancePanelTransport");
+  if (
+    transportPanel instanceof HTMLElement
+    && transportPanel.hidden !== true
+    && !transportPanel.classList.contains("hidden")
+  ) {
+    const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+    if (normalizedFamilyId === "airport") {
+      const airportCard = document.getElementById("transportAirportCard");
+      if (airportCard instanceof HTMLDetailsElement && airportCard.open) {
+        return true;
+      }
+    }
+    if (normalizedFamilyId === "port") {
+      const portCard = document.getElementById("transportPortCard");
+      if (portCard instanceof HTMLDetailsElement && portCard.open) {
+        return true;
+      }
+    }
+  }
+  const workbenchOverlay = document.getElementById("transportWorkbenchOverlay");
+  return workbenchOverlay instanceof HTMLElement && !workbenchOverlay.classList.contains("hidden");
+}
+
+function getCityLayerRenderState(k, { interactive = false, cacheHoverEntries = false } = {}) {
+  const cityCollection = getEffectiveCityCollection();
+  const featureCount = getFeatureCollectionFeatureCount(cityCollection);
+  if (!runtimeState.showCityPoints || !cityCollection?.features?.length || !projection) {
+    if (cacheHoverEntries) {
+      cacheVisibleCityHoverEntries([]);
+    }
+    return {
+      featureCount,
+      markerEntries: [],
+      labelEntries: [],
+      skipped: true,
+      reason: !runtimeState.showCityPoints ? "hidden" : !projection ? "no-projection" : "no-data",
+    };
+  }
+
+  const config = normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {});
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+  const scale = Math.max(0.0001, Number(transform?.k || k || 1));
+  const opacity = clamp(Number(config.opacity) || 0.92, 0, 1);
+  const plan = config.revealProfile === CITY_REVEAL_PROFILE_HYBRID
+    ? buildCityRevealPlan(cityCollection, scale, transform, config)
+    : buildCityRevealPlan(cityCollection, scale, transform, {
+      ...config,
+      revealProfile: CITY_REVEAL_PROFILE_HYBRID,
+    });
+  const markerEntries = Array.isArray(plan?.markerEntries) ? plan.markerEntries : [];
+
+  if (!markerEntries.length) {
+    if (cacheHoverEntries) {
+      cacheVisibleCityHoverEntries([]);
+    }
+    return {
+      featureCount,
+      skipped: true,
+      reason: "culled",
+      markerEntries,
+      labelEntries: [],
+      config,
+      scale,
+      opacity: clamp(Number(config.opacity) || 0.92, 0, 1),
+    };
+  }
+  if (cacheHoverEntries) {
+    cacheVisibleCityHoverEntries(markerEntries);
+  }
+  return {
+    featureCount,
+    markerEntries,
+    labelEntries: !interactive && config.showLabels ? plan.labelEntries || [] : [],
+    skipped: false,
+    reason: "",
+    config,
+    scale,
+    opacity: clamp(Number(config.opacity) || 0.92, 0, 1),
+  };
+}
+
+function drawCityMarkersFromEntries(markerEntries, { config, scale, opacity, interactive = false } = {}) {
+  if (!Array.isArray(markerEntries) || !markerEntries.length) return;
+  context.save();
+  context.globalCompositeOperation = "source-over";
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  context.globalAlpha = interactive ? Math.min(opacity, 0.8) : opacity;
+
+  markerEntries.forEach((entry) => {
+    const spriteEntry = getCityVisualCapitalState(entry, config)
+      ? entry
+      : {
+        ...entry,
+        isCapital: false,
+        markerSizePx: null,
+      };
+    const sprite = getCityMarkerSprite(spriteEntry, config);
+    if (!sprite?.canvas) return;
+    const drawWidth = sprite.width / scale;
+    const drawHeight = sprite.height / scale;
+    const drawX = entry.anchor[0] - (sprite.anchorX / scale);
+    const drawY = entry.anchor[1] - (sprite.anchorY / scale);
+    context.drawImage(sprite.canvas, drawX, drawY, drawWidth, drawHeight);
+  });
+  context.restore();
+}
+
+function drawCityPointsLayer(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  const renderState = getCityLayerRenderState(k, {
+    interactive,
+    cacheHoverEntries: true,
+  });
+  if (renderState.skipped) {
+    collectContextMetric("drawCityPointsLayer", nowMs() - startedAt, {
+      featureCount: renderState.featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: renderState.reason,
+    });
+    return;
+  }
+  drawCityMarkersFromEntries(renderState.markerEntries, {
+    config: renderState.config,
+    scale: renderState.scale,
+    opacity: renderState.opacity,
+    interactive,
+  });
+  collectContextMetric("drawCityPointsLayer", nowMs() - startedAt, {
+    featureCount: renderState.featureCount,
+    visibleFeatureCount: renderState.markerEntries.length,
+    labelCount: 0,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function getContextFacilityThresholdRank(threshold, allowed = []) {
+  const normalized = String(threshold || "").trim().toLowerCase();
+  if (allowed.includes(normalized)) {
+    if (normalized === "national_core") return 3;
+    if (normalized === "regional_core") return 2;
+    return 1;
+  }
+  return 1;
+}
+
+function getTransportOverviewStyleConfig() {
+  if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
+    runtimeState.styleConfig = {};
+  }
+  runtimeState.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(
+    runtimeState.styleConfig.transportOverview || {},
+  );
+  return runtimeState.styleConfig.transportOverview;
+}
+
+function getTransportOverviewVisualMode() {
+  return normalizeTransportOverviewVisualMode(getTransportOverviewStyleConfig().visualMode, "distribution");
+}
+
+function getTransportOverviewFamilyConfig(familyId) {
+  const config = getTransportOverviewStyleConfig();
+  return config?.[familyId] || {};
+}
+
+function getTransportOverviewLabelZoomConfig(familyId, labelDensity) {
+  const base = familyId === "airport"
+    ? { nationalLabelScale: 2.0, regionalLabelScale: 5.0 }
+    : { nationalLabelScale: 2.2, regionalLabelScale: 5.4 };
+  switch (String(labelDensity || "").trim().toLowerCase()) {
+    case "sparse":
+      return {
+        nationalLabelScale: base.nationalLabelScale + 0.7,
+        regionalLabelScale: base.regionalLabelScale + 1.1,
+      };
+    case "dense":
+      return {
+        nationalLabelScale: Math.max(0.75, base.nationalLabelScale - 0.35),
+        regionalLabelScale: Math.max(1.4, base.regionalLabelScale - 0.9),
+      };
+    default:
+      return base;
+  }
+}
+
+function getTransportOverviewImportanceThresholdRank(value, allowed = ["primary", "secondary", "all"]) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!allowed.includes(normalized)) return 2;
+  if (normalized === "primary") return 3;
+  if (normalized === "secondary") return 2;
+  return 1;
+}
+
+function getTransportOverviewZoomRevealAllowance(scale) {
+  const k = Number(scale || 1);
+  if (k >= 6) return 2;
+  if (k >= 3.1) return 1;
+  return 0;
+}
+
+function getTransportPortZoomRevealFloor(scale) {
+  return Math.max(1, 2 - getTransportOverviewZoomRevealAllowance(scale));
+}
+
+function getTransportAirportScopeThreshold(scope) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  if (normalized === "international") return 3;
+  if (normalized === "all_civil") return 1;
+  return 2;
+}
+
+function getTransportPortScopeThreshold(scope) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  if (normalized === "core") return 3;
+  if (normalized === "expanded") return 1;
+  return 2;
+}
+
+function getTransportRailScopeThreshold(scope) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  return normalized === "mainline_only" ? 1 : 2;
+}
+
+function getTransportRailRevealRankThreshold(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "primary") return 1;
+  if (normalized === "secondary") return 2;
+  return 3;
+}
+
+function getTransportRoadRevealRankThreshold(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "primary") return 1;
+  if (normalized === "secondary") return 2;
+  return 3;
+}
+
+function getTransportRoadScopeThreshold(scope) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  return normalized === "motorway_only" ? 1 : 2;
+}
+
+function getTransportOverviewPrimaryColor(value, fallback = "#1d4ed8") {
+  return ColorManager.normalizeHexColor(String(value || "").trim()) || fallback;
+}
+
+function buildTransportFacilityVisualStyle(primaryColor, visualStrength, fallback = "#1d4ed8") {
+  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, fallback);
+  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.56, 0, 1);
+  const luminance = getCanvasColorRelativeLuminance(resolvedPrimaryColor);
+  const strokeTarget = Number.isFinite(luminance) && luminance < 0.4 ? "#f8fbff" : "#ffffff";
+  const labelTarget = Number.isFinite(luminance) && luminance < 0.56 ? "#f8fafc" : "#0f172a";
+  return {
+    fillStyle: resolvedPrimaryColor,
+    strokeStyle: mixCanvasColors(resolvedPrimaryColor, strokeTarget, 0.72) || strokeTarget,
+    labelColor: mixCanvasColors(resolvedPrimaryColor, labelTarget, Number.isFinite(luminance) && luminance < 0.56 ? 0.48 : 0.78) || labelTarget,
+    highlightStroke: mixCanvasColors(resolvedPrimaryColor, "#ffffff", 0.82) || "#ffffff",
+    radiusScale: 0.85 + (strength * 0.55),
+    strokeScale: 0.9 + (strength * 0.35),
+    hoverScale: 1.12 + (strength * 0.12),
+  };
+}
+
+function getTransportOverviewAirportVisualStyle(primaryColor, visualStrength) {
+  return buildTransportFacilityVisualStyle(primaryColor, visualStrength, "#1d4ed8");
+}
+
+function getTransportOverviewPortVisualStyle(primaryColor, visualStrength) {
+  return buildTransportFacilityVisualStyle(primaryColor, visualStrength, "#b45309");
+}
+
+function getTransportOverviewRailVisualStyle(primaryColor, visualStrength) {
+  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, "#0f172a");
+  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.5, 0, 1);
+  return {
+    mainlineStroke: mixCanvasColors(resolvedPrimaryColor, "#020617", 0.35) || resolvedPrimaryColor,
+    regionalStroke: mixCanvasColors(resolvedPrimaryColor, "#cbd5e1", 0.38) || resolvedPrimaryColor,
+    mainlineWidth: 1.4 + (strength * 1.3),
+    regionalWidth: 0.8 + (strength * 0.75),
+    mainlineOpacity: 0.74 + (strength * 0.26),
+    regionalOpacity: 0.42 + (strength * 0.22),
+  };
+}
+
+function getTransportOverviewRoadVisualStyle(primaryColor, visualStrength) {
+  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, "#374151");
+  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.5, 0, 1);
+  return {
+    motorwayStroke: mixCanvasColors(resolvedPrimaryColor, "#111827", 0.28) || resolvedPrimaryColor,
+    trunkStroke: mixCanvasColors(resolvedPrimaryColor, "#e5e7eb", 0.26) || resolvedPrimaryColor,
+    motorwayWidth: 1.55 + (strength * 1.45),
+    trunkWidth: 0.95 + (strength * 0.95),
+    motorwayOpacity: 0.72 + (strength * 0.24),
+    trunkOpacity: 0.48 + (strength * 0.2),
+  };
+}
+
+function getTransportRailLabelGridSize(labelDensity) {
+  switch (String(labelDensity || "").trim().toLowerCase()) {
+    case "dense":
+      return 112;
+    case "sparse":
+      return 176;
+    default:
+      return 144;
+  }
+}
+
+function buildProjectedRailLines(geometry) {
+  if (!projection || !geometry || typeof geometry !== "object") return [];
+  const rawLines = geometry.type === "LineString"
+    ? [geometry.coordinates || []]
+    : geometry.type === "MultiLineString"
+      ? (geometry.coordinates || [])
+      : [];
+  return rawLines
+    .map((line) => (Array.isArray(line) ? line : []).map((coord) => projection(coord)).filter((point) => Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1])))
+    .filter((line) => line.length >= 2);
+}
+
+function measureProjectedLineSetLength(lines) {
+  let total = 0;
+  (Array.isArray(lines) ? lines : []).forEach((line) => {
+    for (let index = 1; index < line.length; index += 1) {
+      const previous = line[index - 1];
+      const current = line[index];
+      total += Math.hypot(
+        Number(current?.[0] || 0) - Number(previous?.[0] || 0),
+        Number(current?.[1] || 0) - Number(previous?.[1] || 0),
+      );
+    }
+  });
+  return total;
+}
+
+function getRailFeatureLabelAnchor(feature) {
+  const geometry = feature?.geometry;
+  if (!geometry || typeof geometry !== "object") return null;
+  if (geometry.type === "LineString") {
+    return getLineMidpointFromCoordinates(Array.isArray(geometry.coordinates) ? geometry.coordinates : []);
+  }
+  return getMultiLineLabelAnchor(geometry, "midpoint");
+}
+
+function getTransportOverviewAirportLabelText(properties = {}, mode = "both") {
+  const name = String(properties.name || "").trim();
+  const code = String(properties.iata || properties.icao || "").trim();
+  const normalized = String(mode || "").trim().toLowerCase();
+  if (normalized === "code") return code || name;
+  if (normalized === "name") return name || code;
+  return code && name ? `${code} · ${name}` : (code || name);
+}
+
+function getTransportOverviewPortLabelText(properties = {}, mode = "mixed") {
+  const name = String(properties.name || "").trim();
+  const designation = String(properties.legal_designation_label || properties.legal_designation || "").trim();
+  const normalized = String(mode || "").trim().toLowerCase();
+  if (normalized === "cargo_focus") return designation || name;
+  if (normalized === "name") return name || designation;
+  return designation && name ? `${name} · ${designation}` : (name || designation);
+}
+
+function getTransportOverviewRailLabelText(properties = {}, mode = "name") {
+  const name = String(properties.name || "").trim();
+  const normalized = String(mode || "").trim().toLowerCase();
+  if (normalized === "ref") return name;
+  return name;
+}
+
+function buildContextFacilityEntries(
+  collection,
+  thresholdRank = 1,
+  {
+    getLabelText = null,
+  } = {},
+) {
+  const featureCount = getFeatureCollectionFeatureCount(collection);
+  if (!collection?.features?.length || !projection) {
+    return {
+      featureCount,
+      entries: [],
+      skipped: true,
+      reason: !projection ? "no-projection" : "no-data",
+    };
+  }
+  const targetCanvas = context?.canvas || null;
+  const viewportWidth = Number(targetCanvas?.width || 0);
+  const viewportHeight = Number(targetCanvas?.height || 0);
+  const padding = 28;
+  const entries = [];
+  collection.features.forEach((feature) => {
+    if (feature?.geometry?.type !== "Point") return;
+    const coordinates = feature.geometry.coordinates;
+    if (!Array.isArray(coordinates) || coordinates.length < 2) return;
+    const projected = projection([coordinates[0], coordinates[1]]);
+    if (!Array.isArray(projected) || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
+    const properties = feature.properties || {};
+    const importanceRank = Math.max(1, Math.round(Number(properties.importance_rank || 1)));
+    if (importanceRank < thresholdRank) return;
+    const x = projected[0];
+    const y = projected[1];
+    if (
+      viewportWidth > 0
+      && viewportHeight > 0
+      && (x < -padding || x > viewportWidth + padding || y < -padding || y > viewportHeight + padding)
+    ) {
+      return;
+    }
+    entries.push({
+      x,
+      y,
+      label: typeof getLabelText === "function"
+        ? String(getLabelText(properties, feature) || "").trim()
+        : String(properties.name || "").trim(),
+      importanceRank,
+      properties: {
+        ...properties,
+        __coordinates: [coordinates[0], coordinates[1]],
+      },
+    });
+  });
+  entries.sort((left, right) => left.importanceRank - right.importanceRank);
+  return {
+    featureCount,
+    entries,
+    skipped: false,
+    reason: "",
+  };
+}
+
+function drawContextFacilityPointLayer(
+  metricName,
+  collection,
+  k,
+  {
+    familyId = "",
+    interactive = false,
+    visible = true,
+    thresholdRank = 1,
+    shape = "diamond",
+    fillStyle = "#2563eb",
+    strokeStyle = "#eff6ff",
+    labelColor = "#1e3a8a",
+    opacity = 0.9,
+    labelsEnabled = true,
+    nationalLabelScale = 2.2,
+    regionalLabelScale = 5.2,
+    getLabelText = null,
+    radiusScale = 1,
+    strokeScale = 1,
+    hoverScale = 1.18,
+    highlightStroke = "#ffffff",
+  } = {},
+) {
+  const startedAt = nowMs();
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  if (!visible) {
+    clearFacilityHoverEntries(normalizedFamilyId);
+    collectContextMetric(metricName, nowMs() - startedAt, {
+      featureCount: getFeatureCollectionFeatureCount(collection),
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hidden",
+    });
+    return;
+  }
+  if (interactive) {
+    collectContextMetric(metricName, nowMs() - startedAt, {
+      featureCount: getFeatureCollectionFeatureCount(collection),
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: true,
+      skipped: true,
+      reason: "interactive-pass",
+    });
+    return;
+  }
+  const renderState = buildContextFacilityEntries(collection, thresholdRank, {
+    getLabelText,
+  });
+  if (renderState.skipped) {
+    clearFacilityHoverEntries(normalizedFamilyId);
+    collectContextMetric(metricName, nowMs() - startedAt, {
+      featureCount: renderState.featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: renderState.reason,
+    });
+    return;
+  }
+  const activeHighlightKey = buildFacilityEntryKey(getActiveFacilityHighlightEntry());
+  const hoverEntries = [];
+  let labelCount = 0;
+  context.save();
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  context.globalAlpha = opacity;
+  renderState.entries.forEach((entry) => {
+    const radiusBase = entry.importanceRank >= 3 ? 5.2 : entry.importanceRank === 2 ? 4.3 : 3.5;
+    const markerEntry = {
+      familyId: normalizedFamilyId,
+      stableId: String(entry.properties?.stable_key || entry.properties?.id || entry.label || `${entry.x}:${entry.y}`).trim(),
+      shape,
+      markerRadiusPx: radiusBase * radiusScale,
+      hoverScale: Number(hoverScale || 1.18),
+      highlightStroke: String(highlightStroke || strokeStyle || "#ffffff"),
+      screenPoint: [entry.x, entry.y],
+      coordinates: Array.isArray(entry.properties?.__coordinates) ? entry.properties.__coordinates : null,
+      properties: entry.properties,
+    };
+    markerEntry.hoverRadiusPx = getFacilityHoverRadiusPx(markerEntry);
+    markerEntry.tooltipText = buildFacilityTooltipText(markerEntry);
+    hoverEntries.push(markerEntry);
+    const highlightFactor = buildFacilityEntryKey(markerEntry) && buildFacilityEntryKey(markerEntry) === activeHighlightKey ? markerEntry.hoverScale : 1;
+    const radius = markerEntry.markerRadiusPx * highlightFactor;
+    context.beginPath();
+    if (shape === "square") {
+      context.rect(entry.x - radius, entry.y - radius, radius * 2, radius * 2);
+    } else {
+      context.moveTo(entry.x, entry.y - radius);
+      context.lineTo(entry.x + radius, entry.y);
+      context.lineTo(entry.x, entry.y + radius);
+      context.lineTo(entry.x - radius, entry.y);
+      context.closePath();
+    }
+    context.fillStyle = fillStyle;
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = (entry.importanceRank >= 3 ? 1.4 : 1.1) * strokeScale;
+    context.fill();
+    context.stroke();
+  });
+  context.restore();
+  setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries);
+
+  if (!labelsEnabled) {
+    collectContextMetric(metricName, nowMs() - startedAt, {
+      featureCount: renderState.featureCount,
+      visibleFeatureCount: renderState.entries.length,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: false,
+    });
+    return;
+  }
+
+  context.save();
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  renderState.entries.forEach((entry) => {
+    if (!entry.label) return;
+    const shouldShowLabel = entry.importanceRank >= 3 ? k >= nationalLabelScale : k >= regionalLabelScale;
+    if (!shouldShowLabel) return;
+    context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${entry.importanceRank >= 3 ? 11 : 10}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
+    context.lineWidth = 3;
+    context.strokeStyle = "rgba(255,255,255,0.92)";
+    context.fillStyle = labelColor;
+    context.strokeText(entry.label, entry.x + 8, entry.y);
+    context.fillText(entry.label, entry.x + 8, entry.y);
+    labelCount += 1;
+  });
+  context.restore();
+
+  collectContextMetric(metricName, nowMs() - startedAt, {
+    featureCount: renderState.featureCount,
+    visibleFeatureCount: renderState.entries.length,
+    labelCount,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function drawAirportsLayer(k, { interactive = false } = {}) {
+  const airportConfig = getTransportOverviewFamilyConfig("airport");
+  const labelZoomConfig = getTransportOverviewLabelZoomConfig("airport", airportConfig.labelDensity);
+  const visualStyle = getTransportOverviewAirportVisualStyle(airportConfig.primaryColor, airportConfig.visualStrength);
+  const strategy = resolveTransportOverviewPointStrategy("airport", airportConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  drawContextFacilityPointLayer("drawAirportsLayer", runtimeState.airportsData, k, {
+    familyId: "airport",
+    interactive,
+    visible: !!runtimeState.showTransport && !!runtimeState.showAirports,
+    thresholdRank: strategy.thresholdRank,
+    shape: "diamond",
+    fillStyle: visualStyle.fillStyle,
+    strokeStyle: visualStyle.strokeStyle,
+    labelColor: visualStyle.labelColor,
+    opacity: clamp(Number(airportConfig.opacity ?? 0.68), 0, 1) * strategy.opacityMultiplier,
+    labelsEnabled: strategy.labelsEnabled,
+    nationalLabelScale: labelZoomConfig.nationalLabelScale,
+    regionalLabelScale: labelZoomConfig.regionalLabelScale,
+    radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
+    strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
+    hoverScale: visualStyle.hoverScale,
+    highlightStroke: visualStyle.highlightStroke,
+    getLabelText: (properties) => getTransportOverviewAirportLabelText(properties, airportConfig.labelMode),
+  });
+}
+
+function drawPortsLayer(k, { interactive = false } = {}) {
+  const portConfig = getTransportOverviewFamilyConfig("port");
+  const labelZoomConfig = getTransportOverviewLabelZoomConfig("port", portConfig.labelDensity);
+  const visualStyle = getTransportOverviewPortVisualStyle(portConfig.primaryColor, portConfig.visualStrength);
+  const strategy = resolveTransportOverviewPointStrategy("port", portConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  drawContextFacilityPointLayer("drawPortsLayer", runtimeState.portsData, k, {
+    familyId: "port",
+    interactive,
+    visible: !!runtimeState.showTransport && !!runtimeState.showPorts,
+    thresholdRank: strategy.thresholdRank,
+    shape: "square",
+    fillStyle: visualStyle.fillStyle,
+    strokeStyle: visualStyle.strokeStyle,
+    labelColor: visualStyle.labelColor,
+    opacity: clamp(Number(portConfig.opacity ?? 0.64), 0, 1) * strategy.opacityMultiplier,
+    labelsEnabled: strategy.labelsEnabled,
+    nationalLabelScale: labelZoomConfig.nationalLabelScale,
+    regionalLabelScale: labelZoomConfig.regionalLabelScale,
+    radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
+    strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
+    hoverScale: visualStyle.hoverScale,
+    highlightStroke: visualStyle.highlightStroke,
+    getLabelText: (properties) => getTransportOverviewPortLabelText(properties, portConfig.labelMode),
+  });
+}
+
+function drawRailwaysLayer(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  const visible = !!runtimeState.showTransport && !!runtimeState.showRail;
+  const collection = runtimeState.railwaysData;
+  const featureCount = getFeatureCollectionFeatureCount(collection);
+  if (!visible) {
+    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hidden",
+    });
+    return;
+  }
+  if (interactive) {
+    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: true,
+      skipped: true,
+      reason: "interactive-pass",
+    });
+    return;
+  }
+  if (!collection?.features?.length || !pathCanvas) {
+    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !pathCanvas ? "no-path" : "no-data",
+    });
+    return;
+  }
+  const railConfig = getTransportOverviewFamilyConfig("rail");
+  const strategy = resolveTransportOverviewLineStrategy("rail", railConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  const minimumScopeRank = strategy.minimumScopeRank;
+  const maximumRevealRank = strategy.maximumRevealRank;
+  const visualStyle = getTransportOverviewRailVisualStyle(railConfig.primaryColor, railConfig.visualStrength);
+  const featuresByClass = {
+    regional: [],
+    mainline: [],
+  };
+  const labelCandidates = [];
+  collection.features.forEach((feature) => {
+    const properties = feature?.properties || {};
+    const lineClass = String(properties.class || "").trim().toLowerCase();
+    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
+    if (revealRank > maximumRevealRank) return;
+    if (minimumScopeRank <= 1 && lineClass !== "mainline") return;
+    if (lineClass === "mainline") {
+      featuresByClass.mainline.push(feature);
+    } else if (lineClass === "regional") {
+      featuresByClass.regional.push(feature);
+    } else {
+      return;
+    }
+
+    const label = getTransportOverviewRailLabelText(properties, railConfig.labelMode);
+    if (!label || !railConfig.labelsEnabled) return;
+    const anchorGeo = getRailFeatureLabelAnchor(feature);
+    if (!Array.isArray(anchorGeo) || anchorGeo.length < 2) return;
+    const anchorProjected = projection(anchorGeo);
+    if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return;
+    const projectedLines = buildProjectedRailLines(feature.geometry);
+    const projectedLength = measureProjectedLineSetLength(projectedLines);
+    const minimumProjectedLength = lineClass === "mainline" ? 110 : 72;
+    if (projectedLength < minimumProjectedLength) return;
+    labelCandidates.push({
+      label,
+      lineClass,
+      projectedLength,
+      x: anchorProjected[0],
+      y: anchorProjected[1],
+    });
+  });
+  const stationCollection = runtimeState.railStationsMajorData;
+  const stationFeatureCount = getFeatureCollectionFeatureCount(stationCollection);
+  if (Array.isArray(stationCollection?.features) && stationCollection.features.length) {
+    drawContextFacilityPointLayer("drawRailStationsMajorLayer", stationCollection, k, {
+      familyId: "rail",
+      interactive,
+      visible,
+      thresholdRank: 1,
+      shape: "square",
+      fillStyle: visualStyle.regionalStroke,
+      strokeStyle: mixCanvasColors(visualStyle.regionalStroke, "#ffffff", 0.7) || "#ffffff",
+      labelColor: visualStyle.mainlineStroke,
+      opacity: clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * 0.9 * strategy.opacityMultiplier,
+      labelsEnabled: false,
+      radiusScale: 0.92 * Math.max(0.88, strategy.widthMultiplier * 0.92),
+      strokeScale: 0.95,
+      hoverScale: 1.1,
+      highlightStroke: "#ffffff",
+      getLabelText: null,
+    });
+  } else {
+    collectContextMetric("drawRailStationsMajorLayer", 0, {
+      featureCount: stationFeatureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: visible ? "no-data" : "hidden",
+    });
+  }
+  const labelZoomConfig = getTransportOverviewLabelZoomConfig("rail", railConfig.labelDensity);
+  const labelsEnabled = !!railConfig.labelsEnabled && strategy.labelsEnabled;
+  const visibleLabelEntries = [];
+  if (labelsEnabled) {
+    const gridSize = getTransportRailLabelGridSize(railConfig.labelDensity);
+    const usedBuckets = new Set();
+    labelCandidates
+      .filter((entry) => entry.lineClass === "mainline" ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
+      .sort((left, right) => {
+        if (left.lineClass !== right.lineClass) return left.lineClass === "mainline" ? -1 : 1;
+        return right.projectedLength - left.projectedLength;
+      })
+      .forEach((entry) => {
+        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}:${entry.lineClass}`;
+        if (usedBuckets.has(bucketKey)) return;
+        usedBuckets.add(bucketKey);
+        visibleLabelEntries.push(entry);
+      });
+  }
+  const visibleFeatureCount = featuresByClass.mainline.length + featuresByClass.regional.length;
+  if (!visibleFeatureCount) {
+    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "filtered",
+    });
+    return;
+  }
+
+  const drawFeatureSet = (features, strokeStyle, lineWidth, opacity) => {
+    if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
+    context.save();
+    context.globalAlpha = clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * opacity * strategy.opacityMultiplier;
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = (lineWidth * strategy.widthMultiplier) / Math.max(0.0001, Number(k || 1));
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    features.forEach((feature) => {
+      context.beginPath();
+      pathCanvas(feature);
+      context.stroke();
+    });
+    context.restore();
+  };
+
+  drawFeatureSet(
+    featuresByClass.regional,
+    visualStyle.regionalStroke,
+    visualStyle.regionalWidth,
+    visualStyle.regionalOpacity,
+  );
+  drawFeatureSet(
+    featuresByClass.mainline,
+    visualStyle.mainlineStroke,
+    visualStyle.mainlineWidth,
+    visualStyle.mainlineOpacity,
+  );
+
+  let labelCount = 0;
+  if (visibleLabelEntries.length) {
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    visibleLabelEntries.forEach((entry) => {
+      context.font = `${entry.lineClass === "mainline" ? 600 : 500} ${entry.lineClass === "mainline" ? 10.5 : 9.5}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
+      context.lineWidth = 3;
+      context.strokeStyle = "rgba(255,255,255,0.9)";
+      context.fillStyle = visualStyle.mainlineStroke;
+      context.strokeText(entry.label, entry.x, entry.y);
+      context.fillText(entry.label, entry.x, entry.y);
+      labelCount += 1;
+    });
+    context.restore();
+  }
+
+  collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
+    featureCount,
+    visibleFeatureCount,
+    labelCount,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function drawRoadsLayer(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  const visible = !!runtimeState.showTransport && !!runtimeState.showRoad;
+  const collection = runtimeState.roadsData;
+  const featureCount = getFeatureCollectionFeatureCount(collection);
+  if (!visible) {
+    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hidden",
+    });
+    return;
+  }
+  if (interactive) {
+    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: true,
+      skipped: true,
+      reason: "interactive-pass",
+    });
+    return;
+  }
+  if (!collection?.features?.length || !pathCanvas) {
+    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !pathCanvas ? "no-path" : "no-data",
+    });
+    return;
+  }
+  const roadConfig = getTransportOverviewFamilyConfig("road");
+  const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  const minimumScopeRank = strategy.minimumScopeRank;
+  const maximumRevealRank = strategy.maximumRevealRank;
+  const visualStyle = getTransportOverviewRoadVisualStyle(roadConfig.primaryColor, roadConfig.visualStrength);
+  const featuresByClass = {
+    trunk: [],
+    motorway: [],
+  };
+  collection.features.forEach((feature) => {
+    const properties = feature?.properties || {};
+    const roadClass = String(properties.class || "").trim().toLowerCase();
+    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (roadClass === "motorway" ? 1 : 2))));
+    if (revealRank > maximumRevealRank) return;
+    if (minimumScopeRank <= 1 && roadClass !== "motorway") return;
+    if (roadClass === "motorway") {
+      featuresByClass.motorway.push(feature);
+    } else if (roadClass === "trunk") {
+      featuresByClass.trunk.push(feature);
+    }
+  });
+  const visibleFeatureCount = featuresByClass.motorway.length + featuresByClass.trunk.length;
+  if (!visibleFeatureCount) {
+    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "filtered",
+    });
+    return;
+  }
+
+  const drawFeatureSet = (features, strokeStyle, lineWidth, opacity) => {
+    if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
+    context.save();
+    context.globalAlpha = clamp(Number(roadConfig.opacity ?? 0.72), 0, 1) * opacity * strategy.opacityMultiplier;
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = (lineWidth * strategy.widthMultiplier) / Math.max(0.0001, Number(k || 1));
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    features.forEach((feature) => {
+      context.beginPath();
+      pathCanvas(feature);
+      context.stroke();
+    });
+    context.restore();
+  };
+
+  drawFeatureSet(
+    featuresByClass.trunk,
+    visualStyle.trunkStroke,
+    visualStyle.trunkWidth,
+    visualStyle.trunkOpacity,
+  );
+  drawFeatureSet(
+    featuresByClass.motorway,
+    visualStyle.motorwayStroke,
+    visualStyle.motorwayWidth,
+    visualStyle.motorwayOpacity,
+  );
+
+  collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
+    featureCount,
+    visibleFeatureCount,
+    labelCount: 0,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function getTextureStyleConfig() {
+  if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
+    runtimeState.styleConfig = {};
+  }
+  runtimeState.styleConfig.texture = normalizeTextureStyleConfig(runtimeState.styleConfig.texture);
+  return runtimeState.styleConfig.texture;
+}
+
+function requestTextureRerender() {
+  requestRendererRender("texture-rerender", {
+    fallback: () => {
+      if (context) {
+        drawCanvas();
+      }
+    },
+  });
+}
+
+function getDayNightStyleConfig() {
+  if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
+    runtimeState.styleConfig = {};
+  }
+  runtimeState.styleConfig.dayNight = normalizeDayNightStyleConfig(runtimeState.styleConfig.dayNight);
+  return runtimeState.styleConfig.dayNight;
+}
+
+function normalizeLongitude(value) {
+  let normalized = Number.isFinite(Number(value)) ? Number(value) : 0;
+  while (normalized > 180) normalized -= 360;
+  while (normalized <= -180) normalized += 360;
+  return normalized;
+}
+
+function getUtcDateKey(date = new Date()) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getUtcDayOfYear(date = new Date()) {
+  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 1);
+  const todayUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return Math.max(1, Math.floor((todayUtc - yearStart) / 86_400_000) + 1);
+}
+
+function getCurrentUtcMinutesFromDate(date = new Date()) {
+  return date.getUTCHours() * 60 + date.getUTCMinutes();
+}
+
+function getCurrentUtcMinutes() {
+  return getCurrentUtcMinutesFromDate(new Date());
+}
+
+function getDayNightSignatureClockToken(config = getDayNightStyleConfig(), now = new Date()) {
+  const dayKey = getUtcDateKey(now);
+  if (config.mode === "utc") {
+    return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
+  }
+  return `${dayKey}|manual:${config.manualUtcMinutes}`;
+}
+
+function getDayNightLiveClockToken(config = getDayNightStyleConfig(), now = new Date()) {
+  const dayKey = getUtcDateKey(now);
+  if (config.mode === "utc") {
+    return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
+  }
+  return `${dayKey}|manual-day`;
+}
+
+function getSolarDeclinationRadians(date = new Date(), utcMinutes = getCurrentUtcMinutesFromDate(date)) {
+  const dayOfYear = getUtcDayOfYear(date);
+  const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + ((utcMinutes / 60) - 12) / 24);
+  return (
+    0.006918
+    - 0.399912 * Math.cos(gamma)
+    + 0.070257 * Math.sin(gamma)
+    - 0.006758 * Math.cos(2 * gamma)
+    + 0.000907 * Math.sin(2 * gamma)
+    - 0.002697 * Math.cos(3 * gamma)
+    + 0.00148 * Math.sin(3 * gamma)
+  );
+}
+
+function getCurrentSolarState(config = getDayNightStyleConfig()) {
+  const now = new Date();
+  const utcMinutes = config.mode === "utc"
+    ? getCurrentUtcMinutesFromDate(now)
+    : clamp(Math.round(Number(config.manualUtcMinutes) || 0), 0, 24 * 60 - 1);
+  const declinationDeg = getSolarDeclinationRadians(now, utcMinutes) * (180 / Math.PI);
+  const subsolarLongitude = normalizeLongitude(180 - (utcMinutes / 4));
+  return {
+    now,
+    utcMinutes,
+    declinationDeg,
+    subsolarLongitude,
+    antisolarLongitude: normalizeLongitude(subsolarLongitude + 180),
+    antisolarLatitude: clamp(-declinationDeg, -89.5, 89.5),
+  };
+}
+
+function buildNightHemisphereFeature(solarState, radiusDeg = 90) {
+  if (!solarState || !globalThis.d3?.geoCircle) return null;
+  return globalThis.d3.geoCircle()
+    .center([solarState.antisolarLongitude, solarState.antisolarLatitude])
+    .radius(clamp(Number(radiusDeg) || 90, 1, 90))
+    .precision(2)();
+}
+
+function getNightLightPalette(styleVariant = "modern") {
+  if (styleVariant === "historical_1930s") {
+    return {
+      halo: "#f4c972",
+      core: "#ffd88b",
+      glint: "#fff4c1",
+    };
+  }
+  return {
+    texture: "#526a8c",
+    corridor: "#d7e6ff",
+    halo: "#96b5da",
+    core: "#fff1cf",
+    glint: "#f8fbff",
+  };
+}
+
+function getUrbanLightWeight(feature, styleVariant = "modern") {
+  const props = feature?.properties || {};
+  const areaSqKm = Math.max(0, Number(props.area_sqkm ?? props.AREA_SQKM ?? 0));
+  const scalerank = clamp(
+    Math.round(Number(props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+    1,
+    10
+  );
+  const areaScore = clamp(Math.log10(areaSqKm + 1) / 3.45, 0, 1.1);
+  const rankScore = clamp((9 - scalerank) / 7, 0, 1.12);
+  const metroBoost = areaSqKm >= 1500 ? 0.18 : areaSqKm >= 700 ? 0.08 : 0;
+
+  if (styleVariant === "historical_1930s") {
+    const keep = scalerank <= 5 || areaSqKm >= 220;
+    if (!keep) return 0;
+    return clamp((areaScore * 0.55) + (rankScore * 0.72) + metroBoost, 0.12, 0.92);
+  }
+
+  return clamp((areaScore * 0.62) + (rankScore * 0.78) + metroBoost, 0.08, 1.18);
+}
+
+function getModernCityLightsProjectionKey() {
+  if (!projection) return "";
+  const scale = Number(projection.scale?.() || 0).toFixed(4);
+  const translate = projection.translate?.() || [0, 0];
+  const center = projection.center?.() || [0, 0];
+  const rotate = projection.rotate?.() || [0, 0, 0];
+  return [
+    runtimeState.width || 0,
+    runtimeState.height || 0,
+    scale,
+    ...translate.map((value) => Number(value || 0).toFixed(2)),
+    ...center.map((value) => Number(value || 0).toFixed(2)),
+    ...rotate.map((value) => Number(value || 0).toFixed(2)),
+  ].join("|");
+}
+
+function getModernCityLightsGridValue(x, y) {
+  const wrappedX = ((Math.round(x) % MODERN_CITY_LIGHTS_GRID_WIDTH) + MODERN_CITY_LIGHTS_GRID_WIDTH)
+    % MODERN_CITY_LIGHTS_GRID_WIDTH;
+  const clampedY = clamp(Math.round(y), 0, MODERN_CITY_LIGHTS_GRID_HEIGHT - 1);
+  return MODERN_CITY_LIGHTS_GRID[(clampedY * MODERN_CITY_LIGHTS_GRID_WIDTH) + wrappedX] || 0;
+}
+
+function getModernCityLightsNormalizationDenominator() {
+  const p90 = Number(MODERN_CITY_LIGHTS_STATS?.p90 ?? MODERN_CITY_LIGHTS_STATS?.p90_nonzero ?? 0);
+  if (Number.isFinite(p90) && p90 > 0) {
+    return Math.max(20, p90 * 0.82);
+  }
+  const maxValue = Number(MODERN_CITY_LIGHTS_STATS?.max ?? 255);
+  if (Number.isFinite(maxValue) && maxValue > 0) {
+    return Math.max(20, maxValue * 0.72);
+  }
+  return 255;
+}
+
+function normalizeModernCityLightsValue(value) {
+  return clamp(Number(value || 0) / Math.max(getModernCityLightsNormalizationDenominator(), 0.0001), 0, 1);
+}
+
+function sampleModernCityLightsGridNormalized(lon, lat) {
+  if (!MODERN_CITY_LIGHTS_GRID?.length) return 0;
+  const normalizedLon = (
+    (normalizeLongitude(lon) + 180) / Math.max(MODERN_CITY_LIGHTS_STEP_LON_DEG, 0.0001)
+  ) - 0.5;
+  const normalizedLat = clamp(
+    ((90 - clamp(lat, -89.999, 89.999)) / Math.max(MODERN_CITY_LIGHTS_STEP_LAT_DEG, 0.0001)) - 0.5,
+    0,
+    MODERN_CITY_LIGHTS_GRID_HEIGHT - 1
+  );
+  const x0 = Math.floor(normalizedLon);
+  const y0 = Math.floor(normalizedLat);
+  const tx = normalizedLon - x0;
+  const ty = normalizedLat - y0;
+  const y1 = Math.min(MODERN_CITY_LIGHTS_GRID_HEIGHT - 1, y0 + 1);
+  const v00 = getModernCityLightsGridValue(x0, y0);
+  const v10 = getModernCityLightsGridValue(x0 + 1, y0);
+  const v01 = getModernCityLightsGridValue(x0, y1);
+  const v11 = getModernCityLightsGridValue(x0 + 1, y1);
+  const top = v00 + ((v10 - v00) * tx);
+  const bottom = v01 + ((v11 - v01) * tx);
+  return normalizeModernCityLightsValue(top + ((bottom - top) * ty));
+}
+
+function getFeatureGeoCentroid(feature) {
+  if (!feature || !globalThis.d3?.geoCentroid) return null;
+  const cached = urbanGeoCentroidCache.get(feature);
+  if (cached) return cached;
+  const centroid = globalThis.d3.geoCentroid(feature);
+  const longitude = Number(centroid?.[0]);
+  const latitude = Number(centroid?.[1]);
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+    return null;
+  }
+  const normalized = [normalizeLongitude(longitude), clamp(latitude, -89.999, 89.999)];
+  urbanGeoCentroidCache.set(feature, normalized);
+  return normalized;
+}
+
+function getModernCityLightsGeometry() {
+  const projectionKey = getModernCityLightsProjectionKey();
+  if (
+    modernCityLightsGeometryCache.projectionKey === projectionKey &&
+    Array.isArray(modernCityLightsGeometryCache.baseEntries) &&
+    modernCityLightsGeometryCache.baseEntries.length
+  ) {
+    return modernCityLightsGeometryCache;
+  }
+
+  const baseEntries = [];
+  const corridorEntries = [];
+  const halfLon = MODERN_CITY_LIGHTS_STEP_LON_DEG * 0.5;
+  const halfLat = MODERN_CITY_LIGHTS_STEP_LAT_DEG * 0.5;
+
+  for (let y = 0; y < MODERN_CITY_LIGHTS_GRID_HEIGHT; y += 1) {
+    const lat = 90 - ((y + 0.5) * MODERN_CITY_LIGHTS_STEP_LAT_DEG);
+    for (let x = 0; x < MODERN_CITY_LIGHTS_GRID_WIDTH; x += 1) {
+      const value = MODERN_CITY_LIGHTS_GRID[(y * MODERN_CITY_LIGHTS_GRID_WIDTH) + x] || 0;
+      if (value < MODERN_CITY_LIGHTS_BASE_THRESHOLD) continue;
+
+      const lon = -180 + ((x + 0.5) * MODERN_CITY_LIGHTS_STEP_LON_DEG);
+      const center = projection ? projection([lon, lat]) : null;
+      const east = projection ? projection([normalizeLongitude(lon + halfLon), lat]) : null;
+      const west = projection ? projection([normalizeLongitude(lon - halfLon), lat]) : null;
+      const north = projection ? projection([lon, clamp(lat + halfLat, -89.999, 89.999)]) : null;
+      const south = projection ? projection([lon, clamp(lat - halfLat, -89.999, 89.999)]) : null;
+      if (
+        !Array.isArray(center) ||
+        !Array.isArray(east) ||
+        !Array.isArray(west) ||
+        !Array.isArray(north) ||
+        !Array.isArray(south)
+      ) {
+        continue;
+      }
+      const values = [...center, ...east, ...west, ...north, ...south];
+      if (!values.every((entry) => Number.isFinite(Number(entry)))) continue;
+
+      const ewDx = east[0] - west[0];
+      const ewDy = east[1] - west[1];
+      const nsDx = north[0] - south[0];
+      const nsDy = north[1] - south[1];
+      const rx = Math.hypot(ewDx, ewDy) * 0.5;
+      const ry = Math.hypot(nsDx, nsDy) * 0.5;
+      if (!Number.isFinite(rx) || !Number.isFinite(ry) || rx <= 0.02 || ry <= 0.02 || rx > 12 || ry > 12) {
+        continue;
+      }
+      const aspectRatio = Math.max(rx, ry) / Math.max(Math.min(rx, ry), 0.01);
+      if (aspectRatio > 3.5) continue;
+      const maxRadius = Math.min(rx, ry) * 2.2;
+      const clampedRx = Math.min(rx, maxRadius);
+      const clampedRy = Math.min(ry, maxRadius);
+
+      let neighborCount = 0;
+      const visitedNeighborIndices = new Set();
+      const currentIndex = (y * MODERN_CITY_LIGHTS_GRID_WIDTH) + x;
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = ((x + dx) % MODERN_CITY_LIGHTS_GRID_WIDTH + MODERN_CITY_LIGHTS_GRID_WIDTH) % MODERN_CITY_LIGHTS_GRID_WIDTH;
+          const ny = clamp(y + dy, 0, MODERN_CITY_LIGHTS_GRID_HEIGHT - 1);
+          const neighborIndex = (ny * MODERN_CITY_LIGHTS_GRID_WIDTH) + nx;
+          if (neighborIndex === currentIndex) continue;
+          if (visitedNeighborIndices.has(neighborIndex)) continue;
+          visitedNeighborIndices.add(neighborIndex);
+          if (MODERN_CITY_LIGHTS_GRID[neighborIndex] >= MODERN_CITY_LIGHTS_BASE_THRESHOLD) {
+            neighborCount += 1;
+          }
+        }
+      }
+
+      const entry = {
+        x: center[0],
+        y: center[1],
+        rx: clampedRx,
+        ry: clampedRy,
+        rotation: Math.atan2(ewDy, ewDx),
+        gridX: x,
+        gridY: y,
+        value,
+        neighborCount,
+      };
+      baseEntries.push(entry);
+      if (value >= MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD) {
+        corridorEntries.push(entry);
+      }
+    }
+  }
+
+  modernCityLightsGeometryCache.projectionKey = projectionKey;
+  modernCityLightsGeometryCache.baseEntries = baseEntries;
+  modernCityLightsGeometryCache.corridorEntries = corridorEntries;
+  return modernCityLightsGeometryCache;
+}
+
+function shouldCullModernLightEntry(entry, overscan = 48) {
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  const screenX = (entry.x * transform.k) + transform.x;
+  const screenY = (entry.y * transform.k) + transform.y;
+  return (
+    screenX < -overscan ||
+    screenX > runtimeState.width + overscan ||
+    screenY < -overscan ||
+    screenY > runtimeState.height + overscan
+  );
+}
+
+function drawLightEllipse(x, y, rx, ry, rotation = 0) {
+  if (typeof context.ellipse === "function") {
+    context.beginPath();
+    context.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
+    context.fill();
+    return;
+  }
+  context.save();
+  context.translate(x, y);
+  context.rotate(rotation);
+  context.scale(Math.max(rx, 0.0001), Math.max(ry, 0.0001));
+  context.beginPath();
+  context.arc(0, 0, 1, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function getLightBlobRgb(color) {
+  const normalized = ColorManager.normalizeHexColor(color);
+  const rgb = normalized ? ColorManager.hexToRgb(normalized) : null;
+  if (rgb) return rgb;
+  return { r: 255, g: 255, b: 255 };
+}
+
+function toRgbaString(rgb, alpha = 1) {
+  const resolvedAlpha = clamp(Number(alpha) || 0, 0, 1);
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${resolvedAlpha})`;
+}
+
+function drawSoftLightBlob(
+  x,
+  y,
+  rx,
+  ry,
+  {
+    rotation = 0,
+    rgb = { r: 255, g: 255, b: 255 },
+    alpha = 1,
+    innerStop = 0.1,
+    midStop = 0.5,
+    innerAlphaScale = 0.88,
+    midAlphaScale = 0.28,
+  } = {},
+) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  const resolvedRx = Math.max(Number(rx) || 0, 0.0001);
+  const resolvedRy = Math.max(Number(ry) || 0, 0.0001);
+  const resolvedAlpha = clamp(Number(alpha) || 0, 0, 1);
+  if (resolvedAlpha <= 0.0001) return;
+
+  context.save();
+  context.translate(x, y);
+  context.rotate(Number(rotation) || 0);
+  context.scale(resolvedRx, resolvedRy);
+  const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+  gradient.addColorStop(0, toRgbaString(rgb, resolvedAlpha * innerAlphaScale));
+  gradient.addColorStop(
+    clamp(Number(innerStop) || 0.1, 0.01, 0.92),
+    toRgbaString(rgb, resolvedAlpha * Math.max(innerAlphaScale, midAlphaScale)),
+  );
+  gradient.addColorStop(
+    clamp(Number(midStop) || 0.5, 0.08, 0.97),
+    toRgbaString(rgb, resolvedAlpha * midAlphaScale),
+  );
+  gradient.addColorStop(1, toRgbaString(rgb, 0));
+  context.fillStyle = gradient;
+  context.beginPath();
+  context.arc(0, 0, 1, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function getModernCityLightsZoomProfile() {
+  const zoomScale = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+  const fadeT = clamp((zoomScale - 1) / 2.5, 0, 1);
+  const detailT = clamp((zoomScale - 0.9) / 1.6, 0, 1);
+  return {
+    zoomScale,
+    fadeT,
+    detailT,
+    textureAlphaScale: 0.82 + (fadeT * 0.28),
+    corridorAlphaScale: 0.88 + (fadeT * 0.32),
+    textureRadiusScale: 1.24 + (detailT * 0.42),
+    corridorRadiusScale: 1.16 + (detailT * 0.36),
+    textureJitterStrength: 0.2 + (detailT * 0.06),
+    corridorJitterStrength: 0.12 + (detailT * 0.04),
+    coreAlphaScale: 0.86 + (fadeT * 0.52),
+    coreRadiusScale: 1.08 + (detailT * 0.48),
+  };
+}
+
+function getModernPopulationBoostStrength(config) {
+  if (!config?.cityLightsPopulationBoostEnabled) return 0;
+  return clamp(Number(config.cityLightsPopulationBoostStrength) || 0, 0, 1.5);
+}
+
+function getModernCityLightsPopulationBoostData() {
+  const cityCollection = getEffectiveCityCollection();
+  const urbanCollection = runtimeState.urbanData;
+  const cityLayerRevision = Number(runtimeState.cityLayerRevision || 0);
+  const scenarioId = String(runtimeState.activeScenarioId || "");
+  if (
+    modernCityLightsPopulationBoostCache.cityCollection === cityCollection
+    && modernCityLightsPopulationBoostCache.urbanCollection === urbanCollection
+    && modernCityLightsPopulationBoostCache.cityLayerRevision === cityLayerRevision
+    && modernCityLightsPopulationBoostCache.scenarioId === scenarioId
+  ) {
+    return modernCityLightsPopulationBoostCache;
+  }
+
+  const urbanIndex = getUrbanFeatureIndex();
+  const urbanEntriesById = new Map();
+  const unmatchedCityEntries = [];
+  if (Array.isArray(cityCollection?.features)) {
+    cityCollection.features.forEach((feature) => {
+      const props = feature?.properties || {};
+      const population = Math.max(0, Number(props.__city_population || 0));
+      const capitalScore = getCityCapitalScore(feature);
+      const urbanInfo = getCityUrbanRuntimeInfo(feature, urbanIndex);
+      if (urbanInfo.hasUrbanMatch) {
+        const current = urbanEntriesById.get(urbanInfo.urbanMatchId) || {
+          urbanId: urbanInfo.urbanMatchId,
+          urbanFeature: urbanInfo.urbanFeature,
+          populationSum: 0,
+          cityCount: 0,
+          capitalScore: 0,
+        };
+        current.populationSum += population;
+        current.cityCount += 1;
+        current.capitalScore = Math.max(current.capitalScore, capitalScore);
+        urbanEntriesById.set(urbanInfo.urbanMatchId, current);
+        return;
+      }
+      if (capitalScore > 0 || population >= 150000) {
+        unmatchedCityEntries.push({
+          feature,
+          population,
+          capitalScore,
+        });
+      }
+    });
+  }
+
+  const urbanEntries = Array.from(urbanEntriesById.values())
+    .map((entry) => {
+      const areaSqKm = Math.max(
+        0.01,
+        Number(entry.urbanFeature?.properties?.area_sqkm ?? entry.urbanFeature?.properties?.AREA_SQKM ?? 0.01)
+      );
+      return {
+        ...entry,
+        areaSqKm,
+        density: entry.populationSum / areaSqKm,
+      };
+    })
+    .filter((entry) => entry.populationSum >= 100000 || entry.capitalScore > 0)
+    .sort((left, right) => (
+      (right.populationSum + (right.density * 1200))
+      - (left.populationSum + (left.density * 1200))
+    ));
+
+  unmatchedCityEntries.sort((left, right) => (
+    (right.population + (right.capitalScore * 1_000_000))
+    - (left.population + (left.capitalScore * 1_000_000))
+  ));
+
+  modernCityLightsPopulationBoostCache.cityCollection = cityCollection;
+  modernCityLightsPopulationBoostCache.urbanCollection = urbanCollection;
+  modernCityLightsPopulationBoostCache.cityLayerRevision = cityLayerRevision;
+  modernCityLightsPopulationBoostCache.scenarioId = scenarioId;
+  modernCityLightsPopulationBoostCache.urbanEntries = urbanEntries;
+  modernCityLightsPopulationBoostCache.cityEntries = unmatchedCityEntries;
+  return modernCityLightsPopulationBoostCache;
+}
+
+function getSignedHashUnit(seed) {
+  return (((stringHash(seed) >>> 0) % 2001) / 1000) - 1;
+}
+
+function getModernGridEntryJitter(entry, strength = 0.18) {
+  const resolvedStrength = clamp(Number(strength) || 0, 0, 0.4);
+  const dx = getSignedHashUnit(`${entry?.gridX ?? 0}:${entry?.gridY ?? 0}:x`)
+    * Math.max(Number(entry?.rx) || 0, 0.0001)
+    * resolvedStrength;
+  const dy = getSignedHashUnit(`${entry?.gridX ?? 0}:${entry?.gridY ?? 0}:y`)
+    * Math.max(Number(entry?.ry) || 0, 0.0001)
+    * resolvedStrength;
+  return { dx, dy };
+}
+
+function getModernCityLightLatitudeFade(gridY) {
+  const cellLat = 90 - ((gridY + 0.5) * MODERN_CITY_LIGHTS_STEP_LAT_DEG);
+  const absLat = Math.abs(cellLat);
+  if (absLat <= 72) return 1;
+  return clamp(1 - ((absLat - 72) / 16), 0.15, 1);
+}
+
+function drawModernCityLightsTexture(config, intensity) {
+  const textureOpacity = clamp(Number(config.cityLightsTextureOpacity) || 0, 0, 1);
+  if (textureOpacity <= 0) return;
+  const palette = getNightLightPalette("modern");
+  const geometry = getModernCityLightsGeometry();
+  const zoomProfile = getModernCityLightsZoomProfile();
+  const textureRgb = getLightBlobRgb(palette.texture);
+  const overscan = Math.max(32, Math.min(runtimeState.width, runtimeState.height) * 0.06);
+
+  geometry.baseEntries.forEach((entry) => {
+    if (shouldCullModernLightEntry(entry, overscan)) return;
+    const normalized = normalizeModernCityLightsValue(entry.value);
+    const lumaWeight = Math.pow(normalized, 0.78);
+    const densityDampen = entry.neighborCount >= 7 ? 0.56
+      : entry.neighborCount >= 5 ? 0.72
+        : entry.neighborCount >= 3 ? 0.88
+      : 1.0;
+    const isolationAlphaBoost = entry.neighborCount <= 1 ? 0.06 : 0;
+    const latFade = getModernCityLightLatitudeFade(entry.gridY);
+    const alpha = clamp(
+      intensity
+      * (0.16 + (textureOpacity * 0.52))
+      * (0.035 + (lumaWeight * 0.22))
+      * zoomProfile.textureAlphaScale
+      * densityDampen
+      * latFade,
+      0,
+      0.16
+    );
+    if (alpha <= 0.002) return;
+    const jitter = getModernGridEntryJitter(entry, zoomProfile.textureJitterStrength);
+    const isolationSpread = entry.neighborCount <= 1 ? 1.38
+      : entry.neighborCount <= 3 ? 1.18
+      : 1.0;
+    const radiusScale = (zoomProfile.textureRadiusScale + (lumaWeight * 0.24)) * isolationSpread;
+    const blobRx = entry.rx * radiusScale;
+    const blobRy = entry.ry * radiusScale;
+    drawSoftLightBlob(
+      entry.x + jitter.dx,
+      entry.y + jitter.dy,
+      blobRx,
+      blobRy,
+      {
+        rotation: entry.rotation,
+        rgb: textureRgb,
+        alpha,
+        innerStop: 0.06,
+        midStop: 0.7,
+        innerAlphaScale: clamp(0.96 + isolationAlphaBoost, 0, 1.08),
+        midAlphaScale: 0.14,
+      }
+    );
+  });
+}
+
+function drawModernCityLightsCorridors(config, intensity) {
+  const corridorStrength = clamp(Number(config.cityLightsCorridorStrength) || 0, 0, 1);
+  if (corridorStrength <= 0) return;
+  const palette = getNightLightPalette("modern");
+  const geometry = getModernCityLightsGeometry();
+  const zoomProfile = getModernCityLightsZoomProfile();
+  const corridorRgb = getLightBlobRgb(palette.corridor);
+  const overscan = Math.max(40, Math.min(runtimeState.width, runtimeState.height) * 0.08);
+
+  geometry.corridorEntries.forEach((entry) => {
+    if (shouldCullModernLightEntry(entry, overscan)) return;
+    const normalized = normalizeModernCityLightsValue(entry.value);
+    const corridorWeight = Math.pow(normalized, 0.82);
+    const latFade = getModernCityLightLatitudeFade(entry.gridY);
+    const alpha = clamp(
+      intensity
+      * (0.16 + (corridorStrength * 0.42))
+      * (0.03 + (corridorWeight * 0.2))
+      * zoomProfile.corridorAlphaScale
+      * latFade,
+      0,
+      0.12
+    );
+    if (alpha <= 0.003) return;
+    const jitter = getModernGridEntryJitter(entry, zoomProfile.corridorJitterStrength);
+    const baseRadius = Math.max((entry.rx + entry.ry) * 0.5, 0.0001);
+    const majorRadius = baseRadius
+      * (zoomProfile.corridorRadiusScale + 0.08 + (corridorStrength * 0.14) + (corridorWeight * 0.22));
+    drawSoftLightBlob(
+      entry.x + jitter.dx,
+      entry.y + jitter.dy,
+      majorRadius,
+      majorRadius * 1.02,
+      {
+        rotation: entry.rotation * 0.18,
+        rgb: corridorRgb,
+        alpha,
+        innerStop: 0.05,
+        midStop: 0.56,
+        innerAlphaScale: 0.94,
+        midAlphaScale: 0.16,
+      }
+    );
+  });
+}
+
+function collectModernUrbanCoreEntries(k, config, intensity) {
+  if (!Array.isArray(runtimeState.urbanData?.features) || !runtimeState.urbanData.features.length) return [];
+  const textureOpacity = clamp(Number(config.cityLightsTextureOpacity) || 0, 0, 1);
+  const coreSharpness = clamp(Number(config.cityLightsCoreSharpness) || 0, 0, 1);
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  const zoomProfile = getModernCityLightsZoomProfile();
+  const zoomScale = Math.max(0.0001, Number(transform?.k || 1));
+  const minProjectedAreaPx = zoomScale <= 1.15 ? 4.6 : zoomScale <= 1.7 ? 3.2 : 2.2;
+  const overscan = Math.max(32, Math.min(runtimeState.width, runtimeState.height) * 0.06);
+  const entries = [];
+
+  runtimeState.urbanData.features.forEach((feature) => {
+    if (!pathBoundsInScreen(feature)) return;
+    if (estimateProjectedAreaPx(feature, k) < minProjectedAreaPx) return;
+
+    const heuristicWeight = getUrbanLightWeight(feature, "modern");
+    if (heuristicWeight <= 0) return;
+    if (zoomScale <= 1.15 && heuristicWeight < 0.72) return;
+
+    const geographicCentroid = getFeatureGeoCentroid(feature);
+    const sample = geographicCentroid
+      ? sampleModernCityLightsGridNormalized(geographicCentroid[0], geographicCentroid[1])
+      : 0;
+    const sampledBoost = clamp(0.56 + (Math.pow(sample, 0.52) * 1.4), 0.8, 1.8);
+    const weight = clamp(heuristicWeight * sampledBoost, 0.06, 1.4);
+    if (sample <= 0.01 && heuristicWeight < 0.34) return;
+    if (weight < 0.16) return;
+    if (zoomScale <= 1.35 && weight < 0.44) return;
+
+    const centroid = pathCanvas.centroid(feature);
+    const cx = Number(centroid?.[0]);
+    const cy = Number(centroid?.[1]);
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+
+    const screenX = (cx * transform.k) + transform.x;
+    const screenY = (cy * transform.k) + transform.y;
+    if (
+      screenX < -overscan ||
+      screenX > runtimeState.width + overscan ||
+      screenY < -overscan ||
+      screenY > runtimeState.height + overscan
+    ) {
+      return;
+    }
+
+    const identitySeed = String(
+      feature?.properties?.nameascii ||
+      feature?.properties?.name ||
+      feature?.properties?.NAME ||
+      feature?.id ||
+      `${cx}:${cy}`
+    );
+    const orientation = getSignedHashUnit(`${identitySeed}:rotation`) * (Math.PI / 60);
+    const baseRadiusPx = 0.88 + (weight * (1.1 + (coreSharpness * 0.82)));
+    const aspectRatio = clamp(1.04 + (coreSharpness * 0.06) + (sample * 0.06), 1.04, 1.18);
+    const haloAlpha = clamp(
+      intensity * weight * (0.14 + (textureOpacity * 0.18) + (sample * 0.22)) * zoomProfile.coreAlphaScale,
+      0,
+      0.32
+    );
+    const coreAlpha = clamp(
+      intensity * weight * (0.42 + (coreSharpness * 0.38) + (sample * 0.34)) * zoomProfile.coreAlphaScale,
+      0,
+      0.48
+    );
+    entries.push({
+      feature,
+      cx,
+      cy,
+      screenX,
+      screenY,
+      weight,
+      sample,
+      orientation,
+      baseRadiusPx,
+      aspectRatio,
+      haloAlpha,
+      coreAlpha,
+    });
+  });
+  return entries;
+}
+
+function drawModernCityLightsCores(k, _config, _intensity, coreEntries = null) {
+  const palette = getNightLightPalette("modern");
+  const zoomProfile = getModernCityLightsZoomProfile();
+  const haloRgb = getLightBlobRgb(palette.halo);
+  const coreRgb = getLightBlobRgb(palette.core);
+  const entries = Array.isArray(coreEntries) ? coreEntries : [];
+  entries.forEach((entry) => {
+    drawSoftLightBlob(
+      entry.cx,
+      entry.cy,
+      (entry.baseRadiusPx * entry.aspectRatio * 1.12 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (entry.baseRadiusPx * 1.06 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: entry.orientation,
+        rgb: haloRgb,
+        alpha: entry.haloAlpha,
+        innerStop: 0.06,
+        midStop: 0.58,
+        innerAlphaScale: 0.94,
+        midAlphaScale: 0.28,
+      }
+    );
+
+    drawSoftLightBlob(
+      entry.cx,
+      entry.cy,
+      (entry.baseRadiusPx * entry.aspectRatio * 0.94 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (entry.baseRadiusPx * 0.88 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: entry.orientation,
+        rgb: coreRgb,
+        alpha: entry.coreAlpha,
+        innerStop: 0.04,
+        midStop: 0.46,
+        innerAlphaScale: 1,
+        midAlphaScale: 0.46,
+      }
+    );
+  });
+}
+
+function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = []) {
+  const cityCollection = getEffectiveCityCollection();
+  if (!Array.isArray(cityCollection?.features) || !cityCollection.features.length) return;
+  const palette = getNightLightPalette("modern");
+  const coreSharpness = clamp(Number(config.cityLightsCoreSharpness) || 0, 0, 1);
+  const zoomProfile = getModernCityLightsZoomProfile();
+  const haloRgb = getLightBlobRgb(palette.halo);
+  const coreRgb = getLightBlobRgb(palette.core);
+  const zoomScale = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+  const overscan = Math.max(28, Math.min(runtimeState.width, runtimeState.height) * 0.05);
+  const urbanIndex = getUrbanFeatureIndex();
+  const minPopulation = zoomScale <= 1.1 ? 60000 : zoomScale <= 1.8 ? 30000 : 15000;
+
+  cityCollection.features.forEach((feature) => {
+    const props = feature?.properties || {};
+    const population = Math.max(0, Number(props.__city_population || 0));
+    const isCapital = !!props.__city_is_country_capital;
+    if (!isCapital && population < minPopulation) return;
+    if (getCityUrbanRuntimeInfo(feature, urbanIndex).hasUrbanMatch) return;
+    const anchor = getCityAnchor(feature);
+    const screenPoint = getCityScreenPoint(anchor);
+    if (!anchor || !screenPoint) return;
+    if (
+      screenPoint[0] < -overscan ||
+      screenPoint[0] > runtimeState.width + overscan ||
+      screenPoint[1] < -overscan ||
+      screenPoint[1] > runtimeState.height + overscan
+    ) {
+      return;
+    }
+    const overlapsUrbanCore = urbanCoreEntries.some((entry) => (
+      Math.hypot(entry.screenX - screenPoint[0], entry.screenY - screenPoint[1]) <= Math.max(18, entry.baseRadiusPx * 10)
+    ));
+    if (overlapsUrbanCore) return;
+
+    const populationScore = clamp(Math.log10(population + 1) / 6.5, 0.18, 1);
+    const geographicCoords = getCityGeoCoordinates(feature);
+    const sample = geographicCoords
+      ? sampleModernCityLightsGridNormalized(geographicCoords[0], geographicCoords[1])
+      : 0;
+    const weight = clamp(
+      (isCapital ? 0.46 : 0.28) + (populationScore * 0.52) + (sample * 0.44),
+      0.2,
+      1.12
+    );
+    if (zoomScale <= 1.1 && weight < 0.45) return;
+
+    const identitySeed = String(
+      getCityCanonicalId(feature) ||
+      props.name_en ||
+      props.name ||
+      feature?.id ||
+      `${anchor[0]}:${anchor[1]}`
+    );
+    const orientation = getSignedHashUnit(`${identitySeed}:rotation`) * (Math.PI / 80);
+    const baseRadiusPx = 0.58 + (weight * (0.82 + (coreSharpness * 0.46)));
+    const aspectRatio = clamp(1.04 + (coreSharpness * 0.05) + (sample * 0.04), 1.04, 1.14);
+    const haloAlpha = clamp(
+      intensity * weight * (0.08 + (sample * 0.14)) * zoomProfile.coreAlphaScale,
+      0,
+      0.30
+    );
+    const coreAlpha = clamp(
+      intensity * weight * (0.22 + (sample * 0.24)) * zoomProfile.coreAlphaScale,
+      0,
+      0.48
+    );
+
+    drawSoftLightBlob(
+      anchor[0],
+      anchor[1],
+      (baseRadiusPx * aspectRatio * 1.14 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 1.04 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: orientation,
+        rgb: haloRgb,
+        alpha: haloAlpha,
+        innerStop: 0.05,
+        midStop: 0.54,
+        innerAlphaScale: 0.92,
+        midAlphaScale: 0.28,
+      }
+    );
+
+    drawSoftLightBlob(
+      anchor[0],
+      anchor[1],
+      (baseRadiusPx * aspectRatio * 0.98 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 0.94 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: orientation,
+        rgb: coreRgb,
+        alpha: coreAlpha,
+        innerStop: 0.04,
+        midStop: 0.42,
+        innerAlphaScale: 1,
+        midAlphaScale: 0.44,
+      }
+    );
+  });
+}
+
+function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
+  const boostStrength = getModernPopulationBoostStrength(config);
+  if (boostStrength <= 0) return;
+  const palette = getNightLightPalette("modern");
+  const zoomProfile = getModernCityLightsZoomProfile();
+  const haloRgb = getLightBlobRgb(palette.corridor);
+  const coreRgb = getLightBlobRgb(palette.glint);
+  const data = getModernCityLightsPopulationBoostData();
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  const overscan = Math.max(32, Math.min(runtimeState.width, runtimeState.height) * 0.06);
+
+  data.urbanEntries.forEach((entry) => {
+    const feature = entry.urbanFeature;
+    if (!feature || !pathBoundsInScreen(feature)) return;
+    const centroid = pathCanvas.centroid(feature);
+    const cx = Number(centroid?.[0]);
+    const cy = Number(centroid?.[1]);
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+    const screenX = (cx * transform.k) + transform.x;
+    const screenY = (cy * transform.k) + transform.y;
+    if (
+      screenX < -overscan
+      || screenX > runtimeState.width + overscan
+      || screenY < -overscan
+      || screenY > runtimeState.height + overscan
+    ) {
+      return;
+    }
+
+    const geographicCentroid = getFeatureGeoCentroid(feature);
+    const sampled = geographicCentroid
+      ? sampleModernCityLightsGridNormalized(geographicCentroid[0], geographicCentroid[1])
+      : 0;
+    const populationScore = clamp(Math.log10(entry.populationSum + 1) / 7.35, 0.12, 1.28);
+    const densityScore = clamp(Math.log10(entry.density + 1) / 4.4, 0.08, 1.24);
+    const capitalBoost = entry.capitalScore >= 3 ? 0.18 : entry.capitalScore >= 2 ? 0.1 : 0;
+    const boostWeight = clamp(
+      (populationScore * 0.82) + (densityScore * 1.08) + (sampled * 0.18) + capitalBoost,
+      0.16,
+      2
+    );
+    const areaRadiusBoost = clamp(Math.log10(entry.areaSqKm + 1) * 0.18, 0.08, 0.74);
+    const baseRadiusPx = 0.82 + (boostWeight * 1.02) + areaRadiusBoost;
+    const haloAlpha = clamp(
+      intensity * boostStrength * (0.11 + (boostWeight * 0.2)) * zoomProfile.coreAlphaScale,
+      0,
+      0.36
+    );
+    const coreAlpha = clamp(
+      intensity * boostStrength * (0.22 + (boostWeight * 0.3)) * zoomProfile.coreAlphaScale,
+      0,
+      0.54
+    );
+    const aspectRatio = clamp(1.06 + (sampled * 0.1), 1.06, 1.22);
+    drawSoftLightBlob(
+      cx,
+      cy,
+      (baseRadiusPx * aspectRatio * 1.14 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 1.02 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: 0,
+        rgb: haloRgb,
+        alpha: haloAlpha,
+        innerStop: 0.05,
+        midStop: 0.56,
+        innerAlphaScale: 0.82,
+        midAlphaScale: 0.2,
+      }
+    );
+    drawSoftLightBlob(
+      cx,
+      cy,
+      (baseRadiusPx * aspectRatio * 0.88 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 0.82 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: 0,
+        rgb: coreRgb,
+        alpha: coreAlpha,
+        innerStop: 0.04,
+        midStop: 0.46,
+        innerAlphaScale: 0.94,
+        midAlphaScale: 0.36,
+      }
+    );
+  });
+
+  data.cityEntries.forEach((entry) => {
+    const anchor = getCityAnchor(entry.feature);
+    const screenPoint = getCityScreenPoint(anchor);
+    if (!anchor || !screenPoint) return;
+    if (
+      screenPoint[0] < -overscan
+      || screenPoint[0] > runtimeState.width + overscan
+      || screenPoint[1] < -overscan
+      || screenPoint[1] > runtimeState.height + overscan
+    ) {
+      return;
+    }
+    const geographicCoords = getCityGeoCoordinates(entry.feature);
+    const sampled = geographicCoords
+      ? sampleModernCityLightsGridNormalized(geographicCoords[0], geographicCoords[1])
+      : 0;
+    const populationScore = clamp(Math.log10(entry.population + 1) / 6.8, 0.12, 1.08);
+    const capitalBoost = entry.capitalScore >= 3 ? 0.24 : entry.capitalScore >= 2 ? 0.14 : 0;
+    const boostWeight = clamp((populationScore * 1.08) + (sampled * 0.2) + capitalBoost, 0.18, 1.48);
+    const baseRadiusPx = 0.54 + (boostWeight * 0.72);
+    const haloAlpha = clamp(
+      intensity * boostStrength * (0.09 + (boostWeight * 0.14)) * zoomProfile.coreAlphaScale,
+      0,
+      0.24
+    );
+    const coreAlpha = clamp(
+      intensity * boostStrength * (0.18 + (boostWeight * 0.23)) * zoomProfile.coreAlphaScale,
+      0,
+      0.40
+    );
+    drawSoftLightBlob(
+      anchor[0],
+      anchor[1],
+      (baseRadiusPx * 1.22 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 1.08 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: 0,
+        rgb: haloRgb,
+        alpha: haloAlpha,
+        innerStop: 0.05,
+        midStop: 0.5,
+        innerAlphaScale: 0.82,
+        midAlphaScale: 0.2,
+      }
+    );
+    drawSoftLightBlob(
+      anchor[0],
+      anchor[1],
+      (baseRadiusPx * 0.98 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 0.94 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      {
+        rotation: 0,
+        rgb: coreRgb,
+        alpha: coreAlpha,
+        innerStop: 0.04,
+        midStop: 0.4,
+        innerAlphaScale: 0.94,
+        midAlphaScale: 0.36,
+      }
+    );
+  });
+}
+
+function drawModernNightLightsLayer(k, config, solarState) {
+  const nightHemisphere = buildNightHemisphereFeature(solarState, 90);
+  if (!nightHemisphere) return;
+  const intensity = clamp(Number(config.cityLightsIntensity) || 0, 0, 1.8);
+  if (intensity <= 0) return;
+
+  context.save();
+  context.beginPath();
+  pathCanvas(nightHemisphere);
+  context.clip();
+  context.globalCompositeOperation = getSafeBlendMode("screen", "lighter");
+  drawModernCityLightsTexture(config, intensity);
+  drawModernCityLightsCorridors(config, intensity);
+  const urbanCoreEntries = collectModernUrbanCoreEntries(k, config, intensity);
+  drawModernCityLightsCores(k, config, intensity, urbanCoreEntries);
+  drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries);
+  drawModernCityLightsPopulationBoostLayer(k, config, intensity);
+  context.restore();
+}
+
+const historicalCityLightsFallbackCache = {
+  cityCollection: null,
+  cityLayerRevision: -1,
+  scenarioId: "",
+  secondaryRetention: -1,
+  entries: [],
+};
+
+function getHistoricalCityLightsDensity(config) {
+  const density = Number(config?.historicalCityLightsDensity);
+  return clamp(Number.isFinite(density) ? density : 1.25, 0.75, 2);
+}
+
+function getHistoricalCityLightsSecondaryRetention(config) {
+  const secondaryRetention = Number(config?.historicalCityLightsSecondaryRetention);
+  return clamp(Number.isFinite(secondaryRetention) ? secondaryRetention : 0.55, 0, 1);
+}
+
+function interpolateHistoricalThreshold(strictValue, relaxedValue, secondaryRetention) {
+  return strictValue + ((relaxedValue - strictValue) * secondaryRetention);
+}
+
+function getHistoricalCityLightCapitalBoost(capitalKind = "") {
+  const normalizedKind = String(capitalKind || "").trim().toLowerCase();
+  if (normalizedKind === "country_capital") return 0.16;
+  if (normalizedKind === "admin_capital") return 0.08;
+  return 0;
+}
+
+function sanitizeHistoricalCityLightEntry(rawEntry) {
+  const lon = normalizeLongitude(Number(rawEntry?.lon));
+  const lat = clamp(Number(rawEntry?.lat), -89.999, 89.999);
+  const weight = clamp(Number(rawEntry?.weight), 0, 1.08);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat) || weight <= 0) {
+    return null;
+  }
+  return {
+    lon,
+    lat,
+    weight,
+    capitalKind: String(rawEntry?.capitalKind || rawEntry?.capital_kind || "").trim().toLowerCase(),
+    population: Math.max(0, Number(rawEntry?.population || 0)),
+    nameAscii: String(rawEntry?.nameAscii || rawEntry?.name_ascii || rawEntry?.name || "").trim(),
+  };
+}
+
+function shouldRenderHistoricalCityLightEntry(entry, secondaryRetention = 0) {
+  const capitalKind = String(entry?.capitalKind || "").trim().toLowerCase();
+  const population = Math.max(0, Number(entry?.population || 0));
+  const weight = clamp(Number(entry?.weight || 0), 0, 1.08);
+  if (capitalKind === "country_capital") {
+    return true;
+  }
+  const normalizedRetention = clamp(Number(secondaryRetention) || 0, 0, 1);
+  if (capitalKind === "admin_capital") {
+    const adminPopulationThreshold = interpolateHistoricalThreshold(1000000, 700000, normalizedRetention);
+    const adminWeightThreshold = interpolateHistoricalThreshold(0.7, 0.55, normalizedRetention);
+    return population >= adminPopulationThreshold || weight >= adminWeightThreshold;
+  }
+  const cityPopulationThreshold = interpolateHistoricalThreshold(2200000, 1500000, normalizedRetention);
+  const cityWeightThreshold = interpolateHistoricalThreshold(0.8, 0.65, normalizedRetention);
+  return population >= cityPopulationThreshold || weight >= cityWeightThreshold;
+}
+
+function getHistoricalProxyAssetEntries(secondaryRetention = 0) {
+  if (!Array.isArray(HISTORICAL_1930_CITY_LIGHTS_ENTRIES) || !HISTORICAL_1930_CITY_LIGHTS_ENTRIES.length) {
+    return [];
+  }
+  return HISTORICAL_1930_CITY_LIGHTS_ENTRIES
+    .map(sanitizeHistoricalCityLightEntry)
+    .filter((entry) => shouldRenderHistoricalCityLightEntry(entry, secondaryRetention))
+    .filter(Boolean);
+}
+
+function computeHistoricalFallbackCityLightWeight(feature) {
+  const props = feature?.properties || {};
+  const population = Math.max(
+    0,
+    Number(
+      props.__city_population
+      ?? props.population
+      ?? props.pop_max
+      ?? props.POP_MAX
+      ?? 0
+    )
+  );
+  const isCountryCapital = !!(props.__city_is_country_capital ?? props.is_country_capital);
+  const isAdminCapital = !!(props.__city_is_admin_capital ?? props.is_admin_capital);
+  const baseTier = String(props.__city_base_tier || props.base_tier || "").trim().toLowerCase();
+  const tierBoost = baseTier === "major" ? 0.1 : baseTier === "regional" ? 0.04 : 0;
+  const scalerank = clamp(
+    Math.round(Number(props.__city_scalerank ?? props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+    1,
+    10
+  );
+  const rankBoost = scalerank <= 3 ? 0.06 : 0;
+  const populationScore = clamp(Math.log10(population + 1) / 7.1, 0.16, 1);
+  const capitalBoost = isCountryCapital ? 0.34 : isAdminCapital ? 0.2 : 0;
+  return clamp((populationScore * 0.74) + capitalBoost + tierBoost + rankBoost, 0.18, 1.02);
+}
+
+function shouldIncludeHistoricalFallbackCity(feature, secondaryRetention = 0) {
+  const props = feature?.properties || {};
+  const normalizedRetention = clamp(Number(secondaryRetention) || 0, 0, 1);
+  if (!!(props.__city_is_country_capital ?? props.is_country_capital)) return true;
+  const adminPopulation = Math.max(
+    0,
+    Number(
+      props.__city_population
+      ?? props.population
+      ?? props.pop_max
+      ?? props.POP_MAX
+      ?? 0
+    )
+  );
+  if (
+    !!(props.__city_is_admin_capital ?? props.is_admin_capital)
+    && adminPopulation >= interpolateHistoricalThreshold(2000000, 1200000, normalizedRetention)
+  ) {
+    return true;
+  }
+  const scalerank = clamp(
+    Math.round(Number(props.__city_scalerank ?? props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+    1,
+    10
+  );
+  if (scalerank <= 1) return true;
+  const population = Math.max(
+    0,
+    Number(
+      props.__city_population
+      ?? props.population
+      ?? props.pop_max
+      ?? props.POP_MAX
+      ?? 0
+    )
+  );
+  const cityPopulationThreshold = interpolateHistoricalThreshold(4200000, 2400000, normalizedRetention);
+  return population >= cityPopulationThreshold;
+}
+
+function getHistoricalProxyFallbackEntries(secondaryRetention = 0) {
+  const cityCollection = getEffectiveCityCollection();
+  const cityLayerRevision = Number(runtimeState.cityLayerRevision || 0);
+  const scenarioId = String(runtimeState.activeScenarioId || "");
+  const normalizedRetention = clamp(Number(secondaryRetention) || 0, 0, 1);
+  if (
+    historicalCityLightsFallbackCache.cityCollection === cityCollection
+    && historicalCityLightsFallbackCache.cityLayerRevision === cityLayerRevision
+    && historicalCityLightsFallbackCache.scenarioId === scenarioId
+    && historicalCityLightsFallbackCache.secondaryRetention === normalizedRetention
+  ) {
+    return historicalCityLightsFallbackCache.entries;
+  }
+
+  const entries = Array.isArray(cityCollection?.features)
+    ? cityCollection.features
+      .filter((feature) => shouldIncludeHistoricalFallbackCity(feature, normalizedRetention))
+      .map((feature) => {
+        const coordinates = getCityGeoCoordinates(feature);
+        if (!coordinates) return null;
+        const props = feature?.properties || {};
+        return sanitizeHistoricalCityLightEntry({
+          lon: coordinates[0],
+          lat: coordinates[1],
+          weight: computeHistoricalFallbackCityLightWeight(feature),
+          capitalKind: props.__city_capital_kind || props.capital_kind || "",
+          population: props.__city_population ?? props.population ?? 0,
+          nameAscii: props.name_ascii || props.__city_name_ascii || props.name_en || props.name || "",
+        });
+      })
+      .filter((entry) => shouldRenderHistoricalCityLightEntry(entry, normalizedRetention))
+      .filter(Boolean)
+      .sort((left, right) => right.weight - left.weight)
+    : [];
+
+  historicalCityLightsFallbackCache.cityCollection = cityCollection;
+  historicalCityLightsFallbackCache.cityLayerRevision = cityLayerRevision;
+  historicalCityLightsFallbackCache.scenarioId = scenarioId;
+  historicalCityLightsFallbackCache.secondaryRetention = normalizedRetention;
+  historicalCityLightsFallbackCache.entries = entries;
+  return entries;
+}
+
+function getHistoricalNightLightEntries(config) {
+  const secondaryRetention = getHistoricalCityLightsSecondaryRetention(config);
+  const assetEntries = getHistoricalProxyAssetEntries(secondaryRetention);
+  if (assetEntries.length) {
+    return assetEntries;
+  }
+  return getHistoricalProxyFallbackEntries(secondaryRetention);
+}
+
+function getHistoricalDerivedGlowEntries(historicalEntries, config) {
+  if (!Array.isArray(historicalEntries) || !historicalEntries.length) return [];
+  const projectionKey = getModernCityLightsProjectionKey();
+  const retention = getHistoricalCityLightsSecondaryRetention(config).toFixed(3);
+  const first = historicalEntries[0];
+  const last = historicalEntries[historicalEntries.length - 1];
+  const key = [
+    projectionKey,
+    retention,
+    historicalEntries.length,
+    first?.nameAscii || "",
+    first?.weight || 0,
+    last?.nameAscii || "",
+    last?.weight || 0,
+  ].join("|");
+  if (historicalCityLightsDerivedGlowCache.key === key) {
+    return historicalCityLightsDerivedGlowCache.entries;
+  }
+
+  const entries = [];
+  for (const entry of historicalEntries) {
+    if (entries.length >= HISTORICAL_DERIVED_GLOW_MAX_ENTRIES) break;
+    const weight = clamp(Number(entry?.weight || 0), 0, 1.08);
+    if (weight < HISTORICAL_DERIVED_GLOW_MIN_WEIGHT) continue;
+    const projected = projection ? projection([entry.lon, entry.lat]) : null;
+    if (!Array.isArray(projected) || !projected.every((value) => Number.isFinite(Number(value)))) continue;
+    entries.push({
+      cx: Number(projected[0]),
+      cy: Number(projected[1]),
+      weight,
+      rotation: (stringHash(entry.nameAscii || `${entry.lon}:${entry.lat}:derived`) % 180) * (Math.PI / 180),
+    });
+  }
+  historicalCityLightsDerivedGlowCache.key = key;
+  historicalCityLightsDerivedGlowCache.entries = entries;
+  return entries;
+}
+
+function drawHistoricalDerivedGlowLayer(k, historicalEntries, config, intensity, density, palette) {
+  const glowEntries = getHistoricalDerivedGlowEntries(historicalEntries, config);
+  if (!glowEntries.length) return;
+  const overscan = Math.max(28, Math.min(runtimeState.width, runtimeState.height) * 0.06);
+  context.fillStyle = palette.halo;
+  glowEntries.forEach((entry) => {
+    const screenX = (entry.cx * runtimeState.zoomTransform.k) + runtimeState.zoomTransform.x;
+    const screenY = (entry.cy * runtimeState.zoomTransform.k) + runtimeState.zoomTransform.y;
+    if (
+      screenX < -overscan ||
+      screenX > runtimeState.width + overscan ||
+      screenY < -overscan ||
+      screenY > runtimeState.height + overscan
+    ) {
+      return;
+    }
+    const glowRadiusPx = (1.1 + (entry.weight * 1.45)) * density;
+    context.globalAlpha = clamp(intensity * density * entry.weight * 0.036, 0, 0.085);
+    drawLightEllipse(
+      entry.cx,
+      entry.cy,
+      (glowRadiusPx * 1.75) / Math.max(0.0001, k),
+      (glowRadiusPx * 0.82) / Math.max(0.0001, k),
+      entry.rotation
+    );
+  });
+}
+
+function drawHistoricalNightLightsLayer(k, config, solarState) {
+  const historicalEntries = getHistoricalNightLightEntries(config);
+  if (!historicalEntries.length) {
+    return;
+  }
+  const nightHemisphere = buildNightHemisphereFeature(solarState, 90);
+  if (!nightHemisphere) return;
+
+  const variant = "historical_1930s";
+  const intensity = clamp(Number(config.cityLightsIntensity) || 0, 0, 1.8);
+  if (intensity <= 0) return;
+  const density = getHistoricalCityLightsDensity(config);
+  const palette = getNightLightPalette(variant);
+  const overscan = Math.max(24, Math.min(runtimeState.width, runtimeState.height) * 0.05);
+
+  context.save();
+  context.beginPath();
+  pathCanvas(nightHemisphere);
+  context.clip();
+  context.globalCompositeOperation = getSafeBlendMode("screen", "lighter");
+  drawHistoricalDerivedGlowLayer(k, historicalEntries, config, intensity, density, palette);
+
+  historicalEntries.forEach((entry) => {
+    const projected = projection ? projection([entry.lon, entry.lat]) : null;
+    if (!Array.isArray(projected) || !projected.every((value) => Number.isFinite(Number(value)))) return;
+    const weight = clamp(Number(entry.weight || 0), 0, 1.08);
+    if (weight <= 0) return;
+
+    const cx = Number(projected[0]);
+    const cy = Number(projected[1]);
+
+    const screenX = (cx * runtimeState.zoomTransform.k) + runtimeState.zoomTransform.x;
+    const screenY = (cy * runtimeState.zoomTransform.k) + runtimeState.zoomTransform.y;
+    if (
+      screenX < -overscan ||
+      screenX > runtimeState.width + overscan ||
+      screenY < -overscan ||
+      screenY > runtimeState.height + overscan
+    ) {
+      return;
+    }
+
+    const capitalBoost = getHistoricalCityLightCapitalBoost(entry.capitalKind);
+    const baseRadiusPx = (0.52 + (weight * (0.68 + (capitalBoost * 0.28)))) * density;
+    const haloRadiusPx = baseRadiusPx * (1.24 + (capitalBoost * 0.3));
+    const haloAlphaMax = clamp(0.28 * density, 0, 0.48);
+    const coreAlphaMax = clamp(0.52 * density, 0, 0.82);
+    const haloAlpha = clamp(intensity * weight * 0.12 * density, 0, haloAlphaMax);
+    const coreAlpha = clamp(intensity * weight * 0.22 * density, 0, coreAlphaMax);
+    const orientation = (stringHash(
+      entry.nameAscii ||
+      `${entry.lon}:${entry.lat}`
+    ) % 180) * (Math.PI / 180);
+
+    context.fillStyle = palette.halo;
+    context.globalAlpha = haloAlpha;
+    drawLightEllipse(
+      cx,
+      cy,
+      (haloRadiusPx * 1.04) / Math.max(0.0001, k),
+      (haloRadiusPx * 0.78) / Math.max(0.0001, k),
+      orientation
+    );
+
+    context.fillStyle = palette.core;
+    context.globalAlpha = coreAlpha;
+    drawLightEllipse(
+      cx,
+      cy,
+      baseRadiusPx / Math.max(0.0001, k),
+      (baseRadiusPx * 0.64) / Math.max(0.0001, k),
+      orientation
+    );
+  });
+
+  context.restore();
+}
+
+function drawDayNightShadowLayer(_k, config, solarState) {
+  const twilightBand = buildNightHemisphereFeature(solarState, 90);
+  if (!twilightBand) return;
+  const coreRadius = clamp(90 - Number(config.twilightWidthDeg || 10), 56, 89);
+  const nightCore = buildNightHemisphereFeature(solarState, coreRadius);
+
+  context.save();
+  context.globalCompositeOperation = "source-over";
+
+  context.fillStyle = "#24374c";
+  context.globalAlpha = clamp(config.shadowOpacity * 0.5, 0, 0.5);
+  context.beginPath();
+  pathCanvas(twilightBand);
+  context.fill();
+
+  if (nightCore) {
+    context.fillStyle = "#081423";
+    context.globalAlpha = clamp(config.shadowOpacity, 0, 0.85);
+    context.beginPath();
+    pathCanvas(nightCore);
+    context.fill();
+  }
+
+  context.strokeStyle = "#8aa1ba";
+  context.globalAlpha = clamp(config.shadowOpacity * 0.28, 0, 0.24);
+  context.lineWidth = 1.1 / Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+  context.beginPath();
+  pathCanvas(twilightBand);
+  context.stroke();
+
+  context.restore();
+}
+
+function drawNightLightsLayer(k, config, solarState) {
+  if (!config.cityLightsEnabled) {
+    return;
+  }
+  const variant = String(config.cityLightsStyle || "modern").trim().toLowerCase();
+  if (variant === "modern") {
+    drawModernNightLightsLayer(k, config, solarState);
+    return;
+  }
+  drawHistoricalNightLightsLayer(k, config, solarState);
+}
+
+function clearDayNightClockTimer() {
+  if (!dayNightClockTimerId) return;
+  globalThis.clearInterval(dayNightClockTimerId);
+  dayNightClockTimerId = null;
+}
+
+function syncDayNightClockTimer() {
+  const initialConfig = getDayNightStyleConfig();
+  if (!initialConfig.enabled || String(initialConfig.mode || "manual") !== "utc") {
+    clearDayNightClockTimer();
+    return false;
+  }
+  if (dayNightClockTimerId) return true;
+  lastDayNightClockToken = getDayNightLiveClockToken(initialConfig);
+  dayNightClockTimerId = globalThis.setInterval(() => {
+    const config = getDayNightStyleConfig();
+    if (!config.enabled || String(config.mode || "manual") !== "utc") {
+      clearDayNightClockTimer();
+      return;
+    }
+    const nextToken = getDayNightLiveClockToken(config);
+    if (nextToken === lastDayNightClockToken) return;
+    lastDayNightClockToken = nextToken;
+    if (typeof runtimeState.updateToolbarInputsFn === "function") {
+      runtimeState.updateToolbarInputsFn();
+    }
+    if (!config.enabled) return;
+    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+      runtimeState.pendingDayNightRefresh = true;
+      return;
+    }
+    invalidateRenderPasses("dayNight", "day-night-clock");
+    requestRendererRender("day-night-clock", {
+      fallback: () => {
+        if (context) {
+          render();
+        }
+      },
+    });
+  }, DAY_NIGHT_CLOCK_INTERVAL_MS);
+  return true;
+}
+
+function resolvePaperTextureAssetUrl(assetId) {
+  return PAPER_TEXTURE_ASSET_URLS[String(assetId || "").trim()] || null;
+}
+
+function ensureTextureAssetImage(assetId) {
+  const normalizedId = String(assetId || "").trim();
+  if (!normalizedId) return null;
+  const existing = textureAssetCache.get(normalizedId);
+  if (existing) {
+    return existing.status === "ready" ? existing.image : null;
+  }
+  const url = resolvePaperTextureAssetUrl(normalizedId);
+  if (!url) return null;
+
+  const image = new Image();
+  const entry = {
+    status: "loading",
+    image,
+    url,
+  };
+  textureAssetCache.set(normalizedId, entry);
+  image.decoding = "async";
+  image.onload = () => {
+    entry.status = "ready";
+    texturePatternCache.clear();
+    requestTextureRerender();
+  };
+  image.onerror = () => {
+    entry.status = "error";
+  };
+  image.src = url;
+  return null;
+}
+
+function createSeededRandom(seedInput) {
+  let seed = Number(seedInput) || 1;
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function getTexturePattern(source, cacheKey, scale = 1) {
+  if (!context || !source || !cacheKey) return null;
+  const normalizedScale = clamp(Number(scale) || 1, 0.25, 4);
+  const key = `${cacheKey}|${normalizedScale.toFixed(3)}`;
+  const cached = texturePatternCache.get(key);
+  if (cached) return cached;
+
+  const pattern = context.createPattern(source, "repeat");
+  if (!pattern) return null;
+  if (pattern.setTransform && globalThis.DOMMatrix) {
+    const matrix = new globalThis.DOMMatrix();
+    matrix.scaleSelf(normalizedScale, normalizedScale);
+    pattern.setTransform(matrix);
+  }
+  texturePatternCache.set(key, pattern);
+  return pattern;
+}
+
+function getPaperNoiseTile(paperConfig) {
+  const scaleBucket = Math.round((paperConfig?.scale || 1) * 100);
+  const grainBucket = Math.round((paperConfig?.grain || 0) * 100);
+  const wearBucket = Math.round((paperConfig?.wear || 0) * 100);
+  const warmthBucket = Math.round((paperConfig?.warmth || 0) * 100);
+  const key = `${scaleBucket}|${grainBucket}|${wearBucket}|${warmthBucket}`;
+  const cached = textureNoiseTileCache.get(key);
+  if (cached) return cached;
+
+  const tile = document.createElement("canvas");
+  tile.width = PAPER_NOISE_TILE_SIZE;
+  tile.height = PAPER_NOISE_TILE_SIZE;
+  const tileCtx = tile.getContext("2d");
+  if (!tileCtx) return null;
+
+  const rng = createSeededRandom(scaleBucket * 17 + grainBucket * 29 + wearBucket * 43 + warmthBucket * 59);
+  tileCtx.clearRect(0, 0, tile.width, tile.height);
+
+  const speckCount = Math.round(900 + grainBucket * 14);
+  for (let index = 0; index < speckCount; index += 1) {
+    const alpha = 0.012 + rng() * 0.03;
+    const shade = Math.round(88 + rng() * 70);
+    tileCtx.fillStyle = `rgba(${shade}, ${shade - 6}, ${Math.max(24, shade - 22)}, ${alpha})`;
+    const x = rng() * tile.width;
+    const y = rng() * tile.height;
+    const size = rng() < 0.82 ? 1 : 2 + rng() * 1.8;
+    tileCtx.fillRect(x, y, size, size);
+  }
+
+  const fiberCount = Math.round(260 + grainBucket * 2.6);
+  tileCtx.lineCap = "round";
+  for (let index = 0; index < fiberCount; index += 1) {
+    const x = rng() * tile.width;
+    const y = rng() * tile.height;
+    const length = 4 + rng() * 12;
+    const angle = rng() * Math.PI * 2;
+    tileCtx.strokeStyle = `rgba(98, 74, 52, ${0.018 + rng() * 0.025})`;
+    tileCtx.lineWidth = 0.35 + rng() * 0.8;
+    tileCtx.beginPath();
+    tileCtx.moveTo(x, y);
+    tileCtx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+    tileCtx.stroke();
+  }
+
+  const stainCount = Math.round(10 + wearBucket * 0.1);
+  for (let index = 0; index < stainCount; index += 1) {
+    const radius = 12 + rng() * 26;
+    const x = rng() * tile.width;
+    const y = rng() * tile.height;
+    const gradient = tileCtx.createRadialGradient(x, y, radius * 0.12, x, y, radius);
+    gradient.addColorStop(0, `rgba(128, 92, 54, ${0.022 + rng() * 0.028})`);
+    gradient.addColorStop(1, "rgba(128, 92, 54, 0)");
+    tileCtx.fillStyle = gradient;
+    tileCtx.beginPath();
+    tileCtx.arc(x, y, radius, 0, Math.PI * 2);
+    tileCtx.fill();
+  }
+
+  if (warmthBucket > 0) {
+    tileCtx.fillStyle = `rgba(171, 132, 78, ${0.02 + warmthBucket / 5500})`;
+    tileCtx.fillRect(0, 0, tile.width, tile.height);
+  }
+
+  textureNoiseTileCache.set(key, tile);
+  return tile;
+}
+
+function withTextureSphereClip(shouldClip, drawFn) {
+  if (!context || !pathCanvas || typeof drawFn !== "function") return;
+  context.save();
+  if (shouldClip) {
+    context.beginPath();
+    pathCanvas({ type: "Sphere" });
+    context.clip();
+  }
+  drawFn();
+  context.restore();
+}
+
+function buildTextureAxisValues(limit, step) {
+  const values = [];
+  const safeStep = Math.max(1, Number(step) || 1);
+  for (let value = -limit + safeStep; value < limit; value += safeStep) {
+    values.push(Number(value.toFixed(6)));
+  }
+  return values;
+}
+
+function shouldIncludeTextureLabel(value, step) {
+  const normalizedStep = Math.max(1, Number(step) || 1);
+  return Math.abs(value / normalizedStep - Math.round(value / normalizedStep)) < 1e-6;
+}
+
+function formatLongitudeLabel(value) {
+  const abs = Math.round(Math.abs(value));
+  if (abs === 0) return "0°";
+  return `${abs}°${value < 0 ? "W" : "E"}`;
+}
+
+function formatLatitudeLabel(value) {
+  const abs = Math.round(Math.abs(value));
+  if (abs === 0) return "0°";
+  return `${abs}°${value < 0 ? "S" : "N"}`;
+}
+
+function buildTextureLine(kind, fixedValue, rotatePoint, label = "") {
+  const coordinates = [];
+  if (kind === "meridian") {
+    for (let lat = -89.5; lat <= 89.5; lat += GRATICULE_SAMPLE_DEGREES) {
+      coordinates.push(rotatePoint([fixedValue, lat]));
+    }
+    coordinates.push(rotatePoint([fixedValue, 89.5]));
+  } else {
+    for (let lon = -180; lon <= 180; lon += GRATICULE_SAMPLE_DEGREES) {
+      coordinates.push(rotatePoint([lon, fixedValue]));
+    }
+    coordinates.push(rotatePoint([180, fixedValue]));
+  }
+  return {
+    kind,
+    value: fixedValue,
+    label,
+    geometry: {
+      type: "LineString",
+      coordinates,
+    },
+  };
+}
+
+function buildTextureGraticuleGeometry(cacheKey, {
+  majorStep,
+  minorStep,
+  labelStep,
+  rotation = [0, 0, 0],
+  includeLabels = true,
+} = {}) {
+  const cached = textureGeometryCache.get(cacheKey);
+  if (cached) return cached;
+  const rotatePoint = globalThis.d3?.geoRotation ? globalThis.d3.geoRotation(rotation) : ((point) => point);
+  const geometry = {
+    majorLines: [],
+    minorLines: [],
+  };
+  const majorMeridians = new Set(buildTextureAxisValues(180, majorStep).map((value) => value.toFixed(6)));
+  const majorParallels = new Set(buildTextureAxisValues(90, majorStep).map((value) => value.toFixed(6)));
+
+  buildTextureAxisValues(180, majorStep).forEach((value) => {
+    geometry.majorLines.push(
+      buildTextureLine(
+        "meridian",
+        value,
+        rotatePoint,
+        includeLabels && shouldIncludeTextureLabel(value, labelStep) ? formatLongitudeLabel(value) : ""
+      )
+    );
+  });
+  buildTextureAxisValues(90, majorStep).forEach((value) => {
+    geometry.majorLines.push(
+      buildTextureLine(
+        "parallel",
+        value,
+        rotatePoint,
+        includeLabels && shouldIncludeTextureLabel(value, labelStep) ? formatLatitudeLabel(value) : ""
+      )
+    );
+  });
+
+  if (minorStep < majorStep) {
+    buildTextureAxisValues(180, minorStep).forEach((value) => {
+      if (majorMeridians.has(value.toFixed(6))) return;
+      geometry.minorLines.push(buildTextureLine("meridian", value, rotatePoint));
+    });
+    buildTextureAxisValues(90, minorStep).forEach((value) => {
+      if (majorParallels.has(value.toFixed(6))) return;
+      geometry.minorLines.push(buildTextureLine("parallel", value, rotatePoint));
+    });
+  }
+
+  textureGeometryCache.set(cacheKey, geometry);
+  return geometry;
+}
+
+function getTextureLineAnchor(line) {
+  if (!projection || !Array.isArray(line?.geometry?.coordinates)) return null;
+  let topMost = null;
+  let bottomMost = null;
+  let leftMost = null;
+  let rightMost = null;
+  line.geometry.coordinates.forEach((coordinate) => {
+    const projected = projection(coordinate);
+    if (!projected || projected.length < 2 || !projected.every(Number.isFinite)) return;
+    const [x, y] = projected;
+    if (line.kind === "meridian") {
+      if (!topMost || y < topMost.y) topMost = { x, y };
+      if (!bottomMost || y > bottomMost.y) bottomMost = { x, y };
+    } else {
+      if (!leftMost || x < leftMost.x) leftMost = { x, y };
+      if (!rightMost || x > rightMost.x) rightMost = { x, y };
+    }
+  });
+  if (line.kind === "meridian") {
+    const shouldUseBottomAnchor = Number(line.value) < 0;
+    const anchor = shouldUseBottomAnchor ? (bottomMost || topMost) : (topMost || bottomMost);
+    if (!anchor) return null;
+    return shouldUseBottomAnchor
+      ? { ...anchor, align: "center", baseline: "bottom", offsetX: 0, offsetY: -8 }
+      : { ...anchor, align: "center", baseline: "top", offsetX: 0, offsetY: 8 };
+  }
+  const shouldUseRightAnchor = Number(line.value) >= 0;
+  const anchor = shouldUseRightAnchor ? (rightMost || leftMost) : (leftMost || rightMost);
+  if (!anchor) return null;
+  return shouldUseRightAnchor
+    ? { ...anchor, align: "right", baseline: "middle", offsetX: -8, offsetY: 0 }
+    : { ...anchor, align: "left", baseline: "middle", offsetX: 8, offsetY: 0 };
+}
+
+function drawTextureLabels(lines, config, k, opacity) {
+  if (!context || !Array.isArray(lines) || !lines.length) return;
+  const occupied = [];
+  const minDistance = 56 / Math.max(0.8, k);
+  const fontSize = clamp((Number(config.labelSize) || 12) / Math.max(0.75, k), 9, 20);
+  const labelOpacity = clamp(opacity, 0, 0.92);
+
+  context.save();
+  context.lineJoin = "round";
+  context.miterLimit = 2;
+  context.strokeStyle = "rgba(248, 250, 252, 0.92)";
+  context.lineWidth = 3.2 / Math.max(0.85, k);
+  context.fillStyle = getSafeCanvasColor(config.labelColor, "#475569");
+  context.globalAlpha = labelOpacity;
+  context.font = `${fontSize}px ${TEXTURE_LABEL_SERIF_STACK}`;
+
+  lines.forEach((line) => {
+    if (!line?.label) return;
+    const anchor = getTextureLineAnchor(line);
+    if (!anchor) return;
+    const x = anchor.x + anchor.offsetX / Math.max(0.8, k);
+    const y = anchor.y + anchor.offsetY / Math.max(0.8, k);
+    const overlaps = occupied.some((point) => Math.hypot(point.x - x, point.y - y) < minDistance);
+    if (overlaps) return;
+    occupied.push({ x, y });
+    context.textAlign = anchor.align;
+    context.textBaseline = anchor.baseline;
+    context.strokeText(line.label, x, y);
+    context.fillText(line.label, x, y);
+  });
+
+  context.restore();
+}
+
+function drawOldPaperTexture(k, { interactive = false } = {}) {
+  if (!context || !pathCanvas || !pathSVG) return;
+  const texture = getTextureStyleConfig();
+  const paper = texture.paper || {};
+  const assetImage = ensureTextureAssetImage(paper.assetId);
+  const noiseTile = getPaperNoiseTile(paper);
+  const sphereBounds = pathSVG.bounds({ type: "Sphere" });
+  const minX = sphereBounds?.[0]?.[0] || 0;
+  const minY = sphereBounds?.[0]?.[1] || 0;
+  const maxX = sphereBounds?.[1]?.[0] || runtimeState.width;
+  const maxY = sphereBounds?.[1]?.[1] || runtimeState.height;
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const radius = Math.max(maxX - minX, maxY - minY) * 0.58;
+
+  withTextureSphereClip(texture.sphereClip, () => {
+    context.save();
+    context.globalCompositeOperation = "multiply";
+    context.globalAlpha = clamp(texture.opacity * (0.24 + paper.warmth * 0.22), 0, interactive ? 0.28 : 0.42);
+    context.fillStyle = `rgba(205, 182, 138, ${0.42 + paper.warmth * 0.18})`;
+    context.beginPath();
+    pathCanvas({ type: "Sphere" });
+    context.fill();
+
+    if (assetImage) {
+      const assetPattern = getTexturePattern(assetImage, `paper-asset:${paper.assetId}`, paper.scale);
+      if (assetPattern) {
+        context.globalCompositeOperation = getSafeBlendMode(paper.blendMode, "multiply");
+        context.globalAlpha = clamp(texture.opacity * (interactive ? 0.15 : 0.34), 0, 0.42);
+        context.fillStyle = assetPattern;
+        context.beginPath();
+        pathCanvas({ type: "Sphere" });
+        context.fill();
+      }
+    }
+
+    if (noiseTile) {
+      const noisePattern = getTexturePattern(
+        noiseTile,
+        `paper-noise:${Math.round(paper.grain * 100)}:${Math.round(paper.wear * 100)}:${Math.round(paper.warmth * 100)}`,
+        paper.scale * 0.88
+      );
+      if (noisePattern) {
+        context.globalCompositeOperation = "multiply";
+        context.globalAlpha = clamp(texture.opacity * (0.22 + paper.grain * 0.3 + paper.wear * 0.22), 0, interactive ? 0.24 : 0.48);
+        context.fillStyle = noisePattern;
+        context.beginPath();
+        pathCanvas({ type: "Sphere" });
+        context.fill();
+      }
+    }
+
+    const vignette = context.createRadialGradient(
+      centerX,
+      centerY,
+      radius * 0.24,
+      centerX,
+      centerY,
+      radius * 1.06
+    );
+    vignette.addColorStop(0, "rgba(88, 62, 34, 0)");
+    vignette.addColorStop(1, `rgba(88, 62, 34, ${0.18 + paper.vignette * 0.42})`);
+    context.globalCompositeOperation = "multiply";
+    context.globalAlpha = clamp(texture.opacity * (0.14 + paper.vignette * 0.65), 0, 0.32);
+    context.fillStyle = vignette;
+    context.fillRect(minX - 24, minY - 24, maxX - minX + 48, maxY - minY + 48);
+    context.restore();
+  });
+}
+
+function drawProjectedTextureLines(lines, {
+  color = "#64748b",
+  width = 1,
+  opacity = 0.2,
+  dash = [],
+  k = 1,
+} = {}) {
+  if (!context || !pathCanvas || !Array.isArray(lines) || !lines.length) return;
+  context.save();
+  context.strokeStyle = getSafeCanvasColor(color, "#64748b");
+  context.globalAlpha = clamp(opacity, 0, 1);
+  context.lineWidth = clamp(Number(width) || 1, 0.1, 4) / Math.max(0.0001, k);
+  context.setLineDash(Array.isArray(dash) ? dash : []);
+  lines.forEach((line) => {
+    if (!line?.geometry) return;
+    context.beginPath();
+    pathCanvas(line.geometry);
+    context.stroke();
+  });
+  context.restore();
+}
+
+function getGraticuleTextureGeometry(config) {
+  const cacheKey = [
+    "graticule",
+    config.majorStep,
+    config.minorStep,
+    config.labelStep,
+    config.majorWidth,
+    config.minorWidth,
+  ].join("|");
+  return buildTextureGraticuleGeometry(cacheKey, {
+    majorStep: config.majorStep,
+    minorStep: config.minorStep,
+    labelStep: config.labelStep,
+    includeLabels: true,
+  });
+}
+
+function drawGraticuleTextureLines(k, { interactive = false } = {}) {
+  const texture = getTextureStyleConfig();
+  const config = texture.graticule || {};
+  const geometry = getGraticuleTextureGeometry(config);
+
+  withTextureSphereClip(texture.sphereClip, () => {
+    drawProjectedTextureLines(geometry.minorLines, {
+      color: config.color,
+      width: config.minorWidth,
+      opacity: texture.opacity * config.minorOpacity * (interactive ? 0.9 : 1),
+      k,
+    });
+    drawProjectedTextureLines(geometry.majorLines, {
+      color: config.color,
+      width: config.majorWidth,
+      opacity: texture.opacity * config.majorOpacity,
+      k,
+    });
+  });
+}
+
+function drawGraticuleTextureLabels(k) {
+  const texture = getTextureStyleConfig();
+  const config = texture.graticule || {};
+  const geometry = getGraticuleTextureGeometry(config);
+  withTextureSphereClip(texture.sphereClip, () => {
+    drawTextureLabels(
+      geometry.majorLines,
+      config,
+      k,
+      texture.opacity * clamp((config.majorOpacity * 1.25) + 0.08, 0, 0.78)
+    );
+  });
+}
+
+function drawDraftGridTexture(k, { interactive = false } = {}) {
+  const texture = getTextureStyleConfig();
+  const config = texture.draftGrid || {};
+  const cacheKey = [
+    "draft-grid",
+    config.majorStep,
+    config.minorStep,
+    Math.round(config.lonOffset),
+    Math.round(config.latOffset),
+    Math.round(config.roll),
+  ].join("|");
+  const geometry = buildTextureGraticuleGeometry(cacheKey, {
+    majorStep: config.majorStep,
+    minorStep: config.minorStep,
+    labelStep: 999,
+    rotation: [config.lonOffset, config.latOffset, config.roll],
+    includeLabels: false,
+  });
+  const majorDash = getDashPattern(config.dash || "dashed", Number(config.width) || 1);
+  const minorDash = config.dash === "solid"
+    ? []
+    : getDashPattern(config.dash || "dashed", Math.max(0.5, (Number(config.width) || 1) * 0.75));
+  const drawMinor = !interactive || k > 1.15;
+
+  withTextureSphereClip(texture.sphereClip, () => {
+    if (drawMinor) {
+      drawProjectedTextureLines(geometry.minorLines, {
+        color: config.color,
+        width: Math.max(0.22, (Number(config.width) || 1) * 0.68),
+        opacity: texture.opacity * config.minorOpacity,
+        dash: minorDash,
+        k,
+      });
+    }
+    drawProjectedTextureLines(geometry.majorLines, {
+      color: config.color,
+      width: config.width,
+      opacity: texture.opacity * config.majorOpacity,
+      dash: majorDash,
+      k,
+    });
+  });
+}
+
+function drawTextureLayer(k, { interactive = false } = {}) {
+  const texture = getTextureStyleConfig();
+  const mode = String(texture.mode || "none").trim().toLowerCase();
+  if (mode === "none") return;
+  if (!isBootInteractionReady()) return;
+  if (mode === "paper") {
+    drawOldPaperTexture(k, { interactive });
+    return;
+  }
+  if (mode === "graticule") {
+    drawGraticuleTextureLines(k, { interactive });
+    if (!interactive) {
+      drawGraticuleTextureLabels(k);
+    }
+    return;
+  }
+  if (mode === "draft_grid") {
+    drawDraftGridTexture(k, { interactive });
+  }
+}
+
+function shouldUseScenarioPoliticalBackgroundMerge() {
+  return Boolean(
+    debugMode === "PROD" &&
+    runtimeState.activeScenarioId &&
+    Array.isArray((runtimeState.landDataFull || runtimeState.landData)?.features) &&
+    (runtimeState.landDataFull || runtimeState.landData).features.length
+  );
+}
+
+function shouldFallbackScenarioPoliticalBackgroundMergeShape(
+  mergedShape,
+  { displayCode = "", fillColor = "", groupSize = 0 } = {}
+) {
+  const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+  const geoAreaFn = globalThis.d3?.geoArea;
+  const geoBoundsFn = globalThis.d3?.geoBounds;
+  if (typeof geoAreaFn !== "function") {
+    return false;
+  }
+  let area = Number.NaN;
+  let bounds = null;
+  try {
+    area = geoAreaFn(mergedShape);
+    bounds = typeof geoBoundsFn === "function" ? geoBoundsFn(mergedShape) : null;
+  } catch (_error) {
+    area = Number.NaN;
+    bounds = null;
+  }
+  const suspicious =
+    !Number.isFinite(area) ||
+    area > SCENARIO_BACKGROUND_MERGE_MAX_AREA ||
+    isWorldBounds(bounds);
+  if (!suspicious) {
+    return false;
+  }
+  const viewMode = String(runtimeState.scenarioViewMode || "ownership");
+  const logKey = `${scenarioId}::${viewMode}::${displayCode}::${fillColor}`;
+  if (!suspiciousScenarioBackgroundMergeWarnings.has(logKey)) {
+    suspiciousScenarioBackgroundMergeWarnings.add(logKey);
+    const areaText = Number.isFinite(area) ? area.toFixed(5) : "non-finite";
+    console.warn(
+      `[map_renderer] Scenario political background merge fallback engaged: scenario=${scenarioId || "(none)"} view=${viewMode} owner=${displayCode || "(unknown)"} fill=${fillColor || "(none)"} group=${groupSize} area=${areaText}`
+    );
+  }
+  return true;
+}
+
+function getScenarioPoliticalBackgroundCacheKey({
+  canvasWidth = 0,
+  canvasHeight = 0,
+} = {}) {
+  return [
+    String(runtimeState.activeScenarioId || ""),
+    String(runtimeState.scenarioViewMode || "ownership"),
+    getAtlantropaSeaPoliticalFillColor(),
+    Number(runtimeState.sovereigntyRevision || 0),
+    Number(runtimeState.scenarioControllerRevision || 0),
+    Number(runtimeState.scenarioShellOverlayRevision || 0),
+    Number(runtimeState.colorRevision || 0),
+    Math.round(Number(canvasWidth || 0)),
+    Math.round(Number(canvasHeight || 0)),
+  ].join("::");
+}
+
+function resolvePoliticalBackgroundEntryMeta(
+  entry,
+  {
+    useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge(),
+  } = {},
+) {
+  const feature = entry?.feature || null;
+  const index = Number(entry?.index || 0);
+  const resolvedId = String(entry?.id || getFeatureId(feature) || `feature-${index}`);
+  const fillColor =
+    (isAtlantropaSeaFeature(feature)
+      ? getAtlantropaSeaPoliticalFillColor()
+      : null) ||
+    getSafeCanvasColor(runtimeState.colors?.[resolvedId], null) ||
+    getSafeCanvasColor(getResolvedFeatureColor(feature, resolvedId), null) ||
+    LAND_FILL_COLOR;
+  const displayCode = useScenarioBackgroundMerge
+    ? (
+      getDisplayOwnerCode(feature, resolvedId) ||
+      getFeatureCountryCodeNormalized(feature) ||
+      "__NONE__"
+    )
+    : (
+      getFeatureCountryCodeNormalized(feature) ||
+      "__NONE__"
+    );
+  return {
+    feature,
+    index,
+    id: resolvedId,
+    path: entry?.path || null,
+    fillColor,
+    displayCode,
+    groupKey: `${displayCode}::${fillColor}`,
+  };
+}
+
+function buildScenarioPoliticalBackgroundColorSignature(
+  entries = [],
+  {
+    useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge(),
+  } = {},
+) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const meta = resolvePoliticalBackgroundEntryMeta(entry, { useScenarioBackgroundMerge });
+      return `${meta.groupKey}::${meta.id}`;
+    })
+    .join("|");
+}
+
+function drawPoliticalBackgroundFillsFromGroups(groups = []) {
+  let groupCount = 0;
+  (Array.isArray(groups) ? groups : []).forEach((group) => {
+    const fillColor = String(group?.fillColor || "").trim() || LAND_FILL_COLOR;
+    const mergedPath = group?.mergedPath || null;
+    const groupEntries = Array.isArray(group?.entries) ? group.entries.filter(Boolean) : [];
+    if (!groupEntries.length && !mergedPath) {
+      return;
+    }
+    context.fillStyle = fillColor;
+    if (mergedPath) {
+      context.fill(mergedPath);
+      groupCount += 1;
+      return;
+    }
+    if (groupEntries.length && groupEntries.every((entry) => entry?.path)) {
+      groupEntries.forEach((entry) => {
+        context.fill(entry.path);
+      });
+      groupCount += 1;
+      return;
+    }
+    context.beginPath();
+    groupEntries.forEach((entry) => {
+      if (entry?.feature) {
+        pathCanvas(entry.feature);
+      }
+    });
+    context.fill();
+    groupCount += 1;
+  });
+  return groupCount;
+}
+
+function buildPoliticalBackgroundResolvedGroups(
+  entries = [],
+  {
+    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+    useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge(),
+    allowBuildPaths = false,
+  } = {},
+) {
+  const groupedEntries = new Map();
+  let reusedPathCount = 0;
+  let builtPathCount = 0;
+  let pathlessEntryCount = 0;
+  const pathCacheHandle = allowBuildPaths
+    ? getPoliticalPathCacheHandle(transform, { resetIfMismatch: true })
+    : null;
+
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    if (!entry?.feature?.geometry) return;
+    const meta = resolvePoliticalBackgroundEntryMeta(entry, { useScenarioBackgroundMerge });
+    let resolvedPath = meta.path || null;
+    if (resolvedPath) {
+      reusedPathCount += 1;
+    } else if (allowBuildPaths && pathCacheHandle?.valid && pathCacheHandle.map instanceof Map) {
+      const hadCachedPath = !!pathCacheHandle.map.get(meta.id)?.path;
+      const pathEntry = getPoliticalFeaturePathEntry(meta.feature, {
+        featureId: meta.id,
+        transform,
+        allowBuild: true,
+        countBuild: true,
+      });
+      resolvedPath = pathEntry?.path || null;
+      if (resolvedPath) {
+        if (hadCachedPath) {
+          reusedPathCount += 1;
+        } else {
+          builtPathCount += 1;
+        }
+      } else {
+        pathlessEntryCount += 1;
+      }
+    } else {
+      pathlessEntryCount += 1;
+    }
+    if (!groupedEntries.has(meta.groupKey)) {
+      groupedEntries.set(meta.groupKey, {
+        fillColor: meta.fillColor,
+        entries: [],
+      });
+    }
+    groupedEntries.get(meta.groupKey).entries.push({
+      feature: meta.feature,
+      path: resolvedPath,
+    });
+  });
+
+  const groups = [];
+  groupedEntries.forEach(({ fillColor, entries: groupEntries }, groupKey) => {
+    const resolvedEntries = Array.isArray(groupEntries) ? groupEntries.filter(Boolean) : [];
+    if (!resolvedEntries.length) return;
+    let mergedPath = null;
+    if (resolvedEntries.length === 1 && resolvedEntries[0]?.path) {
+      mergedPath = resolvedEntries[0].path;
+    } else if (
+      globalThis.Path2D
+      && typeof globalThis.Path2D.prototype?.addPath === "function"
+      && resolvedEntries.every((item) => item?.path)
+    ) {
+      mergedPath = new globalThis.Path2D();
+      resolvedEntries.forEach((item) => {
+        mergedPath.addPath(item.path);
+      });
+    }
+    groups.push({
+      groupKey,
+      fillColor,
+      mergedPath,
+      entries: resolvedEntries,
+    });
+  });
+
+  return {
+    groups,
+    groupCount: groups.length,
+    entryCount: Array.isArray(entries) ? entries.length : 0,
+    reusedPathCount,
+    builtPathCount,
+    pathlessEntryCount,
+  };
+}
+
+function getScenarioPoliticalBackgroundFullPassGroups(
+  entries = [],
+  {
+    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  } = {},
+) {
+  const startedAt = nowMs();
+  const normalizedEntries = Array.isArray(entries) ? entries.filter((entry) => entry?.feature?.geometry) : [];
+  if (!normalizedEntries.length) {
+    return {
+      cacheHit: false,
+      groupCount: 0,
+      entryCount: 0,
+      reusedPathCount: 0,
+      builtPathCount: 0,
+      pathlessEntryCount: 0,
+      groups: [],
+    };
+  }
+  const transformSignature = getTransformSignature(transform);
+  const pathCacheSignature = getPoliticalPathCacheSignature(transform);
+  const colorSignature = buildScenarioPoliticalBackgroundColorSignature(normalizedEntries);
+  const fullPassCacheKey = [
+    scenarioPoliticalBackgroundCache.cacheKey,
+    transformSignature,
+    pathCacheSignature,
+    colorSignature,
+    normalizedEntries.length,
+  ].join("::");
+  if (
+    scenarioPoliticalBackgroundCache.fullPassCacheKey === fullPassCacheKey
+    && Array.isArray(scenarioPoliticalBackgroundCache.fullPassGroups)
+    && scenarioPoliticalBackgroundCache.fullPassGroups.length
+  ) {
+    recordRenderPerfMetric("scenarioPoliticalBackgroundCacheReplay", nowMs() - startedAt, {
+      cacheHit: true,
+      groupCount: Number(scenarioPoliticalBackgroundCache.fullPassGroupCount || 0),
+      entryCount: Number(scenarioPoliticalBackgroundCache.fullPassEntryCount || 0),
+      reusedPathCount: Number(scenarioPoliticalBackgroundCache.fullPassReusedPathCount || 0),
+      builtPathCount: Number(scenarioPoliticalBackgroundCache.fullPassBuiltPathCount || 0),
+      pathlessEntryCount: Number(scenarioPoliticalBackgroundCache.fullPassPathlessEntryCount || 0),
+    });
+    return {
+      cacheHit: true,
+      groupCount: Number(scenarioPoliticalBackgroundCache.fullPassGroupCount || 0),
+      entryCount: Number(scenarioPoliticalBackgroundCache.fullPassEntryCount || 0),
+      reusedPathCount: Number(scenarioPoliticalBackgroundCache.fullPassReusedPathCount || 0),
+      builtPathCount: Number(scenarioPoliticalBackgroundCache.fullPassBuiltPathCount || 0),
+      pathlessEntryCount: Number(scenarioPoliticalBackgroundCache.fullPassPathlessEntryCount || 0),
+      groups: scenarioPoliticalBackgroundCache.fullPassGroups,
+    };
+  }
+  const resolvedGroups = buildPoliticalBackgroundResolvedGroups(normalizedEntries, {
+    transform,
+    useScenarioBackgroundMerge: true,
+    allowBuildPaths: true,
+  });
+  scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
+    ...scenarioPoliticalBackgroundCache,
+    transformSignature,
+    colorSignature,
+    fullPassCacheKey,
+    fullPassPathCacheSignature: pathCacheSignature,
+    fullPassTransformSignature: transformSignature,
+    fullPassColorSignature: colorSignature,
+    fullPassGroupCount: resolvedGroups.groupCount,
+    fullPassEntryCount: resolvedGroups.entryCount,
+    fullPassReusedPathCount: resolvedGroups.reusedPathCount,
+    fullPassBuiltPathCount: resolvedGroups.builtPathCount,
+    fullPassPathlessEntryCount: resolvedGroups.pathlessEntryCount,
+    fullPassGroups: resolvedGroups.groups,
+  });
+  recordRenderPerfMetric("scenarioPoliticalBackgroundCacheBuild", nowMs() - startedAt, {
+    cacheHit: false,
+    groupCount: resolvedGroups.groupCount,
+    entryCount: resolvedGroups.entryCount,
+    reusedPathCount: resolvedGroups.reusedPathCount,
+    builtPathCount: resolvedGroups.builtPathCount,
+    pathlessEntryCount: resolvedGroups.pathlessEntryCount,
+  });
+  return {
+    cacheHit: false,
+    ...resolvedGroups,
+  };
+}
+
+function buildScenarioPoliticalBackgroundEntries() {
+  const startedAt = nowMs();
+  if (!shouldUseScenarioPoliticalBackgroundMerge()) {
+    recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
+      cacheHit: false,
+      entryCount: 0,
+      featureCount: 0,
+      skipped: true,
+    });
+    return [];
+  }
+
+  const landCollection = runtimeState.landDataFull || runtimeState.landData;
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  const featureCount = Array.isArray(landCollection?.features) ? landCollection.features.length : 0;
+  const cacheKey = getScenarioPoliticalBackgroundCacheKey({
+    canvasWidth,
+    canvasHeight,
+  });
+  if (
+    scenarioPoliticalBackgroundCache.runtimeRef === landCollection
+    && scenarioPoliticalBackgroundCache.cacheKey === cacheKey
+  ) {
+    recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
+      cacheHit: true,
+      entryCount: scenarioPoliticalBackgroundCache.entries.length,
+      featureCount,
+    });
+    return scenarioPoliticalBackgroundCache.entries;
+  }
+
+  const entries = [];
+  (landCollection?.features || []).forEach((feature, index) => {
+    const id = getFeatureId(feature) || `feature-${index}`;
+    if (!feature?.geometry) return;
+    if (isAntarcticSectorFeature(feature, id)) return;
+    if (isBaseGeographyScenarioFeature(feature)) return;
+    if (shouldExcludePoliticalVisualFeature(feature, id)) return;
+    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) return;
+    const projectedBounds = getProjectedFeatureBounds(feature, {
+      featureId: id,
+      allowCompute: true,
+    });
+    if (!pathBoundsInScreen(feature)) return;
+    entries.push({
+      feature,
+      index,
+      id,
+      projectedBounds,
+    });
+  });
+  if (!entries.length) {
+    scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
+      runtimeRef: landCollection,
+      scenarioId: runtimeState.activeScenarioId || "",
+      viewMode: String(runtimeState.scenarioViewMode || "ownership"),
+      oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
+      sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
+      controllerRevision: Number(runtimeState.scenarioControllerRevision || 0),
+      shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
+      colorRevision: Number(runtimeState.colorRevision || 0),
+      canvasWidth,
+      canvasHeight,
+      cacheKey,
+      entries: [],
+    });
+    recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
+      cacheHit: false,
+      entryCount: 0,
+      featureCount,
+    });
+    return scenarioPoliticalBackgroundCache.entries;
+  }
+
+  scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
+    runtimeRef: landCollection,
+    scenarioId: runtimeState.activeScenarioId || "",
+    viewMode: String(runtimeState.scenarioViewMode || "ownership"),
+    oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
+    sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
+    controllerRevision: Number(runtimeState.scenarioControllerRevision || 0),
+    shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    canvasWidth,
+    canvasHeight,
+    cacheKey,
+    entries,
+  });
+  recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
+    cacheHit: false,
+    entryCount: entries.length,
+    featureCount,
+  });
+  return entries;
+}
+
+function buildScenarioPoliticalBackgroundEntriesFromSpatialItems(items = []) {
+  return (Array.isArray(items) ? items : []).map((item) => ({
+    feature: item?.feature || null,
+    index: Number(item?.drawOrder || 0),
+    id: item?.id || "",
+    projectedBounds: item
+      ? {
+        minX: Number(item.minX),
+        minY: Number(item.minY),
+        maxX: Number(item.maxX),
+        maxY: Number(item.maxY),
+      }
+      : null,
+  })).filter((entry) => (
+    entry.feature?.geometry
+    && entry.id
+    && entry.projectedBounds
+    && !shouldExcludePoliticalVisualFeature(entry.feature, entry.id)
+  ));
+}
+
+function collectScenarioPoliticalBackgroundSpatialEntries({
+  screenRects = null,
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  visibleItems = null,
+} = {}) {
+  const landCollection = runtimeState.landDataFull || runtimeState.landData;
+  if (landCollection !== runtimeState.landData) {
+    return null;
+  }
+  if (Array.isArray(visibleItems)) {
+    return buildScenarioPoliticalBackgroundEntriesFromSpatialItems(visibleItems);
+  }
+  if (!Array.isArray(runtimeState.spatialItems) || !runtimeState.spatialItems.length) {
+    return null;
+  }
+  if (!Array.isArray(screenRects) || !screenRects.length) {
+    const items = collectVisibleLandSpatialItems();
+    return Array.isArray(items)
+      ? buildScenarioPoliticalBackgroundEntriesFromSpatialItems(items)
+      : null;
+  }
+  const projectedRects = screenRects
+    .map((rect) => screenRectToProjectedRect(rect, transform))
+    .filter(Boolean);
+  if (!projectedRects.length) {
+    return [];
+  }
+  const candidateResult = collectLandSpatialItemsForProjectedRects(projectedRects);
+  if (!candidateResult || candidateResult.overflow) {
+    return null;
+  }
+  return buildScenarioPoliticalBackgroundEntriesFromSpatialItems(candidateResult.items);
+}
+
+function drawScenarioPoliticalBackgroundFills({
+  screenRects = null,
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  visibleItems = null,
+  returnSummary = false,
+} = {}) {
+  const entries =
+    collectScenarioPoliticalBackgroundSpatialEntries({
+      screenRects,
+      transform,
+      visibleItems,
+    })
+    || buildScenarioPoliticalBackgroundEntries();
+  if (!entries.length) {
+    return returnSummary
+      ? {
+        groupCount: 0,
+        entryCount: 0,
+        reusedPathCount: 0,
+        builtPathCount: 0,
+        pathlessEntryCount: 0,
+        cacheHit: false,
+      }
+      : 0;
+  }
+  const visibleEntries = Array.isArray(screenRects) && screenRects.length
+    ? entries.filter(({ projectedBounds }) =>
+      projectedBoundsIntersectScreenRects(projectedBounds, screenRects, { transform })
+    )
+    : entries;
+  return drawPoliticalBackgroundFillsForEntries(visibleEntries, {
+    transform,
+    useFullPassCache: !Array.isArray(screenRects) && Array.isArray(visibleItems),
+    returnSummary,
+  });
+}
+
+function buildAdmin0MergedShapes() {
+  const topology = runtimeState.topologyPrimary || runtimeState.topology;
+  if (!topology?.objects?.political || !globalThis.topojson?.merge) return [];
+
+  const geometries = topology.objects.political.geometries || [];
+  const currentFeatureCount = runtimeState.landData?.features?.length || 0;
+
+  if (
+    admin0MergedCache.topologyRef === topology &&
+    admin0MergedCache.featureCount === currentFeatureCount
+  ) {
+    return admin0MergedCache.entries;
+  }
+
+  const byCountry = new Map();
+  geometries.forEach((geom) => {
+    const code = String(geom?.properties?.cntr_code || "").trim().toUpperCase();
+    if (!code) return;
+    if (!byCountry.has(code)) byCountry.set(code, []);
+    byCountry.get(code).push(geom);
+  });
+
+  const entries = [];
+  byCountry.forEach((geoms, code) => {
+    try {
+      const mergedShape = globalThis.topojson.merge(topology, geoms);
+      const mergedFeature = {
+        type: "Feature",
+        properties: {
+          id: `admin0-background-${code}`,
+          cntr_code: code,
+        },
+        geometry: mergedShape,
+      };
+      entries.push({
+        code,
+        mergedShape,
+        mergedFeature,
+        projectedBounds: getProjectedFeatureBounds(mergedFeature, { allowCompute: true }),
+      });
+    } catch (_e) {
+      // Skip countries that fail to merge
+    }
+  });
+
+  admin0MergedCache = {
+    topologyRef: topology,
+    featureCount: currentFeatureCount,
+    entries,
+  };
+  return entries;
+}
+
+function drawAdmin0BackgroundFills({
+  screenRects = null,
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+} = {}) {
+  const entries = buildAdmin0MergedShapes();
+  if (!entries.length) return;
+
+  entries.forEach(({ code, mergedShape, mergedFeature, projectedBounds }) => {
+    if (code === "ATL") return;
+    if (!projectedBoundsIntersectScreenRects(projectedBounds, screenRects, { transform })) {
+      return;
+    }
+    const color =
+      (runtimeState.sovereignBaseColors && runtimeState.sovereignBaseColors[code]) ||
+      (runtimeState.countryBaseColors && runtimeState.countryBaseColors[code]) ||
+      null;
+    const fillColor = getSafeCanvasColor(color, null) || LAND_FILL_COLOR;
+
+    context.beginPath();
+    pathCanvas(mergedFeature || {
+      type: "Feature",
+      properties: {
+        id: `admin0-background-${code}`,
+        cntr_code: code,
+      },
+      geometry: mergedShape,
+    });
+    context.fillStyle = fillColor;
+    context.fill();
+  });
+}
+
+function drawBackgroundPass() {
+  const oceanFillColor = getOceanBaseFillColor();
+  context.fillStyle = oceanFillColor;
+  context.beginPath();
+  pathCanvas({ type: "Sphere" });
+  context.fill();
+
+  if (runtimeState.oceanData) {
+    context.fillStyle = oceanFillColor;
+    context.beginPath();
+    pathCanvas(runtimeState.oceanData);
+    context.fill();
+  }
+  drawOceanStyle();
+}
+
+function getCachedPoliticalPassStaticSignature(signature) {
+  const parts = String(signature || "").split("::");
+  return parts.length > 1 ? parts.slice(1).join("::") : "";
+}
+
+function getFeatureScreenBounds(feature, {
+  featureId = null,
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  allowCompute = true,
+  padding = 0,
+} = {}) {
+  const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute });
+  if (!bounds) return null;
+  const normalizedTransform = cloneZoomTransform(transform);
+  const rawMinX = bounds.minX * normalizedTransform.k + normalizedTransform.x;
+  const rawMinY = bounds.minY * normalizedTransform.k + normalizedTransform.y;
+  const rawMaxX = bounds.maxX * normalizedTransform.k + normalizedTransform.x;
+  const rawMaxY = bounds.maxY * normalizedTransform.k + normalizedTransform.y;
+  if (![rawMinX, rawMinY, rawMaxX, rawMaxY].every(Number.isFinite)) {
+    return null;
+  }
+  const normalizedPadding = Math.max(0, Number(padding || 0));
+  const minX = rawMinX - normalizedPadding;
+  const minY = rawMinY - normalizedPadding;
+  const maxX = rawMaxX + normalizedPadding;
+  const maxY = rawMaxY + normalizedPadding;
+  return {
+    x: minX,
+    y: minY,
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+  };
+}
+
+function getScreenBoundsFromProjectedBounds(projectedBounds, {
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  padding = 0,
+} = {}) {
+  if (!projectedBounds) return null;
+  const normalizedTransform = cloneZoomTransform(transform);
+  const rawMinX = Number(projectedBounds.minX) * normalizedTransform.k + normalizedTransform.x;
+  const rawMinY = Number(projectedBounds.minY) * normalizedTransform.k + normalizedTransform.y;
+  const rawMaxX = Number(projectedBounds.maxX) * normalizedTransform.k + normalizedTransform.x;
+  const rawMaxY = Number(projectedBounds.maxY) * normalizedTransform.k + normalizedTransform.y;
+  if (![rawMinX, rawMinY, rawMaxX, rawMaxY].every(Number.isFinite)) {
+    return null;
+  }
+  const normalizedPadding = Math.max(0, Number(padding || 0));
+  const minX = rawMinX - normalizedPadding;
+  const minY = rawMinY - normalizedPadding;
+  const maxX = rawMaxX + normalizedPadding;
+  const maxY = rawMaxY + normalizedPadding;
+  return {
+    x: minX,
+    y: minY,
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+  };
+}
+
+function rectsIntersect(a, b) {
+  if (!a || !b) return false;
+  return !(
+    a.maxX < b.minX ||
+    a.maxY < b.minY ||
+    a.minX > b.maxX ||
+    a.minY > b.maxY
+  );
+}
+
+function projectedRectsIntersect(a, b) {
+  if (!a || !b) return false;
+  return !(
+    Number(a.maxX) < Number(b.minX) ||
+    Number(a.maxY) < Number(b.minY) ||
+    Number(a.minX) > Number(b.maxX) ||
+    Number(a.minY) > Number(b.maxY)
+  );
+}
+
+function mergeIntersectingRects(rects = []) {
+  const pending = Array.isArray(rects) ? rects.filter(Boolean).map((rect) => ({ ...rect })) : [];
+  const merged = [];
+  while (pending.length) {
+    const next = pending.pop();
+    if (!next) continue;
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let index = pending.length - 1; index >= 0; index -= 1) {
+        const candidate = pending[index];
+        if (!rectsIntersect(next, candidate)) continue;
+        next.minX = Math.min(next.minX, candidate.minX);
+        next.minY = Math.min(next.minY, candidate.minY);
+        next.maxX = Math.max(next.maxX, candidate.maxX);
+        next.maxY = Math.max(next.maxY, candidate.maxY);
+        next.x = next.minX;
+        next.y = next.minY;
+        next.width = Math.max(0, next.maxX - next.minX);
+        next.height = Math.max(0, next.maxY - next.minY);
+        pending.splice(index, 1);
+        changed = true;
+      }
+    }
+    merged.push(next);
+  }
+  return merged;
+}
+
+function getViewportCoverageForRects(rects = []) {
+  const viewportArea = Math.max(1, Number(runtimeState.width || 1) * Number(runtimeState.height || 1));
+  const coveredArea = (Array.isArray(rects) ? rects : []).reduce((sum, rect) => {
+    if (!rect) return sum;
+    const minX = clamp(rect.minX, 0, Number(runtimeState.width || 0));
+    const minY = clamp(rect.minY, 0, Number(runtimeState.height || 0));
+    const maxX = clamp(rect.maxX, 0, Number(runtimeState.width || 0));
+    const maxY = clamp(rect.maxY, 0, Number(runtimeState.height || 0));
+    if (maxX <= minX || maxY <= minY) return sum;
+    return sum + ((maxX - minX) * (maxY - minY));
+  }, 0);
+  return clamp(coveredArea / viewportArea, 0, 1);
+}
+
+function screenRectToProjectedRect(rect, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  if (!rect) return null;
+  const normalizedTransform = cloneZoomTransform(transform);
+  const minX = (Number(rect.minX ?? rect.x ?? 0) - normalizedTransform.x) / normalizedTransform.k;
+  const minY = (Number(rect.minY ?? rect.y ?? 0) - normalizedTransform.y) / normalizedTransform.k;
+  const maxX = (Number(rect.maxX ?? ((rect.x || 0) + (rect.width || 0))) - normalizedTransform.x) / normalizedTransform.k;
+  const maxY = (Number(rect.maxY ?? ((rect.y || 0) + (rect.height || 0))) - normalizedTransform.y) / normalizedTransform.k;
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+    return null;
+  }
+  return {
+    minX: Math.min(minX, maxX),
+    minY: Math.min(minY, maxY),
+    maxX: Math.max(minX, maxX),
+    maxY: Math.max(minY, maxY),
+  };
+}
+
+function screenRectToPassRect(rect, layout) {
+  if (!rect || !layout) return null;
+  const minX = clamp(Number(rect.minX || rect.x || 0) + Number(layout.offsetX || 0), 0, Number(layout.paddedWidth || 0));
+  const minY = clamp(Number(rect.minY || rect.y || 0) + Number(layout.offsetY || 0), 0, Number(layout.paddedHeight || 0));
+  const maxX = clamp(Number(rect.maxX || ((rect.x || 0) + (rect.width || 0))) + Number(layout.offsetX || 0), 0, Number(layout.paddedWidth || 0));
+  const maxY = clamp(Number(rect.maxY || ((rect.y || 0) + (rect.height || 0))) + Number(layout.offsetY || 0), 0, Number(layout.paddedHeight || 0));
+  if (maxX <= minX || maxY <= minY) return null;
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
+}
+
+function projectedBoundsIntersectScreenRects(projectedBounds, screenRects, {
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  padding = 0,
+} = {}) {
+  if (!Array.isArray(screenRects) || !screenRects.length) return true;
+  const screenBounds = getScreenBoundsFromProjectedBounds(projectedBounds, { transform, padding });
+  if (!screenBounds) return false;
+  return screenRects.some((rect) => rectsIntersect(rect, screenBounds));
+}
+
+function collectLandSpatialItemsForProjectedRects(projectedRects = [], { maxCandidates = Infinity } = {}) {
+  const meta = runtimeState.spatialGridMeta;
+  const grid = runtimeState.spatialGrid;
+  if (!meta || !grid || !Array.isArray(runtimeState.spatialItems)) return null;
+  const { cellSize, cols, rows, globals } = meta;
+  if (!cellSize || cols <= 0 || rows <= 0) return null;
+  const normalizedRects = (Array.isArray(projectedRects) ? projectedRects : []).filter(Boolean);
+  if (!normalizedRects.length) return { items: [], overflow: false };
+  const seen = new Set();
+  const candidateItems = [];
+  let overflow = false;
+  const maybePush = (item) => {
+    if (overflow || !item?.id || seen.has(item.id)) return;
+    seen.add(item.id);
+    if (!normalizedRects.some((rect) => projectedRectsIntersect(item, rect))) return;
+    candidateItems.push(item);
+    if (candidateItems.length > maxCandidates) {
+      overflow = true;
+    }
+  };
+  normalizedRects.forEach((rect) => {
+    const c0 = clamp(Math.floor(Number(rect.minX || 0) / cellSize), 0, cols - 1);
+    const c1 = clamp(Math.floor(Number(rect.maxX || 0) / cellSize), 0, cols - 1);
+    const r0 = clamp(Math.floor(Number(rect.minY || 0) / cellSize), 0, rows - 1);
+    const r1 = clamp(Math.floor(Number(rect.maxY || 0) / cellSize), 0, rows - 1);
+    for (let row = r0; row <= r1; row += 1) {
+      for (let col = c0; col <= c1; col += 1) {
+        const bucket = grid.get(getSpatialBucketKey(col, row));
+        bucket?.forEach(maybePush);
+      }
+    }
+  });
+  globals?.forEach(maybePush);
+  candidateItems.sort((left, right) => (left?.drawOrder ?? 0) - (right?.drawOrder ?? 0));
+  return {
+    items: candidateItems,
+    overflow,
+  };
+}
+
+function drawPoliticalBackgroundFills(options = {}) {
+  if (debugMode !== "PROD") {
+    return options.returnSummary
+      ? {
+        groupCount: 0,
+        entryCount: 0,
+        reusedPathCount: 0,
+        builtPathCount: 0,
+        pathlessEntryCount: 0,
+        cacheHit: false,
+      }
+      : 0;
+  }
+  if (shouldUseScenarioPoliticalBackgroundMerge()) {
+    return drawScenarioPoliticalBackgroundFills(options);
+  }
+  drawAdmin0BackgroundFills(options);
+  return options.returnSummary
+    ? {
+      groupCount: 0,
+      entryCount: 0,
+      reusedPathCount: 0,
+      builtPathCount: 0,
+      pathlessEntryCount: 0,
+      cacheHit: false,
+    }
+    : 0;
+}
+
+function drawPoliticalBackgroundFillsForEntries(entries = [], {
+  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+  useFullPassCache = false,
+  returnSummary = false,
+} = {}) {
+  if (debugMode !== "PROD") {
+    return returnSummary
+      ? {
+        groupCount: 0,
+        entryCount: 0,
+        reusedPathCount: 0,
+        builtPathCount: 0,
+        pathlessEntryCount: 0,
+        cacheHit: false,
+      }
+      : 0;
+  }
+  const useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge();
+  const groupSummary = useFullPassCache && useScenarioBackgroundMerge
+    ? getScenarioPoliticalBackgroundFullPassGroups(entries, { transform })
+    : {
+      cacheHit: false,
+      ...buildPoliticalBackgroundResolvedGroups(entries, {
+        transform,
+        useScenarioBackgroundMerge,
+        allowBuildPaths: false,
+      }),
+    };
+  const groupCount = drawPoliticalBackgroundFillsFromGroups(groupSummary.groups);
+  if (returnSummary) {
+    return {
+      groupCount,
+      entryCount: Number(groupSummary.entryCount || 0),
+      reusedPathCount: Number(groupSummary.reusedPathCount || 0),
+      builtPathCount: Number(groupSummary.builtPathCount || 0),
+      pathlessEntryCount: Number(groupSummary.pathlessEntryCount || 0),
+      cacheHit: !!groupSummary.cacheHit,
+    };
+  }
+  return groupCount;
+}
+
+function drawPoliticalFeature(
+  feature,
+  index,
+  {
+    k,
+    canvasWidth,
+    canvasHeight,
+    islandNeighbors = null,
+    skipScreenCheck = false,
+    path = null,
+    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+    useCachedPath = true,
+    allowBuildPath = false,
+    countPathBuild = false,
+    metricsCollector = null,
+  } = {},
+) {
+  const id = getFeatureId(feature) || `feature-${index}`;
+  if (shouldExcludePoliticalVisualFeature(feature, id)) return false;
+  if (shouldSkipFeature(feature, canvasWidth, canvasHeight)) return false;
+  if (!skipScreenCheck && !pathBoundsInScreen(feature)) return false;
+  const isAtlantropaSea = debugMode === "PROD" && isAtlantropaSeaFeature(feature);
+
+  let fillColor = LAND_FILL_COLOR;
+  if (debugMode === "PROD") {
+    fillColor = isAtlantropaSea
+      ? getAtlantropaSeaPoliticalFillColor()
+      : (getSafeCanvasColor(runtimeState.colors[id], null) || LAND_FILL_COLOR);
+  } else if (debugMode === "GEOMETRY") {
+    fillColor = index % 2 === 0 ? "pink" : "lightgreen";
+  } else if (debugMode === "ARTIFACTS") {
+    const bounds = pathCanvas.bounds(feature);
+    let featureWidth = 0;
+    if (bounds && bounds.length === 2) {
+      const minX = bounds[0][0];
+      const maxX = bounds[1][0];
+      if ([minX, maxX].every(Number.isFinite)) {
+        featureWidth = maxX - minX;
+      }
+    }
+    fillColor = featureWidth > canvasWidth * 0.5 ? "red" : "#eee";
+  } else if (debugMode === "ISLANDS") {
+    const degree = islandNeighbors?.[index]?.length || 0;
+    fillColor = degree === 0 ? "orange" : "lightgreen";
+  } else if (debugMode === "ID_HASH") {
+    fillColor = hashToColor(id);
+  }
+
+  const cachedPath =
+    path
+    || (useCachedPath
+      ? getPoliticalFeaturePathEntry(feature, {
+        featureId: id,
+        transform,
+        allowBuild: allowBuildPath,
+        countBuild: countPathBuild,
+      })?.path
+      : null)
+    || null;
+  context.fillStyle = fillColor;
+  const fillStartedAt = metricsCollector ? nowMs() : 0;
+  if (cachedPath) {
+    context.fill(cachedPath);
+  } else {
+    context.beginPath();
+    pathCanvas(feature);
+    context.fill();
+  }
+  if (metricsCollector) {
+    metricsCollector.fillMs = Number(metricsCollector.fillMs || 0) + Math.max(0, nowMs() - fillStartedAt);
+  }
+
+  if (debugMode === "PROD") {
+    context.strokeStyle = isAtlantropaSea
+      ? getAtlantropaSeaPoliticalStrokeColor()
+      : fillColor;
+    context.lineWidth = 0.75 / Math.max(0.0001, k);
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    const strokeStartedAt = metricsCollector ? nowMs() : 0;
+    if (cachedPath) {
+      context.stroke(cachedPath);
+    } else {
+      context.stroke();
+    }
+    if (metricsCollector) {
+      metricsCollector.strokeMs = Number(metricsCollector.strokeMs || 0) + Math.max(0, nowMs() - strokeStartedAt);
+    }
+  }
+  if (metricsCollector) {
+    metricsCollector.renderedCount = Number(metricsCollector.renderedCount || 0) + 1;
+  }
+  return true;
+}
+
+function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
+  const cache = getRenderPassCacheState();
+  const dirtyIds = Array.from(cache.partialPoliticalDirtyIds || []).filter(Boolean);
+  const dirtyFeatureCount = dirtyIds.length;
+  const fallback = (fallbackReason, details = {}) => {
+    incrementPerfCounter("politicalPartialFallbacks");
+    recordRenderPerfMetric("politicalPartialRepaint", 0, {
+      applied: false,
+      dirtyFeatureCount,
+      dirtyRectCount: 0,
+      viewportCoverage: 0,
+      candidateCount: 0,
+      pathCacheMisses: 0,
+      pathCacheMissRatio: 0,
+      fallbackReason,
+      ...details,
+    });
+    return false;
+  };
+  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
+    return fallback("non-idle-phase");
+  }
+  if (debugMode !== "PROD") {
+    return fallback("non-prod-mode");
+  }
+  if (!["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))) {
+    return fallback("non-color-invalidation");
+  }
+  if (!dirtyFeatureCount) {
+    return fallback("no-dirty-features");
+  }
+  if (dirtyFeatureCount > POLITICAL_PARTIAL_REPAINT_FEATURE_THRESHOLD) {
+    return fallback("dirty-feature-threshold");
+  }
+  const passCanvas = cache.canvases?.political;
+  const passContext = passCanvas?.getContext?.("2d");
+  if (!passCanvas || !passContext) {
+    return fallback("missing-pass-canvas");
+  }
+  const layout = getRenderPassLayout("political");
+  if (passCanvas.width !== layout.pixelWidth || passCanvas.height !== layout.pixelHeight) {
+    return fallback("layout-mismatch");
+  }
+  const referenceTransform = getPassReferenceTransform("political");
+  if (!referenceTransform || !areZoomTransformsEquivalent(referenceTransform, transform)) {
+    return fallback("reference-transform-mismatch");
+  }
+  if (getCachedPoliticalPassStaticSignature(cache.signatures?.political) !== getCachedPoliticalPassStaticSignature(nextSignature)) {
+    return fallback("static-signature-mismatch");
+  }
+
+  const canvasWidth = Math.max(Number(layout.paddedWidth || 0), Number(runtimeState.width || 0), 1);
+  const canvasHeight = Math.max(Number(layout.paddedHeight || 0), Number(runtimeState.height || 0), 1);
+  const dirtyRects = [];
+  dirtyIds.forEach((id) => {
+    const feature = runtimeState.landIndex?.get(id);
+    if (!feature) {
+      dirtyRects.push(null);
+      return;
+    }
+    if (shouldExcludePoliticalVisualFeature(feature, id)) return;
+    if (shouldSkipFeature(feature, canvasWidth, canvasHeight)) return;
+    const rect = getFeatureScreenBounds(feature, {
+      featureId: id,
+      transform,
+      padding: POLITICAL_PARTIAL_REPAINT_PAD_PX,
+    });
+    if (!rect) {
+      dirtyRects.push(null);
+      return;
+    }
+    dirtyRects.push(rect);
+  });
+  if (dirtyRects.some((rect) => !rect)) {
+    return fallback("missing-dirty-bounds");
+  }
+  if (!dirtyRects.length) {
+    cache.signatures.political = nextSignature;
+    cache.dirty.political = false;
+    cache.partialPoliticalDirtyIds.clear();
+    cache.reasons.political = "partial-noop";
+    setPassReferenceTransform("political", transform);
+    incrementPerfCounter("politicalPartialRepaints");
+    recordRenderPerfMetric("politicalPartialRepaint", 0, {
+      applied: true,
+      dirtyFeatureCount,
+      dirtyRectCount: 0,
+      viewportCoverage: 0,
+      affectedFeatureCount: 0,
+      noop: true,
+    });
+    return true;
+  }
+
+  const mergedDirtyRects = mergeIntersectingRects(dirtyRects);
+  const viewportCoverage = getViewportCoverageForRects(mergedDirtyRects);
+  if (viewportCoverage > POLITICAL_PARTIAL_REPAINT_VIEWPORT_COVERAGE_MAX) {
+    return fallback("coverage-threshold", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+    });
+  }
+
+  const projectedDirtyRects = mergedDirtyRects.map((rect) => screenRectToProjectedRect(rect, transform));
+  if (projectedDirtyRects.some((rect) => !rect)) {
+    return fallback("projected-dirty-rect-missing", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+    });
+  }
+  const candidateResult = collectLandSpatialItemsForProjectedRects(projectedDirtyRects, {
+    maxCandidates: POLITICAL_PARTIAL_REPAINT_CANDIDATE_THRESHOLD,
+  });
+  if (!candidateResult) {
+    return fallback("spatial-index-unavailable", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+    });
+  }
+  if (candidateResult.overflow) {
+    return fallback("candidate-threshold", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+      candidateCount: candidateResult.items.length,
+    });
+  }
+  const candidateItems = candidateResult.items;
+  const candidateCount = candidateItems.length;
+  incrementPerfCounter("politicalPartialCandidateCount", candidateCount);
+  if (!candidateCount) {
+    return fallback("no-spatial-candidates", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+    });
+  }
+  if (candidateCount > POLITICAL_PARTIAL_REPAINT_CANDIDATE_THRESHOLD) {
+    return fallback("candidate-threshold", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+      candidateCount,
+    });
+  }
+  const pathCacheHandle = getPoliticalPathCacheHandle(transform, { resetIfMismatch: true });
+  let pathCacheMisses = 0;
+  if (!pathCacheHandle.valid || !(pathCacheHandle.map instanceof Map)) {
+    return fallback("path-cache-unavailable", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+      candidateCount,
+    });
+  }
+  candidateItems.forEach((item) => {
+    if (!pathCacheHandle.map.get(item.id)?.path) {
+      pathCacheMisses += 1;
+    }
+  });
+  if (pathCacheMisses > 0) {
+    incrementPerfCounter("politicalPartialPathCacheMisses", pathCacheMisses);
+  }
+  const pathCacheMissRatio = candidateCount > 0
+    ? (pathCacheMisses / candidateCount)
+    : 0;
+  const allowSyncPartialBuild =
+    candidateCount <= POLITICAL_PARTIAL_REPAINT_SYNC_BUILD_CANDIDATE_MAX
+    && pathCacheMisses <= POLITICAL_PARTIAL_REPAINT_SYNC_BUILD_MISS_MAX;
+  if (pathCacheMisses > 0 && !allowSyncPartialBuild) {
+    return fallback("partial-build-threshold", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+      candidateCount,
+      pathCacheMisses,
+      pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
+    });
+  }
+  const redrawEntries = candidateItems.map((item) => {
+    let pathEntry = pathCacheHandle.map.get(item.id) || null;
+    const shouldBuildPath = !pathEntry?.path && allowSyncPartialBuild;
+    if (shouldBuildPath) {
+      pathEntry = getPoliticalFeaturePathEntry(item.feature, {
+        featureId: item.id,
+        transform,
+        allowBuild: true,
+        countBuild: true,
+      });
+      if (pathEntry?.path) {
+        incrementPerfCounter("politicalPartialPathBuild");
+      }
+    }
+    if (!pathEntry?.path) return null;
+    return {
+      feature: item.feature,
+      index: item.drawOrder,
+      id: item.id,
+      path: pathEntry.path,
+    };
+  });
+  if (redrawEntries.some((entry) => !entry)) {
+    return fallback("path-cache-build-failed", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+      candidateCount,
+      pathCacheMisses,
+      pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
+    });
+  }
+
+  const passRects = mergedDirtyRects
+    .map((rect) => screenRectToPassRect(rect, layout))
+    .filter(Boolean);
+  if (!passRects.length) {
+    return fallback("pass-rect-empty", {
+      dirtyRectCount: mergedDirtyRects.length,
+      viewportCoverage,
+    });
+  }
+
+  const startedAt = nowMs();
+  let backgroundGroupCount = 0;
+  passContext.save();
+  passContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
+  passContext.beginPath();
+  passRects.forEach((rect) => {
+    passContext.rect(rect.x, rect.y, rect.width, rect.height);
+  });
+  passContext.clip();
+  passContext.clearRect(0, 0, layout.paddedWidth, layout.paddedHeight);
+  passContext.translate(layout.offsetX, layout.offsetY);
+  passContext.translate(transform.x, transform.y);
+  passContext.scale(transform.k, transform.k);
+  withRenderTarget(passContext, () => {
+    backgroundGroupCount = drawPoliticalBackgroundFillsForEntries(redrawEntries);
+    redrawEntries.forEach(({ feature, index, path }) => {
+      drawPoliticalFeature(feature, index, {
+        k: transform.k,
+        canvasWidth,
+        canvasHeight,
+        skipScreenCheck: true,
+        path,
+        transform,
+      });
+    });
+  });
+  passContext.restore();
+
+  cache.signatures.political = nextSignature;
+  cache.dirty.political = false;
+  cache.partialPoliticalDirtyIds.clear();
+  cache.reasons.political = "partial-repaint";
+  setPassReferenceTransform("political", transform);
+  incrementPerfCounter("politicalPartialRepaints");
+  recordPassTiming(timings, "political", startedAt);
+  recordRenderPerfMetric("politicalPartialRepaint", nowMs() - startedAt, {
+    applied: true,
+    dirtyFeatureCount,
+    dirtyRectCount: mergedDirtyRects.length,
+    viewportCoverage: Number(viewportCoverage.toFixed(4)),
+      candidateCount,
+      affectedFeatureCount: redrawEntries.length,
+      backgroundGroupCount,
+      pathCacheMisses,
+      pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
+  });
+  return true;
+}
+
+function recordPoliticalRasterWorkerSnapshot() {
+  const metrics = ensurePoliticalRasterWorkerMetrics(globalThis);
+  const nextState = {
+    enabled: !!metrics.enabled,
+    protocolVersion: Number(metrics.protocolVersion || 0),
+    roundTripMs: Number(metrics.roundTripMs || 0),
+    rasterMs: Number(metrics.rasterMs || 0),
+    encodeMs: Number(metrics.encodeMs || 0),
+    decodeMs: Number(metrics.decodeMs || 0),
+    blitMs: Number(metrics.blitMs || 0),
+    timeoutCount: Number(metrics.timeoutCount || 0),
+    recycleCount: Number(metrics.recycleCount || 0),
+    staleResponseCount: Number(metrics.staleResponseCount || 0),
+    acceptedCount: Number(metrics.acceptedCount || 0),
+    rejectedStaleCount: Number(metrics.rejectedStaleCount || 0),
+    fallbackCount: Number(metrics.fallbackCount || 0),
+  };
+  const stateChanged = !recordPoliticalRasterWorkerSnapshot.lastState
+    || recordPoliticalRasterWorkerSnapshot.lastState.enabled !== nextState.enabled
+    || recordPoliticalRasterWorkerSnapshot.lastState.protocolVersion !== nextState.protocolVersion
+    || recordPoliticalRasterWorkerSnapshot.lastState.roundTripMs !== nextState.roundTripMs
+    || recordPoliticalRasterWorkerSnapshot.lastState.rasterMs !== nextState.rasterMs
+    || recordPoliticalRasterWorkerSnapshot.lastState.encodeMs !== nextState.encodeMs
+    || recordPoliticalRasterWorkerSnapshot.lastState.decodeMs !== nextState.decodeMs
+    || recordPoliticalRasterWorkerSnapshot.lastState.blitMs !== nextState.blitMs
+    || recordPoliticalRasterWorkerSnapshot.lastState.timeoutCount !== nextState.timeoutCount
+    || recordPoliticalRasterWorkerSnapshot.lastState.recycleCount !== nextState.recycleCount
+    || recordPoliticalRasterWorkerSnapshot.lastState.staleResponseCount !== nextState.staleResponseCount
+    || recordPoliticalRasterWorkerSnapshot.lastState.acceptedCount !== nextState.acceptedCount
+    || recordPoliticalRasterWorkerSnapshot.lastState.rejectedStaleCount !== nextState.rejectedStaleCount
+    || recordPoliticalRasterWorkerSnapshot.lastState.fallbackCount !== nextState.fallbackCount;
+  recordPoliticalRasterWorkerSnapshot.frameCount = Number(recordPoliticalRasterWorkerSnapshot.frameCount || 0) + 1;
+  if (!stateChanged && (recordPoliticalRasterWorkerSnapshot.frameCount % 30) !== 0) return;
+  recordPoliticalRasterWorkerSnapshot.lastState = nextState;
+  recordRenderPerfMetric("politicalRasterWorker.roundTripMs", Number(metrics.roundTripMs || 0), {
+    enabled: nextState.enabled,
+    protocolVersion: nextState.protocolVersion,
+  });
+  recordRenderPerfMetric("politicalRasterWorker.rasterMs", Number(metrics.rasterMs || 0), { enabled: nextState.enabled });
+  recordRenderPerfMetric("politicalRasterWorker.encodeMs", Number(metrics.encodeMs || 0), { enabled: nextState.enabled });
+  recordRenderPerfMetric("politicalRasterWorker.decodeMs", Number(metrics.decodeMs || 0), { enabled: nextState.enabled });
+  recordRenderPerfMetric("politicalRasterWorker.blitMs", Number(metrics.blitMs || 0), { enabled: nextState.enabled });
+  recordRenderPerfMetric("politicalRasterWorker.timeoutCount", 0, { count: nextState.timeoutCount });
+  recordRenderPerfMetric("politicalRasterWorker.recycleCount", 0, { count: nextState.recycleCount });
+  recordRenderPerfMetric("politicalRasterWorker.staleResponseCount", 0, { count: nextState.staleResponseCount });
+  recordRenderPerfMetric("politicalRasterWorker.acceptedCount", 0, { count: nextState.acceptedCount });
+  recordRenderPerfMetric("politicalRasterWorker.rejectedStaleCount", 0, { count: nextState.rejectedStaleCount });
+  recordRenderPerfMetric("politicalRasterWorker.fallbackCount", 0, { count: nextState.fallbackCount });
+}
+
+function drawPoliticalPass(k) {
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
+    ? runtimeState.runtimeChunkLoadState
+    : null;
+  const workerIdentity = createPoliticalRasterWorkerIdentity({
+    scenarioId: runtimeState.activeScenarioId || "",
+    selectionVersion: Number(loadState?.selectionVersion || 0),
+    topologyRevision: Number(runtimeState.topologyRevision || 0),
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    transformBucket: getTransformBucketSignature(transform),
+    dpr: Number(runtimeState.dpr || 1),
+    viewport: {
+      x: 0,
+      y: 0,
+      width: canvasWidth,
+      height: canvasHeight,
+      left: 0,
+      top: 0,
+      right: canvasWidth,
+      bottom: canvasHeight,
+    },
+    passSignature: getRenderPassSignature("political", transform),
+  });
+  requestPoliticalRasterWorkerPass({
+    identity: workerIdentity,
+    renderHint: {
+      pass: "political",
+      surface: "main",
+      canvasPxWidth: Math.max(0, Math.round(canvasWidth * Number(runtimeState.dpr || 1))),
+      canvasPxHeight: Math.max(0, Math.round(canvasHeight * Number(runtimeState.dpr || 1))),
+    },
+  });
+  recordPoliticalRasterWorkerSnapshot();
+  const visibleItemsResult = debugMode === "PROD" ? collectVisibleLandSpatialItemsWithStats() : null;
+  const visibleItems = visibleItemsResult ? visibleItemsResult.items : null;
+  if (visibleItemsResult?.stats) {
+    recordRenderPerfMetric("politicalPassVisibleItems", 0, {
+      visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : 0,
+      ...visibleItemsResult.stats,
+    });
+  }
+  const backgroundStartedAt = nowMs();
+  const backgroundSummary = drawPoliticalBackgroundFills({
+    transform,
+    visibleItems,
+    returnSummary: true,
+  });
+  recordRenderPerfMetric("drawPoliticalBackgroundFillsPass", nowMs() - backgroundStartedAt, {
+    groupCount: Number(backgroundSummary?.groupCount || 0),
+    entryCount: Number(backgroundSummary?.entryCount || 0),
+    reusedPathCount: Number(backgroundSummary?.reusedPathCount || 0),
+    builtPathCount: Number(backgroundSummary?.builtPathCount || 0),
+    pathlessEntryCount: Number(backgroundSummary?.pathlessEntryCount || 0),
+    cacheHit: !!backgroundSummary?.cacheHit,
+  });
+  if (!runtimeState.landData?.features?.length) return;
+  const islandNeighbors = debugMode === "ISLANDS" ? getIslandNeighborGraph() : null;
+  const featureMetrics = {
+    fillMs: 0,
+    strokeMs: 0,
+    renderedCount: 0,
+  };
+  if (Array.isArray(visibleItems)) {
+    visibleItems.forEach((item) => {
+      drawPoliticalFeature(item.feature, item.drawOrder, {
+        k,
+        canvasWidth,
+        canvasHeight,
+        islandNeighbors,
+        transform,
+        skipScreenCheck: true,
+        useCachedPath: true,
+        allowBuildPath: false,
+        countPathBuild: false,
+        metricsCollector: featureMetrics,
+      });
+    });
+  } else {
+    runtimeState.landData.features.forEach((feature, index) => {
+      drawPoliticalFeature(feature, index, {
+        k,
+        canvasWidth,
+        canvasHeight,
+        islandNeighbors,
+        transform,
+        useCachedPath: true,
+        allowBuildPath: false,
+        countPathBuild: false,
+        metricsCollector: featureMetrics,
+      });
+    });
+  }
+  recordRenderPerfMetric("drawPoliticalFeatureFillLoop", Number(featureMetrics.fillMs || 0), {
+    renderedCount: Number(featureMetrics.renderedCount || 0),
+    visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
+  });
+  recordRenderPerfMetric("drawPoliticalFeatureStrokeLoop", Number(featureMetrics.strokeMs || 0), {
+    renderedCount: Number(featureMetrics.renderedCount || 0),
+    visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
+  });
+}
+
+function getContextScenarioLayerCacheEntry(layerName) {
+  const cache = getRenderPassCacheState();
+  const resolvedLayerName = String(layerName || "default").trim() || "default";
+  const existing = cache.contextScenarioLayerCache?.[resolvedLayerName];
+  if (existing && typeof existing === "object") {
+    return existing;
+  }
+  const next = {
+    canvas: null,
+    signature: "",
+    referenceTransform: null,
+    renderedCount: 0,
+  };
+  cache.contextScenarioLayerCache[resolvedLayerName] = next;
+  return next;
+}
+
+function ensureContextScenarioLayerCanvas(layerName) {
+  const layerEntry = getContextScenarioLayerCacheEntry(layerName);
+  if (!layerEntry.canvas) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    layerEntry.canvas = canvas;
+  }
+  const layout = getRenderPassLayout("contextScenario");
+  if (layerEntry.canvas.width !== layout.pixelWidth || layerEntry.canvas.height !== layout.pixelHeight) {
+    layerEntry.canvas.width = layout.pixelWidth;
+    layerEntry.canvas.height = layout.pixelHeight;
+    layerEntry.signature = "";
+    layerEntry.referenceTransform = null;
+    layerEntry.renderedCount = 0;
+  }
+  return layerEntry.canvas;
+}
+
+function drawCachedContextScenarioLayer(layerName, currentTransform) {
+  const layerEntry = getContextScenarioLayerCacheEntry(layerName);
+  const layerCanvas = layerEntry.canvas;
+  const referenceTransform = layerEntry.referenceTransform
+    ? cloneZoomTransform(layerEntry.referenceTransform)
+    : null;
+  if (!layerCanvas || !referenceTransform) return false;
+  const layout = getRenderPassLayout("contextScenario");
+  if (layerCanvas.width !== layout.pixelWidth || layerCanvas.height !== layout.pixelHeight) {
+    return false;
+  }
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  if (areZoomTransformsEquivalent(referenceTransform, currentTransform)) {
+    context.drawImage(layerCanvas, 0, 0);
+    context.restore();
+    return true;
+  }
+  const current = cloneZoomTransform(currentTransform);
+  const scaleRatio = current.k / Math.max(referenceTransform.k, 0.0001);
+  const dx = current.x - (referenceTransform.x * scaleRatio);
+  const dy = current.y - (referenceTransform.y * scaleRatio);
+  const offsetX = Number(layout?.offsetX || 0);
+  const offsetY = Number(layout?.offsetY || 0);
+  context.translate(
+    (dx + offsetX * (1 - scaleRatio)) * runtimeState.dpr,
+    (dy + offsetY * (1 - scaleRatio)) * runtimeState.dpr,
+  );
+  context.scale(scaleRatio, scaleRatio);
+  context.drawImage(layerCanvas, 0, 0);
+  context.restore();
+  return true;
+}
+
+function drawScenarioWaterFillLayer(k, { waterFeatures = [] } = {}) {
+  const startedAt = nowMs();
+  let renderedWaterCount = 0;
+  if (!waterFeatures.length) {
+    collectContextMetric("drawScenarioWaterFillLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "no-features",
+    });
+    return 0;
+  }
+  waterFeatures.forEach((feature, index) => {
+    const id = getFeatureId(feature) || `water-${index}`;
+    if (!isWaterRegionEnabled(feature)) return;
+    const defaultStyle = getWaterRegionDefaultStyle(feature);
+    const fillOpacity = defaultStyle.opacity;
+    if (!(fillOpacity > 0)) return;
+    const parts = collectSafeWaterRegionGeometryParts(feature);
+    if (!parts.length) return;
+    const visibleParts = [];
+    parts.forEach((part) => {
+      if (!projectedGeoBoundsInScreen(computeProjectedGeoBounds(part))) return;
+      visibleParts.push(part);
+    });
+    if (!visibleParts.length) return;
+    context.save();
+    context.globalAlpha = fillOpacity;
+    context.fillStyle = getWaterRegionColor(id);
+    const waterPath = visibleParts.length === parts.length
+      ? getScenarioWaterFeaturePath(feature, parts)
+      : null;
+    if (waterPath) {
+      context.fill(waterPath);
+    } else if (globalThis.Path2D) {
+      visibleParts.forEach((part) => {
+        const partPath = getScenarioWaterPartPath(part);
+        if (partPath) {
+          context.fill(partPath);
+        } else if (pathCanvas) {
+          context.beginPath();
+          pathCanvas(part);
+          context.fill();
+        }
+      });
+    } else {
+      context.beginPath();
+      visibleParts.forEach((part) => {
+        if (pathCanvas) pathCanvas(part);
+      });
+      context.fill();
+    }
+    context.restore();
+    renderedWaterCount += 1;
+  });
+  collectContextMetric("drawScenarioWaterFillLayer", nowMs() - startedAt, {
+    featureCount: waterFeatures.length,
+    renderedCount: renderedWaterCount,
+    skipped: renderedWaterCount === 0,
+    reason: renderedWaterCount === 0 ? "culled" : "",
+  });
+  return renderedWaterCount;
+}
+
+function renderScenarioWaterFillLayerToCache(currentTransform, waterFeatures) {
+  const layerEntry = getContextScenarioLayerCacheEntry("water");
+  const layerCanvas = ensureContextScenarioLayerCanvas("water");
+  const layerContext = layerCanvas.getContext("2d");
+  if (!layerContext) {
+    layerEntry.signature = "";
+    layerEntry.referenceTransform = null;
+    layerEntry.renderedCount = 0;
+    return 0;
+  }
+  const layout = getRenderPassLayout("contextScenario");
+  let renderedWaterCount = 0;
+  withRenderTarget(layerContext, () => {
+    const layerK = prepareTargetContext(layerContext, currentTransform, layout);
+    renderedWaterCount = drawScenarioWaterFillLayer(layerK, { waterFeatures });
+  });
+  layerEntry.signature = getScenarioWaterVisualRevisionToken();
+  layerEntry.referenceTransform = cloneZoomTransform(currentTransform);
+  layerEntry.renderedCount = renderedWaterCount;
+  return renderedWaterCount;
+}
+
+function getScenarioWaterPartPath(part) {
+  if (!part || typeof part !== "object" || !globalThis.Path2D || typeof pathSVG !== "function") {
+    return null;
+  }
+  if (scenarioWaterPartPathCache.has(part)) {
+    return scenarioWaterPartPathCache.get(part) || null;
+  }
+  let path = null;
+  try {
+    const pathString = pathSVG(part);
+    path = pathString ? new globalThis.Path2D(pathString) : null;
+  } catch (_error) {
+    path = null;
+  }
+  scenarioWaterPartPathCache.set(part, path);
+  return path;
+}
+
+function getScenarioWaterFeaturePath(feature, parts) {
+  if (!feature || typeof feature !== "object" || !globalThis.Path2D) {
+    return null;
+  }
+  if (scenarioWaterFeaturePathCache.has(feature)) {
+    return scenarioWaterFeaturePathCache.get(feature) || null;
+  }
+  const combinedPath = new globalThis.Path2D();
+  let added = false;
+  (Array.isArray(parts) ? parts : []).forEach((part) => {
+    const partPath = getScenarioWaterPartPath(part);
+    if (!partPath || typeof combinedPath.addPath !== "function") return;
+    combinedPath.addPath(partPath);
+    added = true;
+  });
+  const path = added ? combinedPath : null;
+  scenarioWaterFeaturePathCache.set(feature, path);
+  return path;
+}
+
+function drawScenarioWaterHighlightLayer(k) {
+  const highlightIds = new Set([
+    String(runtimeState.selectedWaterRegionId || "").trim(),
+    String(runtimeState.hoveredWaterRegionId || "").trim(),
+  ].filter(Boolean));
+  let highlightedCount = 0;
+  highlightIds.forEach((id) => {
+    const feature = runtimeState.waterRegionsById?.get(id);
+    if (!feature) return;
+    if (!isWaterRegionEnabled(feature)) return;
+    const parts = collectSafeWaterRegionGeometryParts(feature);
+    if (!parts.length) return;
+    const isMacroOcean = isMacroOceanWaterRegion(feature);
+    context.beginPath();
+    let visiblePartCount = 0;
+    parts.forEach((part) => {
+      if (!projectedGeoBoundsInScreen(computeProjectedGeoBounds(part))) return;
+      if (!pathCanvas) return;
+      pathCanvas(part);
+      visiblePartCount += 1;
+    });
+    if (!visiblePartCount) return;
+    context.save();
+    context.globalAlpha = isMacroOcean ? 0.92 : 1;
+    context.strokeStyle = "#f1c40f";
+    context.lineWidth = (isMacroOcean ? 1.15 : 0.9) / Math.max(0.0001, k);
+    context.lineJoin = "round";
+    context.stroke();
+    context.restore();
+    highlightedCount += 1;
+  });
+  return highlightedCount;
+}
+
+function drawScenarioSpecialRegionOverlaysLayer(k, { specialFeatures = [] } = {}) {
+  const startedAt = nowMs();
+  let renderedSpecialCount = 0;
+  if (!specialFeatures.length) {
+    collectContextMetric("drawScenarioSpecialRegionOverlaysLayer", nowMs() - startedAt, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "no-features",
+    });
+    return 0;
+  }
+  specialFeatures.forEach((feature, index) => {
+    const id = getFeatureId(feature) || `special-${index}`;
+    const renderAsBase = isBaseGeographyScenarioFeature(feature);
+    if (!isSpecialRegionEnabled(feature)) return;
+    if (!pathBoundsInScreen(feature)) return;
+    context.beginPath();
+    pathCanvas(feature);
+    context.save();
+    context.globalAlpha = renderAsBase
+      ? Math.max(getSpecialRegionOpacity(feature, id), 0.94)
+      : getSpecialRegionOpacity(feature, id);
+    context.fillStyle = getSpecialRegionColor(id, feature);
+    context.fill();
+    context.restore();
+    context.strokeStyle = getSpecialRegionStrokeColor(feature);
+    context.lineWidth = 1 / Math.max(0.0001, k);
+    context.lineJoin = "round";
+    context.stroke();
+    renderedSpecialCount += 1;
+  });
+  collectContextMetric("drawScenarioSpecialRegionOverlaysLayer", nowMs() - startedAt, {
+    featureCount: specialFeatures.length,
+    renderedCount: renderedSpecialCount,
+    skipped: renderedSpecialCount === 0,
+    reason: renderedSpecialCount === 0 ? "culled" : "",
+  });
+  return renderedSpecialCount;
+}
+
+function renderScenarioSpecialRegionOverlaysLayerToCache(currentTransform, specialFeatures) {
+  const layerEntry = getContextScenarioLayerCacheEntry("special");
+  const layerCanvas = ensureContextScenarioLayerCanvas("special");
+  const layerContext = layerCanvas.getContext("2d");
+  if (!layerContext) {
+    layerEntry.signature = "";
+    layerEntry.referenceTransform = null;
+    layerEntry.renderedCount = 0;
+    return 0;
+  }
+  const layout = getRenderPassLayout("contextScenario");
+  let renderedSpecialCount = 0;
+  withRenderTarget(layerContext, () => {
+    const layerK = prepareTargetContext(layerContext, currentTransform, layout);
+    renderedSpecialCount = drawScenarioSpecialRegionOverlaysLayer(layerK, { specialFeatures });
+  });
+  layerEntry.signature = getScenarioSpecialVisualRevisionToken();
+  layerEntry.referenceTransform = cloneZoomTransform(currentTransform);
+  layerEntry.renderedCount = renderedSpecialCount;
+  return renderedSpecialCount;
+}
+
+function drawScenarioRegionOverlaysPass(k) {
+  const startedAt = nowMs();
+  const showWater = !!runtimeState.showWaterRegions;
+  const showSpecial = !!runtimeState.showScenarioSpecialRegions;
+  const waterFeatures = showWater ? getEffectiveWaterRegionFeatures() : [];
+  const specialFeatures = showSpecial ? getEffectiveSpecialRegionFeatures() : [];
+  let renderedWaterCount = 0;
+  let renderedSpecialCount = 0;
+  let highlightedWaterCount = 0;
+  let waterCacheMode = "disabled";
+  let waterCacheStrategyMode = "disabled";
+  let waterCacheStrategySource = "disabled";
+  let waterCoverageAlgo = "disabled";
+  let waterVisibleCoverageRatio = 0;
+  let waterPrevRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
+  let specialCacheMode = "disabled";
+  if (!showWater && !showSpecial) {
+    collectContextMetric("contextScenarioLayerWater", 0, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "disabled",
+      cacheMode: "disabled",
+      signature: getScenarioWaterVisualRevisionToken(),
+    });
+    collectContextMetric("contextScenarioLayerSpecial", 0, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "disabled",
+      cacheMode: "disabled",
+      signature: getScenarioSpecialVisualRevisionToken(),
+    });
+    collectContextMetric("drawScenarioRegionOverlaysPass", nowMs() - startedAt, {
+      featureCount: 0,
+      waterFeatureCount: 0,
+      specialFeatureCount: 0,
+      renderedWaterCount: 0,
+      renderedSpecialCount: 0,
+      highlightedWaterCount: 0,
+      waterVisibleCoverageRatio,
+      waterPrevRenderedCount,
+      waterCoverageAlgo,
+      waterCacheMode,
+      waterCacheStrategyMode,
+      waterCacheStrategySource,
+      skipped: true,
+      reason: "disabled",
+    });
+    return;
+  }
+
+  if (showWater) {
+    const forcedWaterCache = getForcedScenarioWaterCacheMode();
+    waterCacheStrategyMode = forcedWaterCache.mode;
+    waterCacheStrategySource = forcedWaterCache.source;
+    const signals = getScenarioWaterCacheComplexitySignals(waterFeatures);
+    waterVisibleCoverageRatio = signals.visibleCoverageRatio;
+    waterPrevRenderedCount = signals.previousRenderedCount;
+    waterCoverageAlgo = signals.waterCoverageAlgo || "grid";
+
+    const currentTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+    const waterLayerEntry = getContextScenarioLayerCacheEntry("water");
+    const waterVisualRevision = getScenarioWaterVisualRevisionToken();
+    const canReuseWaterLayer = (
+      shouldEnableContextScenarioTransformReuse()
+      && waterLayerEntry.signature === waterVisualRevision
+      && !!waterLayerEntry.canvas
+      && !!waterLayerEntry.referenceTransform
+    );
+
+    const useAdaptiveDirect = forcedWaterCache.mode === "adaptive" && shouldUseDirectScenarioWaterDraw(signals);
+    const strategy = useAdaptiveDirect ? "adaptive-direct" : forcedWaterCache.mode;
+
+    if (strategy === "direct" || strategy === "adaptive-direct") {
+      waterCacheMode = strategy;
+      collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+        layer: "water",
+        reason: strategy,
+        signatureChanged: waterLayerEntry.signature !== waterVisualRevision,
+      });
+      renderedWaterCount = drawScenarioWaterFillLayer(k, { waterFeatures });
+    } else if (strategy === "reuse") {
+      if (canReuseWaterLayer && drawCachedContextScenarioLayer("water", currentTransform)) {
+        waterCacheMode = "reuse";
+        collectContextMetric("contextScenarioLayerCacheHit", 0, {
+          layer: "water",
+          renderedCount: Number(waterLayerEntry.renderedCount || 0),
+        });
+        renderedWaterCount = Number(waterLayerEntry.renderedCount || 0);
+      } else {
+        waterCacheMode = "redraw";
+        collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+          layer: "water",
+          reason: waterLayerEntry.signature === waterVisualRevision ? "transform" : "signature",
+          signatureChanged: waterLayerEntry.signature !== waterVisualRevision,
+        });
+        renderedWaterCount = renderScenarioWaterFillLayerToCache(currentTransform, waterFeatures);
+        if (!drawCachedContextScenarioLayer("water", currentTransform)) {
+          waterCacheMode = "direct";
+          renderedWaterCount = drawScenarioWaterFillLayer(k, { waterFeatures });
+        }
+      }
+    } else if (strategy === "redraw") {
+      waterCacheMode = "redraw";
+      collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+        layer: "water",
+        reason: "forced-redraw",
+        signatureChanged: waterLayerEntry.signature !== waterVisualRevision,
+      });
+      renderedWaterCount = renderScenarioWaterFillLayerToCache(currentTransform, waterFeatures);
+      if (!drawCachedContextScenarioLayer("water", currentTransform)) {
+        waterCacheMode = "direct";
+        renderedWaterCount = drawScenarioWaterFillLayer(k, { waterFeatures });
+      }
+    } else {
+      if (canReuseWaterLayer && drawCachedContextScenarioLayer("water", currentTransform)) {
+        waterCacheMode = "reuse";
+        collectContextMetric("contextScenarioLayerCacheHit", 0, {
+          layer: "water",
+          renderedCount: Number(waterLayerEntry.renderedCount || 0),
+        });
+        renderedWaterCount = Number(waterLayerEntry.renderedCount || 0);
+      } else {
+        waterCacheMode = "redraw";
+        collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+          layer: "water",
+          reason: waterLayerEntry.signature === waterVisualRevision ? "transform" : "signature",
+          signatureChanged: waterLayerEntry.signature !== waterVisualRevision,
+        });
+        renderedWaterCount = renderScenarioWaterFillLayerToCache(currentTransform, waterFeatures);
+        if (!drawCachedContextScenarioLayer("water", currentTransform)) {
+          waterCacheMode = "direct";
+          renderedWaterCount = drawScenarioWaterFillLayer(k, { waterFeatures });
+        }
+      }
+    }
+    highlightedWaterCount = drawScenarioWaterHighlightLayer(k);
+    lastScenarioWaterRenderedCount = Math.max(0, Number(renderedWaterCount || 0));
+    collectContextMetric("contextScenarioLayerWater", 0, {
+      featureCount: waterFeatures.length,
+      renderedCount: renderedWaterCount,
+      highlightedCount: highlightedWaterCount,
+      cacheMode: waterCacheMode,
+      signature: waterVisualRevision,
+    });
+  } else {
+    collectContextMetric("contextScenarioLayerWater", 0, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "disabled",
+      cacheMode: "disabled",
+      signature: getScenarioWaterVisualRevisionToken(),
+    });
+  }
+
+  if (showSpecial) {
+    const currentTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+    const specialLayerEntry = getContextScenarioLayerCacheEntry("special");
+    const specialVisualRevision = getScenarioSpecialVisualRevisionToken();
+    const canReuseSpecialLayer = (
+      shouldEnableContextScenarioTransformReuse()
+      && specialLayerEntry.signature === specialVisualRevision
+      && !!specialLayerEntry.canvas
+      && !!specialLayerEntry.referenceTransform
+    );
+    if (canReuseSpecialLayer && drawCachedContextScenarioLayer("special", currentTransform)) {
+      specialCacheMode = "reuse";
+      renderedSpecialCount = Number(specialLayerEntry.renderedCount || 0);
+      collectContextMetric("contextScenarioLayerCacheHit", 0, {
+        layer: "special",
+        renderedCount: renderedSpecialCount,
+      });
+    } else {
+      specialCacheMode = "redraw";
+      collectContextMetric("contextScenarioLayerCacheMiss", 0, {
+        layer: "special",
+        reason: specialLayerEntry.signature === specialVisualRevision ? "transform" : "signature",
+        signatureChanged: specialLayerEntry.signature !== specialVisualRevision,
+      });
+      renderedSpecialCount = renderScenarioSpecialRegionOverlaysLayerToCache(currentTransform, specialFeatures);
+      if (!drawCachedContextScenarioLayer("special", currentTransform)) {
+        specialCacheMode = "direct";
+        renderedSpecialCount = drawScenarioSpecialRegionOverlaysLayer(k, { specialFeatures });
+      }
+    }
+    collectContextMetric("contextScenarioLayerSpecial", 0, {
+      featureCount: specialFeatures.length,
+      renderedCount: renderedSpecialCount,
+      cacheMode: specialCacheMode,
+      signature: getScenarioSpecialVisualRevisionToken(),
+    });
+  } else {
+    collectContextMetric("contextScenarioLayerSpecial", 0, {
+      featureCount: 0,
+      renderedCount: 0,
+      skipped: true,
+      reason: "disabled",
+      cacheMode: "disabled",
+      signature: getScenarioSpecialVisualRevisionToken(),
+    });
+  }
+  collectContextMetric("drawScenarioRegionOverlaysPass", nowMs() - startedAt, {
+    featureCount: waterFeatures.length + specialFeatures.length,
+    waterFeatureCount: waterFeatures.length,
+    specialFeatureCount: specialFeatures.length,
+    renderedWaterCount,
+    renderedSpecialCount,
+    highlightedWaterCount,
+    waterVisibleCoverageRatio,
+    waterPrevRenderedCount,
+    waterCoverageAlgo,
+    waterCacheMode,
+    waterCacheStrategyMode,
+    waterCacheStrategySource,
+    specialCacheMode,
+    skipped: false,
+  });
+}
+
+
+function drawEffectsPass(k, { interactive = false } = {}) {
+  const texture = getTextureStyleConfig();
+  if (normalizeTextureMode(texture.mode) !== "paper") return;
+  if (!isBootInteractionReady()) return;
+  drawOldPaperTexture(k, { interactive });
+}
+
+function drawLineEffectsPass(k, { interactive = false } = {}) {
+  const texture = getTextureStyleConfig();
+  const mode = String(texture.mode || "none").trim().toLowerCase();
+  if (!isBootInteractionReady()) return;
+  if (mode === "graticule") {
+    drawGraticuleTextureLines(k, { interactive });
+    return;
+  }
+  if (mode === "draft_grid") {
+    drawDraftGridTexture(k, { interactive });
+  }
+}
+
+function drawTextureLabelEffectsPass(k) {
+  const texture = getTextureStyleConfig();
+  const mode = String(texture.mode || "none").trim().toLowerCase();
+  if (!isBootInteractionReady()) return;
+  if (mode === "graticule") {
+    drawGraticuleTextureLabels(k);
+  }
+}
+
+function drawContextBasePass(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  let deferred = false;
+  beginContextMetricSession();
+  try {
+    if (runtimeState.deferContextBasePass && !interactive) {
+      deferred = true;
+      drawPhysicalReliefOverlayLayer(k, { interactive: false });
+      const maskInfo = getPhysicalLandMaskInfo();
+      collectContextMetric("drawPhysicalContourLayer", 0, {
+        featureCount: 0,
+        majorFeatureCount: 0,
+        minorFeatureCount: 0,
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+        maskSource: maskInfo.maskSource,
+        maskFeatureCount: maskInfo.maskFeatureCount,
+        maskArcRefEstimate: maskInfo.maskArcRefEstimate,
+      });
+      collectContextMetric("drawUrbanLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawAirportsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawRoadsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawRailwaysLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawPortsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawRiversLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.riversData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+    } else {
+      drawPhysicalReliefOverlayLayer(k, { interactive });
+      drawPhysicalContourLayer(k, { interactive });
+      drawUrbanLayer(k, { interactive });
+      drawRiversLayer(k, { interactive });
+    }
+  } finally {
+    endContextMetricSession();
+  }
+  recordRenderPerfMetric("drawContextBasePass", nowMs() - startedAt, {
+    interactive: !!interactive,
+    deferred,
+  });
+}
+
+function drawContextMarkersPass(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  let deferred = false;
+  beginContextMetricSession();
+  try {
+    if (runtimeState.deferContextBasePass && !interactive) {
+      deferred = true;
+      collectContextMetric("drawCityPointsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(getEffectiveCityCollection()),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawAirportsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawPortsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawRoadsLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+      collectContextMetric("drawRailwaysLayer", 0, {
+        featureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
+    } else {
+      drawRoadsLayer(k, { interactive });
+      drawRailwaysLayer(k, { interactive });
+      drawAirportsLayer(k, { interactive });
+      drawPortsLayer(k, { interactive });
+      if (interactive) {
+        drawCityPointsLayer(k, { interactive: true });
+      }
+    }
+  } finally {
+    endContextMetricSession();
+  }
+  recordRenderPerfMetric("drawContextMarkersPass", nowMs() - startedAt, {
+    interactive: !!interactive,
+    deferred,
+  });
+}
+
+function drawContextScenarioPass(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  beginContextMetricSession();
+  try {
+    drawScenarioRegionOverlaysPass(k);
+    drawScenarioReliefOverlaysPass(k);
+  } finally {
+    endContextMetricSession();
+  }
+  recordRenderPerfMetric("drawContextScenarioPass", nowMs() - startedAt, {
+    interactive: !!interactive,
+  });
+}
+
+function drawDayNightPass(k, { interactive = false } = {}) {
+  const config = getDayNightStyleConfig();
+  if (!config.enabled) return;
+  if (!isBootInteractionReady()) return;
+  const solarState = getCurrentSolarState(config);
+  drawDayNightShadowLayer(k, config, solarState);
+  if (!interactive) {
+    drawNightLightsLayer(k, config, solarState);
+  }
+}
+
+function drawBordersPass(k, { interactive = false } = {}) {
+  if (!runtimeState.landData?.features?.length) return;
+  drawHierarchicalBorders(k, { interactive });
+}
+
+function drawLabelsPass(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  if (interactive) {
+    recordRenderPerfMetric("drawLabelsPass", nowMs() - startedAt, {
+      interactive: true,
+      skipped: true,
+      reason: "interactive",
+      labelCount: 0,
+    });
+    return;
+  }
+  if (runtimeState.deferContextBasePass) {
+    recordRenderPerfMetric("drawLabelsPass", nowMs() - startedAt, {
+      interactive: false,
+      skipped: true,
+      reason: "staged-apply",
+      labelCount: 0,
+    });
+    return;
+  }
+  const renderState = getCityLayerRenderState(k, {
+    interactive: false,
+    cacheHoverEntries: true,
+  });
+  if (renderState.skipped || !renderState.markerEntries.length) {
+    recordRenderPerfMetric("drawLabelsPass", nowMs() - startedAt, {
+      interactive: false,
+      skipped: true,
+      reason: renderState.reason || "markers-hidden",
+      featureCount: renderState.featureCount,
+      visibleFeatureCount: renderState.markerEntries.length,
+      labelCount: 0,
+    });
+    return;
+  }
+  drawCityMarkersFromEntries(renderState.markerEntries, {
+    config: renderState.config,
+    scale: renderState.scale,
+    opacity: renderState.opacity,
+    interactive: false,
+  });
+  const labelCount = drawCityLabelsFromEntries(renderState.labelEntries, {
+    config: renderState.config,
+    scale: renderState.scale,
+  });
+  recordRenderPerfMetric("drawLabelsPass", nowMs() - startedAt, {
+    interactive: false,
+    skipped: false,
+    featureCount: renderState.featureCount,
+    visibleFeatureCount: renderState.markerEntries.length,
+    labelCount,
+  });
+}
+
+function renderPassToCache(passName, drawFn, transform, timings) {
+  const cache = getRenderPassCacheState();
+  const passCanvas = ensureRenderPassCanvas(passName);
+  const passContext = passCanvas.getContext("2d");
+  if (!passContext) return;
+  const passStart = nowMs();
+  const layout = getRenderPassLayout(passName);
+  withRenderTarget(passContext, () => {
+    const k = prepareTargetContext(passContext, transform, layout);
+    drawFn(k);
+  });
+  setPassReferenceTransform(passName, transform);
+  cache.signatures[passName] = getRenderPassSignature(passName, transform);
+  cache.dirty[passName] = false;
+  if (passName === "political") {
+    cache.partialPoliticalDirtyIds.clear();
+    schedulePoliticalPathWarmup(transform);
+  }
+  recordPassTiming(timings, passName, passStart);
+  getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));
+  if (passName === "contextScenario") {
+    cache.counters.contextScenarioReuseCount = 0;
+  }
+}
+
+
+function resetCanvasContext(targetContext, width, height) {
+  if (!targetContext) return;
+  targetContext.setTransform(1, 0, 0, 1, 0, 0);
+  targetContext.clearRect(0, 0, width, height);
+  targetContext.globalCompositeOperation = "source-over";
+  targetContext.globalAlpha = 1;
+  targetContext.shadowBlur = 0;
+  targetContext.filter = "none";
+}
+
+function resetMainCanvas() {
+  if (!context?.canvas) return;
+  resetCanvasContext(context, context.canvas.width, context.canvas.height);
+}
+
+function areZoomTransformsEquivalent(a, b, epsilon = 0.01) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return (
+    Math.abs(Number(a.k || 1) - Number(b.k || 1)) <= epsilon
+    && Math.abs(Number(a.x || 0) - Number(b.x || 0)) <= epsilon
+    && Math.abs(Number(a.y || 0) - Number(b.y || 0)) <= epsilon
+  );
+}
+
+function blitCompositeBufferToMain(bufferCanvas) {
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.filter = "none";
+  context.globalCompositeOperation = "copy";
+  context.drawImage(bufferCanvas, 0, 0);
+  context.globalCompositeOperation = "source-over";
+}
+
+function composeCachedPasses(passNames, currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity) {
+  if (!context?.canvas) return false;
+  const bufferCanvas = ensureCompositeBufferCanvas();
+  const bufferContext = bufferCanvas.getContext("2d");
+  if (!bufferContext) return false;
+  resetCanvasContext(bufferContext, bufferCanvas.width, bufferCanvas.height);
+  const result = composeRenderPassesToTarget(bufferContext, passNames, currentTransform, {
+    requireAllPasses: true,
+  });
+  if (!result.ok) {
+    const controller = getExactAfterSettleControllerState();
+    const missingPassNames = Array.isArray(result.missingPassNames) && result.missingPassNames.length
+      ? result.missingPassNames
+      : (result.passName ? [result.passName] : []);
+    recordRenderPerfMetric("compositeBufferMissingPass", 0, {
+      reason: result.reason,
+      passName: result.passName || "",
+      missingPassNames: missingPassNames.join(","),
+      controllerPhase: String(controller.phase || ""),
+      deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+    return false;
+  }
+  blitCompositeBufferToMain(bufferCanvas);
+  incrementPerfCounter("composites");
+  return true;
+}
+
+
+function canDrawTransformedPass(passName, cache = getRenderPassCacheState(), { allowDirty = false } = {}) {
+  if (cache.dirty?.[passName] && !allowDirty) return false;
+  if (!cache.canvases?.[passName]) return false;
+  return !!getPassReferenceTransform(passName);
+}
+
+function canBuildInteractionComposite(cache = getRenderPassCacheState()) {
+  return INTERACTION_COMPOSITE_PASS_NAMES.every((passName) => canDrawTransformedPass(passName, cache));
+}
+
+function buildInteractionComposite(currentTransform, timings) {
+  if (!context?.canvas || !canBuildInteractionComposite(getRenderPassCacheState())) return false;
+  const cache = getRenderPassCacheState();
+  const compositeCanvas = ensureInteractionCompositeCanvas();
+  const compositeContext = compositeCanvas.getContext("2d");
+  if (!compositeContext) return false;
+  const startedAt = nowMs();
+  compositeContext.setTransform(1, 0, 0, 1, 0, 0);
+  compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+  composeRenderPassesToTarget(compositeContext, INTERACTION_COMPOSITE_PASS_NAMES, currentTransform);
+  const identity = getVisibleFrameIdentity(currentTransform);
+  cache.interactionComposite.referenceTransform = cloneZoomTransform(currentTransform);
+  cache.interactionComposite.signature = getInteractionCompositeSignature(cache);
+  cache.interactionComposite.valid = true;
+  cache.interactionComposite.capturedAt = Date.now();
+  cache.interactionComposite.reason = String(runtimeState.renderPhase || "interaction");
+  cache.interactionComposite.rejectedReason = "";
+  cache.interactionComposite.scenarioId = identity.scenarioId;
+  cache.interactionComposite.selectionVersion = identity.selectionVersion;
+  cache.interactionComposite.contextFlagSignature = identity.contextFlagSignature;
+  cache.interactionComposite.topologyRevision = identity.topologyRevision;
+  cache.interactionComposite.dpr = identity.dpr;
+  cache.interactionComposite.pixelWidth = identity.pixelWidth;
+  cache.interactionComposite.pixelHeight = identity.pixelHeight;
+  cache.interactionComposite.colorRevision = identity.colorRevision;
+  cache.interactionComposite.transformBucket = identity.transformBucket;
+  incrementPerfCounter("interactionCompositeBuilds");
+  recordPassTiming(timings, "interactionCompositeBuild", startedAt);
+  recordRenderPerfMetric("interactionCompositeBuild", nowMs() - startedAt, {
+    phase: String(runtimeState.renderPhase || ""),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    passCount: INTERACTION_COMPOSITE_PASS_NAMES.length,
+  });
+  return true;
+}
+
+function drawInteractionComposite(currentTransform) {
+  const cache = getRenderPassCacheState();
+  const composite = cache.interactionComposite || {};
+  if (!canDrawInteractionComposite(currentTransform, cache)) {
+    return false;
+  }
+  const current = cloneZoomTransform(currentTransform);
+  const reference = cloneZoomTransform(composite.referenceTransform);
+  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
+  const dx = current.x - (reference.x * scaleRatio);
+  const dy = current.y - (reference.y * scaleRatio);
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
+  context.scale(scaleRatio, scaleRatio);
+  context.drawImage(composite.canvas, 0, 0);
+  context.restore();
+  incrementPerfCounter("interactionCompositeReuses");
+  return true;
+}
+
+function drawTransformedPass(passName, currentTransform, referenceTransform = null) {
+  const cache = getRenderPassCacheState();
+  const passCanvas = cache.canvases?.[passName];
+  if (!passCanvas) return false;
+  const resolvedReferenceTransform = referenceTransform || getPassReferenceTransform(passName);
+  if (!resolvedReferenceTransform) return false;
+  const current = cloneZoomTransform(currentTransform);
+  const reference = cloneZoomTransform(resolvedReferenceTransform);
+  const layout = getRenderPassLayout(passName);
+  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
+  const dx = current.x - (reference.x * scaleRatio);
+  const dy = current.y - (reference.y * scaleRatio);
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.translate(
+    (dx - Number(layout?.offsetX || 0) * scaleRatio) * runtimeState.dpr,
+    (dy - Number(layout?.offsetY || 0) * scaleRatio) * runtimeState.dpr,
+  );
+  context.scale(scaleRatio, scaleRatio);
+  context.drawImage(passCanvas, 0, 0);
+  context.restore();
+  return true;
+}
+
+function composeRenderPassesToTarget(
+  targetContext,
+  passNames,
+  currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity,
+  { requireAllPasses = false } = {},
+) {
+  if (!targetContext) return { ok: false, reason: "missing-target-context" };
+  const cache = getRenderPassCacheState();
+  const names = Array.isArray(passNames) ? passNames : RENDER_PASS_NAMES;
+  const missingCanvasPassNames = [];
+  const missingReferenceTransformPassNames = [];
+  if (requireAllPasses) {
+    for (const passName of names) {
+      const passCanvas = cache.canvases?.[passName];
+      if (!passCanvas) {
+        missingCanvasPassNames.push(passName);
+        continue;
+      }
+      const referenceTransform = getPassReferenceTransform(passName);
+      if (!referenceTransform) {
+        missingReferenceTransformPassNames.push(passName);
+      }
+    }
+    if (missingCanvasPassNames.length) {
+      return {
+        ok: false,
+        reason: "missing-pass-canvas",
+        passName: missingCanvasPassNames[0],
+        missingPassNames: missingCanvasPassNames,
+      };
+    }
+    if (missingReferenceTransformPassNames.length) {
+      return {
+        ok: false,
+        reason: "missing-reference-transform",
+        passName: missingReferenceTransformPassNames[0],
+        missingPassNames: missingReferenceTransformPassNames,
+      };
+    }
+  }
+  for (const passName of names) {
+    const passCanvas = cache.canvases?.[passName];
+    if (!passCanvas) {
+      if (requireAllPasses) return { ok: false, reason: "missing-pass-canvas", passName };
+      continue;
+    }
+    const referenceTransform = getPassReferenceTransform(passName);
+    if (!referenceTransform && requireAllPasses) {
+      return { ok: false, reason: "missing-reference-transform", passName };
+    }
+    if (referenceTransform && !areZoomTransformsEquivalent(referenceTransform, currentTransform)) {
+      const layout = getRenderPassLayout(passName);
+      const current = cloneZoomTransform(currentTransform);
+      const reference = cloneZoomTransform(referenceTransform);
+      const scaleRatio = current.k / Math.max(reference.k, 0.0001);
+      const dx = current.x - (reference.x * scaleRatio);
+      const dy = current.y - (reference.y * scaleRatio);
+      targetContext.save();
+      targetContext.setTransform(1, 0, 0, 1, 0, 0);
+      targetContext.translate(
+        (dx - Number(layout?.offsetX || 0) * scaleRatio) * runtimeState.dpr,
+        (dy - Number(layout?.offsetY || 0) * scaleRatio) * runtimeState.dpr,
+      );
+      targetContext.scale(scaleRatio, scaleRatio);
+      targetContext.drawImage(passCanvas, 0, 0);
+      targetContext.restore();
+      continue;
+    }
+    const layout = getRenderPassLayout(passName);
+    targetContext.drawImage(
+      passCanvas,
+      Math.round(-Number(layout?.offsetX || 0) * runtimeState.dpr),
+      Math.round(-Number(layout?.offsetY || 0) * runtimeState.dpr),
+    );
+  }
+  return { ok: true };
+}
+
+
+function renderExportPassesToCanvas(passNames) {
+  const width = Number(runtimeState.colorCanvas?.width || 0);
+  const height = Number(runtimeState.colorCanvas?.height || 0);
+  if (!width || !height) return null;
+  ensureIdleRenderPasses({});
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = width;
+  exportCanvas.height = height;
+  const exportContext = exportCanvas.getContext("2d");
+  if (!exportContext) return null;
+  exportContext.setTransform(1, 0, 0, 1, 0, 0);
+  exportContext.clearRect(0, 0, width, height);
+  composeRenderPassesToTarget(exportContext, passNames, runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+  return exportCanvas;
+}
+
+function composeTransformedFrameToBuffer(
+  currentTransform,
+  transformedPasses,
+  { interactiveBorders = false, useInteractionComposite = true } = {},
+) {
+  const bufferCanvas = ensureCompositeBufferCanvas();
+  const bufferContext = bufferCanvas.getContext("2d");
+  if (!bufferContext) return false;
+  resetCanvasContext(bufferContext, bufferCanvas.width, bufferCanvas.height);
+  let ok = false;
+  withRenderTarget(bufferContext, () => {
+    const interactionOk = useInteractionComposite
+      ? drawInteractionComposite(currentTransform)
+      : composeRenderPassesToTarget(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES, currentTransform, {
+        requireAllPasses: true,
+      }).ok;
+    ok = interactionOk
+      && transformedPasses.every((passName) => drawTransformedPass(passName, currentTransform));
+    if (!ok) return;
+    if (!drawInteractionBorderSnapshot(currentTransform)) {
+      const k = Math.max(0.0001, Number(currentTransform?.k || 1));
+      bufferContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
+      bufferContext.translate(currentTransform.x, currentTransform.y);
+      bufferContext.scale(k, k);
+      drawBordersPass(k, { interactive: !!interactiveBorders });
+      bufferContext.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    ok = drawTransformedPass("labels", currentTransform);
+  });
+  if (!ok) return false;
+  blitCompositeBufferToMain(bufferCanvas);
+  return true;
+}
+
+function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } = {}) {
+  const currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
+  const compositeStart = nowMs();
+  const cache = getRenderPassCacheState();
+  const transformedPasses = TRANSFORMED_FRAME_PASS_NAMES.filter((passName) =>
+    !INTERACTION_COMPOSITE_PASS_NAMES.includes(passName) && passName !== "labels"
+  );
+  const allowDirtyFastFrame =
+    runtimeState.renderPhase === RENDER_PHASE_SETTLING
+    || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
+  const dirtyFastFramePassNames = allowDirtyFastFrame
+    ? TRANSFORMED_FRAME_PASS_NAMES.filter((passName) => !!cache.dirty?.[passName])
+    : [];
+  // Preflight avoids clearing the visible canvas when a cached pass is missing.
+  if (TRANSFORMED_FRAME_PASS_NAMES.some((passName) => !canDrawTransformedPass(passName, cache, {
+    allowDirty: allowDirtyFastFrame,
+  }))) {
+    return false;
+  }
+  const canReuseComposite = canDrawInteractionComposite(currentTransform, cache);
+  const canBuildCompositeNow = runtimeState.renderPhase !== RENDER_PHASE_INTERACTING;
+  const canDrawDirtyInteractionPasses = allowDirtyFastFrame
+    && !canReuseComposite
+    && INTERACTION_COMPOSITE_PASS_NAMES.every((passName) => canDrawTransformedPass(passName, cache, {
+      allowDirty: true,
+    }));
+  const compositeReady = canReuseComposite
+    || (canBuildCompositeNow && buildInteractionComposite(currentTransform, timings))
+    || canDrawDirtyInteractionPasses;
+  if (!compositeReady) {
+    recordRenderPerfMetric("interactionCompositeUnavailable", 0, {
+      phase: String(runtimeState.renderPhase || ""),
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      deferredBuild: !canBuildCompositeNow,
+      allowDirtyFastFrame,
+      reason: cache.interactionComposite?.rejectedReason || "missing-interaction-composite",
+    });
+    return false;
+  }
+  if (!canDrawDirtyInteractionPasses && !canDrawInteractionComposite(currentTransform, cache)) {
+    return false;
+  }
+  if (
+    runtimeState.deferExactAfterSettle
+    && runtimeState.pendingExactPoliticalFastFrame
+    && !cache.dirty?.political
+  ) {
+    runtimeState.pendingExactPoliticalFastFrame = false;
+    recordRenderPerfMetric("settlePoliticalFastExactSkipped", 0, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      reason: "defer-to-sliced-exact-refresh",
+      scaleDelta: Number(runtimeState.zoomGestureScaleDelta || 0),
+      zoomEndedAt: Number(runtimeState.zoomGestureEndedAt || 0),
+    });
+  }
+  if (canDrawDirtyInteractionPasses) {
+    timings.usedDirtyInteractionPasses = true;
+    recordRenderPerfMetric("dirtyInteractionPassFastFrame", 0, {
+      phase: String(runtimeState.renderPhase || ""),
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      reason: cache.interactionComposite?.rejectedReason || "dirty-interaction-passes",
+    });
+  }
+  if (dirtyFastFramePassNames.length) {
+    timings.usedDirtyFastFramePasses = dirtyFastFramePassNames.join(",");
+  }
+  const drewAll = composeTransformedFrameToBuffer(currentTransform, transformedPasses, {
+    interactiveBorders,
+    useInteractionComposite: !canDrawDirtyInteractionPasses,
+  });
+  if (!drewAll) {
+    recordRenderPerfMetric("transformedFrameBufferComposeFailure", 0, {
+      phase: String(runtimeState.renderPhase || ""),
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      allowDirtyFastFrame,
+      usedDirtyInteractionPasses: canDrawDirtyInteractionPasses,
+    });
+    return false;
+  }
+  const timingLabel = interactiveBorders ? "interactiveComposite" : "transformedComposite";
+  recordPassTiming(timings, timingLabel, compositeStart);
+  if (Number.isFinite(timings.contextBase) || Number.isFinite(timings.contextScenario)) {
+    timings.context =
+      Math.max(0, Number(timings.contextBase || 0))
+      + Math.max(0, Number(timings.contextScenario || 0));
+  }
+  incrementPerfCounter("transformedFrames");
+  if (runtimeState.renderPhase === RENDER_PHASE_SETTLING || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle)) {
+    recordRenderPerfMetric("settleFastFrame", Math.max(0, nowMs() - compositeStart), {
+      phase: runtimeState.renderPhase,
+      interactiveBorders: !!interactiveBorders,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+  }
+  return true;
+}
+
+function shouldPromoteDeferredColorRenderToIdle() {
+  const cache = getRenderPassCacheState();
+  if (
+    runtimeState.renderPhase !== RENDER_PHASE_SETTLING
+    && !(runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle)
+  ) {
+    return false;
+  }
+  if (!cache.dirty?.political) {
+    return false;
+  }
+  const reason = String(cache.reasons?.political || "");
+  return reason === "refresh-colors" || reason === "rebuild-colors";
+}
+
+function promoteDeferredColorRenderToIdle() {
+  if (!shouldPromoteDeferredColorRenderToIdle()) {
+    return false;
+  }
+  const previousPhase = String(runtimeState.renderPhase || "");
+  const previousDefer = !!runtimeState.deferExactAfterSettle;
+  clearRenderPhaseTimer();
+  cancelExactAfterSettleRefresh({ clearDefer: true });
+  setRenderPhase(RENDER_PHASE_IDLE);
+  recordRenderPerfMetric("promoteDeferredColorRenderToIdle", 0, {
+    previousPhase,
+    previousDefer,
+    reason: String(getRenderPassCacheState().reasons?.political || ""),
+  });
+  return true;
+}
+
+function drawCanvas() {
+  if (!context || !pathCanvas) return;
+  ensureLayerDataFromTopology();
+  incrementPerfCounter("drawCanvas");
+  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
+    cancelPoliticalPathWarmup("drawCanvas-non-idle");
+  }
+  promoteDeferredColorRenderToIdle();
+  const frameStart = nowMs();
+  const frameTimings = {};
+  const useTransformedFrame =
+    runtimeState.renderPhase === RENDER_PHASE_INTERACTING
+    || runtimeState.renderPhase === RENDER_PHASE_SETTLING
+    || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
+  let drewFrame = false;
+  let usedLastGoodFallback = false;
+  let usedBaseVisibleFallback = false;
+  let keptPreviousPixels = false;
+  let drewExactFrame = false;
+  if (useTransformedFrame) {
+    drewFrame = drawTransformedFrameFromCaches(frameTimings, {
+      interactiveBorders: runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle,
+    });
+    if (!drewFrame) {
+      drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+      usedLastGoodFallback = drewFrame;
+      if (!drewFrame) {
+        if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING && runtimeState.firstVisibleFramePainted) {
+          noteMissingVisibleFrameSkippedDuringInteraction("missing-fast-frame-no-continuity");
+          keptPreviousPixels = true;
+          drewFrame = true;
+        } else {
+          drewFrame = drawBaseVisibleFrameFallback("missing-fast-frame-no-continuity");
+          usedBaseVisibleFallback = drewFrame;
+        }
+      }
+    }
+  }
+
+  if (!useTransformedFrame || !drewFrame) {
+    resetContextBreakdownForExactFrame();
+    ensureIdleRenderPasses(frameTimings);
+    drewExactFrame = composeCachedPasses(RENDER_PASS_NAMES);
+    drewFrame = drewExactFrame;
+    if (!drewExactFrame) {
+      abortPendingExactAfterSettleRefreshAfterPaint("compose-cached-passes-failed");
+    }
+  }
+
+  const cache = getRenderPassCacheState();
+  cache.lastFrame = {
+    phase: runtimeState.renderPhase,
+    totalMs: Math.max(0, nowMs() - frameStart),
+    timings: frameTimings,
+    transform: cloneZoomTransform(runtimeState.zoomTransform),
+  };
+  if (drewFrame && !usedBaseVisibleFallback && !keptPreviousPixels) {
+    markFirstVisibleFramePainted(usedLastGoodFallback ? "last-good-frame" : (useTransformedFrame ? "fast-frame" : "exact-frame"));
+  }
+  const usedDirtyFastFramePasses = typeof frameTimings.usedDirtyFastFramePasses === "string"
+    && frameTimings.usedDirtyFastFramePasses.length > 0;
+  if (
+    drewFrame
+    && !usedLastGoodFallback
+    && !usedBaseVisibleFallback
+    && !usedDirtyFastFramePasses
+    && (!useTransformedFrame || runtimeState.renderPhase !== RENDER_PHASE_INTERACTING)
+  ) {
+    captureLastGoodFrame(useTransformedFrame ? "fast-frame" : "exact-frame", runtimeState.zoomTransform);
+  } else if (drewFrame && usedDirtyFastFramePasses) {
+    recordRenderPerfMetric("lastGoodFrameCaptureSkipped", 0, {
+      reason: "dirty-fast-frame",
+      dirtyPasses: frameTimings.usedDirtyFastFramePasses,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      phase: String(runtimeState.renderPhase || ""),
+    });
+  }
+  if (drewExactFrame) {
+    finalizePendingExactAfterSettleRefreshAfterPaint();
+  }
+  incrementPerfCounter("frames");
+}
+
+function buildExactAfterSettleRefreshPlan({ profile, scheduleStartedAt, callbackStartedAt }) {
+  const resolvedProfile = profile || getAdaptiveSettleProfile();
+  const reuseDecision = getContextBaseReuseDecision();
+  const forceExactContextBaseRefresh = shouldForceExactContextBaseRefresh(reuseDecision);
+  const exactRefreshApplied = forceExactContextBaseRefresh || !!reuseDecision.shouldExactRefresh;
+  return {
+    resolvedProfile,
+    reuseDecision,
+    forceExactContextBaseRefresh,
+    exactRefreshApplied,
+    exactTargetPasses: [],
+    scheduleStartedAt,
+    callbackStartedAt,
+    startedAt: callbackStartedAt,
+    settleWindowElapsedMs: Math.max(0, callbackStartedAt - scheduleStartedAt),
+  };
+}
+
+function applyExactAfterSettleRefreshPlan(plan) {
+  const reuseDecision = plan.reuseDecision || {};
+  updateDprStage("idle", { force: true });
+  setCanvasSize({
+    reason: "exact-after-settle-dpr-restore",
+    targetPassesOnDprChange: ["political", "contextBase", "borders"],
+  });
+  runtimeState.deferExactAfterSettle = false;
+  cancelDeferredContextBaseEnhancement();
+  if (plan.forceExactContextBaseRefresh) {
+    invalidateRenderPasses(["physicalBase", "contextBase"], "physical-visible-exact");
+  } else if (reuseDecision.enabled) {
+    recordRenderPerfMetric("contextBaseReuseScaleRatio", 0, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      scaleRatio: reuseDecision.scaleRatio,
+      zoomBucket: reuseDecision.zoomBucket,
+      referenceZoomBucket: reuseDecision.referenceZoomBucket,
+    });
+    recordRenderPerfMetric("contextBaseReuseDistancePx", 0, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      distancePx: reuseDecision.distancePx,
+      maxDistancePx: reuseDecision.maxDistancePx,
+    });
+    if (reuseDecision.shouldExactRefresh) {
+      invalidateRenderPasses(getPhysicalExactRefreshPasses(), reuseDecision.reason || "context-base-exact");
+    } else {
+      recordRenderPerfMetric("contextBaseReuseSkipped", 0, {
+        activeScenarioId: String(runtimeState.activeScenarioId || ""),
+        reason: reuseDecision.reason,
+        scaleRatio: reuseDecision.scaleRatio,
+        distancePx: reuseDecision.distancePx,
+        maxDistancePx: reuseDecision.maxDistancePx,
+        zoomBucket: reuseDecision.zoomBucket,
+        referenceZoomBucket: reuseDecision.referenceZoomBucket,
+        crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
+        crossesMinorContourThreshold: !!reuseDecision.crossesMinorContourThreshold,
+      });
+    }
+  }
+  deferContextBaseEnhancements = shouldDeferContextBaseEnhancementsForExactRefresh(
+    reuseDecision,
+    plan.forceExactContextBaseRefresh,
+  );
+  plan.deferContextBaseEnhancements = deferContextBaseEnhancements;
+  const cache = getRenderPassCacheState();
+  const targetPassNames = new Set(["political", "borders", "labels", "textureLabels"]);
+  if (plan.forceExactContextBaseRefresh || plan.exactRefreshApplied) {
+    getPhysicalExactRefreshPasses().forEach((passName) => targetPassNames.add(passName));
+  }
+  RENDER_PASS_NAMES.forEach((passName) => {
+    if (cache.dirty[passName]) {
+      targetPassNames.add(passName);
+    }
+  });
+  plan.deferredExactTargetPasses = getIdleRenderPassDefinitions()
+    .map(([passName]) => passName)
+    .filter((passName) => targetPassNames.has(passName) && EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
+  plan.exactTargetPasses = getIdleRenderPassDefinitions()
+    .map(([passName]) => passName)
+    .filter((passName) => targetPassNames.has(passName) && !EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
+}
+
+function finalizeExactAfterSettleRefreshPlan(plan) {
+  const reuseDecision = plan.reuseDecision || {};
+  const resolvedProfile = plan.resolvedProfile || getAdaptiveSettleProfile();
+  flushPendingScenarioChunkRefreshAfterExact();
+  const finishedAt = nowMs();
+  const durationMs = Math.max(0, finishedAt - plan.startedAt);
+  const finalSharpnessMs = Math.max(0, finishedAt - Number(runtimeState.zoomGestureEndedAt || plan.startedAt));
+  recordRenderPerfMetric("settleExactRefresh", durationMs, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    contextBaseRefreshed: plan.exactRefreshApplied,
+    reason: plan.forceExactContextBaseRefresh ? "physical-visible-exact" : reuseDecision.reason,
+    scaleRatio: reuseDecision.scaleRatio,
+    distancePx: reuseDecision.distancePx,
+    maxDistancePx: reuseDecision.maxDistancePx,
+    zoomBucket: reuseDecision.zoomBucket,
+    referenceZoomBucket: reuseDecision.referenceZoomBucket,
+    crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
+    crossesMinorContourThreshold: !!reuseDecision.crossesMinorContourThreshold,
+    scaleDelta: Number(runtimeState.zoomGestureScaleDelta || resolvedProfile.scaleDelta || 0),
+    settleDurationMs: Number(resolvedProfile.settleDurationMs || 0),
+    exactQuietWindowMs: Number(resolvedProfile.exactQuietWindowMs || 0),
+    settleWindowElapsedMs: Number(plan.settleWindowElapsedMs || 0),
+    finalSharpnessMs: Number(finalSharpnessMs || 0),
+  });
+  if (plan.exactRefreshApplied) {
+    recordRenderPerfMetric("contextBaseExactRefresh", Number(runtimeState.renderPerfMetrics?.drawContextBasePass?.durationMs || durationMs), {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      reason: plan.forceExactContextBaseRefresh ? "physical-visible-exact" : reuseDecision.reason,
+      scaleRatio: reuseDecision.scaleRatio,
+      distancePx: reuseDecision.distancePx,
+      maxDistancePx: reuseDecision.maxDistancePx,
+      zoomBucket: reuseDecision.zoomBucket,
+      referenceZoomBucket: reuseDecision.referenceZoomBucket,
+      crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
+      crossesMinorContourThreshold: !!reuseDecision.crossesMinorContourThreshold,
+    });
+  }
+  if (plan.deferContextBaseEnhancements) {
+    scheduleDeferredContextBaseEnhancements();
+  }
+  scheduleDeferredExactContextRefresh(plan);
+}
+
+function cancelDeferredExactContextRefresh() {
+  deferredExactContextRefreshVersion += 1;
+  cancelDeferredWork(deferredExactContextRefreshHandle);
+  deferredExactContextRefreshHandle = null;
+  deferredExactContextRefreshTaskHandles.forEach((handle) => {
+    if (handle && typeof handle.cancel === "function") {
+      handle.cancel();
+    }
+  });
+  deferredExactContextRefreshTaskHandles.clear();
+}
+
+function getDeferredExactContextTargetPasses(plan = {}) {
+  const cache = getRenderPassCacheState();
+  const targetPasses = new Set(Array.isArray(plan.deferredExactTargetPasses) ? plan.deferredExactTargetPasses : []);
+  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.forEach((passName) => {
+    if (cache.dirty?.[passName]) targetPasses.add(passName);
+  });
+  return getIdleRenderPassDefinitions()
+    .map(([passName]) => passName)
+    .filter((passName) => targetPasses.has(passName));
+}
+
+function isDeferredExactContextRefreshCurrent(refreshVersion, plan = {}) {
+  if (Number(refreshVersion || 0) !== Number(deferredExactContextRefreshVersion || 0)) return false;
+  const identity = plan && typeof plan === "object" ? plan.deferredExactContextIdentity : null;
+  if (identity && typeof identity === "object" && !isExactAfterSettleIdentityCurrent(identity)) return false;
+  return true;
+}
+
+function prepareDeferredExactContextPassesInSlices(passNames, plan = {}, refreshVersion = deferredExactContextRefreshVersion) {
+  const targetPasses = Array.isArray(passNames) ? passNames.filter(Boolean) : [];
+  if (!targetPasses.length) return false;
+  if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return false;
+  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+  const definitions = getIdleRenderPassDefinitions().filter(([passName]) => targetPasses.includes(passName));
+  const cache = getRenderPassCacheState();
+  const timings = {};
+  const startedAt = nowMs();
+
+  const enqueueNextPass = (index) => {
+    if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
+    if (index >= definitions.length) {
+      recordRenderPerfMetric("deferredExactContextRefresh", Math.max(0, nowMs() - startedAt), {
+        activeScenarioId: String(runtimeState.activeScenarioId || ""),
+        targetPasses,
+        passCount: targetPasses.length,
+        sourceGeneration: Number(plan.controllerGeneration || 0),
+      });
+      requestRendererRender("deferred-exact-context-refresh", {
+        flush: false,
+        fallback: () => render(),
+      });
+      return;
+    }
+    const [passName, drawFn] = definitions[index];
+    let taskHandle = null;
+    taskHandle = enqueueFrameTask(() => {
+      if (taskHandle) {
+        deferredExactContextRefreshTaskHandles.delete(taskHandle);
+      }
+      const passStart = nowMs();
+      if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
+      if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
+        if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
+          scheduleDeferredExactContextRefresh(plan);
+        }
+        return;
+      }
+      prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
+      recordRenderPerfMetric("deferredExactContextRefreshPass", Math.max(0, nowMs() - passStart), {
+        activeScenarioId: String(runtimeState.activeScenarioId || ""),
+        passName,
+        index,
+        targetPasses,
+      });
+      enqueueNextPass(index + 1);
+    }, {
+      priority: "high",
+      label: `deferred-exact-context-pass-${passName}`,
+      generation: Number(plan.controllerGeneration || 0),
+      dedupe: true,
+      // This work is already scheduled after settle and guarded by the exact
+      // identity. Letting continuous-input heuristics defer it again can strand
+      // the queue during repeated wheel probes.
+      deferOnContinuousInput: false,
+    });
+    if (taskHandle) {
+      deferredExactContextRefreshTaskHandles.add(taskHandle);
+    }
+  };
+  enqueueNextPass(0);
+  return true;
+}
+
+function scheduleDeferredExactContextRefresh(plan = {}) {
+  const targetPasses = getDeferredExactContextTargetPasses(plan);
+  if (!targetPasses.length) return false;
+  cancelDeferredExactContextRefresh();
+  const refreshVersion = Number(deferredExactContextRefreshVersion || 0);
+  if (!plan.deferredExactContextIdentity) {
+    plan.deferredExactContextIdentity = getExactAfterSettleIdentity();
+  }
+  deferredExactContextRefreshHandle = scheduleDeferredWork(() => {
+    deferredExactContextRefreshHandle = null;
+    if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
+    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
+      if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
+        scheduleDeferredExactContextRefresh(plan);
+      }
+      return;
+    }
+    prepareDeferredExactContextPassesInSlices(targetPasses, plan, refreshVersion);
+  }, {
+    timeout: DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS,
+  });
+  recordRenderPerfMetric("deferredExactContextRefreshScheduled", 0, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    targetPasses,
+    passCount: targetPasses.length,
+    sourceGeneration: Number(plan.controllerGeneration || 0),
+  });
+  return true;
+}
+
+function enqueueExactAfterSettleSegment(generation, label, task) {
+  return enqueueFrameTask(() => {
+    const startedAt = nowMs();
+    if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) return;
+    if (!runtimeState.deferExactAfterSettle || runtimeState.renderPhase !== RENDER_PHASE_IDLE) return;
+    if (!isExactAfterSettleIdentityCurrent(getExactAfterSettleControllerState())) {
+      resetExactAfterSettleController(`${label}-identity-mismatch`, generation);
+      return;
+    }
+    task();
+    recordRenderPerfMetric(`settleExactRefresh${label}`, Math.max(0, nowMs() - startedAt), {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      generation,
+    });
+  }, {
+    priority: "high",
+    label: `exact-after-settle-${label}`,
+    generation,
+    dedupe: true,
+    // The timeout quiet window already separates exact work from active wheel
+    // input. Running the queued segment promptly avoids repeated probes waiting
+    // on stale continuous-input signals.
+    deferOnContinuousInput: false,
+  });
+}
+
+function scheduleExactAfterSettleRefresh(profile = runtimeState.adaptiveSettleProfile || getAdaptiveSettleProfile()) {
+  cancelExactAfterSettleRefresh({ clearDefer: false });
+  const scheduleStartedAt = nowMs();
+  const controller = beginExactAfterSettleControllerSchedule(scheduleStartedAt);
+  const generation = Number(controller.generation || 0);
+  const resolvedProfile = profile || getAdaptiveSettleProfile();
+  runtimeState.exactAfterSettleHandle = {
+    type: "timeout",
+    id: globalThis.setTimeout(() => {
+      runtimeState.exactAfterSettleHandle = null;
+      if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) return;
+      if (!runtimeState.deferExactAfterSettle) {
+        resetExactAfterSettleController("defer-cleared", generation);
+        return;
+      }
+      if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+        scheduleExactAfterSettleRefresh(resolvedProfile);
+        return;
+      }
+      assignExactAfterSettleIdentity(getExactAfterSettleControllerState());
+      enqueueExactAfterSettleSegment(generation, "Prepare", () => {
+        const plan = buildExactAfterSettleRefreshPlan({
+          profile: resolvedProfile,
+          scheduleStartedAt,
+          callbackStartedAt: nowMs(),
+        });
+        enqueueExactAfterSettleSegment(generation, "Apply", () => {
+          applyScheduledExactAfterSettleRefreshPlan(generation, plan);
+        });
+      });
+    }, resolvedProfile.exactQuietWindowMs),
+  };
+}
+
+function scheduleStagedHitCanvasWarmup(startedAt, token) {
+  cancelDeferredWork(runtimeState.stagedHitCanvasHandle);
+  runtimeState.stagedHitCanvasHandle = scheduleDeferredWork(() => {
+    runtimeState.stagedHitCanvasHandle = null;
+    if (token !== Number(runtimeState.stagedMapDataToken || 0)) return;
+    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+      scheduleStagedHitCanvasWarmup(startedAt, token);
+      return;
+    }
+    runtimeState.deferHitCanvasBuild = false;
+    if (runtimeState.hitCanvasDirty) {
+      ensureHitCanvasUpToDate({ force: true });
+    }
+    recordRenderPerfMetric("setMapDataHitCanvasReady", nowMs() - startedAt, {
+      staged: true,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+  }, {
+    timeout: STAGED_HIT_CANVAS_TIMEOUT_MS,
+  });
+}
+
+function scheduleStagedContextBaseWarmup(startedAt, token) {
+  cancelDeferredWork(runtimeState.stagedContextBaseHandle);
+  runtimeState.stagedContextBaseHandle = scheduleDeferredWork(() => {
+    runtimeState.stagedContextBaseHandle = null;
+    if (token !== Number(runtimeState.stagedMapDataToken || 0)) return;
+    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+      scheduleStagedContextBaseWarmup(startedAt, token);
+      return;
+    }
+    runtimeState.deferContextBasePass = false;
+    invalidateRenderPasses(["contextBase", "contextMarkers"], "staged-context-base");
+    clearRenderPassReferenceTransforms(["contextBase", "contextMarkers"]);
+    render();
+    recordRenderPerfMetric("setMapDataContextBaseReady", nowMs() - startedAt, {
+      staged: true,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+    scheduleStagedHitCanvasWarmup(startedAt, token);
+  }, {
+    timeout: STAGED_CONTEXT_BASE_TIMEOUT_MS,
+  });
+}
+
+function beginStagedMapDataWarmup(startedAt) {
+  clearStagedMapDataTasks();
+  const token = Number(runtimeState.stagedMapDataToken || 0) + 1;
+  runtimeState.stagedMapDataToken = token;
+  const shouldStage = isHeavyScenarioStagedApplyCandidate();
+  runtimeState.deferContextBasePass = shouldStage;
+  runtimeState.deferHitCanvasBuild = shouldStage;
+  if (shouldStage) {
+    scheduleStagedContextBaseWarmup(startedAt, token);
+  }
+  return shouldStage;
+}
+
+function ensureSpecialZoneEditorState() {
+  if (!runtimeState.manualSpecialZones || runtimeState.manualSpecialZones.type !== "FeatureCollection") {
+    runtimeState.manualSpecialZones = { type: "FeatureCollection", features: [] };
+  }
+  if (!Array.isArray(runtimeState.manualSpecialZones.features)) {
+    runtimeState.manualSpecialZones.features = [];
+  }
+  if (!runtimeState.specialZoneEditor || typeof runtimeState.specialZoneEditor !== "object") {
+    runtimeState.specialZoneEditor = createDefaultSpecialZoneEditorState();
+  }
+  if (!Array.isArray(runtimeState.specialZoneEditor.vertices)) {
+    runtimeState.specialZoneEditor.vertices = [];
+  }
+  if (!Number.isFinite(Number(runtimeState.specialZoneEditor.counter))) {
+    runtimeState.specialZoneEditor.counter = 1;
+  }
+  if (!runtimeState.specialZoneEditor.zoneType) {
+    runtimeState.specialZoneEditor.zoneType = DEFAULT_SPECIAL_ZONE_TYPE;
+  }
+  if (typeof runtimeState.specialZoneEditor.label !== "string") {
+    runtimeState.specialZoneEditor.label = "";
+  }
+  if (runtimeState.specialZoneEditor.selectedId === undefined) {
+    runtimeState.specialZoneEditor.selectedId = null;
+  }
+}
+
+function getManualSpecialZoneFeatures() {
+  ensureSpecialZoneEditorState();
+  return runtimeState.manualSpecialZones.features || [];
+}
+
+function getEffectiveSpecialZonesFeatureCollection() {
+  const topologyFeatures = Array.isArray(runtimeState.specialZonesData?.features)
+    ? runtimeState.specialZonesData.features
+    : [];
+  const manualFeatures = getManualSpecialZoneFeatures();
+
+  const normalizeSpecialZoneFeature = (feature, index, sourceLabel) => {
+    if (!feature?.geometry) return null;
+    const normalizedFeature = normalizeFeatureGeometry(feature, {
+      sourceLabel: `special_zone_${sourceLabel}`,
+    });
+    return {
+      ...normalizedFeature,
+      properties: {
+        ...(normalizedFeature?.properties || {}),
+        __source: sourceLabel,
+        id: String(normalizedFeature?.properties?.id || `special_zone_${sourceLabel}_${index + 1}`),
+      },
+    };
+  };
+
+  const features = [
+    ...topologyFeatures
+      .map((feature, index) => normalizeSpecialZoneFeature(feature, index, "topology"))
+      .filter(Boolean),
+    ...manualFeatures
+      .map((feature, index) => normalizeSpecialZoneFeature(feature, index, "manual"))
+      .filter(Boolean),
+  ];
+  return { type: "FeatureCollection", features };
+}
+
+function getSpecialZoneStyle(feature) {
+  const config = runtimeState.styleConfig?.specialZones || {};
+  const type = String(feature?.properties?.type || "").toLowerCase();
+  const fillOpacity = clamp(Number.isFinite(Number(config.opacity)) ? Number(config.opacity) : 0.32, 0, 1);
+  const strokeWidth = clamp(Number.isFinite(Number(config.strokeWidth)) ? Number(config.strokeWidth) : 1.3, 0.4, 4);
+  const dashStyle = String(config.dashStyle || "dashed");
+  const dash = getDashPattern(dashStyle, strokeWidth);
+
+  if (type === "disputed") {
+    return {
+      fill: getSafeCanvasColor(config.disputedFill, "#f97316"),
+      stroke: getSafeCanvasColor(config.disputedStroke, "#ea580c"),
+      fillOpacity,
+      strokeWidth,
+      dash,
+    };
+  }
+  if (type === "wasteland") {
+    return {
+      fill: getSafeCanvasColor(config.wastelandFill, "#dc2626"),
+      stroke: getSafeCanvasColor(config.wastelandStroke, "#b91c1c"),
+      fillOpacity,
+      strokeWidth,
+      dash,
+    };
+  }
+  return {
+    fill: getSafeCanvasColor(config.customFill, "#8b5cf6"),
+    stroke: getSafeCanvasColor(config.customStroke, "#6d28d9"),
+    fillOpacity,
+    strokeWidth,
+    dash,
+  };
+}
+
+function updateSpecialZonesPaths() {
+  if (!specialZonesGroup || !pathSVG) return;
+
+  const features = getEffectiveSpecialZonesFeatureCollection().features;
+  if (!features.length) {
+    specialZonesGroup.selectAll("path.special-zone").remove();
+    return;
+  }
+
+  const selectedId = String(runtimeState.specialZoneEditor?.selectedId || "");
+  const selection = specialZonesGroup
+    .selectAll("path.special-zone")
+    .data(features, (d, i) => d?.properties?.id || `special-zone-${i}`);
+
+  selection
+    .enter()
+    .append("path")
+    .attr("class", "special-zone")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(selection)
+    .attr("d", pathSVG)
+    .attr("fill", (d) => getSpecialZoneStyle(d).fill)
+    .attr("fill-opacity", (d) => getSpecialZoneStyle(d).fillOpacity)
+    .attr("stroke", (d) => getSpecialZoneStyle(d).stroke)
+    .attr("stroke-width", (d) => {
+      const base = getSpecialZoneStyle(d).strokeWidth;
+      const id = String(d?.properties?.id || "");
+      return id && id === selectedId ? base + 0.9 : base;
+    })
+    .attr("stroke-dasharray", (d) => getSpecialZoneStyle(d).dash.join(" "))
+    .attr("opacity", 0.95);
+
+  selection.exit().remove();
+}
+
+function renderSpecialZoneEditorOverlay() {
+  if (!specialZoneEditorGroup || !pathSVG) return;
+  ensureSpecialZoneEditorState();
+
+  const vertices = runtimeState.specialZoneEditor.vertices || [];
+  const isActive = !!runtimeState.specialZoneEditor.active;
+
+  if (!isActive || vertices.length === 0) {
+    specialZoneEditorGroup.selectAll("*").remove();
+    return;
+  }
+
+  const lineFeature = {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: vertices,
+    },
+    properties: {},
+  };
+  const polygonFeature = vertices.length >= 3
+    ? {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [[...vertices, vertices[0]]],
+      },
+      properties: {},
+    }
+    : null;
+
+  const style = getSpecialZoneStyle({
+    properties: { type: runtimeState.specialZoneEditor.zoneType || DEFAULT_SPECIAL_ZONE_TYPE },
+  });
+
+  const paths = [];
+  if (polygonFeature) paths.push({ id: "draw-poly", feature: polygonFeature, fill: true });
+  paths.push({ id: "draw-line", feature: lineFeature, fill: false });
+
+  const pathSelection = specialZoneEditorGroup
+    .selectAll("path.special-zone-editor-path")
+    .data(paths, (d) => d.id);
+
+  pathSelection
+    .enter()
+    .append("path")
+    .attr("class", "special-zone-editor-path")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(pathSelection)
+    .attr("d", (d) => pathSVG(d.feature))
+    .attr("fill", (d) => (d.fill ? style.fill : "none"))
+    .attr("fill-opacity", (d) => (d.fill ? Math.min(style.fillOpacity * 0.85, 0.6) : 0))
+    .attr("stroke", style.stroke)
+    .attr("stroke-width", Math.max(1.2, style.strokeWidth + 0.5))
+    .attr("stroke-dasharray", style.dash.join(" "));
+
+  pathSelection.exit().remove();
+
+  const points = vertices.map((coord, index) => ({ coord, key: `v-${index}` }));
+  const pointSelection = specialZoneEditorGroup
+    .selectAll("circle.special-zone-editor-point")
+    .data(points, (d) => d.key);
+
+  pointSelection
+    .enter()
+    .append("circle")
+    .attr("class", "special-zone-editor-point")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .merge(pointSelection)
+    .attr("r", 3.4)
+    .attr("cx", (d) => projection(d.coord)?.[0] ?? -9999)
+    .attr("cy", (d) => projection(d.coord)?.[1] ?? -9999)
+    .attr("fill", "#ffffff")
+    .attr("stroke", style.stroke)
+    .attr("stroke-width", 1.3);
+
+  pointSelection.exit().remove();
+}
+
+function updateStrategicOverlayUi() {
+  if (typeof runtimeState.updateStrategicOverlayUIFn === "function") {
+    runtimeState.updateStrategicOverlayUIFn();
+  }
+}
+
+function ensureOperationGraphicsEditorState() {
+  if (!runtimeState.operationGraphicsEditor || typeof runtimeState.operationGraphicsEditor !== "object") {
+    runtimeState.operationGraphicsEditor = createDefaultOperationGraphicsEditorState();
+  }
+  if (typeof runtimeState.operationGraphicsEditor.mode !== "string") {
+    runtimeState.operationGraphicsEditor.mode = runtimeState.operationGraphicsEditor.active ? "draw" : "idle";
+  }
+  runtimeState.operationGraphicsEditor.collection = "operationGraphics";
+  if (!Array.isArray(runtimeState.operationGraphicsEditor.points)) {
+    runtimeState.operationGraphicsEditor.points = [];
+  }
+  if (!OPERATION_GRAPHIC_STYLE_PRESETS.includes(String(runtimeState.operationGraphicsEditor.stylePreset || "").trim())) {
+    runtimeState.operationGraphicsEditor.stylePreset = String(runtimeState.operationGraphicsEditor.kind || DEFAULT_OPERATION_GRAPHIC_KIND);
+  }
+  runtimeState.operationGraphicsEditor.stroke = String(runtimeState.operationGraphicsEditor.stroke || "").trim();
+  runtimeState.operationGraphicsEditor.width = Math.max(0, Math.min(16, Number(runtimeState.operationGraphicsEditor.width) || 0));
+  runtimeState.operationGraphicsEditor.opacity = Math.max(0, Math.min(1, Number(runtimeState.operationGraphicsEditor.opacity) || 1));
+  runtimeState.operationGraphicsEditor.selectedVertexIndex = Math.max(-1, Number(runtimeState.operationGraphicsEditor.selectedVertexIndex) || -1);
+}
+
+function ensureOperationalLineEditorState() {
+  if (!runtimeState.operationalLineEditor || typeof runtimeState.operationalLineEditor !== "object") {
+    runtimeState.operationalLineEditor = createDefaultOperationalLineEditorState();
+  }
+  if (typeof runtimeState.operationalLineEditor.mode !== "string") {
+    runtimeState.operationalLineEditor.mode = runtimeState.operationalLineEditor.active ? "draw" : "idle";
+  }
+  if (!Array.isArray(runtimeState.operationalLineEditor.points)) {
+    runtimeState.operationalLineEditor.points = [];
+  }
+  if (!OPERATIONAL_LINE_STYLE_PRESETS.includes(String(runtimeState.operationalLineEditor.stylePreset || "").trim())) {
+    runtimeState.operationalLineEditor.stylePreset = String(runtimeState.operationalLineEditor.kind || DEFAULT_OPERATIONAL_LINE_KIND);
+  }
+  runtimeState.operationalLineEditor.stroke = String(runtimeState.operationalLineEditor.stroke || "").trim();
+  runtimeState.operationalLineEditor.width = Math.max(0, Math.min(16, Number(runtimeState.operationalLineEditor.width) || 0));
+  runtimeState.operationalLineEditor.opacity = Math.max(0, Math.min(1, Number(runtimeState.operationalLineEditor.opacity) || 1));
+  runtimeState.operationalLineEditor.selectedVertexIndex = Math.max(-1, Number(runtimeState.operationalLineEditor.selectedVertexIndex) || -1);
+}
+
+function normalizeUnitCounterStatPercent(value, fallback = DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT) {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) {
+    return Math.max(0, Math.min(100, Number(fallback) || 0));
+  }
+  return Math.max(0, Math.min(100, Math.round(nextValue)));
+}
+
+function normalizeUnitCounterStatsPresetId(value, fallback = "regular") {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  if (normalizedValue === "random") return "random";
+  return Object.prototype.hasOwnProperty.call(UNIT_COUNTER_STATS_PRESETS, normalizedValue)
+    ? normalizedValue
+    : fallback;
+}
+
+function getUnitCounterStatsPreset(value, fallback = "regular") {
+  const presetId = normalizeUnitCounterStatsPresetId(value, fallback);
+  return UNIT_COUNTER_STATS_PRESETS[presetId] || UNIT_COUNTER_STATS_PRESETS.regular;
+}
+
+function normalizeUnitCounterBaseFillColor(value) {
+  const candidate = String(value || "").trim();
+  return /^#(?:[0-9a-f]{6})$/i.test(candidate) ? candidate.toLowerCase() : "";
+}
+
+function getNormalizedUnitCounterCombatState(candidate = {}) {
+  const statsPresetId = normalizeUnitCounterStatsPresetId(candidate.statsPresetId || "regular");
+  const presetDefaults = getUnitCounterStatsPreset(statsPresetId);
+  const statsSource = ["preset", "random", "manual"].includes(String(candidate.statsSource || "").trim().toLowerCase())
+    ? String(candidate.statsSource || "").trim().toLowerCase()
+    : "preset";
+  return {
+    baseFillColor: normalizeUnitCounterBaseFillColor(candidate.baseFillColor),
+    organizationPct: normalizeUnitCounterStatPercent(candidate.organizationPct, presetDefaults.organizationPct || DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT),
+    equipmentPct: normalizeUnitCounterStatPercent(candidate.equipmentPct, presetDefaults.equipmentPct || DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT),
+    statsPresetId,
+    statsSource,
+  };
+}
+
+function assignUnitCounterEditorFromCounter(counter = null) {
+  ensureUnitCounterEditorState();
+  if (!counter) {
+    return;
+  }
+  const normalizedCombatState = getNormalizedUnitCounterCombatState(counter);
+  runtimeState.unitCounterEditor.renderer = String(counter.renderer || DEFAULT_UNIT_COUNTER_RENDERER);
+  runtimeState.unitCounterEditor.label = String(counter.label || "");
+  runtimeState.unitCounterEditor.sidc = String(counter.sidc || counter.symbolCode || "").trim().toUpperCase();
+  runtimeState.unitCounterEditor.symbolCode = String(counter.symbolCode || counter.sidc || "").trim().toUpperCase();
+  runtimeState.unitCounterEditor.nationTag = canonicalCountryCode(counter.nationTag || "");
+  runtimeState.unitCounterEditor.nationSource = normalizeUnitCounterNationSource(counter.nationSource, "display");
+  runtimeState.unitCounterEditor.presetId = String(counter.presetId || DEFAULT_UNIT_COUNTER_PRESET_ID).trim().toLowerCase() || DEFAULT_UNIT_COUNTER_PRESET_ID;
+  runtimeState.unitCounterEditor.iconId = String(counter.iconId || getUnitCounterPresetById(counter.presetId).iconId || "").trim().toLowerCase();
+  runtimeState.unitCounterEditor.unitType = String(counter.unitType || getUnitCounterPresetById(counter.presetId).unitType || "").trim().toUpperCase();
+  runtimeState.unitCounterEditor.echelon = String(counter.echelon || "").trim().toLowerCase();
+  runtimeState.unitCounterEditor.subLabel = String(counter.subLabel || "");
+  runtimeState.unitCounterEditor.strengthText = String(counter.strengthText || "");
+  runtimeState.unitCounterEditor.layoutAnchor = counter.layoutAnchor && typeof counter.layoutAnchor === "object"
+    ? { ...counter.layoutAnchor }
+    : { kind: "feature", key: String(counter.anchor?.featureId || ""), slotIndex: null };
+  runtimeState.unitCounterEditor.attachment = counter.attachment && typeof counter.attachment === "object"
+    ? { ...counter.attachment }
+    : null;
+  runtimeState.unitCounterEditor.baseFillColor = normalizedCombatState.baseFillColor;
+  runtimeState.unitCounterEditor.organizationPct = normalizedCombatState.organizationPct;
+  runtimeState.unitCounterEditor.equipmentPct = normalizedCombatState.equipmentPct;
+  runtimeState.unitCounterEditor.statsPresetId = normalizedCombatState.statsPresetId;
+  runtimeState.unitCounterEditor.statsSource = normalizedCombatState.statsSource;
+  runtimeState.unitCounterEditor.size = normalizeUnitCounterSizeToken(counter.size || "medium");
+}
+
+function ensureUnitCounterEditorState() {
+  if (!runtimeState.unitCounterEditor || typeof runtimeState.unitCounterEditor !== "object") {
+    runtimeState.unitCounterEditor = createDefaultUnitCounterEditorState({
+      renderer: DEFAULT_UNIT_COUNTER_RENDERER,
+      presetId: DEFAULT_UNIT_COUNTER_PRESET_ID,
+      organizationPct: DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT,
+      equipmentPct: DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT,
+    });
+  }
+  runtimeState.unitCounterEditor.sidc = String(
+    runtimeState.unitCounterEditor.sidc
+    || runtimeState.unitCounterEditor.symbolCode
+    || ""
+  ).trim();
+  runtimeState.unitCounterEditor.symbolCode = String(
+    runtimeState.unitCounterEditor.symbolCode
+    || runtimeState.unitCounterEditor.sidc
+    || ""
+  ).trim();
+  runtimeState.unitCounterEditor.nationTag = canonicalCountryCode(runtimeState.unitCounterEditor.nationTag || "");
+  runtimeState.unitCounterEditor.nationSource = normalizeUnitCounterNationSource(runtimeState.unitCounterEditor.nationSource, "display");
+  runtimeState.unitCounterEditor.presetId = String(runtimeState.unitCounterEditor.presetId || DEFAULT_UNIT_COUNTER_PRESET_ID).trim().toLowerCase() || DEFAULT_UNIT_COUNTER_PRESET_ID;
+  runtimeState.unitCounterEditor.iconId = String(
+    runtimeState.unitCounterEditor.iconId
+    || getUnitCounterPresetById(runtimeState.unitCounterEditor.presetId).iconId
+    || ""
+  ).trim().toLowerCase();
+  runtimeState.unitCounterEditor.unitType = String(
+    runtimeState.unitCounterEditor.unitType
+    || getUnitCounterPresetById(runtimeState.unitCounterEditor.presetId).unitType
+    || ""
+  ).trim().toUpperCase();
+  runtimeState.unitCounterEditor.echelon = String(runtimeState.unitCounterEditor.echelon || "").trim().toLowerCase();
+  runtimeState.unitCounterEditor.subLabel = String(runtimeState.unitCounterEditor.subLabel || "").trim();
+  runtimeState.unitCounterEditor.strengthText = String(runtimeState.unitCounterEditor.strengthText || "").trim();
+  if (!runtimeState.unitCounterEditor.layoutAnchor || typeof runtimeState.unitCounterEditor.layoutAnchor !== "object") {
+    runtimeState.unitCounterEditor.layoutAnchor = { kind: "feature", key: "", slotIndex: null };
+  }
+  runtimeState.unitCounterEditor.layoutAnchor.kind = String(runtimeState.unitCounterEditor.layoutAnchor.kind || "feature").trim().toLowerCase() || "feature";
+  runtimeState.unitCounterEditor.layoutAnchor.key = String(runtimeState.unitCounterEditor.layoutAnchor.key || "").trim();
+  runtimeState.unitCounterEditor.layoutAnchor.slotIndex = Number.isInteger(Number(runtimeState.unitCounterEditor.layoutAnchor.slotIndex))
+    ? Math.max(0, Math.round(Number(runtimeState.unitCounterEditor.layoutAnchor.slotIndex)))
+    : null;
+  runtimeState.unitCounterEditor.attachment = runtimeState.unitCounterEditor.attachment && typeof runtimeState.unitCounterEditor.attachment === "object"
+    ? {
+      kind: String(runtimeState.unitCounterEditor.attachment.kind || STRATEGIC_COUNTER_ATTACHMENT_KIND).trim().toLowerCase() || STRATEGIC_COUNTER_ATTACHMENT_KIND,
+      lineId: String(runtimeState.unitCounterEditor.attachment.lineId || "").trim(),
+    }
+    : null;
+  runtimeState.unitCounterEditor.baseFillColor = normalizeUnitCounterBaseFillColor(runtimeState.unitCounterEditor.baseFillColor);
+  runtimeState.unitCounterEditor.organizationPct = normalizeUnitCounterStatPercent(
+    runtimeState.unitCounterEditor.organizationPct,
+    DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT
+  );
+  runtimeState.unitCounterEditor.equipmentPct = normalizeUnitCounterStatPercent(
+    runtimeState.unitCounterEditor.equipmentPct,
+    DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT
+  );
+  runtimeState.unitCounterEditor.statsPresetId = normalizeUnitCounterStatsPresetId(runtimeState.unitCounterEditor.statsPresetId || "regular");
+  runtimeState.unitCounterEditor.statsSource = ["preset", "random", "manual"].includes(String(runtimeState.unitCounterEditor.statsSource || "").trim().toLowerCase())
+    ? String(runtimeState.unitCounterEditor.statsSource || "").trim().toLowerCase()
+    : "preset";
+  runtimeState.unitCounterEditor.size = normalizeUnitCounterSizeToken(runtimeState.unitCounterEditor.size);
+}
+
+function resetUnitCounterEditorState({ preserveSelection = false, preserveCounter = true } = {}) {
+  ensureUnitCounterEditorState();
+  const preservedSelection = preserveSelection ? String(runtimeState.unitCounterEditor.selectedId || "").trim() || null : null;
+  const preservedCounter = preserveCounter ? Math.max(1, Number(runtimeState.unitCounterEditor.counter) || 1) : 1;
+  runtimeState.unitCounterEditor.active = false;
+  runtimeState.unitCounterEditor.renderer = DEFAULT_UNIT_COUNTER_RENDERER;
+  runtimeState.unitCounterEditor.label = "";
+  runtimeState.unitCounterEditor.sidc = "";
+  runtimeState.unitCounterEditor.symbolCode = "";
+  runtimeState.unitCounterEditor.nationTag = "";
+  runtimeState.unitCounterEditor.nationSource = "display";
+  runtimeState.unitCounterEditor.presetId = DEFAULT_UNIT_COUNTER_PRESET_ID;
+  runtimeState.unitCounterEditor.iconId = "";
+  runtimeState.unitCounterEditor.unitType = "";
+  runtimeState.unitCounterEditor.echelon = "";
+  runtimeState.unitCounterEditor.subLabel = "";
+  runtimeState.unitCounterEditor.strengthText = "";
+  runtimeState.unitCounterEditor.layoutAnchor = { kind: "feature", key: "", slotIndex: null };
+  runtimeState.unitCounterEditor.attachment = null;
+  runtimeState.unitCounterEditor.baseFillColor = "";
+  runtimeState.unitCounterEditor.organizationPct = DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT;
+  runtimeState.unitCounterEditor.equipmentPct = DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT;
+  runtimeState.unitCounterEditor.statsPresetId = "regular";
+  runtimeState.unitCounterEditor.statsSource = "preset";
+  runtimeState.unitCounterEditor.size = "medium";
+  runtimeState.unitCounterEditor.selectedId = preservedSelection;
+  runtimeState.unitCounterEditor.returnSelectionId = null;
+  runtimeState.unitCounterEditor.counter = preservedCounter;
+  ensureUnitCounterEditorState();
+}
+
+function getProjectedPoint(coord) {
+  const projected = projection?.(coord);
+  if (!Array.isArray(projected) || projected.length < 2) return null;
+  const x = Number(projected[0]);
+  const y = Number(projected[1]);
+  return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+}
+
+function getLineMidpointFromCoordinates(coordinates = []) {
+  if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+  const totalSegments = [];
+  let totalLength = 0;
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const previous = coordinates[index - 1];
+    const current = coordinates[index];
+    if (!Array.isArray(previous) || !Array.isArray(current)) continue;
+    const dx = Number(current[0]) - Number(previous[0]);
+    const dy = Number(current[1]) - Number(previous[1]);
+    const segmentLength = Math.hypot(dx, dy);
+    if (!Number.isFinite(segmentLength) || segmentLength <= 0) continue;
+    totalSegments.push({ previous, current, segmentLength });
+    totalLength += segmentLength;
+  }
+  if (!totalLength || !totalSegments.length) return null;
+  let distance = totalLength / 2;
+  for (const segment of totalSegments) {
+    if (distance <= segment.segmentLength) {
+      const ratio = distance / segment.segmentLength;
+      return [
+        Number(segment.previous[0]) + (Number(segment.current[0]) - Number(segment.previous[0])) * ratio,
+        Number(segment.previous[1]) + (Number(segment.current[1]) - Number(segment.previous[1])) * ratio,
+      ];
+    }
+    distance -= segment.segmentLength;
+  }
+  const last = totalSegments[totalSegments.length - 1];
+  return [Number(last.current[0]), Number(last.current[1])];
+}
+
+function getMultiLineLabelAnchor(geometry, placementMode = "midpoint") {
+  const lines = Array.isArray(geometry?.coordinates) ? geometry.coordinates : [];
+  let bestLine = null;
+  let bestLength = -1;
+  lines.forEach((line) => {
+    if (!Array.isArray(line) || line.length < 2) return;
+    let length = 0;
+    for (let index = 1; index < line.length; index += 1) {
+      const previous = line[index - 1];
+      const current = line[index];
+      length += Math.hypot(
+        Number(current?.[0] || 0) - Number(previous?.[0] || 0),
+        Number(current?.[1] || 0) - Number(previous?.[1] || 0)
+      );
+    }
+    if (length > bestLength) {
+      bestLength = length;
+      bestLine = line;
+    }
+  });
+  if (!bestLine) return null;
+  if (placementMode === "centroid") {
+    const sums = bestLine.reduce((acc, coord) => {
+      acc[0] += Number(coord?.[0] || 0);
+      acc[1] += Number(coord?.[1] || 0);
+      acc[2] += 1;
+      return acc;
+    }, [0, 0, 0]);
+    return sums[2] > 0 ? [sums[0] / sums[2], sums[1] / sums[2]] : null;
+  }
+  return getLineMidpointFromCoordinates(bestLine);
+}
+
+function getFrontlineLabelAnchors() {
+  if (
+    !runtimeState.activeScenarioId
+    || !runtimeState.annotationView?.frontlineEnabled
+    || !runtimeState.annotationView?.showFrontlineLabels
+    || !globalThis.topojson
+  ) {
+    runtimeState.cachedFrontlineLabelAnchors = [];
+    runtimeState.cachedFrontlineLabelAnchorsHash = "";
+    return [];
+  }
+  const nextHash = [
+    `scenario:${String(runtimeState.activeScenarioId || "")}`,
+    `ctrl:${Number(runtimeState.scenarioControllerRevision || 0)}`,
+    `shell:${Number(runtimeState.scenarioShellOverlayRevision || 0)}`,
+    `sov:${Number(runtimeState.sovereigntyRevision || 0)}`,
+    `placement:${String(runtimeState.annotationView?.labelPlacementMode || "midpoint")}`,
+    `lang:${String(runtimeState.currentLanguage || "")}`,
+  ].join("|");
+  if (
+    Array.isArray(runtimeState.cachedFrontlineLabelAnchors)
+    && runtimeState.cachedFrontlineLabelAnchorsHash === nextHash
+  ) {
+    return runtimeState.cachedFrontlineLabelAnchors;
+  }
+  const topology = runtimeState.runtimePoliticalTopology;
+  const object = topology?.objects?.political;
+  const geometries = Array.isArray(object?.geometries) ? object.geometries : [];
+  const neighbors = Array.isArray(runtimeState.runtimeNeighborGraph) ? runtimeState.runtimeNeighborGraph : [];
+  const ownershipContext = getBorderMeshOwner().getFrontlineOwnershipContext();
+  const anchors = [];
+  const seenPairs = new Set();
+
+  geometries.forEach((geometry, index) => {
+    const featureId = getEntityFeatureId(geometry);
+    if (!featureId || shouldExcludeOwnerBorderEntity(geometry, { excludeSea: true })) return;
+    const ownerA = resolveOwnerBorderCode(geometry, ownershipContext);
+    if (!ownerA) return;
+    const neighborIndexes = Array.isArray(neighbors[index]) ? neighbors[index] : [];
+    neighborIndexes.forEach((neighborIndex) => {
+      if (neighborIndex <= index) return;
+      const neighbor = geometries[neighborIndex];
+      if (!neighbor || shouldExcludeOwnerBorderEntity(neighbor, { excludeSea: true })) return;
+      const ownerB = resolveOwnerBorderCode(neighbor, ownershipContext);
+      if (!ownerB || ownerA === ownerB) return;
+      const pairKey = [ownerA, ownerB].sort().join("::");
+      if (seenPairs.has(pairKey)) return;
+      const pairMesh = globalThis.topojson.mesh(topology, object, (a, b) => (
+        (a === geometry && b === neighbor) || (a === neighbor && b === geometry)
+      ));
+      const anchor = getMultiLineLabelAnchor(pairMesh, runtimeState.annotationView?.labelPlacementMode || "midpoint");
+      if (!anchor) return;
+      const projected = getProjectedPoint(anchor);
+      if (!projected) return;
+      seenPairs.add(pairKey);
+      anchors.push({
+        key: pairKey,
+        coord: anchor,
+        projected,
+        label: `${getScenarioCountryDisplayName(ownerA) || ownerA} / ${getScenarioCountryDisplayName(ownerB) || ownerB}`,
+      });
+    });
+  });
+
+  runtimeState.cachedFrontlineLabelAnchorsHash = nextHash;
+  runtimeState.cachedFrontlineLabelAnchors = anchors;
+  return anchors;
+}
+
+function renderStrategicDefs() {
+  if (!strategicDefs) return;
+  const defs = [
+    {
+      id: "strategic-arrow-attack",
+      path: "M 0 5 L 8 1.8 L 7 5 L 8 8.2 z",
+      fill: "#7f1d1d",
+      stroke: "#f5d7d3",
+      strokeWidth: 0.45,
+    },
+    {
+      id: "strategic-arrow-retreat",
+      path: "M 1 5 L 8 2 L 6.6 5 L 8 8 z",
+      fill: "#9a3412",
+      stroke: "#f3dec6",
+      strokeWidth: 0.45,
+    },
+    {
+      id: "strategic-arrow-supply",
+      path: "M 0 5 L 6 2.5 L 6 4.2 L 8 4.2 L 8 5.8 L 6 5.8 L 6 7.5 z",
+      fill: "#475569",
+      stroke: "#dbe2eb",
+      strokeWidth: 0.5,
+    },
+    {
+      id: "strategic-arrow-naval",
+      path: "M 0 5 L 7 1.6 L 6 5 L 7 8.4 z",
+      fill: "#1e3a8a",
+      stroke: "#d8e6ff",
+      strokeWidth: 0.45,
+    },
+  ];
+
+  const selection = strategicDefs.selectAll("marker.strategic-marker").data(defs, (d) => d.id);
+  const enter = selection
+    .enter()
+    .append("marker")
+    .attr("class", "strategic-marker")
+    .attr("markerUnits", "strokeWidth")
+    .attr("orient", "auto-start-reverse")
+    .attr("refX", 10)
+    .attr("refY", 5)
+    .attr("markerWidth", 11)
+    .attr("markerHeight", 10)
+    .attr("viewBox", "0 0 11 10");
+
+  enter.append("path");
+  enter.merge(selection)
+    .attr("id", (d) => d.id)
+    .select("path")
+    .attr("d", (d) => d.path)
+    .attr("fill", (d) => d.fill)
+    .attr("stroke", (d) => d.stroke)
+    .attr("stroke-width", (d) => d.strokeWidth);
+
+  selection.exit().remove();
+}
+
+function getOperationGraphicPreset(kind) {
+  const presets = {
+    attack: {
+      stroke: "#7f1d1d",
+      width: 2.2,
+      opacity: 0.9,
+      dasharray: null,
+      markerEnd: "url(#strategic-arrow-attack)",
+      curved: true,
+      closed: false,
+    },
+    retreat: {
+      stroke: "#9a3412",
+      width: 1.8,
+      opacity: 0.82,
+      dasharray: "7 5",
+      markerEnd: "url(#strategic-arrow-retreat)",
+      curved: true,
+      closed: false,
+    },
+    supply: {
+      stroke: "#475569",
+      width: 1.4,
+      opacity: 0.8,
+      dasharray: "4 4",
+      markerEnd: "url(#strategic-arrow-supply)",
+      curved: true,
+      closed: false,
+    },
+    naval: {
+      stroke: "#1e3a8a",
+      width: 1.8,
+      opacity: 0.82,
+      dasharray: "8 5",
+      markerEnd: "url(#strategic-arrow-naval)",
+      curved: true,
+      closed: false,
+    },
+    encirclement: {
+      stroke: "#4c1d95",
+      width: 1.7,
+      opacity: 0.76,
+      dasharray: "6 4",
+      markerEnd: null,
+      curved: true,
+      closed: true,
+    },
+    theater: {
+      stroke: "#7c2d12",
+      width: 1.9,
+      opacity: 0.74,
+      dasharray: "10 5",
+      markerEnd: null,
+      curved: true,
+      closed: true,
+    },
+  };
+  return presets[kind] || presets.attack;
+}
+
+function getOperationalLinePreset(kind) {
+  const presets = {
+    frontline: {
+      stroke: "#6b7280",
+      width: 2.1,
+      opacity: 0.82,
+      dasharray: "10 5",
+      markerEnd: null,
+      curved: true,
+      closed: false,
+    },
+    offensive_line: {
+      stroke: "#7f1d1d",
+      width: 2.5,
+      opacity: 0.94,
+      dasharray: null,
+      markerEnd: "url(#strategic-arrow-attack)",
+      curved: true,
+      closed: false,
+    },
+    spearhead_line: {
+      stroke: "#991b1b",
+      width: 2.9,
+      opacity: 0.98,
+      dasharray: "14 5 2 5",
+      markerEnd: "url(#strategic-arrow-attack)",
+      curved: true,
+      closed: false,
+    },
+    defensive_line: {
+      stroke: "#92400e",
+      width: 1.9,
+      opacity: 0.82,
+      dasharray: "5 4",
+      markerEnd: null,
+      curved: true,
+      closed: false,
+    },
+  };
+  return presets[kind] || presets.frontline;
+}
+
+function projectStrategicPoints(points = []) {
+  return points.map((point) => getProjectedPoint(point)).filter(Boolean);
+}
+
+function createOperationGraphicPath(points = [], { closed = false, curved = true } = {}) {
+  const projected = projectStrategicPoints(points);
+  if (projected.length < (closed ? 3 : 2) || !globalThis.d3?.line) return "";
+  const curve = closed
+    ? (curved ? globalThis.d3.curveCatmullRomClosed.alpha(0.5) : globalThis.d3.curveLinearClosed)
+    : (curved ? globalThis.d3.curveCatmullRom.alpha(0.5) : globalThis.d3.curveLinear);
+  return globalThis.d3.line().curve(curve)(projected) || "";
+}
+
+function getOperationGraphicMinPoints(kind = DEFAULT_OPERATION_GRAPHIC_KIND) {
+  return kind === "encirclement" || kind === "theater" ? 3 : 2;
+}
+
+function getOperationalLineMinPoints() {
+  return 2;
+}
+
+function getOperationGraphicById(id) {
+  const selectedId = String(id || "").trim();
+  if (!selectedId) return null;
+  return (runtimeState.operationGraphics || []).find((entry) => String(entry?.id || "") === selectedId) || null;
+}
+
+function getOperationalLineById(id) {
+  const selectedId = String(id || "").trim();
+  if (!selectedId) return null;
+  return (runtimeState.operationalLines || []).find((entry) => String(entry?.id || "") === selectedId) || null;
+}
+
+function normalizeOperationGraphicStylePreset(value, fallback = DEFAULT_OPERATION_GRAPHIC_KIND) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (OPERATION_GRAPHIC_STYLE_PRESETS.includes(normalized)) {
+    return normalized;
+  }
+  return OPERATION_GRAPHIC_STYLE_PRESETS.includes(String(fallback || "").trim().toLowerCase())
+    ? String(fallback || "").trim().toLowerCase()
+    : DEFAULT_OPERATION_GRAPHIC_KIND;
+}
+
+function normalizeOperationalLineStylePreset(value, fallback = DEFAULT_OPERATIONAL_LINE_KIND) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (OPERATIONAL_LINE_STYLE_PRESETS.includes(normalized)) {
+    return normalized;
+  }
+  return OPERATIONAL_LINE_STYLE_PRESETS.includes(String(fallback || "").trim().toLowerCase())
+    ? String(fallback || "").trim().toLowerCase()
+    : DEFAULT_OPERATIONAL_LINE_KIND;
+}
+
+function normalizeOperationGraphicStroke(value) {
+  const candidate = String(value || "").trim();
+  return /^#(?:[0-9a-f]{6})$/i.test(candidate) ? candidate.toLowerCase() : "";
+}
+
+function normalizeOperationGraphicWidth(value) {
+  return Math.max(0, Math.min(16, Number(value) || 0));
+}
+
+function normalizeOperationGraphicOpacity(value) {
+  return Math.max(0, Math.min(1, Number(value) || 1));
+}
+
+function getOperationGraphicEditorModel() {
+  ensureOperationGraphicsEditorState();
+  const isDrawing = !!runtimeState.operationGraphicsEditor.active;
+  if (isDrawing) {
+    const kind = String(runtimeState.operationGraphicsEditor.kind || DEFAULT_OPERATION_GRAPHIC_KIND);
+    return {
+      mode: "draw",
+      graphic: null,
+      points: Array.isArray(runtimeState.operationGraphicsEditor.points) ? runtimeState.operationGraphicsEditor.points : [],
+      kind,
+      stylePreset: normalizeOperationGraphicStylePreset(runtimeState.operationGraphicsEditor.stylePreset, kind),
+      stroke: normalizeOperationGraphicStroke(runtimeState.operationGraphicsEditor.stroke),
+      width: normalizeOperationGraphicWidth(runtimeState.operationGraphicsEditor.width),
+      opacity: normalizeOperationGraphicOpacity(runtimeState.operationGraphicsEditor.opacity),
+      selectedVertexIndex: -1,
+    };
+  }
+  const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
+  if (!graphic) {
+    return null;
+  }
+  const kind = String(graphic.kind || DEFAULT_OPERATION_GRAPHIC_KIND);
+  return {
+    mode: "edit",
+    graphic,
+    points: Array.isArray(graphic.points) ? graphic.points : [],
+    kind,
+    stylePreset: normalizeOperationGraphicStylePreset(graphic.stylePreset, kind),
+    stroke: normalizeOperationGraphicStroke(graphic.stroke),
+    width: normalizeOperationGraphicWidth(graphic.width),
+    opacity: normalizeOperationGraphicOpacity(graphic.opacity),
+    selectedVertexIndex: Math.max(-1, Number(runtimeState.operationGraphicsEditor.selectedVertexIndex) || -1),
+  };
+}
+
+function getOperationGraphicEditorMidpoints(points = [], { closed = false } = {}) {
+  const segments = [];
+  const maxIndex = closed ? points.length : points.length - 1;
+  for (let index = 0; index < maxIndex; index += 1) {
+    const start = points[index];
+    const end = points[(index + 1) % points.length];
+    if (!Array.isArray(start) || !Array.isArray(end)) continue;
+    const midpoint = [
+      (Number(start[0]) + Number(end[0])) / 2,
+      (Number(start[1]) + Number(end[1])) / 2,
+    ];
+    segments.push({
+      id: `opg-midpoint-${index}`,
+      insertIndex: index + 1,
+      coord: midpoint,
+    });
+  }
+  return segments;
+}
+
+function getUnitCounterSymbolToken(counter = {}) {
+  return String(counter.sidc || counter.symbolCode || getUnitCounterPresetById(counter.presetId).baseSidc || "").trim();
+}
+
+function getUnitCounterEffectiveSidc(counter = {}) {
+  const raw = getUnitCounterSymbolToken(counter);
+  if (/^\d{30}$/.test(raw)) {
+    return raw;
+  }
+  return UNIT_COUNTER_SIDC_ALIASES[String(raw || "").trim().toUpperCase()] || DEFAULT_MILSTD_SIDC;
+}
+
+function getMilSymbolDataUri(sidc, size = 42) {
+  const normalizedSidc = String(sidc || "").trim();
+  const normalizedSize = Math.max(24, Math.min(96, Number(size) || 42));
+  const cacheKey = `${normalizedSidc}|${normalizedSize}`;
+  if (milsymbolSvgUriCache.has(cacheKey)) {
+    return milsymbolSvgUriCache.get(cacheKey);
+  }
+  if (!normalizedSidc || !globalThis.ms?.Symbol) {
+    return "";
+  }
+  try {
+    const symbol = new globalThis.ms.Symbol(normalizedSidc, {
+      size: normalizedSize,
+      frame: true,
+      colorMode: "Light",
+    });
+    const uri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(symbol.asSVG())}`;
+    milsymbolSvgUriCache.set(cacheKey, uri);
+    return uri;
+  } catch (_error) {
+    milsymbolSvgUriCache.set(cacheKey, "");
+    return "";
+  }
+}
+
+function getLandFeatureIdFromEvent(event, eventType = "unit-counter-hit") {
+  const hit = getHitFromEvent(event, {
+    enableSnap: true,
+    snapPx: HIT_SNAP_RADIUS_CLICK_PX,
+    eventType,
+  });
+  return hit?.targetType === "land" ? String(hit.id || "") : "";
+}
+
+function renderFrontlineOverlay() {
+  if (!frontlineOverlayGroup || !frontlineLabelsGroup || !pathSVG) return;
+  if (!runtimeState.annotationView?.frontlineEnabled) {
+    runtimeState.cachedFrontlineMesh = null;
+    runtimeState.cachedFrontlineMeshHash = "";
+    runtimeState.cachedFrontlineLabelAnchors = [];
+    runtimeState.cachedFrontlineLabelAnchorsHash = "";
+    frontlineOverlayGroup.selectAll("*").remove();
+    frontlineLabelsGroup.selectAll("*").remove();
+    frontlineOverlayGroup.attr("aria-hidden", "true");
+    frontlineLabelsGroup.attr("aria-hidden", "true");
+    return;
+  }
+  const mesh = getBorderMeshOwner().getFrontlineMesh();
+  const hasMesh = !!mesh && Array.isArray(mesh.coordinates) && mesh.coordinates.length > 0;
+  if (!hasMesh) {
+    frontlineOverlayGroup.selectAll("*").remove();
+    frontlineLabelsGroup.selectAll("*").remove();
+    frontlineOverlayGroup.attr("aria-hidden", "true");
+    frontlineLabelsGroup.attr("aria-hidden", "true");
+    return;
+  }
+
+  const style = String(runtimeState.annotationView?.frontlineStyle || "clean");
+  const zoomK = Math.max(0.1, Number(runtimeState.zoomTransform?.k || 1));
+  const widthScale = zoomK >= 5 ? 1.18 : zoomK >= 2.4 ? 1.04 : zoomK >= 1.2 ? 0.92 : 0.82;
+  const pathValue = pathSVG(mesh);
+  const layers = style === "dual-rail"
+    ? [
+      { key: "base", stroke: "rgba(17, 24, 39, 0.78)", width: 4.2 * widthScale, dasharray: null },
+      { key: "inner-a", stroke: "rgba(127, 29, 29, 0.46)", width: 1.5 * widthScale, dasharray: null },
+      { key: "inner-b", stroke: "rgba(30, 58, 138, 0.42)", width: 0.8 * widthScale, dasharray: "10 7" },
+    ]
+      : style === "teeth"
+      ? [
+        { key: "base", stroke: "rgba(24, 32, 45, 0.82)", width: 4.1 * widthScale, dasharray: null },
+        { key: "teeth", stroke: "rgba(231, 229, 221, 0.84)", width: 1.3 * widthScale, dasharray: "1.5 5.8" },
+      ]
+      : [
+        { key: "base", stroke: "rgba(20, 29, 43, 0.78)", width: 4.3 * widthScale, dasharray: null },
+        { key: "inner", stroke: "rgba(236, 232, 223, 0.9)", width: 1.7 * widthScale, dasharray: null },
+      ];
+
+  const selection = frontlineOverlayGroup
+    .selectAll("path.frontline-path")
+    .data(layers, (d) => d.key);
+
+  selection
+    .enter()
+    .append("path")
+    .attr("class", "frontline-path")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(selection)
+    .attr("d", pathValue)
+    .attr("fill", "none")
+    .attr("stroke", (d) => d.stroke)
+    .attr("stroke-width", (d) => d.width)
+    .attr("stroke-linecap", "round")
+    .attr("stroke-linejoin", "round")
+    .attr("stroke-dasharray", (d) => d.dasharray || null);
+
+  selection.exit().remove();
+  frontlineOverlayGroup.attr("aria-hidden", "false");
+
+  const labels = runtimeState.annotationView?.showFrontlineLabels ? getFrontlineLabelAnchors() : [];
+  const labelSelection = frontlineLabelsGroup
+    .selectAll("g.frontline-label")
+    .data(labels, (d) => d.key);
+
+  const labelEnter = labelSelection.enter().append("g").attr("class", "frontline-label");
+  labelEnter.append("rect").attr("rx", 4).attr("ry", 4);
+  labelEnter.append("text");
+
+  labelEnter.merge(labelSelection)
+    .attr("transform", (d) => `translate(${d.projected[0]},${d.projected[1]})`);
+
+  labelEnter.merge(labelSelection).select("text")
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "central")
+    .attr("font-family", STRATEGIC_LINE_LABEL_FONT)
+    .attr("font-size", 10)
+    .attr("font-weight", 600)
+    .attr("fill", "#f8fafc")
+    .text((d) => d.label);
+
+  labelEnter.merge(labelSelection).select("rect")
+    .each(function eachLabelRect(d) {
+      const textNode = globalThis.d3.select(this.parentNode).select("text").node();
+      const bbox = textNode?.getBBox?.();
+      const width = bbox ? bbox.width + 10 : 64;
+      const height = bbox ? bbox.height + 6 : 18;
+      globalThis.d3.select(this)
+        .attr("x", -width / 2)
+        .attr("y", -height / 2)
+        .attr("width", width)
+        .attr("height", height)
+        .attr("fill", "rgba(15, 23, 42, 0.78)")
+        .attr("stroke", "rgba(248, 250, 252, 0.18)")
+        .attr("stroke-width", 0.8);
+    });
+
+  labelSelection.exit().remove();
+  frontlineLabelsGroup.attr("aria-hidden", labels.length ? "false" : "true");
+}
+
+function syncInteractionLayerPointerEvents() {
+  if (!interactionRect) return;
+  const operationGraphicEditor = runtimeState.operationGraphicsEditor || {};
+  const hasEditableOperationGraphic = !operationGraphicEditor.active
+    && String(operationGraphicEditor.mode || "") === "edit"
+    && !!String(operationGraphicEditor.selectedId || "").trim()
+    && Array.isArray(operationGraphicEditor.points)
+    && operationGraphicEditor.points.length > 0;
+  interactionRect
+    .style("pointer-events", hasEditableOperationGraphic ? "none" : "all")
+    .lower();
+}
+
+function renderOperationGraphicsEditorOverlay() {
+  if (!operationGraphicsEditorGroup) return;
+  ensureOperationGraphicsEditorState();
+  const editorModel = getOperationGraphicEditorModel();
+  const points = Array.isArray(editorModel?.points) ? editorModel.points : [];
+  const isDrawing = editorModel?.mode === "draw";
+  if (!editorModel || points.length === 0) {
+    operationGraphicsEditorGroup.selectAll("*").remove();
+    operationGraphicsEditorGroup.attr("aria-hidden", "true");
+    syncInteractionLayerPointerEvents();
+    return;
+  }
+  const geometryPreset = getOperationGraphicPreset(editorModel.kind);
+  const stylePreset = getOperationGraphicPreset(editorModel.stylePreset);
+  const previewPath = createOperationGraphicPath(points, {
+    closed: !!geometryPreset.closed && points.length >= 3,
+    curved: true,
+  });
+  const previewData = previewPath ? [{ id: "preview", d: previewPath, closed: !!geometryPreset.closed && points.length >= 3 }] : [];
+  const pathSelection = operationGraphicsEditorGroup
+    .selectAll("path.operation-graphics-editor-path")
+    .data(previewData, (d) => d.id);
+
+  pathSelection
+    .enter()
+    .append("path")
+    .attr("class", "operation-graphics-editor-path")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("pointer-events", "none")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(pathSelection)
+    .attr("d", (d) => d.d)
+    .attr("fill", (d) => (d.closed ? "rgba(59, 130, 246, 0.08)" : "none"))
+    .attr("stroke", editorModel.stroke || stylePreset.stroke)
+    .attr("stroke-width", Math.max(1.5, editorModel.width || stylePreset.width))
+    .attr("stroke-linecap", "round")
+    .attr("stroke-linejoin", "round")
+    .attr("stroke-dasharray", stylePreset.dasharray || "8 4")
+    .attr("opacity", Number.isFinite(Number(editorModel.opacity)) ? editorModel.opacity : stylePreset.opacity);
+
+  pathSelection.exit().remove();
+
+  const pointSelection = operationGraphicsEditorGroup
+    .selectAll("circle.operation-graphics-editor-point")
+    .data(points.map((coord, index) => ({ coord, index, id: `opg-point-${index}` })), (d) => d.id);
+
+  const pointEnter = pointSelection
+    .enter()
+    .append("circle")
+    .attr("class", "operation-graphics-editor-point")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true");
+
+  pointEnter.merge(pointSelection)
+    .attr("r", 4.2)
+    .attr("cx", (d) => getProjectedPoint(d.coord)?.[0] ?? -9999)
+    .attr("cy", (d) => getProjectedPoint(d.coord)?.[1] ?? -9999)
+    .attr("fill", (_d, index) => (index === editorModel.selectedVertexIndex ? "#0f172a" : "#ffffff"))
+    .attr("stroke", editorModel.stroke || stylePreset.stroke)
+    .attr("stroke-width", (_d, index) => (index === editorModel.selectedVertexIndex ? 2 : 1.3))
+    .attr("pointer-events", "all")
+    .style("cursor", isDrawing ? "default" : "grab");
+
+  pointSelection.exit().remove();
+
+  if (!isDrawing && globalThis.d3?.drag) {
+    if (!renderOperationGraphicsEditorOverlay.pointDragBehavior) {
+      renderOperationGraphicsEditorOverlay.pointDragBehavior = globalThis.d3.drag()
+        .on("start", function onStart(event, datum) {
+          event?.sourceEvent?.stopPropagation?.();
+          datum.__historyBefore = captureHistoryState({ strategicOverlay: true });
+          runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.index;
+          runtimeState.operationGraphicsDirty = true;
+          globalThis.d3.select(this).style("cursor", "grabbing");
+          renderOperationGraphicsIfNeeded({ force: true });
+          updateStrategicOverlayUi();
+        })
+        .on("drag", function onDrag(event, datum) {
+          const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
+          const coord = getMapLonLatFromEvent(event?.sourceEvent || event);
+          if (!graphic || !coord || !Array.isArray(graphic.points?.[datum.index])) return;
+          graphic.points[datum.index] = coord;
+          runtimeState.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
+          runtimeState.operationGraphicsDirty = true;
+          renderOperationGraphicsIfNeeded({ force: true });
+        })
+        .on("end", function onEnd(_event, datum) {
+          globalThis.d3.select(this).style("cursor", "grab");
+          pushHistoryEntry({
+            kind: "move-operation-graphic-vertex",
+            before: datum.__historyBefore,
+            after: captureHistoryState({ strategicOverlay: true }),
+          });
+          datum.__historyBefore = null;
+          markDirty("move-operation-graphic-vertex");
+          runtimeState.operationGraphicsDirty = true;
+          updateStrategicOverlayUi();
+          renderOperationGraphicsIfNeeded({ force: true });
+        });
+    }
+    pointEnter.merge(pointSelection)
+      .on("click", (event, datum) => {
+        event.stopPropagation();
+        runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.index;
+        runtimeState.operationGraphicsEditor.points = points;
+        runtimeState.operationGraphicsDirty = true;
+        updateStrategicOverlayUi();
+        renderOperationGraphicsIfNeeded({ force: true });
+      })
+      .call(renderOperationGraphicsEditorOverlay.pointDragBehavior);
+  }
+
+  const midpointData = !isDrawing
+    ? getOperationGraphicEditorMidpoints(points, { closed: !!geometryPreset.closed && points.length >= 3 })
+    : [];
+  const midpointSelection = operationGraphicsEditorGroup
+    .selectAll("circle.operation-graphics-editor-midpoint")
+    .data(midpointData, (d) => d.id);
+
+  midpointSelection
+    .enter()
+    .append("circle")
+    .attr("class", "operation-graphics-editor-midpoint")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .merge(midpointSelection)
+    .attr("r", 10)
+    .attr("cx", (d) => getProjectedPoint(d.coord)?.[0] ?? -9999)
+    .attr("cy", (d) => getProjectedPoint(d.coord)?.[1] ?? -9999)
+    .attr("fill", editorModel.stroke || stylePreset.stroke)
+    .attr("opacity", 0.001)
+    .attr("stroke", "none")
+    .attr("stroke-width", 0)
+    .attr("pointer-events", "all")
+    .style("cursor", "copy")
+    .on("pointerdown", function onPointerDown(event, datum) {
+      this.dataset.skipMidpointClick = "true";
+      event.stopPropagation();
+      event.preventDefault?.();
+      const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
+      if (!graphic) return;
+      const before = captureHistoryState({ strategicOverlay: true });
+      graphic.points.splice(datum.insertIndex, 0, datum.coord);
+      runtimeState.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
+      runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.insertIndex;
+      runtimeState.operationGraphicsDirty = true;
+      pushHistoryEntry({
+        kind: "insert-operation-graphic-vertex",
+        before,
+        after: captureHistoryState({ strategicOverlay: true }),
+      });
+      markDirty("insert-operation-graphic-vertex");
+      updateStrategicOverlayUi();
+      renderOperationGraphicsIfNeeded({ force: true });
+    })
+    .on("click", function onClick(event, datum) {
+      if (this.dataset.skipMidpointClick === "true") {
+        this.dataset.skipMidpointClick = "false";
+        return;
+      }
+      event.stopPropagation();
+      const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
+      if (!graphic) return;
+      const before = captureHistoryState({ strategicOverlay: true });
+      graphic.points.splice(datum.insertIndex, 0, datum.coord);
+      runtimeState.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
+      runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.insertIndex;
+      runtimeState.operationGraphicsDirty = true;
+      pushHistoryEntry({
+        kind: "insert-operation-graphic-vertex",
+        before,
+        after: captureHistoryState({ strategicOverlay: true }),
+      });
+      markDirty("insert-operation-graphic-vertex");
+      updateStrategicOverlayUi();
+      renderOperationGraphicsIfNeeded({ force: true });
+    });
+
+  const midpointVisualSelection = operationGraphicsEditorGroup
+    .selectAll("circle.operation-graphics-editor-midpoint-visual")
+    .data(midpointData, (d) => d.id);
+
+  midpointVisualSelection
+    .enter()
+    .append("circle")
+    .attr("class", "operation-graphics-editor-midpoint-visual")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .merge(midpointVisualSelection)
+    .attr("r", 4.6)
+    .attr("cx", (d) => getProjectedPoint(d.coord)?.[0] ?? -9999)
+    .attr("cy", (d) => getProjectedPoint(d.coord)?.[1] ?? -9999)
+    .attr("fill", editorModel.stroke || stylePreset.stroke)
+    .attr("opacity", 0.72)
+    .attr("stroke", "#ffffff")
+    .attr("stroke-width", 1)
+    .attr("pointer-events", "none");
+
+  operationGraphicsEditorGroup.selectAll("circle.operation-graphics-editor-point").raise();
+
+  midpointSelection.exit().remove();
+  midpointVisualSelection.exit().remove();
+  operationGraphicsEditorGroup.attr("aria-hidden", "false");
+  syncInteractionLayerPointerEvents();
+}
+
+function getOperationGraphicLabelAnchor(projectedPoints = [], { closed = false } = {}) {
+  if (!Array.isArray(projectedPoints) || projectedPoints.length === 0) {
+    return null;
+  }
+  if (closed) {
+    const [sumX, sumY] = projectedPoints.reduce(
+      (acc, point) => [acc[0] + Number(point?.[0] || 0), acc[1] + Number(point?.[1] || 0)],
+      [0, 0]
+    );
+    return [sumX / projectedPoints.length, sumY / projectedPoints.length];
+  }
+  if (projectedPoints.length === 1) {
+    return projectedPoints[0];
+  }
+  const midIndex = Math.floor((projectedPoints.length - 1) / 2);
+  const start = projectedPoints[midIndex];
+  const end = projectedPoints[Math.min(projectedPoints.length - 1, midIndex + 1)];
+  const anchorX = (Number(start?.[0] || 0) + Number(end?.[0] || 0)) / 2;
+  const anchorY = (Number(start?.[1] || 0) + Number(end?.[1] || 0)) / 2;
+  const dx = Number(end?.[0] || 0) - Number(start?.[0] || 0);
+  const dy = Number(end?.[1] || 0) - Number(start?.[1] || 0);
+  const length = Math.max(1, Math.hypot(dx, dy));
+  return [anchorX - (dy / length) * 9, anchorY + (dx / length) * 9];
+}
+
+const renderOperationalLinesOverlay = (...args) =>
+  getStrategicOverlayHelpersOwner().renderOperationalLinesOverlay(...args);
+
+const renderOperationGraphicsOverlay = (...args) =>
+  getStrategicOverlayHelpersOwner().renderOperationGraphicsOverlay(...args);
+
+function getUnitCounterNationMeta(tag) {
+  const normalizedTag = canonicalCountryCode(tag);
+  if (!normalizedTag) {
+    return {
+      tag: "",
+      name: "",
+      color: "#7c8ba1",
+    };
+  }
+  const scenarioEntry = runtimeState.scenarioCountriesByTag?.[normalizedTag];
+  const name = getScenarioCountryDisplayName(
+    scenarioEntry,
+    runtimeState.countryNames?.[normalizedTag] || normalizedTag
+  ) || runtimeState.countryNames?.[normalizedTag] || normalizedTag;
+  const color = String(
+    scenarioEntry?.color_hex
+    || scenarioEntry?.colorHex
+    || runtimeState.countryPalette?.[normalizedTag]
+    || ColorManager.getPoliticalFallbackColor(normalizedTag, 0)
+    || "#7c8ba1"
+  ).trim() || "#7c8ba1";
+  return {
+    tag: normalizedTag,
+    name,
+    color,
+  };
+}
+
+function normalizeUnitCounterNationSource(value, fallback = "display") {
+  const source = String(value || "").trim().toLowerCase();
+  return ["display", "controller", "owner", "active", "manual"].includes(source) ? source : fallback;
+}
+
+function getUnitCounterScreenMetrics(size = "medium") {
+  const token = normalizeUnitCounterSizeToken(size);
+  return UNIT_COUNTER_SCREEN_SIZE[token] || UNIT_COUNTER_SCREEN_SIZE.medium;
+}
+
+function getUnitCounterCardModel(counter = {}, { stackCount = 1 } = {}) {
+  const preset = getUnitCounterPresetById(counter.presetId || counter.unitType || DEFAULT_UNIT_COUNTER_PRESET_ID);
+  const sizeToken = normalizeUnitCounterSizeToken(counter.size);
+  const metrics = getUnitCounterScreenMetrics(sizeToken);
+  const nation = getUnitCounterNationMeta(counter.nationTag);
+  const renderer = String(counter.renderer || preset.defaultRenderer || DEFAULT_UNIT_COUNTER_RENDERER).trim().toLowerCase() === "milstd" ? "milstd" : "game";
+  const sidc = getUnitCounterEffectiveSidc({
+    ...counter,
+    presetId: preset.id,
+  });
+  const combatState = getNormalizedUnitCounterCombatState(counter);
+  return {
+    counter,
+    preset,
+    renderer,
+    metrics,
+    nation,
+    nationTag: nation.tag || "N/A",
+    nationName: nation.name || t("Unassigned", "ui"),
+    label: String(counter.label || "").trim(),
+    subLabel: String(counter.subLabel || "").trim(),
+    strengthText: String(counter.strengthText || "").trim(),
+    baseFillColor: combatState.baseFillColor || DEFAULT_UNIT_COUNTER_BASE_FILL,
+    baseFillColorOverride: combatState.baseFillColor,
+    organizationPct: combatState.organizationPct,
+    equipmentPct: combatState.equipmentPct,
+    statsPresetId: combatState.statsPresetId,
+    statsSource: combatState.statsSource,
+    echelon: String(counter.echelon || preset.defaultEchelon || "").trim().toLowerCase(),
+    echelonLabel: getUnitCounterEchelonLabel(counter.echelon || preset.defaultEchelon || ""),
+    shortCode: String(counter.unitType || preset.shortCode || "").trim().toUpperCase() || preset.shortCode,
+    iconId: String(counter.iconId || preset.iconId || "infantry").trim().toLowerCase() || "infantry",
+    shellVariant: preset.shellVariant || "line",
+    sidc,
+    stackCount: Math.max(1, Number(stackCount) || 1),
+    symbolUri: renderer === "milstd"
+      ? getMilSymbolDataUri(sidc, UNIT_COUNTER_MILSTD_SIZE_BY_TOKEN[sizeToken] || UNIT_COUNTER_MILSTD_SIZE_BY_TOKEN.medium)
+      : "",
+    sizeToken,
+  };
+}
+
+function getUnitCounterIconPath(iconId = "") {
+  return getUnitCounterIconPathById(iconId);
+}
+
+function getOperationalLineAnchorCoord(lineId = "") {
+  const line = getOperationalLineById(lineId);
+  if (!line || !Array.isArray(line.points) || line.points.length < 2) return null;
+  return getLineMidpointFromCoordinates(line.points);
+}
+
+function getUnitCounterRenderAnchor(counter = {}) {
+  const attachedLineId = String(counter?.attachment?.lineId || "").trim();
+  if (attachedLineId) {
+    const lineCoord = getOperationalLineAnchorCoord(attachedLineId);
+    if (lineCoord) {
+      return {
+        coord: lineCoord,
+        key: `line:${attachedLineId}`,
+      };
+    }
+  }
+  const lon = Number(counter?.anchor?.lon || 0);
+  const lat = Number(counter?.anchor?.lat || 0);
+  return {
+    coord: [lon, lat],
+    key: String(counter?.anchor?.featureId || "").trim() || `${Math.round(lon * 3)}:${Math.round(lat * 3)}`,
+  };
+}
+
+function getUnitCounterSlotOffset(slotIndex = 0, stackCount = 1, metrics = UNIT_COUNTER_SCREEN_SIZE.medium) {
+  const count = Math.max(1, Number(stackCount) || 1);
+  const index = Math.max(0, Number(slotIndex) || 0);
+  const columns = count <= 2 ? count : count <= 4 ? 2 : 3;
+  const rows = Math.max(1, Math.ceil(count / Math.max(1, columns)));
+  const row = Math.floor(index / Math.max(1, columns));
+  const col = index % Math.max(1, columns);
+  const itemsInRow = row === rows - 1 ? Math.min(columns, count - row * columns) : columns;
+  const x = (col - (itemsInRow - 1) / 2) * Math.max(metrics.width * 0.76, 18);
+  const y = (row - (rows - 1) / 2) * Math.max(metrics.height * 0.84, 14);
+  return [x, y];
+}
+
+function compareUnitCounterRenderOrder(left, right) {
+  const zDelta = Number(left?.zIndex || 0) - Number(right?.zIndex || 0);
+  if (zDelta !== 0) return zDelta;
+  const leftId = String(left?.id || "");
+  const rightId = String(right?.id || "");
+  if (leftId < rightId) return -1;
+  if (leftId > rightId) return 1;
+  return 0;
+}
+
+function getUnitCounterRenderEntries() {
+  const counters = Array.isArray(runtimeState.unitCounters) ? runtimeState.unitCounters : [];
+  const grouped = new Map();
+  counters.forEach((counter) => {
+    const anchor = getUnitCounterRenderAnchor(counter);
+    const key = String(anchor?.key || "");
+    if (!grouped.has(key)) {
+      grouped.set(key, { anchor, counters: [] });
+    }
+    grouped.get(key).counters.push(counter);
+  });
+  return Array.from(grouped.values()).flatMap((bucket) => {
+    const sortedBucket = bucket.counters
+      .slice()
+      .sort(compareUnitCounterRenderOrder);
+    return sortedBucket.map((counter, slotIndex) => ({
+      counter,
+      stackCount: sortedBucket.length,
+      slotIndex,
+      anchor: bucket.anchor,
+    }));
+  });
+}
+
+function getUnitCounterRenderScale(metrics, zoomK) {
+  const normalizedZoom = Math.max(0.1, Number(zoomK) || 1);
+  const zoomPercent = normalizedZoom * 100;
+  const fixedScaleMultiplier = clamp(
+    Number(runtimeState.annotationView?.unitCounterFixedScaleMultiplier) || 1.5,
+    0.5,
+    2.0,
+  );
+  const desiredScreenScale = 0.5 * fixedScaleMultiplier;
+
+  const effectiveWidth = Number(metrics?.width || 0) * desiredScreenScale;
+  const localScale = desiredScreenScale / normalizedZoom;
+  const hidden = zoomPercent <= 600;
+  const opacity = hidden ? 0 : 1;
+
+  return {
+    desiredScreenScale,
+    localScale,
+    effectiveWidth,
+    hidden,
+    opacity,
+  };
+}
+
+// 在缩放过程中轻量更新兵牌 transform，避免 localScale 陈旧导致跳变
+function getUnitCounterNodeTransform(entry) {
+  const projected = Array.isArray(entry?.projected) ? entry.projected : [0, 0];
+  const slotOffset = Array.isArray(entry?.slotOffset) ? entry.slotOffset : [0, 0];
+  const localScale = Number(entry?.scaleModel?.localScale || 1);
+  return `translate(${projected[0]},${projected[1]}) scale(${localScale}) translate(${slotOffset[0]},${slotOffset[1]})`;
+}
+
+const syncUnitCounterScalesDuringZoom = (...args) =>
+  getStrategicOverlayHelpersOwner().syncUnitCounterScalesDuringZoom(...args);
+
+function renderUnitCountersOverlay() {
+  getStrategicOverlayHelpersOwner().renderUnitCountersOverlay();
+  bindUnitCounterOverlayInteractions();
+}
+
+function bindUnitCounterOverlayInteractions() {
+  if (!unitCountersGroup) return;
+  const merged = unitCountersGroup.selectAll("g.unit-counter");
+  if (globalThis.d3?.drag) {
+    if (!bindUnitCounterOverlayInteractions.dragBehavior) {
+      bindUnitCounterOverlayInteractions.dragBehavior = globalThis.d3.drag()
+        .on("start", function onStart(event, datum) {
+          ensureUnitCounterEditorState();
+          datum.__historyBefore = captureHistoryState({ strategicOverlay: true });
+          runtimeState.unitCounterEditor.selectedId = datum.counter.id;
+          datum.__dragMoved = false;
+          updateStrategicOverlayUi();
+          globalThis.d3.select(this).style("cursor", "grabbing");
+        })
+        .on("drag", function onDrag(event, datum) {
+          const sourceEvent = event?.sourceEvent || event;
+          const coord = getMapLonLatFromEvent(sourceEvent);
+          if (!coord) return;
+          if (!datum.__dragMoved) {
+            datum.__dragMoved = true;
+            datum.counter.attachment = null;
+            datum.counter.layoutAnchor = {
+              ...(datum.counter.layoutAnchor || {}),
+              kind: "feature",
+              key: String(datum.counter.anchor?.featureId || ""),
+              slotIndex: null,
+            };
+          }
+          datum.counter.anchor = {
+            ...(datum.counter.anchor || {}),
+            lon: coord[0],
+            lat: coord[1],
+          };
+          runtimeState.unitCountersDirty = true;
+          const projected = getProjectedPoint(coord);
+          if (projected) {
+            datum.projected = projected;
+            this.setAttribute("transform", getUnitCounterNodeTransform(datum));
+          }
+        })
+        .on("end", function onEnd(event, datum) {
+          globalThis.d3.select(this).style("cursor", "grab");
+          if (datum.__dragMoved) {
+            datum.counter.anchor = {
+              ...(datum.counter.anchor || {}),
+              featureId: getLandFeatureIdFromEvent(event?.sourceEvent || event, "unit-counter-drag-end"),
+            };
+            datum.counter.layoutAnchor = {
+              ...(datum.counter.layoutAnchor || {}),
+              kind: "feature",
+              key: String(datum.counter.anchor?.featureId || ""),
+              slotIndex: null,
+            };
+            runtimeState.unitCountersDirty = true;
+            pushHistoryEntry({
+              kind: "move-unit-counter",
+              before: datum.__historyBefore,
+              after: captureHistoryState({ strategicOverlay: true }),
+            });
+            markDirty("move-unit-counter");
+          }
+          datum.__historyBefore = null;
+          datum.__dragMoved = false;
+          updateStrategicOverlayUi();
+          renderUnitCountersIfNeeded({ force: true });
+        });
+    }
+    merged.call(bindUnitCounterOverlayInteractions.dragBehavior);
+  }
+
+  merged.on("click", (_event, datum) => {
+    ensureUnitCounterEditorState();
+    runtimeState.unitCounterEditor.selectedId = datum.counter.id;
+    assignUnitCounterEditorFromCounter(datum.counter);
+    runtimeState.unitCountersDirty = true;
+    updateStrategicOverlayUi();
+    renderUnitCountersIfNeeded({ force: true });
+  });
+}
+
+function renderHoverOverlay() {
+  if (!hoverGroup || !pathSVG) return;
+
+  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    hoverGroup.selectAll("path.hovered-feature").remove();
+    hoverGroup.selectAll("path.hovered-facility-marker").remove();
+    hoverGroup.attr("aria-hidden", "true");
+    return;
+  }
+
+  const feature = runtimeState.hoveredSpecialRegionId
+    ? runtimeState.specialRegionsById.get(runtimeState.hoveredSpecialRegionId)
+    : runtimeState.hoveredWaterRegionId
+      ? runtimeState.waterRegionsById.get(runtimeState.hoveredWaterRegionId)
+      : (runtimeState.hoveredId ? runtimeState.landIndex.get(runtimeState.hoveredId) : null);
+  const data = feature && (
+    (!runtimeState.hoveredSpecialRegionId || isSpecialRegionEnabled(feature))
+    && (!runtimeState.hoveredWaterRegionId || isWaterRegionEnabled(feature))
+  ) ? [feature] : [];
+
+  const selection = hoverGroup
+    .selectAll("path.hovered-feature")
+    .data(data, (d) => getFeatureId(d) || "hover");
+
+  selection
+    .enter()
+    .append("path")
+    .attr("class", "hovered-feature")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(selection)
+    .attr("d", pathSVG)
+    .attr("fill", "none")
+    .attr("stroke", "#f1c40f")
+    .attr("stroke-width", 2.0);
+
+  selection.exit().remove();
+
+  const activeFacilityEntry = getActiveFacilityHighlightEntry();
+  const facilityMarkerData = activeFacilityEntry?.screenPoint?.length >= 2 ? [activeFacilityEntry] : [];
+  const facilitySelection = hoverGroup
+    .selectAll("path.hovered-facility-marker")
+    .data(facilityMarkerData, (datum) => buildFacilityEntryKey(datum) || "hovered-facility");
+
+  facilitySelection
+    .enter()
+    .append("path")
+    .attr("class", "hovered-facility-marker")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .merge(facilitySelection)
+    .attr("d", (datum) => {
+      const [x, y] = datum.screenPoint || [];
+      const radius = Math.max(6.8, Number(datum.markerRadiusPx || 0) + 2.8);
+      if (datum.shape === "square") {
+        return `M ${x - radius} ${y - radius} L ${x + radius} ${y - radius} L ${x + radius} ${y + radius} L ${x - radius} ${y + radius} Z`;
+      }
+      return `M ${x} ${y - radius} L ${x + radius} ${y} L ${x} ${y + radius} L ${x - radius} ${y} Z`;
+    })
+    .attr("fill", "rgba(255,255,255,0.12)")
+    .attr("stroke", (datum) => String(datum.highlightStroke || "#ffffff"))
+    .attr("stroke-width", 2.1);
+
+  facilitySelection.exit().remove();
+  hoverGroup.attr("aria-hidden", data.length || facilityMarkerData.length ? "false" : "true");
+}
+
+function renderInspectorHighlightOverlay() {
+  if (!inspectorHighlightGroup || !pathSVG) return;
+  const code = String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase();
+  if (!code) {
+    inspectorHighlightGroup.selectAll("path.inspector-highlight").remove();
+    inspectorHighlightGroup.attr("aria-hidden", "true");
+    return;
+  }
+  const data = (runtimeState.landData?.features || []).filter((feature) => getFeatureCountryCodeNormalized(feature) === code);
+  const selection = inspectorHighlightGroup
+    .selectAll("path.inspector-highlight")
+    .data(data, (d, index) => getFeatureId(d) || `${code}-${index}`);
+
+  selection
+    .enter()
+    .append("path")
+    .attr("class", "inspector-highlight")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(selection)
+    .attr("d", pathSVG)
+    .attr("fill", "none")
+    .attr("stroke", "rgba(0, 47, 167, 0.6)")
+    .attr("stroke-width", 2.4);
+
+  selection.exit().remove();
+  inspectorHighlightGroup
+    .attr("aria-hidden", data.length ? "false" : "true")
+    .attr("aria-label", data.length ? `Inspector highlight overlay for ${code}` : "Inspector highlight overlay");
+}
+
+const renderSpecialZones = (...args) => getStrategicOverlayHelpersOwner().renderSpecialZones(...args);
+
+export function renderLegend(uniqueColors = null, labels = null) {
+  if (!legendGroup || !legendItemsGroup || !legendBackground) return;
+
+  const colors = Array.isArray(uniqueColors)
+    ? uniqueColors
+    : LegendManager.getUniqueColors(state);
+  const labelMap = labels || LegendManager.getLabels();
+  const hasScenarioVisualEdits =
+    !!runtimeState.activeScenarioId &&
+    (
+      Object.keys(runtimeState.visualOverrides || {}).length > 0
+      || Object.keys(runtimeState.featureOverrides || {}).length > 0
+    );
+  const hasMeaningfulLabels = colors.some((color) => {
+    const key = String(color || "").toLowerCase();
+    return String(labelMap?.[key] || "").trim().length > 0;
+  });
+  const colorKey = colors.join("|");
+  const normalizedLabels = colors.map((color) => {
+    const key = String(color || "").toLowerCase();
+    return labelMap?.[key] || "";
+  });
+  const legendKey = `${colorKey}::${normalizedLabels.join("|")}`;
+  const shouldRebuild = legendKey !== lastLegendKey;
+
+  if (!colors.length) {
+    legendGroup.attr("display", "none");
+    lastLegendKey = legendKey;
+    return;
+  }
+
+  if (runtimeState.activeScenarioId && !hasMeaningfulLabels && !hasScenarioVisualEdits) {
+    legendGroup.attr("display", "none");
+    lastLegendKey = `${legendKey}::scenario-hidden`;
+    return;
+  }
+
+  legendGroup.attr("display", null);
+
+  if (shouldRebuild) {
+    legendItemsGroup.selectAll("*").remove();
+    const itemHeight = 18;
+    const swatchSize = 12;
+    const textOffset = swatchSize + 8;
+
+    colors.forEach((color, index) => {
+      const y = index * itemHeight;
+      const normalized = String(color || "").toLowerCase();
+      const label = labelMap?.[normalized] || `Category ${index + 1}`;
+
+      legendItemsGroup
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", y)
+        .attr("width", swatchSize)
+        .attr("height", swatchSize)
+        .attr("rx", 2)
+        .attr("ry", 2)
+        .attr("fill", color)
+        .attr("stroke", "#1f2937")
+        .attr("stroke-width", 0.4);
+
+      legendItemsGroup
+        .append("text")
+        .attr("x", textOffset)
+        .attr("y", y - 1)
+        .attr("dominant-baseline", "hanging")
+        .attr("font-size", 11)
+        .attr("fill", "#111827")
+        .text(label);
+    });
+  }
+
+  const bbox = legendItemsGroup.node().getBBox();
+  const padding = 8;
+  const width = bbox.width + padding * 2;
+  const height = bbox.height + padding * 2;
+
+  legendBackground
+    .attr("x", bbox.x - padding)
+    .attr("y", bbox.y - padding)
+    .attr("width", width)
+    .attr("height", height);
+
+  const margin = 14;
+  const x = margin;
+  const y = Math.max(margin, runtimeState.height - height - margin);
+  legendGroup.attr("transform", `translate(${x},${y})`);
+
+  lastLegendKey = legendKey;
+}
+
+function ensurePerfOverlayElement() {
+  const cache = getRenderPassCacheState();
+  if (!cache.perfOverlayEnabled || !mapContainer) return null;
+  if (cache.overlayElement && mapContainer.contains(cache.overlayElement)) {
+    return cache.overlayElement;
+  }
+  const element = document.createElement("pre");
+  element.id = "perf-overlay";
+  element.style.position = "absolute";
+  element.style.top = "12px";
+  element.style.right = "12px";
+  element.style.zIndex = "5";
+  element.style.maxWidth = "360px";
+  element.style.margin = "0";
+  element.style.padding = "10px 12px";
+  element.style.borderRadius = "10px";
+  element.style.background = "rgba(15, 23, 42, 0.84)";
+  element.style.color = "#e2e8f0";
+  element.style.font = "11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  element.style.whiteSpace = "pre-wrap";
+  element.style.pointerEvents = "none";
+  element.style.boxShadow = "0 8px 30px rgba(15, 23, 42, 0.28)";
+  mapContainer.appendChild(element);
+  cache.overlayElement = element;
+  return element;
+}
+
+function updatePerfOverlay() {
+  const cache = getRenderPassCacheState();
+  if (!cache.perfOverlayEnabled) {
+    if (cache.overlayElement?.remove) {
+      cache.overlayElement.remove();
+    }
+    cache.overlayElement = null;
+    return;
+  }
+  const overlay = ensurePerfOverlayElement();
+  if (!overlay) return;
+  const frame = cache.lastFrame || {};
+  const sidebarPerf = getSidebarPerfState();
+  const invalidations = RENDER_PASS_NAMES.map((passName) => {
+    const reason = cache.reasons?.[passName] || "-";
+    const dirtyFlag = cache.dirty?.[passName] ? "*" : "";
+    return `${passName}:${reason}${dirtyFlag}`;
+  }).join(" | ");
+  const timingEntries = Object.entries(frame.timings || {})
+    .map(([name, value]) => `${name}=${Number(value || 0).toFixed(1)}ms`)
+    .join(", ");
+  const renderPerf = runtimeState.renderPerfMetrics || {};
+  const scenarioPerf = runtimeState.scenarioPerfMetrics || {};
+  const contextScenarioReasonSnapshot = resolveContextScenarioReasonSnapshot({ cache, renderPerf });
+  const opEntries = [
+    ["setMapData", renderPerf.setMapData?.durationMs],
+    ["firstPaint", renderPerf.setMapDataFirstPaint?.durationMs],
+    ["contextBaseReady", renderPerf.setMapDataContextBaseReady?.durationMs],
+    ["hitReady", renderPerf.setMapDataHitCanvasReady?.durationMs],
+    ["settleFast", renderPerf.settleFastFrame?.durationMs],
+    ["settleExact", renderPerf.settleExactRefresh?.durationMs],
+    ["ctxBaseExact", renderPerf.contextBaseExactRefresh?.durationMs],
+    ["buildSpatialIndex", renderPerf.buildSpatialIndex?.durationMs],
+    ["rebuildStaticMeshes", renderPerf.rebuildStaticMeshes?.durationMs],
+    ["rebuildDynamicBorders", renderPerf.rebuildDynamicBorders?.durationMs],
+    ["physicalClip", renderPerf.applyPhysicalLandClipMask?.durationMs],
+    ["oceanClip", renderPerf.applyOceanClipMask?.durationMs],
+    ["contextBase", renderPerf.drawContextBasePass?.durationMs],
+    ["labels", renderPerf.drawLabelsPass?.durationMs],
+    ["contextScenario", renderPerf.drawContextScenarioPass?.durationMs],
+    ["hitCanvas", renderPerf.buildHitCanvas?.durationMs],
+    ["bgMerge", renderPerf.drawScenarioPoliticalBackgroundEntries?.durationMs],
+    ["politicalBg", renderPerf.drawPoliticalBackgroundFillsPass?.durationMs],
+    ["politicalFill", renderPerf.drawPoliticalFeatureFillLoop?.durationMs],
+    ["politicalStroke", renderPerf.drawPoliticalFeatureStrokeLoop?.durationMs],
+    ["bgCacheBuild", renderPerf.scenarioPoliticalBackgroundCacheBuild?.durationMs],
+    ["bgCacheReplay", renderPerf.scenarioPoliticalBackgroundCacheReplay?.durationMs],
+    ["relief", renderPerf.drawScenarioReliefOverlaysLayer?.durationMs],
+    ["scenarioLoad", scenarioPerf.loadScenarioBundle?.durationMs],
+    ["scenarioApply", scenarioPerf.applyScenarioBundle?.durationMs],
+  ]
+    .filter(([, value]) => Number.isFinite(Number(value)))
+    .map(([name, value]) => `${name}=${Number(value || 0).toFixed(1)}ms`)
+    .join(", ");
+  const contextBreakdownEntries = Object.entries(renderPerf.contextBreakdown || {})
+    .map(([name, value]) => {
+      const duration = Number(value?.durationMs || 0).toFixed(1);
+      const callCount = Number(value?.callCount || 0);
+      return `${name}=${duration}ms${callCount > 1 ? `#${callCount}` : ""}`;
+    })
+    .join(", ");
+  const coverageDebug = runtimeState.debugCountryCoverage || {};
+  overlay.textContent = [
+    `phase=${frame.phase || runtimeState.renderPhase} total=${Number(frame.totalMs || 0).toFixed(1)}ms`,
+    `action=${cache.lastAction || "-"} ${Number(cache.lastActionDurationMs || 0).toFixed(1)}ms`,
+    `transform=${getTransformSignature(frame.transform || runtimeState.zoomTransform)}`,
+    `passes ${timingEntries || "none"}`,
+    `contextBreakdown ${contextBreakdownEntries || "none"}`,
+    `ops ${opEntries || "none"}`,
+    `ctxReuse skip=${renderPerf.contextBaseReuseSkipped ? "yes" : "no"} scale=${Number(renderPerf.contextBaseReuseScaleRatio?.scaleRatio || 0).toFixed(4)} dist=${Number(renderPerf.contextBaseReuseDistancePx?.distancePx || 0).toFixed(2)}px`,
+    `ctxScenario reuse=${cache.counters.contextScenarioReuseCount || 0} exact=${cache.counters.contextScenarioExactRefreshCount || 0} reason=${contextScenarioReasonSnapshot.displayReason} cacheReason=${contextScenarioReasonSnapshot.cacheReason} perfReason=${contextScenarioReasonSnapshot.perfReason} mismatchWarn=${cache.counters.contextScenarioReasonMismatchWarnings || 0}`,
+    `coverage countries=${Number(coverageDebug.totalCountries || 0)} detail=${Number(coverageDebug.detailCountries || 0)} primary=${Number(coverageDebug.primaryCountries || 0)} priorityGap=${Array.isArray(coverageDebug.priorityCountryGaps) ? coverageDebug.priorityCountryGaps.length : 0}`,
+    `projBounds total=${Number(renderPerf.projectedBoundsDiagnostics?.total || 0)} reasons=${JSON.stringify(renderPerf.projectedBoundsDiagnostics?.byReason || {})}`,
+    `invalidations ${invalidations}`,
+    `render draw=${cache.counters.drawCanvas || 0} frame=${cache.counters.frames || 0} ctxBase=${cache.counters.contextBasePassRenders || 0} labels=${cache.counters.labelPassRenders || 0} ctxScenario=${cache.counters.contextScenarioPassRenders || 0} dayNight=${cache.counters.dayNightPassRenders || 0} hit=${cache.counters.hitCanvasRenders || 0} dynBorder=${cache.counters.dynamicBorderRebuilds || 0}`,
+    `sidebar list=${sidebarPerf.counters.fullListRenders || 0} rows=${sidebarPerf.counters.rowRefreshes || 0} detail=${sidebarPerf.counters.inspectorRenders || 0} preset=${sidebarPerf.counters.presetTreeRenders || 0} legend=${sidebarPerf.counters.legendRenders || 0}`,
+  ].join("\n");
+}
+
+function render() {
+  const startedAt = perfIsEnabled() ? nowMs() : 0;
+  const frameSchedulerQueue = getFrameSchedulerQueueLength({ byPriority: true, byLabelGeneration: true });
+  recordRenderPerfMetric("frameSchedulerQueueDepth", 0, frameSchedulerQueue);
+  recordRenderPerfMetric("renderBoundaryReasons", 0, getRenderBoundaryDebugState());
+  if (runtimeState.scenarioChunkPromotionRenderLocked) {
+    recordRenderPerfMetric("scenarioChunkPromotionRenderLocked", 0, {
+      phase: String(runtimeState.renderPhase || ""),
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+    return;
+  }
+  drawCanvas();
+  if (runtimeState.renderPhase === RENDER_PHASE_IDLE) {
+    scheduleHitCanvasBuildIfNeeded();
+  }
+  renderFrontlineOverlayIfNeeded();
+  renderOperationalLinesIfNeeded();
+  renderOperationGraphicsIfNeeded();
+  renderUnitCountersIfNeeded();
+  renderSpecialZonesIfNeeded();
+  renderDevSelectionOverlayIfNeeded();
+  renderInspectorHighlightOverlayIfNeeded();
+  renderHoverOverlayIfNeeded({ eventType: "render-frame" });
+  if (runtimeState.renderPhase === RENDER_PHASE_IDLE) {
+    renderLegend();
+    if (typeof runtimeState.updateLegendUI === "function") {
+      runtimeState.updateLegendUI();
+    }
+  }
+  updatePerfOverlay();
+  if (startedAt > 0) {
+    recordRenderSample(nowMs() - startedAt, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      phase: String(runtimeState.renderPhase || ""),
+    });
+  }
+}
+
+function autoFillMap(mode = "region", { recordHistory = true, styleUpdates = null } = {}) {
+  if (!runtimeState.landData?.features?.length) {
+    console.warn("[autoFillMap] No land features available, aborting.");
+    return;
+  }
+
+  migrateLegacyColorState();
+  ensureSovereigntyState();
+  const nextCountryBaseColors = {};
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+
+  if (mode === "political" && runtimeState.runtimePoliticalTopology?.objects?.political) {
+    const computed = ColorManager.computeOwnerColors(
+      {
+        featureIds: runtimeState.runtimeFeatureIds,
+        canonicalCountryByFeatureId: runtimeState.runtimeCanonicalCountryByFeatureId,
+        neighborGraph: runtimeState.runtimeNeighborGraph,
+      },
+      runtimeState.sovereigntyByFeatureId,
+      {
+        fixedOwnerColors: {
+          ...(runtimeState.fixedPaletteColorsByIso2 || {}),
+          ...(runtimeState.scenarioFixedOwnerColors || {}),
+        },
+      }
+    );
+    const ownerColors = computed?.ownerColors || {};
+    runtimeState.landData.features.forEach((feature, index) => {
+      const id = getFeatureId(feature) || `feature-${index}`;
+      if (shouldExcludePoliticalVisualFeature(feature, id)) return;
+      if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) return;
+      const ownerCode = getFeatureOwnerCode(id) || getFeatureCountryCodeNormalized(feature);
+      if (!ownerCode || nextCountryBaseColors[ownerCode]) return;
+      const color =
+        getColorByCanonicalCountryCode(ownerColors, ownerCode) ||
+        (ownerCode && runtimeState.countryPalette && runtimeState.countryPalette[ownerCode]) ||
+        ColorManager.getPoliticalFallbackColor(ownerCode || id, index);
+      nextCountryBaseColors[ownerCode] = getSafeCanvasColor(color, LAND_FILL_COLOR);
+    });
+    runtimeState.sovereignContrastWarnings = computed?.contrastStats?.lowContrastEdges
+      ? [computed.contrastStats]
+      : [];
+
+  } else {
+    // Region mode: assign one region-derived color per country to country base colors.
+    const countryRegionTag = new Map();
+    runtimeState.landData.features.forEach((feature, index) => {
+      const id = getFeatureId(feature) || `feature-${index}`;
+      if (shouldExcludePoliticalVisualFeature(feature, id)) return;
+      if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) return;
+      const countryCode = getFeatureCountryCodeNormalized(feature);
+      if (!countryCode) return;
+      if (countryRegionTag.has(countryCode)) return;
+      const tag = getFeatureRegionTag(feature);
+      countryRegionTag.set(countryCode, tag);
+    });
+    countryRegionTag.forEach((tag, countryCode) => {
+      nextCountryBaseColors[countryCode] = getSafeCanvasColor(
+        ColorManager.getRegionColor(tag),
+        LAND_FILL_COLOR
+      );
+    });
+  }
+
+  const historyFeatureIds = Object.keys(runtimeState.visualOverrides || {});
+  const historyOwnerCodes = Array.from(new Set([
+    ...Object.keys(runtimeState.sovereignBaseColors || {}),
+    ...Object.keys(runtimeState.countryBaseColors || {}),
+    ...Object.keys(nextCountryBaseColors || {}),
+  ]));
+  const stylePaths = styleUpdates && typeof styleUpdates === "object"
+    ? Object.keys(styleUpdates)
+    : [];
+  const historyBefore = recordHistory
+    ? captureHistoryState({
+      featureIds: historyFeatureIds,
+      ownerCodes: historyOwnerCodes,
+      stylePaths,
+    })
+    : null;
+
+  runtimeState.visualOverrides = {};
+  runtimeState.featureOverrides = {};
+  runtimeState.sovereignBaseColors = sanitizeCountryColorMap(nextCountryBaseColors);
+  runtimeState.countryBaseColors = { ...runtimeState.sovereignBaseColors };
+  markLegacyColorStateDirty();
+  if (styleUpdates && typeof styleUpdates === "object") {
+    Object.entries(styleUpdates).forEach(([path, value]) => {
+      const segments = String(path || "").split(".").filter(Boolean);
+      if (!segments.length) return;
+      let cursor = runtimeState.styleConfig;
+      for (let index = 0; index < segments.length - 1; index += 1) {
+        const segment = segments[index];
+        if (!cursor[segment] || typeof cursor[segment] !== "object") {
+          cursor[segment] = {};
+        }
+        cursor = cursor[segment];
+      }
+      cursor[segments[segments.length - 1]] = value;
+    });
+  }
+  markDirty(mode === "political" ? "auto-fill-political" : "auto-fill-region");
+  refreshResolvedColorsForOwners(Object.keys(nextCountryBaseColors), { renderNow: false });
+  if (recordHistory) {
+    commitHistoryEntry({
+      kind: mode === "political" ? "auto-fill-political" : "auto-fill-region",
+      before: historyBefore,
+      after: captureHistoryState({
+        featureIds: historyFeatureIds,
+        ownerCodes: historyOwnerCodes,
+        stylePaths,
+      }),
+    });
+  }
+  const changedCountryCodes = Object.keys(nextCountryBaseColors);
+  if (typeof runtimeState.refreshCountryListRowsFn === "function") {
+    runtimeState.refreshCountryListRowsFn({
+      countryCodes: changedCountryCodes,
+      refreshInspector: true,
+      refreshPresetTree: true,
+    });
+  } else if (typeof runtimeState.renderCountryListFn === "function") {
+    runtimeState.renderCountryListFn();
+  }
+  if (context) {
+    render();
+  }
+}
+
+function getMapLonLatFromEvent(event) {
+  if (!projection || !interactionRect?.node || !globalThis.d3?.pointer) return null;
+  const [sx, sy] = globalThis.d3.pointer(event, interactionRect.node());
+  if (![sx, sy].every(Number.isFinite)) return null;
+  const t = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
+  const k = Math.max(0.0001, t.k || 1);
+  const mapX = (sx - t.x) / k;
+  const mapY = (sy - t.y) / k;
+  const lonLat = projection.invert([mapX, mapY]);
+  if (!Array.isArray(lonLat) || lonLat.length < 2) return null;
+  const lon = Number(lonLat[0]);
+  const lat = Number(lonLat[1]);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  return [lon, clamp(lat, -90, 90)];
+}
+
+function updateSpecialZoneEditorUI() {
+  if (typeof runtimeState.updateSpecialZoneEditorUIFn === "function") {
+    runtimeState.updateSpecialZoneEditorUIFn();
+  }
+}
+
+function ensureManualSpecialZoneCounter() {
+  ensureSpecialZoneEditorState();
+  const used = new Set(
+    getManualSpecialZoneFeatures().map((feature) => String(feature?.properties?.id || ""))
+  );
+  let counter = Math.max(1, Number(runtimeState.specialZoneEditor.counter) || 1);
+  while (used.has(`manual_sz_${counter}`)) {
+    counter += 1;
+  }
+  runtimeState.specialZoneEditor.counter = counter;
+}
+
+function ensureOperationGraphicCounter() {
+  ensureOperationGraphicsEditorState();
+  const used = new Set((runtimeState.operationGraphics || []).map((graphic) => String(graphic?.id || "")));
+  let counter = Math.max(1, Number(runtimeState.operationGraphicsEditor.counter) || 1);
+  while (used.has(`opg_${counter}`)) {
+    counter += 1;
+  }
+  runtimeState.operationGraphicsEditor.counter = counter;
+}
+
+function ensureOperationalLineCounter() {
+  ensureOperationalLineEditorState();
+  const used = new Set((runtimeState.operationalLines || []).map((line) => String(line?.id || "")));
+  let counter = Math.max(1, Number(runtimeState.operationalLineEditor.counter) || 1);
+  while (used.has(`opl_${counter}`)) {
+    counter += 1;
+  }
+  runtimeState.operationalLineEditor.counter = counter;
+}
+
+function ensureUnitCounterCounter() {
+  ensureUnitCounterEditorState();
+  const used = new Set((runtimeState.unitCounters || []).map((counter) => String(counter?.id || "")));
+  let counter = Math.max(1, Number(runtimeState.unitCounterEditor.counter) || 1);
+  while (used.has(`unit_${counter}`)) {
+    counter += 1;
+  }
+  runtimeState.unitCounterEditor.counter = counter;
+}
+
+function handleMouseMove(event) {
+  const now = performance.now();
+  if (now - runtimeState.lastMouseMoveTime < runtimeState.MOUSE_THROTTLE_MS) return;
+  runtimeState.lastMouseMoveTime = now;
+  if (!runtimeState.landData && !runtimeState.waterRegionsData && !runtimeState.scenarioSpecialRegionsData) return;
+  if (runtimeState.specialZoneEditor?.active) {
+    runtimeState.hoveredId = null;
+    runtimeState.hoveredWaterRegionId = null;
+    runtimeState.hoveredSpecialRegionId = null;
+    if (hoveredFacilityEntry) {
+      hoveredFacilityEntry = null;
+    }
+    updateDevHoverHit(null);
+    runtimeState.hoverOverlayDirty = true;
+    scheduleHoverOverlayRender();
+    queueTooltipUpdate({ visible: false });
+    setMapInteractionCursor("");
+    return;
+  }
+
+  const reducedHoverPhase =
+    runtimeState.renderPhase !== RENDER_PHASE_IDLE
+    || runtimeState.isInteracting
+    || runtimeState.scenarioApplyInFlight
+    || runtimeState.startupReadonly
+    || runtimeState.startupReadonlyUnlockInFlight;
+  if (reducedHoverPhase) {
+    if (runtimeState.hoveredId || runtimeState.hoveredWaterRegionId || runtimeState.hoveredSpecialRegionId) {
+      runtimeState.hoveredId = null;
+      runtimeState.hoveredWaterRegionId = null;
+      runtimeState.hoveredSpecialRegionId = null;
+      runtimeState.hoverOverlayDirty = true;
+      scheduleHoverOverlayRender();
+    }
+    if (hoveredFacilityEntry) {
+      hoveredFacilityEntry = null;
+      runtimeState.hoverOverlayDirty = true;
+      scheduleHoverOverlayRender();
+    }
+    updateDevHoverHit(null);
+    queueTooltipUpdate({ visible: false });
+    setMapInteractionCursor("");
+    return;
+  }
+  const hit = getHitFromEvent(event, {
+    enableSnap: false,
+    snapPx: HIT_SNAP_RADIUS_HOVER_PX,
+    eventType: "hover",
+  });
+  const id = hit.id;
+  const nextHoveredSpecialId = hit.targetType === "special" ? id : null;
+  const nextHoveredLandId = hit.targetType === "land" ? id : null;
+  const nextHoveredWaterId = hit.targetType === "water" ? id : null;
+  if (
+    nextHoveredLandId !== runtimeState.hoveredId
+    || nextHoveredWaterId !== runtimeState.hoveredWaterRegionId
+    || nextHoveredSpecialId !== runtimeState.hoveredSpecialRegionId
+  ) {
+    runtimeState.hoveredId = nextHoveredLandId;
+    runtimeState.hoveredWaterRegionId = nextHoveredWaterId;
+    runtimeState.hoveredSpecialRegionId = nextHoveredSpecialId;
+    runtimeState.hoverOverlayDirty = true;
+    if (!reducedHoverPhase) {
+      scheduleHoverOverlayRender();
+    }
+  }
+  updateDevHoverHit(id ? hit : null);
+
+  if (!tooltip) return;
+  const hoveredFacility = getHoveredFacilityEntryFromEvent(event);
+  const facilityDetailsActive = hoveredFacility ? isFacilityDetailsSurfaceActive(hoveredFacility.familyId) : false;
+  const nextFacilityKey = buildFacilityEntryKey(hoveredFacility);
+  const previousFacilityKey = buildFacilityEntryKey(hoveredFacilityEntry);
+  if (nextFacilityKey !== previousFacilityKey) {
+    hoveredFacilityEntry = hoveredFacility || null;
+    runtimeState.hoverOverlayDirty = true;
+    scheduleHoverOverlayRender();
+  }
+  setMapInteractionCursor(facilityDetailsActive ? "pointer" : "");
+  if (hoveredFacility?.tooltipText) {
+    queueTooltipUpdate({
+      visible: true,
+      text: hoveredFacility.tooltipText,
+      x: event.clientX + 12,
+      y: event.clientY + 12,
+    });
+    return;
+  }
+  const hoveredCityEntry = getHoveredCityTooltipEntry(event, hit);
+  if (hoveredCityEntry?.tooltipText) {
+    queueTooltipUpdate({
+      visible: true,
+      text: hoveredCityEntry.tooltipText,
+      x: event.clientX + 12,
+      y: event.clientY + 12,
+    });
+    return;
+  }
+  if (id && (runtimeState.landIndex.has(id) || runtimeState.waterRegionsById.has(id) || runtimeState.specialRegionsById.has(id))) {
+    const feature = hit.targetType === "special"
+      ? runtimeState.specialRegionsById.get(id)
+      : hit.targetType === "water"
+        ? runtimeState.waterRegionsById.get(id)
+        : runtimeState.landIndex.get(id);
+    queueTooltipUpdate({
+      visible: true,
+      text: getTooltipText(feature),
+      x: event.clientX + 12,
+      y: event.clientY + 12,
+    });
+  } else {
+    queueTooltipUpdate({ visible: false });
+  }
+}
+
+function addRecentColor(color) {
+  if (!color) return;
+  runtimeState.recentColors = runtimeState.recentColors.filter((value) => value !== color);
+  runtimeState.recentColors.unshift(color);
+  if (runtimeState.recentColors.length > 4) {
+    runtimeState.recentColors = runtimeState.recentColors.slice(0, 4);
+  }
+  if (typeof runtimeState.updateRecentUI === "function") {
+    runtimeState.updateRecentUI();
+  }
+}
+
+function commitHistoryEntry({ kind, before, after, affectsSovereignty = false } = {}) {
+  pushHistoryEntry({
+    kind: String(kind || "interaction"),
+    before: before || {},
+    after: after || {},
+    meta: {
+      affectsSovereignty: !!affectsSovereignty,
+    },
+  });
+}
+
+function getCountryFeatureIds(countryCode) {
+  if (!countryCode || !(runtimeState.countryToFeatureIds instanceof Map)) return [];
+  const ids = runtimeState.countryToFeatureIds.get(countryCode);
+  if (!Array.isArray(ids)) return [];
+  return ids.filter((candidateId) => {
+    const candidateFeature = runtimeState.landIndex?.get(candidateId);
+    return candidateFeature && !shouldExcludePoliticalInteractionFeature(candidateFeature, candidateId);
+  });
+}
+
+function getScenarioOwnerFeatureIds(ownerTag) {
+  const normalizedOwnerTag = String(ownerTag || "").trim().toUpperCase();
+  if (!normalizedOwnerTag || !(runtimeState.ownerToFeatureIds instanceof Map)) return [];
+  const ids = runtimeState.ownerToFeatureIds.get(normalizedOwnerTag);
+  if (!Array.isArray(ids)) return [];
+  return ids.filter((candidateId) => {
+    const candidateFeature = runtimeState.landIndex?.get(candidateId);
+    return candidateFeature && !shouldExcludePoliticalInteractionFeature(candidateFeature, candidateId);
+  });
+}
+
+function getInteractionCountryFeatureIds(feature, featureId) {
+  const interactionCountryCode = getFeatureInteractionCountryCodeNormalized(feature, featureId);
+  const ownerIds = interactionCountryCode ? getScenarioOwnerFeatureIds(interactionCountryCode) : [];
+  if (ownerIds.length) return ownerIds;
+
+  const runtimeCountryCode = getFeatureCountryCodeNormalized(feature);
+  const runtimeIds = runtimeCountryCode ? getCountryFeatureIds(runtimeCountryCode) : [];
+  if (runtimeIds.length) return runtimeIds;
+
+  return interactionCountryCode ? getCountryFeatureIds(interactionCountryCode) : [];
+}
+
+function getCountryInteractionPolicy(countryCode) {
+  if (!countryCode || !(runtimeState.countryInteractionPoliciesByCode instanceof Map)) return null;
+  return runtimeState.countryInteractionPoliciesByCode.get(countryCode) || null;
+}
+
+function shouldRequireLeafDetail(countryCode) {
+  const policy = getCountryInteractionPolicy(countryCode);
+  if (!policy?.requiresComposite) return false;
+  if (isSovereigntyModeActive()) return false;
+  return runtimeState.interactionGranularity !== "country";
+}
+
+function hasLeafDetailReady(countryCode) {
+  if (!shouldRequireLeafDetail(countryCode)) return true;
+  if (runtimeState.topologyBundleMode !== "composite") return false;
+  return getCountryFeatureIds(countryCode).length > 1;
+}
+
+function showDetailPromotionToast(message, { title = "", tone = "info", duration = 2600 } = {}) {
+  const nextMessage = String(message || "").trim();
+  if (!nextMessage) return;
+  const now = Date.now();
+  const token = `${tone}::${title}::${nextMessage}`;
+  if (token === lastDetailToastToken && now - lastDetailToastAt < 1400) {
+    return;
+  }
+  lastDetailToastToken = token;
+  lastDetailToastAt = now;
+  showToast(nextMessage, { title, tone, duration });
+}
+
+function blockStartupReadonlyInteraction() {
+  if (!runtimeState.startupReadonly) return false;
+  showDetailPromotionToast(t("Detailed interactions are still loading. Pan and zoom remain available.", "ui"), {
+    title: t("Startup is still read-only", "ui"),
+    tone: "info",
+    duration: 2200,
+  });
+  return true;
+}
+
+function requestLeafDetailPromotion(countryCode, { announce = false } = {}) {
+  if (!shouldRequireLeafDetail(countryCode)) return true;
+  if (hasLeafDetailReady(countryCode)) return true;
+
+  if (announce) {
+    showDetailPromotionToast("Loading detailed subdivisions for this country…", {
+      title: "Detail layer",
+      tone: "info",
+    });
+  }
+
+  if (!runtimeState.detailPromotionInFlight && typeof runtimeState.ensureDetailTopologyFn === "function") {
+    void runtimeState.ensureDetailTopologyFn();
+  }
+  return false;
+}
+
+async function ensureLeafDetailReady(countryCode, { announce = false } = {}) {
+  if (!shouldRequireLeafDetail(countryCode)) return true;
+  if (hasLeafDetailReady(countryCode)) return true;
+
+  if (announce) {
+    showDetailPromotionToast("Loading detailed subdivisions for this country…", {
+      title: "Detail layer",
+      tone: "info",
+      duration: 2200,
+    });
+  }
+
+  if (typeof runtimeState.ensureDetailTopologyFn !== "function") {
+    showDetailPromotionToast("Detailed subdivisions are unavailable in the current session.", {
+      title: "Detail layer unavailable",
+      tone: "warning",
+      duration: 3200,
+    });
+    return false;
+  }
+
+  const promoted = await runtimeState.ensureDetailTopologyFn();
+  if (!promoted || !hasLeafDetailReady(countryCode)) {
+    showDetailPromotionToast("Detailed subdivisions could not be loaded. Keep the detail layer enabled and try again.", {
+      title: "Detail layer unavailable",
+      tone: "warning",
+      duration: 3600,
+    });
+    return false;
+  }
+  return true;
+}
+
+function collectCountryCodesForFeatureIds(featureIds) {
+  const codes = new Set();
+  (Array.isArray(featureIds) ? featureIds : []).forEach((featureId) => {
+    const feature = runtimeState.landIndex?.get(featureId);
+    const code = feature ? getFeatureCountryCodeNormalized(feature) : "";
+    if (code) {
+      codes.add(code);
+    }
+  });
+  return Array.from(codes);
+}
+
+function hasSelectedOrActiveCountryImpact(countryCodes = []) {
+  const impactedCodes = new Set((Array.isArray(countryCodes) ? countryCodes : [])
+    .map((code) => canonicalCountryCode(code))
+    .filter(Boolean));
+  const selectedCode = canonicalCountryCode(runtimeState.selectedInspectorCountryCode);
+  const activeCode = canonicalCountryCode(runtimeState.activeSovereignCode);
+  return !!(
+    (selectedCode && impactedCodes.has(selectedCode))
+    || (activeCode && impactedCodes.has(activeCode))
+  );
+}
+
+function refreshSidebarAfterPaint({
+  featureIds = [],
+  waterRegionIds = [],
+  specialRegionIds = [],
+  ownerCodes = [],
+  refreshPresetTree = false,
+} = {}) {
+  scheduleSidebarRefresh({
+    featureIds,
+    waterRegionIds,
+    specialRegionIds,
+    ownerCodes,
+    refreshPresetTree,
+  });
+}
+
+function requestInteractionRender(reason = "interaction") {
+  return requestRendererRender(reason, {
+    flush: false,
+    fallback: () => {
+      if (context) render();
+    },
+  });
+}
+
+function flushInteractionRender(reason = "interaction") {
+  return flushRenderBoundary(reason);
+}
+
+function requestRendererRender(reason = "renderer", { flush = false, fallback = null } = {}) {
+  const requested = flush ? flushRenderBoundary(reason) : requestRender(reason);
+  if (requested) {
+    return true;
+  }
+  if (typeof fallback === "function") {
+    fallback();
+    return true;
+  }
+  return false;
+}
+
+function notifyDevWorkspace() {
+  if (typeof runtimeState.updateDevWorkspaceUIFn === "function") {
+    runtimeState.updateDevWorkspaceUIFn();
+  }
+}
+
+function isDevSelectionEligibleFeature(feature, featureId = null) {
+  return !!feature
+    && !shouldExcludePoliticalInteractionFeature(feature, featureId)
+    && !isAtlantropaSeaFeature(feature);
+}
+
+function setDevSelectionDirty() {
+  runtimeState.devSelectionOverlayDirty = true;
+  runtimeState.devClipboardFallbackText = "";
+  notifyDevWorkspace();
+}
+
+function updateDevHoverHit(hit = null) {
+  runtimeState.devHoverHit = hit?.id
+    ? {
+      id: String(hit.id || "").trim(),
+      targetType: String(hit.targetType || ""),
+      countryCode: String(hit.countryCode || "").trim().toUpperCase(),
+      hitSource: String(hit.hitSource || "spatial"),
+      viaSnap: !!hit.viaSnap,
+      strict: !!hit.strict,
+    }
+    : null;
+  notifyDevWorkspace();
+}
+
+function updateDevSelectedHit(hit = null) {
+  runtimeState.devSelectedHit = hit?.id
+    ? {
+      id: String(hit.id || "").trim(),
+      targetType: String(hit.targetType || ""),
+      countryCode: String(hit.countryCode || "").trim().toUpperCase(),
+      hitSource: String(hit.hitSource || "spatial"),
+      viaSnap: !!hit.viaSnap,
+      strict: !!hit.strict,
+    }
+    : null;
+  notifyDevWorkspace();
+}
+
+function getDevSelectionIds() {
+  const rawIds = Array.isArray(runtimeState.devSelectionOrder)
+    ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  const nextIds = [];
+  const seen = new Set();
+  rawIds.forEach((id) => {
+    if (!id || seen.has(id)) return;
+    const feature = runtimeState.landIndex?.get(id);
+    if (!isDevSelectionEligibleFeature(feature, id)) return;
+    seen.add(id);
+    nextIds.push(id);
+  });
+  const changed = rawIds.length !== nextIds.length || rawIds.some((id, index) => id !== nextIds[index]);
+  if (changed) {
+    runtimeState.devSelectionOrder = nextIds;
+    runtimeState.devSelectionFeatureIds = new Set(nextIds);
+    runtimeState.devClipboardFallbackText = "";
+    runtimeState.devSelectionOverlayDirty = true;
+  } else if (!(runtimeState.devSelectionFeatureIds instanceof Set)) {
+    runtimeState.devSelectionFeatureIds = new Set(nextIds);
+  }
+  return nextIds;
+}
+
+function addFeatureToDevSelection(featureId) {
+  const id = String(featureId || "").trim();
+  const feature = id ? runtimeState.landIndex?.get(id) : null;
+  if (!isDevSelectionEligibleFeature(feature, id)) return false;
+  runtimeState.devSelectionFeatureIds = runtimeState.devSelectionFeatureIds instanceof Set
+    ? runtimeState.devSelectionFeatureIds
+    : new Set();
+  runtimeState.devSelectionOrder = getDevSelectionIds();
+  if (runtimeState.devSelectionFeatureIds.has(id)) {
+    return false;
+  }
+  const limit = Math.max(1, Number(runtimeState.devSelectionLimit) || 200);
+  if (runtimeState.devSelectionOrder.length >= limit) {
+    showToast(
+      runtimeState.currentLanguage === "zh"
+        ? `开发多选已达到上限（${limit}）。`
+        : `Selection limit reached (${limit}).`,
+      {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+      duration: 3600,
+    });
+    return false;
+  }
+  runtimeState.devSelectionFeatureIds.add(id);
+  runtimeState.devSelectionOrder.push(id);
+  setDevSelectionDirty();
+  requestInteractionRender("dev-selection-add");
+  return true;
+}
+
+function toggleFeatureInDevSelection(featureId) {
+  const id = String(featureId || "").trim();
+  const feature = id ? runtimeState.landIndex?.get(id) : null;
+  if (!isDevSelectionEligibleFeature(feature, id)) return false;
+  runtimeState.devSelectionFeatureIds = runtimeState.devSelectionFeatureIds instanceof Set
+    ? runtimeState.devSelectionFeatureIds
+    : new Set();
+  runtimeState.devSelectionOrder = getDevSelectionIds();
+  if (runtimeState.devSelectionFeatureIds.has(id)) {
+    runtimeState.devSelectionFeatureIds.delete(id);
+    runtimeState.devSelectionOrder = runtimeState.devSelectionOrder.filter((value) => value !== id);
+    setDevSelectionDirty();
+    requestInteractionRender("dev-selection-toggle");
+    return true;
+  }
+  return addFeatureToDevSelection(id);
+}
+
+function removeLastDevSelection() {
+  const ids = getDevSelectionIds();
+  if (!ids.length) return false;
+  const lastId = ids[ids.length - 1];
+  runtimeState.devSelectionFeatureIds.delete(lastId);
+  runtimeState.devSelectionOrder = ids.slice(0, -1);
+  setDevSelectionDirty();
+  requestInteractionRender("dev-selection-remove-last");
+  return true;
+}
+
+function clearDevSelection() {
+  const hadEntries = getDevSelectionIds().length > 0;
+  runtimeState.devSelectionFeatureIds = new Set();
+  runtimeState.devSelectionOrder = [];
+  if (hadEntries) {
+    setDevSelectionDirty();
+    requestInteractionRender("dev-selection-clear");
+  } else {
+    notifyDevWorkspace();
+  }
+  return hadEntries;
+}
+
+function getDevWorkspaceActiveLandContext() {
+  const selectedHit = runtimeState.devSelectedHit;
+  const selectedId = selectedHit?.targetType === "land" ? String(selectedHit.id || "").trim() : "";
+  const hoveredId = String(runtimeState.hoveredId || "").trim();
+  const featureId = selectedId || hoveredId;
+  if (!featureId) return null;
+  const feature = runtimeState.landIndex?.get(featureId);
+  if (!isDevSelectionEligibleFeature(feature, featureId)) return null;
+  const countryCode = getFeatureCountryCodeNormalized(feature);
+  return {
+    featureId,
+    feature,
+    countryCode,
+  };
+}
+
+function applyVisualFillToResolvedIds(targetIds, selectedColor, kind, dirtyReason) {
+  const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  if (!resolvedIds.length) return false;
+  return applyVisualSubdivisionFill(resolvedIds, selectedColor, {
+    kind,
+    dirtyReason,
+  });
+}
+
+function eraseVisualOverridesForIds(targetIds, { kind, dirtyReason } = {}) {
+  const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  if (!resolvedIds.length) return false;
+  const historyBefore = captureHistoryState({
+    featureIds: resolvedIds,
+  });
+  resolvedIds.forEach((targetId) => {
+    delete runtimeState.visualOverrides[targetId];
+    delete runtimeState.featureOverrides[targetId];
+  });
+  markLegacyColorStateDirty();
+  refreshResolvedColorsForFeatures(resolvedIds, { renderNow: false });
+  markDirty(dirtyReason || kind || "erase-feature-color");
+  commitHistoryEntry({
+    kind: kind || "erase-feature-color",
+    before: historyBefore,
+    after: captureHistoryState({
+      featureIds: resolvedIds,
+    }),
+  });
+  if (context) {
+    render();
+  }
+  refreshSidebarAfterPaint({ featureIds: resolvedIds });
+  return true;
+}
+
+function applySovereigntyFillToIds(targetIds, { kind, dirtyReason, recomputeReason } = {}) {
+  const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  if (!resolvedIds.length) return false;
+  if (!runtimeState.activeSovereignCode) {
+    showToast(t("No active sovereign selected.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  const historyBefore = captureHistoryState({
+    sovereigntyFeatureIds: resolvedIds,
+  });
+  const changed = setFeatureOwnerCodes(resolvedIds, runtimeState.activeSovereignCode);
+  refreshResolvedColorsForFeatures(resolvedIds, { renderNow: false });
+  if (changed > 0) {
+    scheduleDynamicBorderRecompute(recomputeReason || kind || "dev-workspace-sovereignty-fill", 90);
+    markDirty(dirtyReason || kind || "fill-sovereignty");
+    commitHistoryEntry({
+      kind: kind || "fill-sovereignty",
+      before: historyBefore,
+      after: captureHistoryState({
+        sovereigntyFeatureIds: resolvedIds,
+      }),
+      affectsSovereignty: true,
+    });
+    if (context) {
+      render();
+    }
+    refreshSidebarAfterPaint({ featureIds: resolvedIds });
+    return true;
+  }
+  return false;
+}
+
+function eraseSovereigntyForIds(targetIds, { kind, dirtyReason, recomputeReason } = {}) {
+  const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  if (!resolvedIds.length) return false;
+  const historyBefore = captureHistoryState({
+    sovereigntyFeatureIds: resolvedIds,
+  });
+  const changed = resetFeatureOwnerCodes(resolvedIds);
+  refreshResolvedColorsForFeatures(resolvedIds, { renderNow: false });
+  if (changed > 0) {
+    scheduleDynamicBorderRecompute(recomputeReason || kind || "dev-workspace-sovereignty-reset", 90);
+    markDirty(dirtyReason || kind || "erase-sovereignty");
+    commitHistoryEntry({
+      kind: kind || "erase-sovereignty",
+      before: historyBefore,
+      after: captureHistoryState({
+        sovereigntyFeatureIds: resolvedIds,
+      }),
+      affectsSovereignty: true,
+    });
+    if (context) {
+      render();
+    }
+    refreshSidebarAfterPaint({ featureIds: resolvedIds });
+    return true;
+  }
+  return false;
+}
+
+function applyDevLandBatchAction(targetIds, {
+  ownerCodes = [],
+  visualKind = "dev-batch-fill",
+  visualDirtyReason = visualKind,
+  sovereigntyFillKind = "dev-batch-sovereignty-fill",
+  sovereigntyEraseKind = "dev-batch-sovereignty-reset",
+  recomputeReason = "dev-batch",
+} = {}) {
+  const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  if (!resolvedIds.length) return false;
+  if (runtimeState.currentTool === "eyedropper") {
+    showToast(t("Switch to Fill or Eraser before running a batch action.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  if (isSovereigntyModeActive()) {
+    return runtimeState.currentTool === "eraser"
+      ? eraseSovereigntyForIds(resolvedIds, {
+        kind: sovereigntyEraseKind,
+        dirtyReason: sovereigntyEraseKind,
+        recomputeReason,
+      })
+      : applySovereigntyFillToIds(resolvedIds, {
+        kind: sovereigntyFillKind,
+        dirtyReason: sovereigntyFillKind,
+        recomputeReason,
+      });
+  }
+  if (runtimeState.currentTool === "eraser") {
+    return eraseVisualOverridesForIds(resolvedIds, {
+      kind: `${visualKind}-erase`,
+      dirtyReason: `${visualDirtyReason}-erase`,
+    });
+  }
+  const color = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);
+  if (ownerCodes.length === 1) {
+    refreshSidebarAfterPaint({
+      featureIds: resolvedIds,
+      ownerCodes,
+    });
+  }
+  return applyVisualFillToResolvedIds(resolvedIds, color, visualKind, visualDirtyReason);
+}
+
+function applyDevMacroFillCurrentCountry() {
+  const contextInfo = getDevWorkspaceActiveLandContext();
+  if (!contextInfo?.countryCode) {
+    showToast(t("Select or hover a land feature first.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  const ids = getCountryFeatureIds(contextInfo.countryCode);
+  if (!ids.length) return false;
+  return applyDevLandBatchAction(ids, {
+    ownerCodes: [contextInfo.countryCode],
+    visualKind: "dev-fill-country",
+    visualDirtyReason: "dev-fill-country",
+    sovereigntyFillKind: "dev-fill-country-sovereignty",
+    sovereigntyEraseKind: "dev-erase-country-sovereignty",
+    recomputeReason: "dev-fill-country",
+  });
+}
+
+function applyDevMacroFillCurrentParentGroup() {
+  const contextInfo = getDevWorkspaceActiveLandContext();
+  if (!contextInfo) {
+    showToast(t("Select or hover a land feature first.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  const ids = resolveParentGroupTargetIds(contextInfo.feature, contextInfo.featureId);
+  if (!ids.length) {
+    showToast(t("No parent group is available for this feature.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  return applyDevLandBatchAction(ids, {
+    visualKind: "dev-fill-parent-group",
+    visualDirtyReason: "dev-fill-parent-group",
+    sovereigntyFillKind: "dev-fill-parent-group-sovereignty",
+    sovereigntyEraseKind: "dev-erase-parent-group-sovereignty",
+    recomputeReason: "dev-fill-parent-group",
+  });
+}
+
+function applyDevMacroFillCurrentOwnerScope() {
+  const contextInfo = getDevWorkspaceActiveLandContext();
+  if (!contextInfo) {
+    showToast(t("Select or hover a land feature first.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  const ownerCode = getFeatureOwnerCode(contextInfo.featureId) || contextInfo.countryCode;
+  const ids = getFeatureIdsForOwner(ownerCode)
+    .map((value) => String(value || "").trim())
+    .filter((featureId) => featureId && runtimeState.landIndex?.has(featureId));
+  if (!ids.length) {
+    showToast(t("No owner scope is available for this feature.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  return applyDevLandBatchAction(ids, {
+    ownerCodes: ownerCode ? [ownerCode] : [],
+    visualKind: "dev-fill-owner-scope",
+    visualDirtyReason: "dev-fill-owner-scope",
+    sovereigntyFillKind: "dev-fill-owner-scope-sovereignty",
+    sovereigntyEraseKind: "dev-erase-owner-scope-sovereignty",
+    recomputeReason: "dev-fill-owner-scope",
+  });
+}
+
+function applyDevSelectionFill() {
+  const ids = getDevSelectionIds();
+  if (!ids.length) {
+    showToast(t("No selected regions in the development selection.", "ui"), {
+      title: t("Dev Workspace", "ui"),
+      tone: "warning",
+    });
+    return false;
+  }
+  return applyDevLandBatchAction(ids, {
+    visualKind: "dev-fill-selection",
+    visualDirtyReason: "dev-fill-selection",
+    sovereigntyFillKind: "dev-fill-selection-sovereignty",
+    sovereigntyEraseKind: "dev-erase-selection-sovereignty",
+    recomputeReason: "dev-fill-selection",
+  });
+}
+
+function resolveInteractionTargetIds(feature, id) {
+  if (shouldExcludePoliticalInteractionFeature(feature, id)) {
+    return [];
+  }
+  if (isSovereigntyModeActive()) {
+    return [id];
+  }
+  if (runtimeState.interactionGranularity !== "country") {
+    return [id];
+  }
+  const countryCode = getFeatureInteractionCountryCodeNormalized(feature, id);
+  if (!countryCode) {
+    return [id];
+  }
+  const ids = getInteractionCountryFeatureIds(feature, id);
+  return ids.length ? ids : [id];
+}
+
+function isBrushNavigationModifier(event) {
+  return !!(runtimeState.brushModeEnabled && event?.shiftKey);
+}
+
+function shouldAllowZoomEvent(event) {
+  const type = String(event?.type || "").toLowerCase();
+  if (type === "wheel") return true;
+  if (type.startsWith("touch")) return true;
+  if (event?.ctrlKey) return false;
+  if (typeof event?.button === "number" && event.button !== 0) return false;
+  if (runtimeState.specialZoneEditor?.active) return false;
+  if (runtimeState.brushModeEnabled) {
+    return isBrushNavigationModifier(event);
+  }
+  return true;
+}
+
+function resolveParentGroupKey(feature, featureId) {
+  const scenarioDistrictGroup = String(runtimeState.scenarioDistrictGroupByFeatureId?.get(featureId) || "").trim();
+  const scenarioOwnerTag = String(runtimeState.sovereigntyByFeatureId?.[featureId] || "").trim().toUpperCase();
+  const scopeCode = scenarioDistrictGroup && scenarioOwnerTag
+    ? scenarioOwnerTag
+    : getFeatureInteractionCountryCodeNormalized(feature, featureId);
+  if (!scopeCode) return "";
+  const directGroup = getAdmin1Group(feature);
+  const groupName = String(scenarioDistrictGroup || runtimeState.parentGroupByFeatureId?.get(featureId) || directGroup || "").trim();
+  if (!groupName) return "";
+  return `${scopeCode}::${groupName}`;
+}
+
+function resolveParentGroupTargetIds(feature, featureId) {
+  if (!featureId || !runtimeState.landIndex?.has(featureId)) return [];
+  if (shouldExcludePoliticalInteractionFeature(feature, featureId)) return [];
+  const scenarioDistrictGroup = String(runtimeState.scenarioDistrictGroupByFeatureId?.get(featureId) || "").trim();
+  const scenarioOwnerTag = String(runtimeState.sovereigntyByFeatureId?.[featureId] || "").trim().toUpperCase();
+  const parentGroupKey = resolveParentGroupKey(feature, featureId);
+  const ids = scenarioDistrictGroup && scenarioOwnerTag
+    ? getScenarioOwnerFeatureIds(scenarioOwnerTag)
+    : getInteractionCountryFeatureIds(feature, featureId);
+  if (!parentGroupKey || !ids.length) return [];
+  const targetIds = ids.filter((candidateId) => {
+    const candidateFeature = runtimeState.landIndex.get(candidateId);
+    if (!candidateFeature) return false;
+    if (shouldExcludePoliticalInteractionFeature(candidateFeature, candidateId)) return false;
+    return resolveParentGroupKey(candidateFeature, candidateId) === parentGroupKey;
+  });
+  if (targetIds.length < 2) return [];
+  return Array.from(new Set(targetIds));
+}
+
+function resolveCountryFillTargetIds(feature, featureId, { allowWhenParentGrouping = false } = {}) {
+  if (!featureId || !runtimeState.landIndex?.has(featureId)) return [];
+  if (shouldExcludePoliticalInteractionFeature(feature, featureId)) return [];
+  const countryCode = getFeatureInteractionCountryCodeNormalized(feature, featureId);
+  if (!countryCode) return [];
+  const ids = getInteractionCountryFeatureIds(feature, featureId).filter((candidateId) => {
+    const candidateFeature = runtimeState.landIndex.get(candidateId);
+    return candidateFeature && !shouldExcludePoliticalInteractionFeature(candidateFeature, candidateId);
+  });
+  if (ids.length < 2) return [];
+
+  if (!allowWhenParentGrouping) {
+    const hasParentGrouping = ids.some((candidateId) => {
+      const candidateFeature = runtimeState.landIndex.get(candidateId);
+      if (!candidateFeature) return false;
+      return !!resolveParentGroupKey(candidateFeature, candidateId);
+    });
+    if (hasParentGrouping) return [];
+  }
+
+  return ids;
+}
+
+function isBatchFillDoubleClickBaseEligible(hit, feature) {
+  if (!hit?.id || !feature) return false;
+  if (runtimeState.currentTool !== "fill") return false;
+  if (isSovereigntyModeActive()) return false;
+  if (runtimeState.interactionGranularity !== "subdivision") return false;
+  if (runtimeState.brushModeEnabled) return false;
+  if (runtimeState.specialZoneEditor?.active) return false;
+  return true;
+}
+
+function buildDoubleClickBatchPlan(feature, featureId) {
+  if (!feature || !featureId) return null;
+  if (shouldExcludePoliticalInteractionFeature(feature, featureId)) return null;
+  const requestedScope = String(runtimeState.batchFillScope || "parent") === "country" ? "country" : "parent";
+  if (requestedScope === "parent") {
+    const parentTargetIds = resolveParentGroupTargetIds(feature, featureId);
+    if (parentTargetIds.length >= 2) {
+      return {
+        targetIds: parentTargetIds,
+        kind: "fill-parent-group",
+        dirtyReason: "fill-parent-group",
+        fallbackToCountry: false,
+      };
+    }
+  }
+
+  const countryTargetIds = resolveCountryFillTargetIds(feature, featureId, {
+    allowWhenParentGrouping: true,
+  });
+  if (countryTargetIds.length >= 2) {
+    return {
+      targetIds: countryTargetIds,
+      kind: "fill-country-batch",
+      dirtyReason: "fill-country-batch",
+      fallbackToCountry: requestedScope === "parent",
+    };
+  }
+  return null;
+}
+
+function isDoubleClickBatchEligible(hit, feature) {
+  if (!isBatchFillDoubleClickBaseEligible(hit, feature)) return false;
+  return !!buildDoubleClickBatchPlan(feature, hit.id);
+}
+
+function applyVisualSubdivisionFill(targetIds, selectedColor, { kind = "fill-feature-color", dirtyReason = kind } = {}) {
+  const actionStart = nowMs();
+  const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  if (!resolvedIds.length) return false;
+  const color = getSafeCanvasColor(selectedColor, LAND_FILL_COLOR);
+  const historyBefore = captureHistoryState({
+    featureIds: resolvedIds,
+  });
+  resolvedIds.forEach((targetId) => {
+    runtimeState.visualOverrides[targetId] = color;
+    runtimeState.featureOverrides[targetId] = color;
+  });
+  markLegacyColorStateDirty();
+  refreshResolvedColorsForFeatures(resolvedIds, { renderNow: false });
+  markDirty(dirtyReason);
+  commitHistoryEntry({
+    kind,
+    before: historyBefore,
+    after: captureHistoryState({
+      featureIds: resolvedIds,
+    }),
+  });
+  addRecentColor(color);
+  requestInteractionRender(kind);
+  refreshSidebarAfterPaint({ featureIds: resolvedIds });
+  noteRenderAction(kind, actionStart);
+  return true;
+}
+
+function applyWaterRegionFill(targetId, selectedColor, { kind = "fill-water-region-color", dirtyReason = kind } = {}) {
+  const actionStart = nowMs();
+  const resolvedId = String(targetId || "").trim();
+  if (!resolvedId) return false;
+  const defaultColor = getWaterRegionDefaultFillColorById(resolvedId);
+  const color = getSafeCanvasColor(selectedColor, defaultColor);
+  const currentColor = getWaterRegionColor(resolvedId);
+  runtimeState.selectedWaterRegionId = resolvedId;
+  if (currentColor === color) {
+    refreshWaterRegionSidebarRowsNow([resolvedId]);
+    return false;
+  }
+  const historyBefore = captureHistoryState({
+    waterRegionIds: [resolvedId],
+  });
+  runtimeState.waterRegionOverrides[resolvedId] = color;
+  markDirty(dirtyReason);
+  commitHistoryEntry({
+    kind,
+    before: historyBefore,
+    after: captureHistoryState({
+      waterRegionIds: [resolvedId],
+    }),
+  });
+  addRecentColor(color);
+  requestInteractionRender(kind);
+  refreshSidebarAfterPaint({ waterRegionIds: [resolvedId] });
+  noteRenderAction(kind, actionStart);
+  return true;
+}
+
+function executeSingleSubdivisionFill(action) {
+  if (!action) return false;
+  const targetIds = action.eventPayload?.targetIds || [action.featureId];
+  return applyVisualSubdivisionFill(targetIds, action.selectedColor, {
+    kind: "fill-feature-color",
+    dirtyReason: "fill-feature-color",
+  });
+}
+
+function executeBatchFill(action, resolverFn, kind) {
+  if (!action) return false;
+  const feature = action.eventPayload?.feature || runtimeState.landIndex.get(action.featureId);
+  const targetIds = resolverFn(feature, action.featureId);
+  if (!targetIds.length) {
+    return executeSingleSubdivisionFill(action);
+  }
+  return applyVisualSubdivisionFill(targetIds, action.selectedColor, {
+    kind,
+    dirtyReason: kind,
+  });
+}
+
+function executeDoubleClickBatchFill(feature, featureId) {
+  if (!feature || !featureId) return false;
+  const plan = buildDoubleClickBatchPlan(feature, featureId);
+  if (!plan?.targetIds?.length) return false;
+  if (plan.fallbackToCountry) {
+    showDetailPromotionToast("No parent group was available here. Double-click fell back to country fill.", {
+      title: "Quick fill scope",
+      tone: "info",
+      duration: 2400,
+    });
+  }
+  return applyVisualSubdivisionFill(plan.targetIds, runtimeState.selectedColor, {
+    kind: plan.kind,
+    dirtyReason: plan.dirtyReason,
+  });
+}
+
+function mergeHistorySnapshot(target, snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return;
+  Object.entries(snapshot).forEach(([section, patch]) => {
+    if (!patch || typeof patch !== "object") return;
+    target[section] = target[section] || {};
+    Object.assign(target[section], patch);
+  });
+}
+
+function ensureBrushSession(event) {
+  if (brushSession) return brushSession;
+  brushSession = {
+    active: true,
+    dragging: false,
+    startX: Number(event?.clientX || 0),
+    startY: Number(event?.clientY || 0),
+    visitedFeatureIds: new Set(),
+    visitedWaterRegionIds: new Set(),
+    visitedSpecialRegionIds: new Set(),
+    visitedOwnerCodes: new Set(),
+    affectedFeatureIds: new Set(),
+    affectedWaterRegionIds: new Set(),
+    affectedSpecialRegionIds: new Set(),
+    affectedOwnerCodes: new Set(),
+    affectedSovereigntyIds: new Set(),
+    before: {},
+    changed: false,
+  };
+  return brushSession;
+}
+
+function applyBrushHit(hit) {
+  if (!hit?.id) return false;
+  if (hit.targetType === "special") {
+    const specialId = String(hit.id || "").trim();
+    if (!specialId || brushSession.visitedSpecialRegionIds.has(specialId)) return false;
+    if (runtimeState.currentTool === "eyedropper") return false;
+    mergeHistorySnapshot(brushSession.before, captureHistoryState({ specialRegionIds: [specialId] }));
+    brushSession.visitedSpecialRegionIds.add(specialId);
+    brushSession.affectedSpecialRegionIds.add(specialId);
+    if (runtimeState.currentTool === "eraser") {
+      delete runtimeState.specialRegionOverrides[specialId];
+    } else {
+      runtimeState.specialRegionOverrides[specialId] = getSafeCanvasColor(
+        runtimeState.selectedColor,
+        getSpecialRegionColor(specialId)
+      );
+    }
+    runtimeState.selectedSpecialRegionId = specialId;
+    brushSession.changed = true;
+    return true;
+  }
+  if (hit.targetType === "water") {
+    const waterId = String(hit.id || "").trim();
+    if (!waterId || brushSession.visitedWaterRegionIds.has(waterId)) return false;
+    if (runtimeState.currentTool === "eyedropper") return false;
+    mergeHistorySnapshot(brushSession.before, captureHistoryState({ waterRegionIds: [waterId] }));
+    brushSession.visitedWaterRegionIds.add(waterId);
+    brushSession.affectedWaterRegionIds.add(waterId);
+    if (runtimeState.currentTool === "eraser") {
+      delete runtimeState.waterRegionOverrides[waterId];
+    } else {
+      runtimeState.waterRegionOverrides[waterId] = getSafeCanvasColor(
+        runtimeState.selectedColor,
+        getWaterRegionDefaultFillColorById(waterId)
+      );
+    }
+    runtimeState.selectedWaterRegionId = waterId;
+    brushSession.changed = true;
+    return true;
+  }
+  const feature = runtimeState.landIndex.get(hit.id);
+  if (!feature) return false;
+  const id = hit.id;
+  const countryCode = hit.countryCode || getFeatureCountryCodeNormalized(feature);
+  if (!requestLeafDetailPromotion(countryCode, { announce: true })) {
+    return false;
+  }
+  const targetIds = resolveInteractionTargetIds(feature, id);
+  const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);
+
+  if (runtimeState.currentTool === "eyedropper") return false;
+  if (runtimeState.currentTool === "eraser") {
+    if (isSovereigntyModeActive()) {
+      const freshIds = targetIds.filter((targetId) => !brushSession.affectedSovereigntyIds.has(targetId));
+      if (!freshIds.length) return false;
+      mergeHistorySnapshot(brushSession.before, captureHistoryState({ sovereigntyFeatureIds: freshIds }));
+      freshIds.forEach((targetId) => brushSession.affectedSovereigntyIds.add(targetId));
+      const changed = resetFeatureOwnerCodes(freshIds);
+      if (changed > 0) {
+        brushSession.changed = true;
+        refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+        scheduleDynamicBorderRecompute("brush-sovereignty-reset", 90);
+        return true;
+      }
+      return false;
+    }
+    if (runtimeState.interactionGranularity === "country" && countryCode) {
+      if (brushSession.visitedOwnerCodes.has(countryCode)) return false;
+      brushSession.visitedOwnerCodes.add(countryCode);
+      mergeHistorySnapshot(brushSession.before, captureHistoryState({ ownerCodes: [countryCode] }));
+      brushSession.affectedOwnerCodes.add(countryCode);
+      delete runtimeState.sovereignBaseColors[countryCode];
+      delete runtimeState.countryBaseColors[countryCode];
+      markLegacyColorStateDirty();
+      refreshResolvedColorsForOwners([countryCode], { renderNow: false });
+      brushSession.changed = true;
+      return true;
+    }
+    const freshIds = targetIds.filter((targetId) => !brushSession.visitedFeatureIds.has(targetId));
+    if (!freshIds.length) return false;
+    mergeHistorySnapshot(brushSession.before, captureHistoryState({ featureIds: freshIds }));
+    freshIds.forEach((targetId) => {
+      brushSession.visitedFeatureIds.add(targetId);
+      brushSession.affectedFeatureIds.add(targetId);
+      delete runtimeState.visualOverrides[targetId];
+      delete runtimeState.featureOverrides[targetId];
+    });
+    markLegacyColorStateDirty();
+    refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+    brushSession.changed = true;
+    return true;
+  }
+
+  if (isSovereigntyModeActive()) {
+    if (!runtimeState.activeSovereignCode) return false;
+    const freshIds = targetIds.filter((targetId) => !brushSession.affectedSovereigntyIds.has(targetId));
+    if (!freshIds.length) return false;
+    mergeHistorySnapshot(brushSession.before, captureHistoryState({ sovereigntyFeatureIds: freshIds }));
+    freshIds.forEach((targetId) => brushSession.affectedSovereigntyIds.add(targetId));
+    const changed = setFeatureOwnerCodes(freshIds, runtimeState.activeSovereignCode);
+    if (changed > 0) {
+      brushSession.changed = true;
+      refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+      scheduleDynamicBorderRecompute("brush-sovereignty-fill", 90);
+      return true;
+    }
+    return false;
+  }
+
+  if (runtimeState.interactionGranularity === "country" && countryCode) {
+    if (brushSession.visitedOwnerCodes.has(countryCode)) return false;
+    brushSession.visitedOwnerCodes.add(countryCode);
+    mergeHistorySnapshot(brushSession.before, captureHistoryState({ ownerCodes: [countryCode] }));
+    brushSession.affectedOwnerCodes.add(countryCode);
+    runtimeState.sovereignBaseColors[countryCode] = selectedColor;
+    runtimeState.countryBaseColors[countryCode] = selectedColor;
+    markLegacyColorStateDirty();
+    refreshResolvedColorsForOwners([countryCode], { renderNow: false });
+    brushSession.changed = true;
+    return true;
+  }
+
+  const freshIds = targetIds.filter((targetId) => !brushSession.visitedFeatureIds.has(targetId));
+  if (!freshIds.length) return false;
+  mergeHistorySnapshot(brushSession.before, captureHistoryState({ featureIds: freshIds }));
+  freshIds.forEach((targetId) => {
+    brushSession.visitedFeatureIds.add(targetId);
+    brushSession.affectedFeatureIds.add(targetId);
+    runtimeState.visualOverrides[targetId] = selectedColor;
+    runtimeState.featureOverrides[targetId] = selectedColor;
+  });
+  markLegacyColorStateDirty();
+  refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+  brushSession.changed = true;
+  return true;
+}
+
+function flushBrushSession() {
+  const actionStart = nowMs();
+  if (!brushSession) return;
+  const current = brushSession;
+  brushSession = null;
+  if (current.dragging) {
+    suppressNextClickAfterBrush = true;
+  }
+  if (!current.dragging || !current.changed) return;
+  const featureIds = Array.from(current.affectedFeatureIds);
+  const waterRegionIds = Array.from(current.affectedWaterRegionIds);
+  const specialRegionIds = Array.from(current.affectedSpecialRegionIds);
+  const ownerCodes = Array.from(current.affectedOwnerCodes);
+  const sovereigntyFeatureIds = Array.from(current.affectedSovereigntyIds);
+  const after = captureHistoryState({ featureIds, waterRegionIds, specialRegionIds, ownerCodes, sovereigntyFeatureIds });
+  pushHistoryEntry({
+    kind: runtimeState.currentTool === "eraser" ? "brush-erase" : "brush-fill",
+    before: current.before,
+    after,
+    meta: {
+      affectsSovereignty: isSovereigntyModeActive(),
+    },
+  });
+  if (runtimeState.currentTool !== "eyedropper") {
+    addRecentColor(runtimeState.selectedColor);
+  }
+  markDirty("brush-stroke");
+  refreshSidebarAfterPaint({
+    featureIds,
+    waterRegionIds,
+    specialRegionIds,
+    ownerCodes,
+  });
+  requestRendererRender("brush-stroke", { flush: true });
+  noteRenderAction("brush-stroke", actionStart);
+}
+
+function handleBrushPointerDown(event) {
+  if (runtimeState.startupReadonly) {
+    if (event?.preventDefault) event.preventDefault();
+    blockStartupReadonlyInteraction();
+    return;
+  }
+  if (!runtimeState.brushModeEnabled || runtimeState.currentTool === "eyedropper" || runtimeState.specialZoneEditor?.active) return;
+  if (isBrushNavigationModifier(event)) return;
+  if ((event.buttons & 1) !== 1) return;
+  if (event?.preventDefault) event.preventDefault();
+  ensureBrushSession(event);
+}
+
+function handleBrushPointerMove(event) {
+  if (runtimeState.startupReadonly) {
+    return;
+  }
+  if (!brushSession || !runtimeState.brushModeEnabled || runtimeState.currentTool === "eyedropper" || runtimeState.specialZoneEditor?.active) {
+    return;
+  }
+  if ((event.buttons & 1) !== 1) {
+    flushBrushSession();
+    return;
+  }
+  const dx = Number(event.clientX || 0) - brushSession.startX;
+  const dy = Number(event.clientY || 0) - brushSession.startY;
+  if (!brushSession.dragging && Math.hypot(dx, dy) <= 3) return;
+  brushSession.dragging = true;
+  const hit = getHitFromEvent(event, {
+    enableSnap: false,
+    snapPx: 0,
+    eventType: "brush",
+  });
+  if (!hit?.id) return;
+  if (applyBrushHit(hit) && context) {
+    requestInteractionRender("brush-preview");
+  }
+}
+
+async function handleClick(event, _interactionContext = null) {
+  if (runtimeState.startupReadonly) {
+    if (event?.preventDefault) event.preventDefault();
+    blockStartupReadonlyInteraction();
+    return;
+  }
+  const actionStart = nowMs();
+  if (!runtimeState.landData && !runtimeState.waterRegionsData && !runtimeState.scenarioSpecialRegionsData) return;
+  if (suppressNextClickAfterBrush) {
+    suppressNextClickAfterBrush = false;
+    return;
+  }
+  if (typeof runtimeState.dismissOnboardingHintFn === "function") {
+    runtimeState.dismissOnboardingHintFn();
+  }
+  if (runtimeState.specialZoneEditor?.active) {
+    appendSpecialZoneVertexFromEvent(event);
+    return;
+  }
+  if (runtimeState.operationalLineEditor?.active) {
+    appendOperationalLineVertexFromEvent(event);
+    return;
+  }
+  if (runtimeState.operationGraphicsEditor?.active) {
+    appendOperationGraphicVertexFromEvent(event);
+    return;
+  }
+  if (runtimeState.unitCounterEditor?.active) {
+    placeUnitCounterFromEvent(event);
+    return;
+  }
+
+  const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);
+  if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {
+    hoveredFacilityEntry = clickedFacilityEntry;
+    selectedFacilityEntry = clickedFacilityEntry;
+    facilityInfoCardExpanded = false;
+    queueTooltipUpdate({ visible: false });
+    applyFacilityInfoCardState(clickedFacilityEntry, {
+      x: event?.clientX,
+      y: event?.clientY,
+    });
+    runtimeState.hoverOverlayDirty = true;
+    renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });
+    noteRenderAction("click-facility-info", actionStart);
+    return;
+  }
+  if (selectedFacilityEntry) {
+    selectedFacilityEntry = null;
+    applyFacilityInfoCardState(null);
+    runtimeState.hoverOverlayDirty = true;
+    renderHoverOverlayIfNeeded({ eventType: "facility-card-clear" });
+  }
+
+  const hit = getHitFromEvent(event, {
+    enableSnap: true,
+    snapPx: HIT_SNAP_RADIUS_CLICK_PX,
+    eventType: "click",
+  });
+  // City points may influence hover messaging, but paint/select stays bound to
+  // the canonical land/water/special hit pipeline only.
+  const id = hit.id;
+  if (!id) return;
+  updateDevSelectedHit(hit);
+  if (hit.targetType === "special") {
+    const specialFeature = runtimeState.specialRegionsById.get(id);
+    if (!specialFeature) return;
+    const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
+    const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
+    runtimeState.selectedWaterRegionId = "";
+    runtimeState.selectedSpecialRegionId = id;
+    if (previousWaterRegionId) refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
+    refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId, id]);
+    if (runtimeState.currentTool === "eraser") {
+      const historyBefore = captureHistoryState({ specialRegionIds: [id] });
+      delete runtimeState.specialRegionOverrides[id];
+      markDirty("erase-special-region-color");
+      commitHistoryEntry({
+        kind: "erase-special-region-color",
+        before: historyBefore,
+        after: captureHistoryState({ specialRegionIds: [id] }),
+      });
+      requestInteractionRender("click-erase-special");
+      refreshSidebarAfterPaint({ specialRegionIds: [id] });
+      noteRenderAction("click-erase-special", actionStart);
+      return;
+    }
+    if (runtimeState.currentTool === "eyedropper") {
+      const picked = getSpecialRegionColor(id, specialFeature);
+      if (picked) {
+        runtimeState.selectedColor = picked;
+        if (typeof runtimeState.updateSwatchUIFn === "function") {
+          runtimeState.updateSwatchUIFn();
+        }
+      }
+      noteRenderAction("eyedropper-special", actionStart);
+      return;
+    }
+    const currentColor = getSpecialRegionColor(id, specialFeature);
+    const nextColor = getSafeCanvasColor(runtimeState.selectedColor, currentColor);
+    if (nextColor !== currentColor) {
+      const historyBefore = captureHistoryState({ specialRegionIds: [id] });
+      runtimeState.specialRegionOverrides[id] = nextColor;
+      markDirty("fill-special-region-color");
+      commitHistoryEntry({
+        kind: "fill-special-region-color",
+        before: historyBefore,
+        after: captureHistoryState({ specialRegionIds: [id] }),
+      });
+      addRecentColor(nextColor);
+      requestInteractionRender("click-fill-special");
+      refreshSidebarAfterPaint({ specialRegionIds: [id] });
+    }
+    noteRenderAction("click-fill-special", actionStart);
+    return;
+  }
+  if (hit.targetType === "water") {
+    const waterFeature = runtimeState.waterRegionsById.get(id);
+    if (!waterFeature) return;
+    const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
+    const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
+    runtimeState.selectedSpecialRegionId = "";
+    runtimeState.selectedWaterRegionId = id;
+    if (previousSpecialRegionId) refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
+    refreshWaterRegionSidebarRowsNow([previousWaterRegionId, id]);
+    const macroOceanSelectionOnly =
+      isMacroOceanWaterRegion(waterFeature) && !isOpenOceanPaintEnabled();
+    if (macroOceanSelectionOnly) {
+      noteRenderAction("click-select-open-ocean", actionStart);
+      return;
+    }
+    if (runtimeState.currentTool === "eraser") {
+      const historyBefore = captureHistoryState({ waterRegionIds: [id] });
+      delete runtimeState.waterRegionOverrides[id];
+      markDirty("erase-water-region-color");
+      commitHistoryEntry({
+        kind: "erase-water-region-color",
+        before: historyBefore,
+        after: captureHistoryState({ waterRegionIds: [id] }),
+      });
+      requestInteractionRender("click-erase-water");
+      refreshSidebarAfterPaint({ waterRegionIds: [id] });
+      noteRenderAction("click-erase-water", actionStart);
+      return;
+    }
+    if (runtimeState.currentTool === "eyedropper") {
+      const picked = getWaterRegionColor(id);
+      if (picked) {
+        runtimeState.selectedColor = picked;
+        if (typeof runtimeState.updateSwatchUIFn === "function") {
+          runtimeState.updateSwatchUIFn();
+        }
+      }
+      noteRenderAction("eyedropper-water", actionStart);
+      return;
+    }
+    applyWaterRegionFill(id, runtimeState.selectedColor, {
+      kind: "fill-water-region-color",
+      dirtyReason: "fill-water-region-color",
+    });
+    return;
+  }
+  if (runtimeState.selectedWaterRegionId) {
+    const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
+    runtimeState.selectedWaterRegionId = "";
+    refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
+  }
+  if (runtimeState.selectedSpecialRegionId) {
+    const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
+    runtimeState.selectedSpecialRegionId = "";
+    refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
+  }
+  let landHit = hit;
+  let landId = id;
+  let feature = runtimeState.landIndex.get(landId);
+  if (!feature) return;
+  if (runtimeState.devSelectionModeEnabled && (event?.ctrlKey || event?.metaKey)) {
+    toggleFeatureInDevSelection(landId);
+    noteRenderAction("dev-selection-toggle", actionStart);
+    return;
+  }
+  let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);
+  if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {
+    return;
+  }
+  if (shouldRequireLeafDetail(countryCode)) {
+    const refreshedHit = getHitFromEvent(event, {
+      enableSnap: true,
+      snapPx: HIT_SNAP_RADIUS_CLICK_PX,
+      eventType: "click",
+    });
+    const refreshedId = refreshedHit.id;
+    const refreshedFeature = refreshedId ? runtimeState.landIndex.get(refreshedId) : null;
+    if (refreshedHit.targetType === "land" && refreshedId && refreshedFeature) {
+      landHit = refreshedHit;
+      landId = refreshedId;
+      feature = refreshedFeature;
+      countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);
+      updateDevSelectedHit(landHit);
+    }
+  }
+  const targetIds = resolveInteractionTargetIds(feature, landId);
+
+  if (runtimeState.isEditingPreset) {
+    if (typeof globalThis.togglePresetRegion === "function") {
+      globalThis.togglePresetRegion(landId);
+    }
+    return;
+  }
+
+  if (runtimeState.currentTool === "eraser") {
+    const shouldRefreshCountryList = (!!countryCode);
+    let historyBefore = null;
+    if (isSovereigntyModeActive()) {
+      historyBefore = captureHistoryState({
+        sovereigntyFeatureIds: targetIds,
+      });
+      const changed = resetFeatureOwnerCodes(targetIds);
+      if (changed > 0) {
+        refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
+        markDirty("erase-sovereignty");
+        if (targetIds.length > 1) {
+          scheduleDynamicBorderRecompute("sovereignty-batch-reset", 90);
+        } else {
+          scheduleDynamicBorderRecompute("sovereignty-single-reset", 150);
+        }
+        commitHistoryEntry({
+          kind: "erase-sovereignty",
+          before: historyBefore,
+          after: captureHistoryState({
+            sovereigntyFeatureIds: targetIds,
+          }),
+          affectsSovereignty: true,
+        });
+      }
+    } else if (runtimeState.interactionGranularity === "country" && countryCode) {
+      historyBefore = captureHistoryState({
+        ownerCodes: [countryCode],
+      });
+      delete runtimeState.sovereignBaseColors[countryCode];
+      delete runtimeState.countryBaseColors[countryCode];
+      markLegacyColorStateDirty();
+      refreshResolvedColorsForOwners([countryCode], { renderNow: false });
+      markDirty("erase-country-color");
+      commitHistoryEntry({
+        kind: "erase-country-color",
+        before: historyBefore,
+        after: captureHistoryState({
+          ownerCodes: [countryCode],
+        }),
+      });
+    } else {
+      historyBefore = captureHistoryState({
+        featureIds: targetIds,
+      });
+      targetIds.forEach((targetId) => {
+        delete runtimeState.visualOverrides[targetId];
+        delete runtimeState.featureOverrides[targetId];
+      });
+      markLegacyColorStateDirty();
+      refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
+      markDirty("erase-feature-color");
+      commitHistoryEntry({
+        kind: "erase-feature-color",
+        before: historyBefore,
+        after: captureHistoryState({
+          featureIds: targetIds,
+        }),
+      });
+    }
+    requestInteractionRender("click-erase");
+    if (shouldRefreshCountryList) {
+      refreshSidebarAfterPaint({
+        featureIds: targetIds,
+        ownerCodes: countryCode ? [countryCode] : [],
+      });
+    }
+    noteRenderAction("click-erase", actionStart);
+    return;
+  }
+
+  if (runtimeState.currentTool === "eyedropper") {
+    if (isSovereigntyModeActive()) {
+      const ownerCode = getFeatureOwnerCode(landId) || countryCode;
+      if (ownerCode) {
+        const previousActiveOwner = runtimeState.activeSovereignCode;
+        runtimeState.activeSovereignCode = ownerCode;
+        if (typeof runtimeState.updateActiveSovereignUIFn === "function") {
+          runtimeState.updateActiveSovereignUIFn();
+        }
+        refreshSidebarAfterPaint({
+          ownerCodes: [previousActiveOwner, ownerCode],
+        });
+      }
+    } else {
+      const picked =
+        (runtimeState.interactionGranularity === "country" && countryCode
+          ? getSafeCanvasColor(runtimeState.sovereignBaseColors?.[countryCode] || runtimeState.countryBaseColors?.[countryCode], null)
+          : null) ||
+        getSafeCanvasColor(runtimeState.colors[landId], null);
+      if (picked) {
+        runtimeState.selectedColor = picked;
+        if (typeof runtimeState.updateSwatchUIFn === "function") {
+          runtimeState.updateSwatchUIFn();
+        }
+      }
+    }
+    noteRenderAction("eyedropper", actionStart);
+    return;
+  }
+
+  const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);
+  runtimeState.selectedColor = selectedColor;
+  if (isSovereigntyModeActive()) {
+    const historyBefore = captureHistoryState({
+      sovereigntyFeatureIds: targetIds,
+    });
+    if (!runtimeState.activeSovereignCode) {
+      console.warn("[sovereignty] No active sovereign selected.");
+      return;
+    }
+    const changed = setFeatureOwnerCodes(targetIds, runtimeState.activeSovereignCode);
+    if (changed > 0) {
+      refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
+      if (targetIds.length > 1) {
+        scheduleDynamicBorderRecompute("sovereignty-batch-fill", 90);
+      } else {
+        scheduleDynamicBorderRecompute("sovereignty-single-fill", 150);
+      }
+    }
+    if (changed > 0) {
+      markDirty("fill-sovereignty");
+      commitHistoryEntry({
+        kind: "fill-sovereignty",
+        before: historyBefore,
+        after: captureHistoryState({
+          sovereigntyFeatureIds: targetIds,
+        }),
+        affectsSovereignty: true,
+      });
+    }
+  } else if (runtimeState.interactionGranularity === "country" && countryCode) {
+    const historyBefore = captureHistoryState({
+      ownerCodes: [countryCode],
+    });
+    runtimeState.sovereignBaseColors[countryCode] = selectedColor;
+    runtimeState.countryBaseColors[countryCode] = selectedColor;
+    markLegacyColorStateDirty();
+    refreshResolvedColorsForOwners([countryCode], { renderNow: false });
+    markDirty("fill-country-color");
+    commitHistoryEntry({
+      kind: "fill-country-color",
+      before: historyBefore,
+      after: captureHistoryState({
+        ownerCodes: [countryCode],
+      }),
+    });
+  } else {
+    const clickCount = Math.max(1, Number(event?.detail || 1));
+    if (clickCount >= 2 && isDoubleClickBatchEligible(landHit, feature)) {
+      return;
+    }
+    applyVisualSubdivisionFill(targetIds, selectedColor, {
+      kind: "fill-feature-color",
+      dirtyReason: "fill-feature-color",
+    });
+    return;
+  }
+  addRecentColor(selectedColor);
+  requestInteractionRender("click-fill");
+  if (isSovereigntyModeActive() || (runtimeState.interactionGranularity === "country" && countryCode)) {
+    refreshSidebarAfterPaint({
+      featureIds: targetIds,
+      ownerCodes: countryCode ? [countryCode] : [],
+    });
+  }
+  noteRenderAction("click-fill", actionStart);
+}
+
+async function handleDoubleClick(event, _interactionContext = null) {
+  if (runtimeState.startupReadonly) {
+    if (event?.preventDefault) event.preventDefault();
+    blockStartupReadonlyInteraction();
+    return;
+  }
+  const actionStart = nowMs();
+  if (runtimeState.specialZoneEditor?.active) {
+    if (event?.preventDefault) event.preventDefault();
+    finishSpecialZoneDraw();
+    return;
+  }
+  if (runtimeState.operationalLineEditor?.active) {
+    if (event?.preventDefault) event.preventDefault();
+    finishOperationalLineDraw();
+    return;
+  }
+  if (runtimeState.operationGraphicsEditor?.active) {
+    if (event?.preventDefault) event.preventDefault();
+    finishOperationGraphicDraw();
+    return;
+  }
+  if (!runtimeState.landData) return;
+  if (event?.preventDefault) event.preventDefault();
+
+  const hit = getHitFromEvent(event, {
+    enableSnap: true,
+    snapPx: HIT_SNAP_RADIUS_CLICK_PX,
+    eventType: "dblclick",
+  });
+  const id = hit.id;
+  if (!id) return;
+  let feature = runtimeState.landIndex.get(id);
+  if (!feature) return;
+  let featureId = id;
+  let countryCode = hit.countryCode || getFeatureCountryCodeNormalized(feature);
+  if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {
+    return;
+  }
+  if (shouldRequireLeafDetail(countryCode)) {
+    const refreshedHit = getHitFromEvent(event, {
+      enableSnap: true,
+      snapPx: HIT_SNAP_RADIUS_CLICK_PX,
+      eventType: "dblclick",
+    });
+    const refreshedId = refreshedHit.id;
+    const refreshedFeature = refreshedId ? runtimeState.landIndex.get(refreshedId) : null;
+    if (refreshedHit.targetType === "land" && refreshedId && refreshedFeature) {
+      feature = refreshedFeature;
+      featureId = refreshedId;
+      countryCode = refreshedHit.countryCode || getFeatureCountryCodeNormalized(feature);
+    }
+  }
+  executeDoubleClickBatchFill(feature, featureId);
+  noteRenderAction("double-click-fill", actionStart);
+}
+
+function calculatePanExtent() {
+  const fallback = [
+    [-MAP_PAN_PADDING_PX, -MAP_PAN_PADDING_PX],
+    [runtimeState.width + MAP_PAN_PADDING_PX, runtimeState.height + MAP_PAN_PADDING_PX],
+  ];
+
+  if (!pathSVG || !runtimeState.landData || !runtimeState.landData.features?.length) return fallback;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+
+  for (const feature of runtimeState.landData.features) {
+    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) continue;
+    const featureId = getFeatureId(feature);
+    const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
+      || getProjectedFeatureBounds(feature, { featureId });
+    if (!bounds) continue;
+
+    const featureMinX = bounds.minX;
+    const featureMinY = bounds.minY;
+    const featureMaxX = bounds.maxX;
+    const featureMaxY = bounds.maxY;
+
+    minX = Math.min(minX, featureMinX);
+    minY = Math.min(minY, featureMinY);
+    maxX = Math.max(maxX, featureMaxX);
+    maxY = Math.max(maxY, featureMaxY);
+  }
+
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return fallback;
+
+  return [
+    [minX - MAP_PAN_PADDING_PX, minY - MAP_PAN_PADDING_PX],
+    [maxX + MAP_PAN_PADDING_PX, maxY + MAP_PAN_PADDING_PX],
+  ];
+}
+
+function updateZoomTranslateExtent() {
+  if (!zoomBehavior || runtimeState.width <= 0 || runtimeState.height <= 0) return;
+  zoomBehavior.scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE]);
+  zoomBehavior.extent([[0, 0], [runtimeState.width, runtimeState.height]]);
+  zoomBehavior.translateExtent(calculatePanExtent());
+}
+
+function getViewportGeoBounds() {
+  if (!projection || typeof projection.invert !== "function") {
+    return [-180, -90, 180, 90];
+  }
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  const width = Math.max(1, Number(runtimeState.width || 1));
+  const height = Math.max(1, Number(runtimeState.height || 1));
+  const insetX = Math.min(width * 0.12, 160);
+  const insetY = Math.min(height * 0.12, 120);
+  const samplePoints = [
+    [insetX, insetY],
+    [width * 0.5, insetY],
+    [Math.max(insetX, width - insetX), insetY],
+    [insetX, height * 0.5],
+    [width * 0.5, height * 0.5],
+    [Math.max(insetX, width - insetX), height * 0.5],
+    [insetX, Math.max(insetY, height - insetY)],
+    [width * 0.5, Math.max(insetY, height - insetY)],
+    [Math.max(insetX, width - insetX), Math.max(insetY, height - insetY)],
+  ];
+  const longitudes = [];
+  const latitudes = [];
+  samplePoints.forEach(([screenX, screenY]) => {
+    try {
+      const mapX = (Number(screenX || 0) - Number(transform.x || 0)) / Math.max(0.0001, Number(transform.k || 1));
+      const mapY = (Number(screenY || 0) - Number(transform.y || 0)) / Math.max(0.0001, Number(transform.k || 1));
+      const inverted = projection.invert([mapX, mapY]);
+      if (!Array.isArray(inverted) || inverted.length < 2) return;
+      const [lon, lat] = inverted.map((value) => Number(value));
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+      longitudes.push(Math.max(-180, Math.min(180, lon)));
+      latitudes.push(Math.max(-90, Math.min(90, lat)));
+    } catch (_error) {
+      // Ignore failed projection inversion and continue.
+    }
+  });
+  if (!longitudes.length || !latitudes.length) {
+    return [-180, -90, 180, 90];
+  }
+  const sortedLongitudes = [...longitudes].sort((left, right) => left - right);
+  const sortedLatitudes = [...latitudes].sort((left, right) => left - right);
+  const trimCount = sortedLongitudes.length >= 7 && sortedLatitudes.length >= 7 ? 1 : 0;
+  return [
+    sortedLongitudes[trimCount],
+    sortedLatitudes[trimCount],
+    sortedLongitudes[sortedLongitudes.length - 1 - trimCount],
+    sortedLatitudes[sortedLatitudes.length - 1 - trimCount],
+  ];
+}
+
+function updateMap(transform) {
+  runtimeState.zoomTransform = transform;
+  runtimeState.hitCanvasDirty = true;
+  if (typeof runtimeState.updateZoomUIFn === "function") {
+    runtimeState.updateZoomUIFn();
+  }
+  if (viewportGroup) {
+    viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+  }
+  syncUnitCounterScalesDuringZoom();
+  drawCanvas();
+}
+
+function resetZoomToFit() {
+  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
+  const identity = globalThis.d3.zoomIdentity;
+  runtimeState.zoomTransform = identity;
+  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.transform, identity);
+}
+
+function zoomByStep(direction = 1) {
+  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
+  const factor = Number(direction) >= 0 ? 1.2 : 1 / 1.2;
+  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleBy, factor);
+}
+
+function setZoomPercent(percent) {
+  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
+  const rawPercent = typeof percent === "string"
+    ? Number(String(percent).trim().replace(/%/g, ""))
+    : Number(percent);
+  if (!Number.isFinite(rawPercent)) return;
+  const nextScale = Math.min(MAX_ZOOM_SCALE, Math.max(MIN_ZOOM_SCALE, rawPercent / 100));
+  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleTo, nextScale);
+}
+
+function getZoomPercent() {
+  const scale = Math.max(0.01, Number(runtimeState.zoomTransform?.k) || 1);
+  return `${Math.round(scale * 100)}%`;
+}
+
+function enforceZoomConstraints() {
+  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
+  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.translateBy, 0, 0);
+}
+
+function fitProjection({ skipSpatialIndex = false } = {}) {
+  if (!runtimeState.landData?.features?.length || runtimeState.width <= 0 || runtimeState.height <= 0) {
+    return;
+  }
+  const padding = Math.max(16, Math.round(Math.min(runtimeState.width, runtimeState.height) * PROJECTION_FIT_PADDING_RATIO));
+  const x1 = Math.max(padding + 1, runtimeState.width - padding);
+  const y1 = Math.max(padding + 1, runtimeState.height - padding);
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  const renderableFeatures = getRenderableLandFeatures(canvasWidth, canvasHeight, {
+    forceProd: true,
+  });
+  const fitTarget = renderableFeatures.length
+    ? { type: "FeatureCollection", features: renderableFeatures }
+    : runtimeState.landData;
+  projection.fitExtent([[padding, padding], [x1, y1]], fitTarget);
+  cityAnchorCache = new WeakMap();
+  rebuildProjectedBoundsCache();
+  if (!skipSpatialIndex) {
+    buildSpatialIndex();
+  }
+  runtimeState.hitCanvasDirty = true;
+  updateSpecialZonesPaths();
+  renderSpecialZoneEditorOverlay();
+  updateZoomTranslateExtent();
+  markAllOverlaysDirty();
+}
+
+function handleResize() {
+  setCanvasSize();
+  fitProjection();
+  resetZoomToFit();
+  enforceZoomConstraints();
+  markAllOverlaysDirty();
+  render();
+}
+
+function initZoom() {
+  zoomBehavior = globalThis.d3
+    .zoom()
+    .scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE])
+    .extent([[0, 0], [runtimeState.width, runtimeState.height]])
+    .filter((event) => shouldAllowZoomEvent(event))
+    .on("start", () => {
+      clearRenderPhaseTimer();
+      cancelExactAfterSettleRefresh();
+      runtimeState.zoomGestureStartTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+      runtimeState.zoomGestureScaleDelta = 0;
+      runtimeState.pendingExactPoliticalFastFrame = false;
+      setRenderPhase(RENDER_PHASE_INTERACTING);
+      captureInteractionBorderSnapshot(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+      renderHoverOverlayIfNeeded({ force: true, eventType: "zoom-start" });
+      if (typeof runtimeState.dismissOnboardingHintFn === "function") {
+        runtimeState.dismissOnboardingHintFn();
+      }
+    })
+    .on("zoom", (event) => {
+      runtimeState.pendingZoomTransform = event.transform;
+      if (runtimeState.zoomRenderScheduled) return;
+      runtimeState.zoomRenderScheduled = true;
+      const flushLatestZoomTransform = () => {
+        const nextTransform = runtimeState.pendingZoomTransform;
+        runtimeState.pendingZoomTransform = null;
+        if (nextTransform) {
+          updateMap(nextTransform);
+        }
+        if (runtimeState.pendingZoomTransform) {
+          requestAnimationFrame(flushLatestZoomTransform);
+          return;
+        }
+        runtimeState.zoomRenderScheduled = false;
+      };
+      requestAnimationFrame(flushLatestZoomTransform);
+    })
+    .on("end", (event) => {
+      setRenderPhase(RENDER_PHASE_SETTLING);
+      runtimeState.pendingZoomTransform = null;
+      updateMap(event.transform);
+      const startK = Math.max(0.0001, Number(runtimeState.zoomGestureStartTransform?.k || event.transform?.k || 1));
+      const endK = Math.max(0.0001, Number(event.transform?.k || startK));
+      runtimeState.zoomGestureScaleDelta = Math.abs(Math.log2(endK / startK));
+      runtimeState.zoomGestureEndedAt = nowMs();
+      runtimeState.pendingExactPoliticalFastFrame = true;
+      if (typeof runtimeState.scheduleScenarioChunkRefreshFn === "function") {
+        runtimeState.scheduleScenarioChunkRefreshFn({
+          reason: "zoom-end",
+          delayMs: 0,
+        });
+      }
+      scheduleRenderPhaseIdle();
+    });
+
+  updateZoomTranslateExtent();
+  const zoomTarget = globalThis.d3.select(interactionRect.node());
+  zoomTarget.call(zoomBehavior);
+  zoomTarget.on("dblclick.zoom", null);
+  resetZoomToFit();
+  enforceZoomConstraints();
+}
+
+function bindEvents() {
+  if (!interactionRect) return;
+  bindInteractionFunnel({
+    mapClick: handleClick,
+    mapDoubleClick: handleDoubleClick,
+  });
+  interactionRect.on("mousemove", handleMouseMove);
+  interactionRect.on("mousedown.brush", handleBrushPointerDown);
+  interactionRect.on("mousemove.brush", handleBrushPointerMove);
+  interactionRect.on("mouseleave", () => {
+    runtimeState.hoveredId = null;
+    runtimeState.hoveredWaterRegionId = null;
+    runtimeState.hoveredSpecialRegionId = null;
+    hoveredFacilityEntry = null;
+    updateDevHoverHit(null);
+    runtimeState.hoverOverlayDirty = true;
+    renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
+    queueTooltipUpdate({ visible: false });
+    setMapInteractionCursor("");
+  });
+  interactionRect.on("click", dispatchMapClick);
+  interactionRect.on("dblclick", dispatchMapDoubleClick);
+  window.addEventListener("mouseup", flushBrushSession);
+  window.addEventListener("resize", handleResize);
+}
+
+function initMap({
+  containerId = "mapContainer",
+  suppressRender = false,
+  interactionLevel = "full",
+  deferInteractionInfrastructure = false,
+} = {}) {
+  if (!globalThis.d3) {
+    console.error("D3 is required for map renderer.");
+    return;
+  }
+
+  mapContainer = document.getElementById(containerId);
+  tooltip = document.getElementById("tooltip");
+  facilityInfoCard = document.getElementById("facilityInfoCard");
+  facilityInfoCardTitle = document.getElementById("facilityInfoCardTitle");
+  facilityInfoCardBody = document.getElementById("facilityInfoCardBody");
+  facilityInfoCardZoomBtn = document.getElementById("facilityInfoCardZoomBtn");
+  facilityInfoCardCloseBtn = document.getElementById("facilityInfoCardCloseBtn");
+  facilityInfoCardMoreBtn = document.getElementById("facilityInfoCardMoreBtn");
+  runtimeState.refreshColorStateFn = refreshColorState;
+  runtimeState.recomputeDynamicBordersNowFn = recomputeDynamicBordersNow;
+
+  if (!mapContainer) {
+    console.error("Map container not found.");
+    return;
+  }
+
+  if (facilityInfoCardCloseBtn && !facilityInfoCardCloseBtn.dataset.bound) {
+    facilityInfoCardCloseBtn.addEventListener("click", () => {
+      applyFacilityInfoCardState(null);
+      runtimeState.hoverOverlayDirty = true;
+      renderHoverOverlayIfNeeded({ eventType: "facility-card-close" });
+    });
+    facilityInfoCardCloseBtn.dataset.bound = "true";
+  }
+  if (facilityInfoCardZoomBtn && !facilityInfoCardZoomBtn.dataset.bound) {
+    facilityInfoCardZoomBtn.addEventListener("click", () => {
+      const activeEntry = selectedFacilityEntry;
+      if (!activeEntry) return;
+      zoomToFacilityEntry(activeEntry);
+    });
+    facilityInfoCardZoomBtn.dataset.bound = "true";
+  }
+  if (facilityInfoCardMoreBtn && !facilityInfoCardMoreBtn.dataset.bound) {
+    facilityInfoCardMoreBtn.addEventListener("click", () => {
+      if (!selectedFacilityEntry) return;
+      facilityInfoCardExpanded = !facilityInfoCardExpanded;
+      applyFacilityInfoCardState(selectedFacilityEntry);
+    });
+    facilityInfoCardMoreBtn.dataset.bound = "true";
+  }
+  runtimeState.syncFacilityInfoCardVisibilityFn = syncFacilityInfoCardVisibility;
+  runtimeState.updateFacilityInfoCardUiFn = () => {
+    if (selectedFacilityEntry) {
+      applyFacilityInfoCardState(selectedFacilityEntry);
+    }
+  };
+  applyFacilityInfoCardState(null);
+
+  ensureHybridLayers();
+
+  if (!hitCanvas) {
+    hitCanvas = createHitCanvasElement();
+  }
+
+  context = mapCanvas.getContext("2d");
+  if (!context) {
+    console.error("Canvas 2D context unavailable.");
+    return;
+  }
+  hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
+  if (!hitContext) {
+    console.error("Hit canvas 2D context unavailable.");
+    return;
+  }
+
+  projection = globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION);
+  projection.clipExtent(null);
+  pathSVG = globalThis.d3.geoPath(projection).pointRadius(PATH_POINT_RADIUS);
+  pathCanvas = globalThis.d3.geoPath(projection, context).pointRadius(PATH_POINT_RADIUS);
+  pathHitCanvas = globalThis.d3.geoPath(projection, hitContext).pointRadius(PATH_POINT_RADIUS);
+  layerResolverCache.primaryRef = null;
+  layerResolverCache.detailRef = null;
+  layerResolverCache.bundleMode = null;
+  layerResolverCache.contextRevision = 0;
+  resetPhysicalLandClipPathCache();
+  resetExactRefreshOptimizationState();
+  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+  runtimeState.hitCanvasTopologyRevision = 0;
+  const renderPassCache = getRenderPassCacheState();
+  renderPassCache.referenceTransform = null;
+  renderPassCache.referenceTransforms = {};
+  renderPassCache.contextScenarioLayerCache = {};
+  clearLastGoodFrame("init-map");
+  invalidateInteractionComposite("init-map");
+  resetFirstVisibleFramePainted("init-map");
+  renderPassCache.perfOverlayEnabled = isPerfOverlayEnabled();
+  ensureLayerDataFromTopology();
+  rebuildPoliticalLandCollections();
+
+  runtimeState.colorCanvas = mapCanvas;
+  runtimeState.lineCanvas = null;
+  runtimeState.colorCtx = context;
+  runtimeState.lineCtx = null;
+  migrateLegacyColorState();
+  ensureSovereigntyState();
+  normalizeColorStateForRender(state, {
+    sanitizeColorMap,
+    sanitizeCountryColorMap,
+  });
+  runtimeState.debugMode = debugMode;
+  resetRenderDiagnostics();
+  clearRenderPhaseTimer();
+  runtimeState.renderPhase = RENDER_PHASE_IDLE;
+  runtimeState.phaseEnteredAt = nowMs();
+  runtimeState.renderPhaseTimerId = null;
+  runtimeState.tooltipPendingState = { visible: false };
+  runtimeState.tooltipRafHandle = null;
+  cancelScheduledHoverOverlayRender();
+  markAllOverlaysDirty();
+  clearStagedMapDataTasks();
+  cancelExactAfterSettleRefresh();
+  cancelPendingIndexUiRefresh();
+  runtimeState.deferContextBasePass = false;
+  runtimeState.deferHitCanvasBuild = false;
+  runtimeState.deferExactAfterSettle = false;
+  runtimeState.hitCanvasBuildScheduled = null;
+  resetProjectedBoundsCacheState();
+  invalidateAllRenderPasses("init-map");
+  runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;
+  syncDayNightClockTimer();
+
+  mapCanvas.style.pointerEvents = "none";
+  mapCanvas.style.touchAction = "none";
+
+  const shouldDeferInteractionInfrastructure =
+    deferInteractionInfrastructure || interactionLevel === "readonly-startup";
+  buildRuntimePoliticalMeta();
+  setCanvasSize();
+  if (!shouldDeferInteractionInfrastructure) {
+    buildIndex();
+  } else {
+    runtimeState.deferHitCanvasBuild = true;
+    setInteractionInfrastructureState("deferred-startup", {
+      ready: false,
+      inFlight: false,
+    });
+  }
+  rebuildStaticMeshes();
+  invalidateBorderCache();
+  updateDynamicBorderStatusUI();
+  fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });
+  initZoom();
+  bindEvents();
+  runtimeState.getViewportGeoBoundsFn = getViewportGeoBounds;
+  if (!shouldDeferInteractionInfrastructure) {
+    setInteractionInfrastructureState("ready", {
+      ready: true,
+      inFlight: false,
+    });
+  }
+
+  if (!suppressRender) {
+    render();
+  }
+}
+
+function setMapData({
+  refitProjection = true,
+  resetZoom = true,
+  suppressRender = false,
+  interactionLevel = "full",
+  deferInteractionInfrastructure = false,
+} = {}) {
+  const startedAt = nowMs();
+  clearPendingDynamicBorderTimer();
+  clearRenderPhaseTimer();
+  cancelPendingIndexUiRefresh();
+  cancelPendingSidebarRefresh();
+  cancelScheduledHoverOverlayRender();
+  setRenderPhase(RENDER_PHASE_IDLE);
+  resetRenderDiagnostics();
+  clearStagedMapDataTasks();
+  cancelExactAfterSettleRefresh();
+  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
+  runtimeState.hitCanvasBuildScheduled = null;
+  cancelDeferredWork(secondarySpatialBuildHandle);
+  secondarySpatialBuildHandle = null;
+  pendingSecondarySpatialBuildReasons.clear();
+  runtimeState.deferContextBasePass = false;
+  runtimeState.deferHitCanvasBuild = false;
+  runtimeState.deferExactAfterSettle = false;
+  layerResolverCache.primaryRef = null;
+  layerResolverCache.detailRef = null;
+  layerResolverCache.bundleMode = null;
+  layerResolverCache.contextRevision = 0;
+  runtimeState.devHoverHit = null;
+  runtimeState.devSelectedHit = null;
+  runtimeState.devSelectionFeatureIds = new Set();
+  runtimeState.devSelectionOrder = [];
+  runtimeState.devClipboardFallbackText = "";
+  runtimeState.devClipboardPreviewFormat = "names_with_ids";
+  resetPhysicalLandClipPathCache();
+  resetExactRefreshOptimizationState();
+  resetVisibleInternalBorderMeshSignature();
+  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+  runtimeState.hitCanvasTopologyRevision = 0;
+  const renderPassCache = getRenderPassCacheState();
+  renderPassCache.referenceTransform = null;
+  renderPassCache.referenceTransforms = {};
+  renderPassCache.contextScenarioLayerCache = {};
+  clearLastGoodFrame("set-map-data");
+  invalidateInteractionComposite("set-map-data");
+  resetFirstVisibleFramePainted("set-map-data");
+  invalidateAllRenderPasses("set-map-data");
+  markAllOverlaysDirty();
+  queueTooltipUpdate({ visible: false });
+  ensureLayerDataFromTopology();
+  const { fullCollection, interactiveCollection } = rebuildPoliticalLandCollections();
+
+  if (runtimeState.topologyBundleMode === "composite" && Array.isArray(fullCollection?.features)) {
+    const coverage = runtimeState.debugCountryCoverage || collectCountryCoverageStats(fullCollection.features);
+    const interactiveFeatureCount = Array.isArray(interactiveCollection?.features)
+      ? interactiveCollection.features.length
+      : 0;
+    console.info(
+      `[map_renderer] Composite coverage: countries detail=${coverage.detailCountries}, primaryFallback=${coverage.primaryCountries}, total=${coverage.totalCountries}; features detail=${coverage.detailFeatures}, primary=${coverage.primaryFeatures}, total=${coverage.totalFeatures}.`
+      + ` interactive=${interactiveFeatureCount}.`
+    );
+    console.info("[map_renderer] Composite country coverage detail/primary", {
+      summary: {
+        totalCountries: coverage.totalCountries,
+        detailCountries: coverage.detailCountries,
+        primaryCountries: coverage.primaryCountries,
+        totalFeatures: coverage.totalFeatures,
+        detailFeatures: coverage.detailFeatures,
+        primaryFeatures: coverage.primaryFeatures,
+      },
+      priorityCountryGaps: coverage.priorityCountryGaps,
+      detailCountries: coverage.detailCountryList,
+      primaryCountries: coverage.primaryCountryList,
+    });
+  }
+
+  runtimeState.countryBaseColors = sanitizeCountryColorMap(runtimeState.countryBaseColors);
+  runtimeState.featureOverrides = sanitizeColorMap(runtimeState.featureOverrides);
+  runtimeState.waterRegionOverrides = sanitizeColorMap(runtimeState.waterRegionOverrides);
+  runtimeState.specialRegionOverrides = sanitizeColorMap(runtimeState.specialRegionOverrides);
+  migrateLegacyColorState();
+  setCanvasSize();
+  buildRuntimePoliticalMeta();
+  runtimeState.sovereigntyInitialized = false;
+  islandNeighborsCache = {
+    topologyRef: null,
+    objectRef: null,
+    count: 0,
+    neighbors: [],
+  };
+  ensureSphericalFeatureDiagnosticsCache().clear();
+  const shouldDeferInteractionInfrastructure =
+    deferInteractionInfrastructure || interactionLevel === "readonly-startup";
+  if (!shouldDeferInteractionInfrastructure) {
+    buildIndex();
+    ensureSovereigntyState();
+  } else {
+    runtimeState.deferHitCanvasBuild = true;
+    setInteractionInfrastructureState("deferred-startup", {
+      ready: false,
+      inFlight: false,
+    });
+  }
+  if (!refitProjection) {
+    rebuildProjectedBoundsCache();
+  }
+  rebuildStaticMeshes();
+  invalidateBorderCache();
+  updateDynamicBorderStatusUI();
+  rebuildResolvedColors();
+  if (refitProjection) {
+    fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });
+  } else {
+    if (!shouldDeferInteractionInfrastructure) {
+      buildSpatialIndex();
+    }
+    updateSpecialZonesPaths();
+    renderSpecialZoneEditorOverlay();
+    updateZoomTranslateExtent();
+  }
+  if (resetZoom) {
+    resetZoomToFit();
+    enforceZoomConstraints();
+  } else {
+    runtimeState.hitCanvasDirty = true;
+  }
+  let stagedApply = false;
+  if (!suppressRender) {
+    stagedApply = beginStagedMapDataWarmup(startedAt);
+    render();
+    recordRenderPerfMetric("setMapDataFirstPaint", nowMs() - startedAt, {
+      staged: stagedApply,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+  }
+  recordRenderPerfMetric("setMapData", nowMs() - startedAt, {
+    refitProjection: !!refitProjection,
+    resetZoom: !!resetZoom,
+    suppressRender: !!suppressRender,
+    landCount: Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
+    renderProfile: String(runtimeState.renderProfile || "auto"),
+    staged: stagedApply,
+  });
+  if (!shouldDeferInteractionInfrastructure) {
+    setInteractionInfrastructureState("ready", {
+      ready: true,
+      inFlight: false,
+    });
+  }
+}
+
+function getScenarioChunkPromotionTargetPasses({
+  changedLayerKeys = [],
+  hasPoliticalChange = false,
+} = {}) {
+  const targetPasses = new Set();
+  if (hasPoliticalChange) {
+    ["political", "contextBase", "contextMarkers", "borders", "labels"].forEach((passName) => targetPasses.add(passName));
+  }
+  (Array.isArray(changedLayerKeys) ? changedLayerKeys : []).forEach((layerKey) => {
+    const normalized = String(layerKey || "").trim().toLowerCase();
+    if (normalized === "cities") {
+      ["contextBase", "labels", "dayNight"].forEach((passName) => targetPasses.add(passName));
+      return;
+    }
+    if (normalized === "water" || normalized === "special" || normalized === "relief") {
+      targetPasses.add("contextScenario");
+    }
+  });
+  return Array.from(targetPasses);
+}
+
+function normalizeRendererRefreshPlan(refreshPlan, defaults = {}) {
+  const plan = refreshPlan && typeof refreshPlan === "object" ? refreshPlan : {};
+  const defaultTargetPasses = Array.isArray(defaults.targetPasses) ? defaults.targetPasses : [];
+  const targetPasses = Array.isArray(plan.targetPasses) && plan.targetPasses.length
+    ? plan.targetPasses
+    : defaultTargetPasses;
+  return {
+    source: String(plan.source || defaults.source || "renderer-refresh"),
+    targetPasses: Array.from(
+      new Set(
+        (Array.isArray(targetPasses) ? targetPasses : [])
+          .map((passName) => String(passName || "").trim())
+          .filter(Boolean)
+      )
+    ),
+    refreshOpeningOwnerBorders: plan.refreshOpeningOwnerBorders !== undefined
+      ? plan.refreshOpeningOwnerBorders !== false
+      : defaults.refreshOpeningOwnerBorders !== false,
+    resetWaterCacheReason: String(plan.resetWaterCacheReason || defaults.resetWaterCacheReason || ""),
+  };
+}
+
+function cancelDeferredScenarioChunkPromotionInfraRefresh() {
+  cancelDeferredWork(deferredScenarioChunkPromotionInfraHandle);
+  deferredScenarioChunkPromotionInfraHandle = null;
+}
+
+function scheduleDeferredScenarioChunkPromotionInfraRefresh({
+  reason = "scenario-chunk-promotion",
+  suppressRender = false,
+  promotionVersion = scenarioChunkPromotionVersion,
+  hasPoliticalGeometryChange = false,
+  primaryDerivedStateReady = false,
+  refreshOpeningOwnerBorders = true,
+} = {}) {
+  cancelDeferredScenarioChunkPromotionInfraRefresh();
+  deferredScenarioChunkPromotionInfraHandle = scheduleDeferredWork(() => {
+    deferredScenarioChunkPromotionInfraHandle = null;
+    void runDeferredScenarioChunkPromotionInfraRefresh({
+      reason,
+      suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange,
+      primaryDerivedStateReady,
+      refreshOpeningOwnerBorders,
+    });
+  }, {
+    timeout: 120,
+  });
+}
+
+async function runDeferredScenarioChunkPromotionInfraRefresh({
+  reason = "scenario-chunk-promotion",
+  suppressRender = false,
+  promotionVersion = scenarioChunkPromotionVersion,
+  hasPoliticalGeometryChange = false,
+  primaryDerivedStateReady = false,
+  refreshOpeningOwnerBorders = true,
+} = {}) {
+  if (promotionVersion !== scenarioChunkPromotionVersion) {
+    return false;
+  }
+  if (!isInteractionRecoverySettled({ quietMs: 600 })) {
+    scheduleDeferredScenarioChunkPromotionInfraRefresh({
+      reason,
+      suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange,
+      primaryDerivedStateReady,
+      refreshOpeningOwnerBorders,
+    });
+    return false;
+  }
+  const taskKey = "scenario-chunk-promotion-infra";
+  if (!beginInteractionRecoveryTask(taskKey)) {
+    scheduleDeferredScenarioChunkPromotionInfraRefresh({
+      reason,
+      suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange,
+      primaryDerivedStateReady,
+      refreshOpeningOwnerBorders,
+    });
+    return false;
+  }
+  const startedAt = nowMs();
+  const previousInteractionInfrastructureStage = String(runtimeState.interactionInfrastructureStage || "");
+  let restoredInteractionInfrastructureState = false;
+  let yieldCount = 0;
+  try {
+    if (!primaryDerivedStateReady) {
+      buildIndex();
+      await yieldToMain();
+      yieldCount += 1;
+      if (promotionVersion !== scenarioChunkPromotionVersion) {
+        return false;
+      }
+      await buildSpatialIndexChunked({
+        includeSecondary: false,
+        keepReady: true,
+      });
+    }
+    setInteractionInfrastructureState(previousInteractionInfrastructureStage || "basic-ready", {
+      ready: true,
+      inFlight: false,
+    });
+    restoredInteractionInfrastructureState = true;
+    if (promotionVersion !== scenarioChunkPromotionVersion) {
+      return false;
+    }
+    scheduleSecondarySpatialIndexBuild({
+      reason: `${reason}-secondary-spatial`,
+    });
+    if (runtimeState.hitCanvasDirty) {
+      scheduleHitCanvasBuildIfNeeded({
+        reason: `${reason}-hit-canvas`,
+      });
+    }
+    if (hasPoliticalGeometryChange) {
+      ensureSovereigntyState();
+      if (refreshOpeningOwnerBorders !== false) {
+        refreshScenarioOpeningOwnerBorders({
+          renderNow: false,
+          reason: `${reason}-opening`,
+        });
+      }
+      invalidateBorderCache();
+      updateDynamicBorderStatusUI();
+      updateSpecialZonesPaths();
+      renderSpecialZoneEditorOverlay();
+    }
+    if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
+      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
+    }
+    if (!suppressRender) {
+      render();
+    }
+    const infraDurationMs = nowMs() - startedAt;
+    recordRenderPerfMetric("scenarioChunkPromotionInfraStage", infraDurationMs, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      suppressRender: !!suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
+    });
+    recordRenderPerfMetric("chunkPromotionInfraMs", infraDurationMs, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      suppressRender: !!suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
+    });
+    recordInteractionRecoveryTaskMetric(taskKey, infraDurationMs, {
+      reason: String(reason || "scenario-chunk-promotion"),
+      suppressRender: !!suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
+      refreshOpeningOwnerBorders: refreshOpeningOwnerBorders !== false,
+      yieldCount,
+    });
+    return true;
+  } finally {
+    if (!restoredInteractionInfrastructureState) {
+      setInteractionInfrastructureState(previousInteractionInfrastructureStage || "basic-ready", {
+        ready: true,
+        inFlight: false,
+      });
+    }
+    endInteractionRecoveryTask(taskKey);
+  }
+}
+
+function refreshMapDataForScenarioChunkPromotion({
+  suppressRender = false,
+  reason = "scenario-chunk-promotion",
+  changedLayerKeys = [],
+  politicalFeatureIds = [],
+  hasPoliticalPayloadChange = false,
+  refreshPlan = null,
+} = {}) {
+  // chunk promotion 刻意分成两段：
+  // 1. 先把用户能立刻看到的 topology / color / render pass 刷出来；
+  // 2. 再把 hit canvas、border mesh、interaction infra 这些重活延后。
+  // 这样可以缩短交互停顿，同时保留后续 infra refresh 的确定性。
+  const startedAt = nowMs();
+  const runtimeChunkLoadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
+    ? runtimeState.runtimeChunkLoadState
+    : null;
+  const pendingVisualPromotion = runtimeChunkLoadState?.pendingVisualPromotion || null;
+  const pendingPromotion = runtimeChunkLoadState?.pendingPromotion || null;
+  const promotionQueuedAt = Number(pendingVisualPromotion?.queuedAt || pendingPromotion?.queuedAt || 0);
+  const requiredChunkCount = Array.isArray(pendingVisualPromotion?.requiredChunkIds)
+    ? pendingVisualPromotion.requiredChunkIds.length
+    : 0;
+  const requiredPoliticalChunkCount = Math.max(0, Number(pendingPromotion?.requiredPoliticalChunkCount || 0));
+  const hasPoliticalChange = !!hasPoliticalPayloadChange
+    || (Array.isArray(politicalFeatureIds) && politicalFeatureIds.length > 0);
+  if (hasPoliticalChange) {
+    ensureLayerDataFromTopology();
+    rebuildPoliticalLandCollections();
+    // political chunk promotion 首帧必须和 scenario apply 一样，先把 primary derived state 收回一致：
+    // landIndex / 主 spatial grid / resolved colors / runtime political meta 都要先于 render 完成，
+    // deferred infra 再只接 secondary indexes、hit canvas 和重 mesh。
+    rebuildRuntimeDerivedState({
+      includeRuntimePoliticalMeta: true,
+      scheduleUiMode: "deferred",
+      buildSpatial: true,
+      includeSecondarySpatial: false,
+    });
+  }
+  resetExactRefreshOptimizationState();
+  resetVisibleInternalBorderMeshSignature();
+  scenarioChunkPromotionVersion = Number(scenarioChunkPromotionVersion || 0) + 1;
+  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+  runtimeState.hitCanvasDirty = true;
+  runtimeState.hitCanvasTopologyRevision = 0;
+  if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
+    runtimeState.runtimeChunkLoadState.pendingVisualPromotion = null;
+    runtimeState.runtimeChunkLoadState.pendingInfraPromotion = {
+      reason: String(reason || "scenario-chunk-promotion"),
+      selectionVersion: Math.max(0, Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0)),
+      promotionVersion: scenarioChunkPromotionVersion,
+      hasPoliticalGeometryChange: hasPoliticalChange,
+      primaryDerivedStateReady: hasPoliticalChange,
+    };
+  }
+  if (hasPoliticalChange) {
+    clearDeferredInternalBorderMeshCaches();
+    scheduleDeferredHeavyBorderMeshes();
+  }
+  if ((Array.isArray(changedLayerKeys) ? changedLayerKeys : []).some((layerKey) => String(layerKey || "").trim().toLowerCase() === "water")) {
+    resetScenarioWaterCacheAdaptiveState("scenario-water-regions-data-replaced");
+  }
+  const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes({
+    changedLayerKeys,
+    reason: `${reason}-secondary-sync`,
+  });
+  const shouldSkipDeferredInfraRefresh = synchronizedSecondaryRegionIndexes && !hasPoliticalChange;
+  if (shouldSkipDeferredInfraRefresh && runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
+    runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
+  }
+  const defaultTargetPasses = getScenarioChunkPromotionTargetPasses({
+    changedLayerKeys,
+    hasPoliticalChange,
+  });
+  const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
+    source: "scenario-chunk-promotion",
+    targetPasses: defaultTargetPasses,
+    refreshOpeningOwnerBorders: hasPoliticalChange,
+  });
+  invalidateRenderPasses(
+    rendererRefreshPlan.targetPasses.length ? rendererRefreshPlan.targetPasses : ["political", "borders", "labels"],
+    reason,
+  );
+  markAllOverlaysDirty();
+  updateZoomTranslateExtent();
+  if (!suppressRender) {
+    render();
+  }
+  const shouldRefreshOpeningOwnerBordersInVisual =
+    hasPoliticalChange
+    && rendererRefreshPlan.refreshOpeningOwnerBorders !== false
+    && isUsableMesh(runtimeState.activeScenarioMeshPack?.meshes?.opening_owner_borders);
+  if (shouldSkipDeferredInfraRefresh) {
+    if (runtimeState.hitCanvasDirty) {
+      scheduleHitCanvasBuildIfNeeded({
+        reason: `${reason}-secondary-hit-canvas`,
+      });
+    }
+  } else {
+    scheduleDeferredScenarioChunkPromotionInfraRefresh({
+      reason,
+      suppressRender,
+      promotionVersion: scenarioChunkPromotionVersion,
+      hasPoliticalGeometryChange: hasPoliticalChange,
+      primaryDerivedStateReady: hasPoliticalChange,
+      refreshOpeningOwnerBorders: !shouldRefreshOpeningOwnerBordersInVisual,
+    });
+  }
+  recordRenderPerfMetric("scenarioChunkPromotionVisualStage", nowMs() - startedAt, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    reason: String(reason || "scenario-chunk-promotion"),
+    selectionVersion: Math.max(0, Number(pendingVisualPromotion?.selectionVersion || pendingPromotion?.selectionVersion || runtimeChunkLoadState?.selectionVersion || 0)),
+    requiredPoliticalChunkCount,
+    requiredChunkCount,
+    queuedAt: promotionQueuedAt,
+    queueMs: promotionQueuedAt > 0 ? Math.max(0, startedAt - promotionQueuedAt) : 0,
+    promotionRetryCount: Math.max(0, Number(runtimeChunkLoadState?.promotionRetryCount || 0)),
+    renderNow: !suppressRender,
+    hasPoliticalGeometryChange: hasPoliticalChange,
+    suppressRender: !!suppressRender,
+    promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+      ? runtimeState.scenarioPoliticalChunkData.features.length
+      : 0,
+    changedLayerCount: Array.isArray(changedLayerKeys) ? changedLayerKeys.length : 0,
+    promotionVersion: scenarioChunkPromotionVersion,
+    synchronizedSecondaryRegionIndexes,
+  });
+  recordRenderPerfMetric("chunkPromotionVisualMs", nowMs() - startedAt, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    suppressRender: !!suppressRender,
+    promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+      ? runtimeState.scenarioPoliticalChunkData.features.length
+      : 0,
+    changedLayerCount: Array.isArray(changedLayerKeys) ? changedLayerKeys.length : 0,
+    promotionVersion: scenarioChunkPromotionVersion,
+    hasPoliticalGeometryChange: hasPoliticalChange,
+    synchronizedSecondaryRegionIndexes,
+  });
+  recordRenderPerfMetric("scenarioChunkPoliticalPromotion", nowMs() - startedAt, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    suppressRender: !!suppressRender,
+    promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+      ? runtimeState.scenarioPoliticalChunkData.features.length
+      : 0,
+    changedLayerCount: Array.isArray(changedLayerKeys) ? changedLayerKeys.length : 0,
+    promotionVersion: scenarioChunkPromotionVersion,
+    synchronizedSecondaryRegionIndexes,
+    stage: "visual",
+  });
+  if (shouldRefreshOpeningOwnerBordersInVisual) {
+    refreshScenarioOpeningOwnerBorders({
+      renderNow: false,
+      reason: `${reason}-opening-sync`,
+    });
+  }
+}
+
+function refreshMapDataForScenarioApply({
+  suppressRender = false,
+  refreshPlan = null,
+} = {}) {
+  const startedAt = nowMs();
+  const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
+    source: "scenario-apply",
+    targetPasses: ["background", "physicalBase", "political", "contextBase", "contextScenario", "dayNight", "borders", "labels"],
+    refreshOpeningOwnerBorders: true,
+    resetWaterCacheReason: "scenario-switch-complete",
+  });
+  clearPendingDynamicBorderTimer();
+  clearRenderPhaseTimer();
+  cancelPendingIndexUiRefresh();
+  cancelPendingSidebarRefresh();
+  setRenderPhase(RENDER_PHASE_IDLE);
+  resetRenderDiagnostics();
+  clearStagedMapDataTasks();
+  cancelExactAfterSettleRefresh();
+  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
+  runtimeState.hitCanvasBuildScheduled = null;
+  runtimeState.deferContextBasePass = false;
+  runtimeState.deferHitCanvasBuild = false;
+  runtimeState.deferExactAfterSettle = false;
+  layerResolverCache.primaryRef = null;
+  layerResolverCache.detailRef = null;
+  layerResolverCache.bundleMode = null;
+  layerResolverCache.contextRevision = 0;
+  runtimeState.devHoverHit = null;
+  runtimeState.devSelectedHit = null;
+  runtimeState.devSelectionFeatureIds = new Set();
+  runtimeState.devSelectionOrder = [];
+  runtimeState.devClipboardFallbackText = "";
+  runtimeState.devClipboardPreviewFormat = "names_with_ids";
+  resetPhysicalLandClipPathCache();
+  ensureLayerDataFromTopology();
+  rebuildPoliticalLandCollections();
+  rebuildRuntimeDerivedState({
+    includeRuntimePoliticalMeta: true,
+    scheduleUiMode: "deferred",
+    buildSpatial: true,
+    includeSecondarySpatial: false,
+  });
+  resetExactRefreshOptimizationState();
+  resetVisibleInternalBorderMeshSignature();
+  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+  runtimeState.hitCanvasDirty = true;
+  runtimeState.hitCanvasTopologyRevision = 0;
+  clearLastGoodFrame("scenario-apply-refresh");
+  invalidateInteractionComposite("scenario-apply-refresh");
+  resetFirstVisibleFramePainted("scenario-apply-refresh");
+  const targetPasses = rendererRefreshPlan.targetPasses;
+  invalidateRenderPasses(targetPasses, "scenario-apply-refresh");
+  clearRenderPassReferenceTransforms(targetPasses);
+  markAllOverlaysDirty();
+  rebuildStaticMeshes({
+    refreshOpeningOwnerBorders: rendererRefreshPlan.refreshOpeningOwnerBorders,
+  });
+  invalidateBorderCache();
+  updateDynamicBorderStatusUI();
+  updateSpecialZonesPaths();
+  renderSpecialZoneEditorOverlay();
+  updateZoomTranslateExtent();
+  scheduleSecondarySpatialIndexBuild({
+    reason: "scenario-apply-secondary-spatial",
+  });
+  resetScenarioWaterCacheAdaptiveState(rendererRefreshPlan.resetWaterCacheReason || "scenario-switch-complete");
+  if (!suppressRender) {
+    render();
+  }
+  recordRenderPerfMetric("scenarioApplyMapRefresh", nowMs() - startedAt, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    suppressRender: !!suppressRender,
+    landCount: Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
+  });
+}
+
+// Batch 5 facade note:
+// 1) 生产代码侧尽量只用 named imports，避免 namespace import 把 donor surface 继续放大。
+// 2) 这里按 consumer lane 分组公开 stable facade，owner-backed 细节继续留在模块内部。
+export {
+  // Core render lifecycle facade.
+  initMap,
+  setMapData,
+  buildInteractionInfrastructureAfterStartup,
+  render,
+
+  // Scenario refresh and color synchronization facade.
+  refreshMapDataForScenarioChunkPromotion,
+  refreshMapDataForScenarioApply,
+  refreshColorState,
+  refreshResolvedColorsForFeatures,
+  refreshResolvedColorsForOwners,
+  refreshScenarioOpeningOwnerBorders,
+  markDynamicBordersDirty,
+  recomputeDynamicBordersNow,
+  scheduleDynamicBorderRecompute,
+
+  // Strategic overlay editing facade.
+  startOperationalLineDraw,
+  undoOperationalLineVertex,
+  finishOperationalLineDraw,
+  cancelOperationalLineDraw,
+  selectOperationalLineById,
+  deleteSelectedOperationalLine,
+  updateSelectedOperationalLine,
+  startOperationGraphicDraw,
+  undoOperationGraphicVertex,
+  finishOperationGraphicDraw,
+  cancelOperationGraphicDraw,
+  selectOperationGraphicById,
+  deleteSelectedOperationGraphic,
+  deleteSelectedOperationGraphicVertex,
+  updateSelectedOperationGraphic,
+  startUnitCounterPlacement,
+  cancelUnitCounterPlacement,
+  cancelActiveStrategicInteractionModes,
+  selectUnitCounterById,
+  deleteSelectedUnitCounter,
+  updateSelectedUnitCounter,
+  getUnitCounterPreviewData,
+  resolveUnitCounterNationForPlacement,
+  startSpecialZoneDraw,
+  undoSpecialZoneVertex,
+  finishSpecialZoneDraw,
+  cancelSpecialZoneDraw,
+  deleteSelectedManualSpecialZone,
+  selectSpecialZoneById,
+
+  // Render cache and visual invalidation facade.
+  rebuildStaticMeshes,
+  invalidateBorderCache,
+  invalidateContextLayerVisualState,
+  invalidateContextLayerVisualStateBatch,
+  invalidateOceanBackgroundVisualState,
+  invalidateOceanTextureVisualState,
+  invalidateOceanWaterInteractionVisualState,
+  invalidateOceanCoastalAccentVisualState,
+  invalidateOceanVisualState,
+
+  // Dev workspace selection and fill facade.
+  addFeatureToDevSelection,
+  toggleFeatureInDevSelection,
+  removeLastDevSelection,
+  clearDevSelection,
+  applyDevMacroFillCurrentCountry,
+  applyDevMacroFillCurrentParentGroup,
+  applyDevMacroFillCurrentOwnerScope,
+  applyDevSelectionFill,
+
+  // Read-model helpers for UI, diagnostics, and export tooling.
+  autoFillMap,
+  getBathymetryPresetStyleDefaults,
+  getWaterRegionColor,
+  getUrbanLayerCapability,
+  computeUrbanAdaptivePaintFromHostColor,
+  getEffectiveUrbanMode,
+  buildCityRevealPlan,
+  getCityScenarioTag,
+  getCityLabelRenderStyle,
+  getCityMarkerRenderStyle,
+  getEffectiveCityCollection,
+  doesScenarioCountryHideCityPoints,
+  renderExportPassesToCanvas,
+
+  // Viewport, diagnostics, and render scheduling facade.
+  requestInteractionRender,
+  setDebugMode,
+  getZoomPercent,
+  resetZoomToFit,
+  setZoomPercent,
+  zoomByStep,
+  scheduleExactAfterSettleRefresh,
+  scheduleRenderPhaseIdle,
+};

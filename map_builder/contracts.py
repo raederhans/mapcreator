@@ -28,6 +28,9 @@ class DataArtifactSpec:
     artifact_class: str
     owner: str
     description: str
+    schema_ref: str = ""
+    simplification: str = ""
+    target_zoom_range: tuple[float, float] | tuple[()] = ()
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="init_map_data.primary_topology_bundle",
         description="Primary political topology emitted by the coarse GIS pipeline.",
+        schema_ref="schema://topology/political_bundle_v1",
+        simplification="coarse_publish_v1",
+        target_zoom_range=(0.0, 1.7),
     ),
     DataArtifactSpec(
         path="europe_topology.na_v1.json",
@@ -72,6 +78,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="init_map_data.detail_topology",
         description="Legacy North America detail topology checkpoint.",
+        schema_ref="schema://topology/detail_political_bundle_v1",
+        simplification="detail_publish_legacy_v1",
+        target_zoom_range=(1.7, 20.0),
     ),
     DataArtifactSpec(
         path="europe_topology.na_v2.json",
@@ -79,6 +88,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="init_map_data.detail_topology",
         description="Current detail political topology used for runtime enrichment.",
+        schema_ref="schema://topology/detail_political_bundle_v2",
+        simplification="detail_publish_v2",
+        target_zoom_range=(1.7, 20.0),
     ),
     DataArtifactSpec(
         path="europe_topology.runtime_political_v1.json",
@@ -86,6 +98,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_PUBLISH,
         owner="init_map_data.runtime_political_topology",
         description="Unified runtime political topology consumed by the app and scenarios.",
+        schema_ref="schema://topology/runtime_political_v1",
+        simplification="runtime_projection_v1",
+        target_zoom_range=(1.7, 20.0),
     ),
     DataArtifactSpec(
         path="global_physical_semantics.topo.json",
@@ -93,6 +108,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_PUBLISH,
         owner="init_map_data.primary_topology_bundle",
         description="Physical semantics topology shipped with the runtime bundle.",
+        schema_ref="schema://topology/physical_semantics_v1",
+        simplification="semantic_dissolve_v1",
+        target_zoom_range=(0.0, 20.0),
     ),
     DataArtifactSpec(
         path="global_contours.major.topo.json",
@@ -100,6 +118,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_PUBLISH,
         owner="init_map_data.primary_topology_bundle",
         description="Major contour topology published for runtime relief rendering.",
+        schema_ref="schema://topology/terrain_contours_major_v1",
+        simplification="contour_major_publish_v1",
+        target_zoom_range=(0.0, 20.0),
     ),
     DataArtifactSpec(
         path="global_contours.minor.topo.json",
@@ -107,6 +128,9 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_PUBLISH,
         owner="init_map_data.primary_topology_bundle",
         description="Minor contour topology published for runtime relief rendering.",
+        schema_ref="schema://topology/terrain_contours_minor_v1",
+        simplification="contour_minor_publish_v1",
+        target_zoom_range=(0.0, 20.0),
     ),
     DataArtifactSpec(
         path="hierarchy.json",

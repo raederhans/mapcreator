@@ -2604,6 +2604,12 @@ def write_data_manifest(output_dir: Path) -> Path:
             "size_bytes": path.stat().st_size,
             "sha256": _sha256_file(path),
         }
+        if artifact_spec.schema_ref:
+            item["schema_ref"] = artifact_spec.schema_ref
+        if artifact_spec.simplification:
+            item["simplification"] = artifact_spec.simplification
+        if artifact_spec.target_zoom_range:
+            item["target_zoom_range"] = [*artifact_spec.target_zoom_range]
         should_inspect = path.suffix in {".json", ".geojson"} or file_name in {
             "js/core/city_lights_modern_asset.js",
             "js/core/city_lights_historical_1930_asset.js",

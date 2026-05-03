@@ -1412,3 +1412,21 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 这次 river targeted Playwright 的真实根因，是 fresh page 第一轮采样会继续读到全量 rivers metric；只靠固定 sleep 或直接读 `drawRiversLayer` 指标会把上一帧当成当前 subset。
 - 更稳的做法是：先确认 `state.riversData.features.length` 已等于目标 subset，再跑 `waitForRenderIdle()`，最后才读取 metric 和截图。
 - startup bundle preload browser warning 这类已知噪音要按 spec scoped allowlist 记录，避免把真实 console 问题和浏览器提示混在一起。
+
+## 2026-05-02 - data catalog / data_service / transport preview 平台化
+
+### 1. 生成型 catalog 的 `generated_at` 要跟随源契约时间，不能用“当前时间”
+- 否则 `check_data_catalog` 这类重建比对永远漂移，哪怕输入完全没变。
+- 最稳的做法是从 `data/manifest.json` 和 transport manifests 取稳定时间戳，catalog 只反映源状态变化。
+
+### 2. transport 家族 key 命名要区分“family 语义”和“目录命名空间”
+- `airport` / `port` 同时存在 global overview 和 japan workbench 两套 manifest 时，直接拿 family 做 catalog key 会撞名。
+- 更稳的规则是：有 runtime asset key 时沿 runtime key；没有时退回 manifest 目录名，例如 `global_airport` / `global_port`。
+
+### 3. 把 direct fetch 收口到共享 loader 时，要把 HTTP 语义一并带过去
+- transport preview 的 `404 -> pending` 依赖能读到 `httpStatus`，如果共享 loader 只抛普通 Error，原有状态机会悄悄坏掉。
+- 最稳的做法是让底层 loader 和 `data_service` 都保留 `httpStatus` / `code`，上层继续按显式状态机处理。
+
+### 4. 运行时新增公开数据文件后，要同步更新 Pages publish contract
+- 这次 `data_service.js` 顶层读取 `data/CATALOG.json`，主仓运行正常，但 `build_pages_dist.py` 漏发这个文件，Pages dist 会在模块图加载阶段直接断掉。
+- 更稳的做法是：只要新增了 runtime import 或 runtime fetch 依赖，就同步更新 `tools/build_pages_dist.py` 和 `tests/test_pages_dist_startup_shell.py`，把文件纳入 required files 和 dist manifest 校验。

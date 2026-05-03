@@ -25,7 +25,13 @@
       "arc_count": 67765,
       "arc_point_count": 421346,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0
+      "raw_world_bounds_geometries": 0,
+      "schema_ref": "schema://topology/political_bundle_v1",
+      "simplification": "coarse_publish_v1",
+      "target_zoom_range": [
+        0.0,
+        1.7
+      ]
     },
     "europe_topology.na_v1.json": {
       "role": "detail_topology_na_v1",
@@ -49,7 +55,13 @@
       "arc_count": 120462,
       "arc_point_count": 533080,
       "world_bounds_geometries": 1,
-      "raw_world_bounds_geometries": 64
+      "raw_world_bounds_geometries": 64,
+      "schema_ref": "schema://topology/detail_political_bundle_v1",
+      "simplification": "detail_publish_legacy_v1",
+      "target_zoom_range": [
+        1.7,
+        20.0
+      ]
     },
     "europe_topology.na_v2.json": {
       "role": "detail_topology_na_v2",
@@ -74,7 +86,13 @@
       "arc_count": 172671,
       "arc_point_count": 787094,
       "world_bounds_geometries": 11,
-      "raw_world_bounds_geometries": 45
+      "raw_world_bounds_geometries": 45,
+      "schema_ref": "schema://topology/detail_political_bundle_v2",
+      "simplification": "detail_publish_v2",
+      "target_zoom_range": [
+        1.7,
+        20.0
+      ]
     },
     "europe_topology.runtime_political_v1.json": {
       "role": "runtime_political_topology",
@@ -92,7 +110,13 @@
       "arc_count": 144926,
       "arc_point_count": 613401,
       "world_bounds_geometries": 7,
-      "raw_world_bounds_geometries": 81
+      "raw_world_bounds_geometries": 81,
+      "schema_ref": "schema://topology/runtime_political_v1",
+      "simplification": "runtime_projection_v1",
+      "target_zoom_range": [
+        1.7,
+        20.0
+      ]
     },
     "global_physical_semantics.topo.json": {
       "role": "physical_semantics_topology",
@@ -110,7 +134,13 @@
       "arc_count": 5991,
       "arc_point_count": 35367,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0
+      "raw_world_bounds_geometries": 0,
+      "schema_ref": "schema://topology/physical_semantics_v1",
+      "simplification": "semantic_dissolve_v1",
+      "target_zoom_range": [
+        0.0,
+        20.0
+      ]
     },
     "global_contours.major.topo.json": {
       "role": "terrain_contours_major_topology",
@@ -128,7 +158,13 @@
       "arc_count": 16411,
       "arc_point_count": 221202,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0
+      "raw_world_bounds_geometries": 0,
+      "schema_ref": "schema://topology/terrain_contours_major_v1",
+      "simplification": "contour_major_publish_v1",
+      "target_zoom_range": [
+        0.0,
+        20.0
+      ]
     },
     "global_contours.minor.topo.json": {
       "role": "terrain_contours_minor_topology",
@@ -146,7 +182,13 @@
       "arc_count": 198350,
       "arc_point_count": 1423560,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0
+      "raw_world_bounds_geometries": 0,
+      "schema_ref": "schema://topology/terrain_contours_minor_v1",
+      "simplification": "contour_minor_publish_v1",
+      "target_zoom_range": [
+        0.0,
+        20.0
+      ]
     },
     "hierarchy.json": {
       "role": "hierarchy",

@@ -55,6 +55,7 @@ const {
   buildScenarioRuntimeDefaultTagColors,
 } = runtimeBridge;
 const {
+  collectColorStateConsistencyIssues,
   createDefaultColorState,
   normalizeColorStateForRender,
   replaceResolvedColorsState,
@@ -235,6 +236,29 @@ test("normalizeColorStateForRender sanitizes mirrors and resolved colors togethe
   assert.deepEqual(colorRuntimeState.colors, { feature_2: "#abcdef" });
 });
 
+test("color state consistency checker reports mirror drift before normalization", () => {
+  const colorRuntimeState = createDefaultColorState();
+  colorRuntimeState.sovereignBaseColors = { AAA: "#112233" };
+  colorRuntimeState.countryBaseColors = { BBB: "#445566" };
+  colorRuntimeState.visualOverrides = { feature_1: "#778899" };
+  colorRuntimeState.featureOverrides = { feature_1: "#aabbcc", feature_2: "#ddeeff" };
+
+  const issues = collectColorStateConsistencyIssues(colorRuntimeState);
+  const issueLabels = issues.map((issue) => `${issue.mirror}:${issue.key}:${issue.kind}`);
+  assert.deepEqual(issueLabels, [
+    "sovereignBaseColors<->countryBaseColors:AAA:missing-key",
+    "sovereignBaseColors<->countryBaseColors:BBB:missing-key",
+    "visualOverrides<->featureOverrides:feature_1:value-mismatch",
+    "visualOverrides<->featureOverrides:feature_2:missing-key",
+  ]);
+
+  normalizeColorStateForRender(colorRuntimeState, {
+    sanitizeColorMap: (value) => value || {},
+    sanitizeCountryColorMap: (value) => value || {},
+  });
+  assert.deepEqual(collectColorStateConsistencyIssues(colorRuntimeState), []);
+});
+
 test("color manager cache signature is stable across object key order", () => {
   const left = ColorManager.getOwnerColorCacheSignature({
     featureIds: ["B", "A"],
@@ -257,6 +281,39 @@ test("color manager normalizes palette candidates into valid six-digit hex color
   assert.equal(ColorManager.normalizeHexColor("#A1B2C3"), "#a1b2c3");
   assert.equal(ColorManager.normalizeHexColor("bad"), null);
   assert.match(ColorManager.getPoliticalFallbackColor("test-token", 3), /^#[0-9a-f]{6}$/);
+});
+
+test("color manager cache helpers trim caches and expose explicit reset", () => {
+  const originalRegionLimit = ColorManager.regionColorCacheLimit;
+  const originalLabLimit = ColorManager.labCacheLimit;
+  ColorManager.clearRuntimeCaches();
+  ColorManager.regionColorCacheLimit = 2;
+  ColorManager.labCacheLimit = 2;
+
+  ColorManager.getRegionColor("A");
+  ColorManager.getRegionColor("B");
+  ColorManager.getRegionColor("C");
+  ColorManager.colorToLab("#112233");
+  ColorManager.colorToLab("#445566");
+  ColorManager.colorToLab("#778899");
+
+  assert.equal(ColorManager.regionColorMap.size <= 2, true);
+  assert.equal(ColorManager.labCache.size <= 2, true);
+  assert.deepEqual(ColorManager.getRuntimeCacheSnapshot(), {
+    regionColorEntries: 2,
+    regionColorCacheLimit: 2,
+    labCacheEntries: 2,
+    labCacheLimit: 2,
+    ownerColorCacheReady: false,
+    ownerColorCacheSignature: "",
+  });
+
+  ColorManager.clearRuntimeCaches();
+  assert.equal(ColorManager.regionColorMap.size, 0);
+  assert.equal(ColorManager.labCache.size, 0);
+
+  ColorManager.regionColorCacheLimit = originalRegionLimit;
+  ColorManager.labCacheLimit = originalLabLimit;
 });
 
 test("feature identity helper normalizes ids, country codes, and stable keys from shared fallback chains", () => {
