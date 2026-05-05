@@ -470,7 +470,6 @@ SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME = "runtime_topology.topo.json"
 SCENARIO_COUNTRIES_STAGE_ARTIFACTS: tuple[ScenarioCheckpointArtifact, ...] = (
     ScenarioCheckpointArtifact("countries_payload", "countries.json"),
     ScenarioCheckpointArtifact("owners_payload", "owners.by_feature.json"),
-    ScenarioCheckpointArtifact("controllers_payload", "controllers.by_feature.json"),
     ScenarioCheckpointArtifact("cores_payload", "cores.by_feature.json"),
     ScenarioCheckpointArtifact("manifest_payload", "manifest.json"),
     ScenarioCheckpointArtifact("audit_payload", "audit.json"),
@@ -535,7 +534,6 @@ SCENARIO_PUBLISH_FILENAMES_BY_SCOPE = {
     SCENARIO_PUBLISH_SCOPE_SCENARIO_DATA: (
         "countries.json",
         "owners.by_feature.json",
-        "controllers.by_feature.json",
         "cores.by_feature.json",
         "manifest.json",
         "audit.json",
@@ -563,7 +561,6 @@ SCENARIO_PUBLISH_FILENAMES_BY_SCOPE[SCENARIO_PUBLISH_SCOPE_ALL] = (
 SCENARIO_STRICT_REQUIRED_FILENAMES = (
     "manifest.json",
     "owners.by_feature.json",
-    "controllers.by_feature.json",
     "cores.by_feature.json",
     SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
 )

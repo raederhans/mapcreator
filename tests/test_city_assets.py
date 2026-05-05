@@ -232,7 +232,7 @@ class CityAssetsTest(unittest.TestCase):
                 },
             )
             _write_json(scenario_dir / "owners.by_feature.json", {"owners": {"US_CNTY_11001": "US"}})
-            _write_json(scenario_dir / "controllers.by_feature.json", {"controllers": {"US_CNTY_11001": "US"}})
+            _write_json(scenario_dir / "controllers.by_feature.json", {"controllers": {"US_CNTY_11001": "STALE"}})
 
             world_cities = gpd.GeoDataFrame(
                 [

@@ -1466,7 +1466,7 @@ def emit_default_scenario_city_assets(output_dir: Path, world_cities: gpd.GeoDat
         }
 
         owners_by_feature = _extract_assignment_map(scenario_dir / "owners.by_feature.json", "owners")
-        controllers_by_feature = _extract_assignment_map(scenario_dir / "controllers.by_feature.json", "controllers")
+        controllers_by_feature = dict(owners_by_feature)
         tag_city_index = _build_tag_city_index(
             world_cities,
             owners_by_feature=owners_by_feature,

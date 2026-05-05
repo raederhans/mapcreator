@@ -200,7 +200,6 @@ def compute_tno_stage_signature_payload(
         STAGE_RUNTIME_TOPOLOGY: [
             checkpoint_dir / "countries.json",
             checkpoint_dir / "owners.by_feature.json",
-            checkpoint_dir / "controllers.by_feature.json",
             checkpoint_dir / "cores.by_feature.json",
             checkpoint_dir / "scenario_political.geojson",
             checkpoint_dir / "scenario_water_seed.geojson",
@@ -231,7 +230,6 @@ def compute_tno_stage_signature_payload(
             checkpoint_dir / "manifest.json",
             checkpoint_dir / "countries.json",
             checkpoint_dir / "owners.by_feature.json",
-            checkpoint_dir / "controllers.by_feature.json",
             checkpoint_dir / "cores.by_feature.json",
             checkpoint_dir / "runtime_topology.topo.json",
             checkpoint_dir / "runtime_topology.bootstrap.topo.json",
@@ -243,7 +241,6 @@ def compute_tno_stage_signature_payload(
             checkpoint_dir / "manifest.json",
             checkpoint_dir / "countries.json",
             checkpoint_dir / "owners.by_feature.json",
-            checkpoint_dir / "controllers.by_feature.json",
             checkpoint_dir / "cores.by_feature.json",
             checkpoint_dir / "runtime_topology.topo.json",
             checkpoint_dir / "runtime_topology.bootstrap.topo.json",

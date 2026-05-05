@@ -1629,7 +1629,6 @@ def compile_scenario_bundle(
         "baseline_hash": baseline_hash,
         "countries_url": f"data/scenarios/{scenario_id}/countries.json",
         "owners_url": f"data/scenarios/{scenario_id}/owners.by_feature.json",
-        "controllers_url": f"data/scenarios/{scenario_id}/controllers.by_feature.json",
         "cores_url": f"data/scenarios/{scenario_id}/cores.by_feature.json",
         "audit_url": f"data/scenarios/{scenario_id}/audit.json",
         "summary": summary,

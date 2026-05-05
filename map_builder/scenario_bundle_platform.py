@@ -404,16 +404,15 @@ def build_manual_sync_file_report(
             if scenario_countries.get(key) != checkpoint_countries.get(key)
         )
         kind = "countries"
-    elif filename in {"owners.by_feature.json", "controllers.by_feature.json"}:
-        key = "owners" if filename.startswith("owners") else "controllers"
-        scenario_map = scenario_payload.get(key, {}) if isinstance(scenario_payload, dict) else {}
-        checkpoint_map = checkpoint_payload.get(key, {}) if isinstance(checkpoint_payload, dict) else {}
+    elif filename == "owners.by_feature.json":
+        scenario_map = scenario_payload.get("owners", {}) if isinstance(scenario_payload, dict) else {}
+        checkpoint_map = checkpoint_payload.get("owners", {}) if isinstance(checkpoint_payload, dict) else {}
         changed_keys = sorted(
             feature_id
             for feature_id in set(scenario_map.keys()) | set(checkpoint_map.keys())
             if scenario_map.get(feature_id) != checkpoint_map.get(feature_id)
         )
-        kind = key
+        kind = "owners"
     elif filename == "cores.by_feature.json":
         scenario_map = scenario_payload.get("cores", {}) if isinstance(scenario_payload, dict) else {}
         checkpoint_map = checkpoint_payload.get("cores", {}) if isinstance(checkpoint_payload, dict) else {}
@@ -461,7 +460,6 @@ def detect_unsynced_manual_edits(
     monitored_filenames = (
         "countries.json",
         "owners.by_feature.json",
-        "controllers.by_feature.json",
         "cores.by_feature.json",
         "geo_locale_patch.json",
     )

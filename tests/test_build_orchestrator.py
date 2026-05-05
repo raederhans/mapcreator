@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from argparse import Namespace
@@ -443,6 +444,111 @@ class BuildOrchestratorTest(unittest.TestCase):
                 runtime_call.kwargs["promote_candidate_topology_if_safe_func"],
                 init_map_data._promote_candidate_topology_if_safe,
             )
+
+    def test_candidate_topology_audit_v2_records_parameters_transform_and_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            primary_path = root / "primary.topo.json"
+            candidate_path = root / "runtime.candidate.topo.json"
+            output_path = root / "runtime.topo.json"
+            topology_payload = {
+                "type": "Topology",
+                "transform": {"scale": [0.1, 0.2], "translate": [-180, -90]},
+                "objects": {"political": {"type": "GeometryCollection", "geometries": []}},
+                "arcs": [],
+            }
+            primary_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            candidate_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            output_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            metrics = {"RU": {"feature_count": 1, "fragment_count": 0}}
+
+            with patch.object(init_map_data, "_validate_candidate_topology_contract", return_value=[]), patch.object(
+                init_map_data,
+                "_collect_country_gate_metrics",
+                return_value=metrics,
+            ), patch.object(init_map_data, "evaluate_country_gate_metrics", return_value=[]):
+                init_map_data._promote_candidate_topology_if_safe(
+                    stage_label="Runtime Political",
+                    primary_topology_path=primary_path,
+                    candidate_path=candidate_path,
+                    output_path=output_path,
+                )
+
+            audit = json.loads(init_map_data._candidate_topology_audit_path(output_path).read_text(encoding="utf-8"))
+            self.assertEqual(audit["version"], 2)
+            self.assertEqual(audit["stage"], "Runtime Political")
+            self.assertEqual(audit["parameter_profile_id"], "runtime_political")
+            self.assertEqual(
+                audit["topology_parameters"]["quantization"],
+                cfg.RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION,
+            )
+            self.assertFalse(audit["topology_parameters"]["presimplify"])
+            self.assertFalse(audit["topology_parameters"]["toposimplify"])
+            self.assertTrue(audit["topology_parameters"]["shared_coords"])
+            self.assertEqual(audit["topology_transform"]["scale"], [0.1, 0.2])
+            self.assertEqual(audit["topology_transform"]["translate"], [-180, -90])
+            self.assertFalse(audit["fallback_used"])
+            self.assertEqual(audit["result"], "promoted")
+
+    def test_candidate_topology_promotion_fails_closed_when_evaluator_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            primary_path = root / "primary.topo.json"
+            candidate_path = root / "detail.candidate.topo.json"
+            output_path = root / "detail.topo.json"
+            topology_payload = {
+                "type": "Topology",
+                "objects": {"political": {"type": "GeometryCollection", "geometries": []}},
+                "arcs": [],
+            }
+            primary_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            candidate_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            output_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            metrics = {"RU": {"feature_count": 1, "fragment_count": 0}}
+
+            with patch.object(init_map_data, "_validate_candidate_topology_contract", return_value=[]), patch.object(
+                init_map_data,
+                "_collect_country_gate_metrics",
+                return_value=metrics,
+            ), patch.object(init_map_data, "evaluate_country_gate_metrics", None):
+                with self.assertRaises(SystemExit):
+                    init_map_data._promote_candidate_topology_if_safe(
+                        stage_label="Detail Bundle",
+                        primary_topology_path=primary_path,
+                        candidate_path=candidate_path,
+                        output_path=output_path,
+                    )
+
+            audit = json.loads(init_map_data._candidate_topology_audit_path(output_path).read_text(encoding="utf-8"))
+            self.assertEqual(audit["version"], 2)
+            self.assertEqual(audit["result"], "failed_country_gate")
+            self.assertIn("country gate evaluator unavailable", audit["gate_problems"])
+            self.assertEqual(audit["parameter_profile_id"], "detail_output")
+            self.assertTrue(audit["fallback_used"])
+
+    def test_candidate_topology_contract_failure_writes_v2_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            primary_path = root / "primary.topo.json"
+            candidate_path = root / "runtime.candidate.topo.json"
+            output_path = root / "runtime.topo.json"
+            topology_payload = {"type": "Topology", "objects": {}, "arcs": []}
+            primary_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+            candidate_path.write_text(json.dumps(topology_payload), encoding="utf-8")
+
+            with patch.object(init_map_data, "_validate_candidate_topology_contract", return_value=["bad topology"]):
+                with self.assertRaises(SystemExit):
+                    init_map_data._promote_candidate_topology_if_safe(
+                        stage_label="Runtime Political",
+                        primary_topology_path=primary_path,
+                        candidate_path=candidate_path,
+                        output_path=output_path,
+                    )
+
+            audit = json.loads(init_map_data._candidate_topology_audit_path(output_path).read_text(encoding="utf-8"))
+            self.assertEqual(audit["version"], 2)
+            self.assertEqual(audit["result"], "failed_contract")
+            self.assertEqual(audit["contract_problems"], ["bad topology"])
 
     def test_init_hierarchy_locale_wrappers_delegate_to_stage_owner(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

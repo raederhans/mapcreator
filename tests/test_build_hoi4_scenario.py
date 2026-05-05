@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from tools.build_hoi4_scenario import PROJECT_ROOT, resolve_manual_rules
+from tools.build_hoi4_scenario import PROJECT_ROOT, resolve_controller_rules, resolve_manual_rules
 
 
 class BuildHoi4ScenarioDefaultsTest(unittest.TestCase):
@@ -41,6 +41,13 @@ class BuildHoi4ScenarioDefaultsTest(unittest.TestCase):
 
     def test_resolve_manual_rules_returns_empty_string_when_no_default_exists(self) -> None:
         self.assertEqual(resolve_manual_rules("", "missing_scenario"), "")
+
+    def test_resolve_controller_rules_rejects_explicit_rules_for_owner_only_output(self) -> None:
+        with self.assertRaisesRegex(ValueError, "controller rules are retired"):
+            resolve_controller_rules("custom/controller.json", "hoi4_1939")
+
+    def test_resolve_controller_rules_returns_empty_for_owner_only_output(self) -> None:
+        self.assertEqual(resolve_controller_rules("", "hoi4_1939"), "")
 
 
 if __name__ == "__main__":

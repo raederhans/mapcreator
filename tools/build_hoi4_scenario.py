@@ -221,9 +221,11 @@ def resolve_manual_rules(raw_value: str, scenario_id: str) -> str:
 def resolve_controller_rules(raw_value: str, scenario_id: str) -> str:
     value = str(raw_value or "").strip()
     if value:
-        return value
-    default_path = PROJECT_ROOT / "data" / "scenario-rules" / f"{scenario_id}.controller.manual.json"
-    return str(default_path) if default_path.exists() else ""
+        raise ValueError(
+            "HOI4 controller rules are retired from owner-only scenario output; "
+            "move the intended runtime ownership into owner manual rules or omit --controller-rules."
+        )
+    return ""
 
 
 def ensure_city_authoring_inputs(scenario_output_dir: Path, scenario_id: str) -> None:
@@ -314,7 +316,7 @@ def build_startup_assets_for_scenario(scenario_output_dir: Path, report_dir: Pat
         runtime_bootstrap_topology_path=scenario_output_dir / "runtime_topology.bootstrap.topo.json",
         countries_path=scenario_output_dir / "countries.json",
         owners_path=scenario_output_dir / "owners.by_feature.json",
-        controllers_path=scenario_output_dir / "controllers.by_feature.json",
+        controllers_path=None,
         cores_path=scenario_output_dir / "cores.by_feature.json",
         geo_locale_patch_en_path=scenario_output_dir / SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE["en"],
         geo_locale_patch_zh_path=scenario_output_dir / SCENARIO_GEO_LOCALE_PATCH_FILENAMES_BY_LANGUAGE["zh"],
@@ -558,7 +560,9 @@ def main() -> int:
     ensure_city_authoring_inputs(scenario_output_dir, args.scenario_id)
     write_json(scenario_output_dir / "countries.json", bundle["countries"])
     write_json(scenario_output_dir / "owners.by_feature.json", bundle["owners"])
-    write_json(scenario_output_dir / "controllers.by_feature.json", bundle["controllers"])
+    stale_controllers_path = scenario_output_dir / "controllers.by_feature.json"
+    if stale_controllers_path.exists():
+        stale_controllers_path.unlink()
     write_json(scenario_output_dir / "cores.by_feature.json", bundle["cores"])
     write_json(scenario_output_dir / "audit.json", bundle["audit"])
     write_json(scenario_output_dir / "runtime_topology.topo.json", runtime_topology_payload)
@@ -665,7 +669,7 @@ def main() -> int:
     print(f"[scenario] Date anchor: {as_of_date}")
     print(f"[scenario] Features: {bundle['audit']['summary']['feature_count']}")
     print(f"[scenario] Owners: {bundle['audit']['summary']['owner_count']}")
-    print(f"[scenario] Controllers: {bundle['audit']['summary'].get('controller_count', 0)}")
+    print(f"[scenario] Controller rules parsed: {bundle['audit']['summary'].get('controller_rule_count', 0)}")
     print(
         "[scenario] Owner/controller split features: "
         f"{bundle['audit']['summary'].get('owner_controller_split_feature_count', 0)}"

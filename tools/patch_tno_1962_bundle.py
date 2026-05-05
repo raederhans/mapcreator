@@ -10416,15 +10416,21 @@ def build_empty_bathymetry_payload() -> dict:
     }
 
 
+def derive_controller_payload_from_owners(owners_payload: dict) -> dict:
+    owners = owners_payload.get("owners", {}) if isinstance(owners_payload, dict) else {}
+    return {"controllers": dict(owners) if isinstance(owners, dict) else {}}
+
+
 def recalculate_country_feature_counts(
     countries_payload: dict,
     owners_payload: dict,
-    controllers_payload: dict,
     audit_payload: dict,
     manifest_payload: dict,
 ) -> None:
     counts = Counter(str(tag).upper() for tag in owners_payload.get("owners", {}).values())
-    controller_counts = Counter(str(tag).upper() for tag in controllers_payload.get("controllers", {}).values())
+    # controllers.by_feature.json has left the formal bundle contract; keep the
+    # legacy country field as an owner-derived compatibility count.
+    controller_counts = counts
     countries = countries_payload.get("countries", {})
     quality_counts: Counter[str] = Counter()
     source_counts: Counter[str] = Counter()
@@ -10466,7 +10472,7 @@ def recalculate_country_feature_counts(
     manifest_summary["synthetic_count"] = synthetic_owner_feature_count
     for summary in (audit_summary, manifest_summary):
         summary["owner_count"] = len({tag for tag in owners_payload.get("owners", {}).values() if str(tag).strip()})
-        summary["controller_count"] = len({tag for tag in controllers_payload.get("controllers", {}).values() if str(tag).strip()})
+        summary["controller_count"] = summary["owner_count"]
 
 
 def build_runtime_topology_payload(
@@ -10563,7 +10569,7 @@ def build_countries_stage_state(
 ) -> dict[str, object]:
     countries_payload = load_json(scenario_dir / "countries.json")
     owners_payload = load_json(scenario_dir / "owners.by_feature.json")
-    controllers_payload = load_json(scenario_dir / "controllers.by_feature.json")
+    controllers_payload = derive_controller_payload_from_owners(owners_payload)
     cores_payload = load_json(scenario_dir / "cores.by_feature.json")
     manual_overrides_payload = load_scenario_manual_overrides_payload(scenario_dir)
     manifest_payload = load_json(scenario_dir / "manifest.json")
@@ -10589,11 +10595,7 @@ def build_countries_stage_state(
             valid_feature_ids=valid_runtime_feature_ids,
             migration_map=migration_map,
         )
-        controllers_payload["controllers"] = expand_feature_code_map(
-            controllers_payload.get("controllers", {}),
-            valid_feature_ids=valid_runtime_feature_ids,
-            migration_map=migration_map,
-        )
+        controllers_payload = derive_controller_payload_from_owners(owners_payload)
         cores_payload["cores"] = expand_feature_core_map(
             cores_payload.get("cores", {}),
             valid_feature_ids=valid_runtime_feature_ids,
@@ -10742,6 +10744,7 @@ def build_countries_stage_state(
         scenario_political_gdf,
     )
     polar_feature_diagnostics = build_polar_feature_diagnostics(scenario_political_gdf)
+    controllers_payload = derive_controller_payload_from_owners(owners_payload)
 
     countries_payload.setdefault("countries", {})[ATL_TAG] = build_atl_country_entry(
         countries_payload.get("countries", {}).get(ATL_TAG),
@@ -10787,6 +10790,7 @@ def build_countries_stage_state(
         manual_overrides_payload,
         audit_payload,
     )
+    controllers_payload = derive_controller_payload_from_owners(owners_payload)
     palette_audit_color_sync_summary = sync_tno_country_colors_from_palette_audit(countries_payload)
 
     stage_metadata = {
@@ -11067,14 +11071,12 @@ def build_runtime_topology_state(
     recalculate_country_feature_counts(
         countries_payload,
         owners_payload,
-        controllers_payload,
         audit_payload,
         manifest_payload,
     )
     rebuild_tno_featured_tags(manifest_payload, countries_payload)
 
     owner_baseline_hash = stable_json_hash(owners_payload["owners"])
-    controller_baseline_hash = stable_json_hash(controllers_payload["controllers"])
     core_baseline_hash = stable_json_hash(cores_payload["cores"])
     generated_at = stage_metadata.get("generated_at") or utc_timestamp()
 
@@ -11082,8 +11084,6 @@ def build_runtime_topology_state(
     audit_payload["generated_at"] = generated_at
 
     owners_payload["baseline_hash"] = owner_baseline_hash
-    controllers_payload["baseline_hash"] = controller_baseline_hash
-    controllers_payload["owner_baseline_hash"] = owner_baseline_hash
     cores_payload["baseline_hash"] = core_baseline_hash
     manifest_payload["baseline_hash"] = owner_baseline_hash
     manifest_payload["special_regions_url"] = "data/scenarios/tno_1962/special_regions.geojson"
@@ -11334,11 +11334,13 @@ def write_countries_stage_checkpoints(
 
 
 def load_countries_stage_checkpoints(checkpoint_dir: Path) -> dict[str, object]:
-    return scenario_bundle_platform.load_countries_stage_checkpoints(
+    state = scenario_bundle_platform.load_countries_stage_checkpoints(
         checkpoint_dir,
         load_json=load_json,
         geopandas_from_features=geopandas_from_features,
     )
+    state["controllers_payload"] = derive_controller_payload_from_owners(state.get("owners_payload", {}))
+    return state
 
 
 def write_water_stage_checkpoints(
@@ -11582,7 +11584,7 @@ def build_startup_bundle_assets_stage(
                 runtime_bootstrap_topology_path=checkpoint_dir / CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME,
                 countries_path=checkpoint_dir / "countries.json",
                 owners_path=checkpoint_dir / "owners.by_feature.json",
-                controllers_path=checkpoint_dir / "controllers.by_feature.json",
+                controllers_path=None,
                 cores_path=checkpoint_dir / "cores.by_feature.json",
                 geo_locale_patch_en_path=checkpoint_dir / CHECKPOINT_GEO_LOCALE_EN_FILENAME,
                 geo_locale_patch_zh_path=checkpoint_dir / CHECKPOINT_GEO_LOCALE_ZH_FILENAME,

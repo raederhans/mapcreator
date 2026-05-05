@@ -182,6 +182,7 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
 
             self.assertTrue((scenario_dir / "derived" / "marine_regions_named_waters.snapshot.geojson").exists())
             self.assertTrue((scenario_dir / "derived" / "water_regions.provenance.json").exists())
+            self.assertFalse((scenario_dir / "controllers.by_feature.json").exists())
 
 
 if __name__ == "__main__":

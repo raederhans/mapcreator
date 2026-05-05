@@ -782,6 +782,25 @@ def _candidate_topology_audit_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + ".candidate_audit.json")
 
 
+def _candidate_topology_parameter_profile(stage_label: str) -> tuple[str, dict[str, object]]:
+    normalized = str(stage_label or "").strip().lower()
+    if "runtime" in normalized:
+        profile_id = "runtime_political"
+        quantization = getattr(cfg, "RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION", cfg.TOPOLOGY_QUANTIZATION)
+    elif "detail" in normalized:
+        profile_id = "detail_output"
+        quantization = getattr(cfg, "DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION", cfg.TOPOLOGY_QUANTIZATION)
+    else:
+        profile_id = "default"
+        quantization = cfg.TOPOLOGY_QUANTIZATION
+    return profile_id, {
+        "quantization": quantization,
+        "presimplify": False,
+        "toposimplify": False,
+        "shared_coords": True,
+    }
+
+
 def _sha256_file_or_empty(path: Path | None) -> str:
     if path is None or not path.exists() or not path.is_file():
         return ""
@@ -805,6 +824,27 @@ def _safe_topology_summary(path: Path | None) -> dict[str, object]:
     return summary
 
 
+def _safe_topology_transform(path: Path | None) -> dict[str, object]:
+    if path is None or not path.exists():
+        return {"scale": None, "translate": None}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return {"scale": None, "translate": None, "transform_error": str(exc)}
+    transform = payload.get("transform", {}) if isinstance(payload, dict) else {}
+    if not isinstance(transform, dict):
+        transform = {}
+    return {
+        "scale": transform.get("scale"),
+        "translate": transform.get("translate"),
+    }
+
+
+def _candidate_topology_fallback_used(path: Path | None) -> bool:
+    transform = _safe_topology_transform(path)
+    return not bool(transform.get("scale") and transform.get("translate"))
+
+
 def _write_candidate_topology_audit(
     *,
     stage_label: str,
@@ -815,9 +855,17 @@ def _write_candidate_topology_audit(
     gate_problems: list[str] | None = None,
     candidate_metrics: dict[str, dict[str, float | int]] | None = None,
     baseline_metrics: dict[str, dict[str, float | int]] | None = None,
+    topology_parameters: dict[str, object] | None = None,
+    fallback_used: bool | None = None,
+    parameter_profile_id: str | None = None,
 ) -> None:
+    default_profile_id, default_parameters = _candidate_topology_parameter_profile(stage_label)
+    parameters = dict(default_parameters)
+    if topology_parameters:
+        parameters.update(topology_parameters)
     payload = {
-        "version": 1,
+        "version": 2,
+        "stage": stage_label,
         "stage_label": stage_label,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "result": result,
@@ -826,6 +874,10 @@ def _write_candidate_topology_audit(
         "previous_path": str(_previous_topology_path(output_path)),
         "candidate_summary": _safe_topology_summary(candidate_path),
         "baseline_summary": _safe_topology_summary(output_path),
+        "topology_parameters": parameters,
+        "topology_transform": _safe_topology_transform(candidate_path),
+        "fallback_used": _candidate_topology_fallback_used(candidate_path) if fallback_used is None else bool(fallback_used),
+        "parameter_profile_id": parameter_profile_id or default_profile_id,
         "contract_problems": list(contract_problems or []),
         "gate_problems": list(gate_problems or []),
         "country_gate": {
@@ -912,14 +964,15 @@ def _promote_candidate_topology_if_safe(
     override_path: Path | None = None,
 ) -> None:
     if collect_topology_country_metrics is None:
+        gate_problems = ["country gate metrics collector unavailable"]
         _write_candidate_topology_audit(
             stage_label=stage_label,
             candidate_path=candidate_path,
             output_path=output_path,
-            result="promoted_without_country_gate",
+            result="failed_country_gate",
+            gate_problems=gate_problems,
         )
-        shutil.copy2(candidate_path, output_path)
-        return
+        raise SystemExit(f"{stage_label}: candidate gate failed: {'; '.join(gate_problems)}")
 
     contract_problems = _validate_candidate_topology_contract(candidate_path, label=stage_label)
     if contract_problems:
@@ -957,13 +1010,28 @@ def _promote_candidate_topology_if_safe(
                 if not _is_managed_shell_coverage_id(feature_id)
             }
             if missing_runtime_ids or unexpected_extra_ids:
-                raise SystemExit(
+                message = (
                     f"{stage_label}: runtime political ids drift: "
                     f"expected={len(expected_ids)}, actual={len(candidate_ids)}, "
                     f"missing={len(missing_runtime_ids)}, extra={len(extra_runtime_ids)}, "
                     f"unexpected_extra={len(unexpected_extra_ids)}"
                 )
+                _write_candidate_topology_audit(
+                    stage_label=stage_label,
+                    candidate_path=candidate_path,
+                    output_path=output_path,
+                    result="failed_contract",
+                    contract_problems=[message],
+                )
+                raise SystemExit(message)
         except Exception as exc:
+            _write_candidate_topology_audit(
+                stage_label=stage_label,
+                candidate_path=candidate_path,
+                output_path=output_path,
+                result="failed_contract",
+                contract_problems=[f"{stage_label}: runtime political validation failed: {exc}"],
+            )
             raise SystemExit(f"{stage_label}: runtime political validation failed: {exc}") from exc
 
     candidate_metrics = _collect_country_gate_metrics(
@@ -982,6 +1050,10 @@ def _promote_candidate_topology_if_safe(
 
     if evaluate_country_gate_metrics is None:
         gate_problems = ["country gate evaluator unavailable"]
+    elif candidate_metrics is None:
+        gate_problems = ["candidate country gate metrics unavailable"]
+    elif output_path.exists() and baseline_metrics is None:
+        gate_problems = ["baseline country gate metrics unavailable"]
     else:
         gate_problems = evaluate_country_gate_metrics(
             baseline_metrics,
@@ -3195,7 +3267,7 @@ def rebuild_derived_hoi4_assets(output_dir: Path, strict: bool = False) -> bool:
                 "data/scenario-rules/hoi4_1936.manual.json",
                 "data/scenario-rules/hoi4_1939.manual.json",
             ],
-            "controller_rules": ["data/scenario-rules/hoi4_1939.controller.manual.json"],
+            "controller_rules": [],
             "scenario_output_dir": "data/scenarios/hoi4_1939",
             "report_dir": ".runtime/reports/generated/scenarios/hoi4_1939",
         },

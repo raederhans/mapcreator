@@ -405,7 +405,7 @@ def inspect_hoi4_scenario_bundle(
             owners_by_feature_id=owners_by_feature_id,
         )
     controller_set_assertions = expectation.get("controller_set_assertions", [])
-    if isinstance(controller_set_assertions, list):
+    if require_controllers and isinstance(controller_set_assertions, list):
         evaluate_controller_set_assertions(
             errors=errors,
             assertions=controller_set_assertions,
@@ -435,40 +435,41 @@ def inspect_hoi4_scenario_bundle(
         for tag in owners_by_feature_id.values()
         if str(tag or "").strip()
     )
-    controller_tag_counts = Counter(
-        str(tag or "").strip().upper()
-        for tag in controllers_by_feature_id.values()
-        if str(tag or "").strip()
-    )
-    missing_controller_country_tags = [
-        tag
-        for tag, count in sorted(controller_tag_counts.items())
-        if count > 0 and tag not in country_map
-    ]
-    expect(
-        not missing_controller_country_tags,
-        "All controller tags must exist in countries.json. Missing: "
-        f"{missing_controller_country_tags[:10]}",
-    )
-    for tag, entry in country_map.items():
-        if str(entry.get("entry_kind") or "").strip().lower() != "controller_only":
-            continue
-        expected_controller_count = controller_tag_counts.get(tag, 0)
-        actual_controller_count = int(entry.get("controller_feature_count") or 0)
-        actual_owner_count = int(entry.get("feature_count") or 0)
-        expect(
-            actual_controller_count == expected_controller_count,
-            f"controller_only country {tag}.controller_feature_count must equal controller payload count "
-            f"({expected_controller_count}). Found {actual_controller_count}.",
+    if require_controllers:
+        controller_tag_counts = Counter(
+            str(tag or "").strip().upper()
+            for tag in controllers_by_feature_id.values()
+            if str(tag or "").strip()
         )
+        missing_controller_country_tags = [
+            tag
+            for tag, count in sorted(controller_tag_counts.items())
+            if count > 0 and tag not in country_map
+        ]
         expect(
-            actual_owner_count == 0,
-            f"controller_only country {tag}.feature_count must stay at 0. Found {actual_owner_count}.",
+            not missing_controller_country_tags,
+            "All controller tags must exist in countries.json. Missing: "
+            f"{missing_controller_country_tags[:10]}",
         )
-        expect(
-            owner_tag_counts.get(tag, 0) == 0,
-            f"controller_only country {tag} must not own features in owners payload.",
-        )
+        for tag, entry in country_map.items():
+            if str(entry.get("entry_kind") or "").strip().lower() != "controller_only":
+                continue
+            expected_controller_count = controller_tag_counts.get(tag, 0)
+            actual_controller_count = int(entry.get("controller_feature_count") or 0)
+            actual_owner_count = int(entry.get("feature_count") or 0)
+            expect(
+                actual_controller_count == expected_controller_count,
+                f"controller_only country {tag}.controller_feature_count must equal controller payload count "
+                f"({expected_controller_count}). Found {actual_controller_count}.",
+            )
+            expect(
+                actual_owner_count == 0,
+                f"controller_only country {tag}.feature_count must stay at 0. Found {actual_owner_count}.",
+            )
+            expect(
+                owner_tag_counts.get(tag, 0) == 0,
+                f"controller_only country {tag} must not own features in owners payload.",
+            )
 
     if coverage_report:
         md_to_audit_key = {

@@ -264,6 +264,35 @@ class CheckHoi4ScenarioBundleTest(unittest.TestCase):
                 any("coverage_report.md feature_count must equal audit.summary.feature_count." in error for error in report["domain_errors"])
             )
 
+    def test_inspect_hoi4_scenario_bundle_skips_controller_payload_assertions_when_optional(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            scenario_dir, report_dir, expectation_path = _create_valid_hoi4_bundle(tmp_root, scenario_name="hoi4_1939")
+            (scenario_dir / "controllers.by_feature.json").unlink()
+            expectation = json.loads(expectation_path.read_text(encoding="utf-8"))
+            expectation["require_controllers"] = False
+            expectation["controller_set_assertions"] = [
+                {
+                    "name": "legacy controller assertion",
+                    "expected_controller_tag": "AAA",
+                    "feature_ids": ["F-1"],
+                }
+            ]
+            _write_json(expectation_path, expectation)
+
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            try:
+                report = inspect_hoi4_scenario_bundle(
+                    scenario_dir,
+                    report_dir,
+                    expectation_path=expectation_path,
+                )
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(report["status"], "ok")
+
     def test_inspect_hoi4_scenario_bundle_ignores_strict_bundle_only_mismatches(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)

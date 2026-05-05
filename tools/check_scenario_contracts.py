@@ -1033,7 +1033,7 @@ def _resolve_scenario_url(target_dir: Path, url: object, errors: list[str], fiel
 
 def _required_profile_filenames(profile_id: str, manifest: dict[str, Any]) -> list[str]:
     profile = resolve_scenario_contract_profile(profile_id)
-    required = [name for name in SCENARIO_STRICT_REQUIRED_FILENAMES if name != "controllers.by_feature.json"]
+    required = list(SCENARIO_STRICT_REQUIRED_FILENAMES)
     if profile.expect_runtime_bootstrap or str(manifest.get("runtime_bootstrap_topology_url") or "").strip():
         required.append(SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME)
     if profile.expect_chunk_assets or str(manifest.get("detail_chunk_manifest_url") or "").strip():
@@ -1435,8 +1435,7 @@ def validate_strict_bundle_contract(
         for filename in required_filenames
         if filename.endswith(".json")
     }
-    strict_required = [name for name in SCENARIO_STRICT_REQUIRED_FILENAMES if name != "controllers.by_feature.json"]
-    if any(required_payloads.get(filename) is None for filename in strict_required):
+    if any(required_payloads.get(filename) is None for filename in SCENARIO_STRICT_REQUIRED_FILENAMES):
         return
     owners_payload = required_payloads["owners.by_feature.json"]
     cores_payload = required_payloads["cores.by_feature.json"]

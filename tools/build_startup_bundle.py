@@ -670,8 +670,8 @@ def build_startup_bundle_payload(
     runtime_bootstrap_topology_path: Path,
     countries_path: Path,
     owners_path: Path,
-    controllers_path: Path,
     cores_path: Path,
+    controllers_path: Path | None = None,
     detail_chunk_manifest_path: Path | None = None,
 ) -> dict:
     scenario_id = _normalize_text(scenario_manifest.get("scenario_id"))
@@ -687,7 +687,14 @@ def build_startup_bundle_payload(
     runtime_shell_topology = build_startup_runtime_shell(runtime_bootstrap_topology)
     countries_payload = _read_json(countries_path)
     owners_payload = _read_json(owners_path)
-    controllers_payload = _read_json(controllers_path)
+    # controllers.by_feature.json is retired from the formal scenario contract.
+    # Startup keeps the legacy compact section by deriving equivalent controller
+    # assignments from owners so older consumers still receive a stable shape.
+    controllers_payload = (
+        _read_json(controllers_path)
+        if controllers_path is not None and controllers_path.is_file()
+        else {"controllers": dict(owners_payload.get("owners", {}))}
+    )
     cores_payload = _read_json(cores_path)
     compact_owners_payload = compact_tag_assignment_payload(owners_payload, runtime_feature_ids, "owners")
     compact_controllers_payload = compact_tag_assignment_payload(controllers_payload, runtime_feature_ids, "controllers")
@@ -706,9 +713,10 @@ def build_startup_bundle_payload(
         "runtime_bootstrap_topology_sha256": _sha256_path(runtime_bootstrap_topology_path),
         "countries_sha256": _sha256_path(countries_path),
         "owners_sha256": _sha256_path(owners_path),
-        "controllers_sha256": _sha256_path(controllers_path),
         "cores_sha256": _sha256_path(cores_path),
     }
+    if controllers_path is not None and controllers_path.is_file():
+        source_metadata["controllers_sha256"] = _sha256_path(controllers_path)
     if detail_chunk_manifest_path is not None and detail_chunk_manifest_path.is_file():
         source_metadata["detail_chunk_manifest_sha256"] = _sha256_path(detail_chunk_manifest_path)
 
@@ -1147,12 +1155,12 @@ def build_startup_bundles(
     runtime_bootstrap_topology_path: Path,
     countries_path: Path,
     owners_path: Path,
-    controllers_path: Path,
     cores_path: Path,
     geo_locale_patch_en_path: Path,
     geo_locale_patch_zh_path: Path,
     output_en_path: Path,
     output_zh_path: Path,
+    controllers_path: Path | None = None,
     detail_chunk_manifest_path: Path | None = None,
     report_path: Path | None = None,
 ) -> dict:
@@ -1250,7 +1258,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--detail-chunk-manifest", default="")
     parser.add_argument("--countries", required=True)
     parser.add_argument("--owners", required=True)
-    parser.add_argument("--controllers", required=True)
+    parser.add_argument("--controllers", default="")
     parser.add_argument("--cores", required=True)
     parser.add_argument("--geo-locale-patch-en", required=True)
     parser.add_argument("--geo-locale-patch-zh", required=True)
@@ -1273,7 +1281,7 @@ def main() -> None:
         detail_chunk_manifest_path=Path(args.detail_chunk_manifest).resolve() if _normalize_text(args.detail_chunk_manifest) else None,
         countries_path=Path(args.countries).resolve(),
         owners_path=Path(args.owners).resolve(),
-        controllers_path=Path(args.controllers).resolve(),
+        controllers_path=Path(args.controllers).resolve() if _normalize_text(args.controllers) else None,
         cores_path=Path(args.cores).resolve(),
         geo_locale_patch_en_path=Path(args.geo_locale_patch_en).resolve(),
         geo_locale_patch_zh_path=Path(args.geo_locale_patch_zh).resolve(),
