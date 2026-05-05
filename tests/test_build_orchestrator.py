@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import importlib
+import os
 import tempfile
 import unittest
 from argparse import Namespace
@@ -16,6 +18,36 @@ from map_builder import validation_schema
 from map_builder import config as cfg
 from map_builder.processors import config_subdivisions
 from tools import build_na_detail_topology
+
+
+class ConfigTopologyQuantizationEnvTests(unittest.TestCase):
+    def tearDown(self) -> None:
+        importlib.reload(cfg)
+
+    def test_topology_quantization_env_overrides_feed_candidate_profiles(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION": "50000",
+                "DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION": "25000",
+            },
+        ):
+            reloaded_cfg = importlib.reload(cfg)
+            self.assertEqual(reloaded_cfg.RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION, 50_000)
+            self.assertEqual(reloaded_cfg.DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION, 25_000)
+            _runtime_profile, runtime_parameters = init_map_data._candidate_topology_parameter_profile(
+                "Runtime Political"
+            )
+            _detail_profile, detail_parameters = init_map_data._candidate_topology_parameter_profile(
+                "Detail Bundle"
+            )
+            self.assertEqual(runtime_parameters["quantization"], 50_000)
+            self.assertEqual(detail_parameters["quantization"], 25_000)
+
+    def test_topology_quantization_env_override_fails_closed_on_invalid_value(self) -> None:
+        with patch.dict(os.environ, {"RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION": "0"}):
+            with self.assertRaisesRegex(ValueError, "RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION"):
+                importlib.reload(cfg)
 
 
 class _FakeStageOps:

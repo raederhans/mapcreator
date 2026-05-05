@@ -1475,3 +1475,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 2. 运维脚本依赖的外部 CLI 子命令也要进合同测试
 - 这次 browser smoke 的网络采集还在调用旧 `network` 子命令，当前 Playwright CLI 已改为 `requests`，导致报告 network summary 虚绿。
 - 更稳的做法是：脚本对外部 CLI 的关键子命令用轻量静态合同锁住，升级 CLI 后先修脚本采集面。
+
+### 44. Topology quantization promotion must stop at the first hard gate
+- A smaller TopoJSON file can still be invalid: runtime q50000 reduced bytes but increased world-bounds geometries, so contract failure must block q25000, visual QA, and production parameter updates.
+- Detail topology experiments depend on fresh source-layer contracts; if source/primary urban layers lack `id` / `country_owner_id`, fix the source rebuild chain before running quantization A/B.

@@ -11,3 +11,13 @@
 2026-05-05 验证：py_compile 通过；147 个 targeted unittest 通过；HOI4 checker OK；hoi4_1939/tno_1962 strict contract OK。Phase 3b production 参数未更新，需后续带真实候选产物和视觉关键点再推进。
 
 2026-05-05 review fix: explicit --controller-rules now fails at resolve_controller_rules, preventing audit/summary from claiming controller-rule application under owner-only output. City asset generation now always derives controllers_by_feature from owners_by_feature, so stale controllers.by_feature.json files cannot affect capital/city indexing. Verification: py_compile build_hoi4_scenario.py/cities.py; 157 targeted unittest OK.
+
+2026-05-05 Phase 3b continuation: added explicit env-variable tuning for runtime/detail topology quantization (RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION, DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION) with fail-closed positive integer parsing. Targeted config/audit tests pass.
+
+2026-05-05 Phase 3b runtime q50000: candidate build completed under .runtime/tmp/phase3b/runtime_q50000, audit v2 wrote result=failed_contract. Quantization=50000, fallback_used=false, bytes 15,038,191 vs baseline 15,682,866, arc_count 151,356 vs 144,926, arc_point_count 601,362 vs 613,401. Contract blocker: world_bounds_geometries=391, so runtime q25000 and production parameter update were not attempted.
+
+2026-05-05 Phase 3b detail q50000: build failed before candidate because source/primary urban layer contract lacks id and country_owner_id. Wrote a failed_contract audit in .runtime/tmp/phase3b/detail_q50000/europe_topology.na_v2.json.candidate_audit.json. Detail q25000 and production parameter update were blocked.
+
+2026-05-05 Phase 3b verification rule: visual key-point checks were intentionally not run because candidate gate failed before the visual gate. Strict scenario checks and HOI4 checker remain green on current production artifacts.
+
+2026-05-05 self-review: the simplest stable path is to keep production quantization at 100000 until runtime q50000 world-bounds leakage and stale urban source schema are fixed. No fallback promotion or visual approval was used.

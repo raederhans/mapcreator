@@ -1,5 +1,7 @@
 # Centralized configuration for map data pipeline.
 
+import os
+
 from map_builder.country_feature_policies import subdivision_protected_countries
 
 # Data source URLs
@@ -639,11 +641,33 @@ PROJECTION = {
 # Equal-area CRS + global visibility threshold used for geometry culling.
 AREA_CRS = "EPSG:6933"
 MIN_VISIBLE_AREA_KM2 = 50.0
+
+
+def _positive_int_env(name: str, default: int) -> int:
+    """Read integer build tuning from the environment and fail on bad values."""
+    raw_value = os.environ.get(name)
+    if raw_value is None or raw_value.strip() == "":
+        return default
+    try:
+        value = int(raw_value.strip())
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive integer, got {raw_value!r}") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {raw_value!r}")
+    return value
+
+
 TOPOLOGY_QUANTIZATION = 10_000
 # Managed-detail political outputs need finer quantization to keep narrow RU shell
 # fallback fragments stable through TopoJSON round-trips.
-DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION = 100_000
-RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION = 100_000
+DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION = _positive_int_env(
+    "DETAIL_OUTPUT_TOPOLOGY_QUANTIZATION",
+    100_000,
+)
+RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION = _positive_int_env(
+    "RUNTIME_POLITICAL_TOPOLOGY_QUANTIZATION",
+    100_000,
+)
 
 # Simplification tolerances (WGS84 degrees)
 SIMPLIFY_NUTS3 = 0.002
