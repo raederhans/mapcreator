@@ -236,6 +236,7 @@ def _load_layer_payloads_from_manifest(manifest: dict[str, Any]) -> dict[str, di
     for layer_key, raw_url in {
         "water": manifest.get("water_regions_url"),
         "special": manifest.get("special_regions_url"),
+        "special_zone_layers": manifest.get("special_zone_layers_url"),
         "relief": manifest.get("relief_overlays_url"),
         "cities": manifest.get("city_overrides_url"),
     }.items():
@@ -288,6 +289,7 @@ def _collect_snapshot_inputs(
     }
     manifest_input_fields = {
         "special_regions_url": "special_regions.geojson",
+        "special_zone_layers_url": "special_zone_layers.json",
         "relief_overlays_url": "relief_overlays.geojson",
         "bathymetry_topology_url": "bathymetry.topo.json",
         "city_overrides_url": "city_overrides.json",
@@ -722,6 +724,64 @@ def validate_manifest_urls(expected_scenario_id: str, manifest: dict, errors: li
             )
 
 
+def validate_special_zone_layers(expected_scenario_id: str, manifest: dict, errors: list[str]) -> None:
+    raw_url = str(manifest.get("special_zone_layers_url") or "").strip()
+    if not raw_url:
+        errors.append("manifest.special_zone_layers_url is required for layer-based special zones.")
+        return
+    path = scenario_relative_url_to_path(raw_url)
+    if path is None or not path.exists():
+        errors.append(f"special_zone_layers_url target must exist. Missing: {raw_url}")
+        return
+    payload = load_json(path)
+    if not isinstance(payload, dict):
+        errors.append("special_zone_layers.json must be a JSON object.")
+        return
+    if int(payload.get("version") or 0) != 1:
+        errors.append("special_zone_layers.json version must be 1.")
+    layers = payload.get("layers")
+    if not isinstance(layers, list):
+        errors.append("special_zone_layers.json layers must be an array.")
+        return
+    active_layer_id = str(payload.get("activeLayerId") or "").strip()
+    layer_ids: set[str] = set()
+    owners_path = PROJECT_ROOT / "data" / "scenarios" / expected_scenario_id / "owners.by_feature.json"
+    known_feature_ids: set[str] = set()
+    if owners_path.exists():
+        owners_payload = load_json(owners_path)
+        owners = owners_payload.get("owners") if isinstance(owners_payload, dict) else None
+        if isinstance(owners, dict):
+            known_feature_ids = {str(feature_id).strip() for feature_id in owners if str(feature_id).strip()}
+    for index, layer in enumerate(layers):
+        if not isinstance(layer, dict):
+            errors.append(f"special_zone_layers.json layer {index} must be an object.")
+            continue
+        layer_id = str(layer.get("id") or "").strip()
+        if not layer_id:
+            errors.append(f"special_zone_layers.json layer {index} is missing id.")
+            continue
+        if layer_id in layer_ids:
+            errors.append(f"special_zone_layers.json duplicate layer id: {layer_id}.")
+        layer_ids.add(layer_id)
+        if str(layer.get("source") or "").strip() not in {"project", "scenario"}:
+            errors.append(f"special_zone_layers.json layer {layer_id} has invalid source.")
+        if not isinstance(layer.get("style"), dict):
+            errors.append(f"special_zone_layers.json layer {layer_id} style must be an object.")
+        member_ids = layer.get("memberFeatureIds")
+        if not isinstance(member_ids, list):
+            errors.append(f"special_zone_layers.json layer {layer_id} memberFeatureIds must be an array.")
+            continue
+        invalid_ids = sorted({
+            str(feature_id).strip()
+            for feature_id in member_ids
+            if str(feature_id).strip() and known_feature_ids and str(feature_id).strip() not in known_feature_ids
+        })
+        if invalid_ids:
+            errors.append(f"special_zone_layers.json layer {layer_id} references unknown feature ids: {invalid_ids[:10]}.")
+    if active_layer_id and active_layer_id not in layer_ids:
+        errors.append("special_zone_layers.json activeLayerId must match an existing layer id.")
+
+
 def validate_runtime_capitals(expected_scenario_id: str, manifest: dict, errors: list[str]) -> None:
     city_overrides_url = str(manifest.get("city_overrides_url") or "").strip()
     if not city_overrides_url:
@@ -1052,6 +1112,8 @@ def _required_profile_filenames(profile_id: str, manifest: dict[str, Any]) -> li
         )
     if str(manifest.get("audit_url") or "").strip():
         required.append("audit.json")
+    if str(manifest.get("special_zone_layers_url") or "").strip():
+        required.append("special_zone_layers.json")
     required.append(SCENARIO_BUILD_SNAPSHOT_FILENAME)
     return sorted(dict.fromkeys(required))
 
@@ -1680,6 +1742,7 @@ def inspect_scenario_contract(
 
     validate_manifest_version_matrix(expected_scenario_id, manifest, errors)
     validate_manifest_urls(expected_scenario_id, manifest, errors)
+    validate_special_zone_layers(expected_scenario_id, manifest, errors)
     validate_runtime_capitals(expected_scenario_id, manifest, errors)
     validate_internal_authoring_inputs(expected_scenario_id, errors)
     validate_locale_patch(expected_scenario_id, manifest, errors, warnings, strict=strict, repair_tracks=repair_tracks)

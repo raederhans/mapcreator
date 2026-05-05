@@ -40,6 +40,7 @@ import {
   buildScenarioDistrictGroupByFeatureId,
   normalizeScenarioDistrictGroupsPayload,
 } from "./scenario_districts.js";
+import { normalizeSpecialZoneLayersState } from "./special_zone_layers.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
 import { ensureDetailTopologyBoundary, flushRenderBoundary } from "./render_boundary.js";
 import { buildScenarioReleasableIndex } from "./releasable_manager.js";
@@ -150,6 +151,13 @@ const SCENARIO_OPTIONAL_LAYER_CONFIGS = {
     urlField: "special_regions_url",
     objectName: "scenario_special_land",
     visibilityField: "showScenarioSpecialRegions",
+  },
+  specialzonelayers: {
+    bundleField: "specialZoneLayersPayload",
+    stateField: "specialZoneLayers",
+    urlField: "special_zone_layers_url",
+    objectName: "",
+    visibilityField: "showSpecialZones",
   },
   relief: {
     bundleField: "reliefOverlaysPayload",
@@ -333,7 +341,10 @@ function areScenarioFeatureCollectionsEquivalent(leftPayload, rightPayload) {
 }
 
 function normalizeScenarioOptionalLayerKey(value) {
-  const key = String(value || "").trim().toLowerCase();
+  const rawKey = String(value || "").trim().toLowerCase();
+  const key = rawKey === "special_zone_layers" || rawKey === "special-zone-layers"
+    ? "specialzonelayers"
+    : rawKey;
   return Object.prototype.hasOwnProperty.call(SCENARIO_OPTIONAL_LAYER_CONFIGS, key) ? key : "";
 }
 
@@ -622,6 +633,12 @@ function applyScenarioOptionalLayerState(bundle, layerKey, payload) {
   }
   if (config.stateField === "scenarioCityOverridesData") {
     syncScenarioLocalizationState({ cityOverridesPayload: payload });
+  } else if (config.stateField === "specialZoneLayers") {
+    state.specialZoneLayers = normalizeSpecialZoneLayersState(payload, {
+      defaultSource: "scenario",
+      validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
+    });
+    state.specialZonesOverlayDirty = true;
   } else {
     state[config.stateField] = payload || null;
   }
@@ -693,7 +710,9 @@ async function loadScenarioOptionalLayerPayload(
         ? normalizeScenarioCityOverridesPayload(rawPayload, {
           sourceLabel: `scenario_city_overrides:${getScenarioBundleId(bundle) || "scenario"}`,
         })
-        : normalizeScenarioFeatureCollection(rawPayload);
+        : layerKey === "specialzonelayers"
+          ? normalizeSpecialZoneLayersState(rawPayload, { defaultSource: "scenario" })
+          : normalizeScenarioFeatureCollection(rawPayload);
       bundle[config.bundleField] = payload;
       bundle.optionalLayerSettledByKey[layerKey] = true;
       return payload;

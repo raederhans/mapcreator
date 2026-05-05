@@ -154,7 +154,7 @@
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "f1a53abd785c6fa1849d5e16a40d63572acd41846e2b0ca1581d86f35b281c3c",
+  "snapshot_fingerprint": "c40ca5f987866d7c9a581a1664c23b5eb9d5158962d9709128fa2273e7488601",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "detail_chunk_manifest_sha256": "a6927da7500007be7d3129393a3ad957846bf6b9eef95d4a50ba9267f4121267",
@@ -162,6 +162,7 @@
     "runtime_topology_sha256": "9ea46d951d006811959476e7cdc835c376c043164ce5c5f333cb32b612eb1ab0"
   },
   "special_regions_url": "data/scenarios/tno_1962/special_regions.geojson",
+  "special_zone_layers_url": "data/scenarios/tno_1962/special_zone_layers.json",
   "startup_bundle_url_en": "data/scenarios/tno_1962/startup.bundle.en.json",
   "startup_bundle_url_zh": "data/scenarios/tno_1962/startup.bundle.zh.json",
   "startup_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",

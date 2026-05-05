@@ -158,6 +158,7 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
             _write_json(checkpoint_dir / "manifest.json", {"summary": {"feature_count": 1}})
             _write_json(checkpoint_dir / "audit.json", {"ok": True})
             _write_json(checkpoint_dir / "special_regions.geojson", {"type": "FeatureCollection", "features": []})
+            _write_json(checkpoint_dir / "special_zone_layers.json", {"version": 1, "layers": [], "activeLayerId": "", "topologyFingerprint": "", "diagnostics": []})
             _write_json(checkpoint_dir / "water_regions.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "relief_overlays.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "bathymetry.topo.json", {"type": "Topology"})

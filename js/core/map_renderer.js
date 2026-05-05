@@ -118,6 +118,11 @@ import { createFacilitySurfaceOwner } from "./renderer/facility_surface.js";
 import { createRiverLayerRenderOwner } from "./renderer/river_layer_render_owner.js";
 import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
+import {
+  buildSpecialZoneRenderFeatures,
+  normalizeSpecialZoneLayersState,
+  updateSpecialZoneLayerMembership,
+} from "./special_zone_layers.js";
 import { createBorderDrawOwner } from "./renderer/border_draw_owner.js";
 import { createInteractionBorderSnapshotOwner } from "./renderer/interaction_border_snapshot_owner.js";
 import { createSpatialIndexRuntimeOwner } from "./renderer/spatial_index_runtime_owner.js";
@@ -260,6 +265,7 @@ let legendItemsGroup = null;
 let legendBackground = null;
 let lastLegendKey = null;
 let brushSession = null;
+let specialZoneMembershipDragSession = null;
 let suppressNextClickAfterBrush = false;
 let lastDetailToastToken = "";
 let lastDetailToastAt = 0;
@@ -6815,6 +6821,7 @@ function resolveOwnerBorderCode(entity, ownershipContext = {}) {
   const ownershipByFeatureId = ownershipContext?.ownershipByFeatureId || {};
   const shellOwnerByFeatureId = ownershipContext?.shellOwnerByFeatureId || {};
   const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
+  const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
   if (!featureId) {
     return canonicalCountryCode(fallbackCode);
   }
@@ -6822,7 +6829,7 @@ function resolveOwnerBorderCode(entity, ownershipContext = {}) {
   return canonicalCountryCode(
     ownershipByFeatureId?.[featureId]
     || (!isScenarioShell ? fallbackCode : "")
-    || (isScenarioShell ? (shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode) : "")
+    || (isScenarioShell ? (shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode || shellControllerHintCode) : "")
     || ""
   );
 }
@@ -18728,38 +18735,24 @@ function getManualSpecialZoneFeatures() {
 }
 
 function getEffectiveSpecialZonesFeatureCollection() {
-  const topologyFeatures = Array.isArray(runtimeState.specialZonesData?.features)
-    ? runtimeState.specialZonesData.features
-    : [];
-  const manualFeatures = getManualSpecialZoneFeatures();
-
-  const normalizeSpecialZoneFeature = (feature, index, sourceLabel) => {
-    if (!feature?.geometry) return null;
-    const normalizedFeature = normalizeFeatureGeometry(feature, {
-      sourceLabel: `special_zone_${sourceLabel}`,
-    });
-    return {
-      ...normalizedFeature,
-      properties: {
-        ...(normalizedFeature?.properties || {}),
-        __source: sourceLabel,
-        id: String(normalizedFeature?.properties?.id || `special_zone_${sourceLabel}_${index + 1}`),
-      },
-    };
-  };
-
-  const features = [
-    ...topologyFeatures
-      .map((feature, index) => normalizeSpecialZoneFeature(feature, index, "topology"))
-      .filter(Boolean),
-    ...manualFeatures
-      .map((feature, index) => normalizeSpecialZoneFeature(feature, index, "manual"))
-      .filter(Boolean),
-  ];
-  return { type: "FeatureCollection", features };
+  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
+  return buildSpecialZoneRenderFeatures(runtimeState.specialZoneLayers, runtimeState.landIndex);
 }
 
 function getSpecialZoneStyle(feature) {
+  const layerStyle = feature?.properties?.__specialZoneLayerStyle;
+  if (layerStyle && typeof layerStyle === "object") {
+    return {
+      fill: getSafeCanvasColor(layerStyle.fill, "#8b5cf6"),
+      stroke: getSafeCanvasColor(layerStyle.stroke, "#6d28d9"),
+      fillOpacity: clamp(Number(layerStyle.fillOpacity) || 0.32, 0, 1),
+      strokeWidth: clamp(Number(layerStyle.strokeWidth) || 1.3, 0.4, 8),
+      dash: getDashPattern(layerStyle.pattern === "outlineOnly" ? "solid" : "dashed", Number(layerStyle.strokeWidth) || 1.3),
+      pattern: String(layerStyle.pattern || "solid"),
+      patternOpacity: clamp(Number(layerStyle.patternOpacity) || 0.42, 0, 1),
+      revision: Math.max(1, Math.round(Number(layerStyle.revision) || 1)),
+    };
+  }
   const config = runtimeState.styleConfig?.specialZones || {};
   const type = String(feature?.properties?.type || "").toLowerCase();
   const fillOpacity = clamp(Number.isFinite(Number(config.opacity)) ? Number(config.opacity) : 0.32, 0, 1);
@@ -18794,14 +18787,97 @@ function getSpecialZoneStyle(feature) {
   };
 }
 
+function sanitizeSpecialZonePatternToken(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "zone";
+}
+
+function getSpecialZonePatternDefId(feature, style) {
+  const layerId = sanitizeSpecialZonePatternToken(feature?.properties?.__specialZoneLayerId || "layer");
+  const pattern = sanitizeSpecialZonePatternToken(style?.pattern || "solid");
+  const stroke = sanitizeSpecialZonePatternToken(style?.stroke || "stroke");
+  const revision = Math.max(1, Math.round(Number(style?.revision) || 1));
+  return `special-zone-pattern-${layerId}-${pattern}-${stroke}-${revision}`;
+}
+
+function renderSpecialZonePatternDefs(features) {
+  if (!strategicDefs) return new Map();
+  const defsById = new Map();
+  features.forEach((feature) => {
+    const style = getSpecialZoneStyle(feature);
+    const pattern = String(style.pattern || "solid");
+    if (pattern === "solid" || pattern === "outlineOnly") return;
+    const id = getSpecialZonePatternDefId(feature, style);
+    if (!defsById.has(id)) {
+      defsById.set(id, {
+        id,
+        pattern,
+        stroke: style.stroke,
+        strokeWidth: Math.max(0.8, Number(style.strokeWidth) || 1.2),
+      });
+    }
+  });
+
+  const selection = strategicDefs
+    .selectAll("pattern.special-zone-pattern-def")
+    .data(Array.from(defsById.values()), (d) => d.id);
+
+  const enter = selection
+    .enter()
+    .append("pattern")
+    .attr("class", "special-zone-pattern-def")
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 14)
+    .attr("height", 14);
+
+  const merged = enter.merge(selection)
+    .attr("id", (d) => d.id)
+    .attr("width", (d) => (d.pattern === "denseDots" ? 8 : 14))
+    .attr("height", (d) => (d.pattern === "denseDots" ? 8 : 14));
+
+  merged.each(function renderPatternDefinition(d) {
+    const patternSelection = globalThis.d3.select(this);
+    patternSelection.selectAll("*").remove();
+    const stroke = d.stroke;
+    const width = d.strokeWidth;
+    if (d.pattern === "diagonalHatch") {
+      patternSelection.append("path").attr("d", "M -4 14 L 14 -4 M 0 18 L 18 0").attr("stroke", stroke).attr("stroke-width", width).attr("fill", "none");
+    } else if (d.pattern === "crossHatch") {
+      patternSelection.append("path").attr("d", "M -4 14 L 14 -4 M 0 18 L 18 0 M 0 -4 L 18 14 M -4 0 L 14 18").attr("stroke", stroke).attr("stroke-width", width * 0.75).attr("fill", "none");
+    } else if (d.pattern === "horizontalLines") {
+      patternSelection.append("path").attr("d", "M 0 4 H 14 M 0 10 H 14").attr("stroke", stroke).attr("stroke-width", width).attr("fill", "none");
+    } else if (d.pattern === "wavyLines") {
+      patternSelection.append("path").attr("d", "M 0 5 C 3 2, 5 8, 8 5 S 12 2, 14 5 M 0 11 C 3 8, 5 14, 8 11 S 12 8, 14 11").attr("stroke", stroke).attr("stroke-width", width * 0.75).attr("fill", "none");
+    } else if (d.pattern === "dots" || d.pattern === "denseDots") {
+      const radius = d.pattern === "denseDots" ? 1.1 : 1.35;
+      patternSelection.append("circle").attr("cx", d.pattern === "denseDots" ? 2 : 4).attr("cy", d.pattern === "denseDots" ? 2 : 4).attr("r", radius).attr("fill", stroke);
+      patternSelection.append("circle").attr("cx", d.pattern === "denseDots" ? 6 : 10).attr("cy", d.pattern === "denseDots" ? 6 : 10).attr("r", radius).attr("fill", stroke);
+    } else if (d.pattern === "concentric") {
+      patternSelection.append("circle").attr("cx", 7).attr("cy", 7).attr("r", 2.2).attr("stroke", stroke).attr("stroke-width", width * 0.7).attr("fill", "none");
+      patternSelection.append("circle").attr("cx", 7).attr("cy", 7).attr("r", 5.4).attr("stroke", stroke).attr("stroke-width", width * 0.55).attr("fill", "none");
+    } else if (d.pattern === "chevrons") {
+      patternSelection.append("path").attr("d", "M 1 9 L 7 4 L 13 9 M 1 14 L 7 9 L 13 14").attr("stroke", stroke).attr("stroke-width", width).attr("fill", "none").attr("stroke-linejoin", "round");
+    }
+  });
+
+  selection.exit().remove();
+  return defsById;
+}
+
 function updateSpecialZonesPaths() {
   if (!specialZonesGroup || !pathSVG) return;
 
   const features = getEffectiveSpecialZonesFeatureCollection().features;
   if (!features.length) {
     specialZonesGroup.selectAll("path.special-zone").remove();
+    specialZonesGroup.selectAll("path.special-zone-pattern").remove();
+    renderSpecialZonePatternDefs([]);
     return;
   }
+  renderSpecialZonePatternDefs(features);
 
   const selectedId = String(runtimeState.specialZoneEditor?.selectedId || "");
   const selection = specialZonesGroup
@@ -18818,7 +18894,7 @@ function updateSpecialZonesPaths() {
     .merge(selection)
     .attr("d", pathSVG)
     .attr("fill", (d) => getSpecialZoneStyle(d).fill)
-    .attr("fill-opacity", (d) => getSpecialZoneStyle(d).fillOpacity)
+    .attr("fill-opacity", (d) => (getSpecialZoneStyle(d).pattern === "outlineOnly" ? 0 : getSpecialZoneStyle(d).fillOpacity))
     .attr("stroke", (d) => getSpecialZoneStyle(d).stroke)
     .attr("stroke-width", (d) => {
       const base = getSpecialZoneStyle(d).strokeWidth;
@@ -18829,6 +18905,29 @@ function updateSpecialZonesPaths() {
     .attr("opacity", 0.95);
 
   selection.exit().remove();
+
+  const patternSelection = specialZonesGroup
+    .selectAll("path.special-zone-pattern")
+    .data(features.filter((d) => {
+      const pattern = getSpecialZoneStyle(d).pattern;
+      return pattern && pattern !== "solid" && pattern !== "outlineOnly";
+    }), (d, i) => `${d?.properties?.id || `special-zone-${i}`}:pattern`);
+
+  patternSelection
+    .enter()
+    .append("path")
+    .attr("class", "special-zone-pattern")
+    .attr("role", "presentation")
+    .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
+    .merge(patternSelection)
+    .attr("d", pathSVG)
+    .attr("fill", (d) => `url(#${getSpecialZonePatternDefId(d, getSpecialZoneStyle(d))})`)
+    .attr("fill-opacity", (d) => getSpecialZoneStyle(d).patternOpacity)
+    .attr("stroke", "none")
+    .attr("pointer-events", "none");
+
+  patternSelection.exit().remove();
 }
 
 function renderSpecialZoneEditorOverlay() {
@@ -20899,6 +20998,42 @@ function commitHistoryEntry({ kind, before, after, affectsSovereignty = false } 
   });
 }
 
+function handleSpecialZoneMembershipClick(hit, event) {
+  if (runtimeState.currentTool !== "special-zone-membership") return false;
+  const featureId = hit?.targetType === "land" ? String(hit.id || "").trim() : "";
+  if (!featureId || !runtimeState.landIndex?.has(featureId)) return true;
+  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
+  const activeLayerId = String(runtimeState.specialZoneLayers.activeLayerId || "").trim();
+  if (!activeLayerId) return true;
+  const mode = event?.altKey ? "remove" : "toggle";
+  const historyBefore = captureHistoryState({ strategicOverlay: true });
+  applySpecialZoneMembershipFeature(featureId, mode, activeLayerId);
+  commitHistoryEntry({
+    kind: `special-zone-membership-${mode}`,
+    before: historyBefore,
+    after: captureHistoryState({ strategicOverlay: true }),
+  });
+  renderSpecialZonesIfNeeded({ force: true });
+  return true;
+}
+
+function applySpecialZoneMembershipFeature(featureId, mode, layerId = "") {
+  const normalizedFeatureId = String(featureId || "").trim();
+  if (!normalizedFeatureId || !runtimeState.landIndex?.has(normalizedFeatureId)) return false;
+  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
+  const activeLayerId = String(layerId || runtimeState.specialZoneLayers.activeLayerId || "").trim();
+  if (!activeLayerId) return false;
+  runtimeState.specialZoneLayers = updateSpecialZoneLayerMembership(
+    runtimeState.specialZoneLayers,
+    activeLayerId,
+    [normalizedFeatureId],
+    mode,
+  );
+  runtimeState.specialZonesOverlayDirty = true;
+  markDirty(`special-zone-membership-${mode}`);
+  return true;
+}
+
 function getCountryFeatureIds(countryCode) {
   if (!countryCode || !(runtimeState.countryToFeatureIds instanceof Map)) return [];
   const ids = runtimeState.countryToFeatureIds.get(countryCode);
@@ -21771,21 +21906,7 @@ function applyBrushHit(hit) {
   if (hit.targetType === "special") {
     const specialId = String(hit.id || "").trim();
     if (!specialId || brushSession.visitedSpecialRegionIds.has(specialId)) return false;
-    if (runtimeState.currentTool === "eyedropper") return false;
-    mergeHistorySnapshot(brushSession.before, captureHistoryState({ specialRegionIds: [specialId] }));
-    brushSession.visitedSpecialRegionIds.add(specialId);
-    brushSession.affectedSpecialRegionIds.add(specialId);
-    if (runtimeState.currentTool === "eraser") {
-      delete runtimeState.specialRegionOverrides[specialId];
-    } else {
-      runtimeState.specialRegionOverrides[specialId] = getSafeCanvasColor(
-        runtimeState.selectedColor,
-        getSpecialRegionColor(specialId)
-      );
-    }
-    runtimeState.selectedSpecialRegionId = specialId;
-    brushSession.changed = true;
-    return true;
+    return false;
   }
   if (hit.targetType === "water") {
     const waterId = String(hit.id || "").trim();
@@ -21940,12 +22061,65 @@ function flushBrushSession() {
   noteRenderAction("brush-stroke", actionStart);
 }
 
+function applySpecialZoneMembershipDragHit(event) {
+  if (!specialZoneMembershipDragSession) return false;
+  const hit = getHitFromEvent(event, {
+    enableSnap: false,
+    snapPx: 0,
+    eventType: "special-zone-membership-drag",
+  });
+  const featureId = hit?.targetType === "land" ? String(hit.id || "").trim() : "";
+  if (!featureId || specialZoneMembershipDragSession.visited.has(featureId)) return false;
+  specialZoneMembershipDragSession.visited.add(featureId);
+  const changed = applySpecialZoneMembershipFeature(
+    featureId,
+    specialZoneMembershipDragSession.mode,
+    specialZoneMembershipDragSession.layerId,
+  );
+  specialZoneMembershipDragSession.changed = specialZoneMembershipDragSession.changed || changed;
+  return changed;
+}
+
+function flushSpecialZoneMembershipDragSession() {
+  const current = specialZoneMembershipDragSession;
+  specialZoneMembershipDragSession = null;
+  if (!current) return;
+  suppressNextClickAfterBrush = true;
+  if (!current.changed) return;
+  commitHistoryEntry({
+    kind: `special-zone-membership-drag-${current.mode}`,
+    before: current.before,
+    after: captureHistoryState({ strategicOverlay: true }),
+  });
+  renderSpecialZonesIfNeeded({ force: true });
+}
+
+function handleSpecialZoneMembershipPointerDown(event) {
+  if (runtimeState.currentTool !== "special-zone-membership") return false;
+  if (!event?.shiftKey && !event?.altKey) return false;
+  if ((event.buttons & 1) !== 1) return true;
+  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
+  const layerId = String(runtimeState.specialZoneLayers.activeLayerId || "").trim();
+  if (!layerId) return true;
+  if (event?.preventDefault) event.preventDefault();
+  specialZoneMembershipDragSession = {
+    mode: event.altKey ? "remove" : "add",
+    layerId,
+    before: captureHistoryState({ strategicOverlay: true }),
+    visited: new Set(),
+    changed: false,
+  };
+  applySpecialZoneMembershipDragHit(event);
+  return true;
+}
+
 function handleBrushPointerDown(event) {
   if (runtimeState.startupReadonly) {
     if (event?.preventDefault) event.preventDefault();
     blockStartupReadonlyInteraction();
     return;
   }
+  if (handleSpecialZoneMembershipPointerDown(event)) return;
   if (!runtimeState.brushModeEnabled || runtimeState.currentTool === "eyedropper" || runtimeState.specialZoneEditor?.active) return;
   if (isBrushNavigationModifier(event)) return;
   if ((event.buttons & 1) !== 1) return;
@@ -21955,6 +22129,16 @@ function handleBrushPointerDown(event) {
 
 function handleBrushPointerMove(event) {
   if (runtimeState.startupReadonly) {
+    return;
+  }
+  if (specialZoneMembershipDragSession) {
+    if ((event.buttons & 1) !== 1) {
+      flushSpecialZoneMembershipDragSession();
+      return;
+    }
+    if (applySpecialZoneMembershipDragHit(event)) {
+      requestInteractionRender("special-zone-membership-drag");
+    }
     return;
   }
   if (!brushSession || !runtimeState.brushModeEnabled || runtimeState.currentTool === "eyedropper" || runtimeState.specialZoneEditor?.active) {
@@ -22043,6 +22227,7 @@ async function handleClick(event, _interactionContext = null) {
   const id = hit.id;
   if (!id) return;
   updateDevSelectedHit(hit);
+  if (handleSpecialZoneMembershipClick(hit, event)) return;
   if (hit.targetType === "special") {
     const specialFeature = runtimeState.specialRegionsById.get(id);
     if (!specialFeature) return;
@@ -22052,20 +22237,6 @@ async function handleClick(event, _interactionContext = null) {
     runtimeState.selectedSpecialRegionId = id;
     if (previousWaterRegionId) refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
     refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId, id]);
-    if (runtimeState.currentTool === "eraser") {
-      const historyBefore = captureHistoryState({ specialRegionIds: [id] });
-      delete runtimeState.specialRegionOverrides[id];
-      markDirty("erase-special-region-color");
-      commitHistoryEntry({
-        kind: "erase-special-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ specialRegionIds: [id] }),
-      });
-      requestInteractionRender("click-erase-special");
-      refreshSidebarAfterPaint({ specialRegionIds: [id] });
-      noteRenderAction("click-erase-special", actionStart);
-      return;
-    }
     if (runtimeState.currentTool === "eyedropper") {
       const picked = getSpecialRegionColor(id, specialFeature);
       if (picked) {
@@ -22077,22 +22248,7 @@ async function handleClick(event, _interactionContext = null) {
       noteRenderAction("eyedropper-special", actionStart);
       return;
     }
-    const currentColor = getSpecialRegionColor(id, specialFeature);
-    const nextColor = getSafeCanvasColor(runtimeState.selectedColor, currentColor);
-    if (nextColor !== currentColor) {
-      const historyBefore = captureHistoryState({ specialRegionIds: [id] });
-      runtimeState.specialRegionOverrides[id] = nextColor;
-      markDirty("fill-special-region-color");
-      commitHistoryEntry({
-        kind: "fill-special-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ specialRegionIds: [id] }),
-      });
-      addRecentColor(nextColor);
-      requestInteractionRender("click-fill-special");
-      refreshSidebarAfterPaint({ specialRegionIds: [id] });
-    }
-    noteRenderAction("click-fill-special", actionStart);
+    noteRenderAction("select-special-region", actionStart);
     return;
   }
   if (hit.targetType === "water") {
@@ -22679,7 +22835,10 @@ function bindEvents() {
   });
   interactionRect.on("click", dispatchMapClick);
   interactionRect.on("dblclick", dispatchMapDoubleClick);
-  window.addEventListener("mouseup", flushBrushSession);
+  window.addEventListener("mouseup", () => {
+    flushSpecialZoneMembershipDragSession();
+    flushBrushSession();
+  });
   window.addEventListener("resize", handleResize);
 }
 

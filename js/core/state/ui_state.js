@@ -24,6 +24,7 @@ import {
   normalizeUrbanStyleConfig,
 } from "../state_defaults.js";
 import { listTransportRuntimeCapabilityFamilyIds } from "../transport_capability_registry.js";
+import { createEmptySpecialZoneLayersState } from "../special_zone_layers.js";
 
 const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportRuntimeCapabilityFamilyIds();
 
@@ -240,6 +241,7 @@ export function createDefaultUiState() {
     showRoad: false,
     showSpecialZones: false,
     cityLayerRevision: 0,
+    specialZoneLayers: createEmptySpecialZoneLayersState(),
     manualSpecialZones: createDefaultManualSpecialZonesState(),
     annotationView: createDefaultAnnotationView(),
     operationalLines: [],

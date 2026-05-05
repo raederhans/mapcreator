@@ -11087,6 +11087,7 @@ def build_runtime_topology_state(
     cores_payload["baseline_hash"] = core_baseline_hash
     manifest_payload["baseline_hash"] = owner_baseline_hash
     manifest_payload["special_regions_url"] = "data/scenarios/tno_1962/special_regions.geojson"
+    manifest_payload["special_zone_layers_url"] = "data/scenarios/tno_1962/special_zone_layers.json"
     manifest_payload["water_regions_url"] = "data/scenarios/tno_1962/water_regions.geojson"
     manifest_payload["relief_overlays_url"] = "data/scenarios/tno_1962/relief_overlays.geojson"
     manifest_payload["bathymetry_topology_url"] = "data/scenarios/tno_1962/bathymetry.topo.json"

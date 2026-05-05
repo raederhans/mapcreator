@@ -570,6 +570,18 @@ def main() -> int:
         scenario_output_dir / "runtime_topology.bootstrap.topo.json",
         runtime_bootstrap_topology_payload,
     )
+    special_zone_layers_path = scenario_output_dir / "special_zone_layers.json"
+    if not special_zone_layers_path.exists():
+        write_json(
+            special_zone_layers_path,
+            {
+                "version": 1,
+                "layers": [],
+                "activeLayerId": "",
+                "topologyFingerprint": "",
+                "diagnostics": [],
+            },
+        )
 
     manifest_payload = bundle["manifest"]
     manifest_payload["runtime_topology_url"] = f"data/scenarios/{args.scenario_id}/runtime_topology.topo.json"
@@ -594,6 +606,7 @@ def main() -> int:
         )
     manifest_payload["city_overrides_url"] = f"data/scenarios/{args.scenario_id}/city_overrides.json"
     manifest_payload["capital_hints_url"] = f"data/scenarios/{args.scenario_id}/capital_hints.json"
+    manifest_payload["special_zone_layers_url"] = f"data/scenarios/{args.scenario_id}/special_zone_layers.json"
     write_json(scenario_output_dir / "manifest.json", manifest_payload)
 
     ensure_geo_locale_patch_inputs(scenario_output_dir, args.scenario_id)

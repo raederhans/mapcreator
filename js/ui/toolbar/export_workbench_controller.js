@@ -15,6 +15,7 @@ const EXPORT_MAIN_LAYER_IDS = Object.freeze(EXPORT_MAIN_LAYER_VIEW_MODELS.map((l
 const EXPORT_MAIN_LAYER_MODEL_BY_ID = new Map(EXPORT_MAIN_LAYER_VIEW_MODELS.map((layer) => [layer.id, layer]));
 const EXPORT_TEXT_LAYER_VIEW_MODELS = Object.freeze([
   Object.freeze({ id: "render-labels", name: "Render-pass labels", summary: "City and map labels from the labels pass" }),
+  Object.freeze({ id: "special-zones", name: "Special zones", summary: "Layer-based special zone fills, patterns, and outlines" }),
   Object.freeze({ id: "svg-annotations", name: "SVG annotations", summary: "Frontlines, graphics, counters, and other SVG overlays" }),
 ]);
 const EXPORT_TEXT_LAYER_IDS = Object.freeze(EXPORT_TEXT_LAYER_VIEW_MODELS.map((layer) => layer.id));
@@ -170,11 +171,16 @@ function createExportWorkbenchController({
   const getExportTextLayerEntries = () => {
     const mapSvg = document.getElementById("map-svg");
     const svgTextCount = mapSvg ? mapSvg.querySelectorAll("text").length : 0;
+    const specialZoneCount = mapSvg ? mapSvg.querySelectorAll(".special-zones-layer .special-zone").length : 0;
     const renderPassMetrics = state.renderPassCache?.metrics?.labels || null;
     return [
       {
         ...EXPORT_TEXT_LAYER_MODEL_BY_ID.get("render-labels"),
         count: Math.max(0, Number(renderPassMetrics?.labelCount || 0)),
+      },
+      {
+        ...EXPORT_TEXT_LAYER_MODEL_BY_ID.get("special-zones"),
+        count: specialZoneCount,
       },
       {
         ...EXPORT_TEXT_LAYER_MODEL_BY_ID.get("svg-annotations"),

@@ -9,6 +9,7 @@ EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failur
 PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_library_panel.js"
 SCENARIO_GUIDE_POPOVER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js"
 SPECIAL_ZONE_EDITOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zone_editor.js"
+SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
 EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
@@ -195,8 +196,11 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const onSpecialZonesStyleChange =", owner_content)
         self.assertIn("const renderSpecialZoneEditorUI =", owner_content)
         self.assertIn("const bindSpecialZoneEditorEvents =", owner_content)
-        self.assertIn("startSpecialZoneDraw({", owner_content)
+        self.assertIn("Use Layer-based special zones for new edits.", owner_content)
+        self.assertNotIn("startSpecialZoneDraw({", owner_content)
         self.assertIn("deleteSelectedManualSpecialZone();", owner_content)
+        self.assertIn("./toolbar/special_zones_workbench_controller.js", toolbar_content)
+        self.assertIn("createSpecialZonesWorkbenchController", toolbar_content)
 
     def test_toolbar_keeps_special_zone_facade_and_callback_registration(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -215,12 +219,26 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         ui_state = (REPO_ROOT / "js" / "core" / "state" / "ui_state.js").read_text(encoding="utf-8")
 
         self.assertIn("specialZones: appState.specialZones || {}", file_manager)
-        self.assertIn('manualSpecialZones: appState.manualSpecialZones || { type: "FeatureCollection", features: [] }', file_manager)
+        self.assertIn("specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers)", file_manager)
+        self.assertIn("specialRegionOverrides: {}", file_manager)
+        self.assertIn('manualSpecialZones: { type: "FeatureCollection", features: [] }', file_manager)
         self.assertIn("specialZones: appState.styleConfig?.specialZones || null", file_manager)
         self.assertIn("state.specialZones = data.specialZones || {}", interaction_funnel)
+        self.assertIn("state.specialZoneLayers = normalizeSpecialZoneLayersState", interaction_funnel)
+        self.assertIn("state.specialRegionOverrides = {};", interaction_funnel)
         self.assertIn("state.manualSpecialZones =", interaction_funnel)
         self.assertIn("restoreImportedStyleConfigState(state, data.styleConfig);", interaction_funnel)
+        self.assertIn("specialZoneLayers: createEmptySpecialZoneLayersState()", ui_state)
         self.assertIn("specialZones: imported.specialZones && typeof imported.specialZones === \"object\"", ui_state)
+
+    def test_special_zone_workbench_load_cache_is_scenario_scoped(self):
+        owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn('let loadedScenarioLayerAssetId = "";', owner_content)
+        self.assertIn('const scenarioId = String(runtimeState.activeScenarioId || "").trim();', owner_content)
+        self.assertIn("if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;", owner_content)
+        self.assertIn("loadedScenarioLayerAssetId = scenarioId;", owner_content)
+        self.assertIn("if (loadedScenarioLayerAssetId !== scenarioId)", owner_content)
 
     def test_export_workbench_persistence_contract_stays_stable(self):
         file_manager = FILE_MANAGER_JS.read_text(encoding="utf-8")

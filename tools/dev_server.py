@@ -921,6 +921,90 @@ def _write_json_transaction(file_payloads: list[tuple[Path, object]]) -> None:
             raise
 
 
+def _normalize_special_zone_layers_payload(payload: object) -> dict[str, object]:
+    source = {"layers": payload} if isinstance(payload, list) else (payload if isinstance(payload, dict) else {})
+    diagnostics = [entry for entry in source.get("diagnostics", []) if isinstance(entry, dict)]
+    layers: list[dict[str, object]] = []
+    seen_layer_ids: set[str] = set()
+    for index, raw_layer in enumerate(source.get("layers", []) if isinstance(source.get("layers"), list) else []):
+        if not isinstance(raw_layer, dict):
+            continue
+        layer_id = _normalize_text(raw_layer.get("id")) or f"scenario-zone-layer-{index + 1}"
+        if layer_id in seen_layer_ids:
+            diagnostics.append({"code": "duplicate_layer_id_dropped", "layerId": layer_id})
+            continue
+        seen_layer_ids.add(layer_id)
+        style = raw_layer.get("style") if isinstance(raw_layer.get("style"), dict) else {}
+        member_ids = sorted({
+            _normalize_text(value)
+            for value in (raw_layer.get("memberFeatureIds") if isinstance(raw_layer.get("memberFeatureIds"), list) else [])
+            if _normalize_text(value)
+        })
+        layers.append({
+            "id": layer_id,
+            "name": _normalize_text(raw_layer.get("name")) or layer_id,
+            "presetId": _normalize_text(raw_layer.get("presetId")) or "custom",
+            "category": _normalize_text(raw_layer.get("category")) or "custom",
+            "source": "scenario",
+            "visible": bool(raw_layer.get("visible", True)),
+            "style": {
+                "fill": _normalize_text(style.get("fill")) or "#8b5cf6",
+                "stroke": _normalize_text(style.get("stroke")) or "#6d28d9",
+                "fillOpacity": style.get("fillOpacity", style.get("opacity", 0.32)),
+                "strokeOpacity": style.get("strokeOpacity", 0.92),
+                "strokeWidth": style.get("strokeWidth", 1.3),
+                "pattern": _normalize_text(style.get("pattern")) or "solid",
+                "patternOpacity": style.get("patternOpacity", 0.42),
+                "revision": int(style.get("revision") or 1),
+            },
+            "memberFeatureIds": member_ids,
+        })
+    active_layer_id = _normalize_text(source.get("activeLayerId"))
+    if active_layer_id not in seen_layer_ids:
+        active_layer_id = str(layers[0]["id"]) if layers else ""
+    return {
+        "version": 1,
+        "layers": layers,
+        "activeLayerId": active_layer_id,
+        "topologyFingerprint": _normalize_text(source.get("topologyFingerprint")),
+        "diagnostics": diagnostics,
+    }
+
+
+def save_scenario_special_zone_layers_payload(
+    scenario_id: object,
+    layers_payload: object,
+    *,
+    root: Path | None = None,
+) -> dict[str, object]:
+    normalized_scenario_id = _normalize_text(scenario_id)
+    if not normalized_scenario_id:
+        raise DevServerError("missing_scenario_id", "Scenario id is required.", status=400)
+    project_root = Path(root).resolve() if root is not None else ROOT
+    scenario_dir = _ensure_path_within_root(project_root / "data" / "scenarios" / normalized_scenario_id, root=project_root)
+    if not scenario_dir.is_dir():
+        raise DevServerError("scenario_not_found", f'Scenario "{normalized_scenario_id}" was not found.', status=404)
+    layer_path = _ensure_path_within_root(scenario_dir / "special_zone_layers.json", root=project_root)
+    manifest_path = _ensure_path_within_root(scenario_dir / "manifest.json", root=project_root)
+    manifest = _read_json(manifest_path)
+    if not isinstance(manifest, dict):
+        raise DevServerError("invalid_manifest", "Scenario manifest must be a JSON object.", status=500)
+    payload = _normalize_special_zone_layers_payload(layers_payload)
+    manifest["special_zone_layers_url"] = f"data/scenarios/{normalized_scenario_id}/special_zone_layers.json"
+    _write_json_transaction([
+        (layer_path, payload),
+        (manifest_path, manifest),
+    ])
+    return {
+        "ok": True,
+        "scenarioId": normalized_scenario_id,
+        "path": _repo_relative(layer_path, root=project_root),
+        "manifestPath": _repo_relative(manifest_path, root=project_root),
+        "layerCount": len(payload["layers"]),
+        "specialZoneLayers": payload,
+    }
+
+
 def _load_city_assets_payload(context: dict[str, object]) -> dict[str, object]:
     city_assets_partial_path = Path(context["cityAssetsPartialPath"])
     payload = _read_json_or_none(city_assets_partial_path)
@@ -2730,6 +2814,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     payload.get("scenarioId"),
                     tag=payload.get("tag"),
                     districts=payload.get("districts"),
+                )
+                self._send_json(200, response)
+                return
+            if route == "/__dev/scenario/special-zone-layers/save":
+                response = save_scenario_special_zone_layers_payload(
+                    payload.get("scenarioId"),
+                    payload.get("specialZoneLayers") or payload.get("layers"),
                 )
                 self._send_json(200, response)
                 return

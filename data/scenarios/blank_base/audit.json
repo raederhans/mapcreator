@@ -18,10 +18,10 @@
   "profile": "lightweight_base",
   "reverse_coverage_gap_count": 0,
   "scenario_id": "blank_base",
-  "snapshot_fingerprint": "9b4d03807cce55f2f9b418e40936c1bab0baad7c60431c83e6aa02fe0c4deb07",
+  "snapshot_fingerprint": "315bdf6eb0f39124b1dbfc9d387a802a796bae8629e452dbf0c299ad5a136266",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "b0e0bb3891c858615996fb3ec5bc1b2132b35adcb4bbc97a3e7fdd49e2e30384",
+    "build_snapshot_sha256": "af13821bb82810a5f5c09499e91e7d16e79dadc88d03d5807dfcd7ce2797b03e",
     "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
   },
   "summary": {

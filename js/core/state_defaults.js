@@ -1125,6 +1125,7 @@ const EXPORT_WORKBENCH_LAYER_IDS = Object.freeze([
 ]);
 const EXPORT_WORKBENCH_TEXT_LAYER_IDS = Object.freeze([
   "render-labels",
+  "special-zones",
   "svg-annotations",
 ]);
 const EXPORT_WORKBENCH_BAKE_LAYER_IDS = new Set(["color", "line", "text", "composite"]);
@@ -1138,6 +1139,8 @@ const EXPORT_WORKBENCH_LEGACY_LAYER_ID_ALIASES = Object.freeze({
 const EXPORT_WORKBENCH_TEXT_LAYER_ID_ALIASES = Object.freeze({
   labels: "render-labels",
   text: "render-labels",
+  specialzones: "special-zones",
+  "special-zones": "special-zones",
   svg: "svg-annotations",
   annotations: "svg-annotations",
 });

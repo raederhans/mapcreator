@@ -12,7 +12,8 @@
     "countries.json": "70da17c7800677d902d558c52fb518044aa70312a401ad2e9bdf34b393339d5a",
     "geo_locale_patch.json": "4132d98b005fbb3103105c6dd4f31d41ed476e5f19c13042a4afdf5a54fdad34",
     "owners.by_feature.json": "22b46fed3031f3b4fe8ce92532e66f2b445044bf9372e1e16a1cbd52049b9384",
-    "runtime_topology.topo.json": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53"
+    "runtime_topology.topo.json": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53",
+    "special_zone_layers.json": "9e34b1f10517e1b1279d140dce6c5bedce8fbb3e5b9051c8428a2fc0d53d3df2"
   },
   "output_sha": {
     "context_lod.manifest.json": "388a31b6763e78cc656d6c7f7e4f3efdc0371ecf59340f6fab9bc082af01fb91",
@@ -30,6 +31,6 @@
   "profile": "hoi4_chunked",
   "report_paths": {},
   "scenario_id": "hoi4_1939",
-  "snapshot_fingerprint": "a2d5d5dc723019323f384758d9a80738288665e56f450f3edcb9c9faaee7b2fe",
+  "snapshot_fingerprint": "641155eb5108eb9ba572d99a0b64ee71cf880f4c6dbd1be52e2d09e91dafa079",
   "water_count": 0
 }

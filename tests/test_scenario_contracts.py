@@ -52,6 +52,7 @@ def _build_minimal_manifest(
         "performance_hints": {"render_profile_default": "balanced"},
         "style_defaults": {"ocean": {"fillColor": "#123456"}},
         "city_overrides_url": f"data/scenarios/{scenario_name}/city_overrides.json",
+        "special_zone_layers_url": f"data/scenarios/{scenario_name}/special_zone_layers.json",
     }
     if include_capital_hints_url:
         manifest["capital_hints_url"] = f"data/scenarios/{scenario_name}/capital_hints.json"
@@ -79,6 +80,16 @@ def _create_scenario_dir(
             "scenario_id": scenario_id or scenario_name,
             "capitals_by_tag": {"AAA": "CITY::capital"},
             "capital_city_hints": {},
+        },
+    )
+    _write_json(
+        scenario_dir / "special_zone_layers.json",
+        {
+            "version": 1,
+            "layers": [],
+            "activeLayerId": "",
+            "topologyFingerprint": "",
+            "diagnostics": [],
         },
     )
     _write_json(
@@ -756,11 +767,13 @@ class ScenarioContractTest(unittest.TestCase):
             check_scenario_contracts.PROJECT_ROOT = tmp_root
             scenario_dir = _create_scenario_dir(tmp_root, "snapshot_layers")
             _write_json(scenario_dir / "special_regions.geojson", {"type": "FeatureCollection", "features": []})
+            _write_json(scenario_dir / "special_zone_layers.json", {"version": 1, "layers": [], "activeLayerId": "", "topologyFingerprint": "", "diagnostics": []})
             _write_json(scenario_dir / "relief_overlays.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(scenario_dir / "bathymetry.topo.json", {"type": "Topology", "objects": {}, "arcs": []})
             _write_json(scenario_dir / "city_overrides.json", {"type": "city_overrides", "featureCollection": {"features": []}})
             manifest = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
             manifest["special_regions_url"] = "data/scenarios/snapshot_layers/special_regions.geojson"
+            manifest["special_zone_layers_url"] = "data/scenarios/snapshot_layers/special_zone_layers.json"
             manifest["relief_overlays_url"] = "data/scenarios/snapshot_layers/relief_overlays.geojson"
             manifest["bathymetry_topology_url"] = "data/scenarios/snapshot_layers/bathymetry.topo.json"
             manifest["city_overrides_url"] = "data/scenarios/snapshot_layers/city_overrides.json"
@@ -771,6 +784,7 @@ class ScenarioContractTest(unittest.TestCase):
                 check_scenario_contracts.PROJECT_ROOT = previous_project_root
 
             self.assertIn("special_regions.geojson", input_sha)
+            self.assertIn("special_zone_layers.json", input_sha)
             self.assertIn("relief_overlays.geojson", input_sha)
             self.assertIn("bathymetry.topo.json", input_sha)
             self.assertIn("city_overrides.json", input_sha)

@@ -246,7 +246,7 @@
     },
     "Available only in the TNO 1962 scenario.": {
       "en": "Available only in the TNO 1962 scenario.",
-      "zh": "仅在 TNO 1962 剧本中可用。"
+      "zh": "仅在 TNO 1962 场景中可用。"
     },
     "Available when Experimental Bathymetry is enabled.": {
       "en": "Available when Experimental Bathymetry is enabled.",
@@ -3807,6 +3807,146 @@
     "Unable to load diagnostics": {
       "en": "Unable to load diagnostics",
       "zh": "无法加载诊断"
+    },
+    "Active layer": {
+      "en": "Active layer",
+      "zh": "当前图层"
+    },
+    "Add country / owner": {
+      "en": "Add country / owner",
+      "zh": "添加国家 / 属主"
+    },
+    "Add dev selection": {
+      "en": "Add dev selection",
+      "zh": "添加当前开发选择"
+    },
+    "Bulk actions and save": {
+      "en": "Bulk actions and save",
+      "zh": "批量操作与保存"
+    },
+    "Clear members": {
+      "en": "Clear members",
+      "zh": "清空成员"
+    },
+    "Copy members from layer": {
+      "en": "Copy members from layer",
+      "zh": "从图层复制成员"
+    },
+    "Country / owner id": {
+      "en": "Country / owner id",
+      "zh": "国家 / 属主 ID"
+    },
+    "Create a preset or custom layer to start editing map membership.": {
+      "en": "Create a preset or custom layer to start editing map membership.",
+      "zh": "创建预设或自定义图层后开始编辑地图成员。"
+    },
+    "Delete layer": {
+      "en": "Delete layer",
+      "zh": "删除图层"
+    },
+    "Duplicate layer": {
+      "en": "Duplicate layer",
+      "zh": "复制图层"
+    },
+    "Edit map membership": {
+      "en": "Edit map membership",
+      "zh": "编辑地图成员"
+    },
+    "Exit membership tool": {
+      "en": "Exit membership tool",
+      "zh": "退出成员工具"
+    },
+    "Finish or cancel the current legacy drawing, then use Layer-based special zones.": {
+      "en": "Finish or cancel the current legacy drawing, then use Layer-based special zones.",
+      "zh": "先完成或取消当前旧绘制，再使用分层特殊区域。"
+    },
+    "Layer-based special zones": {
+      "en": "Layer-based special zones",
+      "zh": "分层特殊区域"
+    },
+    "Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.": {
+      "en": "Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.",
+      "zh": "分层特殊区域是当前标准编辑器。使用上方工作台编辑成员。"
+    },
+    "Membership tool active. Click a land tile to toggle it; Alt-click removes it.": {
+      "en": "Membership tool active. Click a land tile to toggle it; Alt-click removes it.",
+      "zh": "成员工具已激活。单击地块切换成员；Alt 单击移除。"
+    },
+    "Membership tool closed.": {
+      "en": "Membership tool closed.",
+      "zh": "成员工具已关闭。"
+    },
+    "No active special zone layer.": {
+      "en": "No active special zone layer.",
+      "zh": "没有当前特殊区域图层。"
+    },
+    "No special zone layers yet.": {
+      "en": "No special zone layers yet.",
+      "zh": "还没有特殊区域图层。"
+    },
+    "Preset library": {
+      "en": "Preset library",
+      "zh": "预设库"
+    },
+    "Read-only scenario asset": {
+      "en": "Read-only scenario asset",
+      "zh": "只读场景资产"
+    },
+    "Replace with dev selection": {
+      "en": "Replace with dev selection",
+      "zh": "用开发选择替换"
+    },
+    "Save scenario layer asset": {
+      "en": "Save scenario layer asset",
+      "zh": "保存场景图层资产"
+    },
+    "Scenario layer asset save is available only in the local dev server.": {
+      "en": "Scenario layer asset save is available only in the local dev server.",
+      "zh": "场景图层资产保存只在本地开发服务器可用。"
+    },
+    "Scenario special zone layers saved.": {
+      "en": "Scenario special zone layers saved.",
+      "zh": "场景特殊区域图层已保存。"
+    },
+    "Special zone layers workbench": {
+      "en": "Special zone layers workbench",
+      "zh": "特殊区域图层工作台"
+    },
+    "Special zones saved": {
+      "en": "Special zones saved",
+      "zh": "特殊区域已保存"
+    },
+    "Use Layer-based special zones for new edits.": {
+      "en": "Use Layer-based special zones for new edits.",
+      "zh": "新编辑请使用分层特殊区域。"
+    },
+    "active members": {
+      "en": "active members",
+      "zh": "当前成员"
+    },
+    "features added from country / owner filter.": {
+      "en": "features added from country / owner filter.",
+      "zh": "个要素已通过国家 / 属主筛选加入。"
+    },
+    "layers": {
+      "en": "layers",
+      "zh": "个图层"
+    },
+    "Available when the active scenario enables coastal accent.": {
+      "en": "Available when the active scenario enables coastal accent.",
+      "zh": "当前场景启用海岸强调时可用。"
+    },
+    "Ownership baseline active.": {
+      "en": "Ownership baseline active.",
+      "zh": "属主基线已启用。"
+    },
+    "Scenario special zone layers loaded. Review changes before saving.": {
+      "en": "Scenario special zone layers loaded. Review changes before saving.",
+      "zh": "场景特殊区域图层已加载。请检查更改后再保存。"
+    },
+    "Special zones loaded": {
+      "en": "Special zones loaded",
+      "zh": "特殊区域已加载"
     }
   },
   "geo": {

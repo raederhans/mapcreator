@@ -1479,3 +1479,9 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 44. Topology quantization promotion must stop at the first hard gate
 - A smaller TopoJSON file can still be invalid: runtime q50000 reduced bytes but increased world-bounds geometries, so contract failure must block q25000, visual QA, and production parameter updates.
 - Detail topology experiments depend on fresh source-layer contracts; if source/primary urban layers lack `id` / `country_owner_id`, fix the source rebuild chain before running quantization A/B.
+
+## 2026-05-05 - scenario special-zone layer asset
+
+### 1. 新增场景可写资产要先加载再保存，避免本地 dev save 覆盖磁盘真值
+- 这次 `special_zone_layers.json` 既是 scenario asset 又能在本地写盘，保存按钮如果先拿空运行时状态发 POST，会把真实资产覆盖成空层。
+- 更稳的做法是：workbench 打开时加载一次；保存前若尚未确认加载完成，只执行加载和提示，下一次保存才写盘。

@@ -16,6 +16,10 @@ import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { clearDirty } from "./dirty_state.js";
+import {
+  normalizeSpecialZoneLayersState,
+  serializeSpecialZoneLayersState,
+} from "./special_zone_layers.js";
 
 const LEGACY_BOUNDARY_VARIANT_ALIASES = {
   legacy_approx: "historical_reference",
@@ -411,7 +415,8 @@ class FileManager {
       sovereignBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       visualOverrides: appState.visualOverrides || appState.featureOverrides || {},
       waterRegionOverrides: appState.waterRegionOverrides || {},
-      specialRegionOverrides: appState.specialRegionOverrides || {},
+      specialRegionOverrides: {},
+      specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers),
       sovereigntyByFeatureId: appState.sovereigntyByFeatureId || {},
       mapSemanticMode: normalizeMapSemanticMode(appState.mapSemanticMode),
       paintMode: appState.paintMode || "visual",
@@ -424,7 +429,7 @@ class FileManager {
       specialZones: appState.specialZones || {},
       parentBordersVisible: appState.parentBordersVisible !== false,
       parentBorderEnabledByCountry: appState.parentBorderEnabledByCountry || {},
-      manualSpecialZones: appState.manualSpecialZones || { type: "FeatureCollection", features: [] },
+      manualSpecialZones: { type: "FeatureCollection", features: [] },
       annotationView: normalizeAnnotationView(appState.annotationView),
       operationalLines: normalizeOperationalLines(appState.operationalLines),
       operationGraphics: normalizeOperationGraphics(appState.operationGraphics),
@@ -543,9 +548,12 @@ class FileManager {
         if (!data.waterRegionOverrides || typeof data.waterRegionOverrides !== "object") {
           data.waterRegionOverrides = {};
         }
-        if (!data.specialRegionOverrides || typeof data.specialRegionOverrides !== "object") {
-          data.specialRegionOverrides = {};
-        }
+        data.specialZoneLayers = normalizeSpecialZoneLayersState({
+          ...(data.specialZoneLayers && typeof data.specialZoneLayers === "object" ? data.specialZoneLayers : {}),
+          manualSpecialZones: data.manualSpecialZones,
+          specialRegionOverrides: data.specialRegionOverrides,
+        }, { defaultSource: "project" });
+        data.specialRegionOverrides = {};
         if (!data.sovereignBaseColors || typeof data.sovereignBaseColors !== "object") {
           data.sovereignBaseColors = data.countryBaseColors;
         }
@@ -601,7 +609,7 @@ class FileManager {
         data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
         data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
         data.exportWorkbenchUi = normalizeExportWorkbenchUiState(data.exportWorkbenchUi);
-        data.manualSpecialZones = normalizeManualSpecialZones(data.manualSpecialZones);
+        data.manualSpecialZones = { type: "FeatureCollection", features: [] };
         data.annotationView = normalizeAnnotationView(data.annotationView);
         data.operationalLines = normalizeOperationalLines(data.operationalLines);
         data.operationGraphics = normalizeOperationGraphics(data.operationGraphics);

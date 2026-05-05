@@ -1741,6 +1741,40 @@ class DevServerTest(unittest.TestCase):
             self.assertEqual(result["districtGroupsUrl"], "data/scenarios/test_scenario/district_groups.manual.json")
             self.assertEqual(result["stats"]["districtCount"], 2)
 
+    def test_save_scenario_special_zone_layers_payload_writes_layer_asset_and_updates_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = self._create_scenario_fixture(root)
+
+            result = dev_server.save_scenario_special_zone_layers_payload(
+                "test_scenario",
+                {
+                    "version": 1,
+                    "layers": [
+                        {
+                            "id": "buffer",
+                            "name": "Buffer",
+                            "presetId": "buffer",
+                            "category": "security",
+                            "source": "project",
+                            "visible": True,
+                            "style": {"fill": "#facc15", "stroke": "#a16207", "pattern": "horizontalLines"},
+                            "memberFeatureIds": ["DE-3", "DE-1", "DE-1"],
+                        }
+                    ],
+                    "activeLayerId": "buffer",
+                },
+                root=root,
+            )
+
+            payload = json.loads((scenario_dir / "special_zone_layers.json").read_text(encoding="utf-8"))
+            manifest_payload = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["ok"])
+            self.assertEqual(manifest_payload["special_zone_layers_url"], "data/scenarios/test_scenario/special_zone_layers.json")
+            self.assertEqual(payload["layers"][0]["source"], "scenario")
+            self.assertEqual(payload["layers"][0]["memberFeatureIds"], ["DE-1", "DE-3"])
+            self.assertEqual(result["layerCount"], 1)
+
     def test_save_scenario_district_groups_payload_rolls_back_when_manifest_write_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)

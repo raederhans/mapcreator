@@ -11,12 +11,13 @@
     "cores.by_feature.json": "9f57e6fc83aab1fcf4961f2279482306769158ae371c4932c86120c8fb4707fe",
     "countries.json": "8d297f5fc954797c75f4934f624797b88b686ed46601690279e945c24172eb8f",
     "owners.by_feature.json": "0125a2bf8742db90ab7c3eff65dac0dc70cc5cad1959e9db8da82d19d341a8c6",
-    "runtime_topology.topo.json": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
+    "runtime_topology.topo.json": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c",
+    "special_zone_layers.json": "9e34b1f10517e1b1279d140dce6c5bedce8fbb3e5b9051c8428a2fc0d53d3df2"
   },
   "output_sha": {},
   "profile": "lightweight_base",
   "report_paths": {},
   "scenario_id": "blank_base",
-  "snapshot_fingerprint": "9b4d03807cce55f2f9b418e40936c1bab0baad7c60431c83e6aa02fe0c4deb07",
+  "snapshot_fingerprint": "315bdf6eb0f39124b1dbfc9d387a802a796bae8629e452dbf0c299ad5a136266",
   "water_count": 0
 }

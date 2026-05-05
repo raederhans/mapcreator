@@ -145,17 +145,17 @@ function createSpecialZoneEditorController({
     }
 
     const isDrawing = !!runtimeState.specialZoneEditor?.active;
-    if (specialZoneStartBtn) specialZoneStartBtn.disabled = isDrawing;
-    if (specialZoneUndoBtn) specialZoneUndoBtn.disabled = !isDrawing;
-    if (specialZoneFinishBtn) specialZoneFinishBtn.disabled = !isDrawing;
-    if (specialZoneCancelBtn) specialZoneCancelBtn.disabled = !isDrawing;
+    if (specialZoneStartBtn) specialZoneStartBtn.disabled = true;
+    if (specialZoneUndoBtn) specialZoneUndoBtn.disabled = true;
+    if (specialZoneFinishBtn) specialZoneFinishBtn.disabled = true;
+    if (specialZoneCancelBtn) specialZoneCancelBtn.disabled = true;
     if (specialZoneDeleteBtn) {
       specialZoneDeleteBtn.disabled = !runtimeState.specialZoneEditor?.selectedId;
     }
     if (specialZoneEditorHint) {
       specialZoneEditorHint.textContent = isDrawing
-        ? t("Drawing in progress: click map to add vertices, double-click to finish.", "ui")
-        : t("Click map to add vertices, double-click to finish.", "ui");
+        ? t("Finish or cancel the current legacy drawing, then use Layer-based special zones.", "ui")
+        : t("Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.", "ui");
     }
     renderTransportAppearanceUi?.();
   };
@@ -254,14 +254,10 @@ function createSpecialZoneEditorController({
     }
     if (specialZoneStartBtn && !specialZoneStartBtn.dataset.bound) {
       specialZoneStartBtn.addEventListener("click", () => {
-        startSpecialZoneDraw({
-          zoneType: String(specialZoneTypeSelect?.value || runtimeState.specialZoneEditor.zoneType || "custom"),
-          label: String(specialZoneLabelInput?.value || runtimeState.specialZoneEditor.label || ""),
+        showToast(t("Use Layer-based special zones for new edits.", "ui"), {
+          title: t("Special Zones", "ui"),
+          tone: "warning",
         });
-        runtimeState.updateSpecialZoneEditorUIFn?.();
-        dismissOnboardingHint?.();
-        updateToolUI?.();
-        render?.();
       });
       specialZoneStartBtn.dataset.bound = "true";
     }

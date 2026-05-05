@@ -490,6 +490,7 @@ SCENARIO_WATER_STAGE_ARTIFACTS: tuple[ScenarioCheckpointArtifact, ...] = (
 
 SCENARIO_RUNTIME_STAGE_EXTRA_ARTIFACTS: tuple[ScenarioCheckpointArtifact, ...] = (
     ScenarioCheckpointArtifact("runtime_special_regions", "special_regions.geojson"),
+    ScenarioCheckpointArtifact("special_zone_layers_payload", "special_zone_layers.json"),
     ScenarioCheckpointArtifact("runtime_water_regions", SCENARIO_CHECKPOINT_WATER_FILENAME),
     ScenarioCheckpointArtifact("runtime_topology_payload", SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME),
 )
@@ -538,6 +539,7 @@ SCENARIO_PUBLISH_FILENAMES_BY_SCOPE = {
         "manifest.json",
         "audit.json",
         "special_regions.geojson",
+        "special_zone_layers.json",
         SCENARIO_CHECKPOINT_WATER_FILENAME,
         SCENARIO_CHECKPOINT_RELIEF_FILENAME,
         SCENARIO_CHECKPOINT_BATHYMETRY_FILENAME,
