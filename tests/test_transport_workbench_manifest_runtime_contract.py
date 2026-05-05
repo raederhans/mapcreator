@@ -14,10 +14,12 @@ FAMILY_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_previe
 MANIFEST_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_manifest_preview.js"
 FAMILY_REGISTRY_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_registry.js"
 TRANSPORT_CAPABILITY_REGISTRY_JS = REPO_ROOT / "js" / "core" / "transport_capability_registry.js"
+DATA_SERVICE_JS = REPO_ROOT / "js" / "core" / "data_service.js"
 STATE_DEFAULTS_JS = REPO_ROOT / "js" / "core" / "state_defaults.js"
 UI_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "ui_state.js"
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
+TRANSPORT_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 STARTUP_LOCALE_FILES = [
     REPO_ROOT / "data" / "scenarios" / "hoi4_1936" / "locales.startup.json",
@@ -139,6 +141,17 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("getTransportAsset", manifest_content)
         self.assertNotIn("fetch(packPath", point_content)
         self.assertNotIn("fetch(packPath", industrial_content)
+
+    def test_transport_carrier_uses_runtime_asset_key_through_data_service(self) -> None:
+        carrier_content = TRANSPORT_CARRIER_JS.read_text(encoding="utf-8")
+        data_service_content = DATA_SERVICE_JS.read_text(encoding="utf-8")
+
+        self.assertIn("../core/data_service.js", carrier_content)
+        self.assertIn('const DEFAULT_ASSET_KEY = "transport_carrier:japan_corridor";', carrier_content)
+        self.assertIn("getAsset(DEFAULT_ASSET_KEY)", carrier_content)
+        self.assertNotIn("resolveDataAssetUrl", carrier_content)
+        self.assertNotIn("fetch(DEFAULT_ASSET_URL)", carrier_content)
+        self.assertIn('registerMapcreatorSnapshotProvider("loadStatus", "data_service"', data_service_content)
 
 
     def test_family_preview_dispatch_is_config_driven(self) -> None:

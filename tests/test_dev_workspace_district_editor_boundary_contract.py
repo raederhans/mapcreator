@@ -4,6 +4,7 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 DISTRICT_EDITOR_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "district_editor_controller.js"
 
@@ -26,9 +27,14 @@ class DevWorkspaceDistrictEditorBoundaryContractTest(unittest.TestCase):
         self.assertIn('bindButtonAction(districtSaveBtn, async () => {', owner_content)
         self.assertIn('bindButtonAction(scenarioDistrictPromoteBtn, async () => {', owner_content)
         self.assertIn('bindButtonAction(scenarioDistrictApplyTemplateBtn, async () => {', owner_content)
-        self.assertIn('fetch("/__dev/scenario/districts/save"', owner_content)
-        self.assertIn('fetch("/__dev/scenario/district-templates/save"', owner_content)
-        self.assertIn('fetch("/__dev/scenario/district-templates/apply"', owner_content)
+        self.assertIn('import { postDevScenarioMutation } from "./dev_mutation_service.js";', owner_content)
+        self.assertIn('postDevScenarioMutation("/__dev/scenario/districts/save", buildDistrictSavePayload({', owner_content)
+        self.assertIn('postDevScenarioMutation(', owner_content)
+        self.assertIn('"/__dev/scenario/district-templates/save",', owner_content)
+        self.assertIn('postDevScenarioMutation("/__dev/scenario/district-templates/apply", {', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/districts/save"', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/district-templates/save"', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/district-templates/apply"', owner_content)
 
         self.assertIsNone(re.search(r"function\s+resolveDistrictEditorModel\s*\(", donor_content))
         self.assertIsNone(re.search(r"function\s+buildDistrictSavePayload\s*\(", donor_content))

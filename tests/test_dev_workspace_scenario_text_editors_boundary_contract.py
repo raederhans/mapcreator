@@ -4,6 +4,7 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 SCENARIO_TEXT_EDITORS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_text_editors_controller.js"
 
@@ -25,9 +26,13 @@ class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
         self.assertIn("const resolveLocaleEditorModel = () => {", owner_content)
         self.assertIn("const render = ({ hasActiveScenario }) => {", owner_content)
         self.assertIn("const bindEvents = () => {", owner_content)
-        self.assertIn('fetch("/__dev/scenario/country/save"', owner_content)
-        self.assertIn('fetch("/__dev/scenario/capital/save"', owner_content)
-        self.assertIn('fetch("/__dev/scenario/geo-locale/save"', owner_content)
+        self.assertIn('import { postDevScenarioMutation } from "./dev_mutation_service.js";', owner_content)
+        self.assertIn('postDevScenarioMutation("/__dev/scenario/country/save", built.payload)', owner_content)
+        self.assertIn('postDevScenarioMutation("/__dev/scenario/capital/save", built.payload)', owner_content)
+        self.assertIn('postDevScenarioMutation("/__dev/scenario/geo-locale/save", {', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/country/save"', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/capital/save"', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/geo-locale/save"', owner_content)
 
         self.assertIsNone(re.search(r"function\s+resolveCountryEditorModel\s*\(", donor_content))
         self.assertIsNone(re.search(r"function\s+resolveCapitalEditorModel\s*\(", donor_content))
@@ -60,6 +65,7 @@ class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
         self.assertIn("syncRuntimeScenarioCityOverrides(nextOverrides);", owner_content)
         self.assertIn("syncScenarioLocalizationState({", owner_content)
         self.assertIn("getScenarioGeoLocaleEntry(featureId)", owner_content)
+        self.assertIn('const patchResponse = await fetch(patchUrl.href, { cache: "no-store" });', owner_content)
 
 
 if __name__ == "__main__":

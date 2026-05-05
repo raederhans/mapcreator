@@ -263,9 +263,14 @@ def _iter_transport_manifest_leaf_paths(container: Any, path_parts: tuple[str, .
     return results
 
 
-def collect_transport_path_contract_errors(manifest: dict[str, Any], manifest_path: Path) -> list[str]:
+def collect_transport_path_contract_errors(
+    manifest: dict[str, Any],
+    manifest_path: Path,
+    *,
+    project_root: Path = PROJECT_ROOT,
+) -> list[str]:
     errors: list[str] = []
-    relative_manifest_path = _normalize_rel_path(manifest_path)
+    relative_manifest_path = _normalize_rel_path(manifest_path.relative_to(project_root) if manifest_path.is_absolute() and manifest_path.is_relative_to(project_root) else manifest_path)
     leaf_paths = _iter_transport_manifest_leaf_paths(manifest.get("paths"), ("paths",))
     variants = manifest.get("variants")
     if isinstance(variants, dict):
@@ -285,7 +290,7 @@ def collect_transport_path_contract_errors(manifest: dict[str, Any], manifest_pa
         if not normalized_path.startswith("data/"):
             errors.append(f"{relative_manifest_path}: `{label}` must stay under data/. Got `{normalized_path}`.")
             continue
-        target_path = PROJECT_ROOT / normalized_path
+        target_path = project_root / normalized_path
         if not target_path.is_file():
             errors.append(f"{relative_manifest_path}: `{label}` target missing at {normalized_path}.")
             continue

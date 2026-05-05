@@ -4,6 +4,7 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 SELECTION_OWNERSHIP_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "selection_ownership_controller.js"
 
@@ -50,7 +51,9 @@ class DevWorkspaceSelectionOwnershipBoundaryContractTest(unittest.TestCase):
         self.assertIn('applyOwnerToFeatureIds(targetIds, ownerCode, {', owner_content)
         self.assertIn('resetOwnersToScenarioBaselineForFeatureIds(resolveOwnershipTargetIds(), {', owner_content)
         self.assertIn('const payload = buildScenarioOwnershipSavePayload();', owner_content)
-        self.assertIn('fetch("/__dev/scenario/ownership/save"', owner_content)
+        self.assertIn('import { postDevScenarioMutation } from "./dev_mutation_service.js";', owner_content)
+        self.assertIn('postDevScenarioMutation("/__dev/scenario/ownership/save", {', owner_content)
+        self.assertNotIn('fetch("/__dev/scenario/ownership/save"', owner_content)
         self.assertIn('runtimeState.devScenarioEditor = {', owner_content)
 
 

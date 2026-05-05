@@ -12,6 +12,8 @@ from tools.check_transport_workbench_manifests import discover_manifest_paths, i
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PORT_BUILDER = PROJECT_ROOT / "tools" / "build_transport_workbench_japan_ports.py"
 INDUSTRIAL_BUILDER = PROJECT_ROOT / "tools" / "build_transport_workbench_japan_industrial_zones.py"
+RUNTIME_ASSET_REGISTRY = PROJECT_ROOT / "data" / "runtime_asset_registry.json"
+CATALOG_JSON = PROJECT_ROOT / "data" / "CATALOG.json"
 
 
 class TransportManifestContractsTest(unittest.TestCase):
@@ -101,3 +103,14 @@ class TransportManifestContractsTest(unittest.TestCase):
         )
         errors = validate_transport_manifest(carrier_manifest, source_label="carrier")
         self.assertFalse(errors, errors)
+
+    def test_carrier_runtime_asset_key_and_catalog_key_share_the_same_url(self) -> None:
+        runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
+        catalog_payload = json.loads(CATALOG_JSON.read_text(encoding="utf-8"))
+        catalog_entries = {entry["key"]: entry for entry in catalog_payload.get("entries") or []}
+
+        runtime_url = runtime_asset_registry["assets"]["transport_carrier:japan_corridor"]["url"]
+        catalog_url = catalog_entries["transport:japan_corridor:carrier"]["url"]
+
+        self.assertEqual(runtime_url, "data/transport_layers/japan_corridor/carrier.json")
+        self.assertEqual(catalog_url, runtime_url)

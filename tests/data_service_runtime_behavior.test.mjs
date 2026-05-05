@@ -56,6 +56,18 @@ const stubCatalogPayload = {
       sourceId: "",
       readMode: "module",
     },
+    {
+      key: "transport:japan_corridor:carrier",
+      url: "data/transport_layers/japan_corridor/carrier.json",
+      role: "transport_carrier_payload",
+      format: "json",
+      schemaRef: "schema://transport/carrier_payload/v1",
+      hashRef: "",
+      owner: "builder",
+      cachePolicy: "default",
+      sourceId: "",
+      readMode: "json",
+    },
   ],
 };
 
@@ -89,12 +101,17 @@ const patchedDataServiceSource = dataServiceSource
           url: "js/core/city_lights_historical_1930_asset.js",
           role: "city_lights_asset",
         },
+        "transport_carrier:japan_corridor": {
+          url: "data/transport_layers/japan_corridor/carrier.json",
+          role: "transport_workbench_carrier",
+        },
       },
     })};
     const RUNTIME_ASSET_URLS = Object.freeze(${JSON.stringify({
       world_cities: "data/world_cities.geojson",
       "transport_manifest:road": "data/transport_layers/japan_road/manifest.json",
       "city_lights:historical_1930:asset": "js/core/city_lights_historical_1930_asset.js",
+      "transport_carrier:japan_corridor": "data/transport_layers/japan_corridor/carrier.json",
     })});`,
   )
   .replace(
@@ -225,6 +242,44 @@ test("data service records HTTP failures in load status snapshots", async () => 
   clearJsonLoaderStub();
 });
 
+test("data service loads transport carrier runtime assets through getAsset", async () => {
+  setJsonLoaderStub(async (url, options = {}) => ({
+    payload: {
+      kind: "carrier",
+      url,
+      cache: options.cache,
+      label: options.label,
+    },
+    metrics: {
+      url,
+      label: options.label,
+      cache: options.cache,
+      fetchMs: 1,
+      jsonParseMs: 1,
+      totalMs: 2,
+      transferMs: 1,
+    },
+  }));
+
+  const payload = await dataServiceModule.getAsset("transport_carrier:japan_corridor");
+  assert.deepEqual(payload, {
+    kind: "carrier",
+    url: "data/transport_layers/japan_corridor/carrier.json",
+    cache: "default",
+    label: "asset:transport_carrier:japan_corridor",
+  });
+
+  const snapshot = dataServiceModule.getStatusSnapshot();
+  const requestId = "asset:transport_carrier:japan_corridor";
+  assert.equal(snapshot.resources[requestId].status, "ready");
+  assert.equal(snapshot.resources[requestId].url, "data/transport_layers/japan_corridor/carrier.json");
+
+  const metrics = dataServiceModule.getMetricsSnapshot();
+  assert.equal(metrics.resources[requestId].label, "asset:transport_carrier:japan_corridor");
+
+  clearJsonLoaderStub();
+});
+
 test("__mapcreator__ snapshot stays JSON-serializable", async () => {
   setJsonLoaderStub(async (url, options = {}) => ({
     payload: {
@@ -248,7 +303,7 @@ test("__mapcreator__ snapshot stays JSON-serializable", async () => {
   const snapshot = globalThis.__mapcreator__.snapshot();
   const roundTrip = JSON.parse(JSON.stringify(snapshot));
   assert.deepEqual(roundTrip, snapshot);
-  assert.equal(roundTrip.assets.providers.data_service.runtimeAssetCount, 3);
+  assert.equal(roundTrip.assets.providers.data_service.runtimeAssetCount, 4);
   assert.equal(roundTrip.version.providers.data_service.catalogVersion, 1);
 
   clearJsonLoaderStub();

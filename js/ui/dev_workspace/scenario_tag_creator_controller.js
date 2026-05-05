@@ -10,6 +10,7 @@ import { applyOwnerControllerAssignmentsToFeatureIds } from "../../core/scenario
 import { buildScenarioReleasableIndex, rebuildPresetState } from "../../core/releasable_manager.js";
 import { t } from "../i18n.js";
 import { showToast } from "../toast.js";
+import { postDevScenarioMutation } from "./dev_mutation_service.js";
 import {
   normalizeScenarioTagInput,
   normalizeScenarioNameInput,
@@ -961,14 +962,7 @@ export function createScenarioTagCreatorController({
       };
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/tag/create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(built.payload),
-        });
-        const result = await response.json().catch(() => ({}));
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/tag/create", built.payload);
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }

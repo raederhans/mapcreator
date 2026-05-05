@@ -6215,6 +6215,54 @@
     "The live slice stays on motorway, trunk, primary, and dedicated reference labels. Links are carried for review but stay filtered by default.": {
       "en": "The live slice stays on motorway, trunk, primary, and dedicated reference labels. Links are carried for review but stay filtered by default.",
       "zh": "当前 live 预览聚焦高速公路、主干道、一级道路和独立参考标签。连接线会保留给审查使用，但默认继续过滤。"
+    },
+    "Available": {
+      "en": "Available",
+      "zh": "可用"
+    },
+    "Coverage gaps": {
+      "en": "Coverage gaps",
+      "zh": "覆盖缺口"
+    },
+    "Forbidden": {
+      "en": "Forbidden",
+      "zh": "禁止项"
+    },
+    "Loading diagnostics…": {
+      "en": "Loading diagnostics…",
+      "zh": "正在加载诊断…"
+    },
+    "No diagnostics loaded": {
+      "en": "No diagnostics loaded",
+      "zh": "尚未加载诊断"
+    },
+    "Owner bucket mismatches": {
+      "en": "Owner bucket mismatches",
+      "zh": "所有者分桶不匹配"
+    },
+    "Profile": {
+      "en": "Profile",
+      "zh": "配置档"
+    },
+    "Risky fixes": {
+      "en": "Risky fixes",
+      "zh": "风险修复"
+    },
+    "Safe fixes": {
+      "en": "Safe fixes",
+      "zh": "安全修复"
+    },
+    "Scenario diagnostics": {
+      "en": "Scenario diagnostics",
+      "zh": "剧本诊断"
+    },
+    "Snapshot": {
+      "en": "Snapshot",
+      "zh": "快照"
+    },
+    "Unable to load diagnostics": {
+      "en": "Unable to load diagnostics",
+      "zh": "无法加载诊断"
     }
   },
   "geo": {

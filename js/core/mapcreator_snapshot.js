@@ -1,6 +1,8 @@
 // Central read-only runtime snapshot bridge for console/debug inspection.
 // 这里不暴露可写 runtime owner，只聚合普通 JSON snapshot。
 
+import { normalizeLoadStatusForDisplay } from "./load_status_display.js";
+
 const SNAPSHOT_SCHEMA_VERSION = 1;
 const SECTION_NAMES = ["assets", "loadStatus", "perf", "diag", "version"];
 const providerRegistry = Object.freeze(
@@ -89,6 +91,10 @@ function getLoadStatusSnapshot() {
   };
 }
 
+function getLoadStatusDisplaySnapshot() {
+  return normalizeLoadStatusForDisplay(getLoadStatusSnapshot());
+}
+
 function getVersionSnapshot() {
   return {
     schemaVersion: SNAPSHOT_SCHEMA_VERSION,
@@ -119,8 +125,35 @@ export function registerMapcreatorSnapshotProvider(sectionName, providerKey, pro
     throw new Error(`[mapcreator_snapshot] Provider ${normalizedProviderKey} must be a function.`);
   }
   ensureMapcreatorSnapshotGlobal();
+  if (
+    providerRegistry[normalizedSectionName].has(normalizedProviderKey)
+    && shouldWarnOnProviderReplace()
+  ) {
+    console.warn(
+      `[mapcreator_snapshot] Replacing provider "${normalizedProviderKey}" in section "${normalizedSectionName}".`
+    );
+  }
   providerRegistry[normalizedSectionName].set(normalizedProviderKey, provider);
   return () => unregisterMapcreatorSnapshotProvider(normalizedSectionName, normalizedProviderKey);
+}
+
+function shouldWarnOnProviderReplace() {
+  try {
+    const params = typeof globalThis.URLSearchParams === "function"
+      ? new globalThis.URLSearchParams(globalThis.location?.search || "")
+      : null;
+    const devFlag = String(params?.get("dev") || "").trim();
+    if (["1", "true", "yes", "on"].includes(devFlag.toLowerCase())) {
+      return true;
+    }
+  } catch (_error) {
+    // Ignore URL parsing issues and keep fallback checks below.
+  }
+  const hostname = String(globalThis.location?.hostname || "").trim().toLowerCase();
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return true;
+  }
+  return !!globalThis.document?.body?.classList?.contains("developer-mode");
 }
 
 export function unregisterMapcreatorSnapshotProvider(sectionName, providerKey) {
@@ -155,6 +188,10 @@ export function ensureMapcreatorSnapshotGlobal() {
       enumerable: true,
       get: getLoadStatusSnapshot,
     },
+    loadStatusDisplay: {
+      enumerable: true,
+      get: getLoadStatusDisplaySnapshot,
+    },
     perf: {
       enumerable: true,
       get: getPerfSnapshot,
@@ -170,6 +207,10 @@ export function ensureMapcreatorSnapshotGlobal() {
     snapshot: {
       enumerable: false,
       value: getMapcreatorSnapshot,
+    },
+    formatLoadStatus: {
+      enumerable: false,
+      value: normalizeLoadStatusForDisplay,
     },
   });
   Object.freeze(snapshotApi);

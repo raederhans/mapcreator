@@ -1660,6 +1660,10 @@
       "en": "Legend Editor",
       "zh": "图例编辑器"
     },
+    "Line Width": {
+      "en": "Line Width",
+      "zh": "线宽"
+    },
     "Link Lakes To Ocean": {
       "en": "Link Lakes To Ocean",
       "zh": "将湖泊连通到海洋"
@@ -3755,6 +3759,54 @@
     "Style and labels.": {
       "en": "Style and labels.",
       "zh": "样式与标签。"
+    },
+    "Available": {
+      "en": "Available",
+      "zh": "可用"
+    },
+    "Coverage gaps": {
+      "en": "Coverage gaps",
+      "zh": "覆盖缺口"
+    },
+    "Forbidden": {
+      "en": "Forbidden",
+      "zh": "禁止项"
+    },
+    "Loading diagnostics…": {
+      "en": "Loading diagnostics…",
+      "zh": "正在加载诊断…"
+    },
+    "No diagnostics loaded": {
+      "en": "No diagnostics loaded",
+      "zh": "尚未加载诊断"
+    },
+    "Owner bucket mismatches": {
+      "en": "Owner bucket mismatches",
+      "zh": "所有者分桶不匹配"
+    },
+    "Profile": {
+      "en": "Profile",
+      "zh": "配置档"
+    },
+    "Risky fixes": {
+      "en": "Risky fixes",
+      "zh": "风险修复"
+    },
+    "Safe fixes": {
+      "en": "Safe fixes",
+      "zh": "安全修复"
+    },
+    "Scenario diagnostics": {
+      "en": "Scenario diagnostics",
+      "zh": "剧本诊断"
+    },
+    "Snapshot": {
+      "en": "Snapshot",
+      "zh": "快照"
+    },
+    "Unable to load diagnostics": {
+      "en": "Unable to load diagnostics",
+      "zh": "无法加载诊断"
     }
   },
   "geo": {

@@ -378,6 +378,9 @@ const BATHYMETRY_PRESET_PROFILES = Object.freeze({
 const RENDER_PHASE_IDLE = "idle";
 const RENDER_PHASE_INTERACTING = "interacting";
 const RENDER_PHASE_SETTLING = "settling";
+// renderPhase 只区分“正在连续输入”“输入刚停、等待 quiet window”“完全 idle”三段。
+// exact-after-settle 和 deferred exact refresh 都依赖这组状态切换，后续若调整窗口值，
+// 要把这三段时序一起看，不能只改单个 timeout。
 const RENDER_SETTLE_DURATION_MS = 200;
 const RENDER_SETTLE_DURATION_MS_MIN = 120;
 const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS = 420;
@@ -18283,6 +18286,9 @@ function drawScenarioRegionOverlaysPass(k) {
   let waterVisibleCoverageRatio = 0;
   let waterPrevRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
   let specialCacheMode = "disabled";
+  // water/special overlay 这里走的是显式策略选择，不是错误恢复链：
+  // adaptive 会按覆盖率和复杂度在 reuse/redraw/direct 间切换；
+  // direct 表示“直接画到当前 pass，不维护复用缓存”，不要把它当失败兜底继续叠 fallback。
   if (!showWater && !showSpecial) {
     collectContextMetric("contextScenarioLayerWater", 0, {
       featureCount: 0,
@@ -19481,6 +19487,8 @@ function scheduleDeferredExactContextRefresh(plan = {}) {
   deferredExactContextRefreshHandle = scheduleDeferredWork(() => {
     deferredExactContextRefreshHandle = null;
     if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
+    // deferred exact refresh 只允许在真正 idle 时落地。
+    // 如果用户又开始交互，宁可整批重排，也不要让旧 generation 在 settling/interacting 阶段写回精细 pass。
     if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
       if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
         scheduleDeferredExactContextRefresh(plan);
@@ -19610,6 +19618,8 @@ function beginStagedMapDataWarmup(startedAt) {
   const token = Number(runtimeState.stagedMapDataToken || 0) + 1;
   runtimeState.stagedMapDataToken = token;
   const shouldStage = isHeavyScenarioStagedApplyCandidate();
+  // staged warmup 的目标是先把可交互底座恢复出来，再把 contextBase / hit canvas 这类重活延后。
+  // 这里如果改成立即同步完成，通常会直接把大场景 apply 又拉回启动关键路径。
   runtimeState.deferContextBasePass = shouldStage;
   runtimeState.deferHitCanvasBuild = shouldStage;
   if (shouldStage) {

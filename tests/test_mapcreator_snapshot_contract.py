@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 DATA_SERVICE_JS = REPO_ROOT / "js" / "core" / "data_service.js"
 SNAPSHOT_JS = REPO_ROOT / "js" / "core" / "mapcreator_snapshot.js"
+LOAD_STATUS_DISPLAY_JS = REPO_ROOT / "js" / "core" / "load_status_display.js"
 
 
 class MapcreatorSnapshotContractTest(unittest.TestCase):
@@ -41,6 +42,19 @@ class MapcreatorSnapshotContractTest(unittest.TestCase):
         self.assertIn("getMapcreatorSnapshot", content)
         self.assertIn('SECTION_NAMES = ["assets", "loadStatus", "perf", "diag", "version"]', content)
         self.assertIn("snapshotApi", content)
+        self.assertIn("loadStatusDisplay", content)
+        self.assertIn("formatLoadStatus", content)
+        self.assertIn("shouldWarnOnProviderReplace", content)
+
+    def test_load_status_display_helper_is_wired_from_snapshot_bridge(self) -> None:
+        snapshot_content = SNAPSHOT_JS.read_text(encoding="utf-8")
+        display_content = LOAD_STATUS_DISPLAY_JS.read_text(encoding="utf-8")
+
+        self.assertIn('./load_status_display.js', snapshot_content)
+        self.assertIn("normalizeLoadStatusForDisplay", snapshot_content)
+        self.assertIn("export function normalizeLoadStatusForDisplay", display_content)
+        self.assertIn('providerKey === "data_service"', display_content)
+        self.assertIn('providerKey === "main_runtime"', display_content)
 
 
 if __name__ == "__main__":

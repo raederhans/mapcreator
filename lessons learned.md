@@ -1430,3 +1430,26 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 4. 运行时新增公开数据文件后，要同步更新 Pages publish contract
 - 这次 `data_service.js` 顶层读取 `data/CATALOG.json`，主仓运行正常，但 `build_pages_dist.py` 漏发这个文件，Pages dist 会在模块图加载阶段直接断掉。
 - 更稳的做法是：只要新增了 runtime import 或 runtime fetch 依赖，就同步更新 `tools/build_pages_dist.py` 和 `tests/test_pages_dist_startup_shell.py`，把文件纳入 required files 和 dist manifest 校验。
+
+## 2026-05-03 - 注释维护与最小 diff
+
+### 1. comment-only 修改也要先盯住换行风格，否则很容易把整文件伪装成“全部改过”
+- 这次给 `map_renderer.js`、`scenario_resources.js`、`chunk_runtime.js` 补注释时，工作树一度被写成 CRLF，`git diff` 立刻膨胀成整文件重写。
+- 更稳的做法是：在收尾前同时看普通 `git diff --stat` 和 `git diff --ignore-space-at-eol --stat`；如果后者很小、前者很大，优先先修换行风格，再继续做 review 和留档。
+
+## 2026-05-03 - localization source-of-truth
+
+### 1. `data/locales.json` / `locales_baseline.json` 是 `ui` / `geo` 双层结构，补 UI key 时不能直接尾插
+- 这次 diagnostics 文案第一次补丁把 key 加进了 `geo` 末尾，导致 JSON 合法、测试也可能绿，但 `i18n_audit` 仍然继续报 `ui_missing`。
+- 更稳的做法是：补 UI 词条时先确认目标在 `ui` 对象内，再复跑 `i18n_audit`，不要只看 JSON 能不能解析。
+
+## 2026-05-04 - 数据治理白名单 / 双 key 单 URL 收口
+
+### 1. data health 要先锁治理入口，再谈 orphan
+- data/** 很大时，全目录 orphan 扫描只会制造噪音；先把 catalog、runtime registry、transport manifest、scenario registry 这些入口钉成白名单，再围绕这些入口做 health gate。
+
+### 2. runtime key 迁移优先保留单 URL 契约
+- 像 	ransport_carrier:japan_corridor 和 	ransport:japan_corridor:carrier 这种双 key 单 URL 关系，优先复用现有 URL 与 metadata，再改调用点；这样比顺手改 key 体系更稳。
+
+### 3. 只读 loader、dynamic API、localhost metadata 要各守接口域
+- dataService 适合管 catalog/runtime/transport 只读 JSON；/api/scenario-diagnostics/*、/.runtime/dev/active_server.json、manifest-driven patch reload 各自保留独立域，后续展示统一放 display/helper 层。

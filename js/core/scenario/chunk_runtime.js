@@ -609,7 +609,8 @@ function createScenarioChunkRuntimeController({
     retry = false,
   } = {}) {
     // promotion commit 必须单拥有者串行推进。
-    // 这里负责把多次 selection 变化折叠成一次延后提交，避免 visual/infra promotion 并发互踩。
+    // 这里的 timer 只负责把多次 selection 变化折叠成一次延后提交；
+    // 真正拥有提交权的始终是 commitPendingScenarioChunkPromotion()，避免 visual/infra promotion 并发互踩。
     const loadState = ensureRuntimeChunkLoadState();
     if (!loadState.pendingPromotion) {
       clearPendingScenarioChunkPromotion(loadState);
@@ -646,6 +647,9 @@ function createScenarioChunkRuntimeController({
   } = {}) {
     const loadState = ensureRuntimeChunkLoadState();
     const hasPendingReason = !!allowRefreshStart || !!String(loadState.pendingReason || "").trim();
+    // 这里的返回值是调度状态，不是业务成功/失败：
+    // promotion-scheduled / promotion-commit-started / refresh-started 等状态会被上层继续串联，
+    // 后续新增分支时要保持“调用方可据此决定是否重排”的语义。
     if (!bundle) {
       clearPendingScenarioChunkRefresh(loadState);
       return "noop";
@@ -1060,6 +1064,9 @@ function createScenarioChunkRuntimeController({
         reason: String(pendingPromotion.reason || "refresh"),
         changedLayerCount: mergedLayerResult?.changedLayerKeys?.length || 0,
       });
+      // promotion 分成 infra -> visual 两段：
+      // 先把 merged layer / localization / runtime payload 写稳，再让出一帧给渲染系统消化，
+      // 返回后还要重新验证 current，防止旧 run 在新 selection 之后继续落地。
       await yieldToFrame();
       if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
         if (canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })) {
