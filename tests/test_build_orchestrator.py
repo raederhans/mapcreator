@@ -9,6 +9,7 @@ from unittest.mock import patch
 import init_map_data
 from map_builder import base_stage
 from map_builder import build_orchestrator
+from map_builder import contracts
 from map_builder import country_feature_policies
 from map_builder import validation_schema
 from map_builder import config as cfg
@@ -442,6 +443,82 @@ class BuildOrchestratorTest(unittest.TestCase):
                 runtime_call.kwargs["promote_candidate_topology_if_safe_func"],
                 init_map_data._promote_candidate_topology_if_safe,
             )
+
+    def test_init_hierarchy_locale_wrappers_delegate_to_stage_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir) / "data"
+            stage_timings: dict[str, dict] = {}
+            build_stage_cache: dict[str, dict] = {}
+            expected = {"geo_missing_like": 0, "geo_literal_todo_markers": 0, "mt_requests": 0}
+
+            with patch.object(
+                init_map_data.hierarchy_locale_stage,
+                "run_hierarchy_locale_stage",
+                return_value=expected,
+            ) as hierarchy_mock:
+                result = init_map_data.run_hierarchy_locale_stage(
+                    output_dir,
+                    stage_timings=stage_timings,
+                    build_stage_cache=build_stage_cache,
+                )
+
+            self.assertIs(result, expected)
+            hierarchy_mock.assert_called_once()
+            hierarchy_call = hierarchy_mock.call_args
+            self.assertEqual(hierarchy_call.args, (output_dir,))
+            self.assertIs(hierarchy_call.kwargs["stage_timings"], stage_timings)
+            self.assertIs(hierarchy_call.kwargs["build_stage_cache"], build_stage_cache)
+            self.assertEqual(hierarchy_call.kwargs["project_root"], init_map_data.PROJECT_ROOT)
+            self.assertEqual(hierarchy_call.kwargs["init_map_data_path"], Path(init_map_data.__file__))
+            self.assertIs(hierarchy_call.kwargs["compute_stage_signature_func"], init_map_data._compute_stage_signature)
+            self.assertIs(hierarchy_call.kwargs["should_skip_stage_func"], init_map_data._should_skip_stage)
+            self.assertIs(hierarchy_call.kwargs["update_stage_cache_func"], init_map_data._update_stage_cache)
+            self.assertIs(hierarchy_call.kwargs["record_stage_timing_func"], init_map_data._record_stage_timing)
+            self.assertIs(hierarchy_call.kwargs["write_json_atomic_func"], init_map_data.write_json_atomic)
+
+            with patch.object(
+                init_map_data.hierarchy_locale_stage,
+                "run_geo_alias_normalization",
+            ) as aliases_mock:
+                init_map_data.run_geo_alias_normalization(output_dir)
+
+            aliases_mock.assert_called_once()
+            aliases_call = aliases_mock.call_args
+            self.assertEqual(aliases_call.args, (output_dir,))
+            self.assertEqual(aliases_call.kwargs["project_root"], init_map_data.PROJECT_ROOT)
+            self.assertIs(aliases_call.kwargs["write_json_atomic_func"], init_map_data.write_json_atomic)
+
+            with patch.object(
+                init_map_data.hierarchy_locale_stage,
+                "run_optional_machine_translation",
+            ) as mt_mock:
+                init_map_data.run_optional_machine_translation(output_dir, stage_timings=stage_timings)
+
+            mt_mock.assert_called_once()
+            mt_call = mt_mock.call_args
+            self.assertEqual(mt_call.args, (output_dir,))
+            self.assertIs(mt_call.kwargs["stage_timings"], stage_timings)
+            self.assertEqual(mt_call.kwargs["project_root"], init_map_data.PROJECT_ROOT)
+            self.assertIs(mt_call.kwargs["record_stage_timing_func"], init_map_data._record_stage_timing)
+
+    def test_hierarchy_locale_contract_points_to_stage_owner_with_manifest_owner_stable(self) -> None:
+        hierarchy_stage = next(
+            stage for stage in contracts.INIT_MAP_DATA_STAGE_DESCRIPTORS if stage.name == "hierarchy_locales"
+        )
+
+        self.assertEqual(hierarchy_stage.owner, "map_builder/hierarchy_locale_stage.py")
+        self.assertEqual(
+            contracts.DATA_ARTIFACT_SPECS_BY_PATH["hierarchy.json"].owner,
+            "init_map_data.hierarchy_locales",
+        )
+        self.assertEqual(
+            contracts.DATA_ARTIFACT_SPECS_BY_PATH["geo_aliases.json"].owner,
+            "init_map_data.hierarchy_locales",
+        )
+        self.assertEqual(
+            contracts.DATA_ARTIFACT_SPECS_BY_PATH["locales.json"].owner,
+            "init_map_data.hierarchy_locales",
+        )
 
     def test_validation_schema_owner_matches_orchestrator_stage_contract(self) -> None:
         self.assertEqual(

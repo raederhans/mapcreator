@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   commitScenarioActivationRuntimeState,
   createDefaultScenarioRuntimeState,
+  recordScenarioPerfMetricState,
+  setScenarioPerfMetricState,
 } from "../js/core/state/scenario_runtime_state.js";
 import {
   applyZoomEndChunkProtectionToSelection,
@@ -117,6 +119,35 @@ test("scenario activation commit helper centralizes staged runtime writes", () =
   assert.deepEqual(runtimeState.scenarioGeneratedColorTags, ["FRA"]);
   assert.deepEqual(runtimeState.scenarioFixedOwnerColors, { FRA: "#0055aa" });
   assert.equal(runtimeState.activeSovereignCode, "FRA");
+});
+
+test("scenario perf metrics are written through the scenario runtime owner", () => {
+  const runtimeState = createDefaultScenarioRuntimeState({ scenarioId: "tno_1962" });
+  const previousGlobalMetrics = globalThis.__scenarioPerfMetrics;
+  try {
+    const applyMetric = recordScenarioPerfMetricState(runtimeState, "applyScenarioBundle", 12.5, {
+      scenarioId: "tno_1962",
+    });
+    assert.equal(applyMetric.durationMs, 12.5);
+    assert.equal(applyMetric.scenarioId, "tno_1962");
+    assert.equal(runtimeState.scenarioPerfMetrics.applyScenarioBundle, applyMetric);
+    assert.equal(globalThis.__scenarioPerfMetrics, runtimeState.scenarioPerfMetrics);
+
+    const prewarmMetric = setScenarioPerfMetricState(runtimeState, "chunkedFirstFramePrewarm", {
+      prewarmStartedAt: 100,
+    });
+    assert.deepEqual(prewarmMetric, { prewarmStartedAt: 100 });
+
+    const mergedPrewarmMetric = setScenarioPerfMetricState(runtimeState, "chunkedFirstFramePrewarm", {
+      refreshScheduledAt: 120,
+    }, { merge: true });
+    assert.deepEqual(mergedPrewarmMetric, {
+      prewarmStartedAt: 100,
+      refreshScheduledAt: 120,
+    });
+  } finally {
+    globalThis.__scenarioPerfMetrics = previousGlobalMetrics;
+  }
 });
 
 test("zoom-end detail chunk protection is one-shot and selection scoped", () => {

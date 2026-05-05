@@ -4,6 +4,9 @@ import {
 } from "./state/index.js";
 import { state as runtimeState } from "./state.js";
 import {
+  setScenarioPerfMetricState,
+} from "./state/scenario_runtime_state.js";
+import {
   createScenarioApplyRefreshPlan,
   refreshMapDataForScenarioApply,
   refreshScenarioOpeningOwnerBorders,
@@ -66,25 +69,11 @@ function scheduleAfterFirstFrame(callback) {
   runAsync();
 }
 
-function ensureScenarioPerfMetrics() {
-  if (!runtimeState.scenarioPerfMetrics || typeof runtimeState.scenarioPerfMetrics !== "object") {
-    runtimeState.scenarioPerfMetrics = {};
-  }
-  return runtimeState.scenarioPerfMetrics;
-}
-
 function updateChunkedFirstFramePrewarmMetric(details = {}, { replace = false } = {}) {
-  const metrics = ensureScenarioPerfMetrics();
-  const previousEntry = !replace && metrics.chunkedFirstFramePrewarm && typeof metrics.chunkedFirstFramePrewarm === "object"
-    ? metrics.chunkedFirstFramePrewarm
-    : {};
-  metrics.chunkedFirstFramePrewarm = {
-    ...previousEntry,
+  return setScenarioPerfMetricState(runtimeState, "chunkedFirstFramePrewarm", {
     ...details,
     recordedAt: Date.now(),
-  };
-  globalThis.__scenarioPerfMetrics = metrics;
-  return metrics.chunkedFirstFramePrewarm;
+  }, { merge: !replace });
 }
 
 function scheduleScenarioDetailChunkPrewarm({

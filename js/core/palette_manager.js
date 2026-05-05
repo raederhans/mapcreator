@@ -4,7 +4,15 @@ import {
   buildRuntimeDefaultColorsByIso2,
   getRuntimeBridgeMappedIso2,
 } from "./palette_runtime_bridge.js";
-const state = runtimeState;
+import {
+  applyActivePaletteRuntimeState,
+  applyResolvedDefaultCountryPaletteState,
+  commitActivePaletteSourceState,
+  restoreActivePaletteSourceState,
+  setPaletteLibraryEntriesState,
+  setPaletteLoadErrorState,
+  setPaletteQuickSwatchesState,
+} from "./state/color_state.js";
 
 function normalizeCountryCode(rawCode) {
   return normalizeCountryCodeAlias(rawCode);
@@ -21,15 +29,6 @@ function normalizeHexColor(value) {
   }
   if (/^#[0-9a-f]{6}$/.test(input)) return input;
   return "";
-}
-
-function replaceObjectContents(target, nextValues) {
-  Object.keys(target || {}).forEach((key) => {
-    delete target[key];
-  });
-  Object.entries(nextValues || {}).forEach(([key, value]) => {
-    target[key] = value;
-  });
 }
 
 function getMappedIso2(mappedEntry) {
@@ -105,12 +104,10 @@ function resolveDefaultCountryPalette() {
 
 function syncResolvedDefaultCountryPalette({ overwriteCountryPalette = false } = {}) {
   const next = resolveDefaultCountryPalette();
-  runtimeState.resolvedDefaultCountryPalette = next;
-  replaceObjectContents(defaultCountryPalette, next);
-  if (overwriteCountryPalette) {
-    replaceObjectContents(runtimeState.countryPalette, next);
-  }
-  return next;
+  return applyResolvedDefaultCountryPaletteState(runtimeState, next, {
+    overwriteCountryPalette,
+    defaultPaletteTarget: defaultCountryPalette,
+  });
 }
 
 function getPaletteSourceOptions() {
@@ -130,8 +127,7 @@ function getPaletteSourceOptions() {
 function buildPaletteLibraryEntries() {
   const entries = runtimeState.activePalettePack?.entries;
   if (!entries || typeof entries !== "object") {
-    runtimeState.paletteLibraryEntries = [];
-    return runtimeState.paletteLibraryEntries;
+    return setPaletteLibraryEntriesState(runtimeState, []);
   }
 
   const mapped = runtimeState.activePaletteMap?.mapped && typeof runtimeState.activePaletteMap.mapped === "object"
@@ -193,8 +189,7 @@ function buildPaletteLibraryEntries() {
     return a.localizedName.localeCompare(b.localizedName) || a.sourceTag.localeCompare(b.sourceTag);
   });
 
-  runtimeState.paletteLibraryEntries = libraryEntries;
-  return libraryEntries;
+  return setPaletteLibraryEntriesState(runtimeState, libraryEntries);
 }
 
 function buildPaletteQuickSwatches(maxCount = 24) {
@@ -226,16 +221,17 @@ function buildPaletteQuickSwatches(maxCount = 24) {
     });
   });
 
-  runtimeState.paletteQuickSwatches = swatches.slice(0, maxCount);
-  return runtimeState.paletteQuickSwatches;
+  return setPaletteQuickSwatchesState(runtimeState, swatches, maxCount);
 }
 
 function applyActivePaletteState({ overwriteCountryPalette = false } = {}) {
-  runtimeState.fixedPaletteColorsByIso2 = buildFixedPaletteColorsByIso2(
-    runtimeState.activePalettePack,
-    runtimeState.activePaletteMap
-  );
-  runtimeState.activePaletteOceanMeta = runtimeState.activePalettePack?.ocean || null;
+  applyActivePaletteRuntimeState(runtimeState, {
+    fixedPaletteColorsByIso2: buildFixedPaletteColorsByIso2(
+      runtimeState.activePalettePack,
+      runtimeState.activePaletteMap
+    ),
+    activePaletteOceanMeta: runtimeState.activePalettePack?.ocean || null,
+  });
   syncResolvedDefaultCountryPalette({ overwriteCountryPalette });
   buildPaletteLibraryEntries();
   buildPaletteQuickSwatches();
@@ -277,7 +273,7 @@ async function ensurePaletteAssetsLoaded(
   ]);
   runtimeState.palettePackCacheById[targetId] = pack;
   runtimeState.paletteMapCacheById[targetId] = map;
-  runtimeState.paletteLoadErrorById[targetId] = "";
+  setPaletteLoadErrorState(runtimeState, targetId, "");
   return { meta, pack, map };
 }
 
@@ -306,13 +302,13 @@ async function setActivePaletteSource(
 
   try {
     const { meta, pack, map } = await ensurePaletteAssetsLoaded(paletteId, { d3Client });
-    runtimeState.activePaletteId = String(meta?.palette_id || paletteId || "").trim();
-    runtimeState.activePaletteMeta = meta || null;
-    runtimeState.activePalettePack = pack || null;
-    runtimeState.activePaletteMap = map || null;
-    runtimeState.currentPaletteTheme = String(
-      meta?.display_name || runtimeState.currentPaletteTheme || runtimeState.activePaletteId || "HOI4 Vanilla"
-    );
+    commitActivePaletteSourceState(runtimeState, {
+      activePaletteId: meta?.palette_id || paletteId,
+      activePaletteMeta: meta,
+      activePalettePack: pack,
+      activePaletteMap: map,
+      currentPaletteTheme: meta?.display_name || runtimeState.currentPaletteTheme,
+    });
     applyActivePaletteState({ overwriteCountryPalette });
     if (typeof runtimeState.renderPaletteFn === "function") {
       runtimeState.renderPaletteFn(runtimeState.currentPaletteTheme);
@@ -327,14 +323,13 @@ async function setActivePaletteSource(
   } catch (error) {
     const targetId = String(paletteId || "").trim();
     if (targetId) {
-      runtimeState.paletteLoadErrorById[targetId] = String(error?.message || error || "Unknown palette load error");
+      setPaletteLoadErrorState(
+        runtimeState,
+        targetId,
+        String(error?.message || error || "Unknown palette load error"),
+      );
     }
-    runtimeState.activePaletteId = previousState.activePaletteId;
-    runtimeState.activePaletteMeta = previousState.activePaletteMeta;
-    runtimeState.activePalettePack = previousState.activePalettePack;
-    runtimeState.activePaletteMap = previousState.activePaletteMap;
-    runtimeState.currentPaletteTheme = previousState.currentPaletteTheme;
-    runtimeState.activePaletteOceanMeta = previousState.activePaletteOceanMeta;
+    restoreActivePaletteSourceState(runtimeState, previousState);
     if (syncUI) {
       syncPaletteSourceControls();
     }

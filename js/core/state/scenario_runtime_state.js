@@ -70,6 +70,31 @@ export function createDefaultScenarioDataHealth(minRatio = 0.7) {
   };
 }
 
+export function setScenarioDataHealthState(target, nextState = {}, fallbackMinRatio = 0.7) {
+  if (!target || typeof target !== "object") {
+    return createDefaultScenarioDataHealth(fallbackMinRatio);
+  }
+  const health = {
+    ...createDefaultScenarioDataHealth(fallbackMinRatio),
+    ...(
+      nextState && typeof nextState === "object"
+        ? nextState
+        : {}
+    ),
+  };
+  health.expectedFeatureCount = Number(health.expectedFeatureCount) || 0;
+  health.runtimeFeatureCount = Number(health.runtimeFeatureCount) || 0;
+  health.ratio = Number.isFinite(Number(health.ratio)) ? Number(health.ratio) : 1;
+  health.minRatio = Number(health.minRatio) || Number(fallbackMinRatio) || 0.7;
+  health.generatedColorTags = Array.isArray(health.generatedColorTags)
+    ? [...health.generatedColorTags]
+    : [];
+  health.warning = String(health.warning || "");
+  health.severity = String(health.severity || "");
+  target.scenarioDataHealth = health;
+  return target.scenarioDataHealth;
+}
+
 export function createDefaultScenarioHydrationHealthGate() {
   return {
     status: "idle",
@@ -165,6 +190,48 @@ export function setScenarioOwnerControllerDiffCount(target, value = 0) {
   }
   target.scenarioOwnerControllerDiffCount = Number(value) || 0;
   return target.scenarioOwnerControllerDiffCount;
+}
+
+export function ensureScenarioPerfMetricsState(target) {
+  if (!target || typeof target !== "object") {
+    return {};
+  }
+  if (!target.scenarioPerfMetrics || typeof target.scenarioPerfMetrics !== "object") {
+    target.scenarioPerfMetrics = {};
+  }
+  globalThis.__scenarioPerfMetrics = target.scenarioPerfMetrics;
+  return target.scenarioPerfMetrics;
+}
+
+export function setScenarioPerfMetricState(target, name, nextEntry = {}, { merge = false } = {}) {
+  const metrics = ensureScenarioPerfMetricsState(target);
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+  const previousEntry = merge && metrics[normalizedName] && typeof metrics[normalizedName] === "object"
+    ? metrics[normalizedName]
+    : {};
+  metrics[normalizedName] = {
+    ...previousEntry,
+    ...(
+      nextEntry && typeof nextEntry === "object"
+        ? nextEntry
+        : {}
+    ),
+  };
+  globalThis.__scenarioPerfMetrics = metrics;
+  return metrics[normalizedName];
+}
+
+export function recordScenarioPerfMetricState(target, name, durationMs, details = {}) {
+  return setScenarioPerfMetricState(target, name, {
+    durationMs: Math.max(0, Number(durationMs) || 0),
+    recordedAt: Date.now(),
+    ...(
+      details && typeof details === "object"
+        ? details
+        : {}
+    ),
+  });
 }
 
 export function commitScenarioActivationRuntimeState(target, nextState = {}) {

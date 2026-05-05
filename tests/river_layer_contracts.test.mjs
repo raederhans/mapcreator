@@ -15,13 +15,21 @@ function readJsonRepoFile(...relativeParts) {
 
 test("river layer contracts keep zoom gating, render metrics, and targeted regression coverage", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const riverOwnerSource = readRepoFile("js", "core", "renderer", "river_layer_render_owner.js");
   const riverSpecSource = readRepoFile("tests", "e2e", "river_layer_regression.spec.js");
 
   const drawRiversLayerStart = rendererSource.indexOf("function drawRiversLayer");
-  const drawRiversLayerEnd = rendererSource.indexOf("function drawTextureLabelEffectsPass", drawRiversLayerStart);
+  const drawRiversLayerEnd = rendererSource.indexOf("function getCityFeatureKey", drawRiversLayerStart);
   const drawRiversLayerSource =
     drawRiversLayerStart >= 0 && drawRiversLayerEnd > drawRiversLayerStart
       ? rendererSource.slice(drawRiversLayerStart, drawRiversLayerEnd)
+      : "";
+
+  const ownerDrawStart = riverOwnerSource.indexOf("function drawRiversLayer");
+  const ownerDrawEnd = riverOwnerSource.indexOf("return {", ownerDrawStart);
+  const ownerDrawSource =
+    ownerDrawStart >= 0 && ownerDrawEnd > ownerDrawStart
+      ? riverOwnerSource.slice(ownerDrawStart, ownerDrawEnd)
       : "";
 
   const contextBaseStart = rendererSource.indexOf("function drawContextBasePass");
@@ -33,18 +41,25 @@ test("river layer contracts keep zoom gating, render metrics, and targeted regre
 
   const checks = {
     hasDrawRiversLayerPass: drawRiversLayerSource.includes("function drawRiversLayer(k, { interactive = false } = {})"),
-    riverPassRecordsPerfMetric:
-      drawRiversLayerSource.includes('recordRenderPerfMetric("drawRiversLayer"')
-      || drawRiversLayerSource.includes('collectContextMetric("drawRiversLayer"'),
-    riverPassComputesZoomBucket:
-      /zoomBucket/.test(drawRiversLayerSource)
-      && /coreWidthFactor/.test(drawRiversLayerSource)
-      && /outlineWidthFactor/.test(drawRiversLayerSource)
-      && /outlineAlphaFactor/.test(drawRiversLayerSource),
+    mapRendererKeepsThinRiverWrapper:
+      drawRiversLayerSource.includes("return getRiverLayerRenderOwner().drawRiversLayer(k, { interactive });")
+      && !/coreWidthFactor|outlineWidthFactor|outlineAlphaFactor/.test(drawRiversLayerSource),
+    ownerRecordsRiverMetric:
+      ownerDrawSource.includes('collectContextMetric("drawRiversLayer"'),
+    ownerComputesZoomBucket:
+      /zoomBucket/.test(riverOwnerSource)
+      && /coreWidthFactor/.test(riverOwnerSource)
+      && /outlineWidthFactor/.test(riverOwnerSource)
+      && /outlineAlphaFactor/.test(riverOwnerSource),
+    ownerOwnsClassProfileAndCanvasDraw:
+      riverOwnerSource.includes("RIVER_CLASS_STYLE_FACTORS")
+      && riverOwnerSource.includes("function getRiverVisibilityProfile")
+      && ownerDrawSource.includes("pathCanvas(feature)")
+      && ownerDrawSource.includes("context.stroke()"),
     contextBaseInvokesRiverPass:
       contextBaseSource.includes("drawRiversLayer(k, { interactive });"),
     deferredContextStillRecordsRiverMetric:
-      /collectContextMetric\("drawRiversLayer", 0, \{[\s\S]*?reason: "staged-apply"/.test(contextBaseSource),
+      /recordDeferredRiversLayerMetric\(\{ interactive: false, reason: "staged-apply" \}\)/.test(contextBaseSource),
     hasTargetedRiverRegressionSpec:
       riverSpecSource.includes("river layer major and mid-tier zoom gating regression")
       && riverSpecSource.includes("river layer lake and intermittent zoom gating regression")

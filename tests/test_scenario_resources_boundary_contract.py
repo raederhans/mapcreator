@@ -10,6 +10,7 @@ SCENARIO_BUNDLE_RUNTIME = REPO_ROOT / "js" / "core" / "scenario" / "bundle_runti
 SCENARIO_CHUNK_RUNTIME = REPO_ROOT / "js" / "core" / "scenario" / "chunk_runtime.js"
 SCENARIO_MANAGER = REPO_ROOT / "js" / "core" / "scenario_manager.js"
 SCENARIO_POST_APPLY_EFFECTS = REPO_ROOT / "js" / "core" / "scenario_post_apply_effects.js"
+SCENARIO_PURE_HELPERS = REPO_ROOT / "js" / "core" / "scenario" / "pure_helpers.js"
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 STARTUP_DATA_PIPELINE_JS = REPO_ROOT / "js" / "bootstrap" / "startup_data_pipeline.js"
 STARTUP_SCENARIO_BOOT_JS = REPO_ROOT / "js" / "bootstrap" / "startup_scenario_boot.js"
@@ -173,6 +174,20 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
         self.assertIn('import { requestRender } from "./render_boundary.js";', content)
         self.assertIn("scheduleAfterFirstFrame(() => {", content)
         self.assertIn("requestRender(`scenario-reset-post-frame:${scenarioId}`);", content)
+
+    def test_scenario_ui_and_perf_metrics_use_owner_write_paths(self):
+        controls_content = SCENARIO_CONTROLS_JS.read_text(encoding="utf-8")
+        post_apply_content = SCENARIO_POST_APPLY_EFFECTS.read_text(encoding="utf-8")
+        pure_helpers_content = SCENARIO_PURE_HELPERS.read_text(encoding="utf-8")
+
+        self.assertIn('registerRuntimeHook(state, "updateScenarioUIFn", renderScenarioControls);', controls_content)
+        self.assertNotIn("runtimeState.updateScenarioUIFn = renderScenarioControls;", controls_content)
+
+        self.assertIn('setScenarioPerfMetricState(runtimeState, "chunkedFirstFramePrewarm"', post_apply_content)
+        self.assertNotIn("runtimeState.scenarioPerfMetrics = {};", post_apply_content)
+
+        self.assertIn("recordScenarioPerfMetricState(state, name, durationMs, details);", pure_helpers_content)
+        self.assertNotIn("state.scenarioPerfMetrics = {};", pure_helpers_content)
 
     def test_full_bundle_prefers_runtime_topology_even_with_chunk_manifest(self):
         content = SCENARIO_BUNDLE_RUNTIME.read_text(encoding="utf-8")

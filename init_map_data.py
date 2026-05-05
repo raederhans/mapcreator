@@ -134,6 +134,7 @@ from map_builder import (
     build_orchestrator,
     config as cfg,
     detail_topology_stage,
+    hierarchy_locale_stage,
     primary_topology_stage,
     runtime_political_topology_stage,
     validation_schema,
@@ -189,7 +190,6 @@ if REQUESTED_MODE != "palettes":
     from map_builder.processors.south_asia import apply_south_asia_replacement
     from map_builder.processors.special_zones import build_special_zones
     from map_builder.outputs.save import save_outputs
-    from tools import generate_hierarchy, geo_key_normalizer, translate_manager
 else:  # pragma: no cover - palettes mode avoids GIS/runtime build imports
     assign_urban_country_owners = None
     assign_stable_urban_area_ids = None
@@ -222,9 +222,6 @@ else:  # pragma: no cover - palettes mode avoids GIS/runtime build imports
     apply_south_asia_replacement = None
     build_special_zones = None
     save_outputs = None
-    generate_hierarchy = None
-    geo_key_normalizer = None
-    translate_manager = None
     read_json_optional = _read_json_optional_light
     read_json_strict = _read_json_strict_light
     write_json_atomic = _write_json_atomic_light
@@ -1749,77 +1746,18 @@ def run_hierarchy_locale_stage(
     stage_timings: dict[str, dict] | None = None,
     build_stage_cache: dict[str, dict] | None = None,
 ) -> dict[str, object] | None:
-    stage_name = "hierarchy_locales"
-    stage_start = time.perf_counter()
-    topology_path = output_dir / "europe_topology.na_v2.json"
-    runtime_topology_path = output_dir / "europe_topology.runtime_political_v1.json"
-    baseline_locales_path = PROJECT_ROOT / "data" / "i18n" / "locales_baseline.json"
-    translation_audit_path = PROJECT_ROOT / ".runtime" / "reports" / "generated" / "translation_source_audit.json"
-    translation_review_queue_path = PROJECT_ROOT / ".runtime" / "reports" / "generated" / "translation_review_queue.json"
-    outputs = [
-        output_dir / "hierarchy.json",
-        output_dir / "geo_aliases.json",
-        output_dir / "locales.json",
-        translation_audit_path,
-        translation_review_queue_path,
-    ]
-    signature = _compute_stage_signature(
-        stage_name=stage_name,
-        inputs=[
-            Path(__file__),
-            PROJECT_ROOT / "tools" / "generate_hierarchy.py",
-            PROJECT_ROOT / "tools" / "geo_key_normalizer.py",
-            PROJECT_ROOT / "tools" / "translate_manager.py",
-            PROJECT_ROOT / "data" / "i18n" / "manual_ui.json",
-            PROJECT_ROOT / "data" / "i18n" / "manual_geo_overrides.json",
-            PROJECT_ROOT / "data" / "i18n" / "europe_geo_seeds.json",
-            baseline_locales_path,
-            topology_path,
-            runtime_topology_path,
-        ],
-        extra={"scenario_root": str(output_dir / "scenarios")},
+    return hierarchy_locale_stage.run_hierarchy_locale_stage(
+        output_dir,
+        stage_timings=stage_timings,
+        build_stage_cache=build_stage_cache,
+        project_root=PROJECT_ROOT,
+        init_map_data_path=Path(__file__),
+        compute_stage_signature_func=_compute_stage_signature,
+        should_skip_stage_func=_should_skip_stage,
+        update_stage_cache_func=_update_stage_cache,
+        record_stage_timing_func=_record_stage_timing,
+        write_json_atomic_func=write_json_atomic,
     )
-    if build_stage_cache is not None and _should_skip_stage(
-        cache_payload=build_stage_cache,
-        stage_name=stage_name,
-        signature=signature,
-        outputs=outputs,
-    ):
-        print("[INFO] Hierarchy/locales stage skipped: cache hit.")
-        if stage_timings is not None:
-            _record_stage_timing(stage_timings, stage_name, stage_start, skipped=True, cache_hit=True)
-        return None
-
-    print("[INFO] Generating Hierarchy Data....")
-    generate_hierarchy.main()
-
-    print("[INFO] Normalizing GEO keys....")
-    run_geo_alias_normalization(output_dir)
-
-    print("[INFO] Syncing Translations....")
-    translation_result = translate_manager.sync_translations(
-        topology_path=topology_path,
-        output_path=output_dir / "locales.json",
-        geo_aliases_path=output_dir / "geo_aliases.json",
-        hierarchy_path=output_dir / "hierarchy.json",
-        runtime_topology_path=runtime_topology_path,
-        scenarios_root=output_dir / "scenarios",
-        baseline_locales_path=baseline_locales_path,
-        audit_report_path=translation_audit_path,
-        review_queue_path=translation_review_queue_path,
-        machine_translate=False,
-        network_mode="off",
-    )
-    if build_stage_cache is not None:
-        _update_stage_cache(
-            cache_payload=build_stage_cache,
-            stage_name=stage_name,
-            signature=signature,
-            outputs=outputs,
-        )
-    if stage_timings is not None:
-        _record_stage_timing(stage_timings, stage_name, stage_start, skipped=False)
-    return translation_result
 
 
 def build_balkan_fallback(
@@ -2988,15 +2926,11 @@ def validate_build_outputs(
 
 
 def run_geo_alias_normalization(output_dir: Path) -> None:
-    topology_path = geo_key_normalizer.resolve_default_topology(Path(__file__).resolve().parent)
-    payload = geo_key_normalizer.normalize_geokeys(topology_path)
-    output_path = output_dir / "geo_aliases.json"
-    write_json_atomic(output_path, payload, ensure_ascii=False, indent=2)
-    print(
-        f"OK: geo aliases generated. entries={payload['entry_count']}, "
-        f"aliases={payload['alias_count']}, conflicts={payload['conflict_count']}"
+    hierarchy_locale_stage.run_geo_alias_normalization(
+        output_dir,
+        project_root=PROJECT_ROOT,
+        write_json_atomic_func=write_json_atomic,
     )
-    print(f"Saved geo aliases to: {output_path}")
 
 
 def _resolve_palette_source_root(candidates: list[Path]) -> Path | None:
@@ -3244,44 +3178,12 @@ def run_optional_machine_translation(
     *,
     stage_timings: dict[str, dict] | None = None,
 ) -> None:
-    build_mt_mode = str(os.environ.get("MAPCREATOR_BUILD_MT", "off")).strip().lower()
-    if build_mt_mode not in {"auto", "on"}:
-        return
-    print(f"[INFO] Running optional machine translation pass (mode={build_mt_mode})....")
-    machine_translation_start = time.perf_counter()
-    baseline_locales_path = PROJECT_ROOT / "data" / "i18n" / "locales_baseline.json"
-    translation_audit_path = PROJECT_ROOT / ".runtime" / "reports" / "generated" / "translation_source_audit.machine_translation.json"
-    translation_review_queue_path = PROJECT_ROOT / ".runtime" / "reports" / "generated" / "translation_review_queue.machine_translation.json"
-    translation_result = translate_manager.sync_translations(
-        topology_path=output_dir / "europe_topology.na_v2.json",
-        output_path=output_dir / "locales.json",
-        geo_aliases_path=output_dir / "geo_aliases.json",
-        hierarchy_path=output_dir / "hierarchy.json",
-        runtime_topology_path=output_dir / "europe_topology.runtime_political_v1.json",
-        scenarios_root=output_dir / "scenarios",
-        baseline_locales_path=baseline_locales_path,
-        audit_report_path=translation_audit_path,
-        review_queue_path=translation_review_queue_path,
-        machine_translate=True,
-        translator_delay_seconds=0.05,
-        max_machine_translations=2500,
-        auto_country_codes="visible-missing",
-        network_mode=build_mt_mode,
+    hierarchy_locale_stage.run_optional_machine_translation(
+        output_dir,
+        stage_timings=stage_timings,
+        project_root=PROJECT_ROOT,
+        record_stage_timing_func=_record_stage_timing,
     )
-    print(
-        "[INFO] Optional translation result: "
-        f"geo_missing_like={translation_result['geo_missing_like']}, "
-        f"todo_markers={translation_result['geo_literal_todo_markers']}, "
-        f"mt_requests={translation_result['mt_requests']}"
-    )
-    if stage_timings is not None:
-        _record_stage_timing(
-            stage_timings,
-            "machine_translation",
-            machine_translation_start,
-            mode=build_mt_mode,
-            mt_requests=translation_result.get("mt_requests"),
-        )
 
 
 def build_primary_topology_bundle(

@@ -1,4 +1,5 @@
 import { state as runtimeState } from "../core/state.js";
+import { registerRuntimeHook } from "../core/state/index.js";
 import {
   clearActiveScenarioCommand,
   applyScenarioByIdCommand,
@@ -107,7 +108,7 @@ export function initScenarioControls() {
     }
   };
 
-  runtimeState.updateScenarioUIFn = renderScenarioControls;
+  registerRuntimeHook(state, "updateScenarioUIFn", renderScenarioControls);
 
   if (scenarioSelect && !scenarioSelect.dataset.bound) {
     scenarioSelect.addEventListener("change", () => {

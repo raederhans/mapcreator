@@ -315,7 +315,7 @@ INIT_MAP_DATA_STAGE_DESCRIPTORS: tuple[StageDescriptor, ...] = (
     ),
     StageDescriptor(
         name="hierarchy_locales",
-        owner="init_map_data.py",
+        owner="map_builder/hierarchy_locale_stage.py",
         inputs=("runtime political topology", "scenario roots", "locale sync rules"),
         outputs=("hierarchy.json", "geo_aliases.json", "locales.json"),
         failure_surface=("missing runtime ids", "translation sync drift"),

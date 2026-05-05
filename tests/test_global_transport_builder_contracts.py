@@ -670,7 +670,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         appearance_controller_content = (
             REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
         ).read_text(encoding='utf-8')
-        self.assertIn('data/transport_layers/global_rail/catalog.json', data_loader_content)
+        self.assertIn('resolveDataAssetUrl("transport_catalog:rail")', data_loader_content)
         self.assertNotIn('data/transport_layers/global_rail/railways.topo.json', data_loader_content)
         self.assertNotIn('data/transport_layers/global_rail/rail_stations_major.geojson', data_loader_content)
         self.assertIn('listTransportOverviewCapabilityFamilyIds()', data_loader_content)
@@ -687,7 +687,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')
         toolbar_content = (REPO_ROOT / 'js' / 'ui' / 'toolbar.js').read_text(encoding='utf-8')
         interaction_content = (REPO_ROOT / 'js' / 'core' / 'interaction_funnel.js').read_text(encoding='utf-8')
-        self.assertIn('data/transport_layers/global_road/catalog.json', data_loader_content)
+        self.assertIn('resolveDataAssetUrl("transport_catalog:road")', data_loader_content)
         self.assertIn('layerName === "roads"', data_loader_content)
         self.assertIn('EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES.has(name)', data_loader_content)
         self.assertNotIn('road_labels.geojson', data_loader_content)
@@ -720,7 +720,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertNotIn('id="roadLabelsEnabled"', html_content)
 
     def test_rail_renderer_consumes_label_config_and_station_layer(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         self.assertIn('railConfig.labelsEnabled', renderer_content)
         self.assertIn('railConfig.labelDensity', renderer_content)
         self.assertIn('railConfig.labelMode', renderer_content)
@@ -728,7 +728,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('runtimeState.railStationsMajorData', renderer_content)
 
     def test_rail_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         self.assertIn('function getTransportRailRevealRankThreshold(value)', renderer_content)
         self.assertIn('if (normalized === "primary") return 1;', renderer_content)
         self.assertIn('if (normalized === "secondary") return 2;', renderer_content)
@@ -736,7 +736,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('if (revealRank > maximumRevealRank) return;', renderer_content)
 
     def test_road_renderer_uses_road_scope_threshold_helper(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         self.assertIn('export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}, { scale = 1, visualMode = "distribution" } = {})', registry_content)
         self.assertIn('if (normalizedFamilyId === "road") {', registry_content)
@@ -745,7 +745,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('const minimumScopeRank = strategy.minimumScopeRank;', renderer_content)
 
     def test_road_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         self.assertIn('function getTransportRoadRevealRankThreshold(value)', renderer_content)
         self.assertIn('if (normalized === "primary") return 1;', renderer_content)
         self.assertIn('if (normalized === "secondary") return 2;', renderer_content)
@@ -774,8 +774,8 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         data_loader_content = (REPO_ROOT / "js" / "core" / "data_loader.js").read_text(encoding="utf-8")
         pages_dist_content = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
 
-        self.assertIn("data/transport_layers/global_airport/airports.geojson", data_loader_content)
-        self.assertIn("data/transport_layers/global_port/ports.geojson", data_loader_content)
+        self.assertIn('resolveDataAssetUrl("context_layer:airports")', data_loader_content)
+        self.assertIn('resolveDataAssetUrl("context_layer:ports")', data_loader_content)
         self.assertNotIn("data/transport_layers/japan_airport/airports.geojson", data_loader_content)
         self.assertNotIn("data/transport_layers/japan_port/ports.geojson", data_loader_content)
         self.assertIn("data/transport_layers/global_airport/airports.geojson", pages_dist_content)
@@ -827,7 +827,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
                 self.assertIn("naturalearth", recipe.get("source", {}).get("url", ""))
 
     def test_port_renderer_default_reveal_floor_keeps_regional_ports_visible(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         port_payload = json.loads((REPO_ROOT / 'data' / 'transport_layers' / 'japan_port' / 'ports.geojson').read_text(encoding='utf-8'))
         max_importance_rank = max(
@@ -846,10 +846,12 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('features: stationFeatures', data_loader_content)
 
     def test_road_renderer_consumes_roads_without_labels(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
+        main_renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         self.assertIn('function drawRoadsLayer(k, { interactive = false } = {})', renderer_content)
         self.assertIn('runtimeState.roadsData', renderer_content)
         self.assertIn('!!runtimeState.showTransport && !!runtimeState.showRoad', renderer_content)
+        self.assertIn('return getTransportOverviewRenderOwner().drawRoadsLayer(k, { interactive });', main_renderer_content)
         self.assertNotIn('state.roadLabelsData', renderer_content)
 
     def test_road_save_load_gate_stays_closed(self) -> None:

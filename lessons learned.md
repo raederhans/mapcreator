@@ -1453,3 +1453,9 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ### 3. 只读 loader、dynamic API、localhost metadata 要各守接口域
 - dataService 适合管 catalog/runtime/transport 只读 JSON；/api/scenario-diagnostics/*、/.runtime/dev/active_server.json、manifest-driven patch reload 各自保留独立域，后续展示统一放 display/helper 层。
+
+## 2026-05-05 - owner extraction 与 state guardrail 同步收口
+
+### 1. renderer owner 抽离时，配置归一化写口要同步下沉到 state owner
+- 这次 `transport_overview_render_owner.js` 首轮抽离后，`styleConfig.transportOverview` 还在 owner 内直接归一化写回，state allowlist gate 立刻转红。
+- 更稳的做法是：owner 只读能力和绘制逻辑，凡是 `styleConfig`、UI hook、runtime perf metrics 这类持久 shape 写口，都同步收回 `ui_state`、`scenario_runtime_state` 或 `state/index` 这类 state owner。

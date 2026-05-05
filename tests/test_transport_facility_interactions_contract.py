@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface.js"
+TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
 FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
 
 
@@ -39,6 +40,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
     def test_map_renderer_wires_facility_hover_and_card_logic(self):
         content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
         owner_content = FACILITY_SURFACE_JS.read_text(encoding="utf-8")
+        transport_owner_content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
         facade_content = FACILITY_FACADE_JS.read_text(encoding="utf-8")
         required_tokens = [
             "function getHoveredFacilityEntryFromEvent",
@@ -46,10 +48,6 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             'recordInteractionDurationMetric("interactionHoverCityProbeDuration"',
             "function applyFacilityInfoCardState",
             "function zoomToFacilityEntry",
-            "setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries);",
-            "const nextEntriesByKey = new Map(",
-            "hoveredFacilityEntry = nextHoveredEntry;",
-            "selectedFacilityEntry = nextSelectedEntry;",
             "const facilityDetailsActive = hoveredFacility ? isFacilityDetailsSurfaceActive(hoveredFacility.familyId) : false;",
             "const nextFacilityKey = buildFacilityEntryKey(hoveredFacility);",
             "const previousFacilityKey = buildFacilityEntryKey(hoveredFacilityEntry);",
@@ -62,12 +60,16 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             self.assertIn(token, content)
         self.assertIn("readFacadeGetter('getFacilitySurfaceOwner')().buildFacilityTooltipText(entry);", facade_content)
         self.assertIn("getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {", content)
+        self.assertIn("setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries);", transport_owner_content)
+        self.assertIn("const nextEntriesByKey = new Map(", content)
+        self.assertIn("hoveredFacilityEntry = nextHoveredEntry;", content)
+        self.assertIn("selectedFacilityEntry = nextSelectedEntry;", content)
         self.assertIn("function buildFacilityTooltipText", owner_content)
         self.assertIn("buildFacilityInfoCardFieldSections: buildFacilityInfoCardRows", owner_content)
         self.assertIn('facilityInfoCardMoreBtn.textContent = t(expanded ? "Less fields" : "More fields", "ui");', owner_content)
 
     def test_facility_entry_builder_uses_current_render_target_canvas(self):
-        content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+        content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
         section = content.split("function buildContextFacilityEntries", 1)[1].split(
             "function drawContextFacilityPointLayer",
             1,

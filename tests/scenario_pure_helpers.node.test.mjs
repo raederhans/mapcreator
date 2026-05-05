@@ -4,16 +4,36 @@ import { readFile } from "node:fs/promises";
 
 const pureHelpersPath = new URL("../js/core/scenario/pure_helpers.js", import.meta.url);
 const pureHelpersSource = await readFile(pureHelpersPath, "utf8");
-const inlinedSource = pureHelpersSource.replace(
-  /import\s*\{[\s\S]*?\}\s*from\s*"\.\.\/scenario_runtime_queries\.js";/,
-  `const getRuntimeGeometryFeatureId = (geometry) => String(geometry?.properties?.id || geometry?.id || "").trim();
+const inlinedSource = pureHelpersSource
+  .replace(
+    /import\s*\{[\s\S]*?\}\s*from\s*"\.\.\/scenario_runtime_queries\.js";/,
+    `const getRuntimeGeometryFeatureId = (geometry) => String(geometry?.properties?.id || geometry?.id || "").trim();
 const getScenarioRuntimeGeometryCountryCode = (geometry) => String(geometry?.properties?.cntr_code || "").trim().toUpperCase();
 const hasExplicitScenarioAssignment = (featureMap, featureId) => !!(featureMap && Object.prototype.hasOwnProperty.call(featureMap, featureId));
 const shouldApplyHoi4FarEastSovietBackfill = (scenarioId) => {
   const normalizedId = String(scenarioId || "").trim();
   return normalizedId === "hoi4_1936" || normalizedId === "hoi4_1939";
-};`
-);
+};`,
+  )
+  .replace(
+    /import\s*\{\s*recordScenarioPerfMetricState,\s*\}\s*from\s*"\.\.\/state\/scenario_runtime_state\.js";/,
+    `const recordScenarioPerfMetricState = (state, name, durationMs, details = {}) => {
+  if (!state.scenarioPerfMetrics || typeof state.scenarioPerfMetrics !== "object") {
+    Reflect.set(state, "scenarioPerfMetrics", {});
+  }
+  const metrics = state.scenarioPerfMetrics;
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+  const nextEntry = {
+    durationMs: Math.max(0, Number(durationMs) || 0),
+    recordedAt: Date.now(),
+    ...(details && typeof details === "object" ? details : {}),
+  };
+  metrics[normalizedName] = nextEntry;
+  globalThis.__scenarioPerfMetrics = metrics;
+  return nextEntry;
+};`,
+  );
 const pureHelpers = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(inlinedSource)}`);
 
 test("getHoi4FarEastSovietRuntimeCandidateFeatureIds uses topology identity cache on repeated calls", () => {

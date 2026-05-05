@@ -1,5 +1,8 @@
 import { state as runtimeState } from "./state.js";
-import { createDefaultScenarioDataHealth } from "./state/scenario_runtime_state.js";
+import {
+  createDefaultScenarioDataHealth,
+  setScenarioDataHealthState,
+} from "./state/scenario_runtime_state.js";
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 const state = runtimeState;
@@ -70,11 +73,14 @@ function refreshScenarioDataHealth({
   minRatio = SCENARIO_DETAIL_MIN_RATIO_STRICT,
 } = {}) {
   if (!runtimeState.activeScenarioId || !runtimeState.activeScenarioManifest) {
-    runtimeState.scenarioDataHealth = createDefaultScenarioDataHealth(SCENARIO_DETAIL_MIN_RATIO_STRICT);
-    return runtimeState.scenarioDataHealth;
+    return setScenarioDataHealthState(
+      runtimeState,
+      createDefaultScenarioDataHealth(SCENARIO_DETAIL_MIN_RATIO_STRICT),
+      SCENARIO_DETAIL_MIN_RATIO_STRICT,
+    );
   }
   const health = evaluateScenarioDataHealth(runtimeState.activeScenarioManifest, { minRatio });
-  runtimeState.scenarioDataHealth = health;
+  setScenarioDataHealthState(runtimeState, health, minRatio);
   const shouldToast = health.warning && (showErrorToast || showWarningToast);
   if (shouldToast) {
     const errorLevel = showErrorToast || health.severity === "error";
@@ -86,7 +92,7 @@ function refreshScenarioDataHealth({
       duration: errorLevel ? 6200 : 5200,
     });
   }
-  return health;
+  return runtimeState.scenarioDataHealth;
 }
 
 export {

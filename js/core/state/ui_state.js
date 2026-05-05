@@ -96,6 +96,19 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
   return target.styleConfig.transportOverview;
 }
 
+export function ensureTransportOverviewStyleConfigState(target) {
+  if (!target || typeof target !== "object") {
+    return createDefaultTransportOverviewStyleConfig();
+  }
+  if (!target.styleConfig || typeof target.styleConfig !== "object") {
+    target.styleConfig = {};
+  }
+  target.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(
+    target.styleConfig.transportOverview || {},
+  );
+  return target.styleConfig.transportOverview;
+}
+
 export function createDefaultReferenceImageState() {
   return {
     opacity: 0.6,
@@ -586,4 +599,27 @@ export function setActiveDockPopoverState(target, nextKind = "") {
   }
   target.activeDockPopover = String(nextKind || "").trim();
   return target.activeDockPopover;
+}
+
+export function markDirtyState(target, reason = "") {
+  if (!target || typeof target !== "object") {
+    return 0;
+  }
+  target.isDirty = true;
+  target.dirtyRevision = Number(target.dirtyRevision || 0) + 1;
+  if (reason) {
+    target.lastDirtyReason = String(reason);
+  }
+  return target.dirtyRevision;
+}
+
+export function clearDirtyState(target, reason = "") {
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+  target.isDirty = false;
+  if (reason) {
+    target.lastDirtyReason = String(reason);
+  }
+  return target.isDirty;
 }
