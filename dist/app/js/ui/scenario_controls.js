@@ -1,9 +1,9 @@
 import { state as runtimeState } from "../core/state.js";
+import { registerRuntimeHook } from "../core/state/index.js";
 import {
   clearActiveScenarioCommand,
   applyScenarioByIdCommand,
   resetScenarioToBaselineCommand,
-  setScenarioViewModeCommand,
 } from "../core/scenario_dispatcher.js";
 import {
   formatScenarioAuditText,
@@ -11,7 +11,6 @@ import {
   getScenarioDisplayName,
   getScenarioRegistryEntries,
   normalizeScenarioId,
-  normalizeScenarioViewMode,
 } from "../core/scenario_manager.js";
 import {
   formatScenarioFatalRecoveryMessage,
@@ -29,8 +28,6 @@ export function initScenarioControls() {
   const clearScenarioBtn = document.getElementById("clearScenarioBtn");
   const scenarioStatus = document.getElementById("scenarioStatus");
   const scenarioAuditHint = document.getElementById("scenarioAuditHint");
-  const scenarioViewModeLabel = document.getElementById("lblScenarioViewMode");
-  const scenarioViewModeSelect = document.getElementById("scenarioViewModeSelect");
   let pendingScenarioId = "";
 
   const renderScenarioControls = () => {
@@ -70,20 +67,6 @@ export function initScenarioControls() {
       scenarioAuditHint.textContent = auditText;
       scenarioAuditHint.classList.toggle("hidden", !auditText);
     }
-    if (scenarioViewModeSelect) {
-      const hasScenario = !!runtimeState.activeScenarioId;
-      const hasControllerData = Object.keys(runtimeState.scenarioControllersByFeatureId || {}).length > 0;
-      const hasSplit = Number(runtimeState.activeScenarioManifest?.summary?.owner_controller_split_feature_count || 0) > 0;
-      scenarioViewModeSelect.value = normalizeScenarioViewMode(runtimeState.scenarioViewMode);
-      scenarioViewModeSelect.disabled = isFatalLocked || !hasScenario || !hasControllerData || !hasSplit;
-      scenarioViewModeSelect.classList.toggle("hidden", !hasScenario);
-      scenarioViewModeLabel?.classList.toggle("hidden", !hasScenario);
-      scenarioViewModeSelect.title = isFatalLocked
-        ? fatalMessage
-        : hasSplit
-        ? t("Toggle legal ownership vs frontline control.", "ui")
-        : t("No frontline control split in current scenario.", "ui");
-    }
     if (resetScenarioBtn) {
       resetScenarioBtn.textContent = t("Reset", "ui");
       resetScenarioBtn.disabled = !runtimeState.activeScenarioId || isApplyInFlight || isBootBlocking || isFatalLocked;
@@ -107,7 +90,7 @@ export function initScenarioControls() {
     }
   };
 
-  runtimeState.updateScenarioUIFn = renderScenarioControls;
+  registerRuntimeHook(state, "updateScenarioUIFn", renderScenarioControls);
 
   if (scenarioSelect && !scenarioSelect.dataset.bound) {
     scenarioSelect.addEventListener("change", () => {
@@ -115,19 +98,6 @@ export function initScenarioControls() {
       renderScenarioControls();
     });
     scenarioSelect.dataset.bound = "true";
-  }
-
-  if (scenarioViewModeSelect && !scenarioViewModeSelect.dataset.bound) {
-    scenarioViewModeSelect.addEventListener("change", (event) => {
-      const changed = setScenarioViewModeCommand(event?.target?.value, {
-        renderMode: "request",
-        markDirtyReason: "",
-      });
-      if (changed) {
-        renderScenarioControls();
-      }
-    });
-    scenarioViewModeSelect.dataset.bound = "true";
   }
 
   if (applyScenarioBtn && !applyScenarioBtn.dataset.bound) {

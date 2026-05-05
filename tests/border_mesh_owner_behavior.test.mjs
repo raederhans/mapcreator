@@ -28,7 +28,6 @@ test("refreshScenarioOpeningOwnerBorders reuses mesh pack opening-owner mesh whe
   const state = {
     activeScenarioId: "tno_1962",
     scenarioBorderMode: "scenario_owner_only",
-    scenarioViewMode: "ownership",
     runtimePoliticalTopology: null,
     activeScenarioMeshPack: { meshes: { opening_owner_borders: meshPackMesh } },
     scenarioBaselineOwnersByFeatureId: {},
@@ -59,8 +58,7 @@ test("refreshScenarioOpeningOwnerBorders falls back to runtime topology when mes
     const state = {
       activeScenarioId: "tno_1962",
       scenarioBorderMode: "scenario_owner_only",
-      scenarioViewMode: "ownership",
-      runtimePoliticalTopology: { objects: { political: {} } },
+        runtimePoliticalTopology: { objects: { political: {} } },
       activeScenarioMeshPack: null,
       scenarioBaselineOwnersByFeatureId: { A: "GER", B: "USA" },
       scenarioAutoShellOwnerByFeatureId: {},
@@ -83,7 +81,6 @@ test("refreshScenarioOpeningOwnerBorders clears cache when startup state is not 
   const state = {
     activeScenarioId: "tno_1962",
     scenarioBorderMode: "canonical",
-    scenarioViewMode: "ownership",
     runtimePoliticalTopology: { objects: { political: {} } },
     activeScenarioMeshPack: null,
     scenarioBaselineOwnersByFeatureId: {},
@@ -103,49 +100,22 @@ test("refreshScenarioOpeningOwnerBorders clears cache when startup state is not 
   assert.equal(state.cachedScenarioOpeningOwnerBorders, null);
 });
 
-test("getFrontlineMesh caches frontline mesh by ownership revision hash and clears when disabled", () => {
-  const frontlineMesh = {
-    type: "MultiLineString",
-    coordinates: [[[7, 7], [8, 8]]],
+test("getFrontlineMesh remains disabled after control layer retirement", () => {
+  const state = {
+    activeScenarioId: "tno_1962",
+    annotationView: { frontlineEnabled: true },
+    runtimePoliticalTopology: { objects: { political: {} } },
+    sovereigntyByFeatureId: { A: "GER", B: "USA" },
+    scenarioAutoShellOwnerByFeatureId: {},
+    scenarioShellOverlayRevision: 1,
+    sovereigntyRevision: 4,
+    cachedFrontlineMesh: { type: "MultiLineString", coordinates: [] },
+    cachedFrontlineMeshHash: "stale",
   };
-  const previousTopojson = globalThis.topojson;
-  globalThis.topojson = {
-    mesh: () => frontlineMesh,
-  };
 
-  try {
-    const state = {
-      activeScenarioId: "tno_1962",
-      annotationView: { frontlineEnabled: true },
-      runtimePoliticalTopology: { objects: { political: {} } },
-      sovereigntyByFeatureId: { A: "GER", B: "USA" },
-      scenarioControllersByFeatureId: { A: "GER", B: "USA" },
-      scenarioAutoShellOwnerByFeatureId: {},
-      scenarioAutoShellControllerByFeatureId: {},
-      scenarioControllerRevision: 2,
-      scenarioShellOverlayRevision: 1,
-      sovereigntyRevision: 4,
-      cachedFrontlineMesh: null,
-      cachedFrontlineMeshHash: "",
-    };
+  const { owner } = createTestOwner(state);
 
-    const { owner } = createTestOwner(state);
-    const first = owner.getFrontlineMesh();
-    const second = owner.getFrontlineMesh();
-    const ownershipContext = owner.getFrontlineOwnershipContext();
-
-    assert.equal(first, frontlineMesh);
-    assert.equal(second, frontlineMesh);
-    assert.equal(state.cachedFrontlineMesh, frontlineMesh);
-    assert.match(state.cachedFrontlineMeshHash, /^scenario:tno_1962\|ctrl:2\|shell:1\|sov:4$/);
-    assert.equal(ownershipContext.viewMode, "frontline");
-    assert.equal(ownershipContext.scenarioActive, true);
-
-    state.annotationView.frontlineEnabled = false;
-    assert.equal(owner.getFrontlineMesh(), null);
-    assert.equal(state.cachedFrontlineMesh, null);
-    assert.equal(state.cachedFrontlineMeshHash, "");
-  } finally {
-    globalThis.topojson = previousTopojson;
-  }
+  assert.equal(owner.getFrontlineMesh(), null);
+  assert.equal(state.cachedFrontlineMesh, null);
+  assert.equal(state.cachedFrontlineMeshHash, "");
 });

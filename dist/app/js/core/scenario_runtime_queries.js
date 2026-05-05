@@ -41,18 +41,6 @@ export function getScenarioEffectiveOwnerCodeByFeatureId(featureId) {
     .toUpperCase();
 }
 
-export function getScenarioEffectiveControllerCodeByFeatureId(featureId) {
-  const normalizedId = String(featureId || "").trim();
-  if (!normalizedId) return "";
-  return String(
-    runtimeState.scenarioControllersByFeatureId?.[normalizedId] ||
-    getScenarioEffectiveOwnerCodeByFeatureId(normalizedId) ||
-    ""
-  )
-    .trim()
-    .toUpperCase();
-}
-
 export function shouldApplyHoi4FarEastSovietBackfill(scenarioId) {
   const normalizedId = String(scenarioId || "").trim();
   return normalizedId === "hoi4_1936" || normalizedId === "hoi4_1939";

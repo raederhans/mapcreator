@@ -7,7 +7,6 @@
   "bookmark_name": "TNO_1962_NAME",
   "city_overrides_url": "data/scenarios/tno_1962/city_overrides.json",
   "context_lod_manifest": "data/scenarios/tno_1962/context_lod.manifest.json",
-  "controllers_url": "data/scenarios/tno_1962/controllers.by_feature.json",
   "cores_url": "data/scenarios/tno_1962/cores.by_feature.json",
   "countries_url": "data/scenarios/tno_1962/countries.json",
   "default_country": "GER",
@@ -135,6 +134,10 @@
     "special_regions_default": true,
     "water_regions_default": true
   },
+  "presentation_features": {
+    "atlantropa_relief": true,
+    "coastal_accent": true
+  },
   "releasable_catalog_url": "data/releasables/tno_1962.internal.phase1.catalog.json",
   "relief_overlays_url": "data/scenarios/tno_1962/relief_overlays.geojson",
   "render_budget_hints": {
@@ -151,7 +154,7 @@
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "7120f239a7f389967b0adcf305f836047d9f18870da8e7219ee32b12361564e0",
+  "snapshot_fingerprint": "f1a53abd785c6fa1849d5e16a40d63572acd41846e2b0ca1581d86f35b281c3c",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "detail_chunk_manifest_sha256": "a6927da7500007be7d3129393a3ad957846bf6b9eef95d4a50ba9267f4121267",

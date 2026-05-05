@@ -665,7 +665,7 @@ test("unit counter placement cancels on escape or tab switch, resets after delet
   await expect(page.locator("#unitCounterList")).toHaveValue("");
 });
 
-test("unit counter auto nation follows displayed political code and keeps legacy/controller/manual compatibility", async ({ page }) => {
+test("unit counter auto nation follows ownership after control retirement", async ({ page }) => {
   test.setTimeout(120000);
   await gotoApp(page, undefined, { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page, { timeout: 120000 });
@@ -674,115 +674,32 @@ test("unit counter auto nation follows displayed political code and keeps legacy
   await applyScenarioAndWaitIdle(page, "tno_1962", { timeout: 120000 });
   await openFrontlineTab(page);
 
-  await expect(page.locator("#unitCounterNationModeSelect")).toHaveValue("display");
-
-  const splitFeature = await page.evaluate(async () => {
+  const result = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const splitEntry = Object.entries(state.scenarioBaselineControllersByFeatureId || {}).find(([featureId, controller]) => {
-      const owner = state.scenarioBaselineOwnersByFeatureId?.[featureId];
-      return owner && controller && owner !== controller;
-    });
-    if (!splitEntry) return null;
-    const [featureId, baselineController] = splitEntry;
-    return {
-      featureId,
-      baselineOwner: String(state.scenarioBaselineOwnersByFeatureId?.[featureId] || ""),
-      baselineController: String(baselineController || ""),
-    };
-  });
-
-  expect(splitFeature).not.toBeNull();
-  expect(splitFeature.baselineOwner).not.toBe(splitFeature.baselineController);
-
-  const result = await page.evaluate(async ({ featureId, baselineOwner, baselineController }) => {
-    const { state } = await import("/js/core/state.js");
-    const {
-      resolveUnitCounterNationForPlacement,
-      startUnitCounterPlacement,
-    } = await import("/js/core/map_renderer.js");
-
-    state.sovereigntyByFeatureId = {
-      ...(state.sovereigntyByFeatureId || {}),
-      [featureId]: baselineOwner,
-    };
-    state.scenarioControllersByFeatureId = {
-      ...(state.scenarioControllersByFeatureId || {}),
-      [featureId]: baselineController,
-    };
-    state.activeSovereignCode = baselineOwner;
-    state.scenarioViewMode = "ownership";
-
-    const displayOwnership = resolveUnitCounterNationForPlacement(featureId, "", "display");
+    const { resolveUnitCounterNationForPlacement, startUnitCounterPlacement } = await import("/js/core/map_renderer.js");
+    const featureId = Object.keys(state.scenarioBaselineOwnersByFeatureId || {})[0] || "";
+    const owner = String(state.scenarioBaselineOwnersByFeatureId?.[featureId] || "");
+    state.sovereigntyByFeatureId = { ...(state.sovereigntyByFeatureId || {}), [featureId]: owner };
+    state.activeSovereignCode = owner;
+    const display = resolveUnitCounterNationForPlacement(featureId, "", "display");
     const explicitOwner = resolveUnitCounterNationForPlacement(featureId, "", "owner");
-    const explicitController = resolveUnitCounterNationForPlacement(featureId, "", "controller");
-    const activeFallback = resolveUnitCounterNationForPlacement("", "", "controller");
-    const manual = resolveUnitCounterNationForPlacement(featureId, baselineController, "manual");
-
-    startUnitCounterPlacement({
-      presetId: "inf",
-      nationSource: "display",
-      nationTag: "",
-    });
-    const displayEditor = {
-      nationSource: String(state.unitCounterEditor?.nationSource || ""),
-      nationTag: String(state.unitCounterEditor?.nationTag || ""),
-    };
-
-    state.scenarioViewMode = "frontline";
-    const displayFrontline = resolveUnitCounterNationForPlacement(featureId, "", "display");
-
-    startUnitCounterPlacement({
-      presetId: "inf",
-      nationSource: "controller",
-      nationTag: "",
-    });
-    const legacyEditor = {
-      nationSource: String(state.unitCounterEditor?.nationSource || ""),
-      nationTag: String(state.unitCounterEditor?.nationTag || ""),
-    };
-
+    const legacyController = resolveUnitCounterNationForPlacement(featureId, "", "controller");
+    startUnitCounterPlacement({ presetId: "inf", nationSource: "controller", nationTag: "" });
     return {
-      displayOwnership,
-      displayFrontline,
+      owner,
+      display,
       explicitOwner,
-      explicitController,
-      activeFallback,
-      manual,
-      displayEditor,
-      legacyEditor,
+      legacyController,
+      editor: {
+        nationSource: String(state.unitCounterEditor?.nationSource || ""),
+        nationTag: String(state.unitCounterEditor?.nationTag || ""),
+      },
     };
-  }, splitFeature);
+  });
 
-  expect(result.displayOwnership).toEqual({
-    tag: splitFeature.baselineOwner,
-    source: "display",
-  });
-  expect(result.displayFrontline).toEqual({
-    tag: splitFeature.baselineController,
-    source: "display",
-  });
-  expect(result.explicitOwner).toEqual({
-    tag: splitFeature.baselineOwner,
-    source: "owner",
-  });
-  expect(result.explicitController).toEqual({
-    tag: splitFeature.baselineController,
-    source: "controller",
-  });
-  expect(result.activeFallback).toEqual({
-    tag: splitFeature.baselineOwner,
-    source: "controller",
-  });
-  expect(result.manual).toEqual({
-    tag: splitFeature.baselineController,
-    source: "manual",
-  });
-  expect(result.displayEditor).toEqual({
-    nationSource: "display",
-    nationTag: "",
-  });
-  expect(result.legacyEditor).toEqual({
-    nationSource: "controller",
-    nationTag: "",
-  });
+  expect(result.display).toEqual({ tag: result.owner, source: "display" });
+  expect(result.explicitOwner).toEqual({ tag: result.owner, source: "owner" });
+  expect(result.legacyController).toEqual({ tag: result.owner, source: "owner" });
+  expect(result.editor.nationSource).toBe("controller");
+  expect(result.editor.nationTag).toBe(result.owner);
 });

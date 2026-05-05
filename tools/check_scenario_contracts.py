@@ -55,7 +55,6 @@ COMMON_REQUIRED_MANIFEST_FIELDS = (
     "baseline_hash",
     "countries_url",
     "owners_url",
-    "controllers_url",
     "cores_url",
     "audit_url",
     "summary",
@@ -282,7 +281,6 @@ def _collect_snapshot_inputs(
     paths = {
         "countries.json": scenario_dir / "countries.json",
         "owners.by_feature.json": scenario_dir / "owners.by_feature.json",
-        "controllers.by_feature.json": scenario_dir / "controllers.by_feature.json",
         "cores.by_feature.json": scenario_dir / "cores.by_feature.json",
         "water_regions.geojson": scenario_dir / "water_regions.geojson",
         "runtime_topology.topo.json": scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
@@ -291,6 +289,7 @@ def _collect_snapshot_inputs(
     manifest_input_fields = {
         "special_regions_url": "special_regions.geojson",
         "relief_overlays_url": "relief_overlays.geojson",
+        "bathymetry_topology_url": "bathymetry.topo.json",
         "city_overrides_url": "city_overrides.json",
     }
     for field_name, label in manifest_input_fields.items():
@@ -506,7 +505,6 @@ def _apply_safe_repairs(
             runtime_bootstrap_topology_path=scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME,
             countries_path=scenario_dir / "countries.json",
             owners_path=scenario_dir / "owners.by_feature.json",
-            controllers_path=scenario_dir / "controllers.by_feature.json",
             cores_path=scenario_dir / "cores.by_feature.json",
             geo_locale_patch_en_path=geo_patch_paths["en"],
             geo_locale_patch_zh_path=geo_patch_paths["zh"],
@@ -579,7 +577,7 @@ def _capture_safe_repair_hashes(scenario_dir: Path) -> dict[str, str]:
 
 def _classify_violation(message: str) -> str:
     risky_markers = (
-        "owners/controllers feature keysets",
+        "owners/cores feature keysets",
         "owners/cores feature keysets",
         "runtime_topology is missing feature ids",
         "missing owners.by_feature ownership",
@@ -1035,7 +1033,7 @@ def _resolve_scenario_url(target_dir: Path, url: object, errors: list[str], fiel
 
 def _required_profile_filenames(profile_id: str, manifest: dict[str, Any]) -> list[str]:
     profile = resolve_scenario_contract_profile(profile_id)
-    required = list(SCENARIO_STRICT_REQUIRED_FILENAMES)
+    required = [name for name in SCENARIO_STRICT_REQUIRED_FILENAMES if name != "controllers.by_feature.json"]
     if profile.expect_runtime_bootstrap or str(manifest.get("runtime_bootstrap_topology_url") or "").strip():
         required.append(SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME)
     if profile.expect_chunk_assets or str(manifest.get("detail_chunk_manifest_url") or "").strip():
@@ -1437,21 +1435,17 @@ def validate_strict_bundle_contract(
         for filename in required_filenames
         if filename.endswith(".json")
     }
-    if any(required_payloads.get(filename) is None for filename in SCENARIO_STRICT_REQUIRED_FILENAMES):
+    strict_required = [name for name in SCENARIO_STRICT_REQUIRED_FILENAMES if name != "controllers.by_feature.json"]
+    if any(required_payloads.get(filename) is None for filename in strict_required):
         return
     owners_payload = required_payloads["owners.by_feature.json"]
-    controllers_payload = required_payloads["controllers.by_feature.json"]
     cores_payload = required_payloads["cores.by_feature.json"]
     runtime_payload = required_payloads[SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME]
 
     owners = owners_payload.get("owners")
-    controllers = controllers_payload.get("controllers")
     cores = cores_payload.get("cores")
     if not isinstance(owners, dict):
         errors.append("owners.by_feature.json owners payload must be an object in strict mode.")
-        return
-    if not isinstance(controllers, dict):
-        errors.append("controllers.by_feature.json controllers payload must be an object in strict mode.")
         return
     if not isinstance(cores, dict):
         errors.append("cores.by_feature.json cores payload must be an object in strict mode.")
@@ -1465,32 +1459,12 @@ def validate_strict_bundle_contract(
         )
 
     owner_ids = {str(feature_id).strip() for feature_id in owners.keys() if str(feature_id).strip()}
-    controller_ids = {str(feature_id).strip() for feature_id in controllers.keys() if str(feature_id).strip()}
     core_ids = {str(feature_id).strip() for feature_id in cores.keys() if str(feature_id).strip()}
     if report is not None:
         report["artifact_counts"] = {
             "owner_features": len(owner_ids),
-            "controller_features": len(controller_ids),
             "core_features": len(core_ids),
         }
-    if owner_ids != controller_ids:
-        controller_only_ids = sorted(controller_ids - owner_ids)
-        owner_only_ids = sorted(owner_ids - controller_ids)
-        if repair_tracks is not None:
-            repair_tracks["owners_controllers_keyset"] = {
-                "owners_count": len(owner_ids),
-                "controllers_count": len(controller_ids),
-                "controller_only_count": len(controller_only_ids),
-                "controller_only_sample": controller_only_ids[:10],
-                "owner_only_count": len(owner_only_ids),
-                "owner_only_sample": owner_only_ids[:10],
-            }
-        errors.append(
-            "owners/controllers feature keysets must match in strict mode. "
-            f"owners={len(owner_ids)} controllers={len(controller_ids)} "
-            f"controller_only={controller_only_ids[:10]} "
-            f"owner_only={owner_only_ids[:10]}."
-        )
     if owner_ids != core_ids:
         core_only_ids = sorted(core_ids - owner_ids)
         owner_only_ids = sorted(owner_ids - core_ids)
@@ -1591,7 +1565,7 @@ def validate_strict_bundle_contract(
     missing_runtime_ids = sorted(owner_ids - runtime_feature_ids)
     if missing_runtime_ids:
         errors.append(
-            "runtime_topology is missing feature ids referenced by owners/controllers/cores in strict mode. "
+            "runtime_topology is missing feature ids referenced by owners/cores in strict mode. "
             f"Sample: {missing_runtime_ids[:10]}."
         )
     extra_runtime_ids = runtime_feature_ids - owner_ids

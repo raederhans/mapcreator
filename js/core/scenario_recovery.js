@@ -1,10 +1,7 @@
 import { normalizeMapSemanticMode, state as runtimeState } from "./state.js";
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
-import {
-  getScenarioEffectiveControllerCodeByFeatureId,
-  getScenarioEffectiveOwnerCodeByFeatureId,
-} from "./scenario_runtime_queries.js";
+import { getScenarioEffectiveOwnerCodeByFeatureId } from "./scenario_runtime_queries.js";
 const state = runtimeState;
 
 function getScenarioTestHooks() {
@@ -57,9 +54,7 @@ export function validateScenarioRuntimeConsistency({ expectedScenarioId = "", ph
   const mapSemanticMode = normalizeMapSemanticMode(runtimeState.mapSemanticMode);
   const requiredObjects = [
     ["sovereigntyByFeatureId", runtimeState.sovereigntyByFeatureId],
-    ["scenarioControllersByFeatureId", runtimeState.scenarioControllersByFeatureId],
     ["scenarioBaselineOwnersByFeatureId", runtimeState.scenarioBaselineOwnersByFeatureId],
-    ["scenarioBaselineControllersByFeatureId", runtimeState.scenarioBaselineControllersByFeatureId],
   ];
 
   if (normalizedExpectedScenarioId && activeScenarioId !== normalizedExpectedScenarioId) {
@@ -80,17 +75,12 @@ export function validateScenarioRuntimeConsistency({ expectedScenarioId = "", ph
   const sampleFeatureId =
     Object.keys(runtimeState.scenarioBaselineOwnersByFeatureId || {}).find(Boolean) ||
     Object.keys(runtimeState.sovereigntyByFeatureId || {}).find(Boolean) ||
-    Object.keys(runtimeState.scenarioBaselineControllersByFeatureId || {}).find(Boolean) ||
-    Object.keys(runtimeState.scenarioControllersByFeatureId || {}).find(Boolean) ||
     "";
   if (activeScenarioId && !sampleFeatureId && mapSemanticMode !== "blank") {
     problems.push("No feature assignments are available in the active scenario runtimeState.");
   } else if (sampleFeatureId) {
     if (!getScenarioEffectiveOwnerCodeByFeatureId(sampleFeatureId)) {
       problems.push(`Effective owner lookup failed for ${sampleFeatureId}.`);
-    }
-    if (!getScenarioEffectiveControllerCodeByFeatureId(sampleFeatureId)) {
-      problems.push(`Effective controller lookup failed for ${sampleFeatureId}.`);
     }
   }
 

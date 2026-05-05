@@ -295,30 +295,16 @@ async function waitForProjectImportCompletionFrom(page, importWaitState, { timeo
   );
 }
 
-async function getScenarioSplitFeature(page) {
+async function getScenarioOwnershipFeature(page) {
   return page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const splitEntry = Object.entries(state.scenarioBaselineControllersByFeatureId || {}).find(([featureId, controller]) => {
-      const owner = state.scenarioBaselineOwnersByFeatureId?.[featureId];
-      return owner && controller && owner !== controller;
-    });
-    if (!splitEntry) return null;
-    const [featureId, baselineController] = splitEntry;
-    const baselineOwner = String(state.scenarioBaselineOwnersByFeatureId?.[featureId] || "");
-    const alternateController = Object.keys(state.scenarioCountriesByTag || {}).find((tag) => (
-      tag
-      && tag !== baselineOwner
-      && tag !== baselineController
-    )) || "";
+    const featureId = Object.keys(state.scenarioBaselineOwnersByFeatureId || {})[0] || "";
     return {
       featureId,
-      baselineOwner,
-      baselineController: String(baselineController || ""),
-      alternateController,
+      baselineOwner: String(state.scenarioBaselineOwnersByFeatureId?.[featureId] || ""),
     };
   });
 }
-
 test("project save/load roundtrip preserves extended runtime state", async ({ page }) => {
   test.setTimeout(120000);
   const consoleErrors = [];
@@ -828,7 +814,7 @@ test("project import/export preserves legacy unit counter controller nation sour
   });
 });
 
-test("scenario project roundtrip preserves controller overrides", async ({ page }) => {
+test("scenario project roundtrip omits retired controller maps", async ({ page }) => {
   test.setTimeout(120000);
   const artifactDir = path.join(".runtime", "tests", "playwright", "project-save-load");
   fs.mkdirSync(artifactDir, { recursive: true });
@@ -837,46 +823,14 @@ test("scenario project roundtrip preserves controller overrides", async ({ page 
   await waitForProjectUiReady(page);
   await ensureScenarioActive(page, "tno_1962");
 
-  const splitFeature = await getScenarioSplitFeature(page);
-  expect(splitFeature).not.toBeNull();
-  expect(splitFeature.alternateController).not.toBe("");
+  const feature = await getScenarioOwnershipFeature(page);
+  expect(feature.featureId).not.toBe("");
 
-  await page.evaluate(async ({ featureId, baselineOwner, alternateController }) => {
-    const { state } = await import("/js/core/state.js");
-    state.sovereigntyByFeatureId = state.sovereigntyByFeatureId || {};
-    state.scenarioControllersByFeatureId = state.scenarioControllersByFeatureId || {};
-    state.sovereigntyByFeatureId[featureId] = baselineOwner;
-    state.scenarioControllersByFeatureId[featureId] = alternateController;
-    state.scenarioControllerRevision = (Number(state.scenarioControllerRevision) || 0) + 1;
-  }, splitFeature);
-
-  const importPath = path.join(artifactDir, "scenario-controller-roundtrip.json");
+  const importPath = path.join(artifactDir, "scenario-retired-controller-roundtrip.json");
   const exported = await exportProjectJson(page, importPath);
-  expect(exported.scenarioControllersByFeatureId?.[splitFeature.featureId]).toBe(splitFeature.alternateController);
-
-  const scenarioImportWait = await beginProjectImportWait(page, {
-    expectedFileName: path.basename(importPath),
-  });
-  await page.locator("#projectFileInput").setInputFiles(importPath);
-  await waitForProjectImportCompletionFrom(page, scenarioImportWait);
-
-  const runtimeState = await page.evaluate(async ({ featureId }) => {
-    const { state } = await import("/js/core/state.js");
-    return {
-      activeScenarioId: state.activeScenarioId || "",
-      owner: String(state.sovereigntyByFeatureId?.[featureId] || ""),
-      controller: String(state.scenarioControllersByFeatureId?.[featureId] || ""),
-      importAudit: state.scenarioImportAudit || null,
-      controllerCount: Object.keys(state.scenarioControllersByFeatureId || {}).length,
-    };
-  }, { featureId: splitFeature.featureId });
-
-  expect(runtimeState.activeScenarioId).toBe("tno_1962");
-  expect(runtimeState.owner).toBe(splitFeature.baselineOwner);
-  expect(runtimeState.controller).toBe(splitFeature.alternateController);
+  expect(exported.scenarioControllersByFeatureId).toBeUndefined();
 });
-
-test("legacy scenario project import keeps baseline controllers when controller map is absent", async ({ page }) => {
+test("legacy scenario project import ignores retired controller map", async ({ page }) => {
   test.setTimeout(120000);
   const artifactDir = path.join(".runtime", "tests", "playwright", "project-save-load");
   fs.mkdirSync(artifactDir, { recursive: true });
@@ -885,27 +839,14 @@ test("legacy scenario project import keeps baseline controllers when controller 
   await waitForProjectUiReady(page);
   await ensureScenarioActive(page, "tno_1962");
 
-  const splitFeature = await getScenarioSplitFeature(page);
-  expect(splitFeature).not.toBeNull();
-
+  const feature = await getScenarioOwnershipFeature(page);
   const baselineExportPath = path.join(artifactDir, "scenario-legacy-source.json");
   const exported = await exportProjectJson(page, baselineExportPath);
-  delete exported.scenarioControllersByFeatureId;
+  exported.scenarioControllersByFeatureId = { [feature.featureId]: "LEGACY" };
   const legacyImportPath = path.join(artifactDir, "scenario-legacy-import.json");
   fs.writeFileSync(legacyImportPath, JSON.stringify(exported, null, 2));
 
-  await page.evaluate(async ({ featureId, baselineOwner }) => {
-    const { state } = await import("/js/core/state.js");
-    state.sovereigntyByFeatureId = state.sovereigntyByFeatureId || {};
-    state.scenarioControllersByFeatureId = state.scenarioControllersByFeatureId || {};
-    state.sovereigntyByFeatureId[featureId] = baselineOwner;
-    state.scenarioControllersByFeatureId[featureId] = baselineOwner;
-    state.scenarioControllerRevision = (Number(state.scenarioControllerRevision) || 0) + 1;
-  }, splitFeature);
-
-  const legacyScenarioImportWait = await beginProjectImportWait(page, {
-    expectedFileName: path.basename(legacyImportPath),
-  });
+  const legacyScenarioImportWait = await beginProjectImportWait(page, { expectedFileName: path.basename(legacyImportPath) });
   await page.locator("#projectFileInput").setInputFiles(legacyImportPath);
   await waitForProjectImportCompletionFrom(page, legacyScenarioImportWait);
 
@@ -914,17 +855,14 @@ test("legacy scenario project import keeps baseline controllers when controller 
     return {
       activeScenarioId: state.activeScenarioId || "",
       owner: String(state.sovereigntyByFeatureId?.[featureId] || ""),
-      controller: String(state.scenarioControllersByFeatureId?.[featureId] || ""),
-      baselineController: String(state.scenarioBaselineControllersByFeatureId?.[featureId] || ""),
+      hasControllerMap: Object.prototype.hasOwnProperty.call(state, "scenarioControllersByFeatureId"),
     };
-  }, { featureId: splitFeature.featureId });
+  }, { featureId: feature.featureId });
 
   expect(runtimeState.activeScenarioId).toBe("tno_1962");
-  expect(runtimeState.owner).toBe(splitFeature.baselineOwner);
-  expect(runtimeState.baselineController).toBe(splitFeature.baselineController);
-  expect(runtimeState.controller).toBe(splitFeature.baselineController);
+  expect(runtimeState.owner).toBe(feature.baselineOwner);
+  expect(runtimeState.hasControllerMap).toBeFalsy();
 });
-
 test("baseline mismatch acceptance persists scenario import audit", async ({ page }) => {
   test.setTimeout(120000);
   const artifactDir = path.join(".runtime", "tests", "playwright", "project-save-load");

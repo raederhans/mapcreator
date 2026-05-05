@@ -45,7 +45,6 @@ def _build_minimal_manifest(
         "baseline_hash": "abc123",
         "countries_url": f"data/scenarios/{scenario_name}/countries.json",
         "owners_url": f"data/scenarios/{scenario_name}/owners.by_feature.json",
-        "controllers_url": f"data/scenarios/{scenario_name}/controllers.by_feature.json",
         "cores_url": f"data/scenarios/{scenario_name}/cores.by_feature.json",
         "audit_url": f"data/scenarios/{scenario_name}/audit.json",
         "summary": {"feature_count": 1},
@@ -608,7 +607,6 @@ class ScenarioContractTest(unittest.TestCase):
                 check_scenario_contracts.PROJECT_ROOT = previous_project_root
 
             self.assertEqual(warnings, [])
-            self.assertTrue(any("owners/controllers feature keysets must match" in error for error in errors))
             self.assertTrue(any("owners/cores feature keysets must match" in error for error in errors))
             self.assertTrue(any("must store arrays for every feature" in error for error in errors))
             self.assertTrue(any("feature_count must equal owners feature count" in error for error in errors))
@@ -759,10 +757,12 @@ class ScenarioContractTest(unittest.TestCase):
             scenario_dir = _create_scenario_dir(tmp_root, "snapshot_layers")
             _write_json(scenario_dir / "special_regions.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(scenario_dir / "relief_overlays.geojson", {"type": "FeatureCollection", "features": []})
+            _write_json(scenario_dir / "bathymetry.topo.json", {"type": "Topology", "objects": {}, "arcs": []})
             _write_json(scenario_dir / "city_overrides.json", {"type": "city_overrides", "featureCollection": {"features": []}})
             manifest = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
             manifest["special_regions_url"] = "data/scenarios/snapshot_layers/special_regions.geojson"
             manifest["relief_overlays_url"] = "data/scenarios/snapshot_layers/relief_overlays.geojson"
+            manifest["bathymetry_topology_url"] = "data/scenarios/snapshot_layers/bathymetry.topo.json"
             manifest["city_overrides_url"] = "data/scenarios/snapshot_layers/city_overrides.json"
 
             try:
@@ -772,6 +772,7 @@ class ScenarioContractTest(unittest.TestCase):
 
             self.assertIn("special_regions.geojson", input_sha)
             self.assertIn("relief_overlays.geojson", input_sha)
+            self.assertIn("bathymetry.topo.json", input_sha)
             self.assertIn("city_overrides.json", input_sha)
 
     def test_validate_startup_bundle_sources_rejects_missing_source_sha(self) -> None:
@@ -1085,7 +1086,7 @@ class ScenarioContractTest(unittest.TestCase):
 
             repair_tracks = report["repair_tracks"]
             self.assertEqual(report["status"], "failed")
-            self.assertEqual(repair_tracks["owners_controllers_keyset"]["controller_only_count"], 1)
+            self.assertIsNone(repair_tracks["owners_controllers_keyset"])
             self.assertEqual(repair_tracks["owners_cores_keyset"]["core_only_count"], 1)
             self.assertEqual(repair_tracks["runtime_topology_extra_ids"]["extra_runtime_id_count"], 2)
 

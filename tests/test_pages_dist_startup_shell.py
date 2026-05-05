@@ -325,6 +325,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         "scenario_id": "sample_scenario",
                         "audit_url": "data/scenarios/sample_scenario/audit.json",
                         "countries_url": "data/scenarios/sample_scenario/countries.json",
+                        "controllers_url": "data/scenarios/sample_scenario/controllers.by_feature.json",
                         "runtime_topology_url": "data/scenarios/sample_scenario/runtime_topology.topo.json",
                     }
                 ),
@@ -335,6 +336,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 "manifest_subset": {
                     "scenario_id": "sample_scenario",
                     "audit_url": "data/scenarios/sample_scenario/audit.json",
+                    "controllers_url": "data/scenarios/sample_scenario/controllers.by_feature.json",
                     "runtime_topology_url": "data/scenarios/sample_scenario/runtime_topology.topo.json",
                     "countries_url": "data/scenarios/sample_scenario/countries.json",
                 },
@@ -353,15 +355,62 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
             self.assertNotIn("audit_url", index_payload["scenarios"][0])
             self.assertNotIn("audit_url", manifest_payload)
+            self.assertNotIn("controllers_url", manifest_payload)
             self.assertNotIn("runtime_topology_url", manifest_payload)
             self.assertEqual(manifest_payload["countries_url"], "data/scenarios/sample_scenario/countries.json")
             self.assertNotIn("audit_url", bundle_payload["manifest_subset"])
+            self.assertNotIn("controllers_url", bundle_payload["manifest_subset"])
             self.assertNotIn("runtime_topology_url", bundle_payload["manifest_subset"])
             self.assertEqual(
                 bundle_payload["manifest_subset"]["countries_url"],
                 "data/scenarios/sample_scenario/countries.json",
             )
             self.assertEqual(gzip_bundle_payload, bundle_payload)
+
+    def test_pages_scenario_metadata_preserves_published_controllers_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            previous_app_dist_root = build_pages_dist.APP_DIST_ROOT
+            app_dist_root = Path(tmp_dir)
+            scenarios_dir = app_dist_root / "data" / "scenarios"
+            scenario_dir = scenarios_dir / "sample_scenario"
+            scenario_dir.mkdir(parents=True)
+            build_pages_dist.APP_DIST_ROOT = app_dist_root
+            try:
+                controllers_url = "data/scenarios/sample_scenario/controllers.by_feature.json"
+                (scenario_dir / "controllers.by_feature.json").write_text("{}", encoding="utf-8")
+                (scenario_dir / "manifest.json").write_text(
+                    json.dumps(
+                        {
+                            "scenario_id": "sample_scenario",
+                            "controllers_url": controllers_url,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                bundle_payload = {
+                    "scenario_id": "sample_scenario",
+                    "manifest_subset": {
+                        "scenario_id": "sample_scenario",
+                        "controllers_url": controllers_url,
+                    },
+                }
+                bundle_path = scenario_dir / "startup.bundle.en.json"
+                bundle_bytes = json.dumps(bundle_payload, separators=(",", ":")).encode("utf-8")
+                bundle_path.write_bytes(bundle_bytes)
+                (scenario_dir / "startup.bundle.en.json.gz").write_bytes(gzip.compress(bundle_bytes, mtime=0))
+
+                build_pages_dist.strip_scenario_publish_audit_urls(scenarios_dir)
+
+                manifest_payload = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+                bundle_payload = json.loads(bundle_path.read_text(encoding="utf-8"))
+                gzip_bundle_payload = json.loads(
+                    gzip.decompress((scenario_dir / "startup.bundle.en.json.gz").read_bytes())
+                )
+                self.assertEqual(manifest_payload["controllers_url"], controllers_url)
+                self.assertEqual(bundle_payload["manifest_subset"]["controllers_url"], controllers_url)
+                self.assertEqual(gzip_bundle_payload, bundle_payload)
+            finally:
+                build_pages_dist.APP_DIST_ROOT = previous_app_dist_root
 
     def test_pages_scenario_url_probe_rejects_empty_manifest_url(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

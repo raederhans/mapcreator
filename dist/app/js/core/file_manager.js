@@ -405,7 +405,7 @@ class FileManager {
     // export 的职责是把当前 runtimeState 收敛成稳定 schema。
     // 这里宁可集中做一次 normalize，也不要让读取方承担多套历史字段和 UI 派生状态。
     const payload = {
-      schemaVersion: 20,
+      schemaVersion: 21,
       countryBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       featureOverrides: appState.visualOverrides || appState.featureOverrides || {},
       sovereignBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
@@ -413,7 +413,6 @@ class FileManager {
       waterRegionOverrides: appState.waterRegionOverrides || {},
       specialRegionOverrides: appState.specialRegionOverrides || {},
       sovereigntyByFeatureId: appState.sovereigntyByFeatureId || {},
-      scenarioControllersByFeatureId: appState.scenarioControllersByFeatureId || {},
       mapSemanticMode: normalizeMapSemanticMode(appState.mapSemanticMode),
       paintMode: appState.paintMode || "visual",
       interactionGranularity: normalizeInteractionGranularity(appState.interactionGranularity),
@@ -481,7 +480,6 @@ class FileManager {
           id: appState.activeScenarioId,
           version: appState.activeScenarioManifest?.version || 1,
           baselineHash: appState.scenarioBaselineHash || "",
-          viewMode: String(appState.scenarioViewMode || "ownership"),
           importAudit: normalizeScenarioImportAudit(appState.scenarioImportAudit, {
             scenarioId: appState.activeScenarioId,
             savedVersion: appState.activeScenarioManifest?.version || 1,
@@ -554,11 +552,7 @@ class FileManager {
         if (!data.sovereigntyByFeatureId || typeof data.sovereigntyByFeatureId !== "object") {
           data.sovereigntyByFeatureId = {};
         }
-        if (!data.scenarioControllersByFeatureId || typeof data.scenarioControllersByFeatureId !== "object") {
-          data.scenarioControllersByFeatureId = null;
-        } else {
-          data.scenarioControllersByFeatureId = { ...data.scenarioControllersByFeatureId };
-        }
+        delete data.scenarioControllersByFeatureId;
         data.mapSemanticMode = normalizeMapSemanticMode(data.mapSemanticMode);
         data.interactionGranularity = normalizeInteractionGranularity(data.interactionGranularity);
         data.batchFillScope = normalizeBatchFillScope(data.batchFillScope);

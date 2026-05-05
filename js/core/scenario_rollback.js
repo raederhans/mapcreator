@@ -47,16 +47,10 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "scenarioImportAudit",
   "scenarioBaselineHash",
   "scenarioBaselineOwnersByFeatureId",
-  "scenarioControllersByFeatureId",
   "scenarioAutoShellOwnerByFeatureId",
-  "scenarioAutoShellControllerByFeatureId",
-  "scenarioBaselineControllersByFeatureId",
   "scenarioBaselineCoresByFeatureId",
   "scenarioShellOverlayRevision",
-  "scenarioControllerRevision",
-  "scenarioOwnerControllerDiffCount",
   "scenarioDataHealth",
-  "scenarioViewMode",
   "countryNames",
   "sovereigntyByFeatureId",
   "sovereigntyInitialized",
@@ -159,16 +153,10 @@ function captureScenarioRuntimeSnapshot() {
     scenarioImportAudit: cloneScenarioStateValue(runtimeState.scenarioImportAudit),
     scenarioBaselineHash: String(runtimeState.scenarioBaselineHash || ""),
     scenarioBaselineOwnersByFeatureId: cloneScenarioStateValue(runtimeState.scenarioBaselineOwnersByFeatureId),
-    scenarioControllersByFeatureId: cloneScenarioStateValue(runtimeState.scenarioControllersByFeatureId),
     scenarioAutoShellOwnerByFeatureId: cloneScenarioStateValue(runtimeState.scenarioAutoShellOwnerByFeatureId),
-    scenarioAutoShellControllerByFeatureId: cloneScenarioStateValue(runtimeState.scenarioAutoShellControllerByFeatureId),
-    scenarioBaselineControllersByFeatureId: cloneScenarioStateValue(runtimeState.scenarioBaselineControllersByFeatureId),
     scenarioBaselineCoresByFeatureId: cloneScenarioStateValue(runtimeState.scenarioBaselineCoresByFeatureId),
     scenarioShellOverlayRevision: Number(runtimeState.scenarioShellOverlayRevision) || 0,
-    scenarioControllerRevision: Number(runtimeState.scenarioControllerRevision) || 0,
-    scenarioOwnerControllerDiffCount: Number(runtimeState.scenarioOwnerControllerDiffCount) || 0,
     scenarioDataHealth: cloneScenarioStateValue(runtimeState.scenarioDataHealth),
-    scenarioViewMode: String(runtimeState.scenarioViewMode || "ownership"),
     mapSemanticMode: normalizeMapSemanticMode(runtimeState.mapSemanticMode),
     countryNames: cloneScenarioStateValue(runtimeState.countryNames),
     sovereigntyByFeatureId: cloneScenarioStateValue(runtimeState.sovereigntyByFeatureId),
@@ -291,16 +279,10 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   runtimeState.scenarioImportAudit = cloneScenarioStateValue(snapshot.scenarioImportAudit);
   runtimeState.scenarioBaselineHash = String(snapshot.scenarioBaselineHash || "");
   runtimeState.scenarioBaselineOwnersByFeatureId = cloneScenarioStateValue(snapshot.scenarioBaselineOwnersByFeatureId);
-  runtimeState.scenarioControllersByFeatureId = cloneScenarioStateValue(snapshot.scenarioControllersByFeatureId);
   runtimeState.scenarioAutoShellOwnerByFeatureId = cloneScenarioStateValue(snapshot.scenarioAutoShellOwnerByFeatureId);
-  runtimeState.scenarioAutoShellControllerByFeatureId = cloneScenarioStateValue(snapshot.scenarioAutoShellControllerByFeatureId);
-  runtimeState.scenarioBaselineControllersByFeatureId = cloneScenarioStateValue(snapshot.scenarioBaselineControllersByFeatureId);
   runtimeState.scenarioBaselineCoresByFeatureId = cloneScenarioStateValue(snapshot.scenarioBaselineCoresByFeatureId);
   runtimeState.scenarioShellOverlayRevision = Number(snapshot.scenarioShellOverlayRevision) || 0;
-  runtimeState.scenarioControllerRevision = Number(snapshot.scenarioControllerRevision) || 0;
-  runtimeState.scenarioOwnerControllerDiffCount = Number(snapshot.scenarioOwnerControllerDiffCount) || 0;
   runtimeState.scenarioDataHealth = cloneScenarioStateValue(snapshot.scenarioDataHealth);
-  runtimeState.scenarioViewMode = String(snapshot.scenarioViewMode || "ownership");
   runtimeState.mapSemanticMode = normalizeMapSemanticMode(snapshot.mapSemanticMode);
   runtimeState.countryNames = cloneScenarioStateValue(snapshot.countryNames) || { ...countryNames };
   runtimeState.sovereigntyByFeatureId = cloneScenarioStateValue(snapshot.sovereigntyByFeatureId);
@@ -398,4 +380,3 @@ export function restoreScenarioApplyRollbackSnapshot(
   syncResolvedDefaultCountryPalette({ overwriteCountryPalette: false });
   return true;
 }
-

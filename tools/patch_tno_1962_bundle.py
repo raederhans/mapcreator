@@ -11090,6 +11090,10 @@ def build_runtime_topology_state(
     manifest_payload["water_regions_url"] = "data/scenarios/tno_1962/water_regions.geojson"
     manifest_payload["relief_overlays_url"] = "data/scenarios/tno_1962/relief_overlays.geojson"
     manifest_payload["bathymetry_topology_url"] = "data/scenarios/tno_1962/bathymetry.topo.json"
+    manifest_payload["presentation_features"] = {
+        "atlantropa_relief": True,
+        "coastal_accent": True,
+    }
     manifest_payload["runtime_topology_url"] = "data/scenarios/tno_1962/runtime_topology.topo.json"
     manifest_payload["runtime_bootstrap_topology_url"] = (
         f"data/scenarios/{SCENARIO_ID}/{CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME}"

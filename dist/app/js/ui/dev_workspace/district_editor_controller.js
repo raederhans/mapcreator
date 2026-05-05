@@ -8,6 +8,7 @@ import {
 } from "../../core/scenario_districts.js";
 import { t } from "../i18n.js";
 import { showToast } from "../toast.js";
+import { postDevScenarioMutation } from "./dev_mutation_service.js";
 const state = runtimeState;
 
 function ui(key) {
@@ -848,17 +849,10 @@ export function createDistrictEditorController({
       });
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/districts/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(buildDistrictSavePayload({
-            ...model,
-            draftTag,
-          })),
-        });
-        const result = await response.json().catch(() => ({}));
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/districts/save", buildDistrictSavePayload({
+          ...model,
+          draftTag,
+        }));
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }
@@ -929,14 +923,10 @@ export function createDistrictEditorController({
       });
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/district-templates/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(buildDistrictTemplatePayload(model, templateTag)),
-        });
-        const result = await response.json().catch(() => ({}));
+        const { response, result } = await postDevScenarioMutation(
+          "/__dev/scenario/district-templates/save",
+          buildDistrictTemplatePayload(model, templateTag)
+        );
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }
@@ -993,18 +983,11 @@ export function createDistrictEditorController({
       });
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/district-templates/apply", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            scenarioId: String(runtimeState.activeScenarioId || "").trim(),
-            tag: model.tag,
-            templateTag,
-          }),
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/district-templates/apply", {
+          scenarioId: String(runtimeState.activeScenarioId || "").trim(),
+          tag: model.tag,
+          templateTag,
         });
-        const result = await response.json().catch(() => ({}));
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }

@@ -171,6 +171,17 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("toggleScenarioGuidePopover(trigger);", content)
         self.assertIn('closeScenarioGuidePopover({ restoreFocus: true });', content)
 
+    def test_scenario_context_bar_supplies_guide_status_labels(self):
+        content = TOOLBAR_JS.read_text(encoding="utf-8")
+        refresh_start = content.index("const refreshScenarioContextBar = () => {")
+        render_status = content.index("renderScenarioGuideStatus({", refresh_start)
+        refresh_prefix = content[refresh_start:render_status]
+
+        self.assertIn("const splitCount = Number(runtimeState.scenarioOwnerControllerDiffCount || 0);", refresh_prefix)
+        self.assertIn('const scenarioViewLabel = String(runtimeState.scenarioViewMode || "ownership") === "frontline"', refresh_prefix)
+        self.assertIn("scenarioViewLabel,", content[render_status:content.index("refreshWorkspaceStatus();", render_status)])
+        self.assertIn("splitCount,", content[render_status:content.index("refreshWorkspaceStatus();", render_status)])
+
     def test_special_zone_editor_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = SPECIAL_ZONE_EDITOR_JS.read_text(encoding="utf-8")

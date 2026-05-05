@@ -38,33 +38,13 @@ export function createColorResolutionStrategyOwner({
     ).trim().toUpperCase();
     const directOwnerCode = canonicalCountryCode(state.sovereigntyByFeatureId?.[resolvedId] || "");
     if (mapSemanticMode === "blank") {
-      if (!state.activeScenarioId || String(state.scenarioViewMode || "ownership") !== "frontline") {
-        return isScenarioShell ? (directOwnerCode || shellOwnerCode || "") : directOwnerCode;
-      }
-      const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
-      const shellControllerCode = String(
-        state.scenarioAutoShellControllerByFeatureId?.[resolvedId] || shellControllerHintCode || ""
-      ).trim().toUpperCase();
-      const directControllerCode = canonicalCountryCode(state.scenarioControllersByFeatureId?.[resolvedId] || "");
-      return isScenarioShell
-        ? (directControllerCode || shellControllerCode || directOwnerCode || shellOwnerCode || "")
-        : (directControllerCode || directOwnerCode || "");
+      return isScenarioShell ? (directOwnerCode || shellOwnerCode || "") : directOwnerCode;
     }
     const fallbackOwnerCode = getFeatureCountryCodeNormalized(feature);
     const ownershipOwnerCode = isScenarioShell
       ? (directOwnerCode || shellOwnerCode || "")
       : (directOwnerCode || fallbackOwnerCode || "");
-    if (!state.activeScenarioId || String(state.scenarioViewMode || "ownership") !== "frontline") {
-      return ownershipOwnerCode;
-    }
-    const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
-    const shellControllerCode = String(
-      state.scenarioAutoShellControllerByFeatureId?.[resolvedId] || shellControllerHintCode || ""
-    ).trim().toUpperCase();
-    const directControllerCode = canonicalCountryCode(state.scenarioControllersByFeatureId?.[resolvedId] || "");
-    return isScenarioShell
-      ? (directControllerCode || shellControllerCode || ownershipOwnerCode || "")
-      : (directControllerCode || ownershipOwnerCode || "");
+    return ownershipOwnerCode;
   }
 
   // 颜色优先级继续由 color_resolver.js 统一裁决；这里仅注入 renderer runtime 上下文。

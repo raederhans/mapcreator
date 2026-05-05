@@ -1,10 +1,9 @@
 {
   "scenario_id": "tno_1962",
-  "require_controllers": true,
+  "require_controllers": false,
   "manifest_required_fields": [
     "countries_url",
     "owners_url",
-    "controllers_url",
     "cores_url",
     "audit_url",
     "releasable_catalog_url"

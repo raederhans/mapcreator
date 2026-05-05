@@ -1,5 +1,9 @@
 import { normalizeLakeStyleConfig } from "../../core/state.js";
 import { captureHistoryState, pushHistoryEntry } from "../../core/history_manager.js";
+import {
+  SCENARIO_PRESENTATION_FEATURES,
+  scenarioHasPresentationFeature,
+} from "../../core/scenario/presentation_hint_helpers.js";
 
 /**
  * Owns ocean / lake appearance controls.
@@ -201,7 +205,10 @@ export function createOceanLakeControlsController({
   };
 
   const oceanAdvancedStylesEnabled = () => state.styleConfig.ocean.experimentalAdvancedStyles === true;
-  const isTno1962Scenario = () => String(state.activeScenarioId || "").trim().toLowerCase() === "tno_1962";
+  const hasCoastalAccentFeature = () => scenarioHasPresentationFeature(
+    state.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.COASTAL_ACCENT
+  );
 
   const renderOceanAdvancedStylesUi = () => {
     const enabled = oceanAdvancedStylesEnabled();
@@ -242,14 +249,14 @@ export function createOceanLakeControlsController({
   };
 
   const renderOceanCoastalAccentUi = () => {
-    const visible = isTno1962Scenario();
+    const visible = hasCoastalAccentFeature();
     if (oceanCoastalAccentRow) {
       oceanCoastalAccentRow.classList.toggle("hidden", !visible);
     }
     if (oceanCoastalAccentToggle) {
       oceanCoastalAccentToggle.checked = state.styleConfig.ocean.coastalAccentEnabled !== false;
       oceanCoastalAccentToggle.disabled = !visible;
-      oceanCoastalAccentToggle.title = visible ? "" : t("Available only in the TNO 1962 scenario.", "ui");
+      oceanCoastalAccentToggle.title = visible ? "" : t("Available when the active scenario enables coastal accent.", "ui");
     }
   };
 

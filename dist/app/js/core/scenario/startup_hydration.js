@@ -370,7 +370,6 @@ function createScenarioStartupHydrationController({
     if (
       state.activeScenarioMeshPack?.meshes?.opening_owner_borders
       && state.scenarioBorderMode === "scenario_owner_only"
-      && String(state.scenarioViewMode || "ownership") === "ownership"
     ) {
       refreshScenarioOpeningOwnerBorders({
         renderNow: false,

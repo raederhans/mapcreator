@@ -778,6 +778,69 @@ def _candidate_topology_path(path: Path) -> Path:
 def _previous_topology_path(path: Path) -> Path:
     return path.with_name(f"{path.stem}.previous{path.suffix}")
 
+def _candidate_topology_audit_path(path: Path) -> Path:
+    return path.with_suffix(path.suffix + ".candidate_audit.json")
+
+
+def _sha256_file_or_empty(path: Path | None) -> str:
+    if path is None or not path.exists() or not path.is_file():
+        return ""
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _safe_topology_summary(path: Path | None) -> dict[str, object]:
+    if path is None or not path.exists():
+        return {"exists": False}
+    try:
+        summary = dict(_topology_summary(path))
+    except Exception as exc:  # keep audit writing best-effort and non-promoting
+        return {"exists": True, "summary_error": str(exc)}
+    summary["exists"] = True
+    summary["bytes"] = path.stat().st_size
+    summary["sha256"] = _sha256_file_or_empty(path)
+    return summary
+
+
+def _write_candidate_topology_audit(
+    *,
+    stage_label: str,
+    candidate_path: Path,
+    output_path: Path,
+    result: str,
+    contract_problems: list[str] | None = None,
+    gate_problems: list[str] | None = None,
+    candidate_metrics: dict[str, dict[str, float | int]] | None = None,
+    baseline_metrics: dict[str, dict[str, float | int]] | None = None,
+) -> None:
+    payload = {
+        "version": 1,
+        "stage_label": stage_label,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "result": result,
+        "candidate_path": str(candidate_path),
+        "output_path": str(output_path),
+        "previous_path": str(_previous_topology_path(output_path)),
+        "candidate_summary": _safe_topology_summary(candidate_path),
+        "baseline_summary": _safe_topology_summary(output_path),
+        "contract_problems": list(contract_problems or []),
+        "gate_problems": list(gate_problems or []),
+        "country_gate": {
+            "target_country_codes": list(LOCAL_CANONICAL_COUNTRY_CODES),
+            "candidate_metrics": candidate_metrics or {},
+            "baseline_metrics": baseline_metrics or {},
+        },
+    }
+    write_json_atomic(
+        _candidate_topology_audit_path(output_path),
+        payload,
+        ensure_ascii=False,
+        indent=2,
+    )
+
 
 def _summarize_country_gate_metrics(
     stage_label: str,
@@ -849,11 +912,24 @@ def _promote_candidate_topology_if_safe(
     override_path: Path | None = None,
 ) -> None:
     if collect_topology_country_metrics is None:
+        _write_candidate_topology_audit(
+            stage_label=stage_label,
+            candidate_path=candidate_path,
+            output_path=output_path,
+            result="promoted_without_country_gate",
+        )
         shutil.copy2(candidate_path, output_path)
         return
 
     contract_problems = _validate_candidate_topology_contract(candidate_path, label=stage_label)
     if contract_problems:
+        _write_candidate_topology_audit(
+            stage_label=stage_label,
+            candidate_path=candidate_path,
+            output_path=output_path,
+            result="failed_contract",
+            contract_problems=contract_problems,
+        )
         raise SystemExit(f"{stage_label}: candidate contract failed: {'; '.join(contract_problems)}")
 
     if detail_topology_path is not None:
@@ -913,8 +989,28 @@ def _promote_candidate_topology_if_safe(
             target_country_codes=LOCAL_CANONICAL_COUNTRY_CODES,
         )
     if gate_problems:
+        _write_candidate_topology_audit(
+            stage_label=stage_label,
+            candidate_path=candidate_path,
+            output_path=output_path,
+            result="failed_country_gate",
+            contract_problems=contract_problems,
+            gate_problems=gate_problems,
+            candidate_metrics=candidate_metrics,
+            baseline_metrics=baseline_metrics,
+        )
         raise SystemExit(f"{stage_label}: candidate gate failed: {'; '.join(gate_problems)}")
 
+    _write_candidate_topology_audit(
+        stage_label=stage_label,
+        candidate_path=candidate_path,
+        output_path=output_path,
+        result="promoted",
+        contract_problems=contract_problems,
+        gate_problems=gate_problems,
+        candidate_metrics=candidate_metrics,
+        baseline_metrics=baseline_metrics,
+    )
     if output_path.exists():
         shutil.copy2(output_path, _previous_topology_path(output_path))
     shutil.copy2(candidate_path, output_path)

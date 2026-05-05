@@ -4,7 +4,6 @@ import {
   refreshResolvedColorsForFeatures,
   scheduleDynamicBorderRecompute,
 } from "../../core/map_renderer/public.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "../../core/scenario_owner_metrics.js";
 import { getFeatureOwnerCode } from "../../core/sovereignty_manager.js";
 import { applyOwnerControllerAssignmentsToFeatureIds } from "../../core/scenario_ownership_editor.js";
 import { buildScenarioReleasableIndex, rebuildPresetState } from "../../core/releasable_manager.js";
@@ -613,15 +612,12 @@ export function createScenarioTagCreatorController({
       }
     );
     const nextBaselineOwners = { ...(runtimeState.scenarioBaselineOwnersByFeatureId || {}) };
-    const nextBaselineControllers = { ...(runtimeState.scenarioBaselineControllersByFeatureId || {}) };
     targetIds.forEach((featureId) => {
       const id = String(featureId || "").trim();
       if (!id) return;
       nextBaselineOwners[id] = normalizedTag;
-      nextBaselineControllers[id] = normalizedTag;
     });
     runtimeState.scenarioBaselineOwnersByFeatureId = nextBaselineOwners;
-    runtimeState.scenarioBaselineControllersByFeatureId = nextBaselineControllers;
     syncActiveScenarioBundleAssignments(targetIds, normalizedTag);
     if (response?.catalogPath) {
       syncActiveScenarioManifestUrl("releasable_catalog_url", response.catalogPath);
@@ -636,7 +632,6 @@ export function createScenarioTagCreatorController({
     };
     runtimeState.selectedInspectorCountryCode = normalizedTag;
     runtimeState.inspectorHighlightCountryCode = normalizedTag;
-    recalculateScenarioOwnerControllerDiffCount();
     refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
     scheduleDynamicBorderRecompute("dev-workspace-tag-create", 90);
     flushDevWorkspaceRender("dev-workspace-tag-create");

@@ -129,8 +129,7 @@ export function createUrbanCityPolicyOwner({
     const hostFeatureId = String(props.__city_host_feature_id || props.host_feature_id || "").trim();
     if (!hostFeatureId) return "";
     return String(
-      state?.scenarioControllersByFeatureId?.[hostFeatureId]
-      || state?.sovereigntyByFeatureId?.[hostFeatureId]
+      state?.sovereigntyByFeatureId?.[hostFeatureId]
       || ""
     ).trim().toUpperCase();
   }
@@ -367,7 +366,6 @@ export function createUrbanCityPolicyOwner({
     const scenarioCountriesRef = state?.scenarioCountriesByTag || null;
     const scenarioId = String(state?.activeScenarioId || "");
     const cityLayerRevision = Number(state?.cityLayerRevision || 0);
-    const scenarioControllerRevision = Number(state?.scenarioControllerRevision || 0);
     const sovereigntyRevision = Number(state?.sovereigntyRevision || 0);
     if (
       cityLayerCache?.baseRef === baseRef
@@ -375,7 +373,6 @@ export function createUrbanCityPolicyOwner({
       && cityLayerCache?.scenarioCountriesRef === scenarioCountriesRef
       && cityLayerCache?.scenarioId === scenarioId
       && cityLayerCache?.cityLayerRevision === cityLayerRevision
-      && cityLayerCache?.scenarioControllerRevision === scenarioControllerRevision
       && cityLayerCache?.sovereigntyRevision === sovereigntyRevision
     ) {
       return cityLayerCache.merged;
@@ -496,7 +493,6 @@ export function createUrbanCityPolicyOwner({
       cityLayerCache.scenarioCountriesRef = scenarioCountriesRef;
       cityLayerCache.scenarioId = scenarioId;
       cityLayerCache.cityLayerRevision = cityLayerRevision;
-      cityLayerCache.scenarioControllerRevision = scenarioControllerRevision;
       cityLayerCache.sovereigntyRevision = sovereigntyRevision;
       cityLayerCache.merged = merged;
     }

@@ -112,8 +112,6 @@ class DevServerTest(unittest.TestCase):
             "owners_url": f"data/scenarios/{scenario_id}/owners.by_feature.json",
             "geo_locale_patch_url": f"data/scenarios/{scenario_id}/geo_locale_patch.json",
         }
-        if include_controllers:
-            manifest_payload["controllers_url"] = f"data/scenarios/{scenario_id}/controllers.by_feature.json"
         if include_cores:
             manifest_payload["cores_url"] = f"data/scenarios/{scenario_id}/cores.by_feature.json"
         if geo_locale_builder_url:
@@ -1575,21 +1573,23 @@ class DevServerTest(unittest.TestCase):
             self.assertNotIn("controller", manual_payload["assignments"]["DE-1"])
             self.assertNotIn("cores", manual_payload["assignments"]["DE-1"])
 
-    def test_save_scenario_ownership_payload_rejects_controller_assignment_when_controllers_file_missing(self) -> None:
+    def test_save_scenario_ownership_payload_ignores_legacy_controller_assignment(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
-            self._create_scenario_fixture(root, include_controllers=False)
+            scenario_dir = self._create_scenario_fixture(root, include_controllers=False)
 
-            with self.assertRaises(dev_server.DevServerError) as exc_info:
-                dev_server.save_scenario_ownership_payload(
-                    "test_scenario",
-                    None,
-                    assignments_by_feature_id={"DE-1": {"controller": "BBB"}},
-                    baseline_hash="baseline-123",
-                    root=root,
-                )
+            result = dev_server.save_scenario_ownership_payload(
+                "test_scenario",
+                None,
+                assignments_by_feature_id={"DE-1": {"controller": "BBB", "owner": "AAA"}},
+                baseline_hash="baseline-123",
+                root=root,
+            )
 
-            self.assertEqual(exc_info.exception.code, "missing_controllers_file")
+            manual_payload = json.loads((scenario_dir / "scenario_manual_overrides.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["ok"])
+            self.assertEqual(manual_payload["assignments"]["DE-1"]["owner"], "AAA")
+            self.assertNotIn("controller", manual_payload["assignments"]["DE-1"])
 
     def test_save_scenario_ownership_payload_rejects_core_assignment_when_cores_file_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

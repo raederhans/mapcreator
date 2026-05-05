@@ -2,7 +2,6 @@ import { state as runtimeState } from "./state.js";
 import { markDirty } from "./dirty_state.js";
 import { markLegacyColorStateDirty, rebuildOwnerIndex } from "./sovereignty_manager.js";
 import { flushRenderBoundary } from "./render_boundary.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "./scenario_owner_metrics.js";
 import { callRuntimeHook, callRuntimeHooks } from "./state/index.js";
 const state = runtimeState;
 
@@ -53,7 +52,6 @@ function captureHistoryState({
   specialRegionIds = [],
   ownerCodes = [],
   sovereigntyFeatureIds = [],
-  scenarioControllerFeatureIds = [],
   stylePaths = [],
   strategicOverlay = false,
 } = {}) {
@@ -63,7 +61,6 @@ function captureHistoryState({
   const specialIds = uniqueKeys(specialRegionIds);
   const ownerKeys = uniqueKeys(ownerCodes);
   const sovereigntyIds = uniqueKeys(sovereigntyFeatureIds);
-  const scenarioControllerIds = uniqueKeys(scenarioControllerFeatureIds);
   const styleKeys = uniqueKeys(stylePaths);
 
   if (ids.length) {
@@ -87,13 +84,6 @@ function captureHistoryState({
 
   if (sovereigntyIds.length) {
     snapshot.sovereigntyByFeatureId = captureEntries(runtimeState.sovereigntyByFeatureId || {}, sovereigntyIds);
-  }
-
-  if (scenarioControllerIds.length) {
-    snapshot.scenarioControllersByFeatureId = captureEntries(
-      runtimeState.scenarioControllersByFeatureId || {},
-      scenarioControllerIds
-    );
   }
 
   if (styleKeys.length) {
@@ -177,20 +167,12 @@ function pushHistoryEntry(entry) {
 }
 
 function refreshUiAfterHistory(direction, entry) {
-  const affectsScenarioControllers = !!(
-    entry?.before?.scenarioControllersByFeatureId
-    || entry?.after?.scenarioControllersByFeatureId
-  );
   if (entry?.before?.sovereigntyByFeatureId || entry?.after?.sovereigntyByFeatureId) {
     runtimeState.sovereigntyInitialized = true;
     rebuildOwnerIndex();
   }
-  if (affectsScenarioControllers) {
-    runtimeState.scenarioControllerRevision = (Number(runtimeState.scenarioControllerRevision) || 0) + 1;
-    recalculateScenarioOwnerControllerDiffCount();
-  }
   callRuntimeHook(state, "refreshColorStateFn", { renderNow: false });
-  if (entry?.meta?.affectsSovereignty || affectsScenarioControllers) {
+  if (entry?.meta?.affectsSovereignty) {
     callRuntimeHook(state, "recomputeDynamicBordersNowFn", { renderNow: false, reason: `history-${direction}` });
   }
   callRuntimeHooks(state, [
@@ -227,7 +209,6 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   runtimeState.countryBaseColors = runtimeState.countryBaseColors || {};
   runtimeState.countryPalette = runtimeState.countryPalette || {};
   runtimeState.sovereigntyByFeatureId = runtimeState.sovereigntyByFeatureId || {};
-  runtimeState.scenarioControllersByFeatureId = runtimeState.scenarioControllersByFeatureId || {};
 
   applyEntries(runtimeState.visualOverrides, snapshot.visualOverrides);
   applyEntries(runtimeState.featureOverrides, snapshot.featureOverrides);
@@ -237,7 +218,6 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   applyEntries(runtimeState.countryBaseColors, snapshot.countryBaseColors);
   applyEntries(runtimeState.countryPalette, snapshot.countryPalette);
   applyEntries(runtimeState.sovereigntyByFeatureId, snapshot.sovereigntyByFeatureId);
-  applyEntries(runtimeState.scenarioControllersByFeatureId, snapshot.scenarioControllersByFeatureId);
   if (
     snapshot.visualOverrides
     || snapshot.featureOverrides

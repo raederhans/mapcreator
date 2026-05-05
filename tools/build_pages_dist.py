@@ -230,6 +230,17 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
         if isinstance(runtime_topology_url, str) and not (APP_DIST_ROOT / runtime_topology_url).is_file():
             payload.pop("runtime_topology_url", None)
             changed = True
+        for field_name, value in list(payload.items()):
+            if (
+                field_name in {"controllers_url"}
+                and isinstance(value, str)
+                and value.startswith("data/scenarios/")
+                and not (APP_DIST_ROOT / value).is_file()
+            ):
+                # Pages publishes a reduced scenario payload. Keep manifest URLs aligned
+                # with the files that are actually shipped so manifest walks stay strict.
+                payload.pop(field_name, None)
+                changed = True
         return changed
 
     index_path = scenarios_dir / "index.json"

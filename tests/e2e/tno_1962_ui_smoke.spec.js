@@ -27,7 +27,6 @@ async function readScenarioShellRuntime(page) {
     return {
       activeScenarioId: String(state.activeScenarioId || ''),
       shellOwnerFeatureCount: Object.keys(state.scenarioAutoShellOwnerByFeatureId || {}).length,
-      shellControllerFeatureCount: Object.keys(state.scenarioAutoShellControllerByFeatureId || {}).length,
     };
   });
 }
@@ -98,7 +97,6 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
     await expect.poll(() => page.locator('#scenarioSelect').inputValue(), { timeout: 20000 }).toBe(SCENARIO_ID);
 
     const scenarioStatus = ((await page.locator('#scenarioStatus').textContent()) || '').trim();
-    const viewMode = await page.locator('#scenarioViewModeSelect').inputValue();
     const selectedScenarioId = await page.locator('#scenarioSelect').inputValue();
 
     const payload = await page.evaluate(async () => {
@@ -138,7 +136,6 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
 
     expect(scenarioStatus).toContain('TNO 1962');
     expect(selectedScenarioId).toBe('tno_1962');
-    expect(viewMode).toBe('ownership');
     expect(payload.manifest.releasable_catalog_url).toBe('data/releasables/tno_1962.internal.phase1.catalog.json');
     expect(payload.manifest.geo_locale_patch_url_en).toBe('data/scenarios/tno_1962/geo_locale_patch.en.json');
     expect(payload.manifest.geo_locale_patch_url_zh).toBe('data/scenarios/tno_1962/geo_locale_patch.zh.json');
@@ -176,7 +173,6 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
       initialScenarioId,
       scenarioStatus,
       selectedScenarioId,
-      viewMode,
       releasableCatalogUrl: payload.manifest.releasable_catalog_url,
       catalogEntryCount: payload.catalogEntries.length,
       missingFeaturedTags,

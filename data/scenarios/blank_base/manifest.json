@@ -6,7 +6,6 @@
   "bookmark_name": "Blank Map",
   "capital_hints_url": "data/scenarios/blank_base/capital_hints.json",
   "city_overrides_url": "data/scenarios/blank_base/city_overrides.json",
-  "controllers_url": "data/scenarios/blank_base/controllers.by_feature.json",
   "cores_url": "data/scenarios/blank_base/cores.by_feature.json",
   "countries_url": "data/scenarios/blank_base/countries.json",
   "default_country": "US",
@@ -33,7 +32,7 @@
   "runtime_topology_url": "data/scenarios/blank_base/runtime_topology.topo.json",
   "scenario_contract_profile": "lightweight_base",
   "scenario_id": "blank_base",
-  "snapshot_fingerprint": "750d1d51cdb42096cae3a280f9ee65ba958d01a0bf4ac7d876147ed344484d53",
+  "snapshot_fingerprint": "9b4d03807cce55f2f9b418e40936c1bab0baad7c60431c83e6aa02fe0c4deb07",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"

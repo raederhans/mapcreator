@@ -133,8 +133,6 @@ export function createBorderMeshOwner({
     const nextHash = buildDynamicBorderHash({
       sovereigntyRevision: state.sovereigntyRevision,
       activeScenarioId: state.activeScenarioId,
-      scenarioViewMode: state.scenarioViewMode,
-      scenarioControllerRevision: state.scenarioControllerRevision,
       scenarioShellOverlayRevision: state.scenarioShellOverlayRevision,
     });
     if (state.cachedDynamicBordersHash === nextHash && state.cachedDynamicOwnerBorders) {
@@ -228,42 +226,10 @@ export function createBorderMeshOwner({
     return !!state.cachedScenarioOpeningOwnerBorders;
   }
 
-  function getFrontlineOwnershipContext() {
-    return {
-      ownershipByFeatureId: state.sovereigntyByFeatureId,
-      controllerByFeatureId: state.scenarioControllersByFeatureId,
-      shellOwnerByFeatureId: state.scenarioAutoShellOwnerByFeatureId,
-      shellControllerByFeatureId: state.scenarioAutoShellControllerByFeatureId,
-      scenarioActive: !!state.activeScenarioId,
-      viewMode: "frontline",
-    };
-  }
-
   function getFrontlineMesh() {
-    if (
-      !state.activeScenarioId
-      || !state.annotationView?.frontlineEnabled
-      || !state.runtimePoliticalTopology?.objects?.political
-    ) {
-      state.cachedFrontlineMesh = null;
-      state.cachedFrontlineMeshHash = "";
-      return null;
-    }
-    const nextHash = [
-      `scenario:${String(state.activeScenarioId || "")}`,
-      `ctrl:${Number(state.scenarioControllerRevision || 0)}`,
-      `shell:${Number(state.scenarioShellOverlayRevision || 0)}`,
-      `sov:${Number(state.sovereigntyRevision || 0)}`,
-    ].join("|");
-    if (state.cachedFrontlineMesh && state.cachedFrontlineMeshHash === nextHash) {
-      return state.cachedFrontlineMesh;
-    }
-    state.cachedFrontlineMesh = buildDynamicOwnerBorderMesh(
-      state.runtimePoliticalTopology,
-      getFrontlineOwnershipContext()
-    );
-    state.cachedFrontlineMeshHash = nextHash;
-    return state.cachedFrontlineMesh;
+    state.cachedFrontlineMesh = null;
+    state.cachedFrontlineMeshHash = "";
+    return null;
   }
 
   const buildDetailAdmBorderMesh = (topology, includedCountries) =>
@@ -396,7 +362,6 @@ export function createBorderMeshOwner({
     countUnresolvedOwnerBorderEntities,
     rebuildDynamicBorders,
     refreshScenarioOpeningOwnerBorders,
-    getFrontlineOwnershipContext,
     getFrontlineMesh,
     buildDetailAdmBorderMesh,
     getSourceCountrySets,

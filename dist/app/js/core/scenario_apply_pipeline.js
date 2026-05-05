@@ -49,7 +49,6 @@ function createScenarioApplyPipeline({
   scheduleScenarioChunkRefresh,
   resetScenarioChunkRuntimeState,
   ensureRuntimeChunkLoadState,
-  recalculateScenarioOwnerControllerDiffCount,
   hasRenderableScenarioPoliticalTopology,
   normalizeScenarioFeatureCollection,
   cloneScenarioStateValue,
@@ -145,14 +144,9 @@ function createScenarioApplyPipeline({
       scenarioImportAudit: null,
       scenarioBaselineHash: getScenarioBaselineHashFromBundle(bundle),
       scenarioBaselineOwnersByFeatureId: staged.resolvedOwners,
-      scenarioControllersByFeatureId: staged.controllers,
       scenarioAutoShellOwnerByFeatureId: {},
-      scenarioAutoShellControllerByFeatureId: {},
-      scenarioBaselineControllersByFeatureId: staged.controllers,
       scenarioBaselineCoresByFeatureId: staged.cores,
       scenarioShellOverlayRevision: (Number(runtimeState.scenarioShellOverlayRevision) || 0) + 1,
-      scenarioControllerRevision: (Number(runtimeState.scenarioControllerRevision) || 0) + 1,
-      scenarioViewMode: "ownership",
       countryNames: staged.mapSemanticMode === "blank"
         ? countryNames
         : staged.scenarioNameMap,
@@ -201,7 +195,6 @@ function createScenarioApplyPipeline({
     syncScenarioOceanFillForActivation(bundle.manifest);
     applyScenarioPerformanceHints(bundle.manifest);
     commitScenarioChunkRuntimeState(bundle, staged);
-    recalculateScenarioOwnerControllerDiffCount();
   }
 
   function commitScenarioChunkRuntimeState(bundle, staged) {
@@ -339,9 +332,6 @@ function createScenarioApplyPipeline({
     }
     const baseCountryTags = Object.keys(baseCountryMap);
     const owners = ownersPayload;
-    const controllers = bundle.controllersPayload?.controllers && typeof bundle.controllersPayload.controllers === "object"
-      ? bundle.controllersPayload.controllers
-      : owners;
     const cores = bundle.coresPayload?.cores && typeof bundle.coresPayload.cores === "object"
       ? normalizeScenarioCoreMap(bundle.coresPayload.cores)
       : {};
@@ -447,7 +437,7 @@ function createScenarioApplyPipeline({
           ? runtimeTopologyPayload
           : (runtimeState.defaultRuntimePoliticalTopology || runtimeState.runtimePoliticalTopology || null),
         ownersByFeatureId: owners,
-        controllersByFeatureId: controllers,
+        controllersByFeatureId: owners,
       });
     const resolvedOwners = startupApplySeed?.resolved_owners && typeof startupApplySeed.resolved_owners === "object"
       ? { ...startupApplySeed.resolved_owners }
@@ -485,7 +475,6 @@ function createScenarioApplyPipeline({
       coarseColorMap,
       scenarioOwnerBackfill,
       resolvedOwners,
-      controllers,
       cores,
       releasableIndex,
       ...activationContext,

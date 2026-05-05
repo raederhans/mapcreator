@@ -122,9 +122,8 @@ def build_political_materialization_transaction(
     political_bundle = deps.load_political_payload_bundle(context)
     owners_payload = political_bundle["ownersPayload"]
     owners = political_bundle["owners"]
-    controllers_payload = political_bundle["controllersPayload"]
-    controllers = political_bundle["controllers"]
-    has_controllers = bool(political_bundle["hasControllers"])
+    controllers = {}
+    has_controllers = False
     cores_payload = political_bundle["coresPayload"]
     cores = political_bundle["cores"]
     has_cores = bool(political_bundle["hasCores"])
@@ -179,22 +178,6 @@ def build_political_materialization_transaction(
                     details={"featureId": feature_id, "invalidOwnerTag": owner_tag},
                 )
             owners[feature_id] = owner_tag
-        if "controller" in raw_assignment:
-            if not has_controllers:
-                raise deps.error_cls(
-                    "missing_controllers_file",
-                    "Scenario controllers file is required when saving controller assignments.",
-                    status=400,
-                )
-            controller_tag = deps.normalize_code(raw_assignment.get("controller"))
-            if controller_tag not in allowed_tags:
-                raise deps.error_cls(
-                    "invalid_controller_codes",
-                    f'Feature "{feature_id}" used a controller tag not declared by the scenario.',
-                    status=400,
-                    details={"featureId": feature_id, "invalidControllerTag": controller_tag},
-                )
-            controllers[feature_id] = controller_tag
         if "cores" in raw_assignment:
             if not has_cores:
                 raise deps.error_cls(
@@ -292,8 +275,6 @@ def build_political_materialization_transaction(
     deps.recompute_country_feature_counts(countries, owners, controllers)
     countries_payload["generated_at"] = deps.now_iso()
     owners_payload["owners"] = owners
-    if has_controllers and controllers_payload is not None:
-        controllers_payload["controllers"] = controllers
     if has_cores and cores_payload is not None:
         cores_payload["cores"] = cores
 
@@ -434,8 +415,6 @@ def build_political_materialization_transaction(
         (Path(context["ownersPath"]), owners_payload),
         (Path(context["manualOverridesPath"]), manual_payload),
     ]
-    if has_controllers and political_bundle["controllersPath"] is not None and controllers_payload is not None:
-        transaction_payloads.append((political_bundle["controllersPath"], controllers_payload))
     if has_cores and political_bundle["coresPath"] is not None and cores_payload is not None:
         transaction_payloads.append((political_bundle["coresPath"], cores_payload))
     if capital_mutations:

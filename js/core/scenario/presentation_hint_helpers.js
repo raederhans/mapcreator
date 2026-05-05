@@ -30,6 +30,24 @@ function normalizeScenarioPerformanceHints(manifest) {
   };
 }
 
+const SCENARIO_PRESENTATION_FEATURES = Object.freeze({
+  ATLANTROPA_RELIEF: "atlantropa_relief",
+  COASTAL_ACCENT: "coastal_accent",
+});
+
+function getScenarioPresentationFeatures(manifest) {
+  const raw = manifest?.presentation_features;
+  return raw && typeof raw === "object" ? raw : {};
+}
+
+function scenarioHasPresentationFeature(manifest, featureKey) {
+  const normalizedKey = String(featureKey || "").trim();
+  if (!normalizedKey) return false;
+  return getScenarioPresentationFeatures(manifest)?.[normalizedKey] === true;
+}
+
 export {
+  SCENARIO_PRESENTATION_FEATURES,
   normalizeScenarioPerformanceHints,
+  scenarioHasPresentationFeature,
 };

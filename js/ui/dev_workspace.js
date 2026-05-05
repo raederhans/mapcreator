@@ -193,9 +193,7 @@ function resolveOwnershipEditorModel() {
   const singleFeatureId = targetIds.length === 1 ? targetIds[0] : "";
   const singleFeature = singleFeatureId ? runtimeState.landIndex?.get(singleFeatureId) || null : null;
   const currentOwnerCode = singleFeatureId ? normalizeOwnerInput(getFeatureOwnerCode(singleFeatureId)) : "";
-  const currentControllerCode = singleFeatureId
-    ? normalizeOwnerInput(runtimeState.scenarioControllersByFeatureId?.[singleFeatureId] || currentOwnerCode)
-    : "";
+  const currentControllerCode = currentOwnerCode;
   return {
     targetIds,
     selectionCount: targetIds.length,
@@ -363,22 +361,6 @@ function syncActiveScenarioBundleAssignments(targetIds = [], ownerCode = "") {
     ...(bundle.ownersPayload || {}),
     owners: nextOwners,
   };
-  if (bundle.controllersPayload && typeof bundle.controllersPayload === "object") {
-    const nextControllers = {
-      ...((bundle.controllersPayload.controllers && typeof bundle.controllersPayload.controllers === "object")
-        ? bundle.controllersPayload.controllers
-        : {}),
-    };
-    targetIds.forEach((featureId) => {
-      const id = String(featureId || "").trim();
-      if (!id) return;
-      nextControllers[id] = normalizedOwnerCode;
-    });
-    bundle.controllersPayload = {
-      ...bundle.controllersPayload,
-      controllers: nextControllers,
-    };
-  }
   if (bundle.coresPayload && typeof bundle.coresPayload === "object") {
     const nextCores = {
       ...((bundle.coresPayload.cores && typeof bundle.coresPayload.cores === "object")
@@ -619,10 +601,6 @@ function resolveInspectorRows() {
   const ownerCode = hit.targetType === "land"
     ? String(getFeatureOwnerCode(hit.id) || tooltipModel.countryCode || hit.countryCode || "").trim().toUpperCase()
     : "";
-  const controllerCode = hit.targetType === "land"
-    ? String(runtimeState.scenarioControllersByFeatureId?.[hit.id] || "").trim().toUpperCase()
-    : "";
-
   const rows = [
     [ui("Target"), String(hit.targetType || "land")],
     [ui("Name"), resolveFeatureName(feature, hit.id)],
@@ -631,8 +609,6 @@ function resolveInspectorRows() {
     [ui("Parent Group"), parentGroup],
     [ui("Detail Tier"), detailTier],
     [ui("Owner"), ownerCode],
-    [ui("Controller"), controllerCode],
-    [ui("Scenario View"), String(runtimeState.scenarioViewMode || "ownership")],
     [ui("Hit Source"), String(hit.hitSource || "spatial")],
     [ui("Snap"), hit.viaSnap ? ui("Snap hit") : hit.strict ? ui("Strict hit") : ui("No")],
     [ui("Source Topology"), source],

@@ -1,7 +1,7 @@
-import { resolveDataAssetUrl } from "../core/runtime_asset_registry.js";
+import { getAsset } from "../core/data_service.js";
 import { t } from "./i18n.js";
 
-const DEFAULT_ASSET_URL = resolveDataAssetUrl("transport_carrier:japan_corridor");
+const DEFAULT_ASSET_KEY = "transport_carrier:japan_corridor";
 
 const COLOR_TOKENS = {
   sea: "#d8e4ed",
@@ -46,12 +46,7 @@ function getD3() {
 
 function loadAsset() {
   if (!assetPromise) {
-    assetPromise = fetch(DEFAULT_ASSET_URL).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load transport workbench carrier asset: ${response.status}`);
-      }
-      return response.json();
-    });
+    assetPromise = getAsset(DEFAULT_ASSET_KEY);
   }
   return assetPromise;
 }

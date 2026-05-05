@@ -1459,3 +1459,19 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 1. renderer owner 抽离时，配置归一化写口要同步下沉到 state owner
 - 这次 `transport_overview_render_owner.js` 首轮抽离后，`styleConfig.transportOverview` 还在 owner 内直接归一化写回，state allowlist gate 立刻转红。
 - 更稳的做法是：owner 只读能力和绘制逻辑，凡是 `styleConfig`、UI hook、runtime perf metrics 这类持久 shape 写口，都同步收回 `ui_state`、`scenario_runtime_state` 或 `state/index` 这类 state owner。
+
+## 2026-05-05 - scenario controller layer retirement
+
+### 1. 删除 checked-in scenario 输入文件时，要同步 snapshot / audit / contract required list
+- 这次移除 `controllers.by_feature.json` 后，strict contract 第一轮失败点是 `build_snapshot.json` 和 `audit.json` 仍记录旧输入指纹。
+- 更稳的做法是：先改 checker 的 required artifact 列表，再 scoped 重写 `build_snapshot.json` / `manifest.source` / `audit.json`，最后跑 `check_scenario_contracts.py --strict` 验证。
+
+## 2026-05-05 - startup smoke / UI facade 局部字段
+
+### 1. facade 拆分后，传给 owner 的局部派生字段要用静态合同锁住
+- 这次 `scenarioViewLabel` / `controllerFeatureCount` 被删除后仍传给 owner，启动 apply、rollback、deferred UI bootstrap 三条路径都会触发 `ReferenceError`。
+- 更稳的做法是：facade 保留 `render*Status()` / `create*State()` 入参时，同步用静态测试锁住“局部来源 + 返回字段/传参”这条链。
+
+### 2. 运维脚本依赖的外部 CLI 子命令也要进合同测试
+- 这次 browser smoke 的网络采集还在调用旧 `network` 子命令，当前 Playwright CLI 已改为 `requests`，导致报告 network summary 虚绿。
+- 更稳的做法是：脚本对外部 CLI 的关键子命令用轻量静态合同锁住，升级 CLI 后先修脚本采集面。

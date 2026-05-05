@@ -222,7 +222,6 @@ function createScenarioBundleRuntimeController({
             bundleLevel: requestedBundleLevel,
             countriesPayload: bundle.countriesPayload,
             ownersPayload: bundle.ownersPayload,
-            controllersPayload: bundle.controllersPayload,
             coresPayload: bundle.coresPayload,
             runtimeTopologyPayload: bundle.runtimeTopologyPayload,
             runtimePoliticalMeta: bundle.runtimePoliticalMeta,
@@ -388,12 +387,10 @@ function createScenarioBundleRuntimeController({
         bundle,
         countriesResult,
         ownersResult,
-        controllersResult,
         coresResult,
         runtimeTopologyResult,
         geoLocalePatchResult,
         ownerCount,
-        controllerCount,
         countryCount,
       } = await assembleScenarioBundle({
         d3Client,
@@ -409,7 +406,6 @@ function createScenarioBundleRuntimeController({
       });
       void countriesResult;
       void ownersResult;
-      void controllersResult;
       void coresResult;
       bundle.loadDiagnostics.requiredResources.manifest = manifestResult.metrics || null;
       if (requestedBundleLevel === "full") {
@@ -424,7 +420,7 @@ function createScenarioBundleRuntimeController({
         + Number(bundle.chunkRegistryLoadMetrics?.runtimeMeta?.totalMs || bundle.chunkRegistryLoadMetrics?.runtimeMeta?.durationMs || 0)
         + Number(bundle.chunkRegistryLoadMetrics?.meshPack?.totalMs || bundle.chunkRegistryLoadMetrics?.meshPack?.durationMs || 0);
       console.log(
-        `[scenario] Loaded ${requestedBundleLevel} bundle "${targetId}": ${ownerCount} owner entries, ${controllerCount} controller entries, ${countryCount} countries, baseline=${String(manifest?.baseline_hash || "").slice(0, 12)}`
+        `[scenario] Loaded ${requestedBundleLevel} bundle "${targetId}": ${ownerCount} owner entries, ${countryCount} countries, baseline=${String(manifest?.baseline_hash || "").slice(0, 12)}`
       );
       state.scenarioBundleCacheById[targetId] = bundle;
       queueBootstrapBundleCacheWrite({
@@ -441,7 +437,6 @@ function createScenarioBundleRuntimeController({
         bundleLevel: requestedBundleLevel,
         countryCount,
         ownerCount,
-        controllerCount,
         workerDecodeMs: Number(runtimeTopologyResult.workerMetrics?.runtimePoliticalTopology?.totalMs || 0),
         workerMetaBuildMs: Number(runtimeTopologyResult.workerMetrics?.runtimePoliticalMeta?.buildMs || 0),
         runtimeTopologyDecodePath: String(runtimeTopologyResult.reason || "main-thread"),

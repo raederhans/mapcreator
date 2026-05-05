@@ -20,11 +20,6 @@ import {
   state as runtimeState,
 } from "./state.js";
 import {
-  normalizeTransportOverviewVisualMode,
-  resolveTransportOverviewLineStrategy,
-  resolveTransportOverviewPointStrategy,
-} from "./transport_capability_registry.js";
-import {
   createDefaultOperationGraphicsEditorState,
   createDefaultOperationalLineEditorState,
   createDefaultSpecialZoneEditorState,
@@ -82,6 +77,10 @@ import { markDirty } from "./dirty_state.js";
 import { perfIsEnabled, recordRenderSample } from "./perf_probe.js";
 import { getScenarioCountryDisplayName } from "./scenario_country_display.js";
 import {
+  SCENARIO_PRESENTATION_FEATURES,
+  scenarioHasPresentationFeature,
+} from "./scenario/presentation_hint_helpers.js";
+import {
   ensureSovereigntyState,
   getFeatureOwnerCode,
   getFeatureIdsForOwner,
@@ -116,6 +115,8 @@ import { createPoliticalCollectionOwner } from "./renderer/political_collection_
 import { createContextLayerResolverOwner } from "./renderer/context_layer_resolver.js";
 import { createRendererAssetUrlPolicyOwner } from "./renderer/asset_url_policy.js";
 import { createFacilitySurfaceOwner } from "./renderer/facility_surface.js";
+import { createRiverLayerRenderOwner } from "./renderer/river_layer_render_owner.js";
+import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
 import { createBorderDrawOwner } from "./renderer/border_draw_owner.js";
 import { createInteractionBorderSnapshotOwner } from "./renderer/interaction_border_snapshot_owner.js";
@@ -378,6 +379,9 @@ const BATHYMETRY_PRESET_PROFILES = Object.freeze({
 const RENDER_PHASE_IDLE = "idle";
 const RENDER_PHASE_INTERACTING = "interacting";
 const RENDER_PHASE_SETTLING = "settling";
+// renderPhase 只区分“正在连续输入”“输入刚停、等待 quiet window”“完全 idle”三段。
+// exact-after-settle 和 deferred exact refresh 都依赖这组状态切换，后续若调整窗口值，
+// 要把这三段时序一起看，不能只改单个 timeout。
 const RENDER_SETTLE_DURATION_MS = 200;
 const RENDER_SETTLE_DURATION_MS_MIN = 120;
 const EXACT_AFTER_SETTLE_QUIET_WINDOW_MS = 420;
@@ -450,52 +454,6 @@ const CONTOUR_ZOOM_STYLE_PROFILES = Object.freeze({
     minorMaxFeaturesHardCap: 6400,
   }),
 });
-const RIVER_LOW_MAX_SCALERANK = 5;
-const RIVER_MID_MAX_SCALERANK = 7;
-const RIVER_ZOOM_STYLE_FACTORS = {
-  low: {
-    coreWidthFactor: 1.2,
-    outlineWidthFactor: 0.85,
-    outlineAlphaFactor: 0.6,
-  },
-  mid: {
-    coreWidthFactor: 1,
-    outlineWidthFactor: 0.7,
-    outlineAlphaFactor: 0.7,
-  },
-  high: {
-    coreWidthFactor: 0.75,
-    outlineWidthFactor: 0.35,
-    outlineAlphaFactor: 0.45,
-  },
-};
-const RIVER_CLASS_STYLE_FACTORS = {
-  river: {
-    widthFactor: 1,
-    opacityFactor: 1,
-    outlineFactor: 1,
-  },
-  intermittent: {
-    widthFactor: 0.8,
-    opacityFactor: 0.7,
-    outlineFactor: 0.5,
-  },
-  lakeCenterline: {
-    widthFactor: 0.72,
-    opacityFactor: 0.55,
-    outlineFactor: 0,
-  },
-  canal: {
-    widthFactor: 0.72,
-    opacityFactor: 0.6,
-    outlineFactor: 0,
-  },
-  unknown: {
-    widthFactor: 1,
-    opacityFactor: 1,
-    outlineFactor: 1,
-  },
-};
 const INTERNAL_BORDER_PROVINCE_MIN_ALPHA = 0.30;
 const INTERNAL_BORDER_LOCAL_MIN_ALPHA = 0.22;
 const INTERNAL_BORDER_PROVINCE_MIN_WIDTH = 0.52;
@@ -935,14 +893,14 @@ let staticMeshCache = {
   bundleMode: "",
   activeScenarioId: "",
   scenarioBorderMode: "",
-  scenarioViewMode: "",
+  scenarioOwnershipColorMode: "",
   sourceCountriesSignature: "",
   coastlineDecisionSignature: "",
   snapshot: null,
 };
 let countryDominantFillColorCache = {
   colorRevision: -1,
-  scenarioViewMode: "",
+  scenarioOwnershipColorMode: "",
   activeScenarioId: "",
   result: new Map(),
 };
@@ -990,7 +948,7 @@ const cityLayerCache = {
   scenarioCountriesRef: null,
   scenarioId: "",
   cityLayerRevision: -1,
-  scenarioControllerRevision: -1,
+  scenarioOwnershipTagRevision: -1,
   sovereigntyRevision: -1,
   merged: null,
 };
@@ -1004,6 +962,8 @@ let politicalCollectionOwner = null;
 let contextLayerResolverOwner = null;
 let rendererAssetUrlPolicyOwner = null;
 let facilitySurfaceOwner = null;
+let riverLayerRenderOwner = null;
+let transportOverviewRenderOwner = null;
 let borderMeshOwner = null;
 let borderDrawOwner = null;
 let interactionBorderSnapshotOwner = null;
@@ -1228,6 +1188,57 @@ function getFacilitySurfaceOwner() {
   return facilitySurfaceOwner;
 }
 
+function getRiverLayerRenderOwner() {
+  if (riverLayerRenderOwner) {
+    return riverLayerRenderOwner;
+  }
+  riverLayerRenderOwner = createRiverLayerRenderOwner({
+    state,
+    helpers: {
+      clamp,
+      collectContextMetric,
+      getContext: () => context,
+      getContextBaseZoomBucketId,
+      getDashPattern,
+      getFeatureCollectionFeatureCount,
+      getPathCanvas: () => pathCanvas,
+      getSafeCanvasColor,
+      nowMs,
+      pathBoundsInScreen,
+    },
+  });
+  return riverLayerRenderOwner;
+}
+
+function getTransportOverviewRenderOwner() {
+  if (transportOverviewRenderOwner) {
+    return transportOverviewRenderOwner;
+  }
+  transportOverviewRenderOwner = createTransportOverviewRenderOwner({
+    state,
+    helpers: {
+      buildFacilityEntryKey,
+      buildFacilityTooltipText,
+      clamp,
+      clearFacilityHoverEntries,
+      collectContextMetric,
+      getActiveFacilityHighlightEntry,
+      getCanvasColorRelativeLuminance,
+      getContext: () => context,
+      getFacilityHoverRadiusPx,
+      getFeatureCollectionFeatureCount,
+      getLineMidpointFromCoordinates,
+      getMultiLineLabelAnchor,
+      getPathCanvas: () => pathCanvas,
+      getProjection: () => projection,
+      mixCanvasColors,
+      nowMs,
+      setVisibleFacilityHoverEntries,
+    },
+  });
+  return transportOverviewRenderOwner;
+}
+
 function getBorderMeshOwner() {
   if (borderMeshOwner) {
     return borderMeshOwner;
@@ -1327,7 +1338,7 @@ function getBorderDrawOwner() {
       buildCountryParentBorderMeshes,
       buildDetailAdmMeshSignature,
       clamp,
-      drawTnoCoastalAccentLayer,
+      drawScenarioCoastalAccentLayer,
       getCoastlineCollectionForZoom,
       getInternalBorderStrokeColor,
       getSafeCanvasColor,
@@ -1909,7 +1920,7 @@ function getRuntimeChunkSelectionVersion() {
 
 function getVisibleContextFlagSignature() {
   return [
-    `view:${String(runtimeState.scenarioViewMode || "ownership")}`,
+    `view:${"ownership"}`,
     `profile:${String(runtimeState.renderProfile || "auto")}`,
     runtimeState.showPhysical ? "physical:on" : "physical:off",
     runtimeState.showUrban ? "urban:on" : "urban:off",
@@ -2361,9 +2372,9 @@ function getPoliticalPathCacheSignature(transform = runtimeState.zoomTransform |
     getProjectionRenderSignature(),
     getViewportRenderSignature(),
     String(runtimeState.activeScenarioId || ""),
-    String(runtimeState.scenarioViewMode || "ownership"),
+    "ownership",
     Number(runtimeState.sovereigntyRevision || 0),
-    Number(runtimeState.scenarioControllerRevision || 0),
+    0,
     Number(runtimeState.scenarioShellOverlayRevision || 0),
   ].join("::");
 }
@@ -2677,7 +2688,10 @@ function getScenarioDetailPhaseSignatureToken() {
 }
 
 function isScenarioWaterTopologyExclusiveMode() {
-  return String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962";
+  return scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.ATLANTROPA_RELIEF
+  );
 }
 
 function getScenarioSurfaceVersionSignal() {
@@ -2905,10 +2919,10 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.colorRevision || 0,
       runtimeState.cachedDynamicBordersHash || "",
       runtimeState.sovereigntyRevision || 0,
-      runtimeState.scenarioControllerRevision || 0,
+      0,
       runtimeState.activeScenarioId || "",
       runtimeState.scenarioBorderMode || "canonical",
-      runtimeState.scenarioViewMode || "ownership",
+      "ownership",
       stableJson(runtimeState.parentBorderEnabledByCountry || {}),
       stableJson(runtimeState.styleConfig?.internalBorders || {}),
       stableJson(runtimeState.styleConfig?.empireBorders || {}),
@@ -3050,11 +3064,6 @@ function getWaterRegionType(feature) {
   return String(feature?.properties?.water_type || "water_region").trim().toLowerCase();
 }
 
-function isAtlantropaOceanMergedWaterRegion(feature) {
-  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") return false;
-  return String(feature?.properties?.region_group || "").trim().toLowerCase() === "mediterranean";
-}
-
 function isBaseGeographyScenarioFeature(feature) {
   return feature?.properties?.render_as_base_geography === true;
 }
@@ -3136,7 +3145,6 @@ function getScenarioExcludedWaterRegionGroups() {
 
 function isWaterRegionExcludedByScenario(feature) {
   if (!feature || isScenarioWaterRegion(feature)) return false;
-  if (isAtlantropaOceanMergedWaterRegion(feature)) return true;
   const excludedIds = getScenarioExcludedWaterRegionIds();
   const featureId = String(feature?.properties?.id || "").trim();
   if (featureId && excludedIds.has(featureId)) {
@@ -3240,7 +3248,10 @@ function getReliefOverlayKind(feature) {
 }
 
 function isAtlantropaReliefOverlayFeature(feature) {
-  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") {
+  if (!scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.ATLANTROPA_RELIEF
+  )) {
     return false;
   }
   return String(feature?.properties?.id || "").trim().toLowerCase().startsWith("atlantropa_");
@@ -3258,13 +3269,16 @@ function isReliefOverlayEnabled(feature) {
   return feature?.properties?.interactive !== false;
 }
 
-function isTnoCoastalAccentEnabled() {
-  return String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962"
+function isScenarioCoastalAccentEnabled() {
+  return scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.COASTAL_ACCENT
+  )
     && runtimeState.styleConfig?.ocean?.coastalAccentEnabled !== false;
 }
 
 function getScenarioCoastalAccentOverlayFeatures() {
-  if (!isTnoCoastalAccentEnabled()) return [];
+  if (!isScenarioCoastalAccentEnabled()) return [];
   return getEffectiveScenarioReliefOverlayFeatures().filter((feature) => {
     const kind = getReliefOverlayKind(feature);
     return kind === "new_shoreline" || kind === "lake_shoreline";
@@ -3272,7 +3286,7 @@ function getScenarioCoastalAccentOverlayFeatures() {
 }
 
 function getAtlantropaAccentSuppressionFeatures() {
-  if (!isTnoCoastalAccentEnabled()) return [];
+  if (!isScenarioCoastalAccentEnabled()) return [];
   return Array.isArray(runtimeState.activeBathymetryBandsData?.features)
     ? runtimeState.activeBathymetryBandsData.features.filter((feature) => {
       if (String(feature?.properties?._bathymetrySource || "").trim().toLowerCase() !== "scenario") {
@@ -3637,7 +3651,10 @@ function getAtlantropaSeaPoliticalStrokeColor() {
 }
 
 function getMediterraneanAtlantropaBounds() {
-  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") return null;
+  if (!scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.COASTAL_ACCENT
+  )) return null;
   const cache = runtimeState.mediterraneanAtlantropaBoundsCache || {};
   const featureCount = Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0;
   if (
@@ -3775,7 +3792,7 @@ function mixCanvasColors(baseColor, targetColor, amount) {
 function buildCountryDominantFillColorMap() {
   const cacheMatches =
     countryDominantFillColorCache.colorRevision === Number(runtimeState.colorRevision || 0)
-    && countryDominantFillColorCache.scenarioViewMode === String(runtimeState.scenarioViewMode || "ownership")
+    && countryDominantFillColorCache.scenarioOwnershipColorMode === "ownership"
     && countryDominantFillColorCache.activeScenarioId === String(runtimeState.activeScenarioId || "");
   if (cacheMatches && countryDominantFillColorCache.result instanceof Map) {
     return countryDominantFillColorCache.result;
@@ -3809,7 +3826,7 @@ function buildCountryDominantFillColorMap() {
 
   countryDominantFillColorCache = {
     colorRevision: Number(runtimeState.colorRevision || 0),
-    scenarioViewMode: String(runtimeState.scenarioViewMode || "ownership"),
+    scenarioOwnershipColorMode: "ownership",
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     result,
   };
@@ -3843,7 +3860,7 @@ function getContourFeatureHostFillColor(feature) {
   const cacheKey = [
     Number(runtimeState.colorRevision || 0),
     String(runtimeState.activeScenarioId || ""),
-    String(runtimeState.scenarioViewMode || "ownership"),
+    "ownership",
   ].join("::");
   const cached = contourHostFillColorCache.get(feature);
   if (cached?.key === cacheKey) {
@@ -5746,7 +5763,7 @@ function getFrontlineOverlaySignature() {
   return [
     getOverlayProjectionSignature(),
     String(runtimeState.activeScenarioId || ""),
-    Number(runtimeState.scenarioControllerRevision || 0),
+    0,
     Number(runtimeState.scenarioShellOverlayRevision || 0),
     Number(runtimeState.sovereigntyRevision || 0),
     runtimeState.annotationView?.frontlineEnabled ? "1" : "0",
@@ -6796,21 +6813,14 @@ function resolveOwnerBorderCode(entity, ownershipContext = {}) {
   const featureId = getEntityFeatureId(entity);
   const fallbackCode = getEntityCountryCode(entity) || "";
   const ownershipByFeatureId = ownershipContext?.ownershipByFeatureId || {};
-  const controllerByFeatureId = ownershipContext?.controllerByFeatureId || {};
   const shellOwnerByFeatureId = ownershipContext?.shellOwnerByFeatureId || {};
-  const shellControllerByFeatureId = ownershipContext?.shellControllerByFeatureId || {};
-  const scenarioActive = !!ownershipContext?.scenarioActive;
-  const useFrontline = scenarioActive && String(ownershipContext?.viewMode || "ownership") === "frontline";
   const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
-  const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
   if (!featureId) {
     return canonicalCountryCode(fallbackCode);
   }
   const isScenarioShell = isScenarioShellFeature(feature, featureId);
   return canonicalCountryCode(
-    (useFrontline ? controllerByFeatureId?.[featureId] : "")
-    || (useFrontline && isScenarioShell ? (shellControllerByFeatureId?.[featureId] || shellControllerHintCode) : "")
-    || ownershipByFeatureId?.[featureId]
+    ownershipByFeatureId?.[featureId]
     || (!isScenarioShell ? fallbackCode : "")
     || (isScenarioShell ? (shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode) : "")
     || ""
@@ -7805,7 +7815,7 @@ function rebuildStaticMeshes({
     staticMeshCache.bundleMode === String(runtimeState.topologyBundleMode || "") &&
     staticMeshCache.activeScenarioId === String(runtimeState.activeScenarioId || "") &&
     staticMeshCache.scenarioBorderMode === String(runtimeState.scenarioBorderMode || "") &&
-    staticMeshCache.scenarioViewMode === String(runtimeState.scenarioViewMode || "") &&
+    staticMeshCache.scenarioOwnershipColorMode === "ownership" &&
     staticMeshCache.sourceCountriesSignature === sourceCountriesSignature &&
     staticMeshCache.coastlineDecisionSignature === coastlineDecisionSignature &&
     staticMeshCache.snapshot;
@@ -7930,7 +7940,7 @@ function rebuildStaticMeshes({
     &&
     runtimeState.activeScenarioId
     && runtimeState.scenarioBorderMode === "scenario_owner_only"
-    && String(runtimeState.scenarioViewMode || "ownership") === "ownership"
+    && "ownership" === "ownership"
   ) {
     refreshScenarioOpeningOwnerBorders({
       renderNow: false,
@@ -7947,7 +7957,7 @@ function rebuildStaticMeshes({
     bundleMode: String(runtimeState.topologyBundleMode || ""),
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     scenarioBorderMode: String(runtimeState.scenarioBorderMode || ""),
-    scenarioViewMode: String(runtimeState.scenarioViewMode || ""),
+    scenarioOwnershipColorMode: "ownership",
     sourceCountriesSignature,
     coastlineDecisionSignature,
     snapshot: captureStaticMeshSnapshot(),
@@ -9842,7 +9852,7 @@ function getOceanStyleConfig() {
     ),
     bathymetryProfile: getBathymetryPresetProfile(preset),
     experimentalAdvancedStyles: ocean.experimentalAdvancedStyles === true,
-    coastalAccentEnabled: isTnoCoastalAccentEnabled(),
+    coastalAccentEnabled: isScenarioCoastalAccentEnabled(),
   };
 }
 
@@ -10426,7 +10436,7 @@ function getCoastlineCollectionForZoom(k) {
   return runtimeState.cachedCoastlinesHigh?.length ? runtimeState.cachedCoastlinesHigh : runtimeState.cachedCoastlines;
 }
 
-function getTnoCoastalAccentLineWidth(k, { interactive = false, overlay = false } = {}) {
+function getScenarioCoastalAccentLineWidth(k, { interactive = false, overlay = false } = {}) {
   const baseWidth = overlay
     ? 1.22 / Math.max(0.0001, k)
     : (interactive ? 1.05 : 1.28) / Math.max(0.0001, k);
@@ -10522,7 +10532,7 @@ function getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive =
   }
   return {
     alpha,
-    lineWidth: getTnoCoastalAccentLineWidth(k, { interactive, overlay: true }),
+    lineWidth: getScenarioCoastalAccentLineWidth(k, { interactive, overlay: true }),
   };
 }
 
@@ -10562,14 +10572,14 @@ function drawScenarioCoastalAccentOverlays(k, { interactive = false } = {}) {
   drawCoastalAccentStrokeBuckets(entries);
 }
 
-function drawTnoCoastalAccentLayer(k, { interactive = false } = {}) {
-  if (!context || !isTnoCoastalAccentEnabled()) return;
+function drawScenarioCoastalAccentLayer(k, { interactive = false } = {}) {
+  if (!context || !isScenarioCoastalAccentEnabled()) return;
   const coastlineDecision = resolveCoastlineTopologySource();
   const usesScenarioCoastlineSource = coastlineDecision?.source === "scenario";
   const coastlineCollection = interactive
     ? getCoastlineCollectionForZoom(k)
     : getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
-  const coastlineWidth = getTnoCoastalAccentLineWidth(k, { interactive });
+  const coastlineWidth = getScenarioCoastalAccentLineWidth(k, { interactive });
   const densityThreshold = k < COASTLINE_LOD_LOW_ZOOM_MAX
     ? COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW
     : k < COASTLINE_LOD_MID_ZOOM_MAX
@@ -11799,155 +11809,12 @@ function drawUrbanLayer(k, { interactive = false } = {}) {
   });
 }
 
-function getRiverZoomStyleFactors(k) {
-  return RIVER_ZOOM_STYLE_FACTORS[getContextBaseZoomBucketId(k)] || RIVER_ZOOM_STYLE_FACTORS.mid;
-}
-
-function getRiverClassKind(feature) {
-  const props = feature?.properties || {};
-  const featureClass = String(props.featurecla || props.FEATURECLA || "").trim().toLowerCase();
-  switch (featureClass) {
-    case "river":
-      return "river";
-    case "river (intermittent)":
-      return "intermittent";
-    case "lake centerline":
-      return "lakeCenterline";
-    case "canal":
-      return "canal";
-    default:
-      return "unknown";
-  }
-}
-
-function getRiverVisibilityProfile(feature, k) {
-  const props = feature?.properties || {};
-  const zoomBucket = getContextBaseZoomBucketId(k);
-  const classKind = getRiverClassKind(feature);
-  const scalerank = clamp(
-    Math.round(Number(props.scalerank ?? props.SCALERANK ?? 8)) || 8,
-    0,
-    12,
-  );
-  const minZoom = Number(props.min_zoom ?? props.minZoom);
-  let visible = false;
-
-  if (zoomBucket === "low") {
-    visible = classKind === "river" && scalerank <= RIVER_LOW_MAX_SCALERANK;
-  } else if (zoomBucket === "mid") {
-    visible = classKind === "river"
-      && (
-        scalerank <= RIVER_MID_MAX_SCALERANK
-        || (
-          scalerank === RIVER_MID_MAX_SCALERANK + 1
-          && Number.isFinite(minZoom)
-          && minZoom <= 5
-        )
-      );
-  } else {
-    visible = classKind !== "unknown";
-  }
-
-  const classStyle = RIVER_CLASS_STYLE_FACTORS[classKind] || RIVER_CLASS_STYLE_FACTORS.unknown;
-  return {
-    visible,
-    zoomBucket,
-    classKind,
-    scalerank,
-    minZoom: Number.isFinite(minZoom) ? minZoom : null,
-    widthFactor: classStyle.widthFactor,
-    opacityFactor: classStyle.opacityFactor,
-    outlineFactor: classStyle.outlineFactor,
-  };
+function recordDeferredRiversLayerMetric({ interactive = false, reason = "staged-apply" } = {}) {
+  return getRiverLayerRenderOwner().recordDeferredRiversLayerMetric({ interactive, reason });
 }
 
 function drawRiversLayer(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  if (!runtimeState.showRivers || !runtimeState.riversData?.features?.length) {
-    collectContextMetric("drawRiversLayer", nowMs() - startedAt, {
-      featureCount: getFeatureCollectionFeatureCount(runtimeState.riversData),
-      interactive: !!interactive,
-      skipped: true,
-      reason: !runtimeState.showRivers ? "hidden" : "no-data",
-    });
-    return;
-  }
-  const cfg = runtimeState.styleConfig?.rivers || {};
-  const color = getSafeCanvasColor(cfg.color, "#3b82f6");
-  const opacity = clamp(Number.isFinite(Number(cfg.opacity)) ? Number(cfg.opacity) : 0.88, 0, 1);
-  const widthBase = clamp(Number.isFinite(Number(cfg.width)) ? Number(cfg.width) : 0.5, 0.2, 4);
-  const outlineColor = getSafeCanvasColor(cfg.outlineColor, "#e2efff");
-  const outlineWidth = clamp(Number.isFinite(Number(cfg.outlineWidth)) ? Number(cfg.outlineWidth) : 0.25, 0, 3);
-  const dashPattern = getDashPattern(cfg.dashStyle, widthBase);
-  const scale = Math.max(0.0001, k);
-  const resolvedDashPattern = dashPattern.map((value) => value / scale);
-  const zoomStyle = getRiverZoomStyleFactors(k);
-  const visibleEntries = [];
-
-  runtimeState.riversData.features.forEach((feature) => {
-    if (!pathBoundsInScreen(feature)) return;
-    const profile = getRiverVisibilityProfile(feature, k);
-    if (!profile.visible) return;
-    visibleEntries.push({ feature, profile });
-  });
-
-  context.save();
-
-  if (outlineWidth > 0) {
-    context.strokeStyle = outlineColor;
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.setLineDash(resolvedDashPattern);
-    visibleEntries.forEach(({ feature, profile }) => {
-      const resolvedOutlineWidth = outlineWidth
-        * zoomStyle.outlineWidthFactor
-        * profile.outlineFactor;
-      if (!(resolvedOutlineWidth > 0)) return;
-      const resolvedCoreWidth = widthBase
-        * zoomStyle.coreWidthFactor
-        * profile.widthFactor;
-      const outlineAlpha = opacity
-        * zoomStyle.outlineAlphaFactor
-        * profile.opacityFactor;
-      context.globalAlpha = interactive ? Math.min(outlineAlpha * 0.7, 0.65) : Math.min(outlineAlpha, 0.95);
-      context.lineWidth = (resolvedCoreWidth + resolvedOutlineWidth * 2) / scale;
-      context.beginPath();
-      pathCanvas(feature);
-      context.stroke();
-    });
-  }
-
-  context.strokeStyle = color;
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.setLineDash(resolvedDashPattern);
-  visibleEntries.forEach(({ feature, profile }) => {
-    const resolvedCoreWidth = widthBase
-      * zoomStyle.coreWidthFactor
-      * profile.widthFactor;
-    context.globalAlpha = interactive
-      ? Math.min(opacity * profile.opacityFactor, 0.78)
-      : opacity * profile.opacityFactor;
-    context.lineWidth = resolvedCoreWidth / scale;
-    context.beginPath();
-    pathCanvas(feature);
-    context.stroke();
-  });
-  context.setLineDash([]);
-
-  context.restore();
-  collectContextMetric("drawRiversLayer", nowMs() - startedAt, {
-    featureCount: getFeatureCollectionFeatureCount(runtimeState.riversData),
-    visibleFeatureCount: visibleEntries.length,
-    zoomBucket: getContextBaseZoomBucketId(k),
-    coreWidthFactor: zoomStyle.coreWidthFactor,
-    outlineWidthFactor: zoomStyle.outlineWidthFactor,
-    outlineAlphaFactor: zoomStyle.outlineAlphaFactor,
-    dashStyle: String(cfg.dashStyle || "solid"),
-    dashPattern: resolvedDashPattern,
-    interactive: !!interactive,
-    skipped: false,
-  });
+  return getRiverLayerRenderOwner().drawRiversLayer(k, { interactive });
 }
 
 function getCityFeatureKey(feature, fallbackKey = "") {
@@ -13780,814 +13647,24 @@ function drawCityPointsLayer(k, { interactive = false } = {}) {
   });
 }
 
-function getContextFacilityThresholdRank(threshold, allowed = []) {
-  const normalized = String(threshold || "").trim().toLowerCase();
-  if (allowed.includes(normalized)) {
-    if (normalized === "national_core") return 3;
-    if (normalized === "regional_core") return 2;
-    return 1;
-  }
-  return 1;
-}
-
 function getTransportOverviewStyleConfig() {
-  if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
-    runtimeState.styleConfig = {};
-  }
-  runtimeState.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(
-    runtimeState.styleConfig.transportOverview || {},
-  );
-  return runtimeState.styleConfig.transportOverview;
-}
-
-function getTransportOverviewVisualMode() {
-  return normalizeTransportOverviewVisualMode(getTransportOverviewStyleConfig().visualMode, "distribution");
-}
-
-function getTransportOverviewFamilyConfig(familyId) {
-  const config = getTransportOverviewStyleConfig();
-  return config?.[familyId] || {};
-}
-
-function getTransportOverviewLabelZoomConfig(familyId, labelDensity) {
-  const base = familyId === "airport"
-    ? { nationalLabelScale: 2.0, regionalLabelScale: 5.0 }
-    : { nationalLabelScale: 2.2, regionalLabelScale: 5.4 };
-  switch (String(labelDensity || "").trim().toLowerCase()) {
-    case "sparse":
-      return {
-        nationalLabelScale: base.nationalLabelScale + 0.7,
-        regionalLabelScale: base.regionalLabelScale + 1.1,
-      };
-    case "dense":
-      return {
-        nationalLabelScale: Math.max(0.75, base.nationalLabelScale - 0.35),
-        regionalLabelScale: Math.max(1.4, base.regionalLabelScale - 0.9),
-      };
-    default:
-      return base;
-  }
-}
-
-function getTransportOverviewImportanceThresholdRank(value, allowed = ["primary", "secondary", "all"]) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (!allowed.includes(normalized)) return 2;
-  if (normalized === "primary") return 3;
-  if (normalized === "secondary") return 2;
-  return 1;
-}
-
-function getTransportOverviewZoomRevealAllowance(scale) {
-  const k = Number(scale || 1);
-  if (k >= 6) return 2;
-  if (k >= 3.1) return 1;
-  return 0;
-}
-
-function getTransportPortZoomRevealFloor(scale) {
-  return Math.max(1, 2 - getTransportOverviewZoomRevealAllowance(scale));
-}
-
-function getTransportAirportScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  if (normalized === "international") return 3;
-  if (normalized === "all_civil") return 1;
-  return 2;
-}
-
-function getTransportPortScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  if (normalized === "core") return 3;
-  if (normalized === "expanded") return 1;
-  return 2;
-}
-
-function getTransportRailScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  return normalized === "mainline_only" ? 1 : 2;
-}
-
-function getTransportRailRevealRankThreshold(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "primary") return 1;
-  if (normalized === "secondary") return 2;
-  return 3;
-}
-
-function getTransportRoadRevealRankThreshold(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "primary") return 1;
-  if (normalized === "secondary") return 2;
-  return 3;
-}
-
-function getTransportRoadScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  return normalized === "motorway_only" ? 1 : 2;
-}
-
-function getTransportOverviewPrimaryColor(value, fallback = "#1d4ed8") {
-  return ColorManager.normalizeHexColor(String(value || "").trim()) || fallback;
-}
-
-function buildTransportFacilityVisualStyle(primaryColor, visualStrength, fallback = "#1d4ed8") {
-  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, fallback);
-  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.56, 0, 1);
-  const luminance = getCanvasColorRelativeLuminance(resolvedPrimaryColor);
-  const strokeTarget = Number.isFinite(luminance) && luminance < 0.4 ? "#f8fbff" : "#ffffff";
-  const labelTarget = Number.isFinite(luminance) && luminance < 0.56 ? "#f8fafc" : "#0f172a";
-  return {
-    fillStyle: resolvedPrimaryColor,
-    strokeStyle: mixCanvasColors(resolvedPrimaryColor, strokeTarget, 0.72) || strokeTarget,
-    labelColor: mixCanvasColors(resolvedPrimaryColor, labelTarget, Number.isFinite(luminance) && luminance < 0.56 ? 0.48 : 0.78) || labelTarget,
-    highlightStroke: mixCanvasColors(resolvedPrimaryColor, "#ffffff", 0.82) || "#ffffff",
-    radiusScale: 0.85 + (strength * 0.55),
-    strokeScale: 0.9 + (strength * 0.35),
-    hoverScale: 1.12 + (strength * 0.12),
-  };
-}
-
-function getTransportOverviewAirportVisualStyle(primaryColor, visualStrength) {
-  return buildTransportFacilityVisualStyle(primaryColor, visualStrength, "#1d4ed8");
-}
-
-function getTransportOverviewPortVisualStyle(primaryColor, visualStrength) {
-  return buildTransportFacilityVisualStyle(primaryColor, visualStrength, "#b45309");
-}
-
-function getTransportOverviewRailVisualStyle(primaryColor, visualStrength) {
-  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, "#0f172a");
-  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.5, 0, 1);
-  return {
-    mainlineStroke: mixCanvasColors(resolvedPrimaryColor, "#020617", 0.35) || resolvedPrimaryColor,
-    regionalStroke: mixCanvasColors(resolvedPrimaryColor, "#cbd5e1", 0.38) || resolvedPrimaryColor,
-    mainlineWidth: 1.4 + (strength * 1.3),
-    regionalWidth: 0.8 + (strength * 0.75),
-    mainlineOpacity: 0.74 + (strength * 0.26),
-    regionalOpacity: 0.42 + (strength * 0.22),
-  };
-}
-
-function getTransportOverviewRoadVisualStyle(primaryColor, visualStrength) {
-  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, "#374151");
-  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.5, 0, 1);
-  return {
-    motorwayStroke: mixCanvasColors(resolvedPrimaryColor, "#111827", 0.28) || resolvedPrimaryColor,
-    trunkStroke: mixCanvasColors(resolvedPrimaryColor, "#e5e7eb", 0.26) || resolvedPrimaryColor,
-    motorwayWidth: 1.55 + (strength * 1.45),
-    trunkWidth: 0.95 + (strength * 0.95),
-    motorwayOpacity: 0.72 + (strength * 0.24),
-    trunkOpacity: 0.48 + (strength * 0.2),
-  };
-}
-
-function getTransportRailLabelGridSize(labelDensity) {
-  switch (String(labelDensity || "").trim().toLowerCase()) {
-    case "dense":
-      return 112;
-    case "sparse":
-      return 176;
-    default:
-      return 144;
-  }
-}
-
-function buildProjectedRailLines(geometry) {
-  if (!projection || !geometry || typeof geometry !== "object") return [];
-  const rawLines = geometry.type === "LineString"
-    ? [geometry.coordinates || []]
-    : geometry.type === "MultiLineString"
-      ? (geometry.coordinates || [])
-      : [];
-  return rawLines
-    .map((line) => (Array.isArray(line) ? line : []).map((coord) => projection(coord)).filter((point) => Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1])))
-    .filter((line) => line.length >= 2);
-}
-
-function measureProjectedLineSetLength(lines) {
-  let total = 0;
-  (Array.isArray(lines) ? lines : []).forEach((line) => {
-    for (let index = 1; index < line.length; index += 1) {
-      const previous = line[index - 1];
-      const current = line[index];
-      total += Math.hypot(
-        Number(current?.[0] || 0) - Number(previous?.[0] || 0),
-        Number(current?.[1] || 0) - Number(previous?.[1] || 0),
-      );
-    }
-  });
-  return total;
-}
-
-function getRailFeatureLabelAnchor(feature) {
-  const geometry = feature?.geometry;
-  if (!geometry || typeof geometry !== "object") return null;
-  if (geometry.type === "LineString") {
-    return getLineMidpointFromCoordinates(Array.isArray(geometry.coordinates) ? geometry.coordinates : []);
-  }
-  return getMultiLineLabelAnchor(geometry, "midpoint");
-}
-
-function getTransportOverviewAirportLabelText(properties = {}, mode = "both") {
-  const name = String(properties.name || "").trim();
-  const code = String(properties.iata || properties.icao || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "code") return code || name;
-  if (normalized === "name") return name || code;
-  return code && name ? `${code} · ${name}` : (code || name);
-}
-
-function getTransportOverviewPortLabelText(properties = {}, mode = "mixed") {
-  const name = String(properties.name || "").trim();
-  const designation = String(properties.legal_designation_label || properties.legal_designation || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "cargo_focus") return designation || name;
-  if (normalized === "name") return name || designation;
-  return designation && name ? `${name} · ${designation}` : (name || designation);
-}
-
-function getTransportOverviewRailLabelText(properties = {}, mode = "name") {
-  const name = String(properties.name || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "ref") return name;
-  return name;
-}
-
-function buildContextFacilityEntries(
-  collection,
-  thresholdRank = 1,
-  {
-    getLabelText = null,
-  } = {},
-) {
-  const featureCount = getFeatureCollectionFeatureCount(collection);
-  if (!collection?.features?.length || !projection) {
-    return {
-      featureCount,
-      entries: [],
-      skipped: true,
-      reason: !projection ? "no-projection" : "no-data",
-    };
-  }
-  const targetCanvas = context?.canvas || null;
-  const viewportWidth = Number(targetCanvas?.width || 0);
-  const viewportHeight = Number(targetCanvas?.height || 0);
-  const padding = 28;
-  const entries = [];
-  collection.features.forEach((feature) => {
-    if (feature?.geometry?.type !== "Point") return;
-    const coordinates = feature.geometry.coordinates;
-    if (!Array.isArray(coordinates) || coordinates.length < 2) return;
-    const projected = projection([coordinates[0], coordinates[1]]);
-    if (!Array.isArray(projected) || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
-    const properties = feature.properties || {};
-    const importanceRank = Math.max(1, Math.round(Number(properties.importance_rank || 1)));
-    if (importanceRank < thresholdRank) return;
-    const x = projected[0];
-    const y = projected[1];
-    if (
-      viewportWidth > 0
-      && viewportHeight > 0
-      && (x < -padding || x > viewportWidth + padding || y < -padding || y > viewportHeight + padding)
-    ) {
-      return;
-    }
-    entries.push({
-      x,
-      y,
-      label: typeof getLabelText === "function"
-        ? String(getLabelText(properties, feature) || "").trim()
-        : String(properties.name || "").trim(),
-      importanceRank,
-      properties: {
-        ...properties,
-        __coordinates: [coordinates[0], coordinates[1]],
-      },
-    });
-  });
-  entries.sort((left, right) => left.importanceRank - right.importanceRank);
-  return {
-    featureCount,
-    entries,
-    skipped: false,
-    reason: "",
-  };
-}
-
-function drawContextFacilityPointLayer(
-  metricName,
-  collection,
-  k,
-  {
-    familyId = "",
-    interactive = false,
-    visible = true,
-    thresholdRank = 1,
-    shape = "diamond",
-    fillStyle = "#2563eb",
-    strokeStyle = "#eff6ff",
-    labelColor = "#1e3a8a",
-    opacity = 0.9,
-    labelsEnabled = true,
-    nationalLabelScale = 2.2,
-    regionalLabelScale = 5.2,
-    getLabelText = null,
-    radiusScale = 1,
-    strokeScale = 1,
-    hoverScale = 1.18,
-    highlightStroke = "#ffffff",
-  } = {},
-) {
-  const startedAt = nowMs();
-  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
-  if (!visible) {
-    clearFacilityHoverEntries(normalizedFamilyId);
-    collectContextMetric(metricName, nowMs() - startedAt, {
-      featureCount: getFeatureCollectionFeatureCount(collection),
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "hidden",
-    });
-    return;
-  }
-  if (interactive) {
-    collectContextMetric(metricName, nowMs() - startedAt, {
-      featureCount: getFeatureCollectionFeatureCount(collection),
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: true,
-      skipped: true,
-      reason: "interactive-pass",
-    });
-    return;
-  }
-  const renderState = buildContextFacilityEntries(collection, thresholdRank, {
-    getLabelText,
-  });
-  if (renderState.skipped) {
-    clearFacilityHoverEntries(normalizedFamilyId);
-    collectContextMetric(metricName, nowMs() - startedAt, {
-      featureCount: renderState.featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: renderState.reason,
-    });
-    return;
-  }
-  const activeHighlightKey = buildFacilityEntryKey(getActiveFacilityHighlightEntry());
-  const hoverEntries = [];
-  let labelCount = 0;
-  context.save();
-  context.lineJoin = "round";
-  context.lineCap = "round";
-  context.globalAlpha = opacity;
-  renderState.entries.forEach((entry) => {
-    const radiusBase = entry.importanceRank >= 3 ? 5.2 : entry.importanceRank === 2 ? 4.3 : 3.5;
-    const markerEntry = {
-      familyId: normalizedFamilyId,
-      stableId: String(entry.properties?.stable_key || entry.properties?.id || entry.label || `${entry.x}:${entry.y}`).trim(),
-      shape,
-      markerRadiusPx: radiusBase * radiusScale,
-      hoverScale: Number(hoverScale || 1.18),
-      highlightStroke: String(highlightStroke || strokeStyle || "#ffffff"),
-      screenPoint: [entry.x, entry.y],
-      coordinates: Array.isArray(entry.properties?.__coordinates) ? entry.properties.__coordinates : null,
-      properties: entry.properties,
-    };
-    markerEntry.hoverRadiusPx = getFacilityHoverRadiusPx(markerEntry);
-    markerEntry.tooltipText = buildFacilityTooltipText(markerEntry);
-    hoverEntries.push(markerEntry);
-    const highlightFactor = buildFacilityEntryKey(markerEntry) && buildFacilityEntryKey(markerEntry) === activeHighlightKey ? markerEntry.hoverScale : 1;
-    const radius = markerEntry.markerRadiusPx * highlightFactor;
-    context.beginPath();
-    if (shape === "square") {
-      context.rect(entry.x - radius, entry.y - radius, radius * 2, radius * 2);
-    } else {
-      context.moveTo(entry.x, entry.y - radius);
-      context.lineTo(entry.x + radius, entry.y);
-      context.lineTo(entry.x, entry.y + radius);
-      context.lineTo(entry.x - radius, entry.y);
-      context.closePath();
-    }
-    context.fillStyle = fillStyle;
-    context.strokeStyle = strokeStyle;
-    context.lineWidth = (entry.importanceRank >= 3 ? 1.4 : 1.1) * strokeScale;
-    context.fill();
-    context.stroke();
-  });
-  context.restore();
-  setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries);
-
-  if (!labelsEnabled) {
-    collectContextMetric(metricName, nowMs() - startedAt, {
-      featureCount: renderState.featureCount,
-      visibleFeatureCount: renderState.entries.length,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: false,
-    });
-    return;
-  }
-
-  context.save();
-  context.textAlign = "left";
-  context.textBaseline = "middle";
-  renderState.entries.forEach((entry) => {
-    if (!entry.label) return;
-    const shouldShowLabel = entry.importanceRank >= 3 ? k >= nationalLabelScale : k >= regionalLabelScale;
-    if (!shouldShowLabel) return;
-    context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${entry.importanceRank >= 3 ? 11 : 10}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
-    context.lineWidth = 3;
-    context.strokeStyle = "rgba(255,255,255,0.92)";
-    context.fillStyle = labelColor;
-    context.strokeText(entry.label, entry.x + 8, entry.y);
-    context.fillText(entry.label, entry.x + 8, entry.y);
-    labelCount += 1;
-  });
-  context.restore();
-
-  collectContextMetric(metricName, nowMs() - startedAt, {
-    featureCount: renderState.featureCount,
-    visibleFeatureCount: renderState.entries.length,
-    labelCount,
-    interactive: !!interactive,
-    skipped: false,
-  });
+  return getTransportOverviewRenderOwner().getTransportOverviewStyleConfig();
 }
 
 function drawAirportsLayer(k, { interactive = false } = {}) {
-  const airportConfig = getTransportOverviewFamilyConfig("airport");
-  const labelZoomConfig = getTransportOverviewLabelZoomConfig("airport", airportConfig.labelDensity);
-  const visualStyle = getTransportOverviewAirportVisualStyle(airportConfig.primaryColor, airportConfig.visualStrength);
-  const strategy = resolveTransportOverviewPointStrategy("airport", airportConfig, {
-    scale: k,
-    visualMode: getTransportOverviewVisualMode(),
-  });
-  drawContextFacilityPointLayer("drawAirportsLayer", runtimeState.airportsData, k, {
-    familyId: "airport",
-    interactive,
-    visible: !!runtimeState.showTransport && !!runtimeState.showAirports,
-    thresholdRank: strategy.thresholdRank,
-    shape: "diamond",
-    fillStyle: visualStyle.fillStyle,
-    strokeStyle: visualStyle.strokeStyle,
-    labelColor: visualStyle.labelColor,
-    opacity: clamp(Number(airportConfig.opacity ?? 0.68), 0, 1) * strategy.opacityMultiplier,
-    labelsEnabled: strategy.labelsEnabled,
-    nationalLabelScale: labelZoomConfig.nationalLabelScale,
-    regionalLabelScale: labelZoomConfig.regionalLabelScale,
-    radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
-    strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
-    hoverScale: visualStyle.hoverScale,
-    highlightStroke: visualStyle.highlightStroke,
-    getLabelText: (properties) => getTransportOverviewAirportLabelText(properties, airportConfig.labelMode),
-  });
+  return getTransportOverviewRenderOwner().drawAirportsLayer(k, { interactive });
 }
 
 function drawPortsLayer(k, { interactive = false } = {}) {
-  const portConfig = getTransportOverviewFamilyConfig("port");
-  const labelZoomConfig = getTransportOverviewLabelZoomConfig("port", portConfig.labelDensity);
-  const visualStyle = getTransportOverviewPortVisualStyle(portConfig.primaryColor, portConfig.visualStrength);
-  const strategy = resolveTransportOverviewPointStrategy("port", portConfig, {
-    scale: k,
-    visualMode: getTransportOverviewVisualMode(),
-  });
-  drawContextFacilityPointLayer("drawPortsLayer", runtimeState.portsData, k, {
-    familyId: "port",
-    interactive,
-    visible: !!runtimeState.showTransport && !!runtimeState.showPorts,
-    thresholdRank: strategy.thresholdRank,
-    shape: "square",
-    fillStyle: visualStyle.fillStyle,
-    strokeStyle: visualStyle.strokeStyle,
-    labelColor: visualStyle.labelColor,
-    opacity: clamp(Number(portConfig.opacity ?? 0.64), 0, 1) * strategy.opacityMultiplier,
-    labelsEnabled: strategy.labelsEnabled,
-    nationalLabelScale: labelZoomConfig.nationalLabelScale,
-    regionalLabelScale: labelZoomConfig.regionalLabelScale,
-    radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
-    strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
-    hoverScale: visualStyle.hoverScale,
-    highlightStroke: visualStyle.highlightStroke,
-    getLabelText: (properties) => getTransportOverviewPortLabelText(properties, portConfig.labelMode),
-  });
+  return getTransportOverviewRenderOwner().drawPortsLayer(k, { interactive });
 }
 
 function drawRailwaysLayer(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  const visible = !!runtimeState.showTransport && !!runtimeState.showRail;
-  const collection = runtimeState.railwaysData;
-  const featureCount = getFeatureCollectionFeatureCount(collection);
-  if (!visible) {
-    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "hidden",
-    });
-    return;
-  }
-  if (interactive) {
-    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: true,
-      skipped: true,
-      reason: "interactive-pass",
-    });
-    return;
-  }
-  if (!collection?.features?.length || !pathCanvas) {
-    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: !pathCanvas ? "no-path" : "no-data",
-    });
-    return;
-  }
-  const railConfig = getTransportOverviewFamilyConfig("rail");
-  const strategy = resolveTransportOverviewLineStrategy("rail", railConfig, {
-    scale: k,
-    visualMode: getTransportOverviewVisualMode(),
-  });
-  const minimumScopeRank = strategy.minimumScopeRank;
-  const maximumRevealRank = strategy.maximumRevealRank;
-  const visualStyle = getTransportOverviewRailVisualStyle(railConfig.primaryColor, railConfig.visualStrength);
-  const featuresByClass = {
-    regional: [],
-    mainline: [],
-  };
-  const labelCandidates = [];
-  collection.features.forEach((feature) => {
-    const properties = feature?.properties || {};
-    const lineClass = String(properties.class || "").trim().toLowerCase();
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
-    if (revealRank > maximumRevealRank) return;
-    if (minimumScopeRank <= 1 && lineClass !== "mainline") return;
-    if (lineClass === "mainline") {
-      featuresByClass.mainline.push(feature);
-    } else if (lineClass === "regional") {
-      featuresByClass.regional.push(feature);
-    } else {
-      return;
-    }
-
-    const label = getTransportOverviewRailLabelText(properties, railConfig.labelMode);
-    if (!label || !railConfig.labelsEnabled) return;
-    const anchorGeo = getRailFeatureLabelAnchor(feature);
-    if (!Array.isArray(anchorGeo) || anchorGeo.length < 2) return;
-    const anchorProjected = projection(anchorGeo);
-    if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return;
-    const projectedLines = buildProjectedRailLines(feature.geometry);
-    const projectedLength = measureProjectedLineSetLength(projectedLines);
-    const minimumProjectedLength = lineClass === "mainline" ? 110 : 72;
-    if (projectedLength < minimumProjectedLength) return;
-    labelCandidates.push({
-      label,
-      lineClass,
-      projectedLength,
-      x: anchorProjected[0],
-      y: anchorProjected[1],
-    });
-  });
-  const stationCollection = runtimeState.railStationsMajorData;
-  const stationFeatureCount = getFeatureCollectionFeatureCount(stationCollection);
-  if (Array.isArray(stationCollection?.features) && stationCollection.features.length) {
-    drawContextFacilityPointLayer("drawRailStationsMajorLayer", stationCollection, k, {
-      familyId: "rail",
-      interactive,
-      visible,
-      thresholdRank: 1,
-      shape: "square",
-      fillStyle: visualStyle.regionalStroke,
-      strokeStyle: mixCanvasColors(visualStyle.regionalStroke, "#ffffff", 0.7) || "#ffffff",
-      labelColor: visualStyle.mainlineStroke,
-      opacity: clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * 0.9 * strategy.opacityMultiplier,
-      labelsEnabled: false,
-      radiusScale: 0.92 * Math.max(0.88, strategy.widthMultiplier * 0.92),
-      strokeScale: 0.95,
-      hoverScale: 1.1,
-      highlightStroke: "#ffffff",
-      getLabelText: null,
-    });
-  } else {
-    collectContextMetric("drawRailStationsMajorLayer", 0, {
-      featureCount: stationFeatureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: visible ? "no-data" : "hidden",
-    });
-  }
-  const labelZoomConfig = getTransportOverviewLabelZoomConfig("rail", railConfig.labelDensity);
-  const labelsEnabled = !!railConfig.labelsEnabled && strategy.labelsEnabled;
-  const visibleLabelEntries = [];
-  if (labelsEnabled) {
-    const gridSize = getTransportRailLabelGridSize(railConfig.labelDensity);
-    const usedBuckets = new Set();
-    labelCandidates
-      .filter((entry) => entry.lineClass === "mainline" ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
-      .sort((left, right) => {
-        if (left.lineClass !== right.lineClass) return left.lineClass === "mainline" ? -1 : 1;
-        return right.projectedLength - left.projectedLength;
-      })
-      .forEach((entry) => {
-        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}:${entry.lineClass}`;
-        if (usedBuckets.has(bucketKey)) return;
-        usedBuckets.add(bucketKey);
-        visibleLabelEntries.push(entry);
-      });
-  }
-  const visibleFeatureCount = featuresByClass.mainline.length + featuresByClass.regional.length;
-  if (!visibleFeatureCount) {
-    collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "filtered",
-    });
-    return;
-  }
-
-  const drawFeatureSet = (features, strokeStyle, lineWidth, opacity) => {
-    if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
-    context.save();
-    context.globalAlpha = clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * opacity * strategy.opacityMultiplier;
-    context.strokeStyle = strokeStyle;
-    context.lineWidth = (lineWidth * strategy.widthMultiplier) / Math.max(0.0001, Number(k || 1));
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    features.forEach((feature) => {
-      context.beginPath();
-      pathCanvas(feature);
-      context.stroke();
-    });
-    context.restore();
-  };
-
-  drawFeatureSet(
-    featuresByClass.regional,
-    visualStyle.regionalStroke,
-    visualStyle.regionalWidth,
-    visualStyle.regionalOpacity,
-  );
-  drawFeatureSet(
-    featuresByClass.mainline,
-    visualStyle.mainlineStroke,
-    visualStyle.mainlineWidth,
-    visualStyle.mainlineOpacity,
-  );
-
-  let labelCount = 0;
-  if (visibleLabelEntries.length) {
-    context.save();
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    visibleLabelEntries.forEach((entry) => {
-      context.font = `${entry.lineClass === "mainline" ? 600 : 500} ${entry.lineClass === "mainline" ? 10.5 : 9.5}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
-      context.lineWidth = 3;
-      context.strokeStyle = "rgba(255,255,255,0.9)";
-      context.fillStyle = visualStyle.mainlineStroke;
-      context.strokeText(entry.label, entry.x, entry.y);
-      context.fillText(entry.label, entry.x, entry.y);
-      labelCount += 1;
-    });
-    context.restore();
-  }
-
-  collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
-    featureCount,
-    visibleFeatureCount,
-    labelCount,
-    interactive: !!interactive,
-    skipped: false,
-  });
+  return getTransportOverviewRenderOwner().drawRailwaysLayer(k, { interactive });
 }
 
 function drawRoadsLayer(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  const visible = !!runtimeState.showTransport && !!runtimeState.showRoad;
-  const collection = runtimeState.roadsData;
-  const featureCount = getFeatureCollectionFeatureCount(collection);
-  if (!visible) {
-    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "hidden",
-    });
-    return;
-  }
-  if (interactive) {
-    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: true,
-      skipped: true,
-      reason: "interactive-pass",
-    });
-    return;
-  }
-  if (!collection?.features?.length || !pathCanvas) {
-    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: !pathCanvas ? "no-path" : "no-data",
-    });
-    return;
-  }
-  const roadConfig = getTransportOverviewFamilyConfig("road");
-  const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {
-    scale: k,
-    visualMode: getTransportOverviewVisualMode(),
-  });
-  const minimumScopeRank = strategy.minimumScopeRank;
-  const maximumRevealRank = strategy.maximumRevealRank;
-  const visualStyle = getTransportOverviewRoadVisualStyle(roadConfig.primaryColor, roadConfig.visualStrength);
-  const featuresByClass = {
-    trunk: [],
-    motorway: [],
-  };
-  collection.features.forEach((feature) => {
-    const properties = feature?.properties || {};
-    const roadClass = String(properties.class || "").trim().toLowerCase();
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (roadClass === "motorway" ? 1 : 2))));
-    if (revealRank > maximumRevealRank) return;
-    if (minimumScopeRank <= 1 && roadClass !== "motorway") return;
-    if (roadClass === "motorway") {
-      featuresByClass.motorway.push(feature);
-    } else if (roadClass === "trunk") {
-      featuresByClass.trunk.push(feature);
-    }
-  });
-  const visibleFeatureCount = featuresByClass.motorway.length + featuresByClass.trunk.length;
-  if (!visibleFeatureCount) {
-    collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
-      featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "filtered",
-    });
-    return;
-  }
-
-  const drawFeatureSet = (features, strokeStyle, lineWidth, opacity) => {
-    if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
-    context.save();
-    context.globalAlpha = clamp(Number(roadConfig.opacity ?? 0.72), 0, 1) * opacity * strategy.opacityMultiplier;
-    context.strokeStyle = strokeStyle;
-    context.lineWidth = (lineWidth * strategy.widthMultiplier) / Math.max(0.0001, Number(k || 1));
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    features.forEach((feature) => {
-      context.beginPath();
-      pathCanvas(feature);
-      context.stroke();
-    });
-    context.restore();
-  };
-
-  drawFeatureSet(
-    featuresByClass.trunk,
-    visualStyle.trunkStroke,
-    visualStyle.trunkWidth,
-    visualStyle.trunkOpacity,
-  );
-  drawFeatureSet(
-    featuresByClass.motorway,
-    visualStyle.motorwayStroke,
-    visualStyle.motorwayWidth,
-    visualStyle.motorwayOpacity,
-  );
-
-  collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
-    featureCount,
-    visibleFeatureCount,
-    labelCount: 0,
-    interactive: !!interactive,
-    skipped: false,
-  });
+  return getTransportOverviewRenderOwner().drawRoadsLayer(k, { interactive });
 }
 
 function getTextureStyleConfig() {
@@ -16598,7 +15675,7 @@ function shouldFallbackScenarioPoliticalBackgroundMergeShape(
   if (!suspicious) {
     return false;
   }
-  const viewMode = String(runtimeState.scenarioViewMode || "ownership");
+  const viewMode = "ownership";
   const logKey = `${scenarioId}::${viewMode}::${displayCode}::${fillColor}`;
   if (!suspiciousScenarioBackgroundMergeWarnings.has(logKey)) {
     suspiciousScenarioBackgroundMergeWarnings.add(logKey);
@@ -16616,10 +15693,10 @@ function getScenarioPoliticalBackgroundCacheKey({
 } = {}) {
   return [
     String(runtimeState.activeScenarioId || ""),
-    String(runtimeState.scenarioViewMode || "ownership"),
+    "ownership",
     getAtlantropaSeaPoliticalFillColor(),
     Number(runtimeState.sovereigntyRevision || 0),
-    Number(runtimeState.scenarioControllerRevision || 0),
+    0,
     Number(runtimeState.scenarioShellOverlayRevision || 0),
     Number(runtimeState.colorRevision || 0),
     Math.round(Number(canvasWidth || 0)),
@@ -16943,10 +16020,9 @@ function buildScenarioPoliticalBackgroundEntries() {
     scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
       runtimeRef: landCollection,
       scenarioId: runtimeState.activeScenarioId || "",
-      viewMode: String(runtimeState.scenarioViewMode || "ownership"),
+      viewMode: "ownership",
       oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
       sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
-      controllerRevision: Number(runtimeState.scenarioControllerRevision || 0),
       shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
       colorRevision: Number(runtimeState.colorRevision || 0),
       canvasWidth,
@@ -16965,10 +16041,9 @@ function buildScenarioPoliticalBackgroundEntries() {
   scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
     runtimeRef: landCollection,
     scenarioId: runtimeState.activeScenarioId || "",
-    viewMode: String(runtimeState.scenarioViewMode || "ownership"),
+    viewMode: "ownership",
     oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
     sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
-    controllerRevision: Number(runtimeState.scenarioControllerRevision || 0),
     shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
     colorRevision: Number(runtimeState.colorRevision || 0),
     canvasWidth,
@@ -18283,6 +17358,9 @@ function drawScenarioRegionOverlaysPass(k) {
   let waterVisibleCoverageRatio = 0;
   let waterPrevRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
   let specialCacheMode = "disabled";
+  // water/special overlay 这里走的是显式策略选择，不是错误恢复链：
+  // adaptive 会按覆盖率和复杂度在 reuse/redraw/direct 间切换；
+  // direct 表示“直接画到当前 pass，不维护复用缓存”，不要把它当失败兜底继续叠 fallback。
   if (!showWater && !showSpecial) {
     collectContextMetric("contextScenarioLayerWater", 0, {
       featureCount: 0,
@@ -18568,12 +17646,7 @@ function drawContextBasePass(k, { interactive = false } = {}) {
         skipped: true,
         reason: "staged-apply",
       });
-      collectContextMetric("drawRiversLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.riversData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
+      recordDeferredRiversLayerMetric({ interactive: false, reason: "staged-apply" });
     } else {
       drawPhysicalReliefOverlayLayer(k, { interactive });
       drawPhysicalContourLayer(k, { interactive });
@@ -19481,6 +18554,8 @@ function scheduleDeferredExactContextRefresh(plan = {}) {
   deferredExactContextRefreshHandle = scheduleDeferredWork(() => {
     deferredExactContextRefreshHandle = null;
     if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
+    // deferred exact refresh 只允许在真正 idle 时落地。
+    // 如果用户又开始交互，宁可整批重排，也不要让旧 generation 在 settling/interacting 阶段写回精细 pass。
     if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
       if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
         scheduleDeferredExactContextRefresh(plan);
@@ -19610,6 +18685,8 @@ function beginStagedMapDataWarmup(startedAt) {
   const token = Number(runtimeState.stagedMapDataToken || 0) + 1;
   runtimeState.stagedMapDataToken = token;
   const shouldStage = isHeavyScenarioStagedApplyCandidate();
+  // staged warmup 的目标是先把可交互底座恢复出来，再把 contextBase / hit canvas 这类重活延后。
+  // 这里如果改成立即同步完成，通常会直接把大场景 apply 又拉回启动关键路径。
   runtimeState.deferContextBasePass = shouldStage;
   runtimeState.deferHitCanvasBuild = shouldStage;
   if (shouldStage) {
@@ -20135,7 +19212,7 @@ function getFrontlineLabelAnchors() {
   }
   const nextHash = [
     `scenario:${String(runtimeState.activeScenarioId || "")}`,
-    `ctrl:${Number(runtimeState.scenarioControllerRevision || 0)}`,
+    `ctrl:${0}`,
     `shell:${Number(runtimeState.scenarioShellOverlayRevision || 0)}`,
     `sov:${Number(runtimeState.sovereigntyRevision || 0)}`,
     `placement:${String(runtimeState.annotationView?.labelPlacementMode || "midpoint")}`,

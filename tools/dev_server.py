@@ -625,7 +625,6 @@ def save_scenario_ownership_payload(
             )
         political_bundle = _load_political_payload_bundle(context)
         owners_map = political_bundle["owners"]
-        has_controllers = bool(political_bundle["hasControllers"])
         has_cores = bool(political_bundle["hasCores"])
         allowed_tags = {
             str(tag or "").strip().upper()
@@ -687,7 +686,7 @@ def save_scenario_ownership_payload(
                 if not isinstance(raw_assignment, dict):
                     raise DevServerError(
                         "invalid_assignment_payload",
-                        f'Feature "{feature_id}" must map to an object with owner/controller/cores fields.',
+                        f'Feature "{feature_id}" must map to an object with owner/cores fields.',
                         status=400,
                     )
                 if "owner" in raw_assignment:
@@ -702,24 +701,6 @@ def save_scenario_ownership_payload(
                     existing_assignment = mutations_payload["assignments_by_feature_id"].get(feature_id)
                     assignment_record = dict(existing_assignment) if isinstance(existing_assignment, dict) else {}
                     assignment_record["owner"] = owner_tag
-                    mutations_payload["assignments_by_feature_id"][feature_id] = assignment_record
-                if "controller" in raw_assignment:
-                    if not has_controllers:
-                        raise DevServerError(
-                            "missing_controllers_file",
-                            "Scenario controllers file is required when saving controller assignments.",
-                            status=400,
-                        )
-                    controller_tag = _normalize_code(raw_assignment.get("controller"))
-                    if controller_tag not in allowed_tags:
-                        raise DevServerError(
-                            "invalid_controller_codes",
-                            f'Feature "{feature_id}" used a controller tag not declared by the scenario.',
-                            status=400,
-                            details={"featureId": feature_id, "invalidControllerTag": controller_tag},
-                        )
-                    assignment_record = dict(mutations_payload["assignments_by_feature_id"].get(feature_id)) if isinstance(mutations_payload["assignments_by_feature_id"].get(feature_id), dict) else {}
-                    assignment_record["controller"] = controller_tag
                     mutations_payload["assignments_by_feature_id"][feature_id] = assignment_record
                 if "cores" in raw_assignment:
                     if not has_cores:
@@ -1284,24 +1265,9 @@ def _load_political_payload_bundle(context: dict[str, object]) -> dict[str, obje
         if str(feature_id or "").strip()
     }
 
-    controllers_path = Path(context["controllersPath"]) if context.get("controllersPath") else None
+    controllers_path = None
     controllers_payload: dict[str, object] | None = None
     controllers: dict[str, str] = {}
-    if controllers_path is not None:
-        if not controllers_path.exists():
-            raise DevServerError(
-                "missing_controllers_file",
-                "Scenario controllers file is declared but could not be found.",
-                status=400,
-            )
-        controllers_payload = _read_json(controllers_path)
-        if not isinstance(controllers_payload, dict) or not isinstance(controllers_payload.get("controllers"), dict):
-            raise DevServerError("invalid_controllers_file", "Scenario controllers file must contain a controllers object.", status=500)
-        controllers = {
-            str(feature_id or "").strip(): _normalize_code(owner_code)
-            for feature_id, owner_code in controllers_payload["controllers"].items()
-            if str(feature_id or "").strip()
-        }
 
     cores_path = Path(context["coresPath"]) if context.get("coresPath") else None
     cores_payload: dict[str, object] | None = None
@@ -1322,10 +1288,7 @@ def _load_political_payload_bundle(context: dict[str, object]) -> dict[str, obje
         "ownersPath": owners_path,
         "ownersPayload": owners_payload,
         "owners": owners,
-        "controllersPath": controllers_path,
-        "controllersPayload": controllers_payload,
         "controllers": controllers,
-        "hasControllers": controllers_payload is not None,
         "coresPath": cores_path,
         "coresPayload": cores_payload,
         "cores": cores,
@@ -1359,8 +1322,6 @@ def _build_manual_assignment_record(
     record: dict[str, object] = {
         "owner": owners.get(feature_id, ""),
     }
-    if has_controllers:
-        record["controller"] = controllers.get(feature_id, "")
     if has_cores:
         record["cores"] = list(cores.get(feature_id, []))
     return record
@@ -1581,21 +1542,17 @@ def _recompute_country_feature_counts(
     controllers: dict[str, str],
 ) -> None:
     owner_counts: dict[str, int] = {}
-    controller_counts: dict[str, int] = {}
     for owner_code in owners.values():
         if not owner_code:
             continue
         owner_counts[owner_code] = owner_counts.get(owner_code, 0) + 1
-    for controller_code in controllers.values():
-        if not controller_code:
-            continue
-        controller_counts[controller_code] = controller_counts.get(controller_code, 0) + 1
     for raw_tag, raw_country in countries.items():
         tag = _normalize_code(raw_tag)
         if not tag or not isinstance(raw_country, dict):
             continue
-        raw_country["feature_count"] = int(owner_counts.get(tag, 0))
-        raw_country["controller_feature_count"] = int(controller_counts.get(tag, 0))
+        feature_count = int(owner_counts.get(tag, 0))
+        raw_country["feature_count"] = feature_count
+        raw_country["controller_feature_count"] = feature_count
 
 
 # Keep dev_server's legacy helper names stable while making map_builder the
@@ -1737,8 +1694,6 @@ def save_scenario_tag_create_payload(
         assignment_patch: dict[str, dict[str, object]] = {}
         for feature_id in normalized_feature_ids:
             assignment_record: dict[str, object] = {"owner": normalized_tag}
-            if political_bundle["hasControllers"]:
-                assignment_record["controller"] = normalized_tag
             if political_bundle["hasCores"]:
                 assignment_record["cores"] = [normalized_tag]
             assignment_patch[feature_id] = assignment_record

@@ -15,7 +15,6 @@ function createScenarioLifecycleRuntime({
   markDirty,
   markLegacyColorStateDirty,
   normalizeScenarioId,
-  recalculateScenarioOwnerControllerDiffCount,
   releaseScenarioAuditPayload,
   resetScenarioChunkRuntimeState,
   restoreScenarioDisplaySettingsAfterExit,
@@ -132,17 +131,12 @@ function createScenarioLifecycleRuntime({
       : new Set();
     const previousInspectorExpansionInitialized = !!runtimeState.inspectorExpansionInitialized;
     runtimeState.sovereigntyByFeatureId = { ...(runtimeState.scenarioBaselineOwnersByFeatureId || {}) };
-    runtimeState.scenarioControllersByFeatureId = { ...(runtimeState.scenarioBaselineControllersByFeatureId || {}) };
     runtimeState.scenarioAutoShellOwnerByFeatureId = {};
-    runtimeState.scenarioAutoShellControllerByFeatureId = {};
     runtimeState.mapSemanticMode = getScenarioMapSemanticMode(runtimeState.activeScenarioManifest, runtimeState.mapSemanticMode);
     if (runtimeState.mapSemanticMode === "blank") {
       applyBlankScenarioPresentationDefaults();
     }
     runtimeState.scenarioShellOverlayRevision = (Number(runtimeState.scenarioShellOverlayRevision) || 0) + 1;
-    runtimeState.scenarioControllerRevision = (Number(runtimeState.scenarioControllerRevision) || 0) + 1;
-    runtimeState.scenarioViewMode = "ownership";
-    recalculateScenarioOwnerControllerDiffCount();
     runtimeState.sovereigntyInitialized = false;
     ensureSovereigntyState({ force: true });
     runtimeState.parentBordersVisible = false;
@@ -246,17 +240,11 @@ function createScenarioLifecycleRuntime({
     runtimeState.scenarioImportAudit = null;
     runtimeState.scenarioBaselineHash = "";
     runtimeState.scenarioBaselineOwnersByFeatureId = {};
-    runtimeState.scenarioControllersByFeatureId = {};
     runtimeState.scenarioAutoShellOwnerByFeatureId = {};
-    runtimeState.scenarioAutoShellControllerByFeatureId = {};
-    runtimeState.scenarioBaselineControllersByFeatureId = {};
     runtimeState.scenarioBaselineCoresByFeatureId = {};
     runtimeState.scenarioShellOverlayRevision = (Number(runtimeState.scenarioShellOverlayRevision) || 0) + 1;
-    runtimeState.scenarioControllerRevision = (Number(runtimeState.scenarioControllerRevision) || 0) + 1;
-    runtimeState.scenarioOwnerControllerDiffCount = 0;
     runtimeState.scenarioHydrationHealthGate = createDefaultScenarioHydrationHealthGate();
     runtimeState.scenarioDataHealth = createDefaultScenarioDataHealth(scenarioDetailMinRatioStrict);
-    runtimeState.scenarioViewMode = "ownership";
     runtimeState.countryNames = { ...countryNames };
     runtimeState.selectedWaterRegionId = "";
     runtimeState.selectedSpecialRegionId = "";

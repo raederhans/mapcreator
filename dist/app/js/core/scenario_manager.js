@@ -22,7 +22,6 @@ import {
   normalizeScenarioDistrictGroupsPayload,
 } from "./scenario_districts.js";
 import { ensureDetailTopologyBoundary } from "./render_boundary.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "./scenario_owner_metrics.js";
 import { applyActivePaletteState, setActivePaletteSource, syncResolvedDefaultCountryPalette } from "./palette_manager.js";
 import { markDirty } from "./dirty_state.js";
 import {
@@ -123,7 +122,7 @@ let activeScenarioApplyPromise = null;
  * Cross-module shared high-frequency state fields.
  * - activeScenarioId: active scenario selector used by UI sync, resources, and apply pipeline.
  * - scenarioBundleCacheById: bundle cache keyed by normalized scenario id for startup/full reuse.
- * - scenarioControllerRevision: revision counter for owner/controller overlay refresh and dependent UI.
+ * - scenarioShellOverlayRevision: revision counter for owner shell overlay refresh and dependent UI.
  */
 
 function normalizeScenarioCoreMap(rawMap) {
@@ -145,7 +144,8 @@ function hasActiveScenarioPaletteLoaded(paletteId) {
 }
 
 function normalizeScenarioViewMode(value) {
-  return String(value || "").trim().toLowerCase() === "frontline" ? "frontline" : "ownership";
+  void value;
+  return "ownership";
 }
 
 function canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId) {
@@ -180,22 +180,13 @@ function canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId
     return false;
   }
 
-  const hasSplitFeatures = Number(cachedManifest?.summary?.owner_controller_split_feature_count || 0) > 0;
-  if (!hasSplitFeatures) {
-    return true;
-  }
-
   const hasShellOwnerMap = Object.keys(runtimeState.scenarioAutoShellOwnerByFeatureId || {}).length > 0;
-  const hasShellControllerMap = Object.keys(runtimeState.scenarioAutoShellControllerByFeatureId || {}).length > 0;
   const hasBaselineOwnerMap = Object.keys(runtimeState.scenarioBaselineOwnersByFeatureId || {}).length > 0;
-  const hasBaselineControllerMap = Object.keys(runtimeState.scenarioBaselineControllersByFeatureId || {}).length > 0;
   const requiresMeshPack = !!String(cachedManifest?.mesh_pack_url || "").trim();
   const hasMeshPack = !requiresMeshPack || !!runtimeState.activeScenarioMeshPack;
   return (
     hasShellOwnerMap
-    && hasShellControllerMap
     && hasBaselineOwnerMap
-    && hasBaselineControllerMap
     && hasMeshPack
   );
 }
@@ -230,7 +221,6 @@ const {
   markDirty,
   markLegacyColorStateDirty,
   normalizeScenarioId,
-  recalculateScenarioOwnerControllerDiffCount,
   releaseScenarioAuditPayload,
   resetScenarioChunkRuntimeState,
   restoreScenarioDisplaySettingsAfterExit,
@@ -248,16 +238,7 @@ function getScenarioDisplayOwnerByFeatureId(featureId, { fallbackOwner = "" } = 
   if (!normalizedId) return String(fallbackOwner || "").trim().toUpperCase();
   const fallback = String(fallbackOwner || "").trim().toUpperCase();
   const directOwner = String(runtimeState.sovereigntyByFeatureId?.[normalizedId] || "").trim().toUpperCase();
-  const directController = String(runtimeState.scenarioControllersByFeatureId?.[normalizedId] || "").trim().toUpperCase();
-  if (!runtimeState.activeScenarioId || normalizeScenarioViewMode(runtimeState.scenarioViewMode) !== "frontline") {
-    return directOwner || fallback;
-  }
-  return String(
-    directController
-    || directOwner
-    || fallback
-    || ""
-  ).trim().toUpperCase();
+  return directOwner || fallback;
 }
 
 function getScenarioRegistryEntries() {
@@ -354,24 +335,10 @@ function setScenarioViewMode(
     markDirtyReason = "",
   } = {}
 ) {
-  assertScenarioInteractionsAllowed("change scenario view mode");
-  const nextMode = normalizeScenarioViewMode(viewMode);
-  if (!runtimeState.activeScenarioId) {
-    runtimeState.scenarioViewMode = "ownership";
-    return false;
-  }
-  if (runtimeState.scenarioViewMode === nextMode) {
-    return false;
-  }
-  runtimeState.scenarioViewMode = nextMode;
-  recalculateScenarioOwnerControllerDiffCount();
-  if (markDirtyReason) {
-    markDirty(markDirtyReason);
-  }
-  refreshColorState({ renderNow: false });
-  recomputeDynamicBordersNow({ renderNow: false, reason: `scenario-view:${nextMode}` });
-  syncCountryUi({ renderNow });
-  return true;
+  void viewMode;
+  void renderNow;
+  void markDirtyReason;
+  return false;
 }
 
 async function ensureScenarioDetailTopologyLoaded({ applyMapData = true } = {}) {
@@ -512,7 +479,6 @@ const {
   scheduleScenarioChunkRefresh,
   resetScenarioChunkRuntimeState,
   ensureRuntimeChunkLoadState,
-  recalculateScenarioOwnerControllerDiffCount,
   hasRenderableScenarioPoliticalTopology,
   normalizeScenarioFeatureCollection,
   cloneScenarioStateValue,
@@ -548,7 +514,6 @@ async function applyScenarioBundle(
         `[scenario] Applied HOI4 Far East owner backfill for "${staged.scenarioId}": ${Object.keys(staged.scenarioOwnerBackfill).length} missing RU runtime features -> SOV.`
       );
     }
-    recalculateScenarioOwnerControllerDiffCount();
     bundle.chunkLifecycle = {
       applyStartedAt,
       politicalCoreReadyRecorded: false,
@@ -615,7 +580,7 @@ async function applyScenarioBundle(
       }
     }
 
-    // Diagnostic: verify key ownership/frontline assignments took effect.
+    // Diagnostic: verify key ownership assignments took effect.
     const spotChecks = [
       "SYR-134",
       "LBN-3022",
@@ -626,10 +591,9 @@ async function applyScenarioBundle(
     if (String(runtimeState.debugMode || "PROD") !== "PROD") {
       spotChecks.forEach((fid) => {
         const owner = runtimeState.sovereigntyByFeatureId[fid];
-        const controller = runtimeState.scenarioControllersByFeatureId?.[fid] || owner;
         if (owner) {
           const color = staged.scenarioColorMap[owner] || "(no color)";
-          console.log(`[scenario] Spot-check: ${fid} -> owner=${owner}, controller=${controller}, color=${color}`);
+          console.log(`[scenario] Spot-check: ${fid} -> owner=${owner}, color=${color}`);
         }
       });
     }
@@ -865,11 +829,7 @@ function formatScenarioAuditText() {
   if (!runtimeState.activeScenarioId || !runtimeState.activeScenarioManifest) {
     return "";
   }
-  const splitCount = Number(runtimeState.activeScenarioManifest?.summary?.owner_controller_split_feature_count || 0);
-  if (splitCount > 0) {
-    return `${t("Frontline", "ui")}: ${splitCount} split features.`;
-  }
-  return t("No frontline control split in current scenario.", "ui");
+  return t("Ownership baseline active.", "ui");
 }
 
 export {

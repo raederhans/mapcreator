@@ -14,7 +14,6 @@ export function resolveScenarioOpeningOwnerBorderSelection({
   const shouldBuild =
     !!scenarioId
     && state.scenarioBorderMode === "scenario_owner_only"
-    && String(state.scenarioViewMode || "ownership") === "ownership"
     && (
       hasMeshPackMesh
       || (!!runtimeRef?.objects?.political && hasBaselineOwners)

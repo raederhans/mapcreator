@@ -37,7 +37,7 @@ class MapRendererColorResolutionStrategyBoundaryContractTest(unittest.TestCase):
         self.assertIn("function getResolvedFeatureColor(feature, id) {", owner_content)
         self.assertIn("getOwnerCode: getDisplayOwnerCode,", owner_content)
         self.assertIn("state.scenarioAutoShellOwnerByFeatureId?.[resolvedId]", owner_content)
-        self.assertIn("state.scenarioControllersByFeatureId?.[resolvedId]", owner_content)
+        self.assertNotIn("scenarioControllersByFeatureId", owner_content)
 
         self.assertIsNone(re.search(r"function\s+getDisplayOwnerCode\s*\(", renderer_content))
         self.assertIsNone(re.search(r"function\s+getResolvedFeatureColor\s*\(", renderer_content))

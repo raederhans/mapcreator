@@ -22,6 +22,8 @@ class ScenarioPresentationRuntimeBoundaryContractTest(unittest.TestCase):
         self.assertIn("createScenarioOceanFillRestoreRuntime", runtime_content)
         self.assertIn("normalizeScenarioPerformanceHints,", runtime_content)
         self.assertIn("function normalizeScenarioPerformanceHints(manifest)", hint_content)
+        self.assertIn("function scenarioHasPresentationFeature(manifest, featureKey)", hint_content)
+        self.assertIn("SCENARIO_PRESENTATION_FEATURES,", hint_content)
         self.assertIn("function syncScenarioPresentationUi()", display_content)
         self.assertIn("function captureScenarioDisplaySettingsBeforeActivate()", display_content)
         self.assertIn("function applyScenarioPerformanceHints(manifest)", display_content)

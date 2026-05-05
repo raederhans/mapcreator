@@ -7,7 +7,6 @@
   "capital_hints_url": "data/scenarios/hoi4_1939/capital_hints.json",
   "city_overrides_url": "data/scenarios/hoi4_1939/city_overrides.json",
   "context_lod_manifest": "data/scenarios/hoi4_1939/context_lod.manifest.json",
-  "controllers_url": "data/scenarios/hoi4_1939/controllers.by_feature.json",
   "cores_url": "data/scenarios/hoi4_1939/cores.by_feature.json",
   "countries_url": "data/scenarios/hoi4_1939/countries.json",
   "default_country": "GER",
@@ -86,7 +85,7 @@
   "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
   "scenario_contract_profile": "hoi4_chunked",
   "scenario_id": "hoi4_1939",
-  "snapshot_fingerprint": "3819eb36f8d6a7c6228de4ddc2b0da8f3878d17350a498bffea007bb25f1adf3",
+  "snapshot_fingerprint": "a2d5d5dc723019323f384758d9a80738288665e56f450f3edcb9c9faaee7b2fe",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "detail_chunk_manifest_sha256": "5a2e4d606db8c5992cdfe83388258ea3aeeafb28599a8f0aec1dd750e91646d7",

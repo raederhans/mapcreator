@@ -40,21 +40,16 @@ async function waitForScenarioControlsReady(page) {
   await expect(page.locator("#scenarioSelect")).toBeVisible();
 }
 
-async function waitForFrontlineViewReady(page) {
+async function waitForOwnershipOnlyControlsReady(page) {
   await expect.poll(async () => page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const select = document.querySelector("#scenarioViewModeSelect");
     return {
       activeScenarioId: String(state.activeScenarioId || ""),
       scenarioApplyInFlight: !!state.scenarioApplyInFlight,
       startupReadonly: !!state.startupReadonly,
       startupReadonlyUnlockInFlight: !!state.startupReadonlyUnlockInFlight,
       detailPromotionInFlight: !!state.detailPromotionInFlight,
-      hasSplit: Number(state.activeScenarioManifest?.summary?.owner_controller_split_feature_count || 0) > 0,
-      hasControllers: Object.keys(state.scenarioControllersByFeatureId || {}).length > 0,
-      selectDisabled: !!select?.disabled,
-      selectValue: String(select?.value || ""),
-      stateViewMode: String(state.scenarioViewMode || ""),
+      hasViewModeSelect: !!document.querySelector("#scenarioViewModeSelect"),
     };
   }), { timeout: 45_000 }).toEqual({
     activeScenarioId: "tno_1962",
@@ -62,14 +57,9 @@ async function waitForFrontlineViewReady(page) {
     startupReadonly: false,
     startupReadonlyUnlockInFlight: false,
     detailPromotionInFlight: false,
-    hasSplit: true,
-    hasControllers: true,
-    selectDisabled: false,
-    selectValue: "ownership",
-    stateViewMode: "ownership",
+    hasViewModeSelect: false,
   });
 }
-
 test("scenario controls apply reset and exit stay on dispatcher-backed path", async ({ page }) => {
   await waitForScenarioControlsReady(page);
 
@@ -127,23 +117,8 @@ test("scenario controls apply reset and exit stay on dispatcher-backed path", as
   await expect(page.locator("#scenarioStatus")).toContainText("No scenario active");
 });
 
-test("scenario controls switch ownership and frontline view modes through dispatcher", async ({ page }) => {
+test("scenario controls expose ownership-only mode after control retirement", async ({ page }) => {
   await waitForScenarioControlsReady(page);
-  await waitForFrontlineViewReady(page);
-
-  const viewModeSelect = page.locator("#scenarioViewModeSelect");
-  await expect(viewModeSelect).toBeVisible();
-  await expect(viewModeSelect).toBeEnabled();
-
-  await viewModeSelect.selectOption("frontline");
-  await expect.poll(async () => page.evaluate(async () => {
-    const { state } = await import("/js/core/state.js");
-    return String(state.scenarioViewMode || "");
-  }), { timeout: 20_000 }).toBe("frontline");
-
-  await viewModeSelect.selectOption("ownership");
-  await expect.poll(async () => page.evaluate(async () => {
-    const { state } = await import("/js/core/state.js");
-    return String(state.scenarioViewMode || "");
-  }), { timeout: 20_000 }).toBe("ownership");
+  await waitForOwnershipOnlyControlsReady(page);
+  await expect(page.locator("#scenarioViewModeSelect")).toHaveCount(0);
 });

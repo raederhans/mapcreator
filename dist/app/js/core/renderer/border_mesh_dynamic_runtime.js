@@ -1,14 +1,10 @@
 export function buildDynamicBorderHash({
   sovereigntyRevision = 0,
   activeScenarioId = '',
-  scenarioViewMode = 'ownership',
-  scenarioControllerRevision = 0,
   scenarioShellOverlayRevision = 0,
 } = {}) {
   return [
     `rev:${Number(sovereigntyRevision) || 0}`,
-    `mode:${activeScenarioId ? String(scenarioViewMode || 'ownership') : 'ownership'}`,
-    `ctrl:${Number(scenarioControllerRevision) || 0}`,
     `shell:${activeScenarioId ? Number(scenarioShellOverlayRevision) || 0 : 0}`,
   ].join('|');
 }
@@ -16,11 +12,9 @@ export function buildDynamicBorderHash({
 export function getDynamicBorderOwnershipContext(state = {}) {
   return {
     ownershipByFeatureId: state.sovereigntyByFeatureId,
-    controllerByFeatureId: state.scenarioControllersByFeatureId,
     shellOwnerByFeatureId: state.scenarioAutoShellOwnerByFeatureId,
-    shellControllerByFeatureId: state.scenarioAutoShellControllerByFeatureId,
     scenarioActive: !!state.activeScenarioId,
-    viewMode: state.scenarioViewMode,
+    viewMode: "ownership",
   };
 }
 

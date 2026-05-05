@@ -1401,7 +1401,7 @@ function initToolbar({ render } = {}) {
       scenarioContextModeText.setAttribute(
         "title",
         showScenarioState
-          ? `${t("Mode", "ui")}: ${modeLabel} · ${t("View", "ui")}: ${scenarioViewLabel} · ${t("Split", "ui")}: ${splitCount}`
+          ? `${t("Mode", "ui")}: ${modeLabel} · ${t("View", "ui")}: ${t("Ownership", "ui")}`
           : `${t("Mode", "ui")}: ${modeLabel}`
       );
     }

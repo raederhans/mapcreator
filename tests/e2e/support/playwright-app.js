@@ -458,12 +458,10 @@ async function applyScenarioAndWaitIdle(page, scenarioId, {
   const currentScenarioState = await page.evaluate(() => {
     const state = globalThis.__playwrightStateRef || null;
     const shellOwnerCount = Object.keys(state?.scenarioAutoShellOwnerByFeatureId || {}).length;
-    const shellControllerCount = Object.keys(state?.scenarioAutoShellControllerByFeatureId || {}).length;
-    const splitFeatureCount = Number(state?.activeScenarioManifest?.summary?.owner_controller_split_feature_count || 0);
     return {
       activeScenarioId: String(state?.activeScenarioId || ""),
       scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
-      shellReady: splitFeatureCount <= 0 || (shellOwnerCount > 0 && shellControllerCount > 0),
+      shellReady: shellOwnerCount > 0,
     };
   });
   if (
@@ -546,9 +544,7 @@ async function applyScenarioAndWaitIdle(page, scenarioId, {
     }
     if (!state) return false;
     const shellOwnerCount = Object.keys(state.scenarioAutoShellOwnerByFeatureId || {}).length;
-    const shellControllerCount = Object.keys(state.scenarioAutoShellControllerByFeatureId || {}).length;
-    const splitFeatureCount = Number(state.activeScenarioManifest?.summary?.owner_controller_split_feature_count || 0);
-    const shellReady = splitFeatureCount <= 0 || (shellOwnerCount > 0 && shellControllerCount > 0);
+    const shellReady = shellOwnerCount > 0;
     return state.activeScenarioId === targetScenarioId
       && !state.scenarioApplyInFlight
       && shellReady;

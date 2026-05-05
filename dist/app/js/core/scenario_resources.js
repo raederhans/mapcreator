@@ -42,7 +42,6 @@ import {
 } from "./scenario_districts.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
 import { ensureDetailTopologyBoundary, flushRenderBoundary } from "./render_boundary.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "./scenario_owner_metrics.js";
 import { buildScenarioReleasableIndex } from "./releasable_manager.js";
 import { syncScenarioLocalizationState } from "./scenario_localization_state.js";
 import {
@@ -124,6 +123,9 @@ import { consumeScenarioTestHook } from "./scenario_recovery.js";
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 
+// scenario_resources.js 现在是 scenario runtime 的聚合门面：
+// bundle loader、chunk runtime、startup hydration、optional layer、audit facade 都从这里汇合；
+// 真正的重事务已拆到子 controller，本文件主要负责 wiring、共享约束和对外 facade。
 const state = runtimeState;
 const SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "highres"];
 const SCENARIO_FATAL_RECOVERY_CODE = "SCENARIO_FATAL_RECOVERY";
@@ -131,6 +133,9 @@ const SCENARIO_CHUNK_REFRESH_DELAY_MS_INTERACTING = 180;
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_IDLE = 60;
 const SCENARIO_OWNER_FEATURE_COVERAGE_MIN_RATIO = 0.85;
 const SCENARIO_OWNER_FEATURE_COVERAGE_MIN_FEATURES = 1000;
+// optional layer 的单一映射表。
+// 这里同时定义 bundle 字段、runtime state 字段、manifest URL、可见性开关和 revision 语义，
+// 新增 layer 时优先补这里，而不是在各条加载链里散落硬编码字符串。
 const SCENARIO_OPTIONAL_LAYER_CONFIGS = {
   water: {
     bundleField: "waterRegionsPayload",
@@ -220,7 +225,8 @@ const assembleScenarioBundle = createScenarioBundleAssembler({
 });
 
 function normalizeScenarioViewMode(value) {
-  return String(value || "").trim().toLowerCase() === "frontline" ? "frontline" : "ownership";
+  void value;
+  return "ownership";
 }
 
 function recordScenarioPerfMetric(name, durationMs, details = {}) {
@@ -232,16 +238,7 @@ function getScenarioDisplayOwnerByFeatureId(featureId, { fallbackOwner = "" } = 
   if (!normalizedId) return String(fallbackOwner || "").trim().toUpperCase();
   const fallback = String(fallbackOwner || "").trim().toUpperCase();
   const directOwner = String(runtimeState.sovereigntyByFeatureId?.[normalizedId] || "").trim().toUpperCase();
-  const directController = String(runtimeState.scenarioControllersByFeatureId?.[normalizedId] || "").trim().toUpperCase();
-  if (!runtimeState.activeScenarioId || normalizeScenarioViewMode(runtimeState.scenarioViewMode) !== "frontline") {
-    return directOwner || fallback;
-  }
-  return String(
-    directController
-    || directOwner
-    || fallback
-    || ""
-  ).trim().toUpperCase();
+  return directOwner || fallback;
 }
 
 function getScenarioRegistryEntries() {
@@ -496,6 +493,8 @@ const {
   preloadScenarioFocusCountryPoliticalDetailChunk,
   scheduleScenarioChunkRefresh,
 } = createScenarioChunkRuntimeController({
+  // chunk runtime 需要反向调用 getCachedScenarioBundle / ensureScenarioChunkRegistryLoaded；
+  // 后者在本文件稍后才绑定真实实现，所以这里允许先注入占位引用，再由外层 wiring 补齐闭环。
   state,
   getSearchParams,
   normalizeScenarioId,
@@ -593,6 +592,9 @@ const hasRenderableScenarioPoliticalTopology = hasRenderableScenarioPoliticalTop
 function shouldEagerLoadScenarioOptionalLayer(layerKey, manifest, runtimeTopologyPayload, hints = normalizeScenarioPerformanceHints(manifest)) {
   const config = getScenarioOptionalLayerConfig(layerKey);
   if (!config) return false;
+  // “默认可见”不等于“必须在 startup/apply 主路径同步拉取”。
+  // 这里只回答“理论上值得尽快准备吗”，真正是否在 cache-hit 或 visibility 阶段触发，
+  // 还要继续受 runtime topology 已有内容和性能 hints 约束。
   const visibleByDefault = config.visibilityField === "showWaterRegions"
     ? hints.waterRegionsDefault !== false
     : config.visibilityField === "showScenarioSpecialRegions"
@@ -837,6 +839,8 @@ function releaseScenarioAuditPayload(scenarioId = runtimeState.activeScenarioId,
 const {
   loadScenarioBundle,
 } = createScenarioBundleRuntimeController({
+  // bundle_runtime 拥有 bundle 事务、startup cache 读写和 registry 解析；
+  // scenario_resources 保留的职责只是把 facade 暴露给上层，并补齐 optional layer / deferred metadata 这些共享接线。
   state,
   STARTUP_CACHE_KINDS,
   normalizeScenarioId,
@@ -917,4 +921,3 @@ export {
   releaseScenarioAuditPayload,
   validateImportedScenarioBaseline,
 };
-

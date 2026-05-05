@@ -40,7 +40,6 @@ def _create_scenario_fixture(root: Path, scenario_id: str = "tno_1962") -> Path:
             "baseline_hash": "baseline-123",
             "countries_url": f"data/scenarios/{scenario_id}/countries.json",
             "owners_url": f"data/scenarios/{scenario_id}/owners.by_feature.json",
-            "controllers_url": f"data/scenarios/{scenario_id}/controllers.by_feature.json",
             "cores_url": f"data/scenarios/{scenario_id}/cores.by_feature.json",
             "geo_locale_patch_url": f"data/scenarios/{scenario_id}/geo_locale_patch.json",
         },

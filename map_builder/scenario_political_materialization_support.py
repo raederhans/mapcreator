@@ -530,24 +530,12 @@ def load_political_payload_bundle(
         if str(feature_id or "").strip()
     }
 
-    controllers_path = Path(context["controllersPath"]) if context.get("controllersPath") else None
+    # Controllers were a de facto control overlay. Political materialization now
+    # treats ownership as the single source of truth while keeping legacy return
+    # keys so older helper callers can continue to destructure the bundle.
+    controllers_path = None
     controllers_payload: dict[str, object] | None = None
     controllers: dict[str, str] = {}
-    if controllers_path is not None:
-        if not controllers_path.exists():
-            raise error_cls(
-                "missing_controllers_file",
-                "Scenario controllers file is declared but could not be found.",
-                status=400,
-            )
-        controllers_payload = read_json(controllers_path)
-        if not isinstance(controllers_payload, dict) or not isinstance(controllers_payload.get("controllers"), dict):
-            raise error_cls("invalid_controllers_file", "Scenario controllers file must contain a controllers object.", status=500)
-        controllers = {
-            str(feature_id or "").strip(): normalize_code(owner_code)
-            for feature_id, owner_code in controllers_payload["controllers"].items()
-            if str(feature_id or "").strip()
-        }
 
     cores_path = Path(context["coresPath"]) if context.get("coresPath") else None
     cores_payload: dict[str, object] | None = None
@@ -568,10 +556,7 @@ def load_political_payload_bundle(
         "ownersPath": owners_path,
         "ownersPayload": owners_payload,
         "owners": owners,
-        "controllersPath": controllers_path,
-        "controllersPayload": controllers_payload,
         "controllers": controllers,
-        "hasControllers": controllers_payload is not None,
         "coresPath": cores_path,
         "coresPayload": cores_payload,
         "cores": cores,
@@ -591,8 +576,6 @@ def build_manual_assignment_record(
     record: dict[str, object] = {
         "owner": owners.get(feature_id, ""),
     }
-    if has_controllers:
-        record["controller"] = controllers.get(feature_id, "")
     if has_cores:
         record["cores"] = list(cores.get(feature_id, []))
     return record
@@ -728,18 +711,14 @@ def recompute_country_feature_counts(
     controllers: dict[str, str],
 ) -> None:
     owner_counts: dict[str, int] = {}
-    controller_counts: dict[str, int] = {}
     for owner_code in owners.values():
         if not owner_code:
             continue
         owner_counts[owner_code] = owner_counts.get(owner_code, 0) + 1
-    for controller_code in controllers.values():
-        if not controller_code:
-            continue
-        controller_counts[controller_code] = controller_counts.get(controller_code, 0) + 1
     for raw_tag, raw_country in countries.items():
         tag = normalize_code(raw_tag)
         if not tag or not isinstance(raw_country, dict):
             continue
-        raw_country["feature_count"] = int(owner_counts.get(tag, 0))
-        raw_country["controller_feature_count"] = int(controller_counts.get(tag, 0))
+        feature_count = int(owner_counts.get(tag, 0))
+        raw_country["feature_count"] = feature_count
+        raw_country["controller_feature_count"] = feature_count

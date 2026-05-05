@@ -299,7 +299,7 @@ def inspect_hoi4_scenario_bundle(
             errors.append(message)
 
     expected_scenario_id = str(expectation.get("scenario_id") or scenario_dir_name).strip()
-    require_controllers = bool(expectation.get("require_controllers", bool(manifest.get("controllers_url"))))
+    require_controllers = bool(expectation.get("require_controllers", False))
     expectation_scenario_id = str(expectation.get("scenario_id") or "").strip()
     if expectation_scenario_id:
         expect(

@@ -53,7 +53,7 @@ export function createBorderDrawOwner({
     clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
     buildCountryParentBorderMeshes = () => [],
     buildDetailAdmMeshSignature = () => ({ detailCountries: [], signature: "" }),
-    drawTnoCoastalAccentLayer = () => {},
+    drawScenarioCoastalAccentLayer = () => {},
     getCoastlineCollectionForZoom = () => [],
     getInternalBorderStrokeColor = (_countryCode, fallbackColor) => fallbackColor,
     getSafeCanvasColor = (value, fallbackColor) => value || fallbackColor,
@@ -362,7 +362,6 @@ export function createBorderDrawOwner({
         : null;
     const openingOwnerMeshes =
       scenarioOwnerOnlyBorders
-      && String(state.scenarioViewMode || "ownership") === "ownership"
       && !isDynamicBordersEnabled()
       && isUsableMesh(state.cachedScenarioOpeningOwnerBorders)
         ? [state.cachedScenarioOpeningOwnerBorders]
@@ -571,7 +570,7 @@ export function createBorderDrawOwner({
 
     context.globalAlpha = coastAlpha;
     drawMeshCollection(coastlineCollection, coastColor, coastWidth, { transformMesh: coastlineMeshTransform });
-    drawTnoCoastalAccentLayer(k, { interactive });
+    drawScenarioCoastalAccentLayer(k, { interactive });
 
     context.globalAlpha = 1.0;
   }

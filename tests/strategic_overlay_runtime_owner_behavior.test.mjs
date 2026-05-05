@@ -204,11 +204,10 @@ test("operational line runtime owner commits history and updates modal selection
   assert.equal(renderCount, 1);
 });
 
-test("unit counter nation resolution keeps controller fallback source semantics", () => {
+test("unit counter nation resolution maps retired controller source to ownership", () => {
   const runtimeState = {
     activeSovereignCode: "FRA",
     landIndex: new Map([["feature-1", { id: "feature-1" }]]),
-    scenarioControllersByFeatureId: { "feature-1": "" },
     selectedInspectorCountryCode: "",
   };
 
@@ -224,11 +223,11 @@ test("unit counter nation resolution keeps controller fallback source semantics"
 
   assert.deepEqual(
     owner.resolveUnitCounterNationForPlacement("feature-1", "", "controller"),
-    { tag: "ENG", source: "controller" },
+    { tag: "ENG", source: "owner" },
   );
   assert.deepEqual(
     owner.resolveUnitCounterNationForPlacement("", "", "controller"),
-    { tag: "FRA", source: "controller" },
+    { tag: "FRA", source: "owner" },
   );
 });
 

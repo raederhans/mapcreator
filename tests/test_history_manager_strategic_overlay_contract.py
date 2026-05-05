@@ -70,7 +70,6 @@ class HistoryManagerStrategicOverlayContractTest(unittest.TestCase):
               countryBaseColors: {},
               countryPalette: {},
               sovereigntyByFeatureId: {},
-              scenarioControllersByFeatureId: {},
               annotationView: {
                 frontlineEnabled: true,
                 frontlineStyle: "clean",

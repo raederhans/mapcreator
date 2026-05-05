@@ -136,7 +136,6 @@ async function readScenarioResilienceState(page) {
         applyDisabled: !!document.querySelector('#applyScenarioBtn')?.disabled,
         resetDisabled: !!document.querySelector('#resetScenarioBtn')?.disabled,
         clearDisabled: !!document.querySelector('#clearScenarioBtn')?.disabled,
-        viewModeDisabled: !!document.querySelector('#scenarioViewModeSelect')?.disabled,
       },
     };
   });

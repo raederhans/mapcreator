@@ -6,6 +6,7 @@ import {
 } from "../../core/scenario_ownership_editor.js";
 import { t } from "../i18n.js";
 import { showToast } from "../toast.js";
+import { postDevScenarioMutation } from "./dev_mutation_service.js";
 const state = runtimeState;
 
 function ui(key) {
@@ -239,18 +240,11 @@ export function createSelectionOwnershipController({
       };
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/ownership/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            scenarioId: payload.scenarioId,
-            baselineHash: payload.baselineHash,
-            owners: payload.owners,
-          }),
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/ownership/save", {
+          scenarioId: payload.scenarioId,
+          baselineHash: payload.baselineHash,
+          owners: payload.owners,
         });
-        const result = await response.json().catch(() => ({}));
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }

@@ -554,6 +554,9 @@ collect_network_issues() {
   local pattern
 
   extract_playwright_sources "$pointer_log" "$src_file"
+  if [[ ! -s "$src_file" && -f "$pointer_log" ]]; then
+    printf '%s\n' "$pointer_log" > "$src_file"
+  fi
   if [[ "$EVIDENCE_NETWORK_FAILED_ONLY" == "1" ]]; then
     pattern="=> \\[(4[0-9]{2}|5[0-9]{2})\\]|Failed|ERR_"
   else
@@ -622,11 +625,7 @@ collect_route_evidence() {
   fi
 
   if [[ "$capture_network" == "1" ]]; then
-    if [[ "$EVIDENCE_NETWORK_INCLUDE_STATIC" == "1" ]]; then
-      run_pwcli network --static > "$network_log" || true
-    else
-      run_pwcli network > "$network_log" || true
-    fi
+    run_pwcli requests > "$network_log" || true
     collect_network_issues "$network_log" "route:${context}" "$mode" || true
   fi
 
@@ -1024,8 +1023,6 @@ run_route() {
   echo "$url" >> "$VISITED_ROUTES_FILE"
 
   run_pwcli console "$EVIDENCE_CONSOLE_MIN_LEVEL" --clear > /dev/null 2>&1 || true
-  run_pwcli network --clear > /dev/null 2>&1 || true
-
   if [[ "$skip_navigation" != "1" ]]; then
     local goto_log="$LOG_DIR/pw-goto-${rid}-${mode}-$TS.log"
     if ! run_pwcli goto "$url" > "$goto_log"; then

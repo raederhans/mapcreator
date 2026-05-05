@@ -133,8 +133,6 @@ async function applyImportedProjectState(data, { ui, hooks }) {
     data.mapSemanticMode,
     state.activeScenarioId ? state.mapSemanticMode : "political"
   );
-  state.scenarioControllersByFeatureId = importedOwnershipState.scenarioControllersByFeatureId;
-  state.scenarioControllerRevision = (Number(state.scenarioControllerRevision) || 0) + 1;
   state.sovereigntyInitialized = false;
   state.paintMode = data.paintMode || "visual";
   state.activeSovereignCode = data.activeSovereignCode || "";
@@ -263,12 +261,6 @@ async function applyImportedProjectState(data, { ui, hooks }) {
       reason: "project-import",
       renderNow: false,
     });
-  }
-  if (importedOwnershipState.shouldRestoreScenarioBaselineControllers) {
-    state.scenarioControllersByFeatureId = {
-      ...(state.scenarioBaselineControllersByFeatureId || {}),
-    };
-    state.scenarioControllerRevision = (Number(state.scenarioControllerRevision) || 0) + 1;
   }
   debugState.importPhase = "ui-sync";
   debugState.importApplyCount += 1;

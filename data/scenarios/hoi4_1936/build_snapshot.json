@@ -8,7 +8,6 @@
   "generated_at": "2026-04-04T02:45:46.798067+00:00",
   "input_sha": {
     "city_overrides.json": "20c0f7edd3b5aa7e62e5ed7e04407bbe921f581c8711f1233bfc6a44b80e8c7c",
-    "controllers.by_feature.json": "34c4335c04af87c0e67713d99902252e76d406ad9f24ff88cdadf9ba79358a4e",
     "cores.by_feature.json": "7d3a5d121836147249539d0303e30a6e1ff605d710d61e7ec913cd077f99ba86",
     "countries.json": "cd0b1625545a5ba0b1494eccbf56b7e46e77572addd290b546763e24be75fbe2",
     "geo_locale_patch.json": "14d7f72268de5006a47ae6ddffa887ffc395b377ce48513024602a929dcf1a64",
@@ -19,7 +18,7 @@
     "context_lod.manifest.json": "37d4173e9ddf81e87ef5b54fae72f8fdb9919b752e1affbe902184f59be90c91",
     "detail_chunks.manifest.json": "9b1cbf43890070502a31c81c082a0054337256959d8d6a2c732c55453f6aaa25",
     "geo_aliases.startup.json": "c130235273d1ea6b83f39b7995940df82031976f65755fdaadf6f1727baaddc0",
-    "locales.startup.json": "62ff052669ad9282853d07f49566106bc78f057c0b5f5f468b5f143f744ca608",
+    "locales.startup.json": "a4c0d4f173cccf7cbf11638f5caf74211ded6a86e4bb6d7fea529a70c3ff02bd",
     "mesh_pack.json": "a68c54cfdc0626be11c93dacb0054b6d312a77d0efe2e1014c3a4391d1496261",
     "runtime_meta.json": "989c6b02b7b88f27a18b73d9873aaf852ec946a5e020297b2abecd9bfb656c4e",
     "runtime_topology.bootstrap.topo.json": "dc80343e62fef541652c973957e4a69248d2bc611e1d04463fbd57d6e48f8cbd",
@@ -31,6 +30,6 @@
   "profile": "hoi4_chunked",
   "report_paths": {},
   "scenario_id": "hoi4_1936",
-  "snapshot_fingerprint": "d1a123d175e666bad22a0f21cac0b0d6bfa9d697d3edf0fc06dbb83a3e12556b",
+  "snapshot_fingerprint": "272512f7935c0e5c42df3054ac942ec67abcc89086dc9040f3baa75dd8b2417a",
   "water_count": 0
 }

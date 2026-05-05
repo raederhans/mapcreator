@@ -467,7 +467,6 @@ function createScenarioBootstrapBundleFromCache({
     chunkPreloaded: !!priorBundle?.chunkPreloaded,
     countriesPayload: cachedCorePayload?.countriesPayload || null,
     ownersPayload: normalizeIndexedTagAssignmentPayload(cachedCorePayload?.ownersPayload, runtimeFeatureIds, "owners"),
-    controllersPayload: normalizeIndexedTagAssignmentPayload(cachedCorePayload?.controllersPayload, runtimeFeatureIds, "controllers"),
     coresPayload: normalizeIndexedCoreAssignmentPayload(cachedCorePayload?.coresPayload, runtimeFeatureIds),
     waterRegionsPayload: priorBundle?.waterRegionsPayload || null,
     specialRegionsPayload: priorBundle?.specialRegionsPayload || null,
@@ -618,7 +617,6 @@ async function createStartupScenarioBundleFromPayload({
     chunkPreloaded: false,
     countriesPayload: payload?.scenario?.countries || null,
     ownersPayload: normalizeIndexedTagAssignmentPayload(payload?.scenario?.owners, runtimeFeatureIds, "owners"),
-    controllersPayload: normalizeIndexedTagAssignmentPayload(payload?.scenario?.controllers, runtimeFeatureIds, "controllers"),
     coresPayload: normalizeIndexedCoreAssignmentPayload(payload?.scenario?.cores, runtimeFeatureIds),
     waterRegionsPayload: null,
     specialRegionsPayload: null,
@@ -740,7 +738,6 @@ function createScenarioBundleAssembler({
     const [
       countriesResult,
       ownersResult,
-      controllersResult,
       coresResult,
       runtimeTopologyResult,
       geoLocalePatchResult,
@@ -758,13 +755,6 @@ function createScenarioBundleAssembler({
         resourceLabel: "owners",
         requiredField: "owners",
       }),
-      manifest?.controllers_url
-        ? loadMeasuredRequiredScenarioResource(d3Client, manifest.controllers_url, {
-          scenarioId: targetId,
-          resourceLabel: "controllers",
-          requiredField: "controllers",
-        })
-        : Promise.resolve({ payload: null, metrics: null }),
       loadMeasuredRequiredScenarioResource(d3Client, manifest?.cores_url, {
         scenarioId: targetId,
         resourceLabel: "cores",
@@ -827,8 +817,7 @@ function createScenarioBundleAssembler({
       chunkPreloaded: !!priorBundle?.chunkPreloaded,
       countriesPayload: countriesResult.payload,
       ownersPayload: ownersResult.payload,
-      controllersPayload: controllersResult.payload,
-      coresPayload: coresResult.payload,
+        coresPayload: coresResult.payload,
       waterRegionsPayload: priorBundle?.waterRegionsPayload || null,
       specialRegionsPayload: priorBundle?.specialRegionsPayload || null,
       reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
@@ -890,7 +879,6 @@ function createScenarioBundleAssembler({
           manifest: null,
           countries: countriesResult.metrics || null,
           owners: ownersResult.metrics || null,
-          controllers: controllersResult.metrics || null,
           cores: coresResult.metrics || null,
         },
         bundleLevel: requestedBundleLevel,
@@ -898,18 +886,16 @@ function createScenarioBundleAssembler({
     };
     writeScenarioGeoLocalePatchIntoBundle(bundle, bundle.geoLocalePatchPayload, geoLocalePatchDescriptor);
     const ownerCount = Object.keys(bundle.ownersPayload?.owners || {}).length;
-    const controllerCount = Object.keys(bundle.controllersPayload?.controllers || {}).length;
     const countryCount = Object.keys(bundle.countriesPayload?.countries || {}).length;
     return {
       bundle,
       countriesResult,
       ownersResult,
-      controllersResult,
       coresResult,
       runtimeTopologyResult,
       geoLocalePatchResult,
       ownerCount,
-      controllerCount,
+      controllerCount: 0,
       countryCount,
     };
   };

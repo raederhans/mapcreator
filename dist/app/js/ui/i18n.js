@@ -417,7 +417,7 @@ function updateUIText() {
     ["lblOcean", "Ocean"],
     ["lblOceanFillColor", "Fill Color"],
     ["lblOceanCoastalAccent", "Coastal Accent"],
-    ["oceanCoastalAccentHint", "Available only in the TNO 1962 scenario."],
+    ["oceanCoastalAccentHint", "Available when the active scenario enables coastal accent."],
     ["lblOceanAdvancedStylesToggle", "Experimental Bathymetry"],
     ["oceanAdvancedStylesHint", "Enable data-driven bathymetry presets for testing. May reduce pan and zoom performance."],
     ["lblOceanStyle", "Style"],

@@ -443,5 +443,6 @@
   "Safe fixes": "安全修复",
   "Scenario diagnostics": "剧本诊断",
   "Snapshot": "快照",
-  "Unable to load diagnostics": "无法加载诊断"
+  "Unable to load diagnostics": "无法加载诊断",
+  "Available when the active scenario enables coastal accent.": "当前剧本启用海岸强调时可用。"
 }

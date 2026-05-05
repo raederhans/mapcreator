@@ -77,6 +77,10 @@ import { markDirty } from "./dirty_state.js";
 import { perfIsEnabled, recordRenderSample } from "./perf_probe.js";
 import { getScenarioCountryDisplayName } from "./scenario_country_display.js";
 import {
+  SCENARIO_PRESENTATION_FEATURES,
+  scenarioHasPresentationFeature,
+} from "./scenario/presentation_hint_helpers.js";
+import {
   ensureSovereigntyState,
   getFeatureOwnerCode,
   getFeatureIdsForOwner,
@@ -889,14 +893,14 @@ let staticMeshCache = {
   bundleMode: "",
   activeScenarioId: "",
   scenarioBorderMode: "",
-  scenarioViewMode: "",
+  scenarioOwnershipColorMode: "",
   sourceCountriesSignature: "",
   coastlineDecisionSignature: "",
   snapshot: null,
 };
 let countryDominantFillColorCache = {
   colorRevision: -1,
-  scenarioViewMode: "",
+  scenarioOwnershipColorMode: "",
   activeScenarioId: "",
   result: new Map(),
 };
@@ -944,7 +948,7 @@ const cityLayerCache = {
   scenarioCountriesRef: null,
   scenarioId: "",
   cityLayerRevision: -1,
-  scenarioControllerRevision: -1,
+  scenarioOwnershipTagRevision: -1,
   sovereigntyRevision: -1,
   merged: null,
 };
@@ -1334,7 +1338,7 @@ function getBorderDrawOwner() {
       buildCountryParentBorderMeshes,
       buildDetailAdmMeshSignature,
       clamp,
-      drawTnoCoastalAccentLayer,
+      drawScenarioCoastalAccentLayer,
       getCoastlineCollectionForZoom,
       getInternalBorderStrokeColor,
       getSafeCanvasColor,
@@ -1916,7 +1920,7 @@ function getRuntimeChunkSelectionVersion() {
 
 function getVisibleContextFlagSignature() {
   return [
-    `view:${String(runtimeState.scenarioViewMode || "ownership")}`,
+    `view:${"ownership"}`,
     `profile:${String(runtimeState.renderProfile || "auto")}`,
     runtimeState.showPhysical ? "physical:on" : "physical:off",
     runtimeState.showUrban ? "urban:on" : "urban:off",
@@ -2368,9 +2372,9 @@ function getPoliticalPathCacheSignature(transform = runtimeState.zoomTransform |
     getProjectionRenderSignature(),
     getViewportRenderSignature(),
     String(runtimeState.activeScenarioId || ""),
-    String(runtimeState.scenarioViewMode || "ownership"),
+    "ownership",
     Number(runtimeState.sovereigntyRevision || 0),
-    Number(runtimeState.scenarioControllerRevision || 0),
+    0,
     Number(runtimeState.scenarioShellOverlayRevision || 0),
   ].join("::");
 }
@@ -2684,7 +2688,10 @@ function getScenarioDetailPhaseSignatureToken() {
 }
 
 function isScenarioWaterTopologyExclusiveMode() {
-  return String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962";
+  return scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.ATLANTROPA_RELIEF
+  );
 }
 
 function getScenarioSurfaceVersionSignal() {
@@ -2912,10 +2919,10 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.colorRevision || 0,
       runtimeState.cachedDynamicBordersHash || "",
       runtimeState.sovereigntyRevision || 0,
-      runtimeState.scenarioControllerRevision || 0,
+      0,
       runtimeState.activeScenarioId || "",
       runtimeState.scenarioBorderMode || "canonical",
-      runtimeState.scenarioViewMode || "ownership",
+      "ownership",
       stableJson(runtimeState.parentBorderEnabledByCountry || {}),
       stableJson(runtimeState.styleConfig?.internalBorders || {}),
       stableJson(runtimeState.styleConfig?.empireBorders || {}),
@@ -3057,11 +3064,6 @@ function getWaterRegionType(feature) {
   return String(feature?.properties?.water_type || "water_region").trim().toLowerCase();
 }
 
-function isAtlantropaOceanMergedWaterRegion(feature) {
-  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") return false;
-  return String(feature?.properties?.region_group || "").trim().toLowerCase() === "mediterranean";
-}
-
 function isBaseGeographyScenarioFeature(feature) {
   return feature?.properties?.render_as_base_geography === true;
 }
@@ -3143,7 +3145,6 @@ function getScenarioExcludedWaterRegionGroups() {
 
 function isWaterRegionExcludedByScenario(feature) {
   if (!feature || isScenarioWaterRegion(feature)) return false;
-  if (isAtlantropaOceanMergedWaterRegion(feature)) return true;
   const excludedIds = getScenarioExcludedWaterRegionIds();
   const featureId = String(feature?.properties?.id || "").trim();
   if (featureId && excludedIds.has(featureId)) {
@@ -3247,7 +3248,10 @@ function getReliefOverlayKind(feature) {
 }
 
 function isAtlantropaReliefOverlayFeature(feature) {
-  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") {
+  if (!scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.ATLANTROPA_RELIEF
+  )) {
     return false;
   }
   return String(feature?.properties?.id || "").trim().toLowerCase().startsWith("atlantropa_");
@@ -3265,13 +3269,16 @@ function isReliefOverlayEnabled(feature) {
   return feature?.properties?.interactive !== false;
 }
 
-function isTnoCoastalAccentEnabled() {
-  return String(runtimeState.activeScenarioId || "").trim().toLowerCase() === "tno_1962"
+function isScenarioCoastalAccentEnabled() {
+  return scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.COASTAL_ACCENT
+  )
     && runtimeState.styleConfig?.ocean?.coastalAccentEnabled !== false;
 }
 
 function getScenarioCoastalAccentOverlayFeatures() {
-  if (!isTnoCoastalAccentEnabled()) return [];
+  if (!isScenarioCoastalAccentEnabled()) return [];
   return getEffectiveScenarioReliefOverlayFeatures().filter((feature) => {
     const kind = getReliefOverlayKind(feature);
     return kind === "new_shoreline" || kind === "lake_shoreline";
@@ -3279,7 +3286,7 @@ function getScenarioCoastalAccentOverlayFeatures() {
 }
 
 function getAtlantropaAccentSuppressionFeatures() {
-  if (!isTnoCoastalAccentEnabled()) return [];
+  if (!isScenarioCoastalAccentEnabled()) return [];
   return Array.isArray(runtimeState.activeBathymetryBandsData?.features)
     ? runtimeState.activeBathymetryBandsData.features.filter((feature) => {
       if (String(feature?.properties?._bathymetrySource || "").trim().toLowerCase() !== "scenario") {
@@ -3644,7 +3651,10 @@ function getAtlantropaSeaPoliticalStrokeColor() {
 }
 
 function getMediterraneanAtlantropaBounds() {
-  if (String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962") return null;
+  if (!scenarioHasPresentationFeature(
+    runtimeState.activeScenarioManifest,
+    SCENARIO_PRESENTATION_FEATURES.COASTAL_ACCENT
+  )) return null;
   const cache = runtimeState.mediterraneanAtlantropaBoundsCache || {};
   const featureCount = Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0;
   if (
@@ -3782,7 +3792,7 @@ function mixCanvasColors(baseColor, targetColor, amount) {
 function buildCountryDominantFillColorMap() {
   const cacheMatches =
     countryDominantFillColorCache.colorRevision === Number(runtimeState.colorRevision || 0)
-    && countryDominantFillColorCache.scenarioViewMode === String(runtimeState.scenarioViewMode || "ownership")
+    && countryDominantFillColorCache.scenarioOwnershipColorMode === "ownership"
     && countryDominantFillColorCache.activeScenarioId === String(runtimeState.activeScenarioId || "");
   if (cacheMatches && countryDominantFillColorCache.result instanceof Map) {
     return countryDominantFillColorCache.result;
@@ -3816,7 +3826,7 @@ function buildCountryDominantFillColorMap() {
 
   countryDominantFillColorCache = {
     colorRevision: Number(runtimeState.colorRevision || 0),
-    scenarioViewMode: String(runtimeState.scenarioViewMode || "ownership"),
+    scenarioOwnershipColorMode: "ownership",
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     result,
   };
@@ -3850,7 +3860,7 @@ function getContourFeatureHostFillColor(feature) {
   const cacheKey = [
     Number(runtimeState.colorRevision || 0),
     String(runtimeState.activeScenarioId || ""),
-    String(runtimeState.scenarioViewMode || "ownership"),
+    "ownership",
   ].join("::");
   const cached = contourHostFillColorCache.get(feature);
   if (cached?.key === cacheKey) {
@@ -5753,7 +5763,7 @@ function getFrontlineOverlaySignature() {
   return [
     getOverlayProjectionSignature(),
     String(runtimeState.activeScenarioId || ""),
-    Number(runtimeState.scenarioControllerRevision || 0),
+    0,
     Number(runtimeState.scenarioShellOverlayRevision || 0),
     Number(runtimeState.sovereigntyRevision || 0),
     runtimeState.annotationView?.frontlineEnabled ? "1" : "0",
@@ -6803,21 +6813,14 @@ function resolveOwnerBorderCode(entity, ownershipContext = {}) {
   const featureId = getEntityFeatureId(entity);
   const fallbackCode = getEntityCountryCode(entity) || "";
   const ownershipByFeatureId = ownershipContext?.ownershipByFeatureId || {};
-  const controllerByFeatureId = ownershipContext?.controllerByFeatureId || {};
   const shellOwnerByFeatureId = ownershipContext?.shellOwnerByFeatureId || {};
-  const shellControllerByFeatureId = ownershipContext?.shellControllerByFeatureId || {};
-  const scenarioActive = !!ownershipContext?.scenarioActive;
-  const useFrontline = scenarioActive && String(ownershipContext?.viewMode || "ownership") === "frontline";
   const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
-  const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
   if (!featureId) {
     return canonicalCountryCode(fallbackCode);
   }
   const isScenarioShell = isScenarioShellFeature(feature, featureId);
   return canonicalCountryCode(
-    (useFrontline ? controllerByFeatureId?.[featureId] : "")
-    || (useFrontline && isScenarioShell ? (shellControllerByFeatureId?.[featureId] || shellControllerHintCode) : "")
-    || ownershipByFeatureId?.[featureId]
+    ownershipByFeatureId?.[featureId]
     || (!isScenarioShell ? fallbackCode : "")
     || (isScenarioShell ? (shellOwnerByFeatureId?.[featureId] || shellOwnerHintCode) : "")
     || ""
@@ -7812,7 +7815,7 @@ function rebuildStaticMeshes({
     staticMeshCache.bundleMode === String(runtimeState.topologyBundleMode || "") &&
     staticMeshCache.activeScenarioId === String(runtimeState.activeScenarioId || "") &&
     staticMeshCache.scenarioBorderMode === String(runtimeState.scenarioBorderMode || "") &&
-    staticMeshCache.scenarioViewMode === String(runtimeState.scenarioViewMode || "") &&
+    staticMeshCache.scenarioOwnershipColorMode === "ownership" &&
     staticMeshCache.sourceCountriesSignature === sourceCountriesSignature &&
     staticMeshCache.coastlineDecisionSignature === coastlineDecisionSignature &&
     staticMeshCache.snapshot;
@@ -7937,7 +7940,7 @@ function rebuildStaticMeshes({
     &&
     runtimeState.activeScenarioId
     && runtimeState.scenarioBorderMode === "scenario_owner_only"
-    && String(runtimeState.scenarioViewMode || "ownership") === "ownership"
+    && "ownership" === "ownership"
   ) {
     refreshScenarioOpeningOwnerBorders({
       renderNow: false,
@@ -7954,7 +7957,7 @@ function rebuildStaticMeshes({
     bundleMode: String(runtimeState.topologyBundleMode || ""),
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     scenarioBorderMode: String(runtimeState.scenarioBorderMode || ""),
-    scenarioViewMode: String(runtimeState.scenarioViewMode || ""),
+    scenarioOwnershipColorMode: "ownership",
     sourceCountriesSignature,
     coastlineDecisionSignature,
     snapshot: captureStaticMeshSnapshot(),
@@ -9849,7 +9852,7 @@ function getOceanStyleConfig() {
     ),
     bathymetryProfile: getBathymetryPresetProfile(preset),
     experimentalAdvancedStyles: ocean.experimentalAdvancedStyles === true,
-    coastalAccentEnabled: isTnoCoastalAccentEnabled(),
+    coastalAccentEnabled: isScenarioCoastalAccentEnabled(),
   };
 }
 
@@ -10433,7 +10436,7 @@ function getCoastlineCollectionForZoom(k) {
   return runtimeState.cachedCoastlinesHigh?.length ? runtimeState.cachedCoastlinesHigh : runtimeState.cachedCoastlines;
 }
 
-function getTnoCoastalAccentLineWidth(k, { interactive = false, overlay = false } = {}) {
+function getScenarioCoastalAccentLineWidth(k, { interactive = false, overlay = false } = {}) {
   const baseWidth = overlay
     ? 1.22 / Math.max(0.0001, k)
     : (interactive ? 1.05 : 1.28) / Math.max(0.0001, k);
@@ -10529,7 +10532,7 @@ function getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive =
   }
   return {
     alpha,
-    lineWidth: getTnoCoastalAccentLineWidth(k, { interactive, overlay: true }),
+    lineWidth: getScenarioCoastalAccentLineWidth(k, { interactive, overlay: true }),
   };
 }
 
@@ -10569,14 +10572,14 @@ function drawScenarioCoastalAccentOverlays(k, { interactive = false } = {}) {
   drawCoastalAccentStrokeBuckets(entries);
 }
 
-function drawTnoCoastalAccentLayer(k, { interactive = false } = {}) {
-  if (!context || !isTnoCoastalAccentEnabled()) return;
+function drawScenarioCoastalAccentLayer(k, { interactive = false } = {}) {
+  if (!context || !isScenarioCoastalAccentEnabled()) return;
   const coastlineDecision = resolveCoastlineTopologySource();
   const usesScenarioCoastlineSource = coastlineDecision?.source === "scenario";
   const coastlineCollection = interactive
     ? getCoastlineCollectionForZoom(k)
     : getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
-  const coastlineWidth = getTnoCoastalAccentLineWidth(k, { interactive });
+  const coastlineWidth = getScenarioCoastalAccentLineWidth(k, { interactive });
   const densityThreshold = k < COASTLINE_LOD_LOW_ZOOM_MAX
     ? COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW
     : k < COASTLINE_LOD_MID_ZOOM_MAX
@@ -15672,7 +15675,7 @@ function shouldFallbackScenarioPoliticalBackgroundMergeShape(
   if (!suspicious) {
     return false;
   }
-  const viewMode = String(runtimeState.scenarioViewMode || "ownership");
+  const viewMode = "ownership";
   const logKey = `${scenarioId}::${viewMode}::${displayCode}::${fillColor}`;
   if (!suspiciousScenarioBackgroundMergeWarnings.has(logKey)) {
     suspiciousScenarioBackgroundMergeWarnings.add(logKey);
@@ -15690,10 +15693,10 @@ function getScenarioPoliticalBackgroundCacheKey({
 } = {}) {
   return [
     String(runtimeState.activeScenarioId || ""),
-    String(runtimeState.scenarioViewMode || "ownership"),
+    "ownership",
     getAtlantropaSeaPoliticalFillColor(),
     Number(runtimeState.sovereigntyRevision || 0),
-    Number(runtimeState.scenarioControllerRevision || 0),
+    0,
     Number(runtimeState.scenarioShellOverlayRevision || 0),
     Number(runtimeState.colorRevision || 0),
     Math.round(Number(canvasWidth || 0)),
@@ -16017,10 +16020,9 @@ function buildScenarioPoliticalBackgroundEntries() {
     scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
       runtimeRef: landCollection,
       scenarioId: runtimeState.activeScenarioId || "",
-      viewMode: String(runtimeState.scenarioViewMode || "ownership"),
+      viewMode: "ownership",
       oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
       sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
-      controllerRevision: Number(runtimeState.scenarioControllerRevision || 0),
       shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
       colorRevision: Number(runtimeState.colorRevision || 0),
       canvasWidth,
@@ -16039,10 +16041,9 @@ function buildScenarioPoliticalBackgroundEntries() {
   scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
     runtimeRef: landCollection,
     scenarioId: runtimeState.activeScenarioId || "",
-    viewMode: String(runtimeState.scenarioViewMode || "ownership"),
+    viewMode: "ownership",
     oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
     sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
-    controllerRevision: Number(runtimeState.scenarioControllerRevision || 0),
     shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
     colorRevision: Number(runtimeState.colorRevision || 0),
     canvasWidth,
@@ -19211,7 +19212,7 @@ function getFrontlineLabelAnchors() {
   }
   const nextHash = [
     `scenario:${String(runtimeState.activeScenarioId || "")}`,
-    `ctrl:${Number(runtimeState.scenarioControllerRevision || 0)}`,
+    `ctrl:${0}`,
     `shell:${Number(runtimeState.scenarioShellOverlayRevision || 0)}`,
     `sov:${Number(runtimeState.sovereigntyRevision || 0)}`,
     `placement:${String(runtimeState.annotationView?.labelPlacementMode || "midpoint")}`,

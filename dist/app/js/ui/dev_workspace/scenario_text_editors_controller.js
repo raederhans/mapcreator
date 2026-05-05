@@ -4,6 +4,7 @@ import { syncScenarioLocalizationState } from "../../core/scenario_localization_
 import { getFeatureOwnerCode } from "../../core/sovereignty_manager.js";
 import { t } from "../i18n.js";
 import { showToast } from "../toast.js";
+import { postDevScenarioMutation } from "./dev_mutation_service.js";
 import {
   normalizeScenarioTagInput,
   normalizeScenarioNameInput,
@@ -720,14 +721,7 @@ export function createScenarioTextEditorsController({
       };
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/country/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(built.payload),
-        });
-        const result = await response.json().catch(() => ({}));
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/country/save", built.payload);
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }
@@ -778,14 +772,7 @@ export function createScenarioTextEditorsController({
       };
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/capital/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(built.payload),
-        });
-        const result = await response.json().catch(() => ({}));
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/capital/save", built.payload);
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }
@@ -846,20 +833,13 @@ export function createScenarioTextEditorsController({
       };
       renderWorkspace();
       try {
-        const response = await fetch("/__dev/scenario/geo-locale/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            scenarioId: runtimeState.activeScenarioId,
-            featureId: localeModel.featureId,
-            en: normalizeLocaleInput(runtimeState.devLocaleEditor?.en),
-            zh: normalizeLocaleInput(runtimeState.devLocaleEditor?.zh),
-            mode: "manual_override",
-          }),
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/geo-locale/save", {
+          scenarioId: runtimeState.activeScenarioId,
+          featureId: localeModel.featureId,
+          en: normalizeLocaleInput(runtimeState.devLocaleEditor?.en),
+          zh: normalizeLocaleInput(runtimeState.devLocaleEditor?.zh),
+          mode: "manual_override",
         });
-        const result = await response.json().catch(() => ({}));
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }

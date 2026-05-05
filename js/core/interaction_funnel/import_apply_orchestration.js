@@ -1,6 +1,5 @@
 import {
   getFeatureId,
-  hasFeatureOwnershipMap,
   migrateFeatureScopedProjectDataToCurrentTopology,
   normalizeFeatureOwnershipMap,
 } from "../sovereignty_manager.js";
@@ -164,26 +163,18 @@ function getScenarioImportValidFeatureIds() {
 }
 
 function resolveImportedOwnershipState(data) {
-  const hasScenarioControllerMap = hasFeatureOwnershipMap(data?.scenarioControllersByFeatureId);
   const importedOwnersByFeatureId = normalizeFeatureOwnershipMap(data.sovereigntyByFeatureId);
-  const importedControllersByFeatureId = hasScenarioControllerMap
-    ? normalizeFeatureOwnershipMap(data.scenarioControllersByFeatureId)
-    : null;
   if (state.activeScenarioId) {
     return {
       sovereigntyByFeatureId: {
         ...(state.scenarioBaselineOwnersByFeatureId || {}),
         ...importedOwnersByFeatureId,
       },
-      scenarioControllersByFeatureId: hasScenarioControllerMap
-        ? importedControllersByFeatureId
-        : { ...(state.scenarioBaselineControllersByFeatureId || {}) },
-      shouldRestoreScenarioBaselineControllers: !hasScenarioControllerMap,
+      shouldRestoreScenarioBaselineControllers: false,
     };
   }
   return {
     sovereigntyByFeatureId: importedOwnersByFeatureId,
-    scenarioControllersByFeatureId: hasScenarioControllerMap ? importedControllersByFeatureId : {},
     shouldRestoreScenarioBaselineControllers: false,
   };
 }

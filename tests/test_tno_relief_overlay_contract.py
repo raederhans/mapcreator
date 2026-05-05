@@ -13,8 +13,10 @@ class TnoReliefOverlayContractTest(unittest.TestCase):
         self.assertIn('const RELIEF_ATLANTROPA_SALT_STROKE_COLOR = "rgba(148, 163, 184, 0.22)";', content)
         self.assertIn('const RELIEF_ATLANTROPA_SHORELINE_COLOR = "rgba(148, 163, 184, 0.36)";', content)
         self.assertIn('const RELIEF_ATLANTROPA_CONTOUR_COLOR = "rgba(148, 163, 184, 0.18)";', content)
+        self.assertIn('SCENARIO_PRESENTATION_FEATURES.ATLANTROPA_RELIEF', content)
+        self.assertIn('SCENARIO_PRESENTATION_FEATURES.COASTAL_ACCENT', content)
         self.assertIn("function isAtlantropaReliefOverlayFeature(feature) {", content)
-        self.assertIn('String(runtimeState.activeScenarioId || "").trim().toLowerCase() !== "tno_1962"', content)
+        self.assertIn("scenarioHasPresentationFeature(", content)
         self.assertIn('startsWith("atlantropa_")', content)
         self.assertIn("if (isAtlantropaReliefOverlayFeature(feature)) {", content)
         self.assertIn("if (!runtimeState.detailPromotionCompleted) return false;", content)
@@ -25,6 +27,12 @@ class TnoReliefOverlayContractTest(unittest.TestCase):
         self.assertIn("stroke: RELIEF_ATLANTROPA_SALT_STROKE_COLOR,", content)
         self.assertIn("stroke: isAtlantropaRelief ? RELIEF_ATLANTROPA_SHORELINE_COLOR : RELIEF_SHORELINE_COLOR,", content)
         self.assertIn("stroke: isAtlantropaRelief ? RELIEF_ATLANTROPA_CONTOUR_COLOR : RELIEF_CONTOUR_COLOR,", content)
+
+    def test_tno_specific_relief_gates_are_manifest_features(self):
+        content = MAP_RENDERER.read_text(encoding="utf-8")
+        self.assertNotIn("function isTnoCoastalAccentEnabled()", content)
+        self.assertIn("function isScenarioCoastalAccentEnabled()", content)
+        self.assertIn("function isScenarioWaterTopologyExclusiveMode()", content)
 
     def test_context_scenario_signature_tracks_detail_phase_for_cache_invalidation(self):
         content = MAP_RENDERER.read_text(encoding="utf-8")

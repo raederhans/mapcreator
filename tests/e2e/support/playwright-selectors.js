@@ -10,7 +10,6 @@ const SMOKE_FAILURE_SELECTOR_SETS = Object.freeze({
   scenarioShell: [
     "#scenarioSelect",
     "#scenarioStatus",
-    "#scenarioViewModeSelect",
   ],
   hoi4ScenarioAudit: [
     "#scenarioAuditHint",

@@ -82,11 +82,11 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8636554
+      "size_bytes": 8637897
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 24871
+      "size_bytes": 24866
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.audit.json",
@@ -197,10 +197,6 @@
       "size_bytes": 37506
     },
     {
-      "path": "app/data/scenario-rules/hoi4_1939.controller.manual.json",
-      "size_bytes": 21038
-    },
-    {
       "path": "app/data/scenario-rules/hoi4_1939.manual.json",
       "size_bytes": 17756
     },
@@ -230,7 +226,7 @@
     },
     {
       "path": "app/data/scenarios/blank_base/build_snapshot.json",
-      "size_bytes": 1048
+      "size_bytes": 945
     },
     {
       "path": "app/data/scenarios/blank_base/capital_hints.json",
@@ -239,10 +235,6 @@
     {
       "path": "app/data/scenarios/blank_base/city_overrides.json",
       "size_bytes": 123834
-    },
-    {
-      "path": "app/data/scenarios/blank_base/controllers.by_feature.json",
-      "size_bytes": 24
     },
     {
       "path": "app/data/scenarios/blank_base/cores.by_feature.json",
@@ -254,7 +246,7 @@
     },
     {
       "path": "app/data/scenarios/blank_base/manifest.json",
-      "size_bytes": 2522
+      "size_bytes": 2443
     },
     {
       "path": "app/data/scenarios/blank_base/owners.by_feature.json",
@@ -270,19 +262,19 @@
     },
     {
       "path": "app/data/scenarios/expectations/hoi4_1936.expectation.json",
-      "size_bytes": 601
+      "size_bytes": 635
     },
     {
       "path": "app/data/scenarios/expectations/hoi4_1939.expectation.json",
-      "size_bytes": 8009
+      "size_bytes": 8297
     },
     {
       "path": "app/data/scenarios/expectations/tno_1962.expectation.json",
-      "size_bytes": 1568
+      "size_bytes": 1631
     },
     {
       "path": "app/data/scenarios/hoi4_1936/build_snapshot.json",
-      "size_bytes": 2249
+      "size_bytes": 2146
     },
     {
       "path": "app/data/scenarios/hoi4_1936/capital_hints.json",
@@ -789,10 +781,6 @@
       "size_bytes": 20802
     },
     {
-      "path": "app/data/scenarios/hoi4_1936/controllers.by_feature.json",
-      "size_bytes": 763569
-    },
-    {
       "path": "app/data/scenarios/hoi4_1936/cores.by_feature.json",
       "size_bytes": 1078498
     },
@@ -822,11 +810,11 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/locales.startup.json",
-      "size_bytes": 1992310
+      "size_bytes": 1993079
     },
     {
       "path": "app/data/scenarios/hoi4_1936/manifest.json",
-      "size_bytes": 4366
+      "size_bytes": 4288
     },
     {
       "path": "app/data/scenarios/hoi4_1936/mesh_pack.json",
@@ -846,23 +834,23 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
-      "size_bytes": 9338747
+      "size_bytes": 9338674
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json.gz",
-      "size_bytes": 1943600
+      "size_bytes": 1943596
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json",
-      "size_bytes": 9338747
+      "size_bytes": 9338674
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json.gz",
-      "size_bytes": 1943601
+      "size_bytes": 1943596
     },
     {
       "path": "app/data/scenarios/hoi4_1939/build_snapshot.json",
-      "size_bytes": 2249
+      "size_bytes": 2146
     },
     {
       "path": "app/data/scenarios/hoi4_1939/capital_hints.json",
@@ -2125,10 +2113,6 @@
       "size_bytes": 19626
     },
     {
-      "path": "app/data/scenarios/hoi4_1939/controllers.by_feature.json",
-      "size_bytes": 763569
-    },
-    {
       "path": "app/data/scenarios/hoi4_1939/cores.by_feature.json",
       "size_bytes": 1078498
     },
@@ -2158,11 +2142,11 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/locales.startup.json",
-      "size_bytes": 1992310
+      "size_bytes": 1993079
     },
     {
       "path": "app/data/scenarios/hoi4_1939/manifest.json",
-      "size_bytes": 4400
+      "size_bytes": 4322
     },
     {
       "path": "app/data/scenarios/hoi4_1939/mesh_pack.json",
@@ -2182,19 +2166,19 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
-      "size_bytes": 9336486
+      "size_bytes": 9336413
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json.gz",
-      "size_bytes": 1943197
+      "size_bytes": 1943192
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json",
-      "size_bytes": 9336486
+      "size_bytes": 9336413
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json.gz",
-      "size_bytes": 1943197
+      "size_bytes": 1943193
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
@@ -2206,7 +2190,7 @@
     },
     {
       "path": "app/data/scenarios/modern_world/build_snapshot.json",
-      "size_bytes": 1054
+      "size_bytes": 951
     },
     {
       "path": "app/data/scenarios/modern_world/capital_hints.json",
@@ -2215,10 +2199,6 @@
     {
       "path": "app/data/scenarios/modern_world/city_overrides.json",
       "size_bytes": 123836
-    },
-    {
-      "path": "app/data/scenarios/modern_world/controllers.by_feature.json",
-      "size_bytes": 400761
     },
     {
       "path": "app/data/scenarios/modern_world/cores.by_feature.json",
@@ -2230,7 +2210,7 @@
     },
     {
       "path": "app/data/scenarios/modern_world/manifest.json",
-      "size_bytes": 2534
+      "size_bytes": 2453
     },
     {
       "path": "app/data/scenarios/modern_world/owners.by_feature.json",
@@ -2246,7 +2226,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/build_snapshot.json",
-      "size_bytes": 2529
+      "size_bytes": 2522
     },
     {
       "path": "app/data/scenarios/tno_1962/capital_defaults.partial.json",
@@ -3745,10 +3725,6 @@
       "size_bytes": 31595
     },
     {
-      "path": "app/data/scenarios/tno_1962/controllers.by_feature.json",
-      "size_bytes": 473486
-    },
-    {
       "path": "app/data/scenarios/tno_1962/cores.by_feature.json",
       "size_bytes": 706796
     },
@@ -3794,7 +3770,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/manifest.json",
-      "size_bytes": 6913
+      "size_bytes": 6932
     },
     {
       "path": "app/data/scenarios/tno_1962/mesh_pack.json",
@@ -3834,19 +3810,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json",
-      "size_bytes": 5889275
+      "size_bytes": 5889203
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1271431
+      "size_bytes": 1271425
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
-      "size_bytes": 5889275
+      "size_bytes": 5889203
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1271432
+      "size_bytes": 1271426
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
@@ -5726,7 +5702,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 217755
+      "size_bytes": 217292
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -5782,7 +5758,7 @@
     },
     {
       "path": "app/js/core/dirty_state.js",
-      "size_bytes": 1257
+      "size_bytes": 1043
     },
     {
       "path": "app/js/core/feature_identity.js",
@@ -5794,7 +5770,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 32955
+      "size_bytes": 32568
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -5802,11 +5778,11 @@
     },
     {
       "path": "app/js/core/history_manager.js",
-      "size_bytes": 11889
+      "size_bytes": 10875
     },
     {
       "path": "app/js/core/interaction_funnel/import_apply_orchestration.js",
-      "size_bytes": 6649
+      "size_bytes": 6081
     },
     {
       "path": "app/js/core/interaction_funnel/ui_sync.js",
@@ -5818,11 +5794,15 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 12999
+      "size_bytes": 12517
     },
     {
       "path": "app/js/core/legend_manager.js",
       "size_bytes": 1058
+    },
+    {
+      "path": "app/js/core/load_status_display.js",
+      "size_bytes": 4836
     },
     {
       "path": "app/js/core/logic.js",
@@ -5850,15 +5830,15 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 929198
+      "size_bytes": 893903
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
-      "size_bytes": 5387
+      "size_bytes": 6733
     },
     {
       "path": "app/js/core/palette_manager.js",
-      "size_bytes": 12753
+      "size_bytes": 12165
     },
     {
       "path": "app/js/core/palette_runtime_bridge.js",
@@ -5890,7 +5870,7 @@
     },
     {
       "path": "app/js/core/renderer/border_draw_owner.js",
-      "size_bytes": 23495
+      "size_bytes": 23446
     },
     {
       "path": "app/js/core/renderer/border_mesh_diagnostics.js",
@@ -5898,15 +5878,15 @@
     },
     {
       "path": "app/js/core/renderer/border_mesh_dynamic_runtime.js",
-      "size_bytes": 4760
+      "size_bytes": 4396
     },
     {
       "path": "app/js/core/renderer/border_mesh_owner.js",
-      "size_bytes": 15496
+      "size_bytes": 14117
     },
     {
       "path": "app/js/core/renderer/border_mesh_source_selection.js",
-      "size_bytes": 8195
+      "size_bytes": 8126
     },
     {
       "path": "app/js/core/renderer/city_label_owner.js",
@@ -5914,7 +5894,7 @@
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
-      "size_bytes": 3731
+      "size_bytes": 2353
     },
     {
       "path": "app/js/core/renderer/context_layer_resolver.js",
@@ -5939,6 +5919,10 @@
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
       "size_bytes": 7467
+    },
+    {
+      "path": "app/js/core/renderer/river_layer_render_owner.js",
+      "size_bytes": 7451
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_builders.js",
@@ -5974,15 +5958,19 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_helpers.js",
-      "size_bytes": 5107
+      "size_bytes": 4923
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime_owner.js",
       "size_bytes": 16753
     },
     {
+      "path": "app/js/core/renderer/transport_overview_render_owner.js",
+      "size_bytes": 31314
+    },
+    {
       "path": "app/js/core/renderer/urban_city_policy.js",
-      "size_bytes": 20940
+      "size_bytes": 20628
     },
     {
       "path": "app/js/core/runtime_asset_registry.js",
@@ -5990,19 +5978,19 @@
     },
     {
       "path": "app/js/core/scenario/bundle_loader.js",
-      "size_bytes": 42098
+      "size_bytes": 41322
     },
     {
       "path": "app/js/core/scenario/bundle_runtime.js",
-      "size_bytes": 20608
+      "size_bytes": 20381
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 90967
+      "size_bytes": 89659
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
-      "size_bytes": 14137
+      "size_bytes": 13293
     },
     {
       "path": "app/js/core/scenario/locale_asset_contract.js",
@@ -6014,7 +6002,7 @@
     },
     {
       "path": "app/js/core/scenario/presentation_hint_helpers.js",
-      "size_bytes": 1326
+      "size_bytes": 1925
     },
     {
       "path": "app/js/core/scenario/presentation_ocean_fill_restore.js",
@@ -6026,7 +6014,7 @@
     },
     {
       "path": "app/js/core/scenario/pure_helpers.js",
-      "size_bytes": 3987
+      "size_bytes": 3544
     },
     {
       "path": "app/js/core/scenario/scenario_renderer_bridge.js",
@@ -6038,11 +6026,11 @@
     },
     {
       "path": "app/js/core/scenario/startup_hydration.js",
-      "size_bytes": 30822
+      "size_bytes": 30751
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 23301
+      "size_bytes": 22655
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
@@ -6054,7 +6042,7 @@
     },
     {
       "path": "app/js/core/scenario_data_health.js",
-      "size_bytes": 3843
+      "size_bytes": 3932
     },
     {
       "path": "app/js/core/scenario_dispatcher.js",
@@ -6070,39 +6058,35 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 33649
-    },
-    {
-      "path": "app/js/core/scenario_owner_metrics.js",
-      "size_bytes": 1761
+      "size_bytes": 31539
     },
     {
       "path": "app/js/core/scenario_ownership_editor.js",
-      "size_bytes": 12191
+      "size_bytes": 11209
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 12218
+      "size_bytes": 11776
     },
     {
       "path": "app/js/core/scenario_recovery.js",
-      "size_bytes": 6840
+      "size_bytes": 6242
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 35411
+      "size_bytes": 35261
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 24625
+      "size_bytes": 23159
     },
     {
       "path": "app/js/core/scenario_runtime_queries.js",
-      "size_bytes": 2151
+      "size_bytes": 1785
     },
     {
       "path": "app/js/core/scenario_shell_overlay.js",
-      "size_bytes": 9585
+      "size_bytes": 7663
     },
     {
       "path": "app/js/core/scenario_ui_sync.js",
@@ -6110,7 +6094,7 @@
     },
     {
       "path": "app/js/core/sovereignty_manager.js",
-      "size_bytes": 19587
+      "size_bytes": 18104
     },
     {
       "path": "app/js/core/startup_bundle_compaction.js",
@@ -6118,7 +6102,7 @@
     },
     {
       "path": "app/js/core/startup_cache.js",
-      "size_bytes": 20045
+      "size_bytes": 19773
     },
     {
       "path": "app/js/core/startup_worker_client.js",
@@ -6138,7 +6122,7 @@
     },
     {
       "path": "app/js/core/state/color_state.js",
-      "size_bytes": 9052
+      "size_bytes": 12623
     },
     {
       "path": "app/js/core/state/config.js",
@@ -6166,7 +6150,7 @@
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
-      "size_bytes": 15976
+      "size_bytes": 17164
     },
     {
       "path": "app/js/core/state/spatial_index_state.js",
@@ -6178,7 +6162,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 20452
+      "size_bytes": 21450
     },
     {
       "path": "app/js/core/state.js",
@@ -6213,6 +6197,10 @@
       "size_bytes": 5075
     },
     {
+      "path": "app/js/ui/dev_workspace/dev_mutation_service.js",
+      "size_bytes": 1266
+    },
+    {
       "path": "app/js/ui/dev_workspace/dev_workspace_normalizers.js",
       "size_bytes": 744
     },
@@ -6222,27 +6210,27 @@
     },
     {
       "path": "app/js/ui/dev_workspace/district_editor_controller.js",
-      "size_bytes": 48625
+      "size_bytes": 48132
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_tag_creator_controller.js",
-      "size_bytes": 50663
+      "size_bytes": 50133
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_text_editors_controller.js",
-      "size_bytes": 45502
+      "size_bytes": 44978
     },
     {
       "path": "app/js/ui/dev_workspace/selection_ownership_controller.js",
-      "size_bytes": 13442
+      "size_bytes": 13310
     },
     {
       "path": "app/js/ui/dev_workspace.js",
-      "size_bytes": 47873
+      "size_bytes": 46870
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 45119
+      "size_bytes": 45136
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
@@ -6250,7 +6238,7 @@
     },
     {
       "path": "app/js/ui/scenario_controls.js",
-      "size_bytes": 8637
+      "size_bytes": 7139
     },
     {
       "path": "app/js/ui/shortcuts.js",
@@ -6290,7 +6278,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 231207
+      "size_bytes": 229377
     },
     {
       "path": "app/js/ui/toast.js",
@@ -6310,7 +6298,7 @@
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
-      "size_bytes": 19295
+      "size_bytes": 19508
     },
     {
       "path": "app/js/ui/toolbar/palette_library_panel.js",
@@ -6338,7 +6326,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 163126
+      "size_bytes": 163074
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6346,7 +6334,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_carrier.js",
-      "size_bytes": 23814
+      "size_bytes": 23580
     },
     {
       "path": "app/js/ui/transport_workbench_density_helpers.js",
@@ -6478,7 +6466,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 204524
+      "size_bytes": 204145
     },
     {
       "path": "styles.css",
@@ -6495,5 +6483,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 993297134
+  "total_bytes": 990864366
 }

@@ -184,14 +184,6 @@ export function setScenarioImportAudit(target, scenarioImportAudit = null) {
   return target.scenarioImportAudit;
 }
 
-export function setScenarioOwnerControllerDiffCount(target, value = 0) {
-  if (!target || typeof target !== "object") {
-    return 0;
-  }
-  target.scenarioOwnerControllerDiffCount = Number(value) || 0;
-  return target.scenarioOwnerControllerDiffCount;
-}
-
 export function ensureScenarioPerfMetricsState(target) {
   if (!target || typeof target !== "object") {
     return {};
@@ -290,15 +282,9 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   setScenarioImportAudit(target, nextState.scenarioImportAudit || null);
   target.scenarioBaselineHash = String(nextState.scenarioBaselineHash || "");
   target.scenarioBaselineOwnersByFeatureId = { ...(nextState.scenarioBaselineOwnersByFeatureId || {}) };
-  target.scenarioControllersByFeatureId = { ...(nextState.scenarioControllersByFeatureId || {}) };
   target.scenarioAutoShellOwnerByFeatureId = { ...(nextState.scenarioAutoShellOwnerByFeatureId || {}) };
-  target.scenarioAutoShellControllerByFeatureId = { ...(nextState.scenarioAutoShellControllerByFeatureId || {}) };
-  target.scenarioBaselineControllersByFeatureId = { ...(nextState.scenarioBaselineControllersByFeatureId || {}) };
   target.scenarioBaselineCoresByFeatureId = { ...(nextState.scenarioBaselineCoresByFeatureId || {}) };
   target.scenarioShellOverlayRevision = Number(nextState.scenarioShellOverlayRevision) || 0;
-  target.scenarioControllerRevision = Number(nextState.scenarioControllerRevision) || 0;
-  setScenarioOwnerControllerDiffCount(target, nextState.scenarioOwnerControllerDiffCount || 0);
-  target.scenarioViewMode = String(nextState.scenarioViewMode || "ownership");
   target.countryNames = { ...(nextState.countryNames || {}) };
   target.sovereigntyByFeatureId = { ...(nextState.sovereigntyByFeatureId || {}) };
   target.sovereigntyInitialized = !!nextState.sovereigntyInitialized;
@@ -380,22 +366,16 @@ export function createDefaultScenarioRuntimeState({
     runtimeChunkLoadState: createDefaultRuntimeChunkLoadState({ scenarioId: normalizedScenarioId }),
     activeScenarioId: normalizedScenarioId,
     scenarioBorderMode: "canonical",
-    scenarioViewMode: "ownership",
     activeScenarioManifest: null,
     scenarioCountriesByTag: {},
     scenarioFixedOwnerColors: {},
     scenarioGeneratedColorTags: [],
     scenarioBaselineHash: "",
     scenarioBaselineOwnersByFeatureId: {},
-    scenarioControllersByFeatureId: {},
     scenarioAutoShellOwnerByFeatureId: {},
-    scenarioAutoShellControllerByFeatureId: {},
     scenarioShellOverlayRevision: 0,
-    scenarioBaselineControllersByFeatureId: {},
     scenarioBaselineCoresByFeatureId: {},
-    scenarioControllerRevision: 0,
     scenarioReliefOverlayRevision: 0,
-    scenarioOwnerControllerDiffCount: 0,
     scenarioParentBorderEnabledBeforeActivate: null,
     scenarioPaintModeBeforeActivate: null,
     scenarioOceanFillBeforeActivate: null,

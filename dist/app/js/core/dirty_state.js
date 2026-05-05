@@ -1,5 +1,5 @@
 import { state as runtimeState } from "./state.js";
-const state = runtimeState;
+import { clearDirtyState, markDirtyState } from "./state/ui_state.js";
 
 function updateDirtyIndicator() {
   const indicator = document.getElementById("appDirtyIndicator");
@@ -9,21 +9,12 @@ function updateDirtyIndicator() {
 }
 
 function markDirty(reason = "") {
-  if (!runtimeState.isDirty) {
-    runtimeState.isDirty = true;
-  }
-  runtimeState.dirtyRevision = Number(runtimeState.dirtyRevision || 0) + 1;
-  if (reason) {
-    runtimeState.lastDirtyReason = String(reason);
-  }
+  markDirtyState(runtimeState, reason);
   updateDirtyIndicator();
 }
 
 function clearDirty(reason = "") {
-  runtimeState.isDirty = false;
-  if (reason) {
-    runtimeState.lastDirtyReason = String(reason);
-  }
+  clearDirtyState(runtimeState, reason);
   updateDirtyIndicator();
 }
 

@@ -50,6 +50,21 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("bindCountryInspectorEvents();", content)
 
 
+    def test_country_inspector_state_preserves_feature_count_fields(self):
+        content = SIDEBAR_JS.read_text(encoding="utf-8")
+        state_start = content.index("const createCountryInspectorState = (entry, fallbackIndex = 0) => {")
+        state_return = content.index("return {", state_start)
+        state_prefix = content[state_start:state_return]
+        state_body = content[state_return:content.index("disabledRegionalPresetReason:", state_return)]
+
+        self.assertIn("const ownerFeatureCount = Number(", state_prefix)
+        self.assertIn("const controllerFeatureCount = Number(", state_prefix)
+        self.assertIn("const featureCount = ownerFeatureCount;", state_prefix)
+        self.assertIn("featureCount,", state_body)
+        self.assertIn("ownerFeatureCount,", state_body)
+        self.assertIn("controllerFeatureCount,", state_body)
+
+
     def test_auto_fill_refreshes_country_rows_before_full_list_fallback(self):
         content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         self.assertRegex(

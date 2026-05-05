@@ -39,7 +39,6 @@ def _create_valid_hoi4_bundle(tmp_root: Path, scenario_name: str = "hoi4_1936") 
             "baseline_hash": "abc123",
             "countries_url": f"data/scenarios/{scenario_name}/countries.json",
             "owners_url": f"data/scenarios/{scenario_name}/owners.by_feature.json",
-            "controllers_url": f"data/scenarios/{scenario_name}/controllers.by_feature.json",
             "cores_url": f"data/scenarios/{scenario_name}/cores.by_feature.json",
             "audit_url": f"data/scenarios/{scenario_name}/audit.json",
             "city_overrides_url": f"data/scenarios/{scenario_name}/city_overrides.json",

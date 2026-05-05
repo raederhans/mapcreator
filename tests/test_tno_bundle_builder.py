@@ -945,6 +945,10 @@ class TnoBundleBuilderTest(unittest.TestCase):
             result["manifest_payload"]["bathymetry_topology_url"],
             "data/scenarios/tno_1962/bathymetry.topo.json",
         )
+        self.assertEqual(
+            result["manifest_payload"]["presentation_features"],
+            {"atlantropa_relief": True, "coastal_accent": True},
+        )
         self.assertEqual(result["manifest_payload"]["summary"]["tno_bathymetry_band_count"], 1)
         self.assertEqual(result["manifest_payload"]["summary"]["tno_bathymetry_contour_count"], 1)
 
@@ -1538,7 +1542,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
 
             errors = validate_publish_bundle_dir(bundle_dir)
 
-            self.assertEqual(errors, [])
+            self.assertTrue(any("build_snapshot.json" in error for error in errors))
 
     def test_validate_publish_bundle_dir_rejects_legacy_shell_runtime_only_features(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1692,13 +1696,11 @@ class TnoBundleBuilderTest(unittest.TestCase):
     def test_checked_in_tno_1962_atlisl_runtime_contract_stays_consistent(self) -> None:
         scenario_dir = Path(tno_bundle.SCENARIO_DIR)
         owners_payload = json.loads((scenario_dir / "owners.by_feature.json").read_text(encoding="utf-8"))
-        controllers_payload = json.loads((scenario_dir / "controllers.by_feature.json").read_text(encoding="utf-8"))
         cores_payload = json.loads((scenario_dir / "cores.by_feature.json").read_text(encoding="utf-8"))
         countries_payload = json.loads((scenario_dir / "countries.json").read_text(encoding="utf-8"))
         runtime_topology = json.loads((scenario_dir / "runtime_topology.topo.json").read_text(encoding="utf-8"))
 
         owners = owners_payload["owners"]
-        controllers = controllers_payload["controllers"]
         cores = cores_payload["cores"]
         countries = countries_payload["countries"]
         political_geometries = runtime_topology["objects"]["political"]["geometries"]
@@ -1717,16 +1719,12 @@ class TnoBundleBuilderTest(unittest.TestCase):
         for props in atlisl_props:
             feature_id = props["id"]
             self.assertIn(feature_id, owners, feature_id)
-            self.assertIn(feature_id, controllers, feature_id)
             self.assertIn(feature_id, cores, feature_id)
             self.assertEqual(props.get("cntr_code"), "ATL", feature_id)
             owner_tag = owners[feature_id]
-            controller_tag = controllers[feature_id]
             core_tags = cores[feature_id]
             self.assertIn(owner_tag, countries, feature_id)
-            self.assertIn(controller_tag, countries, feature_id)
             self.assertNotEqual(owner_tag, "ATL", feature_id)
-            self.assertNotEqual(controller_tag, "ATL", feature_id)
             self.assertTrue(core_tags, feature_id)
             for core_tag in core_tags:
                 self.assertIn(core_tag, countries, feature_id)
@@ -1859,7 +1857,6 @@ class TnoBundleBuilderTest(unittest.TestCase):
 
             errors = validate_publish_bundle_dir(bundle_dir)
 
-            self.assertTrue(any("owners/controllers feature keysets must match" in error for error in errors))
             self.assertTrue(any("owners/cores feature keysets must match" in error for error in errors))
             self.assertTrue(any("must store arrays for every feature" in error for error in errors))
             self.assertTrue(any("feature_count must equal owners feature count" in error for error in errors))

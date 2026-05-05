@@ -4,6 +4,9 @@ import {
   hasExplicitScenarioAssignment,
   shouldApplyHoi4FarEastSovietBackfill,
 } from "../scenario_runtime_queries.js";
+import {
+  recordScenarioPerfMetricState,
+} from "../state/scenario_runtime_state.js";
 
 const DEFAULT_OCEAN_FILL_COLOR = "#aadaff";
 const SCENARIO_RENDER_PROFILES = new Set(["auto", "balanced", "full"]);
@@ -82,25 +85,8 @@ function normalizeScenarioRenderProfile(value, fallback = "auto") {
   return SCENARIO_RENDER_PROFILES.has(candidate) ? candidate : normalizedFallback;
 }
 
-function ensureScenarioPerfMetrics(state) {
-  if (!state.scenarioPerfMetrics || typeof state.scenarioPerfMetrics !== "object") {
-    state.scenarioPerfMetrics = {};
-  }
-  return state.scenarioPerfMetrics;
-}
-
 function recordScenarioPerfMetric(state, name, durationMs, details = {}) {
-  const metrics = ensureScenarioPerfMetrics(state);
-  const normalizedName = String(name || "").trim();
-  if (!normalizedName) return null;
-  const nextEntry = {
-    durationMs: Math.max(0, Number(durationMs) || 0),
-    recordedAt: Date.now(),
-    ...details,
-  };
-  metrics[normalizedName] = nextEntry;
-  globalThis.__scenarioPerfMetrics = metrics;
-  return nextEntry;
+  return recordScenarioPerfMetricState(state, name, durationMs, details);
 }
 
 export {

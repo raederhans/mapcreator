@@ -87,6 +87,15 @@ function ensurePaletteCacheRecord(target, key) {
   return target[key];
 }
 
+function replaceObjectContents(target, nextValues) {
+  Object.keys(target || {}).forEach((key) => {
+    delete target[key];
+  });
+  Object.entries(nextValues || {}).forEach(([key, value]) => {
+    target[key] = value;
+  });
+}
+
 // Startup boot loads one initial palette pack/map pair; this helper keeps the
 // palette root writes in the color-state owner without changing runtime flow.
 export function hydrateStartupPaletteState(
@@ -126,6 +135,114 @@ export function hydrateStartupPaletteState(
     paletteMapCacheById[target.activePaletteId] = activePaletteMap;
   }
   return target.activePaletteId;
+}
+
+export function applyResolvedDefaultCountryPaletteState(
+  target,
+  nextPalette = {},
+  {
+    overwriteCountryPalette = false,
+    defaultPaletteTarget = null,
+  } = {},
+) {
+  if (!target || typeof target !== "object") {
+    return {};
+  }
+  target.resolvedDefaultCountryPalette = nextPalette && typeof nextPalette === "object"
+    ? nextPalette
+    : {};
+  if (defaultPaletteTarget && typeof defaultPaletteTarget === "object") {
+    replaceObjectContents(defaultPaletteTarget, target.resolvedDefaultCountryPalette);
+  }
+  if (overwriteCountryPalette) {
+    replaceObjectContents(target.countryPalette, target.resolvedDefaultCountryPalette);
+  }
+  return target.resolvedDefaultCountryPalette;
+}
+
+export function setPaletteLibraryEntriesState(target, entries = []) {
+  if (!target || typeof target !== "object") {
+    return [];
+  }
+  target.paletteLibraryEntries = Array.isArray(entries) ? entries : [];
+  return target.paletteLibraryEntries;
+}
+
+export function setPaletteQuickSwatchesState(target, swatches = [], maxCount = 24) {
+  if (!target || typeof target !== "object") {
+    return [];
+  }
+  target.paletteQuickSwatches = Array.isArray(swatches)
+    ? swatches.slice(0, maxCount)
+    : [];
+  return target.paletteQuickSwatches;
+}
+
+export function applyActivePaletteRuntimeState(
+  target,
+  {
+    fixedPaletteColorsByIso2 = {},
+    activePaletteOceanMeta = null,
+  } = {},
+) {
+  if (!target || typeof target !== "object") {
+    return null;
+  }
+  target.fixedPaletteColorsByIso2 =
+    fixedPaletteColorsByIso2 && typeof fixedPaletteColorsByIso2 === "object"
+      ? fixedPaletteColorsByIso2
+      : {};
+  target.activePaletteOceanMeta = activePaletteOceanMeta || null;
+  return target.fixedPaletteColorsByIso2;
+}
+
+export function commitActivePaletteSourceState(
+  target,
+  {
+    activePaletteId,
+    activePaletteMeta = null,
+    activePalettePack = null,
+    activePaletteMap = null,
+    currentPaletteTheme,
+  } = {},
+) {
+  if (!target || typeof target !== "object") {
+    return "";
+  }
+  target.activePaletteId = String(activePaletteId || "").trim();
+  target.activePaletteMeta = activePaletteMeta || null;
+  target.activePalettePack = activePalettePack || null;
+  target.activePaletteMap = activePaletteMap || null;
+  target.currentPaletteTheme = String(
+    currentPaletteTheme || target.currentPaletteTheme || target.activePaletteId || "HOI4 Vanilla"
+  );
+  return target.activePaletteId;
+}
+
+export function restoreActivePaletteSourceState(target, snapshot = {}) {
+  if (!target || typeof target !== "object") {
+    return "";
+  }
+  target.activePaletteId = snapshot.activePaletteId;
+  target.activePaletteMeta = snapshot.activePaletteMeta;
+  target.activePalettePack = snapshot.activePalettePack;
+  target.activePaletteMap = snapshot.activePaletteMap;
+  target.currentPaletteTheme = snapshot.currentPaletteTheme;
+  target.activePaletteOceanMeta = snapshot.activePaletteOceanMeta;
+  return target.activePaletteId;
+}
+
+export function setPaletteLoadErrorState(target, paletteId, errorMessage = "") {
+  if (!target || typeof target !== "object") {
+    return "";
+  }
+  const targetId = String(paletteId || "").trim();
+  if (!targetId) {
+    return "";
+  }
+  const loadErrorById = ensurePaletteCacheRecord(target, "paletteLoadErrorById");
+  loadErrorById[targetId] = String(errorMessage || "");
+  return loadErrorById[targetId];
 }
 
 export function replaceResolvedColorsState(target, nextColors = {}) {

@@ -8,47 +8,47 @@
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "js/core/map_renderer.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "js/core/scenario_dispatcher.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "js/core/state.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "js/ui/sidebar.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/playwright-app-paths.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/playwright-app.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/playwright-frontline-panel.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/playwright-project-import.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/playwright-web-server.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/startup-paths.js",
-        "specCount": 47
+        "specCount": 46
       },
       {
         "dependency": "tests/e2e/support/playwright-selectors.js",
@@ -1030,31 +1030,9 @@
       ]
     },
     "tests/e2e/strategic_overlay_frontline.spec.js": {
-      "directDependencies": [
-        "js/core/map_renderer.js",
-        "js/core/state.js",
-        "tests/e2e/support/playwright-app.js"
-      ],
-      "transitiveDependencies": [
-        "js/core/interaction_funnel.js",
-        "js/core/map_renderer.js",
-        "js/core/scenario_dispatcher.js",
-        "js/core/state.js",
-        "js/ui/sidebar.js",
-        "tests/e2e/support/playwright-app-paths.js",
-        "tests/e2e/support/playwright-app.js",
-        "tests/e2e/support/playwright-frontline-panel.js",
-        "tests/e2e/support/playwright-project-import.js",
-        "tests/e2e/support/playwright-web-server.js",
-        "tests/e2e/support/startup-paths.js"
-      ],
-      "repoImpact": [
-        "js/core/interaction_funnel.js",
-        "js/core/map_renderer.js",
-        "js/core/scenario_dispatcher.js",
-        "js/core/state.js",
-        "js/ui/sidebar.js"
-      ]
+      "directDependencies": [],
+      "transitiveDependencies": [],
+      "repoImpact": []
     },
     "tests/e2e/strategic_overlay_roundtrip.spec.js": {
       "directDependencies": [
@@ -1529,7 +1507,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -1578,7 +1555,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -1632,7 +1608,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -1702,7 +1677,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -1764,7 +1738,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -1947,7 +1920,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -1996,7 +1968,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -2045,7 +2016,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -2094,7 +2064,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -2154,7 +2123,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -2203,7 +2171,6 @@
       "tests/e2e/startup_bundle_recovery_contract.spec.js",
       "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
       "tests/e2e/strategic_overlay_editing.spec.js",
-      "tests/e2e/strategic_overlay_frontline.spec.js",
       "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
       "tests/e2e/strategic_overlay_smoke.spec.js",

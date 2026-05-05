@@ -296830,5 +296830,9 @@
       "en": "Ｚuichangxian (CN)",
       "zh": "泽昌县"
     }
+  },
+  "Available when the active scenario enables coastal accent.": {
+    "en": "Available when the active scenario enables coastal accent.",
+    "zh": "当前剧本启用海岸强调时可用。"
   }
 }

@@ -16,10 +16,6 @@ function createLifecycleRuntime(runtimeState, overrides = {}) {
     markDirty: () => {},
     markLegacyColorStateDirty: () => {},
     normalizeScenarioId: (value) => String(value || "").trim(),
-    recalculateScenarioOwnerControllerDiffCount: () => {
-      runtimeState.scenarioOwnerControllerDiffCount = 4;
-      return 4;
-    },
     releaseScenarioAuditPayload: () => {},
     resetScenarioChunkRuntimeState: () => {},
     restoreScenarioDisplaySettingsAfterExit: () => {},
@@ -45,13 +41,10 @@ function createBaseState(overrides = {}) {
     expandedInspectorReleaseParents: new Set(["FR"]),
     inspectorExpansionInitialized: true,
     scenarioBaselineOwnersByFeatureId: { A: "FR", B: "DE" },
-    scenarioBaselineControllersByFeatureId: { A: "FR", B: "FR" },
     scenarioCountriesByTag: { FR: {}, DE: {} },
     scenarioFixedOwnerColors: { FR: "#00f", DE: "#000" },
     scenarioBorderMode: "scenario_owner_only",
     scenarioShellOverlayRevision: 0,
-    scenarioControllerRevision: 0,
-    scenarioViewMode: "frontline",
     scenarioPaintModeBeforeActivate: {
       paintMode: "visual",
       interactionGranularity: "subdivision",
@@ -81,9 +74,7 @@ function createBaseState(overrides = {}) {
     scenarioImportAudit: { status: "ok" },
     scenarioBaselineHash: "baseline",
     scenarioAutoShellOwnerByFeatureId: { A: "FR" },
-    scenarioAutoShellControllerByFeatureId: { A: "FR" },
     scenarioBaselineCoresByFeatureId: { A: ["FR"] },
-    scenarioOwnerControllerDiffCount: 999,
     scenarioHydrationHealthGate: { status: "ok" },
     scenarioDataHealth: { expectedFeatureCount: 12 },
     mapSemanticMode: "countries",
@@ -175,7 +166,6 @@ test("scenario apply staging rejects unrenderable political runtime topology bef
     scheduleScenarioChunkRefresh: () => {},
     resetScenarioChunkRuntimeState: () => {},
     ensureRuntimeChunkLoadState: () => ({}),
-    recalculateScenarioOwnerControllerDiffCount: () => {},
     hasRenderableScenarioPoliticalTopology: () => false,
     normalizeScenarioFeatureCollection: (value) => value,
     cloneScenarioStateValue: (value) => value,
@@ -186,7 +176,6 @@ test("scenario apply staging rejects unrenderable political runtime topology bef
       manifest: { scenario_id: "sample" },
       countriesPayload: { countries: { AAA: { display_name: "Alpha", color_hex: "#111111" } } },
       ownersPayload: { owners: { "1": "AAA" } },
-      controllersPayload: { controllers: { "1": "AAA" } },
       coresPayload: { cores: { "1": ["AAA"] } },
       runtimeTopologyPayload: {
         type: "Topology",
@@ -257,7 +246,6 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     scheduleScenarioChunkRefresh: () => {},
     resetScenarioChunkRuntimeState: () => phaseEvents.push(`post:chunks:${runtimeState.activeScenarioId}`),
     ensureRuntimeChunkLoadState: () => ({}),
-    recalculateScenarioOwnerControllerDiffCount: () => phaseEvents.push(`post:diff:${runtimeState.activeScenarioId}`),
     hasRenderableScenarioPoliticalTopology: () => false,
     normalizeScenarioFeatureCollection: (value) => value,
     cloneScenarioStateValue: (value) => value,
@@ -267,7 +255,6 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     manifest: { scenario_id: "blank_base", map_mode: "blank" },
     countriesPayload: { countries: {} },
     ownersPayload: { owners: {} },
-    controllersPayload: { controllers: {} },
     coresPayload: { cores: {} },
     runtimeTopologyPayload: emptyBlankTopology,
   }, { syncPalette: false });
@@ -286,7 +273,6 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     "post:ocean:blank_base",
     "post:performance:blank_base",
     "post:chunks:blank_base",
-    "post:diff:blank_base",
   ]);
 });
 
@@ -326,12 +312,14 @@ test("clearActiveScenario keeps composite mode when baseline detail topology is 
   assert.equal(runtimeState.detailPromotionCompleted, true);
 });
 
-test("resetToScenarioBaseline recalculates split count before UI refresh side effects", () => {
-  const runtimeState = createBaseState();
-  const seenCounts = [];
+test("resetToScenarioBaseline restores ownership before UI refresh side effects", () => {
+  const runtimeState = createBaseState({
+    sovereigntyByFeatureId: { A: "DE", B: "DE" },
+  });
+  const seenOwners = [];
   const runtime = createLifecycleRuntime(runtimeState, {
     runPostScenarioResetEffects: () => {
-      seenCounts.push(runtimeState.scenarioOwnerControllerDiffCount);
+      seenOwners.push(runtimeState.sovereigntyByFeatureId.A);
     },
   });
 
@@ -342,6 +330,6 @@ test("resetToScenarioBaseline recalculates split count before UI refresh side ef
   });
 
   assert.equal(changed, true);
-  assert.deepEqual(seenCounts, [4]);
-  assert.equal(runtimeState.scenarioOwnerControllerDiffCount, 4);
+  assert.deepEqual(seenOwners, ["FR"]);
+  assert.deepEqual(runtimeState.sovereigntyByFeatureId, { A: "FR", B: "DE" });
 });

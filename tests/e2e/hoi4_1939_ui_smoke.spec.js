@@ -58,16 +58,13 @@ test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
     const selectedScenarioId = await page.locator('#scenarioSelect').inputValue();
     const scenarioStatus = await page.locator('#scenarioStatus').innerText();
     const scenarioAuditHint = await page.locator('#scenarioAuditHint').innerText();
-    const viewMode = await page.locator('#scenarioViewModeSelect').inputValue();
     const countries = readScenarioJson('data', 'scenarios', 'hoi4_1939', 'countries.json').countries || {};
     const manifest = readScenarioJson('data', 'scenarios', 'hoi4_1939', 'manifest.json');
-    const controllers = readScenarioJson('data', 'scenarios', 'hoi4_1939', 'controllers.by_feature.json').controllers || {};
 
     const ncp = countries.NCP || null;
     const rgc = countries.RGC || null;
 
     expect(selectedScenarioId).toBe('hoi4_1939');
-    expect(viewMode).toBe('ownership');
     expect(scenarioAuditHint.toLowerCase()).toContain('split');
     expect(scenarioAuditHint).toContain(String(manifest?.summary?.owner_controller_split_feature_count || 0));
 
@@ -88,12 +85,10 @@ test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
       scenarioStatus,
       scenarioAuditHint,
       selectedScenarioId,
-      viewMode,
       ncpFeatureCount: ncp ? ncp.feature_count : null,
       rgcFeatureCount: rgc ? rgc.feature_count : null,
       ncpControllerFeatureCount: ncp ? ncp.controller_feature_count : null,
       rgcControllerFeatureCount: rgc ? rgc.controller_feature_count : null,
-      controllerEntryCount: Object.keys(controllers).length,
       consoleIssueCount: consoleIssues.length,
       networkFailureCount: networkFailures.length,
       consoleIssues,

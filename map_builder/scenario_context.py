@@ -223,7 +223,6 @@ def load_scenario_context(
 
     owners_path = resolve_repo_path(manifest.get("owners_url"), root=root, error_cls=error_cls)
     countries_path = resolve_repo_path(manifest.get("countries_url"), root=root, error_cls=error_cls)
-    controllers_url = str(manifest.get("controllers_url") or "").strip()
     cores_url = str(manifest.get("cores_url") or "").strip()
     releasable_catalog_url = str(manifest.get("releasable_catalog_url") or "").strip()
     district_groups_url = str(manifest.get("district_groups_url") or "").strip()
@@ -236,7 +235,6 @@ def load_scenario_context(
         or ""
     ).strip()
     geo_locale_builder_url = str(manifest.get("geo_locale_builder_url") or "").strip()
-    controllers_path = resolve_repo_path(controllers_url, root=root, error_cls=error_cls) if controllers_url else None
     cores_path = resolve_repo_path(cores_url, root=root, error_cls=error_cls) if cores_url else None
     releasable_catalog_path = (
         resolve_repo_path(releasable_catalog_url, root=root, error_cls=error_cls)
@@ -283,7 +281,6 @@ def load_scenario_context(
         manifest_path,
         owners_path,
         countries_path,
-        controllers_path,
         cores_path,
         city_overrides_path,
         city_assets_partial_path,
@@ -324,7 +321,6 @@ def load_scenario_context(
         "scenarioDir": scenario_dir,
         "ownersPath": owners_path,
         "countriesPath": countries_path,
-        "controllersPath": controllers_path,
         "coresPath": cores_path,
         "releasableCatalogUrl": releasable_catalog_url,
         "releasableCatalogPath": releasable_catalog_path,
@@ -366,7 +362,6 @@ def scenario_transaction_paths(context: dict[str, object]) -> list[Path]:
         Path(context["manifestPath"]),
         Path(context["countriesPath"]),
         Path(context["ownersPath"]),
-        context.get("controllersPath"),
         context.get("coresPath"),
         Path(context["releasableCatalogLocalPath"]),
         Path(context["districtGroupsPath"]),

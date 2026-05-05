@@ -194,7 +194,6 @@ test("startup hydration refreshes opening owner borders when full mesh pack arri
   const state = {
     activeScenarioId: "tno_1962",
     scenarioBorderMode: "scenario_owner_only",
-    scenarioViewMode: "ownership",
     activeScenarioMeshPack: null,
     runtimePoliticalTopology: null,
     scenarioRuntimeTopologyData: null,
@@ -281,7 +280,6 @@ test("startup hydration marks political promotion as changed when runtime politi
   const state = {
     activeScenarioId: "tno_1962",
     scenarioBorderMode: "scenario_owner_only",
-    scenarioViewMode: "ownership",
     activeScenarioMeshPack: null,
     runtimePoliticalTopology: null,
     scenarioRuntimeTopologyData: null,
@@ -377,7 +375,6 @@ test("startup hydration keeps political promotion safe when refresh plan factory
   const state = {
     activeScenarioId: "tno_1962",
     scenarioBorderMode: "scenario_owner_only",
-    scenarioViewMode: "ownership",
     activeScenarioMeshPack: null,
     runtimePoliticalTopology: null,
     scenarioRuntimeTopologyData: null,

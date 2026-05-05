@@ -42,7 +42,6 @@ import {
 } from "./scenario_districts.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
 import { ensureDetailTopologyBoundary, flushRenderBoundary } from "./render_boundary.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "./scenario_owner_metrics.js";
 import { buildScenarioReleasableIndex } from "./releasable_manager.js";
 import { syncScenarioLocalizationState } from "./scenario_localization_state.js";
 import {
@@ -226,7 +225,8 @@ const assembleScenarioBundle = createScenarioBundleAssembler({
 });
 
 function normalizeScenarioViewMode(value) {
-  return String(value || "").trim().toLowerCase() === "frontline" ? "frontline" : "ownership";
+  void value;
+  return "ownership";
 }
 
 function recordScenarioPerfMetric(name, durationMs, details = {}) {
@@ -238,16 +238,7 @@ function getScenarioDisplayOwnerByFeatureId(featureId, { fallbackOwner = "" } = 
   if (!normalizedId) return String(fallbackOwner || "").trim().toUpperCase();
   const fallback = String(fallbackOwner || "").trim().toUpperCase();
   const directOwner = String(runtimeState.sovereigntyByFeatureId?.[normalizedId] || "").trim().toUpperCase();
-  const directController = String(runtimeState.scenarioControllersByFeatureId?.[normalizedId] || "").trim().toUpperCase();
-  if (!runtimeState.activeScenarioId || normalizeScenarioViewMode(runtimeState.scenarioViewMode) !== "frontline") {
-    return directOwner || fallback;
-  }
-  return String(
-    directController
-    || directOwner
-    || fallback
-    || ""
-  ).trim().toUpperCase();
+  return directOwner || fallback;
 }
 
 function getScenarioRegistryEntries() {
@@ -930,4 +921,3 @@ export {
   releaseScenarioAuditPayload,
   validateImportedScenarioBaseline,
 };
-

@@ -71,7 +71,6 @@ test('hoi4 rkm/rko/rku reapply closes RU coverage gaps', async ({ page }) => {
     markDirtyReason: 'playwright-hoi4-rk-russia',
   });
   await expect(page.locator('#scenarioStatus')).toContainText('HOI4 1939', { timeout: 20000 });
-  await page.selectOption('#scenarioViewModeSelect', 'ownership');
   await page.waitForTimeout(1200);
 
   for (const tag of ['RKU', 'RKO', 'RKM']) {
@@ -109,12 +108,10 @@ test('hoi4 rkm/rko/rku reapply closes RU coverage gaps', async ({ page }) => {
         featureName: String(props.name || '').trim(),
         countryCode: String(props.cntr_code || '').trim(),
         owner: featureId ? String(state.sovereigntyByFeatureId?.[featureId] || '') : '',
-        controller: featureId ? String(state.scenarioControllersByFeatureId?.[featureId] || '') : '',
       };
     });
     return {
       activeScenarioId: state.activeScenarioId,
-      viewMode: state.scenarioViewMode,
       runtimeFeatureCount: state.runtimePoliticalTopology?.objects?.political?.geometries?.length || 0,
       results,
     };

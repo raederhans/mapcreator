@@ -71,13 +71,9 @@ export function createUnitCounterRuntimeHelpers({
     if (requestedSource === "display" && displayTag) {
       return { tag: displayTag, source: "display" };
     }
-    const controllerTag = canonicalCountryCode(state.scenarioControllersByFeatureId?.[normalizedFeatureId] || "");
-    if (requestedSource === "controller" && controllerTag) {
-      return { tag: controllerTag, source: "controller" };
-    }
     const ownerTag = canonicalCountryCode(getFeatureOwnerCode(normalizedFeatureId) || "");
     if (requestedSource === "controller" && ownerTag) {
-      return { tag: ownerTag, source: "controller" };
+      return { tag: ownerTag, source: "owner" };
     }
     if (requestedSource === "owner" && ownerTag) {
       return { tag: ownerTag, source: "owner" };
@@ -85,12 +81,10 @@ export function createUnitCounterRuntimeHelpers({
     if (requestedSource === "display" && ownerTag) {
       return { tag: ownerTag, source: "display" };
     }
-    if (requestedSource === "display" && controllerTag) {
-      return { tag: controllerTag, source: "display" };
-    }
     const activeTag = canonicalCountryCode(state.activeSovereignCode || state.selectedInspectorCountryCode || "");
     if (activeTag) {
-      return { tag: activeTag, source: requestedSource };
+      const activeSource = requestedSource === "controller" ? "owner" : requestedSource;
+      return { tag: activeTag, source: activeSource };
     }
     return { tag: "", source: requestedSource };
   }

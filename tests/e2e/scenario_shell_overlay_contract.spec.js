@@ -62,10 +62,7 @@ async function clearScenario(page) {
 async function readShellState(page) {
   return page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const shellIds = Array.from(new Set([
-      ...Object.keys(state.scenarioAutoShellOwnerByFeatureId || {}),
-      ...Object.keys(state.scenarioAutoShellControllerByFeatureId || {}),
-    ]));
+    const shellIds = Object.keys(state.scenarioAutoShellOwnerByFeatureId || {});
     const ruPolarId = shellIds.find((id) => id.startsWith("RU_ARCTIC_FB_")) || "";
     return {
       activeScenarioId: String(state.activeScenarioId || ""),
@@ -73,9 +70,7 @@ async function readShellState(page) {
       shellRevision: Number(state.scenarioShellOverlayRevision || 0),
       ruPolarId,
       ruPolarOwner: String(state.scenarioAutoShellOwnerByFeatureId?.[ruPolarId] || ""),
-      ruPolarController: String(state.scenarioAutoShellControllerByFeatureId?.[ruPolarId] || ""),
       ownerCount: Object.keys(state.scenarioAutoShellOwnerByFeatureId || {}).length,
-      controllerCount: Object.keys(state.scenarioAutoShellControllerByFeatureId || {}).length,
     };
   });
 }

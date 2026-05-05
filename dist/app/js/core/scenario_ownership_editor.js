@@ -6,7 +6,6 @@ import {
   scheduleDynamicBorderRecompute,
 } from "./map_renderer.js";
 import { markDirty } from "./dirty_state.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "./scenario_owner_metrics.js";
 import {
   getFeatureOwnerCode,
   normalizeOwnerCode,
@@ -242,12 +241,10 @@ function applyOwnerControllerAssignmentsToFeatureIds(
     .map(([featureId, assignment]) => {
       const normalizedFeatureId = String(featureId || "").trim();
       const ownerCode = normalizeOwnerCode(assignment?.ownerCode);
-      const controllerCode = normalizeOwnerCode(assignment?.controllerCode || assignment?.ownerCode);
-      if (!normalizedFeatureId || !ownerCode || !controllerCode) return null;
+      if (!normalizedFeatureId || !ownerCode) return null;
       return {
         featureId: normalizedFeatureId,
         ownerCode,
-        controllerCode,
       };
     })
     .filter(Boolean);
@@ -279,27 +276,18 @@ function applyOwnerControllerAssignmentsToFeatureIds(
 
   const before = captureHistoryState({
     sovereigntyFeatureIds: targetIds,
-    scenarioControllerFeatureIds: targetIds,
   });
-  runtimeState.scenarioControllersByFeatureId = runtimeState.scenarioControllersByFeatureId || {};
   const ownerFeatureIdsByCode = new Map();
   const changedFeatureIds = new Set();
 
-  entries.forEach(({ featureId, ownerCode, controllerCode }) => {
+  entries.forEach(({ featureId, ownerCode }) => {
     if (!targetIds.includes(featureId)) return;
     const currentOwnerCode = normalizeOwnerCode(runtimeState.sovereigntyByFeatureId?.[featureId]);
-    const currentControllerCode = normalizeOwnerCode(
-      runtimeState.scenarioControllersByFeatureId?.[featureId] || currentOwnerCode
-    );
     if (currentOwnerCode !== ownerCode) {
       if (!ownerFeatureIdsByCode.has(ownerCode)) {
         ownerFeatureIdsByCode.set(ownerCode, []);
       }
       ownerFeatureIdsByCode.get(ownerCode).push(featureId);
-      changedFeatureIds.add(featureId);
-    }
-    if (currentControllerCode !== controllerCode) {
-      runtimeState.scenarioControllersByFeatureId[featureId] = controllerCode;
       changedFeatureIds.add(featureId);
     }
   });
@@ -308,8 +296,6 @@ function applyOwnerControllerAssignmentsToFeatureIds(
     setFeatureOwnerCodes(featureIds, ownerCode);
   });
   if (changedFeatureIds.size) {
-    runtimeState.scenarioControllerRevision = (Number(runtimeState.scenarioControllerRevision) || 0) + 1;
-    recalculateScenarioOwnerControllerDiffCount();
     refreshResolvedColorsForFeatures(Array.from(changedFeatureIds), { renderNow: false });
     scheduleDynamicBorderRecompute(recomputeReason, 90);
     markDirty(dirtyReason);
@@ -318,7 +304,6 @@ function applyOwnerControllerAssignmentsToFeatureIds(
       before,
       after: captureHistoryState({
         sovereigntyFeatureIds: targetIds,
-        scenarioControllerFeatureIds: targetIds,
       }),
       meta: {
         affectsSovereignty: true,
@@ -326,7 +311,7 @@ function applyOwnerControllerAssignmentsToFeatureIds(
     });
   }
   if (render) {
-    requestScenarioOwnershipRender("scenario-ownership-apply-owner-controller");
+    requestScenarioOwnershipRender("scenario-ownership-apply-owner");
   }
   return {
     applied: true,

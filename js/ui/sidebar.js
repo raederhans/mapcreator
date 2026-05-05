@@ -48,7 +48,6 @@ import {
   releaseScenarioAuditPayload,
 } from "../core/scenario_resources.js";
 import { refreshScenarioShellOverlays } from "../core/scenario_shell_overlay.js";
-import { recalculateScenarioOwnerControllerDiffCount } from "../core/scenario_owner_metrics.js";
 import { getGeoFeatureDisplayLabel, t } from "./i18n.js";
 import { showToast } from "./toast.js";
 import { showAppDialog } from "./app_dialog.js";
@@ -235,10 +234,8 @@ function collectCountryNameByCode() {
 
 function getDynamicCountryEntries() {
   const resolveScenarioCountryFeatureCount = (entry = {}) => {
-    const entryKind = String(entry?.entry_kind || entry?.entryKind || "").trim().toLowerCase();
     const ownerFeatureCount = Number(entry?.feature_count ?? entry?.featureCount ?? 0) || 0;
-    const controllerFeatureCount = Number(entry?.controller_feature_count ?? entry?.controllerFeatureCount ?? 0) || 0;
-    return entryKind === "controller_only" ? controllerFeatureCount : ownerFeatureCount;
+    return ownerFeatureCount;
   };
 
   if (runtimeState.activeScenarioId && runtimeState.scenarioCountriesByTag && typeof runtimeState.scenarioCountriesByTag === "object") {
@@ -1026,32 +1023,20 @@ function applyScenarioOwnerControllerAssignments(
   const targetIds = entries.map((entry) => entry.featureId);
   const before = captureHistoryState({
     sovereigntyFeatureIds: targetIds,
-    scenarioControllerFeatureIds: targetIds,
   });
 
-  // 这是 sidebar 内唯一同时写 owner/controller 的批量入口；
-  // 视觉覆盖不要走到这里，否则颜色预览会变成真实政治状态修改。
-  // scenario 模式下 owner / controller 允许分离，
-  // 但两者必须在同一笔 sidebar 事务里写入并统一推高 revision，
-  // 否则 UI、diff 计数和边界重算会短暂看到半更新状态。
-  runtimeState.scenarioControllersByFeatureId = runtimeState.scenarioControllersByFeatureId || {};
+  // 这是 sidebar 内的批量 ownership 入口；视觉覆盖不要走到这里，
+  // 否则颜色预览会变成真实政治状态修改。
   const ownerFeatureIdsByCode = new Map();
   const changedFeatureIds = new Set();
 
-  entries.forEach(({ featureId, ownerCode, controllerCode }) => {
+  entries.forEach(({ featureId, ownerCode }) => {
     const currentOwnerCode = normalizeCountryCode(runtimeState.sovereigntyByFeatureId?.[featureId]);
-    const currentControllerCode = normalizeCountryCode(
-      runtimeState.scenarioControllersByFeatureId?.[featureId] || currentOwnerCode
-    );
     if (currentOwnerCode !== ownerCode) {
       if (!ownerFeatureIdsByCode.has(ownerCode)) {
         ownerFeatureIdsByCode.set(ownerCode, []);
       }
       ownerFeatureIdsByCode.get(ownerCode).push(featureId);
-      changedFeatureIds.add(featureId);
-    }
-    if (currentControllerCode !== controllerCode) {
-      runtimeState.scenarioControllersByFeatureId[featureId] = controllerCode;
       changedFeatureIds.add(featureId);
     }
   });
@@ -1061,8 +1046,6 @@ function applyScenarioOwnerControllerAssignments(
     ownerChanged += setFeatureOwnerCodes(featureIds, ownerCode);
   });
   if (changedFeatureIds.size) {
-    runtimeState.scenarioControllerRevision = (Number(runtimeState.scenarioControllerRevision) || 0) + 1;
-    recalculateScenarioOwnerControllerDiffCount();
     refreshResolvedColorsForFeatures(Array.from(changedFeatureIds), { renderNow: false });
     scheduleDynamicBorderRecompute(recomputeReason, 90);
     markDirty(dirtyReason);
@@ -1071,7 +1054,6 @@ function applyScenarioOwnerControllerAssignments(
       before,
       after: captureHistoryState({
         sovereigntyFeatureIds: targetIds,
-        scenarioControllerFeatureIds: targetIds,
       }),
       meta: {
         affectsSovereignty: true,
@@ -3592,9 +3574,7 @@ function initSidebar({ render } = {}) {
       ?? entry.controllerFeatureCount
       ?? 0
     ) || 0;
-    const featureCount = String(entryKind).trim().toLowerCase() === "controller_only"
-      ? controllerFeatureCount
-      : ownerFeatureCount;
+    const featureCount = ownerFeatureCount;
     const continentId = String(
       scenarioMeta.continent_id || scenarioMeta.continentId || groupingMeta.continentId || "continent_other"
     );
@@ -4174,15 +4154,9 @@ function initSidebar({ render } = {}) {
             || runtimeState.runtimeCanonicalCountryByFeatureId?.[normalizedId]
             || ""
         );
-        const baselineControllerCode = normalizeCountryCode(
-          runtimeState.scenarioBaselineControllersByFeatureId?.[normalizedId]
-            || baselineOwnerCode
-            || ""
-        );
-        if (!baselineOwnerCode || !baselineControllerCode) return;
+        if (!baselineOwnerCode) return;
         assignmentsByFeatureId[normalizedId] = {
           ownerCode: baselineOwnerCode,
-          controllerCode: baselineControllerCode,
         };
       });
       const result = applyScenarioOwnerControllerAssignments(assignmentsByFeatureId, {
@@ -5565,5 +5539,3 @@ function initSidebar({ render } = {}) {
 }
 
 export { initSidebar };
-
-
