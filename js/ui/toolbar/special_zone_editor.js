@@ -35,9 +35,7 @@ function createSpecialZoneEditorController({
   undoSpecialZoneVertex,
   finishSpecialZoneDraw,
   cancelSpecialZoneDraw,
-  deleteSelectedManualSpecialZone,
   selectSpecialZoneById,
-  showAppDialog,
   showToast,
   t,
 } = {}) {
@@ -150,7 +148,7 @@ function createSpecialZoneEditorController({
     if (specialZoneFinishBtn) specialZoneFinishBtn.disabled = true;
     if (specialZoneCancelBtn) specialZoneCancelBtn.disabled = true;
     if (specialZoneDeleteBtn) {
-      specialZoneDeleteBtn.disabled = !runtimeState.specialZoneEditor?.selectedId;
+      specialZoneDeleteBtn.disabled = true;
     }
     if (specialZoneEditorHint) {
       specialZoneEditorHint.textContent = isDrawing
@@ -301,25 +299,9 @@ function createSpecialZoneEditorController({
     }
     if (specialZoneDeleteBtn && !specialZoneDeleteBtn.dataset.bound) {
       specialZoneDeleteBtn.addEventListener("click", async () => {
-        if (!runtimeState.specialZoneEditor?.selectedId) return;
-        const confirmed = await showAppDialog({
-          title: t("Delete Selected", "ui"),
-          message: t("Delete the selected special region?", "ui"),
-          details: t(
-            "This removes the selected manual zone from the current project. You can undo the deletion from history.",
-            "ui"
-          ),
-          confirmLabel: t("Delete Zone", "ui"),
-          cancelLabel: t("Cancel", "ui"),
-          tone: "warning",
-        });
-        if (!confirmed) return;
-        deleteSelectedManualSpecialZone();
         runtimeState.updateSpecialZoneEditorUIFn?.();
-        markDirty("special-zone-delete");
-        render?.();
-        showToast(t("Selected special region was deleted.", "ui"), {
-          title: t("Delete Selected", "ui"),
+        showToast(t("Use Layer-based special zones for new edits.", "ui"), {
+          title: t("Special Zones", "ui"),
           tone: "warning",
         });
       });

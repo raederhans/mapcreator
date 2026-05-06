@@ -105,7 +105,7 @@ test("operation graphic runtime owner keeps warning path for invalid closed-styl
   assert.equal(toasts[0].options.title, "More points required");
 });
 
-test("special zone runtime owner creates manual feature and preserves isolated semantics", () => {
+test("special zone runtime owner retires legacy manual feature creation", () => {
   let uiRefreshCount = 0;
   let renderCount = 0;
   const runtimeState = {
@@ -135,13 +135,13 @@ test("special zone runtime owner creates manual feature and preserves isolated s
     },
   });
 
-  assert.equal(owner.finishSpecialZoneDraw(), true);
-  assert.equal(runtimeState.manualSpecialZones.features.length, 1);
-  assert.equal(runtimeState.manualSpecialZones.features[0].properties.id, "manual_sz_1");
-  assert.equal(runtimeState.specialZoneEditor.selectedId, "manual_sz_1");
+  assert.equal(owner.startSpecialZoneDraw({ zoneType: "custom", label: "Buffer" }), false);
+  assert.equal(owner.finishSpecialZoneDraw(), false);
+  assert.equal(runtimeState.manualSpecialZones.features.length, 0);
+  assert.equal(runtimeState.specialZoneEditor.selectedId, null);
   assert.equal(runtimeState.specialZoneEditor.active, false);
-  assert.equal(uiRefreshCount, 1);
-  assert.equal(renderCount, 1);
+  assert.equal(uiRefreshCount, 2);
+  assert.equal(renderCount, 2);
 });
 
 test("operational line runtime owner commits history and updates modal selection on finish", () => {

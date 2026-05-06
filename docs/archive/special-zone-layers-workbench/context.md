@@ -44,3 +44,11 @@
 - Fixed workbench scenario asset cache by replacing the boolean loaded flag with `loadedScenarioLayerAssetId`, so switching active scenarios forces the new scenario's `special_zone_layers.json` to load before save.
 - Rebuilt `modern_world` build snapshot/audit/manifest with `check_scenario_contracts.py --strict --write-safe`, adding `special_zone_layers.json` to `input_sha` and updating the fingerprint.
 - Verification: `node --check js/ui/toolbar/special_zones_workbench_controller.js`, `python -m unittest tests.test_toolbar_split_boundary_contract -q`, `python tools/check_scenario_contracts.py --strict --scenario-dir data/scenarios/modern_world`, and `git diff --check` all passed.
+
+## Render-owner and legacy-retirement pass - 2026-05-05
+
+- Extracted special zone SVG rendering into `js/core/renderer/special_zone_layers_render_owner.js`; `map_renderer.js` now keeps a narrow facade only.
+- Render owner now owns SVG pattern defs, zoom-time pattern transforms, per-layer `topojson.merge()` merged outlines, and outline cache keys based on topology/scenario/layer/style/member ids.
+- Retired legacy `specialRegionOverrides` editor writes and removed the old `special-overrides` render token from the special visual signature.
+- Retired legacy manual freehand creation: runtime facade calls now cancel stale draw state and return `false`, and the legacy toolbar panel keeps creation/deletion buttons read-only while directing edits to the layer workbench.
+- Verification passed: `node --check` for changed renderer/sidebar/toolbar/runtime modules; `node --test tests/strategic_overlay_runtime_owner_behavior.test.mjs`; `npm run test:node:renderer-splits`; `python -m unittest tests.test_water_special_region_sidebar_boundary_contract tests.test_map_renderer_special_zone_layers_render_owner_boundary_contract tests.test_map_renderer_strategic_overlay_helpers_boundary_contract tests.test_map_renderer_strategic_overlay_runtime_owner_boundary_contract tests.test_toolbar_split_boundary_contract -q`; `python tools/check_scenario_contracts.py --strict --scenario-dir data/scenarios/modern_world --report-path .runtime/reports/generated/modern_world.special_zone_layers.strict.remaining2.json`; `git diff --check`. Known Node module-type warnings remain unchanged.

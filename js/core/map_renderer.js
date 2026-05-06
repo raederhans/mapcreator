@@ -118,8 +118,8 @@ import { createFacilitySurfaceOwner } from "./renderer/facility_surface.js";
 import { createRiverLayerRenderOwner } from "./renderer/river_layer_render_owner.js";
 import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
+import { createSpecialZoneLayersRenderOwner } from "./renderer/special_zone_layers_render_owner.js";
 import {
-  buildSpecialZoneRenderFeatures,
   normalizeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 } from "./special_zone_layers.js";
@@ -971,6 +971,7 @@ let facilitySurfaceOwner = null;
 let riverLayerRenderOwner = null;
 let transportOverviewRenderOwner = null;
 let borderMeshOwner = null;
+let specialZoneLayersRenderOwner = null;
 let borderDrawOwner = null;
 let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
@@ -1021,6 +1022,27 @@ function getStrategicOverlayHelpersOwner() {
     },
   });
   return strategicOverlayHelpersOwner;
+}
+
+function getSpecialZoneLayersRenderOwner() {
+  if (specialZoneLayersRenderOwner) {
+    return specialZoneLayersRenderOwner;
+  }
+  specialZoneLayersRenderOwner = createSpecialZoneLayersRenderOwner({
+    state,
+    groupGetters: {
+      getSpecialZonesGroup: () => specialZonesGroup,
+      getStrategicDefs: () => strategicDefs,
+    },
+    helpers: {
+      clamp,
+      getDashPattern,
+      getFeatureId,
+      getPathSVG: () => pathSVG,
+      getSafeCanvasColor,
+    },
+  });
+  return specialZoneLayersRenderOwner;
 }
 
 function getUrbanCityPolicyOwner() {
@@ -2739,7 +2761,6 @@ function getScenarioSpecialVisualRevisionToken() {
     `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
     `special-ref:${getObjectIdentityToken(runtimeState.scenarioSpecialRegionsData, "scenario-special")}`,
     `special-count:${getFeatureCollectionFeatureCount(runtimeState.scenarioSpecialRegionsData)}`,
-    `special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}`,
     runtimeState.showScenarioSpecialRegions ? "scenario-special:on" : "scenario-special:off",
   ].join("|");
 }
@@ -3219,10 +3240,7 @@ function getSpecialRegionDefaultStyle(feature) {
 }
 
 function getSpecialRegionColor(id, feature = null) {
-  const resolvedId = String(id || "").trim();
-  const override = getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);
-  if (override) return override;
-  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(resolvedId)).fill;
+  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(String(id || "").trim())).fill;
 }
 
 function getSpecialRegionStrokeColor(feature) {
@@ -3230,10 +3248,6 @@ function getSpecialRegionStrokeColor(feature) {
 }
 
 function getSpecialRegionOpacity(feature, id) {
-  const resolvedId = String(id || "").trim();
-  if (Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)) {
-    return 1;
-  }
   return getSpecialRegionDefaultStyle(feature).opacity;
 }
 
@@ -18735,8 +18749,7 @@ function getManualSpecialZoneFeatures() {
 }
 
 function getEffectiveSpecialZonesFeatureCollection() {
-  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
-  return buildSpecialZoneRenderFeatures(runtimeState.specialZoneLayers, runtimeState.landIndex);
+  return getSpecialZoneLayersRenderOwner().getEffectiveSpecialZonesFeatureCollection();
 }
 
 function getSpecialZoneStyle(feature) {
@@ -18787,147 +18800,12 @@ function getSpecialZoneStyle(feature) {
   };
 }
 
-function sanitizeSpecialZonePatternToken(value) {
-  return String(value || "")
-    .trim()
-    .replace(/[^a-zA-Z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    || "zone";
-}
-
-function getSpecialZonePatternDefId(feature, style) {
-  const layerId = sanitizeSpecialZonePatternToken(feature?.properties?.__specialZoneLayerId || "layer");
-  const pattern = sanitizeSpecialZonePatternToken(style?.pattern || "solid");
-  const stroke = sanitizeSpecialZonePatternToken(style?.stroke || "stroke");
-  const revision = Math.max(1, Math.round(Number(style?.revision) || 1));
-  return `special-zone-pattern-${layerId}-${pattern}-${stroke}-${revision}`;
-}
-
-function renderSpecialZonePatternDefs(features) {
-  if (!strategicDefs) return new Map();
-  const defsById = new Map();
-  features.forEach((feature) => {
-    const style = getSpecialZoneStyle(feature);
-    const pattern = String(style.pattern || "solid");
-    if (pattern === "solid" || pattern === "outlineOnly") return;
-    const id = getSpecialZonePatternDefId(feature, style);
-    if (!defsById.has(id)) {
-      defsById.set(id, {
-        id,
-        pattern,
-        stroke: style.stroke,
-        strokeWidth: Math.max(0.8, Number(style.strokeWidth) || 1.2),
-      });
-    }
-  });
-
-  const selection = strategicDefs
-    .selectAll("pattern.special-zone-pattern-def")
-    .data(Array.from(defsById.values()), (d) => d.id);
-
-  const enter = selection
-    .enter()
-    .append("pattern")
-    .attr("class", "special-zone-pattern-def")
-    .attr("patternUnits", "userSpaceOnUse")
-    .attr("width", 14)
-    .attr("height", 14);
-
-  const merged = enter.merge(selection)
-    .attr("id", (d) => d.id)
-    .attr("width", (d) => (d.pattern === "denseDots" ? 8 : 14))
-    .attr("height", (d) => (d.pattern === "denseDots" ? 8 : 14));
-
-  merged.each(function renderPatternDefinition(d) {
-    const patternSelection = globalThis.d3.select(this);
-    patternSelection.selectAll("*").remove();
-    const stroke = d.stroke;
-    const width = d.strokeWidth;
-    if (d.pattern === "diagonalHatch") {
-      patternSelection.append("path").attr("d", "M -4 14 L 14 -4 M 0 18 L 18 0").attr("stroke", stroke).attr("stroke-width", width).attr("fill", "none");
-    } else if (d.pattern === "crossHatch") {
-      patternSelection.append("path").attr("d", "M -4 14 L 14 -4 M 0 18 L 18 0 M 0 -4 L 18 14 M -4 0 L 14 18").attr("stroke", stroke).attr("stroke-width", width * 0.75).attr("fill", "none");
-    } else if (d.pattern === "horizontalLines") {
-      patternSelection.append("path").attr("d", "M 0 4 H 14 M 0 10 H 14").attr("stroke", stroke).attr("stroke-width", width).attr("fill", "none");
-    } else if (d.pattern === "wavyLines") {
-      patternSelection.append("path").attr("d", "M 0 5 C 3 2, 5 8, 8 5 S 12 2, 14 5 M 0 11 C 3 8, 5 14, 8 11 S 12 8, 14 11").attr("stroke", stroke).attr("stroke-width", width * 0.75).attr("fill", "none");
-    } else if (d.pattern === "dots" || d.pattern === "denseDots") {
-      const radius = d.pattern === "denseDots" ? 1.1 : 1.35;
-      patternSelection.append("circle").attr("cx", d.pattern === "denseDots" ? 2 : 4).attr("cy", d.pattern === "denseDots" ? 2 : 4).attr("r", radius).attr("fill", stroke);
-      patternSelection.append("circle").attr("cx", d.pattern === "denseDots" ? 6 : 10).attr("cy", d.pattern === "denseDots" ? 6 : 10).attr("r", radius).attr("fill", stroke);
-    } else if (d.pattern === "concentric") {
-      patternSelection.append("circle").attr("cx", 7).attr("cy", 7).attr("r", 2.2).attr("stroke", stroke).attr("stroke-width", width * 0.7).attr("fill", "none");
-      patternSelection.append("circle").attr("cx", 7).attr("cy", 7).attr("r", 5.4).attr("stroke", stroke).attr("stroke-width", width * 0.55).attr("fill", "none");
-    } else if (d.pattern === "chevrons") {
-      patternSelection.append("path").attr("d", "M 1 9 L 7 4 L 13 9 M 1 14 L 7 9 L 13 14").attr("stroke", stroke).attr("stroke-width", width).attr("fill", "none").attr("stroke-linejoin", "round");
-    }
-  });
-
-  selection.exit().remove();
-  return defsById;
-}
-
 function updateSpecialZonesPaths() {
-  if (!specialZonesGroup || !pathSVG) return;
+  getSpecialZoneLayersRenderOwner().updateSpecialZonesPaths();
+}
 
-  const features = getEffectiveSpecialZonesFeatureCollection().features;
-  if (!features.length) {
-    specialZonesGroup.selectAll("path.special-zone").remove();
-    specialZonesGroup.selectAll("path.special-zone-pattern").remove();
-    renderSpecialZonePatternDefs([]);
-    return;
-  }
-  renderSpecialZonePatternDefs(features);
-
-  const selectedId = String(runtimeState.specialZoneEditor?.selectedId || "");
-  const selection = specialZonesGroup
-    .selectAll("path.special-zone")
-    .data(features, (d, i) => d?.properties?.id || `special-zone-${i}`);
-
-  selection
-    .enter()
-    .append("path")
-    .attr("class", "special-zone")
-    .attr("role", "presentation")
-    .attr("aria-hidden", "true")
-    .attr("vector-effect", "non-scaling-stroke")
-    .merge(selection)
-    .attr("d", pathSVG)
-    .attr("fill", (d) => getSpecialZoneStyle(d).fill)
-    .attr("fill-opacity", (d) => (getSpecialZoneStyle(d).pattern === "outlineOnly" ? 0 : getSpecialZoneStyle(d).fillOpacity))
-    .attr("stroke", (d) => getSpecialZoneStyle(d).stroke)
-    .attr("stroke-width", (d) => {
-      const base = getSpecialZoneStyle(d).strokeWidth;
-      const id = String(d?.properties?.id || "");
-      return id && id === selectedId ? base + 0.9 : base;
-    })
-    .attr("stroke-dasharray", (d) => getSpecialZoneStyle(d).dash.join(" "))
-    .attr("opacity", 0.95);
-
-  selection.exit().remove();
-
-  const patternSelection = specialZonesGroup
-    .selectAll("path.special-zone-pattern")
-    .data(features.filter((d) => {
-      const pattern = getSpecialZoneStyle(d).pattern;
-      return pattern && pattern !== "solid" && pattern !== "outlineOnly";
-    }), (d, i) => `${d?.properties?.id || `special-zone-${i}`}:pattern`);
-
-  patternSelection
-    .enter()
-    .append("path")
-    .attr("class", "special-zone-pattern")
-    .attr("role", "presentation")
-    .attr("aria-hidden", "true")
-    .attr("vector-effect", "non-scaling-stroke")
-    .merge(patternSelection)
-    .attr("d", pathSVG)
-    .attr("fill", (d) => `url(#${getSpecialZonePatternDefId(d, getSpecialZoneStyle(d))})`)
-    .attr("fill-opacity", (d) => getSpecialZoneStyle(d).patternOpacity)
-    .attr("stroke", "none")
-    .attr("pointer-events", "none");
-
-  patternSelection.exit().remove();
+function syncSpecialZonePatternTransformDuringZoom() {
+  getSpecialZoneLayersRenderOwner().syncPatternTransformDuringZoom();
 }
 
 function renderSpecialZoneEditorOverlay() {
@@ -22678,6 +22556,7 @@ function updateMap(transform) {
     viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
   }
   syncUnitCounterScalesDuringZoom();
+  syncSpecialZonePatternTransformDuringZoom();
   drawCanvas();
 }
 

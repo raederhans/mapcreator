@@ -78,6 +78,8 @@ class MapRendererStrategicOverlayRuntimeOwnerBoundaryContractTest(unittest.TestC
         self.assertIn("function updateSelectedOperationGraphic(partial = {}) {", operation_graphics_content)
         self.assertIn("function deleteSelectedOperationGraphicVertex() {", operation_graphics_content)
         self.assertIn("function finishSpecialZoneDraw() {", special_zones_content)
+        self.assertIn("Layer membership editing is now handled by the special zones workbench.", special_zones_content)
+        self.assertNotIn("state.manualSpecialZones.features.push", special_zones_content)
         self.assertIn("export function createUnitCounterRuntimeDomain({", unit_counter_domain_content)
         self.assertIn("function syncOperationalLineAttachedCounterIds() {", unit_counter_domain_content)
         self.assertIn("function placeUnitCounterFromEvent(event) {", unit_counter_domain_content)
