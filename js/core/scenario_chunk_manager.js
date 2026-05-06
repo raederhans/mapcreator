@@ -34,6 +34,16 @@ function normalizeBounds(rawBounds) {
   return [-180, -90, 180, 90];
 }
 
+function inflateBounds(bounds, paddingLon = 0, paddingLat = 0) {
+  const [minLon, minLat, maxLon, maxLat] = normalizeBounds(bounds);
+  return [
+    Math.max(-180, minLon - Math.max(0, Number(paddingLon || 0))),
+    Math.max(-90, minLat - Math.max(0, Number(paddingLat || 0))),
+    Math.min(180, maxLon + Math.max(0, Number(paddingLon || 0))),
+    Math.min(90, maxLat + Math.max(0, Number(paddingLat || 0))),
+  ];
+}
+
 function boundsIntersect(leftBounds, rightBounds) {
   const [leftMinLon, leftMinLat, leftMaxLon, leftMaxLat] = normalizeBounds(leftBounds);
   const [rightMinLon, rightMinLat, rightMaxLon, rightMaxLat] = normalizeBounds(rightBounds);
@@ -172,13 +182,13 @@ export function normalizeScenarioRenderBudgetHints(rawHints = {}) {
   const maxPoliticalRequiredChunks = clampNumber(
     rawHints.max_required_political_chunks ?? rawHints.political_max_required_chunks,
     1,
-    24,
+    64,
     Math.min(maxRequiredChunks * 2, 12)
   );
   const minPoliticalRequiredChunks = clampNumber(
     rawHints.min_required_political_chunks ?? rawHints.political_min_required_chunks,
     1,
-    24,
+    64,
     Math.max(1, maxRequiredChunks, minRequiredChunks)
   );
   return {
@@ -337,13 +347,17 @@ export function buildViewportGeoBounds({
       k: Math.max(0.0001, Number(transform.k || 1)),
     }
     : { x: 0, y: 0, k: 1 };
-  const points = [
-    [0, 0],
-    [Number(width || 0), 0],
-    [0, Number(height || 0)],
-    [Number(width || 0), Number(height || 0)],
-    [Number(width || 0) * 0.5, Number(height || 0) * 0.5],
-  ];
+  const viewportWidth = Number(width || 0);
+  const viewportHeight = Number(height || 0);
+  // Curved projections can place the geographic extrema along screen edges.
+  // Sampling a small grid keeps edge chunks eligible during zoom/pan.
+  const sampleFractions = [0, 0.25, 0.5, 0.75, 1];
+  const points = [];
+  sampleFractions.forEach((xFraction) => {
+    sampleFractions.forEach((yFraction) => {
+      points.push([viewportWidth * xFraction, viewportHeight * yFraction]);
+    });
+  });
   const longitudes = [];
   const latitudes = [];
   points.forEach(([screenX, screenY]) => {
@@ -363,12 +377,15 @@ export function buildViewportGeoBounds({
   if (!longitudes.length || !latitudes.length) {
     return [-180, -90, 180, 90];
   }
-  return [
+  const sampledBounds = [
     Math.min(...longitudes),
     Math.min(...latitudes),
     Math.max(...longitudes),
     Math.max(...latitudes),
   ];
+  const lonPadding = Math.min(2.5, Math.max(0.25, (sampledBounds[2] - sampledBounds[0]) * 0.03));
+  const latPadding = Math.min(2.5, Math.max(0.25, (sampledBounds[3] - sampledBounds[1]) * 0.03));
+  return inflateBounds(sampledBounds, lonPadding, latPadding);
 }
 
 function resolveLayerChunksForZoom({

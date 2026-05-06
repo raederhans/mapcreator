@@ -617,6 +617,8 @@ class FileManager {
         if (!data.layerVisibility || typeof data.layerVisibility !== "object") {
           data.layerVisibility = {};
         }
+        // `scenario` 是项目文件和当前场景资产之间的桥。
+        // 这里只保留可稳定序列化的识别信息，把运行时派生态留给后续 scenario apply 重新建立。
         if (!data.scenario || typeof data.scenario !== "object") {
           data.scenario = null;
         } else {

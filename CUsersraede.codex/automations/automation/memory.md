@@ -1,0 +1,2 @@
+- 2026-05-06: 为近期高频核心文件补了中文注释，覆盖 chunk runtime、bundle loader、toolbar、file manager、water special region controller；已更新 docs/active/comment-annotation-2026-05-06 留档，跑过 node --check，并清理了 comment-only 补丁触发的 CRLF 噪音。
+- Runtime: 2026-05-06T21:13:16Z

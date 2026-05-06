@@ -217,6 +217,8 @@ function validateScenarioRuntimeShellContract({
   runtimeTopologyPayload = null,
   runtimePoliticalMeta = null,
 } = {}) {
+  // startup runtime shell 的目标是“先让场景壳层可启动”，
+  // 所以这里只检查最小必需对象和政治要素计数，不把完整 detail/chunk 数据拉进这个合同。
   const normalizedTopologyPayload = normalizeScenarioRuntimeTopologyPayload(runtimeTopologyPayload);
   const normalizedMeta = normalizeScenarioRuntimePoliticalMeta(runtimePoliticalMeta);
   const missingObjects = normalizedTopologyPayload
@@ -1042,6 +1044,8 @@ function createImportedScenarioBaselineValidator({
     const currentBaselineHash = getScenarioBaselineHashFromBundle(bundle);
     const expectedVersion = Number(projectScenario?.version || 1) || 1;
     const expectedBaselineHash = String(projectScenario?.baselineHash || "").trim();
+    // 导入项目时，version 和 baselineHash 一起定义“这份存档基于哪一版 scenario 世界线”。
+    // 只对比其中一个字段会把“结构没变但基线变了”或“基线相同但 schema 升级了”的情况漏掉。
     const mismatches = [];
 
     if (currentVersion !== expectedVersion) {

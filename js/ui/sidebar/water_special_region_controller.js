@@ -256,6 +256,8 @@ export function createWaterSpecialRegionController({
     if (!normalizedSelectedId) return [];
     const selectedFeature = runtimeState.waterRegionsById?.get(normalizedSelectedId);
     if (!selectedFeature) return [];
+    // scope 批量操作只针对“当前过滤后仍可见”的水域集合生效。
+    // 这样 inspector 里的同 parent / 同 group / 同 type 始终和用户眼前列表保持同一语义。
     const filteredFeatures = getFilteredWaterFeatures();
     const selectedGroup = getWaterFeatureGroup(selectedFeature);
     const selectedType = getWaterFeatureType(selectedFeature);
@@ -1047,6 +1049,8 @@ export function createWaterSpecialRegionController({
 
 
   const bindEvents = () => {
+  // 这一层不是纯 UI 绑定：多个 toggle 会同步 runtime flag、可见图层、hover/inspector 状态，
+  // 还会在需要时触发 optional layer 懒加载，所以事件顺序要保持集中，不要拆到零散回调里。
   if (waterInspectorOpenOceanSelectToggle && !waterInspectorOpenOceanSelectToggle.dataset.bound) {
     waterInspectorOpenOceanSelectToggle.addEventListener("change", (event) => {
       runtimeState.allowOpenOceanSelect = !!event.target.checked;

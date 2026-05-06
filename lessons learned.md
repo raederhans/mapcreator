@@ -1511,3 +1511,24 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 53. Scenario focus country resolution must prefer scenario tags before ISO2 palette aliases
 - TNO 这类历史场景里，`countries.json.lookup_iso2` 可用于颜色和地理元数据，但 chunk manifest 的 `country_codes` 仍可能是 scenario tag，比如 `GCO`。
 - 缩放 detail chunk 选择应先尝试 active scenario tag，再尝试 ISO2；否则会等待并不存在的 `political.detail.country.cd`，导致 zoom-end detail 加载和可见性测试卡住。
+
+## 2026-05-06 - TNO chunk / Atlantropa water runtime
+
+- 政治 chunk 中投影出的水域要同步进入 water cache、auxiliary index、secondary spatial index 和 visual revision；只改绘制层会留下可见但不可交互的区域。
+- 视口 chunk 选择不能只依赖角点和中心点；曲面投影的地理边界极值可能落在屏幕边上，至少要网格采样并给小余量。
+
+## 2026-05-06 - ATLSEA donor sea D3 orientation
+
+- ATLSEA donor sea 从 TopoJSON 转成 direct GeoJSON chunk 后，要用 D3 small-polygon 环方向做发布合同；否则 `d3.geoArea≈4π` 会把局部海盆解释成全球水面。
+- 运行时 sanitizer 只能当最后安全网；根因应修在 chunk payload 和生成链，同时同步 `detail_chunks.manifest.json`、startup bundle source hash、build snapshot、audit。
+
+### 24. Codex 内置 feature 要写进 `[features]`，工具列表还要新会话加载
+- `js_repl` 这类 Codex 内置工具不是 npm 包，也不是普通 MCP server；正确入口是 `~/.codex/config.toml` 的 `[features] js_repl = true`。
+- 修配置后要用新 Codex 会话验证工具列表；当前会话通常不会热加载新 tool。
+- 如果 `--enable js_repl` 的新 `codex exec` 仍缺工具，优先对照 upstream issue，而不是继续叠加本地 MCP 配置。
+- TopoJSON `serialize_as_geojson` 可能给坐标环返回 tuple；发布前做环方向/面积判断时要同时接受 `list` 和 `tuple`，否则重建会悄悄跳过 sanitizer。
+
+## 2026-05-06 - comment-only maintenance hygiene
+
+- 某些老文件会混有 CRLF/LF；只补两行注释也可能把整文件伪装成重写。
+- 最稳的做法是先看 `git diff --stat`，一旦出现异常大 diff，立刻统一回仓库当前行尾风格后再继续。

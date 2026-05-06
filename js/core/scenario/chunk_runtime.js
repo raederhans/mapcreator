@@ -108,10 +108,16 @@ function applyZoomEndChunkProtectionToSelection(selection, loadState, {
   const previousRequiredChunkIds = (Array.isArray(previousSelection?.requiredChunkIds) ? previousSelection.requiredChunkIds : [])
     .map((chunkId) => String(chunkId || "").trim())
     .filter((chunkId) => chunkId.startsWith("political.detail."));
+  const previousRetainedActiveChunkIds = (Array.isArray(previousSelection?.retainedActiveChunkIds) ? previousSelection.retainedActiveChunkIds : [])
+    .map((chunkId) => String(chunkId || "").trim())
+    .filter((chunkId) => chunkId.startsWith("political.detail."));
+  const previousProtectedChunkIds = Array.from(new Set([
+    ...previousRequiredChunkIds,
+    ...previousRetainedActiveChunkIds,
+  ]));
   if (
     shouldApplyPreviousSelectionProtection
-    && String(previousSelection?.reason || "").trim().toLowerCase() === "zoom-end"
-    && previousRequiredChunkIds.length > 0
+    && previousProtectedChunkIds.length > 0
     && isZoomEndChunkProtectionContextValid({
       recordedAt: previousSelection?.recordedAt,
       expiresAt: previousSelection?.zoomEndProtectionUntil,
@@ -126,7 +132,7 @@ function applyZoomEndChunkProtectionToSelection(selection, loadState, {
       nowMs,
     })
   ) {
-    previousRequiredChunkIds.forEach((chunkId) => protectedSet.add(chunkId));
+    previousProtectedChunkIds.forEach((chunkId) => protectedSet.add(chunkId));
   }
   if (!protectedSet.size) {
     return false;
@@ -1043,6 +1049,9 @@ function createScenarioChunkRuntimeController({
       setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
       return false;
     }
+    // pendingPromotion 是一次“已经选好 chunk、等待正式提交”的快照。
+    // 这里开始后只消费这个快照，不重新读取 selection，
+    // 否则 promotion 过程中视图再次变化时会把两次选择混成一次提交。
     const mergedLayerPayloads =
       pendingPromotion.mergedLayerPayloads && typeof pendingPromotion.mergedLayerPayloads === "object"
         ? pendingPromotion.mergedLayerPayloads
@@ -1304,6 +1313,8 @@ function createScenarioChunkRuntimeController({
       });
       throw error;
     }).finally(() => {
+      // commit 结束后统一在这里处理“收尾 + 是否重放最新 refresh”。
+      // 这样每一轮 promotion 都只有一个出口，避免不同分支分别改 in-flight 标记。
       if (Math.max(0, Number(loadState.promotionCommitRunId || 0)) === runId) {
         loadState.promotionCommitInFlight = false;
         if (loadState.promotionCommitStatus === "promotion-commit-started" || loadState.promotionCommitStatus === "promotion-commit-in-flight") {
@@ -1654,6 +1665,9 @@ function createScenarioChunkRuntimeController({
     const nextOptionalChunkIds = selection.optionalChunks.map((chunk) => chunk.id);
     const nextCacheOnlyChunkIds = Array.isArray(selection.cacheOnlyChunkIds) ? [...selection.cacheOnlyChunkIds] : [];
     const nextRetainedActiveChunkIds = Array.isArray(selection.retainedActiveChunkIds) ? [...selection.retainedActiveChunkIds] : [];
+    const previousZoomEndProtectionUntil = Math.max(0, Number(previousSelection?.zoomEndProtectionUntil || 0));
+    const shouldCarryZoomEndProtection = nextRetainedActiveChunkIds.length > 0 && previousZoomEndProtectionUntil > Date.now();
+    const carriedZoomEndRecordedAt = Math.max(0, Number(previousSelection?.recordedAt || 0));
     const selectionUnchanged =
       normalizeScenarioId(previousSelection?.scenarioId) === scenarioId
       && getChunkIdListSignature(previousSelection?.requiredChunkIds) === getChunkIdListSignature(nextRequiredChunkIds)
@@ -1675,8 +1689,10 @@ function createScenarioChunkRuntimeController({
       retainedActiveChunkIds: nextRetainedActiveChunkIds,
       selectionVersion: nextSelectionVersion,
       focusCountry: String(focusCountry || "").trim().toUpperCase(),
-      recordedAt: selectionRecordedAt,
-      zoomEndProtectionUntil: normalizedReason === "zoom-end" ? selectionRecordedAt + 5000 : 0,
+      recordedAt: shouldCarryZoomEndProtection && carriedZoomEndRecordedAt > 0 ? carriedZoomEndRecordedAt : selectionRecordedAt,
+      zoomEndProtectionUntil: normalizedReason === "zoom-end"
+        ? selectionRecordedAt + 5000
+        : (shouldCarryZoomEndProtection ? previousZoomEndProtectionUntil : 0),
     };
     if (selectionUnchanged) {
       if (nextRequiredChunkIds.length || chunkState.loadedChunkIds.length) {

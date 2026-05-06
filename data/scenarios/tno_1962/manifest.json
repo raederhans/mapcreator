@@ -144,9 +144,9 @@
     "detail_zoom_threshold": 1.7,
     "max_optional_chunks": 3,
     "max_required_chunks": 6,
-    "max_required_political_byte_size": 12000000,
-    "max_required_political_chunks": 6,
-    "max_required_political_estimated_path_cost": 260000,
+    "max_required_political_byte_size": 45000000,
+    "max_required_political_chunks": 48,
+    "max_required_political_estimated_path_cost": 520000,
     "min_required_political_chunks": 1
   },
   "runtime_bootstrap_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
@@ -154,7 +154,7 @@
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "73b853702ee4fd06517e45079db18521eeddb3a3d1db019d1e6f9d42a57bbad6",
+  "snapshot_fingerprint": "49077c5ed6cce2f9639d1eb9b75cc2e5510be4d6b1fe72a0ac7ed92799eb4209",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "detail_chunk_manifest_sha256": "bf0d1d723ace4c587f95ff841e5efe23ed4ba0e754a775ad3f3471237385a22b",

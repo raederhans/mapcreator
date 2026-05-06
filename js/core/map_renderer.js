@@ -932,6 +932,7 @@ const waterSphericalSanitizationWarnings = new Set();
 const sphericalGeometryDiagnosticsByObject = new WeakMap();
 const safeWaterRegionGeometryPartsByFeature = new WeakMap();
 const sanitizedWaterRegionFeatureByFeature = new WeakMap();
+const atlantropaSeaWaterFeatureByFeature = new WeakMap();
 let scenarioWaterPartPathCache = new WeakMap();
 let scenarioWaterFeaturePathCache = new WeakMap();
 const renderDiag = {
@@ -2733,6 +2734,7 @@ function getScenarioSurfaceVersionSignal() {
     `mask-tag:${String(runtimeState.scenarioContextLandMaskVersionTag || runtimeState.scenarioLandMaskVersionTag || "").trim() || `${maskInfo.maskSource}:${getObjectIdentityToken(maskInfo.collection, "scenario-mask")}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`}`,
     `water-ref:${getObjectIdentityToken(runtimeState.scenarioWaterRegionsData, "scenario-water")}`,
     `water-tag:${String(runtimeState.scenarioWaterOverlayVersionTag || "").trim() || `features:${effectiveWaterFeatureCount}`}`,
+    `water-atlsea:${getActiveAtlantropaSeaWaterSignature()}`,
   ].join("|");
 }
 
@@ -2742,6 +2744,7 @@ function getScenarioWaterVisualRevisionToken() {
     getScenarioSurfaceVersionSignal(),
     `water-effective:${effectiveWaterFeatureCount}`,
     `water-scenario:${getFeatureCollectionFeatureCount(runtimeState.scenarioWaterRegionsData)}`,
+    `water-atlsea:${getActiveAtlantropaSeaWaterSignature()}`,
     `water-overrides:${stableJson(runtimeState.waterRegionOverrides || {})}`,
     runtimeState.showWaterRegions ? "scenario-water:on" : "scenario-water:off",
     runtimeState.showOpenOceanRegions ? "open-ocean:on" : "open-ocean:off",
@@ -3139,11 +3142,12 @@ function getWaterRegionDefaultStyle(feature) {
   return getUnifiedWaterBaseStyle(feature);
 }
 
-function getWaterRegionColor(id) {
+function getWaterRegionColor(id, feature = null) {
   const resolvedId = String(id || "").trim();
+  const defaultStyleFeature = feature || runtimeState.waterRegionsById?.get(resolvedId);
   return (
     getSafeCanvasColor(runtimeState.waterRegionOverrides?.[resolvedId], null) ||
-    getWaterRegionDefaultStyle(runtimeState.waterRegionsById?.get(resolvedId)).fill
+    getWaterRegionDefaultStyle(defaultStyleFeature).fill
   );
 }
 
@@ -3184,9 +3188,12 @@ function isWaterRegionExcludedByScenario(feature) {
 }
 
 function getEffectiveWaterRegionFeatures() {
-  const scenarioFeatures = Array.isArray(runtimeState.scenarioWaterRegionsData?.features)
-    ? runtimeState.scenarioWaterRegionsData.features
-    : [];
+  const scenarioFeatures = [
+    ...(Array.isArray(runtimeState.scenarioWaterRegionsData?.features)
+      ? runtimeState.scenarioWaterRegionsData.features
+      : []),
+    ...collectActiveAtlantropaSeaWaterFeatures(),
+  ];
   if (isScenarioWaterTopologyExclusiveMode()) {
     return sanitizeWaterRegionFeatures(scenarioFeatures.filter((feature) => !isWaterRegionExcludedByScenario(feature)));
   }
@@ -3670,6 +3677,62 @@ function getAtlantropaSurfaceKind(feature) {
 function isAtlantropaSeaFeature(feature) {
   return getFeatureCountryCodeNormalized(feature) === "ATL"
     && getAtlantropaSurfaceKind(feature) === "sea";
+}
+
+function isAtlantropaSeaWaterProjectionSource(feature) {
+  const featureId = String(getFeatureId(feature) || "").trim();
+  if (!featureId.startsWith("ATLSEA_") || featureId.startsWith("ATLSEA_FILL_")) return false;
+  if (getFeatureCountryCodeNormalized(feature) !== "ATL") return false;
+  return String(feature?.properties?.atl_geometry_role || "").trim().toLowerCase() === "donor_sea";
+}
+
+function getAtlantropaSeaWaterFeature(feature) {
+  if (!isAtlantropaSeaWaterProjectionSource(feature)) return null;
+  if (atlantropaSeaWaterFeatureByFeature.has(feature)) {
+    return atlantropaSeaWaterFeatureByFeature.get(feature);
+  }
+  const props = feature?.properties || {};
+  const featureId = getFeatureId(feature);
+  const waterFeature = {
+    ...feature,
+    properties: {
+      ...props,
+      id: featureId || props.id,
+      scenario_id: props.scenario_id || runtimeState.activeScenarioId || "tno_1962",
+      water_type: "water_region",
+      interactive: true,
+      atl_surface_kind: props.atl_surface_kind || "sea",
+      source_standard: props.source_standard || "atlantropa_political_sea",
+      atl_water_projection: true,
+    },
+  };
+  atlantropaSeaWaterFeatureByFeature.set(feature, waterFeature);
+  return waterFeature;
+}
+
+function collectActiveAtlantropaSeaWaterFeatures() {
+  const seen = new Set();
+  const waterFeatures = [];
+  const sourceFeatures = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+    ? runtimeState.scenarioPoliticalChunkData.features
+    : [];
+  sourceFeatures.forEach((feature) => {
+    if (!isAtlantropaSeaWaterProjectionSource(feature)) return;
+    const waterFeature = getAtlantropaSeaWaterFeature(feature);
+    const featureId = getFeatureId(waterFeature);
+    if (!waterFeature || !featureId || seen.has(featureId)) return;
+    seen.add(featureId);
+    waterFeatures.push(waterFeature);
+  });
+  return waterFeatures;
+}
+
+function getActiveAtlantropaSeaWaterSignature() {
+  const ids = collectActiveAtlantropaSeaWaterFeatures()
+    .map((feature) => String(getFeatureId(feature) || "").trim())
+    .filter(Boolean)
+    .sort();
+  return `${ids.length}:${ids.join(",")}`;
 }
 
 function getAtlantropaSeaManifestFillColor() {
@@ -4981,6 +5044,41 @@ function computeProjectedFeatureBounds(feature) {
   return computeProjectedGeoBounds(feature);
 }
 
+function computeProjectedCoordinateBounds(geoObject) {
+  if (!projection || !geoObject || typeof geoObject !== "object") return null;
+  const geometry = String(geoObject.type || "") === "Feature" ? geoObject.geometry : geoObject;
+  const coordinates = geometry?.coordinates;
+  if (!Array.isArray(coordinates)) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const visit = (value) => {
+    if (!Array.isArray(value)) return;
+    if (value.length >= 2 && Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) {
+      const projected = projection([Number(value[0]), Number(value[1])]);
+      if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
+      minX = Math.min(minX, projected[0]);
+      minY = Math.min(minY, projected[1]);
+      maxX = Math.max(maxX, projected[0]);
+      maxY = Math.max(maxY, projected[1]);
+      return;
+    }
+    value.forEach(visit);
+  };
+  visit(coordinates);
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
+  };
+}
+
 function computeProjectedGeoBounds(geoObject) {
   const pathRef = pathCanvas || pathSVG;
   if (!pathRef || !geoObject) return null;
@@ -4989,15 +5087,15 @@ function computeProjectedGeoBounds(geoObject) {
   try {
     bounds = pathRef.bounds(geoObject);
   } catch (error) {
-    return null;
+    return computeProjectedCoordinateBounds(geoObject);
   }
 
-  if (!bounds || bounds.length !== 2) return null;
+  if (!bounds || bounds.length !== 2) return computeProjectedCoordinateBounds(geoObject);
   const minX = bounds[0][0];
   const minY = bounds[0][1];
   const maxX = bounds[1][0];
   const maxY = bounds[1][1];
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return computeProjectedCoordinateBounds(geoObject);
 
   const featureWidth = maxX - minX;
   const featureHeight = maxY - minY;
@@ -5136,7 +5234,11 @@ function collectSafeWaterRegionGeometryParts(feature) {
   return collectSafeWaterRegionGeometryPartsInfo(feature).parts;
 }
 
-function shouldExcludeWaterHitGeometry(hitGeometry) {
+function isAtlantropaSeaWaterProjection(feature) {
+  return feature?.properties?.atl_water_projection === true;
+}
+
+function shouldExcludeWaterHitGeometry(hitGeometry, feature = null) {
   return isSphericalGeometryUnsafe(hitGeometry);
 }
 
@@ -8722,6 +8824,9 @@ function shouldPreferWaterHit(landHit, waterHit, { eventType = "unknown" } = {})
   if (eventType === "hover" && isMacroOceanWaterRegion(waterHit.feature)) {
     return false;
   }
+  if (landHit?.id && isAtlantropaSeaWaterProjection(waterHit.feature)) {
+    return false;
+  }
   if (!landHit?.id) return true;
   const waterType = getWaterRegionType(waterHit.feature);
   if (["lake", "inland_sea", "strait", "chokepoint"].includes(waterType)) {
@@ -9500,6 +9605,7 @@ function scheduleSecondarySpatialIndexBuild({
     pendingSecondarySpatialBuildReasons.clear();
     const startedAt = nowMs();
     try {
+      rebuildAuxiliaryRegionIndexes();
       resetSecondarySpatialIndexState();
       buildSecondarySpatialIndexes({
         allowComputeMissingBounds: true,
@@ -9782,7 +9888,12 @@ function getHitFromEvent(
       snapPx,
       eventType,
     });
-    if (waterHit.id && isScenarioWaterRegion(waterHit.feature) && eventType !== "hover") {
+    if (
+      waterHit.id
+      && isScenarioWaterRegion(waterHit.feature)
+      && eventType !== "hover"
+      && !(landHit.id && isAtlantropaSeaWaterProjection(waterHit.feature))
+    ) {
       resolvedHit = waterHit;
     } else if (shouldPreferWaterHit(landHit, waterHit, { eventType })) {
       resolvedHit = waterHit;
@@ -9929,7 +10040,9 @@ function getLakeBaseFillColor() {
 function getUnifiedWaterBaseStyle(feature) {
   const waterType = getWaterRegionType(feature);
   return {
-    fill: waterType === "lake" ? getLakeBaseFillColor() : getOceanBaseFillColor(),
+    fill: isAtlantropaSeaFeature(feature)
+      ? getAtlantropaSeaPoliticalFillColor()
+      : (waterType === "lake" ? getLakeBaseFillColor() : getOceanBaseFillColor()),
     stroke: UNIFIED_WATER_STROKE_COLOR,
     opacity: UNIFIED_WATER_FILL_OPACITY,
   };
@@ -17201,7 +17314,7 @@ function drawScenarioWaterFillLayer(k, { waterFeatures = [] } = {}) {
     if (!visibleParts.length) return;
     context.save();
     context.globalAlpha = fillOpacity;
-    context.fillStyle = getWaterRegionColor(id);
+    context.fillStyle = getWaterRegionColor(id, feature);
     const waterPath = visibleParts.length === parts.length
       ? getScenarioWaterFeaturePath(feature, parts)
       : null;
@@ -23290,6 +23403,13 @@ function refreshMapDataForScenarioChunkPromotion({
   const requiredPoliticalChunkCount = Math.max(0, Number(pendingPromotion?.requiredPoliticalChunkCount || 0));
   const hasPoliticalChange = !!hasPoliticalPayloadChange
     || (Array.isArray(politicalFeatureIds) && politicalFeatureIds.length > 0);
+  const projectsAtlantropaSeaWater = hasPoliticalChange && collectActiveAtlantropaSeaWaterFeatures().length > 0;
+  const effectiveChangedLayerKeys = projectsAtlantropaSeaWater
+    ? Array.from(new Set([
+      ...(Array.isArray(changedLayerKeys) ? changedLayerKeys : []),
+      "water",
+    ]))
+    : changedLayerKeys;
   if (hasPoliticalChange) {
     ensureLayerDataFromTopology();
     rebuildPoliticalLandCollections();
@@ -23323,19 +23443,25 @@ function refreshMapDataForScenarioChunkPromotion({
     clearDeferredInternalBorderMeshCaches();
     scheduleDeferredHeavyBorderMeshes();
   }
-  if ((Array.isArray(changedLayerKeys) ? changedLayerKeys : []).some((layerKey) => String(layerKey || "").trim().toLowerCase() === "water")) {
+  if ((Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys : []).some((layerKey) => String(layerKey || "").trim().toLowerCase() === "water")) {
     resetScenarioWaterCacheAdaptiveState("scenario-water-regions-data-replaced");
   }
   const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes({
-    changedLayerKeys,
+    changedLayerKeys: effectiveChangedLayerKeys,
     reason: `${reason}-secondary-sync`,
   });
+  if (projectsAtlantropaSeaWater && !synchronizedSecondaryRegionIndexes) {
+    scheduleSecondarySpatialIndexBuild({
+      timeout: 0,
+      reason: `${reason}-atlantropa-sea-secondary`,
+    });
+  }
   const shouldSkipDeferredInfraRefresh = synchronizedSecondaryRegionIndexes && !hasPoliticalChange;
   if (shouldSkipDeferredInfraRefresh && runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
     runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
   }
   const defaultTargetPasses = getScenarioChunkPromotionTargetPasses({
-    changedLayerKeys,
+    changedLayerKeys: effectiveChangedLayerKeys,
     hasPoliticalChange,
   });
   const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
@@ -23387,7 +23513,7 @@ function refreshMapDataForScenarioChunkPromotion({
     promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
       ? runtimeState.scenarioPoliticalChunkData.features.length
       : 0,
-    changedLayerCount: Array.isArray(changedLayerKeys) ? changedLayerKeys.length : 0,
+    changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
     promotionVersion: scenarioChunkPromotionVersion,
     synchronizedSecondaryRegionIndexes,
   });
@@ -23397,7 +23523,7 @@ function refreshMapDataForScenarioChunkPromotion({
     promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
       ? runtimeState.scenarioPoliticalChunkData.features.length
       : 0,
-    changedLayerCount: Array.isArray(changedLayerKeys) ? changedLayerKeys.length : 0,
+    changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
     promotionVersion: scenarioChunkPromotionVersion,
     hasPoliticalGeometryChange: hasPoliticalChange,
     synchronizedSecondaryRegionIndexes,
@@ -23408,7 +23534,7 @@ function refreshMapDataForScenarioChunkPromotion({
     promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
       ? runtimeState.scenarioPoliticalChunkData.features.length
       : 0,
-    changedLayerCount: Array.isArray(changedLayerKeys) ? changedLayerKeys.length : 0,
+    changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
     promotionVersion: scenarioChunkPromotionVersion,
     synchronizedSecondaryRegionIndexes,
     stage: "visual",
@@ -23484,10 +23610,29 @@ function refreshMapDataForScenarioApply({
   updateSpecialZonesPaths();
   renderSpecialZoneEditorOverlay();
   updateZoomTranslateExtent();
-  scheduleSecondarySpatialIndexBuild({
-    reason: "scenario-apply-secondary-spatial",
-  });
+  const projectsAtlantropaSeaWater = collectActiveAtlantropaSeaWaterFeatures().length > 0;
   resetScenarioWaterCacheAdaptiveState(rendererRefreshPlan.resetWaterCacheReason || "scenario-switch-complete");
+  let projectedAtlantropaSeaWaterCount = 0;
+  let projectedAtlantropaSeaWaterSpatialCount = 0;
+  if (projectsAtlantropaSeaWater) {
+    rebuildAuxiliaryRegionIndexes();
+    projectedAtlantropaSeaWaterCount = Array.from(runtimeState.waterRegionsById?.keys?.() || [])
+      .filter((featureId) => String(featureId || "").startsWith("ATLSEA_")).length;
+    resetSecondarySpatialIndexState();
+    buildSecondarySpatialIndexes({
+      allowComputeMissingBounds: true,
+    });
+    projectedAtlantropaSeaWaterSpatialCount = (Array.isArray(runtimeState.waterSpatialItems) ? runtimeState.waterSpatialItems : [])
+      .filter((item) => String(item?.featureId || item?.id || "").startsWith("ATLSEA_")).length;
+    queueIndexUiRefresh({
+      renderWaterRegionList: true,
+      renderSpecialRegionList: true,
+    });
+  } else {
+    scheduleSecondarySpatialIndexBuild({
+      reason: "scenario-apply-secondary-spatial",
+    });
+  }
   if (!suppressRender) {
     render();
   }
@@ -23495,6 +23640,9 @@ function refreshMapDataForScenarioApply({
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     suppressRender: !!suppressRender,
     landCount: Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
+    projectsAtlantropaSeaWater,
+    projectedAtlantropaSeaWaterCount,
+    projectedAtlantropaSeaWaterSpatialCount,
   });
 }
 

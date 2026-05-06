@@ -25,6 +25,7 @@ const ATLANTROPA_SEA_SAMPLE_POINTS = [
 
 const HELPER_PREFIXES = ["ATLSHL_", "ATLWLD_", "ATLSEA_FILL_"];
 const ATLANTROPA_MEDITERRANEAN_FOCUS = { lon: 16.5, lat: 37.5, zoomPercent: 165 };
+const ADRIATIC_BASIN_TARGET_ID = "ATLSEA_adriatica_8597_5838_0";
 
 async function applyScenario(page, scenarioId) {
   await applyScenarioAndWaitIdle(page, scenarioId, {
@@ -428,6 +429,52 @@ async function centerMapOnGeoPoint(page, point, {
   return centerOnce();
 }
 
+async function requestScenarioPoliticalChunk(page, {
+  chunkId,
+  focusCountry,
+  viewportBbox,
+  reason = "test-focus-detail",
+  timeout = 120000,
+}) {
+  await page.evaluate(async ({ nextFocusCountry, nextViewportBbox, nextReason }) => {
+    const { state } = await import("/js/core/state.js");
+    state.__testRestoreViewportGeoBoundsFn = state.getViewportGeoBoundsFn;
+    state.getViewportGeoBoundsFn = () => nextViewportBbox;
+    if (state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object") {
+      state.runtimeChunkLoadState.focusCountryOverride = nextFocusCountry;
+      state.runtimeChunkLoadState.focusCountryOverrideSource = "test";
+      state.runtimeChunkLoadState.focusCountryOverrideExpiresAt = Date.now() + 120000;
+      state.runtimeChunkLoadState.pendingReason = nextReason;
+      state.runtimeChunkLoadState.pendingDelayMs = 0;
+    }
+    if (typeof state.scheduleScenarioChunkRefreshFn === "function") {
+      state.scheduleScenarioChunkRefreshFn({ reason: nextReason, delayMs: 0, flushPending: true });
+    }
+  }, {
+    nextFocusCountry: focusCountry,
+    nextViewportBbox: viewportBbox,
+    nextReason: reason,
+  });
+  await page.waitForFunction((expectedChunkId) => {
+    const state = globalThis.__playwrightStateRef || null;
+    const loadedChunkIds = Array.isArray(state.activeScenarioChunks?.loadedChunkIds)
+      ? state.activeScenarioChunks.loadedChunkIds.map((id) => String(id || ""))
+      : [];
+    return loadedChunkIds.includes(expectedChunkId);
+  }, chunkId, { timeout });
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout });
+}
+
+async function restoreScenarioViewportProvider(page) {
+  await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    if (typeof state.__testRestoreViewportGeoBoundsFn === "function") {
+      state.getViewportGeoBoundsFn = state.__testRestoreViewportGeoBoundsFn;
+    }
+    delete state.__testRestoreViewportGeoBoundsFn;
+  });
+}
+
 async function computeFeatureProbePoints(page, featureId) {
   return page.evaluate(async (targetFeatureId) => {
     const { state } = await import("/js/core/state.js");
@@ -623,6 +670,118 @@ async function sampleLandFeaturePatchStats(page, featureId, radiusPx = 6) {
   return patch ? { ...patch, point } : null;
 }
 
+async function readAtlantropaSeaRuntime(page) {
+  return page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const waterItems = Array.isArray(state.waterSpatialItems)
+      ? state.waterSpatialItems.filter((item) => String(item?.featureId || item?.id || "").startsWith("ATLSEA_"))
+      : [];
+    const waterFeatureIds = Array.from(state.waterRegionsById?.keys?.() || [])
+      .filter((featureId) => String(featureId || "").startsWith("ATLSEA_"));
+    return {
+      itemCount: waterItems.length,
+      featureCount: waterFeatureIds.length,
+      sampleFeatureIds: waterFeatureIds.slice(0, 8),
+    };
+  });
+}
+
+async function waitForAtlantropaSeaRuntime(page, { timeout = 120000 } = {}) {
+  await page.waitForFunction(() => {
+    const state = globalThis.__playwrightStateRef || null;
+    const featureIds = Array.from(state?.waterRegionsById?.keys?.() || [])
+      .filter((featureId) => String(featureId || "").startsWith("ATLSEA_"));
+    const itemCount = Array.isArray(state?.waterSpatialItems)
+      ? state.waterSpatialItems.filter((item) => String(item?.featureId || item?.id || "").startsWith("ATLSEA_")).length
+      : 0;
+    return featureIds.length > 20 && itemCount > 20;
+  }, undefined, { timeout });
+}
+
+async function readAtlantropaWaterFeatureDiagnostics(page, featureId) {
+  return page.evaluate(async (targetFeatureId) => {
+    const { state } = await import("/js/core/state.js");
+    const feature = state.waterRegionsById?.get?.(targetFeatureId) || null;
+    const items = Array.isArray(state.waterSpatialItems)
+      ? state.waterSpatialItems.filter((item) => String(item?.featureId || item?.id || "").trim() === targetFeatureId)
+      : [];
+    const d3 = globalThis.d3;
+    const bounds = feature && d3?.geoBounds ? d3.geoBounds(feature) : null;
+    const area = feature && d3?.geoArea ? d3.geoArea(feature) : null;
+    const containsAdriaticProbe = feature && d3?.geoContains ? d3.geoContains(feature, [18, 41.6]) : false;
+    const containsGlobalProbe = feature && d3?.geoContains ? d3.geoContains(feature, [-150, 0]) : false;
+    const isWorldBounds = Array.isArray(bounds)
+      && bounds.length === 2
+      && bounds[0]?.[0] <= -179.999
+      && bounds[0]?.[1] <= -89.999
+      && bounds[1]?.[0] >= 179.999
+      && bounds[1]?.[1] >= 89.999;
+    return {
+      featureId: targetFeatureId,
+      exists: !!feature,
+      itemCount: items.length,
+      bounds,
+      area,
+      isWorldBounds,
+      containsAdriaticProbe,
+      containsGlobalProbe,
+    };
+  }, featureId);
+}
+
+async function clickWaterFeature(page, featureId) {
+  const points = await page.evaluate(async (targetFeatureId) => {
+    const { state } = await import("/js/core/state.js");
+    const mapContainer = document.querySelector("#mapContainer");
+    if (!mapContainer) return [];
+    const rect = mapContainer.getBoundingClientRect();
+    const transform = state.zoomTransform || { x: 0, y: 0, k: 1 };
+    return (Array.isArray(state.waterSpatialItems) ? state.waterSpatialItems : [])
+      .filter((item) => String(item?.featureId || item?.id || "").trim() === targetFeatureId)
+      .sort((left, right) => Number(right?.bboxArea || 0) - Number(left?.bboxArea || 0))
+      .slice(0, 6)
+      .flatMap((item) => {
+        const minX = Number(item?.minX);
+        const minY = Number(item?.minY);
+        const maxX = Number(item?.maxX);
+        const maxY = Number(item?.maxY);
+        if (![minX, minY, maxX, maxY].every(Number.isFinite)) return [];
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        return [
+          [centerX, centerY],
+          [centerX - ((maxX - minX) * 0.18), centerY],
+          [centerX + ((maxX - minX) * 0.18), centerY],
+          [centerX, centerY - ((maxY - minY) * 0.18)],
+          [centerX, centerY + ((maxY - minY) * 0.18)],
+        ].map(([projectedX, projectedY]) => ({
+          x: rect.left + (projectedX * Number(transform.k || 1)) + Number(transform.x || 0),
+          y: rect.top + (projectedY * Number(transform.k || 1)) + Number(transform.y || 0),
+        }));
+      })
+      .filter((point) => (
+        Number.isFinite(point.x)
+        && Number.isFinite(point.y)
+        && point.x >= rect.left - 12
+        && point.x <= rect.right + 12
+        && point.y >= rect.top - 12
+        && point.y <= rect.bottom + 12
+      ));
+  }, featureId);
+  for (const point of points) {
+    await clearDevSelectedHit(page);
+    await page.mouse.click(point.x, point.y);
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await page.waitForTimeout(120);
+      const hit = await readDevSelectedHit(page);
+      if (String(hit?.id || "") === featureId && String(hit?.targetType || "") === "water") {
+        return { point, hit };
+      }
+    }
+  }
+  throw new Error(`Failed to click water feature ${featureId}`);
+}
+
 async function clearDevSelectedHit(page) {
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -787,10 +946,32 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
   await centerMapOnGeoPoint(page, ATLANTROPA_MEDITERRANEAN_FOCUS, {
     zoomPercent: ATLANTROPA_MEDITERRANEAN_FOCUS.zoomPercent,
   });
+  await requestScenarioPoliticalChunk(page, {
+    chunkId: "political.detail.country.atl",
+    focusCountry: "ATL",
+    viewportBbox: [8, 30, 28, 46],
+    reason: "test-atlantropa-sea-runtime",
+  });
   await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+  await waitForAtlantropaSeaRuntime(page);
 
   const mediterraneanShot = path.join(screenshotDir, "tno_atlantropa_mediterranean_overview.png");
   await page.locator("#mapContainer").screenshot({ path: mediterraneanShot });
+  const atlantropaSeaRuntime = await readAtlantropaSeaRuntime(page);
+  expect(atlantropaSeaRuntime.featureCount).toBeGreaterThan(20);
+  expect(atlantropaSeaRuntime.itemCount).toBeGreaterThan(20);
+  const adriaticBasinDiagnostics = await readAtlantropaWaterFeatureDiagnostics(page, ADRIATIC_BASIN_TARGET_ID);
+  expect(adriaticBasinDiagnostics.exists).toBe(true);
+  expect(adriaticBasinDiagnostics.itemCount).toBeGreaterThan(0);
+  expect(adriaticBasinDiagnostics.isWorldBounds).toBe(false);
+  expect(adriaticBasinDiagnostics.area).toBeLessThan(0.05);
+  expect(adriaticBasinDiagnostics.containsAdriaticProbe).toBe(true);
+  expect(adriaticBasinDiagnostics.containsGlobalProbe).toBe(false);
+  const clickedAdriaticBasin = await clickWaterFeature(page, ADRIATIC_BASIN_TARGET_ID);
+  expect(clickedAdriaticBasin.hit?.targetType).toBe("water");
+  const clickedAtlantropaSea = await clickWaterFeature(page, atlantropaSeaRuntime.sampleFeatureIds[0]);
+  expect(clickedAtlantropaSea.hit?.targetType).toBe("water");
+  await restoreScenarioViewportProvider(page);
   await resetZoomToFit(page);
   await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
 
@@ -835,9 +1016,12 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
   const helperHit = await readDevSelectedHit(page) || helperClick.hit || null;
   expect(HELPER_PREFIXES.some((prefix) => String(helperHit?.id || "").startsWith(prefix))).toBe(false);
 
-  console.log(JSON.stringify({
+  const runtimeSummary = {
     atlantropaSeaSample,
     atlantropaSeaSamples,
+    atlantropaSeaRuntime,
+    adriaticBasinDiagnostics,
+    clickedAdriaticBasin,
     outerOceanPatch,
     probeResults,
     helperProbe: {
@@ -846,5 +1030,11 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
       hit: helperHit,
     },
     screenshots: [mediterraneanShot],
-  }, null, 2));
+  };
+  const runtimeSummaryPath = path.join(screenshotDir, "tno_atlantropa_runtime_summary.json");
+  fs.writeFileSync(runtimeSummaryPath, JSON.stringify(runtimeSummary, null, 2));
+  console.log(JSON.stringify({
+    runtimeSummaryPath,
+    screenshots: [mediterraneanShot],
+  }));
 });

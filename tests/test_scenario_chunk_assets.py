@@ -321,7 +321,9 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
             self.assertGreater(coarse_chunk["coord_count"], 0)
             self.assertGreater(coarse_chunk["part_count"], 0)
             self.assertGreater(coarse_chunk["estimated_path_cost"], 0)
-            coarse_payload = json.loads((scenario_dir / "chunks" / "political.coarse.r0c0.json").read_text(encoding="utf-8"))
+            coarse_path = scenario_dir / "chunks" / "political.coarse.r0c0.json"
+            coarse_text = coarse_path.read_text(encoding="utf-8")
+            coarse_payload = json.loads(coarse_text)
             self.assertEqual(len(coarse_payload["features"]), 1)
             self.assertNotIn("id", coarse_payload["features"][0])
             self.assertEqual(
@@ -342,6 +344,8 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                     "scenario_shell_owner_hint",
                 ],
             )
+            expected_text = json.dumps(coarse_payload, ensure_ascii=False, separators=(",", ":")) + "\n"
+            self.assertEqual(coarse_text, expected_text)
 
     def test_standalone_chunk_builder_syncs_detail_chunk_manifest_source_sha(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

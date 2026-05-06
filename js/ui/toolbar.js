@@ -957,6 +957,8 @@ function initToolbar({ render } = {}) {
   };
 
   const toggleLeftPanel = (force) => {
+    // transport workbench 打开时，左右抽屉继续展开会和 workbench 抢同一块侧边布局。
+    // 这里直接把面板切换收口成单一入口，保证 chrome 状态始终只有一种主布局。
     if (runtimeState.transportWorkbenchUi?.open && force !== false) {
       return false;
     }
@@ -1534,6 +1536,9 @@ function initToolbar({ render } = {}) {
   };
 
   const getFeatureIdsForOwnerColorRefresh = (ownerCode) => {
+    // owner 着色的命中集合来自多条索引链：
+    // sovereignty 映射、ownerToFeatureIds、countryToFeatureIds 可能在不同生命周期下先后可用。
+    // 这里做并集是为了让 palette apply 在运行态、导入后和场景切换后都能落到完整集合。
     const normalizedOwner = normalizeCountryCode(ownerCode);
     if (!normalizedOwner) return [];
     const ids = new Set();
@@ -1558,6 +1563,8 @@ function initToolbar({ render } = {}) {
   };
 
   const resolvePaletteLibraryApplyTarget = () => {
+    // Palette Library 采用“显式选中 > 当前 hover > inspector 主权对象”的优先级。
+    // 这样用户在没有重新切工具的情况下也能把颜色准确落到当前最直观的目标上。
     const selectedHitId = String(runtimeState.devSelectedHit?.id || "").trim();
     if (selectedHitId && runtimeState.landIndex?.has(selectedHitId)) {
       return { type: "feature", featureIds: [selectedHitId] };

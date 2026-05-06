@@ -1761,6 +1761,76 @@ class TnoBundleBuilderTest(unittest.TestCase):
         for props in helper_props:
             self.assertIs(props.get("interactive"), False, props.get("id"))
 
+    def test_checked_in_tno_1962_atlsea_runtime_contract_keeps_donor_sea_projectable(self) -> None:
+        scenario_dir = Path(tno_bundle.SCENARIO_DIR)
+        runtime_topology = json.loads((scenario_dir / "runtime_topology.topo.json").read_text(encoding="utf-8"))
+        political_geometries = runtime_topology["objects"]["political"]["geometries"]
+        donor_sea_props = [
+            geometry.get("properties", {})
+            for geometry in political_geometries
+            if str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_")
+            and not str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_FILL_")
+            and str(geometry.get("properties", {}).get("atl_geometry_role") or "").strip().lower() == "donor_sea"
+        ]
+        fill_props = [
+            geometry.get("properties", {})
+            for geometry in political_geometries
+            if str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_FILL_")
+        ]
+
+        self.assertGreater(len(donor_sea_props), 50)
+        for props in donor_sea_props:
+            feature_id = props.get("id")
+            self.assertEqual(props.get("cntr_code"), "ATL", feature_id)
+            self.assertEqual(str(props.get("atl_surface_kind") or "").strip().lower(), "sea", feature_id)
+            self.assertEqual(str(props.get("atl_geometry_role") or "").strip().lower(), "donor_sea", feature_id)
+            self.assertIs(props.get("interactive"), False, feature_id)
+            self.assertIs(props.get("render_as_base_geography"), False, feature_id)
+        self.assertGreater(len(fill_props), 100)
+        for props in fill_props:
+            feature_id = props.get("id")
+            self.assertEqual(str(props.get("atl_geometry_role") or "").strip().lower(), "sea_completion", feature_id)
+            self.assertIs(props.get("interactive"), False, feature_id)
+
+    def test_checked_in_tno_1962_atlsea_chunks_keep_d3_small_polygon_orientation(self) -> None:
+        def signed_area(ring: list) -> float:
+            total = 0.0
+            for first, second in zip(ring, ring[1:]):
+                total += (float(first[0]) * float(second[1])) - (float(second[0]) * float(first[1]))
+            return total / 2.0
+
+        scenario_dir = Path(tno_bundle.SCENARIO_DIR)
+        checked_chunk_paths = [
+            scenario_dir / "chunks" / "political.coarse.r0c0.json",
+            scenario_dir / "chunks" / "political.detail.country.atl.json",
+        ]
+        donor_sea_count = 0
+        for chunk_path in checked_chunk_paths:
+            payload = json.loads(chunk_path.read_text(encoding="utf-8"))
+            for feature in payload.get("features", []):
+                props = feature.get("properties", {})
+                feature_id = str(props.get("id") or "").strip()
+                if not feature_id.startswith("ATLSEA_") or feature_id.startswith("ATLSEA_FILL_"):
+                    continue
+                if str(props.get("atl_geometry_role") or "").strip().lower() != "donor_sea":
+                    continue
+                donor_sea_count += 1
+                geometry = feature.get("geometry") or {}
+                polygons = (
+                    [geometry.get("coordinates") or []]
+                    if geometry.get("type") == "Polygon"
+                    else geometry.get("coordinates") or []
+                )
+                for polygon in polygons:
+                    if polygon:
+                        self.assertLessEqual(
+                            signed_area(polygon[0]),
+                            0.0,
+                            f"{feature_id} in {chunk_path.name} must use d3 small-polygon orientation",
+                        )
+
+        self.assertGreater(donor_sea_count, 100)
+
     def test_atlantropa_west_med_owner_overrides_use_existing_algeria_subject_tags(self) -> None:
         overrides = ATLANTROPA_REGION_CONFIGS["west_med"]["state_owner_overrides"]
 

@@ -21,6 +21,13 @@ DEFAULT_RENDER_BUDGET_HINTS = {
     "detail_zoom_threshold": 1.7,
 }
 
+TNO_1962_RENDER_BUDGET_HINTS = {
+    "max_required_political_chunks": 48,
+    "max_required_political_estimated_path_cost": 520000,
+    "max_required_political_byte_size": 45000000,
+    "min_required_political_chunks": 1,
+}
+
 LOD_SPECS = (
     {"lod": "coarse", "cols": 1, "rows": 1, "min_zoom": 0.0, "max_zoom": 1.7, "global_coverage": True},
     {"lod": "detail", "cols": 4, "rows": 2, "min_zoom": 1.7, "max_zoom": 99.0, "global_coverage": False},
@@ -182,6 +189,19 @@ def _feature_atl_join_mode(feature: dict[str, Any]) -> str:
     return str(_feature_properties(feature).get("atl_join_mode") or "").strip().lower()
 
 
+def _is_atlantropa_donor_sea_feature(feature: dict[str, Any]) -> bool:
+    feature_id = _feature_identity(feature, 0).strip().upper()
+    if not feature_id.startswith("ATLSEA_") or feature_id.startswith("ATLSEA_FILL_"):
+        return False
+    if _feature_atl_geometry_role(feature) == "donor_sea":
+        return True
+    props = _feature_properties(feature)
+    return (
+        _normalize_country_code(props.get("cntr_code")) == "ATL"
+        and str(props.get("atl_surface_kind") or "").strip().lower() == "sea"
+    )
+
+
 def _is_interactive_atlantropa_boolean_weld_island(feature: dict[str, Any]) -> bool:
     feature_id = _feature_identity(feature, 0).strip().upper()
     if not feature_id.startswith("ATLISL_"):
@@ -327,6 +347,72 @@ def _count_geometry_parts(geometry: dict[str, Any] | None) -> int:
     return 0
 
 
+def _ring_signed_area(ring: Any) -> float:
+    if not isinstance(ring, (list, tuple)) or len(ring) < 4:
+        return 0.0
+    total = 0.0
+    for first, second in zip(ring, ring[1:]):
+        if not (
+            isinstance(first, (list, tuple))
+            and isinstance(second, (list, tuple))
+            and len(first) >= 2
+            and len(second) >= 2
+        ):
+            continue
+        total += (float(first[0]) * float(second[1])) - (float(second[0]) * float(first[1]))
+    return total / 2.0
+
+
+def _normalize_polygon_coordinates_for_d3(polygon_coordinates: Any) -> Any:
+    if not isinstance(polygon_coordinates, (list, tuple)) or not polygon_coordinates:
+        return polygon_coordinates
+    # ATLSEA donor seas move from TopoJSON into direct chunk GeoJSON. Normalize
+    # the exterior ring to d3-geo's small-polygon fill convention before publish.
+    if _ring_signed_area(polygon_coordinates[0]) <= 0:
+        return polygon_coordinates
+    return [
+        list(reversed(ring)) if isinstance(ring, (list, tuple)) else ring
+        for ring in polygon_coordinates
+    ]
+
+
+def _normalize_d3_polygonal_geometry_orientation(geometry: Any) -> Any:
+    if not isinstance(geometry, dict):
+        return geometry
+    geometry_type = str(geometry.get("type") or "").strip()
+    if geometry_type == "Polygon":
+        normalized = dict(geometry)
+        normalized["coordinates"] = _normalize_polygon_coordinates_for_d3(geometry.get("coordinates"))
+        return normalized
+    if geometry_type == "MultiPolygon":
+        normalized = dict(geometry)
+        normalized["coordinates"] = [
+            _normalize_polygon_coordinates_for_d3(polygon_coordinates)
+            for polygon_coordinates in (geometry.get("coordinates") or [])
+        ]
+        return normalized
+    return geometry
+
+
+def _normalize_atlantropa_donor_sea_feature_for_d3(feature: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(feature, dict) or not _is_atlantropa_donor_sea_feature(feature):
+        return feature
+    normalized = dict(feature)
+    normalized["geometry"] = _normalize_d3_polygonal_geometry_orientation(feature.get("geometry"))
+    return normalized
+
+
+def _normalize_chunk_atlantropa_donor_seas_for_d3(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(payload, dict) or not isinstance(payload.get("features"), list):
+        return payload
+    normalized = dict(payload)
+    normalized["features"] = [
+        _normalize_atlantropa_donor_sea_feature_for_d3(feature)
+        for feature in payload.get("features") or []
+    ]
+    return normalized
+
+
 def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict[str, int]:
     feature_collection = _layer_payload_to_feature_collection("", payload)
     features = feature_collection.get("features") if isinstance(feature_collection, dict) else []
@@ -401,7 +487,10 @@ def _topology_object_to_feature_collection(topology_payload: dict[str, Any] | No
         return None
     return {
         "type": "FeatureCollection",
-        "features": feature_collection.get("features") or [],
+        "features": [
+            _normalize_atlantropa_donor_sea_feature_for_d3(feature)
+            for feature in (feature_collection.get("features") or [])
+        ],
     }
 
 
@@ -473,7 +562,7 @@ def _slice_layer_payload(layer_key: str, payload: dict[str, Any], selected_featu
     return {
         "type": "FeatureCollection",
         "features": [
-            feature
+            _normalize_atlantropa_donor_sea_feature_for_d3(feature)
             for index, feature in enumerate(feature_collection.get("features") or [])
             if _feature_id(feature, index) in selected_feature_ids
         ],
@@ -484,7 +573,7 @@ def _slice_feature_collection(feature_collection: dict[str, Any], selected_featu
     return {
         "type": "FeatureCollection",
         "features": [
-            feature
+            _normalize_atlantropa_donor_sea_feature_for_d3(feature)
             for index, feature in enumerate(feature_collection.get("features") or [])
             if _feature_id(feature, index) in selected_feature_ids
         ],
@@ -742,8 +831,10 @@ def _build_chunk_payloads_for_feature_collection(
                 chunk_id = f"{layer_key}.{spec['lod']}.r{row}c{col}"
                 chunk_filename = f"{chunk_id}.json"
                 chunk_path = scenario_dir / "chunks" / chunk_filename
+                chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
                 if layer_key == "political" and spec["lod"] == "coarse":
                     chunk_payload = _optimize_political_coarse_payload(chunk_payload)
+                    chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
                     _write_minified_json(chunk_path, chunk_payload)
                 elif layer_key == "water" and spec["lod"] == "coarse":
                     _write_minified_json(chunk_path, chunk_payload)
@@ -848,6 +939,7 @@ def _build_political_chunk_payloads(
             chunk_id = f"political.detail.country.{owner_bucket.lower()}"
             chunk_filename = f"{chunk_id}.json"
             chunk_path = chunks_dir / chunk_filename
+            chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
             _write_json(chunk_path, chunk_payload)
             chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
             all_chunks.append({
@@ -989,8 +1081,12 @@ def build_and_write_scenario_chunk_assets(
     manifest_payload["runtime_meta_url"] = f"data/scenarios/{scenario_id}/runtime_meta.json"
     manifest_payload["mesh_pack_url"] = f"data/scenarios/{scenario_id}/mesh_pack.json"
     manifest_payload["context_lod_manifest"] = f"data/scenarios/{scenario_id}/context_lod.manifest.json"
-    manifest_payload["render_budget_hints"] = {
+    scenario_default_render_budget_hints = {
         **DEFAULT_RENDER_BUDGET_HINTS,
+        **(TNO_1962_RENDER_BUDGET_HINTS if scenario_id == "tno_1962" else {}),
+    }
+    manifest_payload["render_budget_hints"] = {
+        **scenario_default_render_budget_hints,
         **(manifest_payload.get("render_budget_hints") if isinstance(manifest_payload.get("render_budget_hints"), dict) else {}),
     }
 
