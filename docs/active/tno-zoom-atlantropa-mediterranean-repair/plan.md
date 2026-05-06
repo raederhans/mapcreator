@@ -16,3 +16,9 @@ Fix the TNO 1962 runtime regressions where zoomed political colors disappear, Me
 - TNO ATLSEA features are present in water indexes when their political detail chunk is active.
 - Atlantropa water click hits water while Cyprus/Balearics/Crete/Sicily remain land hits.
 - Targeted Node, strict scenario contract, and targeted e2e gates pass on the main thread.
+
+## 2026-05-06 comprehensive follow-up
+- Re-audit Mediterranean ATLSEA/ATLISL/HGO donor data, including donor role tags, owner/palette routing, and checked-in generated artifacts.
+- Re-audit projection and ocean adaptation so local donor seas stay local, water stays interactive, and nearby political land keeps land precedence.
+- Re-audit zoom-end behavior for long stalls, black frames, and disappearing political colors after detail chunk promotion.
+- Main thread owns live browser and test execution; child agents stay read-only and static.

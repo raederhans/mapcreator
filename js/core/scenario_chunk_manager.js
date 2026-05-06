@@ -86,6 +86,39 @@ function getBoundsCenterDistance(bounds, viewportBbox) {
   return Math.hypot(centerLon - viewportCenterLon, centerLat - viewportCenterLat);
 }
 
+function normalizeFeatureBoundsList(rawBoundsList = []) {
+  if (!Array.isArray(rawBoundsList)) return [];
+  return rawBoundsList
+    .map((bounds) => (Array.isArray(bounds) ? normalizeBounds(bounds) : null))
+    .filter((bounds) => Array.isArray(bounds) && getBoundsArea(bounds) > 0);
+}
+
+function getChunkSelectionBounds(chunk) {
+  return Array.isArray(chunk?.featureBounds) && chunk.featureBounds.length
+    ? chunk.featureBounds
+    : [chunk?.bounds || [-180, -90, 180, 90]];
+}
+
+function chunkIntersectsViewport(chunk, viewportBbox) {
+  return getChunkSelectionBounds(chunk).some((bounds) => boundsIntersect(bounds, viewportBbox));
+}
+
+function getChunkOverlapArea(chunk, viewportBbox) {
+  return getChunkSelectionBounds(chunk)
+    .reduce((sum, bounds) => sum + getBoundsOverlapArea(bounds, viewportBbox), 0);
+}
+
+function getChunkSelectionArea(chunk) {
+  return getChunkSelectionBounds(chunk)
+    .reduce((sum, bounds) => sum + getBoundsArea(bounds), 0);
+}
+
+function getChunkCenterDistance(chunk, viewportBbox) {
+  const boundsList = getChunkSelectionBounds(chunk);
+  if (!boundsList.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...boundsList.map((bounds) => getBoundsCenterDistance(bounds, viewportBbox)));
+}
+
 function normalizeChunkEntry(rawChunk = {}) {
   const chunkId = String(rawChunk.id || rawChunk.chunk_id || "").trim();
   const chunkUrl = String(rawChunk.url || rawChunk.chunk_url || "").trim();
@@ -120,6 +153,8 @@ function normalizeChunkEntry(rawChunk = {}) {
     partCount,
     estimatedPathCost,
     dataFormat: String(rawChunk.data_format || rawChunk.dataFormat || "geojson").trim().toLowerCase(),
+    sha256: String(rawChunk.sha256 || rawChunk.content_sha256 || rawChunk.contentHash || "").trim(),
+    featureBounds: normalizeFeatureBoundsList(rawChunk.feature_bounds || rawChunk.featureBounds),
     countryCodes: Array.isArray(rawChunk.country_codes || rawChunk.countryCodes)
       ? rawChunk.country_codes || rawChunk.countryCodes
       : [],
@@ -141,13 +176,13 @@ function sortChunksForSelection(chunks, focusCountry = "", viewportBbox = [-180,
     const leftLoaded = loadedChunkIdSet.has(left.id) ? 1 : 0;
     const rightLoaded = loadedChunkIdSet.has(right.id) ? 1 : 0;
     if (leftLoaded !== rightLoaded) return rightLoaded - leftLoaded;
-    const leftOverlapArea = getBoundsOverlapArea(left.bounds, normalizedViewportBbox);
-    const rightOverlapArea = getBoundsOverlapArea(right.bounds, normalizedViewportBbox);
-    const leftOverlapRatio = leftOverlapArea / Math.max(1, getBoundsArea(left.bounds));
-    const rightOverlapRatio = rightOverlapArea / Math.max(1, getBoundsArea(right.bounds));
+    const leftOverlapArea = getChunkOverlapArea(left, normalizedViewportBbox);
+    const rightOverlapArea = getChunkOverlapArea(right, normalizedViewportBbox);
+    const leftOverlapRatio = leftOverlapArea / Math.max(1, getChunkSelectionArea(left));
+    const rightOverlapRatio = rightOverlapArea / Math.max(1, getChunkSelectionArea(right));
     if (Math.abs(leftOverlapRatio - rightOverlapRatio) > 0.0001) return rightOverlapRatio - leftOverlapRatio;
-    const leftCenterDistance = getBoundsCenterDistance(left.bounds, normalizedViewportBbox);
-    const rightCenterDistance = getBoundsCenterDistance(right.bounds, normalizedViewportBbox);
+    const leftCenterDistance = getChunkCenterDistance(left, normalizedViewportBbox);
+    const rightCenterDistance = getChunkCenterDistance(right, normalizedViewportBbox);
     if (Math.abs(leftCenterDistance - rightCenterDistance) > 0.0001) return leftCenterDistance - rightCenterDistance;
     if (Math.abs(leftOverlapArea - rightOverlapArea) > 0.0001) return rightOverlapArea - leftOverlapArea;
     if (left.priority !== right.priority) return right.priority - left.priority;
@@ -437,7 +472,7 @@ export function selectScenarioChunks({
       contextLodManifest,
       layerKey,
       zoom,
-    }).filter((chunk) => chunk.globalCoverage || boundsIntersect(chunk.bounds, viewportBbox));
+    }).filter((chunk) => chunk.globalCoverage || chunkIntersectsViewport(chunk, viewportBbox));
     const ordered = sortChunksForSelection(candidates, focusCountry, viewportBbox, loadedChunkIds);
     const focusDetailChunks = normalizedFocusCountry
       ? ordered.filter((chunk) => chunk.lod === "detail" && chunk.countryCodes.includes(normalizedFocusCountry))

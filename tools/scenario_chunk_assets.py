@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from map_builder.contracts import normalize_scenario_contract_tag
+from map_builder.contracts import normalize_scenario_contract_tag, sha256_path
 from map_builder.io.writers import write_json_atomic
 from shapely import make_valid
 from shapely.geometry import LineString, MultiLineString, mapping, shape
@@ -413,7 +413,7 @@ def _normalize_chunk_atlantropa_donor_seas_for_d3(payload: dict[str, Any] | None
     return normalized
 
 
-def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict[str, int]:
+def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict[str, Any]:
     feature_collection = _layer_payload_to_feature_collection("", payload)
     features = feature_collection.get("features") if isinstance(feature_collection, dict) else []
     if not features and isinstance(payload.get("featureCollection"), dict):
@@ -428,6 +428,7 @@ def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict
     estimated_path_cost = max(0, coord_count + (part_count * 8) + (len(features) * 3 if isinstance(features, list) else 0))
     return {
         "byte_size": byte_size,
+        "sha256": sha256_path(chunk_path) if chunk_path.exists() else "",
         "coord_count": coord_count,
         "part_count": part_count,
         "estimated_path_cost": estimated_path_cost,
@@ -447,6 +448,24 @@ def _feature_bounds(feature: dict[str, Any]) -> list[float]:
         max(-180.0, min(180.0, max(longitudes))),
         max(-90.0, min(90.0, max(latitudes))),
     ]
+
+
+def _bounds_area(bounds: list[float]) -> float:
+    if len(bounds) != 4:
+        return 0.0
+    width = max(0.0, float(bounds[2]) - float(bounds[0]))
+    height = max(0.0, float(bounds[3]) - float(bounds[1]))
+    return width * height
+
+
+def _build_feature_bounds_summary(features: list[dict[str, Any]]) -> list[list[float]]:
+    bounds_summary: list[list[float]] = []
+    for feature in features:
+        bounds = _feature_bounds(feature)
+        if _bounds_area(bounds) <= 0:
+            continue
+        bounds_summary.append(bounds)
+    return bounds_summary
 
 
 def _bounds_intersect(left: list[float], right: list[float]) -> bool:
@@ -841,6 +860,9 @@ def _build_chunk_payloads_for_feature_collection(
                 else:
                     _write_json(chunk_path, chunk_payload)
                 chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
+                feature_bounds_summary = _build_feature_bounds_summary(selected_features) if (
+                    layer_key == "political" and spec["lod"] == "detail"
+                ) else []
                 manifest_chunks.append({
                     "id": chunk_id,
                     "layer": layer_key,
@@ -855,6 +877,7 @@ def _build_chunk_payloads_for_feature_collection(
                     "data_format": "geojson",
                     "global_coverage": bool(spec["global_coverage"]),
                     "country_codes": chunk_country_codes,
+                    **({"feature_bounds": feature_bounds_summary} if feature_bounds_summary else {}),
                 })
                 lod_entries[layer_key].append({
                     "lod": spec["lod"],
@@ -942,6 +965,8 @@ def _build_political_chunk_payloads(
             chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
             _write_json(chunk_path, chunk_payload)
             chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
+            selected_features = [feature for _feature_id_value, feature, _bounds in entries]
+            feature_bounds_summary = _build_feature_bounds_summary(selected_features)
             all_chunks.append({
                 "id": chunk_id,
                 "layer": "political",
@@ -956,6 +981,7 @@ def _build_political_chunk_payloads(
                 "data_format": "geojson",
                 "global_coverage": False,
                 "country_codes": [owner_bucket],
+                **({"feature_bounds": feature_bounds_summary} if feature_bounds_summary else {}),
             })
             lod_layers["political"].append({
                 "lod": "detail",

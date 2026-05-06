@@ -1152,6 +1152,102 @@ def _resolve_detail_feature_owner_bucket(
     return feature_id, ""
 
 
+def _collect_geojson_coordinates(value: Any, coordinates: list[tuple[float, float]]) -> None:
+    if not isinstance(value, list):
+        return
+    if (
+        len(value) >= 2
+        and isinstance(value[0], (int, float))
+        and isinstance(value[1], (int, float))
+    ):
+        lon = float(value[0])
+        lat = float(value[1])
+        if -180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0:
+            coordinates.append((lon, lat))
+        return
+    for item in value:
+        _collect_geojson_coordinates(item, coordinates)
+
+
+def _feature_bounds_for_contract(feature: dict[str, Any]) -> list[float]:
+    coordinates: list[tuple[float, float]] = []
+    geometry = feature.get("geometry") if isinstance(feature.get("geometry"), dict) else {}
+    _collect_geojson_coordinates(geometry.get("coordinates"), coordinates)
+    if not coordinates:
+        return [-180.0, -90.0, 180.0, 90.0]
+    longitudes = [coord[0] for coord in coordinates]
+    latitudes = [coord[1] for coord in coordinates]
+    return [
+        max(-180.0, min(180.0, min(longitudes))),
+        max(-90.0, min(90.0, min(latitudes))),
+        max(-180.0, min(180.0, max(longitudes))),
+        max(-90.0, min(90.0, max(latitudes))),
+    ]
+
+
+def _bounds_area_for_contract(bounds: list[float]) -> float:
+    if len(bounds) != 4:
+        return 0.0
+    return max(0.0, float(bounds[2]) - float(bounds[0])) * max(0.0, float(bounds[3]) - float(bounds[1]))
+
+
+def _normalize_manifest_feature_bounds(raw_bounds: Any) -> list[float] | None:
+    if not isinstance(raw_bounds, list) or len(raw_bounds) != 4:
+        return None
+    try:
+        bounds = [float(value) for value in raw_bounds]
+    except (TypeError, ValueError):
+        return None
+    if not all(-180.0 <= bounds[index] <= 180.0 for index in (0, 2)):
+        return None
+    if not all(-90.0 <= bounds[index] <= 90.0 for index in (1, 3)):
+        return None
+    if _bounds_area_for_contract(bounds) <= 0:
+        return None
+    return bounds
+
+
+def _validate_detail_chunk_feature_bounds(
+    chunk_id: str,
+    chunk: dict[str, Any],
+    features: list[dict[str, Any]],
+    errors: list[str],
+    *,
+    required: bool,
+) -> None:
+    raw_feature_bounds = chunk.get("feature_bounds")
+    if not isinstance(raw_feature_bounds, list) or not raw_feature_bounds:
+        if required:
+            errors.append(f"detail chunk {chunk_id} feature_bounds must be present for political detail chunks.")
+        return
+    manifest_bounds: list[list[float]] = []
+    for index, raw_bounds in enumerate(raw_feature_bounds):
+        normalized_bounds = _normalize_manifest_feature_bounds(raw_bounds)
+        if normalized_bounds is None:
+            errors.append(f"detail chunk {chunk_id} feature_bounds[{index}] must be a valid non-empty bbox.")
+            continue
+        manifest_bounds.append(normalized_bounds)
+    expected_bounds = [
+        bounds
+        for feature in features
+        for bounds in [_feature_bounds_for_contract(feature)]
+        if _bounds_area_for_contract(bounds) > 0
+    ]
+    if len(manifest_bounds) != len(expected_bounds):
+        errors.append(
+            f"detail chunk {chunk_id} feature_bounds length must match non-empty payload feature bounds. "
+            f"manifest={len(manifest_bounds)} actual={len(expected_bounds)}."
+        )
+    for index, expected_bounds_entry in enumerate(expected_bounds[:len(manifest_bounds)]):
+        manifest_bounds_entry = manifest_bounds[index]
+        if any(abs(manifest_bounds_entry[axis] - expected_bounds_entry[axis]) > 1e-7 for axis in range(4)):
+            errors.append(
+                f"detail chunk {chunk_id} feature_bounds[{index}] must match payload geometry bounds. "
+                f"manifest={manifest_bounds_entry} actual={expected_bounds_entry}."
+            )
+            break
+
+
 def _collect_feature_ids_from_geojson(path: Path, errors: list[str]) -> set[str]:
     payload = _load_required_local_json(path, errors)
     if payload is None:
@@ -1344,6 +1440,7 @@ def _validate_detail_chunk_manifest(
     political_ids: set[str] = set()
     feature_to_chunk: dict[str, str] = {}
     owner_bucket_mismatch_count = 0
+    require_precise_chunk_manifest = target_dir.name == "tno_1962"
     for chunk in chunks:
         if not isinstance(chunk, dict):
             errors.append("detail_chunks.manifest.json chunks entries must be objects.")
@@ -1370,6 +1467,17 @@ def _validate_detail_chunk_manifest(
                 f"detail chunk {chunk_id} byte_size must match file size. "
                 f"manifest={expected_byte_size_int} actual={chunk_path.stat().st_size}."
             )
+        expected_sha256 = str(chunk.get("sha256") or "").strip().lower()
+        if not expected_sha256:
+            if require_precise_chunk_manifest:
+                errors.append(f"detail chunk {chunk_id} sha256 must be present in strict mode.")
+        else:
+            actual_sha256 = _sha256_path(chunk_path)
+            if expected_sha256 != actual_sha256:
+                errors.append(
+                    f"detail chunk {chunk_id} sha256 must match file content. "
+                    f"manifest={expected_sha256} actual={actual_sha256}."
+                )
         if (
             str(chunk.get("layer") or "").strip() == "political"
             and str(chunk.get("lod") or "").strip() == "detail"
@@ -1392,6 +1500,13 @@ def _validate_detail_chunk_manifest(
                     f"detail chunk {chunk_id} feature_count must match payload feature length. "
                     f"manifest={expected_feature_count_int} actual={len(features)}."
                 )
+            _validate_detail_chunk_feature_bounds(
+                chunk_id,
+                chunk,
+                features,
+                errors,
+                required=require_precise_chunk_manifest,
+            )
             chunk_bucket = _parse_detail_chunk_bucket(chunk_id)
             manifest_country_codes = [
                 normalize_scenario_contract_tag(code)

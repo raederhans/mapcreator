@@ -438,7 +438,14 @@ async function requestScenarioPoliticalChunk(page, {
 }) {
   await page.evaluate(async ({ nextFocusCountry, nextViewportBbox, nextReason }) => {
     const { state } = await import("/js/core/state.js");
-    state.__testRestoreViewportGeoBoundsFn = state.getViewportGeoBoundsFn;
+    const { readRegisteredRuntimeHookSource } = await import("/js/core/state/index.js");
+    if (!Object.prototype.hasOwnProperty.call(state, "__testRestoreViewportGeoBoundsFn")) {
+      const directViewportProvider = typeof state.getViewportGeoBoundsFn === "function"
+        ? state.getViewportGeoBoundsFn
+        : null;
+      const registeredViewportProvider = readRegisteredRuntimeHookSource(state, "getViewportGeoBoundsFn");
+      state.__testRestoreViewportGeoBoundsFn = registeredViewportProvider || directViewportProvider;
+    }
     state.getViewportGeoBoundsFn = () => nextViewportBbox;
     if (state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object") {
       state.runtimeChunkLoadState.focusCountryOverride = nextFocusCountry;
@@ -465,11 +472,30 @@ async function requestScenarioPoliticalChunk(page, {
   await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout });
 }
 
+function buildProbeViewportBbox(probe, marginDegrees = 6) {
+  const focus = probe?.focus || {};
+  const lon = Number(focus.lon);
+  const lat = Number(focus.lat);
+  return [
+    Math.max(-180, lon - marginDegrees),
+    Math.max(-90, lat - marginDegrees),
+    Math.min(180, lon + marginDegrees),
+    Math.min(90, lat + marginDegrees),
+  ];
+}
+
 async function restoreScenarioViewportProvider(page) {
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    if (typeof state.__testRestoreViewportGeoBoundsFn === "function") {
-      state.getViewportGeoBoundsFn = state.__testRestoreViewportGeoBoundsFn;
+    if (Object.prototype.hasOwnProperty.call(state, "__testRestoreViewportGeoBoundsFn")) {
+      state.getViewportGeoBoundsFn = typeof state.__testRestoreViewportGeoBoundsFn === "function"
+        ? state.__testRestoreViewportGeoBoundsFn
+        : null;
+    }
+    if (state.runtimeChunkLoadState?.focusCountryOverrideSource === "test") {
+      state.runtimeChunkLoadState.focusCountryOverride = "";
+      state.runtimeChunkLoadState.focusCountryOverrideSource = "";
+      state.runtimeChunkLoadState.focusCountryOverrideExpiresAt = 0;
     }
     delete state.__testRestoreViewportGeoBoundsFn;
   });
@@ -906,7 +932,7 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
 });
 
 test("tno atlantropa welded donor islands stay clickable and mediterranean sea uses dedicated fill", async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
 
   const screenshotDir = path.join(".runtime", "tests", "playwright", "tno_open_ocean_rendering");
   fs.mkdirSync(screenshotDir, { recursive: true });
@@ -979,6 +1005,15 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
   for (const probe of ATLANTROPA_ISLAND_PROBES) {
     await resetZoomToFit(page);
     await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+    await centerMapOnGeoPoint(page, probe.focus, {
+      zoomPercent: probe.focus.zoomPercent,
+    });
+    await requestScenarioPoliticalChunk(page, {
+      chunkId: `political.detail.country.${String(probe.ownerCode || "").toLowerCase()}`,
+      focusCountry: probe.ownerCode,
+      viewportBbox: buildProbeViewportBbox(probe),
+      reason: `test-atlantropa-island-${String(probe.label || "").toLowerCase()}`,
+    });
     await waitForLandFeature(page, probe.featureId);
     const runtime = await readLandFeatureRuntime(page, probe.featureId);
     expect(runtime.featureId).toBe(probe.featureId);
@@ -1004,6 +1039,7 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
       patch,
     });
   }
+  await restoreScenarioViewportProvider(page);
 
   await resetZoomToFit(page);
   await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });

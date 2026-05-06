@@ -23,3 +23,12 @@
 - [x] Preserve ATLSEA donor sea D3-small orientation after regeneration.
 - [x] Refresh dependent source hashes, startup bundles, build snapshot, and audit.
 - [x] Run targeted Python, Node, and strict scenario contract verification.
+
+## Comprehensive follow-up
+- [x] Reproduce or instrument remaining Mediterranean water/land interaction failures.
+- [x] Audit HGO donor data and ATLSEA/ATLISL role/owner/palette routing.
+- [x] Audit projection and ocean adaptation for local bounds, water cache, auxiliary index, and secondary spatial index.
+- [x] Audit zoom black frame/color disappearance path.
+- [x] Implement root-cause fixes with minimal scope.
+- [x] Run targeted Node/Python/strict/browser verification on the main thread.
+- [x] Run code review and first-principles self-check before final report.

@@ -1532,3 +1532,9 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 某些老文件会混有 CRLF/LF；只补两行注释也可能把整文件伪装成重写。
 - 最稳的做法是先看 `git diff --stat`，一旦出现异常大 diff，立刻统一回仓库当前行尾风格后再继续。
+
+## 2026-05-06 - TNO owner chunk precise bounds
+
+- 按 owner 分出来的 detail chunk 可能因为海外领土或跨洲 owner 得到超大 bbox，Mediterranean 视口会误选 USA/JAP/CAN 等零本地 feature chunk，放大缩放卡顿。
+- 更稳的做法是在 chunk manifest 中写入 per-feature bounds，选择时用 feature bounds 过滤和排序；chunk 总 bbox 只作为旧 manifest 的兼容路径。
+- 测试里临时覆盖 state hook 时，要保存 `readRegisteredRuntimeHookSource(...)` 得到的原始函数；保存 dispatcher 再恢复会造成 hook 递归。

@@ -370,6 +370,54 @@ test("political byte budget limits cold required detail tail", () => {
   assert.equal(selection.selectedByteCountSum, 10);
 });
 
+test("feature bounds keep broad owner chunks out of unrelated viewports", () => {
+  const selection = selectScenarioChunks({
+    scenarioId: "tno_1962",
+    chunkRegistry: normalizeScenarioChunkManifest({
+      chunks: [
+        {
+          id: "political.detail.country.global-owner",
+          url: "global-owner.json",
+          layer: "political",
+          lod: "detail",
+          bounds: [-180, -60, 180, 80],
+          feature_bounds: [[120, 20, 130, 30]],
+          min_zoom: 0,
+          max_zoom: 99,
+          country_codes: ["GO"],
+          feature_count: 1,
+          byte_size: 1,
+          estimated_path_cost: 1,
+        },
+        {
+          id: "political.detail.country.local-owner",
+          url: "local-owner.json",
+          layer: "political",
+          lod: "detail",
+          bounds: [-180, -60, 180, 80],
+          feature_bounds: [[8, 32, 12, 36]],
+          min_zoom: 0,
+          max_zoom: 99,
+          country_codes: ["LO"],
+          feature_count: 1,
+          byte_size: 1,
+          estimated_path_cost: 1,
+        },
+      ],
+    }),
+    zoom: 2.5,
+    viewportBbox: [7, 31, 13, 37],
+    visibleLayers: ["political"],
+    renderBudgetHints: {
+      max_required_chunks: 6,
+      max_required_political_chunks: 6,
+      min_required_political_chunks: 1,
+    },
+  });
+
+  assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["political.detail.country.local-owner"]);
+});
+
 test("tno render budget sets political cold selection caps", () => {
   const manifest = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "manifest.json"));
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
@@ -409,6 +457,19 @@ test("tno mediterranean detail selection keeps Atlantropa companion political ch
     );
     assert.ok(requiredIds.length > 6, "TNO Mediterranean detail view needs wider political chunk coverage than the old 6 chunk cap");
   });
+});
+
+test("tno detail chunk manifest records content hashes and precise feature bounds", () => {
+  const chunkManifest = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "detail_chunks.manifest.json"));
+  const atlChunk = (chunkManifest.chunks || []).find((chunk) => chunk.id === "political.detail.country.atl");
+  assert.ok(atlChunk, "ATL detail chunk must exist");
+  assert.match(String(atlChunk.sha256 || ""), /^[a-f0-9]{64}$/);
+  assert.ok(Array.isArray(atlChunk.feature_bounds));
+  assert.ok(atlChunk.feature_bounds.length >= 100);
+  assert.ok(
+    atlChunk.feature_bounds.some((bounds) => Array.isArray(bounds) && bounds[0] >= -6.1 && bounds[2] <= 36.3),
+    "ATL detail chunk should expose local feature bounds for viewport selection",
+  );
 });
 
 test("viewport geo bounds samples curved projection edges for chunk eligibility", () => {
@@ -850,6 +911,7 @@ test("Atlantropa land interaction contracts keep welded donor islands clickable 
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
+  const checkScenarioContractsSource = readRepoFile("tools", "check_scenario_contracts.py");
   const visualRenderableBody = rendererSource.match(/function isPoliticalVisualRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
 
   const checks = {
@@ -893,7 +955,8 @@ test("Atlantropa land interaction contracts keep welded donor islands clickable 
       /function isAtlantropaSeaWaterProjectionSource\(feature\) \{[\s\S]*?featureId\.startsWith\("ATLSEA_"\)[\s\S]*?featureId\.startsWith\("ATLSEA_FILL_"\)[\s\S]*?atl_geometry_role[\s\S]*?"donor_sea"/.test(rendererSource)
       && /getFeatureCountryCodeNormalized\(feature\) !== "ATL"/.test(rendererSource)
       && /atl_surface_kind: props\.atl_surface_kind \|\| "sea"/.test(rendererSource)
-      && /function collectActiveAtlantropaSeaWaterFeatures\(\) \{[\s\S]*?runtimeState\.scenarioPoliticalChunkData\?\.features[\s\S]*?isAtlantropaSeaWaterProjectionSource\(feature\)[\s\S]*?getAtlantropaSeaWaterFeature\(feature\)/.test(rendererSource)
+      && /function collectActiveAtlantropaSeaWaterFeatures\(\) \{[\s\S]*?return getActiveAtlantropaSeaWaterProjectionState\(\)\.features;/.test(rendererSource)
+      && /function getActiveAtlantropaSeaWaterProjectionState\(\) \{[\s\S]*?runtimeState\.scenarioPoliticalChunkData[\s\S]*?isAtlantropaSeaWaterProjectionSource\(feature\)[\s\S]*?getAtlantropaSeaWaterFeature\(feature\)/.test(rendererSource)
       && /function shouldExcludeWaterHitGeometry\(hitGeometry, feature = null\) \{[\s\S]*?return isSphericalGeometryUnsafe\(hitGeometry\);[\s\S]*?\}/.test(rendererSource)
       && !/function collectSafeWaterRegionGeometryPartsInfo\(feature\) \{[\s\S]*?if \(isAtlantropaSeaWaterProjection\(feature\)\)/.test(rendererSource)
       && !/function sanitizeWaterRegionFeature\(feature\) \{[\s\S]*?if \(isAtlantropaSeaWaterProjection\(feature\)\) return feature;/.test(rendererSource)
@@ -904,19 +967,30 @@ test("Atlantropa land interaction contracts keep welded donor islands clickable 
       && /function getUnifiedWaterBaseStyle\(feature\) \{[\s\S]*?isAtlantropaSeaFeature\(feature\)[\s\S]*?getAtlantropaSeaPoliticalFillColor\(\)/.test(rendererSource)
       && /function getWaterRegionColor\(id, feature = null\) \{[\s\S]*?const defaultStyleFeature = feature \|\| runtimeState\.waterRegionsById\?\.get\(resolvedId\);/.test(rendererSource)
       && /context\.fillStyle = getWaterRegionColor\(id, feature\);/.test(rendererSource)
-      && /function getScenarioWaterVisualRevisionToken\(\) \{[\s\S]*?water-atlsea:\$\{getActiveAtlantropaSeaWaterSignature\(\)\}/.test(rendererSource)
+      && /function getActiveAtlantropaSeaWaterRevisionToken\(\) \{[\s\S]*?atlsea-political-source[\s\S]*?signature:\$\{projectionState\.signature\}/.test(rendererSource)
+      && /function getScenarioWaterVisualRevisionToken\(\) \{[\s\S]*?water-atlsea:\$\{getActiveAtlantropaSeaWaterRevisionToken\(\)\}/.test(rendererSource)
       && !rendererSource.includes("getAtlantropaSeaWaterHitFromPointer"),
     politicalPromotionTreatsProjectedAtlantropaSeaAsWaterChange:
-      /const projectsAtlantropaSeaWater = hasPoliticalChange && collectActiveAtlantropaSeaWaterFeatures\(\)\.length > 0;/.test(rendererSource)
-      && /const effectiveChangedLayerKeys = projectsAtlantropaSeaWater[\s\S]*?"water"/.test(rendererSource)
+      /const hadProjectedAtlantropaSeaWater = lastActiveAtlantropaSeaWaterSignature !== "0:";/.test(rendererSource)
+      && /const hasProjectedAtlantropaSeaWater = atlantropaSeaWaterProjectionState\.features\.length > 0;/.test(rendererSource)
+      && /const atlantropaSeaWaterProjectionChanged = hasPoliticalChange[\s\S]*?hadProjectedAtlantropaSeaWater \|\| hasProjectedAtlantropaSeaWater[\s\S]*?lastActiveAtlantropaSeaWaterSignature !== atlantropaSeaWaterProjectionState\.signature/.test(rendererSource)
+      && /const effectiveChangedLayerKeys = atlantropaSeaWaterProjectionChanged[\s\S]*?"water"/.test(rendererSource)
       && /syncScenarioSecondaryRegionIndexes\(\{[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,/.test(rendererSource)
-      && /if \(projectsAtlantropaSeaWater && !synchronizedSecondaryRegionIndexes\) \{[\s\S]*?scheduleSecondarySpatialIndexBuild/.test(rendererSource)
-      && /function refreshMapDataForScenarioApply\([\s\S]*?const projectsAtlantropaSeaWater = collectActiveAtlantropaSeaWaterFeatures\(\)\.length > 0;[\s\S]*?if \(projectsAtlantropaSeaWater\) \{[\s\S]*?rebuildAuxiliaryRegionIndexes\(\);[\s\S]*?buildSecondarySpatialIndexes/.test(rendererSource)
+      && /if \(atlantropaSeaWaterProjectionChanged && !synchronizedSecondaryRegionIndexes\) \{[\s\S]*?scheduleSecondarySpatialIndexBuild/.test(rendererSource)
+      && /function refreshMapDataForScenarioApply\([\s\S]*?const projectsAtlantropaSeaWater = atlantropaSeaWaterProjectionState\.features\.length > 0;[\s\S]*?if \(projectsAtlantropaSeaWater\) \{[\s\S]*?rebuildAuxiliaryRegionIndexes\(\);[\s\S]*?buildSecondarySpatialIndexes/.test(rendererSource)
       && /function scheduleSecondarySpatialIndexBuild\([\s\S]*?rebuildAuxiliaryRegionIndexes\(\);[\s\S]*?buildSecondarySpatialIndexes/.test(rendererSource),
     chunkAssetBuilderNormalizesDirectAtlseaGeojsonForD3:
       /def _normalize_atlantropa_donor_sea_feature_for_d3\(feature: dict\[str, Any\]\) -> dict\[str, Any\]:/.test(chunkAssetToolSource)
       && /def _normalize_polygon_coordinates_for_d3\(polygon_coordinates: Any\) -> Any:/.test(chunkAssetToolSource)
-      && /_normalize_atlantropa_donor_sea_feature_for_d3\(feature\)/.test(chunkAssetToolSource),
+      && /_normalize_atlantropa_donor_sea_feature_for_d3\(feature\)/.test(chunkAssetToolSource)
+      && /\"sha256\": sha256_path\(chunk_path\)/.test(chunkAssetToolSource)
+      && /\"feature_bounds\": feature_bounds_summary/.test(chunkAssetToolSource),
+    strictCheckerValidatesDetailFeatureBounds:
+      /def _validate_detail_chunk_feature_bounds\(/.test(checkScenarioContractsSource)
+      && /require_precise_chunk_manifest = target_dir\.name == "tno_1962"/.test(checkScenarioContractsSource)
+      && /feature_bounds must be present for political detail chunks/.test(checkScenarioContractsSource)
+      && /feature_bounds length must match non-empty payload feature bounds/.test(checkScenarioContractsSource)
+      && /feature_bounds\[\{index\}\] must match payload geometry bounds/.test(checkScenarioContractsSource),
   };
 
   Object.entries(checks).forEach(([label, ok]) => {

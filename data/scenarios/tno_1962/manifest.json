@@ -154,10 +154,10 @@
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "49077c5ed6cce2f9639d1eb9b75cc2e5510be4d6b1fe72a0ac7ed92799eb4209",
+  "snapshot_fingerprint": "56977fc9d5b19d12af0495e6822bc72208b3a6f2e12617746df2197814a24698",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "bf0d1d723ace4c587f95ff841e5efe23ed4ba0e754a775ad3f3471237385a22b",
+    "detail_chunk_manifest_sha256": "4f903f08250df5fa33d843c244f69a35e968ba6a26660cea46cc9032f8042e05",
     "runtime_bootstrap_topology_sha256": "27365dbff68d420415e0ad91afd38ac33fbc70f02d614fe8c45e10023b6be20a",
     "runtime_topology_sha256": "f9009f0b5cfde4e78a7429ab55286e8e1816cca3e81dd734e939d0e641d98c7c"
   },
