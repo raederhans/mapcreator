@@ -758,10 +758,7 @@ export function createWaterSpecialRegionController({
 
   const getSpecialFeatureColor = (featureId, feature = null) => {
     const resolvedId = String(featureId || "").trim();
-    return (
-      normalizeHexColor(runtimeState.specialRegionOverrides?.[resolvedId]) ||
-      getSpecialFeatureFallbackColor(feature || runtimeState.specialRegionsById?.get(resolvedId))
-    );
+    return getSpecialFeatureFallbackColor(feature || runtimeState.specialRegionsById?.get(resolvedId));
   };
 
   const ensureSelectedSpecialRegion = () => {
@@ -807,22 +804,11 @@ export function createWaterSpecialRegionController({
   const renderSpecialRegionLegend = () => {
     if (!specialRegionLegendList) return;
     specialRegionLegendList.replaceChildren();
-    const overrideEntries = Object.entries(runtimeState.specialRegionOverrides || {})
-      .map(([featureId, color]) => {
-        const feature = runtimeState.specialRegionsById?.get(featureId);
-        if (!feature || !isSpecialFeatureVisibleInInspector(feature)) return null;
-        return {
-          featureId,
-          feature,
-          color: normalizeHexColor(color) || getSpecialFeatureColor(featureId, feature),
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => getSpecialFeatureDisplayName(a.feature).localeCompare(getSpecialFeatureDisplayName(b.feature)));
+    const overrideEntries = [];
 
     if (!overrideEntries.length) {
       specialRegionLegendList.appendChild(
-        createEmptyNote(t("Paint special regions to create an override list.", "ui"))
+        createEmptyNote(t("Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.", "ui"))
       );
       return;
     }
@@ -883,6 +869,9 @@ export function createWaterSpecialRegionController({
       if (specialRegionColorInput) {
         specialRegionColorInput.disabled = true;
       }
+      if (clearSpecialRegionColorBtn) {
+        clearSpecialRegionColorBtn.disabled = true;
+      }
       specialRegionColorPickerOpen = false;
       scheduleAdaptiveInspectorHeights();
       return;
@@ -909,8 +898,11 @@ export function createWaterSpecialRegionController({
       specialRegionColorValue.textContent = featureColor.toUpperCase();
     }
     if (specialRegionColorInput) {
-      specialRegionColorInput.disabled = false;
+      specialRegionColorInput.disabled = true;
       specialRegionColorInput.value = featureColor;
+    }
+    if (clearSpecialRegionColorBtn) {
+      clearSpecialRegionColorBtn.disabled = true;
     }
     scheduleAdaptiveInspectorHeights();
   };
@@ -1247,6 +1239,7 @@ export function createWaterSpecialRegionController({
 
   if (specialRegionColorSwatch && specialRegionColorInput && !specialRegionColorSwatch.dataset.bound) {
     specialRegionColorSwatch.addEventListener("click", () => {
+      if (specialRegionColorInput.disabled) return;
       specialRegionColorPickerOpen = true;
       specialRegionColorInput.focus({ preventScroll: true });
       if (typeof specialRegionColorInput.showPicker === "function") {
@@ -1260,24 +1253,7 @@ export function createWaterSpecialRegionController({
 
   if (specialRegionColorInput && !specialRegionColorInput.dataset.bound) {
     specialRegionColorInput.addEventListener("change", (event) => {
-      const selectedId = ensureSelectedSpecialRegion();
-      if (!selectedId) return;
-      const nextColor = normalizeHexColor(event.target.value);
-      const currentColor = getSpecialFeatureColor(selectedId);
-      if (!nextColor || nextColor === currentColor) {
-        closeSpecialRegionColorPicker();
-        renderSpecialRegionList();
-        return;
-      }
-      const historyBefore = captureHistoryState({ specialRegionIds: [selectedId] });
-      runtimeState.specialRegionOverrides[selectedId] = nextColor;
-      pushHistoryEntry({
-        kind: "inspector-special-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ specialRegionIds: [selectedId] }),
-      });
-      markDirty("inspector-special-region-color");
-      if (render) render();
+      event.preventDefault();
       closeSpecialRegionColorPicker();
       renderSpecialRegionList();
     });
@@ -1289,20 +1265,6 @@ export function createWaterSpecialRegionController({
 
   if (clearSpecialRegionColorBtn && !clearSpecialRegionColorBtn.dataset.bound) {
     clearSpecialRegionColorBtn.addEventListener("click", () => {
-      const selectedId = ensureSelectedSpecialRegion();
-      if (!selectedId) return;
-      if (!Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, selectedId)) {
-        return;
-      }
-      const historyBefore = captureHistoryState({ specialRegionIds: [selectedId] });
-      delete runtimeState.specialRegionOverrides[selectedId];
-      pushHistoryEntry({
-        kind: "clear-special-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ specialRegionIds: [selectedId] }),
-      });
-      markDirty("clear-special-region-color");
-      if (render) render();
       renderSpecialRegionList();
     });
     clearSpecialRegionColorBtn.dataset.bound = "true";

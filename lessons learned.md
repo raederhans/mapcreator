@@ -1491,3 +1491,13 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 1. 新增场景可写资产要先加载再保存，避免本地 dev save 覆盖磁盘真值
 - 这次 `special_zone_layers.json` 既是 scenario asset 又能在本地写盘，保存按钮如果先拿空运行时状态发 POST，会把真实资产覆盖成空层。
 - 更稳的做法是：workbench 打开时加载一次；保存前若尚未确认加载完成，只执行加载和提示，下一次保存才写盘。
+
+## 2026-05-05 - special zone layer render owner
+
+### 1. 场景资产加载哨兵必须绑定 scenario id
+- `special_zone_layers.json` 这种 per-scenario 资产只用 boolean loaded flag 会在切换场景后复用上一场景运行时状态，保存时可能写错目标场景。
+- 更稳的做法是把 loaded 标记绑定到 `activeScenarioId`，并用 strict contract 重建对应 `build_snapshot.json` / `audit.json` / `manifest.json`。
+
+### 2. 退出旧编辑主路径时，runtime facade 也要同步退休写口
+- 只禁用按钮仍可能留下双击完成、facade 调用、测试 helper 这类写入口。
+- 更稳的做法是让旧 `start/finish/delete` runtime API 清理临时状态并返回 `false`，再用边界测试锁住“不再 push manual features”。

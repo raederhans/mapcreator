@@ -198,7 +198,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const bindSpecialZoneEditorEvents =", owner_content)
         self.assertIn("Use Layer-based special zones for new edits.", owner_content)
         self.assertNotIn("startSpecialZoneDraw({", owner_content)
-        self.assertIn("deleteSelectedManualSpecialZone();", owner_content)
+        self.assertNotIn("deleteSelectedManualSpecialZone();", owner_content)
         self.assertIn("./toolbar/special_zones_workbench_controller.js", toolbar_content)
         self.assertIn("createSpecialZonesWorkbenchController", toolbar_content)
 

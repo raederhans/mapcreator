@@ -71,11 +71,22 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
 
         self.assertIn('captureHistoryState({ waterRegionIds: nextIds })', owner_content)
-        self.assertIn('captureHistoryState({ specialRegionIds: [selectedId] })', owner_content)
         self.assertIn('updateSpecialZoneEditorUi();', owner_content)
         self.assertIn('updateWorkspaceStatus();', owner_content)
         self.assertIn('updateSpecialZoneEditorUi: () => callRuntimeHook(state, "updateSpecialZoneEditorUIFn"),', sidebar_content)
         self.assertIn('updateWorkspaceStatus: () => callRuntimeHook(state, "updateWorkspaceStatusFn"),', sidebar_content)
+
+    def test_special_region_sidebar_is_read_only_after_layer_workbench_cutover(self):
+        owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.", owner_content)
+        self.assertIn("specialRegionColorInput.disabled = true;", owner_content)
+        self.assertIn("clearSpecialRegionColorBtn.disabled = true;", owner_content)
+        self.assertNotIn("runtimeState.specialRegionOverrides[selectedId]", owner_content)
+        self.assertNotIn("delete runtimeState.specialRegionOverrides", owner_content)
+        self.assertNotIn("special-overrides:", renderer_content)
+        self.assertNotIn("runtimeState.specialRegionOverrides?.", renderer_content)
 
     def test_renderer_history_and_import_funnel_keep_water_special_callbacks(self):
         map_renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

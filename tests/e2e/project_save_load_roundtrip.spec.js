@@ -360,12 +360,13 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   await setSelectValue(page, "#themeSelect", selectedPaletteId);
   await page.waitForFunction((value) => document.querySelector("#themeSelect")?.value === value, selectedPaletteId);
 
-  await page.evaluate(async () => {
+  const legacySpecialZoneStartResult = await page.evaluate(async () => {
     const { startSpecialZoneDraw } = await import("/js/core/map_renderer.js");
-    startSpecialZoneDraw({ zoneType: "custom", label: "" });
+    return startSpecialZoneDraw({ zoneType: "custom", label: "" });
   });
+  expect(legacySpecialZoneStartResult).toBe(false);
   await installStateHandle(page);
-  await page.waitForFunction(() => !!globalThis.__pwProjectSaveLoad?.state?.specialZoneEditor?.active);
+  await page.waitForFunction(() => !globalThis.__pwProjectSaveLoad?.state?.specialZoneEditor?.active);
 
   const initialExportPath = path.join(artifactDir, "initial-export.json");
   const initialExport = await exportProjectJson(page, initialExportPath);
