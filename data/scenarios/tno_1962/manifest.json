@@ -154,12 +154,12 @@
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "c40ca5f987866d7c9a581a1664c23b5eb9d5158962d9709128fa2273e7488601",
+  "snapshot_fingerprint": "73b853702ee4fd06517e45079db18521eeddb3a3d1db019d1e6f9d42a57bbad6",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "a6927da7500007be7d3129393a3ad957846bf6b9eef95d4a50ba9267f4121267",
+    "detail_chunk_manifest_sha256": "bf0d1d723ace4c587f95ff841e5efe23ed4ba0e754a775ad3f3471237385a22b",
     "runtime_bootstrap_topology_sha256": "27365dbff68d420415e0ad91afd38ac33fbc70f02d614fe8c45e10023b6be20a",
-    "runtime_topology_sha256": "9ea46d951d006811959476e7cdc835c376c043164ce5c5f333cb32b612eb1ab0"
+    "runtime_topology_sha256": "f9009f0b5cfde4e78a7429ab55286e8e1816cca3e81dd734e939d0e641d98c7c"
   },
   "special_regions_url": "data/scenarios/tno_1962/special_regions.geojson",
   "special_zone_layers_url": "data/scenarios/tno_1962/special_zone_layers.json",
@@ -167,6 +167,9 @@
   "startup_bundle_url_zh": "data/scenarios/tno_1962/startup.bundle.zh.json",
   "startup_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
   "style_defaults": {
+    "atlantropa_sea": {
+      "fillColor": "#203856"
+    },
     "ocean": {
       "fillColor": "#2d4769"
     }

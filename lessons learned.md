@@ -1476,6 +1476,12 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 这次 browser smoke 的网络采集还在调用旧 `network` 子命令，当前 Playwright CLI 已改为 `requests`，导致报告 network summary 虚绿。
 - 更稳的做法是：脚本对外部 CLI 的关键子命令用轻量静态合同锁住，升级 CLI 后先修脚本采集面。
 
+## 2026-05-05 - Atlantropa E2E 点击取证
+
+### 1. 微小岛体的 Playwright 点击探针要优先复用 runtime spatial items，再补 geo fallback
+- 这次 ATLISL/ATLSHL 目标在浏览器里很小，单靠 geo centroid 或简化 bounds center 会频繁落到背景或邻近省份。
+- 更稳的做法是：先用 `state.spatialItems` 生成 screen-space probe 网格；helper 或缺失 spatial item 的目标，再补 `landDataFull` + geo fallback。
+
 ### 44. Topology quantization promotion must stop at the first hard gate
 - A smaller TopoJSON file can still be invalid: runtime q50000 reduced bytes but increased world-bounds geometries, so contract failure must block q25000, visual QA, and production parameter updates.
 - Detail topology experiments depend on fresh source-layer contracts; if source/primary urban layers lack `id` / `country_owner_id`, fix the source rebuild chain before running quantization A/B.

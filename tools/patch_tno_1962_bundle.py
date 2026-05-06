@@ -6488,6 +6488,12 @@ def load_tno_ocean_fill_color() -> str:
     return normalize_hex(ocean.get("fill_color")) or "#2d4769"
 
 
+def load_tno_atlantropa_sea_fill_color() -> str:
+    payload = load_json(TNO_PALETTE_PATH)
+    atlantropa_sea = payload.get("atlantropa_sea", {}) if isinstance(payload, dict) else {}
+    return normalize_hex(atlantropa_sea.get("fill_color")) or "#203856"
+
+
 def resolve_tno_palette_color(tag: str, palette_entries: dict[str, dict]) -> str:
     normalized_tag = normalize_tag(tag)
     if not normalized_tag:
@@ -6573,6 +6579,11 @@ def patch_tno_palette_defaults(countries_payload: dict, manifest_payload: dict) 
         ocean_defaults = {}
     ocean_defaults["fillColor"] = load_tno_ocean_fill_color()
     style_defaults["ocean"] = ocean_defaults
+    atlantropa_sea_defaults = style_defaults.get("atlantropa_sea")
+    if not isinstance(atlantropa_sea_defaults, dict):
+        atlantropa_sea_defaults = {}
+    atlantropa_sea_defaults["fillColor"] = load_tno_atlantropa_sea_fill_color()
+    style_defaults["atlantropa_sea"] = atlantropa_sea_defaults
     manifest_payload["style_defaults"] = style_defaults
 
 
@@ -8161,12 +8172,18 @@ def make_atl_row(
 ) -> dict:
     normalized_join_mode = str(join_mode or ATL_JOIN_MODE_NONE).strip() or ATL_JOIN_MODE_NONE
     is_explicit_political = (
-        geometry_role in {
-            ATL_GEOMETRY_ROLE_DONOR_LAND,
-            ATL_GEOMETRY_ROLE_DONOR_ISLAND,
-            ATL_GEOMETRY_ROLE_CAUSEWAY,
-        }
-        and normalized_join_mode not in {ATL_JOIN_MODE_GAP_FILL, ATL_JOIN_MODE_BOOLEAN_WELD}
+        (
+            geometry_role == ATL_GEOMETRY_ROLE_DONOR_ISLAND
+            and normalized_join_mode == ATL_JOIN_MODE_BOOLEAN_WELD
+        )
+        or (
+            geometry_role in {
+                ATL_GEOMETRY_ROLE_DONOR_LAND,
+                ATL_GEOMETRY_ROLE_DONOR_ISLAND,
+                ATL_GEOMETRY_ROLE_CAUSEWAY,
+            }
+            and normalized_join_mode not in {ATL_JOIN_MODE_GAP_FILL, ATL_JOIN_MODE_BOOLEAN_WELD}
+        )
     )
     return {
         "id": feature_id,
@@ -10515,16 +10532,33 @@ def build_runtime_topology_payload(
         atl_runtime_mask = feature_ids.str.startswith("ATLISL_") | feature_ids.str.startswith("ATLSHL_")
         runtime_political_gdf.loc[atl_runtime_mask, "cntr_code"] = ATL_TAG
         if "interactive" in runtime_political_gdf.columns:
-            atl_shell_mask = feature_ids.str.startswith("ATLSHL_")
-            runtime_political_gdf.loc[atl_shell_mask, "interactive"] = False
-            if "atl_join_mode" in runtime_political_gdf.columns:
-                atl_boolean_weld_mask = (
-                    feature_ids.str.startswith("ATLISL_")
-                    & runtime_political_gdf["atl_join_mode"].fillna("").astype(str).str.strip().str.lower().eq(
-                        ATL_JOIN_MODE_BOOLEAN_WELD
-                    )
-                )
-                runtime_political_gdf.loc[atl_boolean_weld_mask, "interactive"] = False
+            geometry_roles = (
+                runtime_political_gdf["atl_geometry_role"].fillna("").astype(str).str.strip().str.lower()
+                if "atl_geometry_role" in runtime_political_gdf.columns
+                else pd.Series("", index=runtime_political_gdf.index, dtype="object")
+            )
+            join_modes = (
+                runtime_political_gdf["atl_join_mode"].fillna("").astype(str).str.strip().str.lower()
+                if "atl_join_mode" in runtime_political_gdf.columns
+                else pd.Series("", index=runtime_political_gdf.index, dtype="object")
+            )
+            atl_boolean_weld_island_mask = (
+                feature_ids.str.startswith("ATLISL_")
+                & geometry_roles.eq(ATL_GEOMETRY_ROLE_DONOR_ISLAND)
+                & join_modes.eq(ATL_JOIN_MODE_BOOLEAN_WELD)
+            )
+            atl_helper_mask = (
+                feature_ids.str.startswith(("ATLSHL_", "ATLWLD_", "ATLSEA_FILL_"))
+                | geometry_roles.isin({
+                    ATL_GEOMETRY_ROLE_SHORE_SEAL,
+                    ATL_GEOMETRY_ROLE_SEA_COMPLETION,
+                    ATL_GEOMETRY_ROLE_DONOR_SEA,
+                })
+                | join_modes.eq(ATL_JOIN_MODE_GAP_FILL)
+                | (join_modes.eq(ATL_JOIN_MODE_BOOLEAN_WELD) & ~atl_boolean_weld_island_mask)
+            )
+            runtime_political_gdf.loc[atl_helper_mask, "interactive"] = False
+            runtime_political_gdf.loc[atl_boolean_weld_island_mask, "interactive"] = True
     topo_dict = build_named_topology([
         ("political", runtime_political_gdf),
         ("land_mask", land_mask_gdf),
@@ -11077,6 +11111,7 @@ def build_runtime_topology_state(
     rebuild_tno_featured_tags(manifest_payload, countries_payload)
 
     owner_baseline_hash = stable_json_hash(owners_payload["owners"])
+    controller_baseline_hash = stable_json_hash(controllers_payload["controllers"])
     core_baseline_hash = stable_json_hash(cores_payload["cores"])
     generated_at = stage_metadata.get("generated_at") or utc_timestamp()
 

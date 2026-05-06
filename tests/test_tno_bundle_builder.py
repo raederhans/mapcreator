@@ -565,9 +565,19 @@ class TnoBundleBuilderTest(unittest.TestCase):
                     "id": "ATLISL_adriatica_CRO_3",
                     "name": "Welded Adriatica",
                     "cntr_code": "CRO",
+                    "atl_geometry_role": "donor_island",
                     "atl_join_mode": "boolean_weld",
                     "interactive": True,
                     "geometry": _square(1, 0, 1.0),
+                },
+                {
+                    "id": "ATLWLD_adriatica_9",
+                    "name": "Weld Helper",
+                    "cntr_code": "ATL",
+                    "atl_geometry_role": "shore_seal",
+                    "atl_join_mode": "boolean_weld",
+                    "interactive": True,
+                    "geometry": _square(1, 1, 1.0),
                 },
                 {"id": "ATLSHL_adriatica_4", "name": "Shelf", "cntr_code": "GRE", "geometry": _square(2, 0, 1.0)},
             ],
@@ -604,7 +614,8 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(political_props["ATLISL_adriatica_corfu"]["cntr_code"], "ATL")
         self.assertIs(political_props["ATLISL_adriatica_corfu"].get("interactive"), True)
         self.assertEqual(political_props["ATLISL_adriatica_CRO_3"]["cntr_code"], "ATL")
-        self.assertIs(political_props["ATLISL_adriatica_CRO_3"].get("interactive"), False)
+        self.assertIs(political_props["ATLISL_adriatica_CRO_3"].get("interactive"), True)
+        self.assertIs(political_props["ATLWLD_adriatica_9"].get("interactive"), False)
         self.assertEqual(political_props["ATLSHL_adriatica_4"]["cntr_code"], "ATL")
         self.assertIn(political_props["ATLSHL_adriatica_4"].get("interactive"), (False, None))
 
@@ -1288,6 +1299,8 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(countries_payload["countries"]["SOV"]["color_hex"], "#7d0d18")
         self.assertEqual(countries_payload["countries"]["ARM"]["color_hex"], "#b066b4")
         self.assertEqual(manifest_payload["palette_id"], "tno")
+        self.assertEqual(manifest_payload["style_defaults"]["ocean"]["fillColor"], "#2d4769")
+        self.assertEqual(manifest_payload["style_defaults"]["atlantropa_sea"]["fillColor"], "#203856")
 
     def test_apply_tno_decolonization_metadata_sets_explicit_raj_color(self) -> None:
         countries_payload = {
@@ -1730,10 +1743,22 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 self.assertIn(core_tag, countries, feature_id)
                 self.assertNotEqual(core_tag, "ATL", feature_id)
             if str(props.get("atl_join_mode") or "").strip().lower() == "boolean_weld":
-                self.assertIs(props.get("interactive"), False, feature_id)
+                self.assertIs(props.get("interactive"), True, feature_id)
             else:
                 self.assertIs(props.get("interactive"), True, feature_id)
         for props in atlshl_props:
+            self.assertIs(props.get("interactive"), False, props.get("id"))
+        helper_prefixes = ("ATLWLD_", "ATLSEA_FILL_")
+        helper_roles = {"shore_seal", "sea_completion", "donor_sea"}
+        helper_props = [
+            geometry.get("properties", {})
+            for geometry in political_geometries
+            if str(geometry.get("properties", {}).get("id", "")).startswith(helper_prefixes)
+            or str(geometry.get("properties", {}).get("atl_geometry_role", "")).strip().lower() in helper_roles
+            or str(geometry.get("properties", {}).get("atl_join_mode", "")).strip().lower() == "gap_fill"
+        ]
+        self.assertTrue(helper_props)
+        for props in helper_props:
             self.assertIs(props.get("interactive"), False, props.get("id"))
 
     def test_atlantropa_west_med_owner_overrides_use_existing_algeria_subject_tags(self) -> None:

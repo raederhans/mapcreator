@@ -14675,7 +14675,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "donor_island",
         "atl_join_mode": "boolean_weld",
-        "interactive": false,
+        "interactive": true,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -15987,7 +15987,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "donor_island",
         "atl_join_mode": "boolean_weld",
-        "interactive": false,
+        "interactive": true,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29139,7 +29139,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29193,7 +29193,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29263,7 +29263,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29317,7 +29317,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29471,7 +29471,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29649,7 +29649,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29711,7 +29711,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29773,7 +29773,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29827,7 +29827,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29889,7 +29889,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29951,7 +29951,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -29993,7 +29993,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30035,7 +30035,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30121,7 +30121,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30307,7 +30307,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30541,7 +30541,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30619,7 +30619,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30709,7 +30709,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30791,7 +30791,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -30885,7 +30885,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31103,7 +31103,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31225,7 +31225,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31435,7 +31435,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31511,7 +31511,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31585,7 +31585,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31809,7 +31809,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -31965,7 +31965,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32043,7 +32043,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32105,7 +32105,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32155,7 +32155,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32201,7 +32201,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32243,7 +32243,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32305,7 +32305,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32347,7 +32347,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32397,7 +32397,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32467,7 +32467,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32513,7 +32513,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32563,7 +32563,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32605,7 +32605,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32655,7 +32655,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32721,7 +32721,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32783,7 +32783,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -32845,7 +32845,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33095,7 +33095,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33141,7 +33141,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33199,7 +33199,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33253,7 +33253,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33399,7 +33399,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33537,7 +33537,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33603,7 +33603,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33705,7 +33705,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33787,7 +33787,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33833,7 +33833,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33891,7 +33891,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33937,7 +33937,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -33983,7 +33983,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34037,7 +34037,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34103,7 +34103,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34149,7 +34149,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34203,7 +34203,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34295,7 +34295,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34375,7 +34375,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34421,7 +34421,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34467,7 +34467,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {
@@ -34509,7 +34509,7 @@
         "atl_surface_kind": "salt_flat_land",
         "atl_geometry_role": "shore_seal",
         "atl_join_mode": "boolean_weld",
-        "interactive": true,
+        "interactive": false,
         "render_as_base_geography": false
       },
       "geometry": {

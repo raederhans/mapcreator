@@ -683,7 +683,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   });
 });
 
-test("Atlantropa land interaction contracts use owner-aware targets with runtime country preserved", () => {
+test("Atlantropa land interaction contracts keep welded donor islands clickable while helpers stay helper-only", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
@@ -705,8 +705,11 @@ test("Atlantropa land interaction contracts use owner-aware targets with runtime
     parentGroupsUseOwnerAwareScope:
       /function resolveParentGroupKey\(feature, featureId\) \{[\s\S]*?getFeatureInteractionCountryCodeNormalized\(feature, featureId\)/.test(rendererSource)
       && /function resolveParentGroupTargetIds\(feature, featureId\) \{[\s\S]*?getInteractionCountryFeatureIds\(feature, featureId\)/.test(rendererSource),
-    booleanWeldIslandCanRenderWithoutBecomingInteractive:
+    booleanWeldDonorIslandHasDedicatedInteractiveEscape:
+      /function isInteractiveAtlantropaBooleanWeldIslandFeature\(feature, featureId = null\) \{[\s\S]*?candidate\.startsWith\("ATLISL_"\)[\s\S]*?getAtlantropaGeometryRole\(feature\) === "donor_island"[\s\S]*?getAtlantropaJoinMode\(feature\) === "boolean_weld"[\s\S]*?\}/.test(rendererSource),
+    booleanWeldIslandCanRenderAndRemainInteractive:
       /function isAtlantropaVisualSupportHelperFeature\(feature, featureId = null\) \{[\s\S]*?joinMode === "gap_fill"[\s\S]*?\}/.test(rendererSource)
+      && /function isAtlantropaSupportHelperFeature\(feature, featureId = null\) \{[\s\S]*?isInteractiveAtlantropaBooleanWeldIslandFeature\(feature, featureId\)[\s\S]*?return false;[\s\S]*?joinMode === "boolean_weld"[\s\S]*?\}/.test(rendererSource)
       && /function isPoliticalInteractionRenderableFeature\(feature, featureId = null\) \{[\s\S]*?feature\?\.properties\?\.interactive === false[\s\S]*?isAtlantropaSupportHelperFeature\(feature, featureId\)/.test(rendererSource),
     arcticShellCanRenderWithoutBecomingInteractive:
       !/isScenarioShellFeature/.test(visualRenderableBody)

@@ -132,7 +132,7 @@ async function readBoundaryRuntime(page) {
           || geometryRole === "sea_completion"
           || geometryRole === "donor_sea"
           || joinMode === "gap_fill"
-          || joinMode === "boolean_weld";
+          || (joinMode === "boolean_weld" && !(id.startsWith("ATLISL_") && geometryRole === "donor_island"));
       }).length;
     };
 

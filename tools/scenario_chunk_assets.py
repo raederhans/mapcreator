@@ -182,10 +182,21 @@ def _feature_atl_join_mode(feature: dict[str, Any]) -> str:
     return str(_feature_properties(feature).get("atl_join_mode") or "").strip().lower()
 
 
+def _is_interactive_atlantropa_boolean_weld_island(feature: dict[str, Any]) -> bool:
+    feature_id = _feature_identity(feature, 0).strip().upper()
+    if not feature_id.startswith("ATLISL_"):
+        return False
+    geometry_role = _feature_atl_geometry_role(feature)
+    join_mode = _feature_atl_join_mode(feature)
+    return geometry_role == "donor_island" and join_mode == "boolean_weld"
+
+
 def _is_atlantropa_helper_feature(feature: dict[str, Any]) -> bool:
     feature_id = _feature_identity(feature, 0).strip().upper()
     if feature_id.startswith("ATLSHL_") or feature_id.startswith("ATLWLD_") or feature_id.startswith("ATLSEA_FILL_"):
         return True
+    if _is_interactive_atlantropa_boolean_weld_island(feature):
+        return False
     geometry_role = _feature_atl_geometry_role(feature)
     join_mode = _feature_atl_join_mode(feature)
     return (

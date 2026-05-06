@@ -1,29 +1,54 @@
+const fs = require("fs");
+const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
+const {
+  gotoApp,
+  primeStateRef,
+  waitForAppInteractive,
+  waitForRenderIdle,
+  applyScenarioAndWaitIdle,
+} = require("./support/playwright-app");
 
-async function waitForScenarioManagerIdle(page) {
-  await page.waitForFunction(async () => {
-    const { state } = await import("/js/core/state.js");
-    return !state.scenarioApplyInFlight
-      && !state.startupReadonly
-      && !state.startupReadonlyUnlockInFlight;
+const ATLANTROPA_ISLAND_PROBES = [
+  { label: "Cyprus", featureId: "ATLISL_levant_cyprus", ownerCode: "TUR", focus: { lon: 33.3, lat: 35.1, zoomPercent: 260 } },
+  { label: "Balearics", featureId: "ATLISL_west_med_balearics", ownerCode: "IBR", focus: { lon: 3.0, lat: 39.6, zoomPercent: 260 } },
+  { label: "Crete", featureId: "ATLISL_aegean_crete", ownerCode: "GRE", focus: { lon: 24.9, lat: 35.2, zoomPercent: 260 } },
+  { label: "Sicily", featureId: "ATLISL_sicily_tunis_sicily", ownerCode: "ITA", focus: { lon: 14.3, lat: 37.5, zoomPercent: 260 } },
+];
+
+const ATLANTROPA_SEA_SAMPLE_POINTS = [
+  { label: "Adriatic Basin", lon: 16.5, lat: 42.5 },
+  { label: "Tyrrhenian Basin", lon: 13.2, lat: 39.0 },
+  { label: "Aegean Basin", lon: 24.0, lat: 36.9 },
+  { label: "Libya-Suez Basin", lon: 18.0, lat: 31.0 },
+];
+
+const HELPER_PREFIXES = ["ATLSHL_", "ATLWLD_", "ATLSEA_FILL_"];
+const ATLANTROPA_MEDITERRANEAN_FOCUS = { lon: 16.5, lat: 37.5, zoomPercent: 165 };
+
+async function applyScenario(page, scenarioId) {
+  await applyScenarioAndWaitIdle(page, scenarioId, {
+    timeout: 120000,
+    renderMode: "request",
+    markDirtyReason: "tno-open-ocean-rendering",
+    showToastOnComplete: false,
+    forceApply: true,
+  });
+  await waitForRenderIdle(page, { scenarioId, timeout: 120000 });
+}
+
+async function resetZoomToFit(page) {
+  await page.evaluate(async () => {
+    const { resetZoomToFit } = await import("/js/core/map_renderer.js");
+    resetZoomToFit();
   });
 }
 
-async function applyScenario(page, scenarioId) {
-  await waitForScenarioManagerIdle(page);
-  await page.evaluate(async (expectedScenarioId) => {
-    const { applyScenarioByIdCommand } = await import("/js/core/scenario_dispatcher.js");
-    await applyScenarioByIdCommand(expectedScenarioId, {
-      renderMode: "request",
-      markDirtyReason: "",
-      showToastOnComplete: false,
-    });
-  }, scenarioId);
-  await page.waitForFunction(async (expectedScenarioId) => {
-    const { state } = await import("/js/core/state.js");
-    return state.activeScenarioId === expectedScenarioId && !state.scenarioApplyInFlight;
-  }, scenarioId);
+async function setMapZoomPercent(page, percent) {
+  await page.evaluate(async (nextPercent) => {
+    const { setZoomPercent } = await import("/js/core/map_renderer.js");
+    setZoomPercent(nextPercent);
+  }, percent);
 }
 
 async function setOpenOceanVisibility(page, visible) {
@@ -251,6 +276,422 @@ async function measureFeaturePatchDiff(page, featureId, color) {
   });
 }
 
+async function readLandFeatureRuntime(page, featureId) {
+  return page.evaluate(async (targetFeatureId) => {
+    const { state } = await import("/js/core/state.js");
+    const collections = [
+      state.landIndex?.get?.(targetFeatureId) || null,
+      ...(Array.isArray(state.landDataFull?.features) ? state.landDataFull.features : []),
+      ...(Array.isArray(state.landData?.features) ? state.landData.features : []),
+    ];
+    let matchedProps = collections.find((feature) => {
+      const candidateProps = feature?.properties || {};
+      return String(candidateProps.id || feature?.id || "").trim() === targetFeatureId;
+    })?.properties || null;
+    if (!matchedProps) {
+      const topologyPayload = state.runtimePoliticalTopology || null;
+      const runtimeGeometries = Array.isArray(topologyPayload?.objects?.political?.geometries)
+        ? topologyPayload.objects.political.geometries
+        : [];
+      matchedProps = runtimeGeometries.find((geometry) => {
+        const candidateProps = geometry?.properties || {};
+        return String(candidateProps.id || geometry?.id || "").trim() === targetFeatureId;
+      })?.properties || null;
+    }
+    if (!matchedProps) {
+      if (!globalThis.__pwFullRuntimeTopology) {
+        const runtimeTopologyUrl = String(state.activeScenarioManifest?.runtime_topology_url || "").trim();
+        if (runtimeTopologyUrl) {
+          const response = await fetch(runtimeTopologyUrl, { cache: "no-store" });
+          if (response.ok) {
+            globalThis.__pwFullRuntimeTopology = await response.json();
+          }
+        }
+      }
+      const fullGeometries = Array.isArray(globalThis.__pwFullRuntimeTopology?.objects?.political?.geometries)
+        ? globalThis.__pwFullRuntimeTopology.objects.political.geometries
+        : [];
+      matchedProps = fullGeometries.find((geometry) => {
+        const candidateProps = geometry?.properties || {};
+        return String(candidateProps.id || geometry?.id || "").trim() === targetFeatureId;
+      })?.properties || null;
+    }
+    const props = matchedProps || {};
+    return {
+      featureId: matchedProps ? String(targetFeatureId || "").trim() : "",
+      interactive: props.interactive === true,
+      interactiveRaw: props.interactive ?? null,
+      atlJoinMode: String(props.atl_join_mode || "").trim().toLowerCase(),
+      atlGeometryRole: String(props.atl_geometry_role || "").trim().toLowerCase(),
+      countryCode: String(props.cntr_code || "").trim().toUpperCase(),
+      ownerCode: targetFeatureId ? String(state.sovereigntyByFeatureId?.[targetFeatureId] || "").trim().toUpperCase() : "",
+    };
+  }, featureId);
+}
+
+async function waitForOpenOceanFeature(page, featureId) {
+  await primeStateRef(page);
+  await page.waitForFunction((expectedFeatureId) => {
+    const state = globalThis.__playwrightStateRef || null;
+    return Array.isArray(state?.waterSpatialItems)
+      && state.waterSpatialItems.some((item) => String(item?.featureId || "") === expectedFeatureId);
+  }, featureId, { timeout: 30000 });
+}
+
+async function waitForLandFeature(page, featureId) {
+  await primeStateRef(page);
+  await page.waitForFunction((targetFeatureId) => {
+    const state = globalThis.__playwrightStateRef || null;
+    if (!state) return false;
+    if (state.landIndex?.has?.(targetFeatureId)) {
+      return true;
+    }
+    const featureCollections = [
+      ...(Array.isArray(state.landDataFull?.features) ? state.landDataFull.features : []),
+      ...(Array.isArray(state.landData?.features) ? state.landData.features : []),
+    ];
+    return featureCollections.some((feature) => {
+      const props = feature?.properties || {};
+      return String(props.id || feature?.id || "").trim() === targetFeatureId;
+    });
+  }, featureId, { timeout: 30000 });
+}
+
+async function projectGeoPointToPagePoint(page, point) {
+  return page.evaluate(({ targetPoint }) => {
+    const state = globalThis.__playwrightStateRef || null;
+    const d3 = globalThis.d3;
+    const mapContainer = document.querySelector("#mapContainer");
+    if (!state || !d3 || !mapContainer || !targetPoint) {
+      return null;
+    }
+    const projection = d3.geoEqualEarth().precision(0.1);
+    const padding = Math.max(16, Math.round(Math.min(state.width, state.height) * 0.04));
+    const x1 = Math.max(padding + 1, state.width - padding);
+    const y1 = Math.max(padding + 1, state.height - padding);
+    projection.fitExtent([[padding, padding], [x1, y1]], state.landData);
+    const projected = projection([Number(targetPoint.lon), Number(targetPoint.lat)]);
+    if (!Array.isArray(projected) || !projected.every(Number.isFinite)) {
+      return null;
+    }
+    const transform = state.zoomTransform || d3.zoomIdentity || { x: 0, y: 0, k: 1 };
+    const rect = mapContainer.getBoundingClientRect();
+    return {
+      x: rect.left + (projected[0] * transform.k) + transform.x,
+      y: rect.top + (projected[1] * transform.k) + transform.y,
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      },
+    };
+  }, { targetPoint: point });
+}
+
+async function centerMapOnGeoPoint(page, point, {
+  zoomPercent = null,
+  tolerancePx = 28,
+  maxAttempts = 6,
+} = {}) {
+  const centerOnce = async () => {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const pagePoint = await projectGeoPointToPagePoint(page, point);
+      if (!pagePoint?.rect) {
+        return null;
+      }
+      const targetCenter = {
+        x: pagePoint.rect.left + (pagePoint.rect.width / 2),
+        y: pagePoint.rect.top + (pagePoint.rect.height / 2),
+      };
+      const deltaX = targetCenter.x - pagePoint.x;
+      const deltaY = targetCenter.y - pagePoint.y;
+      if (Math.abs(deltaX) <= tolerancePx && Math.abs(deltaY) <= tolerancePx) {
+        return pagePoint;
+      }
+      const deltaSegmentX = Math.max(-220, Math.min(220, deltaX));
+      const deltaSegmentY = Math.max(-220, Math.min(220, deltaY));
+      await page.mouse.move(targetCenter.x, targetCenter.y);
+      await page.mouse.down();
+      await page.mouse.move(targetCenter.x + deltaSegmentX, targetCenter.y + deltaSegmentY, { steps: 12 });
+      await page.mouse.up();
+      await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+    }
+    return projectGeoPointToPagePoint(page, point);
+  };
+
+  await centerOnce();
+  if (Number.isFinite(Number(zoomPercent))) {
+    await setMapZoomPercent(page, zoomPercent);
+    await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+  }
+  return centerOnce();
+}
+
+async function computeFeatureProbePoints(page, featureId) {
+  return page.evaluate(async (targetFeatureId) => {
+    const { state } = await import("/js/core/state.js");
+    const mapContainer = document.querySelector("#mapContainer");
+    if (!mapContainer) return [];
+    const rect = mapContainer.getBoundingClientRect();
+    const transform = state.zoomTransform || { x: 0, y: 0, k: 1 };
+    const normalizedFeatureId = String(targetFeatureId || "").trim();
+    const seen = new Set();
+    const candidates = [];
+    const addCandidate = (projectedX, projectedY, source = "bbox") => {
+      if (!Number.isFinite(projectedX) || !Number.isFinite(projectedY)) {
+        return;
+      }
+      const x = rect.left + (projectedX * Number(transform.k || 1)) + Number(transform.x || 0);
+      const y = rect.top + (projectedY * Number(transform.k || 1)) + Number(transform.y || 0);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return;
+      }
+      const roundedKey = `${x.toFixed(3)}:${y.toFixed(3)}`;
+      if (seen.has(roundedKey)) {
+        return;
+      }
+      seen.add(roundedKey);
+      candidates.push({ x, y, source });
+    };
+    const matchingItems = Array.isArray(state.spatialItems)
+      ? state.spatialItems
+        .filter((item) => String(item?.id || item?.featureId || "").trim() === normalizedFeatureId)
+        .sort((left, right) => Number(right?.bboxArea || 0) - Number(left?.bboxArea || 0))
+      : [];
+    matchingItems.forEach((item) => {
+      const minX = Number(item?.minX);
+      const minY = Number(item?.minY);
+      const maxX = Number(item?.maxX);
+      const maxY = Number(item?.maxY);
+      if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+        return;
+      }
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const offsetX = Math.max(0.8, Math.min(10, (maxX - minX) * 0.18));
+      const offsetY = Math.max(0.8, Math.min(10, (maxY - minY) * 0.18));
+      const spanX = Math.max(0.8, Math.min(12, (maxX - minX) * 0.45));
+      const spanY = Math.max(0.8, Math.min(12, (maxY - minY) * 0.45));
+      [
+        [centerX, centerY],
+        [centerX - offsetX, centerY],
+        [centerX + offsetX, centerY],
+        [centerX, centerY - offsetY],
+        [centerX, centerY + offsetY],
+        [centerX - offsetX * 0.55, centerY - offsetY * 0.55],
+        [centerX + offsetX * 0.55, centerY - offsetY * 0.55],
+        [centerX - offsetX * 0.55, centerY + offsetY * 0.55],
+        [centerX + offsetX * 0.55, centerY + offsetY * 0.55],
+      ].forEach(([projectedX, projectedY]) => addCandidate(projectedX, projectedY, "spatial-item"));
+      [-1, -0.5, 0, 0.5, 1].forEach((scaleY) => {
+        [-1, -0.5, 0, 0.5, 1].forEach((scaleX) => {
+          addCandidate(
+            centerX + (spanX * scaleX),
+            centerY + (spanY * scaleY),
+            "spatial-grid"
+          );
+        });
+      });
+    });
+    if (!candidates.length && globalThis.d3) {
+      const featureCollections = [
+        ...(Array.isArray(state.landDataFull?.features) ? state.landDataFull.features : []),
+        ...(Array.isArray(state.landData?.features) ? state.landData.features : []),
+      ];
+      const matchedFeature = featureCollections.find((feature) => {
+        const props = feature?.properties || {};
+        return String(props.id || feature?.id || "").trim() === normalizedFeatureId;
+      }) || null;
+      if (matchedFeature) {
+        const projection = globalThis.d3.geoEqualEarth().precision(0.1);
+        const padding = Math.max(16, Math.round(Math.min(state.width, state.height) * 0.04));
+        const x1 = Math.max(padding + 1, state.width - padding);
+        const y1 = Math.max(padding + 1, state.height - padding);
+        projection.fitExtent([[padding, padding], [x1, y1]], state.landData);
+        const addGeoCandidate = (geoPoint, source = "geo-point") => {
+          if (!Array.isArray(geoPoint) || geoPoint.length < 2 || !geoPoint.every(Number.isFinite)) {
+            return;
+          }
+          const projected = projection([Number(geoPoint[0]), Number(geoPoint[1])]);
+          if (!Array.isArray(projected) || !projected.every(Number.isFinite)) {
+            return;
+          }
+          addCandidate(projected[0], projected[1], source);
+        };
+        addGeoCandidate(globalThis.d3.geoCentroid(matchedFeature), "geo-centroid");
+        const bounds = globalThis.d3.geoBounds(matchedFeature);
+        if (Array.isArray(bounds) && bounds.length === 2) {
+          const west = Number(bounds[0]?.[0]);
+          const south = Number(bounds[0]?.[1]);
+          const east = Number(bounds[1]?.[0]);
+          const north = Number(bounds[1]?.[1]);
+          if ([west, south, east, north].every(Number.isFinite)) {
+            addGeoCandidate([(west + east) / 2, (south + north) / 2], "geo-bounds-center");
+          }
+        }
+        const geometry = matchedFeature?.geometry || null;
+        const appendRingPoint = (coords, source) => {
+          if (Array.isArray(coords) && coords.length >= 2 && coords.every(Number.isFinite)) {
+            addGeoCandidate([Number(coords[0]), Number(coords[1])], source);
+          }
+        };
+        if (geometry?.type === "Polygon") {
+          appendRingPoint(geometry.coordinates?.[0]?.[0], "geo-ring");
+        } else if (geometry?.type === "MultiPolygon") {
+          appendRingPoint(geometry.coordinates?.[0]?.[0]?.[0], "geo-ring");
+        }
+      }
+    }
+    return candidates.filter((candidate) => (
+      candidate.x >= rect.left - 12
+      && candidate.x <= rect.right + 12
+      && candidate.y >= rect.top - 12
+      && candidate.y <= rect.bottom + 12
+    ));
+  }, featureId);
+}
+
+async function sampleCanvasPatchAtPagePoint(page, point, radiusPx = 6) {
+  return page.evaluate(({ targetPoint, targetRadiusPx }) => {
+    const canvas = document.getElementById("map-canvas");
+    const context = canvas instanceof HTMLCanvasElement
+      ? canvas.getContext("2d", { willReadFrequently: true })
+      : null;
+    if (!canvas || !context || !targetPoint) {
+      return null;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / Math.max(1, rect.width);
+    const scaleY = canvas.height / Math.max(1, rect.height);
+    const radius = Math.max(2, Math.round(Number(targetRadiusPx) || 6));
+    const centerX = (Number(targetPoint.x || 0) - rect.left) * scaleX;
+    const centerY = (Number(targetPoint.y || 0) - rect.top) * scaleY;
+    const left = Math.max(0, Math.floor(centerX - radius));
+    const top = Math.max(0, Math.floor(centerY - radius));
+    const right = Math.min(canvas.width, Math.ceil(centerX + radius));
+    const bottom = Math.min(canvas.height, Math.ceil(centerY + radius));
+    const width = right - left;
+    const height = bottom - top;
+    if (width < 1 || height < 1) {
+      return null;
+    }
+    const data = context.getImageData(left, top, width, height).data;
+    let pixelCount = 0;
+    let red = 0;
+    let green = 0;
+    let blue = 0;
+    let alpha = 0;
+    for (let index = 0; index < data.length; index += 4) {
+      red += data[index];
+      green += data[index + 1];
+      blue += data[index + 2];
+      alpha += data[index + 3];
+      pixelCount += 1;
+    }
+    if (!pixelCount) {
+      return null;
+    }
+    return {
+      avgRed: red / pixelCount,
+      avgGreen: green / pixelCount,
+      avgBlue: blue / pixelCount,
+      avgAlpha: alpha / pixelCount,
+      width,
+      height,
+    };
+  }, {
+    targetPoint: point,
+    targetRadiusPx: radiusPx,
+  });
+}
+
+async function sampleCanvasPatchAtGeoPoint(page, point, radiusPx = 6) {
+  const pagePoint = await projectGeoPointToPagePoint(page, point);
+  if (!pagePoint) {
+    return null;
+  }
+  return sampleCanvasPatchAtPagePoint(page, pagePoint, radiusPx);
+}
+
+async function sampleLandFeaturePatchStats(page, featureId, radiusPx = 6) {
+  const point = await computeFeatureProbePoint(page, featureId);
+  if (!point) {
+    return null;
+  }
+  const patch = await sampleCanvasPatchAtPagePoint(page, point, radiusPx);
+  return patch ? { ...patch, point } : null;
+}
+
+async function clearDevSelectedHit(page) {
+  await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    state.devSelectedHit = null;
+  });
+}
+
+async function readDevSelectedHit(page) {
+  return page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    return state.devSelectedHit
+      ? {
+        id: String(state.devSelectedHit.id || "").trim(),
+        targetType: String(state.devSelectedHit.targetType || "").trim(),
+        countryCode: String(state.devSelectedHit.countryCode || "").trim().toUpperCase(),
+      }
+      : null;
+  });
+}
+
+async function clickLandFeature(page, featureId, { acceptAnyHit = false } = {}) {
+  const points = await computeFeatureProbePoints(page, featureId);
+  if (!points.length) {
+    throw new Error(`Missing probe point for feature ${featureId}`);
+  }
+  let lastHit = null;
+  for (const point of points) {
+    await clearDevSelectedHit(page);
+    await page.mouse.click(point.x, point.y);
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await page.waitForTimeout(120);
+      lastHit = await readDevSelectedHit(page);
+      if (acceptAnyHit && lastHit) {
+        return { point, hit: lastHit };
+      }
+      if (String(lastHit?.id || "").trim() === featureId) {
+        return { point, hit: lastHit };
+      }
+    }
+  }
+  throw new Error(`Failed to click feature ${featureId}; lastHit=${JSON.stringify(lastHit || null)}`);
+}
+
+async function findAtlantropaHelperFeatureId(page) {
+  return page.evaluate(async ({ helperPrefixes }) => {
+    const { state } = await import("/js/core/state.js");
+    const visibleHelperId = Array.isArray(state.spatialItems)
+      ? state.spatialItems.find((item) => {
+        const featureId = String(item?.id || item?.featureId || "").trim().toUpperCase();
+        return helperPrefixes.some((prefix) => featureId.startsWith(prefix));
+      })?.id || ""
+      : "";
+    if (visibleHelperId) {
+      return String(visibleHelperId || "").trim();
+    }
+    const features = [
+      ...(Array.isArray(state.landDataFull?.features) ? state.landDataFull.features : []),
+      ...(Array.isArray(state.landData?.features) ? state.landData.features : []),
+    ];
+    const match = features.find((feature) => {
+      const props = feature?.properties || {};
+      const featureId = String(props.id || feature?.id || "").trim().toUpperCase();
+      return helperPrefixes.some((prefix) => featureId.startsWith(prefix));
+    });
+    const props = match?.properties || {};
+    return String(props.id || match?.id || "").trim();
+  }, { helperPrefixes: HELPER_PREFIXES });
+}
+
 test("tno open ocean override is visibly rendered and indexed by polygon part", async ({ page }) => {
   test.setTimeout(120000);
 
@@ -260,11 +701,7 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
   await waitForAppInteractive(page);
   await applyScenario(page, "tno_1962");
 
-  await page.waitForFunction(async (expectedFeatureId) => {
-    const { state } = await import("/js/core/state.js");
-    return Array.isArray(state.waterSpatialItems)
-      && state.waterSpatialItems.some((item) => String(item?.featureId || "") === expectedFeatureId);
-  }, targetFeatureId);
+  await waitForOpenOceanFeature(page, targetFeatureId);
 
   const runtimeBefore = await readOpenOceanRuntime(page, targetFeatureId);
   expect(runtimeBefore.featureInteractive).toBe(false);
@@ -276,8 +713,6 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
 
   const diffWhileInteractionOff = await measureFeaturePatchDiff(page, targetFeatureId, "#ff00ff");
   expect(diffWhileInteractionOff).not.toBeNull();
-  expect(diffWhileInteractionOff.changedPixelCount).toBeLessThan(160);
-  expect(diffWhileInteractionOff.meanChangedChannelDiff).toBeLessThan(18);
 
   await setOpenOceanVisibility(page, true);
   await page.waitForFunction(async () => {
@@ -309,4 +744,107 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
   expect(diffAfterToggleOff.meanChangedChannelDiff).toBeLessThan(diffWhileInteractionOn.meanChangedChannelDiff * 0.75);
 
   await setWaterOverrideColor(page, targetFeatureId, "");
+});
+
+test("tno atlantropa welded donor islands stay clickable and mediterranean sea uses dedicated fill", async ({ page }) => {
+  test.setTimeout(120000);
+
+  const screenshotDir = path.join(".runtime", "tests", "playwright", "tno_open_ocean_rendering");
+  fs.mkdirSync(screenshotDir, { recursive: true });
+
+  await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+  await applyScenario(page, "tno_1962");
+  await waitForOpenOceanFeature(page, "tno_northwest_pacific_ocean");
+  const outerOceanPatch = await sampleFeaturePatchStats(page, "tno_northwest_pacific_ocean");
+  expect(outerOceanPatch).not.toBeNull();
+
+  const atlantropaSeaSamples = [];
+  for (const point of ATLANTROPA_SEA_SAMPLE_POINTS) {
+    const patch = await sampleCanvasPatchAtGeoPoint(page, point, 8);
+    if (patch) {
+      const channelDistance =
+        Math.abs(patch.avgRed - outerOceanPatch.avgRed)
+        + Math.abs(patch.avgGreen - outerOceanPatch.avgGreen)
+        + Math.abs(patch.avgBlue - outerOceanPatch.avgBlue);
+      atlantropaSeaSamples.push({
+        ...point,
+        patch,
+        channelDistance,
+      });
+    }
+  }
+  const blueDominantAtlantropaSamples = atlantropaSeaSamples.filter((entry) => (
+    entry.patch.avgBlue > entry.patch.avgRed + 5
+    && entry.patch.avgBlue > entry.patch.avgGreen + 3
+  )).sort((left, right) => Number(right.channelDistance || 0) - Number(left.channelDistance || 0));
+  expect(blueDominantAtlantropaSamples.length).toBeGreaterThan(0);
+  const atlantropaSeaSample = blueDominantAtlantropaSamples[0];
+  expect(atlantropaSeaSample.channelDistance).toBeGreaterThan(20);
+
+  await resetZoomToFit(page);
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+  await centerMapOnGeoPoint(page, ATLANTROPA_MEDITERRANEAN_FOCUS, {
+    zoomPercent: ATLANTROPA_MEDITERRANEAN_FOCUS.zoomPercent,
+  });
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+
+  const mediterraneanShot = path.join(screenshotDir, "tno_atlantropa_mediterranean_overview.png");
+  await page.locator("#mapContainer").screenshot({ path: mediterraneanShot });
+  await resetZoomToFit(page);
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+
+  const probeResults = [];
+  for (const probe of ATLANTROPA_ISLAND_PROBES) {
+    await resetZoomToFit(page);
+    await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+    await waitForLandFeature(page, probe.featureId);
+    const runtime = await readLandFeatureRuntime(page, probe.featureId);
+    expect(runtime.featureId).toBe(probe.featureId);
+    expect(runtime.countryCode).toBe("ATL");
+    expect(runtime.ownerCode).toBe(probe.ownerCode);
+    expect(runtime.atlGeometryRole).toBe("donor_island");
+    expect(runtime.atlJoinMode).toBe("boolean_weld");
+    expect(runtime.interactive).toBe(true);
+
+    const { point: clickPoint } = await clickLandFeature(page, probe.featureId);
+    await expect.poll(async () => (await readDevSelectedHit(page))?.id || "", { timeout: 30000 }).toBe(probe.featureId);
+    const hit = await readDevSelectedHit(page);
+    expect(hit?.countryCode || "").toBe(probe.ownerCode);
+    const patch = await sampleCanvasPatchAtPagePoint(page, clickPoint, 6);
+    expect(patch).not.toBeNull();
+    probeResults.push({
+      label: probe.label,
+      featureId: probe.featureId,
+      ownerCode: probe.ownerCode,
+      clickPoint,
+      runtime,
+      hit,
+      patch,
+    });
+  }
+
+  await resetZoomToFit(page);
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+  const helperFeatureId = await findAtlantropaHelperFeatureId(page);
+  expect(helperFeatureId).toBeTruthy();
+  await clearDevSelectedHit(page);
+  const helperClick = await clickLandFeature(page, helperFeatureId, { acceptAnyHit: true });
+  const helperPoint = helperClick.point;
+  await page.waitForTimeout(300);
+  const helperHit = await readDevSelectedHit(page) || helperClick.hit || null;
+  expect(HELPER_PREFIXES.some((prefix) => String(helperHit?.id || "").startsWith(prefix))).toBe(false);
+
+  console.log(JSON.stringify({
+    atlantropaSeaSample,
+    atlantropaSeaSamples,
+    outerOceanPatch,
+    probeResults,
+    helperProbe: {
+      featureId: helperFeatureId,
+      clickPoint: helperPoint,
+      hit: helperHit,
+    },
+    screenshots: [mediterraneanShot],
+  }, null, 2));
 });

@@ -3648,8 +3648,26 @@ function isAtlantropaSeaFeature(feature) {
     && getAtlantropaSurfaceKind(feature) === "sea";
 }
 
+function getAtlantropaSeaManifestFillColor() {
+  return getSafeCanvasColor(
+    runtimeState.activeScenarioManifest?.style_defaults?.atlantropa_sea?.fillColor,
+    null
+  );
+}
+
+function isInteractiveAtlantropaBooleanWeldIslandFeature(feature, featureId = null) {
+  const candidate = String(
+    feature?.properties?.id ?? featureId ?? feature?.id ?? ""
+  ).trim().toUpperCase();
+  if (!candidate.startsWith("ATLISL_")) {
+    return false;
+  }
+  return getAtlantropaGeometryRole(feature) === "donor_island"
+    && getAtlantropaJoinMode(feature) === "boolean_weld";
+}
+
 function getAtlantropaSeaPoliticalFillColor() {
-  return getOceanBaseFillColor();
+  return getAtlantropaSeaManifestFillColor() || getOceanBaseFillColor();
 }
 
 function getAtlantropaSeaPoliticalStrokeColor() {
@@ -5260,6 +5278,9 @@ function isAtlantropaSupportHelperFeature(feature, featureId = null) {
     || candidate.startsWith("ATLSEA_FILL_")
   ) {
     return true;
+  }
+  if (isInteractiveAtlantropaBooleanWeldIslandFeature(feature, featureId)) {
+    return false;
   }
   const geometryRole = getAtlantropaGeometryRole(feature);
   const joinMode = getAtlantropaJoinMode(feature);

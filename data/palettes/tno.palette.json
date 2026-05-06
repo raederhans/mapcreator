@@ -40,6 +40,10 @@
     "fill_color": "#2d4769",
     "source": "map/terrain/colormap_water_0.dds:average"
   },
+  "atlantropa_sea": {
+    "fill_color": "#203856",
+    "source": "scenario/tno_1962:atlantropa_sea_fixed"
+  },
   "entries": {
     "AAA": {
       "localized_name": "Argentine Antarctic Sector",
