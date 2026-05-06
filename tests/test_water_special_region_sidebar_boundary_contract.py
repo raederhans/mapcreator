@@ -76,17 +76,18 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('updateSpecialZoneEditorUi: () => callRuntimeHook(state, "updateSpecialZoneEditorUIFn"),', sidebar_content)
         self.assertIn('updateWorkspaceStatus: () => callRuntimeHook(state, "updateWorkspaceStatusFn"),', sidebar_content)
 
-    def test_special_region_sidebar_is_read_only_after_layer_workbench_cutover(self):
+    def test_special_region_sidebar_keeps_legacy_override_compatibility_surface(self):
         owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
 
-        self.assertIn("Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.", owner_content)
-        self.assertIn("specialRegionColorInput.disabled = true;", owner_content)
-        self.assertIn("clearSpecialRegionColorBtn.disabled = true;", owner_content)
-        self.assertNotIn("runtimeState.specialRegionOverrides[selectedId]", owner_content)
-        self.assertNotIn("delete runtimeState.specialRegionOverrides", owner_content)
-        self.assertNotIn("special-overrides:", renderer_content)
-        self.assertNotIn("runtimeState.specialRegionOverrides?.", renderer_content)
+        self.assertIn('createEmptyNote(t("Paint special regions to create an override list.", "ui"))', owner_content)
+        self.assertIn("specialRegionColorInput.disabled = false;", owner_content)
+        self.assertIn("clearSpecialRegionColorBtn.disabled = !hasOverride;", owner_content)
+        self.assertIn("runtimeState.specialRegionOverrides[selectedId] = nextColor;", owner_content)
+        self.assertIn("delete runtimeState.specialRegionOverrides[selectedId];", owner_content)
+        self.assertIn("special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}", renderer_content)
+        self.assertIn("getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);", renderer_content)
+        self.assertIn("Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)", renderer_content)
 
     def test_renderer_history_and_import_funnel_keep_water_special_callbacks(self):
         map_renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

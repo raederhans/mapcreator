@@ -2761,6 +2761,7 @@ function getScenarioSpecialVisualRevisionToken() {
     `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
     `special-ref:${getObjectIdentityToken(runtimeState.scenarioSpecialRegionsData, "scenario-special")}`,
     `special-count:${getFeatureCollectionFeatureCount(runtimeState.scenarioSpecialRegionsData)}`,
+    `special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}`,
     runtimeState.showScenarioSpecialRegions ? "scenario-special:on" : "scenario-special:off",
   ].join("|");
 }
@@ -3240,7 +3241,12 @@ function getSpecialRegionDefaultStyle(feature) {
 }
 
 function getSpecialRegionColor(id, feature = null) {
-  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(String(id || "").trim())).fill;
+  const resolvedId = String(id || "").trim();
+  // History restore and older scenario snapshots can still carry legacy
+  // special-region overrides, so the renderer continues to honor them here.
+  const override = getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);
+  if (override) return override;
+  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(resolvedId)).fill;
 }
 
 function getSpecialRegionStrokeColor(feature) {
@@ -3248,6 +3254,10 @@ function getSpecialRegionStrokeColor(feature) {
 }
 
 function getSpecialRegionOpacity(feature, id) {
+  const resolvedId = String(id || "").trim();
+  if (Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)) {
+    return 1;
+  }
   return getSpecialRegionDefaultStyle(feature).opacity;
 }
 

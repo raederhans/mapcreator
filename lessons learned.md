@@ -1501,3 +1501,9 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 2. 退出旧编辑主路径时，runtime facade 也要同步退休写口
 - 只禁用按钮仍可能留下双击完成、facade 调用、测试 helper 这类写入口。
 - 更稳的做法是让旧 `start/finish/delete` runtime API 清理临时状态并返回 `false`，再用边界测试锁住“不再 push manual features”。
+
+## 2026-05-05 - special region compatibility retirement
+
+### 1. 迁移中的旧状态字段只要还会被 history 或 startup 恢复，renderer 和 sidebar 就要继续保留兼容面
+- 这次 `specialRegionOverrides` 已从新 workbench 主路径退休，但 history restore 仍会回填它；如果同步拿掉 sidebar 写口和 renderer 读口，地图就会出现“能选中、不能改色、恢复后不渲染”的直接回退。
+- 更稳的做法是：先确认旧字段已经从 history、startup hydration、scenario assets 全链路退出，再删最后一层 UI/renderer compatibility surface。
