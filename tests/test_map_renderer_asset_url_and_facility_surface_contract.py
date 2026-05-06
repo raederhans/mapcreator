@@ -7,6 +7,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 ASSET_URL_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "asset_url_policy.js"
 FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface.js"
 FACADE_DATA_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
+TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
 
 
 class MapRendererAssetUrlAndFacilitySurfaceContractTest(unittest.TestCase):
@@ -65,6 +66,15 @@ class MapRendererAssetUrlAndFacilitySurfaceContractTest(unittest.TestCase):
         self.assertIn("function applyFacilityInfoCardState(entry, {", owner_content)
         self.assertIn("container.replaceChildren();", owner_content)
         self.assertIn("valueNode.textContent = String(row?.value || \"\");", owner_content)
+        self.assertNotIn("transport_facility_icons", owner_content)
+        self.assertIn("transport_facility_icons", TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8"))
+
+    def test_transport_facility_icon_atlas_is_inside_pages_shared_js_tree(self):
+        pages_dist_content = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
+        atlas_path = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icon_atlas.png"
+
+        self.assertTrue(atlas_path.exists())
+        self.assertIn('APP_SHARED_DIRS = ("css", "js", "vendor")', pages_dist_content)
 
 
 if __name__ == "__main__":

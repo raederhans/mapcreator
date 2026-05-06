@@ -1538,3 +1538,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 按 owner 分出来的 detail chunk 可能因为海外领土或跨洲 owner 得到超大 bbox，Mediterranean 视口会误选 USA/JAP/CAN 等零本地 feature chunk，放大缩放卡顿。
 - 更稳的做法是在 chunk manifest 中写入 per-feature bounds，选择时用 feature bounds 过滤和排序；chunk 总 bbox 只作为旧 manifest 的兼容路径。
 - 测试里临时覆盖 state hook 时，要保存 `readRegisteredRuntimeHookSource(...)` 得到的原始函数；保存 dispatcher 再恢复会造成 hook 递归。
+
+## 2026-05-06 - transport facility icon atlas
+
+- 新增地图点位图标资产时，加载状态必须先接入交互命中链；atlas loading/error 阶段清空 hover entry，ready 后再注册，避免出现看不见但可点击的目标。

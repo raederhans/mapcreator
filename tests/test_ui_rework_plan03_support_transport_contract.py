@@ -3,6 +3,7 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+RIVER_LAYER_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "river_layer_render_owner.js"
 
 
 class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
@@ -95,11 +96,11 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             self.assertIn(token, index_content)
 
     def test_river_dash_style_applies_to_outline_and_core_strokes(self):
-        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
-        self.assertIn("const resolvedDashPattern = dashPattern.map((value) => value / scale);", renderer_content)
-        self.assertGreaterEqual(renderer_content.count("context.setLineDash(resolvedDashPattern);"), 2)
-        self.assertIn('dashStyle: String(cfg.dashStyle || "solid"),', renderer_content)
-        self.assertIn("dashPattern: resolvedDashPattern,", renderer_content)
+        owner_content = RIVER_LAYER_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        self.assertIn("const resolvedDashPattern = dashPattern.map((value) => value / scale);", owner_content)
+        self.assertGreaterEqual(owner_content.count("context.setLineDash(resolvedDashPattern);"), 2)
+        self.assertIn('dashStyle: String(cfg.dashStyle || "solid"),', owner_content)
+        self.assertIn("dashPattern: resolvedDashPattern,", owner_content)
 
     def test_transport_shell_uses_phase03_titles_and_status_contract(self):
         content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")

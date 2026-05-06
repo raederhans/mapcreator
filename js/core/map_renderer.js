@@ -1271,6 +1271,7 @@ function getTransportOverviewRenderOwner() {
       getProjection: () => projection,
       mixCanvasColors,
       nowMs,
+      requestRender: (reason) => requestRendererRender(reason),
       setVisibleFacilityHoverEntries,
     },
   });
@@ -13568,7 +13569,7 @@ function setVisibleFacilityHoverEntries(familyId = "", entries = []) {
 }
 
 function getFacilityHoverRadiusPx(entry) {
-  return Math.max(8, Number(entry?.markerRadiusPx || 0) + 5);
+  return Math.max(9, Math.min(18, Number(entry?.markerRadiusPx || 0) + 5));
 }
 
 function getHoveredFacilityEntryFromEvent(event) {
@@ -20446,6 +20447,9 @@ function renderHoverOverlay() {
     .attr("d", (datum) => {
       const [x, y] = datum.screenPoint || [];
       const radius = Math.max(6.8, Number(datum.markerRadiusPx || 0) + 2.8);
+      if (datum.shape === "icon") {
+        return `M ${x - radius} ${y} A ${radius} ${radius} 0 1 0 ${x + radius} ${y} A ${radius} ${radius} 0 1 0 ${x - radius} ${y} Z`;
+      }
       if (datum.shape === "square") {
         return `M ${x - radius} ${y - radius} L ${x + radius} ${y - radius} L ${x + radius} ${y + radius} L ${x - radius} ${y + radius} Z`;
       }
