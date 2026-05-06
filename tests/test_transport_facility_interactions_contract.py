@@ -7,6 +7,7 @@ TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface.js"
 TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
+TRANSPORT_FACILITY_ICONS_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icons.js"
 FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
 
 
@@ -67,6 +68,43 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("function buildFacilityTooltipText", owner_content)
         self.assertIn("buildFacilityInfoCardFieldSections: buildFacilityInfoCardRows", owner_content)
         self.assertIn('facilityInfoCardMoreBtn.textContent = t(expanded ? "Less fields" : "More fields", "ui");', owner_content)
+
+    def test_airport_and_port_layers_use_icon_atlas_and_screen_space_hits(self):
+        content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
+        icon_owner_content = TRANSPORT_FACILITY_ICONS_JS.read_text(encoding="utf-8")
+        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+
+        self.assertTrue((REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icon_atlas.png").exists())
+        self.assertIn("resolveTransportFacilityIconKey", content)
+        self.assertIn("getTransportFacilityIconAtlasImage", content)
+        self.assertIn("context.drawImage(", content)
+        self.assertIn("screenPoint: [entry.screenX, entry.screenY]", content)
+        self.assertIn("const screenX = (x * zoomTransform.k) + zoomTransform.x;", content)
+        self.assertIn("const screenY = (y * zoomTransform.k) + zoomTransform.y;", content)
+        self.assertIn('shape: iconCell ? "icon" : shape', content)
+        self.assertIn("markerRadiusPx: iconCell ? Math.max(5.4, iconSizePx * 0.52) : radiusBase * radiusScale", content)
+        self.assertIn("clearFacilityHoverEntries(normalizedFamilyId);", content)
+        self.assertIn('reason: `icon-atlas-${getTransportFacilityIconAtlasStatus() || "unavailable"}`', content)
+        self.assertIn('if (datum.shape === "icon")', renderer_content)
+        self.assertIn("Math.min(18, Number(entry?.markerRadiusPx || 0) + 5)", renderer_content)
+
+        airport_section = content.split('familyId: "airport"', 1)[1].split("});", 1)[0]
+        port_section = content.split('familyId: "port"', 1)[1].split("});", 1)[0]
+        self.assertNotIn('shape: "diamond"', airport_section)
+        self.assertNotIn('shape: "square"', port_section)
+
+        for token in [
+            "airport_major",
+            "airport_regional",
+            "airport_local",
+            "airport_military",
+            "airport_spaceport",
+            "port_hub",
+            "port_important",
+            "port_local",
+            "TRANSPORT_FACILITY_ICON_ATLAS_URL",
+        ]:
+            self.assertIn(token, icon_owner_content)
 
     def test_facility_entry_builder_uses_current_render_target_canvas(self):
         content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")

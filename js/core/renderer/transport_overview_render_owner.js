@@ -5,6 +5,14 @@ import {
   resolveTransportOverviewLineStrategy,
   resolveTransportOverviewPointStrategy,
 } from "../transport_capability_registry.js";
+import {
+  getTransportFacilityIconAtlasImage,
+  getTransportFacilityIconAtlasStatus,
+  getTransportFacilityIconCell,
+  isTransportFacilityIconAtlasReady,
+  resolveTransportFacilityIconDrawSizePx,
+  resolveTransportFacilityIconKey,
+} from "./transport_facility_icons.js";
 
 export function createTransportOverviewRenderOwner({
   state = {},
@@ -28,18 +36,26 @@ export function createTransportOverviewRenderOwner({
     getProjection = () => null,
     mixCanvasColors,
     nowMs,
+    requestRender = null,
     setVisibleFacilityHoverEntries,
   } = helpers;
 
   let context = null;
   let pathCanvas = null;
   let projection = null;
+  let transportFacilityIconAtlasRenderQueued = false;
 
   function syncRenderTargets() {
     context = getContext();
     pathCanvas = getPathCanvas();
     projection = getProjection();
   }
+
+function requestTransportFacilityIconAtlasRender() {
+  if (transportFacilityIconAtlasRenderQueued) return;
+  transportFacilityIconAtlasRenderQueued = true;
+  if (typeof requestRender === "function") requestRender("transport-facility-icons-ready");
+}
 
 function getContextFacilityThresholdRank(threshold, allowed = []) {
   const normalized = String(threshold || "").trim().toLowerCase();
@@ -268,6 +284,15 @@ function getTransportOverviewRailLabelText(properties = {}, mode = "name") {
   return name;
 }
 
+function getCurrentZoomTransform() {
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  return {
+    x: Number(transform.x || 0),
+    y: Number(transform.y || 0),
+    k: Math.max(0.0001, Number(transform.k || 1)),
+  };
+}
+
 function buildContextFacilityEntries(
   collection,
   thresholdRank = 1,
@@ -287,7 +312,8 @@ function buildContextFacilityEntries(
   const targetCanvas = context?.canvas || null;
   const viewportWidth = Number(targetCanvas?.width || 0);
   const viewportHeight = Number(targetCanvas?.height || 0);
-  const padding = 28;
+  const zoomTransform = getCurrentZoomTransform();
+  const padding = 36;
   const entries = [];
   collection.features.forEach((feature) => {
     if (feature?.geometry?.type !== "Point") return;
@@ -300,16 +326,21 @@ function buildContextFacilityEntries(
     if (importanceRank < thresholdRank) return;
     const x = projected[0];
     const y = projected[1];
+    const screenX = (x * zoomTransform.k) + zoomTransform.x;
+    const screenY = (y * zoomTransform.k) + zoomTransform.y;
     if (
       viewportWidth > 0
       && viewportHeight > 0
-      && (x < -padding || x > viewportWidth + padding || y < -padding || y > viewportHeight + padding)
+      && (screenX < -padding || screenX > viewportWidth + padding || screenY < -padding || screenY > viewportHeight + padding)
     ) {
       return;
     }
     entries.push({
       x,
       y,
+      screenX,
+      screenY,
+      screenScale: zoomTransform.k,
       label: typeof getLabelText === "function"
         ? String(getLabelText(properties, feature) || "").trim()
         : String(properties.name || "").trim(),
@@ -327,6 +358,24 @@ function buildContextFacilityEntries(
     skipped: false,
     reason: "",
   };
+}
+
+function tintTransportFacilityIcon(context2d, { x, y, size, tintColor, strokeColor, opacity, scale, strokeScale }) {
+  context2d.save();
+  context2d.globalCompositeOperation = "source-atop";
+  context2d.globalAlpha = Math.min(0.22, Math.max(0.08, opacity * 0.18));
+  context2d.fillStyle = tintColor;
+  context2d.fillRect(x, y, size, size);
+  context2d.restore();
+
+  context2d.save();
+  context2d.globalAlpha = Math.min(0.72, Math.max(0.28, opacity * 0.48));
+  context2d.strokeStyle = strokeColor;
+  context2d.lineWidth = Math.max(0.75 / scale, (0.95 * strokeScale) / scale);
+  context2d.beginPath();
+  context2d.arc(x + (size / 2), y + (size / 2), size * 0.48, 0, Math.PI * 2);
+  context2d.stroke();
+  context2d.restore();
 }
 
 function drawContextFacilityPointLayer(
@@ -395,6 +444,23 @@ function drawContextFacilityPointLayer(
   }
   const activeHighlightKey = buildFacilityEntryKey(getActiveFacilityHighlightEntry());
   const hoverEntries = [];
+  const usesFacilityIconLayer = normalizedFamilyId === "airport" || normalizedFamilyId === "port";
+  const iconAtlasImage = usesFacilityIconLayer
+    ? getTransportFacilityIconAtlasImage(requestTransportFacilityIconAtlasRender)
+    : null;
+  const canDrawIconAtlas = !!iconAtlasImage && isTransportFacilityIconAtlasReady();
+  if (usesFacilityIconLayer && !canDrawIconAtlas) {
+    clearFacilityHoverEntries(normalizedFamilyId);
+    collectContextMetric(metricName, nowMs() - startedAt, {
+      featureCount: renderState.featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: `icon-atlas-${getTransportFacilityIconAtlasStatus() || "unavailable"}`,
+    });
+    return;
+  }
   let labelCount = 0;
   context.save();
   context.lineJoin = "round";
@@ -402,14 +468,21 @@ function drawContextFacilityPointLayer(
   context.globalAlpha = opacity;
   renderState.entries.forEach((entry) => {
     const radiusBase = entry.importanceRank >= 3 ? 5.2 : entry.importanceRank === 2 ? 4.3 : 3.5;
+    const iconKey = resolveTransportFacilityIconKey(normalizedFamilyId, entry.properties);
+    const iconCell = getTransportFacilityIconCell(iconKey);
+    const iconSizePx = iconCell
+      ? resolveTransportFacilityIconDrawSizePx(normalizedFamilyId, entry.properties, { visualScale: radiusScale })
+      : radiusBase * radiusScale * 2;
+    const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));
     const markerEntry = {
       familyId: normalizedFamilyId,
       stableId: String(entry.properties?.stable_key || entry.properties?.id || entry.label || `${entry.x}:${entry.y}`).trim(),
-      shape,
-      markerRadiusPx: radiusBase * radiusScale,
+      shape: iconCell ? "icon" : shape,
+      iconKey,
+      markerRadiusPx: iconCell ? Math.max(5.4, iconSizePx * 0.52) : radiusBase * radiusScale,
       hoverScale: Number(hoverScale || 1.18),
       highlightStroke: String(highlightStroke || strokeStyle || "#ffffff"),
-      screenPoint: [entry.x, entry.y],
+      screenPoint: [entry.screenX, entry.screenY],
       coordinates: Array.isArray(entry.properties?.__coordinates) ? entry.properties.__coordinates : null,
       properties: entry.properties,
     };
@@ -417,6 +490,35 @@ function drawContextFacilityPointLayer(
     markerEntry.tooltipText = buildFacilityTooltipText(markerEntry);
     hoverEntries.push(markerEntry);
     const highlightFactor = buildFacilityEntryKey(markerEntry) && buildFacilityEntryKey(markerEntry) === activeHighlightKey ? markerEntry.hoverScale : 1;
+    if (iconCell) {
+      if (canDrawIconAtlas) {
+        const iconWorldSize = (iconSizePx * highlightFactor) / zoomScale;
+        const iconLeft = entry.x - (iconWorldSize / 2);
+        const iconTop = entry.y - (iconWorldSize / 2);
+        context.drawImage(
+          iconAtlasImage,
+          iconCell.x,
+          iconCell.y,
+          iconCell.size,
+          iconCell.size,
+          iconLeft,
+          iconTop,
+          iconWorldSize,
+          iconWorldSize,
+        );
+        tintTransportFacilityIcon(context, {
+          x: iconLeft,
+          y: iconTop,
+          size: iconWorldSize,
+          tintColor: fillStyle,
+          strokeColor: highlightFactor > 1 ? markerEntry.highlightStroke : strokeStyle,
+          opacity,
+          scale: zoomScale,
+          strokeScale,
+        });
+      }
+      return;
+    }
     const radius = markerEntry.markerRadiusPx * highlightFactor;
     context.beginPath();
     if (shape === "square") {
@@ -455,12 +557,19 @@ function drawContextFacilityPointLayer(
     if (!entry.label) return;
     const shouldShowLabel = entry.importanceRank >= 3 ? k >= nationalLabelScale : k >= regionalLabelScale;
     if (!shouldShowLabel) return;
-    context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${entry.importanceRank >= 3 ? 11 : 10}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
-    context.lineWidth = 3;
+    const usesFacilityIcon = normalizedFamilyId === "airport" || normalizedFamilyId === "port";
+    const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));
+    const iconSizePx = resolveTransportFacilityIconDrawSizePx(normalizedFamilyId, entry.properties, { visualScale: radiusScale });
+    const fontSize = usesFacilityIcon
+      ? (entry.importanceRank >= 3 ? 11 : 10) / zoomScale
+      : (entry.importanceRank >= 3 ? 11 : 10);
+    const labelOffset = usesFacilityIcon ? ((iconSizePx / 2) + 4) / zoomScale : 8;
+    context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${fontSize}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
+    context.lineWidth = usesFacilityIcon ? 3 / zoomScale : 3;
     context.strokeStyle = "rgba(255,255,255,0.92)";
     context.fillStyle = labelColor;
-    context.strokeText(entry.label, entry.x + 8, entry.y);
-    context.fillText(entry.label, entry.x + 8, entry.y);
+    context.strokeText(entry.label, entry.x + labelOffset, entry.y);
+    context.fillText(entry.label, entry.x + labelOffset, entry.y);
     labelCount += 1;
   });
   context.restore();
@@ -488,7 +597,6 @@ function drawAirportsLayer(k, { interactive = false } = {}) {
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showAirports,
     thresholdRank: strategy.thresholdRank,
-    shape: "diamond",
     fillStyle: visualStyle.fillStyle,
     strokeStyle: visualStyle.strokeStyle,
     labelColor: visualStyle.labelColor,
@@ -518,7 +626,6 @@ function drawPortsLayer(k, { interactive = false } = {}) {
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showPorts,
     thresholdRank: strategy.thresholdRank,
-    shape: "square",
     fillStyle: visualStyle.fillStyle,
     strokeStyle: visualStyle.strokeStyle,
     labelColor: visualStyle.labelColor,

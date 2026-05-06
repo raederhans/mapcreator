@@ -1532,3 +1532,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 某些老文件会混有 CRLF/LF；只补两行注释也可能把整文件伪装成重写。
 - 最稳的做法是先看 `git diff --stat`，一旦出现异常大 diff，立刻统一回仓库当前行尾风格后再继续。
+
+## 2026-05-06 - transport facility icon atlas
+
+- 新增地图点位图标资产时，加载状态必须先接入交互命中链；atlas loading/error 阶段清空 hover entry，ready 后再注册，避免出现看不见但可点击的目标。
