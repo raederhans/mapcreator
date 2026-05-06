@@ -194,7 +194,8 @@ test("chunk promotion visual stage can land before exact-after-settle clears", a
   await setZoomPercent(page, 120, { waitAfterMs: 0 });
   await page.waitForFunction(() => {
     const state = globalThis.__playwrightStateRef || null;
-    return !!state.deferExactAfterSettle || !!state.exactAfterSettleHandle;
+    const probe = state?.__chunkPromotionVisualStageProbe || null;
+    return !!state.deferExactAfterSettle || !!state.exactAfterSettleHandle || !!probe?.sawDeferred;
   }, { timeout: 20_000 });
   await waitForStableExactRender(page, { timeout: 30_000 });
 
@@ -376,7 +377,7 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
     const { state } = await import("/js/core/state.js");
     state.getViewportGeoBoundsFn = () => [12, -8, 28, 6];
     if (state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object") {
-      state.runtimeChunkLoadState.focusCountryOverride = "CD";
+      state.runtimeChunkLoadState.focusCountryOverride = "GCO";
     }
   });
   await setZoomPercent(page, 175, { waitAfterMs: 0 });
@@ -399,7 +400,7 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
       ? state.activeScenarioChunks.loadedChunkIds.map((chunkId) => String(chunkId || ""))
       : [];
     return expectedChunkIds.every((chunkId) => loadedChunkIds.includes(chunkId));
-  }, ["political.detail.country.cd", "political.detail.country.gco"], { timeout: 30_000 });
+  }, ["political.detail.country.gco"], { timeout: 30_000 });
   await waitForStableExactRender(page, { timeout: 30_000 });
 
   const afterZoom = await page.evaluate(async (probes) => {
@@ -452,7 +453,6 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   expect(afterZoom.renderPhase).toBe("idle");
   expect(afterZoom.isInteracting).toBe(false);
   expect(afterZoom.blackFrameCount).toBe(beforeZoom.blackFrameCount);
-  expect(afterZoom.loadedChunkIds).toContain("political.detail.country.cd");
   expect(afterZoom.loadedChunkIds).toContain("political.detail.country.gco");
   for (const probe of afterZoom.results) {
     expect(probe.featureId, `missing feature after zoom at ${probe.id}`).toBeTruthy();

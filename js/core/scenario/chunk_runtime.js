@@ -132,17 +132,21 @@ function applyZoomEndChunkProtectionToSelection(selection, loadState, {
     return false;
   }
   const previousEvictableCount = selection.evictableChunkIds.length;
-  const cacheOnlyChunkIds = [];
+  const retainedActiveChunkIds = [];
   selection.evictableChunkIds = selection.evictableChunkIds.filter((chunkId) => {
     const normalizedChunkId = String(chunkId || "").trim();
     if (!protectedSet.has(normalizedChunkId)) return true;
-    cacheOnlyChunkIds.push(normalizedChunkId);
+    if (normalizedChunkId.startsWith("political.detail.")) {
+      retainedActiveChunkIds.push(normalizedChunkId);
+    }
     return false;
   });
-  selection.cacheOnlyChunkIds = Array.from(new Set([
-    ...(Array.isArray(selection.cacheOnlyChunkIds) ? selection.cacheOnlyChunkIds : []),
-    ...cacheOnlyChunkIds,
-  ]));
+  if (retainedActiveChunkIds.length) {
+    selection.retainedActiveChunkIds = Array.from(new Set([
+      ...(Array.isArray(selection.retainedActiveChunkIds) ? selection.retainedActiveChunkIds : []),
+      ...retainedActiveChunkIds,
+    ]));
+  }
   const protectedEvictionCount = previousEvictableCount - selection.evictableChunkIds.length;
   return protectedEvictionCount > 0;
 }
@@ -415,10 +419,15 @@ function createScenarioChunkRuntimeController({
     const cacheOnlyChunkIdSet = new Set((Array.isArray(selection?.cacheOnlyChunkIds) ? selection.cacheOnlyChunkIds : [])
       .map((chunkId) => String(chunkId || "").trim())
       .filter(Boolean));
+    // retainedActiveChunkIds keeps zoom-end protected detail chunks in the render/hit input
+    // while cacheOnlyChunkIds remains reserved for chunks that only stay warm in memory.
+    const retainedActiveChunkIdSet = new Set((Array.isArray(selection?.retainedActiveChunkIds) ? selection.retainedActiveChunkIds : [])
+      .map((chunkId) => String(chunkId || "").trim())
+      .filter(Boolean));
     return (Array.isArray(chunkState?.loadedChunkIds) ? chunkState.loadedChunkIds : [])
       .map((chunkId) => String(chunkId || "").trim())
       .filter(Boolean)
-      .filter((chunkId) => !cacheOnlyChunkIdSet.has(chunkId));
+      .filter((chunkId) => !cacheOnlyChunkIdSet.has(chunkId) || retainedActiveChunkIdSet.has(chunkId));
   }
 
   function isScenarioChunkRefreshCurrent(loadState, {
@@ -426,6 +435,7 @@ function createScenarioChunkRuntimeController({
     selectionVersion = 0,
     requiredChunkIds = [],
     cacheOnlyChunkIds = [],
+    retainedActiveChunkIds = [],
   } = {}) {
     if (runtimeState.runtimeChunkLoadState !== loadState) return false;
     const normalizedScenarioId = normalizeScenarioId(scenarioId);
@@ -436,6 +446,7 @@ function createScenarioChunkRuntimeController({
     return (
       getChunkIdListSignature(loadState.lastSelection?.requiredChunkIds) === getChunkIdListSignature(requiredChunkIds)
       && getChunkIdListSignature(loadState.lastSelection?.cacheOnlyChunkIds) === getChunkIdListSignature(cacheOnlyChunkIds)
+      && getChunkIdListSignature(loadState.lastSelection?.retainedActiveChunkIds) === getChunkIdListSignature(retainedActiveChunkIds)
     );
   }
 
@@ -567,10 +578,16 @@ function createScenarioChunkRuntimeController({
       || focusCountryEntry?.provenance_iso2
       || ""
     ).trim().toUpperCase();
-    const resolvedFocusCountry = mappedIso2
-      ? normalizeCountryCodeAlias(mappedIso2)
-      : normalizeCountryCodeAlias(rawFocusCountry);
-    if (!isScenarioChunkFocusCountryInViewport(bundle, resolvedFocusCountry, viewportBbox)) {
+    const focusCountryCandidates = Array.from(new Set([
+      normalizeCountryCodeAlias(rawFocusCountry),
+      mappedIso2 ? normalizeCountryCodeAlias(mappedIso2) : "",
+    ].filter(Boolean)));
+    // Scenario tags such as TNO's GCO can map to modern ISO2 codes for palette data
+    // while chunk metadata remains tag-scoped. Try the active scenario tag first.
+    const resolvedFocusCountry = focusCountryCandidates.find((candidate) =>
+      isScenarioChunkFocusCountryInViewport(bundle, candidate, viewportBbox)
+    ) || "";
+    if (!resolvedFocusCountry) {
       if (usesFocusOverride) {
         clearScenarioChunkFocusCountryOverride(loadState);
       }
@@ -1636,11 +1653,13 @@ function createScenarioChunkRuntimeController({
     const nextRequiredChunkIds = selection.requiredChunks.map((chunk) => chunk.id);
     const nextOptionalChunkIds = selection.optionalChunks.map((chunk) => chunk.id);
     const nextCacheOnlyChunkIds = Array.isArray(selection.cacheOnlyChunkIds) ? [...selection.cacheOnlyChunkIds] : [];
+    const nextRetainedActiveChunkIds = Array.isArray(selection.retainedActiveChunkIds) ? [...selection.retainedActiveChunkIds] : [];
     const selectionUnchanged =
       normalizeScenarioId(previousSelection?.scenarioId) === scenarioId
       && getChunkIdListSignature(previousSelection?.requiredChunkIds) === getChunkIdListSignature(nextRequiredChunkIds)
       && getChunkIdListSignature(previousSelection?.optionalChunkIds) === getChunkIdListSignature(nextOptionalChunkIds)
       && getChunkIdListSignature(previousSelection?.cacheOnlyChunkIds) === getChunkIdListSignature(nextCacheOnlyChunkIds)
+      && getChunkIdListSignature(previousSelection?.retainedActiveChunkIds) === getChunkIdListSignature(nextRetainedActiveChunkIds)
       && selection.evictableChunkIds.length === 0
       && nextRequiredChunkIds.every((chunkId) => !!chunkState.payloadByChunkId?.[chunkId]);
     const currentSelectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
@@ -1653,6 +1672,7 @@ function createScenarioChunkRuntimeController({
       requiredChunkIds: nextRequiredChunkIds,
       optionalChunkIds: nextOptionalChunkIds,
       cacheOnlyChunkIds: nextCacheOnlyChunkIds,
+      retainedActiveChunkIds: nextRetainedActiveChunkIds,
       selectionVersion: nextSelectionVersion,
       focusCountry: String(focusCountry || "").trim().toUpperCase(),
       recordedAt: selectionRecordedAt,
@@ -1704,6 +1724,7 @@ function createScenarioChunkRuntimeController({
       selectionVersion: nextSelectionVersion,
       requiredChunkIds: nextRequiredChunkIds,
       cacheOnlyChunkIds: nextCacheOnlyChunkIds,
+      retainedActiveChunkIds: nextRetainedActiveChunkIds,
     })) {
       recordScenarioChunkRuntimeMetric("staleRefreshDiscardedCount", 1, {
         scenarioId,
@@ -1767,10 +1788,16 @@ function createScenarioChunkRuntimeController({
     const cacheOnlyChunkIdSet = new Set((Array.isArray(selection.cacheOnlyChunkIds) ? selection.cacheOnlyChunkIds : [])
       .map((chunkId) => String(chunkId || "").trim())
       .filter(Boolean));
+    const retainedActiveChunkIdSet = new Set(nextRetainedActiveChunkIds
+      .map((chunkId) => String(chunkId || "").trim())
+      .filter(Boolean));
     const changedPoliticalChunkIds = Array.from(new Set([
       ...previousRequiredPoliticalChunkIds.filter((chunkId) => !nextRequiredPoliticalChunkIds.includes(chunkId)),
       ...nextRequiredPoliticalChunkIds.filter((chunkId) => !previousRequiredPoliticalChunkIds.includes(chunkId)),
-    ])).filter((chunkId) => !cacheOnlyChunkIdSet.has(String(chunkId || "").trim()));
+    ])).filter((chunkId) => {
+      const normalizedChunkId = String(chunkId || "").trim();
+      return !cacheOnlyChunkIdSet.has(normalizedChunkId) || retainedActiveChunkIdSet.has(normalizedChunkId);
+    });
     const politicalFeatureIds = collectScenarioPoliticalFeatureIdsForChunkIds(bundle, changedPoliticalChunkIds);
     const hasMergedLayerChange = mergedResult.changedLayerKeys.length > 0;
     const hasPoliticalFeatureChange = politicalFeatureIds.length > 0;
@@ -1809,6 +1836,7 @@ function createScenarioChunkRuntimeController({
       requiredPoliticalChunkCount: selection.requiredChunks.filter((chunk) => chunk.layer === "political").length,
       requiredChunkIds: nextRequiredChunkIds,
       cacheOnlyChunkIds: Array.isArray(selection.cacheOnlyChunkIds) ? [...selection.cacheOnlyChunkIds] : [],
+      retainedActiveChunkIds: nextRetainedActiveChunkIds,
       selectionVersion: nextSelectionVersion,
       politicalFeatureIds,
       queuedAt: promotionQueuedAt,

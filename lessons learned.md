@@ -1507,3 +1507,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 1. 迁移中的旧状态字段只要还会被 history 或 startup 恢复，renderer 和 sidebar 就要继续保留兼容面
 - 这次 `specialRegionOverrides` 已从新 workbench 主路径退休，但 history restore 仍会回填它；如果同步拿掉 sidebar 写口和 renderer 读口，地图就会出现“能选中、不能改色、恢复后不渲染”的直接回退。
 - 更稳的做法是：先确认旧字段已经从 history、startup hydration、scenario assets 全链路退出，再删最后一层 UI/renderer compatibility surface。
+
+### 53. Scenario focus country resolution must prefer scenario tags before ISO2 palette aliases
+- TNO 这类历史场景里，`countries.json.lookup_iso2` 可用于颜色和地理元数据，但 chunk manifest 的 `country_codes` 仍可能是 scenario tag，比如 `GCO`。
+- 缩放 detail chunk 选择应先尝试 active scenario tag，再尝试 ISO2；否则会等待并不存在的 `political.detail.country.cd`，导致 zoom-end detail 加载和可见性测试卡住。

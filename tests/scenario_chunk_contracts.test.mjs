@@ -105,6 +105,99 @@ test("scheduled chunk refresh starts without seeded pending reason", async () =>
   }
 });
 
+test("scenario tag focus stays tag-scoped when palette metadata maps to ISO2", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const chunk = {
+    id: "political.detail.country.gco",
+    url: "political.detail.country.gco.json",
+    layer: "political",
+    lod: "detail",
+    bounds: [8, -14, 32, 14],
+    countryCodes: ["GCO"],
+  };
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeSovereignCode: "GCO",
+    activeScenarioChunks: {
+      loadedChunkIds: [],
+      payloadByChunkId: {},
+      mergedLayerPayloads: {},
+      lruChunkIds: [],
+    },
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 3 },
+    getViewportGeoBoundsFn: () => [12, -8, 28, 6],
+  };
+  let selectedFocusCountry = "";
+
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 1;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const controller = createScenarioChunkRuntimeController({
+      runtimeState,
+      getSearchParams: () => new URLSearchParams(),
+      normalizeScenarioId: (value) => String(value || "").trim(),
+      normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+      normalizeScenarioFeatureCollection: (payload) => payload,
+      getScenarioFeatureCollectionIdentityList: (payload) => (
+        Array.isArray(payload?.features) ? payload.features.map((feature) => String(feature?.id || "")) : []
+      ),
+      areScenarioFeatureCollectionsEquivalent: () => false,
+      getScenarioDefaultCountryCode: () => "GCO",
+      getScenarioBundleId: () => "tno_1962",
+      getCachedScenarioBundle: () => ({
+        manifest: { scenario_id: "tno_1962" },
+        chunkRegistry: { byLayer: { political: [chunk] } },
+        runtimeShell: { renderBudgetHints: { detail_zoom_threshold: 2 } },
+        countriesPayload: { countries: { GCO: { lookup_iso2: "CD" } } },
+      }),
+      getVisibleScenarioChunkLayers: () => ["political"],
+      selectScenarioChunks: ({ focusCountry }) => {
+        selectedFocusCountry = focusCountry;
+        return {
+          scenarioId: "tno_1962",
+          requiredChunks: [chunk],
+          optionalChunks: [],
+          evictableChunkIds: [],
+          selectedFeatureCountSum: 1,
+        };
+      },
+      mergeScenarioChunkPayloads: (_layerKey, payloads) => ({
+        type: "FeatureCollection",
+        features: payloads.flatMap((payload) => payload?.features || []),
+      }),
+      normalizeScenarioRenderBudgetHints: (value) => value || {},
+      loadScenarioChunkFile: async () => ({
+        payload: { type: "FeatureCollection", features: [] },
+      }),
+      scenarioSupportsChunkedRuntime: () => true,
+      scenarioBundleUsesChunkedLayer: (_bundle, layerKey = "") => !layerKey || layerKey === "political",
+      getScenarioOptionalLayerConfig: () => null,
+      syncScenarioLocalizationState: () => {},
+      refreshMapDataForScenarioChunkPromotion: () => {},
+      flushRenderBoundary: () => {},
+      recordScenarioPerfMetric: () => {},
+      ensureScenarioChunkRegistryLoaded: async () => {},
+    });
+
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "zoom-end", delayMs: 0 }), "scheduled");
+    for (let i = 0; i < 4; i += 1) {
+      await Promise.resolve();
+    }
+    assert.equal(selectedFocusCountry, "GCO");
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
 test("chunk cost tie-breaker preserves viewport center relevance", () => {
   const selection = selectScenarioChunks({
     scenarioId: "tno_1962",
@@ -785,6 +878,8 @@ test("zoom-end evictable protection reuses unified validator across TTL, focusCo
     true,
   );
   assert.deepEqual(selection.evictableChunkIds, ["political.detail.b"]);
+  assert.deepEqual(selection.retainedActiveChunkIds, ["political.detail.a"]);
+  assert.deepEqual(selection.cacheOnlyChunkIds || [], []);
 
   const expiredLoadState = {
     ...baseLoadState,
@@ -839,6 +934,141 @@ test("zoom-end evictable protection reuses unified validator across TTL, focusCo
     }),
     false,
   );
+});
+
+test("zoom-end retained political detail chunks stay in active merge payload", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const previousChunk = {
+    id: "political.detail.previous",
+    url: "political.detail.previous.json",
+    layer: "political",
+    lod: "detail",
+    bounds: [-1, -1, 1, 1],
+    countryCodes: ["DE"],
+  };
+  const nextChunk = {
+    id: "political.detail.next",
+    url: "political.detail.next.json",
+    layer: "political",
+    lod: "detail",
+    bounds: [1, 1, 2, 2],
+    countryCodes: ["DE"],
+  };
+  const previousPayload = {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", id: "feature-previous", properties: {}, geometry: null }],
+  };
+  const nextPayload = {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", id: "feature-next", properties: {}, geometry: null }],
+  };
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: { byLayer: { political: [previousChunk, nextChunk] } },
+    runtimeShell: { renderBudgetHints: { detail_zoom_threshold: 2 } },
+    countriesPayload: { countries: { DE: { lookup_iso2: "DE" } } },
+    chunkPayloadCacheById: {},
+  };
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeSovereignCode: "DE",
+    activeScenarioChunks: {
+      scenarioId: "tno_1962",
+      loadedChunkIds: [previousChunk.id],
+      payloadByChunkId: {
+        [previousChunk.id]: {
+          layerKey: "political",
+          payload: previousPayload,
+        },
+      },
+      mergedLayerPayloads: { political: previousPayload },
+      lruChunkIds: [previousChunk.id],
+    },
+    runtimeChunkLoadState: {
+      shellStatus: "ready",
+      selectionVersion: 1,
+      lastSelection: {
+        reason: "zoom-end",
+        scenarioId: "tno_1962",
+        requiredChunkIds: [previousChunk.id],
+        optionalChunkIds: [],
+        cacheOnlyChunkIds: [],
+        retainedActiveChunkIds: [],
+        selectionVersion: 1,
+        focusCountry: "DE",
+        recordedAt: Date.now(),
+        zoomEndProtectionUntil: Date.now() + 5000,
+      },
+      layerSelectionSignatures: { political: previousChunk.id },
+      mergedLayerPayloadCache: { political: previousPayload },
+    },
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 3 },
+    getViewportGeoBoundsFn: () => [-2, -2, 3, 3],
+  };
+
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 1;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const controller = createScenarioChunkRuntimeController({
+      runtimeState,
+      getSearchParams: () => new URLSearchParams(),
+      normalizeScenarioId: (value) => String(value || "").trim(),
+      normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+      normalizeScenarioFeatureCollection: (payload) => payload,
+      getScenarioFeatureCollectionIdentityList: (payload) => (
+        Array.isArray(payload?.features) ? payload.features.map((feature) => String(feature?.id || "")) : []
+      ),
+      areScenarioFeatureCollectionsEquivalent: () => false,
+      getScenarioDefaultCountryCode: () => "DE",
+      getScenarioBundleId: () => "tno_1962",
+      getCachedScenarioBundle: () => bundle,
+      getVisibleScenarioChunkLayers: () => ["political"],
+      selectScenarioChunks: () => ({
+        scenarioId: "tno_1962",
+        requiredChunks: [nextChunk],
+        optionalChunks: [],
+        evictableChunkIds: [previousChunk.id],
+        selectedFeatureCountSum: 1,
+      }),
+      mergeScenarioChunkPayloads: (_layerKey, payloads) => ({
+        type: "FeatureCollection",
+        features: payloads.flatMap((payload) => payload?.features || []),
+      }),
+      normalizeScenarioRenderBudgetHints: (value) => value || {},
+      loadScenarioChunkFile: async () => ({ payload: nextPayload }),
+      scenarioSupportsChunkedRuntime: () => true,
+      scenarioBundleUsesChunkedLayer: (_bundle, layerKey = "") => !layerKey || layerKey === "political",
+      getScenarioOptionalLayerConfig: () => null,
+      syncScenarioLocalizationState: () => {},
+      refreshMapDataForScenarioChunkPromotion: () => {},
+      flushRenderBoundary: () => {},
+      recordScenarioPerfMetric: () => {},
+      ensureScenarioChunkRegistryLoaded: async () => {},
+    });
+
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "scenario-apply", delayMs: 0 }), "scheduled");
+    for (let i = 0; i < 6; i += 1) {
+      await Promise.resolve();
+    }
+
+    assert.deepEqual(runtimeState.runtimeChunkLoadState.lastSelection.cacheOnlyChunkIds, []);
+    assert.deepEqual(runtimeState.runtimeChunkLoadState.lastSelection.retainedActiveChunkIds, [previousChunk.id]);
+    assert.deepEqual(
+      runtimeState.activeScenarioChunks.mergedLayerPayloads.political.features.map((feature) => feature.id),
+      ["feature-previous", "feature-next"],
+    );
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
 });
 
 test("political raster worker result currentness includes viewport", async () => {

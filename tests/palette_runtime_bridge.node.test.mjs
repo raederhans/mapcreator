@@ -405,6 +405,35 @@ test("buildScenarioOwnerColorMap keeps scenario colors before palette and genera
   assert.deepEqual(firstDetails.generatedTags, ["ABC"]);
 });
 
+test("buildScenarioOwnerColorMapDetails keeps seed tag colors above palette and ISO2 bridge", () => {
+  const details = buildScenarioOwnerColorMapDetails(
+    {
+      GER: { color_hex: "#111111", base_iso2: "DE", lookup_iso2: "DE" },
+      AUS: { base_iso2: "DE", lookup_iso2: "DE" },
+    },
+    {
+      seedColorByTag: {
+        GER: "#444444",
+      },
+      palettePack: {
+        entries: {
+          GER: { map_hex: "#222222" },
+        },
+      },
+      paletteMap: {
+        mapped: {
+          GER: { iso2: "DE" },
+          AUS: { iso2: "DE", expose_as_runtime_default: false },
+        },
+      },
+    },
+  );
+
+  assert.equal(details.byTag.GER, "#444444");
+  assert.equal(details.byTag.AUS, "#222222");
+  assert.deepEqual(details.generatedTags, []);
+});
+
 test("buildScenarioOwnerColorMapDetails preserves TNO mixed-policy explicit colors", () => {
   const details = buildScenarioOwnerColorMapDetails(
     {
