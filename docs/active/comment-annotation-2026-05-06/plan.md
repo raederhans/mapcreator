@@ -6,10 +6,10 @@
 
 ## 范围
 
-- `js/core/scenario/chunk_runtime.js`
-- `js/core/scenario/bundle_loader.js`
-- `js/ui/toolbar.js`
-- `js/core/file_manager.js`
+- `js/core/data_loader.js`
+- `js/core/scenario_resources.js`
+- `js/core/state/ui_state.js`
+- `tools/check_scenario_contracts.py`
 
 ## 执行步骤
 

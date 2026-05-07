@@ -431,6 +431,9 @@ def _apply_safe_repairs(
         raise FileNotFoundError(f"Missing runtime topology for safe repair: {runtime_topology_path}")
 
     safe_fixes_applied: list[str] = []
+    # --write-safe 只允许重建“可推导且幂等”的派生产物：
+    # manifest 补字段、startup support、chunk assets、startup bundles、audit/snapshot。
+    # 需要人工判断的数据语义问题仍然通过 strict error 暴露，不在这里悄悄兜底。
     geo_patch_required = bool(
         profile.expect_startup_assets
         or str(manifest.get(SCENARIO_GEO_LOCALE_PATCH_MANIFEST_FIELD) or "").strip()
@@ -1606,6 +1609,9 @@ def validate_strict_bundle_contract(
     manifest = _load_required_local_json(target_dir / "manifest.json", errors)
     if manifest is None:
         return
+    # strict gate 的目标是把 checked-in scenario 目录当成发布物来审计：
+    # 不只看 manifest 存在，还要核对 owners / cores / runtime topology / chunk metadata
+    # 之间是否还能互相解释同一份场景真相。
     required_filenames = _required_profile_filenames(target_dir.name, manifest)
     required_payloads = {
         filename: _load_required_local_json(target_dir / filename, errors)

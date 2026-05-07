@@ -1,0 +1,22 @@
+# Context
+
+- 2026-05-06 standup automation run.
+- Previous standup cleanup on 2026-04-29 already archived four completed active folders and trimmed some `lessons learned.md` noise.
+- Current `docs/active` state mixes truly active work with several fully completed folders whose follow-up has already moved to separate tasks.
+- Current `lessons learned.md` still contains repeated guidance around long tests, CRLF/comment-only diffs, scenario derived artifact sync, and transport/platformization contracts.
+- Applied minimal lessons cleanup:
+  - removed two duplicate comment-only/CRLF reminders and kept the stronger 2026-05-03 version
+  - removed one Codex local-environment item that does not belong in project engineering lessons
+- Archived completed active folders:
+  - `codex-browser-use-js-repl`
+  - `startup-progress-94-scenario-context-bar`
+  - `renderer_volume_wave_2026-04-22`
+  - `test-system-structural-improvement`
+- Deleted stale or duplicate docs:
+  - duplicate active folder `transport-facility-icons-selection`
+  - empty archive shells `js-runtime-static-review` and `scenario-review-static-analysis`
+- Final active set after cleanup:
+  - `app-performance-overhaul`
+  - `comment-annotation-2026-05-06`
+  - `controller-topology-architecture-cleanup-2026-05-05`
+  - `tno-zoom-atlantropa-mediterranean-repair`

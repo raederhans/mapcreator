@@ -729,6 +729,8 @@ function resolveTopologyVariant() {
   const params = getSearchParams();
   if (!params) return null;
 
+  // topology_variant 只用于显式调试或对比不同底图输入；
+  // 正常启动路径继续走 manifest / startup bundle 选出来的默认资源。
   const raw = params.get("topology_variant");
   if (!raw) return null;
 
@@ -892,6 +894,8 @@ export async function loadMeasuredJsonResource(
     });
   }
   const startedAt = nowMs();
+  // 这里统一收口 fetch + JSON parse + timing metrics。
+  // 上层 loader 只关心 payload 和指标，不再各自拼接重复的网络错误语义。
   if (typeof globalThis.fetch === "function") {
     const response = await globalThis.fetch(url, {
       cache,

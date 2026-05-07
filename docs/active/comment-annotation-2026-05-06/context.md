@@ -3,7 +3,8 @@
 ## 2026-05-06
 
 - 任务目标是“扫描近期更改过的代码库和提交文件，为重要文件、长文件和长期存在文件添加必要中文注释”。
-- 结合近两周提交记录和文件体量，优先锁定 `chunk_runtime`、`bundle_loader`、`toolbar`、`file_manager` 四个核心长文件。
-- 注释策略保持最小改动：只解释职责边界、交易阶段、兼容入口和状态同步语义，不给显而易见的赋值语句加注释。
-- 子代理补充指出 `water_special_region_controller.js` 是近期高频改动且状态语义容易看反的文件，因此主线程额外补了该文件的 scope/bindEvents 注释。
-- 验证采用 `node --check` 对 5 个 JavaScript 文件做语法检查，并手工清理了 comment-only 补丁触发的 CRLF 换行噪音。
+- 本轮重新按近期提交、长文件和长期 owner 筛选，避开 automation memory 里已补过的热点文件。
+- 两个只读子代理分别覆盖 `js/core/js/bootstrap` 与 `tools/js/core/state/js/ui/sidebar`，候选集中收敛到 `scenario_resources`、`data_loader`、`ui_state`、`scenario_runtime_state`、`check_scenario_contracts.py`。
+- 主线程最终选择 `js/core/data_loader.js`、`js/core/scenario_resources.js`、`js/core/state/ui_state.js`、`tools/check_scenario_contracts.py` 四个文件，注释仍保持最小改动，只解释职责边界、状态合并顺序和 strict repair 语义。
+- 定向验证已完成：`node --check` 通过 3 个 JavaScript 文件，`python -m py_compile` 通过 `tools/check_scenario_contracts.py`。
+- 当前待收尾项只剩复核子代理的静态 review 结果；主线程已先做 diff 体量检查，未发现 comment-only 异常大改动。

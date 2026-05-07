@@ -1315,10 +1315,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 去掉固定 sleep 后，视觉类 E2E 要同时等待 scenario apply、chunk promotion、exact-after-settle、zoom/render timer 和双帧 RAF；只等 renderPhase idle 会在整域顺序里采到前一轮残留帧。
 - canvas 采样点要把 CSS 坐标换算到 backing canvas 尺寸，否则高 DPR/缩放下亮度断言会测错区域。
 
-### 2026-05-01 - comment-only 任务也要先核对换行风格
-- `apply_patch` 后如果 `git diff --numstat` 突然显示整文件大面积替换，先检查是不是 LF/CRLF 漂移，不要急着把噪音 diff 留在提交里。
-- 对老文件补注释时，最终要回到仓库原本的换行风格，再做语法校验和留档回写。
-
 ### 2026-05-01 - worktree runtime verification and TNO chunk metadata drift
 - 在 Windows worktree 里跑 Playwright 时，可以先用主仓 `node_modules` + `NODE_PATH` 做最小验证；如果用例长时间只打印 `Running ...` 没有断言输出，就应尽快停止，把它当成环境型噪声而不是继续卡住主线程。
 - `tools/patch_tno_1962_bundle.py --stage chunk_assets` 依赖的 checkpoint 必须已经有同源 `runtime_topology.topo.json`；只有 water-stage checkpoint 会在 chunk rebuild 时暴露 `source/runtime/chunks` 的真实 id 漂移。
@@ -1522,16 +1518,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - ATLSEA donor sea 从 TopoJSON 转成 direct GeoJSON chunk 后，要用 D3 small-polygon 环方向做发布合同；否则 `d3.geoArea≈4π` 会把局部海盆解释成全球水面。
 - 运行时 sanitizer 只能当最后安全网；根因应修在 chunk payload 和生成链，同时同步 `detail_chunks.manifest.json`、startup bundle source hash、build snapshot、audit。
 
-### 24. Codex 内置 feature 要写进 `[features]`，工具列表还要新会话加载
-- `js_repl` 这类 Codex 内置工具不是 npm 包，也不是普通 MCP server；正确入口是 `~/.codex/config.toml` 的 `[features] js_repl = true`。
-- 修配置后要用新 Codex 会话验证工具列表；当前会话通常不会热加载新 tool。
-- 如果 `--enable js_repl` 的新 `codex exec` 仍缺工具，优先对照 upstream issue，而不是继续叠加本地 MCP 配置。
 - TopoJSON `serialize_as_geojson` 可能给坐标环返回 tuple；发布前做环方向/面积判断时要同时接受 `list` 和 `tuple`，否则重建会悄悄跳过 sanitizer。
-
-## 2026-05-06 - comment-only maintenance hygiene
-
-- 某些老文件会混有 CRLF/LF；只补两行注释也可能把整文件伪装成重写。
-- 最稳的做法是先看 `git diff --stat`，一旦出现异常大 diff，立刻统一回仓库当前行尾风格后再继续。
 
 ## 2026-05-06 - TNO owner chunk precise bounds
 

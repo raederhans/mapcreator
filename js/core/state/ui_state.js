@@ -81,6 +81,8 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
     ...currentOverviewConfig,
     visualMode: patch.visualMode,
   };
+  // workbench -> main map 的桥只发布 overview 认可的字段；
+  // preview camera、局部交互模式等 workbench 私有状态继续留在 transportWorkbenchUi。
   if (familyId) {
     nextOverviewConfig[familyId] = {
       ...(currentOverviewConfig[familyId] || {}),
@@ -390,6 +392,8 @@ export function restoreImportedStyleConfigState(
   if (!target || typeof target !== "object") {
     return null;
   }
+  // 导入 style config 时采用“默认值 + 当前安全字段 + 导入补丁”的合并顺序，
+  // 让旧快照缺失的新字段自动补齐，同时保留已经过 normalize 的嵌套 shape。
   const imported =
     importedStyleConfig && typeof importedStyleConfig === "object" ? importedStyleConfig : {};
   const defaults = createDefaultStyleConfig();
@@ -503,6 +507,9 @@ export function restoreImportedWorkbenchUiState(
   if (!target || typeof target !== "object") {
     return null;
   }
+  // workbench UI 恢复分两层：
+  // 先深拷贝导入快照，避免直接复用旧引用；
+  // 再对 transport/export workbench 分别做 normalize，收口新增字段和 family 局部配置。
   const clone = typeof cloneValue === "function" ? cloneValue : cloneImportedUiValue;
   const normalizeTransportWorkbench =
     typeof normalizeTransportWorkbenchState === "function"
@@ -608,6 +615,8 @@ export function markDirtyState(target, reason = "") {
   if (!target || typeof target !== "object") {
     return 0;
   }
+  // dirtyRevision 是 save/history/watchers 共用的“发生过可保存变更”时钟，
+  // 即便 isDirty 已经是 true，也继续递增，方便观察者区分连续两次编辑。
   target.isDirty = true;
   target.dirtyRevision = Number(target.dirtyRevision || 0) + 1;
   if (reason) {
@@ -620,6 +629,8 @@ export function clearDirtyState(target, reason = "") {
   if (!target || typeof target !== "object") {
     return false;
   }
+  // clear 只重置当前脏标记，不回滚 dirtyRevision。
+  // 历史记录与自动保存仍可以把 revision 当作单调递增事件号使用。
   target.isDirty = false;
   if (reason) {
     target.lastDirtyReason = String(reason);

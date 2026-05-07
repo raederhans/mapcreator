@@ -10,9 +10,9 @@
 - 改动只碰根因相关文件，避免扩大到未提交大改的其他面。
 
 ## 执行清单
-- [ ] 定位 `scenarioViewLabel` 的真实来源和最近改动差异。
-- [ ] 加最小回归测试或扩展现有测试，锁住 context bar label 变量。
-- [ ] 修复 `toolbar.js` 和必要的 `dist/app` 镜像。
-- [ ] 跑 targeted 测试。
-- [ ] 用启动脚本复验，并读取性能/console/network 证据。
-- [ ] 做最终自检与 lessons learned 检查。
+- [x] 定位 `scenarioViewLabel` 的真实来源和最近改动差异。
+- [x] 加最小回归测试或扩展现有测试，锁住 context bar label 变量。
+- [x] 修复 `toolbar.js` 和必要的 `dist/app` 镜像。
+- [x] 跑 targeted 测试。
+- [x] 用启动脚本复验，并读取性能/console/network 证据。
+- [x] 做最终自检与 lessons learned 检查。

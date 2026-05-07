@@ -660,6 +660,11 @@ async function loadScenarioOptionalLayerPayload(
 ) {
   const config = getScenarioOptionalLayerConfig(layerKey);
   if (!bundle || !config) return null;
+  // optional layer 允许从 3 个来源收敛到同一份 bundle/runtime state：
+  // 1) 现成 promise，避免并发重复请求
+  // 2) runtime topology 内嵌对象，避免再走一次磁盘/网络
+  // 3) manifest URL 指向的独立 payload
+  // 外部只看最终 layerKey，不需要感知实际命中的来源。
   bundle.optionalLayerPromises = bundle.optionalLayerPromises && typeof bundle.optionalLayerPromises === "object"
     ? bundle.optionalLayerPromises
     : {};
@@ -799,6 +804,9 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
   const activeScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
   const activeBundle = bundle || runtimeState.scenarioBundleCacheById?.[activeScenarioId] || null;
   if (!activeScenarioId || !activeBundle) return [];
+  // chunked layer 和独立 payload layer 的可见性同步路径不同：
+  // 前者交给 chunk refresh 统一决策，后者才在这里补拉 payload。
+  // 这样可以避免把 chunk layer 当成普通 JSON 再加载一遍。
   const requestedChunkedLayers = Object.entries(SCENARIO_OPTIONAL_LAYER_CONFIGS)
     .filter(([, config]) => state[config.visibilityField])
     .map(([layerKey]) => layerKey)
@@ -842,6 +850,8 @@ function releaseScenarioAuditPayload(scenarioId = runtimeState.activeScenarioId,
   if (bundle) {
     bundle.auditPayload = null;
   }
+  // 当前激活场景的 audit 还会驱动 sidebar/panel 状态；
+  // 释放缓存时要同步把 runtimeState 和 UI facade 一起清空，避免旧场景报告残留到新场景。
   if (!normalizedScenarioId || normalizeScenarioId(runtimeState.activeScenarioId) === normalizedScenarioId) {
     runtimeState.scenarioAudit = null;
     setScenarioAuditUiState({
