@@ -21176,6 +21176,22 @@ function commitHistoryEntry({ kind, before, after, affectsSovereignty = false } 
   });
 }
 
+function getSpecialZoneMembershipTool() {
+  const tool = String(runtimeState.specialZoneMembershipTool || "multi").trim();
+  return tool === "single" || tool === "multi" || tool === "brush" ? tool : "multi";
+}
+
+function getSpecialZoneMembershipBrushMode() {
+  const mode = String(runtimeState.specialZoneMembershipBrushMode || "add").trim();
+  return mode === "remove" ? "remove" : "add";
+}
+
+function refreshSpecialZonesWorkbenchUi() {
+  if (typeof runtimeState.updateSpecialZonesWorkbenchUIFn === "function") {
+    runtimeState.updateSpecialZonesWorkbenchUIFn();
+  }
+}
+
 function handleSpecialZoneMembershipClick(hit, event) {
   if (runtimeState.currentTool !== "special-zone-membership") return false;
   const featureId = hit?.targetType === "land" ? String(hit.id || "").trim() : "";
@@ -21183,7 +21199,10 @@ function handleSpecialZoneMembershipClick(hit, event) {
   runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
   const activeLayerId = String(runtimeState.specialZoneLayers.activeLayerId || "").trim();
   if (!activeLayerId) return true;
-  const mode = event?.altKey ? "remove" : "toggle";
+  const membershipTool = getSpecialZoneMembershipTool();
+  const mode = membershipTool === "single"
+    ? "replace"
+    : (membershipTool === "brush" ? getSpecialZoneMembershipBrushMode() : "toggle");
   const historyBefore = captureHistoryState({ strategicOverlay: true });
   applySpecialZoneMembershipFeature(featureId, mode, activeLayerId);
   commitHistoryEntry({
@@ -21192,6 +21211,7 @@ function handleSpecialZoneMembershipClick(hit, event) {
     after: captureHistoryState({ strategicOverlay: true }),
   });
   renderSpecialZonesIfNeeded({ force: true });
+  refreshSpecialZonesWorkbenchUi();
   return true;
 }
 
@@ -21879,6 +21899,13 @@ function resolveParentGroupTargetIds(feature, featureId) {
   return Array.from(new Set(targetIds));
 }
 
+function resolveSpecialZoneParentGroupTargetIds(featureId) {
+  const id = String(featureId || "").trim();
+  const feature = id ? runtimeState.landIndex?.get(id) : null;
+  if (!feature) return [];
+  return resolveParentGroupTargetIds(feature, id);
+}
+
 function resolveCountryFillTargetIds(feature, featureId, { allowWhenParentGrouping = false } = {}) {
   if (!featureId || !runtimeState.landIndex?.has(featureId)) return [];
   if (shouldExcludePoliticalInteractionFeature(feature, featureId)) return [];
@@ -22270,18 +22297,20 @@ function flushSpecialZoneMembershipDragSession() {
     after: captureHistoryState({ strategicOverlay: true }),
   });
   renderSpecialZonesIfNeeded({ force: true });
+  refreshSpecialZonesWorkbenchUi();
 }
 
 function handleSpecialZoneMembershipPointerDown(event) {
   if (runtimeState.currentTool !== "special-zone-membership") return false;
-  if (!event?.shiftKey && !event?.altKey) return false;
+  const membershipTool = getSpecialZoneMembershipTool();
+  if (membershipTool !== "brush" && !event?.shiftKey && !event?.altKey) return false;
   if ((event.buttons & 1) !== 1) return true;
   runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
   const layerId = String(runtimeState.specialZoneLayers.activeLayerId || "").trim();
   if (!layerId) return true;
   if (event?.preventDefault) event.preventDefault();
   specialZoneMembershipDragSession = {
-    mode: event.altKey ? "remove" : "add",
+    mode: membershipTool === "brush" ? getSpecialZoneMembershipBrushMode() : (event.altKey ? "remove" : "add"),
     layerId,
     before: captureHistoryState({ strategicOverlay: true }),
     visited: new Set(),
@@ -23042,6 +23071,7 @@ function initMap({
   facilityInfoCardMoreBtn = document.getElementById("facilityInfoCardMoreBtn");
   runtimeState.refreshColorStateFn = refreshColorState;
   runtimeState.recomputeDynamicBordersNowFn = recomputeDynamicBordersNow;
+  runtimeState.resolveSpecialZoneParentGroupTargetIdsFn = resolveSpecialZoneParentGroupTargetIds;
 
   if (!mapContainer) {
     console.error("Map container not found.");

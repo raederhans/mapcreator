@@ -105,3 +105,31 @@ test("serialization and render feature bridge preserve canonical ids", () => {
   assert.deepEqual(rendered.features.map((feature) => feature.properties.sourceFeatureId), ["1", "3"]);
   assert.equal(rendered.features[0].properties.__specialZoneLayerId, "neutral");
 });
+
+test("style preset updates preserve members and replace mode keeps one explicit set", () => {
+  let state = createEmptySpecialZoneLayersState();
+  state = mutateSpecialZoneLayersState(state, {
+    action: "addLayer",
+    layer: createLayerFromPreset("custom", { id: "active", memberFeatureIds: ["2", "1"] }),
+  });
+
+  const disputed = SPECIAL_ZONE_PRESETS.find((preset) => preset.id === "disputed");
+  state = mutateSpecialZoneLayersState(state, {
+    action: "updateLayer",
+    layerId: "active",
+    patch: {
+      presetId: disputed.id,
+      category: disputed.category,
+      style: { ...disputed.style, revision: 9 },
+    },
+  });
+
+  let layer = state.layers.find((entry) => entry.id === "active");
+  assert.equal(layer.presetId, "disputed");
+  assert.equal(layer.style.fill, disputed.style.fill);
+  assert.deepEqual(layer.memberFeatureIds, ["1", "2"]);
+
+  state = updateSpecialZoneLayerMembership(state, "active", "9", "replace");
+  layer = state.layers.find((entry) => entry.id === "active");
+  assert.deepEqual(layer.memberFeatureIds, ["9"]);
+});

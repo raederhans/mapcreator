@@ -18,6 +18,7 @@ OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
+MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 
 
 class ToolbarSplitBoundaryContractTest(unittest.TestCase):
@@ -239,6 +240,31 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;", owner_content)
         self.assertIn("loadedScenarioLayerAssetId = scenarioId;", owner_content)
         self.assertIn("if (loadedScenarioLayerAssetId !== scenarioId)", owner_content)
+
+    def test_special_zone_workbench_gates_members_and_style_on_active_layer(self):
+        owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn('title.textContent = translate("Members");', owner_content)
+        self.assertIn('empty.textContent = translate("Select or create a layer before editing members.");', owner_content)
+        self.assertIn('title.textContent = translate("Current layer style");', owner_content)
+        self.assertIn('empty.textContent = translate("Select a layer to edit its style.");', owner_content)
+        self.assertIn("special-zone-member-tool-btn", owner_content)
+        self.assertIn("special-zone-preset-preview", owner_content)
+        self.assertIn("special-zone-current-style-preview", owner_content)
+        self.assertNotIn("Country / owner id", owner_content)
+        self.assertNotIn("special-zone-members-add-country", owner_content)
+
+    def test_special_zone_membership_tools_have_explicit_renderer_modes(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function getSpecialZoneMembershipTool()", renderer_content)
+        self.assertIn('tool === "single" || tool === "multi" || tool === "brush"', renderer_content)
+        self.assertIn('membershipTool === "single"', renderer_content)
+        self.assertIn('getSpecialZoneMembershipBrushMode()', renderer_content)
+        self.assertIn("runtimeState.resolveSpecialZoneParentGroupTargetIdsFn = resolveSpecialZoneParentGroupTargetIds;", renderer_content)
+        self.assertIn("getParentGroupFeatureIds", owner_content)
+        self.assertIn("special-zone-members-add-parent-group", owner_content)
 
     def test_export_workbench_persistence_contract_stays_stable(self):
         file_manager = FILE_MANAGER_JS.read_text(encoding="utf-8")

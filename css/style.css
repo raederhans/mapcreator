@@ -9683,8 +9683,18 @@ body.right-drawer-open::after {
   gap: 6px;
 }
 
+.special-zone-workbench-section-title,
+.special-zone-members-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
 .special-zone-layer-row,
-.special-zone-workbench-card[data-role="actions"] {
+.special-zone-member-actions-row,
+.special-zone-layer-actions-row,
+.special-zone-member-brush-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -9696,8 +9706,62 @@ body.right-drawer-open::after {
 
 .special-zone-preset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 6px;
+}
+
+.special-zone-preset-tabs,
+.special-zone-member-tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.special-zone-preset-tab[aria-pressed="true"],
+.special-zone-member-tool-btn[aria-pressed="true"] {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.45);
+  color: var(--accent-color, #2563eb);
+}
+
+.special-zone-member-tool-btn {
+  align-items: center;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  width: 30px;
+}
+
+.special-zone-member-tool-btn svg {
+  height: 16px;
+  width: 16px;
+}
+
+.special-zone-preset-card {
+  align-items: stretch;
+  display: grid;
+  gap: 5px;
+  padding: 5px;
+  text-align: left;
+}
+
+.special-zone-preset-preview,
+.special-zone-current-style-preview {
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  display: block;
+  min-height: 34px;
+}
+
+.special-zone-preset-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.special-zone-current-style-preview {
+  min-height: 42px;
 }
 
 .special-zone-workbench-field {
@@ -9708,4 +9772,28 @@ body.right-drawer-open::after {
 .special-zone-workbench-field span {
   color: var(--muted-text, #64748b);
   font-size: 0.85em;
+}
+
+.special-zone-member-summary {
+  margin: 0;
+  color: var(--muted-text, #64748b);
+  font-size: 0.85em;
+}
+
+.special-zone-member-list {
+  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.26));
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.special-zone-member-id-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 6px;
+}
+
+.special-zone-member-chip {
+  font-size: 0.78rem;
+  max-width: 100%;
 }
