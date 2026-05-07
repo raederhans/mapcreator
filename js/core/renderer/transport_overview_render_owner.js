@@ -34,6 +34,7 @@ export function createTransportOverviewRenderOwner({
     getMultiLineLabelAnchor,
     getPathCanvas = () => null,
     getProjection = () => null,
+    invalidateRenderPasses = null,
     mixCanvasColors,
     nowMs,
     requestRender = null,
@@ -54,6 +55,9 @@ export function createTransportOverviewRenderOwner({
 function requestTransportFacilityIconAtlasRender() {
   if (transportFacilityIconAtlasRenderQueued) return;
   transportFacilityIconAtlasRenderQueued = true;
+  if (typeof invalidateRenderPasses === "function") {
+    invalidateRenderPasses("contextMarkers", "transport-facility-icons-ready");
+  }
   if (typeof requestRender === "function") requestRender("transport-facility-icons-ready");
 }
 
@@ -482,6 +486,7 @@ function drawContextFacilityPointLayer(
       markerRadiusPx: iconCell ? Math.max(5.4, iconSizePx * 0.52) : radiusBase * radiusScale,
       hoverScale: Number(hoverScale || 1.18),
       highlightStroke: String(highlightStroke || strokeStyle || "#ffffff"),
+      projectedPoint: [entry.x, entry.y],
       screenPoint: [entry.screenX, entry.screenY],
       coordinates: Array.isArray(entry.properties?.__coordinates) ? entry.properties.__coordinates : null,
       properties: entry.properties,

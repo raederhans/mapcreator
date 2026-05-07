@@ -1269,6 +1269,7 @@ function getTransportOverviewRenderOwner() {
       getMultiLineLabelAnchor,
       getPathCanvas: () => pathCanvas,
       getProjection: () => projection,
+      invalidateRenderPasses,
       mixCanvasColors,
       nowMs,
       requestRender: (reason) => requestRendererRender(reason),
@@ -6011,8 +6012,8 @@ function getHoverOverlaySignature() {
     String(runtimeState.hoveredWaterRegionId || ""),
     String(runtimeState.hoveredSpecialRegionId || ""),
     buildFacilityEntryKey(activeFacilityEntry),
-    Number(activeFacilityEntry?.screenPoint?.[0] || 0).toFixed(1),
-    Number(activeFacilityEntry?.screenPoint?.[1] || 0).toFixed(1),
+    Number(activeFacilityEntry?.projectedPoint?.[0] || 0).toFixed(1),
+    Number(activeFacilityEntry?.projectedPoint?.[1] || 0).toFixed(1),
   ].join("::");
 }
 
@@ -20432,7 +20433,7 @@ function renderHoverOverlay() {
   selection.exit().remove();
 
   const activeFacilityEntry = getActiveFacilityHighlightEntry();
-  const facilityMarkerData = activeFacilityEntry?.screenPoint?.length >= 2 ? [activeFacilityEntry] : [];
+  const facilityMarkerData = activeFacilityEntry?.projectedPoint?.length >= 2 ? [activeFacilityEntry] : [];
   const facilitySelection = hoverGroup
     .selectAll("path.hovered-facility-marker")
     .data(facilityMarkerData, (datum) => buildFacilityEntryKey(datum) || "hovered-facility");
@@ -20443,10 +20444,12 @@ function renderHoverOverlay() {
     .attr("class", "hovered-facility-marker")
     .attr("role", "presentation")
     .attr("aria-hidden", "true")
+    .attr("vector-effect", "non-scaling-stroke")
     .merge(facilitySelection)
     .attr("d", (datum) => {
-      const [x, y] = datum.screenPoint || [];
-      const radius = Math.max(6.8, Number(datum.markerRadiusPx || 0) + 2.8);
+      const [x, y] = datum.projectedPoint || [];
+      const zoomScale = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || datum.screenScale || 1));
+      const radius = Math.max(6.8, Number(datum.markerRadiusPx || 0) + 2.8) / zoomScale;
       if (datum.shape === "icon") {
         return `M ${x - radius} ${y} A ${radius} ${radius} 0 1 0 ${x + radius} ${y} A ${radius} ${radius} 0 1 0 ${x - radius} ${y} Z`;
       }

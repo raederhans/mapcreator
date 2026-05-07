@@ -1542,3 +1542,4 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-06 - transport facility icon atlas
 
 - 新增地图点位图标资产时，加载状态必须先接入交互命中链；atlas loading/error 阶段清空 hover entry，ready 后再注册，避免出现看不见但可点击的目标。
+- 异步图集从 loading 变成 ready/error 时，要同步失效对应 render pass；只 request render 会让上一帧空缓存继续被复用。

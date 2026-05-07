@@ -10,6 +10,7 @@ import {
   resolveTransportFacilityIconDrawSizePx,
   resolveTransportFacilityIconKey,
 } from "../js/core/renderer/transport_facility_icons.js";
+import { createTransportOverviewRenderOwner } from "../js/core/renderer/transport_overview_render_owner.js";
 
 const globalAirportsUrl = new URL("../data/transport_layers/global_airport/airports.geojson", import.meta.url);
 const globalPortsUrl = new URL("../data/transport_layers/global_port/ports.geojson", import.meta.url);
@@ -67,6 +68,81 @@ test("transport facility icon size stays in small screen-pixel bounds", () => {
       assert.ok(size >= 10, `${familyId} size ${size} should stay readable`);
       assert.ok(size <= 18, `${familyId} size ${size} should stay compact`);
     }
+  }
+});
+
+test("atlas ready callback dirties contextMarkers after skipped first pass", () => {
+  const previousImage = globalThis.Image;
+  let imageInstance = null;
+  const invalidations = [];
+  const renderRequests = [];
+  const clearedFamilies = [];
+  const metrics = [];
+  class MockImage {
+    constructor() {
+      imageInstance = this;
+      this.complete = false;
+      this.naturalWidth = 0;
+    }
+    set src(value) {
+      this.value = value;
+    }
+  }
+  const state = {
+    showTransport: true,
+    showAirports: true,
+    zoomTransform: { x: 20, y: 30, k: 2 },
+    airportsData: {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [139.7, 35.7] },
+        properties: { stable_key: "airport:test", importance_rank: 3, name: "Test Airport" },
+      }],
+    },
+  };
+  const context = { canvas: { width: 800, height: 500 } };
+  try {
+    globalThis.Image = MockImage;
+    const owner = createTransportOverviewRenderOwner({
+      state,
+      helpers: {
+        buildFacilityEntryKey: (entry) => entry ? `${entry.familyId || ""}:${entry.stableId || ""}` : "",
+        buildFacilityTooltipText: () => "",
+        clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
+        clearFacilityHoverEntries: (familyId) => clearedFamilies.push(familyId),
+        collectContextMetric: (name, _duration, detail) => metrics.push({ name, detail }),
+        getActiveFacilityHighlightEntry: () => null,
+        getCanvasColorRelativeLuminance: () => 0.5,
+        getContext: () => context,
+        getFacilityHoverRadiusPx: () => 12,
+        getFeatureCollectionFeatureCount: (collection) => Array.isArray(collection?.features) ? collection.features.length : 0,
+        getLineMidpointFromCoordinates: () => null,
+        getMultiLineLabelAnchor: () => null,
+        getPathCanvas: () => null,
+        getProjection: () => () => [100, 120],
+        invalidateRenderPasses: (passName, reason) => invalidations.push({ passName, reason }),
+        mixCanvasColors: (color) => color,
+        nowMs: () => 0,
+        requestRender: (reason) => renderRequests.push(reason),
+        setVisibleFacilityHoverEntries: () => {
+          throw new Error("first atlas-loading pass must not register visible hover entries");
+        },
+      },
+    });
+    owner.drawAirportsLayer(1);
+    assert.equal(getTransportFacilityIconAtlasStatus(), "loading");
+    assert.deepEqual(clearedFamilies, ["airport"]);
+    assert.equal(metrics.at(-1)?.detail?.reason, "icon-atlas-loading");
+    assert.deepEqual(invalidations, []);
+
+    imageInstance.naturalWidth = 256;
+    imageInstance.onload();
+    assert.equal(getTransportFacilityIconAtlasStatus(), "ready");
+    assert.deepEqual(invalidations, [{ passName: "contextMarkers", reason: "transport-facility-icons-ready" }]);
+    assert.deepEqual(renderRequests, ["transport-facility-icons-ready"]);
+  } finally {
+    globalThis.Image = previousImage;
   }
 });
 

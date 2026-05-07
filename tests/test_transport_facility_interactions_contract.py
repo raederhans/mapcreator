@@ -78,6 +78,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("resolveTransportFacilityIconKey", content)
         self.assertIn("getTransportFacilityIconAtlasImage", content)
         self.assertIn("context.drawImage(", content)
+        self.assertIn("projectedPoint: [entry.x, entry.y]", content)
         self.assertIn("screenPoint: [entry.screenX, entry.screenY]", content)
         self.assertIn("const screenX = (x * zoomTransform.k) + zoomTransform.x;", content)
         self.assertIn("const screenY = (y * zoomTransform.k) + zoomTransform.y;", content)
@@ -85,7 +86,14 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("markerRadiusPx: iconCell ? Math.max(5.4, iconSizePx * 0.52) : radiusBase * radiusScale", content)
         self.assertIn("clearFacilityHoverEntries(normalizedFamilyId);", content)
         self.assertIn('reason: `icon-atlas-${getTransportFacilityIconAtlasStatus() || "unavailable"}`', content)
+        self.assertIn('invalidateRenderPasses("contextMarkers", "transport-facility-icons-ready");', content)
+        self.assertIn("invalidateRenderPasses,", renderer_content)
         self.assertIn('if (datum.shape === "icon")', renderer_content)
+        self.assertIn("const facilityMarkerData = activeFacilityEntry?.projectedPoint?.length >= 2 ? [activeFacilityEntry] : [];", renderer_content)
+        self.assertIn("const [x, y] = datum.projectedPoint || [];", renderer_content)
+        self.assertIn('attr("vector-effect", "non-scaling-stroke")', renderer_content)
+        self.assertIn("const zoomScale = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || datum.screenScale || 1));", renderer_content)
+        self.assertIn("const radius = Math.max(6.8, Number(datum.markerRadiusPx || 0) + 2.8) / zoomScale;", renderer_content)
         self.assertIn("Math.min(18, Number(entry?.markerRadiusPx || 0) + 5)", renderer_content)
 
         airport_section = content.split('familyId: "airport"', 1)[1].split("});", 1)[0]
