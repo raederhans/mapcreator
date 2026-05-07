@@ -17,6 +17,7 @@ export function createColorResolutionStrategyOwner({
     canonicalCountryCode,
     getFeatureCountryCodeNormalized,
     getFeatureId,
+    getAtlantropaRuleColor,
     getOceanBaseFillColor,
     getSafeCanvasColor,
     isAntarcticSectorFeature,
@@ -55,6 +56,7 @@ export function createColorResolutionStrategyOwner({
       feature,
       getSafeColor: getSafeCanvasColor,
       isOceanFeature: isAtlantropaSeaFeature,
+      getAtlantropaRuleColor,
       getOceanBaseFillColor,
       getOwnerCode: getDisplayOwnerCode,
     }).color;

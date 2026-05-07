@@ -25,6 +25,10 @@ def _square(x: float, y: float, size: float = 1.0) -> Polygon:
     ])
 
 
+def _chunk_feature_ids(payload: dict) -> list[str]:
+    return [str(feature.get("properties", {}).get("id") or "") for feature in payload.get("features", [])]
+
+
 class ScenarioChunkAssetsTest(unittest.TestCase):
     def test_checked_in_tno_chunk_manifest_byte_sizes_and_hashes_match_files(self) -> None:
         scenario_id = "tno_1962"
@@ -98,19 +102,6 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                         "geometry": _square(1, 0),
                     },
                     {
-                        "id": "ATLSHL_TEST",
-                        "name": "Atlantropa Shore Seal",
-                        "cntr_code": "ATL",
-                        "admin1_group": "atl_group",
-                        "detail_tier": "scenario_atlantropa",
-                        "__source": "detail",
-                        "interactive": False,
-                        "render_as_base_geography": False,
-                        "atl_geometry_role": "shore_seal",
-                        "atl_join_mode": "gap_fill",
-                        "geometry": _square(3, 0),
-                    },
-                    {
                         "id": "RU_ARCTIC_FB_001",
                         "name": "Russia Shell Fallback 1",
                         "cntr_code": "RU",
@@ -128,6 +119,28 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 geometry="geometry",
                 crs="EPSG:4326",
             )
+            atlantropa_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "ATLSHL_TEST",
+                        "name": "Atlantropa Shore Seal",
+                        "cntr_code": "ATL",
+                        "admin1_group": "atl_group",
+                        "detail_tier": "scenario_atlantropa",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "atl_render_layer": "shoal",
+                        "atl_interactive": True,
+                        "atl_color_rule": "shoal_pattern",
+                        "atl_geometry_role": "shore_seal",
+                        "atl_join_mode": "gap_fill",
+                        "geometry": _square(3, 1),
+                    },
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
             land_mask_gdf = gpd.GeoDataFrame(
                 [{"id": "mask-1", "name": "Mask", "geometry": _square(0, 0, 5)}],
                 geometry="geometry",
@@ -139,8 +152,8 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 crs="EPSG:4326",
             )
             runtime_topology_payload = Topology(
-                [political_gdf, land_mask_gdf, context_land_mask_gdf],
-                object_name=["political", "land_mask", "context_land_mask"],
+                [political_gdf, atlantropa_gdf, land_mask_gdf, context_land_mask_gdf],
+                object_name=["political", "scenario_atlantropa", "land_mask", "context_land_mask"],
                 topology=True,
                 prequantize=False,
                 topoquantize=False,
@@ -160,12 +173,16 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 generated_at="2026-04-02T00:00:00Z",
             )
 
-            atl_chunk_path = scenario_dir / "chunks" / "political.detail.country.atl.json"
+            self.assertFalse((scenario_dir / "chunks" / "political.detail.country.atl.json").exists())
+            atl_chunk_path = scenario_dir / "chunks" / "scenario_atlantropa.detail.r1c2.json"
             atl_chunk_payload = json.loads(atl_chunk_path.read_text(encoding="utf-8"))
             self.assertEqual(len(atl_chunk_payload["features"]), 1)
             atl_props = atl_chunk_payload["features"][0]["properties"]
             self.assertEqual(atl_props["id"], "ATLSHL_TEST")
-            self.assertFalse(atl_props["interactive"])
+            self.assertIs(atl_props["interactive"], True)
+            self.assertIs(atl_props["atl_interactive"], True)
+            self.assertEqual(atl_props["atl_render_layer"], "shoal")
+            self.assertEqual(atl_props["atl_color_rule"], "shoal_pattern")
             self.assertEqual(atl_props["atl_geometry_role"], "shore_seal")
             self.assertEqual(atl_props["atl_join_mode"], "gap_fill")
             ru_chunk_path = scenario_dir / "chunks" / "political.detail.country.ru.json"
@@ -185,13 +202,14 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 owner_mesh,
             )
 
-    def test_political_detail_chunks_follow_owner_buckets_for_atl_synthetic_features(self) -> None:
+    def test_scenario_atlantropa_detail_chunks_keep_synthetic_feature_contracts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "tno_1962"
             scenario_dir.mkdir(parents=True, exist_ok=True)
             (scenario_dir / "owners.by_feature.json").write_text(
                 json.dumps({
                     "owners": {
+                        "AAA-1": "AAA",
                         "ATLISL_adriatica_corfu": "ITA",
                         "ATLSHL_adriatica_4": "GRE",
                     }
@@ -200,6 +218,11 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
             )
 
             political_gdf = gpd.GeoDataFrame(
+                [{"id": "AAA-1", "name": "Alpha", "cntr_code": "AAA", "geometry": _square(-10, 1)}],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            atlantropa_gdf = gpd.GeoDataFrame(
                 [
                     {
                         "id": "ATLISL_adriatica_corfu",
@@ -210,9 +233,12 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                         "__source": "detail",
                         "interactive": True,
                         "render_as_base_geography": False,
+                        "atl_render_layer": "land",
+                        "atl_interactive": True,
+                        "atl_color_rule": "owner",
                         "atl_geometry_role": "donor_island",
                         "atl_join_mode": "boolean_weld",
-                        "geometry": _square(0, 0),
+                        "geometry": _square(1, 1),
                     },
                     {
                         "id": "ATLSHL_adriatica_4",
@@ -221,19 +247,39 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                         "admin1_group": "atl_group",
                         "detail_tier": "scenario_atlantropa",
                         "__source": "detail",
-                        "interactive": False,
+                        "interactive": True,
                         "render_as_base_geography": False,
+                        "atl_render_layer": "shoal",
+                        "atl_interactive": True,
+                        "atl_color_rule": "shoal_pattern",
                         "atl_geometry_role": "shore_seal",
                         "atl_join_mode": "gap_fill",
-                        "geometry": _square(2, 0),
+                        "geometry": _square(3, 1),
+                    },
+                    {
+                        "id": "ATLSEA_FILL_adriatica_1",
+                        "name": "Adriatic Sea Completion",
+                        "cntr_code": "ATL",
+                        "admin1_group": "atl_group",
+                        "detail_tier": "scenario_atlantropa",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "atl_render_layer": "water",
+                        "atl_interactive": True,
+                        "atl_color_rule": "atlantropa_sea",
+                        "atl_surface_kind": "sea",
+                        "atl_geometry_role": "sea_completion",
+                        "atl_join_mode": "gap_fill",
+                        "geometry": _square(5, 1),
                     },
                 ],
                 geometry="geometry",
                 crs="EPSG:4326",
             )
             runtime_topology_payload = Topology(
-                [political_gdf],
-                object_name=["political"],
+                [political_gdf, atlantropa_gdf],
+                object_name=["political", "scenario_atlantropa"],
                 topology=True,
                 prequantize=False,
                 topoquantize=False,
@@ -253,20 +299,31 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 generated_at="2026-04-23T00:00:00Z",
             )
 
-            ita_chunk = json.loads((scenario_dir / "chunks" / "political.detail.country.ita.json").read_text(encoding="utf-8"))
+            atl_chunk = json.loads((scenario_dir / "chunks" / "scenario_atlantropa.detail.r1c2.json").read_text(encoding="utf-8"))
             self.assertEqual(
-                [feature["properties"]["id"] for feature in ita_chunk["features"]],
-                ["ATLISL_adriatica_corfu"],
+                _chunk_feature_ids(atl_chunk),
+                ["ATLISL_adriatica_corfu", "ATLSHL_adriatica_4", "ATLSEA_FILL_adriatica_1"],
             )
-            gre_chunk = json.loads((scenario_dir / "chunks" / "political.detail.country.gre.json").read_text(encoding="utf-8"))
-            self.assertEqual(
-                [feature["properties"]["id"] for feature in gre_chunk["features"]],
-                ["ATLSHL_adriatica_4"],
-            )
-            ita_manifest_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.detail.country.ita")
-            gre_manifest_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.detail.country.gre")
-            self.assertEqual(ita_manifest_chunk["country_codes"], ["ITA"])
-            self.assertEqual(gre_manifest_chunk["country_codes"], ["GRE"])
+            props_by_id = {feature["properties"]["id"]: feature["properties"] for feature in atl_chunk["features"]}
+            self.assertIs(props_by_id["ATLISL_adriatica_corfu"].get("interactive"), True)
+            self.assertIs(props_by_id["ATLISL_adriatica_corfu"].get("atl_interactive"), True)
+            self.assertEqual(props_by_id["ATLISL_adriatica_corfu"].get("atl_render_layer"), "land")
+            self.assertEqual(props_by_id["ATLISL_adriatica_corfu"].get("atl_color_rule"), "owner")
+            self.assertEqual(props_by_id["ATLISL_adriatica_corfu"].get("atl_geometry_role"), "donor_island")
+            self.assertIs(props_by_id["ATLSHL_adriatica_4"].get("interactive"), True)
+            self.assertIs(props_by_id["ATLSHL_adriatica_4"].get("atl_interactive"), True)
+            self.assertEqual(props_by_id["ATLSHL_adriatica_4"].get("atl_render_layer"), "shoal")
+            self.assertEqual(props_by_id["ATLSHL_adriatica_4"].get("atl_color_rule"), "shoal_pattern")
+            self.assertEqual(props_by_id["ATLSHL_adriatica_4"].get("atl_join_mode"), "gap_fill")
+            self.assertIs(props_by_id["ATLSEA_FILL_adriatica_1"].get("interactive"), True)
+            self.assertEqual(props_by_id["ATLSEA_FILL_adriatica_1"].get("atl_render_layer"), "water")
+            self.assertEqual(props_by_id["ATLSEA_FILL_adriatica_1"].get("atl_color_rule"), "atlantropa_sea")
+            self.assertEqual(props_by_id["ATLSEA_FILL_adriatica_1"].get("atl_geometry_role"), "sea_completion")
+
+            atl_manifest_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "scenario_atlantropa.detail.r1c2")
+            self.assertEqual(atl_manifest_chunk["layer"], "scenario_atlantropa")
+            self.assertEqual(atl_manifest_chunk["country_codes"], ["ATL"])
+            self.assertTrue(atl_manifest_chunk["feature_bounds"])
 
     def test_political_coarse_falls_back_to_runtime_topology_when_startup_shell_has_no_political(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

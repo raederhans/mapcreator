@@ -231,6 +231,7 @@ export function createDefaultUiState() {
     allowOpenOceanSelect: false,
     allowOpenOceanPaint: false,
     showScenarioSpecialRegions: true,
+    showScenarioAtlantropa: true,
     showScenarioReliefOverlays: true,
     showCityPoints: true,
     showUrban: true,
@@ -354,6 +355,10 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
       layerVisibility.showScenarioSpecialRegions === undefined
         ? true
         : !!layerVisibility.showScenarioSpecialRegions,
+    showScenarioAtlantropa:
+      layerVisibility.showScenarioAtlantropa === undefined
+        ? true
+        : !!layerVisibility.showScenarioAtlantropa,
     showScenarioReliefOverlays:
       layerVisibility.showScenarioReliefOverlays === undefined
         ? true

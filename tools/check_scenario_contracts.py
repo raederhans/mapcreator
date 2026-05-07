@@ -73,6 +73,26 @@ SUSPICIOUS_LOCALE_TRANSLATIONS = {
     "\u591a\u4e91",
 }
 STRICT_RUNTIME_ONLY_FEATURE_ID_PREFIXES = ("RU_ARCTIC_FB_",)
+SCENARIO_ATLANTROPA_OBJECT_NAME = "scenario_atlantropa"
+SCENARIO_ATLANTROPA_LAYER_KEY = "scenario_atlantropa"
+ATLANTROPA_FEATURE_PREFIXES = (
+    "ATLPRV_",
+    "ATLISL_",
+    "ATLSEA_FILL_",
+    "ATLSEA_",
+    "ATLWLD_",
+    "ATLSHL_",
+)
+ATLANTROPA_RENDER_LAYER_VALUES = {"water", "land", "shoal", "relief"}
+ATLANTROPA_COLOR_RULE_VALUES = {"atlantropa_sea", "owner", "salt_flat", "shoal_pattern"}
+ATLANTROPA_PREFIX_FIELD_RULES = (
+    ("ATLSEA_FILL_", "water", "atlantropa_sea"),
+    ("ATLSEA_", "water", "atlantropa_sea"),
+    ("ATLPRV_", "land", "owner"),
+    ("ATLISL_", "land", "owner"),
+    ("ATLWLD_", "land", "owner"),
+    ("ATLSHL_", "shoal", "shoal_pattern"),
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -293,6 +313,8 @@ def _collect_snapshot_inputs(
         "relief_overlays_url": "relief_overlays.geojson",
         "bathymetry_topology_url": "bathymetry.topo.json",
         "city_overrides_url": "city_overrides.json",
+        "scenario_atlantropa_topology_url": "scenario_atlantropa.topo.json",
+        "scenario_atlantropa_metadata_url": "scenario_atlantropa_metadata.json",
     }
     for field_name, label in manifest_input_fields.items():
         raw_url = str(manifest.get(field_name) or "").strip()
@@ -317,6 +339,8 @@ def _collect_snapshot_outputs(
         "context_lod.manifest.json": scenario_dir / "context_lod.manifest.json",
         "runtime_meta.json": scenario_dir / "runtime_meta.json",
         "mesh_pack.json": scenario_dir / "mesh_pack.json",
+        "scenario_atlantropa.topo.json": scenario_dir / "scenario_atlantropa.topo.json",
+        "scenario_atlantropa_metadata.json": scenario_dir / "scenario_atlantropa_metadata.json",
         "locales.startup.json": scenario_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
         "geo_aliases.startup.json": scenario_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
         SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"]: scenario_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
@@ -1117,6 +1141,10 @@ def _required_profile_filenames(profile_id: str, manifest: dict[str, Any]) -> li
         required.append("audit.json")
     if str(manifest.get("special_zone_layers_url") or "").strip():
         required.append("special_zone_layers.json")
+    if str(manifest.get("scenario_atlantropa_topology_url") or "").strip():
+        required.append("scenario_atlantropa.topo.json")
+    if str(manifest.get("scenario_atlantropa_metadata_url") or "").strip():
+        required.append("scenario_atlantropa_metadata.json")
     required.append(SCENARIO_BUILD_SNAPSHOT_FILENAME)
     return sorted(dict.fromkeys(required))
 
@@ -1413,7 +1441,7 @@ def _validate_runtime_shell_topology(
         if not isinstance(political_geometries, list) or not political_geometries:
             errors.append(f"{field_name} must contain non-empty objects.political.geometries in strict mode.")
     if require_overlay_shell_objects:
-        for object_name in ("land_mask", "context_land_mask", "scenario_water"):
+        for object_name in ("land_mask", "context_land_mask", "scenario_water", SCENARIO_ATLANTROPA_OBJECT_NAME):
             if object_name not in objects:
                 errors.append(f"{field_name} must contain objects.{object_name} in strict mode.")
 
@@ -1424,6 +1452,7 @@ def _validate_detail_chunk_manifest(
     runtime_feature_ids: set[str],
     owners_by_feature_id: dict[str, str],
     errors: list[str],
+    atlantropa_feature_ids: set[str] | None = None,
 ) -> dict[str, int]:
     payload = _load_required_local_json(detail_manifest_path, errors)
     if payload is None:
@@ -1441,6 +1470,8 @@ def _validate_detail_chunk_manifest(
     seen_ids: set[str] = set()
     duplicate_ids: list[str] = []
     political_ids: set[str] = set()
+    atlantropa_all_ids: set[str] = set()
+    atlantropa_detail_ids: set[str] = set()
     feature_to_chunk: dict[str, str] = {}
     owner_bucket_mismatch_count = 0
     require_precise_chunk_manifest = target_dir.name == "tno_1962"
@@ -1481,9 +1512,65 @@ def _validate_detail_chunk_manifest(
                     f"detail chunk {chunk_id} sha256 must match file content. "
                     f"manifest={expected_sha256} actual={actual_sha256}."
                 )
+        chunk_layer = str(chunk.get("layer") or "").strip()
+        chunk_lod = str(chunk.get("lod") or "").strip()
+        if chunk_layer == SCENARIO_ATLANTROPA_LAYER_KEY:
+            chunk_payload = _load_required_local_json(chunk_path, errors)
+            if chunk_payload is None:
+                continue
+            features = chunk_payload.get("features")
+            if not isinstance(features, list):
+                errors.append(f"scenario_atlantropa chunk {chunk_id} must be a FeatureCollection with features.")
+                continue
+            expected_feature_count = chunk.get("feature_count")
+            try:
+                expected_feature_count_int = int(expected_feature_count)
+            except (TypeError, ValueError):
+                errors.append(f"scenario_atlantropa chunk {chunk_id} feature_count must be an integer.")
+                expected_feature_count_int = None
+            if expected_feature_count_int is not None and expected_feature_count_int != len(features):
+                errors.append(
+                    f"scenario_atlantropa chunk {chunk_id} feature_count must match payload feature length. "
+                    f"manifest={expected_feature_count_int} actual={len(features)}."
+                )
+            _validate_detail_chunk_feature_bounds(
+                chunk_id,
+                chunk,
+                features,
+                errors,
+                required=require_precise_chunk_manifest and chunk_lod == "detail",
+            )
+            for feature in features:
+                if not isinstance(feature, dict):
+                    continue
+                props = feature.get("properties") if isinstance(feature.get("properties"), dict) else {}
+                feature_id = str(props.get("id") or feature.get("id") or "").strip()
+                if not feature_id:
+                    errors.append(f"scenario_atlantropa chunk {chunk_id} contains a feature without properties.id.")
+                    continue
+                if not _is_atlantropa_feature_id(feature_id):
+                    errors.append(f"scenario_atlantropa chunk {chunk_id} contains non-ATL feature {feature_id}.")
+                atlantropa_all_ids.add(feature_id)
+                if chunk_lod == "detail":
+                    atlantropa_detail_ids.add(feature_id)
+                if str(props.get("atl_render_layer") or "").strip() not in ATLANTROPA_RENDER_LAYER_VALUES:
+                    errors.append(f"scenario_atlantropa chunk {chunk_id} feature {feature_id} has invalid atl_render_layer.")
+                if str(props.get("atl_color_rule") or "").strip() not in ATLANTROPA_COLOR_RULE_VALUES:
+                    errors.append(f"scenario_atlantropa chunk {chunk_id} feature {feature_id} has invalid atl_color_rule.")
+                if not isinstance(props.get("atl_interactive"), bool):
+                    errors.append(f"scenario_atlantropa chunk {chunk_id} feature {feature_id} must store boolean atl_interactive.")
+                expected_field_rule = _expected_atlantropa_field_rule(feature_id)
+                render_layer = str(props.get("atl_render_layer") or "").strip()
+                color_rule = str(props.get("atl_color_rule") or "").strip()
+                if expected_field_rule and (render_layer, color_rule) != expected_field_rule:
+                    errors.append(
+                        f"scenario_atlantropa chunk {chunk_id} feature {feature_id} must use prefix fields "
+                        f"atl_render_layer={expected_field_rule[0]!r} atl_color_rule={expected_field_rule[1]!r}; "
+                        f"got atl_render_layer={render_layer!r} atl_color_rule={color_rule!r}."
+                    )
         if (
-            str(chunk.get("layer") or "").strip() == "political"
-            and str(chunk.get("lod") or "").strip() == "detail"
+            chunk_layer == "political"
+            and chunk_lod == "detail"
         ):
             chunk_payload = _load_required_local_json(chunk_path, errors)
             if chunk_payload is None:
@@ -1563,24 +1650,58 @@ def _validate_detail_chunk_manifest(
             "detail political chunk union must cover runtime political ids. "
             f"Missing sample: {sorted(runtime_feature_ids - political_ids)[:10]}."
         )
+    if atlantropa_feature_ids is not None:
+        illegal_atlantropa_chunk_ids = sorted(atlantropa_all_ids - atlantropa_feature_ids)
+        if illegal_atlantropa_chunk_ids:
+            errors.append(
+                "scenario_atlantropa chunk feature ids must belong to runtime scenario_atlantropa ids. "
+                f"Sample: {illegal_atlantropa_chunk_ids[:10]}."
+            )
+        missing_atlantropa_detail_chunk_ids = sorted(atlantropa_feature_ids - atlantropa_detail_ids)
+        if missing_atlantropa_detail_chunk_ids:
+            errors.append(
+                "scenario_atlantropa detail chunks must cover runtime scenario_atlantropa ids. "
+                f"Missing sample: {missing_atlantropa_detail_chunk_ids[:10]}."
+            )
     return {
         "owner_bucket_mismatch_count": owner_bucket_mismatch_count,
         "reverse_coverage_gap_count": reverse_coverage_gap_count,
     }
 
 
-def _extract_runtime_political_feature_ids(runtime_payload: dict, errors: list[str], runtime_path: Path) -> set[str]:
+def _is_atlantropa_feature_id(feature_id: str) -> bool:
+    normalized = str(feature_id or "").strip().upper()
+    return any(normalized.startswith(prefix) for prefix in ATLANTROPA_FEATURE_PREFIXES)
+
+
+def _expected_atlantropa_field_rule(feature_id: str) -> tuple[str, str] | None:
+    normalized = str(feature_id or "").strip().upper()
+    for prefix, render_layer, color_rule in ATLANTROPA_PREFIX_FIELD_RULES:
+        if normalized.startswith(prefix):
+            return render_layer, color_rule
+    return None
+
+
+def _extract_runtime_object_feature_ids(
+    runtime_payload: dict,
+    errors: list[str],
+    runtime_path: Path,
+    object_name: str,
+    *,
+    required: bool = True,
+) -> set[str]:
     objects = runtime_payload.get("objects")
     if not isinstance(objects, dict):
         errors.append(f"runtime_topology payload must contain objects at {runtime_path}.")
         return set()
-    political = objects.get("political")
-    if not isinstance(political, dict):
-        errors.append(f"runtime_topology payload must contain objects.political at {runtime_path}.")
+    runtime_object = objects.get(object_name)
+    if not isinstance(runtime_object, dict):
+        if required:
+            errors.append(f"runtime_topology payload must contain objects.{object_name} at {runtime_path}.")
         return set()
-    geometries = political.get("geometries")
+    geometries = runtime_object.get("geometries")
     if not isinstance(geometries, list):
-        errors.append(f"runtime_topology payload must contain objects.political.geometries at {runtime_path}.")
+        errors.append(f"runtime_topology payload must contain objects.{object_name}.geometries at {runtime_path}.")
         return set()
     feature_ids: set[str] = set()
     missing_ids = 0
@@ -1595,9 +1716,83 @@ def _extract_runtime_political_feature_ids(runtime_payload: dict, errors: list[s
         feature_ids.add(feature_id)
     if missing_ids:
         errors.append(
-            f"runtime_topology political geometries must expose stable ids. Missing ids on {missing_ids} geometries."
+            f"runtime_topology {object_name} geometries must expose stable ids. Missing ids on {missing_ids} geometries."
         )
     return feature_ids
+
+
+def _extract_runtime_political_feature_ids(runtime_payload: dict, errors: list[str], runtime_path: Path) -> set[str]:
+    return _extract_runtime_object_feature_ids(runtime_payload, errors, runtime_path, "political")
+
+
+def _validate_runtime_atlantropa_layer(
+    runtime_payload: dict,
+    *,
+    owner_ids: set[str],
+    errors: list[str],
+    runtime_path: Path,
+) -> set[str]:
+    objects = runtime_payload.get("objects") if isinstance(runtime_payload, dict) else None
+    if not isinstance(objects, dict):
+        errors.append(f"runtime_topology payload must contain objects at {runtime_path}.")
+        return set()
+    political_geometries = objects.get("political", {}).get("geometries", []) if isinstance(objects.get("political"), dict) else []
+    if isinstance(political_geometries, list):
+        political_atl_ids = []
+        for geometry in political_geometries:
+            props = geometry.get("properties") if isinstance(geometry, dict) and isinstance(geometry.get("properties"), dict) else {}
+            feature_id = str(props.get("id") or (geometry.get("id") if isinstance(geometry, dict) else "") or "").strip()
+            if _is_atlantropa_feature_id(feature_id):
+                political_atl_ids.append(feature_id)
+        if political_atl_ids:
+            errors.append(
+                "runtime_topology political object must not contain ATL* features once scenario_atlantropa is present. "
+                f"Sample: {political_atl_ids[:10]}."
+            )
+    atlantropa = objects.get(SCENARIO_ATLANTROPA_OBJECT_NAME)
+    if not isinstance(atlantropa, dict):
+        errors.append(f"runtime_topology payload must contain objects.{SCENARIO_ATLANTROPA_OBJECT_NAME} at {runtime_path}.")
+        return set()
+    geometries = atlantropa.get("geometries")
+    if not isinstance(geometries, list) or not geometries:
+        errors.append(f"runtime_topology objects.{SCENARIO_ATLANTROPA_OBJECT_NAME}.geometries must be non-empty.")
+        return set()
+    atlantropa_ids: set[str] = set()
+    for geometry in geometries:
+        if not isinstance(geometry, dict):
+            continue
+        props = geometry.get("properties") if isinstance(geometry.get("properties"), dict) else {}
+        feature_id = str(props.get("id") or geometry.get("id") or "").strip()
+        if not feature_id:
+            errors.append("scenario_atlantropa geometry is missing stable properties.id.")
+            continue
+        if not _is_atlantropa_feature_id(feature_id):
+            errors.append(f"scenario_atlantropa geometry {feature_id} must use an ATL* feature id.")
+        atlantropa_ids.add(feature_id)
+        render_layer = str(props.get("atl_render_layer") or "").strip()
+        color_rule = str(props.get("atl_color_rule") or "").strip()
+        if render_layer not in ATLANTROPA_RENDER_LAYER_VALUES:
+            errors.append(f"scenario_atlantropa feature {feature_id} has invalid atl_render_layer={render_layer!r}.")
+        if color_rule not in ATLANTROPA_COLOR_RULE_VALUES:
+            errors.append(f"scenario_atlantropa feature {feature_id} has invalid atl_color_rule={color_rule!r}.")
+        if not isinstance(props.get("atl_interactive"), bool):
+            errors.append(f"scenario_atlantropa feature {feature_id} must store boolean atl_interactive.")
+        expected_field_rule = _expected_atlantropa_field_rule(feature_id)
+        if expected_field_rule and (render_layer, color_rule) != expected_field_rule:
+            errors.append(
+                f"scenario_atlantropa feature {feature_id} must use prefix fields "
+                f"atl_render_layer={expected_field_rule[0]!r} atl_color_rule={expected_field_rule[1]!r}; "
+                f"got atl_render_layer={render_layer!r} atl_color_rule={color_rule!r}."
+            )
+    owner_atl_ids = {feature_id for feature_id in owner_ids if _is_atlantropa_feature_id(feature_id)}
+    if atlantropa_ids != owner_atl_ids:
+        errors.append(
+            "scenario_atlantropa ids must match ATL* owners.by_feature ids. "
+            f"runtime={len(atlantropa_ids)} owners={len(owner_atl_ids)} "
+            f"missing={sorted(owner_atl_ids - atlantropa_ids)[:10]} "
+            f"extra={sorted(atlantropa_ids - owner_atl_ids)[:10]}."
+        )
+    return atlantropa_ids
 
 
 def validate_strict_bundle_contract(
@@ -1678,8 +1873,26 @@ def validate_strict_bundle_contract(
             "manifest.summary.feature_count must equal owners feature count in strict mode. "
             f"manifest={expected_feature_count} owners={len(owner_ids)}."
         )
+    if target_dir.name == "tno_1962":
+        for field_name in ("scenario_atlantropa_topology_url", "scenario_atlantropa_metadata_url"):
+            if not str(manifest.get(field_name) or "").strip():
+                errors.append(f"manifest.{field_name} is required for tno_1962 strict Atlantropa layer contract.")
+        style_defaults = manifest.get("style_defaults") if isinstance(manifest.get("style_defaults"), dict) else {}
+        for style_key in ("atlantropa_sea", "atlantropa_salt_flat", "atlantropa_shoal"):
+            fill_color = style_defaults.get(style_key, {}).get("fillColor") if isinstance(style_defaults.get(style_key), dict) else ""
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", str(fill_color or "").strip()):
+                errors.append(f"manifest.style_defaults.{style_key}.fillColor must be a hex color.")
 
-    runtime_feature_ids = _extract_runtime_political_feature_ids(runtime_payload, errors, target_dir / "runtime_topology.topo.json")
+    runtime_political_feature_ids = _extract_runtime_political_feature_ids(runtime_payload, errors, target_dir / "runtime_topology.topo.json")
+    runtime_atlantropa_feature_ids = set()
+    if target_dir.name == "tno_1962":
+        runtime_atlantropa_feature_ids = _validate_runtime_atlantropa_layer(
+            runtime_payload,
+            owner_ids=owner_ids,
+            errors=errors,
+            runtime_path=target_dir / "runtime_topology.topo.json",
+        )
+    runtime_feature_ids = runtime_political_feature_ids | runtime_atlantropa_feature_ids
     runtime_topology_path = target_dir / "runtime_topology.topo.json"
     bootstrap_topology_path = None
     source_bootstrap_topology_path = None
@@ -1720,13 +1933,14 @@ def validate_strict_bundle_contract(
             detail_chunk_metrics = _validate_detail_chunk_manifest(
                 target_dir,
                 detail_chunk_manifest_path,
-                runtime_feature_ids,
+                runtime_political_feature_ids,
                 {
                     str(feature_id).strip(): normalize_scenario_contract_tag(owner_tag)
                     for feature_id, owner_tag in owners.items()
                     if str(feature_id).strip() and normalize_scenario_contract_tag(owner_tag)
                 },
                 errors,
+                atlantropa_feature_ids=runtime_atlantropa_feature_ids if target_dir.name == "tno_1962" else None,
             )
             if report is not None:
                 report["owner_bucket_mismatch_count"] = int(detail_chunk_metrics["owner_bucket_mismatch_count"])

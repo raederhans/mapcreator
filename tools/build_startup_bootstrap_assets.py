@@ -25,6 +25,7 @@ BOOTSTRAP_RUNTIME_OBJECTS = (
     "context_land_mask",
     "scenario_water",
     "scenario_special_land",
+    "scenario_atlantropa",
 )
 BOOTSTRAP_POLITICAL_PROPERTY_WHITELIST = (
     "id",
@@ -40,6 +41,9 @@ BOOTSTRAP_POLITICAL_PROPERTY_WHITELIST = (
     "retained_fragment_area",
     "interactive",
     "render_as_base_geography",
+    "atl_render_layer",
+    "atl_interactive",
+    "atl_color_rule",
 )
 STARTUP_BASE_OBJECTS = (
     "political",

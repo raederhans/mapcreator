@@ -105,14 +105,6 @@
         "min_zoom": 1.35,
         "max_zoom": 99.0,
         "chunk_ids": [
-          "political.detail.country.atl"
-        ]
-      },
-      {
-        "lod": "detail",
-        "min_zoom": 1.35,
-        "max_zoom": 99.0,
-        "chunk_ids": [
           "political.detail.country.bhr"
         ]
       },
@@ -1153,14 +1145,6 @@
         "min_zoom": 1.35,
         "max_zoom": 99.0,
         "chunk_ids": [
-          "political.detail.country.spr"
-        ]
-      },
-      {
-        "lod": "detail",
-        "min_zoom": 1.35,
-        "max_zoom": 99.0,
-        "chunk_ids": [
           "political.detail.country.svr"
         ]
       },
@@ -1402,6 +1386,32 @@
         "max_zoom": 99.0,
         "chunk_ids": [
           "political.detail.country.zlt"
+        ]
+      }
+    ],
+    "scenario_atlantropa": [
+      {
+        "lod": "coarse",
+        "min_zoom": 0.0,
+        "max_zoom": 1.7,
+        "chunk_ids": [
+          "scenario_atlantropa.coarse.r0c0"
+        ]
+      },
+      {
+        "lod": "detail",
+        "min_zoom": 1.7,
+        "max_zoom": 99.0,
+        "chunk_ids": [
+          "scenario_atlantropa.detail.r1c1"
+        ]
+      },
+      {
+        "lod": "detail",
+        "min_zoom": 1.7,
+        "max_zoom": 99.0,
+        "chunk_ids": [
+          "scenario_atlantropa.detail.r1c2"
         ]
       }
     ],

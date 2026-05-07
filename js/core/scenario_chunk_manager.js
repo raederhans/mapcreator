@@ -354,6 +354,7 @@ export function getVisibleScenarioChunkLayers({
   includePoliticalCore = false,
   showWaterRegions = false,
   showScenarioSpecialRegions = false,
+  showScenarioAtlantropa = false,
   showScenarioReliefOverlays = false,
   showCityPoints = false,
 } = {}) {
@@ -361,6 +362,7 @@ export function getVisibleScenarioChunkLayers({
     includePoliticalCore ? "political" : "",
     showWaterRegions ? "water" : "",
     showScenarioSpecialRegions ? "special" : "",
+    showScenarioAtlantropa ? "scenario_atlantropa" : "",
     showScenarioReliefOverlays ? "relief" : "",
     showCityPoints ? "cities" : "",
   ].filter(Boolean);

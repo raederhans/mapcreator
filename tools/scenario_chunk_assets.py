@@ -22,11 +22,14 @@ DEFAULT_RENDER_BUDGET_HINTS = {
 }
 
 TNO_1962_RENDER_BUDGET_HINTS = {
-    "max_required_political_chunks": 48,
+    "max_required_political_chunks": 6,
     "max_required_political_estimated_path_cost": 520000,
     "max_required_political_byte_size": 45000000,
     "min_required_political_chunks": 1,
 }
+
+SCENARIO_ATLANTROPA_LAYER_KEY = "scenario_atlantropa"
+SCENARIO_ATLANTROPA_OBJECT_NAME = "scenario_atlantropa"
 
 LOD_SPECS = (
     {"lod": "coarse", "cols": 1, "rows": 1, "min_zoom": 0.0, "max_zoom": 1.7, "global_coverage": True},
@@ -213,6 +216,11 @@ def _is_interactive_atlantropa_boolean_weld_island(feature: dict[str, Any]) -> b
 
 def _is_atlantropa_helper_feature(feature: dict[str, Any]) -> bool:
     feature_id = _feature_identity(feature, 0).strip().upper()
+    props = _feature_properties(feature)
+    render_layer = str(props.get("atl_render_layer") or "").strip().lower()
+    color_rule = str(props.get("atl_color_rule") or "").strip().lower()
+    if render_layer == "water" and color_rule == "atlantropa_sea":
+        return False
     if feature_id.startswith("ATLSHL_") or feature_id.startswith("ATLWLD_") or feature_id.startswith("ATLSEA_FILL_"):
         return True
     if _is_interactive_atlantropa_boolean_weld_island(feature):
@@ -394,20 +402,24 @@ def _normalize_d3_polygonal_geometry_orientation(geometry: Any) -> Any:
     return geometry
 
 
-def _normalize_atlantropa_donor_sea_feature_for_d3(feature: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(feature, dict) or not _is_atlantropa_donor_sea_feature(feature):
+def _is_atlantropa_feature(feature: dict[str, Any]) -> bool:
+    return _feature_identity(feature, 0).strip().upper().startswith("ATL")
+
+
+def _normalize_atlantropa_feature_for_d3(feature: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(feature, dict) or not _is_atlantropa_feature(feature):
         return feature
     normalized = dict(feature)
     normalized["geometry"] = _normalize_d3_polygonal_geometry_orientation(feature.get("geometry"))
     return normalized
 
 
-def _normalize_chunk_atlantropa_donor_seas_for_d3(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+def _normalize_chunk_atlantropa_features_for_d3(payload: dict[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(payload, dict) or not isinstance(payload.get("features"), list):
         return payload
     normalized = dict(payload)
     normalized["features"] = [
-        _normalize_atlantropa_donor_sea_feature_for_d3(feature)
+        _normalize_atlantropa_feature_for_d3(feature)
         for feature in payload.get("features") or []
     ]
     return normalized
@@ -507,7 +519,7 @@ def _topology_object_to_feature_collection(topology_payload: dict[str, Any] | No
     return {
         "type": "FeatureCollection",
         "features": [
-            _normalize_atlantropa_donor_sea_feature_for_d3(feature)
+            _normalize_atlantropa_feature_for_d3(feature)
             for feature in (feature_collection.get("features") or [])
         ],
     }
@@ -581,7 +593,7 @@ def _slice_layer_payload(layer_key: str, payload: dict[str, Any], selected_featu
     return {
         "type": "FeatureCollection",
         "features": [
-            _normalize_atlantropa_donor_sea_feature_for_d3(feature)
+            _normalize_atlantropa_feature_for_d3(feature)
             for index, feature in enumerate(feature_collection.get("features") or [])
             if _feature_id(feature, index) in selected_feature_ids
         ],
@@ -592,7 +604,7 @@ def _slice_feature_collection(feature_collection: dict[str, Any], selected_featu
     return {
         "type": "FeatureCollection",
         "features": [
-            _normalize_atlantropa_donor_sea_feature_for_d3(feature)
+            _normalize_atlantropa_feature_for_d3(feature)
             for index, feature in enumerate(feature_collection.get("features") or [])
             if _feature_id(feature, index) in selected_feature_ids
         ],
@@ -850,10 +862,10 @@ def _build_chunk_payloads_for_feature_collection(
                 chunk_id = f"{layer_key}.{spec['lod']}.r{row}c{col}"
                 chunk_filename = f"{chunk_id}.json"
                 chunk_path = scenario_dir / "chunks" / chunk_filename
-                chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
+                chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
                 if layer_key == "political" and spec["lod"] == "coarse":
                     chunk_payload = _optimize_political_coarse_payload(chunk_payload)
-                    chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
+                    chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
                     _write_minified_json(chunk_path, chunk_payload)
                 elif layer_key == "water" and spec["lod"] == "coarse":
                     _write_minified_json(chunk_path, chunk_payload)
@@ -861,7 +873,8 @@ def _build_chunk_payloads_for_feature_collection(
                     _write_json(chunk_path, chunk_payload)
                 chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
                 feature_bounds_summary = _build_feature_bounds_summary(selected_features) if (
-                    layer_key == "political" and spec["lod"] == "detail"
+                    layer_key in {"political", SCENARIO_ATLANTROPA_LAYER_KEY}
+                    and spec["lod"] == "detail"
                 ) else []
                 manifest_chunks.append({
                     "id": chunk_id,
@@ -962,7 +975,7 @@ def _build_political_chunk_payloads(
             chunk_id = f"political.detail.country.{owner_bucket.lower()}"
             chunk_filename = f"{chunk_id}.json"
             chunk_path = chunks_dir / chunk_filename
-            chunk_payload = _normalize_chunk_atlantropa_donor_seas_for_d3(chunk_payload)
+            chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
             _write_json(chunk_path, chunk_payload)
             chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
             selected_features = [feature for _feature_id_value, feature, _bounds in entries]
@@ -991,6 +1004,26 @@ def _build_political_chunk_payloads(
             })
 
     return all_chunks, lod_layers
+
+
+def _build_atlantropa_chunk_payloads(
+    *,
+    scenario_id: str,
+    scenario_dir: Path,
+    runtime_topology_payload: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
+    feature_collection = _topology_object_to_feature_collection(
+        runtime_topology_payload,
+        SCENARIO_ATLANTROPA_OBJECT_NAME,
+    )
+    return _build_chunk_payloads_for_feature_collection(
+        scenario_id=scenario_id,
+        scenario_dir=scenario_dir,
+        layer_key=SCENARIO_ATLANTROPA_LAYER_KEY,
+        feature_collection=feature_collection,
+        payload_factory=lambda selected_feature_ids: _slice_feature_collection(feature_collection, selected_feature_ids),
+        chunk_specs=LOD_SPECS,
+    )
 
 
 def build_and_write_scenario_chunk_assets(
@@ -1026,7 +1059,17 @@ def build_and_write_scenario_chunk_assets(
     all_chunks.extend(political_chunks)
     for lod_layer_key, entries in political_lod_entries.items():
         lod_layers[lod_layer_key].extend(entries)
+    atlantropa_chunks, atlantropa_lod_entries = _build_atlantropa_chunk_payloads(
+        scenario_id=scenario_id,
+        scenario_dir=scenario_dir,
+        runtime_topology_payload=runtime_topology_payload,
+    )
+    all_chunks.extend(atlantropa_chunks)
+    for lod_layer_key, entries in atlantropa_lod_entries.items():
+        lod_layers[lod_layer_key].extend(entries)
     for layer_key, payload in (layer_payloads or {}).items():
+        if str(layer_key).strip().lower() == SCENARIO_ATLANTROPA_LAYER_KEY:
+            continue
         chunks, lod_entries = _build_chunk_payloads_for_layer(
             scenario_id=scenario_id,
             scenario_dir=scenario_dir,
@@ -1056,6 +1099,13 @@ def build_and_write_scenario_chunk_assets(
         "startup_topology_url": startup_topology_url,
         "runtime_topology_url": runtime_topology_url,
         "political_chunk_count": len([chunk for chunk in all_chunks if chunk.get("layer") == "political"]),
+        "scenario_atlantropa_chunk_count": len([
+            chunk for chunk in all_chunks if chunk.get("layer") == SCENARIO_ATLANTROPA_LAYER_KEY
+        ]),
+        "layer_chunk_counts": {
+            layer_key: len([chunk for chunk in all_chunks if chunk.get("layer") == layer_key])
+            for layer_key in sorted({str(chunk.get("layer") or "") for chunk in all_chunks if str(chunk.get("layer") or "")})
+        },
         "total_chunk_count": len(all_chunks),
         "runtime_topology_object_names": sorted((runtime_topology_payload or {}).get("objects", {}).keys()) if isinstance(runtime_topology_payload, dict) else [],
         "runtime_topology_object_count": len((runtime_topology_payload or {}).get("objects", {})) if isinstance(runtime_topology_payload, dict) else 0,

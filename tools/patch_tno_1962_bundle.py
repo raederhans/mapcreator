@@ -2161,6 +2161,20 @@ ATL_JOIN_MODE_NONE = "none"
 ATL_JOIN_MODE_GAP_FILL = "gap_fill"
 ATL_JOIN_MODE_BOOLEAN_WELD = "boolean_weld"
 
+SCENARIO_ATLANTROPA_OBJECT_NAME = "scenario_atlantropa"
+SCENARIO_ATLANTROPA_TOPOLOGY_FILENAME = "scenario_atlantropa.topo.json"
+SCENARIO_ATLANTROPA_METADATA_FILENAME = "scenario_atlantropa_metadata.json"
+ATLANTROPA_RENDER_LAYER_VALUES = {"water", "land", "shoal", "relief"}
+ATLANTROPA_COLOR_RULE_VALUES = {"atlantropa_sea", "owner", "salt_flat", "shoal_pattern"}
+ATLANTROPA_PREFIX_RULES = (
+    ("ATLSEA_FILL_", "water", True, "atlantropa_sea"),
+    ("ATLSEA_", "water", True, "atlantropa_sea"),
+    ("ATLPRV_", "land", True, "owner"),
+    ("ATLISL_", "land", True, "owner"),
+    ("ATLWLD_", "land", True, "owner"),
+    ("ATLSHL_", "shoal", True, "shoal_pattern"),
+)
+
 DONOR_ISLAND_NAME_HINTS = (
     "island",
     "islands",
@@ -4550,6 +4564,7 @@ ATLANTROPA_REGION_CONFIGS = {
                 "owner_tag": "TUR",
                 "donor_state_ids": [8551, 8552, 8553, 8554, 8555, 8556],
                 "baseline_feature_ids": ["CY000"],
+                "group_bbox": (32.20, 34.45, 34.55, 35.70),
                 "search_margin": 0.26,
                 "gap_fill_buffer": 0.12,
                 "boolean_weld_distance": 0.16,
@@ -4888,7 +4903,7 @@ ATLANTROPA_REGION_CONFIGS = {
         "feature_group_id": "atlantropa_libya_suez_and_qattara",
         "group_label": "Libya, Cyrenaica and Suez Chain",
         "aoi_bbox": (12.5, 28.0, 35.2, 34.2),
-        "sea_completion_bbox": (11.8, 27.8, 35.9, 34.8),
+        "sea_completion_bbox": (11.8, 27.8, 35.9, 35.2),
         "land_state_ids": [8563, 8564, 8565, 8567, 8568, 8569, 8570, 8572, 8574, 8575, 8576],
         "water_state_ids": [8599, 8605, 8613, 8614, 8615, 8616, 8617, 8618],
         "state_owner_overrides": {
@@ -5662,6 +5677,30 @@ def rebuild_published_scenario_chunk_assets(scenario_dir: Path, checkpoint_dir: 
     runtime_topology_path = ROOT.joinpath(*Path(runtime_topology_url).parts)
     runtime_topology_path.parent.mkdir(parents=True, exist_ok=True)
     write_json(runtime_topology_path, runtime_topology_payload)
+    scenario_atlantropa_topology_payload = load_checkpoint_json(
+        checkpoint_dir,
+        SCENARIO_ATLANTROPA_TOPOLOGY_FILENAME,
+    )
+    scenario_atlantropa_topology_url = str(
+        manifest_payload.get("scenario_atlantropa_topology_url")
+        or f"data/scenarios/{SCENARIO_ID}/{SCENARIO_ATLANTROPA_TOPOLOGY_FILENAME}"
+    ).strip()
+    scenario_atlantropa_topology_path = ROOT.joinpath(*Path(scenario_atlantropa_topology_url).parts)
+    scenario_atlantropa_topology_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(scenario_atlantropa_topology_path, scenario_atlantropa_topology_payload)
+    manifest_payload["scenario_atlantropa_topology_url"] = scenario_atlantropa_topology_url
+    scenario_atlantropa_metadata_payload = load_checkpoint_json(
+        checkpoint_dir,
+        SCENARIO_ATLANTROPA_METADATA_FILENAME,
+    )
+    scenario_atlantropa_metadata_url = str(
+        manifest_payload.get("scenario_atlantropa_metadata_url")
+        or f"data/scenarios/{SCENARIO_ID}/{SCENARIO_ATLANTROPA_METADATA_FILENAME}"
+    ).strip()
+    scenario_atlantropa_metadata_path = ROOT.joinpath(*Path(scenario_atlantropa_metadata_url).parts)
+    scenario_atlantropa_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(scenario_atlantropa_metadata_path, scenario_atlantropa_metadata_payload)
+    manifest_payload["scenario_atlantropa_metadata_url"] = scenario_atlantropa_metadata_url
 
     runtime_bootstrap_topology_payload = build_bootstrap_runtime_topology(runtime_topology_payload)
     startup_topology_url = str(
@@ -6584,6 +6623,16 @@ def patch_tno_palette_defaults(countries_payload: dict, manifest_payload: dict) 
         atlantropa_sea_defaults = {}
     atlantropa_sea_defaults["fillColor"] = load_tno_atlantropa_sea_fill_color()
     style_defaults["atlantropa_sea"] = atlantropa_sea_defaults
+    atlantropa_salt_flat_defaults = style_defaults.get("atlantropa_salt_flat")
+    if not isinstance(atlantropa_salt_flat_defaults, dict):
+        atlantropa_salt_flat_defaults = {}
+    atlantropa_salt_flat_defaults["fillColor"] = "#7c6f53"
+    style_defaults["atlantropa_salt_flat"] = atlantropa_salt_flat_defaults
+    atlantropa_shoal_defaults = style_defaults.get("atlantropa_shoal")
+    if not isinstance(atlantropa_shoal_defaults, dict):
+        atlantropa_shoal_defaults = {}
+    atlantropa_shoal_defaults["fillColor"] = "#3a5d70"
+    style_defaults["atlantropa_shoal"] = atlantropa_shoal_defaults
     manifest_payload["style_defaults"] = style_defaults
 
 
@@ -7352,6 +7401,22 @@ def normalize_polygonal(geom):
             if candidate_part.is_empty or candidate_part.area <= 1e-9:
                 continue
             parts.append(orient(candidate_part, sign=-1.0))
+    if not parts:
+        return None
+    return parts[0] if len(parts) == 1 else MultiPolygon(parts)
+
+
+def solidify_polygonal_interiors(geom):
+    candidate = normalize_polygonal(geom)
+    if candidate is None:
+        return None
+    parts: list[Polygon] = []
+    for part in iter_polygon_parts(candidate):
+        exterior = list(part.exterior.coords)
+        if len(exterior) < 4:
+            continue
+        solid_part = normalize_polygonal(Polygon(exterior))
+        parts.extend(iter_polygon_parts(solid_part))
     if not parts:
         return None
     return parts[0] if len(parts) == 1 else MultiPolygon(parts)
@@ -8308,6 +8373,12 @@ def build_major_island_rows(
             combined = normalize_polygonal(combined)
         if combined is None:
             continue
+        if join_mode == ATL_JOIN_MODE_BOOLEAN_WELD:
+            # Boolean-welded major islands represent rebuilt land mass. The weld can
+            # leave the island core as interior rings, which D3 renders as sea holes.
+            combined = solidify_polygonal_interiors(combined)
+            if combined is None:
+                continue
 
         owner_tag = normalize_tag(group.get("owner_tag")) or assign_owner_from_nearest_rows(combined, matched_rows)
         donor_state_name_set = sorted({
@@ -10492,6 +10563,101 @@ def recalculate_country_feature_counts(
         summary["controller_count"] = summary["owner_count"]
 
 
+def is_atlantropa_feature_id(feature_id: object) -> bool:
+    text = str(feature_id or "").strip().upper()
+    return any(text.startswith(prefix) for prefix, _layer, _interactive, _color_rule in ATLANTROPA_PREFIX_RULES)
+
+
+def classify_atlantropa_feature_id(feature_id: object) -> tuple[str, bool, str] | None:
+    text = str(feature_id or "").strip().upper()
+    for prefix, render_layer, interactive, color_rule in ATLANTROPA_PREFIX_RULES:
+        if text.startswith(prefix):
+            return render_layer, interactive, color_rule
+    return None
+
+
+def apply_atlantropa_runtime_fields(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    next_gdf = gdf.copy()
+    if next_gdf.empty or "id" not in next_gdf.columns:
+        next_gdf["atl_render_layer"] = ""
+        next_gdf["atl_interactive"] = False
+        next_gdf["atl_color_rule"] = ""
+        return next_gdf
+    classifications = next_gdf["id"].astype(str).map(classify_atlantropa_feature_id)
+    next_gdf["atl_render_layer"] = classifications.map(lambda value: value[0] if value else "")
+    next_gdf["atl_interactive"] = classifications.map(lambda value: bool(value[1]) if value else False)
+    next_gdf["atl_color_rule"] = classifications.map(lambda value: value[2] if value else "")
+    if "interactive" not in next_gdf.columns:
+        next_gdf["interactive"] = False
+    next_gdf["interactive"] = next_gdf["atl_interactive"].astype(bool)
+    return next_gdf
+
+
+def build_scenario_atlantropa_metadata_payload(feature_collection: dict) -> dict:
+    features = feature_collection.get("features", []) if isinstance(feature_collection, dict) else []
+    prefix_counts: Counter[str] = Counter()
+    render_layer_counts: Counter[str] = Counter()
+    color_rule_counts: Counter[str] = Counter()
+    interactive_count = 0
+    for feature in features if isinstance(features, list) else []:
+        props = feature.get("properties", {}) if isinstance(feature, dict) else {}
+        feature_id = str(props.get("id") or feature.get("id") or "").strip().upper()
+        for prefix, _render_layer, _interactive, _color_rule in ATLANTROPA_PREFIX_RULES:
+            if feature_id.startswith(prefix):
+                prefix_counts[prefix] += 1
+                break
+        render_layer = str(props.get("atl_render_layer") or "").strip()
+        color_rule = str(props.get("atl_color_rule") or "").strip()
+        if render_layer:
+            render_layer_counts[render_layer] += 1
+        if color_rule:
+            color_rule_counts[color_rule] += 1
+        if props.get("atl_interactive") is True:
+            interactive_count += 1
+    return {
+        "version": 1,
+        "scenario_id": SCENARIO_ID,
+        "generated_at": utc_timestamp(),
+        "object_name": SCENARIO_ATLANTROPA_OBJECT_NAME,
+        "feature_count": len(features) if isinstance(features, list) else 0,
+        "interactive_feature_count": interactive_count,
+        "prefix_rules": [
+            {
+                "prefix": prefix,
+                "atl_render_layer": render_layer,
+                "atl_interactive": interactive,
+                "atl_color_rule": color_rule,
+            }
+            for prefix, render_layer, interactive, color_rule in ATLANTROPA_PREFIX_RULES
+        ],
+        "prefix_counts": dict(sorted(prefix_counts.items())),
+        "render_layer_counts": dict(sorted(render_layer_counts.items())),
+        "color_rule_counts": dict(sorted(color_rule_counts.items())),
+    }
+
+
+def build_single_object_topology_payload(source_topology: dict, object_name: str) -> dict:
+    objects = source_topology.get("objects") if isinstance(source_topology, dict) else None
+    source_object = objects.get(object_name) if isinstance(objects, dict) else None
+    if not isinstance(source_object, dict):
+        source_object = {
+            "type": "GeometryCollection",
+            "geometries": [],
+        }
+    payload = {
+        "type": "Topology",
+        "objects": {
+            object_name: copy.deepcopy(source_object),
+        },
+        "arcs": copy.deepcopy(source_topology.get("arcs") if isinstance(source_topology, dict) else []),
+    }
+    if isinstance(source_topology, dict):
+        for key in ("bbox", "transform"):
+            if key in source_topology:
+                payload[key] = copy.deepcopy(source_topology[key])
+    return payload
+
+
 def build_runtime_topology_payload(
     political_gdf: gpd.GeoDataFrame,
     water_gdf: gpd.GeoDataFrame,
@@ -10516,6 +10682,9 @@ def build_runtime_topology_payload(
         "atl_surface_kind",
         "atl_geometry_role",
         "atl_join_mode",
+        "atl_render_layer",
+        "atl_interactive",
+        "atl_color_rule",
         "interactive",
         "render_as_base_geography",
         "geometry",
@@ -10527,40 +10696,24 @@ def build_runtime_topology_payload(
     water_gdf = apply_d3_spherical_safe_split_to_gdf(water_gdf)
     land_mask_gdf = apply_d3_spherical_safe_split_to_gdf(land_mask_gdf)
     context_land_mask_gdf = apply_d3_spherical_safe_split_to_gdf(context_land_mask_gdf)
-    if "id" in runtime_political_gdf.columns and "cntr_code" in runtime_political_gdf.columns:
+    if "id" in runtime_political_gdf.columns:
         feature_ids = runtime_political_gdf["id"].astype(str)
-        atl_runtime_mask = feature_ids.str.startswith("ATLISL_") | feature_ids.str.startswith("ATLSHL_")
-        runtime_political_gdf.loc[atl_runtime_mask, "cntr_code"] = ATL_TAG
-        if "interactive" in runtime_political_gdf.columns:
-            geometry_roles = (
-                runtime_political_gdf["atl_geometry_role"].fillna("").astype(str).str.strip().str.lower()
-                if "atl_geometry_role" in runtime_political_gdf.columns
-                else pd.Series("", index=runtime_political_gdf.index, dtype="object")
-            )
-            join_modes = (
-                runtime_political_gdf["atl_join_mode"].fillna("").astype(str).str.strip().str.lower()
-                if "atl_join_mode" in runtime_political_gdf.columns
-                else pd.Series("", index=runtime_political_gdf.index, dtype="object")
-            )
-            atl_boolean_weld_island_mask = (
-                feature_ids.str.startswith("ATLISL_")
-                & geometry_roles.eq(ATL_GEOMETRY_ROLE_DONOR_ISLAND)
-                & join_modes.eq(ATL_JOIN_MODE_BOOLEAN_WELD)
-            )
-            atl_helper_mask = (
-                feature_ids.str.startswith(("ATLSHL_", "ATLWLD_", "ATLSEA_FILL_"))
-                | geometry_roles.isin({
-                    ATL_GEOMETRY_ROLE_SHORE_SEAL,
-                    ATL_GEOMETRY_ROLE_SEA_COMPLETION,
-                    ATL_GEOMETRY_ROLE_DONOR_SEA,
-                })
-                | join_modes.eq(ATL_JOIN_MODE_GAP_FILL)
-                | (join_modes.eq(ATL_JOIN_MODE_BOOLEAN_WELD) & ~atl_boolean_weld_island_mask)
-            )
-            runtime_political_gdf.loc[atl_helper_mask, "interactive"] = False
-            runtime_political_gdf.loc[atl_boolean_weld_island_mask, "interactive"] = True
+        atl_feature_mask = feature_ids.map(is_atlantropa_feature_id)
+        runtime_atlantropa_gdf = apply_atlantropa_runtime_fields(runtime_political_gdf.loc[atl_feature_mask].copy())
+        if "cntr_code" in runtime_atlantropa_gdf.columns:
+            atl_system_mask = runtime_atlantropa_gdf["id"].astype(str).str.startswith((
+                "ATLISL_",
+                "ATLSHL_",
+                "ATLSEA_",
+                "ATLSEA_FILL_",
+            ))
+            runtime_atlantropa_gdf.loc[atl_system_mask, "cntr_code"] = ATL_TAG
+        runtime_political_gdf = runtime_political_gdf.loc[~atl_feature_mask].copy()
+    else:
+        runtime_atlantropa_gdf = runtime_political_gdf.iloc[0:0].copy()
     topo_dict = build_named_topology([
         ("political", runtime_political_gdf),
+        (SCENARIO_ATLANTROPA_OBJECT_NAME, runtime_atlantropa_gdf),
         ("land_mask", land_mask_gdf),
         ("context_land_mask", context_land_mask_gdf),
         ("scenario_water", water_gdf),
@@ -10568,14 +10721,20 @@ def build_runtime_topology_payload(
     replace_topology_object_from_gdf_for_d3(topo_dict, "land_mask", land_mask_gdf)
     replace_topology_object_from_gdf_for_d3(topo_dict, "context_land_mask", context_land_mask_gdf)
     replace_topology_object_from_gdf_for_d3(topo_dict, "scenario_water", water_gdf)
+    replace_topology_object_from_gdf_for_d3(topo_dict, SCENARIO_ATLANTROPA_OBJECT_NAME, runtime_atlantropa_gdf)
     compact_topology_arcs(topo_dict)
     topo_dict.setdefault("objects", {})["scenario_special_land"] = {
         "type": "GeometryCollection",
         "geometries": [],
     }
     compact_topology_properties(topo_dict, "political")
-    political_out = topology_object_to_gdf(topo_dict, "political")
-    topo_dict["objects"]["political"]["computed_neighbors"] = compute_neighbor_graph(political_out)
+    compact_topology_properties(topo_dict, SCENARIO_ATLANTROPA_OBJECT_NAME)
+    political_geometries = topo_dict.get("objects", {}).get("political", {}).get("geometries", [])
+    if isinstance(political_geometries, list) and political_geometries:
+        political_out = topology_object_to_gdf(topo_dict, "political")
+        topo_dict["objects"]["political"]["computed_neighbors"] = compute_neighbor_graph(political_out)
+    else:
+        topo_dict["objects"]["political"]["computed_neighbors"] = []
     return topo_dict
 
 
@@ -11094,6 +11253,16 @@ def build_runtime_topology_state(
     runtime_water_regions = sanitize_feature_collection_polygonal_geometries(
         topology_object_to_feature_collection(runtime_topology_payload, "scenario_water")
     )
+    scenario_atlantropa_features = sanitize_feature_collection_polygonal_geometries(
+        topology_object_to_feature_collection(runtime_topology_payload, SCENARIO_ATLANTROPA_OBJECT_NAME)
+    )
+    scenario_atlantropa_topology_payload = build_single_object_topology_payload(
+        runtime_topology_payload,
+        SCENARIO_ATLANTROPA_OBJECT_NAME,
+    )
+    scenario_atlantropa_metadata_payload = build_scenario_atlantropa_metadata_payload(
+        scenario_atlantropa_features or feature_collection_from_features([])
+    )
     validate_runtime_topology_water_outputs(
         runtime_topology_payload,
         water_feature_collection,
@@ -11131,6 +11300,12 @@ def build_runtime_topology_state(
         "coastal_accent": True,
     }
     manifest_payload["runtime_topology_url"] = "data/scenarios/tno_1962/runtime_topology.topo.json"
+    manifest_payload["scenario_atlantropa_topology_url"] = (
+        f"data/scenarios/{SCENARIO_ID}/{SCENARIO_ATLANTROPA_TOPOLOGY_FILENAME}"
+    )
+    manifest_payload["scenario_atlantropa_metadata_url"] = (
+        f"data/scenarios/{SCENARIO_ID}/{SCENARIO_ATLANTROPA_METADATA_FILENAME}"
+    )
     manifest_payload["runtime_bootstrap_topology_url"] = (
         f"data/scenarios/{SCENARIO_ID}/{CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME}"
     )
@@ -11152,6 +11327,7 @@ def build_runtime_topology_state(
         "render_profile_default": "balanced",
         "dynamic_borders_default": False,
         "scenario_relief_overlays_default": True,
+        "scenario_atlantropa_default": True,
         "water_regions_default": True,
         "special_regions_default": True,
     }
@@ -11191,7 +11367,10 @@ def build_runtime_topology_state(
         summary["tno_bathymetry_contour_count"] = len(
             bathymetry_payload.get("objects", {}).get("bathymetry_contours", {}).get("geometries", [])
         )
-        summary["scenario_runtime_topology_object_count"] = 5
+        summary["scenario_runtime_topology_object_count"] = len(runtime_topology_payload.get("objects", {}))
+        summary["scenario_atlantropa_feature_count"] = int(
+            scenario_atlantropa_metadata_payload.get("feature_count") or 0
+        )
         summary["context_land_mask_tolerance"] = context_land_mask_tolerance
         summary["context_land_mask_area_delta_ratio"] = context_land_mask_area_delta_ratio
         summary["context_land_mask_fallback_used"] = context_land_mask_fallback_used
@@ -11223,7 +11402,7 @@ def build_runtime_topology_state(
         "tno_special_region_ids": [],
         "tno_water_region_ids": runtime_water_region_ids,
         "tno_named_marginal_water_ids": named_marginal_water_ids,
-        "special_region_source": "runtime_topology_atl_political_features",
+        "special_region_source": "runtime_topology_scenario_atlantropa_features",
         "water_region_source": "tno_extracted_lake_provinces+tno_political_interior_holes+tno_ocean_bbox_split+marine_regions_named_waters_snapshot+global_water_region_clones",
         "german_baseline_annex_sets_applied": [
             "Alsace-Lorraine + Luxembourg",
@@ -11248,6 +11427,7 @@ def build_runtime_topology_state(
         "runtime_topology_path": "data/scenarios/tno_1962/runtime_topology.topo.json",
         "runtime_topology_objects": [
             "political",
+            SCENARIO_ATLANTROPA_OBJECT_NAME,
             "scenario_water",
             "scenario_special_land",
             "land_mask",
@@ -11295,6 +11475,8 @@ def build_runtime_topology_state(
     full_state.update({
         "runtime_topology_payload": runtime_topology_payload,
         "runtime_bootstrap_topology_payload": build_bootstrap_runtime_topology(runtime_topology_payload),
+        "scenario_atlantropa_topology_payload": scenario_atlantropa_topology_payload,
+        "scenario_atlantropa_metadata_payload": scenario_atlantropa_metadata_payload,
         "runtime_special_regions": runtime_special_regions,
         "runtime_water_regions": runtime_water_regions,
         "bathymetry_payload": bathymetry_payload,

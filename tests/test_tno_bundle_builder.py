@@ -12,10 +12,14 @@ import unittest
 from unittest.mock import patch
 
 import geopandas as gpd
-from shapely.geometry import Point, Polygon, mapping, shape
+from shapely.geometry import MultiPolygon, Point, Polygon, box, mapping, shape
 
 from map_builder.contracts import SCENARIO_BUNDLE_STAGE_DESCRIPTORS
 from tools.check_scenario_contracts import validate_publish_bundle_dir
+from tools.extract_scenario_atlantropa import (
+    split_topology_payload as split_atlantropa_topology_payload,
+    update_manifest as update_atlantropa_manifest,
+)
 from tools import patch_tno_1962_bundle as tno_bundle
 from tools.patch_tno_1962_bundle import (
     ATLANTROPA_REGION_CONFIGS,
@@ -59,6 +63,69 @@ def _square(x: float, y: float, size: float = 1.0) -> Polygon:
         (x + size, y + size),
         (x, y + size),
     ])
+
+
+def _decode_topology_arc(topology: dict, arc_index: int) -> list[tuple[float, float]]:
+    source_index = -arc_index - 1 if arc_index < 0 else arc_index
+    coords = topology["arcs"][source_index]
+    transform_payload = topology.get("transform") or {}
+    scale = transform_payload.get("scale")
+    translate = transform_payload.get("translate")
+    decoded: list[tuple[float, float]] = []
+    x = 0.0
+    y = 0.0
+    for point in coords:
+        px = float(point[0])
+        py = float(point[1])
+        if scale and translate:
+            x += px
+            y += py
+            decoded.append((
+                (x * float(scale[0])) + float(translate[0]),
+                (y * float(scale[1])) + float(translate[1]),
+            ))
+        else:
+            decoded.append((px, py))
+    if arc_index < 0:
+        decoded.reverse()
+    return decoded
+
+
+def _decode_topology_ring(topology: dict, arc_refs: list[int]) -> list[tuple[float, float]]:
+    ring: list[tuple[float, float]] = []
+    for arc_ref in arc_refs:
+        arc = _decode_topology_arc(topology, int(arc_ref))
+        if ring and arc and ring[-1] == arc[0]:
+            ring.extend(arc[1:])
+        else:
+            ring.extend(arc)
+    if ring and ring[0] != ring[-1]:
+        ring.append(ring[0])
+    return ring
+
+
+def _feature_geometry_from_topology(topology: dict, object_name: str, feature_id: str):
+    geometries = topology["objects"][object_name]["geometries"]
+    for geometry in geometries:
+        props = geometry.get("properties") or {}
+        if str(props.get("id") or geometry.get("id") or "") != feature_id:
+            continue
+        return _geometry_from_topology_geometry(topology, geometry)
+    raise AssertionError(f"feature {feature_id} not found in topology object {object_name}")
+
+
+def _geometry_from_topology_geometry(topology: dict, geometry: dict):
+    if geometry.get("type") == "Polygon":
+        rings = [_decode_topology_ring(topology, ring_refs) for ring_refs in geometry.get("arcs") or []]
+        return Polygon(rings[0], rings[1:]) if rings else Polygon()
+    if geometry.get("type") == "MultiPolygon":
+        polygons = []
+        for polygon_refs in geometry.get("arcs") or []:
+            rings = [_decode_topology_ring(topology, ring_refs) for ring_refs in polygon_refs]
+            if rings:
+                polygons.append(Polygon(rings[0], rings[1:]))
+        return MultiPolygon(polygons)
+    raise AssertionError(f"unsupported topology geometry type {geometry.get('type')}")
 
 
 def _write_publish_bundle_dir(
@@ -547,10 +614,10 @@ class TnoBundleBuilderTest(unittest.TestCase):
         layer_names = [layer_name for layer_name, _ in topology_mock.call_args.args[0]]
         self.assertEqual(
             layer_names,
-            ["political", "land_mask", "context_land_mask", "scenario_water"],
+            ["political", "scenario_atlantropa", "land_mask", "context_land_mask", "scenario_water"],
         )
 
-    def test_build_runtime_topology_payload_forces_atl_synthetic_country_code(self) -> None:
+    def test_build_runtime_topology_payload_routes_atl_synthetic_features_to_scenario_atlantropa(self) -> None:
         political_gdf = gpd.GeoDataFrame(
             [
                 {
@@ -606,18 +673,31 @@ class TnoBundleBuilderTest(unittest.TestCase):
             land_mask_gdf,
             context_land_mask_gdf,
         )
-        political_props = {
-            geometry.get("properties", {}).get("id"): geometry.get("properties", {})
+        political_ids = {
+            geometry.get("properties", {}).get("id")
             for geometry in topo["objects"]["political"]["geometries"]
         }
+        self.assertFalse(
+            any(str(feature_id or "").startswith(("ATLISL_", "ATLSHL_", "ATLWLD_")) for feature_id in political_ids)
+        )
+        atlantropa_props = {
+            geometry.get("properties", {}).get("id"): geometry.get("properties", {})
+            for geometry in topo["objects"]["scenario_atlantropa"]["geometries"]
+        }
 
-        self.assertEqual(political_props["ATLISL_adriatica_corfu"]["cntr_code"], "ATL")
-        self.assertIs(political_props["ATLISL_adriatica_corfu"].get("interactive"), True)
-        self.assertEqual(political_props["ATLISL_adriatica_CRO_3"]["cntr_code"], "ATL")
-        self.assertIs(political_props["ATLISL_adriatica_CRO_3"].get("interactive"), True)
-        self.assertIs(political_props["ATLWLD_adriatica_9"].get("interactive"), False)
-        self.assertEqual(political_props["ATLSHL_adriatica_4"]["cntr_code"], "ATL")
-        self.assertIn(political_props["ATLSHL_adriatica_4"].get("interactive"), (False, None))
+        self.assertEqual(atlantropa_props["ATLISL_adriatica_corfu"]["cntr_code"], "ATL")
+        self.assertIs(atlantropa_props["ATLISL_adriatica_corfu"].get("interactive"), True)
+        self.assertEqual(atlantropa_props["ATLISL_adriatica_CRO_3"]["cntr_code"], "ATL")
+        self.assertIs(atlantropa_props["ATLISL_adriatica_CRO_3"].get("interactive"), True)
+        self.assertEqual(atlantropa_props["ATLWLD_adriatica_9"].get("atl_render_layer"), "land")
+        self.assertEqual(atlantropa_props["ATLWLD_adriatica_9"].get("atl_color_rule"), "owner")
+        self.assertIs(atlantropa_props["ATLWLD_adriatica_9"].get("atl_interactive"), True)
+        self.assertIs(atlantropa_props["ATLWLD_adriatica_9"].get("interactive"), True)
+        self.assertEqual(atlantropa_props["ATLSHL_adriatica_4"]["cntr_code"], "ATL")
+        self.assertEqual(atlantropa_props["ATLSHL_adriatica_4"].get("atl_render_layer"), "shoal")
+        self.assertEqual(atlantropa_props["ATLSHL_adriatica_4"].get("atl_color_rule"), "shoal_pattern")
+        self.assertIs(atlantropa_props["ATLSHL_adriatica_4"].get("atl_interactive"), True)
+        self.assertIs(atlantropa_props["ATLSHL_adriatica_4"].get("interactive"), True)
 
     def test_build_runtime_topology_state_keeps_water_stage_artifacts_in_full_state(self) -> None:
         source = Path(tno_bundle.__file__).read_text(encoding="utf-8")
@@ -1212,6 +1292,22 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertTrue(props["interactive"])
         self.assertTrue(water_geom.contains(tno_bundle.TNO_QYZYLORDA_INLAND_WATER_PROBE))
 
+    def test_solidify_polygonal_interiors_fills_major_island_core_holes(self) -> None:
+        core_hole = Polygon([
+            (1.0, 1.0),
+            (3.0, 1.0),
+            (3.0, 3.0),
+            (1.0, 3.0),
+        ])
+        island_with_hole = Polygon(_square(0.0, 0.0, 4.0).exterior.coords, [core_hole.exterior.coords])
+
+        repaired = tno_bundle.solidify_polygonal_interiors(island_with_hole)
+
+        self.assertIsNotNone(repaired)
+        repaired_parts = tno_bundle.iter_polygon_parts(repaired)
+        self.assertTrue(repaired.contains(Point(2.0, 2.0)))
+        self.assertTrue(all(len(part.interiors) == 0 for part in repaired_parts))
+
     def test_resolve_publish_filenames_scopes(self) -> None:
         runtime_only = resolve_publish_filenames("polar_runtime")
         scenario_data = resolve_publish_filenames("scenario_data")
@@ -1301,6 +1397,63 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(manifest_payload["palette_id"], "tno")
         self.assertEqual(manifest_payload["style_defaults"]["ocean"]["fillColor"], "#2d4769")
         self.assertEqual(manifest_payload["style_defaults"]["atlantropa_sea"]["fillColor"], "#203856")
+
+    def test_extract_scenario_atlantropa_manifest_writes_runtime_style_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            scenario_dir = Path(tmpdir)
+            (scenario_dir / "manifest.json").write_text(
+                json.dumps({"scenario_id": "tno_1962", "style_defaults": {}}),
+                encoding="utf-8",
+            )
+
+            update_atlantropa_manifest(scenario_dir, {"feature_count": 927})
+
+            manifest_payload = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            manifest_payload["scenario_atlantropa_topology_url"],
+            "data/scenarios/tno_1962/scenario_atlantropa.topo.json",
+        )
+        self.assertEqual(
+            manifest_payload["scenario_atlantropa_metadata_url"],
+            "data/scenarios/tno_1962/scenario_atlantropa_metadata.json",
+        )
+        self.assertIs(manifest_payload["performance_hints"]["scenario_atlantropa_default"], True)
+        self.assertEqual(manifest_payload["summary"]["scenario_atlantropa_feature_count"], 927)
+        self.assertEqual(manifest_payload["style_defaults"]["atlantropa_sea"]["fillColor"], "#203856")
+        self.assertEqual(manifest_payload["style_defaults"]["atlantropa_salt_flat"]["fillColor"], "#7c6f53")
+        self.assertEqual(manifest_payload["style_defaults"]["atlantropa_shoal"]["fillColor"], "#3a5d70")
+
+    def test_extract_scenario_atlantropa_remaps_political_neighbors_after_split(self) -> None:
+        payload = {
+            "type": "Topology",
+            "objects": {
+                "political": {
+                    "type": "GeometryCollection",
+                    "computed_neighbors": [[1, 2, 3], [0, 2], [0, 1, 3], [0, 2]],
+                    "geometries": [
+                        {"type": "Polygon", "id": "AAA-1", "properties": {"id": "AAA-1", "CNTR_CODE": "AAA"}},
+                        {"type": "Polygon", "id": "ATLSEA_mid", "properties": {"id": "ATLSEA_mid"}},
+                        {"type": "Polygon", "id": "BBB-1", "properties": {"id": "BBB-1", "CNTR_CODE": "BBB"}},
+                        {"type": "Polygon", "id": "ATLISL_side", "properties": {"id": "ATLISL_side"}},
+                    ],
+                }
+            },
+            "arcs": [],
+        }
+
+        migrated, atlantropa_geometries = split_atlantropa_topology_payload(payload)
+
+        political = migrated["objects"]["political"]
+        self.assertEqual(
+            [geometry["id"] for geometry in political["geometries"]],
+            ["AAA-1", "BBB-1"],
+        )
+        self.assertEqual(political["computed_neighbors"], [[1], [0]])
+        self.assertEqual(
+            [geometry["properties"]["id"] for geometry in atlantropa_geometries],
+            ["ATLSEA_mid", "ATLISL_side"],
+        )
 
     def test_apply_tno_decolonization_metadata_sets_explicit_raj_color(self) -> None:
         countries_payload = {
@@ -1717,14 +1870,21 @@ class TnoBundleBuilderTest(unittest.TestCase):
         cores = cores_payload["cores"]
         countries = countries_payload["countries"]
         political_geometries = runtime_topology["objects"]["political"]["geometries"]
+        atlantropa_geometries = runtime_topology["objects"]["scenario_atlantropa"]["geometries"]
+        self.assertFalse(
+            any(
+                str(geometry.get("properties", {}).get("id", "")).startswith(("ATLISL_", "ATLSHL_", "ATLWLD_", "ATLSEA_"))
+                for geometry in political_geometries
+            )
+        )
         atlisl_props = [
             geometry.get("properties", {})
-            for geometry in political_geometries
+            for geometry in atlantropa_geometries
             if str(geometry.get("properties", {}).get("id", "")).startswith("ATLISL_")
         ]
         atlshl_props = [
             geometry.get("properties", {})
-            for geometry in political_geometries
+            for geometry in atlantropa_geometries
             if str(geometry.get("properties", {}).get("id", "")).startswith("ATLSHL_")
         ]
 
@@ -1747,34 +1907,43 @@ class TnoBundleBuilderTest(unittest.TestCase):
             else:
                 self.assertIs(props.get("interactive"), True, feature_id)
         for props in atlshl_props:
-            self.assertIs(props.get("interactive"), False, props.get("id"))
+            self.assertIs(props.get("interactive"), True, props.get("id"))
+            self.assertIs(props.get("atl_interactive"), True, props.get("id"))
         helper_prefixes = ("ATLWLD_", "ATLSEA_FILL_")
         helper_roles = {"shore_seal", "sea_completion", "donor_sea"}
         helper_props = [
             geometry.get("properties", {})
-            for geometry in political_geometries
+            for geometry in atlantropa_geometries
             if str(geometry.get("properties", {}).get("id", "")).startswith(helper_prefixes)
             or str(geometry.get("properties", {}).get("atl_geometry_role", "")).strip().lower() in helper_roles
             or str(geometry.get("properties", {}).get("atl_join_mode", "")).strip().lower() == "gap_fill"
         ]
         self.assertTrue(helper_props)
         for props in helper_props:
-            self.assertIs(props.get("interactive"), False, props.get("id"))
+            self.assertIs(props.get("interactive"), True, props.get("id"))
+            self.assertIs(props.get("atl_interactive"), True, props.get("id"))
 
     def test_checked_in_tno_1962_atlsea_runtime_contract_keeps_donor_sea_projectable(self) -> None:
         scenario_dir = Path(tno_bundle.SCENARIO_DIR)
         runtime_topology = json.loads((scenario_dir / "runtime_topology.topo.json").read_text(encoding="utf-8"))
         political_geometries = runtime_topology["objects"]["political"]["geometries"]
+        atlantropa_geometries = runtime_topology["objects"]["scenario_atlantropa"]["geometries"]
+        self.assertFalse(
+            any(
+                str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_")
+                for geometry in political_geometries
+            )
+        )
         donor_sea_props = [
             geometry.get("properties", {})
-            for geometry in political_geometries
+            for geometry in atlantropa_geometries
             if str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_")
             and not str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_FILL_")
             and str(geometry.get("properties", {}).get("atl_geometry_role") or "").strip().lower() == "donor_sea"
         ]
         fill_props = [
             geometry.get("properties", {})
-            for geometry in political_geometries
+            for geometry in atlantropa_geometries
             if str(geometry.get("properties", {}).get("id", "")).startswith("ATLSEA_FILL_")
         ]
 
@@ -1784,13 +1953,47 @@ class TnoBundleBuilderTest(unittest.TestCase):
             self.assertEqual(props.get("cntr_code"), "ATL", feature_id)
             self.assertEqual(str(props.get("atl_surface_kind") or "").strip().lower(), "sea", feature_id)
             self.assertEqual(str(props.get("atl_geometry_role") or "").strip().lower(), "donor_sea", feature_id)
-            self.assertIs(props.get("interactive"), False, feature_id)
+            self.assertEqual(props.get("atl_render_layer"), "water", feature_id)
+            self.assertEqual(props.get("atl_color_rule"), "atlantropa_sea", feature_id)
+            self.assertIs(props.get("atl_interactive"), True, feature_id)
+            self.assertIs(props.get("interactive"), True, feature_id)
             self.assertIs(props.get("render_as_base_geography"), False, feature_id)
         self.assertGreater(len(fill_props), 100)
         for props in fill_props:
             feature_id = props.get("id")
             self.assertEqual(str(props.get("atl_geometry_role") or "").strip().lower(), "sea_completion", feature_id)
-            self.assertIs(props.get("interactive"), False, feature_id)
+            self.assertEqual(props.get("atl_render_layer"), "water", feature_id)
+            self.assertEqual(props.get("atl_color_rule"), "atlantropa_sea", feature_id)
+            self.assertIs(props.get("atl_interactive"), True, feature_id)
+            self.assertIs(props.get("interactive"), True, feature_id)
+
+    def test_checked_in_tno_1962_cyprus_rebuilt_island_covers_runtime_baseline_west(self) -> None:
+        scenario_dir = Path(tno_bundle.SCENARIO_DIR)
+        atlantropa_topology = json.loads((scenario_dir / "scenario_atlantropa.topo.json").read_text(encoding="utf-8"))
+        runtime_baseline_topology = json.loads((Path(tno_bundle.ROOT) / "data" / "europe_topology.runtime_political_v1.json").read_text(encoding="utf-8"))
+        rebuilt = _feature_geometry_from_topology(atlantropa_topology, "scenario_atlantropa", "ATLISL_levant_cyprus")
+        baseline = _feature_geometry_from_topology(runtime_baseline_topology, "political", "CY000")
+        minx, miny, maxx, maxy = baseline.bounds
+        west_baseline = baseline.intersection(box(minx, miny, minx + ((maxx - minx) * 0.33), maxy))
+        west_cover_ratio = rebuilt.intersection(west_baseline).area / west_baseline.area
+
+        self.assertGreaterEqual(west_cover_ratio, 0.95)
+        self.assertLessEqual(rebuilt.area, baseline.area * 1.08)
+
+    def test_checked_in_tno_1962_southwest_greece_gap_is_atlantropa_water(self) -> None:
+        scenario_dir = Path(tno_bundle.SCENARIO_DIR)
+        atlantropa_topology = json.loads((scenario_dir / "scenario_atlantropa.topo.json").read_text(encoding="utf-8"))
+        probe = Point(20.6, 35.0)
+        water_hits = []
+        for geometry in atlantropa_topology["objects"]["scenario_atlantropa"]["geometries"]:
+            props = geometry.get("properties") or {}
+            if props.get("atl_render_layer") != "water" or props.get("atl_color_rule") != "atlantropa_sea":
+                continue
+            decoded = _geometry_from_topology_geometry(atlantropa_topology, geometry)
+            if decoded.contains(probe) or decoded.touches(probe):
+                water_hits.append(props.get("id"))
+
+        self.assertIn("ATLSEA_FILL_libya_suez_9", water_hits)
 
     def test_checked_in_tno_1962_atlsea_chunks_keep_d3_small_polygon_orientation(self) -> None:
         def signed_area(ring: list) -> float:
@@ -1800,10 +2003,13 @@ class TnoBundleBuilderTest(unittest.TestCase):
             return total / 2.0
 
         scenario_dir = Path(tno_bundle.SCENARIO_DIR)
+        chunk_manifest = json.loads((scenario_dir / "detail_chunks.manifest.json").read_text(encoding="utf-8"))
         checked_chunk_paths = [
-            scenario_dir / "chunks" / "political.coarse.r0c0.json",
-            scenario_dir / "chunks" / "political.detail.country.atl.json",
+            Path(tno_bundle.ROOT).joinpath(*str(chunk.get("url") or "").split("/"))
+            for chunk in chunk_manifest.get("chunks", [])
+            if chunk.get("layer") == "scenario_atlantropa"
         ]
+        self.assertTrue(checked_chunk_paths)
         donor_sea_count = 0
         for chunk_path in checked_chunk_paths:
             payload = json.loads(chunk_path.read_text(encoding="utf-8"))

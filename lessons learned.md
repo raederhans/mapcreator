@@ -4,18 +4,15 @@
 
 ## 2026-04-03 - TNO 1962 bundle / 编辑链重构
 
-### 1. “闪退”通常先当成前置校验失败，不先当成随机崩溃
-- 长构建和长测试前台会话很不稳定，优先用后台日志模式跑，分开保存 `stdout`、`stderr`、退出码和锁文件。
+### 1. 长构建 / 长测试先走后台日志，并先排最小静态检查
+- “闪退”优先当成前置校验失败或前台会话不稳，不先当成随机崩溃。
+- 小测试可前台跑，完整 `pytest/unittest` 和长构建默认后台日志，分开保存 `stdout`、`stderr`、退出码和锁文件。
 - 完整 rebuild 前，先做最小静态检查：
   - `py_compile`
   - 关键 override / 路径解析
   - checkpoint 锁是否正常
-- rebuild 产物要整体审查；如果 manifest 引用了新 chunk，文件也必须一起提交。
-
-### 2. bundle / test 的长命令必须后台化
-- 前台会话掉线不等于 Python 进程崩溃。
-- 小测试可前台跑，完整 `pytest/unittest` 和长构建默认后台日志。
 - 先看 `.runtime/tmp/*.out.log`、`.runtime/tmp/*.err.log`、PID、退出码，再判断是不是代码失败。
+- rebuild 产物要整体审查；如果 manifest 引用了新 chunk，文件也必须一起提交。
 
 ### 3. 重逻辑要按事务边界拆，不要按文件类型拆
 - 先找一笔完整 transaction 的输入输出，再抽 materializer / service。
@@ -27,10 +24,13 @@
 - 如果 UI 需要“保存后立即可见”，应该显式串联 `materialize + publish`，不要把 publish 藏进 materializer。
 - editor outputs publish 和 bundle publish 不是一回事，不能为了省事合成一个 service。
 
-### 5. canonical 输入只能有一份，公开产物不要回流当输入
+### 5. canonical 输入只能有一份，公开产物、诊断文件和工具链都要围绕这份输入收口
 - `scenario_mutations.json`、`city_assets.partial.json`、`capital_defaults.partial.json` 这类 internal partial 才能当主输入。
 - `city_overrides.json`、`capital_hints.json`、`scenario_manual_overrides.json`、`releasable_catalog.manual.json` 这类公开或镜像文件，默认都当输出，不再回读。
 - 一旦已有独立 partial，就不要再从最终组合产物里反提取主输入。
+- `capital_hints.json` 这类公开诊断文件可以保留给 contract / audit，但不要再参与保存链或 materialize 主路径。
+- internal partial 不应该通过 public schema 倒推生成；应该直接从底层候选结果生成，再投影出公开诊断文件。
+- 边界切换时要同步收口 save / materialize / publish、migration script、contract checker、test fixture；不能让仓库真实状态已经迁移，但工具流水线还停在旧世界。
 
 ### 6. local manual mirror 不能支配 canonical，但合法 manual-only 数据必须保留
 - source 同名条目永远比 local mirror 更权威。
@@ -53,10 +53,6 @@
 - `capitals_by_tag` / `capital_city_hints` 来自 capital mutation / defaults。
 - 最终只通过 composer 合成新的 `city_overrides.json`。
 
-### 9. 公开诊断文件和内部 canonical partial 不要混用
-- `capital_hints.json` 这类公开诊断文件可以保留给 contract / audit，但不要再参与保存链或 materialize 主路径。
-- internal partial 不应该通过 public schema 倒推生成；应该直接从底层候选结果生成，再投影出公开诊断文件。
-
 ### 10. 强制切换输入边界时，测试夹具要一起切
 - 删除 fallback 后，最先坏的往往不是生产代码，而是测试夹具还活在兼容期。
 - 新的必需输入文件要让共享 fixture 默认生成。
@@ -72,10 +68,6 @@
 ### 12. 其他通用教训
 - repo 内部的临时 worktree 会污染主仓 `git status`；如果要可丢弃，尽量放到 repo 外。
 - 做 i18n / markup audit 时，要先排除 `script`、`style`、`importmap` 这类非可见内容，避免把嵌入代码误判成 UI 文案。
-
-### 13. canonical 输入边界切换时，要一次性收口工具链
-- 不能只改 save/materialize/publish 主线，还要同步改 migration script、contract checker、test fixture。
-- 如果这几层没一起收口，就会出现“仓库真实状态已经迁移，但工具流水线还停在旧世界”的假完成状态。
 
 ### 14. owner-aware 锁不能只看 pid，必须把 thread 和 transaction 一起建模
 - 同线程嵌套写链如果没有 transaction 继承，收紧锁语义后会先把自己锁死。
@@ -106,9 +98,10 @@
 - 更稳的做法是先判 `hasOwnProperty(layerKey)`，只有 chunk 真正接管的 layer 才允许写回 `null`；fallback layer 必须保持现有 bundle/topology 路径，不应被 chunk refresh 顺手清空。
 - 这条边界尤其会放大到 `cities -> syncScenarioLocalizationState()`，所以 runtime/chunk 调整时必须把 localization collateral 一起复核。
 
-### 20. 新 validator 的路径归一化要在 CLI 入口就做，不要等到 report 阶段才混用相对/绝对路径
+### 20. 路径归一化和路径断言要在入口统一成 repo-relative 契约
 - 只要 validator 会把输入路径再做 `relative_to(PROJECT_ROOT)` 或写进报告，`--root` / `--manifest` 入口就必须先统一 `resolve()`；否则本地相对路径能跑到扫描阶段，却会在生成报告或错误文案时直接炸掉。
 - 这类问题最容易在“本地手跑命令”和“CI 从 repo root 跑命令”之间来回漂移，所以应把归一化做成入口不变量，不要散落在后续 helper 里补。
+- builder 写绝对路径而 expectation 存 repo-relative 路径时，gold baseline 会出现跨机器假失败；路径断言要在 checker 内统一归一到 repo-root-relative，而不是把绝对路径写进 expectation。
 
 ### 21. 新增 review lane 的第一职责是暴露真实缺口，不是把红灯伪装成绿灯
 - 如果新 workflow 接上 shared strict checker 后立刻暴露 checked-in 产物缺文件，优先把它记录为显式剩余风险；不要通过降级 strict、跳过 scenario、改成 warning-only 来掩盖真实 contract 漏口。
@@ -132,10 +125,6 @@
 ### 26. Fix the checked-in scenario pack first, then tune runtime symptoms
 - When a historical scenario suddenly shows modern countries or wrong palettes, check the checked-in bundle and audit outputs before touching render or UI code.
 - Runtime strictness is still useful: removing silent fallback to global names makes bad scenario packs fail loudly instead of looking half-correct.
-
-### 27. Scenario checker path assertions must normalize before compare
-- If a builder writes absolute diagnostic paths while expectations store repo-relative paths, the same gold baseline will fail across machines for non-semantic reasons.
-- The stable fix is to normalize diagnostic path assertions to repo-root-relative form inside the checker instead of hardcoding absolute paths into expectations.
 
 ### 28. Scenario name fallback tests must distinguish blank mode from active scenario mode
 - The real regression is merging global modern country names into an active historical scenario, not every read of countryNames.
@@ -196,6 +185,7 @@
 ### 42. Ultra-light runtime shell should keep contract markers and ids, not real mask geometry
 - Re-embedding real land/water mask geometry into startup bundle quickly eats back the startup gain.
 - Keep empty named topology objects plus runtime_political_meta in startup bundle, and leave real overlay geometry to deferred hydration.
+- chunked-coarse startup shell 还要显式表达“该层为空但合同存在”；如果场景没有 water / special runtime object，也要发布空 `land_mask` / `context_land_mask` / `scenario_water` shell object，并继续用 `runtime_political_meta` 表达政治要素身份，避免回退到 legacy bootstrap。
 
 ### 43. UI controller 拆分后，静态合同要跟着切到新的 owner 文件
 - shared boot fixture 灰度前，要先把 localStorage、globalThis 调试钩子、scenario reset 三类泄漏面集中收口成 guard
@@ -1196,9 +1186,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - chunk promotion 这次在 visual stage 先做了一次 `refreshScenarioOpeningOwnerBorders()`，deferred infra stage 又做了一次，同一轮 promotion 会重复 invalidation 和 rebuild 判定。
 - 更稳的做法是：明确哪一层拥有 opening-owner refresh；另一层只补自己独占的工作，避免同一事务双写同一缓存。
 
-### 2026-04-24 - HOI4 startup bundle formalization
-- chunked-coarse startup shell 要表达“该层为空但合同存在”；如果场景没有 water/special runtime object，也要发布空 `land_mask/context_land_mask/scenario_water` shell object，并用 `runtime_political_meta` 表达政治要素身份，避免回退到 legacy bootstrap。
-
 ## 2026-04-24 - Landing page modernization
 
 ### 287. Scroll reveal 首屏优化要保留静态可见性
@@ -1439,6 +1426,10 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 这次 diagnostics 文案第一次补丁把 key 加进了 `geo` 末尾，导致 JSON 合法、测试也可能绿，但 `i18n_audit` 仍然继续报 `ui_missing`。
 - 更稳的做法是：补 UI 词条时先确认目标在 `ui` 对象内，再复跑 `i18n_audit`，不要只看 JSON 能不能解析。
 
+### 2. runtime locale 可用，不代表 source-of-truth 和 baseline 已经同步
+- `i18n_audit.py` 当前证明的是 runtime locale 可用性；`data/i18n/locales_baseline.json` 是否跟上新 UI 词条，需要单独做 source-of-truth 复核。
+- `manual_ui.json`、`data/locales.json` 和 `js/ui/i18n_catalog.js` 共同供给 UI 翻译时，必须先统一 canonical 中文，再补 baseline；否则会留下“页面能翻译，但多源词条彼此不一致”的漂移。
+
 ## 2026-05-04 - 数据治理白名单 / 双 key 单 URL 收口
 
 ### 1. data health 要先锁治理入口，再谈 orphan
@@ -1535,3 +1526,28 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - Overture release pin 可能随公共 S3 发布窗口失效；重建 transport shard 前先用源前缀存在性检查确认 release 可用，再启动长构建。
 - Project roundtrip E2E 只验证保存恢复状态时，应避免打开会触发全局 shard 加载的主图总开关；数据加载合同用更轻的静态/单元测试锁住。
+
+## 2026-05-07 - TNO Atlantropa layer split
+
+- 大型 TopoJSON 重分层优先做内存轻量、可重复的拆分脚本；全量 bundle builder 在 runtime topology 阶段可能把工作集推到几十 GB，适合先保留为后续性能任务。
+- 迁移脚本必须具备幂等保护：当目标 layer 已存在时应 redecorate/preserve，避免第二次运行把已迁移数据清空。
+
+## 2026-05-07 - data catalog recursive transport contract
+
+- 数据目录和健康检查必须跟实际发布形态使用同一套 manifest 枚举规则；如果 transport checker 递归治理 75 个 manifest，catalog/data_health 继续只看顶层 11 个会制造虚绿。
+
+## 2026-05-07 - scenario_atlantropa D3 orientation
+
+- Atlantropa 独立图层拆出后，所有 ATL 前缀的 direct GeoJSON chunk 都要走 D3 small-polygon ring normalization；只处理 ATLSEA 会让 ATLWLD/ATLSHL/ATLSEA_FILL 这类局部地块被 D3 解释成全球外壳，表现为偏色和不可交互。
+- 浏览器点击验证微小重叠地块时，按 prefix 至少取多个 screen-space grid 点；单点 bbox center 会把几何细线和重叠优先级误报成交互失败。
+- `ATLSEA_FILL` / `ATLSHL` 这类非水 Atlantropa 地块进入 land spatial index 后，也要在 scenario water pass 之后按 `atl_color_rule` 重绘；否则会出现“可命中但视觉仍是海色”的假修复。
+
+## 2026-05-07 - ATLSEA_FILL sea-completion semantics
+
+- `ATLSEA_FILL_*` 的源属性是 `atl_surface_kind=sea` / `atl_geometry_role=sea_completion`，应按 `water/atlantropa_sea` 路由；把它们当 `shoal/salt_flat` 会把真实海面画成褐色。
+- 大岛 boolean weld 修空洞后还要对照 runtime baseline 做覆盖率探针；Cyprus 这类 donor AOI 裁剪会留下整侧缺块。
+
+### 25. startup shell meta 校验要按 id 覆盖，不要按同序长度
+- TNO startup bootstrap 可能只携带少量 political shell，且 shell 顺序可与完整 runtime meta 不同。
+- runtime meta seed 的安全校验应确认 shell ids 都存在于 seed，并允许 seed 额外包含后续 chunk layer ids。
+- 迁移 TopoJSON 几何列表时，computed_neighbors 必须跟着 old->new index 重映射。

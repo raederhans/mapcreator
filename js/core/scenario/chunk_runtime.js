@@ -956,6 +956,27 @@ function createScenarioChunkRuntimeController({
     return true;
   }
 
+  function refreshScenarioAtlantropaChunkPayloadChange({
+    renderNow = false,
+    reason = "refresh",
+    changedLayerKeys = [],
+  } = {}) {
+    const normalizedChangedLayerKeys = (Array.isArray(changedLayerKeys) ? changedLayerKeys : [])
+      .map((layerKey) => String(layerKey || "").trim().toLowerCase())
+      .filter(Boolean);
+    if (!normalizedChangedLayerKeys.includes("scenario_atlantropa")) {
+      return false;
+    }
+    refreshMapDataForScenarioChunkPromotion({
+      suppressRender: !renderNow,
+      reason,
+      changedLayerKeys: normalizedChangedLayerKeys,
+      politicalFeatureIds: [],
+      hasPoliticalPayloadChange: false,
+    });
+    return true;
+  }
+
   function setPromotionCommitStatus(loadState, status, details = {}) {
     loadState.promotionCommitStatus = String(status || "idle");
     if (Object.prototype.hasOwnProperty.call(details, "inFlight")) {
@@ -1110,6 +1131,13 @@ function createScenarioChunkRuntimeController({
         changedLayerKeys: mergedLayerResult?.changedLayerKeys || [],
         politicalFeatureIds: pendingPromotion.politicalFeatureIds || [],
       });
+      if (!politicalPayloadChanged) {
+        refreshScenarioAtlantropaChunkPayloadChange({
+          renderNow: false,
+          reason: pendingPromotion.reason,
+          changedLayerKeys: mergedLayerResult?.changedLayerKeys || [],
+        });
+      }
       // Keep the render lock across this frame break so a half-applied visual payload
       // cannot be flushed while a newer promotion run is taking ownership.
       await yieldToFrame();
@@ -1491,6 +1519,7 @@ function createScenarioChunkRuntimeController({
       includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
       showWaterRegions: normalizeScenarioPerformanceHints(bundle.manifest).waterRegionsDefault !== false,
       showScenarioSpecialRegions: normalizeScenarioPerformanceHints(bundle.manifest).specialRegionsDefault !== false,
+      showScenarioAtlantropa: normalizeScenarioPerformanceHints(bundle.manifest).scenarioAtlantropaDefault !== false,
       showScenarioReliefOverlays: normalizeScenarioPerformanceHints(bundle.manifest).scenarioReliefOverlaysDefault === true,
       // First-frame coarse prewarm keeps the apply transaction focused on
       // political/runtime shell readiness. City chunks continue to load through
@@ -1544,10 +1573,18 @@ function createScenarioChunkRuntimeController({
       loadState.layerSelectionSignatures = layerSignatures;
       loadState.mergedLayerPayloadCache = mergedLayerPayloads;
       applyMergedScenarioChunkLayerPayloads(mergedLayerPayloads, { renderNow: false });
-      applyScenarioPoliticalChunkPayload(bundle, mergedLayerPayloads.political || null, {
+      const politicalPayloadChanged = applyScenarioPoliticalChunkPayload(bundle, mergedLayerPayloads.political || null, {
         renderNow: false,
         reason: "coarse-prewarm",
+        changedLayerKeys: mergedResult.changedLayerKeys,
       });
+      if (!politicalPayloadChanged) {
+        refreshScenarioAtlantropaChunkPayloadChange({
+          renderNow: false,
+          reason: "coarse-prewarm",
+          changedLayerKeys: mergedResult.changedLayerKeys,
+        });
+      }
       return mergedLayerPayloads;
     }
     return null;
@@ -1602,6 +1639,7 @@ function createScenarioChunkRuntimeController({
       includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
       showWaterRegions: runtimeState.showWaterRegions !== false,
       showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
+      showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
       showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
       showCityPoints: runtimeState.showCityPoints !== false,
     });
@@ -1625,7 +1663,7 @@ function createScenarioChunkRuntimeController({
     const normalizedReason = String(reason || "refresh").trim().toLowerCase();
     if (normalizedReason === "zoom-end") {
       const demotedNonPoliticalDetailOptional = selection.requiredChunks.filter(
-        (chunk) => chunk.layer !== "political" && chunk.lod === "detail"
+        (chunk) => !["political", "scenario_atlantropa"].includes(chunk.layer) && chunk.lod === "detail"
       );
       if (demotedNonPoliticalDetailOptional.length) {
         const demotedIdSet = new Set(demotedNonPoliticalDetailOptional.map((chunk) => chunk.id));

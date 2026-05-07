@@ -1,6 +1,6 @@
 {
   "artifact_counts": {
-    "chunk_count": 188,
+    "chunk_count": 189,
     "feature_count": 12811,
     "water_count": 123
   },
@@ -102737,13 +102737,13 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "56977fc9d5b19d12af0495e6822bc72208b3a6f2e12617746df2197814a24698",
+  "snapshot_fingerprint": "909c726f164ddf234af73363499275d5a8752ca0d18510c65c80f242f44b782f",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "11d83010611992a10bba5787d14b1a311a0e5856ef9388099a9d46f6e2197c0f",
-    "detail_chunk_manifest_sha256": "4f903f08250df5fa33d843c244f69a35e968ba6a26660cea46cc9032f8042e05",
-    "runtime_bootstrap_topology_sha256": "27365dbff68d420415e0ad91afd38ac33fbc70f02d614fe8c45e10023b6be20a",
-    "runtime_topology_sha256": "f9009f0b5cfde4e78a7429ab55286e8e1816cca3e81dd734e939d0e641d98c7c"
+    "build_snapshot_sha256": "adb69864adc0c41eb0226f07ecb3a4457b3d28fff954675a9775cbdb08323a32",
+    "detail_chunk_manifest_sha256": "3ed758bf7b92da25bd221fb49dff1547519d51aa647c8f20e0630a89f9184eb8",
+    "runtime_bootstrap_topology_sha256": "bdb2d27ca2666749f35e2cc17b9f27427c15ec4232d4b314c179742fdc725555",
+    "runtime_topology_sha256": "f737182cf75c65b3977aea679f5f7a102877b7a344173a0db32c3b9fb8d564ab"
   },
   "summary": {
     "approximate_count": 915,
@@ -102770,6 +102770,7 @@
       "direct_country_copy": 2424,
       "manual_reviewed": 9467
     },
+    "scenario_atlantropa_feature_count": 927,
     "scenario_rule_blocker_count": 0,
     "scenario_runtime_topology_object_count": 5,
     "source_counts": {

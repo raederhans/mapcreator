@@ -450,6 +450,8 @@ class FileManager {
             : !!appState.allowOpenOceanPaint,
         showScenarioSpecialRegions:
           appState.showScenarioSpecialRegions === undefined ? true : !!appState.showScenarioSpecialRegions,
+        showScenarioAtlantropa:
+          appState.showScenarioAtlantropa === undefined ? true : !!appState.showScenarioAtlantropa,
         showScenarioReliefOverlays:
           appState.showScenarioReliefOverlays === undefined ? true : !!appState.showScenarioReliefOverlays,
         showCityPoints: appState.showCityPoints === undefined ? true : !!appState.showCityPoints,
@@ -664,6 +666,10 @@ class FileManager {
           data.layerVisibility.showScenarioSpecialRegions === undefined
             ? true
             : !!data.layerVisibility.showScenarioSpecialRegions;
+        data.layerVisibility.showScenarioAtlantropa =
+          data.layerVisibility.showScenarioAtlantropa === undefined
+            ? true
+            : !!data.layerVisibility.showScenarioAtlantropa;
         data.layerVisibility.showScenarioReliefOverlays =
           data.layerVisibility.showScenarioReliefOverlays === undefined
             ? true

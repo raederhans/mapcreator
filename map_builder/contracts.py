@@ -436,6 +436,8 @@ SCENARIO_CHECKPOINT_WATER_FILENAME = "water_regions.geojson"
 SCENARIO_CHECKPOINT_RELIEF_FILENAME = "relief_overlays.geojson"
 SCENARIO_CHECKPOINT_BATHYMETRY_FILENAME = "bathymetry.topo.json"
 SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME = "runtime_topology.bootstrap.topo.json"
+SCENARIO_CHECKPOINT_ATLANTROPA_TOPOLOGY_FILENAME = "scenario_atlantropa.topo.json"
+SCENARIO_CHECKPOINT_ATLANTROPA_METADATA_FILENAME = "scenario_atlantropa_metadata.json"
 SCENARIO_CHECKPOINT_GEO_LOCALE_FILENAME = "geo_locale_patch.json"
 SCENARIO_CHECKPOINT_GEO_LOCALE_EN_FILENAME = "geo_locale_patch.en.json"
 SCENARIO_CHECKPOINT_GEO_LOCALE_ZH_FILENAME = "geo_locale_patch.zh.json"
@@ -493,10 +495,14 @@ SCENARIO_RUNTIME_STAGE_EXTRA_ARTIFACTS: tuple[ScenarioCheckpointArtifact, ...] =
     ScenarioCheckpointArtifact("special_zone_layers_payload", "special_zone_layers.json"),
     ScenarioCheckpointArtifact("runtime_water_regions", SCENARIO_CHECKPOINT_WATER_FILENAME),
     ScenarioCheckpointArtifact("runtime_topology_payload", SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME),
+    ScenarioCheckpointArtifact("scenario_atlantropa_topology_payload", SCENARIO_CHECKPOINT_ATLANTROPA_TOPOLOGY_FILENAME),
+    ScenarioCheckpointArtifact("scenario_atlantropa_metadata_payload", SCENARIO_CHECKPOINT_ATLANTROPA_METADATA_FILENAME),
 )
 
 SCENARIO_OPTIONAL_RUNTIME_STAGE_ARTIFACTS: tuple[ScenarioCheckpointArtifact, ...] = ()
 
+# 下面这些 stage artifact 列表和 patch_tno_1962_bundle.py 的阶段顺序一一对应。
+# builder / checker / snapshot 只要都依赖这里，新增或删除 checkpoint 文件时就不会各改各的。
 SCENARIO_GEO_LOCALE_STAGE_ARTIFACTS: tuple[ScenarioCheckpointArtifact, ...] = (
     ScenarioCheckpointArtifact("geo_locale_payload", SCENARIO_CHECKPOINT_GEO_LOCALE_FILENAME),
     ScenarioCheckpointArtifact("geo_locale_payload_en", SCENARIO_CHECKPOINT_GEO_LOCALE_EN_FILENAME),
@@ -529,6 +535,8 @@ SCENARIO_CHUNK_STAGE_REQUIRED_FILENAMES = (
 )
 
 SCENARIO_PUBLISH_FILENAMES_BY_SCOPE = {
+    # 这里描述的是 scenario 目录 publish contract。
+    # Pages dist 可以在后续构建里继续裁剪，所以它和 build_pages_dist.py 的最终发布集合不是同一回事。
     SCENARIO_PUBLISH_SCOPE_POLAR_RUNTIME: (
         SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
     ),
@@ -545,6 +553,8 @@ SCENARIO_PUBLISH_FILENAMES_BY_SCOPE = {
         SCENARIO_CHECKPOINT_BATHYMETRY_FILENAME,
         SCENARIO_CHECKPOINT_NAMED_WATER_SNAPSHOT_FILENAME,
         SCENARIO_CHECKPOINT_WATER_REGIONS_PROVENANCE_FILENAME,
+        SCENARIO_CHECKPOINT_ATLANTROPA_TOPOLOGY_FILENAME,
+        SCENARIO_CHECKPOINT_ATLANTROPA_METADATA_FILENAME,
         SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME,
         SCENARIO_CHECKPOINT_GEO_LOCALE_FILENAME,
         SCENARIO_CHECKPOINT_GEO_LOCALE_EN_FILENAME,
@@ -612,6 +622,8 @@ def normalize_scenario_contract_tag(raw_value: object) -> str:
 
 def resolve_scenario_contract_profile(scenario_id: str) -> ScenarioContractProfile:
     normalized = str(scenario_id or "").strip().lower()
+    # profile 决定 strict checker 对一个 scenario 期待哪些产物。
+    # 这里保持“按 scenario 家族分合同”，这样 builder 和 checker 可以共用同一套分流规则。
     if normalized == "tno_1962":
         return SCENARIO_PROFILE_TNO_FULL
     if normalized.startswith("hoi4_"):
@@ -646,6 +658,7 @@ def build_scenario_snapshot_payload(
     contract_version: str = SCENARIO_CONTRACT_VERSION,
     builder_version: str = SCENARIO_BUILDER_VERSION,
 ) -> dict[str, object]:
+    # snapshot_fingerprint 只吃稳定输入/输出摘要，不把生成时间这类易漂移字段算进去。
     stable_payload = {
         "scenario_id": scenario_id,
         "profile": profile_id,

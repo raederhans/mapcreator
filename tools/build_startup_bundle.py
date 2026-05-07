@@ -291,40 +291,37 @@ def _extract_geometry_country_code(geometry: object) -> str:
 
 
 def build_runtime_political_meta(runtime_bootstrap_topology: dict) -> dict:
-    geometries = (
-        runtime_bootstrap_topology.get("objects", {}).get("political", {}).get("geometries", [])
-        if isinstance(runtime_bootstrap_topology, dict)
-        else []
-    )
-    neighbors = (
-        runtime_bootstrap_topology.get("objects", {}).get("political", {}).get("computed_neighbors", [])
-        if isinstance(runtime_bootstrap_topology, dict)
-        else []
-    )
-    if not isinstance(geometries, list):
-        geometries = []
-    if not isinstance(neighbors, list):
-        neighbors = []
-
+    objects = runtime_bootstrap_topology.get("objects", {}) if isinstance(runtime_bootstrap_topology, dict) else {}
+    object_names = ("political", "scenario_atlantropa")
     feature_ids: list[str] = []
     canonical_country_by_index: list[str] = []
+    neighbor_graph: list[list[int]] = []
 
-    for index, geometry in enumerate(geometries):
-        feature_id = _extract_geometry_key(geometry)
-        if not feature_id:
-            continue
-        feature_ids.append(feature_id)
-        canonical_country_by_index.append(_extract_geometry_country_code(geometry))
+    for object_name in object_names:
+        runtime_object = objects.get(object_name) if isinstance(objects, dict) else None
+        geometries = runtime_object.get("geometries", []) if isinstance(runtime_object, dict) else []
+        neighbors = runtime_object.get("computed_neighbors", []) if isinstance(runtime_object, dict) else []
+        if not isinstance(geometries, list):
+            geometries = []
+        if not isinstance(neighbors, list):
+            neighbors = []
+        for index, geometry in enumerate(geometries):
+            feature_id = _extract_geometry_key(geometry)
+            if not feature_id:
+                continue
+            feature_ids.append(feature_id)
+            canonical_country_by_index.append(_extract_geometry_country_code(geometry))
+            neighbor_graph.append(
+                neighbors[index]
+                if object_name == "political" and index < len(neighbors) and isinstance(neighbors[index], list)
+                else []
+            )
 
     return {
         "encoding": STARTUP_RUNTIME_POLITICAL_META_ENCODING,
         "featureIds": feature_ids,
         "canonicalCountryByIndex": canonical_country_by_index,
-        "neighborGraph": (
-            neighbors
-            if len(neighbors) == len(geometries)
-            else [[] for _ in geometries]
-        ),
+        "neighborGraph": neighbor_graph,
     }
 
 

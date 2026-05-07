@@ -117,7 +117,7 @@ async function setZoomPercent(page, percent) {
 async function readBoundaryRuntime(page) {
   return page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const helperPrefixes = ["RU_ARCTIC_FB_", "ATLSHL_", "ATLWLD_", "ATLSEA_FILL_"];
+    const helperPrefixes = ["RU_ARCTIC_FB_", "ATLSHL_", "ATLWLD_"];
     const countHelpers = (collection) => {
       const features = Array.isArray(collection?.features) ? collection.features : [];
       return features.filter((feature, index) => {
@@ -129,7 +129,7 @@ async function readBoundaryRuntime(page) {
         return helperKind === "shell_fallback"
           || helperPrefixes.some((prefix) => id.startsWith(prefix))
           || geometryRole === "shore_seal"
-          || geometryRole === "sea_completion"
+          || (geometryRole === "sea_completion" && props.atl_render_layer !== "water")
           || geometryRole === "donor_sea"
           || joinMode === "gap_fill"
           || (joinMode === "boolean_weld" && !(id.startsWith("ATLISL_") && geometryRole === "donor_island"));

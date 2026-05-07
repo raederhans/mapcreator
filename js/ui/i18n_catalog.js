@@ -9,7 +9,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Viewport controls": { zh: "\u89c6\u53e3\u63a7\u5236", en: "Viewport controls" },
   "System status": { zh: "\u7cfb\u7edf\u72b6\u6001", en: "System status" },
   "Workspace entry": { zh: "\u5de5\u4f5c\u533a\u5165\u53e3", en: "Workspace entry" },
-  "Transport guide": { zh: "Transport \u6307\u5357", en: "Transport guide" },
+  "Transport guide": { zh: "\u8fd0\u8f93\u6307\u5357", en: "Transport guide" },
   "Guide sections": { zh: "\u6307\u5357\u5206\u6bb5", en: "Guide sections" },
   "Quick path": { zh: "\u5feb\u901f\u8def\u5f84", en: "Quick path" },
   "Before you edit": { zh: "\u5f00\u59cb\u524d", en: "Before you edit" },

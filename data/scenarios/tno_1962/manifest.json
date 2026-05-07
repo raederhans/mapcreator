@@ -130,6 +130,7 @@
   "performance_hints": {
     "dynamic_borders_default": false,
     "render_profile_default": "balanced",
+    "scenario_atlantropa_default": true,
     "scenario_relief_overlays_default": true,
     "special_regions_default": true,
     "water_regions_default": true
@@ -145,21 +146,23 @@
     "max_optional_chunks": 3,
     "max_required_chunks": 6,
     "max_required_political_byte_size": 45000000,
-    "max_required_political_chunks": 48,
+    "max_required_political_chunks": 6,
     "max_required_political_estimated_path_cost": 520000,
     "min_required_political_chunks": 1
   },
   "runtime_bootstrap_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
   "runtime_meta_url": "data/scenarios/tno_1962/runtime_meta.json",
   "runtime_topology_url": "data/scenarios/tno_1962/runtime_topology.topo.json",
+  "scenario_atlantropa_metadata_url": "data/scenarios/tno_1962/scenario_atlantropa_metadata.json",
+  "scenario_atlantropa_topology_url": "data/scenarios/tno_1962/scenario_atlantropa.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "56977fc9d5b19d12af0495e6822bc72208b3a6f2e12617746df2197814a24698",
+  "snapshot_fingerprint": "909c726f164ddf234af73363499275d5a8752ca0d18510c65c80f242f44b782f",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "4f903f08250df5fa33d843c244f69a35e968ba6a26660cea46cc9032f8042e05",
-    "runtime_bootstrap_topology_sha256": "27365dbff68d420415e0ad91afd38ac33fbc70f02d614fe8c45e10023b6be20a",
-    "runtime_topology_sha256": "f9009f0b5cfde4e78a7429ab55286e8e1816cca3e81dd734e939d0e641d98c7c"
+    "detail_chunk_manifest_sha256": "3ed758bf7b92da25bd221fb49dff1547519d51aa647c8f20e0630a89f9184eb8",
+    "runtime_bootstrap_topology_sha256": "bdb2d27ca2666749f35e2cc17b9f27427c15ec4232d4b314c179742fdc725555",
+    "runtime_topology_sha256": "f737182cf75c65b3977aea679f5f7a102877b7a344173a0db32c3b9fb8d564ab"
   },
   "special_regions_url": "data/scenarios/tno_1962/special_regions.geojson",
   "special_zone_layers_url": "data/scenarios/tno_1962/special_zone_layers.json",
@@ -167,8 +170,14 @@
   "startup_bundle_url_zh": "data/scenarios/tno_1962/startup.bundle.zh.json",
   "startup_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
   "style_defaults": {
+    "atlantropa_salt_flat": {
+      "fillColor": "#7c6f53"
+    },
     "atlantropa_sea": {
       "fillColor": "#203856"
+    },
+    "atlantropa_shoal": {
+      "fillColor": "#3a5d70"
     },
     "ocean": {
       "fillColor": "#2d4769"
@@ -199,6 +208,7 @@
       "direct_country_copy": 2424,
       "manual_reviewed": 9467
     },
+    "scenario_atlantropa_feature_count": 927,
     "scenario_rule_blocker_count": 0,
     "scenario_runtime_topology_object_count": 5,
     "source_counts": {

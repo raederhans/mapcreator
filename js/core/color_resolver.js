@@ -16,6 +16,21 @@ function resolveFeatureColor(featureId, ctx = {}) {
   const runtimeState = ctx.state && typeof ctx.state === "object" ? ctx.state : {};
   const getSafeColor = typeof ctx.getSafeColor === "function" ? ctx.getSafeColor : defaultSafeColor;
   const feature = ctx.feature || null;
+  const atlantropaColorRule = String(feature?.properties?.atl_color_rule || "").trim().toLowerCase();
+  if (atlantropaColorRule && atlantropaColorRule !== "owner") {
+    const color = getSafeColor(
+      typeof ctx.getAtlantropaRuleColor === "function"
+        ? ctx.getAtlantropaRuleColor(atlantropaColorRule, feature, id)
+        : "",
+      "",
+    );
+    return {
+      color: color || null,
+      source: color ? `atlantropa:${atlantropaColorRule}` : "",
+      featureId: id,
+      ownerCode: "",
+    };
+  }
 
   if (typeof ctx.isOceanFeature === "function" && ctx.isOceanFeature(feature, id)) {
     const color = getSafeColor(

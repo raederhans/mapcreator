@@ -10,6 +10,7 @@ function normalizeScenarioPerformanceHints(manifest) {
       dynamicBordersDefault: null,
       parentBordersDefault: null,
       scenarioReliefOverlaysDefault: null,
+      scenarioAtlantropaDefault: null,
       waterRegionsDefault: null,
       specialRegionsDefault: null,
     };
@@ -23,6 +24,8 @@ function normalizeScenarioPerformanceHints(manifest) {
       typeof raw.parent_borders_default === "boolean" ? raw.parent_borders_default : null,
     scenarioReliefOverlaysDefault:
       typeof raw.scenario_relief_overlays_default === "boolean" ? raw.scenario_relief_overlays_default : null,
+    scenarioAtlantropaDefault:
+      typeof raw.scenario_atlantropa_default === "boolean" ? raw.scenario_atlantropa_default : null,
     waterRegionsDefault:
       typeof raw.water_regions_default === "boolean" ? raw.water_regions_default : null,
     specialRegionsDefault:

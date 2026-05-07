@@ -23,7 +23,7 @@ const ATLANTROPA_SEA_SAMPLE_POINTS = [
   { label: "Libya-Suez Basin", lon: 18.0, lat: 31.0 },
 ];
 
-const HELPER_PREFIXES = ["ATLSHL_", "ATLWLD_", "ATLSEA_FILL_"];
+const HELPER_PREFIXES = ["ATLSHL_", "ATLWLD_"];
 const ATLANTROPA_MEDITERRANEAN_FOCUS = { lon: 16.5, lat: 37.5, zoomPercent: 165 };
 const ADRIATIC_BASIN_TARGET_ID = "ATLSEA_adriatica_8597_5838_0";
 

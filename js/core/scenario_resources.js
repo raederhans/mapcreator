@@ -152,6 +152,14 @@ const SCENARIO_OPTIONAL_LAYER_CONFIGS = {
     objectName: "scenario_special_land",
     visibilityField: "showScenarioSpecialRegions",
   },
+  scenario_atlantropa: {
+    bundleField: "scenarioAtlantropaPayload",
+    stateField: "scenarioAtlantropaData",
+    urlField: "scenario_atlantropa_topology_url",
+    objectName: "scenario_atlantropa",
+    visibilityField: "showScenarioAtlantropa",
+    revisionField: "scenarioAtlantropaRevision",
+  },
   specialzonelayers: {
     bundleField: "specialZoneLayersPayload",
     stateField: "specialZoneLayers",
@@ -610,11 +618,13 @@ function shouldEagerLoadScenarioOptionalLayer(layerKey, manifest, runtimeTopolog
     ? hints.waterRegionsDefault !== false
     : config.visibilityField === "showScenarioSpecialRegions"
       ? hints.specialRegionsDefault !== false
-      : config.visibilityField === "showScenarioReliefOverlays"
-        ? hints.scenarioReliefOverlaysDefault === true
-        : config.visibilityField === "showCityPoints"
-          ? runtimeState.showCityPoints !== false
-          : false;
+      : config.visibilityField === "showScenarioAtlantropa"
+        ? hints.scenarioAtlantropaDefault !== false
+        : config.visibilityField === "showScenarioReliefOverlays"
+          ? hints.scenarioReliefOverlaysDefault === true
+          : config.visibilityField === "showCityPoints"
+            ? runtimeState.showCityPoints !== false
+            : false;
   if (!visibleByDefault) {
     return false;
   }
@@ -717,7 +727,10 @@ async function loadScenarioOptionalLayerPayload(
         })
         : layerKey === "specialzonelayers"
           ? normalizeSpecialZoneLayersState(rawPayload, { defaultSource: "scenario" })
-          : normalizeScenarioFeatureCollection(rawPayload);
+          : config.objectName
+            ? getScenarioTopologyFeatureCollection(rawPayload, config.objectName)
+              || normalizeScenarioFeatureCollection(rawPayload)
+            : normalizeScenarioFeatureCollection(rawPayload);
       bundle[config.bundleField] = payload;
       bundle.optionalLayerSettledByKey[layerKey] = true;
       return payload;

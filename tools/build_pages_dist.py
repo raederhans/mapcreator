@@ -72,6 +72,8 @@ DATA_RUNTIME_FILES = (
     "global_bathymetry.topo.json",
     "historical_city_lights_1930_exclusions.json",
 )
+# 这两组 allowlist 定义的是 Pages 运行时公开面，不是仓库 data 目录的全量镜像。
+# 新增浏览器直接读取的 runtime import 或 manifest URL 时，要同步把文件放进这里。
 DATA_RUNTIME_DIRS = (
     "city_lights",
     "feature-migrations",
@@ -194,6 +196,8 @@ def copy_scenario_runtime_data() -> None:
     source_dir = ROOT / "data" / "scenarios"
     destination_dir = APP_DIST_ROOT / "data" / "scenarios"
     chunked_full_topology_excludes = set()
+    # 只要场景 manifest 已声明 chunk runtime，Pages 包里就不再复制完整 runtime_topology。
+    # 发布面要保持“运行时真实会加载什么，就只运什么”，避免 dist 体积和 metadata 一起漂移。
     for manifest_path in source_dir.glob("*/manifest.json"):
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         if isinstance(payload, dict) and str(payload.get("detail_chunk_manifest_url") or "").strip():
@@ -331,6 +335,7 @@ def validate_dist_scenario_startup_urls() -> None:
         detail_manifest_url = str(manifest.get("detail_chunk_manifest_url") or "").strip()
         detail_manifest_path = _dist_path_for_app_url(detail_manifest_url)
         if detail_manifest_path.is_file():
+            # manifest 自己存在还不够，chunk manifest 里列出来的每个 chunk URL 也要真的能在 dist 里找到。
             detail_manifest = json.loads(detail_manifest_path.read_text(encoding="utf-8"))
             chunks = detail_manifest.get("chunks") if isinstance(detail_manifest, dict) else []
             if isinstance(chunks, list):
@@ -346,6 +351,8 @@ def validate_dist_scenario_startup_urls() -> None:
             bundle_path = _dist_path_for_app_url(bundle_url)
             if not bundle_path.is_file():
                 continue
+            # startup bundle 内嵌的 manifest_subset 也是公开合同的一部分。
+            # 这里继续递归校验，防止页面首屏能拿到 bundle，却在后续跳转时引用未发布文件。
             bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
             manifest_subset = bundle.get("manifest_subset") if isinstance(bundle, dict) else None
             if not isinstance(manifest_subset, dict):
@@ -365,6 +372,8 @@ def copy_transport_runtime_data() -> None:
     destination_dir = APP_DIST_ROOT / "data" / "transport_layers"
 
     def should_copy_file(relative_path: Path, source_file: Path) -> bool:
+        # transport dist 只发布主运行时所需的小直载资产、metadata、preview 和 overrides。
+        # 这样 Pages 既能保留 workbench/overview 所需最小面，又不会把全量 builder 中间产物带上去。
         repo_relative = source_file.relative_to(ROOT).as_posix()
         if repo_relative in TRANSPORT_SMALL_DIRECT_RUNTIME_FILES:
             return True

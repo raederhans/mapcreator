@@ -34,6 +34,7 @@ function createScenarioDisplayRestoreRuntime({
       parentBordersVisible: state.parentBordersVisible !== false,
       showWaterRegions: state.showWaterRegions !== false,
       showScenarioSpecialRegions: state.showScenarioSpecialRegions !== false,
+      showScenarioAtlantropa: state.showScenarioAtlantropa !== false,
       showScenarioReliefOverlays: state.showScenarioReliefOverlays !== false,
     };
     return state.scenarioDisplaySettingsBeforeActivate;
@@ -58,6 +59,9 @@ function createScenarioDisplayRestoreRuntime({
     if (typeof hints.specialRegionsDefault === "boolean") {
       state.showScenarioSpecialRegions = hints.specialRegionsDefault;
     }
+    if (typeof hints.scenarioAtlantropaDefault === "boolean") {
+      state.showScenarioAtlantropa = hints.scenarioAtlantropaDefault;
+    }
     if (typeof hints.scenarioReliefOverlaysDefault === "boolean") {
       state.showScenarioReliefOverlays = hints.scenarioReliefOverlaysDefault;
     }
@@ -72,6 +76,7 @@ function createScenarioDisplayRestoreRuntime({
       state.parentBordersVisible = snapshot.parentBordersVisible !== false;
       state.showWaterRegions = snapshot.showWaterRegions !== false;
       state.showScenarioSpecialRegions = snapshot.showScenarioSpecialRegions !== false;
+      state.showScenarioAtlantropa = snapshot.showScenarioAtlantropa !== false;
       state.showScenarioReliefOverlays = snapshot.showScenarioReliefOverlays !== false;
     }
     state.scenarioDisplaySettingsBeforeActivate = null;
