@@ -80,7 +80,7 @@ def build_rail_catalog() -> dict[str, Any]:
         "distribution_tier": "regional_sharded_manifest_catalog",
         "source_policy": "overture_only_checked_in_v1",
         "default_variant": "default",
-        "coverage_scope": "focus_regions_only",
+        "coverage_scope": "focus_regions_plus_coarse_gap_regions",
         "regions": [
             {
                 "id": region_spec["id"],

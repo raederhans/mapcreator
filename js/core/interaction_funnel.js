@@ -252,6 +252,12 @@ async function applyImportedProjectState(data, { ui, hooks }) {
       renderNow: false,
     });
   }
+  if (state.showTransport && state.showRoad) {
+    await callRuntimeHook(state, "ensureContextLayerDataFn", "roads", {
+      reason: "project-import",
+      renderNow: false,
+    });
+  }
   if (state.showUrban) {
     await callRuntimeHook(state, "ensureContextLayerDataFn", "urban", {
       reason: "project-import",

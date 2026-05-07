@@ -13,7 +13,7 @@ from pyarrow import fs
 from shapely import from_wkb
 from topojson import Topology
 
-OVERTURE_RELEASE = "2026-02-18.0"
+OVERTURE_RELEASE = "2026-04-15.0"
 OVERTURE_REGION = "us-west-2"
 OVERTURE_BUCKET = "overturemaps-us-west-2"
 OVERTURE_TRANSPORT_SEGMENT_PATH = (

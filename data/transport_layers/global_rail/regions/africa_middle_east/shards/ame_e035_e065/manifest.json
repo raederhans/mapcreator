@@ -1,0 +1,94 @@
+{
+  "adapter_id": "global_rail_v1",
+  "family": "rail",
+  "geometry_kind": "line",
+  "schema_version": 1,
+  "generated_at": "2026-05-06T23:44:08.941890Z",
+  "recipe_path": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/source_recipe.manual.json",
+  "recipe_version": "global_rail_sources_v1",
+  "distribution_tier": "single_pack",
+  "source_policy": "overture_only_checked_in_v1",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.preview.topo.json"
+    },
+    "full": {
+      "railways": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.topo.json"
+    },
+    "build_audit": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/build_audit.json"
+  },
+  "feature_counts": {
+    "preview": {
+      "railways": 45
+    },
+    "full": {
+      "railways": 175
+    }
+  },
+  "build_command": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e035_e065",
+  "runtime_consumer": "transport_overview_rail",
+  "source_signature": {
+    "overture_transport_segment": {
+      "release": "2026-04-15.0",
+      "remote_path": "s3://overturemaps-us-west-2/release/2026-04-15.0/theme=transportation/type=segment/"
+    },
+    "source_recipe": {
+      "filename": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/source_recipe.manual.json",
+      "size_bytes": 4659,
+      "sha256": "935339e5411bf8543be39714a4f278f9852553b941237e9442d108ef55295040"
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.preview.topo.json"
+        },
+        "full": {
+          "railways": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.topo.json"
+        },
+        "build_audit": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 45
+        },
+        "full": {
+          "railways": 175
+        }
+      }
+    }
+  },
+  "extensions": {
+    "rail": {
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      },
+      "runtime_readiness": {
+        "transport_overview_rail": "backbone_only_not_ui_ready",
+        "rail_stations_major": "placeholder_only"
+      },
+      "phase_b_reserved_outputs": [
+        "rail_stations_major"
+      ],
+      "region": {
+        "id": "africa_middle_east",
+        "lon_min": -20.0,
+        "lon_max": 65.0,
+        "lat_min": -35.0,
+        "lat_max": 38.0
+      },
+      "shard": {
+        "id": "ame_e035_e065",
+        "lon_min": 35.0,
+        "lon_max": 65.0,
+        "lat_min": -35.0,
+        "lat_max": 38.0
+      }
+    }
+  }
+}

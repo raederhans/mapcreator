@@ -85,7 +85,16 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertEqual(rules.get('stations_phase'), 'phase_b_pending_major_station_source')
         self.assertEqual(
             rules.get('focus_region_priority'),
-            ['japan', 'europe', 'russia', 'east_asia', 'north_america'],
+            [
+                'japan',
+                'europe',
+                'russia',
+                'east_asia',
+                'north_america',
+                'south_america',
+                'africa_middle_east',
+                'south_southeast_asia_oceania',
+            ],
         )
         self.assertIn('low_priority', rules.get('region_policy', {}))
         self.assertEqual(
@@ -401,10 +410,22 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         shard_region_ids = {spec['region_id'] for spec in RAIL_SHARDS}
         self.assertEqual(
             region_ids,
-            {'europe', 'japan', 'russia', 'east_asia', 'north_america'},
+            {
+                'europe',
+                'japan',
+                'russia',
+                'east_asia',
+                'north_america',
+                'south_america',
+                'africa_middle_east',
+                'south_southeast_asia_oceania',
+            },
         )
         self.assertEqual(shard_region_ids, region_ids)
         self.assertIn('jp_e128_e147', {spec['id'] for spec in RAIL_SHARDS})
+        self.assertIn('sa_w082_w058', {spec['id'] for spec in RAIL_SHARDS})
+        self.assertIn('ame_e035_e065', {spec['id'] for spec in RAIL_SHARDS})
+        self.assertIn('ssea_e155_e180', {spec['id'] for spec in RAIL_SHARDS})
 
     def test_rail_shard_can_infer_region_when_region_flag_is_default(self) -> None:
         if not self.pyarrow_available:
@@ -560,7 +581,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         catalog = json.loads(GLOBAL_RAIL_CATALOG.read_text(encoding='utf-8'))
         self.assertEqual(catalog.get('family'), 'rail')
         self.assertEqual(catalog.get('distribution_tier'), 'regional_sharded_manifest_catalog')
-        self.assertEqual(catalog.get('coverage_scope'), 'focus_regions_only')
+        self.assertEqual(catalog.get('coverage_scope'), 'focus_regions_plus_coarse_gap_regions')
 
         regions = catalog.get('regions', [])
         entries = catalog.get('entries', [])
@@ -618,10 +639,11 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('showRoad', appearance_controller_content)
         self.assertIn('showRoad', renderer_content)
         self.assertIn('layerName === "roads"', data_loader_content)
-        self.assertNotIn('showRoad', file_manager_content)
-        self.assertNotIn('showRoad', interaction_content)
-        self.assertNotIn('data.layerVisibility.showRoad', file_manager_content)
-        self.assertNotIn('state.showRoad = !!data.layerVisibility.showRoad', interaction_content)
+        self.assertIn('showRoad', file_manager_content)
+        self.assertIn('showRoad', interaction_content)
+        self.assertIn('data.layerVisibility.showRoad', file_manager_content)
+        self.assertIn('showRoad: !!layerVisibility.showRoad', state_content)
+        self.assertIn('callRuntimeHook(state, "ensureContextLayerDataFn", "roads"', interaction_content)
 
     def test_transport_toggles_release_deferred_context_markers(self) -> None:
         appearance_controller_content = (
@@ -854,12 +876,19 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('return getTransportOverviewRenderOwner().drawRoadsLayer(k, { interactive });', main_renderer_content)
         self.assertNotIn('state.roadLabelsData', renderer_content)
 
-    def test_road_save_load_gate_stays_closed(self) -> None:
+    def test_road_save_load_is_open_while_workbench_bridge_stays_closed(self) -> None:
         file_manager_content = (REPO_ROOT / 'js' / 'core' / 'file_manager.js').read_text(encoding='utf-8')
         interaction_content = (REPO_ROOT / 'js' / 'core' / 'interaction_funnel.js').read_text(encoding='utf-8')
-        self.assertNotIn('data.layerVisibility.showRoad', file_manager_content)
-        self.assertNotIn('state.showRoad = !!data.layerVisibility.showRoad', interaction_content)
-        self.assertNotIn('ensureContextLayerDataFn("roads"', interaction_content)
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
+        ui_state_content = (REPO_ROOT / 'js' / 'core' / 'state' / 'ui_state.js').read_text(encoding='utf-8')
+        self.assertIn('data.layerVisibility.showRoad', file_manager_content)
+        self.assertIn('showRoad: !!appState.showRoad', file_manager_content)
+        self.assertIn('data.layerVisibility.showRoad === undefined ? false : !!data.layerVisibility.showRoad', file_manager_content)
+        self.assertIn('showRoad: !!layerVisibility.showRoad', ui_state_content)
+        self.assertIn('if (state.showTransport && state.showRoad) {', interaction_content)
+        self.assertIn('callRuntimeHook(state, "ensureContextLayerDataFn", "roads"', interaction_content)
+        bridge_section = registry_content.split('if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {', 1)[1].split('if (normalizedFamilyId === "airport")', 1)[0]
+        self.assertIn('supported: false', bridge_section)
 
     def test_data_loader_no_longer_hardcodes_missing_global_transport_pack_paths(self) -> None:
         content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')

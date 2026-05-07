@@ -1532,3 +1532,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 某些老文件会混有 CRLF/LF；只补两行注释也可能把整文件伪装成重写。
 - 最稳的做法是先看 `git diff --stat`，一旦出现异常大 diff，立刻统一回仓库当前行尾风格后再继续。
+
+## 2026-05-07 - transport global data release and E2E scope
+
+- Overture release pin 可能随公共 S3 发布窗口失效；重建 transport shard 前先用源前缀存在性检查确认 release 可用，再启动长构建。
+- Project roundtrip E2E 只验证保存恢复状态时，应避免打开会触发全局 shard 加载的主图总开关；数据加载合同用更轻的静态/单元测试锁住。

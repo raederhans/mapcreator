@@ -1,0 +1,94 @@
+{
+  "adapter_id": "global_rail_v1",
+  "family": "rail",
+  "geometry_kind": "line",
+  "schema_version": 1,
+  "generated_at": "2026-05-06T23:53:56.812933Z",
+  "recipe_path": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/source_recipe.manual.json",
+  "recipe_version": "global_rail_sources_v1",
+  "distribution_tier": "single_pack",
+  "source_policy": "overture_only_checked_in_v1",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.preview.topo.json"
+    },
+    "full": {
+      "railways": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.topo.json"
+    },
+    "build_audit": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/build_audit.json"
+  },
+  "feature_counts": {
+    "preview": {
+      "railways": 22
+    },
+    "full": {
+      "railways": 228
+    }
+  },
+  "build_command": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e125_e155",
+  "runtime_consumer": "transport_overview_rail",
+  "source_signature": {
+    "overture_transport_segment": {
+      "release": "2026-04-15.0",
+      "remote_path": "s3://overturemaps-us-west-2/release/2026-04-15.0/theme=transportation/type=segment/"
+    },
+    "source_recipe": {
+      "filename": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/source_recipe.manual.json",
+      "size_bytes": 4683,
+      "sha256": "dc2f923ece14aa64e5e22e0c4f2124d54ac8e2f013ba3135980a1fd871179c0c"
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.preview.topo.json"
+        },
+        "full": {
+          "railways": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.topo.json"
+        },
+        "build_audit": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 22
+        },
+        "full": {
+          "railways": 228
+        }
+      }
+    }
+  },
+  "extensions": {
+    "rail": {
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      },
+      "runtime_readiness": {
+        "transport_overview_rail": "backbone_only_not_ui_ready",
+        "rail_stations_major": "placeholder_only"
+      },
+      "phase_b_reserved_outputs": [
+        "rail_stations_major"
+      ],
+      "region": {
+        "id": "south_southeast_asia_oceania",
+        "lon_min": 65.0,
+        "lon_max": 180.0,
+        "lat_min": -45.0,
+        "lat_max": 35.0
+      },
+      "shard": {
+        "id": "ssea_e125_e155",
+        "lon_min": 125.0,
+        "lon_max": 155.0,
+        "lat_min": -45.0,
+        "lat_max": 35.0
+      }
+    }
+  }
+}

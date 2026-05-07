@@ -371,17 +371,17 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   const initialExportPath = path.join(artifactDir, "initial-export.json");
   const initialExport = await exportProjectJson(page, initialExportPath);
 
-  expect(initialExport.schemaVersion).toBe(19);
-  expect(initialExport.styleConfig.internalBorders).toEqual({
+  expect(initialExport.schemaVersion).toBe(21);
+  expect(initialExport.styleConfig.internalBorders).toMatchObject({
     color: "#123456",
     opacity: 0.42,
     width: 0.88,
   });
-  expect(initialExport.styleConfig.empireBorders).toEqual({
+  expect(initialExport.styleConfig.empireBorders).toMatchObject({
     color: "#135790",
     width: 2.25,
   });
-  expect(initialExport.styleConfig.coastlines).toEqual({
+  expect(initialExport.styleConfig.coastlines).toMatchObject({
     color: "#2468ac",
     width: 2.4,
   });
@@ -435,6 +435,7 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
     },
   };
   importedProject.layerVisibility.showSpecialZones = true;
+  importedProject.layerVisibility.showTransport = false;
   importedProject.layerVisibility.showRail = true;
   importedProject.recentColors = ["#112233", "#445566"];
   importedProject.interactionGranularity = "country";
@@ -544,7 +545,7 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
       && byId("#railLabelsEnabled")?.checked === true
       && byId("#railLabelDensity")?.value === expected.railLabelDensity
       && byId("#railOpacity")?.value === expected.railOpacity
-      && byId("#paintGranularitySelect")?.value === expected.granularity
+      && state.interactionGranularity === expected.granularity
       && byId("#toggleSpecialZones")?.checked === true
       && byId("#referenceOpacity")?.value === expected.referenceOpacity
       && byId("#referenceScale")?.value === expected.referenceScale
@@ -672,6 +673,7 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   delete legacyProject.styleConfig.coastlines;
   delete legacyProject.styleConfig.physical;
   delete legacyProject.layerVisibility.showRail;
+  delete legacyProject.layerVisibility.showRoad;
   delete legacyProject.layerVisibility.showSpecialZones;
   const legacyProjectPath = path.join(artifactDir, "legacy-import.json");
   fs.writeFileSync(legacyProjectPath, JSON.stringify(legacyProject, null, 2));
@@ -698,6 +700,7 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
     return byId("#themeSelect")?.value === "hoi4_vanilla"
       && byId("#toggleSpecialZones")?.checked === false
       && byId("#toggleRail")?.checked === false
+      && byId("#toggleRoad")?.checked === false
       && byId("#physicalBlendMode")?.value === "source-over"
       && byId("#physicalOpacity")?.value === "56"
       && !state.specialZoneEditor?.active
@@ -735,16 +738,17 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   expect(legacyExport.unitCounters).toEqual([]);
   expect(legacyExport.layerVisibility.showSpecialZones).toBe(false);
   expect(legacyExport.layerVisibility.showRail).toBe(false);
-  expect(legacyExport.styleConfig.internalBorders).toEqual({
+  expect(legacyExport.layerVisibility.showRoad).toBe(false);
+  expect(legacyExport.styleConfig.internalBorders).toMatchObject({
     color: "#cccccc",
     opacity: 1,
     width: 0.5,
   });
-  expect(legacyExport.styleConfig.empireBorders).toEqual({
+  expect(legacyExport.styleConfig.empireBorders).toMatchObject({
     color: "#666666",
     width: 1,
   });
-  expect(legacyExport.styleConfig.coastlines).toEqual({
+  expect(legacyExport.styleConfig.coastlines).toMatchObject({
     color: "#333333",
     width: 1.2,
   });

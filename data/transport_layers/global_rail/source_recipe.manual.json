@@ -4,7 +4,7 @@
   "source_policy": "overture_only_checked_in_v1",
   "primary_source": {
     "provider": "Overture Maps Foundation",
-    "release": "2026-02-18.0",
+    "release": "2026-04-15.0",
     "theme": "transportation",
     "type": "segment",
     "subtype": "rail",
@@ -12,16 +12,19 @@
       "standard_gauge",
       "unknown"
     ],
-    "remote_path": "s3://overturemaps-us-west-2/release/2026-02-18.0/theme=transportation/type=segment/",
+    "remote_path": "s3://overturemaps-us-west-2/release/2026-04-15.0/theme=transportation/type=segment/",
     "license": "ODbL-1.0"
   },
   "product_rules": {
-    "focus_region_priority": [
-      "japan",
-      "europe",
-      "russia",
-      "east_asia",
-      "north_america"
+      "focus_region_priority": [
+        "japan",
+        "europe",
+        "russia",
+        "east_asia",
+        "north_america",
+        "south_america",
+        "africa_middle_east",
+        "south_southeast_asia_oceania"
     ],
     "region_policy": {
       "japan": {
@@ -130,6 +133,6 @@
     "line_class_policy": "standard_gauge long segments => mainline, other standard_gauge => regional, remaining => secondary",
     "stations_phase": "phase_b_pending_major_station_source",
     "phase_a_scope": "line_only_backbone",
-    "non_focus_strategy": "keep focus regions at baseline fidelity; drop unnamed low-priority lines early and raise thresholds outside focus regions"
+    "non_focus_strategy": "keep focus regions at baseline fidelity; coarse gap regions use the low_priority policy to retain only sparse long-distance backbone lines"
   }
 }

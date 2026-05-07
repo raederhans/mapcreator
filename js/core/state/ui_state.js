@@ -365,6 +365,7 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
     showAirports: !!layerVisibility.showAirports,
     showPorts: !!layerVisibility.showPorts,
     showRail: !!layerVisibility.showRail,
+    showRoad: !!layerVisibility.showRoad,
     showSpecialZones:
       layerVisibility.showSpecialZones === undefined ? false : !!layerVisibility.showSpecialZones,
   });

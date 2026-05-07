@@ -1,0 +1,94 @@
+{
+  "adapter_id": "global_rail_v1",
+  "family": "rail",
+  "geometry_kind": "line",
+  "schema_version": 1,
+  "generated_at": "2026-05-06T23:35:52.668688Z",
+  "recipe_path": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/source_recipe.manual.json",
+  "recipe_version": "global_rail_sources_v1",
+  "distribution_tier": "single_pack",
+  "source_policy": "overture_only_checked_in_v1",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.preview.topo.json"
+    },
+    "full": {
+      "railways": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.topo.json"
+    },
+    "build_audit": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/build_audit.json"
+  },
+  "feature_counts": {
+    "preview": {
+      "railways": 46
+    },
+    "full": {
+      "railways": 345
+    }
+  },
+  "build_command": "python tools/build_global_transport_rail.py --region south_america --shard sa_w082_w058",
+  "runtime_consumer": "transport_overview_rail",
+  "source_signature": {
+    "overture_transport_segment": {
+      "release": "2026-04-15.0",
+      "remote_path": "s3://overturemaps-us-west-2/release/2026-04-15.0/theme=transportation/type=segment/"
+    },
+    "source_recipe": {
+      "filename": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/source_recipe.manual.json",
+      "size_bytes": 4650,
+      "sha256": "ed6e1b43f523ad752f973d7c6f0da6b79a1b6f039b72de1d270bcbd17778e5f6"
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.preview.topo.json"
+        },
+        "full": {
+          "railways": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.topo.json"
+        },
+        "build_audit": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 46
+        },
+        "full": {
+          "railways": 345
+        }
+      }
+    }
+  },
+  "extensions": {
+    "rail": {
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      },
+      "runtime_readiness": {
+        "transport_overview_rail": "backbone_only_not_ui_ready",
+        "rail_stations_major": "placeholder_only"
+      },
+      "phase_b_reserved_outputs": [
+        "rail_stations_major"
+      ],
+      "region": {
+        "id": "south_america",
+        "lon_min": -82.0,
+        "lon_max": -34.0,
+        "lat_min": -56.0,
+        "lat_max": 13.0
+      },
+      "shard": {
+        "id": "sa_w082_w058",
+        "lon_min": -82.0,
+        "lon_max": -58.0,
+        "lat_min": -56.0,
+        "lat_max": 13.0
+      }
+    }
+  }
+}

@@ -33,6 +33,7 @@
     "test:node:scenario-runtime-state-behavior": "node --test tests/scenario_runtime_state_behavior.test.mjs",
     "test:node:startup-hydration-behavior": "node --test tests/startup_hydration_behavior.test.mjs",
     "test:node:palette-runtime-bridge": "node --test tests/palette_runtime_bridge.node.test.mjs",
+    "test:node:transport-overview-line-contract": "node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs",
     "test:node:renderer-runtime-state-behavior": "node --test tests/renderer_runtime_state_behavior.test.mjs",
     "test:node:border-mesh-owner-behavior": "node --test tests/border_mesh_owner_behavior.test.mjs",
     "test:node:perf-probe-snapshot-behavior": "node --test tests/perf_probe_snapshot_behavior.test.mjs",

@@ -460,6 +460,7 @@ class FileManager {
         showAirports: !!appState.showAirports,
         showPorts: !!appState.showPorts,
         showRail: !!appState.showRail,
+        showRoad: !!appState.showRoad,
         showSpecialZones: !!appState.showSpecialZones,
       },
       styleConfig: {
@@ -683,6 +684,8 @@ class FileManager {
           data.layerVisibility.showPorts === undefined ? false : !!data.layerVisibility.showPorts;
         data.layerVisibility.showRail =
           data.layerVisibility.showRail === undefined ? false : !!data.layerVisibility.showRail;
+        data.layerVisibility.showRoad =
+          data.layerVisibility.showRoad === undefined ? false : !!data.layerVisibility.showRoad;
         data.layerVisibility.showSpecialZones =
           data.layerVisibility.showSpecialZones === undefined
             ? false

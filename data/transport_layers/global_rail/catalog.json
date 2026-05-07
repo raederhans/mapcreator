@@ -1,11 +1,11 @@
 {
   "version": "global_transport_catalog_v1",
   "family": "rail",
-  "generated_at": "2026-04-15T22:21:26.805019Z",
+  "generated_at": "2026-05-06T23:54:38.168572Z",
   "distribution_tier": "regional_sharded_manifest_catalog",
   "source_policy": "overture_only_checked_in_v1",
   "default_variant": "default",
-  "coverage_scope": "focus_regions_only",
+  "coverage_scope": "focus_regions_plus_coarse_gap_regions",
   "regions": [
     {
       "id": "europe",
@@ -46,6 +46,30 @@
       "lat_min": 15.0,
       "lat_max": 75.0,
       "default_shard": "na_w170_w140"
+    },
+    {
+      "id": "south_america",
+      "lon_min": -82.0,
+      "lon_max": -34.0,
+      "lat_min": -56.0,
+      "lat_max": 13.0,
+      "default_shard": "sa_w082_w058"
+    },
+    {
+      "id": "africa_middle_east",
+      "lon_min": -20.0,
+      "lon_max": 65.0,
+      "lat_min": -35.0,
+      "lat_max": 38.0,
+      "default_shard": "ame_w020_e010"
+    },
+    {
+      "id": "south_southeast_asia_oceania",
+      "lon_min": 65.0,
+      "lon_max": 180.0,
+      "lat_min": -45.0,
+      "lat_max": 35.0,
+      "default_shard": "ssea_e065_e095"
     }
   ],
   "entries": [
@@ -378,6 +402,195 @@
         },
         "full": {
           "railways": 2356
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "sa_w082_w058",
+      "region_id": "south_america",
+      "manifest_path": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/manifest.json",
+      "lon_min": -82.0,
+      "lon_max": -58.0,
+      "lat_min": -56.0,
+      "lat_max": 13.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 46
+        },
+        "full": {
+          "railways": 345
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "sa_w058_w034",
+      "region_id": "south_america",
+      "manifest_path": "data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/manifest.json",
+      "lon_min": -58.0,
+      "lon_max": -34.0,
+      "lat_min": -56.0,
+      "lat_max": 13.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 25
+        },
+        "full": {
+          "railways": 212
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ame_w020_e010",
+      "region_id": "africa_middle_east",
+      "manifest_path": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/manifest.json",
+      "lon_min": -20.0,
+      "lon_max": 10.0,
+      "lat_min": -35.0,
+      "lat_max": 38.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 12
+        },
+        "full": {
+          "railways": 56
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ame_e010_e035",
+      "region_id": "africa_middle_east",
+      "manifest_path": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/manifest.json",
+      "lon_min": 10.0,
+      "lon_max": 35.0,
+      "lat_min": -35.0,
+      "lat_max": 38.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 21
+        },
+        "full": {
+          "railways": 126
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ame_e035_e065",
+      "region_id": "africa_middle_east",
+      "manifest_path": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/manifest.json",
+      "lon_min": 35.0,
+      "lon_max": 65.0,
+      "lat_min": -35.0,
+      "lat_max": 38.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 45
+        },
+        "full": {
+          "railways": 175
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ssea_e065_e095",
+      "region_id": "south_southeast_asia_oceania",
+      "manifest_path": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/manifest.json",
+      "lon_min": 65.0,
+      "lon_max": 95.0,
+      "lat_min": -45.0,
+      "lat_max": 35.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 50
+        },
+        "full": {
+          "railways": 496
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ssea_e095_e125",
+      "region_id": "south_southeast_asia_oceania",
+      "manifest_path": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/manifest.json",
+      "lon_min": 95.0,
+      "lon_max": 125.0,
+      "lat_min": -45.0,
+      "lat_max": 35.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 28
+        },
+        "full": {
+          "railways": 183
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ssea_e125_e155",
+      "region_id": "south_southeast_asia_oceania",
+      "manifest_path": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/manifest.json",
+      "lon_min": 125.0,
+      "lon_max": 155.0,
+      "lat_min": -45.0,
+      "lat_max": 35.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 22
+        },
+        "full": {
+          "railways": 228
+        }
+      },
+      "phase_status": {
+        "backbone": "ready_for_phase_a_checked_in_outputs",
+        "major_stations": "phase_b_pending_source"
+      }
+    },
+    {
+      "id": "ssea_e155_e180",
+      "region_id": "south_southeast_asia_oceania",
+      "manifest_path": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/manifest.json",
+      "lon_min": 155.0,
+      "lon_max": 180.0,
+      "lat_min": -45.0,
+      "lat_max": 35.0,
+      "feature_counts": {
+        "preview": {
+          "railways": 3
+        },
+        "full": {
+          "railways": 37
         }
       },
       "phase_status": {
