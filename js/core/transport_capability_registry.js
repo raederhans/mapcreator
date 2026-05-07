@@ -387,14 +387,10 @@ export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}
   let opacityMultiplier = normalizedMode === "coverage" ? 0.92 : 1;
   let labelsEnabled = !!familyConfig.labelsEnabled;
   if (scaleTier === "world") {
-    minimumScopeRank = Math.max(baseMinimumScopeRank, 2);
-    maximumRevealRank = Math.max(baseMaximumRevealRank, 2);
     widthMultiplier *= normalizedMode === "network" ? 1.18 : (normalizedMode === "coverage" ? 1.2 : 1.12);
     opacityMultiplier *= normalizedMode === "network" ? 1.06 : (normalizedMode === "coverage" ? 0.94 : 1.02);
     labelsEnabled = false;
   } else if (scaleTier === "regional") {
-    minimumScopeRank = Math.max(baseMinimumScopeRank, familyId === "rail" ? 2 : 2);
-    maximumRevealRank = Math.max(baseMaximumRevealRank, 2);
     widthMultiplier *= normalizedMode === "network" ? 1.1 : 1.04;
     opacityMultiplier *= normalizedMode === "coverage" ? 0.96 : 1.02;
     labelsEnabled = !!familyConfig.labelsEnabled && normalizedMode !== "coverage";

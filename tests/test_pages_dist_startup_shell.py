@@ -189,7 +189,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         required_files = set(payload.get("required_files", []))
 
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
-        self.assertEqual(payload["max_allowed_bytes"], 950 * 1024 * 1024)
+        self.assertEqual(payload["max_allowed_bytes"], 970 * 1024 * 1024)
         self.assertIn("app/data/CATALOG.json", required_files)
         for expected_path in (
             "index.html",
@@ -205,6 +205,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
             "app/data/europe_topology.na_v2.json",
             "app/data/transport_layers/global_road/catalog.json",
+            "app/data/transport_layers/global_rail/catalog.json",
+            "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/manifest.json",
+            "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/build_audit.json",
+            "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.preview.topo.json",
             "app/data/transport_layers/global_airport/airports.geojson",
             "app/data/transport_layers/global_port/ports.geojson",
             "app/data/transport_layers/japan_airport/airports.geojson",
@@ -225,6 +229,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/scenarios/modern_world/runtime_topology.topo.json",
             "app/data/i18n/locales_baseline.json",
             "app/data/transport_layers/global_road/shards/w120_w090/roads.topo.json",
+            "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.topo.json",
             "app/data/transport_layers/japan_road/roads.topo.json",
             "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.geojson",
             "app/data/europe_topology.highres.json",

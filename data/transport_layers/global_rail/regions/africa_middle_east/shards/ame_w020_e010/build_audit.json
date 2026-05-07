@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-05-06T23:39:31.461178Z",
+  "adapter_id": "global_rail_v1",
+  "region_id": "africa_middle_east",
+  "shard_id": "ame_w020_e010",
+  "recipe_version": "global_rail_sources_v1",
+  "source_policy": "overture_only_checked_in_v1",
+  "raw_line_count": 12027,
+  "filtered_line_count": 56,
+  "preview_line_count": 12,
+  "major_station_count": 0,
+  "line_class_counts": {
+    "mainline": 12,
+    "regional": 44,
+    "secondary": 0
+  },
+  "region_counts": {
+    "africa_middle_east": 56
+  },
+  "preview_thresholds_m": {
+    "japan": {
+      "mainline": 25000.0,
+      "regional": 28000.0,
+      "secondary": 70000.0
+    },
+    "europe": {
+      "mainline": 35000.0,
+      "regional": 35000.0,
+      "secondary": 90000.0
+    },
+    "russia": {
+      "mainline": 42000.0,
+      "regional": 52000.0,
+      "secondary": 120000.0
+    },
+    "east_asia": {
+      "mainline": 35000.0,
+      "regional": 40000.0,
+      "secondary": 100000.0
+    },
+    "north_america": {
+      "mainline": 45000.0,
+      "regional": 55000.0,
+      "secondary": 130000.0
+    },
+    "low_priority": {
+      "mainline": 150000.0,
+      "regional": 220000.0,
+      "secondary": 320000.0
+    }
+  },
+  "output_size_bytes": {
+    "railways_preview": 12791,
+    "railways_full": 34109,
+    "stations_preview": 54,
+    "stations_full": 54
+  },
+  "source_signature": {
+    "overture_transport_segment": {
+      "release": "2026-04-15.0",
+      "remote_path": "s3://overturemaps-us-west-2/release/2026-04-15.0/theme=transportation/type=segment/"
+    },
+    "source_recipe": {
+      "filename": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/source_recipe.manual.json",
+      "size_bytes": 4660,
+      "sha256": "d1ac871c4cdd7d44f9cda87e9f27bea14b6489b8c9b11f52aecbde50efb0bcbb"
+    }
+  },
+  "phase_status": {
+    "backbone": "ready_for_phase_a_checked_in_outputs",
+    "major_stations": "phase_b_pending_source"
+  },
+  "runtime_readiness": {
+    "transport_overview_rail": "backbone_only_not_ui_ready",
+    "rail_stations_major": "placeholder_only"
+  },
+  "notes": [
+    "Global rail coarse v1 uses Overture transportation segments as the only canonical source.",
+    "Phase A delivers backbone railways now and leaves major station enrichment to phase B.",
+    "Manifest phase A only declares railways as checked-in live outputs.",
+    "rail_stations_major is emitted as an empty placeholder sidecar until the dedicated major-station source is finalized.",
+    "Focus regions keep baseline fidelity; coarse gap regions keep a sparse line-only baseline with stricter early filtering and longer reveal thresholds.",
+    "Region scope: africa_middle_east (-20.0..65.0 lon, -35.0..38.0 lat).",
+    "Shard scope: ame_w020_e010 (-20.0..10.0 lon within region window)."
+  ]
+}

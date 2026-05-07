@@ -19,7 +19,7 @@ from tools.app_entry_resolver import (
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
-MAX_PAGES_DIST_BYTES = 950 * 1024 * 1024
+MAX_PAGES_DIST_BYTES = 970 * 1024 * 1024
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",

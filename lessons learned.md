@@ -1543,3 +1543,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 新增地图点位图标资产时，加载状态必须先接入交互命中链；atlas loading/error 阶段清空 hover entry，ready 后再注册，避免出现看不见但可点击的目标。
 - 异步图集从 loading 变成 ready/error 时，要同步失效对应 render pass；只 request render 会让上一帧空缓存继续被复用。
+
+## 2026-05-07 - transport global data release and E2E scope
+
+- Overture release pin 可能随公共 S3 发布窗口失效；重建 transport shard 前先用源前缀存在性检查确认 release 可用，再启动长构建。
+- Project roundtrip E2E 只验证保存恢复状态时，应避免打开会触发全局 shard 加载的主图总开关；数据加载合同用更轻的静态/单元测试锁住。

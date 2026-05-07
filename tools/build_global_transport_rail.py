@@ -42,6 +42,9 @@ FOCUS_REGION_SPECS = (
     {'id': 'russia', 'lon_min': 30.0, 'lon_max': 180.0, 'lat_min': 45.0, 'lat_max': 78.0},
     {'id': 'east_asia', 'lon_min': 95.0, 'lon_max': 150.0, 'lat_min': 20.0, 'lat_max': 55.0},
     {'id': 'north_america', 'lon_min': -170.0, 'lon_max': -50.0, 'lat_min': 15.0, 'lat_max': 75.0},
+    {'id': 'south_america', 'lon_min': -82.0, 'lon_max': -34.0, 'lat_min': -56.0, 'lat_max': 13.0},
+    {'id': 'africa_middle_east', 'lon_min': -20.0, 'lon_max': 65.0, 'lat_min': -35.0, 'lat_max': 38.0},
+    {'id': 'south_southeast_asia_oceania', 'lon_min': 65.0, 'lon_max': 180.0, 'lat_min': -45.0, 'lat_max': 35.0},
 )
 FOCUS_REGION_IDS = tuple(spec['id'] for spec in FOCUS_REGION_SPECS)
 RAIL_SHARDS = (
@@ -61,6 +64,15 @@ RAIL_SHARDS = (
     {'id': 'na_w140_w110', 'region_id': 'north_america', 'lon_min': -140.0, 'lon_max': -110.0},
     {'id': 'na_w110_w080', 'region_id': 'north_america', 'lon_min': -110.0, 'lon_max': -80.0},
     {'id': 'na_w080_w050', 'region_id': 'north_america', 'lon_min': -80.0, 'lon_max': -50.0},
+    {'id': 'sa_w082_w058', 'region_id': 'south_america', 'lon_min': -82.0, 'lon_max': -58.0},
+    {'id': 'sa_w058_w034', 'region_id': 'south_america', 'lon_min': -58.0, 'lon_max': -34.0},
+    {'id': 'ame_w020_e010', 'region_id': 'africa_middle_east', 'lon_min': -20.0, 'lon_max': 10.0},
+    {'id': 'ame_e010_e035', 'region_id': 'africa_middle_east', 'lon_min': 10.0, 'lon_max': 35.0},
+    {'id': 'ame_e035_e065', 'region_id': 'africa_middle_east', 'lon_min': 35.0, 'lon_max': 65.0},
+    {'id': 'ssea_e065_e095', 'region_id': 'south_southeast_asia_oceania', 'lon_min': 65.0, 'lon_max': 95.0},
+    {'id': 'ssea_e095_e125', 'region_id': 'south_southeast_asia_oceania', 'lon_min': 95.0, 'lon_max': 125.0},
+    {'id': 'ssea_e125_e155', 'region_id': 'south_southeast_asia_oceania', 'lon_min': 125.0, 'lon_max': 155.0},
+    {'id': 'ssea_e155_e180', 'region_id': 'south_southeast_asia_oceania', 'lon_min': 155.0, 'lon_max': 180.0},
 )
 RAIL_SHARD_IDS = tuple(spec['id'] for spec in RAIL_SHARDS)
 REGION_POLICY_BY_ID = {
@@ -485,7 +497,7 @@ def write_source_recipe(recipe_path: Path, region_spec: dict[str, Any], shard_sp
             'line_class_policy': 'standard_gauge long segments => mainline, other standard_gauge => regional, remaining => secondary',
             'stations_phase': 'phase_b_pending_major_station_source',
             'phase_a_scope': 'line_only_backbone',
-            'non_focus_strategy': 'keep focus regions at baseline fidelity; drop unnamed low-priority lines early and raise thresholds outside focus regions',
+            'non_focus_strategy': 'keep focus regions at baseline fidelity; coarse gap regions use the low_priority policy to retain only sparse long-distance backbone lines',
         },
         'region': {
             'id': region_id,
@@ -558,7 +570,7 @@ def build_audit_payload(
             'Phase A delivers backbone railways now and leaves major station enrichment to phase B.',
             'Manifest phase A only declares railways as checked-in live outputs.',
             'rail_stations_major is emitted as an empty placeholder sidecar until the dedicated major-station source is finalized.',
-            'Focus regions are Europe, Russia, East Asia, Japan, and North America; other regions keep a coarser line-only baseline with stricter early filtering and longer reveal thresholds.',
+            'Focus regions keep baseline fidelity; coarse gap regions keep a sparse line-only baseline with stricter early filtering and longer reveal thresholds.',
             f'Region scope: {region_id} ({region_spec["lon_min"]}..{region_spec["lon_max"]} lon, {region_spec["lat_min"]}..{region_spec["lat_max"]} lat).',
             f'Shard scope: {shard_id} ({shard_spec["lon_min"]}..{shard_spec["lon_max"]} lon within region window).',
         ],
