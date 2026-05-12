@@ -981,8 +981,17 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
 
   const checks = {
+    scenarioWaterExclusiveModeComesFromManifestWithLegacyAtlantropaDefault:
+      /function getScenarioWaterRegionsMode\(\) \{[\s\S]*?runtimeState\.activeScenarioManifest\?\.water_regions_mode[\s\S]*?SCENARIO_PRESENTATION_FEATURES\.ATLANTROPA_RELIEF[\s\S]*?return "exclusive";[\s\S]*?return "combined";[\s\S]*?\}/.test(rendererSource)
+      && /function isScenarioWaterTopologyExclusiveMode\(\) \{[\s\S]*?return getScenarioWaterRegionsMode\(\) === "exclusive";[\s\S]*?\}/.test(rendererSource),
     tnoWaterUsesScenarioCollectionOnly:
       /function getEffectiveWaterRegionFeatures\(\) \{[\s\S]*?if \(isScenarioWaterTopologyExclusiveMode\(\)\) \{[\s\S]*?return sanitizeWaterRegionFeatures\(scenarioFeatures\.filter\(\(feature\) => !isWaterRegionExcludedByScenario\(feature\)\)\);/.test(rendererSource),
+    waterRenderAndInteractionUseSeparateContracts:
+      /function isWaterRegionRenderable\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return true;[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
+      && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) return;/.test(rendererSource)
+      && /function collectWaterGridCandidates\(px, py, radiusProj = 0\) \{[\s\S]*?if \(!isWaterRegionEnabled\(item\.feature\)\) return;/.test(rendererSource)
+      && /function rebuildAuxiliaryRegionIndexes\(\) \{[\s\S]*?if \(!isWaterRegionEnabled\(selectedFeature\)\) \{[\s\S]*?runtimeState\.selectedWaterRegionId = "";/.test(rendererSource)
+      && /function drawScenarioWaterHighlightLayer\(k\) \{[\s\S]*?if \(!isWaterRegionEnabled\(feature\)\) return;/.test(rendererSource),
     waterSphericalDiagnosticsBacksSanitization:
       /function getSphericalGeometryDiagnostics\(geoObject\) \{[\s\S]*?globalThis\.d3\.geoArea[\s\S]*?globalThis\.d3\.geoBounds[\s\S]*?isWorldBounds\(bounds\)[\s\S]*?SPHERICAL_GEOMETRY_MAX_AREA/.test(rendererSource)
       && /function collectSafeWaterRegionGeometryPartsInfo\(feature\) \{[\s\S]*?isSphericalGeometryUnsafe\(part\)[\s\S]*?removedCount \+= 1;/.test(rendererSource)
@@ -995,8 +1004,8 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function getScenarioWaterFeaturePath\(feature, parts\) \{[\s\S]*?scenarioWaterFeaturePathCache\.has\(feature\)[\s\S]*?combinedPath\.addPath\(partPath\)[\s\S]*?scenarioWaterFeaturePathCache\.set\(feature, path\);/.test(rendererSource)
       && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?const waterPath = visibleParts\.length === parts\.length[\s\S]*?getScenarioWaterFeaturePath\(feature, parts\)[\s\S]*?context\.fill\(waterPath\);[\s\S]*?getScenarioWaterPartPath\(part\)[\s\S]*?context\.fill\(partPath\)[\s\S]*?pathCanvas\(part\);/.test(rendererSource),
     waterCoverageUsesSafeParts:
-      /function getScenarioWaterVisibleCoverageRatioLegacy\(waterFeatures = \[\]\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?computeProjectedGeoBounds\(part\)/.test(rendererSource)
-      && /function getScenarioWaterVisibleCoverageRatioGrid\(waterFeatures = \[\]\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?computeProjectedGeoBounds\(part\)/.test(rendererSource),
+      /function getScenarioWaterVisibleCoverageRatioLegacy\(waterFeatures = \[\]\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) return;[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?computeProjectedGeoBounds\(part\)/.test(rendererSource)
+      && /function getScenarioWaterVisibleCoverageRatioGrid\(waterFeatures = \[\]\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) continue;[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?computeProjectedGeoBounds\(part\)/.test(rendererSource),
     waterSpatialIndexSkipsUnsafeParts:
       /function buildWaterSpatialItems\(\{[\s\S]*?shouldExcludeWaterHitGeometry = \(\) => false,[\s\S]*?if \(shouldExcludeWaterHitGeometry\(hitGeometry, feature, id\)\) return;/.test(spatialBuilderSource)
       && /shouldExcludeWaterHitGeometry = \(\) => false/.test(spatialOwnerSource)
@@ -1008,6 +1017,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
     waterMaskAndCoastlineShareScenarioSurfaceSignal:
       /function getScenarioSurfaceVersionSignal\(\) \{/.test(rendererSource)
       && /`water-ref:\$\{getObjectIdentityToken\(runtimeState\.scenarioWaterRegionsData, "scenario-water"\)\}`/.test(rendererSource)
+      && /`water-mode:\$\{getScenarioWaterRegionsMode\(\)\}`/.test(rendererSource)
       && /maskInfo\.maskQualityToken \|\| "unchecked"/.test(rendererSource)
       && /function getScenarioWaterVisualRevisionToken\(\) \{[\s\S]*?getScenarioSurfaceVersionSignal\(\)/.test(rendererSource)
       && /function getPhysicalLandClipCacheKey\(maskInfo\) \{[\s\S]*?scenario-surface:\$\{getScenarioSurfaceVersionSignal\(\)\}/.test(rendererSource)

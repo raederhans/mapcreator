@@ -85,6 +85,7 @@ ATLANTROPA_FEATURE_PREFIXES = (
 )
 ATLANTROPA_RENDER_LAYER_VALUES = {"water", "land", "shoal", "relief"}
 ATLANTROPA_COLOR_RULE_VALUES = {"atlantropa_sea", "owner", "salt_flat", "shoal_pattern"}
+WATER_REGIONS_MODE_VALUES = {"combined", "exclusive"}
 ATLANTROPA_PREFIX_FIELD_RULES = (
     ("ATLSEA_FILL_", "water", "atlantropa_sea"),
     ("ATLSEA_", "water", "atlantropa_sea"),
@@ -749,6 +750,21 @@ def validate_manifest_urls(expected_scenario_id: str, manifest: dict, errors: li
                 f"manifest.{key} must point at scenario directory `{expected_scenario_id}`. "
                 f"Found `{actual_dir}` via `{url}`."
             )
+
+
+def validate_water_regions_mode(expected_scenario_id: str, manifest: dict, errors: list[str]) -> None:
+    raw_mode = manifest.get("water_regions_mode")
+    if raw_mode is None or raw_mode == "":
+        return
+    mode = str(raw_mode).strip().lower()
+    if mode not in WATER_REGIONS_MODE_VALUES:
+        errors.append(
+            "manifest.water_regions_mode must be one of "
+            f"{sorted(WATER_REGIONS_MODE_VALUES)}. Found {raw_mode!r}."
+        )
+        return
+    if expected_scenario_id == "tno_1962" and mode != "exclusive":
+        errors.append("manifest.water_regions_mode must be 'exclusive' for tno_1962.")
 
 
 def validate_special_zone_layers(expected_scenario_id: str, manifest: dict, errors: list[str]) -> None:
@@ -2190,6 +2206,7 @@ def inspect_scenario_contract(
 
     validate_manifest_version_matrix(expected_scenario_id, manifest, errors)
     validate_manifest_urls(expected_scenario_id, manifest, errors)
+    validate_water_regions_mode(expected_scenario_id, manifest, errors)
     validate_special_zone_layers(expected_scenario_id, manifest, errors)
     validate_runtime_capitals(expected_scenario_id, manifest, errors)
     validate_internal_authoring_inputs(expected_scenario_id, errors)

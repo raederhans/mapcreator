@@ -32,8 +32,10 @@ from tools.patch_tno_1962_bundle import (
     apply_tno_feature_assignment_overrides,
     apply_tno_decolonization_metadata,
     apply_dev_manual_overrides,
+    apply_tno_named_water_exclusions,
     build_context_land_mask_geometry,
     build_relief_overlays,
+    build_tno_named_marginal_water_features,
     clip_named_water_features_to_land_mask,
     build_tno_bathymetry_payload,
     build_polar_feature_diagnostics_from_topology,
@@ -809,16 +811,22 @@ class TnoBundleBuilderTest(unittest.TestCase):
             if spec["source_id"] == "marine_arctic_ocean"
         )
         western_child, eastern_child = arctic_spec["children"]
-        self.assertEqual(western_child["bbox"][2], tno_bundle.TNO_ARCTIC_SPLIT_LONGITUDE)
-        self.assertEqual(eastern_child["bbox"][0], tno_bundle.TNO_ARCTIC_SPLIT_LONGITUDE)
+        self.assertEqual(
+            western_child["bbox"],
+            tno_bundle.TNO_ARCTIC_OPEN_OCEAN_CHILD_BBOXES[western_child["id"]],
+        )
+        self.assertEqual(
+            eastern_child["bbox"],
+            tno_bundle.TNO_ARCTIC_OPEN_OCEAN_CHILD_BBOXES[eastern_child["id"]],
+        )
 
         barents_spec = next(
             spec for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
             if spec["id"] == "tno_barents_sea"
         )
-        self.assertIn(
-            (0.0, 79.5, tno_bundle.TNO_ARCTIC_SPLIT_LONGITUDE, 82.2),
+        self.assertEqual(
             tuple(barents_spec.get("supplement_bboxes") or ()),
+            tno_bundle.TNO_POLAR_NAMED_WATER_SUPPLEMENT_BBOXES["tno_barents_sea"],
         )
 
         cardigan_spec = next(
@@ -833,6 +841,28 @@ class TnoBundleBuilderTest(unittest.TestCase):
             if spec["id"] == "tno_humber_estuary"
         )
         self.assertFalse(humber_spec.get("clip_against_land_mask", True))
+
+    def test_tno_southern_open_ocean_split_and_polar_supplements_use_shared_regression_boxes(self) -> None:
+        southern_spec = next(
+            spec for spec in tno_bundle.TNO_OPEN_OCEAN_SPLIT_SPECS
+            if spec["source_id"] == "marine_southern_ocean"
+        )
+        for child_spec in southern_spec["children"]:
+            expected_boxes = tno_bundle.TNO_SOUTHERN_OPEN_OCEAN_CHILD_BBOXES[child_spec["id"]]
+            if "bbox" in child_spec:
+                self.assertEqual(child_spec["bbox"], expected_boxes)
+            else:
+                self.assertEqual(tuple(child_spec.get("bboxes") or ()), expected_boxes)
+
+        for feature_id in ("tno_greenland_sea", "tno_barents_sea", "tno_ross_sea"):
+            spec = next(
+                item for item in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+                if item["id"] == feature_id
+            )
+            self.assertEqual(
+                tuple(spec.get("supplement_bboxes") or ()),
+                tno_bundle.TNO_POLAR_NAMED_WATER_SUPPLEMENT_BBOXES[feature_id],
+            )
 
     def test_named_water_specs_include_seam_repair_supplements(self) -> None:
         spec_map = {
@@ -882,6 +912,81 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 f"{feature_id} snapshot geometry should already cover validator probe {point.wkt}",
             )
 
+    def test_named_water_base_controls_keep_geometry_subtraction_separate_from_clone_exclusion(self) -> None:
+        spec_map = {
+            spec["id"]: spec
+            for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+        }
+        snapshot_payload = {
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": "tno_sea_of_japan",
+                        "name": "Sea of Japan",
+                        "source_record_ids": [],
+                    },
+                    "geometry": mapping(_square(0.0, 0.0, 10.0)),
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": "tno_black_sea",
+                        "name": "Black Sea",
+                        "source_record_ids": [],
+                    },
+                    "geometry": mapping(_square(20.0, 20.0, 10.0)),
+                },
+            ]
+        }
+        feature_index = {
+            "marine_yellow_sea": {
+                "type": "Feature",
+                "properties": {"id": "marine_yellow_sea"},
+                "geometry": mapping(_square(0.0, 0.0, 2.0)),
+            },
+            "marine_east_china_sea": {
+                "type": "Feature",
+                "properties": {"id": "marine_east_china_sea"},
+                "geometry": mapping(_square(2.0, 0.0, 2.0)),
+            },
+            "marine_sea_of_okhotsk": {
+                "type": "Feature",
+                "properties": {"id": "marine_sea_of_okhotsk"},
+                "geometry": mapping(_square(4.0, 0.0, 2.0)),
+            },
+        }
+        sea_of_japan_spec = dict(spec_map["tno_sea_of_japan"])
+        sea_of_japan_spec["subtract_named_ids"] = ()
+        sea_of_japan_spec["clip_open_ocean_ids"] = ()
+        black_sea_spec = dict(spec_map["tno_black_sea"])
+        black_sea_spec["subtract_named_ids"] = ()
+
+        with (
+            patch.object(tno_bundle, "load_global_water_regions_feature_index", return_value=feature_index),
+            patch.object(
+                tno_bundle,
+                "TNO_NAMED_MARGINAL_WATER_SPECS",
+                (sea_of_japan_spec, black_sea_spec),
+            ),
+        ):
+            named_features, diagnostics = build_tno_named_marginal_water_features(snapshot_payload)
+
+        named_feature_map = {
+            str(feature["properties"]["id"]): shape(feature["geometry"])
+            for feature in named_features
+        }
+        self.assertEqual(
+            diagnostics["tno_sea_of_japan"]["subtract_base_ids"],
+            ["marine_yellow_sea", "marine_east_china_sea", "marine_sea_of_okhotsk"],
+        )
+        self.assertEqual(diagnostics["tno_black_sea"]["subtract_base_ids"], [])
+        self.assertLess(named_feature_map["tno_sea_of_japan"].area, 100.0)
+        self.assertAlmostEqual(named_feature_map["tno_black_sea"].area, 100.0, places=3)
+        self.assertIn("marine_black_sea", tno_bundle.TNO_MANIFEST_EXCLUDED_BASE_WATER_REGION_IDS)
+        self.assertEqual(tuple(sea_of_japan_spec.get("exclude_base_ids") or ()), ())
+        self.assertEqual(tuple(black_sea_spec.get("exclude_base_ids") or ()), ("marine_black_sea",))
+
     def test_clip_named_water_features_to_land_mask_removes_macro_land_overlap(self) -> None:
         named_features = [
             {
@@ -913,6 +1018,34 @@ class TnoBundleBuilderTest(unittest.TestCase):
 
         clipped_geom = shape(clipped_features[0]["geometry"])
         self.assertAlmostEqual(clipped_geom.intersection(land_mask_geom).area, 1.0)
+
+    def test_apply_tno_named_water_exclusions_removes_post_supplement_overlap(self) -> None:
+        named_features = [
+            {
+                "type": "Feature",
+                "properties": {"id": "macro"},
+                "geometry": mapping(_square(0, 0, 2.0)),
+            },
+            {
+                "type": "Feature",
+                "properties": {"id": "detail"},
+                "geometry": mapping(_square(1, 1, 1.0)),
+            },
+        ]
+        specs = (
+            {"id": "macro", "subtract_named_ids": ("detail",)},
+            {"id": "detail"},
+        )
+
+        with patch.object(tno_bundle, "TNO_NAMED_MARGINAL_WATER_SPECS", specs):
+            repaired_features = apply_tno_named_water_exclusions(named_features)
+
+        repaired_by_id = {
+            str(feature["properties"]["id"]): shape(feature["geometry"])
+            for feature in repaired_features
+        }
+        self.assertAlmostEqual(repaired_by_id["macro"].intersection(repaired_by_id["detail"]).area, 0.0)
+        self.assertAlmostEqual(repaired_by_id["macro"].area, 3.0)
 
     def test_build_relief_overlays_keeps_expected_overlay_kind_distribution(self) -> None:
         region_unions = {

@@ -1562,7 +1562,16 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - runtime meta seed 的安全校验应确认 shell ids 都存在于 seed，并允许 seed 额外包含后续 chunk layer ids。
 - 迁移 TopoJSON 几何列表时，computed_neighbors 必须跟着 old->new index 重映射。
 
+## 2026-05-12 - Codex pet hatch workflow
+
+- Windows 上 `hatch-pet` finalize 可能因缺少视频编码工具卡在 QA video 渲染；spritesheet、contact sheet、validation 已通过时，可用 `--skip-videos` 完成 package，并在报告里明确视频预览未生成。
+
 ## 2026-05-12 - annotation productization worktree verification
 
 - 独立 worktree 先确认 `node_modules` 是否存在；缺失时先跑 `npm ci`，再跑浏览器测试。
 - Windows 后台重定向下，默认 `reuseExistingServer` 分支可能长时间没有 reporter 输出；验收用 `CODEX_CI=1 CI=1` 让 Playwright 自己启动并关闭 8810 dev server。
+
+## 2026-05-12 - TNO water named exclusions and runtime topology
+
+- Named water 的 supplement 可能在初次 `subtract_named_ids` 后重新引入微小重叠；最终发布前需要在 supplement 与 land-mask clip 后再执行一次 named-water 排他裁剪。
+- `tno_south_indian_antarctic_ocean` 的源 GeoJSON 与 runtime TopoJSON 方向合同不同；源阶段只做一次方向修复，同时保留 runtime TopoJSON 的 D3 专用方向修复。

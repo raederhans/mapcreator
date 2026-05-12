@@ -2736,11 +2736,20 @@ function getScenarioAtlantropaRevisionToken() {
   ].join(":");
 }
 
-function isScenarioWaterTopologyExclusiveMode() {
-  return scenarioHasPresentationFeature(
+function getScenarioWaterRegionsMode() {
+  const explicitMode = String(runtimeState.activeScenarioManifest?.water_regions_mode || "").trim().toLowerCase();
+  if (explicitMode) return explicitMode;
+  if (scenarioHasPresentationFeature(
     runtimeState.activeScenarioManifest,
     SCENARIO_PRESENTATION_FEATURES.ATLANTROPA_RELIEF
-  );
+  )) {
+    return "exclusive";
+  }
+  return "combined";
+}
+
+function isScenarioWaterTopologyExclusiveMode() {
+  return getScenarioWaterRegionsMode() === "exclusive";
 }
 
 function getScenarioSurfaceVersionSignal() {
@@ -2754,6 +2763,7 @@ function getScenarioSurfaceVersionSignal() {
     `mask-tag:${String(runtimeState.scenarioContextLandMaskVersionTag || runtimeState.scenarioLandMaskVersionTag || "").trim() || `${maskInfo.maskSource}:${getObjectIdentityToken(maskInfo.collection, "scenario-mask")}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`}`,
     `water-ref:${getObjectIdentityToken(runtimeState.scenarioWaterRegionsData, "scenario-water")}`,
     `water-tag:${String(runtimeState.scenarioWaterOverlayVersionTag || "").trim() || `features:${effectiveWaterFeatureCount}`}`,
+    `water-mode:${getScenarioWaterRegionsMode()}`,
     `atlantropa:${getScenarioAtlantropaRevisionToken()}`,
   ].join("|");
 }
@@ -3142,6 +3152,9 @@ function isOpenOceanPaintEnabled() {
 function isWaterRegionRenderable(feature) {
   if (!feature) return false;
   if (isBaseGeographyScenarioFeature(feature)) {
+    return true;
+  }
+  if (isOpenOceanWaterRegion(feature)) {
     return true;
   }
   return feature?.properties?.interactive !== false;
@@ -4770,6 +4783,7 @@ function getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures = []) {
   const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
   let clippedArea = 0;
   (Array.isArray(waterFeatures) ? waterFeatures : []).forEach((feature) => {
+    if (!isWaterRegionRenderable(feature)) return;
     collectSafeWaterRegionGeometryParts(feature).forEach((part) => {
       const bounds = computeProjectedGeoBounds(part);
       if (!bounds) return;
@@ -4801,6 +4815,7 @@ function getScenarioWaterVisibleCoverageRatioGrid(waterFeatures = []) {
   let coveredCount = 0;
   const safeWaterFeatures = Array.isArray(waterFeatures) ? waterFeatures : [];
   for (const feature of safeWaterFeatures) {
+    if (!isWaterRegionRenderable(feature)) continue;
     if (coveredCount >= totalCellCount) break;
     for (const part of collectSafeWaterRegionGeometryParts(feature)) {
       if (coveredCount >= totalCellCount) break;
@@ -17387,7 +17402,7 @@ function drawScenarioWaterFillLayer(k, { waterFeatures = [] } = {}) {
   }
   waterFeatures.forEach((feature, index) => {
     const id = getFeatureId(feature) || `water-${index}`;
-    if (!isWaterRegionEnabled(feature)) return;
+    if (!isWaterRegionRenderable(feature)) return;
     const defaultStyle = getWaterRegionDefaultStyle(feature);
     const fillOpacity = defaultStyle.opacity;
     if (!(fillOpacity > 0)) return;

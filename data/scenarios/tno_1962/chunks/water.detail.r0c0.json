@@ -2,6 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
+      "id": "8",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -70077,6 +70078,7 @@
       }
     },
     {
+      "id": "9",
       "type": "Feature",
       "properties": {
         "id": "tno_east_central_pacific_ocean",
@@ -70504,6 +70506,7 @@
       }
     },
     {
+      "id": "10",
       "type": "Feature",
       "properties": {
         "id": "tno_southwest_pacific_ocean",
@@ -78303,6 +78306,7 @@
       }
     },
     {
+      "id": "11",
       "type": "Feature",
       "properties": {
         "id": "tno_southeast_pacific_ocean",
@@ -80064,6 +80068,7 @@
       }
     },
     {
+      "id": "19",
       "type": "Feature",
       "properties": {
         "id": "tno_south_pacific_antarctic_ocean",
@@ -80641,6 +80646,7 @@
       }
     },
     {
+      "id": "105",
       "type": "Feature",
       "properties": {
         "id": "tno_ross_sea",

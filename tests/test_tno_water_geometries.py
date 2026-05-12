@@ -591,6 +591,7 @@ def test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap():
 
     assert int(manifest.get("summary", {}).get("tno_water_region_count") or 0) == source_feature_count
     assert int(manifest.get("summary", {}).get("tno_named_marginal_water_count") or 0) == expected_named_marginal_count
+    assert str(manifest.get("water_regions_mode") or "") == "exclusive"
 
     for bundle_path in bundle_paths:
         bundle = _load_startup_bundle(bundle_path)
@@ -599,6 +600,7 @@ def test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap():
 
         assert str(bundle.get("generated_at") or "") == str(manifest.get("generated_at") or "")
         assert str(bundle.get("baseline_hash") or "") == str(manifest.get("baseline_hash") or "")
+        assert str(manifest_subset.get("water_regions_mode") or "") == "exclusive"
         assert int(manifest_subset.get("summary", {}).get("tno_water_region_count") or 0) == source_feature_count
         assert int(manifest_subset.get("summary", {}).get("tno_named_marginal_water_count") or 0) == expected_named_marginal_count
         assert str(source_meta.get("runtime_topology_sha256") or "") == expected_runtime_sha

@@ -2,6 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
+      "id": "2",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_atlantic_ocean",
@@ -4861,6 +4862,7 @@
       }
     },
     {
+      "id": "3",
       "type": "Feature",
       "properties": {
         "id": "tno_east_central_atlantic_ocean",
@@ -7494,6 +7496,7 @@
       }
     },
     {
+      "id": "4",
       "type": "Feature",
       "properties": {
         "id": "tno_southwest_atlantic_ocean",
@@ -9173,6 +9176,7 @@
       }
     },
     {
+      "id": "5",
       "type": "Feature",
       "properties": {
         "id": "tno_southeast_atlantic_ocean",
@@ -9862,6 +9866,7 @@
       }
     },
     {
+      "id": "8",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -79937,6 +79942,7 @@
       }
     },
     {
+      "id": "9",
       "type": "Feature",
       "properties": {
         "id": "tno_east_central_pacific_ocean",
@@ -80364,6 +80370,7 @@
       }
     },
     {
+      "id": "10",
       "type": "Feature",
       "properties": {
         "id": "tno_southwest_pacific_ocean",
@@ -88163,6 +88170,7 @@
       }
     },
     {
+      "id": "11",
       "type": "Feature",
       "properties": {
         "id": "tno_southeast_pacific_ocean",
@@ -89924,6 +89932,7 @@
       }
     },
     {
+      "id": "17",
       "type": "Feature",
       "properties": {
         "id": "tno_south_atlantic_antarctic_ocean",
@@ -91897,6 +91906,7 @@
       }
     },
     {
+      "id": "19",
       "type": "Feature",
       "properties": {
         "id": "tno_south_pacific_antarctic_ocean",
@@ -92474,6 +92484,7 @@
       }
     },
     {
+      "id": "85",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_guinea",
@@ -100987,6 +100998,7 @@
       }
     },
     {
+      "id": "103",
       "type": "Feature",
       "properties": {
         "id": "tno_scotia_sea",
@@ -101084,6 +101096,7 @@
       }
     },
     {
+      "id": "104",
       "type": "Feature",
       "properties": {
         "id": "tno_weddell_sea",
@@ -105809,6 +105822,7 @@
       }
     },
     {
+      "id": "105",
       "type": "Feature",
       "properties": {
         "id": "tno_ross_sea",

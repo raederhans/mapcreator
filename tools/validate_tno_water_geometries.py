@@ -212,6 +212,7 @@ process.stdout.write(JSON.stringify(out));
         ["node", "-e", script],
         input=json.dumps({"topology": topology_payload, "objectNames": target_names}),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         cwd=ROOT,
         check=True,
@@ -458,6 +459,7 @@ process.stdout.write(JSON.stringify(report));
         ["node", "-e", script],
         input=json.dumps({"collections": feature_collections}),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         cwd=ROOT,
         check=True,
@@ -678,14 +680,16 @@ def build_report_from_collections(
     runtime_context_land_mask: dict | None = None,
     chunk_feature_collections: list[tuple[str, dict]] | None = None,
 ) -> dict:
+    d3_runtime_collections = {}
     if runtime_topology_payload is not None:
-        runtime_water = runtime_water or _topology_object_to_feature_collection(runtime_topology_payload, "scenario_water")
-        runtime_political = runtime_political or _topology_object_to_feature_collection(runtime_topology_payload, "political")
-        runtime_land_mask = runtime_land_mask or _topology_object_to_feature_collection(runtime_topology_payload, "land_mask")
-        runtime_context_land_mask = runtime_context_land_mask or _topology_object_to_feature_collection(
+        d3_runtime_collections = _topology_objects_to_feature_collections_for_d3(
             runtime_topology_payload,
-            "context_land_mask",
+            ["scenario_water", "political", "land_mask", "context_land_mask"],
         )
+        runtime_water = runtime_water or d3_runtime_collections.get("scenario_water")
+        runtime_political = runtime_political or d3_runtime_collections.get("political")
+        runtime_land_mask = runtime_land_mask or d3_runtime_collections.get("land_mask")
+        runtime_context_land_mask = runtime_context_land_mask or d3_runtime_collections.get("context_land_mask")
     if runtime_water is None or runtime_political is None:
         raise ValueError("Runtime water validator requires runtime_water and runtime_political feature collections.")
     chunk_metrics = _collect_chunk_metrics_from_feature_collections(chunk_feature_collections)
@@ -699,15 +703,9 @@ def build_report_from_collections(
         runtime_context_land_mask or {"type": "FeatureCollection", "features": []},
         label="runtime_topology.topo.json::context_land_mask",
     )
-    d3_runtime_collections = {}
-    if runtime_topology_payload is not None:
-        d3_runtime_collections = _topology_objects_to_feature_collections_for_d3(
-            runtime_topology_payload,
-            ["scenario_water", "land_mask", "context_land_mask"],
-        )
     d3_collections = {
         "source": source_water,
-        "runtime": d3_runtime_collections.get("scenario_water") or runtime_water,
+        "runtime": runtime_water,
         "runtime_land_mask": d3_runtime_collections.get("land_mask")
         or runtime_land_mask
         or {"type": "FeatureCollection", "features": []},
