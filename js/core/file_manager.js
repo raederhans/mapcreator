@@ -182,6 +182,8 @@ function normalizeProjectCoordinatePair(value) {
 function normalizeManualSpecialZoneRing(rawRing, coordinateBudget) {
   if (!Array.isArray(rawRing) || coordinateBudget.remaining < 4) return null;
   const normalized = [];
+  // coordinateBudget 在整个 feature 维度共享，
+  // 这样导入时会优先保住“每个 ring 都还能闭合并可编辑”，而不是让单个超大 ring 吃掉全部预算。
   const maxRingVerticesToScan = Math.min(
     rawRing.length,
     MAX_MANUAL_SPECIAL_ZONE_COORDINATES_PER_FEATURE,
@@ -325,6 +327,8 @@ function normalizeOperationalLines(rawLines) {
       const attachedCounterIds = Array.isArray(raw.attachedCounterIds)
         ? raw.attachedCounterIds.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
+      // operational line 这里只保留可序列化的挂接关系；
+      // 真正的 counter 布局恢复留给运行时按 lineId 重新连线，避免项目文件里混入 UI 临时状态。
       return {
         id: String(raw.id || `opl_${index + 1}`).trim() || `opl_${index + 1}`,
         kind,
@@ -387,6 +391,9 @@ function normalizeUnitCounters(rawCounters) {
         || ""
       ).trim();
       const attachmentKind = String(attachmentSource.kind || "").trim().toLowerCase() || (attachmentLineId ? "operational-line" : "");
+      // 项目导入时把 anchor、layoutAnchor、attachment 分开归一：
+      // anchor 解决地理落点，layoutAnchor 解决同地块排布，attachment 解决与线条的从属关系，
+      // 后续 renderer/sidebar 才能按各自职责恢复这些联系。
       return {
         id: String(raw.id || `unit_${index + 1}`).trim() || `unit_${index + 1}`,
         renderer,

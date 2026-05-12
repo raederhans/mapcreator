@@ -206,13 +206,6 @@
       "ownerHint": "overlay-runtime"
     },
     {
-      "specPath": "tests/e2e/strategic_overlay_frontline.spec.js",
-      "primaryLayer": "feature",
-      "executionMode": "browser",
-      "domain": "strategic-overlay",
-      "ownerHint": "overlay-runtime"
-    },
-    {
       "specPath": "tests/e2e/strategic_overlay_roundtrip.spec.js",
       "primaryLayer": "feature",
       "executionMode": "browser",

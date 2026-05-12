@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "graphMode": "artifact-only",
   "summary": {
-    "specCount": 47,
-    "nodeCount": 58,
-    "reverseIndexKeyCount": 78,
+    "specCount": 46,
+    "nodeCount": 57,
+    "reverseIndexKeyCount": 77,
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
@@ -1029,11 +1029,6 @@
         "js/ui/sidebar.js"
       ]
     },
-    "tests/e2e/strategic_overlay_frontline.spec.js": {
-      "directDependencies": [],
-      "transitiveDependencies": [],
-      "repoImpact": []
-    },
     "tests/e2e/strategic_overlay_roundtrip.spec.js": {
       "directDependencies": [
         "js/core/interaction_funnel.js",
@@ -1864,9 +1859,6 @@
     ],
     "tests/e2e/strategic_overlay_editing.spec.js": [
       "tests/e2e/strategic_overlay_editing.spec.js"
-    ],
-    "tests/e2e/strategic_overlay_frontline.spec.js": [
-      "tests/e2e/strategic_overlay_frontline.spec.js"
     ],
     "tests/e2e/strategic_overlay_roundtrip.spec.js": [
       "tests/e2e/strategic_overlay_roundtrip.spec.js"

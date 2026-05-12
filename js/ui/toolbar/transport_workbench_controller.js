@@ -590,6 +590,8 @@ function normalizeLogisticsHubTransportWorkbenchConfig(value) {
 function ensureTransportWorkbenchUiState() {
   const previousUiState = runtimeState.transportWorkbenchUi;
   const normalizedUiState = normalizeTransportWorkbenchUiState(previousUiState);
+  // 这里尽量复用原对象，而不是每次替换成新对象，
+  // 因为 workbench 的事件绑定、预览联动和 dirty 判断都默认握着同一份 transportWorkbenchUi 引用。
   if (!previousUiState || typeof previousUiState !== "object") {
     runtimeState.transportWorkbenchUi = normalizedUiState;
   } else {
@@ -1197,6 +1199,8 @@ export function createTransportWorkbenchController({
   transportWorkbenchDataSections = null,
   transportWorkbenchFamilyTabs = [],
 } = {}) {
+  // controller 只拥有 workbench 自己的 overlay/panel/preview 交互闭环。
+  // 更高层的 toolbar surface 仲裁、别的工作台切换、URL restore 仍由 toolbar.js 处理。
   const closeTransportWorkbenchInfoPopover = ({ restoreFocus = false } = {}) => {
     if (!transportWorkbenchInfoPopover) return;
     transportWorkbenchInfoPopover.classList.add("hidden");

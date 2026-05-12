@@ -28,7 +28,6 @@
     "tests/e2e/startup_bundle_recovery_contract.spec.js",
     "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
     "tests/e2e/strategic_overlay_editing.spec.js",
-    "tests/e2e/strategic_overlay_frontline.spec.js",
     "tests/e2e/strategic_overlay_roundtrip.spec.js",
     "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
     "tests/e2e/strategic_overlay_smoke.spec.js",

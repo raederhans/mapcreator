@@ -600,6 +600,9 @@ async function createStartupScenarioBundleFromPayload({
     })
     : { ok: false, value: null, metrics: null, reason: "not-configured", errorMessage: "" };
   const geoLocalePatchPayload = normalizeScenarioGeoLocalePatchPayload(geoLocalePatchResult.value);
+  // bootstrap bundle 只保留启动阶段立刻要用到的最小合同：
+  // countries/owners/cores/runtime shell 先就位，其他可选图层继续留空，
+  // 后续再由 full bundle 升级，而不是在这里提前假装资源已经齐全。
   const bundle = {
     meta: {
       scenario_id: normalizedScenarioId,
@@ -688,6 +691,8 @@ async function loadScenarioRuntimeTopologyForBundle({
   const requestedRuntimeTopologyLevel = runtimeTopologyLevel === "bootstrap" ? "bootstrap" : "full";
   const runtimeLabel = requestedRuntimeTopologyLevel === "bootstrap" ? "runtime_bootstrap_topology" : "runtime_topology";
   const allowWorkerDecode = !!runtimeTopologyUrl && shouldUseStartupWorker();
+  // worker 负责把“大 JSON + decode”这段重活移出主线程；
+  // 失败时仍回到统一的 optional resource 语义，保持调用方只处理一种结果结构。
   if (allowWorkerDecode) {
     try {
       const workerResult = requestedRuntimeTopologyLevel === "bootstrap"
@@ -963,6 +968,8 @@ function createScenarioAuditPayloadLoader({
       return null;
     }
     if (bundle.auditPayload && !forceReload) {
+      // audit 面板只在“当前仍然看的是这个 scenario”时回写 UI，
+      // 避免异步返回把用户已经切走后的面板状态覆盖掉。
       if (requestedScenarioId && normalizeScenarioId(state.activeScenarioId) === requestedScenarioId) {
         state.scenarioAudit = bundle.auditPayload;
         setScenarioAuditUiState({

@@ -141,6 +141,16 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
       ? report.recommendedCommands.map((entry) => `- ${entry.commandRef} (${entry.executionOwners.join("+")}; ${entry.reason})`)
       : ["- none"]),
   ];
+  lines.push(
+    "",
+    "## Diagnostic next steps",
+    ...((report.diagnosticNextSteps || []).length
+      ? report.diagnosticNextSteps.map((entry) => `- ${entry.commandRef} (${entry.executionOwners.join("+")}; locks=${entry.resourceLocks.join("+") || "none"})`)
+      : ["- none"]),
+    "",
+    "## Advisory notes",
+    ...((report.advisoryNotes || []).length ? report.advisoryNotes.map((note) => `- ${note}`) : ["- none"]),
+  );
   if (executionPlan) {
     lines.push("", "## Execution plan");
     lines.push(...(executionPlan.commandsToRun.length ? executionPlan.commandsToRun.map((commandRef) => `- run: ${commandRef}`) : ["- run: none"]));

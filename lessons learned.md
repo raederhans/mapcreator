@@ -1565,6 +1565,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-12 - Codex pet hatch workflow
 
 - Windows 上 `hatch-pet` finalize 可能因缺少视频编码工具卡在 QA video 渲染；spritesheet、contact sheet、validation 已通过时，可用 `--skip-videos` 完成 package，并在报告里明确视频预览未生成。
+- Codex custom pet 使用 WebP atlas 时，透明像素底色可能在 App overlay 中表现成黑框；保留 WebP 作为回退，同时复制 PNG atlas 并让 `pet.json.spritesheetPath` 指向 PNG，是更稳的本地修复。
 
 ## 2026-05-12 - annotation productization worktree verification
 
@@ -1575,3 +1576,12 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - Named water 的 supplement 可能在初次 `subtract_named_ids` 后重新引入微小重叠；最终发布前需要在 supplement 与 land-mask clip 后再执行一次 named-water 排他裁剪。
 - `tno_south_indian_antarctic_ocean` 的源 GeoJSON 与 runtime TopoJSON 方向合同不同；源阶段只做一次方向修复，同时保留 runtime TopoJSON 的 D3 专用方向修复。
+
+## 2026-05-12 - Codex App load diagnosis
+
+- Codex App 卡顿诊断要同时看短窗口 CPU delta、`logs_*.sqlite` / WAL 体积、`app-server event consumer lagged` 和 MCP 子进程重复挂载。
+- hook 脚本要单独计时；如果单次 hook 只有百毫秒级，优先继续检查 App 会话压力、日志库和插件/MCP 面。
+
+## 2026-05-12 - E2E route retirement hygiene
+
+- 退休一个 Playwright spec 时要同步删除 manifest、checked-in test lists、timeout allowlist、import graph 和相关结构测试引用；只删 spec 会留下假路由或 stale guardrail。

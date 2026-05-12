@@ -133,6 +133,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def create_repair_tracks() -> dict[str, Any]:
+    # repair tracks 记录的是“这轮 strict 检查观察到了什么偏差”，
+    # 目的是把终端报告和 JSON 报告补充得更可读，不代表这些问题都允许自动修。
     return {
         "owners_controllers_keyset": None,
         "owners_cores_keyset": None,
@@ -456,6 +458,8 @@ def _apply_safe_repairs(
         raise FileNotFoundError(f"Missing runtime topology for safe repair: {runtime_topology_path}")
 
     safe_fixes_applied: list[str] = []
+    # safe repair 是“从现有 authoring 输入重新物化派生产物”的车道。
+    # 它负责把缺失或过期的派生产物补齐，但继续把数据语义冲突留给 strict gate 明确报错。
     # --write-safe 只允许重建“可推导且幂等”的派生产物：
     # manifest 补字段、startup support、chunk assets、startup bundles、audit/snapshot。
     # 需要人工判断的数据语义问题仍然通过 strict error 暴露，不在这里悄悄兜底。
@@ -2249,6 +2253,8 @@ def collect_duplicate_scenario_dirs(scenario_dirs: list[Path]) -> dict[str, list
 
 
 def render_repair_track_lines(repair_tracks: dict[str, Any], strict: bool) -> list[str]:
+    # 这里输出给终端看的都是“人类快速排查线索”，
+    # 所以保留 sample 和计数摘要，不复述完整结构化 report。
     lines: list[str] = []
     owners_controllers = repair_tracks.get("owners_controllers_keyset")
     if strict and isinstance(owners_controllers, dict):

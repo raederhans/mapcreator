@@ -20,6 +20,15 @@ export const ROUTE_SCHEMA_FIELDS = [
   "executionOwner",
   "ciProfile",
 ];
+export const ROUTE_GUIDANCE_FIELDS = Object.freeze([
+  "taskEntry",
+  "ownerFiles",
+  "commonChecks",
+  "riskSignals",
+  "diagnostics",
+  "status",
+]);
+const ROUTE_GUIDANCE_ARRAY_FIELDS = new Set(["taskEntry", "ownerFiles", "commonChecks", "riskSignals", "diagnostics"]);
 
 export const RESOURCE_LOCKS = Object.freeze([
   "browser-dev-server",
@@ -205,6 +214,70 @@ const INFRASTRUCTURE_ROUTES = [
     resourceLocks: ["scenario-data", "checkpoint-builder", ".runtime-output"],
     executionOwner: "main-thread",
     ciProfile: "full",
+  },
+  {
+    id: "infra:tno-water-validator",
+    commandRef: "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json",
+    sourceRef: "tools/validate_tno_water_geometries.py,data/scenarios/tno_1962/water_regions.geojson,data/scenarios/tno_1962/runtime_topology.topo.json,data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json,data/scenarios/tno_1962/detail_chunks.manifest.json,data/scenarios/tno_1962/chunks/water",
+    domain: "tno-water",
+    ownerHint: "tno-water",
+    layer: "heavy",
+    cost: "heavy",
+    resourceLocks: ["heavy-geo", "scenario-data", ".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "full",
+    guidance: {
+      taskEntry: ["TNO water geometry health gate"],
+      ownerFiles: [
+        "tools/validate_tno_water_geometries.py",
+        "data/scenarios/tno_1962/water_regions.geojson",
+        "data/scenarios/tno_1962/detail_chunks.manifest.json",
+      ],
+      commonChecks: ["python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json"],
+      riskSignals: ["water geometry source/runtime drift", "chunk manifest coverage drift", "D3 spherical safety regression"],
+      diagnostics: [".runtime/reports/generated/tno_water_geometry_report.json"],
+      status: "active",
+    },
+  },
+  {
+    id: "infra:data-health",
+    commandRef: "python tools/data_health.py --json",
+    sourceRef: "tools/data_health.py,tools/build_data_catalog.py,data/CATALOG.json,data/runtime_asset_registry.json,data/scenarios/index.json",
+    domain: "data-governance",
+    ownerHint: "data-governance",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    guidance: {
+      taskEntry: ["Data catalog governance health gate"],
+      ownerFiles: ["tools/data_health.py", "data/CATALOG.json", "data/runtime_asset_registry.json"],
+      commonChecks: ["python tools/data_health.py --json"],
+      riskSignals: ["catalog/runtime asset drift", "scenario registry coverage drift", "transport manifest path drift"],
+      diagnostics: ["stdout JSON health report"],
+      status: "active",
+    },
+  },
+  {
+    id: "infra:transport-manifest-contracts",
+    commandRef: "python tools/check_transport_workbench_manifests.py --root data/transport_layers --report-path .runtime/reports/generated/transport_workbench_manifest_report.json",
+    sourceRef: "tools/check_transport_workbench_manifests.py,map_builder/transport_workbench_contracts.py,data/transport_layers",
+    domain: "transport-workbench",
+    ownerHint: "transport-workbench",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    guidance: {
+      taskEntry: ["Transport workbench manifest health gate"],
+      ownerFiles: ["tools/check_transport_workbench_manifests.py", "map_builder/transport_workbench_contracts.py", "data/transport_layers"],
+      commonChecks: ["python tools/check_transport_workbench_manifests.py --root data/transport_layers --report-path .runtime/reports/generated/transport_workbench_manifest_report.json"],
+      riskSignals: ["transport family manifest drift", "coverage variant path drift", "runtime workbench contract drift"],
+      diagnostics: [".runtime/reports/generated/transport_workbench_manifest_report.json"],
+      status: "active",
+    },
   },
 ];
 
@@ -468,7 +541,7 @@ export function buildPythonRoutes() {
               : "geo-contract";
         routes.push({
           id: `python-heavy:${groupName}:${sourceRef}`,
-          commandRef: `python -m unittest ${moduleNameFromPythonPath(sourceRef)} -q`,
+          commandRef: pythonCommandForTestPath(sourceRef),
           sourceRef,
           domain,
           ownerHint: domain,
@@ -492,6 +565,17 @@ export function buildRouteIndex() {
     ...buildNodeRoutes(),
     ...buildPythonRoutes(),
   ];
+}
+
+export function pythonCommandForTestPath(sourceRef) {
+  const absolutePath = path.join(REPO_ROOT, sourceRef);
+  const source = fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, "utf8") : "";
+  const hasUnittestCase = /\bunittest\.TestCase\b/.test(source);
+  const hasPytestStyleTests = /(?:^|\n)\s*def\s+test_[A-Za-z0-9_]*\s*\(/.test(source);
+  if (hasPytestStyleTests && !hasUnittestCase) {
+    return `python -m pytest ${sourceRef} -q`;
+  }
+  return `python -m unittest ${moduleNameFromPythonPath(sourceRef)} -q`;
 }
 
 export function summarizeRoutes(routes) {
@@ -541,16 +625,39 @@ export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH)) 
       throw new Error(`Route ${route.id} has invalid resource lock: ${lock}`);
     }
   }
+  validateRouteGuidance(route);
   const scripts = packageJson.scripts || {};
   const knownCommand =
     route.commandRef in scripts ||
     route.commandRef.startsWith("node tools/e2e_layering.mjs ") ||
     route.commandRef.startsWith("node tools/select_verification_targets.mjs ") ||
     route.commandRef.startsWith("node tools/run_adaptive_tests.mjs ") ||
+    route.commandRef.startsWith("python -m pytest ") ||
     route.commandRef.startsWith("python -m unittest ") ||
     route.commandRef.startsWith("python tools/");
   if (!knownCommand) {
     throw new Error(`Route ${route.id} commandRef is not a package script or known command: ${route.commandRef}`);
+  }
+}
+
+function validateRouteGuidance(route) {
+  if (route.guidance === undefined) return;
+  if (!route.guidance || typeof route.guidance !== "object" || Array.isArray(route.guidance)) {
+    throw new Error(`Route ${route.id} guidance must be an object.`);
+  }
+  for (const field of Object.keys(route.guidance)) {
+    if (!ROUTE_GUIDANCE_FIELDS.includes(field)) {
+      throw new Error(`Route ${route.id} guidance has unknown field: ${field}`);
+    }
+    if (ROUTE_GUIDANCE_ARRAY_FIELDS.has(field)) {
+      const value = route.guidance[field];
+      if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string" || !entry.trim())) {
+        throw new Error(`Route ${route.id} guidance.${field} must be an array of strings.`);
+      }
+    }
+  }
+  if ("status" in route.guidance && (typeof route.guidance.status !== "string" || !route.guidance.status.trim())) {
+    throw new Error(`Route ${route.id} guidance.status must be a string.`);
   }
 }
 

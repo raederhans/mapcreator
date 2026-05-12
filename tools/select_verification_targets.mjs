@@ -13,6 +13,7 @@ const BOOTSTRAP_FALLBACK_ROUTE_IDS = new Set([
   "python:tests.test_app_entry_resolver",
   "python:tests.test_startup_shell",
 ]);
+const GUIDANCE_ARRAY_FIELDS = ["taskEntry", "ownerFiles", "commonChecks", "riskSignals", "diagnostics"];
 
 function parseArgs(argv) {
   const args = { command: "recommend", changedFiles: [], jsonOut: null, mdOut: null, format: "text" };
@@ -152,6 +153,64 @@ function uniqueByCommand(routes) {
   return result;
 }
 
+function createGuidanceSets() {
+  return Object.fromEntries(GUIDANCE_ARRAY_FIELDS.map((field) => [field, new Set()]));
+}
+
+function collectRouteGuidance(target, guidance) {
+  if (!guidance) return;
+  for (const field of GUIDANCE_ARRAY_FIELDS) {
+    for (const value of guidance[field] || []) {
+      target[field].add(value);
+    }
+  }
+  if (typeof guidance.status === "string" && guidance.status.trim()) {
+    target.status.add(guidance.status);
+  }
+}
+
+function guidanceSetsToObject(guidanceSets) {
+  const result = Object.fromEntries(GUIDANCE_ARRAY_FIELDS.map((field) => [field, [...guidanceSets[field]].sort()]));
+  result.status = [...guidanceSets.status].sort();
+  return result;
+}
+
+function hasGuidance(guidance) {
+  return GUIDANCE_ARRAY_FIELDS.some((field) => (guidance?.[field] || []).length > 0) || (guidance?.status || []).length > 0;
+}
+
+function buildDiagnosticNextSteps(commandEntries) {
+  return commandEntries
+    .filter((entry) => hasGuidance(entry.guidance) || entry.executionOwners.includes("main-thread") || entry.resourceLocks.length > 0)
+    .map((entry) => ({
+      commandRef: entry.commandRef,
+      domains: entry.domains,
+      ownerHints: entry.ownerHints,
+      executionOwners: entry.executionOwners,
+      resourceLocks: entry.resourceLocks,
+      routeIds: entry.routeIds,
+      guidance: entry.guidance,
+    }));
+}
+
+function buildAdvisoryNotes(commandEntries) {
+  const notes = [];
+  const mainThreadCommands = commandEntries.filter((entry) => entry.executionOwners.includes("main-thread"));
+  if (mainThreadCommands.length) {
+    notes.push(`${mainThreadCommands.length} command(s) require main-thread serial ownership before execution.`);
+  }
+  const lockedCommands = commandEntries.filter((entry) => entry.resourceLocks.length > 0);
+  if (lockedCommands.length) {
+    const locks = [...new Set(lockedCommands.flatMap((entry) => entry.resourceLocks))].sort();
+    notes.push(`Resource locks required: ${locks.join(", ")}.`);
+  }
+  const guidedDomains = [...new Set(commandEntries.filter((entry) => hasGuidance(entry.guidance)).flatMap((entry) => entry.domains))].sort();
+  if (guidedDomains.length) {
+    notes.push(`Guidance available for: ${guidedDomains.join(", ")}.`);
+  }
+  return notes;
+}
+
 function expandedSpecsForCommand(commandRef, allRoutes) {
   const normalized = String(commandRef || "").trim();
   if (!normalized) return [];
@@ -216,6 +275,7 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
       routeIds: new Set(),
       expandedSpecs: new Set(expandedSpecsForCommand(route.commandRef, allRoutes)),
       matchedFiles: new Set(),
+      guidance: { ...createGuidanceSets(), status: new Set() },
     };
     existing.domains.add(route.domain);
     existing.ownerHints.add(route.ownerHint);
@@ -225,6 +285,7 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
     for (const lock of route.resourceLocks) {
       existing.resourceLocks.add(lock);
     }
+    collectRouteGuidance(existing.guidance, route.guidance);
     byCommand.set(route.commandRef, existing);
   }
   return [...byCommand.values()]
@@ -238,6 +299,7 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
       routeIds: [...entry.routeIds].sort(),
       expandedSpecs: [...entry.expandedSpecs].sort(),
       matchedFiles: [...entry.matchedFiles].sort(),
+      guidance: guidanceSetsToObject(entry.guidance),
     }))
     .sort(compareCommandEntries);
 }
@@ -319,6 +381,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
       ciProfiles: entry.ciProfiles,
       expandedSpecs: entry.expandedSpecs,
       routeIds: entry.routeIds,
+      guidance: entry.guidance,
     })),
     coveredDomains: [...new Set(commandEntries.flatMap((entry) => entry.domains))].sort(),
     coveredOwners: [...new Set(commandEntries.flatMap((entry) => entry.ownerHints))].sort(),
@@ -333,6 +396,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
       commandRef: entry.commandRef,
       resourceLocks: entry.resourceLocks,
       expandedSpecs: entry.expandedSpecs,
+      guidance: entry.guidance,
     })),
     ciOnlyVerification: ciOnlyRoutes.map((entry) => ({ commandRef: entry.commandRef, reason: "reserved for CI profile" })),
     matchedByFile: matchedRoutesByFile.map((entry) => ({
@@ -342,10 +406,16 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
         commandRef: commandEntry.commandRef,
         domains: commandEntry.domains,
         ownerHints: commandEntry.ownerHints,
+        resourceLocks: commandEntry.resourceLocks,
+        executionOwners: commandEntry.executionOwners,
+        routeIds: commandEntry.routeIds,
         expandedSpecs: commandEntry.expandedSpecs,
+        guidance: commandEntry.guidance,
       })),
     })),
     impactedDomains: summarizeImpactedDomains(commandEntries),
+    diagnosticNextSteps: buildDiagnosticNextSteps(commandEntries),
+    advisoryNotes: buildAdvisoryNotes(commandEntries),
     unmatchedChangedFiles,
     skippedHeavyTests: skippedHeavyRoutes(allRoutes, matchedRoutes),
   };
@@ -385,6 +455,14 @@ function renderMarkdown(report) {
   lines.push(...(report.resourceLocks.length ? report.resourceLocks.map((lock) => `- ${lock}`) : ["- none"]));
   lines.push("", "## Main-thread serial verification");
   lines.push(...(report.mainThreadSerialVerification.length ? report.mainThreadSerialVerification.map((route) => `- ${route.commandRef}`) : ["- none"]));
+  lines.push("", "## Diagnostic next steps");
+  lines.push(...((report.diagnosticNextSteps || []).length ? report.diagnosticNextSteps.map((entry) => {
+    const owners = entry.executionOwners.join("+") || "unknown-owner";
+    const locks = entry.resourceLocks.length ? `; locks=${entry.resourceLocks.join("+")}` : "";
+    return `- ${entry.commandRef} (${owners}${locks})`;
+  }) : ["- none"]));
+  lines.push("", "## Advisory notes");
+  lines.push(...((report.advisoryNotes || []).length ? report.advisoryNotes.map((note) => `- ${note}`) : ["- none"]));
   lines.push("", "## Child-safe tasks");
   lines.push(...(report.childAgentStaticTasks.length ? report.childAgentStaticTasks.map((route) => `- ${route.commandRef}`) : ["- none"]));
   lines.push("", "## Skipped heavy tests");

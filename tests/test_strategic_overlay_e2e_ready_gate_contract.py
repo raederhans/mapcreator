@@ -5,7 +5,6 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TARGETS = [
     REPO_ROOT / "tests" / "e2e" / "strategic_overlay_editing.spec.js",
-    REPO_ROOT / "tests" / "e2e" / "strategic_overlay_frontline.spec.js",
     REPO_ROOT / "tests" / "e2e" / "strategic_overlay_roundtrip.spec.js",
 ]
 
@@ -21,7 +20,6 @@ class StrategicOverlayE2EReadyGateContractTest(unittest.TestCase):
     def test_specs_drop_local_startup_ready_helpers(self):
         expectations = {
             "strategic_overlay_editing.spec.js": ["async function waitForAppReady(page)", "async function waitForScenarioUiReady(page)", "async function applyScenario(page, scenarioId)"],
-            "strategic_overlay_frontline.spec.js": ["async function waitForProjectUiReady(page)", "async function applyScenario(page, scenarioId)"],
             "strategic_overlay_roundtrip.spec.js": ["async function waitForAppReady(page)"],
         }
         for file_name, forbidden_snippets in expectations.items():

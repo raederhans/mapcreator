@@ -13,6 +13,7 @@ const VALID_LAYERS = new Set(["smoke", "contract", "regression", "feature"]);
 const VALID_EXECUTION_MODES = new Set(["browser", "hybrid", "static-contract"]);
 const LAYER_ORDER = ["smoke", "contract", "regression", "feature", "all"];
 const NON_SMOKE_LAYERS = ["contract", "regression", "feature"];
+const EXPECTED_E2E_SPEC_COUNT = 44;
 // 第一阶段 smoke 明确写死为这 4 个 spec，避免入口再次漂移。
 const FIXED_SMOKE_SPECS = [
   "tests/e2e/main_shell_i18n.spec.js",
@@ -97,8 +98,8 @@ function validateManifest() {
   const seenSpecPaths = new Set();
 
   ensure(manifest?.scope === "tests/e2e/*.spec.js", `Unexpected manifest scope: ${manifest?.scope}`);
-  ensure(specs.length === 45, `Manifest must contain 45 specs, found ${specs.length}.`);
-  ensure(repoSpecs.length === 45, `Repository currently exposes ${repoSpecs.length} Playwright specs under tests/e2e.`);
+  ensure(specs.length === EXPECTED_E2E_SPEC_COUNT, `Manifest must contain ${EXPECTED_E2E_SPEC_COUNT} specs, found ${specs.length}.`);
+  ensure(repoSpecs.length === EXPECTED_E2E_SPEC_COUNT, `Repository currently exposes ${repoSpecs.length} Playwright specs under tests/e2e.`);
 
   for (const spec of specs) {
     ensure(typeof spec?.specPath === "string" && spec.specPath.startsWith("tests/e2e/"), `Invalid specPath: ${spec?.specPath}`);

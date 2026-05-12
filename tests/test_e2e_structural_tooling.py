@@ -44,7 +44,7 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assert_command_ok(result)
         payload = json.loads(json_out.read_text(encoding="utf-8"))
         self.assertEqual(payload["schemaVersion"], 1)
-        self.assertGreaterEqual(payload["summary"]["specFileCount"], 45)
+        self.assertGreaterEqual(payload["summary"]["specFileCount"], 44)
         self.assertTrue(any(entry["specPath"] == "tests/e2e/city_lights_layer_regression.spec.js" for entry in payload["entries"]))
         self.assertTrue(md_out.exists())
 
@@ -65,7 +65,7 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assert_command_ok(result)
         payload = json.loads(graph_out.read_text(encoding="utf-8"))
         self.assertEqual(payload["schemaVersion"], 1)
-        self.assertGreaterEqual(payload["summary"]["specCount"], 45)
+        self.assertGreaterEqual(payload["summary"]["specCount"], 44)
         self.assertIn("tests/e2e/main_shell_i18n.spec.js", payload["specs"])
         self.assertIn("tests/e2e/support/playwright-app.js", payload["reverseIndex"])
         self.assertTrue(summary_json.exists())
@@ -196,16 +196,21 @@ if (files[0] !== 'js/ui/sidebar.js' || files[1] !== 'tests/e2e/dev/tno_ready_sta
     def test_adaptive_execute_plan_blocks_main_thread_by_default(self) -> None:
         script = """
 const { buildExecutionPlan } = await import('./tools/run_adaptive_tests.mjs');
+const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
 const report = {
   childAgentStaticTasks: [{ commandRef: 'verify:test:e2e-layers' }],
-  mainThreadSerialVerification: [{ commandRef: 'node tools/e2e_layering.mjs run-spec tests/e2e/ui_contract_foundation.spec.js' }],
+  mainThreadSerialVerification: [{ commandRef: tnoWaterCommand }],
 };
 const plan = buildExecutionPlan(report, { includeMainThread: false });
 if (plan.commandsToRun.join(',') !== 'verify:test:e2e-layers') {
   throw new Error(`unexpected runnable commands: ${plan.commandsToRun.join(',')}`);
 }
-if (plan.blockedMainThreadCommands.join(',') !== 'node tools/e2e_layering.mjs run-spec tests/e2e/ui_contract_foundation.spec.js') {
+if (plan.blockedMainThreadCommands.join(',') !== tnoWaterCommand) {
   throw new Error(`main-thread command should stay blocked by default: ${plan.blockedMainThreadCommands.join(',')}`);
+}
+const mainThreadPlan = buildExecutionPlan(report, { includeMainThread: true });
+if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.blockedMainThreadCommands.length !== 0) {
+  throw new Error(`includeMainThread should run the reserved command: ${JSON.stringify(mainThreadPlan)}`);
 }
 """
         result = run_command("node", "--input-type=module", "-e", script)
@@ -235,6 +240,58 @@ for (const sourceRef of ['tests/e2e/support/fixtures.js', 'tests/e2e/support/pla
   if (!observabilityRoute.sourceRef.includes(sourceRef)) {
     throw new Error(`observability route must cover ${sourceRef}: ${observabilityRoute.sourceRef}`);
   }
+}
+const tnoWaterRoute = routes.find((route) => route.id === 'infra:tno-water-validator');
+if (!tnoWaterRoute) {
+  throw new Error('missing TNO water validator route');
+}
+if (tnoWaterRoute.domain !== 'tno-water' || tnoWaterRoute.executionOwner !== 'main-thread' || tnoWaterRoute.cost !== 'heavy') {
+  throw new Error(`unexpected TNO water route metadata: ${JSON.stringify(tnoWaterRoute)}`);
+}
+for (const lock of ['heavy-geo', 'scenario-data', '.runtime-output']) {
+  if (!tnoWaterRoute.resourceLocks.includes(lock)) {
+    throw new Error(`TNO water route missing lock ${lock}: ${tnoWaterRoute.resourceLocks.join(',')}`);
+  }
+}
+if (!tnoWaterRoute.guidance?.ownerFiles?.includes('tools/validate_tno_water_geometries.py')) {
+  throw new Error(`TNO water route must expose owner-file guidance: ${JSON.stringify(tnoWaterRoute.guidance)}`);
+}
+const transportRoute = routes.find((route) => route.id === 'infra:transport-manifest-contracts');
+if (!transportRoute || transportRoute.executionOwner !== 'child-safe' || transportRoute.resourceLocks.length !== 0) {
+  throw new Error(`transport manifest route must stay child-safe and lock-free: ${JSON.stringify(transportRoute)}`);
+}
+const dataHealthRoute = routes.find((route) => route.id === 'infra:data-health');
+if (!dataHealthRoute || dataHealthRoute.executionOwner !== 'child-safe' || dataHealthRoute.resourceLocks.length !== 0) {
+  throw new Error(`data health route must stay child-safe and lock-free: ${JSON.stringify(dataHealthRoute)}`);
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
+    def test_route_registry_rejects_invalid_guidance_shape(self) -> None:
+        script = """
+const { validateRoute } = await import('./tools/test_route_registry.mjs');
+const baseRoute = {
+  id: 'test:bad-guidance',
+  commandRef: 'python tools/data_health.py --json',
+  sourceRef: 'tools/data_health.py',
+  domain: 'test-routing',
+  ownerHint: 'test-infra',
+  layer: 'contract',
+  cost: 'contract',
+  resourceLocks: [],
+  executionOwner: 'child-safe',
+  ciProfile: 'pr-fast',
+  guidance: { ownerFiles: 'tools/data_health.py' },
+};
+let rejected = false;
+try {
+  validateRoute(baseRoute);
+} catch (error) {
+  rejected = String(error.message).includes('guidance.ownerFiles');
+}
+if (!rejected) {
+  throw new Error('route guidance ownerFiles must reject non-array values');
 }
 """
         result = run_command("node", "--input-type=module", "-e", script)
@@ -275,6 +332,43 @@ for (const filePath of ['tools/select_verification_targets.mjs', 'tools/test_rou
   if (!commands.includes('python -m unittest tests.test_e2e_structural_tooling -q')) {
     throw new Error(`missing structural tooling route for ${filePath}: ${commands.join(', ')}`);
   }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
+    def test_verification_selector_routes_tno_water_health_gate(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
+const report = buildRecommendation(['data/scenarios/tno_1962/water_regions.geojson']);
+const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+if (!commands.includes(tnoWaterCommand)) {
+  throw new Error(`missing TNO water validator command: ${commands.join(', ')}`);
+}
+const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === tnoWaterCommand);
+if (!mainThreadEntry) {
+  throw new Error(`TNO water validator must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
+}
+for (const lock of ['heavy-geo', 'scenario-data', '.runtime-output']) {
+  if (!mainThreadEntry.resourceLocks.includes(lock)) {
+    throw new Error(`TNO water validator missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
+  }
+}
+const diagnostic = report.diagnosticNextSteps.find((entry) => entry.commandRef === tnoWaterCommand);
+if (!diagnostic || !diagnostic.guidance.ownerFiles.includes('tools/validate_tno_water_geometries.py')) {
+  throw new Error(`TNO water diagnostic guidance missing: ${JSON.stringify(report.diagnosticNextSteps)}`);
+}
+if (!report.advisoryNotes.some((note) => note.includes('main-thread serial ownership'))) {
+  throw new Error(`missing main-thread advisory note: ${report.advisoryNotes.join(' | ')}`);
+}
+const testReport = buildRecommendation(['tests/test_tno_water_geometries.py']);
+const testCommands = testReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!testCommands.includes('python -m pytest tests/test_tno_water_geometries.py -q')) {
+  throw new Error(`pytest-style TNO water test must use pytest: ${testCommands.join(', ')}`);
+}
+if (testCommands.includes('python -m unittest tests.test_tno_water_geometries -q')) {
+  throw new Error(`pytest-style TNO water test must not use unittest: ${testCommands.join(', ')}`);
 }
 """
         result = run_command("node", "--input-type=module", "-e", script)
