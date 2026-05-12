@@ -2283,7 +2283,7 @@ function initSidebar({ render } = {}) {
 
     const title = document.createElement("div");
     title.className = "section-header sidebar-tool-title";
-    title.textContent = t("Frontline Overlay", "ui");
+    title.textContent = t("Derived Frontlines", "ui");
 
     const statusPill = document.createElement("span");
     statusPill.id = "frontlineEnabledStatus";
@@ -2303,7 +2303,7 @@ function initSidebar({ render } = {}) {
     const enableRow = buildRow();
     const enableToggle = document.createElement("label");
     enableToggle.className = "toggle-label";
-    enableToggle.innerHTML = `<input id="frontlineEnabledToggle" type="checkbox" class="checkbox-input" /> <span>${t("Enable Frontline Overlay", "ui")}</span>`;
+    enableToggle.innerHTML = `<input id="frontlineEnabledToggle" type="checkbox" class="checkbox-input" /> <span>${t("Enable derived frontlines", "ui")}</span>`;
     enableRow.appendChild(enableToggle);
 
     const emptyState = document.createElement("div");
@@ -2382,16 +2382,22 @@ function initSidebar({ render } = {}) {
 
     const title = document.createElement("div");
     title.className = "section-header sidebar-tool-title";
-    title.textContent = t("Strategic Overlay", "ui");
+    title.textContent = t("Strategic Annotations", "ui");
 
     const hint = document.createElement("p");
     hint.className = "sidebar-tool-hint";
-    hint.textContent = t("Project-local battle planning tools.", "ui");
+    hint.textContent = t("Project-local lines, graphics, and unit counters for export.", "ui");
+
+    const publishStatus = document.createElement("p");
+    publishStatus.id = "strategicOverlayPublishStatus";
+    publishStatus.className = "sidebar-tool-hint strategic-overlay-publish-status";
+    publishStatus.textContent = `0 ${t("lines", "ui")} · 0 ${t("graphics", "ui")} · 0 ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
 
     const workspaceIconCloseBtn = buildButton("strategicOverlayIconCloseBtn", "Close");
     workspaceIconCloseBtn.classList.add("secondary", "strategic-workspace-icon-close", "hidden");
     headerCopy.appendChild(title);
     headerCopy.appendChild(hint);
+    headerCopy.appendChild(publishStatus);
     headerRow.appendChild(headerCopy);
     headerRow.appendChild(workspaceIconCloseBtn);
 
@@ -3156,6 +3162,7 @@ function initSidebar({ render } = {}) {
   const strategicOverlayOpenWorkspaceBtn = document.getElementById("strategicOverlayOpenWorkspaceBtn");
   const strategicOverlayCloseWorkspaceBtn = document.getElementById("strategicOverlayCloseWorkspaceBtn");
   const strategicOverlayIconCloseBtn = document.getElementById("strategicOverlayIconCloseBtn");
+  const strategicOverlayPublishStatus = document.getElementById("strategicOverlayPublishStatus");
   const operationalLineKindSelect = document.getElementById("operationalLineKindSelect");
   const operationalLineLabelInput = document.getElementById("operationalLineLabelInput");
   const operationalLineStrokeInput = document.getElementById("operationalLineStrokeInput");
@@ -5303,6 +5310,7 @@ function initSidebar({ render } = {}) {
       strategicOverlayOpenWorkspaceBtn,
       strategicOverlayCloseWorkspaceBtn,
       strategicOverlayIconCloseBtn,
+      strategicOverlayPublishStatus,
       unitCounterDetailDrawer,
       unitCounterDetailToggleBtn,
       operationalLineKindSelect,

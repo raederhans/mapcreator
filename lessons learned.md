@@ -1561,3 +1561,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - TNO startup bootstrap 可能只携带少量 political shell，且 shell 顺序可与完整 runtime meta 不同。
 - runtime meta seed 的安全校验应确认 shell ids 都存在于 seed，并允许 seed 额外包含后续 chunk layer ids。
 - 迁移 TopoJSON 几何列表时，computed_neighbors 必须跟着 old->new index 重映射。
+
+## 2026-05-12 - annotation productization worktree verification
+
+- 独立 worktree 先确认 `node_modules` 是否存在；缺失时先跑 `npm ci`，再跑浏览器测试。
+- Windows 后台重定向下，默认 `reuseExistingServer` 分支可能长时间没有 reporter 输出；验收用 `CODEX_CI=1 CI=1` 让 Playwright 自己启动并关闭 8810 dev server。

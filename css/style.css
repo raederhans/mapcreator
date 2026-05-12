@@ -5184,6 +5184,13 @@ body.counter-editor-modal-open {
   padding: 8px 10px;
 }
 
+.export-workbench-layer-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .export-workbench-layer-item.is-dragging {
   opacity: 0.65;
 }
@@ -5198,6 +5205,14 @@ body.counter-editor-modal-open {
   font-size: 0.9rem;
   font-weight: 600;
   color: #e2e8f0;
+}
+
+.export-workbench-layer-meta {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .export-workbench-layer-controls {
@@ -5556,6 +5571,13 @@ body.counter-editor-modal-open {
   border: 1px solid rgba(37, 54, 73, 0.08);
   background: rgba(255, 255, 255, 0.88);
   cursor: pointer;
+}
+
+.export-workbench-layer-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .export-workbench-layer-item.is-selected {

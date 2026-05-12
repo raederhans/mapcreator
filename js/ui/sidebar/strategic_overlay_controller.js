@@ -43,6 +43,7 @@ export function createStrategicOverlayController({
     strategicOverlayOpenWorkspaceBtn,
     strategicOverlayCloseWorkspaceBtn,
     strategicOverlayIconCloseBtn,
+    strategicOverlayPublishStatus,
     unitCounterDetailDrawer,
     unitCounterDetailToggleBtn,
     operationalLineKindSelect,
@@ -277,6 +278,14 @@ export function createStrategicOverlayController({
     state.cachedFrontlineLabelAnchors = [];
   };
 
+  const refreshStrategicOverlayPublishStatus = () => {
+    if (!strategicOverlayPublishStatus) return;
+    const lineCount = Array.isArray(state.operationalLines) ? state.operationalLines.length : 0;
+    const graphicCount = Array.isArray(state.operationGraphics) ? state.operationGraphics.length : 0;
+    const counterCount = Array.isArray(state.unitCounters) ? state.unitCounters.length : 0;
+    strategicOverlayPublishStatus.textContent = `${lineCount} ${t("lines", "ui")} · ${graphicCount} ${t("graphics", "ui")} · ${counterCount} ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
+  };
+
   const applyFrontlineAnnotationViewPatch = (patch = {}, dirtyReason = "frontline-overlay") => {
     const before = captureHistoryState({ strategicOverlay: true });
     // frontline 配置最终都落到 annotationView，
@@ -407,6 +416,7 @@ export function createStrategicOverlayController({
     // 所有 strategic 子面板都走同一个 scoped refresh 入口。
     // 这样外层只要声明“哪块脏了”，而不是分别记住几十个局部刷新函数。
     ensureStrategicOverlayUiState();
+    refreshStrategicOverlayPublishStatus();
     if (hasStrategicOverlayScope(normalizedScopes, "frontlineControls")) {
       recordStrategicOverlayPerfCounter("frontlineControls");
       refreshFrontlineTabUI();
@@ -658,7 +668,6 @@ export function createStrategicOverlayController({
       }
       if (shouldRefreshCounterCatalog) {
         recordStrategicOverlayPerfCounter("counterCatalog");
-        ensureStrategicOverlayUiState();
         renderUnitCounterCatalogSection({
           elements: {
             unitCounterCatalogCategoriesEl,

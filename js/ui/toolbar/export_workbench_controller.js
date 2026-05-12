@@ -20,6 +20,12 @@ const EXPORT_TEXT_LAYER_VIEW_MODELS = Object.freeze([
 ]);
 const EXPORT_TEXT_LAYER_IDS = Object.freeze(EXPORT_TEXT_LAYER_VIEW_MODELS.map((layer) => layer.id));
 const EXPORT_TEXT_LAYER_MODEL_BY_ID = new Map(EXPORT_TEXT_LAYER_VIEW_MODELS.map((layer) => [layer.id, layer]));
+const EXPORT_ANNOTATION_FAMILY_VIEW_MODELS = Object.freeze([
+  Object.freeze({ id: "frontlines", label: "Frontlines", selector: ".frontline-overlay-layer path, .frontline-labels-layer .frontline-label" }),
+  Object.freeze({ id: "operational-lines", label: "Operational lines", selector: ".operational-lines-layer .operational-line" }),
+  Object.freeze({ id: "operation-graphics", label: "Operation graphics", selector: ".operation-graphics-layer .operation-graphic" }),
+  Object.freeze({ id: "unit-counters", label: "Unit counters", selector: ".unit-counters-layer .unit-counter" }),
+]);
 const EXPORT_BAKE_OUTPUT_MODELS = Object.freeze([
   Object.freeze({ id: "color", name: "Color bake", summary: "Base color and scenario fills" }),
   Object.freeze({ id: "line", name: "Line bake", summary: "Borders and line effects" }),
@@ -53,6 +59,32 @@ function normalizeExportWorkbenchTextVisibility(value, includeTextLayer = true) 
   return Object.fromEntries(
     EXPORT_TEXT_LAYER_IDS.map((layerId) => [layerId, source[layerId] === undefined ? !!includeTextLayer : source[layerId] !== false])
   );
+}
+
+function getExportAnnotationFamilyCounts(mapSvg = null) {
+  return Object.fromEntries(
+    EXPORT_ANNOTATION_FAMILY_VIEW_MODELS.map((family) => [
+      family.id,
+      mapSvg ? mapSvg.querySelectorAll(family.selector).length : 0,
+    ])
+  );
+}
+
+function getExportAnnotationCountSummary(mapSvg = null) {
+  const counts = getExportAnnotationFamilyCounts(mapSvg);
+  const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  const summary = EXPORT_ANNOTATION_FAMILY_VIEW_MODELS
+    .map((family) => {
+      const count = counts[family.id] || 0;
+      return count ? `${family.label}: ${count}` : "";
+    })
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    count: total,
+    summary: summary || "No strategic annotations currently visible",
+    counts,
+  };
 }
 
 function ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState) {
@@ -170,21 +202,27 @@ function createExportWorkbenchController({
 
   const getExportTextLayerEntries = () => {
     const mapSvg = document.getElementById("map-svg");
-    const svgTextCount = mapSvg ? mapSvg.querySelectorAll("text").length : 0;
     const specialZoneCount = mapSvg ? mapSvg.querySelectorAll(".special-zones-layer .special-zone").length : 0;
     const renderPassMetrics = state.renderPassCache?.metrics?.labels || null;
+    const annotationSummary = getExportAnnotationCountSummary(mapSvg);
     return [
       {
         ...EXPORT_TEXT_LAYER_MODEL_BY_ID.get("render-labels"),
+        name: "Map labels",
+        summary: "City and map labels from the labels pass",
         count: Math.max(0, Number(renderPassMetrics?.labelCount || 0)),
       },
       {
         ...EXPORT_TEXT_LAYER_MODEL_BY_ID.get("special-zones"),
+        name: "Special zone notes",
         count: specialZoneCount,
       },
       {
         ...EXPORT_TEXT_LAYER_MODEL_BY_ID.get("svg-annotations"),
-        count: svgTextCount,
+        name: "Strategic annotations",
+        summary: annotationSummary.summary,
+        count: annotationSummary.count,
+        familyCounts: annotationSummary.counts,
       },
     ].filter((entry) => !!entry?.id);
   };
@@ -307,6 +345,19 @@ function createExportWorkbenchController({
     if (!exportWorkbenchTextElementList) return;
     const exportUi = getExportUi();
     exportWorkbenchTextElementList.replaceChildren();
+    const getTextLayerSummary = (entry) => {
+      if (entry.id !== "svg-annotations" || !entry.familyCounts) {
+        return t(entry.summary || "", "ui");
+      }
+      const summary = EXPORT_ANNOTATION_FAMILY_VIEW_MODELS
+        .map((family) => {
+          const count = entry.familyCounts[family.id] || 0;
+          return count ? `${t(family.label, "ui")}: ${count}` : "";
+        })
+        .filter(Boolean)
+        .join(" · ");
+      return summary || t("No strategic annotations currently visible", "ui");
+    };
     getExportTextLayerEntries().forEach((entry, index) => {
       const item = document.createElement("div");
       item.className = "export-workbench-layer-item";
@@ -326,7 +377,15 @@ function createExportWorkbenchController({
       const name = document.createElement("span");
       name.className = "export-workbench-layer-name";
       name.textContent = t(entry.name, "ui");
-      item.appendChild(name);
+      const copy = document.createElement("div");
+      copy.className = "export-workbench-layer-copy";
+      copy.appendChild(name);
+      const meta = document.createElement("span");
+      meta.className = "export-workbench-layer-meta";
+      meta.textContent = getTextLayerSummary(entry);
+      meta.title = meta.textContent;
+      copy.appendChild(meta);
+      item.appendChild(copy);
 
       const controls = document.createElement("div");
       controls.className = "export-workbench-layer-controls";
@@ -720,6 +779,8 @@ export {
   EXPORT_MAIN_LAYER_MODEL_BY_ID,
   EXPORT_TEXT_LAYER_IDS,
   EXPORT_TEXT_LAYER_MODEL_BY_ID,
+  getExportAnnotationCountSummary,
+  getExportAnnotationFamilyCounts,
   createExportWorkbenchController,
   ensureExportWorkbenchUiState,
   normalizeExportWorkbenchLayerOrder,

@@ -319,6 +319,59 @@ test("unit counter runtime owner placement syncs line attachments and history", 
   assert.equal(renderCount, 1);
 });
 
+test("unit counter runtime owner detach clears line attachments", () => {
+  const historyEntries = [];
+  const dirtyReasons = [];
+  const runtimeState = {
+    operationalLines: [{
+      id: "opl_1",
+      attachedCounterIds: ["unit_1"],
+    }],
+    operationalLinesDirty: false,
+    unitCounters: [{
+      id: "unit_1",
+      renderer: "game",
+      sidc: "INF",
+      symbolCode: "INF",
+      label: "1st Corps",
+      presetId: "inf",
+      size: "medium",
+      anchor: { lon: 12, lat: 48, featureId: "GER" },
+      layoutAnchor: { kind: "attachment", key: "opl_1", slotIndex: 0 },
+      attachment: { kind: "operational-line", lineId: "opl_1" },
+    }],
+    unitCountersDirty: false,
+    unitCounterEditor: {
+      selectedId: "unit_1",
+    },
+  };
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      assignUnitCounterEditorFromCounter: (counter) => {
+        runtimeState.unitCounterEditor.label = String(counter.label || "");
+      },
+      captureHistoryState: (payload) => ({ snapshot: payload }),
+      commitHistoryEntry: (entry) => historyEntries.push(entry),
+      ensureUnitCounterEditorState: () => {},
+      markDirty: (reason) => dirtyReasons.push(reason),
+      renderNow: () => {},
+      updateStrategicOverlayUi: () => {},
+    },
+  });
+
+  assert.equal(owner.updateSelectedUnitCounter({ attachment: null }), true);
+  assert.equal(runtimeState.unitCounters[0].attachment, null);
+  assert.equal(runtimeState.unitCounters[0].layoutAnchor.kind, "feature");
+  assert.equal(runtimeState.unitCounters[0].layoutAnchor.key, "GER");
+  assert.deepEqual(runtimeState.operationalLines[0].attachedCounterIds, []);
+  assert.equal(runtimeState.unitCountersDirty, true);
+  assert.equal(runtimeState.operationalLinesDirty, true);
+  assert.equal(historyEntries[0].kind, "update-unit-counter");
+  assert.deepEqual(dirtyReasons, ["update-unit-counter"]);
+});
+
 test("unit counter preview seeds editor defaults before reading preview data", () => {
   let ensureCount = 0;
   const runtimeState = {};

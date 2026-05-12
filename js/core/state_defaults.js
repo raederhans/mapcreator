@@ -1235,7 +1235,10 @@ function normalizeExportWorkbenchUiState(rawUi) {
     : raw.layerVisibility;
   const includeTextLayer = raw.includeTextLayer === undefined ? true : !!raw.includeTextLayer;
   const textVisibility = normalizeExportWorkbenchTextVisibility(raw.textVisibility, includeTextLayer);
-  const previewLayerId = String(raw.previewLayerId || raw.previewSource || "background").trim().toLowerCase();
+  const rawPreviewLayerId = String(raw.previewLayerId || raw.previewSource || "background").trim().toLowerCase();
+  const previewLayerId = EXPORT_WORKBENCH_LEGACY_LAYER_ID_ALIASES[rawPreviewLayerId]
+    || EXPORT_WORKBENCH_TEXT_LAYER_ID_ALIASES[rawPreviewLayerId]
+    || rawPreviewLayerId;
   return {
     target: EXPORT_WORKBENCH_TARGETS.has(normalizedTarget) ? normalizedTarget : "composite",
     format: String(raw.format || "").trim().toLowerCase() === "jpg" ? "jpg" : "png",

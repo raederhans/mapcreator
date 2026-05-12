@@ -30,6 +30,7 @@
     "test:e2e:ui-rework-support": "node node_modules/@playwright/test/cli.js test tests/e2e/ui_rework_support_transport_hardening.spec.js --workers=1 --retries=0",
     "test:e2e": "node node_modules/@playwright/test/cli.js test",
     "test:node:renderer-splits": "node --test tests/strategic_overlay_runtime_owner_behavior.test.mjs tests/strategic_overlay_state_behavior.test.mjs tests/special_zone_layers_state_behavior.test.mjs",
+    "test:node:annotation-productization": "node --test tests/file_manager_project_roundtrip_behavior.test.mjs tests/export_workbench_state_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs",
     "test:node:scenario-lifecycle-runtime-behavior": "node --test tests/scenario_lifecycle_runtime_behavior.test.mjs",
     "test:node:scenario-runtime-state-behavior": "node --test tests/scenario_runtime_state_behavior.test.mjs",
     "test:node:startup-hydration-behavior": "node --test tests/startup_hydration_behavior.test.mjs",

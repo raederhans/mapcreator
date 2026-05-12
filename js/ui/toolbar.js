@@ -2663,6 +2663,13 @@ function initToolbar({ render } = {}) {
     ];
   };
 
+  const SVG_ANNOTATION_VIEWPORT_SELECTOR = [
+    ".frontline-overlay-layer",
+    ".frontline-labels-layer",
+    ".operational-lines-layer",
+    ".operation-graphics-layer",
+    ".unit-counters-layer",
+  ].join(", ");
   const cloneSvgForExport = ({ onlyViewportSelector = "", removeSelectors = [] } = {}) => {
     const mapSvg = document.getElementById("map-svg");
     if (!mapSvg) return null;
@@ -2817,7 +2824,7 @@ function initToolbar({ render } = {}) {
       }
       if (normalizedLayerId === "text" && exportUi.textVisibility?.["svg-annotations"]) {
         await drawSvgLayerToCanvas(bakeCanvas, bakeCtx, {
-          removeSelectors: exportUi.textVisibility?.["special-zones"] ? [".special-zones-layer"] : [],
+          onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR,
         });
       }
       if (normalizedLayerId === "text" && exportUi.textVisibility?.["special-zones"]) {
@@ -2942,7 +2949,7 @@ function initToolbar({ render } = {}) {
         throw createExportError("invalid-params", "Composite export context unavailable.");
       }
       await drawSvgLayerToCanvas(workingCanvas, workingCtx, {
-        removeSelectors: exportUi.textVisibility?.["special-zones"] ? [".special-zones-layer"] : [],
+        onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR,
       });
     }
     if (exportUi.textVisibility?.["special-zones"]) {
@@ -2973,7 +2980,7 @@ function initToolbar({ render } = {}) {
       return canvas;
     }
     if (normalizedSourceId === "svg-annotations") {
-      return buildSvgAnnotationCanvas({ removeSelectors: [".special-zones-layer"] });
+      return buildSvgAnnotationCanvas({ onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR });
     }
     if (normalizedSourceId === "special-zones") {
       return buildSpecialZonesExportCanvas();

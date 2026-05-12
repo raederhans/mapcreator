@@ -20474,6 +20474,8 @@ function bindUnitCounterOverlayInteractions() {
               key: String(datum.counter.anchor?.featureId || ""),
               slotIndex: null,
             };
+            syncOperationalLineAttachedCounterIds();
+            runtimeState.operationalLinesDirty = true;
             runtimeState.unitCountersDirty = true;
             pushHistoryEntry({
               kind: "move-unit-counter",

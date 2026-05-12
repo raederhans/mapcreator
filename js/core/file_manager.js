@@ -30,6 +30,10 @@ const MAX_MANUAL_SPECIAL_ZONE_FEATURES = 200;
 const MAX_MANUAL_SPECIAL_ZONE_COORDINATES_PER_FEATURE = 5000;
 const MAX_MANUAL_SPECIAL_ZONE_RINGS_PER_FEATURE = 32;
 const MAX_MANUAL_SPECIAL_ZONE_POLYGONS_PER_FEATURE = 32;
+const DEFAULT_OPERATION_GRAPHIC_KIND = "attack";
+const DEFAULT_OPERATIONAL_LINE_KIND = "frontline";
+const CLOSED_OPERATION_GRAPHIC_KINDS = new Set(["encirclement", "theater"]);
+const UNIT_COUNTER_STATS_SOURCES = new Set(["preset", "random", "manual"]);
 const DEFAULT_REFERENCE_IMAGE_STATE = Object.freeze({
   opacity: 0.6,
   scale: 1,
@@ -48,6 +52,26 @@ function normalizeProjectHexColor(value) {
     return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`.toLowerCase();
   }
   return "";
+}
+
+function normalizeStrategicKindToken(value, fallback) {
+  const token = String(value || "").trim().toLowerCase();
+  return /^[a-z][a-z0-9_-]{0,48}$/.test(token) ? token : fallback;
+}
+
+function normalizeUnitCounterStatPercent(value, fallback) {
+  const numeric = Number(value);
+  return clamp(Number.isFinite(numeric) ? Math.round(numeric) : fallback, 0, 100);
+}
+
+function normalizeUnitCounterStatsPresetId(value) {
+  const token = String(value || "").trim().toLowerCase();
+  return /^[a-z][a-z0-9_-]{0,48}$/.test(token) ? token : "regular";
+}
+
+function normalizeUnitCounterStatsSource(value) {
+  const token = String(value || "").trim().toLowerCase();
+  return UNIT_COUNTER_STATS_SOURCES.has(token) ? token : "preset";
 }
 
 function normalizeReferenceImageState(rawState) {
@@ -267,19 +291,18 @@ function normalizeOperationGraphics(rawGraphics) {
   return rawGraphics
     .map((entry, index) => {
       const raw = entry && typeof entry === "object" ? entry : {};
-      const kind = String(raw.kind || "attack").trim().toLowerCase();
+      const kind = normalizeStrategicKindToken(raw.kind, DEFAULT_OPERATION_GRAPHIC_KIND);
       const points = Array.isArray(raw.points)
         ? raw.points.map((point) => normalizeProjectCoordinatePair(point)).filter(Boolean)
         : [];
-      if (!["attack", "retreat", "supply", "naval", "encirclement", "theater"].includes(kind)) return null;
-      if (points.length < (kind === "encirclement" || kind === "theater" ? 3 : 2)) return null;
+      if (points.length < (CLOSED_OPERATION_GRAPHIC_KINDS.has(kind) ? 3 : 2)) return null;
       const stroke = normalizeProjectHexColor(raw.stroke) || null;
       return {
         id: String(raw.id || `opg_${index + 1}`).trim() || `opg_${index + 1}`,
         kind,
         label: String(raw.label || "").trim(),
         points,
-        stylePreset: String(raw.stylePreset || kind).trim() || kind,
+        stylePreset: normalizeStrategicKindToken(raw.stylePreset, kind),
         stroke,
         width: clamp(Number.isFinite(Number(raw.width)) ? Number(raw.width) : 0, 0, 16),
         opacity: clamp(Number.isFinite(Number(raw.opacity)) ? Number(raw.opacity) : 1, 0, 1),
@@ -293,11 +316,10 @@ function normalizeOperationalLines(rawLines) {
   return rawLines
     .map((entry, index) => {
       const raw = entry && typeof entry === "object" ? entry : {};
-      const kind = String(raw.kind || "frontline").trim().toLowerCase();
+      const kind = normalizeStrategicKindToken(raw.kind, DEFAULT_OPERATIONAL_LINE_KIND);
       const points = Array.isArray(raw.points)
         ? raw.points.map((point) => normalizeProjectCoordinatePair(point)).filter(Boolean)
         : [];
-      if (!["frontline", "offensive_line", "spearhead_line", "defensive_line"].includes(kind)) return null;
       if (points.length < 2) return null;
       const stroke = normalizeProjectHexColor(raw.stroke) || null;
       const attachedCounterIds = Array.isArray(raw.attachedCounterIds)
@@ -308,7 +330,7 @@ function normalizeOperationalLines(rawLines) {
         kind,
         label: String(raw.label || "").trim(),
         points,
-        stylePreset: String(raw.stylePreset || kind).trim().toLowerCase() || kind,
+        stylePreset: normalizeStrategicKindToken(raw.stylePreset, kind),
         stroke,
         width: clamp(Number.isFinite(Number(raw.width)) ? Number(raw.width) : 0, 0, 16),
         opacity: clamp(Number.isFinite(Number(raw.opacity)) ? Number(raw.opacity) : 1, 0, 1),
@@ -379,6 +401,11 @@ function normalizeUnitCounters(rawCounters) {
         echelon: String(raw.echelon || "").trim(),
         subLabel: String(raw.subLabel || "").trim(),
         strengthText: String(raw.strengthText || "").trim(),
+        baseFillColor: normalizeProjectHexColor(raw.baseFillColor),
+        organizationPct: normalizeUnitCounterStatPercent(raw.organizationPct, 78),
+        equipmentPct: normalizeUnitCounterStatPercent(raw.equipmentPct, 74),
+        statsPresetId: normalizeUnitCounterStatsPresetId(raw.statsPresetId),
+        statsSource: normalizeUnitCounterStatsSource(raw.statsSource),
         size: ["small", "medium", "large"].includes(size) ? size : "medium",
         facing: clamp(Number.isFinite(Number(raw.facing)) ? Number(raw.facing) : 0, -180, 180),
         zIndex: Math.round(Number.isFinite(Number(raw.zIndex)) ? Number(raw.zIndex) : index),

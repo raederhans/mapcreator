@@ -128,6 +128,21 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const compositeCanvas = await buildCompositeSourceCanvas(exportUi);", toolbar_content)
         self.assertIn("const passCanvas = renderExportPassesToCanvas(bakePassNames);", toolbar_content)
 
+    def test_svg_annotation_export_uses_strategic_annotation_layers_only(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+
+        self.assertIn("const SVG_ANNOTATION_VIEWPORT_SELECTOR = [", toolbar_content)
+        for selector in [
+            ".frontline-overlay-layer",
+            ".frontline-labels-layer",
+            ".operational-lines-layer",
+            ".operation-graphics-layer",
+            ".unit-counters-layer",
+        ]:
+            self.assertIn(selector, toolbar_content)
+        self.assertIn("onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR", toolbar_content)
+        self.assertNotIn('buildSvgAnnotationCanvas({ removeSelectors: [".special-zones-layer"] })', toolbar_content)
+
     def test_toolbar_keeps_export_workbench_facade_and_url_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
 

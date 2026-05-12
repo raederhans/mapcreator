@@ -60,6 +60,7 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         for token in [
             'frontlineOverlayPanel',
             'strategicOverlayPanel',
+            'strategicOverlayPublishStatus',
             'strategicCommandBar',
             'strategicOverlayOpenWorkspaceBtn',
             'strategicOverlayCloseWorkspaceBtn',
@@ -67,7 +68,24 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
             'unitCounterEditorModalOverlay',
         ]:
             self.assertIn(token, content)
+        self.assertIn('t("Derived Frontlines", "ui")', content)
+        self.assertIn('t("Strategic Annotations", "ui")', content)
+        self.assertIn('t("lines", "ui")', content)
+        self.assertIn('t("graphics", "ui")', content)
+        self.assertIn('t("counters", "ui")', content)
+        self.assertIn('t("Export as Strategic annotations", "ui")', content)
         self.assertIn('invalidateFrontlineOverlayState,', content)
+
+    def test_controller_refreshes_strategic_annotation_publish_status(self):
+        content = STRATEGIC_OVERLAY_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("strategicOverlayPublishStatus,", content)
+        self.assertIn("const refreshStrategicOverlayPublishStatus = () => {", content)
+        self.assertIn("state.operationalLines", content)
+        self.assertIn("state.operationGraphics", content)
+        self.assertIn("state.unitCounters", content)
+        self.assertIn("Export as Strategic annotations", content)
+        self.assertEqual(content.count("refreshStrategicOverlayPublishStatus();"), 1)
 
     def test_controller_keeps_counter_modal_focus_return_to_toggle(self):
         controller_content = STRATEGIC_OVERLAY_CONTROLLER_JS.read_text(encoding="utf-8")
