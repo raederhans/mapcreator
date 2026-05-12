@@ -711,9 +711,14 @@ async function loadScenarioOptionalLayerPayload(
       }
     }
     const requestUrl = bundle.manifest?.[config.urlField];
-    if (!requestUrl || !d3Client || typeof d3Client.json !== "function") {
+    if (!requestUrl) {
       bundle[config.bundleField] = null;
       bundle.optionalLayerSettledByKey[layerKey] = true;
+      return null;
+    }
+    if (!d3Client || typeof d3Client.json !== "function") {
+      bundle[config.bundleField] = null;
+      delete bundle.optionalLayerSettledByKey[layerKey];
       return null;
     }
     try {
@@ -737,7 +742,7 @@ async function loadScenarioOptionalLayerPayload(
     } catch (error) {
       console.warn(`[scenario] Failed to load scenario ${layerKey} layer for "${getScenarioBundleId(bundle)}".`, error);
       bundle[config.bundleField] = null;
-      bundle.optionalLayerSettledByKey[layerKey] = true;
+      delete bundle.optionalLayerSettledByKey[layerKey];
       return null;
     }
   })();

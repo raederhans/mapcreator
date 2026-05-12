@@ -21,7 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from map_builder.transport_workbench_contracts import validate_transport_manifest
-from tools.build_data_catalog import collect_transport_path_contract_errors
+from tools.build_data_catalog import collect_transport_path_contract_errors, iter_transport_manifest_paths
 
 DATA_DIR = PROJECT_ROOT / "data"
 CATALOG_PATH = DATA_DIR / "CATALOG.json"
@@ -108,7 +108,7 @@ def _iter_transport_manifest_leaf_paths(container: Any, path_parts: tuple[str, .
 
 
 def _iter_transport_manifest_paths(transport_root: Path) -> list[Path]:
-    return sorted(path for path in transport_root.glob("*/manifest.json") if path.is_file())
+    return iter_transport_manifest_paths(transport_root)
 
 
 def _transport_leaf_paths(manifest: dict[str, Any]) -> list[tuple[tuple[str, ...], str]]:
@@ -223,6 +223,20 @@ def collect_health(catalog_path: Path = CATALOG_PATH, *, large_file_warn_bytes: 
         # canonical catalog entry with another key.
         if asset_url not in entries_by_url:
             report.errors.append(f"runtime_asset_registry asset {asset_key} url is absent from catalog: {asset_url}")
+        else:
+            catalog_entry = entries_by_url[asset_url]
+            catalog_identities = {
+                str(catalog_entry.get("key") or "").strip(),
+                *[
+                    str(alias or "").strip()
+                    for alias in catalog_entry.get("aliases", [])
+                    if str(alias or "").strip()
+                ],
+            }
+            if asset_key not in catalog_identities:
+                report.errors.append(
+                    f"runtime_asset_registry asset {asset_key} key is absent from catalog key/aliases for {asset_url}"
+                )
         _warn_large_file(report, asset_url, warn_bytes=large_file_warn_bytes, project_root=health_paths.project_root)
     report.checked_runtime_assets = len(assets)
 

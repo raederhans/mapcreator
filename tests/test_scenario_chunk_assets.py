@@ -506,6 +506,43 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 chunk_path = temp_root.joinpath(*str(chunk["url"]).split("/"))
                 self.assertEqual(chunk.get("sha256"), build_scenario_chunk_assets.sha256_path(chunk_path))
 
+    def test_build_scenario_chunk_assets_rejects_cross_scenario_manifest_url(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            scenario_dir = temp_root / "data" / "scenarios" / "tno_1962"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            (scenario_dir / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "scenario_id": "tno_1962",
+                        "generated_at": "2026-05-01T00:00:00Z",
+                        "runtime_topology_url": "data/scenarios/other/runtime_topology.topo.json",
+                        "source": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            previous_project_root = build_scenario_chunk_assets.PROJECT_ROOT
+            build_scenario_chunk_assets.PROJECT_ROOT = temp_root
+            try:
+                with patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "build_scenario_chunk_assets.py",
+                        "--scenario-dir",
+                        str(scenario_dir),
+                    ],
+                ):
+                    with self.assertRaises(Exception) as context:
+                        build_scenario_chunk_assets.main()
+            finally:
+                build_scenario_chunk_assets.PROJECT_ROOT = previous_project_root
+
+            self.assertIn("manifest.runtime_topology_url", str(context.exception))
+            self.assertIn("data/scenarios/tno_1962", str(context.exception))
+
     def test_water_coarse_is_minified_without_trimming_runtime_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "tno_1962"

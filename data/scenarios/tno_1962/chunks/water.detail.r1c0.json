@@ -2,7 +2,6 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": "0",
       "type": "Feature",
       "properties": {
         "id": "tno_northwest_atlantic_ocean",
@@ -10098,7 +10097,6 @@
       }
     },
     {
-      "id": "7",
       "type": "Feature",
       "properties": {
         "id": "tno_northeast_pacific_ocean",
@@ -31286,7 +31284,6 @@
       }
     },
     {
-      "id": "8",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -101362,7 +101359,6 @@
       }
     },
     {
-      "id": "9",
       "type": "Feature",
       "properties": {
         "id": "tno_east_central_pacific_ocean",
@@ -101790,7 +101786,6 @@
       }
     },
     {
-      "id": "15",
       "type": "Feature",
       "properties": {
         "id": "tno_western_arctic_ocean",
@@ -102856,7 +102851,6 @@
       }
     },
     {
-      "id": "24",
       "type": "Feature",
       "properties": {
         "id": "tno_bering_sea",
@@ -147288,7 +147282,6 @@
       }
     },
     {
-      "id": "65",
       "type": "Feature",
       "properties": {
         "id": "tno_beaufort_sea",
@@ -172216,7 +172209,6 @@
       }
     },
     {
-      "id": "68",
       "type": "Feature",
       "properties": {
         "id": "tno_hudson_bay",
@@ -289268,7 +289260,6 @@
       }
     },
     {
-      "id": "84",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_mexico",
@@ -327836,7 +327827,6 @@
       }
     },
     {
-      "id": "99",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_alaska",

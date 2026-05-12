@@ -362,8 +362,18 @@ def collect_transport_path_contract_errors(
     return errors
 
 
-def _iter_top_level_transport_manifest_paths() -> list[Path]:
-    return sorted(path for path in TRANSPORT_ROOT.glob("*/manifest.json") if path.is_file())
+def iter_transport_manifest_paths(transport_root: Path = TRANSPORT_ROOT) -> list[Path]:
+    return sorted(path for path in transport_root.rglob("manifest.json") if path.is_file())
+
+
+def _transport_manifest_key_namespace(manifest_path: Path, manifest_asset_key: str) -> str:
+    if manifest_asset_key.startswith("transport_manifest:"):
+        return manifest_asset_key.split("transport_manifest:", 1)[1]
+    try:
+        manifest_dir = manifest_path.parent.relative_to(TRANSPORT_ROOT)
+    except ValueError:
+        manifest_dir = manifest_path.parent
+    return ":".join(part for part in manifest_dir.parts if part)
 
 
 def _build_transport_entries(
@@ -374,7 +384,7 @@ def _build_transport_entries(
     runtime_asset_key_by_url: dict[str, str],
     generated_at_values: list[str],
 ) -> None:
-    for manifest_path in _iter_top_level_transport_manifest_paths():
+    for manifest_path in iter_transport_manifest_paths():
         manifest = _read_json(manifest_path)
         manifest_generated_at = str(manifest.get("generated_at") or "").strip()
         if manifest_generated_at:
@@ -387,15 +397,10 @@ def _build_transport_entries(
             raise SystemExit("\n".join(errors))
 
         family_id = str(manifest.get("family") or manifest_path.parent.name).strip()
-        manifest_asset_key = runtime_asset_key_by_url.get(
-            relative_manifest_path,
-            f"transport_manifest:{manifest_path.parent.name}",
-        )
-        transport_key_namespace = (
-            manifest_asset_key.split("transport_manifest:", 1)[1]
-            if manifest_asset_key.startswith("transport_manifest:")
-            else manifest_path.parent.name
-        )
+        manifest_asset_key = runtime_asset_key_by_url.get(relative_manifest_path, "")
+        transport_key_namespace = _transport_manifest_key_namespace(manifest_path, manifest_asset_key)
+        if not manifest_asset_key:
+            manifest_asset_key = f"transport_manifest:{transport_key_namespace}"
         _merge_catalog_entry(
             entries_by_url,
             {
@@ -501,7 +506,8 @@ def _merge_catalog_entry(entries_by_url: dict[str, dict[str, Any]], candidate: d
         entries_by_url[url] = next_entry
         return
 
-    preferred_key = _choose_preferred_key(str(current.get("key") or ""), next_entry["key"])
+    previous_key = str(current.get("key") or "").strip()
+    preferred_key = _choose_preferred_key(previous_key, next_entry["key"])
     prefer_next = preferred_key == next_entry["key"] and preferred_key != current.get("key")
     current["key"] = preferred_key
     if prefer_next and next_entry["role"]:
@@ -538,6 +544,8 @@ def _merge_catalog_entry(entries_by_url: dict[str, dict[str, Any]], candidate: d
         *[alias for alias in current.get("aliases", []) if str(alias or "").strip()],
         *next_entry["aliases"],
     }
+    if previous_key and previous_key != preferred_key:
+        aliases.add(previous_key)
     if current["key"] != next_entry["key"]:
         aliases.add(next_entry["key"])
     current["aliases"] = sorted(aliases)

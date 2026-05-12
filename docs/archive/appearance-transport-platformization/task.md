@@ -34,3 +34,11 @@
 - [x] 继续 `map_renderer.js` owner extraction：transport overview + river layer owner 下沉完成。
 - [x] 继续 `init_map_data.py` stage seam 深化：`hierarchy_locales` owner 下沉完成。
 - [x] backlog 验证结果继续写入 `context.md`。
+
+## 2026-05-11 追加收口
+
+- [x] 修复 special zone workbench / render owner 新增直接 state 写口。
+- [x] state write allowlist 继续收紧：`77 -> 73`。
+- [x] 收紧 transport manifest `feature_counts` 合同，排除 boolean count。
+- [x] 收紧 carrier manifest 豁免条件：只允许 `family=carrier` 且 `geometry_kind=carrier` 的真实 carrier manifest 豁免。
+- [x] 补跑 targeted Python / Node / manifest checker 验证。

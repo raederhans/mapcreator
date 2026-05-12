@@ -6315,6 +6315,16 @@ def stable_json_hash(payload: object) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
+def compact_written_json_hash(payload: object) -> str:
+    data = json.dumps(
+        sanitize_jsonable(payload),
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
 def normalize_tag(raw: object) -> str:
     return "".join(char for char in str(raw or "").strip().upper() if char.isalnum())
 
@@ -7694,9 +7704,12 @@ def estimate_topology_object_arc_refs(topology_payload: dict, object_name: str) 
 def build_context_land_mask_geometry(
     land_mask_geom,
     *,
-    tolerances: tuple[float, ...] = (0.25, 0.35, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0),
+    tolerances: tuple[float, ...] = (0.03, 0.05, 0.08, 0.1, 0.15, 0.2, 0.25, 0.35, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0),
     max_area_delta_ratio: float = 0.005,
+    max_publish_area_delta_ratio: float = 0.05,
+    max_publish_preferred_tolerance: float = 0.5,
     max_component_increase: int = 96,
+    max_publish_component_increase: int = 1024,
     target_arc_refs_min: int = 12_000,
     target_arc_refs_max: int = 20_000,
 ):
@@ -7717,6 +7730,14 @@ def build_context_land_mask_geometry(
     best_tolerance = None
     best_area_delta_ratio = None
     best_arc_refs = None
+    publish_candidate = None
+    publish_tolerance = None
+    publish_area_delta_ratio = None
+    publish_arc_refs = None
+    overflow_publish_candidate = None
+    overflow_publish_tolerance = None
+    overflow_publish_area_delta_ratio = None
+    overflow_publish_arc_refs = None
     for tolerance in tolerances:
         simplified_coarse = normalize_polygonal(coarse_geom.simplify(tolerance, preserve_topology=True)) if coarse_geom is not None else None
         candidate_polygons = []
@@ -7727,22 +7748,45 @@ def build_context_land_mask_geometry(
         candidate = normalize_polygonal(candidate_polygons[0] if len(candidate_polygons) == 1 else MultiPolygon(candidate_polygons))
         if candidate is None:
             continue
-        if len(iter_polygon_parts(candidate)) > (base_component_count + max_component_increase):
+        candidate_component_count = len(iter_polygon_parts(candidate))
+        if candidate_component_count > (base_component_count + max_publish_component_increase):
             continue
         candidate_area = estimate_equal_area_value(candidate)
         area_delta_ratio = abs(candidate_area - base_area) / base_area
-        if area_delta_ratio > max_area_delta_ratio:
+        if area_delta_ratio > max_publish_area_delta_ratio:
             continue
         candidate_arc_refs = estimate_geometry_arc_refs(candidate)
-        if target_arc_refs_min <= candidate_arc_refs <= target_arc_refs_max:
-            return candidate, float(tolerance), float(area_delta_ratio), False, int(candidate_arc_refs)
-        if best_candidate is None or candidate_arc_refs < best_arc_refs:
-            best_candidate = candidate
-            best_tolerance = float(tolerance)
-            best_area_delta_ratio = float(area_delta_ratio)
-            best_arc_refs = int(candidate_arc_refs)
+        if area_delta_ratio <= max_area_delta_ratio and candidate_component_count <= (base_component_count + max_component_increase):
+            if target_arc_refs_min <= candidate_arc_refs <= target_arc_refs_max:
+                return candidate, float(tolerance), float(area_delta_ratio), False, int(candidate_arc_refs)
+            if best_candidate is None or candidate_arc_refs < best_arc_refs:
+                best_candidate = candidate
+                best_tolerance = float(tolerance)
+                best_area_delta_ratio = float(area_delta_ratio)
+                best_arc_refs = int(candidate_arc_refs)
+        if float(tolerance) <= max_publish_preferred_tolerance:
+            if publish_candidate is None or candidate_arc_refs < publish_arc_refs:
+                publish_candidate = candidate
+                publish_tolerance = float(tolerance)
+                publish_area_delta_ratio = float(area_delta_ratio)
+                publish_arc_refs = int(candidate_arc_refs)
+        elif overflow_publish_candidate is None or candidate_arc_refs < overflow_publish_arc_refs:
+            overflow_publish_candidate = candidate
+            overflow_publish_tolerance = float(tolerance)
+            overflow_publish_area_delta_ratio = float(area_delta_ratio)
+            overflow_publish_arc_refs = int(candidate_arc_refs)
     if best_candidate is not None:
         return best_candidate, best_tolerance, best_area_delta_ratio, False, best_arc_refs
+    if publish_candidate is not None:
+        return publish_candidate, publish_tolerance, publish_area_delta_ratio, False, publish_arc_refs
+    if overflow_publish_candidate is not None:
+        return (
+            overflow_publish_candidate,
+            overflow_publish_tolerance,
+            overflow_publish_area_delta_ratio,
+            False,
+            overflow_publish_arc_refs,
+        )
     return precise_geom, None, 0.0, True, int(estimate_geometry_arc_refs(precise_geom))
 
 
@@ -11269,6 +11313,13 @@ def build_runtime_topology_state(
         named_water_snapshot_payload,
     )
     runtime_special_regions = feature_collection_from_features([])
+    special_zone_layers_payload = {
+        "version": 1,
+        "layers": [],
+        "activeLayerId": "",
+        "topologyFingerprint": "",
+        "diagnostics": [],
+    }
     relief_overlays_payload = round_geojson_coordinates(relief_overlays_payload, decimals=6)
 
     recalculate_country_feature_counts(
@@ -11333,6 +11384,9 @@ def build_runtime_topology_state(
     }
     manifest_payload["excluded_water_region_groups"] = ["mediterranean"]
     manifest_payload["excluded_water_region_ids"] = list(TNO_EXCLUDED_BASE_WATER_REGION_IDS)
+    source_payload = manifest_payload.get("source") if isinstance(manifest_payload.get("source"), dict) else {}
+    source_payload["runtime_topology_sha256"] = compact_written_json_hash(runtime_topology_payload)
+    manifest_payload["source"] = source_payload
 
     context_land_mask_tolerance = stage_metadata["context_land_mask_tolerance"]
     context_land_mask_area_delta_ratio = stage_metadata["context_land_mask_area_delta_ratio"]
@@ -11478,6 +11532,7 @@ def build_runtime_topology_state(
         "scenario_atlantropa_topology_payload": scenario_atlantropa_topology_payload,
         "scenario_atlantropa_metadata_payload": scenario_atlantropa_metadata_payload,
         "runtime_special_regions": runtime_special_regions,
+        "special_zone_layers_payload": special_zone_layers_payload,
         "runtime_water_regions": runtime_water_regions,
         "bathymetry_payload": bathymetry_payload,
         "named_water_snapshot_payload": named_water_snapshot_payload,

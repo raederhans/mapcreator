@@ -1,7 +1,7 @@
 {
   "artifact_counts": {
     "chunk_count": 189,
-    "feature_count": 12811,
+    "feature_count": 12780,
     "water_count": 123
   },
   "controller_changes": [
@@ -4304,10 +4304,11 @@
   ],
   "dev_manual_override_summary": {
     "assignment_count": 82,
-    "country_count": 8,
+    "country_count": 9,
     "create_tags": [],
     "override_tags": [
       "BOP",
+      "GAY",
       "MAG",
       "NIE",
       "ONG",
@@ -4337,53 +4338,53 @@
     "active_owner_tag_count": 133,
     "as_of_date": "1962.1.1.12",
     "atl_feature_count": 456,
-    "atl_sea_feature_count": 458,
+    "atl_sea_feature_count": 440,
     "atlantropa_geometry_source": "hgo_donor_provinces",
     "atlantropa_island_replacement_stats": {
       "adriatica": {
         "dropped_feature_count": 37,
         "dropped_feature_ids": [
           "ATLISL_adriatica_CRO_1",
-          "ATLISL_adriatica_CRO_11",
           "ATLPRV_18348",
-          "ATLSEA_FILL_adriatica_20",
+          "ATLSEA_FILL_adriatica_17",
+          "ATLSEA_FILL_adriatica_18",
+          "ATLSEA_FILL_adriatica_19",
           "ATLSEA_FILL_adriatica_21",
-          "ATLSEA_FILL_adriatica_23",
-          "ATLSEA_FILL_adriatica_31",
-          "ATLSEA_FILL_adriatica_32",
-          "ATLSEA_FILL_adriatica_47",
-          "ATLSEA_FILL_adriatica_48",
-          "ATLSEA_FILL_adriatica_49",
+          "ATLSEA_FILL_adriatica_28",
+          "ATLSEA_FILL_adriatica_44",
+          "ATLSEA_FILL_adriatica_45",
+          "ATLSEA_FILL_adriatica_46",
           "ATLSEA_FILL_adriatica_5",
           "ATLSEA_FILL_adriatica_50",
+          "ATLSEA_FILL_adriatica_51",
+          "ATLSEA_FILL_adriatica_52",
+          "ATLSEA_FILL_adriatica_53",
           "ATLSEA_FILL_adriatica_54",
           "ATLSEA_FILL_adriatica_55",
           "ATLSEA_FILL_adriatica_56",
-          "ATLSEA_FILL_adriatica_57",
-          "ATLSEA_FILL_adriatica_58",
-          "ATLSEA_FILL_adriatica_59",
           "ATLSEA_FILL_adriatica_60",
           "ATLSEA_FILL_adriatica_61",
-          "ATLSEA_FILL_adriatica_65",
-          "ATLSEA_FILL_adriatica_66",
           "ATLSEA_FILL_adriatica_7",
           "ATLSEA_FILL_adriatica_8",
           "ATLSEA_FILL_adriatica_9",
+          "ATLSEA_FILL_tyrrhenian_32",
+          "ATLSEA_FILL_tyrrhenian_37",
           "ATLSEA_FILL_tyrrhenian_38",
+          "ATLSEA_FILL_tyrrhenian_39",
+          "ATLSEA_FILL_tyrrhenian_40",
           "ATLSEA_FILL_tyrrhenian_42",
           "ATLSEA_FILL_tyrrhenian_43",
-          "ATLSEA_FILL_tyrrhenian_45",
-          "ATLSEA_FILL_tyrrhenian_46",
-          "ATLSEA_FILL_tyrrhenian_47",
-          "ATLSEA_FILL_tyrrhenian_48",
           "ATLSEA_adriatica_8597_5838_0",
           "ATLSEA_adriatica_8601_5913_0",
-          "ATLSHL_adriatica_14",
+          "ATLSHL_adriatica_10",
+          "ATLSHL_adriatica_15",
+          "ATLSHL_adriatica_4",
+          "ATLSHL_adriatica_8",
           "ATLSHL_adriatica_9"
         ]
       },
       "aegean": {
-        "dropped_feature_count": 48,
+        "dropped_feature_count": 53,
         "dropped_feature_ids": [
           "ATLISL_aegean_GRE_1",
           "ATLISL_aegean_GRE_10",
@@ -4399,10 +4400,12 @@
           "ATLISL_aegean_GRE_2",
           "ATLISL_aegean_GRE_20",
           "ATLISL_aegean_GRE_21",
+          "ATLISL_aegean_GRE_22",
           "ATLISL_aegean_GRE_23",
-          "ATLISL_aegean_GRE_24",
           "ATLISL_aegean_GRE_25",
           "ATLISL_aegean_GRE_26",
+          "ATLISL_aegean_GRE_27",
+          "ATLISL_aegean_GRE_28",
           "ATLISL_aegean_GRE_3",
           "ATLISL_aegean_GRE_4",
           "ATLISL_aegean_GRE_5",
@@ -4416,23 +4419,26 @@
           "ATLSEA_FILL_aegean_10",
           "ATLSEA_FILL_aegean_11",
           "ATLSEA_FILL_aegean_17",
-          "ATLSEA_FILL_aegean_18",
+          "ATLSEA_FILL_aegean_23",
           "ATLSEA_FILL_aegean_24",
           "ATLSEA_FILL_aegean_25",
+          "ATLSEA_FILL_aegean_39",
           "ATLSEA_FILL_aegean_4",
+          "ATLSEA_FILL_aegean_40",
+          "ATLSEA_FILL_aegean_41",
+          "ATLSEA_FILL_aegean_42",
           "ATLSEA_FILL_aegean_43",
-          "ATLSEA_FILL_aegean_45",
-          "ATLSEA_FILL_aegean_46",
-          "ATLSEA_FILL_aegean_47",
-          "ATLSEA_FILL_aegean_48",
           "ATLSEA_FILL_aegean_5",
+          "ATLSEA_FILL_aegean_58",
           "ATLSEA_FILL_aegean_6",
           "ATLSEA_FILL_aegean_7",
           "ATLSEA_FILL_aegean_8",
           "ATLSEA_FILL_aegean_9",
-          "ATLSEA_aegean_8610_225_1",
-          "ATLSEA_aegean_8619_428_0",
-          "ATLSEA_aegean_8619_428_1"
+          "ATLSEA_FILL_libya_suez_20",
+          "ATLSEA_FILL_libya_suez_21",
+          "ATLSEA_FILL_libya_suez_22",
+          "ATLSEA_FILL_libya_suez_23",
+          "ATLSEA_aegean_8619_428_0"
         ]
       },
       "gabes": {
@@ -4440,13 +4446,12 @@
         "dropped_feature_ids": []
       },
       "levant": {
-        "dropped_feature_count": 5,
+        "dropped_feature_count": 4,
         "dropped_feature_ids": [
           "ATLISL_levant_cyprus",
-          "ATLSEA_FILL_levant_11",
-          "ATLSEA_FILL_levant_13",
-          "ATLSEA_FILL_levant_14",
-          "ATLSEA_FILL_libya_suez_20"
+          "ATLSEA_FILL_libya_suez_24",
+          "ATLSEA_FILL_libya_suez_25",
+          "ATLSEA_FILL_libya_suez_38"
         ]
       },
       "libya_suez": {
@@ -4454,7 +4459,7 @@
         "dropped_feature_ids": []
       },
       "sicily_tunis": {
-        "dropped_feature_count": 35,
+        "dropped_feature_count": 32,
         "dropped_feature_ids": [
           "ATLISL_sicily_tunis_ITA_1",
           "ATLISL_sicily_tunis_ITA_2",
@@ -4470,17 +4475,14 @@
           "ATLSEA_FILL_sicily_tunis_19",
           "ATLSEA_FILL_sicily_tunis_2",
           "ATLSEA_FILL_sicily_tunis_24",
+          "ATLSEA_FILL_sicily_tunis_26",
           "ATLSEA_FILL_sicily_tunis_27",
-          "ATLSEA_FILL_sicily_tunis_28",
           "ATLSEA_FILL_sicily_tunis_3",
-          "ATLSEA_FILL_sicily_tunis_30",
-          "ATLSEA_FILL_sicily_tunis_31",
           "ATLSEA_FILL_sicily_tunis_4",
           "ATLSEA_FILL_sicily_tunis_5",
           "ATLSEA_FILL_sicily_tunis_6",
           "ATLSEA_FILL_sicily_tunis_7",
           "ATLSEA_FILL_sicily_tunis_9",
-          "ATLSEA_FILL_tyrrhenian_28",
           "ATLSEA_FILL_west_med_10",
           "ATLSEA_FILL_west_med_9",
           "ATLSEA_sicily_tunis_8591_8965_0",
@@ -4494,13 +4496,11 @@
         ]
       },
       "tyrrhenian": {
-        "dropped_feature_count": 76,
+        "dropped_feature_count": 60,
         "dropped_feature_ids": [
           "ATLISL_tyrrhenian_corsica",
           "ATLISL_tyrrhenian_sardinia",
           "ATLSEA_FILL_sicily_tunis_15",
-          "ATLSEA_FILL_sicily_tunis_25",
-          "ATLSEA_FILL_sicily_tunis_26",
           "ATLSEA_FILL_tyrrhenian_1",
           "ATLSEA_FILL_tyrrhenian_10",
           "ATLSEA_FILL_tyrrhenian_11",
@@ -4516,16 +4516,11 @@
           "ATLSEA_FILL_tyrrhenian_21",
           "ATLSEA_FILL_tyrrhenian_22",
           "ATLSEA_FILL_tyrrhenian_23",
+          "ATLSEA_FILL_tyrrhenian_28",
           "ATLSEA_FILL_tyrrhenian_29",
           "ATLSEA_FILL_tyrrhenian_3",
-          "ATLSEA_FILL_tyrrhenian_30",
-          "ATLSEA_FILL_tyrrhenian_31",
-          "ATLSEA_FILL_tyrrhenian_32",
-          "ATLSEA_FILL_tyrrhenian_33",
-          "ATLSEA_FILL_tyrrhenian_34",
-          "ATLSEA_FILL_tyrrhenian_35",
           "ATLSEA_FILL_tyrrhenian_4",
-          "ATLSEA_FILL_tyrrhenian_49",
+          "ATLSEA_FILL_tyrrhenian_45",
           "ATLSEA_FILL_tyrrhenian_5",
           "ATLSEA_FILL_tyrrhenian_6",
           "ATLSEA_FILL_tyrrhenian_7",
@@ -4552,22 +4547,13 @@
           "ATLSEA_FILL_west_med_60",
           "ATLSEA_FILL_west_med_61",
           "ATLSEA_FILL_west_med_62",
-          "ATLSEA_FILL_west_med_63",
-          "ATLSEA_FILL_west_med_64",
+          "ATLSEA_FILL_west_med_72",
+          "ATLSEA_FILL_west_med_73",
           "ATLSEA_FILL_west_med_74",
           "ATLSEA_FILL_west_med_75",
           "ATLSEA_FILL_west_med_76",
           "ATLSEA_FILL_west_med_77",
-          "ATLSEA_FILL_west_med_78",
-          "ATLSEA_FILL_west_med_79",
           "ATLSEA_FILL_west_med_80",
-          "ATLSEA_FILL_west_med_81",
-          "ATLSEA_FILL_west_med_82",
-          "ATLSEA_FILL_west_med_83",
-          "ATLSEA_FILL_west_med_84",
-          "ATLSEA_FILL_west_med_85",
-          "ATLSEA_FILL_west_med_86",
-          "ATLSEA_FILL_west_med_89",
           "ATLSEA_tyrrhenian_8578_5579_0",
           "ATLSEA_tyrrhenian_8579_5555_0",
           "ATLSEA_tyrrhenian_8590_5656_0",
@@ -4581,8 +4567,8 @@
           "ATLISL_west_med_ATL_2",
           "ATLSEA_FILL_west_med_34",
           "ATLSEA_FILL_west_med_35",
-          "ATLSEA_FILL_west_med_65",
-          "ATLSEA_FILL_west_med_66",
+          "ATLSEA_FILL_west_med_63",
+          "ATLSEA_FILL_west_med_64",
           "ATLSEA_west_med_8582_5454_1",
           "ATLSEA_west_med_8586_8871_0",
           "ATLSEA_west_med_8594_5479_0"
@@ -4620,8 +4606,8 @@
           45.753713
         ],
         "centroid": [
-          15.51488,
-          43.141069
+          15.518996,
+          43.137808
         ],
         "control_points": [
           {
@@ -4698,10 +4684,10 @@
           "gap_fill": 13,
           "none": 31
         },
-        "overlap_with_baseline_land_area": 0.079976,
+        "overlap_with_baseline_land_area": 0.082197,
         "pixel_fragment_area_threshold": 0.0032,
         "pixel_fragment_count": 41,
-        "post_clip_area": 9.363671,
+        "post_clip_area": 9.37268,
         "province_feature_count": 61,
         "sea_completion_bbox": [
           10.9,
@@ -4736,8 +4722,8 @@
           40.993447
         ],
         "centroid": [
-          24.845813,
-          37.718951
+          24.859176,
+          37.602745
         ],
         "control_points": [
           {
@@ -4861,10 +4847,10 @@
           "gap_fill": 20,
           "none": 46
         },
-        "overlap_with_baseline_land_area": 1.379188,
+        "overlap_with_baseline_land_area": 1.379404,
         "pixel_fragment_area_threshold": 0.0024,
         "pixel_fragment_count": 135,
-        "post_clip_area": 8.61077,
+        "post_clip_area": 9.119198,
         "province_feature_count": 148,
         "sea_completion_bbox": [
           22.0,
@@ -4984,14 +4970,14 @@
           "TUR": 21
         },
         "bounds": [
-          32.282617,
+          32.276157,
           31.040154,
           36.020141,
           36.734157
         ],
         "centroid": [
-          34.272421,
-          34.742815
+          33.979732,
+          34.673576
         ],
         "control_points": [
           {
@@ -5079,10 +5065,10 @@
           "gap_fill": 9,
           "none": 8
         },
-        "overlap_with_baseline_land_area": 0.597421,
+        "overlap_with_baseline_land_area": 0.919345,
         "pixel_fragment_area_threshold": 0.0026,
         "pixel_fragment_count": 38,
-        "post_clip_area": 2.560207,
+        "post_clip_area": 2.533372,
         "province_feature_count": 48,
         "sea_completion_bbox": [
           30.8,
@@ -5250,7 +5236,7 @@
           11.8,
           27.8,
           35.9,
-          34.8
+          35.2
         ]
       },
       "sicily_tunis": {
@@ -5279,8 +5265,8 @@
           38.617099
         ],
         "centroid": [
-          13.297676,
-          37.271465
+          13.355774,
+          37.287483
         ],
         "control_points": [
           {
@@ -5357,10 +5343,10 @@
           "gap_fill": 4,
           "none": 16
         },
-        "overlap_with_baseline_land_area": 2.357758,
+        "overlap_with_baseline_land_area": 2.617475,
         "pixel_fragment_area_threshold": 0.0028,
         "pixel_fragment_count": 23,
-        "post_clip_area": 4.822623,
+        "post_clip_area": 5.08234,
         "province_feature_count": 35,
         "sea_completion_bbox": [
           7.0,
@@ -5395,8 +5381,8 @@
           44.392582
         ],
         "centroid": [
-          10.767675,
-          40.893691
+          10.744094,
+          40.88685
         ],
         "control_points": [
           {
@@ -5496,10 +5482,10 @@
           "gap_fill": 21,
           "none": 13
         },
-        "overlap_with_baseline_land_area": 3.337971,
+        "overlap_with_baseline_land_area": 3.337975,
         "pixel_fragment_area_threshold": 0.0028,
         "pixel_fragment_count": 60,
-        "post_clip_area": 8.818525,
+        "post_clip_area": 8.949839,
         "province_feature_count": 69,
         "sea_completion_bbox": [
           5.0,
@@ -5537,8 +5523,8 @@
           43.555542
         ],
         "centroid": [
-          1.362928,
-          39.228645
+          1.411166,
+          39.256531
         ],
         "control_points": [
           {
@@ -5663,10 +5649,10 @@
           "gap_fill": 16,
           "none": 15
         },
-        "overlap_with_baseline_land_area": 0.444738,
+        "overlap_with_baseline_land_area": 0.444745,
         "pixel_fragment_area_threshold": 0.0028,
         "pixel_fragment_count": 36,
-        "post_clip_area": 4.953168,
+        "post_clip_area": 5.331167,
         "province_feature_count": 71,
         "sea_completion_bbox": [
           -6.8,
@@ -5915,10 +5901,10 @@
       }
     },
     "congo_lake_topology_mode": "true_water_preserved",
-    "context_land_mask_arc_refs": 130930,
-    "context_land_mask_area_delta_ratio": 0.0,
-    "context_land_mask_fallback_used": true,
-    "context_land_mask_tolerance": null,
+    "context_land_mask_arc_refs": 33584,
+    "context_land_mask_area_delta_ratio": 0.008904270744267489,
+    "context_land_mask_fallback_used": false,
+    "context_land_mask_tolerance": 0.35,
     "controller_rule_count": 8,
     "controller_rule_diagnostics": {},
     "controller_rule_paths": [],
@@ -6124,17 +6110,9 @@
           "RS127"
         ],
         "FFR": [
-          "CI_ADM1_83157122B12160353323799",
-          "CI_ADM1_83157122B20352934117266",
-          "CI_ADM1_83157122B28791092437733",
           "CI_ADM1_83157122B34711482467037",
-          "CI_ADM1_83157122B58892240487392",
-          "CI_ADM1_83157122B62906982633778",
-          "CI_ADM1_83157122B69310198422077",
           "CI_ADM1_83157122B73612976130091",
-          "CI_ADM1_83157122B74959515955757",
           "CI_ADM1_83157122B76853064397847",
-          "CI_ADM1_83157122B79983119233374",
           "CI_ADM1_83157122B96325295181308",
           "CI_ADM1_83157122B96959932745266"
         ],
@@ -6171,12 +6149,7 @@
           "IN_ADM2_76128533B91480770176940"
         ],
         "GCE": [
-          "UKK11",
-          "UKK12",
-          "UKK23",
-          "UKK25",
-          "UKK30",
-          "UKK43"
+          "UKK30"
         ],
         "GCO": [
           "CF_ADM1_CAF-1460",
@@ -6328,8 +6301,6 @@
           "RU_RAY_50074027B87661058912782"
         ],
         "ITA": [
-          "ATLISL_adriatica_CRO_10",
-          "ATLISL_adriatica_CRO_12",
           "ATLISL_adriatica_CRO_3",
           "ATLISL_adriatica_CRO_4",
           "ATLISL_adriatica_CRO_9",
@@ -6346,7 +6317,6 @@
           "ATLSHL_adriatica_11",
           "ATLSHL_adriatica_17",
           "ATLSHL_adriatica_4",
-          "ATLSHL_adriatica_6",
           "SI038",
           "SI043",
           "SI044"
@@ -6776,13 +6746,8 @@
           "RU_RAY_50074027B94064958751973"
         ],
         "RKM": [
-          "RU_RAY_50074027B44154738908147",
-          "RU_RAY_50074027B93805213208185"
-        ],
-        "RKO": [
-          "BY_RAY_67162791B52564132020414",
           "RU_RAY_50074027B11673707761487",
-          "RU_RAY_50074027B12162041502673",
+          "RU_RAY_50074027B44154738908147",
           "RU_RAY_50074027B49278461872326",
           "RU_RAY_50074027B5223158268211",
           "RU_RAY_50074027B5631740772865",
@@ -6792,6 +6757,12 @@
           "RU_RAY_50074027B87627181065564",
           "RU_RAY_50074027B99227036451137",
           "RU_RAY_50074027B99894122533642"
+        ],
+        "RKO": [
+          "BY_RAY_67162791B52564132020414",
+          "PL_POW_2001",
+          "PL_POW_2009",
+          "RU_RAY_50074027B12162041502673"
         ],
         "RKU": [
           "RU_RAY_50074027B11167337977127",
@@ -7316,7 +7287,7 @@
           "RU_RAY_50074027B96478141616654"
         ]
       },
-      "feature_count": 1241
+      "feature_count": 1226
     },
     "finland_greater_finland_applied": true,
     "german_baseline_annex_sets_applied": [
@@ -7392,7 +7363,7 @@
         ],
         "completion_area": 14.088851,
         "completion_feature_count": 65,
-        "expected_completion_area": 19.507005,
+        "expected_completion_area": 19.506997,
         "feature_count": 79,
         "group_label": "Adriatica Salt Basin",
         "remaining_hole_area": 0.007884,
@@ -7412,7 +7383,7 @@
         ]
       },
       "aegean": {
-        "area": 20.053281,
+        "area": 20.019421,
         "bounds": [
           22.0,
           34.4,
@@ -7420,21 +7391,21 @@
           41.048522
         ],
         "centroid": [
-          26.311726,
-          36.740919
+          26.311945,
+          36.740789
         ],
-        "completion_area": 12.131638,
-        "completion_feature_count": 67,
-        "expected_completion_area": 22.040904,
-        "feature_count": 79,
+        "completion_area": 12.113985,
+        "completion_feature_count": 64,
+        "expected_completion_area": 22.02283,
+        "feature_count": 74,
         "group_label": "Aegean and Greek Islands",
-        "remaining_hole_area": 0.02669,
-        "remaining_hole_count": 64,
+        "remaining_hole_area": 0.026414,
+        "remaining_hole_count": 63,
         "template_feature_count": 5,
         "water_state_feature_counts": {
           "8608": 3,
-          "8610": 2,
-          "8619": 2,
+          "8610": 1,
+          "8619": 1,
           "8620": 1,
           "8621": 3,
           "8622": 1
@@ -7480,7 +7451,7 @@
         ]
       },
       "levant": {
-        "area": 20.57123,
+        "area": 20.930384,
         "bounds": [
           30.8,
           31.093889,
@@ -7488,16 +7459,16 @@
           36.884826
         ],
         "centroid": [
-          33.01503,
-          33.93854
+          33.048114,
+          33.963851
         ],
-        "completion_area": 11.06181,
-        "completion_feature_count": 16,
-        "expected_completion_area": 20.551997,
-        "feature_count": 21,
+        "completion_area": 11.42007,
+        "completion_feature_count": 13,
+        "expected_completion_area": 20.911701,
+        "feature_count": 18,
         "group_label": "Levantine Retreat Margin",
-        "remaining_hole_area": 0.002441,
-        "remaining_hole_count": 5,
+        "remaining_hole_area": 0.002211,
+        "remaining_hole_count": 4,
         "template_feature_count": 2,
         "water_state_feature_counts": {
           "8609": 1,
@@ -7516,24 +7487,24 @@
         ]
       },
       "libya_suez": {
-        "area": 50.222509,
+        "area": 52.446342,
         "bounds": [
           11.877179,
           27.800002,
           35.899999,
-          34.799998
+          35.199999
         ],
         "centroid": [
-          22.237515,
-          32.969929
+          22.115828,
+          33.056009
         ],
-        "completion_area": 46.20682,
-        "completion_feature_count": 34,
-        "expected_completion_area": 71.418444,
-        "feature_count": 38,
+        "completion_area": 48.430653,
+        "completion_feature_count": 40,
+        "expected_completion_area": 79.938079,
+        "feature_count": 44,
         "group_label": "Libya, Cyrenaica and Suez Chain",
-        "remaining_hole_area": 0.021849,
-        "remaining_hole_count": 31,
+        "remaining_hole_area": 0.023298,
+        "remaining_hole_count": 34,
         "template_feature_count": 6,
         "water_state_feature_counts": {
           "8605": 1,
@@ -7554,7 +7525,7 @@
         ]
       },
       "sicily_tunis": {
-        "area": 28.230016,
+        "area": 28.219402,
         "bounds": [
           7.000002,
           34.2,
@@ -7562,13 +7533,13 @@
           39.5
         ],
         "centroid": [
-          12.260884,
-          36.842861
+          12.262352,
+          36.841944
         ],
-        "completion_area": 17.244573,
-        "completion_feature_count": 34,
-        "expected_completion_area": 31.691574,
-        "feature_count": 44,
+        "completion_area": 17.233959,
+        "completion_feature_count": 32,
+        "expected_completion_area": 31.68162,
+        "feature_count": 42,
         "group_label": "Sicily-Tunis Salt Shelf",
         "remaining_hole_area": 0.001911,
         "remaining_hole_count": 4,
@@ -7590,7 +7561,7 @@
         ]
       },
       "tyrrhenian": {
-        "area": 27.473816,
+        "area": 27.389722,
         "bounds": [
           5.0,
           37.0,
@@ -7598,16 +7569,16 @@
           45.298203
         ],
         "centroid": [
-          9.076647,
-          40.396076
+          9.075726,
+          40.395291
         ],
-        "completion_area": 15.719619,
-        "completion_feature_count": 51,
-        "expected_completion_area": 59.747053,
-        "feature_count": 67,
+        "completion_area": 15.635524,
+        "completion_feature_count": 45,
+        "expected_completion_area": 59.653159,
+        "feature_count": 61,
         "group_label": "Tyrrhenian and West Italian Coast",
-        "remaining_hole_area": 0.005497,
-        "remaining_hole_count": 16,
+        "remaining_hole_area": 0.005197,
+        "remaining_hole_count": 15,
         "template_feature_count": 5,
         "water_state_feature_counts": {
           "8578": 1,
@@ -7627,7 +7598,7 @@
         ]
       },
       "west_med": {
-        "area": 30.750448,
+        "area": 30.745809,
         "bounds": [
           -5.859879,
           33.300002,
@@ -7635,16 +7606,16 @@
           44.78117
         ],
         "centroid": [
-          1.553921,
-          38.461869
+          1.552789,
+          38.461564
         ],
-        "completion_area": 3.984962,
-        "completion_feature_count": 91,
-        "expected_completion_area": 65.888238,
-        "feature_count": 116,
+        "completion_area": 3.980324,
+        "completion_feature_count": 83,
+        "expected_completion_area": 65.786788,
+        "feature_count": 108,
         "group_label": "West Mediterranean and Iberia-Algeria",
-        "remaining_hole_area": 0.012853,
-        "remaining_hole_count": 32,
+        "remaining_hole_area": 0.012314,
+        "remaining_hole_count": 30,
         "template_feature_count": 5,
         "water_state_feature_counts": {
           "8577": 2,
@@ -10080,8 +10051,45 @@
       }
     },
     "owner_only_backfill_diagnostics": {
-      "by_tag": {},
-      "feature_count": 0
+      "by_tag": {
+        "AFA": [
+          "CI_ADM1_83157122B12160353323799",
+          "CI_ADM1_83157122B20352934117266",
+          "CI_ADM1_83157122B28791092437733",
+          "CI_ADM1_83157122B58892240487392",
+          "CI_ADM1_83157122B62906982633778",
+          "CI_ADM1_83157122B69310198422077",
+          "CI_ADM1_83157122B74959515955757",
+          "CI_ADM1_83157122B79983119233374"
+        ],
+        "ENG": [
+          "UKK11",
+          "UKK12",
+          "UKK23",
+          "UKK25",
+          "UKK43"
+        ],
+        "RKM": [
+          "RU_RAY_50074027B11673707761487",
+          "RU_RAY_50074027B49278461872326",
+          "RU_RAY_50074027B5223158268211",
+          "RU_RAY_50074027B5631740772865",
+          "RU_RAY_50074027B58076034090645",
+          "RU_RAY_50074027B64055482679717",
+          "RU_RAY_50074027B71157437388348",
+          "RU_RAY_50074027B87627181065564",
+          "RU_RAY_50074027B99227036451137",
+          "RU_RAY_50074027B99894122533642"
+        ],
+        "RKO": [
+          "PL_POW_2001",
+          "PL_POW_2009"
+        ],
+        "VOL": [
+          "RU_RAY_50074027B93805213208185"
+        ]
+      },
+      "feature_count": 26
     },
     "owner_rule_paths": [
       "data/scenario-rules/tno_1962.east_asia_ownership.manual.json"
@@ -10158,6 +10166,7 @@
     "runtime_feature_count": 11607,
     "runtime_topology_objects": [
       "political",
+      "scenario_atlantropa",
       "scenario_water",
       "scenario_special_land",
       "land_mask",
@@ -10168,19 +10177,19 @@
     "scenario_topology_source": "hgo_donor_and_tno_congo_cut",
     "sea_coverage_hole_count_by_cluster": {
       "adriatica": 13,
-      "aegean": 64,
+      "aegean": 63,
       "gabes": 3,
-      "levant": 5,
-      "libya_suez": 31,
+      "levant": 4,
+      "libya_suez": 34,
       "sicily_tunis": 4,
-      "tyrrhenian": 16,
-      "west_med": 32
+      "tyrrhenian": 15,
+      "west_med": 30
     },
     "source_root": "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\394360\\3583339918",
     "south_asia_owner_layer_tags": [
       "FRI"
     ],
-    "special_region_source": "runtime_topology_atl_political_features",
+    "special_region_source": "runtime_topology_scenario_atlantropa_features",
     "state_count": 1046,
     "state_delta_gate": {
       "covered_by_direct_mapping": [],
@@ -10561,9 +10570,10 @@
       "tno_banda_sea",
       "tno_molucca_sea",
       "tno_halmahera_sea",
-      "congo_lake"
+      "congo_lake",
+      "tno_qyzylorda_inland_water"
     ],
-    "water_region_source": "tno_extracted_lake_provinces+tno_ocean_bbox_split+marine_regions_named_waters_snapshot+global_water_region_clones",
+    "water_region_source": "tno_extracted_lake_provinces+tno_political_interior_holes+tno_ocean_bbox_split+marine_regions_named_waters_snapshot+global_water_region_clones",
     "water_regions_provenance": {
       "asset_path": "data/scenarios/tno_1962/water_regions.geojson",
       "builder": "tools/patch_tno_1962_bundle.py",
@@ -96315,16 +96325,16 @@
       "to_tag": "SOV"
     }
   ],
-  "generated_at": "2026-04-13T01:45:34Z",
+  "generated_at": "2026-05-08T00:03:04Z",
   "owner_bucket_mismatch_count": 0,
   "owner_stats": {
     "AFA": {
       "base_iso2": "NE",
       "continent_label": "Africa",
-      "controller_feature_count": 86,
+      "controller_feature_count": 117,
       "display_name": "African Anarchy",
       "entry_kind": "scenario_country",
-      "feature_count": 109,
+      "feature_count": 117,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -96337,7 +96347,7 @@
       "provenance_iso2": "NE",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 109
+        "manual_reviewed": 117
       },
       "rule_sources": [
         "tno_1962_afa_manual_override"
@@ -96486,7 +96496,7 @@
     "AOF": {
       "base_iso2": "SN",
       "continent_label": "Africa",
-      "controller_feature_count": 29,
+      "controller_feature_count": 14,
       "display_name": "French West Africa",
       "entry_kind": "scenario_subject",
       "feature_count": 14,
@@ -96719,10 +96729,10 @@
     "ATL": {
       "base_iso2": "ZZ",
       "continent_label": "Special",
-      "controller_feature_count": 465,
+      "controller_feature_count": 442,
       "display_name": "Atlantropa Reclamation Zone",
       "entry_kind": "",
-      "feature_count": 465,
+      "feature_count": 442,
       "hidden_from_country_list": true,
       "historical_fidelity": "alternate_history",
       "historical_fidelity_summary": [
@@ -96735,7 +96745,7 @@
       "provenance_iso2": "ZZ",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 465
+        "manual_reviewed": 442
       },
       "rule_sources": [
         "atlantropa_dummy_owner"
@@ -96913,7 +96923,7 @@
     "BOP": {
       "base_iso2": "BOP",
       "continent_label": "",
-      "controller_feature_count": 4,
+      "controller_feature_count": 8,
       "display_name": "вор в законе",
       "entry_kind": "scenario_country",
       "feature_count": 8,
@@ -97006,7 +97016,7 @@
     "BRG": {
       "base_iso2": "BE",
       "continent_label": "Europe",
-      "controller_feature_count": 91,
+      "controller_feature_count": 90,
       "display_name": "Ordensstaat Burgund",
       "entry_kind": "scenario_country",
       "feature_count": 90,
@@ -97140,7 +97150,7 @@
     "BWA": {
       "base_iso2": "NG",
       "continent_label": "Africa",
-      "controller_feature_count": 35,
+      "controller_feature_count": 27,
       "display_name": "British West Africa",
       "entry_kind": "scenario_country",
       "feature_count": 27,
@@ -97206,7 +97216,7 @@
     "CAM": {
       "base_iso2": "KH",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 17,
       "display_name": "Cambodia",
       "entry_kind": "scenario_subject",
       "feature_count": 17,
@@ -97305,7 +97315,7 @@
     "CHI": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 825,
+      "controller_feature_count": 709,
       "display_name": "Republic of China",
       "entry_kind": "scenario_subject",
       "feature_count": 709,
@@ -97466,10 +97476,10 @@
     "CRO": {
       "base_iso2": "HR",
       "continent_label": "Europe",
-      "controller_feature_count": 48,
+      "controller_feature_count": 35,
       "display_name": "Independent State of Croatia",
       "entry_kind": "scenario_subject",
-      "feature_count": 48,
+      "feature_count": 35,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -97484,7 +97494,7 @@
       "provenance_iso2": "HR",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 48
+        "manual_reviewed": 35
       },
       "rule_sources": [
         "tno_italy_cro"
@@ -97691,10 +97701,10 @@
     "ENG": {
       "base_iso2": "GB",
       "continent_label": "Europe",
-      "controller_feature_count": 130,
+      "controller_feature_count": 135,
       "display_name": "Britain",
       "entry_kind": "",
-      "feature_count": 130,
+      "feature_count": 135,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -97707,7 +97717,7 @@
       "provenance_iso2": "GB",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 130
+        "approx_existing_geometry": 135
       },
       "rule_sources": [
         "british_colonies",
@@ -97726,10 +97736,10 @@
     "FFR": {
       "base_iso2": "FR",
       "continent_label": "Africa",
-      "controller_feature_count": 13,
+      "controller_feature_count": 5,
       "display_name": "Free France",
       "entry_kind": "scenario_country",
-      "feature_count": 13,
+      "feature_count": 5,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -97742,7 +97752,7 @@
       "provenance_iso2": "FR",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 13
+        "manual_reviewed": 5
       },
       "rule_sources": [
         "tno_1962_ffr_manual_override"
@@ -97759,7 +97769,7 @@
     "FIC": {
       "base_iso2": "RU",
       "continent_label": "Asia",
-      "controller_feature_count": 6,
+      "controller_feature_count": 13,
       "display_name": "Far Eastern Intervention Committee",
       "entry_kind": "scenario_country",
       "feature_count": 13,
@@ -97825,10 +97835,10 @@
     "FRA": {
       "base_iso2": "FR",
       "continent_label": "Europe",
-      "controller_feature_count": 295,
+      "controller_feature_count": 294,
       "display_name": "France",
       "entry_kind": "",
-      "feature_count": 295,
+      "feature_count": 294,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -97841,7 +97851,7 @@
       "provenance_iso2": "FR",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 295
+        "approx_existing_geometry": 294
       },
       "rule_sources": [
         "french_colonies"
@@ -97858,7 +97868,7 @@
     "FRI": {
       "base_iso2": "IN",
       "continent_label": "Asia",
-      "controller_feature_count": 32,
+      "controller_feature_count": 199,
       "display_name": "Azad Hind",
       "entry_kind": "scenario_subject",
       "feature_count": 199,
@@ -97924,10 +97934,10 @@
     "GCE": {
       "base_iso2": "GB",
       "continent_label": "Europe",
-      "controller_feature_count": 6,
+      "controller_feature_count": 1,
       "display_name": "German Cornwall Expeditionary Force",
       "entry_kind": "scenario_country",
-      "feature_count": 6,
+      "feature_count": 1,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -97942,7 +97952,7 @@
       "provenance_iso2": "GB",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 6
+        "manual_reviewed": 1
       },
       "rule_sources": [
         "tno_1962_gce_manual_override"
@@ -98029,10 +98039,10 @@
     "GER": {
       "base_iso2": "DE",
       "continent_label": "Europe",
-      "controller_feature_count": 841,
+      "controller_feature_count": 840,
       "display_name": "Germany",
       "entry_kind": "",
-      "feature_count": 842,
+      "feature_count": 840,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -98045,7 +98055,7 @@
       "provenance_iso2": "DE",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 842
+        "manual_reviewed": 840
       },
       "rule_sources": [
         "germany_frontier_1936",
@@ -98066,7 +98076,7 @@
     "GMA": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 83,
+      "controller_feature_count": 104,
       "display_name": "Northwest Pacification Government",
       "entry_kind": "scenario_subject",
       "feature_count": 104,
@@ -98101,7 +98111,7 @@
     "GNG": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 17,
+      "controller_feature_count": 113,
       "display_name": "Guangdong State",
       "entry_kind": "scenario_subject",
       "feature_count": 113,
@@ -98136,7 +98146,7 @@
     "GOR": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 17,
+      "controller_feature_count": 46,
       "display_name": "13th Panzer Army - Gorky",
       "entry_kind": "scenario_country",
       "feature_count": 46,
@@ -98169,10 +98179,10 @@
     "GRE": {
       "base_iso2": "GR",
       "continent_label": "Europe",
-      "controller_feature_count": 162,
+      "controller_feature_count": 169,
       "display_name": "Greek Protectorate",
       "entry_kind": "scenario_subject",
-      "feature_count": 162,
+      "feature_count": 169,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -98187,7 +98197,7 @@
       "provenance_iso2": "GR",
       "quality": "direct_country_copy",
       "quality_breakdown": {
-        "direct_country_copy": 162
+        "direct_country_copy": 169
       },
       "rule_sources": [
         "tno_italy_gre"
@@ -98301,7 +98311,7 @@
     "GUI": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 82,
       "display_name": "Guizhou Clique",
       "entry_kind": "scenario_subject",
       "feature_count": 82,
@@ -98762,10 +98772,10 @@
     "ITA": {
       "base_iso2": "IT",
       "continent_label": "Europe",
-      "controller_feature_count": 244,
+      "controller_feature_count": 246,
       "display_name": "Italy",
       "entry_kind": "",
-      "feature_count": 247,
+      "feature_count": 246,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -98778,7 +98788,7 @@
       "provenance_iso2": "IT",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 247
+        "manual_reviewed": 246
       },
       "rule_sources": [
         "1939_italy_albania"
@@ -98795,7 +98805,7 @@
     "JAP": {
       "base_iso2": "JP",
       "continent_label": "Asia",
-      "controller_feature_count": 123,
+      "controller_feature_count": 108,
       "display_name": "Japan",
       "entry_kind": "",
       "feature_count": 108,
@@ -99094,7 +99104,7 @@
     "LAO": {
       "base_iso2": "LA",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 14,
       "display_name": "Laos",
       "entry_kind": "scenario_subject",
       "feature_count": 14,
@@ -99333,7 +99343,7 @@
     "MAN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 330,
+      "controller_feature_count": 323,
       "display_name": "Manchukuo",
       "entry_kind": "scenario_subject",
       "feature_count": 323,
@@ -99401,7 +99411,7 @@
     "MEN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 32,
+      "controller_feature_count": 79,
       "display_name": "Mengjiang",
       "entry_kind": "scenario_subject",
       "feature_count": 79,
@@ -99498,7 +99508,7 @@
     "MNT": {
       "base_iso2": "ME",
       "continent_label": "Europe",
-      "controller_feature_count": 18,
+      "controller_feature_count": 15,
       "display_name": "Montenegro",
       "entry_kind": "scenario_subject",
       "feature_count": 15,
@@ -99533,7 +99543,7 @@
     "MON": {
       "base_iso2": "MN",
       "continent_label": "Asia",
-      "controller_feature_count": 15,
+      "controller_feature_count": 13,
       "display_name": "Mongolia",
       "entry_kind": "",
       "feature_count": 13,
@@ -99663,7 +99673,7 @@
     "NCP": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 229,
+      "controller_feature_count": 253,
       "display_name": "North China Political Council",
       "entry_kind": "scenario_subject",
       "feature_count": 253,
@@ -100053,7 +100063,7 @@
     "OUR": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 24,
+      "controller_feature_count": 26,
       "display_name": "Orenburg-Ural Union",
       "entry_kind": "scenario_country",
       "feature_count": 26,
@@ -100312,70 +100322,6 @@
       "subregion_label": "South-Eastern Asia",
       "synthetic_owner": false
     },
-    "POR": {
-      "base_iso2": "PT",
-      "continent_label": "Europe",
-      "controller_feature_count": 1,
-      "display_name": "Portugal",
-      "entry_kind": "controller_only",
-      "feature_count": 0,
-      "hidden_from_country_list": true,
-      "historical_fidelity": "tno_baseline",
-      "historical_fidelity_summary": [
-        "tno_baseline"
-      ],
-      "lookup_iso2": "PT",
-      "parent_owner_tag": "IBR",
-      "parent_owner_tags": [
-        "IBR"
-      ],
-      "primary_rule_source": "tno_1962_controller_only_por",
-      "provenance_iso2": "PT",
-      "quality": "manual_reviewed",
-      "quality_breakdown": {},
-      "rule_sources": [
-        "tno_1962_controller_only_por"
-      ],
-      "scenario_only": true,
-      "source_type": "controller_overlay",
-      "source_types": [
-        "controller_overlay"
-      ],
-      "subject_kind": "",
-      "subregion_label": "Southern Europe",
-      "synthetic_owner": false
-    },
-    "PRC": {
-      "base_iso2": "CN",
-      "continent_label": "Asia",
-      "controller_feature_count": 25,
-      "display_name": "Communist China",
-      "entry_kind": "controller_only",
-      "feature_count": 0,
-      "hidden_from_country_list": false,
-      "historical_fidelity": "tno_baseline",
-      "historical_fidelity_summary": [
-        "tno_baseline"
-      ],
-      "lookup_iso2": "CN",
-      "parent_owner_tag": "",
-      "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_controller_only_prc",
-      "provenance_iso2": "CN",
-      "quality": "manual_reviewed",
-      "quality_breakdown": {},
-      "rule_sources": [
-        "tno_1962_controller_only_prc"
-      ],
-      "scenario_only": true,
-      "source_type": "controller_overlay",
-      "source_types": [
-        "controller_overlay"
-      ],
-      "subject_kind": "",
-      "subregion_label": "Eastern Asia",
-      "synthetic_owner": false
-    },
     "PRM": {
       "base_iso2": "RU",
       "continent_label": "Europe",
@@ -100507,7 +100453,7 @@
     "QMA": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 41,
+      "controller_feature_count": 33,
       "display_name": "13th National Revolutionary Army",
       "entry_kind": "scenario_subject",
       "feature_count": 33,
@@ -100542,7 +100488,7 @@
     "RAJ": {
       "base_iso2": "IN",
       "continent_label": "Asia",
-      "controller_feature_count": 679,
+      "controller_feature_count": 512,
       "display_name": "British Raj",
       "entry_kind": "scenario_country",
       "feature_count": 512,
@@ -100608,7 +100554,7 @@
     "RGC": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 320,
+      "controller_feature_count": 177,
       "display_name": "Sichuan Clique",
       "entry_kind": "scenario_subject",
       "feature_count": 177,
@@ -100643,7 +100589,7 @@
     "RKK": {
       "base_iso2": "GE",
       "continent_label": "Asia",
-      "controller_feature_count": 300,
+      "controller_feature_count": 317,
       "display_name": "Reichskommissariat Kaukasien",
       "entry_kind": "scenario_country",
       "feature_count": 317,
@@ -100678,10 +100624,10 @@
     "RKM": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 803,
+      "controller_feature_count": 770,
       "display_name": "Reichskommissariat Moskowien",
       "entry_kind": "scenario_country",
-      "feature_count": 761,
+      "feature_count": 770,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -100696,7 +100642,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 761
+        "manual_reviewed": 770
       },
       "rule_sources": [
         "tno_baseline_rkm"
@@ -100783,10 +100729,10 @@
     "RKO": {
       "base_iso2": "LT",
       "continent_label": "Europe",
-      "controller_feature_count": 89,
+      "controller_feature_count": 68,
       "display_name": "Reichskommissariat Ostland",
       "entry_kind": "scenario_country",
-      "feature_count": 76,
+      "feature_count": 68,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -100801,7 +100747,7 @@
       "provenance_iso2": "LT",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 76
+        "manual_reviewed": 68
       },
       "rule_sources": [
         "tno_baseline_rko"
@@ -101053,7 +100999,7 @@
     "SAM": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 47,
+      "controller_feature_count": 73,
       "display_name": "Russian Liberation Army",
       "entry_kind": "scenario_country",
       "feature_count": 73,
@@ -101253,7 +101199,7 @@
     "SHX": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 136,
+      "controller_feature_count": 196,
       "display_name": "Shanxi",
       "entry_kind": "scenario_subject",
       "feature_count": 196,
@@ -101318,68 +101264,6 @@
       "subregion_label": "South-Eastern Asia",
       "synthetic_owner": false
     },
-    "SIC": {
-      "base_iso2": "CN",
-      "continent_label": "Asia",
-      "controller_feature_count": 4,
-      "display_name": "Xikang Clique",
-      "entry_kind": "controller_only",
-      "feature_count": 0,
-      "hidden_from_country_list": false,
-      "historical_fidelity": "tno_baseline",
-      "historical_fidelity_summary": [
-        "tno_baseline"
-      ],
-      "lookup_iso2": "CN",
-      "parent_owner_tag": "",
-      "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_controller_only_sic",
-      "provenance_iso2": "CN",
-      "quality": "manual_reviewed",
-      "quality_breakdown": {},
-      "rule_sources": [
-        "tno_1962_controller_only_sic"
-      ],
-      "scenario_only": true,
-      "source_type": "controller_overlay",
-      "source_types": [
-        "controller_overlay"
-      ],
-      "subject_kind": "",
-      "subregion_label": "Eastern Asia",
-      "synthetic_owner": false
-    },
-    "SIK": {
-      "base_iso2": "CN",
-      "continent_label": "Asia",
-      "controller_feature_count": 87,
-      "display_name": "Sinkiang",
-      "entry_kind": "controller_only",
-      "feature_count": 0,
-      "hidden_from_country_list": false,
-      "historical_fidelity": "tno_baseline",
-      "historical_fidelity_summary": [
-        "tno_baseline"
-      ],
-      "lookup_iso2": "CN",
-      "parent_owner_tag": "",
-      "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_controller_only_sik",
-      "provenance_iso2": "CN",
-      "quality": "manual_reviewed",
-      "quality_breakdown": {},
-      "rule_sources": [
-        "tno_1962_controller_only_sik"
-      ],
-      "scenario_only": true,
-      "source_type": "controller_overlay",
-      "source_types": [
-        "controller_overlay"
-      ],
-      "subject_kind": "",
-      "subregion_label": "Eastern Asia",
-      "synthetic_owner": false
-    },
     "SLO": {
       "base_iso2": "SK",
       "continent_label": "Europe",
@@ -101416,7 +101300,7 @@
     "SOV": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 49,
+      "controller_feature_count": 20,
       "display_name": "Soviet Union",
       "entry_kind": "",
       "feature_count": 20,
@@ -101484,7 +101368,7 @@
     "SVR": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 109,
+      "controller_feature_count": 105,
       "display_name": "Ural Military District",
       "entry_kind": "scenario_country",
       "feature_count": 105,
@@ -101682,7 +101566,7 @@
     "TIB": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 74,
+      "controller_feature_count": 82,
       "display_name": "Tibet",
       "entry_kind": "scenario_subject",
       "feature_count": 82,
@@ -101983,7 +101867,7 @@
     "URA": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 6,
+      "controller_feature_count": 7,
       "display_name": "Ural Military District Red Air Force",
       "entry_kind": "scenario_country",
       "feature_count": 7,
@@ -102173,7 +102057,7 @@
     "VIN": {
       "base_iso2": "VN",
       "continent_label": "Asia",
-      "controller_feature_count": 83,
+      "controller_feature_count": 52,
       "display_name": "Vietnam",
       "entry_kind": "scenario_subject",
       "feature_count": 52,
@@ -102274,10 +102158,10 @@
     "VOL": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 21,
+      "controller_feature_count": 30,
       "display_name": "Vologda Neutral Zone",
       "entry_kind": "scenario_country",
-      "feature_count": 29,
+      "feature_count": 30,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -102290,7 +102174,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 29
+        "manual_reviewed": 30
       },
       "rule_sources": [
         "tno_1962_vol_manual_override"
@@ -102404,7 +102288,7 @@
     "WRS": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 26,
+      "controller_feature_count": 27,
       "display_name": "West Russian Revolutionary Front",
       "entry_kind": "scenario_country",
       "feature_count": 27,
@@ -102470,7 +102354,7 @@
     "XIN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 87,
       "display_name": "Xinjiang",
       "entry_kind": "scenario_subject",
       "feature_count": 87,
@@ -102499,37 +102383,6 @@
         "scenario_extension"
       ],
       "subject_kind": "client_state",
-      "subregion_label": "Eastern Asia",
-      "synthetic_owner": false
-    },
-    "XSM": {
-      "base_iso2": "CN",
-      "continent_label": "Asia",
-      "controller_feature_count": 24,
-      "display_name": "Xibei San Ma",
-      "entry_kind": "controller_only",
-      "feature_count": 0,
-      "hidden_from_country_list": false,
-      "historical_fidelity": "tno_baseline",
-      "historical_fidelity_summary": [
-        "tno_baseline"
-      ],
-      "lookup_iso2": "CN",
-      "parent_owner_tag": "",
-      "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_controller_only_xsm",
-      "provenance_iso2": "CN",
-      "quality": "manual_reviewed",
-      "quality_breakdown": {},
-      "rule_sources": [
-        "tno_1962_controller_only_xsm"
-      ],
-      "scenario_only": true,
-      "source_type": "controller_overlay",
-      "source_types": [
-        "controller_overlay"
-      ],
-      "subject_kind": "",
       "subregion_label": "Eastern Asia",
       "synthetic_owner": false
     },
@@ -102737,29 +102590,29 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "909c726f164ddf234af73363499275d5a8752ca0d18510c65c80f242f44b782f",
+  "snapshot_fingerprint": "a8d92c3282db70aeda4ff54221e5933f7498fca6908094b8cc5153bf2c2d0d7c",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "adb69864adc0c41eb0226f07ecb3a4457b3d28fff954675a9775cbdb08323a32",
-    "detail_chunk_manifest_sha256": "3ed758bf7b92da25bd221fb49dff1547519d51aa647c8f20e0630a89f9184eb8",
-    "runtime_bootstrap_topology_sha256": "bdb2d27ca2666749f35e2cc17b9f27427c15ec4232d4b314c179742fdc725555",
-    "runtime_topology_sha256": "f737182cf75c65b3977aea679f5f7a102877b7a344173a0db32c3b9fb8d564ab"
+    "build_snapshot_sha256": "021a1e15302138014f04ac464408842aacfc7f648b4269a40f8e764b4bbe1a81",
+    "detail_chunk_manifest_sha256": "8063bc87446eb33109376f64faa105ffe7a5e0b3130174d4ff3f4f7dfada9261",
+    "runtime_bootstrap_topology_sha256": "df37f68afd87760f882a0681d3068d86a016eda6f75a8c4bbe6bbba28b21d963",
+    "runtime_topology_sha256": "d319260a5073ce259cbef8be808c819502b0498f67e35cdc25d5b37c298da4a7"
   },
   "summary": {
-    "approximate_count": 915,
+    "approximate_count": 919,
     "belarus_hybrid_feature_count": 0,
     "blocker_count": 0,
     "changed_feature_count": 2032,
-    "context_land_mask_arc_refs": 130930,
-    "context_land_mask_area_delta_ratio": 0.0,
-    "context_land_mask_fallback_used": true,
-    "context_land_mask_tolerance": null,
-    "controller_count": 175,
+    "context_land_mask_arc_refs": 33584,
+    "context_land_mask_area_delta_ratio": 0.008904270744267489,
+    "context_land_mask_fallback_used": false,
+    "context_land_mask_tolerance": 0.35,
+    "controller_count": 174,
     "controller_rule_count": 8,
     "critical_region_check_count": 0,
     "critical_unresolved_count": 0,
     "failed_region_check_count": 0,
-    "feature_count": 12811,
+    "feature_count": 12780,
     "geometry_blocker_count": 0,
     "manual_reviewed_feature_count": 9467,
     "manual_reviewed_region_count": 0,
@@ -102770,9 +102623,9 @@
       "direct_country_copy": 2424,
       "manual_reviewed": 9467
     },
-    "scenario_atlantropa_feature_count": 927,
+    "scenario_atlantropa_feature_count": 896,
     "scenario_rule_blocker_count": 0,
-    "scenario_runtime_topology_object_count": 5,
+    "scenario_runtime_topology_object_count": 6,
     "source_counts": {
       "direct_active_owner": 4259,
       "fallback_mapped_tag": 3,
@@ -102780,8 +102633,8 @@
       "scenario_generated": 473,
       "tno_reichskommissariat_baseline": 1944
     },
-    "synthetic_count": 468,
-    "synthetic_owner_feature_count": 468,
+    "synthetic_count": 445,
+    "synthetic_owner_feature_count": 445,
     "tno_bathymetry_band_count": 90,
     "tno_bathymetry_contour_count": 74,
     "tno_named_marginal_water_count": 101,

@@ -7,7 +7,7 @@
       "properties": {
         "id": "RU_RAY_50074027B93805213208185",
         "name": "Kiknursky District",
-        "cntr_code": "RKM",
+        "cntr_code": "VOL",
         "__source": "detail"
       },
       "geometry": {
@@ -165,6 +165,10 @@
             [
               47.28827288272885,
               57.195762730627294
+            ],
+            [
+              47.399258992590006,
+              57.20013125716257
             ],
             [
               47.442059035974985,
@@ -578,6 +582,10 @@
             [
               41.906219062190644,
               60.36713941139412
+            ],
+            [
+              41.91701917019169,
+              60.37581860318601
             ],
             [
               41.92535311179886,
@@ -2282,8 +2290,16 @@
                 58.48644399290625
               ],
               [
+                45.106651066510665,
+                58.487226469264684
+              ],
+              [
                 45.12105121051212,
                 58.497641499414996
+              ],
+              [
+                45.07985885797353,
+                58.50910024149446
               ],
               [
                 45.02745027450274,
@@ -2308,6 +2324,10 @@
               [
                 44.8510485104851,
                 58.619150184501834
+              ],
+              [
+                44.76723791628166,
+                58.607436803709554
               ],
               [
                 44.76723791628161,
@@ -2563,6 +2583,10 @@
               ],
               [
                 46.20006926692258,
+                58.577887063263134
+              ],
+              [
+                46.20006926692259,
                 58.577887063263134
               ],
               [
@@ -2982,6 +3006,10 @@
               58.60873515435155
             ],
             [
+              44.769161977334036,
+              58.60983727394412
+            ],
+            [
               44.76916197733407,
               58.60983727394417
             ],
@@ -3008,6 +3036,10 @@
             [
               45.00225002250022,
               58.57749006390064
+            ],
+            [
+              45.07985885797353,
+              58.50910024149446
             ],
             [
               45.10556919040693,
@@ -3216,8 +3248,16 @@
                 58.6074368037095
               ],
               [
+                44.76723791628166,
+                58.607436803709554
+              ],
+              [
                 44.76824768247684,
                 58.60873515435155
+              ],
+              [
+                44.769161977334036,
+                58.60983727394412
               ],
               [
                 44.76916197733407,
@@ -5048,6 +5088,10 @@
                 58.577887063263134
               ],
               [
+                46.20006926692259,
+                58.577887063263134
+              ],
+              [
                 46.26586265862659,
                 58.58790509405095
               ],
@@ -6092,6 +6136,10 @@
                 58.692055395553965
               ],
               [
+                47.89857372257933,
+                58.69187267572676
+              ],
+              [
                 48.130681306813074,
                 58.66948949689497
               ],
@@ -6150,6 +6198,10 @@
               [
                 48.4130326335193,
                 58.90080387887534
+              ],
+              [
+                48.4125765395585,
+                58.901110190398455
               ],
               [
                 48.281882818828194,
@@ -6300,14 +6352,6 @@
           [
             [
               [
-                47.85327475916273,
-                58.67027553690636
-              ],
-              [
-                47.84987849878499,
-                58.6660178201782
-              ],
-              [
                 47.87867878678787,
                 58.690319557195565
               ],
@@ -6322,6 +6366,22 @@
               [
                 47.85327475916273,
                 58.67027553690636
+              ],
+              [
+                47.84987849878499,
+                58.6660178201782
+              ],
+              [
+                47.85185112125097,
+                58.66768232271365
+              ],
+              [
+                47.85800761233422,
+                58.67287718143313
+              ],
+              [
+                47.87867878678787,
+                58.690319557195565
               ]
             ]
           ]
@@ -6365,6 +6425,10 @@
               [
                 48.407884078840794,
                 58.90035599855999
+              ],
+              [
+                48.4125765395585,
+                58.901110190398455
               ],
               [
                 48.42092323362259,
@@ -7865,6 +7929,10 @@
                 61.29581293312934
               ],
               [
+                45.35685356853538,
+                61.29494501395016
+              ],
+              [
                 45.36945369453696,
                 61.29407709477094
               ],
@@ -8118,118 +8186,23 @@
       }
     },
     {
-      "id": 69,
+      "id": 11928,
       "type": "Feature",
       "properties": {
-        "id": "RU_ARCTIC_FB_VOL_052",
+        "id": "RU_ARCTIC_FB_VOL_046",
         "name": "Russia Shell Fallback VOL",
         "cntr_code": "RU",
-        "admin1_group": null,
-        "detail_tier": "scenario_runtime_shell",
-        "__source": "detail",
-        "scenario_id": "tno_1962",
-        "scenario_helper_kind": "shell_fallback",
-        "scenario_shell_owner_hint": "VOL",
-        "scenario_shell_controller_hint": "RKM",
-        "source_fragment_count": 26.0,
-        "source_fragment_area": 0.027624,
-        "retained_fragment_area": 0.003409,
-        "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              47.050670506705075,
-              58.02375762757627
-            ],
-            [
-              47.08667086670869,
-              58.0202859508595
-            ],
-            [
-              46.50346503465036,
-              58.04458768787687
-            ],
-            [
-              47.41787417874178,
-              58.00292756727568
-            ],
-            [
-              47.41427414274145,
-              57.98383334533345
-            ],
-            [
-              47.493474934749344,
-              58.0202859508595
-            ],
-            [
-              47.34947349473495,
-              58.00987092070922
-            ],
-            [
-              47.050670506705075,
-              58.02375762757627
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": 70,
-      "type": "Feature",
-      "properties": {
-        "id": "RU_ARCTIC_FB_VOL_053",
-        "name": "Russia Shell Fallback VOL",
-        "cntr_code": "RU",
-        "admin1_group": null,
         "detail_tier": "scenario_runtime_shell",
         "__source": "detail",
         "scenario_id": "tno_1962",
         "scenario_helper_kind": "shell_fallback",
         "scenario_shell_owner_hint": "VOL",
         "scenario_shell_controller_hint": "VOL",
-        "source_fragment_count": 53.0,
-        "source_fragment_area": 0.090837,
+        "source_fragment_count": 79.0,
+        "source_fragment_area": 0.118461,
         "retained_fragment_area": 0.010273,
         "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
+        "render_as_base_geography": false
       },
       "geometry": {
         "type": "Polygon",

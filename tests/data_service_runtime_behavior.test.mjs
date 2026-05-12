@@ -68,6 +68,18 @@ const stubCatalogPayload = {
       sourceId: "",
       readMode: "json",
     },
+    {
+      key: "unsupported:binary",
+      url: "data/unsupported.bin",
+      role: "unsupported_fixture",
+      format: "binary",
+      schemaRef: "schema://binary/fixture",
+      hashRef: "",
+      owner: "test",
+      cachePolicy: "default",
+      sourceId: "",
+      readMode: "binary",
+    },
   ],
 };
 
@@ -105,6 +117,10 @@ const patchedDataServiceSource = dataServiceSource
           url: "data/transport_layers/japan_corridor/carrier.json",
           role: "transport_workbench_carrier",
         },
+        "unsupported:binary": {
+          url: "data/unsupported.bin",
+          role: "unsupported_fixture",
+        },
       },
     })};
     const RUNTIME_ASSET_URLS = Object.freeze(${JSON.stringify({
@@ -112,6 +128,7 @@ const patchedDataServiceSource = dataServiceSource
       "transport_manifest:road": "data/transport_layers/japan_road/manifest.json",
       "city_lights:historical_1930:asset": "js/core/city_lights_historical_1930_asset.js",
       "transport_carrier:japan_corridor": "data/transport_layers/japan_corridor/carrier.json",
+      "unsupported:binary": "data/unsupported.bin",
     })});`,
   )
   .replace(
@@ -213,11 +230,28 @@ test("data service fail-fast paths reject unknown keys and unsupported read mode
     (error) => error?.code === "catalog-path-not-allowed",
   );
   await assert.rejects(
-    () => dataServiceModule.getAsset("city_lights:historical_1930:asset"),
+    () => dataServiceModule.getAsset("unsupported:binary"),
     (error) => error?.code === "unsupported-format",
   );
 
   clearJsonLoaderStub();
+});
+
+test("data service loads module runtime assets through getAsset", async () => {
+  const payload = await dataServiceModule.getAsset("city_lights:historical_1930:asset", {
+    moduleLoader: async (specifier) => ({
+      specifier,
+      exported: true,
+    }),
+  });
+
+  assert.equal(payload.exported, true);
+  assert.match(payload.specifier, /js\/core\/city_lights_historical_1930_asset\.js$/);
+
+  const snapshot = dataServiceModule.getStatusSnapshot();
+  const requestId = "asset:city_lights:historical_1930:asset";
+  assert.equal(snapshot.resources[requestId].status, "ready");
+  assert.equal(snapshot.resources[requestId].url, "js/core/city_lights_historical_1930_asset.js");
 });
 
 test("data service records HTTP failures in load status snapshots", async () => {
@@ -303,7 +337,7 @@ test("__mapcreator__ snapshot stays JSON-serializable", async () => {
   const snapshot = globalThis.__mapcreator__.snapshot();
   const roundTrip = JSON.parse(JSON.stringify(snapshot));
   assert.deepEqual(roundTrip, snapshot);
-  assert.equal(roundTrip.assets.providers.data_service.runtimeAssetCount, 4);
+  assert.equal(roundTrip.assets.providers.data_service.runtimeAssetCount, 5);
   assert.equal(roundTrip.version.providers.data_service.catalogVersion, 1);
 
   clearJsonLoaderStub();

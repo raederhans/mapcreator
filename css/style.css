@@ -9693,6 +9693,7 @@ body.right-drawer-open::after {
 
 .special-zone-layer-row,
 .special-zone-member-actions-row,
+.special-zone-member-current-target-row,
 .special-zone-layer-actions-row,
 .special-zone-member-brush-row {
   display: flex;

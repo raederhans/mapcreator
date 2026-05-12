@@ -464,6 +464,10 @@
               61.636037251372514
             ],
             [
+              59.251039318903956,
+              61.64715400341239
+            ],
+            [
               59.258392583925854,
               61.6481881198812
             ],
@@ -826,6 +830,10 @@
           ],
           [
             [
+              59.60399603996041,
+              62.38071190711908
+            ],
+            [
               59.567995679956795,
               62.4206361893619
             ],
@@ -836,10 +844,6 @@
             [
               59.60399603996041,
               62.38071190711908
-            ],
-            [
-              59.567995679956795,
-              62.4206361893619
             ]
           ],
           [
@@ -1331,13 +1335,12 @@
       }
     },
     {
-      "id": 47,
+      "id": 11909,
       "type": "Feature",
       "properties": {
-        "id": "RU_ARCTIC_FB_PRM_030",
+        "id": "RU_ARCTIC_FB_PRM_027",
         "name": "Russia Shell Fallback PRM",
         "cntr_code": "RU",
-        "admin1_group": null,
         "detail_tier": "scenario_runtime_shell",
         "__source": "detail",
         "scenario_id": "tno_1962",
@@ -1348,32 +1351,23 @@
         "source_fragment_area": 0.023228,
         "retained_fragment_area": 0.003275,
         "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
+        "render_as_base_geography": false
       },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
           [
             [
+              59.85599855998561,
+              64.13217281072811
+            ],
+            [
               59.819998199981995,
               64.13564448744488
+            ],
+            [
+              59.819998199981995,
+              64.13390864908648
             ],
             [
               59.819998199981995,
@@ -1390,10 +1384,6 @@
             [
               59.85599855998561,
               64.13217281072811
-            ],
-            [
-              59.819998199981995,
-              64.13564448744488
             ]
           ]
         ]

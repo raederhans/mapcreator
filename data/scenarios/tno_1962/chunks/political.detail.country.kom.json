@@ -881,6 +881,10 @@
             ],
             [
               [
+                54.70794707947081,
+                58.96805369453695
+              ],
+              [
                 54.700747007470085,
                 58.96805369453695
               ],
@@ -890,10 +894,6 @@
               ],
               [
                 54.70794707947081,
-                58.96805369453695
-              ],
-              [
-                54.700747007470085,
                 58.96805369453695
               ]
             ],
@@ -1001,6 +1001,10 @@
             ],
             [
               [
+                54.52794527945281,
+                59.03401555215551
+              ],
+              [
                 54.53154531545317,
                 59.03575139051391
               ],
@@ -1011,10 +1015,6 @@
               [
                 54.52794527945281,
                 59.03401555215551
-              ],
-              [
-                54.53154531545317,
-                59.03575139051391
               ]
             ]
           ],
@@ -1938,6 +1938,10 @@
             [
               50.71330068139393,
               59.053669721955295
+            ],
+            [
+              50.64604683782676,
+              59.049756003382676
             ],
             [
               50.52470524705248,
@@ -3507,6 +3511,10 @@
                 59.992688904146355
               ],
               [
+                53.681630975601784,
+                59.99111688332458
+              ],
+              [
                 53.68193681936819,
                 59.99046248762487
               ],
@@ -4616,14 +4624,6 @@
             ],
             [
               [
-                50.90270902709028,
-                61.5527170101701
-              ],
-              [
-                50.89190891908919,
-                61.55445284852847
-              ],
-              [
                 50.9279092790928,
                 61.55445284852847
               ],
@@ -4646,6 +4646,14 @@
               [
                 50.90270902709028,
                 61.5527170101701
+              ],
+              [
+                50.89190891908919,
+                61.55445284852847
+              ],
+              [
+                50.9279092790928,
+                61.55445284852847
               ]
             ]
           ],
@@ -4828,13 +4836,12 @@
       }
     },
     {
-      "id": 32,
+      "id": 11895,
       "type": "Feature",
       "properties": {
-        "id": "RU_ARCTIC_FB_KOM_015",
+        "id": "RU_ARCTIC_FB_KOM_013",
         "name": "Russia Shell Fallback KOM",
         "cntr_code": "RU",
-        "admin1_group": null,
         "detail_tier": "scenario_runtime_shell",
         "__source": "detail",
         "scenario_id": "tno_1962",
@@ -4845,24 +4852,7 @@
         "source_fragment_area": 0.022931,
         "retained_fragment_area": 0.004271,
         "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
+        "render_as_base_geography": false
       },
       "geometry": {
         "type": "Polygon",

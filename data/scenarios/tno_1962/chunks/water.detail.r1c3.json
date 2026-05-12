@@ -2,7 +2,6 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": "6",
       "type": "Feature",
       "properties": {
         "id": "tno_northwest_pacific_ocean",
@@ -4008,7 +4007,6 @@
       }
     },
     {
-      "id": "8",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -74084,7 +74082,6 @@
       }
     },
     {
-      "id": "13",
       "type": "Feature",
       "properties": {
         "id": "tno_eastern_indian_ocean",
@@ -135132,7 +135129,6 @@
       }
     },
     {
-      "id": "16",
       "type": "Feature",
       "properties": {
         "id": "tno_eastern_arctic_ocean",
@@ -135674,7 +135670,6 @@
       }
     },
     {
-      "id": "24",
       "type": "Feature",
       "properties": {
         "id": "tno_bering_sea",
@@ -180106,7 +180101,6 @@
       }
     },
     {
-      "id": "25",
       "type": "Feature",
       "properties": {
         "id": "tno_sea_of_japan",
@@ -218458,7 +218452,6 @@
       }
     },
     {
-      "id": "26",
       "type": "Feature",
       "properties": {
         "id": "tno_seto_naikai",
@@ -232942,7 +232935,6 @@
       }
     },
     {
-      "id": "27",
       "type": "Feature",
       "properties": {
         "id": "tno_tatarskiy_proliv",
@@ -236024,7 +236016,6 @@
       }
     },
     {
-      "id": "86",
       "type": "Feature",
       "properties": {
         "id": "tno_sea_of_okhotsk",
@@ -264030,7 +264021,6 @@
       }
     },
     {
-      "id": "87",
       "type": "Feature",
       "properties": {
         "id": "tno_east_china_sea",
@@ -314982,7 +314972,6 @@
       }
     },
     {
-      "id": "88",
       "type": "Feature",
       "properties": {
         "id": "tno_taiwan_strait",
@@ -335672,7 +335661,6 @@
       }
     },
     {
-      "id": "89",
       "type": "Feature",
       "properties": {
         "id": "tno_yellow_sea",
@@ -375036,7 +375024,6 @@
       }
     },
     {
-      "id": "90",
       "type": "Feature",
       "properties": {
         "id": "tno_bo_hai",
@@ -378498,7 +378485,6 @@
       }
     },
     {
-      "id": "91",
       "type": "Feature",
       "properties": {
         "id": "tno_liaodong_wan",
@@ -379662,7 +379648,6 @@
       }
     },
     {
-      "id": "92",
       "type": "Feature",
       "properties": {
         "id": "tno_south_china_sea",
@@ -423884,7 +423869,6 @@
       }
     },
     {
-      "id": "93",
       "type": "Feature",
       "properties": {
         "id": "tno_philippine_sea",
@@ -476320,7 +476304,6 @@
       }
     },
     {
-      "id": "94",
       "type": "Feature",
       "properties": {
         "id": "tno_sulu_sea",
@@ -503530,7 +503513,6 @@
       }
     },
     {
-      "id": "95",
       "type": "Feature",
       "properties": {
         "id": "tno_celebes_sea",
@@ -525894,7 +525876,6 @@
       }
     },
     {
-      "id": "96",
       "type": "Feature",
       "properties": {
         "id": "tno_natuna_sea",
@@ -557800,7 +557781,6 @@
       }
     },
     {
-      "id": "97",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_tonkin",
@@ -589862,7 +589842,6 @@
       }
     },
     {
-      "id": "98",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_thailand",
@@ -604368,7 +604347,6 @@
       }
     },
     {
-      "id": "107",
       "type": "Feature",
       "properties": {
         "id": "tno_bay_of_bengal",
@@ -622926,7 +622904,6 @@
       }
     },
     {
-      "id": "113",
       "type": "Feature",
       "properties": {
         "id": "tno_andaman_sea",
@@ -666792,7 +666769,6 @@
       }
     },
     {
-      "id": "114",
       "type": "Feature",
       "properties": {
         "id": "tno_malacca_strait",
@@ -682926,7 +682902,6 @@
       }
     },
     {
-      "id": "115",
       "type": "Feature",
       "properties": {
         "id": "tno_singapore_strait",
@@ -684190,7 +684165,6 @@
       }
     },
     {
-      "id": "117",
       "type": "Feature",
       "properties": {
         "id": "tno_makassar_strait",
@@ -694274,7 +694248,6 @@
       }
     },
     {
-      "id": "119",
       "type": "Feature",
       "properties": {
         "id": "tno_molucca_sea",
@@ -703460,7 +703433,6 @@
       }
     },
     {
-      "id": "120",
       "type": "Feature",
       "properties": {
         "id": "tno_halmahera_sea",

@@ -28,7 +28,6 @@
     "js/core/scenario_apply_pipeline.js",
     "js/core/scenario_localization_state.js",
     "js/core/scenario_manager.js",
-    "js/core/scenario_ownership_editor.js",
     "js/core/scenario_recovery.js",
     "js/core/scenario_resources.js",
     "js/core/scenario_rollback.js",
@@ -59,14 +58,12 @@
     "tests/e2e/dev_workspace_render_boundary.spec.js",
     "tests/e2e/physical_layer_regression.spec.js",
     "tests/e2e/physical_layer_runtime_contract.spec.js",
-    "tests/e2e/project_save_load_roundtrip.spec.js",
     "tests/e2e/river_layer_regression.spec.js",
     "tests/e2e/scenario_apply_concurrency.spec.js",
     "tests/e2e/scenario_boundary_regression.spec.js",
     "tests/e2e/shortcut_history_render_boundary.spec.js",
     "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
     "tests/e2e/strategic_overlay_editing.spec.js",
-    "tests/e2e/strategic_overlay_frontline.spec.js",
     "tests/e2e/strategic_overlay_roundtrip.spec.js",
     "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
     "tests/e2e/strategic_overlay_smoke.spec.js",
@@ -75,7 +72,6 @@
     "tests/e2e/tno_open_ocean_rendering.spec.js",
     "tests/physical_layer_contracts.test.mjs",
     "tests/renderer_runtime_state_behavior.test.mjs",
-    "tests/scenario_lifecycle_runtime_behavior.test.mjs",
     "tests/strategic_overlay_runtime_owner_behavior.test.mjs"
   ]
 }

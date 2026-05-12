@@ -21186,10 +21186,26 @@ function getSpecialZoneMembershipBrushMode() {
   return mode === "remove" ? "remove" : "add";
 }
 
+let specialZonesWorkbenchCurrentTargetSignature = "";
+
 function refreshSpecialZonesWorkbenchUi() {
+  specialZonesWorkbenchCurrentTargetSignature = getSpecialZonesWorkbenchCurrentTargetSignature();
   if (typeof runtimeState.updateSpecialZonesWorkbenchUIFn === "function") {
     runtimeState.updateSpecialZonesWorkbenchUIFn();
   }
+}
+
+function refreshSpecialZonesWorkbenchCurrentTargetUi() {
+  specialZonesWorkbenchCurrentTargetSignature = getSpecialZonesWorkbenchCurrentTargetSignature();
+  if (typeof runtimeState.updateSpecialZonesWorkbenchCurrentTargetUIFn === "function") {
+    runtimeState.updateSpecialZonesWorkbenchCurrentTargetUIFn();
+  }
+}
+
+function refreshSpecialZonesWorkbenchCurrentTargetUiIfChanged() {
+  const nextSignature = getSpecialZonesWorkbenchCurrentTargetSignature();
+  if (nextSignature === specialZonesWorkbenchCurrentTargetSignature) return;
+  refreshSpecialZonesWorkbenchCurrentTargetUi();
 }
 
 function handleSpecialZoneMembershipClick(hit, event) {
@@ -21421,6 +21437,42 @@ function requestRendererRender(reason = "renderer", { flush = false, fallback = 
   return false;
 }
 
+function normalizeDevInteractionHit(hit = null) {
+  return hit?.id
+    ? {
+      id: String(hit.id || "").trim(),
+      targetType: String(hit.targetType || ""),
+      countryCode: String(hit.countryCode || "").trim().toUpperCase(),
+      hitSource: String(hit.hitSource || "spatial"),
+      viaSnap: !!hit.viaSnap,
+      strict: !!hit.strict,
+    }
+    : null;
+}
+
+function getDevInteractionHitSignature(hit = null) {
+  if (!hit?.id) return "";
+  return [
+    String(hit.id || "").trim(),
+    String(hit.targetType || ""),
+    String(hit.countryCode || "").trim().toUpperCase(),
+    String(hit.hitSource || "spatial"),
+    hit.viaSnap ? "snap" : "direct",
+    hit.strict ? "strict" : "loose",
+  ].join("|");
+}
+
+function getSpecialZonesWorkbenchCurrentTargetSignature() {
+  const selectedId = runtimeState.devSelectedHit?.targetType === "land"
+    ? String(runtimeState.devSelectedHit.id || "").trim()
+    : "";
+  const hoverHitId = runtimeState.devHoverHit?.targetType === "land"
+    ? String(runtimeState.devHoverHit.id || "").trim()
+    : "";
+  const hoveredId = String(runtimeState.hoveredId || "").trim();
+  return selectedId || hoverHitId || hoveredId || "";
+}
+
 function notifyDevWorkspace() {
   if (typeof runtimeState.updateDevWorkspaceUIFn === "function") {
     runtimeState.updateDevWorkspaceUIFn();
@@ -21437,34 +21489,28 @@ function setDevSelectionDirty() {
   runtimeState.devSelectionOverlayDirty = true;
   runtimeState.devClipboardFallbackText = "";
   notifyDevWorkspace();
+  refreshSpecialZonesWorkbenchUi();
 }
 
 function updateDevHoverHit(hit = null) {
-  runtimeState.devHoverHit = hit?.id
-    ? {
-      id: String(hit.id || "").trim(),
-      targetType: String(hit.targetType || ""),
-      countryCode: String(hit.countryCode || "").trim().toUpperCase(),
-      hitSource: String(hit.hitSource || "spatial"),
-      viaSnap: !!hit.viaSnap,
-      strict: !!hit.strict,
-    }
-    : null;
-  notifyDevWorkspace();
+  const previousHitSignature = getDevInteractionHitSignature(runtimeState.devHoverHit);
+  runtimeState.devHoverHit = normalizeDevInteractionHit(hit);
+  const nextHitSignature = getDevInteractionHitSignature(runtimeState.devHoverHit);
+  if (nextHitSignature !== previousHitSignature) {
+    notifyDevWorkspace();
+  }
+  refreshSpecialZonesWorkbenchCurrentTargetUiIfChanged();
 }
 
 function updateDevSelectedHit(hit = null) {
-  runtimeState.devSelectedHit = hit?.id
-    ? {
-      id: String(hit.id || "").trim(),
-      targetType: String(hit.targetType || ""),
-      countryCode: String(hit.countryCode || "").trim().toUpperCase(),
-      hitSource: String(hit.hitSource || "spatial"),
-      viaSnap: !!hit.viaSnap,
-      strict: !!hit.strict,
-    }
-    : null;
+  const previousHitSignature = getDevInteractionHitSignature(runtimeState.devSelectedHit);
+  runtimeState.devSelectedHit = normalizeDevInteractionHit(hit);
+  const nextHitSignature = getDevInteractionHitSignature(runtimeState.devSelectedHit);
+  if (nextHitSignature === previousHitSignature) {
+    return;
+  }
   notifyDevWorkspace();
+  refreshSpecialZonesWorkbenchCurrentTargetUiIfChanged();
 }
 
 function getDevSelectionIds() {

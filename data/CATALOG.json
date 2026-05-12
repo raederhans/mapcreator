@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-05-02T20:22:13.492583+00:00",
+  "generated_at": "2026-05-06T23:54:37.160272Z",
   "counts": {
-    "entries": 117,
+    "entries": 373,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -34,11 +34,11 @@
       "special_zones": 1,
       "terrain_contours_major_topology": 1,
       "terrain_contours_minor_topology": 1,
-      "transport_build_audit": 10,
+      "transport_build_audit": 74,
       "transport_carrier_payload": 1,
       "transport_catalog": 2,
-      "transport_manifest": 11,
-      "transport_pack": 30,
+      "transport_manifest": 75,
+      "transport_pack": 158,
       "transport_provenance_payload": 1,
       "transport_subtype_catalog": 1,
       "unit_counter_manifest": 1,
@@ -47,11 +47,11 @@
     "by_format": {
       "geojson": 51,
       "javascript": 2,
-      "json": 52,
-      "topojson": 12
+      "json": 180,
+      "topojson": 140
     },
     "by_read_mode": {
-      "json": 115,
+      "json": 371,
       "module": 2
     }
   },
@@ -463,7 +463,9 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": []
+      "aliases": [
+        "context_layer:physical_contours_major"
+      ]
     },
     {
       "key": "manifest_output:global_contours.minor.topo.json",
@@ -476,7 +478,9 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": []
+      "aliases": [
+        "context_layer:physical_contours_minor"
+      ]
     },
     {
       "key": "manifest_output:global_physical_semantics.topo.json",
@@ -489,7 +493,9 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": []
+      "aliases": [
+        "context_layer:physical_semantics"
+      ]
     },
     {
       "key": "context_layer:rivers",
@@ -817,6 +823,7 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": [
+        "context_layer:airports",
         "paths.full.airports",
         "transport:global_airport:default:paths:full:airports",
         "variants.default.paths.full.airports"
@@ -907,6 +914,7 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": [
+        "context_layer:ports",
         "paths.full.ports",
         "transport:global_port:default:paths:full:ports",
         "variants.default.paths.full.ports"
@@ -943,6 +951,1606 @@
       "aliases": []
     },
     {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_e010_e035:build_audit",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e010_e035",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_e010_e035:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:africa_middle_east:shards:ame_e010_e035",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e010_e035",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_e010_e035:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e010_e035",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_e010_e035:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_e010_e035:full:railways",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e010_e035",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_e010_e035:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_e035_e065:build_audit",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e035_e065",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_e035_e065:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:africa_middle_east:shards:ame_e035_e065",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e035_e065",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_e035_e065:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e035_e065",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_e035_e065:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_e035_e065:full:railways",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_e035_e065",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_e035_e065:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_w020_e010:build_audit",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_w020_e010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_w020_e010:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:africa_middle_east:shards:ame_w020_e010",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_w020_e010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_w020_e010:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_w020_e010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_w020_e010:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:africa_middle_east:shards:ame_w020_e010:full:railways",
+      "url": "data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region africa_middle_east --shard ame_w020_e010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:africa_middle_east:shards:ame_w020_e010:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e095_e115:build_audit",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e095_e115",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:east_asia:shards:ea_e095_e115:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:east_asia:shards:ea_e095_e115",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e095_e115",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e095_e115:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e095_e115",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:east_asia:shards:ea_e095_e115:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e095_e115:full:railways",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e095_e115",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:east_asia:shards:ea_e095_e115:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e115_e130:build_audit",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e115_e130",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:east_asia:shards:ea_e115_e130:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:east_asia:shards:ea_e115_e130",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e115_e130",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e115_e130:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e115_e130",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:east_asia:shards:ea_e115_e130:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e115_e130:full:railways",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e115_e130",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:east_asia:shards:ea_e115_e130:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e130_e150:build_audit",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e130_e150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:east_asia:shards:ea_e130_e150:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:east_asia:shards:ea_e130_e150",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e130_e150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e130_e150:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e130_e150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:east_asia:shards:ea_e130_e150:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:east_asia:shards:ea_e130_e150:full:railways",
+      "url": "data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region east_asia --shard ea_e130_e150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:east_asia:shards:ea_e130_e150:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_e010_e025:build_audit",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e010_e025",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:europe:shards:eu_e010_e025:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:europe:shards:eu_e010_e025",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e010_e025",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_e010_e025:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e010_e025",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:europe:shards:eu_e010_e025:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_e010_e025:full:railways",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e010_e025",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:europe:shards:eu_e010_e025:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_e025_e045:build_audit",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e025_e045",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:europe:shards:eu_e025_e045:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:europe:shards:eu_e025_e045",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e025_e045",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_e025_e045:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e025_e045",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:europe:shards:eu_e025_e045:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_e025_e045:full:railways",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_e025_e045",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:europe:shards:eu_e025_e045:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_w012_e010:build_audit",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_w012_e010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:europe:shards:eu_w012_e010:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:europe:shards:eu_w012_e010",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_w012_e010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_w012_e010:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_w012_e010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:europe:shards:eu_w012_e010:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:europe:shards:eu_w012_e010:full:railways",
+      "url": "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region europe --shard eu_w012_e010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:europe:shards:eu_w012_e010:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:japan:shards:jp_e128_e147:build_audit",
+      "url": "data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region japan --shard jp_e128_e147",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:japan:shards:jp_e128_e147:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:japan:shards:jp_e128_e147",
+      "url": "data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region japan --shard jp_e128_e147",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:japan:shards:jp_e128_e147:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region japan --shard jp_e128_e147",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:japan:shards:jp_e128_e147:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:japan:shards:jp_e128_e147:full:railways",
+      "url": "data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region japan --shard jp_e128_e147",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:japan:shards:jp_e128_e147:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w080_w050:build_audit",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w080_w050",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:north_america:shards:na_w080_w050:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:north_america:shards:na_w080_w050",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w080_w050",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w080_w050:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w080_w050",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:north_america:shards:na_w080_w050:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w080_w050:full:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w080_w050",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:north_america:shards:na_w080_w050:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w110_w080:build_audit",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w110_w080",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:north_america:shards:na_w110_w080:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:north_america:shards:na_w110_w080",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w110_w080",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w110_w080:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w110_w080",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:north_america:shards:na_w110_w080:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w110_w080:full:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w110_w080",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:north_america:shards:na_w110_w080:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w140_w110:build_audit",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w140_w110",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:north_america:shards:na_w140_w110:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:north_america:shards:na_w140_w110",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w140_w110",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w140_w110:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w140_w110",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:north_america:shards:na_w140_w110:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w140_w110:full:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w140_w110",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:north_america:shards:na_w140_w110:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w170_w140:build_audit",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w170_w140",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:north_america:shards:na_w170_w140:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:north_america:shards:na_w170_w140",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w170_w140",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w170_w140:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w170_w140",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:north_america:shards:na_w170_w140:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:north_america:shards:na_w170_w140:full:railways",
+      "url": "data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region north_america --shard na_w170_w140",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:north_america:shards:na_w170_w140:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e030_e060:build_audit",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e030_e060",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:russia:shards:ru_e030_e060:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:russia:shards:ru_e030_e060",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e030_e060",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e030_e060:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e030_e060",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:russia:shards:ru_e030_e060:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e030_e060:full:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e030_e060",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:russia:shards:ru_e030_e060:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e060_e090:build_audit",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e060_e090",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:russia:shards:ru_e060_e090:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:russia:shards:ru_e060_e090",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e060_e090",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e060_e090:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e060_e090",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:russia:shards:ru_e060_e090:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e060_e090:full:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e060_e090",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:russia:shards:ru_e060_e090:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e090_e120:build_audit",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e090_e120",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:russia:shards:ru_e090_e120:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:russia:shards:ru_e090_e120",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e090_e120",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e090_e120:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e090_e120",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:russia:shards:ru_e090_e120:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e090_e120:full:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e090_e120",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:russia:shards:ru_e090_e120:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e120_e150:build_audit",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e120_e150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:russia:shards:ru_e120_e150:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:russia:shards:ru_e120_e150",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e120_e150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e120_e150:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e120_e150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:russia:shards:ru_e120_e150:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e120_e150:full:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e120_e150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:russia:shards:ru_e120_e150:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e150_e180:build_audit",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e150_e180",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:russia:shards:ru_e150_e180:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:russia:shards:ru_e150_e180",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e150_e180",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e150_e180:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e150_e180",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:russia:shards:ru_e150_e180:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:russia:shards:ru_e150_e180:full:railways",
+      "url": "data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region russia --shard ru_e150_e180",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:russia:shards:ru_e150_e180:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_america:shards:sa_w058_w034:build_audit",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w058_w034",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:south_america:shards:sa_w058_w034:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:south_america:shards:sa_w058_w034",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w058_w034",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:south_america:shards:sa_w058_w034:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w058_w034",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:south_america:shards:sa_w058_w034:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_america:shards:sa_w058_w034:full:railways",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w058_w034",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:south_america:shards:sa_w058_w034:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_america:shards:sa_w082_w058:build_audit",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w082_w058",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:south_america:shards:sa_w082_w058:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:south_america:shards:sa_w082_w058",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w082_w058",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:south_america:shards:sa_w082_w058:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w082_w058",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:south_america:shards:sa_w082_w058:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_america:shards:sa_w082_w058:full:railways",
+      "url": "data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_america --shard sa_w082_w058",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:south_america:shards:sa_w082_w058:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095:build_audit",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e065_e095",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e065_e095",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e065_e095",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095:full:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e065_e095",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e065_e095:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125:build_audit",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e095_e125",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e095_e125",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e095_e125",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125:full:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e095_e125",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e095_e125:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155:build_audit",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e125_e155",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e125_e155",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e125_e155",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155:full:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e125_e155",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e125_e155:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180:build_audit",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e155_e180",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e155_e180",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180:preview:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e155_e180",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180:full:railways",
+      "url": "data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_rail.py --region south_southeast_asia_oceania --shard ssea_e155_e180",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:global_rail:regions:south_southeast_asia_oceania:shards:ssea_e155_e180:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
       "key": "transport_catalog:road",
       "url": "data/transport_layers/global_road/catalog.json",
       "role": "transport_catalog",
@@ -954,6 +2562,2502 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e000_e005:build_audit",
+      "url": "data/transport_layers/global_road/shards/e000_e005/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e000_e005",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e000_e005:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e000_e005",
+      "url": "data/transport_layers/global_road/shards/e000_e005/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e000_e005",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e000_e005:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e000_e005/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e000_e005",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e000_e005:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e000_e005:full:roads",
+      "url": "data/transport_layers/global_road/shards/e000_e005/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e000_e005",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e000_e005:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e005_e010:build_audit",
+      "url": "data/transport_layers/global_road/shards/e005_e010/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e005_e010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e005_e010:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e005_e010",
+      "url": "data/transport_layers/global_road/shards/e005_e010/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e005_e010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e005_e010:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e005_e010/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e005_e010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e005_e010:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e005_e010:full:roads",
+      "url": "data/transport_layers/global_road/shards/e005_e010/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e005_e010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e005_e010:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e010_e012:build_audit",
+      "url": "data/transport_layers/global_road/shards/e010_e012/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e010_e012",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e010_e012:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e010_e012",
+      "url": "data/transport_layers/global_road/shards/e010_e012/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e010_e012",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e010_e012:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e010_e012/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e010_e012",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e010_e012:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e010_e012:full:roads",
+      "url": "data/transport_layers/global_road/shards/e010_e012/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e010_e012",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e010_e012:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e012_e014:build_audit",
+      "url": "data/transport_layers/global_road/shards/e012_e014/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e012_e014",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e012_e014:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e012_e014",
+      "url": "data/transport_layers/global_road/shards/e012_e014/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e012_e014",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e012_e014:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e012_e014/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e012_e014",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e012_e014:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e012_e014:full:roads",
+      "url": "data/transport_layers/global_road/shards/e012_e014/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e012_e014",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e012_e014:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e014_e016:build_audit",
+      "url": "data/transport_layers/global_road/shards/e014_e016/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e014_e016",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e014_e016:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e014_e016",
+      "url": "data/transport_layers/global_road/shards/e014_e016/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e014_e016",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e014_e016:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e014_e016/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e014_e016",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e014_e016:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e014_e016:full:roads",
+      "url": "data/transport_layers/global_road/shards/e014_e016/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e014_e016",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e014_e016:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e016_e018:build_audit",
+      "url": "data/transport_layers/global_road/shards/e016_e018/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e016_e018",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e016_e018:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e016_e018",
+      "url": "data/transport_layers/global_road/shards/e016_e018/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e016_e018",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e016_e018:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e016_e018/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e016_e018",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e016_e018:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e016_e018:full:roads",
+      "url": "data/transport_layers/global_road/shards/e016_e018/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e016_e018",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e016_e018:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e018_e020:build_audit",
+      "url": "data/transport_layers/global_road/shards/e018_e020/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e018_e020",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e018_e020:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e018_e020",
+      "url": "data/transport_layers/global_road/shards/e018_e020/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e018_e020",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e018_e020:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e018_e020/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e018_e020",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e018_e020:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e018_e020:full:roads",
+      "url": "data/transport_layers/global_road/shards/e018_e020/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e018_e020",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e018_e020:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e020_e025:build_audit",
+      "url": "data/transport_layers/global_road/shards/e020_e025/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e020_e025",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e020_e025:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e020_e025",
+      "url": "data/transport_layers/global_road/shards/e020_e025/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e020_e025",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e020_e025:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e020_e025/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e020_e025",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e020_e025:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e020_e025:full:roads",
+      "url": "data/transport_layers/global_road/shards/e020_e025/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e020_e025",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e020_e025:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e025_e030:build_audit",
+      "url": "data/transport_layers/global_road/shards/e025_e030/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e025_e030",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e025_e030:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e025_e030",
+      "url": "data/transport_layers/global_road/shards/e025_e030/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e025_e030",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e025_e030:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e025_e030/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e025_e030",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e025_e030:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e025_e030:full:roads",
+      "url": "data/transport_layers/global_road/shards/e025_e030/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e025_e030",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e025_e030:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e030_e045:build_audit",
+      "url": "data/transport_layers/global_road/shards/e030_e045/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e030_e045",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e030_e045:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e030_e045",
+      "url": "data/transport_layers/global_road/shards/e030_e045/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e030_e045",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e030_e045:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e030_e045/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e030_e045",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e030_e045:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e030_e045:full:roads",
+      "url": "data/transport_layers/global_road/shards/e030_e045/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e030_e045",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e030_e045:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e045_e060:build_audit",
+      "url": "data/transport_layers/global_road/shards/e045_e060/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e045_e060",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e045_e060:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e045_e060",
+      "url": "data/transport_layers/global_road/shards/e045_e060/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e045_e060",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e045_e060:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e045_e060/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e045_e060",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e045_e060:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e045_e060:full:roads",
+      "url": "data/transport_layers/global_road/shards/e045_e060/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e045_e060",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e045_e060:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e060_e090:build_audit",
+      "url": "data/transport_layers/global_road/shards/e060_e090/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e060_e090",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e060_e090:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e060_e090",
+      "url": "data/transport_layers/global_road/shards/e060_e090/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e060_e090",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e060_e090:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e060_e090/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e060_e090",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e060_e090:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e060_e090:full:roads",
+      "url": "data/transport_layers/global_road/shards/e060_e090/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e060_e090",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e060_e090:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e090_e095:build_audit",
+      "url": "data/transport_layers/global_road/shards/e090_e095/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e090_e095",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e090_e095:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e090_e095",
+      "url": "data/transport_layers/global_road/shards/e090_e095/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e090_e095",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e090_e095:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e090_e095/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e090_e095",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e090_e095:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e090_e095:full:roads",
+      "url": "data/transport_layers/global_road/shards/e090_e095/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e090_e095",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e090_e095:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e095_e100:build_audit",
+      "url": "data/transport_layers/global_road/shards/e095_e100/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e095_e100",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e095_e100:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e095_e100",
+      "url": "data/transport_layers/global_road/shards/e095_e100/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e095_e100",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e095_e100:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e095_e100/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e095_e100",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e095_e100:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e095_e100:full:roads",
+      "url": "data/transport_layers/global_road/shards/e095_e100/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e095_e100",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e095_e100:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e100_e105:build_audit",
+      "url": "data/transport_layers/global_road/shards/e100_e105/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e100_e105",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e100_e105:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e100_e105",
+      "url": "data/transport_layers/global_road/shards/e100_e105/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e100_e105",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e100_e105:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e100_e105/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e100_e105",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e100_e105:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e100_e105:full:roads",
+      "url": "data/transport_layers/global_road/shards/e100_e105/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e100_e105",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e100_e105:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e105_e110:build_audit",
+      "url": "data/transport_layers/global_road/shards/e105_e110/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e105_e110",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e105_e110:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e105_e110",
+      "url": "data/transport_layers/global_road/shards/e105_e110/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e105_e110",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e105_e110:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e105_e110/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e105_e110",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e105_e110:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e105_e110:full:roads",
+      "url": "data/transport_layers/global_road/shards/e105_e110/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e105_e110",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e105_e110:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e110_e115:build_audit",
+      "url": "data/transport_layers/global_road/shards/e110_e115/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e110_e115",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e110_e115:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e110_e115",
+      "url": "data/transport_layers/global_road/shards/e110_e115/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e110_e115",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e110_e115:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e110_e115/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e110_e115",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e110_e115:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e110_e115:full:roads",
+      "url": "data/transport_layers/global_road/shards/e110_e115/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e110_e115",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e110_e115:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e115_e120:build_audit",
+      "url": "data/transport_layers/global_road/shards/e115_e120/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e115_e120",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e115_e120:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e115_e120",
+      "url": "data/transport_layers/global_road/shards/e115_e120/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e115_e120",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e115_e120:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e115_e120/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e115_e120",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e115_e120:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e115_e120:full:roads",
+      "url": "data/transport_layers/global_road/shards/e115_e120/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e115_e120",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e115_e120:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e120_e125:build_audit",
+      "url": "data/transport_layers/global_road/shards/e120_e125/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e120_e125",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e120_e125:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e120_e125",
+      "url": "data/transport_layers/global_road/shards/e120_e125/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e120_e125",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e120_e125:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e120_e125/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e120_e125",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e120_e125:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e120_e125:full:roads",
+      "url": "data/transport_layers/global_road/shards/e120_e125/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e120_e125",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e120_e125:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e125_e130:build_audit",
+      "url": "data/transport_layers/global_road/shards/e125_e130/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e125_e130",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e125_e130:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e125_e130",
+      "url": "data/transport_layers/global_road/shards/e125_e130/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e125_e130",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e125_e130:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e125_e130/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e125_e130",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e125_e130:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e125_e130:full:roads",
+      "url": "data/transport_layers/global_road/shards/e125_e130/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e125_e130",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e125_e130:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e130_e135:build_audit",
+      "url": "data/transport_layers/global_road/shards/e130_e135/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e130_e135",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e130_e135:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e130_e135",
+      "url": "data/transport_layers/global_road/shards/e130_e135/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e130_e135",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e130_e135:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e130_e135/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e130_e135",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e130_e135:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e130_e135:full:roads",
+      "url": "data/transport_layers/global_road/shards/e130_e135/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e130_e135",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e130_e135:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e135_e140:build_audit",
+      "url": "data/transport_layers/global_road/shards/e135_e140/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e135_e140",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e135_e140:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e135_e140",
+      "url": "data/transport_layers/global_road/shards/e135_e140/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e135_e140",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e135_e140:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e135_e140/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e135_e140",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e135_e140:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e135_e140:full:roads",
+      "url": "data/transport_layers/global_road/shards/e135_e140/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e135_e140",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e135_e140:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e140_e145:build_audit",
+      "url": "data/transport_layers/global_road/shards/e140_e145/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e140_e145",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e140_e145:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e140_e145",
+      "url": "data/transport_layers/global_road/shards/e140_e145/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e140_e145",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e140_e145:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e140_e145/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e140_e145",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e140_e145:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e140_e145:full:roads",
+      "url": "data/transport_layers/global_road/shards/e140_e145/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e140_e145",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e140_e145:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e145_e150:build_audit",
+      "url": "data/transport_layers/global_road/shards/e145_e150/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e145_e150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e145_e150:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e145_e150",
+      "url": "data/transport_layers/global_road/shards/e145_e150/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e145_e150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e145_e150:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e145_e150/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e145_e150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e145_e150:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e145_e150:full:roads",
+      "url": "data/transport_layers/global_road/shards/e145_e150/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e145_e150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e145_e150:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e150_e180:build_audit",
+      "url": "data/transport_layers/global_road/shards/e150_e180/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e150_e180",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:e150_e180:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:e150_e180",
+      "url": "data/transport_layers/global_road/shards/e150_e180/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e150_e180",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:e150_e180:preview:roads",
+      "url": "data/transport_layers/global_road/shards/e150_e180/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e150_e180",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:e150_e180:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:e150_e180:full:roads",
+      "url": "data/transport_layers/global_road/shards/e150_e180/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard e150_e180",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:e150_e180:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w010_e000:build_audit",
+      "url": "data/transport_layers/global_road/shards/w010_e000/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w010_e000",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w010_e000:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w010_e000",
+      "url": "data/transport_layers/global_road/shards/w010_e000/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w010_e000",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w010_e000:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w010_e000/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w010_e000",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w010_e000:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w010_e000:full:roads",
+      "url": "data/transport_layers/global_road/shards/w010_e000/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w010_e000",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w010_e000:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w020_w010:build_audit",
+      "url": "data/transport_layers/global_road/shards/w020_w010/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w020_w010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w020_w010:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w020_w010",
+      "url": "data/transport_layers/global_road/shards/w020_w010/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w020_w010",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w020_w010:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w020_w010/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w020_w010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w020_w010:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w020_w010:full:roads",
+      "url": "data/transport_layers/global_road/shards/w020_w010/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w020_w010",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w020_w010:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w030_w020:build_audit",
+      "url": "data/transport_layers/global_road/shards/w030_w020/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w030_w020",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w030_w020:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w030_w020",
+      "url": "data/transport_layers/global_road/shards/w030_w020/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w030_w020",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w030_w020:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w030_w020/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w030_w020",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w030_w020:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w030_w020:full:roads",
+      "url": "data/transport_layers/global_road/shards/w030_w020/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w030_w020",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w030_w020:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w060_w030:build_audit",
+      "url": "data/transport_layers/global_road/shards/w060_w030/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w060_w030",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w060_w030:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w060_w030",
+      "url": "data/transport_layers/global_road/shards/w060_w030/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w060_w030",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w060_w030:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w060_w030/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w060_w030",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w060_w030:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w060_w030:full:roads",
+      "url": "data/transport_layers/global_road/shards/w060_w030/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w060_w030",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w060_w030:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w065_w060:build_audit",
+      "url": "data/transport_layers/global_road/shards/w065_w060/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w065_w060",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w065_w060:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w065_w060",
+      "url": "data/transport_layers/global_road/shards/w065_w060/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w065_w060",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w065_w060:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w065_w060/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w065_w060",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w065_w060:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w065_w060:full:roads",
+      "url": "data/transport_layers/global_road/shards/w065_w060/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w065_w060",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w065_w060:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w070_w065:build_audit",
+      "url": "data/transport_layers/global_road/shards/w070_w065/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w070_w065",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w070_w065:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w070_w065",
+      "url": "data/transport_layers/global_road/shards/w070_w065/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w070_w065",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w070_w065:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w070_w065/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w070_w065",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w070_w065:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w070_w065:full:roads",
+      "url": "data/transport_layers/global_road/shards/w070_w065/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w070_w065",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w070_w065:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w075_w070:build_audit",
+      "url": "data/transport_layers/global_road/shards/w075_w070/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w075_w070",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w075_w070:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w075_w070",
+      "url": "data/transport_layers/global_road/shards/w075_w070/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w075_w070",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w075_w070:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w075_w070/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w075_w070",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w075_w070:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w075_w070:full:roads",
+      "url": "data/transport_layers/global_road/shards/w075_w070/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w075_w070",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w075_w070:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w080_w075:build_audit",
+      "url": "data/transport_layers/global_road/shards/w080_w075/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w080_w075",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w080_w075:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w080_w075",
+      "url": "data/transport_layers/global_road/shards/w080_w075/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w080_w075",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w080_w075:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w080_w075/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w080_w075",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w080_w075:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w080_w075:full:roads",
+      "url": "data/transport_layers/global_road/shards/w080_w075/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w080_w075",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w080_w075:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w082p5_w080:build_audit",
+      "url": "data/transport_layers/global_road/shards/w082p5_w080/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w082p5_w080",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w082p5_w080:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w082p5_w080",
+      "url": "data/transport_layers/global_road/shards/w082p5_w080/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w082p5_w080",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w082p5_w080:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w082p5_w080/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w082p5_w080",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w082p5_w080:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w082p5_w080:full:roads",
+      "url": "data/transport_layers/global_road/shards/w082p5_w080/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w082p5_w080",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w082p5_w080:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w085_w082p5:build_audit",
+      "url": "data/transport_layers/global_road/shards/w085_w082p5/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w085_w082p5",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w085_w082p5:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w085_w082p5",
+      "url": "data/transport_layers/global_road/shards/w085_w082p5/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w085_w082p5",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w085_w082p5:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w085_w082p5/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w085_w082p5",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w085_w082p5:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w085_w082p5:full:roads",
+      "url": "data/transport_layers/global_road/shards/w085_w082p5/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w085_w082p5",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w085_w082p5:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w090_w085:build_audit",
+      "url": "data/transport_layers/global_road/shards/w090_w085/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w090_w085",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w090_w085:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w090_w085",
+      "url": "data/transport_layers/global_road/shards/w090_w085/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w090_w085",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w090_w085:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w090_w085/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w090_w085",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w090_w085:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w090_w085:full:roads",
+      "url": "data/transport_layers/global_road/shards/w090_w085/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w090_w085",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w090_w085:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w120_w090:build_audit",
+      "url": "data/transport_layers/global_road/shards/w120_w090/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w120_w090",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w120_w090:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w120_w090",
+      "url": "data/transport_layers/global_road/shards/w120_w090/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w120_w090",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w120_w090:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w120_w090/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w120_w090",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w120_w090:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w120_w090:full:roads",
+      "url": "data/transport_layers/global_road/shards/w120_w090/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w120_w090",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w120_w090:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w150_w120:build_audit",
+      "url": "data/transport_layers/global_road/shards/w150_w120/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w150_w120",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w150_w120:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w150_w120",
+      "url": "data/transport_layers/global_road/shards/w150_w120/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w150_w120",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w150_w120:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w150_w120/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w150_w120",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w150_w120:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w150_w120:full:roads",
+      "url": "data/transport_layers/global_road/shards/w150_w120/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w150_w120",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w150_w120:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w180_w150:build_audit",
+      "url": "data/transport_layers/global_road/shards/w180_w150/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w180_w150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:global_road:shards:w180_w150:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:global_road:shards:w180_w150",
+      "url": "data/transport_layers/global_road/shards/w180_w150/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w180_w150",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:global_road:shards:w180_w150:preview:roads",
+      "url": "data/transport_layers/global_road/shards/w180_w150/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w180_w150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:global_road:shards:w180_w150:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:global_road:shards:w180_w150:full:roads",
+      "url": "data/transport_layers/global_road/shards/w180_w150/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_global_transport_roads.py --shard w180_w150",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:global_road:shards:w180_w150:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
     },
     {
       "key": "transport:airport:full:airports",
@@ -1033,6 +5137,7 @@
       "aliases": [
         "paths.carrier",
         "transport:japan_corridor:default:paths:carrier",
+        "transport_carrier:japan_corridor",
         "variants.default.paths.carrier"
       ]
     },
@@ -1710,6 +5815,7 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": [
+        "city_lights:historical_1930:source",
         "manifest_output:world_cities.geojson"
       ]
     },
@@ -1724,7 +5830,9 @@
       "cachePolicy": "module",
       "sourceId": "",
       "readMode": "module",
-      "aliases": []
+      "aliases": [
+        "city_lights:historical_1930:asset"
+      ]
     },
     {
       "key": "manifest_output:js/core/city_lights_modern_asset.js",

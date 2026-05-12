@@ -36,6 +36,19 @@ def _has_value(value: object) -> bool:
     return True
 
 
+def _has_feature_count_value(value: object) -> bool:
+    if not isinstance(value, dict) or not value:
+        return False
+    for child in value.values():
+        if isinstance(child, dict):
+            if _has_feature_count_value(child):
+                return True
+            continue
+        if isinstance(child, (int, float)) and not isinstance(child, bool) and child >= 0:
+            return True
+    return False
+
+
 def finalize_transport_manifest(
     manifest: dict[str, Any],
     *,
@@ -60,9 +73,14 @@ def validate_transport_manifest(
     source_label: str = "manifest.json",
 ) -> list[str]:
     errors: list[str] = []
+    family = str(manifest.get("family") or "").strip()
+    geometry_kind = str(manifest.get("geometry_kind") or "").strip()
+    is_carrier_manifest = family == "carrier" and geometry_kind == "carrier"
 
     for field in TRANSPORT_SHARED_REQUIRED_FIELDS:
-        if field == "feature_counts" and isinstance(manifest.get(field), dict):
+        if field == "feature_counts":
+            if not is_carrier_manifest and not _has_feature_count_value(manifest.get(field)):
+                errors.append(f"{source_label}: `feature_counts` must contain at least one numeric count.")
             continue
         if not _has_value(manifest.get(field)):
             errors.append(f"{source_label}: `{field}` is required.")
@@ -73,10 +91,10 @@ def validate_transport_manifest(
                 f"{source_label}: legacy transport variant field `{legacy_field}` is no longer allowed."
             )
 
-    family = str(manifest.get("family") or "").strip()
-    geometry_kind = str(manifest.get("geometry_kind") or "").strip()
     if geometry_kind == "carrier" and family != "carrier":
         errors.append(f"{source_label}: carrier geometry_kind requires family `carrier`.")
+    if family == "carrier" and geometry_kind != "carrier":
+        errors.append(f"{source_label}: carrier family requires geometry_kind `carrier`.")
 
     paths = manifest.get("paths")
     if not isinstance(paths, dict):
@@ -101,10 +119,10 @@ def validate_transport_manifest(
             errors.append(f"{source_label}: variant `{variant_id}` missing `distribution_tier`.")
         if not isinstance(raw_variant.get("paths"), dict):
             errors.append(f"{source_label}: variant `{variant_id}` missing `paths` object.")
-        if not isinstance(raw_variant.get("feature_counts"), dict):
-            errors.append(f"{source_label}: variant `{variant_id}` missing `feature_counts` object.")
+        if not is_carrier_manifest and not _has_feature_count_value(raw_variant.get("feature_counts")):
+            errors.append(f"{source_label}: variant `{variant_id}` missing non-empty `feature_counts` object.")
 
-    if family == "carrier":
+    if is_carrier_manifest:
         if not isinstance(paths, dict):
             return errors
         if not _has_value(paths.get("carrier")):

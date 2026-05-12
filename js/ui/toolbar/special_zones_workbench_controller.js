@@ -4,10 +4,18 @@
 import {
   SPECIAL_ZONE_PATTERN_IDS,
   SPECIAL_ZONE_PRESETS,
+  activateSpecialZoneMembershipToolState,
   createLayerFromPreset,
+  exitSpecialZoneMembershipToolState,
   mutateSpecialZoneLayersState,
+  mutateRuntimeSpecialZoneLayersState,
+  normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
+  registerSpecialZonesWorkbenchRuntimeHooks,
   serializeSpecialZoneLayersState,
+  setRuntimeSpecialZoneLayersState,
+  setSpecialZoneMembershipBrushModeState,
+  setSpecialZonePresetCategoryState,
 } from "../../core/special_zone_layers.js";
 
 function createButton(label, className = "secondary-btn") {
@@ -96,15 +104,15 @@ function createSpecialZonesWorkbenchController({
   let presetListNode = null;
   let propertyNode = null;
   let actionsNode = null;
+  let currentTargetActionsNode = null;
   let loadedScenarioLayerAssetId = "";
 
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
   const normalizeState = () => {
-    runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers, {
+    return normalizeRuntimeSpecialZoneLayersState(runtimeState, {
       defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
     });
-    return runtimeState.specialZoneLayers;
   };
 
   const activeLayer = () => {
@@ -147,13 +155,7 @@ function createSpecialZonesWorkbenchController({
 
   const activateMembershipTool = (tool = getMemberTool()) => {
     const normalizedTool = MEMBER_TOOL_IDS.has(tool) ? tool : "multi";
-    runtimeState.specialZoneMembershipTool = normalizedTool;
-    if (runtimeState.currentTool !== "special-zone-membership") {
-      runtimeState.specialZonePreviousTool = runtimeState.currentTool || "fill";
-    }
-    runtimeState.currentTool = "special-zone-membership";
-    runtimeState.brushModeEnabled = false;
-    runtimeState.specialZoneEditor = { ...(runtimeState.specialZoneEditor || {}), active: false };
+    activateSpecialZoneMembershipToolState(runtimeState, normalizedTool);
     updateToolUI?.();
     renderSpecialZonesWorkbenchUi();
   };
@@ -164,6 +166,8 @@ function createSpecialZonesWorkbenchController({
       action: "updateLayer",
       layerId: layer.id,
       patch: {
+        presetId: "custom",
+        category: "custom",
         style: {
           ...patch,
           revision: Number(layer.style?.revision || 1) + 1,
@@ -176,8 +180,9 @@ function createSpecialZonesWorkbenchController({
     const before = typeof captureHistoryState === "function"
       ? captureHistoryState({ strategicOverlay: true })
       : null;
-    runtimeState.specialZoneLayers = mutateSpecialZoneLayersState(normalizeState(), mutation);
-    runtimeState.specialZonesOverlayDirty = true;
+    mutateRuntimeSpecialZoneLayersState(runtimeState, mutation, {
+      defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+    });
     markDirty?.(label);
     if (typeof pushHistoryEntry === "function") {
       pushHistoryEntry({
@@ -292,14 +297,14 @@ function createSpecialZonesWorkbenchController({
     const selectedCategory = categories.includes(runtimeState.specialZonePresetCategory)
       ? runtimeState.specialZonePresetCategory
       : "all";
-    runtimeState.specialZonePresetCategory = selectedCategory;
+    setSpecialZonePresetCategoryState(runtimeState, selectedCategory);
     const tabs = document.createElement("div");
     tabs.className = "special-zone-preset-tabs";
     categories.forEach((category) => {
       const tab = createButton(category === "all" ? translate("All") : category, "secondary-btn special-zone-preset-tab");
       tab.setAttribute("aria-pressed", String(category === selectedCategory));
       tab.addEventListener("click", () => {
-        runtimeState.specialZonePresetCategory = category;
+        setSpecialZonePresetCategoryState(runtimeState, category);
         renderSpecialZonesWorkbenchUi();
       });
       tabs.appendChild(tab);
@@ -411,9 +416,47 @@ function createSpecialZonesWorkbenchController({
     );
   };
 
+  const renderCurrentTargetActions = (layer) => {
+    if (!currentTargetActionsNode) return;
+    currentTargetActionsNode.replaceChildren();
+
+    const activeFeatureId = layer ? getActiveLandFeatureId() : "";
+    const parentGroupIds = layer ? getParentGroupFeatureIds() : [];
+
+    const addCurrentBtn = createButton(translate("Add current tile"));
+    addCurrentBtn.disabled = !activeFeatureId;
+    addCurrentBtn.addEventListener("click", () => {
+      const featureId = getActiveLandFeatureId();
+      if (!featureId) return;
+      updateState({ action: "addMembers", layerId: layer.id, featureIds: [featureId] }, "special-zone-members-add-current");
+    });
+
+    const toggleCurrentBtn = createButton(translate("Toggle current tile"));
+    toggleCurrentBtn.disabled = !activeFeatureId;
+    toggleCurrentBtn.addEventListener("click", () => {
+      const featureId = getActiveLandFeatureId();
+      if (!featureId) return;
+      updateState({ action: "toggleMembers", layerId: layer.id, featureIds: [featureId] }, "special-zone-members-toggle-current");
+    });
+
+    const addParentGroupBtn = createButton(translate("Add parent group"));
+    addParentGroupBtn.disabled = !parentGroupIds.length;
+    addParentGroupBtn.title = parentGroupIds.length
+      ? `${parentGroupIds.length} ${translate("features in current parent group")}`
+      : translate("Select or hover a land tile with a parent group.");
+    addParentGroupBtn.addEventListener("click", () => {
+      const ids = getParentGroupFeatureIds();
+      if (!ids.length) return;
+      updateState({ action: "addMembers", layerId: layer.id, featureIds: ids }, "special-zone-members-add-parent-group");
+    });
+
+    currentTargetActionsNode.append(addCurrentBtn, toggleCurrentBtn, addParentGroupBtn);
+  };
+
   const renderActions = (state, layer) => {
     if (!actionsNode) return;
     actionsNode.replaceChildren();
+    currentTargetActionsNode = null;
     actionsNode.dataset.role = "members";
     const header = document.createElement("div");
     header.className = "special-zone-members-header";
@@ -462,7 +505,7 @@ function createSpecialZonesWorkbenchController({
         const modeBtn = createButton(label, "secondary-btn special-zone-preset-tab");
         modeBtn.setAttribute("aria-pressed", String(getMemberBrushMode() === mode));
         modeBtn.addEventListener("click", () => {
-          runtimeState.specialZoneMembershipBrushMode = mode;
+          setSpecialZoneMembershipBrushModeState(runtimeState, mode);
           activateMembershipTool("brush");
         });
         brushModeRow.appendChild(modeBtn);
@@ -472,40 +515,15 @@ function createSpecialZonesWorkbenchController({
 
     const exitToolBtn = createButton(translate("Exit membership tool"));
     exitToolBtn.addEventListener("click", () => {
-      runtimeState.currentTool = runtimeState.specialZonePreviousTool || "fill";
-      runtimeState.specialZonePreviousTool = "";
+      exitSpecialZoneMembershipToolState(runtimeState);
       updateToolUI?.();
       statusNode.textContent = translate("Membership tool closed.");
       renderSpecialZonesWorkbenchUi();
     });
 
-    const addCurrentBtn = createButton(translate("Add current tile"));
-    addCurrentBtn.disabled = !getActiveLandFeatureId();
-    addCurrentBtn.addEventListener("click", () => {
-      const featureId = getActiveLandFeatureId();
-      if (!featureId) return;
-      updateState({ action: "addMembers", layerId: layer.id, featureIds: [featureId] }, "special-zone-members-add-current");
-    });
-
-    const toggleCurrentBtn = createButton(translate("Toggle current tile"));
-    toggleCurrentBtn.disabled = !getActiveLandFeatureId();
-    toggleCurrentBtn.addEventListener("click", () => {
-      const featureId = getActiveLandFeatureId();
-      if (!featureId) return;
-      updateState({ action: "toggleMembers", layerId: layer.id, featureIds: [featureId] }, "special-zone-members-toggle-current");
-    });
-
-    const parentGroupIds = getParentGroupFeatureIds();
-    const addParentGroupBtn = createButton(translate("Add parent group"));
-    addParentGroupBtn.disabled = !parentGroupIds.length;
-    addParentGroupBtn.title = parentGroupIds.length
-      ? `${parentGroupIds.length} ${translate("features in current parent group")}`
-      : translate("Select or hover a land tile with a parent group.");
-    addParentGroupBtn.addEventListener("click", () => {
-      const ids = getParentGroupFeatureIds();
-      if (!ids.length) return;
-      updateState({ action: "addMembers", layerId: layer.id, featureIds: ids }, "special-zone-members-add-parent-group");
-    });
+    currentTargetActionsNode = document.createElement("div");
+    currentTargetActionsNode.className = "special-zone-member-current-target-row";
+    renderCurrentTargetActions(layer);
 
     const addSelectionBtn = createButton(translate("Add dev selection"));
     addSelectionBtn.disabled = !layer || !getDevSelectionFeatureIds().length;
@@ -592,7 +610,7 @@ function createSpecialZonesWorkbenchController({
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
         if (!result?.ok) throw new Error(result?.error || "Scenario special zone save failed.");
-        runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(result.specialZoneLayers || normalizeState(), { defaultSource: "scenario" });
+        setRuntimeSpecialZoneLayersState(runtimeState, result.specialZoneLayers || normalizeState(), { defaultSource: "scenario" });
         showToast?.(translate("Scenario special zone layers saved."), { title: translate("Special zones saved"), tone: "success" });
       } catch (error) {
         console.warn("[special-zone-layers] Scenario save unavailable.", error);
@@ -602,9 +620,14 @@ function createSpecialZonesWorkbenchController({
 
     const memberActions = document.createElement("div");
     memberActions.className = "special-zone-member-actions-row";
-    memberActions.append(exitToolBtn, addCurrentBtn, toggleCurrentBtn, addParentGroupBtn, addSelectionBtn, replaceSelectionBtn, copySelect, copyBtn, clearBtn);
+    memberActions.append(exitToolBtn, currentTargetActionsNode, addSelectionBtn, replaceSelectionBtn, copySelect, copyBtn, clearBtn);
     layerActions.append(duplicateBtn, deleteBtn, saveBtn);
     actionsNode.append(memberActions, memberList, layerActions);
+  };
+
+  const renderSpecialZonesWorkbenchCurrentTargetUi = () => {
+    if (!currentTargetActionsNode) return;
+    renderCurrentTargetActions(activeLayer());
   };
 
   const renderSpecialZonesWorkbenchUi = () => {
@@ -617,7 +640,10 @@ function createSpecialZonesWorkbenchController({
         : translate("No special zone layers yet.");
     }
     renderLayerList(state);
-    runtimeState.updateSpecialZonesWorkbenchUIFn = renderSpecialZonesWorkbenchUi;
+    registerSpecialZonesWorkbenchRuntimeHooks(runtimeState, {
+      renderWorkbench: renderSpecialZonesWorkbenchUi,
+      renderCurrentTarget: renderSpecialZonesWorkbenchCurrentTargetUi,
+    });
     renderPresetList(layer);
     renderProperties(layer);
     renderActions(state, layer);
@@ -625,7 +651,10 @@ function createSpecialZonesWorkbenchController({
 
   const bindSpecialZonesWorkbenchEvents = () => {
     ensureRoot();
-    runtimeState.updateSpecialZonesWorkbenchUIFn = renderSpecialZonesWorkbenchUi;
+    registerSpecialZonesWorkbenchRuntimeHooks(runtimeState, {
+      renderWorkbench: renderSpecialZonesWorkbenchUi,
+      renderCurrentTarget: renderSpecialZonesWorkbenchCurrentTargetUi,
+    });
   };
 
   const loadScenarioSpecialZoneLayers = async () => {
@@ -637,8 +666,9 @@ function createSpecialZonesWorkbenchController({
     if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;
     if (typeof ensureActiveScenarioOptionalLayerLoaded !== "function") return null;
     const result = await ensureActiveScenarioOptionalLayerLoaded("specialZoneLayers", { renderNow: false });
+    if (!result) return null;
     loadedScenarioLayerAssetId = scenarioId;
-    runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers, {
+    normalizeRuntimeSpecialZoneLayersState(runtimeState, {
       defaultSource: "scenario",
     });
     renderSpecialZonesWorkbenchUi();
@@ -649,6 +679,7 @@ function createSpecialZonesWorkbenchController({
     bindSpecialZonesWorkbenchEvents,
     loadScenarioSpecialZoneLayers,
     renderSpecialZonesWorkbenchUi,
+    renderSpecialZonesWorkbenchCurrentTargetUi,
   };
 }
 

@@ -623,6 +623,82 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertTrue(any("feature_count must equal owners feature count" in error for error in errors))
             self.assertTrue(any("may only exceed the feature maps with shell fallback ids" in error for error in errors))
 
+    def test_validate_scenario_contract_strict_mode_rejects_runtime_object_count_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "strict_runtime_count")
+            _write_strict_bundle_files(
+                scenario_dir,
+                owners={"F-1": "AAA"},
+                controllers={"F-1": "AAA"},
+                cores={"F-1": ["AAA"]},
+                runtime_feature_ids=["F-1"],
+                manifest_feature_count=1,
+            )
+            manifest_path = scenario_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["summary"]["scenario_runtime_topology_object_count"] = 5
+            _write_json(manifest_path, manifest)
+            _write_json(
+                scenario_dir / "runtime_meta.json",
+                {
+                    "runtime_topology_object_names": ["political", "ghost"],
+                    "runtime_topology_object_count": 2,
+                },
+            )
+
+            try:
+                errors, warnings = validate_scenario_contract(scenario_dir, {}, strict=True)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(warnings, [])
+            self.assertTrue(any("scenario_runtime_topology_object_count must equal" in error for error in errors), errors)
+            self.assertTrue(any("runtime_meta.json runtime_topology_object_count must equal" in error for error in errors), errors)
+
+    def test_atlantropa_publish_mirror_must_match_runtime_object_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "tno_1962")
+            topology_path = scenario_dir / "scenario_atlantropa.topo.json"
+            _write_json(
+                topology_path,
+                {
+                    "type": "Topology",
+                    "objects": {
+                        "scenario_atlantropa": {
+                            "type": "GeometryCollection",
+                            "geometries": [
+                                {"type": "Polygon", "properties": {"id": "ATLSEA_MISSING"}, "arcs": []}
+                            ],
+                        }
+                    },
+                    "arcs": [],
+                },
+            )
+            manifest = {
+                "scenario_atlantropa_topology_url": "data/scenarios/tno_1962/scenario_atlantropa.topo.json",
+                "summary": {"scenario_atlantropa_feature_count": 1},
+            }
+            errors: list[str] = []
+
+            try:
+                check_scenario_contracts._validate_atlantropa_publish_mirror(
+                    scenario_dir,
+                    manifest,
+                    manifest["summary"],
+                    {"ATLSEA_1"},
+                    errors,
+                )
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertTrue(any("must mirror runtime_topology" in error for error in errors), errors)
+
     def test_validate_scenario_contract_strict_mode_rejects_unrenderable_bootstrap_shell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)

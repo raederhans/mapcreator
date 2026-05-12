@@ -178,6 +178,10 @@
 - When the default startup path already prioritizes a scenario-specific startup bundle, cutting the largest embedded payload can produce much larger real gains than adding another cache layer around the old shape.
 - For coarse-first startup, carry enough scenario state to apply ownership/controller/core immediately, then let chunk registry + coarse chunks provide the first scenario geometry.
 
+### 41. Python contract validators must exclude `bool` from numeric counts
+- `bool` is an `int` subclass in Python, so `isinstance(value, (int, float))` accepts `true` / `false` from JSON.
+- Manifest count validators should explicitly reject `bool` before accepting numeric counts, and contract tests should cover boolean payloads.
+
 ### 41. Startup health gate should live inside the scenario apply transaction
 - If the gate runs only after boot leaves apply flow, rollback cannot restore a clean scenario baseline.
 - The safer path is apply -> refresh map data -> run startup-only health gate inside applyScenarioBundle() -> throw into existing rollback.
@@ -1546,6 +1550,12 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - `ATLSEA_FILL_*` 的源属性是 `atl_surface_kind=sea` / `atl_geometry_role=sea_completion`，应按 `water/atlantropa_sea` 路由；把它们当 `shoal/salt_flat` 会把真实海面画成褐色。
 - 大岛 boolean weld 修空洞后还要对照 runtime baseline 做覆盖率探针；Cyprus 这类 donor AOI 裁剪会留下整侧缺块。
+
+## 2026-05-11 - TNO scenario publish stabilization
+
+- Windows 上大 JSON 的 atomic replace 可能被短时文件占用打断；通用 writer 里做有限 `PermissionError` retry，比在 chunk/startup 各自叠补丁更稳。
+- TNO 场景收口要同时看 strict 产物合同和语义探针；strict 通过仍可能遗漏 `PRC/SIC/SIK` 这类 controller-only country entry 或 Cyprus 面积回归。
+- 全量 TNO bundle builder 的 runtime topology 阶段可能把内存推到 50GB 以上；发布修复优先用一致 checkpoint + targeted semantic repair + safe-repair 做闭环验证。
 
 ### 25. startup shell meta 校验要按 id 覆盖，不要按同序长度
 - TNO startup bootstrap 可能只携带少量 political shell，且 shell 顺序可与完整 runtime meta 不同。

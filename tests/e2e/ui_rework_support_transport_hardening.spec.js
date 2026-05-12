@@ -16,6 +16,42 @@ async function activateSupportTrigger(page, selector) {
   await page.keyboard.press("Enter");
 }
 
+test("special zone layer workbench gates members and applies rectangular presets", async ({ page }) => {
+  test.setTimeout(120_000);
+  await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+
+  await page.evaluate(() => {
+    const appearance = document.querySelector('[aria-labelledby="appearanceSectionHeading labelMapStyle"]');
+    const special = document.querySelector("#specialZonePopover");
+    if (appearance instanceof HTMLDetailsElement) appearance.open = true;
+    if (special instanceof HTMLDetailsElement) special.open = true;
+  });
+
+  const workbench = page.locator("[data-special-zone-layers-workbench]");
+  await expect(workbench).toBeVisible();
+  await expect(workbench.locator(".special-zone-member-tool-btn")).toHaveCount(3);
+  await expect(workbench).toContainText("Select or create a layer before editing members.");
+  await expect(workbench).toContainText("Select or create a layer to apply style presets.");
+
+  await workbench.getByRole("button", { name: "New layer" }).click();
+  await expect(workbench.locator(".special-zone-current-style-preview")).toBeVisible();
+  await expect(workbench.locator(".special-zone-preset-preview").first()).toBeVisible();
+
+  await workbench.getByRole("button", { name: "Demilitarized Zone" }).click();
+  const layerState = await page.evaluate(async () => {
+    const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
+    const stateModule = await import(stateModuleUrl);
+    const layer = stateModule.state?.specialZoneLayers?.layers?.[0] || null;
+    return {
+      presetId: layer?.presetId || "",
+      memberCount: layer?.memberFeatureIds?.length || 0,
+    };
+  });
+  expect(layerState.presetId).toBe("demilitarized");
+  expect(layerState.memberCount).toBe(0);
+});
+
 test("phase 03 support and transport surfaces stay unified", async ({ page }) => {
   test.setTimeout(240_000);
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });

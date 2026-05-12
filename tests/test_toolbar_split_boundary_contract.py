@@ -239,6 +239,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('const scenarioId = String(runtimeState.activeScenarioId || "").trim();', owner_content)
         self.assertIn("if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;", owner_content)
         self.assertIn("loadedScenarioLayerAssetId = scenarioId;", owner_content)
+        self.assertIn("if (!result) return null;", owner_content)
         self.assertIn("if (loadedScenarioLayerAssetId !== scenarioId)", owner_content)
 
     def test_special_zone_workbench_gates_members_and_style_on_active_layer(self):
@@ -262,9 +263,40 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('tool === "single" || tool === "multi" || tool === "brush"', renderer_content)
         self.assertIn('membershipTool === "single"', renderer_content)
         self.assertIn('getSpecialZoneMembershipBrushMode()', renderer_content)
+        self.assertIn("refreshSpecialZonesWorkbenchUi();", renderer_content)
         self.assertIn("runtimeState.resolveSpecialZoneParentGroupTargetIdsFn = resolveSpecialZoneParentGroupTargetIds;", renderer_content)
         self.assertIn("getParentGroupFeatureIds", owner_content)
         self.assertIn("special-zone-members-add-parent-group", owner_content)
+
+    def test_special_zone_hover_refresh_stays_targeted(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        notify_body = re.search(
+            r"function notifyDevWorkspace\(\) \{(?P<body>.*?)\n\}\n\nfunction isDevSelectionEligibleFeature",
+            renderer_content,
+            re.S,
+        )
+        self.assertIsNotNone(notify_body)
+        self.assertNotIn("refreshSpecialZonesWorkbenchUi", notify_body.group("body"))
+
+        hover_body = re.search(
+            r"function updateDevHoverHit\(hit = null\) \{(?P<body>.*?)\n\}\n\nfunction updateDevSelectedHit",
+            renderer_content,
+            re.S,
+        )
+        self.assertIsNotNone(hover_body)
+        self.assertIn("refreshSpecialZonesWorkbenchCurrentTargetUiIfChanged();", hover_body.group("body"))
+        self.assertNotIn("refreshSpecialZonesWorkbenchUi();", hover_body.group("body"))
+
+        self.assertIn("function refreshSpecialZonesWorkbenchCurrentTargetUi()", renderer_content)
+        self.assertIn("function refreshSpecialZonesWorkbenchCurrentTargetUiIfChanged()", renderer_content)
+        self.assertIn("let specialZonesWorkbenchCurrentTargetSignature", renderer_content)
+        self.assertIn("renderCurrentTargetActions", owner_content)
+        self.assertIn("registerSpecialZonesWorkbenchRuntimeHooks", owner_content)
+        special_zone_layers_content = (REPO_ROOT / "js" / "core" / "special_zone_layers.js").read_text(encoding="utf-8")
+        self.assertIn("target.updateSpecialZonesWorkbenchCurrentTargetUIFn = hooks.renderCurrentTarget;", special_zone_layers_content)
+        self.assertIn("special-zone-member-current-target-row", owner_content)
 
     def test_export_workbench_persistence_contract_stays_stable(self):
         file_manager = FILE_MANAGER_JS.read_text(encoding="utf-8")

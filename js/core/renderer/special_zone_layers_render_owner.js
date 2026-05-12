@@ -1,6 +1,6 @@
 import {
   buildSpecialZoneRenderFeatures,
-  normalizeSpecialZoneLayersState,
+  ensureSpecialZoneLayersState,
 } from "../special_zone_layers.js";
 
 function sanitizePatternToken(value) {
@@ -71,8 +71,7 @@ export function createSpecialZoneLayersRenderOwner({
   }
 
   function getEffectiveSpecialZonesFeatureCollection() {
-    runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
-    return buildSpecialZoneRenderFeatures(runtimeState.specialZoneLayers, runtimeState.landIndex);
+    return buildSpecialZoneRenderFeatures(ensureSpecialZoneLayersState(runtimeState), runtimeState.landIndex);
   }
 
   function getSpecialZoneStyle(feature) {

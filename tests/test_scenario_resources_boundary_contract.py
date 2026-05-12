@@ -80,6 +80,19 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("assignOptionalLayerPayloadToActiveScenario", content)
         self.assertNotIn("state.scenarioApplyInFlight", content)
 
+    def test_optional_layer_load_failures_remain_retryable(self):
+        content = SCENARIO_RESOURCES.read_text(encoding="utf-8")
+
+        failure_block = re.search(
+            r'console\.warn\(`\[scenario\] Failed to load scenario \$\{layerKey\} layer.*?return null;',
+            content,
+            re.DOTALL,
+        )
+
+        self.assertIsNotNone(failure_block)
+        self.assertIn("delete bundle.optionalLayerSettledByKey[layerKey];", failure_block.group(0))
+        self.assertNotIn("bundle.optionalLayerSettledByKey[layerKey] = true;", failure_block.group(0))
+
     def test_renderable_runtime_topology_helper_has_single_owner(self):
         content = SCENARIO_RESOURCES.read_text(encoding="utf-8")
 

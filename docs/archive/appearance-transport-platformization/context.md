@@ -137,3 +137,23 @@
 - live browser、Playwright、Python、Node、state guardrail、owner extraction 定向合同全部有新鲜证据。
 - 当前目录满足移入 `docs/archive/appearance-transport-platformization/` 的条件。
 
+## 2026-05-11 追加收口
+
+- 恢复现场时发现当前运行态仍指向 appearance + transport 平台化，但实际工作区混有 TNO 数据、data-layer audit、special zone editor 等多条线；本轮只推进 platformization 相关的 state guardrail 与 transport manifest contract。
+- 修复 special zone workbench / render owner 新增直接 state 写口：
+  - `js/core/special_zone_layers.js` 新增 runtime state helper。
+  - `js/core/renderer/special_zone_layers_render_owner.js` 改用 `ensureSpecialZoneLayersState`。
+  - `js/ui/toolbar/special_zones_workbench_controller.js` 改用 special zone helper 写状态和注册 hook。
+- `npm run verify:state-write-allowlist` 通过，allowlist 从 `77 tracked files` 继续收紧到 `73 tracked files`。
+- 子代理静态复核发现 transport manifest validator 两个缺口：`bool` 被 Python 当成 `int`，以及 carrier 豁免只看 `family`。本轮已修复：
+  - `map_builder/transport_workbench_contracts.py` 排除 boolean count。
+  - carrier 豁免只认 `family == "carrier"` 且 `geometry_kind == "carrier"`。
+  - `tests/test_transport_manifest_contracts.py` 增加 boolean count 与 carrier family/geometry mismatch 用例。
+- 本轮验证：
+  - `node --check js/core/special_zone_layers.js js/core/renderer/special_zone_layers_render_owner.js js/ui/toolbar/special_zones_workbench_controller.js js/core/map_renderer.js` 通过。
+  - `python -m unittest tests.test_transport_manifest_contracts -q` 通过，`Ran 10 tests / OK`。
+  - `python tools/check_transport_workbench_manifests.py --root data/transport_layers --report-path .runtime/reports/generated/transport-manifest-contracts-20260511.json` 通过，75 个 checked-in manifest 全部 `OK`。
+  - `python -m unittest tests.test_transport_manifest_contracts tests.test_toolbar_split_boundary_contract tests.test_map_renderer_special_zone_layers_render_owner_boundary_contract -q` 通过，`Ran 46 tests / OK`。
+  - `node --test tests/special_zone_layers_state_behavior.test.mjs` 通过，`5 tests / 0 fail`。
+  - `npm run verify:state-write-allowlist` 通过，`State write allowlist passed with 73 tracked files.`。
+

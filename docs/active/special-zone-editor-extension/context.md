@@ -17,3 +17,16 @@
 执行约束：
 - 共享文件 `index.html`、`css/style.css`、`js/ui/toolbar.js` 串行集成。
 - 主线程独占 live tests。
+
+2026-05-07 执行结果：
+- `special_zones_workbench_controller.js` 现在以当前图层为入口：无图层时成员和样式/preset 都显示禁用说明；新建图层后才出现成员工具、样式和 preset。
+- 成员区工具压缩为 single / multi / brush 三个 icon；brush 有 add/remove 子模式。single 在地图点击时替换当前成员集合，multi 点击切换，brush 按 add/remove 连续写入。
+- 成员批量边界收窄到 current tile、dev selection、parent group；移除 country / owner 输入入口，parent group 通过 renderer 的 `resolveSpecialZoneParentGroupTargetIdsFn` 解析，没有国家级退化。
+- preset 改为矩形预览卡，点击直接更新当前图层样式并保留成员。
+- 已补 state、toolbar contract 和 focused Playwright 回归。
+- 自检修复：场景 asset 首次保存需要真实加载成功；dev hover/selection 会刷新成员按钮；手动样式编辑后 preset 标记回到 custom；E2E 改为按 preset 名称点击。
+
+2026-05-07 review follow-up：
+- 复核 reviewer 指出的 hover 路径：`updateDevHoverHit()` 每次 mousemove 都通过 `notifyDevWorkspace()` 间接重建 special zone workbench。
+- 修复目标：dev hover 只刷新 current tile / parent group 这一小块成员目标按钮；full workbench 继续只在图层、样式、成员集合或 dev selection 实际变化时刷新。
+- 验证目标：JS 语法检查、toolbar split contract、renderer-splits node tests。

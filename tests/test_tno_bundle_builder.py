@@ -32,6 +32,7 @@ from tools.patch_tno_1962_bundle import (
     apply_tno_feature_assignment_overrides,
     apply_tno_decolonization_metadata,
     apply_dev_manual_overrides,
+    build_context_land_mask_geometry,
     build_relief_overlays,
     clip_named_water_features_to_land_mask,
     build_tno_bathymetry_payload,
@@ -42,6 +43,7 @@ from tools.patch_tno_1962_bundle import (
     build_geo_locale_stage,
     build_single_antarctic_feature,
     build_startup_assets_stage,
+    compact_written_json_hash,
     ensure_water_stage_checkpoints,
     detect_unsynced_manual_edits,
     patch_tno_palette_defaults,
@@ -246,6 +248,47 @@ def _write_publish_bundle_dir(
 
 
 class TnoBundleBuilderTest(unittest.TestCase):
+    def test_context_land_mask_uses_fine_grained_simplification_before_precise_fallback(self) -> None:
+        land_mask = Point(0, 0).buffer(10, quad_segs=128)
+
+        _geom, tolerance, area_delta_ratio, fallback_used, arc_refs = build_context_land_mask_geometry(
+            land_mask,
+            target_arc_refs_min=1,
+            target_arc_refs_max=2,
+        )
+
+        self.assertFalse(fallback_used)
+        self.assertIsNotNone(tolerance)
+        self.assertLess(area_delta_ratio, 0.005)
+        self.assertLess(arc_refs, len(land_mask.exterior.coords))
+
+    def test_context_land_mask_uses_bounded_publish_candidate_before_precise_fallback(self) -> None:
+        land_mask = Polygon([
+            (0, 0),
+            (4, 0),
+            (4, 1),
+            (2.2, 1),
+            (2, 1.2),
+            (1.8, 1),
+            (0, 1),
+            (0, 0),
+        ])
+
+        _geom, tolerance, area_delta_ratio, fallback_used, arc_refs = build_context_land_mask_geometry(
+            land_mask,
+            tolerances=(0.5, 1.0),
+            max_area_delta_ratio=0.0001,
+            max_publish_area_delta_ratio=0.1,
+            max_publish_preferred_tolerance=0.5,
+            target_arc_refs_min=100,
+            target_arc_refs_max=200,
+        )
+
+        self.assertFalse(fallback_used)
+        self.assertEqual(tolerance, 0.5)
+        self.assertLessEqual(area_delta_ratio, 0.1)
+        self.assertLess(arc_refs, len(land_mask.exterior.coords))
+
     def test_apply_tno_greece_coarse_owner_backfill_requires_controller_core_consistency(self) -> None:
         owners_payload = {"owners": {}}
         controllers_payload = {
@@ -1039,6 +1082,20 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(
             result["manifest_payload"]["presentation_features"],
             {"atlantropa_relief": True, "coastal_accent": True},
+        )
+        self.assertEqual(
+            result["special_zone_layers_payload"],
+            {
+                "version": 1,
+                "layers": [],
+                "activeLayerId": "",
+                "topologyFingerprint": "",
+                "diagnostics": [],
+            },
+        )
+        self.assertEqual(
+            result["manifest_payload"]["source"]["runtime_topology_sha256"],
+            compact_written_json_hash(result["runtime_topology_payload"]),
         )
         self.assertEqual(result["manifest_payload"]["summary"]["tno_bathymetry_band_count"], 1)
         self.assertEqual(result["manifest_payload"]["summary"]["tno_bathymetry_contour_count"], 1)

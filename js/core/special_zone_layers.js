@@ -193,6 +193,75 @@ function ensureSpecialZoneLayersState(target) {
   return normalized;
 }
 
+function normalizeRuntimeSpecialZoneLayersState(target, options = {}) {
+  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || null, options);
+  if (target && typeof target === "object") {
+    target.specialZoneLayers = normalized;
+  }
+  return normalized;
+}
+
+function setRuntimeSpecialZoneLayersState(target, nextState, options = {}) {
+  const normalized = normalizeSpecialZoneLayersState(nextState, options);
+  if (target && typeof target === "object") {
+    target.specialZoneLayers = normalized;
+  }
+  return normalized;
+}
+
+function mutateRuntimeSpecialZoneLayersState(target, mutation, options = {}) {
+  const current = normalizeRuntimeSpecialZoneLayersState(target, options);
+  const nextState = mutateSpecialZoneLayersState(current, mutation);
+  if (target && typeof target === "object") {
+    target.specialZoneLayers = nextState;
+    target.specialZonesOverlayDirty = true;
+  }
+  return nextState;
+}
+
+function activateSpecialZoneMembershipToolState(target, tool = "multi") {
+  if (!target || typeof target !== "object") return null;
+  const normalizedTool = String(tool || "multi").trim() || "multi";
+  target.specialZoneMembershipTool = normalizedTool;
+  if (target.currentTool !== "special-zone-membership") {
+    target.specialZonePreviousTool = target.currentTool || "fill";
+  }
+  target.currentTool = "special-zone-membership";
+  target.brushModeEnabled = false;
+  target.specialZoneEditor = { ...(target.specialZoneEditor || {}), active: false };
+  return normalizedTool;
+}
+
+function exitSpecialZoneMembershipToolState(target) {
+  if (!target || typeof target !== "object") return "";
+  const previousTool = target.specialZonePreviousTool || "fill";
+  target.currentTool = previousTool;
+  target.specialZonePreviousTool = "";
+  return previousTool;
+}
+
+function setSpecialZoneMembershipBrushModeState(target, mode = "add") {
+  if (!target || typeof target !== "object") return "";
+  target.specialZoneMembershipBrushMode = String(mode || "add").trim() || "add";
+  return target.specialZoneMembershipBrushMode;
+}
+
+function setSpecialZonePresetCategoryState(target, category = "all") {
+  if (!target || typeof target !== "object") return "";
+  target.specialZonePresetCategory = String(category || "all").trim() || "all";
+  return target.specialZonePresetCategory;
+}
+
+function registerSpecialZonesWorkbenchRuntimeHooks(target, hooks = {}) {
+  if (!target || typeof target !== "object") return;
+  if (typeof hooks.renderWorkbench === "function") {
+    target.updateSpecialZonesWorkbenchUIFn = hooks.renderWorkbench;
+  }
+  if (typeof hooks.renderCurrentTarget === "function") {
+    target.updateSpecialZonesWorkbenchCurrentTargetUIFn = hooks.renderCurrentTarget;
+  }
+}
+
 function createLayerFromPreset(presetId = "custom", patch = {}) {
   const preset = SPECIAL_ZONE_PRESET_BY_ID.get(String(presetId || "").trim()) || SPECIAL_ZONE_PRESET_BY_ID.get("custom");
   return normalizeSpecialZoneLayer({
@@ -315,9 +384,17 @@ export {
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
   createSpecialZoneLayerStyle,
+  activateSpecialZoneMembershipToolState,
   ensureSpecialZoneLayersState,
+  exitSpecialZoneMembershipToolState,
   mutateSpecialZoneLayersState,
+  mutateRuntimeSpecialZoneLayersState,
+  normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
+  registerSpecialZonesWorkbenchRuntimeHooks,
   serializeSpecialZoneLayersState,
+  setRuntimeSpecialZoneLayersState,
+  setSpecialZoneMembershipBrushModeState,
+  setSpecialZonePresetCategoryState,
   updateSpecialZoneLayerMembership,
 };

@@ -1441,7 +1441,10 @@ def _validate_runtime_shell_topology(
         if not isinstance(political_geometries, list) or not political_geometries:
             errors.append(f"{field_name} must contain non-empty objects.political.geometries in strict mode.")
     if require_overlay_shell_objects:
-        for object_name in ("land_mask", "context_land_mask", "scenario_water", SCENARIO_ATLANTROPA_OBJECT_NAME):
+        required_objects = ["land_mask", "context_land_mask", "scenario_water"]
+        if str(manifest.get("scenario_atlantropa_topology_url") or "").strip():
+            required_objects.append(SCENARIO_ATLANTROPA_OBJECT_NAME)
+        for object_name in required_objects:
             if object_name not in objects:
                 errors.append(f"{field_name} must contain objects.{object_name} in strict mode.")
 
@@ -1795,6 +1798,108 @@ def _validate_runtime_atlantropa_layer(
     return atlantropa_ids
 
 
+def _validate_runtime_topology_object_count(
+    target_dir: Path,
+    manifest_summary: dict,
+    runtime_payload: dict,
+    errors: list[str],
+) -> None:
+    objects = runtime_payload.get("objects") if isinstance(runtime_payload, dict) else None
+    if not isinstance(objects, dict):
+        return
+    runtime_object_names = sorted(str(name) for name in objects.keys())
+    runtime_object_count = len(runtime_object_names)
+    manifest_count = manifest_summary.get("scenario_runtime_topology_object_count")
+    if manifest_count is not None:
+        try:
+            manifest_count_int = int(manifest_count)
+        except (TypeError, ValueError):
+            errors.append(
+                "manifest.summary.scenario_runtime_topology_object_count must be an integer in strict mode. "
+                f"Found {manifest_count!r}."
+            )
+        else:
+            if manifest_count_int != runtime_object_count:
+                errors.append(
+                    "manifest.summary.scenario_runtime_topology_object_count must equal runtime_topology object count. "
+                    f"manifest={manifest_count_int} runtime={runtime_object_count} objects={runtime_object_names}."
+                )
+    runtime_meta_path = target_dir / "runtime_meta.json"
+    if not runtime_meta_path.is_file():
+        return
+    runtime_meta = _load_required_local_json(runtime_meta_path, errors)
+    if runtime_meta is None:
+        return
+    meta_count = runtime_meta.get("runtime_topology_object_count")
+    try:
+        meta_count_int = int(meta_count)
+    except (TypeError, ValueError):
+        errors.append(f"runtime_meta.json runtime_topology_object_count must be an integer. Found {meta_count!r}.")
+    else:
+        if meta_count_int != runtime_object_count:
+            errors.append(
+                "runtime_meta.json runtime_topology_object_count must equal runtime_topology object count. "
+                f"runtime_meta={meta_count_int} runtime={runtime_object_count}."
+            )
+    meta_names = runtime_meta.get("runtime_topology_object_names")
+    if isinstance(meta_names, list):
+        normalized_meta_names = sorted(str(name) for name in meta_names if str(name).strip())
+        if normalized_meta_names != runtime_object_names:
+            errors.append(
+                "runtime_meta.json runtime_topology_object_names must equal runtime_topology object names. "
+                f"runtime_meta={normalized_meta_names} runtime={runtime_object_names}."
+            )
+
+
+def _validate_atlantropa_publish_mirror(
+    target_dir: Path,
+    manifest: dict,
+    manifest_summary: dict,
+    runtime_atlantropa_feature_ids: set[str],
+    errors: list[str],
+) -> None:
+    topology_path = _resolve_scenario_url(
+        target_dir,
+        manifest.get("scenario_atlantropa_topology_url"),
+        errors,
+        "scenario_atlantropa_topology_url",
+    )
+    if topology_path is None:
+        return
+    topology_payload = _load_required_local_json(topology_path, errors)
+    if topology_payload is None:
+        return
+    mirror_errors: list[str] = []
+    mirror_ids = _extract_runtime_object_feature_ids(
+        topology_payload,
+        mirror_errors,
+        topology_path,
+        SCENARIO_ATLANTROPA_OBJECT_NAME,
+    )
+    if mirror_errors:
+        errors.extend(mirror_errors)
+    if mirror_ids != runtime_atlantropa_feature_ids:
+        errors.append(
+            "scenario_atlantropa_topology_url must mirror runtime_topology objects.scenario_atlantropa ids. "
+            f"mirror={len(mirror_ids)} runtime={len(runtime_atlantropa_feature_ids)} "
+            f"missing={sorted(runtime_atlantropa_feature_ids - mirror_ids)[:10]} "
+            f"extra={sorted(mirror_ids - runtime_atlantropa_feature_ids)[:10]}."
+        )
+    summary_count = manifest_summary.get("scenario_atlantropa_feature_count")
+    if summary_count is None:
+        return
+    try:
+        summary_count_int = int(summary_count)
+    except (TypeError, ValueError):
+        errors.append(f"manifest.summary.scenario_atlantropa_feature_count must be an integer. Found {summary_count!r}.")
+        return
+    if summary_count_int != len(runtime_atlantropa_feature_ids):
+        errors.append(
+            "manifest.summary.scenario_atlantropa_feature_count must equal runtime scenario_atlantropa feature count. "
+            f"manifest={summary_count_int} runtime={len(runtime_atlantropa_feature_ids)}."
+        )
+
+
 def validate_strict_bundle_contract(
     target_dir: Path,
     errors: list[str],
@@ -1873,6 +1978,7 @@ def validate_strict_bundle_contract(
             "manifest.summary.feature_count must equal owners feature count in strict mode. "
             f"manifest={expected_feature_count} owners={len(owner_ids)}."
         )
+    _validate_runtime_topology_object_count(target_dir, manifest_summary, runtime_payload, errors)
     if target_dir.name == "tno_1962":
         for field_name in ("scenario_atlantropa_topology_url", "scenario_atlantropa_metadata_url"):
             if not str(manifest.get(field_name) or "").strip():
@@ -1891,6 +1997,13 @@ def validate_strict_bundle_contract(
             owner_ids=owner_ids,
             errors=errors,
             runtime_path=target_dir / "runtime_topology.topo.json",
+        )
+        _validate_atlantropa_publish_mirror(
+            target_dir,
+            manifest,
+            manifest_summary,
+            runtime_atlantropa_feature_ids,
+            errors,
         )
     runtime_feature_ids = runtime_political_feature_ids | runtime_atlantropa_feature_ids
     runtime_topology_path = target_dir / "runtime_topology.topo.json"

@@ -39,6 +39,10 @@
               50.39474804248043
             ],
             [
+              127.73834166913099,
+              50.399630087863386
+            ],
+            [
               127.66267662676626,
               50.50410585905858
             ],
@@ -85,6 +89,10 @@
             [
               127.459954599546,
               50.38479590255901
+            ],
+            [
+              127.45678835087469,
+              50.388558073437046
             ],
             [
               127.41067410674106,
@@ -231,6 +239,10 @@
               [
                 127.43227432274324,
                 50.40169139591397
+              ],
+              [
+                127.45678835087469,
+                50.388558073437046
               ],
               [
                 127.46467464674646,
@@ -1342,6 +1354,10 @@
               53.130429295292956
             ],
             [
+              124.87199975532033,
+              53.11251062283585
+            ],
+            [
               124.87199975532035,
               53.11251062283584
             ],
@@ -1368,6 +1384,10 @@
             [
               124.9158491584916,
               53.19639115291152
+            ],
+            [
+              124.98654077449869,
+              53.19923161567979
             ],
             [
               125.13185131851321,
@@ -1668,6 +1688,10 @@
             [
               126.16646182272093,
               53.80964980898825
+            ],
+            [
+              126.15589792261552,
+              53.814823018957505
             ],
             [
               126.09306093060934,
@@ -2531,6 +2555,10 @@
               55.75328105481056
             ],
             [
+              130.69727900563404,
+              55.750931691100575
+            ],
+            [
               130.56054285678488,
               55.74353462062832
             ],
@@ -2945,6 +2973,10 @@
             [
               122.10062100621008,
               53.44114436144362
+            ],
+            [
+              122.1075693274416,
+              53.442746673774444
             ],
             [
               122.10846013785573,
@@ -4118,6 +4150,10 @@
                 56.92323610836108
               ],
               [
+                121.50732693767618,
+                56.92888493827312
+              ],
+              [
                 121.4058140581406,
                 56.9857262892629
               ],
@@ -4371,46 +4407,32 @@
       }
     },
     {
-      "id": 23,
+      "id": 11888,
       "type": "Feature",
       "properties": {
         "id": "RU_ARCTIC_FB_FIC_006",
         "name": "Russia Shell Fallback FIC",
         "cntr_code": "RU",
-        "admin1_group": null,
         "detail_tier": "scenario_runtime_shell",
         "__source": "detail",
         "scenario_id": "tno_1962",
         "scenario_helper_kind": "shell_fallback",
         "scenario_shell_owner_hint": "FIC",
         "scenario_shell_controller_hint": "FIC",
-        "source_fragment_count": 67.0,
-        "source_fragment_area": 0.099898,
+        "source_fragment_count": 90.0,
+        "source_fragment_area": 0.136258,
         "retained_fragment_area": 0.010314,
         "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
+        "render_as_base_geography": false
       },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
           [
+            [
+              125.23985239852402,
+              53.165146062460636
+            ],
             [
               125.419854198542,
               53.07835414454145
@@ -4434,79 +4456,6 @@
             [
               125.23985239852402,
               53.165146062460636
-            ],
-            [
-              125.419854198542,
-              53.07835414454145
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": 24,
-      "type": "Feature",
-      "properties": {
-        "id": "RU_ARCTIC_FB_FIC_007",
-        "name": "Russia Shell Fallback FIC",
-        "cntr_code": "RU",
-        "admin1_group": null,
-        "detail_tier": "scenario_runtime_shell",
-        "__source": "detail",
-        "scenario_id": "tno_1962",
-        "scenario_helper_kind": "shell_fallback",
-        "scenario_shell_owner_hint": "FIC",
-        "scenario_shell_controller_hint": "MAN",
-        "source_fragment_count": 23.0,
-        "source_fragment_area": 0.03636,
-        "retained_fragment_area": 0.007318,
-        "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              126.9966699666997,
-              51.002291467914674
-            ],
-            [
-              127.29547295472958,
-              50.710670623706235
-            ],
-            [
-              127.29907299072994,
-              50.745387390873915
-            ],
-            [
-              127.1838718387184,
-              50.840858500585014
-            ],
-            [
-              127.14787147871482,
-              50.89293365133652
-            ],
-            [
-              126.9966699666997,
-              51.002291467914674
             ]
           ]
         ]

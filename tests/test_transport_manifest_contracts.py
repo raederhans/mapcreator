@@ -67,6 +67,82 @@ class TransportManifestContractsTest(unittest.TestCase):
             errors,
         )
 
+    def test_validator_rejects_empty_feature_counts_for_feature_manifests(self) -> None:
+        manifest = {
+            "adapter_id": "empty_point_v1",
+            "family": "road",
+            "geometry_kind": "line",
+            "generated_at": "2026-05-07T00:00:00Z",
+            "recipe_version": "v1",
+            "feature_counts": {},
+            "source_policy": "local_source_cache_only",
+            "distribution_tier": "single_pack",
+            "paths": {"preview": {"roads": "preview.topo.json"}},
+            "default_variant": "default",
+            "variants": {
+                "default": {
+                    "distribution_tier": "single_pack",
+                    "paths": {"preview": {"roads": "preview.topo.json"}},
+                    "feature_counts": {},
+                }
+            },
+        }
+
+        errors = validate_transport_manifest(manifest, source_label="road-manifest")
+
+        self.assertTrue(any("feature_counts" in error for error in errors), errors)
+
+    def test_validator_rejects_boolean_feature_counts(self) -> None:
+        manifest = {
+            "adapter_id": "boolean_count_v1",
+            "family": "road",
+            "geometry_kind": "line",
+            "generated_at": "2026-05-11T00:00:00Z",
+            "recipe_version": "v1",
+            "feature_counts": {"preview": {"roads": True}},
+            "source_policy": "local_source_cache_only",
+            "distribution_tier": "single_pack",
+            "paths": {"preview": {"roads": "preview.topo.json"}},
+            "default_variant": "default",
+            "variants": {
+                "default": {
+                    "distribution_tier": "single_pack",
+                    "paths": {"preview": {"roads": "preview.topo.json"}},
+                    "feature_counts": {"preview": {"roads": False}},
+                }
+            },
+        }
+
+        errors = validate_transport_manifest(manifest, source_label="road-manifest")
+
+        self.assertTrue(any("feature_counts" in error for error in errors), errors)
+
+    def test_validator_rejects_carrier_family_without_carrier_geometry_kind(self) -> None:
+        manifest = {
+            "adapter_id": "bad_carrier_v1",
+            "family": "carrier",
+            "geometry_kind": "line",
+            "generated_at": "2026-05-11T00:00:00Z",
+            "recipe_version": "v1",
+            "feature_counts": {},
+            "source_policy": "local_source_cache_only",
+            "distribution_tier": "single_pack",
+            "paths": {"carrier": "carrier.json", "provenance": "provenance.json"},
+            "default_variant": "default",
+            "variants": {
+                "default": {
+                    "distribution_tier": "single_pack",
+                    "paths": {"carrier": "carrier.json"},
+                    "feature_counts": {},
+                }
+            },
+        }
+
+        errors = validate_transport_manifest(manifest, source_label="carrier-manifest")
+
+        self.assertTrue(any("carrier family requires geometry_kind" in error for error in errors), errors)
+        self.assertTrue(any("feature_counts" in error for error in errors), errors)
+
     def test_checked_in_transport_manifests_do_not_keep_legacy_variant_fields(self) -> None:
         manifest_paths = discover_manifest_paths(PROJECT_ROOT / "data" / "transport_layers")
         legacy_fields = {

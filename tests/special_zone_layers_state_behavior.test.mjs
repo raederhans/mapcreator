@@ -118,13 +118,28 @@ test("style preset updates preserve members and replace mode keeps one explicit 
     action: "updateLayer",
     layerId: "active",
     patch: {
+      presetId: "custom",
+      category: "custom",
+      style: { fill: "#112233", revision: 10 },
+    },
+  });
+
+  let layer = state.layers.find((entry) => entry.id === "active");
+  assert.equal(layer.presetId, "custom");
+  assert.equal(layer.category, "custom");
+  assert.deepEqual(layer.memberFeatureIds, ["1", "2"]);
+
+  state = mutateSpecialZoneLayersState(state, {
+    action: "updateLayer",
+    layerId: "active",
+    patch: {
       presetId: disputed.id,
       category: disputed.category,
       style: { ...disputed.style, revision: 9 },
     },
   });
 
-  let layer = state.layers.find((entry) => entry.id === "active");
+  layer = state.layers.find((entry) => entry.id === "active");
   assert.equal(layer.presetId, "disputed");
   assert.equal(layer.style.fill, disputed.style.fill);
   assert.deepEqual(layer.memberFeatureIds, ["1", "2"]);

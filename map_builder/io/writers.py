@@ -4,9 +4,21 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 
 import geopandas as gpd
+
+
+def _replace_with_retry(temp_path: Path, path: Path) -> None:
+    for attempt in range(5):
+        try:
+            temp_path.replace(path)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.25)
 
 
 def write_text_atomic(path: Path, text: str, *, encoding: str = "utf-8") -> None:
@@ -21,7 +33,7 @@ def write_text_atomic(path: Path, text: str, *, encoding: str = "utf-8") -> None
     try:
         with os.fdopen(fd, "w", encoding=encoding, newline="") as handle:
             handle.write(text)
-        temp_path.replace(path)
+        _replace_with_retry(temp_path, path)
     except Exception:
         temp_path.unlink(missing_ok=True)
         raise
@@ -38,7 +50,7 @@ def write_bytes_atomic(path: Path, content: bytes) -> None:
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(content)
-        temp_path.replace(path)
+        _replace_with_retry(temp_path, path)
     except Exception:
         temp_path.unlink(missing_ok=True)
         raise

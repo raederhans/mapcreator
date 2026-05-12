@@ -131,6 +131,10 @@
               66.30717827378272
             ],
             [
+              63.06643999666063,
+              66.25393007056056
+            ],
+            [
               63.06723067230672,
               66.25336728467285
             ],
@@ -395,13 +399,12 @@
       }
     },
     {
-      "id": 68,
+      "id": 11927,
       "type": "Feature",
       "properties": {
-        "id": "RU_ARCTIC_FB_VOK_051",
+        "id": "RU_ARCTIC_FB_VOK_045",
         "name": "Russia Shell Fallback VOK",
         "cntr_code": "RU",
-        "admin1_group": null,
         "detail_tier": "scenario_runtime_shell",
         "__source": "detail",
         "scenario_id": "tno_1962",
@@ -412,29 +415,16 @@
         "source_fragment_area": 0.005065,
         "retained_fragment_area": 0.003837,
         "interactive": false,
-        "render_as_base_geography": false,
-        "region_id": null,
-        "region_group": null,
-        "atl_surface_kind": null,
-        "atl_region_group": null,
-        "atl_geometry_role": null,
-        "atl_join_mode": null,
-        "owner_tag": null,
-        "synthetic_owner": null,
-        "donor_state_ids": null,
-        "donor_state_names": null,
-        "donor_province_ids": null,
-        "donor_state_id": null,
-        "donor_state_name": null,
-        "donor_province_id": null,
-        "assignment_source": null,
-        "source_standard": null,
-        "atl_subbasin_id": null
+        "render_as_base_geography": false
       },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
           [
+            [
+              64.56124561245613,
+              66.80015636756367
+            ],
             [
               65.02565025650259,
               66.87306157861578
@@ -454,10 +444,6 @@
             [
               64.56124561245613,
               66.80015636756367
-            ],
-            [
-              65.02565025650259,
-              66.87306157861578
             ]
           ]
         ]
