@@ -4,7 +4,7 @@
   "geometry_kind": "point",
   "country": "India",
   "schema_version": 1,
-  "generated_at": "2026-05-12T21:26:33.477879Z",
+  "generated_at": "2026-05-12T22:39:56.105848Z",
   "recipe_path": "data/transport_layers/india_airport/source_recipe.manual.json",
   "distribution_tier": "single_pack",
   "paths": {
@@ -34,6 +34,12 @@
       "path": ".runtime/source-cache/transport/india_airport/in_airport_osm_geometry_overpass_2026-05-12.geojson",
       "size_bytes": 153594,
       "sha256": "d844af5ac6d6322fcfbfefd23af1e8825de564ebd51600bd63171a65706d4813"
+    },
+    "aai_air_traffic_report_june_2025_manual_rank": {
+      "filename": "transport_country_india_airport_traffic_rank.manual.json",
+      "path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+      "size_bytes": 2608,
+      "sha256": "8c8492c998a494d86842c59ef0e4b9b0fb9a07152f2ecafab6e5166edb084922"
     }
   },
   "recipe_version": "india_airport_real_sources_v1",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T21:26:33.477879Z",
+  "generated_at": "2026-05-12T22:39:56.105848Z",
   "adapter_id": "india_airport_v1",
   "pack_id": "india_airport",
   "source_policy": "real_source_cache_only",
@@ -23,6 +23,12 @@
       "path": ".runtime/source-cache/transport/india_airport/in_airport_osm_geometry_overpass_2026-05-12.geojson",
       "size_bytes": 153594,
       "sha256": "d844af5ac6d6322fcfbfefd23af1e8825de564ebd51600bd63171a65706d4813"
+    },
+    "aai_air_traffic_report_june_2025_manual_rank": {
+      "filename": "transport_country_india_airport_traffic_rank.manual.json",
+      "path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+      "size_bytes": 2608,
+      "sha256": "8c8492c998a494d86842c59ef0e4b9b0fb9a07152f2ecafab6e5166edb084922"
     }
   },
   "feature_counts": {
@@ -35,6 +41,7 @@
   },
   "source_row_count": {
     "aai_airport_list_rows": 145,
+    "aai_traffic_rank_rows": 48,
     "osm_geometry_rows": 412
   },
   "matched_count": 73,
@@ -113,5 +120,16 @@
     "Zero"
   ],
   "unmatched_geometry_rows": 339,
-  "preview_rule": "AAI June 2025 traffic-report major airport order matched against AAI airport-list objects"
+  "traffic_rank_source": {
+    "path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+    "rows": 48,
+    "source_pdf_sha256": "b391b309f698086d1358b8e5e8fea7b90de1ed8a8b6a34752c4a820e95abd294",
+    "rank_file_signature": {
+      "filename": "transport_country_india_airport_traffic_rank.manual.json",
+      "path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+      "size_bytes": 2608,
+      "sha256": "8c8492c998a494d86842c59ef0e4b9b0fb9a07152f2ecafab6e5166edb084922"
+    }
+  },
+  "preview_rule": "AAI June 2025 traffic-report audited rank extraction matched against AAI airport-list objects"
 }

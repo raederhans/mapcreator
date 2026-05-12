@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T21:26:26.554490Z",
+  "generated_at": "2026-05-12T22:27:35.401530Z",
   "adapter_id": "france_rail_v1",
   "pack_id": "france_rail",
   "source_policy": "real_source_cache_only",
@@ -21,7 +21,7 @@
   },
   "feature_counts": {
     "preview": {
-      "railways": 1201,
+      "railways": 787,
       "rail_stations_major": 3279
     },
     "full": {
@@ -37,5 +37,5 @@
     "railways": 1638,
     "rail_stations_major": 6469
   },
-  "preview_rule": "exclude neutralized/declassified lines; passenger stations only"
+  "preview_rule": "keep only SNCF operating/Exploitee rail lines; passenger stations only"
 }

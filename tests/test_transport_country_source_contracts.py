@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
+
+import pandas as pd
 
 from map_builder.transport_country_real_source_contracts import (
     COUNTRY_SOURCE_SPECS,
@@ -13,6 +16,7 @@ from map_builder.transport_country_real_source_contracts import (
     check_country_sources,
     scan_for_forbidden_backend_tokens,
 )
+from tools.build_transport_country_real_packs import is_operating_france_rail_status, normalize_text
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +92,59 @@ class TransportCountrySourceContractsTest(unittest.TestCase):
                 missing_signature.append(pack_id)
 
         self.assertFalse(missing_signature, missing_signature)
+
+    def test_normalize_text_treats_pandas_missing_values_as_empty(self) -> None:
+        self.assertEqual(normalize_text(None), "")
+        self.assertEqual(normalize_text(float("nan")), "")
+        self.assertEqual(normalize_text(pd.NA), "")
+
+    def test_usa_airport_pack_excludes_private_airports_and_nan_codes(self) -> None:
+        payload = json.loads((TRANSPORT_ROOT / "usa_airport" / "airports.geojson").read_text(encoding="utf-8"))
+        offenders = []
+        for feature in payload.get("features") or []:
+            properties = feature.get("properties") or {}
+            if properties.get("facility_use") == "PR":
+                offenders.append(properties.get("id") or properties.get("name"))
+            for key in ("iata", "icao"):
+                if str(properties.get(key) or "").casefold() == "nan":
+                    offenders.append(f"{properties.get('id') or properties.get('name')}:{key}=nan")
+
+        self.assertFalse(offenders[:20], offenders[:20])
+
+    def test_france_rail_preview_contains_only_operating_lines(self) -> None:
+        payload = json.loads((TRANSPORT_ROOT / "france_rail" / "railways.preview.topo.json").read_text(encoding="utf-8"))
+        geometries = payload.get("objects", {}).get("railways", {}).get("geometries") or []
+        offenders = []
+        missing_status = []
+        for geometry in geometries:
+            properties = geometry.get("properties") or {}
+            if not is_operating_france_rail_status(properties.get("rail_status")):
+                offenders.append(properties.get("rail_status"))
+            if properties.get("status") != "active":
+                missing_status.append(properties.get("id"))
+
+        self.assertTrue(geometries)
+        self.assertFalse(offenders[:20], offenders[:20])
+        self.assertFalse(missing_status[:20], missing_status[:20])
+
+    def test_india_airport_preview_uses_audited_traffic_rank_source(self) -> None:
+        audit = json.loads((TRANSPORT_ROOT / "india_airport" / "build_audit.json").read_text(encoding="utf-8"))
+        recipe = json.loads((TRANSPORT_ROOT / "india_airport" / "source_recipe.manual.json").read_text(encoding="utf-8"))
+        rank_source = audit.get("traffic_rank_source") or {}
+
+        self.assertGreater(audit.get("source_row_count", {}).get("aai_traffic_rank_rows", 0), 0)
+        self.assertEqual(rank_source.get("rows"), audit.get("source_row_count", {}).get("aai_traffic_rank_rows"))
+        self.assertIn("aai_air_traffic_report_june_2025_manual_rank", recipe.get("source_signature") or {})
+        rank_path = PROJECT_ROOT / rank_source.get("path", "")
+        rank_payload = rank_path.read_text(encoding="utf-8").replace("\r\n", "\n").encode("utf-8")
+        rank_sha = hashlib.sha256(rank_payload).hexdigest()
+        rank_signature = recipe.get("source_signature", {}).get("aai_air_traffic_report_june_2025_manual_rank", {})
+        self.assertEqual(rank_source.get("rank_file_signature", {}).get("sha256"), rank_sha)
+        self.assertEqual(rank_signature.get("sha256"), rank_sha)
+        self.assertEqual(
+            rank_source.get("source_pdf_sha256"),
+            recipe.get("source_signature", {}).get("aai_air_traffic_report_june_2025", {}).get("sha256"),
+        )
 
 
 if __name__ == "__main__":

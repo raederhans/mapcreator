@@ -4,7 +4,7 @@
   "geometry_kind": "point",
   "country": "United States",
   "schema_version": 1,
-  "generated_at": "2026-05-12T21:26:28.557238Z",
+  "generated_at": "2026-05-12T22:27:36.827281Z",
   "recipe_path": "data/transport_layers/usa_airport/source_recipe.manual.json",
   "distribution_tier": "single_pack",
   "paths": {
@@ -36,13 +36,13 @@
       "airports": 250
     },
     "full": {
-      "airports": 12587
+      "airports": 4729
     }
   },
   "clip_bbox": [
     -177.381309,
     -14.331662,
-    174.113589,
+    145.768611,
     71.284861
   ],
   "build_command": "python tools/build_transport_country_real_packs.py --pack usa_airport",
@@ -67,7 +67,7 @@
           "airports": 250
         },
         "full": {
-          "airports": 12587
+          "airports": 4729
         }
       }
     }

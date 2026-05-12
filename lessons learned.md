@@ -1600,3 +1600,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 官方名录 + OSM 坐标补充必须用 exact code/name/alias 匹配；子串匹配会把短地名错配到长地名，并制造同坐标多机场。
 - 已签名的 source 必须真实参与 builder 数据流；source_recipe 记录源文件时用 repo-relative 路径，避免把本机绝对路径写入可提交审计文件。
 - preview 规则解析为空时要 fail-fast；直接取 head 会掩盖官方字段解析失败。
+
+### 25. 审计文件记录 repo 内文本源时，要用 repo-normalized 字节签名
+- 如果受审计源本身是 repo 内 JSON，sha 必须按仓库最终文本字节计算，避免工作区 CRLF/LF 转换让 audit 记录和实际提交内容漂移。
+- 测试不能只比较 audit 与 recipe 彼此一致，还要直接读取源文件并校验实际 sha。

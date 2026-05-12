@@ -40,7 +40,7 @@
         "freight",
         "aircraft_movements"
       ],
-      "filter_rule": "Preview keeps airports above the agreed traffic threshold.",
+      "filter_rule": "Preview ordering uses the repo-versioned audited extraction file whose source_pdf_sha256 must match this PDF.",
       "notes": "",
       "signature": {
         "filename": "aai_air_traffic_report_june_2025_TRJun2k25.pdf",
@@ -70,6 +70,26 @@
         "size_bytes": 153594,
         "sha256": "d844af5ac6d6322fcfbfefd23af1e8825de564ebd51600bd63171a65706d4813"
       }
+    },
+    {
+      "id": "aai_air_traffic_report_june_2025_manual_rank",
+      "role": "audited_importance_filter_extraction",
+      "expected_path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+      "url": "https://www.aai.aero/sites/default/files/traffic-news/TRJun2k25.pdf",
+      "license": "official_reference_citation_only",
+      "required_fields": [
+        "airport",
+        "rank",
+        "source_pdf_sha256"
+      ],
+      "filter_rule": "Preview rank order comes from this audited extraction of the AAI June 2025 traffic report.",
+      "notes": "Small repo-versioned extraction file keeps the PDF-derived ranking auditable without requiring a PDF text dependency.",
+      "signature": {
+        "filename": "transport_country_india_airport_traffic_rank.manual.json",
+        "path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+        "size_bytes": 2608,
+        "sha256": "8c8492c998a494d86842c59ef0e4b9b0fb9a07152f2ecafab6e5166edb084922"
+      }
     }
   ],
   "source_signature": {
@@ -90,6 +110,12 @@
       "path": ".runtime/source-cache/transport/india_airport/in_airport_osm_geometry_overpass_2026-05-12.geojson",
       "size_bytes": 153594,
       "sha256": "d844af5ac6d6322fcfbfefd23af1e8825de564ebd51600bd63171a65706d4813"
+    },
+    "aai_air_traffic_report_june_2025_manual_rank": {
+      "filename": "transport_country_india_airport_traffic_rank.manual.json",
+      "path": "map_builder/transport_country_india_airport_traffic_rank.manual.json",
+      "size_bytes": 2608,
+      "sha256": "8c8492c998a494d86842c59ef0e4b9b0fb9a07152f2ecafab6e5166edb084922"
     }
   },
   "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",

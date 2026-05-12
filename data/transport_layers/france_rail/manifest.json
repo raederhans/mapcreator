@@ -4,7 +4,7 @@
   "geometry_kind": "line",
   "country": "France",
   "schema_version": 1,
-  "generated_at": "2026-05-12T21:26:26.554490Z",
+  "generated_at": "2026-05-12T22:27:35.401530Z",
   "recipe_path": "data/transport_layers/france_rail/source_recipe.manual.json",
   "distribution_tier": "single_pack",
   "paths": {
@@ -35,7 +35,7 @@
   "recipe_version": "france_rail_real_sources_v1",
   "feature_counts": {
     "preview": {
-      "railways": 1201,
+      "railways": 787,
       "rail_stations_major": 3279
     },
     "full": {
@@ -70,7 +70,7 @@
       },
       "feature_counts": {
         "preview": {
-          "railways": 1201,
+          "railways": 787,
           "rail_stations_major": 3279
         },
         "full": {

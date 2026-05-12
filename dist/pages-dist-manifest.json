@@ -3890,11 +3890,11 @@
     },
     {
       "path": "app/data/transport_layers/france_rail/build_audit.json",
-      "size_bytes": 1511
+      "size_bytes": 1517
     },
     {
       "path": "app/data/transport_layers/france_rail/manifest.json",
-      "size_bytes": 2988
+      "size_bytes": 2986
     },
     {
       "path": "app/data/transport_layers/france_rail/rail_stations_major.preview.geojson",
@@ -3902,7 +3902,7 @@
     },
     {
       "path": "app/data/transport_layers/france_rail/railways.preview.topo.json",
-      "size_bytes": 1409058
+      "size_bytes": 1193315
     },
     {
       "path": "app/data/transport_layers/germany_road/build_audit.json",
@@ -4986,15 +4986,15 @@
     },
     {
       "path": "app/data/transport_layers/india_airport/airports.preview.geojson",
-      "size_bytes": 3744
+      "size_bytes": 3738
     },
     {
       "path": "app/data/transport_layers/india_airport/build_audit.json",
-      "size_bytes": 3076
+      "size_bytes": 3998
     },
     {
       "path": "app/data/transport_layers/india_airport/manifest.json",
-      "size_bytes": 2796
+      "size_bytes": 3136
     },
     {
       "path": "app/data/transport_layers/japan_airport/airports.geojson",
@@ -5194,11 +5194,11 @@
     },
     {
       "path": "app/data/transport_layers/usa_airport/build_audit.json",
-      "size_bytes": 1331
+      "size_bytes": 1368
     },
     {
       "path": "app/data/transport_layers/usa_airport/manifest.json",
-      "size_bytes": 2377
+      "size_bytes": 2375
     },
     {
       "path": "app/data/unit_counter_libraries/hoi4/large/category_all_armor.png",
@@ -6783,5 +6783,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1023653273
+  "total_bytes": 1023438825
 }

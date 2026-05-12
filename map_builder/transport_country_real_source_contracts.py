@@ -277,7 +277,7 @@ COUNTRY_SOURCE_SPECS: dict[str, CountrySourceSpec] = {
                 "https://www.aai.aero/sites/default/files/traffic-news/TRJun2k25.pdf",
                 "official_reference_citation_only",
                 required_fields=("airport", "passengers", "freight", "aircraft_movements"),
-                filter_rule="Preview keeps airports above the agreed traffic threshold.",
+                filter_rule="Preview ordering uses the repo-versioned audited extraction file whose source_pdf_sha256 must match this PDF.",
             ),
             _source(
                 "osm_airport_geometry_supplement",

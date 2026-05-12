@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T21:26:28.557238Z",
+  "generated_at": "2026-05-12T22:27:36.827281Z",
   "adapter_id": "usa_airport_v1",
   "pack_id": "usa_airport",
   "source_policy": "real_source_cache_only",
@@ -24,14 +24,15 @@
       "airports": 250
     },
     "full": {
-      "airports": 12587
+      "airports": 4729
     }
   },
   "source_row_count": {
     "APT_BASE": 19410,
     "faa_enplanements": 1703
   },
-  "matched_count": 1644,
-  "unmatched_official_rows": 10943,
-  "preview_rule": "CY2024 enplanements >= 1,000,000 plus ICAO-coded public airports capped at 250"
+  "matched_count": 1536,
+  "unmatched_official_rows": 3193,
+  "excluded_private_rows": 14240,
+  "preview_rule": "CY2024 enplanements >= 1,000,000 plus ICAO-coded public-use airports capped at 250"
 }

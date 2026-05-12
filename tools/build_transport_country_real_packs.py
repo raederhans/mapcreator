@@ -31,6 +31,7 @@ from map_builder.transport_country_real_source_contracts import (  # noqa: E402
 from map_builder.transport_workbench_contracts import finalize_transport_manifest  # noqa: E402
 
 OUTPUT_ROOT = PROJECT_ROOT / "data" / "transport_layers"
+INDIA_TRAFFIC_RANK_PATH = PROJECT_ROOT / "map_builder" / "transport_country_india_airport_traffic_rank.manual.json"
 
 
 def utc_now() -> str:
@@ -45,6 +46,31 @@ def write_json(path: Path, payload: Any, *, compact: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False) if compact else json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False)
     path.write_text(text + ("" if compact else "\n"), encoding="utf-8")
+
+
+def file_signature(path: Path) -> dict[str, Any]:
+    import hashlib
+
+    payload = path.read_bytes()
+    return {
+        "filename": path.name,
+        "path": rel(path),
+        "size_bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def repo_text_file_signature(path: Path) -> dict[str, Any]:
+    import hashlib
+
+    text = path.read_text(encoding="utf-8")
+    payload = text.replace("\r\n", "\n").encode("utf-8")
+    return {
+        "filename": path.name,
+        "path": rel(path),
+        "size_bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
 
 
 def feature_collection(gdf: gpd.GeoDataFrame) -> dict[str, Any]:
@@ -73,6 +99,22 @@ def source_recipe_for(pack_id: str, output_dir: Path) -> tuple[dict[str, Any], d
         missing = ", ".join(item["expected_path"] for item in report.get("missing_sources", []))
         raise SystemExit(f"Missing required source files for {pack_id}: {missing}")
     recipe = build_source_recipe(spec, report)
+    if pack_id == "india_airport":
+        rank_signature = repo_text_file_signature(INDIA_TRAFFIC_RANK_PATH)
+        recipe.setdefault("sources", []).append(
+            {
+                "id": "aai_air_traffic_report_june_2025_manual_rank",
+                "role": "audited_importance_filter_extraction",
+                "expected_path": rel(INDIA_TRAFFIC_RANK_PATH),
+                "url": "https://www.aai.aero/sites/default/files/traffic-news/TRJun2k25.pdf",
+                "license": "official_reference_citation_only",
+                "required_fields": ["airport", "rank", "source_pdf_sha256"],
+                "filter_rule": "Preview rank order comes from this audited extraction of the AAI June 2025 traffic report.",
+                "notes": "Small repo-versioned extraction file keeps the PDF-derived ranking auditable without requiring a PDF text dependency.",
+                "signature": rank_signature,
+            }
+        )
+        recipe.setdefault("source_signature", {})["aai_air_traffic_report_june_2025_manual_rank"] = rank_signature
     write_json(output_dir / "source_recipe.manual.json", recipe)
     return recipe, report
 
@@ -156,6 +198,11 @@ def write_pack(
 
 
 def normalize_text(value: Any) -> str:
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
     return re.sub(r"\s+", " ", str(value or "").strip())
 
 
@@ -174,6 +221,44 @@ def match_key(value: Any) -> str:
     text = re.sub(r"\b(international|airport|aerodrome|civil|municipal|intl|ltd|limited)\b", " ", text)
     text = re.sub(r"(国际机场|國際機場|機場|机场|航空站|аэропорт|аэродром)", " ", text)
     return re.sub(r"[^\w\u0400-\u04ff\u4e00-\u9fff]+", "", text)
+
+
+def is_operating_france_rail_status(value: Any) -> bool:
+    # SNCF's source status is localized and can arrive with lossy accent decoding.
+    # The stable contract is the leading "Exploit..." token for operating lines.
+    return normalize_text(value).casefold().startswith("exploit")
+
+
+def load_india_traffic_rank(pdf_path: Path) -> dict[str, Any]:
+    rank_payload = json.loads(INDIA_TRAFFIC_RANK_PATH.read_text(encoding="utf-8"))
+    expected_pdf_sha = rank_payload.get("source_pdf_sha256")
+    actual_pdf_sha = file_signature(pdf_path)["sha256"]
+    if expected_pdf_sha != actual_pdf_sha:
+        raise SystemExit(
+            "India AAI traffic rank extraction is stale: "
+            f"{INDIA_TRAFFIC_RANK_PATH} expects {expected_pdf_sha}, PDF is {actual_pdf_sha}"
+        )
+    rows = rank_payload.get("ranked_airports") or []
+    if not rows:
+        raise SystemExit(f"{INDIA_TRAFFIC_RANK_PATH} has no ranked_airports rows.")
+    seen_ranks: set[int] = set()
+    traffic_rank: dict[str, int] = {}
+    for row in rows:
+        rank = safe_int(row.get("rank"))
+        airport = normalize_text(row.get("airport"))
+        if rank <= 0 or rank in seen_ranks or not airport:
+            raise SystemExit(f"{INDIA_TRAFFIC_RANK_PATH} contains invalid rank row: {row}")
+        seen_ranks.add(rank)
+        for alias in [airport, *(row.get("aliases") or [])]:
+            key = match_key(alias)
+            if key:
+                traffic_rank[key] = rank
+    return {
+        "rank_by_key": traffic_rank,
+        "rows": rows,
+        "source_pdf_sha256": actual_pdf_sha,
+        "rank_file_signature": repo_text_file_signature(INDIA_TRAFFIC_RANK_PATH),
+    }
 
 
 def official_aliases(name: str) -> list[str]:
@@ -296,15 +381,16 @@ def build_france_rail() -> None:
     lines["id"] = lines["code_ligne"].astype(str) + "-" + lines.index.astype(str)
     lines["name"] = lines["mnemo"].fillna(lines["code_ligne"].astype(str)).astype(str)
     lines["rail_status"] = lines["line_status"].astype(str)
-    full_lines = simplified_lines(lines[["id", "name", "code_ligne", "rail_status", "geometry"]].copy(), tolerance=0.0005)
-    preview_lines = full_lines[~full_lines["rail_status"].str.contains("Neutralisée|Déclassée", case=False, na=False)].copy()
+    lines["status"] = lines["rail_status"].map(lambda value: "active" if is_operating_france_rail_status(value) else "inactive")
+    full_lines = simplified_lines(lines[["id", "name", "code_ligne", "rail_status", "status", "geometry"]].copy(), tolerance=0.0005)
+    preview_lines = full_lines[full_lines["rail_status"].map(is_operating_france_rail_status)].copy()
     stations = stations[stations.geometry.notnull()].copy()
     stations["id"] = stations["code_uic"].astype(str)
     stations["name"] = stations["libelle"].astype(str)
     stations["is_passenger"] = stations["voyageurs"].astype(str).str.upper().eq("O")
     full_stations = stations[["id", "name", "code_uic", "is_passenger", "geometry"]].copy()
     preview_stations = full_stations[full_stations["is_passenger"]].copy()
-    write_pack(pack_id, "rail", "line", {"railways": preview_lines, "rail_stations_major": preview_stations}, {"railways": full_lines, "rail_stations_major": full_stations}, {"source_row_count": {"sncf_lines": len(lines), "sncf_stations": len(stations)}, "matched_count": {"railways": len(full_lines), "rail_stations_major": len(full_stations)}, "preview_rule": "exclude neutralized/declassified lines; passenger stations only"}, build_command="python tools/build_transport_country_real_packs.py --pack france_rail")
+    write_pack(pack_id, "rail", "line", {"railways": preview_lines, "rail_stations_major": preview_stations}, {"railways": full_lines, "rail_stations_major": full_stations}, {"source_row_count": {"sncf_lines": len(lines), "sncf_stations": len(stations)}, "matched_count": {"railways": len(full_lines), "rail_stations_major": len(full_stations)}, "preview_rule": "keep only SNCF operating/Exploitee rail lines; passenger stations only"}, build_command="python tools/build_transport_country_real_packs.py --pack france_rail")
 
 
 def load_osm_points(path: Path) -> gpd.GeoDataFrame:
@@ -366,13 +452,14 @@ def build_usa_airport() -> None:
                 enp_map[loc] = int(value)
     rows = []
     for _, row in apt.iterrows():
-        if row.get("SITE_TYPE_CODE") != "A" or row.get("COUNTRY_CODE") != "US" or row.get("ARPT_STATUS") != "O" or pd.isna(row.get("LAT_DECIMAL")) or pd.isna(row.get("LONG_DECIMAL")):
+        facility_use = normalize_text(row.get("FACILITY_USE_CODE"))
+        if row.get("SITE_TYPE_CODE") != "A" or row.get("COUNTRY_CODE") != "US" or row.get("ARPT_STATUS") != "O" or facility_use != "PU" or pd.isna(row.get("LAT_DECIMAL")) or pd.isna(row.get("LONG_DECIMAL")):
             continue
         loc = str(row.get("ARPT_ID") or "").strip()
-        rows.append({"id": f"us-airport-{loc}", "name": normalize_text(row.get("ARPT_NAME")), "iata": loc, "icao": normalize_text(row.get("ICAO_ID")), "enplanements_2024": enp_map.get(loc, 0), "facility_use": row.get("FACILITY_USE_CODE"), "geometry": Point(float(row["LONG_DECIMAL"]), float(row["LAT_DECIMAL"]))})
+        rows.append({"id": f"us-airport-{loc}", "name": normalize_text(row.get("ARPT_NAME")), "iata": loc, "icao": normalize_text(row.get("ICAO_ID")), "enplanements_2024": enp_map.get(loc, 0), "facility_use": facility_use, "geometry": Point(float(row["LONG_DECIMAL"]), float(row["LAT_DECIMAL"]))})
     gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
     preview = gdf[(gdf["enplanements_2024"] >= 1000000) | (gdf["icao"].astype(str).str.len() > 0)].sort_values("enplanements_2024", ascending=False).head(250).copy()
-    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"APT_BASE": len(apt), "faa_enplanements": len(enp)}, "matched_count": int(gdf["enplanements_2024"].gt(0).sum()), "unmatched_official_rows": int(len(gdf) - gdf["enplanements_2024"].gt(0).sum()), "preview_rule": "CY2024 enplanements >= 1,000,000 plus ICAO-coded public airports capped at 250"}, build_command="python tools/build_transport_country_real_packs.py --pack usa_airport")
+    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"APT_BASE": len(apt), "faa_enplanements": len(enp)}, "matched_count": int(gdf["enplanements_2024"].gt(0).sum()), "unmatched_official_rows": int(len(gdf) - gdf["enplanements_2024"].gt(0).sum()), "excluded_private_rows": int(apt["FACILITY_USE_CODE"].map(normalize_text).eq("PR").sum()), "preview_rule": "CY2024 enplanements >= 1,000,000 plus ICAO-coded public-use airports capped at 250"}, build_command="python tools/build_transport_country_real_packs.py --pack usa_airport")
 
 
 def build_china_airport() -> None:
@@ -447,21 +534,13 @@ def build_india_airport() -> None:
         rows.append({"id": "in-airport-" + match_key(name), "name": name, "iata": normalize_text(hit.get("iata")), "icao": normalize_text(hit.get("icao")), "geometry": hit.geometry})
     gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
     assert_unique_airport_coordinates(pack_id, gdf)
-    traffic_order = [
-        "Delhi", "Mumbai", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Ahmedabad", "Cochin",
-        "Goa", "Pune", "Lucknow", "Guwahati", "Jaipur", "Patna", "Bhubaneswar", "Srinagar",
-        "Calicut", "Trivandrum", "Indore", "Varanasi", "Nagpur", "Amritsar", "Coimbatore",
-        "Mangalore", "Visakhapatnam", "Tiruchirappalli", "Bagdogra", "Ranchi", "Raipur",
-        "Chandigarh", "Madurai", "Dehradun", "Jammu", "Leh", "Port Blair", "Agartala",
-        "Vadodara", "Vijayawada", "Aurangabad", "Rajkot", "Jodhpur", "Bhopal", "Gaya",
-        "Dibrugarh", "Imphal", "Jorhat", "Dimapur", "Silchar",
-    ]
-    traffic_rank = {match_key(name): index + 1 for index, name in enumerate(traffic_order)}
+    traffic_source = load_india_traffic_rank(d / "aai_air_traffic_report_june_2025_TRJun2k25.pdf")
+    traffic_rank = traffic_source["rank_by_key"]
     gdf["traffic_report_rank"] = gdf["name"].map(lambda name: traffic_rank.get(match_key(name), 9999))
     preview = gdf[gdf["traffic_report_rank"] < 9999].sort_values("traffic_report_rank").head(100).copy()
     if preview.empty:
         raise SystemExit(f"{pack_id}: AAI traffic-report preview rank matched zero airports.")
-    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"aai_airport_list_rows": len(official), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "preview_rule": "AAI June 2025 traffic-report major airport order matched against AAI airport-list objects"}, build_command="python tools/build_transport_country_real_packs.py --pack india_airport")
+    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"aai_airport_list_rows": len(official), "aai_traffic_rank_rows": len(traffic_source["rows"]), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "traffic_rank_source": {"path": rel(INDIA_TRAFFIC_RANK_PATH), "rows": len(traffic_source["rows"]), "source_pdf_sha256": traffic_source["source_pdf_sha256"], "rank_file_signature": traffic_source["rank_file_signature"]}, "preview_rule": "AAI June 2025 traffic-report audited rank extraction matched against AAI airport-list objects"}, build_command="python tools/build_transport_country_real_packs.py --pack india_airport")
 
 
 BUILDERS = {
