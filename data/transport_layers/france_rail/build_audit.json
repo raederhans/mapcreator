@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-05-12T21:26:26.554490Z",
+  "adapter_id": "france_rail_v1",
+  "pack_id": "france_rail",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "SNCF RFN line shapes plus official RFN station dataset",
+  "geometry_truth": "SNCF RFN line shapes; station points from SNCF/transport.data.gouv.fr",
+  "source_signature": {
+    "sncf_rfn_line_shapes": {
+      "filename": "sncf_rfn_lines_formes-des-lignes-du-rfn_2026-02-19.geojson",
+      "path": ".runtime/source-cache/transport/france_rail/sncf_rfn_lines_formes-des-lignes-du-rfn_2026-02-19.geojson",
+      "size_bytes": 9477496,
+      "sha256": "872afbb93b45de996b9515a1275a34834a58b05b516df1234d5c9f3e700a2a20"
+    },
+    "sncf_rfn_stations": {
+      "filename": "sncf_rfn_stations_liste-des-gares_2024-03-28.geojson",
+      "path": ".runtime/source-cache/transport/france_rail/sncf_rfn_stations_liste-des-gares_2024-03-28.geojson",
+      "size_bytes": 3810656,
+      "sha256": "fc584b7d888b4660649503eb3d358638eb37d6ccb09528f3046ec70af3c16272"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "railways": 1201,
+      "rail_stations_major": 3279
+    },
+    "full": {
+      "railways": 1638,
+      "rail_stations_major": 6469
+    }
+  },
+  "source_row_count": {
+    "sncf_lines": 1638,
+    "sncf_stations": 6469
+  },
+  "matched_count": {
+    "railways": 1638,
+    "rail_stations_major": 6469
+  },
+  "preview_rule": "exclude neutralized/declassified lines; passenger stations only"
+}

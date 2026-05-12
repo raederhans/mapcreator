@@ -1,0 +1,81 @@
+{
+  "adapter_id": "india_airport_v1",
+  "family": "airport",
+  "geometry_kind": "point",
+  "country": "India",
+  "schema_version": 1,
+  "generated_at": "2026-05-12T21:26:33.477879Z",
+  "recipe_path": "data/transport_layers/india_airport/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "airports": "data/transport_layers/india_airport/airports.preview.geojson"
+    },
+    "full": {
+      "airports": "data/transport_layers/india_airport/airports.geojson"
+    },
+    "build_audit": "data/transport_layers/india_airport/build_audit.json"
+  },
+  "source_signature": {
+    "aai_airport_list_cluster_wise_2025_26": {
+      "filename": "in_airport_aai_operational_airports_2026-05.html",
+      "path": ".runtime/source-cache/transport/india_airport/in_airport_aai_operational_airports_2026-05.html",
+      "size_bytes": 82321,
+      "sha256": "4ad67122e7593e1376366321d913d81c8cca264a1a2eef3157bc7b0ae47bc16a"
+    },
+    "aai_air_traffic_report_june_2025": {
+      "filename": "aai_air_traffic_report_june_2025_TRJun2k25.pdf",
+      "path": ".runtime/source-cache/transport/india_airport/aai_air_traffic_report_june_2025_TRJun2k25.pdf",
+      "size_bytes": 381974,
+      "sha256": "b391b309f698086d1358b8e5e8fea7b90de1ed8a8b6a34752c4a820e95abd294"
+    },
+    "osm_airport_geometry_supplement": {
+      "filename": "in_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "path": ".runtime/source-cache/transport/india_airport/in_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "size_bytes": 153594,
+      "sha256": "d844af5ac6d6322fcfbfefd23af1e8825de564ebd51600bd63171a65706d4813"
+    }
+  },
+  "recipe_version": "india_airport_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "airports": 19
+    },
+    "full": {
+      "airports": 73
+    }
+  },
+  "clip_bbox": [
+    70.008147,
+    8.726447,
+    96.134838,
+    32.688632
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack india_airport",
+  "runtime_consumer": "transport_workbench_airport_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "airports": "data/transport_layers/india_airport/airports.preview.geojson"
+        },
+        "full": {
+          "airports": "data/transport_layers/india_airport/airports.geojson"
+        },
+        "build_audit": "data/transport_layers/india_airport/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "airports": 19
+        },
+        "full": {
+          "airports": 73
+        }
+      }
+    }
+  }
+}

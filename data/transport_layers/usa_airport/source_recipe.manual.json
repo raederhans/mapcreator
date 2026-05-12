@@ -1,0 +1,74 @@
+{
+  "version": "usa_airport_real_sources_v1",
+  "pack_id": "usa_airport",
+  "family": "airport",
+  "country": "United States",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/usa_airport",
+  "source_truth": "FAA NASR APT plus FAA passenger boarding/all-cargo statistics",
+  "geometry_truth": "FAA NASR APT coordinates",
+  "sources": [
+    {
+      "id": "faa_nasr_current",
+      "role": "primary_airport_registry_geometry",
+      "expected_path": ".runtime/source-cache/transport/usa_airport/14_May_2026_APT_CSV.zip",
+      "url": "https://nfdc.faa.gov/webContent/28DaySub/extra/14_May_2026_APT_CSV.zip",
+      "license": "U.S. federal public data; preserve FAA source notice",
+      "required_fields": [
+        "APT_BASE",
+        "LocId",
+        "IcaoId",
+        "ARPLatitudeS",
+        "ARPLongitudeS"
+      ],
+      "filter_rule": "Object scope and coordinates come from NASR APT; exclude closed/private rows by NASR status fields.",
+      "notes": "",
+      "signature": {
+        "filename": "14_May_2026_APT_CSV.zip",
+        "path": ".runtime/source-cache/transport/usa_airport/14_May_2026_APT_CSV.zip",
+        "size_bytes": 8019958,
+        "sha256": "24c7e4bca9bc4b7a8f29a61da47d1de83f949e4c4b82c6ef8437ada8428c6dc2"
+      }
+    },
+    {
+      "id": "faa_passenger_boarding_all_cargo",
+      "role": "importance_filter",
+      "expected_path": ".runtime/source-cache/transport/usa_airport/faa_cy2024_all_enplanements_by_state_airport.xlsx",
+      "url": "https://www.faa.gov/airports/planning_capacity/passenger_allcargo_stats/passenger/arp-cy2024-all-enplanements.xlsx",
+      "license": "U.S. federal public data; preserve FAA source notice",
+      "required_fields": [
+        "Locid",
+        "CY",
+        "Hub",
+        "Total Enplanements"
+      ],
+      "filter_rule": "Preview keeps airports above the agreed enplanement/cargo threshold.",
+      "notes": "",
+      "signature": {
+        "filename": "faa_cy2024_all_enplanements_by_state_airport.xlsx",
+        "path": ".runtime/source-cache/transport/usa_airport/faa_cy2024_all_enplanements_by_state_airport.xlsx",
+        "size_bytes": 151040,
+        "sha256": "af3911390562ddcebfc3cb018b561a25caa58d1df13b53a559ff18a1248cff24"
+      }
+    }
+  ],
+  "source_signature": {
+    "faa_nasr_current": {
+      "filename": "14_May_2026_APT_CSV.zip",
+      "path": ".runtime/source-cache/transport/usa_airport/14_May_2026_APT_CSV.zip",
+      "size_bytes": 8019958,
+      "sha256": "24c7e4bca9bc4b7a8f29a61da47d1de83f949e4c4b82c6ef8437ada8428c6dc2"
+    },
+    "faa_passenger_boarding_all_cargo": {
+      "filename": "faa_cy2024_all_enplanements_by_state_airport.xlsx",
+      "path": ".runtime/source-cache/transport/usa_airport/faa_cy2024_all_enplanements_by_state_airport.xlsx",
+      "size_bytes": 151040,
+      "sha256": "af3911390562ddcebfc3cb018b561a25caa58d1df13b53a559ff18a1248cff24"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "airports.preview.geojson",
+    "airports.geojson"
+  ]
+}

@@ -173,6 +173,41 @@
       "url": "data/historical_city_lights_1930_exclusions.json",
       "role": "city_lights_source",
       "family_id": "historical_1930"
+    },
+    "transport_manifest:germany_road": {
+      "url": "data/transport_layers/germany_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_road"
+    },
+    "transport_manifest:uk_road": {
+      "url": "data/transport_layers/uk_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_road"
+    },
+    "transport_manifest:france_rail": {
+      "url": "data/transport_layers/france_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_rail"
+    },
+    "transport_manifest:usa_airport": {
+      "url": "data/transport_layers/usa_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_airport"
+    },
+    "transport_manifest:china_airport": {
+      "url": "data/transport_layers/china_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_airport"
+    },
+    "transport_manifest:russia_airport": {
+      "url": "data/transport_layers/russia_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_airport"
+    },
+    "transport_manifest:india_airport": {
+      "url": "data/transport_layers/india_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_airport"
     }
   },
   "scenario_registry_key": "scenario_registry",
@@ -184,7 +219,14 @@
     "mineral_resources": "transport_manifest:mineral_resources",
     "energy_facilities": "transport_manifest:energy_facilities",
     "industrial_zones": "transport_manifest:industrial_zones",
-    "logistics_hubs": "transport_manifest:logistics_hubs"
+    "logistics_hubs": "transport_manifest:logistics_hubs",
+    "germany_road": "transport_manifest:germany_road",
+    "uk_road": "transport_manifest:uk_road",
+    "france_rail": "transport_manifest:france_rail",
+    "usa_airport": "transport_manifest:usa_airport",
+    "china_airport": "transport_manifest:china_airport",
+    "russia_airport": "transport_manifest:russia_airport",
+    "india_airport": "transport_manifest:india_airport"
   },
   "city_lights": {
     "historical_1930": {

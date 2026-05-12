@@ -17,6 +17,7 @@ export function createColorResolutionStrategyOwner({
     canonicalCountryCode,
     getFeatureCountryCodeNormalized,
     getFeatureId,
+    getAtlantropaRuleColor,
     getOceanBaseFillColor,
     getSafeCanvasColor,
     isAntarcticSectorFeature,
@@ -33,8 +34,9 @@ export function createColorResolutionStrategyOwner({
     const mapSemanticMode = normalizeMapSemanticMode(state.mapSemanticMode);
     const isScenarioShell = isScenarioShellFeature(feature, resolvedId);
     const shellOwnerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_owner_hint || "");
+    const shellControllerHintCode = canonicalCountryCode(feature?.properties?.scenario_shell_controller_hint || "");
     const shellOwnerCode = String(
-      state.scenarioAutoShellOwnerByFeatureId?.[resolvedId] || shellOwnerHintCode || ""
+      state.scenarioAutoShellOwnerByFeatureId?.[resolvedId] || shellOwnerHintCode || shellControllerHintCode || ""
     ).trim().toUpperCase();
     const directOwnerCode = canonicalCountryCode(state.sovereigntyByFeatureId?.[resolvedId] || "");
     if (mapSemanticMode === "blank") {
@@ -54,6 +56,7 @@ export function createColorResolutionStrategyOwner({
       feature,
       getSafeColor: getSafeCanvasColor,
       isOceanFeature: isAtlantropaSeaFeature,
+      getAtlantropaRuleColor,
       getOceanBaseFillColor,
       getOwnerCode: getDisplayOwnerCode,
     }).color;

@@ -90,7 +90,7 @@ export function buildWaterSpatialItems({
     const hitGeometries = collectFeatureHitGeometries(feature);
     hitGeometries.forEach((hitGeometry, partIndex) => {
       if (shouldExcludeWaterHitGeometry(hitGeometry, feature, id)) return;
-      const bounds = computeProjectedGeoBounds(hitGeometry);
+      const bounds = computeProjectedGeoBounds(hitGeometry) || computeProjectedGeoBounds(feature);
       if (!bounds) return;
       items.push({
         id: `${id}::part:${partIndex}`,

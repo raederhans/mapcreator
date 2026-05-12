@@ -1125,6 +1125,7 @@ const EXPORT_WORKBENCH_LAYER_IDS = Object.freeze([
 ]);
 const EXPORT_WORKBENCH_TEXT_LAYER_IDS = Object.freeze([
   "render-labels",
+  "special-zones",
   "svg-annotations",
 ]);
 const EXPORT_WORKBENCH_BAKE_LAYER_IDS = new Set(["color", "line", "text", "composite"]);
@@ -1138,6 +1139,8 @@ const EXPORT_WORKBENCH_LEGACY_LAYER_ID_ALIASES = Object.freeze({
 const EXPORT_WORKBENCH_TEXT_LAYER_ID_ALIASES = Object.freeze({
   labels: "render-labels",
   text: "render-labels",
+  specialzones: "special-zones",
+  "special-zones": "special-zones",
   svg: "svg-annotations",
   annotations: "svg-annotations",
 });
@@ -1232,7 +1235,10 @@ function normalizeExportWorkbenchUiState(rawUi) {
     : raw.layerVisibility;
   const includeTextLayer = raw.includeTextLayer === undefined ? true : !!raw.includeTextLayer;
   const textVisibility = normalizeExportWorkbenchTextVisibility(raw.textVisibility, includeTextLayer);
-  const previewLayerId = String(raw.previewLayerId || raw.previewSource || "background").trim().toLowerCase();
+  const rawPreviewLayerId = String(raw.previewLayerId || raw.previewSource || "background").trim().toLowerCase();
+  const previewLayerId = EXPORT_WORKBENCH_LEGACY_LAYER_ID_ALIASES[rawPreviewLayerId]
+    || EXPORT_WORKBENCH_TEXT_LAYER_ID_ALIASES[rawPreviewLayerId]
+    || rawPreviewLayerId;
   return {
     target: EXPORT_WORKBENCH_TARGETS.has(normalizedTarget) ? normalizedTarget : "composite",
     format: String(raw.format || "").trim().toLowerCase() === "jpg" ? "jpg" : "png",

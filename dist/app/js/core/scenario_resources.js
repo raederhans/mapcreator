@@ -40,6 +40,7 @@ import {
   buildScenarioDistrictGroupByFeatureId,
   normalizeScenarioDistrictGroupsPayload,
 } from "./scenario_districts.js";
+import { normalizeSpecialZoneLayersState } from "./special_zone_layers.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
 import { ensureDetailTopologyBoundary, flushRenderBoundary } from "./render_boundary.js";
 import { buildScenarioReleasableIndex } from "./releasable_manager.js";
@@ -150,6 +151,21 @@ const SCENARIO_OPTIONAL_LAYER_CONFIGS = {
     urlField: "special_regions_url",
     objectName: "scenario_special_land",
     visibilityField: "showScenarioSpecialRegions",
+  },
+  scenario_atlantropa: {
+    bundleField: "scenarioAtlantropaPayload",
+    stateField: "scenarioAtlantropaData",
+    urlField: "scenario_atlantropa_topology_url",
+    objectName: "scenario_atlantropa",
+    visibilityField: "showScenarioAtlantropa",
+    revisionField: "scenarioAtlantropaRevision",
+  },
+  specialzonelayers: {
+    bundleField: "specialZoneLayersPayload",
+    stateField: "specialZoneLayers",
+    urlField: "special_zone_layers_url",
+    objectName: "",
+    visibilityField: "showSpecialZones",
   },
   relief: {
     bundleField: "reliefOverlaysPayload",
@@ -333,7 +349,10 @@ function areScenarioFeatureCollectionsEquivalent(leftPayload, rightPayload) {
 }
 
 function normalizeScenarioOptionalLayerKey(value) {
-  const key = String(value || "").trim().toLowerCase();
+  const rawKey = String(value || "").trim().toLowerCase();
+  const key = rawKey === "special_zone_layers" || rawKey === "special-zone-layers"
+    ? "specialzonelayers"
+    : rawKey;
   return Object.prototype.hasOwnProperty.call(SCENARIO_OPTIONAL_LAYER_CONFIGS, key) ? key : "";
 }
 
@@ -599,11 +618,13 @@ function shouldEagerLoadScenarioOptionalLayer(layerKey, manifest, runtimeTopolog
     ? hints.waterRegionsDefault !== false
     : config.visibilityField === "showScenarioSpecialRegions"
       ? hints.specialRegionsDefault !== false
-      : config.visibilityField === "showScenarioReliefOverlays"
-        ? hints.scenarioReliefOverlaysDefault === true
-        : config.visibilityField === "showCityPoints"
-          ? runtimeState.showCityPoints !== false
-          : false;
+      : config.visibilityField === "showScenarioAtlantropa"
+        ? hints.scenarioAtlantropaDefault !== false
+        : config.visibilityField === "showScenarioReliefOverlays"
+          ? hints.scenarioReliefOverlaysDefault === true
+          : config.visibilityField === "showCityPoints"
+            ? runtimeState.showCityPoints !== false
+            : false;
   if (!visibleByDefault) {
     return false;
   }
@@ -622,6 +643,12 @@ function applyScenarioOptionalLayerState(bundle, layerKey, payload) {
   }
   if (config.stateField === "scenarioCityOverridesData") {
     syncScenarioLocalizationState({ cityOverridesPayload: payload });
+  } else if (config.stateField === "specialZoneLayers") {
+    state.specialZoneLayers = normalizeSpecialZoneLayersState(payload, {
+      defaultSource: "scenario",
+      validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
+    });
+    state.specialZonesOverlayDirty = true;
   } else {
     state[config.stateField] = payload || null;
   }
@@ -643,6 +670,11 @@ async function loadScenarioOptionalLayerPayload(
 ) {
   const config = getScenarioOptionalLayerConfig(layerKey);
   if (!bundle || !config) return null;
+  // optional layer 允许从 3 个来源收敛到同一份 bundle/runtime state：
+  // 1) 现成 promise，避免并发重复请求
+  // 2) runtime topology 内嵌对象，避免再走一次磁盘/网络
+  // 3) manifest URL 指向的独立 payload
+  // 外部只看最终 layerKey，不需要感知实际命中的来源。
   bundle.optionalLayerPromises = bundle.optionalLayerPromises && typeof bundle.optionalLayerPromises === "object"
     ? bundle.optionalLayerPromises
     : {};
@@ -679,9 +711,14 @@ async function loadScenarioOptionalLayerPayload(
       }
     }
     const requestUrl = bundle.manifest?.[config.urlField];
-    if (!requestUrl || !d3Client || typeof d3Client.json !== "function") {
+    if (!requestUrl) {
       bundle[config.bundleField] = null;
       bundle.optionalLayerSettledByKey[layerKey] = true;
+      return null;
+    }
+    if (!d3Client || typeof d3Client.json !== "function") {
+      bundle[config.bundleField] = null;
+      delete bundle.optionalLayerSettledByKey[layerKey];
       return null;
     }
     try {
@@ -693,14 +730,19 @@ async function loadScenarioOptionalLayerPayload(
         ? normalizeScenarioCityOverridesPayload(rawPayload, {
           sourceLabel: `scenario_city_overrides:${getScenarioBundleId(bundle) || "scenario"}`,
         })
-        : normalizeScenarioFeatureCollection(rawPayload);
+        : layerKey === "specialzonelayers"
+          ? normalizeSpecialZoneLayersState(rawPayload, { defaultSource: "scenario" })
+          : config.objectName
+            ? getScenarioTopologyFeatureCollection(rawPayload, config.objectName)
+              || normalizeScenarioFeatureCollection(rawPayload)
+            : normalizeScenarioFeatureCollection(rawPayload);
       bundle[config.bundleField] = payload;
       bundle.optionalLayerSettledByKey[layerKey] = true;
       return payload;
     } catch (error) {
       console.warn(`[scenario] Failed to load scenario ${layerKey} layer for "${getScenarioBundleId(bundle)}".`, error);
       bundle[config.bundleField] = null;
-      bundle.optionalLayerSettledByKey[layerKey] = true;
+      delete bundle.optionalLayerSettledByKey[layerKey];
       return null;
     }
   })();
@@ -780,6 +822,9 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
   const activeScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
   const activeBundle = bundle || runtimeState.scenarioBundleCacheById?.[activeScenarioId] || null;
   if (!activeScenarioId || !activeBundle) return [];
+  // chunked layer 和独立 payload layer 的可见性同步路径不同：
+  // 前者交给 chunk refresh 统一决策，后者才在这里补拉 payload。
+  // 这样可以避免把 chunk layer 当成普通 JSON 再加载一遍。
   const requestedChunkedLayers = Object.entries(SCENARIO_OPTIONAL_LAYER_CONFIGS)
     .filter(([, config]) => state[config.visibilityField])
     .map(([layerKey]) => layerKey)
@@ -823,6 +868,8 @@ function releaseScenarioAuditPayload(scenarioId = runtimeState.activeScenarioId,
   if (bundle) {
     bundle.auditPayload = null;
   }
+  // 当前激活场景的 audit 还会驱动 sidebar/panel 状态；
+  // 释放缓存时要同步把 runtimeState 和 UI facade 一起清空，避免旧场景报告残留到新场景。
   if (!normalizedScenarioId || normalizeScenarioId(runtimeState.activeScenarioId) === normalizedScenarioId) {
     runtimeState.scenarioAudit = null;
     setScenarioAuditUiState({

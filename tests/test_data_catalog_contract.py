@@ -14,7 +14,7 @@ from tools.data_health import SCENARIO_REGISTRY_URL, collect_health
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_JSON = REPO_ROOT / "data" / "CATALOG.json"
 CATALOG_MD = REPO_ROOT / "data" / "CATALOG.md"
-EXPECTED_ENTRY_COUNT = 373
+EXPECTED_ENTRY_COUNT = 407
 EXPECTED_SCHEMA_REF_COUNT = 20
 
 
@@ -39,10 +39,10 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertEqual(len(entries), EXPECTED_ENTRY_COUNT)
         self.assertEqual(payload.get("counts", {}).get("entries"), EXPECTED_ENTRY_COUNT)
         self.assertEqual(len(schema_counts), EXPECTED_SCHEMA_REF_COUNT)
-        self.assertEqual(schema_counts["schema://transport/manifest/v1"], 75)
-        self.assertEqual(schema_counts["schema://transport/build_audit/v1"], 74)
-        self.assertEqual(schema_counts["schema://topojson/line_collection/roads_v1"], 80)
-        self.assertEqual(schema_counts["schema://topojson/line_collection/railways_v1"], 52)
+        self.assertEqual(schema_counts["schema://transport/manifest/v1"], 82)
+        self.assertEqual(schema_counts["schema://transport/build_audit/v1"], 81)
+        self.assertEqual(schema_counts["schema://topojson/line_collection/roads_v1"], 84)
+        self.assertEqual(schema_counts["schema://topojson/line_collection/railways_v1"], 54)
         self.assertIn("schema://transport/carrier_payload/v1", schema_counts)
         self.assertIn("schema://transport/provenance_payload/v1", schema_counts)
 
@@ -88,7 +88,7 @@ class DataCatalogContractTest(unittest.TestCase):
 
         self.assertEqual(report.errors, [])
         self.assertEqual(report.checked_catalog_urls, EXPECTED_ENTRY_COUNT)
-        self.assertEqual(report.checked_transport_manifests, 75)
+        self.assertEqual(report.checked_transport_manifests, 82)
         self.assertGreaterEqual(report.checked_transport_paths, 460)
         self.assertEqual(len(report.schema_ref_counts), EXPECTED_SCHEMA_REF_COUNT)
 

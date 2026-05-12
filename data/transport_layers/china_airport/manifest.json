@@ -1,0 +1,81 @@
+{
+  "adapter_id": "china_airport_v1",
+  "family": "airport",
+  "geometry_kind": "point",
+  "country": "China",
+  "schema_version": 1,
+  "generated_at": "2026-05-12T21:26:31.015924Z",
+  "recipe_path": "data/transport_layers/china_airport/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "airports": "data/transport_layers/china_airport/airports.preview.geojson"
+    },
+    "full": {
+      "airports": "data/transport_layers/china_airport/airports.geojson"
+    },
+    "build_audit": "data/transport_layers/china_airport/build_audit.json"
+  },
+  "source_signature": {
+    "caac_2025_airport_bulletin": {
+      "filename": "caac_2025_airport_throughput_ranking.xlsx",
+      "path": ".runtime/source-cache/transport/china_airport/caac_2025_airport_throughput_ranking.xlsx",
+      "size_bytes": 42924,
+      "sha256": "0f74dc7bbac864ddc64c6e940f5c4b0710a3d1ad61e77eb0dc0085ba61908794"
+    },
+    "taiwan_caa_airport_page": {
+      "filename": "tw_airport_caa_airport_telephone_2024-08-08.html",
+      "path": ".runtime/source-cache/transport/china_airport/tw_airport_caa_airport_telephone_2024-08-08.html",
+      "size_bytes": 294812,
+      "sha256": "2a2baf5c244fef94751c0388187e2133447d55102f2c2f9cab25520985622621"
+    },
+    "osm_airport_geometry_supplement": {
+      "filename": "cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "path": ".runtime/source-cache/transport/china_airport/cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "size_bytes": 329284,
+      "sha256": "667454988292ad5167bcdae03ac93e05e4e481f139dd4940d4f38bcdefbee7a5"
+    }
+  },
+  "recipe_version": "china_airport_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "airports": 80
+    },
+    "full": {
+      "airports": 258
+    }
+  },
+  "clip_bbox": [
+    75.288831,
+    16.833801,
+    134.365977,
+    52.913253
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack china_airport",
+  "runtime_consumer": "transport_workbench_airport_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "airports": "data/transport_layers/china_airport/airports.preview.geojson"
+        },
+        "full": {
+          "airports": "data/transport_layers/china_airport/airports.geojson"
+        },
+        "build_audit": "data/transport_layers/china_airport/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "airports": 80
+        },
+        "full": {
+          "airports": 258
+        }
+      }
+    }
+  }
+}

@@ -194,33 +194,35 @@ function decodeTopologyObject(topology, objectName) {
 }
 
 function buildRuntimePoliticalMeta(runtimePoliticalTopology) {
-  const geometries = Array.isArray(runtimePoliticalTopology?.objects?.political?.geometries)
-    ? runtimePoliticalTopology.objects.political.geometries
-    : [];
-  const neighbors = Array.isArray(runtimePoliticalTopology?.objects?.political?.computed_neighbors)
-    ? runtimePoliticalTopology.objects.political.computed_neighbors
-    : [];
-
+  const objectNames = ["political", "scenario_atlantropa"];
   const featureIds = [];
   const featureIndexById = {};
   const canonicalCountryByFeatureId = {};
+  const neighborGraph = [];
 
-  geometries.forEach((geometry, index) => {
-    const id = getEntityFeatureId(geometry);
-    if (!id) return;
-    featureIds.push(id);
-    featureIndexById[id] = index;
-    canonicalCountryByFeatureId[id] = getEntityCountryCode(geometry);
+  objectNames.forEach((objectName) => {
+    const runtimeObject = runtimePoliticalTopology?.objects?.[objectName];
+    const geometries = Array.isArray(runtimeObject?.geometries) ? runtimeObject.geometries : [];
+    const neighbors = Array.isArray(runtimeObject?.computed_neighbors) ? runtimeObject.computed_neighbors : [];
+    geometries.forEach((geometry, index) => {
+      const id = getEntityFeatureId(geometry);
+      if (!id) return;
+      featureIndexById[id] = featureIds.length;
+      featureIds.push(id);
+      canonicalCountryByFeatureId[id] = getEntityCountryCode(geometry);
+      neighborGraph.push(
+        objectName === "political" && Array.isArray(neighbors[index])
+          ? neighbors[index]
+          : []
+      );
+    });
   });
 
   return {
     featureIds,
     featureIndexById,
     canonicalCountryByFeatureId,
-    neighborGraph:
-      Array.isArray(neighbors) && neighbors.length === geometries.length
-        ? neighbors
-        : new Array(geometries.length).fill(null).map(() => []),
+    neighborGraph,
   };
 }
 
@@ -384,6 +386,7 @@ async function handleLoadStartupBundle(message) {
       scenarioContextLandMaskData: decodeTopologyObject(runtimeTopology, "context_land_mask"),
       scenarioWaterRegionsData: decodeTopologyObject(runtimeTopology, "scenario_water"),
       scenarioSpecialRegionsData: decodeTopologyObject(runtimeTopology, "scenario_special_land"),
+      scenarioAtlantropaData: decodeTopologyObject(runtimeTopology, "scenario_atlantropa"),
     };
     runtimeDecodeCompletedAt = nowMs();
     runtimePoliticalMeta = runtimePoliticalMetaPayload
@@ -475,6 +478,7 @@ async function handleLoadScenarioRuntimeBootstrap(message) {
       scenarioContextLandMaskData: decodeTopologyObject(runtimeTopologyResult.payload, "context_land_mask"),
       scenarioWaterRegionsData: decodeTopologyObject(runtimeTopologyResult.payload, "scenario_water"),
       scenarioSpecialRegionsData: decodeTopologyObject(runtimeTopologyResult.payload, "scenario_special_land"),
+      scenarioAtlantropaData: decodeTopologyObject(runtimeTopologyResult.payload, "scenario_atlantropa"),
     },
     metrics: {
       totalMs: nowMs() - startedAt,
@@ -527,6 +531,7 @@ async function handleDecodeRuntimeChunk(message) {
       scenarioContextLandMaskData: decodeTopologyObject(runtimeTopologyResult.payload, "context_land_mask"),
       scenarioWaterRegionsData: decodeTopologyObject(runtimeTopologyResult.payload, "scenario_water"),
       scenarioSpecialRegionsData: decodeTopologyObject(runtimeTopologyResult.payload, "scenario_special_land"),
+      scenarioAtlantropaData: decodeTopologyObject(runtimeTopologyResult.payload, "scenario_atlantropa"),
     },
     metrics: {
       totalMs: nowMs() - startedAt,

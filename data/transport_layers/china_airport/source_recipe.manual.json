@@ -1,0 +1,100 @@
+{
+  "version": "china_airport_real_sources_v1",
+  "pack_id": "china_airport",
+  "family": "airport",
+  "country": "China",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/china_airport",
+  "source_truth": "CAAC annual civil transport airport bulletin plus Taiwan official/open points",
+  "geometry_truth": "Official points where available; OSM/Geofabrik only fills coordinates for official-list airports.",
+  "sources": [
+    {
+      "id": "caac_2025_airport_bulletin",
+      "role": "official_scope_and_importance",
+      "expected_path": ".runtime/source-cache/transport/china_airport/caac_2025_airport_throughput_ranking.xlsx",
+      "url": "https://www.caac.gov.cn/XXGK/XXGK/TJSJ/202602/P020260226360830390937.xlsx",
+      "license": "official_publication_citation_only",
+      "required_fields": [
+        "机场",
+        "旅客吞吐量",
+        "货邮吞吐量",
+        "起降架次"
+      ],
+      "filter_rule": "CAAC bulletin decides mainland object scope and importance.",
+      "notes": "",
+      "signature": {
+        "filename": "caac_2025_airport_throughput_ranking.xlsx",
+        "path": ".runtime/source-cache/transport/china_airport/caac_2025_airport_throughput_ranking.xlsx",
+        "size_bytes": 42924,
+        "sha256": "0f74dc7bbac864ddc64c6e940f5c4b0710a3d1ad61e77eb0dc0085ba61908794"
+      }
+    },
+    {
+      "id": "taiwan_caa_airport_page",
+      "role": "official_scope_taiwan",
+      "expected_path": ".runtime/source-cache/transport/china_airport/tw_airport_caa_airport_telephone_2024-08-08.html",
+      "url": "https://www.caa.gov.tw/Article.aspx?a=983&lang=1",
+      "license": "Taiwan Open Government Data License 1.0 where applicable",
+      "required_fields": [
+        "機場",
+        "電話",
+        "地址"
+      ],
+      "filter_rule": "Taiwan CAA airport telephone table contributes official Taiwan airport scope; OSM only fills coordinates for matched official objects.",
+      "notes": "",
+      "signature": {
+        "filename": "tw_airport_caa_airport_telephone_2024-08-08.html",
+        "path": ".runtime/source-cache/transport/china_airport/tw_airport_caa_airport_telephone_2024-08-08.html",
+        "size_bytes": 294812,
+        "sha256": "2a2baf5c244fef94751c0388187e2133447d55102f2c2f9cab25520985622621"
+      }
+    },
+    {
+      "id": "osm_airport_geometry_supplement",
+      "role": "coordinate_supplement_only",
+      "expected_path": ".runtime/source-cache/transport/china_airport/cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "url": "https://www.openstreetmap.org/copyright",
+      "license": "ODbL 1.0",
+      "required_fields": [
+        "aeroway",
+        "name",
+        "iata",
+        "icao",
+        "geometry"
+      ],
+      "filter_rule": "Match coordinates only to CAAC/Taiwan official objects; unmatched OSM rows stay out of output.",
+      "notes": "",
+      "signature": {
+        "filename": "cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+        "path": ".runtime/source-cache/transport/china_airport/cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+        "size_bytes": 329284,
+        "sha256": "667454988292ad5167bcdae03ac93e05e4e481f139dd4940d4f38bcdefbee7a5"
+      }
+    }
+  ],
+  "source_signature": {
+    "caac_2025_airport_bulletin": {
+      "filename": "caac_2025_airport_throughput_ranking.xlsx",
+      "path": ".runtime/source-cache/transport/china_airport/caac_2025_airport_throughput_ranking.xlsx",
+      "size_bytes": 42924,
+      "sha256": "0f74dc7bbac864ddc64c6e940f5c4b0710a3d1ad61e77eb0dc0085ba61908794"
+    },
+    "taiwan_caa_airport_page": {
+      "filename": "tw_airport_caa_airport_telephone_2024-08-08.html",
+      "path": ".runtime/source-cache/transport/china_airport/tw_airport_caa_airport_telephone_2024-08-08.html",
+      "size_bytes": 294812,
+      "sha256": "2a2baf5c244fef94751c0388187e2133447d55102f2c2f9cab25520985622621"
+    },
+    "osm_airport_geometry_supplement": {
+      "filename": "cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "path": ".runtime/source-cache/transport/china_airport/cn_tw_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "size_bytes": 329284,
+      "sha256": "667454988292ad5167bcdae03ac93e05e4e481f139dd4940d4f38bcdefbee7a5"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "airports.preview.geojson",
+    "airports.geojson"
+  ]
+}

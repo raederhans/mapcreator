@@ -311,7 +311,7 @@ function applyOwnerControllerAssignmentsToFeatureIds(
     });
   }
   if (render) {
-    requestScenarioOwnershipRender("scenario-ownership-apply-owner");
+    requestScenarioOwnershipRender("scenario-ownership-apply-owner-controller");
   }
   return {
     applied: true,

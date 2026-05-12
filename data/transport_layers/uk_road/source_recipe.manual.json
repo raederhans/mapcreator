@@ -1,0 +1,77 @@
+{
+  "version": "uk_road_real_sources_v1",
+  "pack_id": "uk_road",
+  "family": "road",
+  "country": "United Kingdom",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/uk_road",
+  "source_truth": "OS Open Roads for Great Britain plus OSNI 50K Transport Lines for Northern Ireland",
+  "geometry_truth": "OS Open Roads GeoPackage/Shapefile and OSNI GeoJSON/Shapefile",
+  "sources": [
+    {
+      "id": "os_open_roads_gb",
+      "role": "primary_geometry_gb",
+      "expected_path": ".runtime/source-cache/transport/uk_road/oproad_essh_gb.zip",
+      "url": "https://api.os.uk/downloads/v1/products/OpenRoads/downloads?area=GB&format=ESRI%C2%AE+Shapefile&redirect",
+      "license": "OS OpenData / UK Open Government Licence",
+      "required_fields": [
+        "RoadLink",
+        "roadClassification",
+        "roadFunction",
+        "formOfWay",
+        "name1",
+        "geometry"
+      ],
+      "filter_rule": "Keep Great Britain motorway, trunk and primary/A-road context features; write source_region=GB.",
+      "notes": "",
+      "signature": {
+        "filename": "oproad_essh_gb.zip",
+        "path": ".runtime/source-cache/transport/uk_road/oproad_essh_gb.zip",
+        "size_bytes": 606145264,
+        "sha256": "bb2bbff8be3d637b38ed5d06277856c15f41ea262614edf974be8f4b96fdc791"
+      }
+    },
+    {
+      "id": "osni_50k_transport_lines_geojson",
+      "role": "primary_geometry_ni",
+      "expected_path": ".runtime/source-cache/transport/uk_road/osni_open_data_50k_transport_transport_lines.geojson",
+      "url": "https://admin.opendatani.gov.uk/dataset/bdcc2953-ed72-4f21-b012-43cbd5bbc395/resource/d09e7052-6390-4953-92da-ec3479100a7b/download/osni_open_data_50k_transport_transport_lines.geojson",
+      "license": "UK Open Government Licence / LPS Open Government Data Licence",
+      "required_fields": [
+        "road_class",
+        "transport_type",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Keep Northern Ireland motorway and A-class context roads; write source_region=NI.",
+      "notes": "",
+      "signature": {
+        "filename": "osni_open_data_50k_transport_transport_lines.geojson",
+        "path": ".runtime/source-cache/transport/uk_road/osni_open_data_50k_transport_transport_lines.geojson",
+        "size_bytes": 12271281,
+        "sha256": "2566d2f16c08e33eca3bd9ccb3183d6a8682fba5675bc1447d14df42db8ba204"
+      }
+    }
+  ],
+  "source_signature": {
+    "os_open_roads_gb": {
+      "filename": "oproad_essh_gb.zip",
+      "path": ".runtime/source-cache/transport/uk_road/oproad_essh_gb.zip",
+      "size_bytes": 606145264,
+      "sha256": "bb2bbff8be3d637b38ed5d06277856c15f41ea262614edf974be8f4b96fdc791"
+    },
+    "osni_50k_transport_lines_geojson": {
+      "filename": "osni_open_data_50k_transport_transport_lines.geojson",
+      "path": ".runtime/source-cache/transport/uk_road/osni_open_data_50k_transport_transport_lines.geojson",
+      "size_bytes": 12271281,
+      "sha256": "2566d2f16c08e33eca3bd9ccb3183d6a8682fba5675bc1447d14df42db8ba204"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "roads.preview.topo.json",
+    "roads.topo.json",
+    "road_labels.preview.geojson",
+    "road_labels.geojson"
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "adapter_id": "france_rail_v1",
+  "family": "rail",
+  "geometry_kind": "line",
+  "country": "France",
+  "schema_version": 1,
+  "generated_at": "2026-05-12T21:26:26.554490Z",
+  "recipe_path": "data/transport_layers/france_rail/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/france_rail/railways.preview.topo.json",
+      "rail_stations_major": "data/transport_layers/france_rail/rail_stations_major.preview.geojson"
+    },
+    "full": {
+      "railways": "data/transport_layers/france_rail/railways.topo.json",
+      "rail_stations_major": "data/transport_layers/france_rail/rail_stations_major.geojson"
+    },
+    "build_audit": "data/transport_layers/france_rail/build_audit.json"
+  },
+  "source_signature": {
+    "sncf_rfn_line_shapes": {
+      "filename": "sncf_rfn_lines_formes-des-lignes-du-rfn_2026-02-19.geojson",
+      "path": ".runtime/source-cache/transport/france_rail/sncf_rfn_lines_formes-des-lignes-du-rfn_2026-02-19.geojson",
+      "size_bytes": 9477496,
+      "sha256": "872afbb93b45de996b9515a1275a34834a58b05b516df1234d5c9f3e700a2a20"
+    },
+    "sncf_rfn_stations": {
+      "filename": "sncf_rfn_stations_liste-des-gares_2024-03-28.geojson",
+      "path": ".runtime/source-cache/transport/france_rail/sncf_rfn_stations_liste-des-gares_2024-03-28.geojson",
+      "size_bytes": 3810656,
+      "sha256": "fc584b7d888b4660649503eb3d358638eb37d6ccb09528f3046ec70af3c16272"
+    }
+  },
+  "recipe_version": "france_rail_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "railways": 1201,
+      "rail_stations_major": 3279
+    },
+    "full": {
+      "railways": 1638,
+      "rail_stations_major": 6469
+    }
+  },
+  "clip_bbox": [
+    -4.477628,
+    41.927633,
+    9.448431,
+    51.076031
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack france_rail",
+  "runtime_consumer": "transport_workbench_rail_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/france_rail/railways.preview.topo.json",
+          "rail_stations_major": "data/transport_layers/france_rail/rail_stations_major.preview.geojson"
+        },
+        "full": {
+          "railways": "data/transport_layers/france_rail/railways.topo.json",
+          "rail_stations_major": "data/transport_layers/france_rail/rail_stations_major.geojson"
+        },
+        "build_audit": "data/transport_layers/france_rail/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 1201,
+          "rail_stations_major": 3279
+        },
+        "full": {
+          "railways": 1638,
+          "rail_stations_major": 6469
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "version": "russia_airport_real_sources_v1",
+  "pack_id": "russia_airport",
+  "family": "airport",
+  "country": "Russia",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/russia_airport",
+  "source_truth": "Rosaviatsiya civil aerodrome/heliport registry",
+  "geometry_truth": "Rosaviatsiya registry if coordinates exist; OSM/Geofabrik only fills coordinates for registered objects.",
+  "sources": [
+    {
+      "id": "rosaviatsiya_civil_aerodrome_registry",
+      "role": "official_scope_registry",
+      "expected_path": ".runtime/source-cache/transport/russia_airport/ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+      "url": "https://favt.gov.ru/dejatelnost-ajeroporty-i-ajerodromy-reestr-grajdanskih-ajerodromov-rf/",
+      "license": "official_registry_citation_only",
+      "required_fields": [
+        "aerodrome_name",
+        "certificate",
+        "operator",
+        "class",
+        "status"
+      ],
+      "filter_rule": "Registry decides object scope; preview uses official class/status and traffic stats when available.",
+      "notes": "",
+      "signature": {
+        "filename": "ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+        "path": ".runtime/source-cache/transport/russia_airport/ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+        "size_bytes": 183065,
+        "sha256": "feb9bb9de4242ab7cade0f61088879846292c0306fbfc7047fa375b6add45d1e"
+      }
+    },
+    {
+      "id": "osm_airport_geometry_supplement",
+      "role": "coordinate_supplement_only",
+      "expected_path": ".runtime/source-cache/transport/russia_airport/ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "url": "https://download.geofabrik.de/russia.html",
+      "license": "ODbL 1.0",
+      "required_fields": [
+        "aeroway",
+        "name",
+        "name:ru",
+        "iata",
+        "icao",
+        "geometry"
+      ],
+      "filter_rule": "Match coordinates only to Rosaviatsiya registry objects; unmatched OSM rows stay out of output.",
+      "notes": "",
+      "signature": {
+        "filename": "ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+        "path": ".runtime/source-cache/transport/russia_airport/ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+        "size_bytes": 606431,
+        "sha256": "c5a1195cd8958f7461f04fe29019ff791b9ab43c7deaaa63410f8dd024cf4b8f"
+      }
+    }
+  ],
+  "source_signature": {
+    "rosaviatsiya_civil_aerodrome_registry": {
+      "filename": "ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+      "path": ".runtime/source-cache/transport/russia_airport/ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+      "size_bytes": 183065,
+      "sha256": "feb9bb9de4242ab7cade0f61088879846292c0306fbfc7047fa375b6add45d1e"
+    },
+    "osm_airport_geometry_supplement": {
+      "filename": "ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "path": ".runtime/source-cache/transport/russia_airport/ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "size_bytes": 606431,
+      "sha256": "c5a1195cd8958f7461f04fe29019ff791b9ab43c7deaaa63410f8dd024cf4b8f"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "airports.preview.geojson",
+    "airports.geojson"
+  ]
+}

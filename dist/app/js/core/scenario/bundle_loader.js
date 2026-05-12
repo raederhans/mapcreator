@@ -217,6 +217,8 @@ function validateScenarioRuntimeShellContract({
   runtimeTopologyPayload = null,
   runtimePoliticalMeta = null,
 } = {}) {
+  // startup runtime shell 的目标是“先让场景壳层可启动”，
+  // 所以这里只检查最小必需对象和政治要素计数，不把完整 detail/chunk 数据拉进这个合同。
   const normalizedTopologyPayload = normalizeScenarioRuntimeTopologyPayload(runtimeTopologyPayload);
   const normalizedMeta = normalizeScenarioRuntimePoliticalMeta(runtimePoliticalMeta);
   const missingObjects = normalizedTopologyPayload
@@ -470,6 +472,7 @@ function createScenarioBootstrapBundleFromCache({
     coresPayload: normalizeIndexedCoreAssignmentPayload(cachedCorePayload?.coresPayload, runtimeFeatureIds),
     waterRegionsPayload: priorBundle?.waterRegionsPayload || null,
     specialRegionsPayload: priorBundle?.specialRegionsPayload || null,
+    specialZoneLayersPayload: priorBundle?.specialZoneLayersPayload || null,
     reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
     cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
     geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(cachedLocalePayload?.geoLocalePatchPayload),
@@ -597,6 +600,9 @@ async function createStartupScenarioBundleFromPayload({
     })
     : { ok: false, value: null, metrics: null, reason: "not-configured", errorMessage: "" };
   const geoLocalePatchPayload = normalizeScenarioGeoLocalePatchPayload(geoLocalePatchResult.value);
+  // bootstrap bundle 只保留启动阶段立刻要用到的最小合同：
+  // countries/owners/cores/runtime shell 先就位，其他可选图层继续留空，
+  // 后续再由 full bundle 升级，而不是在这里提前假装资源已经齐全。
   const bundle = {
     meta: {
       scenario_id: normalizedScenarioId,
@@ -620,6 +626,7 @@ async function createStartupScenarioBundleFromPayload({
     coresPayload: normalizeIndexedCoreAssignmentPayload(payload?.scenario?.cores, runtimeFeatureIds),
     waterRegionsPayload: null,
     specialRegionsPayload: null,
+    specialZoneLayersPayload: null,
     reliefOverlaysPayload: null,
     cityOverridesPayload: null,
     geoLocalePatchPayload,
@@ -684,6 +691,8 @@ async function loadScenarioRuntimeTopologyForBundle({
   const requestedRuntimeTopologyLevel = runtimeTopologyLevel === "bootstrap" ? "bootstrap" : "full";
   const runtimeLabel = requestedRuntimeTopologyLevel === "bootstrap" ? "runtime_bootstrap_topology" : "runtime_topology";
   const allowWorkerDecode = !!runtimeTopologyUrl && shouldUseStartupWorker();
+  // worker 负责把“大 JSON + decode”这段重活移出主线程；
+  // 失败时仍回到统一的 optional resource 语义，保持调用方只处理一种结果结构。
   if (allowWorkerDecode) {
     try {
       const workerResult = requestedRuntimeTopologyLevel === "bootstrap"
@@ -820,6 +829,7 @@ function createScenarioBundleAssembler({
         coresPayload: coresResult.payload,
       waterRegionsPayload: priorBundle?.waterRegionsPayload || null,
       specialRegionsPayload: priorBundle?.specialRegionsPayload || null,
+      specialZoneLayersPayload: priorBundle?.specialZoneLayersPayload || null,
       reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
       cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
       geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(geoLocalePatchResult.value),
@@ -958,6 +968,8 @@ function createScenarioAuditPayloadLoader({
       return null;
     }
     if (bundle.auditPayload && !forceReload) {
+      // audit 面板只在“当前仍然看的是这个 scenario”时回写 UI，
+      // 避免异步返回把用户已经切走后的面板状态覆盖掉。
       if (requestedScenarioId && normalizeScenarioId(state.activeScenarioId) === requestedScenarioId) {
         state.scenarioAudit = bundle.auditPayload;
         setScenarioAuditUiState({
@@ -1039,6 +1051,8 @@ function createImportedScenarioBaselineValidator({
     const currentBaselineHash = getScenarioBaselineHashFromBundle(bundle);
     const expectedVersion = Number(projectScenario?.version || 1) || 1;
     const expectedBaselineHash = String(projectScenario?.baselineHash || "").trim();
+    // 导入项目时，version 和 baselineHash 一起定义“这份存档基于哪一版 scenario 世界线”。
+    // 只对比其中一个字段会把“结构没变但基线变了”或“基线相同但 schema 升级了”的情况漏掉。
     const mismatches = [];
 
     if (currentVersion !== expectedVersion) {

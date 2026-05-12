@@ -54,6 +54,8 @@ function createScenarioApplyPipeline({
   cloneScenarioStateValue,
 } = {}) {
   function prepareScenarioActivationContext(bundle) {
+    // 这里缓存“进入场景前”的显示状态，只在第一次激活场景时截一份基线。
+    // 后续场景切换沿用这份快照，避免每次 apply 都把已经是 scenario 态的值继续覆盖回去。
     const scenarioParentBorderEnabledBeforeActivate =
       runtimeState.scenarioParentBorderEnabledBeforeActivate === null && !runtimeState.activeScenarioId
         ? { ...(runtimeState.parentBorderEnabledByCountry || {}) }
@@ -66,6 +68,7 @@ function createScenarioApplyPipeline({
           parentBordersVisible: runtimeState.parentBordersVisible !== false,
           showWaterRegions: runtimeState.showWaterRegions !== false,
           showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
+          showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
           showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
         }
         : cloneScenarioStateValue(runtimeState.scenarioDisplaySettingsBeforeActivate);
@@ -81,6 +84,8 @@ function createScenarioApplyPipeline({
   }
 
   function buildScenarioActivationCommitState(bundle, staged) {
+    // staged 负责把 bundle/loader 结果整理成一次性 runtimeState 提交包。
+    // 真正写入 runtimeState 时只认这份对象，避免 apply 流程在多个阶段分散写字段。
     const runtimePoliticalTopology = staged.mapSemanticMode === "blank"
       ? (staged.runtimeTopologyPayload || null)
       : (
@@ -99,6 +104,7 @@ function createScenarioApplyPipeline({
     const scenarioLandMaskData = staged.scenarioLandMaskFromTopology || null;
     const scenarioContextLandMaskData = staged.scenarioContextLandMaskFromTopology || null;
     const scenarioWaterRegionsData = staged.scenarioWaterRegionsFromTopology || null;
+    const scenarioAtlantropaData = staged.scenarioAtlantropaFromTopology || null;
     const scenarioDistrictGroupByFeatureId = buildScenarioDistrictGroupByFeatureId(staged.districtGroupsPayload);
     const releasableCatalog = mergeReleasableCatalogs(runtimeState.defaultReleasableCatalog, bundle.releasableCatalog);
     const fixedOwnerColors = { ...staged.scenarioColorMap };
@@ -129,6 +135,7 @@ function createScenarioApplyPipeline({
       scenarioLandMaskData,
       scenarioContextLandMaskData,
       scenarioWaterRegionsData,
+      scenarioAtlantropaData,
       scenarioRuntimeTopologyVersionTag: runtimeVersionTag,
       scenarioLandMaskVersionTag: scenarioLandMaskData ? runtimeVersionTag : "",
       scenarioContextLandMaskVersionTag: scenarioContextLandMaskData ? runtimeVersionTag : "",
@@ -167,6 +174,8 @@ function createScenarioApplyPipeline({
   }
 
   function runScenarioActivationPreCommitPhase(bundle, staged) {
+    // pre-commit 先同步会影响后续提交结果的辅助状态，
+    // commit 阶段只落 runtimeState 字段，post-commit 再触发 UI/render/chunk 副作用。
     syncScenarioLocalizationState({
       cityOverridesPayload: staged.mapSemanticMode === "blank" ? null : (staged.scenarioCityOverridesPayload || null),
       geoLocalePatchPayload: staged.mapSemanticMode === "blank" ? null : (bundle.geoLocalePatchPayload || null),
@@ -198,6 +207,8 @@ function createScenarioApplyPipeline({
   }
 
   function commitScenarioChunkRuntimeState(bundle, staged) {
+    // chunk runtime 的壳状态和 payload cache 在这里统一接管。
+    // 非 chunked 场景直接 reset，避免旧场景留下的 detail/chunk 状态混进新场景。
     runtimeState.scheduleScenarioChunkRefreshFn = scenarioSupportsChunkedRuntime(bundle) ? scheduleScenarioChunkRefresh : null;
     if (scenarioSupportsChunkedRuntime(bundle)) {
       resetScenarioChunkRuntimeState({ scenarioId: staged.scenarioId });
@@ -272,6 +283,8 @@ function createScenarioApplyPipeline({
       interactionLevel = "full",
     } = {}
   ) {
+    // apply 前半段先守住“能不能安全进入场景”这条线：
+    // detail topology / palette / countries / owners 任一关键输入缺失，都在真正 commit 前直接失败。
     const startupReadonly = interactionLevel === "readonly-startup";
     const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime(bundle)
       && (!!bundle?.manifest?.detail_chunk_manifest_url || !!bundle?.manifest?.runtime_meta_url);
@@ -286,6 +299,8 @@ function createScenarioApplyPipeline({
       runtimeState.topologyBundleMode === "composite"
       && hasUsablePoliticalTopology(runtimeState.topologyDetail)
     ) || !!detailPromoted || politicalChunkedReady;
+    // detailReady 只表示“允许进入 apply 的最低入场条件已经满足”。
+    // 后续的 hydration health gate、chunk 接管和 post-commit 细化仍可能继续补齐更多 runtime 面。
     if (!detailReady && scenarioNeedsDetailTopology(bundle.manifest) && !startupReadonly) {
       const scenarioLabel = getScenarioDisplayName(
         bundle.manifest,
@@ -381,8 +396,11 @@ function createScenarioApplyPipeline({
     const districtGroupsPayload = normalizeScenarioDistrictGroupsPayload(bundle.districtGroupsPayload, scenarioId);
     const mergedWaterPayload = getActiveScenarioMergedChunkLayerPayload("water", scenarioId);
     const mergedSpecialPayload = getActiveScenarioMergedChunkLayerPayload("special", scenarioId);
+    const mergedAtlantropaPayload = getActiveScenarioMergedChunkLayerPayload("scenario_atlantropa", scenarioId);
     const mergedReliefPayload = getActiveScenarioMergedChunkLayerPayload("relief", scenarioId);
     const mergedCitiesPayload = getActiveScenarioMergedChunkLayerPayload("cities", scenarioId);
+    // 这里用 undefined 区分“runtime 还没接管该 layer”，此时继续回退到 bundle/topology。
+    // 只要 runtime 显式给出 null 或 payload，都按 runtime 的结论提交。
     const scenarioWaterRegionsFromTopology =
       mergedWaterPayload !== undefined
         ? mergedWaterPayload
@@ -397,6 +415,13 @@ function createScenarioApplyPipeline({
         : (
           getScenarioDecodedCollection(bundle, "scenarioSpecialRegionsData")
           || getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "scenario_special_land")
+        );
+    const scenarioAtlantropaFromTopology =
+      mergedAtlantropaPayload !== undefined
+        ? mergedAtlantropaPayload
+        : (
+          getScenarioDecodedCollection(bundle, "scenarioAtlantropaData")
+          || getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "scenario_atlantropa")
         );
     const scenarioContextLandMaskFromTopology =
       getScenarioDecodedCollection(bundle, "scenarioContextLandMaskData")
@@ -461,6 +486,7 @@ function createScenarioApplyPipeline({
       districtGroupsPayload,
       scenarioWaterRegionsFromTopology,
       scenarioSpecialRegionsFromTopology,
+      scenarioAtlantropaFromTopology,
       scenarioContextLandMaskFromTopology,
       scenarioLandMaskFromTopology,
       scenarioReliefOverlaysPayload: mergedReliefPayload !== undefined

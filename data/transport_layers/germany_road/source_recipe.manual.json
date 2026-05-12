@@ -1,0 +1,48 @@
+{
+  "version": "germany_road_real_sources_v1",
+  "pack_id": "germany_road",
+  "family": "road",
+  "country": "Germany",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/germany_road",
+  "source_truth": "BKG DLM250 compact road/transport objects",
+  "geometry_truth": "BKG DLM250 compact NAS_BDA or NAS_NBA archive",
+  "sources": [
+    {
+      "id": "bkg_dlm250_compact_nas_bda",
+      "role": "primary_geometry",
+      "expected_path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "url": "https://daten.gdz.bkg.bund.de/produkte/dlm/dlm250/aktuell/dlm250.utm32s.nas_bda.kompakt.zip",
+      "license": "Datenlizenz Deutschland Namensnennung 2.0",
+      "required_fields": [
+        "road_object_class",
+        "road_class",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Map DLM250 road/transport object classes to motorway/trunk/primary; reject non-road objects.",
+      "notes": "BKG direct download is advertised as UTM32s NAS_BDA/NAS_NBA ZIP on the product page.",
+      "signature": {
+        "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+        "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+        "size_bytes": 199176519,
+        "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+      }
+    }
+  ],
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "roads.preview.topo.json",
+    "roads.topo.json",
+    "road_labels.preview.geojson",
+    "road_labels.geojson"
+  ]
+}

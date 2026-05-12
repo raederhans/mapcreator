@@ -189,7 +189,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         required_files = set(payload.get("required_files", []))
 
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
-        self.assertEqual(payload["max_allowed_bytes"], 970 * 1024 * 1024)
+        self.assertEqual(payload["max_allowed_bytes"], 995 * 1024 * 1024)
         self.assertIn("app/data/CATALOG.json", required_files)
         for expected_path in (
             "index.html",

@@ -95,6 +95,7 @@ function captureHistoryState({
     snapshot.operationalLines = cloneStructuredValue(runtimeState.operationalLines || []);
     snapshot.operationGraphics = cloneStructuredValue(runtimeState.operationGraphics || []);
     snapshot.unitCounters = cloneStructuredValue(runtimeState.unitCounters || []);
+    snapshot.specialZoneLayers = cloneStructuredValue(runtimeState.specialZoneLayers || {});
   }
 
   return snapshot;
@@ -199,6 +200,7 @@ function applyHistorySnapshot(snapshot, direction, entry) {
     || Array.isArray(snapshot.operationalLines)
     || Array.isArray(snapshot.operationGraphics)
     || Array.isArray(snapshot.unitCounters)
+    || (snapshot.specialZoneLayers && typeof snapshot.specialZoneLayers === "object")
   );
 
   runtimeState.visualOverrides = runtimeState.visualOverrides || {};
@@ -241,6 +243,10 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   if (Array.isArray(snapshot.unitCounters)) {
     runtimeState.unitCounters = cloneStructuredValue(snapshot.unitCounters);
     runtimeState.unitCountersDirty = true;
+  }
+  if (snapshot.specialZoneLayers && typeof snapshot.specialZoneLayers === "object") {
+    runtimeState.specialZoneLayers = cloneStructuredValue(snapshot.specialZoneLayers);
+    runtimeState.specialZonesOverlayDirty = true;
   }
   if (hasAnnotationView) {
     runtimeState.frontlineOverlayDirty = true;

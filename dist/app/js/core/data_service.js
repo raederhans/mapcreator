@@ -158,6 +158,37 @@ function ensureReadableJsonEntry(entry, {
   );
 }
 
+function ensureReadableModuleEntry(entry, {
+  kind,
+  id,
+  url,
+} = {}) {
+  const normalizedUrl = normalizeCatalogPath(url);
+  const normalizedKind = String(kind || "").trim() || "resource";
+  const normalizedId = String(id || "").trim() || normalizedUrl || "<empty>";
+  const readMode = String(entry?.readMode || "").trim();
+  if (readMode === "module") return;
+  throw createDataServiceError(
+    "unsupported-format",
+    `[data_service] ${normalizedKind} ${normalizedId} is registered with readMode=${readMode || "<empty>"} at ${normalizedUrl}.`,
+    {
+      kind: normalizedKind,
+      id: normalizedId,
+      url: normalizedUrl,
+      format: String(entry?.format || "").trim(),
+      readMode,
+    },
+  );
+}
+
+function resolveModuleSpecifier(url) {
+  const normalizedUrl = normalizeCatalogPath(url);
+  if (/^(?:https?:|file:|data:|blob:|\/)/.test(normalizedUrl)) {
+    return normalizedUrl;
+  }
+  return new URL(`../../${normalizedUrl}`, import.meta.url).href;
+}
+
 async function loadJsonEntry(kind, id, url, entry, options = {}) {
   const normalizedUrl = normalizeCatalogPath(url);
   const requestId = createRequestId(kind, id || normalizedUrl);
@@ -215,6 +246,77 @@ async function loadJsonEntry(kind, id, url, entry, options = {}) {
   }
 }
 
+async function loadModuleEntry(kind, id, url, entry, options = {}) {
+  const normalizedUrl = normalizeCatalogPath(url);
+  const requestId = createRequestId(kind, id || normalizedUrl);
+  const cachePolicy = resolveEntryCachePolicy(entry, options.cachePolicy);
+  ensureReadableModuleEntry(entry, { kind, id, url: normalizedUrl });
+  updateStatus(requestId, {
+    kind,
+    id,
+    url: normalizedUrl,
+    role: String(entry?.role || "").trim(),
+    status: "loading",
+    error: "",
+    errorCode: "",
+    httpStatus: 0,
+    cachePolicy,
+  });
+  const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+  try {
+    const injectedModuleLoader = typeof options.moduleLoader === "function"
+      ? options.moduleLoader
+      : typeof globalThis.__mapcreatorModuleLoader === "function"
+        ? globalThis.__mapcreatorModuleLoader
+        : null;
+    const moduleSpecifier = injectedModuleLoader
+      ? normalizedUrl
+      : resolveModuleSpecifier(normalizedUrl);
+    const moduleLoader = injectedModuleLoader || ((specifier) => import(specifier));
+    const payload = await moduleLoader(moduleSpecifier);
+    const finishedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    updateMetrics(requestId, {
+      cachePolicy,
+      kind,
+      id,
+      url: normalizedUrl,
+      role: String(entry?.role || "").trim(),
+      label: options.label || requestId,
+      fetchMs: 0,
+      jsonParseMs: 0,
+      totalMs: Math.max(0, finishedAt - startedAt),
+      transferMs: 0,
+    });
+    updateStatus(requestId, {
+      status: "ready",
+      error: "",
+      errorCode: "",
+      httpStatus: 200,
+      loadedAt: Date.now(),
+      cachePolicy,
+    });
+    return payload;
+  } catch (error) {
+    const normalizedError = normalizeDataServiceError(error, {
+      kind,
+      id,
+      url: normalizedUrl,
+      cachePolicy,
+    });
+    if (!normalizedError.code || normalizedError.code === "load-failed") {
+      normalizedError.code = "module-load-failed";
+    }
+    updateStatus(requestId, {
+      status: "error",
+      error: normalizedError.message,
+      errorCode: String(normalizedError.code || "module-load-failed"),
+      httpStatus: Number(normalizedError.httpStatus || 0),
+      cachePolicy,
+    });
+    throw normalizedError;
+  }
+}
+
 function resolveCatalogEntryByUrl(url) {
   return catalogEntryByUrl.get(normalizeCatalogPath(url)) || null;
 }
@@ -244,6 +346,13 @@ export async function getAsset(key, options = {}) {
     readMode: url.endsWith(".js") ? "module" : "json",
     cachePolicy: "default",
   };
+  const readMode = String(entry?.readMode || "").trim();
+  if (readMode === "module") {
+    return loadModuleEntry("asset", normalizedKey, url, entry, {
+      ...options,
+      label: options.label || `asset:${normalizedKey}`,
+    });
+  }
   return loadJsonEntry("asset", normalizedKey, url, entry, {
     ...options,
     label: options.label || `asset:${normalizedKey}`,

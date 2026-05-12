@@ -1,0 +1,83 @@
+{
+  "adapter_id": "uk_road_v1",
+  "family": "road",
+  "geometry_kind": "line",
+  "country": "United Kingdom",
+  "schema_version": 1,
+  "generated_at": "2026-05-12T21:26:05.097682Z",
+  "recipe_path": "data/transport_layers/uk_road/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "roads": "data/transport_layers/uk_road/roads.preview.topo.json",
+      "road_labels": "data/transport_layers/uk_road/road_labels.preview.geojson"
+    },
+    "full": {
+      "roads": "data/transport_layers/uk_road/roads.topo.json",
+      "road_labels": "data/transport_layers/uk_road/road_labels.geojson"
+    },
+    "build_audit": "data/transport_layers/uk_road/build_audit.json"
+  },
+  "source_signature": {
+    "os_open_roads_gb": {
+      "filename": "oproad_essh_gb.zip",
+      "path": ".runtime/source-cache/transport/uk_road/oproad_essh_gb.zip",
+      "size_bytes": 606145264,
+      "sha256": "bb2bbff8be3d637b38ed5d06277856c15f41ea262614edf974be8f4b96fdc791"
+    },
+    "osni_50k_transport_lines_geojson": {
+      "filename": "osni_open_data_50k_transport_transport_lines.geojson",
+      "path": ".runtime/source-cache/transport/uk_road/osni_open_data_50k_transport_transport_lines.geojson",
+      "size_bytes": 12271281,
+      "sha256": "2566d2f16c08e33eca3bd9ccb3183d6a8682fba5675bc1447d14df42db8ba204"
+    }
+  },
+  "recipe_version": "uk_road_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "roads": 37769,
+      "road_labels": 709
+    },
+    "full": {
+      "roads": 116594,
+      "road_labels": 3570
+    }
+  },
+  "clip_bbox": [
+    -6.744422,
+    50.091927,
+    1.756344,
+    58.612378
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack uk_road",
+  "runtime_consumer": "transport_workbench_road_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "roads": "data/transport_layers/uk_road/roads.preview.topo.json",
+          "road_labels": "data/transport_layers/uk_road/road_labels.preview.geojson"
+        },
+        "full": {
+          "roads": "data/transport_layers/uk_road/roads.topo.json",
+          "road_labels": "data/transport_layers/uk_road/road_labels.geojson"
+        },
+        "build_audit": "data/transport_layers/uk_road/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "roads": 37769,
+          "road_labels": 709
+        },
+        "full": {
+          "roads": 116594,
+          "road_labels": 3570
+        }
+      }
+    }
+  }
+}

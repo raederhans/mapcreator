@@ -228,6 +228,7 @@ function createScenarioLifecycleRuntime({
     resetScenarioChunkRuntimeState({ scenarioId: "" });
     runtimeState.scheduleScenarioChunkRefreshFn = null;
     runtimeState.scenarioWaterRegionsData = null;
+    runtimeState.scenarioAtlantropaData = null;
     runtimeState.scenarioWaterOverlayVersionTag = "";
     runtimeState.scenarioSpecialRegionsData = null;
     runtimeState.scenarioReliefOverlaysData = null;

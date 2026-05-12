@@ -35,9 +35,7 @@ function createSpecialZoneEditorController({
   undoSpecialZoneVertex,
   finishSpecialZoneDraw,
   cancelSpecialZoneDraw,
-  deleteSelectedManualSpecialZone,
   selectSpecialZoneById,
-  showAppDialog,
   showToast,
   t,
 } = {}) {
@@ -145,17 +143,17 @@ function createSpecialZoneEditorController({
     }
 
     const isDrawing = !!runtimeState.specialZoneEditor?.active;
-    if (specialZoneStartBtn) specialZoneStartBtn.disabled = isDrawing;
-    if (specialZoneUndoBtn) specialZoneUndoBtn.disabled = !isDrawing;
-    if (specialZoneFinishBtn) specialZoneFinishBtn.disabled = !isDrawing;
-    if (specialZoneCancelBtn) specialZoneCancelBtn.disabled = !isDrawing;
+    if (specialZoneStartBtn) specialZoneStartBtn.disabled = true;
+    if (specialZoneUndoBtn) specialZoneUndoBtn.disabled = true;
+    if (specialZoneFinishBtn) specialZoneFinishBtn.disabled = true;
+    if (specialZoneCancelBtn) specialZoneCancelBtn.disabled = true;
     if (specialZoneDeleteBtn) {
-      specialZoneDeleteBtn.disabled = !runtimeState.specialZoneEditor?.selectedId;
+      specialZoneDeleteBtn.disabled = true;
     }
     if (specialZoneEditorHint) {
       specialZoneEditorHint.textContent = isDrawing
-        ? t("Drawing in progress: click map to add vertices, double-click to finish.", "ui")
-        : t("Click map to add vertices, double-click to finish.", "ui");
+        ? t("Finish or cancel the current legacy drawing, then use Layer-based special zones.", "ui")
+        : t("Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.", "ui");
     }
     renderTransportAppearanceUi?.();
   };
@@ -254,14 +252,10 @@ function createSpecialZoneEditorController({
     }
     if (specialZoneStartBtn && !specialZoneStartBtn.dataset.bound) {
       specialZoneStartBtn.addEventListener("click", () => {
-        startSpecialZoneDraw({
-          zoneType: String(specialZoneTypeSelect?.value || runtimeState.specialZoneEditor.zoneType || "custom"),
-          label: String(specialZoneLabelInput?.value || runtimeState.specialZoneEditor.label || ""),
+        showToast(t("Use Layer-based special zones for new edits.", "ui"), {
+          title: t("Special Zones", "ui"),
+          tone: "warning",
         });
-        runtimeState.updateSpecialZoneEditorUIFn?.();
-        dismissOnboardingHint?.();
-        updateToolUI?.();
-        render?.();
       });
       specialZoneStartBtn.dataset.bound = "true";
     }
@@ -305,25 +299,9 @@ function createSpecialZoneEditorController({
     }
     if (specialZoneDeleteBtn && !specialZoneDeleteBtn.dataset.bound) {
       specialZoneDeleteBtn.addEventListener("click", async () => {
-        if (!runtimeState.specialZoneEditor?.selectedId) return;
-        const confirmed = await showAppDialog({
-          title: t("Delete Selected", "ui"),
-          message: t("Delete the selected special region?", "ui"),
-          details: t(
-            "This removes the selected manual zone from the current project. You can undo the deletion from history.",
-            "ui"
-          ),
-          confirmLabel: t("Delete Zone", "ui"),
-          cancelLabel: t("Cancel", "ui"),
-          tone: "warning",
-        });
-        if (!confirmed) return;
-        deleteSelectedManualSpecialZone();
         runtimeState.updateSpecialZoneEditorUIFn?.();
-        markDirty("special-zone-delete");
-        render?.();
-        showToast(t("Selected special region was deleted.", "ui"), {
-          title: t("Delete Selected", "ui"),
+        showToast(t("Use Layer-based special zones for new edits.", "ui"), {
+          title: t("Special Zones", "ui"),
           tone: "warning",
         });
       });

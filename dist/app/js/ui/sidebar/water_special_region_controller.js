@@ -256,6 +256,8 @@ export function createWaterSpecialRegionController({
     if (!normalizedSelectedId) return [];
     const selectedFeature = runtimeState.waterRegionsById?.get(normalizedSelectedId);
     if (!selectedFeature) return [];
+    // scope 批量操作只针对“当前过滤后仍可见”的水域集合生效。
+    // 这样 inspector 里的同 parent / 同 group / 同 type 始终和用户眼前列表保持同一语义。
     const filteredFeatures = getFilteredWaterFeatures();
     const selectedGroup = getWaterFeatureGroup(selectedFeature);
     const selectedType = getWaterFeatureType(selectedFeature);
@@ -756,6 +758,8 @@ export function createWaterSpecialRegionController({
   const isSpecialFeatureVisibleInInspector = (feature) =>
     !!feature && !!runtimeState.activeScenarioId && !!runtimeState.showScenarioSpecialRegions && feature?.properties?.interactive !== false;
 
+  // Legacy scenario special-region overrides remain editable until the
+  // layer-based workbench fully replaces checked-in special-region assets.
   const getSpecialFeatureColor = (featureId, feature = null) => {
     const resolvedId = String(featureId || "").trim();
     return (
@@ -821,9 +825,7 @@ export function createWaterSpecialRegionController({
       .sort((a, b) => getSpecialFeatureDisplayName(a.feature).localeCompare(getSpecialFeatureDisplayName(b.feature)));
 
     if (!overrideEntries.length) {
-      specialRegionLegendList.appendChild(
-        createEmptyNote(t("Paint special regions to create an override list.", "ui"))
-      );
+      specialRegionLegendList.appendChild(createEmptyNote(t("Paint special regions to create an override list.", "ui")));
       return;
     }
 
@@ -883,12 +885,16 @@ export function createWaterSpecialRegionController({
       if (specialRegionColorInput) {
         specialRegionColorInput.disabled = true;
       }
+      if (clearSpecialRegionColorBtn) {
+        clearSpecialRegionColorBtn.disabled = true;
+      }
       specialRegionColorPickerOpen = false;
       scheduleAdaptiveInspectorHeights();
       return;
     }
 
     const featureColor = getSpecialFeatureColor(selectedId, feature);
+    const hasOverride = Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, selectedId);
     if (specialRegionInspectorDetailHint) {
       const meta = getSpecialFeatureMeta(feature);
       specialRegionInspectorDetailHint.classList.toggle("hidden", !meta);
@@ -911,6 +917,9 @@ export function createWaterSpecialRegionController({
     if (specialRegionColorInput) {
       specialRegionColorInput.disabled = false;
       specialRegionColorInput.value = featureColor;
+    }
+    if (clearSpecialRegionColorBtn) {
+      clearSpecialRegionColorBtn.disabled = !hasOverride;
     }
     scheduleAdaptiveInspectorHeights();
   };
@@ -1040,6 +1049,8 @@ export function createWaterSpecialRegionController({
 
 
   const bindEvents = () => {
+  // 这一层不是纯 UI 绑定：多个 toggle 会同步 runtime flag、可见图层、hover/inspector 状态，
+  // 还会在需要时触发 optional layer 懒加载，所以事件顺序要保持集中，不要拆到零散回调里。
   if (waterInspectorOpenOceanSelectToggle && !waterInspectorOpenOceanSelectToggle.dataset.bound) {
     waterInspectorOpenOceanSelectToggle.addEventListener("change", (event) => {
       runtimeState.allowOpenOceanSelect = !!event.target.checked;
@@ -1247,6 +1258,7 @@ export function createWaterSpecialRegionController({
 
   if (specialRegionColorSwatch && specialRegionColorInput && !specialRegionColorSwatch.dataset.bound) {
     specialRegionColorSwatch.addEventListener("click", () => {
+      if (specialRegionColorInput.disabled) return;
       specialRegionColorPickerOpen = true;
       specialRegionColorInput.focus({ preventScroll: true });
       if (typeof specialRegionColorInput.showPicker === "function") {

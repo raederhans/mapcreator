@@ -1,0 +1,75 @@
+{
+  "adapter_id": "russia_airport_v1",
+  "family": "airport",
+  "geometry_kind": "point",
+  "country": "Russia",
+  "schema_version": 1,
+  "generated_at": "2026-05-12T21:26:32.809116Z",
+  "recipe_path": "data/transport_layers/russia_airport/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "airports": "data/transport_layers/russia_airport/airports.preview.geojson"
+    },
+    "full": {
+      "airports": "data/transport_layers/russia_airport/airports.geojson"
+    },
+    "build_audit": "data/transport_layers/russia_airport/build_audit.json"
+  },
+  "source_signature": {
+    "rosaviatsiya_civil_aerodrome_registry": {
+      "filename": "ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+      "path": ".runtime/source-cache/transport/russia_airport/ru_airport_rosaviatsiya_civil_aerodrome_registry_2026-04-27.html",
+      "size_bytes": 183065,
+      "sha256": "feb9bb9de4242ab7cade0f61088879846292c0306fbfc7047fa375b6add45d1e"
+    },
+    "osm_airport_geometry_supplement": {
+      "filename": "ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "path": ".runtime/source-cache/transport/russia_airport/ru_airport_osm_geometry_overpass_2026-05-12.geojson",
+      "size_bytes": 606431,
+      "sha256": "c5a1195cd8958f7461f04fe29019ff791b9ab43c7deaaa63410f8dd024cf4b8f"
+    }
+  },
+  "recipe_version": "russia_airport_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "airports": 80
+    },
+    "full": {
+      "airports": 160
+    }
+  },
+  "clip_bbox": [
+    -179.109559,
+    42.813798,
+    179.2936,
+    73.51672
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack russia_airport",
+  "runtime_consumer": "transport_workbench_airport_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "airports": "data/transport_layers/russia_airport/airports.preview.geojson"
+        },
+        "full": {
+          "airports": "data/transport_layers/russia_airport/airports.geojson"
+        },
+        "build_audit": "data/transport_layers/russia_airport/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "airports": 80
+        },
+        "full": {
+          "airports": 160
+        }
+      }
+    }
+  }
+}

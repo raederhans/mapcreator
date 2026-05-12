@@ -16,6 +16,10 @@ import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { clearDirty } from "./dirty_state.js";
+import {
+  normalizeSpecialZoneLayersState,
+  serializeSpecialZoneLayersState,
+} from "./special_zone_layers.js";
 
 const LEGACY_BOUNDARY_VARIANT_ALIASES = {
   legacy_approx: "historical_reference",
@@ -26,6 +30,10 @@ const MAX_MANUAL_SPECIAL_ZONE_FEATURES = 200;
 const MAX_MANUAL_SPECIAL_ZONE_COORDINATES_PER_FEATURE = 5000;
 const MAX_MANUAL_SPECIAL_ZONE_RINGS_PER_FEATURE = 32;
 const MAX_MANUAL_SPECIAL_ZONE_POLYGONS_PER_FEATURE = 32;
+const DEFAULT_OPERATION_GRAPHIC_KIND = "attack";
+const DEFAULT_OPERATIONAL_LINE_KIND = "frontline";
+const CLOSED_OPERATION_GRAPHIC_KINDS = new Set(["encirclement", "theater"]);
+const UNIT_COUNTER_STATS_SOURCES = new Set(["preset", "random", "manual"]);
 const DEFAULT_REFERENCE_IMAGE_STATE = Object.freeze({
   opacity: 0.6,
   scale: 1,
@@ -44,6 +52,26 @@ function normalizeProjectHexColor(value) {
     return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`.toLowerCase();
   }
   return "";
+}
+
+function normalizeStrategicKindToken(value, fallback) {
+  const token = String(value || "").trim().toLowerCase();
+  return /^[a-z][a-z0-9_-]{0,48}$/.test(token) ? token : fallback;
+}
+
+function normalizeUnitCounterStatPercent(value, fallback) {
+  const numeric = Number(value);
+  return clamp(Number.isFinite(numeric) ? Math.round(numeric) : fallback, 0, 100);
+}
+
+function normalizeUnitCounterStatsPresetId(value) {
+  const token = String(value || "").trim().toLowerCase();
+  return /^[a-z][a-z0-9_-]{0,48}$/.test(token) ? token : "regular";
+}
+
+function normalizeUnitCounterStatsSource(value) {
+  const token = String(value || "").trim().toLowerCase();
+  return UNIT_COUNTER_STATS_SOURCES.has(token) ? token : "preset";
 }
 
 function normalizeReferenceImageState(rawState) {
@@ -154,6 +182,8 @@ function normalizeProjectCoordinatePair(value) {
 function normalizeManualSpecialZoneRing(rawRing, coordinateBudget) {
   if (!Array.isArray(rawRing) || coordinateBudget.remaining < 4) return null;
   const normalized = [];
+  // coordinateBudget 在整个 feature 维度共享，
+  // 这样导入时会优先保住“每个 ring 都还能闭合并可编辑”，而不是让单个超大 ring 吃掉全部预算。
   const maxRingVerticesToScan = Math.min(
     rawRing.length,
     MAX_MANUAL_SPECIAL_ZONE_COORDINATES_PER_FEATURE,
@@ -263,19 +293,18 @@ function normalizeOperationGraphics(rawGraphics) {
   return rawGraphics
     .map((entry, index) => {
       const raw = entry && typeof entry === "object" ? entry : {};
-      const kind = String(raw.kind || "attack").trim().toLowerCase();
+      const kind = normalizeStrategicKindToken(raw.kind, DEFAULT_OPERATION_GRAPHIC_KIND);
       const points = Array.isArray(raw.points)
         ? raw.points.map((point) => normalizeProjectCoordinatePair(point)).filter(Boolean)
         : [];
-      if (!["attack", "retreat", "supply", "naval", "encirclement", "theater"].includes(kind)) return null;
-      if (points.length < (kind === "encirclement" || kind === "theater" ? 3 : 2)) return null;
+      if (points.length < (CLOSED_OPERATION_GRAPHIC_KINDS.has(kind) ? 3 : 2)) return null;
       const stroke = normalizeProjectHexColor(raw.stroke) || null;
       return {
         id: String(raw.id || `opg_${index + 1}`).trim() || `opg_${index + 1}`,
         kind,
         label: String(raw.label || "").trim(),
         points,
-        stylePreset: String(raw.stylePreset || kind).trim() || kind,
+        stylePreset: normalizeStrategicKindToken(raw.stylePreset, kind),
         stroke,
         width: clamp(Number.isFinite(Number(raw.width)) ? Number(raw.width) : 0, 0, 16),
         opacity: clamp(Number.isFinite(Number(raw.opacity)) ? Number(raw.opacity) : 1, 0, 1),
@@ -289,22 +318,23 @@ function normalizeOperationalLines(rawLines) {
   return rawLines
     .map((entry, index) => {
       const raw = entry && typeof entry === "object" ? entry : {};
-      const kind = String(raw.kind || "frontline").trim().toLowerCase();
+      const kind = normalizeStrategicKindToken(raw.kind, DEFAULT_OPERATIONAL_LINE_KIND);
       const points = Array.isArray(raw.points)
         ? raw.points.map((point) => normalizeProjectCoordinatePair(point)).filter(Boolean)
         : [];
-      if (!["frontline", "offensive_line", "spearhead_line", "defensive_line"].includes(kind)) return null;
       if (points.length < 2) return null;
       const stroke = normalizeProjectHexColor(raw.stroke) || null;
       const attachedCounterIds = Array.isArray(raw.attachedCounterIds)
         ? raw.attachedCounterIds.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
+      // operational line 这里只保留可序列化的挂接关系；
+      // 真正的 counter 布局恢复留给运行时按 lineId 重新连线，避免项目文件里混入 UI 临时状态。
       return {
         id: String(raw.id || `opl_${index + 1}`).trim() || `opl_${index + 1}`,
         kind,
         label: String(raw.label || "").trim(),
         points,
-        stylePreset: String(raw.stylePreset || kind).trim().toLowerCase() || kind,
+        stylePreset: normalizeStrategicKindToken(raw.stylePreset, kind),
         stroke,
         width: clamp(Number.isFinite(Number(raw.width)) ? Number(raw.width) : 0, 0, 16),
         opacity: clamp(Number.isFinite(Number(raw.opacity)) ? Number(raw.opacity) : 1, 0, 1),
@@ -361,6 +391,9 @@ function normalizeUnitCounters(rawCounters) {
         || ""
       ).trim();
       const attachmentKind = String(attachmentSource.kind || "").trim().toLowerCase() || (attachmentLineId ? "operational-line" : "");
+      // 项目导入时把 anchor、layoutAnchor、attachment 分开归一：
+      // anchor 解决地理落点，layoutAnchor 解决同地块排布，attachment 解决与线条的从属关系，
+      // 后续 renderer/sidebar 才能按各自职责恢复这些联系。
       return {
         id: String(raw.id || `unit_${index + 1}`).trim() || `unit_${index + 1}`,
         renderer,
@@ -375,6 +408,11 @@ function normalizeUnitCounters(rawCounters) {
         echelon: String(raw.echelon || "").trim(),
         subLabel: String(raw.subLabel || "").trim(),
         strengthText: String(raw.strengthText || "").trim(),
+        baseFillColor: normalizeProjectHexColor(raw.baseFillColor),
+        organizationPct: normalizeUnitCounterStatPercent(raw.organizationPct, 78),
+        equipmentPct: normalizeUnitCounterStatPercent(raw.equipmentPct, 74),
+        statsPresetId: normalizeUnitCounterStatsPresetId(raw.statsPresetId),
+        statsSource: normalizeUnitCounterStatsSource(raw.statsSource),
         size: ["small", "medium", "large"].includes(size) ? size : "medium",
         facing: clamp(Number.isFinite(Number(raw.facing)) ? Number(raw.facing) : 0, -180, 180),
         zIndex: Math.round(Number.isFinite(Number(raw.zIndex)) ? Number(raw.zIndex) : index),
@@ -411,7 +449,8 @@ class FileManager {
       sovereignBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       visualOverrides: appState.visualOverrides || appState.featureOverrides || {},
       waterRegionOverrides: appState.waterRegionOverrides || {},
-      specialRegionOverrides: appState.specialRegionOverrides || {},
+      specialRegionOverrides: {},
+      specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers),
       sovereigntyByFeatureId: appState.sovereigntyByFeatureId || {},
       mapSemanticMode: normalizeMapSemanticMode(appState.mapSemanticMode),
       paintMode: appState.paintMode || "visual",
@@ -424,7 +463,7 @@ class FileManager {
       specialZones: appState.specialZones || {},
       parentBordersVisible: appState.parentBordersVisible !== false,
       parentBorderEnabledByCountry: appState.parentBorderEnabledByCountry || {},
-      manualSpecialZones: appState.manualSpecialZones || { type: "FeatureCollection", features: [] },
+      manualSpecialZones: { type: "FeatureCollection", features: [] },
       annotationView: normalizeAnnotationView(appState.annotationView),
       operationalLines: normalizeOperationalLines(appState.operationalLines),
       operationGraphics: normalizeOperationGraphics(appState.operationGraphics),
@@ -445,6 +484,8 @@ class FileManager {
             : !!appState.allowOpenOceanPaint,
         showScenarioSpecialRegions:
           appState.showScenarioSpecialRegions === undefined ? true : !!appState.showScenarioSpecialRegions,
+        showScenarioAtlantropa:
+          appState.showScenarioAtlantropa === undefined ? true : !!appState.showScenarioAtlantropa,
         showScenarioReliefOverlays:
           appState.showScenarioReliefOverlays === undefined ? true : !!appState.showScenarioReliefOverlays,
         showCityPoints: appState.showCityPoints === undefined ? true : !!appState.showCityPoints,
@@ -455,6 +496,7 @@ class FileManager {
         showAirports: !!appState.showAirports,
         showPorts: !!appState.showPorts,
         showRail: !!appState.showRail,
+        showRoad: !!appState.showRoad,
         showSpecialZones: !!appState.showSpecialZones,
       },
       styleConfig: {
@@ -543,9 +585,12 @@ class FileManager {
         if (!data.waterRegionOverrides || typeof data.waterRegionOverrides !== "object") {
           data.waterRegionOverrides = {};
         }
-        if (!data.specialRegionOverrides || typeof data.specialRegionOverrides !== "object") {
-          data.specialRegionOverrides = {};
-        }
+        data.specialZoneLayers = normalizeSpecialZoneLayersState({
+          ...(data.specialZoneLayers && typeof data.specialZoneLayers === "object" ? data.specialZoneLayers : {}),
+          manualSpecialZones: data.manualSpecialZones,
+          specialRegionOverrides: data.specialRegionOverrides,
+        }, { defaultSource: "project" });
+        data.specialRegionOverrides = {};
         if (!data.sovereignBaseColors || typeof data.sovereignBaseColors !== "object") {
           data.sovereignBaseColors = data.countryBaseColors;
         }
@@ -601,7 +646,7 @@ class FileManager {
         data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
         data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
         data.exportWorkbenchUi = normalizeExportWorkbenchUiState(data.exportWorkbenchUi);
-        data.manualSpecialZones = normalizeManualSpecialZones(data.manualSpecialZones);
+        data.manualSpecialZones = { type: "FeatureCollection", features: [] };
         data.annotationView = normalizeAnnotationView(data.annotationView);
         data.operationalLines = normalizeOperationalLines(data.operationalLines);
         data.operationGraphics = normalizeOperationGraphics(data.operationGraphics);
@@ -609,6 +654,8 @@ class FileManager {
         if (!data.layerVisibility || typeof data.layerVisibility !== "object") {
           data.layerVisibility = {};
         }
+        // `scenario` 是项目文件和当前场景资产之间的桥。
+        // 这里只保留可稳定序列化的识别信息，把运行时派生态留给后续 scenario apply 重新建立。
         if (!data.scenario || typeof data.scenario !== "object") {
           data.scenario = null;
         } else {
@@ -653,6 +700,10 @@ class FileManager {
           data.layerVisibility.showScenarioSpecialRegions === undefined
             ? true
             : !!data.layerVisibility.showScenarioSpecialRegions;
+        data.layerVisibility.showScenarioAtlantropa =
+          data.layerVisibility.showScenarioAtlantropa === undefined
+            ? true
+            : !!data.layerVisibility.showScenarioAtlantropa;
         data.layerVisibility.showScenarioReliefOverlays =
           data.layerVisibility.showScenarioReliefOverlays === undefined
             ? true
@@ -673,6 +724,8 @@ class FileManager {
           data.layerVisibility.showPorts === undefined ? false : !!data.layerVisibility.showPorts;
         data.layerVisibility.showRail =
           data.layerVisibility.showRail === undefined ? false : !!data.layerVisibility.showRail;
+        data.layerVisibility.showRoad =
+          data.layerVisibility.showRoad === undefined ? false : !!data.layerVisibility.showRoad;
         data.layerVisibility.showSpecialZones =
           data.layerVisibility.showSpecialZones === undefined
             ? false

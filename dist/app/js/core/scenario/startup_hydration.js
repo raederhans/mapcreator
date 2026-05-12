@@ -247,6 +247,9 @@ function createScenarioStartupHydrationController({
     const mergedSpecialPayload = hasScenarioMergedLayerPayload(runtimeMergedLayerPayloads, "special")
       ? runtimeMergedLayerPayloads.special || null
       : undefined;
+    const mergedAtlantropaPayload = hasScenarioMergedLayerPayload(runtimeMergedLayerPayloads, "scenario_atlantropa")
+      ? runtimeMergedLayerPayloads.scenario_atlantropa || null
+      : undefined;
     const mergedPoliticalPayload = hasScenarioMergedLayerPayload(runtimeMergedLayerPayloads, "political")
       ? runtimeMergedLayerPayloads.political || null
       : undefined;
@@ -258,6 +261,8 @@ function createScenarioStartupHydrationController({
       : undefined;
     let scenarioOverlayChanged = false;
     let contextBaseChanged = false;
+    let scenarioAtlantropaChanged = false;
+    let hydrationChangedLayerKeys = [];
     if (runtimeTopologyPayload) {
       // 这里先用 runtime topology 定住“壳层真相”，再决定各类 overlay 是否复用缓存、是否需要刷新版本标签。
       // 顺序不能反过来，否则 water / land mask 这类派生层会拿到和当前 runtime 壳层不一致的身份标记。
@@ -340,10 +345,22 @@ function createScenarioStartupHydrationController({
             || state.scenarioSpecialRegionsData
             || null
           );
+      const nextScenarioAtlantropaData =
+        mergedAtlantropaPayload !== undefined
+          ? mergedAtlantropaPayload
+          : (
+            getScenarioDecodedCollection(bundle, "scenarioAtlantropaData")
+            || getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "scenario_atlantropa")
+            || state.scenarioAtlantropaData
+            || null
+          );
+      scenarioAtlantropaChanged = state.scenarioAtlantropaData !== nextScenarioAtlantropaData;
+      hydrationChangedLayerKeys = scenarioAtlantropaChanged ? ["scenario_atlantropa"] : [];
       scenarioOverlayChanged =
         state.scenarioRuntimeTopologyData !== runtimeTopologyPayload
         || state.scenarioWaterRegionsData !== nextScenarioWaterRegionsData
-        || state.scenarioSpecialRegionsData !== nextScenarioSpecialRegionsData;
+        || state.scenarioSpecialRegionsData !== nextScenarioSpecialRegionsData
+        || scenarioAtlantropaChanged;
       contextBaseChanged =
         state.scenarioRuntimeTopologyData !== runtimeTopologyPayload
         || state.runtimePoliticalTopology !== nextRuntimePoliticalTopology
@@ -357,6 +374,7 @@ function createScenarioStartupHydrationController({
         scenarioLandMaskData: nextScenarioLandMaskData,
         scenarioContextLandMaskData: nextScenarioContextLandMaskData,
         scenarioWaterRegionsData: nextScenarioWaterRegionsData,
+        scenarioAtlantropaData: nextScenarioAtlantropaData,
         scenarioRuntimeTopologyVersionTag: runtimeVersionTag,
         scenarioWaterOverlayVersionTag: nextScenarioWaterOverlayVersionTag,
         scenarioLandMaskVersionTag: nextScenarioLandMaskVersionTag,
@@ -392,27 +410,37 @@ function createScenarioStartupHydrationController({
       {
         renderNow: false,
         reason: "scenario-hydrate-political",
+        changedLayerKeys: hydrationChangedLayerKeys,
       }
+    );
+    const politicalPayloadChangedForFallback = !!(
+      nextScenarioPoliticalPayload
+      && !areScenarioFeatureCollectionsEquivalent(nextScenarioPoliticalPayload, previousScenarioPoliticalPayload)
     );
     if (!promotedScenarioPolitical) {
       setScenarioRuntimeOptionalLayerState(state, {
         scenarioPoliticalChunkData: nextScenarioPoliticalPayload,
       });
-      if (
-        nextScenarioPoliticalPayload
-        && !areScenarioFeatureCollectionsEquivalent(nextScenarioPoliticalPayload, previousScenarioPoliticalPayload)
-      ) {
+      if (politicalPayloadChangedForFallback) {
         refreshMapDataForScenarioChunkPromotion({
           suppressRender: !renderNow,
           hasPoliticalPayloadChange: true,
           refreshPlan: typeof createStartupHydrationRefreshPlan === "function"
             ? createStartupHydrationRefreshPlan({
-              changedLayerKeys: ["political"],
+              changedLayerKeys: ["political", ...hydrationChangedLayerKeys],
               hasPoliticalChange: true,
             })
             : null,
         });
       }
+    }
+    if (scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback) {
+      refreshMapDataForScenarioChunkPromotion({
+        suppressRender: !renderNow,
+        reason: "scenario-hydrate-atlantropa",
+        changedLayerKeys: hydrationChangedLayerKeys,
+        hasPoliticalPayloadChange: false,
+      });
     }
     if (bundle.districtGroupsPayload) {
       setScenarioRuntimeOptionalLayerState(state, {

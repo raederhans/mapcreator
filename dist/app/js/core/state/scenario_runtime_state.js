@@ -16,6 +16,8 @@ export function createDefaultRuntimeChunkLoadState({ scenarioId = "" } = {}) {
   const normalizedScenarioId = String(scenarioId || "").trim();
   const ready = !!normalizedScenarioId;
   return {
+    // shell/registry 负责 chunk runtime 是否具备基础资源；
+    // protected/promotion/inFlight 三组字段则负责 zoom-end 保护、promotion 提交和并发加载状态机。
     shellStatus: ready ? "ready" : "idle",
     registryStatus: ready ? "ready" : "idle",
     refreshScheduled: false,
@@ -125,6 +127,7 @@ export function setHydratedScenarioRuntimeTopologyState(
     scenarioLandMaskData = null,
     scenarioContextLandMaskData = null,
     scenarioWaterRegionsData = null,
+    scenarioAtlantropaData = null,
     scenarioRuntimeTopologyVersionTag = "",
     scenarioWaterOverlayVersionTag = "",
     scenarioLandMaskVersionTag = "",
@@ -142,6 +145,7 @@ export function setHydratedScenarioRuntimeTopologyState(
   target.scenarioLandMaskData = scenarioLandMaskData || null;
   target.scenarioContextLandMaskData = scenarioContextLandMaskData || null;
   target.scenarioWaterRegionsData = scenarioWaterRegionsData || null;
+  target.scenarioAtlantropaData = scenarioAtlantropaData || null;
   target.scenarioRuntimeTopologyVersionTag = String(scenarioRuntimeTopologyVersionTag || "");
   target.scenarioWaterOverlayVersionTag = String(scenarioWaterOverlayVersionTag || "");
   target.scenarioLandMaskVersionTag = String(scenarioLandMaskVersionTag || "");
@@ -154,12 +158,17 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   if (!target || typeof target !== "object") {
     return null;
   }
+  // optional layer 要区分“这次提交没有提到该 layer”和“这次明确要把它清空”。
+  // 所以这里统一走 hasOwnProperty，而不是用 truthy 判断偷懒。
   const hasOwn = Object.prototype.hasOwnProperty;
   if (hasOwn.call(nextState, "activeScenarioMeshPack")) {
     target.activeScenarioMeshPack = nextState.activeScenarioMeshPack || null;
   }
   if (hasOwn.call(nextState, "scenarioPoliticalChunkData")) {
     target.scenarioPoliticalChunkData = nextState.scenarioPoliticalChunkData || null;
+  }
+  if (hasOwn.call(nextState, "scenarioAtlantropaData")) {
+    target.scenarioAtlantropaData = nextState.scenarioAtlantropaData || null;
   }
   if (hasOwn.call(nextState, "scenarioDistrictGroupsData")) {
     target.scenarioDistrictGroupsData = nextState.scenarioDistrictGroupsData || null;
@@ -191,6 +200,8 @@ export function ensureScenarioPerfMetricsState(target) {
   if (!target.scenarioPerfMetrics || typeof target.scenarioPerfMetrics !== "object") {
     target.scenarioPerfMetrics = {};
   }
+  // perf 面板和外部诊断脚本仍从全局命名空间读取同一份对象。
+  // 这里每次都把引用重新挂回去，保证 owner 写口和观测口指向同一份 state。
   globalThis.__scenarioPerfMetrics = target.scenarioPerfMetrics;
   return target.scenarioPerfMetrics;
 }
@@ -232,6 +243,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   }
   // 这里只做纯 runtimeState 字段提交。
   // preCommit / postCommit 副作用由 scenario_apply_pipeline.js 显式排序。
+  // requiredKeys 用来锁住最低提交合同，避免 apply 流程看似成功，实际却漏掉关键 owner 字段。
   const requiredKeys = [
     "activeScenarioId",
     "scenarioBorderMode",
@@ -262,6 +274,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
     scenarioLandMaskData: nextState.scenarioLandMaskData || null,
     scenarioContextLandMaskData: nextState.scenarioContextLandMaskData || null,
     scenarioWaterRegionsData: nextState.scenarioWaterRegionsData || null,
+    scenarioAtlantropaData: nextState.scenarioAtlantropaData || null,
     scenarioRuntimeTopologyVersionTag: nextState.scenarioRuntimeTopologyVersionTag || "",
     scenarioLandMaskVersionTag: nextState.scenarioLandMaskVersionTag || "",
     scenarioContextLandMaskVersionTag: nextState.scenarioContextLandMaskVersionTag || "",
@@ -271,6 +284,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   setScenarioRuntimeOptionalLayerState(target, {
     activeScenarioMeshPack: nextState.activeScenarioMeshPack || null,
     scenarioPoliticalChunkData: nextState.scenarioPoliticalChunkData || null,
+    scenarioAtlantropaData: nextState.scenarioAtlantropaData || null,
     scenarioDistrictGroupsData: nextState.scenarioDistrictGroupsData || null,
     scenarioDistrictGroupByFeatureId: nextState.scenarioDistrictGroupByFeatureId,
     scenarioReliefOverlaysData: nextState.scenarioReliefOverlaysData || null,
@@ -343,9 +357,11 @@ export function resetScenarioHydrationOverlayState(target) {
   }
   const hadScenarioOverlay =
     !!target.scenarioWaterRegionsData
+    || !!target.scenarioAtlantropaData
     || !!target.scenarioLandMaskData
     || !!target.scenarioContextLandMaskData;
   target.scenarioWaterRegionsData = null;
+  target.scenarioAtlantropaData = null;
   target.scenarioWaterOverlayVersionTag = "";
   target.scenarioLandMaskData = null;
   target.scenarioContextLandMaskData = null;
@@ -359,6 +375,8 @@ export function createDefaultScenarioRuntimeState({
   detailMinRatio = 0.7,
 } = {}) {
   const normalizedScenarioId = String(scenarioId || "").trim();
+  // 这里是 scenario runtime 的 canonical shape。
+  // apply/chunk/hydration/overlay 各条路径都应该在这里补字段，再由 facade 或 owner helper 暴露出去。
   return {
     scenarioRegistry: null,
     scenarioBundleCacheById: {},
@@ -383,6 +401,7 @@ export function createDefaultScenarioRuntimeState({
     activeScenarioPerformanceHints: null,
     activeScenarioMeshPack: null,
     scenarioWaterRegionsData: null,
+    scenarioAtlantropaData: null,
     scenarioWaterOverlayVersionTag: "",
     scenarioSpecialRegionsData: null,
     scenarioRuntimeTopologyData: null,

@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-05-06T23:54:37.160272Z",
+  "generated_at": "2026-05-12T21:26:33.477879Z",
   "counts": {
-    "entries": 373,
+    "entries": 407,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -34,24 +34,24 @@
       "special_zones": 1,
       "terrain_contours_major_topology": 1,
       "terrain_contours_minor_topology": 1,
-      "transport_build_audit": 74,
+      "transport_build_audit": 81,
       "transport_carrier_payload": 1,
       "transport_catalog": 2,
-      "transport_manifest": 75,
-      "transport_pack": 158,
+      "transport_manifest": 82,
+      "transport_pack": 178,
       "transport_provenance_payload": 1,
       "transport_subtype_catalog": 1,
       "unit_counter_manifest": 1,
       "world_cities": 1
     },
     "by_format": {
-      "geojson": 51,
+      "geojson": 65,
       "javascript": 2,
-      "json": 180,
-      "topojson": 140
+      "json": 194,
+      "topojson": 146
     },
     "by_read_mode": {
-      "json": 371,
+      "json": 405,
       "module": 2
     }
   },
@@ -810,6 +810,266 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "transport:china_airport:full:airports",
+      "url": "data/transport_layers/china_airport/airports.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.airports",
+        "transport:china_airport:default:paths:full:airports",
+        "variants.default.paths.full.airports"
+      ]
+    },
+    {
+      "key": "transport:china_airport:preview:airports",
+      "url": "data/transport_layers/china_airport/airports.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.airports",
+        "transport:china_airport:default:paths:preview:airports",
+        "variants.default.paths.preview.airports"
+      ]
+    },
+    {
+      "key": "transport:china_airport:build_audit",
+      "url": "data/transport_layers/china_airport/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_airport:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_airport",
+      "url": "data/transport_layers/china_airport/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_rail:build_audit",
+      "url": "data/transport_layers/france_rail/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:france_rail:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_rail",
+      "url": "data/transport_layers/france_rail/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_rail:full:rail_stations_major",
+      "url": "data/transport_layers/france_rail/rail_stations_major.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.rail_stations_major",
+        "transport:france_rail:default:paths:full:rail_stations_major",
+        "variants.default.paths.full.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:france_rail:preview:rail_stations_major",
+      "url": "data/transport_layers/france_rail/rail_stations_major.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.rail_stations_major",
+        "transport:france_rail:default:paths:preview:rail_stations_major",
+        "variants.default.paths.preview.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:france_rail:preview:railways",
+      "url": "data/transport_layers/france_rail/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:france_rail:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:france_rail:full:railways",
+      "url": "data/transport_layers/france_rail/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:france_rail:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:germany_road:build_audit",
+      "url": "data/transport_layers/germany_road/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack germany_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:germany_road:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:germany_road",
+      "url": "data/transport_layers/germany_road/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack germany_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:germany_road:full:road_labels",
+      "url": "data/transport_layers/germany_road/road_labels.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack germany_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.road_labels",
+        "transport:germany_road:default:paths:full:road_labels",
+        "variants.default.paths.full.road_labels"
+      ]
+    },
+    {
+      "key": "transport:germany_road:preview:road_labels",
+      "url": "data/transport_layers/germany_road/road_labels.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack germany_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.road_labels",
+        "transport:germany_road:default:paths:preview:road_labels",
+        "variants.default.paths.preview.road_labels"
+      ]
+    },
+    {
+      "key": "transport:germany_road:preview:roads",
+      "url": "data/transport_layers/germany_road/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack germany_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:germany_road:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:germany_road:full:roads",
+      "url": "data/transport_layers/germany_road/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack germany_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:germany_road:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
     },
     {
       "key": "transport:global_airport:full:airports",
@@ -5060,6 +5320,70 @@
       ]
     },
     {
+      "key": "transport:india_airport:full:airports",
+      "url": "data/transport_layers/india_airport/airports.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.airports",
+        "transport:india_airport:default:paths:full:airports",
+        "variants.default.paths.full.airports"
+      ]
+    },
+    {
+      "key": "transport:india_airport:preview:airports",
+      "url": "data/transport_layers/india_airport/airports.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.airports",
+        "transport:india_airport:default:paths:preview:airports",
+        "variants.default.paths.preview.airports"
+      ]
+    },
+    {
+      "key": "transport:india_airport:build_audit",
+      "url": "data/transport_layers/india_airport/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_airport:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_airport",
+      "url": "data/transport_layers/india_airport/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
       "key": "transport:airport:full:airports",
       "url": "data/transport_layers/japan_airport/airports.geojson",
       "role": "transport_pack",
@@ -5789,6 +6113,232 @@
         "transport:road:default:paths:full:roads",
         "variants.default.paths.full.roads"
       ]
+    },
+    {
+      "key": "transport:russia_airport:full:airports",
+      "url": "data/transport_layers/russia_airport/airports.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.airports",
+        "transport:russia_airport:default:paths:full:airports",
+        "variants.default.paths.full.airports"
+      ]
+    },
+    {
+      "key": "transport:russia_airport:preview:airports",
+      "url": "data/transport_layers/russia_airport/airports.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.airports",
+        "transport:russia_airport:default:paths:preview:airports",
+        "variants.default.paths.preview.airports"
+      ]
+    },
+    {
+      "key": "transport:russia_airport:build_audit",
+      "url": "data/transport_layers/russia_airport/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_airport:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_airport",
+      "url": "data/transport_layers/russia_airport/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_road:build_audit",
+      "url": "data/transport_layers/uk_road/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:uk_road:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_road",
+      "url": "data/transport_layers/uk_road/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_road:full:road_labels",
+      "url": "data/transport_layers/uk_road/road_labels.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.road_labels",
+        "transport:uk_road:default:paths:full:road_labels",
+        "variants.default.paths.full.road_labels"
+      ]
+    },
+    {
+      "key": "transport:uk_road:preview:road_labels",
+      "url": "data/transport_layers/uk_road/road_labels.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.road_labels",
+        "transport:uk_road:default:paths:preview:road_labels",
+        "variants.default.paths.preview.road_labels"
+      ]
+    },
+    {
+      "key": "transport:uk_road:preview:roads",
+      "url": "data/transport_layers/uk_road/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:uk_road:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:uk_road:full:roads",
+      "url": "data/transport_layers/uk_road/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:uk_road:default:paths:full:roads",
+        "variants.default.paths.full.roads"
+      ]
+    },
+    {
+      "key": "transport:usa_airport:full:airports",
+      "url": "data/transport_layers/usa_airport/airports.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.airports",
+        "transport:usa_airport:default:paths:full:airports",
+        "variants.default.paths.full.airports"
+      ]
+    },
+    {
+      "key": "transport:usa_airport:preview:airports",
+      "url": "data/transport_layers/usa_airport/airports.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_airport",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.airports",
+        "transport:usa_airport:default:paths:preview:airports",
+        "variants.default.paths.preview.airports"
+      ]
+    },
+    {
+      "key": "transport:usa_airport:build_audit",
+      "url": "data/transport_layers/usa_airport/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:usa_airport:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_airport",
+      "url": "data/transport_layers/usa_airport/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_airport",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
     },
     {
       "key": "unit_counter_manifest:hoi4",

@@ -243,8 +243,8 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8340861,
-      "sha256": "525ea3660d928e0f955a9fb35387abc9df9781c12cf459e0cbf6a5a7c148e34f",
+      "size_bytes": 8643019,
+      "sha256": "d5eb7d8785f93f96f37a54812756394daeb7e410c106200acef8d56821d9b03c",
       "type": "locales",
       "geo_entry_count": 72641,
       "ui_entry_count": 1566
@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 7067,
-      "sha256": "8d4c8d69c8e79e3c91161dcd06e3910f8a6eaa47d00ddafaf7a6ebcf619a6c26"
+      "size_bytes": 8760,
+      "sha256": "47c97de4362451ccfb115b02b3fc8ae683918c9fd97a5d5d8ae48c5ca8322dc0"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -305,8 +305,8 @@
       "artifact_class": "publish",
       "owner": "init_map_data.palette_assets",
       "description": "TNO palette pack.",
-      "size_bytes": 234896,
-      "sha256": "ce4c073c189ff27bac1395d7cae97efb416346dd80f5b33937f3d3b9aaa26b78",
+      "size_bytes": 242211,
+      "sha256": "374781f59b9729e2137dd4319a7b8574de23783ab5b4106c5c94982857d22877",
       "type": "palette_pack",
       "palette_id": "tno",
       "entry_count": 511,
@@ -641,6 +641,41 @@
         "url": "data/historical_city_lights_1930_exclusions.json",
         "role": "city_lights_source",
         "family_id": "historical_1930"
+      },
+      "transport_manifest:germany_road": {
+        "url": "data/transport_layers/germany_road/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_road"
+      },
+      "transport_manifest:uk_road": {
+        "url": "data/transport_layers/uk_road/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "uk_road"
+      },
+      "transport_manifest:france_rail": {
+        "url": "data/transport_layers/france_rail/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "france_rail"
+      },
+      "transport_manifest:usa_airport": {
+        "url": "data/transport_layers/usa_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "usa_airport"
+      },
+      "transport_manifest:china_airport": {
+        "url": "data/transport_layers/china_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "china_airport"
+      },
+      "transport_manifest:russia_airport": {
+        "url": "data/transport_layers/russia_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "russia_airport"
+      },
+      "transport_manifest:india_airport": {
+        "url": "data/transport_layers/india_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "india_airport"
       }
     },
     "scenario_registry_key": "scenario_registry",
@@ -652,7 +687,14 @@
       "mineral_resources": "transport_manifest:mineral_resources",
       "energy_facilities": "transport_manifest:energy_facilities",
       "industrial_zones": "transport_manifest:industrial_zones",
-      "logistics_hubs": "transport_manifest:logistics_hubs"
+      "logistics_hubs": "transport_manifest:logistics_hubs",
+      "germany_road": "transport_manifest:germany_road",
+      "uk_road": "transport_manifest:uk_road",
+      "france_rail": "transport_manifest:france_rail",
+      "usa_airport": "transport_manifest:usa_airport",
+      "china_airport": "transport_manifest:china_airport",
+      "russia_airport": "transport_manifest:russia_airport",
+      "india_airport": "transport_manifest:india_airport"
     },
     "city_lights": {
       "historical_1930": {

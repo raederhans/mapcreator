@@ -34,6 +34,16 @@ function normalizeBounds(rawBounds) {
   return [-180, -90, 180, 90];
 }
 
+function inflateBounds(bounds, paddingLon = 0, paddingLat = 0) {
+  const [minLon, minLat, maxLon, maxLat] = normalizeBounds(bounds);
+  return [
+    Math.max(-180, minLon - Math.max(0, Number(paddingLon || 0))),
+    Math.max(-90, minLat - Math.max(0, Number(paddingLat || 0))),
+    Math.min(180, maxLon + Math.max(0, Number(paddingLon || 0))),
+    Math.min(90, maxLat + Math.max(0, Number(paddingLat || 0))),
+  ];
+}
+
 function boundsIntersect(leftBounds, rightBounds) {
   const [leftMinLon, leftMinLat, leftMaxLon, leftMaxLat] = normalizeBounds(leftBounds);
   const [rightMinLon, rightMinLat, rightMaxLon, rightMaxLat] = normalizeBounds(rightBounds);
@@ -76,6 +86,39 @@ function getBoundsCenterDistance(bounds, viewportBbox) {
   return Math.hypot(centerLon - viewportCenterLon, centerLat - viewportCenterLat);
 }
 
+function normalizeFeatureBoundsList(rawBoundsList = []) {
+  if (!Array.isArray(rawBoundsList)) return [];
+  return rawBoundsList
+    .map((bounds) => (Array.isArray(bounds) ? normalizeBounds(bounds) : null))
+    .filter((bounds) => Array.isArray(bounds) && getBoundsArea(bounds) > 0);
+}
+
+function getChunkSelectionBounds(chunk) {
+  return Array.isArray(chunk?.featureBounds) && chunk.featureBounds.length
+    ? chunk.featureBounds
+    : [chunk?.bounds || [-180, -90, 180, 90]];
+}
+
+function chunkIntersectsViewport(chunk, viewportBbox) {
+  return getChunkSelectionBounds(chunk).some((bounds) => boundsIntersect(bounds, viewportBbox));
+}
+
+function getChunkOverlapArea(chunk, viewportBbox) {
+  return getChunkSelectionBounds(chunk)
+    .reduce((sum, bounds) => sum + getBoundsOverlapArea(bounds, viewportBbox), 0);
+}
+
+function getChunkSelectionArea(chunk) {
+  return getChunkSelectionBounds(chunk)
+    .reduce((sum, bounds) => sum + getBoundsArea(bounds), 0);
+}
+
+function getChunkCenterDistance(chunk, viewportBbox) {
+  const boundsList = getChunkSelectionBounds(chunk);
+  if (!boundsList.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...boundsList.map((bounds) => getBoundsCenterDistance(bounds, viewportBbox)));
+}
+
 function normalizeChunkEntry(rawChunk = {}) {
   const chunkId = String(rawChunk.id || rawChunk.chunk_id || "").trim();
   const chunkUrl = String(rawChunk.url || rawChunk.chunk_url || "").trim();
@@ -110,6 +153,8 @@ function normalizeChunkEntry(rawChunk = {}) {
     partCount,
     estimatedPathCost,
     dataFormat: String(rawChunk.data_format || rawChunk.dataFormat || "geojson").trim().toLowerCase(),
+    sha256: String(rawChunk.sha256 || rawChunk.content_sha256 || rawChunk.contentHash || "").trim(),
+    featureBounds: normalizeFeatureBoundsList(rawChunk.feature_bounds || rawChunk.featureBounds),
     countryCodes: Array.isArray(rawChunk.country_codes || rawChunk.countryCodes)
       ? rawChunk.country_codes || rawChunk.countryCodes
       : [],
@@ -131,13 +176,13 @@ function sortChunksForSelection(chunks, focusCountry = "", viewportBbox = [-180,
     const leftLoaded = loadedChunkIdSet.has(left.id) ? 1 : 0;
     const rightLoaded = loadedChunkIdSet.has(right.id) ? 1 : 0;
     if (leftLoaded !== rightLoaded) return rightLoaded - leftLoaded;
-    const leftOverlapArea = getBoundsOverlapArea(left.bounds, normalizedViewportBbox);
-    const rightOverlapArea = getBoundsOverlapArea(right.bounds, normalizedViewportBbox);
-    const leftOverlapRatio = leftOverlapArea / Math.max(1, getBoundsArea(left.bounds));
-    const rightOverlapRatio = rightOverlapArea / Math.max(1, getBoundsArea(right.bounds));
+    const leftOverlapArea = getChunkOverlapArea(left, normalizedViewportBbox);
+    const rightOverlapArea = getChunkOverlapArea(right, normalizedViewportBbox);
+    const leftOverlapRatio = leftOverlapArea / Math.max(1, getChunkSelectionArea(left));
+    const rightOverlapRatio = rightOverlapArea / Math.max(1, getChunkSelectionArea(right));
     if (Math.abs(leftOverlapRatio - rightOverlapRatio) > 0.0001) return rightOverlapRatio - leftOverlapRatio;
-    const leftCenterDistance = getBoundsCenterDistance(left.bounds, normalizedViewportBbox);
-    const rightCenterDistance = getBoundsCenterDistance(right.bounds, normalizedViewportBbox);
+    const leftCenterDistance = getChunkCenterDistance(left, normalizedViewportBbox);
+    const rightCenterDistance = getChunkCenterDistance(right, normalizedViewportBbox);
     if (Math.abs(leftCenterDistance - rightCenterDistance) > 0.0001) return leftCenterDistance - rightCenterDistance;
     if (Math.abs(leftOverlapArea - rightOverlapArea) > 0.0001) return rightOverlapArea - leftOverlapArea;
     if (left.priority !== right.priority) return right.priority - left.priority;
@@ -172,13 +217,13 @@ export function normalizeScenarioRenderBudgetHints(rawHints = {}) {
   const maxPoliticalRequiredChunks = clampNumber(
     rawHints.max_required_political_chunks ?? rawHints.political_max_required_chunks,
     1,
-    24,
+    64,
     Math.min(maxRequiredChunks * 2, 12)
   );
   const minPoliticalRequiredChunks = clampNumber(
     rawHints.min_required_political_chunks ?? rawHints.political_min_required_chunks,
     1,
-    24,
+    64,
     Math.max(1, maxRequiredChunks, minRequiredChunks)
   );
   return {
@@ -309,6 +354,7 @@ export function getVisibleScenarioChunkLayers({
   includePoliticalCore = false,
   showWaterRegions = false,
   showScenarioSpecialRegions = false,
+  showScenarioAtlantropa = false,
   showScenarioReliefOverlays = false,
   showCityPoints = false,
 } = {}) {
@@ -316,6 +362,7 @@ export function getVisibleScenarioChunkLayers({
     includePoliticalCore ? "political" : "",
     showWaterRegions ? "water" : "",
     showScenarioSpecialRegions ? "special" : "",
+    showScenarioAtlantropa ? "scenario_atlantropa" : "",
     showScenarioReliefOverlays ? "relief" : "",
     showCityPoints ? "cities" : "",
   ].filter(Boolean);
@@ -337,13 +384,17 @@ export function buildViewportGeoBounds({
       k: Math.max(0.0001, Number(transform.k || 1)),
     }
     : { x: 0, y: 0, k: 1 };
-  const points = [
-    [0, 0],
-    [Number(width || 0), 0],
-    [0, Number(height || 0)],
-    [Number(width || 0), Number(height || 0)],
-    [Number(width || 0) * 0.5, Number(height || 0) * 0.5],
-  ];
+  const viewportWidth = Number(width || 0);
+  const viewportHeight = Number(height || 0);
+  // Curved projections can place the geographic extrema along screen edges.
+  // Sampling a small grid keeps edge chunks eligible during zoom/pan.
+  const sampleFractions = [0, 0.25, 0.5, 0.75, 1];
+  const points = [];
+  sampleFractions.forEach((xFraction) => {
+    sampleFractions.forEach((yFraction) => {
+      points.push([viewportWidth * xFraction, viewportHeight * yFraction]);
+    });
+  });
   const longitudes = [];
   const latitudes = [];
   points.forEach(([screenX, screenY]) => {
@@ -363,12 +414,15 @@ export function buildViewportGeoBounds({
   if (!longitudes.length || !latitudes.length) {
     return [-180, -90, 180, 90];
   }
-  return [
+  const sampledBounds = [
     Math.min(...longitudes),
     Math.min(...latitudes),
     Math.max(...longitudes),
     Math.max(...latitudes),
   ];
+  const lonPadding = Math.min(2.5, Math.max(0.25, (sampledBounds[2] - sampledBounds[0]) * 0.03));
+  const latPadding = Math.min(2.5, Math.max(0.25, (sampledBounds[3] - sampledBounds[1]) * 0.03));
+  return inflateBounds(sampledBounds, lonPadding, latPadding);
 }
 
 function resolveLayerChunksForZoom({
@@ -420,7 +474,7 @@ export function selectScenarioChunks({
       contextLodManifest,
       layerKey,
       zoom,
-    }).filter((chunk) => chunk.globalCoverage || boundsIntersect(chunk.bounds, viewportBbox));
+    }).filter((chunk) => chunk.globalCoverage || chunkIntersectsViewport(chunk, viewportBbox));
     const ordered = sortChunksForSelection(candidates, focusCountry, viewportBbox, loadedChunkIds);
     const focusDetailChunks = normalizedFocusCountry
       ? ordered.filter((chunk) => chunk.lod === "detail" && chunk.countryCodes.includes(normalizedFocusCountry))

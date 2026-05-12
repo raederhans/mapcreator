@@ -78,6 +78,7 @@ import { createPaletteLibraryPanelController } from "./toolbar/palette_library_p
 import { createAppearanceControlsController } from "./toolbar/appearance_controls_controller.js";
 import { createScenarioGuidePopoverController } from "./toolbar/scenario_guide_popover.js";
 import { createSpecialZoneEditorController } from "./toolbar/special_zone_editor.js";
+import { createSpecialZonesWorkbenchController } from "./toolbar/special_zones_workbench_controller.js";
 import {
   createTransportWorkbenchController,
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
@@ -956,6 +957,8 @@ function initToolbar({ render } = {}) {
   };
 
   const toggleLeftPanel = (force) => {
+    // transport workbench 打开时，左右抽屉继续展开会和 workbench 抢同一块侧边布局。
+    // 这里直接把面板切换收口成单一入口，保证 chrome 状态始终只有一种主布局。
     if (runtimeState.transportWorkbenchUi?.open && force !== false) {
       return false;
     }
@@ -1341,6 +1344,7 @@ function initToolbar({ render } = {}) {
       closeSpecialZonePopover();
       return;
     }
+    specialZonesWorkbenchController?.loadScenarioSpecialZoneLayers?.();
     rememberOverlayTrigger(specialZonePopover, appearanceSpecialZoneBtn);
     specialZonePopover.classList.remove("hidden");
     specialZonePopover.setAttribute("aria-hidden", "false");
@@ -1505,7 +1509,7 @@ function initToolbar({ render } = {}) {
   const setToolCursorClass = () => {
     if (!mapContainer) return;
     mapContainer.classList.remove("tool-fill", "tool-eraser", "tool-eyedropper", "tool-special-zone", "tool-pan-override");
-    if (runtimeState.specialZoneEditor?.active) {
+    if (runtimeState.specialZoneEditor?.active || runtimeState.currentTool === "special-zone-membership") {
       mapContainer.classList.add("tool-special-zone");
       return;
     }
@@ -1532,6 +1536,9 @@ function initToolbar({ render } = {}) {
   };
 
   const getFeatureIdsForOwnerColorRefresh = (ownerCode) => {
+    // owner 着色的命中集合来自多条索引链：
+    // sovereignty 映射、ownerToFeatureIds、countryToFeatureIds 可能在不同生命周期下先后可用。
+    // 这里做并集是为了让 palette apply 在运行态、导入后和场景切换后都能落到完整集合。
     const normalizedOwner = normalizeCountryCode(ownerCode);
     if (!normalizedOwner) return [];
     const ids = new Set();
@@ -1556,6 +1563,8 @@ function initToolbar({ render } = {}) {
   };
 
   const resolvePaletteLibraryApplyTarget = () => {
+    // Palette Library 采用“显式选中 > 当前 hover > inspector 主权对象”的优先级。
+    // 这样用户在没有重新切工具的情况下也能把颜色准确落到当前最直观的目标上。
     const selectedHitId = String(runtimeState.devSelectedHit?.id || "").trim();
     if (selectedHitId && runtimeState.landIndex?.has(selectedHitId)) {
       return { type: "feature", featureIds: [selectedHitId] };
@@ -1941,6 +1950,7 @@ function initToolbar({ render } = {}) {
     if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;
     renderAppearanceStyleControlsUi();
     specialZoneEditorController.renderSpecialZoneEditorUI();
+    specialZonesWorkbenchController.renderSpecialZonesWorkbenchUi();
     updateToolUI();
   }
   registerRuntimeHook(state, "updateSpecialZoneEditorUIFn", renderSpecialZoneEditorUI);
@@ -1977,7 +1987,9 @@ function initToolbar({ render } = {}) {
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
-    const disableBrush = runtimeState.currentTool === "eyedropper" || !!runtimeState.specialZoneEditor?.active;
+    const disableBrush = runtimeState.currentTool === "eyedropper"
+      || runtimeState.currentTool === "special-zone-membership"
+      || !!runtimeState.specialZoneEditor?.active;
     if (disableBrush) {
       runtimeState.brushModeEnabled = false;
       runtimeState.brushPanModifierActive = false;
@@ -2114,6 +2126,18 @@ function initToolbar({ render } = {}) {
     t,
   });
   specialZoneEditorController.normalizeSpecialZoneEditorState();
+  const specialZonesWorkbenchController = createSpecialZonesWorkbenchController({
+    runtimeState: state,
+    container: specialZonePopover,
+    markDirty,
+    render,
+    updateToolUI,
+    captureHistoryState,
+    pushHistoryEntry,
+    ensureActiveScenarioOptionalLayerLoaded,
+    showToast,
+    t,
+  });
   exportWorkbenchController = createExportWorkbenchController({
     state,
     t,
@@ -2639,11 +2663,40 @@ function initToolbar({ render } = {}) {
     ];
   };
 
-  const drawSvgLayerToCanvas = async (targetCanvas, targetCtx) => {
+  const SVG_ANNOTATION_VIEWPORT_SELECTOR = [
+    ".frontline-overlay-layer",
+    ".frontline-labels-layer",
+    ".operational-lines-layer",
+    ".operation-graphics-layer",
+    ".unit-counters-layer",
+  ].join(", ");
+  const cloneSvgForExport = ({ onlyViewportSelector = "", removeSelectors = [] } = {}) => {
     const mapSvg = document.getElementById("map-svg");
-    if (!mapSvg || !targetCanvas || !targetCtx) return false;
+    if (!mapSvg) return null;
+    const clone = mapSvg.cloneNode(true);
+    removeSelectors.forEach((selector) => {
+      clone.querySelectorAll(selector).forEach((node) => node.remove());
+    });
+    if (onlyViewportSelector) {
+      const viewport = clone.querySelector(".viewport-layer");
+      if (viewport) {
+        Array.from(viewport.children).forEach((child) => {
+          if (!child.matches(onlyViewportSelector)) child.remove();
+        });
+      }
+      Array.from(clone.children).forEach((child) => {
+        const tagName = String(child.tagName || "").toLowerCase();
+        if (child !== viewport && tagName !== "defs") child.remove();
+      });
+    }
+    return clone;
+  };
+
+  const drawSvgLayerToCanvas = async (targetCanvas, targetCtx, options = {}) => {
+    const svgForExport = cloneSvgForExport(options);
+    if (!svgForExport || !targetCanvas || !targetCtx) return false;
     const serializer = new XMLSerializer();
-    const svgMarkup = serializer.serializeToString(mapSvg);
+    const svgMarkup = serializer.serializeToString(svgForExport);
     const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
     const svgUrl = URL.createObjectURL(svgBlob);
     try {
@@ -2770,7 +2823,12 @@ function initToolbar({ render } = {}) {
         }
       }
       if (normalizedLayerId === "text" && exportUi.textVisibility?.["svg-annotations"]) {
-        await drawSvgLayerToCanvas(bakeCanvas, bakeCtx);
+        await drawSvgLayerToCanvas(bakeCanvas, bakeCtx, {
+          onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR,
+        });
+      }
+      if (normalizedLayerId === "text" && exportUi.textVisibility?.["special-zones"]) {
+        await drawSvgLayerToCanvas(bakeCanvas, bakeCtx, { onlyViewportSelector: ".special-zones-layer" });
       }
     }
     const version = cacheEntry ? Number(cacheEntry.version || 0) + 1 : 1;
@@ -2828,7 +2886,7 @@ function initToolbar({ render } = {}) {
     return canvas;
   };
 
-  const buildSvgAnnotationCanvas = async () => {
+  const buildSvgAnnotationCanvas = async (options = {}) => {
     const width = runtimeState.colorCanvas?.width || runtimeState.lineCanvas?.width || 0;
     const height = runtimeState.colorCanvas?.height || runtimeState.lineCanvas?.height || 0;
     if (!(width > 0) || !(height > 0)) {
@@ -2841,9 +2899,13 @@ function initToolbar({ render } = {}) {
     if (!ctx) {
       throw createExportError("invalid-params", "SVG annotation context unavailable.");
     }
-    await drawSvgLayerToCanvas(canvas, ctx);
+    await drawSvgLayerToCanvas(canvas, ctx, options);
     return canvas;
   };
+
+  const buildSpecialZonesExportCanvas = async () => buildSvgAnnotationCanvas({
+    onlyViewportSelector: ".special-zones-layer",
+  });
 
   const getBakePassNamesForLayer = (layerId, exportUi) => {
     const visibility = exportUi?.visibility || {};
@@ -2886,7 +2948,16 @@ function initToolbar({ render } = {}) {
       if (!workingCtx) {
         throw createExportError("invalid-params", "Composite export context unavailable.");
       }
-      await drawSvgLayerToCanvas(workingCanvas, workingCtx);
+      await drawSvgLayerToCanvas(workingCanvas, workingCtx, {
+        onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR,
+      });
+    }
+    if (exportUi.textVisibility?.["special-zones"]) {
+      const workingCtx = workingCanvas.getContext("2d");
+      if (!workingCtx) {
+        throw createExportError("invalid-params", "Composite export context unavailable.");
+      }
+      await drawSvgLayerToCanvas(workingCanvas, workingCtx, { onlyViewportSelector: ".special-zones-layer" });
     }
     return workingCanvas;
   };
@@ -2909,7 +2980,10 @@ function initToolbar({ render } = {}) {
       return canvas;
     }
     if (normalizedSourceId === "svg-annotations") {
-      return buildSvgAnnotationCanvas();
+      return buildSvgAnnotationCanvas({ onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR });
+    }
+    if (normalizedSourceId === "special-zones") {
+      return buildSpecialZonesExportCanvas();
     }
     throw createExportError("invalid-params", `Unsupported preview source: ${normalizedSourceId}`);
   };
@@ -2968,6 +3042,9 @@ function initToolbar({ render } = {}) {
     });
     if (exportUi.textVisibility?.["svg-annotations"]) {
       outputs.push({ id: "svg-annotations" });
+    }
+    if (exportUi.textVisibility?.["special-zones"]) {
+      outputs.push({ id: "special-zones" });
     }
     for (const output of outputs) {
       const layerCanvas = await buildSingleExportSourceCanvas(exportUi, output.id);
@@ -3071,8 +3148,11 @@ function initToolbar({ render } = {}) {
 
   if (toggleSpecialZones) {
     toggleSpecialZones.checked = runtimeState.showSpecialZones;
-    toggleSpecialZones.addEventListener("change", (event) => {
+    toggleSpecialZones.addEventListener("change", async (event) => {
       runtimeState.showSpecialZones = event.target.checked;
+      if (runtimeState.showSpecialZones) {
+        await specialZonesWorkbenchController.loadScenarioSpecialZoneLayers();
+      }
       renderDirty("toggle-special-zones");
     });
   }
@@ -3080,6 +3160,7 @@ function initToolbar({ render } = {}) {
   bindAppearanceControlEvents();
   bindOceanLakeControlEvents();
   specialZoneEditorController.bindSpecialZoneEditorEvents();
+  specialZonesWorkbenchController.bindSpecialZonesWorkbenchEvents();
 
   if (presetPolitical) {
     presetPolitical.addEventListener("click", async () => {

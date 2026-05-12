@@ -1589,3 +1589,14 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-12 - TNO Atlantropa chunk E2E contract
 
 - E2E 直接等待 chunk id 时，必须对照 `detail_chunks.manifest.json` 的真实 id 和 `min_zoom`；等待未注册 id 或低于阈值的 detail chunk 会表现成 render/chunk idle 超时。
+
+### 45. transport country pack 必须先过真实源门再注册发布
+- 如果官方源还没有进 `.runtime/source-cache/transport/...`，宁可让 builder/source gate 红灯，也不要先用 global transport 或 Natural Earth clip 做“临时生产包”。
+- `source_recipe.manual.json` 和 `build_audit.json` 里的 source_signature 应来自真实源文件，不能用 recipe 自身或 checked-in global shard manifest 伪装数据源。
+- country pack 注册到 catalog/runtime/Pages 前，先用专项测试扫 forbidden backend token，避免错误产物进入发布链。
+
+## 2026-05-12 - transport country source matching audit
+
+- 官方名录 + OSM 坐标补充必须用 exact code/name/alias 匹配；子串匹配会把短地名错配到长地名，并制造同坐标多机场。
+- 已签名的 source 必须真实参与 builder 数据流；source_recipe 记录源文件时用 repo-relative 路径，避免把本机绝对路径写入可提交审计文件。
+- preview 规则解析为空时要 fail-fast；直接取 head 会掩盖官方字段解析失败。

@@ -630,6 +630,8 @@ def build_catalog_payload() -> dict[str, Any]:
         local_path = _normalize_rel_path(ledger_entry.get("local_path", ""))
         if not local_path or not _is_json_like(local_path):
             continue
+        if not (PROJECT_ROOT / local_path).is_file():
+            continue
         _merge_catalog_entry(
             entries_by_url,
             {

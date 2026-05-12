@@ -6,11 +6,11 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 215481
+      "size_bytes": 219161
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 60583
+      "size_bytes": 246444
     },
     {
       "path": "app/data/city_aliases.json",
@@ -82,11 +82,11 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8637897
+      "size_bytes": 8643019
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 24866
+      "size_bytes": 26648
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.audit.json",
@@ -154,7 +154,7 @@
     },
     {
       "path": "app/data/palettes/tno.palette.json",
-      "size_bytes": 234896
+      "size_bytes": 242211
     },
     {
       "path": "app/data/releasables/hoi4_japan_victory.internal.phase1.overlay.json",
@@ -186,7 +186,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 7067
+      "size_bytes": 8760
     },
     {
       "path": "app/data/scenario-rules/__pycache__/tno_1962.east_asia_ownership.manual.cpython-312.pyc",
@@ -226,7 +226,7 @@
     },
     {
       "path": "app/data/scenarios/blank_base/build_snapshot.json",
-      "size_bytes": 945
+      "size_bytes": 1045
     },
     {
       "path": "app/data/scenarios/blank_base/capital_hints.json",
@@ -246,7 +246,7 @@
     },
     {
       "path": "app/data/scenarios/blank_base/manifest.json",
-      "size_bytes": 2443
+      "size_bytes": 2527
     },
     {
       "path": "app/data/scenarios/blank_base/owners.by_feature.json",
@@ -255,6 +255,10 @@
     {
       "path": "app/data/scenarios/blank_base/runtime_topology.topo.json",
       "size_bytes": 140
+    },
+    {
+      "path": "app/data/scenarios/blank_base/special_zone_layers.json",
+      "size_bytes": 115
     },
     {
       "path": "app/data/scenarios/district_templates.shared.json",
@@ -274,7 +278,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/build_snapshot.json",
-      "size_bytes": 2146
+      "size_bytes": 2246
     },
     {
       "path": "app/data/scenarios/hoi4_1936/capital_hints.json",
@@ -814,7 +818,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/manifest.json",
-      "size_bytes": 4288
+      "size_bytes": 4371
     },
     {
       "path": "app/data/scenarios/hoi4_1936/mesh_pack.json",
@@ -833,24 +837,28 @@
       "size_bytes": 2728004
     },
     {
+      "path": "app/data/scenarios/hoi4_1936/special_zone_layers.json",
+      "size_bytes": 115
+    },
+    {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
-      "size_bytes": 9338674
+      "size_bytes": 9338492
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json.gz",
-      "size_bytes": 1943596
+      "size_bytes": 1943556
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json",
-      "size_bytes": 9338674
+      "size_bytes": 9338492
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json.gz",
-      "size_bytes": 1943596
+      "size_bytes": 1943556
     },
     {
       "path": "app/data/scenarios/hoi4_1939/build_snapshot.json",
-      "size_bytes": 2146
+      "size_bytes": 2246
     },
     {
       "path": "app/data/scenarios/hoi4_1939/capital_hints.json",
@@ -2146,7 +2154,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/manifest.json",
-      "size_bytes": 4322
+      "size_bytes": 4405
     },
     {
       "path": "app/data/scenarios/hoi4_1939/mesh_pack.json",
@@ -2163,6 +2171,10 @@
     {
       "path": "app/data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
       "size_bytes": 2728004
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1939/special_zone_layers.json",
+      "size_bytes": 115
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
@@ -2190,7 +2202,7 @@
     },
     {
       "path": "app/data/scenarios/modern_world/build_snapshot.json",
-      "size_bytes": 951
+      "size_bytes": 1051
     },
     {
       "path": "app/data/scenarios/modern_world/capital_hints.json",
@@ -2210,11 +2222,15 @@
     },
     {
       "path": "app/data/scenarios/modern_world/manifest.json",
-      "size_bytes": 2453
+      "size_bytes": 2539
     },
     {
       "path": "app/data/scenarios/modern_world/owners.by_feature.json",
       "size_bytes": 400756
+    },
+    {
+      "path": "app/data/scenarios/modern_world/special_zone_layers.json",
+      "size_bytes": 115
     },
     {
       "path": "app/data/scenarios/tno_1962/bathymetry.provenance.json",
@@ -2222,11 +2238,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/bathymetry.topo.json",
-      "size_bytes": 1346829
+      "size_bytes": 1339456
     },
     {
       "path": "app/data/scenarios/tno_1962/build_snapshot.json",
-      "size_bytes": 2522
+      "size_bytes": 3094
     },
     {
       "path": "app/data/scenarios/tno_1962/capital_defaults.partial.json",
@@ -2234,7 +2250,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
-      "size_bytes": 31999332
+      "size_bytes": 30804979
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ad.json",
@@ -2250,11 +2266,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.afa.json",
-      "size_bytes": 813011
+      "size_bytes": 863766
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.afg.json",
-      "size_bytes": 252489
+      "size_bytes": 266222
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.al.json",
@@ -2262,11 +2278,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.alc.json",
-      "size_bytes": 63152
+      "size_bytes": 66661
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.alt.json",
-      "size_bytes": 140070
+      "size_bytes": 147768
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.am.json",
@@ -2278,15 +2294,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.aof.json",
-      "size_bytes": 34589
+      "size_bytes": 36184
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.aoi.json",
-      "size_bytes": 326043
+      "size_bytes": 342667
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.aq.json",
-      "size_bytes": 482635
+      "size_bytes": 501511
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ar.json",
@@ -2294,19 +2310,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.are.json",
-      "size_bytes": 52640
+      "size_bytes": 55104
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.arg.json",
-      "size_bytes": 218271
+      "size_bytes": 228548
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.arm.json",
-      "size_bytes": 31877
+      "size_bytes": 33963
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ast.json",
-      "size_bytes": 1569515
+      "size_bytes": 1630662
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.at.json",
@@ -2314,7 +2330,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.atl.json",
-      "size_bytes": 1194300
+      "size_bytes": 1194763
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.au.json",
@@ -2354,11 +2370,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bhr.json",
-      "size_bytes": 6538
+      "size_bytes": 6836
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bhu.json",
-      "size_bytes": 53477
+      "size_bytes": 56913
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bi.json",
@@ -2370,7 +2386,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bkr.json",
-      "size_bytes": 134226
+      "size_bytes": 140670
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bn.json",
@@ -2382,11 +2398,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bol.json",
-      "size_bytes": 84922
+      "size_bytes": 89378
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bop.json",
-      "size_bytes": 101605
+      "size_bytes": 105963
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.br.json",
@@ -2394,19 +2410,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bra.json",
-      "size_bytes": 588598
+      "size_bytes": 613757
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.brg.json",
-      "size_bytes": 552710
+      "size_bytes": 577268
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.brm.json",
-      "size_bytes": 229245
+      "size_bytes": 240324
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bry.json",
-      "size_bytes": 229198
+      "size_bytes": 240468
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bs.json",
@@ -2418,7 +2434,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bul.json",
-      "size_bytes": 163283
+      "size_bytes": 154196
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bw.json",
@@ -2426,7 +2442,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bwa.json",
-      "size_bytes": 179653
+      "size_bytes": 187639
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.by.json",
@@ -2434,7 +2450,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.bz.json",
-      "size_bytes": 27072
+      "size_bytes": 28713
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ca.json",
@@ -2442,11 +2458,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cam.json",
-      "size_bytes": 60211
+      "size_bytes": 63399
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.can.json",
-      "size_bytes": 3564321
+      "size_bytes": 3725116
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cd.json",
@@ -2454,7 +2470,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cey.json",
-      "size_bytes": 79979
+      "size_bytes": 84350
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ch.json",
@@ -2462,15 +2478,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.chi.json",
-      "size_bytes": 2218679
+      "size_bytes": 2315941
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.chl.json",
-      "size_bytes": 450414
+      "size_bytes": 469543
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cht.json",
-      "size_bytes": 236210
+      "size_bytes": 247999
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ci.json",
@@ -2490,11 +2506,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.col.json",
-      "size_bytes": 280136
+      "size_bytes": 294151
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cos.json",
-      "size_bytes": 38858
+      "size_bytes": 40779
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cr.json",
@@ -2502,7 +2518,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cro.json",
-      "size_bytes": 329893
+      "size_bytes": 84674
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cu.json",
@@ -2510,7 +2526,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cub.json",
-      "size_bytes": 48949
+      "size_bytes": 50860
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.cv.json",
@@ -2526,7 +2542,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.den.json",
-      "size_bytes": 114447
+      "size_bytes": 119060
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.dj.json",
@@ -2542,7 +2558,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.dom.json",
-      "size_bytes": 73702
+      "size_bytes": 78253
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ec.json",
@@ -2550,7 +2566,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ecu.json",
-      "size_bytes": 113717
+      "size_bytes": 121650
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ee.json",
@@ -2562,15 +2578,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.egy.json",
-      "size_bytes": 308349
+      "size_bytes": 268843
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.els.json",
-      "size_bytes": 33401
+      "size_bytes": 34836
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.eng.json",
-      "size_bytes": 273068
+      "size_bytes": 285401
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.er.json",
@@ -2586,7 +2602,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ffr.json",
-      "size_bytes": 40141
+      "size_bytes": 42332
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.fi.json",
@@ -2594,11 +2610,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.fic.json",
-      "size_bytes": 109392
+      "size_bytes": 112232
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.fin.json",
-      "size_bytes": 722770
+      "size_bytes": 756136
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.fk.json",
@@ -2614,11 +2630,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.fra.json",
-      "size_bytes": 2839888
+      "size_bytes": 2841820
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.fri.json",
-      "size_bytes": 946083
+      "size_bytes": 998084
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gb.json",
@@ -2626,11 +2642,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gce.json",
-      "size_bytes": 8990
+      "size_bytes": 9373
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gco.json",
-      "size_bytes": 584439
+      "size_bytes": 612423
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ge.json",
@@ -2638,11 +2654,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gea.json",
-      "size_bytes": 653092
+      "size_bytes": 687421
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ger.json",
-      "size_bytes": 5053338
+      "size_bytes": 5281154
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gg.json",
@@ -2662,7 +2678,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gma.json",
-      "size_bytes": 352920
+      "size_bytes": 368696
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gn.json",
@@ -2670,11 +2686,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gng.json",
-      "size_bytes": 357544
+      "size_bytes": 373714
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gor.json",
-      "size_bytes": 263890
+      "size_bytes": 273731
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gq.json",
@@ -2686,11 +2702,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gre.json",
-      "size_bytes": 842726
+      "size_bytes": 277290
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.grn.json",
-      "size_bytes": 307141
+      "size_bytes": 319101
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gs.json",
@@ -2698,7 +2714,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gsw.json",
-      "size_bytes": 220057
+      "size_bytes": 230713
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gt.json",
@@ -2706,11 +2722,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gua.json",
-      "size_bytes": 73668
+      "size_bytes": 78899
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gui.json",
-      "size_bytes": 276153
+      "size_bytes": 288374
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gw.json",
@@ -2718,15 +2734,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gxc.json",
-      "size_bytes": 333815
+      "size_bytes": 348578
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.gy.json",
-      "size_bytes": 52709
+      "size_bytes": 56027
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.hai.json",
-      "size_bytes": 42811
+      "size_bytes": 45216
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.hk.json",
@@ -2742,11 +2758,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.hol.json",
-      "size_bytes": 35946
+      "size_bytes": 38575
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.hon.json",
-      "size_bytes": 84098
+      "size_bytes": 88847
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.hr.json",
@@ -2762,19 +2778,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.hun.json",
-      "size_bytes": 878096
+      "size_bytes": 915915
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ial.json",
-      "size_bytes": 112251
+      "size_bytes": 109895
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ibr.json",
-      "size_bytes": 591316
+      "size_bytes": 531289
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ice.json",
-      "size_bytes": 19499
+      "size_bytes": 20326
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.id.json",
@@ -2798,7 +2814,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ins.json",
-      "size_bytes": 1345071
+      "size_bytes": 1402039
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.io.json",
@@ -2814,15 +2830,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ire.json",
-      "size_bytes": 49149
+      "size_bytes": 51258
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.irk.json",
-      "size_bytes": 105374
+      "size_bytes": 110598
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.irq.json",
-      "size_bytes": 42649
+      "size_bytes": 44994
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.is.json",
@@ -2834,11 +2850,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ita.json",
-      "size_bytes": 1028742
+      "size_bytes": 454669
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.jap.json",
-      "size_bytes": 816908
+      "size_bytes": 852037
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.je.json",
@@ -2854,7 +2870,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.jor.json",
-      "size_bytes": 25218
+      "size_bytes": 26779
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.jp.json",
@@ -2862,7 +2878,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kaz.json",
-      "size_bytes": 239513
+      "size_bytes": 255639
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ke.json",
@@ -2874,7 +2890,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kgz.json",
-      "size_bytes": 64572
+      "size_bytes": 68238
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kh.json",
@@ -2886,11 +2902,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kom.json",
-      "size_bytes": 120203
+      "size_bytes": 124710
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kor.json",
-      "size_bytes": 284334
+      "size_bytes": 297992
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kp.json",
@@ -2902,15 +2918,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.krs.json",
-      "size_bytes": 82401
+      "size_bytes": 86405
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kur.json",
-      "size_bytes": 46857
+      "size_bytes": 49371
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kuw.json",
-      "size_bytes": 15006
+      "size_bytes": 15661
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.kw.json",
@@ -2926,7 +2942,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.lao.json",
-      "size_bytes": 79026
+      "size_bytes": 83093
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.lb.json",
@@ -2934,11 +2950,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.lba.json",
-      "size_bytes": 84885
+      "size_bytes": 77461
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.leb.json",
-      "size_bytes": 25271
+      "size_bytes": 16369
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.li.json",
@@ -2946,7 +2962,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.lib.json",
-      "size_bytes": 61469
+      "size_bytes": 65971
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.lk.json",
@@ -2982,23 +2998,23 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mad.json",
-      "size_bytes": 193005
+      "size_bytes": 201206
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mag.json",
-      "size_bytes": 76252
+      "size_bytes": 79390
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mal.json",
-      "size_bytes": 133687
+      "size_bytes": 140814
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.man.json",
-      "size_bytes": 1684357
+      "size_bytes": 1765481
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mc.json",
-      "size_bytes": 893
+      "size_bytes": 936
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.md.json",
@@ -3010,11 +3026,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.men.json",
-      "size_bytes": 350071
+      "size_bytes": 368696
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mex.json",
-      "size_bytes": 3053848
+      "size_bytes": 3215203
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mg.json",
@@ -3030,7 +3046,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mld.json",
-      "size_bytes": 1016
+      "size_bytes": 1065
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mm.json",
@@ -3042,7 +3058,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mnt.json",
-      "size_bytes": 27438
+      "size_bytes": 29528
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mo.json",
@@ -3050,7 +3066,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mon.json",
-      "size_bytes": 84043
+      "size_bytes": 89215
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.mr.json",
@@ -3086,11 +3102,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ncp.json",
-      "size_bytes": 550466
+      "size_bytes": 576174
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.nep.json",
-      "size_bytes": 71183
+      "size_bytes": 76228
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ng.json",
@@ -3102,11 +3118,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.nic.json",
-      "size_bytes": 68142
+      "size_bytes": 71534
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.nie.json",
-      "size_bytes": 20250
+      "size_bytes": 21129
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.nl.json",
@@ -3118,7 +3134,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.nov.json",
-      "size_bytes": 552215
+      "size_bytes": 585477
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.np.json",
@@ -3130,7 +3146,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.nzl.json",
-      "size_bytes": 155024
+      "size_bytes": 161773
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.om.json",
@@ -3138,27 +3154,27 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.oma.json",
-      "size_bytes": 50977
+      "size_bytes": 53421
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.oms.json",
-      "size_bytes": 250751
+      "size_bytes": 263709
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ong.json",
-      "size_bytes": 75227
+      "size_bytes": 78208
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.orn.json",
-      "size_bytes": 120651
+      "size_bytes": 126028
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ors.json",
-      "size_bytes": 83826
+      "size_bytes": 88116
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.our.json",
-      "size_bytes": 172330
+      "size_bytes": 179325
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pa.json",
@@ -3166,19 +3182,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pak.json",
-      "size_bytes": 123750
+      "size_bytes": 131516
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pal.json",
-      "size_bytes": 44617
+      "size_bytes": 22026
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pan.json",
-      "size_bytes": 91134
+      "size_bytes": 95504
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.par.json",
-      "size_bytes": 88482
+      "size_bytes": 93605
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pe.json",
@@ -3186,11 +3202,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.per.json",
-      "size_bytes": 244889
+      "size_bytes": 256327
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pfc.json",
-      "size_bytes": 422595
+      "size_bytes": 445117
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pg.json",
@@ -3202,7 +3218,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.phi.json",
-      "size_bytes": 500522
+      "size_bytes": 524173
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pk.json",
@@ -3222,11 +3238,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.prm.json",
-      "size_bytes": 33809
+      "size_bytes": 34807
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pru.json",
-      "size_bytes": 192727
+      "size_bytes": 203022
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ps.json",
@@ -3238,7 +3254,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.pue.json",
-      "size_bytes": 9592
+      "size_bytes": 9976
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.py.json",
@@ -3250,51 +3266,51 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.qat.json",
-      "size_bytes": 22667
+      "size_bytes": 23655
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.qma.json",
-      "size_bytes": 173039
+      "size_bytes": 180667
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.raj.json",
-      "size_bytes": 3328584
+      "size_bytes": 3485785
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rfa.json",
-      "size_bytes": 1755305
+      "size_bytes": 1833760
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rgc.json",
-      "size_bytes": 590886
+      "size_bytes": 616810
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rkk.json",
-      "size_bytes": 1357545
+      "size_bytes": 1431983
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rkm.json",
-      "size_bytes": 4620537
+      "size_bytes": 4882394
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rkn.json",
-      "size_bytes": 81926
+      "size_bytes": 85621
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rkno.json",
-      "size_bytes": 382202
+      "size_bytes": 396906
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rko.json",
-      "size_bytes": 507296
+      "size_bytes": 537472
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rkp.json",
-      "size_bytes": 809030
+      "size_bytes": 846227
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rku.json",
-      "size_bytes": 902775
+      "size_bytes": 952589
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ro.json",
@@ -3302,7 +3318,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rom.json",
-      "size_bytes": 318350
+      "size_bytes": 336266
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rs.json",
@@ -3310,7 +3326,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rsf.json",
-      "size_bytes": 190863
+      "size_bytes": 199148
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ru.json",
@@ -3318,7 +3334,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rur.json",
-      "size_bytes": 241599
+      "size_bytes": 253623
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.rw.json",
@@ -3330,19 +3346,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.saf.json",
-      "size_bytes": 242411
+      "size_bytes": 255332
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sam.json",
-      "size_bytes": 476440
+      "size_bytes": 498371
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sau.json",
-      "size_bytes": 177374
+      "size_bytes": 185995
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sba.json",
-      "size_bytes": 196577
+      "size_bytes": 206744
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sc.json",
@@ -3350,7 +3366,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sco.json",
-      "size_bytes": 105892
+      "size_bytes": 110606
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sd.json",
@@ -3362,7 +3378,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ser.json",
-      "size_bytes": 103484
+      "size_bytes": 109958
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sg.json",
@@ -3370,7 +3386,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sgn.json",
-      "size_bytes": 19986
+      "size_bytes": 20947
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sh.json",
@@ -3378,7 +3394,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.shx.json",
-      "size_bytes": 517731
+      "size_bytes": 540332
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.si.json",
@@ -3386,7 +3402,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sia.json",
-      "size_bytes": 487054
+      "size_bytes": 512453
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sk.json",
@@ -3398,7 +3414,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.slo.json",
-      "size_bytes": 2840287
+      "size_bytes": 2958158
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sm.json",
@@ -3414,11 +3430,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sov.json",
-      "size_bytes": 50563
+      "size_bytes": 53041
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.spr.json",
-      "size_bytes": 52140
+      "size_bytes": 52158
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sr.json",
@@ -3438,15 +3454,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.svr.json",
-      "size_bytes": 426389
+      "size_bytes": 451652
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.swe.json",
-      "size_bytes": 300793
+      "size_bytes": 313435
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.swi.json",
-      "size_bytes": 77163
+      "size_bytes": 82333
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sy.json",
@@ -3454,7 +3470,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.syr.json",
-      "size_bytes": 36330
+      "size_bytes": 28400
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.sz.json",
@@ -3462,11 +3478,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tan.json",
-      "size_bytes": 175073
+      "size_bytes": 188507
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tat.json",
-      "size_bytes": 438915
+      "size_bytes": 463090
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.td.json",
@@ -3486,7 +3502,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tib.json",
-      "size_bytes": 603733
+      "size_bytes": 631092
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tj.json",
@@ -3494,11 +3510,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tjk.json",
-      "size_bytes": 33939
+      "size_bytes": 35955
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tkm.json",
-      "size_bytes": 57012
+      "size_bytes": 59587
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tl.json",
@@ -3514,7 +3530,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tom.json",
-      "size_bytes": 148818
+      "size_bytes": 155661
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tr.json",
@@ -3526,15 +3542,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tun.json",
-      "size_bytes": 166238
+      "size_bytes": 75790
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tur.json",
-      "size_bytes": 501721
+      "size_bytes": 373567
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tym.json",
-      "size_bytes": 162495
+      "size_bytes": 172494
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.tz.json",
@@ -3550,11 +3566,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ura.json",
-      "size_bytes": 61379
+      "size_bytes": 64376
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.urg.json",
-      "size_bytes": 76845
+      "size_bytes": 80492
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.us.json",
@@ -3562,7 +3578,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.usa.json",
-      "size_bytes": 6452175
+      "size_bytes": 6758156
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.uy.json",
@@ -3574,7 +3590,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.uzb.json",
-      "size_bytes": 80518
+      "size_bytes": 84466
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ve.json",
@@ -3582,15 +3598,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ven.json",
-      "size_bytes": 235511
+      "size_bytes": 246162
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.vin.json",
-      "size_bytes": 198434
+      "size_bytes": 208609
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.vmt.json",
-      "size_bytes": 72214
+      "size_bytes": 75787
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.vn.json",
@@ -3598,31 +3614,31 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.vok.json",
-      "size_bytes": 11127
+      "size_bytes": 11090
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.vol.json",
-      "size_bytes": 202453
+      "size_bytes": 209715
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.vyt.json",
-      "size_bytes": 422942
+      "size_bytes": 444525
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.wls.json",
-      "size_bytes": 38532
+      "size_bytes": 40189
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.wrs.json",
-      "size_bytes": 344148
+      "size_bytes": 359384
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.xik.json",
-      "size_bytes": 110310
+      "size_bytes": 115033
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.xin.json",
-      "size_bytes": 475756
+      "size_bytes": 498192
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.xk.json",
@@ -3630,7 +3646,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.yak.json",
-      "size_bytes": 158116
+      "size_bytes": 165524
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ye.json",
@@ -3638,11 +3654,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.yem.json",
-      "size_bytes": 105145
+      "size_bytes": 110363
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.yun.json",
-      "size_bytes": 448201
+      "size_bytes": 468673
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.za.json",
@@ -3650,7 +3666,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.zlt.json",
-      "size_bytes": 155716
+      "size_bytes": 163268
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.zm.json",
@@ -3662,55 +3678,67 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/relief.coarse.r0c0.json",
-      "size_bytes": 3085413
+      "size_bytes": 3179328
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/relief.detail.r0c2.json",
-      "size_bytes": 351848
+      "size_bytes": 368515
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/relief.detail.r1c1.json",
-      "size_bytes": 230158
+      "size_bytes": 231645
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/relief.detail.r1c2.json",
-      "size_bytes": 3084820
+      "size_bytes": 3178707
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/scenario_atlantropa.coarse.r0c0.json",
+      "size_bytes": 3285644
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/scenario_atlantropa.detail.r1c1.json",
+      "size_bytes": 215905
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/scenario_atlantropa.detail.r1c2.json",
+      "size_bytes": 3129296
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
-      "size_bytes": 15241745
+      "size_bytes": 15206765
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c0.json",
-      "size_bytes": 1834371
+      "size_bytes": 1917108
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c1.json",
-      "size_bytes": 2440717
+      "size_bytes": 2548630
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c2.json",
-      "size_bytes": 6139940
+      "size_bytes": 6415909
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c3.json",
-      "size_bytes": 10264949
+      "size_bytes": 10727628
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c0.json",
-      "size_bytes": 8127726
+      "size_bytes": 8371499
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c1.json",
-      "size_bytes": 16321262
+      "size_bytes": 16931475
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
-      "size_bytes": 26043895
+      "size_bytes": 27158942
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
-      "size_bytes": 16158202
+      "size_bytes": 16773542
     },
     {
       "path": "app/data/scenarios/tno_1962/city_assets.partial.json",
@@ -3722,19 +3750,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/context_lod.manifest.json",
-      "size_bytes": 31595
+      "size_bytes": 33330
     },
     {
       "path": "app/data/scenarios/tno_1962/cores.by_feature.json",
-      "size_bytes": 706796
+      "size_bytes": 420449
     },
     {
       "path": "app/data/scenarios/tno_1962/countries.json",
-      "size_bytes": 269008
+      "size_bytes": 190153
     },
     {
       "path": "app/data/scenarios/tno_1962/detail_chunks.manifest.json",
-      "size_bytes": 123447
+      "size_bytes": 1996665
     },
     {
       "path": "app/data/scenarios/tno_1962/district_groups.manual.json",
@@ -3746,15 +3774,15 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.en.json",
-      "size_bytes": 1058238
+      "size_bytes": 1099984
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.json",
-      "size_bytes": 1988095
+      "size_bytes": 1820115
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.zh.json",
-      "size_bytes": 1058238
+      "size_bytes": 1099984
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_reviewed_exceptions.json",
@@ -3766,19 +3794,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3790044
+      "size_bytes": 3794850
     },
     {
       "path": "app/data/scenarios/tno_1962/manifest.json",
-      "size_bytes": 6932
+      "size_bytes": 7580
     },
     {
       "path": "app/data/scenarios/tno_1962/mesh_pack.json",
-      "size_bytes": 2934612
+      "size_bytes": 3078883
     },
     {
       "path": "app/data/scenarios/tno_1962/owners.by_feature.json",
-      "size_bytes": 473387
+      "size_bytes": 382704
     },
     {
       "path": "app/data/scenarios/tno_1962/releasable_catalog.manual.json",
@@ -3786,15 +3814,23 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/relief_overlays.geojson",
-      "size_bytes": 816823
+      "size_bytes": 802373
     },
     {
       "path": "app/data/scenarios/tno_1962/runtime_meta.json",
-      "size_bytes": 509
+      "size_bytes": 716
     },
     {
       "path": "app/data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
-      "size_bytes": 209601
+      "size_bytes": 295041
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/scenario_atlantropa.topo.json",
+      "size_bytes": 1472079
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/scenario_atlantropa_metadata.json",
+      "size_bytes": 1020
     },
     {
       "path": "app/data/scenarios/tno_1962/scenario_manual_overrides.json",
@@ -3809,24 +3845,28 @@
       "size_bytes": 42
     },
     {
+      "path": "app/data/scenarios/tno_1962/special_zone_layers.json",
+      "size_bytes": 86
+    },
+    {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json",
-      "size_bytes": 5889203
+      "size_bytes": 6283909
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1271425
+      "size_bytes": 1394133
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
-      "size_bytes": 5889203
+      "size_bytes": 6283909
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1271426
+      "size_bytes": 1394133
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 15241744
+      "size_bytes": 15206763
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.provenance.json",
@@ -3835,6 +3875,50 @@
     {
       "path": "app/data/special_zones.geojson",
       "size_bytes": 47704
+    },
+    {
+      "path": "app/data/transport_layers/china_airport/airports.preview.geojson",
+      "size_bytes": 17521
+    },
+    {
+      "path": "app/data/transport_layers/china_airport/build_audit.json",
+      "size_bytes": 2738
+    },
+    {
+      "path": "app/data/transport_layers/china_airport/manifest.json",
+      "size_bytes": 2776
+    },
+    {
+      "path": "app/data/transport_layers/france_rail/build_audit.json",
+      "size_bytes": 1511
+    },
+    {
+      "path": "app/data/transport_layers/france_rail/manifest.json",
+      "size_bytes": 2988
+    },
+    {
+      "path": "app/data/transport_layers/france_rail/rail_stations_major.preview.geojson",
+      "size_bytes": 638773
+    },
+    {
+      "path": "app/data/transport_layers/france_rail/railways.preview.topo.json",
+      "size_bytes": 1409058
+    },
+    {
+      "path": "app/data/transport_layers/germany_road/build_audit.json",
+      "size_bytes": 1017
+    },
+    {
+      "path": "app/data/transport_layers/germany_road/manifest.json",
+      "size_bytes": 2490
+    },
+    {
+      "path": "app/data/transport_layers/germany_road/road_labels.preview.geojson",
+      "size_bytes": 24331
+    },
+    {
+      "path": "app/data/transport_layers/germany_road/roads.preview.topo.json",
+      "size_bytes": 5257382
     },
     {
       "path": "app/data/transport_layers/global_airport/airports.geojson",
@@ -3870,7 +3954,55 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/catalog.json",
-      "size_bytes": 10645
+      "size_bytes": 16777
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/build_audit.json",
+      "size_bytes": 2869
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/manifest.json",
+      "size_bytes": 3194
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/railways.preview.topo.json",
+      "size_bytes": 24375
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/build_audit.json",
+      "size_bytes": 2869
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/manifest.json",
+      "size_bytes": 3194
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/railways.preview.topo.json",
+      "size_bytes": 36519
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/build_audit.json",
+      "size_bytes": 2867
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/manifest.json",
+      "size_bytes": 3193
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/railways.preview.topo.json",
+      "size_bytes": 12791
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/build_audit.json",
@@ -4127,6 +4259,102 @@
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/railways.preview.topo.json",
       "size_bytes": 108
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/build_audit.json",
+      "size_bytes": 2850
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/manifest.json",
+      "size_bytes": 3137
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/railways.preview.topo.json",
+      "size_bytes": 41146
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/build_audit.json",
+      "size_bytes": 2850
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/manifest.json",
+      "size_bytes": 3137
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.preview.topo.json",
+      "size_bytes": 28767
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/build_audit.json",
+      "size_bytes": 2913
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/manifest.json",
+      "size_bytes": 3304
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/railways.preview.topo.json",
+      "size_bytes": 39216
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/build_audit.json",
+      "size_bytes": 2913
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/manifest.json",
+      "size_bytes": 3305
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/railways.preview.topo.json",
+      "size_bytes": 22793
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/build_audit.json",
+      "size_bytes": 2915
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/manifest.json",
+      "size_bytes": 3306
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/railways.preview.topo.json",
+      "size_bytes": 17872
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/build_audit.json",
+      "size_bytes": 2907
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/manifest.json",
+      "size_bytes": 3302
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/rail_stations_major.preview.geojson",
+      "size_bytes": 54
+    },
+    {
+      "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/railways.preview.topo.json",
+      "size_bytes": 2825
     },
     {
       "path": "app/data/transport_layers/global_road/catalog.json",
@@ -4757,6 +4985,18 @@
       "size_bytes": 2182
     },
     {
+      "path": "app/data/transport_layers/india_airport/airports.preview.geojson",
+      "size_bytes": 3744
+    },
+    {
+      "path": "app/data/transport_layers/india_airport/build_audit.json",
+      "size_bytes": 3076
+    },
+    {
+      "path": "app/data/transport_layers/india_airport/manifest.json",
+      "size_bytes": 2796
+    },
+    {
       "path": "app/data/transport_layers/japan_airport/airports.geojson",
       "size_bytes": 103867
     },
@@ -4919,6 +5159,46 @@
     {
       "path": "app/data/transport_layers/japan_road/roads.preview.topo.json",
       "size_bytes": 4457110
+    },
+    {
+      "path": "app/data/transport_layers/russia_airport/airports.preview.geojson",
+      "size_bytes": 17512
+    },
+    {
+      "path": "app/data/transport_layers/russia_airport/build_audit.json",
+      "size_bytes": 4281
+    },
+    {
+      "path": "app/data/transport_layers/russia_airport/manifest.json",
+      "size_bytes": 2501
+    },
+    {
+      "path": "app/data/transport_layers/uk_road/build_audit.json",
+      "size_bytes": 1377
+    },
+    {
+      "path": "app/data/transport_layers/uk_road/manifest.json",
+      "size_bytes": 2738
+    },
+    {
+      "path": "app/data/transport_layers/uk_road/road_labels.preview.geojson",
+      "size_bytes": 129720
+    },
+    {
+      "path": "app/data/transport_layers/uk_road/roads.preview.topo.json",
+      "size_bytes": 9740083
+    },
+    {
+      "path": "app/data/transport_layers/usa_airport/airports.preview.geojson",
+      "size_bytes": 57097
+    },
+    {
+      "path": "app/data/transport_layers/usa_airport/build_audit.json",
+      "size_bytes": 1331
+    },
+    {
+      "path": "app/data/transport_layers/usa_airport/manifest.json",
+      "size_bytes": 2377
     },
     {
       "path": "app/data/unit_counter_libraries/hoi4/large/category_all_armor.png",
@@ -5702,7 +5982,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 217292
+      "size_bytes": 216980
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -5738,7 +6018,7 @@
     },
     {
       "path": "app/js/core/color_resolver.js",
-      "size_bytes": 2283
+      "size_bytes": 2796
     },
     {
       "path": "app/js/core/country_code_aliases.js",
@@ -5750,11 +6030,11 @@
     },
     {
       "path": "app/js/core/data_loader.js",
-      "size_bytes": 64033
+      "size_bytes": 64342
     },
     {
       "path": "app/js/core/data_service.js",
-      "size_bytes": 10470
+      "size_bytes": 13979
     },
     {
       "path": "app/js/core/dirty_state.js",
@@ -5770,7 +6050,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 32568
+      "size_bytes": 36190
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -5778,7 +6058,7 @@
     },
     {
       "path": "app/js/core/history_manager.js",
-      "size_bytes": 10875
+      "size_bytes": 11270
     },
     {
       "path": "app/js/core/interaction_funnel/import_apply_orchestration.js",
@@ -5794,7 +6074,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 12517
+      "size_bytes": 12998
     },
     {
       "path": "app/js/core/legend_manager.js",
@@ -5830,7 +6110,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 893903
+      "size_bytes": 912115
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -5894,7 +6174,7 @@
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
-      "size_bytes": 2353
+      "size_bytes": 2555
     },
     {
       "path": "app/js/core/renderer/context_layer_resolver.js",
@@ -5926,7 +6206,7 @@
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_builders.js",
-      "size_bytes": 5396
+      "size_bytes": 5429
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_derivation.js",
@@ -5941,6 +6221,10 @@
       "size_bytes": 2798
     },
     {
+      "path": "app/js/core/renderer/special_zone_layers_render_owner.js",
+      "size_bytes": 14946
+    },
+    {
       "path": "app/js/core/renderer/strategic_overlay_helpers.js",
       "size_bytes": 28404
     },
@@ -5950,7 +6234,7 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/special_zones_runtime_domain.js",
-      "size_bytes": 4050
+      "size_bytes": 2431
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_domain.js",
@@ -5965,8 +6249,16 @@
       "size_bytes": 16753
     },
     {
+      "path": "app/js/core/renderer/transport_facility_icon_atlas.png",
+      "size_bytes": 32520
+    },
+    {
+      "path": "app/js/core/renderer/transport_facility_icons.js",
+      "size_bytes": 5296
+    },
+    {
       "path": "app/js/core/renderer/transport_overview_render_owner.js",
-      "size_bytes": 31314
+      "size_bytes": 36947
     },
     {
       "path": "app/js/core/renderer/urban_city_policy.js",
@@ -5978,7 +6270,7 @@
     },
     {
       "path": "app/js/core/scenario/bundle_loader.js",
-      "size_bytes": 41322
+      "size_bytes": 41468
     },
     {
       "path": "app/js/core/scenario/bundle_runtime.js",
@@ -5986,11 +6278,11 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 89659
+      "size_bytes": 94222
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
-      "size_bytes": 13293
+      "size_bytes": 13339
     },
     {
       "path": "app/js/core/scenario/locale_asset_contract.js",
@@ -5998,11 +6290,11 @@
     },
     {
       "path": "app/js/core/scenario/presentation_display_restore.js",
-      "size_bytes": 3689
+      "size_bytes": 3979
     },
     {
       "path": "app/js/core/scenario/presentation_hint_helpers.js",
-      "size_bytes": 1925
+      "size_bytes": 2096
     },
     {
       "path": "app/js/core/scenario/presentation_ocean_fill_restore.js",
@@ -6026,15 +6318,15 @@
     },
     {
       "path": "app/js/core/scenario/startup_hydration.js",
-      "size_bytes": 30751
+      "size_bytes": 32999
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 22655
+      "size_bytes": 24636
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
-      "size_bytes": 22834
+      "size_bytes": 25256
     },
     {
       "path": "app/js/core/scenario_country_display.js",
@@ -6062,7 +6354,7 @@
     },
     {
       "path": "app/js/core/scenario_ownership_editor.js",
-      "size_bytes": 11209
+      "size_bytes": 11220
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
@@ -6074,7 +6366,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 35261
+      "size_bytes": 37602
     },
     {
       "path": "app/js/core/scenario_rollback.js",
@@ -6095,6 +6387,10 @@
     {
       "path": "app/js/core/sovereignty_manager.js",
       "size_bytes": 18104
+    },
+    {
+      "path": "app/js/core/special_zone_layers.js",
+      "size_bytes": 17302
     },
     {
       "path": "app/js/core/startup_bundle_compaction.js",
@@ -6150,7 +6446,7 @@
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
-      "size_bytes": 17164
+      "size_bytes": 18503
     },
     {
       "path": "app/js/core/state/spatial_index_state.js",
@@ -6162,7 +6458,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 21450
+      "size_bytes": 22806
     },
     {
       "path": "app/js/core/state.js",
@@ -6174,11 +6470,11 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 51891
+      "size_bytes": 52168
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
-      "size_bytes": 25051
+      "size_bytes": 24801
     },
     {
       "path": "app/js/core/unit_counter_icon_libraries.js",
@@ -6230,11 +6526,11 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 45136
+      "size_bytes": 47706
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 52237
+      "size_bytes": 56030
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -6270,15 +6566,15 @@
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay_controller.js",
-      "size_bytes": 53023
+      "size_bytes": 53719
     },
     {
       "path": "app/js/ui/sidebar/water_special_region_controller.js",
-      "size_bytes": 54495
+      "size_bytes": 54117
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 229377
+      "size_bytes": 235624
     },
     {
       "path": "app/js/ui/toast.js",
@@ -6294,7 +6590,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 30189
+      "size_bytes": 33886
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -6310,11 +6606,15 @@
     },
     {
       "path": "app/js/ui/toolbar/special_zone_editor.js",
-      "size_bytes": 15588
+      "size_bytes": 14584
+    },
+    {
+      "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
+      "size_bytes": 29341
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_controller.js",
-      "size_bytes": 184045
+      "size_bytes": 184417
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_descriptor.js",
@@ -6326,7 +6626,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 163074
+      "size_bytes": 167032
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6406,7 +6706,7 @@
     },
     {
       "path": "app/js/workers/startup_boot.worker.js",
-      "size_bytes": 21537
+      "size_bytes": 21934
     },
     {
       "path": "app/vendor/d3.v7.min.js",
@@ -6466,14 +6766,14 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 204145
+      "size_bytes": 214925
     },
     {
       "path": "styles.css",
       "size_bytes": 18791
     }
   ],
-  "max_allowed_bytes": 996147200,
+  "max_allowed_bytes": 1043333120,
   "required_files": [
     "index.html",
     "app/index.html",
@@ -6483,5 +6783,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 990864366
+  "total_bytes": 1023653273
 }
