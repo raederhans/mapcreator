@@ -1585,3 +1585,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-12 - E2E route retirement hygiene
 
 - 退休一个 Playwright spec 时要同步删除 manifest、checked-in test lists、timeout allowlist、import graph 和相关结构测试引用；只删 spec 会留下假路由或 stale guardrail。
+
+## 2026-05-12 - TNO Atlantropa chunk E2E contract
+
+- E2E 直接等待 chunk id 时，必须对照 `detail_chunks.manifest.json` 的真实 id 和 `min_zoom`；等待未注册 id 或低于阈值的 detail chunk 会表现成 render/chunk idle 超时。

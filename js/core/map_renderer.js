@@ -3149,13 +3149,17 @@ function isOpenOceanPaintEnabled() {
   return !!runtimeState.allowOpenOceanPaint || (!!runtimeState.showOpenOceanRegions && !runtimeState.allowOpenOceanSelect);
 }
 
+function isOpenOceanOverlayActive() {
+  return isOpenOceanSelectionEnabled() || isOpenOceanPaintEnabled();
+}
+
 function isWaterRegionRenderable(feature) {
   if (!feature) return false;
   if (isBaseGeographyScenarioFeature(feature)) {
     return true;
   }
   if (isOpenOceanWaterRegion(feature)) {
-    return true;
+    return isOpenOceanOverlayActive();
   }
   return feature?.properties?.interactive !== false;
 }
@@ -3166,7 +3170,7 @@ function isWaterRegionEnabled(feature) {
     return true;
   }
   if (isOpenOceanWaterRegion(feature)) {
-    return isOpenOceanSelectionEnabled() || isOpenOceanPaintEnabled();
+    return isOpenOceanOverlayActive();
   }
   return feature?.properties?.interactive !== false;
 }
@@ -23983,6 +23987,7 @@ export {
   getCityMarkerRenderStyle,
   getEffectiveCityCollection,
   doesScenarioCountryHideCityPoints,
+  isOpenOceanOverlayActive,
   renderExportPassesToCanvas,
 
   // Viewport, diagnostics, and render scheduling facade.

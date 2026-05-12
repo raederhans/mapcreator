@@ -11,3 +11,9 @@
 - There are 49 `context7-mcp` related process-chain entries across `cmd`, `npx`, and Node.
 - `codex-tui.log` includes repeated `app-server event consumer lagged` warnings and repeated plugin loader warnings for `chrome@openai-bundled`.
 - Manual invocation of `codex-native-hook.js` completed in about 184.86 ms, so the hook script alone is not the direct CPU spike in this sample.
+- Follow-up OMX MCP check: `omx_state`, `omx_memory`, `omx_trace`, `omx_wiki`, and `omx_code_intel` all responded successfully from the current session.
+- `omx doctor` again reported `MCP Servers: 7 servers configured; first-party OMX MCP compatibility is explicitly present` with 13 passed, 3 warnings, 0 failed.
+- The current problem is MCP lifecycle/process pressure: Codex App `app-server` has 80 OMX MCP child Node processes, exactly 16 each for `code-intel`, `memory`, `state`, `trace`, and `wiki`.
+- Those 80 OMX MCP child processes account for about 4.5 GB total working set in the process snapshot.
+- `context7-mcp` related process-chain entries increased to 81.
+- `.omx` state reports `ultrawork` still active in planning phase, with `last_turn_at=2026-05-12T15:48:34.723Z`. In this Codex App outside-tmux surface, that looks like stale runtime state unless a real OMX tmux run is still active elsewhere.

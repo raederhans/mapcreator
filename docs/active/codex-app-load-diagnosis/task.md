@@ -11,3 +11,4 @@
 
 - Apply config trimming only after the user asks for remediation.
 - Restart Codex App and re-sample process counts to verify whether duplicate MCP children are session residue.
+- Clear stale `.omx` runtime state only after confirming no real OMX CLI/tmux process still owns that workflow.

@@ -986,8 +986,10 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function isScenarioWaterTopologyExclusiveMode\(\) \{[\s\S]*?return getScenarioWaterRegionsMode\(\) === "exclusive";[\s\S]*?\}/.test(rendererSource),
     tnoWaterUsesScenarioCollectionOnly:
       /function getEffectiveWaterRegionFeatures\(\) \{[\s\S]*?if \(isScenarioWaterTopologyExclusiveMode\(\)\) \{[\s\S]*?return sanitizeWaterRegionFeatures\(scenarioFeatures\.filter\(\(feature\) => !isWaterRegionExcludedByScenario\(feature\)\)\);/.test(rendererSource),
-    waterRenderAndInteractionUseSeparateContracts:
-      /function isWaterRegionRenderable\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return true;[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
+    openOceanRenderAndInteractionUseActiveOverlayGate:
+      /function isOpenOceanOverlayActive\(\) \{[\s\S]*?return isOpenOceanSelectionEnabled\(\) \|\| isOpenOceanPaintEnabled\(\);[\s\S]*?\}/.test(rendererSource)
+      && /function isWaterRegionRenderable\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanOverlayActive\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
+      && /function isWaterRegionEnabled\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanOverlayActive\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
       && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) return;/.test(rendererSource)
       && /function collectWaterGridCandidates\(px, py, radiusProj = 0\) \{[\s\S]*?if \(!isWaterRegionEnabled\(item\.feature\)\) return;/.test(rendererSource)
       && /function rebuildAuxiliaryRegionIndexes\(\) \{[\s\S]*?if \(!isWaterRegionEnabled\(selectedFeature\)\) \{[\s\S]*?runtimeState\.selectedWaterRegionId = "";/.test(rendererSource)

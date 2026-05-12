@@ -24,7 +24,7 @@ const ATLANTROPA_SEA_SAMPLE_POINTS = [
 ];
 
 const HELPER_PREFIXES = ["ATLSHL_", "ATLWLD_"];
-const ATLANTROPA_MEDITERRANEAN_FOCUS = { lon: 16.5, lat: 37.5, zoomPercent: 165 };
+const ATLANTROPA_MEDITERRANEAN_FOCUS = { lon: 16.5, lat: 37.5, zoomPercent: 180 };
 const ADRIATIC_BASIN_TARGET_ID = "ATLSEA_adriatica_8597_5838_0";
 
 async function applyScenario(page, scenarioId) {
@@ -59,6 +59,8 @@ async function setOpenOceanVisibility(page, visible) {
       invalidateOceanWaterInteractionVisualState,
       render,
     } = await import("/js/core/map_renderer.js");
+    state.allowOpenOceanSelect = !!nextVisible;
+    state.allowOpenOceanPaint = !!nextVisible;
     state.showOpenOceanRegions = !!nextVisible;
     invalidateOceanWaterInteractionVisualState("test-open-ocean-toggle");
     render();
@@ -87,11 +89,12 @@ async function setWaterOverrideColor(page, featureId, color) {
 async function readOpenOceanRuntime(page, featureId) {
   return page.evaluate(async (targetFeatureId) => {
     const { state } = await import("/js/core/state.js");
+    const { isOpenOceanOverlayActive } = await import("/js/core/map_renderer.js");
     const items = Array.isArray(state.waterSpatialItems)
       ? state.waterSpatialItems.filter((item) => String(item?.featureId || "") === targetFeatureId)
       : [];
     return {
-      featureInteractive: !!state.showOpenOceanRegions,
+      featureInteractive: isOpenOceanOverlayActive(),
       itemCount: items.length,
       itemBounds: items.map((item) => ({
         minX: item.minX,
@@ -755,8 +758,8 @@ async function readAtlantropaWaterFeatureDiagnostics(page, featureId) {
   }, featureId);
 }
 
-async function clickWaterFeature(page, featureId) {
-  const points = await page.evaluate(async (targetFeatureId) => {
+async function computeWaterFeatureProbePoints(page, featureId) {
+  return page.evaluate(async (targetFeatureId) => {
     const { state } = await import("/js/core/state.js");
     const mapContainer = document.querySelector("#mapContainer");
     if (!mapContainer) return [];
@@ -794,16 +797,28 @@ async function clickWaterFeature(page, featureId) {
         && point.y <= rect.bottom + 12
       ));
   }, featureId);
+}
+
+async function tryClickWaterFeature(page, featureId, { maxPoints = 12, attempts = 4, waitMs = 100 } = {}) {
+  const points = (await computeWaterFeatureProbePoints(page, featureId)).slice(0, maxPoints);
   for (const point of points) {
     await clearDevSelectedHit(page);
     await page.mouse.click(point.x, point.y);
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      await page.waitForTimeout(120);
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      await page.waitForTimeout(waitMs);
       const hit = await readDevSelectedHit(page);
       if (String(hit?.id || "") === featureId && String(hit?.targetType || "") === "water") {
         return { point, hit };
       }
     }
+  }
+  return null;
+}
+
+async function clickWaterFeature(page, featureId) {
+  const clicked = await tryClickWaterFeature(page, featureId, { maxPoints: 30, attempts: 6, waitMs: 120 });
+  if (clicked) {
+    return clicked;
   }
   throw new Error(`Failed to click water feature ${featureId}`);
 }
@@ -896,6 +911,9 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
   expect(patchBefore.avgBlue).toBeGreaterThan(patchBefore.avgRed + 10);
   expect(patchBefore.avgBlue).toBeGreaterThan(patchBefore.avgGreen + 5);
 
+  const clickWhileInteractionOff = await tryClickWaterFeature(page, targetFeatureId);
+  expect(clickWhileInteractionOff).toBeNull();
+
   const diffWhileInteractionOff = await measureFeaturePatchDiff(page, targetFeatureId, "#ff00ff");
   expect(diffWhileInteractionOff).not.toBeNull();
 
@@ -906,10 +924,14 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
   });
   const runtimeInteractiveOn = await readOpenOceanRuntime(page, targetFeatureId);
   expect(runtimeInteractiveOn.featureInteractive).toBe(true);
+  const clickWhileInteractionOn = await clickWaterFeature(page, targetFeatureId);
+  expect(clickWhileInteractionOn.hit.targetType).toBe("water");
   const diffWhileInteractionOn = await measureFeaturePatchDiff(page, targetFeatureId, "#00d4ff");
   expect(diffWhileInteractionOn).not.toBeNull();
   expect(diffWhileInteractionOn.changedPixelCount).toBeGreaterThan(80);
   expect(diffWhileInteractionOn.meanChangedChannelDiff).toBeGreaterThan(20);
+  expect(diffWhileInteractionOff.changedPixelCount).toBeLessThan(diffWhileInteractionOn.changedPixelCount * 0.25);
+  expect(diffWhileInteractionOff.meanChangedChannelDiff).toBeLessThan(diffWhileInteractionOn.meanChangedChannelDiff * 0.75);
 
   await setOpenOceanVisibility(page, false);
   await page.waitForFunction(async () => {
@@ -918,6 +940,8 @@ test("tno open ocean override is visibly rendered and indexed by polygon part", 
   });
   const runtimeAfterToggleOff = await readOpenOceanRuntime(page, targetFeatureId);
   expect(runtimeAfterToggleOff.featureInteractive).toBe(false);
+  const clickAfterToggleOff = await tryClickWaterFeature(page, targetFeatureId);
+  expect(clickAfterToggleOff).toBeNull();
   const patchAfterToggleOff = await sampleFeaturePatchStats(page, targetFeatureId);
   expect(patchAfterToggleOff).not.toBeNull();
   expect(patchAfterToggleOff.avgBlue).toBeGreaterThan(patchAfterToggleOff.avgRed + 10);
@@ -973,7 +997,7 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
     zoomPercent: ATLANTROPA_MEDITERRANEAN_FOCUS.zoomPercent,
   });
   await requestScenarioPoliticalChunk(page, {
-    chunkId: "political.detail.country.atl",
+    chunkId: "scenario_atlantropa.detail.r1c2",
     focusCountry: "ATL",
     viewportBbox: [8, 30, 28, 46],
     reason: "test-atlantropa-sea-runtime",
