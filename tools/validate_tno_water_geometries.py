@@ -1,6 +1,7 @@
 import argparse
 import json
 import subprocess
+import time
 from pathlib import Path
 
 from shapely import coverage_invalid_edges, coverage_is_valid
@@ -19,6 +20,40 @@ MACRO_LAND_OVERLAP_AREA_MIN = 20.0
 MACRO_LAND_OVERLAP_RATIO_MAX = 0.08
 MACRO_LAND_OVERLAP_ABS_MAX = 1.0
 MACRO_INFLATION_LAND_DELTA_MAX = 0.05
+OCEAN_REFINEMENT_PHASE_TARGET_IDS = {
+    "phase2_arctic": (
+        "tno_greenland_sea",
+        "tno_barents_sea",
+        "tno_beaufort_sea",
+        "tno_bering_sea",
+    ),
+    "phase3_southern_antimeridian": (
+        "tno_ross_sea",
+        "tno_weddell_sea",
+        "tno_scotia_sea",
+    ),
+    "phase4_east_west_pacific": (
+        "tno_sea_of_japan",
+        "tno_east_china_sea",
+        "tno_yellow_sea",
+        "tno_south_china_sea",
+        "tno_philippine_sea",
+        "tno_sulu_sea",
+        "tno_celebes_sea",
+    ),
+    "phase5_indian_ocean_oceania": (
+        "tno_arabian_sea",
+        "tno_bay_of_bengal",
+        "tno_andaman_sea",
+        "tno_malacca_strait",
+        "tno_tasman_sea",
+        "tno_great_australian_bight",
+        "tno_mozambique_channel",
+    ),
+}
+OCEAN_REFINEMENT_TARGET_IDS = tuple(
+    sorted({feature_id for ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.values() for feature_id in ids})
+)
 TRACKED_COVERAGE_PROBES = [
     {"label": "gulf_of_riga", "point": (23.46, 57.71), "allowed_ids": {"tno_gulf_of_riga"}},
     {"label": "bothnian_sea", "point": (19.9, 61.2), "allowed_ids": {"tno_bothnian_sea"}},
@@ -59,6 +94,8 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "mozambique_channel", "point": (40.88, -19.30), "allowed_ids": {"tno_mozambique_channel"}},
     {"label": "gulf_of_guinea", "point": (3.05, 3.25), "allowed_ids": {"tno_gulf_of_guinea"}},
     {"label": "ross_sea", "point": (-168.0911, -78.5673), "allowed_ids": {"tno_ross_sea"}},
+    {"label": "weddell_sea", "point": (-54.8111, -77.2919), "allowed_ids": {"tno_weddell_sea"}},
+    {"label": "scotia_sea", "point": (-54.5037, -61.2189), "allowed_ids": {"tno_scotia_sea"}},
     {"label": "bering_sea", "point": (-170.8823, 58.7917), "allowed_ids": {"tno_bering_sea"}},
     {"label": "gulf_of_alaska", "point": (-147.3894, 57.3575), "allowed_ids": {"tno_gulf_of_alaska"}},
     {"label": "beaufort_sea", "point": (-136.1302, 72.7404), "allowed_ids": {"tno_beaufort_sea"}},
@@ -139,6 +176,9 @@ TRACKED_SEAM_PAIRS = [
     ("tno_arabian_sea", "tno_gulf_of_oman"),
     ("tno_gulf_of_oman", "tno_persian_gulf"),
     ("tno_red_sea", "tno_gulf_of_aden"),
+    ("tno_ross_sea", "tno_south_pacific_antarctic_ocean"),
+    ("tno_weddell_sea", "tno_south_atlantic_antarctic_ocean"),
+    ("tno_scotia_sea", "tno_south_atlantic_antarctic_ocean"),
     ("tno_yellow_sea", "tno_bo_hai"),
     ("tno_bo_hai", "tno_liaodong_wan"),
     ("tno_east_china_sea", "tno_taiwan_strait"),
@@ -362,6 +402,7 @@ def _collect_chunk_metrics_from_feature_collections(chunk_feature_collections: l
         oversized_parts.extend(metric["oversized_part_bboxes"])
         antimeridian_split_features.extend(metric["antimeridian_split_features"])
     return {
+        "chunk_count": len(metrics),
         "chunks": metrics,
         "feature_ids": sorted(feature_ids),
         "invalid_feature_ids": sorted(set(filter(None, invalid))),
@@ -369,6 +410,57 @@ def _collect_chunk_metrics_from_feature_collections(chunk_feature_collections: l
         "oversized_feature_bboxes": oversized_features,
         "oversized_part_bboxes": oversized_parts,
         "antimeridian_split_features": antimeridian_split_features,
+    }
+
+
+def _collect_ocean_refinement_target_metrics(
+    *,
+    source_water: dict,
+    source_ids: set[str],
+    runtime_ids: set[str],
+    chunk_ids: set[str],
+    require_chunks: bool = True,
+) -> dict:
+    feature_map = _feature_map(source_water)
+    phases = {}
+    all_missing = []
+    for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items():
+        target_records = []
+        missing = {"source": [], "runtime": [], "chunks": []}
+        for feature_id in target_ids:
+            feature = feature_map.get(feature_id)
+            props = feature.get("properties") if feature else {}
+            record = {
+                "id": feature_id,
+                "in_source": feature_id in source_ids,
+                "in_runtime": feature_id in runtime_ids,
+                "in_chunks": feature_id in chunk_ids,
+                "water_type": str((props or {}).get("water_type") or ""),
+                "region_group": str((props or {}).get("region_group") or ""),
+                "parent_id": str((props or {}).get("parent_id") or ""),
+                "source_standard": str((props or {}).get("source_standard") or ""),
+            }
+            surfaces = [
+                ("source", "in_source"),
+                ("runtime", "in_runtime"),
+            ]
+            if require_chunks:
+                surfaces.append(("chunks", "in_chunks"))
+            for surface, present_key in surfaces:
+                if not record[present_key]:
+                    missing[surface].append(feature_id)
+                    all_missing.append({"phase": phase, "surface": surface, "id": feature_id})
+            target_records.append(record)
+        phases[phase] = {
+            "target_count": len(target_ids),
+            "targets": target_records,
+            "missing": missing,
+        }
+    return {
+        "target_count": len(OCEAN_REFINEMENT_TARGET_IDS),
+        "target_ids": list(OCEAN_REFINEMENT_TARGET_IDS),
+        "phases": phases,
+        "missing": all_missing,
     }
 
 
@@ -679,6 +771,7 @@ def build_report_from_collections(
     runtime_land_mask: dict | None = None,
     runtime_context_land_mask: dict | None = None,
     chunk_feature_collections: list[tuple[str, dict]] | None = None,
+    require_chunks: bool = True,
 ) -> dict:
     d3_runtime_collections = {}
     if runtime_topology_payload is not None:
@@ -721,6 +814,14 @@ def build_report_from_collections(
     chunk_ids = set(chunk_metrics["feature_ids"])
     return {
         "scenario_id": scenario_id,
+        "contract": {
+            "name": "tno_water_geometry",
+            "schema_version": 2,
+            "ocean_refinement_phase_targets": {
+                phase: list(target_ids)
+                for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items()
+            },
+        },
         "checks": {
             "source": source_metrics,
             "runtime": runtime_metrics,
@@ -743,6 +844,13 @@ def build_report_from_collections(
                 "chunk_missing": sorted(source_ids - chunk_ids),
                 "chunk_only": sorted(chunk_ids - source_ids),
             },
+            "ocean_refinement_targets": _collect_ocean_refinement_target_metrics(
+                source_water=source_water,
+                source_ids=source_ids,
+                runtime_ids=runtime_ids,
+                chunk_ids=chunk_ids,
+                require_chunks=require_chunks,
+            ),
         },
     }
 
@@ -754,6 +862,7 @@ def build_report(scenario_dir: Path) -> dict:
         runtime_topology_payload=_load_json(scenario_dir / "runtime_topology.topo.json"),
         named_water_snapshot=_load_json(scenario_dir / "derived" / "marine_regions_named_waters.snapshot.geojson"),
         chunk_feature_collections=_load_chunk_feature_collections(scenario_dir),
+        require_chunks=True,
     )
 
 
@@ -807,7 +916,53 @@ def summarize_failures(report: dict, *, require_chunks: bool = True) -> list[str
         failures.append("id_consistency mismatch")
     if require_chunks and (id_consistency["chunk_missing"] or id_consistency["chunk_only"]):
         failures.append("id_consistency mismatch")
+    target_metrics = checks.get("ocean_refinement_targets") or {}
+    if target_metrics.get("missing"):
+        failures.append(f"ocean_refinement_targets: missing={len(target_metrics['missing'])}")
     return failures
+
+
+def _attach_run_diagnostics(report: dict, *, started_at: float, failure_shape: dict | None = None) -> dict:
+    report["diagnostics"] = {
+        "elapsed_seconds": round(time.perf_counter() - started_at, 3),
+        "failure_shape": failure_shape,
+        "feature_counts": {
+            "source": int(((report.get("checks") or {}).get("source") or {}).get("feature_count") or 0),
+            "runtime": int(((report.get("checks") or {}).get("runtime") or {}).get("feature_count") or 0),
+            "chunk_unique": len((((report.get("checks") or {}).get("chunks") or {}).get("feature_ids") or [])),
+            "chunk_count": int(((report.get("checks") or {}).get("chunks") or {}).get("chunk_count") or 0),
+            "ocean_refinement_targets": int(
+                ((report.get("checks") or {}).get("ocean_refinement_targets") or {}).get("target_count") or 0
+            ),
+        },
+    }
+    return report
+
+
+def _write_failure_report(
+    *,
+    scenario_dir: Path,
+    report_path: Path,
+    started_at: float,
+    exc: BaseException,
+    stage: str,
+) -> None:
+    failure_shape = {
+        "type": type(exc).__name__,
+        "stage": stage,
+        "message": str(exc),
+    }
+    report = _attach_run_diagnostics(
+        {
+            "scenario_id": scenario_dir.name,
+            "ok": False,
+            "failures": [f"{stage}: {type(exc).__name__}: {exc}"],
+        },
+        started_at=started_at,
+        failure_shape=failure_shape,
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def validate_report(report: dict, *, stage_label: str, require_chunks: bool = True) -> dict:
@@ -829,13 +984,38 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    started_at = time.perf_counter()
     args = parse_args()
     scenario_dir = Path(args.scenario_dir).resolve()
     report_path = Path(args.report_path).resolve()
-    report = build_report(scenario_dir)
+    try:
+        report = build_report(scenario_dir)
+    except (MemoryError, TimeoutError) as exc:
+        _write_failure_report(
+            scenario_dir=scenario_dir,
+            report_path=report_path,
+            started_at=started_at,
+            exc=exc,
+            stage="build_report",
+        )
+        print(f"build_report: {type(exc).__name__}: {exc}")
+        print(f"report={report_path}")
+        return 1
+    except Exception as exc:
+        _write_failure_report(
+            scenario_dir=scenario_dir,
+            report_path=report_path,
+            started_at=started_at,
+            exc=exc,
+            stage="build_report",
+        )
+        print(f"build_report: {type(exc).__name__}: {exc}")
+        print(f"report={report_path}")
+        return 1
     failures = summarize_failures(report)
     report["ok"] = not failures
     report["failures"] = failures
+    _attach_run_diagnostics(report, started_at=started_at)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if failures:

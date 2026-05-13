@@ -58,6 +58,7 @@ def resolve_tno_rebuild_plan(changed_domain: str) -> TnoRebuildPlan:
                 STAGE_COUNTRIES,
                 STAGE_WATER_STATE,
                 STAGE_RUNTIME_TOPOLOGY,
+                STAGE_GEO_LOCALE,
                 STAGE_STARTUP_SUPPORT_ASSETS,
                 STAGE_STARTUP_BUNDLE_ASSETS,
                 STAGE_WRITE_BUNDLE,
@@ -70,6 +71,7 @@ def resolve_tno_rebuild_plan(changed_domain: str) -> TnoRebuildPlan:
             stage_sequence=(
                 STAGE_WATER_STATE,
                 STAGE_RUNTIME_TOPOLOGY,
+                STAGE_GEO_LOCALE,
                 STAGE_STARTUP_SUPPORT_ASSETS,
                 STAGE_STARTUP_BUNDLE_ASSETS,
                 STAGE_WRITE_BUNDLE,

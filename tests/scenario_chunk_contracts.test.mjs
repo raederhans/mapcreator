@@ -979,6 +979,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
+  const startupHydrationSource = readRepoFile("js", "core", "scenario", "startup_hydration.js");
 
   const checks = {
     scenarioWaterExclusiveModeComesFromManifestWithLegacyAtlantropaDefault:
@@ -1026,6 +1027,11 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function getCoastlineDecisionSignature\(decision = null\) \{[\s\S]*?String\(decision\.scenarioSurfaceVersionSignal \|\| ""\)/.test(rendererSource),
     chunkPromotionSkipsDeferredInfraWhenSecondaryIndexesAlreadySynced:
       /const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes\(\{[\s\S]*?const shouldSkipDeferredInfraRefresh = synchronizedSecondaryRegionIndexes && !hasPoliticalChange;[\s\S]*?if \(shouldSkipDeferredInfraRefresh\) \{[\s\S]*?scheduleHitCanvasBuildIfNeeded\(\{[\s\S]*?\}\);[\s\S]*?\} else \{[\s\S]*?scheduleDeferredScenarioChunkPromotionInfraRefresh\(\{/.test(rendererSource),
+    startupHydrationWaterOnlyChangeSyncsSecondaryIndexes:
+      /let scenarioWaterChanged = false;/.test(startupHydrationSource)
+      && /scenarioWaterChanged = state\.scenarioWaterRegionsData !== nextScenarioWaterRegionsData;/.test(startupHydrationSource)
+      && /hydrationChangedLayerKeys = \[[\s\S]*?\.\.\.\(scenarioWaterChanged \? \["water"\] : \[\]\),[\s\S]*?\.\.\.\(scenarioAtlantropaChanged \? \["scenario_atlantropa"\] : \[\]\),[\s\S]*?\];/.test(startupHydrationSource)
+      && /if \(scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback\) \{[\s\S]*?refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?reason: "scenario-hydrate-water",[\s\S]*?changedLayerKeys: \["water"\],[\s\S]*?hasPoliticalPayloadChange: false,/.test(startupHydrationSource),
     chunkPromotionVisualStageReusesPrimaryDerivedStateRebuild:
       /function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?if \(hasPoliticalChange\) \{[\s\S]*?"contextMarkers"[\s\S]*?"labels"/.test(rendererSource)
       &&

@@ -14,8 +14,11 @@ if str(ROOT) not in sys.path:
 
 from tools import patch_tno_1962_bundle as tno_bundle
 from tools.validate_tno_water_geometries import (
+    OCEAN_REFINEMENT_PHASE_TARGET_IDS,
     _collect_d3_spherical_metrics,
     _topology_objects_to_feature_collections_for_d3,
+    build_report_from_collections,
+    summarize_failures,
 )
 
 SCENARIO_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_regions.geojson"
@@ -23,6 +26,7 @@ RUNTIME_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topolog
 RUNTIME_BOOTSTRAP_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.bootstrap.topo.json"
 SCENARIO_NAMED_WATER_SNAPSHOT_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "marine_regions_named_waters.snapshot.geojson"
 SCENARIO_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "manifest.json"
+DETAIL_CHUNK_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "detail_chunks.manifest.json"
 STARTUP_BUNDLE_EN_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "startup.bundle.en.json"
 STARTUP_BUNDLE_ZH_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "startup.bundle.zh.json"
 TARGET_OPEN_OCEAN_IDS = {
@@ -178,6 +182,8 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "mozambique_channel", "point": (40.88, -19.30), "allowed_ids": {"tno_mozambique_channel"}},
     {"label": "gulf_of_guinea", "point": (3.05, 3.25), "allowed_ids": {"tno_gulf_of_guinea"}},
     {"label": "ross_sea", "point": (-168.0911, -78.5673), "allowed_ids": {"tno_ross_sea"}},
+    {"label": "weddell_sea", "point": (-54.8111, -77.2919), "allowed_ids": {"tno_weddell_sea"}},
+    {"label": "scotia_sea", "point": (-54.5037, -61.2189), "allowed_ids": {"tno_scotia_sea"}},
     {"label": "bering_sea", "point": (-170.8823, 58.7917), "allowed_ids": {"tno_bering_sea"}},
     {"label": "gulf_of_alaska", "point": (-147.3894, 57.3575), "allowed_ids": {"tno_gulf_of_alaska"}},
     {"label": "beaufort_sea", "point": (-136.1302, 72.7404), "allowed_ids": {"tno_beaufort_sea"}},
@@ -260,6 +266,9 @@ TRACKED_SEAM_PAIRS = [
     ("tno_arabian_sea", "tno_gulf_of_oman"),
     ("tno_gulf_of_oman", "tno_persian_gulf"),
     ("tno_red_sea", "tno_gulf_of_aden"),
+    ("tno_ross_sea", "tno_south_pacific_antarctic_ocean"),
+    ("tno_weddell_sea", "tno_south_atlantic_antarctic_ocean"),
+    ("tno_scotia_sea", "tno_south_atlantic_antarctic_ocean"),
     ("tno_yellow_sea", "tno_bo_hai"),
     ("tno_bo_hai", "tno_liaodong_wan"),
     ("tno_east_china_sea", "tno_taiwan_strait"),
@@ -332,6 +341,23 @@ def _load_water_chunk_features():
         payload = json.loads(path.read_text(encoding="utf-8"))
         features.extend(payload.get("features", []) or [])
     return features
+
+
+def _load_water_manifest_chunk_feature_ids():
+    feature_ids = set()
+    manifest = json.loads(DETAIL_CHUNK_MANIFEST_PATH.read_text(encoding="utf-8"))
+    for chunk in manifest.get("chunks", []):
+        if chunk.get("layer") != "water":
+            continue
+        chunk_id = str(chunk.get("id") or "")
+        chunk_url = str(chunk.get("url") or "")
+        assert chunk_id.startswith("water.")
+        assert chunk_url.startswith("data/scenarios/tno_1962/chunks/")
+        payload = json.loads((ROOT / chunk_url).read_text(encoding="utf-8"))
+        assert payload.get("type") == "FeatureCollection"
+        for feature in payload.get("features", []) or []:
+            feature_ids.add(str(feature.get("properties", {}).get("id") or ""))
+    return feature_ids
 
 
 def _load_scenario_manifest():
@@ -544,6 +570,144 @@ def test_tno_water_chunk_feature_ids_cover_tracked_new_family_regions():
     tracked_ids = TRACKED_NAMED_WATER_IDS | TRACKED_INLAND_WATER_IDS
     missing = sorted(feature_id for feature_id in tracked_ids if feature_id not in chunk_ids)
     assert missing == []
+
+
+def test_tno_ocean_refinement_phase_targets_are_synchronized():
+    source_ids = {
+        str(feature.get("properties", {}).get("id") or "")
+        for feature in _load_scenario_water_features()
+    }
+    runtime_ids = {
+        str(feature.get("properties", {}).get("id") or "")
+        for feature in _load_runtime_water_features()
+    }
+    chunk_ids = {
+        str(feature.get("properties", {}).get("id") or "")
+        for feature in _load_water_chunk_features()
+    }
+    manifest_chunk_ids = _load_water_manifest_chunk_feature_ids()
+
+    failures = []
+    for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items():
+        for feature_id in target_ids:
+            if feature_id not in source_ids:
+                failures.append(f"{phase}:{feature_id}:source")
+            if feature_id not in runtime_ids:
+                failures.append(f"{phase}:{feature_id}:runtime")
+            if feature_id not in chunk_ids:
+                failures.append(f"{phase}:{feature_id}:chunks")
+            if feature_id not in manifest_chunk_ids:
+                failures.append(f"{phase}:{feature_id}:manifest_chunks")
+    assert failures == []
+
+
+def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():
+    water_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "tno_greenland_sea",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "fixture",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [-2.0, 76.0],
+                [-1.0, 76.0],
+                [-1.0, 77.0],
+                [-2.0, 77.0],
+                [-2.0, 76.0],
+            ]],
+        },
+    }
+    source_water = {"type": "FeatureCollection", "features": [water_feature]}
+    runtime_political = {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "properties": {"id": "fixture_land"},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[10.0, 10.0], [11.0, 10.0], [11.0, 11.0], [10.0, 11.0], [10.0, 10.0]]],
+            },
+        }],
+    }
+
+    report = build_report_from_collections(
+        scenario_id="fixture",
+        source_water=source_water,
+        runtime_water=source_water,
+        runtime_political=runtime_political,
+        named_water_snapshot=source_water,
+        chunk_feature_collections=[("water.fixture.json", source_water)],
+    )
+
+    assert report["contract"]["schema_version"] == 2
+    checks = report["checks"]
+    for key in (
+        "source",
+        "runtime",
+        "chunks",
+        "d3_spherical",
+        "first_wave_probe_coverage",
+        "first_wave_named_water_seams",
+        "macro_land_overlap",
+        "named_water_snapshot_inflation",
+        "id_consistency",
+        "ocean_refinement_targets",
+    ):
+        assert key in checks
+    assert checks["chunks"]["chunk_count"] == 1
+    assert report["contract"]["ocean_refinement_phase_targets"] == {
+        phase: list(target_ids)
+        for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items()
+    }
+    assert "phase2_arctic" in checks["ocean_refinement_targets"]["phases"]
+
+
+def test_tno_water_validator_report_allows_missing_chunks_when_runtime_gate_owns_chunks():
+    water_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "tno_greenland_sea",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "fixture",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [-2.0, 76.0],
+                [-1.0, 76.0],
+                [-1.0, 77.0],
+                [-2.0, 77.0],
+                [-2.0, 76.0],
+            ]],
+        },
+    }
+    source_water = {"type": "FeatureCollection", "features": [water_feature]}
+    runtime_political = {"type": "FeatureCollection", "features": []}
+
+    report = build_report_from_collections(
+        scenario_id="fixture",
+        source_water=source_water,
+        runtime_water=source_water,
+        runtime_political=runtime_political,
+        named_water_snapshot=source_water,
+        chunk_feature_collections=[],
+        require_chunks=False,
+    )
+
+    targets = report["checks"]["ocean_refinement_targets"]["phases"]["phase2_arctic"]["targets"]
+    target = next(record for record in targets if record["id"] == "tno_greenland_sea")
+    assert target["in_source"] is True
+    assert target["in_runtime"] is True
+    assert target["in_chunks"] is False
+    assert report["checks"]["id_consistency"]["chunk_missing"] == ["tno_greenland_sea"]
+    failures = summarize_failures(report, require_chunks=False)
+    assert not any("id_consistency" in failure for failure in failures)
+    assert not any("surface=chunks" in failure for failure in failures)
 
 
 def test_tno_tracked_inland_water_regions_keep_source_contract():

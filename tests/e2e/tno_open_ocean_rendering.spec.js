@@ -804,12 +804,14 @@ async function tryClickWaterFeature(page, featureId, { maxPoints = 12, attempts 
   for (const point of points) {
     await clearDevSelectedHit(page);
     await page.mouse.click(point.x, point.y);
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
-      await page.waitForTimeout(waitMs);
-      const hit = await readDevSelectedHit(page);
-      if (String(hit?.id || "") === featureId && String(hit?.targetType || "") === "water") {
-        return { point, hit };
-      }
+    const hit = await waitForDevSelectedHit(page, {
+      timeout: attempts * waitMs,
+      polling: waitMs,
+      expectedId: featureId,
+      expectedTargetType: "water",
+    });
+    if (hit) {
+      return { point, hit };
     }
   }
   return null;
@@ -843,6 +845,42 @@ async function readDevSelectedHit(page) {
   });
 }
 
+async function waitForDevSelectedHit(
+  page,
+  {
+    timeout = 3000,
+    polling = 100,
+    expectedId = "",
+    expectedTargetType = "",
+    rejectPrefixes = [],
+  } = {},
+) {
+  const handle = await page.waitForFunction(
+    async ({ id, targetType, prefixes }) => {
+      const { state } = await import("/js/core/state.js");
+      const hit = state.devSelectedHit
+        ? {
+          id: String(state.devSelectedHit.id || "").trim(),
+          targetType: String(state.devSelectedHit.targetType || "").trim(),
+          countryCode: String(state.devSelectedHit.countryCode || "").trim().toUpperCase(),
+        }
+        : null;
+      if (!hit) return false;
+      if (id && hit.id !== id) return false;
+      if (targetType && hit.targetType !== targetType) return false;
+      if (prefixes.some((prefix) => hit.id.startsWith(prefix))) return false;
+      return hit;
+    },
+    {
+      id: String(expectedId || "").trim(),
+      targetType: String(expectedTargetType || "").trim(),
+      prefixes: rejectPrefixes.map((prefix) => String(prefix || "").trim()).filter(Boolean),
+    },
+    { timeout, polling },
+  ).catch(() => null);
+  return handle ? handle.jsonValue() : null;
+}
+
 async function clickLandFeature(page, featureId, { acceptAnyHit = false } = {}) {
   const points = await computeFeatureProbePoints(page, featureId);
   if (!points.length) {
@@ -852,15 +890,15 @@ async function clickLandFeature(page, featureId, { acceptAnyHit = false } = {}) 
   for (const point of points) {
     await clearDevSelectedHit(page);
     await page.mouse.click(point.x, point.y);
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      await page.waitForTimeout(120);
-      lastHit = await readDevSelectedHit(page);
-      if (acceptAnyHit && lastHit) {
-        return { point, hit: lastHit };
-      }
-      if (String(lastHit?.id || "").trim() === featureId) {
-        return { point, hit: lastHit };
-      }
+    lastHit = await waitForDevSelectedHit(page, {
+      timeout: 720,
+      polling: 120,
+      expectedId: acceptAnyHit ? "" : featureId,
+      expectedTargetType: acceptAnyHit ? "land" : "",
+      rejectPrefixes: acceptAnyHit ? HELPER_PREFIXES : [],
+    });
+    if (lastHit) {
+      return { point, hit: lastHit };
     }
   }
   throw new Error(`Failed to click feature ${featureId}; lastHit=${JSON.stringify(lastHit || null)}`);
@@ -1072,8 +1110,12 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
   await clearDevSelectedHit(page);
   const helperClick = await clickLandFeature(page, helperFeatureId, { acceptAnyHit: true });
   const helperPoint = helperClick.point;
-  await page.waitForTimeout(300);
-  const helperHit = await readDevSelectedHit(page) || helperClick.hit || null;
+  const helperHit = await waitForDevSelectedHit(page, {
+    timeout: 300,
+    polling: 100,
+    expectedTargetType: "land",
+    rejectPrefixes: HELPER_PREFIXES,
+  }) || helperClick.hit || null;
   expect(HELPER_PREFIXES.some((prefix) => String(helperHit?.id || "").startsWith(prefix))).toBe(false);
 
   const runtimeSummary = {

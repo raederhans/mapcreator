@@ -1,0 +1,9 @@
+# Scenario contracts store byte-exact sizes and sha256 values for these assets.
+data/scenarios/**/chunks/*.json text eol=lf
+data/scenarios/**/detail_chunks.manifest.json text eol=lf
+data/scenarios/**/context_lod.manifest.json text eol=lf
+data/scenarios/**/runtime_meta.json text eol=lf
+data/scenarios/**/mesh_pack.json text eol=lf
+data/scenarios/**/build_snapshot.json text eol=lf
+data/scenarios/**/audit.json text eol=lf
+data/scenarios/**/startup.bundle.*.json text eol=lf

@@ -262,6 +262,7 @@ function createScenarioStartupHydrationController({
     let scenarioOverlayChanged = false;
     let contextBaseChanged = false;
     let scenarioAtlantropaChanged = false;
+    let scenarioWaterChanged = false;
     let hydrationChangedLayerKeys = [];
     if (runtimeTopologyPayload) {
       // 这里先用 runtime topology 定住“壳层真相”，再决定各类 overlay 是否复用缓存、是否需要刷新版本标签。
@@ -354,11 +355,15 @@ function createScenarioStartupHydrationController({
             || state.scenarioAtlantropaData
             || null
           );
+      scenarioWaterChanged = state.scenarioWaterRegionsData !== nextScenarioWaterRegionsData;
       scenarioAtlantropaChanged = state.scenarioAtlantropaData !== nextScenarioAtlantropaData;
-      hydrationChangedLayerKeys = scenarioAtlantropaChanged ? ["scenario_atlantropa"] : [];
+      hydrationChangedLayerKeys = [
+        ...(scenarioWaterChanged ? ["water"] : []),
+        ...(scenarioAtlantropaChanged ? ["scenario_atlantropa"] : []),
+      ];
       scenarioOverlayChanged =
         state.scenarioRuntimeTopologyData !== runtimeTopologyPayload
-        || state.scenarioWaterRegionsData !== nextScenarioWaterRegionsData
+        || scenarioWaterChanged
         || state.scenarioSpecialRegionsData !== nextScenarioSpecialRegionsData
         || scenarioAtlantropaChanged;
       contextBaseChanged =
@@ -439,6 +444,14 @@ function createScenarioStartupHydrationController({
         suppressRender: !renderNow,
         reason: "scenario-hydrate-atlantropa",
         changedLayerKeys: hydrationChangedLayerKeys,
+        hasPoliticalPayloadChange: false,
+      });
+    }
+    if (scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback) {
+      refreshMapDataForScenarioChunkPromotion({
+        suppressRender: !renderNow,
+        reason: "scenario-hydrate-water",
+        changedLayerKeys: ["water"],
         hasPoliticalPayloadChange: false,
       });
     }

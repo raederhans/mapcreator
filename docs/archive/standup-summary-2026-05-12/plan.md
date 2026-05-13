@@ -14,7 +14,7 @@
 
 ## Steps
 
-- [ ] Audit `lessons learned.md` for merge/delete candidates.
-- [ ] Audit `docs/active` and `docs/archive` for cleanup candidates.
-- [ ] Apply the minimal file edits and moves.
-- [ ] Recheck remaining active docs and repo diff.
+- [x] Audit `lessons learned.md` for merge/delete candidates.
+- [x] Audit `docs/active` and `docs/archive` for cleanup candidates.
+- [x] Apply the minimal file edits and moves.
+- [x] Recheck remaining active docs and repo diff.

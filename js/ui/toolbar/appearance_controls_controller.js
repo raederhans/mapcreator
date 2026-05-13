@@ -1004,6 +1004,36 @@ export function createAppearanceControlsController({
     }).length;
   };
 
+  const transportRenderMetricNames = Object.freeze({
+    airport: "drawAirportsLayer",
+    port: "drawPortsLayer",
+    rail: "drawRailwaysLayer",
+    road: "drawRoadsLayer",
+  });
+
+  const getTransportFamilyRenderMetric = (familyId) => {
+    const metricName = transportRenderMetricNames[familyId];
+    if (!metricName) return null;
+    const metrics = runtimeState.renderPerfMetrics && typeof runtimeState.renderPerfMetrics === "object"
+      ? runtimeState.renderPerfMetrics
+      : (globalThis.__renderPerfMetrics || {});
+    const breakdown = metrics.contextBreakdown && typeof metrics.contextBreakdown === "object"
+      ? metrics.contextBreakdown
+      : {};
+    const metric = breakdown[metricName] || metrics[metricName] || null;
+    return metric && typeof metric === "object" ? metric : null;
+  };
+
+  const isTransportFamilyRenderSettlingMetric = (metric) => {
+    if (!metric || typeof metric !== "object") return true;
+    const reason = String(metric.reason || "").trim().toLowerCase();
+    return !!metric.interactive
+      || reason === "hidden"
+      || reason === "interactive-pass"
+      || reason === "staged-apply"
+      || reason === "no-path";
+  };
+
   const formatTransportFamilyCountText = (familyId, count) => {
     if (!Number.isFinite(count)) return "";
     const roundedCount = Math.max(0, Math.round(count));
@@ -1015,16 +1045,46 @@ export function createAppearanceControlsController({
     return `${roundedCount.toLocaleString()} ${t(noun, "ui")}`;
   };
 
+  const formatTransportLoadedAuxiliaryText = (familyId, count) => {
+    const countText = formatTransportFamilyCountText(familyId, count);
+    return countText ? `${countText} ${t("loaded", "ui")}` : "";
+  };
+
   const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) => {
-    if (!familyEnabled) return t("Off", "ui");
-    if (!masterEnabled) return `${t("On", "ui")} · ${t("hidden by master", "ui")}`;
-    const countText = formatTransportFamilyCountText(
-      familyId,
-      getTransportFamilyFilteredCount(familyId, familyConfig, effectiveScope),
-    );
-    return countText
-      ? `${t("On", "ui")} · ${countText}`
-      : `${t("On", "ui")} · ${t(formatTransportScopeLabel(effectiveScope.scope), "ui")}`;
+    if (!familyEnabled || !masterEnabled) return t("Hidden", "ui");
+    const metric = getTransportFamilyRenderMetric(familyId);
+    const filteredCount = getTransportFamilyFilteredCount(familyId, familyConfig, effectiveScope);
+    const loadedAuxiliaryText = formatTransportLoadedAuxiliaryText(familyId, filteredCount);
+    if (isTransportFamilyRenderSettlingMetric(metric)) {
+      return loadedAuxiliaryText
+        ? `${t("Loading/settling", "ui")} · ${loadedAuxiliaryText}`
+        : t("Loading/settling", "ui");
+    }
+    const visibleCount = Math.max(0, Math.round(Number(metric.visibleFeatureCount || 0)));
+    if (visibleCount > 0) {
+      return `${t("Visible", "ui")} · ${formatTransportFamilyCountText(familyId, visibleCount)}`;
+    }
+    if (Number(metric.featureCount || 0) > 0 || Number.isFinite(filteredCount)) {
+      return loadedAuxiliaryText
+        ? `${t("Loaded · 0 visible", "ui")} · ${loadedAuxiliaryText}`
+        : t("Loaded · 0 visible", "ui");
+    }
+    return t("Loading/settling", "ui");
+  };
+
+  const renderTransportAppearanceDirty = (reason) => {
+    renderDirty(reason);
+    const scheduleFrame = typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame
+      : (callback) => setTimeout(callback, 0);
+    scheduleFrame(() => {
+      renderTransportAppearanceUi();
+    });
+  };
+
+  const refreshTransportAppearanceUiAfterLayerLoad = (layerId) => (error) => {
+    console.warn(`[transport-appearance] Failed to refresh ${layerId} layer data.`, error);
+    renderTransportAppearanceUi();
   };
 
   const setTransportAppearanceGroupEnabled = (container, enabled) => {
@@ -1185,19 +1245,26 @@ export function createAppearanceControlsController({
       runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");
     }
     if (normalized && runtimeState.showAirports && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("airports", { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn("airports", { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("airports"));
     }
     if (normalized && runtimeState.showPorts && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("ports", { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn("ports", { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("ports"));
     }
     if (normalized && runtimeState.showRail && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("rail"));
     }
     if (normalized && runtimeState.showRoad && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("roads", { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn("roads", { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));
     }
-    renderTransportAppearanceUi();
-    renderDirty("toggle-transport-overview");
+    renderTransportAppearanceDirty("toggle-transport-overview");
   };
 
   const renderRecentColors = () => {
@@ -1343,8 +1410,8 @@ export function createAppearanceControlsController({
           event.target.value || "distribution",
           "distribution",
         );
-        renderTransportAppearanceUi();
         renderDirty("transport-visual-mode");
+        renderTransportAppearanceUi();
       });
       transportVisualMode.dataset.bound = "true";
     }
@@ -1358,10 +1425,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-airports");
         }
         if (runtimeState.showAirports && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("airports", { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn("airports", { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("airports"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-airports");
+        renderTransportAppearanceDirty("toggle-airports");
       });
       toggleAirports.dataset.bound = "true";
     }
@@ -1375,10 +1443,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-ports");
         }
         if (runtimeState.showPorts && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("ports", { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn("ports", { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("ports"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-ports");
+        renderTransportAppearanceDirty("toggle-ports");
       });
       togglePorts.dataset.bound = "true";
     }
@@ -1392,10 +1461,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-rail");
         }
         if (runtimeState.showRail && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("rail"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-rail");
+        renderTransportAppearanceDirty("toggle-rail");
       });
       toggleRail.dataset.bound = "true";
     }
@@ -1409,10 +1479,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-road");
         }
         if (runtimeState.showRoad && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("roads", { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn("roads", { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-road");
+        renderTransportAppearanceDirty("toggle-road");
       });
       toggleRoad.dataset.bound = "true";
     }
@@ -1421,8 +1492,7 @@ export function createAppearanceControlsController({
       if (!element || element.dataset.bound === "true") return;
       element.addEventListener("input", (event) => {
         mutate(event);
-        renderTransportAppearanceUi();
-        renderDirty(reason);
+        renderTransportAppearanceDirty(reason);
       });
       element.dataset.bound = "true";
     };
@@ -1430,8 +1500,7 @@ export function createAppearanceControlsController({
       if (!element || element.dataset.bound === "true") return;
       element.addEventListener("change", (event) => {
         mutate(event);
-        renderTransportAppearanceUi();
-        renderDirty(reason);
+        renderTransportAppearanceDirty(reason);
       });
       element.dataset.bound = "true";
     };
@@ -2450,4 +2519,3 @@ export function createAppearanceControlsController({
     syncParentBorderVisibilityUI,
   };
 }
-

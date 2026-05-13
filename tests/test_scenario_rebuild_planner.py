@@ -22,7 +22,15 @@ class ScenarioRebuildPlannerTest(unittest.TestCase):
 
         self.assertEqual(
             plan.stage_sequence,
-            ("water_state", "runtime_topology", "startup_support_assets", "startup_bundle_assets", "write_bundle", "chunk_assets"),
+            (
+                "water_state",
+                "runtime_topology",
+                "geo_locale",
+                "startup_support_assets",
+                "startup_bundle_assets",
+                "write_bundle",
+                "chunk_assets",
+            ),
         )
         self.assertEqual(plan.publish_scope, "all")
         self.assertEqual(plan.publish_targets, ())

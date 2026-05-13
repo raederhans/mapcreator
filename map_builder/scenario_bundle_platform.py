@@ -475,15 +475,16 @@ def detect_unsynced_manual_edits(
             continue
         if not isinstance(scenario_payload, dict) or not isinstance(checkpoint_payload, dict):
             raise TypeError(f"Manual sync comparison expects JSON objects for {filename}")
-        drift_files.append(
-            build_manual_sync_file_report(
-                filename,
-                scenario_payload,
-                checkpoint_payload,
-                normalize_core_tags=normalize_core_tags,
-                normalize_locale_override_entry=normalize_locale_override_entry,
-            )
+        file_report = build_manual_sync_file_report(
+            filename,
+            scenario_payload,
+            checkpoint_payload,
+            normalize_core_tags=normalize_core_tags,
+            normalize_locale_override_entry=normalize_locale_override_entry,
         )
+        if int(file_report.get("changed_key_count") or 0) <= 0:
+            continue
+        drift_files.append(file_report)
 
     timestamp = utc_timestamp().replace(":", "").replace("-", "")
     report = {

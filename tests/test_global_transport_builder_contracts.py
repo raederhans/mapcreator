@@ -660,6 +660,8 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('const hasVisibleTransportFamily = () => !!(', appearance_controller_content)
         self.assertIn('if (normalized && hasVisibleTransportFamily()) {', appearance_controller_content)
         self.assertIn('runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");', appearance_controller_content)
+        self.assertIn('reason === "hidden"', appearance_controller_content)
+        self.assertIn('.catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));', appearance_controller_content)
         self.assertIn('const releaseDeferredContextForTransportToggle = (reason) => {', appearance_controller_content)
         self.assertIn('runtimeState.releaseDeferredContextBasePassFn?.(reason);', appearance_controller_content)
         for reason in ("toggle-airports", "toggle-ports", "toggle-rail", "toggle-road"):

@@ -625,7 +625,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             },
         )
 
-    def test_build_runtime_topology_payload_builds_all_layers_in_single_topology_call(self) -> None:
+    def test_build_runtime_topology_payload_keeps_large_overlays_out_of_shared_topology_pass(self) -> None:
         political_gdf = gpd.GeoDataFrame(
             [{"id": "AAA-1", "name": "Alpha", "cntr_code": "AAA", "geometry": _square(0, 0, 1.0)}],
             geometry="geometry",
@@ -655,12 +655,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 context_land_mask_gdf,
             )
 
-        topology_mock.assert_called_once()
-        layer_names = [layer_name for layer_name, _ in topology_mock.call_args.args[0]]
-        self.assertEqual(
-            layer_names,
-            ["political", "scenario_atlantropa", "land_mask", "context_land_mask", "scenario_water"],
-        )
+        topology_mock.assert_not_called()
 
     def test_build_runtime_topology_payload_routes_atl_synthetic_features_to_scenario_atlantropa(self) -> None:
         political_gdf = gpd.GeoDataFrame(
@@ -776,6 +771,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             source_water=water_feature_collection,
             runtime_topology_payload=runtime_topology_payload,
             named_water_snapshot=named_water_snapshot_payload,
+            require_chunks=False,
         )
         validate_report_mock.assert_called_once_with(
             report,
@@ -2170,6 +2166,17 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertGreaterEqual(west_cover_ratio, 0.95)
         self.assertLessEqual(rebuilt.area, baseline.area * 1.08)
 
+    def test_tno_1962_cyprus_island_rebuild_keeps_baseline_area_clamp_contract(self) -> None:
+        levant_config = tno_bundle.ATLANTROPA_REGION_CONFIGS["levant"]
+        cyprus_group = next(
+            group
+            for group in levant_config["major_island_groups"]
+            if group.get("id") == "cyprus"
+        )
+
+        self.assertEqual(cyprus_group["baseline_feature_ids"], ["CY000"])
+        self.assertEqual(cyprus_group["max_baseline_area_ratio"], 1.08)
+
     def test_checked_in_tno_1962_southwest_greece_gap_is_atlantropa_water(self) -> None:
         scenario_dir = Path(tno_bundle.SCENARIO_DIR)
         atlantropa_topology = json.loads((scenario_dir / "scenario_atlantropa.topo.json").read_text(encoding="utf-8"))
@@ -2506,6 +2513,43 @@ class TnoBundleBuilderTest(unittest.TestCase):
             require_chunk_mock.assert_called_once_with(scenario_dir)
             rebuild_chunk_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
 
+    def test_external_publish_checkpoint_validation_uses_tno_profile_and_filters_final_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            checkpoint_dir = root / "tno-water-checkpoints"
+            checkpoint_dir.mkdir(parents=True)
+            (checkpoint_dir / "manifest.json").write_text("{}", encoding="utf-8")
+            errors = [
+                f"Required file is missing: {root / 'mapped' / tno_bundle.SCENARIO_ID / 'build_snapshot.json'}",
+                f"Required file is missing: {root / 'mapped' / tno_bundle.SCENARIO_ID / 'detail_chunks.manifest.json'}",
+                "manifest.source.detail_chunk_manifest_sha256 must match the checked-in artifact sha. manifest=old actual=new.",
+                "startup bundle en source.detail_chunk_manifest_sha256 must match manifest.source.detail_chunk_manifest_sha256.",
+                "runtime_topology is missing feature ids referenced by owners/cores in strict mode. Sample: ['ATLISL_x'].",
+                "manifest.summary.feature_count must equal owners feature count in strict mode.",
+                "audit.json summary must match manifest.summary for derived scenario artifacts.",
+            ]
+            validation_dirs: list[Path] = []
+
+            def fake_validate_publish_bundle_dir(target_dir: Path) -> list[str]:
+                validation_dirs.append(target_dir)
+                self.assertEqual(target_dir.name, tno_bundle.SCENARIO_ID)
+                return errors
+
+            with patch.object(tno_bundle, "validate_publish_bundle_dir", side_effect=fake_validate_publish_bundle_dir):
+                filtered = tno_bundle.validate_tno_publish_checkpoint_dir(checkpoint_dir)
+
+        self.assertEqual(len(validation_dirs), 1)
+        self.assertEqual(
+            filtered,
+            [
+                "manifest.source.detail_chunk_manifest_sha256 must match the checked-in artifact sha. manifest=old actual=new.",
+                "startup bundle en source.detail_chunk_manifest_sha256 must match manifest.source.detail_chunk_manifest_sha256.",
+                "runtime_topology is missing feature ids referenced by owners/cores in strict mode. Sample: ['ATLISL_x'].",
+                "manifest.summary.feature_count must equal owners feature count in strict mode.",
+                "audit.json summary must match manifest.summary for derived scenario artifacts.",
+            ],
+        )
+
     def test_run_changed_domain_plan_for_geo_locale_uses_planner_targets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "scenario"
@@ -2539,6 +2583,40 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 ["geo-locale", "startup-support-assets"],
             )
             self.assertEqual(result["published_targets"], ["geo-locale", "startup-support-assets"])
+
+    def test_run_changed_domain_plan_for_water_repairs_contract_outputs_after_chunks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "scenario"
+            checkpoint_dir = Path(tmp_dir) / "checkpoint"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            executed_stages: list[str] = []
+
+            def fake_run_single_stage(stage: str, **kwargs):
+                executed_stages.append(stage)
+                return None
+
+            with (
+                patch.object(tno_bundle, "_stage_signature_is_current", return_value=False),
+                patch.object(tno_bundle, "_stage_outputs_are_ready", return_value=False),
+                patch.object(tno_bundle, "_run_single_stage", side_effect=fake_run_single_stage),
+                patch.object(tno_bundle, "sync_water_domain_feature_maps_from_validated_scenario") as sync_maps_mock,
+                patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", return_value=["build_snapshot"]) as repair_mock,
+            ):
+                result = tno_bundle._run_changed_domain_plan(
+                    changed_domain="water",
+                    scenario_dir=scenario_dir,
+                    checkpoint_dir=checkpoint_dir,
+                    publish_scope="all",
+                    manual_sync_policy=MANUAL_SYNC_POLICY_STRICT_BLOCK,
+                    refresh_named_water_snapshot=False,
+                )
+
+            self.assertEqual(executed_stages[-1], "chunk_assets")
+            sync_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
+            self.assertEqual(repair_mock.call_count, 2)
+            self.assertEqual(result["safe_fixes_applied"], ["build_snapshot"])
 
     def test_stage_signature_is_never_reused_for_forced_water_snapshot_refresh(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

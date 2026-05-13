@@ -109,6 +109,35 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
                     strict_block_policy="strict-block",
                 )
 
+    def test_detect_unsynced_manual_edits_ignores_normalized_geo_metadata_only_diff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = root / "scenario"
+            checkpoint_dir = root / "checkpoint"
+            scenario_dir.mkdir()
+            checkpoint_dir.mkdir()
+            _write_json(scenario_dir / "geo_locale_patch.json", {"geo": {}, "audit": {"old": True}})
+            _write_json(checkpoint_dir / "geo_locale_patch.json", {"geo": {}, "audit": {"new": True}})
+
+            report = scenario_bundle_platform.detect_unsynced_manual_edits(
+                scenario_dir,
+                checkpoint_dir,
+                {"manual": scenario_dir / "geo_name_overrides.manual.json"},
+                scenario_id="tno_1962",
+                policy="strict-block",
+                load_json=_load_json,
+                write_json=_write_json,
+                utc_timestamp=lambda: "2026-03-29T01:02:03Z",
+                normalize_core_tags=lambda value: value or [],
+                normalize_locale_override_entry=lambda value: value,
+                report_dir=root / "reports",
+                backup_root=root / "backups",
+                backup_continue_policy="backup-continue",
+                strict_block_policy="strict-block",
+            )
+
+            self.assertFalse(report["has_drift"])
+
     def test_validate_strict_publish_bundle_raises_on_contract_errors(self) -> None:
         with self.assertRaisesRegex(ValueError, "Strict bundle validation failed"):
             scenario_bundle_platform.validate_strict_publish_bundle(
@@ -162,6 +191,8 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
             _write_json(checkpoint_dir / "water_regions.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "relief_overlays.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "bathymetry.topo.json", {"type": "Topology"})
+            _write_json(checkpoint_dir / "scenario_atlantropa.topo.json", {"type": "Topology"})
+            _write_json(checkpoint_dir / "scenario_atlantropa_metadata.json", {"feature_count": 0})
             _write_json(checkpoint_dir / "runtime_topology.bootstrap.topo.json", {"type": "Topology"})
             _write_json(checkpoint_dir / "geo_locale_patch.json", {"geo": {}})
             _write_json(checkpoint_dir / "geo_locale_patch.en.json", {"language": "en"})

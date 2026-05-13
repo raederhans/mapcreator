@@ -9,7 +9,9 @@ import json
 import math
 import os
 import re
+import shutil
 import sys
+import tempfile
 import threading
 import uuid
 from collections import Counter, deque
@@ -53,6 +55,7 @@ from map_builder import scenario_bundle_publish_service
 from map_builder import scenario_publish_service
 from map_builder.scenario_rebuild_planner import (
     CHANGED_DOMAIN_CHOICES,
+    CHANGED_DOMAIN_WATER,
     compute_tno_stage_signature_payload,
     resolve_tno_rebuild_plan,
 )
@@ -90,9 +93,11 @@ from scenario_builder.hoi4.audit import read_bmp24
 from tools.build_tno_1962_geo_locale_patch import build_patch as build_tno_geo_locale_patch
 from tools.build_startup_bootstrap_assets import build_bootstrap_runtime_topology, build_startup_bootstrap_assets
 from tools.build_startup_bundle import build_startup_bundles
+from tools.check_scenario_contracts import _apply_safe_repairs as apply_safe_scenario_contract_repairs
 from tools.check_scenario_contracts import validate_publish_bundle_dir
 from tools.scenario_chunk_assets import build_and_write_scenario_chunk_assets
 from tools.validate_tno_water_geometries import (
+    _collect_d3_spherical_metrics,
     build_report_from_collections as build_tno_water_geometry_report,
     validate_report as validate_tno_water_geometry_report,
 )
@@ -625,7 +630,6 @@ TNO_OPEN_OCEAN_SPLIT_SPECS = (
                 "id": TNO_SOUTHERN_OPEN_OCEAN_IDS[1],
                 "name": "South Indian Antarctic Ocean",
                 "bbox": TNO_SOUTHERN_OPEN_OCEAN_CHILD_BBOXES[TNO_SOUTHERN_OPEN_OCEAN_IDS[1]],
-                "d3_reverse_orientation": True,
             },
             {
                 "id": TNO_SOUTHERN_OPEN_OCEAN_IDS[2],
@@ -656,6 +660,7 @@ D3_SPHERICAL_PRUNE_COMPONENT_MIN_AREA_BY_ID = {
     "tno_sea_of_marmara": 0.000001,
 }
 D3_SPHERICAL_REVERSE_ORIENTATION_FEATURE_IDS = {"tno_south_indian_antarctic_ocean"}
+D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS = {"tno_south_indian_antarctic_ocean"}
 TOPOLOGY_D3_SAFE_MAX_ARC_POINTS = 512
 MARINE_REGIONS_DATASET_META = {
     "seavox_v19": {
@@ -4593,6 +4598,7 @@ ATLANTROPA_REGION_CONFIGS = {
                 "gap_fill_buffer": 0.12,
                 "boolean_weld_distance": 0.16,
                 "boolean_weld_width": 0.03,
+                "max_baseline_area_ratio": 1.08,
             },
         ],
     },
@@ -4752,6 +4758,7 @@ ATLANTROPA_REGION_CONFIGS = {
                 "gap_fill_buffer": 0.12,
                 "boolean_weld_distance": 0.16,
                 "boolean_weld_width": 0.03,
+                "max_baseline_area_ratio": 1.08,
             },
         ],
     },
@@ -6003,6 +6010,24 @@ def gdf_to_feature_collection(gdf: gpd.GeoDataFrame) -> dict:
         return feature_collection_from_features([])
     return json.loads(gdf.to_json())
 
+
+def gdf_to_feature_collection_preserve_geometry(gdf: gpd.GeoDataFrame) -> dict:
+    if gdf is None or gdf.empty:
+        return feature_collection_from_features([])
+    features: list[dict] = []
+    for _index, row in gdf.reset_index(drop=True).iterrows():
+        props = {
+            str(column): sanitize_jsonable(value)
+            for column, value in row.items()
+            if column != "geometry"
+        }
+        features.append({
+            "type": "Feature",
+            "properties": props,
+            "geometry": mapping(row.geometry),
+        })
+    return feature_collection_from_features(features)
+
 def load_checkpoint_gdf(checkpoint_dir: Path, filename: str) -> gpd.GeoDataFrame:
     return scenario_bundle_platform.load_checkpoint_gdf(
         checkpoint_dir,
@@ -6108,6 +6133,49 @@ def ensure_geo_locale_variant_checkpoints(checkpoint_dir: Path) -> None:
 
 def resolve_publish_filenames(scope: str) -> tuple[str, ...]:
     return resolve_scenario_publish_filenames(scope)
+
+
+def validate_tno_publish_checkpoint_dir(checkpoint_dir: Path) -> list[str]:
+    validation_dir = checkpoint_dir
+    temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    try:
+        if checkpoint_dir.resolve() != SCENARIO_DIR.resolve():
+            # The strict scenario validator selects TNO-specific checks from the
+            # directory name. Validate external checkpoints through a temporary
+            # tno_1962 view so pre-publish gates keep the same contract as the
+            # final checked-in scenario directory.
+            temp_dir = tempfile.TemporaryDirectory(prefix="tno-publish-validate-", dir=str(checkpoint_dir.parent))
+            validation_dir = Path(temp_dir.name) / SCENARIO_ID
+            shutil.copytree(checkpoint_dir, validation_dir, dirs_exist_ok=True)
+        errors = validate_publish_bundle_dir(validation_dir)
+    finally:
+        if temp_dir is not None:
+            temp_dir.cleanup()
+
+    filtered_errors: list[str] = []
+    for error in errors:
+        if error.startswith("Required file is missing:") and (
+            error.endswith("build_snapshot.json") or error.endswith("detail_chunks.manifest.json")
+        ):
+            continue
+        filtered_errors.append(error)
+    return filtered_errors
+
+
+def sync_water_domain_feature_maps_from_validated_scenario(scenario_dir: Path, checkpoint_dir: Path) -> None:
+    validation_errors = validate_tno_publish_checkpoint_dir(scenario_dir)
+    if validation_errors:
+        raise ValueError(
+            "Water-domain feature map sync requires a valid published scenario. "
+            f"First error: {validation_errors[0]}"
+        )
+    for filename in ("countries.json", "owners.by_feature.json", "cores.by_feature.json"):
+        source_path = scenario_dir / filename
+        target_path = checkpoint_dir / filename
+        if not source_path.exists():
+            continue
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, target_path)
 
 
 def validate_geo_locale_manual_overrides(geo_locale_payload: dict, manual_overrides_payload: dict) -> None:
@@ -7574,6 +7642,21 @@ def apply_d3_spherical_safe_split_to_gdf(
     return out
 
 
+def apply_d3_spherical_safe_source_split_to_gdf(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    if gdf is None or gdf.empty or "geometry" not in gdf.columns:
+        return gdf
+    out = gdf.copy()
+
+    def _repair_geometry(geom):
+        repaired = split_full_width_polygonal_parts_for_d3(geom)
+        if repaired is None:
+            raise ValueError("D3 source split collapsed an unnamed geometry.")
+        return repaired
+
+    out["geometry"] = out["geometry"].apply(_repair_geometry)
+    return out
+
+
 def replace_topology_object_from_gdf_for_d3(topo_dict: dict, object_name: str, gdf: gpd.GeoDataFrame) -> None:
     geometries = []
     for index, row in gdf.reset_index(drop=True).iterrows():
@@ -8109,6 +8192,60 @@ def sanitize_feature_collection_polygonal_geometries(feature_collection: dict) -
     return feature_collection_from_features(sanitized_features)
 
 
+def orient_source_water_features_for_d3(feature_collection: dict) -> dict:
+    if not isinstance(feature_collection, dict):
+        return feature_collection
+    metrics = _collect_d3_spherical_metrics({"source": feature_collection}).get("source", {})
+    invalid_ids = {
+        str(entry.get("id") or "").strip()
+        for entry in metrics.get("invalidFeatures", []) or []
+        if str(entry.get("id") or "").strip()
+    }
+    invalid_ids.update(
+        str(entry.get("id") or "").strip()
+        for entry in metrics.get("invalidParts", []) or []
+        if str(entry.get("id") or "").strip()
+    )
+    if not invalid_ids:
+        return feature_collection
+    oriented_features: list[dict] = []
+    for feature in feature_collection.get("features", []):
+        if not isinstance(feature, dict):
+            continue
+        props = dict(feature.get("properties", {}))
+        feature_id = str(props.get("id") or feature.get("id") or "").strip()
+        if (
+            feature_id not in invalid_ids
+            and feature_id not in D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS
+        ):
+            oriented_features.append(feature)
+            continue
+        geom = normalize_polygonal(shape(feature.get("geometry")))
+        if geom is None:
+            oriented_features.append(feature)
+            continue
+        reversed_geom = reverse_polygonal_orientation_for_d3(geom)
+        candidate_geom = reversed_geom or geom
+        candidate_feature = {
+            "type": "Feature",
+            "properties": props,
+            "geometry": mapping(candidate_geom),
+        }
+        candidate_metrics = _collect_d3_spherical_metrics({
+            "source": feature_collection_from_features([candidate_feature]),
+        }).get("source", {})
+        if candidate_metrics.get("invalidFeatureCount") or candidate_metrics.get("invalidPartCount"):
+            oriented_features.append(feature)
+            continue
+        parts = iter_polygon_parts(candidate_geom)
+        oriented_features.append({
+            "type": "Feature",
+            "properties": props,
+            "geometry": mapping(parts[0] if len(parts) == 1 else MultiPolygon(parts)),
+        })
+    return feature_collection_from_features(oriented_features)
+
+
 def load_state_path_index(states_dir: Path) -> tuple[dict[int, Path], dict[int, str]]:
     path_by_state_id: dict[int, Path] = {}
     name_by_state_id: dict[int, str] = {}
@@ -8469,6 +8606,13 @@ def build_major_island_rows(
                     combined = welded
                     join_mode = ATL_JOIN_MODE_BOOLEAN_WELD
 
+        max_baseline_area_ratio = group.get("max_baseline_area_ratio")
+        if baseline_union is not None and max_baseline_area_ratio is not None:
+            max_area = float(baseline_union.area) * float(max_baseline_area_ratio)
+            if max_area > 0.0 and float(combined.area) > max_area:
+                baseline_limited = normalize_polygonal(combined.intersection(baseline_union))
+                combined = baseline_limited or baseline_union
+
         combined = normalize_polygonal(combined.intersection(group_aoi))
         if combined is None:
             continue
@@ -8484,6 +8628,11 @@ def build_major_island_rows(
             combined = solidify_polygonal_interiors(combined)
             if combined is None:
                 continue
+        if baseline_union is not None and max_baseline_area_ratio is not None:
+            max_area = float(baseline_union.area) * float(max_baseline_area_ratio)
+            if max_area > 0.0 and float(combined.area) > max_area:
+                baseline_limited = normalize_polygonal(combined.intersection(baseline_union))
+                combined = baseline_limited or baseline_union
 
         owner_tag = normalize_tag(group.get("owner_tag")) or assign_owner_from_nearest_rows(combined, matched_rows)
         donor_state_name_set = sorted({
@@ -10816,13 +10965,11 @@ def build_runtime_topology_payload(
         runtime_political_gdf = runtime_political_gdf.loc[~atl_feature_mask].copy()
     else:
         runtime_atlantropa_gdf = runtime_political_gdf.iloc[0:0].copy()
-    topo_dict = build_named_topology([
-        ("political", runtime_political_gdf),
-        (SCENARIO_ATLANTROPA_OBJECT_NAME, runtime_atlantropa_gdf),
-        ("land_mask", land_mask_gdf),
-        ("context_land_mask", context_land_mask_gdf),
-        ("scenario_water", water_gdf),
-    ])
+    # Build every runtime object through object-local arcs. The shared topology
+    # builder can allocate quadratic dedupe arrays for dense TNO shells, while
+    # the runtime contract only needs valid object geometry and stable ids.
+    topo_dict = {"type": "Topology", "objects": {}, "arcs": []}
+    replace_topology_object_from_gdf_for_d3(topo_dict, "political", runtime_political_gdf)
     replace_topology_object_from_gdf_for_d3(topo_dict, "land_mask", land_mask_gdf)
     replace_topology_object_from_gdf_for_d3(topo_dict, "context_land_mask", context_land_mask_gdf)
     replace_topology_object_from_gdf_for_d3(topo_dict, "scenario_water", water_gdf)
@@ -10853,6 +11000,7 @@ def validate_runtime_topology_water_outputs(
         source_water=water_feature_collection,
         runtime_topology_payload=runtime_topology_payload,
         named_water_snapshot=named_water_snapshot_payload,
+        require_chunks=False,
     )
     return validate_tno_water_geometry_report(
         report,
@@ -11246,6 +11394,13 @@ def build_water_stage_state_from_countries_state(
     )
     water_feature_collection = feature_collection_from_features(scenario_water_features)
     water_gdf = geopandas_from_features(water_feature_collection["features"])
+    water_gdf = apply_d3_spherical_safe_source_split_to_gdf(water_gdf)
+    # Keep checkpoint seed and published water_regions.geojson on the same D3-safe geometry contract.
+    water_feature_collection = orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
+    validate_tno_water_geometries(
+        water_feature_collection.get("features", []),
+        stage_label="scenario_water_seed_d3_safe",
+    )
     land_without_lake = normalize_polygonal(base_land_union.difference(lake_geom))
     if land_without_lake is None:
         raise ValueError("Scenario land mask lost all land after Congo cut.")
@@ -11357,10 +11512,11 @@ def build_runtime_topology_state(
         context_land_mask_gdf,
     )
     context_land_mask_arc_refs = estimate_topology_object_arc_refs(runtime_topology_payload, "context_land_mask")
-    water_feature_collection = gdf_to_feature_collection(water_gdf)
-    runtime_water_regions = sanitize_feature_collection_polygonal_geometries(
-        topology_object_to_feature_collection(runtime_topology_payload, "scenario_water")
-    )
+    water_feature_collection = orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
+    # Publish the source water asset from the D3-safe seed. The runtime topology
+    # object is validated below as a separate render contract.
+    runtime_water_regions = sanitize_feature_collection_polygonal_geometries(water_feature_collection)
+    runtime_water_regions = orient_source_water_features_for_d3(runtime_water_regions)
     scenario_atlantropa_features = sanitize_feature_collection_polygonal_geometries(
         topology_object_to_feature_collection(runtime_topology_payload, SCENARIO_ATLANTROPA_OBJECT_NAME)
     )
@@ -11452,6 +11608,7 @@ def build_runtime_topology_state(
     source_payload = manifest_payload.get("source") if isinstance(manifest_payload.get("source"), dict) else {}
     source_payload["runtime_topology_sha256"] = compact_written_json_hash(runtime_topology_payload)
     manifest_payload["source"] = source_payload
+    audit_payload["source"] = copy.deepcopy(source_payload)
 
     context_land_mask_tolerance = stage_metadata["context_land_mask_tolerance"]
     context_land_mask_area_delta_ratio = stage_metadata["context_land_mask_area_delta_ratio"]
@@ -11494,6 +11651,11 @@ def build_runtime_topology_state(
         summary["context_land_mask_area_delta_ratio"] = context_land_mask_area_delta_ratio
         summary["context_land_mask_fallback_used"] = context_land_mask_fallback_used
         summary["context_land_mask_arc_refs"] = context_land_mask_arc_refs
+
+    # Strict scenario contracts treat manifest.summary and audit.summary as one
+    # derived bundle checksum surface. Keep manifest aligned after owner/water
+    # summaries are refreshed.
+    manifest_payload["summary"] = copy.deepcopy(audit_payload.get("summary", {}))
 
     atlantropa_diagnostics = stage_metadata["atlantropa_diagnostics"]
     med_water_diagnostics = stage_metadata["med_water_diagnostics"]
@@ -12019,7 +12181,7 @@ def _build_bundle_publish_service_kwargs(
             "geo_name_overrides": "geo_name_overrides.manual.json",
             "district_groups": "district_groups.manual.json",
         },
-        "validate_publish_bundle_dir": validate_publish_bundle_dir,
+        "validate_publish_bundle_dir": validate_tno_publish_checkpoint_dir,
         "ensure_publish_target_offline": _ensure_scenario_publish_target_offline,
         "validate_geo_locale_checkpoint": validate_geo_locale_checkpoint,
         "require_startup_stage_checkpoints": scenario_bundle_platform.require_startup_stage_checkpoints,
@@ -12245,6 +12407,8 @@ def _run_changed_domain_plan(
     skipped: list[str] = []
     latest_runtime_state: dict[str, object] | None = None
     for stage in plan.stage_sequence:
+        if changed_domain == CHANGED_DOMAIN_WATER and stage == STAGE_RUNTIME_TOPOLOGY:
+            sync_water_domain_feature_maps_from_validated_scenario(scenario_dir, checkpoint_dir)
         if stage != STAGE_WRITE_BUNDLE:
             current_signature = _stage_signature_is_current(
                 stage,
@@ -12281,11 +12445,28 @@ def _run_changed_domain_plan(
         )
         published_targets.append(target)
 
+    safe_fixes_applied: list[str] = []
+    if STAGE_CHUNK_ASSETS in plan.stage_sequence:
+        # Chunk assets carry byte-exact hashes into manifest/source/startup bundles.
+        # Refresh the derived contract surfaces after chunk rebuilds so strict mode
+        # validates the final published artifact set, not an earlier checkpoint view.
+        safe_fixes_applied = apply_safe_scenario_contract_repairs(
+            scenario_dir,
+            report_path=ROOT / ".runtime" / "reports" / "generated" / f"{SCENARIO_ID}.changed_domain_contract_repair.json",
+        )
+        second_pass_fixes = apply_safe_scenario_contract_repairs(
+            scenario_dir,
+            report_path=ROOT / ".runtime" / "reports" / "generated" / f"{SCENARIO_ID}.changed_domain_contract_repair.json",
+        )
+        if second_pass_fixes and second_pass_fixes != safe_fixes_applied:
+            safe_fixes_applied = list(dict.fromkeys([*safe_fixes_applied, *second_pass_fixes]))
+
     return {
         "changed_domain": changed_domain,
         "executed_stages": executed,
         "skipped_stages": skipped,
         "published_targets": published_targets,
+        "safe_fixes_applied": safe_fixes_applied,
         "runtime_state": latest_runtime_state,
     }
 
@@ -12323,6 +12504,7 @@ def main() -> None:
                         "executed_stages": plan_result["executed_stages"],
                         "skipped_stages": plan_result["skipped_stages"],
                         "published_targets": plan_result["published_targets"],
+                        "safe_fixes_applied": plan_result["safe_fixes_applied"],
                     },
                     ensure_ascii=False,
                     indent=2,

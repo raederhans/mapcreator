@@ -1604,3 +1604,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 25. 审计文件记录 repo 内文本源时，要用 repo-normalized 字节签名
 - 如果受审计源本身是 repo 内 JSON，sha 必须按仓库最终文本字节计算，避免工作区 CRLF/LF 转换让 audit 记录和实际提交内容漂移。
 - 测试不能只比较 audit 与 recipe 彼此一致，还要直接读取源文件并校验实际 sha。
+
+## 2026-05-13 - transport appearance overview metrics
+
+- 给 UI locale 增加少量 key 时，优先从 HEAD 读取并定点 patch 目标键；整文件重写容易把 unrelated geo translation churn 混入本轮 diff。
+- 异步数据加载后刷新 UI summary 时，避免空 catch；失败路径要留下 console/diagnostic 信号，同时刷新一次状态，方便区分加载失败和 renderer settling。

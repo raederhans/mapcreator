@@ -5810,7 +5810,7 @@
     },
     "Visible": {
       "en": "Visible",
-      "zh": "可见的"
+      "zh": "可见"
     },
     "Visual": {
       "en": "Visual Color",
@@ -6403,6 +6403,22 @@
     "Special zones loaded": {
       "en": "Special zones loaded",
       "zh": "特殊区域已加载"
+    },
+    "Hidden": {
+      "en": "Hidden",
+      "zh": "已隐藏"
+    },
+    "Loading/settling": {
+      "en": "Loading/settling",
+      "zh": "加载 / 稳定中"
+    },
+    "Loaded · 0 visible": {
+      "en": "Loaded · 0 visible",
+      "zh": "已加载 · 0 个可见"
+    },
+    "loaded": {
+      "en": "loaded",
+      "zh": "已加载"
     }
   },
   "geo": {
