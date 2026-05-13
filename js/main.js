@@ -22,6 +22,7 @@ import {
 import {
   buildInteractionInfrastructureAfterStartup,
   initMap,
+  invalidateAllRenderPasses,
   invalidateContextLayerVisualStateBatch,
   setMapData,
   render,
@@ -1053,6 +1054,7 @@ async function bootstrap() {
     }
 
     setBootState("warmup");
+    invalidateAllRenderPasses("bootstrap-first-frame");
     renderDispatcher.flush();
     checkpointBootMetricOnce("first-visible");
     checkpointBootMetricOnce("first-visible-scenario");
@@ -1097,6 +1099,7 @@ async function bootstrap() {
             : "Continuing with the base map only.",
           canContinueWithoutScenario: false,
         });
+        invalidateAllRenderPasses("bootstrap-first-frame");
         renderDispatcher.flush();
         checkpointBootMetricOnce("first-visible");
         checkpointBootMetricOnce("first-visible-base");

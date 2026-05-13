@@ -48,6 +48,7 @@ export {
   updateSelectedUnitCounter,
 
   // Render invalidation and scenario/color refresh.
+  invalidateAllRenderPasses,
   invalidateContextLayerVisualStateBatch,
   invalidateOceanBackgroundVisualState,
   invalidateOceanCoastalAccentVisualState,

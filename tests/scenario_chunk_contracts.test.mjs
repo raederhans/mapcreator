@@ -728,6 +728,18 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function shouldRefreshContextBaseContoursForColorChanges\(\) \{[\s\S]*?runtimeState\.showPhysical[\s\S]*?physicalContourMajorData/.test(rendererSource)
       && /if \(passName === "contextBase"\) \{[\s\S]*?`context-colors:\$\{shouldRefreshContextBaseForColorChanges\(\) \? Number\(runtimeState\.colorRevision \|\| 0\) : 0\}`/.test(rendererSource)
       && /if \(passName === "labels"\) \{[\s\S]*?`colors:\$\{Number\(runtimeState\.colorRevision \|\| 0\)\}`/.test(rendererSource),
+    politicalFullReferenceOnlyWrittenByFullPass:
+      /function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?setPassReferenceTransform\(passName, transform\);[\s\S]*?if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(rendererSource)
+      && !/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(rendererSource),
+    politicalPartialRequiresFullReferenceBaseline:
+      /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?hasPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("missing-full-reference-transform"\)[\s\S]*?getPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("full-reference-transform-mismatch"\)/.test(rendererSource),
+    politicalPartialNeverMutatesFullReferenceBaseline:
+      (() => {
+        const partialBody = rendererSource.match(/function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction recordPoliticalRasterWorkerSnapshot/)?.[0] || "";
+        return !!partialBody && !partialBody.includes("setPassFullReferenceTransform");
+      })(),
+    canvasResizeClearsFullReferenceBaseline:
+      /function setCanvasSize\([\s\S]*?if \(sizeChanged\) \{[\s\S]*?invalidateAllRenderPasses\(reason \|\| "resize"\);[\s\S]*?clearRenderPassReferenceTransforms\(RENDER_PASS_NAMES\);[\s\S]*?\} else \{/.test(rendererSource),
     firstBatchInteractionWritesUseRafRenderBoundary:
       /function requestInteractionRender\(reason = "interaction"\) \{[\s\S]*?requestRendererRender\(reason,[\s\S]*?flush: false/.test(rendererSource)
       && !scenarioOwnershipEditorSource.includes("flushRenderBoundary")

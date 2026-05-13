@@ -55,8 +55,17 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn("runtimeState: state,", donor_content)
         self.assertIn("const startupScenarioBoot = getStartupScenarioBootOwner();", donor_content)
         self.assertIn("startupScenarioBoot.runStartupScenarioBoot({", donor_content)
+        self.assertIn('invalidateAllRenderPasses("bootstrap-first-frame");', donor_content)
         self.assertIn("renderDispatcher.flush();", donor_content)
         self.assertIn("await finalizeReadyState(renderDispatcher);", donor_content)
+        self.assertRegex(
+            donor_content,
+            r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-frame\"\);\s*renderDispatcher\.flush\(\);",
+        )
+        self.assertRegex(
+            donor_content,
+            r"setBootState\(\"warmup\", \{[\s\S]*?canContinueWithoutScenario: false,[\s\S]*?\}\);\s*invalidateAllRenderPasses\(\"bootstrap-first-frame\"\);\s*renderDispatcher\.flush\(\);",
+        )
         self.assertIsNone(re.search(r"await applyScenarioBundleCommand\s*\(", donor_content))
         self.assertIsNone(re.search(r"defaultScenarioBundle\s*=\s*await loadScenarioBundle\s*\(", donor_content))
 

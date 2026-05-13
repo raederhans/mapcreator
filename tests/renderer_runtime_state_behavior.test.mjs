@@ -40,12 +40,14 @@ test("renderer runtime factories return fresh nested caches", () => {
 
   first.renderPassCache.counters.frames = 9;
   first.renderPassCache.partialPoliticalDirtyIds.add("feature-1");
+  first.renderPassCache.fullReferenceTransforms.political = { x: 1, y: 2, k: 3 };
   first.sidebarPerf.counters.legendRenders = 2;
   first.projectedBoundsById.set("feature-1", { minX: 1 });
   first.sphericalFeatureDiagnosticsById.set("feature-1", { total: 1 });
 
   assert.equal(second.renderPassCache.counters.frames, 0);
   assert.equal(second.renderPassCache.partialPoliticalDirtyIds.size, 0);
+  assert.deepEqual(second.renderPassCache.fullReferenceTransforms, {});
   assert.equal(second.sidebarPerf.counters.legendRenders, 0);
   assert.equal(second.projectedBoundsById.size, 0);
   assert.equal(second.sphericalFeatureDiagnosticsById.size, 0);
@@ -59,6 +61,7 @@ test("renderer supporting factories keep cache shapes aligned", () => {
   const spatialIndex = createDefaultSpatialIndexState();
 
   assert.equal(renderPass.lastGoodFrame.valid, false);
+  assert.deepEqual(renderPass.fullReferenceTransforms, {});
   assert.equal(renderPass.compositeBuffer.canvas, null);
   assert.equal(renderPass.interactionComposite.scenarioId, "");
   assert.equal(renderPass.interactionComposite.topologyRevision, 0);
@@ -132,6 +135,7 @@ test("renderer runtime accessors normalize cache and infra holders in place", ()
 
   assert.equal(renderPassCache.counters.frames, 3);
   assert.equal(renderPassCache.compositeBuffer.canvas, null);
+  assert.deepEqual(renderPassCache.fullReferenceTransforms, {});
   assert.equal(renderPassCache.dirty.background, true);
   assert.equal(renderPassCache.reasons.political, "init");
   assert.equal(sidebarPerf.counters.legendRenders, 0);

@@ -1635,3 +1635,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - Country overlay persistence must store the actually applied pack identity; workbench tab selection can drift from the active main-map overlay.
 - Family-level Apply bridges are too coarse once multiple country packs share one family; main-map Apply should resolve by activePackId and source gate report.
+
+### 48. partial repaint 的基线必须跟画布生命周期一起失效
+- 如果 partial repaint 依赖 full pass 基线，画布 resize / DPR / pass cache reset 时必须同步清掉 full baseline；只标 dirty 会留下“空 canvas + 旧 transform”的风险窗口。
+- 最短稳做法是把普通 reference 和 full reference 统一挂到同一条 clearRenderPassReferenceTransforms 清理链，再用合同测试钉住 resize 路径。

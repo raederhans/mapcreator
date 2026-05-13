@@ -2100,6 +2100,7 @@ function clearRenderPassReferenceTransforms(passNames = null) {
     cache.referenceTransform = null;
     cache.referenceTransforms = {};
     cache.contextScenarioLayerCache = {};
+    clearPassFullReferenceTransforms();
     invalidateInteractionComposite("clear-reference-transform");
     invalidateInteractionBorderSnapshot("clear-reference-transform");
     invalidatePoliticalPathCache("clear-reference-transform");
@@ -2116,6 +2117,7 @@ function clearRenderPassReferenceTransforms(passNames = null) {
     if (!passName) return;
     delete cache.referenceTransforms[passName];
   });
+  clearPassFullReferenceTransforms(targetPassNames);
   cache.referenceTransform = null;
   if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
     invalidateInteractionComposite("clear-reference-transform");
@@ -4891,6 +4893,22 @@ function setPassReferenceTransform(passName, transform) {
   return getRenderCacheOwner().setPassReferenceTransform(passName, transform);
 }
 
+function getPassFullReferenceTransform(passName) {
+  return getRenderCacheOwner().getPassFullReferenceTransform(passName);
+}
+
+function setPassFullReferenceTransform(passName, transform) {
+  return getRenderCacheOwner().setPassFullReferenceTransform(passName, transform);
+}
+
+function hasPassFullReferenceTransform(passName) {
+  return getRenderCacheOwner().hasPassFullReferenceTransform(passName);
+}
+
+function clearPassFullReferenceTransforms(passNames = null) {
+  return getRenderCacheOwner().clearPassFullReferenceTransforms(passNames);
+}
+
 function getTransformReuseDelta(currentTransform, referenceTransform) {
   const current = cloneZoomTransform(currentTransform);
   const reference = cloneZoomTransform(referenceTransform);
@@ -6927,6 +6945,7 @@ function setCanvasSize({
   runtimeState.hitCanvasDirty = true;
   if (sizeChanged) {
     invalidateAllRenderPasses(reason || "resize");
+    clearRenderPassReferenceTransforms(RENDER_PASS_NAMES);
   } else {
     const passes = Array.isArray(targetPassesOnDprChange) && targetPassesOnDprChange.length
       ? targetPassesOnDprChange
@@ -16968,6 +16987,13 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
   if (!referenceTransform || !areZoomTransformsEquivalent(referenceTransform, transform)) {
     return fallback("reference-transform-mismatch");
   }
+  if (!hasPassFullReferenceTransform("political")) {
+    return fallback("missing-full-reference-transform");
+  }
+  const fullReferenceTransform = getPassFullReferenceTransform("political");
+  if (!fullReferenceTransform || !areZoomTransformsEquivalent(fullReferenceTransform, transform)) {
+    return fallback("full-reference-transform-mismatch");
+  }
   if (getCachedPoliticalPassStaticSignature(cache.signatures?.political) !== getCachedPoliticalPassStaticSignature(nextSignature)) {
     return fallback("static-signature-mismatch");
   }
@@ -18166,6 +18192,9 @@ function renderPassToCache(passName, drawFn, transform, timings) {
     drawFn(k);
   });
   setPassReferenceTransform(passName, transform);
+  if (passName === "political") {
+    setPassFullReferenceTransform(passName, transform);
+  }
   cache.signatures[passName] = getRenderPassSignature(passName, transform);
   cache.dirty[passName] = false;
   if (passName === "political") {
@@ -23273,6 +23302,7 @@ function initMap({
   const renderPassCache = getRenderPassCacheState();
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
+  renderPassCache.fullReferenceTransforms = {};
   renderPassCache.contextScenarioLayerCache = {};
   clearLastGoodFrame("init-map");
   invalidateInteractionComposite("init-map");
@@ -23391,6 +23421,7 @@ function setMapData({
   const renderPassCache = getRenderPassCacheState();
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
+  renderPassCache.fullReferenceTransforms = {};
   renderPassCache.contextScenarioLayerCache = {};
   clearLastGoodFrame("set-map-data");
   invalidateInteractionComposite("set-map-data");
@@ -24021,6 +24052,7 @@ export {
   invalidateBorderCache,
   invalidateContextLayerVisualState,
   invalidateContextLayerVisualStateBatch,
+  invalidateAllRenderPasses,
   invalidateOceanBackgroundVisualState,
   invalidateOceanTextureVisualState,
   invalidateOceanWaterInteractionVisualState,
