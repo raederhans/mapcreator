@@ -1630,3 +1630,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - Set operation 的空结果必须能真实写回模型；`replace` 模式要允许空数组清空成员，否则 subtract/intersect all 会留下旧 members。
 - 退休 UI 写路径时要同步 i18n 键；HTML 文案改了但 runtime translation 仍会覆盖成旧文案。
+
+## 2026-05-13 - transport Phase B main-map bridge
+
+- Country overlay persistence must store the actually applied pack identity; workbench tab selection can drift from the active main-map overlay.
+- Family-level Apply bridges are too coarse once multiple country packs share one family; main-map Apply should resolve by activePackId and source gate report.

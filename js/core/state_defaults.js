@@ -7,6 +7,10 @@ import {
   normalizeTransportOverviewVisualMode,
   resolveLinkedTransportOverviewScopeAndThreshold as resolveLinkedTransportOverviewScopeAndThresholdFromRegistry,
 } from "./transport_capability_registry.js";
+import {
+  getDefaultMainMapPackIdForFamily,
+  getTargetMainMapPackMeta,
+} from "./transport_pack_resolver.js";
 
 import {
   PALETTE_THEMES,
@@ -592,6 +596,7 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
 function createDefaultTransportOverviewStyleConfig() {
   return {
     visualMode: "distribution",
+    activePackIdByFamily: {},
     ...Object.fromEntries(
       TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
         familyId,
@@ -601,10 +606,24 @@ function createDefaultTransportOverviewStyleConfig() {
   };
 }
 
+function normalizeTransportOverviewActivePackIdByFamily(rawValue) {
+  const source = rawValue && typeof rawValue === "object" ? rawValue : {};
+  return Object.fromEntries(
+    Object.entries(source)
+      .map(([familyId, packId]) => {
+        const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+        const meta = getTargetMainMapPackMeta(packId);
+        return meta && meta.family === normalizedFamilyId ? [normalizedFamilyId, meta.packId] : null;
+      })
+      .filter(Boolean)
+  );
+}
+
 function normalizeTransportOverviewStyleConfig(rawConfig) {
   const source = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
   return {
     visualMode: normalizeTransportOverviewVisualMode(source.visualMode, "distribution"),
+    activePackIdByFamily: normalizeTransportOverviewActivePackIdByFamily(source.activePackIdByFamily),
     ...Object.fromEntries(
       TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
         familyId,
@@ -1072,6 +1091,26 @@ function normalizeTransportWorkbenchDisplayConfigs(rawConfigs) {
     ])
   );
 }
+function normalizeTransportWorkbenchActivePackId(value, familyId = "road") {
+  const normalizedFamilyId = String(familyId || "road").trim().toLowerCase() || "road";
+  const candidate = String(value || "").trim().toLowerCase();
+  const meta = getTargetMainMapPackMeta(candidate);
+  if (meta && meta.family === normalizedFamilyId) return meta.packId;
+  return getDefaultMainMapPackIdForFamily(normalizedFamilyId) || "";
+}
+
+function normalizeTransportWorkbenchActivePackIdByFamily(rawValue, activeFamily = "road", activePackId = "") {
+  const source = rawValue && typeof rawValue === "object" ? rawValue : {};
+  const entries = Object.fromEntries(
+    TRANSPORT_WORKBENCH_FAMILY_IDS
+      .filter((familyId) => familyId !== "layers")
+      .map((familyId) => [familyId, normalizeTransportWorkbenchActivePackId(source[familyId], familyId)])
+  );
+  if (activeFamily && activeFamily !== "layers") {
+    entries[activeFamily] = normalizeTransportWorkbenchActivePackId(activePackId || source[activeFamily], activeFamily);
+  }
+  return entries;
+}
 function normalizeTransportWorkbenchUiState(rawUi) {
   const raw = rawUi && typeof rawUi === "object" ? rawUi : {};
   const rawPreviewCamera = raw.previewCamera && typeof raw.previewCamera === "object" ? raw.previewCamera : {};
@@ -1081,11 +1120,16 @@ function normalizeTransportWorkbenchUiState(rawUi) {
   const defaultPreviewAssetId = `${previewCarrierId}_carrier_v3`;
   const sampleCountry = String(raw.sampleCountry || (previewCarrierId === "japan" ? "Japan" : "")).trim()
     || (previewCarrierId === "japan" ? "Japan" : previewCarrierId);
+  const activeFamily = raw.activeFamily === "layers" || TRANSPORT_WORKBENCH_FAMILY_IDS.includes(raw.activeFamily)
+    ? raw.activeFamily
+    : "road";
+  const activePackIdByFamily = normalizeTransportWorkbenchActivePackIdByFamily(raw.activePackIdByFamily, activeFamily, raw.activePackId);
+  const activePackId = activeFamily === "layers" ? "" : activePackIdByFamily[activeFamily];
   return {
     open: !!raw.open,
-    activeFamily: raw.activeFamily === "layers" || TRANSPORT_WORKBENCH_FAMILY_IDS.includes(raw.activeFamily)
-      ? raw.activeFamily
-      : "road",
+    activeFamily,
+    activePackId,
+    activePackIdByFamily,
     activeInspectorTab: ["inspect", "display", "aggregation", "labels", "coverage", "data"].includes(String(raw.activeInspectorTab || "").trim().toLowerCase())
       ? String(raw.activeInspectorTab || "").trim().toLowerCase()
       : "inspect",

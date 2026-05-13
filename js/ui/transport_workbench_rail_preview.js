@@ -215,7 +215,10 @@ function createStationFeature(rawFeature) {
   };
 }
 
-async function loadJapanRailPack(mode = PACK_MODE_PREVIEW) {
+async function loadJapanRailPack(mode = PACK_MODE_PREVIEW, config = {}) {
+  if (config?.activePackId) {
+    lineRuntime.setActivePack(config.activePackId, resolveTransportManifestUrl(config.activePackId));
+  }
   return lineRuntime.loadPack(mode, () => {
     if ((runtime.loadState.status === "ready" || runtime.loadState.status === "pending") && runtime.lastRenderedConfig) {
       emitSelectionChange();
@@ -698,7 +701,7 @@ export function setJapanRailPreviewSelectionListener(listener) {
 }
 
 export async function renderJapanRailPreview(config, options = {}) {
-  await loadJapanRailPack(PACK_MODE_PREVIEW);
+  await loadJapanRailPack(PACK_MODE_PREVIEW, config);
   if (typeof options.isCurrent === "function" && !options.isCurrent()) {
     return null;
   }
@@ -712,6 +715,9 @@ export async function renderJapanRailPreview(config, options = {}) {
 }
 
 export async function warmJapanRailPreviewPack({ includeFull = false } = {}) {
+  if (runtime.lastRenderedConfig?.activePackId) {
+    lineRuntime.setActivePack(runtime.lastRenderedConfig.activePackId, resolveTransportManifestUrl(runtime.lastRenderedConfig.activePackId));
+  }
   await lineRuntime.warm({
     includeFull,
     onAuditReady() {

@@ -84,5 +84,25 @@
         }
       }
     }
-  }
+  },
+  "coverage_scope": "country",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "main_map_consumer": {
+    "consumer_id": "main_map_road_country_overlay_v1",
+    "family": "road",
+    "supported_keys": [
+      "roads",
+      "road_labels"
+    ],
+    "mode": "country_overlay"
+  },
+  "sidecars": {
+    "road_labels": {
+      "required": true,
+      "consumer": "main_map"
+    }
+  },
+  "country_label": "Japan",
+  "pack_id": "japan_road"
 }

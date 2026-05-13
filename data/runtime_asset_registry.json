@@ -214,6 +214,8 @@
   "transport_manifest_keys": {
     "road": "transport_manifest:road",
     "rail": "transport_manifest:rail",
+    "japan_road": "transport_manifest:road",
+    "japan_rail": "transport_manifest:rail",
     "airport": "transport_manifest:airport",
     "port": "transport_manifest:port",
     "mineral_resources": "transport_manifest:mineral_resources",

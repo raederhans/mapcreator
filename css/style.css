@@ -4403,6 +4403,22 @@ body.counter-editor-modal-open {
   font-variant-numeric: tabular-nums;
 }
 
+.transport-workbench-pack-picker {
+  padding-right: 6px;
+}
+
+.transport-workbench-pack-select {
+  min-width: 132px;
+  max-width: 180px;
+  border: 0;
+  background: transparent;
+  color: #182235;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  outline: none;
+}
+
 .transport-workbench-parameter-stack,
 .transport-workbench-inspector-stack {
   display: flex;

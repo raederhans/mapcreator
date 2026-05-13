@@ -15,6 +15,7 @@ import {
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
+import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import { clearDirty } from "./dirty_state.js";
 import {
   normalizeSpecialZoneMembershipBrushModeState,
@@ -45,6 +46,15 @@ const DEFAULT_REFERENCE_IMAGE_STATE = Object.freeze({
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeTransportCountryOverlayProjectState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const meta = getTargetMainMapPackMeta(source.activePackId);
+  if (!meta || (source.family && meta.family !== String(source.family || "").trim().toLowerCase())) {
+    return { activePackId: "", family: "" };
+  }
+  return { activePackId: meta.packId, family: meta.family };
 }
 
 function normalizeProjectHexColor(value) {
@@ -519,6 +529,7 @@ class FileManager {
         dayNight: normalizeDayNightStyleConfig(appState.styleConfig?.dayNight),
       },
       transportWorkbenchUi: normalizeTransportWorkbenchUiState(appState.transportWorkbenchUi),
+      transportCountryOverlayState: normalizeTransportCountryOverlayProjectState(appState.transportCountryOverlayState),
       exportWorkbenchUi: normalizeExportWorkbenchUiState(appState.exportWorkbenchUi),
       scenario: appState.activeScenarioId
         ? {
@@ -653,6 +664,7 @@ class FileManager {
         data.styleConfig.texture = normalizeTextureStyleConfig(data.styleConfig.texture);
         data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
         data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
+        data.transportCountryOverlayState = normalizeTransportCountryOverlayProjectState(data.transportCountryOverlayState);
         data.exportWorkbenchUi = normalizeExportWorkbenchUiState(data.exportWorkbenchUi);
         data.manualSpecialZones = { type: "FeatureCollection", features: [] };
         data.annotationView = normalizeAnnotationView(data.annotationView);

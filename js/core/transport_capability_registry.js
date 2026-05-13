@@ -1,3 +1,7 @@
+import {
+  MAIN_MAP_CONSUMER_KEYS_BY_FAMILY,
+  getTargetMainMapPackMeta,
+} from "./transport_pack_resolver.js";
 export const TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY = Object.freeze({
   mainMapBridge: "main_map_bridge",
   previewOnly: "preview_only",
@@ -18,40 +22,6 @@ const TRANSPORT_OVERVIEW_DATA_LAYER_KEYS_BY_FAMILY = Object.freeze({
   port: Object.freeze(["ports"]),
   rail: Object.freeze(["railways", "rail_stations_major"]),
   road: Object.freeze(["roads"]),
-});
-
-const TRANSPORT_WORKBENCH_OVERVIEW_BRIDGE_SUPPORTED_VALUES = Object.freeze({
-  airport: Object.freeze({
-    airportTypes: Object.freeze([
-      "company_managed",
-      "national",
-      "specific_local",
-      "local",
-      "other",
-      "shared",
-    ]),
-    statuses: Object.freeze([
-      "active",
-      "paused",
-      "unknown",
-    ]),
-  }),
-  port: Object.freeze({
-    legalDesignations: Object.freeze([
-      "international_strategy",
-      "international_hub",
-      "important",
-      "local",
-      "shelter",
-    ]),
-    managerTypes: Object.freeze([
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-    ]),
-  }),
 });
 
 const BASE_TRANSPORT_OVERVIEW_DEFAULTS = Object.freeze({
@@ -272,15 +242,6 @@ function clampUnitInterval(value, fallback = 0.5) {
   return clampNumber(value, 0, 1, fallback);
 }
 
-function hasExactTransportWorkbenchBridgeValueSet(value, expectedValues) {
-  const normalized = Array.isArray(value)
-    ? value.map((entry) => String(entry || "").trim()).filter(Boolean)
-    : [];
-  const deduped = Array.from(new Set(normalized));
-  if (deduped.length !== expectedValues.length) return false;
-  return expectedValues.every((entry) => deduped.includes(entry));
-}
-
 export function normalizeTransportOverviewVisualMode(value, fallback = "distribution") {
   const normalized = String(value || "").trim().toLowerCase();
   if (TRANSPORT_OVERVIEW_VISUAL_MODES.includes(normalized)) {
@@ -467,6 +428,32 @@ export function getTransportCapabilityApplyCompatibility(familyId) {
   return getTransportCapabilityFamilyMetadata(familyId)?.applyCompatibility || "";
 }
 
+function getTransportWorkbenchActivePackBridgeSupport(normalizedFamilyId, familyConfig = {}, compatibility = "") {
+  const activePackId = String(familyConfig?.activePackId || "").trim().toLowerCase();
+  if (!activePackId) return null;
+  const meta = getTargetMainMapPackMeta(activePackId);
+  if (!meta) {
+    return { supported: false, compatibility, reason: "unknown_pack" };
+  }
+  if (meta.family !== normalizedFamilyId) {
+    return { supported: false, compatibility, reason: "family_mismatch" };
+  }
+  const gateReport = familyConfig?.packGateReport || familyConfig?.gateReport || null;
+  if (!gateReport) {
+    return { supported: false, compatibility, reason: "source_pending" };
+  }
+  if (gateReport.passed !== true) {
+    return { supported: false, compatibility, reason: "source_failed", gateReport };
+  }
+  return {
+    supported: true,
+    compatibility,
+    reason: "",
+    activePackId,
+    gateReport,
+    dataLayerKeys: [...(MAIN_MAP_CONSUMER_KEYS_BY_FAMILY[normalizedFamilyId] || [])],
+  };
+}
 export function getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfig = {}) {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   const compatibility = getTransportCapabilityApplyCompatibility(normalizedFamilyId);
@@ -476,39 +463,14 @@ export function getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfi
       compatibility,
     };
   }
-  if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {
-    // 这两条线当前 still use Japan-only preview manifests, while the main-map
-    // overview path consumes global context layers and a coarser patch schema.
-    // 先把 Apply gate 继续关着，等 overview renderer 真正吃同一份 pack contract
-    // 再开放 bridge，避免 workbench 看到的结果和主地图落盘结果不一致。
-    return {
-      supported: false,
-      compatibility,
-    };
+  const activePackBridgeSupport = getTransportWorkbenchActivePackBridgeSupport(normalizedFamilyId, familyConfig, compatibility);
+  if (activePackBridgeSupport) {
+    return activePackBridgeSupport;
   }
-  if (normalizedFamilyId === "airport") {
-    const supportedValues = TRANSPORT_WORKBENCH_OVERVIEW_BRIDGE_SUPPORTED_VALUES.airport;
-    return {
-      supported:
-        hasExactTransportWorkbenchBridgeValueSet(familyConfig.airportTypes, supportedValues.airportTypes)
-        && hasExactTransportWorkbenchBridgeValueSet(familyConfig.statuses, supportedValues.statuses),
-      compatibility,
-    };
-  }
-  if (normalizedFamilyId === "port") {
-    const supportedValues = TRANSPORT_WORKBENCH_OVERVIEW_BRIDGE_SUPPORTED_VALUES.port;
-    return {
-      supported:
-        hasExactTransportWorkbenchBridgeValueSet(familyConfig.legalDesignations, supportedValues.legalDesignations)
-        && hasExactTransportWorkbenchBridgeValueSet(familyConfig.managerTypes, supportedValues.managerTypes),
-      compatibility,
-    };
-  }
-  // Keep future main-map bridge families closed until they declare an exact
-  // workbench-to-overview mapping rule here.
   return {
     supported: false,
     compatibility,
+    reason: "active_pack_required",
   };
 }
 
@@ -647,7 +609,8 @@ export function resolveTransportOverviewPatchFromWorkbench(
   // Preview-only display/aggregation controls stay local to the workbench carrier.
   return {
     visibilityField: metadata.overviewVisibilityField,
-    dataLayerKeys: [...metadata.overviewDataLayerKeys],
+    dataLayerKeys: bridgeSupport.dataLayerKeys ? [...bridgeSupport.dataLayerKeys] : [...metadata.overviewDataLayerKeys],
+    activePackId: bridgeSupport.activePackId || "",
     visualMode: normalizeTransportOverviewVisualMode(currentVisualMode),
     familyConfig: {
       opacity: resolveWorkbenchOverviewOpacity(familyId, familyConfig, defaults.opacity ?? 0.72),

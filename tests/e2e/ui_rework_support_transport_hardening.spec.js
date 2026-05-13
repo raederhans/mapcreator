@@ -109,7 +109,7 @@ test("phase 03 support and transport surfaces stay unified", async ({ page }) =>
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
   await expect(page.locator("#transportWorkbenchLensTitle")).toBeVisible();
   await expect(page.locator(".transport-workbench-meta-strip")).toBeVisible();
-  await expect(page.locator(".transport-workbench-meta-pill")).toHaveCount(3);
+  await expect(page.locator(".transport-workbench-meta-pill")).toHaveCount(4);
   await expect(page.locator("#transportWorkbenchInspectorDetails")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator("#transportWorkbenchLayerOrderPanel")).toHaveAttribute("aria-live", "polite");
 
@@ -638,12 +638,12 @@ test("transport visual mode and apply bridge stay aligned across appearance and 
   await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
 
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map", { timeout: 30_000 });
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeEnabled();
 
   await page.locator('[data-transport-family="airport"]').click();
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map", { timeout: 30_000 });
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeEnabled();
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
     state.transportWorkbenchUi.familyConfigs.airport.airportTypes = [
@@ -673,9 +673,9 @@ test("transport visual mode and apply bridge stay aligned across appearance and 
   await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
   await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
 
-  await page.locator('[data-transport-family="port"]').click();
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map");
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeEnabled();
+  await page.locator('button[data-transport-family="port"]').click();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
 
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");

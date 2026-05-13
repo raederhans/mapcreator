@@ -83,5 +83,19 @@
         }
       }
     }
-  }
+  },
+  "coverage_scope": "country",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "main_map_consumer": {
+    "consumer_id": "main_map_airport_country_overlay_v1",
+    "family": "airport",
+    "supported_keys": [
+      "airports"
+    ],
+    "mode": "country_overlay"
+  },
+  "sidecars": {},
+  "country_label": "India",
+  "pack_id": "india_airport"
 }

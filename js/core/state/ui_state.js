@@ -24,6 +24,7 @@ import {
   normalizeUrbanStyleConfig,
 } from "../state_defaults.js";
 import { listTransportRuntimeCapabilityFamilyIds } from "../transport_capability_registry.js";
+import { getDefaultMainMapPackIdForFamily } from "../transport_pack_resolver.js";
 import { createEmptySpecialZoneLayersState } from "../special_zone_layers.js";
 
 const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportRuntimeCapabilityFamilyIds();
@@ -36,9 +37,16 @@ export function createDefaultManualSpecialZonesState() {
 }
 
 export function createDefaultTransportWorkbenchUiState() {
+  const activePackIdByFamily = Object.fromEntries(
+    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS
+      .filter((familyId) => familyId !== "layers")
+      .map((familyId) => [familyId, getDefaultMainMapPackIdForFamily(familyId)])
+  );
   return {
     open: false,
     activeFamily: "road",
+    activePackId: activePackIdByFamily.road || getDefaultMainMapPackIdForFamily("road"),
+    activePackIdByFamily,
     activeInspectorTab: "inspect",
     sampleCountry: "Japan",
     previewCarrierId: "japan",
@@ -88,6 +96,12 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
       ...(currentOverviewConfig[familyId] || {}),
       ...(patch.familyConfig || {}),
     };
+    if (patch.activePackId) {
+      nextOverviewConfig.activePackIdByFamily = {
+        ...(currentOverviewConfig.activePackIdByFamily || {}),
+        [familyId]: String(patch.activePackId || "").trim().toLowerCase(),
+      };
+    }
   }
   // Workbench apply may only publish the normalized overview fields that the
   // main map renderer already understands; workbench-only preview controls stay local.

@@ -85,8 +85,21 @@ test("project export preserves strategic overlay counters and legacy kind values
     },
     styleConfig: {
       specialZones: { disputedFill: "#ffffff" },
+      transportOverview: {
+        activePackIdByFamily: { road: "germany_road" },
+      },
     },
-    transportWorkbenchUi: {},
+    transportWorkbenchUi: {
+      activeFamily: "road",
+      activePackId: "germany_road",
+      activePackIdByFamily: { road: "germany_road", rail: "france_rail" },
+    },
+    transportCountryOverlayState: {
+      activePackId: "france_rail",
+      family: "rail",
+      status: "ready",
+      collectionsByLayer: { railways: { type: "FeatureCollection", features: [] } },
+    },
     unitCounters: [{
       id: "unit_1",
       renderer: "milstd",
@@ -149,6 +162,10 @@ test("project export preserves strategic overlay counters and legacy kind values
   assert.deepEqual(payload.specialZoneLayers.layers[0].memberFeatureIds, ["a", "z"]);
   assert.equal(payload.specialZoneLayers.layers[0].legendVisible, false);
   assert.equal(Object.hasOwn(payload.styleConfig, "specialZones"), false);
+  assert.equal(payload.styleConfig.transportOverview.activePackIdByFamily.road, "germany_road");
+  assert.equal(payload.transportWorkbenchUi.activePackId, "germany_road");
+  assert.equal(payload.transportWorkbenchUi.activePackIdByFamily.rail, "france_rail");
+  assert.deepEqual(payload.transportCountryOverlayState, { activePackId: "france_rail", family: "rail" });
   assert.deepEqual(payload.manualSpecialZones, { type: "FeatureCollection", features: [] });
   assert.equal(Object.hasOwn(payload, "specialRegionOverrides"), false);
 });

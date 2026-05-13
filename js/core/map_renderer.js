@@ -1546,6 +1546,7 @@ let visibleCityHoverEntries = [];
 const visibleFacilityHoverEntriesByFamily = {
   airport: [],
   port: [],
+  rail: [],
 };
 let hoveredFacilityEntry = null;
 let selectedFacilityEntry = null;
@@ -13521,8 +13522,10 @@ function getHoveredCityEntryFromEvent(event) {
     }
     const threshold = Math.max(6, Number(entry.hoverRadiusPx || 0));
     const distance = Math.hypot(sx - entryX, sy - entryY);
-    if (distance <= threshold && distance < bestDistance) {
+    const hitPriority = getFacilityEntryHitPriority(entry);
+    if (distance <= threshold && (hitPriority > bestPriority || (hitPriority === bestPriority && distance < bestDistance))) {
       bestDistance = distance;
+      bestPriority = hitPriority;
       bestEntry = entry;
     }
   });
@@ -13555,14 +13558,24 @@ function listVisibleFacilityHoverEntries() {
   return [
     ...(Array.isArray(visibleFacilityHoverEntriesByFamily.airport) ? visibleFacilityHoverEntriesByFamily.airport : []),
     ...(Array.isArray(visibleFacilityHoverEntriesByFamily.port) ? visibleFacilityHoverEntriesByFamily.port : []),
+    ...(Array.isArray(visibleFacilityHoverEntriesByFamily.rail) ? visibleFacilityHoverEntriesByFamily.rail : []),
   ];
+}
+
+function normalizeFacilityEntryPackId(value) {
+  return String(value || "global").trim().toLowerCase() || "global";
+}
+
+function getFacilityEntryHitPriority(entry) {
+  return normalizeFacilityEntryPackId(entry?.packId) === "global" ? 0 : 1;
 }
 
 function buildFacilityEntryKey(entry) {
   const familyId = String(entry?.familyId || "").trim().toLowerCase();
+  const packId = normalizeFacilityEntryPackId(entry?.packId);
   const stableId = String(entry?.stableId || "").trim();
   if (!familyId || !stableId) return "";
-  return `${familyId}:${stableId}`;
+  return `${familyId}:${packId}:${stableId}`;
 }
 
 function clearFacilityHoverEntries(familyId = "") {
@@ -13581,12 +13594,24 @@ function clearFacilityHoverEntries(familyId = "") {
   }
 }
 
-function setVisibleFacilityHoverEntries(familyId = "", entries = []) {
+function setVisibleFacilityHoverEntries(familyId = "", entries = [], { append = false, packId = "" } = {}) {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   if (!normalizedFamilyId || !Object.prototype.hasOwnProperty.call(visibleFacilityHoverEntriesByFamily, normalizedFamilyId)) {
     return;
   }
-  visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = Array.isArray(entries) ? entries : [];
+  const normalizedPackId = normalizeFacilityEntryPackId(packId || entries?.[0]?.packId);
+  const nextEntries = (Array.isArray(entries) ? entries : []).map((entry) => ({
+    ...entry,
+    packId: normalizeFacilityEntryPackId(entry?.packId || normalizedPackId),
+  }));
+  if (append) {
+    visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = [
+      ...visibleFacilityHoverEntriesByFamily[normalizedFamilyId].filter((entry) => normalizeFacilityEntryPackId(entry?.packId) !== normalizedPackId),
+      ...nextEntries,
+    ];
+  } else {
+    visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = nextEntries;
+  }
   const nextEntriesByKey = new Map(
     listVisibleFacilityHoverEntries()
       .map((entry) => [buildFacilityEntryKey(entry), entry])
@@ -13656,6 +13681,7 @@ function getHoveredFacilityEntryFromEvent(event) {
   }
   let bestEntry = null;
   let bestDistance = Number.POSITIVE_INFINITY;
+  let bestPriority = -1;
   entries.forEach((entry) => {
     const [entryX, entryY] = entry?.screenPoint || [];
     if (![entryX, entryY].every(Number.isFinite)) {
@@ -13663,8 +13689,10 @@ function getHoveredFacilityEntryFromEvent(event) {
     }
     const threshold = Math.max(6, Number(entry?.hoverRadiusPx || 0));
     const distance = Math.hypot(sx - entryX, sy - entryY);
-    if (distance <= threshold && distance < bestDistance) {
+    const hitPriority = getFacilityEntryHitPriority(entry);
+    if (distance <= threshold && (hitPriority > bestPriority || (hitPriority === bestPriority && distance < bestDistance))) {
       bestDistance = distance;
+      bestPriority = hitPriority;
       bestEntry = entry;
     }
   });

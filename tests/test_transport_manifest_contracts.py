@@ -23,6 +23,59 @@ class TransportManifestContractsTest(unittest.TestCase):
         failed = [report for report in reports if report.get("status") != "ok"]
         self.assertFalse(failed, failed)
 
+
+    def test_target_main_map_packs_declare_phase_b_bridge_contract(self) -> None:
+        expected_keys_by_pack = {
+            "japan_road": ["roads", "road_labels"],
+            "japan_rail": ["railways", "rail_stations_major"],
+            "germany_road": ["roads", "road_labels"],
+            "uk_road": ["roads", "road_labels"],
+            "france_rail": ["railways", "rail_stations_major"],
+            "usa_airport": ["airports"],
+            "china_airport": ["airports"],
+            "russia_airport": ["airports"],
+            "india_airport": ["airports"],
+        }
+        expected_policy_by_pack = {
+            "japan_road": "local_source_cache_only",
+            "japan_rail": "local_source_cache_only",
+            "germany_road": "real_source_cache_only",
+            "uk_road": "real_source_cache_only",
+            "france_rail": "real_source_cache_only",
+            "usa_airport": "real_source_cache_only",
+            "china_airport": "real_source_cache_only",
+            "russia_airport": "real_source_cache_only",
+            "india_airport": "real_source_cache_only",
+        }
+        failures: list[str] = []
+        for pack_id, expected_keys in expected_keys_by_pack.items():
+            manifest_path = PROJECT_ROOT / "data" / "transport_layers" / pack_id / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("pack_id") != pack_id:
+                failures.append(f"{pack_id}: pack_id")
+            if manifest.get("mainMapEligible") is not True:
+                failures.append(f"{pack_id}: mainMapEligible")
+            if manifest.get("apply_bridge_supported") is not True:
+                failures.append(f"{pack_id}: apply_bridge_supported")
+            if manifest.get("coverage_scope") != "country":
+                failures.append(f"{pack_id}: coverage_scope")
+            if manifest.get("source_policy") != expected_policy_by_pack[pack_id]:
+                failures.append(f"{pack_id}: source_policy")
+            if not manifest.get("source_signature"):
+                failures.append(f"{pack_id}: source_signature")
+            consumer = manifest.get("main_map_consumer") or {}
+            if consumer.get("supported_keys") != expected_keys:
+                failures.append(f"{pack_id}: supported_keys")
+            for key in expected_keys:
+                if key not in manifest.get("paths", {}).get("preview", {}) or key not in manifest.get("paths", {}).get("full", {}):
+                    failures.append(f"{pack_id}: paths:{key}")
+            if "road_labels" in expected_keys and manifest.get("sidecars", {}).get("road_labels", {}).get("required") is not True:
+                failures.append(f"{pack_id}: sidecar:road_labels")
+            if "rail_stations_major" in expected_keys and manifest.get("sidecars", {}).get("rail_stations_major", {}).get("required") is not True:
+                failures.append(f"{pack_id}: sidecar:rail_stations_major")
+
+        self.assertFalse(failures, failures)
+
     def test_recursive_manifest_discovery_includes_rail_region_shards(self) -> None:
         manifest_paths = discover_manifest_paths(PROJECT_ROOT / "data" / "transport_layers")
         normalized_paths = [str(path.relative_to(PROJECT_ROOT)).replace("\\", "/") for path in manifest_paths]

@@ -23,6 +23,11 @@ import {
 } from "./state/strategic_overlay_state.js";
 import { resetDevTransientImportState } from "./state/dev_state.js";
 import { prepareImportedProjectState } from "./interaction_funnel/import_apply_orchestration.js";
+import {
+  applyTransportCountryOverlayState,
+  clearTransportCountryOverlayState,
+  loadTransportCountryOverlayState,
+} from "./transport_country_overlay.js";
 import { syncProjectImportUiState as syncProjectImportUiStateHelper } from "./interaction_funnel/ui_sync.js";
 import {
   normalizeSpecialZoneLayersState,
@@ -112,6 +117,31 @@ function cloneImportedProjectValue(value) {
 
 function syncProjectImportUiState({ scenarioImportAudit, hooks }) {
   return syncProjectImportUiStateHelper({ scenarioImportAudit, hooks });
+}
+
+function resolveImportedTransportCountryOverlayPackId(target, importedState = {}) {
+  const explicitPackId = String(importedState?.transportCountryOverlayState?.activePackId || "").trim().toLowerCase();
+  if (explicitPackId) return explicitPackId;
+  const activePackIdByFamily = target?.styleConfig?.transportOverview?.activePackIdByFamily || {};
+  return ["road", "rail", "airport"]
+    .map((familyId) => activePackIdByFamily[familyId])
+    .find((packId) => String(packId || "").trim()) || "";
+}
+
+async function restoreImportedTransportCountryOverlayState(target, importedState = {}) {
+  const activePackId = resolveImportedTransportCountryOverlayPackId(target, importedState);
+  if (!activePackId) {
+    clearTransportCountryOverlayState(target, "project-import-no-country-pack");
+    return null;
+  }
+  try {
+    const overlayState = await loadTransportCountryOverlayState(activePackId);
+    return applyTransportCountryOverlayState(target, overlayState);
+  } catch (error) {
+    clearTransportCountryOverlayState(target, "project-import-country-pack-load-failed");
+    console.warn(`[project-import] Unable to restore transport country overlay ${activePackId}.`, error);
+    return null;
+  }
 }
 
 async function applyImportedProjectState(data, { ui, hooks }) {
@@ -276,6 +306,7 @@ async function applyImportedProjectState(data, { ui, hooks }) {
       renderNow: false,
     });
   }
+  await restoreImportedTransportCountryOverlayState(state, data);
   debugState.importPhase = "ui-sync";
   debugState.importApplyCount += 1;
   debugState.lastImportedScenarioId = String(state.activeScenarioId || "");

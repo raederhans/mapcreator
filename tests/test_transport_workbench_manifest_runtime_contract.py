@@ -170,24 +170,25 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("export function getTransportWorkbenchFamilyPreviewConfig", registry_content)
         self.assertIn("export function listTransportWorkbenchFamilyPreviewConfigs", registry_content)
 
-    def test_apply_bridge_only_accepts_main_map_expressible_workbench_filters(self) -> None:
+    def test_apply_bridge_routes_through_active_pack_contract(self) -> None:
         registry_content = TRANSPORT_CAPABILITY_REGISTRY_JS.read_text(encoding="utf-8")
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        overlay_content = (REPO_ROOT / "js" / "core" / "transport_country_overlay.js").read_text(encoding="utf-8")
+        resolver_content = (REPO_ROOT / "js" / "core" / "transport_pack_resolver.js").read_text(encoding="utf-8")
 
-        self.assertIn('if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {', registry_content)
-        road_rail_section = registry_content.split('if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {', 1)[1].split(
-            'if (normalizedFamilyId === "airport")',
-            1,
-        )[0]
-        self.assertIn("supported: false", road_rail_section)
-        self.assertIn("overview renderer 真正吃同一份 pack contract", road_rail_section)
-        self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.airportTypes, supportedValues.airportTypes)', registry_content)
-        self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.statuses, supportedValues.statuses)', registry_content)
-        self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.legalDesignations, supportedValues.legalDesignations)', registry_content)
-        self.assertIn('hasExactTransportWorkbenchBridgeValueSet(familyConfig.managerTypes, supportedValues.managerTypes)', registry_content)
-        self.assertIn("Keep future main-map bridge families closed until they declare an exact", registry_content)
-        self.assertIn("const bridgeSupport = getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfig);", registry_content)
-        self.assertIn("|| !bridgeSupport.supported", registry_content)
+        self.assertIn("getTransportWorkbenchActivePackBridgeSupport", registry_content)
+        self.assertIn("createTransportPackSourceGateReport(normalizedPackId, manifest)", controller_content)
+        self.assertIn('reason: "source_pending"', registry_content)
+        self.assertIn('reason: "active_pack_required"', registry_content)
+        self.assertNotIn("hasExactTransportWorkbenchBridgeValueSet", registry_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_OVERVIEW_BRIDGE_SUPPORTED_VALUES", registry_content)
+        self.assertIn("dataLayerKeys: [...(MAIN_MAP_CONSUMER_KEYS_BY_FAMILY[normalizedFamilyId] || [])]", registry_content)
+        self.assertIn("resolveTransportOverviewPatchFromWorkbench", registry_content)
+        self.assertIn("loadTransportCountryOverlayState(patch.activePackId || context.activePackId)", controller_content)
+        self.assertIn("applyTransportCountryOverlayState(runtimeState, overlayState)", controller_content)
+        self.assertIn("transportWorkbenchPackSelect", controller_content)
+        self.assertIn("MAIN_MAP_CONSUMER_KEYS_BY_FAMILY", overlay_content)
+        self.assertIn('reason: "consumer_missing"', resolver_content)
         self.assertNotRegex(registry_content, re.compile(r"return\s*\{[\s\S]*?\bdisplayConfig\s*,[\s\S]*?\};"))
         self.assertIn('label: t("Workbench preview only", "ui")', controller_content)
 

@@ -101,5 +101,25 @@
         }
       }
     }
-  }
+  },
+  "coverage_scope": "country",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "main_map_consumer": {
+    "consumer_id": "main_map_rail_country_overlay_v1",
+    "family": "rail",
+    "supported_keys": [
+      "railways",
+      "rail_stations_major"
+    ],
+    "mode": "country_overlay"
+  },
+  "sidecars": {
+    "rail_stations_major": {
+      "required": true,
+      "consumer": "main_map"
+    }
+  },
+  "country_label": "Japan",
+  "pack_id": "japan_rail"
 }

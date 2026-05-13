@@ -85,6 +85,31 @@ function getTransportOverviewFamilyConfig(familyId) {
   return config?.[familyId] || {};
 }
 
+function getTransportCountryOverlayStateForFamily(familyId) {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  const overlayState = runtimeState.transportCountryOverlayState;
+  if (overlayState?.status !== "ready" || overlayState.family !== normalizedFamilyId) return null;
+  return overlayState;
+}
+
+function getTransportCountryOverlayCollection(familyId, layerKey) {
+  const overlayState = getTransportCountryOverlayStateForFamily(familyId);
+  return overlayState?.collectionsByLayer?.[layerKey] || null;
+}
+
+function collectTransportCountryOverlayMetric(metricName, familyId, reason) {
+  const collectionKey = familyId === "road" ? "roads" : familyId === "rail" ? "railways" : "airports";
+  const collection = getTransportCountryOverlayCollection(familyId, collectionKey);
+  collectContextMetric(metricName, 0, {
+    featureCount: getFeatureCollectionFeatureCount(collection),
+    visibleFeatureCount: 0,
+    labelCount: 0,
+    interactive: false,
+    skipped: true,
+    reason,
+  });
+}
+
 function getTransportOverviewLabelZoomConfig(familyId, labelDensity) {
   const base = familyId === "airport"
     ? { nationalLabelScale: 2.0, regionalLabelScale: 5.0 }
@@ -473,12 +498,22 @@ function drawContextFacilityPointLayer(
     strokeScale = 1,
     hoverScale = 1.18,
     highlightStroke = "#ffffff",
+    packId = "global",
+    appendHoverEntries = false,
   } = {},
 ) {
   const startedAt = nowMs();
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
-  if (!visible) {
+  const normalizedPackId = String(packId || "global").trim().toLowerCase() || "global";
+  const clearCurrentPackHoverEntries = () => {
+    if (appendHoverEntries) {
+      setVisibleFacilityHoverEntries(normalizedFamilyId, [], { append: true, packId: normalizedPackId });
+      return;
+    }
     clearFacilityHoverEntries(normalizedFamilyId);
+  };
+  if (!visible) {
+    clearCurrentPackHoverEntries();
     collectContextMetric(metricName, nowMs() - startedAt, {
       featureCount: getFeatureCollectionFeatureCount(collection),
       visibleFeatureCount: 0,
@@ -504,7 +539,7 @@ function drawContextFacilityPointLayer(
     getLabelText,
   });
   if (renderState.skipped) {
-    clearFacilityHoverEntries(normalizedFamilyId);
+    clearCurrentPackHoverEntries();
     collectContextMetric(metricName, nowMs() - startedAt, {
       featureCount: renderState.featureCount,
       visibleFeatureCount: 0,
@@ -523,7 +558,7 @@ function drawContextFacilityPointLayer(
     : null;
   const canDrawIconAtlas = !!iconAtlasImage && isTransportFacilityIconAtlasReady();
   if (usesFacilityIconLayer && !canDrawIconAtlas) {
-    clearFacilityHoverEntries(normalizedFamilyId);
+    clearCurrentPackHoverEntries();
     collectContextMetric(metricName, nowMs() - startedAt, {
       featureCount: renderState.featureCount,
       visibleFeatureCount: 0,
@@ -549,6 +584,7 @@ function drawContextFacilityPointLayer(
     const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));
     const markerEntry = {
       familyId: normalizedFamilyId,
+      packId: normalizedPackId,
       stableId: String(entry.properties?.stable_key || entry.properties?.id || entry.label || `${entry.x}:${entry.y}`).trim(),
       shape: iconCell ? "icon" : shape,
       iconKey,
@@ -611,7 +647,10 @@ function drawContextFacilityPointLayer(
     context.stroke();
   });
   context.restore();
-  setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries);
+  setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries, {
+    append: appendHoverEntries,
+    packId: normalizedPackId,
+  });
 
   if (!labelsEnabled) {
     collectContextMetric(metricName, nowMs() - startedAt, {
@@ -657,8 +696,7 @@ function drawContextFacilityPointLayer(
   });
 }
 
-function drawAirportsLayer(k, { interactive = false } = {}) {
-  syncRenderTargets();
+function drawAirportPointCollection(metricName, collection, k, { interactive = false, packId = "global", appendHoverEntries = false } = {}) {
   const airportConfig = getTransportOverviewFamilyConfig("airport");
   const labelZoomConfig = getTransportOverviewLabelZoomConfig("airport", airportConfig.labelDensity);
   const visualStyle = getTransportOverviewAirportVisualStyle(airportConfig.primaryColor, airportConfig.visualStrength);
@@ -666,7 +704,7 @@ function drawAirportsLayer(k, { interactive = false } = {}) {
     scale: k,
     visualMode: getTransportOverviewVisualMode(),
   });
-  drawContextFacilityPointLayer("drawAirportsLayer", runtimeState.airportsData, k, {
+  drawContextFacilityPointLayer(metricName, collection, k, {
     familyId: "airport",
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showAirports,
@@ -683,7 +721,25 @@ function drawAirportsLayer(k, { interactive = false } = {}) {
     hoverScale: visualStyle.hoverScale,
     highlightStroke: visualStyle.highlightStroke,
     getLabelText: (properties) => getTransportOverviewAirportLabelText(properties, airportConfig.labelMode),
+    packId,
+    appendHoverEntries,
   });
+}
+
+function drawCountryAirportsLayer(k, { interactive = false } = {}) {
+  const overlayState = getTransportCountryOverlayStateForFamily("airport");
+  if (!overlayState) return;
+  drawAirportPointCollection("drawCountryAirportsLayer", overlayState.collectionsByLayer?.airports, k, {
+    interactive,
+    packId: overlayState.activePackId,
+    appendHoverEntries: true,
+  });
+}
+
+function drawAirportsLayer(k, { interactive = false } = {}) {
+  syncRenderTargets();
+  drawAirportPointCollection("drawAirportsLayer", runtimeState.airportsData, k, { interactive });
+  drawCountryAirportsLayer(k, { interactive });
 }
 
 function drawPortsLayer(k, { interactive = false } = {}) {
@@ -752,6 +808,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
       skipped: true,
       reason: !pathCanvas ? "no-path" : "no-data",
     });
+    drawCountryRailwaysLayer(k, { interactive });
     return;
   }
   const railConfig = getTransportOverviewFamilyConfig("rail");
@@ -861,6 +918,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
       skipped: true,
       reason: "filtered",
     });
+    drawCountryRailwaysLayer(k, { interactive });
     return;
   }
 
@@ -928,6 +986,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
     interactive: !!interactive,
     skipped: false,
   });
+  drawCountryRailwaysLayer(k, { interactive });
 }
 
 function drawRoadsLayer(k, { interactive = false } = {}) {
@@ -967,6 +1026,7 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
       skipped: true,
       reason: !pathCanvas ? "no-path" : "no-data",
     });
+    drawCountryRoadsLayer(k, { interactive });
     return;
   }
   const roadConfig = getTransportOverviewFamilyConfig("road");
@@ -1010,6 +1070,7 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
       skipped: true,
       reason: "filtered",
     });
+    drawCountryRoadsLayer(k, { interactive });
     return;
   }
 
@@ -1129,6 +1190,307 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
   }
 
   collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
+    featureCount,
+    visibleFeatureCount,
+    labelCount,
+    interactive: !!interactive,
+    skipped: false,
+  });
+  drawCountryRoadsLayer(k, { interactive });
+}
+
+
+function drawCountryRailwaysLayer(k, { interactive = false } = {}) {
+  syncRenderTargets();
+  const startedAt = nowMs();
+  const overlayState = getTransportCountryOverlayStateForFamily("rail");
+  if (!overlayState) return;
+  const visible = !!runtimeState.showTransport && !!runtimeState.showRail;
+  const collection = overlayState.collectionsByLayer?.railways;
+  const stationCollection = overlayState.collectionsByLayer?.rail_stations_major;
+  const featureCount = getFeatureCollectionFeatureCount(collection);
+  if (!visible) {
+    collectContextMetric("drawCountryRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hidden",
+    });
+    setVisibleFacilityHoverEntries("rail", [], { append: true, packId: overlayState.activePackId });
+    return;
+  }
+  if (interactive) {
+    collectContextMetric("drawCountryRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: true,
+      skipped: true,
+      reason: "interactive-pass",
+    });
+    return;
+  }
+  const railConfig = getTransportOverviewFamilyConfig("rail");
+  const strategy = resolveTransportOverviewLineStrategy("rail", railConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  const visualStyle = getTransportOverviewRailVisualStyle(railConfig.primaryColor, railConfig.visualStrength);
+  drawContextFacilityPointLayer("drawCountryRailStationsMajorLayer", stationCollection, k, {
+    familyId: "rail",
+    interactive,
+    visible,
+    thresholdRank: 1,
+    shape: "square",
+    fillStyle: visualStyle.regionalStroke,
+    strokeStyle: mixCanvasColors(visualStyle.regionalStroke, "#ffffff", 0.7) || "#ffffff",
+    labelColor: visualStyle.mainlineStroke,
+    opacity: clamp(Number(railConfig.opacity ?? 0.72), 0, 1) * 0.9 * strategy.opacityMultiplier,
+    labelsEnabled: false,
+    radiusScale: 0.92 * Math.max(0.88, strategy.widthMultiplier * 0.92),
+    strokeScale: 0.95,
+    hoverScale: 1.1,
+    highlightStroke: "#ffffff",
+    getLabelText: null,
+    packId: overlayState.activePackId,
+    appendHoverEntries: true,
+  });
+  if (!collection?.features?.length || !pathCanvas) {
+    collectContextMetric("drawCountryRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !pathCanvas ? "no-path" : "no-data",
+    });
+    return;
+  }
+  const featuresByClass = {
+    secondary: [],
+    regional: [],
+    mainline: [],
+  };
+  collection.features.forEach((feature) => {
+    const properties = feature?.properties || {};
+    const lineClass = String(properties.class || "").trim().toLowerCase();
+    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
+    if (revealRank > strategy.maximumRevealRank) return;
+    if (getTransportOverviewLineClassScopeRank("rail", lineClass) > strategy.minimumScopeRank) return;
+    if (lineClass === "mainline") featuresByClass.mainline.push(feature);
+    else if (lineClass === "regional") featuresByClass.regional.push(feature);
+    else if (lineClass === "secondary") featuresByClass.secondary.push(feature);
+  });
+  const visibleFeatureCount = featuresByClass.mainline.length + featuresByClass.regional.length + featuresByClass.secondary.length;
+  if (!visibleFeatureCount) {
+    collectContextMetric("drawCountryRailwaysLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "filtered",
+    });
+    return;
+  }
+  const baseRailOpacity = clamp(Number(railConfig.opacity ?? 0.72), 0, 1);
+  drawTransportOverviewLineSet(featuresByClass.secondary, {
+    casingStroke: visualStyle.secondaryCasingStroke,
+    innerStroke: visualStyle.secondaryStroke,
+    casingWidth: visualStyle.secondaryCasingWidth,
+    innerWidth: visualStyle.secondaryWidth,
+    opacity: visualStyle.secondaryOpacity,
+    dashPx: visualStyle.secondaryDashPx,
+  }, { baseOpacity: baseRailOpacity, strategy, k, widthFloorPx: 0.78 });
+  drawTransportOverviewLineSet(featuresByClass.regional, {
+    casingStroke: visualStyle.regionalCasingStroke,
+    innerStroke: visualStyle.regionalStroke,
+    casingWidth: visualStyle.regionalCasingWidth,
+    innerWidth: visualStyle.regionalWidth,
+    opacity: visualStyle.regionalOpacity,
+    dashPx: visualStyle.regionalDashPx,
+  }, { baseOpacity: baseRailOpacity, strategy, k, widthFloorPx: 0.9 });
+  drawTransportOverviewLineSet(featuresByClass.mainline, {
+    casingStroke: visualStyle.mainlineCasingStroke,
+    innerStroke: visualStyle.mainlineStroke,
+    casingWidth: visualStyle.mainlineCasingWidth,
+    innerWidth: visualStyle.mainlineWidth,
+    opacity: visualStyle.mainlineOpacity,
+  }, { baseOpacity: baseRailOpacity, strategy, k, widthFloorPx: 1.05 });
+  collectContextMetric("drawCountryRailwaysLayer", nowMs() - startedAt, {
+    featureCount,
+    visibleFeatureCount,
+    labelCount: 0,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function drawCountryRoadsLayer(k, { interactive = false } = {}) {
+  syncRenderTargets();
+  const startedAt = nowMs();
+  const overlayState = getTransportCountryOverlayStateForFamily("road");
+  if (!overlayState) return;
+  const visible = !!runtimeState.showTransport && !!runtimeState.showRoad;
+  const collection = overlayState.collectionsByLayer?.roads;
+  const labelCollection = overlayState.collectionsByLayer?.road_labels;
+  const featureCount = getFeatureCollectionFeatureCount(collection);
+  if (!visible) {
+    collectContextMetric("drawCountryRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hidden",
+    });
+    return;
+  }
+  if (interactive) {
+    collectContextMetric("drawCountryRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: true,
+      skipped: true,
+      reason: "interactive-pass",
+    });
+    return;
+  }
+  if (!collection?.features?.length || !pathCanvas) {
+    collectContextMetric("drawCountryRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: !pathCanvas ? "no-path" : "no-data",
+    });
+    return;
+  }
+  const roadConfig = getTransportOverviewFamilyConfig("road");
+  const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {
+    scale: k,
+    visualMode: getTransportOverviewVisualMode(),
+  });
+  const visualStyle = getTransportOverviewRoadVisualStyle(roadConfig.primaryColor, roadConfig.visualStrength);
+  const featuresByClass = {
+    secondary: [],
+    primary: [],
+    trunk: [],
+    motorway: [],
+  };
+  collection.features.forEach((feature) => {
+    const properties = feature?.properties || {};
+    const roadClass = String(properties.class || "").trim().toLowerCase();
+    const defaultRevealRank = roadClass === "motorway" ? 1 : roadClass === "trunk" ? 2 : 3;
+    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || defaultRevealRank)));
+    if (revealRank > strategy.maximumRevealRank) return;
+    if (getTransportOverviewLineClassScopeRank("road", roadClass) > strategy.minimumScopeRank) return;
+    if (roadClass === "motorway") featuresByClass.motorway.push(feature);
+    else if (roadClass === "trunk") featuresByClass.trunk.push(feature);
+    else if (roadClass === "primary") featuresByClass.primary.push(feature);
+    else if (roadClass === "secondary") featuresByClass.secondary.push(feature);
+  });
+  const visibleFeatureCount = featuresByClass.motorway.length + featuresByClass.trunk.length + featuresByClass.primary.length + featuresByClass.secondary.length;
+  if (!visibleFeatureCount) {
+    collectContextMetric("drawCountryRoadsLayer", nowMs() - startedAt, {
+      featureCount,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: "filtered",
+    });
+    return;
+  }
+  const baseRoadOpacity = clamp(Number(roadConfig.opacity ?? 0.72), 0, 1);
+  drawTransportOverviewLineSet(featuresByClass.secondary, {
+    casingStroke: visualStyle.secondaryCasingStroke,
+    innerStroke: visualStyle.secondaryStroke,
+    casingWidth: visualStyle.secondaryCasingWidth,
+    innerWidth: visualStyle.secondaryWidth,
+    opacity: visualStyle.secondaryOpacity,
+    dashPx: visualStyle.secondaryDashPx,
+  }, { baseOpacity: baseRoadOpacity, strategy, k, widthFloorPx: 0.68 });
+  drawTransportOverviewLineSet(featuresByClass.primary, {
+    casingStroke: visualStyle.primaryCasingStroke,
+    innerStroke: visualStyle.primaryStroke,
+    casingWidth: visualStyle.primaryCasingWidth,
+    innerWidth: visualStyle.primaryWidth,
+    opacity: visualStyle.primaryOpacity,
+    dashPx: visualStyle.primaryDashPx,
+  }, { baseOpacity: baseRoadOpacity, strategy, k, widthFloorPx: 0.78 });
+  drawTransportOverviewLineSet(featuresByClass.trunk, {
+    casingStroke: visualStyle.trunkCasingStroke,
+    innerStroke: visualStyle.trunkStroke,
+    casingWidth: visualStyle.trunkCasingWidth,
+    innerWidth: visualStyle.trunkWidth,
+    opacity: visualStyle.trunkOpacity,
+    dashPx: visualStyle.trunkDashPx,
+  }, { baseOpacity: baseRoadOpacity, strategy, k, widthFloorPx: 0.95 });
+  drawTransportOverviewLineSet(featuresByClass.motorway, {
+    casingStroke: visualStyle.motorwayCasingStroke,
+    innerStroke: visualStyle.motorwayStroke,
+    casingWidth: visualStyle.motorwayCasingWidth,
+    innerWidth: visualStyle.motorwayWidth,
+    opacity: visualStyle.motorwayOpacity,
+  }, { baseOpacity: baseRoadOpacity, strategy, k, widthFloorPx: 1.1 });
+
+  const labelZoomConfig = getTransportOverviewLabelZoomConfig("road", roadConfig.labelDensity);
+  const labelsEnabled = !!roadConfig.labelsEnabled && strategy.labelsEnabled && typeof projection === "function";
+  let labelCount = 0;
+  if (labelsEnabled && Array.isArray(labelCollection?.features) && labelCollection.features.length) {
+    const gridSize = getTransportLineLabelGridSize(roadConfig.labelDensity);
+    const usedBuckets = new Set();
+    const visibleLabelEntries = [];
+    labelCollection.features
+      .map((feature) => {
+        const properties = feature?.properties || {};
+        const coordinates = feature?.geometry?.coordinates;
+        const label = getTransportOverviewRoadLabelText(properties, roadConfig.labelMode);
+        if (!label || !Array.isArray(coordinates) || coordinates.length < 2) return null;
+        const anchorProjected = projection(coordinates);
+        if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return null;
+        const roadClass = String(properties.class || properties.road_class || properties.highway || "motorway").trim().toLowerCase();
+        const priority = roadClass === "motorway" ? 4 : roadClass === "trunk" ? 3 : roadClass === "primary" ? 2 : 1;
+        return {
+          label,
+          roadClass,
+          priority,
+          x: anchorProjected[0],
+          y: anchorProjected[1],
+        };
+      })
+      .filter(Boolean)
+      .filter((entry) => entry.priority >= 4 ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
+      .sort((left, right) => right.priority - left.priority)
+      .forEach((entry) => {
+        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}`;
+        if (usedBuckets.has(bucketKey)) return;
+        usedBuckets.add(bucketKey);
+        visibleLabelEntries.push(entry);
+      });
+    if (visibleLabelEntries.length) {
+      context.save();
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      visibleLabelEntries.forEach((entry) => {
+        const isMotorway = entry.priority >= 4;
+        context.font = `${isMotorway ? 600 : 500} ${isMotorway ? 10.5 : 9.5}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
+        context.lineWidth = 3;
+        context.strokeStyle = "rgba(255,255,255,0.88)";
+        context.fillStyle = isMotorway ? visualStyle.motorwayStroke : visualStyle.trunkStroke;
+        context.strokeText(entry.label, entry.x, entry.y);
+        context.fillText(entry.label, entry.x, entry.y);
+        labelCount += 1;
+      });
+      context.restore();
+    }
+  }
+  collectContextMetric("drawCountryRoadsLayer", nowMs() - startedAt, {
     featureCount,
     visibleFeatureCount,
     labelCount,

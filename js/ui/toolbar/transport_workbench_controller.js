@@ -10,7 +10,9 @@ import {
   normalizeTransportWorkbenchDisplayConfig,
   normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
+import { getTransportAsset } from "../../core/data_service.js";
 import { markDirty } from "../../core/dirty_state.js";
+import { resolveTransportManifestUrl } from "../../core/runtime_asset_registry.js";
 import { t } from "../i18n.js";
 import {
   focusSurface as focusOverlaySurface,
@@ -43,6 +45,17 @@ import {
   listTransportWorkbenchRuntimeFamilyIds,
   listTransportWorkbenchWarmupPlans,
 } from "../transport_workbench_family_registry.js";
+import {
+  createTransportPackSourceGateReport,
+  getDefaultMainMapPackIdForFamily,
+  getTargetMainMapPackMeta,
+  listTargetMainMapPacks,
+} from "../../core/transport_pack_resolver.js";
+import {
+  applyTransportCountryOverlayState,
+  clearTransportCountryOverlayState,
+  loadTransportCountryOverlayState,
+} from "../../core/transport_country_overlay.js";
 import {
   TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY,
   getTransportCapabilityApplyCompatibility,
@@ -602,6 +615,18 @@ function ensureTransportWorkbenchUiState() {
   // 避免渲染、预览和 inspect 面板各自猜默认值。
   runtimeState.transportWorkbenchUi.open = !!runtimeState.transportWorkbenchUi.open;
   runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
+  if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
+    runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
+  }
+  const activeFamily = runtimeState.transportWorkbenchUi.activeFamily;
+  const candidatePackId = String(runtimeState.transportWorkbenchUi.activePackIdByFamily[activeFamily] || runtimeState.transportWorkbenchUi.activePackId || "").trim().toLowerCase();
+  const candidatePackMeta = getTargetMainMapPackMeta(candidatePackId);
+  runtimeState.transportWorkbenchUi.activePackId = candidatePackMeta?.family === activeFamily
+    ? candidatePackMeta.packId
+    : getDefaultMainMapPackIdForFamily(activeFamily);
+  runtimeState.transportWorkbenchUi.activePackIdByFamily[activeFamily] = runtimeState.transportWorkbenchUi.activePackId;
+  const activePackMeta = getTargetMainMapPackMeta(runtimeState.transportWorkbenchUi.activePackId);
+  if (activePackMeta?.country) runtimeState.transportWorkbenchUi.sampleCountry = activePackMeta.country;
   if (!runtimeState.transportWorkbenchUi.previewCamera || typeof runtimeState.transportWorkbenchUi.previewCamera !== "object") {
     runtimeState.transportWorkbenchUi.previewCamera = {};
   }
@@ -1173,6 +1198,7 @@ export function createTransportWorkbenchController({
   transportWorkbenchLensSections = null,
   transportWorkbenchFamilyStatus = null,
   transportWorkbenchCountryStatus = null,
+  transportWorkbenchPackSelect = null,
   transportWorkbenchPreviewMode = null,
   transportWorkbenchPreviewTitle = null,
   transportWorkbenchPreviewCanvas = null,
@@ -1217,6 +1243,8 @@ export function createTransportWorkbenchController({
   let transportWorkbenchPreviewWarmupScheduled = false;
   let transportWorkbenchDraggedLayerId = "";
   let transportWorkbenchRenderGeneration = 0;
+  const transportWorkbenchPackGateReportByPackId = new Map();
+  const transportWorkbenchPackGatePromiseByPackId = new Map();
 
   const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
     if (!transportWorkbenchSectionHelpPopover) return;
@@ -1418,13 +1446,15 @@ export function createTransportWorkbenchController({
   };
 
   const buildTransportWorkbenchResolvedConfig = (familyId, familyConfig, displayConfig) => {
+    const activePackId = getTransportWorkbenchActivePackId(familyId);
     if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
-      return familyConfig;
+      return { ...(familyConfig || {}), activePackId };
     }
     const resolvedDisplayConfig = normalizeTransportWorkbenchDisplayConfig(displayConfig, familyId);
     // live preview 只认一份扁平 config；这里把 displayConfig 的分层字段映射回旧 preview 合约。
     return {
       ...(familyConfig || {}),
+      activePackId,
       displayConfig: resolvedDisplayConfig,
       displayMode: resolvedDisplayConfig.mode,
       displayPreset: resolvedDisplayConfig.preset,
@@ -1449,6 +1479,80 @@ export function createTransportWorkbenchController({
 
   const getTransportWorkbenchConfigSignature = (config) => JSON.stringify(config || {});
 
+  const getTransportWorkbenchActivePackId = (familyId) => {
+    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
+    const currentByFamily = runtimeState.transportWorkbenchUi?.activePackIdByFamily || {};
+    const currentPackId = String(currentByFamily[normalizedFamilyId] || runtimeState.transportWorkbenchUi?.activePackId || "").trim().toLowerCase();
+    const meta = getTargetMainMapPackMeta(currentPackId);
+    if (meta && meta.family === normalizedFamilyId) return meta.packId;
+    return getDefaultMainMapPackIdForFamily(normalizedFamilyId);
+  };
+
+  const getTransportWorkbenchPackGateReport = (packId) => (
+    transportWorkbenchPackGateReportByPackId.get(String(packId || "").trim().toLowerCase()) || null
+  );
+
+  const refreshTransportWorkbenchPackGateReport = async (packId, { rerender = false } = {}) => {
+    const normalizedPackId = String(packId || "").trim().toLowerCase();
+    if (!normalizedPackId) return null;
+    if (transportWorkbenchPackGateReportByPackId.has(normalizedPackId)) {
+      return transportWorkbenchPackGateReportByPackId.get(normalizedPackId);
+    }
+    if (transportWorkbenchPackGatePromiseByPackId.has(normalizedPackId)) {
+      return transportWorkbenchPackGatePromiseByPackId.get(normalizedPackId);
+    }
+    const promise = getTransportAsset(resolveTransportManifestUrl(normalizedPackId), {
+      cachePolicy: "no-cache",
+      label: `transport-workbench-pack-gate:${normalizedPackId}`,
+    })
+      .then((manifest) => {
+        const gateReport = createTransportPackSourceGateReport(normalizedPackId, manifest);
+        transportWorkbenchPackGateReportByPackId.set(normalizedPackId, gateReport);
+        return gateReport;
+      })
+      .catch((error) => {
+        const gateReport = {
+          packId: normalizedPackId,
+          family: getTargetMainMapPackMeta(normalizedPackId)?.family || "",
+          passed: false,
+          reasons: ["manifest_load_failed"],
+          error: error?.message || String(error || "Unknown pack gate failure"),
+        };
+        transportWorkbenchPackGateReportByPackId.set(normalizedPackId, gateReport);
+        return gateReport;
+      })
+      .finally(() => {
+        transportWorkbenchPackGatePromiseByPackId.delete(normalizedPackId);
+        if (rerender && runtimeState.transportWorkbenchUi?.open && getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily) === normalizedPackId) {
+          renderTransportWorkbenchUi();
+        }
+      });
+    transportWorkbenchPackGatePromiseByPackId.set(normalizedPackId, promise);
+    return promise;
+  };
+
+  const setTransportWorkbenchActivePackId = (packId, { rerender = true } = {}) => {
+    ensureTransportWorkbenchUiState();
+    const normalizedPackId = String(packId || "").trim().toLowerCase();
+    const meta = getTargetMainMapPackMeta(normalizedPackId);
+    if (!meta) return false;
+    const previousPackId = String(runtimeState.transportWorkbenchUi.activePackId || "").trim().toLowerCase();
+    runtimeState.transportWorkbenchUi.activeFamily = meta.family;
+    if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
+      runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
+    }
+    runtimeState.transportWorkbenchUi.activePackIdByFamily[meta.family] = meta.packId;
+    runtimeState.transportWorkbenchUi.activePackId = meta.packId;
+    runtimeState.transportWorkbenchUi.sampleCountry = meta.country;
+    refreshTransportWorkbenchPackGateReport(meta.packId, { rerender: true });
+    if (previousPackId && previousPackId !== meta.packId) {
+      clearTransportCountryOverlayState(runtimeState, "transport-workbench-pack-switch");
+    }
+    if (rerender) renderTransportWorkbenchUi();
+    return true;
+  };
+
+
   const getTransportOverviewVisualModeFromState = () => normalizeTransportOverviewVisualMode(
     runtimeState.styleConfig?.transportOverview?.visualMode,
     "distribution",
@@ -1456,7 +1560,12 @@ export function createTransportWorkbenchController({
 
   const getTransportWorkbenchApplyButtonState = (familyId) => {
     const compatibility = getTransportCapabilityApplyCompatibility(familyId);
-    const familyConfig = runtimeState.transportWorkbenchUi?.familyConfigs?.[familyId] || {};
+    const activePackId = getTransportWorkbenchActivePackId(familyId);
+    const familyConfig = {
+      ...(runtimeState.transportWorkbenchUi?.familyConfigs?.[familyId] || {}),
+      activePackId,
+      packGateReport: getTransportWorkbenchPackGateReport(activePackId),
+    };
     if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.mainMapBridge) {
       const bridgeSupport = getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfig);
       if (!bridgeSupport.supported) {
@@ -1464,7 +1573,11 @@ export function createTransportWorkbenchController({
           compatibility,
           enabled: false,
           label: t("Workbench preview only", "ui"),
-          reason: t("Workbench preview only", "ui"),
+          reason: bridgeSupport.reason === "source_failed"
+            ? t("Pack source check failed", "ui")
+            : bridgeSupport.reason === "active_pack_required"
+              ? t("Select a transport pack", "ui")
+              : t("Workbench preview only", "ui"),
         };
       }
       return {
@@ -1492,15 +1605,24 @@ export function createTransportWorkbenchController({
 
   const applyTransportWorkbenchFamilyToMainMap = async (context) => {
     const currentOverviewConfig = normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {});
+    const activePackId = context.activePackId || getTransportWorkbenchActivePackId(context.family.id);
+    const gateReport = await refreshTransportWorkbenchPackGateReport(activePackId);
+    if (!gateReport?.passed) return false;
     const patch = resolveTransportOverviewPatchFromWorkbench(
       context.family.id,
-      runtimeState.transportWorkbenchUi?.familyConfigs?.[context.family.id] || {},
+      {
+        ...(context.config || runtimeState.transportWorkbenchUi?.familyConfigs?.[context.family.id] || {}),
+        activePackId,
+        packGateReport: gateReport,
+      },
       {
         currentOverviewConfig: currentOverviewConfig?.[context.family.id] || getTransportCapabilityDefaultOverviewConfig(context.family.id),
         currentVisualMode: getTransportOverviewVisualModeFromState(),
       },
     );
     if (!patch) return false;
+    const overlayState = await loadTransportCountryOverlayState(patch.activePackId || context.activePackId);
+    applyTransportCountryOverlayState(runtimeState, overlayState);
     applyTransportWorkbenchOverviewState(runtimeState, {
       ...patch,
       familyId: context.family.id,
@@ -3004,9 +3126,14 @@ export function createTransportWorkbenchController({
     const displayConfig = getTransportWorkbenchDisplayConfig(family.id, { baseline: compareHeld });
     // context 是 shell、lens、inspect 和 preview 的共同输入，避免四处重复读取 runtimeState。
     const config = buildTransportWorkbenchResolvedConfig(family.id, familyConfig, displayConfig);
+    const activePackId = getTransportWorkbenchActivePackId(family.id);
+    refreshTransportWorkbenchPackGateReport(activePackId, { rerender: true });
+    const activePackMeta = getTargetMainMapPackMeta(activePackId);
     return {
       uiState,
       family,
+      activePackId,
+      activePackMeta,
       isOpen,
       compareHeld,
       displayConfig,
@@ -3094,7 +3221,18 @@ export function createTransportWorkbenchController({
     transportWorkbenchTitle.textContent = t(family.title, "ui");
     transportWorkbenchLensTitle.textContent = t(family.lensTitle, "ui");
     transportWorkbenchFamilyStatus.textContent = t(family.label, "ui");
-    transportWorkbenchCountryStatus.textContent = uiState.sampleCountry;
+    transportWorkbenchCountryStatus.textContent = context.activePackMeta?.country || uiState.sampleCountry;
+    if (transportWorkbenchPackSelect) {
+      const packOptions = listTargetMainMapPacks({ familyId: family.id });
+      transportWorkbenchPackSelect.replaceChildren(...packOptions.map((pack) => {
+        const option = document.createElement("option");
+        option.value = pack.packId;
+        option.textContent = pack.label;
+        return option;
+      }));
+      transportWorkbenchPackSelect.disabled = packOptions.length === 0;
+      transportWorkbenchPackSelect.value = context.activePackId || "";
+    }
     transportWorkbenchPreviewMode.textContent = family.id === "layers"
       ? t("Layer order", "ui")
       : TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)
@@ -3191,6 +3329,7 @@ export function createTransportWorkbenchController({
     renderTransportWorkbenchShell(context);
     renderTransportWorkbenchLensSections(context.family, context.config, context.compareHeld);
     renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
+    refreshTransportWorkbenchPackGateReport(context.activePackId, { rerender: true });
     refreshTransportWorkbenchPreview(context);
   };
 
@@ -3390,11 +3529,23 @@ export function createTransportWorkbenchController({
         transportWorkbenchApplyBtn.dataset.bound = "true";
       }
 
+      if (transportWorkbenchPackSelect && !transportWorkbenchPackSelect.dataset.bound) {
+        transportWorkbenchPackSelect.addEventListener("change", () => {
+          setTransportWorkbenchActivePackId(transportWorkbenchPackSelect.value);
+        });
+        transportWorkbenchPackSelect.dataset.bound = "true";
+      }
+
       transportWorkbenchFamilyTabs.forEach((button) => {
         if (!button || button.dataset.bound === "true") return;
         button.addEventListener("click", () => {
           ensureTransportWorkbenchUiState();
           runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(button.dataset.transportFamily || "road");
+          if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
+            runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
+          }
+          runtimeState.transportWorkbenchUi.activePackId = getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily);
+          runtimeState.transportWorkbenchUi.activePackIdByFamily[runtimeState.transportWorkbenchUi.activeFamily] = runtimeState.transportWorkbenchUi.activePackId;
           runtimeState.transportWorkbenchUi.compareHeld = false;
           renderTransportWorkbenchUi();
         });

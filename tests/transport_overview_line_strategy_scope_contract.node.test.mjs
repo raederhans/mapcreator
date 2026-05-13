@@ -4,6 +4,10 @@ import {
   getTransportOverviewLineClassScopeRank,
   resolveTransportOverviewLineStrategy,
 } from "../js/core/transport_capability_registry.js";
+import {
+  createTransportPackSourceGateReport,
+  resolveTransportActivePack,
+} from "../js/core/transport_pack_resolver.js";
 import { createTransportOverviewRenderOwner } from "../js/core/renderer/transport_overview_render_owner.js";
 
 const LINE_FIXTURES = Object.freeze({
@@ -68,6 +72,8 @@ function createRecordingCanvasContext() {
     save: () => calls.push({ type: "save" }),
     restore: () => calls.push({ type: "restore" }),
     beginPath: () => calls.push({ type: "beginPath" }),
+    rect: (x, y, width, height) => calls.push({ type: "rect", x, y, width, height }),
+    fill: () => calls.push({ type: "fill" }),
     stroke: () => calls.push({ type: "stroke" }),
     strokeText: (text, x, y) => calls.push({ type: "strokeText", text, x, y }),
     fillText: (text, x, y) => calls.push({ type: "fillText", text, x, y }),
@@ -133,13 +139,20 @@ function createLineRenderOwnerHarness({ k = 4, roadLabelsEnabled = false, railLa
         { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 2], [1, 3]] }, properties: { class: "mainline", reveal_rank: 1, name: "Mainline" } },
       ],
     },
+    railStationsMajorData: { type: "FeatureCollection", features: [] },
   };
+  const hoverEntries = [];
   const owner = createTransportOverviewRenderOwner({
     state,
     helpers: {
+      buildFacilityEntryKey: (entry) => entry ? `${entry.familyId || ""}:${entry.packId || "global"}:${entry.stableId || ""}` : "",
+      buildFacilityTooltipText: () => "",
       clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
+      clearFacilityHoverEntries: () => {},
       collectContextMetric: (name, _duration, detail) => metrics.push({ name, detail }),
+      getActiveFacilityHighlightEntry: () => null,
       getCanvasColorRelativeLuminance: () => 0.5,
+      getFacilityHoverRadiusPx: () => 12,
       getContext: () => context,
       getFeatureCollectionFeatureCount: (collection) => Array.isArray(collection?.features) ? collection.features.length : 0,
       getLineMidpointFromCoordinates: (coordinates) => coordinates[Math.floor((coordinates.length - 1) / 2)] || null,
@@ -148,9 +161,10 @@ function createLineRenderOwnerHarness({ k = 4, roadLabelsEnabled = false, railLa
       getProjection: () => ([x, y]) => [Number(x) * 100, Number(y) * 100],
       mixCanvasColors: (color) => color,
       nowMs: () => 0,
+      setVisibleFacilityHoverEntries: (_familyId, entries, options = {}) => hoverEntries.push({ entries, options }),
     },
   });
-  return { context, metrics, owner };
+  return { context, metrics, owner, appRuntime: state, hoverEntries };
 }
 
 test("transport overview road line draw resets dash and keeps screen-width floors", () => {
@@ -203,4 +217,166 @@ test("transport overview road labels use ref/name fields and report labelCount",
   const roadMetric = metrics.findLast((entry) => entry.name === "drawRoadsLayer");
   assert.equal(roadMetric?.detail?.visibleFeatureCount, 2);
   assert.equal(roadMetric?.detail?.labelCount, 1);
+});
+
+
+test("transport pack resolver gates source and family before apply", () => {
+  const germanyManifest = {
+    pack_id: "germany_road",
+    family: "road",
+    source_policy: "real_source_cache_only",
+    source_signature: { bkg: { filename: "dlm250.zip", path: ".runtime/source-cache/transport/germany_road/dlm250.zip" } },
+    mainMapEligible: true,
+    apply_bridge_supported: true,
+    coverage_scope: "country",
+    main_map_consumer: { supported_keys: ["roads", "road_labels"] },
+    sidecars: { road_labels: { required: true } },
+    paths: { preview: { roads: "roads.preview.topo.json", road_labels: "road_labels.preview.geojson" }, full: { roads: "roads.topo.json", road_labels: "road_labels.geojson" } },
+  };
+  const passedGate = createTransportPackSourceGateReport("germany_road", germanyManifest);
+  assert.equal(passedGate.passed, true);
+  assert.equal(resolveTransportActivePack({ activePackId: "germany_road", familyId: "road", manifest: germanyManifest }).ok, true);
+
+  const familyMismatch = resolveTransportActivePack({ activePackId: "usa_airport", familyId: "road" });
+  assert.equal(familyMismatch.ok, false);
+  assert.equal(familyMismatch.reason, "family_mismatch");
+
+  const missingManifest = resolveTransportActivePack({ activePackId: "germany_road", familyId: "road" });
+  assert.equal(missingManifest.ok, false);
+  assert.equal(missingManifest.reason, "manifest_missing");
+
+  const missingSignatureGate = createTransportPackSourceGateReport("germany_road", { ...germanyManifest, source_signature: {} });
+  assert.equal(missingSignatureGate.passed, false);
+  assert.ok(missingSignatureGate.reasons.includes("source_signature_missing"));
+
+  const forbiddenSignatureGate = createTransportPackSourceGateReport("germany_road", {
+    ...germanyManifest,
+    source_signature: { bad: { filename: "checked_in_global.geojson" } },
+  });
+  assert.equal(forbiddenSignatureGate.passed, false);
+  assert.ok(forbiddenSignatureGate.reasons.includes("forbidden_source_signature"));
+
+  const consumerMissing = resolveTransportActivePack({
+    activePackId: "germany_road",
+    familyId: "road",
+    manifest: germanyManifest,
+    consumerAvailable: false,
+  });
+  assert.equal(consumerMissing.ok, false);
+  assert.equal(consumerMissing.reason, "consumer_missing");
+});
+
+test("country road overlay consumes road_labels sidecar on the main map", () => {
+  const zoom = 4;
+  const { context, metrics, owner, appRuntime } = createLineRenderOwnerHarness({ k: zoom, roadLabelsEnabled: true });
+  appRuntime.transportCountryOverlayState = {
+    status: "ready",
+    activePackId: "germany_road",
+    family: "road",
+    collectionsByLayer: {
+      roads: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "motorway", reveal_rank: 1 } },
+        ],
+      },
+      road_labels: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "Point", coordinates: [0.5, 0.5] }, properties: { name: "E35" } },
+        ],
+      },
+    },
+  };
+
+  owner.drawRoadsLayer(zoom);
+
+  assert.ok(context.calls.some((call) => call.type === "fillText" && call.text === "E35"), "country road labels should render from the road_labels sidecar");
+  const countryRoadMetric = metrics.findLast((entry) => entry.name === "drawCountryRoadsLayer");
+  assert.equal(countryRoadMetric?.detail?.visibleFeatureCount, 1);
+  assert.equal(countryRoadMetric?.detail?.labelCount, 1);
+});
+
+test("country rail overlay consumes rail_stations_major sidecar with pack-scoped hover keys", () => {
+  const zoom = 4;
+  const { metrics, owner, appRuntime, hoverEntries } = createLineRenderOwnerHarness({ k: zoom });
+  appRuntime.transportCountryOverlayState = {
+    status: "ready",
+    activePackId: "france_rail",
+    family: "rail",
+    collectionsByLayer: {
+      railways: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "mainline", reveal_rank: 1, name: "LGV" } },
+        ],
+      },
+      rail_stations_major: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "Point", coordinates: [0.25, 0.25] }, properties: { id: "station-1", name: "Porte Maillot" } },
+        ],
+      },
+    },
+  };
+
+  owner.drawRailwaysLayer(zoom);
+
+  const stationMetric = metrics.findLast((entry) => entry.name === "drawCountryRailStationsMajorLayer");
+  assert.equal(stationMetric?.detail?.visibleFeatureCount, 1);
+  const stationHoverUpdate = hoverEntries.findLast((entry) => entry.options?.packId === "france_rail");
+  assert.equal(stationHoverUpdate?.options?.append, true);
+  assert.equal(stationHoverUpdate?.entries?.[0]?.packId, "france_rail");
+});
+
+
+
+test("country road overlay still draws when global road data is empty", () => {
+  const zoom = 4;
+  const { metrics, owner, appRuntime } = createLineRenderOwnerHarness({ k: zoom, roadLabelsEnabled: true });
+  appRuntime.roadsData = { type: "FeatureCollection", features: [] };
+  appRuntime.transportCountryOverlayState = {
+    status: "ready",
+    activePackId: "germany_road",
+    family: "road",
+    collectionsByLayer: {
+      roads: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "motorway", reveal_rank: 1 } },
+        ],
+      },
+      road_labels: { type: "FeatureCollection", features: [] },
+    },
+  };
+
+  owner.drawRoadsLayer(zoom);
+
+  assert.equal(metrics.findLast((entry) => entry.name === "drawRoadsLayer")?.detail?.reason, "no-data");
+  assert.equal(metrics.findLast((entry) => entry.name === "drawCountryRoadsLayer")?.detail?.visibleFeatureCount, 1);
+});
+
+test("country rail overlay still draws when global rail data is empty", () => {
+  const zoom = 4;
+  const { metrics, owner, appRuntime } = createLineRenderOwnerHarness({ k: zoom });
+  appRuntime.railwaysData = { type: "FeatureCollection", features: [] };
+  appRuntime.transportCountryOverlayState = {
+    status: "ready",
+    activePackId: "france_rail",
+    family: "rail",
+    collectionsByLayer: {
+      railways: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "mainline", reveal_rank: 1 } },
+        ],
+      },
+      rail_stations_major: { type: "FeatureCollection", features: [] },
+    },
+  };
+
+  owner.drawRailwaysLayer(zoom);
+
+  assert.equal(metrics.findLast((entry) => entry.name === "drawRailwaysLayer")?.detail?.reason, "no-data");
+  assert.equal(metrics.findLast((entry) => entry.name === "drawCountryRailwaysLayer")?.detail?.visibleFeatureCount, 1);
 });
