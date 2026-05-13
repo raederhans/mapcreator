@@ -82,6 +82,20 @@ class HistoryManagerStrategicOverlayContractTest(unittest.TestCase):
               }],
               operationGraphics: [],
               unitCounters: [],
+              specialZoneMembershipBrushMode: "add",
+              specialZoneLayers: {
+                version: 1,
+                layers: [{
+                  id: "zone-a",
+                  name: "Zone A",
+                  visible: true,
+                  legendVisible: true,
+                  style: { fill: "#112233", stroke: "#445566", pattern: "solid" },
+                  memberFeatureIds: ["a"],
+                }],
+                activeLayerId: "zone-a",
+                diagnostics: [],
+              },
               frontlineOverlayDirty: false,
               operationalLinesDirty: false,
               operationGraphicsDirty: false,
@@ -116,6 +130,14 @@ class HistoryManagerStrategicOverlayContractTest(unittest.TestCase):
               kind: "axis",
               points: [[9, 9], [10, 10]],
             }];
+            state.specialZoneMembershipBrushMode = "remove";
+            state.specialZoneLayers = {
+              ...state.specialZoneLayers,
+              layers: [{
+                ...state.specialZoneLayers.layers[0],
+                memberFeatureIds: ["a", "b"],
+              }],
+            };
             const after = captureHistoryState({ strategicOverlay: true });
 
             pushHistoryEntry({
@@ -131,6 +153,9 @@ class HistoryManagerStrategicOverlayContractTest(unittest.TestCase):
               dirtyRevision: state.dirtyRevision,
               isDirty: state.isDirty,
               operationalLinesDirty: state.operationalLinesDirty,
+              specialZoneMembershipBrushMode: state.specialZoneMembershipBrushMode,
+              specialZoneMembers: state.specialZoneLayers.layers[0].memberFeatureIds,
+              specialZonesOverlayDirty: state.specialZonesOverlayDirty,
             };
 
             redoHistory();
@@ -140,6 +165,9 @@ class HistoryManagerStrategicOverlayContractTest(unittest.TestCase):
               dirtyRevision: state.dirtyRevision,
               isDirty: state.isDirty,
               operationalLinesDirty: state.operationalLinesDirty,
+              specialZoneMembershipBrushMode: state.specialZoneMembershipBrushMode,
+              specialZoneMembers: state.specialZoneLayers.layers[0].memberFeatureIds,
+              specialZonesOverlayDirty: state.specialZonesOverlayDirty,
             };
 
             console.log(JSON.stringify({
@@ -176,6 +204,12 @@ class HistoryManagerStrategicOverlayContractTest(unittest.TestCase):
         self.assertGreaterEqual(result["afterRedo"]["overlayUiCalls"], 2)
         self.assertTrue(result["afterUndo"]["operationalLinesDirty"])
         self.assertTrue(result["afterRedo"]["operationalLinesDirty"])
+        self.assertEqual(result["afterUndo"]["specialZoneMembershipBrushMode"], "add")
+        self.assertEqual(result["afterRedo"]["specialZoneMembershipBrushMode"], "remove")
+        self.assertEqual(result["afterUndo"]["specialZoneMembers"], ["a"])
+        self.assertEqual(result["afterRedo"]["specialZoneMembers"], ["a", "b"])
+        self.assertTrue(result["afterUndo"]["specialZonesOverlayDirty"])
+        self.assertTrue(result["afterRedo"]["specialZonesOverlayDirty"])
         self.assertTrue(result["afterUndo"]["isDirty"])
         self.assertTrue(result["afterRedo"]["isDirty"])
         self.assertGreaterEqual(result["afterUndo"]["dirtyRevision"], 1)

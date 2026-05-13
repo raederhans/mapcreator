@@ -70,8 +70,22 @@ test("project export preserves strategic overlay counters and legacy kind values
       opacity: 0.75,
       attachedCounterIds: ["unit_1"],
     }],
-    specialZoneLayers: {},
-    styleConfig: {},
+    showSpecialZones: true,
+    specialZoneMembershipBrushMode: "remove",
+    specialZoneLayers: {
+      layers: [{
+        id: "layer-a",
+        name: "Layer A",
+        visible: true,
+        legendVisible: false,
+        style: { fill: "#112233", stroke: "#445566", pattern: "dots" },
+        memberFeatureIds: ["z", "a"],
+      }],
+      activeLayerId: "layer-a",
+    },
+    styleConfig: {
+      specialZones: { disputedFill: "#ffffff" },
+    },
     transportWorkbenchUi: {},
     unitCounters: [{
       id: "unit_1",
@@ -130,4 +144,11 @@ test("project export preserves strategic overlay counters and legacy kind values
   assert.deepEqual(payload.unitCounters[0].anchor, { lon: 180, lat: -90, featureId: "GER" });
   assert.deepEqual(payload.unitCounters[0].attachment, { kind: "operational-line", lineId: "opl_axis_1" });
   assert.deepEqual(payload.unitCounters[0].layoutAnchor, { kind: "attachment", key: "opl_axis_1", slotIndex: 2 });
+  assert.equal(payload.specialZoneMembershipBrushMode, "remove");
+  assert.equal(payload.layerVisibility.showSpecialZones, true);
+  assert.deepEqual(payload.specialZoneLayers.layers[0].memberFeatureIds, ["a", "z"]);
+  assert.equal(payload.specialZoneLayers.layers[0].legendVisible, false);
+  assert.equal(Object.hasOwn(payload.styleConfig, "specialZones"), false);
+  assert.deepEqual(payload.manualSpecialZones, { type: "FeatureCollection", features: [] });
+  assert.deepEqual(payload.specialRegionOverrides, {});
 });

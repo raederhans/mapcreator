@@ -2,16 +2,19 @@
 // 这个控制器只管理 special zone layer UI；toolbar.js 继续负责弹层、焦点和跨面板仲裁。
 
 import {
+  SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES,
   SPECIAL_ZONE_PATTERN_IDS,
   SPECIAL_ZONE_PRESETS,
   activateSpecialZoneMembershipToolState,
   createLayerFromPreset,
+  createSpecialZonePatternPreviewStyle,
   exitSpecialZoneMembershipToolState,
   mutateSpecialZoneLayersState,
   mutateRuntimeSpecialZoneLayersState,
   normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
   registerSpecialZonesWorkbenchRuntimeHooks,
+  resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
   setRuntimeSpecialZoneLayersState,
   setSpecialZoneMembershipBrushModeState,
@@ -38,6 +41,9 @@ function createLabel(text, control) {
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MEMBER_TOOL_IDS = new Set(["single", "multi", "brush"]);
 const MEMBER_BRUSH_MODES = new Set(["add", "remove"]);
+const MEMBER_LIST_INLINE_LIMIT = 60;
+const MEMBER_LIST_INLINE_RENDER_COUNT = 30;
+const MEMBER_DRAWER_RENDER_LIMIT = 80;
 
 const MEMBER_TOOL_ICONS = Object.freeze({
   single: {
@@ -105,13 +111,19 @@ function createSpecialZonesWorkbenchController({
   let propertyNode = null;
   let actionsNode = null;
   let currentTargetActionsNode = null;
+  let diagnosticsNode = null;
+  let memberDrawerNode = null;
+  let overlayToggleNode = null;
+  let lastDiagnosticsToastKey = "";
   let loadedScenarioLayerAssetId = "";
+  let failedScenarioLayerAssetId = "";
 
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
   const normalizeState = () => {
     return normalizeRuntimeSpecialZoneLayersState(runtimeState, {
       defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
     });
   };
 
@@ -153,6 +165,39 @@ function createSpecialZonesWorkbenchController({
     return MEMBER_BRUSH_MODES.has(mode) ? mode : "add";
   };
 
+  const activeScenarioDeclaresLayerAsset = () => {
+    return !!String(runtimeState.activeScenarioManifest?.special_zone_layers_url || "").trim();
+  };
+
+  const setLoadFailedSpecialZoneLayersState = (scenarioId) => {
+    const topologyFingerprint = resolveSpecialZoneTopologyFingerprint(runtimeState);
+    setRuntimeSpecialZoneLayersState(runtimeState, {
+      version: 1,
+      layers: [],
+      activeLayerId: "",
+      topologyFingerprint,
+      diagnostics: [
+        {
+          code: SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED,
+          scenarioId,
+        },
+      ],
+    }, {
+      defaultSource: "scenario",
+      topologyFingerprint,
+    });
+    runtimeState.specialZonesOverlayDirty = true;
+  };
+
+  const applyPatternPreviewStyle = (node, style = {}) => {
+    if (!node) return;
+    const preview = createSpecialZonePatternPreviewStyle(style);
+    node.style.backgroundColor = preview.backgroundColor;
+    node.style.backgroundImage = preview.backgroundImage;
+    node.style.borderColor = preview.borderColor;
+    node.style.opacity = preview.opacity;
+  };
+
   const activateMembershipTool = (tool = getMemberTool()) => {
     const normalizedTool = MEMBER_TOOL_IDS.has(tool) ? tool : "multi";
     activateSpecialZoneMembershipToolState(runtimeState, normalizedTool);
@@ -182,7 +227,11 @@ function createSpecialZonesWorkbenchController({
       : null;
     mutateRuntimeSpecialZoneLayersState(runtimeState, mutation, {
       defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
     });
+    if (mutation?.action === "addLayer") {
+      runtimeState.showSpecialZones = true;
+    }
     markDirty?.(label);
     if (typeof pushHistoryEntry === "function") {
       pushHistoryEntry({
@@ -192,6 +241,7 @@ function createSpecialZonesWorkbenchController({
       });
     }
     render?.();
+    updateToolUI?.();
     renderSpecialZonesWorkbenchUi();
   };
 
@@ -208,10 +258,30 @@ function createSpecialZonesWorkbenchController({
     header.className = "special-zone-workbench-header";
     const title = document.createElement("h3");
     title.textContent = translate("Layer-based special zones");
+    const overlayToggleLabel = document.createElement("label");
+    overlayToggleLabel.className = "special-zone-overlay-toggle";
+    overlayToggleNode = document.createElement("input");
+    overlayToggleNode.type = "checkbox";
+    overlayToggleNode.dataset.specialZoneOverlayToggle = "true";
+    overlayToggleNode.checked = !!runtimeState.showSpecialZones;
+    const overlayToggleText = document.createElement("span");
+    overlayToggleText.textContent = translate("Show special zones overlay");
+    overlayToggleLabel.append(overlayToggleNode, overlayToggleText);
+    overlayToggleNode.addEventListener("change", async () => {
+      runtimeState.showSpecialZones = !!overlayToggleNode.checked;
+      markDirty?.("toggle-special-zones");
+      if (runtimeState.showSpecialZones) {
+        await loadScenarioSpecialZoneLayers();
+      }
+      render?.();
+      renderSpecialZonesWorkbenchUi();
+    });
     statusNode = document.createElement("p");
     statusNode.className = "special-zone-workbench-status";
     statusNode.setAttribute("aria-live", "polite");
-    header.append(title, statusNode);
+    header.append(title, overlayToggleLabel, statusNode);
+    diagnosticsNode = document.createElement("div");
+    diagnosticsNode.className = "special-zone-workbench-diagnostics";
 
     const layout = document.createElement("div");
     layout.className = "special-zone-workbench-grid";
@@ -223,7 +293,7 @@ function createSpecialZonesWorkbenchController({
       node.className = "special-zone-workbench-card";
       layout.appendChild(node);
     });
-    root.append(header, layout);
+    root.append(header, diagnosticsNode, layout);
     container.prepend(root);
     return root;
   };
@@ -252,12 +322,19 @@ function createSpecialZonesWorkbenchController({
     state.layers.forEach((layer, index) => {
       const row = document.createElement("div");
       row.className = "special-zone-layer-row";
+      row.dataset.layerId = layer.id;
       if (layer.id === state.activeLayerId) row.classList.add("is-active");
       const selectBtn = createButton(`${layer.visible ? "●" : "○"} ${layer.name} (${layer.memberFeatureIds.length})`);
       selectBtn.setAttribute("aria-pressed", String(layer.id === state.activeLayerId));
       selectBtn.addEventListener("click", () => updateState({ action: "setActiveLayer", layerId: layer.id }, "special-zone-active-layer"));
       const visibilityBtn = createButton(layer.visible ? translate("Hide") : translate("Show"));
       visibilityBtn.addEventListener("click", () => updateState({ action: "updateLayer", layerId: layer.id, patch: { visible: !layer.visible } }, "special-zone-layer-visible"));
+      const legendBtn = createButton(layer.legendVisible === false ? translate("Show in legend") : translate("Hide from legend"));
+      legendBtn.addEventListener("click", () => updateState({
+        action: "updateLayer",
+        layerId: layer.id,
+        patch: { legendVisible: layer.legendVisible === false },
+      }, "special-zone-layer-legend"));
       const upBtn = createButton("↑");
       upBtn.disabled = index === 0;
       upBtn.addEventListener("click", () => {
@@ -272,7 +349,7 @@ function createSpecialZonesWorkbenchController({
         [order[index + 1], order[index]] = [order[index], order[index + 1]];
         updateState({ action: "reorderLayers", layerIds: order }, "special-zone-layer-reorder");
       });
-      row.append(selectBtn, visibilityBtn, upBtn, downBtn);
+      row.append(selectBtn, visibilityBtn, legendBtn, upBtn, downBtn);
       layerListNode.appendChild(row);
     });
   };
@@ -320,9 +397,7 @@ function createSpecialZonesWorkbenchController({
       button.setAttribute("aria-pressed", String(layer.presetId === preset.id));
       const preview = document.createElement("span");
       preview.className = "special-zone-preset-preview";
-      preview.style.background = preset.style.fill;
-      preview.style.borderColor = preset.style.stroke;
-      preview.style.opacity = String(Math.max(0.24, Number(preset.style.fillOpacity || 0.32)));
+      applyPatternPreviewStyle(preview, preset.style);
       const name = document.createElement("span");
       name.className = "special-zone-preset-name";
       name.textContent = preset.name;
@@ -361,9 +436,7 @@ function createSpecialZonesWorkbenchController({
     }
     const stylePreview = document.createElement("div");
     stylePreview.className = "special-zone-current-style-preview";
-    stylePreview.style.background = layer.style.fill;
-    stylePreview.style.borderColor = layer.style.stroke;
-    stylePreview.style.opacity = String(Math.max(0.24, Number(layer.style.fillOpacity || 0.32)));
+    applyPatternPreviewStyle(stylePreview, layer.style);
 
     const nameInput = document.createElement("input");
     nameInput.type = "text";
@@ -451,6 +524,87 @@ function createSpecialZonesWorkbenchController({
     });
 
     currentTargetActionsNode.append(addCurrentBtn, toggleCurrentBtn, addParentGroupBtn);
+  };
+
+  const closeMemberDrawer = () => {
+    if (!memberDrawerNode) return;
+    if (typeof memberDrawerNode.close === "function" && memberDrawerNode.open) {
+      memberDrawerNode.close();
+    } else {
+      memberDrawerNode.hidden = true;
+    }
+  };
+
+  const renderMemberDrawerRows = (layer, searchTerm = "") => {
+    if (!memberDrawerNode || !layer) return;
+    const list = memberDrawerNode.querySelector("[data-special-zone-member-drawer-list]");
+    if (!list) return;
+    list.replaceChildren();
+    const query = String(searchTerm || "").trim().toLowerCase();
+    const filtered = layer.memberFeatureIds.filter((featureId) => (
+      !query || String(featureId).toLowerCase().includes(query)
+    ));
+    filtered.slice(0, MEMBER_DRAWER_RENDER_LIMIT).forEach((featureId) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "special-zone-member-drawer-row";
+      row.textContent = featureId;
+      row.addEventListener("click", () => {
+        updateState({
+          action: "removeMembers",
+          layerId: layer.id,
+          featureIds: [featureId],
+        }, "special-zone-members-remove");
+        const search = memberDrawerNode?.querySelector(".special-zone-member-drawer-search");
+        renderMemberDrawerRows(activeLayer(), search?.value || "");
+      });
+      list.appendChild(row);
+    });
+    if (!filtered.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = translate("No matching members.");
+      list.appendChild(empty);
+    } else if (filtered.length > MEMBER_DRAWER_RENDER_LIMIT) {
+      const capped = document.createElement("p");
+      capped.className = "muted";
+      capped.textContent = translate("Showing first 80 matching members.");
+      list.appendChild(capped);
+    }
+  };
+
+  const openMemberDrawer = (layer) => {
+    if (!container || !layer) return;
+    if (!memberDrawerNode) {
+      memberDrawerNode = document.createElement("dialog");
+      memberDrawerNode.className = "special-zone-member-drawer";
+      const header = document.createElement("div");
+      header.className = "special-zone-member-drawer-header";
+      const title = document.createElement("h4");
+      title.textContent = translate("All member ids");
+      const closeBtn = createButton(translate("Close"));
+      closeBtn.addEventListener("click", closeMemberDrawer);
+      header.append(title, closeBtn);
+      const search = document.createElement("input");
+      search.type = "search";
+      search.className = "input special-zone-member-drawer-search";
+      search.placeholder = translate("Search feature id or country code");
+      search.addEventListener("input", () => renderMemberDrawerRows(activeLayer(), search.value));
+      const list = document.createElement("div");
+      list.dataset.specialZoneMemberDrawerList = "true";
+      list.className = "special-zone-member-drawer-list";
+      memberDrawerNode.append(header, search, list);
+      container.appendChild(memberDrawerNode);
+    }
+    const search = memberDrawerNode.querySelector(".special-zone-member-drawer-search");
+    if (search) search.value = "";
+    renderMemberDrawerRows(layer);
+    if (typeof memberDrawerNode.showModal === "function") {
+      memberDrawerNode.showModal();
+    } else {
+      memberDrawerNode.hidden = false;
+    }
+    search?.focus?.();
   };
 
   const renderActions = (state, layer) => {
@@ -558,7 +712,10 @@ function createSpecialZonesWorkbenchController({
     const ids = document.createElement("div");
     ids.className = "special-zone-member-id-list";
     if (layer.memberFeatureIds.length) {
-      layer.memberFeatureIds.forEach((featureId) => {
+      const inlineIds = layer.memberFeatureIds.length > MEMBER_LIST_INLINE_LIMIT
+        ? layer.memberFeatureIds.slice(0, MEMBER_LIST_INLINE_RENDER_COUNT)
+        : layer.memberFeatureIds;
+      inlineIds.forEach((featureId) => {
         const chip = document.createElement("button");
         chip.type = "button";
         chip.className = "special-zone-member-chip";
@@ -567,6 +724,14 @@ function createSpecialZonesWorkbenchController({
         chip.addEventListener("click", () => updateState({ action: "removeMembers", layerId: layer.id, featureIds: [featureId] }, "special-zone-members-remove"));
         ids.appendChild(chip);
       });
+      if (layer.memberFeatureIds.length > MEMBER_LIST_INLINE_LIMIT) {
+        const overflow = createButton(
+          `${translate("View all")} (${layer.memberFeatureIds.length})`,
+          "secondary-btn special-zone-member-overflow-btn"
+        );
+        overflow.addEventListener("click", () => openMemberDrawer(layer));
+        ids.appendChild(overflow);
+      }
     } else {
       const emptyMembers = document.createElement("span");
       emptyMembers.className = "muted";
@@ -590,31 +755,55 @@ function createSpecialZonesWorkbenchController({
     saveBtn.addEventListener("click", async () => {
       const scenarioId = String(runtimeState.activeScenarioId || "").trim();
       if (!scenarioId) return;
+      let stateToSave = null;
+      saveBtn.disabled = true;
+      saveBtn.classList.add("is-loading");
+      saveBtn.setAttribute("aria-busy", "true");
+      if (statusNode) statusNode.textContent = translate("Saving scenario special zone layers…");
       try {
         if (loadedScenarioLayerAssetId !== scenarioId) {
+          const pendingState = serializeSpecialZoneLayersState(normalizeState(), {
+            topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+          });
           await loadScenarioSpecialZoneLayers();
           if (loadedScenarioLayerAssetId !== scenarioId) {
             throw new Error("Scenario special zone layer asset load unavailable.");
           }
-          showToast?.(translate("Scenario special zone layers loaded. Review changes before saving."), {
-            title: translate("Special zones loaded"),
-            tone: "warning",
-          });
-          return;
+          // 首次保存可能发生在 optional asset 载入前；已有本地 layer 时保存本地意图，避免载入结果覆盖用户刚做的编辑。
+          stateToSave = pendingState.layers.length
+            ? pendingState
+            : serializeSpecialZoneLayersState(normalizeState(), {
+                topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+              });
         }
         const response = await fetch("/__dev/scenario/special-zone-layers/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scenarioId, specialZoneLayers: serializeSpecialZoneLayersState(normalizeState()) }),
+          body: JSON.stringify({
+            scenarioId,
+            specialZoneLayers: stateToSave || serializeSpecialZoneLayersState(normalizeState(), {
+              topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+            }),
+          }),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
         if (!result?.ok) throw new Error(result?.error || "Scenario special zone save failed.");
-        setRuntimeSpecialZoneLayersState(runtimeState, result.specialZoneLayers || normalizeState(), { defaultSource: "scenario" });
+        setRuntimeSpecialZoneLayersState(runtimeState, result.specialZoneLayers || normalizeState(), {
+          defaultSource: "scenario",
+          topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+        });
+        render?.();
+        if (statusNode) statusNode.textContent = translate("Scenario special zone layers saved.");
         showToast?.(translate("Scenario special zone layers saved."), { title: translate("Special zones saved"), tone: "success" });
       } catch (error) {
         console.warn("[special-zone-layers] Scenario save unavailable.", error);
+        if (statusNode) statusNode.textContent = translate("Scenario special zone layer save failed.");
         showToast?.(translate("Scenario layer asset save is available only in the local dev server."), { title: translate("Read-only scenario asset"), tone: "warning" });
+      } finally {
+        saveBtn.disabled = !runtimeState.activeScenarioId;
+        saveBtn.classList.remove("is-loading");
+        saveBtn.removeAttribute("aria-busy");
       }
     });
 
@@ -630,16 +819,62 @@ function createSpecialZonesWorkbenchController({
     renderCurrentTargetActions(activeLayer());
   };
 
+  const renderDiagnostics = (state) => {
+    if (!diagnosticsNode) return;
+    diagnosticsNode.replaceChildren();
+    const diagnostics = Array.isArray(state?.diagnostics) ? state.diagnostics : [];
+    if (!diagnostics.length) {
+      diagnosticsNode.hidden = true;
+      return;
+    }
+    diagnosticsNode.hidden = false;
+    const title = document.createElement("strong");
+    title.textContent = translate("Diagnostics");
+    const list = document.createElement("ul");
+    diagnostics.slice(0, 6).forEach((entry) => {
+      const item = document.createElement("li");
+      const code = String(entry?.code || "diagnostic");
+      if (code === "topology_fingerprint_mismatch") {
+        item.textContent = `${code}: expected ${entry.expected || "current"} / got ${entry.actual || "empty"}`;
+      } else if (code === "invalid_feature_id") {
+        item.textContent = `${code}: ${entry.featureId || ""}`.trim();
+      } else if (code === "duplicate_layer_id_dropped") {
+        item.textContent = `${code}: ${entry.layerId || ""}`.trim();
+      } else if (code === SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED) {
+        item.textContent = `${code}: ${entry.scenarioId || runtimeState.activeScenarioId || ""}`.trim();
+      } else if (code === "legacy_special_zone_fields_dropped") {
+        item.textContent = translate("legacy_special_zone_fields_dropped");
+      } else {
+        item.textContent = code;
+      }
+      list.appendChild(item);
+    });
+    diagnosticsNode.append(title, list);
+  };
+
   const renderSpecialZonesWorkbenchUi = () => {
     if (!ensureRoot()) return;
     const state = normalizeState();
     const layer = activeLayer();
+    if (overlayToggleNode) {
+      overlayToggleNode.checked = !!runtimeState.showSpecialZones;
+    }
+    const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+    if (
+      runtimeState.showSpecialZones
+      && scenarioId
+      && loadedScenarioLayerAssetId !== scenarioId
+      && failedScenarioLayerAssetId !== scenarioId
+    ) {
+      void loadScenarioSpecialZoneLayers();
+    }
     if (statusNode) {
       statusNode.textContent = layer
         ? `${state.layers.length} ${translate("layers")}, ${layer.memberFeatureIds.length} ${translate("active members")}.`
         : translate("No special zone layers yet.");
     }
     renderLayerList(state);
+    renderDiagnostics(state);
     registerSpecialZonesWorkbenchRuntimeHooks(runtimeState, {
       renderWorkbench: renderSpecialZonesWorkbenchUi,
       renderCurrentTarget: renderSpecialZonesWorkbenchCurrentTargetUi,
@@ -657,26 +892,60 @@ function createSpecialZonesWorkbenchController({
     });
   };
 
+  const focusSpecialZonesWorkbench = () => {
+    if (!ensureRoot()) return;
+    const activeRow = root.querySelector(".special-zone-layer-row.is-active button");
+    const newLayerButton = layerListNode?.querySelector(".special-zone-workbench-section-title button");
+    (activeRow || newLayerButton || root).focus?.();
+  };
+
   const loadScenarioSpecialZoneLayers = async () => {
     const scenarioId = String(runtimeState.activeScenarioId || "").trim();
     if (!scenarioId) {
       loadedScenarioLayerAssetId = "";
+      failedScenarioLayerAssetId = "";
       return null;
     }
     if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;
     if (typeof ensureActiveScenarioOptionalLayerLoaded !== "function") return null;
     const result = await ensureActiveScenarioOptionalLayerLoaded("specialZoneLayers", { renderNow: false });
-    if (!result) return null;
+    if (!result && activeScenarioDeclaresLayerAsset()) {
+      failedScenarioLayerAssetId = scenarioId;
+      setLoadFailedSpecialZoneLayersState(scenarioId);
+      if (statusNode) statusNode.textContent = translate("Scenario special zone layer load failed.");
+      showToast?.(translate("Scenario special zone layer asset could not be loaded. Retry from the workbench."), {
+        title: translate("Special zone layer load failed"),
+        tone: "warning",
+      });
+      render?.();
+      renderSpecialZonesWorkbenchUi();
+      return null;
+    }
     loadedScenarioLayerAssetId = scenarioId;
+    failedScenarioLayerAssetId = "";
     normalizeRuntimeSpecialZoneLayersState(runtimeState, {
       defaultSource: "scenario",
+      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
     });
+    const diagnostics = Array.isArray(runtimeState.specialZoneLayers?.diagnostics)
+      ? runtimeState.specialZoneLayers.diagnostics
+      : [];
+    const mismatchDiagnostics = diagnostics.filter((entry) => entry?.code === "topology_fingerprint_mismatch");
+    const diagnosticsKey = `${scenarioId}:${mismatchDiagnostics.map((entry) => `${entry.expected || ""}/${entry.actual || ""}`).join("|")}`;
+    if (mismatchDiagnostics.length && diagnosticsKey !== lastDiagnosticsToastKey) {
+      lastDiagnosticsToastKey = diagnosticsKey;
+      showToast?.(translate("Special zone topology fingerprint mismatch is listed in the workbench diagnostics."), {
+        title: translate("Special zone topology mismatch"),
+        tone: "warning",
+      });
+    }
     renderSpecialZonesWorkbenchUi();
     return result;
   };
 
   return {
     bindSpecialZonesWorkbenchEvents,
+    focusSpecialZonesWorkbench,
     loadScenarioSpecialZoneLayers,
     renderSpecialZonesWorkbenchUi,
     renderSpecialZonesWorkbenchCurrentTargetUi,

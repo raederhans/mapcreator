@@ -8,6 +8,7 @@ import {
   createLayerFromPreset,
   mutateSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
+  resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 } from "../js/core/special_zone_layers.js";
@@ -19,6 +20,8 @@ test("special zone layer defaults and preset registry are stable", () => {
   assert.equal(state.activeLayerId, "");
   assert.equal(state.layers.length, 0);
   assert.equal(SPECIAL_ZONE_PRESETS.length, 18);
+  const layer = createLayerFromPreset("custom", { id: "legend-default" });
+  assert.equal(layer.legendVisible, true);
 });
 
 test("normalizes schema, diagnostics, legacy drops, and sorted member arrays", () => {
@@ -30,6 +33,7 @@ test("normalizes schema, diagnostics, legacy drops, and sorted member arrays", (
         id: "layer-a",
         name: "Layer A",
         source: "scenario",
+        legendVisible: false,
         style: { fill: "#ABC", pattern: "dots" },
         memberFeatureIds: ["b", "", "a", "missing", "a"],
       },
@@ -44,11 +48,27 @@ test("normalizes schema, diagnostics, legacy drops, and sorted member arrays", (
   assert.equal(normalized.topologyFingerprint, "new-topo");
   assert.equal(normalized.layers.length, 1);
   assert.deepEqual(normalized.layers[0].memberFeatureIds, ["a", "b"]);
+  assert.equal(normalized.layers[0].legendVisible, false);
   assert.equal(normalized.layers[0].style.fill, "#aabbcc");
   assert.ok(normalized.diagnostics.some((entry) => entry.code === "topology_fingerprint_mismatch"));
   assert.ok(normalized.diagnostics.some((entry) => entry.code === "legacy_special_zone_fields_dropped"));
   assert.ok(normalized.diagnostics.some((entry) => entry.code === "invalid_feature_id" && entry.featureId === "missing"));
   assert.ok(normalized.diagnostics.some((entry) => entry.code === "duplicate_layer_id_dropped"));
+  const normalizedAgain = normalizeSpecialZoneLayersState(normalized, { topologyFingerprint: "new-topo" });
+  assert.equal(
+    normalizedAgain.diagnostics.filter((entry) => entry.code === "topology_fingerprint_mismatch").length,
+    1
+  );
+});
+
+test("topology fingerprint resolves from active scenario runtime state", () => {
+  assert.equal(resolveSpecialZoneTopologyFingerprint({ scenarioBaselineHash: "baseline-a" }), "baseline-a");
+  assert.equal(
+    resolveSpecialZoneTopologyFingerprint({
+      activeScenarioManifest: { source: { runtime_topology_sha256: "runtime-sha" } },
+    }),
+    "runtime-sha"
+  );
 });
 
 test("mutations cover CRUD, reorder, style, and membership operations", () => {
@@ -90,11 +110,12 @@ test("serialization and render feature bridge preserve canonical ids", () => {
   let state = createEmptySpecialZoneLayersState();
   state = mutateSpecialZoneLayersState(state, {
     action: "addLayer",
-    layer: createLayerFromPreset("neutral", { id: "neutral", memberFeatureIds: ["2", "1"] }),
+    layer: createLayerFromPreset("neutral", { id: "neutral", memberFeatureIds: ["2", "1"], legendVisible: false }),
   });
   state = updateSpecialZoneLayerMembership(state, "neutral", "3", "add");
   const serialized = serializeSpecialZoneLayersState(state);
   assert.deepEqual(serialized.layers[0].memberFeatureIds, ["1", "2", "3"]);
+  assert.equal(serialized.layers[0].legendVisible, false);
 
   const featureById = new Map([
     ["1", { type: "Feature", properties: { id: "1" }, geometry: { type: "Polygon", coordinates: [] } }],
@@ -104,6 +125,13 @@ test("serialization and render feature bridge preserve canonical ids", () => {
   assert.equal(rendered.features.length, 2);
   assert.deepEqual(rendered.features.map((feature) => feature.properties.sourceFeatureId), ["1", "3"]);
   assert.equal(rendered.features[0].properties.__specialZoneLayerId, "neutral");
+
+  const hiddenMapLayer = serializeSpecialZoneLayersState(mutateSpecialZoneLayersState(serialized, {
+    action: "updateLayer",
+    layerId: "neutral",
+    patch: { visible: false, legendVisible: true },
+  }));
+  assert.equal(buildSpecialZoneRenderFeatures(hiddenMapLayer, featureById).features.length, 0);
 });
 
 test("style preset updates preserve members and replace mode keeps one explicit set", () => {

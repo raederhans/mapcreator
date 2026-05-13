@@ -1727,95 +1727,9 @@
           <details id="specialZonePopover" class="card special-zone-editor-card sidebar-details-card" data-inline-editor="true" aria-labelledby="lblSpecialZoneEditor">
             <summary class="section-header" id="lblSpecialZoneEditor">Special Zone Editor</summary>
             <div class="sidebar-details-body">
-              <div class="space-y-3">
-                <div class="flex items-center justify-between gap-3">
-                  <label id="lblSpecialZoneType" class="range-label" for="specialZoneTypeSelect">Type</label>
-                  <select id="specialZoneTypeSelect" name="special-zone-type" autocomplete="off" class="select-input">
-                    <option id="optSpecialZoneDisputed" value="disputed">Disputed</option>
-                    <option id="optSpecialZoneWasteland" value="wasteland">Wasteland</option>
-                    <option id="optSpecialZoneCustom" value="custom" selected>Custom</option>
-                  </select>
-                </div>
-                <div>
-                  <label id="lblSpecialZoneLabel" class="range-label" for="specialZoneLabelInput">Label</label>
-                  <input id="specialZoneLabelInput" type="text" name="special-zone-label" autocomplete="off" spellcheck="false" class="input mt-2" placeholder="e.g. Buffer Zone A..." data-i18n-placeholder="e.g. Buffer Zone A..." />
-                </div>
-                <div class="parent-border-actions mt-2">
-                  <button id="specialZoneStartBtn" type="button" class="btn-secondary">Start Draw</button>
-                  <button id="specialZoneUndoBtn" type="button" class="btn-secondary">Undo Vertex</button>
-                </div>
-                <div class="parent-border-actions mt-2">
-                  <button id="specialZoneFinishBtn" type="button" class="btn-secondary">Finish</button>
-                  <button id="specialZoneCancelBtn" type="button" class="btn-secondary">Cancel</button>
-                </div>
-                <div>
-                  <label id="lblSpecialZoneList" class="range-label" for="specialZoneFeatureList">Manual Zones</label>
-                  <select id="specialZoneFeatureList" name="special-zone-feature-list" autocomplete="off" class="select-input mt-2"></select>
-                </div>
-                <button id="specialZoneDeleteBtn" type="button" class="btn-secondary mt-2">Delete Selected</button>
-                <details class="appearance-mini-section special-zone-style-section">
-                  <summary id="lblSpecialZonesStylePanel" class="section-header">Style</summary>
-                  <div class="mt-3">
-                    <label class="toggle-label mt-2">
-                      <input id="toggleSpecialZones" type="checkbox" class="checkbox-input" />
-                      <span id="lblSpecialZones">Special Zones</span>
-                    </label>
-                    <div class="ml-5 space-y-2">
-                      <div class="flex items-center justify-between gap-3">
-                        <label id="lblSpecialZonesDisputedFill" class="range-label" for="specialZonesDisputedFill">Disputed Fill</label>
-                        <input id="specialZonesDisputedFill" type="color" value="#f97316" class="color-input" />
-                      </div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label id="lblSpecialZonesDisputedStroke" class="range-label" for="specialZonesDisputedStroke">Disputed Stroke</label>
-                        <input id="specialZonesDisputedStroke" type="color" value="#ea580c" class="color-input" />
-                      </div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label id="lblSpecialZonesWastelandFill" class="range-label" for="specialZonesWastelandFill">Wasteland Fill</label>
-                        <input id="specialZonesWastelandFill" type="color" value="#dc2626" class="color-input" />
-                      </div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label id="lblSpecialZonesWastelandStroke" class="range-label" for="specialZonesWastelandStroke">Wasteland Stroke</label>
-                        <input id="specialZonesWastelandStroke" type="color" value="#b91c1c" class="color-input" />
-                      </div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label id="lblSpecialZonesCustomFill" class="range-label" for="specialZonesCustomFill">Custom Fill</label>
-                        <input id="specialZonesCustomFill" type="color" value="#8b5cf6" class="color-input" />
-                      </div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label id="lblSpecialZonesCustomStroke" class="range-label" for="specialZonesCustomStroke">Custom Stroke</label>
-                        <input id="specialZonesCustomStroke" type="color" value="#6d28d9" class="color-input" />
-                      </div>
-                      <div>
-                        <div class="range-row">
-                          <label id="lblSpecialZonesOpacity" class="range-label" for="specialZonesOpacity">Opacity</label>
-                          <span id="specialZonesOpacityValue" class="range-value">32%</span>
-                        </div>
-                        <input id="specialZonesOpacity" type="range" min="0" max="100" value="32" class="range-input" />
-                      </div>
-                      <div>
-                        <div class="range-row">
-                          <label id="lblSpecialZonesStrokeWidth" class="range-label" for="specialZonesStrokeWidth">Stroke Width</label>
-                          <span id="specialZonesStrokeWidthValue" class="range-value">1.30</span>
-                        </div>
-                        <input id="specialZonesStrokeWidth" type="range" min="0.4" max="4.0" step="0.05" value="1.30" class="range-input" />
-                      </div>
-                      <div>
-                        <div class="range-row">
-                          <label id="lblSpecialZonesDashStyle" class="range-label" for="specialZonesDashStyle">Dash</label>
-                        </div>
-                        <select id="specialZonesDashStyle" class="select-input mt-2">
-                          <option id="optSpecialZonesDashSolid" value="solid">Solid</option>
-                          <option id="optSpecialZonesDashDashed" value="dashed" selected>Dashed</option>
-                          <option id="optSpecialZonesDashDotted" value="dotted">Dotted</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </details>
-                <div id="specialZoneEditorHint" class="parent-border-empty mt-2">
-                  Click map to add vertices, double-click to finish.
-                </div>
-              </div>
+              <p id="specialZoneEditorHint" class="parent-border-empty mt-2" data-i18n="Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.">
+                Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.
+              </p>
             </div>
           </details>
 

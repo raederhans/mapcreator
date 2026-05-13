@@ -546,7 +546,8 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
       && byId("#railLabelDensity")?.value === expected.railLabelDensity
       && byId("#railOpacity")?.value === expected.railOpacity
       && state.interactionGranularity === expected.granularity
-      && byId("#toggleSpecialZones")?.checked === true
+      && state.showSpecialZones === true
+      && document.querySelector("[data-special-zone-overlay-toggle]")?.checked === true
       && byId("#referenceOpacity")?.value === expected.referenceOpacity
       && byId("#referenceScale")?.value === expected.referenceScale
       && byId("#referenceOffsetX")?.value === expected.referenceOffsetX
@@ -619,6 +620,10 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
     importanceThreshold: "secondary",
   });
   expect(roundtripExport.layerVisibility.showRail).toBe(true);
+  expect(Object.hasOwn(roundtripExport.styleConfig, "specialZones")).toBe(false);
+  expect(roundtripExport.specialZoneLayers).toBeTruthy();
+  expect(roundtripExport.manualSpecialZones).toEqual({ type: "FeatureCollection", features: [] });
+  expect(roundtripExport.specialRegionOverrides).toEqual({});
   expect(roundtripExport.customPresets).toEqual({
     ZZZ: [
       {
@@ -678,7 +683,8 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   const legacyProjectPath = path.join(artifactDir, "legacy-import.json");
   fs.writeFileSync(legacyProjectPath, JSON.stringify(legacyProject, null, 2));
 
-  await page.locator("#toggleSpecialZones").check();
+  await page.locator("#specialZonePopover").evaluate((node) => { node.open = true; });
+  await page.locator("[data-special-zone-overlay-toggle]").check();
   await setInputValue(page, "#internalBorderColor", "#ffffff");
   await setInputValue(page, "#empireBorderWidth", "4.25");
   await setInputValue(page, "#coastlineWidth", "2.9");
@@ -698,7 +704,8 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
     const recentCount = document.querySelectorAll("#recentColors .color-swatch").length;
     const state = globalThis.__pwProjectSaveLoad?.state;
     return byId("#themeSelect")?.value === "hoi4_vanilla"
-      && byId("#toggleSpecialZones")?.checked === false
+      && state.showSpecialZones === false
+      && document.querySelector("[data-special-zone-overlay-toggle]")?.checked === false
       && byId("#toggleRail")?.checked === false
       && byId("#toggleRoad")?.checked === false
       && byId("#physicalBlendMode")?.value === "source-over"

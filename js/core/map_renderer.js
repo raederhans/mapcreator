@@ -120,6 +120,8 @@ import { createTransportOverviewRenderOwner } from "./renderer/transport_overvie
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
 import { createSpecialZoneLayersRenderOwner } from "./renderer/special_zone_layers_render_owner.js";
 import {
+  getSpecialZoneLegendLayers,
+  getSpecialZoneLegendSignature,
   normalizeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 } from "./special_zone_layers.js";
@@ -20635,6 +20637,9 @@ export function renderLegend(uniqueColors = null, labels = null) {
   const colors = Array.isArray(uniqueColors)
     ? uniqueColors
     : LegendManager.getUniqueColors(state);
+  const specialZoneLegendLayers = runtimeState.showSpecialZones === false
+    ? []
+    : getSpecialZoneLegendLayers(runtimeState.specialZoneLayers);
   const labelMap = labels || LegendManager.getLabels();
   const hasScenarioVisualEdits =
     !!runtimeState.activeScenarioId &&
@@ -20647,20 +20652,23 @@ export function renderLegend(uniqueColors = null, labels = null) {
     return String(labelMap?.[key] || "").trim().length > 0;
   });
   const colorKey = colors.join("|");
+  const specialZoneLegendKey = runtimeState.showSpecialZones === false
+    ? ""
+    : getSpecialZoneLegendSignature({ layers: specialZoneLegendLayers });
   const normalizedLabels = colors.map((color) => {
     const key = String(color || "").toLowerCase();
     return labelMap?.[key] || "";
   });
-  const legendKey = `${colorKey}::${normalizedLabels.join("|")}`;
+  const legendKey = `${colorKey}::${normalizedLabels.join("|")}::specialZones:${specialZoneLegendKey}`;
   const shouldRebuild = legendKey !== lastLegendKey;
 
-  if (!colors.length) {
+  if (!colors.length && !specialZoneLegendLayers.length) {
     legendGroup.attr("display", "none");
     lastLegendKey = legendKey;
     return;
   }
 
-  if (runtimeState.activeScenarioId && !hasMeaningfulLabels && !hasScenarioVisualEdits) {
+  if (runtimeState.activeScenarioId && !hasMeaningfulLabels && !hasScenarioVisualEdits && !specialZoneLegendLayers.length) {
     legendGroup.attr("display", "none");
     lastLegendKey = `${legendKey}::scenario-hidden`;
     return;
@@ -20700,6 +20708,49 @@ export function renderLegend(uniqueColors = null, labels = null) {
         .attr("fill", "#111827")
         .text(label);
     });
+
+    if (specialZoneLegendLayers.length) {
+      const sectionY = colors.length ? colors.length * itemHeight + 6 : 0;
+      legendItemsGroup
+        .append("text")
+        .attr("x", 0)
+        .attr("y", sectionY - 1)
+        .attr("dominant-baseline", "hanging")
+        .attr("font-size", 10)
+        .attr("font-weight", 700)
+        .attr("fill", "#111827")
+        .text("Special Zone Layers");
+      specialZoneLegendLayers.forEach((layer, index) => {
+        const y = sectionY + 15 + index * itemHeight;
+        const style = layer.style || {};
+        legendItemsGroup
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", y)
+          .attr("width", swatchSize)
+          .attr("height", swatchSize)
+          .attr("rx", 2)
+          .attr("ry", 2)
+          .attr("fill", style.fill || "#8b5cf6")
+          .attr("stroke", style.stroke || "#6d28d9")
+          .attr("stroke-width", 1);
+        if (String(style.pattern || "solid") !== "solid") {
+          legendItemsGroup
+            .append("path")
+            .attr("d", `M1 ${y + swatchSize - 2} L${swatchSize - 1} ${y + 2}`)
+            .attr("stroke", style.stroke || "#6d28d9")
+            .attr("stroke-width", 1.2);
+        }
+        legendItemsGroup
+          .append("text")
+          .attr("x", textOffset)
+          .attr("y", y - 1)
+          .attr("dominant-baseline", "hanging")
+          .attr("font-size", 11)
+          .attr("fill", "#111827")
+          .text(layer.name || layer.id);
+      });
+    }
   }
 
   const bbox = legendItemsGroup.node().getBBox();

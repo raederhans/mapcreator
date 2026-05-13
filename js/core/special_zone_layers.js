@@ -3,6 +3,10 @@
 
 const SPECIAL_ZONE_LAYER_VERSION = 1;
 const SPECIAL_ZONE_SOURCES = new Set(["project", "scenario"]);
+const SPECIAL_ZONE_MEMBERSHIP_BRUSH_MODES = new Set(["add", "remove"]);
+const SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES = Object.freeze({
+  LOAD_FAILED: "special_zone_layers_load_failed",
+});
 const SPECIAL_ZONE_PATTERN_IDS = Object.freeze([
   "solid",
   "diagonalHatch",
@@ -88,6 +92,12 @@ function createEmptySpecialZoneLayersState({ topologyFingerprint = "" } = {}) {
   };
 }
 
+function resolveSpecialZoneTopologyFingerprint(runtimeState = {}) {
+  const baselineHash = String(runtimeState?.scenarioBaselineHash || "").trim();
+  if (baselineHash) return baselineHash;
+  return String(runtimeState?.activeScenarioManifest?.source?.runtime_topology_sha256 || "").trim();
+}
+
 function normalizeMemberFeatureIds(rawIds, diagnostics, validFeatureIds = null) {
   const seen = new Set();
   const ids = Array.isArray(rawIds) ? rawIds : [];
@@ -101,6 +111,18 @@ function normalizeMemberFeatureIds(rawIds, diagnostics, validFeatureIds = null) 
     seen.add(id);
   });
   return Array.from(seen).sort((a, b) => a.localeCompare(b));
+}
+
+function dedupeSpecialZoneDiagnostics(entries) {
+  const seen = new Set();
+  return (Array.isArray(entries) ? entries : [])
+    .filter((entry) => entry && typeof entry === "object")
+    .filter((entry) => {
+      const key = JSON.stringify(entry);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function normalizeSpecialZoneLayer(rawLayer, index, diagnostics, options = {}) {
@@ -119,6 +141,7 @@ function normalizeSpecialZoneLayer(rawLayer, index, diagnostics, options = {}) {
     category: String(raw.category || preset.category || "custom").trim() || "custom",
     source: normalizedSource,
     visible: raw.visible === undefined ? true : !!raw.visible,
+    legendVisible: raw.legendVisible === undefined ? true : !!raw.legendVisible,
     style: createSpecialZoneLayerStyle({ ...(preset.style || {}), ...(raw.style || {}) }),
     memberFeatureIds: members,
   };
@@ -163,19 +186,20 @@ function normalizeSpecialZoneLayersState(rawState, options = {}) {
     layers,
     activeLayerId,
     topologyFingerprint: expectedFingerprint || stateFingerprint,
-    diagnostics: [
+    diagnostics: dedupeSpecialZoneDiagnostics([
       ...diagnostics,
-      ...(Array.isArray(raw.diagnostics) ? raw.diagnostics.filter((entry) => entry && typeof entry === "object") : []),
-    ],
+      ...(Array.isArray(raw.diagnostics) ? raw.diagnostics : []),
+    ]),
   };
 }
 
-function serializeSpecialZoneLayersState(rawState) {
-  const normalized = normalizeSpecialZoneLayersState(rawState);
+function serializeSpecialZoneLayersState(rawState, options = {}) {
+  const normalized = normalizeSpecialZoneLayersState(rawState, options);
   return {
     version: SPECIAL_ZONE_LAYER_VERSION,
     layers: normalized.layers.map((layer) => ({
       ...layer,
+      legendVisible: layer.legendVisible !== false,
       style: { ...layer.style },
       memberFeatureIds: [...layer.memberFeatureIds].sort((a, b) => a.localeCompare(b)),
     })),
@@ -240,9 +264,53 @@ function exitSpecialZoneMembershipToolState(target) {
   return previousTool;
 }
 
+
+function normalizeSpecialZoneMembershipBrushModeState(value) {
+  const mode = String(value || "add").trim();
+  return SPECIAL_ZONE_MEMBERSHIP_BRUSH_MODES.has(mode) ? mode : "add";
+}
+
+function getSpecialZoneLegendLayers(rawState) {
+  return normalizeSpecialZoneLayersState(rawState).layers
+    .filter((layer) => layer.visible !== false && layer.legendVisible !== false);
+}
+
+function getSpecialZoneLegendSignature(rawState) {
+  return getSpecialZoneLegendLayers(rawState)
+    .map((layer) => [
+      layer.id,
+      layer.name,
+      layer.legendVisible !== false ? "1" : "0",
+      layer.style?.fill || "",
+      layer.style?.stroke || "",
+      layer.style?.pattern || "",
+    ].join(":"))
+    .join("|");
+}
+
+function createSpecialZonePatternPreviewStyle(style = {}) {
+  const fill = normalizeHexColor(style.fill, "#8b5cf6");
+  const stroke = normalizeHexColor(style.stroke, "#6d28d9");
+  const pattern = normalizePatternId(style.pattern, "solid");
+  const opacity = clampNumber(style.fillOpacity, 0.32, 0, 1);
+  const stripe = `linear-gradient(135deg, transparent 0 42%, ${stroke} 42% 52%, transparent 52% 100%)`;
+  const dot = `radial-gradient(circle at 35% 35%, ${stroke} 0 2px, transparent 2.5px)`;
+  const patternLayer = pattern === "dots" || pattern === "denseDots"
+    ? dot
+    : pattern === "solid"
+      ? "none"
+      : stripe;
+  return {
+    backgroundColor: fill,
+    backgroundImage: patternLayer,
+    borderColor: stroke,
+    opacity: String(Math.max(0.24, opacity)),
+  };
+}
+
 function setSpecialZoneMembershipBrushModeState(target, mode = "add") {
   if (!target || typeof target !== "object") return "";
-  target.specialZoneMembershipBrushMode = String(mode || "add").trim() || "add";
+  target.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(mode);
   return target.specialZoneMembershipBrushMode;
 }
 
@@ -271,6 +339,7 @@ function createLayerFromPreset(presetId = "custom", patch = {}) {
     category: patch.category || preset.category,
     source: patch.source || "project",
     visible: patch.visible,
+    legendVisible: patch.legendVisible,
     style: { ...preset.style, ...(patch.style || {}) },
     memberFeatureIds: patch.memberFeatureIds || [],
   }, 0, [], { defaultSource: patch.source || "project" });
@@ -378,20 +447,26 @@ function buildSpecialZoneRenderFeatures(layerState, featureById) {
 
 export {
   SPECIAL_ZONE_LAYER_VERSION,
+  SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES,
   SPECIAL_ZONE_PATTERN_IDS,
   SPECIAL_ZONE_PRESETS,
   buildSpecialZoneRenderFeatures,
+  createSpecialZonePatternPreviewStyle,
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
   createSpecialZoneLayerStyle,
   activateSpecialZoneMembershipToolState,
   ensureSpecialZoneLayersState,
   exitSpecialZoneMembershipToolState,
+  getSpecialZoneLegendLayers,
+  getSpecialZoneLegendSignature,
   mutateSpecialZoneLayersState,
   mutateRuntimeSpecialZoneLayersState,
   normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
+  normalizeSpecialZoneMembershipBrushModeState,
   registerSpecialZonesWorkbenchRuntimeHooks,
+  resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
   setRuntimeSpecialZoneLayersState,
   setSpecialZoneMembershipBrushModeState,

@@ -17,7 +17,9 @@ import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { clearDirty } from "./dirty_state.js";
 import {
+  normalizeSpecialZoneMembershipBrushModeState,
   normalizeSpecialZoneLayersState,
+  resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
 } from "./special_zone_layers.js";
 
@@ -450,7 +452,9 @@ class FileManager {
       visualOverrides: appState.visualOverrides || appState.featureOverrides || {},
       waterRegionOverrides: appState.waterRegionOverrides || {},
       specialRegionOverrides: {},
-      specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers),
+      specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers, {
+        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(appState),
+      }),
       sovereigntyByFeatureId: appState.sovereigntyByFeatureId || {},
       mapSemanticMode: normalizeMapSemanticMode(appState.mapSemanticMode),
       paintMode: appState.paintMode || "visual",
@@ -460,6 +464,7 @@ class FileManager {
       activePaletteId: normalizeActivePaletteId(appState.activePaletteId),
       dynamicBordersDirty: !!appState.dynamicBordersDirty,
       dynamicBordersDirtyReason: appState.dynamicBordersDirtyReason || "",
+      specialZoneMembershipBrushMode: normalizeSpecialZoneMembershipBrushModeState(appState.specialZoneMembershipBrushMode),
       specialZones: appState.specialZones || {},
       parentBordersVisible: appState.parentBordersVisible !== false,
       parentBorderEnabledByCountry: appState.parentBorderEnabledByCountry || {},
@@ -511,7 +516,6 @@ class FileManager {
         physical: normalizePhysicalStyleConfig(appState.styleConfig?.physical),
         transportOverview: normalizeTransportOverviewStyleConfig(appState.styleConfig?.transportOverview),
         rivers: appState.styleConfig?.rivers || null,
-        specialZones: appState.styleConfig?.specialZones || null,
         texture: normalizeTextureStyleConfig(appState.styleConfig?.texture),
         dayNight: normalizeDayNightStyleConfig(appState.styleConfig?.dayNight),
       },
@@ -589,7 +593,10 @@ class FileManager {
           ...(data.specialZoneLayers && typeof data.specialZoneLayers === "object" ? data.specialZoneLayers : {}),
           manualSpecialZones: data.manualSpecialZones,
           specialRegionOverrides: data.specialRegionOverrides,
-        }, { defaultSource: "project" });
+        }, {
+          defaultSource: "project",
+          topologyFingerprint: String(data.scenario?.baselineHash || "").trim(),
+        });
         data.specialRegionOverrides = {};
         if (!data.sovereignBaseColors || typeof data.sovereignBaseColors !== "object") {
           data.sovereignBaseColors = data.countryBaseColors;
@@ -604,6 +611,7 @@ class FileManager {
         data.activePaletteId = normalizeActivePaletteId(data.activePaletteId);
         data.dynamicBordersDirty = !!data.dynamicBordersDirty;
         data.dynamicBordersDirtyReason = String(data.dynamicBordersDirtyReason || "");
+        data.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(data.specialZoneMembershipBrushMode);
         if (!data.customPresets || typeof data.customPresets !== "object") {
           data.customPresets = {};
         }
@@ -639,9 +647,10 @@ class FileManager {
         if (!data.styleConfig.rivers || typeof data.styleConfig.rivers !== "object") {
           data.styleConfig.rivers = null;
         }
-        if (!data.styleConfig.specialZones || typeof data.styleConfig.specialZones !== "object") {
-          data.styleConfig.specialZones = null;
+        if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {
+          console.info("[project-import] Legacy styleConfig.specialZones ignored; specialZoneLayers is the canonical model.");
         }
+        data.styleConfig.specialZones = null;
         data.styleConfig.texture = normalizeTextureStyleConfig(data.styleConfig.texture);
         data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
         data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);

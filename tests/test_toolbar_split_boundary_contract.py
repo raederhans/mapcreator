@@ -5,6 +5,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
+INDEX_HTML = REPO_ROOT / "index.html"
 EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failure_handler.js"
 PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_library_panel.js"
 SCENARIO_GUIDE_POPOVER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js"
@@ -22,6 +23,11 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 
 
 class ToolbarSplitBoundaryContractTest(unittest.TestCase):
+    def _controller_call_body(self, content: str, factory_name: str) -> str:
+        match = re.search(rf"{factory_name}\(\{{(?P<body>[\s\S]*?)\n\s*\}}\);", content)
+        self.assertIsNotNone(match, f"{factory_name} call not found")
+        return match.group("body")
+
     def test_toolbar_imports_new_split_modules(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
 
@@ -202,6 +208,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_special_zone_editor_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = SPECIAL_ZONE_EDITOR_JS.read_text(encoding="utf-8")
+        index_html = INDEX_HTML.read_text(encoding="utf-8")
 
         self.assertIn('./toolbar/special_zone_editor.js', toolbar_content)
         self.assertIn("createSpecialZoneEditorController", toolbar_content)
@@ -209,12 +216,15 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("specialZoneStartBtn.addEventListener", toolbar_content)
         self.assertNotIn("specialZoneDeleteBtn.addEventListener", toolbar_content)
         self.assertIn("function createSpecialZoneEditorController", owner_content)
-        self.assertIn("const onSpecialZonesStyleChange =", owner_content)
         self.assertIn("const renderSpecialZoneEditorUI =", owner_content)
         self.assertIn("const bindSpecialZoneEditorEvents =", owner_content)
-        self.assertIn("Use Layer-based special zones for new edits.", owner_content)
+        self.assertIn("Layer-based special zones are the canonical editor.", owner_content)
         self.assertNotIn("startSpecialZoneDraw({", owner_content)
         self.assertNotIn("deleteSelectedManualSpecialZone();", owner_content)
+        self.assertNotIn('id="specialZoneTypeSelect"', index_html)
+        self.assertNotIn('id="specialZoneStartBtn"', index_html)
+        self.assertNotIn('id="specialZoneDeleteBtn"', index_html)
+        self.assertNotIn('document.getElementById("specialZoneTypeSelect")', toolbar_content)
         self.assertIn("./toolbar/special_zones_workbench_controller.js", toolbar_content)
         self.assertIn("createSpecialZonesWorkbenchController", toolbar_content)
 
@@ -225,7 +235,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "updateSpecialZoneEditorUIFn", renderSpecialZoneEditorUI);', content)
         self.assertIn("specialZoneEditorController.normalizeSpecialZoneEditorState();", content)
         self.assertIn("specialZoneEditorController.bindSpecialZoneEditorEvents();", content)
-        self.assertIn("const openSpecialZonePopover = () => {", content)
+        self.assertIn("const openSpecialZonePopover = async () => {", content)
         self.assertIn("openSpecialZonePopover();", appearance_owner)
         self.assertIn('appearanceSpecialZoneBtn.setAttribute("aria-controls", "specialZonePopover");', appearance_owner)
 
@@ -235,12 +245,14 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         ui_state = (REPO_ROOT / "js" / "core" / "state" / "ui_state.js").read_text(encoding="utf-8")
 
         self.assertIn("specialZones: appState.specialZones || {}", file_manager)
-        self.assertIn("specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers)", file_manager)
+        self.assertIn("specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers, {", file_manager)
+        self.assertIn("specialZoneMembershipBrushMode: normalizeSpecialZoneMembershipBrushModeState(appState.specialZoneMembershipBrushMode)", file_manager)
         self.assertIn("specialRegionOverrides: {}", file_manager)
         self.assertIn('manualSpecialZones: { type: "FeatureCollection", features: [] }', file_manager)
-        self.assertIn("specialZones: appState.styleConfig?.specialZones || null", file_manager)
+        self.assertIn("data.styleConfig.specialZones = null;", file_manager)
         self.assertIn("state.specialZones = data.specialZones || {}", interaction_funnel)
         self.assertIn("state.specialZoneLayers = normalizeSpecialZoneLayersState", interaction_funnel)
+        self.assertIn("state.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState", interaction_funnel)
         self.assertIn("state.specialRegionOverrides = {};", interaction_funnel)
         self.assertIn("state.manualSpecialZones =", interaction_funnel)
         self.assertIn("restoreImportedStyleConfigState(state, data.styleConfig);", interaction_funnel)
@@ -254,8 +266,32 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('const scenarioId = String(runtimeState.activeScenarioId || "").trim();', owner_content)
         self.assertIn("if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;", owner_content)
         self.assertIn("loadedScenarioLayerAssetId = scenarioId;", owner_content)
-        self.assertIn("if (!result) return null;", owner_content)
-        self.assertIn("if (loadedScenarioLayerAssetId !== scenarioId)", owner_content)
+        self.assertIn("await loadScenarioSpecialZoneLayers();", owner_content)
+        self.assertIn('fetch("/__dev/scenario/special-zone-layers/save"', owner_content)
+        self.assertIn("saveBtn.setAttribute(\"aria-busy\", \"true\");", owner_content)
+
+    def test_special_zone_workbench_owns_overlay_toggle_and_diagnostics(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        special_zone_layers_content = (REPO_ROOT / "js" / "core" / "special_zone_layers.js").read_text(encoding="utf-8")
+        scenario_resources_content = (REPO_ROOT / "js" / "core" / "scenario_resources.js").read_text(encoding="utf-8")
+
+        self.assertIn("markDirty,", toolbar_content)
+        self.assertIn("render,", toolbar_content)
+        self.assertIn("updateToolUI,", toolbar_content)
+        self.assertIn("showToast,", toolbar_content)
+        self.assertIn('overlayToggleNode.dataset.specialZoneOverlayToggle = "true";', owner_content)
+        self.assertIn("runtimeState.showSpecialZones = !!overlayToggleNode.checked;", owner_content)
+        self.assertIn("await loadScenarioSpecialZoneLayers();", owner_content)
+        self.assertIn('markDirty?.("toggle-special-zones");', owner_content)
+        self.assertIn('let failedScenarioLayerAssetId = "";', owner_content)
+        self.assertIn("resolveSpecialZoneTopologyFingerprint(runtimeState)", owner_content)
+        self.assertIn('code === "topology_fingerprint_mismatch"', owner_content)
+        self.assertIn("SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED", owner_content)
+        self.assertIn("Special zone topology fingerprint mismatch", owner_content)
+        self.assertIn("function resolveSpecialZoneTopologyFingerprint(runtimeState = {})", special_zone_layers_content)
+        self.assertIn("resolveSpecialZoneTopologyFingerprint(state)", scenario_resources_content)
+        self.assertIn("SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED", scenario_resources_content)
 
     def test_special_zone_workbench_gates_members_and_style_on_active_layer(self):
         owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
@@ -312,6 +348,16 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         special_zone_layers_content = (REPO_ROOT / "js" / "core" / "special_zone_layers.js").read_text(encoding="utf-8")
         self.assertIn("target.updateSpecialZonesWorkbenchCurrentTargetUIFn = hooks.renderCurrentTarget;", special_zone_layers_content)
         self.assertIn("special-zone-member-current-target-row", owner_content)
+
+    def test_special_zone_member_list_rendering_is_capped(self):
+        owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("const MEMBER_LIST_INLINE_LIMIT = 60;", owner_content)
+        self.assertIn("const MEMBER_LIST_INLINE_RENDER_COUNT = 30;", owner_content)
+        self.assertIn("const MEMBER_DRAWER_RENDER_LIMIT = 80;", owner_content)
+        self.assertIn("layer.memberFeatureIds.slice(0, MEMBER_LIST_INLINE_RENDER_COUNT)", owner_content)
+        self.assertIn("special-zone-member-overflow-btn", owner_content)
+        self.assertIn("openMemberDrawer(layer)", owner_content)
 
     def test_export_workbench_persistence_contract_stays_stable(self):
         file_manager = FILE_MANAGER_JS.read_text(encoding="utf-8")
@@ -395,8 +441,12 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
 
     def test_toolbar_keeps_appearance_facade_and_state_registration_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
+        call_body = self._controller_call_body(content, "createAppearanceControlsController")
 
         self.assertIn("runtimeState: state,", content)
+        self.assertIn("clamp,", call_body)
+        self.assertIn("markDirty,", call_body)
+        self.assertIn("normalizeOceanFillColor,", call_body)
         self.assertIn('registerRuntimeHook(state, "updateTransportAppearanceUIFn", renderTransportAppearanceUi);', content)
         self.assertIn('registerRuntimeHook(state, "updateRecentUI", () => {', content)
         self.assertIn('registerRuntimeHook(state, "updateParentBorderCountryListFn", renderParentBorderCountryList);', content)
@@ -499,7 +549,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
 
     def test_toolbar_keeps_ocean_lake_facade_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
+        call_body = self._controller_call_body(content, "createOceanLakeControlsController")
 
+        self.assertIn("clamp,", call_body)
+        self.assertIn("normalizeOceanFillColor,", call_body)
         self.assertIn("bindEvents: bindOceanLakeControlEvents,", content)
         self.assertIn("renderOceanCoastalAccentUi,", content)
         self.assertIn("renderOceanLakeControlsUi,", content)

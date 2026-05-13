@@ -40,7 +40,11 @@ import {
   buildScenarioDistrictGroupByFeatureId,
   normalizeScenarioDistrictGroupsPayload,
 } from "./scenario_districts.js";
-import { normalizeSpecialZoneLayersState } from "./special_zone_layers.js";
+import {
+  SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES,
+  normalizeSpecialZoneLayersState,
+  resolveSpecialZoneTopologyFingerprint,
+} from "./special_zone_layers.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
 import { ensureDetailTopologyBoundary, flushRenderBoundary } from "./render_boundary.js";
 import { buildScenarioReleasableIndex } from "./releasable_manager.js";
@@ -644,8 +648,34 @@ function applyScenarioOptionalLayerState(bundle, layerKey, payload) {
   if (config.stateField === "scenarioCityOverridesData") {
     syncScenarioLocalizationState({ cityOverridesPayload: payload });
   } else if (config.stateField === "specialZoneLayers") {
+    if (!payload || typeof payload !== "object") {
+      const manifestHasLayerUrl = !!String(bundle?.manifest?.[config.urlField] || "").trim();
+      if (manifestHasLayerUrl) {
+        const topologyFingerprint = resolveSpecialZoneTopologyFingerprint(state);
+        state.specialZoneLayers = normalizeSpecialZoneLayersState({
+          version: 1,
+          layers: [],
+          activeLayerId: "",
+          topologyFingerprint,
+          diagnostics: [
+            {
+              code: SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED,
+              scenarioId: bundleScenarioId,
+            },
+          ],
+        }, {
+          defaultSource: "scenario",
+          topologyFingerprint,
+          validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
+        });
+        state.specialZonesOverlayDirty = true;
+      }
+      syncScenarioUi();
+      return false;
+    }
     state.specialZoneLayers = normalizeSpecialZoneLayersState(payload, {
       defaultSource: "scenario",
+      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
       validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
     });
     state.specialZonesOverlayDirty = true;
@@ -731,7 +761,10 @@ async function loadScenarioOptionalLayerPayload(
           sourceLabel: `scenario_city_overrides:${getScenarioBundleId(bundle) || "scenario"}`,
         })
         : layerKey === "specialzonelayers"
-          ? normalizeSpecialZoneLayersState(rawPayload, { defaultSource: "scenario" })
+          ? normalizeSpecialZoneLayersState(rawPayload, {
+            defaultSource: "scenario",
+            topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
+          })
           : config.objectName
             ? getScenarioTopologyFeatureCollection(rawPayload, config.objectName)
               || normalizeScenarioFeatureCollection(rawPayload)
@@ -839,7 +872,12 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
     .filter(([, config]) => state[config.visibilityField])
     .filter(([layerKey]) => !scenarioBundleUsesChunkedLayer(activeBundle, layerKey))
     .filter(([layerKey]) => activeBundle.optionalLayerSettledByKey?.[layerKey] !== true)
-    .filter(([layerKey, config]) => !activeBundle[config.bundleField] && !state[config.stateField])
+    .filter(([layerKey, config]) => {
+      if (config.stateField === "specialZoneLayers") {
+        return !activeBundle[config.bundleField];
+      }
+      return !activeBundle[config.bundleField] && !state[config.stateField];
+    })
     .map(([layerKey]) => layerKey);
   if (!requestedLayers.length) return [];
   const payloads = await Promise.all(

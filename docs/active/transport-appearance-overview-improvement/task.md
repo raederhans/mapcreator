@@ -8,3 +8,4 @@
 - [x] Targeted verification
 - [x] Browser smoke
 - [x] Code review 自检
+- [x] 修复 split-controller dependency injection 导致的启动阻断

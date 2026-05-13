@@ -1758,6 +1758,7 @@ class DevServerTest(unittest.TestCase):
                             "category": "security",
                             "source": "project",
                             "visible": True,
+                            "legendVisible": False,
                             "style": {"fill": "#facc15", "stroke": "#a16207", "pattern": "horizontalLines"},
                             "memberFeatureIds": ["DE-3", "DE-1", "DE-1"],
                         }
@@ -1772,6 +1773,7 @@ class DevServerTest(unittest.TestCase):
             self.assertTrue(result["ok"])
             self.assertEqual(manifest_payload["special_zone_layers_url"], "data/scenarios/test_scenario/special_zone_layers.json")
             self.assertEqual(payload["layers"][0]["source"], "scenario")
+            self.assertIs(payload["layers"][0]["legendVisible"], False)
             self.assertEqual(payload["layers"][0]["memberFeatureIds"], ["DE-1", "DE-3"])
             self.assertEqual(result["layerCount"], 1)
 

@@ -947,6 +947,7 @@ def _normalize_special_zone_layers_payload(payload: object) -> dict[str, object]
             "category": _normalize_text(raw_layer.get("category")) or "custom",
             "source": "scenario",
             "visible": bool(raw_layer.get("visible", True)),
+            "legendVisible": bool(raw_layer.get("legendVisible", True)),
             "style": {
                 "fill": _normalize_text(style.get("fill")) or "#8b5cf6",
                 "stroke": _normalize_text(style.get("stroke")) or "#6d28d9",

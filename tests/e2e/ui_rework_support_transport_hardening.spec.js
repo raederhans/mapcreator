@@ -389,7 +389,7 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
       borderLabel: fontSize('#appearancePanelBorders .range-label'),
       textureLabel: fontSize('#appearancePanelTexture .section-header-block'),
       textureSelect: fontSize('#textureSelect'),
-      specialSelect: fontSize('#specialZoneTypeSelect'),
+      specialOverlayToggle: fontSize('.special-zone-overlay-toggle'),
       specialLabel: fontSize('#specialZonePopover .range-label'),
       paletteTitle: fontSize('#paletteLibraryList .palette-library-title'),
       paletteSubtitle: fontSize('#paletteLibraryList .palette-library-subtitle'),
@@ -410,7 +410,7 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   expect(metrics.sectionTitle).toBeGreaterThan(metrics.borderSummary);
   expect(metrics.borderSummary).toBeGreaterThanOrEqual(metrics.borderLabel);
   expect(Math.abs(metrics.oceanToggle - metrics.textureSelect)).toBeLessThanOrEqual(0.5);
-  expect(Math.abs(metrics.specialSelect - metrics.textureSelect)).toBeLessThanOrEqual(0.5);
+  expect(metrics.specialOverlayToggle).toBeGreaterThan(0);
   expect(metrics.paletteTitle).toBeGreaterThan(metrics.paletteSubtitle);
   expect(metrics.textureFirstControlTop - metrics.textureTitleBottom).toBeLessThan(24);
   expect(metrics.layersStackTop - metrics.layersTitleBottom).toBeLessThan(24);

@@ -3,6 +3,9 @@ import {
   ensureSpecialZoneLayersState,
 } from "../special_zone_layers.js";
 
+// Merged outlines are topology-heavy; keep a small bounded LRU cache per render owner.
+const OUTLINE_MERGE_CACHE_LIMIT = 96;
+
 function sanitizePatternToken(value) {
   return String(value || "")
     .trim()
@@ -253,7 +256,7 @@ export function createSpecialZoneLayersRenderOwner({
         geometry: mergedShape,
       };
       outlineCache.set(cacheKey, { topologyRef: topology, feature });
-      if (outlineCache.size > 96) {
+      if (outlineCache.size > OUTLINE_MERGE_CACHE_LIMIT) {
         outlineCache.delete(outlineCache.keys().next().value);
       }
       return feature;

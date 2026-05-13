@@ -14,3 +14,5 @@
 - Restored the transport visual mode handler's explicit renderDirty call so existing UI support contract continues to recognize the visual-mode wiring while keeping the post-render summary refresh.
 
 - Review follow-up: restored audit/manifest summary mismatch as a strict publish blocker in tools/patch_tno_1962_bundle.py; transport summary now treats hidden metrics as settling and refreshes after master-toggle data load promises settle.
+
+- Startup block fix: `toolbar.js` split-controller calls had dropped facade-owned dependencies while `appearance_controls_controller.js` and `ocean_lake_controls_controller.js` still destructure and call them. Restored `clamp`, `markDirty`, and `normalizeOceanFillColor` injection at the facade boundary, then locked the boundary in `tests/test_toolbar_split_boundary_contract.py`.

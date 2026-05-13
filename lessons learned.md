@@ -158,6 +158,10 @@
 - 像 `ui_contract.js` / `ui_contracts.js` 这种单复数不一致，会先把验证和留档搞乱，再拖累后续阶段接入。
 - 文档里的执行进度、package 脚本名、测试断言要共用同一个 canonical 名称。
 
+### 36. Toolbar facade 拆分后，依赖注入本身要进入边界测试
+- controller 从 `toolbar.js` 拆出去后，`clamp`、`markDirty`、`normalizeOceanFillColor` 这类 facade-owned helper 仍然是启动契约的一部分。
+- 最短稳做法是在 split boundary test 里同时检查 controller owner 和 create call 参数，避免“模块存在但运行时 helper 为空”的启动阻断。
+
 ### 36. Dev startup must not combine `no-store` with on-the-fly gzip for large JSON/topology assets
 - When startup depends on 30-45 MB scenario bundles or topology files, defaulting static responses to `no-store` turns every refresh into a cold start.
 - If the dev server also calls `gzip.compress()` on each request, CPU time can dominate local startup; prefer stable cache headers plus prebuilt `.gz` sidecars for large immutable assets.
@@ -1614,3 +1618,10 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - Repair-first 收口要让 generator/checkpoint、safe repair、strict contract、validator、E2E、perf 共用同一批最终产物；长 builder 卡住时，优先用已验证 checkpoint + targeted safe repair 闭环，避免继续扩大重建面。
 - Playwright synthetic subset 测试如果改写 runtime layer data，先等 context resolver 完成，再注入测试数据；否则首帧 resolver 会把 subset 覆盖回完整 topology，造成 metric 假失败。
+
+### 49. Optional asset 首次保存前要保护 pending 本地状态
+- Workbench 如果允许在 optional layer 真正加载前编辑，首次 Save 的 load 会改写 runtime state；保存链必须先抓住 pending canonical payload，再决定保存 pending 还是 loaded asset。
+- 这类问题用 controller 行为测试最稳：让 loader 返回不同 asset，断言 POST body 仍保留用户本地编辑。
+
+### 25. optional layer 的默认空对象不能当成已加载证据
+- specialZoneLayers 这类 runtime 默认对象会让 !state[field] 判断失效；visibility sync 要看 bundle payload / settled 状态，才能在独立 asset 失败时清空 stale runtime 数据。

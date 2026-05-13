@@ -24,7 +24,11 @@ import {
 import { resetDevTransientImportState } from "./state/dev_state.js";
 import { prepareImportedProjectState } from "./interaction_funnel/import_apply_orchestration.js";
 import { syncProjectImportUiState as syncProjectImportUiStateHelper } from "./interaction_funnel/ui_sync.js";
-import { normalizeSpecialZoneLayersState } from "./special_zone_layers.js";
+import {
+  normalizeSpecialZoneLayersState,
+  normalizeSpecialZoneMembershipBrushModeState,
+  resolveSpecialZoneTopologyFingerprint,
+} from "./special_zone_layers.js";
 
 let mapClickImpl = null;
 let mapDoubleClickImpl = null;
@@ -179,8 +183,10 @@ async function applyImportedProjectState(data, { ui, hooks }) {
   state.specialZones = data.specialZones || {};
   state.specialZoneLayers = normalizeSpecialZoneLayersState(data.specialZoneLayers, {
     defaultSource: "project",
+    topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
     validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
   });
+  state.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(data.specialZoneMembershipBrushMode);
   state.parentBordersVisible = data.parentBordersVisible !== false;
   state.manualSpecialZones = { type: "FeatureCollection", features: [] };
   const supportedCountries = Array.isArray(state.parentBorderSupportedCountries)

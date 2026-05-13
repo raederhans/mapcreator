@@ -243,6 +243,7 @@ export function createDefaultUiState() {
     showRail: false,
     showRoad: false,
     showSpecialZones: false,
+    specialZoneMembershipBrushMode: "add",
     cityLayerRevision: 0,
     specialZoneLayers: createEmptySpecialZoneLayersState(),
     manualSpecialZones: createDefaultManualSpecialZonesState(),
