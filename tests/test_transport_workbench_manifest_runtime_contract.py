@@ -186,6 +186,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("resolveTransportOverviewPatchFromWorkbench", registry_content)
         self.assertIn("loadTransportCountryOverlayState(patch.activePackId || context.activePackId)", controller_content)
         self.assertIn("applyTransportCountryOverlayState(runtimeState, overlayState)", controller_content)
+        self.assertNotIn("clearTransportCountryOverlayState(runtimeState, \"transport-workbench-pack-switch\")", controller_content)
         self.assertIn("transportWorkbenchPackSelect", controller_content)
         self.assertIn("MAIN_MAP_CONSUMER_KEYS_BY_FAMILY", overlay_content)
         self.assertIn('reason: "consumer_missing"', resolver_content)

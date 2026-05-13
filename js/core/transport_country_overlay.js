@@ -9,9 +9,11 @@ import {
 function createEmptyOverlayState(status = "idle") {
   return {
     activePackId: "",
+    activePackIdByFamily: {},
     family: "",
     status,
     collectionsByLayer: {},
+    overlaysByFamily: {},
     sourceSignature: null,
     revision: 0,
     error: "",
@@ -31,6 +33,28 @@ export function clearTransportCountryOverlayState(target, reason = "cleared") {
     reason: String(reason || "cleared"),
   };
   return target.transportCountryOverlayState;
+}
+
+function getExistingOverlaysByFamily(overlayState = {}) {
+  const overlaysByFamily = overlayState?.overlaysByFamily && typeof overlayState.overlaysByFamily === "object"
+    ? { ...overlayState.overlaysByFamily }
+    : {};
+  const legacyFamily = String(overlayState?.family || "").trim().toLowerCase();
+  if (overlayState?.status === "ready" && legacyFamily && overlayState?.collectionsByLayer && !overlaysByFamily[legacyFamily]) {
+    overlaysByFamily[legacyFamily] = {
+      ...overlayState,
+      family: legacyFamily,
+    };
+  }
+  return overlaysByFamily;
+}
+
+function getActivePackIdByFamily(overlaysByFamily = {}) {
+  return Object.fromEntries(
+    Object.entries(overlaysByFamily)
+      .map(([familyId, overlay]) => [familyId, String(overlay?.activePackId || "").trim().toLowerCase()])
+      .filter(([, packId]) => !!packId),
+  );
 }
 
 function getPackPath(manifest, mode, key) {
@@ -109,9 +133,21 @@ export async function loadTransportCountryOverlayState(packId, {
 export function applyTransportCountryOverlayState(target, overlayState) {
   if (!target || typeof target !== "object") return null;
   const previousRevision = Number(target.transportCountryOverlayState?.revision || 0);
-  target.transportCountryOverlayState = {
+  const family = String(overlayState?.family || "").trim().toLowerCase();
+  if (!family) return target.transportCountryOverlayState || null;
+  const revision = previousRevision + 1;
+  const overlaysByFamily = getExistingOverlaysByFamily(target.transportCountryOverlayState);
+  const nextFamilyOverlay = {
     ...overlayState,
-    revision: previousRevision + 1,
+    family,
+    revision,
+  };
+  overlaysByFamily[family] = nextFamilyOverlay;
+  target.transportCountryOverlayState = {
+    ...nextFamilyOverlay,
+    activePackIdByFamily: getActivePackIdByFamily(overlaysByFamily),
+    overlaysByFamily,
+    revision,
   };
   return target.transportCountryOverlayState;
 }

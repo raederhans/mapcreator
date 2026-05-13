@@ -88,6 +88,8 @@ function getTransportOverviewFamilyConfig(familyId) {
 function getTransportCountryOverlayStateForFamily(familyId) {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   const overlayState = runtimeState.transportCountryOverlayState;
+  const familyOverlay = overlayState?.overlaysByFamily?.[normalizedFamilyId];
+  if (familyOverlay?.status === "ready") return familyOverlay;
   if (overlayState?.status !== "ready" || overlayState.family !== normalizedFamilyId) return null;
   return overlayState;
 }
@@ -380,6 +382,44 @@ function getTransportOverviewRoadLabelText(properties = {}, mode = "ref") {
   if (normalized === "name") return name || ref;
   if (normalized === "both") return ref && name ? `${ref} · ${name}` : (ref || name);
   return ref || name;
+}
+
+function getRoadLabelClassPriority(roadClass) {
+  switch (String(roadClass || "").trim().toLowerCase()) {
+    case "motorway":
+      return 4;
+    case "trunk":
+      return 3;
+    case "primary":
+      return 2;
+    default:
+      return 1;
+  }
+}
+
+function getRoadLabelClassFromPriority(priority) {
+  if (priority >= 4) return "motorway";
+  if (priority >= 3) return "trunk";
+  if (priority >= 2) return "primary";
+  return "secondary";
+}
+
+function resolveTransportRoadLabelClassAndPriority(properties = {}) {
+  const explicitRoadClass = String(properties.class || properties.road_class || properties.highway || "").trim().toLowerCase();
+  if (explicitRoadClass) {
+    return {
+      roadClass: explicitRoadClass,
+      priority: getRoadLabelClassPriority(explicitRoadClass),
+    };
+  }
+  const rawPriority = Number(properties.priority ?? properties.label_priority ?? properties.rank);
+  const priority = Number.isFinite(rawPriority)
+    ? Math.max(1, Math.min(4, Math.round(rawPriority)))
+    : 1;
+  return {
+    roadClass: getRoadLabelClassFromPriority(priority),
+    priority,
+  };
 }
 
 function getCurrentZoomTransform() {
@@ -1454,8 +1494,7 @@ function drawCountryRoadsLayer(k, { interactive = false } = {}) {
         if (!label || !Array.isArray(coordinates) || coordinates.length < 2) return null;
         const anchorProjected = projection(coordinates);
         if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return null;
-        const roadClass = String(properties.class || properties.road_class || properties.highway || "motorway").trim().toLowerCase();
-        const priority = roadClass === "motorway" ? 4 : roadClass === "trunk" ? 3 : roadClass === "primary" ? 2 : 1;
+        const { roadClass, priority } = resolveTransportRoadLabelClassAndPriority(properties);
         return {
           label,
           roadClass,

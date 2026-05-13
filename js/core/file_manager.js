@@ -50,11 +50,40 @@ function clamp(value, min, max) {
 
 function normalizeTransportCountryOverlayProjectState(value) {
   const source = value && typeof value === "object" ? value : {};
-  const meta = getTargetMainMapPackMeta(source.activePackId);
-  if (!meta || (source.family && meta.family !== String(source.family || "").trim().toLowerCase())) {
-    return { activePackId: "", family: "" };
+  const activePackIdByFamily = {};
+  const sourcePackIdsByFamily = source.activePackIdByFamily && typeof source.activePackIdByFamily === "object"
+    ? source.activePackIdByFamily
+    : {};
+  Object.entries(sourcePackIdsByFamily).forEach(([familyId, packId]) => {
+    const meta = getTargetMainMapPackMeta(packId);
+    const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+    if (meta && meta.family === normalizedFamilyId) {
+      activePackIdByFamily[meta.family] = meta.packId;
+    }
+  });
+  if (source.overlaysByFamily && typeof source.overlaysByFamily === "object") {
+    Object.entries(source.overlaysByFamily).forEach(([familyId, overlay]) => {
+      const meta = getTargetMainMapPackMeta(overlay?.activePackId);
+      const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+      if (meta && meta.family === normalizedFamilyId) {
+        activePackIdByFamily[meta.family] = meta.packId;
+      }
+    });
   }
-  return { activePackId: meta.packId, family: meta.family };
+  const meta = getTargetMainMapPackMeta(source.activePackId);
+  if (meta && (!source.family || meta.family === String(source.family || "").trim().toLowerCase())) {
+    activePackIdByFamily[meta.family] = meta.packId;
+  }
+  const entries = Object.entries(activePackIdByFamily);
+  if (!entries.length) {
+    return { activePackId: "", family: "", activePackIdByFamily: {} };
+  }
+  const [firstFamily, firstPackId] = entries[0];
+  return {
+    activePackId: firstPackId,
+    family: firstFamily,
+    activePackIdByFamily,
+  };
 }
 
 function normalizeProjectHexColor(value) {

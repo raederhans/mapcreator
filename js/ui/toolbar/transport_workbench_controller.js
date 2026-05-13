@@ -53,7 +53,6 @@ import {
 } from "../../core/transport_pack_resolver.js";
 import {
   applyTransportCountryOverlayState,
-  clearTransportCountryOverlayState,
   loadTransportCountryOverlayState,
 } from "../../core/transport_country_overlay.js";
 import {
@@ -1536,7 +1535,6 @@ export function createTransportWorkbenchController({
     const normalizedPackId = String(packId || "").trim().toLowerCase();
     const meta = getTargetMainMapPackMeta(normalizedPackId);
     if (!meta) return false;
-    const previousPackId = String(runtimeState.transportWorkbenchUi.activePackId || "").trim().toLowerCase();
     runtimeState.transportWorkbenchUi.activeFamily = meta.family;
     if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
       runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
@@ -1545,9 +1543,6 @@ export function createTransportWorkbenchController({
     runtimeState.transportWorkbenchUi.activePackId = meta.packId;
     runtimeState.transportWorkbenchUi.sampleCountry = meta.country;
     refreshTransportWorkbenchPackGateReport(meta.packId, { rerender: true });
-    if (previousPackId && previousPackId !== meta.packId) {
-      clearTransportCountryOverlayState(runtimeState, "transport-workbench-pack-switch");
-    }
     if (rerender) renderTransportWorkbenchUi();
     return true;
   };

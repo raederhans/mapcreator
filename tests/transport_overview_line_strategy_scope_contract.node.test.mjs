@@ -8,6 +8,9 @@ import {
   createTransportPackSourceGateReport,
   resolveTransportActivePack,
 } from "../js/core/transport_pack_resolver.js";
+import {
+  applyTransportCountryOverlayState,
+} from "../js/core/transport_country_overlay.js";
 import { createTransportOverviewRenderOwner } from "../js/core/renderer/transport_overview_render_owner.js";
 
 const LINE_FIXTURES = Object.freeze({
@@ -283,7 +286,7 @@ test("country road overlay consumes road_labels sidecar on the main map", () => 
       road_labels: {
         type: "FeatureCollection",
         features: [
-          { type: "Feature", geometry: { type: "Point", coordinates: [0.5, 0.5] }, properties: { name: "E35" } },
+          { type: "Feature", geometry: { type: "Point", coordinates: [0.5, 0.5] }, properties: { name: "E35", road_class: "motorway" } },
         ],
       },
     },
@@ -295,6 +298,79 @@ test("country road overlay consumes road_labels sidecar on the main map", () => 
   const countryRoadMetric = metrics.findLast((entry) => entry.name === "drawCountryRoadsLayer");
   assert.equal(countryRoadMetric?.detail?.visibleFeatureCount, 1);
   assert.equal(countryRoadMetric?.detail?.labelCount, 1);
+});
+
+test("country overlay apply preserves overlays for other transport families", () => {
+  const zoom = 4;
+  const { metrics, owner, appRuntime } = createLineRenderOwnerHarness({ k: zoom });
+
+  applyTransportCountryOverlayState(appRuntime, {
+    status: "ready",
+    activePackId: "germany_road",
+    family: "road",
+    collectionsByLayer: {
+      roads: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "motorway", reveal_rank: 1 } },
+        ],
+      },
+      road_labels: { type: "FeatureCollection", features: [] },
+    },
+  });
+  applyTransportCountryOverlayState(appRuntime, {
+    status: "ready",
+    activePackId: "france_rail",
+    family: "rail",
+    collectionsByLayer: {
+      railways: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "mainline", reveal_rank: 1 } },
+        ],
+      },
+      rail_stations_major: { type: "FeatureCollection", features: [] },
+    },
+  });
+
+  owner.drawRoadsLayer(zoom);
+  owner.drawRailwaysLayer(zoom);
+
+  assert.equal(appRuntime.transportCountryOverlayState.activePackIdByFamily.road, "germany_road");
+  assert.equal(appRuntime.transportCountryOverlayState.activePackIdByFamily.rail, "france_rail");
+  assert.equal(metrics.findLast((entry) => entry.name === "drawCountryRoadsLayer")?.detail?.visibleFeatureCount, 1);
+  assert.equal(metrics.findLast((entry) => entry.name === "drawCountryRailwaysLayer")?.detail?.visibleFeatureCount, 1);
+});
+
+test("country road sidecar labels without class stay below national label priority", () => {
+  const zoom = 4;
+  const { context, metrics, owner, appRuntime } = createLineRenderOwnerHarness({ k: zoom, roadLabelsEnabled: true });
+  appRuntime.transportCountryOverlayState = {
+    status: "ready",
+    activePackId: "germany_road",
+    family: "road",
+    collectionsByLayer: {
+      roads: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }, properties: { class: "motorway", reveal_rank: 1 } },
+        ],
+      },
+      road_labels: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "Point", coordinates: [0.5, 0.5] }, properties: { name: "B532" } },
+          { type: "Feature", geometry: { type: "Point", coordinates: [0.6, 0.6] }, properties: { name: "A5", priority: 4 } },
+        ],
+      },
+    },
+  };
+
+  owner.drawRoadsLayer(zoom);
+
+  assert.equal(context.calls.some((call) => call.type === "fillText" && call.text === "B532"), false);
+  assert.ok(context.calls.some((call) => call.type === "fillText" && call.text === "A5"));
+  assert.equal(metrics.findLast((entry) => entry.name === "drawCountryRoadsLayer")?.detail?.labelCount, 1);
 });
 
 test("country rail overlay consumes rail_stations_major sidecar with pack-scoped hover keys", () => {

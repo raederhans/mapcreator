@@ -119,27 +119,39 @@ function syncProjectImportUiState({ scenarioImportAudit, hooks }) {
   return syncProjectImportUiStateHelper({ scenarioImportAudit, hooks });
 }
 
-function resolveImportedTransportCountryOverlayPackId(target, importedState = {}) {
+function resolveImportedTransportCountryOverlayPackIds(target, importedState = {}) {
+  const packIds = [];
+  const pushPackId = (packId) => {
+    const normalizedPackId = String(packId || "").trim().toLowerCase();
+    if (normalizedPackId && !packIds.includes(normalizedPackId)) packIds.push(normalizedPackId);
+  };
+  const importedPackIdsByFamily = importedState?.transportCountryOverlayState?.activePackIdByFamily || {};
+  if (importedPackIdsByFamily && typeof importedPackIdsByFamily === "object") {
+    ["road", "rail", "airport"].forEach((familyId) => pushPackId(importedPackIdsByFamily[familyId]));
+  }
   const explicitPackId = String(importedState?.transportCountryOverlayState?.activePackId || "").trim().toLowerCase();
-  if (explicitPackId) return explicitPackId;
+  pushPackId(explicitPackId);
   const activePackIdByFamily = target?.styleConfig?.transportOverview?.activePackIdByFamily || {};
-  return ["road", "rail", "airport"]
-    .map((familyId) => activePackIdByFamily[familyId])
-    .find((packId) => String(packId || "").trim()) || "";
+  ["road", "rail", "airport"].forEach((familyId) => pushPackId(activePackIdByFamily[familyId]));
+  return packIds;
 }
 
 async function restoreImportedTransportCountryOverlayState(target, importedState = {}) {
-  const activePackId = resolveImportedTransportCountryOverlayPackId(target, importedState);
-  if (!activePackId) {
+  const activePackIds = resolveImportedTransportCountryOverlayPackIds(target, importedState);
+  if (!activePackIds.length) {
     clearTransportCountryOverlayState(target, "project-import-no-country-pack");
     return null;
   }
   try {
-    const overlayState = await loadTransportCountryOverlayState(activePackId);
-    return applyTransportCountryOverlayState(target, overlayState);
+    let appliedState = null;
+    for (const activePackId of activePackIds) {
+      const overlayState = await loadTransportCountryOverlayState(activePackId);
+      appliedState = applyTransportCountryOverlayState(target, overlayState);
+    }
+    return appliedState;
   } catch (error) {
     clearTransportCountryOverlayState(target, "project-import-country-pack-load-failed");
-    console.warn(`[project-import] Unable to restore transport country overlay ${activePackId}.`, error);
+    console.warn(`[project-import] Unable to restore transport country overlays ${activePackIds.join(", ")}.`, error);
     return null;
   }
 }

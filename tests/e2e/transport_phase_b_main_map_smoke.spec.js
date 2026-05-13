@@ -16,20 +16,23 @@ async function applyPack(page, { family, packId, keys }) {
   await page.waitForFunction(({ expectedPackId, expectedFamily, expectedKeys }) => {
     const state = globalThis.__playwrightStateRef || null;
     const overlay = state?.transportCountryOverlayState || null;
-    if (overlay?.status !== "ready" || overlay.activePackId !== expectedPackId || overlay.family !== expectedFamily) return false;
-    return expectedKeys.every((key) => Array.isArray(overlay.collectionsByLayer?.[key]?.features) && overlay.collectionsByLayer[key].features.length > 0);
+    const familyOverlay = overlay?.overlaysByFamily?.[expectedFamily] || overlay;
+    if (familyOverlay?.status !== "ready" || familyOverlay.activePackId !== expectedPackId || familyOverlay.family !== expectedFamily) return false;
+    return expectedKeys.every((key) => Array.isArray(familyOverlay.collectionsByLayer?.[key]?.features) && familyOverlay.collectionsByLayer[key].features.length > 0);
   }, { expectedPackId: packId, expectedFamily: family, expectedKeys: keys }, { timeout: 90_000 });
   await waitForRenderIdle(page, { timeout: 60_000 });
   return page.evaluate(({ expectedPackId, expectedFamily, expectedKeys }) => {
     const state = globalThis.__playwrightStateRef || {};
     const overlay = state.transportCountryOverlayState || {};
+    const familyOverlay = overlay.overlaysByFamily?.[expectedFamily] || overlay;
     return {
-      activePackId: overlay.activePackId,
-      family: overlay.family,
-      status: overlay.status,
-      sourceKeys: Object.keys(overlay.sourceSignature || {}),
+      activePackId: familyOverlay.activePackId,
+      family: familyOverlay.family,
+      status: familyOverlay.status,
+      sourceKeys: Object.keys(familyOverlay.sourceSignature || {}),
       persistedPackId: state.styleConfig?.transportOverview?.activePackIdByFamily?.[expectedFamily] || "",
-      counts: Object.fromEntries(expectedKeys.map((key) => [key, overlay.collectionsByLayer?.[key]?.features?.length || 0])),
+      counts: Object.fromEntries(expectedKeys.map((key) => [key, familyOverlay.collectionsByLayer?.[key]?.features?.length || 0])),
+      appliedFamilies: Object.keys(overlay.activePackIdByFamily || {}),
       showTransport: !!state.showTransport,
       showRoad: !!state.showRoad,
       showRail: !!state.showRail,
@@ -53,6 +56,7 @@ test("transport Phase B country packs apply to the main map", async ({ page }) =
   }
 
   expect(snapshots.map((entry) => entry.activePackId)).toEqual(SMOKE_CASES.map((entry) => entry.packId));
+  expect(snapshots.at(-1).appliedFamilies.sort()).toEqual(["airport", "rail", "road"]);
   for (const snapshot of snapshots) {
     expect(snapshot.status).toBe("ready");
     expect(snapshot.persistedPackId).toBe(snapshot.activePackId);
