@@ -1,7 +1,7 @@
 {
   "artifact_counts": {
     "chunk_count": 189,
-    "feature_count": 12780,
+    "feature_count": 12781,
     "water_count": 123
   },
   "controller_changes": [
@@ -4319,12 +4319,26 @@
     ]
   },
   "diagnostics": {
-    "action_feature_counts": {},
+    "action_feature_counts": {
+      "annexed_poland_to_ger": 154,
+      "armenia_to_arm": 11,
+      "british_outposts_to_ger": 6,
+      "brittany_to_fra": 15,
+      "burgundy_to_brg": 61,
+      "crimea_to_ger": 19,
+      "greater_finland_to_fin": 37,
+      "italy_french_baseline_restored": 8,
+      "northern_ireland_to_ire": 11,
+      "ostland_marijampole_to_ger": 1,
+      "scotland_to_sco": 22,
+      "transnistria_to_rom": 26,
+      "wales_to_wls": 12
+    },
     "active_controller_tag_count": 133,
     "active_owner_tag_count": 133,
     "as_of_date": "1962.1.1.12",
-    "atl_feature_count": 896,
-    "atl_sea_feature_count": 440,
+    "atl_feature_count": 456,
+    "atl_sea_feature_count": 441,
     "atlantropa_geometry_source": "hgo_donor_provinces",
     "atlantropa_island_replacement_stats": {
       "adriatica": {
@@ -4432,12 +4446,13 @@
         "dropped_feature_ids": []
       },
       "levant": {
-        "dropped_feature_count": 4,
+        "dropped_feature_count": 5,
         "dropped_feature_ids": [
           "ATLISL_levant_cyprus",
           "ATLSEA_FILL_libya_suez_24",
           "ATLSEA_FILL_libya_suez_25",
-          "ATLSEA_FILL_libya_suez_38"
+          "ATLSEA_FILL_libya_suez_26",
+          "ATLSEA_FILL_libya_suez_39"
         ]
       },
       "libya_suez": {
@@ -4512,6 +4527,7 @@
           "ATLSEA_FILL_tyrrhenian_7",
           "ATLSEA_FILL_tyrrhenian_8",
           "ATLSEA_FILL_tyrrhenian_9",
+          "ATLSEA_FILL_west_med_41",
           "ATLSEA_FILL_west_med_42",
           "ATLSEA_FILL_west_med_43",
           "ATLSEA_FILL_west_med_44",
@@ -4532,14 +4548,13 @@
           "ATLSEA_FILL_west_med_59",
           "ATLSEA_FILL_west_med_60",
           "ATLSEA_FILL_west_med_61",
-          "ATLSEA_FILL_west_med_62",
+          "ATLSEA_FILL_west_med_71",
           "ATLSEA_FILL_west_med_72",
           "ATLSEA_FILL_west_med_73",
           "ATLSEA_FILL_west_med_74",
           "ATLSEA_FILL_west_med_75",
           "ATLSEA_FILL_west_med_76",
-          "ATLSEA_FILL_west_med_77",
-          "ATLSEA_FILL_west_med_80",
+          "ATLSEA_FILL_west_med_79",
           "ATLSEA_tyrrhenian_8578_5579_0",
           "ATLSEA_tyrrhenian_8579_5555_0",
           "ATLSEA_tyrrhenian_8590_5656_0",
@@ -4547,15 +4562,14 @@
         ]
       },
       "west_med": {
-        "dropped_feature_count": 9,
+        "dropped_feature_count": 8,
         "dropped_feature_ids": [
           "ATLISL_west_med_ATL_1",
           "ATLISL_west_med_ATL_2",
-          "ATLSEA_FILL_west_med_34",
-          "ATLSEA_FILL_west_med_35",
+          "ATLISL_west_med_balearics",
+          "ATLSEA_FILL_west_med_62",
           "ATLSEA_FILL_west_med_63",
-          "ATLSEA_FILL_west_med_64",
-          "ATLSEA_west_med_8582_5454_1",
+          "ATLSEA_FILL_west_med_83",
           "ATLSEA_west_med_8586_8871_0",
           "ATLSEA_west_med_8594_5479_0"
         ]
@@ -4962,8 +4976,8 @@
           36.734157
         ],
         "centroid": [
-          33.979732,
-          34.673576
+          33.985891,
+          34.598126
         ],
         "control_points": [
           {
@@ -5051,10 +5065,10 @@
           "gap_fill": 9,
           "none": 8
         },
-        "overlap_with_baseline_land_area": 0.919345,
+        "overlap_with_baseline_land_area": 0.917971,
         "pixel_fragment_area_threshold": 0.0026,
         "pixel_fragment_count": 38,
-        "post_clip_area": 2.533372,
+        "post_clip_area": 2.175791,
         "province_feature_count": 48,
         "sea_completion_bbox": [
           30.8,
@@ -5509,8 +5523,8 @@
           43.555542
         ],
         "centroid": [
-          1.411166,
-          39.256531
+          1.218932,
+          39.166281
         ],
         "control_points": [
           {
@@ -5635,10 +5649,10 @@
           "gap_fill": 16,
           "none": 15
         },
-        "overlap_with_baseline_land_area": 0.444745,
+        "overlap_with_baseline_land_area": 0.442048,
         "pixel_fragment_area_threshold": 0.0028,
         "pixel_fragment_count": 36,
-        "post_clip_area": 5.331167,
+        "post_clip_area": 3.565934,
         "province_feature_count": 71,
         "sea_completion_bbox": [
           -6.8,
@@ -5887,8 +5901,8 @@
       }
     },
     "congo_lake_topology_mode": "true_water_preserved",
-    "context_land_mask_arc_refs": 33584,
-    "context_land_mask_area_delta_ratio": 0.008904270744267489,
+    "context_land_mask_arc_refs": 33582,
+    "context_land_mask_area_delta_ratio": 0.008866196792832596,
     "context_land_mask_fallback_used": false,
     "context_land_mask_tolerance": 0.35,
     "controller_rule_count": 8,
@@ -7369,7 +7383,7 @@
         ]
       },
       "aegean": {
-        "area": 20.019421,
+        "area": 20.019219,
         "bounds": [
           22.0,
           34.4,
@@ -7377,16 +7391,16 @@
           41.048522
         ],
         "centroid": [
-          26.311945,
-          36.740789
+          26.31196,
+          36.740767
         ],
-        "completion_area": 12.113985,
+        "completion_area": 12.113783,
         "completion_feature_count": 64,
         "expected_completion_area": 22.02283,
         "feature_count": 74,
         "group_label": "Aegean and Greek Islands",
-        "remaining_hole_area": 0.026414,
-        "remaining_hole_count": 63,
+        "remaining_hole_area": 0.026813,
+        "remaining_hole_count": 64,
         "template_feature_count": 5,
         "water_state_feature_counts": {
           "8608": 3,
@@ -7437,7 +7451,7 @@
         ]
       },
       "levant": {
-        "area": 20.930384,
+        "area": 21.245947,
         "bounds": [
           30.8,
           31.093889,
@@ -7445,16 +7459,16 @@
           36.884826
         ],
         "centroid": [
-          33.048114,
-          33.963851
+          33.061944,
+          33.980768
         ],
-        "completion_area": 11.42007,
+        "completion_area": 11.727582,
         "completion_feature_count": 13,
-        "expected_completion_area": 20.911701,
+        "expected_completion_area": 21.228126,
         "feature_count": 18,
         "group_label": "Levantine Retreat Margin",
-        "remaining_hole_area": 0.002211,
-        "remaining_hole_count": 4,
+        "remaining_hole_area": 0.003066,
+        "remaining_hole_count": 5,
         "template_feature_count": 2,
         "water_state_feature_counts": {
           "8609": 1,
@@ -7473,7 +7487,7 @@
         ]
       },
       "libya_suez": {
-        "area": 52.446342,
+        "area": 52.446078,
         "bounds": [
           11.877179,
           27.800002,
@@ -7481,16 +7495,16 @@
           35.199999
         ],
         "centroid": [
-          22.115828,
-          33.056009
+          22.115737,
+          33.05599
         ],
-        "completion_area": 48.430653,
-        "completion_feature_count": 40,
-        "expected_completion_area": 79.938079,
-        "feature_count": 44,
+        "completion_area": 48.430389,
+        "completion_feature_count": 41,
+        "expected_completion_area": 80.091145,
+        "feature_count": 45,
         "group_label": "Libya, Cyrenaica and Suez Chain",
-        "remaining_hole_area": 0.023298,
-        "remaining_hole_count": 34,
+        "remaining_hole_area": 0.022453,
+        "remaining_hole_count": 32,
         "template_feature_count": 6,
         "water_state_feature_counts": {
           "8605": 1,
@@ -7584,7 +7598,7 @@
         ]
       },
       "west_med": {
-        "area": 30.745809,
+        "area": 30.978933,
         "bounds": [
           -5.859879,
           33.300002,
@@ -7592,12 +7606,12 @@
           44.78117
         ],
         "centroid": [
-          1.552789,
-          38.461564
+          1.547203,
+          38.463821
         ],
-        "completion_area": 3.980324,
-        "completion_feature_count": 83,
-        "expected_completion_area": 65.786788,
+        "completion_area": 4.128223,
+        "completion_feature_count": 84,
+        "expected_completion_area": 65.957471,
         "feature_count": 108,
         "group_label": "West Mediterranean and Iberia-Algeria",
         "remaining_hole_area": 0.012314,
@@ -7607,7 +7621,7 @@
           "8577": 2,
           "8580": 4,
           "8581": 1,
-          "8582": 3,
+          "8582": 2,
           "8583": 2,
           "8584": 1,
           "8585": 1,
@@ -10168,10 +10182,10 @@
     "scenario_topology_source": "hgo_donor_and_tno_congo_cut",
     "sea_coverage_hole_count_by_cluster": {
       "adriatica": 13,
-      "aegean": 63,
+      "aegean": 64,
       "gabes": 3,
-      "levant": 4,
-      "libya_suez": 34,
+      "levant": 5,
+      "libya_suez": 32,
       "sicily_tunis": 4,
       "tyrrhenian": 15,
       "west_med": 30
@@ -96316,16 +96330,16 @@
       "to_tag": "SOV"
     }
   ],
-  "generated_at": "2026-05-12T18:18:27Z",
+  "generated_at": "2026-05-13T04:32:53Z",
   "owner_bucket_mismatch_count": 0,
   "owner_stats": {
     "AFA": {
       "base_iso2": "NE",
       "continent_label": "Africa",
-      "controller_feature_count": 0,
+      "controller_feature_count": 117,
       "display_name": "African Anarchy",
       "entry_kind": "scenario_country",
-      "feature_count": 66,
+      "feature_count": 117,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -96338,7 +96352,7 @@
       "provenance_iso2": "NE",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 66
+        "manual_reviewed": 117
       },
       "rule_sources": [
         "tno_1962_afa_manual_override"
@@ -96421,10 +96435,10 @@
     "ALT": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 20,
       "display_name": "Altai",
       "entry_kind": "scenario_country",
-      "feature_count": 8,
+      "feature_count": 20,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -96437,7 +96451,7 @@
       "provenance_iso2": "RU",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 8
+        "approx_existing_geometry": 20
       },
       "rule_sources": [
         "tno_1962_russia_alt"
@@ -96720,10 +96734,10 @@
     "ATL": {
       "base_iso2": "ZZ",
       "continent_label": "Special",
-      "controller_feature_count": 442,
+      "controller_feature_count": 443,
       "display_name": "Atlantropa Reclamation Zone",
       "entry_kind": "",
-      "feature_count": 442,
+      "feature_count": 443,
       "hidden_from_country_list": true,
       "historical_fidelity": "alternate_history",
       "historical_fidelity_summary": [
@@ -96736,7 +96750,7 @@
       "provenance_iso2": "ZZ",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 442
+        "manual_reviewed": 443
       },
       "rule_sources": [
         "atlantropa_dummy_owner"
@@ -96850,10 +96864,10 @@
     "BKR": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 18,
       "display_name": "Bashkir",
       "entry_kind": "scenario_country",
-      "feature_count": 26,
+      "feature_count": 18,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -96866,7 +96880,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 26
+        "manual_reviewed": 18
       },
       "rule_sources": [
         "tno_1962_russia_bkr"
@@ -97042,7 +97056,7 @@
     "BRM": {
       "base_iso2": "MM",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 20,
       "display_name": "Burma",
       "entry_kind": "scenario_subject",
       "feature_count": 20,
@@ -97174,7 +97188,7 @@
     "BZ": {
       "base_iso2": "BZ",
       "continent_label": "North America",
-      "controller_feature_count": 0,
+      "controller_feature_count": 6,
       "display_name": "Belize",
       "entry_kind": "scenario_country",
       "feature_count": 6,
@@ -97186,14 +97200,14 @@
       "lookup_iso2": "BZ",
       "parent_owner_tag": "",
       "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_belize_independent",
+      "primary_rule_source": "tno_1962_decolonization_bz",
       "provenance_iso2": "BZ",
       "quality": "manual_reviewed",
       "quality_breakdown": {
         "manual_reviewed": 6
       },
       "rule_sources": [
-        "tno_1962_belize_independent"
+        "tno_1962_decolonization_bz"
       ],
       "scenario_only": false,
       "source_type": "scenario_extension",
@@ -97207,10 +97221,10 @@
     "CAM": {
       "base_iso2": "KH",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 17,
       "display_name": "Cambodia",
       "entry_kind": "scenario_subject",
-      "feature_count": 24,
+      "feature_count": 17,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -97225,7 +97239,7 @@
       "provenance_iso2": "KH",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 24
+        "manual_reviewed": 17
       },
       "rule_sources": [
         "japan_cambodia_client_1962"
@@ -97306,10 +97320,10 @@
     "CHI": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
-      "display_name": "Nanjing China",
+      "controller_feature_count": 709,
+      "display_name": "Republic of China",
       "entry_kind": "scenario_subject",
-      "feature_count": 713,
+      "feature_count": 709,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -97324,7 +97338,7 @@
       "provenance_iso2": "CN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 713
+        "manual_reviewed": 709
       },
       "rule_sources": [
         "japan_nanjing_china_client_1962"
@@ -97859,10 +97873,10 @@
     "FRI": {
       "base_iso2": "IN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 199,
       "display_name": "Azad Hind",
       "entry_kind": "scenario_subject",
-      "feature_count": 172,
+      "feature_count": 199,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -97877,7 +97891,7 @@
       "provenance_iso2": "IN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 172
+        "manual_reviewed": 199
       },
       "rule_sources": [
         "japan_azad_hind_client_1962"
@@ -98067,8 +98081,8 @@
     "GMA": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
-      "display_name": "Gansu Ma Clique",
+      "controller_feature_count": 104,
+      "display_name": "Northwest Pacification Government",
       "entry_kind": "scenario_subject",
       "feature_count": 104,
       "hidden_from_country_list": false,
@@ -98102,8 +98116,8 @@
     "GNG": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
-      "display_name": "Guangdong National Government",
+      "controller_feature_count": 113,
+      "display_name": "Guangdong State",
       "entry_kind": "scenario_subject",
       "feature_count": 113,
       "hidden_from_country_list": false,
@@ -98302,7 +98316,7 @@
     "GUI": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 82,
       "display_name": "Guizhou Clique",
       "entry_kind": "scenario_subject",
       "feature_count": 82,
@@ -98337,7 +98351,7 @@
     "GXC": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 87,
       "display_name": "Guangxi Clique",
       "entry_kind": "scenario_subject",
       "feature_count": 87,
@@ -98372,7 +98386,7 @@
     "GY": {
       "base_iso2": "GY",
       "continent_label": "South America",
-      "controller_feature_count": 0,
+      "controller_feature_count": 10,
       "display_name": "Guyana",
       "entry_kind": "scenario_country",
       "feature_count": 10,
@@ -98384,14 +98398,14 @@
       "lookup_iso2": "GY",
       "parent_owner_tag": "",
       "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_guyana_independent",
+      "primary_rule_source": "tno_1962_decolonization_gy",
       "provenance_iso2": "GY",
       "quality": "manual_reviewed",
       "quality_breakdown": {
         "manual_reviewed": 10
       },
       "rule_sources": [
-        "tno_1962_guyana_independent"
+        "tno_1962_decolonization_gy"
       ],
       "scenario_only": false,
       "source_type": "scenario_extension",
@@ -98633,7 +98647,7 @@
     "INS": {
       "base_iso2": "ID",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 54,
       "display_name": "Indonesia",
       "entry_kind": "scenario_subject",
       "feature_count": 54,
@@ -98699,10 +98713,10 @@
     "IRK": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 15,
       "display_name": "Far Eastern Presidium",
       "entry_kind": "scenario_country",
-      "feature_count": 8,
+      "feature_count": 15,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -98715,7 +98729,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 8
+        "manual_reviewed": 15
       },
       "rule_sources": [
         "tno_1962_irk_manual_override"
@@ -98963,8 +98977,8 @@
     "KOR": {
       "base_iso2": "KR",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
-      "display_name": "Korea",
+      "controller_feature_count": 28,
+      "display_name": "Korean Residency-General",
       "entry_kind": "scenario_subject",
       "feature_count": 28,
       "hidden_from_country_list": false,
@@ -98977,14 +98991,14 @@
       "parent_owner_tags": [
         "JAP"
       ],
-      "primary_rule_source": "japan_korea_colony_1962",
+      "primary_rule_source": "tno_1962_kor_manual_override",
       "provenance_iso2": "KR",
       "quality": "manual_reviewed",
       "quality_breakdown": {
         "manual_reviewed": 28
       },
       "rule_sources": [
-        "japan_korea_colony_1962"
+        "tno_1962_kor_manual_override"
       ],
       "scenario_only": true,
       "source_type": "scenario_extension",
@@ -99095,10 +99109,10 @@
     "LAO": {
       "base_iso2": "LA",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 14,
       "display_name": "Laos",
       "entry_kind": "scenario_subject",
-      "feature_count": 17,
+      "feature_count": 14,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -99113,7 +99127,7 @@
       "provenance_iso2": "LA",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 17
+        "manual_reviewed": 14
       },
       "rule_sources": [
         "japan_laos_client_1962"
@@ -99299,7 +99313,7 @@
     "MAL": {
       "base_iso2": "MY",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 20,
       "display_name": "Malaya",
       "entry_kind": "scenario_subject",
       "feature_count": 20,
@@ -99334,7 +99348,7 @@
     "MAN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 323,
       "display_name": "Manchukuo",
       "entry_kind": "scenario_subject",
       "feature_count": 323,
@@ -99369,7 +99383,7 @@
     "MC": {
       "base_iso2": "MC",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 1,
       "display_name": "Monaco",
       "entry_kind": "scenario_country",
       "feature_count": 1,
@@ -99381,14 +99395,14 @@
       "lookup_iso2": "MC",
       "parent_owner_tag": "",
       "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_monaco_independent",
+      "primary_rule_source": "tno_1962_decolonization_mc",
       "provenance_iso2": "MC",
       "quality": "manual_reviewed",
       "quality_breakdown": {
         "manual_reviewed": 1
       },
       "rule_sources": [
-        "tno_1962_monaco_independent"
+        "tno_1962_decolonization_mc"
       ],
       "scenario_only": false,
       "source_type": "scenario_extension",
@@ -99402,10 +99416,10 @@
     "MEN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 79,
       "display_name": "Mengjiang",
       "entry_kind": "scenario_subject",
-      "feature_count": 70,
+      "feature_count": 79,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -99420,7 +99434,7 @@
       "provenance_iso2": "CN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 70
+        "manual_reviewed": 79
       },
       "rule_sources": [
         "japan_mengjiang_protectorate_1962"
@@ -99664,10 +99678,10 @@
     "NCP": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 253,
       "display_name": "North China Political Council",
       "entry_kind": "scenario_subject",
-      "feature_count": 268,
+      "feature_count": 253,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -99682,7 +99696,7 @@
       "provenance_iso2": "CN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 268
+        "manual_reviewed": 253
       },
       "rule_sources": [
         "japan_north_china_council_client_1962"
@@ -99796,10 +99810,10 @@
     "NOV": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 134,
       "display_name": "Novosibirsk",
       "entry_kind": "scenario_country",
-      "feature_count": 64,
+      "feature_count": 134,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -99812,7 +99826,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 64
+        "manual_reviewed": 134
       },
       "rule_sources": [
         "tno_1962_russia_nov"
@@ -99891,10 +99905,10 @@
     "OMS": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 51,
       "display_name": "Omsk",
       "entry_kind": "scenario_country",
-      "feature_count": 10,
+      "feature_count": 51,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -99907,7 +99921,7 @@
       "provenance_iso2": "RU",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 10
+        "approx_existing_geometry": 51
       },
       "rule_sources": [
         "tno_1962_russia_oms"
@@ -100281,7 +100295,7 @@
     "PHI": {
       "base_iso2": "PH",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 117,
       "display_name": "Philippines",
       "entry_kind": "scenario_subject",
       "feature_count": 117,
@@ -100313,13 +100327,77 @@
       "subregion_label": "South-Eastern Asia",
       "synthetic_owner": false
     },
+    "POR": {
+      "base_iso2": "PT",
+      "continent_label": "Europe",
+      "controller_feature_count": 0,
+      "display_name": "Portugal",
+      "entry_kind": "controller_only",
+      "feature_count": 0,
+      "hidden_from_country_list": true,
+      "historical_fidelity": "tno_baseline",
+      "historical_fidelity_summary": [
+        "tno_baseline"
+      ],
+      "lookup_iso2": "PT",
+      "parent_owner_tag": "IBR",
+      "parent_owner_tags": [
+        "IBR"
+      ],
+      "primary_rule_source": "tno_1962_controller_only_por",
+      "provenance_iso2": "PT",
+      "quality": "manual_reviewed",
+      "quality_breakdown": {},
+      "rule_sources": [
+        "tno_1962_controller_only_por"
+      ],
+      "scenario_only": true,
+      "source_type": "controller_overlay",
+      "source_types": [
+        "controller_overlay"
+      ],
+      "subject_kind": "",
+      "subregion_label": "Southern Europe",
+      "synthetic_owner": false
+    },
+    "PRC": {
+      "base_iso2": "CN",
+      "continent_label": "Asia",
+      "controller_feature_count": 0,
+      "display_name": "Communist China",
+      "entry_kind": "controller_only",
+      "feature_count": 0,
+      "hidden_from_country_list": false,
+      "historical_fidelity": "tno_baseline",
+      "historical_fidelity_summary": [
+        "tno_baseline"
+      ],
+      "lookup_iso2": "CN",
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "primary_rule_source": "tno_1962_controller_only_prc",
+      "provenance_iso2": "CN",
+      "quality": "manual_reviewed",
+      "quality_breakdown": {},
+      "rule_sources": [
+        "tno_1962_controller_only_prc"
+      ],
+      "scenario_only": true,
+      "source_type": "controller_overlay",
+      "source_types": [
+        "controller_overlay"
+      ],
+      "subject_kind": "",
+      "subregion_label": "Eastern Asia",
+      "synthetic_owner": false
+    },
     "PRM": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 3,
       "display_name": "Perm",
       "entry_kind": "scenario_country",
-      "feature_count": 4,
+      "feature_count": 3,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -100332,7 +100410,7 @@
       "provenance_iso2": "RU",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 4
+        "approx_existing_geometry": 3
       },
       "rule_sources": [
         "tno_1962_russia_prm"
@@ -100444,8 +100522,8 @@
     "QMA": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
-      "display_name": "Qinghai Ma Clique",
+      "controller_feature_count": 33,
+      "display_name": "13th National Revolutionary Army",
       "entry_kind": "scenario_subject",
       "feature_count": 33,
       "hidden_from_country_list": false,
@@ -100545,10 +100623,10 @@
     "RGC": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
-      "display_name": "Reformed Government of China",
+      "controller_feature_count": 177,
+      "display_name": "Sichuan Clique",
       "entry_kind": "scenario_subject",
-      "feature_count": 191,
+      "feature_count": 177,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -100563,7 +100641,7 @@
       "provenance_iso2": "CN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 191
+        "manual_reviewed": 177
       },
       "rule_sources": [
         "japan_reformed_china_client_1962"
@@ -100891,10 +100969,10 @@
     "RUR": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 40,
       "display_name": "Rurik Kingdom",
       "entry_kind": "scenario_country",
-      "feature_count": 19,
+      "feature_count": 40,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -100907,7 +100985,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 19
+        "manual_reviewed": 40
       },
       "rule_sources": [
         "tno_1962_rur_manual_override"
@@ -100990,26 +101068,26 @@
     "SAM": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
-      "display_name": "Samara",
+      "controller_feature_count": 73,
+      "display_name": "Russian Liberation Army",
       "entry_kind": "scenario_country",
-      "feature_count": 78,
+      "feature_count": 73,
       "hidden_from_country_list": false,
-      "historical_fidelity": "tno_baseline",
+      "historical_fidelity": "extended",
       "historical_fidelity_summary": [
-        "tno_baseline"
+        "extended"
       ],
       "lookup_iso2": "RU",
       "parent_owner_tag": "",
       "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_russia_sam",
+      "primary_rule_source": "tno_1962_sam_manual_override",
       "provenance_iso2": "RU",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 78
+        "approx_existing_geometry": 73
       },
       "rule_sources": [
-        "tno_1962_russia_sam"
+        "tno_1962_sam_manual_override"
       ],
       "scenario_only": true,
       "source_type": "scenario_extension",
@@ -101190,7 +101268,7 @@
     "SHX": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 196,
       "display_name": "Shanxi",
       "entry_kind": "scenario_subject",
       "feature_count": 196,
@@ -101225,7 +101303,7 @@
     "SIA": {
       "base_iso2": "TH",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 93,
       "display_name": "Siam",
       "entry_kind": "",
       "feature_count": 93,
@@ -101253,6 +101331,68 @@
       ],
       "subject_kind": "",
       "subregion_label": "South-Eastern Asia",
+      "synthetic_owner": false
+    },
+    "SIC": {
+      "base_iso2": "CN",
+      "continent_label": "Asia",
+      "controller_feature_count": 0,
+      "display_name": "Xikang Clique",
+      "entry_kind": "controller_only",
+      "feature_count": 0,
+      "hidden_from_country_list": false,
+      "historical_fidelity": "tno_baseline",
+      "historical_fidelity_summary": [
+        "tno_baseline"
+      ],
+      "lookup_iso2": "CN",
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "primary_rule_source": "tno_1962_controller_only_sic",
+      "provenance_iso2": "CN",
+      "quality": "manual_reviewed",
+      "quality_breakdown": {},
+      "rule_sources": [
+        "tno_1962_controller_only_sic"
+      ],
+      "scenario_only": true,
+      "source_type": "controller_overlay",
+      "source_types": [
+        "controller_overlay"
+      ],
+      "subject_kind": "",
+      "subregion_label": "Eastern Asia",
+      "synthetic_owner": false
+    },
+    "SIK": {
+      "base_iso2": "CN",
+      "continent_label": "Asia",
+      "controller_feature_count": 0,
+      "display_name": "Sinkiang",
+      "entry_kind": "controller_only",
+      "feature_count": 0,
+      "hidden_from_country_list": false,
+      "historical_fidelity": "tno_baseline",
+      "historical_fidelity_summary": [
+        "tno_baseline"
+      ],
+      "lookup_iso2": "CN",
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "primary_rule_source": "tno_1962_controller_only_sik",
+      "provenance_iso2": "CN",
+      "quality": "manual_reviewed",
+      "quality_breakdown": {},
+      "rule_sources": [
+        "tno_1962_controller_only_sik"
+      ],
+      "scenario_only": true,
+      "source_type": "controller_overlay",
+      "source_types": [
+        "controller_overlay"
+      ],
+      "subject_kind": "",
+      "subregion_label": "Eastern Asia",
       "synthetic_owner": false
     },
     "SLO": {
@@ -101359,26 +101499,26 @@
     "SVR": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
-      "display_name": "Sverdlovsk",
+      "controller_feature_count": 105,
+      "display_name": "Ural Military District",
       "entry_kind": "scenario_country",
-      "feature_count": 10,
+      "feature_count": 105,
       "hidden_from_country_list": false,
-      "historical_fidelity": "tno_baseline",
+      "historical_fidelity": "extended",
       "historical_fidelity_summary": [
-        "tno_baseline"
+        "extended"
       ],
       "lookup_iso2": "RU",
       "parent_owner_tag": "",
       "parent_owner_tags": [],
-      "primary_rule_source": "tno_1962_russia_svr",
+      "primary_rule_source": "tno_1962_svr_manual_override",
       "provenance_iso2": "RU",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 10
+        "approx_existing_geometry": 105
       },
       "rule_sources": [
-        "tno_1962_russia_svr"
+        "tno_1962_svr_manual_override"
       ],
       "scenario_only": true,
       "source_type": "scenario_extension",
@@ -101557,10 +101697,10 @@
     "TIB": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 82,
       "display_name": "Tibet",
       "entry_kind": "scenario_subject",
-      "feature_count": 86,
+      "feature_count": 82,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -101575,7 +101715,7 @@
       "provenance_iso2": "CN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 86
+        "manual_reviewed": 82
       },
       "rule_sources": [
         "japan_tibet_client_1962"
@@ -101658,10 +101798,10 @@
     "TOM": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 22,
       "display_name": "Tomsk",
       "entry_kind": "scenario_country",
-      "feature_count": 14,
+      "feature_count": 22,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -101674,7 +101814,7 @@
       "provenance_iso2": "RU",
       "quality": "approx_existing_geometry",
       "quality_breakdown": {
-        "approx_existing_geometry": 14
+        "approx_existing_geometry": 22
       },
       "rule_sources": [
         "tno_1962_russia_tom"
@@ -102048,10 +102188,10 @@
     "VIN": {
       "base_iso2": "VN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 52,
       "display_name": "Vietnam",
       "entry_kind": "scenario_subject",
-      "feature_count": 63,
+      "feature_count": 52,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -102066,7 +102206,7 @@
       "provenance_iso2": "VN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 63
+        "manual_reviewed": 52
       },
       "rule_sources": [
         "japan_vietnam_client_1962"
@@ -102213,10 +102353,10 @@
     "VYT": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 62,
       "display_name": "Vyatka",
       "entry_kind": "scenario_country",
-      "feature_count": 65,
+      "feature_count": 62,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -102229,7 +102369,7 @@
       "provenance_iso2": "RU",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 65
+        "manual_reviewed": 62
       },
       "rule_sources": [
         "tno_1962_russia_vyt"
@@ -102345,7 +102485,7 @@
     "XIN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 87,
       "display_name": "Xinjiang",
       "entry_kind": "scenario_subject",
       "feature_count": 87,
@@ -102374,6 +102514,37 @@
         "scenario_extension"
       ],
       "subject_kind": "client_state",
+      "subregion_label": "Eastern Asia",
+      "synthetic_owner": false
+    },
+    "XSM": {
+      "base_iso2": "CN",
+      "continent_label": "Asia",
+      "controller_feature_count": 0,
+      "display_name": "Xibei San Ma",
+      "entry_kind": "controller_only",
+      "feature_count": 0,
+      "hidden_from_country_list": false,
+      "historical_fidelity": "tno_baseline",
+      "historical_fidelity_summary": [
+        "tno_baseline"
+      ],
+      "lookup_iso2": "CN",
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "primary_rule_source": "tno_1962_controller_only_xsm",
+      "provenance_iso2": "CN",
+      "quality": "manual_reviewed",
+      "quality_breakdown": {},
+      "rule_sources": [
+        "tno_1962_controller_only_xsm"
+      ],
+      "scenario_only": true,
+      "source_type": "controller_overlay",
+      "source_types": [
+        "controller_overlay"
+      ],
+      "subject_kind": "",
       "subregion_label": "Eastern Asia",
       "synthetic_owner": false
     },
@@ -102444,10 +102615,10 @@
     "YUN": {
       "base_iso2": "CN",
       "continent_label": "Asia",
-      "controller_feature_count": 0,
+      "controller_feature_count": 119,
       "display_name": "Yunnan",
       "entry_kind": "scenario_subject",
-      "feature_count": 126,
+      "feature_count": 119,
       "hidden_from_country_list": false,
       "historical_fidelity": "extended",
       "historical_fidelity_summary": [
@@ -102462,7 +102633,7 @@
       "provenance_iso2": "CN",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 126
+        "manual_reviewed": 119
       },
       "rule_sources": [
         "japan_yunnan_client_1962"
@@ -102545,7 +102716,7 @@
     "ZLT": {
       "base_iso2": "RU",
       "continent_label": "Europe",
-      "controller_feature_count": 0,
+      "controller_feature_count": 26,
       "display_name": "Zlatoust",
       "entry_kind": "scenario_country",
       "feature_count": 26,
@@ -102581,21 +102752,21 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "e6a2615ff78eb6288fca55d2c0b5521ac3591a215eb9f95aba52cde4e3c5b2a9",
+  "snapshot_fingerprint": "b3e23d55c5312254361afcd00e4e54cdab0ab94c47db5dee9abc13a57e47e1ba",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "b0ef1ab371a2d78088fdceddb976a86394acf712a967c64bd1fd7aa3f56693aa",
-    "detail_chunk_manifest_sha256": "e46fb5a3226f6026101b4cc5f7aaaa52595b4ceac0c53afa841afd12f9702f9c",
-    "runtime_bootstrap_topology_sha256": "60f479537e6da45047a160478077a5d584771ece65f957537aad051cfce5a1d5",
-    "runtime_topology_sha256": "e12725ba98049dcc5870e0b5cbac694e1384830df2f5f665d313e45fa2b6557a"
+    "build_snapshot_sha256": "1191386e5a1aee824d43f6037f1f52a41b057e283de9c75d6939b1bb6717c607",
+    "detail_chunk_manifest_sha256": "ff76ca8f902905dc6f092414c2a95bcd597b50a3c196d6bcc356fa1603f8d9ac",
+    "runtime_bootstrap_topology_sha256": "24046f9f6cc328d844f320ff099b2f7bb4e7ff9180710df678a48df4c755bab8",
+    "runtime_topology_sha256": "b19f11d830ddd027fb8954ef21585cc8b586579f1c209fe356c6e934cec85ff8"
   },
   "summary": {
     "approximate_count": 919,
     "belarus_hybrid_feature_count": 0,
     "blocker_count": 0,
     "changed_feature_count": 2032,
-    "context_land_mask_arc_refs": 33584,
-    "context_land_mask_area_delta_ratio": 0.008904270744267489,
+    "context_land_mask_arc_refs": 33582,
+    "context_land_mask_area_delta_ratio": 0.008866196792832596,
     "context_land_mask_fallback_used": false,
     "context_land_mask_tolerance": 0.35,
     "controller_count": 174,
@@ -102603,18 +102774,18 @@
     "critical_region_check_count": 0,
     "critical_unresolved_count": 0,
     "failed_region_check_count": 0,
-    "feature_count": 12780,
+    "feature_count": 12781,
     "geometry_blocker_count": 0,
-    "manual_reviewed_feature_count": 9348,
+    "manual_reviewed_feature_count": 9349,
     "manual_reviewed_region_count": 0,
     "owner_controller_split_feature_count": 606,
     "owner_count": 174,
     "quality_counts": {
       "approx_existing_geometry": 919,
       "direct_country_copy": 2513,
-      "manual_reviewed": 9348
+      "manual_reviewed": 9349
     },
-    "scenario_atlantropa_feature_count": 896,
+    "scenario_atlantropa_feature_count": 897,
     "scenario_rule_blocker_count": 0,
     "scenario_runtime_topology_object_count": 6,
     "source_counts": {
@@ -102622,11 +102793,11 @@
       "direct_active_owner": 4289,
       "fallback_mapped_tag": 3,
       "manual_rule": 6236,
-      "scenario_generated": 443,
+      "scenario_generated": 444,
       "tno_reichskommissariat_baseline": 1809
     },
-    "synthetic_count": 445,
-    "synthetic_owner_feature_count": 445,
+    "synthetic_count": 446,
+    "synthetic_owner_feature_count": 446,
     "tno_bathymetry_band_count": 90,
     "tno_bathymetry_contour_count": 74,
     "tno_named_marginal_water_count": 101,

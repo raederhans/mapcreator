@@ -77,6 +77,7 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "batchFillScope",
   "scenarioUiState",
   "scenarioOceanFillBeforeActivate",
+  "scenarioOceanStyleBeforeActivate",
   "styleConfigOcean",
   "scenarioDisplaySettingsBeforeActivate",
   "activeScenarioPerformanceHints",
@@ -213,6 +214,7 @@ function captureScenarioPresentationSnapshot() {
       scenarioVisualAdjustmentsOpen: !!runtimeState.ui?.scenarioVisualAdjustmentsOpen,
     },
     scenarioOceanFillBeforeActivate: runtimeState.scenarioOceanFillBeforeActivate,
+    scenarioOceanStyleBeforeActivate: cloneScenarioStateValue(runtimeState.scenarioOceanStyleBeforeActivate),
     styleConfigOcean: cloneScenarioStateValue(runtimeState.styleConfig?.ocean || {}),
     locales: cloneScenarioStateValue(runtimeState.locales),
     geoAliasToStableKey: cloneScenarioStateValue(runtimeState.geoAliasToStableKey),
@@ -334,6 +336,7 @@ function restoreScenarioPresentationSnapshot(snapshot) {
   runtimeState.ui.politicalEditingExpanded = !!snapshot.scenarioUiState?.politicalEditingExpanded;
   runtimeState.ui.scenarioVisualAdjustmentsOpen = !!snapshot.scenarioUiState?.scenarioVisualAdjustmentsOpen;
   runtimeState.scenarioOceanFillBeforeActivate = snapshot.scenarioOceanFillBeforeActivate;
+  runtimeState.scenarioOceanStyleBeforeActivate = cloneScenarioStateValue(snapshot.scenarioOceanStyleBeforeActivate);
   if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
     runtimeState.styleConfig = {};
   }

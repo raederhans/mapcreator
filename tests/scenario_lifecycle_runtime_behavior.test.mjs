@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { createScenarioLifecycleRuntime } from "../js/core/scenario/lifecycle_runtime.js";
 import { createScenarioApplyPipeline } from "../js/core/scenario_apply_pipeline.js";
+import { createScenarioOceanFillRestoreRuntime } from "../js/core/scenario/presentation_ocean_fill_restore.js";
 
 function createLifecycleRuntime(runtimeState, overrides = {}) {
   return createScenarioLifecycleRuntime({
@@ -273,6 +274,61 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     "post:ocean:blank_base",
     "post:performance:blank_base",
     "post:chunks:blank_base",
+  ]);
+});
+
+test("scenario ocean style restore captures the pre-activation baseline after apply commit", () => {
+  const runtimeState = createBaseState({
+    activeScenarioManifest: {
+      style_defaults: {
+        ocean: {
+          fillColor: "#2d4769",
+          preset: "flat",
+          experimentalAdvancedStyles: false,
+        },
+      },
+    },
+    scenarioOceanFillBeforeActivate: "#123456",
+    scenarioOceanStyleBeforeActivate: null,
+    styleConfig: {
+      ocean: {
+        fillColor: "#123456",
+        preset: "bathymetry_soft",
+        experimentalAdvancedStyles: true,
+      },
+    },
+  });
+  const invalidationReasons = [];
+  const runtime = createScenarioOceanFillRestoreRuntime({
+    state: runtimeState,
+    invalidateOceanBackgroundVisualState: (reason) => invalidationReasons.push(reason),
+  });
+
+  runtime.syncScenarioOceanFillForActivation(runtimeState.activeScenarioManifest);
+
+  assert.deepEqual(runtimeState.scenarioOceanStyleBeforeActivate, {
+    fillColor: "#123456",
+    preset: "bathymetry_soft",
+    experimentalAdvancedStyles: true,
+  });
+  assert.deepEqual(runtimeState.styleConfig.ocean, {
+    fillColor: "#2d4769",
+    preset: "flat",
+    experimentalAdvancedStyles: false,
+  });
+
+  runtime.restoreScenarioOceanFillAfterExit();
+
+  assert.deepEqual(runtimeState.styleConfig.ocean, {
+    fillColor: "#123456",
+    preset: "bathymetry_soft",
+    experimentalAdvancedStyles: true,
+  });
+  assert.equal(runtimeState.scenarioOceanFillBeforeActivate, null);
+  assert.equal(runtimeState.scenarioOceanStyleBeforeActivate, null);
+  assert.deepEqual(invalidationReasons, [
+    "scenario-ocean-fill-activate",
+    "scenario-ocean-fill-clear",
   ]);
 });
 

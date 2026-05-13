@@ -397,6 +397,7 @@ export function createDefaultScenarioRuntimeState({
     scenarioParentBorderEnabledBeforeActivate: null,
     scenarioPaintModeBeforeActivate: null,
     scenarioOceanFillBeforeActivate: null,
+    scenarioOceanStyleBeforeActivate: null,
     scenarioDisplaySettingsBeforeActivate: null,
     activeScenarioPerformanceHints: null,
     activeScenarioMeshPack: null,

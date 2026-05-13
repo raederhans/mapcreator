@@ -125,6 +125,24 @@ async function setCheckbox(page, id, checked) {
   }, { targetId: id, targetChecked: checked });
 }
 
+async function setRiversVisibleForRegression(page, checked) {
+  await page.evaluate(async (targetChecked) => {
+    const { state } = await import('/js/core/state.js');
+    const input = document.getElementById('toggleRivers');
+    if (!input) {
+      throw new Error('Missing checkbox: toggleRivers');
+    }
+
+    // These river zoom-gating checks replace state.riversData with a synthetic subset.
+    // The toolbar change handler refreshes the full context layer, so this helper only
+    // flips the render flag and keeps the injected subset as the render source.
+    input.checked = !!targetChecked;
+    state.showRivers = !!targetChecked;
+    state.renderNowFn?.();
+  }, checked);
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+}
+
 async function setZoomPercent(page, percent) {
   await page.evaluate(async (targetPercent) => {
     const { setZoomPercent } = await import('/js/core/map_renderer.js');
@@ -225,6 +243,12 @@ async function setRiverSubset(page, subsetName) {
       type: 'FeatureCollection',
       features: subset,
     };
+    if (state.renderPerfMetrics && typeof state.renderPerfMetrics === 'object') {
+      delete state.renderPerfMetrics.drawRiversLayer;
+    }
+    if (globalThis.__renderPerfMetrics && typeof globalThis.__renderPerfMetrics === 'object') {
+      delete globalThis.__renderPerfMetrics.drawRiversLayer;
+    }
     state.topologyRevision = Number(state.topologyRevision || 0) + 1;
     state.renderNowFn?.();
 
@@ -249,6 +273,7 @@ async function measureRiverInk(page, {
   label,
   captureScreenshot = false,
 }) {
+  await setRiversVisibleForRegression(page, false);
   await setZoomPercent(page, zoomPercent);
   const zoomState = await readZoomState(page);
   const subsetState = await setRiverSubset(page, subsetName);
@@ -260,8 +285,12 @@ async function measureRiverInk(page, {
     riverDataState = await readRiverDataState(page);
   }
   expect(riverDataState.featureCount).toBe(subsetState.total);
-  await setCheckbox(page, 'toggleRivers', true);
-  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+  await setRiversVisibleForRegression(page, true);
+  const firstRenderMetric = await readRiverRenderMetric(page);
+  if (firstRenderMetric?.featureCount !== subsetState.total) {
+    await setRiverSubset(page, subsetName);
+    await setRiversVisibleForRegression(page, true);
+  }
   const expectedZoomBucket = bucketForZoomPercent(zoomPercent);
   await expect.poll(async () => readRiverRenderMetric(page), {
     timeout: 8000,
@@ -286,8 +315,7 @@ async function measureRiverInk(page, {
     await page.screenshot({ path: onShotPath, fullPage: true });
   }
 
-  await setCheckbox(page, 'toggleRivers', false);
-  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+  await setRiversVisibleForRegression(page, false);
   const riversOff = await captureCanvasSample(page);
 
   const changedPixels = countChangedPixels(riversOff.pixels, riversOn.pixels, 12);
@@ -357,6 +385,16 @@ async function beginRiverRegression(page) {
   await ensureScenario(page, SCENARIO_ID);
   await waitForScenarioApplyIdle(page, { scenarioId: SCENARIO_ID, timeout: 120_000 });
   await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 120_000 });
+  await page.evaluate(async () => {
+    const { state } = await import('/js/core/state.js');
+    if (typeof state.ensureContextLayerDataFn === 'function') {
+      await state.ensureContextLayerDataFn('rivers', {
+        reason: 'river-regression-bootstrap',
+        renderNow: false,
+      });
+    }
+  });
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 120_000 });
   await snapshotOriginalRivers(page);
 
   trackers.consoleIssues.length = 0;
@@ -382,8 +420,16 @@ async function restoreRiverRegressionState(page, { captureFinalScreenshot = fals
     state.topologyRevision = Number(state.topologyRevision || 0) + 1;
     state.renderNowFn?.();
   });
-  await setCheckbox(page, 'toggleRivers', true);
-  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+  await setRiversVisibleForRegression(page, true);
+  const restoredRiverState = await page.evaluate(async () => {
+    const { state } = await import('/js/core/state.js');
+    const original = window.__riverRegressionOriginalRiversData || state.riversData;
+    return {
+      showRivers: !!state.showRivers,
+      riverCount: Array.isArray(state.riversData?.features) ? state.riversData.features.length : 0,
+      originalCount: Array.isArray(original?.features) ? original.features.length : 0,
+    };
+  });
 
   let finalScreenshotPath = '';
   if (captureFinalScreenshot) {
@@ -400,8 +446,11 @@ async function restoreRiverRegressionState(page, { captureFinalScreenshot = fals
 
   expect(finalRiverState.showRivers).toBe(false);
   expect(finalRiverState.riverCount).toBeGreaterThan(0);
+  expect(restoredRiverState.showRivers).toBe(true);
+  expect(restoredRiverState.riverCount).toBe(restoredRiverState.originalCount);
   return {
     finalRiverState,
+    restoredRiverState,
     finalScreenshotPath,
   };
 }

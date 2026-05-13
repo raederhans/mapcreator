@@ -1609,3 +1609,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 给 UI locale 增加少量 key 时，优先从 HEAD 读取并定点 patch 目标键；整文件重写容易把 unrelated geo translation churn 混入本轮 diff。
 - 异步数据加载后刷新 UI summary 时，避免空 catch；失败路径要留下 console/diagnostic 信号，同时刷新一次状态，方便区分加载失败和 renderer settling。
+
+## 2026-05-13 - TNO repair-first water closeout
+
+- Repair-first 收口要让 generator/checkpoint、safe repair、strict contract、validator、E2E、perf 共用同一批最终产物；长 builder 卡住时，优先用已验证 checkpoint + targeted safe repair 闭环，避免继续扩大重建面。
+- Playwright synthetic subset 测试如果改写 runtime layer data，先等 context resolver 完成，再注入测试数据；否则首帧 resolver 会把 subset 覆盖回完整 topology，造成 metric 假失败。

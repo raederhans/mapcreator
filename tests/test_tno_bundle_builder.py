@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from contextlib import nullcontext
+import inspect
 import json
 import os
 from pathlib import Path
@@ -1043,6 +1044,28 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertAlmostEqual(repaired_by_id["macro"].intersection(repaired_by_id["detail"]).area, 0.0)
         self.assertAlmostEqual(repaired_by_id["macro"].area, 3.0)
 
+    def test_apply_tno_named_water_exclusions_rejects_area_collapse(self) -> None:
+        named_features = [
+            {
+                "type": "Feature",
+                "properties": {"id": "macro"},
+                "geometry": mapping(_square(0, 0, 2.0)),
+            },
+            {
+                "type": "Feature",
+                "properties": {"id": "detail"},
+                "geometry": mapping(_square(0, 0, 1.9995)),
+            },
+        ]
+        specs = (
+            {"id": "macro", "subtract_named_ids": ("detail",)},
+            {"id": "detail"},
+        )
+
+        with patch.object(tno_bundle, "TNO_NAMED_MARGINAL_WATER_SPECS", specs):
+            with self.assertRaisesRegex(ValueError, "lost too much area"):
+                apply_tno_named_water_exclusions(named_features)
+
     def test_build_relief_overlays_keeps_expected_overlay_kind_distribution(self) -> None:
         region_unions = {
             region_id: _square(index * 2, 0, 0.18 if index >= 6 else 1.0)
@@ -1582,6 +1605,8 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(countries_payload["countries"]["ARM"]["color_hex"], "#b066b4")
         self.assertEqual(manifest_payload["palette_id"], "tno")
         self.assertEqual(manifest_payload["style_defaults"]["ocean"]["fillColor"], "#2d4769")
+        self.assertEqual(manifest_payload["style_defaults"]["ocean"]["preset"], "flat")
+        self.assertFalse(manifest_payload["style_defaults"]["ocean"]["experimentalAdvancedStyles"])
         self.assertEqual(manifest_payload["style_defaults"]["atlantropa_sea"]["fillColor"], "#203856")
 
     def test_extract_scenario_atlantropa_manifest_writes_runtime_style_contract(self) -> None:
@@ -1714,19 +1739,56 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 audit_entries[tag]["map_hex"],
             )
 
+    def test_single_object_topology_prunes_unused_arcs(self) -> None:
+        source_topology = {
+            "type": "Topology",
+            "transform": {"scale": [1, 1], "translate": [0, 0]},
+            "objects": {
+                "scenario_atlantropa": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {"type": "Polygon", "properties": {"id": "A"}, "arcs": [[0, ~2]]},
+                    ],
+                },
+                "political": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {"type": "Polygon", "properties": {"id": "P"}, "arcs": [[1]]},
+                    ],
+                },
+            },
+            "arcs": [
+                [[0, 0], [1, 0]],
+                [[9, 9], [9, 10]],
+                [[2, 2], [3, 3]],
+            ],
+        }
+
+        payload = tno_bundle.build_single_object_topology_payload(source_topology, "scenario_atlantropa")
+
+        self.assertEqual(payload["arcs"], [source_topology["arcs"][0], source_topology["arcs"][2]])
+        self.assertEqual(
+            payload["objects"]["scenario_atlantropa"]["geometries"][0]["arcs"],
+            [[0, ~1]],
+        )
+
+    def test_tno_country_registry_preserves_controller_only_retired_tags(self) -> None:
+        countries_payload = {"countries": {"POR": {"tag": "POR", "entry_kind": "controller_only"}}}
+        owners_payload = {"owners": {"F-1": "AAA"}}
+
+        tno_bundle.normalize_tno_country_registry(countries_payload, owners_payload)
+
+        self.assertEqual(countries_payload["countries"]["POR"]["entry_kind"], "controller_only")
+
     def test_final_wave_runtime_entries_keep_expected_sources_and_entry_kinds(self) -> None:
         countries = json.loads(
             Path("data/scenarios/tno_1962/countries.json").read_text(encoding="utf-8")
         )["countries"]
 
-        self.assertEqual(countries["PRC"]["entry_kind"], "controller_only")
-        self.assertEqual(countries["PRC"]["primary_rule_source"], "tno_1962_controller_only_prc")
-
-        self.assertEqual(countries["SIC"]["entry_kind"], "controller_only")
-        self.assertEqual(countries["SIC"]["primary_rule_source"], "tno_1962_controller_only_sic")
-
-        self.assertEqual(countries["SIK"]["entry_kind"], "controller_only")
-        self.assertEqual(countries["SIK"]["primary_rule_source"], "tno_1962_controller_only_sik")
+        for tag in ("POR", "PRC", "SIC", "SIK", "XSM"):
+            self.assertEqual(countries[tag]["entry_kind"], "controller_only")
+            self.assertEqual(countries[tag]["primary_rule_source"], f"tno_1962_controller_only_{tag.lower()}")
+        self.assertTrue(countries["POR"]["hidden_from_country_list"])
 
         self.assertEqual(countries["TIB"]["entry_kind"], "scenario_subject")
         self.assertEqual(countries["TIB"]["primary_rule_source"], "japan_tibet_client_1962")
@@ -2513,7 +2575,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             require_chunk_mock.assert_called_once_with(scenario_dir)
             rebuild_chunk_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
 
-    def test_external_publish_checkpoint_validation_uses_tno_profile_and_filters_final_files(self) -> None:
+    def test_external_publish_checkpoint_validation_uses_tno_profile_and_hard_fails_final_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
             checkpoint_dir = root / "tno-water-checkpoints"
@@ -2542,11 +2604,31 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(
             filtered,
             [
+                f"Required file is missing: {root / 'mapped' / tno_bundle.SCENARIO_ID / 'build_snapshot.json'}",
+                f"Required file is missing: {root / 'mapped' / tno_bundle.SCENARIO_ID / 'detail_chunks.manifest.json'}",
                 "manifest.source.detail_chunk_manifest_sha256 must match the checked-in artifact sha. manifest=old actual=new.",
                 "startup bundle en source.detail_chunk_manifest_sha256 must match manifest.source.detail_chunk_manifest_sha256.",
                 "runtime_topology is missing feature ids referenced by owners/cores in strict mode. Sample: ['ATLISL_x'].",
                 "manifest.summary.feature_count must equal owners feature count in strict mode.",
                 "audit.json summary must match manifest.summary for derived scenario artifacts.",
+            ],
+        )
+
+    def test_prechunk_publish_checkpoint_validation_only_allows_missing_build_snapshot(self) -> None:
+        errors = [
+            "Required file is missing: /tmp/tno_1962/build_snapshot.json",
+            "Required file is missing: /tmp/tno_1962/detail_chunks.manifest.json",
+            "manifest.summary.feature_count must equal owners feature count in strict mode.",
+        ]
+
+        with patch.object(tno_bundle, "validate_tno_publish_checkpoint_dir", return_value=errors):
+            filtered = tno_bundle.validate_tno_prechunk_publish_checkpoint_dir(Path("checkpoint"))
+
+        self.assertEqual(
+            filtered,
+            [
+                "Required file is missing: /tmp/tno_1962/detail_chunks.manifest.json",
+                "manifest.summary.feature_count must equal owners feature count in strict mode.",
             ],
         )
 
@@ -2591,18 +2673,40 @@ class TnoBundleBuilderTest(unittest.TestCase):
             scenario_dir.mkdir(parents=True, exist_ok=True)
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-            executed_stages: list[str] = []
+            events: list[str] = []
 
             def fake_run_single_stage(stage: str, **kwargs):
-                executed_stages.append(stage)
+                events.append(f"stage:{stage}")
+                if stage == tno_bundle.STAGE_WRITE_BUNDLE:
+                    self.assertIs(
+                        kwargs["validate_publish_checkpoint_dir"],
+                        tno_bundle.validate_tno_prechunk_publish_checkpoint_dir,
+                    )
+                if stage == tno_bundle.STAGE_RUNTIME_TOPOLOGY:
+                    return {"runtime_topology_payload": {"objects": {}}}
                 return None
+
+            def fake_rebuild_maps(*_args, **_kwargs):
+                events.append("rebuild_maps")
+
+            def fake_checkpoint_chunks(*_args, **_kwargs):
+                events.append("checkpoint_chunks")
+
+            def fake_repair(*_args, **_kwargs):
+                events.append("safe_repair")
+                return ["build_snapshot"]
 
             with (
                 patch.object(tno_bundle, "_stage_signature_is_current", return_value=False),
                 patch.object(tno_bundle, "_stage_outputs_are_ready", return_value=False),
                 patch.object(tno_bundle, "_run_single_stage", side_effect=fake_run_single_stage),
-                patch.object(tno_bundle, "sync_water_domain_feature_maps_from_validated_scenario") as sync_maps_mock,
-                patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", return_value=["build_snapshot"]) as repair_mock,
+                patch.object(
+                    tno_bundle,
+                    "rebuild_water_domain_feature_maps_from_validated_scenario",
+                    side_effect=fake_rebuild_maps,
+                ) as rebuild_maps_mock,
+                patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
+                patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", side_effect=fake_repair) as repair_mock,
             ):
                 result = tno_bundle._run_changed_domain_plan(
                     changed_domain="water",
@@ -2613,10 +2717,85 @@ class TnoBundleBuilderTest(unittest.TestCase):
                     refresh_named_water_snapshot=False,
                 )
 
-            self.assertEqual(executed_stages[-1], "chunk_assets")
-            sync_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
+            self.assertEqual(events[-3:], ["stage:chunk_assets", "safe_repair", "safe_repair"])
+            self.assertLess(events.index("stage:runtime_topology"), events.index("rebuild_maps"))
+            self.assertLess(events.index("rebuild_maps"), events.index("checkpoint_chunks"))
+            self.assertLess(events.index("checkpoint_chunks"), events.index("stage:write_bundle"))
+            self.assertLess(events.index("stage:write_bundle"), events.index("stage:chunk_assets"))
+            rebuild_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
             self.assertEqual(repair_mock.call_count, 2)
             self.assertEqual(result["safe_fixes_applied"], ["build_snapshot"])
+
+    def test_run_changed_domain_plan_for_water_repairs_maps_when_runtime_stage_is_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "scenario"
+            checkpoint_dir = Path(tmp_dir) / "checkpoint"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            events: list[str] = []
+
+            def fake_run_single_stage(stage: str, **kwargs):
+                events.append(f"stage:{stage}")
+                return None
+
+            def fake_rebuild_maps(*_args, **_kwargs):
+                events.append("rebuild_maps")
+
+            def fake_checkpoint_chunks(*_args, **_kwargs):
+                events.append("checkpoint_chunks")
+
+            with (
+                patch.object(tno_bundle, "_stage_signature_is_current", return_value=True),
+                patch.object(tno_bundle, "_stage_outputs_are_ready", return_value=True),
+                patch.object(tno_bundle, "_run_single_stage", side_effect=fake_run_single_stage),
+                patch.object(
+                    tno_bundle,
+                    "rebuild_water_domain_feature_maps_from_validated_scenario",
+                    side_effect=fake_rebuild_maps,
+                ) as rebuild_maps_mock,
+                patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
+                patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", return_value=[]),
+            ):
+                tno_bundle._run_changed_domain_plan(
+                    changed_domain="water",
+                    scenario_dir=scenario_dir,
+                    checkpoint_dir=checkpoint_dir,
+                    publish_scope="all",
+                    manual_sync_policy=MANUAL_SYNC_POLICY_STRICT_BLOCK,
+                    refresh_named_water_snapshot=False,
+                )
+
+            rebuild_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
+            self.assertLess(events.index("rebuild_maps"), events.index("checkpoint_chunks"))
+            self.assertEqual(events, ["rebuild_maps", "checkpoint_chunks", "stage:write_bundle"])
+
+    def test_d3_orientation_flags_are_registered_on_source_orientation_owner(self) -> None:
+        flagged_ids = {
+            str(child_spec.get("id") or "").strip()
+            for split_spec in tno_bundle.TNO_OPEN_OCEAN_SPLIT_SPECS
+            for child_spec in split_spec.get("children", ())
+            if str(child_spec.get("id") or "").strip() and child_spec.get("d3_reverse_orientation")
+        }
+
+        self.assertTrue(flagged_ids)
+        self.assertTrue(flagged_ids.issubset(tno_bundle.D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS))
+
+    def test_clip_open_ocean_split_features_leaves_d3_orientation_to_source_owner(self) -> None:
+        signature = inspect.signature(tno_bundle.clip_tno_open_ocean_split_features)
+        self.assertNotIn("d3_reverse_orientation_ids", signature.parameters)
+        feature_id = next(iter(tno_bundle.D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS))
+        feature = {
+            "type": "Feature",
+            "properties": {"id": feature_id, "name": feature_id},
+            "geometry": mapping(_square(0.0, 0.0)),
+        }
+
+        with patch.object(tno_bundle, "reverse_polygonal_orientation_for_d3") as reverse_mock:
+            result = tno_bundle.clip_tno_open_ocean_split_features([feature], {})
+
+        reverse_mock.assert_not_called()
+        self.assertEqual(result[0]["properties"]["id"], feature_id)
 
     def test_stage_signature_is_never_reused_for_forced_water_snapshot_refresh(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

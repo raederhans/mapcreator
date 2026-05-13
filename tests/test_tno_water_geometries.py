@@ -15,7 +15,7 @@ if str(ROOT) not in sys.path:
 from tools import patch_tno_1962_bundle as tno_bundle
 from tools.validate_tno_water_geometries import (
     OCEAN_REFINEMENT_PHASE_TARGET_IDS,
-    _collect_d3_spherical_metrics,
+    collect_d3_spherical_metrics,
     _topology_objects_to_feature_collections_for_d3,
     build_report_from_collections,
     summarize_failures,
@@ -462,7 +462,7 @@ def test_tno_water_and_runtime_masks_are_d3_spherical_safe():
         "land_mask",
         "context_land_mask",
     ])
-    metrics = _collect_d3_spherical_metrics({
+    metrics = collect_d3_spherical_metrics({
         "source": {"type": "FeatureCollection", "features": _load_scenario_water_features()},
         "runtime": runtime_collections["scenario_water"],
         "runtime_land_mask": runtime_collections["land_mask"],
@@ -708,6 +708,52 @@ def test_tno_water_validator_report_allows_missing_chunks_when_runtime_gate_owns
     failures = summarize_failures(report, require_chunks=False)
     assert not any("id_consistency" in failure for failure in failures)
     assert not any("surface=chunks" in failure for failure in failures)
+
+
+def test_tno_water_validator_report_requires_chunks_when_chunk_gate_is_active():
+    water_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "tno_greenland_sea",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "fixture",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[
+                -2.0, 76.0
+            ], [
+                -1.0, 76.0
+            ], [
+                -1.0, 77.0
+            ], [
+                -2.0, 77.0
+            ], [
+                -2.0, 76.0
+            ]]],
+        },
+    }
+    source_water = {"type": "FeatureCollection", "features": [water_feature]}
+    runtime_political = {"type": "FeatureCollection", "features": []}
+
+    report = build_report_from_collections(
+        scenario_id="fixture",
+        source_water=source_water,
+        runtime_water=source_water,
+        runtime_political=runtime_political,
+        named_water_snapshot=source_water,
+        chunk_feature_collections=[],
+        require_chunks=True,
+    )
+
+    failures = summarize_failures(report, require_chunks=True)
+    assert report["checks"]["id_consistency"]["chunk_missing"] == ["tno_greenland_sea"]
+    assert any("id_consistency" in failure for failure in failures)
+    assert any(
+        item == {"phase": "phase2_arctic", "surface": "chunks", "id": "tno_greenland_sea"}
+        for item in report["checks"]["ocean_refinement_targets"]["missing"]
+    )
 
 
 def test_tno_tracked_inland_water_regions_keep_source_contract():

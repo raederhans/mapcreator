@@ -441,10 +441,11 @@ def _refresh_audit_payload(
     return audit_payload
 
 
-def _apply_safe_repairs(
+def apply_safe_scenario_contract_repairs(
     scenario_dir: Path,
     *,
     report_path: Path | None = None,
+    rebuild_chunk_assets: bool = True,
 ) -> list[str]:
     manifest_path = scenario_dir / "manifest.json"
     manifest = load_json(manifest_path)
@@ -510,7 +511,7 @@ def _apply_safe_repairs(
         manifest[SCENARIO_GEO_LOCALE_PATCH_MANIFEST_FIELD] = f"data/scenarios/{scenario_id}/geo_locale_patch.json"
     manifest["audit_url"] = str(manifest.get("audit_url") or f"data/scenarios/{scenario_id}/audit.json").strip()
     layer_payloads = _load_layer_payloads_from_manifest(manifest)
-    if profile.expect_chunk_assets:
+    if profile.expect_chunk_assets and rebuild_chunk_assets:
         runtime_bootstrap_payload = load_json(scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME)
         runtime_topology_payload = load_json(runtime_topology_path)
         build_and_write_scenario_chunk_assets(
@@ -575,6 +576,11 @@ def _apply_safe_repairs(
     _refresh_audit_payload(scenario_dir, manifest, snapshot_payload=snapshot_payload)
     safe_fixes_applied.extend(["build_snapshot", "audit_sync", "manifest_source_sync"])
     return safe_fixes_applied
+
+
+# Compatibility alias for older tests and scripts. New callers should import the
+# public name above so repair ownership stays visible at the module boundary.
+_apply_safe_repairs = apply_safe_scenario_contract_repairs
 
 
 def _capture_safe_repair_hashes(scenario_dir: Path) -> dict[str, str]:
@@ -2336,12 +2342,12 @@ def main() -> int:
                 continue
             before_second_pass = {}
             try:
-                safe_fixes_applied = _apply_safe_repairs(
+                safe_fixes_applied = apply_safe_scenario_contract_repairs(
                     scenario_dir,
                     report_path=Path(args.report_path).resolve() if args.report_path else None,
                 )
                 before_second_pass = _capture_safe_repair_hashes(scenario_dir)
-                second_pass_fixes = _apply_safe_repairs(
+                second_pass_fixes = apply_safe_scenario_contract_repairs(
                     scenario_dir,
                     report_path=Path(args.report_path).resolve() if args.report_path else None,
                 )

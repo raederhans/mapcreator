@@ -18,7 +18,7 @@ from collections import Counter, deque
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import geopandas as gpd
 import numpy as np
@@ -93,11 +93,12 @@ from scenario_builder.hoi4.audit import read_bmp24
 from tools.build_tno_1962_geo_locale_patch import build_patch as build_tno_geo_locale_patch
 from tools.build_startup_bootstrap_assets import build_bootstrap_runtime_topology, build_startup_bootstrap_assets
 from tools.build_startup_bundle import build_startup_bundles
-from tools.check_scenario_contracts import _apply_safe_repairs as apply_safe_scenario_contract_repairs
+from tools import check_scenario_contracts as scenario_contracts
+from tools.check_scenario_contracts import apply_safe_scenario_contract_repairs
 from tools.check_scenario_contracts import validate_publish_bundle_dir
 from tools.scenario_chunk_assets import build_and_write_scenario_chunk_assets
 from tools.validate_tno_water_geometries import (
-    _collect_d3_spherical_metrics,
+    collect_d3_spherical_metrics,
     build_report_from_collections as build_tno_water_geometry_report,
     validate_report as validate_tno_water_geometry_report,
 )
@@ -132,6 +133,7 @@ STAGE_STARTUP_BUNDLE_ASSETS = "startup_bundle_assets"
 STAGE_STARTUP_ASSETS = "startup_assets"
 STAGE_WRITE_BUNDLE = "write_bundle"
 STAGE_CHUNK_ASSETS = "chunk_assets"
+STRICT_RUNTIME_ONLY_FEATURE_ID_PREFIXES = ("RU_ARCTIC_FB_",)
 PUBLISH_SCOPE_POLAR_RUNTIME = CONTRACT_PUBLISH_SCOPE_POLAR_RUNTIME
 PUBLISH_SCOPE_SCENARIO_DATA = CONTRACT_PUBLISH_SCOPE_SCENARIO_DATA
 PUBLISH_SCOPE_ALL = CONTRACT_PUBLISH_SCOPE_ALL
@@ -430,6 +432,8 @@ TNO_ARCTIC_OPEN_OCEAN_IDS = (
     "tno_eastern_arctic_ocean",
 )
 TNO_ARCTIC_SPLIT_LONGITUDE = 20.0
+# Arctic macro split follows the same meridian used by the Barents supplement.
+# Keeping both values centralized prevents seam probes from drifting separately.
 TNO_ARCTIC_OPEN_OCEAN_CHILD_BBOXES = {
     TNO_ARCTIC_OPEN_OCEAN_IDS[0]: (-180.0, 60.0, TNO_ARCTIC_SPLIT_LONGITUDE, 90.0),
     TNO_ARCTIC_OPEN_OCEAN_IDS[1]: (TNO_ARCTIC_SPLIT_LONGITUDE, 60.0, 180.0, 90.0),
@@ -448,10 +452,14 @@ TNO_SOUTHERN_OPEN_OCEAN_CHILD_BBOXES = {
         (-180.0, -90.0, -70.0, -45.0),
     ),
 }
+# Polar supplement boxes are targeted seam plugs for named waters whose Marine
+# Regions source polygons leave probe-visible gaps after ATL/ocean clipping.
+#
 # Named-water base controls have separate jobs:
 # - subtract_base_ids trims the extracted named-water geometry before named/open-ocean clipping.
 # - exclude_base_ids removes matching global base regions from the fallback clone lane so the named-water
 #   feature owns that footprint without mutating its extracted geometry.
+# - subtract_named_ids runs last and removes finer named waters from broader named waters.
 TNO_POLAR_NAMED_WATER_SUPPLEMENT_BBOXES = {
     "tno_greenland_sea": (
         (-2.5, 76.4, -0.5, 77.0),
@@ -630,6 +638,7 @@ TNO_OPEN_OCEAN_SPLIT_SPECS = (
                 "id": TNO_SOUTHERN_OPEN_OCEAN_IDS[1],
                 "name": "South Indian Antarctic Ocean",
                 "bbox": TNO_SOUTHERN_OPEN_OCEAN_CHILD_BBOXES[TNO_SOUTHERN_OPEN_OCEAN_IDS[1]],
+                "d3_reverse_orientation": True,
             },
             {
                 "id": TNO_SOUTHERN_OPEN_OCEAN_IDS[2],
@@ -659,7 +668,8 @@ D3_SPHERICAL_SAFE_LONGITUDE_SPLIT_BBOXES = (
 D3_SPHERICAL_PRUNE_COMPONENT_MIN_AREA_BY_ID = {
     "tno_sea_of_marmara": 0.000001,
 }
-D3_SPHERICAL_REVERSE_ORIENTATION_FEATURE_IDS = {"tno_south_indian_antarctic_ocean"}
+TNO_NAMED_WATER_EXCLUSION_AREA_RATIO_MIN = 0.001
+D3_SPHERICAL_REVERSE_ORIENTATION_FEATURE_IDS: set[str] = set()
 D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS = {"tno_south_indian_antarctic_ocean"}
 TOPOLOGY_D3_SAFE_MAX_ARC_POINTS = 512
 MARINE_REGIONS_DATASET_META = {
@@ -5357,10 +5367,8 @@ def clip_tno_open_ocean_split_features(
     split_features: list[dict],
     clip_geometries_by_id: dict[str, list],
     component_min_area_by_id: dict[str, float] | None = None,
-    d3_reverse_orientation_ids: set[str] | None = None,
 ) -> list[dict]:
     component_min_area_by_id = component_min_area_by_id or {}
-    d3_reverse_orientation_ids = d3_reverse_orientation_ids or set()
     clipped_features: list[dict] = []
     for feature in split_features:
         props = dict(feature.get("properties", {}))
@@ -5383,10 +5391,6 @@ def clip_tno_open_ocean_split_features(
         )
         if clipped_geom is None:
             raise ValueError(f"TNO ocean split feature '{feature_id}' collapsed after coastal clipping.")
-        if feature_id in d3_reverse_orientation_ids:
-            clipped_geom = reverse_polygonal_orientation_for_d3(clipped_geom)
-            if clipped_geom is None:
-                raise ValueError(f"TNO ocean split feature '{feature_id}' collapsed after D3 orientation repair.")
         clipped_features.append(make_feature(clipped_geom, props))
     validate_tno_water_geometries(
         clipped_features,
@@ -5632,6 +5636,20 @@ def apply_tno_named_water_exclusions(named_features: list[dict]) -> list[dict]:
         repaired_geom = subtract_geometry_list(current_geom, subtract_geometries)
         if repaired_geom is None:
             raise ValueError(f"Named water feature '{feature_id}' collapsed after final named exclusions.")
+        before_area = float(getattr(current_geom, "area", 0.0) or 0.0)
+        after_area = float(getattr(repaired_geom, "area", 0.0) or 0.0)
+        if before_area > 0.0 and (after_area / before_area) < TNO_NAMED_WATER_EXCLUSION_AREA_RATIO_MIN:
+            raise ValueError(
+                f"Named water feature '{feature_id}' lost too much area after final named exclusions: "
+                f"before={before_area} after={after_area}."
+            )
+        if subtract_geometries:
+            props = dict(feature.get("properties", {}))
+            props["named_exclusion_area_before"] = before_area
+            props["named_exclusion_area_after"] = after_area
+            props["named_exclusion_subtract_count"] = len(subtract_geometries)
+            repaired_by_id[feature_id] = make_feature(repaired_geom, props)
+            continue
         repaired_by_id[feature_id] = make_feature(repaired_geom, dict(feature.get("properties", {})))
     return [
         repaired_by_id.get(str(feature.get("properties", {}).get("id") or "").strip(), feature)
@@ -5727,6 +5745,7 @@ def rebuild_published_scenario_chunk_assets(scenario_dir: Path, checkpoint_dir: 
     for layer_key, raw_url in {
         "water": manifest_payload.get("water_regions_url"),
         "special": manifest_payload.get("special_regions_url"),
+        "special_zone_layers": manifest_payload.get("special_zone_layers_url"),
         "relief": manifest_payload.get("relief_overlays_url"),
         "cities": manifest_payload.get("city_overrides_url"),
     }.items():
@@ -6011,23 +6030,6 @@ def gdf_to_feature_collection(gdf: gpd.GeoDataFrame) -> dict:
     return json.loads(gdf.to_json())
 
 
-def gdf_to_feature_collection_preserve_geometry(gdf: gpd.GeoDataFrame) -> dict:
-    if gdf is None or gdf.empty:
-        return feature_collection_from_features([])
-    features: list[dict] = []
-    for _index, row in gdf.reset_index(drop=True).iterrows():
-        props = {
-            str(column): sanitize_jsonable(value)
-            for column, value in row.items()
-            if column != "geometry"
-        }
-        features.append({
-            "type": "Feature",
-            "properties": props,
-            "geometry": mapping(row.geometry),
-        })
-    return feature_collection_from_features(features)
-
 def load_checkpoint_gdf(checkpoint_dir: Path, filename: str) -> gpd.GeoDataFrame:
     return scenario_bundle_platform.load_checkpoint_gdf(
         checkpoint_dir,
@@ -6138,44 +6140,290 @@ def resolve_publish_filenames(scope: str) -> tuple[str, ...]:
 def validate_tno_publish_checkpoint_dir(checkpoint_dir: Path) -> list[str]:
     validation_dir = checkpoint_dir
     temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    previous_contract_root = scenario_contracts.PROJECT_ROOT
     try:
         if checkpoint_dir.resolve() != SCENARIO_DIR.resolve():
             # The strict scenario validator selects TNO-specific checks from the
             # directory name. Validate external checkpoints through a temporary
-            # tno_1962 view so pre-publish gates keep the same contract as the
-            # final checked-in scenario directory.
+            # data/scenarios/tno_1962 root so manifest URLs resolve to the
+            # checkpoint files instead of the checked-in scenario directory.
             temp_dir = tempfile.TemporaryDirectory(prefix="tno-publish-validate-", dir=str(checkpoint_dir.parent))
-            validation_dir = Path(temp_dir.name) / SCENARIO_ID
+            validation_root = Path(temp_dir.name)
+            validation_dir = validation_root / "data" / "scenarios" / SCENARIO_ID
             shutil.copytree(checkpoint_dir, validation_dir, dirs_exist_ok=True)
+            base_topology_source = ROOT / "data" / "europe_topology.json"
+            base_topology_target = validation_root / "data" / "europe_topology.json"
+            base_topology_target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(base_topology_source, base_topology_target)
+            scenario_contracts.PROJECT_ROOT = validation_root
         errors = validate_publish_bundle_dir(validation_dir)
     finally:
+        scenario_contracts.PROJECT_ROOT = previous_contract_root
         if temp_dir is not None:
             temp_dir.cleanup()
 
-    filtered_errors: list[str] = []
+    return errors
+
+
+def validate_tno_prechunk_publish_checkpoint_dir(checkpoint_dir: Path) -> list[str]:
+    """Validate a checkpoint just before scenario-data publish.
+
+    The water rebuild publishes scenario data before the final chunk/snapshot
+    repair pass. Chunk assets are materialized into the checkpoint first; the
+    only accepted prechunk gap is the final build snapshot.
+    """
+
+    errors = validate_tno_publish_checkpoint_dir(checkpoint_dir)
+    filtered: list[str] = []
     for error in errors:
-        if error.startswith("Required file is missing:") and (
-            error.endswith("build_snapshot.json") or error.endswith("detail_chunks.manifest.json")
-        ):
+        if error.startswith("Required file is missing:") and error.endswith("build_snapshot.json"):
             continue
-        filtered_errors.append(error)
-    return filtered_errors
+        filtered.append(error)
+    return filtered
 
 
-def sync_water_domain_feature_maps_from_validated_scenario(scenario_dir: Path, checkpoint_dir: Path) -> None:
-    validation_errors = validate_tno_publish_checkpoint_dir(scenario_dir)
-    if validation_errors:
+def build_checkpoint_chunk_assets(checkpoint_dir: Path) -> None:
+    manifest_payload = load_checkpoint_json(checkpoint_dir, "manifest.json")
+    layer_payloads: dict[str, dict | None] = {}
+    for layer_key, raw_url in {
+        "water": manifest_payload.get("water_regions_url"),
+        "special": manifest_payload.get("special_regions_url"),
+        "relief": manifest_payload.get("relief_overlays_url"),
+        "cities": manifest_payload.get("city_overrides_url"),
+    }.items():
+        url = str(raw_url or "").strip()
+        if not url:
+            continue
+        payload_path = checkpoint_dir / PurePosixPath(url).name
+        if payload_path.exists():
+            layer_payloads[layer_key] = load_json(payload_path)
+
+    runtime_topology_payload = load_checkpoint_json(checkpoint_dir, CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME)
+    runtime_bootstrap_path = checkpoint_dir / CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME
+    runtime_bootstrap_payload = (
+        load_json(runtime_bootstrap_path)
+        if runtime_bootstrap_path.exists()
+        else build_bootstrap_runtime_topology(runtime_topology_payload)
+    )
+    startup_topology_url = str(
+        manifest_payload.get("startup_topology_url")
+        or manifest_payload.get("runtime_bootstrap_topology_url")
+        or f"data/scenarios/{SCENARIO_ID}/{CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME}"
+    ).strip()
+    runtime_topology_url = str(
+        manifest_payload.get("runtime_topology_url")
+        or f"data/scenarios/{SCENARIO_ID}/{CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME}"
+    ).strip()
+    build_and_write_scenario_chunk_assets(
+        scenario_dir=checkpoint_dir,
+        manifest_payload=manifest_payload,
+        layer_payloads=layer_payloads,
+        startup_topology_payload=runtime_bootstrap_payload,
+        runtime_topology_payload=runtime_topology_payload,
+        startup_topology_url=startup_topology_url,
+        runtime_topology_url=runtime_topology_url,
+        generated_at=str(manifest_payload.get("generated_at") or "").strip(),
+        default_startup_topology_url=DEFAULT_STARTUP_TOPOLOGY_URL,
+    )
+    source_payload = manifest_payload.get("source") if isinstance(manifest_payload.get("source"), dict) else {}
+    source_payload = dict(source_payload)
+    source_payload["base_topology_sha256"] = file_content_hash(ROOT / "data" / "europe_topology.json")
+    source_payload["runtime_topology_sha256"] = file_content_hash(checkpoint_dir / CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME)
+    if runtime_bootstrap_path.exists():
+        source_payload["runtime_bootstrap_topology_sha256"] = file_content_hash(runtime_bootstrap_path)
+    detail_chunk_manifest_path = checkpoint_dir / "detail_chunks.manifest.json"
+    if detail_chunk_manifest_path.exists():
+        source_payload["detail_chunk_manifest_sha256"] = file_content_hash(detail_chunk_manifest_path)
+    manifest_payload["source"] = source_payload
+    write_checkpoint_json(checkpoint_dir, "manifest.json", manifest_payload)
+    # The scenario-data publish validator sees checkpoint files before the final
+    # safe repair pass exists. Rebuild startup bundles against the checkpoint
+    # chunk manifest so the prechunk checkpoint is internally consistent.
+    build_startup_bundles(
+        scenario_manifest_path=checkpoint_dir / "manifest.json",
+        data_manifest_path=ROOT / "data/manifest.json",
+        topology_primary_path=ROOT / "data/europe_topology.json",
+        startup_locales_path=checkpoint_dir / CHECKPOINT_STARTUP_LOCALES_FILENAME,
+        geo_aliases_path=checkpoint_dir / CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+        full_runtime_topology_path=checkpoint_dir / CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME,
+        runtime_bootstrap_topology_path=runtime_bootstrap_path,
+        countries_path=checkpoint_dir / "countries.json",
+        owners_path=checkpoint_dir / "owners.by_feature.json",
+        controllers_path=None,
+        cores_path=checkpoint_dir / "cores.by_feature.json",
+        geo_locale_patch_en_path=checkpoint_dir / CHECKPOINT_GEO_LOCALE_EN_FILENAME,
+        geo_locale_patch_zh_path=checkpoint_dir / CHECKPOINT_GEO_LOCALE_ZH_FILENAME,
+        output_en_path=checkpoint_dir / CHECKPOINT_STARTUP_BUNDLE_EN_FILENAME,
+        output_zh_path=checkpoint_dir / CHECKPOINT_STARTUP_BUNDLE_ZH_FILENAME,
+        detail_chunk_manifest_path=detail_chunk_manifest_path,
+        report_path=STARTUP_BUNDLE_REPORT_PATH,
+    )
+
+
+def _iter_topology_geometry_properties(topology_payload: dict, object_name: str):
+    geometries = (
+        topology_payload.get("objects", {})
+        .get(object_name, {})
+        .get("geometries", [])
+    )
+    if not isinstance(geometries, list):
+        return
+    for geometry in geometries:
+        if not isinstance(geometry, dict):
+            continue
+        props = geometry.get("properties") if isinstance(geometry.get("properties"), dict) else {}
+        feature_id = str(props.get("id") or geometry.get("id") or "").strip()
+        if feature_id:
+            yield feature_id, props
+
+
+def _explicit_rebuilt_owner_tag(feature_id: str, props: dict) -> str:
+    for key in ("assigned_owner_tag", "owner_tag", "scenario_owner_tag", "owner"):
+        candidate = normalize_tag(props.get(key))
+        if candidate:
+            if feature_id.startswith(("ATLSEA_", "ATLSEA_FILL_")):
+                return ATL_TAG
+            if feature_id.startswith(("ATLPRV_", "ATLISL_", "ATLWLD_", "ATLSHL_")) and candidate == ATL_TAG:
+                continue
+            return candidate
+    return ""
+
+
+def _infer_rebuilt_owner_tag(feature_id: str, props: dict, source_owners: dict[str, str]) -> str:
+    existing_owner = normalize_tag(source_owners.get(feature_id))
+    explicit_owner = _explicit_rebuilt_owner_tag(feature_id, props)
+    if existing_owner and explicit_owner and existing_owner != explicit_owner:
         raise ValueError(
-            "Water-domain feature map sync requires a valid published scenario. "
-            f"First error: {validation_errors[0]}"
+            f"Feature {feature_id} has conflicting owner tags: source={existing_owner} runtime={explicit_owner}."
         )
-    for filename in ("countries.json", "owners.by_feature.json", "cores.by_feature.json"):
-        source_path = scenario_dir / filename
-        target_path = checkpoint_dir / filename
-        if not source_path.exists():
+    if existing_owner:
+        return existing_owner
+    if explicit_owner:
+        return explicit_owner
+    candidate = normalize_tag(props.get("cntr_code"))
+    if candidate:
+        if feature_id.startswith(("ATLSEA_", "ATLSEA_FILL_")):
+            return ATL_TAG
+        if feature_id.startswith(("ATLPRV_", "ATLISL_", "ATLWLD_", "ATLSHL_")) and candidate == ATL_TAG:
+            return ""
+        return candidate
+    if feature_id.startswith(("ATLSEA_", "ATLSEA_FILL_")):
+        return ATL_TAG
+    raise ValueError(f"Unable to infer owner tag for checkpoint runtime feature {feature_id}.")
+
+
+def _infer_rebuilt_core_tags(feature_id: str, owner_tag: str, props: dict, source_cores: dict[str, object]) -> list[str]:
+    existing_cores = normalize_core_tags(source_cores.get(feature_id))
+    explicit_cores: list[str] = []
+    for key in ("core_tags", "cores", "core"):
+        explicit_cores = normalize_core_tags(props.get(key))
+        if explicit_cores:
+            break
+    if existing_cores and explicit_cores and existing_cores != explicit_cores:
+        raise ValueError(
+            f"Feature {feature_id} has conflicting core tags: source={existing_cores} runtime={explicit_cores}."
+        )
+    if existing_cores:
+        return existing_cores
+    if explicit_cores:
+        return explicit_cores
+    return [owner_tag]
+
+
+def _is_water_domain_runtime_feature_allowed(feature_id: str, object_name: str, source_owners: dict[str, str]) -> bool:
+    if normalize_tag(source_owners.get(feature_id)):
+        return True
+    if any(feature_id.startswith(prefix) for prefix in STRICT_RUNTIME_ONLY_FEATURE_ID_PREFIXES):
+        return True
+    if object_name == SCENARIO_ATLANTROPA_OBJECT_NAME and feature_id.startswith(
+        ("ATLSEA_", "ATLSEA_FILL_", "ATLPRV_", "ATLISL_", "ATLWLD_", "ATLSHL_")
+    ):
+        return True
+    return False
+
+
+def rebuild_water_domain_feature_maps_from_validated_scenario(scenario_dir: Path, checkpoint_dir: Path) -> None:
+    """Rebuild feature maps from the checkpoint runtime topology ids.
+
+    Water-domain rebuilds can add or remove Atlantropa runtime features after
+    the countries stage. The feature maps therefore follow the final checkpoint
+    topology ids instead of copying the older checked-in maps forward.
+    """
+
+    runtime_topology_payload = load_checkpoint_json(checkpoint_dir, CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME)
+    owners_payload = load_checkpoint_json(checkpoint_dir, "owners.by_feature.json")
+    cores_payload = load_checkpoint_json(checkpoint_dir, "cores.by_feature.json")
+    countries_payload = load_checkpoint_json(checkpoint_dir, "countries.json")
+    manifest_payload = load_checkpoint_json(checkpoint_dir, "manifest.json")
+    audit_payload = load_checkpoint_json(checkpoint_dir, "audit.json")
+    source_owners = owners_payload.get("owners") if isinstance(owners_payload.get("owners"), dict) else {}
+    source_cores = cores_payload.get("cores") if isinstance(cores_payload.get("cores"), dict) else {}
+    country_entries = countries_payload.get("countries") if isinstance(countries_payload.get("countries"), dict) else {}
+    scenario_countries_path = scenario_dir / "countries.json"
+    if scenario_countries_path.exists():
+        scenario_countries_payload = load_json(scenario_countries_path)
+        scenario_country_entries = (
+            scenario_countries_payload.get("countries")
+            if isinstance(scenario_countries_payload.get("countries"), dict)
+            else {}
+        )
+        for tag, entry in scenario_country_entries.items():
+            normalized_tag = normalize_tag(tag)
+            if normalized_tag and normalized_tag not in country_entries and isinstance(entry, dict):
+                country_entries[normalized_tag] = copy.deepcopy(entry)
+
+    ensure_tno_controller_only_countries(countries_payload, {"controllers": {}})
+
+    runtime_feature_props: dict[str, tuple[str, dict]] = {}
+    for object_name in ("political", SCENARIO_ATLANTROPA_OBJECT_NAME):
+        for feature_id, props in _iter_topology_geometry_properties(runtime_topology_payload, object_name):
+            if not _is_water_domain_runtime_feature_allowed(feature_id, object_name, source_owners):
+                raise ValueError(f"Unexpected water-domain runtime feature id without source authority: {feature_id}.")
+            runtime_feature_props[feature_id] = (object_name, props)
+
+    if not runtime_feature_props:
+        raise ValueError("Water-domain feature map rebuild found zero runtime feature ids.")
+
+    rebuilt_owners: dict[str, str] = {}
+    rebuilt_cores: dict[str, list[str]] = {}
+    for feature_id in sorted(runtime_feature_props):
+        object_name, props = runtime_feature_props[feature_id]
+        if any(feature_id.startswith(prefix) for prefix in STRICT_RUNTIME_ONLY_FEATURE_ID_PREFIXES):
             continue
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, target_path)
+        owner_tag = _infer_rebuilt_owner_tag(feature_id, props, source_owners)
+        if owner_tag not in country_entries:
+            raise ValueError(f"Feature {feature_id} resolves owner {owner_tag}, but countries.json has no matching entry.")
+        rebuilt_owners[feature_id] = owner_tag
+        rebuilt_cores[feature_id] = _infer_rebuilt_core_tags(feature_id, owner_tag, props, source_cores)
+
+    rebuilt_owners_payload = {"owners": rebuilt_owners}
+    recalculate_country_feature_counts(countries_payload, rebuilt_owners_payload, audit_payload, manifest_payload)
+
+    write_checkpoint_json(checkpoint_dir, "owners.by_feature.json", rebuilt_owners_payload)
+    write_checkpoint_json(checkpoint_dir, "cores.by_feature.json", {"cores": rebuilt_cores})
+    write_checkpoint_json(checkpoint_dir, "controllers.by_feature.json", derive_controller_payload_from_owners(rebuilt_owners_payload))
+    write_checkpoint_json(checkpoint_dir, "countries.json", countries_payload)
+    write_checkpoint_json(checkpoint_dir, "manifest.json", manifest_payload)
+    write_checkpoint_json(checkpoint_dir, "audit.json", audit_payload)
+
+
+def record_runtime_topology_stage_signature(scenario_dir: Path, checkpoint_dir: Path) -> None:
+    _record_checkpoint_stage_outputs(
+        checkpoint_dir,
+        scenario_dir=scenario_dir,
+        stage=STAGE_RUNTIME_TOPOLOGY,
+        filenames=[
+            *(artifact.filename for artifact in scenario_bundle_platform.SCENARIO_COUNTRIES_STAGE_ARTIFACTS),
+            *(artifact.filename for artifact in scenario_bundle_platform.SCENARIO_WATER_STAGE_ARTIFACTS),
+            *(artifact.filename for artifact in scenario_bundle_platform.SCENARIO_OPTIONAL_RUNTIME_STAGE_ARTIFACTS),
+            *(artifact.filename for artifact in scenario_bundle_platform.SCENARIO_RUNTIME_STAGE_EXTRA_ARTIFACTS),
+        ],
+        stage_signature=_build_stage_signature_entry(
+            STAGE_RUNTIME_TOPOLOGY,
+            scenario_dir=scenario_dir,
+            checkpoint_dir=checkpoint_dir,
+        ),
+    )
 
 
 def validate_geo_locale_manual_overrides(geo_locale_payload: dict, manual_overrides_payload: dict) -> None:
@@ -6452,6 +6700,10 @@ def compact_written_json_hash(payload: object) -> str:
         allow_nan=False,
     )
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def file_content_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def normalize_tag(raw: object) -> str:
@@ -6756,6 +7008,8 @@ def patch_tno_palette_defaults(countries_payload: dict, manifest_payload: dict) 
     if not isinstance(ocean_defaults, dict):
         ocean_defaults = {}
     ocean_defaults["fillColor"] = load_tno_ocean_fill_color()
+    ocean_defaults["preset"] = "flat"
+    ocean_defaults["experimentalAdvancedStyles"] = False
     style_defaults["ocean"] = ocean_defaults
     atlantropa_sea_defaults = style_defaults.get("atlantropa_sea")
     if not isinstance(atlantropa_sea_defaults, dict):
@@ -6784,6 +7038,8 @@ def normalize_tno_country_registry(countries_payload: dict, owners_payload: dict
     )
 
     for tag in sorted(TNO_RETIRED_ZERO_FEATURE_TAGS):
+        if tag in TNO_CONTROLLER_ONLY_COUNTRY_META:
+            continue
         if int(owner_counts.get(tag, 0)) == 0:
             countries.pop(tag, None)
 
@@ -6806,11 +7062,10 @@ def ensure_tno_controller_only_countries(countries_payload: dict, controllers_pa
         if str(tag).strip()
     )
     palette_entries = load_palette_entries(TNO_PALETTE_PATH)
-    missing_controller_tags = sorted(
-        tag
-        for tag, count in controller_counts.items()
-        if count > 0 and tag not in countries
-    )
+    controller_stub_tags = set(TNO_CONTROLLER_ONLY_COUNTRY_META) | {
+        tag for tag, count in controller_counts.items() if count > 0
+    }
+    missing_controller_tags = sorted(tag for tag in controller_stub_tags if tag not in countries)
 
     for tag in missing_controller_tags:
         metadata = TNO_CONTROLLER_ONLY_COUNTRY_META.get(tag)
@@ -7445,11 +7700,13 @@ def apply_regional_rules(
             + ", ".join(sorted(remaining_retired_tags))
         )
     for retired_tag in retired_tags:
-        countries.pop(retired_tag, None)
+        if retired_tag not in TNO_CONTROLLER_ONLY_COUNTRY_META:
+            countries.pop(retired_tag, None)
     for tag in touched_tags:
         audit_payload.setdefault("owner_stats", {})[tag] = build_owner_stats_entry(countries[tag])
     for retired_tag in retired_tags:
-        audit_payload.setdefault("owner_stats", {}).pop(retired_tag, None)
+        if retired_tag not in TNO_CONTROLLER_ONLY_COUNTRY_META:
+            audit_payload.setdefault("owner_stats", {}).pop(retired_tag, None)
     return touched_tags
 
 
@@ -7594,18 +7851,40 @@ def split_full_width_polygonal_parts_for_d3(geom):
         safe_parts.extend(split_parts or [part])
     if not safe_parts:
         return None
-    return safe_parts[0] if len(safe_parts) == 1 else MultiPolygon([orient(part, sign=-1.0) for part in safe_parts])
+    return safe_parts[0] if len(safe_parts) == 1 else MultiPolygon(safe_parts)
+
+
+def split_full_width_polygonal_parts_preserve_orientation_for_d3(geom):
+    safe_parts = []
+    for part in iter_polygon_parts(geom):
+        min_x, _, max_x, _ = [float(value) for value in part.bounds]
+        if (max_x - min_x) <= D3_SPHERICAL_SAFE_BBOX_WIDTH_THRESHOLD:
+            safe_parts.append(part)
+            continue
+        split_parts = []
+        for split_bbox in D3_SPHERICAL_SAFE_LONGITUDE_SPLIT_BBOXES:
+            clipped = normalize_polygonal(part.intersection(box(*split_bbox)))
+            split_parts.extend(iter_polygon_parts(clipped))
+        safe_parts.extend(split_parts or [part])
+    if not safe_parts:
+        return None
+    return safe_parts[0] if len(safe_parts) == 1 else MultiPolygon(safe_parts)
 
 
 def make_geometry_d3_spherical_safe(feature_id: str, geom):
+    feature_id_text = str(feature_id).strip()
+    if feature_id_text in D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS:
+        candidate = split_full_width_polygonal_parts_preserve_orientation_for_d3(geom)
+        if candidate is not None:
+            return candidate
     candidate = normalize_polygonal(geom)
     if candidate is None:
         return None
-    component_min_area = D3_SPHERICAL_PRUNE_COMPONENT_MIN_AREA_BY_ID.get(str(feature_id).strip())
+    component_min_area = D3_SPHERICAL_PRUNE_COMPONENT_MIN_AREA_BY_ID.get(feature_id_text)
     if component_min_area is not None:
         candidate = prune_polygonal_components(candidate, min_area=component_min_area)
     candidate = split_full_width_polygonal_parts_for_d3(candidate) or candidate
-    if str(feature_id).strip() in D3_SPHERICAL_REVERSE_ORIENTATION_FEATURE_IDS:
+    if feature_id_text in D3_SPHERICAL_REVERSE_ORIENTATION_FEATURE_IDS:
         candidate = reverse_polygonal_orientation_for_d3(candidate) or candidate
     return candidate
 
@@ -8180,13 +8459,18 @@ def sanitize_feature_collection_polygonal_geometries(feature_collection: dict) -
         if not geometry_payload:
             sanitized_features.append(feature)
             continue
+        props = dict(feature.get("properties", {}))
+        feature_id = str(props.get("id") or feature.get("id") or "").strip()
+        if feature_id in D3_SPHERICAL_SOURCE_POSITIVE_ORIENTATION_FEATURE_IDS:
+            sanitized_features.append(feature)
+            continue
         normalized_geom = normalize_polygonal(shape(geometry_payload))
         if normalized_geom is None:
             sanitized_features.append(feature)
             continue
         sanitized_features.append({
             "type": "Feature",
-            "properties": dict(feature.get("properties", {})),
+            "properties": props,
             "geometry": mapping(normalized_geom),
         })
     return feature_collection_from_features(sanitized_features)
@@ -8195,7 +8479,7 @@ def sanitize_feature_collection_polygonal_geometries(feature_collection: dict) -
 def orient_source_water_features_for_d3(feature_collection: dict) -> dict:
     if not isinstance(feature_collection, dict):
         return feature_collection
-    metrics = _collect_d3_spherical_metrics({"source": feature_collection}).get("source", {})
+    metrics = collect_d3_spherical_metrics({"source": feature_collection}).get("source", {})
     invalid_ids = {
         str(entry.get("id") or "").strip()
         for entry in metrics.get("invalidFeatures", []) or []
@@ -8231,7 +8515,7 @@ def orient_source_water_features_for_d3(feature_collection: dict) -> dict:
             "properties": props,
             "geometry": mapping(candidate_geom),
         }
-        candidate_metrics = _collect_d3_spherical_metrics({
+        candidate_metrics = collect_d3_spherical_metrics({
             "source": feature_collection_from_features([candidate_feature]),
         }).get("source", {})
         if candidate_metrics.get("invalidFeatureCount") or candidate_metrics.get("invalidPartCount"):
@@ -10890,6 +11174,39 @@ def build_scenario_atlantropa_metadata_payload(feature_collection: dict) -> dict
     }
 
 
+def _iter_topology_arc_indexes(node):
+    if isinstance(node, bool):
+        return
+    if isinstance(node, int):
+        yield node if node >= 0 else ~node
+        return
+    if isinstance(node, list):
+        for child in node:
+            yield from _iter_topology_arc_indexes(child)
+
+
+def _remap_topology_arc_indexes(node, index_map: dict[int, int]):
+    if isinstance(node, bool):
+        return node
+    if isinstance(node, int):
+        source_index = node if node >= 0 else ~node
+        remapped_index = index_map[source_index]
+        return remapped_index if node >= 0 else ~remapped_index
+    if isinstance(node, list):
+        return [_remap_topology_arc_indexes(child, index_map) for child in node]
+    return copy.deepcopy(node)
+
+
+def _remap_topology_object_arcs(object_payload: dict, index_map: dict[int, int]) -> dict:
+    next_object = copy.deepcopy(object_payload)
+    geometries = next_object.get("geometries") if isinstance(next_object, dict) else None
+    if isinstance(geometries, list):
+        for geometry in geometries:
+            if isinstance(geometry, dict) and "arcs" in geometry:
+                geometry["arcs"] = _remap_topology_arc_indexes(geometry["arcs"], index_map)
+    return next_object
+
+
 def build_single_object_topology_payload(source_topology: dict, object_name: str) -> dict:
     objects = source_topology.get("objects") if isinstance(source_topology, dict) else None
     source_object = objects.get(object_name) if isinstance(objects, dict) else None
@@ -10898,12 +11215,24 @@ def build_single_object_topology_payload(source_topology: dict, object_name: str
             "type": "GeometryCollection",
             "geometries": [],
         }
+    source_arcs = source_topology.get("arcs") if isinstance(source_topology, dict) else []
+    used_arc_indexes: list[int] = []
+    seen_arc_indexes: set[int] = set()
+    geometries = source_object.get("geometries") if isinstance(source_object, dict) else None
+    if isinstance(geometries, list):
+        for geometry in geometries:
+            for arc_index in _iter_topology_arc_indexes((geometry or {}).get("arcs")):
+                if arc_index in seen_arc_indexes:
+                    continue
+                seen_arc_indexes.add(arc_index)
+                used_arc_indexes.append(arc_index)
+    index_map = {source_index: new_index for new_index, source_index in enumerate(used_arc_indexes)}
     payload = {
         "type": "Topology",
         "objects": {
-            object_name: copy.deepcopy(source_object),
+            object_name: _remap_topology_object_arcs(source_object, index_map),
         },
-        "arcs": copy.deepcopy(source_topology.get("arcs") if isinstance(source_topology, dict) else []),
+        "arcs": [copy.deepcopy(source_arcs[index]) for index in used_arc_indexes] if isinstance(source_arcs, list) else [],
     }
     if isinstance(source_topology, dict):
         for key in ("bbox", "transform"):
@@ -11360,12 +11689,6 @@ def build_water_stage_state_from_countries_state(
         for child_spec in split_spec.get("children", ())
         if str(child_spec.get("id") or "").strip()
     }
-    open_ocean_d3_reverse_orientation_ids = {
-        str(child_spec.get("id")).strip()
-        for split_spec in TNO_OPEN_OCEAN_SPLIT_SPECS
-        for child_spec in split_spec.get("children", ())
-        if str(child_spec.get("id") or "").strip() and child_spec.get("d3_reverse_orientation")
-    }
     clip_open_ocean_geometries_by_id: dict[str, list] = {}
     for spec, feature in zip(TNO_NAMED_MARGINAL_WATER_SPECS, named_marginal_water_features):
         clip_geom = normalize_polygonal(shape(feature.get("geometry")))
@@ -11382,7 +11705,6 @@ def build_water_stage_state_from_countries_state(
         ),
         clip_open_ocean_geometries_by_id,
         open_ocean_component_min_area_by_id,
-        open_ocean_d3_reverse_orientation_ids,
     )
     scenario_water_features.extend(named_marginal_water_features)
     qyzylorda_water_feature = build_qyzylorda_inland_water_feature(scenario_political_gdf)
@@ -11396,7 +11718,7 @@ def build_water_stage_state_from_countries_state(
     water_gdf = geopandas_from_features(water_feature_collection["features"])
     water_gdf = apply_d3_spherical_safe_source_split_to_gdf(water_gdf)
     # Keep checkpoint seed and published water_regions.geojson on the same D3-safe geometry contract.
-    water_feature_collection = orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
+    water_feature_collection = gdf_to_feature_collection(water_gdf)
     validate_tno_water_geometries(
         water_feature_collection.get("features", []),
         stage_label="scenario_water_seed_d3_safe",
@@ -11505,6 +11827,8 @@ def build_runtime_topology_state(
     water_stage_metadata = dict(water_state.get("water_stage_metadata") or {})
     stage_metadata.update(water_stage_metadata)
 
+    water_feature_collection = orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
+    water_gdf = geopandas_from_features(water_feature_collection.get("features", []))
     runtime_topology_payload = build_runtime_topology_payload(
         scenario_political_gdf,
         water_gdf,
@@ -11512,11 +11836,9 @@ def build_runtime_topology_state(
         context_land_mask_gdf,
     )
     context_land_mask_arc_refs = estimate_topology_object_arc_refs(runtime_topology_payload, "context_land_mask")
-    water_feature_collection = orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
     # Publish the source water asset from the D3-safe seed. The runtime topology
     # object is validated below as a separate render contract.
     runtime_water_regions = sanitize_feature_collection_polygonal_geometries(water_feature_collection)
-    runtime_water_regions = orient_source_water_features_for_d3(runtime_water_regions)
     scenario_atlantropa_features = sanitize_feature_collection_polygonal_geometries(
         topology_object_to_feature_collection(runtime_topology_payload, SCENARIO_ATLANTROPA_OBJECT_NAME)
     )
@@ -12169,6 +12491,7 @@ def _build_bundle_publish_service_kwargs(
     *,
     publish_scope: str,
     manual_sync_policy: str,
+    validate_publish_checkpoint_dir=validate_tno_publish_checkpoint_dir,
 ) -> dict[str, object]:
     return {
         "publish_scope": publish_scope,
@@ -12181,7 +12504,7 @@ def _build_bundle_publish_service_kwargs(
             "geo_name_overrides": "geo_name_overrides.manual.json",
             "district_groups": "district_groups.manual.json",
         },
-        "validate_publish_bundle_dir": validate_tno_publish_checkpoint_dir,
+        "validate_publish_bundle_dir": validate_publish_checkpoint_dir,
         "ensure_publish_target_offline": _ensure_scenario_publish_target_offline,
         "validate_geo_locale_checkpoint": validate_geo_locale_checkpoint,
         "require_startup_stage_checkpoints": scenario_bundle_platform.require_startup_stage_checkpoints,
@@ -12199,6 +12522,7 @@ def write_bundle_stage(
     checkpoint_dir: Path,
     publish_scope: str = PUBLISH_SCOPE_POLAR_RUNTIME,
     manual_sync_policy: str = MANUAL_SYNC_POLICY_BACKUP_CONTINUE,
+    validate_publish_checkpoint_dir=validate_tno_publish_checkpoint_dir,
 ) -> None:
     with _scenario_build_session_lock(scenario_dir):
         with _checkpoint_build_lock(checkpoint_dir, stage=STAGE_WRITE_BUNDLE):
@@ -12208,6 +12532,7 @@ def write_bundle_stage(
                 **_build_bundle_publish_service_kwargs(
                     publish_scope=publish_scope,
                     manual_sync_policy=manual_sync_policy,
+                    validate_publish_checkpoint_dir=validate_publish_checkpoint_dir,
                 ),
             )
 
@@ -12326,6 +12651,7 @@ def _run_single_stage(
     publish_scope: str,
     manual_sync_policy: str,
     refresh_named_water_snapshot: bool,
+    validate_publish_checkpoint_dir=validate_tno_publish_checkpoint_dir,
 ) -> dict[str, object] | None:
     if stage == STAGE_COUNTRIES:
         state = build_countries_stage_state(
@@ -12335,19 +12661,22 @@ def _run_single_stage(
         write_countries_stage_checkpoints(state, checkpoint_dir, scenario_dir=scenario_dir)
         return state
     if stage == STAGE_WATER_STATE:
+        state = build_water_stage_state(
+            scenario_dir,
+            checkpoint_dir,
+            refresh_named_water_snapshot=refresh_named_water_snapshot,
+        )
+        write_water_stage_checkpoints(state, checkpoint_dir, scenario_dir=scenario_dir)
+        return None
+    if stage == STAGE_RUNTIME_TOPOLOGY:
         ensure_water_stage_checkpoints(
             scenario_dir,
             checkpoint_dir,
             refresh_named_water_snapshot=refresh_named_water_snapshot,
         )
-        return None
-    if stage == STAGE_RUNTIME_TOPOLOGY:
-        ensure_runtime_topology_checkpoints(
-            scenario_dir,
-            checkpoint_dir,
-            refresh_named_water_snapshot=refresh_named_water_snapshot,
-        )
-        return build_runtime_topology_stage(checkpoint_dir)
+        state = build_runtime_topology_stage(checkpoint_dir)
+        write_runtime_topology_stage_checkpoints(state, checkpoint_dir, scenario_dir=scenario_dir)
+        return state
     if stage == STAGE_GEO_LOCALE:
         build_geo_locale_stage(
             scenario_dir,
@@ -12382,6 +12711,7 @@ def _run_single_stage(
             checkpoint_dir,
             publish_scope,
             manual_sync_policy=manual_sync_policy,
+            validate_publish_checkpoint_dir=validate_publish_checkpoint_dir,
         )
         return None
     if stage == STAGE_CHUNK_ASSETS:
@@ -12407,8 +12737,6 @@ def _run_changed_domain_plan(
     skipped: list[str] = []
     latest_runtime_state: dict[str, object] | None = None
     for stage in plan.stage_sequence:
-        if changed_domain == CHANGED_DOMAIN_WATER and stage == STAGE_RUNTIME_TOPOLOGY:
-            sync_water_domain_feature_maps_from_validated_scenario(scenario_dir, checkpoint_dir)
         if stage != STAGE_WRITE_BUNDLE:
             current_signature = _stage_signature_is_current(
                 stage,
@@ -12422,7 +12750,15 @@ def _run_changed_domain_plan(
                 checkpoint_dir=checkpoint_dir,
             ):
                 skipped.append(stage)
+                if changed_domain == CHANGED_DOMAIN_WATER and stage == STAGE_RUNTIME_TOPOLOGY:
+                    rebuild_water_domain_feature_maps_from_validated_scenario(scenario_dir, checkpoint_dir)
+                    record_runtime_topology_stage_signature(scenario_dir, checkpoint_dir)
                 continue
+        validate_publish_checkpoint_dir = validate_tno_publish_checkpoint_dir
+        if changed_domain == CHANGED_DOMAIN_WATER and stage == STAGE_WRITE_BUNDLE:
+            with _checkpoint_build_lock(checkpoint_dir, stage=STAGE_CHUNK_ASSETS):
+                build_checkpoint_chunk_assets(checkpoint_dir)
+            validate_publish_checkpoint_dir = validate_tno_prechunk_publish_checkpoint_dir
         result = _run_single_stage(
             stage,
             scenario_dir=scenario_dir,
@@ -12430,9 +12766,13 @@ def _run_changed_domain_plan(
             publish_scope=plan.publish_scope or publish_scope,
             manual_sync_policy=manual_sync_policy,
             refresh_named_water_snapshot=refresh_named_water_snapshot,
+            validate_publish_checkpoint_dir=validate_publish_checkpoint_dir,
         )
         if isinstance(result, dict) and stage == STAGE_RUNTIME_TOPOLOGY:
             latest_runtime_state = result
+            if changed_domain == CHANGED_DOMAIN_WATER:
+                rebuild_water_domain_feature_maps_from_validated_scenario(scenario_dir, checkpoint_dir)
+                record_runtime_topology_stage_signature(scenario_dir, checkpoint_dir)
         executed.append(stage)
 
     published_targets: list[str] = []
@@ -12453,13 +12793,20 @@ def _run_changed_domain_plan(
         safe_fixes_applied = apply_safe_scenario_contract_repairs(
             scenario_dir,
             report_path=ROOT / ".runtime" / "reports" / "generated" / f"{SCENARIO_ID}.changed_domain_contract_repair.json",
+            rebuild_chunk_assets=False,
         )
+        before_second_pass = _capture_changed_domain_safe_repair_hashes(scenario_dir)
         second_pass_fixes = apply_safe_scenario_contract_repairs(
             scenario_dir,
             report_path=ROOT / ".runtime" / "reports" / "generated" / f"{SCENARIO_ID}.changed_domain_contract_repair.json",
+            rebuild_chunk_assets=False,
         )
-        if second_pass_fixes and second_pass_fixes != safe_fixes_applied:
-            safe_fixes_applied = list(dict.fromkeys([*safe_fixes_applied, *second_pass_fixes]))
+        after_second_pass = _capture_changed_domain_safe_repair_hashes(scenario_dir)
+        if before_second_pass != after_second_pass:
+            raise ValueError(
+                "Safe scenario contract repair must be idempotent after chunk rebuild. "
+                f"Second pass applied: {second_pass_fixes}"
+            )
 
     return {
         "changed_domain": changed_domain,
@@ -12469,6 +12816,29 @@ def _run_changed_domain_plan(
         "safe_fixes_applied": safe_fixes_applied,
         "runtime_state": latest_runtime_state,
     }
+
+
+def _capture_changed_domain_safe_repair_hashes(scenario_dir: Path) -> dict[str, str]:
+    tracked = [
+        "manifest.json",
+        "audit.json",
+        SCENARIO_BUILD_STATE_FILENAME,
+        "detail_chunks.manifest.json",
+        CHECKPOINT_STARTUP_BUNDLE_EN_FILENAME,
+        f"{CHECKPOINT_STARTUP_BUNDLE_EN_FILENAME}.gz",
+        CHECKPOINT_STARTUP_BUNDLE_ZH_FILENAME,
+        f"{CHECKPOINT_STARTUP_BUNDLE_ZH_FILENAME}.gz",
+    ]
+    hashes: dict[str, str] = {}
+    for relative_path in tracked:
+        path = scenario_dir / relative_path
+        if path.exists():
+            hashes[relative_path] = file_content_hash(path)
+    chunks_dir = scenario_dir / "chunks"
+    if chunks_dir.exists():
+        for path in sorted(chunks_dir.rglob("*.json")):
+            hashes[str(path.relative_to(scenario_dir)).replace("\\", "/")] = file_content_hash(path)
+    return hashes
 
 
 def main() -> None:

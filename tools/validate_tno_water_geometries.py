@@ -464,7 +464,7 @@ def _collect_ocean_refinement_target_metrics(
     }
 
 
-def _collect_d3_spherical_metrics(feature_collections: dict[str, dict]) -> dict:
+def collect_d3_spherical_metrics(feature_collections: dict[str, dict]) -> dict:
     if not feature_collections:
         return {}
     script = r"""
@@ -808,7 +808,7 @@ def build_report_from_collections(
     }
     for label, collection in chunk_feature_collections or []:
         d3_collections[f"chunk:{label}"] = collection
-    d3_spherical_metrics = _collect_d3_spherical_metrics(d3_collections)
+    d3_spherical_metrics = collect_d3_spherical_metrics(d3_collections)
     source_ids = set(source_metrics["feature_ids"])
     runtime_ids = set(runtime_metrics["feature_ids"])
     chunk_ids = set(chunk_metrics["feature_ids"])
@@ -937,6 +937,11 @@ def _attach_run_diagnostics(report: dict, *, started_at: float, failure_shape: d
         },
     }
     return report
+
+
+# Compatibility alias for older tests and scripts. New callers should use the
+# public name so validator metrics are part of the supported module API.
+_collect_d3_spherical_metrics = collect_d3_spherical_metrics
 
 
 def _write_failure_report(

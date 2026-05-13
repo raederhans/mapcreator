@@ -1537,12 +1537,18 @@ function createScenarioChunkRuntimeController({
       visibleLayers,
       loadedChunkIds: [],
     });
+    const requiredChunksToLoad = coarseSelection.requiredChunks.filter((chunk) => (
+      !bundle.chunkPayloadCacheById?.[chunk.id]
+    ));
     await Promise.all(
-      coarseSelection.requiredChunks.map((chunk) => loadScenarioChunkPayload(bundle, chunk, { d3Client }))
+      requiredChunksToLoad.map((chunk) => loadScenarioChunkPayload(bundle, chunk, { d3Client }))
     );
     bundle.chunkPreloaded = true;
     const bundleScenarioId = getScenarioBundleId(bundle);
     if (bundleScenarioId && bundleScenarioId === normalizeScenarioId(runtimeState.activeScenarioId)) {
+      if (!shouldCommitScenarioCoarsePrewarmImmediately(bundle)) {
+        return null;
+      }
       const chunkState = ensureActiveScenarioChunkState();
       const loadState = ensureRuntimeChunkLoadState();
       if (
@@ -1588,6 +1594,15 @@ function createScenarioChunkRuntimeController({
       return mergedLayerPayloads;
     }
     return null;
+  }
+
+  function shouldCommitScenarioCoarsePrewarmImmediately(bundle) {
+    const featureCount = Number(bundle?.manifest?.summary?.feature_count || 0);
+    const hints = normalizeScenarioPerformanceHints(bundle?.manifest);
+    return featureCount >= 18_000
+      && hints.waterRegionsDefault === false
+      && hints.specialRegionsDefault === false
+      && hints.scenarioReliefOverlaysDefault === false;
   }
 
   async function preloadScenarioFocusCountryPoliticalDetailChunk(

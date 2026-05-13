@@ -63,6 +63,24 @@ async function ensureWaterInspectorOpen(page) {
   await expect(page.locator("#waterRegionSearch")).toBeVisible();
 }
 
+async function ensureWaterInspectorItemsReady(page) {
+  await ensureWaterInspectorOpen(page);
+  const hasItems = await page.evaluate(() => !!document.querySelector("#waterRegionList .inspector-item-btn"));
+  if (!hasItems) {
+    await page.evaluate(async () => {
+      const { scheduleScenarioChunkRefresh } = await import("/js/core/scenario_resources.js");
+      scheduleScenarioChunkRefresh({ reason: "scenario-apply", delayMs: 0 });
+    });
+    await waitForRenderIdle(page, { scenarioId: TARGET_SCENARIO_ID, timeout: 120_000 });
+    await page.evaluate(() => {
+      if (typeof globalThis.__playwrightStateRef?.renderWaterRegionListFn === "function") {
+        globalThis.__playwrightStateRef.renderWaterRegionListFn();
+      }
+    });
+  }
+  await page.waitForFunction(() => !!document.querySelector("#waterRegionList .inspector-item-btn"));
+}
+
 async function dragMap(page, { dx = 180, dy = 28, steps = 8 } = {}) {
   const box = await page.locator("#mapContainer").boundingBox();
   if (!box) {
@@ -193,8 +211,7 @@ for (const mode of WATER_CACHE_MODES) {
     await ensureScenario(page, TARGET_SCENARIO_ID, TARGET_SCENARIO_LABEL);
     await waitForStableExactRender(page);
 
-    await ensureWaterInspectorOpen(page);
-    await page.waitForFunction(() => !!document.querySelector("#waterRegionList .inspector-item-btn"));
+    await ensureWaterInspectorItemsReady(page);
 
     const exactRefreshTimeline = [];
 

@@ -74,7 +74,7 @@ from tools.app_entry_resolver import (
     resolve_landing_entry_path,
 )
 from tools.check_scenario_contracts import (
-    _apply_safe_repairs as apply_safe_scenario_contract_repairs,
+    apply_safe_scenario_contract_repairs,
     collect_duplicate_scenario_dirs as collect_duplicate_scenario_contract_dirs,
     discover_scenario_dirs as discover_scenario_contract_dirs,
     inspect_scenario_contract as inspect_scenario_contract_report,
