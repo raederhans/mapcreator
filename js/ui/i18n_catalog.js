@@ -34,6 +34,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Show Rail": { zh: "\u663e\u793a\u94c1\u8def", en: "Show Rail" },
   "Show Rail Labels": { zh: "\u663e\u793a\u94c1\u8def\u6807\u7b7e", en: "Show Rail Labels" },
   "Show Road": { zh: "\u663e\u793a\u9053\u8def", en: "Show Road" },
+  "Show Road Labels": { zh: "\u663e\u793a\u9053\u8def\u6807\u7b7e", en: "Show Road Labels" },
   On: { zh: "开启", en: "On" },
   Off: { zh: "关闭", en: "Off" },
   Hidden: { zh: "已隐藏", en: "Hidden" },
@@ -45,6 +46,14 @@ export const UI_COPY_CATALOG = Object.freeze({
   roads: { zh: "\u9053\u8def", en: "roads" },
   railway: { zh: "\u94c1\u8def", en: "railway" },
   railways: { zh: "\u94c1\u8def", en: "railways" },
+  "Loaded classes:": { zh: "\u5df2\u52a0\u8f7d\u7c7b\u522b\uff1a", en: "Loaded classes:" },
+  "Phase:": { zh: "\u9636\u6bb5\uff1a", en: "Phase:" },
+  "Source:": { zh: "\u6765\u6e90\uff1a", en: "Source:" },
+  "primary/secondary pending": { zh: "primary/secondary \u5f85\u63a5\u5165", en: "primary/secondary pending" },
+  "secondary full-only": { zh: "secondary \u4ec5 full pack", en: "secondary full-only" },
+  "checked-in Overture": { zh: "\u5df2\u5165\u5e93 Overture", en: "checked-in Overture" },
+  "ref sidecar Phase B": { zh: "ref sidecar Phase B", en: "ref sidecar Phase B" },
+  "major stations Phase B": { zh: "\u4e3b\u8981\u8f66\u7ad9 Phase B", en: "major stations Phase B" },
   "Rail labels currently use line names only.": {
     zh: "\u5f53\u524d\u94c1\u8def\u6807\u7b7e\u53ea\u4f7f\u7528\u7ebf\u8def\u540d\u79f0\u3002",
     en: "Rail labels currently use line names only.",
@@ -53,9 +62,9 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Mainline + Regional": { zh: "\u4e3b\u5e72\u7ebf + \u533a\u57df\u7ebf", en: "Mainline + Regional" },
   "Motorway Only": { zh: "\u4ec5\u9ad8\u901f\u516c\u8def", en: "Motorway Only" },
   "Motorway + Trunk": { zh: "\u9ad8\u901f\u516c\u8def + \u4e3b\u5e72\u9053", en: "Motorway + Trunk" },
-  "Road labels stay off in this first runtime pass.": {
-    zh: "\u8fd9\u4e00\u7248 runtime \u91cc\u9053\u8def\u6807\u7b7e\u4ecd\u7136\u5173\u95ed\u3002",
-    en: "Road labels stay off in this first runtime pass.",
+  "Road labels use segment ref/name when present.": {
+    zh: "\u9053\u8def\u6807\u7b7e\u4f7f\u7528\u7ebf\u6bb5 ref/name \u5b57\u6bb5\u3002",
+    en: "Road labels use segment ref/name when present.",
   },
   "Keep the main visibility controls together so opacity, labels, and capital emphasis read as one layer.": {
     zh: "\u628a\u4e3b\u8981\u7684\u53ef\u89c1\u6027\u63a7\u4ef6\u653e\u5728\u4e00\u8d77\uff0c\u8ba9\u900f\u660e\u5ea6\u3001\u6807\u7b7e\u548c\u9996\u90fd\u5f3a\u8c03\u8bfb\u8d77\u6765\u5c5e\u4e8e\u540c\u4e00\u5c42\u3002",

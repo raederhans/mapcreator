@@ -3995,6 +3995,46 @@
     "Visible": {
       "en": "Visible",
       "zh": "可见"
+    },
+    "Show Road Labels": {
+      "en": "Show Road Labels",
+      "zh": "显示道路标签"
+    },
+    "Phase:": {
+      "en": "Phase:",
+      "zh": "阶段："
+    },
+    "Source:": {
+      "en": "Source:",
+      "zh": "来源："
+    },
+    "primary/secondary pending": {
+      "en": "primary/secondary pending",
+      "zh": "primary/secondary 待接入"
+    },
+    "checked-in Overture": {
+      "en": "checked-in Overture",
+      "zh": "已入库 Overture"
+    },
+    "ref sidecar Phase B": {
+      "en": "ref sidecar Phase B",
+      "zh": "ref sidecar Phase B"
+    },
+    "major stations Phase B": {
+      "en": "major stations Phase B",
+      "zh": "主要车站 Phase B"
+    },
+    "Road labels use segment ref/name when present.": {
+      "en": "Road labels use segment ref/name when present.",
+      "zh": "道路标签使用线段 ref/name 字段。"
+    },
+    "secondary full-only": {
+      "en": "secondary full-only",
+      "zh": "secondary 仅 full pack"
+    },
+    "Loaded classes:": {
+      "en": "Loaded classes:",
+      "zh": "已加载类别："
     }
   },
   "geo": {

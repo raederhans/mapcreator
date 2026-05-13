@@ -11,6 +11,8 @@ import {
   resolveLinkedTransportOverviewScopeAndThreshold,
 } from "../../core/state.js";
 import {
+  getTransportOverviewLineClassScopeRank,
+  getTransportOverviewLineSummaryMeta,
   normalizeTransportOverviewVisualMode,
   resolveTransportOverviewLineStrategy,
   resolveTransportOverviewPointStrategy,
@@ -303,6 +305,8 @@ export function createAppearanceControlsController({
   const roadOpacity = document.getElementById("roadOpacity");
   const roadOpacityValue = document.getElementById("roadOpacityValue");
   const roadPrimaryColor = document.getElementById("roadPrimaryColor");
+  const roadLabelsEnabled = document.getElementById("roadLabelsEnabled");
+  const roadLabelDensity = document.getElementById("roadLabelDensity");
   const roadCoverageReach = document.getElementById("roadCoverageReach");
   const roadCoverageReachValue = document.getElementById("roadCoverageReachValue");
   const roadScopeLinked = document.getElementById("roadScopeLinked");
@@ -969,8 +973,8 @@ export function createAppearanceControlsController({
         const lineClass = String(properties.class || "").trim().toLowerCase();
         const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
         if (revealRank > strategy.maximumRevealRank) return false;
-        if (strategy.minimumScopeRank <= 1 && lineClass !== "mainline") return false;
-        return lineClass === "mainline" || lineClass === "regional";
+        if (getTransportOverviewLineClassScopeRank("rail", lineClass) > strategy.minimumScopeRank) return false;
+        return lineClass === "mainline" || lineClass === "regional" || lineClass === "secondary";
       }).length;
     }
     if (familyId === "road") {
@@ -984,10 +988,11 @@ export function createAppearanceControlsController({
       return features.filter((feature) => {
         const properties = feature?.properties || {};
         const roadClass = String(properties.class || "").trim().toLowerCase();
-        const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (roadClass === "motorway" ? 1 : 2))));
+        const defaultRevealRank = roadClass === "motorway" ? 1 : roadClass === "trunk" ? 2 : 3;
+        const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || defaultRevealRank)));
         if (revealRank > strategy.maximumRevealRank) return false;
-        if (strategy.minimumScopeRank <= 1 && roadClass !== "motorway") return false;
-        return roadClass === "motorway" || roadClass === "trunk";
+        if (getTransportOverviewLineClassScopeRank("road", roadClass) > strategy.minimumScopeRank) return false;
+        return roadClass === "motorway" || roadClass === "trunk" || roadClass === "primary" || roadClass === "secondary";
       }).length;
     }
     const collection = familyId === "port" ? runtimeState.portsData : runtimeState.airportsData;
@@ -1050,26 +1055,60 @@ export function createAppearanceControlsController({
     return countText ? `${countText} ${t("loaded", "ui")}` : "";
   };
 
+  const getTransportLineClassCoverage = (familyId) => {
+    const meta = getTransportOverviewLineSummaryMeta(familyId);
+    if (!meta) return "";
+    const collection = familyId === "rail" ? runtimeState.railwaysData : runtimeState.roadsData;
+    const features = Array.isArray(collection?.features) ? collection.features : [];
+    const presentClasses = new Set();
+    features.forEach((feature) => {
+      const className = String(feature?.properties?.class || "").trim().toLowerCase();
+      if (meta.classOrder.includes(className)) presentClasses.add(className);
+    });
+    const orderedClasses = meta.classOrder.filter((className) => presentClasses.has(className));
+    if (!orderedClasses.length) return "";
+    const visibleClasses = orderedClasses.join("/");
+    if (familyId === "road" && !presentClasses.has("primary") && !presentClasses.has("secondary")) {
+      return `${t("Loaded classes:", "ui")} ${visibleClasses} (${t("primary/secondary pending", "ui")})`;
+    }
+    if (familyId === "rail" && !presentClasses.has("secondary")) {
+      return `${t("Loaded classes:", "ui")} ${visibleClasses} (${t("secondary full-only", "ui")})`;
+    }
+    return `${t("Loaded classes:", "ui")} ${visibleClasses}`;
+  };
+
+  const buildTransportLineSummaryDetails = (familyId) => {
+    const meta = getTransportOverviewLineSummaryMeta(familyId);
+    if (!meta) return [];
+    return [
+      getTransportLineClassCoverage(familyId),
+      `${t("Phase:", "ui")} ${t(meta.phaseText, "ui")}`,
+      `${t("Source:", "ui")} ${t(meta.sourceText, "ui")}`,
+    ].filter(Boolean);
+  };
+
   const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) => {
     if (!familyEnabled || !masterEnabled) return t("Hidden", "ui");
     const metric = getTransportFamilyRenderMetric(familyId);
     const filteredCount = getTransportFamilyFilteredCount(familyId, familyConfig, effectiveScope);
     const loadedAuxiliaryText = formatTransportLoadedAuxiliaryText(familyId, filteredCount);
+    const lineDetails = buildTransportLineSummaryDetails(familyId);
+    const joinSummaryParts = (...parts) => parts.filter(Boolean).join(" · ");
     if (isTransportFamilyRenderSettlingMetric(metric)) {
       return loadedAuxiliaryText
-        ? `${t("Loading/settling", "ui")} · ${loadedAuxiliaryText}`
-        : t("Loading/settling", "ui");
+        ? joinSummaryParts(t("Loading/settling", "ui"), loadedAuxiliaryText, ...lineDetails)
+        : joinSummaryParts(t("Loading/settling", "ui"), ...lineDetails);
     }
     const visibleCount = Math.max(0, Math.round(Number(metric.visibleFeatureCount || 0)));
     if (visibleCount > 0) {
-      return `${t("Visible", "ui")} · ${formatTransportFamilyCountText(familyId, visibleCount)}`;
+      return joinSummaryParts(t("Visible", "ui"), formatTransportFamilyCountText(familyId, visibleCount), ...lineDetails);
     }
     if (Number(metric.featureCount || 0) > 0 || Number.isFinite(filteredCount)) {
       return loadedAuxiliaryText
-        ? `${t("Loaded · 0 visible", "ui")} · ${loadedAuxiliaryText}`
-        : t("Loaded · 0 visible", "ui");
+        ? joinSummaryParts(t("Loaded · 0 visible", "ui"), loadedAuxiliaryText, ...lineDetails)
+        : joinSummaryParts(t("Loaded · 0 visible", "ui"), ...lineDetails);
     }
-    return t("Loading/settling", "ui");
+    return joinSummaryParts(t("Loading/settling", "ui"), ...lineDetails);
   };
 
   const renderTransportAppearanceDirty = (reason) => {
@@ -1172,6 +1211,8 @@ export function createAppearanceControlsController({
     if (roadOpacity) roadOpacity.value = String(Math.round(Number(roadConfig.opacity ?? 0.72) * 100));
     if (roadOpacityValue) roadOpacityValue.textContent = formatTransportPercent(roadConfig.opacity ?? 0.72);
     if (roadPrimaryColor) roadPrimaryColor.value = normalizeOceanFillColor(roadConfig.primaryColor || "#374151");
+    if (roadLabelsEnabled) roadLabelsEnabled.checked = !!roadConfig.labelsEnabled;
+    if (roadLabelDensity) roadLabelDensity.value = String(roadConfig.labelDensity || "sparse");
     if (roadCoverageReach) roadCoverageReach.value = String(Math.round(Number(roadConfig.coverageReach ?? 0.2) * 100));
     if (roadCoverageReachValue) roadCoverageReachValue.textContent = formatTransportPercent(roadConfig.coverageReach ?? 0.2);
     if (roadScopeLinked) roadScopeLinked.checked = String(roadConfig.scopeLinkMode || "linked") !== "manual";
@@ -1197,8 +1238,8 @@ export function createAppearanceControlsController({
       railScopeLinked, railScope, railImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
-      roadVisualStrength, roadOpacity, roadPrimaryColor, roadScopeLinked, roadScope,
-      roadImportanceThreshold,
+      roadVisualStrength, roadOpacity, roadPrimaryColor, roadLabelsEnabled, roadLabelDensity,
+      roadScopeLinked, roadScope, roadImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {
       if (control) control.disabled = false;
@@ -1663,6 +1704,12 @@ export function createAppearanceControlsController({
     bindInput(roadPrimaryColor, (event) => {
       getTransportAppearanceConfig().road.primaryColor = normalizeOceanFillColor(event.target.value || "#374151");
     }, "transport-road-primary-color");
+    bindChange(roadLabelsEnabled, (event) => {
+      getTransportAppearanceConfig().road.labelsEnabled = !!event.target.checked;
+    }, "transport-road-labels-enabled");
+    bindChange(roadLabelDensity, (event) => {
+      getTransportAppearanceConfig().road.labelDensity = String(event.target.value || "sparse");
+    }, "transport-road-label-density");
     bindInput(roadCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().road;
