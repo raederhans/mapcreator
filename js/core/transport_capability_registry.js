@@ -97,6 +97,24 @@ const BASE_TRANSPORT_OVERVIEW_DEFAULTS = Object.freeze({
   }),
 });
 
+const TRANSPORT_OVERVIEW_LINE_SUMMARY_META = Object.freeze({
+  rail: Object.freeze({
+    classOrder: Object.freeze(["mainline", "regional", "secondary"]),
+    sourceText: "checked-in Overture",
+    phaseText: "major stations Phase B",
+  }),
+  road: Object.freeze({
+    classOrder: Object.freeze(["motorway", "trunk", "primary", "secondary"]),
+    sourceText: "checked-in Overture",
+    phaseText: "ref sidecar Phase B",
+  }),
+});
+
+export function getTransportOverviewLineSummaryMeta(familyId) {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  return TRANSPORT_OVERVIEW_LINE_SUMMARY_META[normalizedFamilyId] || null;
+}
+
 const createTransportCapabilityFamily = ({
   id,
   label,
@@ -329,6 +347,20 @@ export function getTransportOverviewScopeThresholdRank(familyId, scope) {
   return 1;
 }
 
+export function getTransportOverviewLineClassScopeRank(familyId, lineClass) {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  const normalizedLineClass = String(lineClass || "").trim().toLowerCase();
+  if (normalizedFamilyId === "rail") {
+    return normalizedLineClass === "mainline" ? 1 : 2;
+  }
+  if (normalizedFamilyId === "road") {
+    if (normalizedLineClass === "motorway") return 1;
+    if (normalizedLineClass === "trunk") return 2;
+    return 3;
+  }
+  return 1;
+}
+
 function resolveTransportOverviewPointWorldFloor(familyId, visualMode) {
   if (visualMode === "coverage") return 2;
   if (familyId === "port") return 2;
@@ -373,7 +405,7 @@ function getTransportOverviewLineRevealRankThreshold(familyId, value) {
   if (familyId === "rail") {
     return normalized === "primary" ? 1 : normalized === "secondary" ? 2 : 3;
   }
-  return normalized === "primary" ? 1 : 2;
+  return normalized === "primary" ? 1 : normalized === "secondary" ? 2 : 3;
 }
 
 export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}, { scale = 1, visualMode = "distribution" } = {}) {

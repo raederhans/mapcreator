@@ -146,6 +146,46 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertIn('visualMode: normalizeTransportOverviewVisualMode(source.visualMode, "distribution"),', state_defaults_content)
         self.assertIn('TRANSPORT_OVERVIEW_VISUAL_MODES = Object.freeze(["distribution", "network", "coverage"])', registry_content)
 
+    def test_appearance_transport_summary_reports_class_source_and_phase(self):
+        index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js").read_text(encoding="utf-8")
+        registry_content = (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
+        i18n_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+
+        for token in [
+            'id="roadLabelsEnabled"',
+            'id="roadLabelDensity"',
+            'data-i18n="Road labels use segment ref/name when present."',
+        ]:
+            self.assertIn(token, index_content)
+
+        for token in [
+            'runtimeState.renderPerfMetrics',
+            'metrics.contextBreakdown',
+            'getTransportOverviewLineSummaryMeta',
+            'getTransportLineClassCoverage',
+            'primary/secondary pending',
+            'secondary full-only',
+        ]:
+            self.assertIn(token, controller_content)
+
+        for token in [
+            'TRANSPORT_OVERVIEW_LINE_SUMMARY_META',
+            'ref sidecar Phase B',
+            'major stations Phase B',
+            'checked-in Overture',
+        ]:
+            self.assertIn(token, registry_content)
+
+        for token in [
+            '"Loaded classes:"',
+            '"Phase:"',
+            '"Source:"',
+            '"checked-in Overture"',
+            '"Road labels use segment ref/name when present."',
+        ]:
+            self.assertIn(token, i18n_content)
+
     def test_toolbar_drops_legacy_transport_info_renderer_and_uses_new_copy(self):
         toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js").read_text(encoding="utf-8")

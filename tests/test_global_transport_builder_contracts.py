@@ -102,6 +102,42 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
             True,
         )
 
+    def test_global_transport_catalog_baseline_counts_are_current(self) -> None:
+        road_catalog = json.loads(GLOBAL_ROAD_CATALOG.read_text(encoding='utf-8'))
+        rail_catalog = json.loads(GLOBAL_RAIL_CATALOG.read_text(encoding='utf-8'))
+        self.assertEqual(len(road_catalog.get('entries') or []), 39)
+        self.assertEqual(len(rail_catalog.get('entries') or []), 25)
+
+    def test_global_transport_catalogs_record_phase_status_and_class_buckets(self) -> None:
+        road_catalog = json.loads(GLOBAL_ROAD_CATALOG.read_text(encoding='utf-8'))
+        rail_catalog = json.loads(GLOBAL_RAIL_CATALOG.read_text(encoding='utf-8'))
+        road_classes = Counter()
+        rail_classes = Counter()
+
+        for entry in road_catalog.get('entries') or []:
+            manifest_path = REPO_ROOT / entry['manifest_path']
+            audit_path = manifest_path.with_name('build_audit.json')
+            self.assertTrue(audit_path.exists(), audit_path.as_posix())
+            audit = json.loads(audit_path.read_text(encoding='utf-8'))
+            road_classes.update(audit.get('class_counts') or {})
+            self.assertEqual(entry.get('phase_status', {}).get('road_labels'), 'phase_b_pending_ref_sidecar')
+
+        for entry in rail_catalog.get('entries') or []:
+            manifest_path = REPO_ROOT / entry['manifest_path']
+            audit_path = manifest_path.with_name('build_audit.json')
+            self.assertTrue(audit_path.exists(), audit_path.as_posix())
+            audit = json.loads(audit_path.read_text(encoding='utf-8'))
+            rail_classes.update(audit.get('class_counts') or audit.get('line_class_counts') or {})
+            self.assertEqual(entry.get('phase_status', {}).get('major_stations'), 'phase_b_pending_source')
+
+        self.assertGreater(road_classes['motorway'], 0)
+        self.assertGreater(road_classes['trunk'], 0)
+        self.assertEqual(road_classes['primary'], 0)
+        self.assertEqual(road_classes['secondary'], 0)
+        self.assertGreater(rail_classes['mainline'], 0)
+        self.assertGreater(rail_classes['regional'], 0)
+        self.assertGreater(rail_classes['secondary'], 0)
+
     def test_road_label_builder_handles_empty_input(self) -> None:
         if not self.pyarrow_available:
             self.skipTest("pyarrow is required to import transport builder helpers in this environment.")
@@ -732,16 +768,22 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('id="railLabelDensity"', html_content)
         self.assertNotIn('data-i18n="Planned">Planned</span>', html_content.split('transportRailSummaryMeta', 1)[1].split('</details>', 1)[0])
 
-    def test_transport_appearance_ui_exposes_live_road_controls_without_labels(self) -> None:
+    def test_transport_appearance_ui_exposes_live_road_controls_with_labels(self) -> None:
         toolbar_content = (REPO_ROOT / 'js' / 'ui' / 'toolbar.js').read_text(encoding='utf-8')
+        appearance_controller_content = (
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
+        ).read_text(encoding='utf-8')
         html_content = (REPO_ROOT / 'index.html').read_text(encoding='utf-8')
         self.assertIn('toggleRoad', toolbar_content)
         self.assertIn('transportRoadControls', toolbar_content)
         self.assertIn('drawRoadsLayer', (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8'))
+        self.assertIn('roadLabelsEnabled', appearance_controller_content)
+        self.assertIn('roadLabelDensity', appearance_controller_content)
         self.assertIn('id="toggleRoad"', html_content)
         self.assertIn('id="transportRoadControls"', html_content)
+        self.assertIn('id="roadLabelsEnabled"', html_content)
+        self.assertIn('id="roadLabelDensity"', html_content)
         self.assertNotIn('data-i18n="Planned">Planned</span>', html_content.split('transportRoadSummaryMeta', 1)[1].split('</details>', 1)[0])
-        self.assertNotIn('id="roadLabelsEnabled"', html_content)
 
     def test_rail_renderer_consumes_label_config_and_station_layer(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
@@ -753,11 +795,11 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_rail_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
-        self.assertIn('function getTransportRailRevealRankThreshold(value)', renderer_content)
-        self.assertIn('if (normalized === "primary") return 1;', renderer_content)
-        self.assertIn('if (normalized === "secondary") return 2;', renderer_content)
-        self.assertIn('return 3;', renderer_content)
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
+        self.assertIn('function getTransportOverviewLineRevealRankThreshold(familyId, value)', registry_content)
+        self.assertIn('return normalized === "primary" ? 1 : normalized === "secondary" ? 2 : 3;', registry_content)
         self.assertIn('if (revealRank > maximumRevealRank) return;', renderer_content)
+        self.assertIn('getTransportOverviewLineClassScopeRank("rail", lineClass) > minimumScopeRank', renderer_content)
 
     def test_road_renderer_uses_road_scope_threshold_helper(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
@@ -765,15 +807,16 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}, { scale = 1, visualMode = "distribution" } = {})', registry_content)
         self.assertIn('if (normalizedFamilyId === "road") {', registry_content)
         self.assertIn('return normalizedScope === "motorway_only" ? 1 : 2;', registry_content)
+        self.assertIn('export function getTransportOverviewLineClassScopeRank(familyId, lineClass)', registry_content)
+        self.assertIn('if (normalizedLineClass === "trunk") return 2;', registry_content)
         self.assertIn('const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {', renderer_content)
         self.assertIn('const minimumScopeRank = strategy.minimumScopeRank;', renderer_content)
+        self.assertIn('getTransportOverviewLineClassScopeRank("road", roadClass) > minimumScopeRank', renderer_content)
 
     def test_road_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
-        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
-        self.assertIn('function getTransportRoadRevealRankThreshold(value)', renderer_content)
-        self.assertIn('if (normalized === "primary") return 1;', renderer_content)
-        self.assertIn('if (normalized === "secondary") return 2;', renderer_content)
-        self.assertIn('return 3;', renderer_content)
+        registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
+        self.assertIn('function getTransportOverviewLineRevealRankThreshold(familyId, value)', registry_content)
+        self.assertIn('return normalized === "primary" ? 1 : normalized === "secondary" ? 2 : 3;', registry_content)
 
     def test_rail_transport_overview_default_primary_color_is_dark(self) -> None:
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
@@ -869,12 +912,14 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('rail_stations_major', data_loader_content)
         self.assertIn('features: stationFeatures', data_loader_content)
 
-    def test_road_renderer_consumes_roads_without_labels(self) -> None:
+    def test_road_renderer_consumes_roads_with_inline_ref_name_labels(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         main_renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         self.assertIn('function drawRoadsLayer(k, { interactive = false } = {})', renderer_content)
         self.assertIn('runtimeState.roadsData', renderer_content)
         self.assertIn('!!runtimeState.showTransport && !!runtimeState.showRoad', renderer_content)
+        self.assertIn('getTransportOverviewRoadLabelText(properties, roadConfig.labelMode)', renderer_content)
+        self.assertIn('labelCount', renderer_content)
         self.assertIn('return getTransportOverviewRenderOwner().drawRoadsLayer(k, { interactive });', main_renderer_content)
         self.assertNotIn('state.roadLabelsData', renderer_content)
 

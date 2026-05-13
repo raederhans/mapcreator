@@ -8,9 +8,15 @@
 - Renderer 改动集中在 `transport_overview_render_owner.js`：road/rail 改为 casing + inner stroke，regional rail 与 trunk road 使用 dash；dash 在 `finally` 中清空。
 - UI 改动集中在 `appearance_controls_controller.js`：summary 读取 `runtimeState.renderPerfMetrics.contextBreakdown`，filtered count 只作为 loaded 辅助文本。
 - Review 修复：i18n diff 已收窄到 UI copy；line contract 测试已从源码正则改为 fake canvas 行为测试；transport summary 变更改为 render 后刷新，并在 async layer load settle 后再刷新一次。
-
 - Final reviewer flagged empty async catches in transport toggle summary refresh. Replaced them with diagnostic warning handlers that still refresh the summary after failed layer loads.
-
 - Restored the transport visual mode handler's explicit renderDirty call so existing UI support contract continues to recognize the visual-mode wiring while keeping the post-render summary refresh.
-
 - Review follow-up: restored audit/manifest summary mismatch as a strict publish blocker in tools/patch_tno_1962_bundle.py; transport summary now treats hidden metrics as settling and refreshes after master-toggle data load promises settle.
+- 2026-05-13：用户明确授权创建 worktree，当前执行目录为 `C:\Users\raede\Desktop\dev\mapcreator-transport-overview-feedback`，主 worktree 的 special-zone 改动保持隔离。
+- 本轮计划更新：旧文档中的 road labels 出界约束已被用户新计划覆盖；road labels 改为使用 inline ref/name 字段，不接入 `road_labels` sidecar。
+- 子代理只读结论：renderer 已有 road/rail 线样式基础，road label 是缺口；summary 继续用 contextBreakdown；catalog baseline count 应放在 `tests/test_global_transport_builder_contracts.py`。
+- Live process owner：主线程；已启动过 `translate_manager.py --network-mode off`，因超过交互预算手动停止，随后用最小 JSON 更新同步新增 UI keys。
+- 2026-05-13：WATCH 复核后把 summary phase/source 元数据集中到 `transport_capability_registry.js`，Appearance controller 只消费 helper；UI 文案从 `Classes:` 改为 `Loaded classes:`，减少把 loaded class 误读成 visible class 的风险。
+- 2026-05-13：最终 targeted verification 通过：node syntax check、`npm run test:node:transport-overview-line-contract`、8 个 Python contract、`tools/i18n_audit.py`、`git diff --check`。
+- 2026-05-13：浏览器 smoke 通过，报告 `.runtime/browser/transport-overview-feedback-smoke.json`，截图 `.runtime/browser/mcp-artifacts/screenshots/transport_overview_feedback_smoke.png`；console 仍有既有 D3 water warning 和一个 404 resource clue，networkFailures 为空。
+- 2026-05-13：最终 review BLOCK 已修复：移除 `task.md` 末尾空白行；road/rail line scope 过滤改为 registry `getTransportOverviewLineClassScopeRank()`，`motorway_trunk` scope 即使 threshold 为 all 也保持只含 motorway/trunk。
+- 2026-05-13：WATCH 修复后重跑 targeted verification 与 browser smoke 均通过。

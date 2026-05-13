@@ -1,6 +1,7 @@
 import { ColorManager } from "../color_manager.js";
 import { ensureTransportOverviewStyleConfigState } from "../state/ui_state.js";
 import {
+  getTransportOverviewLineClassScopeRank,
   normalizeTransportOverviewVisualMode,
   resolveTransportOverviewLineStrategy,
   resolveTransportOverviewPointStrategy,
@@ -137,30 +138,6 @@ function getTransportPortScopeThreshold(scope) {
   return 2;
 }
 
-function getTransportRailScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  return normalized === "mainline_only" ? 1 : 2;
-}
-
-function getTransportRailRevealRankThreshold(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "primary") return 1;
-  if (normalized === "secondary") return 2;
-  return 3;
-}
-
-function getTransportRoadRevealRankThreshold(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "primary") return 1;
-  if (normalized === "secondary") return 2;
-  return 3;
-}
-
-function getTransportRoadScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  return normalized === "motorway_only" ? 1 : 2;
-}
-
 function getTransportOverviewPrimaryColor(value, fallback = "#1d4ed8") {
   return ColorManager.normalizeHexColor(String(value || "").trim()) || fallback;
 }
@@ -198,13 +175,19 @@ function getTransportOverviewRailVisualStyle(primaryColor, visualStrength) {
     mainlineStroke: mixCanvasColors(resolvedPrimaryColor, "#020617", 0.28) || resolvedPrimaryColor,
     regionalCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#f1f5f9", 0.72) || "#f1f5f9",
     regionalStroke: mixCanvasColors(resolvedPrimaryColor, "#64748b", 0.34) || resolvedPrimaryColor,
+    secondaryCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#e2e8f0", 0.62) || "#e2e8f0",
+    secondaryStroke: mixCanvasColors(resolvedPrimaryColor, "#94a3b8", 0.42) || resolvedPrimaryColor,
     mainlineCasingWidth: 3.35 + (strength * 1.65),
     mainlineWidth: 1.55 + (strength * 1.25),
     regionalCasingWidth: 2.25 + (strength * 1.05),
     regionalWidth: 0.9 + (strength * 0.75),
+    secondaryCasingWidth: 1.8 + (strength * 0.75),
+    secondaryWidth: 0.72 + (strength * 0.55),
     mainlineOpacity: 0.74 + (strength * 0.26),
     regionalOpacity: 0.42 + (strength * 0.22),
+    secondaryOpacity: 0.28 + (strength * 0.18),
     regionalDashPx: [5.5, 4.5],
+    secondaryDashPx: [2.8, 4.8],
   };
 }
 
@@ -216,13 +199,25 @@ function getTransportOverviewRoadVisualStyle(primaryColor, visualStrength) {
     motorwayStroke: mixCanvasColors(resolvedPrimaryColor, "#111827", 0.22) || resolvedPrimaryColor,
     trunkCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#e5e7eb", 0.68) || "#e5e7eb",
     trunkStroke: mixCanvasColors(resolvedPrimaryColor, "#111827", 0.1) || resolvedPrimaryColor,
+    primaryCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#e5e7eb", 0.54) || "#e5e7eb",
+    primaryStroke: mixCanvasColors(resolvedPrimaryColor, "#4b5563", 0.18) || resolvedPrimaryColor,
+    secondaryCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#d1d5db", 0.44) || "#d1d5db",
+    secondaryStroke: mixCanvasColors(resolvedPrimaryColor, "#6b7280", 0.26) || resolvedPrimaryColor,
     motorwayCasingWidth: 3.45 + (strength * 1.75),
     motorwayWidth: 1.55 + (strength * 1.45),
     trunkCasingWidth: 2.35 + (strength * 1.2),
     trunkWidth: 0.95 + (strength * 0.95),
+    primaryCasingWidth: 1.85 + (strength * 0.85),
+    primaryWidth: 0.76 + (strength * 0.58),
+    secondaryCasingWidth: 1.5 + (strength * 0.58),
+    secondaryWidth: 0.62 + (strength * 0.4),
     motorwayOpacity: 0.72 + (strength * 0.24),
     trunkOpacity: 0.48 + (strength * 0.2),
+    primaryOpacity: 0.34 + (strength * 0.16),
+    secondaryOpacity: 0.24 + (strength * 0.12),
     trunkDashPx: [6, 5],
+    primaryDashPx: [4.2, 5.4],
+    secondaryDashPx: [2.6, 5.8],
   };
 }
 
@@ -277,7 +272,7 @@ function drawTransportOverviewLineSet(features, style, { baseOpacity, strategy, 
   });
 }
 
-function getTransportRailLabelGridSize(labelDensity) {
+function getTransportLineLabelGridSize(labelDensity) {
   switch (String(labelDensity || "").trim().toLowerCase()) {
     case "dense":
       return 112;
@@ -316,6 +311,10 @@ function measureProjectedLineSetLength(lines) {
 }
 
 function getRailFeatureLabelAnchor(feature) {
+  return getLineFeatureLabelAnchor(feature);
+}
+
+function getLineFeatureLabelAnchor(feature) {
   const geometry = feature?.geometry;
   if (!geometry || typeof geometry !== "object") return null;
   if (geometry.type === "LineString") {
@@ -347,6 +346,15 @@ function getTransportOverviewRailLabelText(properties = {}, mode = "name") {
   const normalized = String(mode || "").trim().toLowerCase();
   if (normalized === "ref") return name;
   return name;
+}
+
+function getTransportOverviewRoadLabelText(properties = {}, mode = "ref") {
+  const ref = String(properties.ref || properties.route_ref || "").trim();
+  const name = String(properties.name || properties.road_name || "").trim();
+  const normalized = String(mode || "").trim().toLowerCase();
+  if (normalized === "name") return name || ref;
+  if (normalized === "both") return ref && name ? `${ref} · ${name}` : (ref || name);
+  return ref || name;
 }
 
 function getCurrentZoomTransform() {
@@ -755,6 +763,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
   const maximumRevealRank = strategy.maximumRevealRank;
   const visualStyle = getTransportOverviewRailVisualStyle(railConfig.primaryColor, railConfig.visualStrength);
   const featuresByClass = {
+    secondary: [],
     regional: [],
     mainline: [],
   };
@@ -764,24 +773,26 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
     const lineClass = String(properties.class || "").trim().toLowerCase();
     const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
     if (revealRank > maximumRevealRank) return;
-    if (minimumScopeRank <= 1 && lineClass !== "mainline") return;
+    if (getTransportOverviewLineClassScopeRank("rail", lineClass) > minimumScopeRank) return;
     if (lineClass === "mainline") {
       featuresByClass.mainline.push(feature);
     } else if (lineClass === "regional") {
       featuresByClass.regional.push(feature);
+    } else if (lineClass === "secondary") {
+      featuresByClass.secondary.push(feature);
     } else {
       return;
     }
 
     const label = getTransportOverviewRailLabelText(properties, railConfig.labelMode);
-    if (!label || !railConfig.labelsEnabled) return;
+    if (!label || !railConfig.labelsEnabled || typeof projection !== "function") return;
     const anchorGeo = getRailFeatureLabelAnchor(feature);
     if (!Array.isArray(anchorGeo) || anchorGeo.length < 2) return;
     const anchorProjected = projection(anchorGeo);
     if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return;
     const projectedLines = buildProjectedRailLines(feature.geometry);
     const projectedLength = measureProjectedLineSetLength(projectedLines);
-    const minimumProjectedLength = lineClass === "mainline" ? 110 : 72;
+    const minimumProjectedLength = lineClass === "mainline" ? 110 : lineClass === "regional" ? 72 : 58;
     if (projectedLength < minimumProjectedLength) return;
     labelCandidates.push({
       label,
@@ -825,7 +836,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
   const labelsEnabled = !!railConfig.labelsEnabled && strategy.labelsEnabled;
   const visibleLabelEntries = [];
   if (labelsEnabled) {
-    const gridSize = getTransportRailLabelGridSize(railConfig.labelDensity);
+    const gridSize = getTransportLineLabelGridSize(railConfig.labelDensity);
     const usedBuckets = new Set();
     labelCandidates
       .filter((entry) => entry.lineClass === "mainline" ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
@@ -840,7 +851,7 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
         visibleLabelEntries.push(entry);
       });
   }
-  const visibleFeatureCount = featuresByClass.mainline.length + featuresByClass.regional.length;
+  const visibleFeatureCount = featuresByClass.mainline.length + featuresByClass.regional.length + featuresByClass.secondary.length;
   if (!visibleFeatureCount) {
     collectContextMetric("drawRailwaysLayer", nowMs() - startedAt, {
       featureCount,
@@ -854,6 +865,19 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
   }
 
   const baseRailOpacity = clamp(Number(railConfig.opacity ?? 0.72), 0, 1);
+  drawTransportOverviewLineSet(featuresByClass.secondary, {
+    casingStroke: visualStyle.secondaryCasingStroke,
+    innerStroke: visualStyle.secondaryStroke,
+    casingWidth: visualStyle.secondaryCasingWidth,
+    innerWidth: visualStyle.secondaryWidth,
+    opacity: visualStyle.secondaryOpacity,
+    dashPx: visualStyle.secondaryDashPx,
+  }, {
+    baseOpacity: baseRailOpacity,
+    strategy,
+    k,
+    widthFloorPx: 0.78,
+  });
   drawTransportOverviewLineSet(featuresByClass.regional, {
     casingStroke: visualStyle.regionalCasingStroke,
     innerStroke: visualStyle.regionalStroke,
@@ -954,22 +978,29 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
   const maximumRevealRank = strategy.maximumRevealRank;
   const visualStyle = getTransportOverviewRoadVisualStyle(roadConfig.primaryColor, roadConfig.visualStrength);
   const featuresByClass = {
+    secondary: [],
+    primary: [],
     trunk: [],
     motorway: [],
   };
   collection.features.forEach((feature) => {
     const properties = feature?.properties || {};
     const roadClass = String(properties.class || "").trim().toLowerCase();
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (roadClass === "motorway" ? 1 : 2))));
+    const defaultRevealRank = roadClass === "motorway" ? 1 : roadClass === "trunk" ? 2 : 3;
+    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || defaultRevealRank)));
     if (revealRank > maximumRevealRank) return;
-    if (minimumScopeRank <= 1 && roadClass !== "motorway") return;
+    if (getTransportOverviewLineClassScopeRank("road", roadClass) > minimumScopeRank) return;
     if (roadClass === "motorway") {
       featuresByClass.motorway.push(feature);
     } else if (roadClass === "trunk") {
       featuresByClass.trunk.push(feature);
+    } else if (roadClass === "primary") {
+      featuresByClass.primary.push(feature);
+    } else if (roadClass === "secondary") {
+      featuresByClass.secondary.push(feature);
     }
   });
-  const visibleFeatureCount = featuresByClass.motorway.length + featuresByClass.trunk.length;
+  const visibleFeatureCount = featuresByClass.motorway.length + featuresByClass.trunk.length + featuresByClass.primary.length + featuresByClass.secondary.length;
   if (!visibleFeatureCount) {
     collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
       featureCount,
@@ -983,6 +1014,32 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
   }
 
   const baseRoadOpacity = clamp(Number(roadConfig.opacity ?? 0.72), 0, 1);
+  drawTransportOverviewLineSet(featuresByClass.secondary, {
+    casingStroke: visualStyle.secondaryCasingStroke,
+    innerStroke: visualStyle.secondaryStroke,
+    casingWidth: visualStyle.secondaryCasingWidth,
+    innerWidth: visualStyle.secondaryWidth,
+    opacity: visualStyle.secondaryOpacity,
+    dashPx: visualStyle.secondaryDashPx,
+  }, {
+    baseOpacity: baseRoadOpacity,
+    strategy,
+    k,
+    widthFloorPx: 0.68,
+  });
+  drawTransportOverviewLineSet(featuresByClass.primary, {
+    casingStroke: visualStyle.primaryCasingStroke,
+    innerStroke: visualStyle.primaryStroke,
+    casingWidth: visualStyle.primaryCasingWidth,
+    innerWidth: visualStyle.primaryWidth,
+    opacity: visualStyle.primaryOpacity,
+    dashPx: visualStyle.primaryDashPx,
+  }, {
+    baseOpacity: baseRoadOpacity,
+    strategy,
+    k,
+    widthFloorPx: 0.78,
+  });
   drawTransportOverviewLineSet(featuresByClass.trunk, {
     casingStroke: visualStyle.trunkCasingStroke,
     innerStroke: visualStyle.trunkStroke,
@@ -1009,10 +1066,72 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
     widthFloorPx: 1.1,
   });
 
+  const labelZoomConfig = getTransportOverviewLabelZoomConfig("road", roadConfig.labelDensity);
+  const labelsEnabled = !!roadConfig.labelsEnabled && strategy.labelsEnabled && typeof projection === "function";
+  let labelCount = 0;
+  if (labelsEnabled) {
+    const gridSize = getTransportLineLabelGridSize(roadConfig.labelDensity);
+    const usedBuckets = new Set();
+    const labelCandidates = [];
+    const classPriority = { motorway: 4, trunk: 3, primary: 2, secondary: 1 };
+    Object.entries(featuresByClass).forEach(([roadClass, features]) => {
+      features.forEach((feature) => {
+        const properties = feature?.properties || {};
+        const label = getTransportOverviewRoadLabelText(properties, roadConfig.labelMode);
+        if (!label) return;
+        const anchorGeo = getLineFeatureLabelAnchor(feature);
+        if (!Array.isArray(anchorGeo) || anchorGeo.length < 2) return;
+        const anchorProjected = projection(anchorGeo);
+        if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return;
+        const projectedLines = buildProjectedRailLines(feature.geometry);
+        const projectedLength = measureProjectedLineSetLength(projectedLines);
+        const minimumProjectedLength = roadClass === "motorway" ? 120 : roadClass === "trunk" ? 88 : 70;
+        if (projectedLength < minimumProjectedLength) return;
+        labelCandidates.push({
+          label,
+          roadClass,
+          projectedLength,
+          x: anchorProjected[0],
+          y: anchorProjected[1],
+          priority: classPriority[roadClass] || 0,
+        });
+      });
+    });
+    const visibleLabelEntries = [];
+    labelCandidates
+      .filter((entry) => entry.priority >= 4 ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
+      .sort((left, right) => {
+        if (left.priority !== right.priority) return right.priority - left.priority;
+        return right.projectedLength - left.projectedLength;
+      })
+      .forEach((entry) => {
+        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}`;
+        if (usedBuckets.has(bucketKey)) return;
+        usedBuckets.add(bucketKey);
+        visibleLabelEntries.push(entry);
+      });
+    if (visibleLabelEntries.length) {
+      context.save();
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      visibleLabelEntries.forEach((entry) => {
+        const isMotorway = entry.roadClass === "motorway";
+        context.font = `${isMotorway ? 600 : 500} ${isMotorway ? 10.5 : 9.5}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
+        context.lineWidth = 3;
+        context.strokeStyle = "rgba(255,255,255,0.88)";
+        context.fillStyle = isMotorway ? visualStyle.motorwayStroke : visualStyle.trunkStroke;
+        context.strokeText(entry.label, entry.x, entry.y);
+        context.fillText(entry.label, entry.x, entry.y);
+        labelCount += 1;
+      });
+      context.restore();
+    }
+  }
+
   collectContextMetric("drawRoadsLayer", nowMs() - startedAt, {
     featureCount,
     visibleFeatureCount,
-    labelCount: 0,
+    labelCount,
     interactive: !!interactive,
     skipped: false,
   });

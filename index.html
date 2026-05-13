@@ -1669,7 +1669,19 @@
                         </section>
                         <section class="space-y-2">
                           <h4 id="lblTransportRoadLabelsGroup" class="appearance-prop-heading" data-i18n="Labels">Labels</h4>
-                          <p class="panel-hint" data-i18n="Road labels stay off in this first runtime pass.">Road labels stay off in this first runtime pass.</p>
+                          <label class="toggle-label">
+                            <input id="roadLabelsEnabled" type="checkbox" class="checkbox-input" />
+                            <span id="lblRoadLabelsEnabled" data-i18n="Show Road Labels">Show Road Labels</span>
+                          </label>
+                          <div>
+                            <label id="lblRoadLabelDensity" class="range-label" for="roadLabelDensity" data-i18n="Label Density">Label Density</label>
+                            <select id="roadLabelDensity" class="select-input mt-1">
+                              <option value="sparse" data-i18n="Sparse">Sparse</option>
+                              <option value="balanced" data-i18n="Balanced">Balanced</option>
+                              <option value="dense" data-i18n="Dense">Dense</option>
+                            </select>
+                          </div>
+                          <p class="panel-hint" data-i18n="Road labels use segment ref/name when present.">Road labels use segment ref/name when present.</p>
                         </section>
                         <section class="space-y-3">
                           <h4 id="lblTransportRoadScopeGroup" class="appearance-prop-heading" data-i18n="Scope">Scope</h4>
