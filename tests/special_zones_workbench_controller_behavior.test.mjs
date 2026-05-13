@@ -406,3 +406,63 @@ test("large member lists render capped chips and keep drawer search bounded", ()
     globalThis.document = previousDocument;
   }
 });
+
+test("batch import, set operations, and story preview use compact workbench controls", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+  const container = new TestElement("section");
+  const runtimeState = {
+    landIndex: new Map([["a", {}], ["b", {}], ["c", {}], ["d", {}]]),
+    specialZoneLayers: {
+      layers: [
+        createLayerFromPreset("custom", { id: "target", name: "Target", memberFeatureIds: ["a"] }),
+        createLayerFromPreset("buffer", { id: "source", name: "Source", memberFeatureIds: ["b", "c"] }),
+      ],
+      activeLayerId: "target",
+    },
+  };
+  const dirty = [];
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty: (label) => dirty.push(label),
+    render() {},
+    updateToolUI() {},
+    captureHistoryState: () => ({}),
+    pushHistoryEntry() {},
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const importInput = container.querySelector(".special-zone-member-import-input");
+    assert.ok(importInput);
+    importInput.value = "d missing b";
+    await findButtonByText(container, "Replace with imported ids").click();
+    assert.deepEqual(runtimeState.specialZoneLayers.layers.find((layer) => layer.id === "target").memberFeatureIds, ["b", "d"]);
+
+    controller.renderSpecialZonesWorkbenchUi();
+    const invalidOnlyInput = container.querySelector(".special-zone-member-import-input");
+    invalidOnlyInput.value = "missing";
+    await findButtonByText(container, "Replace with imported ids").click();
+    assert.deepEqual(runtimeState.specialZoneLayers.layers.find((layer) => layer.id === "target").memberFeatureIds, []);
+
+    controller.renderSpecialZonesWorkbenchUi();
+    const restoreInput = container.querySelector(".special-zone-member-import-input");
+    restoreInput.value = "d b";
+    await findButtonByText(container, "Replace with imported ids").click();
+    assert.deepEqual(runtimeState.specialZoneLayers.layers.find((layer) => layer.id === "target").memberFeatureIds, ["b", "d"]);
+
+    controller.renderSpecialZonesWorkbenchUi();
+    const selects = container.querySelectorAll("select");
+    selects[selects.length - 1].value = "source";
+    await findButtonByText(container, "Union with layer").click();
+    assert.deepEqual(runtimeState.specialZoneLayers.layers.find((layer) => layer.id === "target").memberFeatureIds, ["b", "c", "d"]);
+    assert.ok(dirty.includes("special-zone-members-batch-replace"));
+    assert.ok(dirty.includes("special-zone-members-union"));
+    assert.match(getNodeText(container), /Story preview/);
+    assert.match(getNodeText(container), /Target/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});

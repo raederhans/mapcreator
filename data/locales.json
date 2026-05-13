@@ -6274,7 +6274,7 @@
     },
     "Add dev selection": {
       "en": "Add dev selection",
-      "zh": "添加当前开发选择"
+      "zh": "添加开发选择"
     },
     "Bulk actions and save": {
       "en": "Bulk actions and save",
@@ -6318,7 +6318,7 @@
     },
     "Layer-based special zones": {
       "en": "Layer-based special zones",
-      "zh": "分层特殊区域"
+      "zh": "图层式特殊区域"
     },
     "Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.": {
       "en": "Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.",
@@ -6346,7 +6346,7 @@
     },
     "Read-only scenario asset": {
       "en": "Read-only scenario asset",
-      "zh": "只读场景资产"
+      "zh": "只读剧本资产"
     },
     "Replace with dev selection": {
       "en": "Replace with dev selection",
@@ -6358,7 +6358,7 @@
     },
     "Scenario layer asset save is available only in the local dev server.": {
       "en": "Scenario layer asset save is available only in the local dev server.",
-      "zh": "场景图层资产保存只在本地开发服务器可用。"
+      "zh": "剧本图层资产保存仅在本地开发服务器可用。"
     },
     "Scenario special zone layers saved.": {
       "en": "Scenario special zone layers saved.",
@@ -6459,6 +6459,230 @@
     "Loaded classes:": {
       "en": "Loaded classes:",
       "zh": "已加载类别："
+    },
+    "Show special zones overlay": {
+      "en": "Show special zones overlay",
+      "zh": "显示特殊区域叠加层"
+    },
+    "New layer": {
+      "en": "New layer",
+      "zh": "新建图层"
+    },
+    "Create a layer before editing members or styles.": {
+      "en": "Create a layer before editing members or styles.",
+      "zh": "先创建图层，再编辑成员或样式。"
+    },
+    "Hide": {
+      "en": "Hide",
+      "zh": "隐藏"
+    },
+    "Show": {
+      "en": "Show",
+      "zh": "显示"
+    },
+    "Show in legend": {
+      "en": "Show in legend",
+      "zh": "在图例中显示"
+    },
+    "Hide from legend": {
+      "en": "Hide from legend",
+      "zh": "从图例隐藏"
+    },
+    "Style presets": {
+      "en": "Style presets",
+      "zh": "样式预设"
+    },
+    "Select or create a layer to apply style presets.": {
+      "en": "Select or create a layer to apply style presets.",
+      "zh": "先选择或创建图层，再应用样式预设。"
+    },
+    "Current layer style": {
+      "en": "Current layer style",
+      "zh": "当前图层样式"
+    },
+    "Select a layer to edit its style.": {
+      "en": "Select a layer to edit its style.",
+      "zh": "选择一个图层来编辑样式。"
+    },
+    "Pattern": {
+      "en": "Pattern",
+      "zh": "图案"
+    },
+    "Stroke width": {
+      "en": "Stroke width",
+      "zh": "描边宽度"
+    },
+    "Add current tile": {
+      "en": "Add current tile",
+      "zh": "添加当前地块"
+    },
+    "Toggle current tile": {
+      "en": "Toggle current tile",
+      "zh": "切换当前地块"
+    },
+    "Add parent group": {
+      "en": "Add parent group",
+      "zh": "添加上级地块组"
+    },
+    "features in current parent group": {
+      "en": "features in current parent group",
+      "zh": "当前上级组中的地块"
+    },
+    "Select or hover a land tile with a parent group.": {
+      "en": "Select or hover a land tile with a parent group.",
+      "zh": "选择或悬停有上级组的陆地地块。"
+    },
+    "No matching members.": {
+      "en": "No matching members.",
+      "zh": "没有匹配成员。"
+    },
+    "Showing first 80 matching members.": {
+      "en": "Showing first 80 matching members.",
+      "zh": "仅显示前 80 个匹配成员。"
+    },
+    "All member ids": {
+      "en": "All member ids",
+      "zh": "全部成员 ID"
+    },
+    "Search feature id or country code": {
+      "en": "Search feature id or country code",
+      "zh": "搜索地块 ID 或国家代码"
+    },
+    "Members": {
+      "en": "Members",
+      "zh": "成员"
+    },
+    "Single select": {
+      "en": "Single select",
+      "zh": "单选"
+    },
+    "Multi select": {
+      "en": "Multi select",
+      "zh": "多选"
+    },
+    "Brush select": {
+      "en": "Brush select",
+      "zh": "笔刷选择"
+    },
+    "Select or create a layer before editing members.": {
+      "en": "Select or create a layer before editing members.",
+      "zh": "先选择或创建图层，再编辑成员。"
+    },
+    "members in current layer": {
+      "en": "members in current layer",
+      "zh": "当前图层成员"
+    },
+    "Add brush": {
+      "en": "Add brush",
+      "zh": "添加笔刷"
+    },
+    "Remove brush": {
+      "en": "Remove brush",
+      "zh": "移除笔刷"
+    },
+    "Batch import / set operations": {
+      "en": "Batch import / set operations",
+      "zh": "批量导入 / 集合操作"
+    },
+    "Paste feature ids separated by commas, spaces, or new lines": {
+      "en": "Paste feature ids separated by commas, spaces, or new lines",
+      "zh": "粘贴地块 ID，可用逗号、空格或换行分隔"
+    },
+    "Add imported ids": {
+      "en": "Add imported ids",
+      "zh": "添加导入 ID"
+    },
+    "Replace with imported ids": {
+      "en": "Replace with imported ids",
+      "zh": "用导入 ID 替换"
+    },
+    "Union with layer": {
+      "en": "Union with layer",
+      "zh": "与图层并集"
+    },
+    "Subtract layer": {
+      "en": "Subtract layer",
+      "zh": "减去图层"
+    },
+    "Intersect layer": {
+      "en": "Intersect layer",
+      "zh": "与图层交集"
+    },
+    "Member ids": {
+      "en": "Member ids",
+      "zh": "成员 ID"
+    },
+    "Remove member": {
+      "en": "Remove member",
+      "zh": "移除成员"
+    },
+    "View all": {
+      "en": "View all",
+      "zh": "查看全部"
+    },
+    "No members yet.": {
+      "en": "No members yet.",
+      "zh": "暂无成员。"
+    },
+    "Saving scenario special zone layers…": {
+      "en": "Saving scenario special zone layers…",
+      "zh": "正在保存剧本特殊区域图层…"
+    },
+    "Scenario special zone layer save failed.": {
+      "en": "Scenario special zone layer save failed.",
+      "zh": "剧本特殊区域图层保存失败。"
+    },
+    "Story preview": {
+      "en": "Story preview",
+      "zh": "故事预览"
+    },
+    "Create visible layers to preview a story sequence.": {
+      "en": "Create visible layers to preview a story sequence.",
+      "zh": "创建可见图层来预览故事序列。"
+    },
+    "Scenario special zone layer load failed.": {
+      "en": "Scenario special zone layer load failed.",
+      "zh": "剧本特殊区域图层加载失败。"
+    },
+    "Scenario special zone layer asset could not be loaded. Retry from the workbench.": {
+      "en": "Scenario special zone layer asset could not be loaded. Retry from the workbench.",
+      "zh": "无法加载剧本特殊区域图层资产。请在工作台重试。"
+    },
+    "Special zone layer load failed": {
+      "en": "Special zone layer load failed",
+      "zh": "特殊区域图层加载失败"
+    },
+    "Special zone topology fingerprint mismatch is listed in the workbench diagnostics.": {
+      "en": "Special zone topology fingerprint mismatch is listed in the workbench diagnostics.",
+      "zh": "特殊区域拓扑指纹不匹配已列入工作台诊断。"
+    },
+    "Special zone topology mismatch": {
+      "en": "Special zone topology mismatch",
+      "zh": "特殊区域拓扑不匹配"
+    },
+    "legacy_special_zone_fields_dropped": {
+      "en": "legacy_special_zone_fields_dropped",
+      "zh": "已丢弃旧版特殊区域字段。"
+    },
+    "Special Region Reference": {
+      "en": "Special Region Reference",
+      "zh": "特殊区域参考"
+    },
+    "Special Region Overrides Retired": {
+      "en": "Special Region Overrides Retired",
+      "zh": "特殊区域覆盖已退役"
+    },
+    "Special region color overrides retired. Use Special Zones layers for editable narrative regions.": {
+      "en": "Special region color overrides retired. Use Special Zones layers for editable narrative regions.",
+      "zh": "特殊区域颜色覆盖已退役。请使用特殊区域图层编辑叙事区域。"
+    },
+    "Inspect scenario-only basins and exposure zones. Use Special Zones layers for editable narrative regions.": {
+      "en": "Inspect scenario-only basins and exposure zones. Use Special Zones layers for editable narrative regions.",
+      "zh": "检查仅剧本使用的盆地和裸露区。请使用特殊区域图层编辑叙事区域。"
+    },
+    "Stroke": {
+      "en": "Stroke",
+      "zh": "描边"
     }
   },
   "geo": {

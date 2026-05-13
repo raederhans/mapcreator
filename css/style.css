@@ -9839,6 +9839,41 @@ body.right-drawer-open::after {
   padding: 6px 8px;
 }
 
+.special-zone-member-batch,
+.special-zone-story-preview {
+  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.26));
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.special-zone-member-batch-body,
+.special-zone-story-preview-list {
+  display: grid;
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.special-zone-member-import-input {
+  min-height: 72px;
+  resize: vertical;
+  width: 100%;
+}
+
+.special-zone-member-batch-actions,
+.special-zone-member-set-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.special-zone-story-preview-row {
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--muted-text, #64748b);
+  font-size: 0.82rem;
+  padding: 5px 7px;
+}
+
 .special-zone-member-id-list {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,10 @@
 // Legend manager (Phase 13)
 
+import {
+  getSpecialZoneLegendLayers,
+  getSpecialZoneLegendSignature,
+} from "./special_zone_layers.js";
+
 class LegendManager {
   static labels = {};
   static maxItems = 15;
@@ -40,6 +45,18 @@ class LegendManager {
 
   static getLabels() {
     return LegendManager.labels;
+  }
+
+  static getSpecialZoneLayers(appState) {
+    return appState?.showSpecialZones === false
+      ? []
+      : getSpecialZoneLegendLayers(appState?.specialZoneLayers);
+  }
+
+  static getSpecialZoneSignature(appState) {
+    return appState?.showSpecialZones === false
+      ? ""
+      : getSpecialZoneLegendSignature({ layers: LegendManager.getSpecialZoneLayers(appState) });
   }
 }
 

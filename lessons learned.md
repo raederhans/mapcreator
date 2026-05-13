@@ -1625,3 +1625,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ### 25. optional layer 的默认空对象不能当成已加载证据
 - specialZoneLayers 这类 runtime 默认对象会让 !state[field] 判断失效；visibility sync 要看 bundle payload / settled 状态，才能在独立 asset 失败时清空 stale runtime 数据。
+
+## 2026-05-13 - Special Zones Phase D closeout
+
+- Set operation 的空结果必须能真实写回模型；`replace` 模式要允许空数组清空成员，否则 subtract/intersect all 会留下旧 members。
+- 退休 UI 写路径时要同步 i18n 键；HTML 文案改了但 runtime translation 仍会覆盖成旧文案。

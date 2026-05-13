@@ -623,7 +623,7 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   expect(Object.hasOwn(roundtripExport.styleConfig, "specialZones")).toBe(false);
   expect(roundtripExport.specialZoneLayers).toBeTruthy();
   expect(roundtripExport.manualSpecialZones).toEqual({ type: "FeatureCollection", features: [] });
-  expect(roundtripExport.specialRegionOverrides).toEqual({});
+  expect(Object.hasOwn(roundtripExport, "specialRegionOverrides")).toBe(false);
   expect(roundtripExport.customPresets).toEqual({
     ZZZ: [
       {

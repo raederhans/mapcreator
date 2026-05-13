@@ -647,7 +647,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('getContextScenarioLayerCacheEntry("relief")')
       && renderPipelinePassesSource.includes('recordRenderPerfMetric("contextScenarioSignatureChanged"'),
     contextScenarioSpecialSignatureTracksPayloadIdentity:
-      /function getScenarioSpecialVisualRevisionToken\(\) \{[\s\S]*?special-ref:\$\{getObjectIdentityToken\(runtimeState\.scenarioSpecialRegionsData, "scenario-special"\)\}[\s\S]*?special-count:\$\{getFeatureCollectionFeatureCount\(runtimeState\.scenarioSpecialRegionsData\)\}[\s\S]*?special-overrides:\$\{stableJson\(runtimeState\.specialRegionOverrides \|\| \{\}\)\}/.test(rendererSource),
+      /function getScenarioSpecialVisualRevisionToken\(\) \{[\s\S]*?special-ref:\$\{getObjectIdentityToken\(runtimeState\.scenarioSpecialRegionsData, "scenario-special"\)\}[\s\S]*?special-count:\$\{getFeatureCollectionFeatureCount\(runtimeState\.scenarioSpecialRegionsData\)\}[\s\S]*?runtimeState\.showScenarioSpecialRegions \? "scenario-special:on" : "scenario-special:off"/.test(rendererSource),
     interactionMetricsKeepDirectActionAndHitRankDurations:
       rendererSource.includes('recordInteractionDurationMetric("interactionActionDuration"')
       && /function rankCandidates\(candidates, lonLat, \{ eventType = "unknown", targetType = "unknown" \} = \{\}\) \{[\s\S]*?recordInteractionDurationMetric\("interactionHitRankDuration"[\s\S]*?candidateCount: candidates\.length,[\s\S]*?geoContainsCount,[\s\S]*?containsGeoCount:[\s\S]*?eventType,[\s\S]*?targetType,/.test(rendererSource),

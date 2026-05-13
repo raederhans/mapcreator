@@ -206,10 +206,10 @@ test("color state accessor sanitizes water and special overrides through injecte
 
   assert.deepEqual(next, {
     waterRegionOverrides: { ocean: "#abcdef" },
-    specialRegionOverrides: { inland: "#123456" },
+    specialRegionOverrides: {},
   });
   assert.deepEqual(colorRuntimeState.waterRegionOverrides, { ocean: "#abcdef" });
-  assert.deepEqual(colorRuntimeState.specialRegionOverrides, { inland: "#123456" });
+  assert.deepEqual(colorRuntimeState.specialRegionOverrides, {});
 });
 
 test("normalizeColorStateForRender sanitizes mirrors and resolved colors together", () => {

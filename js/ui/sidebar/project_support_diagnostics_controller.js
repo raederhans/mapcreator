@@ -1,8 +1,6 @@
 import { setScenarioDiagnosticsState } from "../../core/state.js";
 import {
   createSpecialZonePatternPreviewStyle,
-  getSpecialZoneLegendLayers,
-  getSpecialZoneLegendSignature,
 } from "../../core/special_zone_layers.js";
 
 /**
@@ -97,7 +95,7 @@ export function createProjectSupportDiagnosticsController({
   };
 
   const getVisibleSpecialZoneLegendLayers = () => (
-    state.showSpecialZones === false ? [] : getSpecialZoneLegendLayers(state.specialZoneLayers)
+    legendManager.getSpecialZoneLayers(state)
   );
 
   const appendSpecialZoneLegendRows = (layers = getVisibleSpecialZoneLegendLayers()) => {
@@ -573,9 +571,7 @@ export function createProjectSupportDiagnosticsController({
     incrementSidebarCounter("legendRenders");
     const colors = legendManager.getUniqueColors(state);
     const specialZoneLegendLayers = getVisibleSpecialZoneLegendLayers();
-    const specialZoneLegendKey = state.showSpecialZones === false
-      ? ""
-      : getSpecialZoneLegendSignature({ layers: specialZoneLegendLayers });
+    const specialZoneLegendKey = legendManager.getSpecialZoneSignature(state);
     const key = `${colors.join("|")}::${specialZoneLegendKey}`;
     if (key === lastLegendKey && legendList.dataset.ready === "true") return;
     lastLegendKey = key;

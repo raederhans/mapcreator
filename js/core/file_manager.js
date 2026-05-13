@@ -451,7 +451,6 @@ class FileManager {
       sovereignBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       visualOverrides: appState.visualOverrides || appState.featureOverrides || {},
       waterRegionOverrides: appState.waterRegionOverrides || {},
-      specialRegionOverrides: {},
       specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers, {
         topologyFingerprint: resolveSpecialZoneTopologyFingerprint(appState),
       }),

@@ -58,7 +58,6 @@ function captureHistoryState({
   const snapshot = {};
   const ids = uniqueKeys(featureIds);
   const waterIds = uniqueKeys(waterRegionIds);
-  const specialIds = uniqueKeys(specialRegionIds);
   const ownerKeys = uniqueKeys(ownerCodes);
   const sovereigntyIds = uniqueKeys(sovereigntyFeatureIds);
   const styleKeys = uniqueKeys(stylePaths);
@@ -70,10 +69,6 @@ function captureHistoryState({
 
   if (waterIds.length) {
     snapshot.waterRegionOverrides = captureEntries(runtimeState.waterRegionOverrides || {}, waterIds);
-  }
-
-  if (specialIds.length) {
-    snapshot.specialRegionOverrides = captureEntries(runtimeState.specialRegionOverrides || {}, specialIds);
   }
 
   if (ownerKeys.length) {
@@ -217,7 +212,6 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   applyEntries(runtimeState.visualOverrides, snapshot.visualOverrides);
   applyEntries(runtimeState.featureOverrides, snapshot.featureOverrides);
   applyEntries(runtimeState.waterRegionOverrides, snapshot.waterRegionOverrides);
-  applyEntries(runtimeState.specialRegionOverrides, snapshot.specialRegionOverrides);
   applyEntries(runtimeState.sovereignBaseColors, snapshot.sovereignBaseColors);
   applyEntries(runtimeState.countryBaseColors, snapshot.countryBaseColors);
   applyEntries(runtimeState.countryPalette, snapshot.countryPalette);

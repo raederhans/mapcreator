@@ -79,7 +79,8 @@
     "build:global-transport-airports": "python tools/build_global_transport_points.py --family airport",
     "build:global-transport-ports": "python tools/build_global_transport_points.py --family port",
     "verify:perf-gate-contract": "python -m unittest tests.test_perf_gate_contract -q",
-    "bench:editor-performance": "python ops/browser-mcp/editor-performance-benchmark.py --out .runtime/output/perf/editor-performance-benchmark.json --screenshot-dir .runtime/browser/mcp-artifacts/perf"
+    "bench:editor-performance": "python ops/browser-mcp/editor-performance-benchmark.py --out .runtime/output/perf/editor-performance-benchmark.json --screenshot-dir .runtime/browser/mcp-artifacts/perf",
+    "bench:special-zones-members": "node tools/perf/special_zone_members_benchmark.mjs --members 240 --iterations 40 --out .runtime/output/perf/special-zone-members-benchmark.json"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",

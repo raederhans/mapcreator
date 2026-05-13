@@ -76,18 +76,23 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('updateSpecialZoneEditorUi: () => callRuntimeHook(state, "updateSpecialZoneEditorUIFn"),', sidebar_content)
         self.assertIn('updateWorkspaceStatus: () => callRuntimeHook(state, "updateWorkspaceStatusFn"),', sidebar_content)
 
-    def test_special_region_sidebar_keeps_legacy_override_compatibility_surface(self):
+    def test_special_region_sidebar_is_read_only_after_override_retirement(self):
         owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        i18n_content = I18N_JS.read_text(encoding="utf-8")
 
-        self.assertIn('createEmptyNote(t("Paint special regions to create an override list.", "ui"))', owner_content)
-        self.assertIn("specialRegionColorInput.disabled = false;", owner_content)
-        self.assertIn("clearSpecialRegionColorBtn.disabled = !hasOverride;", owner_content)
-        self.assertIn("runtimeState.specialRegionOverrides[selectedId] = nextColor;", owner_content)
-        self.assertIn("delete runtimeState.specialRegionOverrides[selectedId];", owner_content)
-        self.assertIn("special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}", renderer_content)
-        self.assertIn("getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);", renderer_content)
-        self.assertIn("Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)", renderer_content)
+        self.assertIn('createEmptyNote(t("Special region color overrides retired. Use Special Zones layers for editable narrative regions.", "ui"))', owner_content)
+        self.assertIn("specialRegionColorInput.disabled = true;", owner_content)
+        self.assertIn("clearSpecialRegionColorBtn.disabled = true;", owner_content)
+        self.assertIn('["lblSpecialRegionLegend", "Special Region Reference"]', i18n_content)
+        self.assertIn('["clearSpecialRegionColorBtn", "Special Region Overrides Retired"]', i18n_content)
+        self.assertNotIn('["lblSpecialRegionLegend", "Special Region Overrides"]', i18n_content)
+        self.assertNotIn('["clearSpecialRegionColorBtn", "Clear Special Region Override"]', i18n_content)
+        self.assertNotIn("runtimeState.specialRegionOverrides[selectedId] = nextColor;", owner_content)
+        self.assertNotIn("delete runtimeState.specialRegionOverrides[selectedId];", owner_content)
+        self.assertNotIn("special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}", renderer_content)
+        self.assertNotIn("getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);", renderer_content)
+        self.assertNotIn("Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)", renderer_content)
 
     def test_renderer_history_and_import_funnel_keep_water_special_callbacks(self):
         map_renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

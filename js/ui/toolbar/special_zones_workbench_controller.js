@@ -9,10 +9,12 @@ import {
   createLayerFromPreset,
   createSpecialZonePatternPreviewStyle,
   exitSpecialZoneMembershipToolState,
+  getSpecialZoneStoryPreviewSteps,
   mutateSpecialZoneLayersState,
   mutateRuntimeSpecialZoneLayersState,
   normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
+  parseSpecialZoneMemberImportText,
   registerSpecialZonesWorkbenchRuntimeHooks,
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
@@ -114,6 +116,7 @@ function createSpecialZonesWorkbenchController({
   let diagnosticsNode = null;
   let memberDrawerNode = null;
   let overlayToggleNode = null;
+  let memberImportInputNode = null;
   let lastDiagnosticsToastKey = "";
   let loadedScenarioLayerAssetId = "";
   let failedScenarioLayerAssetId = "";
@@ -163,6 +166,17 @@ function createSpecialZonesWorkbenchController({
   const getMemberBrushMode = () => {
     const mode = String(runtimeState.specialZoneMembershipBrushMode || "add").trim();
     return MEMBER_BRUSH_MODES.has(mode) ? mode : "add";
+  };
+
+  const getValidFeatureIds = () => (
+    runtimeState.landIndex instanceof Map ? new Set(runtimeState.landIndex.keys()) : null
+  );
+
+  const filterValidFeatureIds = (featureIds = []) => {
+    const validFeatureIds = getValidFeatureIds();
+    const ids = parseSpecialZoneMemberImportText((Array.isArray(featureIds) ? featureIds : [featureIds]).join("\n"));
+    if (!validFeatureIds) return ids;
+    return ids.filter((featureId) => validFeatureIds.has(featureId));
   };
 
   const activeScenarioDeclaresLayerAsset = () => {
@@ -228,6 +242,7 @@ function createSpecialZonesWorkbenchController({
     mutateRuntimeSpecialZoneLayersState(runtimeState, mutation, {
       defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
       topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+      validFeatureIds: getValidFeatureIds(),
     });
     if (mutation?.action === "addLayer") {
       runtimeState.showSpecialZones = true;
@@ -705,6 +720,60 @@ function createSpecialZonesWorkbenchController({
     clearBtn.disabled = !layer || !layer.memberFeatureIds.length;
     clearBtn.addEventListener("click", () => updateState({ action: "replaceMembers", layerId: layer.id, featureIds: [] }, "special-zone-members-clear"));
 
+    const batchImport = document.createElement("details");
+    batchImport.className = "special-zone-member-batch";
+    const batchSummary = document.createElement("summary");
+    batchSummary.textContent = translate("Batch import / set operations");
+    const batchBody = document.createElement("div");
+    batchBody.className = "special-zone-member-batch-body";
+    memberImportInputNode = document.createElement("textarea");
+    memberImportInputNode.className = "input special-zone-member-import-input";
+    memberImportInputNode.rows = 3;
+    memberImportInputNode.placeholder = translate("Paste feature ids separated by commas, spaces, or new lines");
+    const batchActions = document.createElement("div");
+    batchActions.className = "special-zone-member-batch-actions";
+    const importAddBtn = createButton(translate("Add imported ids"));
+    importAddBtn.addEventListener("click", () => {
+      const ids = filterValidFeatureIds(parseSpecialZoneMemberImportText(memberImportInputNode.value));
+      updateState({ action: "addMembers", layerId: layer.id, featureIds: ids }, "special-zone-members-batch-add");
+    });
+    const importReplaceBtn = createButton(translate("Replace with imported ids"));
+    importReplaceBtn.addEventListener("click", () => {
+      const ids = filterValidFeatureIds(parseSpecialZoneMemberImportText(memberImportInputNode.value));
+      updateState({ action: "replaceMembers", layerId: layer.id, featureIds: ids }, "special-zone-members-batch-replace");
+    });
+    batchActions.append(importAddBtn, importReplaceBtn);
+    const setOperationRow = document.createElement("div");
+    setOperationRow.className = "special-zone-member-set-row";
+    const setSourceSelect = document.createElement("select");
+    state.layers.filter((entry) => entry.id !== layer?.id).forEach((entry) => {
+      const option = document.createElement("option");
+      option.value = entry.id;
+      option.textContent = entry.name;
+      setSourceSelect.appendChild(option);
+    });
+    const applySetOperation = (operation, label) => {
+      if (!setSourceSelect.value) return;
+      updateState({
+        action: "applyMemberSetOperation",
+        layerId: layer.id,
+        sourceLayerId: setSourceSelect.value,
+        operation,
+      }, label);
+    };
+    const unionBtn = createButton(translate("Union with layer"));
+    unionBtn.disabled = !setSourceSelect.options.length;
+    unionBtn.addEventListener("click", () => applySetOperation("union", "special-zone-members-union"));
+    const subtractBtn = createButton(translate("Subtract layer"));
+    subtractBtn.disabled = unionBtn.disabled;
+    subtractBtn.addEventListener("click", () => applySetOperation("subtract", "special-zone-members-subtract"));
+    const intersectBtn = createButton(translate("Intersect layer"));
+    intersectBtn.disabled = unionBtn.disabled;
+    intersectBtn.addEventListener("click", () => applySetOperation("intersect", "special-zone-members-intersect"));
+    setOperationRow.append(setSourceSelect, unionBtn, subtractBtn, intersectBtn);
+    batchBody.append(memberImportInputNode, batchActions, setOperationRow);
+    batchImport.append(batchSummary, batchBody);
+
     const memberList = document.createElement("details");
     memberList.className = "special-zone-member-list";
     const memberSummary = document.createElement("summary");
@@ -811,7 +880,26 @@ function createSpecialZonesWorkbenchController({
     memberActions.className = "special-zone-member-actions-row";
     memberActions.append(exitToolBtn, currentTargetActionsNode, addSelectionBtn, replaceSelectionBtn, copySelect, copyBtn, clearBtn);
     layerActions.append(duplicateBtn, deleteBtn, saveBtn);
-    actionsNode.append(memberActions, memberList, layerActions);
+    const storyPreview = document.createElement("details");
+    storyPreview.className = "special-zone-story-preview";
+    const storySummary = document.createElement("summary");
+    storySummary.textContent = translate("Story preview");
+    const storyList = document.createElement("div");
+    storyList.className = "special-zone-story-preview-list";
+    getSpecialZoneStoryPreviewSteps(state).slice(0, 12).forEach((step, index) => {
+      const row = document.createElement("div");
+      row.className = "special-zone-story-preview-row";
+      row.textContent = `${index + 1}. ${step.title} · ${step.layerIds.length} ${translate("layers")}`;
+      storyList.appendChild(row);
+    });
+    if (!storyList.children.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = translate("Create visible layers to preview a story sequence.");
+      storyList.appendChild(empty);
+    }
+    storyPreview.append(storySummary, storyList);
+    actionsNode.append(memberActions, batchImport, memberList, storyPreview, layerActions);
   };
 
   const renderSpecialZonesWorkbenchCurrentTargetUi = () => {

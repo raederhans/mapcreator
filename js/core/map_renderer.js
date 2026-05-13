@@ -120,8 +120,6 @@ import { createTransportOverviewRenderOwner } from "./renderer/transport_overvie
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
 import { createSpecialZoneLayersRenderOwner } from "./renderer/special_zone_layers_render_owner.js";
 import {
-  getSpecialZoneLegendLayers,
-  getSpecialZoneLegendSignature,
   normalizeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 } from "./special_zone_layers.js";
@@ -2796,7 +2794,6 @@ function getScenarioSpecialVisualRevisionToken() {
     `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
     `special-ref:${getObjectIdentityToken(runtimeState.scenarioSpecialRegionsData, "scenario-special")}`,
     `special-count:${getFeatureCollectionFeatureCount(runtimeState.scenarioSpecialRegionsData)}`,
-    `special-overrides:${stableJson(runtimeState.specialRegionOverrides || {})}`,
     runtimeState.showScenarioSpecialRegions ? "scenario-special:on" : "scenario-special:off",
   ].join("|");
 }
@@ -3353,12 +3350,7 @@ function getSpecialRegionDefaultStyle(feature) {
 }
 
 function getSpecialRegionColor(id, feature = null) {
-  const resolvedId = String(id || "").trim();
-  // History restore and older scenario snapshots can still carry legacy
-  // special-region overrides, so the renderer continues to honor them here.
-  const override = getSafeCanvasColor(runtimeState.specialRegionOverrides?.[resolvedId], null);
-  if (override) return override;
-  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(resolvedId)).fill;
+  return getSpecialRegionDefaultStyle(feature || runtimeState.specialRegionsById?.get(String(id || "").trim())).fill;
 }
 
 function getSpecialRegionStrokeColor(feature) {
@@ -3366,10 +3358,6 @@ function getSpecialRegionStrokeColor(feature) {
 }
 
 function getSpecialRegionOpacity(feature, id) {
-  const resolvedId = String(id || "").trim();
-  if (Object.prototype.hasOwnProperty.call(runtimeState.specialRegionOverrides || {}, resolvedId)) {
-    return 1;
-  }
   return getSpecialRegionDefaultStyle(feature).opacity;
 }
 
@@ -20637,9 +20625,7 @@ export function renderLegend(uniqueColors = null, labels = null) {
   const colors = Array.isArray(uniqueColors)
     ? uniqueColors
     : LegendManager.getUniqueColors(state);
-  const specialZoneLegendLayers = runtimeState.showSpecialZones === false
-    ? []
-    : getSpecialZoneLegendLayers(runtimeState.specialZoneLayers);
+  const specialZoneLegendLayers = LegendManager.getSpecialZoneLayers(runtimeState);
   const labelMap = labels || LegendManager.getLabels();
   const hasScenarioVisualEdits =
     !!runtimeState.activeScenarioId &&
@@ -20652,9 +20638,7 @@ export function renderLegend(uniqueColors = null, labels = null) {
     return String(labelMap?.[key] || "").trim().length > 0;
   });
   const colorKey = colors.join("|");
-  const specialZoneLegendKey = runtimeState.showSpecialZones === false
-    ? ""
-    : getSpecialZoneLegendSignature({ layers: specialZoneLegendLayers });
+  const specialZoneLegendKey = LegendManager.getSpecialZoneSignature(runtimeState);
   const normalizedLabels = colors.map((color) => {
     const key = String(color || "").toLowerCase();
     return labelMap?.[key] || "";
@@ -23416,7 +23400,7 @@ function setMapData({
   runtimeState.countryBaseColors = sanitizeCountryColorMap(runtimeState.countryBaseColors);
   runtimeState.featureOverrides = sanitizeColorMap(runtimeState.featureOverrides);
   runtimeState.waterRegionOverrides = sanitizeColorMap(runtimeState.waterRegionOverrides);
-  runtimeState.specialRegionOverrides = sanitizeColorMap(runtimeState.specialRegionOverrides);
+  runtimeState.specialRegionOverrides = {};
   migrateLegacyColorState();
   setCanvasSize();
   buildRuntimePoliticalMeta();

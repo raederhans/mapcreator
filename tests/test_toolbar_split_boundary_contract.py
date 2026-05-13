@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import re
 import unittest
@@ -20,6 +21,8 @@ UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
+LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 
 
 class ToolbarSplitBoundaryContractTest(unittest.TestCase):
@@ -247,7 +250,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("specialZones: appState.specialZones || {}", file_manager)
         self.assertIn("specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers, {", file_manager)
         self.assertIn("specialZoneMembershipBrushMode: normalizeSpecialZoneMembershipBrushModeState(appState.specialZoneMembershipBrushMode)", file_manager)
-        self.assertIn("specialRegionOverrides: {}", file_manager)
+        self.assertNotIn("specialRegionOverrides: {}", file_manager)
         self.assertIn('manualSpecialZones: { type: "FeatureCollection", features: [] }', file_manager)
         self.assertIn("data.styleConfig.specialZones = null;", file_manager)
         self.assertIn("state.specialZones = data.specialZones || {}", interaction_funnel)
@@ -358,6 +361,37 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("layer.memberFeatureIds.slice(0, MEMBER_LIST_INLINE_RENDER_COUNT)", owner_content)
         self.assertIn("special-zone-member-overflow-btn", owner_content)
         self.assertIn("openMemberDrawer(layer)", owner_content)
+
+    def test_special_zone_phase_d_visible_copy_has_locale_entries(self):
+        catalog_content = I18N_CATALOG_JS.read_text(encoding="utf-8")
+        locales = json.loads(LOCALES_JSON.read_text(encoding="utf-8"))
+        ui_locales = locales.get("ui") or {}
+        keys = [
+            "Special Region Reference",
+            "Special Region Overrides Retired",
+            "Special region color overrides retired. Use Special Zones layers for editable narrative regions.",
+            "Inspect scenario-only basins and exposure zones. Use Special Zones layers for editable narrative regions.",
+            "Batch import / set operations",
+            "Paste feature ids separated by commas, spaces, or new lines",
+            "Add imported ids",
+            "Replace with imported ids",
+            "Union with layer",
+            "Subtract layer",
+            "Intersect layer",
+            "Story preview",
+            "Create visible layers to preview a story sequence.",
+            "All member ids",
+            "View all",
+            "Hide from legend",
+            "Show in legend",
+        ]
+
+        for key in keys:
+            with self.subTest(key=key):
+                self.assertIn(key, catalog_content)
+                self.assertIn(key, ui_locales)
+                self.assertEqual(ui_locales[key].get("en"), key)
+                self.assertTrue(ui_locales[key].get("zh"))
 
     def test_export_workbench_persistence_contract_stays_stable(self):
         file_manager = FILE_MANAGER_JS.read_text(encoding="utf-8")

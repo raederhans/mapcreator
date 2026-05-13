@@ -65,6 +65,8 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('importProjectThroughFunnel,', sidebar_content)
         self.assertIn('invalidateFrontlineOverlayState: () => invalidateFrontlineOverlayState(),', sidebar_content)
         self.assertIn('legendManager.getUniqueColors(state)', owner_content)
+        self.assertIn('legendManager.getSpecialZoneLayers(state)', owner_content)
+        self.assertIn('legendManager.getSpecialZoneSignature(state)', owner_content)
         self.assertIn('fileManager.exportProject(state);', owner_content)
         self.assertIn('importProjectThroughFunnel(file, {', owner_content)
         self.assertIn('invalidateFrontlineOverlayState,', owner_content)
