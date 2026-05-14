@@ -13597,6 +13597,39 @@ function buildFacilityEntryKey(entry) {
   return `${familyId}:${packId}:${stableId}`;
 }
 
+function buildFacilityEntrySemanticKey(entry) {
+  const familyId = String(entry?.familyId || "").trim().toLowerCase();
+  if (!familyId) return "";
+  const stableId = String(entry?.stableId || entry?.properties?.stable_key || "").trim();
+  if (stableId) return `${familyId}:stable:${stableId}`;
+  const id = String(entry?.id || entry?.properties?.id || entry?.properties?.facility_id || "").trim();
+  if (id) return `${familyId}:id:${id}`;
+  const coordinates = Array.isArray(entry?.coordinates)
+    ? entry.coordinates
+    : Array.isArray(entry?.properties?.__coordinates)
+      ? entry.properties.__coordinates
+      : Array.isArray(entry?.projectedPoint)
+        ? entry.projectedPoint
+        : [];
+  const [x, y] = coordinates;
+  if (Number.isFinite(Number(x)) && Number.isFinite(Number(y))) {
+    return `${familyId}:coord:${Number(x).toFixed(5)}:${Number(y).toFixed(5)}`;
+  }
+  return "";
+}
+
+function dedupeFacilityHoverEntriesBySemanticKey(entries = []) {
+  const dedupedByKey = new Map();
+  (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+    const semanticKey = buildFacilityEntrySemanticKey(entry) || `entry:${index}`;
+    const existing = dedupedByKey.get(semanticKey);
+    if (!existing || getFacilityEntryHitPriority(entry) >= getFacilityEntryHitPriority(existing)) {
+      dedupedByKey.set(semanticKey, entry);
+    }
+  });
+  return Array.from(dedupedByKey.values());
+}
+
 function clearFacilityHoverEntries(familyId = "") {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   if (normalizedFamilyId && Object.prototype.hasOwnProperty.call(visibleFacilityHoverEntriesByFamily, normalizedFamilyId)) {
@@ -13631,6 +13664,9 @@ function setVisibleFacilityHoverEntries(familyId = "", entries = [], { append = 
   } else {
     visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = nextEntries;
   }
+  visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = dedupeFacilityHoverEntriesBySemanticKey(
+    visibleFacilityHoverEntriesByFamily[normalizedFamilyId],
+  );
   const nextEntriesByKey = new Map(
     listVisibleFacilityHoverEntries()
       .map((entry) => [buildFacilityEntryKey(entry), entry])

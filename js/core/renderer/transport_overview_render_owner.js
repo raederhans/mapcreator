@@ -310,6 +310,48 @@ function getTransportLineLabelGridSize(labelDensity) {
   }
 }
 
+function getTransportFacilityDensityStrategy(k) {
+  const scale = Math.max(0.0001, Number(k || 1));
+  if (scale >= 5) {
+    return { level: "local", gridSizePx: 16, maxVisible: 5000 };
+  }
+  if (scale >= 2.4) {
+    return { level: "regional", gridSizePx: 32, maxVisible: 1200 };
+  }
+  return { level: "world", gridSizePx: 56, maxVisible: 600 };
+}
+
+function getTransportFacilityEntryStableSortKey(feature, properties = {}, coordinates = []) {
+  return String(
+    properties.stable_key
+    || properties.id
+    || properties.facility_id
+    || properties.name
+    || `${coordinates?.[0] ?? ""}:${coordinates?.[1] ?? ""}`
+    || feature?.id
+    || ""
+  ).trim();
+}
+
+function applyTransportFacilityDensity(entries, densityStrategy) {
+  const sortedEntries = [...entries].sort((left, right) => {
+    if (right.importanceRank !== left.importanceRank) return right.importanceRank - left.importanceRank;
+    return String(left.stableSortKey || "").localeCompare(String(right.stableSortKey || ""));
+  });
+  const gridSizePx = Math.max(1, Number(densityStrategy?.gridSizePx || 1));
+  const maxVisible = Math.max(1, Number(densityStrategy?.maxVisible || sortedEntries.length));
+  const usedBuckets = new Set();
+  const filteredEntries = [];
+  for (const entry of sortedEntries) {
+    const bucket = `${Math.floor(Number(entry.screenX || 0) / gridSizePx)}:${Math.floor(Number(entry.screenY || 0) / gridSizePx)}`;
+    if (usedBuckets.has(bucket)) continue;
+    usedBuckets.add(bucket);
+    filteredEntries.push(entry);
+    if (filteredEntries.length >= maxVisible) break;
+  }
+  return filteredEntries;
+}
+
 function buildProjectedRailLines(geometry) {
   if (!projection || !geometry || typeof geometry !== "object") return [];
   const rawLines = geometry.type === "LineString"
@@ -435,6 +477,7 @@ function buildContextFacilityEntries(
   collection,
   thresholdRank = 1,
   {
+    densityStrategy = null,
     getLabelText = null,
   } = {},
 ) {
@@ -479,6 +522,7 @@ function buildContextFacilityEntries(
       screenX,
       screenY,
       screenScale: zoomTransform.k,
+      stableSortKey: getTransportFacilityEntryStableSortKey(feature, properties, coordinates),
       label: typeof getLabelText === "function"
         ? String(getLabelText(properties, feature) || "").trim()
         : String(properties.name || "").trim(),
@@ -489,10 +533,15 @@ function buildContextFacilityEntries(
       },
     });
   });
-  entries.sort((left, right) => left.importanceRank - right.importanceRank);
+  const densityFilteredEntries = densityStrategy
+    ? applyTransportFacilityDensity(entries, densityStrategy)
+    : entries.sort((left, right) => right.importanceRank - left.importanceRank);
   return {
     featureCount,
-    entries,
+    entries: densityFilteredEntries,
+    unfilteredVisibleFeatureCount: entries.length,
+    densityLevel: densityStrategy?.level || "",
+    densityGridSizePx: densityStrategy?.gridSizePx || 0,
     skipped: false,
     reason: "",
   };
@@ -500,20 +549,116 @@ function buildContextFacilityEntries(
 
 function tintTransportFacilityIcon(context2d, { x, y, size, tintColor, strokeColor, opacity, scale, strokeScale }) {
   context2d.save();
-  context2d.globalCompositeOperation = "source-atop";
-  context2d.globalAlpha = Math.min(0.22, Math.max(0.08, opacity * 0.18));
-  context2d.fillStyle = tintColor;
-  context2d.fillRect(x, y, size, size);
-  context2d.restore();
-
-  context2d.save();
   context2d.globalAlpha = Math.min(0.72, Math.max(0.28, opacity * 0.48));
   context2d.strokeStyle = strokeColor;
-  context2d.lineWidth = Math.max(0.75 / scale, (0.95 * strokeScale) / scale);
+  context2d.lineWidth = Math.max(0.75 / scale, (1 * strokeScale) / scale);
   context2d.beginPath();
-  context2d.arc(x + (size / 2), y + (size / 2), size * 0.48, 0, Math.PI * 2);
+  context2d.arc(x + (size / 2), y + (size / 2), Math.max(0, (size / 2) - (0.5 / scale)), 0, Math.PI * 2);
   context2d.stroke();
   context2d.restore();
+}
+
+function rectanglesOverlap(left, right) {
+  return left.x < right.x + right.width
+    && left.x + left.width > right.x
+    && left.y < right.y + right.height
+    && left.y + left.height > right.y;
+}
+
+function findTransportFacilityLabelPlacement(entry, { fontSizePx, iconSizePx, zoomScale, measureText }) {
+  const label = String(entry?.label || "").trim();
+  if (!label) return null;
+  const screenFontSize = Math.max(8, Number(fontSizePx || 10));
+  const screenTextWidth = Math.max(1, Number(measureText(label)) || (label.length * screenFontSize * 0.58));
+  const screenTextHeight = screenFontSize + 3;
+  const gap = Math.max(5, (Number(iconSizePx || 10) / 2) + 4);
+  const screenX = Number(entry.screenX || 0);
+  const screenY = Number(entry.screenY || 0);
+  const placements = [
+    {
+      textX: screenX + gap,
+      textY: screenY,
+      box: { x: screenX + gap - 2, y: screenY - (screenTextHeight / 2), width: screenTextWidth + 4, height: screenTextHeight },
+    },
+    {
+      textX: screenX - gap - screenTextWidth,
+      textY: screenY,
+      box: { x: screenX - gap - screenTextWidth - 2, y: screenY - (screenTextHeight / 2), width: screenTextWidth + 4, height: screenTextHeight },
+    },
+    {
+      textX: screenX - (screenTextWidth / 2),
+      textY: screenY - gap - (screenTextHeight / 2),
+      box: { x: screenX - (screenTextWidth / 2) - 2, y: screenY - gap - screenTextHeight, width: screenTextWidth + 4, height: screenTextHeight },
+    },
+    {
+      textX: screenX - (screenTextWidth / 2),
+      textY: screenY + gap + (screenTextHeight / 2),
+      box: { x: screenX - (screenTextWidth / 2) - 2, y: screenY + gap, width: screenTextWidth + 4, height: screenTextHeight },
+    },
+  ];
+  return placements.map((placement) => ({
+    ...placement,
+    worldX: (placement.textX - getCurrentZoomTransform().x) / zoomScale,
+    worldY: (placement.textY - getCurrentZoomTransform().y) / zoomScale,
+  }));
+}
+
+function drawTransportFacilityLabels(entries, {
+  familyId,
+  k,
+  labelColor,
+  nationalLabelScale,
+  regionalLabelScale,
+  radiusScale,
+}) {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  const candidates = entries
+    .filter((entry) => {
+      if (!entry.label) return false;
+      return entry.importanceRank >= 3 ? k >= nationalLabelScale : k >= regionalLabelScale;
+    })
+    .sort((left, right) => {
+      if (right.importanceRank !== left.importanceRank) return right.importanceRank - left.importanceRank;
+      const labelDelta = String(left.label || "").length - String(right.label || "").length;
+      if (labelDelta !== 0) return labelDelta;
+      return String(left.stableSortKey || "").localeCompare(String(right.stableSortKey || ""));
+    });
+  const occupiedBoxes = [];
+  let labelCount = 0;
+  context.save();
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  candidates.forEach((entry) => {
+    const usesFacilityIcon = normalizedFamilyId === "airport" || normalizedFamilyId === "port";
+    const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));
+    const iconSizePx = usesFacilityIcon
+      ? resolveTransportFacilityIconDrawSizePx(normalizedFamilyId, entry.properties, { visualScale: radiusScale })
+      : (entry.importanceRank >= 3 ? 10.4 : 8.6);
+    const screenFontSize = Math.max(8, Math.min(12, iconSizePx * (entry.importanceRank >= 3 ? 0.92 : 0.86)));
+    const worldFontSize = usesFacilityIcon ? screenFontSize / zoomScale : screenFontSize;
+    context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${worldFontSize}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
+    const measureText = (label) => {
+      if (typeof context.measureText === "function") return Number(context.measureText(label)?.width || 0) * zoomScale;
+      return String(label || "").length * screenFontSize * 0.58;
+    };
+    const placements = findTransportFacilityLabelPlacement(entry, {
+      fontSizePx: screenFontSize,
+      iconSizePx,
+      zoomScale,
+      measureText,
+    });
+    const placement = placements?.find((candidate) => !occupiedBoxes.some((box) => rectanglesOverlap(candidate.box, box)));
+    if (!placement) return;
+    occupiedBoxes.push(placement.box);
+    context.lineWidth = usesFacilityIcon ? 3 / zoomScale : 3;
+    context.strokeStyle = "rgba(255,255,255,0.92)";
+    context.fillStyle = labelColor;
+    context.strokeText(entry.label, placement.worldX, placement.worldY);
+    context.fillText(entry.label, placement.worldX, placement.worldY);
+    labelCount += 1;
+  });
+  context.restore();
+  return labelCount;
 }
 
 function drawContextFacilityPointLayer(
@@ -576,6 +721,9 @@ function drawContextFacilityPointLayer(
     return;
   }
   const renderState = buildContextFacilityEntries(collection, thresholdRank, {
+    densityStrategy: normalizedFamilyId === "airport" || normalizedFamilyId === "port"
+      ? getTransportFacilityDensityStrategy(k)
+      : null,
     getLabelText,
   });
   if (renderState.skipped) {
@@ -596,20 +744,10 @@ function drawContextFacilityPointLayer(
   const iconAtlasImage = usesFacilityIconLayer
     ? getTransportFacilityIconAtlasImage(requestTransportFacilityIconAtlasRender)
     : null;
+  const iconAtlasStatus = usesFacilityIconLayer
+    ? (getTransportFacilityIconAtlasStatus() || "unavailable")
+    : "";
   const canDrawIconAtlas = !!iconAtlasImage && isTransportFacilityIconAtlasReady();
-  if (usesFacilityIconLayer && !canDrawIconAtlas) {
-    clearCurrentPackHoverEntries();
-    collectContextMetric(metricName, nowMs() - startedAt, {
-      featureCount: renderState.featureCount,
-      visibleFeatureCount: 0,
-      labelCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: `icon-atlas-${getTransportFacilityIconAtlasStatus() || "unavailable"}`,
-    });
-    return;
-  }
-  let labelCount = 0;
   context.save();
   context.lineJoin = "round";
   context.lineCap = "round";
@@ -622,13 +760,14 @@ function drawContextFacilityPointLayer(
       ? resolveTransportFacilityIconDrawSizePx(normalizedFamilyId, entry.properties, { visualScale: radiusScale })
       : radiusBase * radiusScale * 2;
     const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));
+    const drawsAtlasIcon = !!iconCell && canDrawIconAtlas;
     const markerEntry = {
       familyId: normalizedFamilyId,
       packId: normalizedPackId,
       stableId: String(entry.properties?.stable_key || entry.properties?.id || entry.label || `${entry.x}:${entry.y}`).trim(),
-      shape: iconCell ? "icon" : shape,
+      shape: drawsAtlasIcon ? "icon" : shape,
       iconKey,
-      markerRadiusPx: iconCell ? Math.max(5.4, iconSizePx * 0.52) : radiusBase * radiusScale,
+      markerRadiusPx: iconCell ? Math.max(4.5, iconSizePx * 0.52) : radiusBase * radiusScale,
       hoverScale: Number(hoverScale || 1.18),
       highlightStroke: String(highlightStroke || strokeStyle || "#ffffff"),
       projectedPoint: [entry.x, entry.y],
@@ -640,36 +779,34 @@ function drawContextFacilityPointLayer(
     markerEntry.tooltipText = buildFacilityTooltipText(markerEntry);
     hoverEntries.push(markerEntry);
     const highlightFactor = buildFacilityEntryKey(markerEntry) && buildFacilityEntryKey(markerEntry) === activeHighlightKey ? markerEntry.hoverScale : 1;
-    if (iconCell) {
-      if (canDrawIconAtlas) {
-        const iconWorldSize = (iconSizePx * highlightFactor) / zoomScale;
-        const iconLeft = entry.x - (iconWorldSize / 2);
-        const iconTop = entry.y - (iconWorldSize / 2);
-        context.drawImage(
-          iconAtlasImage,
-          iconCell.x,
-          iconCell.y,
-          iconCell.size,
-          iconCell.size,
-          iconLeft,
-          iconTop,
-          iconWorldSize,
-          iconWorldSize,
-        );
-        tintTransportFacilityIcon(context, {
-          x: iconLeft,
-          y: iconTop,
-          size: iconWorldSize,
-          tintColor: fillStyle,
-          strokeColor: highlightFactor > 1 ? markerEntry.highlightStroke : strokeStyle,
-          opacity,
-          scale: zoomScale,
-          strokeScale,
-        });
-      }
+    if (drawsAtlasIcon) {
+      const iconWorldSize = (iconSizePx * highlightFactor) / zoomScale;
+      const iconLeft = entry.x - (iconWorldSize / 2);
+      const iconTop = entry.y - (iconWorldSize / 2);
+      context.drawImage(
+        iconAtlasImage,
+        iconCell.x,
+        iconCell.y,
+        iconCell.size,
+        iconCell.size,
+        iconLeft,
+        iconTop,
+        iconWorldSize,
+        iconWorldSize,
+      );
+      tintTransportFacilityIcon(context, {
+        x: iconLeft,
+        y: iconTop,
+        size: iconWorldSize,
+        tintColor: fillStyle,
+        strokeColor: highlightFactor > 1 ? markerEntry.highlightStroke : strokeStyle,
+        opacity,
+        scale: zoomScale,
+        strokeScale,
+      });
       return;
     }
-    const radius = markerEntry.markerRadiusPx * highlightFactor;
+    const radius = (markerEntry.markerRadiusPx * highlightFactor) / zoomScale;
     context.beginPath();
     if (shape === "square") {
       context.rect(entry.x - radius, entry.y - radius, radius * 2, radius * 2);
@@ -682,7 +819,7 @@ function drawContextFacilityPointLayer(
     }
     context.fillStyle = fillStyle;
     context.strokeStyle = strokeStyle;
-    context.lineWidth = (entry.importanceRank >= 3 ? 1.4 : 1.1) * strokeScale;
+    context.lineWidth = ((entry.importanceRank >= 3 ? 1.4 : 1.1) * strokeScale) / zoomScale;
     context.fill();
     context.stroke();
   });
@@ -699,33 +836,22 @@ function drawContextFacilityPointLayer(
       labelCount: 0,
       interactive: !!interactive,
       skipped: false,
+      unfilteredVisibleFeatureCount: renderState.unfilteredVisibleFeatureCount,
+      densityLevel: renderState.densityLevel,
+      densityGridSizePx: renderState.densityGridSizePx,
+      iconAtlasStatus: iconAtlasStatus || undefined,
     });
     return;
   }
 
-  context.save();
-  context.textAlign = "left";
-  context.textBaseline = "middle";
-  renderState.entries.forEach((entry) => {
-    if (!entry.label) return;
-    const shouldShowLabel = entry.importanceRank >= 3 ? k >= nationalLabelScale : k >= regionalLabelScale;
-    if (!shouldShowLabel) return;
-    const usesFacilityIcon = normalizedFamilyId === "airport" || normalizedFamilyId === "port";
-    const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));
-    const iconSizePx = resolveTransportFacilityIconDrawSizePx(normalizedFamilyId, entry.properties, { visualScale: radiusScale });
-    const fontSize = usesFacilityIcon
-      ? (entry.importanceRank >= 3 ? 11 : 10) / zoomScale
-      : (entry.importanceRank >= 3 ? 11 : 10);
-    const labelOffset = usesFacilityIcon ? ((iconSizePx / 2) + 4) / zoomScale : 8;
-    context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${fontSize}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
-    context.lineWidth = usesFacilityIcon ? 3 / zoomScale : 3;
-    context.strokeStyle = "rgba(255,255,255,0.92)";
-    context.fillStyle = labelColor;
-    context.strokeText(entry.label, entry.x + labelOffset, entry.y);
-    context.fillText(entry.label, entry.x + labelOffset, entry.y);
-    labelCount += 1;
+  const labelCount = drawTransportFacilityLabels(renderState.entries, {
+    familyId: normalizedFamilyId,
+    k,
+    labelColor,
+    nationalLabelScale,
+    regionalLabelScale,
+    radiusScale,
   });
-  context.restore();
 
   collectContextMetric(metricName, nowMs() - startedAt, {
     featureCount: renderState.featureCount,
@@ -733,6 +859,10 @@ function drawContextFacilityPointLayer(
     labelCount,
     interactive: !!interactive,
     skipped: false,
+    unfilteredVisibleFeatureCount: renderState.unfilteredVisibleFeatureCount,
+    densityLevel: renderState.densityLevel,
+    densityGridSizePx: renderState.densityGridSizePx,
+    iconAtlasStatus: iconAtlasStatus || undefined,
   });
 }
 
@@ -796,6 +926,7 @@ function drawPortsLayer(k, { interactive = false } = {}) {
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showPorts,
     thresholdRank: strategy.thresholdRank,
+    shape: "square",
     fillStyle: visualStyle.fillStyle,
     strokeStyle: visualStyle.strokeStyle,
     labelColor: visualStyle.labelColor,

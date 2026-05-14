@@ -61,8 +61,10 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             self.assertIn(token, content)
         self.assertIn("readFacadeGetter('getFacilitySurfaceOwner')().buildFacilityTooltipText(entry);", facade_content)
         self.assertIn("getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {", content)
-        self.assertIn("setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries);", transport_owner_content)
+        self.assertIn("setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries, {", transport_owner_content)
         self.assertIn("const nextEntriesByKey = new Map(", content)
+        self.assertIn("function buildFacilityEntrySemanticKey", content)
+        self.assertIn("dedupeFacilityHoverEntriesBySemanticKey(", content)
         self.assertIn("hoveredFacilityEntry = nextHoveredEntry;", content)
         self.assertIn("selectedFacilityEntry = nextSelectedEntry;", content)
         self.assertIn("function buildFacilityTooltipText", owner_content)
@@ -82,10 +84,9 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("screenPoint: [entry.screenX, entry.screenY]", content)
         self.assertIn("const screenX = (x * zoomTransform.k) + zoomTransform.x;", content)
         self.assertIn("const screenY = (y * zoomTransform.k) + zoomTransform.y;", content)
-        self.assertIn('shape: iconCell ? "icon" : shape', content)
-        self.assertIn("markerRadiusPx: iconCell ? Math.max(5.4, iconSizePx * 0.52) : radiusBase * radiusScale", content)
-        self.assertIn("clearFacilityHoverEntries(normalizedFamilyId);", content)
-        self.assertIn('reason: `icon-atlas-${getTransportFacilityIconAtlasStatus() || "unavailable"}`', content)
+        self.assertIn('shape: drawsAtlasIcon ? "icon" : shape', content)
+        self.assertIn("markerRadiusPx: iconCell ? Math.max(4.5, iconSizePx * 0.52) : radiusBase * radiusScale", content)
+        self.assertIn('iconAtlasStatus: iconAtlasStatus || undefined', content)
         self.assertIn('invalidateRenderPasses("contextMarkers", "transport-facility-icons-ready");', content)
         self.assertIn("invalidateRenderPasses,", renderer_content)
         self.assertIn('if (datum.shape === "icon")', renderer_content)
@@ -99,7 +100,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         airport_section = content.split('familyId: "airport"', 1)[1].split("});", 1)[0]
         port_section = content.split('familyId: "port"', 1)[1].split("});", 1)[0]
         self.assertNotIn('shape: "diamond"', airport_section)
-        self.assertNotIn('shape: "square"', port_section)
+        self.assertIn('shape: "square"', port_section)
 
         for token in [
             "airport_major",

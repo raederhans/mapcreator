@@ -14,18 +14,19 @@ export const TRANSPORT_FACILITY_ICON_CELLS = Object.freeze({
 });
 
 const ICON_BASE_SIZE_PX = Object.freeze({
-  airport_major: 15,
-  airport_regional: 14,
-  airport_local: 12,
-  airport_military: 16,
-  airport_spaceport: 16,
-  port_hub: 15,
-  port_important: 14,
-  port_local: 12,
+  airport_major: 11.5,
+  airport_regional: 10.5,
+  airport_local: 9,
+  airport_military: 12,
+  airport_spaceport: 12,
+  port_hub: 11.5,
+  port_important: 10.5,
+  port_local: 9,
 });
 
 let atlasImage = null;
 let atlasStatus = "idle";
+let atlasErrorWarned = false;
 const atlasStatusCallbacks = new Set();
 
 function normalizeToken(value) {
@@ -88,9 +89,9 @@ export function resolveTransportFacilityIconDrawSizePx(
   { visualScale = 1 } = {},
 ) {
   const iconKey = resolveTransportFacilityIconKey(familyId, properties);
-  const baseSize = ICON_BASE_SIZE_PX[iconKey] || 12;
-  const normalizedVisualScale = Math.min(1.14, Math.max(0.9, Number(visualScale) || 1));
-  return Math.min(18, Math.max(10, baseSize * normalizedVisualScale));
+  const baseSize = ICON_BASE_SIZE_PX[iconKey] || 9;
+  const normalizedVisualScale = Math.min(1.4, Math.max(0.6, Number(visualScale) || 1));
+  return Math.min(20, Math.max(7, baseSize * normalizedVisualScale));
 }
 
 function notifyAtlasStatus(status) {
@@ -115,8 +116,19 @@ export function getTransportFacilityIconAtlasStatus() {
 }
 
 export function getTransportFacilityIconAtlasImage(onStatusChange = null) {
+  if (atlasImage) {
+    if (typeof onStatusChange === "function") {
+      if (atlasStatus === "ready" || atlasStatus === "error") {
+        onStatusChange();
+      } else {
+        atlasStatusCallbacks.add(onStatusChange);
+      }
+    }
+    return atlasImage;
+  }
   if (typeof Image === "undefined") {
     atlasStatus = "unavailable";
+    if (typeof onStatusChange === "function") onStatusChange();
     return null;
   }
   if (typeof onStatusChange === "function") {
@@ -126,12 +138,21 @@ export function getTransportFacilityIconAtlasImage(onStatusChange = null) {
       atlasStatusCallbacks.add(onStatusChange);
     }
   }
-  if (atlasImage) return atlasImage;
   atlasImage = new Image();
   atlasStatus = "loading";
   atlasImage.decoding = "async";
   atlasImage.onload = () => notifyAtlasStatus("ready");
-  atlasImage.onerror = () => notifyAtlasStatus("error");
+  atlasImage.onerror = (error) => {
+    if (!atlasErrorWarned) {
+      atlasErrorWarned = true;
+      globalThis.console?.warn?.("[transport-facility-icons] atlas failed", {
+        url: TRANSPORT_FACILITY_ICON_ATLAS_URL,
+        status: "error",
+        error,
+      });
+    }
+    notifyAtlasStatus("error");
+  };
   atlasImage.src = TRANSPORT_FACILITY_ICON_ATLAS_URL;
   if (atlasImage.complete && Number(atlasImage.naturalWidth || 0) > 0) {
     notifyAtlasStatus("ready");

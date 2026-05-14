@@ -1639,3 +1639,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 48. partial repaint 的基线必须跟画布生命周期一起失效
 - 如果 partial repaint 依赖 full pass 基线，画布 resize / DPR / pass cache reset 时必须同步清掉 full baseline；只标 dirty 会留下“空 canvas + 旧 transform”的风险窗口。
 - 最短稳做法是把普通 reference 和 full reference 统一挂到同一条 clearRenderPassReferenceTransforms 清理链，再用合同测试钉住 resize 路径。
+
+### 48. 视觉资源未就绪时，交互目标要跟可见 fallback 同步
+- 机场/港口这类 atlas 图标层如果在 loading/error 时直接早退，会形成“看不见也点不到”的空白态。
+- 更稳的做法是：资源未就绪时绘制明确的几何 fallback，并注册同一批 hover entries；atlas ready 后只切换绘制形态，不切断交互语义。
