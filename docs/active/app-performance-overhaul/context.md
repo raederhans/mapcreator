@@ -439,3 +439,6 @@ pm run bench:editor-performance。
 - Validation: node checks passed; scenario chunk contracts 28/28 passed; physical layer contracts 2/2 passed; scenario chunk runtime E2E 5/5 passed; perf gate contract 19/19 passed.
 - Perf gate: one run passed before review fixes; three later reruns failed on startup/apply timing metrics outside political repaint. Latest logs are under .runtime/tests/perf-gate*.log.
 - Final static review accepted the explicit abort recover requirement and approved the implementation scope.
+
+## 2026-05-14 exact-after-settle political invalidation merge closeout
+- Branch work/exact-after-settle-political fast-forward merged into main at commit 7279324.

@@ -366,13 +366,13 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Run targeted source contracts.
 - [x] Run dev runtime E2E.
 - [x] Run perf contract and perf gate.
-- [x] Final static review completed; merge back to main pending.
+- [x] Final static review completed; merged back to main.
 
 ## 2026-05-14 01:44 UTC exact-after-settle political invalidation task closeout
 - [x] Run targeted source contracts.
 - [x] Run dev runtime E2E.
 - [x] Run perf contract and perf gate.
-- [x] Final static review completed; merge back to main pending.
+- [x] Final static review completed; merged back to main.
 
 ## 2026-05-14 02:07 UTC exact-after-settle political invalidation review-fix tasks
 - [x] Split focused exact-after-settle political repaint E2E from zoom-end GCO chunk-fill regression.
@@ -380,4 +380,4 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Re-run source contracts and runtime E2E after review fixes.
 - [x] Re-run perf contract.
 - [x] Re-run perf gate three times; failures isolated to startup/apply timing metrics outside political repaint.
-- [x] Final static review completed; merge back to main pending.
+- [x] Final static review completed; merged back to main.
