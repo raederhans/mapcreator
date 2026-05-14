@@ -390,4 +390,4 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Run scenario chunk contracts.
 - [x] Run physical layer contracts.
 - [x] Run scenario chunk runtime E2E.
-- [x] Final static review approved; merge back to main pending.
+- [x] Final static review approved; merged back to main.

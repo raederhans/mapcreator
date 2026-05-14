@@ -454,3 +454,6 @@ pm run bench:editor-performance。
 - Fix extended setCanvasSize with targetPassesOnCanvasResize, excluded political from exact-after-settle DPR/resize invalidation and canvas resize, and made ensureRenderPassCanvas resize only the requested pass.
 - Final static review approved the guarded ordering: political canvas resize and exact-after-settle-political dirty now happen together inside the political pass task after idle/current checks.
 - Fresh validation after final fix: scenario chunk contracts 28/28 passed; physical layer contracts 2/2 passed; scenario chunk runtime E2E 5/5 passed; LSP diagnostics 0 errors for modified JS/MJS files.
+
+## 2026-05-14 exact-after-settle political review fix merge
+- Branch work/exact-after-settle-reviewfix fast-forward merged into main at commit b47ca76.
