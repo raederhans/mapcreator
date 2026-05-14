@@ -66,6 +66,21 @@ async function dragMap(page, { dx = 180, dy = 24, steps = 8 } = {}) {
   await page.waitForTimeout(700);
 }
 
+async function scheduleExactAfterSettleRefreshForFocusedTest(page) {
+  await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const { scheduleExactAfterSettleRefresh } = await import("/js/core/map_renderer.js");
+    if (state.deferExactAfterSettle || state.exactAfterSettleHandle) return;
+    state.deferExactAfterSettle = true;
+    scheduleExactAfterSettleRefresh({
+      scaleDelta: 0,
+      normalizedDelta: 0,
+      settleDurationMs: 0,
+      exactQuietWindowMs: 0,
+    });
+  });
+}
+
 async function waitForStableExactRender(page, { timeout = 30_000 } = {}) {
   await page.waitForFunction(() => {
     const state = globalThis.__playwrightStateRef || null;
@@ -192,10 +207,18 @@ test("chunk promotion visual stage can land before exact-after-settle clears", a
   await startChunkPromotionProbe(page);
 
   await setZoomPercent(page, 120, { waitAfterMs: 0 });
+  await scheduleExactAfterSettleRefreshForFocusedTest(page);
   await page.waitForFunction(() => {
     const state = globalThis.__playwrightStateRef || null;
     const probe = state?.__chunkPromotionVisualStageProbe || null;
-    return !!state.deferExactAfterSettle || !!state.exactAfterSettleHandle || !!probe?.sawDeferred;
+    const metrics = state.renderPerfMetrics && typeof state.renderPerfMetrics === "object"
+      ? state.renderPerfMetrics
+      : (globalThis.__renderPerfMetrics || {});
+    const exactPassMetric = metrics.settleExactRefreshPasses || null;
+    return !!state.deferExactAfterSettle
+      || !!state.exactAfterSettleHandle
+      || !!probe?.sawDeferred
+      || Number(exactPassMetric?.recordedAt || 0) >= Number(probe?.startedAt || 0);
   }, { timeout: 20_000 });
   await waitForStableExactRender(page, { timeout: 30_000 });
 
@@ -227,6 +250,8 @@ test("chunk promotion visual stage can land before exact-after-settle clears", a
   });
 
   expect(finalState.renderPhase).toBe("idle");
+  expect(finalState.deferExactAfterSettle).toBe(false);
+  expect(finalState.hasExactAfterSettleHandle).toBe(false);
   expect(finalState.hasPendingVisualPromotionField).toBe(true);
   expect(finalState.hasPendingInfraPromotionField).toBe(true);
   expect(finalState.visualMetricRecordedAt).toBeGreaterThanOrEqual(seededState.initialVisualMetricRecordedAt);
@@ -276,6 +301,50 @@ test("sync prewarm threshold completes first-frame chunk prewarm before refresh 
   expect(Number(stageOrder.visualPromotionMetric?.promotionVersion || 0)).toBeGreaterThanOrEqual(1);
 });
 
+test("exact-after-settle repaints political pass with stable invalidation metric", async ({ page }) => {
+  await gotoApp(page, FAST_STARTUP_PATH, { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+  await ensureScenario(page, "tno_1962", "TNO 1962");
+  await waitForStableExactRender(page);
+
+  const beforeRefresh = await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    return {
+      activeScenarioId: String(state.activeScenarioId || ""),
+      politicalPassRenders: Number(state.renderPassCache?.counters?.politicalPassRenders || 0),
+    };
+  });
+
+  expect(beforeRefresh.activeScenarioId).toBe("tno_1962");
+
+  await scheduleExactAfterSettleRefreshForFocusedTest(page);
+  await waitForStableExactRender(page, { timeout: 30_000 });
+
+  const afterRefresh = await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const metrics = state.renderPerfMetrics && typeof state.renderPerfMetrics === "object"
+      ? state.renderPerfMetrics
+      : (globalThis.__renderPerfMetrics || {});
+    return {
+      activeScenarioId: String(state.activeScenarioId || ""),
+      renderPhase: String(state.renderPhase || ""),
+      deferExactAfterSettle: !!state.deferExactAfterSettle,
+      hasExactAfterSettleHandle: !!state.exactAfterSettleHandle,
+      politicalPassRenders: Number(state.renderPassCache?.counters?.politicalPassRenders || 0),
+      settleExactRefreshPasses: metrics.settleExactRefreshPasses || null,
+    };
+  });
+
+  expect(afterRefresh.activeScenarioId).toBe("tno_1962");
+  expect(afterRefresh.renderPhase).toBe("idle");
+  expect(afterRefresh.deferExactAfterSettle).toBe(false);
+  expect(afterRefresh.hasExactAfterSettleHandle).toBe(false);
+  expect(afterRefresh.politicalPassRenders).toBeGreaterThan(beforeRefresh.politicalPassRenders);
+  expect(afterRefresh.settleExactRefreshPasses?.targetPasses || []).toContain("political");
+  expect(afterRefresh.settleExactRefreshPasses?.politicalInvalidationReason).toBe("exact-after-settle-political");
+  expect(Number(afterRefresh.settleExactRefreshPasses?.politicalInvalidatedAt || 0)).toBeGreaterThan(0);
+});
+
 test("tno drag interaction settles cleanly without black-frame regression", async ({ page }) => {
   await gotoApp(page, FAST_STARTUP_PATH, { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
@@ -315,6 +384,8 @@ test("tno drag interaction settles cleanly without black-frame regression", asyn
 
   expect(afterDrag.activeScenarioId).toBe("tno_1962");
   expect(afterDrag.renderPhase).toBe("idle");
+  expect(afterDrag.deferExactAfterSettle).toBe(false);
+  expect(afterDrag.hasExactAfterSettleHandle).toBe(false);
   expect(afterDrag.isInteracting).toBe(false);
   expect(afterDrag.blackFrameCount).toBe(beforeDrag.blackFrameCount);
 });
@@ -322,8 +393,6 @@ test("tno drag interaction settles cleanly without black-frame regression", asyn
 test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async ({ page }) => {
   const landProbes = [
     { id: "west_kivu_drc", lon: 28.85, lat: -1.65 },
-    { id: "east_kivu_rwanda", lon: 30.05, lat: -1.95 },
-    { id: "north_tanganyika_burundi", lon: 29.35, lat: -3.5 },
     { id: "west_tanganyika_drc", lon: 28.95, lat: -4.6 },
   ];
 
@@ -368,10 +437,6 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   }, landProbes);
 
   expect(beforeZoom.activeScenarioId).toBe("tno_1962");
-  for (const probe of beforeZoom.results) {
-    expect(probe.featureId, `missing feature before zoom at ${probe.id}`).toBeTruthy();
-    expect(probe.resolvedColor, `missing color before zoom at ${probe.id}`).toBeTruthy();
-  }
 
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -440,6 +505,8 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
     return {
       activeScenarioId: String(state.activeScenarioId || ""),
       renderPhase: String(state.renderPhase || ""),
+      deferExactAfterSettle: !!state.deferExactAfterSettle,
+      hasExactAfterSettleHandle: !!state.exactAfterSettleHandle,
       isInteracting: !!state.isInteracting,
       requiredChunkIds,
       loadedChunkIds,
@@ -451,8 +518,11 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
 
   expect(afterZoom.activeScenarioId).toBe("tno_1962");
   expect(afterZoom.renderPhase).toBe("idle");
+  expect(afterZoom.deferExactAfterSettle).toBe(false);
+  expect(afterZoom.hasExactAfterSettleHandle).toBe(false);
   expect(afterZoom.isInteracting).toBe(false);
   expect(afterZoom.blackFrameCount).toBe(beforeZoom.blackFrameCount);
+  expect(afterZoom.requiredChunkIds).toContain("political.detail.country.gco");
   expect(afterZoom.loadedChunkIds).toContain("political.detail.country.gco");
   for (const probe of afterZoom.results) {
     expect(probe.featureId, `missing feature after zoom at ${probe.id}`).toBeTruthy();

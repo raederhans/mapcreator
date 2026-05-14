@@ -4452,6 +4452,8 @@ function completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStar
     contextBaseRefreshed: !!plan.exactRefreshApplied,
     targetPasses: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : [],
     passCount: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses.length : 0,
+    politicalInvalidationReason: String(plan.politicalInvalidationReason || ""),
+    politicalInvalidatedAt: Number(plan.politicalInvalidatedAt || 0),
   });
   return requestRendererRender("exact-after-settle", {
     flush: true,
@@ -4590,6 +4592,15 @@ function abortPendingExactAfterSettleRefreshAfterPaint(reason = "exact-compose-f
     deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
   });
   resetExactAfterSettleController(`abort-${reason}`, generation);
+  runtimeState.deferExactAfterSettle = false;
+  runtimeState.pendingExactPoliticalFastFrame = false;
+  invalidateRenderPasses("political", "exact-after-settle-abort");
+  requestRendererRender("exact-after-settle-abort-recover", {
+    flush: false,
+    fallback: () => {
+      if (context) render();
+    },
+  });
   return true;
 }
 
@@ -18800,6 +18811,10 @@ function applyExactAfterSettleRefreshPlan(plan) {
       });
     }
   }
+  const politicalInvalidatedAt = Date.now();
+  invalidateRenderPasses("political", "exact-after-settle-political");
+  plan.politicalInvalidationReason = "exact-after-settle-political";
+  plan.politicalInvalidatedAt = politicalInvalidatedAt;
   deferContextBaseEnhancements = shouldDeferContextBaseEnhancementsForExactRefresh(
     reuseDecision,
     plan.forceExactContextBaseRefresh,

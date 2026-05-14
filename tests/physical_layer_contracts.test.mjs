@@ -99,6 +99,8 @@ test("physical layer source contracts stay wired to the expected renderer and st
     contourZoomBucketRefreshesAfterQuietWindow:
       /function buildExactAfterSettleRefreshPlan[\s\S]*?const forceExactContextBaseRefresh = shouldForceExactContextBaseRefresh\(reuseDecision\);/.test(rendererSource)
       && /function applyExactAfterSettleRefreshPlan[\s\S]*?if \(plan\.forceExactContextBaseRefresh\) \{[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(rendererSource),
+    exactAfterSettleKeepsPoliticalRefreshExplicit:
+      /function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?runtimeState\.deferExactAfterSettle = false;[\s\S]*?if \(plan\.forceExactContextBaseRefresh\) \{[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);[\s\S]*?invalidateRenderPasses\("political", "exact-after-settle-political"\);/.test(rendererSource),
     hasMountainMultiplier:
       /if \(normalized === "mountain_high_relief"\) return 1\.18;/.test(rendererSource),
     hasMountainHillsMultiplier:

@@ -429,3 +429,13 @@ pm run bench:editor-performance。
   - Short artifact, black-frame, wheel, finalSharpness, and perf gate are green.
   - Full repeated-zoom absolute max and maxLongTask remain red because of cold political detail chunk load for US East.
   - Next implementation boundary should be chunk payload cold-load strategy: either worker/off-main-thread parse for detail chunks, or an explicit scenario-level prewarm policy for high-value political detail payloads. This crosses beyond the current renderer/full-pass slice.
+
+## 2026-05-14 exact-after-settle political invalidation execution
+- Goal: keep exact-after-settle success from losing political color by marking the political pass dirty after settle succeeds.
+- Worktree: C:/Users/raede/Desktop/dev/mapcreator-exact-after-settle-political on branch work/exact-after-settle-political.
+- Live-process owner: main thread only. Child agents handled static review only.
+- Implementation: success path invalidates only political with reason exact-after-settle-political and records stable settleExactRefreshPasses fields; abort path clears defer/fast-frame flags, invalidates political with exact-after-settle-abort, then requests exact-after-settle-abort-recover as required by the approved plan.
+- Tests updated in existing source contracts and dev E2E; render_pipeline_passes.js remains unchanged.
+- Validation: node checks passed; scenario chunk contracts 28/28 passed; physical layer contracts 2/2 passed; scenario chunk runtime E2E 5/5 passed; perf gate contract 19/19 passed.
+- Perf gate: one run passed before review fixes; three later reruns failed on startup/apply timing metrics outside political repaint. Latest logs are under .runtime/tests/perf-gate*.log.
+- Final static review accepted the explicit abort recover requirement and approved the implementation scope.

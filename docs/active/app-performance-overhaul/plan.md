@@ -185,3 +185,20 @@ Complete the next low-risk architecture slice after repeated zoom reached target
 - Benchmark output exposes pass-level attribution and black-pixel classification for every repeated zoom cycle.
 - Worker flag-on path records accepted/stale/fallback metrics without forcing political raster into the default render path.
 - Active docs, task checklist, review notes, and final verification evidence stay in this folder.
+
+## 2026-05-14 01:20 UTC exact-after-settle political invalidation execution
+
+### Goal
+- Fix zoom-settle political color loss by making exact-after-settle success explicitly invalidate the `political` pass.
+- Ensure exact compose abort exits `deferExactAfterSettle`, clears `pendingExactPoliticalFastFrame`, invalidates `political`, and schedules `exact-after-settle-abort-recover`.
+
+### Scope
+- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-exact-after-settle-political` on branch `work/exact-after-settle-political`.
+- Main thread owns all live tests, browser, and perf gates. Subagents are static-only.
+- Keep `js/core/renderer/render_pipeline_passes.js` unchanged.
+
+### Acceptance
+- `map_renderer.js` success path records `exact-after-settle-political` as the political dirty reason before exact pass selection.
+- Abort path resets controller, clears exact-settle flags, invalidates political, and requests recover render.
+- Existing source contracts and dev E2E cover the new political repaint guarantee.
+- Required commands: `npm run test:node:scenario-chunk-contracts`, `npm run test:node:physical-layer-contracts`, `npm run test:e2e:dev:scenario-chunk-runtime`, `npm run verify:perf-gate-contract`, `npm run perf:gate`.

@@ -355,3 +355,29 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Run `npm run perf:gate` after baseline refresh.
 - [ ] Full repeated-zoom max <= 3500ms and maxLongTask <= 750ms. Current blocker: first cold US East political detail payload load/parse, topSubOwner `chunk-promotion:post-commit-replay`.
 - [ ] Decide and implement next boundary: detail chunk worker parse/off-main-thread path or explicit high-value political detail prewarm policy.
+
+## 2026-05-14 01:20 UTC exact-after-settle political invalidation task
+- [x] Create isolated worktree.
+- [x] Read AGENTS, lessons learned, agent tiers, active performance docs.
+- [x] Implement local political invalidation in success path.
+- [x] Implement abort cleanup + recover render request.
+- [x] Extend source contracts for success and abort paths.
+- [x] Extend dev E2E guard to assert political pass repaint and reason.
+- [x] Run targeted source contracts.
+- [x] Run dev runtime E2E.
+- [x] Run perf contract and perf gate.
+- [x] Final static review completed; merge back to main pending.
+
+## 2026-05-14 01:44 UTC exact-after-settle political invalidation task closeout
+- [x] Run targeted source contracts.
+- [x] Run dev runtime E2E.
+- [x] Run perf contract and perf gate.
+- [x] Final static review completed; merge back to main pending.
+
+## 2026-05-14 02:07 UTC exact-after-settle political invalidation review-fix tasks
+- [x] Split focused exact-after-settle political repaint E2E from zoom-end GCO chunk-fill regression.
+- [x] Move E2E success reason assertion to stable settleExactRefreshPasses metric fields.
+- [x] Re-run source contracts and runtime E2E after review fixes.
+- [x] Re-run perf contract.
+- [x] Re-run perf gate three times; failures isolated to startup/apply timing metrics outside political repaint.
+- [x] Final static review completed; merge back to main pending.
