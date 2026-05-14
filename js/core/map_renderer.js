@@ -2165,8 +2165,8 @@ function getRenderPassLayout(passName) {
   return getRenderCacheOwner().getRenderPassLayout(passName);
 }
 
-function resizeRenderPassCanvases() {
-  return getRenderCacheOwner().resizeRenderPassCanvases();
+function resizeRenderPassCanvases(passNames = RENDER_PASS_NAMES) {
+  return getRenderCacheOwner().resizeRenderPassCanvases(passNames);
 }
 
 function ensureRenderPassCanvas(passName) {
@@ -4431,6 +4431,16 @@ function isExactAfterSettleControllerActive() {
   return isExactAfterSettleControllerActiveState(runtimeState);
 }
 
+function invalidateExactAfterSettlePoliticalPass(plan) {
+  if (!plan || typeof plan !== "object") return false;
+  if (String(plan.politicalInvalidationReason || "") === "exact-after-settle-political") return false;
+  const politicalInvalidatedAt = Date.now();
+  invalidateRenderPasses("political", "exact-after-settle-political");
+  plan.politicalInvalidationReason = "exact-after-settle-political";
+  plan.politicalInvalidatedAt = politicalInvalidatedAt;
+  return true;
+}
+
 function completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt) {
   if (!isExactAfterSettleGenerationCurrent(generation, "applying")) {
     return false;
@@ -4498,6 +4508,9 @@ function prepareExactAfterSettlePassesInSlices(generation, plan) {
       if (!isExactAfterSettleIdentityCurrent(activeController)) {
         resetExactAfterSettleController(`${passName}-identity-mismatch`, generation);
         return;
+      }
+      if (passName === "political") {
+        invalidateExactAfterSettlePoliticalPass(plan);
       }
       prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
       recordRenderPerfMetric("settleExactRefreshPass", Math.max(0, nowMs() - passStart), {
@@ -6914,6 +6927,8 @@ function ensureHybridLayers() {
 function setCanvasSize({
   reason = "resize",
   targetPassesOnDprChange = null,
+  targetPassesOnResize = null,
+  targetPassesOnCanvasResize = null,
 } = {}) {
   if (!mapCanvas || !mapSvg) return;
 
@@ -6948,15 +6963,21 @@ function setCanvasSize({
     hitCanvas.width = scaledW;
     hitCanvas.height = scaledH;
   }
-  resizeRenderPassCanvases();
+  const canvasResizePasses = Array.isArray(targetPassesOnCanvasResize) && targetPassesOnCanvasResize.length
+    ? targetPassesOnCanvasResize
+    : RENDER_PASS_NAMES;
+  resizeRenderPassCanvases(canvasResizePasses);
   invalidateInteractionComposite(reason || "resize");
   texturePatternCache.clear();
   textureNoiseTileCache.clear();
   clearProjectedBoundsCache();
   runtimeState.hitCanvasDirty = true;
   if (sizeChanged) {
-    invalidateAllRenderPasses(reason || "resize");
-    clearRenderPassReferenceTransforms(RENDER_PASS_NAMES);
+    const passes = Array.isArray(targetPassesOnResize) && targetPassesOnResize.length
+      ? targetPassesOnResize
+      : RENDER_PASS_NAMES;
+    invalidateRenderPasses(passes, reason || "resize");
+    clearRenderPassReferenceTransforms(passes);
   } else {
     const passes = Array.isArray(targetPassesOnDprChange) && targetPassesOnDprChange.length
       ? targetPassesOnDprChange
@@ -18775,9 +18796,12 @@ function buildExactAfterSettleRefreshPlan({ profile, scheduleStartedAt, callback
 function applyExactAfterSettleRefreshPlan(plan) {
   const reuseDecision = plan.reuseDecision || {};
   updateDprStage("idle", { force: true });
+  const exactAfterSettleDprPasses = RENDER_PASS_NAMES.filter((passName) => passName !== "political");
   setCanvasSize({
     reason: "exact-after-settle-dpr-restore",
-    targetPassesOnDprChange: ["political", "contextBase", "borders"],
+    targetPassesOnDprChange: exactAfterSettleDprPasses,
+    targetPassesOnResize: exactAfterSettleDprPasses,
+    targetPassesOnCanvasResize: exactAfterSettleDprPasses,
   });
   runtimeState.deferExactAfterSettle = false;
   cancelDeferredContextBaseEnhancement();
@@ -18811,10 +18835,6 @@ function applyExactAfterSettleRefreshPlan(plan) {
       });
     }
   }
-  const politicalInvalidatedAt = Date.now();
-  invalidateRenderPasses("political", "exact-after-settle-political");
-  plan.politicalInvalidationReason = "exact-after-settle-political";
-  plan.politicalInvalidatedAt = politicalInvalidatedAt;
   deferContextBaseEnhancements = shouldDeferContextBaseEnhancementsForExactRefresh(
     reuseDecision,
     plan.forceExactContextBaseRefresh,

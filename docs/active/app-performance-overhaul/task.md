@@ -381,3 +381,13 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Re-run perf contract.
 - [x] Re-run perf gate three times; failures isolated to startup/apply timing metrics outside political repaint.
 - [x] Final static review completed; merged back to main.
+
+
+## 2026-05-14 exact-after-settle political review fix
+- [x] Move political dirty invalidation behind idle/current pass-task checks.
+- [x] Update source contracts for delayed invalidation ordering.
+- [x] Run node syntax checks.
+- [x] Run scenario chunk contracts.
+- [x] Run physical layer contracts.
+- [x] Run scenario chunk runtime E2E.
+- [x] Final static review approved; merge back to main pending.

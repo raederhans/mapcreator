@@ -68,9 +68,10 @@ export function createRenderCacheOwner({
     return layout;
   }
 
-  function resizeRenderPassCanvases() {
+  function resizeRenderPassCanvases(passNames = renderPassNames) {
     const cache = getRenderPassCacheState();
-    renderPassNames.forEach((passName) => {
+    const names = Array.isArray(passNames) && passNames.length ? passNames : renderPassNames;
+    names.forEach((passName) => {
       const layout = getRenderPassLayout(passName);
       const canvas = cache.canvases?.[passName];
       if (!canvas) return;
@@ -87,7 +88,7 @@ export function createRenderCacheOwner({
       canvas.height = 1;
       cache.canvases[passName] = canvas;
     }
-    resizeRenderPassCanvases();
+    resizeRenderPassCanvases([passName]);
     return cache.canvases[passName];
   }
 
