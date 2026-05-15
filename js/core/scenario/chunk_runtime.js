@@ -292,6 +292,8 @@ function createScenarioChunkRuntimeController({
       && typeof runtimeState.runtimeChunkLoadState.lastZoomEndToChunkVisibleMetric === "object"
         ? runtimeState.runtimeChunkLoadState.lastZoomEndToChunkVisibleMetric
         : null;
+    // selectionVersion 是 chunk 选择的单调递增“新鲜度令牌”。
+    // refresh、promotion、post-commit replay 都拿它判断“这次请求还属不属于当前视图”。
     runtimeState.runtimeChunkLoadState.selectionVersion = Math.max(
       0,
       Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0),
@@ -1976,6 +1978,8 @@ function createScenarioChunkRuntimeController({
       loadState.refreshScheduled = false;
     }
     if (loadState.promotionCommitInFlight && !flushPending) {
+      // promotion 进行中时，不并发起第二条刷新链。
+      // 这里只保留“最新一条待重放请求”，等 commit 收尾后再按最新 selectionVersion 重放。
       loadState.pendingPostCommitRefresh = {
         scenarioId,
         selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),

@@ -600,6 +600,8 @@ async function createStartupScenarioBundleFromPayload({
     })
     : { ok: false, value: null, metrics: null, reason: "not-configured", errorMessage: "" };
   const geoLocalePatchPayload = normalizeScenarioGeoLocalePatchPayload(geoLocalePatchResult.value);
+  // startup bundle 的目标是把首屏必需的 scenario contract 拼齐，
+  // 让 runtime topology / owners / cores 可以立刻 hydrate，其余可选层继续延后到 full bundle。
   // bootstrap bundle 只保留启动阶段立刻要用到的最小合同：
   // countries/owners/cores/runtime shell 先就位，其他可选图层继续留空，
   // 后续再由 full bundle 升级，而不是在这里提前假装资源已经齐全。
@@ -848,6 +850,8 @@ function createScenarioBundleAssembler({
       optionalLayerSettledByKey: {
         ...(priorBundle?.optionalLayerSettledByKey || {}),
       },
+      // loadDiagnostics 只负责暴露加载真相给 audit/UI/调试链，
+      // runtime 行为仍然依据 bundle payload 本身，而不是倒过来依赖这些描述字段。
       loadDiagnostics: {
         optionalResources: {
           runtime_topology: {

@@ -21,3 +21,5 @@
 2026-05-05 Phase 3b verification rule: visual key-point checks were intentionally not run because candidate gate failed before the visual gate. Strict scenario checks and HOI4 checker remain green on current production artifacts.
 
 2026-05-05 self-review: the simplest stable path is to keep production quantization at 100000 until runtime q50000 world-bounds leakage and stale urban source schema are fixed. No fallback promotion or visual approval was used.
+
+2026-05-14 archive decision: this folder's scoped work is complete. Owner-only controller retirement, checker/audit cutover, candidate gate creation, and fail-closed verification are done. Remaining work is a new blocker track: fix runtime q50000 world-bounds leakage and detail urban source schema, then reopen a separate topology candidate follow-up before any production quantization change.

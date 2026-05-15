@@ -13,4 +13,4 @@
 
 - [x] Phase 3b detail q50000 build audit：输入 urban 合同失败，停止 q25000 推广链
 
-- [ ] Phase 3b production quantization update：blocked by candidate contract failures
+- [x] Phase 3b production quantization decision：维持 production quantization=100000；runtime q50000 world-bounds leakage 和 detail urban source schema blocker 转入后续独立任务

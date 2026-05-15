@@ -52,7 +52,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   "primary/secondary pending": { zh: "primary/secondary \u5f85\u63a5\u5165", en: "primary/secondary pending" },
   "secondary full-only": { zh: "secondary \u4ec5 full pack", en: "secondary full-only" },
   "checked-in Overture": { zh: "\u5df2\u5165\u5e93 Overture", en: "checked-in Overture" },
-  "ref sidecar Phase B": { zh: "ref sidecar Phase B", en: "ref sidecar Phase B" },
+  "ref sidecar Phase B": { zh: "参考 sidecar Phase B", en: "ref sidecar Phase B" },
   "major stations Phase B": { zh: "\u4e3b\u8981\u8f66\u7ad9 Phase B", en: "major stations Phase B" },
   "Rail labels currently use line names only.": {
     zh: "\u5f53\u524d\u94c1\u8def\u6807\u7b7e\u53ea\u4f7f\u7528\u7ebf\u8def\u540d\u79f0\u3002",

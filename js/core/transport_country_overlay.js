@@ -39,6 +39,8 @@ function getExistingOverlaysByFamily(overlayState = {}) {
   const overlaysByFamily = overlayState?.overlaysByFamily && typeof overlayState.overlaysByFamily === "object"
     ? { ...overlayState.overlaysByFamily }
     : {};
+  // 兼容早期“单 family 顶层 overlayState”形态。
+  // 读取时先把 legacy ready overlay 投影回 overlaysByFamily，后面的 apply/save 才能统一按 family 工作。
   const legacyFamily = String(overlayState?.family || "").trim().toLowerCase();
   if (overlayState?.status === "ready" && legacyFamily && overlayState?.collectionsByLayer && !overlaysByFamily[legacyFamily]) {
     overlaysByFamily[legacyFamily] = {
@@ -137,6 +139,8 @@ export function applyTransportCountryOverlayState(target, overlayState) {
   if (!family) return target.transportCountryOverlayState || null;
   const revision = previousRevision + 1;
   const overlaysByFamily = getExistingOverlaysByFamily(target.transportCountryOverlayState);
+  // 每次 Apply 只替换当前 family 的主图 overlay，其他 family 已应用的数据要原样保留。
+  // 这样 road/rail/airport 可以各自独立切换，不会互相冲掉已加载状态。
   const nextFamilyOverlay = {
     ...overlayState,
     family,

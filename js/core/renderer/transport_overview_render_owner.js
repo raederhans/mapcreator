@@ -88,6 +88,7 @@ function getTransportOverviewFamilyConfig(familyId) {
 function getTransportCountryOverlayStateForFamily(familyId) {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   const overlayState = runtimeState.transportCountryOverlayState;
+  // 优先读取按 family 持久化的新 overlay；只有旧状态还没迁完时，才回退到 legacy 顶层单 family 形态。
   const familyOverlay = overlayState?.overlaysByFamily?.[normalizedFamilyId];
   if (familyOverlay?.status === "ready") return familyOverlay;
   if (overlayState?.status !== "ready" || overlayState.family !== normalizedFamilyId) return null;
@@ -334,6 +335,8 @@ function getTransportFacilityEntryStableSortKey(feature, properties = {}, coordi
 }
 
 function applyTransportFacilityDensity(entries, densityStrategy) {
+  // 先按 importance + stable key 排成确定顺序，再做屏幕网格裁剪。
+  // 这样同一视图下的 visible/hover 结果可重复，避免缩放时点位排序来回抖动。
   const sortedEntries = [...entries].sort((left, right) => {
     if (right.importanceRank !== left.importanceRank) return right.importanceRank - left.importanceRank;
     return String(left.stableSortKey || "").localeCompare(String(right.stableSortKey || ""));
@@ -691,6 +694,8 @@ function drawContextFacilityPointLayer(
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   const normalizedPackId = String(packId || "global").trim().toLowerCase() || "global";
   const clearCurrentPackHoverEntries = () => {
+    // 国家包 overlay 追加 hover entry 时，只清自己这一个 pack 的条目，
+    // 保留 global overview 的基础条目，避免 country overlay 把全局 hover 语义整体抹掉。
     if (appendHoverEntries) {
       setVisibleFacilityHoverEntries(normalizedFamilyId, [], { append: true, packId: normalizedPackId });
       return;
@@ -721,6 +726,8 @@ function drawContextFacilityPointLayer(
     return;
   }
   const renderState = buildContextFacilityEntries(collection, thresholdRank, {
+    // 机场/港口的 global overview 先在屏幕空间做密度裁剪；
+    // country overlay 仍沿用同一渲染/hover 通道，只是叠加更细的 pack 数据。
     densityStrategy: normalizedFamilyId === "airport" || normalizedFamilyId === "port"
       ? getTransportFacilityDensityStrategy(k)
       : null,
@@ -741,6 +748,8 @@ function drawContextFacilityPointLayer(
   const activeHighlightKey = buildFacilityEntryKey(getActiveFacilityHighlightEntry());
   const hoverEntries = [];
   const usesFacilityIconLayer = normalizedFamilyId === "airport" || normalizedFamilyId === "port";
+  // 这一段同时承担三件事：绘制 marker、生成 hover entries、以及 atlas ready 后触发重绘。
+  // atlas 未就绪时也要沿用同一批 entry 语义，这样可见 fallback 和交互目标始终一致。
   const iconAtlasImage = usesFacilityIconLayer
     ? getTransportFacilityIconAtlasImage(requestTransportFacilityIconAtlasRender)
     : null;
@@ -908,6 +917,8 @@ function drawCountryAirportsLayer(k, { interactive = false } = {}) {
 
 function drawAirportsLayer(k, { interactive = false } = {}) {
   syncRenderTargets();
+  // 主图先画 global overview，再把已经 Apply 的 country overlay 叠上去。
+  // 这样默认世界层始终可见，国家包只覆盖当前 family 的增强细节。
   drawAirportPointCollection("drawAirportsLayer", runtimeState.airportsData, k, { interactive });
   drawCountryAirportsLayer(k, { interactive });
 }
@@ -1376,6 +1387,7 @@ function drawCountryRailwaysLayer(k, { interactive = false } = {}) {
   const startedAt = nowMs();
   const overlayState = getTransportCountryOverlayStateForFamily("rail");
   if (!overlayState) return;
+  // country rail overlay 只在对应 family 已 Apply 且 source gate 通过后参与主图渲染。
   const visible = !!runtimeState.showTransport && !!runtimeState.showRail;
   const collection = overlayState.collectionsByLayer?.railways;
   const stationCollection = overlayState.collectionsByLayer?.rail_stations_major;

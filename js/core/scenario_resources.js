@@ -806,6 +806,8 @@ function prewarmScenarioOptionalLayersOnCacheHit(
     hints = normalizeScenarioPerformanceHints(manifest),
   } = {}
 ) {
+  // cache hit 的首要目标是尽快恢复首屏；可选层继续按可见性和面板动作懒加载，
+  // 避免“读到了 startup cache”又立刻把可选 JSON 全部拉起，抵消缓存收益。
   // Keep cache-hit hydration lean. Optional layers now load on demand through
   // visibility and panel-driven paths instead of auto-prewarming here.
   void d3Client;
@@ -828,6 +830,7 @@ async function ensureActiveScenarioOptionalLayerLoaded(
   const bundle = runtimeState.scenarioBundleCacheById?.[normalizeScenarioId(runtimeState.activeScenarioId)];
   if (!bundle) return null;
   if (scenarioBundleUsesChunkedLayer(bundle, normalizedKey)) {
+    // chunk-owned layer 的数据所有权在 chunk refresh controller，这里只发刷新请求，不直接补拉独立 JSON。
     scheduleScenarioChunkRefresh({
       reason: `visibility:${normalizedKey}`,
       delayMs: 0,

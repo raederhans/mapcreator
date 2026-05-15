@@ -2708,6 +2708,10 @@
       "en": "Label Size",
       "zh": "标签大小"
     },
+    "Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.": {
+      "en": "Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.",
+      "zh": "分层特殊区域是规范编辑器。请在下方工作台中创建图层、选择预设并编辑成员。"
+    },
     "Label Step": {
       "en": "Label Step",
       "zh": "标签步长"
@@ -3760,6 +3764,14 @@
       "en": "Paint Granularity",
       "zh": "涂色粒度"
     },
+    "Pack": {
+      "en": "Pack",
+      "zh": "包"
+    },
+    "Pack source check failed": {
+      "en": "Pack source check failed",
+      "zh": "包来源检查失败"
+    },
     "Paint Macros": {
       "en": "Paint Macros",
       "zh": "绘图宏操作"
@@ -4744,6 +4756,10 @@
       "en": "Select a country in Inspector",
       "zh": "在国家检查器中选择国家"
     },
+    "Select a transport pack": {
+      "en": "Select a transport pack",
+      "zh": "选择一个运输包"
+    },
     "Select a country to edit": {
       "en": "Select a country to edit",
       "zh": "选择一个国家开始编辑"
@@ -5156,6 +5172,14 @@
       "en": "Special Zones",
       "zh": "特殊区域"
     },
+    "Special Region Color Preview": {
+      "en": "Special Region Color Preview",
+      "zh": "特殊区域颜色预览"
+    },
+    "Special Zone Layers": {
+      "en": "Special Zone Layers",
+      "zh": "特殊区域图层"
+    },
     "Special Zones Style": {
       "en": "Special Zones Style",
       "zh": "特殊区域样式"
@@ -5547,6 +5571,10 @@
     "Transport guide": {
       "en": "Transport guide",
       "zh": "运输指南"
+    },
+    "Transport pack": {
+      "en": "Transport pack",
+      "zh": "运输包"
     },
     "Transport layer order": {
       "en": "Transport layer order",
@@ -6442,7 +6470,7 @@
     },
     "ref sidecar Phase B": {
       "en": "ref sidecar Phase B",
-      "zh": "ref sidecar Phase B"
+      "zh": "参考 sidecar Phase B"
     },
     "major stations Phase B": {
       "en": "major stations Phase B",

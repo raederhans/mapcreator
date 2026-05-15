@@ -130,10 +130,6 @@
 - The real regression is merging global modern country names into an active historical scenario, not every read of countryNames.
 - blank semantic mode may still use baseline countryNames; tests should encode that exception explicitly so correct fixes are not flagged as regressions.
 
-### 29. 做浏览器类审查前，不能只信 `.runtime/dev/active_server.json`，必须先验证端口真活着
-- `active_server.json` 可能残留旧 pid 和旧端口，看起来像“已有 dev server”，但实际请求已经连不上。
-- 最短稳路线是：先做一次真实 HTTP 探测；失败再重启 server，并把 stdout/stderr 落到 `.runtime/tmp`，不要直接把陈旧元数据当事实。
-
 ### 30. 分阶段 UI 重构要先把 contract 落成可机读资产，再让表面迁移接入
 - 如果 01 只是文档，没有 `source of truth + checker + 最小真实接入点`，02/03 执行时很快又会把“标题/标签/按钮/弹层边界”重新争论一遍。
 - 最稳的最短路径是：先落共享 contract 模块、语义 class 骨架、targeted 验证，再开始主界面结构迁移。
@@ -142,10 +138,6 @@
 - 这次 `scenario context bar`、`zoomControls` 和右上 utility 同时收口后，`Guide` 按钮一度被遮住；只看 DOM 顺序和静态截图都看不出来。
 - 最稳做法是：改完布局后立刻做一次真实点击验证，再按结果调整 `z-index`、安全间距和纵向分层。
 
-### 32. `$team` / `omx team` 先检查 tmux leader 前置条件
-- 当前环境如果不在 tmux leader pane 内，`omx team` / `omx_run_team_start` 会直接失败；不要等到分工都写完才发现。
-- 最短路径是先预检 `$env:TMUX` 和 team runtime 条件；不满足时尽早暴露，再决定是否切原生子代理并行。
-
 ### 33. 主壳 E2E 不要被相邻可选区块绑死
 - `main_shell_i18n.spec.js` 这类主壳回归，应该优先锁定真正的主壳文案和交互；像 `.scenario-visual-adjustments` 这种可选相邻区块，存在才校验。
 - 更稳的做法是把“主壳稳定性”和“相邻功能块存在性”拆成不同测试面，避免一处可选 UI 把整轮验收拖死。
@@ -153,6 +145,7 @@
 ### 34. i18n 不能直接对带子节点的 summary / heading 容器整块写 `textContent`
 - 如果一个 summary 里包了标题节点、info trigger、状态节点，翻译时直接 `element.textContent = ...` 会把整个结构抹平。
 - 更稳的做法是先找语义文本子节点，只替换真正承载标题文案的那一层；结构容器本身不要直接覆写。
+- 章节式 manual、rich help panel 这类带嵌套节点的内容也适用同一条规则：不要继续挂在按 id 直接覆写 `textContent` 的翻译绑定表上。
 
 ### 35. 契约文件名、文档进度和验证脚本必须同名同口径
 - 像 `ui_contract.js` / `ui_contracts.js` 这种单复数不一致，会先把验证和留档搞乱，再拖累后续阶段接入。
@@ -621,11 +614,6 @@
 - 这次 Export 从 Utilities 升成 Project 一级区块后，如果只挪 DOM、不同时改 sidebar.js / toolbar.js 的 restore 链、旧 popover 清理和 contract/e2e，界面会立刻出现‘入口新了，但状态恢复和测试还活在旧层级’的分裂。
 - 最稳的最短路径是：保留按钮 id 和 overlay id，只搬入口层级；同时把旧 support-surface 残链一次删干净。
 
-## 2026-04-15 - 外部 skill 安装
-
-### 154. 第三方仓库把 skill 打包在通用目录名 `skill/` 时，安装器必须显式给 `--name`
-- `install-skill-from-github.py` 默认用路径 basename 当目标目录；像 `--path skill` 这种仓库结构会直接撞上已有的 `~/.codex/skills/skill`。
-- 更稳的做法是安装这类第三方 skill 时一开始就显式传 `--name talk-normal` 这类真实 skill 名，避免误判成“已安装”或覆盖错误目录。
 ### 155. 多区域/多分片的几何 builder 不能直接用 bbox intersects 当最终归属规则
 - 这次 rail 在 focus region 和相邻 shard 都有重叠窗口时，只要按 intersects 收件，同一条线就会稳定落入多个 pack。
 - 更稳的最短路径是：query 层仍可用 intersects 做粗筛，但真正写入 checked-in 产物前，必须再走一次唯一 owner 规则；这里用 bbox center + 固定优先顺序收口最稳。
@@ -647,10 +635,6 @@
 ### 160. placeholder 数据家族一旦接进 runtime，返回值要稳定是空集合，不要在无数据时退回 null
 - 这次 `rail_stations_major` 当前真实数据还是空，如果 loader 返回 `null`，UI 和渲染层就会分不清“链路没接上”和“链路已接通但暂时为空”。
 - 更稳的做法是：占位数据也返回 `FeatureCollection(features=[])`，这样运行链能先接通，后面换成真实数据时不用再改状态语义。
-### 161. 带结构的帮助面板一旦继续挂在 id 级 i18n 覆写表上，初始化时整块 rich content 会被 textContent 直接抹平
-- 这次 Scenario Guide 从 4 条短步骤升级成章节式双语手册后，如果还保留 `scenarioGuideStep*` 在 `uiMap` 里，i18n 初始化会把 `<li>` 里的所有子节点整块覆盖掉。
-- 更稳的做法是：章节式 manual 用独立容器或独立 renderer，rich content 节点不要继续放进按 id 直接覆写 `textContent` 的翻译绑定表。
-
 ### 162. 色板导入完成后，必须单独核对“已导入颜色”和“已审核映射”是不是同一层真相
 - 这次 TNO 颜色资产里，`tno.palette.json` 已经导入了 511 条原始颜色，但 `tno.map.json` 的 118 个 mapped TAG 仍完全继承自 `hoi4_vanilla`。
 - 更稳的做法是每次导入新剧本色板后，立刻做一轮场景国家清单 vs 色板条目 vs 映射结果的三方核对，先找出“色板有颜色但映射还没审核”的国家，再处理完全缺席的扩展 TAG。
@@ -685,10 +669,6 @@
 ### 169. palette audit 只能覆盖 palette 优先区，不能一刀切压掉 scenario_extension 的显式色
 - 这次第二轮回归暴露的关键问题是：`tno.audit.json.map_hex -> countries.json.color_hex` 的 blanket 同步会把 `PHI / MAL / LAO / ARM / BRG` 这类已有场景规则或代码显式色的国家重新刷回 palette 色。
 - 更稳的做法是：最终同步阶段先划分“显式特例保留集”和“palette 优先区”；显式特例继续保留场景源色，palette 优先区再对齐 audit。
-
-### 170. 浏览器 benchmark fallback 在 Windows 上要同时处理 transport、URL 入口和截图路径
-- 这次真正卡住 benchmark 的不是单一 open 失败，而是三层问题叠加：wrapper open 不稳、根路径 `/?...` 和真实 `/app/?...` 入口混用、本地 screenshot 继续按 bash path 写入时会落错盘。
-- 更稳的最短路径是：benchmark 内部同时准备 wrapper + local node-playwright 两条 transport，URL 候选默认补 `/app/` 版本，本地 fallback 写截图时直接用 Windows 原生绝对路径。
 
 ### 171. chunked runtime 的 coarse prewarm 一旦算进 time-to-interactive，首帧指标会被整段放大
 - 这次 `tno_1962.timeToInteractive` 从约 2554ms 降到约 731ms，关键动作就是把 `preloadScenarioCoarseChunks()` 从 `runPostScenarioApplyEffects()` 的同步等待里挪到首帧后异步调度。
@@ -1243,9 +1223,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ### 2026-04-28 - Pages and required-check workflow stabilization
 - Pages 发布包要用显式 runtime allowlist 和发布 manifest 管住体积；全量复制 data/ 会把源 GeoTIFF、derived、full transport pack 一起塞进 dist，直接触发 Pages 体积风险。
-
-### 2026-04-28 - GitHub Pages artifact hidden files
-- actions/upload-artifact v4 会默认漏掉隐藏文件；如果 Pages 发布链依赖 .nojekyll，要在 handoff artifact 上传处显式设置 include-hidden-files: true，并用下载后的真实 artifact 验证。
+- 发布清单要直接校验 manifest 的真实运行时目标在 dist 中存在，发布态 metadata 也要跟 allowlist 同步。
+- 如果 Pages 发布链依赖 `.nojekyll` 这类隐藏文件，artifact handoff 要显式保留并下载实物复核。
 
 ### 2026-04-29 - perf report schema bump 要和 checked-in baseline 同步
 - 只改 benchmark/perf 脚本里的 schemaVersion 会让 perf gate 读旧 baseline 时先合同失败。
@@ -1270,10 +1249,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 2026-04-30 - UI hint removal must keep optional DOM bindings declared
 - 删除可选提示文案节点时，controller 里对应的 getElementById 变量仍要声明为可空；否则 render UI 会 ReferenceError，启动流程可能卡在 scenario boot 末段。
 
-### 2026-04-30 - 留档和 automation memory 必须从最终验证口径回写
-- 补写留档时不能沿用中途候选文件清单；最终记录必须以实际改动文件和已执行验证命令为准。
-- automation memory 只写短摘要、实际验证结果和运行时长，避免把旧上下文里的错误事实固化。
-
 ### 2026-04-30 - transport 全局化要同时切 loader、发布 allowlist 和生成源
 - transport toggle 的可见范围由 `data_loader`、checked-in pack、Pages allowlist 三处共同决定；只改其中一处会让本地或部署继续吃旧区域数据。
 - workbench family preview 和主地图 transport overview 是两条数据面；排查范围问题时要先确认用户看到的是哪条入口，再改对应真相源。
@@ -1293,10 +1268,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - Render phase idle is not enough for repeated interaction benchmarks; chunk promotion, post-commit replay, and post-ready interaction infrastructure can still be active.
 - The stable measurement boundary is: render idle + exact-after-settle idle + runtime chunk idle + post-ready infra idle. Otherwise the next cycle can inherit hidden work and produce misleading long-task attribution.
 
-### 2026-04-30 - Pages allowlist 要覆盖 manifest 的所有运行时目标
+### 2026-04-30 - Pages allowlist、metadata 和严格场景入口要一起同步
 - 只复制 manifest 和 preview pack 仍会在 workbench 放大或切 variant 时 404；发布清单要直接校验 manifest `full` 路径在 dist 中存在。
-
-### 2026-04-30 - 发布态元数据必须和 allowlist 同步
 - Pages 排除大体积诊断或本地专用 runtime 文件时，要同步清理 dist 中 manifest/index 的 URL 字段，并用测试校验 URL 不指向缺失文件。
 - 严格场景合同要同时检查 runtime topology 与 owners/controllers/cores keyset，避免旧 feature map 靠缺失 topology 长期隐藏。
 
@@ -1467,10 +1440,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 这次 `scenarioViewLabel` / `controllerFeatureCount` 被删除后仍传给 owner，启动 apply、rollback、deferred UI bootstrap 三条路径都会触发 `ReferenceError`。
 - 更稳的做法是：facade 保留 `render*Status()` / `create*State()` 入参时，同步用静态测试锁住“局部来源 + 返回字段/传参”这条链。
 
-### 2. 运维脚本依赖的外部 CLI 子命令也要进合同测试
-- 这次 browser smoke 的网络采集还在调用旧 `network` 子命令，当前 Playwright CLI 已改为 `requests`，导致报告 network summary 虚绿。
-- 更稳的做法是：脚本对外部 CLI 的关键子命令用轻量静态合同锁住，升级 CLI 后先修脚本采集面。
-
 ## 2026-05-05 - Atlantropa E2E 点击取证
 
 ### 1. 微小岛体的 Playwright 点击探针要优先复用 runtime spatial items，再补 geo fallback
@@ -1481,17 +1450,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - A smaller TopoJSON file can still be invalid: runtime q50000 reduced bytes but increased world-bounds geometries, so contract failure must block q25000, visual QA, and production parameter updates.
 - Detail topology experiments depend on fresh source-layer contracts; if source/primary urban layers lack `id` / `country_owner_id`, fix the source rebuild chain before running quantization A/B.
 
-## 2026-05-05 - scenario special-zone layer asset
-
-### 1. 新增场景可写资产要先加载再保存，避免本地 dev save 覆盖磁盘真值
-- 这次 `special_zone_layers.json` 既是 scenario asset 又能在本地写盘，保存按钮如果先拿空运行时状态发 POST，会把真实资产覆盖成空层。
-- 更稳的做法是：workbench 打开时加载一次；保存前若尚未确认加载完成，只执行加载和提示，下一次保存才写盘。
-
 ## 2026-05-05 - special zone layer render owner
-
-### 1. 场景资产加载哨兵必须绑定 scenario id
-- `special_zone_layers.json` 这种 per-scenario 资产只用 boolean loaded flag 会在切换场景后复用上一场景运行时状态，保存时可能写错目标场景。
-- 更稳的做法是把 loaded 标记绑定到 `activeScenarioId`，并用 strict contract 重建对应 `build_snapshot.json` / `audit.json` / `manifest.json`。
 
 ### 2. 退出旧编辑主路径时，runtime facade 也要同步退休写口
 - 只禁用按钮仍可能留下双击完成、facade 调用、测试 helper 这类写入口。
@@ -1566,25 +1525,10 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - runtime meta seed 的安全校验应确认 shell ids 都存在于 seed，并允许 seed 额外包含后续 chunk layer ids。
 - 迁移 TopoJSON 几何列表时，computed_neighbors 必须跟着 old->new index 重映射。
 
-## 2026-05-12 - Codex pet hatch workflow
-
-- Windows 上 `hatch-pet` finalize 可能因缺少视频编码工具卡在 QA video 渲染；spritesheet、contact sheet、validation 已通过时，可用 `--skip-videos` 完成 package，并在报告里明确视频预览未生成。
-- Codex custom pet 使用 WebP atlas 时，透明像素底色可能在 App overlay 中表现成黑框；保留 WebP 作为回退，同时复制 PNG atlas 并让 `pet.json.spritesheetPath` 指向 PNG，是更稳的本地修复。
-
-## 2026-05-12 - annotation productization worktree verification
-
-- 独立 worktree 先确认 `node_modules` 是否存在；缺失时先跑 `npm ci`，再跑浏览器测试。
-- Windows 后台重定向下，默认 `reuseExistingServer` 分支可能长时间没有 reporter 输出；验收用 `CODEX_CI=1 CI=1` 让 Playwright 自己启动并关闭 8810 dev server。
-
 ## 2026-05-12 - TNO water named exclusions and runtime topology
 
 - Named water 的 supplement 可能在初次 `subtract_named_ids` 后重新引入微小重叠；最终发布前需要在 supplement 与 land-mask clip 后再执行一次 named-water 排他裁剪。
 - `tno_south_indian_antarctic_ocean` 的源 GeoJSON 与 runtime TopoJSON 方向合同不同；源阶段只做一次方向修复，同时保留 runtime TopoJSON 的 D3 专用方向修复。
-
-## 2026-05-12 - Codex App load diagnosis
-
-- Codex App 卡顿诊断要同时看短窗口 CPU delta、`logs_*.sqlite` / WAL 体积、`app-server event consumer lagged` 和 MCP 子进程重复挂载。
-- hook 脚本要单独计时；如果单次 hook 只有百毫秒级，优先继续检查 App 会话压力、日志库和插件/MCP 面。
 
 ## 2026-05-12 - E2E route retirement hygiene
 
@@ -1594,20 +1538,11 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - E2E 直接等待 chunk id 时，必须对照 `detail_chunks.manifest.json` 的真实 id 和 `min_zoom`；等待未注册 id 或低于阈值的 detail chunk 会表现成 render/chunk idle 超时。
 
-### 45. transport country pack 必须先过真实源门再注册发布
+### 45. transport country pack 发布前，真实源、匹配规则和审计签名要一起过门
 - 如果官方源还没有进 `.runtime/source-cache/transport/...`，宁可让 builder/source gate 红灯，也不要先用 global transport 或 Natural Earth clip 做“临时生产包”。
-- `source_recipe.manual.json` 和 `build_audit.json` 里的 source_signature 应来自真实源文件，不能用 recipe 自身或 checked-in global shard manifest 伪装数据源。
+- 官方名录 + OSM 坐标补充必须用 exact code/name/alias 匹配；preview 规则解析为空时要 fail-fast，避免短地名错配和字段解析失败被 head 掩盖。
+- 已签名的 source 必须真实参与 builder 数据流；`source_recipe.manual.json` 记录 repo 内源时要用 repo-relative 路径，`build_audit.json` 里的 sha 要按 repo-normalized 最终文本字节计算，测试也要直接读取真实源文件校验。
 - country pack 注册到 catalog/runtime/Pages 前，先用专项测试扫 forbidden backend token，避免错误产物进入发布链。
-
-## 2026-05-12 - transport country source matching audit
-
-- 官方名录 + OSM 坐标补充必须用 exact code/name/alias 匹配；子串匹配会把短地名错配到长地名，并制造同坐标多机场。
-- 已签名的 source 必须真实参与 builder 数据流；source_recipe 记录源文件时用 repo-relative 路径，避免把本机绝对路径写入可提交审计文件。
-- preview 规则解析为空时要 fail-fast；直接取 head 会掩盖官方字段解析失败。
-
-### 25. 审计文件记录 repo 内文本源时，要用 repo-normalized 字节签名
-- 如果受审计源本身是 repo 内 JSON，sha 必须按仓库最终文本字节计算，避免工作区 CRLF/LF 转换让 audit 记录和实际提交内容漂移。
-- 测试不能只比较 audit 与 recipe 彼此一致，还要直接读取源文件并校验实际 sha。
 
 ## 2026-05-13 - transport appearance overview metrics
 
@@ -1619,12 +1554,11 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - Repair-first 收口要让 generator/checkpoint、safe repair、strict contract、validator、E2E、perf 共用同一批最终产物；长 builder 卡住时，优先用已验证 checkpoint + targeted safe repair 闭环，避免继续扩大重建面。
 - Playwright synthetic subset 测试如果改写 runtime layer data，先等 context resolver 完成，再注入测试数据；否则首帧 resolver 会把 subset 覆盖回完整 topology，造成 metric 假失败。
 
-### 49. Optional asset 首次保存前要保护 pending 本地状态
+### 49. optional asset 首次保存和可见性同步都要基于 scenario-aware 的 pending/settled 真状态
 - Workbench 如果允许在 optional layer 真正加载前编辑，首次 Save 的 load 会改写 runtime state；保存链必须先抓住 pending canonical payload，再决定保存 pending 还是 loaded asset。
-- 这类问题用 controller 行为测试最稳：让 loader 返回不同 asset，断言 POST body 仍保留用户本地编辑。
-
-### 25. optional layer 的默认空对象不能当成已加载证据
-- specialZoneLayers 这类 runtime 默认对象会让 !state[field] 判断失效；visibility sync 要看 bundle payload / settled 状态，才能在独立 asset 失败时清空 stale runtime 数据。
+- `specialZoneLayers` 这类 per-scenario asset 的加载哨兵要绑定 `activeScenarioId`；运行时默认空对象也不能当成“已经加载”。
+- 打开面板时应先触发真实加载；保存前若尚未确认 settled，只执行加载和提示，避免本地 dev save 覆盖磁盘真值。
+- 这类问题用 controller 行为测试最稳：让 loader 返回不同 asset，断言 POST body 仍保留用户本地编辑，同时断言失败加载不会保住旧可见状态。
 
 ## 2026-05-13 - Special Zones Phase D closeout
 
@@ -1643,3 +1577,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 48. 视觉资源未就绪时，交互目标要跟可见 fallback 同步
 - 机场/港口这类 atlas 图标层如果在 loading/error 时直接早退，会形成“看不见也点不到”的空白态。
 - 更稳的做法是：资源未就绪时绘制明确的几何 fallback，并注册同一批 hover entries；atlas ready 后只切换绘制形态，不切断交互语义。
+
+## 2026-05-13 - localization automation drift repair
+
+- scenario locale editor 读取 geo locale patch 时，dev workspace 要复用共享 descriptor 和 normalize 链；只盯 `geo_locale_patch_url` 会漏掉语言分流 URL，并把原始 payload 直接塞回 runtime。
+- 保存后刷新要以 save response 里的实际产物路径为准；UI 当前语言 descriptor 只适合决定编辑入口，不能继续作为保存后的 reload source。

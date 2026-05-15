@@ -12,17 +12,15 @@ export function deriveRuntimePrimaryFeaturePayload({
   if (bounds && projectedBoundsCache?.set) {
     projectedBoundsCache.set(id, bounds);
   }
-  if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) {
-    return {
-      bounds,
-      resolvedColor: null,
-      skipped: true,
-    };
-  }
+  // 颜色解析必须与视口剔除解耦：resolved color map 要覆盖全部 feature，
+  // 否则当前视口外/边缘被 shouldSkipFeature 剔除的 feature 没有颜色，
+  // 政治层把它们画成透明（黑洞），且会随缩放视口变化反复出现。
+  // skipped 只表达"是否进交互空间网格"，颜色照常计算。
+  const skipped = shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true });
   return {
     bounds,
     resolvedColor: getResolvedFeatureColor(feature, id) || null,
-    skipped: false,
+    skipped,
   };
 }
 
