@@ -28,8 +28,17 @@ class MapRendererColorResolutionStrategyBoundaryContractTest(unittest.TestCase):
             "const getResolvedFeatureColor = (...args) => getColorResolutionStrategyOwner().getResolvedFeatureColor(...args);",
             renderer_content,
         )
-        self.assertIn("collectResolvedColor(id, resolvedColor) {", renderer_content)
         self.assertIn("const resolved = getResolvedFeatureColor(feature, id);", renderer_content)
+        rebuild_start = renderer_content.index("function rebuildResolvedColors() {")
+        rebuild_end = renderer_content.index("function shouldRefreshContextBaseContoursForColorChanges()", rebuild_start)
+        rebuild_body = renderer_content[rebuild_start:rebuild_end]
+        self.assertNotIn("getLogicalCanvasDimensions", rebuild_body)
+        self.assertNotIn("shouldSkipFeature", rebuild_body)
+        derived_start = renderer_content.index("function rebuildRuntimeDerivedState({")
+        derived_end = renderer_content.index("async function buildHitCanvasAfterStartup(", derived_start)
+        derived_body = renderer_content[derived_start:derived_end]
+        self.assertIn("const nextColors = rebuildResolvedColors();", derived_body)
+        self.assertNotIn("collectResolvedColor", derived_body)
 
         self.assertIn('import { resolveFeatureColor } from "../color_resolver.js";', owner_content)
         self.assertIn("export function createColorResolutionStrategyOwner({", owner_content)

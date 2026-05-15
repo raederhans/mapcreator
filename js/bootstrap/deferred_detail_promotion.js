@@ -90,7 +90,7 @@ export function createDeferredDetailPromotionOwner({
   } = {}) {
     const hasActiveScenario = !!String(runtimeState.activeScenarioId || "").trim();
     if (hasActiveScenario) {
-      refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });
+      refreshMapDataForScenarioApply({ suppressRender: true });
       return "light";
     }
     setMapData({

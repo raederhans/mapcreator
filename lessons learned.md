@@ -1582,3 +1582,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - scenario locale editor 读取 geo locale patch 时，dev workspace 要复用共享 descriptor 和 normalize 链；只盯 `geo_locale_patch_url` 会漏掉语言分流 URL，并把原始 payload 直接塞回 runtime。
 - 保存后刷新要以 save response 里的实际产物路径为准；UI 当前语言 descriptor 只适合决定编辑入口，不能继续作为保存后的 reload source。
+
+## 2026-05-15 - perf gate drift triage
+
+- 当 `perf:gate` 在补丁分支变红时，先 stash 补丁在同一机器同一 dev server 上跑 HEAD；如果 HEAD 同样红，就把它记录为 benchmark/environment drift，再用具体 per-metric artifact 说明补丁本身的成本。

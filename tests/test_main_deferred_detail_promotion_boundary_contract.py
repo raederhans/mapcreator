@@ -49,7 +49,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
         donor_content = MAIN_JS.read_text(encoding="utf-8")
 
         self.assertIn(
-            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            "refreshMapDataForScenarioApply({ suppressRender: true });",
             owner_content,
         )
         detail_refresh_source = owner_content[
@@ -61,7 +61,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             detail_refresh_source.index("setMapData({", detail_refresh_source.index("if (hasActiveScenario) {"))
         ]
         self.assertIn(
-            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            "refreshMapDataForScenarioApply({ suppressRender: true });",
             active_scenario_refresh_source,
         )
         self.assertNotIn("setMapData(", active_scenario_refresh_source)

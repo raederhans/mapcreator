@@ -286,7 +286,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertNotIn("forcePoliticalFullRepaint", self.map_renderer_source)
         self.assertNotIn("detail-promotion-force", self.map_renderer_source)
         self.assertIn(
-            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            "refreshMapDataForScenarioApply({ suppressRender: true });",
             self.deferred_detail_promotion_source,
         )
         detail_refresh_source = self.deferred_detail_promotion_source[
@@ -298,7 +298,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             detail_refresh_source.index("setMapData({", detail_refresh_source.index("if (hasActiveScenario) {"))
         ]
         self.assertIn(
-            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            "refreshMapDataForScenarioApply({ suppressRender: true });",
             active_scenario_refresh_source,
         )
         self.assertNotIn("setMapData(", active_scenario_refresh_source)

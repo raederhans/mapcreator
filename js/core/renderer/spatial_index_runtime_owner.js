@@ -36,7 +36,6 @@ export function createSpatialIndexRuntimeOwner({
     rebuildAuxiliaryRegionIndexes = () => {},
     getLogicalCanvasDimensions = () => [1, 1],
     computeProjectedFeatureBounds = () => null,
-    getResolvedFeatureColor = () => null,
     shouldSkipFeature = () => false,
     queueIndexUiRefresh = () => {},
     finalizeIndexBuildEffects = () => {},
@@ -93,7 +92,6 @@ export function createSpatialIndexRuntimeOwner({
 
   function rebuildRuntimePrimaryIndex({
     projectedBoundsCache = null,
-    collectResolvedColor = () => {},
   } = {}) {
     clearPrimaryIndexMaps(state);
     rebuildAuxiliaryRegionIndexes();
@@ -114,13 +112,7 @@ export function createSpatialIndexRuntimeOwner({
           projectedBoundsCache,
           computeProjectedFeatureBounds,
           shouldSkipFeature,
-          getResolvedFeatureColor,
         });
-        // 无论该 feature 是否被视口剔除（payload.skipped），都收集其颜色，
-        // 保证 resolved color map 全量、与缩放无关——修首屏黑洞与缩放反复掉色。
-        if (payload.resolvedColor) {
-          collectResolvedColor(id, payload.resolvedColor);
-        }
       },
     });
 

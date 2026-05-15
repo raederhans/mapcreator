@@ -235,7 +235,6 @@ test("spatial derivation payloads stay pure and explicit", () => {
     projectedBoundsCache,
     computeProjectedFeatureBounds: () => ({ minX: 1, minY: 2, maxX: 3, maxY: 4 }),
     shouldSkipFeature: () => false,
-    getResolvedFeatureColor: () => "#123456",
   });
   const perfPayload = createSpatialIndexPerfPayload({
     landCount: 10,
@@ -248,9 +247,9 @@ test("spatial derivation payloads stay pure and explicit", () => {
 
   assert.deepEqual(payload, {
     bounds: { minX: 1, minY: 2, maxX: 3, maxY: 4 },
-    resolvedColor: "#123456",
     skipped: false,
   });
+  assert.deepEqual(Object.keys(payload).sort(), ["bounds", "skipped"]);
   assert.deepEqual(projectedBoundsCache.get("feature-1"), { minX: 1, minY: 2, maxX: 3, maxY: 4 });
   assert.deepEqual(perfPayload, {
     landCount: 10,

@@ -1438,7 +1438,6 @@ function getSpatialIndexRuntimeOwner() {
       getLogicalCanvasDimensions,
       computeProjectedFeatureBounds,
       getProjectedFeatureBounds,
-      getResolvedFeatureColor,
       shouldSkipFeature,
       queueIndexUiRefresh,
       finalizeIndexBuildEffects,
@@ -6378,11 +6377,11 @@ function rebuildResolvedColors() {
     return nextColors;
   }
 
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  // Resolved colors are feature data, so full-table rebuilds stay independent
+  // from the current canvas, zoom, pan, and draw-time culling decisions.
   runtimeState.landData.features.forEach((feature, index) => {
     const id = getFeatureId(feature) || `feature-${index}`;
     if (!id) return;
-    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) return;
     const resolved = getResolvedFeatureColor(feature, id);
     if (resolved) {
       nextColors[id] = resolved;
@@ -9828,26 +9827,13 @@ function rebuildRuntimeDerivedState({
     buildRuntimePoliticalMeta();
   }
 
-  ensureSovereigntyState();
-  migrateLegacyColorState();
-  normalizeColorStateForRender(state, {
-    sanitizeColorMap,
-    sanitizeCountryColorMap,
-  });
-
   clearProjectedBoundsCache();
   const projectedBoundsCache = ensureProjectedBoundsCache();
-  const nextColors = {};
   getSpatialIndexRuntimeOwner().rebuildRuntimePrimaryIndex({
     projectedBoundsCache,
-    collectResolvedColor(id, resolvedColor) {
-      nextColors[id] = resolvedColor;
-    },
   });
 
-  replaceResolvedColorsState(state, nextColors);
-  bumpColorRevision(state);
-  invalidateRenderPasses(["physicalBase", "political", "contextBase"], "rebuild-colors");
+  const nextColors = rebuildResolvedColors();
   queueIndexUiRefresh({
     renderCountryList: true,
     renderWaterRegionList: true,
@@ -23995,7 +23981,6 @@ function reconcileDetailPromotionPoliticalPass(reason = "detail-promotion-politi
 function refreshMapDataForScenarioApply({
   suppressRender = false,
   refreshPlan = null,
-  recolorAllFeatures = false,
 } = {}) {
   const startedAt = nowMs();
   const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
@@ -24036,11 +24021,6 @@ function refreshMapDataForScenarioApply({
     buildSpatial: true,
     includeSecondarySpatial: false,
   });
-  if (recolorAllFeatures) {
-    // detail-promotion 后用全量、与视口无关的重着色覆盖 primary-index 的不完整 color map，
-    // 否则 fit-zoom 下被视口剔除的 detail features 没有 resolved color（黑洞）。
-    rebuildResolvedColors();
-  }
   resetExactRefreshOptimizationState();
   resetVisibleInternalBorderMeshSignature();
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
