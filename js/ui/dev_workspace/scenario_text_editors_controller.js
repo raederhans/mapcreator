@@ -1,5 +1,7 @@
 import { state as runtimeState } from "../../core/state.js";
+import { normalizeScenarioGeoLocalePatchPayload } from "../../core/data_loader.js";
 import { getEffectiveCityCollection } from "../../core/map_renderer/public.js";
+import { getScenarioGeoLocalePatchDescriptor } from "../../core/scenario/shared.js";
 import { syncScenarioLocalizationState } from "../../core/scenario_localization_state.js";
 import { getFeatureOwnerCode } from "../../core/sovereignty_manager.js";
 import { t } from "../i18n.js";
@@ -137,6 +139,8 @@ export function createScenarioTextEditorsController({
         || props.name
         || cityId
       ).trim();
+      // 这里故意用分层权重而不是细碎调参：
+      // 先复用已有 capital hint，再偏向明确的 capital 标记，最后才用人口和名字做稳定 tie-break。
       return (
         (cityId && cityId === String(priorHint?.city_id || "").trim() ? 9_000_000_000_000 : 0)
         + (props.__city_is_country_capital ? 6_000_000_000_000 : 0)
@@ -391,6 +395,8 @@ export function createScenarioTextEditorsController({
         capitals_by_tag: {},
         capital_city_hints: {},
       };
+    // `capitals_by_tag` 是最终 tag -> city_id 映射，供运行时快速读当前首都。
+    // `capital_city_hints` 保留 host feature、capital_state_id 等上下文，方便后续编辑器继续沿用这次选择结果。
     const nextOverrides = {
       ...priorOverrides,
       scenario_id: String(runtimeState.activeScenarioId || "").trim(),
@@ -472,12 +478,17 @@ export function createScenarioTextEditorsController({
     const featureId = targetIds.length === 1 ? String(targetIds[0] || "").trim() : "";
     const feature = featureId ? runtimeState.landIndex?.get(featureId) || null : null;
     const localeEntry = getScenarioGeoLocaleEntry(featureId);
+    const geoLocalePatchDescriptor = getScenarioGeoLocalePatchDescriptor(
+      runtimeState.activeScenarioManifest,
+      runtimeState.currentLanguage
+    );
     return {
       featureId,
       feature,
       selectionCount: targetIds.length,
       hasScenario: !!String(runtimeState.activeScenarioId || "").trim(),
-      hasGeoLocalePatch: !!String(runtimeState.activeScenarioManifest?.geo_locale_patch_url || "").trim(),
+      hasGeoLocalePatch: !!String(geoLocalePatchDescriptor?.url || "").trim(),
+      geoLocalePatchDescriptor,
       ...localeEntry,
     };
   };
@@ -815,7 +826,7 @@ export function createScenarioTextEditorsController({
         renderWorkspace();
         return;
       }
-      const geoLocalePatchUrl = String(runtimeState.activeScenarioManifest?.geo_locale_patch_url || "").trim();
+      const geoLocalePatchUrl = String(localeModel.geoLocalePatchDescriptor?.url || "").trim();
       if (!geoLocalePatchUrl) {
         showToast(ui("The active scenario does not declare a geo locale patch target."), {
           title: ui("Scenario Locale Editor"),
@@ -843,13 +854,19 @@ export function createScenarioTextEditorsController({
         if (!response.ok || !result?.ok) {
           throw new Error(String(result?.message || `HTTP ${response.status}`));
         }
-        const patchUrl = new URL(geoLocalePatchUrl, globalThis.location?.origin || globalThis.location?.href);
+        const savedGeoLocalePatchUrl = String(result.publishedPath || result.generatedPath || "").trim();
+        if (!savedGeoLocalePatchUrl) {
+          throw new Error(ui("Geo locale save response did not include the generated patch path."));
+        }
+        const patchUrl = new URL(savedGeoLocalePatchUrl, globalThis.location?.origin || globalThis.location?.href);
         patchUrl.searchParams.set("_t", String(Date.now()));
         const patchResponse = await fetch(patchUrl.href, { cache: "no-store" });
         if (!patchResponse.ok) {
           throw new Error(`Unable to reload geo locale patch (HTTP ${patchResponse.status}).`);
         }
-        const patchPayload = await patchResponse.json();
+        // save 接口只负责把 patch 写回磁盘。
+        // editor 这里必须再把刚落盘的文件重新拉回 runtime，确保面板、tooltip 和 locale state 看到的是同一份最新结果。
+        const patchPayload = normalizeScenarioGeoLocalePatchPayload(await patchResponse.json());
         syncScenarioLocalizationState({
           cityOverridesPayload: runtimeState.scenarioCityOverridesData,
           geoLocalePatchPayload: patchPayload,

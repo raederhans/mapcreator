@@ -1022,6 +1022,64 @@ class DevServerTest(unittest.TestCase):
 
             self.assertEqual(context["geoLocalePatchPath"], scenario_dir / "geo_locale_patch.en.json")
 
+    def test_save_scenario_geo_locale_entry_reports_actual_generated_path_for_locale_specific_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = self._create_scenario_fixture(root)
+            manifest_path = scenario_dir / "manifest.json"
+            manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest_payload.pop("geo_locale_patch_url", None)
+            manifest_payload["geo_locale_patch_url_en"] = "data/scenarios/test_scenario/geo_locale_patch.en.json"
+            manifest_payload["geo_locale_patch_url_zh"] = "data/scenarios/test_scenario/geo_locale_patch.zh.json"
+            _write_json(manifest_path, manifest_payload)
+            _write_json(
+                scenario_dir / "geo_locale_patch.en.json",
+                {
+                    "version": 1,
+                    "scenario_id": "test_scenario",
+                    "language": "en",
+                    "geo": {},
+                },
+            )
+            _write_json(
+                scenario_dir / "geo_locale_patch.zh.json",
+                {
+                    "version": 1,
+                    "scenario_id": "test_scenario",
+                    "language": "zh",
+                    "geo": {"AAA-1": {"zh": "旧中文名"}},
+                },
+            )
+
+            def fake_materialize_pipeline(context: dict[str, object], **_kwargs: object) -> None:
+                _write_json(
+                    Path(context["geoLocalePatchPath"]),
+                    {
+                        "version": 1,
+                        "scenario_id": "test_scenario",
+                        "language": "en",
+                        "geo": {"AAA-1": {"en": "Alpha One", "zh": "阿尔法一"}},
+                    },
+                )
+
+            with mock.patch.object(
+                dev_server,
+                "_write_and_materialize_mutation_pipeline",
+                side_effect=fake_materialize_pipeline,
+            ):
+                result = dev_server.save_scenario_geo_locale_entry(
+                    "test_scenario",
+                    feature_id="AAA-1",
+                    en="Alpha One",
+                    zh="阿尔法一",
+                    root=root,
+                )
+
+            self.assertEqual(result["generatedPath"], "data/scenarios/test_scenario/geo_locale_patch.en.json")
+            self.assertEqual(result["entry"]["zh"], "阿尔法一")
+            stale_zh_payload = json.loads((scenario_dir / "geo_locale_patch.zh.json").read_text(encoding="utf-8"))
+            self.assertEqual(stale_zh_payload["geo"]["AAA-1"]["zh"], "旧中文名")
+
     def test_normalize_optional_float_accepts_finite_values_and_rejects_non_finite(self) -> None:
         self.assertEqual(dev_server._normalize_optional_float("12.5"), 12.5)
         self.assertIsNone(dev_server._normalize_optional_float(""))

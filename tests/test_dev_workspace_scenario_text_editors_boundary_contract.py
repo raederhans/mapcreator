@@ -65,7 +65,14 @@ class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
         self.assertIn("syncRuntimeScenarioCityOverrides(nextOverrides);", owner_content)
         self.assertIn("syncScenarioLocalizationState({", owner_content)
         self.assertIn("getScenarioGeoLocaleEntry(featureId)", owner_content)
+        self.assertIn('import { normalizeScenarioGeoLocalePatchPayload } from "../../core/data_loader.js";', owner_content)
+        self.assertIn('import { getScenarioGeoLocalePatchDescriptor } from "../../core/scenario/shared.js";', owner_content)
+        self.assertIn("getScenarioGeoLocalePatchDescriptor(", owner_content)
+        self.assertIn("normalizeScenarioGeoLocalePatchPayload(await patchResponse.json())", owner_content)
+        self.assertIn('const savedGeoLocalePatchUrl = String(result.publishedPath || result.generatedPath || "").trim();', owner_content)
+        self.assertIn("new URL(savedGeoLocalePatchUrl,", owner_content)
         self.assertIn('const patchResponse = await fetch(patchUrl.href, { cache: "no-store" });', owner_content)
+        self.assertNotIn("new URL(geoLocalePatchUrl,", owner_content)
 
 
 if __name__ == "__main__":
