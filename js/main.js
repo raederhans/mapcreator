@@ -24,6 +24,7 @@ import {
   initMap,
   invalidateAllRenderPasses,
   invalidateContextLayerVisualStateBatch,
+  reconcileDetailPromotionPoliticalPass,
   setMapData,
   render,
 } from "./core/map_renderer/public.js";
@@ -197,6 +198,7 @@ function getDeferredDetailPromotionOwner() {
       requestMainRender,
       schedulePostReadyDeferredContextWarmup,
       schedulePostReadyHydration,
+      schedulePostReadyPoliticalReconcile,
       schedulePostReadyVisualWarmup,
       scheduleStartupReadonlyUnlockTimer,
       setBootState,
@@ -343,6 +345,37 @@ function schedulePostReadyHydration() {
     delayMs: shouldFastTrackScenarioHydration() ? 300 : 4200,
     retryDelayMs: shouldFastTrackScenarioHydration() ? 450 : 900,
   });
+}
+
+const POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
+
+function schedulePostReadyPoliticalReconcileTask(reason = "detail-promotion-political-reconcile") {
+  const normalizedReason = String(reason || "detail-promotion-political-reconcile").trim()
+    || "detail-promotion-political-reconcile";
+  schedulePostReadyTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {
+    if (!runtimeState.detailPromotionCompleted) {
+      schedulePostReadyPoliticalReconcileTask(normalizedReason);
+      return false;
+    }
+    const requested = reconcileDetailPromotionPoliticalPass(normalizedReason);
+    if (!requested) {
+      schedulePostReadyPoliticalReconcileTask(normalizedReason);
+    }
+    return requested;
+  }, {
+    timeout: 1200,
+    delayMs: 0,
+    retryDelayMs: 320,
+    idleQuietMs: POST_READY_IDLE_QUIET_MS,
+  });
+  return true;
+}
+
+function schedulePostReadyPoliticalReconcile(reason = "detail-promotion-political-reconcile") {
+  if (!runtimeState.detailPromotionCompleted) {
+    return false;
+  }
+  return schedulePostReadyPoliticalReconcileTask(reason);
 }
 
 async function ensureContextLayerDataReady(

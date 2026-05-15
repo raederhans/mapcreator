@@ -830,6 +830,8 @@ const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([
   "textureLabels",
   "labels",
 ]);
+// exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
+// political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
 const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE = 0.15;
 const POLITICAL_PARTIAL_REPAINT_FEATURE_THRESHOLD = 48;
 const POLITICAL_PARTIAL_REPAINT_CANDIDATE_THRESHOLD = 160;
@@ -23686,6 +23688,8 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
   primaryDerivedStateReady = false,
   refreshOpeningOwnerBorders = true,
 } = {}) {
+  // chunk promotion 先让政治/可见数据切换完成，再等交互恢复空闲后补建 index / spatial infra。
+  // 这样可以避免放大缩小时的旧命中状态和新 topology rebuild 互相踩踏。
   if (promotionVersion !== scenarioChunkPromotionVersion) {
     return false;
   }
@@ -23967,9 +23971,31 @@ function refreshMapDataForScenarioChunkPromotion({
   }
 }
 
+function reconcileDetailPromotionPoliticalPass(reason = "detail-promotion-political-reconcile") {
+  const startedAt = nowMs();
+  const normalizedReason = String(reason || "detail-promotion-political-reconcile").trim()
+    || "detail-promotion-political-reconcile";
+  const cache = getRenderPassCacheState();
+  if (cache?.signatures) {
+    cache.signatures.political = "";
+  }
+  clearPassFullReferenceTransforms(["political"]);
+  invalidateRenderPasses(["political"], normalizedReason);
+  const requested = requestRendererRender(normalizedReason, {
+    flush: false,
+  });
+  recordRenderPerfMetric("detailPromotionPoliticalReconcile", nowMs() - startedAt, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    reason: normalizedReason,
+    requested: !!requested,
+  });
+  return requested;
+}
+
 function refreshMapDataForScenarioApply({
   suppressRender = false,
   refreshPlan = null,
+  recolorAllFeatures = false,
 } = {}) {
   const startedAt = nowMs();
   const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
@@ -24010,6 +24036,11 @@ function refreshMapDataForScenarioApply({
     buildSpatial: true,
     includeSecondarySpatial: false,
   });
+  if (recolorAllFeatures) {
+    // detail-promotion 后用全量、与视口无关的重着色覆盖 primary-index 的不完整 color map，
+    // 否则 fit-zoom 下被视口剔除的 detail features 没有 resolved color（黑洞）。
+    rebuildResolvedColors();
+  }
   resetExactRefreshOptimizationState();
   resetVisibleInternalBorderMeshSignature();
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
@@ -24079,6 +24110,7 @@ export {
   // Scenario refresh and color synchronization facade.
   refreshMapDataForScenarioChunkPromotion,
   refreshMapDataForScenarioApply,
+  reconcileDetailPromotionPoliticalPass,
   refreshColorState,
   refreshResolvedColorsForFeatures,
   refreshResolvedColorsForOwners,

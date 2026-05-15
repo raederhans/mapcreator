@@ -37,10 +37,72 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
         self.assertIn("refreshScenarioDataHealth({", owner_content)
         self.assertIn("buildInteractionInfrastructureAfterStartup({", owner_content)
         self.assertIn("getDeferredPromotionDelay(runtimeState.renderProfile)", owner_content)
+        self.assertIn("schedulePostReadyPoliticalReconcile", donor_content)
+        self.assertIn("schedulePostReadyPoliticalReconcile", owner_content)
 
         self.assertNotIn("loadDeferredDetailBundle({", donor_content)
         self.assertNotIn("refreshScenarioDataHealth({", donor_content)
         self.assertNotIn("getDeferredPromotionDelay(runtimeState.renderProfile)", donor_content)
+
+    def test_detail_promotion_recolors_then_defers_political_reconcile(self):
+        owner_content = DEFERRED_DETAIL_PROMOTION_JS.read_text(encoding="utf-8")
+        donor_content = MAIN_JS.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            owner_content,
+        )
+        detail_refresh_source = owner_content[
+            owner_content.index("function applyDetailPromotionMapRefresh({"):
+            owner_content.index("/**", owner_content.index("function applyDetailPromotionMapRefresh({"))
+        ]
+        active_scenario_refresh_source = detail_refresh_source[
+            detail_refresh_source.index("if (hasActiveScenario) {"):
+            detail_refresh_source.index("setMapData({", detail_refresh_source.index("if (hasActiveScenario) {"))
+        ]
+        self.assertIn(
+            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            active_scenario_refresh_source,
+        )
+        self.assertNotIn("setMapData(", active_scenario_refresh_source)
+        self.assertNotIn("setMapData-fallback", detail_refresh_source)
+        self.assertNotIn("falling back to setMapData", detail_refresh_source)
+        self.assertNotIn("catch (error)", detail_refresh_source)
+        self.assertNotIn("forcePoliticalFullRepaint", owner_content)
+        self.assertNotIn("detail-promotion-force", owner_content)
+        self.assertRegex(
+            owner_content,
+            re.compile(
+                r"runtimeState\.detailPromotionCompleted = true;\s*"
+                r"if \(mapDataRefreshed\) \{\s*"
+                r"schedulePostReadyPoliticalReconcile\?\.\(\"detail-topology-ready\"\);",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            owner_content,
+            re.compile(
+                r"const refreshMode = applyDetailPromotionMapRefresh\([\s\S]*?"
+                r"mapDataRefreshed = true;[\s\S]*?"
+                r"schedulePostReadyPoliticalReconcile\?\.\(\"detail-topology-promoted\"\);",
+                re.S,
+            ),
+        )
+        self.assertIn(
+            'const POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";',
+            donor_content,
+        )
+        self.assertRegex(
+            donor_content,
+            re.compile(
+                r"function schedulePostReadyPoliticalReconcile\(reason = \"detail-promotion-political-reconcile\"\) \{[\s\S]*?"
+                r"if \(!runtimeState\.detailPromotionCompleted\) \{[\s\S]*?"
+                r"return false;[\s\S]*?"
+                r"return schedulePostReadyPoliticalReconcileTask\(reason\);",
+                re.S,
+            ),
+        )
+        self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", donor_content)
 
     def test_main_keeps_wrappers_and_ready_state_facade(self):
         donor_content = MAIN_JS.read_text(encoding="utf-8")

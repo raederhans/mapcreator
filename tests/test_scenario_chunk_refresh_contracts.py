@@ -7,6 +7,7 @@ MAP_RENDERER_PATH = ROOT / "js/core/map_renderer.js"
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
 SCENARIO_CHUNK_RUNTIME_PATH = ROOT / "js/core/scenario/chunk_runtime.js"
 SCENARIO_POST_APPLY_EFFECTS_PATH = ROOT / "js/core/scenario_post_apply_effects.js"
+SCENARIO_APPLY_PIPELINE_PATH = ROOT / "js/core/scenario_apply_pipeline.js"
 MAIN_JS_PATH = ROOT / "js/main.js"
 DEFERRED_DETAIL_PROMOTION_PATH = ROOT / "js/bootstrap/deferred_detail_promotion.js"
 SCENARIO_RUNTIME_STATE_PATH = ROOT / "js/core/state/scenario_runtime_state.js"
@@ -19,6 +20,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
         cls.scenario_chunk_runtime_source = SCENARIO_CHUNK_RUNTIME_PATH.read_text(encoding="utf-8")
         cls.scenario_post_apply_effects_source = SCENARIO_POST_APPLY_EFFECTS_PATH.read_text(encoding="utf-8")
+        cls.scenario_apply_pipeline_source = SCENARIO_APPLY_PIPELINE_PATH.read_text(encoding="utf-8")
         cls.main_source = MAIN_JS_PATH.read_text(encoding="utf-8")
         cls.deferred_detail_promotion_source = DEFERRED_DETAIL_PROMOTION_PATH.read_text(encoding="utf-8")
         cls.scenario_runtime_state_source = SCENARIO_RUNTIME_STATE_PATH.read_text(encoding="utf-8")
@@ -248,6 +250,100 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("const shouldSeedFirstReadyFlush = !!(", self.main_source)
         self.assertIn("loadState.pendingReason = normalizedReason;", self.main_source)
         self.assertIn("loadState.pendingDelayMs = 0;", self.main_source)
+
+    def test_detail_promotion_political_reconcile_uses_post_ready_task(self):
+        self.assertIn("function reconcileDetailPromotionPoliticalPass(reason = \"detail-promotion-political-reconcile\")", self.map_renderer_source)
+        self.assertRegex(
+            self.map_renderer_source,
+            re.compile(
+                r"function reconcileDetailPromotionPoliticalPass\(reason = \"detail-promotion-political-reconcile\"\) \{[\s\S]*?"
+                r"cache\.signatures\.political = \"\";[\s\S]*?"
+                r"clearPassFullReferenceTransforms\(\[\"political\"\]\);[\s\S]*?"
+                r"invalidateRenderPasses\(\[\"political\"\], normalizedReason\);[\s\S]*?"
+                r"requestRendererRender\(normalizedReason, \{[\s\S]*?"
+                r"flush: false,[\s\S]*?"
+                r"recordRenderPerfMetric\(\"detailPromotionPoliticalReconcile\"",
+                re.S,
+            ),
+        )
+        reconcile_source = self.map_renderer_source[
+            self.map_renderer_source.index("function reconcileDetailPromotionPoliticalPass("):
+            self.map_renderer_source.index("function refreshMapDataForScenarioApply(", self.map_renderer_source.index("function reconcileDetailPromotionPoliticalPass("))
+        ]
+        self.assertNotIn("fallback:", reconcile_source)
+        self.assertNotIn("render();", reconcile_source)
+        self.assertNotIn("requestMainRender", reconcile_source)
+        self.assertNotIn("requestRender(", reconcile_source)
+        self.assertRegex(
+            self.main_source,
+            re.compile(
+                r"const requested = reconcileDetailPromotionPoliticalPass\(normalizedReason\);\s*"
+                r"if \(!requested\) \{\s*"
+                r"schedulePostReadyPoliticalReconcileTask\(normalizedReason\);",
+                re.S,
+            ),
+        )
+        self.assertNotIn("forcePoliticalFullRepaint", self.map_renderer_source)
+        self.assertNotIn("detail-promotion-force", self.map_renderer_source)
+        self.assertIn(
+            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            self.deferred_detail_promotion_source,
+        )
+        detail_refresh_source = self.deferred_detail_promotion_source[
+            self.deferred_detail_promotion_source.index("function applyDetailPromotionMapRefresh({"):
+            self.deferred_detail_promotion_source.index("/**", self.deferred_detail_promotion_source.index("function applyDetailPromotionMapRefresh({"))
+        ]
+        active_scenario_refresh_source = detail_refresh_source[
+            detail_refresh_source.index("if (hasActiveScenario) {"):
+            detail_refresh_source.index("setMapData({", detail_refresh_source.index("if (hasActiveScenario) {"))
+        ]
+        self.assertIn(
+            "refreshMapDataForScenarioApply({ suppressRender: true, recolorAllFeatures: true });",
+            active_scenario_refresh_source,
+        )
+        self.assertNotIn("setMapData(", active_scenario_refresh_source)
+        self.assertNotIn("setMapData-fallback", detail_refresh_source)
+        self.assertNotIn("falling back to setMapData", detail_refresh_source)
+        self.assertNotIn("catch (error)", detail_refresh_source)
+        self.assertIn(
+            'schedulePostReadyTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {',
+            self.main_source,
+        )
+        self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", self.main_source)
+
+    def test_detail_topology_prepare_without_map_refresh_defers_political_reconcile(self):
+        self.assertRegex(
+            self.deferred_detail_promotion_source,
+            re.compile(
+                r"let mapDataRefreshed = false;[\s\S]*?"
+                r"if \(applyMapData\) \{[\s\S]*?"
+                r"applyDetailPromotionMapRefresh\([\s\S]*?"
+                r"mapDataRefreshed = true;[\s\S]*?"
+                r"runtimeState\.detailPromotionCompleted = true;[\s\S]*?"
+                r"if \(mapDataRefreshed\) \{[\s\S]*?"
+                r"schedulePostReadyPoliticalReconcile\?\.\(\"detail-topology-ready\"\);",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            self.deferred_detail_promotion_source,
+            re.compile(
+                r"const refreshMode = applyDetailPromotionMapRefresh\([\s\S]*?"
+                r"mapDataRefreshed = true;[\s\S]*?"
+                r"if \(mapDataRefreshed\) \{\s*"
+                r"schedulePostReadyPoliticalReconcile\?\.\(\"detail-topology-promoted\"\);",
+                re.S,
+            ),
+        )
+        self.assertIn("const detailPromoted = (startupReadonly || supportsChunkedPoliticalRuntime)", self.scenario_apply_pipeline_source)
+        self.assertIn("await ensureScenarioDetailTopologyLoaded({ applyMapData: false });", self.scenario_apply_pipeline_source)
+        readonly_unlock_source = self.deferred_detail_promotion_source[
+            self.deferred_detail_promotion_source.index("async function unlockStartupReadonlyWithDetail("):
+            self.deferred_detail_promotion_source.index("function scheduleDeferredDetailPromotion(", self.deferred_detail_promotion_source.index("async function unlockStartupReadonlyWithDetail("))
+        ]
+        self.assertNotIn("schedulePostReadyPoliticalReconcile", readonly_unlock_source)
+        self.assertNotIn('schedulePostReadyPoliticalReconcile?.("startup-readonly-unlocked")', readonly_unlock_source)
+        self.assertNotIn('schedulePostReadyPoliticalReconcile?.("startup-readonly-force-unlocked")', readonly_unlock_source)
 
     def test_pending_promotion_keeps_same_selection_version_across_visual_infra_and_commit_payload(self):
         self.assertRegex(

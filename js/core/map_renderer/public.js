@@ -55,6 +55,7 @@ export {
   invalidateOceanVisualState,
   invalidateOceanWaterInteractionVisualState,
   recomputeDynamicBordersNow,
+  reconcileDetailPromotionPoliticalPass,
   refreshColorState,
   refreshResolvedColorsForFeatures,
   scheduleDynamicBorderRecompute,
