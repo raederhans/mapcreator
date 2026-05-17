@@ -457,6 +457,40 @@ test("feature bounds keep broad owner chunks out of unrelated viewports", () => 
   assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["political.detail.country.local-owner"]);
 });
 
+test("edge-touching feature bounds stay eligible for political detail selection", () => {
+  const selection = selectScenarioChunks({
+    scenarioId: "tno_1962",
+    chunkRegistry: normalizeScenarioChunkManifest({
+      chunks: [
+        {
+          id: "political.detail.country.edge-owner",
+          url: "edge-owner.json",
+          layer: "political",
+          lod: "detail",
+          bounds: [-180, -60, 180, 80],
+          feature_bounds: [[13, 33, 15, 36]],
+          min_zoom: 0,
+          max_zoom: 99,
+          country_codes: ["EO"],
+          feature_count: 1,
+          byte_size: 1,
+          estimated_path_cost: 1,
+        },
+      ],
+    }),
+    zoom: 2.5,
+    viewportBbox: [7, 31, 13, 37],
+    visibleLayers: ["political"],
+    renderBudgetHints: {
+      max_required_chunks: 6,
+      max_required_political_chunks: 6,
+      min_required_political_chunks: 1,
+    },
+  });
+
+  assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["political.detail.country.edge-owner"]);
+});
+
 test("tno render budget sets political cold selection caps", () => {
   const manifest = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "manifest.json"));
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
@@ -683,6 +717,14 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('return reject("topology-revision-mismatch")')
       && rendererSource.includes('return reject("stale-age-limit")')
       && rendererSource.includes('continuityFrameRelaxedReuse'),
+    firstVisibleScenarioRequiresCurrentPoliticalExactFrame:
+      /function getFirstVisiblePoliticalFrameBlockReason\(reason = "visible-frame"\) \{[\s\S]*?base-visible-fallback[\s\S]*?normalizedReason !== "exact-frame"[\s\S]*?dirty-political-pass[\s\S]*?stale-ocean-fill[\s\S]*?stale-political-signature[\s\S]*?stale-political-reference-transform[\s\S]*?stale-political-full-reference-transform/.test(rendererSource)
+      && /function noteFirstVisibleFrameBlocked\(reason = "visible-frame", blockReason = "unknown"\) \{[\s\S]*?recordRenderPerfMetric\("firstVisibleFrameBlocked"[\s\S]*?topologyBundleMode:[\s\S]*?oceanFill: getOceanBaseFillColor\(\)/.test(rendererSource)
+      && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?const blockReason = getFirstVisiblePoliticalFrameBlockReason\(reason\);[\s\S]*?if \(blockReason\) \{[\s\S]*?noteFirstVisibleFrameBlocked\(reason, blockReason\);[\s\S]*?return;/.test(rendererSource),
+    oceanBackgroundInvalidationCoversPoliticalSignatureDependents:
+      /function invalidateOceanBackgroundVisualState\(reason = "ocean-background"\) \{[\s\S]*?cancelExactAfterSettleRefresh\(\{ clearDefer: true \}\);[\s\S]*?invalidateRenderPasses\(\["background", "physicalBase", "political", "contextBase", "contextScenario"\], reason\);[\s\S]*?clearRenderPassReferenceTransforms\(\["background", "physicalBase", "political", "contextBase", "contextScenario"\]\);/.test(rendererSource)
+      && /function getPoliticalPassStaticSignature[\s\S]*?`ocean-fill:\$\{getOceanBaseFillColor\(\)\}`/.test(rendererSource)
+      && /if \(passName === "contextScenario"\) \{[\s\S]*?`ocean-fill:\$\{getOceanBaseFillColor\(\)\}`/.test(rendererSource),
     exactAfterSettleReschedulesWhenPhaseStillBusy:
       /function scheduleExactAfterSettleRefresh\(profile = runtimeState\.adaptiveSettleProfile \|\| getAdaptiveSettleProfile\(\)\) \{[\s\S]*?beginExactAfterSettleControllerSchedule\(scheduleStartedAt\);[\s\S]*?isExactAfterSettleGenerationCurrent\(generation, "scheduled"\)[\s\S]*?if \(!runtimeState\.deferExactAfterSettle\) \{[\s\S]*?resetExactAfterSettleController\("defer-cleared", generation\);[\s\S]*?if \(runtimeState\.renderPhase !== RENDER_PHASE_IDLE\) \{[\s\S]*?scheduleExactAfterSettleRefresh\(resolvedProfile\);[\s\S]*?return;[\s\S]*?\}/.test(rendererSource),
     exactAfterSettleUsesLocalController:
@@ -736,6 +778,11 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function shouldRefreshContextBaseContoursForColorChanges\(\) \{[\s\S]*?runtimeState\.showPhysical[\s\S]*?physicalContourMajorData/.test(rendererSource)
       && /if \(passName === "contextBase"\) \{[\s\S]*?`context-colors:\$\{shouldRefreshContextBaseForColorChanges\(\) \? Number\(runtimeState\.colorRevision \|\| 0\) : 0\}`/.test(rendererSource)
       && /if \(passName === "labels"\) \{[\s\S]*?`colors:\$\{Number\(runtimeState\.colorRevision \|\| 0\)\}`/.test(rendererSource),
+    partialPoliticalRepaintOnlyAcceptsTargetedRefreshColors:
+      /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
+      && /targetPassNames\.includes\("political"\)[\s\S]*?String\(reason \|\| "unspecified"\) !== "refresh-colors"[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);/.test(rendererSource)
+      && !rendererSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
+      && !rendererSource.includes('!["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))'),
     politicalFullReferenceOnlyWrittenByFullPass:
       /function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?setPassReferenceTransform\(passName, transform\);[\s\S]*?if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(rendererSource)
       && !/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(rendererSource),

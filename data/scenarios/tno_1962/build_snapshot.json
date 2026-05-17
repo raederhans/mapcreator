@@ -25,7 +25,7 @@
     "context_lod.manifest.json": "4b37ff2b80664ce7b9ffb68bace323e1c1d8be7d81fec6dad6455873ec1dbfdc",
     "detail_chunks.manifest.json": "ff76ca8f902905dc6f092414c2a95bcd597b50a3c196d6bcc356fa1603f8d9ac",
     "geo_aliases.startup.json": "4087b200237be216c8a79ee39d5dc367a452e588ea4ea3647c40ea975a1b440c",
-    "locales.startup.json": "c04b8f7cbd159cc822b617c7b8153c9f6032df7f56870d380660cf7237ce97da",
+    "locales.startup.json": "f1b540ac97c69d5b1f9381d04b7049d6fb30256a99d63ed3ff8db4f9ce06a30b",
     "mesh_pack.json": "b34874f56691c49cf9c5c2891ac97944183cfc7b32ecc4b4228a6387759a5536",
     "runtime_meta.json": "d231435ca72bcba71281b288be0d1ba2e125787e3ec589b9724112cb464c810d",
     "runtime_topology.bootstrap.topo.json": "24046f9f6cc328d844f320ff099b2f7bb4e7ff9180710df678a48df4c755bab8",
@@ -39,6 +39,6 @@
   "profile": "tno_full",
   "report_paths": {},
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "b3e23d55c5312254361afcd00e4e54cdab0ab94c47db5dee9abc13a57e47e1ba",
+  "snapshot_fingerprint": "98f06980df44155a739be484c8fdca9909bb09da92d884218aa37a168a9fa062",
   "water_count": 123
 }

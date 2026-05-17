@@ -6,7 +6,13 @@ const source = await readFile(new URL("../js/core/palette_runtime_bridge.js", im
 const runtimeBridge = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`);
 const stateDefaultsSource = await readFile(new URL("../js/core/state_defaults.js", import.meta.url), "utf8");
 const transportCapabilityRegistrySource = await readFile(new URL("../js/core/transport_capability_registry.js", import.meta.url), "utf8");
-const transportCapabilityRegistryDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transportCapabilityRegistrySource)}`;
+const transportPackResolverSource = await readFile(new URL("../js/core/transport_pack_resolver.js", import.meta.url), "utf8");
+const transportPackResolverDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transportPackResolverSource)}`;
+const patchedTransportCapabilityRegistrySource = transportCapabilityRegistrySource.replace(
+  "./transport_pack_resolver.js",
+  transportPackResolverDataUrl,
+);
+const transportCapabilityRegistryDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(patchedTransportCapabilityRegistrySource)}`;
 const countryFeaturePoliciesSource = await readFile(new URL("../js/core/country_feature_policies.js", import.meta.url), "utf8");
 const countryFeaturePoliciesJsonSource = await readFile(new URL("../data/country_feature_policies.json", import.meta.url), "utf8");
 const countryFeaturePoliciesJsonDataUrl = `data:application/json,${encodeURIComponent(countryFeaturePoliciesJsonSource)}`;
@@ -17,6 +23,7 @@ const patchedCountryFeaturePoliciesSource = countryFeaturePoliciesSource.replace
 const countryFeaturePoliciesDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(patchedCountryFeaturePoliciesSource)}`;
 const patchedStateDefaultsSource = stateDefaultsSource
   .replace("./transport_capability_registry.js", transportCapabilityRegistryDataUrl)
+  .replace("./transport_pack_resolver.js", transportPackResolverDataUrl)
   .replace("./country_feature_policies.js", countryFeaturePoliciesDataUrl);
 const stateDefaultsDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(patchedStateDefaultsSource)}`;
 const colorStateSource = await readFile(new URL("../js/core/state/color_state.js", import.meta.url), "utf8");
@@ -477,8 +484,15 @@ test("buildScenarioOwnerColorMapDetails preserves TNO mixed-policy explicit colo
   assert.deepEqual(details.generatedTags, []);
 });
 
-test("checked-in non-1962 scenarios declare HOI4 palette and complete colors", async () => {
-  const scenarioIds = ["blank_base", "hoi4_1936", "hoi4_1939", "modern_world"];
+test("checked-in scenarios declare expected palette and complete colors", async () => {
+  const expectedPaletteIds = {
+    blank_base: "hoi4_vanilla",
+    hoi4_1936: "hoi4_vanilla",
+    hoi4_1939: "hoi4_vanilla",
+    modern_world: "hoi4_vanilla",
+    tno_1962: "tno",
+  };
+  const scenarioIds = Object.keys(expectedPaletteIds);
   for (const scenarioId of scenarioIds) {
     const manifest = JSON.parse(
       await readFile(new URL(`../data/scenarios/${scenarioId}/manifest.json`, import.meta.url), "utf8"),
@@ -490,7 +504,7 @@ test("checked-in non-1962 scenarios declare HOI4 palette and complete colors", a
       .filter(([, entry]) => !/^#[0-9a-f]{6}$/i.test(String(entry?.color_hex || "").trim()))
       .map(([tag]) => tag);
 
-    assert.equal(manifest.palette_id, "hoi4_vanilla", `${scenarioId} palette_id`);
+    assert.equal(manifest.palette_id, expectedPaletteIds[scenarioId], `${scenarioId} palette_id`);
     assert.deepEqual(missingColorTags, [], `${scenarioId} missing color_hex tags`);
   }
 });
