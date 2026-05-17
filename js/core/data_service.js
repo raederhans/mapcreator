@@ -181,11 +181,29 @@ function ensureReadableModuleEntry(entry, {
   );
 }
 
-function resolveModuleSpecifier(url) {
+const ALLOWED_RUNTIME_MODULE_PATHS = Object.freeze(new Set([
+  "js/core/city_lights_historical_1930_asset.js",
+  "js/core/city_lights_modern_asset.js",
+]));
+
+function ensureAllowedRuntimeModulePath(url) {
   const normalizedUrl = normalizeCatalogPath(url);
-  if (/^(?:https?:|file:|data:|blob:|\/)/.test(normalizedUrl)) {
-    return normalizedUrl;
+  if (!ALLOWED_RUNTIME_MODULE_PATHS.has(normalizedUrl)) {
+    throw createDataServiceError(
+      "module-path-not-allowed",
+      `[data_service] Runtime module path is not allowlisted: ${normalizedUrl || "<empty>"}.`,
+      {
+        kind: "module",
+        id: normalizedUrl,
+        url: normalizedUrl,
+      },
+    );
   }
+  return normalizedUrl;
+}
+
+function resolveModuleSpecifier(url) {
+  const normalizedUrl = ensureAllowedRuntimeModulePath(url);
   return new URL(`../../${normalizedUrl}`, import.meta.url).href;
 }
 
@@ -269,6 +287,7 @@ async function loadModuleEntry(kind, id, url, entry, options = {}) {
       : typeof globalThis.__mapcreatorModuleLoader === "function"
         ? globalThis.__mapcreatorModuleLoader
         : null;
+    ensureAllowedRuntimeModulePath(normalizedUrl);
     const moduleSpecifier = injectedModuleLoader
       ? normalizedUrl
       : resolveModuleSpecifier(normalizedUrl);
