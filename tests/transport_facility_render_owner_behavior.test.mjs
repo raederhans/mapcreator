@@ -62,6 +62,7 @@ function createFacilityRenderOwnerHarness({
   labelMode = "name",
   labelSize = 9,
   labelHalo = 0.22,
+  opacity = 1,
   projection = () => [100, 120],
 } = {}) {
   const context = createRecordingFacilityContext();
@@ -76,7 +77,7 @@ function createFacilityRenderOwnerHarness({
       transportOverview: {
         visualMode: "distribution",
         [familyId]: {
-          opacity: 1,
+          opacity,
           visualStrength: 0,
           labelsEnabled,
           labelDensity,
@@ -176,6 +177,34 @@ test("transport facility icon size stays in small screen-pixel bounds", () => {
     > resolveTransportFacilityIconDrawSizePx("port", { importance_rank: 1 }, { visualScale: 1 }),
     "hub port icons should remain larger than local port icons",
   );
+});
+
+test("transport facility marker opacity follows the family opacity config", () => {
+  const features = [{
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [0, 0] },
+    properties: { stable_key: "airport:opacity:1", importance_rank: 3, name: "Opacity Test Airport" },
+  }];
+  const lowOpacityHarness = createFacilityRenderOwnerHarness({
+    k: 2,
+    features,
+    opacity: 0.35,
+    projection: () => [80, 60],
+  });
+  lowOpacityHarness.owner.drawAirportsLayer(2);
+  const lowOpacity = lowOpacityHarness.context.calls.find((call) => call.type === "globalAlpha")?.value;
+
+  const highOpacityHarness = createFacilityRenderOwnerHarness({
+    k: 2,
+    features,
+    opacity: 0.7,
+    projection: () => [80, 60],
+  });
+  highOpacityHarness.owner.drawAirportsLayer(2);
+  const highOpacity = highOpacityHarness.context.calls.find((call) => call.type === "globalAlpha")?.value;
+
+  assert.ok(lowOpacity < 0.72, "low configured opacity should not be forced to the visibility floor");
+  assert.equal(Number((highOpacity / lowOpacity).toFixed(2)), 2);
 });
 
 test("atlas loading fallback draws visible markers and keeps hover entries", () => {

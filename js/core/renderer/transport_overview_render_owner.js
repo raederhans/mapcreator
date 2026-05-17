@@ -823,7 +823,7 @@ function drawContextFacilityPointLayer(
   context.save();
   context.lineJoin = "round";
   context.lineCap = "round";
-  context.globalAlpha = usesFacilityIconLayer ? Math.max(0.72, opacity) : opacity;
+  context.globalAlpha = opacity;
   renderState.entries.forEach((entry) => {
     const radiusBase = entry.importanceRank >= 3 ? 5.2 : entry.importanceRank === 2 ? 4.3 : 3.5;
     const iconKey = resolveTransportFacilityIconKey(normalizedFamilyId, entry.properties);
