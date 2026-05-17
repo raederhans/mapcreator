@@ -102752,10 +102752,10 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "b3e23d55c5312254361afcd00e4e54cdab0ab94c47db5dee9abc13a57e47e1ba",
+  "snapshot_fingerprint": "98f06980df44155a739be484c8fdca9909bb09da92d884218aa37a168a9fa062",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "1191386e5a1aee824d43f6037f1f52a41b057e283de9c75d6939b1bb6717c607",
+    "build_snapshot_sha256": "4a0c383be5e931a1319e6a35a3a54d1e0cefaf959a5b520d09b23b2627adeb7a",
     "detail_chunk_manifest_sha256": "ff76ca8f902905dc6f092414c2a95bcd597b50a3c196d6bcc356fa1603f8d9ac",
     "runtime_bootstrap_topology_sha256": "24046f9f6cc328d844f320ff099b2f7bb4e7ff9180710df678a48df4c755bab8",
     "runtime_topology_sha256": "b19f11d830ddd027fb8954ef21585cc8b586579f1c209fe356c6e934cec85ff8"

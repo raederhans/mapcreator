@@ -1075,6 +1075,13 @@ async function bootstrap() {
       scenarioBundlePromise,
       startupInteractionMode: runtimeState.startupInteractionMode,
     });
+
+    setBootState("warmup");
+    invalidateAllRenderPasses("bootstrap-first-political-frame");
+    renderDispatcher.flush();
+    checkpointBootMetricOnce("first-visible");
+    checkpointBootMetricOnce("first-visible-scenario");
+
     if (startupUiBootstrapPromise) {
       startupUiBootstrapAwaited = true;
       try {
@@ -1086,11 +1093,6 @@ async function bootstrap() {
       runPostScenarioUiReplay({ full: true });
     }
 
-    setBootState("warmup");
-    invalidateAllRenderPasses("bootstrap-first-frame");
-    renderDispatcher.flush();
-    checkpointBootMetricOnce("first-visible");
-    checkpointBootMetricOnce("first-visible-scenario");
     // Phase: 触发 detail promotion | Input: 当前 scenario/state/renderDispatcher | Output: ready state 或 readonly 解锁调度。
     await finalizeReadyState(renderDispatcher);
     void postStartupSupportKeyUsageReport({

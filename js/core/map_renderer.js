@@ -2047,7 +2047,7 @@ function invalidateRenderPasses(passNames, reason = "unspecified") {
   }
   if (
     targetPassNames.includes("political")
-    && !["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))
+    && String(reason || "unspecified") !== "refresh-colors"
   ) {
     cache.partialPoliticalDirtyIds.clear();
     invalidatePoliticalPathCache(reason);
@@ -2139,8 +2139,8 @@ function invalidateOceanVisualState(reason = "ocean-visual") {
 
 function invalidateOceanBackgroundVisualState(reason = "ocean-background") {
   cancelExactAfterSettleRefresh({ clearDefer: true });
-  invalidateRenderPasses("background", reason);
-  clearRenderPassReferenceTransforms("background");
+  invalidateRenderPasses(["background", "physicalBase", "political", "contextBase", "contextScenario"], reason);
+  clearRenderPassReferenceTransforms(["background", "physicalBase", "political", "contextBase", "contextScenario"]);
 }
 
 function invalidateOceanTextureVisualState(reason = "ocean-texture") {
@@ -2257,12 +2257,69 @@ function noteMissingVisibleFrameSkippedDuringInteraction(reason = "unknown") {
   });
 }
 
+function getFirstVisiblePoliticalFrameBlockReason(reason = "visible-frame") {
+  const activeScenarioId = String(runtimeState.activeScenarioId || "").trim();
+  if (!activeScenarioId) return "";
+  const normalizedReason = String(reason || "visible-frame");
+  if (normalizedReason === "base-visible-fallback") {
+    return "base-visible-fallback";
+  }
+  if (normalizedReason !== "exact-frame") {
+    return `${normalizedReason}-before-current-political-frame`;
+  }
+  const cache = getRenderPassCacheState();
+  if (cache.dirty?.political) {
+    return "dirty-political-pass";
+  }
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+  const expectedSignature = getRenderPassSignature("political", transform);
+  if (String(cache.signatures?.political || "") !== String(expectedSignature || "")) {
+    const cachedOceanFill = getCachedPoliticalPassStaticSignature(cache.signatures?.political)
+      .split("::")
+      .find((part) => String(part || "").startsWith("ocean-fill:"));
+    if (cachedOceanFill && cachedOceanFill !== `ocean-fill:${getOceanBaseFillColor()}`) {
+      return "stale-ocean-fill";
+    }
+    return "stale-political-signature";
+  }
+  const referenceTransform = getPassReferenceTransform("political");
+  if (!referenceTransform || !areZoomTransformsEquivalent(referenceTransform, transform)) {
+    return "stale-political-reference-transform";
+  }
+  const fullReferenceTransform = getPassFullReferenceTransform("political");
+  if (!fullReferenceTransform || !areZoomTransformsEquivalent(fullReferenceTransform, transform)) {
+    return "stale-political-full-reference-transform";
+  }
+  return "";
+}
+
+function noteFirstVisibleFrameBlocked(reason = "visible-frame", blockReason = "unknown") {
+  recordRenderPerfMetric("firstVisibleFrameBlocked", 0, {
+    reason: String(reason || "visible-frame"),
+    blockReason: String(blockReason || "unknown"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    topologyRevision: Number(runtimeState.topologyRevision || 0),
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
+    oceanFill: getOceanBaseFillColor(),
+  });
+}
+
 function markFirstVisibleFramePainted(reason = "visible-frame") {
   if (runtimeState.firstVisibleFramePainted) return;
+  const blockReason = getFirstVisiblePoliticalFrameBlockReason(reason);
+  if (blockReason) {
+    noteFirstVisibleFrameBlocked(reason, blockReason);
+    return;
+  }
   runtimeState.firstVisibleFramePainted = true;
   recordRenderPerfMetric("firstVisibleFramePainted", 0, {
     reason: String(reason || "visible-frame"),
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    topologyRevision: Number(runtimeState.topologyRevision || 0),
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
+    oceanFill: getOceanBaseFillColor(),
   });
 }
 
@@ -17021,7 +17078,7 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
   if (debugMode !== "PROD") {
     return fallback("non-prod-mode");
   }
-  if (!["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))) {
+  if (String(cache.reasons?.political || "") !== "refresh-colors") {
     return fallback("non-color-invalidation");
   }
   if (!dirtyFeatureCount) {

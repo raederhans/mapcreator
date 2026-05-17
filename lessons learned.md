@@ -1586,3 +1586,9 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-15 - perf gate drift triage
 
 - 当 `perf:gate` 在补丁分支变红时，先 stash 补丁在同一机器同一 dev server 上跑 HEAD；如果 HEAD 同样红，就把它记录为 benchmark/environment drift，再用具体 per-metric artifact 说明补丁本身的成本。
+
+## 2026-05-17 - isolated TNO worktree verification
+
+- 独立 worktree 跑 TNO bundle/water 验证时，要显式带上本机 ignored donor root（例如 `SCENARIO_FORGE_HGO_ROOT` 指向原主树的 `historic geographic overhaul`）；否则测试会表现成数据缺失，而不是代码回归。
+- `check_scenario_contracts.py --strict --write-safe` 会刷新 checked-in TNO snapshot/manifest 派生产物；safe-write 后必须再跑一次不带 write 的 strict gate，确认工作树产物已经稳定。
+- Windows 后台 Playwright 的 `Start-Process -ArgumentList` 会把带空格的 `--grep` 拆宽；最终浏览器证据优先用直接 `node ... --grep "..."` 复跑，避免误跑相邻 spec。

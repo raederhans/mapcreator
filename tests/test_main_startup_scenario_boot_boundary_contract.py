@@ -55,12 +55,16 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn("runtimeState: state,", donor_content)
         self.assertIn("const startupScenarioBoot = getStartupScenarioBootOwner();", donor_content)
         self.assertIn("startupScenarioBoot.runStartupScenarioBoot({", donor_content)
-        self.assertIn('invalidateAllRenderPasses("bootstrap-first-frame");', donor_content)
+        self.assertIn('invalidateAllRenderPasses("bootstrap-first-political-frame");', donor_content)
+        self.assertLess(
+            donor_content.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
+            donor_content.index("if (startupUiBootstrapPromise) {"),
+        )
         self.assertIn("renderDispatcher.flush();", donor_content)
         self.assertIn("await finalizeReadyState(renderDispatcher);", donor_content)
         self.assertRegex(
             donor_content,
-            r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-frame\"\);\s*renderDispatcher\.flush\(\);",
+            r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-political-frame\"\);\s*renderDispatcher\.flush\(\);\s*checkpointBootMetricOnce\(\"first-visible\"\);\s*checkpointBootMetricOnce\(\"first-visible-scenario\"\);",
         )
         self.assertRegex(
             donor_content,
