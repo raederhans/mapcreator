@@ -100,7 +100,7 @@ import {
 } from "./unit_counter_presets.js";
 import { enqueueFrameTask, getFrameSchedulerQueueLength } from "./frame_scheduler.js";
 import { flushRenderBoundary, getRenderBoundaryDebugState, requestRender } from "./render_boundary.js";
-import { registerRuntimeHook } from "./state/index.js";
+import { callRuntimeHook, registerRuntimeHook } from "./state/index.js";
 import {
   bindInteractionFunnel,
   dispatchMapClick,
@@ -2320,6 +2320,10 @@ function markFirstVisibleFramePainted(reason = "visible-frame") {
     colorRevision: Number(runtimeState.colorRevision || 0),
     topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
     oceanFill: getOceanBaseFillColor(),
+  });
+  callRuntimeHook(runtimeState, "noteFirstVisibleFramePaintedFn", {
+    reason: String(reason || "visible-frame"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
   });
 }
 

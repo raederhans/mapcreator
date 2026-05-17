@@ -53,6 +53,12 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("function getStartupScenarioBootOwner()", donor_content)
         self.assertIn("runtimeState: state,", donor_content)
+        self.assertIn('registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', donor_content)
+        self.assertIn("function checkpointFirstVisibleFrameMetrics()", donor_content)
+        self.assertRegex(
+            donor_content,
+            r"function checkpointFirstVisibleFrameMetrics\(\) \{[\s\S]*?if \(!state\.firstVisibleFramePainted\) \{[\s\S]*?return null;[\s\S]*?checkpointBootMetricOnce\(\"first-visible\"\);[\s\S]*?checkpointBootMetricOnce\(\"first-visible-scenario\"\);",
+        )
         self.assertIn("const startupScenarioBoot = getStartupScenarioBootOwner();", donor_content)
         self.assertIn("startupScenarioBoot.runStartupScenarioBoot({", donor_content)
         self.assertIn('invalidateAllRenderPasses("bootstrap-first-political-frame");', donor_content)
@@ -64,7 +70,7 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn("await finalizeReadyState(renderDispatcher);", donor_content)
         self.assertRegex(
             donor_content,
-            r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-political-frame\"\);\s*renderDispatcher\.flush\(\);\s*checkpointBootMetricOnce\(\"first-visible\"\);\s*checkpointBootMetricOnce\(\"first-visible-scenario\"\);",
+            r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-political-frame\"\);\s*renderDispatcher\.flush\(\);\s*checkpointFirstVisibleFrameMetrics\(\);",
         )
         self.assertRegex(
             donor_content,

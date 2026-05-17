@@ -142,6 +142,19 @@ let startupDataPipelineOwner = null;
 let deferredDetailPromotionOwner = null;
 let startupScenarioBootOwner = null;
 
+function checkpointFirstVisibleFrameMetrics() {
+  if (!state.firstVisibleFramePainted) {
+    return null;
+  }
+  checkpointBootMetricOnce("first-visible");
+  if (String(state.activeScenarioId || "").trim()) {
+    checkpointBootMetricOnce("first-visible-scenario");
+  }
+  return state.bootMetrics;
+}
+
+registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);
+
 /**
  * Startup owner boundaries:
  * 1) StartupDataPipelineOwner: drives bootstrap data ingestion and base-state hydration.
@@ -1079,8 +1092,7 @@ async function bootstrap() {
     setBootState("warmup");
     invalidateAllRenderPasses("bootstrap-first-political-frame");
     renderDispatcher.flush();
-    checkpointBootMetricOnce("first-visible");
-    checkpointBootMetricOnce("first-visible-scenario");
+    checkpointFirstVisibleFrameMetrics();
 
     if (startupUiBootstrapPromise) {
       startupUiBootstrapAwaited = true;

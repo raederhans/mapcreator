@@ -56,6 +56,8 @@ class StartupShellTest(unittest.TestCase):
         self.assertIn('"first-visible-base"', main_js)
         self.assertIn('"first-visible-scenario"', main_js)
         self.assertIn('"bootstrap-first-political-frame"', main_js)
+        self.assertIn("function checkpointFirstVisibleFrameMetrics()", main_js)
+        self.assertIn('registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', main_js)
         self.assertLess(
             main_js.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
             main_js.index("if (startupUiBootstrapPromise) {"),
