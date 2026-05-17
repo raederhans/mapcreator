@@ -27,6 +27,8 @@ export function createDefaultTransportCountryOverlayState() {
 export function clearTransportCountryOverlayState(target, reason = "cleared") {
   if (!target || typeof target !== "object") return null;
   const previousRevision = Number(target.transportCountryOverlayState?.revision || 0);
+  // clear 也要推进 revision，主图 renderer / 持久化读取方据此识别“已明确清空”，
+  // 而不是把它和“还没初始化过 overlayState”混成同一种状态。
   target.transportCountryOverlayState = {
     ...createEmptyOverlayState("idle"),
     revision: previousRevision + 1,
@@ -114,6 +116,8 @@ export async function loadTransportCountryOverlayState(packId, {
   if (!gateReport.passed) {
     throw new Error(`Transport country overlay pack ${meta.packId} failed source gate: ${gateReport.reasons.join(", ")}`);
   }
+  // 主图 overlay 只读取当前 family 真正会消费的 layer。
+  // 这样 pack manifest 可以继续保留 preview/full 的完整描述，而主图 apply 只搬运自己需要的部分。
   const supportedKeys = MAIN_MAP_CONSUMER_KEYS_BY_FAMILY[meta.family] || [];
   const entries = await Promise.all(
     supportedKeys.map(async (key) => [key, await loadLayerCollection({ manifest, mode, key, topojsonClient })])

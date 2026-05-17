@@ -2,6 +2,14 @@
 
 只记录后续还会反复用到的重大教训，尽量短，避免重复。
 
+## 当前高频主题
+
+- canonical 输入保持单一真相源，公开产物、诊断文件和 builder/publish/tooling 一起围绕它收口。
+- startup、chunk、runtime、checked-in scenario artifacts 要按同一套 contract 一起迁移和验证。
+- live test、长构建、browser smoke 一律单 owner，长流程默认后台日志。
+- UI / transport / special-zone 这类 cutover 要把 reader、writer、validator、checked-in data 同波次切完。
+- 真实回归优先查 checked-in data、manifest、snapshot、audit，再调 runtime 和 renderer。
+
 ## 2026-04-03 - TNO 1962 bundle / 编辑链重构
 
 ### 1. 长构建 / 长测试先走后台日志，并先排最小静态检查
@@ -110,13 +118,9 @@
 - 这次 `build_hoi4_scenario.py` 真正的红点不是 runtime topology，而是它虽然支持 `--scenario-id hoi4_1939`，默认 `display_name`、rules 和 manifest authoring inputs 还停在 1936 世界，导致 checked-in 产物会出现“strict 部分变绿，但 domain 仍然漂移”的假完成状态。
 - 最稳的做法是：只要 builder 宣称支持多个 scenario，`display_name`、bookmark、manual rules、controller rules、authoring input contract 就都必须按 `scenario_id` 一起解析，并且要用真实 checked-in 场景重建一次来验收，不要只靠 fixture。
 
-### 23. transport frontend manifest migrations must switch preview + inspector together
+### 23. transport shared-variant cutover must switch preview, inspector, and validator together
 - If preview loaders move to shared variants but toolbar summary/inspector still read legacy fields, the UI enters a split state: data loads from shared, while panels still describe legacy defaults.
-- The shortest stable fix is to add one tiny shared variant helper, migrate all runtime readers in the same wave, and add a static test that forbids legacy manifest variant field names in runtime UI code.
-
-### 24. once transport runtime is shared-only, validator must ban legacy fields instead of comparing against them
-- If the UI has already switched to shared `default_variant/variants`, keeping validator logic in shared-vs-legacy comparison mode only preserves the old contract and delays real cleanup.
-- The stable cutover is: stop builders from writing legacy fields, remove checked-in legacy fields, then make validator reject any legacy variant keys on sight.
+- The shortest stable fix is to add one tiny shared variant helper, migrate all runtime readers in the same wave, stop builders from writing legacy fields, remove checked-in legacy fields, and make validator reject any legacy variant keys on sight.
 
 ### 25. Scenario delta rule files must never become full-pack defaults
 - If a scenario-specific manual rules file is only meant to override a shared base pack, the builder default must continue to load the base pack and the delta pack together.
@@ -1284,7 +1288,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - canvas 采样点要把 CSS 坐标换算到 backing canvas 尺寸，否则高 DPR/缩放下亮度断言会测错区域。
 
 ### 2026-05-01 - worktree runtime verification and TNO chunk metadata drift
-- 在 Windows worktree 里跑 Playwright 时，可以先用主仓 `node_modules` + `NODE_PATH` 做最小验证；如果用例长时间只打印 `Running ...` 没有断言输出，就应尽快停止，把它当成环境型噪声而不是继续卡住主线程。
 - `tools/patch_tno_1962_bundle.py --stage chunk_assets` 依赖的 checkpoint 必须已经有同源 `runtime_topology.topo.json`；只有 water-stage checkpoint 会在 chunk rebuild 时暴露 `source/runtime/chunks` 的真实 id 漂移。
 
 
@@ -1375,7 +1378,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 52. fresh-page 的 context-layer 回归先等 live subset 接管，再读 renderPerfMetrics
 - 这次 river targeted Playwright 的真实根因，是 fresh page 第一轮采样会继续读到全量 rivers metric；只靠固定 sleep 或直接读 `drawRiversLayer` 指标会把上一帧当成当前 subset。
 - 更稳的做法是：先确认 `state.riversData.features.length` 已等于目标 subset，再跑 `waitForRenderIdle()`，最后才读取 metric 和截图。
-- startup bundle preload browser warning 这类已知噪音要按 spec scoped allowlist 记录，避免把真实 console 问题和浏览器提示混在一起。
 
 ## 2026-05-02 - data catalog / data_service / transport preview 平台化
 
@@ -1471,23 +1473,11 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 政治 chunk 中投影出的水域要同步进入 water cache、auxiliary index、secondary spatial index 和 visual revision；只改绘制层会留下可见但不可交互的区域。
 - 视口 chunk 选择不能只依赖角点和中心点；曲面投影的地理边界极值可能落在屏幕边上，至少要网格采样并给小余量。
 
-## 2026-05-06 - ATLSEA donor sea D3 orientation
-
-- ATLSEA donor sea 从 TopoJSON 转成 direct GeoJSON chunk 后，要用 D3 small-polygon 环方向做发布合同；否则 `d3.geoArea≈4π` 会把局部海盆解释成全球水面。
-- 运行时 sanitizer 只能当最后安全网；根因应修在 chunk payload 和生成链，同时同步 `detail_chunks.manifest.json`、startup bundle source hash、build snapshot、audit。
-
-- TopoJSON `serialize_as_geojson` 可能给坐标环返回 tuple；发布前做环方向/面积判断时要同时接受 `list` 和 `tuple`，否则重建会悄悄跳过 sanitizer。
-
 ## 2026-05-06 - TNO owner chunk precise bounds
 
 - 按 owner 分出来的 detail chunk 可能因为海外领土或跨洲 owner 得到超大 bbox，Mediterranean 视口会误选 USA/JAP/CAN 等零本地 feature chunk，放大缩放卡顿。
 - 更稳的做法是在 chunk manifest 中写入 per-feature bounds，选择时用 feature bounds 过滤和排序；chunk 总 bbox 只作为旧 manifest 的兼容路径。
 - 测试里临时覆盖 state hook 时，要保存 `readRegisteredRuntimeHookSource(...)` 得到的原始函数；保存 dispatcher 再恢复会造成 hook 递归。
-
-## 2026-05-06 - transport facility icon atlas
-
-- 新增地图点位图标资产时，加载状态必须先接入交互命中链；atlas loading/error 阶段清空 hover entry，ready 后再注册，避免出现看不见但可点击的目标。
-- 异步图集从 loading 变成 ready/error 时，要同步失效对应 render pass；只 request render 会让上一帧空缓存继续被复用。
 
 ## 2026-05-07 - transport global data release and E2E scope
 
@@ -1505,7 +1495,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 ## 2026-05-07 - scenario_atlantropa D3 orientation
 
-- Atlantropa 独立图层拆出后，所有 ATL 前缀的 direct GeoJSON chunk 都要走 D3 small-polygon ring normalization；只处理 ATLSEA 会让 ATLWLD/ATLSHL/ATLSEA_FILL 这类局部地块被 D3 解释成全球外壳，表现为偏色和不可交互。
+- Atlantropa 独立图层拆出后，所有 ATL 前缀的 direct GeoJSON chunk 都要走 D3 small-polygon ring normalization；ATLSEA donor sea 也在这条规则里。只处理 ATLSEA 或只处理少数 ATL 图层，都会让 ATLWLD/ATLSHL/ATLSEA_FILL 这类局部地块被 D3 解释成全球外壳，表现为偏色和不可交互。
+- 运行时 sanitizer 只能当最后安全网；根因应修在 chunk payload 和生成链，同时同步 `detail_chunks.manifest.json`、startup bundle source hash、build snapshot、audit。发布前做环方向/面积判断时，要同时接受 `list` 和 `tuple` 坐标环。
 - 浏览器点击验证微小重叠地块时，按 prefix 至少取多个 screen-space grid 点；单点 bbox center 会把几何细线和重叠优先级误报成交互失败。
 - `ATLSEA_FILL` / `ATLSHL` 这类非水 Atlantropa 地块进入 land spatial index 后，也要在 scenario water pass 之后按 `atl_color_rule` 重绘；否则会出现“可命中但视觉仍是海色”的假修复。
 
@@ -1577,6 +1568,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ### 48. 视觉资源未就绪时，交互目标要跟可见 fallback 同步
 - 机场/港口这类 atlas 图标层如果在 loading/error 时直接早退，会形成“看不见也点不到”的空白态。
 - 更稳的做法是：资源未就绪时绘制明确的几何 fallback，并注册同一批 hover entries；atlas ready 后只切换绘制形态，不切断交互语义。
+- 异步图集从 loading 变成 ready/error 时，要同步失效对应 render pass；只 request render 会让上一帧空缓存继续被复用。
 
 ## 2026-05-13 - localization automation drift repair
 

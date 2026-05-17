@@ -254,6 +254,8 @@ function recordScenarioPerfMetric(name, durationMs, details = {}) {
 }
 
 function getScenarioDisplayOwnerByFeatureId(featureId, { fallbackOwner = "" } = {}) {
+  // 这里读的是“当前展示层看到的 owner”，优先吃 runtime sovereignty 覆盖，
+  // fallback 才回退到 bundle / 调用方提供的静态 owner。
   const normalizedId = String(featureId || "").trim();
   if (!normalizedId) return String(fallbackOwner || "").trim().toUpperCase();
   const fallback = String(fallbackOwner || "").trim().toUpperCase();
@@ -320,6 +322,8 @@ function normalizeScenarioFeatureCollection(payload) {
 function getScenarioFeatureCollectionIdentityList(payload) {
   const normalizedPayload = normalizeScenarioFeatureCollection(payload);
   const features = Array.isArray(normalizedPayload?.features) ? normalizedPayload.features : [];
+  // 这里故意只比较 feature identity，不比较几何和属性细节。
+  // optional layer 刷新时，维护者更关心“成员集合有没有换”，而不是 payload 顺序或附属字段抖动。
   return features
     .map((feature) => String(feature?.id || feature?.properties?.id || "").trim())
     .filter(Boolean);

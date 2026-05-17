@@ -353,6 +353,8 @@ function createScenarioChunkRegistryEnsurer({
       return null;
     }
     bundle.runtimeShell = runtimeShell;
+    // registry/context LOD/runtime meta/mesh pack 是同一组 detail-runtime 配套资源。
+    // 这里一次性把它们挂回 bundle，后续 facade/runtime controller 只消费已归位的 bundle 字段。
     if (bundle.chunkRegistry && bundle.contextLodManifest) {
       ensureRuntimeChunkLoadState().registryStatus = "ready";
       return bundle.chunkRegistry;
@@ -425,6 +427,8 @@ function writeScenarioGeoLocalePatchIntoBundle(bundle, geoLocalePatchPayload, ge
     bundle.geoLocalePatchPayloadsByLanguage[geoLocalePatchDescriptor.language] = geoLocalePatchPayload;
     return;
   }
+  // 老场景仍可能只有一份通用 geo locale patch。
+  // bundle 内部统一镜像到 en/zh，调用方就能始终按“当前语言 -> payload”读取，而不用再分叉兼容旧清单。
   bundle.geoLocalePatchPayloadsByLanguage.en = geoLocalePatchPayload;
   bundle.geoLocalePatchPayloadsByLanguage.zh = geoLocalePatchPayload;
 }
@@ -807,7 +811,9 @@ function createScenarioBundleAssembler({
       }),
     ]);
 
-  const bundle = {
+    // full bundle 只强制拉启动与主语义必需资源；
+    // releasable/district/audit 这些高成本附属数据沿用“先保留旧值，再按 idle/on-demand 补齐”的节奏。
+    const bundle = {
       ...(priorBundle && typeof priorBundle === "object" ? priorBundle : {}),
       meta,
       manifest,
