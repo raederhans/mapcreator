@@ -57,6 +57,18 @@ const stubCatalogPayload = {
       readMode: "module",
     },
     {
+      key: "malicious_catalog_module",
+      url: "https://attacker.example/payload.js",
+      role: "malicious_fixture",
+      format: "javascript",
+      schemaRef: "schema://javascript/module/v1",
+      hashRef: "",
+      owner: "test",
+      cachePolicy: "module",
+      sourceId: "",
+      readMode: "module",
+    },
+    {
       key: "transport:japan_corridor:carrier",
       url: "data/transport_layers/japan_corridor/carrier.json",
       role: "transport_carrier_payload",
@@ -113,6 +125,14 @@ const patchedDataServiceSource = dataServiceSource
           url: "js/core/city_lights_historical_1930_asset.js",
           role: "city_lights_asset",
         },
+        "malicious_registry_module": {
+          url: "data:text/javascript,globalThis.__executed=true;//.js",
+          role: "malicious_fixture",
+        },
+        "malicious_catalog_module": {
+          url: "https://attacker.example/payload.js",
+          role: "malicious_fixture",
+        },
         "transport_carrier:japan_corridor": {
           url: "data/transport_layers/japan_corridor/carrier.json",
           role: "transport_workbench_carrier",
@@ -127,6 +147,8 @@ const patchedDataServiceSource = dataServiceSource
       world_cities: "data/world_cities.geojson",
       "transport_manifest:road": "data/transport_layers/japan_road/manifest.json",
       "city_lights:historical_1930:asset": "js/core/city_lights_historical_1930_asset.js",
+      "malicious_registry_module": "data:text/javascript,globalThis.__executed=true;//.js",
+      "malicious_catalog_module": "https://attacker.example/payload.js",
       "transport_carrier:japan_corridor": "data/transport_layers/japan_corridor/carrier.json",
       "unsupported:binary": "data/unsupported.bin",
     })});`,
@@ -254,6 +276,38 @@ test("data service loads module runtime assets through getAsset", async () => {
   assert.equal(snapshot.resources[requestId].url, "js/core/city_lights_historical_1930_asset.js");
 });
 
+test("data service blocks registry-provided module specifiers outside the runtime module allowlist", async () => {
+  let moduleLoaderCalled = false;
+
+  await assert.rejects(
+    () => dataServiceModule.getAsset("malicious_registry_module", {
+      moduleLoader: async () => {
+        moduleLoaderCalled = true;
+        return { executed: true };
+      },
+    }),
+    (error) => error?.code === "module-path-not-allowed",
+  );
+
+  assert.equal(moduleLoaderCalled, false);
+});
+
+test("data service blocks catalog module entries outside the runtime module allowlist", async () => {
+  let moduleLoaderCalled = false;
+
+  await assert.rejects(
+    () => dataServiceModule.getAsset("malicious_catalog_module", {
+      moduleLoader: async () => {
+        moduleLoaderCalled = true;
+        return { executed: true };
+      },
+    }),
+    (error) => error?.code === "module-path-not-allowed",
+  );
+
+  assert.equal(moduleLoaderCalled, false);
+});
+
 test("data service records HTTP failures in load status snapshots", async () => {
   setJsonLoaderStub(async (_url, _options = {}) => {
     const error = new Error("server boom");
@@ -337,7 +391,7 @@ test("__mapcreator__ snapshot stays JSON-serializable", async () => {
   const snapshot = globalThis.__mapcreator__.snapshot();
   const roundTrip = JSON.parse(JSON.stringify(snapshot));
   assert.deepEqual(roundTrip, snapshot);
-  assert.equal(roundTrip.assets.providers.data_service.runtimeAssetCount, 5);
+  assert.equal(roundTrip.assets.providers.data_service.runtimeAssetCount, 7);
   assert.equal(roundTrip.version.providers.data_service.catalogVersion, 1);
 
   clearJsonLoaderStub();
