@@ -35,6 +35,8 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Show Rail Labels": { zh: "\u663e\u793a\u94c1\u8def\u6807\u7b7e", en: "Show Rail Labels" },
   "Show Road": { zh: "\u663e\u793a\u9053\u8def", en: "Show Road" },
   "Show Road Labels": { zh: "\u663e\u793a\u9053\u8def\u6807\u7b7e", en: "Show Road Labels" },
+  "Allow Underlying Map Selection": { zh: "\u5141\u8bb8\u9009\u4e2d\u4ea4\u901a\u70b9\u4e0b\u65b9\u5730\u56fe\u5bf9\u8c61", en: "Allow Underlying Map Selection" },
+  "Label Halo": { zh: "\u6807\u7b7e\u63cf\u8fb9", en: "Label Halo" },
   On: { zh: "开启", en: "On" },
   Off: { zh: "关闭", en: "Off" },
   Hidden: { zh: "已隐藏", en: "Hidden" },

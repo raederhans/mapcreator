@@ -524,6 +524,8 @@ function createDefaultTransportOverviewFamilyConfig(familyId) {
     labelsEnabled: false,
     labelDensity: "balanced",
     labelMode: "name",
+    labelSize: 10,
+    labelHalo: 0.88,
     coverageReach: 0.5,
     scopeLinkMode: "linked",
     scope: "default",
@@ -582,6 +584,8 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
     labelsEnabled: raw.labelsEnabled === undefined ? defaults.labelsEnabled : !!raw.labelsEnabled,
     labelDensity: normalizeTransportOverviewLabelDensity(raw.labelDensity, defaults.labelDensity),
     labelMode: String(raw.labelMode || defaults.labelMode).trim().toLowerCase() || defaults.labelMode,
+    labelSize: clamp(Math.round(toFiniteNumber(raw.labelSize, defaults.labelSize ?? 10)), 7, 16),
+    labelHalo: clampUnitInterval(raw.labelHalo, defaults.labelHalo ?? 0.5),
     coverageReach,
     scopeLinkMode,
     scope: scopeLinkMode === "linked"
@@ -596,6 +600,7 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
 function createDefaultTransportOverviewStyleConfig() {
   return {
     visualMode: "distribution",
+    allowFacilityUnderlyingMapSelection: false,
     activePackIdByFamily: {},
     ...Object.fromEntries(
       TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
@@ -623,6 +628,9 @@ function normalizeTransportOverviewStyleConfig(rawConfig) {
   const source = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
   return {
     visualMode: normalizeTransportOverviewVisualMode(source.visualMode, "distribution"),
+    allowFacilityUnderlyingMapSelection: source.allowFacilityUnderlyingMapSelection === undefined
+      ? !!source.allowFacilityUnderlyingSelection
+      : !!source.allowFacilityUnderlyingMapSelection,
     activePackIdByFamily: normalizeTransportOverviewActivePackIdByFamily(source.activePackIdByFamily),
     ...Object.fromEntries(
       TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [

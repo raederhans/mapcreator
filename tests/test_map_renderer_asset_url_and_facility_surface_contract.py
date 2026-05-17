@@ -44,10 +44,8 @@ class MapRendererAssetUrlAndFacilitySurfaceContractTest(unittest.TestCase):
         facade_content = FACADE_DATA_RUNTIME_JS.read_text(encoding="utf-8")
         renderer_imports = renderer_content.replace('"', "'")
 
-        self.assertIn(
-            "import { createFacilitySurfaceOwner } from './renderer/facility_surface.js';",
-            renderer_imports,
-        )
+        self.assertIn("from './renderer/facility_surface.js';", renderer_imports)
+        self.assertIn("createFacilitySurfaceOwner,", renderer_imports)
         self.assertIn("let facilitySurfaceOwner = null;", renderer_content)
         self.assertIn("function getFacilitySurfaceOwner() {", renderer_content)
         self.assertIn("getFacilitySurfaceOwner,", renderer_content)

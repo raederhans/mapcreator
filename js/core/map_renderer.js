@@ -114,7 +114,11 @@ import { createStrategicOverlayRuntimeOwner } from "./renderer/strategic_overlay
 import { createPoliticalCollectionOwner } from "./renderer/political_collection_owner.js";
 import { createContextLayerResolverOwner } from "./renderer/context_layer_resolver.js";
 import { createRendererAssetUrlPolicyOwner } from "./renderer/asset_url_policy.js";
-import { createFacilitySurfaceOwner } from "./renderer/facility_surface.js";
+import {
+  buildUnderlyingMapHoverClearPatch,
+  createFacilitySurfaceOwner,
+  shouldBlockUnderlyingMapSelectionForFacility,
+} from "./renderer/facility_surface.js";
 import { createRiverLayerRenderOwner } from "./renderer/river_layer_render_owner.js";
 import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
@@ -13951,6 +13955,29 @@ function isFacilityDetailsSurfaceActive(familyId = "") {
   return workbenchOverlay instanceof HTMLElement && !workbenchOverlay.classList.contains("hidden");
 }
 
+function allowsFacilityUnderlyingSelection() {
+  const transportConfig = normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {});
+  return !!transportConfig.allowFacilityUnderlyingMapSelection;
+}
+
+function shouldBlockUnderlyingSelectionForFacility(entry) {
+  return shouldBlockUnderlyingMapSelectionForFacility(entry, allowsFacilityUnderlyingSelection());
+}
+
+function clearUnderlyingHoverForFacilityEntry(entry) {
+  if (!shouldBlockUnderlyingSelectionForFacility(entry)) return false;
+  const patch = buildUnderlyingMapHoverClearPatch(runtimeState);
+  runtimeState.hoveredId = patch.hoveredId;
+  runtimeState.hoveredWaterRegionId = patch.hoveredWaterRegionId;
+  runtimeState.hoveredSpecialRegionId = patch.hoveredSpecialRegionId;
+  updateDevHoverHit(patch.devHoverHit);
+  if (patch.hadUnderlyingHover) {
+    runtimeState.hoverOverlayDirty = true;
+    scheduleHoverOverlayRender();
+  }
+  return true;
+}
+
 function getCityLayerRenderState(k, { interactive = false, cacheHoverEntries = false } = {}) {
   const cityCollection = getEffectiveCityCollection();
   const featureCount = getFeatureCollectionFeatureCount(cityCollection);
@@ -21349,6 +21376,7 @@ function handleMouseMove(event) {
     runtimeState.hoverOverlayDirty = true;
     scheduleHoverOverlayRender();
   }
+  const blockedUnderlyingHover = hoveredFacility ? clearUnderlyingHoverForFacilityEntry(hoveredFacility) : false;
   setMapInteractionCursor(facilityDetailsActive ? "pointer" : "");
   if (hoveredFacility?.tooltipText) {
     queueTooltipUpdate({
@@ -21357,6 +21385,10 @@ function handleMouseMove(event) {
       x: event.clientX + 12,
       y: event.clientY + 12,
     });
+    return;
+  }
+  if (blockedUnderlyingHover) {
+    queueTooltipUpdate({ visible: false });
     return;
   }
   const hoveredCityEntry = getHoveredCityTooltipEntry(event, hit);
@@ -22694,6 +22726,18 @@ async function handleClick(event, _interactionContext = null) {
     runtimeState.hoverOverlayDirty = true;
     renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });
     noteRenderAction("click-facility-info", actionStart);
+    return;
+  }
+  if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {
+    hoveredFacilityEntry = clickedFacilityEntry;
+    if (selectedFacilityEntry) {
+      selectedFacilityEntry = null;
+      applyFacilityInfoCardState(null);
+    }
+    queueTooltipUpdate({ visible: false });
+    runtimeState.hoverOverlayDirty = true;
+    renderHoverOverlayIfNeeded({ eventType: "facility-click-block-underlying" });
+    noteRenderAction("click-facility-block-underlying", actionStart);
     return;
   }
   if (selectedFacilityEntry) {

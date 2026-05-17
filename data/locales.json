@@ -2708,6 +2708,10 @@
       "en": "Label Size",
       "zh": "标签大小"
     },
+    "Label Halo": {
+      "en": "Label Halo",
+      "zh": "标签描边"
+    },
     "Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.": {
       "en": "Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.",
       "zh": "分层特殊区域是规范编辑器。请在下方工作台中创建图层、选择预设并编辑成员。"
@@ -4979,6 +4983,10 @@
     "Show Transport Overview": {
       "en": "Show Transport Overview",
       "zh": "显示交通概览"
+    },
+    "Allow Underlying Map Selection": {
+      "en": "Allow Underlying Map Selection",
+      "zh": "允许选中交通点下方地图对象"
     },
     "Show branch at current zoom": {
       "en": "Show branch at current zoom",

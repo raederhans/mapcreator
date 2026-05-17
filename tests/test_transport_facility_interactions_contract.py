@@ -23,6 +23,11 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             'id="facilityInfoCardCloseBtn"',
             'id="airportPrimaryColor"',
             'id="portPrimaryColor"',
+            'id="airportLabelSize"',
+            'id="portLabelSize"',
+            'id="airportLabelHalo"',
+            'id="portLabelHalo"',
+            'id="transportFacilityUnderlyingMapSelection"',
         ]
         for token in required_tokens:
             self.assertIn(token, content)
@@ -55,6 +60,10 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             'setMapInteractionCursor(facilityDetailsActive ? "pointer" : "");',
             "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {",
             'noteRenderAction("click-facility-info", actionStart);',
+            "function shouldBlockUnderlyingSelectionForFacility",
+            "function clearUnderlyingHoverForFacilityEntry",
+            "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {",
+            'noteRenderAction("click-facility-block-underlying", actionStart);',
             "transportPanel.hidden !== true",
         ]
         for token in required_tokens:
@@ -158,8 +167,11 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         )
         self.assertIn('primaryColor: "#1d4ed8"', state_content)
         self.assertIn('primaryColor: "#b45309"', state_content)
+        self.assertIn("allowFacilityUnderlyingMapSelection: false", state_content)
+        self.assertIn("labelSize: 9", state_content)
+        self.assertIn("labelHalo: 0.22", state_content)
         self.assertIn("function normalizeTransportOverviewPrimaryColor", state_content)
-        for token in ['"Primary Color"', '"More fields"', '"Less fields"', '"Locate and zoom"', '"airport"', '"airports"', '"port"', '"ports"', '"Owner"', '"Manager"', '"Status"', '"Agencies"', '"Ferry service"', '"Unnamed facility"']:
+        for token in ['"Primary Color"', '"Label Halo"', '"Allow Underlying Map Selection"', '"More fields"', '"Less fields"', '"Locate and zoom"', '"airport"', '"airports"', '"port"', '"ports"', '"Owner"', '"Manager"', '"Status"', '"Agencies"', '"Ferry service"', '"Unnamed facility"']:
           self.assertIn(token, i18n_content)
 
     def test_toolbar_syncs_facility_card_visibility_when_transport_surface_changes(self):

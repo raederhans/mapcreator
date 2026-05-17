@@ -235,6 +235,7 @@ export function createAppearanceControlsController({
 
   const transportAppearanceMasterToggle = document.getElementById("transportAppearanceMasterToggle");
   const transportVisualMode = document.getElementById("transportVisualMode");
+  const transportFacilityUnderlyingMapSelection = document.getElementById("transportFacilityUnderlyingMapSelection");
   const transportAirportCard = document.getElementById("transportAirportCard");
   const transportPortCard = document.getElementById("transportPortCard");
   const transportRailCard = document.getElementById("transportRailCard");
@@ -261,6 +262,10 @@ export function createAppearanceControlsController({
   const airportLabelsEnabled = document.getElementById("airportLabelsEnabled");
   const airportLabelDensity = document.getElementById("airportLabelDensity");
   const airportLabelMode = document.getElementById("airportLabelMode");
+  const airportLabelSize = document.getElementById("airportLabelSize");
+  const airportLabelSizeValue = document.getElementById("airportLabelSizeValue");
+  const airportLabelHalo = document.getElementById("airportLabelHalo");
+  const airportLabelHaloValue = document.getElementById("airportLabelHaloValue");
   const airportCoverageReach = document.getElementById("airportCoverageReach");
   const airportCoverageReachValue = document.getElementById("airportCoverageReachValue");
   const airportScopeLinked = document.getElementById("airportScopeLinked");
@@ -277,6 +282,10 @@ export function createAppearanceControlsController({
   const portLabelsEnabled = document.getElementById("portLabelsEnabled");
   const portLabelDensity = document.getElementById("portLabelDensity");
   const portLabelMode = document.getElementById("portLabelMode");
+  const portLabelSize = document.getElementById("portLabelSize");
+  const portLabelSizeValue = document.getElementById("portLabelSizeValue");
+  const portLabelHalo = document.getElementById("portLabelHalo");
+  const portLabelHaloValue = document.getElementById("portLabelHaloValue");
   const portCoverageReach = document.getElementById("portCoverageReach");
   const portCoverageReachValue = document.getElementById("portCoverageReachValue");
   const portScopeLinked = document.getElementById("portScopeLinked");
@@ -1146,15 +1155,22 @@ export function createAppearanceControlsController({
 
     if (transportAppearanceMasterToggle) transportAppearanceMasterToggle.checked = transportEnabled;
     if (transportVisualMode) transportVisualMode.value = visualMode;
+    if (transportFacilityUnderlyingMapSelection) {
+      transportFacilityUnderlyingMapSelection.checked = !!transportConfig.allowFacilityUnderlyingMapSelection;
+    }
 
-    if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportConfig.visualStrength ?? 0.56) * 100));
-    if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportConfig.visualStrength ?? 0.56);
+    if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportConfig.visualStrength ?? 0.62) * 100));
+    if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportConfig.visualStrength ?? 0.62);
     if (airportOpacity) airportOpacity.value = String(Math.round(Number(airportConfig.opacity ?? 0.82) * 100));
     if (airportOpacityValue) airportOpacityValue.textContent = formatTransportPercent(airportConfig.opacity ?? 0.82);
     if (airportPrimaryColor) airportPrimaryColor.value = normalizeOceanFillColor(airportConfig.primaryColor || "#1d4ed8");
     if (airportLabelsEnabled) airportLabelsEnabled.checked = !!airportConfig.labelsEnabled;
     if (airportLabelDensity) airportLabelDensity.value = String(airportConfig.labelDensity || "balanced");
-    if (airportLabelMode) airportLabelMode.value = String(airportConfig.labelMode || "both");
+    if (airportLabelMode) airportLabelMode.value = String(airportConfig.labelMode || "adaptive");
+    if (airportLabelSize) airportLabelSize.value = String(Math.round(Number(airportConfig.labelSize ?? 9)));
+    if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${Math.round(Number(airportConfig.labelSize ?? 9))}px`;
+    if (airportLabelHalo) airportLabelHalo.value = String(Math.round(Number(airportConfig.labelHalo ?? 0.22) * 100));
+    if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(airportConfig.labelHalo ?? 0.22);
     if (airportCoverageReach) airportCoverageReach.value = String(Math.round(Number(airportConfig.coverageReach ?? 0.5) * 100));
     if (airportCoverageReachValue) airportCoverageReachValue.textContent = formatTransportPercent(airportConfig.coverageReach ?? 0.5);
     if (airportScopeLinked) airportScopeLinked.checked = String(airportConfig.scopeLinkMode || "linked") !== "manual";
@@ -1167,14 +1183,18 @@ export function createAppearanceControlsController({
       transportAirportSummaryMeta.textContent = buildTransportFamilySummaryText("airport", transportEnabled, !!runtimeState.showAirports, airportConfig, airportScopeState);
     }
 
-    if (portVisualStrength) portVisualStrength.value = String(Math.round(Number(portConfig.visualStrength ?? 0.54) * 100));
-    if (portVisualStrengthValue) portVisualStrengthValue.textContent = formatTransportPercent(portConfig.visualStrength ?? 0.54);
+    if (portVisualStrength) portVisualStrength.value = String(Math.round(Number(portConfig.visualStrength ?? 0.58) * 100));
+    if (portVisualStrengthValue) portVisualStrengthValue.textContent = formatTransportPercent(portConfig.visualStrength ?? 0.58);
     if (portOpacity) portOpacity.value = String(Math.round(Number(portConfig.opacity ?? 0.78) * 100));
     if (portOpacityValue) portOpacityValue.textContent = formatTransportPercent(portConfig.opacity ?? 0.78);
     if (portPrimaryColor) portPrimaryColor.value = normalizeOceanFillColor(portConfig.primaryColor || "#b45309");
     if (portLabelsEnabled) portLabelsEnabled.checked = !!portConfig.labelsEnabled;
     if (portLabelDensity) portLabelDensity.value = String(portConfig.labelDensity || "balanced");
-    if (portLabelMode) portLabelMode.value = String(portConfig.labelMode || "mixed");
+    if (portLabelMode) portLabelMode.value = String(portConfig.labelMode || "adaptive");
+    if (portLabelSize) portLabelSize.value = String(Math.round(Number(portConfig.labelSize ?? 9)));
+    if (portLabelSizeValue) portLabelSizeValue.textContent = `${Math.round(Number(portConfig.labelSize ?? 9))}px`;
+    if (portLabelHalo) portLabelHalo.value = String(Math.round(Number(portConfig.labelHalo ?? 0.22) * 100));
+    if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(portConfig.labelHalo ?? 0.22);
     if (portCoverageReach) portCoverageReach.value = String(Math.round(Number(portConfig.coverageReach ?? 0.5) * 100));
     if (portCoverageReachValue) portCoverageReachValue.textContent = formatTransportPercent(portConfig.coverageReach ?? 0.5);
     if (portScopeLinked) portScopeLinked.checked = String(portConfig.scopeLinkMode || "linked") !== "manual";
@@ -1227,11 +1247,11 @@ export function createAppearanceControlsController({
 
     [
       airportVisualStrength, airportOpacity, airportPrimaryColor, airportLabelsEnabled, airportLabelDensity,
-      airportLabelMode, airportScopeLinked, airportScope, airportImportanceThreshold,
+      airportLabelMode, airportLabelSize, airportLabelHalo, airportScopeLinked, airportScope, airportImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
       portVisualStrength, portOpacity, portPrimaryColor, portLabelsEnabled, portLabelDensity,
-      portLabelMode, portScopeLinked, portTier, portImportanceThreshold,
+      portLabelMode, portLabelSize, portLabelHalo, portScopeLinked, portTier, portImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
       railVisualStrength, railOpacity, railPrimaryColor, railLabelsEnabled, railLabelDensity,
@@ -1245,6 +1265,7 @@ export function createAppearanceControlsController({
       if (control) control.disabled = false;
     });
     if (transportVisualMode) transportVisualMode.disabled = !transportEnabled;
+    if (transportFacilityUnderlyingMapSelection) transportFacilityUnderlyingMapSelection.disabled = !transportEnabled;
 
     const airportManual = String(airportConfig.scopeLinkMode || "linked") === "manual";
     const portManual = String(portConfig.scopeLinkMode || "linked") === "manual";
@@ -1456,6 +1477,13 @@ export function createAppearanceControlsController({
       });
       transportVisualMode.dataset.bound = "true";
     }
+    if (transportFacilityUnderlyingMapSelection && !transportFacilityUnderlyingMapSelection.dataset.bound) {
+      transportFacilityUnderlyingMapSelection.addEventListener("change", (event) => {
+        getTransportAppearanceConfig().allowFacilityUnderlyingMapSelection = !!event.target.checked;
+        renderTransportAppearanceDirty("transport-facility-underlying-selection");
+      });
+      transportFacilityUnderlyingMapSelection.dataset.bound = "true";
+    }
 
     if (toggleAirports && !toggleAirports.dataset.bound) {
       toggleAirports.checked = !!runtimeState.showAirports;
@@ -1548,7 +1576,7 @@ export function createAppearanceControlsController({
 
     bindInput(airportVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().airport.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.56, 0, 1);
+      getTransportAppearanceConfig().airport.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.62, 0, 1);
     }, "transport-airport-visual-strength");
     bindInput(airportOpacity, (event) => {
       const value = Number(event.target.value);
@@ -1564,8 +1592,20 @@ export function createAppearanceControlsController({
       getTransportAppearanceConfig().airport.labelDensity = String(event.target.value || "balanced");
     }, "transport-airport-label-density");
     bindChange(airportLabelMode, (event) => {
-      getTransportAppearanceConfig().airport.labelMode = String(event.target.value || "both");
+      getTransportAppearanceConfig().airport.labelMode = String(event.target.value || "adaptive");
     }, "transport-airport-label-mode");
+    bindInput(airportLabelSize, (event) => {
+      const value = Number(event.target.value);
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 9), 7, 16);
+      getTransportAppearanceConfig().airport.labelSize = labelSize;
+      if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${labelSize}px`;
+    }, "transport-airport-label-size");
+    bindInput(airportLabelHalo, (event) => {
+      const value = Number(event.target.value);
+      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : 0.22, 0, 1);
+      getTransportAppearanceConfig().airport.labelHalo = labelHalo;
+      if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(labelHalo);
+    }, "transport-airport-label-halo");
     bindInput(airportCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().airport;
@@ -1598,7 +1638,7 @@ export function createAppearanceControlsController({
 
     bindInput(portVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().port.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.54, 0, 1);
+      getTransportAppearanceConfig().port.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.58, 0, 1);
     }, "transport-port-visual-strength");
     bindInput(portOpacity, (event) => {
       const value = Number(event.target.value);
@@ -1614,8 +1654,20 @@ export function createAppearanceControlsController({
       getTransportAppearanceConfig().port.labelDensity = String(event.target.value || "balanced");
     }, "transport-port-label-density");
     bindChange(portLabelMode, (event) => {
-      getTransportAppearanceConfig().port.labelMode = String(event.target.value || "mixed");
+      getTransportAppearanceConfig().port.labelMode = String(event.target.value || "adaptive");
     }, "transport-port-label-mode");
+    bindInput(portLabelSize, (event) => {
+      const value = Number(event.target.value);
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 9), 7, 16);
+      getTransportAppearanceConfig().port.labelSize = labelSize;
+      if (portLabelSizeValue) portLabelSizeValue.textContent = `${labelSize}px`;
+    }, "transport-port-label-size");
+    bindInput(portLabelHalo, (event) => {
+      const value = Number(event.target.value);
+      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : 0.22, 0, 1);
+      getTransportAppearanceConfig().port.labelHalo = labelHalo;
+      if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(labelHalo);
+    }, "transport-port-label-halo");
     bindInput(portCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().port;

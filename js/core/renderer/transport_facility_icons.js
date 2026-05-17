@@ -14,14 +14,14 @@ export const TRANSPORT_FACILITY_ICON_CELLS = Object.freeze({
 });
 
 const ICON_BASE_SIZE_PX = Object.freeze({
-  airport_major: 11.5,
-  airport_regional: 10.5,
-  airport_local: 9,
-  airport_military: 12,
-  airport_spaceport: 12,
-  port_hub: 11.5,
-  port_important: 10.5,
-  port_local: 9,
+  airport_major: 13,
+  airport_regional: 11.8,
+  airport_local: 10.2,
+  airport_military: 13.2,
+  airport_spaceport: 13.2,
+  port_hub: 13,
+  port_important: 11.8,
+  port_local: 10.2,
 });
 
 let atlasImage = null;
@@ -91,7 +91,7 @@ export function resolveTransportFacilityIconDrawSizePx(
   const iconKey = resolveTransportFacilityIconKey(familyId, properties);
   const baseSize = ICON_BASE_SIZE_PX[iconKey] || 9;
   const normalizedVisualScale = Math.min(1.4, Math.max(0.6, Number(visualScale) || 1));
-  return Math.min(20, Math.max(7, baseSize * normalizedVisualScale));
+  return Math.min(22, Math.max(8, baseSize * normalizedVisualScale));
 }
 
 function notifyAtlasStatus(status) {

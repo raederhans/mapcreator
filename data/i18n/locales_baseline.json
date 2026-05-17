@@ -108,6 +108,10 @@
       "en": "Allow Open-Ocean Interaction",
       "zh": "允许开放海洋交互"
     },
+    "Allow Underlying Map Selection": {
+      "en": "Allow Underlying Map Selection",
+      "zh": "允许选中交通点下方地图对象"
+    },
     "Allow or ignore macro open-ocean regions during hover, click, and paint.": {
       "en": "Allow or ignore macro open-ocean regions during hover, click, and paint.",
       "zh": "在悬停、点击和涂绘时允许或忽略宏观外海区域。"
@@ -1627,6 +1631,10 @@
     "Label Size": {
       "en": "Label Size",
       "zh": "标签大小"
+    },
+    "Label Halo": {
+      "en": "Label Halo",
+      "zh": "标签描边"
     },
     "Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.": {
       "en": "Layer-based special zones are the canonical editor. Use the workbench below to create layers, choose presets, and edit memberships.",

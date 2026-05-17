@@ -59,6 +59,9 @@ function createFacilityRenderOwnerHarness({
   familyId = "airport",
   labelDensity = "dense",
   labelsEnabled = true,
+  labelMode = "name",
+  labelSize = 9,
+  labelHalo = 0.22,
   projection = () => [100, 120],
 } = {}) {
   const context = createRecordingFacilityContext();
@@ -77,7 +80,9 @@ function createFacilityRenderOwnerHarness({
           visualStrength: 0,
           labelsEnabled,
           labelDensity,
-          labelMode: familyId === "airport" ? "name" : "name",
+          labelMode,
+          labelSize,
+          labelHalo,
           scopeLinkMode: "manual",
           scope: familyId === "airport" ? "all_civil" : "expanded",
           importanceThreshold: "all",
@@ -157,8 +162,8 @@ test("transport facility icon size stays in small screen-pixel bounds", () => {
   for (const familyId of ["airport", "port"]) {
     for (const visualScale of [0.25, 0.6, 1, 1.8, 3]) {
       const size = resolveTransportFacilityIconDrawSizePx(familyId, { importance_rank: 3 }, { visualScale });
-      assert.ok(size >= 7, `${familyId} size ${size} should stay readable`);
-      assert.ok(size <= 20, `${familyId} size ${size} should stay compact`);
+      assert.ok(size >= 8, `${familyId} size ${size} should stay readable`);
+      assert.ok(size <= 22, `${familyId} size ${size} should stay compact`);
     }
   }
   assert.ok(
@@ -329,6 +334,36 @@ test("facility labels use bbox placement and report drawn labelCount", () => {
     labels.some((label) => label.x < 100) || labels.some((label) => label.y !== 50),
     "labels should move beyond the default right-side placement when boxes collide",
   );
+});
+
+test("facility label size, halo, and adaptive text follow overview config", () => {
+  const features = [{
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [0, 0] },
+    properties: {
+      stable_key: "airport:adaptive:1",
+      importance_rank: 3,
+      iata: "HND",
+      name: "Tokyo International Airport Haneda",
+    },
+  }];
+  const { context, owner } = createFacilityRenderOwnerHarness({
+    k: 6,
+    features,
+    labelsEnabled: true,
+    labelMode: "adaptive",
+    labelSize: 12,
+    labelHalo: 0.1,
+    projection: () => [80, 60],
+  });
+  owner.drawAirportsLayer(6);
+
+  const label = context.calls.find((call) => call.type === "fillText");
+  assert.equal(label?.text, "HND");
+  const fontCall = context.calls.findLast((call) => call.type === "font");
+  assert.match(fontCall?.value || "", /2px "IBM Plex Sans"/);
+  const lineWidthCall = context.calls.findLast((call) => call.type === "lineWidth");
+  assert.ok(lineWidthCall?.value < 0.2, "light facility halo should stay visually thin at high zoom");
 });
 
 test("atlas loader exposes loading and ready states without registering invisible targets", async () => {

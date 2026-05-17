@@ -181,7 +181,7 @@ function buildTransportFacilityVisualStyle(primaryColor, visualStrength, fallbac
     strokeStyle: mixCanvasColors(resolvedPrimaryColor, strokeTarget, 0.72) || strokeTarget,
     labelColor: mixCanvasColors(resolvedPrimaryColor, labelTarget, Number.isFinite(luminance) && luminance < 0.56 ? 0.48 : 0.78) || labelTarget,
     highlightStroke: mixCanvasColors(resolvedPrimaryColor, "#ffffff", 0.82) || "#ffffff",
-    radiusScale: 0.85 + (strength * 0.55),
+    radiusScale: 0.95 + (strength * 0.62),
     strokeScale: 0.9 + (strength * 0.35),
     hoverScale: 1.12 + (strength * 0.12),
   };
@@ -395,21 +395,69 @@ function getLineFeatureLabelAnchor(feature) {
   return getMultiLineLabelAnchor(geometry, "midpoint");
 }
 
-function getTransportOverviewAirportLabelText(properties = {}, mode = "both") {
+function compactTransportFacilityName(name, familyId, { aggressive = false } = {}) {
+  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  const originalLabel = String(name || "").trim();
+  let label = originalLabel;
+  if (!label) return "";
+  if (normalizedFamilyId === "airport") {
+    label = label
+      .replace(/\bInternational Airport\b/gi, "Intl")
+      .replace(/\bInternational\b/gi, "Intl")
+      .replace(/\bAirport\b/gi, "")
+      .replace(/\bAerodrome\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  } else if (normalizedFamilyId === "port") {
+    label = label
+      .replace(/^Port of\s+/i, "")
+      .replace(/\bPort\b/gi, "")
+      .replace(/\bHarbor\b/gi, "Hbr")
+      .replace(/\bHarbour\b/gi, "Hbr")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  if (!label) label = originalLabel;
+  const limit = aggressive ? 18 : 28;
+  return label.length > limit ? `${label.slice(0, Math.max(8, limit - 1)).trim()}...` : label;
+}
+
+function shouldUseShortFacilityLabel(label, { scale = 1, labelSize = 9, importanceRank = 1 } = {}) {
+  const length = String(label || "").trim().length;
+  const zoom = Number(scale || 1);
+  const size = Number(labelSize || 9);
+  if (zoom < 4.2) return true;
+  if (importanceRank < 3 && zoom < 6.2) return true;
+  return length > Math.max(18, 36 - Math.max(0, size - 9) * 3) && zoom < 7.2;
+}
+
+function getTransportOverviewAirportLabelText(properties = {}, mode = "adaptive", options = {}) {
   const name = String(properties.name || "").trim();
   const code = String(properties.iata || properties.icao || "").trim();
   const normalized = String(mode || "").trim().toLowerCase();
   if (normalized === "code") return code || name;
   if (normalized === "name") return name || code;
+  if (normalized === "adaptive") {
+    if (shouldUseShortFacilityLabel(name, options)) return code || compactTransportFacilityName(name, "airport", { aggressive: true });
+    const compactName = compactTransportFacilityName(name, "airport");
+    return code && compactName ? `${code} · ${compactName}` : (code || compactName);
+  }
   return code && name ? `${code} · ${name}` : (code || name);
 }
 
-function getTransportOverviewPortLabelText(properties = {}, mode = "mixed") {
+function getTransportOverviewPortLabelText(properties = {}, mode = "adaptive", options = {}) {
   const name = String(properties.name || "").trim();
   const designation = String(properties.legal_designation_label || properties.legal_designation || "").trim();
   const normalized = String(mode || "").trim().toLowerCase();
   if (normalized === "cargo_focus") return designation || name;
   if (normalized === "name") return name || designation;
+  if (normalized === "adaptive") {
+    const compactName = compactTransportFacilityName(name, "port", {
+      aggressive: shouldUseShortFacilityLabel(name, options),
+    });
+    if (shouldUseShortFacilityLabel(name, options)) return compactName || designation;
+    return designation && compactName ? `${compactName} · ${designation}` : (compactName || designation);
+  }
   return designation && name ? `${name} · ${designation}` : (name || designation);
 }
 
@@ -527,7 +575,7 @@ function buildContextFacilityEntries(
       screenScale: zoomTransform.k,
       stableSortKey: getTransportFacilityEntryStableSortKey(feature, properties, coordinates),
       label: typeof getLabelText === "function"
-        ? String(getLabelText(properties, feature) || "").trim()
+        ? String(getLabelText(properties, feature, { importanceRank, scale: zoomTransform.k }) || "").trim()
         : String(properties.name || "").trim(),
       importanceRank,
       properties: {
@@ -552,11 +600,16 @@ function buildContextFacilityEntries(
 
 function tintTransportFacilityIcon(context2d, { x, y, size, tintColor, strokeColor, opacity, scale, strokeScale }) {
   context2d.save();
-  context2d.globalAlpha = Math.min(0.72, Math.max(0.28, opacity * 0.48));
-  context2d.strokeStyle = strokeColor;
-  context2d.lineWidth = Math.max(0.75 / scale, (1 * strokeScale) / scale);
+  context2d.globalAlpha = Math.min(0.42, Math.max(0.16, opacity * 0.26));
+  context2d.fillStyle = tintColor;
   context2d.beginPath();
-  context2d.arc(x + (size / 2), y + (size / 2), Math.max(0, (size / 2) - (0.5 / scale)), 0, Math.PI * 2);
+  context2d.arc(x + (size / 2), y + (size / 2), Math.max(0, (size / 2) + (1.2 / scale)), 0, Math.PI * 2);
+  context2d.fill();
+  context2d.globalAlpha = Math.min(0.95, Math.max(0.46, opacity * 0.72));
+  context2d.strokeStyle = strokeColor;
+  context2d.lineWidth = Math.max(1 / scale, (1.35 * strokeScale) / scale);
+  context2d.beginPath();
+  context2d.arc(x + (size / 2), y + (size / 2), Math.max(0, (size / 2) + (0.65 / scale)), 0, Math.PI * 2);
   context2d.stroke();
   context2d.restore();
 }
@@ -610,15 +663,22 @@ function drawTransportFacilityLabels(entries, {
   familyId,
   k,
   labelColor,
+  labelSize,
+  labelHalo,
   nationalLabelScale,
   regionalLabelScale,
   radiusScale,
 }) {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+  const configuredLabelSize = clamp(Math.round(Number(labelSize || 9)), 7, 16);
+  const configuredLabelHalo = clamp(Number(labelHalo ?? 0.22), 0, 1);
   const candidates = entries
     .filter((entry) => {
       if (!entry.label) return false;
-      return entry.importanceRank >= 3 ? k >= nationalLabelScale : k >= regionalLabelScale;
+      const baseScale = entry.importanceRank >= 3 ? nationalLabelScale : regionalLabelScale;
+      const labelLengthPenalty = Math.max(0, String(entry.label || "").length - 14) * 0.055;
+      const sizePenalty = Math.max(0, configuredLabelSize - 9) * 0.16;
+      return k >= baseScale + labelLengthPenalty + sizePenalty;
     })
     .sort((left, right) => {
       if (right.importanceRank !== left.importanceRank) return right.importanceRank - left.importanceRank;
@@ -637,7 +697,8 @@ function drawTransportFacilityLabels(entries, {
     const iconSizePx = usesFacilityIcon
       ? resolveTransportFacilityIconDrawSizePx(normalizedFamilyId, entry.properties, { visualScale: radiusScale })
       : (entry.importanceRank >= 3 ? 10.4 : 8.6);
-    const screenFontSize = Math.max(8, Math.min(12, iconSizePx * (entry.importanceRank >= 3 ? 0.92 : 0.86)));
+    const importanceScale = entry.importanceRank >= 3 ? 1 : 0.92;
+    const screenFontSize = Math.max(7, Math.min(16, configuredLabelSize * importanceScale));
     const worldFontSize = usesFacilityIcon ? screenFontSize / zoomScale : screenFontSize;
     context.font = `${entry.importanceRank >= 3 ? 600 : 500} ${worldFontSize}px "IBM Plex Sans", "Noto Sans JP", sans-serif`;
     const measureText = (label) => {
@@ -653,10 +714,10 @@ function drawTransportFacilityLabels(entries, {
     const placement = placements?.find((candidate) => !occupiedBoxes.some((box) => rectanglesOverlap(candidate.box, box)));
     if (!placement) return;
     occupiedBoxes.push(placement.box);
-    context.lineWidth = usesFacilityIcon ? 3 / zoomScale : 3;
-    context.strokeStyle = "rgba(255,255,255,0.92)";
+    context.lineWidth = usesFacilityIcon ? ((0.45 + (configuredLabelHalo * 2.4)) / zoomScale) : 3;
+    context.strokeStyle = `rgba(255,255,255,${(0.16 + (configuredLabelHalo * 0.62)).toFixed(3)})`;
     context.fillStyle = labelColor;
-    context.strokeText(entry.label, placement.worldX, placement.worldY);
+    if (configuredLabelHalo > 0.01) context.strokeText(entry.label, placement.worldX, placement.worldY);
     context.fillText(entry.label, placement.worldX, placement.worldY);
     labelCount += 1;
   });
@@ -677,6 +738,8 @@ function drawContextFacilityPointLayer(
     fillStyle = "#2563eb",
     strokeStyle = "#eff6ff",
     labelColor = "#1e3a8a",
+    labelSize = 9,
+    labelHalo = 0.22,
     opacity = 0.9,
     labelsEnabled = true,
     nationalLabelScale = 2.2,
@@ -760,7 +823,7 @@ function drawContextFacilityPointLayer(
   context.save();
   context.lineJoin = "round";
   context.lineCap = "round";
-  context.globalAlpha = opacity;
+  context.globalAlpha = usesFacilityIconLayer ? Math.max(0.72, opacity) : opacity;
   renderState.entries.forEach((entry) => {
     const radiusBase = entry.importanceRank >= 3 ? 5.2 : entry.importanceRank === 2 ? 4.3 : 3.5;
     const iconKey = resolveTransportFacilityIconKey(normalizedFamilyId, entry.properties);
@@ -792,6 +855,16 @@ function drawContextFacilityPointLayer(
       const iconWorldSize = (iconSizePx * highlightFactor) / zoomScale;
       const iconLeft = entry.x - (iconWorldSize / 2);
       const iconTop = entry.y - (iconWorldSize / 2);
+      tintTransportFacilityIcon(context, {
+        x: iconLeft,
+        y: iconTop,
+        size: iconWorldSize,
+        tintColor: fillStyle,
+        strokeColor: highlightFactor > 1 ? markerEntry.highlightStroke : strokeStyle,
+        opacity,
+        scale: zoomScale,
+        strokeScale,
+      });
       context.drawImage(
         iconAtlasImage,
         iconCell.x,
@@ -803,16 +876,6 @@ function drawContextFacilityPointLayer(
         iconWorldSize,
         iconWorldSize,
       );
-      tintTransportFacilityIcon(context, {
-        x: iconLeft,
-        y: iconTop,
-        size: iconWorldSize,
-        tintColor: fillStyle,
-        strokeColor: highlightFactor > 1 ? markerEntry.highlightStroke : strokeStyle,
-        opacity,
-        scale: zoomScale,
-        strokeScale,
-      });
       return;
     }
     const radius = (markerEntry.markerRadiusPx * highlightFactor) / zoomScale;
@@ -857,6 +920,8 @@ function drawContextFacilityPointLayer(
     familyId: normalizedFamilyId,
     k,
     labelColor,
+    labelSize,
+    labelHalo,
     nationalLabelScale,
     regionalLabelScale,
     radiusScale,
@@ -893,13 +958,18 @@ function drawAirportPointCollection(metricName, collection, k, { interactive = f
     labelColor: visualStyle.labelColor,
     opacity: clamp(Number(airportConfig.opacity ?? 0.68), 0, 1) * strategy.opacityMultiplier,
     labelsEnabled: strategy.labelsEnabled,
+    labelSize: airportConfig.labelSize,
+    labelHalo: airportConfig.labelHalo,
     nationalLabelScale: labelZoomConfig.nationalLabelScale,
     regionalLabelScale: labelZoomConfig.regionalLabelScale,
     radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
     strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
     hoverScale: visualStyle.hoverScale,
     highlightStroke: visualStyle.highlightStroke,
-    getLabelText: (properties) => getTransportOverviewAirportLabelText(properties, airportConfig.labelMode),
+    getLabelText: (properties, feature, labelOptions) => getTransportOverviewAirportLabelText(properties, airportConfig.labelMode, {
+      ...labelOptions,
+      labelSize: airportConfig.labelSize,
+    }),
     packId,
     appendHoverEntries,
   });
@@ -943,13 +1013,18 @@ function drawPortsLayer(k, { interactive = false } = {}) {
     labelColor: visualStyle.labelColor,
     opacity: clamp(Number(portConfig.opacity ?? 0.64), 0, 1) * strategy.opacityMultiplier,
     labelsEnabled: strategy.labelsEnabled,
+    labelSize: portConfig.labelSize,
+    labelHalo: portConfig.labelHalo,
     nationalLabelScale: labelZoomConfig.nationalLabelScale,
     regionalLabelScale: labelZoomConfig.regionalLabelScale,
     radiusScale: visualStyle.radiusScale * strategy.radiusMultiplier,
     strokeScale: visualStyle.strokeScale * strategy.strokeMultiplier,
     hoverScale: visualStyle.hoverScale,
     highlightStroke: visualStyle.highlightStroke,
-    getLabelText: (properties) => getTransportOverviewPortLabelText(properties, portConfig.labelMode),
+    getLabelText: (properties, feature, labelOptions) => getTransportOverviewPortLabelText(properties, portConfig.labelMode, {
+      ...labelOptions,
+      labelSize: portConfig.labelSize,
+    }),
   });
 }
 
