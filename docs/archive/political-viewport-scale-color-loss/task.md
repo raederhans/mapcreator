@@ -8,4 +8,4 @@
 - [x] Add or update targeted contract tests.
 - [x] Run targeted verification.
 - [x] Run cleanup and final review.
-- [ ] Merge back to `main`, commit, and checkpoint ultragoal.
+- [x] Merge back to `main`, commit, and checkpoint ultragoal.

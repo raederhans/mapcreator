@@ -48,3 +48,9 @@
 - Code-review lane: APPROVE, 0 critical/high/medium/low findings.
 - Architect lane: CLEAR, merge-ready from architecture boundary.
 - `lessons learned.md` checked; no new major lesson added because the canvas lifecycle baseline lesson already exists.
+
+## Merge Closure
+
+- Worktree commit: `40f4f6b Keep political rendering stable across viewport changes`.
+- Main merge commit: `6ba3290 Merge political viewport color stability fix`.
+- Post-merge checks on `main` passed: `node --check js/core/map_renderer.js`, `npm run test:node:scenario-chunk-contracts`, and the Python boundary unittest.
