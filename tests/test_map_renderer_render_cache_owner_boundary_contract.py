@@ -45,7 +45,12 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("function buildRenderPassLayout(passName) {", owner_content)
         self.assertIn("function resizeRenderPassCanvases(passNames = renderPassNames) {", owner_content)
         self.assertIn("function ensureRenderPassCanvas(passName) {", owner_content)
-        self.assertIn("resizeRenderPassCanvases([passName]);", owner_content)
+        self.assertRegex(
+            owner_content,
+            r"(?s)function ensureRenderPassCanvas\(passName\) \{"
+            r".*?resizeRenderPassCanvases\(\[passName\]\);"
+            r".*?return cache\.canvases\[passName\];",
+        )
         self.assertIn("function ensureLastGoodFrameCanvas() {", owner_content)
         self.assertIn("function ensureInteractionCompositeCanvas() {", owner_content)
         self.assertIn("function ensureCompositeBufferCanvas() {", owner_content)
