@@ -33,7 +33,7 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
         self.assertIn("./state/renderer_runtime_state.js", content)
         self.assertIn("createDefaultProjectedBoundsCacheState()", content)
         self.assertIn("createDefaultProjectedBoundsDiagnostics()", content)
-        self.assertIn("ensureRenderPassCacheState(state,", content)
+        self.assertIn("ensureRenderPassCacheState,", content)
         self.assertIn("ensureSidebarPerfState(state)", content)
         self.assertIn("resetProjectedBoundsRuntimeCacheState(state);", content)
         self.assertIn("ensureSphericalFeatureDiagnosticsCacheState(state)", content)

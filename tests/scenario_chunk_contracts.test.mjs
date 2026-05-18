@@ -795,7 +795,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
         return !!partialBody && !partialBody.includes("setPassFullReferenceTransform");
       })(),
     canvasResizeClearsFullReferenceBaseline:
-      /function setCanvasSize\(\{[\s\S]*?targetPassesOnResize = null,[\s\S]*?targetPassesOnCanvasResize = null,[\s\S]*?const canvasResizePasses = Array\.isArray\(targetPassesOnCanvasResize\) && targetPassesOnCanvasResize\.length[\s\S]*?resizeRenderPassCanvases\(canvasResizePasses\);[\s\S]*?if \(sizeChanged\) \{[\s\S]*?const passes = Array\.isArray\(targetPassesOnResize\) && targetPassesOnResize\.length[\s\S]*?: RENDER_PASS_NAMES;[\s\S]*?invalidateRenderPasses\(passes, reason \|\| "resize"\);[\s\S]*?clearRenderPassReferenceTransforms\(passes\);[\s\S]*?\} else \{/.test(rendererSource)
+      /function setCanvasSize\(\{[\s\S]*?targetPassesOnResize = null,[\s\S]*?targetPassesOnCanvasResize = null,[\s\S]*?const resizeInvalidationPasses = Array\.isArray\(targetPassesOnResize\) && targetPassesOnResize\.length[\s\S]*?: RENDER_PASS_NAMES;[\s\S]*?const dprInvalidationPasses = Array\.isArray\(targetPassesOnDprChange\) && targetPassesOnDprChange\.length[\s\S]*?: RENDER_PASS_NAMES;[\s\S]*?const invalidationPasses = sizeChanged \? resizeInvalidationPasses : dprInvalidationPasses;[\s\S]*?const canvasResizePasses = Array\.isArray\(targetPassesOnCanvasResize\) && targetPassesOnCanvasResize\.length[\s\S]*?: invalidationPasses;[\s\S]*?resizeRenderPassCanvases\(canvasResizePasses\);[\s\S]*?if \(sizeChanged\) \{[\s\S]*?invalidateRenderPasses\(resizeInvalidationPasses, reason \|\| "resize"\);[\s\S]*?clearRenderPassReferenceTransforms\(resizeInvalidationPasses\);[\s\S]*?\} else \{[\s\S]*?invalidateRenderPasses\(dprInvalidationPasses, reason \|\| "dpr-change"\);[\s\S]*?clearRenderPassReferenceTransforms\(dprInvalidationPasses\);/.test(rendererSource)
       && /function ensureRenderPassCanvas\(passName\) \{[\s\S]*?resizeRenderPassCanvases\(\[passName\]\);[\s\S]*?return cache\.canvases\[passName\];/.test(renderCacheOwnerSource),
     firstBatchInteractionWritesUseRafRenderBoundary:
       /function requestInteractionRender\(reason = "interaction"\) \{[\s\S]*?requestRendererRender\(reason,[\s\S]*?flush: false/.test(rendererSource)
@@ -1161,6 +1161,14 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
     backgroundMergeFiltersVisualHelpersButKeepsVisibleNonInteractiveLand:
       /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(feature, id\)/.test(rendererSource)
       && /function buildScenarioPoliticalBackgroundEntriesFromSpatialItems\(items = \[\]\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(entry\.feature, entry\.id\)/.test(rendererSource),
+    backgroundMergeEntriesCacheIsViewportIndependent:
+      (() => {
+        const entriesBody = rendererSource.match(/function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction buildScenarioPoliticalBackgroundEntriesFromSpatialItems/)?.[0] || "";
+        return !!entriesBody
+          && !entriesBody.includes("pathBoundsInScreen")
+          && entriesBody.includes("viewport filtering stays in the draw path");
+      })()
+      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const visibleEntries = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, screenRects, \{ transform \}\)/.test(rendererSource),
     spatialItemsCanCarryVisibleNonInteractiveLand:
       /function appendLandSpatialItemsRange\([\s\S]*?shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature[\s\S]*?if \(shouldExcludePoliticalVisualFeature\(feature, id\)\) continue;[\s\S]*?interactive: !shouldExcludePoliticalInteractionFeature\(feature, id\)/.test(spatialBuilderSource)
       && /shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature/.test(spatialOwnerSource)

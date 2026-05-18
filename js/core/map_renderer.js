@@ -7029,9 +7029,16 @@ function setCanvasSize({
     hitCanvas.width = scaledW;
     hitCanvas.height = scaledH;
   }
+  const resizeInvalidationPasses = Array.isArray(targetPassesOnResize) && targetPassesOnResize.length
+    ? targetPassesOnResize
+    : RENDER_PASS_NAMES;
+  const dprInvalidationPasses = Array.isArray(targetPassesOnDprChange) && targetPassesOnDprChange.length
+    ? targetPassesOnDprChange
+    : RENDER_PASS_NAMES;
+  const invalidationPasses = sizeChanged ? resizeInvalidationPasses : dprInvalidationPasses;
   const canvasResizePasses = Array.isArray(targetPassesOnCanvasResize) && targetPassesOnCanvasResize.length
     ? targetPassesOnCanvasResize
-    : RENDER_PASS_NAMES;
+    : invalidationPasses;
   resizeRenderPassCanvases(canvasResizePasses);
   invalidateInteractionComposite(reason || "resize");
   texturePatternCache.clear();
@@ -7039,17 +7046,11 @@ function setCanvasSize({
   clearProjectedBoundsCache();
   runtimeState.hitCanvasDirty = true;
   if (sizeChanged) {
-    const passes = Array.isArray(targetPassesOnResize) && targetPassesOnResize.length
-      ? targetPassesOnResize
-      : RENDER_PASS_NAMES;
-    invalidateRenderPasses(passes, reason || "resize");
-    clearRenderPassReferenceTransforms(passes);
+    invalidateRenderPasses(resizeInvalidationPasses, reason || "resize");
+    clearRenderPassReferenceTransforms(resizeInvalidationPasses);
   } else {
-    const passes = Array.isArray(targetPassesOnDprChange) && targetPassesOnDprChange.length
-      ? targetPassesOnDprChange
-      : RENDER_PASS_NAMES;
-    invalidateRenderPasses(passes, reason || "dpr-change");
-    clearRenderPassReferenceTransforms(passes);
+    invalidateRenderPasses(dprInvalidationPasses, reason || "dpr-change");
+    clearRenderPassReferenceTransforms(dprInvalidationPasses);
   }
 
   const svg = globalThis.d3.select(mapSvg);
@@ -16456,7 +16457,7 @@ function buildScenarioPoliticalBackgroundEntries() {
       featureId: id,
       allowCompute: true,
     });
-    if (!pathBoundsInScreen(feature)) return;
+    // This cache is reused across zoom transforms, so viewport filtering stays in the draw path.
     entries.push({
       feature,
       index,
