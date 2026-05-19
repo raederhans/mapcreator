@@ -192,4 +192,4 @@ Progress:
 - [x] Updated contracts and added named Node behavior script.
 - [x] Run targeted verification.
 - [x] Run final static review.
-- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

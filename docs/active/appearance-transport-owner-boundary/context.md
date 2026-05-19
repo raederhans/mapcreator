@@ -212,3 +212,4 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node tools/check_state_write_allowlist.mjs`
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
   - `git diff --check`
+- Pushed implementation to `origin/main` as `2be1614`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean inspector-owner worktree and left those local changes untouched.
