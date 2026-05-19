@@ -2,7 +2,7 @@
 
 - generated_at: 2026-05-12T22:39:56.105848Z
 - version: 1
-- entries: 407
+- entries: 391
 
 ## Counts by role
 
@@ -34,7 +34,7 @@
 | runtime_asset_registry | 1 |
 | runtime_political_topology | 1 |
 | scenario_registry | 1 |
-| source_ledger_asset | 19 |
+| source_ledger_asset | 3 |
 | special_zones | 1 |
 | terrain_contours_major_topology | 1 |
 | terrain_contours_minor_topology | 1 |
@@ -64,22 +64,6 @@
 | context_layer:urban | data/europe_urban.geojson | context_layer | geojson | json | runtime_asset_registry.assets.context_layer:urban |  |
 | feature_migrations:by_hybrid_v1 | data/feature-migrations/by_hybrid_v1.json | feature_migration_table | json | json | runtime_asset_registry.assets.feature_migrations:by_hybrid_v1 |  |
 | source:fr_arr | data/france_arrondissements.geojson | source_ledger_asset | geojson | json | source_ledger | fr_arr |
-| source:gb_bfa_adm1 | data/geoBoundaries-BFA-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_bfa_adm1 |
-| source:gb_bih_adm1 | data/geoBoundaries-BIH-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_bih_adm1 |
-| source:gb_blr_adm2 | data/geoBoundaries-BLR-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_blr_adm2 |
-| source:gb_civ_adm1 | data/geoBoundaries-CIV-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_civ_adm1 |
-| source:gb_cze_adm2 | data/geoBoundaries-CZE-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_cze_adm2 |
-| source:gb_dnk_adm2 | data/geoBoundaries-DNK-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_dnk_adm2 |
-| source:gb_gin_adm1 | data/geoBoundaries-GIN-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_gin_adm1 |
-| source:gb_idn_adm1 | data/geoBoundaries-IDN-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_idn_adm1 |
-| source:gb_ind_adm2 | data/geoBoundaries-IND-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_ind_adm2 |
-| source:gb_mex_adm2 | data/geoBoundaries-MEX-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_mex_adm2 |
-| source:gb_mwi_adm1 | data/geoBoundaries-MWI-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_mwi_adm1 |
-| source:gb_rus_adm2 | data/geoBoundaries-RUS-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_rus_adm2 |
-| source:gb_som_adm1 | data/geoBoundaries-SOM-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_som_adm1 |
-| source:gb_svk_adm2 | data/geoBoundaries-SVK-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_svk_adm2 |
-| source:gb_uga_adm1 | data/geoBoundaries-UGA-ADM1.geojson | source_ledger_asset | geojson | json | source_ledger | gb_uga_adm1 |
-| source:gb_ukr_adm2 | data/geoBoundaries-UKR-ADM2.geojson | source_ledger_asset | geojson | json | source_ledger | gb_ukr_adm2 |
 | manifest_output:geo_aliases.json | data/geo_aliases.json | geo_aliases | json | json | init_map_data.hierarchy_locales |  |
 | bathymetry:global_topology | data/global_bathymetry.topo.json | bathymetry_topology | topojson | json | runtime_asset_registry.assets.bathymetry:global_topology |  |
 | manifest_output:global_contours.major.topo.json | data/global_contours.major.topo.json | terrain_contours_major_topology | topojson | json | init_map_data.primary_topology_bundle |  |

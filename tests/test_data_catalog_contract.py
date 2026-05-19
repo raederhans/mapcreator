@@ -14,7 +14,7 @@ from tools.data_health import SCENARIO_REGISTRY_URL, collect_health
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_JSON = REPO_ROOT / "data" / "CATALOG.json"
 CATALOG_MD = REPO_ROOT / "data" / "CATALOG.md"
-EXPECTED_ENTRY_COUNT = 407
+EXPECTED_ENTRY_COUNT = 391
 EXPECTED_SCHEMA_REF_COUNT = 20
 
 
@@ -188,6 +188,81 @@ class DataCatalogContractTest(unittest.TestCase):
             self.assertEqual(report.checked_catalog_urls, 4)
             self.assertEqual(report.checked_runtime_assets, 2)
             self.assertEqual(report.checked_transport_manifests, 1)
+
+    def test_data_health_rejects_duplicate_catalog_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir) / "fixture-repo"
+            data_root = repo_root / "data"
+            scenarios_root = data_root / "scenarios"
+            transport_root = data_root / "transport_layers"
+            data_root.mkdir(parents=True)
+            scenarios_root.mkdir(parents=True)
+            transport_root.mkdir(parents=True)
+
+            (scenarios_root / "index.json").write_text('{"scenarios":[]}', encoding="utf-8")
+            (data_root / "first.json").write_text("{}", encoding="utf-8")
+            (data_root / "second.json").write_text("{}", encoding="utf-8")
+            catalog_payload = {
+                "version": 1,
+                "generated_at": "2026-05-19T00:00:00Z",
+                "entries": [
+                    {
+                        "key": "scenario_registry",
+                        "url": "data/scenarios/index.json",
+                        "role": "scenario_registry",
+                        "format": "json",
+                        "schemaRef": "schema://json/object/v1",
+                        "hashRef": "",
+                        "owner": "runtime_asset_registry.assets.scenario_registry",
+                        "cachePolicy": "default",
+                        "sourceId": "",
+                        "readMode": "json",
+                    },
+                    {
+                        "key": "fixture_duplicate",
+                        "url": "data/first.json",
+                        "role": "fixture_metadata",
+                        "format": "json",
+                        "schemaRef": "schema://json/object/v1",
+                        "hashRef": "",
+                        "owner": "fixture",
+                        "cachePolicy": "default",
+                        "sourceId": "",
+                        "readMode": "json",
+                    },
+                    {
+                        "key": "fixture_duplicate",
+                        "url": "data/second.json",
+                        "role": "fixture_metadata",
+                        "format": "json",
+                        "schemaRef": "schema://json/object/v1",
+                        "hashRef": "",
+                        "owner": "fixture",
+                        "cachePolicy": "default",
+                        "sourceId": "",
+                        "readMode": "json",
+                    },
+                ],
+            }
+            runtime_asset_registry_payload = {
+                "schema_version": 1,
+                "assets": {
+                    "scenario_registry": {
+                        "url": "data/scenarios/index.json",
+                        "role": "scenario_registry",
+                    },
+                },
+            }
+
+            (data_root / "CATALOG.json").write_text(json.dumps(catalog_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            (data_root / "runtime_asset_registry.json").write_text(
+                json.dumps(runtime_asset_registry_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            report = collect_health(data_root / "CATALOG.json", large_file_warn_bytes=0)
+
+            self.assertIn("catalog key appears more than once: fixture_duplicate", report.errors)
 
     def test_catalog_keeps_topology_metadata_and_source_provenance_traces(self) -> None:
         payload = self._load_catalog()
