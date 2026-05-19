@@ -113,3 +113,4 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract -q`
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
   - `git diff --check -- ...` for changed source, tests, and active docs
+- Pushed implementation to `origin/main` as `eb3eeeb`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean preview-owner worktree and left those local changes untouched.

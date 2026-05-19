@@ -113,4 +113,4 @@ Progress:
 - [x] Updated existing contracts.
 - [x] Run targeted verification.
 - [x] Run final static review.
-- [ ] Push and clean worktree.
+- [x] Pushed implementation to `origin/main`; temporary worktree cleanup follows this closeout commit.

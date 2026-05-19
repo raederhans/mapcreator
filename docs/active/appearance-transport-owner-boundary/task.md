@@ -54,4 +54,4 @@ Owner: main thread for implementation and all live verification.
 - [x] Extend existing contracts.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
-- [ ] Push and clean worktree if current-scope verification is clean.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
