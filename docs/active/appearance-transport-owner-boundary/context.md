@@ -139,3 +139,4 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `npm run test:node:transport-workbench-state-owner`
   - `node tools/check_state_write_allowlist.mjs`
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_state_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
+- Pushed implementation to `origin/main` as `b9835bd`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean state-owner worktree and left those local changes untouched.
