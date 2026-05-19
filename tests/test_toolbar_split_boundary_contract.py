@@ -24,6 +24,7 @@ TRANSPORT_WORKBENCH_LENS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "trans
 TRANSPORT_WORKBENCH_POPOVER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_popover_owner.js"
 TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_right_deck_owner.js"
 TRANSPORT_WORKBENCH_SHELL_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_shell_owner.js"
+TRANSPORT_WORKBENCH_EVENT_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_event_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -443,6 +444,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         popover_owner_content = TRANSPORT_WORKBENCH_POPOVER_OWNER_JS.read_text(encoding="utf-8")
         right_deck_owner_content = TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS.read_text(encoding="utf-8")
         shell_owner_content = TRANSPORT_WORKBENCH_SHELL_OWNER_JS.read_text(encoding="utf-8")
+        event_owner_content = TRANSPORT_WORKBENCH_EVENT_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
@@ -454,6 +456,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("./transport_workbench_popover_owner.js", owner_content)
         self.assertIn("./transport_workbench_right_deck_owner.js", owner_content)
         self.assertIn("./transport_workbench_shell_owner.js", owner_content)
+        self.assertIn("./transport_workbench_event_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
         self.assertIn("const initializeTransportWorkbenchRuntime = () => {", owner_content)
@@ -628,8 +631,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const transportWorkbenchPopoverOwner = createTransportWorkbenchPopoverOwner({", owner_content)
         self.assertIn("infoPopover: transportWorkbenchInfoPopover,", owner_content)
         self.assertIn("sectionHelpPopover: transportWorkbenchSectionHelpPopover,", owner_content)
-        self.assertIn("transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta());", owner_content)
-        self.assertIn("transportWorkbenchPopoverOwner.handleEscape(event)", owner_content)
+        self.assertIn("toggleInfoPopover: () => transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta()),", owner_content)
+        self.assertIn("handlePopoverEscape: (event) => transportWorkbenchPopoverOwner.handleEscape(event),", owner_content)
         self.assertIn("createSectionHelpButton: (familyId, section) => transportWorkbenchPopoverOwner.createSectionHelpButton(familyId, section)", owner_content)
         self.assertNotIn("TRANSPORT_WORKBENCH_INLINE_HELP_COPY", owner_content)
         self.assertNotIn("TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS", owner_content)
@@ -690,6 +693,33 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (node[key] === value) return false;", shell_owner_content)
         self.assertIn("transportWorkbenchShellOwner.syncPreviewControls();", owner_content)
         self.assertIn("getApplyButtonState: (familyId) => getTransportWorkbenchApplyButtonState(familyId)", owner_content)
+        self.assertIn("export function createTransportWorkbenchEventOwner({", event_owner_content)
+        self.assertIn("export function bindTransportWorkbenchEventOnce(node, bind)", event_owner_content)
+        self.assertIn("const transportWorkbenchEventOwner = createTransportWorkbenchEventOwner({", owner_content)
+        self.assertIn("transportWorkbenchEventOwner.bind();", owner_content)
+        self.assertIn("scenarioButton: scenarioTransportWorkbenchBtn,", owner_content)
+        self.assertIn("appearanceButton: transportAppearanceWorkbenchBtn,", owner_content)
+        self.assertIn("applyButton: transportWorkbenchApplyBtn,", owner_content)
+        self.assertIn("familyTabs: transportWorkbenchFamilyTabs,", owner_content)
+        self.assertIn("inspectorTabButtons: transportWorkbenchInspectorTabButtons,", owner_content)
+        self.assertIn("handlePopoverEscape: (event) => transportWorkbenchPopoverOwner.handleEscape(event),", owner_content)
+        self.assertIn('button.addEventListener("pointerdown", (event) => {', event_owner_content)
+        self.assertIn('["pointerup", "pointercancel", "pointerleave", "blur"].forEach((eventName) => {', event_owner_content)
+        self.assertIn("event.preventDefault();", event_owner_content)
+        self.assertIn('button.addEventListener("click", async () => {', event_owner_content)
+        self.assertIn("await applyFamilyToMainMap(context);", event_owner_content)
+        self.assertIn("renderShell(getRenderContext());", event_owner_content)
+        self.assertIn("if (handlePopoverEscape(event)) return;", event_owner_content)
+        self.assertIn("body.dataset.transportWorkbenchEscapeBound = \"true\";", event_owner_content)
+        bind_body = self._arrow_function_body(owner_content, "bindTransportWorkbenchEvents")
+        self.assertIn("transportWorkbenchEventOwner.bind();", bind_body)
+        self.assertNotIn(".addEventListener(", bind_body)
+        self.assertNotIn("document.body.dataset.transportWorkbenchEscapeBound", bind_body)
+        self.assertNotIn('transportWorkbenchApplyBtn.addEventListener("click", async () => {', owner_content)
+        self.assertNotIn('transportWorkbenchCompareBtn.addEventListener("pointerdown"', owner_content)
+        self.assertNotIn('transportWorkbenchPackSelect.addEventListener("change"', owner_content)
+        self.assertNotIn("transportWorkbenchFamilyTabs.forEach((button) => {", owner_content)
+        self.assertNotIn("transportWorkbenchInspectorTabButtons.forEach((button) => {", owner_content)
         ui_body = self._arrow_function_body(owner_content, "renderTransportWorkbenchUi")
         self.assertRegex(
             ui_body,
@@ -718,9 +748,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("await runtimeState.ensureContextLayerDataFn(", apply_owner_content)
         self.assertIn('markDirty("transport-workbench-apply")', apply_owner_content)
         self.assertIn('runtimeState.renderNowFn("transport-workbench-apply")', apply_owner_content)
-        self.assertIn('transportWorkbenchApplyBtn.addEventListener("click", async () => {', owner_content)
-        apply_listener_body = self._event_listener_body(owner_content, "transportWorkbenchApplyBtn", "click")
-        self.assertIn("renderTransportWorkbenchShell(getTransportWorkbenchRenderContext());", apply_listener_body)
+        apply_listener_body = self._event_listener_body(event_owner_content, "button", "click")
+        self.assertIn("renderShell(getRenderContext());", apply_listener_body)
         self.assertNotIn("renderTransportWorkbenchUi()", apply_listener_body)
         self.assertNotIn("renderTransportWorkbenchInspector(", apply_listener_body)
 
@@ -781,9 +810,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("setTransportWorkbenchCarrierViewChangeListener(() => {", controller_content)
         self.assertNotIn("setTransportWorkbenchFamilyPreviewSelectionListener(familyId, () => {", controller_content)
         self.assertNotIn("warmTransportWorkbenchFamilyPreview(plan.familyId", controller_content)
-        self.assertIn("stepTransportWorkbenchCarrierZoom(-1);", controller_content)
-        self.assertIn("stepTransportWorkbenchCarrierZoom(1);", controller_content)
-        self.assertIn("toggleTransportWorkbenchCarrierQuarterTurn();", controller_content)
+        self.assertIn("stepCarrierZoom: (step) => stepTransportWorkbenchCarrierZoom(step),", controller_content)
+        self.assertIn("rotateCarrier: () => toggleTransportWorkbenchCarrierQuarterTurn(),", controller_content)
 
     def test_toolbar_keeps_transport_workbench_facade_and_surface_coordination_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")

@@ -1,5 +1,5 @@
 // Transport workbench controller.
-// 这个模块负责 transport workbench 当前的状态归一、面板渲染、预览联动和内部事件绑定，尚不声明完整应用链所有权。
+// 这个模块负责 transport workbench 当前的状态归一、面板渲染、预览联动和事件委派，尚不声明完整应用链所有权。
 // toolbar.js 继续保留全局 overlay 协调、URL restore、顶层 chrome 和其他 support surface 的仲裁。
 
 import {
@@ -57,6 +57,9 @@ import {
 import {
   createTransportWorkbenchShellOwner,
 } from "./transport_workbench_shell_owner.js";
+import {
+  createTransportWorkbenchEventOwner,
+} from "./transport_workbench_event_owner.js";
 import {
   TRANSPORT_WORKBENCH_FAMILIES,
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
@@ -237,6 +240,43 @@ export function createTransportWorkbenchController({
     toggleSection: (familyId, sectionKey, nextOpen) => toggleTransportWorkbenchSection(familyId, sectionKey, nextOpen),
     createSectionHelpButton: (familyId, section) => transportWorkbenchPopoverOwner.createSectionHelpButton(familyId, section),
     renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config),
+  });
+  const transportWorkbenchEventOwner = createTransportWorkbenchEventOwner({
+    documentRef: document,
+    body: document.body,
+    scenarioButton: scenarioTransportWorkbenchBtn,
+    appearanceButton: transportAppearanceWorkbenchBtn,
+    infoButton: transportWorkbenchInfoBtn,
+    closeButton: transportWorkbenchCloseBtn,
+    resetButton: transportWorkbenchResetBtn,
+    compareButton: transportWorkbenchCompareBtn,
+    zoomOutButton: transportWorkbenchZoomOutBtn,
+    zoomInButton: transportWorkbenchZoomInBtn,
+    rotateButton: transportWorkbenchRotateBtn,
+    applyButton: transportWorkbenchApplyBtn,
+    packSelect: transportWorkbenchPackSelect,
+    familyTabs: transportWorkbenchFamilyTabs,
+    inspectorTabButtons: transportWorkbenchInspectorTabButtons,
+    actions: {
+      isOpen: () => !!runtimeState.transportWorkbenchUi?.open,
+      setOpen: (nextOpen, options) => setTransportWorkbenchState(nextOpen, options),
+      toggleInfoPopover: () => transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta()),
+      resetView: () => resetTransportWorkbenchView(),
+      setCompareHeld: (nextHeld) => setTransportWorkbenchCompareHeld(nextHeld),
+      stepCarrierZoom: (step) => stepTransportWorkbenchCarrierZoom(step),
+      rotateCarrier: () => toggleTransportWorkbenchCarrierQuarterTurn(),
+      syncPreviewControls: () => syncTransportWorkbenchPreviewControls(),
+      getRenderContext: () => getTransportWorkbenchRenderContext(),
+      getApplyButtonState: (familyId) => getTransportWorkbenchApplyButtonState(familyId),
+      applyFamilyToMainMap: (context) => applyTransportWorkbenchFamilyToMainMap(context),
+      renderShell: (context) => renderTransportWorkbenchShell(context),
+      setActivePackId: (packId) => setTransportWorkbenchActivePackId(packId),
+      setActiveFamily: (familyId) => transportWorkbenchStateOwner.setActiveFamily(familyId),
+      renderUi: () => renderTransportWorkbenchUi(),
+      setInspectorTab: (tabId) => transportWorkbenchStateOwner.setInspectorTab(tabId),
+      renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
+      handlePopoverEscape: (event) => transportWorkbenchPopoverOwner.handleEscape(event),
+    },
   });
 
   const getTransportWorkbenchFamilyMeta = () => transportWorkbenchStateOwner.getFamilyMeta();
@@ -498,143 +538,7 @@ export function createTransportWorkbenchController({
   };
 
   const bindTransportWorkbenchEvents = () => {
-      if (scenarioTransportWorkbenchBtn && !scenarioTransportWorkbenchBtn.dataset.bound) {
-        scenarioTransportWorkbenchBtn.addEventListener("click", () => {
-          if (runtimeState.transportWorkbenchUi?.open) {
-            setTransportWorkbenchState(false);
-            return;
-          }
-          setTransportWorkbenchState(true, { trigger: scenarioTransportWorkbenchBtn });
-        });
-        scenarioTransportWorkbenchBtn.dataset.bound = "true";
-      }
-
-      if (transportAppearanceWorkbenchBtn && !transportAppearanceWorkbenchBtn.dataset.bound) {
-        transportAppearanceWorkbenchBtn.addEventListener("click", () => {
-          setTransportWorkbenchState(true, { trigger: transportAppearanceWorkbenchBtn });
-        });
-        transportAppearanceWorkbenchBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchInfoBtn && !transportWorkbenchInfoBtn.dataset.bound) {
-        transportWorkbenchInfoBtn.addEventListener("click", () => {
-          transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta());
-        });
-        transportWorkbenchInfoBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchCloseBtn && !transportWorkbenchCloseBtn.dataset.bound) {
-        transportWorkbenchCloseBtn.addEventListener("click", () => {
-          setTransportWorkbenchState(false);
-        });
-        transportWorkbenchCloseBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchResetBtn && !transportWorkbenchResetBtn.dataset.bound) {
-        transportWorkbenchResetBtn.addEventListener("click", () => {
-          resetTransportWorkbenchView();
-        });
-        transportWorkbenchResetBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchCompareBtn && !transportWorkbenchCompareBtn.dataset.bound) {
-        transportWorkbenchCompareBtn.addEventListener("pointerdown", (event) => {
-          if (event.button !== 0) return;
-          setTransportWorkbenchCompareHeld(true);
-        });
-        ["pointerup", "pointercancel", "pointerleave", "blur"].forEach((eventName) => {
-          transportWorkbenchCompareBtn.addEventListener(eventName, () => {
-            setTransportWorkbenchCompareHeld(false);
-          });
-        });
-        transportWorkbenchCompareBtn.addEventListener("keydown", (event) => {
-          if (event.key !== " " && event.key !== "Enter") return;
-          event.preventDefault();
-          setTransportWorkbenchCompareHeld(true);
-        });
-        transportWorkbenchCompareBtn.addEventListener("keyup", (event) => {
-          if (event.key !== " " && event.key !== "Enter") return;
-          event.preventDefault();
-          setTransportWorkbenchCompareHeld(false);
-        });
-        transportWorkbenchCompareBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchZoomOutBtn && !transportWorkbenchZoomOutBtn.dataset.bound) {
-        transportWorkbenchZoomOutBtn.addEventListener("click", () => {
-          stepTransportWorkbenchCarrierZoom(-1);
-          syncTransportWorkbenchPreviewControls();
-        });
-        transportWorkbenchZoomOutBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchZoomInBtn && !transportWorkbenchZoomInBtn.dataset.bound) {
-        transportWorkbenchZoomInBtn.addEventListener("click", () => {
-          stepTransportWorkbenchCarrierZoom(1);
-          syncTransportWorkbenchPreviewControls();
-        });
-        transportWorkbenchZoomInBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchRotateBtn && !transportWorkbenchRotateBtn.dataset.bound) {
-        transportWorkbenchRotateBtn.addEventListener("click", () => {
-          toggleTransportWorkbenchCarrierQuarterTurn();
-          syncTransportWorkbenchPreviewControls();
-        });
-        transportWorkbenchRotateBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchApplyBtn && !transportWorkbenchApplyBtn.dataset.bound) {
-        transportWorkbenchApplyBtn.addEventListener("click", async () => {
-          const context = getTransportWorkbenchRenderContext();
-          const applyState = getTransportWorkbenchApplyButtonState(context.family.id);
-          if (!applyState.enabled) return;
-          try {
-            await applyTransportWorkbenchFamilyToMainMap(context);
-          } catch (error) {
-            console.error(`[transport-workbench] Failed to apply ${context.family.id} to the main map.`, error);
-          }
-          renderTransportWorkbenchShell(getTransportWorkbenchRenderContext());
-        });
-        transportWorkbenchApplyBtn.dataset.bound = "true";
-      }
-
-      if (transportWorkbenchPackSelect && !transportWorkbenchPackSelect.dataset.bound) {
-        transportWorkbenchPackSelect.addEventListener("change", () => {
-          setTransportWorkbenchActivePackId(transportWorkbenchPackSelect.value);
-        });
-        transportWorkbenchPackSelect.dataset.bound = "true";
-      }
-
-      transportWorkbenchFamilyTabs.forEach((button) => {
-        if (!button || button.dataset.bound === "true") return;
-        button.addEventListener("click", () => {
-          transportWorkbenchStateOwner.setActiveFamily(button.dataset.transportFamily || "road");
-          renderTransportWorkbenchUi();
-        });
-        button.dataset.bound = "true";
-      });
-
-      transportWorkbenchInspectorTabButtons.forEach((button) => {
-        if (!button || button.dataset.bound === "true") return;
-        button.addEventListener("click", () => {
-          transportWorkbenchStateOwner.setInspectorTab(button.dataset.transportInspectorTab || "inspect");
-          const context = getTransportWorkbenchRenderContext();
-          renderTransportWorkbenchShell(context);
-          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-        });
-        button.dataset.bound = "true";
-      });
-
-      if (!document.body.dataset.transportWorkbenchEscapeBound) {
-        document.addEventListener("keydown", (event) => {
-          if (event.key !== "Escape" || !runtimeState.transportWorkbenchUi?.open) return;
-          if (transportWorkbenchPopoverOwner.handleEscape(event)) return;
-          event.preventDefault();
-          setTransportWorkbenchState(false);
-        });
-        document.body.dataset.transportWorkbenchEscapeBound = "true";
-      }
+    transportWorkbenchEventOwner.bind();
   };
 
   return {
