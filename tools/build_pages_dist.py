@@ -432,7 +432,8 @@ def validate_required_dist_files() -> None:
 
 def write_dist_manifest() -> int:
     DIST_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    for _ in range(2):
+    last_manifest_text = ""
+    for _ in range(5):
         records, total_bytes = get_dist_file_records()
         payload = {
             "schema_version": 1,
@@ -441,7 +442,11 @@ def write_dist_manifest() -> int:
             "required_files": list(REQUIRED_DIST_FILES),
             "files": records,
         }
-        DIST_MANIFEST_PATH.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        manifest_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if manifest_text == last_manifest_text:
+            break
+        DIST_MANIFEST_PATH.write_text(manifest_text, encoding="utf-8")
+        last_manifest_text = manifest_text
     _records, total_bytes = get_dist_file_records()
     return total_bytes
 

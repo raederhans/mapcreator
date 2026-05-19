@@ -798,7 +798,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_rail_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
-        visibility_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_visibility_policy.js').read_text(encoding='utf-8')
+        visibility_policy_content = (REPO_ROOT / 'js' / 'core' / 'transport_overview_visibility_policy.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         self.assertIn('function getTransportOverviewLineRevealRankThreshold(familyId, value)', registry_content)
         self.assertIn('return normalized === "primary" ? 1 : normalized === "secondary" ? 2 : 3;', registry_content)
@@ -822,7 +822,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_road_renderer_uses_road_scope_threshold_helper(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
-        visibility_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_visibility_policy.js').read_text(encoding='utf-8')
+        visibility_policy_content = (REPO_ROOT / 'js' / 'core' / 'transport_overview_visibility_policy.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         self.assertIn('export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}, { scale = 1, visualMode = "distribution" } = {})', registry_content)
         self.assertIn('if (normalizedFamilyId === "road") {', registry_content)

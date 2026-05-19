@@ -186,10 +186,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         paths = {record["path"] for record in payload["files"]}
+        records_by_path = {record["path"]: record for record in payload["files"]}
         required_files = set(payload.get("required_files", []))
 
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
         self.assertEqual(payload["max_allowed_bytes"], 995 * 1024 * 1024)
+        self.assertEqual(
+            records_by_path["pages-dist-manifest.json"]["size_bytes"],
+            DIST_MANIFEST.stat().st_size,
+        )
         self.assertIn("app/data/CATALOG.json", required_files)
         for expected_path in (
             "index.html",

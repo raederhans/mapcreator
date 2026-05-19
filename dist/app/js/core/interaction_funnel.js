@@ -119,6 +119,8 @@ function syncProjectImportUiState({ scenarioImportAudit, hooks }) {
   return syncProjectImportUiStateHelper({ scenarioImportAudit, hooks });
 }
 
+// project import 既要恢复文件里显式保存的 overlay pack，也要兼容旧工程只留下
+// activePackId 的形态；这里统一收集 pack id，后面按 pack 顺序逐个恢复。
 function resolveImportedTransportCountryOverlayPackIds(target, importedState = {}) {
   const packIds = [];
   const pushPackId = (packId) => {
@@ -136,6 +138,8 @@ function resolveImportedTransportCountryOverlayPackIds(target, importedState = {
   return packIds;
 }
 
+// country overlay 仍然以 pack 为加载单位，所以导入工程时要把要用到的 pack
+// 逐个读回 runtime，再让 applyTransportCountryOverlayState 负责合并到统一状态。
 async function restoreImportedTransportCountryOverlayState(target, importedState = {}) {
   const activePackIds = resolveImportedTransportCountryOverlayPackIds(target, importedState);
   if (!activePackIds.length) {
@@ -156,6 +160,8 @@ async function restoreImportedTransportCountryOverlayState(target, importedState
   }
 }
 
+// 这里是 project import 的集中收口点：先让 prepareImportedProjectState 解决
+// scenario/runtime 依赖，再一次性回填 state，避免各个 editor 各自恢复半套状态。
 async function applyImportedProjectState(data, { ui, hooks }) {
   debugState.importPhase = "begin";
   clearHistory();
@@ -219,6 +225,8 @@ async function applyImportedProjectState(data, { ui, hooks }) {
     unitCounterRenderer: importedOverlayState?.annotationView?.unitRendererDefault || "game",
   });
   hooks.invalidateFrontlineOverlayState?.();
+  // workbench UI 要先于 style/layer visibility 恢复，这样后面的 normalize 可以拿到
+  // 正确的 tab、preview family 和 panel 状态，不会把导入文件里的 UI 语义抹掉。
   restoreImportedWorkbenchUiState(state, data, {
     cloneValue: cloneImportedProjectValue,
   });

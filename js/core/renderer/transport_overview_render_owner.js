@@ -27,7 +27,7 @@ import {
   getTransportOverviewLabelZoomConfig,
   getTransportOverviewPointImportanceRank,
   shouldIncludeTransportOverviewPointFeature,
-} from "./transport_overview_visibility_policy.js";
+} from "../transport_overview_visibility_policy.js";
 import {
   getTransportOverviewAirportVisualStyle,
   getTransportOverviewPortVisualStyle,
@@ -77,6 +77,8 @@ export function createTransportOverviewRenderOwner({
   let projection = null;
   let transportFacilityIconAtlasRenderQueued = false;
 
+  // render owner 不缓存外部 helper 返回值的快照；每次 pass 前同步当前 canvas /
+  // projection，保证 zoom resize 与 render-pass reset 后仍然读到最新目标。
   function syncRenderTargets() {
     context = getContext();
     pathCanvas = getPathCanvas();
@@ -86,6 +88,8 @@ export function createTransportOverviewRenderOwner({
 function requestTransportFacilityIconAtlasRender() {
   if (transportFacilityIconAtlasRenderQueued) return;
   transportFacilityIconAtlasRenderQueued = true;
+  // atlas ready/error 都要主动失效 contextMarkers pass；否则上一帧“还没图标”的
+  // 缓存会继续复用，hover/label 已经更新了，图标却还停在旧帧。
   if (typeof invalidateRenderPasses === "function") {
     invalidateRenderPasses("contextMarkers", "transport-facility-icons-ready");
   }
@@ -197,6 +201,8 @@ function buildContextFacilityEntries(
   const zoomTransform = getCurrentZoomTransform();
   const padding = 36;
   const entries = [];
+  // 这里先在世界坐标下收集候选，再补齐 screen 坐标与 stableSortKey。
+  // 后面的 density、hover、label 都共享这份 entry，避免不同 pass 各自做一套筛选。
   collection.features.forEach((feature) => {
     if (feature?.geometry?.type !== "Point") return;
     const coordinates = feature.geometry.coordinates;
@@ -288,6 +294,8 @@ function drawTransportFacilityLabels(entries, {
   context.save();
   context.textAlign = "left";
   context.textBaseline = "middle";
+  // label 采用“候选 -> placement -> occupiedBoxes”的单通道流程，
+  // 这样国家级与地区级标签共用同一套碰撞结果，避免不同 rank 互相覆盖。
   candidates.forEach((entry) => {
     const usesFacilityIcon = normalizedFamilyId === "airport" || normalizedFamilyId === "port";
     const zoomScale = Math.max(0.0001, Number(entry.screenScale || 1));

@@ -204,6 +204,13 @@ def _ledger_index_by_local_path(entries: list[dict[str, Any]]) -> dict[str, dict
     }
 
 
+def _should_emit_source_ledger_asset(entry: dict[str, Any]) -> bool:
+    # Optional caches are machine-local rebuild inputs. Keeping them out of the
+    # checked-in catalog makes the catalog deterministic across clean and warm worktrees.
+    local_presence = str(entry.get("local_presence") or "required").strip()
+    return local_presence != "optional_cache"
+
+
 def _derive_generic_schema_ref(path: str, manifest_meta: dict[str, Any] | None = None) -> str:
     metadata = manifest_meta or {}
     if metadata.get("schema_ref"):
@@ -626,6 +633,8 @@ def build_catalog_payload() -> dict[str, Any]:
 
     for ledger_entry in source_ledger:
         if not isinstance(ledger_entry, dict):
+            continue
+        if not _should_emit_source_ledger_asset(ledger_entry):
             continue
         local_path = _normalize_rel_path(ledger_entry.get("local_path", ""))
         if not local_path or not _is_json_like(local_path):

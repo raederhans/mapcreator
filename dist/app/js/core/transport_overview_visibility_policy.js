@@ -2,7 +2,7 @@ import {
   getTransportOverviewLineClassScopeRank,
   resolveTransportOverviewLineStrategy,
   resolveTransportOverviewPointStrategy,
-} from "../transport_capability_registry.js";
+} from "./transport_capability_registry.js";
 
 const TRANSPORT_LINE_CLASS_BY_FAMILY = Object.freeze({
   rail: Object.freeze(["mainline", "regional", "secondary"]),

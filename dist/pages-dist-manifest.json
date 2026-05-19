@@ -6078,7 +6078,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 15379
+      "size_bytes": 16131
     },
     {
       "path": "app/js/core/legend_manager.js",
@@ -6270,15 +6270,11 @@
     },
     {
       "path": "app/js/core/renderer/transport_overview_render_owner.js",
-      "size_bytes": 53032
+      "size_bytes": 53766
     },
     {
       "path": "app/js/core/renderer/transport_overview_style_policy.js",
       "size_bytes": 4924
-    },
-    {
-      "path": "app/js/core/renderer/transport_overview_visibility_policy.js",
-      "size_bytes": 4179
     },
     {
       "path": "app/js/core/renderer/urban_city_policy.js",
@@ -6478,7 +6474,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 23528
+      "size_bytes": 24112
     },
     {
       "path": "app/js/core/state.js",
@@ -6499,6 +6495,10 @@
     {
       "path": "app/js/core/transport_country_overlay.js",
       "size_bytes": 6401
+    },
+    {
+      "path": "app/js/core/transport_overview_visibility_policy.js",
+      "size_bytes": 4178
     },
     {
       "path": "app/js/core/transport_pack_resolver.js",
@@ -6618,7 +6618,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_transport_summary.js",
-      "size_bytes": 7027
+      "size_bytes": 7648
     },
     {
       "path": "app/js/ui/toolbar/export_failure_handler.js",
@@ -6802,7 +6802,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 215885
+      "size_bytes": 215962
     },
     {
       "path": "styles.css",
@@ -6819,5 +6819,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001013939
+  "total_bytes": 1001016706
 }

@@ -44,7 +44,7 @@ import {
   getIncludedTransportOverviewLineClass,
   getTransportOverviewLabelZoomConfig,
   shouldIncludeTransportOverviewLineFeature,
-} from "../js/core/renderer/transport_overview_visibility_policy.js";
+} from "../js/core/transport_overview_visibility_policy.js";
 import {
   getTransportOverviewAirportVisualStyle,
   getTransportOverviewPortVisualStyle,

@@ -31,9 +31,9 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertIn('id="scenarioGuideCloseBtn"', content)
         self.assertIn("scenario-guide-modal", content)
         self.assertIn("Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.", content)
-        self.assertIn("Upload a local image, align it with opacity / scale / offsets, then keep those alignment values in the project. The image file itself needs to be uploaded again when you restore the project.", content)
-        self.assertIn("Preview layers, format, and resolution before export.", content)
-        self.assertIn("Scenario frontline workspace.", content)
+        self.assertIn("Reference: After you upload a local image, the most stable alignment order is opacity", content)
+        self.assertIn("Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.", content)
+        self.assertIn("Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.", content)
         self.assertNotIn("Use Guide for workflow steps and Reference for visual alignment. Both stay in the Project tab so you can check instructions without losing context.", content)
         self.assertNotIn("Use Frontline after you apply a scenario. This section combines", content)
         self.assertNotIn("lblExportInfoTooltip", content)
@@ -250,7 +250,7 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             self.assertIn(token, css_content)
 
         for token in [
-            't("Project-local battle planning tools.", "ui")',
+            't("Project-local lines, graphics, and unit counters for export.", "ui")',
             't("Plan lines.", "ui")',
             't("Arrows and markers.", "ui")',
             't("Map pieces.", "ui")',

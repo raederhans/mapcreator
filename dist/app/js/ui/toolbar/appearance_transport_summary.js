@@ -1,5 +1,5 @@
 import { getTransportOverviewLineSummaryMeta } from "../../core/transport_capability_registry.js";
-import { getTransportOverviewFilteredFeatureCount } from "../../core/renderer/transport_overview_visibility_policy.js";
+import { getTransportOverviewFilteredFeatureCount } from "../../core/transport_overview_visibility_policy.js";
 
 const TRANSPORT_RENDER_METRIC_NAMES = Object.freeze({
   airport: "drawAirportsLayer",
@@ -67,6 +67,8 @@ export function getTransportFamilyRenderMetric(familyId, metricsSource) {
   const metricName = TRANSPORT_RENDER_METRIC_NAMES[familyId];
   if (!metricName) return null;
   const metrics = metricsSource && typeof metricsSource === "object" ? metricsSource : {};
+  // transport summary 以 contextBreakdown 为首选真相源，因为 renderer 现在把
+  // interactive pass、country overlay 和 hidden reason 都写在这里；旧顶层字段只保留兼容读取。
   const breakdown = metrics.contextBreakdown && typeof metrics.contextBreakdown === "object"
     ? metrics.contextBreakdown
     : {};
@@ -77,6 +79,8 @@ export function getTransportFamilyRenderMetric(familyId, metricsSource) {
 export function isTransportFamilyRenderSettlingMetric(metric) {
   if (!metric || typeof metric !== "object") return true;
   const reason = String(metric.reason || "").trim().toLowerCase();
+  // “settling” 表示 UI 还处在 renderer 过渡态：可能正在 staged apply，也可能
+  // interactive pass 还没进入可见统计，所以 summary 先显示加载中，避免把 0 visible 误报成空数据。
   return !!metric.interactive
     || reason === "hidden"
     || reason === "interactive-pass"
@@ -157,6 +161,8 @@ export function buildTransportFamilySummaryText({
   const loadedAuxiliaryText = formatTransportLoadedAuxiliaryText(familyId, filteredCount, translate);
   const lineDetails = buildTransportLineSummaryDetails(familyId, collections, translate);
   const joinSummaryParts = (...parts) => parts.filter(Boolean).join(" · ");
+  // summary 文案优先表达阶段语义，再补 loaded/visible 数量。
+  // 这样 UI 可以区分“还在加载”“已加载但当前视角 0 visible”“已经真正显示出来”。
   if (isTransportFamilyRenderSettlingMetric(metric)) {
     return loadedAuxiliaryText
       ? joinSummaryParts(translateUi(translate, "Loading/settling"), loadedAuxiliaryText, ...lineDetails)

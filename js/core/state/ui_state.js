@@ -37,6 +37,8 @@ export function createDefaultManualSpecialZonesState() {
 }
 
 export function createDefaultTransportWorkbenchUiState() {
+  // transportWorkbenchUi 既要保留当前 family 的直接入口，也要保留按 family
+  // 分开的 activePackIdByFamily，方便 preview/editor/main-map apply 共用同一份选择状态。
   const activePackIdByFamily = Object.fromEntries(
     TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS
       .filter((familyId) => familyId !== "layers")
@@ -85,6 +87,8 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
     target.styleConfig.transportOverview || {},
   );
   const familyId = String(patch.familyId || "").trim();
+  // 这里负责 workbench -> main map 的窄桥接：只把 renderer 真正消费的 overview
+  // 配置写回 styleConfig，preview camera 和 compareHeld 这类本地 UI 状态继续留在 workbench。
   const nextOverviewConfig = {
     ...currentOverviewConfig,
     visualMode: patch.visualMode,
@@ -220,6 +224,8 @@ export function createDefaultUiPanelState() {
 }
 
 export function createDefaultUiState() {
+  // createDefaultUiState 只收口运行中的 UI/runtime dirty 标记与开关；
+  // 更细的 panel/workbench/style 默认值继续分散到专门 helper，避免这里再长出第二套 schema。
   return {
     activeDockPopover: "",
     isDirty: false,

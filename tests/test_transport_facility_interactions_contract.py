@@ -166,7 +166,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             "formatTransportThresholdLabel,",
         ]
         summary_required_tokens = [
-            'from "../../core/renderer/transport_overview_visibility_policy.js";',
+            'from "../../core/transport_overview_visibility_policy.js";',
             "export function getTransportFamilyFilteredCount({",
             "export function formatTransportFamilyCountText(familyId, count, translate)",
             "export function formatTransportPercent(value)",

@@ -46,6 +46,14 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertIn("schema://transport/carrier_payload/v1", schema_counts)
         self.assertIn("schema://transport/provenance_payload/v1", schema_counts)
 
+    def test_catalog_excludes_optional_cache_source_assets(self) -> None:
+        payload = self._load_catalog()
+        entries = {entry["key"]: entry for entry in payload.get("entries") or []}
+
+        self.assertIn("source:gb_chn_adm2", entries)
+        self.assertNotIn("source:gb_bfa_adm1", entries)
+        self.assertNotIn("source:gb_ukr_adm2", entries)
+
     def test_catalog_contains_transport_preview_and_manifest_entries(self) -> None:
         payload = self._load_catalog()
         entries = {entry["key"]: entry for entry in payload.get("entries") or []}
