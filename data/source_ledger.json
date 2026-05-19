@@ -14,7 +14,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/PROBAV_LC100_global_v3.0.1_2019_forest_type.provenance.json",
-    "status": "frozen_local_only"
+    "status": "frozen_local_only",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "etopo_2022_surface_60s",
@@ -32,7 +33,8 @@
     ],
     "rebuild_command": "python tools/build_global_bathymetry_asset.py",
     "provenance_sidecar": "data/ETOPO_2022_v1_60s_N90W180_surface.provenance.json",
-    "status": "frozen_local_only"
+    "status": "frozen_local_only",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "fr_arr",
@@ -50,7 +52,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/france_arrondissements.provenance.json",
-    "status": "frozen_verified"
+    "status": "frozen_verified",
+    "local_presence": "required"
   },
   {
     "source_id": "gb_bfa_adm1",
@@ -68,7 +71,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-BFA-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_bih_adm1",
@@ -86,7 +90,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-BIH-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_blr_adm2",
@@ -104,7 +109,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-BLR-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_chn_adm2",
@@ -112,7 +118,7 @@
     "origin_kind": "download",
     "upstream_url": "https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/CHN/ADM2/geoBoundaries-CHN-ADM2.geojson",
     "immutable_ref": "9469f09",
-    "current_local_sha256": "2b68d8a808742fc6d7acd769584db960d8fc2c25b9f1d20e3e98c72e9f1c4d34",
+    "current_local_sha256": "1692a5beb285d495ad7c416a1900391f58a70915a6c4cdbf7b4dd7c58d34d98a",
     "license": "",
     "citation": "https://www.geoboundaries.org/api/current/gbOpen/CHN/ADM2/",
     "consumers": [
@@ -122,7 +128,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/china_adm2.provenance.json",
-    "status": "frozen_verified"
+    "status": "frozen_verified",
+    "local_presence": "required"
   },
   {
     "source_id": "gb_civ_adm1",
@@ -140,7 +147,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-CIV-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_cze_adm2",
@@ -158,7 +166,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-CZE-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_dnk_adm2",
@@ -176,7 +185,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-DNK-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_gin_adm1",
@@ -194,7 +204,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-GIN-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_idn_adm1",
@@ -212,7 +223,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-IDN-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_ind_adm2",
@@ -230,7 +242,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-IND-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_mex_adm2",
@@ -248,7 +261,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-MEX-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_mwi_adm1",
@@ -266,7 +280,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-MWI-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_rus_adm2",
@@ -284,7 +299,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-RUS-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_som_adm1",
@@ -302,7 +318,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-SOM-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_svk_adm2",
@@ -320,7 +337,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-SVK-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_uga_adm1",
@@ -338,7 +356,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-UGA-ADM1.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "gb_ukr_adm2",
@@ -356,7 +375,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/geoBoundaries-UKR-ADM2.provenance.json",
-    "status": "frozen_verified"
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
   },
   {
     "source_id": "geonames_cities15000",
@@ -374,7 +394,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/cities15000.provenance.json",
-    "status": "pending_upgrade_review"
+    "status": "pending_upgrade_review",
+    "local_presence": "required"
   },
   {
     "source_id": "natural_earth_populated_places_10m",
@@ -392,7 +413,8 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/ne_10m_populated_places.provenance.json",
-    "status": "frozen_local_only"
+    "status": "frozen_local_only",
+    "local_presence": "required"
   },
   {
     "source_id": "pl_powiaty",
@@ -410,6 +432,7 @@
     ],
     "rebuild_command": "python init_map_data.py --mode primary --strict",
     "provenance_sidecar": "data/poland_powiaty.provenance.json",
-    "status": "frozen_verified"
+    "status": "frozen_verified",
+    "local_presence": "required"
   }
 ]

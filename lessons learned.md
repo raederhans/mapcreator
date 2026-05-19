@@ -219,6 +219,10 @@
 - 如果控制台只剩 `Running N tests using 1 worker`，很难分清是 harness 没启动、页面没 ready，还是业务状态卡住了。
 - 更稳的做法是：在关键 helper、页面进入、UI ready、download、import、scenario apply 等阶段补日志，并在超时时抓 `bootPhase`、`startupReadonly`、`scenarioApplyInFlight` 这类运行态快照。
 
+### 50. source ledger 要区分 checked-in frozen 和 optional local source
+- 干净 worktree 里缺少大体积 local-only source 或待复核 source 时，ledger checker 只有在 `local_presence=optional_cache` 时输出 warning；所有 `local_presence=required` 的 source 缺失或 hash 漂移都应硬失败。
+- catalog 生成时已经会跳过缺失 source-ledger asset；ledger 状态也要同步表达这一点，避免 `CATALOG` 绿而 source ledger 红。
+
 ### 49. Chunked detail political features must be normalized before merging into runtime land collections
 - If chunk payload features bypass normalizeFeatureGeometry(), many detail polygons can be interpreted as world-size complements, causing world_bounds skips, blank political fills, and oversized Antarctic/ocean artifacts.
 - When runtime/topology collections are merged, normalize the chunk features at the merge boundary instead of assuming chunk JSON already has safe winding.
