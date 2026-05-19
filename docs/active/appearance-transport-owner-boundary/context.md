@@ -253,3 +253,48 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
   - `git diff --check`
 - Pushed implementation to `origin/main` as `bbe20fc`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean row-metadata worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench layer order owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-layer-order-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes recommended extracting the full layer-order panel owner, not only the status text model, because DOM rendering, drag state, drop side effects, and live/metadata/reserved copy were all one surface.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_layer_order_owner.js`.
+- Moved to layer-order owner: layer-order row model, translated status/caption copy, drag start/end/over/drop event wiring, private dragged-family state, dirty marking callback, panel rerender, and inspector refresh callback.
+- Kept in `transport_workbench_controller.js`: state owner wiring, render context construction, preview lifecycle callback entrypoint, and layer-panel visibility toggling.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks the layer-order owner boundary and confirms drag/status copy left the controller.
+  - `tests/transport_workbench_layer_order_owner_behavior.test.mjs` covers row models, live status class, successful drop side-effect order, and failed drop no-op behavior.
+  - `package.json` exposes `test:node:transport-workbench-layer-order-owner`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_layer_order_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_layer_order_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_layer_order_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review requested two narrow fixes:
+  - restore unconditional inspector refresh after a successful layer-order drop, matching the old `move -> dirty -> context -> rerender -> inspector` contract.
+  - lock controller-to-owner wiring for UI namespace translation, render context, and inspector refresh callbacks in the Python boundary contract.
+- Review fixes applied:
+  - `transport_workbench_layer_order_owner.js` now calls `renderInspector(context.family, context.config, context.compareHeld)` unconditionally after rerender.
+  - `tests/transport_workbench_layer_order_owner_behavior.test.mjs` now covers the unconditional inspector refresh contract.
+  - `tests/test_toolbar_split_boundary_contract.py` now asserts `translate`, `moveLayerOrder`, `getRenderContext`, and `renderInspector` wiring.
+- Verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_layer_order_owner.js`
+  - `node --check tests/transport_workbench_layer_order_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_layer_order_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Final static re-review approved the layer-order owner boundary after the fixes. Remaining risk is limited to live browser behavior, which is intentionally not part of this current verification lane.

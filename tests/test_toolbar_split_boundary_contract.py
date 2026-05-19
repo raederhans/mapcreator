@@ -19,6 +19,7 @@ TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "tra
 TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
 TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js"
 TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
+TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_layer_order_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -420,6 +421,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
         preview_lifecycle_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
         inspector_owner_content = TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS.read_text(encoding="utf-8")
+        layer_order_owner_content = TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
@@ -556,6 +558,18 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const createTransportWorkbenchInspectorRow = ", owner_content)
         self.assertNotIn("const createTransportWorkbenchInspectorStateCard = ", owner_content)
         self.assertNotIn("const renderTransportWorkbenchDiagnosticsBody = ", owner_content)
+        self.assertIn("export function createTransportWorkbenchLayerOrderOwner({", layer_order_owner_content)
+        self.assertIn("export function buildTransportWorkbenchLayerOrderRows({", layer_order_owner_content)
+        self.assertIn("const transportWorkbenchLayerOrderOwner = createTransportWorkbenchLayerOrderOwner({", owner_content)
+        self.assertIn("const renderTransportWorkbenchLayerOrderPanel = () => transportWorkbenchLayerOrderOwner.render();", owner_content)
+        self.assertIn('translate: (label) => t(label, "ui")', owner_content)
+        self.assertIn("moveLayerOrder: (draggedFamilyId, targetFamilyId) => transportWorkbenchStateOwner.moveLayerOrder(draggedFamilyId, targetFamilyId)", owner_content)
+        self.assertIn("getRenderContext: () => getTransportWorkbenchRenderContext()", owner_content)
+        self.assertIn("renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld)", owner_content)
+        self.assertNotIn("let transportWorkbenchDraggedLayerId", owner_content)
+        self.assertNotIn('item.addEventListener("dragstart"', owner_content)
+        self.assertNotIn('"Live now"', owner_content)
+        self.assertIn('"Live now"', layer_order_owner_content)
         self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
         self.assertRegex(
             apply_owner_content,

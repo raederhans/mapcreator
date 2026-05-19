@@ -219,3 +219,28 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench layer order owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-layer-order-owner-2026-05-19`
+Branch: `codex/transport-workbench-layer-order-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench layer-order panel rendering and drag/drop behavior out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_layer_order_owner.js` owns layer-order row models, live/metadata/reserved status copy, drag state, drop handling, DOM row rendering, and rerender callback sequencing.
+- `transport_workbench_controller.js` only wires the owner dependencies and exposes the render entrypoint used by preview lifecycle callbacks.
+- Existing Python contracts and a named Node behavior test cover the new owner boundary and drop side-effect order.
+- Targeted syntax, Python contracts, Node behavior, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only evidence lanes for layer-order boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented layer-order owner split.
+- [x] Updated contracts and added named Node behavior script.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

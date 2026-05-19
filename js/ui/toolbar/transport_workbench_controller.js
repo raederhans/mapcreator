@@ -43,6 +43,9 @@ import {
   createTransportWorkbenchInspectorOwner,
 } from "./transport_workbench_inspector_owner.js";
 import {
+  createTransportWorkbenchLayerOrderOwner,
+} from "./transport_workbench_layer_order_owner.js";
+import {
   TRANSPORT_WORKBENCH_FAMILIES,
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
   TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS,
@@ -119,7 +122,6 @@ export function createTransportWorkbenchController({
   };
 
   let transportWorkbenchSectionHelpState = null;
-  let transportWorkbenchDraggedLayerId = "";
 
   const transportWorkbenchStateOwner = createTransportWorkbenchStateOwner(runtimeState);
   const ensureTransportWorkbenchUiState = () => transportWorkbenchStateOwner.ensureUiState();
@@ -145,6 +147,21 @@ export function createTransportWorkbenchController({
     getLayerFamilyMeta: (familyId) => getTransportWorkbenchLayerFamilyMeta(familyId),
     isLivePreviewFamily: (familyId) => isTransportWorkbenchLivePreviewFamily(familyId),
     isManifestOnlyRuntimeFamily: (familyId) => isTransportWorkbenchManifestOnlyRuntimeFamily(familyId),
+  });
+
+  const transportWorkbenchLayerOrderOwner = createTransportWorkbenchLayerOrderOwner({
+    panel: transportWorkbenchLayerOrderPanel,
+    list: transportWorkbenchLayerOrderList,
+    translate: (label) => t(label, "ui"),
+    ensureUiState: () => ensureTransportWorkbenchUiState(),
+    getLayerOrder: () => runtimeState.transportWorkbenchUi?.layerOrder || [],
+    getLayerFamilyMeta: (familyId) => getTransportWorkbenchLayerFamilyMeta(familyId),
+    isLivePreviewFamily: (familyId) => isTransportWorkbenchLivePreviewFamily(familyId),
+    isManifestOnlyRuntimeFamily: (familyId) => isTransportWorkbenchManifestOnlyRuntimeFamily(familyId),
+    moveLayerOrder: (draggedFamilyId, targetFamilyId) => transportWorkbenchStateOwner.moveLayerOrder(draggedFamilyId, targetFamilyId),
+    markDirty: (reason) => markDirty(reason),
+    getRenderContext: () => getTransportWorkbenchRenderContext(),
+    renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
   });
 
   const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
@@ -414,76 +431,7 @@ export function createTransportWorkbenchController({
     || TRANSPORT_WORKBENCH_FAMILIES[0]
   );
 
-  const renderTransportWorkbenchLayerOrderPanel = () => {
-    if (!transportWorkbenchLayerOrderPanel || !transportWorkbenchLayerOrderList) return;
-    ensureTransportWorkbenchUiState();
-    transportWorkbenchLayerOrderList.replaceChildren();
-    runtimeState.transportWorkbenchUi.layerOrder.forEach((familyId) => {
-      const family = getTransportWorkbenchLayerFamilyMeta(familyId);
-      const item = document.createElement("div");
-      item.className = "transport-workbench-layer-order-item";
-      item.draggable = true;
-      item.dataset.layerFamily = family.id;
-
-      item.addEventListener("dragstart", () => {
-        transportWorkbenchDraggedLayerId = family.id;
-        item.classList.add("is-dragging");
-      });
-      item.addEventListener("dragend", () => {
-        transportWorkbenchDraggedLayerId = "";
-        item.classList.remove("is-dragging");
-      });
-      item.addEventListener("dragover", (event) => {
-        event.preventDefault();
-      });
-      item.addEventListener("drop", (event) => {
-        event.preventDefault();
-        if (!transportWorkbenchStateOwner.moveLayerOrder(transportWorkbenchDraggedLayerId, family.id)) return;
-        markDirty("transport-workbench-layer-order");
-        const context = getTransportWorkbenchRenderContext();
-        renderTransportWorkbenchLayerOrderPanel();
-        renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-      });
-
-      const handle = document.createElement("span");
-      handle.className = "transport-workbench-layer-order-handle";
-      handle.textContent = ":::";
-
-      const meta = document.createElement("div");
-      meta.className = "transport-workbench-layer-order-meta";
-      const name = document.createElement("div");
-      name.className = "transport-workbench-layer-order-name";
-      name.textContent = t(family.label, "ui");
-      const caption = document.createElement("div");
-      caption.className = "transport-workbench-layer-order-caption";
-      caption.textContent = t(
-        isTransportWorkbenchLivePreviewFamily(family.id)
-          ? "Live preview is already wired into the Japan carrier."
-          : isTransportWorkbenchManifestOnlyRuntimeFamily(family.id)
-            ? "Inspector now reads the live manifest and build audit."
-            : "Reserved family shell. Real renderer attaches later.",
-        "ui"
-      );
-      meta.append(name, caption);
-
-      const status = document.createElement("span");
-      status.className = "transport-workbench-layer-order-state";
-      status.textContent = t(
-        isTransportWorkbenchLivePreviewFamily(family.id)
-          ? "Live now"
-          : isTransportWorkbenchManifestOnlyRuntimeFamily(family.id)
-            ? "Metadata live"
-            : "Reserved",
-        "ui"
-      );
-      if (isTransportWorkbenchLivePreviewFamily(family.id)) {
-        status.classList.add("is-live");
-      }
-
-      item.append(handle, meta, status);
-      transportWorkbenchLayerOrderList.appendChild(item);
-    });
-  };
+  const renderTransportWorkbenchLayerOrderPanel = () => transportWorkbenchLayerOrderOwner.render();
 
   const renderTransportWorkbenchControl = (familyId, control, config, compareHeld) => {
     const previewSnapshot = getTransportWorkbenchFamilyPreviewSnapshot(familyId, config);
