@@ -707,12 +707,46 @@ export function buildTransportWorkbenchInspectorModel({
   };
 }
 
+function normalizeInspectorRenderEntry(entry) {
+  if (Array.isArray(entry)) {
+    return [
+      "row",
+      String(entry[0] ?? ""),
+      String(entry[1] ?? ""),
+    ];
+  }
+  return [
+    "node",
+    String(entry?.className || ""),
+    String(entry?.textContent || ""),
+  ];
+}
+
+export function buildTransportWorkbenchInspectorRenderSignature({
+  familyId = "",
+  compareHeld = false,
+  model = {},
+} = {}) {
+  return JSON.stringify({
+    familyId: String(familyId || ""),
+    compareHeld: !!compareHeld,
+    stateCards: (model.stateCards || []).map((card) => [
+      String(card?.title || ""),
+      String(card?.body || ""),
+      String(card?.tone || ""),
+    ]),
+    rows: (model.rows || []).map(normalizeInspectorRenderEntry),
+  });
+}
+
 export function createTransportWorkbenchInspectorOwner({
   getLayerOrder = () => [],
   getLayerFamilyMeta = () => ({ label: "Unknown" }),
   isLivePreviewFamily = () => false,
   isManifestOnlyRuntimeFamily = () => false,
 } = {}) {
+  let lastInspectorDetailsRender = null;
+
   const createRow = (label, value, rowMeta = {}) => {
     const row = document.createElement("div");
     row.className = "transport-workbench-inspector-row";
@@ -769,6 +803,75 @@ export function createTransportWorkbenchInspectorOwner({
     isManifestOnlyRuntimeFamily,
   });
 
+  const syncInspectorEmptyCard = (detailsNode, emptyCard) => {
+    if (emptyCard) {
+      emptyCard.classList.toggle("hidden", detailsNode.childElementCount > 0);
+    }
+  };
+
+  const renderInspectorDetails = ({
+    detailsNode = null,
+    emptyCard = null,
+    family = null,
+    config = {},
+    compareHeld = false,
+    previewSnapshot = {},
+    dataContract = null,
+  } = {}) => {
+    if (!detailsNode) {
+      return { reused: false, rowCount: 0, stateCardCount: 0 };
+    }
+    const inspectorModel = buildInspectorModel({
+      family,
+      config,
+      compareHeld,
+      previewSnapshot,
+      dataContract,
+    });
+    const signature = buildTransportWorkbenchInspectorRenderSignature({
+      familyId: family?.id,
+      compareHeld,
+      model: inspectorModel,
+    });
+    if (
+      lastInspectorDetailsRender?.detailsNode === detailsNode
+      && lastInspectorDetailsRender.signature === signature
+      && lastInspectorDetailsRender.childElementCount === detailsNode.childElementCount
+    ) {
+      syncInspectorEmptyCard(detailsNode, emptyCard);
+      return {
+        reused: true,
+        rowCount: inspectorModel.rows.length,
+        stateCardCount: inspectorModel.stateCards.length,
+      };
+    }
+    detailsNode.replaceChildren();
+    inspectorModel.stateCards.forEach((card) => {
+      detailsNode.appendChild(createStateCardNode(card.title, card.body, card.tone));
+    });
+    inspectorModel.rows.forEach((entry, index) => {
+      if (Array.isArray(entry)) {
+        detailsNode.appendChild(createRow(entry[0], entry[1], {
+          familyId: family?.id,
+          index,
+        }));
+        return;
+      }
+      detailsNode.appendChild(entry);
+    });
+    syncInspectorEmptyCard(detailsNode, emptyCard);
+    lastInspectorDetailsRender = {
+      detailsNode,
+      signature,
+      childElementCount: detailsNode.childElementCount,
+    };
+    return {
+      reused: false,
+      rowCount: inspectorModel.rows.length,
+      stateCardCount: inspectorModel.stateCards.length,
+    };
+  };
+
   return {
     buildDiagnosticRows: buildTransportWorkbenchDiagnosticRows,
     buildInspectorModel,
@@ -780,6 +883,7 @@ export function createTransportWorkbenchInspectorOwner({
     formatManifestTimestamp: formatTransportWorkbenchManifestTimestamp,
     formatOptionLabels: formatTransportWorkbenchOptionLabels,
     formatRoadHiddenReason: formatTransportWorkbenchRoadHiddenReason,
+    renderInspectorDetails,
     renderDiagnosticsBody,
   };
 }

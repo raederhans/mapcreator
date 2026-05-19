@@ -376,3 +376,40 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `git diff --check`
 - Final static re-review approved the right-deck dedupe boundary.
 - Implementation commit `f2c164a` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench inspector detail cache slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-inspector-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static subagent recommendation: reduce repeated inspector rebuilds inside `transport_workbench_inspector_owner.js` by comparing a rendered model signature before replacing DOM.
+- Chosen boundary: keep controller orchestration unchanged and move inspector detail DOM ownership into the inspector owner.
+- Implemented:
+  - `buildTransportWorkbenchInspectorRenderSignature()` serializes the rendered row/card model.
+  - `renderInspectorDetails()` reuses the current detail DOM when family, compare state, and rendered model signature are unchanged.
+  - Controller now passes `detailsNode`, `emptyCard`, family, config, preview snapshot, and data contract to the inspector owner.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` locks controller delegation and prevents direct row/card DOM rebuild from returning to `renderTransportWorkbenchInspector()`.
+  - `tests/transport_workbench_inspector_owner_behavior.test.mjs` covers same-model reuse and changed-model invalidation.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Final static review requested; live process ownership remains with the main thread.
+- Static review approved the implementation and requested only an optional empty-model coverage enhancement. Added a Node test that keeps the empty card visible for empty inspector detail models and verifies same-empty-model reuse.
+- Verification after the empty-model coverage enhancement passed:
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `git diff --check`

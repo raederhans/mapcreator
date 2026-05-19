@@ -294,3 +294,28 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench inspector detail cache slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-inspector-owner-2026-05-19`
+Branch: `codex/transport-workbench-inspector-owner-2026-05-19`
+
+Goal: continue G001 by reducing repeated inspector DOM rebuilds when the rendered inspector model has not changed.
+
+Acceptance:
+
+- `transport_workbench_inspector_owner.js` owns inspector detail model signature comparison and DOM reuse.
+- `transport_workbench_controller.js` passes the inspector mount and render inputs to the inspector owner, while keeping shell/lens/right-deck orchestration unchanged.
+- Same rendered model skips `replaceChildren()` and row/card node rebuild; changed model invalidates the cache and renders normally.
+- Existing toolbar boundary contract and inspector-owner Node test cover the new owner boundary and cache behavior.
+- Targeted syntax, toolbar split contract, inspector owner behavior, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Selected current-scope boundary move.
+- [x] Implemented inspector detail DOM reuse.
+- [x] Updated boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

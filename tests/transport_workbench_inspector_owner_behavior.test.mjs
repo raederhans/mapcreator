@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildManifestOnlyInspectorRows,
+  buildTransportWorkbenchInspectorRenderSignature,
   buildTransportWorkbenchDiagnosticRows,
   buildTransportWorkbenchInspectorModel,
   createTransportWorkbenchInspectorOwner,
@@ -27,8 +28,24 @@ class TestClassList {
     this.node.className = Array.from(values).join(" ");
   }
 
+  remove(...tokens) {
+    const values = new Set(String(this.node.className || "").split(/\s+/).filter(Boolean));
+    tokens.forEach((token) => values.delete(token));
+    this.node.className = Array.from(values).join(" ");
+  }
+
   contains(token) {
     return String(this.node.className || "").split(/\s+/).includes(token);
+  }
+
+  toggle(token, force) {
+    const shouldAdd = force === undefined ? !this.contains(token) : !!force;
+    if (shouldAdd) {
+      this.add(token);
+    } else {
+      this.remove(token);
+    }
+    return shouldAdd;
   }
 }
 
@@ -40,12 +57,21 @@ function createTestDocument() {
         children: [],
         textContent: "",
         className: "",
+        replaceChildrenCallCount: 0,
+        get childElementCount() {
+          return this.children.length;
+        },
         appendChild(child) {
           this.children.push(child);
           return child;
         },
         append(...children) {
           children.forEach((child) => this.appendChild(child));
+        },
+        replaceChildren(...children) {
+          this.replaceChildrenCallCount += 1;
+          this.children = [];
+          this.append(...children);
         },
       };
       node.classList = new TestClassList(node);
@@ -403,4 +429,92 @@ test("owner factory injects layer metadata and keeps translated lens label", () 
   });
   assert.equal(rowValue(summaryRows, "Right deck"), "Translated right deck");
   assert.equal(rowValue(summaryRows, "Compare"), "Holding baseline");
+});
+
+test("inspector owner skips detail DOM rebuilds when the rendered model is unchanged", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+  try {
+    const owner = createTransportWorkbenchInspectorOwner();
+    const detailsNode = document.createElement("div");
+    const emptyCard = document.createElement("div");
+    const input = {
+      detailsNode,
+      emptyCard,
+      family: { id: "road", label: "Road" },
+      config: { motorwayIdentitySource: "osm_only" },
+      compareHeld: false,
+      previewSnapshot: { status: "error", error: "source missing" },
+      dataContract: { governance: "data/transport/road.json" },
+    };
+
+    const firstRender = owner.renderInspectorDetails(input);
+    const secondRender = owner.renderInspectorDetails({ ...input });
+
+    assert.equal(firstRender.reused, false);
+    assert.equal(secondRender.reused, true);
+    assert.equal(detailsNode.replaceChildrenCallCount, 1);
+    assert.equal(detailsNode.childElementCount, 3);
+    assert.equal(emptyCard.classList.contains("hidden"), true);
+
+    const changedRender = owner.renderInspectorDetails({
+      ...input,
+      previewSnapshot: { status: "error", error: "different source missing" },
+    });
+
+    assert.equal(changedRender.reused, false);
+    assert.equal(detailsNode.replaceChildrenCallCount, 2);
+    assert.equal(
+      buildTransportWorkbenchInspectorRenderSignature({
+        familyId: "road",
+        compareHeld: false,
+        model: {
+          rows: [["Pack status", "Road pack failed to load"]],
+          stateCards: [],
+        },
+      }),
+      buildTransportWorkbenchInspectorRenderSignature({
+        familyId: "road",
+        compareHeld: false,
+        model: {
+          rows: [["Pack status", "Road pack failed to load"]],
+          stateCards: [],
+        },
+      }),
+    );
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("inspector owner keeps the empty card visible for empty detail models", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+  try {
+    const owner = createTransportWorkbenchInspectorOwner({
+      getLayerOrder: () => [],
+    });
+    const detailsNode = document.createElement("div");
+    const emptyCard = document.createElement("div");
+    emptyCard.classList.add("hidden");
+
+    const renderResult = owner.renderInspectorDetails({
+      detailsNode,
+      emptyCard,
+      family: { id: "layers", label: "Layers" },
+    });
+    const secondRenderResult = owner.renderInspectorDetails({
+      detailsNode,
+      emptyCard,
+      family: { id: "layers", label: "Layers" },
+    });
+
+    assert.equal(renderResult.reused, false);
+    assert.equal(secondRenderResult.reused, true);
+    assert.equal(detailsNode.childElementCount, 0);
+    assert.equal(detailsNode.replaceChildrenCallCount, 1);
+    assert.equal(emptyCard.classList.contains("hidden"), false);
+  } finally {
+    globalThis.document = previousDocument;
+  }
 });

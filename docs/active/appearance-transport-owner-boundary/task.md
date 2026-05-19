@@ -145,3 +145,16 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench inspector detail cache slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Dispatch static-only subagent for remaining inspector performance boundary.
+- [x] Select current-scope boundary move.
+- [x] Implement inspector detail DOM reuse.
+- [x] Extend Python boundary contract and existing Node behavior script.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

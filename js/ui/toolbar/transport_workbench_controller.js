@@ -512,36 +512,18 @@ export function createTransportWorkbenchController({
 
   const renderTransportWorkbenchInspector = (family, config, compareHeld) => {
     if (transportWorkbenchInspectorDetails) {
-      transportWorkbenchInspectorDetails.replaceChildren();
       const inspectorEmptyCard = transportWorkbenchInspectorEmptyTitle?.parentElement || null;
       const dataContract = getTransportWorkbenchDataContract(family.id);
       const previewSnapshot = getTransportWorkbenchFamilyPreviewSnapshot(family.id, config);
-      const inspectorModel = transportWorkbenchInspectorOwner.buildInspectorModel({
+      transportWorkbenchInspectorOwner.renderInspectorDetails({
+        detailsNode: transportWorkbenchInspectorDetails,
+        emptyCard: inspectorEmptyCard,
         family,
         config,
         compareHeld,
         previewSnapshot,
         dataContract,
       });
-      inspectorModel.stateCards.forEach((card) => {
-        transportWorkbenchInspectorDetails.appendChild(
-          transportWorkbenchInspectorOwner.createStateCardNode(card.title, card.body, card.tone),
-        );
-      });
-      inspectorModel.rows.forEach((entry, index) => {
-        if (Array.isArray(entry)) {
-          const row = transportWorkbenchInspectorOwner.createRow(entry[0], entry[1], {
-            familyId: family.id,
-            index,
-          });
-          transportWorkbenchInspectorDetails.appendChild(row);
-          return;
-        }
-        transportWorkbenchInspectorDetails.appendChild(entry);
-      });
-      if (inspectorEmptyCard) {
-        inspectorEmptyCard.classList.toggle("hidden", transportWorkbenchInspectorDetails.childElementCount > 0);
-      }
     }
     renderTransportWorkbenchInspectorTabs(family, config, compareHeld);
   };
