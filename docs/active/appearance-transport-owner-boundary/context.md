@@ -375,3 +375,4 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `npm run verify:toolbar-split-boundary`
   - `git diff --check`
 - Final static re-review approved the right-deck dedupe boundary.
+- Implementation commit `f2c164a` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
