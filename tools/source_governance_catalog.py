@@ -47,6 +47,7 @@ def _base_entry(
     consumers: list[str],
     rebuild_command: str,
     status: str,
+    local_presence: str = "required",
     min_size_bytes: int = 0,
 ) -> dict[str, object]:
     return {
@@ -63,6 +64,7 @@ def _base_entry(
         "consumers": list(consumers),
         "rebuild_command": rebuild_command,
         "status": status,
+        "local_presence": local_presence,
         "provenance_sidecar": f"data/{_provenance_name(filename)}",
         "local_path": f"data/{filename}",
         "min_size_bytes": int(min_size_bytes),
@@ -74,6 +76,7 @@ def _smoke_entry(
     *,
     citation: str,
     status: str,
+    local_presence: str = "required",
 ) -> dict[str, object]:
     spec = SMOKE_SOURCE_SPECS[source_key]
     return _base_entry(
@@ -94,6 +97,7 @@ def _smoke_entry(
         ],
         rebuild_command="python init_map_data.py --mode primary --strict",
         status=status,
+        local_presence=local_presence,
     )
 
 
@@ -110,11 +114,14 @@ LEDGER_SOURCE_SPECS: list[dict[str, object]] = [
     ),
 ]
 
+FROZEN_GEOBOUNDARIES_SOURCE_IDS = {"gb_chn_adm2"}
+
 LEDGER_SOURCE_SPECS.extend(
     _smoke_entry(
         source_key,
         citation=f"https://www.geoboundaries.org/api/current/gbOpen/{SMOKE_SOURCE_SPECS[source_key]['iso']}/{SMOKE_SOURCE_SPECS[source_key]['adm']}/",
-        status="frozen_verified",
+        status="frozen_verified" if source_key in FROZEN_GEOBOUNDARIES_SOURCE_IDS else "pending_upgrade_review",
+        local_presence="required" if source_key in FROZEN_GEOBOUNDARIES_SOURCE_IDS else "optional_cache",
     )
     for source_key in SOURCE_GROUPS["geoboundaries_phase2"]
 )
@@ -178,6 +185,7 @@ LEDGER_SOURCE_SPECS.extend(
             ],
             rebuild_command="python tools/build_global_bathymetry_asset.py",
             status="frozen_local_only",
+            local_presence="optional_cache",
             min_size_bytes=50_000_000,
         ),
         _base_entry(
@@ -197,6 +205,7 @@ LEDGER_SOURCE_SPECS.extend(
             ],
             rebuild_command="python init_map_data.py --mode primary --strict",
             status="frozen_local_only",
+            local_presence="optional_cache",
             min_size_bytes=50_000_000,
         ),
     ]

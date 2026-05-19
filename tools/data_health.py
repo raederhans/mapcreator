@@ -176,6 +176,7 @@ def collect_health(catalog_path: Path = CATALOG_PATH, *, large_file_warn_bytes: 
     entries_by_key, entries_by_url = _entry_index(entry_dicts, project_root=health_paths.project_root)
     report.schema_ref_counts.update(str(entry.get("schemaRef") or "") for entry in entry_dicts)
 
+    seen_keys: set[str] = set()
     seen_urls: set[str] = set()
     for entry in entry_dicts:
         key = str(entry.get("key") or "").strip()
@@ -184,6 +185,10 @@ def collect_health(catalog_path: Path = CATALOG_PATH, *, large_file_warn_bytes: 
         role = str(entry.get("role") or "").strip()
         if not key:
             report.errors.append("catalog entry is missing key")
+        elif key in seen_keys:
+            report.errors.append(f"catalog key appears more than once: {key}")
+        else:
+            seen_keys.add(key)
         if not url:
             report.errors.append(f"catalog entry {key or '<missing key>'} is missing url")
             continue

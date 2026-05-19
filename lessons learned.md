@@ -223,6 +223,10 @@
 - `palette_runtime_bridge.node.test.mjs` 这类 harness 会把 `state_defaults.js` 改写成 data URL 后加载；新增未同步 patch 的相对 import 会直接触发 module resolve 错误。
 - 抽共享 primitive 时，先确认目标模块是否被 data URL / inline source harness 使用；这类 owner 更适合依赖 import-safe 小 helper 或保持本地纯函数到下一次专门切换。
 
+### 50. source ledger 要区分 checked-in frozen 和 optional local source
+- 干净 worktree 里缺少大体积 local-only source 或待复核 source 时，ledger checker 只有在 `local_presence=optional_cache` 时输出 warning；所有 `local_presence=required` 的 source 缺失或 hash 漂移都应硬失败。
+- catalog 生成时已经会跳过缺失 source-ledger asset；ledger 状态也要同步表达这一点，避免 `CATALOG` 绿而 source ledger 红。
+
 ### 49. Chunked detail political features must be normalized before merging into runtime land collections
 - If chunk payload features bypass normalizeFeatureGeometry(), many detail polygons can be interpreted as world-size complements, causing world_bounds skips, blank political fills, and oversized Antarctic/ocean artifacts.
 - When runtime/topology collections are merged, normalize the chunk features at the merge boundary instead of assuming chunk JSON already has safe winding.
