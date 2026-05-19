@@ -7,6 +7,11 @@ import {
   normalizeTransportOverviewVisualMode,
   resolveLinkedTransportOverviewScopeAndThreshold as resolveLinkedTransportOverviewScopeAndThresholdFromRegistry,
 } from "./transport_capability_registry.js";
+import {
+  getDefaultMainMapPackIdForFamily,
+  getTargetMainMapPackMeta,
+} from "./transport_pack_resolver.js";
+import { normalizeHexColorWithFallback } from "./color_hex_utils.js";
 
 import {
   PALETTE_THEMES,
@@ -520,6 +525,8 @@ function createDefaultTransportOverviewFamilyConfig(familyId) {
     labelsEnabled: false,
     labelDensity: "balanced",
     labelMode: "name",
+    labelSize: 10,
+    labelHalo: 0.88,
     coverageReach: 0.5,
     scopeLinkMode: "linked",
     scope: "default",
@@ -534,14 +541,7 @@ function normalizeTransportOverviewLabelDensity(value, fallback = "balanced") {
 }
 
 function normalizeTransportOverviewPrimaryColor(value, fallback = "#1d4ed8") {
-  const candidate = String(value || "").trim();
-  if (/^#(?:[0-9a-f]{6})$/i.test(candidate)) return candidate.toLowerCase();
-  if (/^#(?:[0-9a-f]{3})$/i.test(candidate)) {
-    return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`.toLowerCase();
-  }
-  const normalizedFallback = String(fallback || "").trim();
-  if (/^#(?:[0-9a-f]{6})$/i.test(normalizedFallback)) return normalizedFallback.toLowerCase();
-  return "#1d4ed8";
+  return normalizeHexColorWithFallback(value, fallback, "#1d4ed8");
 }
 
 function normalizeTransportOverviewImportanceThreshold(value, fallback = "primary") {
@@ -578,6 +578,8 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
     labelsEnabled: raw.labelsEnabled === undefined ? defaults.labelsEnabled : !!raw.labelsEnabled,
     labelDensity: normalizeTransportOverviewLabelDensity(raw.labelDensity, defaults.labelDensity),
     labelMode: String(raw.labelMode || defaults.labelMode).trim().toLowerCase() || defaults.labelMode,
+    labelSize: clamp(Math.round(toFiniteNumber(raw.labelSize, defaults.labelSize ?? 10)), 7, 16),
+    labelHalo: clampUnitInterval(raw.labelHalo, defaults.labelHalo ?? 0.5),
     coverageReach,
     scopeLinkMode,
     scope: scopeLinkMode === "linked"
@@ -592,6 +594,8 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
 function createDefaultTransportOverviewStyleConfig() {
   return {
     visualMode: "distribution",
+    allowFacilityUnderlyingMapSelection: false,
+    activePackIdByFamily: {},
     ...Object.fromEntries(
       TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
         familyId,
@@ -601,10 +605,27 @@ function createDefaultTransportOverviewStyleConfig() {
   };
 }
 
+function normalizeTransportOverviewActivePackIdByFamily(rawValue) {
+  const source = rawValue && typeof rawValue === "object" ? rawValue : {};
+  return Object.fromEntries(
+    Object.entries(source)
+      .map(([familyId, packId]) => {
+        const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+        const meta = getTargetMainMapPackMeta(packId);
+        return meta && meta.family === normalizedFamilyId ? [normalizedFamilyId, meta.packId] : null;
+      })
+      .filter(Boolean)
+  );
+}
+
 function normalizeTransportOverviewStyleConfig(rawConfig) {
   const source = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
   return {
     visualMode: normalizeTransportOverviewVisualMode(source.visualMode, "distribution"),
+    allowFacilityUnderlyingMapSelection: source.allowFacilityUnderlyingMapSelection === undefined
+      ? !!source.allowFacilityUnderlyingSelection
+      : !!source.allowFacilityUnderlyingMapSelection,
+    activePackIdByFamily: normalizeTransportOverviewActivePackIdByFamily(source.activePackIdByFamily),
     ...Object.fromEntries(
       TRANSPORT_OVERVIEW_FAMILY_IDS.map((familyId) => [
         familyId,
@@ -656,12 +677,7 @@ function createDefaultTextureStyleConfig() {
 }
 
 function normalizeTextureHexColor(value, fallback) {
-  const candidate = String(value || "").trim();
-  if (/^#(?:[0-9a-f]{6})$/i.test(candidate)) return candidate.toLowerCase();
-  if (/^#(?:[0-9a-f]{3})$/i.test(candidate)) {
-    return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`.toLowerCase();
-  }
-  return String(fallback || "#475569").trim().toLowerCase();
+  return normalizeHexColorWithFallback(value, fallback, "#475569");
 }
 
 function normalizeTextureStyleConfig(rawConfig) {
@@ -1072,6 +1088,26 @@ function normalizeTransportWorkbenchDisplayConfigs(rawConfigs) {
     ])
   );
 }
+function normalizeTransportWorkbenchActivePackId(value, familyId = "road") {
+  const normalizedFamilyId = String(familyId || "road").trim().toLowerCase() || "road";
+  const candidate = String(value || "").trim().toLowerCase();
+  const meta = getTargetMainMapPackMeta(candidate);
+  if (meta && meta.family === normalizedFamilyId) return meta.packId;
+  return getDefaultMainMapPackIdForFamily(normalizedFamilyId) || "";
+}
+
+function normalizeTransportWorkbenchActivePackIdByFamily(rawValue, activeFamily = "road", activePackId = "") {
+  const source = rawValue && typeof rawValue === "object" ? rawValue : {};
+  const entries = Object.fromEntries(
+    TRANSPORT_WORKBENCH_FAMILY_IDS
+      .filter((familyId) => familyId !== "layers")
+      .map((familyId) => [familyId, normalizeTransportWorkbenchActivePackId(source[familyId], familyId)])
+  );
+  if (activeFamily && activeFamily !== "layers") {
+    entries[activeFamily] = normalizeTransportWorkbenchActivePackId(activePackId || source[activeFamily], activeFamily);
+  }
+  return entries;
+}
 function normalizeTransportWorkbenchUiState(rawUi) {
   const raw = rawUi && typeof rawUi === "object" ? rawUi : {};
   const rawPreviewCamera = raw.previewCamera && typeof raw.previewCamera === "object" ? raw.previewCamera : {};
@@ -1081,11 +1117,16 @@ function normalizeTransportWorkbenchUiState(rawUi) {
   const defaultPreviewAssetId = `${previewCarrierId}_carrier_v3`;
   const sampleCountry = String(raw.sampleCountry || (previewCarrierId === "japan" ? "Japan" : "")).trim()
     || (previewCarrierId === "japan" ? "Japan" : previewCarrierId);
+  const activeFamily = raw.activeFamily === "layers" || TRANSPORT_WORKBENCH_FAMILY_IDS.includes(raw.activeFamily)
+    ? raw.activeFamily
+    : "road";
+  const activePackIdByFamily = normalizeTransportWorkbenchActivePackIdByFamily(raw.activePackIdByFamily, activeFamily, raw.activePackId);
+  const activePackId = activeFamily === "layers" ? "" : activePackIdByFamily[activeFamily];
   return {
     open: !!raw.open,
-    activeFamily: raw.activeFamily === "layers" || TRANSPORT_WORKBENCH_FAMILY_IDS.includes(raw.activeFamily)
-      ? raw.activeFamily
-      : "road",
+    activeFamily,
+    activePackId,
+    activePackIdByFamily,
     activeInspectorTab: ["inspect", "display", "aggregation", "labels", "coverage", "data"].includes(String(raw.activeInspectorTab || "").trim().toLowerCase())
       ? String(raw.activeInspectorTab || "").trim().toLowerCase()
       : "inspect",

@@ -68,9 +68,10 @@ export function createRenderCacheOwner({
     return layout;
   }
 
-  function resizeRenderPassCanvases() {
+  function resizeRenderPassCanvases(passNames = renderPassNames) {
     const cache = getRenderPassCacheState();
-    renderPassNames.forEach((passName) => {
+    const names = Array.isArray(passNames) && passNames.length ? passNames : renderPassNames;
+    names.forEach((passName) => {
       const layout = getRenderPassLayout(passName);
       const canvas = cache.canvases?.[passName];
       if (!canvas) return;
@@ -87,7 +88,7 @@ export function createRenderCacheOwner({
       canvas.height = 1;
       cache.canvases[passName] = canvas;
     }
-    resizeRenderPassCanvases();
+    resizeRenderPassCanvases([passName]);
     return cache.canvases[passName];
   }
 
@@ -158,6 +159,35 @@ export function createRenderCacheOwner({
     cache.referenceTransform = cloneZoomTransform(transform);
   }
 
+  function getPassFullReferenceTransform(passName) {
+    const cache = getRenderPassCacheState();
+    const transform = cache.fullReferenceTransforms?.[passName] || null;
+    return transform ? cloneZoomTransform(transform) : null;
+  }
+
+  function setPassFullReferenceTransform(passName, transform) {
+    const cache = getRenderPassCacheState();
+    cache.fullReferenceTransforms[passName] = cloneZoomTransform(transform);
+  }
+
+  function hasPassFullReferenceTransform(passName) {
+    const cache = getRenderPassCacheState();
+    return !!cache.fullReferenceTransforms?.[passName];
+  }
+
+  function clearPassFullReferenceTransforms(passNames = null) {
+    const cache = getRenderPassCacheState();
+    if (!passNames) {
+      cache.fullReferenceTransforms = {};
+      return;
+    }
+    const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
+    rawTargetPassNames.forEach((passName) => {
+      if (!passName) return;
+      delete cache.fullReferenceTransforms[passName];
+    });
+  }
+
   function getInteractionCompositeSignature(cache = getRenderPassCacheState()) {
     return interactionCompositePassNames.map((passName) => [
       passName,
@@ -198,15 +228,19 @@ export function createRenderCacheOwner({
 
   return {
     canDrawInteractionComposite,
+    clearPassFullReferenceTransforms,
     ensureCompositeBufferCanvas,
     ensureInteractionCompositeCanvas,
     ensureLastGoodFrameCanvas,
     ensureRenderPassCanvas,
     getInteractionCompositeSignature,
+    getPassFullReferenceTransform,
     getPassReferenceTransform,
     getRenderPassCacheState,
     getRenderPassLayout,
+    hasPassFullReferenceTransform,
     resizeRenderPassCanvases,
+    setPassFullReferenceTransform,
     setPassReferenceTransform,
   };
 }

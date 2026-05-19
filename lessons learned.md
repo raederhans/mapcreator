@@ -219,6 +219,10 @@
 - 如果控制台只剩 `Running N tests using 1 worker`，很难分清是 harness 没启动、页面没 ready，还是业务状态卡住了。
 - 更稳的做法是：在关键 helper、页面进入、UI ready、download、import、scenario apply 等阶段补日志，并在超时时抓 `bootPhase`、`startupReadonly`、`scenarioApplyInFlight` 这类运行态快照。
 
+### 49. 被 data URL harness 加载的模块不能随手增加相对 import
+- `palette_runtime_bridge.node.test.mjs` 这类 harness 会把 `state_defaults.js` 改写成 data URL 后加载；新增未同步 patch 的相对 import 会直接触发 module resolve 错误。
+- 抽共享 primitive 时，先确认目标模块是否被 data URL / inline source harness 使用；这类 owner 更适合依赖 import-safe 小 helper 或保持本地纯函数到下一次专门切换。
+
 ### 49. Chunked detail political features must be normalized before merging into runtime land collections
 - If chunk payload features bypass normalizeFeatureGeometry(), many detail polygons can be interpreted as world-size complements, causing world_bounds skips, blank political fills, and oversized Antarctic/ocean artifacts.
 - When runtime/topology collections are merged, normalize the chunk features at the merge boundary instead of assuming chunk JSON already has safe winding.
@@ -1578,3 +1582,14 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-15 - perf gate drift triage
 
 - 当 `perf:gate` 在补丁分支变红时，先 stash 补丁在同一机器同一 dev server 上跑 HEAD；如果 HEAD 同样红，就把它记录为 benchmark/environment drift，再用具体 per-metric artifact 说明补丁本身的成本。
+
+## 2026-05-19 - descriptor split contract hygiene
+
+- 从 controller 拆出 descriptor/summary 后，测试要覆盖导出 helper 的真实可用性和返回值；`node --check` 只能证明语法，不能抓住 moved helper 未 import 的运行时 `ReferenceError`。
+- 新 summary owner 应接收窄输入；继续读取整包 `runtimeState` 或全局 metrics 会把耦合搬家，并可能用旧诊断数据生成假 summary。
+- 从 controller 移出的默认配置和 schema 要以只读形式导出，避免多个 owner 后续共享可变对象。
+
+## 2026-05-19 - map_renderer facade cleanup boundary
+
+- 删除一行 owner proxy 前先区分 internal proxy 和 public read-model facade；`buildCityRevealPlan` / `getEffectiveCityCollection` 这类被 UI/E2E 依赖的读模型要用 export-block contract 锁住，内部 helper 才适合直接 owner 调用。
+- 去掉代理后，测试要同时防回归和锁顺序；只数调用次数会漏掉 reset/build、dirty/signature、render-pass 这类时序合同。

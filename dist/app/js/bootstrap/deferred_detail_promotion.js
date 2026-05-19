@@ -27,6 +27,7 @@ export function createDeferredDetailPromotionOwner({
     requestMainRender,
     schedulePostReadyDeferredContextWarmup,
     schedulePostReadyHydration,
+    schedulePostReadyPoliticalReconcile,
     schedulePostReadyVisualWarmup,
     scheduleStartupReadonlyUnlockTimer,
     setBootState,
@@ -89,12 +90,8 @@ export function createDeferredDetailPromotionOwner({
   } = {}) {
     const hasActiveScenario = !!String(runtimeState.activeScenarioId || "").trim();
     if (hasActiveScenario) {
-      try {
-        refreshMapDataForScenarioApply({ suppressRender: true });
-        return "light";
-      } catch (error) {
-        console.warn("[main] Detail promotion lightweight refresh failed, falling back to setMapData.", error);
-      }
+      refreshMapDataForScenarioApply({ suppressRender: true });
+      return "light";
     }
     setMapData({
       refitProjection: false,
@@ -103,7 +100,7 @@ export function createDeferredDetailPromotionOwner({
       interactionLevel,
       deferInteractionInfrastructure,
     });
-    return hasActiveScenario ? "setMapData-fallback" : "setMapData";
+    return "setMapData";
   }
 
   /**
@@ -124,6 +121,7 @@ export function createDeferredDetailPromotionOwner({
       reason: "detail-promotion-focus",
       flushPending: flushPendingFocusRefresh,
     });
+    let mapDataRefreshed = false;
     if (hasDetailTopologyLoaded()) {
       if (runtimeState.topologyBundleMode !== "composite") {
         runtimeState.topologyBundleMode = "composite";
@@ -132,6 +130,7 @@ export function createDeferredDetailPromotionOwner({
             interactionLevel,
             deferInteractionInfrastructure,
           });
+          mapDataRefreshed = true;
           if (!suppressRender) {
             if (renderDispatcher?.schedule) {
               renderDispatcher.schedule();
@@ -143,6 +142,9 @@ export function createDeferredDetailPromotionOwner({
       }
       runtimeState.detailDeferred = false;
       runtimeState.detailPromotionCompleted = true;
+      if (mapDataRefreshed) {
+        schedulePostReadyPoliticalReconcile?.("detail-topology-ready");
+      }
       syncScenarioReadyUiAfterDetailPromotion();
       return true;
     }
@@ -192,6 +194,7 @@ export function createDeferredDetailPromotionOwner({
           interactionLevel,
           deferInteractionInfrastructure,
         });
+        mapDataRefreshed = true;
         if (!suppressRender) {
           if (renderDispatcher?.schedule) {
             renderDispatcher.schedule();
@@ -200,6 +203,9 @@ export function createDeferredDetailPromotionOwner({
           }
         }
         console.info(`[main] Detail promotion refresh path=${refreshMode}.`);
+      }
+      if (mapDataRefreshed) {
+        schedulePostReadyPoliticalReconcile?.("detail-topology-promoted");
       }
       syncScenarioReadyUiAfterDetailPromotion();
       return true;

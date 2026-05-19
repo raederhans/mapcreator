@@ -149,6 +149,7 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
     def test_appearance_transport_summary_reports_class_source_and_phase(self):
         index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js").read_text(encoding="utf-8")
+        summary_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_transport_summary.js").read_text(encoding="utf-8")
         registry_content = (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
         i18n_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
 
@@ -160,14 +161,27 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             self.assertIn(token, index_content)
 
         for token in [
-            'runtimeState.renderPerfMetrics',
+            'from "./appearance_transport_summary.js";',
+            'buildTransportFamilySummaryTextForState',
+            'formatTransportPercent',
+            'formatTransportScopeLabel',
+            'formatTransportThresholdLabel',
+        ]:
+            self.assertIn(token, controller_content)
+
+        for token in [
+            'metrics,',
+            "const metrics = metricsSource && typeof metricsSource === \"object\" ? metricsSource : {};",
             'metrics.contextBreakdown',
             'getTransportOverviewLineSummaryMeta',
             'getTransportLineClassCoverage',
+            'formatTransportPercent',
+            'formatTransportScopeLabel',
+            'formatTransportThresholdLabel',
             'primary/secondary pending',
             'secondary full-only',
         ]:
-            self.assertIn(token, controller_content)
+            self.assertIn(token, summary_content)
 
         for token in [
             'TRANSPORT_OVERVIEW_LINE_SUMMARY_META',

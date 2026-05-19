@@ -48,16 +48,44 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
     selectionChangeListener: null,
     lastRenderedConfig: null,
     renderStats: { ...(definition.initialRenderStats || {}) },
+    activePackId: "",
+    activeManifestUrl: definition.manifestUrl,
   };
   const fetchOptions = definition.fetchOptions || { cache: "no-cache" };
 
+  function resetLoadStateForActivePack() {
+    runtime.manifestPromise = null;
+    runtime.auditPromise = null;
+    runtime.packPromises = {
+      [PACK_MODE_PREVIEW]: null,
+      [PACK_MODE_FULL]: null,
+    };
+    runtime.projectedPacks = {
+      [PACK_MODE_PREVIEW]: null,
+      [PACK_MODE_FULL]: null,
+    };
+    runtime.activePack = null;
+    runtime.activePackMode = null;
+    runtime.loadState = createInitialLoadState();
+    runtime.selectedFeature = null;
+    runtime.lastRenderedConfig = null;
+  }
+
+  function setActivePack(packId = "", manifestUrl = "") {
+    const normalizedPackId = String(packId || "").trim().toLowerCase();
+    const normalizedManifestUrl = String(manifestUrl || definition.manifestUrl || "").trim();
+    if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
+    runtime.activePackId = normalizedPackId;
+    runtime.activeManifestUrl = normalizedManifestUrl;
+    resetLoadStateForActivePack();
+  }
   async function loadManifest() {
     if (!runtime.manifestPromise) {
       runtime.manifestPromise = (async () => {
         definition.ensureClient?.();
-        const manifest = await getTransportAsset(definition.manifestUrl, {
+        const manifest = await getTransportAsset(runtime.activeManifestUrl || definition.manifestUrl, {
           cachePolicy: fetchOptions.cache,
-          label: `transport-manifest:${definition.familyId}`,
+          label: `transport-manifest:${definition.familyId}:${runtime.activePackId || "default"}`,
         });
         if (!manifest) {
           runtime.loadState.status = "pending";
@@ -221,5 +249,6 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
     setSelectionListener,
     startBackgroundFullPackLoad,
     warm,
+    setActivePack,
   };
 }

@@ -1123,8 +1123,6 @@ function getCityLabelOwner() {
   return cityLabelOwner;
 }
 
-const drawCityLabelsFromEntries = (...args) => getCityLabelOwner().drawCityLabelsFromEntries(...args);
-
 function getColorResolutionStrategyOwner() {
   if (colorResolutionStrategyOwner) {
     return colorResolutionStrategyOwner;
@@ -1534,11 +1532,6 @@ function getRenderPipelinePassesOwner() {
   });
   return renderPipelinePassesOwner;
 }
-
-const getIdleRenderPassDefinitions = (...args) => getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(...args);
-const prepareIdleRenderPassDefinition = (...args) =>
-  getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(...args);
-const ensureIdleRenderPasses = (...args) => getRenderPipelinePassesOwner().ensureIdleRenderPasses(...args);
 
 // --- 注释锚点：缓存状态（cache state）章节 ---
 // --- 注释锚点：pass-through facade 章节 ---
@@ -4548,7 +4541,7 @@ function prepareExactAfterSettlePassesInSlices(generation, plan) {
   }
   const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
   const targetPasses = new Set(Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : []);
-  const definitions = getIdleRenderPassDefinitions()
+  const definitions = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
     .filter(([passName]) => !targetPasses.size || targetPasses.has(passName));
   const timings = {};
   const cache = getRenderPassCacheState();
@@ -4578,7 +4571,7 @@ function prepareExactAfterSettlePassesInSlices(generation, plan) {
       if (passName === "political") {
         invalidateExactAfterSettlePoliticalPass(plan);
       }
-      prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
+      getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
       recordRenderPerfMetric("settleExactRefreshPass", Math.max(0, nowMs() - passStart), {
         activeScenarioId: String(runtimeState.activeScenarioId || ""),
         generation,
@@ -6176,7 +6169,7 @@ function renderSpecialZonesIfNeeded({ force = false } = {}) {
   if (!force && !runtimeState.specialZonesOverlayDirty && nextSignature === lastSpecialZonesOverlaySignature) {
     return;
   }
-  renderSpecialZones();
+  getStrategicOverlayHelpersOwner().renderSpecialZones();
   runtimeState.specialZonesOverlayDirty = false;
   lastSpecialZonesOverlaySignature = nextSignature;
 }
@@ -6202,7 +6195,7 @@ function renderOperationGraphicsIfNeeded({ force = false } = {}) {
   if (!force && !runtimeState.operationGraphicsDirty && nextSignature === lastOperationGraphicsOverlaySignature) {
     return;
   }
-  renderOperationGraphicsOverlay();
+  getStrategicOverlayHelpersOwner().renderOperationGraphicsOverlay();
   runtimeState.operationGraphicsDirty = false;
   lastOperationGraphicsOverlaySignature = nextSignature;
 }
@@ -6215,7 +6208,7 @@ function renderOperationalLinesIfNeeded({ force = false } = {}) {
   if (!force && !runtimeState.operationalLinesDirty && nextSignature === lastOperationalLinesOverlaySignature) {
     return;
   }
-  renderOperationalLinesOverlay();
+  getStrategicOverlayHelpersOwner().renderOperationalLinesOverlay();
   runtimeState.operationalLinesDirty = false;
   lastOperationalLinesOverlaySignature = nextSignature;
 }
@@ -9781,12 +9774,6 @@ function buildRuntimePoliticalMeta() {
   runtimeState.runtimePoliticalMetaSeed = null;
 }
 
-const resetSecondarySpatialIndexState = (...args) =>
-  getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState(...args);
-
-const buildSecondarySpatialIndexes = (...args) =>
-  getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes(...args);
-
 function scheduleSecondarySpatialIndexBuild({
   timeout = 320,
   reason = "deferred-secondary-spatial",
@@ -9818,8 +9805,8 @@ function scheduleSecondarySpatialIndexBuild({
     const startedAt = nowMs();
     try {
       rebuildAuxiliaryRegionIndexes();
-      resetSecondarySpatialIndexState();
-      buildSecondarySpatialIndexes({
+      getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();
+      getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
         allowComputeMissingBounds: true,
       });
       runtimeState.hitCanvasDirty = true;
@@ -9864,8 +9851,8 @@ function syncScenarioSecondaryRegionIndexes({
   }
   const startedAt = nowMs();
   rebuildAuxiliaryRegionIndexes();
-  resetSecondarySpatialIndexState();
-  buildSecondarySpatialIndexes({
+  getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();
+  getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
     allowComputeMissingBounds: true,
   });
   queueIndexUiRefresh({
@@ -10124,19 +10111,6 @@ function getFeatureIdFromEvent(event) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-
-const drawMeshCollection = (...args) => getBorderDrawOwner().drawMeshCollection(...args);
-
-const declutterProjectedPolyline = (...args) => getBorderDrawOwner().declutterProjectedPolyline(...args);
-
-const getProjectedPolylineMetrics = (...args) => getBorderDrawOwner().getProjectedPolylineMetrics(...args);
-
-const buildRenderableBoundaryMesh = (...args) => getBorderDrawOwner().buildRenderableBoundaryMesh(...args);
-
-const getViewportAwareCoastlineCollection = (...args) =>
-  getBorderDrawOwner().getViewportAwareCoastlineCollection(...args);
-
-const getBoundaryMeshTransform = (...args) => getBorderDrawOwner().getBoundaryMeshTransform(...args);
 
 function getProjectedLineDensityStats(line) {
   const sanitized = sanitizePolyline(line);
@@ -10941,7 +10915,7 @@ function drawScenarioCoastalAccentLayer(k, { interactive = false } = {}) {
   const usesScenarioCoastlineSource = coastlineDecision?.source === "scenario";
   const coastlineCollection = interactive
     ? getCoastlineCollectionForZoom(k)
-    : getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
+    : getBorderDrawOwner().getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
   const coastlineWidth = getScenarioCoastalAccentLineWidth(k, { interactive });
   const densityThreshold = k < COASTLINE_LOD_LOW_ZOOM_MAX
     ? COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW
@@ -12478,10 +12452,6 @@ function getUrbanFeatureStableId(feature) {
   return String(props.ID ?? "").trim();
 }
 
-const getUrbanFeatureIndex = (...args) => getUrbanCityPolicyOwner().getUrbanFeatureIndex(...args);
-
-const getCityUrbanRuntimeInfo = (...args) => getUrbanCityPolicyOwner().getCityUrbanRuntimeInfo(...args);
-
 function getCityRadiusMultiplier(feature) {
   switch (getCityTier(feature)) {
     case "major":
@@ -12530,7 +12500,7 @@ function getCityMarkerThemeTokens(config = {}) {
 
 function getCityCountryGroupKey(feature) {
   const props = feature?.properties || {};
-  const scenarioTag = getCityScenarioTag(feature);
+  const scenarioTag = getUrbanCityPolicyOwner().getCityScenarioTag(feature);
   if (scenarioTag) return `tag:${scenarioTag}`;
   const countryCode = String(props.__city_country_code || props.country_code || "").trim().toUpperCase();
   if (countryCode) return `cc:${countryCode}`;
@@ -12699,7 +12669,7 @@ function getCityCountryProfileIndex(cityCollection) {
     if (!profile) {
       profile = {
         groupKey,
-        scenarioTag: getCityScenarioTag(feature),
+        scenarioTag: getUrbanCityPolicyOwner().getCityScenarioTag(feature),
         countryCode: String(props.__city_country_code || props.country_code || "").trim().toUpperCase(),
         featureCount: 0,
         hasCapital: false,
@@ -13258,11 +13228,6 @@ function getCityMarkerSprite(entry, config = {}) {
 }
 
 const buildCityRevealPlan = (...args) => getUrbanCityPolicyOwner().buildCityRevealPlan(...args);
-
-const getCityScenarioTag = (...args) => getUrbanCityPolicyOwner().getCityScenarioTag(...args);
-
-const doesScenarioCountryHideCityPoints = (...args) =>
-  getUrbanCityPolicyOwner().doesScenarioCountryHideCityPoints(...args);
 
 const getEffectiveCityCollection = (...args) => getUrbanCityPolicyOwner().getEffectiveCityCollection(...args);
 
@@ -14096,26 +14061,6 @@ function drawCityPointsLayer(k, { interactive = false } = {}) {
   });
 }
 
-function getTransportOverviewStyleConfig() {
-  return getTransportOverviewRenderOwner().getTransportOverviewStyleConfig();
-}
-
-function drawAirportsLayer(k, { interactive = false } = {}) {
-  return getTransportOverviewRenderOwner().drawAirportsLayer(k, { interactive });
-}
-
-function drawPortsLayer(k, { interactive = false } = {}) {
-  return getTransportOverviewRenderOwner().drawPortsLayer(k, { interactive });
-}
-
-function drawRailwaysLayer(k, { interactive = false } = {}) {
-  return getTransportOverviewRenderOwner().drawRailwaysLayer(k, { interactive });
-}
-
-function drawRoadsLayer(k, { interactive = false } = {}) {
-  return getTransportOverviewRenderOwner().drawRoadsLayer(k, { interactive });
-}
-
 function getTextureStyleConfig() {
   if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
     runtimeState.styleConfig = {};
@@ -14559,7 +14504,7 @@ function getModernCityLightsPopulationBoostData() {
     return modernCityLightsPopulationBoostCache;
   }
 
-  const urbanIndex = getUrbanFeatureIndex();
+  const urbanIndex = getUrbanCityPolicyOwner().getUrbanFeatureIndex();
   const urbanEntriesById = new Map();
   const unmatchedCityEntries = [];
   if (Array.isArray(cityCollection?.features)) {
@@ -14567,7 +14512,7 @@ function getModernCityLightsPopulationBoostData() {
       const props = feature?.properties || {};
       const population = Math.max(0, Number(props.__city_population || 0));
       const capitalScore = getCityCapitalScore(feature);
-      const urbanInfo = getCityUrbanRuntimeInfo(feature, urbanIndex);
+      const urbanInfo = getUrbanCityPolicyOwner().getCityUrbanRuntimeInfo(feature, urbanIndex);
       if (urbanInfo.hasUrbanMatch) {
         const current = urbanEntriesById.get(urbanInfo.urbanMatchId) || {
           urbanId: urbanInfo.urbanMatchId,
@@ -14881,7 +14826,7 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
   const coreRgb = getLightBlobRgb(palette.core);
   const zoomScale = Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
   const overscan = Math.max(28, Math.min(runtimeState.width, runtimeState.height) * 0.05);
-  const urbanIndex = getUrbanFeatureIndex();
+  const urbanIndex = getUrbanCityPolicyOwner().getUrbanFeatureIndex();
   const minPopulation = zoomScale <= 1.1 ? 60000 : zoomScale <= 1.8 ? 30000 : 15000;
 
   cityCollection.features.forEach((feature) => {
@@ -14889,7 +14834,7 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
     const population = Math.max(0, Number(props.__city_population || 0));
     const isCapital = !!props.__city_is_country_capital;
     if (!isCapital && population < minPopulation) return;
-    if (getCityUrbanRuntimeInfo(feature, urbanIndex).hasUrbanMatch) return;
+    if (getUrbanCityPolicyOwner().getCityUrbanRuntimeInfo(feature, urbanIndex).hasUrbanMatch) return;
     const anchor = getCityAnchor(feature);
     const screenPoint = getCityScreenPoint(anchor);
     if (!anchor || !screenPoint) return;
@@ -18224,10 +18169,11 @@ function drawContextMarkersPass(k, { interactive = false } = {}) {
         reason: "staged-apply",
       });
     } else {
-      drawRoadsLayer(k, { interactive });
-      drawRailwaysLayer(k, { interactive });
-      drawAirportsLayer(k, { interactive });
-      drawPortsLayer(k, { interactive });
+      const transportOverviewOwner = getTransportOverviewRenderOwner();
+      transportOverviewOwner.drawRoadsLayer(k, { interactive });
+      transportOverviewOwner.drawRailwaysLayer(k, { interactive });
+      transportOverviewOwner.drawAirportsLayer(k, { interactive });
+      transportOverviewOwner.drawPortsLayer(k, { interactive });
       if (interactive) {
         drawCityPointsLayer(k, { interactive: true });
       }
@@ -18312,7 +18258,7 @@ function drawLabelsPass(k, { interactive = false } = {}) {
     opacity: renderState.opacity,
     interactive: false,
   });
-  const labelCount = drawCityLabelsFromEntries(renderState.labelEntries, {
+  const labelCount = getCityLabelOwner().drawCityLabelsFromEntries(renderState.labelEntries, {
     config: renderState.config,
     scale: renderState.scale,
   });
@@ -18594,7 +18540,7 @@ function renderExportPassesToCanvas(passNames) {
   const width = Number(runtimeState.colorCanvas?.width || 0);
   const height = Number(runtimeState.colorCanvas?.height || 0);
   if (!width || !height) return null;
-  ensureIdleRenderPasses({});
+  getRenderPipelinePassesOwner().ensureIdleRenderPasses({});
   const exportCanvas = document.createElement("canvas");
   exportCanvas.width = width;
   exportCanvas.height = height;
@@ -18810,7 +18756,7 @@ function drawCanvas() {
 
   if (!useTransformedFrame || !drewFrame) {
     resetContextBreakdownForExactFrame();
-    ensureIdleRenderPasses(frameTimings);
+    getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings);
     drewExactFrame = composeCachedPasses(RENDER_PASS_NAMES);
     drewFrame = drewExactFrame;
     if (!drewExactFrame) {
@@ -18927,10 +18873,10 @@ function applyExactAfterSettleRefreshPlan(plan) {
       targetPassNames.add(passName);
     }
   });
-  plan.deferredExactTargetPasses = getIdleRenderPassDefinitions()
+  plan.deferredExactTargetPasses = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
     .map(([passName]) => passName)
     .filter((passName) => targetPassNames.has(passName) && EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
-  plan.exactTargetPasses = getIdleRenderPassDefinitions()
+  plan.exactTargetPasses = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
     .map(([passName]) => passName)
     .filter((passName) => targetPassNames.has(passName) && !EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
 }
@@ -18996,7 +18942,7 @@ function getDeferredExactContextTargetPasses(plan = {}) {
   EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.forEach((passName) => {
     if (cache.dirty?.[passName]) targetPasses.add(passName);
   });
-  return getIdleRenderPassDefinitions()
+  return getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
     .map(([passName]) => passName)
     .filter((passName) => targetPasses.has(passName));
 }
@@ -19013,7 +18959,7 @@ function prepareDeferredExactContextPassesInSlices(passNames, plan = {}, refresh
   if (!targetPasses.length) return false;
   if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return false;
   const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  const definitions = getIdleRenderPassDefinitions().filter(([passName]) => targetPasses.includes(passName));
+  const definitions = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions().filter(([passName]) => targetPasses.includes(passName));
   const cache = getRenderPassCacheState();
   const timings = {};
   const startedAt = nowMs();
@@ -19047,7 +18993,7 @@ function prepareDeferredExactContextPassesInSlices(passNames, plan = {}, refresh
         }
         return;
       }
-      prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
+      getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
       recordRenderPerfMetric("deferredExactContextRefreshPass", Math.max(0, nowMs() - passStart), {
         activeScenarioId: String(runtimeState.activeScenarioId || ""),
         passName,
@@ -20433,12 +20379,6 @@ function getOperationGraphicLabelAnchor(projectedPoints = [], { closed = false }
   return [anchorX - (dy / length) * 9, anchorY + (dx / length) * 9];
 }
 
-const renderOperationalLinesOverlay = (...args) =>
-  getStrategicOverlayHelpersOwner().renderOperationalLinesOverlay(...args);
-
-const renderOperationGraphicsOverlay = (...args) =>
-  getStrategicOverlayHelpersOwner().renderOperationGraphicsOverlay(...args);
-
 function getUnitCounterNationMeta(tag) {
   const normalizedTag = canonicalCountryCode(tag);
   if (!normalizedTag) {
@@ -20626,9 +20566,6 @@ function getUnitCounterNodeTransform(entry) {
   const localScale = Number(entry?.scaleModel?.localScale || 1);
   return `translate(${projected[0]},${projected[1]}) scale(${localScale}) translate(${slotOffset[0]},${slotOffset[1]})`;
 }
-
-const syncUnitCounterScalesDuringZoom = (...args) =>
-  getStrategicOverlayHelpersOwner().syncUnitCounterScalesDuringZoom(...args);
 
 function renderUnitCountersOverlay() {
   getStrategicOverlayHelpersOwner().renderUnitCountersOverlay();
@@ -20821,8 +20758,6 @@ function renderInspectorHighlightOverlay() {
     .attr("aria-hidden", data.length ? "false" : "true")
     .attr("aria-label", data.length ? `Inspector highlight overlay for ${code}` : "Inspector highlight overlay");
 }
-
-const renderSpecialZones = (...args) => getStrategicOverlayHelpersOwner().renderSpecialZones(...args);
 
 export function renderLegend(uniqueColors = null, labels = null) {
   if (!legendGroup || !legendItemsGroup || !legendBackground) return;
@@ -23208,7 +23143,7 @@ function updateMap(transform) {
   if (viewportGroup) {
     viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
   }
-  syncUnitCounterScalesDuringZoom();
+  getStrategicOverlayHelpersOwner().syncUnitCounterScalesDuringZoom();
   syncSpecialZonePatternTransformDuringZoom();
   drawCanvas();
 }
@@ -24155,8 +24090,8 @@ function refreshMapDataForScenarioApply({
     rebuildAuxiliaryRegionIndexes();
     atlantropaWaterIndexCount = Array.from(runtimeState.waterRegionsById?.keys?.() || [])
       .filter((featureId) => String(featureId || "").startsWith("ATLSEA_")).length;
-    resetSecondarySpatialIndexState();
-    buildSecondarySpatialIndexes({
+    getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();
+    getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
       allowComputeMissingBounds: true,
     });
     atlantropaWaterSpatialCount = (Array.isArray(runtimeState.waterSpatialItems) ? runtimeState.waterSpatialItems : [])
@@ -24266,11 +24201,9 @@ export {
   computeUrbanAdaptivePaintFromHostColor,
   getEffectiveUrbanMode,
   buildCityRevealPlan,
-  getCityScenarioTag,
   getCityLabelRenderStyle,
   getCityMarkerRenderStyle,
   getEffectiveCityCollection,
-  doesScenarioCountryHideCityPoints,
   isOpenOceanOverlayActive,
   renderExportPassesToCanvas,
 

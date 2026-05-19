@@ -5,6 +5,8 @@ import { readFile } from "node:fs/promises";
 const source = await readFile(new URL("../js/core/palette_runtime_bridge.js", import.meta.url), "utf8");
 const runtimeBridge = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`);
 const stateDefaultsSource = await readFile(new URL("../js/core/state_defaults.js", import.meta.url), "utf8");
+const colorHexUtilsSource = await readFile(new URL("../js/core/color_hex_utils.js", import.meta.url), "utf8");
+const colorHexUtilsDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(colorHexUtilsSource)}`;
 const transportCapabilityRegistrySource = await readFile(new URL("../js/core/transport_capability_registry.js", import.meta.url), "utf8");
 const transportPackResolverSource = await readFile(new URL("../js/core/transport_pack_resolver.js", import.meta.url), "utf8");
 const transportPackResolverDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transportPackResolverSource)}`;
@@ -22,6 +24,7 @@ const patchedCountryFeaturePoliciesSource = countryFeaturePoliciesSource.replace
 );
 const countryFeaturePoliciesDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(patchedCountryFeaturePoliciesSource)}`;
 const patchedStateDefaultsSource = stateDefaultsSource
+  .replace("./color_hex_utils.js", colorHexUtilsDataUrl)
   .replace("./transport_capability_registry.js", transportCapabilityRegistryDataUrl)
   .replace("./transport_pack_resolver.js", transportPackResolverDataUrl)
   .replace("./country_feature_policies.js", countryFeaturePoliciesDataUrl);
@@ -31,6 +34,7 @@ const patchedColorStateSource = colorStateSource.replace("../state_defaults.js",
 const colorStateModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(patchedColorStateSource)}`);
 const colorResolverSource = await readFile(new URL("../js/core/color_resolver.js", import.meta.url), "utf8");
 const colorResolverModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(colorResolverSource)}`);
+const colorHexUtilsModule = await import(new URL("../js/core/color_hex_utils.js", import.meta.url));
 const colorManagerModule = await import(new URL("../js/core/color_manager.js", import.meta.url));
 const countryCodeAliasesSource = await readFile(new URL("../js/core/country_code_aliases.js", import.meta.url), "utf8");
 const countryCodeAliasesDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(countryCodeAliasesSource)}`;
@@ -72,6 +76,12 @@ const {
 } = colorStateModule;
 const { resolveFeatureColor } = colorResolverModule;
 const { ColorManager } = colorManagerModule;
+const {
+  getHexRelativeLuminance,
+  mixHexColors,
+  normalizeHexColor,
+  normalizeHexColorWithFallback,
+} = colorHexUtilsModule;
 const { getCountryCode, getFeatureId, getStableKey } = featureIdentityModule;
 const {
   getFeatureId: getStartupWorkerFeatureId,
@@ -284,9 +294,17 @@ test("color manager cache signature is stable across object key order", () => {
 });
 
 test("color manager normalizes palette candidates into valid six-digit hex colors", () => {
+  assert.equal(normalizeHexColor("#abc"), "#aabbcc");
+  assert.equal(normalizeHexColorWithFallback("bad", "#ABC"), "#aabbcc");
+  assert.equal(mixHexColors("#000000", "#ffffff", 0.5), "#808080");
+  assert.equal(getHexRelativeLuminance("#000000"), 0);
+  assert.equal(getHexRelativeLuminance("#ffffff"), 1);
   assert.equal(ColorManager.normalizeHexColor("#abc"), "#aabbcc");
   assert.equal(ColorManager.normalizeHexColor("#A1B2C3"), "#a1b2c3");
   assert.equal(ColorManager.normalizeHexColor("bad"), null);
+  assert.equal(ColorManager.mixHexColors("#000000", "#ffffff", 0.5), "#808080");
+  assert.equal(ColorManager.getHexRelativeLuminance("#000000"), 0);
+  assert.equal(ColorManager.getHexRelativeLuminance("#ffffff"), 1);
   assert.match(ColorManager.getPoliticalFallbackColor("test-token", 3), /^#[0-9a-f]{6}$/);
 });
 

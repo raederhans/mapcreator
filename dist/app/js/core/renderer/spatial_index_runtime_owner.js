@@ -36,7 +36,6 @@ export function createSpatialIndexRuntimeOwner({
     rebuildAuxiliaryRegionIndexes = () => {},
     getLogicalCanvasDimensions = () => [1, 1],
     computeProjectedFeatureBounds = () => null,
-    getResolvedFeatureColor = () => null,
     shouldSkipFeature = () => false,
     queueIndexUiRefresh = () => {},
     finalizeIndexBuildEffects = () => {},
@@ -93,7 +92,6 @@ export function createSpatialIndexRuntimeOwner({
 
   function rebuildRuntimePrimaryIndex({
     projectedBoundsCache = null,
-    collectResolvedColor = () => {},
   } = {}) {
     clearPrimaryIndexMaps(state);
     rebuildAuxiliaryRegionIndexes();
@@ -114,14 +112,7 @@ export function createSpatialIndexRuntimeOwner({
           projectedBoundsCache,
           computeProjectedFeatureBounds,
           shouldSkipFeature,
-          getResolvedFeatureColor,
         });
-        if (payload.skipped) {
-          return;
-        }
-        if (payload.resolvedColor) {
-          collectResolvedColor(id, payload.resolvedColor);
-        }
       },
     });
 

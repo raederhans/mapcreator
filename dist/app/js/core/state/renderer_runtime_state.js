@@ -79,6 +79,7 @@ export function createDefaultRenderPassCacheState() {
   return {
     referenceTransform: null,
     referenceTransforms: {},
+    fullReferenceTransforms: {},
     canvases: {},
     layouts: {},
     signatures: {},
@@ -302,6 +303,9 @@ export function ensureRenderPassCacheState(
   cache.referenceTransforms = cache.referenceTransforms && typeof cache.referenceTransforms === "object"
     ? cache.referenceTransforms
     : defaults.referenceTransforms;
+  cache.fullReferenceTransforms = cache.fullReferenceTransforms && typeof cache.fullReferenceTransforms === "object"
+    ? cache.fullReferenceTransforms
+    : defaults.fullReferenceTransforms;
   cache.contextScenarioLayerCache = cache.contextScenarioLayerCache && typeof cache.contextScenarioLayerCache === "object"
     ? cache.contextScenarioLayerCache
     : defaults.contextScenarioLayerCache;

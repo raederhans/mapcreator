@@ -12,11 +12,24 @@ import {
 } from "../../core/state.js";
 import {
   normalizeTransportOverviewVisualMode,
-  resolveTransportOverviewLineStrategy,
-  resolveTransportOverviewPointStrategy,
 } from "../../core/transport_capability_registry.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { captureHistoryState, pushHistoryEntry } from "../../core/history_manager.js";
+import {
+  CITY_POINTS_THEME_OPTIONS,
+  formatCityPointsDensityValue,
+  getCityPointsLabelDensityHint,
+  getCityPointsThemeHint,
+  getCityPointsThemeLabel,
+  getCityPointsThemeMeta,
+  getCityPointsThemeStyle,
+} from "./appearance_city_points_descriptor.js";
+import {
+  buildTransportFamilySummaryText as buildTransportFamilySummaryTextForState,
+  formatTransportPercent,
+  formatTransportScopeLabel,
+  formatTransportThresholdLabel,
+} from "./appearance_transport_summary.js";
 
 /**
  * Owns the Appearance 面板里的 transport appearance、tab/filter、recent colors、
@@ -233,6 +246,7 @@ export function createAppearanceControlsController({
 
   const transportAppearanceMasterToggle = document.getElementById("transportAppearanceMasterToggle");
   const transportVisualMode = document.getElementById("transportVisualMode");
+  const transportFacilityUnderlyingMapSelection = document.getElementById("transportFacilityUnderlyingMapSelection");
   const transportAirportCard = document.getElementById("transportAirportCard");
   const transportPortCard = document.getElementById("transportPortCard");
   const transportRailCard = document.getElementById("transportRailCard");
@@ -259,6 +273,10 @@ export function createAppearanceControlsController({
   const airportLabelsEnabled = document.getElementById("airportLabelsEnabled");
   const airportLabelDensity = document.getElementById("airportLabelDensity");
   const airportLabelMode = document.getElementById("airportLabelMode");
+  const airportLabelSize = document.getElementById("airportLabelSize");
+  const airportLabelSizeValue = document.getElementById("airportLabelSizeValue");
+  const airportLabelHalo = document.getElementById("airportLabelHalo");
+  const airportLabelHaloValue = document.getElementById("airportLabelHaloValue");
   const airportCoverageReach = document.getElementById("airportCoverageReach");
   const airportCoverageReachValue = document.getElementById("airportCoverageReachValue");
   const airportScopeLinked = document.getElementById("airportScopeLinked");
@@ -275,6 +293,10 @@ export function createAppearanceControlsController({
   const portLabelsEnabled = document.getElementById("portLabelsEnabled");
   const portLabelDensity = document.getElementById("portLabelDensity");
   const portLabelMode = document.getElementById("portLabelMode");
+  const portLabelSize = document.getElementById("portLabelSize");
+  const portLabelSizeValue = document.getElementById("portLabelSizeValue");
+  const portLabelHalo = document.getElementById("portLabelHalo");
+  const portLabelHaloValue = document.getElementById("portLabelHaloValue");
   const portCoverageReach = document.getElementById("portCoverageReach");
   const portCoverageReachValue = document.getElementById("portCoverageReachValue");
   const portScopeLinked = document.getElementById("portScopeLinked");
@@ -303,6 +325,8 @@ export function createAppearanceControlsController({
   const roadOpacity = document.getElementById("roadOpacity");
   const roadOpacityValue = document.getElementById("roadOpacityValue");
   const roadPrimaryColor = document.getElementById("roadPrimaryColor");
+  const roadLabelsEnabled = document.getElementById("roadLabelsEnabled");
+  const roadLabelDensity = document.getElementById("roadLabelDensity");
   const roadCoverageReach = document.getElementById("roadCoverageReach");
   const roadCoverageReachValue = document.getElementById("roadCoverageReachValue");
   const roadScopeLinked = document.getElementById("roadScopeLinked");
@@ -619,77 +643,6 @@ export function createAppearanceControlsController({
     return runtimeState.styleConfig.cityPoints;
   };
 
-  const CITY_POINTS_THEME_OPTIONS = [
-    { value: "classic_graphite", labelKey: "optCityPointsThemeClassicGraphite", fallback: "Classic Graphite" },
-    { value: "atlas_ink", labelKey: "optCityPointsThemeAtlasInk", fallback: "Atlas Ink" },
-    { value: "parchment_sepia", labelKey: "optCityPointsThemeParchmentSepia", fallback: "Parchment Sepia" },
-    { value: "slate_blue", labelKey: "optCityPointsThemeSlateBlue", fallback: "Slate Blue" },
-    { value: "ivory_outline", labelKey: "optCityPointsThemeIvoryOutline", fallback: "Ivory Outline" },
-  ];
-
-  const getCityPointsThemeMeta = (themeValue) =>
-    CITY_POINTS_THEME_OPTIONS.find((option) => option.value === String(themeValue || "").trim().toLowerCase())
-    || CITY_POINTS_THEME_OPTIONS[0];
-
-  const getCityPointsThemeLabel = (themeValue) => {
-    const meta = getCityPointsThemeMeta(themeValue);
-    return t(meta.fallback, "ui");
-  };
-
-  const CITY_POINTS_THEME_DEFAULT_STYLES = {
-    classic_graphite: {
-      color: "#2f343a",
-      capitalColor: "#9f9072",
-      hintEn: "Neutral graphite markers that stay readable on mixed political fills.",
-      hintZh: "中性的石墨灰点位，适合混合政治底图，整体最稳。 ",
-    },
-    atlas_ink: {
-      color: "#35506e",
-      capitalColor: "#d2aa72",
-      hintEn: "Cool blue-ink markers with a cleaner atlas feel and clearer outlines.",
-      hintZh: "偏蓝墨水感的点位，轮廓更清楚，更像地图集标注。",
-    },
-    parchment_sepia: {
-      color: "#866245",
-      capitalColor: "#c78d55",
-      hintEn: "Warmer sepia markers tuned for historical overlays and paper-like palettes.",
-      hintZh: "更暖的棕褐色点位，适合历史纸面和偏暖色地图。",
-    },
-    slate_blue: {
-      color: "#566c86",
-      capitalColor: "#d4b178",
-      hintEn: "Cool slate-blue markers that sit quietly on modern, cleaner political maps.",
-      hintZh: "偏冷的石板蓝点位，适合更现代、更干净的政治底图。",
-    },
-    ivory_outline: {
-      color: "#ddd2bf",
-      capitalColor: "#b27a4a",
-      hintEn: "Light ivory fills with darker rims for stronger contrast on darker land colors.",
-      hintZh: "浅象牙底配深描边，在深色国土上会更显眼。",
-    },
-  };
-
-  const getCityPointsThemeStyle = (themeValue) =>
-    CITY_POINTS_THEME_DEFAULT_STYLES[getCityPointsThemeMeta(themeValue).value]
-    || CITY_POINTS_THEME_DEFAULT_STYLES.classic_graphite;
-
-  const getCityPointsThemeHint = (themeValue) => {
-    const themeStyle = getCityPointsThemeStyle(themeValue);
-    return runtimeState.currentLanguage === "zh" ? themeStyle.hintZh.trim() : themeStyle.hintEn;
-  };
-
-  const getCityPointsLabelDensityHint = (densityValue) => {
-    const normalized = String(densityValue || "balanced").trim().toLowerCase();
-    if (runtimeState.currentLanguage === "zh") {
-      if (normalized === "sparse") return "Sparse · 标签预算 P4 16 / P5 32，只保留更关键的名称。";
-      if (normalized === "dense") return "Dense · 标签预算 P4 32 / P5 64，会显示更多次级城市名称。";
-      return "Balanced · 标签预算 P4 24 / P5 48，是默认的均衡读图方案。";
-    }
-    if (normalized === "sparse") return "Sparse · label budget P4 16 / P5 32, favoring only the most important names.";
-    if (normalized === "dense") return "Dense · label budget P4 32 / P5 64, allowing more secondary city labels.";
-    return "Balanced · label budget P4 24 / P5 48, the default readability mix.";
-  };
-
   const ensureCityPointsThemeOptions = () => {
     if (!cityPointsTheme) return;
     const normalizedExisting = Array.from(cityPointsTheme.options || []).map((option) => String(option.value || ""));
@@ -702,7 +655,7 @@ export function createAppearanceControlsController({
         const meta = CITY_POINTS_THEME_OPTIONS[index];
         if (!meta) return;
         optionNode.id = meta.labelKey;
-        optionNode.textContent = getCityPointsThemeLabel(meta.value);
+        optionNode.textContent = getCityPointsThemeLabel(meta.value, t);
       });
       return;
     }
@@ -711,13 +664,11 @@ export function createAppearanceControlsController({
       const option = document.createElement("option");
       option.value = optionMeta.value;
       option.id = optionMeta.labelKey;
-      option.textContent = getCityPointsThemeLabel(optionMeta.value);
+      option.textContent = getCityPointsThemeLabel(optionMeta.value, t);
       fragment.appendChild(option);
     });
     cityPointsTheme.replaceChildren(fragment);
   };
-
-  const formatCityPointsDensityValue = (value) => `${Number(value || 1).toFixed(2)}x`;
 
   const syncUrbanConfig = () => {
     runtimeState.styleConfig.urban = normalizeUrbanStyleConfig(runtimeState.styleConfig.urban);
@@ -834,7 +785,7 @@ export function createAppearanceControlsController({
     const cityPointsConfig = syncCityPointsConfig();
     ensureCityPointsThemeOptions();
     if (cityPointsTheme) cityPointsTheme.value = String(cityPointsConfig.theme || "classic_graphite");
-    if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cityPointsConfig.theme || "classic_graphite");
+    if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cityPointsConfig.theme || "classic_graphite", runtimeState.currentLanguage);
     if (cityPointsMarkerScale) cityPointsMarkerScale.value = Number(cityPointsConfig.markerScale || 1).toFixed(2);
     if (cityPointsMarkerScaleValue) cityPointsMarkerScaleValue.textContent = `${Number(cityPointsConfig.markerScale || 1).toFixed(2)}x`;
     if (cityPointsMarkerDensity) cityPointsMarkerDensity.value = Number(cityPointsConfig.markerDensity || 1).toFixed(2);
@@ -845,7 +796,7 @@ export function createAppearanceControlsController({
         : "Controls how many city markers can surface at each zoom stage.";
     }
     if (cityPointsLabelDensity) cityPointsLabelDensity.value = String(cityPointsConfig.labelDensity || "balanced");
-    if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cityPointsConfig.labelDensity || "balanced");
+    if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cityPointsConfig.labelDensity || "balanced", runtimeState.currentLanguage);
     if (cityPointsColor) cityPointsColor.value = normalizeOceanFillColor(cityPointsConfig.color || "#2f343a");
     if (cityPointsCapitalColor) cityPointsCapitalColor.value = normalizeOceanFillColor(cityPointsConfig.capitalColor || "#9f9072");
     if (cityPointsOpacity) cityPointsOpacity.value = String(Math.round(cityPointsConfig.opacity * 100));
@@ -925,20 +876,6 @@ export function createAppearanceControlsController({
     return runtimeState.styleConfig.transportOverview;
   };
 
-  const formatTransportPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`;
-  const formatTransportScopeLabel = (value) => String(value || "")
-    .trim()
-    .split("_")
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-  const formatTransportThresholdLabel = (value) => String(value || "")
-    .trim()
-    .split("_")
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-
   const getTransportAppearanceVisualMode = () => normalizeTransportOverviewVisualMode(
     getTransportAppearanceConfig().visualMode,
     "distribution",
@@ -953,78 +890,38 @@ export function createAppearanceControlsController({
       : resolveLinkedTransportOverviewScopeAndThreshold(familyId, familyConfig.coverageReach)
   );
 
-  const getTransportFamilyFilteredCount = (familyId, familyConfig, effectiveScope) => {
-    const visualMode = getTransportAppearanceVisualMode();
-    const scale = Number(runtimeState.zoomTransform?.k || 1);
-    if (familyId === "rail") {
-      const features = Array.isArray(runtimeState.railwaysData?.features) ? runtimeState.railwaysData.features : null;
-      if (!features) return null;
-      const strategy = resolveTransportOverviewLineStrategy(
-        familyId,
-        { ...familyConfig, ...effectiveScope },
-        { scale, visualMode },
-      );
-      return features.filter((feature) => {
-        const properties = feature?.properties || {};
-        const lineClass = String(properties.class || "").trim().toLowerCase();
-        const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
-        if (revealRank > strategy.maximumRevealRank) return false;
-        if (strategy.minimumScopeRank <= 1 && lineClass !== "mainline") return false;
-        return lineClass === "mainline" || lineClass === "regional";
-      }).length;
-    }
-    if (familyId === "road") {
-      const features = Array.isArray(runtimeState.roadsData?.features) ? runtimeState.roadsData.features : null;
-      if (!features) return null;
-      const strategy = resolveTransportOverviewLineStrategy(
-        familyId,
-        { ...familyConfig, ...effectiveScope },
-        { scale, visualMode },
-      );
-      return features.filter((feature) => {
-        const properties = feature?.properties || {};
-        const roadClass = String(properties.class || "").trim().toLowerCase();
-        const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (roadClass === "motorway" ? 1 : 2))));
-        if (revealRank > strategy.maximumRevealRank) return false;
-        if (strategy.minimumScopeRank <= 1 && roadClass !== "motorway") return false;
-        return roadClass === "motorway" || roadClass === "trunk";
-      }).length;
-    }
-    const collection = familyId === "port" ? runtimeState.portsData : runtimeState.airportsData;
-    const features = Array.isArray(collection?.features) ? collection.features : null;
-    if (!features) return null;
-    const strategy = resolveTransportOverviewPointStrategy(
+  const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) =>
+    buildTransportFamilySummaryTextForState({
       familyId,
-      { ...familyConfig, ...effectiveScope },
-      { scale, visualMode },
-    );
-    return features.filter((feature) => {
-      const importanceRank = Math.max(1, Math.round(Number(feature?.properties?.importance_rank || 1)));
-      return importanceRank >= strategy.thresholdRank;
-    }).length;
+      masterEnabled,
+      familyEnabled,
+      familyConfig,
+      effectiveScope,
+      collections: {
+        airport: runtimeState.airportsData,
+        port: runtimeState.portsData,
+        rail: runtimeState.railwaysData,
+        road: runtimeState.roadsData,
+      },
+      metrics: runtimeState.renderPerfMetrics,
+      zoomScale: runtimeState.zoomTransform?.k,
+      visualMode: getTransportAppearanceVisualMode(),
+      translate: t,
+    });
+
+  const renderTransportAppearanceDirty = (reason) => {
+    renderDirty(reason);
+    const scheduleFrame = typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame
+      : (callback) => setTimeout(callback, 0);
+    scheduleFrame(() => {
+      renderTransportAppearanceUi();
+    });
   };
 
-  const formatTransportFamilyCountText = (familyId, count) => {
-    if (!Number.isFinite(count)) return "";
-    const roundedCount = Math.max(0, Math.round(count));
-    if (familyId === "rail") return `${roundedCount.toLocaleString()} ${t(roundedCount === 1 ? "railway" : "railways", "ui")}`;
-    if (familyId === "road") return `${roundedCount.toLocaleString()} ${t(roundedCount === 1 ? "road" : "roads", "ui")}`;
-    const noun = familyId === "port"
-      ? (roundedCount === 1 ? "port" : "ports")
-      : (roundedCount === 1 ? "airport" : "airports");
-    return `${roundedCount.toLocaleString()} ${t(noun, "ui")}`;
-  };
-
-  const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) => {
-    if (!familyEnabled) return t("Off", "ui");
-    if (!masterEnabled) return `${t("On", "ui")} · ${t("hidden by master", "ui")}`;
-    const countText = formatTransportFamilyCountText(
-      familyId,
-      getTransportFamilyFilteredCount(familyId, familyConfig, effectiveScope),
-    );
-    return countText
-      ? `${t("On", "ui")} · ${countText}`
-      : `${t("On", "ui")} · ${t(formatTransportScopeLabel(effectiveScope.scope), "ui")}`;
+  const refreshTransportAppearanceUiAfterLayerLoad = (layerId) => (error) => {
+    console.warn(`[transport-appearance] Failed to refresh ${layerId} layer data.`, error);
+    renderTransportAppearanceUi();
   };
 
   const setTransportAppearanceGroupEnabled = (container, enabled) => {
@@ -1047,15 +944,22 @@ export function createAppearanceControlsController({
 
     if (transportAppearanceMasterToggle) transportAppearanceMasterToggle.checked = transportEnabled;
     if (transportVisualMode) transportVisualMode.value = visualMode;
+    if (transportFacilityUnderlyingMapSelection) {
+      transportFacilityUnderlyingMapSelection.checked = !!transportConfig.allowFacilityUnderlyingMapSelection;
+    }
 
-    if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportConfig.visualStrength ?? 0.56) * 100));
-    if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportConfig.visualStrength ?? 0.56);
+    if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportConfig.visualStrength ?? 0.62) * 100));
+    if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportConfig.visualStrength ?? 0.62);
     if (airportOpacity) airportOpacity.value = String(Math.round(Number(airportConfig.opacity ?? 0.82) * 100));
     if (airportOpacityValue) airportOpacityValue.textContent = formatTransportPercent(airportConfig.opacity ?? 0.82);
     if (airportPrimaryColor) airportPrimaryColor.value = normalizeOceanFillColor(airportConfig.primaryColor || "#1d4ed8");
     if (airportLabelsEnabled) airportLabelsEnabled.checked = !!airportConfig.labelsEnabled;
     if (airportLabelDensity) airportLabelDensity.value = String(airportConfig.labelDensity || "balanced");
-    if (airportLabelMode) airportLabelMode.value = String(airportConfig.labelMode || "both");
+    if (airportLabelMode) airportLabelMode.value = String(airportConfig.labelMode || "adaptive");
+    if (airportLabelSize) airportLabelSize.value = String(Math.round(Number(airportConfig.labelSize ?? 9)));
+    if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${Math.round(Number(airportConfig.labelSize ?? 9))}px`;
+    if (airportLabelHalo) airportLabelHalo.value = String(Math.round(Number(airportConfig.labelHalo ?? 0.22) * 100));
+    if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(airportConfig.labelHalo ?? 0.22);
     if (airportCoverageReach) airportCoverageReach.value = String(Math.round(Number(airportConfig.coverageReach ?? 0.5) * 100));
     if (airportCoverageReachValue) airportCoverageReachValue.textContent = formatTransportPercent(airportConfig.coverageReach ?? 0.5);
     if (airportScopeLinked) airportScopeLinked.checked = String(airportConfig.scopeLinkMode || "linked") !== "manual";
@@ -1068,14 +972,18 @@ export function createAppearanceControlsController({
       transportAirportSummaryMeta.textContent = buildTransportFamilySummaryText("airport", transportEnabled, !!runtimeState.showAirports, airportConfig, airportScopeState);
     }
 
-    if (portVisualStrength) portVisualStrength.value = String(Math.round(Number(portConfig.visualStrength ?? 0.54) * 100));
-    if (portVisualStrengthValue) portVisualStrengthValue.textContent = formatTransportPercent(portConfig.visualStrength ?? 0.54);
+    if (portVisualStrength) portVisualStrength.value = String(Math.round(Number(portConfig.visualStrength ?? 0.58) * 100));
+    if (portVisualStrengthValue) portVisualStrengthValue.textContent = formatTransportPercent(portConfig.visualStrength ?? 0.58);
     if (portOpacity) portOpacity.value = String(Math.round(Number(portConfig.opacity ?? 0.78) * 100));
     if (portOpacityValue) portOpacityValue.textContent = formatTransportPercent(portConfig.opacity ?? 0.78);
     if (portPrimaryColor) portPrimaryColor.value = normalizeOceanFillColor(portConfig.primaryColor || "#b45309");
     if (portLabelsEnabled) portLabelsEnabled.checked = !!portConfig.labelsEnabled;
     if (portLabelDensity) portLabelDensity.value = String(portConfig.labelDensity || "balanced");
-    if (portLabelMode) portLabelMode.value = String(portConfig.labelMode || "mixed");
+    if (portLabelMode) portLabelMode.value = String(portConfig.labelMode || "adaptive");
+    if (portLabelSize) portLabelSize.value = String(Math.round(Number(portConfig.labelSize ?? 9)));
+    if (portLabelSizeValue) portLabelSizeValue.textContent = `${Math.round(Number(portConfig.labelSize ?? 9))}px`;
+    if (portLabelHalo) portLabelHalo.value = String(Math.round(Number(portConfig.labelHalo ?? 0.22) * 100));
+    if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(portConfig.labelHalo ?? 0.22);
     if (portCoverageReach) portCoverageReach.value = String(Math.round(Number(portConfig.coverageReach ?? 0.5) * 100));
     if (portCoverageReachValue) portCoverageReachValue.textContent = formatTransportPercent(portConfig.coverageReach ?? 0.5);
     if (portScopeLinked) portScopeLinked.checked = String(portConfig.scopeLinkMode || "linked") !== "manual";
@@ -1112,6 +1020,8 @@ export function createAppearanceControlsController({
     if (roadOpacity) roadOpacity.value = String(Math.round(Number(roadConfig.opacity ?? 0.72) * 100));
     if (roadOpacityValue) roadOpacityValue.textContent = formatTransportPercent(roadConfig.opacity ?? 0.72);
     if (roadPrimaryColor) roadPrimaryColor.value = normalizeOceanFillColor(roadConfig.primaryColor || "#374151");
+    if (roadLabelsEnabled) roadLabelsEnabled.checked = !!roadConfig.labelsEnabled;
+    if (roadLabelDensity) roadLabelDensity.value = String(roadConfig.labelDensity || "sparse");
     if (roadCoverageReach) roadCoverageReach.value = String(Math.round(Number(roadConfig.coverageReach ?? 0.2) * 100));
     if (roadCoverageReachValue) roadCoverageReachValue.textContent = formatTransportPercent(roadConfig.coverageReach ?? 0.2);
     if (roadScopeLinked) roadScopeLinked.checked = String(roadConfig.scopeLinkMode || "linked") !== "manual";
@@ -1126,24 +1036,25 @@ export function createAppearanceControlsController({
 
     [
       airportVisualStrength, airportOpacity, airportPrimaryColor, airportLabelsEnabled, airportLabelDensity,
-      airportLabelMode, airportScopeLinked, airportScope, airportImportanceThreshold,
+      airportLabelMode, airportLabelSize, airportLabelHalo, airportScopeLinked, airportScope, airportImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
       portVisualStrength, portOpacity, portPrimaryColor, portLabelsEnabled, portLabelDensity,
-      portLabelMode, portScopeLinked, portTier, portImportanceThreshold,
+      portLabelMode, portLabelSize, portLabelHalo, portScopeLinked, portTier, portImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
       railVisualStrength, railOpacity, railPrimaryColor, railLabelsEnabled, railLabelDensity,
       railScopeLinked, railScope, railImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [
-      roadVisualStrength, roadOpacity, roadPrimaryColor, roadScopeLinked, roadScope,
-      roadImportanceThreshold,
+      roadVisualStrength, roadOpacity, roadPrimaryColor, roadLabelsEnabled, roadLabelDensity,
+      roadScopeLinked, roadScope, roadImportanceThreshold,
     ].forEach((control) => { if (control) control.disabled = !transportEnabled; });
     [toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {
       if (control) control.disabled = false;
     });
     if (transportVisualMode) transportVisualMode.disabled = !transportEnabled;
+    if (transportFacilityUnderlyingMapSelection) transportFacilityUnderlyingMapSelection.disabled = !transportEnabled;
 
     const airportManual = String(airportConfig.scopeLinkMode || "linked") === "manual";
     const portManual = String(portConfig.scopeLinkMode || "linked") === "manual";
@@ -1185,19 +1096,26 @@ export function createAppearanceControlsController({
       runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");
     }
     if (normalized && runtimeState.showAirports && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("airports", { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn("airports", { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("airports"));
     }
     if (normalized && runtimeState.showPorts && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("ports", { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn("ports", { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("ports"));
     }
     if (normalized && runtimeState.showRail && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("rail"));
     }
     if (normalized && runtimeState.showRoad && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("roads", { reason: "transport-master-toggle", renderNow: true });
+      void runtimeState.ensureContextLayerDataFn("roads", { reason: "transport-master-toggle", renderNow: true })
+        .then(renderTransportAppearanceUi)
+        .catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));
     }
-    renderTransportAppearanceUi();
-    renderDirty("toggle-transport-overview");
+    renderTransportAppearanceDirty("toggle-transport-overview");
   };
 
   const renderRecentColors = () => {
@@ -1343,10 +1261,17 @@ export function createAppearanceControlsController({
           event.target.value || "distribution",
           "distribution",
         );
-        renderTransportAppearanceUi();
         renderDirty("transport-visual-mode");
+        renderTransportAppearanceUi();
       });
       transportVisualMode.dataset.bound = "true";
+    }
+    if (transportFacilityUnderlyingMapSelection && !transportFacilityUnderlyingMapSelection.dataset.bound) {
+      transportFacilityUnderlyingMapSelection.addEventListener("change", (event) => {
+        getTransportAppearanceConfig().allowFacilityUnderlyingMapSelection = !!event.target.checked;
+        renderTransportAppearanceDirty("transport-facility-underlying-selection");
+      });
+      transportFacilityUnderlyingMapSelection.dataset.bound = "true";
     }
 
     if (toggleAirports && !toggleAirports.dataset.bound) {
@@ -1358,10 +1283,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-airports");
         }
         if (runtimeState.showAirports && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("airports", { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn("airports", { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("airports"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-airports");
+        renderTransportAppearanceDirty("toggle-airports");
       });
       toggleAirports.dataset.bound = "true";
     }
@@ -1375,10 +1301,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-ports");
         }
         if (runtimeState.showPorts && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("ports", { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn("ports", { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("ports"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-ports");
+        renderTransportAppearanceDirty("toggle-ports");
       });
       togglePorts.dataset.bound = "true";
     }
@@ -1392,10 +1319,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-rail");
         }
         if (runtimeState.showRail && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("rail"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-rail");
+        renderTransportAppearanceDirty("toggle-rail");
       });
       toggleRail.dataset.bound = "true";
     }
@@ -1409,10 +1337,11 @@ export function createAppearanceControlsController({
           releaseDeferredContextForTransportToggle("toggle-road");
         }
         if (runtimeState.showRoad && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("roads", { reason: "toolbar-toggle", renderNow: true });
+          void runtimeState.ensureContextLayerDataFn("roads", { reason: "toolbar-toggle", renderNow: true })
+            .then(renderTransportAppearanceUi)
+            .catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));
         }
-        renderTransportAppearanceUi();
-        renderDirty("toggle-road");
+        renderTransportAppearanceDirty("toggle-road");
       });
       toggleRoad.dataset.bound = "true";
     }
@@ -1421,8 +1350,7 @@ export function createAppearanceControlsController({
       if (!element || element.dataset.bound === "true") return;
       element.addEventListener("input", (event) => {
         mutate(event);
-        renderTransportAppearanceUi();
-        renderDirty(reason);
+        renderTransportAppearanceDirty(reason);
       });
       element.dataset.bound = "true";
     };
@@ -1430,15 +1358,14 @@ export function createAppearanceControlsController({
       if (!element || element.dataset.bound === "true") return;
       element.addEventListener("change", (event) => {
         mutate(event);
-        renderTransportAppearanceUi();
-        renderDirty(reason);
+        renderTransportAppearanceDirty(reason);
       });
       element.dataset.bound = "true";
     };
 
     bindInput(airportVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().airport.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.56, 0, 1);
+      getTransportAppearanceConfig().airport.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.62, 0, 1);
     }, "transport-airport-visual-strength");
     bindInput(airportOpacity, (event) => {
       const value = Number(event.target.value);
@@ -1454,8 +1381,20 @@ export function createAppearanceControlsController({
       getTransportAppearanceConfig().airport.labelDensity = String(event.target.value || "balanced");
     }, "transport-airport-label-density");
     bindChange(airportLabelMode, (event) => {
-      getTransportAppearanceConfig().airport.labelMode = String(event.target.value || "both");
+      getTransportAppearanceConfig().airport.labelMode = String(event.target.value || "adaptive");
     }, "transport-airport-label-mode");
+    bindInput(airportLabelSize, (event) => {
+      const value = Number(event.target.value);
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 9), 7, 16);
+      getTransportAppearanceConfig().airport.labelSize = labelSize;
+      if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${labelSize}px`;
+    }, "transport-airport-label-size");
+    bindInput(airportLabelHalo, (event) => {
+      const value = Number(event.target.value);
+      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : 0.22, 0, 1);
+      getTransportAppearanceConfig().airport.labelHalo = labelHalo;
+      if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(labelHalo);
+    }, "transport-airport-label-halo");
     bindInput(airportCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().airport;
@@ -1488,7 +1427,7 @@ export function createAppearanceControlsController({
 
     bindInput(portVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().port.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.54, 0, 1);
+      getTransportAppearanceConfig().port.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.58, 0, 1);
     }, "transport-port-visual-strength");
     bindInput(portOpacity, (event) => {
       const value = Number(event.target.value);
@@ -1504,8 +1443,20 @@ export function createAppearanceControlsController({
       getTransportAppearanceConfig().port.labelDensity = String(event.target.value || "balanced");
     }, "transport-port-label-density");
     bindChange(portLabelMode, (event) => {
-      getTransportAppearanceConfig().port.labelMode = String(event.target.value || "mixed");
+      getTransportAppearanceConfig().port.labelMode = String(event.target.value || "adaptive");
     }, "transport-port-label-mode");
+    bindInput(portLabelSize, (event) => {
+      const value = Number(event.target.value);
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 9), 7, 16);
+      getTransportAppearanceConfig().port.labelSize = labelSize;
+      if (portLabelSizeValue) portLabelSizeValue.textContent = `${labelSize}px`;
+    }, "transport-port-label-size");
+    bindInput(portLabelHalo, (event) => {
+      const value = Number(event.target.value);
+      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : 0.22, 0, 1);
+      getTransportAppearanceConfig().port.labelHalo = labelHalo;
+      if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(labelHalo);
+    }, "transport-port-label-halo");
     bindInput(portCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().port;
@@ -1594,6 +1545,12 @@ export function createAppearanceControlsController({
     bindInput(roadPrimaryColor, (event) => {
       getTransportAppearanceConfig().road.primaryColor = normalizeOceanFillColor(event.target.value || "#374151");
     }, "transport-road-primary-color");
+    bindChange(roadLabelsEnabled, (event) => {
+      getTransportAppearanceConfig().road.labelsEnabled = !!event.target.checked;
+    }, "transport-road-labels-enabled");
+    bindChange(roadLabelDensity, (event) => {
+      getTransportAppearanceConfig().road.labelDensity = String(event.target.value || "sparse");
+    }, "transport-road-label-density");
     bindInput(roadCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().road;
@@ -1975,7 +1932,7 @@ export function createAppearanceControlsController({
         const themeStyle = getCityPointsThemeStyle(cfg.theme);
         cfg.color = themeStyle.color;
         cfg.capitalColor = themeStyle.capitalColor;
-        if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cfg.theme);
+        if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cfg.theme, runtimeState.currentLanguage);
         if (cityPointsColor) cityPointsColor.value = normalizeOceanFillColor(cfg.color);
         if (cityPointsCapitalColor) cityPointsCapitalColor.value = normalizeOceanFillColor(cfg.capitalColor);
         persistCityViewSettings();
@@ -2011,7 +1968,7 @@ export function createAppearanceControlsController({
       cityPointsLabelDensity.addEventListener("change", (event) => {
         const cfg = syncCityPointsConfig();
         cfg.labelDensity = String(event.target.value || "balanced");
-        if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cfg.labelDensity);
+        if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cfg.labelDensity, runtimeState.currentLanguage);
         persistCityViewSettings();
         renderDirty("city-points-label-density");
       });
@@ -2450,4 +2407,3 @@ export function createAppearanceControlsController({
     syncParentBorderVisibilityUI,
   };
 }
-

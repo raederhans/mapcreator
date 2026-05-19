@@ -16,6 +16,7 @@ EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_w
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
+APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
 OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean_lake_controls_controller.js"
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
@@ -408,6 +409,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_transport_workbench_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
@@ -426,6 +428,18 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", owner_content)
         self.assertIn("let transportWorkbenchRenderGeneration = 0;", owner_content)
         self.assertIn("const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) =>", owner_content)
+        self.assertIn("export const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = deepFreeze({", descriptor_content)
+        self.assertIn("export const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = deepFreeze({", descriptor_content)
+        self.assertIn("export const TRANSPORT_WORKBENCH_SECTION_DEFAULTS = deepFreeze({", descriptor_content)
+        self.assertIn("const TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET = new Set([", descriptor_content)
+        self.assertIn("export const TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS = Object.freeze({", descriptor_content)
+        self.assertIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,", owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", owner_content)
+        self.assertIn("buildEnergyFacilitySubtypeControlOptions,", owner_content)
+        self.assertNotIn("const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {", owner_content)
+        self.assertNotIn("const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = {", owner_content)
+        self.assertNotIn("const TRANSPORT_WORKBENCH_SECTION_DEFAULTS = {", owner_content)
         self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", owner_content)
         self.assertIn("isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),", owner_content)
         self.assertIn("const applyTransportWorkbenchFamilyToMainMap = async (context) => {", owner_content)
@@ -466,8 +480,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("function renderParentBorderCountryList()", toolbar_content)
         self.assertIn("if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;", owner_content)
         self.assertIn("if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;", owner_content)
-        self.assertIn("airportLabelMode, airportScopeLinked, airportScope, airportImportanceThreshold,", owner_content)
-        self.assertIn("portLabelMode, portScopeLinked, portTier, portImportanceThreshold,", owner_content)
+        for field in ("airportLabelMode", "airportScopeLinked", "airportScope", "airportImportanceThreshold"):
+            self.assertIn(field, owner_content)
+        for field in ("portLabelMode", "portScopeLinked", "portTier", "portImportanceThreshold"):
+            self.assertIn(field, owner_content)
         self.assertIn("if (runtimeState.showAirports && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
         self.assertIn("if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
         self.assertIn("[toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {", owner_content)
@@ -527,10 +543,25 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_appearance_controller_owns_city_urban_physical_rivers_logic(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        city_points_descriptor_content = APPEARANCE_CITY_POINTS_DESCRIPTOR_JS.read_text(encoding="utf-8")
 
         self.assertIn("const syncCityPointsConfig = () => {", owner_content)
         self.assertIn("const syncPhysicalConfig = () => {", owner_content)
         self.assertIn("const renderAppearanceStyleControlsUi = () => {", owner_content)
+        self.assertIn("from \"./appearance_city_points_descriptor.js\";", owner_content)
+        self.assertIn("CITY_POINTS_THEME_OPTIONS,", owner_content)
+        self.assertIn("getCityPointsThemeMeta,", owner_content)
+        self.assertIn("getCityPointsThemeStyle,", owner_content)
+        self.assertIn("formatCityPointsDensityValue,", owner_content)
+        self.assertIn("export const CITY_POINTS_THEME_OPTIONS = Object.freeze([", city_points_descriptor_content)
+        self.assertIn("export const CITY_POINTS_THEME_DEFAULT_STYLES = Object.freeze({", city_points_descriptor_content)
+        self.assertIn("export function getCityPointsThemeMeta", city_points_descriptor_content)
+        self.assertIn("export function getCityPointsThemeHint", city_points_descriptor_content)
+        self.assertIn("export function getCityPointsLabelDensityHint", city_points_descriptor_content)
+        self.assertIn("export function formatCityPointsDensityValue", city_points_descriptor_content)
+        self.assertNotIn("const CITY_POINTS_THEME_OPTIONS =", owner_content)
+        self.assertNotIn("const CITY_POINTS_THEME_DEFAULT_STYLES =", owner_content)
+        self.assertNotIn("const formatCityPointsDensityValue = (value)", owner_content)
         self.assertIn("toggleUrban.addEventListener(\"change\", (event) => {", owner_content)
         self.assertIn("physicalPreset.addEventListener(\"change\", (event) => {", owner_content)
         self.assertIn("riversDashStyle.addEventListener(\"change\", (event) => {", owner_content)

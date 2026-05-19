@@ -685,6 +685,9 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         appearance_controller_content = (
             REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
         ).read_text(encoding='utf-8')
+        appearance_transport_summary_content = (
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_transport_summary.js'
+        ).read_text(encoding='utf-8')
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         state_config_content = (REPO_ROOT / 'js' / 'core' / 'state' / 'config.js').read_text(encoding='utf-8')
 
@@ -696,7 +699,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('const hasVisibleTransportFamily = () => !!(', appearance_controller_content)
         self.assertIn('if (normalized && hasVisibleTransportFamily()) {', appearance_controller_content)
         self.assertIn('runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");', appearance_controller_content)
-        self.assertIn('reason === "hidden"', appearance_controller_content)
+        self.assertIn('reason === "hidden"', appearance_transport_summary_content)
         self.assertIn('.catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));', appearance_controller_content)
         self.assertIn('const releaseDeferredContextForTransportToggle = (reason) => {', appearance_controller_content)
         self.assertIn('runtimeState.releaseDeferredContextBasePassFn?.(reason);', appearance_controller_content)
@@ -795,14 +798,31 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_rail_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
+        visibility_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_visibility_policy.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         self.assertIn('function getTransportOverviewLineRevealRankThreshold(familyId, value)', registry_content)
         self.assertIn('return normalized === "primary" ? 1 : normalized === "secondary" ? 2 : 3;', registry_content)
-        self.assertIn('if (revealRank > maximumRevealRank) return;', renderer_content)
-        self.assertIn('getTransportOverviewLineClassScopeRank("rail", lineClass) > minimumScopeRank', renderer_content)
+        self.assertIn('getIncludedTransportOverviewLineClass("rail", feature, strategy)', renderer_content)
+        self.assertIn('if (revealRank > Math.max(1, Math.round(Number(strategy.maximumRevealRank || 1)))) return "";', visibility_policy_content)
+        self.assertIn('getTransportOverviewLineClassScopeRank(normalizedFamilyId, lineClass) > Math.max(1, Math.round(Number(strategy.minimumScopeRank || 1)))', visibility_policy_content)
+        self.assertIn('getTransportOverviewLabelZoomConfig,', renderer_content)
+        self.assertIn('export function getTransportOverviewLabelZoomConfig(familyId, labelDensity)', visibility_policy_content)
+        self.assertIn('export function getTransportOverviewImportanceThresholdRank(value)', registry_content)
+        self.assertNotIn('export function getTransportOverviewImportanceThresholdRank', visibility_policy_content)
+        self.assertNotIn('function getTransportOverviewLabelZoomConfig', renderer_content)
+        self.assertNotIn('function getTransportOverviewImportanceThresholdRank', renderer_content)
+        self.assertNotIn('getContextFacilityThresholdRank', renderer_content)
+        self.assertNotIn('function getTransportAirportScopeThreshold', renderer_content)
+        self.assertNotIn('function getTransportPortScopeThreshold', renderer_content)
+        self.assertNotIn('getTransportOverviewImportanceThresholdRank,', renderer_content)
+        self.assertNotIn('getContextFacilityThresholdRank', visibility_policy_content)
+        self.assertNotIn('getTransportAirportScopeThreshold', visibility_policy_content)
+        self.assertNotIn('getTransportPortScopeThreshold', visibility_policy_content)
+        self.assertNotIn('getTransportPortZoomRevealFloor', visibility_policy_content)
 
     def test_road_renderer_uses_road_scope_threshold_helper(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
+        visibility_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_visibility_policy.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         self.assertIn('export function resolveTransportOverviewLineStrategy(familyId, familyConfig = {}, { scale = 1, visualMode = "distribution" } = {})', registry_content)
         self.assertIn('if (normalizedFamilyId === "road") {', registry_content)
@@ -810,8 +830,9 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('export function getTransportOverviewLineClassScopeRank(familyId, lineClass)', registry_content)
         self.assertIn('if (normalizedLineClass === "trunk") return 2;', registry_content)
         self.assertIn('const strategy = resolveTransportOverviewLineStrategy("road", roadConfig, {', renderer_content)
-        self.assertIn('const minimumScopeRank = strategy.minimumScopeRank;', renderer_content)
-        self.assertIn('getTransportOverviewLineClassScopeRank("road", roadClass) > minimumScopeRank', renderer_content)
+        self.assertIn('getIncludedTransportOverviewLineClass("road", feature, strategy)', renderer_content)
+        self.assertIn('export function getTransportOverviewFilteredFeatureCount({', visibility_policy_content)
+        self.assertIn('shouldIncludeTransportOverviewLineFeature(normalizedFamilyId, feature, strategy)', visibility_policy_content)
 
     def test_road_renderer_threshold_order_keeps_all_as_broadest_setting(self) -> None:
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
@@ -824,6 +845,25 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('rail: Object.freeze({', registry_content)
         self.assertIn('primaryColor: "#0f172a"', registry_content)
         self.assertIn('getTransportCapabilityDefaultOverviewConfig', state_defaults_content)
+
+    def test_transport_overview_renderer_consumes_visual_style_policy(self) -> None:
+        renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
+        style_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_style_policy.js').read_text(encoding='utf-8')
+        self.assertIn('from "./transport_overview_style_policy.js";', renderer_content)
+        self.assertIn('getTransportOverviewAirportVisualStyle,', renderer_content)
+        self.assertIn('getTransportOverviewPortVisualStyle,', renderer_content)
+        self.assertIn('getTransportOverviewRailVisualStyle,', renderer_content)
+        self.assertIn('getTransportOverviewRoadVisualStyle,', renderer_content)
+        self.assertNotIn('function getTransportOverviewRoadVisualStyle', renderer_content)
+        self.assertNotIn('function getTransportOverviewRailVisualStyle', renderer_content)
+        self.assertIn('export function getTransportOverviewRoadVisualStyle(primaryColor, visualStrength)', style_policy_content)
+        self.assertIn('export function getTransportOverviewRailVisualStyle(primaryColor, visualStrength)', style_policy_content)
+        self.assertIn('export function getTransportOverviewAirportVisualStyle(primaryColor, visualStrength)', style_policy_content)
+        self.assertIn('export function getTransportOverviewPortVisualStyle(primaryColor, visualStrength)', style_policy_content)
+        self.assertNotIn('function mixHexColors', style_policy_content)
+        self.assertNotIn('runtimeState', style_policy_content)
+        self.assertNotIn('context.', style_policy_content)
+        self.assertNotIn('canvas', style_policy_content)
 
     def test_rail_stations_placeholder_sidecars_remain_real_empty_collections(self) -> None:
         sample_station_path = (
@@ -914,13 +954,35 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_road_renderer_consumes_roads_with_inline_ref_name_labels(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
+        line_label_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_line_label_policy.js').read_text(encoding='utf-8')
         main_renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         self.assertIn('function drawRoadsLayer(k, { interactive = false } = {})', renderer_content)
         self.assertIn('runtimeState.roadsData', renderer_content)
         self.assertIn('!!runtimeState.showTransport && !!runtimeState.showRoad', renderer_content)
-        self.assertIn('getTransportOverviewRoadLabelText(properties, roadConfig.labelMode)', renderer_content)
+        self.assertIn('from "./transport_line_label_policy.js";', renderer_content)
+        self.assertIn('buildTransportOverviewLineStrokeSpecs,', renderer_content)
+        self.assertIn('getRoadLabelClassPriority,', renderer_content)
+        self.assertIn('priority: getRoadLabelClassPriority(roadClass)', renderer_content)
+        self.assertIn('export function buildTransportOverviewLineStrokeSpecs(style,', line_label_policy_content)
+        self.assertIn('export function resolveTransportOverviewLineCoordinateWidth(screenWidthPx, k, floorPx = 0.75)', line_label_policy_content)
+        self.assertIn('export function resolveTransportOverviewLineDash(dashPx, k)', line_label_policy_content)
+        self.assertNotIn('const classPriority = {', renderer_content)
+        self.assertNotIn('function resolveTransportOverviewLineCoordinateWidth', renderer_content)
+        self.assertNotIn('function resolveTransportOverviewLineDash', renderer_content)
+        self.assertIn('export function getTransportOverviewRoadLabelText(properties = {}, mode = "ref")', line_label_policy_content)
+        self.assertIn('export function getRoadLabelClassPriority(roadClass)', line_label_policy_content)
+        self.assertIn('export function resolveTransportRoadLabelClassAndPriority(properties = {})', line_label_policy_content)
         self.assertIn('labelCount', renderer_content)
-        self.assertIn('return getTransportOverviewRenderOwner().drawRoadsLayer(k, { interactive });', main_renderer_content)
+        self.assertIn('const transportOverviewOwner = getTransportOverviewRenderOwner();', main_renderer_content)
+        self.assertIn('transportOverviewOwner.drawRoadsLayer(k, { interactive });', main_renderer_content)
+        self.assertIn('transportOverviewOwner.drawRailwaysLayer(k, { interactive });', main_renderer_content)
+        self.assertIn('transportOverviewOwner.drawAirportsLayer(k, { interactive });', main_renderer_content)
+        self.assertIn('transportOverviewOwner.drawPortsLayer(k, { interactive });', main_renderer_content)
+        self.assertNotIn('function drawAirportsLayer(k, { interactive = false } = {})', main_renderer_content)
+        self.assertNotIn('function drawPortsLayer(k, { interactive = false } = {})', main_renderer_content)
+        self.assertNotIn('function drawRailwaysLayer(k, { interactive = false } = {})', main_renderer_content)
+        self.assertNotIn('function drawRoadsLayer(k, { interactive = false } = {})', main_renderer_content)
+        self.assertNotIn('function getTransportOverviewStyleConfig()', main_renderer_content)
         self.assertNotIn('state.roadLabelsData', renderer_content)
 
     def test_road_save_load_is_open_while_workbench_bridge_stays_closed(self) -> None:
@@ -934,8 +996,12 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('showRoad: !!layerVisibility.showRoad', ui_state_content)
         self.assertIn('if (state.showTransport && state.showRoad) {', interaction_content)
         self.assertIn('callRuntimeHook(state, "ensureContextLayerDataFn", "roads"', interaction_content)
-        bridge_section = registry_content.split('if (normalizedFamilyId === "road" || normalizedFamilyId === "rail") {', 1)[1].split('if (normalizedFamilyId === "airport")', 1)[0]
-        self.assertIn('supported: false', bridge_section)
+        self.assertIn('applyCompatibility: TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.mainMapBridge', registry_content)
+        self.assertIn('function getTransportWorkbenchActivePackBridgeSupport(normalizedFamilyId, familyConfig = {}, compatibility = "")', registry_content)
+        self.assertIn('if (!activePackId) return null;', registry_content)
+        self.assertIn('reason: "active_pack_required"', registry_content)
+        self.assertIn('|| !bridgeSupport.supported', registry_content)
+        self.assertIn('return null;', registry_content)
 
     def test_data_loader_no_longer_hardcodes_missing_global_transport_pack_paths(self) -> None:
         content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')

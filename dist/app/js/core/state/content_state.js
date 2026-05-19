@@ -1,3 +1,7 @@
+import {
+  createDefaultTransportCountryOverlayState,
+} from "../transport_country_overlay.js";
+
 // Content/data state defaults.
 // 这里收口 localization、topology、context layer 和底图数据默认 shape，
 // 避免 state.js 与 consumer reset/fallback 再次各写一份。
@@ -69,6 +73,7 @@ export function createDefaultContentState() {
     roadLabelsData: null,
     railwaysData: null,
     railStationsMajorData: null,
+    transportCountryOverlayState: createDefaultTransportCountryOverlayState(),
     oceanData: null,
     globalBathymetryTopologyData: null,
     globalBathymetryBandsData: null,

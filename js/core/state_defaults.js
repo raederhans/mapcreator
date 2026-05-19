@@ -11,6 +11,7 @@ import {
   getDefaultMainMapPackIdForFamily,
   getTargetMainMapPackMeta,
 } from "./transport_pack_resolver.js";
+import { normalizeHexColorWithFallback } from "./color_hex_utils.js";
 
 import {
   PALETTE_THEMES,
@@ -540,14 +541,7 @@ function normalizeTransportOverviewLabelDensity(value, fallback = "balanced") {
 }
 
 function normalizeTransportOverviewPrimaryColor(value, fallback = "#1d4ed8") {
-  const candidate = String(value || "").trim();
-  if (/^#(?:[0-9a-f]{6})$/i.test(candidate)) return candidate.toLowerCase();
-  if (/^#(?:[0-9a-f]{3})$/i.test(candidate)) {
-    return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`.toLowerCase();
-  }
-  const normalizedFallback = String(fallback || "").trim();
-  if (/^#(?:[0-9a-f]{6})$/i.test(normalizedFallback)) return normalizedFallback.toLowerCase();
-  return "#1d4ed8";
+  return normalizeHexColorWithFallback(value, fallback, "#1d4ed8");
 }
 
 function normalizeTransportOverviewImportanceThreshold(value, fallback = "primary") {
@@ -683,12 +677,7 @@ function createDefaultTextureStyleConfig() {
 }
 
 function normalizeTextureHexColor(value, fallback) {
-  const candidate = String(value || "").trim();
-  if (/^#(?:[0-9a-f]{6})$/i.test(candidate)) return candidate.toLowerCase();
-  if (/^#(?:[0-9a-f]{3})$/i.test(candidate)) {
-    return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`.toLowerCase();
-  }
-  return String(fallback || "#475569").trim().toLowerCase();
+  return normalizeHexColorWithFallback(value, fallback, "#475569");
 }
 
 function normalizeTextureStyleConfig(rawConfig) {

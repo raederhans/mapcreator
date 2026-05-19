@@ -3,6 +3,14 @@ import {
   getCountryCode as getFeatureCountryCode,
   getFeatureId as getSharedFeatureId,
 } from "./feature_identity.js";
+import {
+  getHexRelativeLuminance as getSharedHexRelativeLuminance,
+  hexToRgb as sharedHexToRgb,
+  mixHexColors as mixSharedHexColors,
+  normalizeHexColor as normalizeSharedHexColor,
+  rgbToHex as sharedRgbToHex,
+  srgbToLinear as sharedSrgbToLinear,
+} from "./color_hex_utils.js";
 
 class ColorManager {
   static regionPalette = [
@@ -139,26 +147,11 @@ class ColorManager {
   }
 
   static normalizeHexColor(value) {
-    const input = String(value || "").trim().toLowerCase();
-    const shortHex = /^#([0-9a-f]{3})$/.exec(input);
-    if (shortHex) {
-      return `#${shortHex[1]
-        .split("")
-        .map((char) => `${char}${char}`)
-        .join("")}`;
-    }
-    if (/^#[0-9a-f]{6}$/.test(input)) return input;
-    return null;
+    return normalizeSharedHexColor(value);
   }
 
   static hexToRgb(hex) {
-    const normalized = ColorManager.normalizeHexColor(hex);
-    if (!normalized) return null;
-    return {
-      r: parseInt(normalized.slice(1, 3), 16),
-      g: parseInt(normalized.slice(3, 5), 16),
-      b: parseInt(normalized.slice(5, 7), 16),
-    };
+    return sharedHexToRgb(hex);
   }
 
   static getStableObjectSignature(mapLike) {
@@ -189,11 +182,7 @@ class ColorManager {
   }
 
   static rgbToHex(r, g, b) {
-    const toHex = (value) =>
-      Math.round(ColorManager.clamp(value, 0, 255))
-        .toString(16)
-        .padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    return sharedRgbToHex(r, g, b);
   }
 
   static rgbToHsl(r, g, b) {
@@ -283,8 +272,15 @@ class ColorManager {
   }
 
   static srgbToLinear(value) {
-    if (value <= 0.04045) return value / 12.92;
-    return ((value + 0.055) / 1.055) ** 2.4;
+    return sharedSrgbToLinear(value);
+  }
+
+  static getHexRelativeLuminance(hex) {
+    return getSharedHexRelativeLuminance(hex);
+  }
+
+  static mixHexColors(baseColor, targetColor, amount) {
+    return mixSharedHexColors(baseColor, targetColor, amount);
   }
 
   static colorToLab(hex) {

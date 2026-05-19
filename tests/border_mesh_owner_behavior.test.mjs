@@ -115,6 +115,12 @@ test("getFrontlineMesh remains disabled after control layer retirement", () => {
 
   const { owner } = createTestOwner(state);
 
+  assert.deepEqual(owner.getFrontlineOwnershipContext(), {
+    ownershipByFeatureId: state.sovereigntyByFeatureId,
+    shellOwnerByFeatureId: state.scenarioAutoShellOwnerByFeatureId,
+    scenarioActive: true,
+    viewMode: "ownership",
+  });
   assert.equal(owner.getFrontlineMesh(), null);
   assert.equal(state.cachedFrontlineMesh, null);
   assert.equal(state.cachedFrontlineMeshHash, "");

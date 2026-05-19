@@ -7,6 +7,7 @@ TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface.js"
 TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
+TRANSPORT_FACILITY_DISPLAY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_display_policy.js"
 TRANSPORT_FACILITY_ICONS_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icons.js"
 FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
 
@@ -80,6 +81,18 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("buildFacilityInfoCardFieldSections: buildFacilityInfoCardRows", owner_content)
         self.assertIn('facilityInfoCardMoreBtn.textContent = t(expanded ? "Less fields" : "More fields", "ui");', owner_content)
 
+    def test_transport_overview_owner_delegates_facility_display_policy(self):
+        transport_owner_content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
+        display_policy_content = TRANSPORT_FACILITY_DISPLAY_POLICY_JS.read_text(encoding="utf-8")
+        self.assertIn("findTransportFacilityLabelPlacement,", transport_owner_content)
+        self.assertIn("getTransportFacilityLabelCandidates,", transport_owner_content)
+        self.assertIn("doTransportFacilityLabelBoxesOverlap(", transport_owner_content)
+        self.assertIn("export function getTransportFacilityLabelCandidates(entries,", display_policy_content)
+        self.assertIn("export function findTransportFacilityLabelPlacement(entry,", display_policy_content)
+        self.assertIn("export function doTransportFacilityLabelBoxesOverlap(left, right)", display_policy_content)
+        self.assertNotIn("function findTransportFacilityLabelPlacement", transport_owner_content)
+        self.assertNotIn("function rectanglesOverlap", transport_owner_content)
+
     def test_airport_and_port_layers_use_icon_atlas_and_screen_space_hits(self):
         content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
         icon_owner_content = TRANSPORT_FACILITY_ICONS_JS.read_text(encoding="utf-8")
@@ -139,20 +152,37 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
     def test_toolbar_summary_uses_filtered_transport_counts(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
+        summary_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_transport_summary.js").read_text(encoding="utf-8")
         toolbar_required_tokens = [
             'registerRuntimeHook(state, "updateTransportAppearanceUIFn", renderTransportAppearanceUi);',
         ]
         owner_required_tokens = [
-            "const getTransportFamilyFilteredCount = (familyId, familyConfig, effectiveScope) => {",
-            "const formatTransportFamilyCountText = (familyId, count) => {",
+            'from "./appearance_transport_summary.js";',
             'getTransportAppearanceConfig().airport.primaryColor = normalizeOceanFillColor(event.target.value || "#1d4ed8");',
             'getTransportAppearanceConfig().port.primaryColor = normalizeOceanFillColor(event.target.value || "#b45309");',
-            "getTransportFamilyFilteredCount(familyId, familyConfig, effectiveScope)",
+            "buildTransportFamilySummaryTextForState({",
+            "formatTransportPercent,",
+            "formatTransportScopeLabel,",
+            "formatTransportThresholdLabel,",
+        ]
+        summary_required_tokens = [
+            'from "../../core/renderer/transport_overview_visibility_policy.js";',
+            "export function getTransportFamilyFilteredCount({",
+            "export function formatTransportFamilyCountText(familyId, count, translate)",
+            "export function formatTransportPercent(value)",
+            "export function formatTransportScopeLabel(value)",
+            "export function formatTransportThresholdLabel(value)",
+            "return getTransportOverviewFilteredFeatureCount({",
+            "const filteredCount = getTransportFamilyFilteredCount({",
         ]
         for token in toolbar_required_tokens:
             self.assertIn(token, toolbar_content)
         for token in owner_required_tokens:
             self.assertIn(token, owner_content)
+        for token in summary_required_tokens:
+            self.assertIn(token, summary_content)
+        self.assertNotIn("runtimeState", summary_content)
+        self.assertNotIn("const formatTransportPercent = (value)", owner_content)
 
     def test_state_and_i18n_cover_transport_primary_color_and_more_fields(self):
         state_content = (
@@ -171,6 +201,9 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("labelSize: 9", state_content)
         self.assertIn("labelHalo: 0.22", state_content)
         self.assertIn("function normalizeTransportOverviewPrimaryColor", state_content)
+        self.assertIn('import { normalizeHexColorWithFallback } from "./color_hex_utils.js";', state_content)
+        self.assertIn('return normalizeHexColorWithFallback(value, fallback, "#1d4ed8");', state_content)
+        self.assertIn('return normalizeHexColorWithFallback(value, fallback, "#475569");', state_content)
         for token in ['"Primary Color"', '"Label Halo"', '"Allow Underlying Map Selection"', '"More fields"', '"Less fields"', '"Locate and zoom"', '"airport"', '"airports"', '"port"', '"ports"', '"Owner"', '"Manager"', '"Status"', '"Agencies"', '"Ferry service"', '"Unnamed facility"']:
           self.assertIn(token, i18n_content)
 

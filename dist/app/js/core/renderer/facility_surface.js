@@ -1,3 +1,24 @@
+export function shouldBlockUnderlyingMapSelectionForFacility(entry, allowUnderlyingMapSelection = false) {
+  const familyId = String(entry?.familyId || "").trim().toLowerCase();
+  return (familyId === "airport" || familyId === "port") && !allowUnderlyingMapSelection;
+}
+
+export function buildUnderlyingMapHoverClearPatch(currentState = {}) {
+  const hadUnderlyingHover = !!(
+    currentState.hoveredId
+    || currentState.hoveredWaterRegionId
+    || currentState.hoveredSpecialRegionId
+    || currentState.devHoverHit?.id
+  );
+  return {
+    hadUnderlyingHover,
+    hoveredId: null,
+    hoveredWaterRegionId: null,
+    hoveredSpecialRegionId: null,
+    devHoverHit: null,
+  };
+}
+
 export function createFacilitySurfaceOwner({
   helpers = {},
 } = {}) {

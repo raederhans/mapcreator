@@ -20,17 +20,16 @@ class MapRendererCityLabelOwnerBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn("let cityLabelOwner = null;", renderer_content)
         self.assertIn("function getCityLabelOwner() {", renderer_content)
-        self.assertIn("const drawCityLabelsFromEntries = (...args) => getCityLabelOwner().drawCityLabelsFromEntries(...args);", renderer_content)
+        self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+drawCityLabelsFromEntries\s*=", renderer_content))
+        self.assertIsNone(re.search(r"function\s+drawCityLabelsFromEntries\s*\(", renderer_content))
         self.assertIn("function drawLabelsPass(k, { interactive = false } = {}) {", renderer_content)
-        self.assertIn("const labelCount = drawCityLabelsFromEntries(renderState.labelEntries, {", renderer_content)
+        self.assertIn("const labelCount = getCityLabelOwner().drawCityLabelsFromEntries(renderState.labelEntries, {", renderer_content)
 
         self.assertIn("export function createCityLabelOwner({ constants = {}, getters = {}, helpers = {} } = {}) {", owner_content)
         self.assertIn("function drawCityLabelsFromEntries(labelEntries, { config, scale } = {}) {", owner_content)
         self.assertIn("function doScreenBoxesOverlap(a, b) {", owner_content)
         self.assertIn("entry.acceptedLabelPlacement = acceptedPlacement.id;", owner_content)
         self.assertIn("entry.labelContrastMode = labelStyle.usesLightLabel ? \"light\" : \"default\";", owner_content)
-
-        self.assertIsNone(re.search(r"function\s+drawCityLabelsFromEntries\s*\(", renderer_content))
         self.assertIsNone(re.search(r"function\s+doScreenBoxesOverlap\s*\(", renderer_content))
 
 

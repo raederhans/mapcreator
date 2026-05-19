@@ -10,6 +10,17 @@ import {
   resolveTransportFacilityIconDrawSizePx,
   resolveTransportFacilityIconKey,
 } from "../js/core/renderer/transport_facility_icons.js";
+import {
+  applyTransportFacilityDensity,
+  compactTransportFacilityName,
+  doTransportFacilityLabelBoxesOverlap,
+  findTransportFacilityLabelPlacement,
+  getTransportFacilityDensityStrategy,
+  getTransportFacilityEntryStableSortKey,
+  getTransportFacilityLabelCandidates,
+  getTransportOverviewAirportLabelText,
+  getTransportOverviewPortLabelText,
+} from "../js/core/renderer/transport_facility_display_policy.js";
 import { createTransportOverviewRenderOwner } from "../js/core/renderer/transport_overview_render_owner.js";
 
 const globalAirportsUrl = new URL("../data/transport_layers/global_airport/airports.geojson", import.meta.url);
@@ -332,6 +343,86 @@ test("facility density keeps fewer world entries than regional and local entries
   assert.equal(counts[2]?.densityLevel, "local");
   assert.ok(counts[0].visibleFeatureCount < counts[1].visibleFeatureCount, "world density should hide the most clustered points");
   assert.ok(counts[1].visibleFeatureCount <= counts[2].visibleFeatureCount, "local density should keep at least regional detail");
+});
+
+test("facility display policy keeps deterministic density and compact labels", () => {
+  assert.deepEqual(getTransportFacilityDensityStrategy(1.2), { level: "world", gridSizePx: 56, maxVisible: 600 });
+  assert.deepEqual(getTransportFacilityDensityStrategy(3), { level: "regional", gridSizePx: 32, maxVisible: 1200 });
+  assert.deepEqual(getTransportFacilityDensityStrategy(5), { level: "local", gridSizePx: 16, maxVisible: 5000 });
+
+  const densityEntries = [
+    { importanceRank: 1, stableSortKey: "b", screenX: 8, screenY: 8 },
+    { importanceRank: 3, stableSortKey: "a", screenX: 9, screenY: 9 },
+    { importanceRank: 2, stableSortKey: "c", screenX: 80, screenY: 8 },
+  ];
+  const filtered = applyTransportFacilityDensity(densityEntries, { gridSizePx: 16, maxVisible: 3 });
+  assert.deepEqual(filtered.map((entry) => entry.stableSortKey), ["a", "c"]);
+
+  const labelCandidates = getTransportFacilityLabelCandidates([
+    { label: "Regional Long Name", importanceRank: 2, stableSortKey: "c" },
+    { label: "Major Longer", importanceRank: 3, stableSortKey: "b" },
+    { label: "Major", importanceRank: 3, stableSortKey: "a" },
+    { label: "", importanceRank: 4, stableSortKey: "d" },
+  ], {
+    k: 6,
+    configuredLabelSize: 9,
+    nationalLabelScale: 2,
+    regionalLabelScale: 5,
+  });
+  assert.deepEqual(labelCandidates.map((entry) => entry.stableSortKey), ["a", "b", "c"]);
+  assert.deepEqual(getTransportFacilityLabelCandidates([
+    { label: "Regional Long Name", importanceRank: 2, stableSortKey: "c" },
+  ], {
+    k: 5,
+    configuredLabelSize: 12,
+    nationalLabelScale: 2,
+    regionalLabelScale: 5,
+  }), []);
+
+  const placements = findTransportFacilityLabelPlacement({
+    label: "Alpha",
+    screenX: 100,
+    screenY: 50,
+  }, {
+    fontSizePx: 10,
+    iconSizePx: 12,
+    zoomScale: 2,
+    measureText: () => 30,
+    zoomTransform: { x: 20, y: 30 },
+  });
+  assert.equal(placements?.[0]?.textX, 110);
+  assert.equal(placements?.[0]?.worldX, 45);
+  assert.equal(placements?.[0]?.worldY, 10);
+  assert.equal(findTransportFacilityLabelPlacement({ label: "" }), null);
+  assert.equal(
+    doTransportFacilityLabelBoxesOverlap(
+      { x: 0, y: 0, width: 10, height: 10 },
+      { x: 9, y: 9, width: 10, height: 10 },
+    ),
+    true,
+  );
+  assert.equal(
+    doTransportFacilityLabelBoxesOverlap(
+      { x: 0, y: 0, width: 10, height: 10 },
+      { x: 10, y: 10, width: 10, height: 10 },
+    ),
+    false,
+  );
+
+  assert.equal(
+    getTransportFacilityEntryStableSortKey(
+      { id: "feature-id" },
+      { stable_key: "", name: "Named Facility" },
+      [139.7, 35.7],
+    ),
+    "Named Facility",
+  );
+  assert.equal(getTransportFacilityEntryStableSortKey({ id: "feature-id" }, {}, []), "feature-id");
+  assert.equal(getTransportFacilityEntryStableSortKey({ id: "feature-id" }, {}, [139.7, 35.7]), "139.7:35.7");
+  assert.equal(compactTransportFacilityName("Tokyo International Airport Haneda", "airport"), "Tokyo Intl Haneda");
+  assert.equal(compactTransportFacilityName("Port of Yokohama Harbor", "port"), "Yokohama Hbr");
+  assert.equal(getTransportOverviewAirportLabelText({ iata: "HND", name: "Tokyo International Airport Haneda" }, "adaptive", { scale: 6, importanceRank: 3 }), "HND · Tokyo Intl Haneda");
+  assert.equal(getTransportOverviewPortLabelText({ name: "Port of Yokohama Harbor", legal_designation_label: "International hub" }, "adaptive", { scale: 6, importanceRank: 3 }), "Yokohama Hbr · International hub");
 });
 
 test("facility labels use bbox placement and report drawn labelCount", () => {

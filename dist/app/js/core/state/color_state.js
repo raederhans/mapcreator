@@ -293,7 +293,7 @@ export function sanitizeRegionOverrideColors(
     };
   }
   target.waterRegionOverrides = sanitizeColorMap(target.waterRegionOverrides);
-  target.specialRegionOverrides = sanitizeColorMap(target.specialRegionOverrides);
+  target.specialRegionOverrides = {};
   return {
     waterRegionOverrides: target.waterRegionOverrides,
     specialRegionOverrides: target.specialRegionOverrides,

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  getTransportOverviewLineClassScopeRank,
+  getTransportOverviewImportanceThresholdRank,
   resolveTransportOverviewLineStrategy,
 } from "../js/core/transport_capability_registry.js";
 import {
@@ -13,32 +13,74 @@ import {
   applyTransportCountryOverlayState,
 } from "../js/core/transport_country_overlay.js";
 import { createTransportOverviewRenderOwner } from "../js/core/renderer/transport_overview_render_owner.js";
+import {
+  formatCityPointsDensityValue,
+  getCityPointsLabelDensityHint,
+  getCityPointsThemeHint,
+  getCityPointsThemeLabel,
+  getCityPointsThemeMeta,
+  getCityPointsThemeStyle,
+} from "../js/ui/toolbar/appearance_city_points_descriptor.js";
+import {
+  buildTransportFamilySummaryText,
+  formatTransportPercent,
+  formatTransportScopeLabel,
+  formatTransportThresholdLabel,
+  getTransportFamilyRenderMetric,
+} from "../js/ui/toolbar/appearance_transport_summary.js";
+import {
+  buildTransportOverviewLineStrokeSpecs,
+  getTransportLineFeatureLabelAnchor,
+  getTransportLineLabelGridSize,
+  getTransportOverviewRailLabelText,
+  getTransportOverviewRoadLabelText,
+  measureProjectedLineSetLength,
+  projectTransportLineGeometry,
+  resolveTransportOverviewLineCoordinateWidth,
+  resolveTransportOverviewLineDash,
+  resolveTransportRoadLabelClassAndPriority,
+} from "../js/core/renderer/transport_line_label_policy.js";
+import {
+  getIncludedTransportOverviewLineClass,
+  getTransportOverviewLabelZoomConfig,
+  shouldIncludeTransportOverviewLineFeature,
+} from "../js/core/renderer/transport_overview_visibility_policy.js";
+import {
+  getTransportOverviewAirportVisualStyle,
+  getTransportOverviewPortVisualStyle,
+  getTransportOverviewPrimaryColor,
+  getTransportOverviewRailVisualStyle,
+  getTransportOverviewRoadVisualStyle,
+} from "../js/core/renderer/transport_overview_style_policy.js";
 
 const mapRendererSource = readFileSync(new URL("../js/core/map_renderer.js", import.meta.url), "utf8");
 
 const LINE_FIXTURES = Object.freeze({
   road: Object.freeze([
-    { className: "motorway", revealRank: 1 },
-    { className: "motorway", revealRank: 2 },
-    { className: "trunk", revealRank: 2 },
-    { className: "primary", revealRank: 3 },
-    { className: "secondary", revealRank: 3 },
+    { type: "Feature", properties: { class: "motorway", reveal_rank: 1 } },
+    { type: "Feature", properties: { class: "motorway", reveal_rank: 2 } },
+    { type: "Feature", properties: { class: "trunk", reveal_rank: 2 } },
+    { type: "Feature", properties: { class: "primary", reveal_rank: 3 } },
+    { type: "Feature", properties: { class: "secondary", reveal_rank: 3 } },
   ]),
   rail: Object.freeze([
-    { className: "mainline", revealRank: 1 },
-    { className: "mainline", revealRank: 2 },
-    { className: "regional", revealRank: 2 },
-    { className: "secondary", revealRank: 2 },
+    { type: "Feature", properties: { class: "mainline", reveal_rank: 1 } },
+    { type: "Feature", properties: { class: "mainline", reveal_rank: 2 } },
+    { type: "Feature", properties: { class: "regional", reveal_rank: 2 } },
+    { type: "Feature", properties: { class: "secondary", reveal_rank: 2 } },
   ]),
 });
 
+function assertClose(actual, expected, message = "") {
+  assert.ok(
+    Math.abs(actual - expected) < 1e-9,
+    message || `expected ${actual} to be close to ${expected}`,
+  );
+}
+
 function countVisibleLines(familyId, config, scale) {
   const strategy = resolveTransportOverviewLineStrategy(familyId, config, { scale });
-  return LINE_FIXTURES[familyId].filter((feature) => {
-    if (feature.revealRank > strategy.maximumRevealRank) return false;
-    if (getTransportOverviewLineClassScopeRank(familyId, feature.className) > strategy.minimumScopeRank) return false;
-    return true;
-  }).length;
+  return LINE_FIXTURES[familyId].filter((feature) => shouldIncludeTransportOverviewLineFeature(familyId, feature, strategy)).length;
 }
 
 test("rail and road line scope thresholds still constrain counts across overview scales", () => {
@@ -68,6 +110,262 @@ test("rail and road line scope thresholds still constrain counts across overview
     3,
     "road motorway_trunk scope should keep primary/secondary out even when threshold is all",
   );
+
+  const roadBroadStrategy = resolveTransportOverviewLineStrategy(
+    "road",
+    { scope: "motorway_trunk", importanceThreshold: "secondary" },
+    { scale: 5 },
+  );
+  assert.equal(getIncludedTransportOverviewLineClass("road", { properties: { class: "service", reveal_rank: 1 } }, roadBroadStrategy), "");
+  assert.equal(getIncludedTransportOverviewLineClass("road", { properties: { class: "trunk" } }, roadBroadStrategy), "trunk");
+  assert.equal(shouldIncludeTransportOverviewLineFeature("road", { properties: { class: "primary", reveal_rank: 3 } }, roadBroadStrategy), false);
+});
+
+test("transport overview visibility policy keeps label zoom and point threshold boundaries deterministic", () => {
+  assert.deepEqual(getTransportOverviewLabelZoomConfig("airport", "balanced"), {
+    nationalLabelScale: 2,
+    regionalLabelScale: 5,
+  });
+  const sparsePortZoom = getTransportOverviewLabelZoomConfig("port", "sparse");
+  assertClose(sparsePortZoom.nationalLabelScale, 2.9);
+  assertClose(sparsePortZoom.regionalLabelScale, 6.5);
+  const denseRailZoom = getTransportOverviewLabelZoomConfig("rail", "dense");
+  assertClose(denseRailZoom.nationalLabelScale, 1.85);
+  assertClose(denseRailZoom.regionalLabelScale, 4.5);
+  assert.equal(getTransportOverviewImportanceThresholdRank("primary"), 3);
+  assert.equal(getTransportOverviewImportanceThresholdRank("secondary"), 2);
+  assert.equal(getTransportOverviewImportanceThresholdRank("all"), 1);
+  assert.equal(getTransportOverviewImportanceThresholdRank("unknown"), 1);
+});
+
+test("transport line label policy keeps label text, anchors, and projected length deterministic", () => {
+  assert.equal(getTransportLineLabelGridSize("dense"), 112);
+  assert.equal(getTransportLineLabelGridSize("sparse"), 176);
+  assert.equal(getTransportLineLabelGridSize("balanced"), 144);
+
+  assert.equal(getTransportOverviewRailLabelText({ name: "Tokaido Main Line" }, "name"), "Tokaido Main Line");
+  assert.equal(getTransportOverviewRoadLabelText({ ref: "A1", name: "Autobahn 1" }, "ref"), "A1");
+  assert.equal(getTransportOverviewRoadLabelText({ ref: "A1", name: "Autobahn 1" }, "name"), "Autobahn 1");
+  assert.equal(getTransportOverviewRoadLabelText({ ref: "A1", name: "Autobahn 1" }, "both"), "A1 · Autobahn 1");
+
+  assert.deepEqual(resolveTransportRoadLabelClassAndPriority({ road_class: "trunk" }), {
+    roadClass: "trunk",
+    priority: 3,
+  });
+  assert.deepEqual(resolveTransportRoadLabelClassAndPriority({ priority: 4 }), {
+    roadClass: "motorway",
+    priority: 4,
+  });
+
+  const lineFeature = {
+    type: "Feature",
+    geometry: { type: "LineString", coordinates: [[0, 0], [1, 1], [2, 1]] },
+    properties: {},
+  };
+  const anchor = getTransportLineFeatureLabelAnchor(lineFeature, {
+    getLineMidpointFromCoordinates: (coordinates) => coordinates[1],
+    getMultiLineLabelAnchor: () => null,
+  });
+  assert.deepEqual(anchor, [1, 1]);
+
+  const projectedLines = projectTransportLineGeometry(lineFeature.geometry, ([x, y]) => [x * 3, y * 4]);
+  assert.deepEqual(projectedLines, [[[0, 0], [3, 4], [6, 4]]]);
+  assert.equal(measureProjectedLineSetLength(projectedLines), 8);
+});
+
+test("transport line label policy keeps line stroke specs in screen-pixel units", () => {
+  assert.equal(resolveTransportOverviewLineCoordinateWidth(2, 4, 0.75), 0.5);
+  assert.equal(resolveTransportOverviewLineCoordinateWidth(0.25, 4, 0.75), 0.1875);
+  assert.deepEqual(resolveTransportOverviewLineDash([6, 0, -2, 4], 2), [3, 2]);
+  assert.deepEqual(resolveTransportOverviewLineDash(null, 2), []);
+
+  const strokeSpecs = buildTransportOverviewLineStrokeSpecs({
+    casingStroke: "#ffffff",
+    innerStroke: "#111827",
+    casingWidth: 4,
+    innerWidth: 2,
+    opacity: 0.5,
+    dashPx: [6, 4],
+  }, {
+    baseOpacity: 0.8,
+    strategy: { widthMultiplier: 1.5, opacityMultiplier: 0.75 },
+    k: 3,
+    widthFloorPx: 0.75,
+  });
+  assert.equal(strokeSpecs.length, 2);
+  assert.deepEqual(strokeSpecs.map((spec) => spec.strokeStyle), ["#ffffff", "#111827"]);
+  assertClose(strokeSpecs[0].lineWidth, 2);
+  assertClose(strokeSpecs[1].lineWidth, 1);
+  assertClose(strokeSpecs[0].opacity, 0.246);
+  assertClose(strokeSpecs[1].opacity, 0.3);
+  assert.deepEqual(strokeSpecs[0].dash, []);
+  assert.deepEqual(strokeSpecs[1].dash, [2, 4 / 3]);
+});
+
+test("transport overview style policy keeps family visual tokens deterministic", () => {
+  assert.equal(getTransportOverviewPrimaryColor("bad-color", "#123456"), "#123456");
+  assert.equal(getTransportOverviewPrimaryColor("#ABC"), "#aabbcc");
+
+  const airportStyle = getTransportOverviewAirportVisualStyle("#000000", 2);
+  assert.equal(airportStyle.fillStyle, "#000000");
+  assertClose(airportStyle.radiusScale, 1.57);
+  assertClose(airportStyle.strokeScale, 1.25);
+  assertClose(airportStyle.hoverScale, 1.24);
+  assert.match(airportStyle.labelColor, /^#[0-9a-f]{6}$/);
+
+  const portStyle = getTransportOverviewPortVisualStyle(null, -1);
+  assert.equal(portStyle.fillStyle, "#b45309");
+  assertClose(portStyle.radiusScale, 0.95);
+
+  const railStyle = getTransportOverviewRailVisualStyle("#0f172a", 1);
+  assertClose(railStyle.mainlineCasingWidth, 5);
+  assertClose(railStyle.mainlineWidth, 2.8);
+  assertClose(railStyle.mainlineOpacity, 1);
+  assert.deepEqual(railStyle.regionalDashPx, [5.5, 4.5]);
+  assert.deepEqual(railStyle.secondaryDashPx, [2.8, 4.8]);
+
+  const roadStyle = getTransportOverviewRoadVisualStyle("#374151", 0);
+  assertClose(roadStyle.motorwayCasingWidth, 3.45);
+  assertClose(roadStyle.motorwayWidth, 1.55);
+  assertClose(roadStyle.secondaryWidth, 0.62);
+  assertClose(roadStyle.secondaryOpacity, 0.24);
+  assert.deepEqual(roadStyle.trunkDashPx, [6, 5]);
+  assert.deepEqual(roadStyle.primaryDashPx, [4.2, 5.4]);
+  assert.deepEqual(roadStyle.secondaryDashPx, [2.6, 5.8]);
+});
+
+test("appearance transport summary reports hidden, loading, visible, and loaded states", () => {
+  const translate = (key) => key;
+  const collections = {
+    road: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", properties: { class: "motorway", reveal_rank: 1 } },
+        { type: "Feature", properties: { class: "trunk", reveal_rank: 2 } },
+      ],
+    },
+    rail: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", properties: { class: "mainline", reveal_rank: 1 } },
+      ],
+    },
+    airport: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", properties: { importance_rank: 1 } },
+      ],
+    },
+    port: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", properties: { importance_rank: 1 } },
+      ],
+    },
+  };
+  const baseInput = {
+    familyConfig: { scope: "motorway_trunk", importanceThreshold: "secondary" },
+    effectiveScope: { scope: "motorway_trunk", importanceThreshold: "secondary" },
+    collections,
+    zoomScale: 4,
+    visualMode: "distribution",
+    translate,
+  };
+
+  assert.equal(buildTransportFamilySummaryText({
+    ...baseInput,
+    familyId: "road",
+    masterEnabled: false,
+    familyEnabled: true,
+    metrics: {},
+  }), "Hidden");
+
+  assert.match(buildTransportFamilySummaryText({
+    ...baseInput,
+    familyId: "airport",
+    masterEnabled: true,
+    familyEnabled: true,
+    metrics: { drawAirportsLayer: { reason: "staged-apply" } },
+  }), /^Loading\/settling/);
+
+  assert.match(buildTransportFamilySummaryText({
+    ...baseInput,
+    familyId: "road",
+    masterEnabled: true,
+    familyEnabled: true,
+    metrics: { drawRoadsLayer: { reason: "complete", visibleFeatureCount: 2, featureCount: 2 } },
+  }), /^Visible · 2 roads/);
+
+  assert.match(buildTransportFamilySummaryText({
+    ...baseInput,
+    familyId: "road",
+    masterEnabled: true,
+    familyEnabled: true,
+    metrics: { drawRoadsLayer: { reason: "complete", visibleFeatureCount: 0, featureCount: 2 } },
+  }), /^Loaded · 0 visible · 2 roads loaded/);
+});
+
+test("appearance transport summary prefers contextBreakdown metrics and ignores global metrics", () => {
+  assert.equal(getTransportFamilyRenderMetric("road", {
+    contextBreakdown: {
+      drawRoadsLayer: { reason: "context-breakdown" },
+    },
+    drawRoadsLayer: { reason: "root-metric" },
+  })?.reason, "context-breakdown");
+
+  const previousMetrics = globalThis.__renderPerfMetrics;
+  globalThis.__renderPerfMetrics = {
+    drawRoadsLayer: { reason: "global-metric" },
+  };
+  try {
+    assert.equal(getTransportFamilyRenderMetric("road", null), null);
+  } finally {
+    globalThis.__renderPerfMetrics = previousMetrics;
+  }
+});
+
+test("appearance transport summary keeps invalid family ids explicit and empty", () => {
+  assert.equal(buildTransportFamilySummaryText({
+    familyId: "pipeline",
+    masterEnabled: true,
+    familyEnabled: true,
+    familyConfig: {},
+    effectiveScope: {},
+    collections: {
+      airport: { type: "FeatureCollection", features: [{ type: "Feature", properties: { importance_rank: 1 } }] },
+    },
+    metrics: {},
+    zoomScale: 4,
+    visualMode: "distribution",
+    translate: (key) => key,
+  }), "Loading/settling");
+
+  assert.equal(getTransportFamilyRenderMetric("pipeline", {
+    drawAirportsLayer: { reason: "airport" },
+  }), null);
+});
+
+test("appearance city-points descriptor returns stable theme labels, colors, and hints", () => {
+  const translated = getCityPointsThemeLabel("atlas_ink", (key, domain) => `${domain}:${key}`);
+  assert.equal(translated, "ui:Atlas Ink");
+  assert.equal(Object.isFrozen(getCityPointsThemeMeta("atlas_ink")), true);
+  assert.equal(Object.isFrozen(getCityPointsThemeStyle("atlas_ink")), true);
+  assert.equal(getCityPointsThemeMeta("missing_theme").value, "classic_graphite");
+  assert.equal(getCityPointsThemeStyle("atlas_ink").color, "#35506e");
+  assert.match(getCityPointsThemeHint("classic_graphite", "zh"), /石墨灰/);
+  assert.match(getCityPointsThemeHint("classic_graphite", "en"), /graphite/i);
+  assert.match(getCityPointsLabelDensityHint("dense", "zh"), /P4 32/);
+  assert.match(getCityPointsLabelDensityHint("sparse", "en"), /P4 16/);
+  assert.equal(formatCityPointsDensityValue(1.25), "1.25x");
+  assert.equal(formatCityPointsDensityValue(undefined), "1.00x");
+});
+
+test("appearance transport summary exposes pure display formatters", () => {
+  assert.equal(formatTransportPercent(0.625), "63%");
+  assert.equal(formatTransportPercent(undefined), "0%");
+  assert.equal(formatTransportScopeLabel("major_civil"), "Major Civil");
+  assert.equal(formatTransportThresholdLabel("primary_only"), "Primary Only");
+  assert.equal(formatTransportScopeLabel(""), "");
 });
 
 

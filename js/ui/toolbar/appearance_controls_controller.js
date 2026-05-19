@@ -11,14 +11,25 @@ import {
   resolveLinkedTransportOverviewScopeAndThreshold,
 } from "../../core/state.js";
 import {
-  getTransportOverviewLineClassScopeRank,
-  getTransportOverviewLineSummaryMeta,
   normalizeTransportOverviewVisualMode,
-  resolveTransportOverviewLineStrategy,
-  resolveTransportOverviewPointStrategy,
 } from "../../core/transport_capability_registry.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { captureHistoryState, pushHistoryEntry } from "../../core/history_manager.js";
+import {
+  CITY_POINTS_THEME_OPTIONS,
+  formatCityPointsDensityValue,
+  getCityPointsLabelDensityHint,
+  getCityPointsThemeHint,
+  getCityPointsThemeLabel,
+  getCityPointsThemeMeta,
+  getCityPointsThemeStyle,
+} from "./appearance_city_points_descriptor.js";
+import {
+  buildTransportFamilySummaryText as buildTransportFamilySummaryTextForState,
+  formatTransportPercent,
+  formatTransportScopeLabel,
+  formatTransportThresholdLabel,
+} from "./appearance_transport_summary.js";
 
 /**
  * Owns the Appearance 面板里的 transport appearance、tab/filter、recent colors、
@@ -632,77 +643,6 @@ export function createAppearanceControlsController({
     return runtimeState.styleConfig.cityPoints;
   };
 
-  const CITY_POINTS_THEME_OPTIONS = [
-    { value: "classic_graphite", labelKey: "optCityPointsThemeClassicGraphite", fallback: "Classic Graphite" },
-    { value: "atlas_ink", labelKey: "optCityPointsThemeAtlasInk", fallback: "Atlas Ink" },
-    { value: "parchment_sepia", labelKey: "optCityPointsThemeParchmentSepia", fallback: "Parchment Sepia" },
-    { value: "slate_blue", labelKey: "optCityPointsThemeSlateBlue", fallback: "Slate Blue" },
-    { value: "ivory_outline", labelKey: "optCityPointsThemeIvoryOutline", fallback: "Ivory Outline" },
-  ];
-
-  const getCityPointsThemeMeta = (themeValue) =>
-    CITY_POINTS_THEME_OPTIONS.find((option) => option.value === String(themeValue || "").trim().toLowerCase())
-    || CITY_POINTS_THEME_OPTIONS[0];
-
-  const getCityPointsThemeLabel = (themeValue) => {
-    const meta = getCityPointsThemeMeta(themeValue);
-    return t(meta.fallback, "ui");
-  };
-
-  const CITY_POINTS_THEME_DEFAULT_STYLES = {
-    classic_graphite: {
-      color: "#2f343a",
-      capitalColor: "#9f9072",
-      hintEn: "Neutral graphite markers that stay readable on mixed political fills.",
-      hintZh: "中性的石墨灰点位，适合混合政治底图，整体最稳。 ",
-    },
-    atlas_ink: {
-      color: "#35506e",
-      capitalColor: "#d2aa72",
-      hintEn: "Cool blue-ink markers with a cleaner atlas feel and clearer outlines.",
-      hintZh: "偏蓝墨水感的点位，轮廓更清楚，更像地图集标注。",
-    },
-    parchment_sepia: {
-      color: "#866245",
-      capitalColor: "#c78d55",
-      hintEn: "Warmer sepia markers tuned for historical overlays and paper-like palettes.",
-      hintZh: "更暖的棕褐色点位，适合历史纸面和偏暖色地图。",
-    },
-    slate_blue: {
-      color: "#566c86",
-      capitalColor: "#d4b178",
-      hintEn: "Cool slate-blue markers that sit quietly on modern, cleaner political maps.",
-      hintZh: "偏冷的石板蓝点位，适合更现代、更干净的政治底图。",
-    },
-    ivory_outline: {
-      color: "#ddd2bf",
-      capitalColor: "#b27a4a",
-      hintEn: "Light ivory fills with darker rims for stronger contrast on darker land colors.",
-      hintZh: "浅象牙底配深描边，在深色国土上会更显眼。",
-    },
-  };
-
-  const getCityPointsThemeStyle = (themeValue) =>
-    CITY_POINTS_THEME_DEFAULT_STYLES[getCityPointsThemeMeta(themeValue).value]
-    || CITY_POINTS_THEME_DEFAULT_STYLES.classic_graphite;
-
-  const getCityPointsThemeHint = (themeValue) => {
-    const themeStyle = getCityPointsThemeStyle(themeValue);
-    return runtimeState.currentLanguage === "zh" ? themeStyle.hintZh.trim() : themeStyle.hintEn;
-  };
-
-  const getCityPointsLabelDensityHint = (densityValue) => {
-    const normalized = String(densityValue || "balanced").trim().toLowerCase();
-    if (runtimeState.currentLanguage === "zh") {
-      if (normalized === "sparse") return "Sparse · 标签预算 P4 16 / P5 32，只保留更关键的名称。";
-      if (normalized === "dense") return "Dense · 标签预算 P4 32 / P5 64，会显示更多次级城市名称。";
-      return "Balanced · 标签预算 P4 24 / P5 48，是默认的均衡读图方案。";
-    }
-    if (normalized === "sparse") return "Sparse · label budget P4 16 / P5 32, favoring only the most important names.";
-    if (normalized === "dense") return "Dense · label budget P4 32 / P5 64, allowing more secondary city labels.";
-    return "Balanced · label budget P4 24 / P5 48, the default readability mix.";
-  };
-
   const ensureCityPointsThemeOptions = () => {
     if (!cityPointsTheme) return;
     const normalizedExisting = Array.from(cityPointsTheme.options || []).map((option) => String(option.value || ""));
@@ -715,7 +655,7 @@ export function createAppearanceControlsController({
         const meta = CITY_POINTS_THEME_OPTIONS[index];
         if (!meta) return;
         optionNode.id = meta.labelKey;
-        optionNode.textContent = getCityPointsThemeLabel(meta.value);
+        optionNode.textContent = getCityPointsThemeLabel(meta.value, t);
       });
       return;
     }
@@ -724,13 +664,11 @@ export function createAppearanceControlsController({
       const option = document.createElement("option");
       option.value = optionMeta.value;
       option.id = optionMeta.labelKey;
-      option.textContent = getCityPointsThemeLabel(optionMeta.value);
+      option.textContent = getCityPointsThemeLabel(optionMeta.value, t);
       fragment.appendChild(option);
     });
     cityPointsTheme.replaceChildren(fragment);
   };
-
-  const formatCityPointsDensityValue = (value) => `${Number(value || 1).toFixed(2)}x`;
 
   const syncUrbanConfig = () => {
     runtimeState.styleConfig.urban = normalizeUrbanStyleConfig(runtimeState.styleConfig.urban);
@@ -847,7 +785,7 @@ export function createAppearanceControlsController({
     const cityPointsConfig = syncCityPointsConfig();
     ensureCityPointsThemeOptions();
     if (cityPointsTheme) cityPointsTheme.value = String(cityPointsConfig.theme || "classic_graphite");
-    if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cityPointsConfig.theme || "classic_graphite");
+    if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cityPointsConfig.theme || "classic_graphite", runtimeState.currentLanguage);
     if (cityPointsMarkerScale) cityPointsMarkerScale.value = Number(cityPointsConfig.markerScale || 1).toFixed(2);
     if (cityPointsMarkerScaleValue) cityPointsMarkerScaleValue.textContent = `${Number(cityPointsConfig.markerScale || 1).toFixed(2)}x`;
     if (cityPointsMarkerDensity) cityPointsMarkerDensity.value = Number(cityPointsConfig.markerDensity || 1).toFixed(2);
@@ -858,7 +796,7 @@ export function createAppearanceControlsController({
         : "Controls how many city markers can surface at each zoom stage.";
     }
     if (cityPointsLabelDensity) cityPointsLabelDensity.value = String(cityPointsConfig.labelDensity || "balanced");
-    if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cityPointsConfig.labelDensity || "balanced");
+    if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cityPointsConfig.labelDensity || "balanced", runtimeState.currentLanguage);
     if (cityPointsColor) cityPointsColor.value = normalizeOceanFillColor(cityPointsConfig.color || "#2f343a");
     if (cityPointsCapitalColor) cityPointsCapitalColor.value = normalizeOceanFillColor(cityPointsConfig.capitalColor || "#9f9072");
     if (cityPointsOpacity) cityPointsOpacity.value = String(Math.round(cityPointsConfig.opacity * 100));
@@ -938,20 +876,6 @@ export function createAppearanceControlsController({
     return runtimeState.styleConfig.transportOverview;
   };
 
-  const formatTransportPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`;
-  const formatTransportScopeLabel = (value) => String(value || "")
-    .trim()
-    .split("_")
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-  const formatTransportThresholdLabel = (value) => String(value || "")
-    .trim()
-    .split("_")
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-
   const getTransportAppearanceVisualMode = () => normalizeTransportOverviewVisualMode(
     getTransportAppearanceConfig().visualMode,
     "distribution",
@@ -966,159 +890,24 @@ export function createAppearanceControlsController({
       : resolveLinkedTransportOverviewScopeAndThreshold(familyId, familyConfig.coverageReach)
   );
 
-  const getTransportFamilyFilteredCount = (familyId, familyConfig, effectiveScope) => {
-    const visualMode = getTransportAppearanceVisualMode();
-    const scale = Number(runtimeState.zoomTransform?.k || 1);
-    if (familyId === "rail") {
-      const features = Array.isArray(runtimeState.railwaysData?.features) ? runtimeState.railwaysData.features : null;
-      if (!features) return null;
-      const strategy = resolveTransportOverviewLineStrategy(
-        familyId,
-        { ...familyConfig, ...effectiveScope },
-        { scale, visualMode },
-      );
-      return features.filter((feature) => {
-        const properties = feature?.properties || {};
-        const lineClass = String(properties.class || "").trim().toLowerCase();
-        const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
-        if (revealRank > strategy.maximumRevealRank) return false;
-        if (getTransportOverviewLineClassScopeRank("rail", lineClass) > strategy.minimumScopeRank) return false;
-        return lineClass === "mainline" || lineClass === "regional" || lineClass === "secondary";
-      }).length;
-    }
-    if (familyId === "road") {
-      const features = Array.isArray(runtimeState.roadsData?.features) ? runtimeState.roadsData.features : null;
-      if (!features) return null;
-      const strategy = resolveTransportOverviewLineStrategy(
-        familyId,
-        { ...familyConfig, ...effectiveScope },
-        { scale, visualMode },
-      );
-      return features.filter((feature) => {
-        const properties = feature?.properties || {};
-        const roadClass = String(properties.class || "").trim().toLowerCase();
-        const defaultRevealRank = roadClass === "motorway" ? 1 : roadClass === "trunk" ? 2 : 3;
-        const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || defaultRevealRank)));
-        if (revealRank > strategy.maximumRevealRank) return false;
-        if (getTransportOverviewLineClassScopeRank("road", roadClass) > strategy.minimumScopeRank) return false;
-        return roadClass === "motorway" || roadClass === "trunk" || roadClass === "primary" || roadClass === "secondary";
-      }).length;
-    }
-    const collection = familyId === "port" ? runtimeState.portsData : runtimeState.airportsData;
-    const features = Array.isArray(collection?.features) ? collection.features : null;
-    if (!features) return null;
-    const strategy = resolveTransportOverviewPointStrategy(
+  const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) =>
+    buildTransportFamilySummaryTextForState({
       familyId,
-      { ...familyConfig, ...effectiveScope },
-      { scale, visualMode },
-    );
-    return features.filter((feature) => {
-      const importanceRank = Math.max(1, Math.round(Number(feature?.properties?.importance_rank || 1)));
-      return importanceRank >= strategy.thresholdRank;
-    }).length;
-  };
-
-  const transportRenderMetricNames = Object.freeze({
-    airport: "drawAirportsLayer",
-    port: "drawPortsLayer",
-    rail: "drawRailwaysLayer",
-    road: "drawRoadsLayer",
-  });
-
-  const getTransportFamilyRenderMetric = (familyId) => {
-    const metricName = transportRenderMetricNames[familyId];
-    if (!metricName) return null;
-    const metrics = runtimeState.renderPerfMetrics && typeof runtimeState.renderPerfMetrics === "object"
-      ? runtimeState.renderPerfMetrics
-      : (globalThis.__renderPerfMetrics || {});
-    const breakdown = metrics.contextBreakdown && typeof metrics.contextBreakdown === "object"
-      ? metrics.contextBreakdown
-      : {};
-    const metric = breakdown[metricName] || metrics[metricName] || null;
-    return metric && typeof metric === "object" ? metric : null;
-  };
-
-  const isTransportFamilyRenderSettlingMetric = (metric) => {
-    if (!metric || typeof metric !== "object") return true;
-    const reason = String(metric.reason || "").trim().toLowerCase();
-    return !!metric.interactive
-      || reason === "hidden"
-      || reason === "interactive-pass"
-      || reason === "staged-apply"
-      || reason === "no-path";
-  };
-
-  const formatTransportFamilyCountText = (familyId, count) => {
-    if (!Number.isFinite(count)) return "";
-    const roundedCount = Math.max(0, Math.round(count));
-    if (familyId === "rail") return `${roundedCount.toLocaleString()} ${t(roundedCount === 1 ? "railway" : "railways", "ui")}`;
-    if (familyId === "road") return `${roundedCount.toLocaleString()} ${t(roundedCount === 1 ? "road" : "roads", "ui")}`;
-    const noun = familyId === "port"
-      ? (roundedCount === 1 ? "port" : "ports")
-      : (roundedCount === 1 ? "airport" : "airports");
-    return `${roundedCount.toLocaleString()} ${t(noun, "ui")}`;
-  };
-
-  const formatTransportLoadedAuxiliaryText = (familyId, count) => {
-    const countText = formatTransportFamilyCountText(familyId, count);
-    return countText ? `${countText} ${t("loaded", "ui")}` : "";
-  };
-
-  const getTransportLineClassCoverage = (familyId) => {
-    const meta = getTransportOverviewLineSummaryMeta(familyId);
-    if (!meta) return "";
-    const collection = familyId === "rail" ? runtimeState.railwaysData : runtimeState.roadsData;
-    const features = Array.isArray(collection?.features) ? collection.features : [];
-    const presentClasses = new Set();
-    features.forEach((feature) => {
-      const className = String(feature?.properties?.class || "").trim().toLowerCase();
-      if (meta.classOrder.includes(className)) presentClasses.add(className);
+      masterEnabled,
+      familyEnabled,
+      familyConfig,
+      effectiveScope,
+      collections: {
+        airport: runtimeState.airportsData,
+        port: runtimeState.portsData,
+        rail: runtimeState.railwaysData,
+        road: runtimeState.roadsData,
+      },
+      metrics: runtimeState.renderPerfMetrics,
+      zoomScale: runtimeState.zoomTransform?.k,
+      visualMode: getTransportAppearanceVisualMode(),
+      translate: t,
     });
-    const orderedClasses = meta.classOrder.filter((className) => presentClasses.has(className));
-    if (!orderedClasses.length) return "";
-    const visibleClasses = orderedClasses.join("/");
-    if (familyId === "road" && !presentClasses.has("primary") && !presentClasses.has("secondary")) {
-      return `${t("Loaded classes:", "ui")} ${visibleClasses} (${t("primary/secondary pending", "ui")})`;
-    }
-    if (familyId === "rail" && !presentClasses.has("secondary")) {
-      return `${t("Loaded classes:", "ui")} ${visibleClasses} (${t("secondary full-only", "ui")})`;
-    }
-    return `${t("Loaded classes:", "ui")} ${visibleClasses}`;
-  };
-
-  const buildTransportLineSummaryDetails = (familyId) => {
-    const meta = getTransportOverviewLineSummaryMeta(familyId);
-    if (!meta) return [];
-    return [
-      getTransportLineClassCoverage(familyId),
-      `${t("Phase:", "ui")} ${t(meta.phaseText, "ui")}`,
-      `${t("Source:", "ui")} ${t(meta.sourceText, "ui")}`,
-    ].filter(Boolean);
-  };
-
-  const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) => {
-    if (!familyEnabled || !masterEnabled) return t("Hidden", "ui");
-    const metric = getTransportFamilyRenderMetric(familyId);
-    const filteredCount = getTransportFamilyFilteredCount(familyId, familyConfig, effectiveScope);
-    const loadedAuxiliaryText = formatTransportLoadedAuxiliaryText(familyId, filteredCount);
-    const lineDetails = buildTransportLineSummaryDetails(familyId);
-    const joinSummaryParts = (...parts) => parts.filter(Boolean).join(" · ");
-    if (isTransportFamilyRenderSettlingMetric(metric)) {
-      return loadedAuxiliaryText
-        ? joinSummaryParts(t("Loading/settling", "ui"), loadedAuxiliaryText, ...lineDetails)
-        : joinSummaryParts(t("Loading/settling", "ui"), ...lineDetails);
-    }
-    const visibleCount = Math.max(0, Math.round(Number(metric.visibleFeatureCount || 0)));
-    if (visibleCount > 0) {
-      return joinSummaryParts(t("Visible", "ui"), formatTransportFamilyCountText(familyId, visibleCount), ...lineDetails);
-    }
-    if (Number(metric.featureCount || 0) > 0 || Number.isFinite(filteredCount)) {
-      return loadedAuxiliaryText
-        ? joinSummaryParts(t("Loaded · 0 visible", "ui"), loadedAuxiliaryText, ...lineDetails)
-        : joinSummaryParts(t("Loaded · 0 visible", "ui"), ...lineDetails);
-    }
-    return joinSummaryParts(t("Loading/settling", "ui"), ...lineDetails);
-  };
 
   const renderTransportAppearanceDirty = (reason) => {
     renderDirty(reason);
@@ -2143,7 +1932,7 @@ export function createAppearanceControlsController({
         const themeStyle = getCityPointsThemeStyle(cfg.theme);
         cfg.color = themeStyle.color;
         cfg.capitalColor = themeStyle.capitalColor;
-        if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cfg.theme);
+        if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cfg.theme, runtimeState.currentLanguage);
         if (cityPointsColor) cityPointsColor.value = normalizeOceanFillColor(cfg.color);
         if (cityPointsCapitalColor) cityPointsCapitalColor.value = normalizeOceanFillColor(cfg.capitalColor);
         persistCityViewSettings();
@@ -2179,7 +1968,7 @@ export function createAppearanceControlsController({
       cityPointsLabelDensity.addEventListener("change", (event) => {
         const cfg = syncCityPointsConfig();
         cfg.labelDensity = String(event.target.value || "balanced");
-        if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cfg.labelDensity);
+        if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cfg.labelDensity, runtimeState.currentLanguage);
         persistCityViewSettings();
         renderDirty("city-points-label-density");
       });

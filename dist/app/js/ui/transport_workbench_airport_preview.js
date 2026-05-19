@@ -4,6 +4,7 @@ import { createTransportWorkbenchPointPreviewController } from "./transport_work
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "airport",
   manifestUrl: resolveTransportManifestUrl("airport"),
+  resolveManifestUrl: (packId) => resolveTransportManifestUrl(packId || "airport"),
   packKey: "airports",
   selectionType: "airport",
   fullPackScaleThreshold: 1.18,

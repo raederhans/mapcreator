@@ -6,23 +6,17 @@ export function deriveRuntimePrimaryFeaturePayload({
   projectedBoundsCache = null,
   computeProjectedFeatureBounds = () => null,
   shouldSkipFeature = () => false,
-  getResolvedFeatureColor = () => null,
 } = {}) {
   const bounds = computeProjectedFeatureBounds(feature);
   if (bounds && projectedBoundsCache?.set) {
     projectedBoundsCache.set(id, bounds);
   }
-  if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) {
-    return {
-      bounds,
-      resolvedColor: null,
-      skipped: true,
-    };
-  }
+  // Primary payload stays limited to geometry/index state; resolved colors are
+  // rebuilt by map_renderer.js without viewport culling.
+  const skipped = shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true });
   return {
     bounds,
-    resolvedColor: getResolvedFeatureColor(feature, id) || null,
-    skipped: false,
+    skipped,
   };
 }
 

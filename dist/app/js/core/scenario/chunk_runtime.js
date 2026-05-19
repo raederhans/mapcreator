@@ -292,6 +292,8 @@ function createScenarioChunkRuntimeController({
       && typeof runtimeState.runtimeChunkLoadState.lastZoomEndToChunkVisibleMetric === "object"
         ? runtimeState.runtimeChunkLoadState.lastZoomEndToChunkVisibleMetric
         : null;
+    // selectionVersion 是 chunk 选择的单调递增“新鲜度令牌”。
+    // refresh、promotion、post-commit replay 都拿它判断“这次请求还属不属于当前视图”。
     runtimeState.runtimeChunkLoadState.selectionVersion = Math.max(
       0,
       Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0),
@@ -1537,12 +1539,18 @@ function createScenarioChunkRuntimeController({
       visibleLayers,
       loadedChunkIds: [],
     });
+    const requiredChunksToLoad = coarseSelection.requiredChunks.filter((chunk) => (
+      !bundle.chunkPayloadCacheById?.[chunk.id]
+    ));
     await Promise.all(
-      coarseSelection.requiredChunks.map((chunk) => loadScenarioChunkPayload(bundle, chunk, { d3Client }))
+      requiredChunksToLoad.map((chunk) => loadScenarioChunkPayload(bundle, chunk, { d3Client }))
     );
     bundle.chunkPreloaded = true;
     const bundleScenarioId = getScenarioBundleId(bundle);
     if (bundleScenarioId && bundleScenarioId === normalizeScenarioId(runtimeState.activeScenarioId)) {
+      if (!shouldCommitScenarioCoarsePrewarmImmediately(bundle)) {
+        return null;
+      }
       const chunkState = ensureActiveScenarioChunkState();
       const loadState = ensureRuntimeChunkLoadState();
       if (
@@ -1588,6 +1596,15 @@ function createScenarioChunkRuntimeController({
       return mergedLayerPayloads;
     }
     return null;
+  }
+
+  function shouldCommitScenarioCoarsePrewarmImmediately(bundle) {
+    const featureCount = Number(bundle?.manifest?.summary?.feature_count || 0);
+    const hints = normalizeScenarioPerformanceHints(bundle?.manifest);
+    return featureCount >= 18_000
+      && hints.waterRegionsDefault === false
+      && hints.specialRegionsDefault === false
+      && hints.scenarioReliefOverlaysDefault === false;
   }
 
   async function preloadScenarioFocusCountryPoliticalDetailChunk(
@@ -1961,6 +1978,8 @@ function createScenarioChunkRuntimeController({
       loadState.refreshScheduled = false;
     }
     if (loadState.promotionCommitInFlight && !flushPending) {
+      // promotion 进行中时，不并发起第二条刷新链。
+      // 这里只保留“最新一条待重放请求”，等 commit 收尾后再按最新 selectionVersion 重放。
       loadState.pendingPostCommitRefresh = {
         scenarioId,
         selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),

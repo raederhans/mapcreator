@@ -15,9 +15,12 @@ import {
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
+import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import { clearDirty } from "./dirty_state.js";
 import {
+  normalizeSpecialZoneMembershipBrushModeState,
   normalizeSpecialZoneLayersState,
+  resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
 } from "./special_zone_layers.js";
 
@@ -43,6 +46,46 @@ const DEFAULT_REFERENCE_IMAGE_STATE = Object.freeze({
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeTransportCountryOverlayProjectState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const activePackIdByFamily = {};
+  // 项目文件保存的是“已经 Apply 到主地图”的国家 transport 包身份。
+  // 这里统一按 family 收口，顺手把旧的单 pack 形态折叠进新结构，避免导入后丢掉已应用覆盖层。
+  const sourcePackIdsByFamily = source.activePackIdByFamily && typeof source.activePackIdByFamily === "object"
+    ? source.activePackIdByFamily
+    : {};
+  Object.entries(sourcePackIdsByFamily).forEach(([familyId, packId]) => {
+    const meta = getTargetMainMapPackMeta(packId);
+    const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+    if (meta && meta.family === normalizedFamilyId) {
+      activePackIdByFamily[meta.family] = meta.packId;
+    }
+  });
+  if (source.overlaysByFamily && typeof source.overlaysByFamily === "object") {
+    Object.entries(source.overlaysByFamily).forEach(([familyId, overlay]) => {
+      const meta = getTargetMainMapPackMeta(overlay?.activePackId);
+      const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
+      if (meta && meta.family === normalizedFamilyId) {
+        activePackIdByFamily[meta.family] = meta.packId;
+      }
+    });
+  }
+  const meta = getTargetMainMapPackMeta(source.activePackId);
+  if (meta && (!source.family || meta.family === String(source.family || "").trim().toLowerCase())) {
+    activePackIdByFamily[meta.family] = meta.packId;
+  }
+  const entries = Object.entries(activePackIdByFamily);
+  if (!entries.length) {
+    return { activePackId: "", family: "", activePackIdByFamily: {} };
+  }
+  const [firstFamily, firstPackId] = entries[0];
+  return {
+    activePackId: firstPackId,
+    family: firstFamily,
+    activePackIdByFamily,
+  };
 }
 
 function normalizeProjectHexColor(value) {
@@ -449,8 +492,9 @@ class FileManager {
       sovereignBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       visualOverrides: appState.visualOverrides || appState.featureOverrides || {},
       waterRegionOverrides: appState.waterRegionOverrides || {},
-      specialRegionOverrides: {},
-      specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers),
+      specialZoneLayers: serializeSpecialZoneLayersState(appState.specialZoneLayers, {
+        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(appState),
+      }),
       sovereigntyByFeatureId: appState.sovereigntyByFeatureId || {},
       mapSemanticMode: normalizeMapSemanticMode(appState.mapSemanticMode),
       paintMode: appState.paintMode || "visual",
@@ -460,6 +504,7 @@ class FileManager {
       activePaletteId: normalizeActivePaletteId(appState.activePaletteId),
       dynamicBordersDirty: !!appState.dynamicBordersDirty,
       dynamicBordersDirtyReason: appState.dynamicBordersDirtyReason || "",
+      specialZoneMembershipBrushMode: normalizeSpecialZoneMembershipBrushModeState(appState.specialZoneMembershipBrushMode),
       specialZones: appState.specialZones || {},
       parentBordersVisible: appState.parentBordersVisible !== false,
       parentBorderEnabledByCountry: appState.parentBorderEnabledByCountry || {},
@@ -511,11 +556,12 @@ class FileManager {
         physical: normalizePhysicalStyleConfig(appState.styleConfig?.physical),
         transportOverview: normalizeTransportOverviewStyleConfig(appState.styleConfig?.transportOverview),
         rivers: appState.styleConfig?.rivers || null,
-        specialZones: appState.styleConfig?.specialZones || null,
         texture: normalizeTextureStyleConfig(appState.styleConfig?.texture),
         dayNight: normalizeDayNightStyleConfig(appState.styleConfig?.dayNight),
       },
       transportWorkbenchUi: normalizeTransportWorkbenchUiState(appState.transportWorkbenchUi),
+      // workbench 当前选中的 pack 只是预览态；项目文件只持久化真正已经 Apply 到主图的 overlay 身份。
+      transportCountryOverlayState: normalizeTransportCountryOverlayProjectState(appState.transportCountryOverlayState),
       exportWorkbenchUi: normalizeExportWorkbenchUiState(appState.exportWorkbenchUi),
       scenario: appState.activeScenarioId
         ? {
@@ -585,11 +631,16 @@ class FileManager {
         if (!data.waterRegionOverrides || typeof data.waterRegionOverrides !== "object") {
           data.waterRegionOverrides = {};
         }
+        // special zone 的历史项目文件曾分散在 manualSpecialZones / specialRegionOverrides / specialZoneLayers。
+        // 导入时一次性合并回 canonical `specialZoneLayers`，后续运行时只认这一条主状态。
         data.specialZoneLayers = normalizeSpecialZoneLayersState({
           ...(data.specialZoneLayers && typeof data.specialZoneLayers === "object" ? data.specialZoneLayers : {}),
           manualSpecialZones: data.manualSpecialZones,
           specialRegionOverrides: data.specialRegionOverrides,
-        }, { defaultSource: "project" });
+        }, {
+          defaultSource: "project",
+          topologyFingerprint: String(data.scenario?.baselineHash || "").trim(),
+        });
         data.specialRegionOverrides = {};
         if (!data.sovereignBaseColors || typeof data.sovereignBaseColors !== "object") {
           data.sovereignBaseColors = data.countryBaseColors;
@@ -604,6 +655,7 @@ class FileManager {
         data.activePaletteId = normalizeActivePaletteId(data.activePaletteId);
         data.dynamicBordersDirty = !!data.dynamicBordersDirty;
         data.dynamicBordersDirtyReason = String(data.dynamicBordersDirtyReason || "");
+        data.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(data.specialZoneMembershipBrushMode);
         if (!data.customPresets || typeof data.customPresets !== "object") {
           data.customPresets = {};
         }
@@ -639,12 +691,16 @@ class FileManager {
         if (!data.styleConfig.rivers || typeof data.styleConfig.rivers !== "object") {
           data.styleConfig.rivers = null;
         }
-        if (!data.styleConfig.specialZones || typeof data.styleConfig.specialZones !== "object") {
-          data.styleConfig.specialZones = null;
+        if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {
+          console.info("[project-import] Legacy styleConfig.specialZones ignored; specialZoneLayers is the canonical model.");
         }
+        data.styleConfig.specialZones = null;
         data.styleConfig.texture = normalizeTextureStyleConfig(data.styleConfig.texture);
         data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
         data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
+        // 导入后只恢复主图已应用 overlay 的 family->pack 映射；
+        // 具体 collection 仍由运行时按 manifest/source gate 重新加载。
+        data.transportCountryOverlayState = normalizeTransportCountryOverlayProjectState(data.transportCountryOverlayState);
         data.exportWorkbenchUi = normalizeExportWorkbenchUiState(data.exportWorkbenchUi);
         data.manualSpecialZones = { type: "FeatureCollection", features: [] };
         data.annotationView = normalizeAnnotationView(data.annotationView);

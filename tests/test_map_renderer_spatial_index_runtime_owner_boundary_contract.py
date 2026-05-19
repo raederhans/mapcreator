@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -32,10 +33,12 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
         self.assertIn("setInteractionInfrastructureState,", renderer_content)
         self.assertIn("yieldToMain,", renderer_content)
         self.assertIn("getFeatureBorderMeshCountryCodeNormalized,", renderer_content)
-        self.assertIn("const resetSecondarySpatialIndexState = (...args) =>", renderer_content)
-        self.assertIn("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState(...args);", renderer_content)
-        self.assertIn("const buildSecondarySpatialIndexes = (...args) =>", renderer_content)
-        self.assertIn("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes(...args);", renderer_content)
+        self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+resetSecondarySpatialIndexState\s*=", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*function\s+buildSecondarySpatialIndexes\s*\(", renderer_content))
+        self.assertEqual(renderer_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();"), 3)
+        self.assertEqual(renderer_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
         self.assertIn("function rebuildRuntimeDerivedState({", renderer_content)
         self.assertIn("async function buildBasicInteractionInfrastructureAfterStartup({", renderer_content)
         self.assertIn("async function buildFullInteractionInfrastructureAfterStartup({", renderer_content)

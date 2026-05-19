@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -24,21 +25,20 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("drawTextureLabelEffectsPass,", renderer_content)
         self.assertIn("getContextScenarioReuseDecision,", renderer_content)
         self.assertIn("tryPartialPoliticalPassRepaint,", renderer_content)
-        self.assertIn(
-            "const getIdleRenderPassDefinitions = (...args) => getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(...args);",
-            renderer_content,
+        self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+getIdleRenderPassDefinitions\s*=", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+prepareIdleRenderPassDefinition\s*=", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+ensureIdleRenderPasses\s*=", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*function\s+getIdleRenderPassDefinitions\s*\(", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*function\s+prepareIdleRenderPassDefinition\s*\(", renderer_content))
+        self.assertIsNone(re.search(r"(?m)^\s*function\s+ensureIdleRenderPasses\s*\(", renderer_content))
+        self.assertEqual(renderer_content.count("getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()"), 5)
+        self.assertEqual(
+            renderer_content.count(
+                "getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);"
+            ),
+            2,
         )
-        self.assertIn(
-            "getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(...args);",
-            renderer_content,
-        )
-        self.assertIn(
-            "const ensureIdleRenderPasses = (...args) => getRenderPipelinePassesOwner().ensureIdleRenderPasses(...args);",
-            renderer_content,
-        )
-        self.assertNotIn("function getIdleRenderPassDefinitions() {", renderer_content)
-        self.assertNotIn("function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings", renderer_content)
-        self.assertNotIn("function ensureIdleRenderPasses(timings) {", renderer_content)
+        self.assertEqual(renderer_content.count("getRenderPipelinePassesOwner().ensureIdleRenderPasses("), 2)
 
         self.assertIn("export function createRenderPipelinePassesOwner({", owner_content)
         self.assertIn("function getIdleRenderPassDefinitions() {", owner_content)

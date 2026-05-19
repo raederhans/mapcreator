@@ -22,7 +22,9 @@ import {
 import {
   buildInteractionInfrastructureAfterStartup,
   initMap,
+  invalidateAllRenderPasses,
   invalidateContextLayerVisualStateBatch,
+  reconcileDetailPromotionPoliticalPass,
   setMapData,
   render,
 } from "./core/map_renderer/public.js";
@@ -140,6 +142,19 @@ let startupDataPipelineOwner = null;
 let deferredDetailPromotionOwner = null;
 let startupScenarioBootOwner = null;
 
+function checkpointFirstVisibleFrameMetrics() {
+  if (!state.firstVisibleFramePainted) {
+    return null;
+  }
+  checkpointBootMetricOnce("first-visible");
+  if (String(state.activeScenarioId || "").trim()) {
+    checkpointBootMetricOnce("first-visible-scenario");
+  }
+  return state.bootMetrics;
+}
+
+registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);
+
 /**
  * Startup owner boundaries:
  * 1) StartupDataPipelineOwner: drives bootstrap data ingestion and base-state hydration.
@@ -196,6 +211,7 @@ function getDeferredDetailPromotionOwner() {
       requestMainRender,
       schedulePostReadyDeferredContextWarmup,
       schedulePostReadyHydration,
+      schedulePostReadyPoliticalReconcile,
       schedulePostReadyVisualWarmup,
       scheduleStartupReadonlyUnlockTimer,
       setBootState,
@@ -342,6 +358,37 @@ function schedulePostReadyHydration() {
     delayMs: shouldFastTrackScenarioHydration() ? 300 : 4200,
     retryDelayMs: shouldFastTrackScenarioHydration() ? 450 : 900,
   });
+}
+
+const POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
+
+function schedulePostReadyPoliticalReconcileTask(reason = "detail-promotion-political-reconcile") {
+  const normalizedReason = String(reason || "detail-promotion-political-reconcile").trim()
+    || "detail-promotion-political-reconcile";
+  schedulePostReadyTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {
+    if (!runtimeState.detailPromotionCompleted) {
+      schedulePostReadyPoliticalReconcileTask(normalizedReason);
+      return false;
+    }
+    const requested = reconcileDetailPromotionPoliticalPass(normalizedReason);
+    if (!requested) {
+      schedulePostReadyPoliticalReconcileTask(normalizedReason);
+    }
+    return requested;
+  }, {
+    timeout: 1200,
+    delayMs: 0,
+    retryDelayMs: 320,
+    idleQuietMs: POST_READY_IDLE_QUIET_MS,
+  });
+  return true;
+}
+
+function schedulePostReadyPoliticalReconcile(reason = "detail-promotion-political-reconcile") {
+  if (!runtimeState.detailPromotionCompleted) {
+    return false;
+  }
+  return schedulePostReadyPoliticalReconcileTask(reason);
 }
 
 async function ensureContextLayerDataReady(
@@ -1041,6 +1088,12 @@ async function bootstrap() {
       scenarioBundlePromise,
       startupInteractionMode: runtimeState.startupInteractionMode,
     });
+
+    setBootState("warmup");
+    invalidateAllRenderPasses("bootstrap-first-political-frame");
+    renderDispatcher.flush();
+    checkpointFirstVisibleFrameMetrics();
+
     if (startupUiBootstrapPromise) {
       startupUiBootstrapAwaited = true;
       try {
@@ -1052,10 +1105,6 @@ async function bootstrap() {
       runPostScenarioUiReplay({ full: true });
     }
 
-    setBootState("warmup");
-    renderDispatcher.flush();
-    checkpointBootMetricOnce("first-visible");
-    checkpointBootMetricOnce("first-visible-scenario");
     // Phase: 触发 detail promotion | Input: 当前 scenario/state/renderDispatcher | Output: ready state 或 readonly 解锁调度。
     await finalizeReadyState(renderDispatcher);
     void postStartupSupportKeyUsageReport({
@@ -1097,6 +1146,7 @@ async function bootstrap() {
             : "Continuing with the base map only.",
           canContinueWithoutScenario: false,
         });
+        invalidateAllRenderPasses("bootstrap-first-frame");
         renderDispatcher.flush();
         checkpointBootMetricOnce("first-visible");
         checkpointBootMetricOnce("first-visible-base");

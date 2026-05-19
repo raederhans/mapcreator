@@ -1,4 +1,7 @@
 import { setScenarioDiagnosticsState } from "../../core/state.js";
+import {
+  createSpecialZonePatternPreviewStyle,
+} from "../../core/special_zone_layers.js";
 
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
@@ -89,6 +92,37 @@ export function createProjectSupportDiagnosticsController({
       }
     });
     return list;
+  };
+
+  const getVisibleSpecialZoneLegendLayers = () => (
+    legendManager.getSpecialZoneLayers(state)
+  );
+
+  const appendSpecialZoneLegendRows = (layers = getVisibleSpecialZoneLegendLayers()) => {
+    if (!layers.length) return false;
+    const section = document.createElement("div");
+    section.className = "legend-special-zone-section";
+    const title = document.createElement("h4");
+    title.className = "legend-section-title";
+    title.textContent = t("Special Zone Layers", "ui");
+    section.appendChild(title);
+    layers.forEach((layer) => {
+      const row = document.createElement("div");
+      row.className = "legend-row legend-row-special-zone";
+      const swatch = document.createElement("span");
+      swatch.className = "legend-swatch legend-swatch-special-zone";
+      const preview = createSpecialZonePatternPreviewStyle(layer.style);
+      swatch.style.backgroundColor = preview.backgroundColor;
+      swatch.style.backgroundImage = preview.backgroundImage;
+      swatch.style.borderColor = preview.borderColor;
+      const label = document.createElement("span");
+      label.className = "legend-special-zone-label";
+      label.textContent = layer.name;
+      row.append(swatch, label);
+      section.appendChild(row);
+    });
+    legendList.appendChild(section);
+    return true;
   };
 
   const fetchScenarioDiagnosticsReport = async (scenarioId, { preview = false } = {}) => {
@@ -536,13 +570,15 @@ export function createProjectSupportDiagnosticsController({
     if (!legendList) return;
     incrementSidebarCounter("legendRenders");
     const colors = legendManager.getUniqueColors(state);
-    const key = colors.join("|");
+    const specialZoneLegendLayers = getVisibleSpecialZoneLegendLayers();
+    const specialZoneLegendKey = legendManager.getSpecialZoneSignature(state);
+    const key = `${colors.join("|")}::${specialZoneLegendKey}`;
     if (key === lastLegendKey && legendList.dataset.ready === "true") return;
     lastLegendKey = key;
     legendList.dataset.ready = "true";
     legendList.innerHTML = "";
 
-    if (!colors.length) {
+    if (!colors.length && !specialZoneLegendKey) {
       const empty = document.createElement("div");
       empty.className = "legend-empty-state";
       empty.textContent = t("Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session.", "ui");
@@ -572,6 +608,7 @@ export function createProjectSupportDiagnosticsController({
       row.appendChild(input);
       legendList.appendChild(row);
     });
+    appendSpecialZoneLegendRows(specialZoneLegendLayers);
   };
 
 

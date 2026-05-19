@@ -40,7 +40,11 @@ import {
   buildScenarioDistrictGroupByFeatureId,
   normalizeScenarioDistrictGroupsPayload,
 } from "./scenario_districts.js";
-import { normalizeSpecialZoneLayersState } from "./special_zone_layers.js";
+import {
+  SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES,
+  normalizeSpecialZoneLayersState,
+  resolveSpecialZoneTopologyFingerprint,
+} from "./special_zone_layers.js";
 import { normalizeCountryCodeAlias } from "./country_code_aliases.js";
 import { ensureDetailTopologyBoundary, flushRenderBoundary } from "./render_boundary.js";
 import { buildScenarioReleasableIndex } from "./releasable_manager.js";
@@ -250,6 +254,8 @@ function recordScenarioPerfMetric(name, durationMs, details = {}) {
 }
 
 function getScenarioDisplayOwnerByFeatureId(featureId, { fallbackOwner = "" } = {}) {
+  // 这里读的是“当前展示层看到的 owner”，优先吃 runtime sovereignty 覆盖，
+  // fallback 才回退到 bundle / 调用方提供的静态 owner。
   const normalizedId = String(featureId || "").trim();
   if (!normalizedId) return String(fallbackOwner || "").trim().toUpperCase();
   const fallback = String(fallbackOwner || "").trim().toUpperCase();
@@ -316,6 +322,8 @@ function normalizeScenarioFeatureCollection(payload) {
 function getScenarioFeatureCollectionIdentityList(payload) {
   const normalizedPayload = normalizeScenarioFeatureCollection(payload);
   const features = Array.isArray(normalizedPayload?.features) ? normalizedPayload.features : [];
+  // 这里故意只比较 feature identity，不比较几何和属性细节。
+  // optional layer 刷新时，维护者更关心“成员集合有没有换”，而不是 payload 顺序或附属字段抖动。
   return features
     .map((feature) => String(feature?.id || feature?.properties?.id || "").trim())
     .filter(Boolean);
@@ -644,8 +652,34 @@ function applyScenarioOptionalLayerState(bundle, layerKey, payload) {
   if (config.stateField === "scenarioCityOverridesData") {
     syncScenarioLocalizationState({ cityOverridesPayload: payload });
   } else if (config.stateField === "specialZoneLayers") {
+    if (!payload || typeof payload !== "object") {
+      const manifestHasLayerUrl = !!String(bundle?.manifest?.[config.urlField] || "").trim();
+      if (manifestHasLayerUrl) {
+        const topologyFingerprint = resolveSpecialZoneTopologyFingerprint(state);
+        state.specialZoneLayers = normalizeSpecialZoneLayersState({
+          version: 1,
+          layers: [],
+          activeLayerId: "",
+          topologyFingerprint,
+          diagnostics: [
+            {
+              code: SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED,
+              scenarioId: bundleScenarioId,
+            },
+          ],
+        }, {
+          defaultSource: "scenario",
+          topologyFingerprint,
+          validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
+        });
+        state.specialZonesOverlayDirty = true;
+      }
+      syncScenarioUi();
+      return false;
+    }
     state.specialZoneLayers = normalizeSpecialZoneLayersState(payload, {
       defaultSource: "scenario",
+      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
       validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
     });
     state.specialZonesOverlayDirty = true;
@@ -731,7 +765,10 @@ async function loadScenarioOptionalLayerPayload(
           sourceLabel: `scenario_city_overrides:${getScenarioBundleId(bundle) || "scenario"}`,
         })
         : layerKey === "specialzonelayers"
-          ? normalizeSpecialZoneLayersState(rawPayload, { defaultSource: "scenario" })
+          ? normalizeSpecialZoneLayersState(rawPayload, {
+            defaultSource: "scenario",
+            topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
+          })
           : config.objectName
             ? getScenarioTopologyFeatureCollection(rawPayload, config.objectName)
               || normalizeScenarioFeatureCollection(rawPayload)
@@ -773,6 +810,8 @@ function prewarmScenarioOptionalLayersOnCacheHit(
     hints = normalizeScenarioPerformanceHints(manifest),
   } = {}
 ) {
+  // cache hit 的首要目标是尽快恢复首屏；可选层继续按可见性和面板动作懒加载，
+  // 避免“读到了 startup cache”又立刻把可选 JSON 全部拉起，抵消缓存收益。
   // Keep cache-hit hydration lean. Optional layers now load on demand through
   // visibility and panel-driven paths instead of auto-prewarming here.
   void d3Client;
@@ -795,6 +834,7 @@ async function ensureActiveScenarioOptionalLayerLoaded(
   const bundle = runtimeState.scenarioBundleCacheById?.[normalizeScenarioId(runtimeState.activeScenarioId)];
   if (!bundle) return null;
   if (scenarioBundleUsesChunkedLayer(bundle, normalizedKey)) {
+    // chunk-owned layer 的数据所有权在 chunk refresh controller，这里只发刷新请求，不直接补拉独立 JSON。
     scheduleScenarioChunkRefresh({
       reason: `visibility:${normalizedKey}`,
       delayMs: 0,
@@ -839,7 +879,12 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
     .filter(([, config]) => state[config.visibilityField])
     .filter(([layerKey]) => !scenarioBundleUsesChunkedLayer(activeBundle, layerKey))
     .filter(([layerKey]) => activeBundle.optionalLayerSettledByKey?.[layerKey] !== true)
-    .filter(([layerKey, config]) => !activeBundle[config.bundleField] && !state[config.stateField])
+    .filter(([layerKey, config]) => {
+      if (config.stateField === "specialZoneLayers") {
+        return !activeBundle[config.bundleField];
+      }
+      return !activeBundle[config.bundleField] && !state[config.stateField];
+    })
     .map(([layerKey]) => layerKey);
   if (!requestedLayers.length) return [];
   const payloads = await Promise.all(

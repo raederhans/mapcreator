@@ -363,13 +363,47 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     },
     renderedConfigSignature: "",
     lastRenderedConfig: null,
+    activePackId: "",
+    activeManifestUrl: definition.manifestUrl,
   };
 
+  function resetLoadStateForActivePack() {
+    runtime.manifestPromise = null;
+    runtime.auditPromise = null;
+    runtime.subtypeCatalogPromise = null;
+    runtime.packPromises = new Map();
+    runtime.packPaths = new Map();
+    runtime.projectedPacks = new Map();
+    runtime.loadState = {
+      status: "idle",
+      error: null,
+      manifest: null,
+      audit: null,
+      subtypeCatalog: null,
+      singlePack: false,
+      previewStatus: "idle",
+      fullStatus: "idle",
+    };
+    runtime.activePackMode = null;
+    runtime.activeVariantId = null;
+    runtime.selectedFeature = null;
+    runtime.renderedConfigSignature = "";
+    runtime.lastRenderedConfig = null;
+  }
+
+  function setActivePack(packId = "", manifestUrl = "") {
+    const normalizedPackId = String(packId || "").trim().toLowerCase();
+    const normalizedManifestUrl = String(manifestUrl || definition.manifestUrl || "").trim();
+    if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
+    runtime.activePackId = normalizedPackId;
+    runtime.activeManifestUrl = normalizedManifestUrl;
+    resetLoadStateForActivePack();
+  }
   async function loadManifest() {
     if (!runtime.manifestPromise) {
-      runtime.manifestPromise = getTransportAsset(definition.manifestUrl, {
+      runtime.manifestPromise = getTransportAsset(runtime.activeManifestUrl || definition.manifestUrl, {
         cachePolicy: "no-cache",
-        label: `transport-manifest:${definition.familyId}`,
+        label: `transport-manifest:${definition.familyId}:${runtime.activePackId || "default"}`,
       })
         .then(async (manifest) => {
           if (!manifest) {
@@ -556,6 +590,9 @@ export function createTransportWorkbenchPointPreviewController(definition) {
   }
 
   async function render(config = {}, options = {}) {
+    if (config?.activePackId && typeof definition.resolveManifestUrl === "function") {
+      setActivePack(config.activePackId, definition.resolveManifestUrl(config.activePackId));
+    }
     ensureRootGroups(runtime);
     runtime.lastRenderedConfig = { ...(config || {}) };
     runtime.renderedConfigSignature = "";
@@ -742,5 +779,6 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     render,
     setSelectionListener,
     warm,
+    setActivePack,
   };
 }

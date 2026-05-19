@@ -12,6 +12,21 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
     def setUpClass(cls):
         cls.renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
 
+    def assert_secondary_spatial_rebuild_order(self, body, *, allow_work_between_rebuild_and_reset=False):
+        gap = r'[\s\S]*?' if allow_work_between_rebuild_and_reset else r'\s*'
+        self.assertRegex(
+            body,
+            re.compile(
+                r'rebuildAuxiliaryRegionIndexes\(\);'
+                + gap +
+                r'getSpatialIndexRuntimeOwner\(\)\.resetSecondarySpatialIndexState\(\);\s*'
+                r'getSpatialIndexRuntimeOwner\(\)\.buildSecondarySpatialIndexes\(\{\s*'
+                r'allowComputeMissingBounds: true,\s*'
+                r'\}\);',
+                re.S,
+            ),
+        )
+
     def test_basic_interaction_startup_keeps_chunked_index_then_spatial_order(self):
         self.assertRegex(
             self.renderer_content,
@@ -23,14 +38,12 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
 
 
     def test_spatial_owner_pass_through_uses_module_level_bindings(self):
-        self.assertIn(
-            "const resetSecondarySpatialIndexState = (...args) =>\n  getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState(...args);",
-            self.renderer_content,
-        )
-        self.assertIn(
-            "const buildSecondarySpatialIndexes = (...args) =>\n  getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes(...args);",
-            self.renderer_content,
-        )
+        self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+resetSecondarySpatialIndexState\s*=")
+        self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(")
+        self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=")
+        self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+buildSecondarySpatialIndexes\s*\(")
+        self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();"), 3)
+        self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
         self.assertIn(
             "buildIndexChunked,\n  buildSpatialIndex,\n  buildSpatialIndexChunked,\n  configureSpatialRuntimeFacade,\n} from \"./map_renderer/facade_spatial_runtime.js\";",
             self.renderer_content,
@@ -69,12 +82,35 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         )
 
     def test_chunk_promotion_water_and_special_sync_secondary_indexes_before_deferred_infra(self):
+        start = self.renderer_content.index("function syncScenarioSecondaryRegionIndexes({")
+        end = self.renderer_content.index("function rebuildRuntimeDerivedState({", start)
+        sync_body = self.renderer_content[start:end]
+        self.assert_secondary_spatial_rebuild_order(sync_body)
         self.assertRegex(
             self.renderer_content,
             re.compile(
-                r'function syncScenarioSecondaryRegionIndexes\(\{[\s\S]*?rebuildAuxiliaryRegionIndexes\(\);\s*resetSecondarySpatialIndexState\(\);\s*buildSecondarySpatialIndexes\(\{\s*allowComputeMissingBounds: true,\s*\}\);[\s\S]*?const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes\(\{\s*changedLayerKeys,\s*reason: `\$\{reason\}-secondary-sync`,\s*\}\);',
+                r'const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes\(\{\s*'
+                r'changedLayerKeys: effectiveChangedLayerKeys,\s*'
+                r'reason: `\$\{reason\}-secondary-sync`,\s*'
+                r'\}\);',
                 re.S,
             ),
+        )
+
+    def test_all_secondary_spatial_rebuild_paths_preserve_reset_before_build(self):
+        start = self.renderer_content.index("function scheduleSecondarySpatialIndexBuild({")
+        end = self.renderer_content.index("function syncScenarioSecondaryRegionIndexes({", start)
+        self.assert_secondary_spatial_rebuild_order(self.renderer_content[start:end])
+
+        start = self.renderer_content.index("function syncScenarioSecondaryRegionIndexes({")
+        end = self.renderer_content.index("function rebuildRuntimeDerivedState({", start)
+        self.assert_secondary_spatial_rebuild_order(self.renderer_content[start:end])
+
+        start = self.renderer_content.index("function refreshMapDataForScenarioApply({")
+        end = self.renderer_content.index("// Batch 5 facade note:", start)
+        self.assert_secondary_spatial_rebuild_order(
+            self.renderer_content[start:end],
+            allow_work_between_rebuild_and_reset=True,
         )
 
     def test_secondary_spatial_demand_metric_only_records_new_pending_build(self):

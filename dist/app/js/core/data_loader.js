@@ -41,6 +41,9 @@ const TOPOLOGY_VARIANT_URLS = Object.freeze({
   na_v2: "data/europe_topology.na_v2.json",
 });
 const DETAIL_SOURCES = { ...TOPOLOGY_VARIANT_URLS };
+// detail source 的 fallback 顺序属于 runtime 发布契约的一部分：
+// 首选当前主源，缺失时再按历史兼容顺序降到旧文件，保证首屏 coarse 已出图时，
+// detail enhancement 仍尽量接到“最像当前发布物”的那份数据。
 const DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "highres"];
 const WORLD_CITIES_URLS = [resolveDataAssetUrl("world_cities"), "data/world_cities.json"];
 const CITY_ALIASES_URLS = [resolveDataAssetUrl("city_aliases")];
@@ -384,6 +387,8 @@ function normalizeScenarioGeoLocalePatchPayload(payload) {
     return null;
   }
   const geo = {};
+  // runtime 侧统一按 featureId -> { en, zh } 读取 locale patch。
+  // 这里把磁盘上的宽松字段形态收口成稳定结构，避免 editor/save 链再各自兼容一次。
   Object.entries(payload.geo && typeof payload.geo === "object" ? payload.geo : {}).forEach(([rawFeatureId, rawEntry]) => {
     const featureId = normalizeCityText(rawFeatureId);
     const localeEntry = normalizeScenarioGeoLocalePatchEntry(rawEntry);
@@ -416,6 +421,8 @@ function applyGeoLocaleObjectToPatch(rawGeoMap, geo) {
     const stableKey = normalizeCityText(rawStableKey);
     const localeEntry = getCityLocaleEntry(rawEntry, stableKey);
     if (!stableKey || !localeEntry) return;
+    // 多路 locale 来源会在这里汇流，所以保留“后写覆盖前写”的浅合并语义，
+    // 让更具体的 patch/alias 扩展可以覆盖基础条目，而不必复制整份对象。
     geo[stableKey] = {
       ...(geo[stableKey] || {}),
       ...localeEntry,
@@ -1069,6 +1076,8 @@ async function loadTopologyBundle({
 
   const detailLayerEnabled = resolveDetailLayerEnabled();
   const detailSource = resolveDetailSource();
+  // 这个 loader 始终把 primary coarse topology 当作主返回值。
+  // detail topology 只是附加增强层；外部调用方拿到的 `topology` 语义一直是“首屏可依赖基底”。
   const topologyPrimaryResult = prefetchedPrimaryTopology
     ? {
       topology: prefetchedPrimaryTopology,
@@ -1536,6 +1545,8 @@ export async function loadMapData({
     ]
     : [Promise.resolve(null), Promise.resolve(null)];
 
+  // 完整加载链把 startup boot 产物当成 warm cache：
+  // 能复用的就直接复用，缺的部分再走完整 loader，避免首屏和全量链各自重复解析同一批资源。
   const localizationPromise = startupBootArtifactsPromise.then((startupBootArtifacts) => (
     startupBootArtifacts && startupBootArtifacts.locales && startupBootArtifacts.geoAliases
       ? {

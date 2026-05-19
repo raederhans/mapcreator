@@ -58,7 +58,6 @@ function captureHistoryState({
   const snapshot = {};
   const ids = uniqueKeys(featureIds);
   const waterIds = uniqueKeys(waterRegionIds);
-  const specialIds = uniqueKeys(specialRegionIds);
   const ownerKeys = uniqueKeys(ownerCodes);
   const sovereigntyIds = uniqueKeys(sovereigntyFeatureIds);
   const styleKeys = uniqueKeys(stylePaths);
@@ -70,10 +69,6 @@ function captureHistoryState({
 
   if (waterIds.length) {
     snapshot.waterRegionOverrides = captureEntries(runtimeState.waterRegionOverrides || {}, waterIds);
-  }
-
-  if (specialIds.length) {
-    snapshot.specialRegionOverrides = captureEntries(runtimeState.specialRegionOverrides || {}, specialIds);
   }
 
   if (ownerKeys.length) {
@@ -96,6 +91,7 @@ function captureHistoryState({
     snapshot.operationGraphics = cloneStructuredValue(runtimeState.operationGraphics || []);
     snapshot.unitCounters = cloneStructuredValue(runtimeState.unitCounters || []);
     snapshot.specialZoneLayers = cloneStructuredValue(runtimeState.specialZoneLayers || {});
+    snapshot.specialZoneMembershipBrushMode = cloneStructuredValue(runtimeState.specialZoneMembershipBrushMode || "add");
   }
 
   return snapshot;
@@ -201,6 +197,7 @@ function applyHistorySnapshot(snapshot, direction, entry) {
     || Array.isArray(snapshot.operationGraphics)
     || Array.isArray(snapshot.unitCounters)
     || (snapshot.specialZoneLayers && typeof snapshot.specialZoneLayers === "object")
+    || typeof snapshot.specialZoneMembershipBrushMode === "string"
   );
 
   runtimeState.visualOverrides = runtimeState.visualOverrides || {};
@@ -215,7 +212,6 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   applyEntries(runtimeState.visualOverrides, snapshot.visualOverrides);
   applyEntries(runtimeState.featureOverrides, snapshot.featureOverrides);
   applyEntries(runtimeState.waterRegionOverrides, snapshot.waterRegionOverrides);
-  applyEntries(runtimeState.specialRegionOverrides, snapshot.specialRegionOverrides);
   applyEntries(runtimeState.sovereignBaseColors, snapshot.sovereignBaseColors);
   applyEntries(runtimeState.countryBaseColors, snapshot.countryBaseColors);
   applyEntries(runtimeState.countryPalette, snapshot.countryPalette);
@@ -247,6 +243,9 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   if (snapshot.specialZoneLayers && typeof snapshot.specialZoneLayers === "object") {
     runtimeState.specialZoneLayers = cloneStructuredValue(snapshot.specialZoneLayers);
     runtimeState.specialZonesOverlayDirty = true;
+  }
+  if (typeof snapshot.specialZoneMembershipBrushMode === "string") {
+    runtimeState.specialZoneMembershipBrushMode = snapshot.specialZoneMembershipBrushMode || "add";
   }
   if (hasAnnotationView) {
     runtimeState.frontlineOverlayDirty = true;

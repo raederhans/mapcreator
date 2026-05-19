@@ -23,8 +23,17 @@ import {
 } from "./state/strategic_overlay_state.js";
 import { resetDevTransientImportState } from "./state/dev_state.js";
 import { prepareImportedProjectState } from "./interaction_funnel/import_apply_orchestration.js";
+import {
+  applyTransportCountryOverlayState,
+  clearTransportCountryOverlayState,
+  loadTransportCountryOverlayState,
+} from "./transport_country_overlay.js";
 import { syncProjectImportUiState as syncProjectImportUiStateHelper } from "./interaction_funnel/ui_sync.js";
-import { normalizeSpecialZoneLayersState } from "./special_zone_layers.js";
+import {
+  normalizeSpecialZoneLayersState,
+  normalizeSpecialZoneMembershipBrushModeState,
+  resolveSpecialZoneTopologyFingerprint,
+} from "./special_zone_layers.js";
 
 let mapClickImpl = null;
 let mapDoubleClickImpl = null;
@@ -110,6 +119,43 @@ function syncProjectImportUiState({ scenarioImportAudit, hooks }) {
   return syncProjectImportUiStateHelper({ scenarioImportAudit, hooks });
 }
 
+function resolveImportedTransportCountryOverlayPackIds(target, importedState = {}) {
+  const packIds = [];
+  const pushPackId = (packId) => {
+    const normalizedPackId = String(packId || "").trim().toLowerCase();
+    if (normalizedPackId && !packIds.includes(normalizedPackId)) packIds.push(normalizedPackId);
+  };
+  const importedPackIdsByFamily = importedState?.transportCountryOverlayState?.activePackIdByFamily || {};
+  if (importedPackIdsByFamily && typeof importedPackIdsByFamily === "object") {
+    ["road", "rail", "airport"].forEach((familyId) => pushPackId(importedPackIdsByFamily[familyId]));
+  }
+  const explicitPackId = String(importedState?.transportCountryOverlayState?.activePackId || "").trim().toLowerCase();
+  pushPackId(explicitPackId);
+  const activePackIdByFamily = target?.styleConfig?.transportOverview?.activePackIdByFamily || {};
+  ["road", "rail", "airport"].forEach((familyId) => pushPackId(activePackIdByFamily[familyId]));
+  return packIds;
+}
+
+async function restoreImportedTransportCountryOverlayState(target, importedState = {}) {
+  const activePackIds = resolveImportedTransportCountryOverlayPackIds(target, importedState);
+  if (!activePackIds.length) {
+    clearTransportCountryOverlayState(target, "project-import-no-country-pack");
+    return null;
+  }
+  try {
+    let appliedState = null;
+    for (const activePackId of activePackIds) {
+      const overlayState = await loadTransportCountryOverlayState(activePackId);
+      appliedState = applyTransportCountryOverlayState(target, overlayState);
+    }
+    return appliedState;
+  } catch (error) {
+    clearTransportCountryOverlayState(target, "project-import-country-pack-load-failed");
+    console.warn(`[project-import] Unable to restore transport country overlays ${activePackIds.join(", ")}.`, error);
+    return null;
+  }
+}
+
 async function applyImportedProjectState(data, { ui, hooks }) {
   debugState.importPhase = "begin";
   clearHistory();
@@ -179,8 +225,10 @@ async function applyImportedProjectState(data, { ui, hooks }) {
   state.specialZones = data.specialZones || {};
   state.specialZoneLayers = normalizeSpecialZoneLayersState(data.specialZoneLayers, {
     defaultSource: "project",
+    topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
     validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
   });
+  state.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(data.specialZoneMembershipBrushMode);
   state.parentBordersVisible = data.parentBordersVisible !== false;
   state.manualSpecialZones = { type: "FeatureCollection", features: [] };
   const supportedCountries = Array.isArray(state.parentBorderSupportedCountries)
@@ -270,6 +318,7 @@ async function applyImportedProjectState(data, { ui, hooks }) {
       renderNow: false,
     });
   }
+  await restoreImportedTransportCountryOverlayState(state, data);
   debugState.importPhase = "ui-sync";
   debugState.importApplyCount += 1;
   debugState.lastImportedScenarioId = String(state.activeScenarioId || "");

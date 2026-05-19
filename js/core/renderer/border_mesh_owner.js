@@ -232,6 +232,10 @@ export function createBorderMeshOwner({
     return null;
   }
 
+  function getFrontlineOwnershipContext() {
+    return getDynamicBorderOwnershipContext(state);
+  }
+
   const buildDetailAdmBorderMesh = (topology, includedCountries) =>
     buildDetailAdmBorderMeshRuntime({
       topology,
@@ -362,6 +366,7 @@ export function createBorderMeshOwner({
     countUnresolvedOwnerBorderEntities,
     rebuildDynamicBorders,
     refreshScenarioOpeningOwnerBorders,
+    getFrontlineOwnershipContext,
     getFrontlineMesh,
     buildDetailAdmBorderMesh,
     getSourceCountrySets,

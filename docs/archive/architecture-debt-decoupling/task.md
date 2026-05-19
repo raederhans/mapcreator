@@ -1,0 +1,44 @@
+# Architecture Debt Decoupling Task
+
+- [x] Create ultragoal ledger and active task docs.
+- [x] Read project agent rules, lessons learned, skill rules, and current archived/active plans.
+- [x] Complete static hotspot audit for JS and Python/tooling.
+- [x] First implementation slice: reduce transport workbench controller responsibility without changing behavior.
+- [x] Run targeted verification owned by the main thread.
+- [x] Run final review/bug-check/first-principles self-review.
+- [x] Update lessons learned only if this task surfaces a major reusable lesson.
+- [x] Phase 3 implementation slice: split transport overview facility display and visibility policies.
+- [x] Run Phase 3 final review/bug-check/first-principles self-review.
+- [x] Resolve final post-WATCH static review for Phase 3 follow-up changes.
+- [x] Phase 4 implementation slice: split transport overview line-label policy.
+- [x] Run Phase 4 final static review and closeout.
+- [x] Phase 5 implementation slice: split transport overview visual-style policy.
+- [x] Run Phase 5 final static review and closeout.
+- [x] Phase 6 implementation slice: resolve color primitive WATCH with import-safe hex utility.
+- [x] Run Phase 6 final static review and closeout.
+- [x] Phase 7 implementation slice: move transport overview zoom/threshold helpers into visibility policy.
+- [x] Run Phase 7 final static review and closeout.
+- [x] Phase 8 implementation slice: move facility label layout rules into display policy.
+- [x] Run Phase 8 final static review and closeout.
+- [x] Phase 9 implementation slice: move line stroke spec calculations into line policy.
+- [x] Run Phase 9 final static review and closeout.
+- [x] Phase 10 implementation slice: remove map_renderer transport facade wrappers.
+- [x] Run Phase 10 final static review and closeout.
+- [x] Phase 11 implementation slice: remove map_renderer border draw facade wrappers.
+- [x] Run Phase 11 final static review and closeout.
+- [x] Phase 12 implementation slice: move appearance pure display formatters into descriptor/summary owners.
+- [x] Run Phase 12 final static review and closeout.
+- [x] Phase 13 implementation slice: remove map_renderer special-zones render proxy.
+- [x] Phase 14 implementation slice: remove map_renderer operational-lines and operation-graphics render proxies.
+- [x] Run Phase 13/14 final static review and closeout.
+- [x] Phase 15 implementation slice: remove map_renderer unit-counter zoom sync proxy.
+- [x] Run Phase 15 final static review and closeout.
+- [x] Phase 16 implementation slice: remove map_renderer city-label draw proxy.
+- [x] Run Phase 16 final static review and closeout.
+- [x] Phase 17 implementation slice: remove map_renderer render-pipeline pass proxies.
+- [x] Run Phase 17 final static review and closeout.
+- [x] Phase 18 implementation slice: remove map_renderer secondary spatial index proxies.
+- [x] Run Phase 18 final static review and closeout.
+- [x] Phase 19 implementation slice: remove internal-only urban city policy proxies.
+- [x] Run Phase 19 final static review and closeout.
+- [x] Archive this folder after every task item is complete and reviewed.

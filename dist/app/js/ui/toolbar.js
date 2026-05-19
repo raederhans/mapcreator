@@ -21,14 +21,8 @@ import {
   resetZoomToFit,
   recomputeDynamicBordersNow,
   scheduleDynamicBorderRecompute,
-  startSpecialZoneDraw,
-  undoSpecialZoneVertex,
   zoomByStep,
   setZoomPercent,
-  finishSpecialZoneDraw,
-  cancelSpecialZoneDraw,
-  deleteSelectedManualSpecialZone,
-  selectSpecialZoneById,
   RENDER_PASS_NAMES,
   renderExportPassesToCanvas,
 } from "../core/map_renderer/public.js";
@@ -308,7 +302,6 @@ function initToolbar({ render } = {}) {
   const toggleCityPoints = document.getElementById("toggleCityPoints");
   const toggleWaterRegions = document.getElementById("toggleWaterRegions");
   const toggleOpenOceanRegions = document.getElementById("toggleOpenOceanRegions");
-  const toggleSpecialZones = document.getElementById("toggleSpecialZones");
   const cityPointsTheme = document.getElementById("cityPointsTheme");
   const cityPointsThemeHint = document.getElementById("cityPointsThemeHint");
   const cityPointsMarkerScale = document.getElementById("cityPointsMarkerScale");
@@ -370,23 +363,6 @@ function initToolbar({ render } = {}) {
   const riversOutlineColor = document.getElementById("riversOutlineColor");
   const riversOutlineWidth = document.getElementById("riversOutlineWidth");
   const riversDashStyle = document.getElementById("riversDashStyle");
-  const specialZonesDisputedFill = document.getElementById("specialZonesDisputedFill");
-  const specialZonesDisputedStroke = document.getElementById("specialZonesDisputedStroke");
-  const specialZonesWastelandFill = document.getElementById("specialZonesWastelandFill");
-  const specialZonesWastelandStroke = document.getElementById("specialZonesWastelandStroke");
-  const specialZonesCustomFill = document.getElementById("specialZonesCustomFill");
-  const specialZonesCustomStroke = document.getElementById("specialZonesCustomStroke");
-  const specialZonesOpacity = document.getElementById("specialZonesOpacity");
-  const specialZonesStrokeWidth = document.getElementById("specialZonesStrokeWidth");
-  const specialZonesDashStyle = document.getElementById("specialZonesDashStyle");
-  const specialZoneTypeSelect = document.getElementById("specialZoneTypeSelect");
-  const specialZoneLabelInput = document.getElementById("specialZoneLabelInput");
-  const specialZoneStartBtn = document.getElementById("specialZoneStartBtn");
-  const specialZoneUndoBtn = document.getElementById("specialZoneUndoBtn");
-  const specialZoneFinishBtn = document.getElementById("specialZoneFinishBtn");
-  const specialZoneCancelBtn = document.getElementById("specialZoneCancelBtn");
-  const specialZoneFeatureList = document.getElementById("specialZoneFeatureList");
-  const specialZoneDeleteBtn = document.getElementById("specialZoneDeleteBtn");
   const specialZoneEditorHint = document.getElementById("specialZoneEditorHint");
   const recentContainer = document.getElementById("recentColors");
   const paletteLibraryToggle = document.getElementById("paletteLibraryToggle");
@@ -492,6 +468,7 @@ function initToolbar({ render } = {}) {
   const transportWorkbenchLensSections = document.getElementById("transportWorkbenchLensSections");
   const transportWorkbenchFamilyStatus = document.getElementById("transportWorkbenchFamilyStatus");
   const transportWorkbenchCountryStatus = document.getElementById("transportWorkbenchCountryStatus");
+  const transportWorkbenchPackSelect = document.getElementById("transportWorkbenchPackSelect");
   const transportWorkbenchPreviewMode = document.getElementById("transportWorkbenchPreviewMode");
   const transportWorkbenchPreviewTitle = document.getElementById("transportWorkbenchPreviewTitle");
   const transportWorkbenchPreviewCanvas = document.getElementById("transportWorkbenchPreviewCanvas");
@@ -608,8 +585,6 @@ function initToolbar({ render } = {}) {
   const riversOpacityValue = document.getElementById("riversOpacityValue");
   const riversWidthValue = document.getElementById("riversWidthValue");
   const riversOutlineWidthValue = document.getElementById("riversOutlineWidthValue");
-  const specialZonesOpacityValue = document.getElementById("specialZonesOpacityValue");
-  const specialZonesStrokeWidthValue = document.getElementById("specialZonesStrokeWidthValue");
   const textureOpacityValue = document.getElementById("textureOpacityValue");
   const texturePaperScaleValue = document.getElementById("texturePaperScaleValue");
   const texturePaperWarmthValue = document.getElementById("texturePaperWarmthValue");
@@ -861,6 +836,7 @@ function initToolbar({ render } = {}) {
     transportWorkbenchLensSections,
     transportWorkbenchFamilyStatus,
     transportWorkbenchCountryStatus,
+    transportWorkbenchPackSelect,
     transportWorkbenchPreviewMode,
     transportWorkbenchPreviewTitle,
     transportWorkbenchPreviewCanvas,
@@ -1335,22 +1311,24 @@ function initToolbar({ render } = {}) {
     specialZonePopover.setAttribute("aria-hidden", "true");
     appearanceSpecialZoneBtn?.classList.remove("is-active");
     appearanceSpecialZoneBtn?.setAttribute("aria-expanded", "false");
+    appearanceSpecialZoneBtn?.focus?.();
   };
 
-  const openSpecialZonePopover = () => {
+  const openSpecialZonePopover = async () => {
     if (!specialZonePopover || specialZoneEditorInline) return;
     const willOpen = specialZonePopover.classList.contains("hidden");
     if (!willOpen) {
       closeSpecialZonePopover();
       return;
     }
-    specialZonesWorkbenchController?.loadScenarioSpecialZoneLayers?.();
+    await specialZonesWorkbenchController?.loadScenarioSpecialZoneLayers?.();
     rememberOverlayTrigger(specialZonePopover, appearanceSpecialZoneBtn);
     specialZonePopover.classList.remove("hidden");
     specialZonePopover.setAttribute("aria-hidden", "false");
     appearanceSpecialZoneBtn?.classList.add("is-active");
     appearanceSpecialZoneBtn?.setAttribute("aria-expanded", "true");
     focusOverlaySurface(specialZonePopover);
+    specialZonesWorkbenchController?.focusSpecialZonesWorkbench?.();
   };
 
   const getScenarioOverlayLeftInset = () => (
@@ -1945,7 +1923,6 @@ function initToolbar({ render } = {}) {
   function renderSpecialZoneEditorUI() {
     if (toggleWaterRegions) toggleWaterRegions.checked = !!runtimeState.showWaterRegions;
     if (toggleOpenOceanRegions) toggleOpenOceanRegions.checked = !!runtimeState.showOpenOceanRegions;
-    if (toggleSpecialZones) toggleSpecialZones.checked = !!runtimeState.showSpecialZones;
     if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;
     if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;
     renderAppearanceStyleControlsUi();
@@ -2088,41 +2065,8 @@ function initToolbar({ render } = {}) {
 
   const specialZoneEditorController = createSpecialZoneEditorController({
     runtimeState: state,
-    specialZonesDisputedFill,
-    specialZonesDisputedStroke,
-    specialZonesWastelandFill,
-    specialZonesWastelandStroke,
-    specialZonesCustomFill,
-    specialZonesCustomStroke,
-    specialZonesOpacity,
-    specialZonesStrokeWidth,
-    specialZonesDashStyle,
-    specialZoneTypeSelect,
-    specialZoneLabelInput,
-    specialZoneStartBtn,
-    specialZoneUndoBtn,
-    specialZoneFinishBtn,
-    specialZoneCancelBtn,
-    specialZoneFeatureList,
-    specialZoneDeleteBtn,
     specialZoneEditorHint,
-    specialZonesOpacityValue,
-    specialZonesStrokeWidthValue,
-    normalizeOceanFillColor,
-    clamp,
-    markDirty,
-    dismissOnboardingHint,
-    updateToolUI,
     renderTransportAppearanceUi,
-    render,
-    startSpecialZoneDraw,
-    undoSpecialZoneVertex,
-    finishSpecialZoneDraw,
-    cancelSpecialZoneDraw,
-    deleteSelectedManualSpecialZone,
-    selectSpecialZoneById,
-    showAppDialog,
-    showToast,
     t,
   });
   specialZoneEditorController.normalizeSpecialZoneEditorState();
@@ -2141,7 +2085,6 @@ function initToolbar({ render } = {}) {
   exportWorkbenchController = createExportWorkbenchController({
     state,
     t,
-    showToast,
     showExportFailureToast,
     normalizeExportWorkbenchUiState,
     renderPassNames: RENDER_PASS_NAMES,
@@ -3143,17 +3086,6 @@ function initToolbar({ render } = {}) {
       callRuntimeHook(state, "updateWaterInteractionUIFn");
       callRuntimeHook(state, "renderWaterRegionListFn");
       renderDirty("toggle-open-ocean-regions");
-    });
-  }
-
-  if (toggleSpecialZones) {
-    toggleSpecialZones.checked = runtimeState.showSpecialZones;
-    toggleSpecialZones.addEventListener("change", async (event) => {
-      runtimeState.showSpecialZones = event.target.checked;
-      if (runtimeState.showSpecialZones) {
-        await specialZonesWorkbenchController.loadScenarioSpecialZoneLayers();
-      }
-      renderDirty("toggle-special-zones");
     });
   }
 

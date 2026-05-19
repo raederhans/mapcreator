@@ -1,7 +1,5 @@
-import { ColorManager } from "../color_manager.js";
 import { ensureTransportOverviewStyleConfigState } from "../state/ui_state.js";
 import {
-  getTransportOverviewLineClassScopeRank,
   normalizeTransportOverviewVisualMode,
   resolveTransportOverviewLineStrategy,
   resolveTransportOverviewPointStrategy,
@@ -14,6 +12,39 @@ import {
   resolveTransportFacilityIconDrawSizePx,
   resolveTransportFacilityIconKey,
 } from "./transport_facility_icons.js";
+import {
+  applyTransportFacilityDensity,
+  doTransportFacilityLabelBoxesOverlap,
+  findTransportFacilityLabelPlacement,
+  getTransportFacilityDensityStrategy,
+  getTransportFacilityEntryStableSortKey,
+  getTransportFacilityLabelCandidates,
+  getTransportOverviewAirportLabelText,
+  getTransportOverviewPortLabelText,
+} from "./transport_facility_display_policy.js";
+import {
+  getIncludedTransportOverviewLineClass,
+  getTransportOverviewLabelZoomConfig,
+  getTransportOverviewPointImportanceRank,
+  shouldIncludeTransportOverviewPointFeature,
+} from "./transport_overview_visibility_policy.js";
+import {
+  getTransportOverviewAirportVisualStyle,
+  getTransportOverviewPortVisualStyle,
+  getTransportOverviewRailVisualStyle,
+  getTransportOverviewRoadVisualStyle,
+} from "./transport_overview_style_policy.js";
+import {
+  buildTransportOverviewLineStrokeSpecs,
+  getTransportLineFeatureLabelAnchor,
+  getTransportLineLabelGridSize,
+  getTransportOverviewRailLabelText,
+  getTransportOverviewRoadLabelText,
+  getRoadLabelClassPriority,
+  measureProjectedLineSetLength,
+  projectTransportLineGeometry,
+  resolveTransportRoadLabelClassAndPriority,
+} from "./transport_line_label_policy.js";
 
 export function createTransportOverviewRenderOwner({
   state = {},
@@ -27,7 +58,6 @@ export function createTransportOverviewRenderOwner({
     clearFacilityHoverEntries,
     collectContextMetric,
     getActiveFacilityHighlightEntry,
-    getCanvasColorRelativeLuminance,
     getContext = () => null,
     getFacilityHoverRadiusPx,
     getFeatureCollectionFeatureCount,
@@ -60,16 +90,6 @@ function requestTransportFacilityIconAtlasRender() {
     invalidateRenderPasses("contextMarkers", "transport-facility-icons-ready");
   }
   if (typeof requestRender === "function") requestRender("transport-facility-icons-ready");
-}
-
-function getContextFacilityThresholdRank(threshold, allowed = []) {
-  const normalized = String(threshold || "").trim().toLowerCase();
-  if (allowed.includes(normalized)) {
-    if (normalized === "national_core") return 3;
-    if (normalized === "regional_core") return 2;
-    return 1;
-  }
-  return 1;
 }
 
 function getTransportOverviewStyleConfig() {
@@ -113,167 +133,15 @@ function collectTransportCountryOverlayMetric(metricName, familyId, reason) {
   });
 }
 
-function getTransportOverviewLabelZoomConfig(familyId, labelDensity) {
-  const base = familyId === "airport"
-    ? { nationalLabelScale: 2.0, regionalLabelScale: 5.0 }
-    : { nationalLabelScale: 2.2, regionalLabelScale: 5.4 };
-  switch (String(labelDensity || "").trim().toLowerCase()) {
-    case "sparse":
-      return {
-        nationalLabelScale: base.nationalLabelScale + 0.7,
-        regionalLabelScale: base.regionalLabelScale + 1.1,
-      };
-    case "dense":
-      return {
-        nationalLabelScale: Math.max(0.75, base.nationalLabelScale - 0.35),
-        regionalLabelScale: Math.max(1.4, base.regionalLabelScale - 0.9),
-      };
-    default:
-      return base;
-  }
-}
-
-function getTransportOverviewImportanceThresholdRank(value, allowed = ["primary", "secondary", "all"]) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (!allowed.includes(normalized)) return 2;
-  if (normalized === "primary") return 3;
-  if (normalized === "secondary") return 2;
-  return 1;
-}
-
-function getTransportOverviewZoomRevealAllowance(scale) {
-  const k = Number(scale || 1);
-  if (k >= 6) return 2;
-  if (k >= 3.1) return 1;
-  return 0;
-}
-
-function getTransportPortZoomRevealFloor(scale) {
-  return Math.max(1, 2 - getTransportOverviewZoomRevealAllowance(scale));
-}
-
-function getTransportAirportScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  if (normalized === "international") return 3;
-  if (normalized === "all_civil") return 1;
-  return 2;
-}
-
-function getTransportPortScopeThreshold(scope) {
-  const normalized = String(scope || "").trim().toLowerCase();
-  if (normalized === "core") return 3;
-  if (normalized === "expanded") return 1;
-  return 2;
-}
-
-function getTransportOverviewPrimaryColor(value, fallback = "#1d4ed8") {
-  return ColorManager.normalizeHexColor(String(value || "").trim()) || fallback;
-}
-
-function buildTransportFacilityVisualStyle(primaryColor, visualStrength, fallback = "#1d4ed8") {
-  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, fallback);
-  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.56, 0, 1);
-  const luminance = getCanvasColorRelativeLuminance(resolvedPrimaryColor);
-  const strokeTarget = Number.isFinite(luminance) && luminance < 0.4 ? "#f8fbff" : "#ffffff";
-  const labelTarget = Number.isFinite(luminance) && luminance < 0.56 ? "#f8fafc" : "#0f172a";
-  return {
-    fillStyle: resolvedPrimaryColor,
-    strokeStyle: mixCanvasColors(resolvedPrimaryColor, strokeTarget, 0.72) || strokeTarget,
-    labelColor: mixCanvasColors(resolvedPrimaryColor, labelTarget, Number.isFinite(luminance) && luminance < 0.56 ? 0.48 : 0.78) || labelTarget,
-    highlightStroke: mixCanvasColors(resolvedPrimaryColor, "#ffffff", 0.82) || "#ffffff",
-    radiusScale: 0.95 + (strength * 0.62),
-    strokeScale: 0.9 + (strength * 0.35),
-    hoverScale: 1.12 + (strength * 0.12),
-  };
-}
-
-function getTransportOverviewAirportVisualStyle(primaryColor, visualStrength) {
-  return buildTransportFacilityVisualStyle(primaryColor, visualStrength, "#1d4ed8");
-}
-
-function getTransportOverviewPortVisualStyle(primaryColor, visualStrength) {
-  return buildTransportFacilityVisualStyle(primaryColor, visualStrength, "#b45309");
-}
-
-function getTransportOverviewRailVisualStyle(primaryColor, visualStrength) {
-  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, "#0f172a");
-  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.5, 0, 1);
-  return {
-    mainlineCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#f8fafc", 0.82) || "#f8fafc",
-    mainlineStroke: mixCanvasColors(resolvedPrimaryColor, "#020617", 0.28) || resolvedPrimaryColor,
-    regionalCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#f1f5f9", 0.72) || "#f1f5f9",
-    regionalStroke: mixCanvasColors(resolvedPrimaryColor, "#64748b", 0.34) || resolvedPrimaryColor,
-    secondaryCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#e2e8f0", 0.62) || "#e2e8f0",
-    secondaryStroke: mixCanvasColors(resolvedPrimaryColor, "#94a3b8", 0.42) || resolvedPrimaryColor,
-    mainlineCasingWidth: 3.35 + (strength * 1.65),
-    mainlineWidth: 1.55 + (strength * 1.25),
-    regionalCasingWidth: 2.25 + (strength * 1.05),
-    regionalWidth: 0.9 + (strength * 0.75),
-    secondaryCasingWidth: 1.8 + (strength * 0.75),
-    secondaryWidth: 0.72 + (strength * 0.55),
-    mainlineOpacity: 0.74 + (strength * 0.26),
-    regionalOpacity: 0.42 + (strength * 0.22),
-    secondaryOpacity: 0.28 + (strength * 0.18),
-    regionalDashPx: [5.5, 4.5],
-    secondaryDashPx: [2.8, 4.8],
-  };
-}
-
-function getTransportOverviewRoadVisualStyle(primaryColor, visualStrength) {
-  const resolvedPrimaryColor = getTransportOverviewPrimaryColor(primaryColor, "#374151");
-  const strength = clamp(Number.isFinite(Number(visualStrength)) ? Number(visualStrength) : 0.5, 0, 1);
-  return {
-    motorwayCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#f9fafb", 0.86) || "#f9fafb",
-    motorwayStroke: mixCanvasColors(resolvedPrimaryColor, "#111827", 0.22) || resolvedPrimaryColor,
-    trunkCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#e5e7eb", 0.68) || "#e5e7eb",
-    trunkStroke: mixCanvasColors(resolvedPrimaryColor, "#111827", 0.1) || resolvedPrimaryColor,
-    primaryCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#e5e7eb", 0.54) || "#e5e7eb",
-    primaryStroke: mixCanvasColors(resolvedPrimaryColor, "#4b5563", 0.18) || resolvedPrimaryColor,
-    secondaryCasingStroke: mixCanvasColors(resolvedPrimaryColor, "#d1d5db", 0.44) || "#d1d5db",
-    secondaryStroke: mixCanvasColors(resolvedPrimaryColor, "#6b7280", 0.26) || resolvedPrimaryColor,
-    motorwayCasingWidth: 3.45 + (strength * 1.75),
-    motorwayWidth: 1.55 + (strength * 1.45),
-    trunkCasingWidth: 2.35 + (strength * 1.2),
-    trunkWidth: 0.95 + (strength * 0.95),
-    primaryCasingWidth: 1.85 + (strength * 0.85),
-    primaryWidth: 0.76 + (strength * 0.58),
-    secondaryCasingWidth: 1.5 + (strength * 0.58),
-    secondaryWidth: 0.62 + (strength * 0.4),
-    motorwayOpacity: 0.72 + (strength * 0.24),
-    trunkOpacity: 0.48 + (strength * 0.2),
-    primaryOpacity: 0.34 + (strength * 0.16),
-    secondaryOpacity: 0.24 + (strength * 0.12),
-    trunkDashPx: [6, 5],
-    primaryDashPx: [4.2, 5.4],
-    secondaryDashPx: [2.6, 5.8],
-  };
-}
-
-function resolveTransportOverviewLineCoordinateWidth(screenWidthPx, k, floorPx = 0.75) {
-  const safeZoom = Math.max(0.0001, Number(k || 1));
-  const normalizedScreenWidth = Math.max(Number(floorPx) || 0, Number(screenWidthPx) || 0);
-  // Canvas lineWidth is in transformed coordinate units, so keep the visual
-  // target in screen pixels and convert it back through the active zoom.
-  return normalizedScreenWidth / safeZoom;
-}
-
-function resolveTransportOverviewLineDash(dashPx, k) {
-  if (!Array.isArray(dashPx) || !dashPx.length) return [];
-  const safeZoom = Math.max(0.0001, Number(k || 1));
-  return dashPx
-    .map((value) => Math.max(0, Number(value) || 0) / safeZoom)
-    .filter((value) => value > 0);
-}
-
-function drawTransportOverviewLineStroke(features, strokeStyle, screenWidthPx, opacity, { k, dashPx = null, widthFloorPx = 0.75 } = {}) {
-  if (!features.length || !(opacity > 0) || !(screenWidthPx > 0)) return;
+function drawTransportOverviewLineStroke(features, { strokeStyle, lineWidth, opacity, dash = [] } = {}) {
+  if (!features.length || !(opacity > 0) || !(lineWidth > 0)) return;
   context.save();
   context.globalAlpha = opacity;
   context.strokeStyle = strokeStyle;
-  context.lineWidth = resolveTransportOverviewLineCoordinateWidth(screenWidthPx, k, widthFloorPx);
+  context.lineWidth = lineWidth;
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.setLineDash(resolveTransportOverviewLineDash(dashPx, k));
+  context.setLineDash(dash);
   try {
     features.forEach((feature) => {
       context.beginPath();
@@ -288,231 +156,13 @@ function drawTransportOverviewLineStroke(features, strokeStyle, screenWidthPx, o
 
 function drawTransportOverviewLineSet(features, style, { baseOpacity, strategy, k, widthFloorPx = 0.75 } = {}) {
   if (!features.length) return;
-  const opacity = baseOpacity * Number(style.opacity || 0) * strategy.opacityMultiplier;
-  drawTransportOverviewLineStroke(features, style.casingStroke, style.casingWidth * strategy.widthMultiplier, opacity * 0.82, {
+  const strokeSpecs = buildTransportOverviewLineStrokeSpecs(style, {
+    baseOpacity,
+    strategy,
     k,
-    widthFloorPx: widthFloorPx + 0.7,
-  });
-  drawTransportOverviewLineStroke(features, style.innerStroke, style.innerWidth * strategy.widthMultiplier, opacity, {
-    k,
-    dashPx: style.dashPx,
     widthFloorPx,
   });
-}
-
-function getTransportLineLabelGridSize(labelDensity) {
-  switch (String(labelDensity || "").trim().toLowerCase()) {
-    case "dense":
-      return 112;
-    case "sparse":
-      return 176;
-    default:
-      return 144;
-  }
-}
-
-function getTransportFacilityDensityStrategy(k) {
-  const scale = Math.max(0.0001, Number(k || 1));
-  if (scale >= 5) {
-    return { level: "local", gridSizePx: 16, maxVisible: 5000 };
-  }
-  if (scale >= 2.4) {
-    return { level: "regional", gridSizePx: 32, maxVisible: 1200 };
-  }
-  return { level: "world", gridSizePx: 56, maxVisible: 600 };
-}
-
-function getTransportFacilityEntryStableSortKey(feature, properties = {}, coordinates = []) {
-  return String(
-    properties.stable_key
-    || properties.id
-    || properties.facility_id
-    || properties.name
-    || `${coordinates?.[0] ?? ""}:${coordinates?.[1] ?? ""}`
-    || feature?.id
-    || ""
-  ).trim();
-}
-
-function applyTransportFacilityDensity(entries, densityStrategy) {
-  // 先按 importance + stable key 排成确定顺序，再做屏幕网格裁剪。
-  // 这样同一视图下的 visible/hover 结果可重复，避免缩放时点位排序来回抖动。
-  const sortedEntries = [...entries].sort((left, right) => {
-    if (right.importanceRank !== left.importanceRank) return right.importanceRank - left.importanceRank;
-    return String(left.stableSortKey || "").localeCompare(String(right.stableSortKey || ""));
-  });
-  const gridSizePx = Math.max(1, Number(densityStrategy?.gridSizePx || 1));
-  const maxVisible = Math.max(1, Number(densityStrategy?.maxVisible || sortedEntries.length));
-  const usedBuckets = new Set();
-  const filteredEntries = [];
-  for (const entry of sortedEntries) {
-    const bucket = `${Math.floor(Number(entry.screenX || 0) / gridSizePx)}:${Math.floor(Number(entry.screenY || 0) / gridSizePx)}`;
-    if (usedBuckets.has(bucket)) continue;
-    usedBuckets.add(bucket);
-    filteredEntries.push(entry);
-    if (filteredEntries.length >= maxVisible) break;
-  }
-  return filteredEntries;
-}
-
-function buildProjectedRailLines(geometry) {
-  if (!projection || !geometry || typeof geometry !== "object") return [];
-  const rawLines = geometry.type === "LineString"
-    ? [geometry.coordinates || []]
-    : geometry.type === "MultiLineString"
-      ? (geometry.coordinates || [])
-      : [];
-  return rawLines
-    .map((line) => (Array.isArray(line) ? line : []).map((coord) => projection(coord)).filter((point) => Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1])))
-    .filter((line) => line.length >= 2);
-}
-
-function measureProjectedLineSetLength(lines) {
-  let total = 0;
-  (Array.isArray(lines) ? lines : []).forEach((line) => {
-    for (let index = 1; index < line.length; index += 1) {
-      const previous = line[index - 1];
-      const current = line[index];
-      total += Math.hypot(
-        Number(current?.[0] || 0) - Number(previous?.[0] || 0),
-        Number(current?.[1] || 0) - Number(previous?.[1] || 0),
-      );
-    }
-  });
-  return total;
-}
-
-function getRailFeatureLabelAnchor(feature) {
-  return getLineFeatureLabelAnchor(feature);
-}
-
-function getLineFeatureLabelAnchor(feature) {
-  const geometry = feature?.geometry;
-  if (!geometry || typeof geometry !== "object") return null;
-  if (geometry.type === "LineString") {
-    return getLineMidpointFromCoordinates(Array.isArray(geometry.coordinates) ? geometry.coordinates : []);
-  }
-  return getMultiLineLabelAnchor(geometry, "midpoint");
-}
-
-function compactTransportFacilityName(name, familyId, { aggressive = false } = {}) {
-  const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
-  const originalLabel = String(name || "").trim();
-  let label = originalLabel;
-  if (!label) return "";
-  if (normalizedFamilyId === "airport") {
-    label = label
-      .replace(/\bInternational Airport\b/gi, "Intl")
-      .replace(/\bInternational\b/gi, "Intl")
-      .replace(/\bAirport\b/gi, "")
-      .replace(/\bAerodrome\b/gi, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  } else if (normalizedFamilyId === "port") {
-    label = label
-      .replace(/^Port of\s+/i, "")
-      .replace(/\bPort\b/gi, "")
-      .replace(/\bHarbor\b/gi, "Hbr")
-      .replace(/\bHarbour\b/gi, "Hbr")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-  if (!label) label = originalLabel;
-  const limit = aggressive ? 18 : 28;
-  return label.length > limit ? `${label.slice(0, Math.max(8, limit - 1)).trim()}...` : label;
-}
-
-function shouldUseShortFacilityLabel(label, { scale = 1, labelSize = 9, importanceRank = 1 } = {}) {
-  const length = String(label || "").trim().length;
-  const zoom = Number(scale || 1);
-  const size = Number(labelSize || 9);
-  if (zoom < 4.2) return true;
-  if (importanceRank < 3 && zoom < 6.2) return true;
-  return length > Math.max(18, 36 - Math.max(0, size - 9) * 3) && zoom < 7.2;
-}
-
-function getTransportOverviewAirportLabelText(properties = {}, mode = "adaptive", options = {}) {
-  const name = String(properties.name || "").trim();
-  const code = String(properties.iata || properties.icao || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "code") return code || name;
-  if (normalized === "name") return name || code;
-  if (normalized === "adaptive") {
-    if (shouldUseShortFacilityLabel(name, options)) return code || compactTransportFacilityName(name, "airport", { aggressive: true });
-    const compactName = compactTransportFacilityName(name, "airport");
-    return code && compactName ? `${code} · ${compactName}` : (code || compactName);
-  }
-  return code && name ? `${code} · ${name}` : (code || name);
-}
-
-function getTransportOverviewPortLabelText(properties = {}, mode = "adaptive", options = {}) {
-  const name = String(properties.name || "").trim();
-  const designation = String(properties.legal_designation_label || properties.legal_designation || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "cargo_focus") return designation || name;
-  if (normalized === "name") return name || designation;
-  if (normalized === "adaptive") {
-    const compactName = compactTransportFacilityName(name, "port", {
-      aggressive: shouldUseShortFacilityLabel(name, options),
-    });
-    if (shouldUseShortFacilityLabel(name, options)) return compactName || designation;
-    return designation && compactName ? `${compactName} · ${designation}` : (compactName || designation);
-  }
-  return designation && name ? `${name} · ${designation}` : (name || designation);
-}
-
-function getTransportOverviewRailLabelText(properties = {}, mode = "name") {
-  const name = String(properties.name || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "ref") return name;
-  return name;
-}
-
-function getTransportOverviewRoadLabelText(properties = {}, mode = "ref") {
-  const ref = String(properties.ref || properties.route_ref || "").trim();
-  const name = String(properties.name || properties.road_name || "").trim();
-  const normalized = String(mode || "").trim().toLowerCase();
-  if (normalized === "name") return name || ref;
-  if (normalized === "both") return ref && name ? `${ref} · ${name}` : (ref || name);
-  return ref || name;
-}
-
-function getRoadLabelClassPriority(roadClass) {
-  switch (String(roadClass || "").trim().toLowerCase()) {
-    case "motorway":
-      return 4;
-    case "trunk":
-      return 3;
-    case "primary":
-      return 2;
-    default:
-      return 1;
-  }
-}
-
-function getRoadLabelClassFromPriority(priority) {
-  if (priority >= 4) return "motorway";
-  if (priority >= 3) return "trunk";
-  if (priority >= 2) return "primary";
-  return "secondary";
-}
-
-function resolveTransportRoadLabelClassAndPriority(properties = {}) {
-  const explicitRoadClass = String(properties.class || properties.road_class || properties.highway || "").trim().toLowerCase();
-  if (explicitRoadClass) {
-    return {
-      roadClass: explicitRoadClass,
-      priority: getRoadLabelClassPriority(explicitRoadClass),
-    };
-  }
-  const rawPriority = Number(properties.priority ?? properties.label_priority ?? properties.rank);
-  const priority = Number.isFinite(rawPriority)
-    ? Math.max(1, Math.min(4, Math.round(rawPriority)))
-    : 1;
-  return {
-    roadClass: getRoadLabelClassFromPriority(priority),
-    priority,
-  };
+  strokeSpecs.forEach((strokeSpec) => drawTransportOverviewLineStroke(features, strokeSpec));
 }
 
 function getCurrentZoomTransform() {
@@ -553,9 +203,9 @@ function buildContextFacilityEntries(
     if (!Array.isArray(coordinates) || coordinates.length < 2) return;
     const projected = projection([coordinates[0], coordinates[1]]);
     if (!Array.isArray(projected) || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
+    if (!shouldIncludeTransportOverviewPointFeature(feature, { thresholdRank })) return;
     const properties = feature.properties || {};
-    const importanceRank = Math.max(1, Math.round(Number(properties.importance_rank || 1)));
-    if (importanceRank < thresholdRank) return;
+    const importanceRank = getTransportOverviewPointImportanceRank(feature);
     const x = projected[0];
     const y = projected[1];
     const screenX = (x * zoomTransform.k) + zoomTransform.x;
@@ -614,51 +264,6 @@ function tintTransportFacilityIcon(context2d, { x, y, size, tintColor, strokeCol
   context2d.restore();
 }
 
-function rectanglesOverlap(left, right) {
-  return left.x < right.x + right.width
-    && left.x + left.width > right.x
-    && left.y < right.y + right.height
-    && left.y + left.height > right.y;
-}
-
-function findTransportFacilityLabelPlacement(entry, { fontSizePx, iconSizePx, zoomScale, measureText }) {
-  const label = String(entry?.label || "").trim();
-  if (!label) return null;
-  const screenFontSize = Math.max(8, Number(fontSizePx || 10));
-  const screenTextWidth = Math.max(1, Number(measureText(label)) || (label.length * screenFontSize * 0.58));
-  const screenTextHeight = screenFontSize + 3;
-  const gap = Math.max(5, (Number(iconSizePx || 10) / 2) + 4);
-  const screenX = Number(entry.screenX || 0);
-  const screenY = Number(entry.screenY || 0);
-  const placements = [
-    {
-      textX: screenX + gap,
-      textY: screenY,
-      box: { x: screenX + gap - 2, y: screenY - (screenTextHeight / 2), width: screenTextWidth + 4, height: screenTextHeight },
-    },
-    {
-      textX: screenX - gap - screenTextWidth,
-      textY: screenY,
-      box: { x: screenX - gap - screenTextWidth - 2, y: screenY - (screenTextHeight / 2), width: screenTextWidth + 4, height: screenTextHeight },
-    },
-    {
-      textX: screenX - (screenTextWidth / 2),
-      textY: screenY - gap - (screenTextHeight / 2),
-      box: { x: screenX - (screenTextWidth / 2) - 2, y: screenY - gap - screenTextHeight, width: screenTextWidth + 4, height: screenTextHeight },
-    },
-    {
-      textX: screenX - (screenTextWidth / 2),
-      textY: screenY + gap + (screenTextHeight / 2),
-      box: { x: screenX - (screenTextWidth / 2) - 2, y: screenY + gap, width: screenTextWidth + 4, height: screenTextHeight },
-    },
-  ];
-  return placements.map((placement) => ({
-    ...placement,
-    worldX: (placement.textX - getCurrentZoomTransform().x) / zoomScale,
-    worldY: (placement.textY - getCurrentZoomTransform().y) / zoomScale,
-  }));
-}
-
 function drawTransportFacilityLabels(entries, {
   familyId,
   k,
@@ -672,20 +277,12 @@ function drawTransportFacilityLabels(entries, {
   const normalizedFamilyId = String(familyId || "").trim().toLowerCase();
   const configuredLabelSize = clamp(Math.round(Number(labelSize || 9)), 7, 16);
   const configuredLabelHalo = clamp(Number(labelHalo ?? 0.22), 0, 1);
-  const candidates = entries
-    .filter((entry) => {
-      if (!entry.label) return false;
-      const baseScale = entry.importanceRank >= 3 ? nationalLabelScale : regionalLabelScale;
-      const labelLengthPenalty = Math.max(0, String(entry.label || "").length - 14) * 0.055;
-      const sizePenalty = Math.max(0, configuredLabelSize - 9) * 0.16;
-      return k >= baseScale + labelLengthPenalty + sizePenalty;
-    })
-    .sort((left, right) => {
-      if (right.importanceRank !== left.importanceRank) return right.importanceRank - left.importanceRank;
-      const labelDelta = String(left.label || "").length - String(right.label || "").length;
-      if (labelDelta !== 0) return labelDelta;
-      return String(left.stableSortKey || "").localeCompare(String(right.stableSortKey || ""));
-    });
+  const candidates = getTransportFacilityLabelCandidates(entries, {
+    k,
+    configuredLabelSize,
+    nationalLabelScale,
+    regionalLabelScale,
+  });
   const occupiedBoxes = [];
   let labelCount = 0;
   context.save();
@@ -710,8 +307,9 @@ function drawTransportFacilityLabels(entries, {
       iconSizePx,
       zoomScale,
       measureText,
+      zoomTransform: getCurrentZoomTransform(),
     });
-    const placement = placements?.find((candidate) => !occupiedBoxes.some((box) => rectanglesOverlap(candidate.box, box)));
+    const placement = placements?.find((candidate) => !occupiedBoxes.some((box) => doTransportFacilityLabelBoxesOverlap(candidate.box, box)));
     if (!placement) return;
     occupiedBoxes.push(placement.box);
     context.lineWidth = usesFacilityIcon ? ((0.45 + (configuredLabelHalo * 2.4)) / zoomScale) : 3;
@@ -1073,8 +671,6 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
     scale: k,
     visualMode: getTransportOverviewVisualMode(),
   });
-  const minimumScopeRank = strategy.minimumScopeRank;
-  const maximumRevealRank = strategy.maximumRevealRank;
   const visualStyle = getTransportOverviewRailVisualStyle(railConfig.primaryColor, railConfig.visualStrength);
   const featuresByClass = {
     secondary: [],
@@ -1084,10 +680,8 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
   const labelCandidates = [];
   collection.features.forEach((feature) => {
     const properties = feature?.properties || {};
-    const lineClass = String(properties.class || "").trim().toLowerCase();
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
-    if (revealRank > maximumRevealRank) return;
-    if (getTransportOverviewLineClassScopeRank("rail", lineClass) > minimumScopeRank) return;
+    const lineClass = getIncludedTransportOverviewLineClass("rail", feature, strategy);
+    if (!lineClass) return;
     if (lineClass === "mainline") {
       featuresByClass.mainline.push(feature);
     } else if (lineClass === "regional") {
@@ -1100,11 +694,14 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
 
     const label = getTransportOverviewRailLabelText(properties, railConfig.labelMode);
     if (!label || !railConfig.labelsEnabled || typeof projection !== "function") return;
-    const anchorGeo = getRailFeatureLabelAnchor(feature);
+    const anchorGeo = getTransportLineFeatureLabelAnchor(feature, {
+      getLineMidpointFromCoordinates,
+      getMultiLineLabelAnchor,
+    });
     if (!Array.isArray(anchorGeo) || anchorGeo.length < 2) return;
     const anchorProjected = projection(anchorGeo);
     if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return;
-    const projectedLines = buildProjectedRailLines(feature.geometry);
+    const projectedLines = projectTransportLineGeometry(feature.geometry, projection);
     const projectedLength = measureProjectedLineSetLength(projectedLines);
     const minimumProjectedLength = lineClass === "mainline" ? 110 : lineClass === "regional" ? 72 : 58;
     if (projectedLength < minimumProjectedLength) return;
@@ -1291,8 +888,6 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
     scale: k,
     visualMode: getTransportOverviewVisualMode(),
   });
-  const minimumScopeRank = strategy.minimumScopeRank;
-  const maximumRevealRank = strategy.maximumRevealRank;
   const visualStyle = getTransportOverviewRoadVisualStyle(roadConfig.primaryColor, roadConfig.visualStrength);
   const featuresByClass = {
     secondary: [],
@@ -1301,12 +896,8 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
     motorway: [],
   };
   collection.features.forEach((feature) => {
-    const properties = feature?.properties || {};
-    const roadClass = String(properties.class || "").trim().toLowerCase();
-    const defaultRevealRank = roadClass === "motorway" ? 1 : roadClass === "trunk" ? 2 : 3;
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || defaultRevealRank)));
-    if (revealRank > maximumRevealRank) return;
-    if (getTransportOverviewLineClassScopeRank("road", roadClass) > minimumScopeRank) return;
+    const roadClass = getIncludedTransportOverviewLineClass("road", feature, strategy);
+    if (!roadClass) return;
     if (roadClass === "motorway") {
       featuresByClass.motorway.push(feature);
     } else if (roadClass === "trunk") {
@@ -1391,17 +982,19 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
     const gridSize = getTransportLineLabelGridSize(roadConfig.labelDensity);
     const usedBuckets = new Set();
     const labelCandidates = [];
-    const classPriority = { motorway: 4, trunk: 3, primary: 2, secondary: 1 };
     Object.entries(featuresByClass).forEach(([roadClass, features]) => {
       features.forEach((feature) => {
         const properties = feature?.properties || {};
         const label = getTransportOverviewRoadLabelText(properties, roadConfig.labelMode);
         if (!label) return;
-        const anchorGeo = getLineFeatureLabelAnchor(feature);
+        const anchorGeo = getTransportLineFeatureLabelAnchor(feature, {
+          getLineMidpointFromCoordinates,
+          getMultiLineLabelAnchor,
+        });
         if (!Array.isArray(anchorGeo) || anchorGeo.length < 2) return;
         const anchorProjected = projection(anchorGeo);
         if (!Array.isArray(anchorProjected) || anchorProjected.length < 2 || !Number.isFinite(anchorProjected[0]) || !Number.isFinite(anchorProjected[1])) return;
-        const projectedLines = buildProjectedRailLines(feature.geometry);
+        const projectedLines = projectTransportLineGeometry(feature.geometry, projection);
         const projectedLength = measureProjectedLineSetLength(projectedLines);
         const minimumProjectedLength = roadClass === "motorway" ? 120 : roadClass === "trunk" ? 88 : 70;
         if (projectedLength < minimumProjectedLength) return;
@@ -1411,7 +1004,7 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
           projectedLength,
           x: anchorProjected[0],
           y: anchorProjected[1],
-          priority: classPriority[roadClass] || 0,
+          priority: getRoadLabelClassPriority(roadClass),
         });
       });
     });
@@ -1532,11 +1125,8 @@ function drawCountryRailwaysLayer(k, { interactive = false } = {}) {
     mainline: [],
   };
   collection.features.forEach((feature) => {
-    const properties = feature?.properties || {};
-    const lineClass = String(properties.class || "").trim().toLowerCase();
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || (lineClass === "mainline" ? 1 : 2))));
-    if (revealRank > strategy.maximumRevealRank) return;
-    if (getTransportOverviewLineClassScopeRank("rail", lineClass) > strategy.minimumScopeRank) return;
+    const lineClass = getIncludedTransportOverviewLineClass("rail", feature, strategy);
+    if (!lineClass) return;
     if (lineClass === "mainline") featuresByClass.mainline.push(feature);
     else if (lineClass === "regional") featuresByClass.regional.push(feature);
     else if (lineClass === "secondary") featuresByClass.secondary.push(feature);
@@ -1641,12 +1231,8 @@ function drawCountryRoadsLayer(k, { interactive = false } = {}) {
     motorway: [],
   };
   collection.features.forEach((feature) => {
-    const properties = feature?.properties || {};
-    const roadClass = String(properties.class || "").trim().toLowerCase();
-    const defaultRevealRank = roadClass === "motorway" ? 1 : roadClass === "trunk" ? 2 : 3;
-    const revealRank = Math.max(1, Math.round(Number(properties.reveal_rank || defaultRevealRank)));
-    if (revealRank > strategy.maximumRevealRank) return;
-    if (getTransportOverviewLineClassScopeRank("road", roadClass) > strategy.minimumScopeRank) return;
+    const roadClass = getIncludedTransportOverviewLineClass("road", feature, strategy);
+    if (!roadClass) return;
     if (roadClass === "motorway") featuresByClass.motorway.push(feature);
     else if (roadClass === "trunk") featuresByClass.trunk.push(feature);
     else if (roadClass === "primary") featuresByClass.primary.push(feature);
