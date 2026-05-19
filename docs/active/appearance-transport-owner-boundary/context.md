@@ -298,3 +298,4 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_layer_order_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
   - `git diff --check`
 - Final static re-review approved the layer-order owner boundary after the fixes. Remaining risk is limited to live browser behavior, which is intentionally not part of this current verification lane.
+- Pushed implementation to `origin/main` as `0784ff4`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean layer-order worktree and left those local changes untouched.
