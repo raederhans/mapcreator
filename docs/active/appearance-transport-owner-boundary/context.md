@@ -181,3 +181,34 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
   - `git diff --check`
 - Pushed implementation to `origin/main` as `8f2df85`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean preview-runtime-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench inspector owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-inspector-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes identified the inspector model as the next bounded workbench split: the controller was still carrying formatter logic, manifest-only rows, diagnostics rows, lens summary rows, and the large selected-family inspector model.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_inspector_owner.js`.
+- Moved to inspector owner: option/timestamp/road-hidden-reason formatters, manifest-only runtime rows, per-family diagnostic rows, lens summary rows, selected-family inspector row model, state-card models, and small row/card DOM factories.
+- Kept in `transport_workbench_controller.js`: tab switching, shell rendering, inspector empty-state toggling, row insertion/class decoration, current render context, preview lifecycle owner wiring, and apply bridge wiring.
+- The split preserved the existing translated `Right deck` lens summary by passing the localized label from the controller into the owner model.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the inspector owner and checks controller delegation.
+  - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks manifest variant helpers through the inspector owner because those rows moved out of the controller.
+  - `tests/transport_workbench_inspector_owner_behavior.test.mjs` covers manifest-only rows, diagnostics rows, road non-ready rows, rail selected line/station rows, airport/port selected feature rows, logistics empty-filter state cards, layer status rows, and translated lens summary labels.
+  - `package.json` exposes `test:node:transport-workbench-inspector-owner`.
+- Static review found a behavior blocker: road non-ready, rail, airport, and port ready inspector branches were not fully moved on the first pass. The owner now carries those original branches, and the Node behavior test covers the previously missed live-preview families.
+- Review also flagged the owner-level English `Right deck` fallback. The owner now expects the controller to pass the localized label and stores an empty value if a future caller misses that contract.
+- Final static review found no blockers after those fixes.
+- Current verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py tests/test_state_write_guardrail_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`

@@ -1606,3 +1606,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-19 - transport workbench preview listener lifecycle
 
 - 如果 dispose 会销毁底层 carrier 并清空 listener，owner 必须在同一关闭路径恢复 runtime listener；只在 app 启动时注册一次会让 close/open 后的 view sync 断链。
+
+## 2026-05-19 - inspector model owner split coverage
+
+- 从大型 controller 迁出多分支 inspector 模型时，测试必须逐个覆盖每个 live family 的 ready/error/loading 分支；只测一个代表 family 会让漏搬表现成“reserved shell”静默退化。

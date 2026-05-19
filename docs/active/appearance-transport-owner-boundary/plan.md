@@ -168,3 +168,28 @@ Progress:
 - [x] Ran initial targeted verification.
 - [x] Run final static review.
 - [x] Pushed implementation to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench inspector owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-inspector-owner-2026-05-19`
+Branch: `codex/transport-workbench-inspector-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench inspector row models and diagnostic summaries out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_inspector_owner.js` owns inspector formatters, manifest-only rows, diagnostic rows, lens summary rows, state-card models, and small inspector DOM row/card factories.
+- `transport_workbench_controller.js` keeps tab switching, shell rendering, render context, row insertion, and selected-family refresh sequencing.
+- Existing Python contracts and a named Node behavior test cover the boundary and representative row-model behavior.
+- Targeted syntax, Python contracts, Node behavior tests, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only evidence lanes for inspector boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented inspector owner split.
+- [x] Updated contracts and added named Node behavior script.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

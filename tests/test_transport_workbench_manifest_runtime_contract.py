@@ -21,6 +21,7 @@ TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
 TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
+TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
 TRANSPORT_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 STARTUP_LOCALE_FILES = [
@@ -64,16 +65,22 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
         apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
+        inspector_owner_content = TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS.read_text(encoding="utf-8")
 
         self.assertIn('./toolbar/transport_workbench_controller.js', toolbar_content)
-        self.assertIn('../transport_workbench_manifest_variants.js', controller_content)
-        self.assertIn("listTransportWorkbenchManifestVariantEntries", controller_content)
-        self.assertIn("getTransportWorkbenchManifestDefaultVariantId", controller_content)
-        self.assertIn("getTransportWorkbenchManifestVariantMeta", controller_content)
+        self.assertIn('./transport_workbench_inspector_owner.js', controller_content)
+        self.assertIn('../transport_workbench_manifest_variants.js', inspector_owner_content)
+        self.assertIn("listTransportWorkbenchManifestVariantEntries", inspector_owner_content)
+        self.assertIn("getTransportWorkbenchManifestDefaultVariantId", inspector_owner_content)
+        self.assertIn("getTransportWorkbenchManifestVariantMeta", inspector_owner_content)
         self.assertNotIn("coverage_variants", controller_content)
         self.assertNotIn("distribution_variants", controller_content)
         self.assertNotIn("default_coverage_tier", controller_content)
         self.assertNotIn("default_distribution_variant", controller_content)
+        self.assertNotIn("coverage_variants", inspector_owner_content)
+        self.assertNotIn("distribution_variants", inspector_owner_content)
+        self.assertNotIn("default_coverage_tier", inspector_owner_content)
+        self.assertNotIn("default_distribution_variant", inspector_owner_content)
         self.assertIn("getTransportWorkbenchOverviewBridgeSupport", apply_owner_content)
 
     def test_transport_capability_registry_owns_family_capability_truth(self) -> None:

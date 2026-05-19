@@ -18,6 +18,7 @@ TRANSPORT_WORKBENCH_STATE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "tran
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
 TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
 TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js"
+TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -418,6 +419,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         config_owner_content = TRANSPORT_WORKBENCH_CONFIG_OWNER_JS.read_text(encoding="utf-8")
         apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
         preview_lifecycle_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
+        inspector_owner_content = TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
@@ -425,6 +427,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("./transport_workbench_config_owner.js", owner_content)
         self.assertIn("./transport_workbench_apply_bridge_owner.js", owner_content)
         self.assertIn("./transport_workbench_preview_lifecycle_owner.js", owner_content)
+        self.assertIn("./transport_workbench_inspector_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
         self.assertIn("const initializeTransportWorkbenchRuntime = () => {", owner_content)
@@ -507,7 +510,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", owner_content)
         self.assertIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", state_owner_content)
         self.assertNotIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", owner_content)
-        self.assertIn("buildEnergyFacilitySubtypeControlOptions,", owner_content)
+        self.assertIn("buildEnergyFacilitySubtypeControlOptions,", inspector_owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = {", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_SECTION_DEFAULTS = {", owner_content)
@@ -526,6 +529,26 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("warmTransportWorkbenchFamilyPreview,", owner_content)
         self.assertNotIn("listTransportWorkbenchWarmupPlans,", owner_content)
         self.assertNotIn("setTransportWorkbenchFamilyPreviewSelectionListener,", owner_content)
+        self.assertIn("export function createTransportWorkbenchInspectorOwner({", inspector_owner_content)
+        self.assertIn("export function buildTransportWorkbenchInspectorModel({", inspector_owner_content)
+        self.assertIn("export function buildManifestOnlyInspectorRows(", inspector_owner_content)
+        self.assertIn("export function buildTransportWorkbenchDiagnosticRows(", inspector_owner_content)
+        self.assertIn("rightDeckLabel,", inspector_owner_content)
+        self.assertIn('["Right deck", rightDeckLabel || ""]', inspector_owner_content)
+        self.assertIn('rightDeckLabel: t("Display / Aggregation / Labels / Coverage / Data", "ui")', owner_content)
+        self.assertIn("transportWorkbenchInspectorOwner.buildInspectorModel({", owner_content)
+        self.assertIn("transportWorkbenchInspectorOwner.renderDiagnosticsBody(family.id, config)", owner_content)
+        self.assertIn("transportWorkbenchInspectorOwner.buildLensSummaryRows({", owner_content)
+        self.assertIn("transportWorkbenchInspectorOwner.createRow(label, value)", owner_content)
+        self.assertIn("transportWorkbenchInspectorOwner.createStateCardNode", owner_content)
+        self.assertNotIn("const formatTransportWorkbenchOptionLabels = ", owner_content)
+        self.assertNotIn("const formatTransportWorkbenchManifestTimestamp = ", owner_content)
+        self.assertNotIn("const formatTransportWorkbenchRoadHiddenReason = ", owner_content)
+        self.assertNotIn("const buildManifestOnlyInspectorRows = ", owner_content)
+        self.assertNotIn("const buildTransportWorkbenchDiagnosticRows = ", owner_content)
+        self.assertNotIn("const createTransportWorkbenchInspectorRow = ", owner_content)
+        self.assertNotIn("const createTransportWorkbenchInspectorStateCard = ", owner_content)
+        self.assertNotIn("const renderTransportWorkbenchDiagnosticsBody = ", owner_content)
         self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
         self.assertRegex(
             apply_owner_content,
