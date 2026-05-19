@@ -327,6 +327,7 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `npm run test:node:transport-workbench-inspector-owner`
   - `npm run test:node:transport-workbench-layer-order-owner`
 - Final static re-review approved the right-deck owner boundary after the compare-held fixes. Remaining risk is limited to live browser feel and a later pass to see whether full `renderTransportWorkbenchUi()` still does redundant right-deck work.
+- Pushed implementation to `origin/main` as `af3351f`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean right-deck worktree and left those local changes untouched.
   - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
   - `node tools/check_state_write_allowlist.mjs`
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_right_deck_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
