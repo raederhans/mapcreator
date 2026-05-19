@@ -5,14 +5,10 @@
 import {
   state as runtimeState,
   createDefaultTransportWorkbenchDisplayConfig,
-  normalizeTransportOverviewStyleConfig,
-  applyTransportWorkbenchOverviewState,
   normalizeTransportWorkbenchDisplayConfig,
   normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
-import { getTransportAsset } from "../../core/data_service.js";
 import { markDirty } from "../../core/dirty_state.js";
-import { resolveTransportManifestUrl } from "../../core/runtime_asset_registry.js";
 import { t } from "../i18n.js";
 import {
   focusSurface as focusOverlaySurface,
@@ -45,23 +41,13 @@ import {
   listTransportWorkbenchWarmupPlans,
 } from "../transport_workbench_family_registry.js";
 import {
-  createTransportPackSourceGateReport,
   getDefaultMainMapPackIdForFamily,
   getTargetMainMapPackMeta,
   listTargetMainMapPacks,
 } from "../../core/transport_pack_resolver.js";
 import {
-  applyTransportCountryOverlayState,
-  loadTransportCountryOverlayState,
-} from "../../core/transport_country_overlay.js";
-import {
-  TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY,
-  getTransportCapabilityApplyCompatibility,
-  getTransportCapabilityDefaultOverviewConfig,
-  getTransportWorkbenchOverviewBridgeSupport,
-  normalizeTransportOverviewVisualMode,
-  resolveTransportOverviewPatchFromWorkbench,
-} from "../../core/transport_capability_registry.js";
+  createTransportWorkbenchApplyBridgeOwner,
+} from "./transport_workbench_apply_bridge_owner.js";
 import {
   getTransportWorkbenchManifestDefaultVariantId,
   getTransportWorkbenchManifestVariantMeta,
@@ -261,8 +247,11 @@ export function createTransportWorkbenchController({
   let transportWorkbenchPreviewWarmupScheduled = false;
   let transportWorkbenchDraggedLayerId = "";
   let transportWorkbenchRenderGeneration = 0;
-  const transportWorkbenchPackGateReportByPackId = new Map();
-  const transportWorkbenchPackGatePromiseByPackId = new Map();
+
+  const transportWorkbenchApplyBridgeOwner = createTransportWorkbenchApplyBridgeOwner(runtimeState, {
+    shouldRerender: (normalizedPackId) => isCurrentTransportWorkbenchPackGate(normalizedPackId),
+    renderTransportWorkbenchUi: () => renderTransportWorkbenchUi(),
+  });
 
   const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
     if (!transportWorkbenchSectionHelpPopover) return;
@@ -497,57 +486,20 @@ export function createTransportWorkbenchController({
 
   const getTransportWorkbenchConfigSignature = (config) => JSON.stringify(config || {});
 
-  const getTransportWorkbenchActivePackId = (familyId) => {
-    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
-    const currentByFamily = runtimeState.transportWorkbenchUi?.activePackIdByFamily || {};
-    const currentPackId = String(currentByFamily[normalizedFamilyId] || runtimeState.transportWorkbenchUi?.activePackId || "").trim().toLowerCase();
-    const meta = getTargetMainMapPackMeta(currentPackId);
-    if (meta && meta.family === normalizedFamilyId) return meta.packId;
-    return getDefaultMainMapPackIdForFamily(normalizedFamilyId);
-  };
-
-  const getTransportWorkbenchPackGateReport = (packId) => (
-    transportWorkbenchPackGateReportByPackId.get(String(packId || "").trim().toLowerCase()) || null
+  const getTransportWorkbenchActivePackId = (familyId) => (
+    transportWorkbenchApplyBridgeOwner.getActivePackId(familyId)
   );
 
-  const refreshTransportWorkbenchPackGateReport = async (packId, { rerender = false } = {}) => {
-    const normalizedPackId = String(packId || "").trim().toLowerCase();
-    if (!normalizedPackId) return null;
-    if (transportWorkbenchPackGateReportByPackId.has(normalizedPackId)) {
-      return transportWorkbenchPackGateReportByPackId.get(normalizedPackId);
-    }
-    if (transportWorkbenchPackGatePromiseByPackId.has(normalizedPackId)) {
-      return transportWorkbenchPackGatePromiseByPackId.get(normalizedPackId);
-    }
-    const promise = getTransportAsset(resolveTransportManifestUrl(normalizedPackId), {
-      cachePolicy: "no-cache",
-      label: `transport-workbench-pack-gate:${normalizedPackId}`,
+  const isCurrentTransportWorkbenchPackGate = (normalizedPackId) => (
+    runtimeState.transportWorkbenchUi?.open
+    && getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily) === normalizedPackId
+  );
+
+  const refreshTransportWorkbenchPackGateReport = (packId, { rerender = false } = {}) => (
+    transportWorkbenchApplyBridgeOwner.refreshPackGateReport(packId, {
+      rerender,
     })
-      .then((manifest) => {
-        const gateReport = createTransportPackSourceGateReport(normalizedPackId, manifest);
-        transportWorkbenchPackGateReportByPackId.set(normalizedPackId, gateReport);
-        return gateReport;
-      })
-      .catch((error) => {
-        const gateReport = {
-          packId: normalizedPackId,
-          family: getTargetMainMapPackMeta(normalizedPackId)?.family || "",
-          passed: false,
-          reasons: ["manifest_load_failed"],
-          error: error?.message || String(error || "Unknown pack gate failure"),
-        };
-        transportWorkbenchPackGateReportByPackId.set(normalizedPackId, gateReport);
-        return gateReport;
-      })
-      .finally(() => {
-        transportWorkbenchPackGatePromiseByPackId.delete(normalizedPackId);
-        if (rerender && runtimeState.transportWorkbenchUi?.open && getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily) === normalizedPackId) {
-          renderTransportWorkbenchUi();
-        }
-      });
-    transportWorkbenchPackGatePromiseByPackId.set(normalizedPackId, promise);
-    return promise;
-  };
+  );
 
   const setTransportWorkbenchActivePackId = (packId, { rerender = true } = {}) => {
     ensureTransportWorkbenchUiState();
@@ -566,98 +518,13 @@ export function createTransportWorkbenchController({
     return true;
   };
 
-
-  const getTransportOverviewVisualModeFromState = () => normalizeTransportOverviewVisualMode(
-    runtimeState.styleConfig?.transportOverview?.visualMode,
-    "distribution",
+  const getTransportWorkbenchApplyButtonState = (familyId) => (
+    transportWorkbenchApplyBridgeOwner.getApplyButtonState(familyId)
   );
 
-  const getTransportWorkbenchApplyButtonState = (familyId) => {
-    const compatibility = getTransportCapabilityApplyCompatibility(familyId);
-    const activePackId = getTransportWorkbenchActivePackId(familyId);
-    const familyConfig = {
-      ...(runtimeState.transportWorkbenchUi?.familyConfigs?.[familyId] || {}),
-      activePackId,
-      packGateReport: getTransportWorkbenchPackGateReport(activePackId),
-    };
-    if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.mainMapBridge) {
-      const bridgeSupport = getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfig);
-      if (!bridgeSupport.supported) {
-        return {
-          compatibility,
-          enabled: false,
-          label: t("Workbench preview only", "ui"),
-          reason: bridgeSupport.reason === "source_failed"
-            ? t("Pack source check failed", "ui")
-            : bridgeSupport.reason === "active_pack_required"
-              ? t("Select a transport pack", "ui")
-              : t("Workbench preview only", "ui"),
-        };
-      }
-      return {
-        compatibility,
-        enabled: true,
-        label: t("Apply to Main Map", "ui"),
-        reason: "",
-      };
-    }
-    if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.localBoard) {
-      return {
-        compatibility,
-        enabled: false,
-        label: t("Workbench-only family", "ui"),
-        reason: t("Workbench-only family", "ui"),
-      };
-    }
-    return {
-      compatibility,
-      enabled: false,
-      label: t("Workbench preview only", "ui"),
-      reason: t("Workbench preview only", "ui"),
-    };
-  };
-
-  const applyTransportWorkbenchFamilyToMainMap = async (context) => {
-    const currentOverviewConfig = normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {});
-    const activePackId = context.activePackId || getTransportWorkbenchActivePackId(context.family.id);
-    const gateReport = await refreshTransportWorkbenchPackGateReport(activePackId);
-    if (!gateReport?.passed) return false;
-    const patch = resolveTransportOverviewPatchFromWorkbench(
-      context.family.id,
-      {
-        ...(context.config || runtimeState.transportWorkbenchUi?.familyConfigs?.[context.family.id] || {}),
-        activePackId,
-        packGateReport: gateReport,
-      },
-      {
-        currentOverviewConfig: currentOverviewConfig?.[context.family.id] || getTransportCapabilityDefaultOverviewConfig(context.family.id),
-        currentVisualMode: getTransportOverviewVisualModeFromState(),
-      },
-    );
-    if (!patch) return false;
-    const overlayState = await loadTransportCountryOverlayState(patch.activePackId || context.activePackId);
-    applyTransportCountryOverlayState(runtimeState, overlayState);
-    applyTransportWorkbenchOverviewState(runtimeState, {
-      ...patch,
-      familyId: context.family.id,
-    });
-    const dataLayerKeys = Array.isArray(patch.dataLayerKeys) ? patch.dataLayerKeys : [];
-    try {
-      if (dataLayerKeys.length && typeof runtimeState.ensureContextLayerDataFn === "function") {
-        await runtimeState.ensureContextLayerDataFn(
-          dataLayerKeys.length === 1 ? dataLayerKeys[0] : dataLayerKeys,
-          { reason: "transport-workbench-apply", renderNow: false },
-        );
-      }
-    } finally {
-      runtimeState.updateTransportAppearanceUIFn?.();
-      markDirty("transport-workbench-apply");
-      if (typeof runtimeState.renderNowFn === "function") {
-        runtimeState.renderNowFn("transport-workbench-apply");
-      }
-    }
-    return true;
-  };
+  const applyTransportWorkbenchFamilyToMainMap = (context) => (
+    transportWorkbenchApplyBridgeOwner.applyFamilyToMainMap(context)
+  );
 
   const formatTransportWorkbenchManifestTimestamp = (value) => {
     const text = String(value || "").trim();

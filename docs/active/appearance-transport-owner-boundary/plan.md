@@ -64,3 +64,28 @@ Progress:
 - [x] Ran targeted verification.
 - [x] Ran final static review.
 - [x] Merged, pushed, and cleaned worktree.
+
+## 2026-05-19 transport workbench apply bridge owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-apply-owner-2026-05-19`
+Branch: `codex/transport-workbench-apply-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench main-map apply bridge decisions out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_apply_bridge_owner.js` owns active pack resolution, instance-scoped pack gate cache, apply button state, workbench-to-overview patch execution, overlay state loading, dirty marking, and render trigger.
+- `transport_workbench_controller.js` keeps DOM event binding, shell rendering, preview lifecycle, and current render context.
+- Existing Python and Node contracts lock the apply bridge order and the main-map patch shape.
+- Targeted syntax, Python contracts, Node transport contract, state-write guardrail, static review, merge, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree.
+- [x] Dispatched static-only evidence lanes for apply boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented apply bridge owner split.
+- [x] Updated existing contracts.
+- [ ] Run targeted verification.
+- [ ] Run final static review.
+- [ ] Merge, push, and clean worktree.

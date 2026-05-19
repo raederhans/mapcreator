@@ -20,6 +20,7 @@ UI_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "ui_state.js"
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
+TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
 TRANSPORT_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 STARTUP_LOCALE_FILES = [
@@ -62,6 +63,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
     def test_toolbar_no_longer_reads_legacy_transport_variant_fields(self) -> None:
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
 
         self.assertIn('./toolbar/transport_workbench_controller.js', toolbar_content)
         self.assertIn('../transport_workbench_manifest_variants.js', controller_content)
@@ -72,7 +74,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertNotIn("distribution_variants", controller_content)
         self.assertNotIn("default_coverage_tier", controller_content)
         self.assertNotIn("default_distribution_variant", controller_content)
-        self.assertIn("getTransportWorkbenchOverviewBridgeSupport", controller_content)
+        self.assertIn("getTransportWorkbenchOverviewBridgeSupport", apply_owner_content)
 
     def test_transport_capability_registry_owns_family_capability_truth(self) -> None:
         registry_content = TRANSPORT_CAPABILITY_REGISTRY_JS.read_text(encoding="utf-8")
@@ -181,25 +183,46 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
     def test_apply_bridge_routes_through_active_pack_contract(self) -> None:
         registry_content = TRANSPORT_CAPABILITY_REGISTRY_JS.read_text(encoding="utf-8")
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
         overlay_content = (REPO_ROOT / "js" / "core" / "transport_country_overlay.js").read_text(encoding="utf-8")
         resolver_content = (REPO_ROOT / "js" / "core" / "transport_pack_resolver.js").read_text(encoding="utf-8")
 
         self.assertIn("getTransportWorkbenchActivePackBridgeSupport", registry_content)
-        self.assertIn("createTransportPackSourceGateReport(normalizedPackId, manifest)", controller_content)
+        self.assertIn("createTransportPackSourceGateReport(normalizedPackId, manifest)", apply_owner_content)
         self.assertIn('reason: "source_pending"', registry_content)
         self.assertIn('reason: "active_pack_required"', registry_content)
         self.assertNotIn("hasExactTransportWorkbenchBridgeValueSet", registry_content)
         self.assertNotIn("TRANSPORT_WORKBENCH_OVERVIEW_BRIDGE_SUPPORTED_VALUES", registry_content)
         self.assertIn("dataLayerKeys: [...(MAIN_MAP_CONSUMER_KEYS_BY_FAMILY[normalizedFamilyId] || [])]", registry_content)
         self.assertIn("resolveTransportOverviewPatchFromWorkbench", registry_content)
-        self.assertIn("loadTransportCountryOverlayState(patch.activePackId || context.activePackId)", controller_content)
-        self.assertIn("applyTransportCountryOverlayState(runtimeState, overlayState)", controller_content)
+        self.assertIn("loadTransportCountryOverlayState(patch.activePackId || activePackId)", apply_owner_content)
+        self.assertIn("applyTransportCountryOverlayState(runtimeState, overlayState)", apply_owner_content)
+        self.assertIn("applyTransportWorkbenchOverviewState(runtimeState, {", apply_owner_content)
+        self.assertIn('reason: "transport-workbench-apply", renderNow: false', apply_owner_content)
+        self.assertNotIn("applyTransportCountryOverlayState(runtimeState, overlayState)", controller_content)
         self.assertNotIn("clearTransportCountryOverlayState(runtimeState, \"transport-workbench-pack-switch\")", controller_content)
         self.assertIn("transportWorkbenchPackSelect", controller_content)
         self.assertIn("MAIN_MAP_CONSUMER_KEYS_BY_FAMILY", overlay_content)
+        self.assertIn('germany_road: Object.freeze({ packId: "germany_road", family: "road"', resolver_content)
+        self.assertIn('france_rail: Object.freeze({ packId: "france_rail", family: "rail"', resolver_content)
+        self.assertIn('usa_airport: Object.freeze({ packId: "usa_airport", family: "airport"', resolver_content)
+        self.assertNotIn('family: "port"', resolver_content)
         self.assertIn('reason: "consumer_missing"', resolver_content)
         self.assertNotRegex(registry_content, re.compile(r"return\s*\{[\s\S]*?\bdisplayConfig\s*,[\s\S]*?\};"))
-        self.assertIn('label: t("Workbench preview only", "ui")', controller_content)
+        self.assertIn('label: t("Workbench preview only", "ui")', apply_owner_content)
+        expected_apply_order = [
+            "const gateReport = await refreshPackGateReport(activePackId);",
+            "const patch = resolveTransportOverviewPatchFromWorkbench(",
+            "const overlayState = await loadTransportCountryOverlayState(",
+            "applyTransportCountryOverlayState(runtimeState, overlayState);",
+            "applyTransportWorkbenchOverviewState(runtimeState, {",
+            "await runtimeState.ensureContextLayerDataFn(",
+        ]
+        last_index = -1
+        for needle in expected_apply_order:
+            next_index = apply_owner_content.index(needle)
+            self.assertGreater(next_index, last_index)
+            last_index = next_index
 
     def test_transport_copy_drops_road_only_legacy_phrases_from_runtime_and_startup_locales(self) -> None:
         stale_phrases = [

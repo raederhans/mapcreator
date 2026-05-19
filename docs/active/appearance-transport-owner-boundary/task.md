@@ -29,3 +29,16 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Merge, push, and clean worktree after current-scope verification passed.
+
+## 2026-05-19 transport workbench apply bridge owner slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree and branch.
+- [x] Dispatch static-only subagents for apply bridge boundary and test entrypoints.
+- [x] Select current-scope boundary move.
+- [x] Implement apply bridge owner split.
+- [x] Extend existing Python and Node contracts.
+- [ ] Run syntax and targeted contracts.
+- [ ] Run final static review.
+- [ ] Merge, push, and clean worktree if current-scope verification is clean.

@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import subprocess
 import unittest
 
@@ -35,6 +36,13 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             )
             self.fail(details or "state write allowlist check failed")
         self.assertIn("State write allowlist passed", result.stdout)
+
+    def test_transport_workbench_controller_stays_explicit_state_writer(self):
+        allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
+        self.assertIn(
+            "js/ui/toolbar/transport_workbench_controller.js",
+            allowlist.get("files", []),
+        )
 
     def test_scanner_flags_member_computed_and_object_assign_writes(self):
         script = """

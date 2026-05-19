@@ -69,3 +69,17 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node tools/check_state_write_allowlist.mjs`
   - `npm run test:node:transport-overview-line-contract`
 - E2E was not rerun in this slice. Residual known risks remain the same as prior slice: `ui_rework_support_transport_hardening.spec.js` has existing special-zone, support-hint, and port Apply blockers outside this config-owner extraction.
+
+## 2026-05-19 transport workbench apply bridge owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-apply-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes agreed that apply bridge is the next narrow transport workbench boundary: controller should keep DOM/event/render orchestration, while a new owner should own active pack resolution, instance-scoped pack gate cache, button state, apply patch execution, overlay state loading, dirty marking, and render trigger.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_apply_bridge_owner.js`.
+- Kept in `transport_workbench_controller.js`: button click binding, shell render refresh, family/tab switching, pack select UI, preview lifecycle, and current render context.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the apply bridge owner, keeps click binding in the controller, and checks apply side effects in the owner.
+  - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks apply order and confirms port remains preview-only until a real main-map target pack exists.
+  - `tests/transport_overview_line_strategy_scope_contract.node.test.mjs` now checks that workbench apply patches expose only main-map bridge fields and keep preview-only state out.
+  - `tests/test_state_write_guardrail_contract.py` now explicitly keeps the workbench controller in the state-writer allowlist.

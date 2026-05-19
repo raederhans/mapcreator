@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  getTransportWorkbenchOverviewBridgeSupport,
   getTransportOverviewImportanceThresholdRank,
+  resolveTransportOverviewPatchFromWorkbench,
   resolveTransportOverviewLineStrategy,
 } from "../js/core/transport_capability_registry.js";
 import {
@@ -636,6 +638,99 @@ test("transport pack resolver gates source and family before apply", () => {
   });
   assert.equal(consumerMissing.ok, false);
   assert.equal(consumerMissing.reason, "consumer_missing");
+});
+
+function createApplyBridgeManifest({ packId, family, sourcePolicy = "real_source_cache_only", supportedKeys, sidecars = {} }) {
+  const paths = Object.fromEntries(supportedKeys.map((key) => [key, `${packId}.${key}.geojson`]));
+  return {
+    pack_id: packId,
+    family,
+    source_policy: sourcePolicy,
+    source_signature: { source: { filename: `${packId}.source`, path: `.runtime/source-cache/transport/${packId}` } },
+    mainMapEligible: true,
+    apply_bridge_supported: true,
+    coverage_scope: "country",
+    main_map_consumer: { supported_keys: supportedKeys },
+    sidecars,
+    paths: { preview: paths, full: paths },
+  };
+}
+
+test("transport workbench apply patch exposes only main-map bridge fields", () => {
+  const roadGate = createTransportPackSourceGateReport("germany_road", createApplyBridgeManifest({
+    packId: "germany_road",
+    family: "road",
+    supportedKeys: ["roads", "road_labels"],
+    sidecars: { road_labels: { required: true } },
+  }));
+  const railGate = createTransportPackSourceGateReport("france_rail", createApplyBridgeManifest({
+    packId: "france_rail",
+    family: "rail",
+    supportedKeys: ["railways", "rail_stations_major"],
+    sidecars: { rail_stations_major: { required: true } },
+  }));
+  const airportGate = createTransportPackSourceGateReport("usa_airport", createApplyBridgeManifest({
+    packId: "usa_airport",
+    family: "airport",
+    supportedKeys: ["airports"],
+  }));
+
+  assert.equal(roadGate.passed, true);
+  assert.equal(railGate.passed, true);
+  assert.equal(airportGate.passed, true);
+
+  const roadPatch = resolveTransportOverviewPatchFromWorkbench("road", {
+    activePackId: "germany_road",
+    packGateReport: roadGate,
+    roadClass: ["motorway", "trunk"],
+    showRefs: true,
+    labelDensityPreset: "sparse",
+    baseOpacity: 88,
+    motorwayWidth: 3.2,
+    trunkWidth: 2.2,
+    primaryWidth: 1.2,
+  }, { currentVisualMode: "network" });
+
+  assert.deepEqual(Object.keys(roadPatch).sort(), [
+    "activePackId",
+    "dataLayerKeys",
+    "familyConfig",
+    "visibilityField",
+    "visualMode",
+  ].sort());
+  assert.deepEqual(roadPatch.dataLayerKeys, ["roads", "road_labels"]);
+  assert.equal(roadPatch.activePackId, "germany_road");
+  assert.equal(roadPatch.visualMode, "network");
+  ["displayConfig", "previewCamera", "compareHeld", "layerOrder"].forEach((previewOnlyKey) => {
+    assert.equal(Object.hasOwn(roadPatch, previewOnlyKey), false);
+  });
+
+  const railPatch = resolveTransportOverviewPatchFromWorkbench("rail", {
+    activePackId: "france_rail",
+    packGateReport: railGate,
+    importanceThreshold: "regional_core",
+    showStationLabels: true,
+    lineOpacity: 90,
+    stationOpacity: 80,
+  });
+  assert.deepEqual(railPatch.dataLayerKeys, ["railways", "rail_stations_major"]);
+
+  const airportPatch = resolveTransportOverviewPatchFromWorkbench("airport", {
+    activePackId: "usa_airport",
+    packGateReport: airportGate,
+    importanceThreshold: "national_core",
+    showLabels: true,
+    baseOpacity: 84,
+  });
+  assert.deepEqual(airportPatch.dataLayerKeys, ["airports"]);
+
+  const missingPortPack = getTransportWorkbenchOverviewBridgeSupport("port", {});
+  assert.equal(missingPortPack.supported, false);
+  assert.equal(missingPortPack.reason, "active_pack_required");
+
+  const unknownPortPack = getTransportWorkbenchOverviewBridgeSupport("port", { activePackId: "unknown_port", packGateReport: { passed: true } });
+  assert.equal(unknownPortPack.supported, false);
+  assert.equal(unknownPortPack.reason, "unknown_pack");
 });
 
 test("country road overlay consumes road_labels sidecar on the main map", () => {

@@ -15,6 +15,7 @@ SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "s
 EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
+TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -412,10 +413,12 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
         config_owner_content = TRANSPORT_WORKBENCH_CONFIG_OWNER_JS.read_text(encoding="utf-8")
+        apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
         self.assertIn("./transport_workbench_config_owner.js", owner_content)
+        self.assertIn("./transport_workbench_apply_bridge_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
         self.assertIn("const initializeTransportWorkbenchRuntime = () => {", owner_content)
@@ -486,8 +489,25 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const TRANSPORT_WORKBENCH_SECTION_DEFAULTS = {", owner_content)
         self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", owner_content)
         self.assertIn("isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),", owner_content)
-        self.assertIn("const applyTransportWorkbenchFamilyToMainMap = async (context) => {", owner_content)
-        self.assertIn("await runtimeState.ensureContextLayerDataFn(", owner_content)
+        self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
+        self.assertRegex(
+            apply_owner_content,
+            re.compile(
+                r"export function createTransportWorkbenchApplyBridgeOwner\(runtimeState,[\s\S]*?"
+                r"const transportWorkbenchPackGateReportByPackId = new Map\(\);[\s\S]*?"
+                r"const transportWorkbenchPackGatePromiseByPackId = new Map\(\);"
+            ),
+        )
+        self.assertIn("const getApplyButtonState = (familyId) => {", apply_owner_content)
+        self.assertIn("const refreshPackGateReport = async (packId,", apply_owner_content)
+        self.assertIn("createTransportWorkbenchApplyBridgeOwner(runtimeState, {", owner_content)
+        self.assertIn("const applyTransportWorkbenchFamilyToMainMap = (context) => (", owner_content)
+        self.assertIn("transportWorkbenchApplyBridgeOwner.applyFamilyToMainMap(context)", owner_content)
+        self.assertNotIn("const gateReport = await refreshPackGateReport(activePackId);", owner_content)
+        self.assertIn("const gateReport = await refreshPackGateReport(activePackId);", apply_owner_content)
+        self.assertIn("await runtimeState.ensureContextLayerDataFn(", apply_owner_content)
+        self.assertIn('markDirty("transport-workbench-apply")', apply_owner_content)
+        self.assertIn('runtimeState.renderNowFn("transport-workbench-apply")', apply_owner_content)
         self.assertIn('transportWorkbenchApplyBtn.addEventListener("click", async () => {', owner_content)
 
     def test_toolbar_keeps_transport_workbench_facade_and_surface_coordination_contract(self):
