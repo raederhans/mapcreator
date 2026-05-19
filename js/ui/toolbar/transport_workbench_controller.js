@@ -60,6 +60,33 @@ import {
 export { TRANSPORT_WORKBENCH_INSPECTOR_TABS };
 export { TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS } from "./transport_workbench_config_owner.js";
 
+export function getTransportWorkbenchPackOptionsSignature(packOptions) {
+  return JSON.stringify((packOptions || []).map((pack) => [pack.packId, pack.label]));
+}
+
+export function syncTransportWorkbenchPackSelectOptions({
+  selectNode = null,
+  packOptions = [],
+  activePackId = "",
+} = {}) {
+  if (!selectNode) return { rebuilt: false, optionCount: 0 };
+  const nextSignature = getTransportWorkbenchPackOptionsSignature(packOptions);
+  let rebuilt = false;
+  if (selectNode.dataset.packOptionsSignature !== nextSignature) {
+    selectNode.replaceChildren(...packOptions.map((pack) => {
+      const option = document.createElement("option");
+      option.value = pack.packId;
+      option.textContent = pack.label;
+      return option;
+    }));
+    selectNode.dataset.packOptionsSignature = nextSignature;
+    rebuilt = true;
+  }
+  selectNode.disabled = packOptions.length === 0;
+  selectNode.value = activePackId || "";
+  return { rebuilt, optionCount: packOptions.length };
+}
+
 export function createTransportWorkbenchController({
   scenarioTransportWorkbenchBtn = null,
   transportAppearanceWorkbenchBtn = null,
@@ -449,6 +476,15 @@ export function createTransportWorkbenchController({
     || TRANSPORT_WORKBENCH_FAMILIES[0]
   );
 
+  const renderTransportWorkbenchPackSelect = (familyId, activePackId) => {
+    if (!transportWorkbenchPackSelect) return;
+    syncTransportWorkbenchPackSelectOptions({
+      selectNode: transportWorkbenchPackSelect,
+      packOptions: listTargetMainMapPacks({ familyId }),
+      activePackId,
+    });
+  };
+
   const renderTransportWorkbenchLayerOrderPanel = () => transportWorkbenchLayerOrderOwner.render();
 
   const renderTransportWorkbenchInspectorTabs = (family, config, compareHeld) => {
@@ -582,17 +618,7 @@ export function createTransportWorkbenchController({
     transportWorkbenchLensTitle.textContent = t(family.lensTitle, "ui");
     transportWorkbenchFamilyStatus.textContent = t(family.label, "ui");
     transportWorkbenchCountryStatus.textContent = context.activePackMeta?.country || uiState.sampleCountry;
-    if (transportWorkbenchPackSelect) {
-      const packOptions = listTargetMainMapPacks({ familyId: family.id });
-      transportWorkbenchPackSelect.replaceChildren(...packOptions.map((pack) => {
-        const option = document.createElement("option");
-        option.value = pack.packId;
-        option.textContent = pack.label;
-        return option;
-      }));
-      transportWorkbenchPackSelect.disabled = packOptions.length === 0;
-      transportWorkbenchPackSelect.value = context.activePackId || "";
-    }
+    renderTransportWorkbenchPackSelect(family.id, context.activePackId);
     transportWorkbenchPreviewMode.textContent = family.id === "layers"
       ? t("Layer order", "ui")
       : TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)

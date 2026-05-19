@@ -319,3 +319,29 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench shell pack select cache slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-shell-pack-cache-2026-05-19`
+Branch: `codex/transport-workbench-shell-pack-cache-2026-05-19`
+
+Goal: continue G001 by avoiding repeated pack select option DOM rebuilds during shell refreshes when the available pack list is unchanged.
+
+Acceptance:
+
+- Shell refresh still updates pack select disabled state and selected value every time.
+- Pack option nodes are rebuilt only when the pack id/label list changes.
+- `renderTransportWorkbenchShell()` remains chrome-only and delegates pack select option reuse to a narrow helper.
+- Existing toolbar boundary contract locks the helper and prevents direct `replaceChildren()` from returning to the shell body.
+- A named Node behavior script covers option reuse, selected value refresh, disabled-state refresh, and list-change rebuild.
+- Targeted syntax, toolbar split contract, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Selected current-scope boundary move.
+- [x] Implemented pack select option reuse.
+- [x] Updated boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

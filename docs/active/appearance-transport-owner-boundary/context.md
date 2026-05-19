@@ -414,3 +414,31 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `npm run verify:toolbar-split-boundary`
   - `git diff --check`
 - Implementation commit `112a6cd` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench shell pack select cache slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-shell-pack-cache-2026-05-19`.
+- Live process ownership: main thread only.
+- Remaining shell hot path: every shell refresh rebuilt `transportWorkbenchPackSelect` options even when the family pack list did not change.
+- Chosen boundary: add a narrow helper inside `transport_workbench_controller.js` that compares the pack id/label signature and only calls `replaceChildren()` when the option list changes.
+- Behavior kept: shell refresh still recomputes the available packs, disabled state, and selected active pack value every time.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks that `renderTransportWorkbenchShell()` delegates pack-select rendering and no longer calls `transportWorkbenchPackSelect.replaceChildren()` directly.
+  - `tests/transport_workbench_controller_behavior.test.mjs` covers same-signature option reuse, selected value refresh, disabled-state refresh, and rebuild on list change.
+  - `package.json` exposes `test:node:transport-workbench-controller`.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_controller_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run verify:toolbar-split-boundary`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `git diff --check`
+- Static review approved the approach and requested behavior coverage for option reuse with value/disabled refresh. The new `test:node:transport-workbench-controller` entry now covers that case.
+- Final narrow static review agents timed out after repeated waits; main-thread review found no stale option/value/disabled path because the helper recomputes pack options every shell render, caches only the option DOM signature, and still writes `disabled` plus `value` outside the rebuild branch.
