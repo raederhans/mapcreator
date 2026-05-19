@@ -133,3 +133,15 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench right deck render dedupe slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Select current-scope boundary move.
+- [x] Remove duplicate shell-level right-deck render.
+- [x] Extend Python boundary contract.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

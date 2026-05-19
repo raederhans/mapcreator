@@ -655,7 +655,6 @@ export function createTransportWorkbenchController({
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
-    renderTransportWorkbenchInspectorTabs(family, context.config || uiState.familyConfigs?.[family.id] || {}, compareHeld);
     if (transportWorkbenchApplyBtn) {
       transportWorkbenchApplyBtn.disabled = !applyButtonState.enabled;
       transportWorkbenchApplyBtn.setAttribute("aria-disabled", applyButtonState.enabled ? "false" : "true");

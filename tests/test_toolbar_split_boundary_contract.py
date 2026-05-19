@@ -40,6 +40,19 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIsNotNone(match, f"{factory_name} call not found")
         return match.group("body")
 
+    def _arrow_function_body(self, content: str, function_name: str) -> str:
+        match = re.search(rf"const {re.escape(function_name)} = [^\n]*=> \{{(?P<body>[\s\S]*?)\n  \}};", content)
+        self.assertIsNotNone(match, f"{function_name} function body not found")
+        return match.group("body")
+
+    def _event_listener_body(self, content: str, selector: str, event_name: str) -> str:
+        match = re.search(
+            rf"{re.escape(selector)}\.addEventListener\(\"{re.escape(event_name)}\", async \(\) => \{{(?P<body>[\s\S]*?)\n\s*\}}\);",
+            content,
+        )
+        self.assertIsNotNone(match, f"{selector} {event_name} listener body not found")
+        return match.group("body")
+
     def test_toolbar_imports_new_split_modules(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
 
@@ -598,6 +611,22 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("mapTransportWorkbenchLabelLevelToMaxLevel", owner_content)
         self.assertNotIn("mapTransportWorkbenchMaxLevelToLabelLevel", owner_content)
         self.assertNotIn("renderTransportWorkbenchInspectorTabs(nextContext.family", owner_content)
+        shell_body = self._arrow_function_body(owner_content, "renderTransportWorkbenchShell")
+        self.assertNotIn("renderTransportWorkbenchInspectorTabs(", shell_body)
+        self.assertNotIn("transportWorkbenchRightDeckOwner.renderTabs(", shell_body)
+        self.assertNotIn("renderTransportWorkbenchInspector(", shell_body)
+        self.assertIn("const applyButtonState = getTransportWorkbenchApplyButtonState(family.id);", shell_body)
+        self.assertIn("transportWorkbenchApplyBtn.disabled = !applyButtonState.enabled;", shell_body)
+        self.assertIn("transportWorkbenchApplyBtn.textContent = applyButtonState.label;", shell_body)
+        ui_body = self._arrow_function_body(owner_content, "renderTransportWorkbenchUi")
+        self.assertRegex(
+            ui_body,
+            re.compile(
+                r"renderTransportWorkbenchShell\(context\);[\s\S]*?"
+                r"renderTransportWorkbenchLensSections\(context\.family, context\.config, context\.compareHeld\);[\s\S]*?"
+                r"renderTransportWorkbenchInspector\(context\.family, context\.config, context\.compareHeld\);"
+            ),
+        )
         self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
         self.assertRegex(
             apply_owner_content,
@@ -618,6 +647,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('markDirty("transport-workbench-apply")', apply_owner_content)
         self.assertIn('runtimeState.renderNowFn("transport-workbench-apply")', apply_owner_content)
         self.assertIn('transportWorkbenchApplyBtn.addEventListener("click", async () => {', owner_content)
+        apply_listener_body = self._event_listener_body(owner_content, "transportWorkbenchApplyBtn", "click")
+        self.assertIn("renderTransportWorkbenchShell(getTransportWorkbenchRenderContext());", apply_listener_body)
+        self.assertNotIn("renderTransportWorkbenchUi()", apply_listener_body)
+        self.assertNotIn("renderTransportWorkbenchInspector(", apply_listener_body)
 
     def test_transport_workbench_preview_lifecycle_owner_guards_render_and_view_sync(self):
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")

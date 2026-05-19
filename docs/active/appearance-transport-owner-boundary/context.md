@@ -351,3 +351,27 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `npm run test:node:transport-workbench-preview-lifecycle-owner`
   - `npm run test:node:transport-workbench-inspector-owner`
   - `npm run test:node:transport-workbench-layer-order-owner`
+
+## 2026-05-19 transport workbench right deck render dedupe slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-rightdeck-dedupe-2026-05-19`.
+- Live process ownership: main thread only.
+- Follow-up from the right-deck owner review: full `renderTransportWorkbenchUi()` still reached the right-deck active tab once through shell and once through inspector.
+- Chosen boundary: keep `renderTransportWorkbenchShell()` focused on shell chrome and remove its right-deck tab render. `renderTransportWorkbenchInspector()` remains the single right-deck active-tab render path.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks that shell-context right-deck rendering is not reintroduced.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review requested stronger contract coverage. The contract now extracts `renderTransportWorkbenchShell()` and asserts it contains no right-deck/inspector render entrypoints, while also checking that full UI render still runs shell -> lens -> inspector.
+- Second static review requested apply shell-only contract coverage. The contract now extracts the apply button click listener and asserts it refreshes shell only, while also checking shell still owns apply button chrome updates.
+- Verification after review fix passed:
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run verify:toolbar-split-boundary`
+  - `git diff --check`
+- Final static re-review approved the right-deck dedupe boundary.

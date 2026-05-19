@@ -270,3 +270,27 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench right deck render dedupe slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-rightdeck-dedupe-2026-05-19`
+Branch: `codex/transport-workbench-rightdeck-dedupe-2026-05-19`
+
+Goal: continue G001 by removing the remaining duplicate right-deck active-tab render from full transport workbench UI refresh.
+
+Acceptance:
+
+- `renderTransportWorkbenchShell()` updates shell chrome, titles, tabs, preview visibility, and apply/compare controls without rendering right-deck control tabs.
+- `renderTransportWorkbenchInspector()` remains the single right-deck active-tab render path for full UI refresh and inspector-tab clicks.
+- Existing Python boundary contract locks this sequencing so shell refresh cannot reintroduce right-deck DOM work.
+- Targeted syntax, toolbar split contract, right-deck behavior, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Selected current-scope boundary move.
+- [x] Removed duplicate shell-level right-deck render.
+- [x] Updated boundary contract.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
