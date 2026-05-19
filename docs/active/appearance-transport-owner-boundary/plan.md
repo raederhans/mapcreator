@@ -419,4 +419,31 @@ Progress:
 - [x] Update boundary and behavior tests.
 - [x] Run targeted verification.
 - [x] Run final static review.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench event owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-event-owner-2026-05-19`
+Branch: `codex/transport-workbench-event-owner-2026-05-19`
+
+Goal: continue G001 by moving top-level transport workbench event binding out of the controller while keeping state semantics, render sequencing, preview lifecycle, and apply bridge ownership in the controller-owned action callbacks.
+
+Acceptance:
+
+- `transport_workbench_event_owner.js` owns top-level chrome event binding, `dataset.bound` idempotence, compare pointer/keyboard dispatch, pack/family/inspector dispatch, async apply click dispatch, and global Escape binding.
+- `transport_workbench_controller.js` keeps workbench state transitions, render context construction, preview/lens/inspector sequencing, apply bridge semantics, popover behavior, and only delegates `bindTransportWorkbenchEvents()` to the event owner.
+- Async apply still gates on apply button state, logs apply errors, and refreshes only the shell after an attempt.
+- Escape still lets the popover owner consume active popover closure before closing the workbench.
+- Existing toolbar boundary contract and a named Node behavior script cover owner wiring, no controller event-listener body regression, compare semantics, Escape priority, async apply, and duplicate-binding prevention.
+- Targeted syntax, toolbar split contract, event owner behavior, adjacent owner regressions, dist sync, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only subagent for event binding boundary.
+- [x] Selected current-scope boundary move.
+- [x] Implement event owner split.
+- [x] Update boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final self-review; static reviewer lanes timed out with no findings returned.
 - [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

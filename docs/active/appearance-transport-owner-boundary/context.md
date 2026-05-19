@@ -561,3 +561,36 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - source and dist import smokes for shell owner plus controller
   - `git diff --check`
 - Final static review approved the source/dist synchronized shell owner slice. It found no remaining blockers and confirmed the compatibility test alias, source/dist hash match, and manifest sizes.
+- Implementation and closeout commits `74f37fa` and `9b9feb6` were pushed to `origin/main`; temporary worktree cleanup completed.
+
+## 2026-05-19 transport workbench event owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-event-owner-2026-05-19`.
+- Live process ownership: main thread only; static-only subagent may inspect source but must not run or monitor live verification.
+- Static boundary review found the controller still owned top-level workbench event binding: scenario/appearance/info/close/reset buttons, compare pointer/keyboard events, carrier zoom/rotate controls, async apply, pack select, family tabs, inspector tabs, and global Escape.
+- Chosen boundary: create `js/ui/toolbar/transport_workbench_event_owner.js`.
+- Intended behavior:
+  - Event owner owns one-shot listener binding and event-to-action dispatch.
+  - Controller keeps state transitions, render context construction, preview/lens/inspector sequencing, popover/apply semantics, and supplies those as narrow action callbacks.
+  - No new fallback layer: missing required action for a wired node throws immediately during binding.
+- Implemented:
+  - New `createTransportWorkbenchEventOwner()` with `bindTransportWorkbenchEventOnce()` for `dataset.bound` idempotence.
+  - Controller now wires the event owner and `bindTransportWorkbenchEvents()` delegates to `transportWorkbenchEventOwner.bind()`.
+  - New `tests/transport_workbench_event_owner_behavior.test.mjs` covers one-shot binding, scenario open/close, compare pointer/keyboard semantics, preview controls, pack/family/inspector dispatch, async apply gating/error refresh, Escape priority, and direct binder skip behavior.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks the event owner import/delegation and prevents top-level event listener bodies from drifting back into the controller.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_event_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_event_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_ui_rework_plan03_support_transport_contract.py`
+  - `npm run test:node:transport-workbench-event-owner`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run verify:toolbar-split-boundary`
+  - adjacent owner regressions: shell, popover, preview lifecycle, state, lens, right deck, inspector, and layer order
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for event owner plus controller
+  - `git diff --check`
+- Review note: two static reviewer lanes timed out before returning findings. Main thread completed the first-principles self-review: the smaller stable boundary is event binding plus event-to-action dispatch only; state writes, render ordering, apply semantics, and popover semantics stay in the controller-owned owners/callbacks.
