@@ -86,6 +86,6 @@ Progress:
 - [x] Selected current-scope boundary move.
 - [x] Implemented apply bridge owner split.
 - [x] Updated existing contracts.
-- [ ] Run targeted verification.
-- [ ] Run final static review.
-- [ ] Merge, push, and clean worktree.
+- [x] Ran targeted verification.
+- [x] Ran final static review.
+- [x] Pushed implementation to `origin/main`; temporary worktree cleanup follows this closeout commit.

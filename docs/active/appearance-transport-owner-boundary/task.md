@@ -39,6 +39,6 @@ Owner: main thread for implementation and all live verification.
 - [x] Select current-scope boundary move.
 - [x] Implement apply bridge owner split.
 - [x] Extend existing Python and Node contracts.
-- [ ] Run syntax and targeted contracts.
-- [ ] Run final static review.
-- [ ] Merge, push, and clean worktree if current-scope verification is clean.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

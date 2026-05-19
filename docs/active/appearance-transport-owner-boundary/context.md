@@ -83,3 +83,14 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks apply order and confirms port remains preview-only until a real main-map target pack exists.
   - `tests/transport_overview_line_strategy_scope_contract.node.test.mjs` now checks that workbench apply patches expose only main-map bridge fields and keep preview-only state out.
   - `tests/test_state_write_guardrail_contract.py` now explicitly keeps the workbench controller in the state-writer allowlist.
+- Final static review found no blocker. Its non-blocker on cache lifetime was fixed by moving the pack gate cache into the `createTransportWorkbenchApplyBridgeOwner` instance closure.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_apply_bridge_owner.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py tests/test_state_write_guardrail_contract.py`
+  - `python -m unittest tests.test_transport_workbench_manifest_runtime_contract tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract -q`
+  - `node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs`
+  - `npm run verify:state-write-allowlist`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_apply_bridge_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
+  - `git diff --cached --check`
+- Pushed implementation to `origin/main` as `080ad8b`. The local main worktree had unrelated uncommitted archive/lessons changes, so merge/push used the clean apply-owner worktree and left those local changes untouched.
