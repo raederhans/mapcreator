@@ -59,6 +59,7 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - The split boundary test also keeps the config owner free of runtime, DOM, network, state-write, and storage side-effect entrypoints.
   - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks the label-separation normalizer in the config owner.
 - Final static review found no blocker. It recommended the side-effect boundary assertion above and strict staging of the new owner file.
+- Merged into `main` as `af3faca`, pushed to `origin/main`, then removed the temporary worktree and branch.
 - Verification passed:
   - `node --check js/ui/toolbar/transport_workbench_controller.js`
   - `node --check js/ui/toolbar/transport_workbench_config_owner.js`

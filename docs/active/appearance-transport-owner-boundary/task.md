@@ -28,4 +28,4 @@ Owner: main thread for implementation and all live verification.
 - [x] Extend existing test coverage.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
-- [ ] Merge, push, and clean worktree if current-scope verification is clean.
+- [x] Merge, push, and clean worktree after current-scope verification passed.

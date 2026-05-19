@@ -63,4 +63,4 @@ Progress:
 - [x] Updated existing contracts.
 - [x] Ran targeted verification.
 - [x] Ran final static review.
-- [ ] Merge, push, and clean worktree.
+- [x] Merged, pushed, and cleaned worktree.
