@@ -16,22 +16,15 @@ import {
   restoreSurfaceTriggerFocus as restoreOverlayTriggerFocus,
 } from "../ui_contract.js";
 import {
-  destroyTransportWorkbenchCarrier,
-  ensureTransportWorkbenchCarrier,
   getTransportWorkbenchCarrierViewState,
   resetTransportWorkbenchCarrierView,
-  resizeTransportWorkbenchCarrier,
   setTransportWorkbenchCarrierViewChangeListener,
   setTransportWorkbenchCarrierFamily,
   stepTransportWorkbenchCarrierZoom,
   toggleTransportWorkbenchCarrierQuarterTurn,
 } from "../transport_workbench_carrier.js";
 import {
-  clearAllTransportWorkbenchFamilyPreviews,
-  destroyAllTransportWorkbenchFamilyPreviews,
   getTransportWorkbenchFamilyPreviewSnapshot,
-  isTransportWorkbenchFamilyLivePreviewCapable,
-  renderTransportWorkbenchFamilyPreview,
   setTransportWorkbenchFamilyPreviewSelectionListener,
   warmTransportWorkbenchFamilyPreview,
 } from "../transport_workbench_family_preview.js";
@@ -48,6 +41,9 @@ import {
 import {
   createTransportWorkbenchApplyBridgeOwner,
 } from "./transport_workbench_apply_bridge_owner.js";
+import {
+  createTransportWorkbenchPreviewLifecycleOwner,
+} from "./transport_workbench_preview_lifecycle_owner.js";
 import {
   getTransportWorkbenchManifestDefaultVariantId,
   getTransportWorkbenchManifestVariantMeta,
@@ -242,15 +238,21 @@ export function createTransportWorkbenchController({
   };
 
   let transportWorkbenchSectionHelpState = null;
-  let transportWorkbenchPreviewViewSyncRaf = 0;
-  let transportWorkbenchPreviewLastViewKey = "";
   let transportWorkbenchPreviewWarmupScheduled = false;
   let transportWorkbenchDraggedLayerId = "";
-  let transportWorkbenchRenderGeneration = 0;
 
   const transportWorkbenchApplyBridgeOwner = createTransportWorkbenchApplyBridgeOwner(runtimeState, {
     shouldRerender: (normalizedPackId) => isCurrentTransportWorkbenchPackGate(normalizedPackId),
     renderTransportWorkbenchUi: () => renderTransportWorkbenchUi(),
+  });
+
+  const transportWorkbenchPreviewLifecycleOwner = createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
+    ensureUiState: () => ensureTransportWorkbenchUiState(),
+    getCarrierMount: () => transportWorkbenchCarrierMount,
+    getRenderContext: () => getTransportWorkbenchRenderContext(),
+    renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
+    renderLayerOrderPanel: () => renderTransportWorkbenchLayerOrderPanel(),
+    syncPreviewControls: () => syncTransportWorkbenchPreviewControls(),
   });
 
   const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
@@ -2023,74 +2025,12 @@ export function createTransportWorkbenchController({
   };
 
   const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) => (
-    renderGeneration === transportWorkbenchRenderGeneration
-    && !!runtimeState.transportWorkbenchUi?.open
-    && normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi?.activeFamily) === familyId
+    transportWorkbenchPreviewLifecycleOwner.isRenderGenerationCurrent(renderGeneration, familyId)
   );
 
-  const refreshTransportWorkbenchPreview = (context, { allowCarrierPrep = true } = {}) => {
-    const renderGeneration = ++transportWorkbenchRenderGeneration;
-    if (!context.isOpen) {
-      clearAllTransportWorkbenchFamilyPreviews();
-      return Promise.resolve(null);
-    }
-    if (context.family.id === "layers") {
-      clearAllTransportWorkbenchFamilyPreviews();
-      renderTransportWorkbenchLayerOrderPanel();
-      return Promise.resolve(null);
-    }
-    if (!transportWorkbenchCarrierMount) {
-      return Promise.resolve(null);
-    }
-    const prepareCarrier = allowCarrierPrep
-      ? ensureTransportWorkbenchCarrier(transportWorkbenchCarrierMount)
-      : Promise.resolve();
-    return prepareCarrier
-      .then(() => {
-        if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          return null;
-        }
-        resizeTransportWorkbenchCarrier();
-        syncTransportWorkbenchPreviewControls();
-        // preview family 自己消费 resolved config；controller 只负责递送配置和同步 inspector。
-        if (isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
-          return renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {
-            isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),
-          }).then(() => {
-            if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-              return null;
-            }
-            const viewState = getTransportWorkbenchCarrierViewState() || {};
-            transportWorkbenchPreviewLastViewKey = [
-              Number(viewState.scale || 1).toFixed(4),
-              Number(viewState.translateX || 0).toFixed(2),
-              Number(viewState.translateY || 0).toFixed(2),
-              String(viewState.quarterTurns || 0),
-            ].join(":");
-            renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-            return null;
-          });
-        }
-        clearAllTransportWorkbenchFamilyPreviews();
-        if (isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-        }
-        return null;
-      })
-      .catch((error) => {
-        if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          return null;
-        }
-        console.error("[transport-workbench] Failed to prepare Japan carrier preview.", error);
-        if (!isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
-          clearAllTransportWorkbenchFamilyPreviews();
-        }
-        if (isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-        }
-        return null;
-      });
-  };
+  const refreshTransportWorkbenchPreview = (context, { allowCarrierPrep = true } = {}) => (
+    transportWorkbenchPreviewLifecycleOwner.refreshPreview(context, { allowCarrierPrep })
+  );
 
   const renderTransportWorkbenchShell = (context) => {
     const { uiState, family, isOpen, compareHeld } = context;
@@ -2167,33 +2107,9 @@ export function createTransportWorkbenchController({
     }
   };
 
-  const scheduleTransportWorkbenchPreviewViewSync = () => {
-    ensureTransportWorkbenchUiState();
-    const activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-    if (!runtimeState.transportWorkbenchUi?.open || !isTransportWorkbenchFamilyLivePreviewCapable(activeFamily)) {
-      return;
-    }
-    const viewState = getTransportWorkbenchCarrierViewState() || {};
-    const nextViewKey = [
-      Number(viewState.scale || 1).toFixed(4),
-      Number(viewState.translateX || 0).toFixed(2),
-      Number(viewState.translateY || 0).toFixed(2),
-      String(viewState.quarterTurns || 0),
-    ].join(":");
-    if (transportWorkbenchPreviewLastViewKey === nextViewKey) {
-      return;
-    }
-    transportWorkbenchPreviewLastViewKey = nextViewKey;
-    if (transportWorkbenchPreviewViewSyncRaf) {
-      cancelAnimationFrame(transportWorkbenchPreviewViewSyncRaf);
-    }
-    transportWorkbenchPreviewViewSyncRaf = requestAnimationFrame(() => {
-      transportWorkbenchPreviewViewSyncRaf = 0;
-      const context = getTransportWorkbenchRenderContext();
-      if (!context.isOpen || context.family.id !== activeFamily) return;
-      refreshTransportWorkbenchPreview(context, { allowCarrierPrep: false });
-    });
-  };
+  const scheduleTransportWorkbenchPreviewViewSync = () => (
+    transportWorkbenchPreviewLifecycleOwner.scheduleViewSync()
+  );
 
   const renderTransportWorkbenchUi = () => {
     if (
@@ -2256,14 +2172,7 @@ export function createTransportWorkbenchController({
       return;
     }
     uiState.compareHeld = false;
-    if (transportWorkbenchPreviewViewSyncRaf) {
-      cancelAnimationFrame(transportWorkbenchPreviewViewSyncRaf);
-      transportWorkbenchPreviewViewSyncRaf = 0;
-    }
-    transportWorkbenchRenderGeneration += 1;
-    transportWorkbenchPreviewLastViewKey = "";
-    destroyAllTransportWorkbenchFamilyPreviews();
-    destroyTransportWorkbenchCarrier();
+    transportWorkbenchPreviewLifecycleOwner.dispose();
     closeTransportWorkbenchInfoPopover({ restoreFocus: false });
     closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
     runtimeState.toggleLeftPanelFn?.(uiState.restoreLeftDrawer);

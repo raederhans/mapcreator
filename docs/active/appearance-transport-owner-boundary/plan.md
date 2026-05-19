@@ -89,3 +89,28 @@ Progress:
 - [x] Ran targeted verification.
 - [x] Ran final static review.
 - [x] Pushed implementation to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench preview lifecycle owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-preview-owner-2026-05-19`
+Branch: `codex/transport-workbench-preview-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench preview render lifecycle out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_preview_lifecycle_owner.js` owns render generation, live-preview clearing, carrier preparation, view sync RAF, inspector refresh after preview completion, and preview/carrier disposal.
+- `transport_workbench_controller.js` keeps DOM buttons, shell rendering, runtime init, warmup scheduling, selection listener wiring, and render context.
+- Existing contracts lock generation guards, view-key dedupe, close disposal, family preview dispatch, and controller facade.
+- Targeted syntax, Python contracts, Node import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only evidence lanes for preview lifecycle and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented preview lifecycle owner split.
+- [x] Updated existing contracts.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push and clean worktree.

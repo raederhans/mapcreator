@@ -16,6 +16,7 @@ EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_w
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
 TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
+TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -414,11 +415,13 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         owner_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
         config_owner_content = TRANSPORT_WORKBENCH_CONFIG_OWNER_JS.read_text(encoding="utf-8")
         apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
+        preview_lifecycle_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
         self.assertIn("./transport_workbench_config_owner.js", owner_content)
         self.assertIn("./transport_workbench_apply_bridge_owner.js", owner_content)
+        self.assertIn("./transport_workbench_preview_lifecycle_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
         self.assertIn("const initializeTransportWorkbenchRuntime = () => {", owner_content)
@@ -472,7 +475,6 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,", owner_content)
         self.assertIn("Object.assign(previousUiState, normalizedUiState);", owner_content)
         self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", owner_content)
-        self.assertIn("let transportWorkbenchRenderGeneration = 0;", owner_content)
         self.assertIn("const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) =>", owner_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = deepFreeze({", descriptor_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = deepFreeze({", descriptor_content)
@@ -487,8 +489,14 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = {", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_SECTION_DEFAULTS = {", owner_content)
-        self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", owner_content)
-        self.assertIn("isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),", owner_content)
+        self.assertIn("export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState,", preview_lifecycle_owner_content)
+        self.assertIn("let renderGeneration = 0;", preview_lifecycle_owner_content)
+        self.assertNotIn("let transportWorkbenchRenderGeneration = 0;", owner_content)
+        self.assertIn("transportWorkbenchPreviewLifecycleOwner.refreshPreview(context, { allowCarrierPrep })", owner_content)
+        self.assertIn("transportWorkbenchPreviewLifecycleOwner.scheduleViewSync()", owner_content)
+        self.assertIn("transportWorkbenchPreviewLifecycleOwner.dispose();", owner_content)
+        self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", preview_lifecycle_owner_content)
+        self.assertIn("isCurrent: () => isRenderGenerationCurrent(candidateGeneration, context.family.id),", preview_lifecycle_owner_content)
         self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
         self.assertRegex(
             apply_owner_content,
@@ -509,6 +517,47 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('markDirty("transport-workbench-apply")', apply_owner_content)
         self.assertIn('runtimeState.renderNowFn("transport-workbench-apply")', apply_owner_content)
         self.assertIn('transportWorkbenchApplyBtn.addEventListener("click", async () => {', owner_content)
+
+    def test_transport_workbench_preview_lifecycle_owner_guards_render_and_view_sync(self):
+        controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        preview_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
+
+        self.assertRegex(preview_owner_content, r"const \w+Generation = \+\+renderGeneration;")
+        self.assertRegex(
+            preview_owner_content,
+            re.compile(
+                r"const isRenderGenerationCurrent = \(candidateGeneration, familyId\) => \([\s\S]*?"
+                r"candidateGeneration === renderGeneration[\s\S]*?"
+                r"!!runtimeState.transportWorkbenchUi\?\.open[\s\S]*?"
+                r"normalizeTransportWorkbenchFamily\(runtimeState.transportWorkbenchUi\?\.activeFamily\) === familyId"
+            ),
+        )
+        self.assertIn("if (!context.isOpen) {", preview_owner_content)
+        self.assertIn('if (context.family.id === "layers") {', preview_owner_content)
+        self.assertIn("clearAllTransportWorkbenchFamilyPreviews();", preview_owner_content)
+        self.assertIn("const prepareCarrier = allowCarrierPrep", preview_owner_content)
+        self.assertIn("ensureTransportWorkbenchCarrier(carrierMount)", preview_owner_content)
+        self.assertIn("if (!isRenderGenerationCurrent(candidateGeneration, context.family.id))", preview_owner_content)
+        self.assertIn("resizeTransportWorkbenchCarrier();", preview_owner_content)
+        self.assertIn("syncPreviewControls();", preview_owner_content)
+        self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", preview_owner_content)
+        self.assertIn("createTransportWorkbenchPreviewViewKey(getTransportWorkbenchCarrierViewState())", preview_owner_content)
+        self.assertRegex(preview_owner_content, r'console\.error\("\[transport-workbench\][^"]*", error\);')
+        self.assertIn("cancelAnimationFrame(previewViewSyncRaf);", preview_owner_content)
+        self.assertIn("renderGeneration += 1;", preview_owner_content)
+        self.assertIn("previewLastViewKey = \"\";", preview_owner_content)
+        self.assertIn("destroyAllTransportWorkbenchFamilyPreviews();", preview_owner_content)
+        self.assertIn("destroyTransportWorkbenchCarrier();", preview_owner_content)
+        self.assertIn("function createTransportWorkbenchPreviewViewKey(viewState = {})", preview_owner_content)
+        self.assertIn("if (previewLastViewKey === nextViewKey) {", preview_owner_content)
+        self.assertIn("const context = getRenderContext();", preview_owner_content)
+        self.assertIn("if (!context.isOpen || context.family.id !== activeFamily) return;", preview_owner_content)
+        self.assertIn("refreshPreview(context, { allowCarrierPrep: false });", preview_owner_content)
+        self.assertIn("setTransportWorkbenchCarrierViewChangeListener(() => {", controller_content)
+        self.assertIn("scheduleTransportWorkbenchPreviewViewSync();", controller_content)
+        self.assertIn("stepTransportWorkbenchCarrierZoom(-1);", controller_content)
+        self.assertIn("stepTransportWorkbenchCarrierZoom(1);", controller_content)
+        self.assertIn("toggleTransportWorkbenchCarrierQuarterTurn();", controller_content)
 
     def test_toolbar_keeps_transport_workbench_facade_and_surface_coordination_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
