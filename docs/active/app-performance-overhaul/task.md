@@ -1,5 +1,25 @@
 # Task
 
+## 2026-05-19 overall performance evaluation and architecture optimization
+
+Owner: main thread for implementation and all live processes. Child agents are read-only/static only.
+
+- [x] Create isolated worktree and branch.
+- [x] Load `ultragoal`, `ultrawork`, `research-before-fix`, and `performance-goal` skills.
+- [x] Read `lessons learned.md`, `AGENTS.md`, and existing app-performance active docs.
+- [x] Create OMX performance-goal evaluator contract.
+- [x] Dispatch read-only/static subagents for code mapping, architecture review, evaluator review, and external research.
+- [x] Run fresh baseline: `npm run perf:gate`.
+- [x] Run fresh baseline: `npm run bench:editor-performance`.
+- [x] Run fresh baseline: `npm run bench:special-zones-members`.
+- [x] Write baseline/gap summary into context.
+- [x] Implement measured improvements.
+- [x] Extend existing tests only where needed.
+- [x] Run targeted verification.
+- [x] Run evaluator after changes and checkpoint performance-goal.
+- [x] Run final review/bug-check/first-principles pass.
+- [ ] Merge to main, commit, push, and clean worktree.
+
 Execute app performance overhaul v3.1 next slice.
 
 ## Current owner

@@ -26,6 +26,7 @@ import {
   formatTransportPercent,
   formatTransportScopeLabel,
   formatTransportThresholdLabel,
+  getTransportFamilyFilteredCount,
   getTransportFamilyRenderMetric,
 } from "../js/ui/toolbar/appearance_transport_summary.js";
 import {
@@ -303,6 +304,73 @@ test("appearance transport summary reports hidden, loading, visible, and loaded 
     familyEnabled: true,
     metrics: { drawRoadsLayer: { reason: "complete", visibleFeatureCount: 0, featureCount: 2 } },
   }), /^Loaded · 0 visible · 2 roads loaded/);
+});
+
+test("appearance transport summary count cache refreshes when transport collection changes", () => {
+  const collection = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", properties: { class: "motorway", reveal_rank: 1 } },
+    ],
+  };
+  const input = {
+    familyId: "road",
+    familyConfig: { scope: "motorway_trunk", importanceThreshold: "secondary" },
+    effectiveScope: { scope: "motorway_trunk", importanceThreshold: "secondary" },
+    collections: { road: collection },
+    zoomScale: 4,
+    visualMode: "distribution",
+  };
+
+  assert.equal(getTransportFamilyFilteredCount(input), 1);
+  collection.features = [
+    ...collection.features,
+    { type: "Feature", properties: { class: "trunk", reveal_rank: 2 } },
+  ];
+  assert.equal(getTransportFamilyFilteredCount(input), 2);
+  collection.features.push({ type: "Feature", properties: { class: "trunk", reveal_rank: 2 } });
+  assert.equal(getTransportFamilyFilteredCount(input), 3);
+});
+
+test("appearance transport summary count cache ignores pure visual style changes", () => {
+  const collection = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", properties: { class: "motorway", reveal_rank: 1 } },
+      { type: "Feature", properties: { class: "trunk", reveal_rank: 2 } },
+    ],
+  };
+  const baseInput = {
+    familyId: "road",
+    effectiveScope: { scope: "motorway_trunk", importanceThreshold: "secondary" },
+    collections: { road: collection },
+    zoomScale: 4,
+    visualMode: "distribution",
+  };
+
+  assert.equal(getTransportFamilyFilteredCount({
+    ...baseInput,
+    familyConfig: {
+      scope: "motorway_trunk",
+      importanceThreshold: "secondary",
+      opacity: 0.7,
+      visualStrength: 0.4,
+      primaryColor: "#111111",
+    },
+  }), 2);
+  collection.features = [
+    { type: "Feature", properties: { class: "motorway", reveal_rank: 1 } },
+  ];
+  assert.equal(getTransportFamilyFilteredCount({
+    ...baseInput,
+    familyConfig: {
+      scope: "motorway_trunk",
+      importanceThreshold: "secondary",
+      opacity: 0.2,
+      visualStrength: 0.9,
+      primaryColor: "#eeeeee",
+    },
+  }), 1);
 });
 
 test("appearance transport summary prefers contextBreakdown metrics and ignores global metrics", () => {

@@ -488,6 +488,11 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
         self.assertIn("[toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {", owner_content)
         self.assertIn("if (control) control.disabled = false;", owner_content)
+        self.assertIn("let transportAppearanceUiFrameId = 0;", owner_content)
+        self.assertIn("const renderTransportAppearanceDirty = (reason) => {", owner_content)
+        self.assertIn('renderDirty(normalizedReason || "transport-appearance");', owner_content)
+        self.assertIn("if (transportAppearanceUiFrameId) return;", owner_content)
+        self.assertIn("transportAppearanceUiFrameId = scheduleTransportAppearanceFrame(() => {", owner_content)
 
     def test_toolbar_keeps_appearance_facade_and_state_registration_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")

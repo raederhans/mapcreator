@@ -1,5 +1,54 @@
 # App Performance Overhaul Plan
 
+## 2026-05-19 overall performance evaluation and architecture optimization
+
+### Goal
+- Evaluate current app performance from startup, interaction latency, repeated map operations, transport/appearance hot paths, and visual smoothness.
+- Compare the local app against current official web performance and large-map best practices.
+- Ship the smallest measured architecture/performance improvements that preserve feature completeness and existing contracts.
+
+### Worktree and ownership
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-app-performance-overhaul-2026-05-19`
+- Branch: `codex/app-performance-overhaul-2026-05-19`
+- Main thread owns all live tests, dev server, browser, Playwright, benchmark, and perf gate processes.
+- Child agents are read-only/static lanes for code mapping, architecture review, evaluator review, and external research.
+- Shared files `index.html`, `css/style.css`, and `js/ui/toolbar.js` require serial main-thread integration if touched.
+
+### External comparison anchors
+- web.dev INP: user-perceived responsiveness target is 200ms or less for good interaction response.
+- web.dev rendering performance: animation/intermediate-frame work should target roughly 10ms of main-thread budget.
+- MDN Long Animation Frames: frames over 50ms indicate user-visible jank and should be attributed with PerformanceObserver data when possible.
+- Mapbox/MapLibre/deck.gl map performance guidance: reduce visible vertices, separate static and rapidly updated data, tile/chunk large datasets, reduce layer/filter complexity, avoid unnecessary picking/hit work, and move heavy data prep off the main thread where practical.
+
+### Evaluator contract
+- OMX performance-goal slug: `app-overall-performance-2026-05-19`
+- Evaluator command: `npm run perf:gate && npm run bench:editor-performance && npm run bench:special-zones-members`
+- PASS when:
+  - `npm run perf:gate` passes.
+  - `npm run bench:editor-performance` completes and records startup, interaction, visual, long-task, and current bottleneck data without black-frame or long-task regression.
+  - `npm run bench:special-zones-members` completes inside its threshold.
+  - Targeted Node/Python contracts for changed owners pass.
+  - Final static review finds no current-scope correctness or architecture blocker.
+
+### Execution phases
+- [x] Phase 1: fresh baseline and external gap report.
+- [x] Phase 2: choose one or two highest-return local fixes from measured bottlenecks.
+- [x] Phase 3: implement scoped fixes with existing owner boundaries and tests.
+- [x] Phase 4: rerun evaluator and compare before/after artifacts.
+- [ ] Phase 5: run first-principles bug review, static review, update lessons learned if a major reusable lesson appears, then merge back to main.
+
+### 2026-05-19 selected fixes
+- Startup: large chunked scenarios now keep coarse chunks first-frame required while focus political detail blocks apply only when `performance_hints.sync_focus_detail_prewarm_default === true`.
+- Transport appearance: toolbar transport changes are batched through one animation frame, so slider/input bursts no longer call `renderDirty()` synchronously for every event.
+- Transport summary: filtered counts and line class coverage are cached per transport collection object and invalidated when the feature array or length changes.
+
+### 2026-05-19 verification snapshot
+- Baseline `perf:gate` failed on TNO and HOI4 scenario apply timing; final `npm run perf:gate` passed after review fixes.
+- HOI4 final gate median improved to `totalStartupMs=4542.2`, `scenarioAppliedMs=4055.6`, `applyScenarioBundleMs=1922.7`.
+- TNO final gate median passed with `totalStartupMs=4222.6`, `scenarioAppliedMs=3773.4`, `applyScenarioBundleMs=1711.2`.
+- `editor-performance-final-2026-05-19.json` completed with black frame count 0 and network issues 0 for all measured scenarios.
+- `special-zone-members-final-2026-05-19.json` passed at `durationMs=8.691`, matching baseline.
+
 ## Current phase
 2026-04-29 five-step interaction performance slice: pass attribution, dirty/cache narrowing metrics, cost-aware scheduling visibility, worker v2 protocol, and black-pixel attribution.
 

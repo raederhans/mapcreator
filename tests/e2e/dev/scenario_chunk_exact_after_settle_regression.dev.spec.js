@@ -10,7 +10,7 @@ const { DEFAULT_FAST_APP_OPEN_PATH, toRootPath } = require("../support/startup-p
 test.setTimeout(120_000);
 
 const FAST_STARTUP_PATH = toRootPath(DEFAULT_FAST_APP_OPEN_PATH);
-const HOI4_SYNC_PREWARM_PATH = `${FAST_STARTUP_PATH}&default_scenario=hoi4_1939`;
+const HOI4_ASYNC_PREWARM_PATH = `${FAST_STARTUP_PATH}&default_scenario=hoi4_1939`;
 
 const IGNORED_CONSOLE_PATTERNS = [
   /\[map_renderer\] Scenario political background merge fallback engaged:/i,
@@ -262,8 +262,8 @@ test("chunk promotion visual stage can land before exact-after-settle clears", a
   expect(networkFailures).toEqual([]);
 });
 
-test("sync prewarm threshold completes first-frame chunk prewarm before refresh handoff", async ({ page }) => {
-  await gotoApp(page, HOI4_SYNC_PREWARM_PATH, { waitUntil: "domcontentloaded" });
+test("large chunked startup shows coarse first frame before async detail prewarm handoff", async ({ page }) => {
+  await gotoApp(page, HOI4_ASYNC_PREWARM_PATH, { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
 
   await page.waitForFunction(() => {
@@ -271,7 +271,7 @@ test("sync prewarm threshold completes first-frame chunk prewarm before refresh 
     const prewarmMetric = state.scenarioPerfMetrics?.chunkedFirstFramePrewarm || null;
     const visualPromotionMetric = state.renderPerfMetrics?.scenarioChunkPromotionVisualStage || null;
     return !!prewarmMetric
-      && prewarmMetric.mode === "sync"
+      && prewarmMetric.mode === "async"
       && Number(prewarmMetric.prewarmCompletedAt || 0) > 0
       && Number(prewarmMetric.refreshScheduledAt || 0) >= Number(prewarmMetric.prewarmCompletedAt || 0)
       && !!visualPromotionMetric
@@ -292,11 +292,15 @@ test("sync prewarm threshold completes first-frame chunk prewarm before refresh 
 
   expect(stageOrder.activeScenarioId).toBe("hoi4_1939");
   expect(stageOrder.prewarmMetric).toBeTruthy();
-  expect(stageOrder.prewarmMetric.mode).toBe("sync");
-  expect(stageOrder.prewarmMetric.synchronous).toBe(true);
+  expect(stageOrder.prewarmMetric.mode).toBe("async");
+  expect(stageOrder.prewarmMetric.synchronous).toBe(false);
   expect(Number(stageOrder.prewarmMetric.prewarmCompletedAt || 0)).toBeGreaterThan(0);
   expect(Number(stageOrder.prewarmMetric.refreshScheduledAt || 0))
     .toBeGreaterThanOrEqual(Number(stageOrder.prewarmMetric.prewarmCompletedAt || 0));
+  if (Number(stageOrder.prewarmMetric.detailPrewarmStartedAt || 0) > 0) {
+    expect(Number(stageOrder.prewarmMetric.detailPrewarmStartedAt || 0))
+      .toBeGreaterThanOrEqual(Number(stageOrder.prewarmMetric.refreshScheduledAt || 0));
+  }
   expect(String(stageOrder.visualPromotionMetric?.activeScenarioId || "")).toBe("hoi4_1939");
   expect(Number(stageOrder.visualPromotionMetric?.promotionVersion || 0)).toBeGreaterThanOrEqual(1);
 });

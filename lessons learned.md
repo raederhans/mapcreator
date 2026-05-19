@@ -1597,3 +1597,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 删除一行 owner proxy 前先区分 internal proxy 和 public read-model facade；`buildCityRevealPlan` / `getEffectiveCityCollection` 这类被 UI/E2E 依赖的读模型要用 export-block contract 锁住，内部 helper 才适合直接 owner 调用。
 - 去掉代理后，测试要同时防回归和锁顺序；只数调用次数会漏掉 reset/build、dirty/signature、render-pass 这类时序合同。
+
+## 2026-05-19 - transport appearance performance batching
+
+- rAF 批量刷新 summary 时，render 请求必须在事件当下发出；把 `renderDirty()` 延后到 UI rAF 会让 summary 读到上一帧 metrics。
+- 热路径 cache key 要只包含会改变结果的字段；opacity、颜色、strength 这类纯视觉字段不应让 transport filtered count 重新扫描大集合。

@@ -881,6 +881,14 @@ export function createAppearanceControlsController({
     "distribution",
   );
 
+  const scheduleTransportAppearanceFrame = (callback) => {
+    const scheduleFrame = typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame
+      : (frameCallback) => setTimeout(frameCallback, 0);
+    return scheduleFrame(callback);
+  };
+  let transportAppearanceUiFrameId = 0;
+
   const getEffectiveTransportScopeState = (familyId, familyConfig) => (
     familyConfig.scopeLinkMode === "manual"
       ? {
@@ -910,11 +918,11 @@ export function createAppearanceControlsController({
     });
 
   const renderTransportAppearanceDirty = (reason) => {
-    renderDirty(reason);
-    const scheduleFrame = typeof requestAnimationFrame === "function"
-      ? requestAnimationFrame
-      : (callback) => setTimeout(callback, 0);
-    scheduleFrame(() => {
+    const normalizedReason = String(reason || "").trim();
+    renderDirty(normalizedReason || "transport-appearance");
+    if (transportAppearanceUiFrameId) return;
+    transportAppearanceUiFrameId = scheduleTransportAppearanceFrame(() => {
+      transportAppearanceUiFrameId = 0;
       renderTransportAppearanceUi();
     });
   };
@@ -1261,8 +1269,7 @@ export function createAppearanceControlsController({
           event.target.value || "distribution",
           "distribution",
         );
-        renderDirty("transport-visual-mode");
-        renderTransportAppearanceUi();
+        renderTransportAppearanceDirty("transport-visual-mode");
       });
       transportVisualMode.dataset.bound = "true";
     }

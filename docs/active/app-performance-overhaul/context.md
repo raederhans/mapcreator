@@ -1,5 +1,40 @@
 # Context
 
+## 2026-05-19 overall performance evaluation kickoff
+
+- User requested an overall app performance evaluation, network best-practice comparison, comprehensive professional optimization, architecture improvement, separate worktree execution, and completion to a high confidence bar.
+- Active OMX ultragoal story is appearance + transport platformization. Current Codex goal is the aggregate ultragoal objective, so the performance-goal artifact is used as an evaluator contract inside the active ultragoal story instead of replacing Codex goal state.
+- Worktree created: `C:/Users/raede/Desktop/dev/mapcreator-app-performance-overhaul-2026-05-19`; branch `codex/app-performance-overhaul-2026-05-19`.
+- Main-thread live process ownership: all dev server, browser, Playwright, benchmarks, perf gates, and long tests. Subagents may inspect static files and completed artifacts only.
+- Existing performance docs show the previous open bottleneck: ordinary interaction black-frame and wheel latency were improved; the remaining high-cost class was cold political detail chunk load/post-commit replay in US East repeated zoom and broader political/background full-pass cost.
+- External anchors collected so far:
+  - web.dev INP: good interaction response is 200ms or less; lab tests should reproduce common user flows and measure interactions across page lifecycle.
+  - web.dev rendering performance: smooth animation and intermediate visual updates need about 10ms of frame budget; limit JS/style/layout/paint/composite work to the necessary pipeline stages.
+  - MDN Long Animation Frames: frames over 50ms are jank evidence; LoAF observer can attribute scripts and interaction-linked frames.
+  - Mapbox/MapLibre/deck.gl guidance: large map apps improve by reducing visible vertices/layers/sources, using chunked/tiled data, separating dynamic overlays from static data, simplifying filters/styles, gating zoom levels, and moving data prep/attribute work off the main thread when needed.
+- OMX performance-goal created with slug `app-overall-performance-2026-05-19`.
+- Evaluator command: `npm run perf:gate && npm run bench:editor-performance && npm run bench:special-zones-members`.
+- Current implementation rule: no optimization until the fresh baseline identifies the highest-return bottleneck.
+
+## 2026-05-19 baseline, implementation, and verification
+
+- Fresh baseline `npm run perf:gate` failed: TNO `scenarioAppliedMs=5217.1` exceeded the 1.15 gate, and HOI4 failed `totalStartupMs=6004.0`, `scenarioAppliedMs=5429.9`, and `applyScenarioBundleMs=2716.5`.
+- Fresh editor benchmark baseline completed for `none`, `hoi4_1939`, and `tno_1962`; black frame count was 0 and screenshots were written under `.runtime/browser/mcp-artifacts/perf-baseline-2026-05-19/`.
+- Fresh special-zone members baseline passed at `durationMs=9.065`, `averageIterationMs=0.227`.
+- Root cause selected for startup/apply: HOI4's feature-count heuristic made focus-country political detail prewarm synchronous. Coarse chunks are sufficient for the first visible frame, so focus detail now requires explicit manifest opt-in via `sync_focus_detail_prewarm_default`.
+- Interaction/UI hot path selected for transport: transport appearance input bursts now batch render work through one animation frame, and transport summary count/class scans are cached per collection object.
+- Targeted verification passed: JS syntax checks; `npm run test:node:transport-overview-line-contract`; Python toolbar/UI/scenario resource/startup contract group; `npm run test:node:scenario-chunk-contracts`; `npm run test:e2e:dev:scenario-chunk-runtime` 5/5.
+- After `npm run perf:gate` passed. HOI4 gate median: `totalStartupMs=4753.2`, `scenarioAppliedMs=4223.4`, `applyScenarioBundleMs=2048.4`. TNO gate median: `totalStartupMs=4943.0`, `scenarioAppliedMs=4491.0`, `applyScenarioBundleMs=2135.7`.
+- After editor benchmark completed with black frame count 0 and network issues 0 across all measured scenarios; screenshots were written under `.runtime/browser/mcp-artifacts/perf-after-2026-05-19/`.
+- After special-zone members benchmark passed at `durationMs=9.062`, `averageIterationMs=0.227`.
+- Residual note: single-run editor benchmark HOI4 `timeToInteractive` was noisier than the three-run gate median. The gate median is the acceptance signal for startup/apply; keep watching HOI4 TTI in future repeated editor benchmark runs.
+- Static review found a real transport appearance timing blocker: delaying `renderDirty()` into the UI RAF made summary read stale render metrics. Fix: call `renderDirty()` immediately and batch only `renderTransportAppearanceUi()`.
+- Static review also found partial cache-key benefit. Fix: transport filtered-count cache now keys on family, effective scope, effective importance threshold, zoom scale, and visual mode, so pure opacity/color/strength slider changes reuse the count scan.
+- Final `npm run perf:gate` after review fixes passed. HOI4 gate median: `totalStartupMs=4542.2`, `scenarioAppliedMs=4055.6`, `applyScenarioBundleMs=1922.7`. TNO gate median: `totalStartupMs=4222.6`, `scenarioAppliedMs=3773.4`, `applyScenarioBundleMs=1711.2`.
+- Final editor benchmark completed with black frame count 0 and network issues 0 across all measured scenarios; screenshots were written under `.runtime/browser/mcp-artifacts/perf-final-2026-05-19/`.
+- Final special-zone members benchmark passed at `durationMs=8.691`, `averageIterationMs=0.217`.
+- Performance-goal checkpoint recorded `validation_passed` for slug `app-overall-performance-2026-05-19`.
+
 Started 2026-04-24. Current plan is v3. Parent owns tests; subagents static analysis only.
 
 ## 2026-04-24 Phase 0 implementation notes

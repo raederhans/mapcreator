@@ -138,7 +138,7 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             'if (transportVisualMode) transportVisualMode.disabled = !transportEnabled;',
             'transportVisualMode.addEventListener("change", (event) => {',
             'getTransportAppearanceConfig().visualMode = normalizeTransportOverviewVisualMode(',
-            'renderDirty("transport-visual-mode");',
+            'renderTransportAppearanceDirty("transport-visual-mode");',
         ]:
             self.assertIn(token, controller_content)
 
