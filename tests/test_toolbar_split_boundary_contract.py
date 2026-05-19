@@ -21,6 +21,7 @@ TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "tool
 TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
 TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_layer_order_owner.js"
 TRANSPORT_WORKBENCH_LENS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_lens_owner.js"
+TRANSPORT_WORKBENCH_POPOVER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_popover_owner.js"
 TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_right_deck_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
@@ -438,6 +439,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         inspector_owner_content = TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS.read_text(encoding="utf-8")
         layer_order_owner_content = TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS.read_text(encoding="utf-8")
         lens_owner_content = TRANSPORT_WORKBENCH_LENS_OWNER_JS.read_text(encoding="utf-8")
+        popover_owner_content = TRANSPORT_WORKBENCH_POPOVER_OWNER_JS.read_text(encoding="utf-8")
         right_deck_owner_content = TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
@@ -447,6 +449,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("./transport_workbench_apply_bridge_owner.js", owner_content)
         self.assertIn("./transport_workbench_preview_lifecycle_owner.js", owner_content)
         self.assertIn("./transport_workbench_inspector_owner.js", owner_content)
+        self.assertIn("./transport_workbench_popover_owner.js", owner_content)
         self.assertIn("./transport_workbench_right_deck_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
@@ -616,6 +619,25 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("TRANSPORT_WORKBENCH_TAB_SECTION_MAP", right_deck_owner_content)
         self.assertIn("mapTransportWorkbenchLabelLevelToMaxLevel", right_deck_owner_content)
         self.assertIn("mapTransportWorkbenchMaxLevelToLabelLevel", right_deck_owner_content)
+        self.assertIn("export function createTransportWorkbenchPopoverOwner({", popover_owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_INLINE_HELP_COPY", popover_owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS", popover_owner_content)
+        self.assertIn("const transportWorkbenchPopoverOwner = createTransportWorkbenchPopoverOwner({", owner_content)
+        self.assertIn("infoPopover: transportWorkbenchInfoPopover,", owner_content)
+        self.assertIn("sectionHelpPopover: transportWorkbenchSectionHelpPopover,", owner_content)
+        self.assertIn("transportWorkbenchPopoverOwner.renderInfoContent(family);", owner_content)
+        self.assertIn("transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta());", owner_content)
+        self.assertIn("transportWorkbenchPopoverOwner.handleEscape(event)", owner_content)
+        self.assertIn("createSectionHelpButton: (familyId, section) => transportWorkbenchPopoverOwner.createSectionHelpButton(familyId, section)", owner_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_INLINE_HELP_COPY", owner_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS", owner_content)
+        self.assertNotIn("let transportWorkbenchSectionHelpState", owner_content)
+        self.assertNotIn("const renderTransportWorkbenchInfoContent = ", owner_content)
+        self.assertNotIn("const toggleTransportWorkbenchInfoPopover = ", owner_content)
+        self.assertNotIn("const renderTransportWorkbenchSectionHelpPopover = ", owner_content)
+        self.assertNotIn("const toggleTransportWorkbenchSectionHelpPopover = ", owner_content)
+        self.assertNotIn("const positionTransportWorkbenchSectionHelpPopover = ", owner_content)
+        self.assertNotIn("const createTransportWorkbenchSectionHelpButton = ", owner_content)
         self.assertIn("const transportWorkbenchRightDeckOwner = createTransportWorkbenchRightDeckOwner({", owner_content)
         self.assertIn('translate: (label) => t(label, "ui")', owner_content)
         self.assertIn("pickUiCopy,", owner_content)

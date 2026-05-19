@@ -49,13 +49,14 @@ import {
   createTransportWorkbenchLensOwner,
 } from "./transport_workbench_lens_owner.js";
 import {
+  createTransportWorkbenchPopoverOwner,
+} from "./transport_workbench_popover_owner.js";
+import {
   createTransportWorkbenchRightDeckOwner,
 } from "./transport_workbench_right_deck_owner.js";
 import {
   TRANSPORT_WORKBENCH_FAMILIES,
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
-  TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS,
-  TRANSPORT_WORKBENCH_INLINE_HELP_COPY,
   TRANSPORT_WORKBENCH_DATA_CONTRACTS,
   TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS,
 } from "./transport_workbench_descriptor.js";
@@ -138,18 +139,6 @@ export function createTransportWorkbenchController({
 } = {}) {
   // controller 只拥有 workbench 自己的 overlay/panel/preview 交互闭环。
   // 更高层的 toolbar surface 仲裁、别的工作台切换、URL restore 仍由 toolbar.js 处理。
-  const closeTransportWorkbenchInfoPopover = ({ restoreFocus = false } = {}) => {
-    if (!transportWorkbenchInfoPopover) return;
-    transportWorkbenchInfoPopover.classList.add("hidden");
-    transportWorkbenchInfoPopover.setAttribute("aria-hidden", "true");
-    transportWorkbenchInfoBtn?.setAttribute("aria-expanded", "false");
-    if (restoreFocus && transportWorkbenchInfoBtn && typeof transportWorkbenchInfoBtn.focus === "function") {
-      transportWorkbenchInfoBtn.focus({ preventScroll: true });
-    }
-  };
-
-  let transportWorkbenchSectionHelpState = null;
-
   const transportWorkbenchStateOwner = createTransportWorkbenchStateOwner(runtimeState);
   const ensureTransportWorkbenchUiState = () => transportWorkbenchStateOwner.ensureUiState();
   const resetTransportWorkbenchSectionState = () => transportWorkbenchStateOwner.resetSectionState();
@@ -191,80 +180,28 @@ export function createTransportWorkbenchController({
     renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
   });
 
-  const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
-    if (!transportWorkbenchSectionHelpPopover) return;
-    transportWorkbenchSectionHelpPopover.classList.add("hidden");
-    transportWorkbenchSectionHelpPopover.setAttribute("aria-hidden", "true");
-    if (transportWorkbenchSectionHelpState?.trigger instanceof HTMLElement) {
-      transportWorkbenchSectionHelpState.trigger.setAttribute("aria-expanded", "false");
-      if (restoreFocus && typeof transportWorkbenchSectionHelpState.trigger.focus === "function") {
-        transportWorkbenchSectionHelpState.trigger.focus({ preventScroll: true });
-      }
-    }
-    transportWorkbenchSectionHelpState = null;
-  };
-
-  const positionTransportWorkbenchSectionHelpPopover = (trigger) => {
-    if (!(trigger instanceof HTMLElement) || !(transportWorkbenchSectionHelpPopover instanceof HTMLElement) || !(transportWorkbenchPanel instanceof HTMLElement)) {
-      return;
-    }
-    const panelRect = transportWorkbenchPanel.getBoundingClientRect();
-    const triggerRect = trigger.getBoundingClientRect();
-    const popoverWidth = transportWorkbenchSectionHelpPopover.offsetWidth || 280;
-    const popoverHeight = transportWorkbenchSectionHelpPopover.offsetHeight || 140;
-    let left = triggerRect.right + 10;
-    let top = triggerRect.top - 4;
-    const minInset = 18;
-    if (left + popoverWidth > panelRect.right - minInset) {
-      left = triggerRect.left - popoverWidth - 10;
-    }
-    left = Math.min(Math.max(left, panelRect.left + minInset), Math.max(panelRect.left + minInset, panelRect.right - popoverWidth - minInset));
-    top = Math.min(Math.max(top, panelRect.top + minInset), Math.max(panelRect.top + minInset, panelRect.bottom - popoverHeight - minInset));
-    transportWorkbenchSectionHelpPopover.style.left = `${left}px`;
-    transportWorkbenchSectionHelpPopover.style.top = `${top}px`;
-  };
-
-  const renderTransportWorkbenchSectionHelpPopover = (familyId, sectionKey) => {
-    if (!transportWorkbenchSectionHelpTitle || !transportWorkbenchSectionHelpBody) return;
-    const helpCopy = TRANSPORT_WORKBENCH_INLINE_HELP_COPY[familyId]?.[sectionKey];
-    if (!helpCopy) return;
-    transportWorkbenchSectionHelpTitle.textContent = t(helpCopy.title, "ui");
-    transportWorkbenchSectionHelpBody.replaceChildren();
-    const body = document.createElement("p");
-    body.className = "transport-workbench-info-text";
-    body.textContent = t(helpCopy.body, "ui");
-    transportWorkbenchSectionHelpBody.appendChild(body);
-  };
-
-  const toggleTransportWorkbenchSectionHelpPopover = (trigger, familyId, sectionKey) => {
-    if (!transportWorkbenchSectionHelpPopover) return;
-    const isSameTarget = transportWorkbenchSectionHelpState
-      && transportWorkbenchSectionHelpState.familyId === familyId
-      && transportWorkbenchSectionHelpState.sectionKey === sectionKey
-      && transportWorkbenchSectionHelpState.trigger === trigger
-      && !transportWorkbenchSectionHelpPopover.classList.contains("hidden");
-    if (isSameTarget) {
-      closeTransportWorkbenchSectionHelpPopover({ restoreFocus: true });
-      return;
-    }
-    closeTransportWorkbenchInfoPopover({ restoreFocus: false });
-    closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    renderTransportWorkbenchSectionHelpPopover(familyId, sectionKey);
-    transportWorkbenchSectionHelpState = { familyId, sectionKey, trigger };
-    transportWorkbenchSectionHelpPopover.classList.remove("hidden");
-    transportWorkbenchSectionHelpPopover.setAttribute("aria-hidden", "false");
-    if (trigger instanceof HTMLElement) {
-      trigger.setAttribute("aria-expanded", "true");
-    }
-    positionTransportWorkbenchSectionHelpPopover(trigger);
-  };
-
   const getTransportWorkbenchDataContract = (familyId) => TRANSPORT_WORKBENCH_DATA_CONTRACTS[familyId] || null;
   const pickUiCopy = (zh, en) => (runtimeState.currentLanguage === "zh" ? zh : en);
+  const transportWorkbenchPopoverOwner = createTransportWorkbenchPopoverOwner({
+    panel: transportWorkbenchPanel,
+    infoButton: transportWorkbenchInfoBtn,
+    infoPopover: transportWorkbenchInfoPopover,
+    infoBody: transportWorkbenchInfoBody,
+    sectionHelpPopover: transportWorkbenchSectionHelpPopover,
+    sectionHelpTitle: transportWorkbenchSectionHelpTitle,
+    sectionHelpBody: transportWorkbenchSectionHelpBody,
+    translate: (label) => t(label, "ui"),
+    pickUiCopy,
+    getDataContract: (familyId) => getTransportWorkbenchDataContract(familyId),
+    focusSurface: (surface) => focusOverlaySurface(surface),
+    rememberTrigger: (surface, trigger) => rememberOverlayTrigger(surface, trigger),
+  });
+  const closeTransportWorkbenchInfoPopover = (options) => transportWorkbenchPopoverOwner.closeInfoPopover(options);
+  const closeTransportWorkbenchSectionHelpPopover = (options) => transportWorkbenchPopoverOwner.closeSectionHelpPopover(options);
 
   const transportWorkbenchLensOwner = createTransportWorkbenchLensOwner({
     mount: transportWorkbenchLensSections,
-    closeSectionHelpPopover: (options) => closeTransportWorkbenchSectionHelpPopover(options),
+    closeSectionHelpPopover: (options) => transportWorkbenchPopoverOwner.closeSectionHelpPopover(options),
     translate: (label) => t(label, "ui"),
     pickUiCopy,
     createRow: (label, value) => transportWorkbenchInspectorOwner.createRow(label, value),
@@ -289,98 +226,9 @@ export function createTransportWorkbenchController({
     updateFamilyConfig: (familyId, key, nextValue, options) => updateTransportWorkbenchFamilyConfig(familyId, key, nextValue, options),
     updateDisplayConfig: (familyId, updateFn) => updateTransportWorkbenchDisplayConfig(familyId, updateFn),
     toggleSection: (familyId, sectionKey, nextOpen) => toggleTransportWorkbenchSection(familyId, sectionKey, nextOpen),
-    createSectionHelpButton: (familyId, section) => createTransportWorkbenchSectionHelpButton(familyId, section),
+    createSectionHelpButton: (familyId, section) => transportWorkbenchPopoverOwner.createSectionHelpButton(familyId, section),
     renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config),
   });
-
-  const renderTransportWorkbenchInfoContent = (family) => {
-    if (!transportWorkbenchInfoBody) return;
-    transportWorkbenchInfoBody.replaceChildren();
-    const dataContract = getTransportWorkbenchDataContract(family.id);
-    const defaultBlocks = [
-      {
-        title: "Current lens",
-        body: family.lensBody,
-      },
-      {
-        title: "Baseline",
-        body: family.lensNext,
-      },
-      family.supportsDetailedControls
-        ? {
-          title: "Compare action",
-          body: `Compare baseline temporarily swaps the preview to the locked ${family.label.toLowerCase()} baseline while the control is held. It never overwrites the working values in the left column.`,
-        }
-        : {
-          title: "Availability",
-          body: `${family.label} is still a reserved shell. Detailed controls stay closed until the live Japan schema and packs are wired.`,
-        },
-      {
-        title: "Preview controls",
-        body: "Use mouse wheel or the + / - controls to zoom. The 90° button swaps between the default north-up view and the quarter-turn inspection view. Reset View restores the framed default preview.",
-      },
-      dataContract
-        ? {
-          title: "Data path",
-          body: `${dataContract.adapterId} stays on ${dataContract.packs.join(" + ")} using ${dataContract.geometrySource} with ${dataContract.hardeningSource}. Keep the pack build reproducible and diagnostics-friendly so rule changes can be traced later.`,
-        }
-        : null,
-    ];
-    const blocks = family.id === "layers"
-      ? [
-        {
-          title: pickUiCopy("当前用途", "Current use"),
-          body: pickUiCopy(
-            "Layers 用来调整 transport families 的当前本地绘制顺序。中间排序板负责拖拽重排，Inspect 会同步回显当前顺序。",
-            "Layers controls the current local draw order for transport families. Use the center board to drag and reorder families, and use Inspect to review the active order."
-          ),
-        },
-        {
-          title: pickUiCopy("排序板行为", "Board behavior"),
-          body: pickUiCopy(
-            "Layers 使用排序板模式。这里没有缩放、旋转或基线对比，重点是确认绘制顺序和 family 状态。",
-            "Layers uses board mode. Zoom, rotate, and baseline compare are hidden here, and the main task is confirming draw order and family status."
-          ),
-        },
-        {
-          title: pickUiCopy("Inspector 分工", "Inspector role"),
-          body: pickUiCopy(
-            "左侧只保留上下文说明，真正的顺序确认在中间排序板和右侧 Inspect。其余页签继续保留统一结构，方便以后接入更多帮助内容。",
-            "The left column keeps context only, while the center board and right-side Inspect confirm the active order. The remaining tabs stay in place so later help and controls can land without changing the shell."
-          ),
-        },
-      ]
-      : defaultBlocks;
-
-    blocks.filter(Boolean).forEach((block) => {
-      const node = document.createElement("section");
-      node.className = "transport-workbench-info-block";
-      const title = document.createElement("div");
-      title.className = "transport-workbench-info-subtitle";
-      title.textContent = t(block.title, "ui");
-      const body = document.createElement("p");
-      body.className = "transport-workbench-info-text";
-      body.textContent = t(block.body, "ui");
-      node.append(title, body);
-      transportWorkbenchInfoBody.appendChild(node);
-    });
-  };
-
-  const toggleTransportWorkbenchInfoPopover = () => {
-    if (!transportWorkbenchInfoPopover) return;
-    const willOpen = transportWorkbenchInfoPopover.classList.contains("hidden");
-    if (!willOpen) {
-      closeTransportWorkbenchInfoPopover({ restoreFocus: true });
-      return;
-    }
-    closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    renderTransportWorkbenchInfoContent(getTransportWorkbenchFamilyMeta());
-    rememberOverlayTrigger(transportWorkbenchInfoPopover, transportWorkbenchInfoBtn);
-    transportWorkbenchInfoPopover.classList.remove("hidden");
-    transportWorkbenchInfoPopover.setAttribute("aria-hidden", "false");
-    transportWorkbenchInfoBtn?.setAttribute("aria-expanded", "true");
-    focusOverlaySurface(transportWorkbenchInfoPopover);
-  };
 
   const getTransportWorkbenchFamilyMeta = () => transportWorkbenchStateOwner.getFamilyMeta();
 
@@ -460,27 +308,6 @@ export function createTransportWorkbenchController({
 
   const toggleTransportWorkbenchSection = (familyId, sectionKey, nextOpen) => {
     transportWorkbenchStateOwner.toggleSection(familyId, sectionKey, nextOpen);
-  };
-
-  const createTransportWorkbenchSectionHelpButton = (familyId, section) => {
-    if (!TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS[familyId]?.has(section.key)) {
-      return null;
-    }
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "transport-workbench-section-help-btn";
-    button.textContent = "?";
-    const helpLabel = t("Open section help", "ui");
-    button.setAttribute("aria-label", helpLabel);
-    button.setAttribute("title", helpLabel);
-    button.setAttribute("aria-haspopup", "dialog");
-    button.setAttribute("aria-expanded", "false");
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      toggleTransportWorkbenchSectionHelpPopover(button, familyId, section.key);
-    });
-    return button;
   };
 
   const getTransportWorkbenchLayerFamilyMeta = (familyId) => (
@@ -619,8 +446,8 @@ export function createTransportWorkbenchController({
           ? t("Baseline preview", "ui")
           : t("Live working state", "ui");
     }
-    if (transportWorkbenchInfoPopover && !transportWorkbenchInfoPopover.classList.contains("hidden")) {
-      renderTransportWorkbenchInfoContent(family);
+    if (transportWorkbenchPopoverOwner.isInfoPopoverOpen()) {
+      transportWorkbenchPopoverOwner.renderInfoContent(family);
     }
     transportWorkbenchInspectorTitle.textContent = `${t(family.label, "ui")} ${t("inspector", "ui")}`;
     transportWorkbenchInspectorEmptyTitle.textContent = t(family.inspectorEmptyTitle, "ui");
@@ -757,7 +584,7 @@ export function createTransportWorkbenchController({
 
       if (transportWorkbenchInfoBtn && !transportWorkbenchInfoBtn.dataset.bound) {
         transportWorkbenchInfoBtn.addEventListener("click", () => {
-          toggleTransportWorkbenchInfoPopover();
+          transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta());
         });
         transportWorkbenchInfoBtn.dataset.bound = "true";
       }
@@ -868,16 +695,7 @@ export function createTransportWorkbenchController({
       if (!document.body.dataset.transportWorkbenchEscapeBound) {
         document.addEventListener("keydown", (event) => {
           if (event.key !== "Escape" || !runtimeState.transportWorkbenchUi?.open) return;
-          if (transportWorkbenchSectionHelpPopover && !transportWorkbenchSectionHelpPopover.classList.contains("hidden")) {
-            event.preventDefault();
-            closeTransportWorkbenchSectionHelpPopover({ restoreFocus: true });
-            return;
-          }
-          if (transportWorkbenchInfoPopover && !transportWorkbenchInfoPopover.classList.contains("hidden")) {
-            event.preventDefault();
-            closeTransportWorkbenchInfoPopover({ restoreFocus: true });
-            return;
-          }
+          if (transportWorkbenchPopoverOwner.handleEscape(event)) return;
           event.preventDefault();
           setTransportWorkbenchState(false);
         });
