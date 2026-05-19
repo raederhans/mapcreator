@@ -46,6 +46,9 @@ import {
   createTransportWorkbenchLayerOrderOwner,
 } from "./transport_workbench_layer_order_owner.js";
 import {
+  createTransportWorkbenchLensOwner,
+} from "./transport_workbench_lens_owner.js";
+import {
   createTransportWorkbenchRightDeckOwner,
 } from "./transport_workbench_right_deck_owner.js";
 import {
@@ -258,6 +261,15 @@ export function createTransportWorkbenchController({
 
   const getTransportWorkbenchDataContract = (familyId) => TRANSPORT_WORKBENCH_DATA_CONTRACTS[familyId] || null;
   const pickUiCopy = (zh, en) => (runtimeState.currentLanguage === "zh" ? zh : en);
+
+  const transportWorkbenchLensOwner = createTransportWorkbenchLensOwner({
+    mount: transportWorkbenchLensSections,
+    closeSectionHelpPopover: (options) => closeTransportWorkbenchSectionHelpPopover(options),
+    translate: (label) => t(label, "ui"),
+    pickUiCopy,
+    createRow: (label, value) => transportWorkbenchInspectorOwner.createRow(label, value),
+    buildLensSummaryRows: (input) => transportWorkbenchInspectorOwner.buildLensSummaryRows(input),
+  });
 
   const transportWorkbenchRightDeckOwner = createTransportWorkbenchRightDeckOwner({
     tabButtons: transportWorkbenchInspectorTabButtons,
@@ -497,53 +509,15 @@ export function createTransportWorkbenchController({
   };
 
   const renderTransportWorkbenchLensSections = (family, config, compareHeld) => {
-    if (!transportWorkbenchLensSections) return;
-    closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    transportWorkbenchLensSections.replaceChildren();
-    if (family.id === "layers") {
-      const card = document.createElement("div");
-      card.className = "transport-workbench-empty-card";
-      const title = document.createElement("div");
-      title.className = "transport-workbench-empty-title";
-      title.textContent = t("Future draw stack", "ui");
-      const body = document.createElement("p");
-      body.className = "transport-workbench-empty-text";
-      body.textContent = pickUiCopy(
-        "使用中间排序板调整 8 个 transport families 的绘制顺序。左侧负责上下文，右侧负责状态查看。",
-        "Use the center board to reorder the 8 transport families. The left column provides context, and the right column mirrors the current runtimeState."
-      );
-      card.append(title, body);
-      transportWorkbenchLensSections.appendChild(card);
-      return;
-    }
     const previewSnapshot = getTransportWorkbenchFamilyPreviewSnapshot(family.id, config);
     const dataContract = getTransportWorkbenchDataContract(family.id);
-    const overview = document.createElement("div");
-    overview.className = "transport-workbench-note-card transport-workbench-note-card-emphasis";
-    const overviewTitle = document.createElement("div");
-    overviewTitle.className = "transport-workbench-note-title";
-    overviewTitle.textContent = t("Review focus", "ui");
-    const overviewBody = document.createElement("p");
-    overviewBody.className = "transport-workbench-note-text";
-    overviewBody.textContent = `${family.lensBody} ${family.lensNext}`;
-    overview.append(overviewTitle, overviewBody);
-    transportWorkbenchLensSections.appendChild(overview);
-    const summaryCard = document.createElement("div");
-    summaryCard.className = "transport-workbench-note-card transport-workbench-note-card-soft transport-workbench-lens-summary";
-    const summaryTitle = document.createElement("div");
-    summaryTitle.className = "transport-workbench-note-title";
-    summaryTitle.textContent = t("Current context", "ui");
-    summaryCard.appendChild(summaryTitle);
-    transportWorkbenchInspectorOwner.buildLensSummaryRows({
+    transportWorkbenchLensOwner.render({
       family,
       previewSnapshot,
       dataContract,
       compareHeld,
       rightDeckLabel: t("Display / Aggregation / Labels / Coverage / Data", "ui"),
-    }).forEach(([label, value]) => {
-      summaryCard.appendChild(transportWorkbenchInspectorOwner.createRow(label, value));
     });
-    transportWorkbenchLensSections.appendChild(summaryCard);
   };
 
   const renderTransportWorkbenchInspector = (family, config, compareHeld) => {

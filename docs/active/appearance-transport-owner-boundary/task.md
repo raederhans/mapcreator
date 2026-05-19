@@ -171,3 +171,16 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench lens owner slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Dispatch static-only subagent for lens owner boundary and stale lens risk.
+- [x] Select current-scope boundary move.
+- [x] Implement lens owner split and lens DOM signature reuse.
+- [x] Extend Python boundary contract and add named Node behavior script.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

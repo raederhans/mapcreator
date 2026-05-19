@@ -443,3 +443,37 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
 - Static review approved the approach and requested behavior coverage for option reuse with value/disabled refresh. The new `test:node:transport-workbench-controller` entry now covers that case.
 - Final narrow static review agents timed out after repeated waits; main-thread review found no stale option/value/disabled path because the helper recomputes pack options every shell render, caches only the option DOM signature, and still writes `disabled` plus `value` outside the rebuild branch.
 - Implementation commit `a676562` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench lens owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-lens-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Remaining lens hot path: `renderTransportWorkbenchLensSections()` was still clearing and rebuilding the left lens column during full UI refreshes, config updates, display updates, and preview lifecycle refreshes.
+- Chosen boundary: create `js/ui/toolbar/transport_workbench_lens_owner.js`.
+- Implemented:
+  - Lens owner builds the layers empty card and regular review-focus/current-context cards.
+  - Lens owner signs the final card/row model and skips mount `replaceChildren()` when the rendered output is unchanged.
+  - Controller now passes family, preview snapshot, data contract, compare state, and translated right-deck label into the lens owner.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` locks the lens owner boundary and prevents direct lens DOM/card construction from returning to the controller.
+  - `tests/transport_workbench_lens_owner_behavior.test.mjs` covers same-model reuse, compare/status invalidation, family invalidation, and layers empty-card rendering.
+  - `package.json` exposes `test:node:transport-workbench-lens-owner`.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_lens_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_lens_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-lens-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_lens_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `git diff --check`
+- Final static review: the first two reviewer lanes timed out, so a narrowed fast static lane reviewed the lens signature/cache boundary and returned `APPROVE`.

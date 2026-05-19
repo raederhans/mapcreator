@@ -345,3 +345,28 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench lens owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-lens-owner-2026-05-19`
+Branch: `codex/transport-workbench-lens-owner-2026-05-19`
+
+Goal: continue G001 by moving left-column lens DOM rendering out of the transport workbench controller and skipping repeated lens DOM rebuilds when the rendered lens model is unchanged.
+
+Acceptance:
+
+- `transport_workbench_lens_owner.js` owns lens model creation, review-focus/current-context card DOM, layers empty card DOM, and lens render signature reuse.
+- `transport_workbench_controller.js` keeps preview snapshot/data-contract lookup and delegates lens DOM rendering to the lens owner.
+- Same rendered lens model skips `replaceChildren()`; family, compare, status, row content, or copy changes invalidate the lens signature and rebuild normally.
+- Existing toolbar boundary contract and a named Node behavior script cover the owner boundary, stale lens risks, same-model reuse, and changed-model invalidation.
+- Targeted syntax, toolbar split contract, lens owner behavior, import smoke, adjacent owner tests, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Selected current-scope boundary move.
+- [x] Implemented lens owner split and DOM reuse.
+- [x] Updated boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

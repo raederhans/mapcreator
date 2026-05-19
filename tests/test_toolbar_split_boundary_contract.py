@@ -20,6 +20,7 @@ TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" 
 TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js"
 TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
 TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_layer_order_owner.js"
+TRANSPORT_WORKBENCH_LENS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_lens_owner.js"
 TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_right_deck_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
@@ -436,6 +437,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         preview_lifecycle_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
         inspector_owner_content = TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS.read_text(encoding="utf-8")
         layer_order_owner_content = TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS.read_text(encoding="utf-8")
+        lens_owner_content = TRANSPORT_WORKBENCH_LENS_OWNER_JS.read_text(encoding="utf-8")
         right_deck_owner_content = TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
@@ -561,8 +563,20 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("renderInspectorDetails,", inspector_owner_content)
         self.assertIn("renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config)", owner_content)
         self.assertIn("renderDiagnosticsBody(family.id, config)", right_deck_owner_content)
-        self.assertIn("transportWorkbenchInspectorOwner.buildLensSummaryRows({", owner_content)
-        self.assertIn("transportWorkbenchInspectorOwner.createRow(label, value)", owner_content)
+        self.assertIn("export function createTransportWorkbenchLensOwner({", lens_owner_content)
+        self.assertIn("export function buildTransportWorkbenchLensModel({", lens_owner_content)
+        self.assertIn("export function buildTransportWorkbenchLensRenderSignature(model = {})", lens_owner_content)
+        self.assertIn("const transportWorkbenchLensOwner = createTransportWorkbenchLensOwner({", owner_content)
+        self.assertIn('translate: (label) => t(label, "ui")', owner_content)
+        self.assertIn("pickUiCopy,", owner_content)
+        self.assertIn("createRow: (label, value) => transportWorkbenchInspectorOwner.createRow(label, value)", owner_content)
+        self.assertIn("buildLensSummaryRows: (input) => transportWorkbenchInspectorOwner.buildLensSummaryRows(input)", owner_content)
+        lens_body = self._arrow_function_body(owner_content, "renderTransportWorkbenchLensSections")
+        self.assertIn("transportWorkbenchLensOwner.render({", lens_body)
+        self.assertNotIn("transportWorkbenchLensSections.replaceChildren();", lens_body)
+        self.assertNotIn("document.createElement(\"div\")", lens_body)
+        self.assertNotIn("transportWorkbenchInspectorOwner.buildLensSummaryRows({", lens_body)
+        self.assertNotIn("transportWorkbenchInspectorOwner.createRow(label, value)", lens_body)
         inspector_body = self._arrow_function_body(owner_content, "renderTransportWorkbenchInspector")
         self.assertIn("transportWorkbenchInspectorOwner.renderInspectorDetails({", inspector_body)
         self.assertIn("detailsNode: transportWorkbenchInspectorDetails,", inspector_body)
