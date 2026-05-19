@@ -478,3 +478,42 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `git diff --check`
 - Final static review: the first two reviewer lanes timed out, so a narrowed fast static lane reviewed the lens signature/cache boundary and returned `APPROVE`.
 - Implementation commit `07dd0e5` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench popover owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-popover-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- External performance standards captured for this goal:
+  - INP good target is p75 interaction latency at or below 200ms.
+  - Single main-thread long task threshold is 50ms.
+  - Lighthouse DOM-size pressure starts around 800 body nodes and becomes severe around 1400.
+  - Mapbox/MapLibre style performance depends heavily on source count, layer count, vertex count, and update scope.
+- Static popover boundary review recommended moving info/help popover rendering, focus, aria state, positioning, Escape handling, and section-help button creation into a narrow owner.
+- Chosen boundary: controller keeps workbench lifecycle/render orchestration; `transport_workbench_popover_owner.js` owns popover DOM and interaction details.
+- Implemented:
+  - New `createTransportWorkbenchPopoverOwner()` owner with info/help close/toggle/render APIs, section-help button factory, and Escape handler.
+  - Controller now wires popover owner into lens/right-deck dependencies and returns existing close facades for workspace support coordination.
+  - New `tests/transport_workbench_popover_owner_behavior.test.mjs` covers info/help mutual exclusion, aria state, section help positioning, same-trigger collapse, focus restore, Escape close, and unsupported help section null behavior.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks popover owner import/delegation and prevents popover render/helper implementations from returning to the controller.
+- Implementation commit `55e2ff7` is local; push is pending this closeout doc commit.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_popover_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_popover_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-popover-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run test:node:transport-workbench-lens-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_popover_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Final static review approved the popover owner boundary. It found no blocking issues and confirmed aria/focus/mutual-exclusion/Escape behavior plus controller delegation.
+- Known noise: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen the package-level module setting.

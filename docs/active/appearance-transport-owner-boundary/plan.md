@@ -370,3 +370,28 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench popover owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-popover-owner-2026-05-19`
+Branch: `codex/transport-workbench-popover-owner-2026-05-19`
+
+Goal: continue G001 by moving info/help popover DOM, focus, positioning, and section-help button wiring out of the transport workbench controller.
+
+Acceptance:
+
+- `transport_workbench_popover_owner.js` owns info popover content DOM, section-help content DOM, section-help positioning, focus restore, Escape handling, and section help button creation.
+- `transport_workbench_controller.js` keeps workbench lifecycle, render context, state writes, preview/apply sequencing, and only delegates popover operations through the owner.
+- Opening info/help popovers remains mutually exclusive, same section help click collapses the active popover, and Escape closes the active popover before closing the whole workbench.
+- Existing toolbar boundary contract and a named Node behavior script cover the owner boundary, aria state, focus restore, mutual exclusion, and Escape handling.
+- Targeted syntax, toolbar split contract, popover owner behavior, import smoke, adjacent workbench owner tests, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Selected current-scope boundary move.
+- [x] Implemented popover owner split.
+- [x] Updated boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
