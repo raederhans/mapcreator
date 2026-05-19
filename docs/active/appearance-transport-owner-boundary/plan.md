@@ -38,3 +38,29 @@ Branch: `codex/appearance-transport-owner-boundary-2026-05-19`
 - [x] Implement boundary move.
 - [x] Run targeted verification.
 - [x] Run static review and close this slice.
+
+## 2026-05-19 transport workbench config owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-config-owner-2026-05-19`
+Branch: `codex/transport-workbench-config-owner-2026-05-19`
+
+Goal: continue G001 by moving the transport workbench family/config normalization matrix out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_config_owner.js` owns runtime family ids, inspector tab ids, family id normalization, layer order normalization, label-level mapping, enum/multi helpers, and per-family workbench config normalization.
+- `transport_workbench_controller.js` keeps runtime state repair, DOM rendering, preview lifecycle, and apply bridge behavior unchanged for this slice.
+- Existing contract tests are updated to lock the new config owner.
+- Targeted syntax, ES module import smoke, Python contracts, Node transport contract, state-write guardrail, and static review pass.
+
+Progress:
+
+- [x] Created isolated worktree.
+- [x] Re-read ultragoal, ultrawork, agent tiers, lessons, active docs, and relevant memory.
+- [x] Dispatched static-only evidence lanes.
+- [x] Selected current-scope boundary move.
+- [x] Extracted config normalization owner.
+- [x] Updated existing contracts.
+- [x] Ran targeted verification.
+- [x] Ran final static review.
+- [ ] Merge, push, and clean worktree.

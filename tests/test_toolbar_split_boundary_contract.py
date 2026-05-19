@@ -14,6 +14,7 @@ SPECIAL_ZONE_EDITOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zone_edi
 SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
 EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
+TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -410,21 +411,62 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_transport_workbench_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        config_owner_content = TRANSPORT_WORKBENCH_CONFIG_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
+        self.assertIn("./transport_workbench_config_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
         self.assertIn("const initializeTransportWorkbenchRuntime = () => {", owner_content)
         self.assertIn("const openTransportWorkbench = (trigger = null) => {", owner_content)
         self.assertIn("const closeTransportWorkbench = ({ restoreFocus = true } = {}) => {", owner_content)
+        expected_config_owner_helpers = [
+            "normalizeTransportWorkbenchFamily",
+            "normalizeTransportWorkbenchInspectorTab",
+            "mapTransportWorkbenchLabelLevelToMaxLevel",
+            "mapTransportWorkbenchMaxLevelToLabelLevel",
+            "normalizeTransportWorkbenchEnum",
+            "normalizeTransportWorkbenchMulti",
+            "normalizeTransportWorkbenchDensityConfig",
+            "normalizeTransportWorkbenchLayerOrder",
+            "normalizeRoadTransportWorkbenchConfig",
+            "normalizeRailTransportWorkbenchConfig",
+            "normalizeAirportTransportWorkbenchConfig",
+            "normalizePortTransportWorkbenchConfig",
+            "normalizeMineralResourceTransportWorkbenchConfig",
+            "normalizeEnergyFacilityTransportWorkbenchConfig",
+            "normalizeIndustrialTransportWorkbenchConfig",
+            "normalizeLogisticsHubTransportWorkbenchConfig",
+        ]
+        for helper_name in expected_config_owner_helpers:
+            self.assertIn(f"export function {helper_name}", config_owner_content)
+            self.assertIsNone(
+                re.search(rf"\b(?:function|const|let)\s+{re.escape(helper_name)}\b", owner_content),
+                f"{helper_name} should stay in transport_workbench_config_owner.js",
+            )
+        self.assertIn("export const TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS = TRANSPORT_WORKBENCH_INSPECTOR_TABS.map((tab) => tab.id);", config_owner_content)
+        self.assertIn("export const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportWorkbenchRuntimeFamilyIds();", config_owner_content)
+        self.assertIn('export { TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS } from "./transport_workbench_config_owner.js";', owner_content)
+        forbidden_config_owner_side_effect_tokens = [
+            "runtimeState",
+            "document.",
+            ".querySelector",
+            ".addEventListener",
+            "fetch(",
+            "markDirty",
+            "dispatchEvent",
+            "localStorage",
+        ]
+        for token in forbidden_config_owner_side_effect_tokens:
+            self.assertNotIn(token, config_owner_content)
         self.assertNotIn("function normalizeTransportWorkbenchFamily", toolbar_content)
         self.assertNotIn("function normalizeTransportWorkbenchInspectorTab", toolbar_content)
         self.assertNotIn("function normalizeRoadTransportWorkbenchConfig", toolbar_content)
         self.assertNotIn("function ensureTransportWorkbenchUiState", toolbar_content)
         self.assertIn("normalizeTransportWorkbenchUiState,", owner_content)
-        self.assertIn("listTransportWorkbenchRuntimeFamilyIds,", owner_content)
-        self.assertIn("const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportWorkbenchRuntimeFamilyIds();", owner_content)
+        self.assertIn("listTransportWorkbenchRuntimeFamilyIds", config_owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,", owner_content)
         self.assertIn("Object.assign(previousUiState, normalizedUiState);", owner_content)
         self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", owner_content)
         self.assertIn("let transportWorkbenchRenderGeneration = 0;", owner_content)
@@ -435,7 +477,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET = new Set([", descriptor_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS = Object.freeze({", descriptor_content)
         self.assertIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,", owner_content)
-        self.assertIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", config_owner_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", owner_content)
         self.assertIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", owner_content)
         self.assertIn("buildEnergyFacilitySubtypeControlOptions,", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {", owner_content)

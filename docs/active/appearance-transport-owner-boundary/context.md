@@ -45,3 +45,26 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `npm run test:node:physical-layer-contracts`
   - `npm run verify:state-write-allowlist`
 - No new major lessons were added to `lessons learned.md`; this slice reused the existing owner-boundary lesson that split tests should follow the new owner file.
+
+## 2026-05-19 transport workbench config owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-config-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes recommended this sequence: config/state normalization first, apply bridge later, preview lifecycle later.
+- Chosen boundary: extract the pure family/config normalization matrix into `js/ui/toolbar/transport_workbench_config_owner.js`.
+- Kept in `transport_workbench_controller.js` for this slice: `ensureTransportWorkbenchUiState`, `resetTransportWorkbenchSectionState`, working/display config accessors, preview rendering, DOM renderers, and apply bridge. These still have runtime and DOM coupling, so they are better handled in later focused slices.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the new config owner and checks that per-family normalizers moved out of the controller.
+  - The split boundary test also keeps the config owner free of runtime, DOM, network, state-write, and storage side-effect entrypoints.
+  - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks the label-separation normalizer in the config owner.
+- Final static review found no blocker. It recommended the side-effect boundary assertion above and strict staging of the new owner file.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_config_owner.js`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_config_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_transport_manifest_contracts tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `npm run test:node:transport-overview-line-contract`
+- E2E was not rerun in this slice. Residual known risks remain the same as prior slice: `ui_rework_support_transport_hardening.spec.js` has existing special-zone, support-hint, and port Apply blockers outside this config-owner extraction.

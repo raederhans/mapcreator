@@ -14,3 +14,18 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Update docs and checkpoint ultragoal if warranted.
+
+## 2026-05-19 transport workbench config owner slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree and branch.
+- [x] Load ultragoal and ultrawork instructions.
+- [x] Re-read `AGENTS.md`, `docs/shared/agent-tiers.md`, `lessons learned.md`, active docs, and relevant memory.
+- [x] Dispatch static-only subagents for transport workbench owner candidates and test entrypoints.
+- [x] Select current-scope boundary move.
+- [x] Implement config normalization owner split.
+- [x] Extend existing test coverage.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [ ] Merge, push, and clean worktree if current-scope verification is clean.

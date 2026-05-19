@@ -19,6 +19,7 @@ STATE_DEFAULTS_JS = REPO_ROOT / "js" / "core" / "state_defaults.js"
 UI_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "ui_state.js"
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
+TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
 TRANSPORT_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 STARTUP_LOCALE_FILES = [
@@ -113,14 +114,14 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
 
     def test_label_separation_contract_stays_in_the_same_range_across_state_and_preview(self) -> None:
         state_defaults_content = STATE_DEFAULTS_JS.read_text(encoding="utf-8")
-        controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        config_owner_content = TRANSPORT_WORKBENCH_CONFIG_OWNER_JS.read_text(encoding="utf-8")
         density_helper_content = POINT_DENSITY_HELPERS_JS.read_text(encoding="utf-8")
 
         self.assertIn("separationStrength: 1,", state_defaults_content)
         self.assertIn("toFiniteNumber(rawLabels.separationStrength, defaults.labels.separationStrength)", state_defaults_content)
         self.assertIn("0.7,", state_defaults_content)
         self.assertIn("1.8", state_defaults_content)
-        self.assertIn("Math.max(0.7, Math.min(1.8, Number(source.labelSeparation)", controller_content)
+        self.assertIn("Math.max(0.7, Math.min(1.8, Number(source.labelSeparation)", config_owner_content)
         self.assertIn("return clamp(normalizeNumber(config?.labelSeparation, 1), 0.7, 1.8);", density_helper_content)
 
     def test_preview_pack_loaders_reject_missing_pack_paths_before_fetch(self) -> None:
