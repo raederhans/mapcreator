@@ -213,14 +213,11 @@ async function ensureChunkedScenarioFirstFrameReady({
 
 function shouldSynchronouslyPrewarmChunkedScenario(bundle) {
   if (!scenarioSupportsChunkedRuntime(bundle)) return false;
-  const featureCount = Number(bundle?.manifest?.summary?.feature_count || 0);
   const hints = bundle?.manifest?.performance_hints && typeof bundle.manifest.performance_hints === "object"
     ? bundle.manifest.performance_hints
     : {};
-  return featureCount >= 18_000
-    && hints.water_regions_default === false
-    && hints.special_regions_default === false
-    && hints.scenario_relief_overlays_default === false;
+  // Coarse chunks are still first-frame required; focus detail only blocks apply when a scenario opts in.
+  return hints.sync_focus_detail_prewarm_default === true;
 }
 
 async function runPostScenarioApplyEffects({

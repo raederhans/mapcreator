@@ -203,9 +203,14 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
     def test_toolbar_drops_legacy_transport_info_renderer_and_uses_new_copy(self):
         toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js").read_text(encoding="utf-8")
+        shell_owner_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_shell_owner.js").read_text(encoding="utf-8")
         self.assertNotIn("renderTransportWorkbenchInfoPopoverLegacy", toolbar_content)
-        self.assertIn("transportWorkbenchCompareStatus.textContent", controller_content)
-        self.assertIn('transportWorkbenchInspectorTitle.textContent = `${t(family.label, "ui")} ${t("inspector", "ui")}`;', controller_content)
+        self.assertIn("compareStatus,", shell_owner_content)
+        self.assertIn("inspectorTitle,", shell_owner_content)
+        self.assertIn("syncTextContent(compareStatus, compareStatusLabel)", shell_owner_content)
+        self.assertIn('syncTextContent(inspectorTitle, `${translate(family.label)} ${translate("inspector")}`)', shell_owner_content)
+        self.assertIn("transportWorkbenchShellOwner.render(context);", controller_content)
+        self.assertNotIn("transportWorkbenchCompareStatus.textContent", controller_content)
 
     def test_adaptive_popover_and_palette_contracts_are_wired(self):
         index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")

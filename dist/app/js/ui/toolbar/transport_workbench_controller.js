@@ -4,15 +4,8 @@
 
 import {
   state as runtimeState,
-  createDefaultTransportWorkbenchDisplayConfig,
-  normalizeTransportOverviewStyleConfig,
-  applyTransportWorkbenchOverviewState,
-  normalizeTransportWorkbenchDisplayConfig,
-  normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
-import { getTransportAsset } from "../../core/data_service.js";
 import { markDirty } from "../../core/dirty_state.js";
-import { resolveTransportManifestUrl } from "../../core/runtime_asset_registry.js";
 import { t } from "../i18n.js";
 import {
   focusSurface as focusOverlaySurface,
@@ -20,440 +13,58 @@ import {
   restoreSurfaceTriggerFocus as restoreOverlayTriggerFocus,
 } from "../ui_contract.js";
 import {
-  destroyTransportWorkbenchCarrier,
-  ensureTransportWorkbenchCarrier,
   getTransportWorkbenchCarrierViewState,
   resetTransportWorkbenchCarrierView,
-  resizeTransportWorkbenchCarrier,
-  setTransportWorkbenchCarrierViewChangeListener,
   setTransportWorkbenchCarrierFamily,
   stepTransportWorkbenchCarrierZoom,
   toggleTransportWorkbenchCarrierQuarterTurn,
 } from "../transport_workbench_carrier.js";
 import {
-  clearAllTransportWorkbenchFamilyPreviews,
-  destroyAllTransportWorkbenchFamilyPreviews,
   getTransportWorkbenchFamilyPreviewSnapshot,
-  isTransportWorkbenchFamilyLivePreviewCapable,
-  renderTransportWorkbenchFamilyPreview,
-  setTransportWorkbenchFamilyPreviewSelectionListener,
-  warmTransportWorkbenchFamilyPreview,
 } from "../transport_workbench_family_preview.js";
 import {
   isTransportWorkbenchLivePreviewFamily,
   isTransportWorkbenchManifestOnlyRuntimeFamily,
-  listTransportWorkbenchRuntimeFamilyIds,
-  listTransportWorkbenchWarmupPlans,
 } from "../transport_workbench_family_registry.js";
 import {
-  createTransportPackSourceGateReport,
-  getDefaultMainMapPackIdForFamily,
   getTargetMainMapPackMeta,
   listTargetMainMapPacks,
 } from "../../core/transport_pack_resolver.js";
 import {
-  applyTransportCountryOverlayState,
-  loadTransportCountryOverlayState,
-} from "../../core/transport_country_overlay.js";
+  createTransportWorkbenchApplyBridgeOwner,
+} from "./transport_workbench_apply_bridge_owner.js";
 import {
-  TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY,
-  getTransportCapabilityApplyCompatibility,
-  getTransportCapabilityDefaultOverviewConfig,
-  getTransportWorkbenchOverviewBridgeSupport,
-  normalizeTransportOverviewVisualMode,
-  resolveTransportOverviewPatchFromWorkbench,
-} from "../../core/transport_capability_registry.js";
+  createTransportWorkbenchPreviewLifecycleOwner,
+} from "./transport_workbench_preview_lifecycle_owner.js";
 import {
-  getTransportWorkbenchManifestDefaultVariantId,
-  getTransportWorkbenchManifestVariantMeta,
-  listTransportWorkbenchManifestVariantEntries,
-} from "../transport_workbench_manifest_variants.js";
-import { formatJapanRailVisibilityReason } from "../transport_workbench_rail_preview.js";
+  createTransportWorkbenchStateOwner,
+} from "./transport_workbench_state_owner.js";
+import {
+  createTransportWorkbenchInspectorOwner,
+} from "./transport_workbench_inspector_owner.js";
+import {
+  createTransportWorkbenchLayerOrderOwner,
+} from "./transport_workbench_layer_order_owner.js";
+import {
+  createTransportWorkbenchLensOwner,
+} from "./transport_workbench_lens_owner.js";
+import {
+  createTransportWorkbenchPopoverOwner,
+} from "./transport_workbench_popover_owner.js";
+import {
+  createTransportWorkbenchRightDeckOwner,
+} from "./transport_workbench_right_deck_owner.js";
+import {
+  createTransportWorkbenchShellOwner,
+} from "./transport_workbench_shell_owner.js";
 import {
   TRANSPORT_WORKBENCH_FAMILIES,
-  ROAD_CLASS_OPTIONS,
-  ROAD_REF_CLASS_OPTIONS,
-  RAIL_STATUS_OPTIONS,
-  RAIL_CLASS_OPTIONS,
-  AIRPORT_TYPE_OPTIONS,
-  AIRPORT_STATUS_OPTIONS,
-  PORT_DESIGNATION_OPTIONS,
-  PORT_MANAGER_TYPE_OPTIONS,
-  INDUSTRIAL_VARIANT_OPTIONS,
-  INDUSTRIAL_SITE_CLASS_OPTIONS,
-  INDUSTRIAL_COASTAL_OPTIONS,
-  LOGISTICS_HUB_TYPE_OPTIONS,
-  LOGISTICS_OPERATOR_CLASSIFICATION_OPTIONS,
-  ENERGY_STATUS_OPTIONS,
-  TRANSPORT_WORKBENCH_LABEL_DENSITY_OPTIONS,
-  TRANSPORT_WORKBENCH_DISPLAY_MODE_OPTIONS,
-  TRANSPORT_WORKBENCH_DISPLAY_PRESET_OPTIONS,
-  TRANSPORT_WORKBENCH_AGGREGATION_ALGORITHM_OPTIONS,
-  TRANSPORT_WORKBENCH_LABEL_LEVEL_OPTIONS,
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
-  TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS,
-  TRANSPORT_WORKBENCH_INLINE_HELP_COPY,
   TRANSPORT_WORKBENCH_DATA_CONTRACTS,
-  TRANSPORT_WORKBENCH_TAB_SECTION_MAP,
-  TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,
-  TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS,
-  TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,
-  TRANSPORT_WORKBENCH_BASELINE_CONFIGS,
-  TRANSPORT_WORKBENCH_SECTION_DEFAULTS,
-  buildEnergyFacilitySubtypeControlOptions,
 } from "./transport_workbench_descriptor.js";
-const state = runtimeState;
 
-const TRANSPORT_WORKBENCH_FAMILY_IDS = new Set(TRANSPORT_WORKBENCH_FAMILIES.map((family) => family.id));
-const TRANSPORT_WORKBENCH_SORTABLE_LAYER_IDS = TRANSPORT_WORKBENCH_FAMILIES
-  .filter((family) => family.id !== "layers")
-  .map((family) => family.id);
-const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportWorkbenchRuntimeFamilyIds();
-
-const TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES = TRANSPORT_WORKBENCH_LABEL_DENSITY_OPTIONS.map((option) => option.value);
 export { TRANSPORT_WORKBENCH_INSPECTOR_TABS };
-export const TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS = TRANSPORT_WORKBENCH_INSPECTOR_TABS.map((tab) => tab.id);
-function normalizeTransportWorkbenchFamily(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  return TRANSPORT_WORKBENCH_FAMILY_IDS.has(normalized) ? normalized : "road";
-}
-
-function normalizeTransportWorkbenchInspectorTab(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  return TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS.includes(normalized) ? normalized : "inspect";
-}
-
-function mapTransportWorkbenchLabelLevelToMaxLevel(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "region") return 1;
-  if (normalized === "category") return 3;
-  return 2;
-}
-
-function mapTransportWorkbenchMaxLevelToLabelLevel(value) {
-  const numeric = Number(value);
-  if (numeric >= 3) return "category";
-  if (numeric <= 1) return "region";
-  return "anchor";
-}
-
-function normalizeTransportWorkbenchEnum(value, allowedValues, fallback) {
-  const normalized = String(value || "").trim();
-  return allowedValues.includes(normalized) ? normalized : fallback;
-}
-
-function normalizeTransportWorkbenchMulti(value, allowedValues, fallbackValues) {
-  const next = Array.isArray(value)
-    ? value.map((entry) => String(entry || "").trim()).filter((entry) => allowedValues.includes(entry))
-    : [];
-  return next.length ? Array.from(new Set(next)) : [...fallbackValues];
-}
-
-function normalizeTransportWorkbenchDensityConfig(source, defaults, {
-  allowedAlgorithms = TRANSPORT_WORKBENCH_AGGREGATION_ALGORITHM_OPTIONS.map((option) => option.value),
-  defaultDisplayMode = "inspect",
-} = {}) {
-  return {
-    displayMode: normalizeTransportWorkbenchEnum(
-      source.displayMode,
-      TRANSPORT_WORKBENCH_DISPLAY_MODE_OPTIONS.map((option) => option.value),
-      defaults.displayMode || defaultDisplayMode
-    ),
-    displayPreset: normalizeTransportWorkbenchEnum(
-      source.displayPreset,
-      TRANSPORT_WORKBENCH_DISPLAY_PRESET_OPTIONS.map((option) => option.value),
-      defaults.displayPreset || "balanced"
-    ),
-    aggregationAlgorithm: normalizeTransportWorkbenchEnum(
-      source.aggregationAlgorithm,
-      allowedAlgorithms,
-      defaults.aggregationAlgorithm || allowedAlgorithms[0]
-    ),
-    labelLevel: normalizeTransportWorkbenchEnum(
-      source.labelLevel,
-      TRANSPORT_WORKBENCH_LABEL_LEVEL_OPTIONS.map((option) => option.value),
-      defaults.labelLevel || "anchor"
-    ),
-    labelBudget: Math.max(3, Math.min(18, Number(source.labelBudget) || defaults.labelBudget || 8)),
-    labelSeparation: Math.max(0.7, Math.min(1.8, Number(source.labelSeparation) || defaults.labelSeparation || 1)),
-    labelAllowMerge: source.labelAllowMerge !== false,
-  };
-}
-
-function normalizeTransportWorkbenchLayerOrder(value) {
-  const next = Array.isArray(value)
-    ? value
-      .map((entry) => normalizeTransportWorkbenchFamily(entry))
-      .filter((entry) => TRANSPORT_WORKBENCH_SORTABLE_LAYER_IDS.includes(entry))
-    : [];
-  const deduped = Array.from(new Set(next));
-  TRANSPORT_WORKBENCH_SORTABLE_LAYER_IDS.forEach((familyId) => {
-    if (!deduped.includes(familyId)) {
-      deduped.push(familyId);
-    }
-  });
-  return deduped;
-}
-
-function normalizeRoadTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    roadClass: normalizeTransportWorkbenchMulti(source.roadClass, ROAD_CLASS_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.roadClass),
-    excludeLinks: source.excludeLinks !== false,
-    excludeServiceLike: source.excludeServiceLike !== false,
-    zoomGate: normalizeTransportWorkbenchEnum(source.zoomGate, ["strict", "balanced", "loose"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.zoomGate),
-    motorwayIdentitySource: normalizeTransportWorkbenchEnum(source.motorwayIdentitySource, ["osm_plus_n06", "osm_only"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.motorwayIdentitySource),
-    preferOfficialRef: source.preferOfficialRef !== false,
-    preferOfficialNameWhenPresent: source.preferOfficialNameWhenPresent !== false,
-    showSourceConflicts: !!source.showSourceConflicts,
-    mergeContiguousSegments: source.mergeContiguousSegments !== false,
-    minProjectedSegmentPx: Math.max(2, Math.min(16, Number(source.minProjectedSegmentPx) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.minProjectedSegmentPx)),
-    suppressShortPrimarySegments: source.suppressShortPrimarySegments !== false,
-    denseMetroGuard: normalizeTransportWorkbenchEnum(source.denseMetroGuard, ["light", "balanced", "strict"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.denseMetroGuard),
-    showRefs: source.showRefs !== false,
-    refClasses: normalizeTransportWorkbenchMulti(source.refClasses, ROAD_CLASS_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.refClasses),
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.labelDensityPreset),
-    allowPrimaryRefsAtHighZoom: source.allowPrimaryRefsAtHighZoom !== false,
-    strokePreset: normalizeTransportWorkbenchEnum(source.strokePreset, ["corridor", "review", "quiet"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.strokePreset),
-    selectedEmphasis: normalizeTransportWorkbenchEnum(source.selectedEmphasis, ["outline", "glow", "mute_others"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.selectedEmphasis),
-    baseOpacity: Math.max(40, Math.min(100, Number(source.baseOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.baseOpacity)),
-    refOpacity: Math.max(30, Math.min(100, Number(source.refOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.refOpacity)),
-    motorwayWidth: Math.max(1.6, Math.min(4.8, Number(source.motorwayWidth) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.motorwayWidth)),
-    trunkWidth: Math.max(1.1, Math.min(3.8, Number(source.trunkWidth) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.trunkWidth)),
-    primaryWidth: Math.max(0.55, Math.min(2.8, Number(source.primaryWidth) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.road.primaryWidth)),
-  };
-}
-
-function normalizeRailTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    status: normalizeTransportWorkbenchMulti(source.status, RAIL_STATUS_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.status),
-    class: normalizeTransportWorkbenchMulti(source.class, RAIL_CLASS_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.class),
-    showServiceAtHighZoomOnly: source.showServiceAtHighZoomOnly !== false,
-    showOsmPatchSegments: source.showOsmPatchSegments !== false,
-    officialActiveNetworkLocked: source.officialActiveNetworkLocked !== false,
-    allowOsmActiveGapFill: !!source.allowOsmActiveGapFill,
-    strictDedupMode: normalizeTransportWorkbenchEnum(source.strictDedupMode, ["strict", "strict_plus_name"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.strictDedupMode),
-    showReconciliationConflicts: !!source.showReconciliationConflicts,
-    showMajorStations: source.showMajorStations !== false,
-    importanceThreshold: normalizeTransportWorkbenchEnum(source.importanceThreshold, ["capital_core", "regional_core", "broad_major"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.importanceThreshold),
-    singlePrimaryStationPerCity: source.singlePrimaryStationPerCity !== false,
-    showStationLabels: source.showStationLabels !== false,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.labelDensityPreset),
-    statusEncoding: normalizeTransportWorkbenchEnum(source.statusEncoding, ["line_style", "line_style_plus_hue"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.statusEncoding),
-    showBranchAtCurrentZoom: source.showBranchAtCurrentZoom !== false,
-    showServiceLines: !!source.showServiceLines,
-    stationSymbolPreset: normalizeTransportWorkbenchEnum(source.stationSymbolPreset, ["dot_ring", "solid_dot", "quiet_square"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.stationSymbolPreset),
-    lineOpacity: Math.max(40, Math.min(100, Number(source.lineOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.lineOpacity)),
-    stationOpacity: Math.max(35, Math.min(100, Number(source.stationOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.stationOpacity)),
-    inactiveFadeStrength: Math.max(0, Math.min(100, Number(source.inactiveFadeStrength) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.rail.inactiveFadeStrength)),
-  };
-}
-
-function normalizeAirportTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    airportTypes: normalizeTransportWorkbenchMulti(source.airportTypes, AIRPORT_TYPE_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.airport.airportTypes),
-    statuses: normalizeTransportWorkbenchMulti(source.statuses, AIRPORT_STATUS_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.airport.statuses),
-    importanceThreshold: normalizeTransportWorkbenchEnum(source.importanceThreshold, ["national_core", "regional_core", "local_connector"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.airport.importanceThreshold),
-    showLabels: source.showLabels !== false,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.airport.labelDensityPreset),
-    baseOpacity: Math.max(35, Math.min(100, Number(source.baseOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.airport.baseOpacity)),
-  };
-}
-
-function normalizePortTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    ...normalizeTransportWorkbenchDensityConfig(source, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.port, {
-      allowedAlgorithms: ["cluster", "square", "density_surface"],
-      defaultDisplayMode: "inspect",
-    }),
-    legalDesignations: normalizeTransportWorkbenchMulti(source.legalDesignations, PORT_DESIGNATION_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.port.legalDesignations),
-    managerTypes: normalizeTransportWorkbenchMulti(source.managerTypes, PORT_MANAGER_TYPE_OPTIONS.map((option) => option.value), TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.port.managerTypes),
-    importanceThreshold: normalizeTransportWorkbenchEnum(source.importanceThreshold, ["national_core", "regional_core", "local_connector"], TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.port.importanceThreshold),
-    showLabels: source.showLabels !== false,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.port.labelDensityPreset),
-    baseOpacity: Math.max(35, Math.min(100, Number(source.baseOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.port.baseOpacity)),
-  };
-}
-
-function normalizeMineralResourceTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    ...normalizeTransportWorkbenchDensityConfig(source, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.mineral_resources, {
-      allowedAlgorithms: ["hex", "square", "density_surface"],
-      defaultDisplayMode: "aggregate",
-    }),
-    showLabels: !!source.showLabels,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.mineral_resources.labelDensityPreset),
-    pointOpacity: Math.max(28, Math.min(100, Number(source.pointOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.mineral_resources.pointOpacity)),
-    pointSize: Math.max(72, Math.min(148, Number(source.pointSize) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.mineral_resources.pointSize)),
-  };
-}
-
-function normalizeEnergyFacilityTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    ...normalizeTransportWorkbenchDensityConfig(source, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.energy_facilities, {
-      allowedAlgorithms: ["cluster", "square", "density_surface"],
-      defaultDisplayMode: "inspect",
-    }),
-    facilitySubtypes: Array.isArray(source.facilitySubtypes)
-      ? source.facilitySubtypes.map((entry) => String(entry || "").trim()).filter(Boolean)
-      : [...TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.energy_facilities.facilitySubtypes],
-    statuses: normalizeTransportWorkbenchMulti(
-      source.statuses,
-      ENERGY_STATUS_OPTIONS.map((option) => option.value),
-      TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.energy_facilities.statuses
-    ),
-    showLabels: source.showLabels !== false,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.energy_facilities.labelDensityPreset),
-    pointOpacity: Math.max(30, Math.min(100, Number(source.pointOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.energy_facilities.pointOpacity)),
-    pointSize: Math.max(72, Math.min(148, Number(source.pointSize) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.energy_facilities.pointSize)),
-  };
-}
-
-function normalizeIndustrialTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    ...normalizeTransportWorkbenchDensityConfig(source, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones, {
-      allowedAlgorithms: ["square", "hex", "density_surface"],
-      defaultDisplayMode: "aggregate",
-    }),
-    variant: normalizeTransportWorkbenchEnum(
-      source.variant,
-      INDUSTRIAL_VARIANT_OPTIONS.map((option) => option.value),
-      TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones.variant
-    ),
-    siteClasses: normalizeTransportWorkbenchMulti(
-      source.siteClasses,
-      INDUSTRIAL_SITE_CLASS_OPTIONS.map((option) => option.value),
-      TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones.siteClasses
-    ),
-    coastalModes: normalizeTransportWorkbenchMulti(
-      source.coastalModes,
-      INDUSTRIAL_COASTAL_OPTIONS.map((option) => option.value),
-      TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones.coastalModes
-    ),
-    showLabels: !!source.showLabels,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones.labelDensityPreset),
-    fillOpacity: Math.max(18, Math.min(100, Number(source.fillOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones.fillOpacity)),
-    outlineOpacity: Math.max(28, Math.min(100, Number(source.outlineOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.industrial_zones.outlineOpacity)),
-  };
-}
-
-function normalizeLogisticsHubTransportWorkbenchConfig(value) {
-  const source = value && typeof value === "object" ? value : {};
-  return {
-    ...normalizeTransportWorkbenchDensityConfig(source, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.logistics_hubs, {
-      allowedAlgorithms: ["cluster", "square", "density_surface"],
-      defaultDisplayMode: "aggregate",
-    }),
-    hubTypes: normalizeTransportWorkbenchMulti(
-      source.hubTypes,
-      LOGISTICS_HUB_TYPE_OPTIONS.map((option) => option.value),
-      TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.logistics_hubs.hubTypes
-    ),
-    operatorClassifications: normalizeTransportWorkbenchMulti(
-      source.operatorClassifications,
-      LOGISTICS_OPERATOR_CLASSIFICATION_OPTIONS.map((option) => option.value),
-      TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.logistics_hubs.operatorClassifications
-    ),
-    showLabels: !!source.showLabels,
-    labelDensityPreset: normalizeTransportWorkbenchEnum(source.labelDensityPreset, TRANSPORT_WORKBENCH_LABEL_DENSITY_VALUES, TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.logistics_hubs.labelDensityPreset),
-    pointOpacity: Math.max(30, Math.min(100, Number(source.pointOpacity) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.logistics_hubs.pointOpacity)),
-    pointSize: Math.max(72, Math.min(148, Number(source.pointSize) || TRANSPORT_WORKBENCH_DEFAULT_CONFIGS.logistics_hubs.pointSize)),
-  };
-}
-
-function ensureTransportWorkbenchUiState() {
-  const previousUiState = runtimeState.transportWorkbenchUi;
-  const normalizedUiState = normalizeTransportWorkbenchUiState(previousUiState);
-  // 这里尽量复用原对象，而不是每次替换成新对象，
-  // 因为 workbench 的事件绑定、预览联动和 dirty 判断都默认握着同一份 transportWorkbenchUi 引用。
-  if (!previousUiState || typeof previousUiState !== "object") {
-    runtimeState.transportWorkbenchUi = normalizedUiState;
-  } else {
-    Object.assign(previousUiState, normalizedUiState);
-    runtimeState.transportWorkbenchUi = previousUiState;
-  }
-  // transportWorkbenchUi 是工作台的本地编辑态；这里统一补齐 shape，
-  // 避免渲染、预览和 inspect 面板各自猜默认值。
-  runtimeState.transportWorkbenchUi.open = !!runtimeState.transportWorkbenchUi.open;
-  runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-  if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
-    runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
-  }
-  const activeFamily = runtimeState.transportWorkbenchUi.activeFamily;
-  const candidatePackId = String(runtimeState.transportWorkbenchUi.activePackIdByFamily[activeFamily] || runtimeState.transportWorkbenchUi.activePackId || "").trim().toLowerCase();
-  const candidatePackMeta = getTargetMainMapPackMeta(candidatePackId);
-  runtimeState.transportWorkbenchUi.activePackId = candidatePackMeta?.family === activeFamily
-    ? candidatePackMeta.packId
-    : getDefaultMainMapPackIdForFamily(activeFamily);
-  runtimeState.transportWorkbenchUi.activePackIdByFamily[activeFamily] = runtimeState.transportWorkbenchUi.activePackId;
-  const activePackMeta = getTargetMainMapPackMeta(runtimeState.transportWorkbenchUi.activePackId);
-  if (activePackMeta?.country) runtimeState.transportWorkbenchUi.sampleCountry = activePackMeta.country;
-  if (!runtimeState.transportWorkbenchUi.previewCamera || typeof runtimeState.transportWorkbenchUi.previewCamera !== "object") {
-    runtimeState.transportWorkbenchUi.previewCamera = {};
-  }
-  runtimeState.transportWorkbenchUi.previewCamera.scale = Number(runtimeState.transportWorkbenchUi.previewCamera.scale) || 1;
-  runtimeState.transportWorkbenchUi.previewCamera.translateX = Number(runtimeState.transportWorkbenchUi.previewCamera.translateX) || 0;
-  runtimeState.transportWorkbenchUi.previewCamera.translateY = Number(runtimeState.transportWorkbenchUi.previewCamera.translateY) || 0;
-  runtimeState.transportWorkbenchUi.compareHeld = !!runtimeState.transportWorkbenchUi.compareHeld;
-  runtimeState.transportWorkbenchUi.activeInspectorTab = normalizeTransportWorkbenchInspectorTab(runtimeState.transportWorkbenchUi.activeInspectorTab);
-  runtimeState.transportWorkbenchUi.layerOrder = normalizeTransportWorkbenchLayerOrder(runtimeState.transportWorkbenchUi.layerOrder);
-  if (!runtimeState.transportWorkbenchUi.familyConfigs || typeof runtimeState.transportWorkbenchUi.familyConfigs !== "object") {
-    runtimeState.transportWorkbenchUi.familyConfigs = {};
-  }
-  if (!runtimeState.transportWorkbenchUi.displayConfigs || typeof runtimeState.transportWorkbenchUi.displayConfigs !== "object") {
-    runtimeState.transportWorkbenchUi.displayConfigs = {};
-  }
-  // familyConfigs 管每个 family 的业务过滤/样式；displayConfigs 只管密度类图层的展示语言。
-  // 两者分开归一化，正式应用和 preview 才能共享同一份 resolved config。
-  runtimeState.transportWorkbenchUi.familyConfigs.road = normalizeRoadTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.road);
-  runtimeState.transportWorkbenchUi.familyConfigs.rail = normalizeRailTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.rail);
-  runtimeState.transportWorkbenchUi.familyConfigs.airport = normalizeAirportTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.airport);
-  runtimeState.transportWorkbenchUi.familyConfigs.port = normalizePortTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.port);
-  runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources = normalizeMineralResourceTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources);
-  runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities = normalizeEnergyFacilityTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities);
-  runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones = normalizeIndustrialTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones);
-  runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs = normalizeLogisticsHubTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs);
-  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
-    runtimeState.transportWorkbenchUi.displayConfigs[familyId] = normalizeTransportWorkbenchDisplayConfig(
-      runtimeState.transportWorkbenchUi.displayConfigs[familyId],
-      familyId
-    );
-  });
-  ["airport", "port", "mineral_resources", "energy_facilities", "industrial_zones", "logistics_hubs"].forEach((familyId) => {
-    if (!runtimeState.transportWorkbenchUi.familyConfigs[familyId] || typeof runtimeState.transportWorkbenchUi.familyConfigs[familyId] !== "object") {
-      runtimeState.transportWorkbenchUi.familyConfigs[familyId] = {};
-    }
-  });
-  if (!runtimeState.transportWorkbenchUi.sectionOpen || typeof runtimeState.transportWorkbenchUi.sectionOpen !== "object") {
-    runtimeState.transportWorkbenchUi.sectionOpen = {};
-  }
-  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
-    const defaults = TRANSPORT_WORKBENCH_SECTION_DEFAULTS[familyId];
-    const source = runtimeState.transportWorkbenchUi.sectionOpen[familyId] && typeof runtimeState.transportWorkbenchUi.sectionOpen[familyId] === "object"
-      ? runtimeState.transportWorkbenchUi.sectionOpen[familyId]
-      : {};
-    runtimeState.transportWorkbenchUi.sectionOpen[familyId] = Object.fromEntries(
-      Object.entries(defaults).map(([sectionKey, defaultValue]) => [sectionKey, source[sectionKey] !== undefined ? !!source[sectionKey] : defaultValue])
-    );
-  });
-  runtimeState.transportWorkbenchUi.shellPhase = "road-live-preview";
-  runtimeState.transportWorkbenchUi.restoreLeftDrawer = !!runtimeState.transportWorkbenchUi.restoreLeftDrawer;
-  runtimeState.transportWorkbenchUi.restoreRightDrawer = !!runtimeState.transportWorkbenchUi.restoreRightDrawer;
-  return runtimeState.transportWorkbenchUi;
-}
-
-function resetTransportWorkbenchSectionState() {
-  ensureTransportWorkbenchUiState();
-  runtimeState.transportWorkbenchUi.sectionOpen = Object.fromEntries(
-    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.map((familyId) => [familyId, { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS[familyId] }])
-  );
-}
+export { TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS } from "./transport_workbench_config_owner.js";
 
 export function createTransportWorkbenchController({
   scenarioTransportWorkbenchBtn = null,
@@ -503,711 +114,209 @@ export function createTransportWorkbenchController({
 } = {}) {
   // controller 只拥有 workbench 自己的 overlay/panel/preview 交互闭环。
   // 更高层的 toolbar surface 仲裁、别的工作台切换、URL restore 仍由 toolbar.js 处理。
-  const closeTransportWorkbenchInfoPopover = ({ restoreFocus = false } = {}) => {
-    if (!transportWorkbenchInfoPopover) return;
-    transportWorkbenchInfoPopover.classList.add("hidden");
-    transportWorkbenchInfoPopover.setAttribute("aria-hidden", "true");
-    transportWorkbenchInfoBtn?.setAttribute("aria-expanded", "false");
-    if (restoreFocus && transportWorkbenchInfoBtn && typeof transportWorkbenchInfoBtn.focus === "function") {
-      transportWorkbenchInfoBtn.focus({ preventScroll: true });
-    }
-  };
+  const transportWorkbenchStateOwner = createTransportWorkbenchStateOwner(runtimeState);
+  const ensureTransportWorkbenchUiState = () => transportWorkbenchStateOwner.ensureUiState();
+  const resetTransportWorkbenchSectionState = () => transportWorkbenchStateOwner.resetSectionState();
 
-  let transportWorkbenchSectionHelpState = null;
-  let transportWorkbenchPreviewViewSyncRaf = 0;
-  let transportWorkbenchPreviewLastViewKey = "";
-  let transportWorkbenchPreviewWarmupScheduled = false;
-  let transportWorkbenchDraggedLayerId = "";
-  let transportWorkbenchRenderGeneration = 0;
-  const transportWorkbenchPackGateReportByPackId = new Map();
-  const transportWorkbenchPackGatePromiseByPackId = new Map();
+  const transportWorkbenchApplyBridgeOwner = createTransportWorkbenchApplyBridgeOwner(runtimeState, {
+    shouldRerender: (normalizedPackId) => isCurrentTransportWorkbenchPackGate(normalizedPackId),
+    renderTransportWorkbenchUi: () => renderTransportWorkbenchUi(),
+  });
 
-  const closeTransportWorkbenchSectionHelpPopover = ({ restoreFocus = false } = {}) => {
-    if (!transportWorkbenchSectionHelpPopover) return;
-    transportWorkbenchSectionHelpPopover.classList.add("hidden");
-    transportWorkbenchSectionHelpPopover.setAttribute("aria-hidden", "true");
-    if (transportWorkbenchSectionHelpState?.trigger instanceof HTMLElement) {
-      transportWorkbenchSectionHelpState.trigger.setAttribute("aria-expanded", "false");
-      if (restoreFocus && typeof transportWorkbenchSectionHelpState.trigger.focus === "function") {
-        transportWorkbenchSectionHelpState.trigger.focus({ preventScroll: true });
-      }
-    }
-    transportWorkbenchSectionHelpState = null;
-  };
+  const transportWorkbenchPreviewLifecycleOwner = createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
+    ensureUiState: () => ensureTransportWorkbenchUiState(),
+    getCarrierMount: () => transportWorkbenchCarrierMount,
+    getRenderContext: () => getTransportWorkbenchRenderContext(),
+    renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
+    renderLayerOrderPanel: () => renderTransportWorkbenchLayerOrderPanel(),
+    renderLensSections: (family, config, compareHeld) => renderTransportWorkbenchLensSections(family, config, compareHeld),
+    syncPreviewControls: () => syncTransportWorkbenchPreviewControls(),
+  });
 
-  const positionTransportWorkbenchSectionHelpPopover = (trigger) => {
-    if (!(trigger instanceof HTMLElement) || !(transportWorkbenchSectionHelpPopover instanceof HTMLElement) || !(transportWorkbenchPanel instanceof HTMLElement)) {
-      return;
-    }
-    const panelRect = transportWorkbenchPanel.getBoundingClientRect();
-    const triggerRect = trigger.getBoundingClientRect();
-    const popoverWidth = transportWorkbenchSectionHelpPopover.offsetWidth || 280;
-    const popoverHeight = transportWorkbenchSectionHelpPopover.offsetHeight || 140;
-    let left = triggerRect.right + 10;
-    let top = triggerRect.top - 4;
-    const minInset = 18;
-    if (left + popoverWidth > panelRect.right - minInset) {
-      left = triggerRect.left - popoverWidth - 10;
-    }
-    left = Math.min(Math.max(left, panelRect.left + minInset), Math.max(panelRect.left + minInset, panelRect.right - popoverWidth - minInset));
-    top = Math.min(Math.max(top, panelRect.top + minInset), Math.max(panelRect.top + minInset, panelRect.bottom - popoverHeight - minInset));
-    transportWorkbenchSectionHelpPopover.style.left = `${left}px`;
-    transportWorkbenchSectionHelpPopover.style.top = `${top}px`;
-  };
+  const transportWorkbenchInspectorOwner = createTransportWorkbenchInspectorOwner({
+    getLayerOrder: () => runtimeState.transportWorkbenchUi?.layerOrder || [],
+    getLayerFamilyMeta: (familyId) => getTransportWorkbenchLayerFamilyMeta(familyId),
+    isLivePreviewFamily: (familyId) => isTransportWorkbenchLivePreviewFamily(familyId),
+    isManifestOnlyRuntimeFamily: (familyId) => isTransportWorkbenchManifestOnlyRuntimeFamily(familyId),
+  });
 
-  const renderTransportWorkbenchSectionHelpPopover = (familyId, sectionKey) => {
-    if (!transportWorkbenchSectionHelpTitle || !transportWorkbenchSectionHelpBody) return;
-    const helpCopy = TRANSPORT_WORKBENCH_INLINE_HELP_COPY[familyId]?.[sectionKey];
-    if (!helpCopy) return;
-    transportWorkbenchSectionHelpTitle.textContent = t(helpCopy.title, "ui");
-    transportWorkbenchSectionHelpBody.replaceChildren();
-    const body = document.createElement("p");
-    body.className = "transport-workbench-info-text";
-    body.textContent = t(helpCopy.body, "ui");
-    transportWorkbenchSectionHelpBody.appendChild(body);
-  };
-
-  const toggleTransportWorkbenchSectionHelpPopover = (trigger, familyId, sectionKey) => {
-    if (!transportWorkbenchSectionHelpPopover) return;
-    const isSameTarget = transportWorkbenchSectionHelpState
-      && transportWorkbenchSectionHelpState.familyId === familyId
-      && transportWorkbenchSectionHelpState.sectionKey === sectionKey
-      && transportWorkbenchSectionHelpState.trigger === trigger
-      && !transportWorkbenchSectionHelpPopover.classList.contains("hidden");
-    if (isSameTarget) {
-      closeTransportWorkbenchSectionHelpPopover({ restoreFocus: true });
-      return;
-    }
-    closeTransportWorkbenchInfoPopover({ restoreFocus: false });
-    closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    renderTransportWorkbenchSectionHelpPopover(familyId, sectionKey);
-    transportWorkbenchSectionHelpState = { familyId, sectionKey, trigger };
-    transportWorkbenchSectionHelpPopover.classList.remove("hidden");
-    transportWorkbenchSectionHelpPopover.setAttribute("aria-hidden", "false");
-    if (trigger instanceof HTMLElement) {
-      trigger.setAttribute("aria-expanded", "true");
-    }
-    positionTransportWorkbenchSectionHelpPopover(trigger);
-  };
+  const transportWorkbenchLayerOrderOwner = createTransportWorkbenchLayerOrderOwner({
+    panel: transportWorkbenchLayerOrderPanel,
+    list: transportWorkbenchLayerOrderList,
+    translate: (label) => t(label, "ui"),
+    ensureUiState: () => ensureTransportWorkbenchUiState(),
+    getLayerOrder: () => runtimeState.transportWorkbenchUi?.layerOrder || [],
+    getLayerFamilyMeta: (familyId) => getTransportWorkbenchLayerFamilyMeta(familyId),
+    isLivePreviewFamily: (familyId) => isTransportWorkbenchLivePreviewFamily(familyId),
+    isManifestOnlyRuntimeFamily: (familyId) => isTransportWorkbenchManifestOnlyRuntimeFamily(familyId),
+    moveLayerOrder: (draggedFamilyId, targetFamilyId) => transportWorkbenchStateOwner.moveLayerOrder(draggedFamilyId, targetFamilyId),
+    markDirty: (reason) => markDirty(reason),
+    getRenderContext: () => getTransportWorkbenchRenderContext(),
+    renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
+  });
 
   const getTransportWorkbenchDataContract = (familyId) => TRANSPORT_WORKBENCH_DATA_CONTRACTS[familyId] || null;
   const pickUiCopy = (zh, en) => (runtimeState.currentLanguage === "zh" ? zh : en);
+  const transportWorkbenchPopoverOwner = createTransportWorkbenchPopoverOwner({
+    panel: transportWorkbenchPanel,
+    infoButton: transportWorkbenchInfoBtn,
+    infoPopover: transportWorkbenchInfoPopover,
+    infoBody: transportWorkbenchInfoBody,
+    sectionHelpPopover: transportWorkbenchSectionHelpPopover,
+    sectionHelpTitle: transportWorkbenchSectionHelpTitle,
+    sectionHelpBody: transportWorkbenchSectionHelpBody,
+    translate: (label) => t(label, "ui"),
+    pickUiCopy,
+    getDataContract: (familyId) => getTransportWorkbenchDataContract(familyId),
+    focusSurface: (surface) => focusOverlaySurface(surface),
+    rememberTrigger: (surface, trigger) => rememberOverlayTrigger(surface, trigger),
+  });
+  const closeTransportWorkbenchInfoPopover = (options) => transportWorkbenchPopoverOwner.closeInfoPopover(options);
+  const closeTransportWorkbenchSectionHelpPopover = (options) => transportWorkbenchPopoverOwner.closeSectionHelpPopover(options);
+  const transportWorkbenchShellOwner = createTransportWorkbenchShellOwner({
+    body: document.body,
+    scenarioButton: scenarioTransportWorkbenchBtn,
+    overlay: transportWorkbenchOverlay,
+    title: transportWorkbenchTitle,
+    lensTitle: transportWorkbenchLensTitle,
+    familyStatus: transportWorkbenchFamilyStatus,
+    countryStatus: transportWorkbenchCountryStatus,
+    packSelect: transportWorkbenchPackSelect,
+    previewMode: transportWorkbenchPreviewMode,
+    previewTitle: transportWorkbenchPreviewTitle,
+    previewCanvas: transportWorkbenchPreviewCanvas,
+    previewActions: transportWorkbenchPreviewActions,
+    previewControls: transportWorkbenchPreviewControls,
+    carrierMount: transportWorkbenchCarrierMount,
+    layerOrderPanel: transportWorkbenchLayerOrderPanel,
+    compareButton: transportWorkbenchCompareBtn,
+    compareStatus: transportWorkbenchCompareStatus,
+    zoomOutButton: transportWorkbenchZoomOutBtn,
+    zoomInButton: transportWorkbenchZoomInBtn,
+    rotateButton: transportWorkbenchRotateBtn,
+    inspectorTitle: transportWorkbenchInspectorTitle,
+    inspectorEmptyTitle: transportWorkbenchInspectorEmptyTitle,
+    inspectorEmptyBody: transportWorkbenchInspectorEmptyBody,
+    familyTabs: transportWorkbenchFamilyTabs,
+    applyButton: transportWorkbenchApplyBtn,
+    translate: (label) => t(label, "ui"),
+    listPackOptions: ({ familyId }) => listTargetMainMapPacks({ familyId }),
+    getApplyButtonState: (familyId) => getTransportWorkbenchApplyButtonState(familyId),
+    getCarrierViewState: () => getTransportWorkbenchCarrierViewState(),
+    setCarrierFamily: (familyId) => setTransportWorkbenchCarrierFamily(familyId),
+    isInfoPopoverOpen: () => transportWorkbenchPopoverOwner.isInfoPopoverOpen(),
+    renderInfoContent: (family) => transportWorkbenchPopoverOwner.renderInfoContent(family),
+  });
 
-  const renderTransportWorkbenchInfoContent = (family) => {
-    if (!transportWorkbenchInfoBody) return;
-    transportWorkbenchInfoBody.replaceChildren();
-    const dataContract = getTransportWorkbenchDataContract(family.id);
-    const defaultBlocks = [
-      {
-        title: "Current lens",
-        body: family.lensBody,
-      },
-      {
-        title: "Baseline",
-        body: family.lensNext,
-      },
-      family.supportsDetailedControls
-        ? {
-          title: "Compare action",
-          body: `Compare baseline temporarily swaps the preview to the locked ${family.label.toLowerCase()} baseline while the control is held. It never overwrites the working values in the left column.`,
-        }
-        : {
-          title: "Availability",
-          body: `${family.label} is still a reserved shell. Detailed controls stay closed until the live Japan schema and packs are wired.`,
-        },
-      {
-        title: "Preview controls",
-        body: "Use mouse wheel or the + / - controls to zoom. The 90° button swaps between the default north-up view and the quarter-turn inspection view. Reset View restores the framed default preview.",
-      },
-      dataContract
-        ? {
-          title: "Data path",
-          body: `${dataContract.adapterId} stays on ${dataContract.packs.join(" + ")} using ${dataContract.geometrySource} with ${dataContract.hardeningSource}. Keep the pack build reproducible and diagnostics-friendly so rule changes can be traced later.`,
-        }
-        : null,
-    ];
-    const blocks = family.id === "layers"
-      ? [
-        {
-          title: pickUiCopy("当前用途", "Current use"),
-          body: pickUiCopy(
-            "Layers 用来调整 transport families 的当前本地绘制顺序。中间排序板负责拖拽重排，Inspect 会同步回显当前顺序。",
-            "Layers controls the current local draw order for transport families. Use the center board to drag and reorder families, and use Inspect to review the active order."
-          ),
-        },
-        {
-          title: pickUiCopy("排序板行为", "Board behavior"),
-          body: pickUiCopy(
-            "Layers 使用排序板模式。这里没有缩放、旋转或基线对比，重点是确认绘制顺序和 family 状态。",
-            "Layers uses board mode. Zoom, rotate, and baseline compare are hidden here, and the main task is confirming draw order and family status."
-          ),
-        },
-        {
-          title: pickUiCopy("Inspector 分工", "Inspector role"),
-          body: pickUiCopy(
-            "左侧只保留上下文说明，真正的顺序确认在中间排序板和右侧 Inspect。其余页签继续保留统一结构，方便以后接入更多帮助内容。",
-            "The left column keeps context only, while the center board and right-side Inspect confirm the active order. The remaining tabs stay in place so later help and controls can land without changing the shell."
-          ),
-        },
-      ]
-      : defaultBlocks;
+  const transportWorkbenchLensOwner = createTransportWorkbenchLensOwner({
+    mount: transportWorkbenchLensSections,
+    closeSectionHelpPopover: (options) => transportWorkbenchPopoverOwner.closeSectionHelpPopover(options),
+    translate: (label) => t(label, "ui"),
+    pickUiCopy,
+    createRow: (label, value) => transportWorkbenchInspectorOwner.createRow(label, value),
+    buildLensSummaryRows: (input) => transportWorkbenchInspectorOwner.buildLensSummaryRows(input),
+  });
 
-    blocks.filter(Boolean).forEach((block) => {
-      const node = document.createElement("section");
-      node.className = "transport-workbench-info-block";
-      const title = document.createElement("div");
-      title.className = "transport-workbench-info-subtitle";
-      title.textContent = t(block.title, "ui");
-      const body = document.createElement("p");
-      body.className = "transport-workbench-info-text";
-      body.textContent = t(block.body, "ui");
-      node.append(title, body);
-      transportWorkbenchInfoBody.appendChild(node);
-    });
-  };
+  const transportWorkbenchRightDeckOwner = createTransportWorkbenchRightDeckOwner({
+    tabButtons: transportWorkbenchInspectorTabButtons,
+    panels: transportWorkbenchInspectorPanels,
+    mounts: {
+      display: transportWorkbenchDisplaySections,
+      aggregation: transportWorkbenchAggregationSections,
+      labels: transportWorkbenchLabelSections,
+      coverage: transportWorkbenchCoverageSections,
+      data: transportWorkbenchDataSections,
+    },
+    translate: (label) => t(label, "ui"),
+    pickUiCopy,
+    setInspectorTab: (tabId) => transportWorkbenchStateOwner.setInspectorTab(tabId),
+    getDisplayConfig: (familyId) => getTransportWorkbenchDisplayConfig(familyId),
+    isSectionOpen: (familyId, sectionKey) => !!runtimeState.transportWorkbenchUi?.sectionOpen?.[familyId]?.[sectionKey],
+    updateFamilyConfig: (familyId, key, nextValue, options) => updateTransportWorkbenchFamilyConfig(familyId, key, nextValue, options),
+    updateDisplayConfig: (familyId, updateFn) => updateTransportWorkbenchDisplayConfig(familyId, updateFn),
+    toggleSection: (familyId, sectionKey, nextOpen) => toggleTransportWorkbenchSection(familyId, sectionKey, nextOpen),
+    createSectionHelpButton: (familyId, section) => transportWorkbenchPopoverOwner.createSectionHelpButton(familyId, section),
+    renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config),
+  });
 
-  const toggleTransportWorkbenchInfoPopover = () => {
-    if (!transportWorkbenchInfoPopover) return;
-    const willOpen = transportWorkbenchInfoPopover.classList.contains("hidden");
-    if (!willOpen) {
-      closeTransportWorkbenchInfoPopover({ restoreFocus: true });
-      return;
-    }
-    closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    renderTransportWorkbenchInfoContent(getTransportWorkbenchFamilyMeta());
-    rememberOverlayTrigger(transportWorkbenchInfoPopover, transportWorkbenchInfoBtn);
-    transportWorkbenchInfoPopover.classList.remove("hidden");
-    transportWorkbenchInfoPopover.setAttribute("aria-hidden", "false");
-    transportWorkbenchInfoBtn?.setAttribute("aria-expanded", "true");
-    focusOverlaySurface(transportWorkbenchInfoPopover);
-  };
-
-  const getTransportWorkbenchFamilyMeta = () => {
-    ensureTransportWorkbenchUiState();
-    const activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-    return TRANSPORT_WORKBENCH_FAMILIES.find((family) => family.id === activeFamily) || TRANSPORT_WORKBENCH_FAMILIES[0];
-  };
+  const getTransportWorkbenchFamilyMeta = () => transportWorkbenchStateOwner.getFamilyMeta();
 
   const getTransportWorkbenchWorkingConfig = (familyId, { baseline = false } = {}) => {
-    ensureTransportWorkbenchUiState();
     // baseline 只给按住 Compare 时的临时预览使用，不能回写 familyConfigs。
-    if (baseline) {
-      return TRANSPORT_WORKBENCH_BASELINE_CONFIGS[familyId]
-        ? JSON.parse(JSON.stringify(TRANSPORT_WORKBENCH_BASELINE_CONFIGS[familyId]))
-        : null;
-    }
-    if (familyId === "road") return runtimeState.transportWorkbenchUi.familyConfigs.road;
-    if (familyId === "rail") return runtimeState.transportWorkbenchUi.familyConfigs.rail;
-    if (familyId === "airport") return runtimeState.transportWorkbenchUi.familyConfigs.airport;
-    if (familyId === "port") return runtimeState.transportWorkbenchUi.familyConfigs.port;
-    if (familyId === "mineral_resources") return runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources;
-    if (familyId === "energy_facilities") return runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities;
-    if (familyId === "industrial_zones") return runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones;
-    if (familyId === "logistics_hubs") return runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs;
-    return null;
+    return transportWorkbenchStateOwner.getWorkingConfig(familyId, { baseline });
   };
 
   const getTransportWorkbenchDisplayConfig = (familyId, { baseline = false } = {}) => {
-    ensureTransportWorkbenchUiState();
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
-      return createDefaultTransportWorkbenchDisplayConfig(familyId);
-    }
-    if (baseline) {
-      return createDefaultTransportWorkbenchDisplayConfig(familyId);
-    }
-    return normalizeTransportWorkbenchDisplayConfig(
-      runtimeState.transportWorkbenchUi.displayConfigs?.[familyId],
-      familyId
-    );
+    return transportWorkbenchStateOwner.getDisplayConfig(familyId, { baseline });
   };
 
   const buildTransportWorkbenchResolvedConfig = (familyId, familyConfig, displayConfig) => {
     const activePackId = getTransportWorkbenchActivePackId(familyId);
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
-      return { ...(familyConfig || {}), activePackId };
-    }
-    const resolvedDisplayConfig = normalizeTransportWorkbenchDisplayConfig(displayConfig, familyId);
-    // live preview 只认一份扁平 config；这里把 displayConfig 的分层字段映射回旧 preview 合约。
-    return {
-      ...(familyConfig || {}),
-      activePackId,
-      displayConfig: resolvedDisplayConfig,
-      displayMode: resolvedDisplayConfig.mode,
-      displayPreset: resolvedDisplayConfig.preset,
-      aggregationAlgorithm: resolvedDisplayConfig.aggregation.algorithm,
-      aggregationAutoSwitch: !!resolvedDisplayConfig.aggregation.autoSwitch,
-      aggregationCellSizePx: Number(resolvedDisplayConfig.aggregation.thresholds?.cellSizePx || 44),
-      aggregationClusterRadiusPx: Number(resolvedDisplayConfig.aggregation.thresholds?.clusterRadiusPx || 48),
-      labelBudget: Number(resolvedDisplayConfig.labels?.budget || 8),
-      labelSeparation: Number(resolvedDisplayConfig.labels?.separationStrength || 1),
-      labelLevel: mapTransportWorkbenchMaxLevelToLabelLevel(resolvedDisplayConfig.labels?.maxLevel),
-      labelAllowAggregation: !!resolvedDisplayConfig.labels?.allowAggregation,
-      dominantCategoryThreshold: Number(resolvedDisplayConfig.labels?.dominantCategoryThreshold || 0.62),
-      mixedCategoryMode: resolvedDisplayConfig.labels?.mixedCategoryMode || "summary",
-      coverageTier: resolvedDisplayConfig.coverage || "default",
-    };
-  };
-
-  const formatTransportWorkbenchOptionLabels = (values, options) => {
-    const labelByValue = new Map((options || []).map((option) => [option.value, option.label]));
-    return (values || []).map((value) => labelByValue.get(value) || value).join(", ");
+    // live preview 只认一份扁平 config；state owner 负责把 displayConfig 映射回旧 preview 合约。
+    return transportWorkbenchStateOwner.buildResolvedConfig(familyId, familyConfig, displayConfig, activePackId);
   };
 
   const getTransportWorkbenchConfigSignature = (config) => JSON.stringify(config || {});
 
-  const getTransportWorkbenchActivePackId = (familyId) => {
-    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
-    const currentByFamily = runtimeState.transportWorkbenchUi?.activePackIdByFamily || {};
-    const currentPackId = String(currentByFamily[normalizedFamilyId] || runtimeState.transportWorkbenchUi?.activePackId || "").trim().toLowerCase();
-    const meta = getTargetMainMapPackMeta(currentPackId);
-    if (meta && meta.family === normalizedFamilyId) return meta.packId;
-    return getDefaultMainMapPackIdForFamily(normalizedFamilyId);
-  };
-
-  const getTransportWorkbenchPackGateReport = (packId) => (
-    transportWorkbenchPackGateReportByPackId.get(String(packId || "").trim().toLowerCase()) || null
+  const getTransportWorkbenchActivePackId = (familyId) => (
+    transportWorkbenchApplyBridgeOwner.getActivePackId(familyId)
   );
 
-  const refreshTransportWorkbenchPackGateReport = async (packId, { rerender = false } = {}) => {
-    const normalizedPackId = String(packId || "").trim().toLowerCase();
-    if (!normalizedPackId) return null;
-    if (transportWorkbenchPackGateReportByPackId.has(normalizedPackId)) {
-      return transportWorkbenchPackGateReportByPackId.get(normalizedPackId);
-    }
-    if (transportWorkbenchPackGatePromiseByPackId.has(normalizedPackId)) {
-      return transportWorkbenchPackGatePromiseByPackId.get(normalizedPackId);
-    }
-    const promise = getTransportAsset(resolveTransportManifestUrl(normalizedPackId), {
-      cachePolicy: "no-cache",
-      label: `transport-workbench-pack-gate:${normalizedPackId}`,
+  const isCurrentTransportWorkbenchPackGate = (normalizedPackId) => (
+    runtimeState.transportWorkbenchUi?.open
+    && getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily) === normalizedPackId
+  );
+
+  const refreshTransportWorkbenchPackGateReport = (packId, { rerender = false } = {}) => (
+    transportWorkbenchApplyBridgeOwner.refreshPackGateReport(packId, {
+      rerender,
     })
-      .then((manifest) => {
-        const gateReport = createTransportPackSourceGateReport(normalizedPackId, manifest);
-        transportWorkbenchPackGateReportByPackId.set(normalizedPackId, gateReport);
-        return gateReport;
-      })
-      .catch((error) => {
-        const gateReport = {
-          packId: normalizedPackId,
-          family: getTargetMainMapPackMeta(normalizedPackId)?.family || "",
-          passed: false,
-          reasons: ["manifest_load_failed"],
-          error: error?.message || String(error || "Unknown pack gate failure"),
-        };
-        transportWorkbenchPackGateReportByPackId.set(normalizedPackId, gateReport);
-        return gateReport;
-      })
-      .finally(() => {
-        transportWorkbenchPackGatePromiseByPackId.delete(normalizedPackId);
-        if (rerender && runtimeState.transportWorkbenchUi?.open && getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily) === normalizedPackId) {
-          renderTransportWorkbenchUi();
-        }
-      });
-    transportWorkbenchPackGatePromiseByPackId.set(normalizedPackId, promise);
-    return promise;
-  };
+  );
 
   const setTransportWorkbenchActivePackId = (packId, { rerender = true } = {}) => {
-    ensureTransportWorkbenchUiState();
-    const normalizedPackId = String(packId || "").trim().toLowerCase();
-    const meta = getTargetMainMapPackMeta(normalizedPackId);
+    const meta = transportWorkbenchStateOwner.setActivePackId(packId);
     if (!meta) return false;
-    runtimeState.transportWorkbenchUi.activeFamily = meta.family;
-    if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
-      runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
-    }
-    runtimeState.transportWorkbenchUi.activePackIdByFamily[meta.family] = meta.packId;
-    runtimeState.transportWorkbenchUi.activePackId = meta.packId;
-    runtimeState.transportWorkbenchUi.sampleCountry = meta.country;
     refreshTransportWorkbenchPackGateReport(meta.packId, { rerender: true });
     if (rerender) renderTransportWorkbenchUi();
     return true;
   };
 
-
-  const getTransportOverviewVisualModeFromState = () => normalizeTransportOverviewVisualMode(
-    runtimeState.styleConfig?.transportOverview?.visualMode,
-    "distribution",
+  const getTransportWorkbenchApplyButtonState = (familyId) => (
+    transportWorkbenchApplyBridgeOwner.getApplyButtonState(familyId)
   );
 
-  const getTransportWorkbenchApplyButtonState = (familyId) => {
-    const compatibility = getTransportCapabilityApplyCompatibility(familyId);
-    const activePackId = getTransportWorkbenchActivePackId(familyId);
-    const familyConfig = {
-      ...(runtimeState.transportWorkbenchUi?.familyConfigs?.[familyId] || {}),
-      activePackId,
-      packGateReport: getTransportWorkbenchPackGateReport(activePackId),
-    };
-    if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.mainMapBridge) {
-      const bridgeSupport = getTransportWorkbenchOverviewBridgeSupport(familyId, familyConfig);
-      if (!bridgeSupport.supported) {
-        return {
-          compatibility,
-          enabled: false,
-          label: t("Workbench preview only", "ui"),
-          reason: bridgeSupport.reason === "source_failed"
-            ? t("Pack source check failed", "ui")
-            : bridgeSupport.reason === "active_pack_required"
-              ? t("Select a transport pack", "ui")
-              : t("Workbench preview only", "ui"),
-        };
-      }
-      return {
-        compatibility,
-        enabled: true,
-        label: t("Apply to Main Map", "ui"),
-        reason: "",
-      };
-    }
-    if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.localBoard) {
-      return {
-        compatibility,
-        enabled: false,
-        label: t("Workbench-only family", "ui"),
-        reason: t("Workbench-only family", "ui"),
-      };
-    }
-    return {
-      compatibility,
-      enabled: false,
-      label: t("Workbench preview only", "ui"),
-      reason: t("Workbench preview only", "ui"),
-    };
-  };
-
-  const applyTransportWorkbenchFamilyToMainMap = async (context) => {
-    const currentOverviewConfig = normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {});
-    const activePackId = context.activePackId || getTransportWorkbenchActivePackId(context.family.id);
-    const gateReport = await refreshTransportWorkbenchPackGateReport(activePackId);
-    if (!gateReport?.passed) return false;
-    const patch = resolveTransportOverviewPatchFromWorkbench(
-      context.family.id,
-      {
-        ...(context.config || runtimeState.transportWorkbenchUi?.familyConfigs?.[context.family.id] || {}),
-        activePackId,
-        packGateReport: gateReport,
-      },
-      {
-        currentOverviewConfig: currentOverviewConfig?.[context.family.id] || getTransportCapabilityDefaultOverviewConfig(context.family.id),
-        currentVisualMode: getTransportOverviewVisualModeFromState(),
-      },
-    );
-    if (!patch) return false;
-    const overlayState = await loadTransportCountryOverlayState(patch.activePackId || context.activePackId);
-    applyTransportCountryOverlayState(runtimeState, overlayState);
-    applyTransportWorkbenchOverviewState(runtimeState, {
-      ...patch,
-      familyId: context.family.id,
-    });
-    const dataLayerKeys = Array.isArray(patch.dataLayerKeys) ? patch.dataLayerKeys : [];
-    try {
-      if (dataLayerKeys.length && typeof runtimeState.ensureContextLayerDataFn === "function") {
-        await runtimeState.ensureContextLayerDataFn(
-          dataLayerKeys.length === 1 ? dataLayerKeys[0] : dataLayerKeys,
-          { reason: "transport-workbench-apply", renderNow: false },
-        );
-      }
-    } finally {
-      runtimeState.updateTransportAppearanceUIFn?.();
-      markDirty("transport-workbench-apply");
-      if (typeof runtimeState.renderNowFn === "function") {
-        runtimeState.renderNowFn("transport-workbench-apply");
-      }
-    }
-    return true;
-  };
-
-  const formatTransportWorkbenchManifestTimestamp = (value) => {
-    const text = String(value || "").trim();
-    if (!text) return "unknown";
-    return text.replace("T", " ").replace("Z", " UTC");
-  };
-
-  const buildManifestOnlyInspectorRows = (family, previewSnapshot, dataContract) => {
-    if (previewSnapshot?.status === "error") {
-      return [
-        ["Pack status", `${family.label} pack failed to load`],
-        ["Error", previewSnapshot.error || "Unknown error"],
-        ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-      ];
-    }
-    if (previewSnapshot?.status !== "ready") {
-      return [
-        ["Adapter", dataContract?.adapterId || `japan_${family.id}_v1`],
-        ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || `Waiting for ${family.label} Japan pack`) : `Loading ${family.label} Japan pack`],
-      ];
-    }
-
-    const manifest = previewSnapshot.manifest || {};
-    const audit = previewSnapshot.audit || {};
-    const previewCounts = manifest?.feature_counts?.preview || {};
-    const fullCounts = manifest?.feature_counts?.full || {};
-    const variantEntries = listTransportWorkbenchManifestVariantEntries(manifest);
-    const rows = [
-      ["Pack version", manifest.adapter_id || dataContract?.adapterId || `japan_${family.id}_v1`],
-      ["Recipe version", manifest.recipe_version || audit.recipe_version || "unknown"],
-      ["Distribution tier", manifest.distribution_tier || "unknown"],
-      ["License tier", manifest.license_tier || "unknown"],
-      ["Coverage scope", manifest.coverage_scope || "unknown"],
-      ["Source policy", manifest.source_policy || "unknown"],
-      ["Last build", formatTransportWorkbenchManifestTimestamp(manifest.generated_at)],
-      ["Preview features", JSON.stringify(previewCounts || {})],
-      ["Full features", JSON.stringify(fullCounts || {})],
-    ];
-
-    if (variantEntries.length > 0) {
-      const variantSummaries = variantEntries.map(([variantId, variantMeta]) => {
-        const count = variantMeta?.feature_counts?.full?.industrial_zones
-          ?? variantMeta?.feature_counts?.full?.logistics_hubs
-          ?? variantMeta?.feature_counts?.full
-          ?? 0;
-        return `${variantId} (${typeof count === "number" ? count : JSON.stringify(count)})`;
-      });
-      rows.push(
-        ["Default variant", getTransportWorkbenchManifestDefaultVariantId(manifest, family.id)],
-        ["Variants", variantSummaries.join(", ") || "none"],
-      );
-    }
-
-    if (Array.isArray(previewSnapshot?.subtypeCatalog) && family.id === "energy_facilities") {
-      const localSubtypes = previewSnapshot.subtypeCatalog
-        .filter((entry) => entry.availability === "local")
-        .map((entry) => `${entry.subtype_id} (${entry.feature_count || 0})`);
-      const referenceOnlySubtypes = previewSnapshot.subtypeCatalog
-        .filter((entry) => entry.availability === "reference_only")
-        .map((entry) => entry.subtype_id);
-      rows.push(
-        ["Local subtypes", localSubtypes.length ? localSubtypes.join(", ") : "none"],
-        ["Reference-only subtypes", referenceOnlySubtypes.length ? referenceOnlySubtypes.join(", ") : "none"],
-      );
-    }
-    return rows;
-  };
+  const applyTransportWorkbenchFamilyToMainMap = (context) => (
+    transportWorkbenchApplyBridgeOwner.applyFamilyToMainMap(context)
+  );
 
   const setTransportWorkbenchCompareHeld = (nextHeld) => {
-    ensureTransportWorkbenchUiState();
-    const family = getTransportWorkbenchFamilyMeta();
-    if (!family.supportsDetailedControls) return;
-    const normalized = !!nextHeld;
-    if (runtimeState.transportWorkbenchUi.compareHeld === normalized) return;
-    runtimeState.transportWorkbenchUi.compareHeld = normalized;
-    renderTransportWorkbenchUi();
+    if (transportWorkbenchStateOwner.setCompareHeld(nextHeld)) {
+      renderTransportWorkbenchUi();
+    }
   };
 
   const updateTransportWorkbenchFamilyConfig = (familyId, key, nextValue, { appendValue = null } = {}) => {
-    ensureTransportWorkbenchUiState();
-    const family = TRANSPORT_WORKBENCH_FAMILIES.find((entry) => entry.id === familyId);
-    if (!family?.supportsDetailedControls || runtimeState.transportWorkbenchUi.compareHeld) return;
-    const current = JSON.parse(JSON.stringify(getTransportWorkbenchWorkingConfig(familyId) || {}));
-    if (appendValue !== null) {
-      const currentValues = Array.isArray(current[key]) ? [...current[key]] : [];
-      const index = currentValues.indexOf(appendValue);
-      if (nextValue) {
-        if (index === -1) currentValues.push(appendValue);
-      } else if (index !== -1) {
-        currentValues.splice(index, 1);
-      }
-      current[key] = currentValues;
-    } else {
-      current[key] = nextValue;
-    }
-    if (familyId === "road") {
-      runtimeState.transportWorkbenchUi.familyConfigs.road = normalizeRoadTransportWorkbenchConfig(current);
-    } else if (familyId === "rail") {
-      runtimeState.transportWorkbenchUi.familyConfigs.rail = normalizeRailTransportWorkbenchConfig(current);
-    } else if (familyId === "airport") {
-      runtimeState.transportWorkbenchUi.familyConfigs.airport = normalizeAirportTransportWorkbenchConfig(current);
-    } else if (familyId === "port") {
-      runtimeState.transportWorkbenchUi.familyConfigs.port = normalizePortTransportWorkbenchConfig(current);
-    } else if (familyId === "mineral_resources") {
-      runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources = normalizeMineralResourceTransportWorkbenchConfig(current);
-    } else if (familyId === "energy_facilities") {
-      runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities = normalizeEnergyFacilityTransportWorkbenchConfig(current);
-    } else if (familyId === "industrial_zones") {
-      runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones = normalizeIndustrialTransportWorkbenchConfig(current);
-    } else if (familyId === "logistics_hubs") {
-      runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs = normalizeLogisticsHubTransportWorkbenchConfig(current);
-    }
+    if (!transportWorkbenchStateOwner.updateFamilyConfig(familyId, key, nextValue, { appendValue })) return;
     // 控件改动先落到工作台 state，再即时刷新预览；这里不直接改 renderer 的正式图层状态。
     markDirty("transport-workbench-config");
     const nextContext = getTransportWorkbenchRenderContext();
     renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
-    renderTransportWorkbenchInspectorTabs(nextContext.family, nextContext.config, nextContext.compareHeld);
     renderTransportWorkbenchInspector(nextContext.family, nextContext.config, nextContext.compareHeld);
     refreshTransportWorkbenchPreview(nextContext, { allowCarrierPrep: false });
   };
 
   const updateTransportWorkbenchDisplayConfig = (familyId, updateFn) => {
-    ensureTransportWorkbenchUiState();
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId) || typeof updateFn !== "function") return;
-    const current = getTransportWorkbenchDisplayConfig(familyId);
-    const draft = JSON.parse(JSON.stringify(current));
-    updateFn(draft);
-    runtimeState.transportWorkbenchUi.displayConfigs[familyId] = normalizeTransportWorkbenchDisplayConfig(draft, familyId);
+    if (runtimeState.transportWorkbenchUi?.compareHeld) return;
+    if (!transportWorkbenchStateOwner.updateDisplayConfig(familyId, updateFn)) return;
     markDirty("transport-workbench-display-config");
     const nextContext = getTransportWorkbenchRenderContext();
     renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
-    renderTransportWorkbenchInspectorTabs(nextContext.family, nextContext.config, nextContext.compareHeld);
     renderTransportWorkbenchInspector(nextContext.family, nextContext.config, nextContext.compareHeld);
     refreshTransportWorkbenchPreview(nextContext, { allowCarrierPrep: false });
   };
 
   const toggleTransportWorkbenchSection = (familyId, sectionKey, nextOpen) => {
-    ensureTransportWorkbenchUiState();
-    if (!runtimeState.transportWorkbenchUi.sectionOpen[familyId]) {
-      runtimeState.transportWorkbenchUi.sectionOpen[familyId] = {};
-    }
-    runtimeState.transportWorkbenchUi.sectionOpen[familyId][sectionKey] = !!nextOpen;
-  };
-
-  const createTransportWorkbenchInspectorRow = (label, value) => {
-    const row = document.createElement("div");
-    row.className = "transport-workbench-inspector-row";
-    const labelNode = document.createElement("span");
-    labelNode.className = "transport-workbench-inspector-key";
-    labelNode.textContent = label;
-    const valueNode = document.createElement("span");
-    valueNode.className = "transport-workbench-inspector-value";
-    valueNode.textContent = value;
-    row.appendChild(labelNode);
-    row.appendChild(valueNode);
-    return row;
-  };
-
-  const createTransportWorkbenchInspectorStateCard = (titleText, bodyText, tone = "soft") => {
-    const card = document.createElement("div");
-    card.className = "transport-workbench-note-card transport-workbench-inspector-state-card";
-    if (tone === "emphasis") {
-      card.classList.add("transport-workbench-note-card-emphasis");
-    } else {
-      card.classList.add("transport-workbench-note-card-soft");
-    }
-    const title = document.createElement("div");
-    title.className = "transport-workbench-note-title";
-    title.textContent = titleText;
-    const body = document.createElement("p");
-    body.className = "transport-workbench-note-text";
-    body.textContent = bodyText;
-    card.append(title, body);
-    return card;
-  };
-
-  const formatTransportWorkbenchRoadHiddenReason = (reason) => {
-    const map = {
-      class_filtered: "Filtered by class",
-      link_filtered: "Filtered by link rule",
-      short_projected_segment: "Dropped by min projected length",
-      short_primary: "Dropped as short primary",
-      dense_metro_guard: "Dropped by dense metro guard",
-      zoom_gate: "Hidden by zoom gate",
-    };
-    return map[String(reason || "").trim()] || "Visible";
-  };
-
-  const buildTransportWorkbenchDiagnosticRows = (familyId, config) => {
-    if (familyId === "road") {
-      return [
-        ["Data intake", `${formatTransportWorkbenchOptionLabels(config.roadClass, ROAD_CLASS_OPTIONS)} only`],
-        ["Source recipe", config.motorwayIdentitySource === "osm_only" ? "OSM only" : "OSM + N06 hardening"],
-        ["Label scope", config.showRefs ? `${formatTransportWorkbenchOptionLabels(config.refClasses, ROAD_CLASS_OPTIONS)} refs` : "Refs hidden"],
-        ["Noise gate", `${config.denseMetroGuard} metro guard / ${config.minProjectedSegmentPx}px min segment`],
-        ["Line widths", `M ${config.motorwayWidth}px / T ${config.trunkWidth}px / P ${config.primaryWidth}px`],
-      ];
-    }
-    if (familyId === "rail") {
-      return [
-        ["Network scope", formatTransportWorkbenchOptionLabels(config.class, RAIL_CLASS_OPTIONS)],
-        ["Status scope", formatTransportWorkbenchOptionLabels(config.status, RAIL_STATUS_OPTIONS)],
-        ["Reconciliation", config.allowOsmActiveGapFill ? "Official active + OSM gap fill" : "Official active locked"],
-        ["Station policy", config.showMajorStations ? `${config.importanceThreshold} threshold` : "Major stations hidden"],
-      ];
-    }
-    if (familyId === "airport") {
-      return [
-        ["Airport types", formatTransportWorkbenchOptionLabels(config.airportTypes, AIRPORT_TYPE_OPTIONS)],
-        ["Status scope", formatTransportWorkbenchOptionLabels(config.statuses, AIRPORT_STATUS_OPTIONS)],
-        ["Importance", config.importanceThreshold],
-        ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-      ];
-    }
-    if (familyId === "port") {
-      return [
-        ["Display mode", `${config.displayMode} / ${config.displayPreset}`],
-        ["Aggregation", config.aggregationAlgorithm],
-        ["Coverage tier", config.coverageTier || "core"],
-        ["Legal designations", formatTransportWorkbenchOptionLabels(config.legalDesignations, PORT_DESIGNATION_OPTIONS)],
-        ["Manager types", formatTransportWorkbenchOptionLabels(config.managerTypes, PORT_MANAGER_TYPE_OPTIONS)],
-        ["Labels", config.showLabels ? `Enabled (${config.labelLevel}, budget ${config.labelBudget})` : "Hidden"],
-      ];
-    }
-    if (familyId === "mineral_resources") {
-      return [
-        ["Display mode", `${config.displayMode} / ${config.displayPreset}`],
-        ["Aggregation", config.aggregationAlgorithm],
-        ["Labels", config.showLabels ? `Enabled (${config.labelLevel}, budget ${config.labelBudget})` : "Hidden"],
-        ["Point size", `${config.pointSize}%`],
-      ];
-    }
-    if (familyId === "energy_facilities") {
-      return [
-        ["Display mode", `${config.displayMode} / ${config.displayPreset}`],
-        ["Aggregation", config.aggregationAlgorithm],
-        ["Statuses", formatTransportWorkbenchOptionLabels(config.statuses, ENERGY_STATUS_OPTIONS)],
-        ["Labels", config.showLabels ? `Enabled (${config.labelLevel}, budget ${config.labelBudget})` : "Hidden"],
-      ];
-    }
-    if (familyId === "industrial_zones") {
-      return [
-        ["Display mode", `${config.displayMode} / ${config.displayPreset}`],
-        ["Aggregation", config.aggregationAlgorithm],
-        ["Source track", normalizeTransportWorkbenchEnum(config.variant, INDUSTRIAL_VARIANT_OPTIONS.map((option) => option.value), "internal")],
-        ["Land type", formatTransportWorkbenchOptionLabels(config.siteClasses, INDUSTRIAL_SITE_CLASS_OPTIONS)],
-        ["Location context", String(config.variant || "internal") === "internal" ? formatTransportWorkbenchOptionLabels(config.coastalModes, INDUSTRIAL_COASTAL_OPTIONS) : "Not used on open track"],
-        ["Labels", config.showLabels ? `Enabled (${config.labelLevel}, budget ${config.labelBudget})` : "Hidden"],
-      ];
-    }
-    if (familyId === "logistics_hubs") {
-      return [
-        ["Display mode", `${config.displayMode} / ${config.displayPreset}`],
-        ["Aggregation", config.aggregationAlgorithm],
-        ["Hub category", formatTransportWorkbenchOptionLabels(config.hubTypes, LOGISTICS_HUB_TYPE_OPTIONS)],
-        ["Operator type", formatTransportWorkbenchOptionLabels(config.operatorClassifications, LOGISTICS_OPERATOR_CLASSIFICATION_OPTIONS)],
-        ["Labels", config.showLabels ? `Enabled (${config.labelLevel}, budget ${config.labelBudget})` : "Hidden"],
-        ["Point size", `${config.pointSize}%`],
-      ];
-    }
-    return [];
-  };
-
-  const renderTransportWorkbenchDiagnosticsBody = (familyId, config) => {
-    const body = document.createElement("div");
-    body.className = "transport-workbench-section-body transport-workbench-section-body-diagnostics";
-    buildTransportWorkbenchDiagnosticRows(familyId, config).forEach(([label, value]) => {
-      body.appendChild(createTransportWorkbenchInspectorRow(label, value));
-    });
-    return body;
-  };
-
-  const createTransportWorkbenchSectionHelpButton = (familyId, section) => {
-    if (!TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS[familyId]?.has(section.key)) {
-      return null;
-    }
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "transport-workbench-section-help-btn";
-    button.textContent = "?";
-    const helpLabel = t("Open section help", "ui");
-    button.setAttribute("aria-label", helpLabel);
-    button.setAttribute("title", helpLabel);
-    button.setAttribute("aria-haspopup", "dialog");
-    button.setAttribute("aria-expanded", "false");
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      toggleTransportWorkbenchSectionHelpPopover(button, familyId, section.key);
-    });
-    return button;
+    transportWorkbenchStateOwner.toggleSection(familyId, sectionKey, nextOpen);
   };
 
   const getTransportWorkbenchLayerFamilyMeta = (familyId) => (
@@ -1215,1177 +324,49 @@ export function createTransportWorkbenchController({
     || TRANSPORT_WORKBENCH_FAMILIES[0]
   );
 
-  const renderTransportWorkbenchLayerOrderPanel = () => {
-    if (!transportWorkbenchLayerOrderPanel || !transportWorkbenchLayerOrderList) return;
-    ensureTransportWorkbenchUiState();
-    transportWorkbenchLayerOrderList.replaceChildren();
-    runtimeState.transportWorkbenchUi.layerOrder.forEach((familyId) => {
-      const family = getTransportWorkbenchLayerFamilyMeta(familyId);
-      const item = document.createElement("div");
-      item.className = "transport-workbench-layer-order-item";
-      item.draggable = true;
-      item.dataset.layerFamily = family.id;
-
-      item.addEventListener("dragstart", () => {
-        transportWorkbenchDraggedLayerId = family.id;
-        item.classList.add("is-dragging");
-      });
-      item.addEventListener("dragend", () => {
-        transportWorkbenchDraggedLayerId = "";
-        item.classList.remove("is-dragging");
-      });
-      item.addEventListener("dragover", (event) => {
-        event.preventDefault();
-      });
-      item.addEventListener("drop", (event) => {
-        event.preventDefault();
-        if (!transportWorkbenchDraggedLayerId || transportWorkbenchDraggedLayerId === family.id) return;
-        const nextOrder = [...runtimeState.transportWorkbenchUi.layerOrder];
-        const draggedIndex = nextOrder.indexOf(transportWorkbenchDraggedLayerId);
-        const targetIndex = nextOrder.indexOf(family.id);
-        if (draggedIndex === -1 || targetIndex === -1) return;
-        nextOrder.splice(draggedIndex, 1);
-        nextOrder.splice(targetIndex, 0, transportWorkbenchDraggedLayerId);
-        runtimeState.transportWorkbenchUi.layerOrder = nextOrder;
-        markDirty("transport-workbench-layer-order");
-        const context = getTransportWorkbenchRenderContext();
-        renderTransportWorkbenchLayerOrderPanel();
-        renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-      });
-
-      const handle = document.createElement("span");
-      handle.className = "transport-workbench-layer-order-handle";
-      handle.textContent = ":::";
-
-      const meta = document.createElement("div");
-      meta.className = "transport-workbench-layer-order-meta";
-      const name = document.createElement("div");
-      name.className = "transport-workbench-layer-order-name";
-      name.textContent = t(family.label, "ui");
-      const caption = document.createElement("div");
-      caption.className = "transport-workbench-layer-order-caption";
-      caption.textContent = t(
-        isTransportWorkbenchLivePreviewFamily(family.id)
-          ? "Live preview is already wired into the Japan carrier."
-          : isTransportWorkbenchManifestOnlyRuntimeFamily(family.id)
-            ? "Inspector now reads the live manifest and build audit."
-            : "Reserved family shell. Real renderer attaches later.",
-        "ui"
-      );
-      meta.append(name, caption);
-
-      const status = document.createElement("span");
-      status.className = "transport-workbench-layer-order-state";
-      status.textContent = t(
-        isTransportWorkbenchLivePreviewFamily(family.id)
-          ? "Live now"
-          : isTransportWorkbenchManifestOnlyRuntimeFamily(family.id)
-            ? "Metadata live"
-            : "Reserved",
-        "ui"
-      );
-      if (isTransportWorkbenchLivePreviewFamily(family.id)) {
-        status.classList.add("is-live");
-      }
-
-      item.append(handle, meta, status);
-      transportWorkbenchLayerOrderList.appendChild(item);
-    });
-  };
-
-  const renderTransportWorkbenchControl = (familyId, control, config, compareHeld) => {
-    const previewSnapshot = getTransportWorkbenchFamilyPreviewSnapshot(familyId, config);
-    const resolvedOptions = typeof control.options === "function"
-      ? (control.options({ familyId, config, previewSnapshot }) || [])
-      : (control.options || []);
-    const field = document.createElement("div");
-    field.className = "transport-workbench-field";
-    const title = document.createElement("div");
-    title.className = "transport-workbench-field-title";
-    title.textContent = t(control.label, "ui");
-    field.appendChild(title);
-
-    if (control.type === "toggle") {
-      const label = document.createElement("label");
-      label.className = "transport-workbench-toggle";
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = !!config[control.key];
-      input.disabled = compareHeld;
-      input.addEventListener("change", () => updateTransportWorkbenchFamilyConfig(familyId, control.key, input.checked));
-      const text = document.createElement("span");
-      text.textContent = t(input.checked ? "Enabled" : "Disabled", "ui");
-      input.addEventListener("change", () => {
-        text.textContent = t(input.checked ? "Enabled" : "Disabled", "ui");
-      });
-      label.appendChild(input);
-      label.appendChild(text);
-      field.appendChild(label);
-      return field;
-    }
-
-    if (control.type === "select") {
-      const select = document.createElement("select");
-      select.className = "select-input transport-workbench-select";
-      select.disabled = compareHeld;
-      resolvedOptions.forEach((option) => {
-        const optionNode = document.createElement("option");
-        optionNode.value = option.value;
-        optionNode.textContent = t(option.label, "ui");
-        optionNode.selected = option.value === config[control.key];
-        select.appendChild(optionNode);
-      });
-      select.addEventListener("change", () => updateTransportWorkbenchFamilyConfig(familyId, control.key, select.value));
-      field.appendChild(select);
-      return field;
-    }
-
-    if (control.type === "range") {
-      const rangeRow = document.createElement("div");
-      rangeRow.className = "transport-workbench-range-row";
-      const range = document.createElement("input");
-      range.type = "range";
-      range.className = "transport-workbench-range";
-      range.min = String(control.min);
-      range.max = String(control.max);
-      range.step = String(control.step || 1);
-      range.value = String(config[control.key]);
-      range.disabled = compareHeld;
-      const value = document.createElement("span");
-      value.className = "transport-workbench-range-value";
-      const formatRangeValue = (rawValue) => {
-        const numericValue = Number(rawValue);
-        if (!Number.isFinite(numericValue)) return `${rawValue}${control.unit || ""}`;
-        if (String(control.step || "").includes(".")) {
-          return `${numericValue.toFixed(2).replace(/\.?0+$/, "")}${control.unit || ""}`;
-        }
-        return `${numericValue}${control.unit || ""}`;
-      };
-      value.textContent = formatRangeValue(config[control.key]);
-      range.addEventListener("input", () => {
-        value.textContent = formatRangeValue(range.value);
-      });
-      range.addEventListener("change", () => {
-        updateTransportWorkbenchFamilyConfig(familyId, control.key, Number(range.value));
-      });
-      rangeRow.appendChild(range);
-      rangeRow.appendChild(value);
-      field.appendChild(rangeRow);
-      return field;
-    }
-
-    if (control.type === "multi") {
-      const optionGrid = document.createElement("div");
-      optionGrid.className = "transport-workbench-option-grid";
-      const defaultValuesWhenEmpty = control.defaultAllWhenEmpty
-        ? resolvedOptions.filter((option) => !option.disabled).map((option) => option.value)
-        : [];
-      resolvedOptions.forEach((option) => {
-        const label = document.createElement("label");
-        label.className = "transport-workbench-option-pill";
-        if (option.disabled) {
-          label.classList.add("is-disabled");
-        }
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        const configuredValues = Array.isArray(config[control.key]) ? config[control.key] : [];
-        const effectiveValues = configuredValues.length === 0 && control.defaultAllWhenEmpty
-          ? defaultValuesWhenEmpty
-          : configuredValues;
-        input.checked = effectiveValues.includes(option.value);
-        input.disabled = compareHeld || !!option.disabled;
-        input.addEventListener("change", () => {
-          if (control.defaultAllWhenEmpty) {
-            const nextValues = [...effectiveValues];
-            const valueIndex = nextValues.indexOf(option.value);
-            if (input.checked) {
-              if (valueIndex === -1) nextValues.push(option.value);
-            } else if (valueIndex !== -1) {
-              nextValues.splice(valueIndex, 1);
-            }
-            updateTransportWorkbenchFamilyConfig(familyId, control.key, nextValues);
-            return;
-          }
-          updateTransportWorkbenchFamilyConfig(familyId, control.key, input.checked, { appendValue: option.value });
-        });
-        const text = document.createElement("span");
-        text.textContent = t(option.label, "ui");
-        label.appendChild(input);
-        label.appendChild(text);
-        optionGrid.appendChild(label);
-      });
-      field.appendChild(optionGrid);
-      return field;
-    }
-
-    return field;
-  };
-
-  const createTransportWorkbenchSectionNode = (family, section, config, compareHeld) => {
-    const visibleControls = (section.controls || []).filter((control) => (
-      typeof control.showWhen !== "function" || control.showWhen(config)
-    ));
-    if (section.kind !== "diagnostics" && visibleControls.length === 0) {
-      return null;
-    }
-    const details = document.createElement("details");
-    details.className = "transport-workbench-section";
-    details.open = !!runtimeState.transportWorkbenchUi.sectionOpen?.[family.id]?.[section.key];
-    details.addEventListener("toggle", () => {
-      toggleTransportWorkbenchSection(family.id, section.key, details.open);
-    });
-    const summary = document.createElement("summary");
-    summary.className = "transport-workbench-section-summary";
-    const heading = document.createElement("div");
-    heading.className = "transport-workbench-section-heading";
-    const title = document.createElement("div");
-    title.className = "transport-workbench-section-title";
-    title.textContent = t(section.title, "ui");
-    const actions = document.createElement("div");
-    actions.className = "transport-workbench-section-actions";
-    const helpButton = createTransportWorkbenchSectionHelpButton(family.id, section);
-    if (helpButton) {
-      actions.appendChild(helpButton);
-    }
-    const chevron = document.createElement("span");
-    chevron.className = "transport-workbench-section-chevron";
-    chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "▾";
-    actions.appendChild(chevron);
-    heading.appendChild(title);
-    summary.appendChild(heading);
-    summary.appendChild(actions);
-    details.appendChild(summary);
-    const body = section.kind === "diagnostics"
-      ? renderTransportWorkbenchDiagnosticsBody(family.id, config)
-      : document.createElement("div");
-    if (section.kind !== "diagnostics") {
-      body.className = "transport-workbench-section-body";
-      if (section.description) {
-        const description = document.createElement("p");
-        description.className = "transport-workbench-section-description";
-        description.textContent = t(section.description, "ui");
-        body.appendChild(description);
-      }
-      visibleControls.forEach((control) => {
-        body.appendChild(renderTransportWorkbenchControl(family.id, control, config, compareHeld));
-      });
-    } else if (section.description) {
-      const description = document.createElement("p");
-      description.className = "transport-workbench-section-description transport-workbench-section-description-diagnostics";
-      description.textContent = t(section.description, "ui");
-      body.prepend(description);
-    }
-    details.appendChild(body);
-    return details;
-  };
-
-  const createTransportWorkbenchShellCard = (family, tabId, config) => {
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)) {
-      return null;
-    }
-    const displayConfig = getTransportWorkbenchDisplayConfig(family.id);
-    const card = document.createElement("div");
-    card.className = "transport-workbench-note-card transport-workbench-note-card-soft transport-workbench-shell-card";
-    const heading = document.createElement("div");
-    heading.className = "transport-workbench-shell-heading";
-    const title = document.createElement("div");
-    title.className = "transport-workbench-note-title";
-    title.textContent = t(
-      tabId === "display"
-        ? "Display settings"
-        : tabId === "aggregation"
-          ? "Aggregation settings"
-          : tabId === "labels"
-            ? "Label settings"
-            : "Coverage settings",
-      "ui"
-    );
-    const kicker = document.createElement("span");
-    kicker.className = "transport-workbench-shell-kicker";
-    kicker.textContent = t("Current settings", "ui");
-    heading.append(title, kicker);
-    card.appendChild(heading);
-    const grid = document.createElement("div");
-    grid.className = "transport-workbench-shell-grid";
-    const addShellSelect = (labelText, value, options, onChange, mountTarget = grid) => {
-      const control = document.createElement("div");
-      control.className = "transport-workbench-shell-control";
-      const label = document.createElement("div");
-      label.className = "transport-workbench-shell-label";
-      label.textContent = t(labelText, "ui");
-      const select = document.createElement("select");
-      select.className = "select-input transport-workbench-select";
-      options.forEach((option) => {
-        const optionNode = document.createElement("option");
-        optionNode.value = option.value;
-        optionNode.textContent = t(option.label, "ui");
-        optionNode.selected = option.value === value;
-        select.appendChild(optionNode);
-      });
-      select.addEventListener("change", () => onChange(select.value));
-      control.append(label, select);
-      mountTarget.appendChild(control);
-    };
-    const addShellRange = (labelText, value, min, max, step, unit, onChange, mountTarget = grid) => {
-      const control = document.createElement("div");
-      control.className = "transport-workbench-shell-control";
-      const label = document.createElement("div");
-      label.className = "transport-workbench-shell-label";
-      label.textContent = t(labelText, "ui");
-      const row = document.createElement("div");
-      row.className = "transport-workbench-range-row";
-      const input = document.createElement("input");
-      input.type = "range";
-      input.className = "transport-workbench-range";
-      input.min = String(min);
-      input.max = String(max);
-      input.step = String(step);
-      input.value = String(value);
-      const valueNode = document.createElement("span");
-      valueNode.className = "transport-workbench-range-value";
-      valueNode.textContent = `${value}${unit}`;
-      input.addEventListener("input", () => {
-        valueNode.textContent = `${input.value}${unit}`;
-      });
-      input.addEventListener("change", () => onChange(Number(input.value)));
-      row.append(input, valueNode);
-      control.append(label, row);
-      mountTarget.appendChild(control);
-    };
-    const addShellToggle = (labelText, checked, onChange, mountTarget = grid) => {
-      const control = document.createElement("div");
-      control.className = "transport-workbench-shell-control";
-      const label = document.createElement("div");
-      label.className = "transport-workbench-shell-label";
-      label.textContent = t(labelText, "ui");
-      const toggle = document.createElement("label");
-      toggle.className = "transport-workbench-toggle";
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = !!checked;
-      const text = document.createElement("span");
-      text.textContent = input.checked ? t("Enabled", "ui") : t("Disabled", "ui");
-      input.addEventListener("change", () => {
-        text.textContent = input.checked ? t("Enabled", "ui") : t("Disabled", "ui");
-        onChange(input.checked);
-      });
-      toggle.append(input, text);
-      control.append(label, toggle);
-      mountTarget.appendChild(control);
-    };
-    if (tabId === "display") {
-      addShellSelect("Mode", displayConfig.mode, [
-        { value: "inspect", label: "Inspect" },
-        { value: "aggregate", label: "Aggregate" },
-        { value: "density", label: "Density" },
-      ], (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-        draft.mode = nextValue;
-      }));
-      addShellSelect("Preset", displayConfig.preset, [
-        { value: "review_first", label: "Review first" },
-        { value: "balanced", label: "Balanced" },
-        { value: "pattern_first", label: "Pattern first" },
-        { value: "extreme_density", label: "Extreme density" },
-      ], (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-        draft.preset = nextValue;
-      }));
-    } else if (tabId === "aggregation") {
-      const algorithmOptions = family.id === "mineral_resources"
-        ? [
-          { value: "hex", label: "Hex grid" },
-          { value: "square", label: "Square grid" },
-          { value: "density_surface", label: "Density surface" },
-        ]
-        : family.id === "industrial_zones"
-          ? [
-            { value: "square", label: "Square grid" },
-            { value: "density_surface", label: "Density surface" },
-          ]
-          : [
-            { value: "cluster", label: "Cluster" },
-            { value: "square", label: "Grid" },
-            { value: "density_surface", label: "Density surface" },
-          ];
-      addShellSelect("Algorithm", displayConfig.aggregation.algorithm, algorithmOptions, (nextValue) => {
-        updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-          draft.aggregation.algorithm = nextValue;
-        });
-      });
-      addShellRange(
-        "Cell size",
-        Number(displayConfig.aggregation.thresholds?.cellSizePx || config?.aggregationCellSizePx || 44),
-        24,
-        96,
-        2,
-        "px",
-        (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-          draft.aggregation.thresholds.cellSizePx = nextValue;
-        })
-      );
-    } else if (tabId === "labels") {
-      addShellSelect("Geographic level", mapTransportWorkbenchMaxLevelToLabelLevel(displayConfig.labels.maxLevel), [
-        { value: "region", label: "Level 1 region" },
-        { value: "anchor", label: "Level 2 anchor" },
-        { value: "category", label: "Level 3 category" },
-      ], (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-        draft.labels.maxLevel = mapTransportWorkbenchLabelLevelToMaxLevel(nextValue);
-      }));
-      addShellRange(
-        "Label budget",
-        Number(displayConfig.labels.budget || config?.labelBudget || 8),
-        3,
-        18,
-        1,
-        "",
-        (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-          draft.labels.budget = nextValue;
-        })
-      );
-      addShellToggle("Allow label aggregation", !!displayConfig.labels.allowAggregation, (nextValue) => {
-        updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-          draft.labels.allowAggregation = nextValue;
-        });
-      });
-    } else if (tabId === "coverage") {
-      if (family.id === "port") {
-        addShellSelect("Coverage tier", displayConfig.coverage || "core", [
-          { value: "core", label: "Core" },
-          { value: "expanded", label: "Expanded" },
-          { value: "full_official", label: "Full official" },
-        ], (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-          draft.coverage = nextValue;
-        }));
-      }
-    }
-    const note = document.createElement("p");
-    note.className = "transport-workbench-shell-note";
-    note.textContent = tabId === "data"
-      ? t("Manifest and audit stay read-only here so control tuning and source truth do not get mixed.", "ui")
-      : t("Use this panel to adjust the current family without changing the lens column context.", "ui");
-    card.append(grid, note);
-    return card;
-  };
-
-  const getTransportWorkbenchSectionsForTab = (familyId, tabId) => {
-    const sectionMap = TRANSPORT_WORKBENCH_TAB_SECTION_MAP[familyId] || {};
-    const allowedSectionKeys = new Set(sectionMap[tabId] || []);
-    return (TRANSPORT_WORKBENCH_CONTROL_SCHEMAS[familyId] || []).filter((section) => allowedSectionKeys.has(section.key));
-  };
-
-  const renderTransportWorkbenchTabSections = (family, config, compareHeld, tabId, mountNode) => {
-    if (!(mountNode instanceof HTMLElement)) return;
-    const displayConfig = getTransportWorkbenchDisplayConfig(family.id);
-    const appendShellRange = (labelText, value, min, max, step, unit, onChange, mountTarget) => {
-      const control = document.createElement("div");
-      control.className = "transport-workbench-shell-control";
-      const label = document.createElement("div");
-      label.className = "transport-workbench-shell-label";
-      label.textContent = t(labelText, "ui");
-      const row = document.createElement("div");
-      row.className = "transport-workbench-range-row";
-      const input = document.createElement("input");
-      input.type = "range";
-      input.className = "transport-workbench-range";
-      input.min = String(min);
-      input.max = String(max);
-      input.step = String(step);
-      input.value = String(value);
-      const valueText = document.createElement("span");
-      valueText.className = "transport-workbench-range-value";
-      const formatValue = (nextValue) => `${nextValue}${unit || ""}`;
-      valueText.textContent = formatValue(value);
-      input.addEventListener("input", () => {
-        const nextValue = Number(input.value);
-        valueText.textContent = formatValue(nextValue);
-        onChange(nextValue);
-      });
-      row.append(input, valueText);
-      control.append(label, row);
-      mountTarget.appendChild(control);
-    };
-    mountNode.replaceChildren();
-    const shellCard = createTransportWorkbenchShellCard(family, tabId, config);
-    if (shellCard) {
-      mountNode.appendChild(shellCard);
-    }
-    const skipDefaultSections = TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)
-      && (tabId === "aggregation" || tabId === "labels");
-    if (!skipDefaultSections) {
-      getTransportWorkbenchSectionsForTab(family.id, tabId).forEach((section) => {
-        const node = createTransportWorkbenchSectionNode(family, section, config, compareHeld);
-        if (node) {
-          mountNode.appendChild(node);
-        }
-      });
-    }
-    if (tabId === "aggregation" || tabId === "labels") {
-      const advanced = document.createElement("details");
-      advanced.className = "transport-workbench-advanced";
-      const summary = document.createElement("summary");
-      summary.textContent = t("Advanced", "ui");
-      advanced.appendChild(summary);
-      const body = document.createElement("div");
-      body.className = "transport-workbench-section-body transport-workbench-section-body-advanced";
-      const copy = document.createElement("p");
-      copy.className = "transport-workbench-section-description";
-      copy.textContent = tabId === "aggregation"
-        ? pickUiCopy(
-          "这里放当前聚合精调项，例如 cluster radius、cell size 和密度触发阈值。默认折叠，便于先完成主设置，再做细调。",
-          "This section contains active aggregation fine-tuning controls such as cluster radius, cell size, and density thresholds. It stays collapsed by default so the main setup remains easy to scan."
-        )
-        : pickUiCopy(
-          "这里放当前标签精调项，例如 label separation 和聚合阈值。默认折叠，便于先完成主设置，再做细调。",
-          "This section contains active label fine-tuning controls such as label separation and aggregation thresholds. It stays collapsed by default so the main setup remains easy to scan."
-        );
-      if (tabId === "aggregation") {
-        appendShellRange(
-          "Cluster radius",
-          Number(displayConfig.aggregation.thresholds?.clusterRadiusPx || config?.aggregationClusterRadiusPx || 48),
-          24,
-          120,
-          2,
-          "px",
-          (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-            draft.aggregation.thresholds.clusterRadiusPx = nextValue;
-          }),
-          body
-        );
-      } else {
-        appendShellRange(
-          "Label separation",
-          Number(displayConfig.labels.separationStrength || config?.labelSeparation || 1),
-          0.7,
-          1.8,
-          0.05,
-          "",
-          (nextValue) => updateTransportWorkbenchDisplayConfig(family.id, (draft) => {
-            draft.labels.separationStrength = nextValue;
-          }),
-          body
-        );
-      }
-      body.appendChild(copy);
-      advanced.appendChild(body);
-      mountNode.appendChild(advanced);
-    }
-    if (mountNode.childElementCount === 0) {
-      const empty = document.createElement("div");
-      empty.className = "transport-workbench-empty-card";
-      const title = document.createElement("div");
-      title.className = "transport-workbench-empty-title";
-      title.textContent = tabId === "data" ? t("No audit payload yet", "ui") : t("No controls in this tab", "ui");
-      const body = document.createElement("p");
-      body.className = "transport-workbench-empty-text";
-      body.textContent = tabId === "data"
-        ? t("This family has not exposed extra manifest or audit cards in the current shell.", "ui")
-        : family.id === "layers"
-          ? pickUiCopy(
-            "Layers 的主要操作在中间排序板完成。Inspect 用来确认当前顺序，其余页签保留统一结构。",
-            "Layers is operated from the center reorder board. Inspect confirms the active order, and the remaining tabs keep the shared workbench structure."
-          )
-          : pickUiCopy(
-            "这个 family 当前没有单独的页签控件。请在有内容的页签中调整真实规则，Inspect 会继续显示当前状态。",
-            "This family does not expose separate controls in this tab yet. Use the populated tabs for active tuning, and use Inspect to confirm the current runtimeState."
-          );
-      empty.append(title, body);
-      mountNode.appendChild(empty);
-    }
-  };
+  const renderTransportWorkbenchLayerOrderPanel = () => transportWorkbenchLayerOrderOwner.render();
 
   const renderTransportWorkbenchInspectorTabs = (family, config, compareHeld) => {
-    ensureTransportWorkbenchUiState();
-    const activeTab = normalizeTransportWorkbenchInspectorTab(runtimeState.transportWorkbenchUi.activeInspectorTab);
-    runtimeState.transportWorkbenchUi.activeInspectorTab = activeTab;
-    transportWorkbenchInspectorTabButtons.forEach((button) => {
-      const isActive = String(button.dataset.transportInspectorTab || "") === activeTab;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    transportWorkbenchRightDeckOwner.renderTabs({
+      family,
+      config,
+      compareHeld,
+      activeTab: runtimeState.transportWorkbenchUi.activeInspectorTab,
     });
-    Object.entries(transportWorkbenchInspectorPanels).forEach(([tabId, panel]) => {
-      if (!(panel instanceof HTMLElement)) return;
-      panel.classList.toggle("hidden", tabId !== activeTab);
-      panel.classList.toggle("is-active", tabId === activeTab);
-    });
-    renderTransportWorkbenchTabSections(family, config, compareHeld, "display", transportWorkbenchDisplaySections);
-    renderTransportWorkbenchTabSections(family, config, compareHeld, "aggregation", transportWorkbenchAggregationSections);
-    renderTransportWorkbenchTabSections(family, config, compareHeld, "labels", transportWorkbenchLabelSections);
-    renderTransportWorkbenchTabSections(family, config, compareHeld, "coverage", transportWorkbenchCoverageSections);
-    renderTransportWorkbenchTabSections(family, config, compareHeld, "data", transportWorkbenchDataSections);
   };
 
   const renderTransportWorkbenchLensSections = (family, config, compareHeld) => {
-    if (!transportWorkbenchLensSections) return;
-    closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    transportWorkbenchLensSections.replaceChildren();
-    if (family.id === "layers") {
-      const card = document.createElement("div");
-      card.className = "transport-workbench-empty-card";
-      const title = document.createElement("div");
-      title.className = "transport-workbench-empty-title";
-      title.textContent = t("Future draw stack", "ui");
-      const body = document.createElement("p");
-      body.className = "transport-workbench-empty-text";
-      body.textContent = pickUiCopy(
-        "使用中间排序板调整 8 个 transport families 的绘制顺序。左侧负责上下文，右侧负责状态查看。",
-        "Use the center board to reorder the 8 transport families. The left column provides context, and the right column mirrors the current runtimeState."
-      );
-      card.append(title, body);
-      transportWorkbenchLensSections.appendChild(card);
-      return;
-    }
     const previewSnapshot = getTransportWorkbenchFamilyPreviewSnapshot(family.id, config);
     const dataContract = getTransportWorkbenchDataContract(family.id);
-    const overview = document.createElement("div");
-    overview.className = "transport-workbench-note-card transport-workbench-note-card-emphasis";
-    const overviewTitle = document.createElement("div");
-    overviewTitle.className = "transport-workbench-note-title";
-    overviewTitle.textContent = t("Review focus", "ui");
-    const overviewBody = document.createElement("p");
-    overviewBody.className = "transport-workbench-note-text";
-    overviewBody.textContent = `${family.lensBody} ${family.lensNext}`;
-    overview.append(overviewTitle, overviewBody);
-    transportWorkbenchLensSections.appendChild(overview);
-    const summaryCard = document.createElement("div");
-    summaryCard.className = "transport-workbench-note-card transport-workbench-note-card-soft transport-workbench-lens-summary";
-    const summaryTitle = document.createElement("div");
-    summaryTitle.className = "transport-workbench-note-title";
-    summaryTitle.textContent = t("Current context", "ui");
-    summaryCard.appendChild(summaryTitle);
-    summaryCard.appendChild(createTransportWorkbenchInspectorRow("Preview", family.previewTitle || family.label));
-    summaryCard.appendChild(createTransportWorkbenchInspectorRow("Data packs", Array.isArray(dataContract?.packs) && dataContract.packs.length ? dataContract.packs.join(", ") : "Deferred"));
-    summaryCard.appendChild(createTransportWorkbenchInspectorRow("Geometry", dataContract?.geometryKind || "reserved"));
-    summaryCard.appendChild(createTransportWorkbenchInspectorRow("Pack status", previewSnapshot?.status || "pending"));
-    summaryCard.appendChild(createTransportWorkbenchInspectorRow("Right deck", t("Display / Aggregation / Labels / Coverage / Data", "ui")));
-    summaryCard.appendChild(createTransportWorkbenchInspectorRow("Compare", compareHeld ? "Holding baseline" : "Working state"));
-    transportWorkbenchLensSections.appendChild(summaryCard);
+    transportWorkbenchLensOwner.render({
+      family,
+      previewSnapshot,
+      dataContract,
+      compareHeld,
+      rightDeckLabel: t("Display / Aggregation / Labels / Coverage / Data", "ui"),
+    });
   };
 
   const renderTransportWorkbenchInspector = (family, config, compareHeld) => {
     if (transportWorkbenchInspectorDetails) {
-      transportWorkbenchInspectorDetails.replaceChildren();
       const inspectorEmptyCard = transportWorkbenchInspectorEmptyTitle?.parentElement || null;
       const dataContract = getTransportWorkbenchDataContract(family.id);
       const previewSnapshot = getTransportWorkbenchFamilyPreviewSnapshot(family.id, config);
-      const inspectorNodes = [];
-      let rows;
-      if (family.id === "road" && previewSnapshot?.status === "ready") {
-        const selected = previewSnapshot.selected;
-        rows = [
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_road_v1"],
-          ["Recipe version", previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["N06 member", previewSnapshot.manifest?.n06_source_member || previewSnapshot.audit?.n06_source_member || "unknown"],
-          ["N06 encoding", previewSnapshot.manifest?.n06_encoding || previewSnapshot.audit?.n06_encoding || "unknown"],
-          ["Last build", String(previewSnapshot.manifest?.generated_at || "unknown").replace("T", " ").replace("Z", " UTC")],
-          ["Loaded roads", String(previewSnapshot.stats?.totalRoads || 0)],
-          ["Visible labels", String(previewSnapshot.stats?.visibleLabels || 0)],
-          ["Filtered roads", String(previewSnapshot.stats?.filteredRoads || 0)],
-          ["N06 matched", String(previewSnapshot.audit?.n06_matched_count || 0)],
-          ["Name conflicts", String(previewSnapshot.audit?.name_conflict_count || 0)],
-          ["Compare mode", compareHeld ? "Holding baseline" : "Working state"],
-        ];
-        if (selected?.type === "road") {
-          rows.push(
-            ["Selected road", selected.name || "Unnamed segment"],
-            ["Ref", selected.ref || "--"],
-            ["Official name", selected.officialName || "--"],
-            ["Official ref", selected.officialRef || "--"],
-            ["Road class", selected.roadClass || "--"],
-            ["Source", selected.source || "--"],
-            ["Flags", Array.isArray(selected.sourceFlags) && selected.sourceFlags.length ? selected.sourceFlags.join(", ") : "--"],
-            ["Visibility", selected.visible ? "Visible" : formatTransportWorkbenchRoadHiddenReason(selected.hiddenReason)],
-          );
-          if (selected.n06MatchDistanceMeters !== null && selected.n06MatchDistanceMeters !== undefined) {
-            rows.push(["N06 match distance", `${Math.round(selected.n06MatchDistanceMeters)}m`]);
-          }
-        } else if (selected?.type === "label") {
-          rows.push(
-            ["Selected label", selected.ref || "--"],
-            ["Road class", selected.roadClass || "--"],
-            ["Source", selected.source || "--"],
-            ["Priority", String(selected.priority ?? "--")],
-            ["Visibility", selected.visible ? "Visible" : formatTransportWorkbenchRoadHiddenReason(selected.hiddenReason)],
-          );
-        }
-      } else if (family.id === "road" && previewSnapshot?.status === "error") {
-        rows = [
-          ["Pack status", "Road pack failed to load"],
-          ["Error", previewSnapshot.error || "Unknown error"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "road") {
-        rows = [
-          ["Pack status", "Loading Japan road pack"],
-          ["Adapter", config.motorwayIdentitySource === "osm_only" ? "OSM only" : "OSM + N06 hardening"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "rail" && previewSnapshot?.status === "ready") {
-        const selected = previewSnapshot.selected;
-        rows = [
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_rail_v1"],
-          ["Recipe version", previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["Last build", String(previewSnapshot.manifest?.generated_at || "unknown").replace("T", " ").replace("Z", " UTC")],
-          ["Loaded lines", String(previewSnapshot.stats?.totalLines || 0)],
-          ["Visible lines", String(previewSnapshot.stats?.visibleLines || 0)],
-          ["Loaded stations", String(previewSnapshot.stats?.totalStations || 0)],
-          ["Visible stations", String(previewSnapshot.stats?.visibleStations || 0)],
-          ["Adapter", config.allowOsmActiveGapFill ? "Official active + OSM gap fill" : "Official active locked"],
-          ["Statuses", formatTransportWorkbenchOptionLabels(config.status, RAIL_STATUS_OPTIONS)],
-          ["Classes", formatTransportWorkbenchOptionLabels(config.class, RAIL_CLASS_OPTIONS)],
-        ];
-        if (selected?.type === "line") {
-          rows.push(
-            ["Selected line", selected.name || "Unnamed line"],
-            ["Operator", selected.operator || "--"],
-            ["Rail type code", selected.railTypeCode || "--"],
-            ["Operator type code", selected.operatorTypeCode || "--"],
-            ["Status", selected.status || "--"],
-            ["Class", selected.lineClass || "--"],
-            ["Source", selected.source || "--"],
-            ["Flags", Array.isArray(selected.sourceFlags) && selected.sourceFlags.length ? selected.sourceFlags.join(", ") : "--"],
-            ["Visibility", selected.visible ? "Visible" : formatJapanRailVisibilityReason(selected.hiddenReason)],
-          );
-        } else if (selected?.type === "station") {
-          rows.push(
-            ["Selected station", selected.name || "Unnamed station"],
-            ["City key", selected.cityKey || "--"],
-            ["Station code", selected.stationCode || "--"],
-            ["Group code", selected.groupCode || "--"],
-            ["Importance", selected.importance || "--"],
-            ["Source", selected.source || "--"],
-            ["Visibility", selected.visible ? "Visible" : "Hidden by threshold"],
-          );
-        }
-      } else if (family.id === "rail" && previewSnapshot?.status === "error") {
-        rows = [
-          ["Pack status", "Rail pack failed to load"],
-          ["Error", previewSnapshot.error || "Unknown error"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "rail") {
-        rows = [
-          ["Adapter", config.allowOsmActiveGapFill ? "Official active + OSM gap fill" : "Official active locked"],
-          ["Statuses", formatTransportWorkbenchOptionLabels(config.status, RAIL_STATUS_OPTIONS)],
-          ["Classes", formatTransportWorkbenchOptionLabels(config.class, RAIL_CLASS_OPTIONS)],
-          ["Stations", config.showMajorStations ? `${config.importanceThreshold} threshold` : "Hidden"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for the Japan rail lines and major-station packs") : "Loading Japan rail pack"],
-        ];
-      } else if (family.id === "airport" && previewSnapshot?.status === "ready") {
-        const selected = previewSnapshot.selected;
-        const selectedProps = selected?.properties || {};
-        rows = [
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_airport_v1"],
-          ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
-          ["Loaded airports", String(previewSnapshot.stats?.totalFeatures || 0)],
-          ["Visible airports", String(previewSnapshot.stats?.visibleFeatures || 0)],
-          ["Visible labels", String(previewSnapshot.stats?.visibleLabels || 0)],
-          ["Airport types", formatTransportWorkbenchOptionLabels(config.airportTypes, AIRPORT_TYPE_OPTIONS)],
-          ["Statuses", formatTransportWorkbenchOptionLabels(config.statuses, AIRPORT_STATUS_OPTIONS)],
-          ["Pack mode", previewSnapshot.packMode || "preview"],
-        ];
-        if (selected) {
-          rows.push(
-            ["Selected airport", selected.name || "Unnamed airport"],
-            ["Airport type", selectedProps.airport_type_label || selectedProps.airport_type || "—"],
-            ["Status", selectedProps.status || "—"],
-            ["Owner", selectedProps.owner || "—"],
-            ["Manager", selectedProps.manager || "—"],
-            ["Scheduled service", selectedProps.scheduled_service_code || "—"],
-            ["Runway max", selectedProps.runway_length_m_max ? `${selectedProps.runway_length_m_max}m` : "—"],
-            ["Passengers / day", selectedProps.passengers_per_day_latest ?? "—"],
-            ["Survey year", selectedProps.survey_year_latest ?? "—"],
-            ["IATA", selectedProps.iata || "—"],
-            ["ICAO", selectedProps.icao || "—"],
-          );
-        }
-      } else if (family.id === "airport" && previewSnapshot?.status === "error") {
-        rows = [
-          ["Pack status", "Airport pack failed to load"],
-          ["Error", previewSnapshot.error || "Unknown error"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "airport") {
-        rows = [
-          ["Airport types", formatTransportWorkbenchOptionLabels(config.airportTypes, AIRPORT_TYPE_OPTIONS)],
-          ["Statuses", formatTransportWorkbenchOptionLabels(config.statuses, AIRPORT_STATUS_OPTIONS)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for airport Japan pack") : "Loading Japan airport pack"],
-        ];
-      } else if (family.id === "port" && previewSnapshot?.status === "ready") {
-        const selected = previewSnapshot.selected;
-        const selectedProps = selected?.properties || {};
-        rows = [
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_port_v1"],
-          ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["Release policy", previewSnapshot.manifest?.release_policy || "unknown"],
-          ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
-          ["Loaded ports", String(previewSnapshot.stats?.totalFeatures || 0)],
-          ["Visible ports", String(previewSnapshot.stats?.visibleFeatures || 0)],
-          ["Visible labels", String(previewSnapshot.stats?.visibleLabels || 0)],
-          ["Coverage tier", previewSnapshot.activeVariant || config.coverageTier || getTransportWorkbenchManifestDefaultVariantId(previewSnapshot.manifest, "port")],
-          ["Legal designations", formatTransportWorkbenchOptionLabels(config.legalDesignations, PORT_DESIGNATION_OPTIONS)],
-          ["Manager types", formatTransportWorkbenchOptionLabels(config.managerTypes, PORT_MANAGER_TYPE_OPTIONS)],
-          ["Pack mode", previewSnapshot.packMode || "preview"],
-        ];
-        if (selected) {
-          rows.push(
-            ["Selected port", selected.name || "Unnamed port"],
-            ["Designation", selectedProps.legal_designation_label || selectedProps.legal_designation || "—"],
-            ["Manager", selectedProps.manager || "—"],
-            ["Manager type", selectedProps.manager_type || selectedProps.manager_type_code || "—"],
-            ["Outer facility", selectedProps.outer_facility_length_m ? `${selectedProps.outer_facility_length_m}m` : "—"],
-            ["Mooring facility", selectedProps.mooring_facility_length_m ? `${selectedProps.mooring_facility_length_m}m` : "—"],
-            ["Ferry service", selectedProps.ferry_service === true ? "Yes" : selectedProps.ferry_service === false ? "No" : "—"],
-            ["Agencies", selectedProps.agency_labels || "—"],
-          );
-        }
-      } else if (family.id === "port" && previewSnapshot?.status === "error") {
-        rows = [
-          ["Pack status", "Port pack failed to load"],
-          ["Error", previewSnapshot.error || "Unknown error"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "port") {
-        rows = [
-          ["Coverage tier", config.coverageTier || "core"],
-          ["Legal designations", formatTransportWorkbenchOptionLabels(config.legalDesignations, PORT_DESIGNATION_OPTIONS)],
-          ["Manager types", formatTransportWorkbenchOptionLabels(config.managerTypes, PORT_MANAGER_TYPE_OPTIONS)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for port Japan pack") : "Loading Japan port pack"],
-        ];
-      } else if (family.id === "mineral_resources" && previewSnapshot?.status === "ready") {
-        const selected = previewSnapshot.selected;
-        const selectedProps = selected?.properties || {};
-        rows = [
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_mineral_resources_v1"],
-          ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["Source encoding", previewSnapshot.manifest?.source_encoding || previewSnapshot.audit?.source_encoding || "unknown"],
-          ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
-          ["Loaded sites", String(previewSnapshot.stats?.totalFeatures || 0)],
-          ["Visible sites", String(previewSnapshot.stats?.visibleFeatures || 0)],
-          ["Visible labels", String(previewSnapshot.stats?.visibleLabels || 0)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Pack mode", previewSnapshot.packMode || "preview"],
-        ];
-        if (selected) {
-          rows.push(
-            ["Selected site", selected.name || "Unnamed mineral site"],
-            ["Resource type", selectedProps.resource_type || "--"],
-            ["Resource code", selectedProps.resource_type_code || "--"],
-            ["Resource class", selectedProps.resource_class || "--"],
-            ["Work status", selectedProps.work_status || "--"],
-            ["Map name", selectedProps.map_name || "--"],
-            ["Map year", selectedProps.map_pub_year || "--"],
-            ["Publisher", selectedProps.map_publisher || "--"],
-            ["Source", selectedProps.source || "--"],
-          );
-        }
-      } else if (family.id === "mineral_resources" && previewSnapshot?.status === "error") {
-        rows = [
-          ["Pack status", "Mineral resource pack failed to load"],
-          ["Error", previewSnapshot.error || "Unknown error"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "mineral_resources") {
-        rows = [
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for the Japan mineral resource pack manifest") : "Loading Japan mineral resource pack"],
-        ];
-      } else if (family.id === "energy_facilities" && previewSnapshot?.status === "ready") {
-        const selected = previewSnapshot.selected;
-        const selectedProps = selected?.properties || {};
-        const subtypeOptions = buildEnergyFacilitySubtypeControlOptions(previewSnapshot);
-        const selectedSubtypeValues = Array.isArray(config.facilitySubtypes) && config.facilitySubtypes.length > 0
-          ? config.facilitySubtypes
-          : subtypeOptions.map((option) => option.value);
-        const referenceOnlySubtypes = (Array.isArray(previewSnapshot.subtypeCatalog) ? previewSnapshot.subtypeCatalog : [])
-          .filter((entry) => entry?.availability === "reference_only")
-          .map((entry) => String(entry.subtype_id || "").trim())
-          .filter(Boolean);
-        rows = [
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_energy_facilities_v1"],
-          ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["Distribution tier", previewSnapshot.manifest?.distribution_tier || "unknown"],
-          ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
-          ["Loaded facilities", String(previewSnapshot.stats?.totalFeatures || 0)],
-          ["Visible facilities", String(previewSnapshot.stats?.visibleFeatures || 0)],
-          ["Visible labels", String(previewSnapshot.stats?.visibleLabels || 0)],
-          ["Local subtypes", formatTransportWorkbenchOptionLabels(selectedSubtypeValues, subtypeOptions)],
-          ["Statuses", formatTransportWorkbenchOptionLabels(config.statuses, ENERGY_STATUS_OPTIONS)],
-          ["Reference-only subtypes", referenceOnlySubtypes.length ? referenceOnlySubtypes.join(", ") : "none"],
-          ["Pack mode", previewSnapshot.packMode || "preview"],
-        ];
-        if (selected) {
-          rows.push(
-            ["Selected facility", selected.name || "Unnamed energy facility"],
-            ["Subtype", selectedProps.facility_label || selectedProps.facility_subtype || "--"],
-            ["Operator", selectedProps.operator || "--"],
-            ["Status", selectedProps.status || "--"],
-            ["Start date", selectedProps.start_date || "--"],
-            ["Address", selectedProps.address || "--"],
-            ["Source", selectedProps.source || "--"],
-          );
-        }
-      } else if (family.id === "energy_facilities" && previewSnapshot?.status === "error") {
-        rows = [
-          ["Pack status", "Energy facility pack failed to load"],
-          ["Error", previewSnapshot.error || "Unknown error"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (family.id === "energy_facilities") {
-        rows = [
-          ["Statuses", formatTransportWorkbenchOptionLabels(config.statuses, ENERGY_STATUS_OPTIONS)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Data path", dataContract?.governance || "Deferred pack governance pending"],
-          ["Pack status", previewSnapshot?.status === "pending" ? (dataContract?.pendingStatus || "Waiting for the Japan energy facility pack manifest") : "Loading Japan energy facility pack"],
-        ];
-      } else if (
-        family.id === "industrial_zones"
-        && previewSnapshot?.status === "ready"
-      ) {
-        const selected = previewSnapshot.selected;
-        const selectedProps = selected?.properties || {};
-        const activeVariant = previewSnapshot.activeVariant
-          || config.variant
-          || getTransportWorkbenchManifestDefaultVariantId(previewSnapshot.manifest, "industrial_zones");
-        const variantMeta = getTransportWorkbenchManifestVariantMeta(previewSnapshot.manifest, activeVariant, "industrial_zones");
-        const totalFeatures = Number(previewSnapshot.stats?.totalFeatures || 0);
-        const visibleFeatures = Number(previewSnapshot.stats?.visibleFeatures || 0);
-        const filteredFeatures = Number(previewSnapshot.stats?.filteredFeatures || 0);
-        const visibleLabels = Number(previewSnapshot.stats?.visibleLabels || 0);
-        if (totalFeatures > 0 && visibleFeatures === 0) {
-          inspectorNodes.push(
-            createTransportWorkbenchInspectorStateCard(
-              "No features match the current filters",
-              "Switch the source track or relax the active land filters to bring industrial land back into view.",
-              "soft",
-            ),
-          );
-        }
-        rows = [
-          ["Source track", activeVariant],
-          ["Visible polygons", String(visibleFeatures)],
-          ["Filtered out", String(filteredFeatures)],
-          ["Visible labels", String(visibleLabels)],
-        ];
-        if (selected) {
-          rows.push(
-            ["Selected polygon", selected.name || "Unnamed industrial polygon"],
-            ["Land type", selectedProps.site_class || "--"],
-          );
-          if (activeVariant === "internal") {
-            rows.push(
-              ["Municipality", selectedProps.municipality_name || "--"],
-              ["Location context", selectedProps.coastal_inland_label || "--"],
-              ["Operator", selectedProps.operator || "--"],
-              ["Completion year", selectedProps.completion_year ?? "--"],
-              ["Industry category", selectedProps.industry_category || "--"],
-            );
-          } else {
-            rows.push(
-              ["OSM id", selectedProps.osm_id || "--"],
-              ["Landuse", selectedProps.landuse || "--"],
-              ["Man made", selectedProps.man_made || "--"],
-            );
-          }
-        }
-        rows.push(
-          ["Loaded polygons", String(totalFeatures)],
-          ["Pack mode", previewSnapshot.packMode || "preview"],
-          ["Variant tier", variantMeta?.distribution_tier || "unknown"],
-          ["License tier", variantMeta?.license_tier || "unknown"],
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_industrial_zones_v2"],
-          ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
-        );
-        if (selected) {
-          rows.push(
-            ["Source dataset", selectedProps.source_dataset || "--"],
-            ["Source member", selectedProps.source_member || "--"],
-          );
-        }
-      } else if (family.id === "industrial_zones" && previewSnapshot?.status === "error") {
-        inspectorNodes.push(
-          createTransportWorkbenchInspectorStateCard(
-            "Industrial land preview failed",
-            previewSnapshot.error || "The industrial polygon pack could not be loaded.",
-            "emphasis",
-          ),
-        );
-        rows = [["Data path", dataContract?.governance || "Deferred pack governance pending"]];
-      } else if (family.id === "industrial_zones") {
-        inspectorNodes.push(
-          createTransportWorkbenchInspectorStateCard(
-            "Preparing industrial land preview",
-            "The current source track is still loading into the Japan carrier.",
-            "soft",
-          ),
-        );
-        rows = [
-          ["Source track", config.variant || (previewSnapshot?.manifest ? getTransportWorkbenchManifestDefaultVariantId(previewSnapshot.manifest, "industrial_zones") : "internal")],
-          ["Land type", formatTransportWorkbenchOptionLabels(config.siteClasses, INDUSTRIAL_SITE_CLASS_OPTIONS)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Data check", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (
-        family.id === "logistics_hubs"
-        && previewSnapshot?.status === "ready"
-      ) {
-        const selected = previewSnapshot.selected;
-        const selectedProps = selected?.properties || {};
-        const totalFeatures = Number(previewSnapshot.stats?.totalFeatures || 0);
-        const visibleFeatures = Number(previewSnapshot.stats?.visibleFeatures || 0);
-        const filteredFeatures = Number(previewSnapshot.stats?.filteredFeatures || 0);
-        if (totalFeatures > 0 && visibleFeatures === 0) {
-          inspectorNodes.push(
-            createTransportWorkbenchInspectorStateCard(
-              "No features match the current filters",
-              "Relax the active hub category or operator type filters to bring logistics hubs back into view.",
-              "soft",
-            ),
-          );
-        }
-        rows = [
-          ["Hub category", formatTransportWorkbenchOptionLabels(config.hubTypes, LOGISTICS_HUB_TYPE_OPTIONS)],
-          ["Visible hubs", String(visibleFeatures)],
-          ["Filtered out", String(filteredFeatures)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-        ];
-        if (selected) {
-          rows.push(
-            ["Selected hub", selected.name || "Unnamed logistics hub"],
-            ["Hub category", selectedProps.hub_type || "--"],
-            ["Classification", selectedProps.classification_label || "--"],
-            ["Operator type", selectedProps.operator_classification || "--"],
-            ["Address", selectedProps.address || "--"],
-            ["Maintenance year", selectedProps.maintenance_year ?? "--"],
-            ["Size value", selectedProps.size_value ?? "--"],
-            ["Remarks", selectedProps.remarks || "--"],
-          );
-        }
-        rows.push(
-          ["Loaded hubs", String(totalFeatures)],
-          ["Pack mode", previewSnapshot.packMode || "preview"],
-          ["Distribution tier", previewSnapshot.manifest?.distribution_tier || "unknown"],
-          ["Source policy", previewSnapshot.manifest?.source_policy || "unknown"],
-          ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_logistics_hubs_v1"],
-          ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
-          ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
-        );
-        if (selected) {
-          rows.push(["Source member", selectedProps.source_member || "--"]);
-        }
-      } else if (family.id === "logistics_hubs" && previewSnapshot?.status === "error") {
-        inspectorNodes.push(
-          createTransportWorkbenchInspectorStateCard(
-            "Logistics hub preview failed",
-            previewSnapshot.error || "The logistics hub pack could not be loaded.",
-            "emphasis",
-          ),
-        );
-        rows = [["Data path", dataContract?.governance || "Deferred pack governance pending"]];
-      } else if (family.id === "logistics_hubs") {
-        inspectorNodes.push(
-          createTransportWorkbenchInspectorStateCard(
-            "Preparing logistics hub preview",
-            "The current hub scope is still loading into the Japan carrier.",
-            "soft",
-          ),
-        );
-        rows = [
-          ["Hub category", formatTransportWorkbenchOptionLabels(config.hubTypes, LOGISTICS_HUB_TYPE_OPTIONS)],
-          ["Operator type", formatTransportWorkbenchOptionLabels(config.operatorClassifications, LOGISTICS_OPERATOR_CLASSIFICATION_OPTIONS)],
-          ["Labels", config.showLabels ? "Enabled" : "Hidden"],
-          ["Data check", dataContract?.governance || "Deferred pack governance pending"],
-        ];
-      } else if (isTransportWorkbenchManifestOnlyRuntimeFamily(family.id)) {
-        rows = buildManifestOnlyInspectorRows(family, previewSnapshot, dataContract);
-      } else if (family.id === "layers") {
-        rows = runtimeState.transportWorkbenchUi.layerOrder.map((layerId, index) => {
-          const entry = getTransportWorkbenchLayerFamilyMeta(layerId);
-          if (isTransportWorkbenchLivePreviewFamily(layerId)) {
-            return [`${index + 1}`, `${entry.label} (live)`];
-          }
-          if (isTransportWorkbenchManifestOnlyRuntimeFamily(layerId)) {
-            return [`${index + 1}`, `${entry.label} (metadata)`];
-          }
-          return [`${index + 1}`, `${entry.label} (reserved)`];
-        });
-      } else {
-        rows = [
-          ["Adapter", "Reserved shell only"],
-          ["Compare mode", "No baseline yet"],
-          ["Pack status", `Waiting for ${family.label} Japan adapter`],
-        ];
-      }
-      inspectorNodes.forEach((node) => {
-        transportWorkbenchInspectorDetails.appendChild(node);
+      transportWorkbenchInspectorOwner.renderInspectorDetails({
+        detailsNode: transportWorkbenchInspectorDetails,
+        emptyCard: inspectorEmptyCard,
+        family,
+        config,
+        compareHeld,
+        previewSnapshot,
+        dataContract,
       });
-      rows.forEach((entry, index) => {
-        if (Array.isArray(entry)) {
-          const row = createTransportWorkbenchInspectorRow(entry[0], entry[1]);
-          if (family.id === "industrial_zones" || family.id === "logistics_hubs") {
-            if (index < 4) row.classList.add("is-summary");
-            if (String(entry[0] || "").startsWith("Selected ")) row.classList.add("is-selected");
-            if (["Pack version", "Recipe version", "Last build", "License tier", "Variant tier", "Distribution tier", "Source policy", "Source member", "Source dataset", "Data path", "Data check", "Pack mode"].includes(String(entry[0] || ""))) {
-              row.classList.add("is-governance");
-            }
-          }
-          transportWorkbenchInspectorDetails.appendChild(row);
-          return;
-        }
-        transportWorkbenchInspectorDetails.appendChild(entry);
-      });
-      if (inspectorEmptyCard) {
-        inspectorEmptyCard.classList.toggle("hidden", transportWorkbenchInspectorDetails.childElementCount > 0);
-      }
     }
     renderTransportWorkbenchInspectorTabs(family, config, compareHeld);
   };
 
   const syncTransportWorkbenchPreviewControls = () => {
-    const carrierViewState = getTransportWorkbenchCarrierViewState();
-    const isAlternateTurn = carrierViewState.quarterTurns !== 0;
-    if (transportWorkbenchZoomOutBtn) transportWorkbenchZoomOutBtn.textContent = "-";
-    if (transportWorkbenchZoomInBtn) transportWorkbenchZoomInBtn.textContent = "+";
-    if (transportWorkbenchRotateBtn) transportWorkbenchRotateBtn.textContent = "90°";
-    transportWorkbenchRotateBtn?.classList.toggle("is-active", isAlternateTurn);
-    transportWorkbenchRotateBtn?.setAttribute("aria-pressed", isAlternateTurn ? "true" : "false");
-  };
-
-  const scheduleTransportWorkbenchFamilyPreviewWarmup = () => {
-    if (transportWorkbenchPreviewWarmupScheduled) return;
-    transportWorkbenchPreviewWarmupScheduled = true;
-    const runWarmup = () => {
-      const warmupPlans = listTransportWorkbenchWarmupPlans();
-      Promise.allSettled(
-        warmupPlans.map((plan) => warmTransportWorkbenchFamilyPreview(plan.familyId, { includeFull: !!plan.includeFull }))
-      ).then((results) => {
-        results.forEach((result, index) => {
-          if (result.status === "fulfilled") return;
-          const familyId = warmupPlans[index]?.familyId || "unknown";
-          console.warn(`[transport-workbench] Failed to warm ${familyId} preview pack.`, result.reason);
-        });
-      });
-    };
-    window.setTimeout(() => {
-      if (typeof window.requestIdleCallback === "function") {
-        window.requestIdleCallback(() => runWarmup(), { timeout: 2_000 });
-        return;
-      }
-      runWarmup();
-    }, 10_000);
+    transportWorkbenchShellOwner.syncPreviewControls();
   };
 
   const getTransportWorkbenchRenderContext = () => {
@@ -2414,176 +395,15 @@ export function createTransportWorkbenchController({
   };
 
   const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) => (
-    renderGeneration === transportWorkbenchRenderGeneration
-    && !!runtimeState.transportWorkbenchUi?.open
-    && normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi?.activeFamily) === familyId
+    transportWorkbenchPreviewLifecycleOwner.isRenderGenerationCurrent(renderGeneration, familyId)
   );
 
-  const refreshTransportWorkbenchPreview = (context, { allowCarrierPrep = true } = {}) => {
-    const renderGeneration = ++transportWorkbenchRenderGeneration;
-    if (!context.isOpen) {
-      clearAllTransportWorkbenchFamilyPreviews();
-      return Promise.resolve(null);
-    }
-    if (context.family.id === "layers") {
-      clearAllTransportWorkbenchFamilyPreviews();
-      renderTransportWorkbenchLayerOrderPanel();
-      return Promise.resolve(null);
-    }
-    if (!transportWorkbenchCarrierMount) {
-      return Promise.resolve(null);
-    }
-    const prepareCarrier = allowCarrierPrep
-      ? ensureTransportWorkbenchCarrier(transportWorkbenchCarrierMount)
-      : Promise.resolve();
-    return prepareCarrier
-      .then(() => {
-        if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          return null;
-        }
-        resizeTransportWorkbenchCarrier();
-        syncTransportWorkbenchPreviewControls();
-        // preview family 自己消费 resolved config；controller 只负责递送配置和同步 inspector。
-        if (isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
-          return renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {
-            isCurrent: () => isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id),
-          }).then(() => {
-            if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-              return null;
-            }
-            const viewState = getTransportWorkbenchCarrierViewState() || {};
-            transportWorkbenchPreviewLastViewKey = [
-              Number(viewState.scale || 1).toFixed(4),
-              Number(viewState.translateX || 0).toFixed(2),
-              Number(viewState.translateY || 0).toFixed(2),
-              String(viewState.quarterTurns || 0),
-            ].join(":");
-            renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-            return null;
-          });
-        }
-        clearAllTransportWorkbenchFamilyPreviews();
-        if (isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-        }
-        return null;
-      })
-      .catch((error) => {
-        if (!isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          return null;
-        }
-        console.error("[transport-workbench] Failed to prepare Japan carrier preview.", error);
-        if (!isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
-          clearAllTransportWorkbenchFamilyPreviews();
-        }
-        if (isTransportWorkbenchRenderGenerationCurrent(renderGeneration, context.family.id)) {
-          renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-        }
-        return null;
-      });
-  };
+  const refreshTransportWorkbenchPreview = (context, { allowCarrierPrep = true } = {}) => (
+    transportWorkbenchPreviewLifecycleOwner.refreshPreview(context, { allowCarrierPrep })
+  );
 
   const renderTransportWorkbenchShell = (context) => {
-    const { uiState, family, isOpen, compareHeld } = context;
-    document.body.classList.toggle("transport-workbench-open", isOpen);
-    transportWorkbenchOverlay?.classList.toggle("hidden", !isOpen);
-    transportWorkbenchOverlay?.setAttribute("aria-hidden", isOpen ? "false" : "true");
-    scenarioTransportWorkbenchBtn?.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    scenarioTransportWorkbenchBtn?.setAttribute("title", isOpen ? t("Close transport workbench", "ui") : t("Open transport workbench", "ui"));
-    transportWorkbenchTitle.textContent = t(family.title, "ui");
-    transportWorkbenchLensTitle.textContent = t(family.lensTitle, "ui");
-    transportWorkbenchFamilyStatus.textContent = t(family.label, "ui");
-    transportWorkbenchCountryStatus.textContent = context.activePackMeta?.country || uiState.sampleCountry;
-    if (transportWorkbenchPackSelect) {
-      const packOptions = listTargetMainMapPacks({ familyId: family.id });
-      transportWorkbenchPackSelect.replaceChildren(...packOptions.map((pack) => {
-        const option = document.createElement("option");
-        option.value = pack.packId;
-        option.textContent = pack.label;
-        return option;
-      }));
-      transportWorkbenchPackSelect.disabled = packOptions.length === 0;
-      transportWorkbenchPackSelect.value = context.activePackId || "";
-    }
-    transportWorkbenchPreviewMode.textContent = family.id === "layers"
-      ? t("Layer order", "ui")
-      : TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)
-        ? `${String(context.config?.displayMode || "inspect").replace(/_/g, " ")} · ${String(context.config?.displayPreset || "balanced").replace(/_/g, " ")}`
-        : uiState.previewMode === "bounded_zoom_pan"
-          ? t("Zoom / pan / quarter-turn", "ui")
-          : uiState.previewMode;
-    transportWorkbenchPreviewTitle.textContent = family.id === "layers"
-      ? t(family.previewTitle, "ui")
-      : (uiState.sampleCountry === "Japan" ? t("Japan preview", "ui") : `${uiState.sampleCountry} preview`);
-    const applyButtonState = getTransportWorkbenchApplyButtonState(family.id);
-    if (transportWorkbenchCompareBtn) {
-      transportWorkbenchCompareBtn.disabled = !family.supportsDetailedControls;
-      transportWorkbenchCompareBtn.setAttribute("aria-disabled", family.supportsDetailedControls ? "false" : "true");
-      transportWorkbenchCompareBtn.classList.toggle("is-held", compareHeld);
-      transportWorkbenchCompareBtn.textContent = family.supportsDetailedControls
-        ? t("Compare baseline", "ui")
-        : t("Baseline unavailable", "ui");
-    }
-    if (transportWorkbenchCompareStatus) {
-      transportWorkbenchCompareStatus.textContent = !family.supportsDetailedControls
-        ? (family.id === "layers" ? t("Local layer board", "ui") : t("Workbench runtime state", "ui"))
-        : compareHeld
-          ? t("Baseline preview", "ui")
-          : t("Live working state", "ui");
-    }
-    if (transportWorkbenchInfoPopover && !transportWorkbenchInfoPopover.classList.contains("hidden")) {
-      renderTransportWorkbenchInfoContent(family);
-    }
-    transportWorkbenchInspectorTitle.textContent = `${t(family.label, "ui")} ${t("inspector", "ui")}`;
-    transportWorkbenchInspectorEmptyTitle.textContent = t(family.inspectorEmptyTitle, "ui");
-    transportWorkbenchInspectorEmptyBody.textContent = t(family.inspectorEmptyBody, "ui");
-    transportWorkbenchPreviewCanvas?.classList.toggle("is-layer-order-mode", family.id === "layers");
-    transportWorkbenchPreviewActions?.classList.toggle("hidden", family.id === "layers");
-    transportWorkbenchPreviewControls?.classList.toggle("hidden", family.id === "layers");
-    transportWorkbenchCarrierMount?.classList.toggle("hidden", family.id === "layers");
-    transportWorkbenchLayerOrderPanel?.classList.toggle("hidden", family.id !== "layers");
-    setTransportWorkbenchCarrierFamily(family.id);
-    syncTransportWorkbenchPreviewControls();
-    transportWorkbenchFamilyTabs.forEach((button) => {
-      const isActive = String(button.dataset.transportFamily || "") === family.id;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-selected", isActive ? "true" : "false");
-    });
-    renderTransportWorkbenchInspectorTabs(family, context.config || uiState.familyConfigs?.[family.id] || {}, compareHeld);
-    if (transportWorkbenchApplyBtn) {
-      transportWorkbenchApplyBtn.disabled = !applyButtonState.enabled;
-      transportWorkbenchApplyBtn.setAttribute("aria-disabled", applyButtonState.enabled ? "false" : "true");
-      transportWorkbenchApplyBtn.textContent = applyButtonState.label;
-      transportWorkbenchApplyBtn.title = applyButtonState.reason || applyButtonState.label;
-    }
-  };
-
-  const scheduleTransportWorkbenchPreviewViewSync = () => {
-    ensureTransportWorkbenchUiState();
-    const activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-    if (!runtimeState.transportWorkbenchUi?.open || !isTransportWorkbenchFamilyLivePreviewCapable(activeFamily)) {
-      return;
-    }
-    const viewState = getTransportWorkbenchCarrierViewState() || {};
-    const nextViewKey = [
-      Number(viewState.scale || 1).toFixed(4),
-      Number(viewState.translateX || 0).toFixed(2),
-      Number(viewState.translateY || 0).toFixed(2),
-      String(viewState.quarterTurns || 0),
-    ].join(":");
-    if (transportWorkbenchPreviewLastViewKey === nextViewKey) {
-      return;
-    }
-    transportWorkbenchPreviewLastViewKey = nextViewKey;
-    if (transportWorkbenchPreviewViewSyncRaf) {
-      cancelAnimationFrame(transportWorkbenchPreviewViewSyncRaf);
-    }
-    transportWorkbenchPreviewViewSyncRaf = requestAnimationFrame(() => {
-      transportWorkbenchPreviewViewSyncRaf = 0;
-      const context = getTransportWorkbenchRenderContext();
-      if (!context.isOpen || context.family.id !== activeFamily) return;
-      refreshTransportWorkbenchPreview(context, { allowCarrierPrep: false });
-    });
+    transportWorkbenchShellOwner.render(context);
   };
 
   const renderTransportWorkbenchUi = () => {
@@ -2621,9 +441,10 @@ export function createTransportWorkbenchController({
       return;
     }
     if (willOpen) {
-      uiState.restoreLeftDrawer = document.body.classList.contains("left-drawer-open");
-      uiState.restoreRightDrawer = document.body.classList.contains("right-drawer-open");
-      uiState.compareHeld = false;
+      transportWorkbenchStateOwner.prepareOpenState({
+        restoreLeftDrawer: document.body.classList.contains("left-drawer-open"),
+        restoreRightDrawer: document.body.classList.contains("right-drawer-open"),
+      });
       resetTransportWorkbenchSectionState();
       runtimeState.toggleLeftPanelFn?.(false);
       runtimeState.toggleRightPanelFn?.(false);
@@ -2636,8 +457,7 @@ export function createTransportWorkbenchController({
       }
     }
     // section reset 可能补齐最新 uiState 结构，这里统一回读当前对象后再落 open 状态。
-    uiState = runtimeState.transportWorkbenchUi;
-    uiState.open = willOpen;
+    uiState = transportWorkbenchStateOwner.setOpenState(willOpen);
     renderTransportWorkbenchUi();
     if (typeof runtimeState.syncFacilityInfoCardVisibilityFn === "function") {
       runtimeState.syncFacilityInfoCardVisibilityFn();
@@ -2646,21 +466,12 @@ export function createTransportWorkbenchController({
       focusOverlaySurface(transportWorkbenchPanel);
       return;
     }
-    uiState.compareHeld = false;
-    if (transportWorkbenchPreviewViewSyncRaf) {
-      cancelAnimationFrame(transportWorkbenchPreviewViewSyncRaf);
-      transportWorkbenchPreviewViewSyncRaf = 0;
-    }
-    transportWorkbenchRenderGeneration += 1;
-    transportWorkbenchPreviewLastViewKey = "";
-    destroyAllTransportWorkbenchFamilyPreviews();
-    destroyTransportWorkbenchCarrier();
+    const restoreState = transportWorkbenchStateOwner.prepareCloseState();
+    transportWorkbenchPreviewLifecycleOwner.dispose();
     closeTransportWorkbenchInfoPopover({ restoreFocus: false });
     closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    runtimeState.toggleLeftPanelFn?.(uiState.restoreLeftDrawer);
-    runtimeState.toggleRightPanelFn?.(!uiState.restoreLeftDrawer && uiState.restoreRightDrawer);
-    uiState.restoreLeftDrawer = false;
-    uiState.restoreRightDrawer = false;
+    runtimeState.toggleLeftPanelFn?.(restoreState.restoreLeftDrawer);
+    runtimeState.toggleRightPanelFn?.(!restoreState.restoreLeftDrawer && restoreState.restoreRightDrawer);
     if (restoreFocus) {
       restoreOverlayTriggerFocus(transportWorkbenchOverlay);
     }
@@ -2683,20 +494,7 @@ export function createTransportWorkbenchController({
   };
 
   const initializeTransportWorkbenchRuntime = () => {
-    scheduleTransportWorkbenchFamilyPreviewWarmup();
-    setTransportWorkbenchCarrierViewChangeListener(() => {
-      scheduleTransportWorkbenchPreviewViewSync();
-    });
-    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
-      setTransportWorkbenchFamilyPreviewSelectionListener(familyId, () => {
-        const context = getTransportWorkbenchRenderContext();
-        if (!context.isOpen || context.family.id !== familyId) {
-          return;
-        }
-        renderTransportWorkbenchLensSections(context.family, context.config, context.compareHeld);
-        renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-      });
-    });
+    transportWorkbenchPreviewLifecycleOwner.initializeRuntimeHooks();
   };
 
   const bindTransportWorkbenchEvents = () => {
@@ -2720,7 +518,7 @@ export function createTransportWorkbenchController({
 
       if (transportWorkbenchInfoBtn && !transportWorkbenchInfoBtn.dataset.bound) {
         transportWorkbenchInfoBtn.addEventListener("click", () => {
-          toggleTransportWorkbenchInfoPopover();
+          transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta());
         });
         transportWorkbenchInfoBtn.dataset.bound = "true";
       }
@@ -2811,14 +609,7 @@ export function createTransportWorkbenchController({
       transportWorkbenchFamilyTabs.forEach((button) => {
         if (!button || button.dataset.bound === "true") return;
         button.addEventListener("click", () => {
-          ensureTransportWorkbenchUiState();
-          runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(button.dataset.transportFamily || "road");
-          if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
-            runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
-          }
-          runtimeState.transportWorkbenchUi.activePackId = getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily);
-          runtimeState.transportWorkbenchUi.activePackIdByFamily[runtimeState.transportWorkbenchUi.activeFamily] = runtimeState.transportWorkbenchUi.activePackId;
-          runtimeState.transportWorkbenchUi.compareHeld = false;
+          transportWorkbenchStateOwner.setActiveFamily(button.dataset.transportFamily || "road");
           renderTransportWorkbenchUi();
         });
         button.dataset.bound = "true";
@@ -2827,8 +618,7 @@ export function createTransportWorkbenchController({
       transportWorkbenchInspectorTabButtons.forEach((button) => {
         if (!button || button.dataset.bound === "true") return;
         button.addEventListener("click", () => {
-          ensureTransportWorkbenchUiState();
-          runtimeState.transportWorkbenchUi.activeInspectorTab = normalizeTransportWorkbenchInspectorTab(button.dataset.transportInspectorTab || "inspect");
+          transportWorkbenchStateOwner.setInspectorTab(button.dataset.transportInspectorTab || "inspect");
           const context = getTransportWorkbenchRenderContext();
           renderTransportWorkbenchShell(context);
           renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
@@ -2839,16 +629,7 @@ export function createTransportWorkbenchController({
       if (!document.body.dataset.transportWorkbenchEscapeBound) {
         document.addEventListener("keydown", (event) => {
           if (event.key !== "Escape" || !runtimeState.transportWorkbenchUi?.open) return;
-          if (transportWorkbenchSectionHelpPopover && !transportWorkbenchSectionHelpPopover.classList.contains("hidden")) {
-            event.preventDefault();
-            closeTransportWorkbenchSectionHelpPopover({ restoreFocus: true });
-            return;
-          }
-          if (transportWorkbenchInfoPopover && !transportWorkbenchInfoPopover.classList.contains("hidden")) {
-            event.preventDefault();
-            closeTransportWorkbenchInfoPopover({ restoreFocus: true });
-            return;
-          }
+          if (transportWorkbenchPopoverOwner.handleEscape(event)) return;
           event.preventDefault();
           setTransportWorkbenchState(false);
         });

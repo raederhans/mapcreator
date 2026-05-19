@@ -55,41 +55,16 @@ import {
   createTransportWorkbenchRightDeckOwner,
 } from "./transport_workbench_right_deck_owner.js";
 import {
+  createTransportWorkbenchShellOwner,
+} from "./transport_workbench_shell_owner.js";
+import {
   TRANSPORT_WORKBENCH_FAMILIES,
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
   TRANSPORT_WORKBENCH_DATA_CONTRACTS,
-  TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS,
 } from "./transport_workbench_descriptor.js";
 
 export { TRANSPORT_WORKBENCH_INSPECTOR_TABS };
 export { TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS } from "./transport_workbench_config_owner.js";
-
-export function getTransportWorkbenchPackOptionsSignature(packOptions) {
-  return JSON.stringify((packOptions || []).map((pack) => [pack.packId, pack.label]));
-}
-
-export function syncTransportWorkbenchPackSelectOptions({
-  selectNode = null,
-  packOptions = [],
-  activePackId = "",
-} = {}) {
-  if (!selectNode) return { rebuilt: false, optionCount: 0 };
-  const nextSignature = getTransportWorkbenchPackOptionsSignature(packOptions);
-  let rebuilt = false;
-  if (selectNode.dataset.packOptionsSignature !== nextSignature) {
-    selectNode.replaceChildren(...packOptions.map((pack) => {
-      const option = document.createElement("option");
-      option.value = pack.packId;
-      option.textContent = pack.label;
-      return option;
-    }));
-    selectNode.dataset.packOptionsSignature = nextSignature;
-    rebuilt = true;
-  }
-  selectNode.disabled = packOptions.length === 0;
-  selectNode.value = activePackId || "";
-  return { rebuilt, optionCount: packOptions.length };
-}
 
 export function createTransportWorkbenchController({
   scenarioTransportWorkbenchBtn = null,
@@ -198,6 +173,40 @@ export function createTransportWorkbenchController({
   });
   const closeTransportWorkbenchInfoPopover = (options) => transportWorkbenchPopoverOwner.closeInfoPopover(options);
   const closeTransportWorkbenchSectionHelpPopover = (options) => transportWorkbenchPopoverOwner.closeSectionHelpPopover(options);
+  const transportWorkbenchShellOwner = createTransportWorkbenchShellOwner({
+    body: document.body,
+    scenarioButton: scenarioTransportWorkbenchBtn,
+    overlay: transportWorkbenchOverlay,
+    title: transportWorkbenchTitle,
+    lensTitle: transportWorkbenchLensTitle,
+    familyStatus: transportWorkbenchFamilyStatus,
+    countryStatus: transportWorkbenchCountryStatus,
+    packSelect: transportWorkbenchPackSelect,
+    previewMode: transportWorkbenchPreviewMode,
+    previewTitle: transportWorkbenchPreviewTitle,
+    previewCanvas: transportWorkbenchPreviewCanvas,
+    previewActions: transportWorkbenchPreviewActions,
+    previewControls: transportWorkbenchPreviewControls,
+    carrierMount: transportWorkbenchCarrierMount,
+    layerOrderPanel: transportWorkbenchLayerOrderPanel,
+    compareButton: transportWorkbenchCompareBtn,
+    compareStatus: transportWorkbenchCompareStatus,
+    zoomOutButton: transportWorkbenchZoomOutBtn,
+    zoomInButton: transportWorkbenchZoomInBtn,
+    rotateButton: transportWorkbenchRotateBtn,
+    inspectorTitle: transportWorkbenchInspectorTitle,
+    inspectorEmptyTitle: transportWorkbenchInspectorEmptyTitle,
+    inspectorEmptyBody: transportWorkbenchInspectorEmptyBody,
+    familyTabs: transportWorkbenchFamilyTabs,
+    applyButton: transportWorkbenchApplyBtn,
+    translate: (label) => t(label, "ui"),
+    listPackOptions: ({ familyId }) => listTargetMainMapPacks({ familyId }),
+    getApplyButtonState: (familyId) => getTransportWorkbenchApplyButtonState(familyId),
+    getCarrierViewState: () => getTransportWorkbenchCarrierViewState(),
+    setCarrierFamily: (familyId) => setTransportWorkbenchCarrierFamily(familyId),
+    isInfoPopoverOpen: () => transportWorkbenchPopoverOwner.isInfoPopoverOpen(),
+    renderInfoContent: (family) => transportWorkbenchPopoverOwner.renderInfoContent(family),
+  });
 
   const transportWorkbenchLensOwner = createTransportWorkbenchLensOwner({
     mount: transportWorkbenchLensSections,
@@ -315,15 +324,6 @@ export function createTransportWorkbenchController({
     || TRANSPORT_WORKBENCH_FAMILIES[0]
   );
 
-  const renderTransportWorkbenchPackSelect = (familyId, activePackId) => {
-    if (!transportWorkbenchPackSelect) return;
-    syncTransportWorkbenchPackSelectOptions({
-      selectNode: transportWorkbenchPackSelect,
-      packOptions: listTargetMainMapPacks({ familyId }),
-      activePackId,
-    });
-  };
-
   const renderTransportWorkbenchLayerOrderPanel = () => transportWorkbenchLayerOrderOwner.render();
 
   const renderTransportWorkbenchInspectorTabs = (family, config, compareHeld) => {
@@ -366,13 +366,7 @@ export function createTransportWorkbenchController({
   };
 
   const syncTransportWorkbenchPreviewControls = () => {
-    const carrierViewState = getTransportWorkbenchCarrierViewState();
-    const isAlternateTurn = carrierViewState.quarterTurns !== 0;
-    if (transportWorkbenchZoomOutBtn) transportWorkbenchZoomOutBtn.textContent = "-";
-    if (transportWorkbenchZoomInBtn) transportWorkbenchZoomInBtn.textContent = "+";
-    if (transportWorkbenchRotateBtn) transportWorkbenchRotateBtn.textContent = "90°";
-    transportWorkbenchRotateBtn?.classList.toggle("is-active", isAlternateTurn);
-    transportWorkbenchRotateBtn?.setAttribute("aria-pressed", isAlternateTurn ? "true" : "false");
+    transportWorkbenchShellOwner.syncPreviewControls();
   };
 
   const getTransportWorkbenchRenderContext = () => {
@@ -409,67 +403,7 @@ export function createTransportWorkbenchController({
   );
 
   const renderTransportWorkbenchShell = (context) => {
-    const { uiState, family, isOpen, compareHeld } = context;
-    document.body.classList.toggle("transport-workbench-open", isOpen);
-    transportWorkbenchOverlay?.classList.toggle("hidden", !isOpen);
-    transportWorkbenchOverlay?.setAttribute("aria-hidden", isOpen ? "false" : "true");
-    scenarioTransportWorkbenchBtn?.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    scenarioTransportWorkbenchBtn?.setAttribute("title", isOpen ? t("Close transport workbench", "ui") : t("Open transport workbench", "ui"));
-    transportWorkbenchTitle.textContent = t(family.title, "ui");
-    transportWorkbenchLensTitle.textContent = t(family.lensTitle, "ui");
-    transportWorkbenchFamilyStatus.textContent = t(family.label, "ui");
-    transportWorkbenchCountryStatus.textContent = context.activePackMeta?.country || uiState.sampleCountry;
-    renderTransportWorkbenchPackSelect(family.id, context.activePackId);
-    transportWorkbenchPreviewMode.textContent = family.id === "layers"
-      ? t("Layer order", "ui")
-      : TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)
-        ? `${String(context.config?.displayMode || "inspect").replace(/_/g, " ")} · ${String(context.config?.displayPreset || "balanced").replace(/_/g, " ")}`
-        : uiState.previewMode === "bounded_zoom_pan"
-          ? t("Zoom / pan / quarter-turn", "ui")
-          : uiState.previewMode;
-    transportWorkbenchPreviewTitle.textContent = family.id === "layers"
-      ? t(family.previewTitle, "ui")
-      : (uiState.sampleCountry === "Japan" ? t("Japan preview", "ui") : `${uiState.sampleCountry} preview`);
-    const applyButtonState = getTransportWorkbenchApplyButtonState(family.id);
-    if (transportWorkbenchCompareBtn) {
-      transportWorkbenchCompareBtn.disabled = !family.supportsDetailedControls;
-      transportWorkbenchCompareBtn.setAttribute("aria-disabled", family.supportsDetailedControls ? "false" : "true");
-      transportWorkbenchCompareBtn.classList.toggle("is-held", compareHeld);
-      transportWorkbenchCompareBtn.textContent = family.supportsDetailedControls
-        ? t("Compare baseline", "ui")
-        : t("Baseline unavailable", "ui");
-    }
-    if (transportWorkbenchCompareStatus) {
-      transportWorkbenchCompareStatus.textContent = !family.supportsDetailedControls
-        ? (family.id === "layers" ? t("Local layer board", "ui") : t("Workbench runtime state", "ui"))
-        : compareHeld
-          ? t("Baseline preview", "ui")
-          : t("Live working state", "ui");
-    }
-    if (transportWorkbenchPopoverOwner.isInfoPopoverOpen()) {
-      transportWorkbenchPopoverOwner.renderInfoContent(family);
-    }
-    transportWorkbenchInspectorTitle.textContent = `${t(family.label, "ui")} ${t("inspector", "ui")}`;
-    transportWorkbenchInspectorEmptyTitle.textContent = t(family.inspectorEmptyTitle, "ui");
-    transportWorkbenchInspectorEmptyBody.textContent = t(family.inspectorEmptyBody, "ui");
-    transportWorkbenchPreviewCanvas?.classList.toggle("is-layer-order-mode", family.id === "layers");
-    transportWorkbenchPreviewActions?.classList.toggle("hidden", family.id === "layers");
-    transportWorkbenchPreviewControls?.classList.toggle("hidden", family.id === "layers");
-    transportWorkbenchCarrierMount?.classList.toggle("hidden", family.id === "layers");
-    transportWorkbenchLayerOrderPanel?.classList.toggle("hidden", family.id !== "layers");
-    setTransportWorkbenchCarrierFamily(family.id);
-    syncTransportWorkbenchPreviewControls();
-    transportWorkbenchFamilyTabs.forEach((button) => {
-      const isActive = String(button.dataset.transportFamily || "") === family.id;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-selected", isActive ? "true" : "false");
-    });
-    if (transportWorkbenchApplyBtn) {
-      transportWorkbenchApplyBtn.disabled = !applyButtonState.enabled;
-      transportWorkbenchApplyBtn.setAttribute("aria-disabled", applyButtonState.enabled ? "false" : "true");
-      transportWorkbenchApplyBtn.textContent = applyButtonState.label;
-      transportWorkbenchApplyBtn.title = applyButtonState.reason || applyButtonState.label;
-    }
+    transportWorkbenchShellOwner.render(context);
   };
 
   const renderTransportWorkbenchUi = () => {

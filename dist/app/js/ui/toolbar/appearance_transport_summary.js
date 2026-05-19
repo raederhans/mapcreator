@@ -45,6 +45,75 @@ function getTransportFamilyCollection(familyId, collections = {}) {
   return null;
 }
 
+const transportSummaryCollectionCache = new WeakMap();
+
+function getTransportCollectionSummaryCache(collection) {
+  if (!collection || typeof collection !== "object") return null;
+  const features = Array.isArray(collection.features) ? collection.features : null;
+  if (!features) return null;
+  const cached = transportSummaryCollectionCache.get(collection);
+  if (cached && cached.features === features && cached.length === features.length) {
+    return cached;
+  }
+  const next = {
+    features,
+    length: features.length,
+    filteredCounts: new Map(),
+    lineCoverage: new Map(),
+  };
+  transportSummaryCollectionCache.set(collection, next);
+  return next;
+}
+
+function normalizeTransportSummaryKeyToken(value) {
+  if (value == null) return "";
+  return String(value).trim().toLowerCase();
+}
+
+function getTransportSummaryCountScope(familyConfig = {}, effectiveScope = {}) {
+  return {
+    scope: normalizeTransportSummaryKeyToken(effectiveScope.scope || familyConfig.scope),
+    importanceThreshold: normalizeTransportSummaryKeyToken(effectiveScope.importanceThreshold || familyConfig.importanceThreshold),
+  };
+}
+
+function buildFilteredCountCacheKey({
+  familyId,
+  familyConfig,
+  effectiveScope,
+  zoomScale,
+  visualMode,
+}) {
+  const scale = Number(zoomScale || 1);
+  const scaleKey = Number.isFinite(scale) ? scale.toFixed(3) : "1.000";
+  const countScope = getTransportSummaryCountScope(familyConfig, effectiveScope);
+  return [
+    normalizeTransportSummaryKeyToken(familyId),
+    countScope.scope,
+    countScope.importanceThreshold,
+    scaleKey,
+    normalizeTransportSummaryKeyToken(visualMode),
+  ].join("|");
+}
+
+function computeTransportFamilyFilteredCount({
+  familyId,
+  collection,
+  familyConfig,
+  effectiveScope,
+  zoomScale,
+  visualMode,
+}) {
+  return getTransportOverviewFilteredFeatureCount({
+    familyId,
+    collection,
+    familyConfig,
+    effectiveScope,
+    zoomScale,
+    visualMode,
+  });
+}
+
 export function getTransportFamilyFilteredCount({
   familyId,
   familyConfig,
@@ -53,14 +122,38 @@ export function getTransportFamilyFilteredCount({
   zoomScale,
   visualMode,
 }) {
-  return getTransportOverviewFilteredFeatureCount({
+  const collection = getTransportFamilyCollection(familyId, collections);
+  const collectionCache = getTransportCollectionSummaryCache(collection);
+  if (!collectionCache) {
+    return computeTransportFamilyFilteredCount({
+      familyId,
+      collection,
+      familyConfig,
+      effectiveScope,
+      zoomScale,
+      visualMode,
+    });
+  }
+  const cacheKey = buildFilteredCountCacheKey({
     familyId,
-    collection: getTransportFamilyCollection(familyId, collections),
     familyConfig,
     effectiveScope,
     zoomScale,
     visualMode,
   });
+  if (collectionCache.filteredCounts.has(cacheKey)) {
+    return collectionCache.filteredCounts.get(cacheKey);
+  }
+  const filteredCount = computeTransportFamilyFilteredCount({
+    familyId,
+    collection,
+    familyConfig,
+    effectiveScope,
+    zoomScale,
+    visualMode,
+  });
+  collectionCache.filteredCounts.set(cacheKey, filteredCount);
+  return filteredCount;
 }
 
 export function getTransportFamilyRenderMetric(familyId, metricsSource) {
@@ -104,23 +197,39 @@ export function formatTransportLoadedAuxiliaryText(familyId, count, translate) {
   return countText ? `${countText} ${translateUi(translate, "loaded")}` : "";
 }
 
-export function getTransportLineClassCoverage(familyId, collections, translate) {
+function getTransportLineClassCoverageState(familyId, collections) {
   const meta = getTransportOverviewLineSummaryMeta(familyId);
-  if (!meta) return "";
   const collection = getTransportFamilyCollection(familyId, collections);
   const features = Array.isArray(collection?.features) ? collection.features : [];
+  if (!meta) return null;
+  const collectionCache = getTransportCollectionSummaryCache(collection);
+  const cacheKey = String(familyId || "").trim().toLowerCase();
+  if (collectionCache?.lineCoverage.has(cacheKey)) {
+    return collectionCache.lineCoverage.get(cacheKey);
+  }
   const presentClasses = new Set();
   features.forEach((feature) => {
     const className = String(feature?.properties?.class || "").trim().toLowerCase();
     if (meta.classOrder.includes(className)) presentClasses.add(className);
   });
   const orderedClasses = meta.classOrder.filter((className) => presentClasses.has(className));
-  if (!orderedClasses.length) return "";
-  const visibleClasses = orderedClasses.join("/");
-  if (familyId === "road" && !presentClasses.has("primary") && !presentClasses.has("secondary")) {
+  const state = {
+    orderedClasses,
+    missingRoadSecondary: familyId === "road" && !presentClasses.has("primary") && !presentClasses.has("secondary"),
+    missingRailSecondary: familyId === "rail" && !presentClasses.has("secondary"),
+  };
+  collectionCache?.lineCoverage.set(cacheKey, state);
+  return state;
+}
+
+export function getTransportLineClassCoverage(familyId, collections, translate) {
+  const coverageState = getTransportLineClassCoverageState(familyId, collections);
+  if (!coverageState?.orderedClasses?.length) return "";
+  const visibleClasses = coverageState.orderedClasses.join("/");
+  if (coverageState.missingRoadSecondary) {
     return `${translateUi(translate, "Loaded classes:")} ${visibleClasses} (${translateUi(translate, "primary/secondary pending")})`;
   }
-  if (familyId === "rail" && !presentClasses.has("secondary")) {
+  if (coverageState.missingRailSecondary) {
     return `${translateUi(translate, "Loaded classes:")} ${visibleClasses} (${translateUi(translate, "secondary full-only")})`;
   }
   return `${translateUi(translate, "Loaded classes:")} ${visibleClasses}`;
