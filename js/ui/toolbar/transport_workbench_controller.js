@@ -1074,14 +1074,10 @@ export function createTransportWorkbenchController({
       });
       inspectorModel.rows.forEach((entry, index) => {
         if (Array.isArray(entry)) {
-          const row = transportWorkbenchInspectorOwner.createRow(entry[0], entry[1]);
-          if (family.id === "industrial_zones" || family.id === "logistics_hubs") {
-            if (index < 4) row.classList.add("is-summary");
-            if (String(entry[0] || "").startsWith("Selected ")) row.classList.add("is-selected");
-            if (["Pack version", "Recipe version", "Last build", "License tier", "Variant tier", "Distribution tier", "Source policy", "Source member", "Source dataset", "Data path", "Data check", "Pack mode"].includes(String(entry[0] || ""))) {
-              row.classList.add("is-governance");
-            }
-          }
+          const row = transportWorkbenchInspectorOwner.createRow(entry[0], entry[1], {
+            familyId: family.id,
+            index,
+          });
           transportWorkbenchInspectorDetails.appendChild(row);
           return;
         }

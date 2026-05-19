@@ -94,3 +94,16 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench inspector row metadata slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Dispatch static-only subagents for row metadata boundary and test entrypoints.
+- [x] Select current-scope boundary move.
+- [x] Implement inspector row metadata owner split.
+- [x] Extend Python contracts and existing Node behavior script.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

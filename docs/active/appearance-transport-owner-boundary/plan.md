@@ -193,3 +193,29 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench inspector row metadata slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-row-meta-owner-2026-05-19`
+Branch: `codex/transport-workbench-row-meta-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench inspector row style semantics out of the controller and into the inspector owner.
+
+Acceptance:
+
+- `transport_workbench_inspector_owner.js` owns `is-summary`, `is-selected`, and `is-governance` row class decisions.
+- `transport_workbench_controller.js` only passes row metadata to the owner row factory and appends returned DOM nodes.
+- Existing Python and Node tests lock the owner boundary and row class semantics.
+- A named toolbar split boundary script exists so this contract has a direct verification entrypoint.
+- Targeted syntax, Python contracts, Node behavior, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only evidence lanes for row metadata boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented row metadata owner split.
+- [x] Updated contracts and existing Node behavior script.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

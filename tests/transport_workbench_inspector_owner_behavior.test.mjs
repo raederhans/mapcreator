@@ -7,12 +7,51 @@ import {
   buildTransportWorkbenchInspectorModel,
   createTransportWorkbenchInspectorOwner,
   formatTransportWorkbenchManifestTimestamp,
+  getTransportWorkbenchInspectorRowClassNames,
 } from "../js/ui/toolbar/transport_workbench_inspector_owner.js";
 
 function rowValue(rows, label) {
   const row = rows.find(([candidate]) => candidate === label);
   assert.ok(row, `missing row: ${label}`);
   return row[1];
+}
+
+class TestClassList {
+  constructor(node) {
+    this.node = node;
+  }
+
+  add(...tokens) {
+    const values = new Set(String(this.node.className || "").split(/\s+/).filter(Boolean));
+    tokens.forEach((token) => values.add(token));
+    this.node.className = Array.from(values).join(" ");
+  }
+
+  contains(token) {
+    return String(this.node.className || "").split(/\s+/).includes(token);
+  }
+}
+
+function createTestDocument() {
+  return {
+    createElement(tagName) {
+      const node = {
+        tagName: String(tagName || "").toLowerCase(),
+        children: [],
+        textContent: "",
+        className: "",
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+        append(...children) {
+          children.forEach((child) => this.appendChild(child));
+        },
+      };
+      node.classList = new TestClassList(node);
+      return node;
+    },
+  };
 }
 
 test("manifest timestamps stay readable for inspector rows", () => {
@@ -298,6 +337,48 @@ test("inspector model reports empty logistics filters and layer status", () => {
     ["2", "energy_facilities (metadata)"],
     ["3", "custom (reserved)"],
   ]);
+});
+
+test("inspector owner keeps row class semantics out of the controller", () => {
+  assert.deepEqual(getTransportWorkbenchInspectorRowClassNames({
+    familyId: "logistics_hubs",
+    index: 0,
+    label: "Hub category",
+  }), ["is-summary"]);
+  assert.deepEqual(getTransportWorkbenchInspectorRowClassNames({
+    familyId: "logistics_hubs",
+    index: 4,
+    label: "Selected hub",
+  }), ["is-selected"]);
+  assert.deepEqual(getTransportWorkbenchInspectorRowClassNames({
+    familyId: "industrial_zones",
+    index: 8,
+    label: "Pack version",
+  }), ["is-governance"]);
+  assert.deepEqual(getTransportWorkbenchInspectorRowClassNames({
+    familyId: "industrial_zones",
+    label: "Source track",
+  }), []);
+  assert.deepEqual(getTransportWorkbenchInspectorRowClassNames({
+    familyId: "road",
+    index: 0,
+    label: "Pack version",
+  }), []);
+
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+  try {
+    const owner = createTransportWorkbenchInspectorOwner();
+    const row = owner.createRow("Pack version", "japan_industrial_zones_v2", {
+      familyId: "industrial_zones",
+      index: 2,
+    });
+    assert.equal(row.classList.contains("transport-workbench-inspector-row"), true);
+    assert.equal(row.classList.contains("is-summary"), true);
+    assert.equal(row.classList.contains("is-governance"), true);
+  } finally {
+    globalThis.document = previousDocument;
+  }
 });
 
 test("owner factory injects layer metadata and keeps translated lens label", () => {

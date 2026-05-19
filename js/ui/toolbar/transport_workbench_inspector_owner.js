@@ -25,9 +25,48 @@ import {
 } from "../transport_workbench_manifest_variants.js";
 import { formatJapanRailVisibilityReason } from "../transport_workbench_rail_preview.js";
 
+const INSPECTOR_CLASSIFIED_FAMILY_IDS = new Set(["industrial_zones", "logistics_hubs"]);
+const INSPECTOR_GOVERNANCE_ROW_LABELS = new Set([
+  "Pack version",
+  "Recipe version",
+  "Last build",
+  "License tier",
+  "Variant tier",
+  "Distribution tier",
+  "Source policy",
+  "Source member",
+  "Source dataset",
+  "Data path",
+  "Data check",
+  "Pack mode",
+]);
+
 export function formatTransportWorkbenchOptionLabels(values, options) {
   const labelByValue = new Map((options || []).map((option) => [option.value, option.label]));
   return (values || []).map((value) => labelByValue.get(value) || value).join(", ");
+}
+
+export function getTransportWorkbenchInspectorRowClassNames({
+  familyId = "",
+  index = -1,
+  label = "",
+} = {}) {
+  if (!INSPECTOR_CLASSIFIED_FAMILY_IDS.has(String(familyId || ""))) {
+    return [];
+  }
+  const classNames = [];
+  const rowIndex = Number(index);
+  const rowLabel = String(label || "");
+  if (Number.isFinite(rowIndex) && rowIndex >= 0 && rowIndex < 4) {
+    classNames.push("is-summary");
+  }
+  if (rowLabel.startsWith("Selected ")) {
+    classNames.push("is-selected");
+  }
+  if (INSPECTOR_GOVERNANCE_ROW_LABELS.has(rowLabel)) {
+    classNames.push("is-governance");
+  }
+  return classNames;
 }
 
 export function formatTransportWorkbenchManifestTimestamp(value) {
@@ -674,7 +713,7 @@ export function createTransportWorkbenchInspectorOwner({
   isLivePreviewFamily = () => false,
   isManifestOnlyRuntimeFamily = () => false,
 } = {}) {
-  const createRow = (label, value) => {
+  const createRow = (label, value, rowMeta = {}) => {
     const row = document.createElement("div");
     row.className = "transport-workbench-inspector-row";
     const labelNode = document.createElement("span");
@@ -685,6 +724,13 @@ export function createTransportWorkbenchInspectorOwner({
     valueNode.textContent = value;
     row.appendChild(labelNode);
     row.appendChild(valueNode);
+    const classNames = getTransportWorkbenchInspectorRowClassNames({
+      ...rowMeta,
+      label,
+    });
+    if (classNames.length > 0) {
+      row.classList.add(...classNames);
+    }
     return row;
   };
 
@@ -730,6 +776,7 @@ export function createTransportWorkbenchInspectorOwner({
     buildManifestOnlyInspectorRows,
     createRow,
     createStateCardNode,
+    getRowClassNames: getTransportWorkbenchInspectorRowClassNames,
     formatManifestTimestamp: formatTransportWorkbenchManifestTimestamp,
     formatOptionLabels: formatTransportWorkbenchOptionLabels,
     formatRoadHiddenReason: formatTransportWorkbenchRoadHiddenReason,

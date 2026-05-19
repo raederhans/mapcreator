@@ -213,3 +213,42 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
   - `git diff --check`
 - Pushed implementation to `origin/main` as `2be1614`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean inspector-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench inspector row metadata slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-row-meta-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes agreed the smallest remaining inspector coupling is row class semantics: `transport_workbench_controller.js` was still deciding `is-summary`, `is-selected`, and `is-governance` from family id, row index, and row label.
+- Chosen boundary: keep row ordering and row data unchanged, but move row class decisions into `transport_workbench_inspector_owner.js`.
+- Moved to inspector owner: `getTransportWorkbenchInspectorRowClassNames()` and `createRow(..., rowMeta)` class application.
+- Kept in controller: model retrieval, state card append, row append, empty-card visibility, and inspector tab render sequencing.
+- Tests updated:
+  - `tests/transport_workbench_inspector_owner_behavior.test.mjs` now covers summary, selected, governance, and non-classified family row class decisions.
+  - `tests/test_toolbar_split_boundary_contract.py` now checks controller delegates row class semantics to the inspector owner.
+  - `package.json` now exposes `verify:toolbar-split-boundary`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review found no blocker. Its coverage recommendation was fixed by adding a lightweight fake-DOM assertion that `createRow(..., rowMeta)` applies the owner-computed classes to the returned row.
+- Final verification after review fix passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
