@@ -4,9 +4,6 @@
 
 import {
   state as runtimeState,
-  createDefaultTransportWorkbenchDisplayConfig,
-  normalizeTransportWorkbenchDisplayConfig,
-  normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
 import { markDirty } from "../../core/dirty_state.js";
 import { t } from "../i18n.js";
@@ -34,7 +31,6 @@ import {
   listTransportWorkbenchWarmupPlans,
 } from "../transport_workbench_family_registry.js";
 import {
-  getDefaultMainMapPackIdForFamily,
   getTargetMainMapPackMeta,
   listTargetMainMapPacks,
 } from "../../core/transport_pack_resolver.js";
@@ -44,6 +40,9 @@ import {
 import {
   createTransportWorkbenchPreviewLifecycleOwner,
 } from "./transport_workbench_preview_lifecycle_owner.js";
+import {
+  createTransportWorkbenchStateOwner,
+} from "./transport_workbench_state_owner.js";
 import {
   getTransportWorkbenchManifestDefaultVariantId,
   getTransportWorkbenchManifestVariantMeta,
@@ -65,119 +64,17 @@ import {
   TRANSPORT_WORKBENCH_TAB_SECTION_MAP,
   TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,
   TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS,
-  TRANSPORT_WORKBENCH_BASELINE_CONFIGS,
-  TRANSPORT_WORKBENCH_SECTION_DEFAULTS,
   buildEnergyFacilitySubtypeControlOptions,
 } from "./transport_workbench_descriptor.js";
 import {
   TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,
   mapTransportWorkbenchLabelLevelToMaxLevel,
   mapTransportWorkbenchMaxLevelToLabelLevel,
-  normalizeAirportTransportWorkbenchConfig,
-  normalizeEnergyFacilityTransportWorkbenchConfig,
-  normalizeIndustrialTransportWorkbenchConfig,
-  normalizeLogisticsHubTransportWorkbenchConfig,
-  normalizeMineralResourceTransportWorkbenchConfig,
-  normalizePortTransportWorkbenchConfig,
-  normalizeRailTransportWorkbenchConfig,
-  normalizeRoadTransportWorkbenchConfig,
   normalizeTransportWorkbenchEnum,
-  normalizeTransportWorkbenchFamily,
-  normalizeTransportWorkbenchInspectorTab,
-  normalizeTransportWorkbenchLayerOrder,
 } from "./transport_workbench_config_owner.js";
-const state = runtimeState;
 
 export { TRANSPORT_WORKBENCH_INSPECTOR_TABS };
 export { TRANSPORT_WORKBENCH_INSPECTOR_TAB_IDS } from "./transport_workbench_config_owner.js";
-
-function ensureTransportWorkbenchUiState() {
-  const previousUiState = runtimeState.transportWorkbenchUi;
-  const normalizedUiState = normalizeTransportWorkbenchUiState(previousUiState);
-  // 这里尽量复用原对象，而不是每次替换成新对象，
-  // 因为 workbench 的事件绑定、预览联动和 dirty 判断都默认握着同一份 transportWorkbenchUi 引用。
-  if (!previousUiState || typeof previousUiState !== "object") {
-    runtimeState.transportWorkbenchUi = normalizedUiState;
-  } else {
-    Object.assign(previousUiState, normalizedUiState);
-    runtimeState.transportWorkbenchUi = previousUiState;
-  }
-  // transportWorkbenchUi 是工作台的本地编辑态；这里统一补齐 shape，
-  // 避免渲染、预览和 inspect 面板各自猜默认值。
-  runtimeState.transportWorkbenchUi.open = !!runtimeState.transportWorkbenchUi.open;
-  runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-  if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
-    runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
-  }
-  const activeFamily = runtimeState.transportWorkbenchUi.activeFamily;
-  const candidatePackId = String(runtimeState.transportWorkbenchUi.activePackIdByFamily[activeFamily] || runtimeState.transportWorkbenchUi.activePackId || "").trim().toLowerCase();
-  const candidatePackMeta = getTargetMainMapPackMeta(candidatePackId);
-  runtimeState.transportWorkbenchUi.activePackId = candidatePackMeta?.family === activeFamily
-    ? candidatePackMeta.packId
-    : getDefaultMainMapPackIdForFamily(activeFamily);
-  runtimeState.transportWorkbenchUi.activePackIdByFamily[activeFamily] = runtimeState.transportWorkbenchUi.activePackId;
-  const activePackMeta = getTargetMainMapPackMeta(runtimeState.transportWorkbenchUi.activePackId);
-  if (activePackMeta?.country) runtimeState.transportWorkbenchUi.sampleCountry = activePackMeta.country;
-  if (!runtimeState.transportWorkbenchUi.previewCamera || typeof runtimeState.transportWorkbenchUi.previewCamera !== "object") {
-    runtimeState.transportWorkbenchUi.previewCamera = {};
-  }
-  runtimeState.transportWorkbenchUi.previewCamera.scale = Number(runtimeState.transportWorkbenchUi.previewCamera.scale) || 1;
-  runtimeState.transportWorkbenchUi.previewCamera.translateX = Number(runtimeState.transportWorkbenchUi.previewCamera.translateX) || 0;
-  runtimeState.transportWorkbenchUi.previewCamera.translateY = Number(runtimeState.transportWorkbenchUi.previewCamera.translateY) || 0;
-  runtimeState.transportWorkbenchUi.compareHeld = !!runtimeState.transportWorkbenchUi.compareHeld;
-  runtimeState.transportWorkbenchUi.activeInspectorTab = normalizeTransportWorkbenchInspectorTab(runtimeState.transportWorkbenchUi.activeInspectorTab);
-  runtimeState.transportWorkbenchUi.layerOrder = normalizeTransportWorkbenchLayerOrder(runtimeState.transportWorkbenchUi.layerOrder);
-  if (!runtimeState.transportWorkbenchUi.familyConfigs || typeof runtimeState.transportWorkbenchUi.familyConfigs !== "object") {
-    runtimeState.transportWorkbenchUi.familyConfigs = {};
-  }
-  if (!runtimeState.transportWorkbenchUi.displayConfigs || typeof runtimeState.transportWorkbenchUi.displayConfigs !== "object") {
-    runtimeState.transportWorkbenchUi.displayConfigs = {};
-  }
-  // familyConfigs 管每个 family 的业务过滤/样式；displayConfigs 只管密度类图层的展示语言。
-  // 两者分开归一化，正式应用和 preview 才能共享同一份 resolved config。
-  runtimeState.transportWorkbenchUi.familyConfigs.road = normalizeRoadTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.road);
-  runtimeState.transportWorkbenchUi.familyConfigs.rail = normalizeRailTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.rail);
-  runtimeState.transportWorkbenchUi.familyConfigs.airport = normalizeAirportTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.airport);
-  runtimeState.transportWorkbenchUi.familyConfigs.port = normalizePortTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.port);
-  runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources = normalizeMineralResourceTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources);
-  runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities = normalizeEnergyFacilityTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities);
-  runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones = normalizeIndustrialTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones);
-  runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs = normalizeLogisticsHubTransportWorkbenchConfig(runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs);
-  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
-    runtimeState.transportWorkbenchUi.displayConfigs[familyId] = normalizeTransportWorkbenchDisplayConfig(
-      runtimeState.transportWorkbenchUi.displayConfigs[familyId],
-      familyId
-    );
-  });
-  ["airport", "port", "mineral_resources", "energy_facilities", "industrial_zones", "logistics_hubs"].forEach((familyId) => {
-    if (!runtimeState.transportWorkbenchUi.familyConfigs[familyId] || typeof runtimeState.transportWorkbenchUi.familyConfigs[familyId] !== "object") {
-      runtimeState.transportWorkbenchUi.familyConfigs[familyId] = {};
-    }
-  });
-  if (!runtimeState.transportWorkbenchUi.sectionOpen || typeof runtimeState.transportWorkbenchUi.sectionOpen !== "object") {
-    runtimeState.transportWorkbenchUi.sectionOpen = {};
-  }
-  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
-    const defaults = TRANSPORT_WORKBENCH_SECTION_DEFAULTS[familyId];
-    const source = runtimeState.transportWorkbenchUi.sectionOpen[familyId] && typeof runtimeState.transportWorkbenchUi.sectionOpen[familyId] === "object"
-      ? runtimeState.transportWorkbenchUi.sectionOpen[familyId]
-      : {};
-    runtimeState.transportWorkbenchUi.sectionOpen[familyId] = Object.fromEntries(
-      Object.entries(defaults).map(([sectionKey, defaultValue]) => [sectionKey, source[sectionKey] !== undefined ? !!source[sectionKey] : defaultValue])
-    );
-  });
-  runtimeState.transportWorkbenchUi.shellPhase = "road-live-preview";
-  runtimeState.transportWorkbenchUi.restoreLeftDrawer = !!runtimeState.transportWorkbenchUi.restoreLeftDrawer;
-  runtimeState.transportWorkbenchUi.restoreRightDrawer = !!runtimeState.transportWorkbenchUi.restoreRightDrawer;
-  return runtimeState.transportWorkbenchUi;
-}
-
-function resetTransportWorkbenchSectionState() {
-  ensureTransportWorkbenchUiState();
-  runtimeState.transportWorkbenchUi.sectionOpen = Object.fromEntries(
-    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.map((familyId) => [familyId, { ...TRANSPORT_WORKBENCH_SECTION_DEFAULTS[familyId] }])
-  );
-}
 
 export function createTransportWorkbenchController({
   scenarioTransportWorkbenchBtn = null,
@@ -240,6 +137,10 @@ export function createTransportWorkbenchController({
   let transportWorkbenchSectionHelpState = null;
   let transportWorkbenchPreviewWarmupScheduled = false;
   let transportWorkbenchDraggedLayerId = "";
+
+  const transportWorkbenchStateOwner = createTransportWorkbenchStateOwner(runtimeState);
+  const ensureTransportWorkbenchUiState = () => transportWorkbenchStateOwner.ensureUiState();
+  const resetTransportWorkbenchSectionState = () => transportWorkbenchStateOwner.resetSectionState();
 
   const transportWorkbenchApplyBridgeOwner = createTransportWorkbenchApplyBridgeOwner(runtimeState, {
     shouldRerender: (normalizedPackId) => isCurrentTransportWorkbenchPackGate(normalizedPackId),
@@ -415,70 +316,21 @@ export function createTransportWorkbenchController({
     focusOverlaySurface(transportWorkbenchInfoPopover);
   };
 
-  const getTransportWorkbenchFamilyMeta = () => {
-    ensureTransportWorkbenchUiState();
-    const activeFamily = normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi.activeFamily);
-    return TRANSPORT_WORKBENCH_FAMILIES.find((family) => family.id === activeFamily) || TRANSPORT_WORKBENCH_FAMILIES[0];
-  };
+  const getTransportWorkbenchFamilyMeta = () => transportWorkbenchStateOwner.getFamilyMeta();
 
   const getTransportWorkbenchWorkingConfig = (familyId, { baseline = false } = {}) => {
-    ensureTransportWorkbenchUiState();
     // baseline 只给按住 Compare 时的临时预览使用，不能回写 familyConfigs。
-    if (baseline) {
-      return TRANSPORT_WORKBENCH_BASELINE_CONFIGS[familyId]
-        ? JSON.parse(JSON.stringify(TRANSPORT_WORKBENCH_BASELINE_CONFIGS[familyId]))
-        : null;
-    }
-    if (familyId === "road") return runtimeState.transportWorkbenchUi.familyConfigs.road;
-    if (familyId === "rail") return runtimeState.transportWorkbenchUi.familyConfigs.rail;
-    if (familyId === "airport") return runtimeState.transportWorkbenchUi.familyConfigs.airport;
-    if (familyId === "port") return runtimeState.transportWorkbenchUi.familyConfigs.port;
-    if (familyId === "mineral_resources") return runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources;
-    if (familyId === "energy_facilities") return runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities;
-    if (familyId === "industrial_zones") return runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones;
-    if (familyId === "logistics_hubs") return runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs;
-    return null;
+    return transportWorkbenchStateOwner.getWorkingConfig(familyId, { baseline });
   };
 
   const getTransportWorkbenchDisplayConfig = (familyId, { baseline = false } = {}) => {
-    ensureTransportWorkbenchUiState();
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
-      return createDefaultTransportWorkbenchDisplayConfig(familyId);
-    }
-    if (baseline) {
-      return createDefaultTransportWorkbenchDisplayConfig(familyId);
-    }
-    return normalizeTransportWorkbenchDisplayConfig(
-      runtimeState.transportWorkbenchUi.displayConfigs?.[familyId],
-      familyId
-    );
+    return transportWorkbenchStateOwner.getDisplayConfig(familyId, { baseline });
   };
 
   const buildTransportWorkbenchResolvedConfig = (familyId, familyConfig, displayConfig) => {
     const activePackId = getTransportWorkbenchActivePackId(familyId);
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
-      return { ...(familyConfig || {}), activePackId };
-    }
-    const resolvedDisplayConfig = normalizeTransportWorkbenchDisplayConfig(displayConfig, familyId);
-    // live preview 只认一份扁平 config；这里把 displayConfig 的分层字段映射回旧 preview 合约。
-    return {
-      ...(familyConfig || {}),
-      activePackId,
-      displayConfig: resolvedDisplayConfig,
-      displayMode: resolvedDisplayConfig.mode,
-      displayPreset: resolvedDisplayConfig.preset,
-      aggregationAlgorithm: resolvedDisplayConfig.aggregation.algorithm,
-      aggregationAutoSwitch: !!resolvedDisplayConfig.aggregation.autoSwitch,
-      aggregationCellSizePx: Number(resolvedDisplayConfig.aggregation.thresholds?.cellSizePx || 44),
-      aggregationClusterRadiusPx: Number(resolvedDisplayConfig.aggregation.thresholds?.clusterRadiusPx || 48),
-      labelBudget: Number(resolvedDisplayConfig.labels?.budget || 8),
-      labelSeparation: Number(resolvedDisplayConfig.labels?.separationStrength || 1),
-      labelLevel: mapTransportWorkbenchMaxLevelToLabelLevel(resolvedDisplayConfig.labels?.maxLevel),
-      labelAllowAggregation: !!resolvedDisplayConfig.labels?.allowAggregation,
-      dominantCategoryThreshold: Number(resolvedDisplayConfig.labels?.dominantCategoryThreshold || 0.62),
-      mixedCategoryMode: resolvedDisplayConfig.labels?.mixedCategoryMode || "summary",
-      coverageTier: resolvedDisplayConfig.coverage || "default",
-    };
+    // live preview 只认一份扁平 config；state owner 负责把 displayConfig 映射回旧 preview 合约。
+    return transportWorkbenchStateOwner.buildResolvedConfig(familyId, familyConfig, displayConfig, activePackId);
   };
 
   const formatTransportWorkbenchOptionLabels = (values, options) => {
@@ -504,17 +356,8 @@ export function createTransportWorkbenchController({
   );
 
   const setTransportWorkbenchActivePackId = (packId, { rerender = true } = {}) => {
-    ensureTransportWorkbenchUiState();
-    const normalizedPackId = String(packId || "").trim().toLowerCase();
-    const meta = getTargetMainMapPackMeta(normalizedPackId);
+    const meta = transportWorkbenchStateOwner.setActivePackId(packId);
     if (!meta) return false;
-    runtimeState.transportWorkbenchUi.activeFamily = meta.family;
-    if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
-      runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
-    }
-    runtimeState.transportWorkbenchUi.activePackIdByFamily[meta.family] = meta.packId;
-    runtimeState.transportWorkbenchUi.activePackId = meta.packId;
-    runtimeState.transportWorkbenchUi.sampleCountry = meta.country;
     refreshTransportWorkbenchPackGateReport(meta.packId, { rerender: true });
     if (rerender) renderTransportWorkbenchUi();
     return true;
@@ -597,49 +440,13 @@ export function createTransportWorkbenchController({
   };
 
   const setTransportWorkbenchCompareHeld = (nextHeld) => {
-    ensureTransportWorkbenchUiState();
-    const family = getTransportWorkbenchFamilyMeta();
-    if (!family.supportsDetailedControls) return;
-    const normalized = !!nextHeld;
-    if (runtimeState.transportWorkbenchUi.compareHeld === normalized) return;
-    runtimeState.transportWorkbenchUi.compareHeld = normalized;
-    renderTransportWorkbenchUi();
+    if (transportWorkbenchStateOwner.setCompareHeld(nextHeld)) {
+      renderTransportWorkbenchUi();
+    }
   };
 
   const updateTransportWorkbenchFamilyConfig = (familyId, key, nextValue, { appendValue = null } = {}) => {
-    ensureTransportWorkbenchUiState();
-    const family = TRANSPORT_WORKBENCH_FAMILIES.find((entry) => entry.id === familyId);
-    if (!family?.supportsDetailedControls || runtimeState.transportWorkbenchUi.compareHeld) return;
-    const current = JSON.parse(JSON.stringify(getTransportWorkbenchWorkingConfig(familyId) || {}));
-    if (appendValue !== null) {
-      const currentValues = Array.isArray(current[key]) ? [...current[key]] : [];
-      const index = currentValues.indexOf(appendValue);
-      if (nextValue) {
-        if (index === -1) currentValues.push(appendValue);
-      } else if (index !== -1) {
-        currentValues.splice(index, 1);
-      }
-      current[key] = currentValues;
-    } else {
-      current[key] = nextValue;
-    }
-    if (familyId === "road") {
-      runtimeState.transportWorkbenchUi.familyConfigs.road = normalizeRoadTransportWorkbenchConfig(current);
-    } else if (familyId === "rail") {
-      runtimeState.transportWorkbenchUi.familyConfigs.rail = normalizeRailTransportWorkbenchConfig(current);
-    } else if (familyId === "airport") {
-      runtimeState.transportWorkbenchUi.familyConfigs.airport = normalizeAirportTransportWorkbenchConfig(current);
-    } else if (familyId === "port") {
-      runtimeState.transportWorkbenchUi.familyConfigs.port = normalizePortTransportWorkbenchConfig(current);
-    } else if (familyId === "mineral_resources") {
-      runtimeState.transportWorkbenchUi.familyConfigs.mineral_resources = normalizeMineralResourceTransportWorkbenchConfig(current);
-    } else if (familyId === "energy_facilities") {
-      runtimeState.transportWorkbenchUi.familyConfigs.energy_facilities = normalizeEnergyFacilityTransportWorkbenchConfig(current);
-    } else if (familyId === "industrial_zones") {
-      runtimeState.transportWorkbenchUi.familyConfigs.industrial_zones = normalizeIndustrialTransportWorkbenchConfig(current);
-    } else if (familyId === "logistics_hubs") {
-      runtimeState.transportWorkbenchUi.familyConfigs.logistics_hubs = normalizeLogisticsHubTransportWorkbenchConfig(current);
-    }
+    if (!transportWorkbenchStateOwner.updateFamilyConfig(familyId, key, nextValue, { appendValue })) return;
     // 控件改动先落到工作台 state，再即时刷新预览；这里不直接改 renderer 的正式图层状态。
     markDirty("transport-workbench-config");
     const nextContext = getTransportWorkbenchRenderContext();
@@ -650,12 +457,7 @@ export function createTransportWorkbenchController({
   };
 
   const updateTransportWorkbenchDisplayConfig = (familyId, updateFn) => {
-    ensureTransportWorkbenchUiState();
-    if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId) || typeof updateFn !== "function") return;
-    const current = getTransportWorkbenchDisplayConfig(familyId);
-    const draft = JSON.parse(JSON.stringify(current));
-    updateFn(draft);
-    runtimeState.transportWorkbenchUi.displayConfigs[familyId] = normalizeTransportWorkbenchDisplayConfig(draft, familyId);
+    if (!transportWorkbenchStateOwner.updateDisplayConfig(familyId, updateFn)) return;
     markDirty("transport-workbench-display-config");
     const nextContext = getTransportWorkbenchRenderContext();
     renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
@@ -665,11 +467,7 @@ export function createTransportWorkbenchController({
   };
 
   const toggleTransportWorkbenchSection = (familyId, sectionKey, nextOpen) => {
-    ensureTransportWorkbenchUiState();
-    if (!runtimeState.transportWorkbenchUi.sectionOpen[familyId]) {
-      runtimeState.transportWorkbenchUi.sectionOpen[familyId] = {};
-    }
-    runtimeState.transportWorkbenchUi.sectionOpen[familyId][sectionKey] = !!nextOpen;
+    transportWorkbenchStateOwner.toggleSection(familyId, sectionKey, nextOpen);
   };
 
   const createTransportWorkbenchInspectorRow = (label, value) => {
@@ -850,14 +648,7 @@ export function createTransportWorkbenchController({
       });
       item.addEventListener("drop", (event) => {
         event.preventDefault();
-        if (!transportWorkbenchDraggedLayerId || transportWorkbenchDraggedLayerId === family.id) return;
-        const nextOrder = [...runtimeState.transportWorkbenchUi.layerOrder];
-        const draggedIndex = nextOrder.indexOf(transportWorkbenchDraggedLayerId);
-        const targetIndex = nextOrder.indexOf(family.id);
-        if (draggedIndex === -1 || targetIndex === -1) return;
-        nextOrder.splice(draggedIndex, 1);
-        nextOrder.splice(targetIndex, 0, transportWorkbenchDraggedLayerId);
-        runtimeState.transportWorkbenchUi.layerOrder = nextOrder;
+        if (!transportWorkbenchStateOwner.moveLayerOrder(transportWorkbenchDraggedLayerId, family.id)) return;
         markDirty("transport-workbench-layer-order");
         const context = getTransportWorkbenchRenderContext();
         renderTransportWorkbenchLayerOrderPanel();
@@ -1405,9 +1196,7 @@ export function createTransportWorkbenchController({
   };
 
   const renderTransportWorkbenchInspectorTabs = (family, config, compareHeld) => {
-    ensureTransportWorkbenchUiState();
-    const activeTab = normalizeTransportWorkbenchInspectorTab(runtimeState.transportWorkbenchUi.activeInspectorTab);
-    runtimeState.transportWorkbenchUi.activeInspectorTab = activeTab;
+    const activeTab = transportWorkbenchStateOwner.setInspectorTab(runtimeState.transportWorkbenchUi.activeInspectorTab);
     transportWorkbenchInspectorTabButtons.forEach((button) => {
       const isActive = String(button.dataset.transportInspectorTab || "") === activeTab;
       button.classList.toggle("is-active", isActive);
@@ -2146,9 +1935,10 @@ export function createTransportWorkbenchController({
       return;
     }
     if (willOpen) {
-      uiState.restoreLeftDrawer = document.body.classList.contains("left-drawer-open");
-      uiState.restoreRightDrawer = document.body.classList.contains("right-drawer-open");
-      uiState.compareHeld = false;
+      transportWorkbenchStateOwner.prepareOpenState({
+        restoreLeftDrawer: document.body.classList.contains("left-drawer-open"),
+        restoreRightDrawer: document.body.classList.contains("right-drawer-open"),
+      });
       resetTransportWorkbenchSectionState();
       runtimeState.toggleLeftPanelFn?.(false);
       runtimeState.toggleRightPanelFn?.(false);
@@ -2161,8 +1951,7 @@ export function createTransportWorkbenchController({
       }
     }
     // section reset 可能补齐最新 uiState 结构，这里统一回读当前对象后再落 open 状态。
-    uiState = runtimeState.transportWorkbenchUi;
-    uiState.open = willOpen;
+    uiState = transportWorkbenchStateOwner.setOpenState(willOpen);
     renderTransportWorkbenchUi();
     if (typeof runtimeState.syncFacilityInfoCardVisibilityFn === "function") {
       runtimeState.syncFacilityInfoCardVisibilityFn();
@@ -2171,14 +1960,12 @@ export function createTransportWorkbenchController({
       focusOverlaySurface(transportWorkbenchPanel);
       return;
     }
-    uiState.compareHeld = false;
+    const restoreState = transportWorkbenchStateOwner.prepareCloseState();
     transportWorkbenchPreviewLifecycleOwner.dispose();
     closeTransportWorkbenchInfoPopover({ restoreFocus: false });
     closeTransportWorkbenchSectionHelpPopover({ restoreFocus: false });
-    runtimeState.toggleLeftPanelFn?.(uiState.restoreLeftDrawer);
-    runtimeState.toggleRightPanelFn?.(!uiState.restoreLeftDrawer && uiState.restoreRightDrawer);
-    uiState.restoreLeftDrawer = false;
-    uiState.restoreRightDrawer = false;
+    runtimeState.toggleLeftPanelFn?.(restoreState.restoreLeftDrawer);
+    runtimeState.toggleRightPanelFn?.(!restoreState.restoreLeftDrawer && restoreState.restoreRightDrawer);
     if (restoreFocus) {
       restoreOverlayTriggerFocus(transportWorkbenchOverlay);
     }
@@ -2329,14 +2116,7 @@ export function createTransportWorkbenchController({
       transportWorkbenchFamilyTabs.forEach((button) => {
         if (!button || button.dataset.bound === "true") return;
         button.addEventListener("click", () => {
-          ensureTransportWorkbenchUiState();
-          runtimeState.transportWorkbenchUi.activeFamily = normalizeTransportWorkbenchFamily(button.dataset.transportFamily || "road");
-          if (!runtimeState.transportWorkbenchUi.activePackIdByFamily || typeof runtimeState.transportWorkbenchUi.activePackIdByFamily !== "object") {
-            runtimeState.transportWorkbenchUi.activePackIdByFamily = {};
-          }
-          runtimeState.transportWorkbenchUi.activePackId = getTransportWorkbenchActivePackId(runtimeState.transportWorkbenchUi.activeFamily);
-          runtimeState.transportWorkbenchUi.activePackIdByFamily[runtimeState.transportWorkbenchUi.activeFamily] = runtimeState.transportWorkbenchUi.activePackId;
-          runtimeState.transportWorkbenchUi.compareHeld = false;
+          transportWorkbenchStateOwner.setActiveFamily(button.dataset.transportFamily || "road");
           renderTransportWorkbenchUi();
         });
         button.dataset.bound = "true";
@@ -2345,8 +2125,7 @@ export function createTransportWorkbenchController({
       transportWorkbenchInspectorTabButtons.forEach((button) => {
         if (!button || button.dataset.bound === "true") return;
         button.addEventListener("click", () => {
-          ensureTransportWorkbenchUiState();
-          runtimeState.transportWorkbenchUi.activeInspectorTab = normalizeTransportWorkbenchInspectorTab(button.dataset.transportInspectorTab || "inspect");
+          transportWorkbenchStateOwner.setInspectorTab(button.dataset.transportInspectorTab || "inspect");
           const context = getTransportWorkbenchRenderContext();
           renderTransportWorkbenchShell(context);
           renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);

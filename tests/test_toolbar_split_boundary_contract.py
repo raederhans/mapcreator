@@ -14,6 +14,7 @@ SPECIAL_ZONE_EDITOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zone_edi
 SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
 EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
+TRANSPORT_WORKBENCH_STATE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_state_owner.js"
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
 TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
 TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js"
@@ -413,12 +414,14 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_transport_workbench_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        state_owner_content = TRANSPORT_WORKBENCH_STATE_OWNER_JS.read_text(encoding="utf-8")
         config_owner_content = TRANSPORT_WORKBENCH_CONFIG_OWNER_JS.read_text(encoding="utf-8")
         apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")
         preview_lifecycle_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
+        self.assertIn("./transport_workbench_state_owner.js", owner_content)
         self.assertIn("./transport_workbench_config_owner.js", owner_content)
         self.assertIn("./transport_workbench_apply_bridge_owner.js", owner_content)
         self.assertIn("./transport_workbench_preview_lifecycle_owner.js", owner_content)
@@ -470,11 +473,29 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("function normalizeTransportWorkbenchInspectorTab", toolbar_content)
         self.assertNotIn("function normalizeRoadTransportWorkbenchConfig", toolbar_content)
         self.assertNotIn("function ensureTransportWorkbenchUiState", toolbar_content)
-        self.assertIn("normalizeTransportWorkbenchUiState,", owner_content)
+        self.assertIn("export function createTransportWorkbenchStateOwner(runtimeState)", state_owner_content)
+        self.assertIn("createTransportWorkbenchStateOwner(runtimeState)", owner_content)
+        self.assertNotIn("normalizeTransportWorkbenchUiState,", owner_content)
+        self.assertIn("normalizeTransportWorkbenchUiState,", state_owner_content)
         self.assertIn("listTransportWorkbenchRuntimeFamilyIds", config_owner_content)
         self.assertIn("TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,", owner_content)
-        self.assertIn("Object.assign(previousUiState, normalizedUiState);", owner_content)
+        self.assertIn("Object.assign(previousUiState, normalizedUiState);", state_owner_content)
         self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", owner_content)
+        self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", state_owner_content)
+        for helper_name in [
+            "setActivePackId",
+            "setActiveFamily",
+            "setInspectorTab",
+            "updateFamilyConfig",
+            "updateDisplayConfig",
+            "moveLayerOrder",
+            "prepareOpenState",
+            "prepareCloseState",
+        ]:
+            self.assertIn(helper_name, state_owner_content)
+        self.assertIn("transportWorkbenchStateOwner.updateFamilyConfig", owner_content)
+        self.assertIn("transportWorkbenchStateOwner.updateDisplayConfig", owner_content)
+        self.assertIn("transportWorkbenchStateOwner.moveLayerOrder", owner_content)
         self.assertIn("const isTransportWorkbenchRenderGenerationCurrent = (renderGeneration, familyId) =>", owner_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = deepFreeze({", descriptor_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = deepFreeze({", descriptor_content)
@@ -484,7 +505,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,", owner_content)
         self.assertIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", config_owner_content)
         self.assertNotIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", owner_content)
-        self.assertIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", state_owner_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", owner_content)
         self.assertIn("buildEnergyFacilitySubtypeControlOptions,", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS = {", owner_content)
         self.assertNotIn("const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = {", owner_content)

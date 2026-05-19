@@ -114,3 +114,28 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
   - `git diff --check -- ...` for changed source, tests, and active docs
 - Pushed implementation to `origin/main` as `eb3eeeb`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean preview-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench state owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-state-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes split on ordering: preview runtime listener movement is smaller, while state-owner movement has stronger architecture value. This slice chose state owner because direct `transportWorkbenchUi` writes and config mutation branching were still concentrated in the controller after config/apply/preview extraction.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_state_owner.js`.
+- Kept in `transport_workbench_controller.js`: DOM events, shell rendering, pack select UI, preview lifecycle owner wiring, apply bridge owner wiring, render context, and repaint sequencing after state changes.
+- Moved to state owner: UI state normalization, active pack/family/tab mutations, compare-held mutation, family/display config writes, section open state, layer order movement, and open/close restore flags.
+- The new Node behavior test exposed that repeated ensure calls could erase a dragged layer order. The state owner now preserves the previous layer order before applying the shared state normalizer.
+- Final static review found no blocker. Its coverage recommendation was fixed by adding behavior assertions for open/close restore flags and family-local active pack restoration.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the state owner, keeps controller facade wiring, and checks state mutation helpers moved out of the controller.
+  - `tests/test_state_write_guardrail_contract.py` now expects the state owner, not the controller, in the direct state writer allowlist.
+  - `tests/transport_workbench_state_owner_behavior.test.mjs` covers object identity, active pack writes, family-local active pack restoration, open/close restore flags, compare-mode read-only config behavior, density display writes, and layer-order preservation.
+  - `package.json` exposes `test:node:transport-workbench-state-owner` so the new behavior test has a named entrypoint.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_state_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_state_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`

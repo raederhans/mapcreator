@@ -114,3 +114,30 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Pushed implementation to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench state owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-state-owner-2026-05-19`
+Branch: `codex/transport-workbench-state-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench local UI state normalization and mutations out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_state_owner.js` owns workbench UI state normalization, active pack/family/tab writes, config/display config mutations, section open state, layer order movement, and open/close restore flags.
+- `transport_workbench_controller.js` keeps DOM event binding, shell rendering, preview/apply owner wiring, render context, and repaint sequencing.
+- Existing contracts lock the new owner boundary and the state-writer allowlist moves from controller to state owner.
+- A named Node behavior script covers state-owner object identity, active pack updates, compare-mode read-only behavior, density display writes, and layer-order preservation.
+- Targeted syntax, Python contracts, Node state-owner behavior, state-write guardrail, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Loaded ultragoal, ultrawork, research-before-fix, performance-goal, and Ralph instructions.
+- [x] Dispatched static-only evidence lanes for next owner boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented state owner split.
+- [x] Updated existing contracts and added named Node behavior script.
+- [x] Ran initial targeted verification.
+- [x] Run final static review.
+- [ ] Push and clean worktree.

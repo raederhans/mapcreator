@@ -37,9 +37,13 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             self.fail(details or "state write allowlist check failed")
         self.assertIn("State write allowlist passed", result.stdout)
 
-    def test_transport_workbench_controller_stays_explicit_state_writer(self):
+    def test_transport_workbench_state_owner_is_explicit_state_writer(self):
         allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
         self.assertIn(
+            "js/ui/toolbar/transport_workbench_state_owner.js",
+            allowlist.get("files", []),
+        )
+        self.assertNotIn(
             "js/ui/toolbar/transport_workbench_controller.js",
             allowlist.get("files", []),
         )
