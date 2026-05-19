@@ -394,4 +394,29 @@ Progress:
 - [x] Updated boundary and behavior tests.
 - [x] Run targeted verification.
 - [x] Run final static review.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench shell chrome owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-shell-chrome-owner-2026-05-19`
+Branch: `codex/transport-workbench-shell-chrome-owner-2026-05-19`
+
+Goal: continue G001 by moving shell chrome DOM synchronization out of the transport workbench controller and skipping unchanged text, attribute, class, and property writes during shell refreshes.
+
+Acceptance:
+
+- `transport_workbench_shell_owner.js` owns shell text/aria/class/property synchronization, family tab active state, apply button chrome, pack select option reuse, and preview control chrome.
+- `transport_workbench_controller.js` keeps render context construction, workbench lifecycle, state writes, preview/lens/inspector sequencing, and only delegates shell rendering to the shell owner.
+- Re-rendering the same shell context does not rewrite unchanged text/attributes/properties and still refreshes pack select value/disabled state plus preview control state.
+- Existing toolbar boundary contract and a named Node behavior script cover the owner boundary, same-context DOM write reuse, changed-context invalidation, and pack select reuse.
+- Targeted syntax, toolbar split contract, shell owner behavior, adjacent owner regressions, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Selected current-scope boundary move.
+- [x] Implement shell chrome owner split.
+- [x] Update boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final static review.
 - [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

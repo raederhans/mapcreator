@@ -517,3 +517,47 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `git diff --check`
 - Final static review approved the popover owner boundary. It found no blocking issues and confirmed aria/focus/mutual-exclusion/Escape behavior plus controller delegation.
 - Known noise: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen the package-level module setting.
+- Implementation and closeout commits `55e2ff7` and `df9e9f5` were pushed to `origin/main`; temporary worktree cleanup completed.
+
+## 2026-05-19 transport workbench shell chrome owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-shell-chrome-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Remaining controller hot path: `renderTransportWorkbenchShell()` still owns repeated textContent writes, aria/class toggles, family tab active-state writes, apply button chrome, preview control chrome, and pack select option sync.
+- Chosen boundary: create `js/ui/toolbar/transport_workbench_shell_owner.js`.
+- Intended behavior:
+  - Controller keeps render context construction and high-level sequencing.
+  - Shell owner synchronizes shell chrome with change-aware helpers so repeated identical renders avoid unchanged DOM writes.
+  - Pack select helper moves out of the controller into shell owner while preserving option DOM reuse plus value/disabled refresh.
+- Implemented:
+  - New `transport_workbench_shell_owner.js` owns shell text/aria/class/property synchronization, family tab active state, apply button chrome, preview controls, and pack select option reuse.
+  - Controller now wires shell owner dependencies and keeps `renderTransportWorkbenchShell(context)` as a one-line delegation.
+  - `tests/transport_workbench_shell_owner_behavior.test.mjs` replaces the old controller pack-select behavior test and adds same-context empty-write coverage plus family/layers/apply visibility changes.
+  - `package.json` keeps `test:node:transport-workbench-controller` as a compatibility alias to the new shell-owner script.
+  - `tests/test_ui_rework_plan03_support_transport_contract.py` now treats shell chrome as shell-owner-owned rather than controller-owned.
+- Review blockers found and fixed:
+  - Stale UI contract still expected compare/inspector text writes in the controller. Fixed by moving the assertion to shell owner and rerunning the UI support contract group.
+  - `dist/app` was behind source. Fixed with `npm run verify:pages-dist`, which also synchronized older transport owner dist files that had not yet reached Pages dist.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_shell_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_shell_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_ui_rework_plan03_support_transport_contract.py`
+  - `npm run test:node:transport-workbench-shell-owner`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-lens-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `npm run test:node:transport-workbench-popover-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for shell owner plus controller
+  - `git diff --check`
+- Final static review approved the source/dist synchronized shell owner slice. It found no remaining blockers and confirmed the compatibility test alias, source/dist hash match, and manifest sizes.
