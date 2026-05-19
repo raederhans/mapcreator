@@ -4,7 +4,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
-APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
+TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
 FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface.js"
 TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
 TRANSPORT_FACILITY_DISPLAY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_display_policy.js"
@@ -151,7 +151,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
 
     def test_toolbar_summary_uses_filtered_transport_counts(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        owner_content = APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
+        owner_content = TRANSPORT_APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
         summary_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_transport_summary.js").read_text(encoding="utf-8")
         toolbar_required_tokens = [
             'registerRuntimeHook(state, "updateTransportAppearanceUIFn", renderTransportAppearanceUi);',
@@ -209,7 +209,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
 
     def test_toolbar_syncs_facility_card_visibility_when_transport_surface_changes(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        owner_content = APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
+        owner_content = TRANSPORT_APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
         self.assertIn("runtimeState.syncFacilityInfoCardVisibilityFn?.();", owner_content)
         self.assertIn("panel.hidden = !isActive;", toolbar_content)
 

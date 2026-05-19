@@ -646,7 +646,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
     def test_rail_runtime_opens_and_saves(self) -> None:
         state_content = (REPO_ROOT / 'js' / 'core' / 'state' / 'ui_state.js').read_text(encoding='utf-8')
         appearance_controller_content = (
-            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'transport_appearance_controller.js'
         ).read_text(encoding='utf-8')
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         file_manager_content = (REPO_ROOT / 'js' / 'core' / 'file_manager.js').read_text(encoding='utf-8')
@@ -664,7 +664,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
     def test_road_runtime_opens_main_map_only(self) -> None:
         state_content = (REPO_ROOT / 'js' / 'core' / 'state' / 'ui_state.js').read_text(encoding='utf-8')
         appearance_controller_content = (
-            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'transport_appearance_controller.js'
         ).read_text(encoding='utf-8')
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')
@@ -683,7 +683,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
 
     def test_transport_toggles_release_deferred_context_markers(self) -> None:
         appearance_controller_content = (
-            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'transport_appearance_controller.js'
         ).read_text(encoding='utf-8')
         appearance_transport_summary_content = (
             REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_transport_summary.js'
@@ -731,7 +731,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')
         registry_content = (REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js').read_text(encoding='utf-8')
         appearance_controller_content = (
-            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'transport_appearance_controller.js'
         ).read_text(encoding='utf-8')
         self.assertIn('resolveDataAssetUrl("transport_catalog:rail")', data_loader_content)
         self.assertNotIn('data/transport_layers/global_rail/railways.topo.json', data_loader_content)
@@ -758,13 +758,15 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertNotIn('ensureContextLayerDataFn("road_labels"', interaction_content)
 
     def test_transport_appearance_ui_exposes_live_rail_controls(self) -> None:
-        toolbar_content = (REPO_ROOT / 'js' / 'ui' / 'toolbar.js').read_text(encoding='utf-8')
+        appearance_controller_content = (
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'transport_appearance_controller.js'
+        ).read_text(encoding='utf-8')
         html_content = (REPO_ROOT / 'index.html').read_text(encoding='utf-8')
-        self.assertIn('toggleRail', toolbar_content)
-        self.assertIn('transportRailControls', toolbar_content)
+        self.assertIn('toggleRail', appearance_controller_content)
+        self.assertIn('transportRailControls', appearance_controller_content)
         self.assertIn('drawRailwaysLayer', (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8'))
-        self.assertIn('railLabelsEnabled', toolbar_content)
-        self.assertIn('railLabelDensity', toolbar_content)
+        self.assertIn('railLabelsEnabled', appearance_controller_content)
+        self.assertIn('railLabelDensity', appearance_controller_content)
         self.assertIn('id="toggleRail"', html_content)
         self.assertIn('id="transportRailControls"', html_content)
         self.assertIn('id="railLabelsEnabled"', html_content)
@@ -772,13 +774,12 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertNotIn('data-i18n="Planned">Planned</span>', html_content.split('transportRailSummaryMeta', 1)[1].split('</details>', 1)[0])
 
     def test_transport_appearance_ui_exposes_live_road_controls_with_labels(self) -> None:
-        toolbar_content = (REPO_ROOT / 'js' / 'ui' / 'toolbar.js').read_text(encoding='utf-8')
         appearance_controller_content = (
-            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'appearance_controls_controller.js'
+            REPO_ROOT / 'js' / 'ui' / 'toolbar' / 'transport_appearance_controller.js'
         ).read_text(encoding='utf-8')
         html_content = (REPO_ROOT / 'index.html').read_text(encoding='utf-8')
-        self.assertIn('toggleRoad', toolbar_content)
-        self.assertIn('transportRoadControls', toolbar_content)
+        self.assertIn('toggleRoad', appearance_controller_content)
+        self.assertIn('transportRoadControls', appearance_controller_content)
         self.assertIn('drawRoadsLayer', (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8'))
         self.assertIn('roadLabelsEnabled', appearance_controller_content)
         self.assertIn('roadLabelDensity', appearance_controller_content)

@@ -50,6 +50,8 @@
     "js/ui/toolbar/appearance_controls_controller.js",
     "js/ui/toolbar/palette_library_panel.js",
     "js/ui/toolbar/special_zone_editor.js",
+    "js/ui/toolbar/special_zones_workbench_controller.js",
+    "js/ui/toolbar/transport_appearance_controller.js",
     "js/ui/toolbar/transport_workbench_controller.js",
     "tests/e2e/city_label_i18n_redraw.spec.js",
     "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
@@ -72,6 +74,8 @@
     "tests/e2e/tno_open_ocean_rendering.spec.js",
     "tests/physical_layer_contracts.test.mjs",
     "tests/renderer_runtime_state_behavior.test.mjs",
+    "tests/scenario_optional_layers_behavior.test.mjs",
+    "tests/special_zones_workbench_controller_behavior.test.mjs",
     "tests/strategic_overlay_runtime_owner_behavior.test.mjs"
   ]
 }

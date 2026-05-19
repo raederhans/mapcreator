@@ -16,6 +16,7 @@ EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_w
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
+TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
 APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
 OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean_lake_controls_controller.js"
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
@@ -465,34 +466,40 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_appearance_controller_owns_transport_appearance_and_shell_logic(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        transport_owner_content = TRANSPORT_APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
 
         self.assertIn("export function createAppearanceControlsController", owner_content)
         self.assertIn("const applyAppearanceFilter = () => {", owner_content)
         self.assertIn("const setAppearanceTab = (tabId = \"ocean\") => {", owner_content)
-        self.assertIn("const getTransportAppearanceConfig = () => {", owner_content)
-        self.assertIn("const renderTransportAppearanceUi = () => {", owner_content)
+        self.assertIn("createTransportAppearanceController({", owner_content)
+        self.assertIn("const renderTransportAppearanceUi = transportAppearanceController.renderTransportAppearanceUi;", owner_content)
+        self.assertIn("transportAppearanceController.bindEvents();", owner_content)
+        self.assertIn("export function createTransportAppearanceController", transport_owner_content)
+        self.assertIn("const getTransportAppearanceConfig = () => {", transport_owner_content)
+        self.assertIn("const renderTransportAppearanceUi = () => {", transport_owner_content)
         self.assertIn("const renderRecentColors = () => {", owner_content)
         self.assertIn("const renderParentBorderCountryList = () => {", owner_content)
         self.assertIn("const bindEvents = () => {", owner_content)
         self.assertNotIn("const getTransportAppearanceConfig = () => {", toolbar_content)
+        self.assertNotIn("const getTransportAppearanceConfig = () => {", owner_content)
         self.assertNotIn("const applyAppearanceFilter = () => {", toolbar_content)
         self.assertNotIn("function renderRecentColors()", toolbar_content)
         self.assertNotIn("function renderParentBorderCountryList()", toolbar_content)
-        self.assertIn("if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;", owner_content)
-        self.assertIn("if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;", owner_content)
+        self.assertIn("if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;", transport_owner_content)
+        self.assertIn("if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;", transport_owner_content)
         for field in ("airportLabelMode", "airportScopeLinked", "airportScope", "airportImportanceThreshold"):
-            self.assertIn(field, owner_content)
+            self.assertIn(field, transport_owner_content)
         for field in ("portLabelMode", "portScopeLinked", "portTier", "portImportanceThreshold"):
-            self.assertIn(field, owner_content)
-        self.assertIn("if (runtimeState.showAirports && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
-        self.assertIn("if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;", owner_content)
-        self.assertIn("[toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {", owner_content)
-        self.assertIn("if (control) control.disabled = false;", owner_content)
-        self.assertIn("let transportAppearanceUiFrameId = 0;", owner_content)
-        self.assertIn("const renderTransportAppearanceDirty = (reason) => {", owner_content)
-        self.assertIn('renderDirty(normalizedReason || "transport-appearance");', owner_content)
-        self.assertIn("if (transportAppearanceUiFrameId) return;", owner_content)
-        self.assertIn("transportAppearanceUiFrameId = scheduleTransportAppearanceFrame(() => {", owner_content)
+            self.assertIn(field, transport_owner_content)
+        self.assertIn("if (runtimeState.showAirports && runtimeState.showTransport === false) runtimeState.showTransport = true;", transport_owner_content)
+        self.assertIn("if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;", transport_owner_content)
+        self.assertIn("[toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {", transport_owner_content)
+        self.assertIn("if (control) control.disabled = false;", transport_owner_content)
+        self.assertIn("let transportAppearanceUiFrameId = 0;", transport_owner_content)
+        self.assertIn("const renderTransportAppearanceDirty = (reason) => {", transport_owner_content)
+        self.assertIn('renderDirty(normalizedReason || "transport-appearance");', transport_owner_content)
+        self.assertIn("if (transportAppearanceUiFrameId) return;", transport_owner_content)
+        self.assertIn("transportAppearanceUiFrameId = scheduleTransportAppearanceFrame(() => {", transport_owner_content)
 
     def test_toolbar_keeps_appearance_facade_and_state_registration_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
