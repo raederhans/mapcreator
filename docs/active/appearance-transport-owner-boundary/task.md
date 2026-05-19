@@ -120,3 +120,16 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench right deck owner slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Dispatch static-only subagents for right-deck/control rendering boundary and test entrypoints.
+- [x] Select current-scope boundary move.
+- [x] Implement right-deck owner split.
+- [x] Extend Python contracts and add named Node behavior script.
+- [x] Run syntax and targeted contracts.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

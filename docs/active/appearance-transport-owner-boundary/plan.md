@@ -244,3 +244,29 @@ Progress:
 - [x] Run targeted verification.
 - [x] Run final static review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench right deck owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-next-owner-2026-05-19`
+Branch: `codex/transport-workbench-next-owner-2026-05-19`
+
+Goal: continue G001 by moving right-deck control rendering and tab-section DOM wiring out of the overloaded workbench controller.
+
+Acceptance:
+
+- `transport_workbench_right_deck_owner.js` owns control DOM factories, right-deck section nodes, density shell cards, advanced range controls, active-tab panel rendering, and control event wiring.
+- `transport_workbench_controller.js` keeps overlay lifecycle, render context construction, state-owner writes, preview refresh sequencing, and right-deck dependency injection.
+- Config/display config updates avoid the previous duplicate explicit tab render because `renderTransportWorkbenchInspector()` already refreshes the right deck.
+- Existing Python contracts and a named Node behavior test cover the new owner boundary, control event commits, compare-held read-only behavior, section open state, active-tab-only rendering, and advanced range writes.
+- Targeted syntax, Python contracts, Node behavior, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only evidence lanes for right-deck boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented right-deck owner split.
+- [x] Updated contracts and added named Node behavior script.
+- [x] Run targeted verification.
+- [x] Run final static review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

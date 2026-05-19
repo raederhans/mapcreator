@@ -299,3 +299,54 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `git diff --check`
 - Final static re-review approved the layer-order owner boundary after the fixes. Remaining risk is limited to live browser behavior, which is intentionally not part of this current verification lane.
 - Pushed implementation to `origin/main` as `0784ff4`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean layer-order worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench right deck owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-next-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes converged on the right-deck control panel as the next performance/architecture slice: config changes were rebuilding all five right-deck tab mounts and duplicating tab rendering before inspector refresh.
+- External performance reference: web.dev INP guidance frames interaction responsiveness around the time from input handling to the next paint, with long JavaScript and large DOM/layout work as common causes. This supports reducing per-control DOM rebuilds and keeping event handlers narrow.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_right_deck_owner.js`.
+- Moved to right-deck owner: generic control DOM factory, right-deck section node creation, density family shell cards, advanced aggregation/label range controls, active-tab panel rendering, compare-held read-only guard, section-open read, and control event wiring.
+- Kept in `transport_workbench_controller.js`: overlay lifecycle, render context construction, state-owner writes, pack gate/apply owner wiring, preview lifecycle calls, lens/inspector orchestration, and owner dependency injection.
+- Performance-oriented behavior change: right-deck rendering now renders only the active control tab mount, and config/display updates no longer call `renderTransportWorkbenchInspectorTabs()` before `renderTransportWorkbenchInspector()` because inspector refresh already delegates to the right-deck owner.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks the right-deck owner boundary and confirms control schema/tab map/control DOM factories left the controller.
+  - `tests/transport_workbench_right_deck_owner_behavior.test.mjs` covers toggle/select/range/multi commits, compare-held read-only controls, active-tab-only rendering, section-open/toggle behavior, and advanced range display-config writes.
+  - `package.json` exposes `test:node:transport-workbench-right-deck-owner`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_right_deck_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_right_deck_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+- Final static re-review approved the right-deck owner boundary after the compare-held fixes. Remaining risk is limited to live browser feel and a later pass to see whether full `renderTransportWorkbenchUi()` still does redundant right-deck work.
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_right_deck_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review requested a compare-held fix: density shell card controls and advanced ranges were still writable while baseline compare was held.
+- Review fixes applied:
+  - `transport_workbench_right_deck_owner.js` now passes `compareHeld` through shell/advanced control factories, disables those inputs, and short-circuits their handlers.
+  - `transport_workbench_controller.js` now also returns early from display-config writes while compare is held.
+  - `tests/transport_workbench_right_deck_owner_behavior.test.mjs` now covers shell/advanced compare-held read-only behavior, diagnostics body render, and active mount replacement on tab/family change.
+- Verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_right_deck_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_right_deck_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_right_deck_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`

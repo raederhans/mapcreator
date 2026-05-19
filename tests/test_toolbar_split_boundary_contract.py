@@ -20,6 +20,7 @@ TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" 
 TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js"
 TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
 TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_layer_order_owner.js"
+TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_right_deck_owner.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -422,6 +423,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         preview_lifecycle_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
         inspector_owner_content = TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS.read_text(encoding="utf-8")
         layer_order_owner_content = TRANSPORT_WORKBENCH_LAYER_ORDER_OWNER_JS.read_text(encoding="utf-8")
+        right_deck_owner_content = TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS.read_text(encoding="utf-8")
         descriptor_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_descriptor.js").read_text(encoding="utf-8")
 
         self.assertIn("export function createTransportWorkbenchController", owner_content)
@@ -430,6 +432,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("./transport_workbench_apply_bridge_owner.js", owner_content)
         self.assertIn("./transport_workbench_preview_lifecycle_owner.js", owner_content)
         self.assertIn("./transport_workbench_inspector_owner.js", owner_content)
+        self.assertIn("./transport_workbench_right_deck_owner.js", owner_content)
         self.assertIn("const renderTransportWorkbenchUi = () => {", owner_content)
         self.assertIn("const bindTransportWorkbenchEvents = () => {", owner_content)
         self.assertIn("const initializeTransportWorkbenchRuntime = () => {", owner_content)
@@ -507,7 +510,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("export const TRANSPORT_WORKBENCH_SECTION_DEFAULTS = deepFreeze({", descriptor_content)
         self.assertIn("const TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET = new Set([", descriptor_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS = Object.freeze({", descriptor_content)
-        self.assertIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,", owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,", right_deck_owner_content)
         self.assertIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", config_owner_content)
         self.assertNotIn("TRANSPORT_WORKBENCH_DEFAULT_CONFIGS,", owner_content)
         self.assertIn("TRANSPORT_WORKBENCH_SECTION_DEFAULTS,", state_owner_content)
@@ -539,7 +542,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('["Right deck", rightDeckLabel || ""]', inspector_owner_content)
         self.assertIn('rightDeckLabel: t("Display / Aggregation / Labels / Coverage / Data", "ui")', owner_content)
         self.assertIn("transportWorkbenchInspectorOwner.buildInspectorModel({", owner_content)
-        self.assertIn("transportWorkbenchInspectorOwner.renderDiagnosticsBody(family.id, config)", owner_content)
+        self.assertIn("renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config)", owner_content)
+        self.assertIn("renderDiagnosticsBody(family.id, config)", right_deck_owner_content)
         self.assertIn("transportWorkbenchInspectorOwner.buildLensSummaryRows({", owner_content)
         self.assertIn("transportWorkbenchInspectorOwner.createRow(label, value)", owner_content)
         self.assertIn("transportWorkbenchInspectorOwner.createRow(entry[0], entry[1], {", owner_content)
@@ -570,6 +574,30 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn('item.addEventListener("dragstart"', owner_content)
         self.assertNotIn('"Live now"', owner_content)
         self.assertIn('"Live now"', layer_order_owner_content)
+        self.assertIn("export function createTransportWorkbenchRightDeckOwner({", right_deck_owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS", right_deck_owner_content)
+        self.assertIn("TRANSPORT_WORKBENCH_TAB_SECTION_MAP", right_deck_owner_content)
+        self.assertIn("mapTransportWorkbenchLabelLevelToMaxLevel", right_deck_owner_content)
+        self.assertIn("mapTransportWorkbenchMaxLevelToLabelLevel", right_deck_owner_content)
+        self.assertIn("const transportWorkbenchRightDeckOwner = createTransportWorkbenchRightDeckOwner({", owner_content)
+        self.assertIn('translate: (label) => t(label, "ui")', owner_content)
+        self.assertIn("pickUiCopy,", owner_content)
+        self.assertIn("getDisplayConfig: (familyId) => getTransportWorkbenchDisplayConfig(familyId)", owner_content)
+        self.assertIn("isSectionOpen: (familyId, sectionKey) => !!runtimeState.transportWorkbenchUi?.sectionOpen?.[familyId]?.[sectionKey]", owner_content)
+        self.assertIn("updateFamilyConfig: (familyId, key, nextValue, options) => updateTransportWorkbenchFamilyConfig(familyId, key, nextValue, options)", owner_content)
+        self.assertIn("updateDisplayConfig: (familyId, updateFn) => updateTransportWorkbenchDisplayConfig(familyId, updateFn)", owner_content)
+        self.assertIn("renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config)", owner_content)
+        self.assertIn("transportWorkbenchRightDeckOwner.renderTabs({", owner_content)
+        self.assertIn("renderTabSections(family, config, compareHeld, resolvedTab, mounts[resolvedTab]);", right_deck_owner_content)
+        self.assertNotIn("const renderTransportWorkbenchControl = ", owner_content)
+        self.assertNotIn("const createTransportWorkbenchSectionNode = ", owner_content)
+        self.assertNotIn("const createTransportWorkbenchShellCard = ", owner_content)
+        self.assertNotIn("const renderTransportWorkbenchTabSections = ", owner_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_CONTROL_SCHEMAS", owner_content)
+        self.assertNotIn("TRANSPORT_WORKBENCH_TAB_SECTION_MAP", owner_content)
+        self.assertNotIn("mapTransportWorkbenchLabelLevelToMaxLevel", owner_content)
+        self.assertNotIn("mapTransportWorkbenchMaxLevelToLabelLevel", owner_content)
+        self.assertNotIn("renderTransportWorkbenchInspectorTabs(nextContext.family", owner_content)
         self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
         self.assertRegex(
             apply_owner_content,
