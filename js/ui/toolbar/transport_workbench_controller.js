@@ -15,20 +15,16 @@ import {
 import {
   getTransportWorkbenchCarrierViewState,
   resetTransportWorkbenchCarrierView,
-  setTransportWorkbenchCarrierViewChangeListener,
   setTransportWorkbenchCarrierFamily,
   stepTransportWorkbenchCarrierZoom,
   toggleTransportWorkbenchCarrierQuarterTurn,
 } from "../transport_workbench_carrier.js";
 import {
   getTransportWorkbenchFamilyPreviewSnapshot,
-  setTransportWorkbenchFamilyPreviewSelectionListener,
-  warmTransportWorkbenchFamilyPreview,
 } from "../transport_workbench_family_preview.js";
 import {
   isTransportWorkbenchLivePreviewFamily,
   isTransportWorkbenchManifestOnlyRuntimeFamily,
-  listTransportWorkbenchWarmupPlans,
 } from "../transport_workbench_family_registry.js";
 import {
   getTargetMainMapPackMeta,
@@ -67,7 +63,6 @@ import {
   buildEnergyFacilitySubtypeControlOptions,
 } from "./transport_workbench_descriptor.js";
 import {
-  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,
   mapTransportWorkbenchLabelLevelToMaxLevel,
   mapTransportWorkbenchMaxLevelToLabelLevel,
   normalizeTransportWorkbenchEnum,
@@ -135,7 +130,6 @@ export function createTransportWorkbenchController({
   };
 
   let transportWorkbenchSectionHelpState = null;
-  let transportWorkbenchPreviewWarmupScheduled = false;
   let transportWorkbenchDraggedLayerId = "";
 
   const transportWorkbenchStateOwner = createTransportWorkbenchStateOwner(runtimeState);
@@ -153,6 +147,7 @@ export function createTransportWorkbenchController({
     getRenderContext: () => getTransportWorkbenchRenderContext(),
     renderInspector: (family, config, compareHeld) => renderTransportWorkbenchInspector(family, config, compareHeld),
     renderLayerOrderPanel: () => renderTransportWorkbenchLayerOrderPanel(),
+    renderLensSections: (family, config, compareHeld) => renderTransportWorkbenchLensSections(family, config, compareHeld),
     syncPreviewControls: () => syncTransportWorkbenchPreviewControls(),
   });
 
@@ -1764,30 +1759,6 @@ export function createTransportWorkbenchController({
     transportWorkbenchRotateBtn?.setAttribute("aria-pressed", isAlternateTurn ? "true" : "false");
   };
 
-  const scheduleTransportWorkbenchFamilyPreviewWarmup = () => {
-    if (transportWorkbenchPreviewWarmupScheduled) return;
-    transportWorkbenchPreviewWarmupScheduled = true;
-    const runWarmup = () => {
-      const warmupPlans = listTransportWorkbenchWarmupPlans();
-      Promise.allSettled(
-        warmupPlans.map((plan) => warmTransportWorkbenchFamilyPreview(plan.familyId, { includeFull: !!plan.includeFull }))
-      ).then((results) => {
-        results.forEach((result, index) => {
-          if (result.status === "fulfilled") return;
-          const familyId = warmupPlans[index]?.familyId || "unknown";
-          console.warn(`[transport-workbench] Failed to warm ${familyId} preview pack.`, result.reason);
-        });
-      });
-    };
-    window.setTimeout(() => {
-      if (typeof window.requestIdleCallback === "function") {
-        window.requestIdleCallback(() => runWarmup(), { timeout: 2_000 });
-        return;
-      }
-      runWarmup();
-    }, 10_000);
-  };
-
   const getTransportWorkbenchRenderContext = () => {
     ensureTransportWorkbenchUiState();
     const uiState = runtimeState.transportWorkbenchUi;
@@ -1896,10 +1867,6 @@ export function createTransportWorkbenchController({
     }
   };
 
-  const scheduleTransportWorkbenchPreviewViewSync = () => (
-    transportWorkbenchPreviewLifecycleOwner.scheduleViewSync()
-  );
-
   const renderTransportWorkbenchUi = () => {
     if (
       !transportWorkbenchOverlay
@@ -1988,20 +1955,7 @@ export function createTransportWorkbenchController({
   };
 
   const initializeTransportWorkbenchRuntime = () => {
-    scheduleTransportWorkbenchFamilyPreviewWarmup();
-    setTransportWorkbenchCarrierViewChangeListener(() => {
-      scheduleTransportWorkbenchPreviewViewSync();
-    });
-    TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
-      setTransportWorkbenchFamilyPreviewSelectionListener(familyId, () => {
-        const context = getTransportWorkbenchRenderContext();
-        if (!context.isOpen || context.family.id !== familyId) {
-          return;
-        }
-        renderTransportWorkbenchLensSections(context.family, context.config, context.compareHeld);
-        renderTransportWorkbenchInspector(context.family, context.config, context.compareHeld);
-      });
-    });
+    transportWorkbenchPreviewLifecycleOwner.initializeRuntimeHooks();
   };
 
   const bindTransportWorkbenchEvents = () => {

@@ -6,14 +6,21 @@ import {
   ensureTransportWorkbenchCarrier,
   getTransportWorkbenchCarrierViewState,
   resizeTransportWorkbenchCarrier,
+  setTransportWorkbenchCarrierViewChangeListener,
 } from "../transport_workbench_carrier.js";
 import {
   clearAllTransportWorkbenchFamilyPreviews,
   destroyAllTransportWorkbenchFamilyPreviews,
   isTransportWorkbenchFamilyLivePreviewCapable,
   renderTransportWorkbenchFamilyPreview,
+  setTransportWorkbenchFamilyPreviewSelectionListener,
+  warmTransportWorkbenchFamilyPreview,
 } from "../transport_workbench_family_preview.js";
-import { normalizeTransportWorkbenchFamily } from "./transport_workbench_config_owner.js";
+import { listTransportWorkbenchWarmupPlans } from "../transport_workbench_family_registry.js";
+import {
+  TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,
+  normalizeTransportWorkbenchFamily,
+} from "./transport_workbench_config_owner.js";
 
 function createTransportWorkbenchPreviewViewKey(viewState = {}) {
   return [
@@ -30,11 +37,31 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
   ensureUiState = () => {},
   renderInspector = () => {},
   renderLayerOrderPanel = () => {},
+  renderLensSections = () => {},
   syncPreviewControls = () => {},
+  listWarmupPlans = listTransportWorkbenchWarmupPlans,
+  warmFamilyPreview = warmTransportWorkbenchFamilyPreview,
+  setCarrierViewChangeListener = setTransportWorkbenchCarrierViewChangeListener,
+  setFamilyPreviewSelectionListener = setTransportWorkbenchFamilyPreviewSelectionListener,
+  runtimeFamilyIds = TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,
+  destroyCarrier = destroyTransportWorkbenchCarrier,
+  destroyFamilyPreviews = destroyAllTransportWorkbenchFamilyPreviews,
+  scheduleTimeout = (callback, delay) => globalThis.setTimeout(callback, delay),
+  requestIdle = (callback, options) => {
+    if (typeof globalThis.requestIdleCallback === "function") {
+      return globalThis.requestIdleCallback(callback, options);
+    }
+    callback();
+    return 0;
+  },
+  warnWarmupFailure = (familyId, reason) => {
+    console.warn(`[transport-workbench] Failed to warm ${familyId} preview pack.`, reason);
+  },
 } = {}) {
   let renderGeneration = 0;
   let previewViewSyncRaf = 0;
   let previewLastViewKey = "";
+  let previewWarmupScheduled = false;
 
   const isRenderGenerationCurrent = (candidateGeneration, familyId) => (
     candidateGeneration === renderGeneration
@@ -123,6 +150,46 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     });
   };
 
+  const schedulePreviewWarmup = () => {
+    if (previewWarmupScheduled) return;
+    previewWarmupScheduled = true;
+    const runWarmup = () => {
+      const warmupPlans = listWarmupPlans();
+      Promise.allSettled(
+        warmupPlans.map((plan) => warmFamilyPreview(plan.familyId, { includeFull: !!plan.includeFull }))
+      ).then((results) => {
+        results.forEach((result, index) => {
+          if (result.status === "fulfilled") return;
+          warnWarmupFailure(warmupPlans[index]?.familyId || "unknown", result.reason);
+        });
+      });
+    };
+    scheduleTimeout(() => {
+      requestIdle(() => runWarmup(), { timeout: 2_000 });
+    }, 10_000);
+  };
+
+  const attachRuntimeListeners = () => {
+    setCarrierViewChangeListener(() => {
+      scheduleViewSync();
+    });
+    runtimeFamilyIds.forEach((familyId) => {
+      setFamilyPreviewSelectionListener(familyId, () => {
+        const context = getRenderContext();
+        if (!context?.isOpen || context.family?.id !== familyId) {
+          return;
+        }
+        renderLensSections(context.family, context.config, context.compareHeld);
+        renderInspector(context.family, context.config, context.compareHeld);
+      });
+    });
+  };
+
+  const initializeRuntimeHooks = () => {
+    schedulePreviewWarmup();
+    attachRuntimeListeners();
+  };
+
   const dispose = () => {
     if (previewViewSyncRaf) {
       cancelAnimationFrame(previewViewSyncRaf);
@@ -130,12 +197,14 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     }
     renderGeneration += 1;
     previewLastViewKey = "";
-    destroyAllTransportWorkbenchFamilyPreviews();
-    destroyTransportWorkbenchCarrier();
+    destroyFamilyPreviews();
+    destroyCarrier();
+    attachRuntimeListeners();
   };
 
   return {
     dispose,
+    initializeRuntimeHooks,
     isRenderGenerationCurrent,
     refreshPreview,
     scheduleViewSync,

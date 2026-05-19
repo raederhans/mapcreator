@@ -141,3 +141,30 @@ Progress:
 - [x] Ran initial targeted verification.
 - [x] Run final static review.
 - [x] Pushed implementation to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 transport workbench preview runtime hooks owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-preview-runtime-owner-2026-05-19`
+Branch: `codex/transport-workbench-preview-runtime-owner-2026-05-19`
+
+Goal: continue G001 by moving transport workbench preview warmup and runtime listener registration into the preview lifecycle owner.
+
+Acceptance:
+
+- `transport_workbench_preview_lifecycle_owner.js` owns warmup scheduling, carrier view listener registration, family preview selection listener registration, and preview selection refresh callbacks.
+- `transport_workbench_controller.js` keeps the toolbar-visible runtime initialization entrypoint and delegates to `initializeRuntimeHooks()`.
+- Closing the workbench keeps the carrier view listener available after carrier disposal.
+- Existing Python contracts and a named Node behavior test cover the boundary and runtime hook behavior.
+- Targeted syntax, Python contracts, Node behavior, import smoke, static review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Loaded ultragoal, ultrawork, research-before-fix, performance-goal, Ralph, AGENTS, active docs, and lessons.
+- [x] Dispatched static-only evidence lanes for runtime hook boundary and test entrypoints.
+- [x] Selected current-scope boundary move.
+- [x] Implemented preview runtime hook owner split.
+- [x] Updated existing contracts and added named Node behavior script.
+- [x] Ran initial targeted verification.
+- [x] Run final static review.
+- [ ] Push implementation to `origin/main`; temporary worktree cleanup follows closeout commit.

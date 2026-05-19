@@ -1602,3 +1602,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - rAF 批量刷新 summary 时，render 请求必须在事件当下发出；把 `renderDirty()` 延后到 UI rAF 会让 summary 读到上一帧 metrics。
 - 热路径 cache key 要只包含会改变结果的字段；opacity、颜色、strength 这类纯视觉字段不应让 transport filtered count 重新扫描大集合。
+
+## 2026-05-19 - transport workbench preview listener lifecycle
+
+- 如果 dispose 会销毁底层 carrier 并清空 listener，owner 必须在同一关闭路径恢复 runtime listener；只在 app 启动时注册一次会让 close/open 后的 view sync 断链。

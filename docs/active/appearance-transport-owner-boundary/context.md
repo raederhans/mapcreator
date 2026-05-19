@@ -140,3 +140,43 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node tools/check_state_write_allowlist.mjs`
   - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_state_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
 - Pushed implementation to `origin/main` as `b9835bd`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean state-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench preview runtime hooks owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-preview-runtime-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes split on whether runtime listener registration should remain in the controller. Current code showed a narrow owner-owned lifecycle move was still useful: preview warmup, carrier view listener registration, and family preview selection listeners all target preview lifecycle behavior, while the controller only needs a toolbar-visible initialization entrypoint.
+- Chosen boundary: extend `js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js` with `initializeRuntimeHooks()`.
+- Moved to preview lifecycle owner: warmup scheduling, idle warmup execution, warmup failure reporting, carrier view listener registration, runtime family selection listener registration, and selection-triggered lens/inspector refresh.
+- Kept in `transport_workbench_controller.js`: DOM buttons, shell rendering, current render context construction, panel open/close, and the exported `initializeTransportWorkbenchRuntime()` facade.
+- The move exposed a real lifecycle risk: `destroyTransportWorkbenchCarrier()` clears the carrier view listener during close, while runtime initialization happens once from `toolbar.js`. The preview lifecycle owner now reattaches runtime listeners after `dispose()` so close/open does not leave preview view sync detached.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks that warmup/listener wiring moved to preview lifecycle owner and stays out of the controller.
+  - `tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs` covers warmup scheduling idempotency, warmup failure reporting, selection listener refresh behavior, and listener reattachment after dispose.
+  - `package.json` exposes `test:node:transport-workbench-preview-lifecycle-owner`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js`
+  - `node --check tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+- Node emitted the existing typeless package ESM warning during module import and Node tests; the commands passed.
+- Final static review requested that the new Node behavior test be included in the commit and that the dispose listener reattach test prove ordering, not only setter count.
+- Review fixes:
+  - `transport_workbench_preview_lifecycle_owner.js` now injects `destroyCarrier` and `destroyFamilyPreviews` for behavior tests while defaulting to the original runtime functions.
+  - The Node behavior test now simulates carrier destroy clearing the listener, then asserts `dispose()` leaves a live carrier view listener after reattachment.
+  - The Python split contract now locks `destroyFamilyPreviews(); destroyCarrier(); attachRuntimeListeners();` ordering.
+- Added a short `lessons learned.md` note for the carrier listener lifecycle issue.
+- Final verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js`
+  - `node --check tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py tests/test_state_write_guardrail_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
