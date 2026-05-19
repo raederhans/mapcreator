@@ -106,4 +106,4 @@ Owner: main thread for implementation and all live verification.
 - [x] Extend Python contracts and existing Node behavior script.
 - [x] Run syntax and targeted contracts.
 - [x] Run final static review.
-- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
