@@ -29,6 +29,7 @@ WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "tool
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
 APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
+APPEARANCE_PARENT_BORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_parent_border_owner.js"
 OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean_lake_controls_controller.js"
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
@@ -844,7 +845,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const getTransportAppearanceConfig = () => {", transport_owner_content)
         self.assertIn("const renderTransportAppearanceUi = () => {", transport_owner_content)
         self.assertIn("const renderRecentColors = () => {", owner_content)
-        self.assertIn("const renderParentBorderCountryList = () => {", owner_content)
+        self.assertIn("const renderParentBorderCountryList = () => parentBorderOwner.renderCountryList();", owner_content)
         self.assertIn("const bindEvents = () => {", owner_content)
         self.assertNotIn("const getTransportAppearanceConfig = () => {", toolbar_content)
         self.assertNotIn("const getTransportAppearanceConfig = () => {", owner_content)
@@ -956,6 +957,28 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("renderAppearanceStyleControlsUi();", content)
         self.assertIn("specialZoneEditorController.renderSpecialZoneEditorUI();", content)
         self.assertIn('registerRuntimeHook(state, "updateSpecialZoneEditorUIFn", renderSpecialZoneEditorUI);', content)
+
+    def test_appearance_parent_border_owner_moves_list_rendering_out_of_controller(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        parent_border_owner_content = APPEARANCE_PARENT_BORDER_OWNER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("from \"./appearance_parent_border_owner.js\";", owner_content)
+        self.assertIn("const parentBorderOwner = createAppearanceParentBorderOwner({", owner_content)
+        self.assertIn("const syncParentBorderVisibilityUI = () => parentBorderOwner.syncVisibilityUi();", owner_content)
+        self.assertIn("const renderParentBorderCountryList = () => parentBorderOwner.renderCountryList();", owner_content)
+        self.assertIn("export function createAppearanceParentBorderOwner({", parent_border_owner_content)
+        self.assertIn("export function normalizeParentBorderEnabledMap(runtimeState)", parent_border_owner_content)
+        self.assertIn("export function buildParentBorderCountryRows({", parent_border_owner_content)
+        self.assertIn("export function getParentBorderRowsSignature(rows = [])", parent_border_owner_content)
+        self.assertIn("if (countryList.dataset.parentBorderRowsSignature === nextSignature)", parent_border_owner_content)
+        self.assertIn("syncCountryCheckboxes(rows, enabled);", parent_border_owner_content)
+        self.assertIn('renderDirty("parent-border-country");', parent_border_owner_content)
+        self.assertNotIn("const normalizeParentBorderEnabledMap = () => {", owner_content)
+        self.assertNotIn("parentBorderCountryList.replaceChildren();", owner_content)
+        self.assertNotIn('checkbox.addEventListener("change", (event) => {', owner_content)
+        self.assertNotIn("const normalizeParentBorderEnabledMap = () => {", toolbar_content)
+        self.assertNotIn("parentBorderCountryList.replaceChildren();", toolbar_content)
 
     def test_appearance_controller_owns_reference_overlay_logic(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")

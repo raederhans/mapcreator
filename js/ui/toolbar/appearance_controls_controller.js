@@ -11,6 +11,7 @@ import {
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { captureHistoryState, pushHistoryEntry } from "../../core/history_manager.js";
 import { createTransportAppearanceController } from "./transport_appearance_controller.js";
+import { createAppearanceParentBorderOwner } from "./appearance_parent_border_owner.js";
 import {
   CITY_POINTS_THEME_OPTIONS,
   formatCityPointsDensityValue,
@@ -242,6 +243,21 @@ export function createAppearanceControlsController({
     normalizeOceanFillColor,
   });
   const renderTransportAppearanceUi = transportAppearanceController.renderTransportAppearanceUi;
+  const parentBorderOwner = createAppearanceParentBorderOwner({
+    runtimeState,
+    nodes: {
+      visibleToggle: parentBordersVisible,
+      colorInput: parentBorderColor,
+      opacityInput: parentBorderOpacity,
+      widthInput: parentBorderWidth,
+      enableAllButton: parentBorderEnableAll,
+      disableAllButton: parentBorderDisableAll,
+      countryList: parentBorderCountryList,
+      emptyNode: parentBorderEmpty,
+    },
+    translateGeo: (label) => t(label, "geo"),
+    renderDirty,
+  });
 
   const physicalClassToggleMap = {
     mountain_high_relief: physicalClassMountain,
@@ -801,76 +817,9 @@ export function createAppearanceControlsController({
     });
   };
 
-  const normalizeParentBorderEnabledMap = () => {
-    const supported = Array.isArray(runtimeState.parentBorderSupportedCountries) ? runtimeState.parentBorderSupportedCountries : [];
-    const prev = runtimeState.parentBorderEnabledByCountry && typeof runtimeState.parentBorderEnabledByCountry === "object"
-      ? runtimeState.parentBorderEnabledByCountry
-      : {};
-    const next = {};
-    supported.forEach((countryCode) => {
-      next[countryCode] = !!prev[countryCode];
-    });
-    runtimeState.parentBorderEnabledByCountry = next;
-  };
+  const syncParentBorderVisibilityUI = () => parentBorderOwner.syncVisibilityUi();
 
-  const syncParentBorderVisibilityUI = () => {
-    const enabled = runtimeState.parentBordersVisible !== false;
-    if (parentBordersVisible) parentBordersVisible.checked = enabled;
-    if (parentBorderColor) parentBorderColor.disabled = !enabled;
-    if (parentBorderOpacity) parentBorderOpacity.disabled = !enabled;
-    if (parentBorderWidth) parentBorderWidth.disabled = !enabled;
-    if (parentBorderEnableAll) parentBorderEnableAll.disabled = !enabled;
-    if (parentBorderDisableAll) parentBorderDisableAll.disabled = !enabled;
-    if (parentBorderCountryList) {
-      parentBorderCountryList.classList.toggle("opacity-60", !enabled);
-      parentBorderCountryList.classList.toggle("pointer-events-none", !enabled);
-    }
-  };
-
-  const renderParentBorderCountryList = () => {
-    if (!parentBorderCountryList) return;
-    normalizeParentBorderEnabledMap();
-    syncParentBorderVisibilityUI();
-    const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
-      ? [...runtimeState.parentBorderSupportedCountries]
-      : [];
-
-    parentBorderCountryList.replaceChildren();
-    if (!supported.length) {
-      parentBorderEmpty?.classList.remove("hidden");
-      return;
-    }
-    parentBorderEmpty?.classList.add("hidden");
-
-    const entries = supported
-      .map((code) => ({
-        code,
-        displayName: t(runtimeState.countryNames?.[code] || code, "geo"),
-      }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
-
-    entries.forEach(({ code, displayName }) => {
-      const label = document.createElement("label");
-      label.className = "toggle-label parent-border-country-item";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "checkbox-input";
-      checkbox.checked = !!runtimeState.parentBorderEnabledByCountry?.[code];
-      checkbox.disabled = runtimeState.parentBordersVisible === false;
-      checkbox.addEventListener("change", (event) => {
-        runtimeState.parentBorderEnabledByCountry[code] = !!event.target.checked;
-        renderDirty("parent-border-country");
-      });
-
-      const text = document.createElement("span");
-      text.textContent = `${displayName} (${code})`;
-
-      label.appendChild(checkbox);
-      label.appendChild(text);
-      parentBorderCountryList.appendChild(label);
-    });
-  };
+  const renderParentBorderCountryList = () => parentBorderOwner.renderCountryList();
 
   const bindEvents = () => {
     if (appearanceSpecialZoneBtn && !appearanceSpecialZoneBtn.dataset.bound) {

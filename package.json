@@ -9,6 +9,7 @@
   "scripts": {
     "test:node:city-lights-assets": "node --test tests/city_lights_asset_contract.test.mjs",
     "test:node:data-service-runtime": "node --test tests/data_service_runtime_behavior.test.mjs",
+    "test:node:appearance-parent-border-owner": "node --test tests/appearance_parent_border_owner_behavior.test.mjs",
     "test:node:transport-facility-render-owner": "node --test tests/transport_facility_render_owner_behavior.test.mjs",
     "test:node:transport-workbench-controller": "npm run test:node:transport-workbench-event-owner && npm run test:node:transport-workbench-shell-owner",
     "test:node:transport-workbench-event-owner": "node --test tests/transport_workbench_event_owner_behavior.test.mjs",

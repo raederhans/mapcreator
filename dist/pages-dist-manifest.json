@@ -6610,7 +6610,11 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 101157
+      "size_bytes": 98949
+    },
+    {
+      "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
+      "size_bytes": 4974
     },
     {
       "path": "app/js/ui/toolbar/appearance_transport_summary.js",
@@ -6658,7 +6662,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_controller.js",
-      "size_bytes": 26521
+      "size_bytes": 26574
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_descriptor.js",
@@ -6666,7 +6670,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_event_owner.js",
-      "size_bytes": 7038
+      "size_bytes": 7236
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_inspector_owner.js",
@@ -6846,7 +6850,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217202
+      "size_bytes": 217312
     },
     {
       "path": "styles.css",
@@ -6863,5 +6867,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001452210
+  "total_bytes": 1001455337
 }
