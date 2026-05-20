@@ -594,3 +594,36 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - source and dist import smokes for event owner plus controller
   - `git diff --check`
 - Review note: two static reviewer lanes timed out before returning findings. Main thread completed the first-principles self-review: the smaller stable boundary is event binding plus event-to-action dispatch only; state writes, render ordering, apply semantics, and popover semantics stay in the controller-owned owners/callbacks.
+- Implementation and closeout commits `6dd1401` and `e6e8c43` were pushed to `origin/main`; temporary worktree cleanup completed.
+
+## 2026-05-19 appearance parent border owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-parent-border-owner-2026-05-19`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static appearance review found `appearance_controls_controller.js` is now the largest toolbar owner at 1664 lines on `origin/main`.
+- Chosen boundary: create `js/ui/toolbar/appearance_parent_border_owner.js` before larger texture/city/urban splits because parent-border list rendering is low-coupling and can prove DOM churn reduction.
+- Intended behavior:
+  - Parent border owner owns enabled-map normalization, translated/sorted country row model, row signatures, list DOM rendering, checkbox events, empty state, and visibility control sync.
+  - Appearance controller keeps the existing facade that `toolbar.js` calls: `renderParentBorderCountryList()` and `syncParentBorderVisibilityUI()`.
+  - Repeated renders with the same country model skip `replaceChildren()` and only refresh checkbox checked/disabled state.
+- Implemented:
+  - New `createAppearanceParentBorderOwner()` plus helper exports for normalization, rows, and signatures.
+  - Controller delegates parent-border country list rendering and visibility sync to the owner.
+  - New `tests/appearance_parent_border_owner_behavior.test.mjs` covers row sorting, enabled-map cleanup, same-model DOM reuse, visibility sync, checkbox dirty dispatch, and repeated empty renders.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks the parent-border owner boundary and prevents list render body/checkbox listener drift back into the controller.
+- Verification passed:
+  - `node --check js/ui/toolbar/appearance_parent_border_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check tests/appearance_parent_border_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:appearance-parent-border-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for parent-border owner plus appearance controller
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `git diff --check`
+- Review note: the static reviewer lane timed out before returning findings. Main thread completed the first-principles self-review: this slice keeps the old toolbar input event lifecycle intact and only moves low-coupling list rendering plus visibility sync into the new owner.

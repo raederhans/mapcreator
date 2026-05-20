@@ -446,4 +446,30 @@ Progress:
 - [x] Update boundary and behavior tests.
 - [x] Run targeted verification.
 - [x] Run final self-review; static reviewer lanes timed out with no findings returned.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 appearance parent border owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-parent-border-owner-2026-05-19`
+Branch: `codex/appearance-parent-border-owner-2026-05-19`
+
+Goal: continue G001 by moving parent-border list rendering and visibility synchronization out of the large appearance controller and skipping repeated list DOM rebuilds when the country row model is unchanged.
+
+Acceptance:
+
+- `appearance_parent_border_owner.js` owns parent-border enabled-map normalization, country row model sorting, row signature creation, list DOM creation, checkbox binding, empty-state visibility, and visibility-control synchronization.
+- `appearance_controls_controller.js` keeps the public facade expected by `toolbar.js` and delegates `renderParentBorderCountryList()` plus `syncParentBorderVisibilityUI()` to the owner.
+- Re-rendering the same country row model does not call `replaceChildren()` again; checkbox checked/disabled state still refreshes from runtime state.
+- Existing toolbar boundary contract and a named Node behavior script cover owner wiring, DOM reuse, empty-state rendering, visibility sync, and checkbox dirty dispatch.
+- Targeted syntax, toolbar split contract, owner behavior, dist sync, final review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only subagent for appearance owner candidates.
+- [x] Selected current-scope boundary move.
+- [x] Implement parent border owner split and DOM reuse.
+- [x] Update boundary and behavior tests.
+- [x] Run targeted verification.
+- [x] Run final self-review; static reviewer lane timed out with no findings returned.
 - [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

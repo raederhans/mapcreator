@@ -222,4 +222,17 @@ Owner: main thread for implementation and all live verification.
 - [x] Extend Python boundary contract and add named Node behavior script.
 - [x] Run syntax and targeted contracts.
 - [x] Run final self-review; static reviewer lanes timed out with no findings returned.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-19 appearance parent border owner slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Dispatch static-only subagent for appearance owner candidates.
+- [x] Select current-scope boundary move.
+- [x] Implement parent border owner split and DOM reuse.
+- [x] Extend Python boundary contract and add named Node behavior script.
+- [x] Run syntax and targeted contracts.
+- [x] Run final self-review; static reviewer lane timed out with no findings returned.
 - [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
