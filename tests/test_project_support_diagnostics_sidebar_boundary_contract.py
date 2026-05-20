@@ -79,6 +79,7 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('syncProjectImportUiStateHelper', interaction_funnel_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_LEGEND_UI);', interaction_funnel_ui_sync_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.RENDER_SCENARIO_AUDIT_PANEL);', interaction_funnel_ui_sync_content)
+        self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_TRANSPORT_APPEARANCE_UI);', interaction_funnel_ui_sync_content)
         self.assertIn('runtimeState.updateLegendUI();', map_renderer_content)
 
 

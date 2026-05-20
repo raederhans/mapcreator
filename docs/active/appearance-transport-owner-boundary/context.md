@@ -735,3 +735,103 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `git diff --check`
 - Final static review found no blocker. One low current-scope cleanup item was fixed: `toolbar.js` still queried `togglePhysical` after physical DOM ownership moved to the new owner. The query was removed and the boundary contract now blocks this drift.
 - The reviewer also flagged `dist/pages-dist-manifest.json` size churn for `appearance_city_points_owner.js`. `build_pages_dist.py` writes manifest entries from current Windows worktree `stat().st_size`, and the Pages dist test asserts the generated size, so this slice keeps the generated manifest output rather than hand-editing it.
+
+## 2026-05-20 appearance reference owner slice
+
+- User asked to continue G001 and allowed previous commits to be merged back to `main` first.
+- Local `main` fast-forwarded from `fc041c2` to `07709e0`; the prior local WIP failed autostash replay and remains preserved as `stash@{0}: autostash` in the original main worktree.
+- New worktree: `C:/Users/raede/Desktop/dev/mapcreator-perf-g001` on branch `codex/perf-appearance-transport-g001`, based on `origin/main` at `07709e0`.
+- Active Codex goal is the aggregate ultragoal objective. The new performance-goal artifact is used as a G001 evaluator contract and does not replace the active Codex goal.
+- Performance-goal slug: `appearance-transport-g001-2026-05-20`.
+- Evaluator command: `npm run perf:gate && npm run verify:toolbar-split-boundary && npm run verify:state-write-allowlist`.
+- External research anchors for the performance comparison:
+  - web.dev INP targets interaction response at 200ms or less.
+  - web.dev rendering guidance emphasizes avoiding unnecessary style/layout/paint work and keeping visual changes on cheaper pipeline paths where possible.
+  - MDN Long Animation Frames treats frames over 50ms as jank evidence and supports script attribution through `PerformanceObserver`.
+  - Mapbox large-GeoJSON guidance aligns with this repo's existing chunk/zoom gating direction: reduce visible data, zoom-gate dense sources, and avoid unnecessary client-side load/render work.
+- Static subagent recommendation split:
+  - One mapper recommended `reference` as the smallest next owner because it is local to reference image state, DOM, and object URL lifecycle.
+  - Test-planning lane recommended Node owner behavior + Python boundary contracts first, then main-thread-only perf evaluator.
+- Main-thread decision: choose `reference` for this slice. `urban` remains higher-risk due capability/adaptive mode; `rivers` remains a follow-up because it touches context-layer rendering semantics and has stronger E2E coupling.
+- Implemented:
+  - Added `js/ui/toolbar/appearance_reference_owner.js`.
+  - Moved reference image input/range binding, `referenceImageState` normalization, `referenceImageUrl` replacement/revocation, and reference image style application out of `appearance_controls_controller.js`.
+  - `appearance_controls_controller.js` now wires `createAppearanceReferenceOwner()` and delegates `renderReferenceOverlayUi()` plus `bindEvents()`.
+  - Removed dead reference DOM queries from `js/ui/toolbar.js`.
+  - Added style-signature reuse so repeated `renderReferenceOverlayUi()` calls do not rewrite the same `#referenceImage` opacity/transform.
+  - Added `tests/appearance_reference_owner_behavior.test.mjs` and `test:node:appearance-reference-owner`.
+  - Updated toolbar split boundary and state-write guardrail contracts.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_reference_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check js/ui/toolbar.js`
+  - `node --check tests/appearance_reference_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-reference-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run verify:state-write-allowlist`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - source import smoke for toolbar, appearance controller, and reference owner.
+  - `MODULE_TYPELESS_PACKAGE_JSON` warning remains the known existing Node ESM warning.
+
+## 2026-05-20 reference/rivers continuation update
+
+- Static reviewer returned two current-scope ownership findings:
+  - `toolbar.js` still directly synced `toggleAirports` / `togglePorts` in the special-zone refresh path even though `special_zone_editor.js` already routes through `renderTransportAppearanceUi()`.
+  - `toolbar.js` still normalized `styleConfig.physical` during bootstrap after physical ownership moved to `appearance_physical_owner.js`.
+- Main-thread follow-up widened the same cleanup to the adjacent already-owned Appearance branches:
+  - Removed dead transport appearance DOM queries from `toolbar.js`; the transport appearance owner remains the single DOM owner for airport/port/rail/road appearance controls.
+  - Removed direct bootstrap normalization for physical, texture, reference, urban, and rivers from `toolbar.js`; the corresponding owners/controllers now perform those syncs at render/bind boundaries.
+  - Added `js/ui/toolbar/appearance_rivers_owner.js` for the independent rivers branch, including rivers DOM lookup, style normalization, render synchronization, one-shot input binding, dirty reasons, and river context-layer loading on enable.
+  - `appearance_controls_controller.js` now owns shell + urban and delegates rivers to the new owner.
+- Verification passed for the continuation update:
+  - `node --check js/ui/toolbar.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check js/ui/toolbar/appearance_rivers_owner.js`
+  - `node --check tests/appearance_rivers_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-rivers-owner`
+  - `npm run test:node:appearance-reference-owner`
+  - `npm run verify:state-write-allowlist`
+  - `npm run verify:toolbar-split-boundary`
+- Pages/dist verification passed:
+  - `npm run verify:pages-dist`
+  - dist import smoke for toolbar, appearance controller, reference owner, and rivers owner.
+- Final non-perf evaluator contracts passed after Pages dist:
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run verify:state-write-allowlist`
+  - `git diff --check`
+- Perf evaluator status:
+  - Initial `npm run perf:gate` failed before measurement because this new worktree had no `node_modules/playwright`; `npm ci` restored lockfile dependencies with 0 vulnerabilities.
+  - Current worktree `npm run perf:gate` then failed twice on startup/apply metrics. Second run examples: `tno_1962.totalStartupMs=10560.1ms`, `tno_1962.applyScenarioBundleMs=6175.8ms`, `hoi4_1939.totalStartupMs=8563.6ms`, `hoi4_1939.applyScenarioBundleMs=3763.1ms`.
+  - Control worktree `C:/Users/raede/Desktop/dev/mapcreator-perf-control-g001` at untouched `origin/main@07709e0` also failed the same gate: `tno_1962.totalStartupMs=7976.9ms`, `tno_1962.applyScenarioBundleMs=4701.0ms`, `hoi4_1939.totalStartupMs=6263.7ms`, `hoi4_1939.applyScenarioBundleMs=3034.3ms`.
+  - The gate blocker is therefore broader than this owner split and tied to the current startup/apply baseline on this machine. This slice keeps the failing perf logs under `.runtime/tmp/perf-gate-g001-2026-05-20*.log` and `.runtime/tmp/perf-gate-control-g001-2026-05-20*.log`.
+
+## 2026-05-20 final review fix
+
+- Final static reviewer found one real blocker:
+  - Project import UI sync emitted special-zone and toolbar input refreshes, but not `UPDATE_TRANSPORT_APPEARANCE_UI`.
+  - Because `renderSpecialZoneEditorUI()` no longer directly syncs airport/port toggles, imported `showAirports` / `showPorts` state could leave transport appearance checkboxes stale.
+- Fixed:
+  - `js/core/interaction_funnel/ui_sync.js` now emits `STATE_BUS_EVENTS.UPDATE_TRANSPORT_APPEARANCE_UI` during project import sync.
+  - `tests/test_project_support_diagnostics_sidebar_boundary_contract.py` now locks that import refresh event.
+  - The review's light duplicate-normalizer note was also cleaned up: `normalizeReferenceImageState()` now lives in `js/core/state/ui_state.js`; `file_manager.js` and `appearance_reference_owner.js` share that helper.
+- Verification after review fix:
+  - `node --check js/core/interaction_funnel/ui_sync.js`
+  - `node --check js/core/file_manager.js`
+  - `node --check js/core/state/ui_state.js`
+  - `node --check js/ui/toolbar/appearance_reference_owner.js`
+  - `node --check js/ui/toolbar/appearance_rivers_owner.js`
+  - `node --check tests/appearance_reference_owner_behavior.test.mjs`
+  - `node --check tests/appearance_rivers_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_project_support_diagnostics_sidebar_boundary_contract.py tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-reference-owner`
+  - `npm run test:node:appearance-rivers-owner`
+  - `python -m unittest tests.test_project_support_diagnostics_sidebar_boundary_contract tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `npm run verify:state-write-allowlist`
+  - source import smoke for ui sync, file manager, state, reference/rivers owners, appearance controller, and toolbar.
+  - `npm run verify:pages-dist`
+  - dist import smoke for the same paths.
+  - `npm run verify:toolbar-split-boundary`
+  - `git diff --check`

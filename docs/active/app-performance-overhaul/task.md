@@ -20,6 +20,17 @@ Owner: main thread for implementation and all live processes. Child agents are r
 - [x] Run final review/bug-check/first-principles pass.
 - [ ] Merge to main, commit, push, and clean worktree.
 
+## 2026-05-20 G001 appearance/reference evaluator continuation
+
+Owner: main thread for all live processes.
+
+- [x] Create scoped performance-goal evaluator contract.
+- [x] Keep Codex goal on the outer ultragoal aggregate objective.
+- [x] Implement a small appearance owner split with DOM-work reduction.
+- [x] Run targeted short verification.
+- [ ] Run full evaluator command.
+- [ ] Record performance-goal checkpoint after evaluator pass.
+
 Execute app performance overhaul v3.1 next slice.
 
 ## Current owner
@@ -411,3 +422,18 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Run physical layer contracts.
 - [x] Run scenario chunk runtime E2E.
 - [x] Final static review approved; merged back to main.
+
+## 2026-05-20 G001 appearance/reference/rivers evaluator continuation
+- [x] Create isolated worktree from `origin/main@07709e0`.
+- [x] Create scoped performance-goal evaluator contract.
+- [x] Move reference overlay state/style/object-URL work into `appearance_reference_owner.js`.
+- [x] Move rivers controls into `appearance_rivers_owner.js`.
+- [x] Remove stale Appearance/transport bootstrap DOM and state writes from `toolbar.js`.
+- [x] Run targeted owner behavior tests and toolbar/state contracts.
+- [x] Run Pages dist sync and dist import smoke.
+- [x] Run final toolbar/state evaluator contracts.
+- [x] Run `npm run perf:gate` and clean `origin/main@07709e0` control comparison; both fail startup/apply gate family.
+- [x] Fix final static review blocker in project import transport appearance UI sync.
+- [x] Consolidate reference image state normalization into shared state helper.
+- [ ] Track current startup/apply perf gate blocker as the next performance boundary.
+- [ ] Commit, push to `origin/main`, checkpoint goal state, and clean temporary worktree.

@@ -62,6 +62,20 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             allowlist.get("files", []),
         )
 
+    def test_appearance_reference_owner_is_explicit_state_writer(self):
+        allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
+        self.assertIn(
+            "js/ui/toolbar/appearance_reference_owner.js",
+            allowlist.get("files", []),
+        )
+
+    def test_appearance_rivers_owner_is_explicit_state_writer(self):
+        allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
+        self.assertIn(
+            "js/ui/toolbar/appearance_rivers_owner.js",
+            allowlist.get("files", []),
+        )
+
     def test_scanner_flags_member_computed_and_object_assign_writes(self):
         script = """
 const { scanContentForStateWrites } = require('./tools/eslint-rules/no-direct-state-mutation.js');

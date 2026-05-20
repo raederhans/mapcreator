@@ -32,6 +32,8 @@ APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ap
 APPEARANCE_CITY_POINTS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_owner.js"
 APPEARANCE_PARENT_BORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_parent_border_owner.js"
 APPEARANCE_PHYSICAL_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_physical_owner.js"
+APPEARANCE_REFERENCE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_reference_owner.js"
+APPEARANCE_RIVERS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_rivers_owner.js"
 APPEARANCE_TEXTURE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_texture_owner.js"
 OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean_lake_controls_controller.js"
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
@@ -932,6 +934,24 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("renderDayNightUI();", content)
         self.assertIn('registerRuntimeHook(state, "updateToolbarInputsFn", () => {', content)
 
+    def test_toolbar_leaves_appearance_state_normalization_to_owners(self):
+        content = TOOLBAR_JS.read_text(encoding="utf-8")
+
+        for symbol in (
+            "normalizePhysicalStyleConfig",
+            "normalizeTextureStyleConfig",
+            "normalizeUrbanStyleConfig",
+        ):
+            self.assertNotIn(symbol, content)
+        for state_write in (
+            "runtimeState.styleConfig.physical =",
+            "runtimeState.styleConfig.rivers =",
+            "runtimeState.styleConfig.texture =",
+            "runtimeState.styleConfig.urban =",
+            "runtimeState.referenceImageState =",
+        ):
+            self.assertNotIn(state_write, content)
+
     def test_zoom_toolbar_update_avoids_rewriting_clean_dom_state(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
         self.assertIn("if (zoomPercentInput.value !== text)", content)
@@ -1017,17 +1037,58 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("physicalPreset.addEventListener(\"change\", (event) => {", controller_content)
         self.assertNotIn("physicalPreset.addEventListener(\"change\", (event) => {", toolbar_content)
 
-    def test_appearance_controller_owns_urban_rivers_logic(self):
+    def test_appearance_controller_keeps_urban_and_moves_rivers_to_owner(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        controller_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        rivers_owner_content = APPEARANCE_RIVERS_OWNER_JS.read_text(encoding="utf-8")
+        owner_call = self._controller_call_body(controller_content, "createAppearanceRiversOwner")
 
-        self.assertIn("const syncUrbanConfig = () => {", owner_content)
-        self.assertIn("const renderAppearanceStyleControlsUi = () => {", owner_content)
-        self.assertIn("toggleUrban.addEventListener(\"change\", (event) => {", owner_content)
-        self.assertIn("riversDashStyle.addEventListener(\"change\", (event) => {", owner_content)
+        self.assertIn("const syncUrbanConfig = () => {", controller_content)
+        self.assertIn("const renderAppearanceStyleControlsUi = () => {", controller_content)
+        self.assertIn("toggleUrban.addEventListener(\"change\", (event) => {", controller_content)
+        self.assertIn("from \"./appearance_rivers_owner.js\";", controller_content)
+        self.assertIn("const riversOwner = createAppearanceRiversOwner({", controller_content)
+        self.assertIn("runtimeState,", owner_call)
+        self.assertIn("clamp,", owner_call)
+        self.assertIn("renderDirty,", owner_call)
+        self.assertIn("normalizeOceanFillColor,", owner_call)
+        self.assertIn("riversOwner.renderRiversUi();", controller_content)
+        self.assertIn("riversOwner.bindEvents();", controller_content)
+        self.assertIn("export function createAppearanceRiversOwner({", rivers_owner_content)
+        self.assertIn("export function normalizeRiversStyleConfig", rivers_owner_content)
+        self.assertIn("const syncRiversConfig = () => {", rivers_owner_content)
+        self.assertIn('documentRef.getElementById("toggleRivers")', rivers_owner_content)
+        self.assertIn('documentRef.getElementById("riversDashStyle")', rivers_owner_content)
+        self.assertIn('void runtimeState.ensureContextLayerDataFn("rivers", { reason: "toolbar-toggle", renderNow: true });', rivers_owner_content)
+        self.assertIn('renderDirty("rivers-dash");', rivers_owner_content)
         self.assertNotIn("const syncUrbanConfig = () => {", toolbar_content)
         self.assertNotIn("toggleUrban.addEventListener(\"change\", (event) => {", toolbar_content)
+        self.assertNotIn('document.getElementById("toggleRivers")', toolbar_content)
+        self.assertNotIn('document.getElementById("toggleRivers")', controller_content)
+        self.assertNotIn('document.getElementById("riversDashStyle")', toolbar_content)
+        self.assertNotIn('document.getElementById("riversDashStyle")', controller_content)
+        self.assertNotIn("const syncRiversConfig = () => {", toolbar_content)
+        self.assertNotIn("const syncRiversConfig = () => {", controller_content)
+        self.assertNotIn("riversDashStyle.addEventListener(\"change\", (event) => {", controller_content)
         self.assertNotIn("riversDashStyle.addEventListener(\"change\", (event) => {", toolbar_content)
+
+    def test_transport_appearance_owner_keeps_transport_control_dom_out_of_toolbar(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        transport_owner_content = TRANSPORT_APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        for node_id in (
+            "toggleAirports",
+            "togglePorts",
+            "toggleRail",
+            "toggleRoad",
+            "transportAppearanceMasterToggle",
+            "airportVisualStrength",
+            "portVisualStrength",
+            "railVisualStrength",
+            "roadVisualStrength",
+        ):
+            self.assertIn(f'document.getElementById("{node_id}")', transport_owner_content)
+            self.assertNotIn(f'document.getElementById("{node_id}")', toolbar_content)
 
     def test_toolbar_keeps_city_urban_physical_special_zone_facade_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -1059,16 +1120,34 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const normalizeParentBorderEnabledMap = () => {", toolbar_content)
         self.assertNotIn("parentBorderCountryList.replaceChildren();", toolbar_content)
 
-    def test_appearance_controller_owns_reference_overlay_logic(self):
+    def test_appearance_reference_owner_moves_reference_overlay_logic_out_of_controller(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        controller_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        reference_owner_content = APPEARANCE_REFERENCE_OWNER_JS.read_text(encoding="utf-8")
+        owner_call = self._controller_call_body(controller_content, "createAppearanceReferenceOwner")
 
-        self.assertIn("const renderReferenceOverlayUi = () => {", owner_content)
-        self.assertIn("referenceImageInput.addEventListener(\"change\", (event) => {", owner_content)
-        self.assertIn("markDirty(\"reference-image-file\");", owner_content)
-        self.assertIn("markDirty(\"reference-offset-y\");", owner_content)
+        self.assertIn("from \"./appearance_reference_owner.js\";", controller_content)
+        self.assertIn("const referenceOwner = createAppearanceReferenceOwner({", controller_content)
+        self.assertIn("runtimeState,", owner_call)
+        self.assertIn("clamp,", owner_call)
+        self.assertIn("markDirty,", owner_call)
+        self.assertIn("const renderReferenceOverlayUi = referenceOwner.renderReferenceOverlayUi;", controller_content)
+        self.assertIn("referenceOwner.bindEvents();", controller_content)
+        self.assertIn('import { normalizeReferenceImageState } from "../../core/state.js";', reference_owner_content)
+        self.assertIn("export function createAppearanceReferenceOwner({", reference_owner_content)
+        self.assertIn("export { normalizeReferenceImageState };", reference_owner_content)
+        self.assertIn("export function getReferenceStyleSignature", reference_owner_content)
+        self.assertIn('documentRef.getElementById("referenceImage")', reference_owner_content)
+        self.assertIn('documentRef.getElementById("referenceImageInput")', reference_owner_content)
+        self.assertIn("nodes.imageInput.addEventListener(\"change\", (event) => {", reference_owner_content)
+        self.assertIn("markDirty(\"reference-image-file\");", reference_owner_content)
+        self.assertIn('"reference-offset-y",', reference_owner_content)
         self.assertNotIn("const applyReferenceStyles = () => {", toolbar_content)
         self.assertNotIn("referenceImageInput.addEventListener(\"change\", (event) => {", toolbar_content)
+        self.assertNotIn("const renderReferenceOverlayUi = () => {", controller_content)
+        self.assertNotIn("referenceImageInput.addEventListener(\"change\", (event) => {", controller_content)
+        self.assertNotIn('document.getElementById("referenceImageInput")', toolbar_content)
+        self.assertNotIn('document.getElementById("referenceOpacity")', toolbar_content)
 
     def test_toolbar_keeps_reference_refresh_facade_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")

@@ -139,6 +139,35 @@ export function createDefaultReferenceImageState() {
   };
 }
 
+export function normalizeReferenceImageState(rawState, {
+  clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
+} = {}) {
+  const defaults = createDefaultReferenceImageState();
+  const state = rawState && typeof rawState === "object" ? rawState : {};
+  return {
+    opacity: clamp(
+      Number.isFinite(Number(state.opacity)) ? Number(state.opacity) : defaults.opacity,
+      0,
+      1,
+    ),
+    scale: clamp(
+      Number.isFinite(Number(state.scale)) ? Number(state.scale) : defaults.scale,
+      0.2,
+      3,
+    ),
+    offsetX: clamp(
+      Number.isFinite(Number(state.offsetX)) ? Number(state.offsetX) : defaults.offsetX,
+      -1000,
+      1000,
+    ),
+    offsetY: clamp(
+      Number.isFinite(Number(state.offsetY)) ? Number(state.offsetY) : defaults.offsetY,
+      -1000,
+      1000,
+    ),
+  };
+}
+
 export function createDefaultStyleConfig() {
   return {
     internalBorders: {

@@ -35,6 +35,15 @@
 - Final special-zone members benchmark passed at `durationMs=8.691`, `averageIterationMs=0.217`.
 - Performance-goal checkpoint recorded `validation_passed` for slug `app-overall-performance-2026-05-19`.
 
+## 2026-05-20 appearance/transport G001 continuation
+
+- Current execution continues the appearance + transport platformization ultragoal rather than starting a separate Codex goal.
+- New performance-goal slug: `appearance-transport-g001-2026-05-20`.
+- Evaluator command: `npm run perf:gate && npm run verify:toolbar-split-boundary && npm run verify:state-write-allowlist`.
+- Pass contract: evaluator passes, changed owner behavior tests pass, Pages dist verifies, and final review finds no current-scope blocker.
+- Fresh external comparison remains aligned with the existing app-performance plan: good interaction response should stay near the web.dev INP 200ms target, long animation frames over 50ms are jank evidence, and large-map guidance favors reducing visible work and avoiding repeated client-side render/load work.
+- Current local optimization is architecture + DOM-work reduction: `appearance_reference_owner.js` takes over reference image state/DOM/object-URL behavior and skips unchanged reference image style writes by signature.
+
 Started 2026-04-24. Current plan is v3. Parent owns tests; subagents static analysis only.
 
 ## 2026-04-24 Phase 0 implementation notes
@@ -492,3 +501,10 @@ pm run bench:editor-performance。
 
 ## 2026-05-14 exact-after-settle political review fix merge
 - Branch work/exact-after-settle-reviewfix fast-forward merged into main at commit b47ca76.
+
+## 2026-05-20 G001 appearance/reference/rivers continuation
+- Worktree `C:/Users/raede/Desktop/dev/mapcreator-perf-g001` continues the appearance/transport owner-boundary performance work from `origin/main@07709e0`.
+- Current slice reduces startup/render synchronization work in `toolbar.js` by moving reference overlay and rivers controls into owners and removing stale transport/physical/texture/reference/urban/rivers bootstrap writes from the toolbar facade.
+- Performance-goal evaluator remains `npm run perf:gate && npm run verify:toolbar-split-boundary && npm run verify:state-write-allowlist`; targeted owner tests and toolbar/state contracts are already green before the final perf gate.
+- `npm run perf:gate` failed twice in the implementation worktree on startup/apply metrics. A clean control worktree at untouched `origin/main@07709e0` failed the same gate family, so this is now tracked as a broader startup/apply baseline blocker rather than evidence that the reference/rivers owner split regressed the app.
+- Final static review blocker was fixed: project import now emits `UPDATE_TRANSPORT_APPEARANCE_UI`, preserving transport appearance checkbox sync after import. Reference image normalization also moved into shared state helpers so project import/export and UI render use one rule.

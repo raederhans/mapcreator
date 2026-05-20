@@ -6,6 +6,7 @@ import {
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
   normalizePhysicalStyleConfig,
+  normalizeReferenceImageState,
   normalizeTransportOverviewStyleConfig,
   normalizeUrbanStyleConfig,
   normalizeTransportWorkbenchUiState,
@@ -37,13 +38,6 @@ const DEFAULT_OPERATION_GRAPHIC_KIND = "attack";
 const DEFAULT_OPERATIONAL_LINE_KIND = "frontline";
 const CLOSED_OPERATION_GRAPHIC_KINDS = new Set(["encirclement", "theater"]);
 const UNIT_COUNTER_STATS_SOURCES = new Set(["preset", "random", "manual"]);
-const DEFAULT_REFERENCE_IMAGE_STATE = Object.freeze({
-  opacity: 0.6,
-  scale: 1,
-  offsetX: 0,
-  offsetY: 0,
-});
-
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -115,32 +109,6 @@ function normalizeUnitCounterStatsPresetId(value) {
 function normalizeUnitCounterStatsSource(value) {
   const token = String(value || "").trim().toLowerCase();
   return UNIT_COUNTER_STATS_SOURCES.has(token) ? token : "preset";
-}
-
-function normalizeReferenceImageState(rawState) {
-  const state = rawState && typeof rawState === "object" ? rawState : {};
-  return {
-    opacity: clamp(
-      Number.isFinite(Number(state.opacity)) ? Number(state.opacity) : DEFAULT_REFERENCE_IMAGE_STATE.opacity,
-      0,
-      1
-    ),
-    scale: clamp(
-      Number.isFinite(Number(state.scale)) ? Number(state.scale) : DEFAULT_REFERENCE_IMAGE_STATE.scale,
-      0.2,
-      3
-    ),
-    offsetX: clamp(
-      Number.isFinite(Number(state.offsetX)) ? Number(state.offsetX) : DEFAULT_REFERENCE_IMAGE_STATE.offsetX,
-      -1000,
-      1000
-    ),
-    offsetY: clamp(
-      Number.isFinite(Number(state.offsetY)) ? Number(state.offsetY) : DEFAULT_REFERENCE_IMAGE_STATE.offsetY,
-      -1000,
-      1000
-    ),
-  };
 }
 
 function normalizeRecentColors(rawColors) {

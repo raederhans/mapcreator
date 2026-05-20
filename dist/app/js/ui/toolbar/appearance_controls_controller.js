@@ -5,10 +5,12 @@ import { createAppearanceParentBorderOwner } from "./appearance_parent_border_ow
 import { createAppearanceTextureOwner } from "./appearance_texture_owner.js";
 import { createAppearanceCityPointsOwner } from "./appearance_city_points_owner.js";
 import { createAppearancePhysicalOwner } from "./appearance_physical_owner.js";
+import { createAppearanceReferenceOwner } from "./appearance_reference_owner.js";
+import { createAppearanceRiversOwner } from "./appearance_rivers_owner.js";
 
 /**
- * Owns the Appearance 面板 shell plus urban / rivers / reference controls.
- * Transport, texture/day-night, city-points, physical, and parent-border details live in narrower owners.
+ * Owns the Appearance 面板 shell plus urban controls.
+ * Transport, texture/day-night, city-points, physical, reference, rivers, and parent-border details live in narrower owners.
  *
  * toolbar.js 继续保留更高层 facade：
  * - runtimeState callback 注册
@@ -27,7 +29,6 @@ export function createAppearanceControlsController({
   openSpecialZonePopover,
 }) {
   const toggleUrban = document.getElementById("toggleUrban");
-  const toggleRivers = document.getElementById("toggleRivers");
   const urbanMode = document.getElementById("urbanMode");
   const urbanAdaptiveControls = document.getElementById("urbanAdaptiveControls");
   const urbanManualControls = document.getElementById("urbanManualControls");
@@ -43,30 +44,12 @@ export function createAppearanceControlsController({
   const urbanAdaptiveTintStrength = document.getElementById("urbanAdaptiveTintStrength");
   const urbanMinArea = document.getElementById("urbanMinArea");
   const urbanAdaptiveStatus = document.getElementById("urbanAdaptiveStatus");
-  const riversColor = document.getElementById("riversColor");
-  const riversOpacity = document.getElementById("riversOpacity");
-  const riversWidth = document.getElementById("riversWidth");
-  const riversOutlineColor = document.getElementById("riversOutlineColor");
-  const riversOutlineWidth = document.getElementById("riversOutlineWidth");
-  const riversDashStyle = document.getElementById("riversDashStyle");
-  const referenceImageInput = document.getElementById("referenceImageInput");
-  const referenceOpacity = document.getElementById("referenceOpacity");
-  const referenceScale = document.getElementById("referenceScale");
-  const referenceOffsetX = document.getElementById("referenceOffsetX");
-  const referenceOffsetY = document.getElementById("referenceOffsetY");
   const urbanOpacityValue = document.getElementById("urbanOpacityValue");
   const urbanAdaptiveStrengthValue = document.getElementById("urbanAdaptiveStrengthValue");
   const urbanStrokeOpacityValue = document.getElementById("urbanStrokeOpacityValue");
   const urbanToneBiasValue = document.getElementById("urbanToneBiasValue");
   const urbanAdaptiveTintStrengthValue = document.getElementById("urbanAdaptiveTintStrengthValue");
   const urbanMinAreaValue = document.getElementById("urbanMinAreaValue");
-  const riversOpacityValue = document.getElementById("riversOpacityValue");
-  const riversWidthValue = document.getElementById("riversWidthValue");
-  const riversOutlineWidthValue = document.getElementById("riversOutlineWidthValue");
-  const referenceOpacityValue = document.getElementById("referenceOpacityValue");
-  const referenceScaleValue = document.getElementById("referenceScaleValue");
-  const referenceOffsetXValue = document.getElementById("referenceOffsetXValue");
-  const referenceOffsetYValue = document.getElementById("referenceOffsetYValue");
   const appearanceLayerFilter = document.getElementById("appearanceLayerFilter");
   const appearanceTabButtons = Array.from(document.querySelectorAll("[data-appearance-tab]"));
   const appearanceTabPanels = Array.from(document.querySelectorAll("[data-appearance-panel]"));
@@ -114,6 +97,18 @@ export function createAppearanceControlsController({
     renderDirty,
     normalizeOceanFillColor,
   });
+  const riversOwner = createAppearanceRiversOwner({
+    runtimeState,
+    clamp,
+    renderDirty,
+    normalizeOceanFillColor,
+  });
+  const referenceOwner = createAppearanceReferenceOwner({
+    runtimeState,
+    clamp,
+    markDirty,
+  });
+  const renderReferenceOverlayUi = referenceOwner.renderReferenceOverlayUi;
   const parentBorderOwner = createAppearanceParentBorderOwner({
     runtimeState,
     nodes: {
@@ -234,37 +229,8 @@ export function createAppearanceControlsController({
     cityPointsOwner.renderCityPointsUi();
     if (toggleUrban) toggleUrban.checked = !!runtimeState.showUrban;
     physicalOwner.renderPhysicalUi();
-    if (toggleRivers) toggleRivers.checked = !!runtimeState.showRivers;
-
+    riversOwner.renderRiversUi();
     syncUrbanControls();
-
-    if (riversColor) riversColor.value = runtimeState.styleConfig.rivers.color;
-    if (riversOpacity) riversOpacity.value = String(Math.round(runtimeState.styleConfig.rivers.opacity * 100));
-    if (riversOpacityValue) riversOpacityValue.textContent = `${Math.round(runtimeState.styleConfig.rivers.opacity * 100)}%`;
-    if (riversWidth) riversWidth.value = String(Number(runtimeState.styleConfig.rivers.width).toFixed(2));
-    if (riversWidthValue) riversWidthValue.textContent = Number(runtimeState.styleConfig.rivers.width).toFixed(2);
-    if (riversOutlineColor) riversOutlineColor.value = runtimeState.styleConfig.rivers.outlineColor;
-    if (riversOutlineWidth) riversOutlineWidth.value = String(Number(runtimeState.styleConfig.rivers.outlineWidth).toFixed(2));
-    if (riversOutlineWidthValue) riversOutlineWidthValue.textContent = Number(runtimeState.styleConfig.rivers.outlineWidth).toFixed(2);
-    if (riversDashStyle) riversDashStyle.value = runtimeState.styleConfig.rivers.dashStyle;
-  };
-
-  const renderReferenceOverlayUi = () => {
-    if (referenceOpacity) referenceOpacity.value = String(Math.round(runtimeState.referenceImageState.opacity * 100));
-    if (referenceOpacityValue) referenceOpacityValue.textContent = `${Math.round(runtimeState.referenceImageState.opacity * 100)}%`;
-    if (referenceScale) referenceScale.value = String(Number(runtimeState.referenceImageState.scale).toFixed(2));
-    if (referenceScaleValue) referenceScaleValue.textContent = `${Number(runtimeState.referenceImageState.scale).toFixed(2)}x`;
-    if (referenceOffsetX) referenceOffsetX.value = String(Math.round(runtimeState.referenceImageState.offsetX));
-    if (referenceOffsetXValue) referenceOffsetXValue.textContent = `${Math.round(runtimeState.referenceImageState.offsetX)}px`;
-    if (referenceOffsetY) referenceOffsetY.value = String(Math.round(runtimeState.referenceImageState.offsetY));
-    if (referenceOffsetYValue) referenceOffsetYValue.textContent = `${Math.round(runtimeState.referenceImageState.offsetY)}px`;
-    const referenceImage = document.getElementById("referenceImage");
-    if (referenceImage) {
-      referenceImage.style.opacity = String(runtimeState.referenceImageState.opacity);
-      referenceImage.style.transform =
-        `translate(${runtimeState.referenceImageState.offsetX}px, ${runtimeState.referenceImageState.offsetY}px) `
-        + `scale(${runtimeState.referenceImageState.scale})`;
-    }
   };
 
   const renderRecentColors = () => {
@@ -323,6 +289,8 @@ export function createAppearanceControlsController({
     textureOwner.bindEvents();
     cityPointsOwner.bindEvents();
     physicalOwner.bindEvents();
+    riversOwner.bindEvents();
+    referenceOwner.bindEvents();
 
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
       toggleUrban.checked = !!runtimeState.showUrban;
@@ -334,18 +302,6 @@ export function createAppearanceControlsController({
         renderDirty("toggle-urban");
       });
       toggleUrban.dataset.bound = "true";
-    }
-
-    if (toggleRivers && toggleRivers.dataset.bound !== "true") {
-      toggleRivers.checked = !!runtimeState.showRivers;
-      toggleRivers.addEventListener("change", (event) => {
-        runtimeState.showRivers = event.target.checked;
-        if (runtimeState.showRivers && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("rivers", { reason: "toolbar-toggle", renderNow: true });
-        }
-        renderDirty("toggle-rivers");
-      });
-      toggleRivers.dataset.bound = "true";
     }
 
     if (urbanMode && urbanMode.dataset.bound !== "true") {
@@ -451,137 +407,6 @@ export function createAppearanceControlsController({
         renderDirty("urban-area");
       });
       urbanMinArea.dataset.bound = "true";
-    }
-    if (riversColor && riversColor.dataset.bound !== "true") {
-      riversColor.addEventListener("input", (event) => {
-        runtimeState.styleConfig.rivers.color = normalizeOceanFillColor(event.target.value);
-        renderDirty("rivers-color");
-      });
-      riversColor.dataset.bound = "true";
-    }
-    if (riversOpacity && riversOpacity.dataset.bound !== "true") {
-      riversOpacity.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.styleConfig.rivers.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.88, 0, 1);
-        if (riversOpacityValue) riversOpacityValue.textContent = `${Math.round(runtimeState.styleConfig.rivers.opacity * 100)}%`;
-        renderDirty("rivers-opacity");
-      });
-      riversOpacity.dataset.bound = "true";
-    }
-    if (riversWidth && riversWidth.dataset.bound !== "true") {
-      riversWidth.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.styleConfig.rivers.width = clamp(Number.isFinite(value) ? value : 0.5, 0.2, 4);
-        if (riversWidthValue) riversWidthValue.textContent = Number(runtimeState.styleConfig.rivers.width).toFixed(2);
-        renderDirty("rivers-width");
-      });
-      riversWidth.dataset.bound = "true";
-    }
-    if (riversOutlineColor && riversOutlineColor.dataset.bound !== "true") {
-      riversOutlineColor.addEventListener("input", (event) => {
-        runtimeState.styleConfig.rivers.outlineColor = normalizeOceanFillColor(event.target.value);
-        renderDirty("rivers-outline-color");
-      });
-      riversOutlineColor.dataset.bound = "true";
-    }
-    if (riversOutlineWidth && riversOutlineWidth.dataset.bound !== "true") {
-      riversOutlineWidth.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.styleConfig.rivers.outlineWidth = clamp(Number.isFinite(value) ? value : 0.25, 0, 3);
-        if (riversOutlineWidthValue) riversOutlineWidthValue.textContent = Number(runtimeState.styleConfig.rivers.outlineWidth).toFixed(2);
-        renderDirty("rivers-outline-width");
-      });
-      riversOutlineWidth.dataset.bound = "true";
-    }
-    if (riversDashStyle && riversDashStyle.dataset.bound !== "true") {
-      riversDashStyle.addEventListener("change", (event) => {
-        runtimeState.styleConfig.rivers.dashStyle = String(event.target.value || "solid");
-        renderDirty("rivers-dash");
-      });
-      riversDashStyle.dataset.bound = "true";
-    }
-
-    const applyReferenceStyles = () => {
-      const referenceImage = document.getElementById("referenceImage");
-      if (!referenceImage) return;
-      referenceImage.style.opacity = String(runtimeState.referenceImageState.opacity);
-      referenceImage.style.transform =
-        `translate(${runtimeState.referenceImageState.offsetX}px, ${runtimeState.referenceImageState.offsetY}px) `
-        + `scale(${runtimeState.referenceImageState.scale})`;
-    };
-
-    if (referenceImageInput && referenceImageInput.dataset.bound !== "true") {
-      referenceImageInput.addEventListener("change", (event) => {
-        const file = event.target.files?.[0];
-        const referenceImage = document.getElementById("referenceImage");
-        if (!referenceImage) return;
-        if (!file) {
-          if (runtimeState.referenceImageUrl) {
-            URL.revokeObjectURL(runtimeState.referenceImageUrl);
-            runtimeState.referenceImageUrl = null;
-          }
-          referenceImage.src = "";
-          referenceImage.style.opacity = "0";
-          markDirty("reference-image-clear");
-          return;
-        }
-        if (runtimeState.referenceImageUrl) {
-          URL.revokeObjectURL(runtimeState.referenceImageUrl);
-        }
-        runtimeState.referenceImageUrl = URL.createObjectURL(file);
-        referenceImage.src = runtimeState.referenceImageUrl;
-        applyReferenceStyles();
-        markDirty("reference-image-file");
-      });
-      referenceImageInput.dataset.bound = "true";
-    }
-    if (referenceOpacity && referenceOpacity.dataset.bound !== "true") {
-      runtimeState.referenceImageState.opacity = Number(referenceOpacity.value) / 100;
-      if (referenceOpacityValue) referenceOpacityValue.textContent = `${referenceOpacity.value}%`;
-      referenceOpacity.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.referenceImageState.opacity = Number.isFinite(value) ? value / 100 : 0.6;
-        if (referenceOpacityValue) referenceOpacityValue.textContent = `${event.target.value}%`;
-        applyReferenceStyles();
-        markDirty("reference-opacity");
-      });
-      referenceOpacity.dataset.bound = "true";
-    }
-    if (referenceScale && referenceScale.dataset.bound !== "true") {
-      runtimeState.referenceImageState.scale = Number(referenceScale.value);
-      if (referenceScaleValue) referenceScaleValue.textContent = `${Number(referenceScale.value).toFixed(2)}x`;
-      referenceScale.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.referenceImageState.scale = Number.isFinite(value) ? value : 1;
-        if (referenceScaleValue) referenceScaleValue.textContent = `${runtimeState.referenceImageState.scale.toFixed(2)}x`;
-        applyReferenceStyles();
-        markDirty("reference-scale");
-      });
-      referenceScale.dataset.bound = "true";
-    }
-    if (referenceOffsetX && referenceOffsetX.dataset.bound !== "true") {
-      runtimeState.referenceImageState.offsetX = Number(referenceOffsetX.value);
-      if (referenceOffsetXValue) referenceOffsetXValue.textContent = `${referenceOffsetX.value}px`;
-      referenceOffsetX.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.referenceImageState.offsetX = Number.isFinite(value) ? value : 0;
-        if (referenceOffsetXValue) referenceOffsetXValue.textContent = `${runtimeState.referenceImageState.offsetX}px`;
-        applyReferenceStyles();
-        markDirty("reference-offset-x");
-      });
-      referenceOffsetX.dataset.bound = "true";
-    }
-    if (referenceOffsetY && referenceOffsetY.dataset.bound !== "true") {
-      runtimeState.referenceImageState.offsetY = Number(referenceOffsetY.value);
-      if (referenceOffsetYValue) referenceOffsetYValue.textContent = `${referenceOffsetY.value}px`;
-      referenceOffsetY.addEventListener("input", (event) => {
-        const value = Number(event.target.value);
-        runtimeState.referenceImageState.offsetY = Number.isFinite(value) ? value : 0;
-        if (referenceOffsetYValue) referenceOffsetYValue.textContent = `${runtimeState.referenceImageState.offsetY}px`;
-        applyReferenceStyles();
-        markDirty("reference-offset-y");
-      });
-      referenceOffsetY.dataset.bound = "true";
     }
   };
 

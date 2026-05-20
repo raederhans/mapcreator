@@ -553,3 +553,38 @@ Progress:
 - [x] Run targeted verification and dist sync.
 - [x] Run final review.
 - [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-20 appearance reference owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-perf-g001`
+Branch: `codex/perf-appearance-transport-g001`
+
+Goal: continue G001 by moving reference-image overlay rendering, input binding, object-URL lifecycle, and the independent rivers controls out of the large appearance controller while preserving the existing toolbar facade.
+
+Acceptance:
+
+- `appearance_reference_owner.js` owns reference DOM lookup, reference image state normalization, reference image style application, file object-URL replacement/cleanup, range input binding, and reference dirty reasons.
+- `appearance_controls_controller.js` keeps only owner construction, `renderReferenceOverlayUi` facade wiring, and `bindEvents()` delegation.
+- `toolbar.js` drops the dead reference DOM queries that became unused after the owner split.
+- Re-rendering the same reference image transform avoids rewriting image style when the style signature is unchanged.
+- `appearance_rivers_owner.js` owns rivers DOM lookup, style normalization, render synchronization, one-shot event binding, dirty reasons, and river context-layer loading on enable.
+- `toolbar.js` leaves transport appearance DOM sync and Appearance style normalization to their owners/controllers.
+- Existing Python boundary/state-write contracts and a named Node behavior script cover owner wiring, object URL cleanup, range writes, dirty reasons, and style-signature reuse.
+- Targeted syntax, owner behavior, toolbar split boundary, state-write guardrail, support contract, Pages dist sync, perf evaluator, final review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main` after fast-forwarding local `main` to `07709e0`.
+- [x] Loaded ultragoal, ultrawork, performance-goal, research-before-fix, active docs, lessons, agent tiers, and relevant memory.
+- [x] Created the scoped performance-goal evaluator contract at `.omx/goals/performance/appearance-transport-g001-2026-05-20`.
+- [x] Dispatched static-only subagents for owner candidates, verification matrix, and pre-review.
+- [x] Selected the reference owner boundary from fresh code evidence.
+- [x] Implemented reference owner split and dead toolbar query cleanup.
+- [x] Fixed reviewer-reported toolbar ownership residuals.
+- [x] Implemented rivers owner split and removed toolbar bootstrap normalization drift.
+- [x] Updated boundary/state-write contracts and added named Node behavior scripts.
+- [x] Run initial targeted verification.
+- [x] Run Pages dist sync and non-perf evaluator contracts.
+- [x] Run perf evaluator and control comparison; current `origin/main@07709e0` fails the same startup/apply gate family.
+- [x] Finish final review and fix current-scope findings.
+- [ ] Push and cleanup.

@@ -275,3 +275,26 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax, targeted contracts, state guardrail, support contract, and Pages dist sync.
 - [x] Run final review and fix current-scope findings.
 - [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-20 appearance reference owner slice
+
+Owner: main thread for implementation and all live verification. Static subagents only inspect source and completed artifacts.
+
+- [x] Fast-forward local `main` to previous pushed work at `07709e0`.
+- [x] Create isolated worktree from `origin/main`.
+- [x] Load ultragoal, ultrawork, performance-goal, research-before-fix, agent tiers, active docs, lessons, and memory.
+- [x] Create scoped performance-goal evaluator contract.
+- [x] Dispatch static-only subagents for next owner boundary, verification matrix, and pre-review.
+- [x] Select current-scope boundary move.
+- [x] Implement reference owner split and dead toolbar query cleanup.
+- [x] Extend Python boundary/state-write contracts and add named Node behavior script.
+- [x] Fix static-review toolbar ownership residuals.
+- [x] Implement rivers owner split and remove toolbar bootstrap normalization drift.
+- [x] Extend Python boundary/state-write contracts and add named rivers behavior script.
+- [x] Run syntax, owner behavior, state guardrail, support contract, and source import smoke.
+- [x] Run Pages dist sync and dist import smoke.
+- [x] Run final non-perf evaluator contracts.
+- [x] Run performance evaluator and control comparison; gate is blocked by current baseline/startup behavior also present on `origin/main@07709e0`.
+- [x] Run final self-review / static review and fix current-scope findings.
+- [x] Rerun targeted verification, Pages dist sync, dist import smoke, toolbar split, state guardrail, and `git diff --check`.
+- [ ] Push to `origin/main`, checkpoint ultragoal, and clean worktree.

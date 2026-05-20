@@ -6050,7 +6050,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 39530
+      "size_bytes": 38638
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6066,7 +6066,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel/ui_sync.js",
-      "size_bytes": 2212
+      "size_bytes": 2278
     },
     {
       "path": "app/js/core/interaction_funnel/wait_readiness.js",
@@ -6470,7 +6470,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 24142
+      "size_bytes": 24959
     },
     {
       "path": "app/js/core/state.js",
@@ -6614,7 +6614,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 31486
+      "size_bytes": 20551
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
@@ -6622,7 +6622,15 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 16163
+      "size_bytes": 16441
+    },
+    {
+      "path": "app/js/ui/toolbar/appearance_reference_owner.js",
+      "size_bytes": 6497
+    },
+    {
+      "path": "app/js/ui/toolbar/appearance_rivers_owner.js",
+      "size_bytes": 6073
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
@@ -6722,7 +6730,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 151056
+      "size_bytes": 139127
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6862,7 +6870,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217635
+      "size_bytes": 217846
     },
     {
       "path": "styles.css",
@@ -6879,5 +6887,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001442332
+  "total_bytes": 1001432518
 }

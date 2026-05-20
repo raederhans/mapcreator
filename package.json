@@ -12,6 +12,8 @@
     "test:node:appearance-city-points-owner": "node --test tests/appearance_city_points_owner_behavior.test.mjs",
     "test:node:appearance-parent-border-owner": "node --test tests/appearance_parent_border_owner_behavior.test.mjs",
     "test:node:appearance-physical-owner": "node --test tests/appearance_physical_owner_behavior.test.mjs",
+    "test:node:appearance-reference-owner": "node --test tests/appearance_reference_owner_behavior.test.mjs",
+    "test:node:appearance-rivers-owner": "node --test tests/appearance_rivers_owner_behavior.test.mjs",
     "test:node:appearance-texture-owner": "node --test tests/appearance_texture_owner_behavior.test.mjs",
     "test:node:transport-facility-render-owner": "node --test tests/transport_facility_render_owner_behavior.test.mjs",
     "test:node:transport-workbench-controller": "npm run test:node:transport-workbench-event-owner && npm run test:node:transport-workbench-shell-owner",

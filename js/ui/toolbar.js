@@ -4,9 +4,6 @@ import {
   PALETTE_THEMES,
   normalizeExportWorkbenchUiState,
   normalizeLakeStyleConfig,
-  normalizePhysicalStyleConfig,
-  normalizeTextureStyleConfig,
-  normalizeUrbanStyleConfig,
 } from "../core/state.js";
 import {
   autoFillMap,
@@ -178,99 +175,9 @@ function initToolbar({ render } = {}) {
   if (exportWorkbenchTextElementList && !exportWorkbenchTextElementList.getAttribute("aria-label")) {
     exportWorkbenchTextElementList.setAttribute("aria-label", t("Text elements", "ui"));
   }
-  const toggleUrban = document.getElementById("toggleUrban");
-  const toggleRivers = document.getElementById("toggleRivers");
-  const toggleAirports = document.getElementById("toggleAirports");
-  const togglePorts = document.getElementById("togglePorts");
-  const toggleRail = document.getElementById("toggleRail");
-  const toggleRoad = document.getElementById("toggleRoad");
-  const transportAppearanceMasterToggle = document.getElementById("transportAppearanceMasterToggle");
   const transportAppearanceWorkbenchBtn = document.getElementById("transportAppearanceWorkbenchBtn");
-  const transportAirportCard = document.getElementById("transportAirportCard");
-  const transportPortCard = document.getElementById("transportPortCard");
-  const transportRailCard = document.getElementById("transportRailCard");
-  const transportRoadCard = document.getElementById("transportRoadCard");
-  const transportAirportControls = document.getElementById("transportAirportControls");
-  const transportPortControls = document.getElementById("transportPortControls");
-  const transportRailControls = document.getElementById("transportRailControls");
-  const transportRoadControls = document.getElementById("transportRoadControls");
-  const airportVisualStrength = document.getElementById("airportVisualStrength");
-  const airportOpacity = document.getElementById("airportOpacity");
-  const airportPrimaryColor = document.getElementById("airportPrimaryColor");
-  const airportLabelsEnabled = document.getElementById("airportLabelsEnabled");
-  const airportLabelDensity = document.getElementById("airportLabelDensity");
-  const airportLabelMode = document.getElementById("airportLabelMode");
-  const airportCoverageReach = document.getElementById("airportCoverageReach");
-  const airportScopeLinked = document.getElementById("airportScopeLinked");
-  const airportScopeResolved = document.getElementById("airportScopeResolved");
-  const airportThresholdResolved = document.getElementById("airportThresholdResolved");
-  const airportScope = document.getElementById("airportScope");
-  const airportImportanceThreshold = document.getElementById("airportImportanceThreshold");
-  const transportAirportSummaryMeta = document.getElementById("transportAirportSummaryMeta");
-  const portVisualStrength = document.getElementById("portVisualStrength");
-  const portOpacity = document.getElementById("portOpacity");
-  const portPrimaryColor = document.getElementById("portPrimaryColor");
-  const portLabelsEnabled = document.getElementById("portLabelsEnabled");
-  const portLabelDensity = document.getElementById("portLabelDensity");
-  const portLabelMode = document.getElementById("portLabelMode");
-  const portCoverageReach = document.getElementById("portCoverageReach");
-  const portScopeLinked = document.getElementById("portScopeLinked");
-  const portScopeResolved = document.getElementById("portScopeResolved");
-  const portThresholdResolved = document.getElementById("portThresholdResolved");
-  const portTier = document.getElementById("portTier");
-  const portImportanceThreshold = document.getElementById("portImportanceThreshold");
-  const transportPortSummaryMeta = document.getElementById("transportPortSummaryMeta");
-  const railVisualStrength = document.getElementById("railVisualStrength");
-  const railVisualStrengthValue = document.getElementById("railVisualStrengthValue");
-  const railOpacity = document.getElementById("railOpacity");
-  const railOpacityValue = document.getElementById("railOpacityValue");
-  const railPrimaryColor = document.getElementById("railPrimaryColor");
-  const railLabelsEnabled = document.getElementById("railLabelsEnabled");
-  const railLabelDensity = document.getElementById("railLabelDensity");
-  const railCoverageReach = document.getElementById("railCoverageReach");
-  const railCoverageReachValue = document.getElementById("railCoverageReachValue");
-  const railScopeLinked = document.getElementById("railScopeLinked");
-  const railScopeResolved = document.getElementById("railScopeResolved");
-  const railThresholdResolved = document.getElementById("railThresholdResolved");
-  const railScope = document.getElementById("railScope");
-  const railImportanceThreshold = document.getElementById("railImportanceThreshold");
-  const transportRailSummaryMeta = document.getElementById("transportRailSummaryMeta");
-  const roadVisualStrength = document.getElementById("roadVisualStrength");
-  const roadVisualStrengthValue = document.getElementById("roadVisualStrengthValue");
-  const roadOpacity = document.getElementById("roadOpacity");
-  const roadOpacityValue = document.getElementById("roadOpacityValue");
-  const roadPrimaryColor = document.getElementById("roadPrimaryColor");
-  const roadCoverageReach = document.getElementById("roadCoverageReach");
-  const roadCoverageReachValue = document.getElementById("roadCoverageReachValue");
-  const roadScopeLinked = document.getElementById("roadScopeLinked");
-  const roadScopeResolved = document.getElementById("roadScopeResolved");
-  const roadThresholdResolved = document.getElementById("roadThresholdResolved");
-  const roadScope = document.getElementById("roadScope");
-  const roadImportanceThreshold = document.getElementById("roadImportanceThreshold");
-  const transportRoadSummaryMeta = document.getElementById("transportRoadSummaryMeta");
   const toggleWaterRegions = document.getElementById("toggleWaterRegions");
   const toggleOpenOceanRegions = document.getElementById("toggleOpenOceanRegions");
-  const urbanMode = document.getElementById("urbanMode");
-  const urbanAdaptiveControls = document.getElementById("urbanAdaptiveControls");
-  const urbanManualControls = document.getElementById("urbanManualControls");
-  const lblUrbanOpacity = document.getElementById("lblUrbanOpacity");
-  const urbanColor = document.getElementById("urbanColor");
-  const urbanOpacity = document.getElementById("urbanOpacity");
-  const urbanBlendMode = document.getElementById("urbanBlendMode");
-  const urbanAdaptiveStrength = document.getElementById("urbanAdaptiveStrength");
-  const urbanStrokeOpacity = document.getElementById("urbanStrokeOpacity");
-  const urbanToneBias = document.getElementById("urbanToneBias");
-  const urbanAdaptiveTintEnabled = document.getElementById("urbanAdaptiveTintEnabled");
-  const urbanAdaptiveTintColor = document.getElementById("urbanAdaptiveTintColor");
-  const urbanAdaptiveTintStrength = document.getElementById("urbanAdaptiveTintStrength");
-  const urbanMinArea = document.getElementById("urbanMinArea");
-  const urbanAdaptiveStatus = document.getElementById("urbanAdaptiveStatus");
-  const riversColor = document.getElementById("riversColor");
-  const riversOpacity = document.getElementById("riversOpacity");
-  const riversWidth = document.getElementById("riversWidth");
-  const riversOutlineColor = document.getElementById("riversOutlineColor");
-  const riversOutlineWidth = document.getElementById("riversOutlineWidth");
-  const riversDashStyle = document.getElementById("riversDashStyle");
   const specialZoneEditorHint = document.getElementById("specialZoneEditorHint");
   const recentContainer = document.getElementById("recentColors");
   const paletteLibraryToggle = document.getElementById("paletteLibraryToggle");
@@ -457,11 +364,6 @@ function initToolbar({ render } = {}) {
   const oceanScenarioShallowContourFadeEndZoom = document.getElementById("oceanScenarioShallowContourFadeEndZoom");
   const toggleLang = document.getElementById("btnToggleLang");
   const themeSelect = document.getElementById("themeSelect");
-  const referenceImageInput = document.getElementById("referenceImageInput");
-  const referenceOpacity = document.getElementById("referenceOpacity");
-  const referenceScale = document.getElementById("referenceScale");
-  const referenceOffsetX = document.getElementById("referenceOffsetX");
-  const referenceOffsetY = document.getElementById("referenceOffsetY");
   const paletteLibraryToggleLabel = document.getElementById("paletteLibraryToggleLabel");
 
   const internalBorderOpacityValue = document.getElementById("internalBorderOpacityValue");
@@ -470,21 +372,6 @@ function initToolbar({ render } = {}) {
   const coastlineWidthValue = document.getElementById("coastlineWidthValue");
   const parentBorderOpacityValue = document.getElementById("parentBorderOpacityValue");
   const parentBorderWidthValue = document.getElementById("parentBorderWidthValue");
-  const urbanOpacityValue = document.getElementById("urbanOpacityValue");
-  const urbanAdaptiveStrengthValue = document.getElementById("urbanAdaptiveStrengthValue");
-  const urbanStrokeOpacityValue = document.getElementById("urbanStrokeOpacityValue");
-  const urbanToneBiasValue = document.getElementById("urbanToneBiasValue");
-  const urbanAdaptiveTintStrengthValue = document.getElementById("urbanAdaptiveTintStrengthValue");
-  const urbanMinAreaValue = document.getElementById("urbanMinAreaValue");
-  const riversOpacityValue = document.getElementById("riversOpacityValue");
-  const riversWidthValue = document.getElementById("riversWidthValue");
-  const riversOutlineWidthValue = document.getElementById("riversOutlineWidthValue");
-  const airportVisualStrengthValue = document.getElementById("airportVisualStrengthValue");
-  const airportOpacityValue = document.getElementById("airportOpacityValue");
-  const airportCoverageReachValue = document.getElementById("airportCoverageReachValue");
-  const portVisualStrengthValue = document.getElementById("portVisualStrengthValue");
-  const portOpacityValue = document.getElementById("portOpacityValue");
-  const portCoverageReachValue = document.getElementById("portCoverageReachValue");
   const oceanTextureOpacityValue = document.getElementById("oceanTextureOpacityValue");
   const oceanTextureScaleValue = document.getElementById("oceanTextureScaleValue");
   const oceanContourStrengthValue = document.getElementById("oceanContourStrengthValue");
@@ -493,10 +380,6 @@ function initToolbar({ render } = {}) {
   const oceanDeepFadeEndZoomValue = document.getElementById("oceanDeepFadeEndZoomValue");
   const oceanScenarioSyntheticContourFadeEndZoomValue = document.getElementById("oceanScenarioSyntheticContourFadeEndZoomValue");
   const oceanScenarioShallowContourFadeEndZoomValue = document.getElementById("oceanScenarioShallowContourFadeEndZoomValue");
-  const referenceOpacityValue = document.getElementById("referenceOpacityValue");
-  const referenceScaleValue = document.getElementById("referenceScaleValue");
-  const referenceOffsetXValue = document.getElementById("referenceOffsetXValue");
-  const referenceOffsetYValue = document.getElementById("referenceOffsetYValue");
   const appearanceLayerFilter = document.getElementById("appearanceLayerFilter");
   const appearanceTabButtons = Array.from(document.querySelectorAll("[data-appearance-tab]"));
   const appearanceTabPanels = Array.from(document.querySelectorAll("[data-appearance-panel]"));
@@ -1672,69 +1555,6 @@ function initToolbar({ render } = {}) {
     runtimeState.parentBorderEnabledByCountry = {};
   }
   runtimeState.parentBordersVisible = runtimeState.parentBordersVisible !== false;
-  runtimeState.styleConfig.urban = normalizeUrbanStyleConfig(runtimeState.styleConfig.urban);
-  if (runtimeState.styleConfig.urban.mode === "manual") {
-    runtimeState.styleConfig.urban.color = normalizeOceanFillColor(runtimeState.styleConfig.urban.color || "#4b5563");
-  }
-  runtimeState.styleConfig.urban.adaptiveTintColor = normalizeOceanFillColor(
-    runtimeState.styleConfig.urban.adaptiveTintColor || "#f2dea1"
-  );
-
-  runtimeState.styleConfig.physical = normalizePhysicalStyleConfig(runtimeState.styleConfig.physical);
-  runtimeState.styleConfig.physical.contourColor = normalizeOceanFillColor(
-    runtimeState.styleConfig.physical.contourColor || "#6b5947"
-  );
-
-  if (!runtimeState.styleConfig.rivers || typeof runtimeState.styleConfig.rivers !== "object") {
-    runtimeState.styleConfig.rivers = {};
-  }
-  runtimeState.styleConfig.rivers.color = normalizeOceanFillColor(runtimeState.styleConfig.rivers.color || "#3b82f6");
-  runtimeState.styleConfig.rivers.opacity = clamp(
-    Number.isFinite(Number(runtimeState.styleConfig.rivers.opacity)) ? Number(runtimeState.styleConfig.rivers.opacity) : 0.88,
-    0,
-    1
-  );
-  runtimeState.styleConfig.rivers.width = clamp(
-    Number.isFinite(Number(runtimeState.styleConfig.rivers.width)) ? Number(runtimeState.styleConfig.rivers.width) : 0.5,
-    0.2,
-    4
-  );
-  runtimeState.styleConfig.rivers.outlineColor = normalizeOceanFillColor(
-    runtimeState.styleConfig.rivers.outlineColor || "#e2efff"
-  );
-  runtimeState.styleConfig.rivers.outlineWidth = clamp(
-    Number.isFinite(Number(runtimeState.styleConfig.rivers.outlineWidth))
-      ? Number(runtimeState.styleConfig.rivers.outlineWidth)
-      : 0.25,
-    0,
-    3
-  );
-  runtimeState.styleConfig.rivers.dashStyle = String(runtimeState.styleConfig.rivers.dashStyle || "solid");
-
-  runtimeState.styleConfig.texture = normalizeTextureStyleConfig(runtimeState.styleConfig.texture);
-  if (!runtimeState.referenceImageState || typeof runtimeState.referenceImageState !== "object") {
-    runtimeState.referenceImageState = {};
-  }
-  runtimeState.referenceImageState.opacity = clamp(
-    Number.isFinite(Number(runtimeState.referenceImageState.opacity)) ? Number(runtimeState.referenceImageState.opacity) : 0.6,
-    0,
-    1
-  );
-  runtimeState.referenceImageState.scale = clamp(
-    Number.isFinite(Number(runtimeState.referenceImageState.scale)) ? Number(runtimeState.referenceImageState.scale) : 1,
-    0.2,
-    3
-  );
-  runtimeState.referenceImageState.offsetX = clamp(
-    Number.isFinite(Number(runtimeState.referenceImageState.offsetX)) ? Number(runtimeState.referenceImageState.offsetX) : 0,
-    -1000,
-    1000
-  );
-  runtimeState.referenceImageState.offsetY = clamp(
-    Number.isFinite(Number(runtimeState.referenceImageState.offsetY)) ? Number(runtimeState.referenceImageState.offsetY) : 0,
-    -1000,
-    1000
-  );
 
   const paletteLibraryPanelController = createPaletteLibraryPanelController({
     themeSelect,
@@ -1766,8 +1586,6 @@ function initToolbar({ render } = {}) {
   function renderSpecialZoneEditorUI() {
     if (toggleWaterRegions) toggleWaterRegions.checked = !!runtimeState.showWaterRegions;
     if (toggleOpenOceanRegions) toggleOpenOceanRegions.checked = !!runtimeState.showOpenOceanRegions;
-    if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;
-    if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;
     renderAppearanceStyleControlsUi();
     specialZoneEditorController.renderSpecialZoneEditorUI();
     specialZonesWorkbenchController.renderSpecialZonesWorkbenchUi();

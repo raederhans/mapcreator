@@ -1615,3 +1615,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 从 `toolbar.js` 或大型 controller 拆出 owner 后，要同步删除原 facade 里已无使用者的 DOM 查询；这些查询会继续增加启动成本，也会误导后续 owner 边界判断。
 - 边界合同除了检查 helper 迁出，还要检查关键 `getElementById(...)` 查询不会回流到旧 facade。
+
+## 2026-05-20 - import UI sync after owner split
+
+- 删除旧 facade 里的局部补同步后，project import / restore 这类批量状态写入路径必须显式触发新 owner 的专用 state bus event；只保留总 toolbar refresh 会让拆出的面板出现 stale DOM。
