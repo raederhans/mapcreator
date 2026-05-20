@@ -526,3 +526,30 @@ Progress:
 - [x] Run targeted verification and dist sync.
 - [x] Run final review.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-20 appearance physical owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-physical-owner-2026-05-20`
+Branch: `codex/appearance-physical-owner-2026-05-20`
+
+Goal: continue G001 by moving physical appearance UI rendering/event binding out of the large appearance controller while preserving physical context loading, preset semantics, and toolbar facade behavior.
+
+Acceptance:
+
+- `appearance_physical_owner.js` owns physical DOM lookup, style normalization, preset application, preset hint copy, render synchronization, one-shot event binding, physical context-layer loading on enable, and physical atlas class toggles.
+- `appearance_controls_controller.js` keeps the existing toolbar-facing facade and delegates physical rendering plus event binding to the owner.
+- `toolbar.js` no longer performs unused physical DOM queries or class-toggle map construction.
+- Existing toolbar boundary and state-write contracts lock the new owner boundary and allowlist ownership.
+- A named Node behavior script covers render synchronization, toggle context loading, preset application, duplicate binding prevention, numeric clamping, and class visibility writes.
+- Targeted syntax, owner behavior, toolbar split boundary, state-write guardrail, support contract, dist sync, import smokes, final review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only subagent for physical boundary.
+- [x] Selected current-scope boundary move.
+- [x] Implement physical owner split.
+- [x] Update boundary, state-write, and behavior tests.
+- [x] Run targeted verification and dist sync.
+- [x] Run final review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

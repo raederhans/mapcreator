@@ -1,18 +1,14 @@
-import {
-  createPhysicalStyleConfigForPreset,
-  normalizePhysicalPreset,
-  normalizePhysicalStyleConfig,
-  normalizeUrbanStyleConfig,
-} from "../../core/state.js";
+import { normalizeUrbanStyleConfig } from "../../core/state.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { createTransportAppearanceController } from "./transport_appearance_controller.js";
 import { createAppearanceParentBorderOwner } from "./appearance_parent_border_owner.js";
 import { createAppearanceTextureOwner } from "./appearance_texture_owner.js";
 import { createAppearanceCityPointsOwner } from "./appearance_city_points_owner.js";
+import { createAppearancePhysicalOwner } from "./appearance_physical_owner.js";
 
 /**
- * Owns the Appearance 面板 shell plus urban / physical / rivers / reference controls.
- * Transport, texture/day-night, city-points, and parent-border details live in narrower owners.
+ * Owns the Appearance 面板 shell plus urban / rivers / reference controls.
+ * Transport, texture/day-night, city-points, physical, and parent-border details live in narrower owners.
  *
  * toolbar.js 继续保留更高层 facade：
  * - runtimeState callback 注册
@@ -31,7 +27,6 @@ export function createAppearanceControlsController({
   openSpecialZonePopover,
 }) {
   const toggleUrban = document.getElementById("toggleUrban");
-  const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
   const urbanMode = document.getElementById("urbanMode");
   const urbanAdaptiveControls = document.getElementById("urbanAdaptiveControls");
@@ -48,34 +43,6 @@ export function createAppearanceControlsController({
   const urbanAdaptiveTintStrength = document.getElementById("urbanAdaptiveTintStrength");
   const urbanMinArea = document.getElementById("urbanMinArea");
   const urbanAdaptiveStatus = document.getElementById("urbanAdaptiveStatus");
-  const physicalPreset = document.getElementById("physicalPreset");
-  const physicalPresetHint = document.getElementById("physicalPresetHint");
-  const physicalMode = document.getElementById("physicalMode");
-  const physicalOpacity = document.getElementById("physicalOpacity");
-  const physicalAtlasIntensity = document.getElementById("physicalAtlasIntensity");
-  const physicalRainforestEmphasis = document.getElementById("physicalRainforestEmphasis");
-  const physicalContourColor = document.getElementById("physicalContourColor");
-  const physicalContourOpacity = document.getElementById("physicalContourOpacity");
-  const physicalMinorContours = document.getElementById("physicalMinorContours");
-  const physicalContourMajorWidth = document.getElementById("physicalContourMajorWidth");
-  const physicalContourMinorWidth = document.getElementById("physicalContourMinorWidth");
-  const physicalContourMajorInterval = document.getElementById("physicalContourMajorInterval");
-  const physicalContourMinorInterval = document.getElementById("physicalContourMinorInterval");
-  const physicalContourMajorLowReliefCutoff = document.getElementById("physicalContourMajorLowReliefCutoff");
-  const physicalContourMinorLowReliefCutoff = document.getElementById("physicalContourMinorLowReliefCutoff");
-  const physicalBlendMode = document.getElementById("physicalBlendMode");
-  const physicalClassMountain = document.getElementById("physicalClassMountain");
-  const physicalClassMountainHills = document.getElementById("physicalClassMountainHills");
-  const physicalClassPlateau = document.getElementById("physicalClassPlateau");
-  const physicalClassBadlands = document.getElementById("physicalClassBadlands");
-  const physicalClassPlains = document.getElementById("physicalClassPlains");
-  const physicalClassBasin = document.getElementById("physicalClassBasin");
-  const physicalClassWetlands = document.getElementById("physicalClassWetlands");
-  const physicalClassForestTemperate = document.getElementById("physicalClassForestTemperate");
-  const physicalClassRainforestTropical = document.getElementById("physicalClassRainforestTropical");
-  const physicalClassGrassland = document.getElementById("physicalClassGrassland");
-  const physicalClassDesert = document.getElementById("physicalClassDesert");
-  const physicalClassTundra = document.getElementById("physicalClassTundra");
   const riversColor = document.getElementById("riversColor");
   const riversOpacity = document.getElementById("riversOpacity");
   const riversWidth = document.getElementById("riversWidth");
@@ -93,16 +60,6 @@ export function createAppearanceControlsController({
   const urbanToneBiasValue = document.getElementById("urbanToneBiasValue");
   const urbanAdaptiveTintStrengthValue = document.getElementById("urbanAdaptiveTintStrengthValue");
   const urbanMinAreaValue = document.getElementById("urbanMinAreaValue");
-  const physicalOpacityValue = document.getElementById("physicalOpacityValue");
-  const physicalAtlasIntensityValue = document.getElementById("physicalAtlasIntensityValue");
-  const physicalRainforestEmphasisValue = document.getElementById("physicalRainforestEmphasisValue");
-  const physicalContourOpacityValue = document.getElementById("physicalContourOpacityValue");
-  const physicalContourMajorWidthValue = document.getElementById("physicalContourMajorWidthValue");
-  const physicalContourMinorWidthValue = document.getElementById("physicalContourMinorWidthValue");
-  const physicalContourMajorIntervalValue = document.getElementById("physicalContourMajorIntervalValue");
-  const physicalContourMinorIntervalValue = document.getElementById("physicalContourMinorIntervalValue");
-  const physicalContourMajorLowReliefCutoffValue = document.getElementById("physicalContourMajorLowReliefCutoffValue");
-  const physicalContourMinorLowReliefCutoffValue = document.getElementById("physicalContourMinorLowReliefCutoffValue");
   const riversOpacityValue = document.getElementById("riversOpacityValue");
   const riversWidthValue = document.getElementById("riversWidthValue");
   const riversOutlineWidthValue = document.getElementById("riversOutlineWidthValue");
@@ -150,6 +107,13 @@ export function createAppearanceControlsController({
     normalizeOceanFillColor,
     ensureActiveScenarioOptionalLayerLoaded,
   });
+  const physicalOwner = createAppearancePhysicalOwner({
+    runtimeState,
+    t,
+    clamp,
+    renderDirty,
+    normalizeOceanFillColor,
+  });
   const parentBorderOwner = createAppearanceParentBorderOwner({
     runtimeState,
     nodes: {
@@ -165,21 +129,6 @@ export function createAppearanceControlsController({
     translateGeo: (label) => t(label, "geo"),
     renderDirty,
   });
-
-  const physicalClassToggleMap = {
-    mountain_high_relief: physicalClassMountain,
-    mountain_hills: physicalClassMountainHills,
-    upland_plateau: physicalClassPlateau,
-    badlands_canyon: physicalClassBadlands,
-    plains_lowlands: physicalClassPlains,
-    basin_lowlands: physicalClassBasin,
-    wetlands_delta: physicalClassWetlands,
-    forest_temperate: physicalClassForestTemperate,
-    rainforest_tropical: physicalClassRainforestTropical,
-    grassland_steppe: physicalClassGrassland,
-    desert_bare: physicalClassDesert,
-    tundra_ice: physicalClassTundra,
-  };
 
   const applyAppearanceFilter = () => {
     const query = String(appearanceLayerFilter?.value || "").trim().toLowerCase();
@@ -238,37 +187,6 @@ export function createAppearanceControlsController({
     return `${percent >= 0 ? "+" : ""}${percent}%`;
   };
 
-  const syncPhysicalConfig = () => {
-    runtimeState.styleConfig.physical = normalizePhysicalStyleConfig(runtimeState.styleConfig.physical);
-    runtimeState.styleConfig.physical.contourColor = normalizeOceanFillColor(
-      runtimeState.styleConfig.physical.contourColor || "#6b5947",
-    );
-    return runtimeState.styleConfig.physical;
-  };
-
-  const applyPhysicalPresetConfig = (preset, { preserveMode = true } = {}) => {
-    const current = syncPhysicalConfig();
-    const resolvedPreset = normalizePhysicalPreset(preset);
-    const next = createPhysicalStyleConfigForPreset(resolvedPreset);
-    runtimeState.styleConfig.physical = normalizePhysicalStyleConfig({
-      ...next,
-      mode: preserveMode ? current.mode : next.mode,
-      contourColor: current.contourColor || next.contourColor,
-    });
-    return runtimeState.styleConfig.physical;
-  };
-
-  const getPhysicalPresetHint = (preset) => {
-    const normalizedPreset = normalizePhysicalPreset(preset);
-    if (normalizedPreset === "political_clean") {
-      return t("Political Clean keeps only the clearest landform cues over political fills.", "ui");
-    }
-    if (normalizedPreset === "terrain_rich") {
-      return t("Terrain Rich pushes the atlas and contour layer for the strongest relief read.", "ui");
-    }
-    return t("Balanced keeps terrain visible while staying cleaner over political fills.", "ui");
-  };
-
   const syncUrbanControls = () => {
     const urbanConfig = syncUrbanConfig();
     const capability = getUrbanCapability();
@@ -315,42 +233,10 @@ export function createAppearanceControlsController({
   const renderAppearanceStyleControlsUi = () => {
     cityPointsOwner.renderCityPointsUi();
     if (toggleUrban) toggleUrban.checked = !!runtimeState.showUrban;
-    if (togglePhysical) togglePhysical.checked = !!runtimeState.showPhysical;
+    physicalOwner.renderPhysicalUi();
     if (toggleRivers) toggleRivers.checked = !!runtimeState.showRivers;
 
     syncUrbanControls();
-
-    runtimeState.styleConfig.physical = normalizePhysicalStyleConfig(runtimeState.styleConfig.physical);
-    const activePhysicalPreset = normalizePhysicalPreset(runtimeState.styleConfig.physical.preset || "balanced");
-    if (physicalPreset) physicalPreset.value = activePhysicalPreset;
-    if (physicalPresetHint) physicalPresetHint.textContent = getPhysicalPresetHint(activePhysicalPreset);
-    if (physicalMode) physicalMode.value = runtimeState.styleConfig.physical.mode;
-    if (physicalOpacity) physicalOpacity.value = String(Math.round(runtimeState.styleConfig.physical.opacity * 100));
-    if (physicalOpacityValue) physicalOpacityValue.textContent = `${Math.round(runtimeState.styleConfig.physical.opacity * 100)}%`;
-    if (physicalAtlasIntensity) physicalAtlasIntensity.value = String(Math.round(runtimeState.styleConfig.physical.atlasIntensity * 100));
-    if (physicalAtlasIntensityValue) physicalAtlasIntensityValue.textContent = `${Math.round(runtimeState.styleConfig.physical.atlasIntensity * 100)}%`;
-    if (physicalRainforestEmphasis) physicalRainforestEmphasis.value = String(Math.round(runtimeState.styleConfig.physical.rainforestEmphasis * 100));
-    if (physicalRainforestEmphasisValue) physicalRainforestEmphasisValue.textContent = `${Math.round(runtimeState.styleConfig.physical.rainforestEmphasis * 100)}%`;
-    if (physicalContourColor) physicalContourColor.value = runtimeState.styleConfig.physical.contourColor;
-    if (physicalContourOpacity) physicalContourOpacity.value = String(Math.round(runtimeState.styleConfig.physical.contourOpacity * 100));
-    if (physicalContourOpacityValue) physicalContourOpacityValue.textContent = `${Math.round(runtimeState.styleConfig.physical.contourOpacity * 100)}%`;
-    if (physicalMinorContours) physicalMinorContours.checked = !!runtimeState.styleConfig.physical.contourMinorVisible;
-    if (physicalContourMajorWidth) physicalContourMajorWidth.value = String(Number(runtimeState.styleConfig.physical.contourMajorWidth).toFixed(2));
-    if (physicalContourMajorWidthValue) physicalContourMajorWidthValue.textContent = Number(runtimeState.styleConfig.physical.contourMajorWidth).toFixed(2);
-    if (physicalContourMinorWidth) physicalContourMinorWidth.value = String(Number(runtimeState.styleConfig.physical.contourMinorWidth).toFixed(2));
-    if (physicalContourMinorWidthValue) physicalContourMinorWidthValue.textContent = Number(runtimeState.styleConfig.physical.contourMinorWidth).toFixed(2);
-    if (physicalContourMajorInterval) physicalContourMajorInterval.value = String(Math.round(runtimeState.styleConfig.physical.contourMajorIntervalM));
-    if (physicalContourMajorIntervalValue) physicalContourMajorIntervalValue.textContent = `${Math.round(runtimeState.styleConfig.physical.contourMajorIntervalM)}`;
-    if (physicalContourMinorInterval) physicalContourMinorInterval.value = String(Math.round(runtimeState.styleConfig.physical.contourMinorIntervalM));
-    if (physicalContourMinorIntervalValue) physicalContourMinorIntervalValue.textContent = `${Math.round(runtimeState.styleConfig.physical.contourMinorIntervalM)}`;
-    if (physicalContourMajorLowReliefCutoff) physicalContourMajorLowReliefCutoff.value = String(Math.round(runtimeState.styleConfig.physical.contourMajorLowReliefCutoffM));
-    if (physicalContourMajorLowReliefCutoffValue) physicalContourMajorLowReliefCutoffValue.textContent = `${Math.round(runtimeState.styleConfig.physical.contourMajorLowReliefCutoffM)}`;
-    if (physicalContourMinorLowReliefCutoff) physicalContourMinorLowReliefCutoff.value = String(Math.round(runtimeState.styleConfig.physical.contourMinorLowReliefCutoffM));
-    if (physicalContourMinorLowReliefCutoffValue) physicalContourMinorLowReliefCutoffValue.textContent = `${Math.round(runtimeState.styleConfig.physical.contourMinorLowReliefCutoffM)}`;
-    if (physicalBlendMode) physicalBlendMode.value = runtimeState.styleConfig.physical.blendMode;
-    Object.entries(physicalClassToggleMap).forEach(([key, element]) => {
-      if (element) element.checked = runtimeState.styleConfig.physical.atlasClassVisibility?.[key] !== false;
-    });
 
     if (riversColor) riversColor.value = runtimeState.styleConfig.rivers.color;
     if (riversOpacity) riversOpacity.value = String(Math.round(runtimeState.styleConfig.rivers.opacity * 100));
@@ -436,6 +322,7 @@ export function createAppearanceControlsController({
     transportAppearanceController.bindEvents();
     textureOwner.bindEvents();
     cityPointsOwner.bindEvents();
+    physicalOwner.bindEvents();
 
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
       toggleUrban.checked = !!runtimeState.showUrban;
@@ -447,18 +334,6 @@ export function createAppearanceControlsController({
         renderDirty("toggle-urban");
       });
       toggleUrban.dataset.bound = "true";
-    }
-
-    if (togglePhysical && togglePhysical.dataset.bound !== "true") {
-      togglePhysical.checked = !!runtimeState.showPhysical;
-      togglePhysical.addEventListener("change", (event) => {
-        runtimeState.showPhysical = event.target.checked;
-        if (runtimeState.showPhysical && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn(["physical-set", "physical-contours-set"], { reason: "toolbar-toggle", renderNow: true });
-        }
-        renderDirty("toggle-physical");
-      });
-      togglePhysical.dataset.bound = "true";
     }
 
     if (toggleRivers && toggleRivers.dataset.bound !== "true") {
@@ -577,158 +452,6 @@ export function createAppearanceControlsController({
       });
       urbanMinArea.dataset.bound = "true";
     }
-    if (physicalPreset && physicalPreset.dataset.bound !== "true") {
-      physicalPreset.addEventListener("change", (event) => {
-        applyPhysicalPresetConfig(event.target.value || "balanced");
-        renderAppearanceStyleControlsUi();
-        renderDirty("physical-preset-select");
-      });
-      physicalPreset.dataset.bound = "true";
-    }
-    if (physicalMode && physicalMode.dataset.bound !== "true") {
-      physicalMode.addEventListener("change", (event) => {
-        const cfg = syncPhysicalConfig();
-        cfg.mode = String(event.target.value || "atlas_and_contours");
-        renderDirty("physical-mode");
-      });
-      physicalMode.dataset.bound = "true";
-    }
-    if (physicalOpacity && physicalOpacity.dataset.bound !== "true") {
-      physicalOpacity.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
-        if (physicalOpacityValue) physicalOpacityValue.textContent = `${Math.round(cfg.opacity * 100)}%`;
-        renderDirty("physical-opacity");
-      });
-      physicalOpacity.dataset.bound = "true";
-    }
-    if (physicalAtlasIntensity && physicalAtlasIntensity.dataset.bound !== "true") {
-      physicalAtlasIntensity.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.atlasIntensity = clamp(Number.isFinite(value) ? value / 100 : 0.9, 0.2, 1.4);
-        if (physicalAtlasIntensityValue) physicalAtlasIntensityValue.textContent = `${Math.round(cfg.atlasIntensity * 100)}%`;
-        renderDirty("physical-atlas-intensity");
-      });
-      physicalAtlasIntensity.dataset.bound = "true";
-    }
-    if (physicalRainforestEmphasis && physicalRainforestEmphasis.dataset.bound !== "true") {
-      physicalRainforestEmphasis.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.rainforestEmphasis = clamp(Number.isFinite(value) ? value / 100 : 0.72, 0, 1);
-        if (physicalRainforestEmphasisValue) physicalRainforestEmphasisValue.textContent = `${Math.round(cfg.rainforestEmphasis * 100)}%`;
-        renderDirty("physical-rainforest-emphasis");
-      });
-      physicalRainforestEmphasis.dataset.bound = "true";
-    }
-    if (physicalContourColor && physicalContourColor.dataset.bound !== "true") {
-      physicalContourColor.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        cfg.contourColor = normalizeOceanFillColor(event.target.value);
-        renderDirty("physical-contour-color");
-      });
-      physicalContourColor.dataset.bound = "true";
-    }
-    if (physicalContourOpacity && physicalContourOpacity.dataset.bound !== "true") {
-      physicalContourOpacity.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.34, 0, 1);
-        if (physicalContourOpacityValue) physicalContourOpacityValue.textContent = `${Math.round(cfg.contourOpacity * 100)}%`;
-        renderDirty("physical-contour-opacity");
-      });
-      physicalContourOpacity.dataset.bound = "true";
-    }
-    if (physicalMinorContours && physicalMinorContours.dataset.bound !== "true") {
-      physicalMinorContours.addEventListener("change", (event) => {
-        const cfg = syncPhysicalConfig();
-        cfg.contourMinorVisible = !!event.target.checked;
-        renderDirty("physical-contour-minor-toggle");
-      });
-      physicalMinorContours.dataset.bound = "true";
-    }
-    if (physicalContourMajorWidth && physicalContourMajorWidth.dataset.bound !== "true") {
-      physicalContourMajorWidth.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourMajorWidth = clamp(Number.isFinite(value) ? value : 0.8, 0.2, 3);
-        if (physicalContourMajorWidthValue) physicalContourMajorWidthValue.textContent = Number(cfg.contourMajorWidth).toFixed(2);
-        renderDirty("physical-contour-major-width");
-      });
-      physicalContourMajorWidth.dataset.bound = "true";
-    }
-    if (physicalContourMinorWidth && physicalContourMinorWidth.dataset.bound !== "true") {
-      physicalContourMinorWidth.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourMinorWidth = clamp(Number.isFinite(value) ? value : 0.45, 0.1, 2);
-        if (physicalContourMinorWidthValue) physicalContourMinorWidthValue.textContent = Number(cfg.contourMinorWidth).toFixed(2);
-        renderDirty("physical-contour-minor-width");
-      });
-      physicalContourMinorWidth.dataset.bound = "true";
-    }
-    if (physicalContourMajorInterval && physicalContourMajorInterval.dataset.bound !== "true") {
-      physicalContourMajorInterval.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourMajorIntervalM = clamp(Number.isFinite(value) ? Math.round(value / 500) * 500 : 500, 500, 2000);
-        if (physicalContourMajorIntervalValue) physicalContourMajorIntervalValue.textContent = `${Math.round(cfg.contourMajorIntervalM)}`;
-        renderDirty("physical-contour-major-interval");
-      });
-      physicalContourMajorInterval.dataset.bound = "true";
-    }
-    if (physicalContourMinorInterval && physicalContourMinorInterval.dataset.bound !== "true") {
-      physicalContourMinorInterval.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourMinorIntervalM = clamp(Number.isFinite(value) ? Math.round(value / 100) * 100 : 100, 100, 1000);
-        if (physicalContourMinorIntervalValue) physicalContourMinorIntervalValue.textContent = `${Math.round(cfg.contourMinorIntervalM)}`;
-        renderDirty("physical-contour-minor-interval");
-      });
-      physicalContourMinorInterval.dataset.bound = "true";
-    }
-    if (physicalContourMajorLowReliefCutoff && physicalContourMajorLowReliefCutoff.dataset.bound !== "true") {
-      physicalContourMajorLowReliefCutoff.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourMajorLowReliefCutoffM = clamp(Number.isFinite(value) ? Math.round(value) : 200, 0, 2000);
-        if (physicalContourMajorLowReliefCutoffValue) physicalContourMajorLowReliefCutoffValue.textContent = `${Math.round(cfg.contourMajorLowReliefCutoffM)}`;
-        renderDirty("physical-contour-major-low-relief-cutoff");
-      });
-      physicalContourMajorLowReliefCutoff.dataset.bound = "true";
-    }
-    if (physicalContourMinorLowReliefCutoff && physicalContourMinorLowReliefCutoff.dataset.bound !== "true") {
-      physicalContourMinorLowReliefCutoff.addEventListener("input", (event) => {
-        const cfg = syncPhysicalConfig();
-        const value = Number(event.target.value);
-        cfg.contourMinorLowReliefCutoffM = clamp(Number.isFinite(value) ? Math.round(value) : 280, 0, 2000);
-        if (physicalContourMinorLowReliefCutoffValue) physicalContourMinorLowReliefCutoffValue.textContent = `${Math.round(cfg.contourMinorLowReliefCutoffM)}`;
-        renderDirty("physical-contour-minor-low-relief-cutoff");
-      });
-      physicalContourMinorLowReliefCutoff.dataset.bound = "true";
-    }
-    if (physicalBlendMode && physicalBlendMode.dataset.bound !== "true") {
-      physicalBlendMode.addEventListener("change", (event) => {
-        const cfg = syncPhysicalConfig();
-        cfg.blendMode = String(event.target.value || "source-over");
-        renderDirty("physical-blend");
-      });
-      physicalBlendMode.dataset.bound = "true";
-    }
-    Object.entries(physicalClassToggleMap).forEach(([key, element]) => {
-      if (!element || element.dataset.bound === "true") return;
-      element.addEventListener("change", (event) => {
-        const cfg = syncPhysicalConfig();
-        cfg.atlasClassVisibility = {
-          ...(cfg.atlasClassVisibility || {}),
-          [key]: !!event.target.checked,
-        };
-        renderDirty(`physical-class-${key}`);
-      });
-      element.dataset.bound = "true";
-    });
     if (riversColor && riversColor.dataset.bound !== "true") {
       riversColor.addEventListener("input", (event) => {
         runtimeState.styleConfig.rivers.color = normalizeOceanFillColor(event.target.value);

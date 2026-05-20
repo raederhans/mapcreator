@@ -262,3 +262,16 @@ Owner: main thread for implementation and all live verification.
 - [x] Run syntax, targeted contracts, state guardrail, support contract, and Pages dist sync.
 - [x] Run final review and fix current-scope findings.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-20 appearance physical owner slice
+
+Owner: main thread for implementation and all live verification.
+
+- [x] Create isolated worktree from `origin/main`.
+- [x] Dispatch static-only subagent for physical boundary.
+- [x] Select current-scope boundary move.
+- [x] Implement physical owner split.
+- [x] Extend Python boundary/state-write contracts and add named Node behavior script.
+- [x] Run syntax, targeted contracts, state guardrail, support contract, and Pages dist sync.
+- [x] Run final review and fix current-scope findings.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

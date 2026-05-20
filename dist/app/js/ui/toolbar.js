@@ -179,7 +179,6 @@ function initToolbar({ render } = {}) {
     exportWorkbenchTextElementList.setAttribute("aria-label", t("Text elements", "ui"));
   }
   const toggleUrban = document.getElementById("toggleUrban");
-  const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
   const toggleAirports = document.getElementById("toggleAirports");
   const togglePorts = document.getElementById("togglePorts");
@@ -266,34 +265,6 @@ function initToolbar({ render } = {}) {
   const urbanAdaptiveTintStrength = document.getElementById("urbanAdaptiveTintStrength");
   const urbanMinArea = document.getElementById("urbanMinArea");
   const urbanAdaptiveStatus = document.getElementById("urbanAdaptiveStatus");
-  const physicalPreset = document.getElementById("physicalPreset");
-  const physicalPresetHint = document.getElementById("physicalPresetHint");
-  const physicalMode = document.getElementById("physicalMode");
-  const physicalOpacity = document.getElementById("physicalOpacity");
-  const physicalAtlasIntensity = document.getElementById("physicalAtlasIntensity");
-  const physicalRainforestEmphasis = document.getElementById("physicalRainforestEmphasis");
-  const physicalContourColor = document.getElementById("physicalContourColor");
-  const physicalContourOpacity = document.getElementById("physicalContourOpacity");
-  const physicalMinorContours = document.getElementById("physicalMinorContours");
-  const physicalContourMajorWidth = document.getElementById("physicalContourMajorWidth");
-  const physicalContourMinorWidth = document.getElementById("physicalContourMinorWidth");
-  const physicalContourMajorInterval = document.getElementById("physicalContourMajorInterval");
-  const physicalContourMinorInterval = document.getElementById("physicalContourMinorInterval");
-  const physicalContourMajorLowReliefCutoff = document.getElementById("physicalContourMajorLowReliefCutoff");
-  const physicalContourMinorLowReliefCutoff = document.getElementById("physicalContourMinorLowReliefCutoff");
-  const physicalBlendMode = document.getElementById("physicalBlendMode");
-  const physicalClassMountain = document.getElementById("physicalClassMountain");
-  const physicalClassMountainHills = document.getElementById("physicalClassMountainHills");
-  const physicalClassPlateau = document.getElementById("physicalClassPlateau");
-  const physicalClassBadlands = document.getElementById("physicalClassBadlands");
-  const physicalClassPlains = document.getElementById("physicalClassPlains");
-  const physicalClassBasin = document.getElementById("physicalClassBasin");
-  const physicalClassWetlands = document.getElementById("physicalClassWetlands");
-  const physicalClassForestTemperate = document.getElementById("physicalClassForestTemperate");
-  const physicalClassRainforestTropical = document.getElementById("physicalClassRainforestTropical");
-  const physicalClassGrassland = document.getElementById("physicalClassGrassland");
-  const physicalClassDesert = document.getElementById("physicalClassDesert");
-  const physicalClassTundra = document.getElementById("physicalClassTundra");
   const riversColor = document.getElementById("riversColor");
   const riversOpacity = document.getElementById("riversOpacity");
   const riversWidth = document.getElementById("riversWidth");
@@ -505,16 +476,6 @@ function initToolbar({ render } = {}) {
   const urbanToneBiasValue = document.getElementById("urbanToneBiasValue");
   const urbanAdaptiveTintStrengthValue = document.getElementById("urbanAdaptiveTintStrengthValue");
   const urbanMinAreaValue = document.getElementById("urbanMinAreaValue");
-  const physicalOpacityValue = document.getElementById("physicalOpacityValue");
-  const physicalAtlasIntensityValue = document.getElementById("physicalAtlasIntensityValue");
-  const physicalRainforestEmphasisValue = document.getElementById("physicalRainforestEmphasisValue");
-  const physicalContourOpacityValue = document.getElementById("physicalContourOpacityValue");
-  const physicalContourMajorWidthValue = document.getElementById("physicalContourMajorWidthValue");
-  const physicalContourMinorWidthValue = document.getElementById("physicalContourMinorWidthValue");
-  const physicalContourMajorIntervalValue = document.getElementById("physicalContourMajorIntervalValue");
-  const physicalContourMinorIntervalValue = document.getElementById("physicalContourMinorIntervalValue");
-  const physicalContourMajorLowReliefCutoffValue = document.getElementById("physicalContourMajorLowReliefCutoffValue");
-  const physicalContourMinorLowReliefCutoffValue = document.getElementById("physicalContourMinorLowReliefCutoffValue");
   const riversOpacityValue = document.getElementById("riversOpacityValue");
   const riversWidthValue = document.getElementById("riversWidthValue");
   const riversOutlineWidthValue = document.getElementById("riversOutlineWidthValue");
@@ -545,20 +506,6 @@ function initToolbar({ render } = {}) {
   const specialZoneEditorInline = specialZonePopover?.dataset.inlineEditor === "true";
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const DEVELOPER_MODE_STORAGE_KEY = "map_creator_developer_mode";
-  const physicalClassToggleMap = {
-    mountain_high_relief: physicalClassMountain,
-    mountain_hills: physicalClassMountainHills,
-    upland_plateau: physicalClassPlateau,
-    badlands_canyon: physicalClassBadlands,
-    plains_lowlands: physicalClassPlains,
-    basin_lowlands: physicalClassBasin,
-    wetlands_delta: physicalClassWetlands,
-    forest_temperate: physicalClassForestTemperate,
-    rainforest_tropical: physicalClassRainforestTropical,
-    grassland_steppe: physicalClassGrassland,
-    desert_bare: physicalClassDesert,
-    tundra_ice: physicalClassTundra,
-  };
   let toolHudTimerId = null;
   let scenarioGuideTimerId = null;
   let dockPopoverCloseBound = false;

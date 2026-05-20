@@ -31,6 +31,7 @@ TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "tran
 APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
 APPEARANCE_CITY_POINTS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_owner.js"
 APPEARANCE_PARENT_BORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_parent_border_owner.js"
+APPEARANCE_PHYSICAL_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_physical_owner.js"
 APPEARANCE_TEXTURE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_texture_owner.js"
 OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean_lake_controls_controller.js"
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
@@ -982,20 +983,50 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const syncCityPointsConfig = () => {", toolbar_content)
         self.assertNotIn("const persistCityViewSettings = () => {", toolbar_content)
 
-    def test_appearance_controller_owns_urban_physical_rivers_logic(self):
+    def test_appearance_physical_owner_moves_physical_controls_out_of_controller(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        controller_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        physical_owner_content = APPEARANCE_PHYSICAL_OWNER_JS.read_text(encoding="utf-8")
+        owner_call = self._controller_call_body(controller_content, "createAppearancePhysicalOwner")
+
+        self.assertIn("from \"./appearance_physical_owner.js\";", controller_content)
+        self.assertIn("const physicalOwner = createAppearancePhysicalOwner({", controller_content)
+        self.assertIn("runtimeState,", owner_call)
+        self.assertIn("t,", owner_call)
+        self.assertIn("clamp,", owner_call)
+        self.assertIn("renderDirty,", owner_call)
+        self.assertIn("normalizeOceanFillColor,", owner_call)
+        self.assertIn("physicalOwner.renderPhysicalUi();", controller_content)
+        self.assertIn("physicalOwner.bindEvents();", controller_content)
+        self.assertIn("export function createAppearancePhysicalOwner({", physical_owner_content)
+        self.assertIn("const syncPhysicalConfig = () => {", physical_owner_content)
+        self.assertIn("const applyPhysicalPresetConfig = (preset, { preserveMode = true } = {}) => {", physical_owner_content)
+        self.assertIn("const getPhysicalPresetHint = (preset) => {", physical_owner_content)
+        self.assertIn("export const PHYSICAL_CLASS_TOGGLE_IDS = Object.freeze({", physical_owner_content)
+        self.assertIn('documentRef.getElementById("togglePhysical")', physical_owner_content)
+        self.assertIn('documentRef.getElementById("physicalPreset")', physical_owner_content)
+        self.assertIn('documentRef.getElementById("physicalContourMajorInterval")', physical_owner_content)
+        self.assertIn('void runtimeState.ensureContextLayerDataFn(["physical-set", "physical-contours-set"], { reason: "toolbar-toggle", renderNow: true });', physical_owner_content)
+        self.assertIn('renderDirty("physical-preset-select");', physical_owner_content)
+        self.assertNotIn('document.getElementById("togglePhysical")', controller_content)
+        self.assertNotIn('document.getElementById("togglePhysical")', toolbar_content)
+        self.assertNotIn('document.getElementById("physicalPreset")', controller_content)
+        self.assertNotIn('document.getElementById("physicalPreset")', toolbar_content)
+        self.assertNotIn("const syncPhysicalConfig = () => {", controller_content)
+        self.assertNotIn("const syncPhysicalConfig = () => {", toolbar_content)
+        self.assertNotIn("physicalPreset.addEventListener(\"change\", (event) => {", controller_content)
+        self.assertNotIn("physicalPreset.addEventListener(\"change\", (event) => {", toolbar_content)
+
+    def test_appearance_controller_owns_urban_rivers_logic(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
 
         self.assertIn("const syncUrbanConfig = () => {", owner_content)
-        self.assertIn("const syncPhysicalConfig = () => {", owner_content)
         self.assertIn("const renderAppearanceStyleControlsUi = () => {", owner_content)
         self.assertIn("toggleUrban.addEventListener(\"change\", (event) => {", owner_content)
-        self.assertIn("physicalPreset.addEventListener(\"change\", (event) => {", owner_content)
         self.assertIn("riversDashStyle.addEventListener(\"change\", (event) => {", owner_content)
         self.assertNotIn("const syncUrbanConfig = () => {", toolbar_content)
-        self.assertNotIn("const syncPhysicalConfig = () => {", toolbar_content)
         self.assertNotIn("toggleUrban.addEventListener(\"change\", (event) => {", toolbar_content)
-        self.assertNotIn("physicalPreset.addEventListener(\"change\", (event) => {", toolbar_content)
         self.assertNotIn("riversDashStyle.addEventListener(\"change\", (event) => {", toolbar_content)
 
     def test_toolbar_keeps_city_urban_physical_special_zone_facade_contract(self):

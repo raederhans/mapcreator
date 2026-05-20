@@ -6610,15 +6610,19 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
-      "size_bytes": 11899
+      "size_bytes": 12136
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 50208
+      "size_bytes": 31486
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
       "size_bytes": 5117
+    },
+    {
+      "path": "app/js/ui/toolbar/appearance_physical_owner.js",
+      "size_bytes": 16163
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
@@ -6718,7 +6722,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 155147
+      "size_bytes": 151056
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6858,7 +6862,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217528
+      "size_bytes": 217635
     },
     {
       "path": "styles.css",
@@ -6875,5 +6879,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001448638
+  "total_bytes": 1001442332
 }

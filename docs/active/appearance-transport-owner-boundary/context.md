@@ -697,3 +697,41 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
 - Final self-review found one current-scope cleanup item: `toolbar.js` still had an unused `persistCityViewSettings()` helper after city-points moved to the owner. It was removed and the toolbar split contract now blocks it from drifting back into the facade.
 - Static reviewer lane timed out twice without returning findings; it was closed before final verification to keep live ownership and closeout bounded to the main thread.
 - Implementation commit `32c05d3` was pushed to `origin/main`; this closeout records the completed push before temporary worktree cleanup.
+
+## 2026-05-20 appearance physical owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-physical-owner-2026-05-20`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static boundary review found physical DOM constants, physical class toggle map, physical config normalization, preset application, preset hint copy, render synchronization, physical layer loading on enable, and physical event bindings were a cohesive UI owner still inside `appearance_controls_controller.js`.
+- Chosen boundary: create `js/ui/toolbar/appearance_physical_owner.js`.
+- Intended behavior:
+  - Physical owner owns DOM lookup, preset/config normalization, render synchronization, event binding, physical context-layer loading, and atlas class visibility updates.
+  - Appearance controller keeps the old toolbar-facing facade and delegates `renderAppearanceStyleControlsUi()` plus `bindEvents()` physical work to the owner.
+  - Rivers remain in `appearance_controls_controller.js` for this slice; they still write a separate `styleConfig.rivers` state branch and are a cleaner follow-up owner candidate.
+  - `toolbar.js` drops physical `getElementById(...)` queries and the old physical class-toggle map that became dead after the owner split.
+- Implemented so far:
+  - New `createAppearancePhysicalOwner()` plus `PHYSICAL_CLASS_TOGGLE_IDS`.
+  - Controller imports and wires the physical owner with `runtimeState`, `t`, `clamp`, `renderDirty`, and `normalizeOceanFillColor`.
+  - `tests/appearance_physical_owner_behavior.test.mjs` covers render synchronization, enable-path context-layer loading, preset application with mode preservation, duplicate binding prevention, numeric input clamping, and class toggle writes.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks physical owner wiring and prevents physical DOM queries or config helpers from drifting back into `toolbar.js` or the appearance controller.
+  - `tools/eslint-rules/state-writer-allowlist.json` and `tests/test_state_write_guardrail_contract.py` now record the owner as an explicit state writer, because the physical owner owns `runtimeState.showPhysical` and `styleConfig.physical` writes.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_physical_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check js/ui/toolbar.js`
+  - `node --check tests/appearance_physical_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-physical-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+- Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen package module settings.
+- Final verification passed:
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - source import smoke for toolbar, physical owner, and appearance controller
+  - `npm run verify:pages-dist`
+  - dist import smoke for toolbar, physical owner, and appearance controller
+  - `git diff --check`
+- Final static review found no blocker. One low current-scope cleanup item was fixed: `toolbar.js` still queried `togglePhysical` after physical DOM ownership moved to the new owner. The query was removed and the boundary contract now blocks this drift.
+- The reviewer also flagged `dist/pages-dist-manifest.json` size churn for `appearance_city_points_owner.js`. `build_pages_dist.py` writes manifest entries from current Windows worktree `stat().st_size`, and the Pages dist test asserts the generated size, so this slice keeps the generated manifest output rather than hand-editing it.
