@@ -10,9 +10,9 @@ function requireAction(actions, actionName) {
 }
 
 export function bindTransportWorkbenchEventOnce(node, bind) {
-  if (!node || node.dataset?.bound === "true") return false;
+  if (!node || node.dataset?.transportWorkbenchEventBound === "true") return false;
   bind(node);
-  node.dataset.bound = "true";
+  node.dataset.transportWorkbenchEventBound = "true";
   return true;
 }
 

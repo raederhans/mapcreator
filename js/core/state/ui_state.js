@@ -139,6 +139,38 @@ export function createDefaultReferenceImageState() {
   };
 }
 
+export function createDefaultRiversStyleConfig() {
+  return {
+    color: "#3b82f6",
+    opacity: 0.88,
+    width: 0.5,
+    outlineColor: "#e2efff",
+    outlineWidth: 0.25,
+    dashStyle: "solid",
+  };
+}
+
+export function normalizeRiversStyleConfig(rawConfig = {}, {
+  clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
+  normalizeOceanFillColor = (value) => value,
+} = {}) {
+  const defaults = createDefaultRiversStyleConfig();
+  const source = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
+  const numberOr = (value, defaultValue) => (
+    Number.isFinite(Number(value)) ? Number(value) : defaultValue
+  );
+
+  return {
+    ...source,
+    color: normalizeOceanFillColor(source.color || defaults.color),
+    opacity: clamp(numberOr(source.opacity, defaults.opacity), 0, 1),
+    width: clamp(numberOr(source.width, defaults.width), 0.2, 4),
+    outlineColor: normalizeOceanFillColor(source.outlineColor || defaults.outlineColor),
+    outlineWidth: clamp(numberOr(source.outlineWidth, defaults.outlineWidth), 0, 3),
+    dashStyle: String(source.dashStyle || defaults.dashStyle),
+  };
+}
+
 export function normalizeReferenceImageState(rawState, {
   clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
 } = {}) {
@@ -212,14 +244,7 @@ export function createDefaultStyleConfig() {
       ...createDefaultPhysicalStyleConfig(),
     },
     transportOverview: createDefaultTransportOverviewStyleConfig(),
-    rivers: {
-      color: "#3b82f6",
-      opacity: 0.88,
-      width: 0.5,
-      outlineColor: "#e2efff",
-      outlineWidth: 0.25,
-      dashStyle: "solid",
-    },
+    rivers: createDefaultRiversStyleConfig(),
     specialZones: {
       disputedFill: "#f97316",
       disputedStroke: "#ea580c",
@@ -511,10 +536,10 @@ export function restoreImportedStyleConfigState(
           })
         : currentStyleConfig.transportOverview,
     rivers: imported.rivers && typeof imported.rivers === "object"
-      ? {
+      ? normalizeRiversStyleConfig({
           ...(currentStyleConfig.rivers || defaults.rivers),
           ...imported.rivers,
-        }
+        })
       : currentStyleConfig.rivers,
     specialZones: imported.specialZones && typeof imported.specialZones === "object"
       ? {

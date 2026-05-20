@@ -53,6 +53,7 @@ class TestElement {
     this.checked = false;
     this.disabled = false;
     this.open = false;
+    this.replaceChildrenCallCount = 0;
   }
 
   get childElementCount() {
@@ -77,6 +78,7 @@ class TestElement {
   }
 
   replaceChildren(...nodes) {
+    this.replaceChildrenCallCount += 1;
     this.children.forEach((child) => {
       child.parentNode = null;
     });
@@ -271,7 +273,7 @@ test("right deck owner preserves section open state and toggle writes", () => wi
   assert.deepEqual(events, [["road", "style", false]]);
 }));
 
-test("right deck owner wires advanced range input to display config", () => withTestDocument(() => {
+test("right deck owner updates advanced range text on input and commits on change", () => withTestDocument(() => {
   const events = [];
   const mount = new TestElement("div");
   const owner = createTransportWorkbenchRightDeckOwner({
@@ -295,8 +297,13 @@ test("right deck owner wires advanced range input to display config", () => with
   );
   const ranges = findAllByTag(mount, "input").filter((input) => input.type === "range");
   const advancedRange = ranges[ranges.length - 1];
+  const initialReplaceCount = mount.replaceChildrenCallCount;
   advancedRange.value = "64";
   advancedRange.dispatch("input");
+  assert.match(textOf(mount), /64px/);
+  assert.deepEqual(events, []);
+  assert.equal(mount.replaceChildrenCallCount, initialReplaceCount);
+  advancedRange.dispatch("change");
 
   assert.deepEqual(events, [["mineral_resources", 64]]);
 }));

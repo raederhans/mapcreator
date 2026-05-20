@@ -1,3 +1,7 @@
+import { normalizeRiversStyleConfig } from "../../core/state.js";
+
+export { normalizeRiversStyleConfig };
+
 function collectRiversNodes(documentRef = document) {
   return {
     toggle: documentRef.getElementById("toggleRivers"),
@@ -10,26 +14,6 @@ function collectRiversNodes(documentRef = document) {
     opacityValue: documentRef.getElementById("riversOpacityValue"),
     widthValue: documentRef.getElementById("riversWidthValue"),
     outlineWidthValue: documentRef.getElementById("riversOutlineWidthValue"),
-  };
-}
-
-export function normalizeRiversStyleConfig(rawConfig = {}, {
-  clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
-  normalizeOceanFillColor = (value) => value,
-} = {}) {
-  const source = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
-  const numberOr = (value, defaultValue) => (
-    Number.isFinite(Number(value)) ? Number(value) : defaultValue
-  );
-
-  return {
-    ...source,
-    color: normalizeOceanFillColor(source.color || "#3b82f6"),
-    opacity: clamp(numberOr(source.opacity, 0.88), 0, 1),
-    width: clamp(numberOr(source.width, 0.5), 0.2, 4),
-    outlineColor: normalizeOceanFillColor(source.outlineColor || "#e2efff"),
-    outlineWidth: clamp(numberOr(source.outlineWidth, 0.25), 0, 3),
-    dashStyle: String(source.dashStyle || "solid"),
   };
 }
 

@@ -283,5 +283,5 @@ test("transport workbench event owner one-shot binder reports skipped bound node
     calls += 1;
   }), false);
   assert.equal(calls, 1);
-  assert.equal(node.dataset.bound, "true");
+  assert.equal(node.dataset.transportWorkbenchEventBound, "true");
 });

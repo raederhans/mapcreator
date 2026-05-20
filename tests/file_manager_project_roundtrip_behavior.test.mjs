@@ -88,6 +88,12 @@ test("project export preserves strategic overlay counters and legacy kind values
       transportOverview: {
         activePackIdByFamily: { road: "germany_road" },
       },
+      rivers: {
+        opacity: 3,
+        width: 0.01,
+        outlineWidth: -3,
+        dashStyle: "",
+      },
     },
     transportWorkbenchUi: {
       activeFamily: "road",
@@ -164,6 +170,14 @@ test("project export preserves strategic overlay counters and legacy kind values
   assert.equal(payload.specialZoneLayers.layers[0].legendVisible, false);
   assert.equal(Object.hasOwn(payload.styleConfig, "specialZones"), false);
   assert.equal(payload.styleConfig.transportOverview.activePackIdByFamily.road, "germany_road");
+  assert.deepEqual(payload.styleConfig.rivers, {
+    color: "#3b82f6",
+    opacity: 1,
+    width: 0.2,
+    outlineColor: "#e2efff",
+    outlineWidth: 0,
+    dashStyle: "solid",
+  });
   assert.equal(payload.transportWorkbenchUi.activePackId, "germany_road");
   assert.equal(payload.transportWorkbenchUi.activePackIdByFamily.rail, "france_rail");
   assert.deepEqual(payload.transportCountryOverlayState, {

@@ -185,3 +185,23 @@ test("reference owner replaces and clears object URLs", () => {
     "reference-image-clear",
   ]);
 });
+
+test("reference owner clears imported stale object URL without dirtying project", () => {
+  const harness = createHarness({
+    referenceImageUrl: "blob:stale-import",
+  });
+
+  harness.nodes.referenceImage.src = "blob:stale-import";
+  harness.nodes.referenceImage.style.opacity = "0.8";
+  harness.nodes.referenceImage.dataset.referenceStyleSignature = "old";
+  harness.nodes.referenceImageInput.value = "old.png";
+  harness.owner.clearReferenceImage({ markDirty: false });
+
+  assert.deepEqual(harness.revokedUrls, ["blob:stale-import"]);
+  assert.equal(harness.runtimeState.referenceImageUrl, null);
+  assert.equal(harness.nodes.referenceImage.src, "");
+  assert.equal(harness.nodes.referenceImage.style.opacity, "0");
+  assert.equal(harness.nodes.referenceImage.dataset.referenceStyleSignature, "");
+  assert.equal(harness.nodes.referenceImageInput.value, "");
+  assert.deepEqual(harness.dirtyReasons, []);
+});

@@ -465,7 +465,7 @@ export function createTransportWorkbenchRightDeckOwner({
     valueText.className = "transport-workbench-range-value";
     const formatValue = (nextValue) => `${nextValue}${unit}`;
     valueText.textContent = formatValue(value);
-    input.addEventListener("input", () => {
+    const commitValue = () => {
       const nextValue = Number(input.value);
       valueText.textContent = formatValue(nextValue);
       if (compareHeld) return;
@@ -476,7 +476,11 @@ export function createTransportWorkbenchRightDeckOwner({
           draft.labels.separationStrength = nextValue;
         }
       });
+    };
+    input.addEventListener("input", () => {
+      valueText.textContent = formatValue(Number(input.value));
     });
+    input.addEventListener("change", commitValue);
     row.append(input, valueText);
     control.append(label, row);
     body.appendChild(control);

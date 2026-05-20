@@ -176,10 +176,12 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("preloadScenarioCoarseChunks", content)
         self.assertIn("ensureChunkedScenarioFirstFrameReady", content)
-        self.assertIn("await preloadScenarioCoarseChunks(bundle);", content)
+        self.assertIn("const coarsePayload = await preloadScenarioCoarseChunks(bundle);", content)
         self.assertIn("awaitPrewarm = true", content)
         self.assertIn("awaited: shouldAwaitPrewarm", content)
         self.assertIn("coarsePrewarmAwaited: shouldAwaitPrewarm", content)
+        self.assertIn("coarsePrewarmCommitted: false", content)
+        self.assertIn("coarsePrewarmCommitted = !!coarsePayload;", content)
         self.assertIn('deferChunkPrewarm = false', content)
         self.assertIn('awaitPrewarm: !deferChunkPrewarm', content)
         self.assertNotIn('interactionLevel = "full"', content)

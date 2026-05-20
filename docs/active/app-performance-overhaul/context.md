@@ -1,5 +1,14 @@
 # Context
 
+## 2026-05-20 performance commit review closeout kickoff
+
+- User requested review of all performance-related commits and direct fixes for any discovered issues.
+- Clean worktree: `C:/Users/raede/Desktop/dev/mapcreator-perf-commits-review`, branch `codex/perf-commits-review`, based on `origin/main@c751325`.
+- Main worktree has unrelated WIP and is left untouched.
+- Main thread owns live tests, perf gate, Pages dist verification, import smoke, commit, push, and worktree cleanup.
+- Child agents are read-only/static review lanes. They must not run or monitor live tests.
+- Initial commit scope is the recent performance/G001 range `82115dd..c751325`, with grep-based checks for earlier performance-tagged hot-path commits.
+
 ## 2026-05-19 overall performance evaluation kickoff
 
 - User requested an overall app performance evaluation, network best-practice comparison, comprehensive professional optimization, architecture improvement, separate worktree execution, and completion to a high confidence bar.
@@ -518,3 +527,19 @@ pm run bench:editor-performance。
 - Deferred startup records `timeToStartupShellFrame` with `readinessLevel=startup-shell`; `timeToPoliticalCoreReady` and `timeToInteractiveCoarseFrame` are left for real coarse chunk readiness rather than the deferred shell point.
 - Fresh `npm run perf:gate` passed after the metric cleanup. Gate medians: TNO `totalStartupMs=4410.4`, `scenarioAppliedMs=3541.0`, `applyScenarioBundleMs=981.3`; HOI4 `totalStartupMs=4501.9`, `scenarioAppliedMs=3025.4`, `applyScenarioBundleMs=591.3`.
 - Additional verification passed: startup/resource Python contracts, `npm run test:node:scenario-chunk-contracts`, `npm run verify:perf-gate-contract`, `npm run test:node:startup-hydration-behavior`, `npm run test:node:scenario-runtime-state-behavior`, `npm run verify:toolbar-split-boundary`, `npm run verify:state-write-allowlist`, `npm run verify:pages-dist`, and source/dist import smoke.
+
+## 2026-05-20 performance commit review closeout
+
+- Worktree `C:/Users/raede/Desktop/dev/mapcreator-perf-commits-review` reviews the pushed performance-related commits through `origin/main@c751325`.
+- Fixed review findings:
+  - `timeToStartupShellFrame` was renamed to `timeToStartupShellApplyReady`, and post-apply coarse-ready metrics now require a confirmed coarse commit.
+  - Transport advanced range `input` now updates only the visible value label; `change` commits state and can rebuild the right deck. Render-context getters no longer refresh pack gates, and the event owner uses a scoped `transportWorkbenchEventBound` dataset marker.
+  - Project import now clears stale reference image object URLs through the state bus without dirtying the project, appearance tabs route through the controller, and facility-card sync stays attached to tab changes.
+  - Rivers style normalization moved to shared state so import, export, restore, and owner rendering share one rule.
+- Verification:
+  - Targeted owner tests passed for transport right deck/event/shell/inspector/lens/popover/state/layer-order and appearance parent-border/texture/city-points/physical/reference/rivers.
+  - Startup/resource/chunk/perf/toolbar/state contracts passed, including `npm run test:node:scenario-chunk-contracts`, `npm run verify:perf-gate-contract`, `npm run verify:toolbar-split-boundary`, and `npm run verify:state-write-allowlist`.
+  - `npm run verify:pages-dist`, source import smoke, dist import smoke, and `git diff --check` passed.
+  - `npm run perf:gate` initially failed on a stale/slow dev server; a clean `origin/main` control passed, and the current branch also passed after restarting a clean dev server.
+- Final static reviewer found one accessibility regression after the appearance tab owner move: controller tab switching wrote `aria-pressed` for `role="tab"` buttons. Fixed by restoring `aria-selected` updates and adding a toolbar split contract assertion.
+- Final clean-server `npm run perf:gate` passed after the accessibility fix and Pages dist resync.

@@ -1624,3 +1624,7 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 启动 bundle 已经提供 shell/core 首帧时，`scenario-apply` 事务应只提交可见启动状态并调度 chunk refresh；等待 coarse chunk 全量预热会把真实 hydrate 成本算进启动 apply 门禁。
 - 启动性能指标要区分 startup shell ready 与 coarse chunk ready；defer prewarm 后继续写 coarse-ready 指标会误导后续性能判断。
+
+## 2026-05-20 - perf gate stale server triage
+
+- `perf:gate` 失败时要检查 `.runtime/dev/active_server.json` 指向的进程是否真实存活；stale 或慢 dev server 会把资源 transfer 和 ready 等待一起拉高，先用 clean server 重跑，再判断代码回退。

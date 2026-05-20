@@ -7,6 +7,7 @@ import {
   normalizeMapSemanticMode,
   normalizePhysicalStyleConfig,
   normalizeReferenceImageState,
+  normalizeRiversStyleConfig,
   normalizeTransportOverviewStyleConfig,
   normalizeUrbanStyleConfig,
   normalizeTransportWorkbenchUiState,
@@ -523,7 +524,7 @@ class FileManager {
         urban: normalizeUrbanStyleConfig(appState.styleConfig?.urban),
         physical: normalizePhysicalStyleConfig(appState.styleConfig?.physical),
         transportOverview: normalizeTransportOverviewStyleConfig(appState.styleConfig?.transportOverview),
-        rivers: appState.styleConfig?.rivers || null,
+        rivers: normalizeRiversStyleConfig(appState.styleConfig?.rivers),
         texture: normalizeTextureStyleConfig(appState.styleConfig?.texture),
         dayNight: normalizeDayNightStyleConfig(appState.styleConfig?.dayNight),
       },
@@ -656,9 +657,7 @@ class FileManager {
         data.styleConfig.urban = normalizeUrbanStyleConfig(data.styleConfig.urban);
         data.styleConfig.physical = normalizePhysicalStyleConfig(data.styleConfig.physical);
         data.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(data.styleConfig.transportOverview);
-        if (!data.styleConfig.rivers || typeof data.styleConfig.rivers !== "object") {
-          data.styleConfig.rivers = null;
-        }
+        data.styleConfig.rivers = normalizeRiversStyleConfig(data.styleConfig.rivers);
         if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {
           console.info("[project-import] Legacy styleConfig.specialZones ignored; specialZoneLayers is the canonical model.");
         }

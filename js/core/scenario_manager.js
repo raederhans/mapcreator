@@ -525,6 +525,7 @@ async function applyScenarioBundle(
       hasChunkedRuntime,
       chunkPrewarmAwaited = true,
       chunkPrewarmDeferred = false,
+      coarsePrewarmCommitted = false,
     } = await runPostScenarioApplyEffects({
       bundle,
       scenarioId: staged.scenarioId,
@@ -551,17 +552,21 @@ async function applyScenarioBundle(
       currentPoliticalCoreReadyMetric
       && String(currentPoliticalCoreReadyMetric.scenarioId || "") === staged.scenarioId;
     const postApplyReadyMs = (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt;
+    const canRecordPostApplyCoarseMetric = !hasChunkedRuntime || coarsePrewarmCommitted;
     if (chunkPrewarmDeferred) {
-      recordScenarioPerfMetric("timeToStartupShellFrame", postApplyReadyMs, {
+      recordScenarioPerfMetric("timeToStartupShellApplyReady", postApplyReadyMs, {
         scenarioId: staged.scenarioId,
         source: "post-apply-startup-shell-ready",
-        readinessLevel: "startup-shell",
+        readinessLevel: "startup-shell-apply-ready",
         hasChunkedRuntime,
         mapRefreshMode: scenarioMapRefreshMode,
         chunkPrewarmAwaited,
         chunkPrewarmDeferred,
+        coarsePrewarmCommitted,
       });
     } else if (
+      canRecordPostApplyCoarseMetric
+      &&
       !hasCurrentPoliticalCoreReadyMetric
       && (
         hasChunkedRuntime
@@ -580,13 +585,14 @@ async function applyScenarioBundle(
           mapRefreshMode: scenarioMapRefreshMode,
           chunkPrewarmAwaited,
           chunkPrewarmDeferred,
+          coarsePrewarmCommitted,
         }
       );
       if (bundle?.chunkLifecycle) {
         bundle.chunkLifecycle.politicalCoreReadyRecorded = true;
       }
     }
-    if (!chunkPrewarmDeferred) {
+    if (!chunkPrewarmDeferred && canRecordPostApplyCoarseMetric) {
       recordScenarioPerfMetric(
         "timeToInteractiveCoarseFrame",
         postApplyReadyMs,
@@ -598,6 +604,7 @@ async function applyScenarioBundle(
           mapRefreshMode: scenarioMapRefreshMode,
           chunkPrewarmAwaited,
           chunkPrewarmDeferred,
+          coarsePrewarmCommitted,
         }
       );
     }

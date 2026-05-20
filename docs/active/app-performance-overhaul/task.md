@@ -1,5 +1,21 @@
 # Task
 
+## 2026-05-20 performance commit review closeout
+
+Owner: main thread for implementation, live tests, perf gate, commit/push, and cleanup. Child agents are static/read-only review lanes only.
+
+- [x] Create isolated clean worktree from `origin/main`.
+- [x] Load review/performance/ultrawork guidance and read active performance docs.
+- [ ] Identify performance-related commit scope.
+- [ ] Dispatch static review lanes.
+- [ ] Review startup/apply/chunk metric changes.
+- [ ] Review transport workbench DOM/cache hot-path changes.
+- [ ] Review appearance owner split and toolbar facade reduction changes.
+- [ ] Fix confirmed issues.
+- [ ] Run targeted verification.
+- [ ] Run final perf/dist/import verification.
+- [ ] Commit, push to `origin/main`, and clean temporary worktree.
+
 ## 2026-05-19 overall performance evaluation and architecture optimization
 
 Owner: main thread for implementation and all live processes. Child agents are read-only/static only.
@@ -443,4 +459,9 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Preserve synchronous chunk prewarm for ordinary scenario Apply.
 - [x] Run startup/resource/chunk/perf/toolbar/state contracts.
 - [x] Run `npm run perf:gate`; final gate passed.
+- [x] Review all performance-related commits since the latest pushed performance split work.
+- [x] Fix startup metric naming and prevent false coarse-ready metrics.
+- [x] Fix transport workbench range input rebuilds, render-context side effects, and event-owner marker scope.
+- [x] Fix appearance import/reference/rivers owner regressions found during review.
+- [x] Re-run targeted contracts, owner tests, Pages dist, import smoke, and clean-server `npm run perf:gate`.
 - [ ] Commit, push to `origin/main`, checkpoint goal state, and clean temporary worktree.

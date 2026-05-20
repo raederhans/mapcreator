@@ -735,6 +735,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
                 r"renderTransportWorkbenchInspector\(context\.family, context\.config, context\.compareHeld\);"
             ),
         )
+        render_context_body = self._arrow_function_body(owner_content, "getTransportWorkbenchRenderContext")
+        self.assertNotIn("refreshTransportWorkbenchPackGateReport(", render_context_body)
         self.assertIn("export function createTransportWorkbenchApplyBridgeOwner(runtimeState,", apply_owner_content)
         self.assertRegex(
             apply_owner_content,
@@ -843,6 +845,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("export function createAppearanceControlsController", owner_content)
         self.assertIn("const applyAppearanceFilter = () => {", owner_content)
         self.assertIn("const setAppearanceTab = (tabId = \"ocean\") => {", owner_content)
+        self.assertIn('button.setAttribute("aria-selected", isActive ? "true" : "false");', owner_content)
+        self.assertNotIn('button.setAttribute("aria-pressed", isActive ? "true" : "false");', owner_content)
         self.assertIn("createTransportAppearanceController({", owner_content)
         self.assertIn("const renderTransportAppearanceUi = transportAppearanceController.renderTransportAppearanceUi;", owner_content)
         self.assertIn("transportAppearanceController.bindEvents();", owner_content)
@@ -885,7 +889,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "updateRecentUI", () => {', content)
         self.assertIn('registerRuntimeHook(state, "updateParentBorderCountryListFn", renderParentBorderCountryList);', content)
         self.assertIn("bindAppearanceControlEvents();", content)
-        self.assertIn("setAppearanceTab(\"ocean\");", content)
+        self.assertIn("setAppearanceTabController(\"ocean\");", content)
+        self.assertNotIn("const setAppearanceTab = (tabId) => {", content)
+        self.assertNotIn('document.querySelectorAll("[data-appearance-tab]")', content)
+        self.assertNotIn('document.querySelectorAll("[data-appearance-panel]")', content)
         self.assertIn("applyAppearanceFilter();", content)
 
     def test_appearance_texture_owner_moves_texture_and_day_night_logic_out_of_controller(self):
@@ -1055,7 +1062,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("riversOwner.renderRiversUi();", controller_content)
         self.assertIn("riversOwner.bindEvents();", controller_content)
         self.assertIn("export function createAppearanceRiversOwner({", rivers_owner_content)
-        self.assertIn("export function normalizeRiversStyleConfig", rivers_owner_content)
+        self.assertIn('import { normalizeRiversStyleConfig } from "../../core/state.js";', rivers_owner_content)
+        self.assertIn("export { normalizeRiversStyleConfig };", rivers_owner_content)
         self.assertIn("const syncRiversConfig = () => {", rivers_owner_content)
         self.assertIn('documentRef.getElementById("toggleRivers")', rivers_owner_content)
         self.assertIn('documentRef.getElementById("riversDashStyle")', rivers_owner_content)
@@ -1132,6 +1140,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("clamp,", owner_call)
         self.assertIn("markDirty,", owner_call)
         self.assertIn("const renderReferenceOverlayUi = referenceOwner.renderReferenceOverlayUi;", controller_content)
+        self.assertIn("clearReferenceImage: referenceOwner.clearReferenceImage,", controller_content)
         self.assertIn("referenceOwner.bindEvents();", controller_content)
         self.assertIn('import { normalizeReferenceImageState } from "../../core/state.js";', reference_owner_content)
         self.assertIn("export function createAppearanceReferenceOwner({", reference_owner_content)
@@ -1141,6 +1150,9 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('documentRef.getElementById("referenceImageInput")', reference_owner_content)
         self.assertIn("nodes.imageInput.addEventListener(\"change\", (event) => {", reference_owner_content)
         self.assertIn("markDirty(\"reference-image-file\");", reference_owner_content)
+        self.assertIn("const clearReferenceImage = ({ markDirty: shouldMarkDirty = true } = {}) => {", reference_owner_content)
+        self.assertIn("revokeReferenceUrl();", reference_owner_content)
+        self.assertIn("nodes.imageInput.value = \"\";", reference_owner_content)
         self.assertIn('"reference-offset-y",', reference_owner_content)
         self.assertNotIn("const applyReferenceStyles = () => {", toolbar_content)
         self.assertNotIn("referenceImageInput.addEventListener(\"change\", (event) => {", toolbar_content)
@@ -1153,6 +1165,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
 
         self.assertIn("renderReferenceOverlayUi();", content)
+        self.assertIn('registerRuntimeHook(state, "clearReferenceImageFn", clearReferenceImage);', content)
         self.assertIn('registerRuntimeHook(state, "updateToolbarInputsFn", () => {', content)
 
     def test_ocean_lake_controller_owns_water_appearance_logic(self):

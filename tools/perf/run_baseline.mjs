@@ -260,6 +260,7 @@ function summarizeSnapshot(snapshot) {
     interactionInfraMs: finiteNumber(bootMetrics["interaction-infra"]?.durationMs),
     startupBundleSource: String(bootMetrics["scenario-apply"]?.source || "").trim(),
     applyScenarioBundleMs: finiteNumber(scenarioPerfMetrics.applyScenarioBundle?.durationMs),
+    startupShellApplyReadyMs: finiteNumber(scenarioPerfMetrics.timeToStartupShellApplyReady?.durationMs),
     loadScenarioBundleMs: finiteNumber(scenarioPerfMetrics.loadScenarioBundle?.durationMs),
     workerDecodeMs: finiteNumber(scenarioPerfMetrics.loadScenarioBundle?.workerDecodeMs),
     workerMetaBuildMs: finiteNumber(scenarioPerfMetrics.loadScenarioBundle?.workerMetaBuildMs),
@@ -332,6 +333,7 @@ function aggregateRuns(runs) {
     "scenarioFullHydrateMs",
     "interactionInfraMs",
     "applyScenarioBundleMs",
+    "startupShellApplyReadyMs",
     "loadScenarioBundleMs",
     "workerDecodeMs",
     "workerMetaBuildMs",
@@ -516,6 +518,7 @@ function buildMarkdown(report) {
     lines.push(formatMetricRow("interaction infra", summary.interactionInfraMs));
     lines.push(`- startup bundle source: ${String(summary.startupBundleSource || "") || "unknown"}`);
     lines.push(formatMetricRow("applyScenarioBundle", summary.applyScenarioBundleMs));
+    lines.push(formatMetricRow("startup shell apply-ready", summary.startupShellApplyReadyMs));
     lines.push(formatMetricRow("loadScenarioBundle", summary.loadScenarioBundleMs));
     lines.push(formatMetricRow("worker decode", summary.workerDecodeMs));
     lines.push(formatMetricRow("worker meta build", summary.workerMetaBuildMs));

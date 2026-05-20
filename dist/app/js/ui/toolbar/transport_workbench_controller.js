@@ -420,7 +420,6 @@ export function createTransportWorkbenchController({
     // context 是 shell、lens、inspect 和 preview 的共同输入，避免四处重复读取 runtimeState。
     const config = buildTransportWorkbenchResolvedConfig(family.id, familyConfig, displayConfig);
     const activePackId = getTransportWorkbenchActivePackId(family.id);
-    refreshTransportWorkbenchPackGateReport(activePackId, { rerender: true });
     const activePackMeta = getTargetMainMapPackMeta(activePackId);
     return {
       uiState,

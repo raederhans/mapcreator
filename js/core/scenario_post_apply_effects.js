@@ -150,6 +150,7 @@ async function ensureChunkedScenarioFirstFrameReady({
   let prewarmStatus = {
     chunkPrewarmAwaited: shouldAwaitPrewarm,
     chunkPrewarmDeferred: !shouldAwaitPrewarm,
+    coarsePrewarmCommitted: false,
   };
   updateChunkedFirstFramePrewarmMetric({
     scenarioId: normalizedScenarioId,
@@ -157,6 +158,7 @@ async function ensureChunkedScenarioFirstFrameReady({
     synchronous: normalizedMode === "sync",
     awaited: shouldAwaitPrewarm,
     coarsePrewarmAwaited: shouldAwaitPrewarm,
+    coarsePrewarmCommitted: false,
     prewarmStartedAt,
   }, { replace: true });
   if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
@@ -177,6 +179,7 @@ async function ensureChunkedScenarioFirstFrameReady({
       awaited: false,
       coarsePrewarmAwaited: false,
       chunkPrewarmDeferred: true,
+      coarsePrewarmCommitted: false,
       prewarmStartedAt,
       prewarmDeferredAt: refreshScheduledAt,
       refreshScheduledAt,
@@ -191,12 +194,15 @@ async function ensureChunkedScenarioFirstFrameReady({
     return {
       chunkPrewarmAwaited: false,
       chunkPrewarmDeferred: true,
+      coarsePrewarmCommitted: false,
       chunkRefreshScheduledAt: refreshScheduledAt,
     };
   }
   let prewarmCompletedAt = 0;
+  let coarsePrewarmCommitted = false;
   try {
-    await preloadScenarioCoarseChunks(bundle);
+    const coarsePayload = await preloadScenarioCoarseChunks(bundle);
+    coarsePrewarmCommitted = !!coarsePayload;
     if (synchronous) {
       await preloadScenarioFocusCountryPoliticalDetailChunk(bundle);
     }
@@ -211,6 +217,7 @@ async function ensureChunkedScenarioFirstFrameReady({
       awaited: true,
       coarsePrewarmAwaited: true,
       chunkPrewarmDeferred: false,
+      coarsePrewarmCommitted,
       prewarmStartedAt,
       prewarmCompletedAt,
       coarsePrewarmCompletedAt: prewarmCompletedAt,
@@ -218,6 +225,7 @@ async function ensureChunkedScenarioFirstFrameReady({
     prewarmStatus = {
       chunkPrewarmAwaited: true,
       chunkPrewarmDeferred: false,
+      coarsePrewarmCommitted,
       coarsePrewarmCompletedAt: prewarmCompletedAt,
     };
   } catch (error) {
@@ -233,6 +241,7 @@ async function ensureChunkedScenarioFirstFrameReady({
       awaited: true,
       coarsePrewarmAwaited: true,
       chunkPrewarmDeferred: false,
+      coarsePrewarmCommitted,
       prewarmStartedAt,
       prewarmCompletedAt: failedAt,
       coarsePrewarmCompletedAt: failedAt,
@@ -242,6 +251,7 @@ async function ensureChunkedScenarioFirstFrameReady({
     prewarmStatus = {
       chunkPrewarmAwaited: true,
       chunkPrewarmDeferred: false,
+      coarsePrewarmCommitted,
       coarsePrewarmCompletedAt: failedAt,
       prewarmFailed: true,
     };
@@ -349,6 +359,7 @@ async function runPostScenarioApplyEffects({
     hasChunkedRuntime: scenarioSupportsChunkedRuntime(bundle),
     chunkPrewarmAwaited: chunkPrewarmResult?.chunkPrewarmAwaited !== false,
     chunkPrewarmDeferred: chunkPrewarmResult?.chunkPrewarmDeferred === true,
+    coarsePrewarmCommitted: chunkPrewarmResult?.coarsePrewarmCommitted === true,
   };
 }
 

@@ -92,6 +92,7 @@ class PerfGateContractTest(unittest.TestCase):
             "postReadyMaxPendingAgeMs",
             "postReadyMaxRetryCount",
             "startupBundleSource",
+            "startupShellApplyReadyMs",
             "loadScenarioBundleMs",
             "drawContextScenarioPassMs",
             "setMapDataFirstPaintMs",

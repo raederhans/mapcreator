@@ -91,7 +91,7 @@ class StartupShellTest(unittest.TestCase):
             scenario_bundle_runtime_js,
         )
         self.assertIn('async function ensureChunkedScenarioFirstFrameReady({', scenario_post_apply_effects_js)
-        self.assertIn('await preloadScenarioCoarseChunks(bundle);', scenario_post_apply_effects_js)
+        self.assertIn('const coarsePayload = await preloadScenarioCoarseChunks(bundle);', scenario_post_apply_effects_js)
         self.assertIn('awaitPrewarm: !deferChunkPrewarm', scenario_post_apply_effects_js)
         self.assertIn('coarsePrewarmDeferredAt: refreshScheduledAt', scenario_post_apply_effects_js)
         self.assertIn('chunkRefreshScheduledAt: refreshScheduledAt', scenario_post_apply_effects_js)

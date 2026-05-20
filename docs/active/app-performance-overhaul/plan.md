@@ -1,5 +1,22 @@
 # App Performance Overhaul Plan
 
+## 2026-05-20 performance commit review closeout
+
+### Goal
+- Review all recent performance-related commits now on `origin/main`, including startup/apply timing, transport workbench DOM/cache cuts, appearance owner splits, and checked-in source/dist sync.
+- Fix any correctness, performance-measurement, or architecture-boundary issues found during review.
+- Keep the main thread as the only live test/perf-gate owner. Child agents are read-only static reviewers.
+
+### Review scope
+- Runtime/perf commits from the app-performance and G001 line, especially `82115dd..c751325`.
+- Earlier performance-tagged hot-path commits are checked by commit message and diff surface; record-only closeout commits are reviewed for unintended source changes only.
+
+### Acceptance
+- Static review lanes report no unresolved current-scope blocker.
+- Any confirmed issue is fixed with the smallest behavior-preserving patch.
+- Targeted contracts for touched areas pass.
+- `npm run perf:gate`, Pages dist verification, import smoke, and `git diff --check` pass before commit/push.
+
 ## 2026-05-19 overall performance evaluation and architecture optimization
 
 ### Goal

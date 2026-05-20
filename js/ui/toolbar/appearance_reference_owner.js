@@ -79,6 +79,19 @@ export function createAppearanceReferenceOwner({
     runtimeState.referenceImageUrl = null;
   };
 
+  const clearReferenceImage = ({ markDirty: shouldMarkDirty = true } = {}) => {
+    revokeReferenceUrl();
+    if (nodes.imageInput) nodes.imageInput.value = "";
+    if (nodes.image) {
+      nodes.image.src = "";
+      nodes.image.style.opacity = "0";
+      nodes.image.dataset.referenceStyleSignature = "";
+    }
+    if (shouldMarkDirty) {
+      markDirty("reference-image-clear");
+    }
+  };
+
   const readNumber = (element, fallback) => {
     const value = Number(element?.value);
     return Number.isFinite(value) ? value : fallback;
@@ -103,11 +116,7 @@ export function createAppearanceReferenceOwner({
         const file = event.target.files?.[0];
         if (!nodes.image) return;
         if (!file) {
-          revokeReferenceUrl();
-          nodes.image.src = "";
-          nodes.image.style.opacity = "0";
-          nodes.image.dataset.referenceStyleSignature = "";
-          markDirty("reference-image-clear");
+          clearReferenceImage();
           return;
         }
         revokeReferenceUrl();
@@ -166,6 +175,7 @@ export function createAppearanceReferenceOwner({
   return {
     applyReferenceStyles,
     bindEvents,
+    clearReferenceImage,
     renderReferenceOverlayUi,
     syncReferenceState,
   };

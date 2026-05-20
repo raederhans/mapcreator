@@ -139,7 +139,7 @@ export function createAppearanceControlsController({
       const id = String(button.dataset.appearanceTab || "").trim().toLowerCase();
       const isActive = id === normalizedTabId;
       button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
     appearanceTabPanels.forEach((panel) => {
       const id = String(panel.dataset.appearancePanel || "").trim().toLowerCase();
@@ -148,6 +148,7 @@ export function createAppearanceControlsController({
       panel.classList.toggle("hidden", !isActive);
       panel.hidden = !isActive;
     });
+    runtimeState.syncFacilityInfoCardVisibilityFn?.();
   };
 
   const syncUrbanConfig = () => {
@@ -413,6 +414,7 @@ export function createAppearanceControlsController({
   return {
     applyAppearanceFilter,
     bindEvents,
+    clearReferenceImage: referenceOwner.clearReferenceImage,
     renderAppearanceStyleControlsUi,
     renderReferenceOverlayUi,
     renderParentBorderCountryList,

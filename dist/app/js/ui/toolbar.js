@@ -381,8 +381,6 @@ function initToolbar({ render } = {}) {
   const oceanScenarioSyntheticContourFadeEndZoomValue = document.getElementById("oceanScenarioSyntheticContourFadeEndZoomValue");
   const oceanScenarioShallowContourFadeEndZoomValue = document.getElementById("oceanScenarioShallowContourFadeEndZoomValue");
   const appearanceLayerFilter = document.getElementById("appearanceLayerFilter");
-  const appearanceTabButtons = Array.from(document.querySelectorAll("[data-appearance-tab]"));
-  const appearanceTabPanels = Array.from(document.querySelectorAll("[data-appearance-panel]"));
   const appearanceFilterItems = Array.from(document.querySelectorAll("[data-appearance-filter-item]"));
   const appearanceSpecialZoneBtn = document.getElementById("appearanceSpecialZoneBtn");
   const specialZonePopover = document.getElementById("specialZonePopover");
@@ -1015,26 +1013,6 @@ function initToolbar({ render } = {}) {
     }
   };
 
-  const setAppearanceTab = (tabId) => {
-    const normalized = String(tabId || "").trim().toLowerCase();
-    const activeId = normalized || "ocean";
-    appearanceTabButtons.forEach((button) => {
-      const id = String(button.dataset.appearanceTab || "").trim().toLowerCase();
-      const isActive = id === activeId;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-selected", isActive ? "true" : "false");
-    });
-    appearanceTabPanels.forEach((panel) => {
-      const id = String(panel.dataset.appearancePanel || "").trim().toLowerCase();
-      const isActive = id === activeId;
-      panel.classList.toggle("is-active", isActive);
-      panel.hidden = !isActive;
-    });
-    if (typeof runtimeState.syncFacilityInfoCardVisibilityFn === "function") {
-      runtimeState.syncFacilityInfoCardVisibilityFn();
-    }
-  };
-
   const closeSpecialZonePopover = () => {
     if (!specialZonePopover || specialZoneEditorInline) return;
     specialZonePopover.classList.add("hidden");
@@ -1656,6 +1634,7 @@ function initToolbar({ render } = {}) {
   const {
     applyAppearanceFilter,
     bindEvents: bindAppearanceControlEvents,
+    clearReferenceImage,
     renderAppearanceStyleControlsUi,
     renderDayNightUI,
     renderParentBorderCountryList,
@@ -1666,6 +1645,7 @@ function initToolbar({ render } = {}) {
     setAppearanceTab: setAppearanceTabController,
     syncParentBorderVisibilityUI,
   } = appearanceControlsController;
+  registerRuntimeHook(state, "clearReferenceImageFn", clearReferenceImage);
   registerRuntimeHook(state, "updateTransportAppearanceUIFn", renderTransportAppearanceUi);
   registerRuntimeHook(state, "updateRecentUI", () => {
     renderRecentColors();
@@ -3125,7 +3105,7 @@ function initToolbar({ render } = {}) {
   callRuntimeHook(state, "updatePaintModeUIFn");
   registerRuntimeHook(state, "updateDockCollapsedUiFn", updateDockCollapsedUi);
   updateDockCollapsedUi();
-  setAppearanceTab("ocean");
+  setAppearanceTabController("ocean");
   applyAppearanceFilter();
   refreshScenarioContextBar();
   renderRecentColors();
