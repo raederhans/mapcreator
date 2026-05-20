@@ -172,62 +172,12 @@ function initToolbar({ render } = {}) {
   const exportScale = document.getElementById("exportWorkbenchScale");
   const exportWorkbenchLayerList = document.getElementById("exportWorkbenchMainLayerList");
   const exportWorkbenchTextElementList = document.getElementById("exportWorkbenchTextElementList");
-  const textureSelect = document.getElementById("textureSelect");
-  const textureOpacity = document.getElementById("textureOpacity");
-  const texturePaperControls = document.getElementById("texturePaperControls");
-  const texturePaperScale = document.getElementById("texturePaperScale");
-  const texturePaperWarmth = document.getElementById("texturePaperWarmth");
-  const texturePaperGrain = document.getElementById("texturePaperGrain");
-  const texturePaperWear = document.getElementById("texturePaperWear");
-  const textureGraticuleControls = document.getElementById("textureGraticuleControls");
-  const textureGraticuleMajorStep = document.getElementById("textureGraticuleMajorStep");
-  const textureGraticuleMinorStep = document.getElementById("textureGraticuleMinorStep");
-  const textureGraticuleLabelStep = document.getElementById("textureGraticuleLabelStep");
-  const textureGraticuleColor = document.getElementById("textureGraticuleColor");
-  const textureGraticuleLabelColor = document.getElementById("textureGraticuleLabelColor");
-  const textureGraticuleLabelSize = document.getElementById("textureGraticuleLabelSize");
-  const textureGraticuleMajorWidth = document.getElementById("textureGraticuleMajorWidth");
-  const textureGraticuleMinorWidth = document.getElementById("textureGraticuleMinorWidth");
-  const textureGraticuleMajorOpacity = document.getElementById("textureGraticuleMajorOpacity");
-  const textureGraticuleMinorOpacity = document.getElementById("textureGraticuleMinorOpacity");
-  const textureDraftGridControls = document.getElementById("textureDraftGridControls");
-  const textureDraftMajorStep = document.getElementById("textureDraftMajorStep");
-  const textureDraftMinorStep = document.getElementById("textureDraftMinorStep");
-  const textureDraftLonOffset = document.getElementById("textureDraftLonOffset");
-  const textureDraftLatOffset = document.getElementById("textureDraftLatOffset");
-  const textureDraftRoll = document.getElementById("textureDraftRoll");
-  const textureDraftColor = document.getElementById("textureDraftColor");
-  const textureDraftWidth = document.getElementById("textureDraftWidth");
-  const textureDraftMajorOpacity = document.getElementById("textureDraftMajorOpacity");
-  const textureDraftMinorOpacity = document.getElementById("textureDraftMinorOpacity");
-  const textureDraftDash = document.getElementById("textureDraftDash");
-  const dayNightEnabled = document.getElementById("dayNightEnabled");
-  const dayNightModeManualBtn = document.getElementById("dayNightModeManualBtn");
-  const dayNightModeUtcBtn = document.getElementById("dayNightModeUtcBtn");
-  const dayNightManualControls = document.getElementById("dayNightManualControls");
-  const dayNightManualTime = document.getElementById("dayNightManualTime");
-  const dayNightUtcStatus = document.getElementById("dayNightUtcStatus");
-  const dayNightCurrentTime = document.getElementById("dayNightCurrentTime");
-  const dayNightCityLightsEnabled = document.getElementById("dayNightCityLightsEnabled");
   if (exportWorkbenchLayerList && !exportWorkbenchLayerList.getAttribute("aria-label")) {
     exportWorkbenchLayerList.setAttribute("aria-label", t("Main Layers", "ui"));
   }
   if (exportWorkbenchTextElementList && !exportWorkbenchTextElementList.getAttribute("aria-label")) {
     exportWorkbenchTextElementList.setAttribute("aria-label", t("Text elements", "ui"));
   }
-  const dayNightCityLightsStyle = document.getElementById("dayNightCityLightsStyle");
-  const dayNightCityLightsIntensity = document.getElementById("dayNightCityLightsIntensity");
-  const dayNightCityLightsTextureOpacity = document.getElementById("dayNightCityLightsTextureOpacity");
-  const dayNightCityLightsCorridorStrength = document.getElementById("dayNightCityLightsCorridorStrength");
-  const dayNightCityLightsCoreSharpness = document.getElementById("dayNightCityLightsCoreSharpness");
-  const dayNightCityLightsPopulationBoostEnabled = document.getElementById("dayNightCityLightsPopulationBoostEnabled");
-  const dayNightCityLightsPopulationBoostStrength = document.getElementById("dayNightCityLightsPopulationBoostStrength");
-  const dayNightHistoricalCityLightsDensity = document.getElementById("dayNightHistoricalCityLightsDensity");
-  const dayNightHistoricalCityLightsSecondaryRetention = document.getElementById(
-    "dayNightHistoricalCityLightsSecondaryRetention"
-  );
-  const dayNightShadowOpacity = document.getElementById("dayNightShadowOpacity");
-  const dayNightTwilightWidth = document.getElementById("dayNightTwilightWidth");
   const toggleUrban = document.getElementById("toggleUrban");
   const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
@@ -585,39 +535,6 @@ function initToolbar({ render } = {}) {
   const riversOpacityValue = document.getElementById("riversOpacityValue");
   const riversWidthValue = document.getElementById("riversWidthValue");
   const riversOutlineWidthValue = document.getElementById("riversOutlineWidthValue");
-  const textureOpacityValue = document.getElementById("textureOpacityValue");
-  const texturePaperScaleValue = document.getElementById("texturePaperScaleValue");
-  const texturePaperWarmthValue = document.getElementById("texturePaperWarmthValue");
-  const texturePaperGrainValue = document.getElementById("texturePaperGrainValue");
-  const texturePaperWearValue = document.getElementById("texturePaperWearValue");
-  const textureGraticuleMajorStepValue = document.getElementById("textureGraticuleMajorStepValue");
-  const textureGraticuleMinorStepValue = document.getElementById("textureGraticuleMinorStepValue");
-  const textureGraticuleLabelStepValue = document.getElementById("textureGraticuleLabelStepValue");
-  const textureGraticuleLabelSizeValue = document.getElementById("textureGraticuleLabelSizeValue");
-  const textureGraticuleMajorWidthValue = document.getElementById("textureGraticuleMajorWidthValue");
-  const textureGraticuleMinorWidthValue = document.getElementById("textureGraticuleMinorWidthValue");
-  const textureGraticuleMajorOpacityValue = document.getElementById("textureGraticuleMajorOpacityValue");
-  const textureGraticuleMinorOpacityValue = document.getElementById("textureGraticuleMinorOpacityValue");
-  const textureDraftMajorStepValue = document.getElementById("textureDraftMajorStepValue");
-  const textureDraftMinorStepValue = document.getElementById("textureDraftMinorStepValue");
-  const textureDraftLonOffsetValue = document.getElementById("textureDraftLonOffsetValue");
-  const textureDraftLatOffsetValue = document.getElementById("textureDraftLatOffsetValue");
-  const textureDraftRollValue = document.getElementById("textureDraftRollValue");
-  const textureDraftWidthValue = document.getElementById("textureDraftWidthValue");
-  const textureDraftMajorOpacityValue = document.getElementById("textureDraftMajorOpacityValue");
-  const textureDraftMinorOpacityValue = document.getElementById("textureDraftMinorOpacityValue");
-  const dayNightManualTimeValue = document.getElementById("dayNightManualTimeValue");
-  const dayNightCityLightsIntensityValue = document.getElementById("dayNightCityLightsIntensityValue");
-  const dayNightCityLightsTextureOpacityValue = document.getElementById("dayNightCityLightsTextureOpacityValue");
-  const dayNightCityLightsCorridorStrengthValue = document.getElementById("dayNightCityLightsCorridorStrengthValue");
-  const dayNightCityLightsCoreSharpnessValue = document.getElementById("dayNightCityLightsCoreSharpnessValue");
-  const dayNightCityLightsPopulationBoostStrengthValue = document.getElementById("dayNightCityLightsPopulationBoostStrengthValue");
-  const dayNightHistoricalCityLightsDensityValue = document.getElementById("dayNightHistoricalCityLightsDensityValue");
-  const dayNightHistoricalCityLightsSecondaryRetentionValue = document.getElementById(
-    "dayNightHistoricalCityLightsSecondaryRetentionValue"
-  );
-  const dayNightShadowOpacityValue = document.getElementById("dayNightShadowOpacityValue");
-  const dayNightTwilightWidthValue = document.getElementById("dayNightTwilightWidthValue");
   const airportVisualStrengthValue = document.getElementById("airportVisualStrengthValue");
   const airportOpacityValue = document.getElementById("airportOpacityValue");
   const airportCoverageReachValue = document.getElementById("airportCoverageReachValue");

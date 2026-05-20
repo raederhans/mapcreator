@@ -30,6 +30,7 @@ APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appea
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
 APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
 APPEARANCE_PARENT_BORDER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_parent_border_owner.js"
+APPEARANCE_TEXTURE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_texture_owner.js"
 OCEAN_LAKE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "ocean_lake_controls_controller.js"
 UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
@@ -883,21 +884,37 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("setAppearanceTab(\"ocean\");", content)
         self.assertIn("applyAppearanceFilter();", content)
 
-    def test_appearance_controller_owns_texture_and_day_night_logic(self):
+    def test_appearance_texture_owner_moves_texture_and_day_night_logic_out_of_controller(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        owner_content = APPEARANCE_TEXTURE_OWNER_JS.read_text(encoding="utf-8")
+        controller_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
 
+        self.assertIn("from \"./appearance_texture_owner.js\";", controller_content)
+        self.assertIn("const textureOwner = createAppearanceTextureOwner({", controller_content)
+        self.assertIn("const renderTextureUI = textureOwner.renderTextureUI;", controller_content)
+        self.assertIn("const renderDayNightUI = textureOwner.renderDayNightUI;", controller_content)
+        self.assertIn("textureOwner.bindEvents();", controller_content)
+        self.assertIn("export function createAppearanceTextureOwner({", owner_content)
+        self.assertIn("export const TEXTURE_STYLE_PATHS = Object.freeze([", owner_content)
         self.assertIn("const syncDayNightConfig = () => {", owner_content)
-        self.assertTrue(
-            "const renderTextureModePanels = (mode = state.styleConfig.texture?.mode || \"none\") => {" in owner_content
-            or "const renderTextureModePanels = (mode = runtimeState.styleConfig.texture?.mode || \"none\") => {" in owner_content
-        )
+        self.assertIn("const renderTextureModePanels = (mode = runtimeState.styleConfig.texture?.mode || \"none\") => {", owner_content)
         self.assertIn("const renderTextureUI = () => {", owner_content)
         self.assertIn("const renderDayNightUI = () => {", owner_content)
         self.assertIn("runtimeState.syncDayNightClockTimerFn?.();", owner_content)
         self.assertIn("const updateTextureStyle = (mutate, { historyKind = \"texture-style\", commitHistory = false } = {}) => {", owner_content)
         self.assertIn("const bindTextureRange = (element, handler) => {", owner_content)
         self.assertIn("const bindTextureColorInput = (element, handler) => {", owner_content)
+        self.assertNotIn('document.getElementById("textureSelect")', controller_content)
+        self.assertNotIn('document.getElementById("dayNightEnabled")', controller_content)
+        self.assertNotIn('document.getElementById("textureSelect")', toolbar_content)
+        self.assertNotIn('document.getElementById("dayNightEnabled")', toolbar_content)
+        self.assertNotIn("const syncDayNightConfig = () => {", controller_content)
+        self.assertNotIn("const renderTextureModePanels = (mode = runtimeState.styleConfig.texture?.mode || \"none\") => {", controller_content)
+        self.assertNotIn("const renderTextureUI = () => {", controller_content)
+        self.assertNotIn("const renderDayNightUI = () => {", controller_content)
+        self.assertNotIn("const updateTextureStyle = (mutate, { historyKind = \"texture-style\", commitHistory = false } = {}) => {", controller_content)
+        self.assertNotIn("const bindTextureRange = (element, handler) => {", controller_content)
+        self.assertNotIn("const bindTextureColorInput = (element, handler) => {", controller_content)
         self.assertNotIn("const syncDayNightConfig = () => {", toolbar_content)
         self.assertNotIn("const renderTextureUI = () => {", toolbar_content)
         self.assertNotIn("const renderDayNightUI = () => {", toolbar_content)
