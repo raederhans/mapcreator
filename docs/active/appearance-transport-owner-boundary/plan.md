@@ -525,4 +525,4 @@ Progress:
 - [x] Update boundary, state-write, and behavior tests.
 - [x] Run targeted verification and dist sync.
 - [x] Run final review.
-- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

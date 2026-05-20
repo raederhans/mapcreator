@@ -696,3 +696,4 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
 - Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests and import smokes; this slice did not widen package module settings.
 - Final self-review found one current-scope cleanup item: `toolbar.js` still had an unused `persistCityViewSettings()` helper after city-points moved to the owner. It was removed and the toolbar split contract now blocks it from drifting back into the facade.
 - Static reviewer lane timed out twice without returning findings; it was closed before final verification to keep live ownership and closeout bounded to the main thread.
+- Implementation commit `32c05d3` was pushed to `origin/main`; this closeout records the completed push before temporary worktree cleanup.

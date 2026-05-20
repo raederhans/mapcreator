@@ -261,4 +261,4 @@ Owner: main thread for implementation and all live verification.
 - [x] Extend Python boundary/state-write contracts and add named Node behavior script.
 - [x] Run syntax, targeted contracts, state guardrail, support contract, and Pages dist sync.
 - [x] Run final review and fix current-scope findings.
-- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
