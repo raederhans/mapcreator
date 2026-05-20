@@ -627,3 +627,38 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
   - `git diff --check`
 - Review note: the static reviewer lane timed out before returning findings. Main thread completed the first-principles self-review: this slice keeps the old toolbar input event lifecycle intact and only moves low-coupling list rendering plus visibility sync into the new owner.
+
+## 2026-05-20 appearance texture owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-texture-owner-2026-05-20`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static boundary review found texture/day-night DOM constants, style normalization, render helpers, texture history, range/color binding, day-night mode/time/city-light bindings, and clock refresh are a cohesive UI owner inside `appearance_controls_controller.js`.
+- Chosen boundary: create `js/ui/toolbar/appearance_texture_owner.js`.
+- Intended behavior:
+  - Texture owner owns texture/day-night DOM lookup, style normalization, render synchronization, texture history capture/commit, one-shot event binding, and day-night clock refresh dispatch.
+  - Appearance controller keeps the old toolbar-facing facade: `renderTextureUI()`, `renderDayNightUI()`, and `bindEvents()`.
+  - Texture range input still captures history on first input and commits one history entry on change; duplicate `bindEvents()` calls keep one listener pair per control.
+- Implemented so far:
+  - New `createAppearanceTextureOwner()` plus helper exports for `TEXTURE_STYLE_PATHS` and `formatUtcMinutes()`.
+  - Controller delegates texture/day-night rendering and events to the owner.
+  - New `tests/appearance_texture_owner_behavior.test.mjs` covers UTC label formatting, texture panel/value rendering, range history commit, duplicate binding prevention, and day-night UI state writes.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks the owner boundary and prevents texture/day-night helper drift back into the controller.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_texture_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check tests/appearance_texture_owner_behavior.test.mjs`
+  - `npm run test:node:appearance-texture-owner`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `npm run test:node:appearance-parent-border-owner`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for texture owner plus appearance controller
+  - `git diff --check`
+- Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen package module settings.
+- Final review found no current-scope blocker. Two low WATCH items were fixed in-slice:
+  - `appearance_controls_controller.js` owner comment now matches the remaining city / urban / physical / rivers / reference responsibilities.
+  - Dead texture/day-night DOM queries were removed from `toolbar.js`; the toolbar split boundary contract now blocks those queries from drifting back into the facade.
+- Implementation commit `f119786` was created; this closeout records docs and lessons for the same slice before pushing to `origin/main`.

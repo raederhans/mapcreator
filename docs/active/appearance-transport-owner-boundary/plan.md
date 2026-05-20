@@ -472,4 +472,30 @@ Progress:
 - [x] Update boundary and behavior tests.
 - [x] Run targeted verification.
 - [x] Run final self-review; static reviewer lane timed out with no findings returned.
-- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-20 appearance texture owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-texture-owner-2026-05-20`
+Branch: `codex/appearance-texture-owner-2026-05-20`
+
+Goal: continue G001 by moving texture and day-night UI rendering/event binding out of the large appearance controller while preserving toolbar facade hooks and history semantics.
+
+Acceptance:
+
+- `appearance_texture_owner.js` owns texture/day-night DOM lookup, style normalization, render synchronization, texture history capture/commit, one-shot event binding, and day-night clock refresh dispatch.
+- `appearance_controls_controller.js` keeps the public facade expected by `toolbar.js` and delegates `renderTextureUI()`, `renderDayNightUI()`, and texture/day-night event binding to the owner.
+- Texture range inputs still capture history on first input and commit one history entry on change; repeated `bindEvents()` calls do not duplicate listeners.
+- Existing toolbar boundary contract and a named Node behavior script cover owner wiring, panel visibility, value labels, history commit, day-night state writes, and duplicate-binding prevention.
+- Targeted syntax, toolbar split contract, owner behavior, state-write guardrail, dist sync, final review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only subagent for texture/day-night boundary.
+- [x] Selected current-scope boundary move.
+- [x] Implement texture/day-night owner split.
+- [x] Update boundary and behavior tests.
+- [x] Run targeted verification and dist sync.
+- [x] Run final review and fix review WATCH items.
+- [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

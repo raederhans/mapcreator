@@ -1610,3 +1610,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-19 - inspector model owner split coverage
 
 - 从大型 controller 迁出多分支 inspector 模型时，测试必须逐个覆盖每个 live family 的 ready/error/loading 分支；只测一个代表 family 会让漏搬表现成“reserved shell”静默退化。
+
+## 2026-05-20 - toolbar owner split dead DOM cleanup
+
+- 从 `toolbar.js` 或大型 controller 拆出 owner 后，要同步删除原 facade 里已无使用者的 DOM 查询；这些查询会继续增加启动成本，也会误导后续 owner 边界判断。
+- 边界合同除了检查 helper 迁出，还要检查关键 `getElementById(...)` 查询不会回流到旧 facade。
