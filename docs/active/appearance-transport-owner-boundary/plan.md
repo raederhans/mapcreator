@@ -499,3 +499,30 @@ Progress:
 - [x] Run targeted verification and dist sync.
 - [x] Run final review and fix review WATCH items.
 - [x] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.
+
+## 2026-05-20 appearance city-points owner slice
+
+Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-city-points-owner-2026-05-20`
+Branch: `codex/appearance-city-points-owner-2026-05-20`
+
+Goal: continue G001 by moving city-points UI rendering/event binding out of the large appearance controller while preserving toolbar facade hooks and visible behavior.
+
+Acceptance:
+
+- `appearance_city_points_owner.js` owns city-points DOM lookup, style normalization, theme option synchronization, render synchronization, one-shot event binding, persisted view settings, and optional city layer loading on enable.
+- `appearance_controls_controller.js` keeps the existing toolbar-facing facade and delegates city-points rendering plus event binding to the owner.
+- `toolbar.js` no longer performs unused city-points DOM queries.
+- Existing toolbar boundary and state-write contracts lock the new owner boundary and allowlist ownership.
+- A named Node behavior script covers theme rendering, option reuse, duplicate binding prevention, optional city layer loading, and numeric clamping.
+- Targeted syntax, owner behavior, toolbar split boundary, state-write guardrail, support contract, dist sync, import smokes, final review, push, and worktree cleanup pass.
+
+Progress:
+
+- [x] Created isolated worktree from `origin/main`.
+- [x] Dispatched static-only subagent for city-points boundary.
+- [x] Selected current-scope boundary move.
+- [x] Implement city-points owner split.
+- [x] Update boundary, state-write, and behavior tests.
+- [x] Run targeted verification and dist sync.
+- [x] Run final review.
+- [ ] Push to `origin/main`; temporary worktree cleanup follows this closeout commit.

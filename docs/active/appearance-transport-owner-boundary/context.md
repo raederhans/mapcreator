@@ -662,3 +662,37 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `appearance_controls_controller.js` owner comment now matches the remaining city / urban / physical / rivers / reference responsibilities.
   - Dead texture/day-night DOM queries were removed from `toolbar.js`; the toolbar split boundary contract now blocks those queries from drifting back into the facade.
 - Implementation commit `f119786` was created; this closeout records docs and lessons for the same slice before pushing to `origin/main`.
+
+## 2026-05-20 appearance city-points owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-city-points-owner-2026-05-20`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static boundary review found city-points DOM constants, theme option sync, config normalization, render synchronization, persisted view settings, city data loading on enable, and city-points event bindings were a cohesive UI owner still inside `appearance_controls_controller.js`.
+- Chosen boundary: create `js/ui/toolbar/appearance_city_points_owner.js`.
+- Intended behavior:
+  - City-points owner owns DOM lookup, theme descriptor usage, render synchronization, event binding, view settings persistence, and optional city layer loading when the layer is enabled.
+  - Appearance controller keeps the old toolbar-facing facade and delegates `renderAppearanceStyleControlsUi()` and `bindEvents()` city-points work to the owner.
+  - `toolbar.js` drops city-points `getElementById(...)` queries that became dead after the owner split.
+- Implemented:
+  - New `createAppearanceCityPointsOwner()` with helper exports kept local to the owner and descriptor helpers still centralized in `appearance_city_points_descriptor.js`.
+  - Controller imports and wires the city-points owner with `runtimeState`, `t`, `clamp`, `renderDirty`, `normalizeOceanFillColor`, and `ensureActiveScenarioOptionalLayerLoaded`.
+  - `tests/appearance_city_points_owner_behavior.test.mjs` covers theme option rendering/reuse, duplicate theme binding prevention, enable-path city data loading, persisted view settings, dirty reasons, and numeric input clamping.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks city-points owner wiring and prevents city-points DOM queries or config helpers from drifting back into `toolbar.js` or the appearance controller.
+  - `tools/eslint-rules/state-writer-allowlist.json` and `tests/test_state_write_guardrail_contract.py` now record the owner as an explicit state writer, because the city-points owner owns `runtimeState.showCityPoints` and `styleConfig.cityPoints` writes.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_city_points_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check tests/appearance_city_points_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-city-points-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - source import smoke for toolbar, city-points owner, and appearance controller
+  - `npm run verify:pages-dist`
+  - dist import smoke for toolbar, city-points owner, and appearance controller
+- Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests and import smokes; this slice did not widen package module settings.
+- Final self-review found one current-scope cleanup item: `toolbar.js` still had an unused `persistCityViewSettings()` helper after city-points moved to the owner. It was removed and the toolbar split contract now blocks it from drifting back into the facade.
+- Static reviewer lane timed out twice without returning findings; it was closed before final verification to keep live ownership and closeout bounded to the main thread.

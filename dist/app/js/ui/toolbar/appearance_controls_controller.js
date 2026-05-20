@@ -1,6 +1,5 @@
 import {
   createPhysicalStyleConfigForPreset,
-  normalizeCityLayerStyleConfig,
   normalizePhysicalPreset,
   normalizePhysicalStyleConfig,
   normalizeUrbanStyleConfig,
@@ -9,19 +8,11 @@ import { normalizeHexColor } from "../../core/palette_manager.js";
 import { createTransportAppearanceController } from "./transport_appearance_controller.js";
 import { createAppearanceParentBorderOwner } from "./appearance_parent_border_owner.js";
 import { createAppearanceTextureOwner } from "./appearance_texture_owner.js";
-import {
-  CITY_POINTS_THEME_OPTIONS,
-  formatCityPointsDensityValue,
-  getCityPointsLabelDensityHint,
-  getCityPointsThemeHint,
-  getCityPointsThemeLabel,
-  getCityPointsThemeMeta,
-  getCityPointsThemeStyle,
-} from "./appearance_city_points_descriptor.js";
+import { createAppearanceCityPointsOwner } from "./appearance_city_points_owner.js";
 
 /**
- * Owns the Appearance 面板 shell plus city / urban / physical / rivers / reference controls.
- * Transport, texture/day-night, and parent-border list details live in narrower owners.
+ * Owns the Appearance 面板 shell plus urban / physical / rivers / reference controls.
+ * Transport, texture/day-night, city-points, and parent-border details live in narrower owners.
  *
  * toolbar.js 继续保留更高层 facade：
  * - runtimeState callback 注册
@@ -42,20 +33,6 @@ export function createAppearanceControlsController({
   const toggleUrban = document.getElementById("toggleUrban");
   const togglePhysical = document.getElementById("togglePhysical");
   const toggleRivers = document.getElementById("toggleRivers");
-  const toggleCityPoints = document.getElementById("toggleCityPoints");
-  const cityPointsTheme = document.getElementById("cityPointsTheme");
-  const cityPointsThemeHint = document.getElementById("cityPointsThemeHint");
-  const cityPointsMarkerScale = document.getElementById("cityPointsMarkerScale");
-  const cityPointsMarkerDensity = document.getElementById("cityPointsMarkerDensity");
-  const cityPointsMarkerDensityHint = document.getElementById("cityPointsMarkerDensityHint");
-  const cityPointsLabelDensity = document.getElementById("cityPointsLabelDensity");
-  const cityPointsLabelDensityHint = document.getElementById("cityPointsLabelDensityHint");
-  const cityPointsColor = document.getElementById("cityPointsColor");
-  const cityPointsCapitalColor = document.getElementById("cityPointsCapitalColor");
-  const cityPointsOpacity = document.getElementById("cityPointsOpacity");
-  const cityPointLabelsEnabled = document.getElementById("cityPointLabelsEnabled");
-  const cityPointsLabelSize = document.getElementById("cityPointsLabelSize");
-  const cityCapitalOverlayEnabled = document.getElementById("cityCapitalOverlayEnabled");
   const urbanMode = document.getElementById("urbanMode");
   const urbanAdaptiveControls = document.getElementById("urbanAdaptiveControls");
   const urbanManualControls = document.getElementById("urbanManualControls");
@@ -110,10 +87,6 @@ export function createAppearanceControlsController({
   const referenceScale = document.getElementById("referenceScale");
   const referenceOffsetX = document.getElementById("referenceOffsetX");
   const referenceOffsetY = document.getElementById("referenceOffsetY");
-  const cityPointsMarkerScaleValue = document.getElementById("cityPointsMarkerScaleValue");
-  const cityPointsMarkerDensityValue = document.getElementById("cityPointsMarkerDensityValue");
-  const cityPointsOpacityValue = document.getElementById("cityPointsOpacityValue");
-  const cityPointsLabelSizeValue = document.getElementById("cityPointsLabelSizeValue");
   const urbanOpacityValue = document.getElementById("urbanOpacityValue");
   const urbanAdaptiveStrengthValue = document.getElementById("urbanAdaptiveStrengthValue");
   const urbanStrokeOpacityValue = document.getElementById("urbanStrokeOpacityValue");
@@ -169,6 +142,14 @@ export function createAppearanceControlsController({
   });
   const renderTextureUI = textureOwner.renderTextureUI;
   const renderDayNightUI = textureOwner.renderDayNightUI;
+  const cityPointsOwner = createAppearanceCityPointsOwner({
+    runtimeState,
+    t,
+    clamp,
+    renderDirty,
+    normalizeOceanFillColor,
+    ensureActiveScenarioOptionalLayerLoaded,
+  });
   const parentBorderOwner = createAppearanceParentBorderOwner({
     runtimeState,
     nodes: {
@@ -223,42 +204,6 @@ export function createAppearanceControlsController({
       panel.classList.toggle("hidden", !isActive);
       panel.hidden = !isActive;
     });
-  };
-
-  const persistCityViewSettings = () => {
-    runtimeState.persistViewSettingsFn?.();
-  };
-
-  const syncCityPointsConfig = () => {
-    runtimeState.styleConfig.cityPoints = normalizeCityLayerStyleConfig(runtimeState.styleConfig.cityPoints);
-    return runtimeState.styleConfig.cityPoints;
-  };
-
-  const ensureCityPointsThemeOptions = () => {
-    if (!cityPointsTheme) return;
-    const normalizedExisting = Array.from(cityPointsTheme.options || []).map((option) => String(option.value || ""));
-    const expected = CITY_POINTS_THEME_OPTIONS.map((option) => option.value);
-    const matchesExisting =
-      normalizedExisting.length === expected.length
-      && normalizedExisting.every((value, index) => value === expected[index]);
-    if (matchesExisting) {
-      Array.from(cityPointsTheme.options || []).forEach((optionNode, index) => {
-        const meta = CITY_POINTS_THEME_OPTIONS[index];
-        if (!meta) return;
-        optionNode.id = meta.labelKey;
-        optionNode.textContent = getCityPointsThemeLabel(meta.value, t);
-      });
-      return;
-    }
-    const fragment = document.createDocumentFragment();
-    CITY_POINTS_THEME_OPTIONS.forEach((optionMeta) => {
-      const option = document.createElement("option");
-      option.value = optionMeta.value;
-      option.id = optionMeta.labelKey;
-      option.textContent = getCityPointsThemeLabel(optionMeta.value, t);
-      fragment.appendChild(option);
-    });
-    cityPointsTheme.replaceChildren(fragment);
   };
 
   const syncUrbanConfig = () => {
@@ -368,34 +313,10 @@ export function createAppearanceControlsController({
   };
 
   const renderAppearanceStyleControlsUi = () => {
-    if (toggleCityPoints) toggleCityPoints.checked = !!runtimeState.showCityPoints;
+    cityPointsOwner.renderCityPointsUi();
     if (toggleUrban) toggleUrban.checked = !!runtimeState.showUrban;
     if (togglePhysical) togglePhysical.checked = !!runtimeState.showPhysical;
     if (toggleRivers) toggleRivers.checked = !!runtimeState.showRivers;
-
-    const cityPointsConfig = syncCityPointsConfig();
-    ensureCityPointsThemeOptions();
-    if (cityPointsTheme) cityPointsTheme.value = String(cityPointsConfig.theme || "classic_graphite");
-    if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cityPointsConfig.theme || "classic_graphite", runtimeState.currentLanguage);
-    if (cityPointsMarkerScale) cityPointsMarkerScale.value = Number(cityPointsConfig.markerScale || 1).toFixed(2);
-    if (cityPointsMarkerScaleValue) cityPointsMarkerScaleValue.textContent = `${Number(cityPointsConfig.markerScale || 1).toFixed(2)}x`;
-    if (cityPointsMarkerDensity) cityPointsMarkerDensity.value = Number(cityPointsConfig.markerDensity || 1).toFixed(2);
-    if (cityPointsMarkerDensityValue) cityPointsMarkerDensityValue.textContent = formatCityPointsDensityValue(cityPointsConfig.markerDensity || 1);
-    if (cityPointsMarkerDensityHint) {
-      cityPointsMarkerDensityHint.textContent = runtimeState.currentLanguage === "zh"
-        ? "控制每个缩放阶段最多允许出现多少个城市点。"
-        : "Controls how many city markers can surface at each zoom stage.";
-    }
-    if (cityPointsLabelDensity) cityPointsLabelDensity.value = String(cityPointsConfig.labelDensity || "balanced");
-    if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cityPointsConfig.labelDensity || "balanced", runtimeState.currentLanguage);
-    if (cityPointsColor) cityPointsColor.value = normalizeOceanFillColor(cityPointsConfig.color || "#2f343a");
-    if (cityPointsCapitalColor) cityPointsCapitalColor.value = normalizeOceanFillColor(cityPointsConfig.capitalColor || "#9f9072");
-    if (cityPointsOpacity) cityPointsOpacity.value = String(Math.round(cityPointsConfig.opacity * 100));
-    if (cityPointsOpacityValue) cityPointsOpacityValue.textContent = `${Math.round(cityPointsConfig.opacity * 100)}%`;
-    if (cityPointLabelsEnabled) cityPointLabelsEnabled.checked = !!cityPointsConfig.showLabels;
-    if (cityPointsLabelSize) cityPointsLabelSize.value = String(Math.round(cityPointsConfig.labelSize));
-    if (cityPointsLabelSizeValue) cityPointsLabelSizeValue.textContent = `${Math.round(cityPointsConfig.labelSize)}px`;
-    if (cityCapitalOverlayEnabled) cityCapitalOverlayEnabled.checked = !!cityPointsConfig.showCapitalOverlay;
 
     syncUrbanControls();
 
@@ -514,6 +435,7 @@ export function createAppearanceControlsController({
 
     transportAppearanceController.bindEvents();
     textureOwner.bindEvents();
+    cityPointsOwner.bindEvents();
 
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
       toggleUrban.checked = !!runtimeState.showUrban;
@@ -551,22 +473,6 @@ export function createAppearanceControlsController({
       toggleRivers.dataset.bound = "true";
     }
 
-    if (toggleCityPoints && toggleCityPoints.dataset.bound !== "true") {
-      toggleCityPoints.checked = !!runtimeState.showCityPoints;
-      toggleCityPoints.addEventListener("change", (event) => {
-        runtimeState.showCityPoints = !!event.target.checked;
-        if (runtimeState.showCityPoints) {
-          if (typeof runtimeState.ensureBaseCityDataFn === "function") {
-            void runtimeState.ensureBaseCityDataFn({ reason: "toolbar-toggle", renderNow: true });
-          }
-          void ensureActiveScenarioOptionalLayerLoaded("cities", { renderNow: true });
-        }
-        persistCityViewSettings();
-        renderDirty("toggle-city-points");
-      });
-      toggleCityPoints.dataset.bound = "true";
-    }
-
     if (urbanMode && urbanMode.dataset.bound !== "true") {
       urbanMode.addEventListener("change", (event) => {
         const cfg = syncUrbanConfig();
@@ -585,113 +491,6 @@ export function createAppearanceControlsController({
         renderDirty("urban-color");
       });
       urbanColor.dataset.bound = "true";
-    }
-    if (cityPointsColor && cityPointsColor.dataset.bound !== "true") {
-      cityPointsColor.addEventListener("input", (event) => {
-        const cfg = syncCityPointsConfig();
-        cfg.color = normalizeOceanFillColor(event.target.value);
-        persistCityViewSettings();
-        renderDirty("city-points-color");
-      });
-      cityPointsColor.dataset.bound = "true";
-    }
-    if (cityPointsTheme && cityPointsTheme.dataset.bound !== "true") {
-      cityPointsTheme.addEventListener("change", (event) => {
-        const cfg = syncCityPointsConfig();
-        cfg.theme = getCityPointsThemeMeta(event.target.value || "classic_graphite").value;
-        const themeStyle = getCityPointsThemeStyle(cfg.theme);
-        cfg.color = themeStyle.color;
-        cfg.capitalColor = themeStyle.capitalColor;
-        if (cityPointsThemeHint) cityPointsThemeHint.textContent = getCityPointsThemeHint(cfg.theme, runtimeState.currentLanguage);
-        if (cityPointsColor) cityPointsColor.value = normalizeOceanFillColor(cfg.color);
-        if (cityPointsCapitalColor) cityPointsCapitalColor.value = normalizeOceanFillColor(cfg.capitalColor);
-        persistCityViewSettings();
-        renderDirty("city-points-theme");
-      });
-      cityPointsTheme.dataset.bound = "true";
-    }
-    if (cityPointsMarkerScale && cityPointsMarkerScale.dataset.bound !== "true") {
-      cityPointsMarkerScale.addEventListener("input", (event) => {
-        const cfg = syncCityPointsConfig();
-        const value = Number(event.target.value);
-        cfg.markerScale = clamp(Number.isFinite(value) ? value : 1, 0.75, 2.5);
-        if (cityPointsMarkerScaleValue) cityPointsMarkerScaleValue.textContent = `${Number(cfg.markerScale).toFixed(2)}x`;
-        persistCityViewSettings();
-        renderDirty("city-points-marker-scale");
-      });
-      cityPointsMarkerScale.dataset.bound = "true";
-    }
-    if (cityPointsMarkerDensity && cityPointsMarkerDensity.dataset.bound !== "true") {
-      const syncMarkerDensity = (event) => {
-        const cfg = syncCityPointsConfig();
-        const value = Number(event.target.value);
-        cfg.markerDensity = clamp(Number.isFinite(value) ? value : 1, 0.5, 2);
-        if (cityPointsMarkerDensityValue) cityPointsMarkerDensityValue.textContent = formatCityPointsDensityValue(cfg.markerDensity);
-        persistCityViewSettings();
-        renderDirty("city-points-marker-density");
-      };
-      cityPointsMarkerDensity.addEventListener("input", syncMarkerDensity);
-      cityPointsMarkerDensity.addEventListener("change", syncMarkerDensity);
-      cityPointsMarkerDensity.dataset.bound = "true";
-    }
-    if (cityPointsLabelDensity && cityPointsLabelDensity.dataset.bound !== "true") {
-      cityPointsLabelDensity.addEventListener("change", (event) => {
-        const cfg = syncCityPointsConfig();
-        cfg.labelDensity = String(event.target.value || "balanced");
-        if (cityPointsLabelDensityHint) cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cfg.labelDensity, runtimeState.currentLanguage);
-        persistCityViewSettings();
-        renderDirty("city-points-label-density");
-      });
-      cityPointsLabelDensity.dataset.bound = "true";
-    }
-    if (cityPointsCapitalColor && cityPointsCapitalColor.dataset.bound !== "true") {
-      cityPointsCapitalColor.addEventListener("input", (event) => {
-        const cfg = syncCityPointsConfig();
-        cfg.capitalColor = normalizeOceanFillColor(event.target.value);
-        persistCityViewSettings();
-        renderDirty("city-points-capital-color");
-      });
-      cityPointsCapitalColor.dataset.bound = "true";
-    }
-    if (cityPointsOpacity && cityPointsOpacity.dataset.bound !== "true") {
-      cityPointsOpacity.addEventListener("input", (event) => {
-        const cfg = syncCityPointsConfig();
-        const value = Number(event.target.value);
-        cfg.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.92, 0, 1);
-        if (cityPointsOpacityValue) cityPointsOpacityValue.textContent = `${Math.round(cfg.opacity * 100)}%`;
-        persistCityViewSettings();
-        renderDirty("city-points-opacity");
-      });
-      cityPointsOpacity.dataset.bound = "true";
-    }
-    if (cityPointLabelsEnabled && cityPointLabelsEnabled.dataset.bound !== "true") {
-      cityPointLabelsEnabled.addEventListener("change", (event) => {
-        const cfg = syncCityPointsConfig();
-        cfg.showLabels = !!event.target.checked;
-        persistCityViewSettings();
-        renderDirty("city-points-labels-toggle");
-      });
-      cityPointLabelsEnabled.dataset.bound = "true";
-    }
-    if (cityPointsLabelSize && cityPointsLabelSize.dataset.bound !== "true") {
-      cityPointsLabelSize.addEventListener("input", (event) => {
-        const cfg = syncCityPointsConfig();
-        const value = Number(event.target.value);
-        cfg.labelSize = clamp(Math.round(Number.isFinite(value) ? value : 12), 8, 24);
-        if (cityPointsLabelSizeValue) cityPointsLabelSizeValue.textContent = `${Math.round(cfg.labelSize)}px`;
-        persistCityViewSettings();
-        renderDirty("city-points-label-size");
-      });
-      cityPointsLabelSize.dataset.bound = "true";
-    }
-    if (cityCapitalOverlayEnabled && cityCapitalOverlayEnabled.dataset.bound !== "true") {
-      cityCapitalOverlayEnabled.addEventListener("change", (event) => {
-        const cfg = syncCityPointsConfig();
-        cfg.showCapitalOverlay = !!event.target.checked;
-        persistCityViewSettings();
-        renderDirty("city-points-capital-overlay");
-      });
-      cityCapitalOverlayEnabled.dataset.bound = "true";
     }
     if (urbanOpacity && urbanOpacity.dataset.bound !== "true") {
       urbanOpacity.addEventListener("input", (event) => {

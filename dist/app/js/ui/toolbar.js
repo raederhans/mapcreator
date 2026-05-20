@@ -249,21 +249,8 @@ function initToolbar({ render } = {}) {
   const roadScope = document.getElementById("roadScope");
   const roadImportanceThreshold = document.getElementById("roadImportanceThreshold");
   const transportRoadSummaryMeta = document.getElementById("transportRoadSummaryMeta");
-  const toggleCityPoints = document.getElementById("toggleCityPoints");
   const toggleWaterRegions = document.getElementById("toggleWaterRegions");
   const toggleOpenOceanRegions = document.getElementById("toggleOpenOceanRegions");
-  const cityPointsTheme = document.getElementById("cityPointsTheme");
-  const cityPointsThemeHint = document.getElementById("cityPointsThemeHint");
-  const cityPointsMarkerScale = document.getElementById("cityPointsMarkerScale");
-  const cityPointsMarkerDensity = document.getElementById("cityPointsMarkerDensity");
-  const cityPointsMarkerDensityHint = document.getElementById("cityPointsMarkerDensityHint");
-  const cityPointsLabelDensity = document.getElementById("cityPointsLabelDensity");
-  const cityPointsColor = document.getElementById("cityPointsColor");
-  const cityPointsCapitalColor = document.getElementById("cityPointsCapitalColor");
-  const cityPointsOpacity = document.getElementById("cityPointsOpacity");
-  const cityPointLabelsEnabled = document.getElementById("cityPointLabelsEnabled");
-  const cityPointsLabelSize = document.getElementById("cityPointsLabelSize");
-  const cityCapitalOverlayEnabled = document.getElementById("cityCapitalOverlayEnabled");
   const urbanMode = document.getElementById("urbanMode");
   const urbanAdaptiveControls = document.getElementById("urbanAdaptiveControls");
   const urbanManualControls = document.getElementById("urbanManualControls");
@@ -518,10 +505,6 @@ function initToolbar({ render } = {}) {
   const urbanToneBiasValue = document.getElementById("urbanToneBiasValue");
   const urbanAdaptiveTintStrengthValue = document.getElementById("urbanAdaptiveTintStrengthValue");
   const urbanMinAreaValue = document.getElementById("urbanMinAreaValue");
-  const cityPointsOpacityValue = document.getElementById("cityPointsOpacityValue");
-  const cityPointsMarkerScaleValue = document.getElementById("cityPointsMarkerScaleValue");
-  const cityPointsMarkerDensityValue = document.getElementById("cityPointsMarkerDensityValue");
-  const cityPointsLabelSizeValue = document.getElementById("cityPointsLabelSizeValue");
   const physicalOpacityValue = document.getElementById("physicalOpacityValue");
   const physicalAtlasIntensityValue = document.getElementById("physicalAtlasIntensityValue");
   const physicalRainforestEmphasisValue = document.getElementById("physicalRainforestEmphasisValue");
@@ -1534,10 +1517,6 @@ function initToolbar({ render } = {}) {
     updateSwatchUI();
     if (render) render();
     return true;
-  };
-
-  const persistCityViewSettings = () => {
-    runtimeState.persistViewSettingsFn?.();
   };
 
   const refreshActiveSovereignLabel = () => {
