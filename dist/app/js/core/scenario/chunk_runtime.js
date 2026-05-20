@@ -1183,11 +1183,16 @@ function createScenarioChunkRuntimeController({
       ) {
         const applyStartedAt = Number(bundle?.chunkLifecycle?.applyStartedAt || 0);
         if (applyStartedAt > 0) {
-          recordScenarioPerfMetric("timeToPoliticalCoreReady", (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt, {
+          const coarseReadyMs = (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt;
+          const coarseReadyDetails = {
             scenarioId,
+            source: "chunk-promotion-coarse-ready",
+            readinessLevel: "coarse-chunk",
             promotedPoliticalFeatureCount: mergedLayerPayloads.political.features.length,
             requiredPoliticalChunkCount: Number(pendingPromotion.requiredPoliticalChunkCount || 0),
-          });
+          };
+          recordScenarioPerfMetric("timeToPoliticalCoreReady", coarseReadyMs, coarseReadyDetails);
+          recordScenarioPerfMetric("timeToInteractiveCoarseFrame", coarseReadyMs, coarseReadyDetails);
         }
         if (bundle?.chunkLifecycle) {
           bundle.chunkLifecycle.politicalCoreReadyRecorded = true;

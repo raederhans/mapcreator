@@ -5998,7 +5998,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_scenario_boot.js",
-      "size_bytes": 4669
+      "size_bytes": 4904
     },
     {
       "path": "app/js/core/city_lights_historical_1930_asset.js",
@@ -6050,7 +6050,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 38638
+      "size_bytes": 38648
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6066,7 +6066,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel/ui_sync.js",
-      "size_bytes": 2278
+      "size_bytes": 2283
     },
     {
       "path": "app/js/core/interaction_funnel/wait_readiness.js",
@@ -6290,7 +6290,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 97279
+      "size_bytes": 97574
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
@@ -6362,7 +6362,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 31593
+      "size_bytes": 32373
     },
     {
       "path": "app/js/core/scenario_ownership_editor.js",
@@ -6370,7 +6370,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 11713
+      "size_bytes": 14156
     },
     {
       "path": "app/js/core/scenario_recovery.js",
@@ -6470,7 +6470,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 24959
+      "size_bytes": 24998
     },
     {
       "path": "app/js/core/state.js",
@@ -6614,7 +6614,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 20551
+      "size_bytes": 20610
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
@@ -6626,11 +6626,11 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_reference_owner.js",
-      "size_bytes": 6497
+      "size_bytes": 6669
     },
     {
       "path": "app/js/ui/toolbar/appearance_rivers_owner.js",
-      "size_bytes": 6073
+      "size_bytes": 6216
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
@@ -6730,7 +6730,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 139127
+      "size_bytes": 139146
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6887,5 +6887,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001432518
+  "total_bytes": 1001436718
 }

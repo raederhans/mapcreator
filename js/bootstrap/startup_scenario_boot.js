@@ -42,6 +42,8 @@ export function createStartupScenarioBootOwner({
     let defaultScenarioBundle = scenarioBundleResult.bundle;
     let scenarioBundleSource = String(scenarioBundleResult.source || "legacy").trim() || "legacy";
     let startupRecoveryReason = "";
+    let canDeferStartupChunkPrewarm = scenarioBundleSource === "startup-bundle"
+      && defaultScenarioBundle?.loadDiagnostics?.startupBundle === true;
 
     if (!defaultScenarioBundle?.manifest) {
       throw new Error("Default scenario bundle did not include a manifest.");
@@ -66,6 +68,7 @@ export function createStartupScenarioBootOwner({
       await applyScenarioBundleCommand(defaultScenarioBundle, {
         renderMode: "none",
         suppressRender: true,
+        deferChunkPrewarm: canDeferStartupChunkPrewarm,
         markDirtyReason: "",
         showToastOnComplete: false,
         interactionLevel: startupInteractionMode === "readonly" ? "readonly-startup" : "full",
@@ -86,6 +89,7 @@ export function createStartupScenarioBootOwner({
         forceReload: true,
       });
       scenarioBundleSource = "legacy-bootstrap-recovery";
+      canDeferStartupChunkPrewarm = false;
       await applyScenarioBundleCommand(defaultScenarioBundle, {
         renderMode: "none",
         suppressRender: true,

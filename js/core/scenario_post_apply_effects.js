@@ -137,20 +137,62 @@ function scheduleScenarioDetailChunkPrewarm({
 async function ensureChunkedScenarioFirstFrameReady({
   bundle,
   scenarioId = "",
+  awaitPrewarm = true,
 } = {}) {
-  if (!scenarioSupportsChunkedRuntime(bundle)) return;
+  if (!scenarioSupportsChunkedRuntime(bundle)) {
+    return { chunkPrewarmAwaited: true, chunkPrewarmDeferred: false };
+  }
   const normalizedScenarioId = String(scenarioId || "").trim();
   const synchronous = shouldSynchronouslyPrewarmChunkedScenario(bundle);
   const normalizedMode = synchronous ? "sync" : "async";
   const prewarmStartedAt = Date.now();
+  const shouldAwaitPrewarm = awaitPrewarm !== false || synchronous;
+  let prewarmStatus = {
+    chunkPrewarmAwaited: shouldAwaitPrewarm,
+    chunkPrewarmDeferred: !shouldAwaitPrewarm,
+  };
   updateChunkedFirstFramePrewarmMetric({
     scenarioId: normalizedScenarioId,
     mode: normalizedMode,
     synchronous: normalizedMode === "sync",
+    awaited: shouldAwaitPrewarm,
+    coarsePrewarmAwaited: shouldAwaitPrewarm,
     prewarmStartedAt,
   }, { replace: true });
   if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
-    return;
+    return prewarmStatus;
+  }
+  if (awaitPrewarm === false && !synchronous) {
+    const refreshScheduledAt = Date.now();
+    // Startup boot already has a shell/core frame; chunk refresh can hydrate the full coarse selection after apply.
+    scheduleScenarioChunkRefresh({
+      reason: "scenario-apply",
+      delayMs: 0,
+      refreshSourceStartedAtMs: prewarmStartedAt,
+    });
+    updateChunkedFirstFramePrewarmMetric({
+      scenarioId: normalizedScenarioId,
+      mode: normalizedMode,
+      synchronous: false,
+      awaited: false,
+      coarsePrewarmAwaited: false,
+      chunkPrewarmDeferred: true,
+      prewarmStartedAt,
+      prewarmDeferredAt: refreshScheduledAt,
+      refreshScheduledAt,
+      coarsePrewarmDeferredAt: refreshScheduledAt,
+      chunkRefreshScheduledAt: refreshScheduledAt,
+    });
+    scheduleScenarioDetailChunkPrewarm({
+      bundle,
+      scenarioId: normalizedScenarioId,
+      prewarmStartedAt,
+    });
+    return {
+      chunkPrewarmAwaited: false,
+      chunkPrewarmDeferred: true,
+      chunkRefreshScheduledAt: refreshScheduledAt,
+    };
   }
   let prewarmCompletedAt = 0;
   try {
@@ -159,33 +201,53 @@ async function ensureChunkedScenarioFirstFrameReady({
       await preloadScenarioFocusCountryPoliticalDetailChunk(bundle);
     }
     if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
-      return;
+      return prewarmStatus;
     }
     prewarmCompletedAt = Date.now();
     updateChunkedFirstFramePrewarmMetric({
       scenarioId: normalizedScenarioId,
       mode: normalizedMode,
       synchronous,
+      awaited: true,
+      coarsePrewarmAwaited: true,
+      chunkPrewarmDeferred: false,
       prewarmStartedAt,
       prewarmCompletedAt,
+      coarsePrewarmCompletedAt: prewarmCompletedAt,
     });
+    prewarmStatus = {
+      chunkPrewarmAwaited: true,
+      chunkPrewarmDeferred: false,
+      coarsePrewarmCompletedAt: prewarmCompletedAt,
+    };
   } catch (error) {
     console.warn(`[scenario] Coarse chunk prewarm failed for "${scenarioId}".`, error);
     if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
-      return;
+      return prewarmStatus;
     }
+    const failedAt = prewarmCompletedAt || Date.now();
     updateChunkedFirstFramePrewarmMetric({
       scenarioId: normalizedScenarioId,
       mode: normalizedMode,
       synchronous,
+      awaited: true,
+      coarsePrewarmAwaited: true,
+      chunkPrewarmDeferred: false,
       prewarmStartedAt,
-      prewarmCompletedAt: prewarmCompletedAt || Date.now(),
+      prewarmCompletedAt: failedAt,
+      coarsePrewarmCompletedAt: failedAt,
       prewarmFailed: true,
       prewarmFailure: String(error?.message || error || "Unknown prewarm error"),
     });
+    prewarmStatus = {
+      chunkPrewarmAwaited: true,
+      chunkPrewarmDeferred: false,
+      coarsePrewarmCompletedAt: failedAt,
+      prewarmFailed: true,
+    };
   } finally {
     if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
-      return;
+      return prewarmStatus;
     }
     const refreshScheduledAt = Date.now();
     scheduleScenarioChunkRefresh({
@@ -200,6 +262,7 @@ async function ensureChunkedScenarioFirstFrameReady({
       prewarmStartedAt,
       prewarmCompletedAt: prewarmCompletedAt || Date.now(),
       refreshScheduledAt,
+      chunkRefreshScheduledAt: refreshScheduledAt,
     });
     if (!synchronous) {
       scheduleScenarioDetailChunkPrewarm({
@@ -209,6 +272,7 @@ async function ensureChunkedScenarioFirstFrameReady({
       });
     }
   }
+  return prewarmStatus;
 }
 
 function shouldSynchronouslyPrewarmChunkedScenario(bundle) {
@@ -223,6 +287,7 @@ function shouldSynchronouslyPrewarmChunkedScenario(bundle) {
 async function runPostScenarioApplyEffects({
   bundle,
   scenarioId = "",
+  deferChunkPrewarm = false,
   renderNow = false,
   suppressRender = false,
 } = {}) {
@@ -252,8 +317,16 @@ async function runPostScenarioApplyEffects({
     refreshOpeningOwnerBorders: false,
   });
   refreshScenarioOpeningOwnerBorders({ renderNow: false, reason: `scenario:${scenarioId}:opening` });
+  let chunkPrewarmResult = {
+    chunkPrewarmAwaited: true,
+    chunkPrewarmDeferred: false,
+  };
   if (scenarioSupportsChunkedRuntime(bundle)) {
-    await ensureChunkedScenarioFirstFrameReady({ bundle, scenarioId });
+    chunkPrewarmResult = await ensureChunkedScenarioFirstFrameReady({
+      bundle,
+      scenarioId,
+      awaitPrewarm: !deferChunkPrewarm,
+    });
   } else if (!runtimeState.bootBlocking) {
     await ensureActiveScenarioOptionalLayersForVisibility({ bundle, renderNow })
       .catch((error) => {
@@ -274,6 +347,8 @@ async function runPostScenarioApplyEffects({
     dataHealth,
     scenarioMapRefreshMode,
     hasChunkedRuntime: scenarioSupportsChunkedRuntime(bundle),
+    chunkPrewarmAwaited: chunkPrewarmResult?.chunkPrewarmAwaited !== false,
+    chunkPrewarmDeferred: chunkPrewarmResult?.chunkPrewarmDeferred === true,
   };
 }
 

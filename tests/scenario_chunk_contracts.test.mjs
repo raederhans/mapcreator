@@ -942,6 +942,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: replayReason,[\s\S]*?refreshSourceStartedAtMs: Number\(pendingPostCommitRefresh\.refreshSourceStartedAtMs \|\| 0\),[\s\S]*?\}\);/.test(chunkRuntimeSource)
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply-detail-prewarm",[\s\S]*?refreshSourceStartedAtMs: prewarmStartedAt,[\s\S]*?\}\);/.test(postApplyEffectsSource)
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply",[\s\S]*?refreshSourceStartedAtMs: prewarmStartedAt,[\s\S]*?\}\);/.test(postApplyEffectsSource),
+    delayedPoliticalCoreReadyMetricKeepsCoarseReadinessDetails:
+      /const coarseReadyDetails = \{[\s\S]*?source: "chunk-promotion-coarse-ready"[\s\S]*?readinessLevel: "coarse-chunk"[\s\S]*?promotedPoliticalFeatureCount[\s\S]*?recordScenarioPerfMetric\("timeToPoliticalCoreReady", coarseReadyMs, coarseReadyDetails\);[\s\S]*?recordScenarioPerfMetric\("timeToInteractiveCoarseFrame", coarseReadyMs, coarseReadyDetails\);/.test(chunkRuntimeSource),
     chunkSelectionCarriesCostFieldsAndSums:
       chunkManagerSource.includes("byteSize")
       && chunkManagerSource.includes("coordCount")
@@ -994,7 +996,10 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
     unconfirmedDetailPromotionStillWarnsBeforeHealthGate:
       /if \(!detailReady && (?:runtimeState|state)\.topologyBundleMode !== "composite"\) \{[\s\S]*?console\.warn\("\[scenario\] Applying bundle without confirmed detail promotion; health gate will validate runtime topology\."\);/.test(scenarioApplyPipelineSource),
     coarseInteractiveMetricRecordedAfterPostApplyEffects:
-      /const \{ dataHealth, scenarioMapRefreshMode, hasChunkedRuntime \} = await runPostScenarioApplyEffects\([\s\S]*?recordScenarioPerfMetric\(\s*"timeToInteractiveCoarseFrame",[\s\S]*?hasChunkedRuntime,[\s\S]*?mapRefreshMode: scenarioMapRefreshMode,/.test(scenarioManagerSource),
+      /const \{[\s\S]*?chunkPrewarmAwaited = true,[\s\S]*?chunkPrewarmDeferred = false,[\s\S]*?\} = await runPostScenarioApplyEffects\([\s\S]*?deferChunkPrewarm,[\s\S]*?if \(chunkPrewarmDeferred\) \{[\s\S]*?recordScenarioPerfMetric\("timeToStartupShellFrame"[\s\S]*?source: "post-apply-startup-shell-ready"[\s\S]*?readinessLevel: "startup-shell"[\s\S]*?\} else if[\s\S]*?recordScenarioPerfMetric\([\s\S]*?"timeToPoliticalCoreReady"[\s\S]*?source: "post-apply-coarse-ready"[\s\S]*?if \(!chunkPrewarmDeferred\) \{[\s\S]*?recordScenarioPerfMetric\([\s\S]*?"timeToInteractiveCoarseFrame"[\s\S]*?readinessLevel: "coarse-chunk"[\s\S]*?chunkPrewarmAwaited,[\s\S]*?chunkPrewarmDeferred,/.test(scenarioManagerSource),
+    startupBootDefersCoarsePrewarm:
+      /async function ensureChunkedScenarioFirstFrameReady\(\{[\s\S]*?awaitPrewarm = true,[\s\S]*?if \(awaitPrewarm === false && !synchronous\) \{[\s\S]*?scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply"[\s\S]*?coarsePrewarmDeferredAt: refreshScheduledAt[\s\S]*?chunkRefreshScheduledAt: refreshScheduledAt[\s\S]*?return \{[\s\S]*?chunkPrewarmAwaited: false,[\s\S]*?chunkPrewarmDeferred: true,/.test(readRepoFile("js", "core", "scenario_post_apply_effects.js"))
+      && /canDeferStartupChunkPrewarm = scenarioBundleSource === "startup-bundle"[\s\S]*?defaultScenarioBundle\?\.loadDiagnostics\?\.startupBundle === true[\s\S]*?deferChunkPrewarm: canDeferStartupChunkPrewarm,[\s\S]*?canDeferStartupChunkPrewarm = false;/.test(readRepoFile("js", "bootstrap", "startup_scenario_boot.js")),
     ensureAppPathUrlRewritesRootAndNestedPaths:
       /def ensure_app_path_url\(url: str\) -> str:[\s\S]*?if path\.startswith\("\/app\/"\) or path == "\/app":[\s\S]*?elif path == "\/":[\s\S]*?normalized_path = "\/app\/"[\s\S]*?else:[\s\S]*?normalized_path = f"\/app\{path\}" if path\.startswith\("\/"\) else f"\/app\/\{path\}"/.test(benchmarkSource),
     buildScenarioOpenUrlsAddsPerfOverlayAndScenarioCandidate:

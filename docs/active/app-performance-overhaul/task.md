@@ -435,5 +435,12 @@ pm run perf:gate: pass against refreshed baseline.
 - [x] Run `npm run perf:gate` and clean `origin/main@07709e0` control comparison; both fail startup/apply gate family.
 - [x] Fix final static review blocker in project import transport appearance UI sync.
 - [x] Consolidate reference image state normalization into shared state helper.
-- [ ] Track current startup/apply perf gate blocker as the next performance boundary.
+- [x] Track current startup/apply perf gate blocker as the next performance boundary.
+- [x] Reproduce startup/apply blocker in a clean `origin/main@b923b22` worktree.
+- [x] Move startup scenario coarse chunk prewarm out of the blocking apply transaction.
+- [x] Keep legacy bootstrap recovery on the synchronous prewarm path.
+- [x] Separate startup-shell readiness metrics from coarse chunk readiness metrics.
+- [x] Preserve synchronous chunk prewarm for ordinary scenario Apply.
+- [x] Run startup/resource/chunk/perf/toolbar/state contracts.
+- [x] Run `npm run perf:gate`; final gate passed.
 - [ ] Commit, push to `origin/main`, checkpoint goal state, and clean temporary worktree.

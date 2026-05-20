@@ -1619,3 +1619,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-20 - import UI sync after owner split
 
 - 删除旧 facade 里的局部补同步后，project import / restore 这类批量状态写入路径必须显式触发新 owner 的专用 state bus event；只保留总 toolbar refresh 会让拆出的面板出现 stale DOM。
+
+## 2026-05-20 - startup apply chunk prewarm boundary
+
+- 启动 bundle 已经提供 shell/core 首帧时，`scenario-apply` 事务应只提交可见启动状态并调度 chunk refresh；等待 coarse chunk 全量预热会把真实 hydrate 成本算进启动 apply 门禁。
+- 启动性能指标要区分 startup shell ready 与 coarse chunk ready；defer prewarm 后继续写 coarse-ready 指标会误导后续性能判断。

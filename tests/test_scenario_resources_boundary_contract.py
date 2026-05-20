@@ -171,14 +171,23 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("bundle.chunkMergedLayerPayloads", manager_content)
         self.assertIn("runtimeState.activeScenarioChunks?.mergedLayerPayloads", manager_content)
 
-    def test_post_apply_effects_waits_for_chunked_first_frame_before_returning(self):
+    def test_post_apply_effects_defers_startup_boot_chunk_prewarm(self):
         content = SCENARIO_POST_APPLY_EFFECTS.read_text(encoding="utf-8")
 
         self.assertIn("preloadScenarioCoarseChunks", content)
         self.assertIn("ensureChunkedScenarioFirstFrameReady", content)
         self.assertIn("await preloadScenarioCoarseChunks(bundle);", content)
+        self.assertIn("awaitPrewarm = true", content)
+        self.assertIn("awaited: shouldAwaitPrewarm", content)
+        self.assertIn("coarsePrewarmAwaited: shouldAwaitPrewarm", content)
+        self.assertIn('deferChunkPrewarm = false', content)
+        self.assertIn('awaitPrewarm: !deferChunkPrewarm', content)
+        self.assertNotIn('interactionLevel = "full"', content)
+        self.assertIn("prewarmDeferredAt: refreshScheduledAt", content)
+        self.assertIn("coarsePrewarmDeferredAt: refreshScheduledAt", content)
+        self.assertIn("chunkRefreshScheduledAt: refreshScheduledAt", content)
         self.assertIn("hints.sync_focus_detail_prewarm_default === true", content)
-        self.assertIn("await ensureChunkedScenarioFirstFrameReady({ bundle, scenarioId });", content)
+        self.assertIn("await ensureChunkedScenarioFirstFrameReady({", content)
         self.assertNotIn("void ensureChunkedScenarioFirstFrameReady({ bundle, scenarioId });", content)
         self.assertIn('reason: "scenario-apply"', content)
 

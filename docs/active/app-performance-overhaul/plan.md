@@ -49,6 +49,13 @@
 - `editor-performance-final-2026-05-19.json` completed with black frame count 0 and network issues 0 for all measured scenarios.
 - `special-zone-members-final-2026-05-19.json` passed at `durationMs=8.691`, matching baseline.
 
+### 2026-05-20 startup/apply repair
+- Startup scenario apply now defers coarse chunk prewarm by passing `deferChunkPrewarm: true` from `startup_scenario_boot.js`.
+- Legacy bootstrap recovery keeps synchronous coarse chunk prewarm because that path is already recovering from a failed startup bundle transaction.
+- Manual scenario Apply keeps the existing synchronous coarse prewarm path.
+- Deferred startup records startup-shell readiness separately from coarse chunk readiness.
+- Acceptance for this repair is `npm run perf:gate` plus startup/resource/chunk contract coverage.
+
 ## Current phase
 2026-04-29 five-step interaction performance slice: pass attribution, dirty/cache narrowing metrics, cost-aware scheduling visibility, worker v2 protocol, and black-pixel attribution.
 

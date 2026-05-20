@@ -26,6 +26,16 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn('setBootState?.("scenario-apply");', owner_content)
         self.assertIn('startBootMetric?.("scenario-apply");', owner_content)
         self.assertIn("await applyScenarioBundleCommand(defaultScenarioBundle, {", owner_content)
+        self.assertIn('scenarioBundleSource === "startup-bundle"', owner_content)
+        self.assertIn("defaultScenarioBundle?.loadDiagnostics?.startupBundle === true", owner_content)
+        self.assertIn("deferChunkPrewarm: canDeferStartupChunkPrewarm,", owner_content)
+        self.assertIn("canDeferStartupChunkPrewarm = false;", owner_content)
+        recovery_apply = re.search(
+            r'scenarioBundleSource = "legacy-bootstrap-recovery";(?P<body>[\s\S]*?)\n      \}\);',
+            owner_content,
+        )
+        self.assertIsNotNone(recovery_apply)
+        self.assertNotIn("deferChunkPrewarm", recovery_apply.group("body"))
         self.assertIn('scenarioBundleSource !== "startup-bundle"', owner_content)
         self.assertIn("defaultScenarioBundle = await loadScenarioBundle(String(defaultScenarioBundle.manifest?.scenario_id || \"\"), {", owner_content)
         self.assertIn('scenarioBundleSource = "legacy-bootstrap-recovery";', owner_content)

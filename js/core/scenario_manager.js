@@ -493,6 +493,7 @@ async function applyScenarioBundle(
     syncPalette = true,
     showToastOnComplete = false,
     interactionLevel = "full",
+    deferChunkPrewarm = false,
   } = {}
 ) {
   const applyStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
@@ -518,9 +519,16 @@ async function applyScenarioBundle(
       applyStartedAt,
       politicalCoreReadyRecorded: false,
     };
-    const { dataHealth, scenarioMapRefreshMode, hasChunkedRuntime } = await runPostScenarioApplyEffects({
+    const {
+      dataHealth,
+      scenarioMapRefreshMode,
+      hasChunkedRuntime,
+      chunkPrewarmAwaited = true,
+      chunkPrewarmDeferred = false,
+    } = await runPostScenarioApplyEffects({
       bundle,
       scenarioId: staged.scenarioId,
+      deferChunkPrewarm,
       renderNow,
       suppressRender,
     });
@@ -542,7 +550,18 @@ async function applyScenarioBundle(
     const hasCurrentPoliticalCoreReadyMetric =
       currentPoliticalCoreReadyMetric
       && String(currentPoliticalCoreReadyMetric.scenarioId || "") === staged.scenarioId;
-    if (
+    const postApplyReadyMs = (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt;
+    if (chunkPrewarmDeferred) {
+      recordScenarioPerfMetric("timeToStartupShellFrame", postApplyReadyMs, {
+        scenarioId: staged.scenarioId,
+        source: "post-apply-startup-shell-ready",
+        readinessLevel: "startup-shell",
+        hasChunkedRuntime,
+        mapRefreshMode: scenarioMapRefreshMode,
+        chunkPrewarmAwaited,
+        chunkPrewarmDeferred,
+      });
+    } else if (
       !hasCurrentPoliticalCoreReadyMetric
       && (
         hasChunkedRuntime
@@ -552,27 +571,36 @@ async function applyScenarioBundle(
     ) {
       recordScenarioPerfMetric(
         "timeToPoliticalCoreReady",
-        (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt,
+        postApplyReadyMs,
         {
           scenarioId: staged.scenarioId,
           source: "post-apply-coarse-ready",
+          readinessLevel: "coarse-chunk",
           hasChunkedRuntime,
           mapRefreshMode: scenarioMapRefreshMode,
+          chunkPrewarmAwaited,
+          chunkPrewarmDeferred,
         }
       );
       if (bundle?.chunkLifecycle) {
         bundle.chunkLifecycle.politicalCoreReadyRecorded = true;
       }
     }
-    recordScenarioPerfMetric(
-      "timeToInteractiveCoarseFrame",
-      (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt,
-      {
-        scenarioId: staged.scenarioId,
-        hasChunkedRuntime,
-        mapRefreshMode: scenarioMapRefreshMode,
-      }
-    );
+    if (!chunkPrewarmDeferred) {
+      recordScenarioPerfMetric(
+        "timeToInteractiveCoarseFrame",
+        postApplyReadyMs,
+        {
+          scenarioId: staged.scenarioId,
+          source: "post-apply-coarse-ready",
+          readinessLevel: "coarse-chunk",
+          hasChunkedRuntime,
+          mapRefreshMode: scenarioMapRefreshMode,
+          chunkPrewarmAwaited,
+          chunkPrewarmDeferred,
+        }
+      );
+    }
     if (typeof document !== "undefined") {
       const presetSection = document.getElementById("selectedCountryActionsSection");
       if (presetSection && "open" in presetSection) {
