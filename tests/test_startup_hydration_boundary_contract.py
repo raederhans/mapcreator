@@ -43,10 +43,9 @@ class StartupHydrationBoundaryContractTest(unittest.TestCase):
         content = SCENARIO_STARTUP_HYDRATION.read_text(encoding="utf-8")
 
         self.assertIn("areScenarioFeatureCollectionsEquivalent,", content)
-        self.assertIn(
-            "!areScenarioFeatureCollectionsEquivalent(nextScenarioPoliticalPayload, previousScenarioPoliticalPayload)",
-            content,
-        )
+        self.assertIn("const hasPoliticalPayloadChange = !areScenarioFeatureCollectionsEquivalent(", content)
+        self.assertIn("nextScenarioPoliticalPayload,", content)
+        self.assertIn("previousScenarioPoliticalPayload", content)
         self.assertIn("bundleScenarioId !== normalizeScenarioId(state.activeScenarioId)", content)
         self.assertIn("return false;", content)
         self.assertIn("return true;", content)
@@ -79,7 +78,14 @@ class StartupHydrationBoundaryContractTest(unittest.TestCase):
         self.assertIn("|| state.scenarioWaterRegionsData", content)
         self.assertIn("mergedPoliticalPayload !== undefined", content)
         self.assertIn('getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political")', content)
-        self.assertIn("|| state.scenarioPoliticalChunkData", content)
+        self.assertIn("const promotableFeatures = features.filter", content)
+        self.assertIn("{ ...collection, features: promotableFeatures }", content)
+        self.assertIn("let nextScenarioPoliticalPayload = previousScenarioPoliticalPayload || null", content)
+        self.assertIn("if (runtimePoliticalPayloadDecision.hasPayload)", content)
+        self.assertIn("if (decodedPoliticalPayloadDecision.hasPayload)", content)
+        self.assertIn("if (mergedPoliticalPayload !== undefined)", content)
+        self.assertIn("const previousScenarioPoliticalPayload = state.scenarioPoliticalChunkData;", content)
+        self.assertIn("const hasPoliticalPayloadChange = !areScenarioFeatureCollectionsEquivalent", content)
         self.assertIn("applyScenarioPoliticalChunkPayload(", content)
         self.assertIn('reason: "scenario-hydrate-political"', content)
         self.assertIn("renderNow: false,", content)

@@ -80,6 +80,37 @@ function createScenarioStartupHydrationController({
       && !!getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political");
   }
 
+  function isRuntimeOnlyShellFallbackFeature(feature) {
+    const props = feature?.properties || {};
+    return String(props.scenario_helper_kind || "").trim().toLowerCase() === "shell_fallback"
+      && props.render_as_base_geography === false;
+  }
+
+  function getPromotablePoliticalPayloadDecision(payload, mapSemanticMode) {
+    const collection = normalizeScenarioFeatureCollection(payload);
+    if (!collection) return { hasPayload: false, payload: null };
+    if (String(mapSemanticMode || "").trim().toLowerCase() === "blank") {
+      return { hasPayload: true, payload: collection };
+    }
+    const features = Array.isArray(collection.features) ? collection.features : [];
+    const promotableFeatures = features.filter((feature) => !isRuntimeOnlyShellFallbackFeature(feature));
+    if (!features.length || promotableFeatures.length === features.length) {
+      return { hasPayload: true, payload: collection };
+    }
+    if (!promotableFeatures.length) {
+      return { hasPayload: true, payload: null };
+    }
+    return {
+      hasPayload: true,
+      payload: { ...collection, features: promotableFeatures },
+    };
+  }
+
+  function getPoliticalPayloadDecisionFromRuntimeTopology(runtimeTopologyPayload, mapSemanticMode) {
+    const collection = getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political");
+    return getPromotablePoliticalPayloadDecision(collection, mapSemanticMode);
+  }
+
   function normalizeScenarioSourceMetadata(source) {
     return source && typeof source === "object" ? source : {};
   }
@@ -399,16 +430,32 @@ function createScenarioStartupHydrationController({
         reason: "scenario-hydrate-opening",
       });
     }
-    const nextScenarioPoliticalPayload = normalizeScenarioFeatureCollection(
-      mergedPoliticalPayload !== undefined
-        ? mergedPoliticalPayload
-        : (
-          getScenarioDecodedCollection(bundle, "politicalData")
-          || getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political")
-          || state.scenarioPoliticalChunkData
-        )
-    ) || null;
+    const runtimePoliticalPayloadDecision = getPoliticalPayloadDecisionFromRuntimeTopology(
+      runtimeTopologyPayload,
+      mapSemanticMode,
+    );
+    const decodedPoliticalPayloadDecision = getPromotablePoliticalPayloadDecision(
+      getScenarioDecodedCollection(bundle, "politicalData"),
+      mapSemanticMode,
+    );
     const previousScenarioPoliticalPayload = state.scenarioPoliticalChunkData;
+    let nextScenarioPoliticalPayload = previousScenarioPoliticalPayload || null;
+    if (runtimePoliticalPayloadDecision.hasPayload) {
+      nextScenarioPoliticalPayload = runtimePoliticalPayloadDecision.payload;
+    }
+    if (decodedPoliticalPayloadDecision.hasPayload) {
+      nextScenarioPoliticalPayload = decodedPoliticalPayloadDecision.payload;
+    }
+    if (mergedPoliticalPayload !== undefined) {
+      let mergedPoliticalPayloadDecision = { hasPayload: true, payload: null };
+      if (mergedPoliticalPayload !== null) {
+        mergedPoliticalPayloadDecision = getPromotablePoliticalPayloadDecision(
+          mergedPoliticalPayload,
+          mapSemanticMode
+        );
+      }
+      nextScenarioPoliticalPayload = mergedPoliticalPayloadDecision.payload;
+    }
     const promotedScenarioPolitical = applyScenarioPoliticalChunkPayload(
       bundle,
       nextScenarioPoliticalPayload,
@@ -418,15 +465,15 @@ function createScenarioStartupHydrationController({
         changedLayerKeys: hydrationChangedLayerKeys,
       }
     );
-    const politicalPayloadChangedForFallback = !!(
-      nextScenarioPoliticalPayload
-      && !areScenarioFeatureCollectionsEquivalent(nextScenarioPoliticalPayload, previousScenarioPoliticalPayload)
+    const hasPoliticalPayloadChange = !areScenarioFeatureCollectionsEquivalent(
+      nextScenarioPoliticalPayload,
+      previousScenarioPoliticalPayload
     );
     if (!promotedScenarioPolitical) {
       setScenarioRuntimeOptionalLayerState(state, {
         scenarioPoliticalChunkData: nextScenarioPoliticalPayload,
       });
-      if (politicalPayloadChangedForFallback) {
+      if (hasPoliticalPayloadChange) {
         refreshMapDataForScenarioChunkPromotion({
           suppressRender: !renderNow,
           hasPoliticalPayloadChange: true,
@@ -439,7 +486,7 @@ function createScenarioStartupHydrationController({
         });
       }
     }
-    if (scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback) {
+    if (scenarioAtlantropaChanged && !promotedScenarioPolitical && !hasPoliticalPayloadChange) {
       refreshMapDataForScenarioChunkPromotion({
         suppressRender: !renderNow,
         reason: "scenario-hydrate-atlantropa",
@@ -447,7 +494,7 @@ function createScenarioStartupHydrationController({
         hasPoliticalPayloadChange: false,
       });
     }
-    if (scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback) {
+    if (scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !hasPoliticalPayloadChange) {
       refreshMapDataForScenarioChunkPromotion({
         suppressRender: !renderNow,
         reason: "scenario-hydrate-water",

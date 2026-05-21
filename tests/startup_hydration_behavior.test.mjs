@@ -1,11 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { createScenarioStartupHydrationController } from "../js/core/scenario/startup_hydration.js";
 import {
   createStartupScenarioBootstrapCacheKey,
   createStartupScenarioBootstrapCoreCacheKey,
 } from "../js/core/startup_cache.js";
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function readRepoFile(...segments) {
+  return readFileSync(path.join(REPO_ROOT, ...segments), "utf8");
+}
 
 function createMinimalHydrationController(state, overrides = {}) {
   return createScenarioStartupHydrationController({
@@ -44,6 +53,19 @@ function createMinimalHydrationController(state, overrides = {}) {
     ...overrides,
   });
 }
+
+test("startup shell-empty scenario political baseline cannot fall back to modern primary", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+
+  assert.match(
+    rendererSource,
+    /const hasScenarioRuntimePoliticalSource = !!String\(runtimeState\.activeScenarioId \|\| ""\)\.trim\(\)\s*&& !!runtimeTopology\?\.objects\?\.political;/,
+  );
+  assert.match(
+    rendererSource,
+    /if \(runtimeBaseCollection\) \{[\s\S]*?fullCollection = runtimeBaseCollection;[\s\S]*?\} else if \(hasScenarioRuntimePoliticalSource\) \{[\s\S]*?fullCollection = \{ type: "FeatureCollection", features: \[\] \};[\s\S]*?\} else if \(primaryTopology\?\.objects\?\.political/,
+  );
+});
 
 test("runtime version tag is driven by source sha metadata", () => {
   const { buildScenarioRuntimeVersionTag } = createMinimalHydrationController({ activeScenarioId: "sample" });
@@ -141,6 +163,219 @@ test("startup hydration allows blank scenario runtime topology shells", () => {
   assert.equal(state.startupReadonly, false);
   assert.equal(state.scenarioHydrationHealthGate, null);
   assert.equal(state.runtimePoliticalTopology, blankTopology);
+});
+
+test("startup hydration clears stale political chunk when runtime-only shell fallback arrives", () => {
+  const originalTopojson = globalThis.topojson;
+  const appliedPayloads = [];
+  const promotionCalls = [];
+  globalThis.topojson = {
+    feature: (_topology, object) => ({
+      type: "FeatureCollection",
+      features: (object?.geometries || []).map((geometry) => ({
+        type: "Feature",
+        id: geometry?.id,
+        properties: { ...(geometry?.properties || {}), id: geometry?.id },
+        geometry: { type: "Polygon", coordinates: [] },
+      })),
+    }),
+  };
+  try {
+    const shellTopology = {
+      type: "Topology",
+      objects: {
+        political: {
+          type: "GeometryCollection",
+          geometries: [{
+            id: "RU_ARCTIC_FB_ALT_001",
+            properties: {
+              id: "RU_ARCTIC_FB_ALT_001",
+              scenario_helper_kind: "shell_fallback",
+              render_as_base_geography: false,
+            },
+          }],
+        },
+      },
+      arcs: [],
+    };
+    const shellCollection = {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        id: "RU_ARCTIC_FB_ALT_001",
+        properties: {
+          id: "RU_ARCTIC_FB_ALT_001",
+          scenario_helper_kind: "shell_fallback",
+          render_as_base_geography: false,
+        },
+        geometry: { type: "Polygon", coordinates: [] },
+      }],
+    };
+    const stalePoliticalChunk = {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        id: "STALE_COUNTRY",
+        properties: { id: "STALE_COUNTRY" },
+        geometry: { type: "Polygon", coordinates: [] },
+      }],
+    };
+    const state = {
+      activeScenarioId: "tno_1962",
+      startupReadonly: false,
+      scenarioHydrationHealthGate: null,
+      runtimePoliticalTopology: null,
+      scenarioRuntimeTopologyData: null,
+      scenarioPoliticalChunkData: stalePoliticalChunk,
+      scenarioWaterRegionsData: null,
+      scenarioSpecialRegionsData: null,
+      scenarioAtlantropaData: null,
+      scenarioLandMaskData: null,
+      scenarioContextLandMaskData: null,
+      scenarioWaterOverlayVersionTag: "",
+      scenarioLandMaskVersionTag: "",
+      scenarioContextLandMaskVersionTag: "",
+      defaultReleasableCatalog: null,
+    };
+    const { hydrateActiveScenarioBundle } = createMinimalHydrationController(state, {
+      getScenarioRuntimeMergedLayerPayloads: () => ({ political: shellCollection }),
+      hasScenarioMergedLayerPayload: (_payloads, layerKey) => layerKey === "political",
+      applyScenarioPoliticalChunkPayload: (_bundle, payload) => {
+        appliedPayloads.push(payload);
+        return false;
+      },
+      areScenarioFeatureCollectionsEquivalent: () => false,
+      refreshMapDataForScenarioChunkPromotion: (options) => {
+        promotionCalls.push(options);
+      },
+    });
+
+    const hydrated = hydrateActiveScenarioBundle({
+      manifest: { scenario_id: "tno_1962", map_mode: "ownership" },
+      source: {
+        runtime_bootstrap_topology_sha256: "bootstrap-sha",
+        detail_chunk_manifest_sha256: "chunk-sha",
+      },
+      bundleLevel: "full",
+      runtimeTopologyPayload: shellTopology,
+    });
+
+    assert.equal(hydrated, true);
+    assert.equal(state.runtimePoliticalTopology, shellTopology);
+    assert.equal(state.scenarioRuntimeTopologyData, shellTopology);
+    assert.equal(state.scenarioPoliticalChunkData, null);
+    assert.equal(appliedPayloads.length, 1);
+    assert.equal(appliedPayloads[0], null);
+    assert.equal(promotionCalls.length, 1);
+    assert.equal(promotionCalls[0].hasPoliticalPayloadChange, true);
+  } finally {
+    globalThis.topojson = originalTopojson;
+  }
+});
+
+test("startup hydration filters runtime-only shell fallback from mixed political payload", () => {
+  const originalTopojson = globalThis.topojson;
+  const appliedPayloads = [];
+  globalThis.topojson = {
+    feature: (_topology, object) => ({
+      type: "FeatureCollection",
+      features: (object?.geometries || []).map((geometry) => ({
+        type: "Feature",
+        id: geometry?.id,
+        properties: { ...(geometry?.properties || {}), id: geometry?.id },
+        geometry: { type: "Polygon", coordinates: [] },
+      })),
+    }),
+  };
+  try {
+    const mixedTopology = {
+      type: "Topology",
+      objects: {
+        political: {
+          type: "GeometryCollection",
+          geometries: [
+            { id: "REAL_COUNTRY", properties: { id: "REAL_COUNTRY" } },
+            {
+              id: "RU_ARCTIC_FB_ALT_001",
+              properties: {
+                id: "RU_ARCTIC_FB_ALT_001",
+                scenario_helper_kind: "shell_fallback",
+                render_as_base_geography: false,
+              },
+            },
+          ],
+        },
+      },
+      arcs: [],
+    };
+    const mixedCollection = {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        id: "REAL_COUNTRY",
+        properties: { id: "REAL_COUNTRY" },
+        geometry: { type: "Polygon", coordinates: [] },
+      }, {
+        type: "Feature",
+        id: "RU_ARCTIC_FB_ALT_001",
+        properties: {
+          id: "RU_ARCTIC_FB_ALT_001",
+          scenario_helper_kind: "shell_fallback",
+          render_as_base_geography: false,
+        },
+        geometry: { type: "Polygon", coordinates: [] },
+      }],
+    };
+    const state = {
+      activeScenarioId: "tno_1962",
+      startupReadonly: false,
+      scenarioHydrationHealthGate: null,
+      runtimePoliticalTopology: null,
+      scenarioRuntimeTopologyData: null,
+      scenarioPoliticalChunkData: null,
+      scenarioWaterRegionsData: null,
+      scenarioSpecialRegionsData: null,
+      scenarioAtlantropaData: null,
+      scenarioLandMaskData: null,
+      scenarioContextLandMaskData: null,
+      scenarioWaterOverlayVersionTag: "",
+      scenarioLandMaskVersionTag: "",
+      scenarioContextLandMaskVersionTag: "",
+      defaultReleasableCatalog: null,
+    };
+    const { hydrateActiveScenarioBundle } = createMinimalHydrationController(state, {
+      getScenarioRuntimeMergedLayerPayloads: () => ({ political: mixedCollection }),
+      hasScenarioMergedLayerPayload: (_payloads, layerKey) => layerKey === "political",
+      applyScenarioPoliticalChunkPayload: (_bundle, payload) => {
+        appliedPayloads.push(payload);
+        return false;
+      },
+      areScenarioFeatureCollectionsEquivalent: () => false,
+    });
+
+    const hydrated = hydrateActiveScenarioBundle({
+      manifest: { scenario_id: "tno_1962", map_mode: "ownership" },
+      source: {
+        runtime_bootstrap_topology_sha256: "bootstrap-sha",
+        detail_chunk_manifest_sha256: "chunk-sha",
+      },
+      bundleLevel: "full",
+      runtimeTopologyPayload: mixedTopology,
+    });
+
+    assert.equal(hydrated, true);
+    assert.equal(appliedPayloads.length, 1);
+    assert.deepEqual(
+      appliedPayloads[0].features.map((feature) => feature.id),
+      ["REAL_COUNTRY"],
+    );
+    assert.deepEqual(
+      state.scenarioPoliticalChunkData.features.map((feature) => feature.id),
+      ["REAL_COUNTRY"],
+    );
+  } finally {
+    globalThis.topojson = originalTopojson;
+  }
 });
 
 test("startup scenario cache keys change when source sha metadata changes", () => {

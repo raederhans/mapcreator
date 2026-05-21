@@ -103,6 +103,13 @@ export function createDeferredDetailPromotionOwner({
     return "setMapData";
   }
 
+  function shouldAdoptDeferredRuntimePoliticalTopology() {
+    if (!String(runtimeState.activeScenarioId || "").trim()) {
+      return true;
+    }
+    return !runtimeState.runtimePoliticalTopology?.objects?.political;
+  }
+
   /**
    * 事务：detail topology 准备。
    * 成功路径：加载 detail bundle -> 写入 topology/detail/runtime runtimeState -> 刷新 map data -> 标记 detailPromotionCompleted。
@@ -172,8 +179,10 @@ export function createDeferredDetailPromotionOwner({
       }
 
       runtimeState.topologyDetail = topologyDetail;
-      runtimeState.runtimePoliticalTopology = runtimePoliticalTopology || runtimeState.runtimePoliticalTopology;
-      if (!runtimeState.activeScenarioId) {
+      if (shouldAdoptDeferredRuntimePoliticalTopology()) {
+        runtimeState.runtimePoliticalTopology = runtimePoliticalTopology || runtimeState.runtimePoliticalTopology;
+      }
+      if (!String(runtimeState.activeScenarioId || "").trim()) {
         runtimeState.defaultRuntimePoliticalTopology = runtimeState.runtimePoliticalTopology || null;
       }
       runtimeState.topologyBundleMode = topologyBundleMode || "composite";

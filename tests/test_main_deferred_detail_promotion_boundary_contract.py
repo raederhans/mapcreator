@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail_promotion.js"
+MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 
 
 class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
@@ -29,6 +30,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
         self.assertIn("function prioritizeViewportFocusCountry({", owner_content)
         self.assertIn("function syncScenarioReadyUiAfterDetailPromotion()", owner_content)
         self.assertIn("function applyDetailPromotionMapRefresh({", owner_content)
+        self.assertIn("function shouldAdoptDeferredRuntimePoliticalTopology()", owner_content)
         self.assertIn("async function ensureDetailTopologyReady({", owner_content)
         self.assertIn("async function unlockStartupReadonlyWithDetail(renderDispatcher)", owner_content)
         self.assertIn("function scheduleStartupReadonlyUnlock(", owner_content)
@@ -52,22 +54,33 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             "refreshMapDataForScenarioApply({ suppressRender: true });",
             owner_content,
         )
-        detail_refresh_source = owner_content[
-            owner_content.index("function applyDetailPromotionMapRefresh({"):
-            owner_content.index("/**", owner_content.index("function applyDetailPromotionMapRefresh({"))
-        ]
-        active_scenario_refresh_source = detail_refresh_source[
-            detail_refresh_source.index("if (hasActiveScenario) {"):
-            detail_refresh_source.index("setMapData({", detail_refresh_source.index("if (hasActiveScenario) {"))
-        ]
-        self.assertIn(
-            "refreshMapDataForScenarioApply({ suppressRender: true });",
-            active_scenario_refresh_source,
+        self.assertRegex(
+            owner_content,
+            re.compile(
+                r"if \(hasActiveScenario\) \{\s*"
+                r"refreshMapDataForScenarioApply\(\{ suppressRender: true \}\);\s*"
+                r"return \"light\";\s*"
+                r"\}",
+                re.S,
+            ),
         )
-        self.assertNotIn("setMapData(", active_scenario_refresh_source)
-        self.assertNotIn("setMapData-fallback", detail_refresh_source)
-        self.assertNotIn("falling back to setMapData", detail_refresh_source)
-        self.assertNotIn("catch (error)", detail_refresh_source)
+        self.assertNotIn("setMapData-fallback", owner_content)
+        self.assertNotIn("falling back to setMapData", owner_content)
+        self.assertIn(
+            "if (!String(runtimeState.activeScenarioId || \"\").trim())",
+            owner_content,
+        )
+        self.assertIn("function shouldAdoptDeferredRuntimePoliticalTopology()", owner_content)
+        self.assertIn("return !runtimeState.runtimePoliticalTopology?.objects?.political;", owner_content)
+        self.assertIn("if (shouldAdoptDeferredRuntimePoliticalTopology())", owner_content)
+        self.assertIn(
+            "runtimeState.runtimePoliticalTopology = runtimePoliticalTopology || runtimeState.runtimePoliticalTopology;",
+            owner_content,
+        )
+        self.assertIn(
+            "runtimeState.defaultRuntimePoliticalTopology = runtimeState.runtimePoliticalTopology || null;",
+            owner_content,
+        )
         self.assertNotIn("forcePoliticalFullRepaint", owner_content)
         self.assertNotIn("detail-promotion-force", owner_content)
         self.assertRegex(
@@ -120,6 +133,48 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
         self.assertIsNone(re.search(r"function\s+prioritizeViewportFocusCountry\s*\(", donor_content))
         self.assertIsNone(re.search(r"function\s+applyDetailPromotionMapRefresh\s*\(", donor_content))
         self.assertIsNone(re.search(r"function\s+syncScenarioReadyUiAfterDetailPromotion\s*\(", donor_content))
+
+    def test_active_scenario_detail_promotion_refreshes_political_water_and_atlantropa_targets(self):
+        owner_content = DEFERRED_DETAIL_PROMOTION_JS.read_text(encoding="utf-8")
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+
+        self.assertRegex(
+            owner_content,
+            re.compile(
+                r"function applyDetailPromotionMapRefresh\([\s\S]*?"
+                r"if \(hasActiveScenario\) \{[\s\S]*?"
+                r"refreshMapDataForScenarioApply\(\{ suppressRender: true \}\);",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            renderer_content,
+            re.compile(
+                r"function refreshMapDataForScenarioApply\([\s\S]*?"
+                r'targetPasses: \["background", "physicalBase", "political", "contextBase", "contextScenario", "dayNight", "borders", "labels"\],[\s\S]*?'
+                r'resetWaterCacheReason: "scenario-switch-complete"',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            renderer_content,
+            re.compile(
+                r"function refreshMapDataForScenarioApply\([\s\S]*?"
+                r"const atlantropaWaterFeatureCount = getEffectiveAtlantropaFeatures\(\)\.water\.length;[\s\S]*?"
+                r"rebuildAuxiliaryRegionIndexes\(\);[\s\S]*?"
+                r"getSpatialIndexRuntimeOwner\(\)\.buildSecondarySpatialIndexes",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            renderer_content,
+            re.compile(
+                r"function refreshMapDataForScenarioChunkPromotion\([\s\S]*?"
+                r'const hasAtlantropaLayerChange = normalizedChangedLayerKeys\.includes\("scenario_atlantropa"\);[\s\S]*?'
+                r'"water"',
+                re.S,
+            ),
+        )
 
 
 if __name__ == "__main__":

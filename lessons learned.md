@@ -4,15 +4,13 @@
 
 ## 当前高频主题
 
-- canonical 输入保持单一真相源，公开产物、诊断文件和 builder/publish/tooling 一起围绕它收口。
-- startup、chunk、runtime、checked-in scenario artifacts 要按同一套 contract 一起迁移和验证。
+- canonical 输入、checked-in 产物和运行时 contract 要共用同一份真相源。
+- 边界切换要同波次收口 validator、fixture、发布链和真实数据。
 - live test、长构建、browser smoke 一律单 owner，长流程默认后台日志。
-- UI / transport / special-zone 这类 cutover 要把 reader、writer、validator、checked-in data 同波次切完。
-- 真实回归优先查 checked-in data、manifest、snapshot、audit，再调 runtime 和 renderer。
 
 ## 2026-04-03 - TNO 1962 bundle / 编辑链重构
 
-### 1. 长构建 / 长测试先走后台日志，并先排最小静态检查
+### 1. 长构建 / live test 先锁 owner，再走后台日志和最小静态检查
 - “闪退”优先当成前置校验失败或前台会话不稳，不先当成随机崩溃。
 - 小测试可前台跑，完整 `pytest/unittest` 和长构建默认后台日志，分开保存 `stdout`、`stderr`、退出码和锁文件。
 - 完整 rebuild 前，先做最小静态检查：
@@ -21,6 +19,7 @@
   - checkpoint 锁是否正常
 - 先看 `.runtime/tmp/*.out.log`、`.runtime/tmp/*.err.log`、PID、退出码，再判断是不是代码失败。
 - rebuild 产物要整体审查；如果 manifest 引用了新 chunk，文件也必须一起提交。
+- live test 默认串行；先关掉还在运行的写线子代理，再由主线程独占执行所有验证。
 
 ### 3. 重逻辑要按事务边界拆，不要按文件类型拆
 - 先找一笔完整 transaction 的输入输出，再抽 materializer / service。
@@ -61,11 +60,6 @@
 - `capitals_by_tag` / `capital_city_hints` 来自 capital mutation / defaults。
 - 最终只通过 composer 合成新的 `city_overrides.json`。
 
-### 10. 强制切换输入边界时，测试夹具要一起切
-- 删除 fallback 后，最先坏的往往不是生产代码，而是测试夹具还活在兼容期。
-- 新的必需输入文件要让共享 fixture 默认生成。
-- 旧断言里不能继续期待 stale 发布态内容会回流进新结果。
-
 ### 11. 审核重构进度时，要分清三件事
 - 代码是否已改
 - 测试是否已约束
@@ -86,10 +80,6 @@
 - 如果 `locales.startup.json` / `geo_aliases.startup.json` 已经参与 startup bundle 构筑，就应当进入 checkpoint artifact 和 scenario publish contract。
 - 继续把它们留在 root 当 supporting file，只会让 build、publish、fallback 各走各的路径。
 - 更稳的最短路径是：checkpoint 内生成，scenario 目录正式发布，fallback 也直接读 scenario-scoped 版本。
-
-### 16. live test 归属要先锁死，不能在收尾阶段并行起两条 unittest
-- 就算都是短测，也要默认串行；一旦 parent 和子代理同时持有 live test，日志归属会立刻混乱。
-- 正确顺序是：先关掉还在运行的写线子代理，再由主线程独占执行所有验证。
 
 ### 17. 抽 service 时，测试要跟着切到真实写口，不能继续 patch 旧 adapter helper
 - 业务 helper 下沉后，dev_server.write_json_atomic 这类旧入口不一定还是实际写口；继续 patch 旧入口，测出来的只会是过时实现。
@@ -192,18 +182,14 @@
 - Keep empty named topology objects plus runtime_political_meta in startup bundle, and leave real overlay geometry to deferred hydration.
 - chunked-coarse startup shell 还要显式表达“该层为空但合同存在”；如果场景没有 water / special runtime object，也要发布空 `land_mask` / `context_land_mask` / `scenario_water` shell object，并继续用 `runtime_political_meta` 表达政治要素身份，避免回退到 legacy bootstrap。
 
-### 43. UI controller 拆分后，静态合同要跟着切到新的 owner 文件
+### 43. UI owner / facade / support surface 拆分要同波次收口
 - shared boot fixture 灰度前，要先把 localStorage、globalThis 调试钩子、scenario reset 三类泄漏面集中收口成 guard
   - 这次 city-runtime 静态复核里，真正阻碍共享启动的核心不是等待 helper，而是 `map_view_settings_v1`、`__e2eCityLabelDraws`、`__playwrightScenarioApplyState`、`state.riversData` 这类跨用例残留点。
   - 更稳的路径是先补 `boot profile key + reset/teardown + failure-context artifact`，再让 spec 小范围 opt-in。
 - 像 transport workbench 这种大面板拆到 `toolbar/*_controller.js` 之后，旧测试如果还盯 `toolbar.js` 的实现细节，会把正确的 owner 迁移误报成回归。
 - 更稳的做法是把 facade 合同继续钉在 `toolbar.js`，把内部文案、manifest/runtime 读取、面板事件绑定这些 owner 合同切到新的 controller 文件。
-
-### 44. support surface 这类壳层协调要单独成 owner，别和具体面板实现搅在一起
 - guide、dock reference、URL restore、outside click、Escape 关闭链属于同一层 workspace chrome 协调，和 export/transport/special zone 的面板内部实现是两层职责。
 - 更稳的拆法是：面板内部逻辑进各自 controller，support surface 壳层再单独进 `workspace_chrome_support_surface_controller.js`，测试也分成 facade 合同和 owner 合同两层。
-
-### 45. facade 还在运行链上时，拆 owner 不能顺手带走 facade
 - `toggleLeftPanel`、`toggleRightPanel`、`toggleDock`、`syncPanelToggleButtons`、`state.toggle*` 这类函数如果还被 shortcuts、restore 链、其他 controller 直接调用，就属于 `toolbar.js` 的运行态 facade。
 - 更稳的拆法是：owner 逻辑下沉，新旧 facade 继续留在 `toolbar.js`，等所有调用方一起迁完再决定是否收口。
 
@@ -246,12 +232,8 @@
 - 更稳的最小修复是先确认上层 fill 是否透明，再决定 physical ownership；在不改 political opacity 的前提下，优先把最抢眼的 atlas fill 下沉，把最轻的 contour cue 留在上层。
 
 ### 54. Ready text and editability must use the same runtime contract
-- TNO 1962 showed detail promotion completed and startupReadonly=false while the status bar still claimed coarse mode, so status copy and edit locks cannot be derived from separate stale flags.
-- Keep startup readonly for startup unlock only; treat post-ready overlay degradation as a separate health-gate state, and drive status text/buttons from the real ready state.
-
-### 55. detail promotion 完成后，状态文案不能继续吃旧的 scenarioDataHealth 快照
-- 这次浏览器里 `detailPromotionCompleted=true`、`topologyBundleMode="composite"` 已经成立，但状态栏还残留 coarse mode，说明 detail promotion 链只更新了渲染，没有同步刷新 status 依赖的数据。
-- 更稳的做法是：detail promotion 一旦落地，就在同一轮里刷新 scenarioDataHealth 和 scenario UI，避免“画面是 detail，文案还是 coarse”的假只读感。
+- TNO 1962 showed detail promotion completed and startupReadonly=false while the status bar still claimed coarse mode, so status copy, edit locks, and health snapshots cannot be derived from separate stale flags.
+- Keep startup readonly for startup unlock only; treat post-ready overlay degradation as a separate health-gate state, and refresh scenarioDataHealth plus scenario UI in the same promotion wave.
 
 ### 56. hydration / health gate 做要素重叠校验时，不能优先读 topology 自动编号 `feature.id`
 - 这次 TNO 1962 detail runtime 里很多 feature 的真正稳定 id 在 `properties.id`，而 `feature.id` 只是 0,1,2 这种自动编号；如果校验逻辑优先读 `feature.id`，owner overlap 会被误判成几乎全丢。
@@ -1508,11 +1490,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 - 浏览器点击验证微小重叠地块时，按 prefix 至少取多个 screen-space grid 点；单点 bbox center 会把几何细线和重叠优先级误报成交互失败。
 - `ATLSEA_FILL` / `ATLSHL` 这类非水 Atlantropa 地块进入 land spatial index 后，也要在 scenario water pass 之后按 `atl_color_rule` 重绘；否则会出现“可命中但视觉仍是海色”的假修复。
 
-## 2026-05-07 - ATLSEA_FILL sea-completion semantics
-
-- `ATLSEA_FILL_*` 的源属性是 `atl_surface_kind=sea` / `atl_geometry_role=sea_completion`，应按 `water/atlantropa_sea` 路由；把它们当 `shoal/salt_flat` 会把真实海面画成褐色。
-- 大岛 boolean weld 修空洞后还要对照 runtime baseline 做覆盖率探针；Cyprus 这类 donor AOI 裁剪会留下整侧缺块。
-
 ## 2026-05-11 - TNO scenario publish stabilization
 
 - Windows 上大 JSON 的 atomic replace 可能被短时文件占用打断；通用 writer 里做有限 `PermissionError` retry，比在 chunk/startup 各自叠补丁更稳。
@@ -1532,10 +1509,6 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-12 - E2E route retirement hygiene
 
 - 退休一个 Playwright spec 时要同步删除 manifest、checked-in test lists、timeout allowlist、import graph 和相关结构测试引用；只删 spec 会留下假路由或 stale guardrail。
-
-## 2026-05-12 - TNO Atlantropa chunk E2E contract
-
-- E2E 直接等待 chunk id 时，必须对照 `detail_chunks.manifest.json` 的真实 id 和 `min_zoom`；等待未注册 id 或低于阈值的 detail chunk 会表现成 render/chunk idle 超时。
 
 ### 45. transport country pack 发布前，真实源、匹配规则和审计签名要一起过门
 - 如果官方源还没有进 `.runtime/source-cache/transport/...`，宁可让 builder/source gate 红灯，也不要先用 global transport 或 Natural Earth clip 做“临时生产包”。
@@ -1587,31 +1560,22 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - 当 `perf:gate` 在补丁分支变红时，先 stash 补丁在同一机器同一 dev server 上跑 HEAD；如果 HEAD 同样红，就把它记录为 benchmark/environment drift，再用具体 per-metric artifact 说明补丁本身的成本。
 
-## 2026-05-19 - descriptor split contract hygiene
+## 2026-05-19 - owner split closeout hygiene
 
-- 从 controller 拆出 descriptor/summary 后，测试要覆盖导出 helper 的真实可用性和返回值；`node --check` 只能证明语法，不能抓住 moved helper 未 import 的运行时 `ReferenceError`。
-- 新 summary owner 应接收窄输入；继续读取整包 `runtimeState` 或全局 metrics 会把耦合搬家，并可能用旧诊断数据生成假 summary。
-- 从 controller 移出的默认配置和 schema 要以只读形式导出，避免多个 owner 后续共享可变对象。
-
-## 2026-05-19 - map_renderer facade cleanup boundary
-
-- 删除一行 owner proxy 前先区分 internal proxy 和 public read-model facade；`buildCityRevealPlan` / `getEffectiveCityCollection` 这类被 UI/E2E 依赖的读模型要用 export-block contract 锁住，内部 helper 才适合直接 owner 调用。
-- 去掉代理后，测试要同时防回归和锁顺序；只数调用次数会漏掉 reset/build、dirty/signature、render-pass 这类时序合同。
+- 从 controller 或 renderer facade 拆 owner 后，测试要覆盖导出 helper 的真实可用性和返回值；`node --check` 只能证明语法，抓不住 moved helper 未 import 的运行时 `ReferenceError`。
+- 新 owner 应接收窄输入，移出的默认配置和 schema 继续按只读方式导出，避免把整包 `runtimeState`、全局 metrics 或共享可变对象一起搬过去。
+- 删除 donor proxy 前先区分 internal proxy 和 public read-model facade；`buildCityRevealPlan`、`getEffectiveCityCollection` 这类公共读模型要继续用 export-block contract 锁住，避免拆分后把对外合同一起剪断。
+- 多分支 owner 要逐个覆盖 ready/error/loading 等 live 分支；close/dispose 路径如果会清空 listener，也要在同一关闭链恢复 runtime listener，避免 reopen 后静默断链。
+- owner 迁走后要同步删掉 donor facade 里已经无使用者的 DOM 查询，并继续检查关键 `getElementById(...)` 和 render-pass 时序不会回流到旧 facade。
 
 ## 2026-05-19 - transport appearance performance batching
 
 - rAF 批量刷新 summary 时，render 请求必须在事件当下发出；把 `renderDirty()` 延后到 UI rAF 会让 summary 读到上一帧 metrics。
 - 热路径 cache key 要只包含会改变结果的字段；opacity、颜色、strength 这类纯视觉字段不应让 transport filtered count 重新扫描大集合。
 
-## 2026-05-19 - transport workbench preview listener lifecycle
+## 2026-05-20 - physical layer paint authority
 
-- 如果 dispose 会销毁底层 carrier 并清空 listener，owner 必须在同一关闭路径恢复 runtime listener；只在 app 启动时注册一次会让 close/open 后的 view sync 断链。
-
-## 2026-05-19 - inspector model owner split coverage
-
-- 从大型 controller 迁出多分支 inspector 模型时，测试必须逐个覆盖每个 live family 的 ready/error/loading 分支；只测一个代表 family 会让漏搬表现成“reserved shell”静默退化。
-
-## 2026-05-20 - toolbar owner split dead DOM cleanup
-
-- 从 `toolbar.js` 或大型 controller 拆出 owner 后，要同步删除原 facade 里已无使用者的 DOM 查询；这些查询会继续增加启动成本，也会误导后续 owner 边界判断。
-- 边界合同除了检查 helper 迁出，还要检查关键 `getElementById(...)` 查询不会回流到旧 facade。
+- 默认开启的地貌填充必须作为 political 下层 underlay 绘制；如果 relief/atlas 放进 `contextBase`，它会在 political 之后覆盖国家填色和画笔结果。
+- 这类问题的合同测试要同时钉住 pass 顺序和具体 draw helper 所属 pass，单看 `physicalBase -> political -> contextBase` 顺序会漏掉 helper 被放错层的问题。
+- Runtime-only `shell_fallback + render_as_base_geography:false` 是诊断/辅助形状，non-blank 场景里必须在政治底图入口过滤；shell-only payload 也要清空旧 chunk，避免旧政治数据被静默复用。
+- 过滤 shell-only runtime political payload 后，active scenario 仍要保留 scenario-owned 空政治基线；让空结果落到 modern primary fallback 会重新把现代大国轮廓盖到 TNO 细分国家上。

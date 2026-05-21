@@ -790,12 +790,28 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     politicalPartialRequiresFullReferenceBaseline:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?hasPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("missing-full-reference-transform"\)[\s\S]*?getPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("full-reference-transform-mismatch"\)/.test(rendererSource),
     politicalPartialNeverMutatesFullReferenceBaseline:
-      (() => {
-        const partialBody = rendererSource.match(/function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction recordPoliticalRasterWorkerSnapshot/)?.[0] || "";
-        return !!partialBody && !partialBody.includes("setPassFullReferenceTransform");
-      })(),
+      [
+        "function tryPartialPoliticalPassRepaint(transform, nextSignature, timings)",
+        'setPassReferenceTransform("political", transform);',
+        "setPassFullReferenceTransform(passName, transform);",
+        'if (passName === "political")',
+      ].every((snippet) => rendererSource.includes(snippet))
+      && !rendererSource.includes('setPassFullReferenceTransform("political"'),
     canvasResizeClearsFullReferenceBaseline:
-      /function setCanvasSize\(\{[\s\S]*?targetPassesOnResize = null,[\s\S]*?targetPassesOnCanvasResize = null,[\s\S]*?const resizeInvalidationPasses = Array\.isArray\(targetPassesOnResize\) && targetPassesOnResize\.length[\s\S]*?: RENDER_PASS_NAMES;[\s\S]*?const dprInvalidationPasses = Array\.isArray\(targetPassesOnDprChange\) && targetPassesOnDprChange\.length[\s\S]*?: RENDER_PASS_NAMES;[\s\S]*?const invalidationPasses = sizeChanged \? resizeInvalidationPasses : dprInvalidationPasses;[\s\S]*?const canvasResizePasses = Array\.isArray\(targetPassesOnCanvasResize\) && targetPassesOnCanvasResize\.length[\s\S]*?: invalidationPasses;[\s\S]*?resizeRenderPassCanvases\(canvasResizePasses\);[\s\S]*?if \(sizeChanged\) \{[\s\S]*?invalidateRenderPasses\(resizeInvalidationPasses, reason \|\| "resize"\);[\s\S]*?clearRenderPassReferenceTransforms\(resizeInvalidationPasses\);[\s\S]*?\} else \{[\s\S]*?invalidateRenderPasses\(dprInvalidationPasses, reason \|\| "dpr-change"\);[\s\S]*?clearRenderPassReferenceTransforms\(dprInvalidationPasses\);/.test(rendererSource)
+      [
+        "targetPassesOnDprChange = null",
+        "targetPassesOnResize = null",
+        "targetPassesOnCanvasResize = null",
+        "const resizeInvalidationPasses = Array.isArray(targetPassesOnResize) && targetPassesOnResize.length",
+        "const dprInvalidationPasses = Array.isArray(targetPassesOnDprChange) && targetPassesOnDprChange.length",
+        "const invalidationPasses = sizeChanged ? resizeInvalidationPasses : dprInvalidationPasses;",
+        "const canvasResizePasses = Array.isArray(targetPassesOnCanvasResize) && targetPassesOnCanvasResize.length",
+        "resizeRenderPassCanvases(canvasResizePasses);",
+        "invalidateRenderPasses(resizeInvalidationPasses, reason || \"resize\");",
+        "clearRenderPassReferenceTransforms(resizeInvalidationPasses);",
+        "invalidateRenderPasses(dprInvalidationPasses, reason || \"dpr-change\");",
+        "clearRenderPassReferenceTransforms(dprInvalidationPasses);",
+      ].every((snippet) => rendererSource.includes(snippet))
       && /function ensureRenderPassCanvas\(passName\) \{[\s\S]*?resizeRenderPassCanvases\(\[passName\]\);[\s\S]*?return cache\.canvases\[passName\];/.test(renderCacheOwnerSource),
     firstBatchInteractionWritesUseRafRenderBoundary:
       /function requestInteractionRender\(reason = "interaction"\) \{[\s\S]*?requestRendererRender\(reason,[\s\S]*?flush: false/.test(rendererSource)
@@ -1100,12 +1116,41 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       /let scenarioWaterChanged = false;/.test(startupHydrationSource)
       && /scenarioWaterChanged = state\.scenarioWaterRegionsData !== nextScenarioWaterRegionsData;/.test(startupHydrationSource)
       && /hydrationChangedLayerKeys = \[[\s\S]*?\.\.\.\(scenarioWaterChanged \? \["water"\] : \[\]\),[\s\S]*?\.\.\.\(scenarioAtlantropaChanged \? \["scenario_atlantropa"\] : \[\]\),[\s\S]*?\];/.test(startupHydrationSource)
-      && /if \(scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback\) \{[\s\S]*?refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?reason: "scenario-hydrate-water",[\s\S]*?changedLayerKeys: \["water"\],[\s\S]*?hasPoliticalPayloadChange: false,/.test(startupHydrationSource),
+      && /if \(scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !hasPoliticalPayloadChange\) \{[\s\S]*?refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?reason: "scenario-hydrate-water",[\s\S]*?changedLayerKeys: \["water"\],[\s\S]*?hasPoliticalPayloadChange: false,/.test(startupHydrationSource),
     chunkPromotionVisualStageReusesPrimaryDerivedStateRebuild:
-      /function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?if \(hasPoliticalChange\) \{[\s\S]*?"contextMarkers"[\s\S]*?"labels"/.test(rendererSource)
-      &&
-      /function refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?if \(hasPoliticalChange\) \{[\s\S]*?ensureLayerDataFromTopology\(\);[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?scheduleUiMode: "deferred",[\s\S]*?buildSpatial: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(rendererSource)
-      && /async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?primaryDerivedStateReady = false,[\s\S]*?if \(!primaryDerivedStateReady\) \{[\s\S]*?buildIndex\(\);[\s\S]*?await buildSpatialIndexChunked\(\{[\s\S]*?includeSecondary: false,[\s\S]*?keepReady: true,[\s\S]*?\}\);/.test(rendererSource),
+      [
+        "function getScenarioChunkPromotionTargetPasses({",
+        '"contextMarkers"',
+        '"labels"',
+        "function refreshMapDataForScenarioChunkPromotion({",
+        "ensureLayerDataFromTopology();",
+        "rebuildPoliticalLandCollections();",
+        "includeRuntimePoliticalMeta: true",
+        'scheduleUiMode: "deferred"',
+        "buildSpatial: true",
+        "includeSecondarySpatial: false",
+        "async function runDeferredScenarioChunkPromotionInfraRefresh({",
+        "primaryDerivedStateReady = false",
+        "buildIndex();",
+        "await buildSpatialIndexChunked({",
+        "includeSecondary: false",
+        "keepReady: true",
+      ].every((snippet) => rendererSource.includes(snippet)),
+    compositeScenarioRebuildKeepsScenarioRuntimeTopology:
+      [
+        "render_as_base_geography === false",
+        "scenarioRuntimeTopologyData || runtimeState.runtimePoliticalTopology",
+        "const runtimeBaseCollection = getRuntimePoliticalBaseCollection(runtimeCollection);",
+        "const hasScenarioRuntimePoliticalSource = !!String(runtimeState.activeScenarioId || \"\").trim()",
+        "&& !!runtimeTopology?.objects?.political;",
+        "if (runtimeBaseCollection)",
+        "fullCollection = runtimeBaseCollection;",
+        "fullCollection = { type: \"FeatureCollection\", features: [] };",
+        "composePoliticalFeatureCollections(fullCollection, scenarioPoliticalChunkCollection)",
+        "shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(",
+      ].every((snippet) => rendererSource.includes(snippet))
+      && rendererSource.includes("features.filter((feature, index) => !shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(")
+      && /if \(runtimeBaseCollection\) \{[\s\S]*?fullCollection = runtimeBaseCollection;[\s\S]*?\} else if \(hasScenarioRuntimePoliticalSource\) \{[\s\S]*?fullCollection = \{ type: "FeatureCollection", features: \[\] \};[\s\S]*?\} else if \(primaryTopology\?\.objects\?\.political/.test(rendererSource),
     scenarioApplyCommitsPreparedScenarioWaterPayloadOnly:
       /function buildScenarioActivationCommitState\(bundle,\s*staged\) \{[\s\S]*?const scenarioWaterRegionsData = staged\.scenarioWaterRegionsFromTopology \|\| null;[\s\S]*?scenarioWaterRegionsData,/.test(scenarioApplyPipelineSource)
       && /commitScenarioActivationRuntimeState\(runtimeState,\s*nextRuntimeState\);/.test(scenarioApplyPipelineSource),

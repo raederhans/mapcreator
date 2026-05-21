@@ -898,6 +898,8 @@ function initToolbar({ render } = {}) {
     }
   };
 
+  // runtime hooks 是 toolbar 壳层暴露给其他 owner 的控制平面。
+  // 其他模块通过这些窄入口开关 export/workbench，避免反向 import 具体 controller 并把 DOM 依赖扩散出去。
   registerRuntimeHook(state, "openExportWorkbenchFn", (trigger = dockExportBtn) => {
     setExportWorkbenchState(true, { trigger });
     return true;
