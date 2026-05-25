@@ -44,7 +44,7 @@ async function exportProjectPayload(appState) {
   }
 }
 
-async function importProjectPayload(payload) {
+async function importProjectPayload(payload, observerHooks = {}) {
   const previousDocument = globalThis.document;
   const previousFileReader = globalThis.FileReader;
   const callbacks = [];
@@ -71,8 +71,14 @@ async function importProjectPayload(payload) {
         callbacks.push(data);
       },
       {
-        onSuccess: (data) => successes.push(data),
-        onError: (error) => errors.push(error),
+        onSuccess: (data) => {
+          successes.push(data);
+          observerHooks.onSuccess?.(data);
+        },
+        onError: (error) => {
+          errors.push(error);
+          observerHooks.onError?.(error);
+        },
       }
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -250,4 +256,38 @@ test("project import notifies observers after successful import", async () => {
   assert.equal(result.successes.length, 1);
   assert.equal(result.errors.length, 0);
   assert.equal(result.successes[0].styleConfig.transportOverview.activePackIdByFamily.road, "germany_road");
+});
+
+test("project import success is not reclassified when status observer fails", async () => {
+  const previousConsoleError = console.error;
+  const consoleErrors = [];
+  console.error = (...args) => {
+    consoleErrors.push(args);
+  };
+
+  try {
+    const payload = await exportProjectPayload({
+      activePaletteId: "hoi4_vanilla",
+      annotationView: {},
+      exportWorkbenchUi: {},
+      styleConfig: {
+        transportOverview: {
+          activePackIdByFamily: { road: "germany_road" },
+        },
+      },
+    });
+
+    const result = await importProjectPayload(payload, {
+      onSuccess: () => {
+        throw new Error("status render failed");
+      },
+    });
+
+    assert.equal(result.callbacks.length, 1);
+    assert.equal(result.successes.length, 1);
+    assert.equal(result.errors.length, 0);
+    assert.match(String(consoleErrors[0]?.[0] || ""), /success observer failed/);
+  } finally {
+    console.error = previousConsoleError;
+  }
 });

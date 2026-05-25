@@ -712,6 +712,7 @@ export function createProjectSupportDiagnosticsController({
 
   return {
     bindEvents,
+    refreshProjectSaveStatus,
     refreshLegendEditor,
     renderScenarioAuditPanel,
   };

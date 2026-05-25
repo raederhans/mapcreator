@@ -571,6 +571,18 @@ class FileManager {
     if (!file) return;
     const notifySuccess = typeof observers.onSuccess === "function" ? observers.onSuccess : () => {};
     const notifyError = typeof observers.onError === "function" ? observers.onError : () => {};
+    const notifyObserver = (observer, payload, phase) => {
+      try {
+        const result = observer(payload);
+        if (result && typeof result.catch === "function") {
+          result.catch((error) => {
+            console.error(`[project-import] ${phase} observer failed:`, error);
+          });
+        }
+      } catch (error) {
+        console.error(`[project-import] ${phase} observer failed:`, error);
+      }
+    };
     const reader = new FileReader();
 
     reader.onload = async () => {
@@ -764,7 +776,7 @@ class FileManager {
           title: t("Project imported", "ui"),
           tone: "success",
         });
-        notifySuccess(data);
+        notifyObserver(notifySuccess, data, "success");
       } catch (error) {
         console.error("Failed to import project:", error);
         const tone = String(error?.toastTone || "error");
@@ -777,7 +789,7 @@ class FileManager {
           tone,
           duration: 4200,
         });
-        notifyError(error);
+        notifyObserver(notifyError, error, "error");
       }
     };
 
@@ -788,7 +800,7 @@ class FileManager {
         tone: "error",
         duration: 4200,
       });
-      notifyError(reader.error);
+      notifyObserver(notifyError, reader.error, "read-error");
     };
 
     reader.readAsText(file);

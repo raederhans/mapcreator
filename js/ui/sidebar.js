@@ -3993,6 +3993,7 @@ function initSidebar({ render } = {}) {
 
   let bindProjectSupportDiagnosticsEvents = () => {};
   let refreshLegendEditor = () => {};
+  let refreshProjectSaveStatus = () => {};
   let renderScenarioAuditPanel = () => {};
 
   let bindStrategicOverlayEvents = () => {};
@@ -5268,6 +5269,7 @@ function initSidebar({ render } = {}) {
   ({
     bindEvents: bindProjectSupportDiagnosticsEvents,
     refreshLegendEditor,
+    refreshProjectSaveStatus,
     renderScenarioAuditPanel,
   } = createProjectSupportDiagnosticsController({
     state,
@@ -5460,6 +5462,7 @@ function initSidebar({ render } = {}) {
   registerRuntimeHook(state, "updateScenarioSpecialRegionUIFn", renderSpecialRegionInspectorUi);
   registerRuntimeHook(state, "updateScenarioReliefOverlayUIFn", renderSpecialRegionInspectorUi);
   registerRuntimeHook(state, "updateLegendUI", refreshLegendEditor);
+  registerRuntimeHook(state, "updateProjectSaveStatusFn", refreshProjectSaveStatus);
   registerRuntimeHook(state, "renderScenarioAuditPanelFn", renderScenarioAuditPanel);
   registerRuntimeHook(state, "updateStrategicOverlayUIFn", refreshStrategicOverlayUI);
   registerRuntimeHook(state, "getStrategicOverlayPerfCountersFn", getStrategicOverlayPerfCounters);

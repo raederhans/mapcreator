@@ -1633,3 +1633,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 
 - Project import / export 这类异步闭环要有完成和失败 observer；只在按钮点击时写“started”状态，会让拆出的 status surface 停在过时文案。
 - 用户可见状态不要直接显示 `lastDirtyReason` 这类内部原因码；需要先映射成板块内可理解的状态文案，避免把 owner 内部契约泄漏到 Project Management。
+
+## 2026-05-25 - project status observer hardening
+
+- import/export 的 UI observer 只能做旁路通知；observer 异常应记录为 observer failure，不能把已经成功的导入事务改判成失败。
+- 保存状态类 live region 要接到 `markDirty` / `clearDirty` 共同路径；只在按钮 click 里刷新会漏掉 appearance、transport、special zones 这类跨入口编辑。

@@ -283,12 +283,18 @@ export function createStrategicOverlayController({
     const lineCount = Array.isArray(state.operationalLines) ? state.operationalLines.length : 0;
     const graphicCount = Array.isArray(state.operationGraphics) ? state.operationGraphics.length : 0;
     const counterCount = Array.isArray(state.unitCounters) ? state.unitCounters.length : 0;
-    strategicOverlayPublishStatus.textContent = `${lineCount} ${t("lines", "ui")} · ${graphicCount} ${t("graphics", "ui")} · ${counterCount} ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
-    strategicOverlayPublishStatus.title = t("Project export saves Strategic annotations.", "ui");
-    strategicOverlayPublishStatus.setAttribute(
-      "aria-label",
-      `${lineCount} ${t("lines", "ui")}, ${graphicCount} ${t("graphics", "ui")}, ${counterCount} ${t("counters", "ui")}. ${t("Project export saves Strategic annotations.", "ui")}`
-    );
+    const nextText = `${lineCount} ${t("lines", "ui")} · ${graphicCount} ${t("graphics", "ui")} · ${counterCount} ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
+    const nextTitle = t("Project export saves Strategic annotations.", "ui");
+    const nextLabel = `${lineCount} ${t("lines", "ui")}, ${graphicCount} ${t("graphics", "ui")}, ${counterCount} ${t("counters", "ui")}. ${nextTitle}`;
+    if (strategicOverlayPublishStatus.textContent !== nextText) {
+      strategicOverlayPublishStatus.textContent = nextText;
+    }
+    if (strategicOverlayPublishStatus.title !== nextTitle) {
+      strategicOverlayPublishStatus.title = nextTitle;
+    }
+    if (strategicOverlayPublishStatus.getAttribute("aria-label") !== nextLabel) {
+      strategicOverlayPublishStatus.setAttribute("aria-label", nextLabel);
+    }
   };
 
   const applyFrontlineAnnotationViewPatch = (patch = {}, dirtyReason = "frontline-overlay") => {

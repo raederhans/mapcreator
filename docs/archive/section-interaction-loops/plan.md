@@ -20,7 +20,7 @@ Polish section-level interaction loops without merging them into one global play
 - [x] Add per-section status/disabled-reason UI improvements.
 - [x] Extend existing tests and static contracts instead of creating a new test system.
 - [x] Run targeted verification owned by the main thread.
-- [ ] Run final bug review and update ultragoal evidence.
+- [x] Run final bug review and update ultragoal evidence.
 
 ## Live Process Ownership
 

@@ -88,6 +88,8 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn("state.unitCounters", content)
         self.assertIn("Export as Strategic annotations", content)
         self.assertIn("Project export saves Strategic annotations.", content)
+        self.assertIn("if (strategicOverlayPublishStatus.textContent !== nextText)", content)
+        self.assertIn('strategicOverlayPublishStatus.getAttribute("aria-label") !== nextLabel', content)
         self.assertEqual(content.count("refreshStrategicOverlayPublishStatus();"), 1)
 
     def test_controller_keeps_counter_modal_focus_return_to_toggle(self):
