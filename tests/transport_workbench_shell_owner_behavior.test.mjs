@@ -252,6 +252,7 @@ test("transport workbench shell owner skips unchanged shell writes", () => withT
   assert.equal(harness.nodes.rotateButton.getAttribute("aria-pressed"), "true");
   assert.equal(harness.nodes.familyTabs[0].getAttribute("aria-selected"), "true");
   assert.equal(harness.nodes.applyButton.disabled, false);
+  assert.equal(harness.nodes.applyButton.getAttribute("aria-label"), "Apply road");
   assert.deepEqual(harness.carrierFamilies, ["road", "road"]);
   assert.equal(harness.infoRenderCount, 2);
 }));
@@ -293,4 +294,6 @@ test("transport workbench shell owner updates changed family and preview control
   assert.equal(harness.nodes.compareButton.textContent, "t:Baseline unavailable");
   assert.equal(harness.nodes.familyTabs[1].getAttribute("aria-selected"), "true");
   assert.equal(harness.nodes.applyButton.disabled, true);
+  assert.equal(harness.nodes.applyButton.title, "Reserved");
+  assert.equal(harness.nodes.applyButton.getAttribute("aria-label"), "Unavailable: Reserved");
 }));

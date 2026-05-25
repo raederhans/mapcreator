@@ -284,6 +284,11 @@ export function createStrategicOverlayController({
     const graphicCount = Array.isArray(state.operationGraphics) ? state.operationGraphics.length : 0;
     const counterCount = Array.isArray(state.unitCounters) ? state.unitCounters.length : 0;
     strategicOverlayPublishStatus.textContent = `${lineCount} ${t("lines", "ui")} · ${graphicCount} ${t("graphics", "ui")} · ${counterCount} ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
+    strategicOverlayPublishStatus.title = t("Project export saves Strategic annotations.", "ui");
+    strategicOverlayPublishStatus.setAttribute(
+      "aria-label",
+      `${lineCount} ${t("lines", "ui")}, ${graphicCount} ${t("graphics", "ui")}, ${counterCount} ${t("counters", "ui")}. ${t("Project export saves Strategic annotations.", "ui")}`
+    );
   };
 
   const applyFrontlineAnnotationViewPatch = (patch = {}, dirtyReason = "frontline-overlay") => {

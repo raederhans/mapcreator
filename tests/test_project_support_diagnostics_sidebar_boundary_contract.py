@@ -55,6 +55,7 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('uploadProjectBtn.addEventListener("click"', owner_content)
         self.assertIn('projectFileInput.addEventListener("change"', owner_content)
         self.assertIn('debugModeSelect.addEventListener("change"', owner_content)
+        self.assertIn("refreshProjectSaveStatus", owner_content)
 
     def test_controller_keeps_project_import_and_legend_helpers(self):
         sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
@@ -68,6 +69,12 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('legendManager.getSpecialZoneLayers(state)', owner_content)
         self.assertIn('legendManager.getSpecialZoneSignature(state)', owner_content)
         self.assertIn('fileManager.exportProject(state);', owner_content)
+        self.assertIn('projectSaveStatus,', sidebar_content)
+        self.assertIn('projectSaveStatus,', owner_content)
+        self.assertIn('Project export includes appearance and transport settings.', sidebar_content)
+        self.assertIn('Project exported. Appearance and transport settings are saved in the JSON file.', owner_content)
+        self.assertIn('onProjectImportComplete: () => refreshProjectSaveStatus()', owner_content)
+        self.assertIn('onProjectImportError: () => refreshProjectSaveStatus(t("Project import failed before completion. Review the current map state.", "ui"))', owner_content)
         self.assertIn('importProjectThroughFunnel(file, {', owner_content)
         self.assertIn('invalidateFrontlineOverlayState,', owner_content)
 
@@ -77,6 +84,8 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         map_renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
 
         self.assertIn('syncProjectImportUiStateHelper', interaction_funnel_content)
+        self.assertIn("onProjectImportComplete", interaction_funnel_content)
+        self.assertIn("onSuccess: () => hooks.onProjectImportComplete?.()", interaction_funnel_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_LEGEND_UI);', interaction_funnel_ui_sync_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.RENDER_SCENARIO_AUDIT_PANEL);', interaction_funnel_ui_sync_content)
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_TRANSPORT_APPEARANCE_UI);', interaction_funnel_ui_sync_content)

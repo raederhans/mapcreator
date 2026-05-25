@@ -211,6 +211,42 @@ test("first scenario save loads the optional layer asset and posts canonical pay
   }
 });
 
+test("project-scoped special zones expose save status and disabled scenario asset reason", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "project-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "project-layer",
+    },
+  };
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render() {},
+    updateToolUI() {},
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const status = container.querySelector(".special-zone-workbench-status");
+    const saveBtn = findButtonByText(container, "Save scenario layer asset");
+    assert.equal(status.id, "specialZoneWorkbenchStatus");
+    assert.equal(status.getAttribute("role"), "status");
+    assert.equal(status.getAttribute("aria-atomic"), "true");
+    assert.match(status.textContent, /Project export preserves these layers/);
+    assert.equal(saveBtn.disabled, true);
+    assert.equal(saveBtn.getAttribute("aria-describedby"), "specialZoneWorkbenchStatus");
+    assert.match(saveBtn.getAttribute("aria-label"), /Scenario asset save needs an active scenario/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
 test("overlay toggle enables map overlay and loads scenario layers", async () => {
   const previousDocument = globalThis.document;
   globalThis.document = createTestDocument();

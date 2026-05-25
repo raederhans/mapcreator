@@ -35,6 +35,18 @@ function getTransportOverviewVisualModeFromState(runtimeState) {
   );
 }
 
+function getApplyDisabledReasonCopy(reason, compatibility) {
+  if (reason === "active_pack_required") return t("Select a transport pack before applying to the main map", "ui");
+  if (reason === "source_pending") return t("Checking pack source before apply", "ui");
+  if (reason === "source_failed") return t("Pack source check failed", "ui");
+  if (reason === "unknown_pack") return t("Selected transport pack is unavailable", "ui");
+  if (reason === "family_mismatch") return t("Selected pack belongs to another transport family", "ui");
+  if (compatibility === TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.localBoard) {
+    return t("Layer order stays inside this workbench", "ui");
+  }
+  return t("This family is preview-only until a main-map bridge exists.", "ui");
+}
+
 export function getTransportWorkbenchActivePackId(runtimeState, familyId) {
   const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
   const currentByFamily = runtimeState?.transportWorkbenchUi?.activePackIdByFamily || {};
@@ -111,11 +123,7 @@ export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
           compatibility,
           enabled: false,
           label: t("Workbench preview only", "ui"),
-          reason: bridgeSupport.reason === "source_failed"
-            ? t("Pack source check failed", "ui")
-            : bridgeSupport.reason === "active_pack_required"
-              ? t("Select a transport pack", "ui")
-              : t("Workbench preview only", "ui"),
+          reason: getApplyDisabledReasonCopy(bridgeSupport.reason, compatibility),
         };
       }
       return {
@@ -130,14 +138,14 @@ export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
         compatibility,
         enabled: false,
         label: t("Workbench-only family", "ui"),
-        reason: t("Workbench-only family", "ui"),
+        reason: getApplyDisabledReasonCopy("", compatibility),
       };
     }
     return {
       compatibility,
       enabled: false,
       label: t("Workbench preview only", "ui"),
-      reason: t("Workbench preview only", "ui"),
+      reason: getApplyDisabledReasonCopy("", compatibility),
     };
   };
 

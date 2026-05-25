@@ -1628,3 +1628,8 @@ untimePoliticalTopology / defaultRuntimePoliticalTopology / landDataFull 计数�
 ## 2026-05-20 - perf gate stale server triage
 
 - `perf:gate` 失败时要检查 `.runtime/dev/active_server.json` 指向的进程是否真实存活；stale 或慢 dev server 会把资源 transfer 和 ready 等待一起拉高，先用 clean server 重跑，再判断代码回退。
+
+## 2026-05-24 - section status loops after owner split
+
+- Project import / export 这类异步闭环要有完成和失败 observer；只在按钮点击时写“started”状态，会让拆出的 status surface 停在过时文案。
+- 用户可见状态不要直接显示 `lastDirtyReason` 这类内部原因码；需要先映射成板块内可理解的状态文案，避免把 owner 内部契约泄漏到 Project Management。

@@ -74,6 +74,8 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('t("graphics", "ui")', content)
         self.assertIn('t("counters", "ui")', content)
         self.assertIn('t("Export as Strategic annotations", "ui")', content)
+        self.assertIn('publishStatus.setAttribute("role", "status");', content)
+        self.assertIn('publishStatus.setAttribute("aria-live", "polite");', content)
         self.assertIn('invalidateFrontlineOverlayState,', content)
 
     def test_controller_refreshes_strategic_annotation_publish_status(self):
@@ -85,6 +87,7 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn("state.operationGraphics", content)
         self.assertIn("state.unitCounters", content)
         self.assertIn("Export as Strategic annotations", content)
+        self.assertIn("Project export saves Strategic annotations.", content)
         self.assertEqual(content.count("refreshStrategicOverlayPublishStatus();"), 1)
 
     def test_controller_keeps_counter_modal_focus_return_to_toggle(self):

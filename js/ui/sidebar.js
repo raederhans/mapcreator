@@ -1480,8 +1480,17 @@ function initSidebar({ render } = {}) {
     fileMeta.appendChild(fileMetaLabel);
     fileMeta.appendChild(fileName);
 
+    const projectSaveStatus = document.createElement("p");
+    projectSaveStatus.id = "projectSaveStatus";
+    projectSaveStatus.className = "sidebar-tool-hint project-save-status";
+    projectSaveStatus.setAttribute("role", "status");
+    projectSaveStatus.setAttribute("aria-live", "polite");
+    projectSaveStatus.setAttribute("aria-atomic", "true");
+    projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
+
     actions.appendChild(downloadBtn);
     actions.appendChild(uploadBtn);
+    actions.appendChild(projectSaveStatus);
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);
 
@@ -2391,6 +2400,10 @@ function initSidebar({ render } = {}) {
     const publishStatus = document.createElement("p");
     publishStatus.id = "strategicOverlayPublishStatus";
     publishStatus.className = "sidebar-tool-hint strategic-overlay-publish-status";
+    publishStatus.setAttribute("role", "status");
+    publishStatus.setAttribute("aria-live", "polite");
+    publishStatus.setAttribute("aria-atomic", "true");
+    publishStatus.title = t("Project export saves Strategic annotations.", "ui");
     publishStatus.textContent = `0 ${t("lines", "ui")} · 0 ${t("graphics", "ui")} · 0 ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
 
     const workspaceIconCloseBtn = buildButton("strategicOverlayIconCloseBtn", "Close");
@@ -3076,6 +3089,7 @@ function initSidebar({ render } = {}) {
   const uploadProjectBtn = document.getElementById("uploadProjectBtn");
   const projectFileInput = document.getElementById("projectFileInput");
   const projectFileName = document.getElementById("projectFileName");
+  const projectSaveStatus = document.getElementById("projectSaveStatus");
   const legendList = document.getElementById("legendEditorList");
   const inspectorSidebarTabButtons = Array.from(document.querySelectorAll("[data-inspector-tab]"));
   const inspectorSidebarTabPanels = Array.from(document.querySelectorAll("[data-inspector-panel]"));
@@ -5264,6 +5278,7 @@ function initSidebar({ render } = {}) {
       uploadProjectBtn,
       projectFileInput,
       projectFileName,
+      projectSaveStatus,
       debugModeSelect,
     },
     helpers: {

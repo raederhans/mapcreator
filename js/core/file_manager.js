@@ -567,8 +567,10 @@ class FileManager {
     clearDirty("project-export");
   }
 
-  static importProject(file, callback) {
+  static importProject(file, callback, observers = {}) {
     if (!file) return;
+    const notifySuccess = typeof observers.onSuccess === "function" ? observers.onSuccess : () => {};
+    const notifyError = typeof observers.onError === "function" ? observers.onError : () => {};
     const reader = new FileReader();
 
     reader.onload = async () => {
@@ -762,6 +764,7 @@ class FileManager {
           title: t("Project imported", "ui"),
           tone: "success",
         });
+        notifySuccess(data);
       } catch (error) {
         console.error("Failed to import project:", error);
         const tone = String(error?.toastTone || "error");
@@ -774,6 +777,7 @@ class FileManager {
           tone,
           duration: 4200,
         });
+        notifyError(error);
       }
     };
 
@@ -784,6 +788,7 @@ class FileManager {
         tone: "error",
         duration: 4200,
       });
+      notifyError(reader.error);
     };
 
     reader.readAsText(file);

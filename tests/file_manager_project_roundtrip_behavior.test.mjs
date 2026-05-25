@@ -44,6 +44,45 @@ async function exportProjectPayload(appState) {
   }
 }
 
+async function importProjectPayload(payload) {
+  const previousDocument = globalThis.document;
+  const previousFileReader = globalThis.FileReader;
+  const callbacks = [];
+  const successes = [];
+  const errors = [];
+
+  globalThis.document = {
+    getElementById: () => null,
+  };
+  globalThis.FileReader = class {
+    readAsText(file) {
+      this.result = file.text;
+      queueMicrotask(() => this.onload?.());
+    }
+  };
+
+  try {
+    FileManager.importProject(
+      {
+        name: "map_project.json",
+        text: JSON.stringify(payload),
+      },
+      async (data) => {
+        callbacks.push(data);
+      },
+      {
+        onSuccess: (data) => successes.push(data),
+        onError: (error) => errors.push(error),
+      }
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return { callbacks, successes, errors };
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.FileReader = previousFileReader;
+  }
+}
+
 test("project export preserves strategic overlay counters and legacy kind values", async () => {
   const payload = await exportProjectPayload({
     activePaletteId: "hoi4_vanilla",
@@ -187,4 +226,28 @@ test("project export preserves strategic overlay counters and legacy kind values
   });
   assert.deepEqual(payload.manualSpecialZones, { type: "FeatureCollection", features: [] });
   assert.equal(Object.hasOwn(payload, "specialRegionOverrides"), false);
+});
+
+test("project import notifies observers after successful import", async () => {
+  const payload = await exportProjectPayload({
+    activePaletteId: "hoi4_vanilla",
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {
+      transportOverview: {
+        activePackIdByFamily: { road: "germany_road" },
+      },
+    },
+    transportWorkbenchUi: {
+      activeFamily: "road",
+      activePackIdByFamily: { road: "germany_road" },
+    },
+  });
+
+  const result = await importProjectPayload(payload);
+
+  assert.equal(result.callbacks.length, 1);
+  assert.equal(result.successes.length, 1);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.successes[0].styleConfig.transportOverview.activePackIdByFamily.road, "germany_road");
 });
