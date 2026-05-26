@@ -99,6 +99,16 @@ def normalize_linear(geom):
     return None
 
 
+def build_geo_dataframe(rows, *, geometry_key: str = "geometry") -> gpd.GeoDataFrame:
+    if not rows:
+        return gpd.GeoDataFrame(
+            {geometry_key: gpd.GeoSeries([], crs="EPSG:4326")},
+            geometry=geometry_key,
+            crs="EPSG:4326",
+        )
+    return gpd.GeoDataFrame(rows, geometry=geometry_key, crs="EPSG:4326")
+
+
 def collect_water_mask():
     focus_bounds = box(*EUROPE_TNO_BATHY_BBOX)
     ocean_gdf = load_feature_collection(EUROPE_OCEAN_PATH)
@@ -208,8 +218,8 @@ def build_contour_rows(band_rows, water_union):
 
 
 def build_topology_payload(band_rows, contour_rows):
-    band_gdf = gpd.GeoDataFrame(band_rows, geometry="geometry", crs="EPSG:4326")
-    contour_gdf = gpd.GeoDataFrame(contour_rows, geometry="geometry", crs="EPSG:4326")
+    band_gdf = build_geo_dataframe(band_rows)
+    contour_gdf = build_geo_dataframe(contour_rows)
     topo = Topology(
         [band_gdf, contour_gdf],
         object_name=["bathymetry_bands", "bathymetry_contours"],

@@ -1689,12 +1689,33 @@ class DevServerTest(unittest.TestCase):
             self.assertEqual(countries_payload["countries"]["AAA"]["display_name_en"], "Alpha Prime")
             self.assertEqual(countries_payload["countries"]["AAA"]["display_name_zh"], "阿尔法首府")
             self.assertEqual(countries_payload["countries"]["AAA"]["color_hex"], "#654321")
+            self.assertEqual(countries_payload["countries"]["AAA"]["color_policy"], "locked")
             self.assertEqual(countries_payload["countries"]["AAA"]["parent_owner_tag"], "BBB")
             self.assertEqual(countries_payload["countries"]["AAA"]["notes"], "Scenario edit")
             self.assertTrue(countries_payload["countries"]["AAA"]["featured"])
             self.assertEqual(manual_payload["countries"]["AAA"]["mode"], "override")
             self.assertEqual(manual_payload["countries"]["AAA"]["display_name_en"], "Alpha Prime")
+            self.assertEqual(manual_payload["countries"]["AAA"]["color_policy"], "locked")
             self.assertEqual(mutations_payload["countries"]["AAA"]["display_name_en"], "Alpha Prime")
+
+    def test_save_scenario_country_payload_preserves_palette_policy_when_only_names_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = self._create_scenario_fixture(root)
+
+            result = dev_server.save_scenario_country_payload(
+                "test_scenario",
+                tag="AAA",
+                name_en="Alpha Renamed",
+                name_zh="阿尔法改名",
+                root=root,
+            )
+
+            countries_payload = json.loads((scenario_dir / "countries.json").read_text(encoding="utf-8"))
+            manual_payload = json.loads((scenario_dir / "scenario_manual_overrides.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["ok"])
+            self.assertEqual(countries_payload["countries"]["AAA"]["color_policy"], "palette")
+            self.assertEqual(manual_payload["countries"]["AAA"]["color_policy"], "palette")
 
     def test_save_scenario_ownership_payload_rejects_unknown_owner_tag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -94,6 +94,9 @@ COUNTRY_CODE_PATTERN = re.compile(r"^[A-Z]{2,3}$")
 DISTRICT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 COLOR_HEX_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 INSPECTOR_GROUP_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$")
+COLOR_POLICY_LOCKED = "locked"
+COLOR_POLICY_PALETTE = "palette"
+VALID_COLOR_POLICIES = {COLOR_POLICY_LOCKED, COLOR_POLICY_PALETTE}
 GZIP_STATIC_SUFFIXES = (".json", ".geojson", ".topo.json")
 DEFAULT_OPEN_PATH = "/app/"
 SCENARIO_DIAGNOSTICS_ROUTE_RE = re.compile(r"^/api/scenario-diagnostics/(?P<scenario_id>[A-Za-z0-9_-]+)$")
@@ -234,6 +237,16 @@ def _validate_color_hex(color_hex: object) -> str:
             status=400,
         )
     return normalized_color.lower()
+
+
+def _normalize_color_policy(value: object, *, default: str = "") -> str:
+    normalized_policy = _normalize_text(value).lower()
+    if normalized_policy in VALID_COLOR_POLICIES:
+        return normalized_policy
+    normalized_default = _normalize_text(default).lower()
+    if normalized_default in VALID_COLOR_POLICIES:
+        return normalized_default
+    return ""
 
 
 def load_scenario_diagnostics_report(scenario_id: object) -> dict[str, object]:
@@ -1883,6 +1896,13 @@ def save_scenario_country_payload(
         updated_entry["display_name_en"] = resolved_name_en
         updated_entry["display_name_zh"] = resolved_name_zh
         updated_entry["color_hex"] = resolved_color_hex
+        if color_hex is not None:
+            updated_entry["color_policy"] = COLOR_POLICY_LOCKED
+        else:
+            updated_entry["color_policy"] = _normalize_color_policy(
+                updated_entry.get("color_policy"),
+                default=COLOR_POLICY_PALETTE,
+            ) or COLOR_POLICY_PALETTE
         updated_entry["parent_owner_tag"] = resolved_parent_owner_tag
         updated_entry["parent_owner_tags"] = [resolved_parent_owner_tag] if resolved_parent_owner_tag else []
         if notes is not None:

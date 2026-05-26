@@ -686,7 +686,8 @@ const CITY_MARKER_THEME_TOKENS = {
 
 const bathymetryTopologyCacheByUrl = new Map();
 const bathymetryLoadPromiseByUrl = new Map();
-const bathymetryLoadFailureByUrl = new Set();
+const bathymetryLoadFailureByUrl = new Map();
+const BATHYMETRY_LOAD_RETRY_COOLDOWN_MS = 10_000;
 const CITY_MARKER_SIZE_LIMITS_PX = {
   minor: 10,
   regional: 14,
@@ -3478,6 +3479,7 @@ function isScenarioCoastalAccentEnabled() {
 function getScenarioCoastalAccentOverlayFeatures() {
   if (!isScenarioCoastalAccentEnabled()) return [];
   return getEffectiveScenarioReliefOverlayFeatures().filter((feature) => {
+    if (!isReliefOverlayEnabled(feature)) return false;
     const kind = getReliefOverlayKind(feature);
     return kind === "new_shoreline" || kind === "lake_shoreline";
   });
@@ -3657,7 +3659,12 @@ function drawScenarioReliefOverlaysLayer(k, {
     if (!pathBoundsInScreen(feature)) return;
     const style = getReliefOverlayStyle(feature);
     const kind = getReliefOverlayKind(feature);
-    if (kind === "new_shoreline" || kind === "lake_shoreline") return;
+    if (
+      (kind === "new_shoreline" || kind === "lake_shoreline")
+      && isScenarioCoastalAccentEnabled()
+    ) {
+      return;
+    }
     const bounds = getPathBounds(feature);
     if (!bounds) return;
     const geometryType = String(feature?.geometry?.type || "").trim();
@@ -10432,8 +10439,11 @@ function normalizeBathymetryTopologyEntry(url, topology) {
 }
 
 function warnBathymetryLoadFailureOnce(url, error) {
-  if (!url || bathymetryLoadFailureByUrl.has(url)) return;
-  bathymetryLoadFailureByUrl.add(url);
+  if (!url) return;
+  const previousFailureAt = Number(bathymetryLoadFailureByUrl.get(url) || 0);
+  const now = Date.now();
+  bathymetryLoadFailureByUrl.set(url, now);
+  if (previousFailureAt && now - previousFailureAt < BATHYMETRY_LOAD_RETRY_COOLDOWN_MS) return;
   const message = error instanceof Error ? error.message : String(error || "Unknown error");
   console.warn(`[bathymetry] Failed to load ${url}: ${message}`);
 }
@@ -10481,7 +10491,11 @@ function scheduleBathymetryTopologyLoad(url, { slot = "global" } = {}) {
     applyResolvedBathymetryEntry(slot, url, cached);
     return;
   }
-  if (bathymetryLoadFailureByUrl.has(url) || bathymetryLoadPromiseByUrl.has(url)) {
+  const previousFailureAt = Number(bathymetryLoadFailureByUrl.get(url) || 0);
+  if (
+    bathymetryLoadPromiseByUrl.has(url)
+    || (previousFailureAt && Date.now() - previousFailureAt < BATHYMETRY_LOAD_RETRY_COOLDOWN_MS)
+  ) {
     return;
   }
   const loadPromise = loadBathymetryTopology(url, { slot })

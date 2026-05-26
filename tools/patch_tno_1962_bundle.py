@@ -133,6 +133,9 @@ STAGE_STARTUP_BUNDLE_ASSETS = "startup_bundle_assets"
 STAGE_STARTUP_ASSETS = "startup_assets"
 STAGE_WRITE_BUNDLE = "write_bundle"
 STAGE_CHUNK_ASSETS = "chunk_assets"
+COLOR_POLICY_LOCKED = "locked"
+COLOR_POLICY_PALETTE = "palette"
+VALID_COLOR_POLICIES = {COLOR_POLICY_LOCKED, COLOR_POLICY_PALETTE}
 STRICT_RUNTIME_ONLY_FEATURE_ID_PREFIXES = ("RU_ARCTIC_FB_",)
 PUBLISH_SCOPE_POLAR_RUNTIME = CONTRACT_PUBLISH_SCOPE_POLAR_RUNTIME
 PUBLISH_SCOPE_SCENARIO_DATA = CONTRACT_PUBLISH_SCOPE_SCENARIO_DATA
@@ -4332,14 +4335,6 @@ TNO_1962_TNO_COLOR_FIXED_HEX = {
     "YUN": "#763446",
 }
 
-TNO_1962_SCENARIO_COLOR_EXPLICIT_EXCEPTIONS = {
-    "ARM",
-    "BRG",
-    "LAO",
-    "MAL",
-    "PHI",
-}
-
 UNAPPLIED_ACTION_IDS = (
     "arctic_islands_to_ger",
 )
@@ -6509,6 +6504,8 @@ def apply_dev_manual_overrides(
         if not tag or not isinstance(raw_entry, dict):
             continue
         mode = str(raw_entry.get("mode") or "override").strip().lower() or "override"
+        explicit_manual_color = normalize_hex(raw_entry.get("color_hex"))
+        manual_color_policy = normalize_color_policy(raw_entry.get("color_policy"))
         existing_entry = countries.get(tag)
         if mode == "create":
             if isinstance(existing_entry, dict):
@@ -6531,7 +6528,8 @@ def apply_dev_manual_overrides(
                 "display_name": str(raw_entry.get("display_name") or raw_entry.get("display_name_en") or tag).strip(),
                 "display_name_en": str(raw_entry.get("display_name_en") or raw_entry.get("display_name") or tag).strip(),
                 "display_name_zh": str(raw_entry.get("display_name_zh") or "").strip(),
-                "color_hex": normalize_hex(raw_entry.get("color_hex")) or "#808080",
+                "color_hex": explicit_manual_color or "#808080",
+                "color_policy": manual_color_policy or (COLOR_POLICY_LOCKED if explicit_manual_color else COLOR_POLICY_PALETTE),
                 "feature_count": 0,
                 "controller_feature_count": 0,
                 "quality": "manual_reviewed",
@@ -6581,9 +6579,11 @@ def apply_dev_manual_overrides(
             if field in raw_entry:
                 entry[field] = raw_entry.get(field)
         if "color_hex" in raw_entry:
-            normalized_hex = normalize_hex(raw_entry.get("color_hex"))
-            if normalized_hex:
-                entry["color_hex"] = normalized_hex
+            if explicit_manual_color:
+                entry["color_hex"] = explicit_manual_color
+                entry["color_policy"] = manual_color_policy or COLOR_POLICY_LOCKED
+        elif manual_color_policy:
+            entry["color_policy"] = manual_color_policy
         if "featured" in raw_entry:
             entry["featured"] = bool(raw_entry.get("featured"))
         if "hidden_from_country_list" in raw_entry:
@@ -6814,6 +6814,16 @@ def normalize_hex(raw: object) -> str:
     return ""
 
 
+def normalize_color_policy(raw: object, *, default: str = "") -> str:
+    value = str(raw or "").strip().lower()
+    if value in VALID_COLOR_POLICIES:
+        return value
+    default_value = str(default or "").strip().lower()
+    if default_value in VALID_COLOR_POLICIES:
+        return default_value
+    return ""
+
+
 def fallback_color(tag: str) -> str:
     seed = sum(ord(char) * (index + 1) for index, char in enumerate(tag))
     r = 72 + (seed % 104)
@@ -6950,6 +6960,30 @@ def load_tno_palette_audit_entries() -> dict[str, dict]:
     return entries if isinstance(entries, dict) else {}
 
 
+def apply_tno_country_color_policy_backfill(countries_payload: dict) -> None:
+    # Keep confirmed scenario-specific colors stable while palette-managed tags
+    # continue to follow the TNO audit palette.
+    countries = countries_payload.setdefault("countries", {})
+    audit_entries = load_tno_palette_audit_entries()
+    for raw_tag, raw_entry in countries.items():
+        tag = normalize_tag(raw_tag)
+        if not tag or not isinstance(raw_entry, dict):
+            continue
+        existing_policy = normalize_color_policy(raw_entry.get("color_policy"))
+        existing_hex = normalize_hex(raw_entry.get("color_hex"))
+        if existing_policy == COLOR_POLICY_LOCKED and existing_hex:
+            raw_entry["color_policy"] = COLOR_POLICY_LOCKED
+            raw_entry["color_hex"] = existing_hex
+            continue
+        if existing_policy == COLOR_POLICY_LOCKED:
+            raw_entry["color_policy"] = COLOR_POLICY_LOCKED
+            continue
+        audit_entry = audit_entries.get(tag, {})
+        audit_hex = normalize_hex(audit_entry.get("map_hex")) if isinstance(audit_entry, dict) else ""
+        if audit_hex:
+            raw_entry["color_policy"] = COLOR_POLICY_PALETTE
+
+
 def sync_tno_country_colors_from_palette_audit(countries_payload: dict) -> dict[str, list[str]]:
     countries = countries_payload.setdefault("countries", {})
     audit_entries = load_tno_palette_audit_entries()
@@ -6959,7 +6993,11 @@ def sync_tno_country_colors_from_palette_audit(countries_payload: dict) -> dict[
         tag = normalize_tag(raw_tag)
         if not tag or not isinstance(raw_entry, dict):
             continue
-        if tag in TNO_1962_SCENARIO_COLOR_EXPLICIT_EXCEPTIONS:
+        color_policy = normalize_color_policy(
+            raw_entry.get("color_policy"),
+            default=COLOR_POLICY_PALETTE,
+        )
+        if color_policy != COLOR_POLICY_PALETTE:
             skipped_tags.append(tag)
             continue
         audit_entry = audit_entries.get(tag, {})
@@ -6988,6 +7026,8 @@ def patch_tno_palette_defaults(countries_payload: dict, manifest_payload: dict) 
     )
     for tag, country_entry in countries.items():
         normalized_tag = normalize_tag(tag)
+        if normalize_color_policy(country_entry.get("color_policy")) == COLOR_POLICY_LOCKED:
+            continue
         continent_id = str(country_entry.get("continent_id") or "").strip()
         should_patch = (
             normalized_tag in target_tags
@@ -7156,6 +7196,7 @@ def ensure_tno_manual_override_countries(countries_payload: dict, owners_payload
             provenance_iso2=metadata["provenance_iso2"],
             display_name=metadata["display_name"],
             color_hex=metadata["color_hex"],
+            color_policy=metadata.get("color_policy", COLOR_POLICY_LOCKED),
             rule_id=f"tno_1962_{tag.lower()}_manual_override",
             notes=metadata["notes"],
             source="manual_rule",
@@ -7257,18 +7298,25 @@ def build_country_entry(
     tag = normalize_tag(rule.get("tag"))
     existing_entry = existing_entry if isinstance(existing_entry, dict) else {}
     palette_entry = palette_entries.get(tag, {})
+    explicit_rule_color_hex = normalize_hex(rule.get("color_hex"))
     base_iso2 = normalize_iso2(rule.get("base_iso2")) or normalize_iso2(existing_entry.get("base_iso2")) or "CN"
     lookup_iso2 = normalize_iso2(rule.get("lookup_iso2")) or normalize_iso2(existing_entry.get("lookup_iso2")) or base_iso2
     continent_id, continent_label, subregion_id, subregion_label = resolve_region_meta(rule, existing_entry, tag)
     parent_owner_tag = normalize_tag(rule.get("parent_owner_tag"))
     parent_owner_tags = [parent_owner_tag] if parent_owner_tag else []
     color_hex = (
-        normalize_hex(rule.get("color_hex"))
+        explicit_rule_color_hex
         or normalize_hex(existing_entry.get("color_hex"))
         or normalize_hex(palette_entry.get("map_hex"))
         or normalize_hex(palette_entry.get("country_file_hex"))
         or fallback_color(tag)
     )
+    color_policy = normalize_color_policy(
+        rule.get("color_policy"),
+        default=normalize_color_policy(existing_entry.get("color_policy")),
+    )
+    if not color_policy:
+        color_policy = COLOR_POLICY_LOCKED if explicit_rule_color_hex else COLOR_POLICY_PALETTE
     display_name = (
         str(rule.get("display_name") or "").strip()
         or str(existing_entry.get("display_name") or "").strip()
@@ -7282,6 +7330,7 @@ def build_country_entry(
         "tag": tag,
         "display_name": display_name,
         "color_hex": color_hex,
+        "color_policy": color_policy,
         "feature_count": int(feature_count),
         "quality": str(rule.get("quality") or "manual_reviewed").strip(),
         "source": str(rule.get("source") or "manual_rule").strip(),
@@ -7325,6 +7374,7 @@ def build_manual_country_entry(
     provenance_iso2: str = "",
     display_name: str = "",
     color_hex: str = "",
+    color_policy: str = "",
     rule_id: str = "",
     notes: str = "",
     source: str = "manual_rule",
@@ -7340,6 +7390,7 @@ def build_manual_country_entry(
     normalized_tag = normalize_tag(tag)
     existing_entry = existing_entry if isinstance(existing_entry, dict) else {}
     palette_entry = palette_entries.get(normalized_tag, {})
+    explicit_color_hex = normalize_hex(color_hex)
     normalized_parent = normalize_tag(parent_owner_tag)
     normalized_base_iso2 = normalize_iso2(base_iso2) or normalize_iso2(existing_entry.get("base_iso2")) or "ZZ"
     normalized_lookup_iso2 = (
@@ -7359,17 +7410,24 @@ def build_manual_country_entry(
         or normalized_tag
     )
     resolved_color_hex = (
-        normalize_hex(color_hex)
+        explicit_color_hex
         or normalize_hex(existing_entry.get("color_hex"))
         or normalize_hex(palette_entry.get("map_hex"))
         or normalize_hex(palette_entry.get("country_file_hex"))
         or fallback_color(normalized_tag)
     )
+    resolved_color_policy = normalize_color_policy(
+        color_policy,
+        default=normalize_color_policy(existing_entry.get("color_policy")),
+    )
+    if not resolved_color_policy:
+        resolved_color_policy = COLOR_POLICY_LOCKED if explicit_color_hex else COLOR_POLICY_PALETTE
     resolved_rule_id = str(rule_id or f"tno_1962_{normalized_tag.lower()}_baseline").strip()
     return {
         "tag": normalized_tag,
         "display_name": resolved_display_name,
         "color_hex": resolved_color_hex,
+        "color_policy": resolved_color_policy,
         "feature_count": int(feature_count),
         "quality": str(existing_entry.get("quality") or "manual_reviewed").strip() or "manual_reviewed",
         "source": str(source or existing_entry.get("source") or "manual_rule").strip() or "manual_rule",
@@ -10971,7 +11029,7 @@ def build_tno_bathymetry_payload(
     atl_counts = {
         "observed_region_ids": set(),
         "synthetic_region_ids": set(),
-        "excluded_region_ids": sorted(atlantropa_region_unions.keys()),
+        "excluded_region_ids": set(atlantropa_region_unions.keys()),
     }
 
     for feature in atl_sea_collection:
@@ -10995,6 +11053,7 @@ def build_tno_bathymetry_payload(
         else:
             band_defs = _atl_synthetic_depth_profile_for_region(region_id)
             atl_counts["synthetic_region_ids"].add(region_id)
+        atl_counts["excluded_region_ids"].discard(region_id)
         region_group = str(props.get("region_group") or f"{region_id}_sea").strip() or f"{region_id}_sea"
         band_part_rows, contour_part_rows = _build_bathymetry_ring_rows(
             geometry,
@@ -11026,7 +11085,7 @@ def build_tno_bathymetry_payload(
         "contour_feature_count": int(len(contour_gdf)),
         "observed_region_ids": sorted(atl_counts["observed_region_ids"]),
         "synthetic_region_ids": sorted(atl_counts["synthetic_region_ids"]),
-        "excluded_region_ids": atl_counts["excluded_region_ids"],
+        "excluded_region_ids": sorted(atl_counts["excluded_region_ids"]),
     }
     return topo_payload, diagnostics
 
@@ -11566,6 +11625,7 @@ def build_countries_stage_state(
         audit_payload,
     )
     controllers_payload = derive_controller_payload_from_owners(owners_payload)
+    apply_tno_country_color_policy_backfill(countries_payload)
     palette_audit_color_sync_summary = sync_tno_country_colors_from_palette_audit(countries_payload)
 
     stage_metadata = {

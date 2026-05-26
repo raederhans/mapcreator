@@ -17,6 +17,9 @@ from map_builder.scenario_service_errors import ScenarioServiceError
 
 TAG_CODE_PATTERN = re.compile(r"^[A-Z]{2,4}$")
 COLOR_HEX_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
+COLOR_POLICY_LOCKED = "locked"
+COLOR_POLICY_PALETTE = "palette"
+VALID_COLOR_POLICIES = {COLOR_POLICY_LOCKED, COLOR_POLICY_PALETTE}
 
 
 def normalize_code(value: object) -> str:
@@ -57,6 +60,16 @@ def validate_color_hex(
     return normalized_color.lower()
 
 
+def normalize_color_policy(value: object, *, default: str = "") -> str:
+    normalized_policy = normalize_text(value).lower()
+    if normalized_policy in VALID_COLOR_POLICIES:
+        return normalized_policy
+    normalized_default = normalize_text(default).lower()
+    if normalized_default in VALID_COLOR_POLICIES:
+        return normalized_default
+    return ""
+
+
 def apply_inspector_group_fields(
     payload: dict[str, object],
     *,
@@ -87,6 +100,7 @@ def scenario_country_entry(
     inspector_group_id: str = "",
     inspector_group_label: str = "",
     inspector_group_anchor_id: str = "",
+    color_policy: str = COLOR_POLICY_LOCKED,
 ) -> dict[str, object]:
     parent_tags = [parent_owner_tag] if parent_owner_tag else []
     entry_kind = "scenario_subject" if parent_owner_tag else "scenario_country"
@@ -96,6 +110,7 @@ def scenario_country_entry(
         "display_name_en": display_name_en,
         "display_name_zh": display_name_zh,
         "color_hex": color_hex,
+        "color_policy": normalize_color_policy(color_policy, default=COLOR_POLICY_LOCKED),
         "feature_count": feature_count,
         "controller_feature_count": feature_count,
         "quality": "manual_reviewed",
@@ -282,6 +297,10 @@ def build_country_entry_from_mutation(
             inspector_group_id=normalize_text(mutation.get("inspector_group_id")),
             inspector_group_label=normalize_text(mutation.get("inspector_group_label")),
             inspector_group_anchor_id=normalize_text(mutation.get("inspector_group_anchor_id")),
+            color_policy=normalize_color_policy(
+                mutation.get("color_policy"),
+                default=COLOR_POLICY_LOCKED,
+            ),
         )
     else:
         entry = copy.deepcopy(existing_entry)
@@ -304,6 +323,20 @@ def build_country_entry_from_mutation(
         mutation.get("color_hex") or entry.get("color_hex") or "#000000",
         error_cls=error_cls,
     )
+    resolved_color_policy = normalize_color_policy(
+        mutation.get("color_policy"),
+        default=normalize_color_policy(
+            entry.get("color_policy"),
+            default=COLOR_POLICY_PALETTE,
+        ),
+    )
+    if (
+        "color_hex" in mutation
+        and normalize_text(mutation.get("color_hex"))
+        and not normalize_color_policy(mutation.get("color_policy"))
+    ):
+        resolved_color_policy = COLOR_POLICY_LOCKED
+    entry["color_policy"] = resolved_color_policy or COLOR_POLICY_PALETTE
     entry["parent_owner_tag"] = parent_owner_tag
     entry["parent_owner_tags"] = [parent_owner_tag] if parent_owner_tag else []
     if "featured" in mutation:
@@ -401,6 +434,13 @@ def sync_releasable_catalog_entry_from_country(
         country_entry.get("color_hex") or updated.get("color_hex") or "#000000",
         error_cls=error_cls,
     )
+    updated["color_policy"] = normalize_color_policy(
+        country_entry.get("color_policy"),
+        default=normalize_color_policy(
+            updated.get("color_policy"),
+            default=COLOR_POLICY_PALETTE,
+        ),
+    ) or COLOR_POLICY_PALETTE
     updated["capital_state_id"] = country_entry.get("capital_state_id")
     parent_owner_tag = normalize_code(country_entry.get("parent_owner_tag") or updated.get("parent_owner_tag"))
     updated["parent_owner_tag"] = parent_owner_tag
@@ -452,6 +492,10 @@ def build_editable_country_entry(
             catalog_entry.get("color_hex") or "#000000",
             error_cls=error_cls,
         ),
+        "color_policy": normalize_color_policy(
+            catalog_entry.get("color_policy"),
+            default=COLOR_POLICY_PALETTE,
+        ) or COLOR_POLICY_PALETTE,
         "feature_count": int(catalog_entry.get("resolved_feature_count_hint") or 0),
         "controller_feature_count": int(
             catalog_entry.get("resolved_feature_count_hint") or 0
@@ -588,6 +632,10 @@ def build_manual_override_country_record(country_entry: dict[str, object], *, mo
         "display_name_en": normalize_text(country_entry.get("display_name_en") or country_entry.get("display_name")),
         "display_name_zh": normalize_text(country_entry.get("display_name_zh")),
         "color_hex": normalize_text(country_entry.get("color_hex")).lower(),
+        "color_policy": normalize_color_policy(
+            country_entry.get("color_policy"),
+            default=COLOR_POLICY_LOCKED,
+        ) or COLOR_POLICY_LOCKED,
         "parent_owner_tag": normalize_code(country_entry.get("parent_owner_tag")),
         "subject_kind": normalize_text(country_entry.get("subject_kind")),
         "entry_kind": normalize_text(country_entry.get("entry_kind")),
@@ -667,6 +715,7 @@ def scenario_manual_catalog_entry(
     color_hex: str,
     feature_ids: list[str],
     parent_owner_tag: str,
+    color_policy: str = COLOR_POLICY_LOCKED,
 ) -> dict[str, object]:
     lookup_code = parent_owner_tag or tag
     preset_source = {
@@ -681,6 +730,7 @@ def scenario_manual_catalog_entry(
         "display_name_en": display_name_en,
         "display_name_zh": display_name_zh,
         "color_hex": color_hex,
+        "color_policy": normalize_color_policy(color_policy, default=COLOR_POLICY_LOCKED),
         "capital_state_id": None,
         "parent_owner_tag": parent_owner_tag,
         "parent_owner_tags": [parent_owner_tag] if parent_owner_tag else [],

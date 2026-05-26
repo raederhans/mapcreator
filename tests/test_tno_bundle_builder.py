@@ -1129,6 +1129,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(set(band_gdf["bathymetry_mode"]), {"observed", "synthetic"})
         self.assertIn("west_mediterranean", diagnostics["observed_region_ids"])
         self.assertIn("libya_suez_and_qattara", diagnostics["synthetic_region_ids"])
+        self.assertEqual(diagnostics["excluded_region_ids"], [])
         shallow_rows = band_gdf.loc[
             band_gdf["region_id"] == "libya_suez_and_qattara",
             "depth_max_m",
@@ -1846,10 +1847,60 @@ class TnoBundleBuilderTest(unittest.TestCase):
 
         self.assertEqual(mismatches, [])
 
-    def test_tno_palette_audit_sync_keeps_explicit_scenario_color_exceptions(self) -> None:
+    def test_tno_palette_audit_sync_uses_color_policy_not_static_override_list(self) -> None:
         source = Path("tools/patch_tno_1962_bundle.py").read_text(encoding="utf-8")
-        for tag in ["PHI", "MAL", "LAO", "ARM", "BRG"]:
-            self.assertIn(f'    "{tag}",', source)
+        self.assertIn("def apply_tno_country_color_policy_backfill", source)
+        self.assertIn('raw_entry["color_policy"] = COLOR_POLICY_PALETTE', source)
+        self.assertNotIn("TNO_1962_LOCKED_COLOR_OVERRIDES", source)
+
+    def test_apply_tno_country_color_policy_backfill_marks_locked_and_palette_entries(self) -> None:
+        countries_payload = {
+            "countries": {
+                "KOR": {"tag": "KOR", "color_hex": "#009163"},
+                "AAA": {"tag": "AAA", "color_hex": "#111111"},
+                "BBB": {"tag": "BBB", "color_hex": "#222222", "color_policy": "locked"},
+                "MAG": {"tag": "MAG", "color_hex": "#cac6b2", "color_policy": "locked"},
+            }
+        }
+        with patch.object(
+            tno_bundle,
+            "load_tno_palette_audit_entries",
+            return_value={
+                "KOR": {"map_hex": "#009163"},
+                "AAA": {"map_hex": "#abcdef"},
+                "BBB": {"map_hex": "#123456"},
+            },
+        ):
+            tno_bundle.apply_tno_country_color_policy_backfill(countries_payload)
+
+        self.assertEqual(countries_payload["countries"]["KOR"]["color_hex"], "#009163")
+        self.assertEqual(countries_payload["countries"]["KOR"]["color_policy"], "palette")
+        self.assertEqual(countries_payload["countries"]["AAA"]["color_policy"], "palette")
+        self.assertEqual(countries_payload["countries"]["BBB"]["color_policy"], "locked")
+        self.assertEqual(countries_payload["countries"]["MAG"]["color_hex"], "#cac6b2")
+        self.assertEqual(countries_payload["countries"]["MAG"]["color_policy"], "locked")
+
+    def test_sync_tno_country_colors_from_palette_audit_only_updates_palette_entries(self) -> None:
+        countries_payload = {
+            "countries": {
+                "KOR": {"tag": "KOR", "color_hex": "#111111", "color_policy": "palette"},
+                "AAA": {"tag": "AAA", "color_hex": "#111111", "color_policy": "palette"},
+            }
+        }
+        with patch.object(
+            tno_bundle,
+            "load_tno_palette_audit_entries",
+            return_value={
+                "KOR": {"map_hex": "#009163"},
+                "AAA": {"map_hex": "#abcdef"},
+            },
+        ):
+            summary = tno_bundle.sync_tno_country_colors_from_palette_audit(countries_payload)
+
+        self.assertEqual(countries_payload["countries"]["KOR"]["color_hex"], "#009163")
+        self.assertEqual(countries_payload["countries"]["AAA"]["color_hex"], "#abcdef")
+        self.assertEqual(summary["synced_tags"], ["KOR", "AAA"])
+        self.assertEqual(summary["skipped_explicit_tags"], [])
 
     def test_scenario_manager_keeps_active_scenario_colors_tag_scoped(self) -> None:
         manager_source = Path("js/core/scenario_manager.js").read_text(encoding="utf-8")

@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 SCENARIO_TEXT_EDITORS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_text_editors_controller.js"
+SCENARIO_COUNTRY_COLOR_EDITOR_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_country_color_editor.js"
 
 
 class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
@@ -58,8 +59,15 @@ class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
 
     def test_controller_keeps_country_capital_locale_runtime_contracts(self):
         owner_content = SCENARIO_TEXT_EDITORS_CONTROLLER_JS.read_text(encoding="utf-8")
+        color_editor_content = SCENARIO_COUNTRY_COLOR_EDITOR_JS.read_text(encoding="utf-8")
 
         self.assertIn('flushDevWorkspaceRender("dev-workspace-country-save");', owner_content)
+        self.assertIn('const scenarioCountryColorInput = panel.querySelector("#devScenarioCountryColorInput");', owner_content)
+        self.assertIn("renderScenarioCountryColorEditor({", owner_content)
+        self.assertIn("buildScenarioCountryColorSavePayload({", owner_content)
+        self.assertIn("const nameEn = normalizeScenarioNameInput(", color_editor_content)
+        self.assertNotIn("editorState?.nameEn", color_editor_content)
+        self.assertNotIn("editorState?.nameZh", color_editor_content)
         self.assertIn('flushDevWorkspaceRender("dev-workspace-capital-save");', owner_content)
         self.assertIn('flushDevWorkspaceRender("dev-workspace-locale-save");', owner_content)
         self.assertIn("syncRuntimeScenarioCityOverrides(nextOverrides);", owner_content)
