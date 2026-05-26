@@ -230,6 +230,7 @@ export function createDeferredDetailPromotionOwner({
     // 事务：startup readonly 解锁。
     // 成功路径：detail promotion 成功 + interaction infra basic 构建完成 -> 进入 ready 并释放 readonly。
     // 恢复路径：detail promotion 未就绪 -> 记录失败指标并保持 readonly，等待后续调度重试。
+    // 这里的 readonly 不是单纯 UI 锁，而是 boot state / render readiness / interaction infra 的合流门。
     if (!runtimeState.startupReadonly || runtimeState.startupReadonlyUnlockInFlight) {
       return false;
     }
@@ -280,6 +281,8 @@ export function createDeferredDetailPromotionOwner({
         });
       }
       renderDispatcher?.flush?.();
+      // detail promotion 先把政治底图和 startup bundle 语义钉住，
+      // interaction infra basic 再补最小可交互能力，避免 hit canvas 和 UI 先于 detail 真相源就绪。
       setBootState?.("interaction-infra", {
         blocking: true,
         canContinueWithoutScenario: false,
@@ -343,6 +346,7 @@ export function createDeferredDetailPromotionOwner({
     }
     scheduleStartupReadonlyUnlockTimer?.(() => {
       if (attempt >= maxAttempts) {
+        // force-unlock 仍然会补 interaction infra，只是把 detail promotion 从硬前置改成后台恢复任务。
         console.warn(`[boot] Startup readonly unlock failed after ${maxAttempts} attempts, force-unlocking.`);
         setStartupReadonlyState?.(true, {
           reason: "detail-promotion-failed",

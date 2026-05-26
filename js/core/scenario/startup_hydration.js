@@ -167,6 +167,8 @@ function createScenarioStartupHydrationController({
         ? bundle.geoLocalePatchPayloadsByLanguage
         : {};
 
+    // locale-specific patch 只按语言缓存一份；共享 patch 则同时挂到 en/zh，
+    // 这样保存后 reload 不会因为 UI 当前语言切换而把同一份 payload 重复拉两次。
     let payload = !forceReload ? bundle.geoLocalePatchPayloadsByLanguage[descriptor.language] || null : null;
     if (!payload) {
       const result = await loadOptionalScenarioResource(d3Client, descriptor.url, {
@@ -186,6 +188,8 @@ function createScenarioStartupHydrationController({
       }
     }
 
+    // 异步资源回来前用户可能已经切走场景；这里允许返回加载结果给调用方，
+    // 但不再把旧场景的 locale patch 回写进当前 runtime。
     if (normalizeScenarioId(state.activeScenarioId) !== scenarioId) {
       return payload || null;
     }
@@ -438,6 +442,8 @@ function createScenarioStartupHydrationController({
       getScenarioDecodedCollection(bundle, "politicalData"),
       mapSemanticMode,
     );
+    // political payload 优先级从旧 runtime -> decoded full bundle -> merged runtime layer 逐层覆盖。
+    // 最后一层 merged payload 代表 chunk/apply 后的最新壳层真相，必须拥有最终解释权。
     const previousScenarioPoliticalPayload = state.scenarioPoliticalChunkData;
     let nextScenarioPoliticalPayload = previousScenarioPoliticalPayload || null;
     if (runtimePoliticalPayloadDecision.hasPayload) {

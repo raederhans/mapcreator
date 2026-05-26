@@ -258,6 +258,8 @@ export function createAppearanceTextureOwner({
   };
 
   const renderDayNightUI = () => {
+    // 这里所有 enabled/disabled 状态都从同一份归一化后的 dayNight config 推导，
+    // 避免 modern / historical 两套控件各自记状态，切模式后留下半旧 UI。
     const dayNight = syncDayNightConfig();
     if (nodes.dayNightEnabled) nodes.dayNightEnabled.checked = !!dayNight.enabled;
     if (nodes.dayNightManualTime) nodes.dayNightManualTime.value = String(dayNight.manualUtcMinutes);
@@ -331,6 +333,8 @@ export function createAppearanceTextureOwner({
   };
 
   const updateTextureStyle = (mutate, { historyKind = "texture-style", commitHistory = false } = {}) => {
+    // input/change 共用同一份 history capture：拖动滑杆期间持续改 working state，
+    // 到 commit 边界再写入一条 undo 记录，避免一帧一个历史快照。
     beginTextureHistoryCapture();
     const texture = syncTextureConfig();
     if (typeof mutate === "function") mutate(texture);
@@ -365,6 +369,7 @@ export function createAppearanceTextureOwner({
   };
 
   const bindDayNightInput = (element, mutate, reason) => {
+    // day/night 滑杆走 input-only 即时刷新，语义上更像 renderer 参数调校而不是表单提交。
     if (!element || element.dataset.bound === "true") return;
     element.addEventListener("input", (event) => {
       mutate(event);

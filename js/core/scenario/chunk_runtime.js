@@ -1882,6 +1882,9 @@ function createScenarioChunkRuntimeController({
       return selection;
     }
     const promotionQueuedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    // chunk promotion 故意拆成 visual / infra 两段 pending 状态：
+    // visual 先保证地图能尽快画出新 selection，infra 再补 state signature、overlay 元数据和后续调度需要的 bookkeeping。
+    // pendingPromotion 保留两段共享的完整事务快照，提交阶段就不用重新推导“这一轮到底选中了哪些 chunk / political features”。
     loadState.pendingVisualPromotion = {
       scenarioId,
       reason,

@@ -69,3 +69,669 @@ The next low-risk movement toward the ultragoal is likely inside `appearance_con
   - `node tools/check_state_write_allowlist.mjs`
   - `npm run test:node:transport-overview-line-contract`
 - E2E was not rerun in this slice. Residual known risks remain the same as prior slice: `ui_rework_support_transport_hardening.spec.js` has existing special-zone, support-hint, and port Apply blockers outside this config-owner extraction.
+
+## 2026-05-19 transport workbench apply bridge owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-apply-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes agreed that apply bridge is the next narrow transport workbench boundary: controller should keep DOM/event/render orchestration, while a new owner should own active pack resolution, instance-scoped pack gate cache, button state, apply patch execution, overlay state loading, dirty marking, and render trigger.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_apply_bridge_owner.js`.
+- Kept in `transport_workbench_controller.js`: button click binding, shell render refresh, family/tab switching, pack select UI, preview lifecycle, and current render context.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the apply bridge owner, keeps click binding in the controller, and checks apply side effects in the owner.
+  - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks apply order and confirms port remains preview-only until a real main-map target pack exists.
+  - `tests/transport_overview_line_strategy_scope_contract.node.test.mjs` now checks that workbench apply patches expose only main-map bridge fields and keep preview-only state out.
+  - `tests/test_state_write_guardrail_contract.py` now explicitly keeps the workbench controller in the state-writer allowlist.
+- Final static review found no blocker. Its non-blocker on cache lifetime was fixed by moving the pack gate cache into the `createTransportWorkbenchApplyBridgeOwner` instance closure.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_apply_bridge_owner.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py tests/test_state_write_guardrail_contract.py`
+  - `python -m unittest tests.test_transport_workbench_manifest_runtime_contract tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract -q`
+  - `node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs`
+  - `npm run verify:state-write-allowlist`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_apply_bridge_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
+  - `git diff --cached --check`
+- Pushed implementation to `origin/main` as `080ad8b`. The local main worktree had unrelated uncommitted archive/lessons changes, so merge/push used the clean apply-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench preview lifecycle owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-preview-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes pointed at preview lifecycle as the next bounded transport workbench split. The chosen slice extracts render generation, live-preview clear/dispose, carrier preparation, view-sync RAF, and post-preview inspector refresh into `js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js`.
+- Kept in `transport_workbench_controller.js`: DOM buttons, shell rendering, runtime init, warmup scheduling, selection listener wiring, render context, config updates, and apply bridge wrappers.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the preview lifecycle owner and checks generation guard, view-key dedupe, RAF cancellation, dispose cleanup, and controller listener wiring.
+  - `tests/test_transport_workbench_manifest_runtime_contract.py` now strengthens family preview dispatch boundaries so family preview modules stay dispatch-only and do not take carrier/runtime ownership.
+- Final static review found no blocker. Its non-blocker on overly specific contract strings was fixed by keeping lifecycle boundary assertions while loosening the log message and view-key format checks.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
+  - `git diff --check -- ...` for changed source, tests, and active docs
+- Pushed implementation to `origin/main` as `eb3eeeb`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean preview-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench state owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-state-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes split on ordering: preview runtime listener movement is smaller, while state-owner movement has stronger architecture value. This slice chose state owner because direct `transportWorkbenchUi` writes and config mutation branching were still concentrated in the controller after config/apply/preview extraction.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_state_owner.js`.
+- Kept in `transport_workbench_controller.js`: DOM events, shell rendering, pack select UI, preview lifecycle owner wiring, apply bridge owner wiring, render context, and repaint sequencing after state changes.
+- Moved to state owner: UI state normalization, active pack/family/tab mutations, compare-held mutation, family/display config writes, section open state, layer order movement, and open/close restore flags.
+- The new Node behavior test exposed that repeated ensure calls could erase a dragged layer order. The state owner now preserves the previous layer order before applying the shared state normalizer.
+- Final static review found no blocker. Its coverage recommendation was fixed by adding behavior assertions for open/close restore flags and family-local active pack restoration.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the state owner, keeps controller facade wiring, and checks state mutation helpers moved out of the controller.
+  - `tests/test_state_write_guardrail_contract.py` now expects the state owner, not the controller, in the direct state writer allowlist.
+  - `tests/transport_workbench_state_owner_behavior.test.mjs` covers object identity, active pack writes, family-local active pack restoration, open/close restore flags, compare-mode read-only config behavior, density display writes, and layer-order preservation.
+  - `package.json` exposes `test:node:transport-workbench-state-owner` so the new behavior test has a named entrypoint.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_state_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_state_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js')"`
+- Pushed implementation to `origin/main` as `b9835bd`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean state-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench preview runtime hooks owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-preview-runtime-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes split on whether runtime listener registration should remain in the controller. Current code showed a narrow owner-owned lifecycle move was still useful: preview warmup, carrier view listener registration, and family preview selection listeners all target preview lifecycle behavior, while the controller only needs a toolbar-visible initialization entrypoint.
+- Chosen boundary: extend `js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js` with `initializeRuntimeHooks()`.
+- Moved to preview lifecycle owner: warmup scheduling, idle warmup execution, warmup failure reporting, carrier view listener registration, runtime family selection listener registration, and selection-triggered lens/inspector refresh.
+- Kept in `transport_workbench_controller.js`: DOM buttons, shell rendering, current render context construction, panel open/close, and the exported `initializeTransportWorkbenchRuntime()` facade.
+- The move exposed a real lifecycle risk: `destroyTransportWorkbenchCarrier()` clears the carrier view listener during close, while runtime initialization happens once from `toolbar.js`. The preview lifecycle owner now reattaches runtime listeners after `dispose()` so close/open does not leave preview view sync detached.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks that warmup/listener wiring moved to preview lifecycle owner and stays out of the controller.
+  - `tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs` covers warmup scheduling idempotency, warmup failure reporting, selection listener refresh behavior, and listener reattachment after dispose.
+  - `package.json` exposes `test:node:transport-workbench-preview-lifecycle-owner`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js`
+  - `node --check tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+- Node emitted the existing typeless package ESM warning during module import and Node tests; the commands passed.
+- Final static review requested that the new Node behavior test be included in the commit and that the dispose listener reattach test prove ordering, not only setter count.
+- Review fixes:
+  - `transport_workbench_preview_lifecycle_owner.js` now injects `destroyCarrier` and `destroyFamilyPreviews` for behavior tests while defaulting to the original runtime functions.
+  - The Node behavior test now simulates carrier destroy clearing the listener, then asserts `dispose()` leaves a live carrier view listener after reattachment.
+  - The Python split contract now locks `destroyFamilyPreviews(); destroyCarrier(); attachRuntimeListeners();` ordering.
+- Added a short `lessons learned.md` note for the carrier listener lifecycle issue.
+- Final verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js`
+  - `node --check tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py tests/test_state_write_guardrail_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Pushed implementation to `origin/main` as `8f2df85`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean preview-runtime-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench inspector owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-inspector-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes identified the inspector model as the next bounded workbench split: the controller was still carrying formatter logic, manifest-only rows, diagnostics rows, lens summary rows, and the large selected-family inspector model.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_inspector_owner.js`.
+- Moved to inspector owner: option/timestamp/road-hidden-reason formatters, manifest-only runtime rows, per-family diagnostic rows, lens summary rows, selected-family inspector row model, state-card models, and small row/card DOM factories.
+- Kept in `transport_workbench_controller.js`: tab switching, shell rendering, inspector empty-state toggling, row insertion/class decoration, current render context, preview lifecycle owner wiring, and apply bridge wiring.
+- The split preserved the existing translated `Right deck` lens summary by passing the localized label from the controller into the owner model.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now requires the inspector owner and checks controller delegation.
+  - `tests/test_transport_workbench_manifest_runtime_contract.py` now checks manifest variant helpers through the inspector owner because those rows moved out of the controller.
+  - `tests/transport_workbench_inspector_owner_behavior.test.mjs` covers manifest-only rows, diagnostics rows, road non-ready rows, rail selected line/station rows, airport/port selected feature rows, logistics empty-filter state cards, layer status rows, and translated lens summary labels.
+  - `package.json` exposes `test:node:transport-workbench-inspector-owner`.
+- Static review found a behavior blocker: road non-ready, rail, airport, and port ready inspector branches were not fully moved on the first pass. The owner now carries those original branches, and the Node behavior test covers the previously missed live-preview families.
+- Review also flagged the owner-level English `Right deck` fallback. The owner now expects the controller to pass the localized label and stores an empty value if a future caller misses that contract.
+- Final static review found no blockers after those fixes.
+- Current verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py tests/test_state_write_guardrail_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Pushed implementation to `origin/main` as `2be1614`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean inspector-owner worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench inspector row metadata slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-row-meta-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes agreed the smallest remaining inspector coupling is row class semantics: `transport_workbench_controller.js` was still deciding `is-summary`, `is-selected`, and `is-governance` from family id, row index, and row label.
+- Chosen boundary: keep row ordering and row data unchanged, but move row class decisions into `transport_workbench_inspector_owner.js`.
+- Moved to inspector owner: `getTransportWorkbenchInspectorRowClassNames()` and `createRow(..., rowMeta)` class application.
+- Kept in controller: model retrieval, state card append, row append, empty-card visibility, and inspector tab render sequencing.
+- Tests updated:
+  - `tests/transport_workbench_inspector_owner_behavior.test.mjs` now covers summary, selected, governance, and non-classified family row class decisions.
+  - `tests/test_toolbar_split_boundary_contract.py` now checks controller delegates row class semantics to the inspector owner.
+  - `package.json` now exposes `verify:toolbar-split-boundary`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review found no blocker. Its coverage recommendation was fixed by adding a lightweight fake-DOM assertion that `createRow(..., rowMeta)` applies the owner-computed classes to the returned row.
+- Final verification after review fix passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_transport_workbench_manifest_runtime_contract.py`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_transport_workbench_manifest_runtime_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Pushed implementation to `origin/main` as `bbe20fc`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean row-metadata worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench layer order owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-layer-order-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes recommended extracting the full layer-order panel owner, not only the status text model, because DOM rendering, drag state, drop side effects, and live/metadata/reserved copy were all one surface.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_layer_order_owner.js`.
+- Moved to layer-order owner: layer-order row model, translated status/caption copy, drag start/end/over/drop event wiring, private dragged-family state, dirty marking callback, panel rerender, and inspector refresh callback.
+- Kept in `transport_workbench_controller.js`: state owner wiring, render context construction, preview lifecycle callback entrypoint, and layer-panel visibility toggling.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks the layer-order owner boundary and confirms drag/status copy left the controller.
+  - `tests/transport_workbench_layer_order_owner_behavior.test.mjs` covers row models, live status class, successful drop side-effect order, and failed drop no-op behavior.
+  - `package.json` exposes `test:node:transport-workbench-layer-order-owner`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_layer_order_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_layer_order_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_layer_order_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review requested two narrow fixes:
+  - restore unconditional inspector refresh after a successful layer-order drop, matching the old `move -> dirty -> context -> rerender -> inspector` contract.
+  - lock controller-to-owner wiring for UI namespace translation, render context, and inspector refresh callbacks in the Python boundary contract.
+- Review fixes applied:
+  - `transport_workbench_layer_order_owner.js` now calls `renderInspector(context.family, context.config, context.compareHeld)` unconditionally after rerender.
+  - `tests/transport_workbench_layer_order_owner_behavior.test.mjs` now covers the unconditional inspector refresh contract.
+  - `tests/test_toolbar_split_boundary_contract.py` now asserts `translate`, `moveLayerOrder`, `getRenderContext`, and `renderInspector` wiring.
+- Verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_layer_order_owner.js`
+  - `node --check tests/transport_workbench_layer_order_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_layer_order_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Final static re-review approved the layer-order owner boundary after the fixes. Remaining risk is limited to live browser behavior, which is intentionally not part of this current verification lane.
+- Pushed implementation to `origin/main` as `0784ff4`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean layer-order worktree and left those local changes untouched.
+
+## 2026-05-19 transport workbench right deck owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-next-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static evidence lanes converged on the right-deck control panel as the next performance/architecture slice: config changes were rebuilding all five right-deck tab mounts and duplicating tab rendering before inspector refresh.
+- External performance reference: web.dev INP guidance frames interaction responsiveness around the time from input handling to the next paint, with long JavaScript and large DOM/layout work as common causes. This supports reducing per-control DOM rebuilds and keeping event handlers narrow.
+- Chosen boundary: extract `js/ui/toolbar/transport_workbench_right_deck_owner.js`.
+- Moved to right-deck owner: generic control DOM factory, right-deck section node creation, density family shell cards, advanced aggregation/label range controls, active-tab panel rendering, compare-held read-only guard, section-open read, and control event wiring.
+- Kept in `transport_workbench_controller.js`: overlay lifecycle, render context construction, state-owner writes, pack gate/apply owner wiring, preview lifecycle calls, lens/inspector orchestration, and owner dependency injection.
+- Performance-oriented behavior change: right-deck rendering now renders only the active control tab mount, and config/display updates no longer call `renderTransportWorkbenchInspectorTabs()` before `renderTransportWorkbenchInspector()` because inspector refresh already delegates to the right-deck owner.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks the right-deck owner boundary and confirms control schema/tab map/control DOM factories left the controller.
+  - `tests/transport_workbench_right_deck_owner_behavior.test.mjs` covers toggle/select/range/multi commits, compare-held read-only controls, active-tab-only rendering, section-open/toggle behavior, and advanced range display-config writes.
+  - `package.json` exposes `test:node:transport-workbench-right-deck-owner`.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_right_deck_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_right_deck_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+- Final static re-review approved the right-deck owner boundary after the compare-held fixes. Remaining risk is limited to live browser feel and a later pass to see whether full `renderTransportWorkbenchUi()` still does redundant right-deck work.
+- Pushed implementation to `origin/main` as `af3351f`. The local main worktree still has unrelated uncommitted archive/lessons changes, so merge/push used the clean right-deck worktree and left those local changes untouched.
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_right_deck_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review requested a compare-held fix: density shell card controls and advanced ranges were still writable while baseline compare was held.
+- Review fixes applied:
+  - `transport_workbench_right_deck_owner.js` now passes `compareHeld` through shell/advanced control factories, disables those inputs, and short-circuits their handlers.
+  - `transport_workbench_controller.js` now also returns early from display-config writes while compare is held.
+  - `tests/transport_workbench_right_deck_owner_behavior.test.mjs` now covers shell/advanced compare-held read-only behavior, diagnostics body render, and active mount replacement on tab/family change.
+- Verification after review fixes passed:
+  - `node --check js/ui/toolbar/transport_workbench_right_deck_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_right_deck_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_right_deck_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+
+## 2026-05-19 transport workbench right deck render dedupe slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-rightdeck-dedupe-2026-05-19`.
+- Live process ownership: main thread only.
+- Follow-up from the right-deck owner review: full `renderTransportWorkbenchUi()` still reached the right-deck active tab once through shell and once through inspector.
+- Chosen boundary: keep `renderTransportWorkbenchShell()` focused on shell chrome and remove its right-deck tab render. `renderTransportWorkbenchInspector()` remains the single right-deck active-tab render path.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks that shell-context right-deck rendering is not reintroduced.
+- Initial verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Static review requested stronger contract coverage. The contract now extracts `renderTransportWorkbenchShell()` and asserts it contains no right-deck/inspector render entrypoints, while also checking that full UI render still runs shell -> lens -> inspector.
+- Second static review requested apply shell-only contract coverage. The contract now extracts the apply button click listener and asserts it refreshes shell only, while also checking shell still owns apply button chrome updates.
+- Verification after review fix passed:
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run verify:toolbar-split-boundary`
+  - `git diff --check`
+- Final static re-review approved the right-deck dedupe boundary.
+- Implementation commit `f2c164a` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench inspector detail cache slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-inspector-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Static subagent recommendation: reduce repeated inspector rebuilds inside `transport_workbench_inspector_owner.js` by comparing a rendered model signature before replacing DOM.
+- Chosen boundary: keep controller orchestration unchanged and move inspector detail DOM ownership into the inspector owner.
+- Implemented:
+  - `buildTransportWorkbenchInspectorRenderSignature()` serializes the rendered row/card model.
+  - `renderInspectorDetails()` reuses the current detail DOM when family, compare state, and rendered model signature are unchanged.
+  - Controller now passes `detailsNode`, `emptyCard`, family, config, preview snapshot, and data contract to the inspector owner.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` locks controller delegation and prevents direct row/card DOM rebuild from returning to `renderTransportWorkbenchInspector()`.
+  - `tests/transport_workbench_inspector_owner_behavior.test.mjs` covers same-model reuse and changed-model invalidation.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_inspector_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_inspector_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Final static review requested; live process ownership remains with the main thread.
+- Static review approved the implementation and requested only an optional empty-model coverage enhancement. Added a Node test that keeps the empty card visible for empty inspector detail models and verifies same-empty-model reuse.
+- Verification after the empty-model coverage enhancement passed:
+  - `node --check tests/transport_workbench_inspector_owner_behavior.test.mjs`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `git diff --check`
+- Implementation commit `112a6cd` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench shell pack select cache slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-shell-pack-cache-2026-05-19`.
+- Live process ownership: main thread only.
+- Remaining shell hot path: every shell refresh rebuilt `transportWorkbenchPackSelect` options even when the family pack list did not change.
+- Chosen boundary: add a narrow helper inside `transport_workbench_controller.js` that compares the pack id/label signature and only calls `replaceChildren()` when the option list changes.
+- Behavior kept: shell refresh still recomputes the available packs, disabled state, and selected active pack value every time.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` now checks that `renderTransportWorkbenchShell()` delegates pack-select rendering and no longer calls `transportWorkbenchPackSelect.replaceChildren()` directly.
+  - `tests/transport_workbench_controller_behavior.test.mjs` covers same-signature option reuse, selected value refresh, disabled-state refresh, and rebuild on list change.
+  - `package.json` exposes `test:node:transport-workbench-controller`.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_controller_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run verify:toolbar-split-boundary`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `git diff --check`
+- Static review approved the approach and requested behavior coverage for option reuse with value/disabled refresh. The new `test:node:transport-workbench-controller` entry now covers that case.
+- Final narrow static review agents timed out after repeated waits; main-thread review found no stale option/value/disabled path because the helper recomputes pack options every shell render, caches only the option DOM signature, and still writes `disabled` plus `value` outside the rebuild branch.
+- Implementation commit `a676562` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench lens owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-lens-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Remaining lens hot path: `renderTransportWorkbenchLensSections()` was still clearing and rebuilding the left lens column during full UI refreshes, config updates, display updates, and preview lifecycle refreshes.
+- Chosen boundary: create `js/ui/toolbar/transport_workbench_lens_owner.js`.
+- Implemented:
+  - Lens owner builds the layers empty card and regular review-focus/current-context cards.
+  - Lens owner signs the final card/row model and skips mount `replaceChildren()` when the rendered output is unchanged.
+  - Controller now passes family, preview snapshot, data contract, compare state, and translated right-deck label into the lens owner.
+- Tests updated:
+  - `tests/test_toolbar_split_boundary_contract.py` locks the lens owner boundary and prevents direct lens DOM/card construction from returning to the controller.
+  - `tests/transport_workbench_lens_owner_behavior.test.mjs` covers same-model reuse, compare/status invalidation, family invalidation, and layers empty-card rendering.
+  - `package.json` exposes `test:node:transport-workbench-lens-owner`.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_lens_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_lens_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-lens-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_lens_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `git diff --check`
+- Final static review: the first two reviewer lanes timed out, so a narrowed fast static lane reviewed the lens signature/cache boundary and returned `APPROVE`.
+- Implementation commit `07dd0e5` was pushed to `origin/main`; closeout docs are the only remaining work in this slice before worktree cleanup.
+
+## 2026-05-19 transport workbench popover owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-popover-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- External performance standards captured for this goal:
+  - INP good target is p75 interaction latency at or below 200ms.
+  - Single main-thread long task threshold is 50ms.
+  - Lighthouse DOM-size pressure starts around 800 body nodes and becomes severe around 1400.
+  - Mapbox/MapLibre style performance depends heavily on source count, layer count, vertex count, and update scope.
+- Static popover boundary review recommended moving info/help popover rendering, focus, aria state, positioning, Escape handling, and section-help button creation into a narrow owner.
+- Chosen boundary: controller keeps workbench lifecycle/render orchestration; `transport_workbench_popover_owner.js` owns popover DOM and interaction details.
+- Implemented:
+  - New `createTransportWorkbenchPopoverOwner()` owner with info/help close/toggle/render APIs, section-help button factory, and Escape handler.
+  - Controller now wires popover owner into lens/right-deck dependencies and returns existing close facades for workspace support coordination.
+  - New `tests/transport_workbench_popover_owner_behavior.test.mjs` covers info/help mutual exclusion, aria state, section help positioning, same-trigger collapse, focus restore, Escape close, and unsupported help section null behavior.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks popover owner import/delegation and prevents popover render/helper implementations from returning to the controller.
+- Implementation commit `55e2ff7` is local; push is pending this closeout doc commit.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_popover_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_popover_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:transport-workbench-popover-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run test:node:transport-workbench-lens-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `node --input-type=module -e "await import('./js/ui/toolbar/transport_workbench_popover_owner.js'); await import('./js/ui/toolbar/transport_workbench_controller.js'); console.log('imports-ok')"`
+  - `git diff --check`
+- Final static review approved the popover owner boundary. It found no blocking issues and confirmed aria/focus/mutual-exclusion/Escape behavior plus controller delegation.
+- Known noise: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen the package-level module setting.
+- Implementation and closeout commits `55e2ff7` and `df9e9f5` were pushed to `origin/main`; temporary worktree cleanup completed.
+
+## 2026-05-19 transport workbench shell chrome owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-shell-chrome-owner-2026-05-19`.
+- Live process ownership: main thread only.
+- Remaining controller hot path: `renderTransportWorkbenchShell()` still owns repeated textContent writes, aria/class toggles, family tab active-state writes, apply button chrome, preview control chrome, and pack select option sync.
+- Chosen boundary: create `js/ui/toolbar/transport_workbench_shell_owner.js`.
+- Intended behavior:
+  - Controller keeps render context construction and high-level sequencing.
+  - Shell owner synchronizes shell chrome with change-aware helpers so repeated identical renders avoid unchanged DOM writes.
+  - Pack select helper moves out of the controller into shell owner while preserving option DOM reuse plus value/disabled refresh.
+- Implemented:
+  - New `transport_workbench_shell_owner.js` owns shell text/aria/class/property synchronization, family tab active state, apply button chrome, preview controls, and pack select option reuse.
+  - Controller now wires shell owner dependencies and keeps `renderTransportWorkbenchShell(context)` as a one-line delegation.
+  - `tests/transport_workbench_shell_owner_behavior.test.mjs` replaces the old controller pack-select behavior test and adds same-context empty-write coverage plus family/layers/apply visibility changes.
+  - `package.json` keeps `test:node:transport-workbench-controller` as a compatibility alias to the new shell-owner script.
+  - `tests/test_ui_rework_plan03_support_transport_contract.py` now treats shell chrome as shell-owner-owned rather than controller-owned.
+- Review blockers found and fixed:
+  - Stale UI contract still expected compare/inspector text writes in the controller. Fixed by moving the assertion to shell owner and rerunning the UI support contract group.
+  - `dist/app` was behind source. Fixed with `npm run verify:pages-dist`, which also synchronized older transport owner dist files that had not yet reached Pages dist.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_shell_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_shell_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_ui_rework_plan03_support_transport_contract.py`
+  - `npm run test:node:transport-workbench-shell-owner`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run verify:toolbar-split-boundary`
+  - `npm run test:node:transport-workbench-lens-owner`
+  - `npm run test:node:transport-workbench-right-deck-owner`
+  - `npm run test:node:transport-workbench-inspector-owner`
+  - `npm run test:node:transport-workbench-preview-lifecycle-owner`
+  - `npm run test:node:transport-workbench-state-owner`
+  - `npm run test:node:transport-workbench-layer-order-owner`
+  - `npm run test:node:transport-workbench-popover-owner`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_state_write_guardrail_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for shell owner plus controller
+  - `git diff --check`
+- Final static review approved the source/dist synchronized shell owner slice. It found no remaining blockers and confirmed the compatibility test alias, source/dist hash match, and manifest sizes.
+- Implementation and closeout commits `74f37fa` and `9b9feb6` were pushed to `origin/main`; temporary worktree cleanup completed.
+
+## 2026-05-19 transport workbench event owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-transport-workbench-event-owner-2026-05-19`.
+- Live process ownership: main thread only; static-only subagent may inspect source but must not run or monitor live verification.
+- Static boundary review found the controller still owned top-level workbench event binding: scenario/appearance/info/close/reset buttons, compare pointer/keyboard events, carrier zoom/rotate controls, async apply, pack select, family tabs, inspector tabs, and global Escape.
+- Chosen boundary: create `js/ui/toolbar/transport_workbench_event_owner.js`.
+- Intended behavior:
+  - Event owner owns one-shot listener binding and event-to-action dispatch.
+  - Controller keeps state transitions, render context construction, preview/lens/inspector sequencing, popover/apply semantics, and supplies those as narrow action callbacks.
+  - No new fallback layer: missing required action for a wired node throws immediately during binding.
+- Implemented:
+  - New `createTransportWorkbenchEventOwner()` with `bindTransportWorkbenchEventOnce()` for `dataset.bound` idempotence.
+  - Controller now wires the event owner and `bindTransportWorkbenchEvents()` delegates to `transportWorkbenchEventOwner.bind()`.
+  - New `tests/transport_workbench_event_owner_behavior.test.mjs` covers one-shot binding, scenario open/close, compare pointer/keyboard semantics, preview controls, pack/family/inspector dispatch, async apply gating/error refresh, Escape priority, and direct binder skip behavior.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks the event owner import/delegation and prevents top-level event listener bodies from drifting back into the controller.
+- Verification passed:
+  - `node --check js/ui/toolbar/transport_workbench_event_owner.js`
+  - `node --check js/ui/toolbar/transport_workbench_controller.js`
+  - `node --check tests/transport_workbench_event_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_ui_rework_plan03_support_transport_contract.py`
+  - `npm run test:node:transport-workbench-event-owner`
+  - `npm run test:node:transport-workbench-controller`
+  - `npm run verify:toolbar-split-boundary`
+  - adjacent owner regressions: shell, popover, preview lifecycle, state, lens, right deck, inspector, and layer order
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_transport_workbench_manifest_runtime_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for event owner plus controller
+  - `git diff --check`
+- Review note: two static reviewer lanes timed out before returning findings. Main thread completed the first-principles self-review: the smaller stable boundary is event binding plus event-to-action dispatch only; state writes, render ordering, apply semantics, and popover semantics stay in the controller-owned owners/callbacks.
+- Implementation and closeout commits `6dd1401` and `e6e8c43` were pushed to `origin/main`; temporary worktree cleanup completed.
+
+## 2026-05-19 appearance parent border owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-parent-border-owner-2026-05-19`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static appearance review found `appearance_controls_controller.js` is now the largest toolbar owner at 1664 lines on `origin/main`.
+- Chosen boundary: create `js/ui/toolbar/appearance_parent_border_owner.js` before larger texture/city/urban splits because parent-border list rendering is low-coupling and can prove DOM churn reduction.
+- Intended behavior:
+  - Parent border owner owns enabled-map normalization, translated/sorted country row model, row signatures, list DOM rendering, checkbox events, empty state, and visibility control sync.
+  - Appearance controller keeps the existing facade that `toolbar.js` calls: `renderParentBorderCountryList()` and `syncParentBorderVisibilityUI()`.
+  - Repeated renders with the same country model skip `replaceChildren()` and only refresh checkbox checked/disabled state.
+- Implemented:
+  - New `createAppearanceParentBorderOwner()` plus helper exports for normalization, rows, and signatures.
+  - Controller delegates parent-border country list rendering and visibility sync to the owner.
+  - New `tests/appearance_parent_border_owner_behavior.test.mjs` covers row sorting, enabled-map cleanup, same-model DOM reuse, visibility sync, checkbox dirty dispatch, and repeated empty renders.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks the parent-border owner boundary and prevents list render body/checkbox listener drift back into the controller.
+- Verification passed:
+  - `node --check js/ui/toolbar/appearance_parent_border_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check tests/appearance_parent_border_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py`
+  - `npm run test:node:appearance-parent-border-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for parent-border owner plus appearance controller
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `git diff --check`
+- Review note: the static reviewer lane timed out before returning findings. Main thread completed the first-principles self-review: this slice keeps the old toolbar input event lifecycle intact and only moves low-coupling list rendering plus visibility sync into the new owner.
+
+## 2026-05-20 appearance texture owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-texture-owner-2026-05-20`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static boundary review found texture/day-night DOM constants, style normalization, render helpers, texture history, range/color binding, day-night mode/time/city-light bindings, and clock refresh are a cohesive UI owner inside `appearance_controls_controller.js`.
+- Chosen boundary: create `js/ui/toolbar/appearance_texture_owner.js`.
+- Intended behavior:
+  - Texture owner owns texture/day-night DOM lookup, style normalization, render synchronization, texture history capture/commit, one-shot event binding, and day-night clock refresh dispatch.
+  - Appearance controller keeps the old toolbar-facing facade: `renderTextureUI()`, `renderDayNightUI()`, and `bindEvents()`.
+  - Texture range input still captures history on first input and commits one history entry on change; duplicate `bindEvents()` calls keep one listener pair per control.
+- Implemented so far:
+  - New `createAppearanceTextureOwner()` plus helper exports for `TEXTURE_STYLE_PATHS` and `formatUtcMinutes()`.
+  - Controller delegates texture/day-night rendering and events to the owner.
+  - New `tests/appearance_texture_owner_behavior.test.mjs` covers UTC label formatting, texture panel/value rendering, range history commit, duplicate binding prevention, and day-night UI state writes.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks the owner boundary and prevents texture/day-night helper drift back into the controller.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_texture_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check tests/appearance_texture_owner_behavior.test.mjs`
+  - `npm run test:node:appearance-texture-owner`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - `npm run test:node:appearance-parent-border-owner`
+  - `npm run verify:pages-dist`
+  - source and dist import smokes for texture owner plus appearance controller
+  - `git diff --check`
+- Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen package module settings.
+- Final review found no current-scope blocker. Two low WATCH items were fixed in-slice:
+  - `appearance_controls_controller.js` owner comment now matches the remaining city / urban / physical / rivers / reference responsibilities.
+  - Dead texture/day-night DOM queries were removed from `toolbar.js`; the toolbar split boundary contract now blocks those queries from drifting back into the facade.
+- Implementation commit `f119786` was created; this closeout records docs and lessons for the same slice before pushing to `origin/main`.
+
+## 2026-05-20 appearance city-points owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-city-points-owner-2026-05-20`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static boundary review found city-points DOM constants, theme option sync, config normalization, render synchronization, persisted view settings, city data loading on enable, and city-points event bindings were a cohesive UI owner still inside `appearance_controls_controller.js`.
+- Chosen boundary: create `js/ui/toolbar/appearance_city_points_owner.js`.
+- Intended behavior:
+  - City-points owner owns DOM lookup, theme descriptor usage, render synchronization, event binding, view settings persistence, and optional city layer loading when the layer is enabled.
+  - Appearance controller keeps the old toolbar-facing facade and delegates `renderAppearanceStyleControlsUi()` and `bindEvents()` city-points work to the owner.
+  - `toolbar.js` drops city-points `getElementById(...)` queries that became dead after the owner split.
+- Implemented:
+  - New `createAppearanceCityPointsOwner()` with helper exports kept local to the owner and descriptor helpers still centralized in `appearance_city_points_descriptor.js`.
+  - Controller imports and wires the city-points owner with `runtimeState`, `t`, `clamp`, `renderDirty`, `normalizeOceanFillColor`, and `ensureActiveScenarioOptionalLayerLoaded`.
+  - `tests/appearance_city_points_owner_behavior.test.mjs` covers theme option rendering/reuse, duplicate theme binding prevention, enable-path city data loading, persisted view settings, dirty reasons, and numeric input clamping.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks city-points owner wiring and prevents city-points DOM queries or config helpers from drifting back into `toolbar.js` or the appearance controller.
+  - `tools/eslint-rules/state-writer-allowlist.json` and `tests/test_state_write_guardrail_contract.py` now record the owner as an explicit state writer, because the city-points owner owns `runtimeState.showCityPoints` and `styleConfig.cityPoints` writes.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_city_points_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check tests/appearance_city_points_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-city-points-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - source import smoke for toolbar, city-points owner, and appearance controller
+  - `npm run verify:pages-dist`
+  - dist import smoke for toolbar, city-points owner, and appearance controller
+- Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests and import smokes; this slice did not widen package module settings.
+- Final self-review found one current-scope cleanup item: `toolbar.js` still had an unused `persistCityViewSettings()` helper after city-points moved to the owner. It was removed and the toolbar split contract now blocks it from drifting back into the facade.
+- Static reviewer lane timed out twice without returning findings; it was closed before final verification to keep live ownership and closeout bounded to the main thread.
+- Implementation commit `32c05d3` was pushed to `origin/main`; this closeout records the completed push before temporary worktree cleanup.
+
+## 2026-05-20 appearance physical owner slice
+
+- Ultragoal status: `G001-mapcreator-appearance-transport-o` remains `in_progress`.
+- Worktree: `C:/Users/raede/Desktop/dev/mapcreator-appearance-physical-owner-2026-05-20`.
+- Live process ownership: main thread only; static-only subagents may inspect source but must not run or monitor live verification.
+- Static boundary review found physical DOM constants, physical class toggle map, physical config normalization, preset application, preset hint copy, render synchronization, physical layer loading on enable, and physical event bindings were a cohesive UI owner still inside `appearance_controls_controller.js`.
+- Chosen boundary: create `js/ui/toolbar/appearance_physical_owner.js`.
+- Intended behavior:
+  - Physical owner owns DOM lookup, preset/config normalization, render synchronization, event binding, physical context-layer loading, and atlas class visibility updates.
+  - Appearance controller keeps the old toolbar-facing facade and delegates `renderAppearanceStyleControlsUi()` plus `bindEvents()` physical work to the owner.
+  - Rivers remain in `appearance_controls_controller.js` for this slice; they still write a separate `styleConfig.rivers` state branch and are a cleaner follow-up owner candidate.
+  - `toolbar.js` drops physical `getElementById(...)` queries and the old physical class-toggle map that became dead after the owner split.
+- Implemented so far:
+  - New `createAppearancePhysicalOwner()` plus `PHYSICAL_CLASS_TOGGLE_IDS`.
+  - Controller imports and wires the physical owner with `runtimeState`, `t`, `clamp`, `renderDirty`, and `normalizeOceanFillColor`.
+  - `tests/appearance_physical_owner_behavior.test.mjs` covers render synchronization, enable-path context-layer loading, preset application with mode preservation, duplicate binding prevention, numeric input clamping, and class toggle writes.
+  - `tests/test_toolbar_split_boundary_contract.py` now locks physical owner wiring and prevents physical DOM queries or config helpers from drifting back into `toolbar.js` or the appearance controller.
+  - `tools/eslint-rules/state-writer-allowlist.json` and `tests/test_state_write_guardrail_contract.py` now record the owner as an explicit state writer, because the physical owner owns `runtimeState.showPhysical` and `styleConfig.physical` writes.
+- Verification passed so far:
+  - `node --check js/ui/toolbar/appearance_physical_owner.js`
+  - `node --check js/ui/toolbar/appearance_controls_controller.js`
+  - `node --check js/ui/toolbar.js`
+  - `node --check tests/appearance_physical_owner_behavior.test.mjs`
+  - `python -m py_compile tests/test_toolbar_split_boundary_contract.py tests/test_state_write_guardrail_contract.py`
+  - `npm run test:node:appearance-physical-owner`
+  - `npm run verify:toolbar-split-boundary`
+  - `node tools/check_state_write_allowlist.mjs`
+  - `python -m unittest tests.test_state_write_guardrail_contract -q`
+- Note: Node still reports the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for ES module tests; this slice did not widen package module settings.
+- Final verification passed:
+  - `python -m unittest tests.test_toolbar_split_boundary_contract tests.test_state_write_guardrail_contract tests.test_ui_rework_plan03_support_transport_contract -q`
+  - source import smoke for toolbar, physical owner, and appearance controller
+  - `npm run verify:pages-dist`
+  - dist import smoke for toolbar, physical owner, and appearance controller
+  - `git diff --check`
+- Final static review found no blocker. One low current-scope cleanup item was fixed: `toolbar.js` still queried `togglePhysical` after physical DOM ownership moved to the new owner. The query was removed and the boundary contract now blocks this drift.
+- The reviewer also flagged `dist/pages-dist-manifest.json` size churn for `appearance_city_points_owner.js`. `build_pages_dist.py` writes manifest entries from current Windows worktree `stat().st_size`, and the Pages dist test asserts the generated size, so this slice keeps the generated manifest output rather than hand-editing it.

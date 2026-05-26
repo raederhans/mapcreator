@@ -55,6 +55,8 @@ function captureHistoryState({
   stylePaths = [],
   strategicOverlay = false,
 } = {}) {
+  // history snapshot 只抓本次编辑真实触达的键，避免把整份 runtime state 塞进 undo 栈。
+  // 这里缺省键写成 null，后面 apply 时才能表达“这次撤销后应该删除该键”。
   const snapshot = {};
   const ids = uniqueKeys(featureIds);
   const waterIds = uniqueKeys(waterRegionIds);
@@ -150,6 +152,8 @@ function pushHistoryEntry(entry) {
     return false;
   }
 
+  // 新操作一旦入栈，future 分支就要整体失效；
+  // 这和常规编辑器 undo/redo 的分叉语义保持一致。
   runtimeState.historyPast = Array.isArray(runtimeState.historyPast) ? runtimeState.historyPast : [];
   runtimeState.historyFuture = [];
   runtimeState.historyPast.push(nextEntry);
@@ -164,6 +168,8 @@ function pushHistoryEntry(entry) {
 }
 
 function refreshUiAfterHistory(direction, entry) {
+  // undo/redo 之后统一从这里补 UI 和 render side effects，
+  // 调用方只负责准备 before/after，不要在外面各自手写半套刷新逻辑。
   if (entry?.before?.sovereigntyByFeatureId || entry?.after?.sovereigntyByFeatureId) {
     runtimeState.sovereigntyInitialized = true;
     rebuildOwnerIndex();
@@ -199,6 +205,7 @@ function applyHistorySnapshot(snapshot, direction, entry) {
     || (snapshot.specialZoneLayers && typeof snapshot.specialZoneLayers === "object")
     || typeof snapshot.specialZoneMembershipBrushMode === "string"
   );
+  // runtimeState 上这一批容器必须先补齐，历史快照恢复才可以安全地执行 delete / replace。
 
   runtimeState.visualOverrides = runtimeState.visualOverrides || {};
   runtimeState.featureOverrides = runtimeState.featureOverrides || {};

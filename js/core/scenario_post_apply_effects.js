@@ -26,6 +26,8 @@ import { syncCountryUi } from "./scenario_ui_sync.js";
 import { requestRender } from "./render_boundary.js";
 
 function runPaletteAndToolbarRefreshCallbacks() {
+  // scenario apply / reset / rollback 都会复用这一批 UI 回放事件，
+  // 这样地图数据刷新和各 owner 的可见状态能在同一轮里重新对齐。
   emitStateBusEvent(STATE_BUS_EVENTS.RENDER_PALETTE, runtimeState.currentPaletteTheme);
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_PALETTE_LIBRARY);
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_PALETTE_SOURCE);
@@ -81,6 +83,8 @@ function scheduleScenarioDetailChunkPrewarm({
   scenarioId = "",
   prewarmStartedAt = 0,
 } = {}) {
+  // 细节政治块只在首帧已经交给 coarse 数据兜住可见性的前提下异步补齐。
+  // 这里重复检查 activeScenarioId，是为了避免用户在等待期间切剧本后把旧 detail 刷回当前页面。
   if (!scenarioSupportsChunkedRuntime(bundle)) return;
   const normalizedScenarioId = String(scenarioId || "").trim();
   scheduleAfterFirstFrame(() => {
@@ -138,6 +142,8 @@ async function ensureChunkedScenarioFirstFrameReady({
   bundle,
   scenarioId = "",
 } = {}) {
+  // 这里负责“apply 成功后第一眼必须看见什么”：
+  // coarse chunk 永远先到位，focus detail 只在 manifest 明确要求时同步阻塞。
   if (!scenarioSupportsChunkedRuntime(bundle)) return;
   const normalizedScenarioId = String(scenarioId || "").trim();
   const synchronous = shouldSynchronouslyPrewarmChunkedScenario(bundle);
@@ -226,6 +232,8 @@ async function runPostScenarioApplyEffects({
   renderNow = false,
   suppressRender = false,
 } = {}) {
+  // post-apply 只收口 apply 之后的可见修复和 UI 回放。
+  // 真正的 scenario state 提交已经在更早阶段完成，这里避免再引入第二套写口。
   const useSingleFinalRender = !!renderNow && !suppressRender;
   const refreshPlan = createScenarioApplyRefreshPlan({
     refreshOpeningOwnerBorders: false,

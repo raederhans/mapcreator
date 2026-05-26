@@ -243,6 +243,8 @@ function getGeoFeatureDisplayLabel(feature, fallback = "") {
 
 function t(key, type = "geo") {
   if (!key) return "";
+  // geo 文案优先走 runtime locale / alias 真相源；
+  // UI 文案则先看 runtime 注入，再退回静态 catalog，保证启动期和完整加载后共用同一套调用入口。
   const entry = type === "geo" ? resolveGeoLocaleEntry(key) : runtimeState.locales?.[type]?.[key];
   const lang = runtimeState.currentLanguage === "zh" ? "zh" : "en";
   if (entry?.[lang] || entry?.en) {
@@ -260,6 +262,7 @@ function t(key, type = "geo") {
 function applyDeclarativeTranslationToElement(element) {
   if (!element?.getAttribute) return;
 
+  // 这一层只负责把 data-i18n* 属性映射到 DOM，可见文本的业务决策仍留在 t()/catalog/runtime locale。
   const applyTextValue = (localizedText) => {
     const semanticChild = typeof element.querySelector === "function"
       ? element.querySelector(":scope > .sidebar-anchor-title, :scope > .sidebar-section-title, :scope > .sidebar-support-title, :scope > .sidebar-appendix-title, :scope > .sidebar-tool-title")
@@ -299,6 +302,8 @@ function applyDeclarativeTranslationToElement(element) {
 
 function applyDeclarativeTranslations(root = document) {
   if (!root) return;
+  // root 可以是整个 document，也可以是局部重渲染后的壳节点；
+  // 统一走同一个扫描器，避免每个 panel 都维护各自的翻译补丁逻辑。
   const selector = "[data-i18n], [data-i18n-placeholder], [data-i18n-title], [data-i18n-aria-label], [data-i18n-alt]";
   const elements = [];
   if (root.nodeType === 1 && root.matches?.(selector)) {
@@ -875,6 +880,8 @@ async function toggleLanguage() {
   } catch (error) {
     console.warn("Unable to hydrate full localization data before language toggle:", error);
   }
+  // 语言切换分三段：先切 runtime language，再刷新现有 UI 文案，最后补 active scenario 的 geo locale patch。
+  // 这样即使异步 locale 资源稍后到达，界面也能先用稳定回退链完成一次可见刷新。
   updateUIText();
   callRuntimeHooks(state, [
     "updateToolbarInputsFn",

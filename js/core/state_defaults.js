@@ -210,6 +210,8 @@ function normalizePhysicalStyleConfig(rawConfig) {
   const normalizedPreset = normalizePhysicalPreset(raw.preset || "balanced");
   const defaults = createPhysicalPresetConfig(normalizedPreset);
   const legacyPreset = raw.preset;
+  // physical style 正在从旧的单层 opacity/contourWidth 形态迁到 preset + atlas/contour 分层 schema。
+  // 这里先判断调用方是否已经写入新字段，再决定旧字段该作为兼容输入还是彻底让位给新默认值。
   const hasNewPhysicalSchema = [
     "preset",
     "mode",
@@ -367,6 +369,8 @@ function hasLegacyUrbanManualSignal(rawConfig) {
 function normalizeUrbanStyleConfig(rawConfig) {
   const defaults = createDefaultUrbanStyleConfig();
   const raw = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
+  // 旧 urban 配置没有显式 mode；是否进入 manual 取决于 legacy 字段里有没有真正偏离默认值的“人工调参信号”。
+  // 这样既能兼容老项目，又不会把一份仅靠默认值保存下来的旧配置误判成 manual。
   const inferredLegacyMode = hasLegacyUrbanManualSignal(raw) ? "manual" : defaults.mode;
   const mode = normalizeUrbanStyleMode(raw.mode, inferredLegacyMode);
   const fillOpacityFallback =
@@ -432,6 +436,8 @@ function normalizeCityLayerStyleConfig(rawConfig) {
   const labelDensity = String(raw.labelDensity || defaults.labelDensity).trim().toLowerCase();
   const explicitMarkerScale = toFiniteNumber(raw.markerScale, Number.NaN);
   const legacyRadius = toFiniteNumber(raw.radius, Number.NaN);
+  // city layer 从旧 radius 迁到 markerScale 后，旧项目仍可能只保存 radius。
+  // 这里把 radius 折算成近似 scale，保证历史项目恢复出来的视觉密度接近用户原来的意图。
   const legacyRadiusScale = Number.isFinite(legacyRadius)
     ? clamp(legacyRadius / 3.2, 0.75, 1.3)
     : 1;
@@ -561,6 +567,8 @@ function normalizeTransportOverviewFamilyConfig(rawConfig, familyId) {
   const defaults = createDefaultTransportOverviewFamilyConfig(familyId);
   const raw = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
   const scopeLinkMode = normalizeTransportOverviewScopeLinkMode(raw.scopeLinkMode, defaults.scopeLinkMode);
+  // linked 模式下，coverageReach 才是用户真正想表达的连续滑杆语义；
+  // scope / importanceThreshold 会由 registry 里的族别规则反推出来，避免 UI、main-map bridge、workbench preview 各算一套。
   const coverageReach = Object.prototype.hasOwnProperty.call(raw, "coverageReach")
     ? clampUnitInterval(raw.coverageReach, defaults.coverageReach)
     : mapLegacyTransportScopeToCoverageReach(
