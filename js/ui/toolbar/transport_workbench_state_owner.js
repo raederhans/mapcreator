@@ -47,6 +47,8 @@ function normalizeTransportWorkbenchFamilyConfig(familyId, value) {
 }
 
 function resolveTransportWorkbenchPackIdForFamily(uiState, familyId) {
+  // activePackIdByFamily 是长期真相源；activePackId 只保留给旧调用方和当前激活 family 的便捷读取。
+  // 解析时先吃 family-scoped 状态，避免切换 tab 后把别的 family pack 误投到当前预览。
   const candidatePackId = String(
     uiState?.activePackIdByFamily?.[familyId] || uiState?.activePackId || ""
   ).trim().toLowerCase();
@@ -156,6 +158,8 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
       return { ...(familyConfig || {}), activePackId };
     }
+    // density family 既要保留嵌套 displayConfig 供持久化/回显，
+    // 也要展开出 preview renderer 直接消费的平铺字段，避免下游每次再手动解包。
     const resolvedDisplayConfig = normalizeTransportWorkbenchDisplayConfig(displayConfig, familyId);
     return {
       ...(familyConfig || {}),

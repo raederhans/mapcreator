@@ -194,6 +194,8 @@ function normalizeSpecialZoneLayersState(rawState, options = {}) {
   const validFeatureIds = options.validFeatureIds instanceof Set ? options.validFeatureIds : null;
   const expectedFingerprint = String(options.topologyFingerprint || "").trim();
   const stateFingerprint = String(raw.topologyFingerprint || "").trim();
+  // normalize 是 layer-based special zones 的单一入口：
+  // import、mutation、preview、serialize 前都先走这里，保证 runtime/store/导出看到同一份形状。
   if (expectedFingerprint && stateFingerprint && expectedFingerprint !== stateFingerprint) {
     diagnostics.push({
       code: "topology_fingerprint_mismatch",
@@ -464,6 +466,8 @@ function updateSpecialZoneLayerMembership(state, layerId, featureIds, mode = "to
   const ids = (Array.isArray(featureIds) ? featureIds : [featureIds])
     .map((value) => String(value || "").trim())
     .filter(Boolean);
+  // member 改动始终先基于 normalized 副本计算，
+  // 这样 add/remove/toggle/replace 四种入口都共用同一套去重和排序合同。
   const layer = normalized.layers.find((entry) => entry.id === layerId) || normalized.layers.find((entry) => entry.id === normalized.activeLayerId);
   if (!layer) return normalized;
   if (mode === "replace") {
@@ -485,6 +489,8 @@ function updateSpecialZoneLayerMembership(state, layerId, featureIds, mode = "to
 function mutateSpecialZoneLayersState(state, mutation) {
   const normalized = normalizeSpecialZoneLayersState(state);
   const action = String(mutation?.action || "").trim();
+  // 所有工作台按钮都应折叠到这个 mutation switch，
+  // 未来新增动作时优先加新 action 分支，而不是在外围直接手改 layers 结构。
   if (action === "addLayer") {
     const nextLayer = normalizeSpecialZoneLayer(mutation.layer || createLayerFromPreset(mutation.presetId, mutation), normalized.layers.length, normalized.diagnostics);
     if (nextLayer && !normalized.layers.some((layer) => layer.id === nextLayer.id)) {
@@ -561,6 +567,8 @@ function buildSpecialZoneRenderFeatures(layerState, featureById) {
   const resolveFeature = typeof featureById === "function"
     ? featureById
     : (id) => featureById?.get?.(id) || null;
+  // 渲染层只消费扁平 FeatureCollection，
+  // layer 元数据在这里投影进 feature.properties，避免 renderer 反向理解 workbench store。
   const features = [];
   normalized.layers.forEach((layer, layerIndex) => {
     if (!layer.visible) return;

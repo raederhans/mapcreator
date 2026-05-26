@@ -14,6 +14,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
   const mainSource = readRepoFile("js", "main.js");
   const startupDataPipelineSource = readRepoFile("js", "bootstrap", "startup_data_pipeline.js");
   const appearanceControllerSource = readRepoFile("js", "ui", "toolbar", "appearance_controls_controller.js");
+  const physicalOwnerSource = readRepoFile("js", "ui", "toolbar", "appearance_physical_owner.js");
   const interactionFunnelSource = readRepoFile("js", "core", "interaction_funnel.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
 
@@ -55,23 +56,29 @@ test("physical layer source contracts stay wired to the expected renderer and st
     hasPhysicalBasePass:
       /\["physicalBase", \(k\) => drawPhysicalBasePass\(k\)\]/.test(renderPipelinePassesSource)
       && /drawPhysicalBasePass,/.test(rendererSource),
+    physicalBaseDrawsBeforePolitical:
+      renderPipelinePassesSource.indexOf('["physicalBase", (k) => drawPhysicalBasePass(k)]')
+        < renderPipelinePassesSource.indexOf('["political", (k) => drawPoliticalPass(k)]')
+      && renderPipelinePassesSource.indexOf('["political", (k) => drawPoliticalPass(k)]')
+        < renderPipelinePassesSource.indexOf('["contextBase", (k) => drawContextBasePass(k)]'),
     hasPhysicalReliefOverlayHelper:
       /function drawPhysicalReliefOverlayLayer\(k, \{ interactive = false, clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
     reliefOverlayBlendClamp:
       /function getPhysicalReliefOverlayBlendMode\(cfg, presetProfile\)/.test(rendererSource)
       && /if \(requestedMode === "overlay" \|\| requestedMode === "multiply"\) \{[\s\S]*?return "soft-light";/.test(rendererSource),
-    physicalBaseKeepsSemanticAtlas:
-      physicalBaseSource.includes("drawPhysicalAtlasLayer(k, { interactive });")
-      && !physicalBaseSource.includes("drawPhysicalReliefOverlayLayer(k, { interactive });"),
+    physicalBaseKeepsPhysicalFillUnderPolitical:
+      physicalBaseSource.includes("const semanticRenderedCount = drawPhysicalAtlasLayer(k, { interactive });")
+      && physicalBaseSource.includes("const reliefRenderedCount = drawPhysicalReliefOverlayLayer(k, { interactive });")
+      && physicalBaseSource.indexOf("drawPhysicalAtlasLayer(k, { interactive });")
+        < physicalBaseSource.indexOf("drawPhysicalReliefOverlayLayer(k, { interactive });"),
     hasPhysicalExactRefresh:
       /invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(rendererSource),
-    contextBaseDrawsReliefOverlayBeforeContours:
-      contextBaseSource.includes("drawPhysicalReliefOverlayLayer(k, { interactive });")
-      && contextBaseSource.indexOf("drawPhysicalReliefOverlayLayer(k, { interactive });")
-        < contextBaseSource.indexOf("drawPhysicalContourLayer(k, { interactive });"),
-    deferredContextBaseStillDrawsReliefOverlay:
+    contextBaseKeepsReliefBelowPolitical:
+      !contextBaseSource.includes("drawPhysicalReliefOverlayLayer(")
+      && contextBaseSource.includes("drawPhysicalContourLayer(k, { interactive });"),
+    deferredContextBaseSkipsReliefOverlay:
       /if \((?:runtimeState|state)\.deferContextBasePass && !interactive\) \{/.test(contextBaseSource)
-      && contextBaseSource.includes("drawPhysicalReliefOverlayLayer(k, { interactive: false });"),
+      && !contextBaseSource.includes("drawPhysicalReliefOverlayLayer(k, { interactive: false });"),
     contourUsesSourceOver:
       /drawPhysicalContourLayer[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(rendererSource),
     hasContourZoomProfiles:
@@ -129,7 +136,8 @@ test("physical layer source contracts stay wired to the expected renderer and st
       /if \((?:runtimeState|state)\.showPhysical\) \{[\s\S]*?requestedLayerNames\.push\("physical-set"\);[\s\S]*?requestedContourLayerNames\.push\("physical-contours-set"\);/.test(mainSource)
       && /schedulePostReadyTask\("post-ready-contour-warmup", async \(\) => \{[\s\S]*?await ensureContextLayerDataReady\(requestedContourLayerNames, \{[\s\S]*?reason: "post-ready-contours",[\s\S]*?renderNow: false,[\s\S]*?requestMainRender\("post-ready-contours"\);/.test(mainSource),
     toolbarToggleLoadsFullPhysicalSet:
-      /ensureContextLayerDataFn\(\["physical-set", "physical-contours-set"\], \{ reason: "toolbar-toggle", renderNow: true \}\)/.test(appearanceControllerSource),
+      /ensureContextLayerDataFn\(\["physical-set", "physical-contours-set"\], \{ reason: "toolbar-toggle", renderNow: true \}\)/.test(physicalOwnerSource)
+      && /physicalOwner\.bindEvents\(\);/.test(appearanceControllerSource),
     projectImportLoadsFullPhysicalSet:
       /callRuntimeHook\(state, "ensureContextLayerDataFn", \["physical-set", "physical-contours-set"\], \{[\s\S]*?reason: "project-import",[\s\S]*?renderNow: false,/.test(interactionFunnelSource),
     contextMarkersStagedMetricsCoverTransportLines:

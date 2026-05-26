@@ -418,6 +418,7 @@ export function createTransportWorkbenchController({
     const familyConfig = getTransportWorkbenchWorkingConfig(family.id, { baseline: compareHeld });
     const displayConfig = getTransportWorkbenchDisplayConfig(family.id, { baseline: compareHeld });
     // context 是 shell、lens、inspect 和 preview 的共同输入，避免四处重复读取 runtimeState。
+    // compare-held 模式也在这里一次性切到 baseline 视角，防止某个子面板还在读 live config、另一个已经切到对比快照。
     const config = buildTransportWorkbenchResolvedConfig(family.id, familyConfig, displayConfig);
     const activePackId = getTransportWorkbenchActivePackId(family.id);
     const activePackMeta = getTargetMainMapPackMeta(activePackId);
@@ -480,6 +481,8 @@ export function createTransportWorkbenchController({
       return;
     }
     if (willOpen) {
+      // 打开时先收拢会抢布局或焦点的兄弟 surface，再记住 trigger 并进入新 overlay。
+      // 关闭时则反过来按 restoreState 恢复抽屉/焦点，preview dispose 放在真正 close 分支里执行。
       transportWorkbenchStateOwner.prepareOpenState({
         restoreLeftDrawer: document.body.classList.contains("left-drawer-open"),
         restoreRightDrawer: document.body.classList.contains("right-drawer-open"),

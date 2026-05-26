@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
+import {
+  createDefaultDayNightStyleConfig,
+  normalizeDayNightStyleConfig,
+} from "../js/core/state.js";
 import {
   TEXTURE_STYLE_PATHS,
   createAppearanceTextureOwner,
@@ -207,4 +213,109 @@ test("day-night owner syncs mode controls and writes state from UI events", () =
   assert.equal(harness.nodes.dayNightManualTimeValue.textContent, "15:30 UTC");
   assert.equal(harness.runtimeState.syncDayNightClockTimerCount, 3);
   assert.deepEqual(harness.dirtyReasons, ["day-night-mode", "day-night-time"]);
+});
+
+test("day-night owner renders modern defaults from normalized state", () => {
+  const defaults = createDefaultDayNightStyleConfig();
+  const harness = createHarness([
+    "dayNightCityLightsEnabled",
+    "dayNightCityLightsStyle",
+    "dayNightCityLightsIntensity",
+    "dayNightCityLightsIntensityValue",
+    "dayNightCityLightsTextureOpacity",
+    "dayNightCityLightsTextureOpacityValue",
+    "dayNightCityLightsCorridorStrength",
+    "dayNightCityLightsCorridorStrengthValue",
+    "dayNightCityLightsCoreSharpness",
+    "dayNightCityLightsCoreSharpnessValue",
+    "dayNightCityLightsPopulationBoostEnabled",
+    "dayNightCityLightsPopulationBoostStrength",
+    "dayNightCityLightsPopulationBoostStrengthValue",
+    "dayNightShadowOpacity",
+    "dayNightShadowOpacityValue",
+  ], {
+    styleConfig: {
+      texture: { mode: "none" },
+      dayNight: {},
+    },
+  });
+
+  harness.owner.renderDayNightUI();
+
+  assert.equal(harness.nodes.dayNightCityLightsEnabled.checked, defaults.cityLightsEnabled);
+  assert.equal(harness.nodes.dayNightCityLightsStyle.value, defaults.cityLightsStyle);
+  assert.equal(harness.nodes.dayNightCityLightsIntensity.value, String(Math.round(defaults.cityLightsIntensity * 100)));
+  assert.equal(harness.nodes.dayNightCityLightsIntensityValue.textContent, "68%");
+  assert.equal(harness.nodes.dayNightCityLightsTextureOpacity.value, String(Math.round(defaults.cityLightsTextureOpacity * 100)));
+  assert.equal(harness.nodes.dayNightCityLightsTextureOpacityValue.textContent, "20%");
+  assert.equal(harness.nodes.dayNightCityLightsCorridorStrength.value, String(Math.round(defaults.cityLightsCorridorStrength * 100)));
+  assert.equal(harness.nodes.dayNightCityLightsCorridorStrengthValue.textContent, "8%");
+  assert.equal(harness.nodes.dayNightCityLightsCoreSharpness.value, String(Math.round(defaults.cityLightsCoreSharpness * 100)));
+  assert.equal(harness.nodes.dayNightCityLightsCoreSharpnessValue.textContent, "64%");
+  assert.equal(harness.nodes.dayNightCityLightsPopulationBoostEnabled.checked, defaults.cityLightsPopulationBoostEnabled);
+  assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrength.value, String(Math.round(defaults.cityLightsPopulationBoostStrength * 100)));
+  assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrengthValue.textContent, "58%");
+  assert.equal(harness.nodes.dayNightShadowOpacity.value, String(Math.round(defaults.shadowOpacity * 100)));
+  assert.equal(harness.nodes.dayNightShadowOpacityValue.textContent, "24%");
+});
+
+test("day-night modern range fallbacks match normalized defaults", () => {
+  const defaults = normalizeDayNightStyleConfig({});
+  const harness = createHarness([
+    "dayNightCityLightsIntensity",
+    "dayNightCityLightsTextureOpacity",
+    "dayNightCityLightsCorridorStrength",
+    "dayNightCityLightsCoreSharpness",
+    "dayNightCityLightsPopulationBoostStrength",
+    "dayNightShadowOpacity",
+  ]);
+
+  harness.owner.bindEvents();
+  [
+    "dayNightCityLightsIntensity",
+    "dayNightCityLightsTextureOpacity",
+    "dayNightCityLightsCorridorStrength",
+    "dayNightCityLightsCoreSharpness",
+    "dayNightCityLightsPopulationBoostStrength",
+    "dayNightShadowOpacity",
+  ].forEach((id) => {
+    harness.nodes[id].value = "invalid";
+    harness.nodes[id].dispatch("input");
+  });
+
+  assert.equal(harness.runtimeState.styleConfig.dayNight.cityLightsIntensity, defaults.cityLightsIntensity);
+  assert.equal(harness.runtimeState.styleConfig.dayNight.cityLightsTextureOpacity, defaults.cityLightsTextureOpacity);
+  assert.equal(harness.runtimeState.styleConfig.dayNight.cityLightsCorridorStrength, defaults.cityLightsCorridorStrength);
+  assert.equal(harness.runtimeState.styleConfig.dayNight.cityLightsCoreSharpness, defaults.cityLightsCoreSharpness);
+  assert.equal(
+    harness.runtimeState.styleConfig.dayNight.cityLightsPopulationBoostStrength,
+    defaults.cityLightsPopulationBoostStrength,
+  );
+  assert.equal(harness.runtimeState.styleConfig.dayNight.shadowOpacity, defaults.shadowOpacity);
+});
+
+test("day-night HTML initial values match normalized defaults", () => {
+  const defaults = createDefaultDayNightStyleConfig();
+  const html = readFileSync(join(process.cwd(), "index.html"), "utf8");
+  const assertRangeDefault = (id, expectedPercent) => {
+    const inputPattern = new RegExp(`<input[^>]*id="${id}"[^>]*value="${expectedPercent}"`, "s");
+    const valuePattern = new RegExp(`<span[^>]*id="${id}Value"[^>]*>${expectedPercent}%<\\/span>`, "s");
+    assert.match(html, inputPattern);
+    assert.match(html, valuePattern);
+  };
+
+  assertRangeDefault("dayNightCityLightsIntensity", Math.round(defaults.cityLightsIntensity * 100));
+  assertRangeDefault("dayNightCityLightsTextureOpacity", Math.round(defaults.cityLightsTextureOpacity * 100));
+  assertRangeDefault("dayNightCityLightsCorridorStrength", Math.round(defaults.cityLightsCorridorStrength * 100));
+  assertRangeDefault("dayNightCityLightsCoreSharpness", Math.round(defaults.cityLightsCoreSharpness * 100));
+  assertRangeDefault(
+    "dayNightCityLightsPopulationBoostStrength",
+    Math.round(defaults.cityLightsPopulationBoostStrength * 100),
+  );
+  assertRangeDefault("dayNightHistoricalCityLightsDensity", Math.round(defaults.historicalCityLightsDensity * 100));
+  assertRangeDefault(
+    "dayNightHistoricalCityLightsSecondaryRetention",
+    Math.round(defaults.historicalCityLightsSecondaryRetention * 100),
+  );
+  assertRangeDefault("dayNightShadowOpacity", Math.round(defaults.shadowOpacity * 100));
 });

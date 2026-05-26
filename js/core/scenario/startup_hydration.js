@@ -80,6 +80,37 @@ function createScenarioStartupHydrationController({
       && !!getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political");
   }
 
+  function isRuntimeOnlyShellFallbackFeature(feature) {
+    const props = feature?.properties || {};
+    return String(props.scenario_helper_kind || "").trim().toLowerCase() === "shell_fallback"
+      && props.render_as_base_geography === false;
+  }
+
+  function getPromotablePoliticalPayloadDecision(payload, mapSemanticMode) {
+    const collection = normalizeScenarioFeatureCollection(payload);
+    if (!collection) return { hasPayload: false, payload: null };
+    if (String(mapSemanticMode || "").trim().toLowerCase() === "blank") {
+      return { hasPayload: true, payload: collection };
+    }
+    const features = Array.isArray(collection.features) ? collection.features : [];
+    const promotableFeatures = features.filter((feature) => !isRuntimeOnlyShellFallbackFeature(feature));
+    if (!features.length || promotableFeatures.length === features.length) {
+      return { hasPayload: true, payload: collection };
+    }
+    if (!promotableFeatures.length) {
+      return { hasPayload: true, payload: null };
+    }
+    return {
+      hasPayload: true,
+      payload: { ...collection, features: promotableFeatures },
+    };
+  }
+
+  function getPoliticalPayloadDecisionFromRuntimeTopology(runtimeTopologyPayload, mapSemanticMode) {
+    const collection = getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political");
+    return getPromotablePoliticalPayloadDecision(collection, mapSemanticMode);
+  }
+
   function normalizeScenarioSourceMetadata(source) {
     return source && typeof source === "object" ? source : {};
   }
@@ -136,6 +167,8 @@ function createScenarioStartupHydrationController({
         ? bundle.geoLocalePatchPayloadsByLanguage
         : {};
 
+    // locale-specific patch 只按语言缓存一份；共享 patch 则同时挂到 en/zh，
+    // 这样保存后 reload 不会因为 UI 当前语言切换而把同一份 payload 重复拉两次。
     let payload = !forceReload ? bundle.geoLocalePatchPayloadsByLanguage[descriptor.language] || null : null;
     if (!payload) {
       const result = await loadOptionalScenarioResource(d3Client, descriptor.url, {
@@ -155,6 +188,8 @@ function createScenarioStartupHydrationController({
       }
     }
 
+    // 异步资源回来前用户可能已经切走场景；这里允许返回加载结果给调用方，
+    // 但不再把旧场景的 locale patch 回写进当前 runtime。
     if (normalizeScenarioId(state.activeScenarioId) !== scenarioId) {
       return payload || null;
     }
@@ -399,16 +434,34 @@ function createScenarioStartupHydrationController({
         reason: "scenario-hydrate-opening",
       });
     }
-    const nextScenarioPoliticalPayload = normalizeScenarioFeatureCollection(
-      mergedPoliticalPayload !== undefined
-        ? mergedPoliticalPayload
-        : (
-          getScenarioDecodedCollection(bundle, "politicalData")
-          || getScenarioTopologyFeatureCollection(runtimeTopologyPayload, "political")
-          || state.scenarioPoliticalChunkData
-        )
-    ) || null;
+    const runtimePoliticalPayloadDecision = getPoliticalPayloadDecisionFromRuntimeTopology(
+      runtimeTopologyPayload,
+      mapSemanticMode,
+    );
+    const decodedPoliticalPayloadDecision = getPromotablePoliticalPayloadDecision(
+      getScenarioDecodedCollection(bundle, "politicalData"),
+      mapSemanticMode,
+    );
+    // political payload 优先级从旧 runtime -> decoded full bundle -> merged runtime layer 逐层覆盖。
+    // 最后一层 merged payload 代表 chunk/apply 后的最新壳层真相，必须拥有最终解释权。
     const previousScenarioPoliticalPayload = state.scenarioPoliticalChunkData;
+    let nextScenarioPoliticalPayload = previousScenarioPoliticalPayload || null;
+    if (runtimePoliticalPayloadDecision.hasPayload) {
+      nextScenarioPoliticalPayload = runtimePoliticalPayloadDecision.payload;
+    }
+    if (decodedPoliticalPayloadDecision.hasPayload) {
+      nextScenarioPoliticalPayload = decodedPoliticalPayloadDecision.payload;
+    }
+    if (mergedPoliticalPayload !== undefined) {
+      let mergedPoliticalPayloadDecision = { hasPayload: true, payload: null };
+      if (mergedPoliticalPayload !== null) {
+        mergedPoliticalPayloadDecision = getPromotablePoliticalPayloadDecision(
+          mergedPoliticalPayload,
+          mapSemanticMode
+        );
+      }
+      nextScenarioPoliticalPayload = mergedPoliticalPayloadDecision.payload;
+    }
     const promotedScenarioPolitical = applyScenarioPoliticalChunkPayload(
       bundle,
       nextScenarioPoliticalPayload,
@@ -418,15 +471,15 @@ function createScenarioStartupHydrationController({
         changedLayerKeys: hydrationChangedLayerKeys,
       }
     );
-    const politicalPayloadChangedForFallback = !!(
-      nextScenarioPoliticalPayload
-      && !areScenarioFeatureCollectionsEquivalent(nextScenarioPoliticalPayload, previousScenarioPoliticalPayload)
+    const hasPoliticalPayloadChange = !areScenarioFeatureCollectionsEquivalent(
+      nextScenarioPoliticalPayload,
+      previousScenarioPoliticalPayload
     );
     if (!promotedScenarioPolitical) {
       setScenarioRuntimeOptionalLayerState(state, {
         scenarioPoliticalChunkData: nextScenarioPoliticalPayload,
       });
-      if (politicalPayloadChangedForFallback) {
+      if (hasPoliticalPayloadChange) {
         refreshMapDataForScenarioChunkPromotion({
           suppressRender: !renderNow,
           hasPoliticalPayloadChange: true,
@@ -439,7 +492,7 @@ function createScenarioStartupHydrationController({
         });
       }
     }
-    if (scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback) {
+    if (scenarioAtlantropaChanged && !promotedScenarioPolitical && !hasPoliticalPayloadChange) {
       refreshMapDataForScenarioChunkPromotion({
         suppressRender: !renderNow,
         reason: "scenario-hydrate-atlantropa",
@@ -447,7 +500,7 @@ function createScenarioStartupHydrationController({
         hasPoliticalPayloadChange: false,
       });
     }
-    if (scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !politicalPayloadChangedForFallback) {
+    if (scenarioWaterChanged && !scenarioAtlantropaChanged && !promotedScenarioPolitical && !hasPoliticalPayloadChange) {
       refreshMapDataForScenarioChunkPromotion({
         suppressRender: !renderNow,
         reason: "scenario-hydrate-water",

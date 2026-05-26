@@ -68,6 +68,72 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIsNone(re.search(r"function\s+buildRenderPassLayout\s*\(", renderer_content))
         self.assertIsNone(re.search(r"function\s+getInteractionCompositeRejectReason\s*\(", renderer_content))
 
+    def test_modern_city_lights_static_cache_excludes_clock_fields(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        signature_match = re.search(
+            r"function getModernCityLightsStaticConfigSignature\(config\) \{(?P<body>[\s\S]*?)\n\}",
+            renderer_content,
+        )
+        self.assertIsNotNone(signature_match)
+        signature_body = signature_match.group("body")
+
+        self.assertIn("cityLightsIntensity", signature_body)
+        self.assertIn("cityLightsTextureOpacity", signature_body)
+        self.assertIn("cityLightsCorridorStrength", signature_body)
+        self.assertIn("cityLightsCoreSharpness", signature_body)
+        self.assertIn("cityLightsPopulationBoostStrength", signature_body)
+        self.assertNotIn("manualUtcMinutes", signature_body)
+        self.assertNotIn("shadowOpacity", signature_body)
+        self.assertNotIn("twilightWidthDeg", signature_body)
+
+        key_match = re.search(
+            r"function getModernCityLightsStaticLayerKey\(config\) \{(?P<body>[\s\S]*?)\n\}",
+            renderer_content,
+        )
+        self.assertIsNotNone(key_match)
+        key_body = key_match.group("body")
+        self.assertIn("getModernCityLightsStaticConfigSignature(config)", key_body)
+        self.assertIn("getTransformSignature(runtimeState.zoomTransform", key_body)
+        self.assertIn("runtimeState.contextLayerRevision", key_body)
+        self.assertIn("runtimeState.cityLayerRevision", key_body)
+        self.assertNotIn("manualUtcMinutes", key_body)
+        self.assertNotIn("getDayNightSignatureClockToken", key_body)
+        self.assertNotIn("shadowOpacity", key_body)
+        self.assertNotIn("twilightWidthDeg", key_body)
+        self.assertNotIn("solarState", key_body)
+
+        self.assertRegex(
+            renderer_content,
+            r"function drawModernNightLightsLayer\(k, config, solarState\) \{[\s\S]*?"
+            r"const staticLayerCanvas = getModernCityLightsStaticLayerCanvas\(k, config, intensity\);[\s\S]*?"
+            r"context\.drawImage\(staticLayerCanvas, 0, 0\);",
+        )
+
+    def test_active_scenario_shell_empty_political_baseline_cannot_fall_back_to_primary(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "const runtimeBaseCollection = getRuntimePoliticalBaseCollection(runtimeCollection);",
+            renderer_content,
+        )
+        self.assertIn(
+            'const hasScenarioRuntimePoliticalSource = !!String(runtimeState.activeScenarioId || "").trim()',
+            renderer_content,
+        )
+        self.assertIn("&& !!runtimeTopology?.objects?.political;", renderer_content)
+        self.assertRegex(
+            renderer_content,
+            r"if \(runtimeBaseCollection\) \{[\s\S]*?"
+            r"fullCollection = runtimeBaseCollection;[\s\S]*?"
+            r"\} else if \(hasScenarioRuntimePoliticalSource\) \{[\s\S]*?"
+            r"fullCollection = \{ type: \"FeatureCollection\", features: \[\] \};[\s\S]*?"
+            r"\} else if \(primaryTopology\?\.objects\?\.political",
+        )
+        self.assertIn(
+            "appendUniqueFeatureCollections(\n    fullCollection,\n    buildAtlantropaLandLikeFeatureCollection()\n  );",
+            renderer_content,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

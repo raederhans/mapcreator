@@ -58,6 +58,8 @@ function buildMainRuntimeLoadStatusSnapshot() {
   const chunkLoadState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object"
     ? state.runtimeChunkLoadState
     : {};
+  // 这个 snapshot 给诊断面板和外部调试工具读“当前主线程还卡在哪一段”。
+  // 这里坚持只暴露可序列化的只读快照，避免把 runtimeState 原对象直接泄漏给诊断消费者。
   return {
     boot: {
       phase: String(state.bootPhase || ""),
@@ -660,6 +662,8 @@ function schedulePostReadyTask(
 ) {
   const normalizedTaskKey = String(taskKey || "").trim();
   if (!normalizedTaskKey) return;
+  // post-ready 队列的目标是把“首屏之后才值得做”的 warmup / reconcile 串成单拥有者空闲任务。
+  // 每次重排都会先清掉旧 handle，再沿用同一个 taskKey 的诊断记录，这样外部才能持续看到重试原因和最新排程时刻。
   const previousDiagnostic = postReadyTaskDiagnostics.get(normalizedTaskKey);
   clearScheduledPostReadyTask(normalizedTaskKey);
   postReadyTaskDiagnostics.set(normalizedTaskKey, {
@@ -692,6 +696,8 @@ function schedulePostReadyTask(
       return;
     }
     if (typeof globalThis.requestIdleCallback === "function") {
+      // requestIdleCallback 只在真正有空闲预算时才运行 callback；
+      // 剩余时间不足就回到统一重排链，避免 warmup 抢走正在稳定中的 render / chunk promotion 时间片。
       const idleId = globalThis.requestIdleCallback((deadline) => {
         postReadyTaskHandles.delete(normalizedTaskKey);
         if (scheduledEpoch !== postReadyTaskEpoch) {

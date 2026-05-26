@@ -66,6 +66,8 @@ export function createAppearanceControlsController({
   const parentBorderCountryList = document.getElementById("parentBorderCountryList");
   const parentBorderEmpty = document.getElementById("parentBorderEmpty");
 
+  // Appearance shell 自己只保留跨分区的 tab/filter/toggle 编排。
+  // 细分面板各自维护自己的脏标记、状态归一化和 UI 刷新，避免再次回到 toolbar.js 式的大一统逻辑。
   const transportAppearanceController = createTransportAppearanceController({
     runtimeState,
     t,
@@ -227,6 +229,8 @@ export function createAppearanceControlsController({
   };
 
   const renderAppearanceStyleControlsUi = () => {
+    // 先让子 owner 刷到各自的稳定视图，再回填这个 shell 仍然直接拥有的原始 toggle/value。
+    // 这样 transport/city/physical 的派生状态不会被后面的简单 DOM 赋值覆盖回旧值。
     cityPointsOwner.renderCityPointsUi();
     if (toggleUrban) toggleUrban.checked = !!runtimeState.showUrban;
     physicalOwner.renderPhysicalUi();

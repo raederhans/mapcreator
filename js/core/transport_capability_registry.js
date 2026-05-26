@@ -24,6 +24,9 @@ const TRANSPORT_OVERVIEW_DATA_LAYER_KEYS_BY_FAMILY = Object.freeze({
   road: Object.freeze(["roads"]),
 });
 
+// 这里是 transport family 的单一真相源：
+// appearance summary、main-map bridge、preview/workbench 和 state_defaults 都应复用同一份 family 元数据，
+// 这样“某个 family 支持什么能力、默认怎样显示、能不能 apply 到主图”就不会在多处静态常量里漂移。
 const BASE_TRANSPORT_OVERVIEW_DEFAULTS = Object.freeze({
   airport: Object.freeze({
     opacity: 0.82,

@@ -33,12 +33,12 @@ const DEFAULT_MODERN_LIGHTS_CONFIG = {
   manualUtcMinutes: 0,
   cityLightsEnabled: true,
   cityLightsStyle: 'modern',
-  cityLightsIntensity: 0.78,
-  cityLightsTextureOpacity: 0.32,
-  cityLightsCorridorStrength: 0.18,
-  cityLightsCoreSharpness: 0.54,
+  cityLightsIntensity: 0.68,
+  cityLightsTextureOpacity: 0.2,
+  cityLightsCorridorStrength: 0.08,
+  cityLightsCoreSharpness: 0.64,
   cityLightsPopulationBoostEnabled: true,
-  cityLightsPopulationBoostStrength: 0.9,
+  cityLightsPopulationBoostStrength: 0.58,
 };
 
 const EASTERN_NIGHT_UTC_MINUTES = 18 * 60;
