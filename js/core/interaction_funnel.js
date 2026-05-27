@@ -193,8 +193,7 @@ async function applyImportedProjectState(data, { ui, hooks }) {
   state.sovereigntyInitialized = false;
   state.paintMode = data.paintMode || "visual";
   state.activeSovereignCode = data.activeSovereignCode || "";
-  state.selectedInspectorCountryCode =
-    data.activeSovereignCode || state.selectedInspectorCountryCode || "";
+  state.selectedInspectorCountryCode = "";
   state.inspectorHighlightCountryCode = state.selectedInspectorCountryCode;
   state.releasableBoundaryVariantByTag =
     data.releasableBoundaryVariantByTag &&

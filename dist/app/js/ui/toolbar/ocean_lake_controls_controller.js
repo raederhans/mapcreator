@@ -34,7 +34,6 @@ export function createOceanLakeControlsController({
   oceanCoastalAccentToggle,
   oceanAdvancedStylesToggle,
   oceanStyleSelect,
-  oceanStylePresetHint,
   oceanTextureOpacity,
   oceanTextureScale,
   oceanContourStrength,
@@ -140,17 +139,6 @@ export function createOceanLakeControlsController({
     lakeHistoryBefore = null;
   };
 
-  const getOceanPresetHint = (preset) => {
-    const normalizedPreset = normalizeOceanPreset(preset);
-    if (normalizedPreset === "bathymetry_soft") {
-      return t("Bathymetry Soft emphasizes depth bands while keeping contours subtle.", "ui");
-    }
-    if (normalizedPreset === "bathymetry_contours") {
-      return t("Bathymetry Contours emphasizes contour lines while bands stay in the background.", "ui");
-    }
-    return t("Flat Blue keeps the ocean fill clean with no bathymetry overlay.", "ui");
-  };
-
   const syncOceanPresetControlValues = () => {
     if (oceanStyleSelect) {
       oceanStyleSelect.value = state.styleConfig.ocean.preset || "flat";
@@ -172,9 +160,6 @@ export function createOceanLakeControlsController({
     }
     if (oceanContourStrengthValue) {
       oceanContourStrengthValue.textContent = `${Math.round(clamp(state.styleConfig.ocean.contourStrength || 0.34, 0, 1) * 100)}%`;
-    }
-    if (oceanStylePresetHint) {
-      oceanStylePresetHint.textContent = getOceanPresetHint(state.styleConfig.ocean.preset || "flat");
     }
   };
 
@@ -287,9 +272,6 @@ export function createOceanLakeControlsController({
       2.5,
       5
     );
-    if (oceanStylePresetHint) {
-      oceanStylePresetHint.textContent = getOceanPresetHint(state.styleConfig.ocean.preset || "flat");
-    }
     if (oceanBathymetrySourceValue) {
       const bathymetrySourceLabel = String(state.activeBathymetrySource || "").trim();
       oceanBathymetrySourceValue.textContent = bathymetrySourceLabel || t("None", "ui");

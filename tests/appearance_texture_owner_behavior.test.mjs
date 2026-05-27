@@ -186,33 +186,42 @@ test("texture owner binds range inputs once and commits texture history on chang
   assert.deepEqual(harness.historyEntries[0].after.stylePaths, TEXTURE_STYLE_PATHS);
 });
 
-test("day-night owner syncs mode controls and writes state from UI events", () => {
+test("day-night owner syncs computer UTC time into the manual slider", () => {
   const harness = createHarness([
     "dayNightEnabled",
-    "dayNightModeManualBtn",
-    "dayNightModeUtcBtn",
     "dayNightManualControls",
     "dayNightManualTime",
     "dayNightManualTimeValue",
-    "dayNightUtcStatus",
-    "dayNightCurrentTime",
+    "dayNightSyncComputerUtcBtn",
   ]);
+  harness.nodes.dayNightManualControls.classList.add("hidden");
 
   harness.owner.renderDayNightUI();
   harness.owner.bindEvents();
-  harness.nodes.dayNightModeUtcBtn.dispatch("click");
   harness.nodes.dayNightManualTime.value = "930";
   harness.nodes.dayNightManualTime.dispatch("input");
+  harness.nodes.dayNightSyncComputerUtcBtn.dispatch("click");
 
-  assert.equal(harness.runtimeState.styleConfig.dayNight.mode, "utc");
-  assert.equal(harness.runtimeState.styleConfig.dayNight.manualUtcMinutes, 930);
-  assert.equal(harness.nodes.dayNightModeUtcBtn.getAttribute("aria-pressed"), "true");
-  assert.equal(harness.nodes.dayNightModeManualBtn.getAttribute("aria-pressed"), "false");
-  assert.equal(harness.nodes.dayNightManualControls.classList.contains("hidden"), true);
-  assert.equal(harness.nodes.dayNightUtcStatus.classList.contains("hidden"), false);
-  assert.equal(harness.nodes.dayNightManualTimeValue.textContent, "15:30 UTC");
+  const now = new Date();
+  const expectedUtcMinutes = (now.getUTCHours() * 60) + now.getUTCMinutes();
+  const syncedUtcMinutes = harness.runtimeState.styleConfig.dayNight.manualUtcMinutes;
+
+  assert.equal(harness.runtimeState.styleConfig.dayNight.mode, "manual");
+  assert.ok(Math.abs(syncedUtcMinutes - expectedUtcMinutes) <= 1);
+  assert.equal(harness.nodes.dayNightManualControls.classList.contains("hidden"), false);
+  assert.equal(harness.nodes.dayNightManualTimeValue.textContent, formatUtcMinutes(syncedUtcMinutes));
   assert.equal(harness.runtimeState.syncDayNightClockTimerCount, 3);
-  assert.deepEqual(harness.dirtyReasons, ["day-night-mode", "day-night-time"]);
+  assert.deepEqual(harness.dirtyReasons, ["day-night-time", "day-night-sync-computer-utc"]);
+});
+
+test("day-night normalization retires legacy live UTC mode", () => {
+  const normalized = normalizeDayNightStyleConfig({
+    mode: "utc",
+    manualUtcMinutes: 18 * 60,
+  });
+
+  assert.equal(normalized.mode, "manual");
+  assert.equal(normalized.manualUtcMinutes, 18 * 60);
 });
 
 test("day-night owner renders modern defaults from normalized state", () => {

@@ -2,6 +2,7 @@
 // Owns info/help popover DOM, focus, and positioning so the controller keeps only workbench orchestration.
 
 import {
+  TRANSPORT_WORKBENCH_FAMILIES,
   TRANSPORT_WORKBENCH_INLINE_HELP_COPY,
   TRANSPORT_WORKBENCH_INLINE_HELP_SECTIONS,
 } from "./transport_workbench_descriptor.js";
@@ -13,6 +14,18 @@ const focusNode = (node) => {
     node.focus({ preventScroll: true });
   }
 };
+
+const APPLY_COMPATIBILITY_COPY = Object.freeze({
+  main_map_bridge: "main map apply",
+  local_board: "workbench board",
+  preview_only: "preview only",
+});
+
+function buildTransportCapabilityMatrixBody(translate) {
+  return TRANSPORT_WORKBENCH_FAMILIES
+    .map((entry) => `${translate(entry.label)}: ${translate(APPLY_COMPATIBILITY_COPY[entry.applyCompatibility] || "preview only")}`)
+    .join(" · ");
+}
 
 export function createTransportWorkbenchPopoverOwner({
   panel = null,
@@ -142,6 +155,10 @@ export function createTransportWorkbenchPopoverOwner({
         title: "Preview controls",
         body: "Use mouse wheel or the + / - controls to zoom. The 90° button swaps between the default north-up view and the quarter-turn inspection view. Reset View restores the framed default preview.",
       },
+      {
+        title: "Capability matrix",
+        body: () => buildTransportCapabilityMatrixBody(translate),
+      },
       dataContract
         ? {
           title: "Data path",
@@ -172,6 +189,10 @@ export function createTransportWorkbenchPopoverOwner({
             "The left column keeps context only, while the center board and right-side Inspect confirm the active order. The remaining tabs stay in place so later help and controls can land without changing the shell.",
           ),
         },
+        {
+          title: "Capability matrix",
+          body: () => buildTransportCapabilityMatrixBody(translate),
+        },
       ]
       : defaultBlocks;
 
@@ -184,7 +205,7 @@ export function createTransportWorkbenchPopoverOwner({
       title.textContent = translate(block.title);
       const body = document.createElement("p");
       body.className = "transport-workbench-info-text";
-      body.textContent = translate(block.body);
+      body.textContent = typeof block.body === "function" ? block.body() : translate(block.body);
       node.append(title, body);
       infoBody.appendChild(node);
     });

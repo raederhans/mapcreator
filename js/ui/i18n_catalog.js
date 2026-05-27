@@ -36,6 +36,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Show Road": { zh: "\u663e\u793a\u9053\u8def", en: "Show Road" },
   "Show Road Labels": { zh: "\u663e\u793a\u9053\u8def\u6807\u7b7e", en: "Show Road Labels" },
   "Allow Underlying Map Selection": { zh: "\u5141\u8bb8\u9009\u4e2d\u4ea4\u901a\u70b9\u4e0b\u65b9\u5730\u56fe\u5bf9\u8c61", en: "Allow Underlying Map Selection" },
+  "Sync Computer UTC Time": { zh: "\u540c\u6b65\u7535\u8111 UTC \u65f6\u95f4", en: "Sync Computer UTC Time" },
   "Label Halo": { zh: "\u6807\u7b7e\u63cf\u8fb9", en: "Label Halo" },
   On: { zh: "开启", en: "On" },
   Off: { zh: "关闭", en: "Off" },
@@ -209,10 +210,6 @@ export const UI_COPY_CATALOG = Object.freeze({
     zh: "\u6253\u5f00 Transport workbench\uff0c\u5728\u5de6\u4fa7\u67e5\u770b family \u4e0a\u4e0b\u6587\uff0c\u5728\u4e2d\u95f4\u9884\u89c8\u6216\u6392\u5e8f\uff0c\u5728\u53f3\u4fa7 inspector tabs \u91cc\u8c03\u6574\u548c\u6838\u5bf9\u89c4\u5219\u3002",
     en: "Open the Transport workbench to review family context on the left, preview or reorder in the center, and tune or verify rules in the inspector tabs on the right.",
   },
-  "Save the current map state as a project file or restore one from disk. Loading a project replaces the current working state, and the app asks before continuing when the saved scenario baseline differs from the current assets.": {
-    zh: "\u628a\u5f53\u524d\u5730\u56fe\u72b6\u6001\u4fdd\u5b58\u6210 project file\uff0c\u6216\u4ece\u78c1\u76d8\u6062\u590d\u65e2\u6709\u9879\u76ee\u3002\u52a0\u8f7d\u9879\u76ee\u4f1a\u66ff\u6362\u5f53\u524d working state\uff1b\u5982\u679c\u4fdd\u5b58\u65f6\u7684 scenario baseline \u548c\u5f53\u524d assets \u4e0d\u4e00\u81f4\uff0c\u7cfb\u7edf\u4f1a\u5148\u5f39\u51fa\u786e\u8ba4\u63d0\u793a\u3002",
-    en: "Save the current map state as a project file or restore one from disk. Loading a project replaces the current working state, and the app asks before continuing when the saved scenario baseline differs from the current assets.",
-  },
   "Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session.": {
     zh: "\u5148\u7ed9\u5730\u56fe\u4e0a\u8272\uff0c\u518d\u5728\u8fd9\u91cc\u91cd\u547d\u540d\u6bcf\u4e2a color entry\u3002\u540d\u79f0\u6e05\u7a7a\u540e\u4f1a\u79fb\u9664\u8be5 label\uff0c\u800c\u5f53\u524d legend list \u4f1a\u4fdd\u6301\u5728\u8fd9\u6b21 working session \u91cc\u3002",
     en: "Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session.",
@@ -326,18 +323,6 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Political Clean": { zh: "\u653f\u6cbb\u4f18\u5148", en: "Political Clean" },
   Balanced: { zh: "\u5747\u8861", en: "Balanced" },
   "Terrain Rich": { zh: "\u5730\u8c8c\u4f18\u5148", en: "Terrain Rich" },
-  "Balanced keeps terrain visible while staying cleaner over political fills.": {
-    zh: "\u5747\u8861\u6a21\u5f0f\u4f1a\u4fdd\u7559\u5730\u8c8c\u5b58\u5728\u611f\uff0c\u540c\u65f6\u5c3d\u91cf\u907f\u514d\u628a\u653f\u6cbb\u5e95\u8272\u5f04\u810f\u3002",
-    en: "Balanced keeps terrain visible while staying cleaner over political fills.",
-  },
-  "Political Clean keeps only the clearest landform cues over political fills.": {
-    zh: "\u653f\u6cbb\u4f18\u5148\u6a21\u5f0f\u53ea\u4fdd\u7559\u6700\u6e05\u6670\u7684\u5730\u8c8c\u7ed3\u6784\u63d0\u793a\uff0c\u5c3d\u91cf\u4e0d\u5e72\u6270\u56fd\u5bb6\u5e95\u8272\u3002",
-    en: "Political Clean keeps only the clearest landform cues over political fills.",
-  },
-  "Terrain Rich pushes the atlas and contour layer for the strongest relief read.": {
-    zh: "\u5730\u8c8c\u4f18\u5148\u6a21\u5f0f\u4f1a\u5f3a\u5316\u56fe\u96c6\u548c\u7b49\u9ad8\u7ebf\uff0c\u8ba9\u5730\u5f62\u8d77\u4f0f\u6700\u660e\u663e\u3002",
-    en: "Terrain Rich pushes the atlas and contour layer for the strongest relief read.",
-  },
   "Scenario runtime overlays were degraded. Editing remains available.": {
     zh: "\u573a\u666f\u8fd0\u884c\u65f6 overlay \u5df2\u964d\u7ea7\uff0c\u4f46\u4ecd\u53ef\u4ee5\u7ee7\u7eed\u67e5\u770b\u548c\u7f16\u8f91\u3002",
     en: "Scenario runtime overlays were degraded. Editing remains available.",

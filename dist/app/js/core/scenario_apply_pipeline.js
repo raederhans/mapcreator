@@ -47,6 +47,7 @@ function createScenarioApplyPipeline({
   syncScenarioOceanFillForActivation,
   applyScenarioPerformanceHints,
   scheduleScenarioChunkRefresh,
+  awaitInitialScenarioChunkVisualPromotion,
   resetScenarioChunkRuntimeState,
   ensureRuntimeChunkLoadState,
   hasRenderableScenarioPoliticalTopology,
@@ -176,6 +177,7 @@ function createScenarioApplyPipeline({
   function runScenarioActivationPreCommitPhase(bundle, staged) {
     // pre-commit 先同步会影响后续提交结果的辅助状态，
     // commit 阶段只落 runtimeState 字段，post-commit 再触发 UI/render/chunk 副作用。
+    // 这样排是为了把“提交真相源”和“提交后的连锁刷新”拆开，定位 apply 异常时更容易看出卡在哪一段。
     syncScenarioLocalizationState({
       cityOverridesPayload: staged.mapSemanticMode === "blank" ? null : (staged.scenarioCityOverridesPayload || null),
       geoLocalePatchPayload: staged.mapSemanticMode === "blank" ? null : (bundle.geoLocalePatchPayload || null),
@@ -198,7 +200,7 @@ function createScenarioApplyPipeline({
 
   function runScenarioActivationPostCommitPhase(bundle, staged) {
     markLegacyColorStateDirty();
-    syncScenarioInspectorSelection(runtimeState.activeSovereignCode);
+    syncScenarioInspectorSelection("");
     disableScenarioParentBorders();
     applyScenarioPaintMode();
     syncScenarioOceanFillForActivation(bundle.manifest);
@@ -209,8 +211,13 @@ function createScenarioApplyPipeline({
   function commitScenarioChunkRuntimeState(bundle, staged) {
     // chunk runtime 的壳状态和 payload cache 在这里统一接管。
     // 非 chunked 场景直接 reset，避免旧场景留下的 detail/chunk 状态混进新场景。
-    runtimeState.scheduleScenarioChunkRefreshFn = scenarioSupportsChunkedRuntime(bundle) ? scheduleScenarioChunkRefresh : null;
-    if (scenarioSupportsChunkedRuntime(bundle)) {
+    // 这里的 reset 不是保守清空，而是显式把 owner 交回当前场景，避免上一场景的缓存继续冒充已加载。
+    const supportsChunkedRuntime = scenarioSupportsChunkedRuntime(bundle);
+    runtimeState.scheduleScenarioChunkRefreshFn = supportsChunkedRuntime ? scheduleScenarioChunkRefresh : null;
+    runtimeState.awaitInitialScenarioChunkVisualPromotionFn = supportsChunkedRuntime
+      ? awaitInitialScenarioChunkVisualPromotion
+      : null;
+    if (supportsChunkedRuntime) {
       resetScenarioChunkRuntimeState({ scenarioId: staged.scenarioId });
       const chunkIds = Object.keys(bundle.chunkPayloadCacheById || {});
       if (chunkIds.length) {
@@ -301,6 +308,7 @@ function createScenarioApplyPipeline({
     ) || !!detailPromoted || politicalChunkedReady;
     // detailReady 只表示“允许进入 apply 的最低入场条件已经满足”。
     // 后续的 hydration health gate、chunk 接管和 post-commit 细化仍可能继续补齐更多 runtime 面。
+    // 所以 coarse 路径能继续，不等于场景已经完全稳定；真正 ready 还要看后续 owner 是否把细节面接管完整。
     if (!detailReady && scenarioNeedsDetailTopology(bundle.manifest) && !startupReadonly) {
       const scenarioLabel = getScenarioDisplayName(
         bundle.manifest,

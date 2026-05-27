@@ -102,6 +102,10 @@ function resolveHooks(hooks = {}) {
         : null,
     refreshColorState:
       typeof hooks.refreshColorState === "function" ? hooks.refreshColorState : null,
+    onProjectImportComplete:
+      typeof hooks.onProjectImportComplete === "function" ? hooks.onProjectImportComplete : null,
+    onProjectImportError:
+      typeof hooks.onProjectImportError === "function" ? hooks.onProjectImportError : null,
   };
 }
 
@@ -189,8 +193,7 @@ async function applyImportedProjectState(data, { ui, hooks }) {
   state.sovereigntyInitialized = false;
   state.paintMode = data.paintMode || "visual";
   state.activeSovereignCode = data.activeSovereignCode || "";
-  state.selectedInspectorCountryCode =
-    data.activeSovereignCode || state.selectedInspectorCountryCode || "";
+  state.selectedInspectorCountryCode = "";
   state.inspectorHighlightCountryCode = state.selectedInspectorCountryCode;
   state.releasableBoundaryVariantByTag =
     data.releasableBoundaryVariantByTag &&
@@ -367,15 +370,22 @@ export function importProjectThroughFunnel(file, options = {}) {
   debugState.importPhase = "file-read";
   debugState.lastImportError = "";
   debugState.lastImportFileName = String(file?.name || "");
-  FileManager.importProject(file, async (data) => {
-    try {
-      await applyImportedProjectState(data, { ui, hooks });
-    } catch (error) {
-      debugState.importPhase = "error";
-      debugState.lastImportError = String(error?.message || error || "");
-      throw error;
+  FileManager.importProject(
+    file,
+    async (data) => {
+      try {
+        await applyImportedProjectState(data, { ui, hooks });
+      } catch (error) {
+        debugState.importPhase = "error";
+        debugState.lastImportError = String(error?.message || error || "");
+        throw error;
+      }
+    },
+    {
+      onSuccess: () => hooks.onProjectImportComplete?.(),
+      onError: () => hooks.onProjectImportError?.(),
     }
-  });
+  );
   return true;
 }
 

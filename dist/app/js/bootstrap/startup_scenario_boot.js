@@ -1,5 +1,6 @@
 import { loadScenarioBundle } from "../core/scenario_resources.js";
 import { applyScenarioBundleCommand } from "../core/scenario_dispatcher.js";
+import { normalizeScenarioId } from "../core/scenario/shared.js";
 
 function buildScenarioBundleBootMetrics(bundle) {
   return bundle?.loadDiagnostics?.optionalResources?.runtime_topology?.metrics
@@ -12,6 +13,16 @@ function buildScenarioBundleBootMetrics(bundle) {
       geoLocalePatch: bundle?.loadDiagnostics?.optionalResources?.geo_locale_patch?.metrics || null,
       manifest: bundle?.loadDiagnostics?.requiredResources?.manifest || null,
     };
+}
+
+function cacheStartupScenarioBundle(runtimeState, bundle) {
+  const scenarioId = normalizeScenarioId(bundle?.manifest?.scenario_id || bundle?.meta?.scenario_id);
+  if (!scenarioId) return;
+  runtimeState.scenarioBundleCacheById = runtimeState.scenarioBundleCacheById
+    && typeof runtimeState.scenarioBundleCacheById === "object"
+    ? runtimeState.scenarioBundleCacheById
+    : {};
+  runtimeState.scenarioBundleCacheById[scenarioId] = bundle;
 }
 
 export function createStartupScenarioBootOwner({
@@ -48,6 +59,7 @@ export function createStartupScenarioBootOwner({
     if (!defaultScenarioBundle?.manifest) {
       throw new Error("Default scenario bundle did not include a manifest.");
     }
+    cacheStartupScenarioBundle(runtimeState, defaultScenarioBundle);
 
     finishBootMetric?.("scenario-bundle", {
       source: scenarioBundleResult.source || "legacy",
@@ -90,6 +102,7 @@ export function createStartupScenarioBootOwner({
       });
       scenarioBundleSource = "legacy-bootstrap-recovery";
       canDeferStartupChunkPrewarm = false;
+      cacheStartupScenarioBundle(runtimeState, defaultScenarioBundle);
       await applyScenarioBundleCommand(defaultScenarioBundle, {
         renderMode: "none",
         suppressRender: true,

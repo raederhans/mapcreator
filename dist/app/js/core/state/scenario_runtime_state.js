@@ -18,6 +18,8 @@ export function createDefaultRuntimeChunkLoadState({ scenarioId = "" } = {}) {
   return {
     // shell/registry 负责 chunk runtime 是否具备基础资源；
     // protected/promotion/inFlight 三组字段则负责 zoom-end 保护、promotion 提交和并发加载状态机。
+    // 后续 owner 会跨 startup、chunk refresh、detail promotion 共同读写这里，
+    // 所以字段语义必须稳定，不能把一次性局部状态随手塞进这个对象。
     shellStatus: ready ? "ready" : "idle",
     registryStatus: ready ? "ready" : "idle",
     refreshScheduled: false,
@@ -160,6 +162,7 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   }
   // optional layer 要区分“这次提交没有提到该 layer”和“这次明确要把它清空”。
   // 所以这里统一走 hasOwnProperty，而不是用 truthy 判断偷懒。
+  // 这样 rollback / apply / reload 才能保住“沿用旧值”和“主动清空”两种不同语义。
   const hasOwn = Object.prototype.hasOwnProperty;
   if (hasOwn.call(nextState, "activeScenarioMeshPack")) {
     target.activeScenarioMeshPack = nextState.activeScenarioMeshPack || null;
@@ -244,6 +247,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   // 这里只做纯 runtimeState 字段提交。
   // preCommit / postCommit 副作用由 scenario_apply_pipeline.js 显式排序。
   // requiredKeys 用来锁住最低提交合同，避免 apply 流程看似成功，实际却漏掉关键 owner 字段。
+  // 如果要扩展场景切换合同，应先补这里的 requiredKeys，再补 apply pipeline 的 staged builder。
   const requiredKeys = [
     "activeScenarioId",
     "scenarioBorderMode",

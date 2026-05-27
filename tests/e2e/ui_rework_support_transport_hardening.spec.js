@@ -333,12 +333,12 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
       .map((element) => element.getBoundingClientRect());
     const gaps = cards.slice(1).map((card, index) => card.top - cards[index].bottom);
     const firstCard = document.querySelector('#appearancePanelDayNight .appearance-day-night-card');
-    const modeRow = document.querySelector('#appearancePanelDayNight .appearance-day-night-mode-row');
+    const syncButton = document.querySelector('#dayNightSyncComputerUtcBtn');
     return {
       cardCount: cards.length,
       minGap: gaps.length ? Math.min(...gaps) : 0,
       cardPaddingTop: firstCard ? Number.parseFloat(getComputedStyle(firstCard).paddingTop) : 0,
-      modeGap: modeRow ? Number.parseFloat(getComputedStyle(modeRow).gap) : 0,
+      syncButtonWidth: syncButton ? syncButton.getBoundingClientRect().width : 0,
     };
   });
   await activateAppearanceTab('#appearanceTabTexture', '#appearancePanelTexture');
@@ -427,7 +427,7 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   expect(dayNightLayout.cardCount).toBeGreaterThanOrEqual(3);
   expect(dayNightLayout.minGap).toBeGreaterThanOrEqual(12);
   expect(dayNightLayout.cardPaddingTop).toBeGreaterThanOrEqual(10);
-  expect(dayNightLayout.modeGap).toBeGreaterThanOrEqual(10);
+  expect(dayNightLayout.syncButtonWidth).toBeGreaterThanOrEqual(100);
   expect(transportLayout.familyCount).toBe(4);
   expect(transportLayout.childCardCount).toBeGreaterThanOrEqual(11);
   expect(transportLayout.familyRadius).toBeGreaterThanOrEqual(14);

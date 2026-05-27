@@ -185,8 +185,12 @@ export function createTransportWorkbenchShellOwner({
     updated += syncPreviewControls().updated;
     updated += syncFamilyTabs(family.id);
     if (applyButton) {
+      const applyAriaLabel = applyButtonState.reason
+        ? `${applyButtonState.label}: ${applyButtonState.reason}`
+        : applyButtonState.label;
       if (syncProperty(applyButton, "disabled", !applyButtonState.enabled)) updated += 1;
       if (syncAttribute(applyButton, "aria-disabled", applyButtonState.enabled ? "false" : "true")) updated += 1;
+      if (syncAttribute(applyButton, "aria-label", applyAriaLabel || "")) updated += 1;
       if (syncTextContent(applyButton, applyButtonState.label)) updated += 1;
       if (syncProperty(applyButton, "title", applyButtonState.reason || applyButtonState.label || "")) updated += 1;
     }

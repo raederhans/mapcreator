@@ -494,11 +494,19 @@ function createScenarioChunkRuntimeController({
     return Number.isFinite(zoom) && zoom >= Number(hints.detail_zoom_threshold || 0);
   }
 
-  function shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling = false } = {}) {
+  function shouldDeferScenarioChunkRefreshFor({
+    allowZoomEndSettling = false,
+    allowStartupInitialVisual = false,
+  } = {}) {
     const renderPhase = String(runtimeState.renderPhase || "idle");
     const renderPhaseBlocksRefresh = renderPhase !== "idle" && !(allowZoomEndSettling && renderPhase === "settling");
+    const bootBlockingRefresh = !!runtimeState.bootBlocking && !(
+      allowStartupInitialVisual
+      && !runtimeState.scenarioApplyInFlight
+      && !!normalizeScenarioId(runtimeState.activeScenarioId)
+    );
     return !!(
-      runtimeState.bootBlocking
+      bootBlockingRefresh
       || runtimeState.scenarioApplyInFlight
       || runtimeState.startupReadonly
       || runtimeState.startupReadonlyUnlockInFlight
@@ -1253,6 +1261,7 @@ function createScenarioChunkRuntimeController({
     pendingPromotion = null,
     renderNow = null,
     runId = 0,
+    allowStartupInitialVisual = false,
   } = {}) {
     const loadState = ensureRuntimeChunkLoadState();
     const resolvedPendingPromotion = pendingPromotion || loadState.pendingPromotion;
@@ -1276,7 +1285,7 @@ function createScenarioChunkRuntimeController({
       setPromotionCommitStatus(loadState, "noop", { inFlight: false, finishedAt: Date.now() });
       return false;
     }
-    if (shouldDeferScenarioChunkRefresh()) {
+    if (shouldDeferScenarioChunkRefreshFor({ allowStartupInitialVisual })) {
       setScenarioChunkShellStatus("loading", loadState);
       const hasExplicitPendingDelayMs =
         loadState.pendingDelayMs != null && Number.isFinite(Number(loadState.pendingDelayMs));
@@ -1312,6 +1321,7 @@ function createScenarioChunkRuntimeController({
     bundle = null,
     pendingPromotion = null,
     renderNow = null,
+    allowStartupInitialVisual = false,
   } = {}) {
     // 真正的 promotion transaction 只允许一个 in-flight run。
     // 结束后如果还有新的 refresh 请求，会通过 pendingPostCommitRefresh 重放，
@@ -1339,6 +1349,7 @@ function createScenarioChunkRuntimeController({
       pendingPromotion: resolvedPendingPromotion,
       renderNow,
       runId,
+      allowStartupInitialVisual,
     }).catch((error) => {
       setPromotionCommitStatus(loadState, "error", {
         inFlight: false,
@@ -1638,33 +1649,43 @@ function createScenarioChunkRuntimeController({
     reason = "refresh",
     d3Client = globalThis.d3,
     renderNow = true,
+    allowStartupInitialVisual = false,
+    startupInitialPoliticalOnly = false,
   } = {}) {
     const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
     if (!scenarioId) return null;
     const bundle = getCachedScenarioBundle(scenarioId);
-    if (!bundle || !scenarioBundleUsesChunkedLayer(bundle)) return null;
+    if (!bundle) return null;
     const loadState = ensureRuntimeChunkLoadState();
     const allowZoomEndSettling = shouldZoomEndPromoteImmediately(bundle, reason);
-    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })) {
+    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling, allowStartupInitialVisual })) {
       markPendingScenarioChunkRefresh(reason);
       if (loadState.selectionVersion <= 0 && !runtimeState.activeScenarioChunks?.loadedChunkIds?.length) {
         setScenarioChunkShellStatus("loading", loadState);
       }
       return null;
     }
+    if (!scenarioBundleUsesChunkedLayer(bundle)) {
+      if (!scenarioSupportsChunkedRuntime(bundle?.manifest)) return null;
+      await ensureScenarioChunkRegistryLoaded(bundle, { d3Client });
+      if (!scenarioBundleUsesChunkedLayer(bundle)) return null;
+    }
     clearPendingScenarioChunkRefresh(loadState);
-    await ensureScenarioChunkRegistryLoaded(bundle, { d3Client });
     const viewportBbox = typeof runtimeState.getViewportGeoBoundsFn === "function"
       ? runtimeState.getViewportGeoBoundsFn()
       : [-180, -90, 180, 90];
-    const visibleLayers = getVisibleScenarioChunkLayers({
-      includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
-      showWaterRegions: runtimeState.showWaterRegions !== false,
-      showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
-      showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
-      showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
-      showCityPoints: runtimeState.showCityPoints !== false,
-    });
+    const visibleLayers = startupInitialPoliticalOnly
+      ? getVisibleScenarioChunkLayers({
+        includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
+      })
+      : getVisibleScenarioChunkLayers({
+        includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
+        showWaterRegions: runtimeState.showWaterRegions !== false,
+        showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
+        showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
+        showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
+        showCityPoints: runtimeState.showCityPoints !== false,
+      });
     const chunkState = ensureActiveScenarioChunkState();
     chunkState.scenarioId = scenarioId;
     setScenarioChunkShellStatus("loading", loadState);
@@ -1887,6 +1908,9 @@ function createScenarioChunkRuntimeController({
       return selection;
     }
     const promotionQueuedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    // chunk promotion 故意拆成 visual / infra 两段 pending 状态：
+    // visual 先保证地图能尽快画出新 selection，infra 再补 state signature、overlay 元数据和后续调度需要的 bookkeeping。
+    // pendingPromotion 保留两段共享的完整事务快照，提交阶段就不用重新推导“这一轮到底选中了哪些 chunk / political features”。
     loadState.pendingVisualPromotion = {
       scenarioId,
       reason,
@@ -1920,7 +1944,7 @@ function createScenarioChunkRuntimeController({
     loadState.promotionRetryCount = 0;
     loadState.lastPromotionRetryAt = 0;
     setScenarioChunkShellStatus("loading", loadState);
-    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })) {
+    if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling, allowStartupInitialVisual })) {
       markPendingScenarioChunkRefresh(reason);
       return selection;
     }
@@ -1929,6 +1953,128 @@ function createScenarioChunkRuntimeController({
     });
     consumeScenarioChunkFocusCountryOverride(loadState);
     return selection;
+  }
+
+  function getFeatureCount(collection) {
+    return Array.isArray(collection?.features) ? collection.features.length : 0;
+  }
+
+  function getColorCount() {
+    return Object.keys(runtimeState.colors || {}).length;
+  }
+
+  function getRequiredPoliticalChunkCount(bundle, loadState) {
+    const politicalChunkIdSet = getScenarioChunkIdSetByLayer(bundle, "political");
+    return (Array.isArray(loadState?.lastSelection?.requiredChunkIds) ? loadState.lastSelection.requiredChunkIds : [])
+      .filter((chunkId) => politicalChunkIdSet.has(String(chunkId || "").trim()))
+      .length;
+  }
+
+  function buildInitialScenarioChunkVisualPromotionResult(status, {
+    bundle = null,
+    loadState = ensureRuntimeChunkLoadState(),
+    scenarioId = "",
+  } = {}) {
+    const expectedScenarioId = normalizeScenarioId(scenarioId || runtimeState.activeScenarioId);
+    const activeScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
+    const scenarioPoliticalChunkFeatureCount = getFeatureCount(runtimeState.scenarioPoliticalChunkData);
+    const landFeatureCount = getFeatureCount(runtimeState.landData);
+    const colorCount = getColorCount();
+    const selectionVersion = Math.max(0, Number(loadState?.selectionVersion || 0));
+    const pendingPromotion = !!loadState?.pendingPromotion;
+    const pendingVisualPromotion = !!loadState?.pendingVisualPromotion;
+    const promotionCommitInFlight = !!loadState?.promotionCommitInFlight;
+    const requiredPoliticalChunkCount = getRequiredPoliticalChunkCount(bundle, loadState);
+    const ready = !!(
+      expectedScenarioId
+      && expectedScenarioId === activeScenarioId
+      && selectionVersion > 0
+      && !pendingPromotion
+      && !pendingVisualPromotion
+      && !promotionCommitInFlight
+      && scenarioPoliticalChunkFeatureCount > 0
+      && landFeatureCount > 0
+      && colorCount > 0
+    );
+    return {
+      ok: status === "not-chunked" ? true : ready,
+      status,
+      scenarioId: expectedScenarioId,
+      activeScenarioId,
+      selectionVersion,
+      shellStatus: String(loadState?.shellStatus || ""),
+      requiredPoliticalChunkCount,
+      promotedFeatureCount: scenarioPoliticalChunkFeatureCount,
+      landFeatureCount,
+      colorCount,
+      pendingVisualPromotion,
+      pendingPromotion,
+      promotionCommitInFlight,
+      promotionScheduled: !!loadState?.promotionScheduled,
+    };
+  }
+
+  async function awaitInitialScenarioChunkVisualPromotion({
+    reason = "startup-initial-visual",
+    d3Client = globalThis.d3,
+    renderNow = true,
+  } = {}) {
+    const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
+    if (!scenarioId) {
+      return buildInitialScenarioChunkVisualPromotionResult("no-active-scenario", { scenarioId });
+    }
+    const bundle = getCachedScenarioBundle(scenarioId);
+    const loadState = ensureRuntimeChunkLoadState();
+    if (!bundle) {
+      return buildInitialScenarioChunkVisualPromotionResult("missing-bundle", { bundle, loadState, scenarioId });
+    }
+    if (!scenarioBundleUsesChunkedLayer(bundle)) {
+      if (scenarioSupportsChunkedRuntime(bundle?.manifest)) {
+        await ensureScenarioChunkRegistryLoaded(bundle, { d3Client });
+      }
+    }
+    if (!scenarioBundleUsesChunkedLayer(bundle)) {
+      return buildInitialScenarioChunkVisualPromotionResult("not-chunked", { bundle, loadState, scenarioId });
+    }
+    const alreadyReady = buildInitialScenarioChunkVisualPromotionResult("already-current", {
+      bundle,
+      loadState,
+      scenarioId,
+    });
+    if (alreadyReady.ok) return alreadyReady;
+
+    await refreshActiveScenarioChunks({
+      reason,
+      d3Client,
+      renderNow,
+      allowStartupInitialVisual: true,
+      startupInitialPoliticalOnly: true,
+    });
+    if (scenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
+      return buildInitialScenarioChunkVisualPromotionResult("stale", { bundle, loadState, scenarioId });
+    }
+    if (loadState.promotionTimerId) {
+      globalThis.clearTimeout(loadState.promotionTimerId);
+      loadState.promotionTimerId = null;
+      loadState.promotionScheduled = false;
+    }
+    if (loadState.pendingPromotion || promotionCommitPromise || loadState.promotionCommitInFlight) {
+      await commitPendingScenarioChunkPromotion({
+        bundle,
+        renderNow,
+        allowStartupInitialVisual: true,
+      });
+    }
+    await yieldToFrame();
+    const result = buildInitialScenarioChunkVisualPromotionResult("promoted", {
+      bundle,
+      loadState,
+      scenarioId,
+    });
+    const endedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    recordScenarioRenderMetric("initialScenarioChunkVisualPromotion", Math.max(0, endedAt - startedAt), result);
+    return result;
   }
 
   function scheduleScenarioChunkRefresh({
@@ -2040,6 +2186,7 @@ function createScenarioChunkRuntimeController({
     resetScenarioChunkRuntimeState,
     preloadScenarioCoarseChunks,
     preloadScenarioFocusCountryPoliticalDetailChunk,
+    awaitInitialScenarioChunkVisualPromotion,
     scheduleScenarioChunkRefresh,
   };
 }

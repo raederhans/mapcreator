@@ -292,8 +292,11 @@ function createSpecialZonesWorkbenchController({
       renderSpecialZonesWorkbenchUi();
     });
     statusNode = document.createElement("p");
+    statusNode.id = "specialZoneWorkbenchStatus";
     statusNode.className = "special-zone-workbench-status";
+    statusNode.setAttribute("role", "status");
     statusNode.setAttribute("aria-live", "polite");
+    statusNode.setAttribute("aria-atomic", "true");
     header.append(title, overlayToggleLabel, statusNode);
     diagnosticsNode = document.createElement("div");
     diagnosticsNode.className = "special-zone-workbench-diagnostics";
@@ -820,7 +823,21 @@ function createSpecialZonesWorkbenchController({
     deleteBtn.addEventListener("click", () => updateState({ action: "deleteLayer", layerId: layer.id }, "special-zone-layer-delete"));
 
     const saveBtn = createButton(translate("Save scenario layer asset"));
-    saveBtn.disabled = !runtimeState.activeScenarioId;
+    const syncScenarioSaveButtonState = () => {
+      const disabledReason = runtimeState.activeScenarioId
+        ? ""
+        : translate("Scenario asset save needs an active scenario.");
+      saveBtn.disabled = !!disabledReason;
+      saveBtn.title = disabledReason;
+      if (disabledReason) {
+        saveBtn.setAttribute("aria-describedby", "specialZoneWorkbenchStatus");
+        saveBtn.setAttribute("aria-label", `${translate("Save scenario layer asset")}: ${disabledReason}`);
+      } else {
+        saveBtn.removeAttribute("aria-describedby");
+        saveBtn.setAttribute("aria-label", translate("Save scenario layer asset"));
+      }
+    };
+    syncScenarioSaveButtonState();
     saveBtn.addEventListener("click", async () => {
       const scenarioId = String(runtimeState.activeScenarioId || "").trim();
       if (!scenarioId) return;
@@ -870,9 +887,9 @@ function createSpecialZonesWorkbenchController({
         if (statusNode) statusNode.textContent = translate("Scenario special zone layer save failed.");
         showToast?.(translate("Scenario layer asset save is available only in the local dev server."), { title: translate("Read-only scenario asset"), tone: "warning" });
       } finally {
-        saveBtn.disabled = !runtimeState.activeScenarioId;
         saveBtn.classList.remove("is-loading");
         saveBtn.removeAttribute("aria-busy");
+        syncScenarioSaveButtonState();
       }
     });
 
@@ -957,9 +974,12 @@ function createSpecialZonesWorkbenchController({
       void loadScenarioSpecialZoneLayers();
     }
     if (statusNode) {
+      const saveScope = scenarioId
+        ? translate("Scenario asset save is available.")
+        : translate("Project export preserves these layers.");
       statusNode.textContent = layer
-        ? `${state.layers.length} ${translate("layers")}, ${layer.memberFeatureIds.length} ${translate("active members")}.`
-        : translate("No special zone layers yet.");
+        ? `${state.layers.length} ${translate("layers")}, ${layer.memberFeatureIds.length} ${translate("active members")}. ${saveScope}`
+        : `${translate("No special zone layers yet.")} ${scenarioId ? "" : translate("Project export preserves project layers.")}`.trim();
     }
     renderLayerList(state);
     renderDiagnostics(state);

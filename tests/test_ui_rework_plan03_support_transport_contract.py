@@ -85,13 +85,14 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             'id="lblOceanStyleCard" class="appearance-control-card-title"',
             'id="lblOceanTextureCard" class="appearance-control-card-title"',
             'class="toggle-label appearance-day-night-card"',
-            'class="mode-toggle-row appearance-day-night-mode-row"',
+            'id="dayNightManualControls" class="appearance-day-night-card"',
+            'id="dayNightSyncComputerUtcBtn"',
             'id="cityPointsHelpTooltip" class="info-tooltip"',
             'id="lblCityPointsStyleGroup" class="appearance-control-card-title"',
             'id="lblCityPointsLabelGroup" class="appearance-control-card-title"',
             'id="lblRiversStrokeGroup" class="appearance-control-card-title"',
             'id="lblRiversOutlineGroup" class="appearance-control-card-title"',
-            'class="transport-master-toggle-card"',
+            'class="toggle-label transport-master-toggle-card"',
         ]:
             self.assertIn(token, index_content)
 
@@ -121,15 +122,17 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         registry_content = (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
 
         for token in [
-            'id="transportVisualModeControls" class="appearance-control-card transport-visual-mode-card mt-3" aria-labelledby="lblTransportVisualMode"',
+            'id="transportVisualModeControls" class="appearance-control-card transport-visual-mode-card" aria-labelledby="lblTransportVisualMode"',
+            'class="toggle-label transport-master-toggle-card"',
+            'id="transportAppearanceMasterToggle" type="checkbox" class="checkbox-input"',
             'id="lblTransportVisualMode" class="range-label" for="transportVisualMode" data-i18n="Transport Visual Mode"',
             'id="transportVisualMode" class="select-input mt-2"',
             'id="optTransportVisualModeDistribution" value="distribution" selected data-i18n="Distribution"',
             'id="optTransportVisualModeNetwork" value="network" data-i18n="Network"',
             'id="optTransportVisualModeCoverage" value="coverage" data-i18n="Coverage"',
-            'id="transportVisualModeHint" class="sidebar-tool-hint" data-i18n="Choose whether transport emphasizes distribution, network structure, or coverage reach."',
         ]:
             self.assertIn(token, index_content)
+        self.assertNotIn("transportVisualModeHint", index_content)
 
         for token in [
             'const transportVisualMode = document.getElementById("transportVisualMode");',

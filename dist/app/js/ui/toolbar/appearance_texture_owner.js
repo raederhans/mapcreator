@@ -84,12 +84,9 @@ function collectTextureNodes(documentRef) {
     textureDraftMinorOpacity: documentRef.getElementById("textureDraftMinorOpacity"),
     textureDraftDash: documentRef.getElementById("textureDraftDash"),
     dayNightEnabled: documentRef.getElementById("dayNightEnabled"),
-    dayNightModeManualBtn: documentRef.getElementById("dayNightModeManualBtn"),
-    dayNightModeUtcBtn: documentRef.getElementById("dayNightModeUtcBtn"),
     dayNightManualControls: documentRef.getElementById("dayNightManualControls"),
     dayNightManualTime: documentRef.getElementById("dayNightManualTime"),
-    dayNightUtcStatus: documentRef.getElementById("dayNightUtcStatus"),
-    dayNightCurrentTime: documentRef.getElementById("dayNightCurrentTime"),
+    dayNightSyncComputerUtcBtn: documentRef.getElementById("dayNightSyncComputerUtcBtn"),
     dayNightCityLightsEnabled: documentRef.getElementById("dayNightCityLightsEnabled"),
     dayNightCityLightsStyle: documentRef.getElementById("dayNightCityLightsStyle"),
     dayNightCityLightsIntensity: documentRef.getElementById("dayNightCityLightsIntensity"),
@@ -156,6 +153,11 @@ export function createAppearanceTextureOwner({
   const syncDayNightConfig = () => {
     runtimeState.styleConfig.dayNight = normalizeDayNightStyleConfig(runtimeState.styleConfig.dayNight);
     return runtimeState.styleConfig.dayNight;
+  };
+
+  const getComputerUtcMinutes = () => {
+    const now = new Date();
+    return (now.getUTCHours() * 60) + now.getUTCMinutes();
   };
 
   const beginTextureHistoryCapture = () => {
@@ -258,23 +260,14 @@ export function createAppearanceTextureOwner({
   };
 
   const renderDayNightUI = () => {
+    // 这里所有 enabled/disabled 状态都从同一份归一化后的 dayNight config 推导，
+    // 避免 modern / historical 两套控件各自记状态，切模式后留下半旧 UI。
     const dayNight = syncDayNightConfig();
+    dayNight.mode = "manual";
     if (nodes.dayNightEnabled) nodes.dayNightEnabled.checked = !!dayNight.enabled;
     if (nodes.dayNightManualTime) nodes.dayNightManualTime.value = String(dayNight.manualUtcMinutes);
     updateValueLabel(nodes.dayNightManualTimeValue, formatUtcMinutes(dayNight.manualUtcMinutes, clamp));
-    const utcNow = new Date();
-    const currentUtcMinutes = (utcNow.getUTCHours() * 60) + utcNow.getUTCMinutes();
-    if (nodes.dayNightCurrentTime) {
-      nodes.dayNightCurrentTime.textContent = formatUtcMinutes(dayNight.mode === "utc" ? currentUtcMinutes : dayNight.manualUtcMinutes, clamp);
-    }
-    [[nodes.dayNightModeManualBtn, "manual"], [nodes.dayNightModeUtcBtn, "utc"]].forEach(([button, modeValue]) => {
-      if (!button) return;
-      const isActive = dayNight.mode === modeValue;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-pressed", isActive ? "true" : "false");
-    });
-    nodes.dayNightManualControls?.classList.toggle("hidden", dayNight.mode !== "manual");
-    nodes.dayNightUtcStatus?.classList.toggle("hidden", dayNight.mode !== "utc");
+    nodes.dayNightManualControls?.classList.remove("hidden");
 
     if (nodes.dayNightCityLightsEnabled) nodes.dayNightCityLightsEnabled.checked = !!dayNight.cityLightsEnabled;
     if (nodes.dayNightCityLightsStyle) {
@@ -331,6 +324,8 @@ export function createAppearanceTextureOwner({
   };
 
   const updateTextureStyle = (mutate, { historyKind = "texture-style", commitHistory = false } = {}) => {
+    // input/change 共用同一份 history capture：拖动滑杆期间持续改 working state，
+    // 到 commit 边界再写入一条 undo 记录，避免一帧一个历史快照。
     beginTextureHistoryCapture();
     const texture = syncTextureConfig();
     if (typeof mutate === "function") mutate(texture);
@@ -365,6 +360,7 @@ export function createAppearanceTextureOwner({
   };
 
   const bindDayNightInput = (element, mutate, reason) => {
+    // day/night 滑杆走 input-only 即时刷新，语义上更像 renderer 参数调校而不是表单提交。
     if (!element || element.dataset.bound === "true") return;
     element.addEventListener("input", (event) => {
       mutate(event);
@@ -557,22 +553,22 @@ export function createAppearanceTextureOwner({
       });
       nodes.dayNightEnabled.dataset.bound = "true";
     }
-    [[nodes.dayNightModeManualBtn, "manual"], [nodes.dayNightModeUtcBtn, "utc"]].forEach(([button, modeValue]) => {
-      if (!button || button.dataset.bound === "true") return;
-      button.addEventListener("click", () => {
-        const dayNight = syncDayNightConfig();
-        if (dayNight.mode === modeValue) return;
-        dayNight.mode = modeValue;
-        renderDayNightUI();
-        renderDirty("day-night-mode");
-      });
-      button.dataset.bound = "true";
-    });
     bindDayNightInput(nodes.dayNightManualTime, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
+      dayNight.mode = "manual";
       dayNight.manualUtcMinutes = clamp(Number.isFinite(value) ? value : 12 * 60, 0, 24 * 60 - 1);
     }, "day-night-time");
+    if (nodes.dayNightSyncComputerUtcBtn && nodes.dayNightSyncComputerUtcBtn.dataset.bound !== "true") {
+      nodes.dayNightSyncComputerUtcBtn.addEventListener("click", () => {
+        const dayNight = syncDayNightConfig();
+        dayNight.mode = "manual";
+        dayNight.manualUtcMinutes = clamp(getComputerUtcMinutes(), 0, 24 * 60 - 1);
+        renderDayNightUI();
+        renderDirty("day-night-sync-computer-utc");
+      });
+      nodes.dayNightSyncComputerUtcBtn.dataset.bound = "true";
+    }
     bindDayNightChange(nodes.dayNightCityLightsEnabled, (event) => {
       const dayNight = syncDayNightConfig();
       dayNight.cityLightsEnabled = !!event.target.checked;
@@ -584,22 +580,22 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightCityLightsIntensity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsIntensity = clamp(Number.isFinite(value) ? value / 100 : 0.78, 0, 1.8);
+      dayNight.cityLightsIntensity = clamp(Number.isFinite(value) ? value / 100 : 0.68, 0, 1.8);
     }, "day-night-city-lights-intensity");
     bindDayNightInput(nodes.dayNightCityLightsTextureOpacity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsTextureOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.32, 0, 1);
+      dayNight.cityLightsTextureOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.2, 0, 1);
     }, "day-night-city-lights-texture-opacity");
     bindDayNightInput(nodes.dayNightCityLightsCorridorStrength, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsCorridorStrength = clamp(Number.isFinite(value) ? value / 100 : 0.18, 0, 1);
+      dayNight.cityLightsCorridorStrength = clamp(Number.isFinite(value) ? value / 100 : 0.08, 0, 1);
     }, "day-night-city-lights-corridor-strength");
     bindDayNightInput(nodes.dayNightCityLightsCoreSharpness, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsCoreSharpness = clamp(Number.isFinite(value) ? value / 100 : 0.54, 0, 1);
+      dayNight.cityLightsCoreSharpness = clamp(Number.isFinite(value) ? value / 100 : 0.64, 0, 1);
     }, "day-night-city-lights-core-sharpness");
     bindDayNightChange(nodes.dayNightCityLightsPopulationBoostEnabled, (event) => {
       const dayNight = syncDayNightConfig();
@@ -608,7 +604,7 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightCityLightsPopulationBoostStrength, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsPopulationBoostStrength = clamp(Number.isFinite(value) ? value / 100 : 0.9, 0, 1.5);
+      dayNight.cityLightsPopulationBoostStrength = clamp(Number.isFinite(value) ? value / 100 : 0.58, 0, 1.5);
     }, "day-night-city-lights-population-boost-strength");
     bindDayNightInput(nodes.dayNightHistoricalCityLightsDensity, (event) => {
       const value = Number(event.target.value);
@@ -623,7 +619,7 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightShadowOpacity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.shadowOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.28, 0, 0.85);
+      dayNight.shadowOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.24, 0, 0.85);
     }, "day-night-shadow-opacity");
     bindDayNightInput(nodes.dayNightTwilightWidth, (event) => {
       const value = Number(event.target.value);

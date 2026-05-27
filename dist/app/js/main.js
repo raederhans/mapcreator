@@ -58,6 +58,8 @@ function buildMainRuntimeLoadStatusSnapshot() {
   const chunkLoadState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object"
     ? state.runtimeChunkLoadState
     : {};
+  // 这个 snapshot 给诊断面板和外部调试工具读“当前主线程还卡在哪一段”。
+  // 这里坚持只暴露可序列化的只读快照，避免把 runtimeState 原对象直接泄漏给诊断消费者。
   return {
     boot: {
       phase: String(state.bootPhase || ""),
@@ -151,6 +153,14 @@ function checkpointFirstVisibleFrameMetrics() {
     checkpointBootMetricOnce("first-visible-scenario");
   }
   return state.bootMetrics;
+}
+
+function assertStartupFirstVisibleFrameAccepted(reason = "startup-first-visible") {
+  const metrics = checkpointFirstVisibleFrameMetrics();
+  if (metrics) return metrics;
+  const blocked = state.renderPerfMetrics?.firstVisibleFrameBlocked || {};
+  const blockReason = String(blocked.blockReason || blocked.reason || state.renderPhase || "unknown");
+  throw new Error(`[boot] First visible frame was not accepted after ${reason}: ${blockReason}`);
 }
 
 registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);
@@ -440,6 +450,27 @@ function flushPendingScenarioChunkRefreshAfterReady(reason = "post-ready") {
   });
 }
 
+async function ensureStartupInitialScenarioChunkVisualReady({
+  reason = "startup-initial-visual",
+  d3Client = globalThis.d3,
+} = {}) {
+  if (typeof runtimeState.awaitInitialScenarioChunkVisualPromotionFn !== "function") {
+    return null;
+  }
+  const result = await runtimeState.awaitInitialScenarioChunkVisualPromotionFn({
+    reason,
+    d3Client,
+    renderNow: true,
+  });
+  runtimeState.startupInitialScenarioChunkVisualPromotion = result;
+  if (result && result.ok === false) {
+    throw new Error(
+      `[boot] Initial scenario chunk visual promotion did not reach visible readiness: ${result.status || "unknown"}`
+    );
+  }
+  return result;
+}
+
 function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state") {
   // ready 是启动链的交接点：同步完成可交互指标与首轮 chunk flush；detail promotion 单独调度，交互基础设施和数据补水进入 post-ready 任务。
   checkpointBootMetric("time-to-interactive");
@@ -660,6 +691,8 @@ function schedulePostReadyTask(
 ) {
   const normalizedTaskKey = String(taskKey || "").trim();
   if (!normalizedTaskKey) return;
+  // post-ready 队列的目标是把“首屏之后才值得做”的 warmup / reconcile 串成单拥有者空闲任务。
+  // 每次重排都会先清掉旧 handle，再沿用同一个 taskKey 的诊断记录，这样外部才能持续看到重试原因和最新排程时刻。
   const previousDiagnostic = postReadyTaskDiagnostics.get(normalizedTaskKey);
   clearScheduledPostReadyTask(normalizedTaskKey);
   postReadyTaskDiagnostics.set(normalizedTaskKey, {
@@ -692,6 +725,8 @@ function schedulePostReadyTask(
       return;
     }
     if (typeof globalThis.requestIdleCallback === "function") {
+      // requestIdleCallback 只在真正有空闲预算时才运行 callback；
+      // 剩余时间不足就回到统一重排链，避免 warmup 抢走正在稳定中的 render / chunk promotion 时间片。
       const idleId = globalThis.requestIdleCallback((deadline) => {
         postReadyTaskHandles.delete(normalizedTaskKey);
         if (scheduledEpoch !== postReadyTaskEpoch) {
@@ -1089,10 +1124,15 @@ async function bootstrap() {
       startupInteractionMode: runtimeState.startupInteractionMode,
     });
 
+    await ensureStartupInitialScenarioChunkVisualReady({
+      reason: "startup-initial-visual",
+      d3Client,
+    });
+
     setBootState("warmup");
     invalidateAllRenderPasses("bootstrap-first-political-frame");
     renderDispatcher.flush();
-    checkpointFirstVisibleFrameMetrics();
+    assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");
 
     if (startupUiBootstrapPromise) {
       startupUiBootstrapAwaited = true;

@@ -776,12 +776,11 @@ function createDefaultDayNightStyleConfig() {
 function normalizeDayNightStyleConfig(rawConfig) {
   const defaults = createDefaultDayNightStyleConfig();
   const raw = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
-  const mode = String(raw.mode || defaults.mode).trim().toLowerCase();
   const cityLightsStyle = String(raw.cityLightsStyle || defaults.cityLightsStyle).trim().toLowerCase();
 
   return {
     enabled: raw.enabled === undefined ? defaults.enabled : !!raw.enabled,
-    mode: mode === "utc" ? "utc" : "manual",
+    mode: "manual",
     manualUtcMinutes: clamp(
       Math.round(toFiniteNumber(raw.manualUtcMinutes, defaults.manualUtcMinutes)),
       0,

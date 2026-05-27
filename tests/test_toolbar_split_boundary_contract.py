@@ -6,6 +6,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
+DIST_TOOLBAR_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "toolbar.js"
 INDEX_HTML = REPO_ROOT / "index.html"
 EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failure_handler.js"
 PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_library_panel.js"
@@ -62,6 +63,25 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         )
         self.assertIsNotNone(match, f"{selector} {event_name} listener body not found")
         return match.group("body")
+
+    def _assert_workspace_refresh_hooks_wait_for_ocean_lake_facade(self, content: str) -> None:
+        controller_start = content.index("const oceanLakeControlsController = createOceanLakeControlsController({")
+        facade_ready = content.index("renderOceanLakeControlsUi();", controller_start)
+
+        for hook_name in [
+            "updateWorkspaceStatusFn",
+            "updateScenarioContextBarFn",
+            "updateActiveSovereignUIFn",
+            "updatePaintModeUIFn",
+        ]:
+            registration = content.index(f'registerRuntimeHook(state, "{hook_name}"', facade_ready)
+            self.assertGreater(registration, facade_ready, hook_name)
+
+        early_registration_region = content[:facade_ready]
+        self.assertNotIn('registerRuntimeHook(state, "updateWorkspaceStatusFn"', early_registration_region)
+        self.assertNotIn('registerRuntimeHook(state, "updateScenarioContextBarFn"', early_registration_region)
+        self.assertNotIn('registerRuntimeHook(state, "updateActiveSovereignUIFn"', early_registration_region)
+        self.assertNotIn('registerRuntimeHook(state, "updatePaintModeUIFn"', early_registration_region)
 
     def test_toolbar_imports_new_split_modules(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -1198,6 +1218,16 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("renderOceanLakeControlsUi();", content)
         self.assertIn("bindOceanLakeControlEvents();", content)
         self.assertIn("const nextOceanFill = applyAutoFillOceanColor();", content)
+
+    def test_workspace_refresh_hooks_wait_for_ocean_lake_facade(self):
+        content = TOOLBAR_JS.read_text(encoding="utf-8")
+        self._assert_workspace_refresh_hooks_wait_for_ocean_lake_facade(content)
+
+    def test_dist_workspace_refresh_hooks_wait_for_ocean_lake_facade(self):
+        if not DIST_TOOLBAR_JS.exists():
+            self.skipTest("dist/app/js/ui/toolbar.js is only available after build_pages_dist runs")
+        content = DIST_TOOLBAR_JS.read_text(encoding="utf-8")
+        self._assert_workspace_refresh_hooks_wait_for_ocean_lake_facade(content)
 
     def test_workspace_chrome_support_surface_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")

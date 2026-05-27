@@ -23,12 +23,57 @@ const state = runtimeState;
 
 export function initScenarioControls() {
   const scenarioSelect = document.getElementById("scenarioSelect");
+  const scenarioSelectButton = document.getElementById("scenarioSelectButton");
+  const scenarioSelectButtonText = document.getElementById("scenarioSelectButtonText");
+  const scenarioSelectMenu = document.getElementById("scenarioSelectMenu");
   const applyScenarioBtn = document.getElementById("applyScenarioBtn");
   const resetScenarioBtn = document.getElementById("resetScenarioBtn");
   const clearScenarioBtn = document.getElementById("clearScenarioBtn");
   const scenarioStatus = document.getElementById("scenarioStatus");
   const scenarioAuditHint = document.getElementById("scenarioAuditHint");
   let pendingScenarioId = "";
+
+  const closeScenarioSelectMenu = () => {
+    if (!scenarioSelectMenu || !scenarioSelectButton) return;
+    scenarioSelectMenu.classList.add("hidden");
+    scenarioSelectButton.setAttribute("aria-expanded", "false");
+  };
+
+  const syncScenarioSelectSurface = ({ entries, currentValue, disabled }) => {
+    if (!scenarioSelectButton || !scenarioSelectButtonText || !scenarioSelectMenu) return;
+    const normalizedValue = normalizeScenarioId(currentValue);
+    const selectedOption = scenarioSelect?.selectedOptions?.[0] || null;
+    scenarioSelectButtonText.textContent = selectedOption?.textContent || t("None", "ui");
+    scenarioSelectButton.disabled = !!disabled;
+    scenarioSelectButton.title = scenarioSelect?.title || "";
+    scenarioSelectMenu.replaceChildren();
+
+    const optionPayloads = [
+      { value: "", label: t("None", "ui") },
+      ...entries.map((entry) => ({
+        value: normalizeScenarioId(entry.scenario_id),
+        label: getScenarioDisplayName(entry, entry.scenario_id),
+      })),
+    ];
+    optionPayloads.forEach(({ value, label }) => {
+      const optionButton = document.createElement("button");
+      optionButton.type = "button";
+      optionButton.className = "scenario-select-option";
+      optionButton.setAttribute("role", "option");
+      optionButton.setAttribute("aria-selected", normalizeScenarioId(value) === normalizedValue ? "true" : "false");
+      optionButton.classList.toggle("is-selected", normalizeScenarioId(value) === normalizedValue);
+      optionButton.dataset.value = value;
+      optionButton.textContent = label;
+      optionButton.addEventListener("click", () => {
+        if (!scenarioSelect || scenarioSelect.disabled) return;
+        scenarioSelect.value = value;
+        scenarioSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        closeScenarioSelectMenu();
+        scenarioSelectButton.focus();
+      });
+      scenarioSelectMenu.appendChild(optionButton);
+    });
+  };
 
   const renderScenarioControls = () => {
     const entries = getScenarioRegistryEntries();
@@ -57,6 +102,11 @@ export function initScenarioControls() {
       scenarioSelect.disabled = isApplyInFlight || isBootBlocking || isFatalLocked;
       scenarioSelect.title = isFatalLocked ? fatalMessage : "";
       pendingScenarioId = normalizeScenarioId(scenarioSelect.value);
+      syncScenarioSelectSurface({
+        entries,
+        currentValue: scenarioSelect.value,
+        disabled: scenarioSelect.disabled,
+      });
     }
 
     if (scenarioStatus) {
@@ -98,6 +148,36 @@ export function initScenarioControls() {
       renderScenarioControls();
     });
     scenarioSelect.dataset.bound = "true";
+  }
+
+  if (scenarioSelectButton && !scenarioSelectButton.dataset.bound) {
+    scenarioSelectButton.addEventListener("click", () => {
+      if (!scenarioSelectMenu || scenarioSelectButton.disabled) return;
+      const isOpen = !scenarioSelectMenu.classList.contains("hidden");
+      scenarioSelectMenu.classList.toggle("hidden", isOpen);
+      scenarioSelectButton.setAttribute("aria-expanded", isOpen ? "false" : "true");
+    });
+    scenarioSelectButton.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeScenarioSelectMenu();
+      }
+    });
+    scenarioSelectButton.dataset.bound = "true";
+  }
+
+  if (scenarioSelectMenu && !scenarioSelectMenu.dataset.bound) {
+    scenarioSelectMenu.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeScenarioSelectMenu();
+        scenarioSelectButton?.focus();
+      }
+    });
+    document.addEventListener("click", (event) => {
+      if (!scenarioSelectMenu || !scenarioSelectButton) return;
+      if (scenarioSelectMenu.contains(event.target) || scenarioSelectButton.contains(event.target)) return;
+      closeScenarioSelectMenu();
+    });
+    scenarioSelectMenu.dataset.bound = "true";
   }
 
   if (applyScenarioBtn && !applyScenarioBtn.dataset.bound) {

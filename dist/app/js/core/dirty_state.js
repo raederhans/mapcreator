@@ -1,11 +1,14 @@
 import { state as runtimeState } from "./state.js";
+import { callRuntimeHook } from "./state/index.js";
 import { clearDirtyState, markDirtyState } from "./state/ui_state.js";
 
 function updateDirtyIndicator() {
   const indicator = document.getElementById("appDirtyIndicator");
-  if (!indicator) return;
-  indicator.classList.toggle("hidden", !runtimeState.isDirty);
-  indicator.setAttribute("aria-hidden", runtimeState.isDirty ? "false" : "true");
+  if (indicator) {
+    indicator.classList.toggle("hidden", !runtimeState.isDirty);
+    indicator.setAttribute("aria-hidden", runtimeState.isDirty ? "false" : "true");
+  }
+  callRuntimeHook(runtimeState, "updateProjectSaveStatusFn");
 }
 
 function markDirty(reason = "") {

@@ -1437,11 +1437,6 @@ function initSidebar({ render } = {}) {
     title.className = "section-header sidebar-tool-title";
     title.textContent = t("Project Management", "ui");
 
-    const hint = document.createElement("p");
-    hint.id = "lblProjectHint";
-    hint.className = "sidebar-tool-hint";
-    hint.textContent = t("Save the current map state as a project file or restore one from disk. Loading a project replaces the current working state, and the app asks before continuing when the saved scenario baseline differs from the current assets.", "ui");
-
     const actions = document.createElement("div");
     actions.className = "mt-3 flex flex-col gap-2";
 
@@ -1480,13 +1475,21 @@ function initSidebar({ render } = {}) {
     fileMeta.appendChild(fileMetaLabel);
     fileMeta.appendChild(fileName);
 
+    const projectSaveStatus = document.createElement("p");
+    projectSaveStatus.id = "projectSaveStatus";
+    projectSaveStatus.className = "sidebar-tool-hint project-save-status";
+    projectSaveStatus.setAttribute("role", "status");
+    projectSaveStatus.setAttribute("aria-live", "polite");
+    projectSaveStatus.setAttribute("aria-atomic", "true");
+    projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
+
     actions.appendChild(downloadBtn);
     actions.appendChild(uploadBtn);
+    actions.appendChild(projectSaveStatus);
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);
 
     projectSection.appendChild(title);
-    projectSection.appendChild(hint);
     projectSection.appendChild(actions);
     projectLegendStack.appendChild(projectSection);
   }
@@ -1502,17 +1505,11 @@ function initSidebar({ render } = {}) {
     title.className = "section-header sidebar-tool-title";
     title.textContent = t("Legend Editor", "ui");
 
-    const hint = document.createElement("p");
-    hint.id = "lblLegendHint";
-    hint.className = "sidebar-tool-hint";
-    hint.textContent = t("Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session.", "ui");
-
     const list = document.createElement("div");
     list.id = "legendEditorList";
     list.className = "mt-3";
 
     legendSection.appendChild(title);
-    legendSection.appendChild(hint);
     legendSection.appendChild(list);
     projectLegendStack.appendChild(legendSection);
   }
@@ -2391,6 +2388,10 @@ function initSidebar({ render } = {}) {
     const publishStatus = document.createElement("p");
     publishStatus.id = "strategicOverlayPublishStatus";
     publishStatus.className = "sidebar-tool-hint strategic-overlay-publish-status";
+    publishStatus.setAttribute("role", "status");
+    publishStatus.setAttribute("aria-live", "polite");
+    publishStatus.setAttribute("aria-atomic", "true");
+    publishStatus.title = t("Project export saves Strategic annotations.", "ui");
     publishStatus.textContent = `0 ${t("lines", "ui")} · 0 ${t("graphics", "ui")} · 0 ${t("counters", "ui")} · ${t("Export as Strategic annotations", "ui")}`;
 
     const workspaceIconCloseBtn = buildButton("strategicOverlayIconCloseBtn", "Close");
@@ -3076,6 +3077,7 @@ function initSidebar({ render } = {}) {
   const uploadProjectBtn = document.getElementById("uploadProjectBtn");
   const projectFileInput = document.getElementById("projectFileInput");
   const projectFileName = document.getElementById("projectFileName");
+  const projectSaveStatus = document.getElementById("projectSaveStatus");
   const legendList = document.getElementById("legendEditorList");
   const inspectorSidebarTabButtons = Array.from(document.querySelectorAll("[data-inspector-tab]"));
   const inspectorSidebarTabPanels = Array.from(document.querySelectorAll("[data-inspector-panel]"));
@@ -3979,6 +3981,7 @@ function initSidebar({ render } = {}) {
 
   let bindProjectSupportDiagnosticsEvents = () => {};
   let refreshLegendEditor = () => {};
+  let refreshProjectSaveStatus = () => {};
   let renderScenarioAuditPanel = () => {};
 
   let bindStrategicOverlayEvents = () => {};
@@ -5254,6 +5257,7 @@ function initSidebar({ render } = {}) {
   ({
     bindEvents: bindProjectSupportDiagnosticsEvents,
     refreshLegendEditor,
+    refreshProjectSaveStatus,
     renderScenarioAuditPanel,
   } = createProjectSupportDiagnosticsController({
     state,
@@ -5264,6 +5268,7 @@ function initSidebar({ render } = {}) {
       uploadProjectBtn,
       projectFileInput,
       projectFileName,
+      projectSaveStatus,
       debugModeSelect,
     },
     helpers: {
@@ -5445,6 +5450,7 @@ function initSidebar({ render } = {}) {
   registerRuntimeHook(state, "updateScenarioSpecialRegionUIFn", renderSpecialRegionInspectorUi);
   registerRuntimeHook(state, "updateScenarioReliefOverlayUIFn", renderSpecialRegionInspectorUi);
   registerRuntimeHook(state, "updateLegendUI", refreshLegendEditor);
+  registerRuntimeHook(state, "updateProjectSaveStatusFn", refreshProjectSaveStatus);
   registerRuntimeHook(state, "renderScenarioAuditPanelFn", renderScenarioAuditPanel);
   registerRuntimeHook(state, "updateStrategicOverlayUIFn", refreshStrategicOverlayUI);
   registerRuntimeHook(state, "getStrategicOverlayPerfCountersFn", getStrategicOverlayPerfCounters);

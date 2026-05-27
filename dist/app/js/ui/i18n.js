@@ -243,6 +243,8 @@ function getGeoFeatureDisplayLabel(feature, fallback = "") {
 
 function t(key, type = "geo") {
   if (!key) return "";
+  // geo 文案优先走 runtime locale / alias 真相源；
+  // UI 文案则先看 runtime 注入，再退回静态 catalog，保证启动期和完整加载后共用同一套调用入口。
   const entry = type === "geo" ? resolveGeoLocaleEntry(key) : runtimeState.locales?.[type]?.[key];
   const lang = runtimeState.currentLanguage === "zh" ? "zh" : "en";
   if (entry?.[lang] || entry?.en) {
@@ -260,6 +262,7 @@ function t(key, type = "geo") {
 function applyDeclarativeTranslationToElement(element) {
   if (!element?.getAttribute) return;
 
+  // 这一层只负责把 data-i18n* 属性映射到 DOM，可见文本的业务决策仍留在 t()/catalog/runtime locale。
   const applyTextValue = (localizedText) => {
     const semanticChild = typeof element.querySelector === "function"
       ? element.querySelector(":scope > .sidebar-anchor-title, :scope > .sidebar-section-title, :scope > .sidebar-support-title, :scope > .sidebar-appendix-title, :scope > .sidebar-tool-title")
@@ -299,6 +302,8 @@ function applyDeclarativeTranslationToElement(element) {
 
 function applyDeclarativeTranslations(root = document) {
   if (!root) return;
+  // root 可以是整个 document，也可以是局部重渲染后的壳节点；
+  // 统一走同一个扫描器，避免每个 panel 都维护各自的翻译补丁逻辑。
   const selector = "[data-i18n], [data-i18n-placeholder], [data-i18n-title], [data-i18n-aria-label], [data-i18n-alt]";
   const elements = [];
   if (root.nodeType === 1 && root.matches?.(selector)) {
@@ -419,14 +424,11 @@ function updateUIText() {
     ["lblOcean", "Ocean"],
     ["lblOceanFillColor", "Fill Color"],
     ["lblOceanCoastalAccent", "Coastal Accent"],
-    ["oceanCoastalAccentHint", "Available when the active scenario enables coastal accent."],
     ["lblOceanAdvancedStylesToggle", "Experimental Bathymetry"],
-    ["oceanAdvancedStylesHint", "Enable data-driven bathymetry presets for testing. May reduce pan and zoom performance."],
     ["lblOceanStyle", "Style"],
     ["optOceanFlat", "Flat Blue"],
     ["optOceanBathymetrySoft", "Bathymetry Soft"],
     ["optOceanBathymetryContours", "Bathymetry Contours"],
-    ["oceanStylePresetHint", "Flat Blue keeps the ocean fill clean with no bathymetry overlay."],
     ["lblOceanOpacity", "Opacity"],
     ["lblOceanScale", "Scale"],
     ["lblOceanContourStrength", "Contour Strength"],
@@ -456,7 +458,6 @@ function updateUIText() {
     ["optPhysicalPresetPoliticalClean", "Political Clean"],
     ["optPhysicalPresetBalanced", "Balanced"],
     ["optPhysicalPresetTerrainRich", "Terrain Rich"],
-    ["physicalPresetHint", "Balanced keeps terrain visible while staying cleaner over political fills."],
     ["lblPhysicalMode", "Mode"],
     ["optPhysicalModeAtlasContours", "Atlas + Contours"],
     ["optPhysicalModeAtlasOnly", "Atlas Only"],
@@ -535,10 +536,8 @@ function updateUIText() {
     ["lblCityCapitalOverlayEnabled", "Highlight Capitals"],
     ["lblDayNightPanel", "Day / Night"],
     ["lblDayNightEnabled", "Enable Day / Night Cycle"],
-    ["dayNightModeManualBtn", "Manual"],
-    ["dayNightModeUtcBtn", "UTC Sync"],
     ["lblDayNightTime", "UTC Time"],
-    ["dayNightModeHint", "Live UTC sync updates once per minute."],
+    ["dayNightSyncComputerUtcBtn", "Sync Computer UTC Time"],
     ["lblDayNightCityLights", "City Lights"],
     ["lblDayNightCityLightsStyle", "Style"],
     ["optDayNightCityLightsModern", "Modern"],
@@ -569,7 +568,6 @@ function updateUIText() {
     ["lblOpenOceanRegions", "Allow Open-Ocean Interaction"],
     ["labelPresetPolitical", "Auto-Fill Countries"],
     ["presetClear", "Clear Map"],
-    ["zoomResetBtn", "Fit"],
     ["lblCountrySearch", "Search Countries"],
     ["lblWaterSearch", "Search Water Regions"],
     ["lblSpecialRegionSearch", "Search Special Regions"],
@@ -664,7 +662,6 @@ function updateUIText() {
     ["Finish or cancel the current legacy drawing, then use Layer-based special zones.", "Finish or cancel the current legacy drawing, then use Layer-based special zones."],
     ["Layer-based special zones are the canonical editor. Use the workbench above to edit memberships.", "Layer-based special zones are the canonical editor. Use the workbench above to edit memberships."],
     ["lblProjectManagement", "Project Management"],
-    ["lblProjectHint", "Save the current map state as a project file or restore one from disk. Loading a project replaces the current working state, and the app asks before continuing when the saved scenario baseline differs from the current assets."],
     ["downloadProjectBtn", "Download Project"],
     ["uploadProjectBtn", "Load Project"],
     ["lblProjectFile", "Selected File"],
@@ -685,7 +682,6 @@ function updateUIText() {
     ["lblReferenceOffsetX", "Offset X"],
     ["lblReferenceOffsetY", "Offset Y"],
     ["lblLegendEditor", "Legend Editor"],
-    ["lblLegendHint", "Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session."],
     ["debugOptionPROD", "Normal View"],
     ["debugOptionGEOMETRY", "1. Geometry Check (Pink/Green)"],
     ["debugOptionARTIFACTS", "2. Artifact Hunter (Red Giants)"],
@@ -785,7 +781,6 @@ function updateUIText() {
     ["redoBtn", "Redo"],
     ["zoomInBtn", "Zoom in"],
     ["zoomOutBtn", "Zoom out"],
-    ["zoomResetBtn", "Fit"],
     ["dockReferenceBtn", "Reference"],
     ["dockExportBtn", "Open workbench"],
   ];
@@ -875,6 +870,8 @@ async function toggleLanguage() {
   } catch (error) {
     console.warn("Unable to hydrate full localization data before language toggle:", error);
   }
+  // 语言切换分三段：先切 runtime language，再刷新现有 UI 文案，最后补 active scenario 的 geo locale patch。
+  // 这样即使异步 locale 资源稍后到达，界面也能先用稳定回退链完成一次可见刷新。
   updateUIText();
   callRuntimeHooks(state, [
     "updateToolbarInputsFn",

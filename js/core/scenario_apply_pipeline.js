@@ -200,7 +200,7 @@ function createScenarioApplyPipeline({
 
   function runScenarioActivationPostCommitPhase(bundle, staged) {
     markLegacyColorStateDirty();
-    syncScenarioInspectorSelection(runtimeState.activeSovereignCode);
+    syncScenarioInspectorSelection("");
     disableScenarioParentBorders();
     applyScenarioPaintMode();
     syncScenarioOceanFillForActivation(bundle.manifest);

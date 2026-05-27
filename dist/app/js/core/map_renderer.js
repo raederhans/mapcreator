@@ -686,7 +686,8 @@ const CITY_MARKER_THEME_TOKENS = {
 
 const bathymetryTopologyCacheByUrl = new Map();
 const bathymetryLoadPromiseByUrl = new Map();
-const bathymetryLoadFailureByUrl = new Set();
+const bathymetryLoadFailureByUrl = new Map();
+const BATHYMETRY_LOAD_RETRY_COOLDOWN_MS = 10_000;
 const CITY_MARKER_SIZE_LIMITS_PX = {
   minor: 10,
   regional: 14,
@@ -878,6 +879,12 @@ const modernCityLightsPopulationBoostCache = {
   scenarioId: "",
   urbanEntries: [],
   cityEntries: [],
+};
+const modernCityLightsStaticLayerCache = {
+  key: "",
+  canvas: null,
+  width: 0,
+  height: 0,
 };
 const historicalCityLightsDerivedGlowCache = {
   key: "",
@@ -3472,6 +3479,7 @@ function isScenarioCoastalAccentEnabled() {
 function getScenarioCoastalAccentOverlayFeatures() {
   if (!isScenarioCoastalAccentEnabled()) return [];
   return getEffectiveScenarioReliefOverlayFeatures().filter((feature) => {
+    if (!isReliefOverlayEnabled(feature)) return false;
     const kind = getReliefOverlayKind(feature);
     return kind === "new_shoreline" || kind === "lake_shoreline";
   });
@@ -3651,7 +3659,12 @@ function drawScenarioReliefOverlaysLayer(k, {
     if (!pathBoundsInScreen(feature)) return;
     const style = getReliefOverlayStyle(feature);
     const kind = getReliefOverlayKind(feature);
-    if (kind === "new_shoreline" || kind === "lake_shoreline") return;
+    if (
+      (kind === "new_shoreline" || kind === "lake_shoreline")
+      && isScenarioCoastalAccentEnabled()
+    ) {
+      return;
+    }
     const bounds = getPathBounds(feature);
     if (!bounds) return;
     const geometryType = String(feature?.geometry?.type || "").trim();
@@ -5544,6 +5557,18 @@ function isScenarioShellFeature(feature, featureId = null) {
   return String(feature?.properties?.name || "").toLowerCase().includes("shell fallback");
 }
 
+function isRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId = null) {
+  return isScenarioShellFeature(feature, featureId)
+    && feature?.properties?.render_as_base_geography === false;
+}
+
+function shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId = null) {
+  if (String(runtimeState.mapSemanticMode || "").trim().toLowerCase() === "blank") {
+    return false;
+  }
+  return isRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId);
+}
+
 function getAtlantropaGeometryRole(feature) {
   return String(feature?.properties?.atl_geometry_role || "").trim().toLowerCase();
 }
@@ -5619,6 +5644,7 @@ function isPoliticalVisualRenderableFeature(feature, featureId = null) {
   if (isAtlantropaFieldDrivenFeature(feature) && !isScenarioAtlantropaVisible()) return false;
   if (isAntarcticSectorFeature(feature, featureId)) return false;
   if (isBaseGeographyScenarioFeature(feature)) return false;
+  if (shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId)) return false;
   if (isAtlantropaVisualSupportHelperFeature(feature, featureId)) return false;
   return true;
 }
@@ -5821,26 +5847,51 @@ function updateDprStage(nextStage = "idle", { force = false } = {}) {
   return true;
 }
 
+function getRuntimePoliticalBaseCollection(collection) {
+  const features = Array.isArray(collection?.features) ? collection.features : [];
+  if (!features.length) return null;
+  if (String(runtimeState.mapSemanticMode || "").trim().toLowerCase() === "blank") {
+    return collection;
+  }
+  const baseFeatures = features.filter((feature, index) => !shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(
+    feature,
+    getFeatureId(feature) || `feature-${index}`,
+  ));
+  if (!baseFeatures.length) return null;
+  if (baseFeatures.length === features.length) return collection;
+  return { ...collection, features: baseFeatures };
+}
+
 function rebuildPoliticalLandCollections() {
   const startedAt = nowMs();
   const primaryTopology = runtimeState.topologyPrimary || runtimeState.topology;
   const detailTopology = runtimeState.topologyBundleMode === "composite" ? runtimeState.topologyDetail : null;
   const overrideCollection = runtimeState.topologyBundleMode === "composite" ? runtimeState.ruCityOverrides : null;
-  const runtimeTopology = runtimeState.topologyBundleMode === "composite" ? runtimeState.runtimePoliticalTopology : null;
+  const runtimeTopology = runtimeState.topologyBundleMode === "composite"
+    ? (runtimeState.scenarioRuntimeTopologyData || runtimeState.runtimePoliticalTopology)
+    : null;
   const scenarioPoliticalChunkCollection = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
     ? runtimeState.scenarioPoliticalChunkData
     : null;
 
   let fullCollection = runtimeState.landDataFull || runtimeState.landData || null;
-  if (runtimeTopology?.objects?.political && globalThis.topojson) {
-    const runtimeCollection = getPoliticalFeatureCollection(runtimeTopology, "runtime");
-    fullCollection = scenarioPoliticalChunkCollection
-      ? composePoliticalFeatureCollections(runtimeCollection, scenarioPoliticalChunkCollection)
-      : runtimeCollection;
+  const runtimeCollection = runtimeTopology?.objects?.political && globalThis.topojson
+    ? getPoliticalFeatureCollection(runtimeTopology, "runtime")
+    : null;
+  const runtimeBaseCollection = getRuntimePoliticalBaseCollection(runtimeCollection);
+  const hasScenarioRuntimePoliticalSource = !!String(runtimeState.activeScenarioId || "").trim()
+    && !!runtimeTopology?.objects?.political;
+  if (runtimeBaseCollection) {
+    fullCollection = runtimeBaseCollection;
+  } else if (hasScenarioRuntimePoliticalSource) {
+    fullCollection = { type: "FeatureCollection", features: [] };
   } else if (primaryTopology?.objects?.political && globalThis.topojson) {
     fullCollection = runtimeState.topologyBundleMode === "composite"
       ? composePoliticalFeatures(primaryTopology, detailTopology, overrideCollection)
       : getPoliticalFeatureCollection(primaryTopology, "primary");
+  }
+  if (scenarioPoliticalChunkCollection) {
+    fullCollection = composePoliticalFeatureCollections(fullCollection, scenarioPoliticalChunkCollection);
   }
   fullCollection = appendUniqueFeatureCollections(
     fullCollection,
@@ -10388,8 +10439,11 @@ function normalizeBathymetryTopologyEntry(url, topology) {
 }
 
 function warnBathymetryLoadFailureOnce(url, error) {
-  if (!url || bathymetryLoadFailureByUrl.has(url)) return;
-  bathymetryLoadFailureByUrl.add(url);
+  if (!url) return;
+  const previousFailureAt = Number(bathymetryLoadFailureByUrl.get(url) || 0);
+  const now = Date.now();
+  bathymetryLoadFailureByUrl.set(url, now);
+  if (previousFailureAt && now - previousFailureAt < BATHYMETRY_LOAD_RETRY_COOLDOWN_MS) return;
   const message = error instanceof Error ? error.message : String(error || "Unknown error");
   console.warn(`[bathymetry] Failed to load ${url}: ${message}`);
 }
@@ -10437,7 +10491,11 @@ function scheduleBathymetryTopologyLoad(url, { slot = "global" } = {}) {
     applyResolvedBathymetryEntry(slot, url, cached);
     return;
   }
-  if (bathymetryLoadFailureByUrl.has(url) || bathymetryLoadPromiseByUrl.has(url)) {
+  const previousFailureAt = Number(bathymetryLoadFailureByUrl.get(url) || 0);
+  if (
+    bathymetryLoadPromiseByUrl.has(url)
+    || (previousFailureAt && Date.now() - previousFailureAt < BATHYMETRY_LOAD_RETRY_COOLDOWN_MS)
+  ) {
     return;
   }
   const loadPromise = loadBathymetryTopology(url, { slot })
@@ -11690,13 +11748,17 @@ function drawPhysicalBasePass(k, { interactive = false } = {}) {
     return;
   }
 
-  const renderedCount = drawPhysicalAtlasLayer(k, { interactive });
+  const semanticRenderedCount = drawPhysicalAtlasLayer(k, { interactive });
+  const reliefRenderedCount = drawPhysicalReliefOverlayLayer(k, { interactive });
+  const renderedCount = semanticRenderedCount + reliefRenderedCount;
   collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
     featureCount: atlasCollection.features.length,
     renderedCount,
+    semanticRenderedCount,
+    reliefRenderedCount,
     interactive: !!interactive,
     skipped: renderedCount === 0,
-    reason: renderedCount === 0 ? "no-semantic-overlay" : "",
+    reason: renderedCount === 0 ? "no-physical-underlay" : "",
     maskSource: maskInfo.maskSource,
     maskFeatureCount: maskInfo.maskFeatureCount,
     maskArcRefEstimate: maskInfo.maskArcRefEstimate,
@@ -14476,12 +14538,12 @@ function getModernCityLightsZoomProfile() {
     detailT,
     textureAlphaScale: 0.82 + (fadeT * 0.28),
     corridorAlphaScale: 0.88 + (fadeT * 0.32),
-    textureRadiusScale: 1.24 + (detailT * 0.42),
-    corridorRadiusScale: 1.16 + (detailT * 0.36),
+    textureRadiusScale: 1.08 + (detailT * 0.3),
+    corridorRadiusScale: 1.02 + (detailT * 0.24),
     textureJitterStrength: 0.2 + (detailT * 0.06),
     corridorJitterStrength: 0.12 + (detailT * 0.04),
     coreAlphaScale: 0.86 + (fadeT * 0.52),
-    coreRadiusScale: 1.08 + (detailT * 0.48),
+    coreRadiusScale: 1 + (detailT * 0.34),
   };
 }
 
@@ -14955,23 +15017,23 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const densityScore = clamp(Math.log10(entry.density + 1) / 4.4, 0.08, 1.24);
     const capitalBoost = entry.capitalScore >= 3 ? 0.18 : entry.capitalScore >= 2 ? 0.1 : 0;
     const boostWeight = clamp(
-      (populationScore * 0.82) + (densityScore * 1.08) + (sampled * 0.18) + capitalBoost,
+      (populationScore * 0.78) + (densityScore * 0.78) + (sampled * 0.16) + capitalBoost,
       0.16,
-      2
+      1.55
     );
-    const areaRadiusBoost = clamp(Math.log10(entry.areaSqKm + 1) * 0.18, 0.08, 0.74);
-    const baseRadiusPx = 0.82 + (boostWeight * 1.02) + areaRadiusBoost;
+    const areaRadiusBoost = clamp(Math.log10(entry.areaSqKm + 1) * 0.14, 0.06, 0.5);
+    const baseRadiusPx = 0.7 + (boostWeight * 0.78) + areaRadiusBoost;
     const haloAlpha = clamp(
-      intensity * boostStrength * (0.11 + (boostWeight * 0.2)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.09 + (boostWeight * 0.16)) * zoomProfile.coreAlphaScale,
       0,
-      0.36
+      0.28
     );
     const coreAlpha = clamp(
-      intensity * boostStrength * (0.22 + (boostWeight * 0.3)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.18 + (boostWeight * 0.24)) * zoomProfile.coreAlphaScale,
       0,
-      0.54
+      0.42
     );
-    const aspectRatio = clamp(1.06 + (sampled * 0.1), 1.06, 1.22);
+    const aspectRatio = clamp(1.05 + (sampled * 0.08), 1.05, 1.16);
     drawSoftLightBlob(
       cx,
       cy,
@@ -15022,17 +15084,17 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
       : 0;
     const populationScore = clamp(Math.log10(entry.population + 1) / 6.8, 0.12, 1.08);
     const capitalBoost = entry.capitalScore >= 3 ? 0.24 : entry.capitalScore >= 2 ? 0.14 : 0;
-    const boostWeight = clamp((populationScore * 1.08) + (sampled * 0.2) + capitalBoost, 0.18, 1.48);
-    const baseRadiusPx = 0.54 + (boostWeight * 0.72);
+    const boostWeight = clamp((populationScore * 0.92) + (sampled * 0.16) + capitalBoost, 0.18, 1.24);
+    const baseRadiusPx = 0.48 + (boostWeight * 0.58);
     const haloAlpha = clamp(
-      intensity * boostStrength * (0.09 + (boostWeight * 0.14)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.08 + (boostWeight * 0.11)) * zoomProfile.coreAlphaScale,
       0,
-      0.24
+      0.19
     );
     const coreAlpha = clamp(
-      intensity * boostStrength * (0.18 + (boostWeight * 0.23)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.15 + (boostWeight * 0.18)) * zoomProfile.coreAlphaScale,
       0,
-      0.40
+      0.32
     );
     drawSoftLightBlob(
       anchor[0],
@@ -15067,6 +15129,92 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
   });
 }
 
+function getModernCityLightsStaticConfigSignature(config) {
+  return stableJson({
+    intensity: Number(config.cityLightsIntensity || 0).toFixed(3),
+    textureOpacity: Number(config.cityLightsTextureOpacity || 0).toFixed(3),
+    corridorStrength: Number(config.cityLightsCorridorStrength || 0).toFixed(3),
+    coreSharpness: Number(config.cityLightsCoreSharpness || 0).toFixed(3),
+    populationBoostEnabled: !!config.cityLightsPopulationBoostEnabled,
+    populationBoostStrength: Number(config.cityLightsPopulationBoostStrength || 0).toFixed(3),
+  });
+}
+
+function getModernCityLightsStaticLayerKey(config) {
+  const canvasWidth = Number(context?.canvas?.width || 0);
+  const canvasHeight = Number(context?.canvas?.height || 0);
+  return [
+    canvasWidth,
+    canvasHeight,
+    Number(runtimeState.dpr || 1).toFixed(3),
+    getTransformSignature(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity),
+    getModernCityLightsProjectionKey(),
+    runtimeState.activeScenarioId || "",
+    runtimeState.topologyRevision || 0,
+    runtimeState.contextLayerRevision || 0,
+    runtimeState.cityLayerRevision || 0,
+    getModernCityLightsStaticConfigSignature(config),
+  ].join("::");
+}
+
+function createModernCityLightsStaticLayerCanvas(width, height) {
+  const ownerDocument = context?.canvas?.ownerDocument || globalThis.document;
+  const canvas = typeof ownerDocument?.createElement === "function"
+    ? ownerDocument.createElement("canvas")
+    : (typeof globalThis.OffscreenCanvas === "function" ? new globalThis.OffscreenCanvas(width, height) : null);
+  if (!canvas) return null;
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
+function drawModernCityLightsStaticLayer(k, config, intensity) {
+  context.save();
+  context.globalCompositeOperation = getSafeBlendMode("screen", "lighter");
+  drawModernCityLightsTexture(config, intensity);
+  drawModernCityLightsCorridors(config, intensity);
+  const urbanCoreEntries = collectModernUrbanCoreEntries(k, config, intensity);
+  drawModernCityLightsCores(k, config, intensity, urbanCoreEntries);
+  drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries);
+  drawModernCityLightsPopulationBoostLayer(k, config, intensity);
+  context.restore();
+}
+
+function getModernCityLightsStaticLayerCanvas(k, config, intensity) {
+  const width = Number(context?.canvas?.width || 0);
+  const height = Number(context?.canvas?.height || 0);
+  if (width <= 0 || height <= 0) return null;
+  const key = getModernCityLightsStaticLayerKey(config);
+  if (
+    modernCityLightsStaticLayerCache.key === key
+    && modernCityLightsStaticLayerCache.canvas
+    && modernCityLightsStaticLayerCache.width === width
+    && modernCityLightsStaticLayerCache.height === height
+  ) {
+    recordRenderPerfMetric("modernCityLightsStaticLayerCache", 0, { hit: true });
+    return modernCityLightsStaticLayerCache.canvas;
+  }
+
+  const canvas = modernCityLightsStaticLayerCache.canvas || createModernCityLightsStaticLayerCanvas(width, height);
+  if (!canvas) return null;
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+  const layerContext = canvas.getContext?.("2d");
+  if (!layerContext) return null;
+
+  const layout = getRenderPassLayout("dayNight");
+  withRenderTarget(layerContext, () => {
+    const layerK = prepareTargetContext(layerContext, runtimeState.zoomTransform, layout);
+    drawModernCityLightsStaticLayer(layerK || k, config, intensity);
+  });
+  modernCityLightsStaticLayerCache.key = key;
+  modernCityLightsStaticLayerCache.canvas = canvas;
+  modernCityLightsStaticLayerCache.width = width;
+  modernCityLightsStaticLayerCache.height = height;
+  recordRenderPerfMetric("modernCityLightsStaticLayerCache", 0, { hit: false });
+  return canvas;
+}
+
 function drawModernNightLightsLayer(k, config, solarState) {
   const nightHemisphere = buildNightHemisphereFeature(solarState, 90);
   if (!nightHemisphere) return;
@@ -15077,13 +15225,15 @@ function drawModernNightLightsLayer(k, config, solarState) {
   context.beginPath();
   pathCanvas(nightHemisphere);
   context.clip();
-  context.globalCompositeOperation = getSafeBlendMode("screen", "lighter");
-  drawModernCityLightsTexture(config, intensity);
-  drawModernCityLightsCorridors(config, intensity);
-  const urbanCoreEntries = collectModernUrbanCoreEntries(k, config, intensity);
-  drawModernCityLightsCores(k, config, intensity, urbanCoreEntries);
-  drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries);
-  drawModernCityLightsPopulationBoostLayer(k, config, intensity);
+  const staticLayerCanvas = getModernCityLightsStaticLayerCanvas(k, config, intensity);
+  if (staticLayerCanvas) {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.globalAlpha = 1;
+    context.globalCompositeOperation = getSafeBlendMode("screen", "lighter");
+    context.drawImage(staticLayerCanvas, 0, 0);
+  } else {
+    drawModernCityLightsStaticLayer(k, config, intensity);
+  }
   context.restore();
 }
 
@@ -18072,7 +18222,6 @@ function drawContextBasePass(k, { interactive = false } = {}) {
   try {
     if (runtimeState.deferContextBasePass && !interactive) {
       deferred = true;
-      drawPhysicalReliefOverlayLayer(k, { interactive: false });
       const maskInfo = getPhysicalLandMaskInfo();
       collectContextMetric("drawPhysicalContourLayer", 0, {
         featureCount: 0,
@@ -18117,7 +18266,6 @@ function drawContextBasePass(k, { interactive = false } = {}) {
       });
       recordDeferredRiversLayerMetric({ interactive: false, reason: "staged-apply" });
     } else {
-      drawPhysicalReliefOverlayLayer(k, { interactive });
       drawPhysicalContourLayer(k, { interactive });
       drawUrbanLayer(k, { interactive });
       drawRiversLayer(k, { interactive });
@@ -23662,6 +23810,8 @@ function normalizeRendererRefreshPlan(refreshPlan, defaults = {}) {
   const targetPasses = Array.isArray(plan.targetPasses) && plan.targetPasses.length
     ? plan.targetPasses
     : defaultTargetPasses;
+  // refresh plan 是 scenario apply / chunk promotion / transport appearance 共用的窄合同。
+  // 调用方只声明“这次想刷新哪些 pass、是否顺手刷新 opening borders”，具体失效策略统一在 renderer 里收口。
   return {
     source: String(plan.source || defaults.source || "renderer-refresh"),
     targetPasses: Array.from(
@@ -24024,6 +24174,8 @@ function refreshMapDataForScenarioApply({
   refreshPlan = null,
 } = {}) {
   const startedAt = nowMs();
+  // scenario apply 走的是“重建基线”路径：先清掉上一场景遗留的 render/interaction 状态，
+  // 再按完整 pass 集重建 topology、derived state 和 mesh；这和 chunk promotion 的增量刷新语义不同。
   const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
     source: "scenario-apply",
     targetPasses: ["background", "physicalBase", "political", "contextBase", "contextScenario", "dayNight", "borders", "labels"],

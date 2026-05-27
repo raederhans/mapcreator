@@ -10,7 +10,13 @@ import { postDevScenarioMutation } from "./dev_mutation_service.js";
 import {
   normalizeScenarioTagInput,
   normalizeScenarioNameInput,
+  normalizeScenarioColorInput,
 } from "./dev_workspace_normalizers.js";
+import {
+  buildScenarioCountryColorSavePayload,
+  renderScenarioCountryColorEditor,
+  syncScenarioCountryColorEditorState,
+} from "./scenario_country_color_editor.js";
 const state = runtimeState;
 
 function ui(key) {
@@ -54,6 +60,9 @@ export function createScenarioTextEditorsController({
   const scenarioCountryNameZhInput = panel.querySelector("#devScenarioCountryNameZhInput");
   const scenarioCountryStatus = panel.querySelector("#devScenarioCountryStatus");
   const saveCountryBtn = panel.querySelector("#devScenarioSaveCountryBtn");
+  const scenarioCountryColorInput = panel.querySelector("#devScenarioCountryColorInput");
+  const scenarioCountryColorStatus = panel.querySelector("#devScenarioCountryColorStatus");
+  const saveCountryColorBtn = panel.querySelector("#devScenarioSaveCountryColorBtn");
 
   const scenarioCapitalPanel = panel.querySelector("#devScenarioCapitalPanel");
   const scenarioCapitalTitle = panel.querySelector("#devScenarioCapitalTitle");
@@ -365,6 +374,7 @@ export function createScenarioTextEditorsController({
       tag: normalizedTag,
       nameEn: normalizeScenarioNameInput(nextEntry?.display_name_en || payload.nameEn),
       nameZh: normalizeScenarioNameInput(nextEntry?.display_name_zh || payload.nameZh),
+      colorHex: normalizeScenarioColorInput(nextEntry?.color_hex || payload.colorHex || ""),
       lastSavedAt: String(response?.savedAt || ""),
       lastSavedPath: String(response?.filePath || response?.catalogPath || ""),
       lastSaveMessage: `${ui("Saved")}: ${String(response?.filePath || response?.catalogPath || normalizedTag)}`,
@@ -523,16 +533,25 @@ export function createScenarioTextEditorsController({
     const currentCountryTag = normalizeScenarioTagInput(priorCountryEditorState.tag);
     const hasValidCountryTag = !!currentCountryTag && countryModel.options.some((entry) => entry.tag === currentCountryTag);
     const needsCountryPrefill = !!countryModel.tag && (!hasValidCountryTag || currentCountryTag !== countryModel.tag);
-    const countryEditorState = needsCountryPrefill
+    let countryEditorState = needsCountryPrefill
       ? {
         ...priorCountryEditorState,
         tag: countryModel.tag,
         nameEn: countryModel.defaultNameEn,
         nameZh: countryModel.defaultNameZh,
+        colorHex: normalizeScenarioColorInput(countryModel.entry?.color_hex || ""),
       }
       : priorCountryEditorState;
     if (needsCountryPrefill) {
       runtimeState.devScenarioCountryEditor = countryEditorState;
+    }
+    const nextCountryColorState = syncScenarioCountryColorEditorState({
+      countryModel,
+      previousState: countryEditorState,
+    });
+    if (nextCountryColorState) {
+      runtimeState.devScenarioCountryEditor = nextCountryColorState;
+      countryEditorState = nextCountryColorState;
     }
     scenarioCountryPanel?.classList.toggle("hidden", !hasActiveScenario);
     if (scenarioCountryTitle) {
@@ -587,6 +606,15 @@ export function createScenarioTextEditorsController({
       }
       scenarioCountryStatus.textContent = countryStatusBits.join(" | ");
     }
+    renderScenarioCountryColorEditor({
+      hasActiveScenario,
+      model: countryModel,
+      editorState: countryEditorState,
+      colorInput: scenarioCountryColorInput,
+      saveButton: saveCountryColorBtn,
+      statusNode: scenarioCountryColorStatus,
+      ui,
+    });
 
     const priorCapitalEditorState = runtimeState.devScenarioCapitalEditor || {};
     const capitalModel = resolveCapitalEditorModel();
@@ -765,6 +793,69 @@ export function createScenarioTextEditorsController({
       renderWorkspace();
     });
 
+    bindButtonAction(saveCountryColorBtn, async () => {
+      const countryModel = resolveCountryEditorModel();
+      const built = buildScenarioCountryColorSavePayload({
+        activeScenarioId: runtimeState.activeScenarioId,
+        model: countryModel,
+        editorState: runtimeState.devScenarioCountryEditor || {},
+        ui,
+      });
+      if (!built.ok || !built.payload) {
+        showToast(built.message || ui("Unable to save country color."), {
+          title: ui("Color"),
+          tone: "warning",
+        });
+        renderWorkspace();
+        return;
+      }
+      runtimeState.devScenarioCountryEditor = {
+        ...(runtimeState.devScenarioCountryEditor || {}),
+        isSaving: true,
+        lastColorSaveMessage: "",
+        lastColorSaveTone: "",
+      };
+      renderWorkspace();
+      try {
+        const { response, result } = await postDevScenarioMutation("/__dev/scenario/country/save", built.payload);
+        if (!response.ok || !result?.ok) {
+          throw new Error(String(result?.message || `HTTP ${response.status}`));
+        }
+        applyScenarioCountrySaveSuccess(result, built.payload);
+        runtimeState.devScenarioCountryEditor = {
+          ...(runtimeState.devScenarioCountryEditor || {}),
+          lastColorSavedAt: String(result?.savedAt || ""),
+          lastColorSaveMessage: `${ui("Saved")}: ${String(result?.filePath || result?.catalogPath || built.payload.tag)}`,
+          lastColorSaveTone: "success",
+        };
+        flushDevWorkspaceRender("dev-workspace-country-save");
+        if (typeof runtimeState.updateScenarioUIFn === "function") {
+          runtimeState.updateScenarioUIFn();
+        }
+        showToast(ui("Saved"), {
+          title: ui("Color"),
+          tone: "success",
+        });
+      } catch (error) {
+        runtimeState.devScenarioCountryEditor = {
+          ...(runtimeState.devScenarioCountryEditor || {}),
+          isSaving: false,
+          lastColorSaveMessage: String(error?.message || ui("Unable to save country color.")),
+          lastColorSaveTone: "critical",
+        };
+        showToast(String(error?.message || ui("Unable to save country color.")), {
+          title: ui("Color"),
+          tone: "critical",
+          duration: 4200,
+        });
+      }
+      runtimeState.devScenarioCountryEditor = {
+        ...(runtimeState.devScenarioCountryEditor || {}),
+        isSaving: false,
+      };
+      renderWorkspace();
+    });
+
     bindButtonAction(saveCapitalBtn, async () => {
       const built = buildScenarioCapitalSavePayload();
       if (!built.ok || !built.payload) {
@@ -911,8 +1002,11 @@ export function createScenarioTextEditorsController({
           tag,
           nameEn: normalizeScenarioNameInput(entry.display_name_en || entry.display_name || ""),
           nameZh: normalizeScenarioNameInput(entry.display_name_zh),
+          colorHex: normalizeScenarioColorInput(entry.color_hex || ""),
           lastSaveMessage: "",
           lastSaveTone: "",
+          lastColorSaveMessage: "",
+          lastColorSaveTone: "",
         };
         renderWorkspace();
       });
@@ -943,6 +1037,19 @@ export function createScenarioTextEditorsController({
         renderWorkspace();
       });
       scenarioCountryNameZhInput.dataset.bound = "true";
+    }
+
+    if (scenarioCountryColorInput && scenarioCountryColorInput.dataset.bound !== "true") {
+      scenarioCountryColorInput.addEventListener("input", (event) => {
+        runtimeState.devScenarioCountryEditor = {
+          ...(runtimeState.devScenarioCountryEditor || {}),
+          colorHex: normalizeScenarioColorInput(event.target.value),
+          lastColorSaveMessage: "",
+          lastColorSaveTone: "",
+        };
+        renderWorkspace();
+      });
+      scenarioCountryColorInput.dataset.bound = "true";
     }
 
     if (scenarioCapitalSelect && scenarioCapitalSelect.dataset.bound !== "true") {

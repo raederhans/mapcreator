@@ -256,6 +256,8 @@ export function buildTransportWorkbenchInspectorModel({
   isLivePreviewFamily = () => false,
   isManifestOnlyRuntimeFamily = () => false,
 } = {}) {
+  // 先把家族差异收口成纯 rows/stateCards，后面的 DOM owner 只负责渲染。
+  // 这样 family-specific 诊断逻辑可以单测，也方便后续继续拆分大分支。
   const familyId = family?.id || "";
   const stateCards = [];
   let rows;
@@ -727,6 +729,8 @@ export function buildTransportWorkbenchInspectorRenderSignature({
   compareHeld = false,
   model = {},
 } = {}) {
+  // signature 只描述“当前看见的语义内容”，不关心临时节点身份，
+  // 这样 preview 轮询时只要内容没变，就可以安全跳过 details DOM 重建。
   return JSON.stringify({
     familyId: String(familyId || ""),
     compareHeld: !!compareHeld,

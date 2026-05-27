@@ -75,10 +75,24 @@
             <div class="sidebar-details-body">
               <div id="scenarioStatus" class="body-text visually-hidden">No scenario active</div>
               <div id="scenarioAuditHint" class="body-text visually-hidden hidden">Coverage report unavailable</div>
-              <label id="lblScenarioSelect" class="section-header-block mt-3" for="scenarioSelect">Scenario</label>
-              <select id="scenarioSelect" name="scenario-select" autocomplete="off" class="select-input mt-2">
+              <label id="lblScenarioSelect" class="visually-hidden" for="scenarioSelect">Scenario</label>
+              <select id="scenarioSelect" name="scenario-select" autocomplete="off" class="select-input scenario-select-native" aria-hidden="true" tabindex="-1">
                 <option id="optScenarioNone" value="">None</option>
               </select>
+              <div class="scenario-select-shell">
+                <button
+                  id="scenarioSelectButton"
+                  type="button"
+                  class="scenario-select-button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-labelledby="lblScenarioSelect scenarioSelectButtonText"
+                >
+                  <span id="scenarioSelectButtonText" class="u-truncate">None</span>
+                  <span class="scenario-select-chevron" aria-hidden="true">▾</span>
+                </button>
+                <div id="scenarioSelectMenu" class="scenario-select-menu hidden" role="listbox" aria-labelledby="lblScenarioSelect"></div>
+              </div>
               <div class="sidebar-equal-actions mt-3">
                 <button id="applyScenarioBtn" type="button" class="btn-secondary">Apply</button>
                 <button id="resetScenarioBtn" type="button" class="btn-secondary hidden" disabled>Reset</button>
@@ -190,9 +204,6 @@
                           <input id="oceanCoastalAccentToggle" type="checkbox" class="checkbox-input" checked />
                           <span id="lblOceanCoastalAccent">Coastal Accent</span>
                         </label>
-                        <p id="oceanCoastalAccentHint" class="sidebar-tool-hint" data-i18n="Available only in the TNO 1962 scenario.">
-                          Available only in the TNO 1962 scenario.
-                        </p>
                       </div>
                     </div>
                   </section>
@@ -204,9 +215,6 @@
                         <input id="oceanAdvancedStylesToggle" type="checkbox" class="checkbox-input" />
                         <span id="lblOceanAdvancedStylesToggle">Experimental Bathymetry</span>
                       </label>
-                      <p id="oceanAdvancedStylesHint" class="sidebar-tool-hint">
-                        Enable data-driven bathymetry presets for testing. May reduce pan and zoom performance.
-                      </p>
                       <div>
                         <div class="range-row">
                           <label id="lblOceanStyle" class="range-label" for="oceanStyleSelect">Style</label>
@@ -216,9 +224,6 @@
                           <option id="optOceanBathymetrySoft" value="bathymetry_soft" disabled>Bathymetry Soft</option>
                           <option id="optOceanBathymetryContours" value="bathymetry_contours" disabled>Bathymetry Contours</option>
                         </select>
-                        <p id="oceanStylePresetHint" class="sidebar-tool-hint mt-2">
-                          Flat Blue keeps the ocean fill clean with no bathymetry overlay.
-                        </p>
                       </div>
                     </div>
                   </section>
@@ -448,9 +453,6 @@
                             <option id="optPhysicalPresetTerrainRich" value="terrain_rich" data-i18n="Terrain Rich">Terrain Rich</option>
                           </select>
                         </div>
-                        <p id="physicalPresetHint" class="sidebar-tool-hint" data-i18n="Balanced keeps terrain visible while staying cleaner over political fills.">
-                          Balanced keeps terrain visible while staying cleaner over political fills.
-                        </p>
                         <div class="flex items-center justify-between gap-3">
                           <label id="lblPhysicalMode" class="range-label" for="physicalMode">Mode</label>
                           <select id="physicalMode" class="select-input">
@@ -654,23 +656,25 @@
                             </div>
                             <input id="urbanToneBias" type="range" min="-30" max="30" value="12" class="range-input" />
                           </div>
-                          <div>
-                            <label class="range-label" for="urbanAdaptiveTintEnabled" data-i18n="Adaptive Tint">Adaptive Tint</label>
-                            <label class="toggle-switch mt-2">
-                              <input id="urbanAdaptiveTintEnabled" type="checkbox" />
-                              <span class="toggle-slider"></span>
-                            </label>
-                          </div>
-                          <div class="flex items-center justify-between gap-3">
-                            <label class="range-label" for="urbanAdaptiveTintColor" data-i18n="Tint Color">Tint Color</label>
-                            <input id="urbanAdaptiveTintColor" type="color" value="#f2dea1" class="color-input" />
-                          </div>
-                          <div>
-                            <div class="range-row">
-                              <label class="range-label" for="urbanAdaptiveTintStrength" data-i18n="Tint Strength">Tint Strength</label>
-                              <span id="urbanAdaptiveTintStrengthValue" class="range-value">0%</span>
+                          <div class="urban-adaptive-tint-group">
+                            <div>
+                              <label class="range-label" for="urbanAdaptiveTintEnabled" data-i18n="Adaptive Tint">Adaptive Tint</label>
+                              <label class="toggle-switch mt-2">
+                                <input id="urbanAdaptiveTintEnabled" type="checkbox" />
+                                <span class="toggle-slider"></span>
+                              </label>
                             </div>
-                            <input id="urbanAdaptiveTintStrength" type="range" min="0" max="50" value="0" class="range-input" />
+                            <div class="flex items-center justify-between gap-3">
+                              <label class="range-label" for="urbanAdaptiveTintColor" data-i18n="Tint Color">Tint Color</label>
+                              <input id="urbanAdaptiveTintColor" type="color" value="#f2dea1" class="color-input" />
+                            </div>
+                            <div>
+                              <div class="range-row">
+                                <label class="range-label" for="urbanAdaptiveTintStrength" data-i18n="Tint Strength">Tint Strength</label>
+                                <span id="urbanAdaptiveTintStrengthValue" class="range-value">0%</span>
+                              </div>
+                              <input id="urbanAdaptiveTintStrength" type="range" min="0" max="50" value="0" class="range-input" />
+                            </div>
                           </div>
                         </div>
                         <div id="urbanManualControls" class="space-y-2 hidden">
@@ -710,20 +714,20 @@
                   <details class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="city points capitals labels">
                     <summary id="lblCityPointsPanel" class="section-header">City Points</summary>
                     <div class="mt-3 city-points-panel">
-                      <div class="city-points-toggle-card">
-                        <label class="toggle-label">
-                          <input id="toggleCityPoints" type="checkbox" class="checkbox-input" checked />
-                          <span id="lblCityPointsLayer">City Points</span>
-                        </label>
-                        <span class="summary-info-trigger city-points-help-trigger" tabindex="0" role="button" aria-label="City points help" data-i18n-aria-label="City points help">
-                          <svg class="summary-info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
-                            <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-                          </svg>
-                          <span id="cityPointsHelpTooltip" class="info-tooltip" data-i18n="Pick a restrained style, then tune marker density and label density for the current map scale.">Pick a restrained style, then tune marker density and label density for the current map scale.</span>
-                        </span>
-                      </div>
                       <div class="city-points-panel-body ml-5">
+                        <div class="city-points-toggle-card">
+                          <label class="toggle-label">
+                            <input id="toggleCityPoints" type="checkbox" class="checkbox-input" checked />
+                            <span id="lblCityPointsLayer">City Points</span>
+                          </label>
+                          <span class="summary-info-trigger city-points-help-trigger" tabindex="0" role="button" aria-label="City points help" data-i18n-aria-label="City points help">
+                            <svg class="summary-info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
+                              <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                            </svg>
+                            <span id="cityPointsHelpTooltip" class="info-tooltip" data-i18n="Pick a restrained style, then tune marker density and label density for the current map scale.">Pick a restrained style, then tune marker density and label density for the current map scale.</span>
+                          </span>
+                        </div>
                         <div class="city-points-panel-stack">
                           <section class="appearance-control-card city-points-style-card" aria-labelledby="lblCityPointsStyleGroup">
                             <h4 id="lblCityPointsStyleGroup" class="appearance-control-card-title" data-i18n="Style">Style</h4>
@@ -899,27 +903,6 @@
                     <span id="lblDayNightEnabled">Enable Day / Night Cycle</span>
                   </label>
 
-                  <div class="mode-toggle-row appearance-day-night-mode-row" role="group" aria-label="Day and night mode" data-i18n-aria-label="Day and night mode">
-                    <button
-                      id="dayNightModeManualBtn"
-                      type="button"
-                      class="mode-toggle-btn is-active"
-                      data-day-night-mode="manual"
-                      aria-pressed="true"
-                    >
-                      Manual
-                    </button>
-                    <button
-                      id="dayNightModeUtcBtn"
-                      type="button"
-                      class="mode-toggle-btn"
-                      data-day-night-mode="utc"
-                      aria-pressed="false"
-                    >
-                      UTC Sync
-                    </button>
-                  </div>
-
                   <div id="dayNightManualControls" class="appearance-day-night-card">
                     <div class="range-row">
                       <label id="lblDayNightTime" class="range-label" for="dayNightManualTime">UTC Time</label>
@@ -934,13 +917,13 @@
                       value="720"
                       class="range-input"
                     />
-                  </div>
-
-                  <div id="dayNightUtcStatus" class="day-night-status appearance-day-night-card hidden" aria-live="polite">
-                    <div id="dayNightCurrentTime" class="day-night-status-value">12:00 UTC</div>
-                    <div id="dayNightModeHint" class="parent-border-empty mt-2">
-                      Live UTC sync updates once per minute.
-                    </div>
+                    <button
+                      id="dayNightSyncComputerUtcBtn"
+                      type="button"
+                      class="sidebar-action-secondary appearance-day-night-sync-btn"
+                    >
+                      Sync Computer UTC Time
+                    </button>
                   </div>
 
                   <div class="appearance-day-night-card">
@@ -963,9 +946,9 @@
                       <div>
                         <div class="range-row">
                           <label id="lblDayNightCityLightsIntensity" class="range-label" for="dayNightCityLightsIntensity">Intensity</label>
-                          <span id="dayNightCityLightsIntensityValue" class="range-value">78%</span>
+                          <span id="dayNightCityLightsIntensityValue" class="range-value">68%</span>
                         </div>
-                        <input id="dayNightCityLightsIntensity" type="range" min="0" max="180" value="78" class="range-input" />
+                        <input id="dayNightCityLightsIntensity" type="range" min="0" max="180" value="68" class="range-input" />
                       </div>
                     </div>
                   </div>
@@ -982,14 +965,14 @@
                           >
                             Texture Opacity (Modern only)
                           </label>
-                          <span id="dayNightCityLightsTextureOpacityValue" class="range-value">32%</span>
+                          <span id="dayNightCityLightsTextureOpacityValue" class="range-value">20%</span>
                         </div>
                         <input
                           id="dayNightCityLightsTextureOpacity"
                           type="range"
                           min="0"
                           max="100"
-                          value="32"
+                          value="20"
                           class="range-input"
                         />
                       </div>
@@ -1002,14 +985,14 @@
                           >
                             Corridor Strength (Modern only)
                           </label>
-                          <span id="dayNightCityLightsCorridorStrengthValue" class="range-value">18%</span>
+                          <span id="dayNightCityLightsCorridorStrengthValue" class="range-value">8%</span>
                         </div>
                         <input
                           id="dayNightCityLightsCorridorStrength"
                           type="range"
                           min="0"
                           max="100"
-                          value="18"
+                          value="8"
                           class="range-input"
                         />
                       </div>
@@ -1022,14 +1005,14 @@
                           >
                             Core Sharpness (Modern only)
                           </label>
-                          <span id="dayNightCityLightsCoreSharpnessValue" class="range-value">54%</span>
+                          <span id="dayNightCityLightsCoreSharpnessValue" class="range-value">64%</span>
                         </div>
                         <input
                           id="dayNightCityLightsCoreSharpness"
                           type="range"
                           min="0"
                           max="100"
-                          value="54"
+                          value="64"
                           class="range-input"
                         />
                       </div>
@@ -1048,14 +1031,14 @@
                           >
                             <span data-i18n="Population Boost Strength (Modern only)">Population Boost Strength (Modern only)</span>
                           </label>
-                          <span id="dayNightCityLightsPopulationBoostStrengthValue" class="range-value">90%</span>
+                          <span id="dayNightCityLightsPopulationBoostStrengthValue" class="range-value">58%</span>
                         </div>
                         <input
                           id="dayNightCityLightsPopulationBoostStrength"
                           type="range"
                           min="0"
                           max="150"
-                          value="90"
+                          value="58"
                           class="range-input"
                         />
                       </div>
@@ -1069,14 +1052,14 @@
                           >
                             Historical Light Density
                           </label>
-                          <span id="dayNightHistoricalCityLightsDensityValue" class="range-value">125%</span>
+                          <span id="dayNightHistoricalCityLightsDensityValue" class="range-value">112%</span>
                         </div>
                         <input
                           id="dayNightHistoricalCityLightsDensity"
                           type="range"
                           min="75"
                           max="200"
-                          value="125"
+                          value="112"
                           class="range-input"
                         />
                       </div>
@@ -1089,23 +1072,23 @@
                           >
                             Secondary City Retention
                           </label>
-                          <span id="dayNightHistoricalCityLightsSecondaryRetentionValue" class="range-value">55%</span>
+                          <span id="dayNightHistoricalCityLightsSecondaryRetentionValue" class="range-value">46%</span>
                         </div>
                         <input
                           id="dayNightHistoricalCityLightsSecondaryRetention"
                           type="range"
                           min="0"
                           max="100"
-                          value="55"
+                          value="46"
                           class="range-input"
                         />
                       </div>
                       <div>
                         <div class="range-row">
                           <label id="lblDayNightShadowOpacity" class="range-label" for="dayNightShadowOpacity">Shadow Opacity</label>
-                          <span id="dayNightShadowOpacityValue" class="range-value">28%</span>
+                          <span id="dayNightShadowOpacityValue" class="range-value">24%</span>
                         </div>
-                        <input id="dayNightShadowOpacity" type="range" min="0" max="85" value="28" class="range-input" />
+                        <input id="dayNightShadowOpacity" type="range" min="0" max="85" value="24" class="range-input" />
                       </div>
                       <div>
                         <div class="range-row">
@@ -1322,15 +1305,12 @@
               >
                 <h2 id="lblTransportPanel" class="section-header">Transport</h2>
                 <div class="appearance-panel-body appearance-panel-body-transport mt-3">
-                  <div class="transport-master-toggle-card">
-                    <label class="toggle-label">
-                      <input id="transportAppearanceMasterToggle" type="checkbox" class="checkbox-input" />
-                      <span id="lblTransportAppearanceMasterToggle" data-i18n="Show Transport Overview">Show Transport Overview</span>
-                    </label>
-                  </div>
-
-                  <section id="transportVisualModeControls" class="appearance-control-card transport-visual-mode-card mt-3" aria-labelledby="lblTransportVisualMode">
+                  <section id="transportVisualModeControls" class="appearance-control-card transport-visual-mode-card" aria-labelledby="lblTransportVisualMode">
                     <div class="appearance-control-card-stack">
+                      <label class="toggle-label transport-master-toggle-card">
+                        <input id="transportAppearanceMasterToggle" type="checkbox" class="checkbox-input" />
+                        <span id="lblTransportAppearanceMasterToggle" data-i18n="Show Transport Overview">Show Transport Overview</span>
+                      </label>
                       <div>
                         <div class="range-row">
                           <label id="lblTransportVisualMode" class="range-label" for="transportVisualMode" data-i18n="Transport Visual Mode">Transport Visual Mode</label>
@@ -1341,7 +1321,6 @@
                           <option id="optTransportVisualModeCoverage" value="coverage" data-i18n="Coverage">Coverage</option>
                         </select>
                       </div>
-                      <p id="transportVisualModeHint" class="sidebar-tool-hint" data-i18n="Choose whether transport emphasizes distribution, network structure, or coverage reach.">Choose whether transport emphasizes distribution, network structure, or coverage reach.</p>
                       <label class="toggle-label">
                         <input id="transportFacilityUnderlyingMapSelection" type="checkbox" class="checkbox-input" />
                         <span id="lblTransportFacilityUnderlyingMapSelection" data-i18n="Allow Underlying Map Selection">Allow Underlying Map Selection</span>
@@ -1809,7 +1788,7 @@
                 <input id="paletteLibrarySearch" type="text" name="palette-library-search" autocomplete="off" spellcheck="false" placeholder="Search country, ISO-2, or source tag..." class="input palette-library-search-input" />
                 <button id="paletteLibrarySearchClear" type="button" class="palette-library-search-clear hidden" data-i18n-aria-label="Clear color search" aria-label="Clear color search">×</button>
               </div>
-              <div id="paletteLibrarySummary" class="body-text mt-2" data-i18n="0 colors">0 colors</div>
+              <div id="paletteLibrarySummary" class="body-text mt-2 hidden" hidden data-i18n="0 colors">0 colors</div>
               <div id="paletteLibraryList" class="palette-library-list mt-3 u-scroll-y"></div>
             </div>
           </div>
@@ -1866,7 +1845,6 @@
               <button id="zoomOutBtn" type="button" class="zoom-btn" aria-label="Zoom out" title="Zoom out">-</button>
               <input id="zoomPercentInput" type="text" name="zoom-percent" autocomplete="off" spellcheck="false" inputmode="numeric" class="input dock-zoom-input" aria-label="Zoom percentage" value="100%" />
               <button id="zoomInBtn" type="button" class="zoom-btn" aria-label="Zoom in" title="Zoom in">+</button>
-              <button id="zoomResetBtn" type="button" class="zoom-btn zoom-btn-reset" aria-label="Reset zoom" data-i18n-aria-label="Reset zoom" title="Fit">Fit</button>
             </div>
             <div id="zoomUtilitySystemGroup" class="shell-utility-group shell-utility-group-system" role="group" aria-label="System status" data-i18n-aria-label="System status">
               <button id="btnToggleLang" class="zoom-btn zoom-pill-btn zoom-language-btn shell-utility-status-btn" type="button" aria-label="Language" data-i18n-aria-label="Language" title="Language" data-i18n-title="Language">
@@ -2074,18 +2052,6 @@
             aria-labelledby="inspectorSidebarTabInspector"
           >
           <div class="sidebar-shell-heading sidebar-shell-heading-right sidebar-shell-anchor" data-i18n="Inspector">Inspector</div>
-          <div class="inspector-search-shell">
-            <div class="card-flat inspector-search-block">
-              <label id="lblCountrySearch" class="visually-hidden" for="countrySearch">Search Countries</label>
-              <div class="inspector-search-input-row">
-                <svg class="inspector-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.6"></circle>
-                  <path d="M16 16 20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
-                </svg>
-                <input id="countrySearch" type="text" name="country-search" autocomplete="off" spellcheck="false" placeholder="Search country or code..." class="input inspector-search-input" />
-              </div>
-            </div>
-          </div>
 
           <h2 id="countryInspectorHeading" class="visually-hidden">Country Inspector</h2>
           <details id="countryInspectorSection" class="card inspector-section sidebar-section-shell" aria-labelledby="countryInspectorHeading lblCountryInspector">
@@ -2100,6 +2066,18 @@
               </span>
             </summary>
             <div class="inspector-panel-body">
+              <div class="inspector-search-shell">
+                <div class="card-flat inspector-search-block">
+                  <label id="lblCountrySearch" class="visually-hidden" for="countrySearch">Search Countries</label>
+                  <div class="inspector-search-input-row">
+                    <svg class="inspector-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.6"></circle>
+                      <path d="M16 16 20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+                    </svg>
+                    <input id="countrySearch" type="text" name="country-search" autocomplete="off" spellcheck="false" placeholder="Search country or code..." class="input inspector-search-input" />
+                  </div>
+                </div>
+              </div>
               <div id="countryList" class="country-list inspector-scroll mt-3"></div>
               <div id="countryInspectorDetail" class="inspector-detail-card mt-3">
                 <div id="countryInspectorSelected" class="hidden">

@@ -85,6 +85,7 @@ export function createWaterSpecialRegionController({
 
   let waterInspectorColorPickerOpen = false;
   let specialRegionColorPickerOpen = false;
+  const waterInspectorDetail = waterInspectorEmpty?.closest?.("#waterInspectorDetail") || null;
   const waterRowRefsById = new Map();
   const specialRegionRowRefsById = new Map();
 
@@ -448,6 +449,7 @@ export function createWaterSpecialRegionController({
     const feature = selectedId ? runtimeState.waterRegionsById?.get(selectedId) : null;
     const isEmpty = !feature;
 
+    waterInspectorDetail?.classList.toggle("hidden", isEmpty);
     waterInspectorEmpty.classList.toggle("hidden", !isEmpty);
     waterInspectorSelected.classList.toggle("hidden", isEmpty);
 
@@ -877,12 +879,13 @@ export function createWaterSpecialRegionController({
     const features = getVisibleSpecialFeatures();
 
     if (!features.length) {
-      specialRegionList.appendChild(createEmptyNote(t("No special regions available", "ui")));
+      specialRegionList.classList.add("hidden");
       renderSpecialRegionInspectorDetail();
       renderSpecialRegionLegend();
       scheduleAdaptiveInspectorHeights();
       return;
     }
+    specialRegionList.classList.remove("hidden");
 
     const filteredFeatures = term
       ? features.filter((feature) => {

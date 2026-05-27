@@ -1437,11 +1437,6 @@ function initSidebar({ render } = {}) {
     title.className = "section-header sidebar-tool-title";
     title.textContent = t("Project Management", "ui");
 
-    const hint = document.createElement("p");
-    hint.id = "lblProjectHint";
-    hint.className = "sidebar-tool-hint";
-    hint.textContent = t("Save the current map state as a project file or restore one from disk. Loading a project replaces the current working state, and the app asks before continuing when the saved scenario baseline differs from the current assets.", "ui");
-
     const actions = document.createElement("div");
     actions.className = "mt-3 flex flex-col gap-2";
 
@@ -1495,7 +1490,6 @@ function initSidebar({ render } = {}) {
     actions.appendChild(fileInput);
 
     projectSection.appendChild(title);
-    projectSection.appendChild(hint);
     projectSection.appendChild(actions);
     projectLegendStack.appendChild(projectSection);
   }
@@ -1511,17 +1505,11 @@ function initSidebar({ render } = {}) {
     title.className = "section-header sidebar-tool-title";
     title.textContent = t("Legend Editor", "ui");
 
-    const hint = document.createElement("p");
-    hint.id = "lblLegendHint";
-    hint.className = "sidebar-tool-hint";
-    hint.textContent = t("Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session.", "ui");
-
     const list = document.createElement("div");
     list.id = "legendEditorList";
     list.className = "mt-3";
 
     legendSection.appendChild(title);
-    legendSection.appendChild(hint);
     legendSection.appendChild(list);
     projectLegendStack.appendChild(legendSection);
   }

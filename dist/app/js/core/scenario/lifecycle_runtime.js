@@ -159,7 +159,7 @@ function createScenarioLifecycleRuntime({
     const restoredInspectorCode =
       previousSelectedInspectorCountryCode && runtimeState.scenarioCountriesByTag?.[previousSelectedInspectorCountryCode]
         ? previousSelectedInspectorCountryCode
-        : runtimeState.activeSovereignCode;
+        : "";
     runtimeState.selectedInspectorCountryCode = restoredInspectorCode;
     runtimeState.inspectorHighlightCountryCode = restoredInspectorCode;
     runtimeState.expandedInspectorContinents = previousExpandedInspectorContinents;
@@ -227,6 +227,7 @@ function createScenarioLifecycleRuntime({
     runtimeState.detailPromotionCompleted = hasBaselineDetailTopology;
     resetScenarioChunkRuntimeState({ scenarioId: "" });
     runtimeState.scheduleScenarioChunkRefreshFn = null;
+    runtimeState.awaitInitialScenarioChunkVisualPromotionFn = null;
     runtimeState.scenarioWaterRegionsData = null;
     runtimeState.scenarioAtlantropaData = null;
     runtimeState.scenarioWaterOverlayVersionTag = "";

@@ -50,6 +50,7 @@ import {
 import { syncScenarioLocalizationState } from "./scenario_localization_state.js";
 import {
   applyBlankScenarioPresentationDefaults,
+  awaitInitialScenarioChunkVisualPromotion,
   ensureRuntimeChunkLoadState,
   ensureActiveScenarioOptionalLayerLoaded,
   ensureScenarioGeoLocalePatchForLanguage,
@@ -291,6 +292,10 @@ function getActiveScenarioMergedChunkLayerPayload(layerKey, scenarioId = runtime
   const mergedLayerPayloads = runtimeState.activeScenarioChunks?.mergedLayerPayloads;
   const normalizedScenarioId = normalizeScenarioId(scenarioId);
   const normalizedChunkScenarioId = normalizeScenarioId(runtimeState.activeScenarioChunks?.scenarioId);
+  // 这里故意保留三态：
+  // undefined = chunk runtime 还没有接管这个 layer；
+  // null = chunk 明确声明该 layer 当前为空；
+  // object = 已有合并后的 layer payload。
   if (
     !normalizedScenarioId
     || normalizedChunkScenarioId !== normalizedScenarioId
@@ -477,6 +482,7 @@ const {
   syncScenarioOceanFillForActivation,
   applyScenarioPerformanceHints,
   scheduleScenarioChunkRefresh,
+  awaitInitialScenarioChunkVisualPromotion,
   resetScenarioChunkRuntimeState,
   ensureRuntimeChunkLoadState,
   hasRenderableScenarioPoliticalTopology,

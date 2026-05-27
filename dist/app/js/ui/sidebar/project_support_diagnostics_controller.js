@@ -26,6 +26,7 @@ export function createProjectSupportDiagnosticsController({
     uploadProjectBtn,
     projectFileInput,
     projectFileName,
+    projectSaveStatus,
     debugModeSelect,
   } = elements;
 
@@ -97,6 +98,28 @@ export function createProjectSupportDiagnosticsController({
   const getVisibleSpecialZoneLegendLayers = () => (
     legendManager.getSpecialZoneLayers(state)
   );
+
+  const refreshProjectSaveStatus = (message = "") => {
+    if (!projectSaveStatus) return;
+    const lastChange = String(state.lastDirtyReason || "").trim();
+    if (message) {
+      projectSaveStatus.textContent = message;
+      return;
+    }
+    if (state.isDirty) {
+      projectSaveStatus.textContent = `${t("Unsaved project changes.", "ui")} ${t("Project export includes appearance and transport settings.", "ui")}`;
+      return;
+    }
+    if (lastChange === "project-export") {
+      projectSaveStatus.textContent = t("Project exported. Appearance and transport settings are saved in the JSON file.", "ui");
+      return;
+    }
+    if (lastChange === "project-import") {
+      projectSaveStatus.textContent = t("Project imported. Appearance and transport settings were restored from the JSON file.", "ui");
+      return;
+    }
+    projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
+  };
 
   const appendSpecialZoneLegendRows = (layers = getVisibleSpecialZoneLegendLayers()) => {
     if (!layers.length) return false;
@@ -613,75 +636,83 @@ export function createProjectSupportDiagnosticsController({
 
 
   const bindEvents = () => {
-  if (downloadProjectBtn && !downloadProjectBtn.dataset.bound) {
-    downloadProjectBtn.addEventListener("click", () => {
-      fileManager.exportProject(state);
-    });
-    downloadProjectBtn.dataset.bound = "true";
-  }
-
-  if (uploadProjectBtn && projectFileInput && !uploadProjectBtn.dataset.bound) {
-    uploadProjectBtn.addEventListener("click", async () => {
-      if (state.isDirty) {
-        const shouldContinue = await showAppDialog({
-          title: t("Load Project", "ui"),
-          message: t("You have unsaved changes. Loading a project will replace the current map.", "ui"),
-          details: t(
-            "Continue only if you are ready to discard the current working state or have already exported it.",
-            "ui"
-          ),
-          confirmLabel: t("Discard and Load", "ui"),
-          cancelLabel: t("Stay on Current Map", "ui"),
-          tone: "warning",
-        });
-        if (!shouldContinue) return;
-      }
-      projectFileInput.click();
-    });
-    uploadProjectBtn.dataset.bound = "true";
-  }
-
-  if (projectFileInput && !projectFileInput.dataset.bound) {
-    projectFileInput.addEventListener("change", () => {
-      const file = projectFileInput.files?.[0];
-      if (!file) {
-        if (projectFileName) {
-          projectFileName.textContent = t("No file selected", "ui");
-        }
-        return;
-      }
-      if (projectFileName) {
-        projectFileName.textContent = file.name;
-      }
-      importProjectThroughFunnel(file, {
-        ui: {
-          t,
-          showAppDialog,
-          showToast,
-        },
-        hooks: {
-          refreshColorState: mapRenderer.refreshColorState,
-          invalidateFrontlineOverlayState,
-        },
+    refreshProjectSaveStatus();
+    if (downloadProjectBtn && !downloadProjectBtn.dataset.bound) {
+      downloadProjectBtn.addEventListener("click", () => {
+        refreshProjectSaveStatus(t("Exporting project file with appearance and transport settings.", "ui"));
+        fileManager.exportProject(state);
+        refreshProjectSaveStatus();
       });
-      projectFileInput.value = "";
-    });
-    projectFileInput.dataset.bound = "true";
-  }
+      downloadProjectBtn.dataset.bound = "true";
+    }
 
-  if (debugModeSelect && !debugModeSelect.dataset.bound) {
-    debugModeSelect.value = String(state.debugMode || "PROD").toUpperCase();
-    debugModeSelect.addEventListener("change", (event) => {
-      mapRenderer.setDebugMode(event.target.value);
-    });
-    debugModeSelect.dataset.bound = "true";
-  }
+    if (uploadProjectBtn && projectFileInput && !uploadProjectBtn.dataset.bound) {
+      uploadProjectBtn.addEventListener("click", async () => {
+        if (state.isDirty) {
+          const shouldContinue = await showAppDialog({
+            title: t("Load Project", "ui"),
+            message: t("You have unsaved changes. Loading a project will replace the current map.", "ui"),
+            details: t(
+              "Continue only if you are ready to discard the current working state or have already exported it.",
+              "ui"
+            ),
+            confirmLabel: t("Discard and Load", "ui"),
+            cancelLabel: t("Stay on Current Map", "ui"),
+            tone: "warning",
+          });
+          if (!shouldContinue) return;
+        }
+        projectFileInput.click();
+      });
+      uploadProjectBtn.dataset.bound = "true";
+    }
+
+    if (projectFileInput && !projectFileInput.dataset.bound) {
+      projectFileInput.addEventListener("change", () => {
+        const file = projectFileInput.files?.[0];
+        if (!file) {
+          if (projectFileName) {
+            projectFileName.textContent = t("No file selected", "ui");
+          }
+          refreshProjectSaveStatus(t("No file selected", "ui"));
+          return;
+        }
+        if (projectFileName) {
+          projectFileName.textContent = file.name;
+        }
+        refreshProjectSaveStatus(t("Project import started. Appearance and transport settings will be restored from the file.", "ui"));
+        importProjectThroughFunnel(file, {
+          ui: {
+            t,
+            showAppDialog,
+            showToast,
+          },
+          hooks: {
+            refreshColorState: mapRenderer.refreshColorState,
+            invalidateFrontlineOverlayState,
+            onProjectImportComplete: () => refreshProjectSaveStatus(),
+            onProjectImportError: () => refreshProjectSaveStatus(t("Project import failed before completion. Review the current map state.", "ui")),
+          },
+        });
+        projectFileInput.value = "";
+      });
+      projectFileInput.dataset.bound = "true";
+    }
+
+    if (debugModeSelect && !debugModeSelect.dataset.bound) {
+      debugModeSelect.value = String(state.debugMode || "PROD").toUpperCase();
+      debugModeSelect.addEventListener("change", (event) => {
+        mapRenderer.setDebugMode(event.target.value);
+      });
+      debugModeSelect.dataset.bound = "true";
+    }
 
 
   };
 
   return {
     bindEvents,
+    refreshProjectSaveStatus,
     refreshLegendEditor,
     renderScenarioAuditPanel,
   };

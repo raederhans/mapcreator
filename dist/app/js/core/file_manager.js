@@ -477,6 +477,8 @@ class FileManager {
       specialZones: appState.specialZones || {},
       parentBordersVisible: appState.parentBordersVisible !== false,
       parentBorderEnabledByCountry: appState.parentBorderEnabledByCountry || {},
+      // manualSpecialZones 只作为旧项目 schema 的占位兼容字段继续导出；
+      // 真实可编辑数据已经全部收口到 specialZoneLayers，避免两套 special zone 真相源并存。
       manualSpecialZones: { type: "FeatureCollection", features: [] },
       annotationView: normalizeAnnotationView(appState.annotationView),
       operationalLines: normalizeOperationalLines(appState.operationalLines),
@@ -567,8 +569,22 @@ class FileManager {
     clearDirty("project-export");
   }
 
-  static importProject(file, callback) {
+  static importProject(file, callback, observers = {}) {
     if (!file) return;
+    const notifySuccess = typeof observers.onSuccess === "function" ? observers.onSuccess : () => {};
+    const notifyError = typeof observers.onError === "function" ? observers.onError : () => {};
+    const notifyObserver = (observer, payload, phase) => {
+      try {
+        const result = observer(payload);
+        if (result && typeof result.catch === "function") {
+          result.catch((error) => {
+            console.error(`[project-import] ${phase} observer failed:`, error);
+          });
+        }
+      } catch (error) {
+        console.error(`[project-import] ${phase} observer failed:`, error);
+      }
+    };
     const reader = new FileReader();
 
     reader.onload = async () => {
@@ -755,6 +771,8 @@ class FileManager {
             : !!data.layerVisibility.showSpecialZones;
 
         if (typeof callback === "function") {
+          // callback 负责把归一化后的项目状态真正接到运行时；
+          // 只有 callback 完整成功，才把这次导入视为成功并清掉 dirty / 弹成功提示。
           await callback(data);
         }
         clearDirty("project-import");
@@ -762,6 +780,7 @@ class FileManager {
           title: t("Project imported", "ui"),
           tone: "success",
         });
+        notifyObserver(notifySuccess, data, "success");
       } catch (error) {
         console.error("Failed to import project:", error);
         const tone = String(error?.toastTone || "error");
@@ -774,6 +793,7 @@ class FileManager {
           tone,
           duration: 4200,
         });
+        notifyObserver(notifyError, error, "error");
       }
     };
 
@@ -784,6 +804,7 @@ class FileManager {
         tone: "error",
         duration: 4200,
       });
+      notifyObserver(notifyError, reader.error, "read-error");
     };
 
     reader.readAsText(file);

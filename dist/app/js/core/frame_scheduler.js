@@ -30,6 +30,8 @@ function hasPendingInput(priority = "normal", { includeContinuous = null } = {})
 function scheduleDrain() {
   if (scheduled) return;
   scheduled = true;
+  // drain 统一从 idle/rAF/timer 三种入口接管，
+  // 外部调用方只负责塞任务，避免每条调用链都各自维护一套“下一帧再跑”的时序。
   const drain = (deadline = null) => {
     scheduled = false;
     const idleBudget = deadline && typeof deadline.timeRemaining === "function"
@@ -64,6 +66,8 @@ export function enqueueFrameTask(task, {
   dedupe = false,
   deferOnContinuousInput = false,
 } = {}) {
+  // label + generation 是这里的去重合同：
+  // 同一代任务可以被重复请求，但队列里只保留一个待执行实例。
   if (typeof task !== "function") return null;
   const normalizedLabel = String(label || "task");
   const normalizedGeneration = generation == null ? "" : String(generation);
@@ -100,6 +104,8 @@ export function runFrameTasks(budgetMs = DEFAULT_FRAME_BUDGET_MS) {
   const budget = Math.max(1, Number(budgetMs) || DEFAULT_FRAME_BUDGET_MS);
   const highPriorityMinPerDrain = Math.max(0, Number(HIGH_PRIORITY_MIN_PER_DRAIN) || 0);
   let highTasksConsumed = 0;
+  // 先按优先级排，再保证每轮至少吃掉少量 high 任务，
+  // 这样 exact-after-settle 一类高价值刷新不会被普通队列长期饿死。
   queue.sort((left, right) => {
     const priorityDelta = PRIORITY_WEIGHT[left.priority] - PRIORITY_WEIGHT[right.priority];
     return priorityDelta || (left.id - right.id);
@@ -136,6 +142,8 @@ export function runFrameTasks(budgetMs = DEFAULT_FRAME_BUDGET_MS) {
     if (nowMs() - startedAt >= budget) break;
     const entry = queue.shift();
     if (!entry || entry.canceled) continue;
+    // 输入还在持续时，把当前任务放回队首并尽快让出主线程，
+    // 下一轮 drain 会沿用同一套优先级顺序继续处理。
     if (hasPendingInput(entry.priority, { includeContinuous: entry.deferOnContinuousInput ? true : null })) {
       queue.unshift(entry);
       break;

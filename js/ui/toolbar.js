@@ -204,7 +204,6 @@ function initToolbar({ render } = {}) {
   const brushModeBtn = document.getElementById("brushModeBtn");
   const zoomInBtn = document.getElementById("zoomInBtn");
   const zoomOutBtn = document.getElementById("zoomOutBtn");
-  const zoomResetBtn = document.getElementById("zoomResetBtn");
   const zoomPercentInput = document.getElementById("zoomPercentInput");
   const zoomControls = document.getElementById("zoomControls");
   const developerModeBtn = document.getElementById("developerModeBtn");
@@ -349,7 +348,6 @@ function initToolbar({ render } = {}) {
   const oceanCoastalAccentToggle = document.getElementById("oceanCoastalAccentToggle");
   const oceanAdvancedStylesToggle = document.getElementById("oceanAdvancedStylesToggle");
   const oceanStyleSelect = document.getElementById("oceanStyleSelect");
-  const oceanStylePresetHint = document.getElementById("oceanStylePresetHint");
   const oceanTextureOpacity = document.getElementById("oceanTextureOpacity");
   const oceanTextureScale = document.getElementById("oceanTextureScale");
   const oceanContourStrength = document.getElementById("oceanContourStrength");
@@ -399,6 +397,7 @@ function initToolbar({ render } = {}) {
   const SCENARIO_BAR_MIN_WIDTH = 172;
   const SCENARIO_BAR_BASE_MAX_WIDTH = 560;
   const SCENARIO_BAR_NARROW_WIDTH = 360;
+  const SCENARIO_BAR_COMPACT_WIDTH = 420;
   const SCENARIO_GUIDE_MAX_WIDTH = 360;
   const SCENARIO_GUIDE_VERTICAL_GAP = 10;
   if (!runtimeState.ui || typeof runtimeState.ui !== "object") {
@@ -857,7 +856,6 @@ function initToolbar({ render } = {}) {
     refreshScenarioSelectionChip();
     renderOceanCoastalAccentUi();
   };
-  registerRuntimeHook(state, "updateWorkspaceStatusFn", refreshWorkspaceStatus);
 
   const getActiveQuickFillPolicy = () => {
     const selectedCode = normalizeCountryCode(
@@ -1065,6 +1063,7 @@ function initToolbar({ render } = {}) {
     scenarioContextBar.style.setProperty("--scenario-bar-safe-max-width", `${availableWidth}px`);
     scenarioContextBar.classList.toggle("is-overlay-constrained", availableWidth < SCENARIO_BAR_BASE_MAX_WIDTH);
     scenarioContextBar.classList.toggle("is-narrow", availableWidth < SCENARIO_BAR_NARROW_WIDTH);
+    scenarioContextBar.classList.toggle("is-auto-compact", availableWidth < SCENARIO_BAR_COMPACT_WIDTH);
   };
 
   const refreshScenarioContextBar = () => {
@@ -1138,7 +1137,6 @@ function initToolbar({ render } = {}) {
       scenarioContextBar.classList.remove("is-highlight");
     }, 3000);
   };
-  registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);
   registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);
   let onboardingAutoTimer = 0;
   const dismissOnboardingHint = () => {
@@ -1345,7 +1343,6 @@ function initToolbar({ render } = {}) {
       runtimeState.renderPresetTreeFn();
     }
   };
-  registerRuntimeHook(state, "updateActiveSovereignUIFn", refreshActiveSovereignLabel);
   const refreshDynamicBorderStatus = () => {
     if (dynamicBorderStatus) {
       if (!runtimeState.runtimePoliticalTopology?.objects?.political) {
@@ -1361,7 +1358,7 @@ function initToolbar({ render } = {}) {
     }
   };
   registerRuntimeHook(state, "updateDynamicBorderStatusUIFn", refreshDynamicBorderStatus);
-  registerRuntimeHook(state, "updatePaintModeUIFn", () => {
+  const refreshPaintModeUi = () => {
     if (paintModeSelect) {
       paintModeSelect.value = runtimeState.paintMode || "visual";
     }
@@ -1381,7 +1378,7 @@ function initToolbar({ render } = {}) {
     refreshDynamicBorderStatus();
     refreshWorkspaceStatus();
     updateDockCollapsedUi();
-  });
+  };
   const normalizeOceanPreset = (value) => {
     const candidate = String(value || "flat").trim().toLowerCase();
     if (candidate === "wave_hachure") {
@@ -1676,7 +1673,6 @@ function initToolbar({ render } = {}) {
     oceanCoastalAccentToggle,
     oceanAdvancedStylesToggle,
     oceanStyleSelect,
-    oceanStylePresetHint,
     oceanTextureOpacity,
     oceanTextureScale,
     oceanContourStrength,
@@ -1705,6 +1701,10 @@ function initToolbar({ render } = {}) {
     renderOceanLakeControlsUi,
   } = oceanLakeControlsController;
   renderOceanLakeControlsUi();
+  registerRuntimeHook(state, "updateWorkspaceStatusFn", refreshWorkspaceStatus);
+  registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);
+  registerRuntimeHook(state, "updateActiveSovereignUIFn", refreshActiveSovereignLabel);
+  registerRuntimeHook(state, "updatePaintModeUIFn", refreshPaintModeUi);
 
   const specialZoneEditorController = createSpecialZoneEditorController({
     runtimeState: state,
@@ -1968,6 +1968,10 @@ function initToolbar({ render } = {}) {
 
   if (selectedColorPreview && customColor && !selectedColorPreview.dataset.bound) {
     selectedColorPreview.addEventListener("click", () => {
+      if (typeof customColor.showPicker === "function") {
+        customColor.showPicker();
+        return;
+      }
       customColor.click();
     });
     selectedColorPreview.dataset.bound = "true";
@@ -1999,13 +2003,6 @@ function initToolbar({ render } = {}) {
       runZoomStep(-1);
     });
     zoomOutBtn.dataset.bound = "true";
-  }
-
-  if (zoomResetBtn && !zoomResetBtn.dataset.bound) {
-    zoomResetBtn.addEventListener("click", () => {
-      runZoomReset();
-    });
-    zoomResetBtn.dataset.bound = "true";
   }
 
   if (zoomPercentInput && !zoomPercentInput.dataset.bound) {

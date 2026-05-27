@@ -6,6 +6,7 @@
 
 - canonical 输入、checked-in 产物、运行时 contract 要共用同一份真相源。
 - owner / facade / support surface 拆分要同波次收口验证链、发布链、依赖注入、state writer 和真实运行分支。
+- toolbar / sidebar 的 state-bus hook 注册要排在被调用 facade 初始化之后；startup 回放会同步触发这些 hook，顺序漂移会把首帧卡在进度条阶段。
 - live test、长构建、browser smoke、bundle/checkpoint builder 一律单 owner，长流程默认后台日志。
 - scenario-aware asset 的 pending / settled 真状态要先钉住，再接保存、可见性和 reload 链。
 

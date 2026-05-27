@@ -159,7 +159,7 @@ function createScenarioLifecycleRuntime({
     const restoredInspectorCode =
       previousSelectedInspectorCountryCode && runtimeState.scenarioCountriesByTag?.[previousSelectedInspectorCountryCode]
         ? previousSelectedInspectorCountryCode
-        : runtimeState.activeSovereignCode;
+        : "";
     runtimeState.selectedInspectorCountryCode = restoredInspectorCode;
     runtimeState.inspectorHighlightCountryCode = restoredInspectorCode;
     runtimeState.expandedInspectorContinents = previousExpandedInspectorContinents;

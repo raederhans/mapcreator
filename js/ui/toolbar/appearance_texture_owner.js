@@ -84,12 +84,9 @@ function collectTextureNodes(documentRef) {
     textureDraftMinorOpacity: documentRef.getElementById("textureDraftMinorOpacity"),
     textureDraftDash: documentRef.getElementById("textureDraftDash"),
     dayNightEnabled: documentRef.getElementById("dayNightEnabled"),
-    dayNightModeManualBtn: documentRef.getElementById("dayNightModeManualBtn"),
-    dayNightModeUtcBtn: documentRef.getElementById("dayNightModeUtcBtn"),
     dayNightManualControls: documentRef.getElementById("dayNightManualControls"),
     dayNightManualTime: documentRef.getElementById("dayNightManualTime"),
-    dayNightUtcStatus: documentRef.getElementById("dayNightUtcStatus"),
-    dayNightCurrentTime: documentRef.getElementById("dayNightCurrentTime"),
+    dayNightSyncComputerUtcBtn: documentRef.getElementById("dayNightSyncComputerUtcBtn"),
     dayNightCityLightsEnabled: documentRef.getElementById("dayNightCityLightsEnabled"),
     dayNightCityLightsStyle: documentRef.getElementById("dayNightCityLightsStyle"),
     dayNightCityLightsIntensity: documentRef.getElementById("dayNightCityLightsIntensity"),
@@ -156,6 +153,11 @@ export function createAppearanceTextureOwner({
   const syncDayNightConfig = () => {
     runtimeState.styleConfig.dayNight = normalizeDayNightStyleConfig(runtimeState.styleConfig.dayNight);
     return runtimeState.styleConfig.dayNight;
+  };
+
+  const getComputerUtcMinutes = () => {
+    const now = new Date();
+    return (now.getUTCHours() * 60) + now.getUTCMinutes();
   };
 
   const beginTextureHistoryCapture = () => {
@@ -261,22 +263,11 @@ export function createAppearanceTextureOwner({
     // 这里所有 enabled/disabled 状态都从同一份归一化后的 dayNight config 推导，
     // 避免 modern / historical 两套控件各自记状态，切模式后留下半旧 UI。
     const dayNight = syncDayNightConfig();
+    dayNight.mode = "manual";
     if (nodes.dayNightEnabled) nodes.dayNightEnabled.checked = !!dayNight.enabled;
     if (nodes.dayNightManualTime) nodes.dayNightManualTime.value = String(dayNight.manualUtcMinutes);
     updateValueLabel(nodes.dayNightManualTimeValue, formatUtcMinutes(dayNight.manualUtcMinutes, clamp));
-    const utcNow = new Date();
-    const currentUtcMinutes = (utcNow.getUTCHours() * 60) + utcNow.getUTCMinutes();
-    if (nodes.dayNightCurrentTime) {
-      nodes.dayNightCurrentTime.textContent = formatUtcMinutes(dayNight.mode === "utc" ? currentUtcMinutes : dayNight.manualUtcMinutes, clamp);
-    }
-    [[nodes.dayNightModeManualBtn, "manual"], [nodes.dayNightModeUtcBtn, "utc"]].forEach(([button, modeValue]) => {
-      if (!button) return;
-      const isActive = dayNight.mode === modeValue;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-pressed", isActive ? "true" : "false");
-    });
-    nodes.dayNightManualControls?.classList.toggle("hidden", dayNight.mode !== "manual");
-    nodes.dayNightUtcStatus?.classList.toggle("hidden", dayNight.mode !== "utc");
+    nodes.dayNightManualControls?.classList.remove("hidden");
 
     if (nodes.dayNightCityLightsEnabled) nodes.dayNightCityLightsEnabled.checked = !!dayNight.cityLightsEnabled;
     if (nodes.dayNightCityLightsStyle) {
@@ -562,22 +553,22 @@ export function createAppearanceTextureOwner({
       });
       nodes.dayNightEnabled.dataset.bound = "true";
     }
-    [[nodes.dayNightModeManualBtn, "manual"], [nodes.dayNightModeUtcBtn, "utc"]].forEach(([button, modeValue]) => {
-      if (!button || button.dataset.bound === "true") return;
-      button.addEventListener("click", () => {
-        const dayNight = syncDayNightConfig();
-        if (dayNight.mode === modeValue) return;
-        dayNight.mode = modeValue;
-        renderDayNightUI();
-        renderDirty("day-night-mode");
-      });
-      button.dataset.bound = "true";
-    });
     bindDayNightInput(nodes.dayNightManualTime, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
+      dayNight.mode = "manual";
       dayNight.manualUtcMinutes = clamp(Number.isFinite(value) ? value : 12 * 60, 0, 24 * 60 - 1);
     }, "day-night-time");
+    if (nodes.dayNightSyncComputerUtcBtn && nodes.dayNightSyncComputerUtcBtn.dataset.bound !== "true") {
+      nodes.dayNightSyncComputerUtcBtn.addEventListener("click", () => {
+        const dayNight = syncDayNightConfig();
+        dayNight.mode = "manual";
+        dayNight.manualUtcMinutes = clamp(getComputerUtcMinutes(), 0, 24 * 60 - 1);
+        renderDayNightUI();
+        renderDirty("day-night-sync-computer-utc");
+      });
+      nodes.dayNightSyncComputerUtcBtn.dataset.bound = "true";
+    }
     bindDayNightChange(nodes.dayNightCityLightsEnabled, (event) => {
       const dayNight = syncDayNightConfig();
       dayNight.cityLightsEnabled = !!event.target.checked;
