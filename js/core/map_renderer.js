@@ -246,6 +246,8 @@ let pathSVG = null;
 let pathCanvas = null;
 let pathHitCanvas = null;
 let zoomBehavior = null;
+let mapContainerResizeObserver = null;
+let mapContainerResizeFrame = 0;
 let interactionInfrastructureBasicPromise = null;
 let interactionInfrastructureFullPromise = null;
 let activeContextMetricSession = null;
@@ -23356,8 +23358,40 @@ function fitProjection({ skipSpatialIndex = false } = {}) {
   markAllOverlaysDirty();
 }
 
-function handleResize() {
-  setCanvasSize();
+function getResizeReason(reason, fallback = "resize") {
+  return typeof reason === "string" && reason.trim() ? reason.trim() : fallback;
+}
+
+function requestMapContainerResizeSync(reason = "map-container-resize") {
+  if (mapContainerResizeFrame) return;
+  const requestFrame = typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame
+    : (callback) => globalThis.setTimeout(callback, 0);
+  mapContainerResizeFrame = requestFrame(() => {
+    mapContainerResizeFrame = 0;
+    handleResize(reason);
+  });
+}
+
+function bindMapContainerResizeObserver() {
+  if (!mapContainer || typeof globalThis.ResizeObserver !== "function") return;
+  if (mapContainerResizeObserver) {
+    mapContainerResizeObserver.disconnect();
+  }
+  mapContainerResizeObserver = new globalThis.ResizeObserver((entries = []) => {
+    const entry = entries[0] || null;
+    const width = Math.round(Number(entry?.contentRect?.width || mapContainer.clientWidth || 0));
+    const height = Math.round(Number(entry?.contentRect?.height || mapContainer.clientHeight || 0));
+    if (width <= 0 || height <= 0) return;
+    if (width === Number(runtimeState.width || 0) && height === Number(runtimeState.height || 0)) return;
+    requestMapContainerResizeSync("map-container-resize");
+  });
+  mapContainerResizeObserver.observe(mapContainer);
+}
+
+function handleResize(reason = "resize") {
+  const resizeReason = getResizeReason(reason);
+  setCanvasSize({ reason: resizeReason });
   fitProjection();
   resetZoomToFit();
   enforceZoomConstraints();
@@ -23455,6 +23489,7 @@ function bindEvents() {
     flushBrushSession();
   });
   window.addEventListener("resize", handleResize);
+  bindMapContainerResizeObserver();
 }
 
 function initMap({

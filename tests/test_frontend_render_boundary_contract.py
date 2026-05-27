@@ -46,6 +46,20 @@ class FrontendRenderBoundaryContractTest(unittest.TestCase):
         self.assertIn('recordRenderPerfMetric("renderBoundaryReasons", 0, getRenderBoundaryDebugState())', renderer)
         self.assertIn("markRenderBoundaryFlushed();", main_js)
 
+    def test_map_container_resize_observer_keeps_stage_resize_centered(self):
+        for renderer_path in (
+            REPO_ROOT / "js" / "core" / "map_renderer.js",
+            REPO_ROOT / "dist" / "app" / "js" / "core" / "map_renderer.js",
+        ):
+            content = renderer_path.read_text(encoding="utf-8")
+            with self.subTest(renderer=renderer_path.relative_to(REPO_ROOT).as_posix()):
+                self.assertIn("let mapContainerResizeObserver = null;", content)
+                self.assertIn("function bindMapContainerResizeObserver()", content)
+                self.assertIn("new globalThis.ResizeObserver", content)
+                self.assertIn('requestMapContainerResizeSync("map-container-resize");', content)
+                self.assertIn("mapContainerResizeObserver.observe(mapContainer);", content)
+                self.assertIn("setCanvasSize({ reason: resizeReason });", content)
+
 
 if __name__ == "__main__":
     unittest.main()

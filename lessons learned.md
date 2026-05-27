@@ -88,6 +88,7 @@
 - 对首屏、滚动、点击、summary、toolbar 这类可见路径，先保静态可见性，再做 reveal、defer 和批处理。
 - Inspector 的批量动作默认绑定当前可见过滤结果，并先给影响数量预览。
 - ready 文案、禁用态、可编辑性、真实 runtime capability 要共享同一份 contract。
+- 侧栏折叠这类 flex 布局变化要观察真实容器尺寸；合成 `window.resize` 只能作为辅助信号，最终视点修正要由 `ResizeObserver` 锁住。
 
 ### i18n 和容器绑定要尊重 DOM 结构
 - 不要对带子节点的 summary / heading 容器整块写 `textContent`。
