@@ -75,6 +75,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertIn('html[data-reveal="enabled"]', styles_css)
         self.assertIn(".is-revealed", styles_css)
+        self.assertRegex(
+            styles_css,
+            re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
+        )
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")
@@ -171,6 +175,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
+        self.assertRegex(
+            styles_css,
+            re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
+        )
 
     def test_dist_app_index_keeps_pages_startup_contract(self) -> None:
         if not DIST_APP_INDEX.exists():
