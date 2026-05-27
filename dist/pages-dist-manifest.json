@@ -6882,7 +6882,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 19131
+      "size_bytes": 19171
     }
   ],
   "max_allowed_bytes": 1043333120,
@@ -6895,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001061238
+  "total_bytes": 1001061278
 }

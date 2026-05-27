@@ -430,11 +430,13 @@ a.button {
 
 .hero__chips {
   position: absolute;
-  left: 22px;
-  right: 22px;
-  bottom: -18px;
+  left: 32px;
+  right: 32px;
+  bottom: 18px;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
   gap: 10px;
 }
 
