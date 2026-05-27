@@ -155,6 +155,14 @@ function checkpointFirstVisibleFrameMetrics() {
   return state.bootMetrics;
 }
 
+function assertStartupFirstVisibleFrameAccepted(reason = "startup-first-visible") {
+  const metrics = checkpointFirstVisibleFrameMetrics();
+  if (metrics) return metrics;
+  const blocked = state.renderPerfMetrics?.firstVisibleFrameBlocked || {};
+  const blockReason = String(blocked.blockReason || blocked.reason || state.renderPhase || "unknown");
+  throw new Error(`[boot] First visible frame was not accepted after ${reason}: ${blockReason}`);
+}
+
 registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);
 
 /**
@@ -1124,7 +1132,7 @@ async function bootstrap() {
     setBootState("warmup");
     invalidateAllRenderPasses("bootstrap-first-political-frame");
     renderDispatcher.flush();
-    checkpointFirstVisibleFrameMetrics();
+    assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");
 
     if (startupUiBootstrapPromise) {
       startupUiBootstrapAwaited = true;

@@ -1650,6 +1650,7 @@ function createScenarioChunkRuntimeController({
     d3Client = globalThis.d3,
     renderNow = true,
     allowStartupInitialVisual = false,
+    startupInitialPoliticalOnly = false,
   } = {}) {
     const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
     if (!scenarioId) return null;
@@ -1673,14 +1674,18 @@ function createScenarioChunkRuntimeController({
     const viewportBbox = typeof runtimeState.getViewportGeoBoundsFn === "function"
       ? runtimeState.getViewportGeoBoundsFn()
       : [-180, -90, 180, 90];
-    const visibleLayers = getVisibleScenarioChunkLayers({
-      includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
-      showWaterRegions: runtimeState.showWaterRegions !== false,
-      showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
-      showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
-      showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
-      showCityPoints: runtimeState.showCityPoints !== false,
-    });
+    const visibleLayers = startupInitialPoliticalOnly
+      ? getVisibleScenarioChunkLayers({
+        includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
+      })
+      : getVisibleScenarioChunkLayers({
+        includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
+        showWaterRegions: runtimeState.showWaterRegions !== false,
+        showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
+        showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
+        showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
+        showCityPoints: runtimeState.showCityPoints !== false,
+      });
     const chunkState = ensureActiveScenarioChunkState();
     chunkState.scenarioId = scenarioId;
     setScenarioChunkShellStatus("loading", loadState);
@@ -2044,6 +2049,7 @@ function createScenarioChunkRuntimeController({
       d3Client,
       renderNow,
       allowStartupInitialVisual: true,
+      startupInitialPoliticalOnly: true,
     });
     if (scenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
       return buildInitialScenarioChunkVisualPromotionResult("stale", { bundle, loadState, scenarioId });

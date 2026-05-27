@@ -245,6 +245,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 r"await ensureScenarioChunkRegistryLoaded\(bundle, \{ d3Client \}\);[\s\S]*?"
                 r"await refreshActiveScenarioChunks\(\{[\s\S]*?"
                 r"allowStartupInitialVisual: true,[\s\S]*?"
+                r"startupInitialPoliticalOnly: true,[\s\S]*?"
                 r"await commitPendingScenarioChunkPromotion\(\{[\s\S]*?"
                 r"allowStartupInitialVisual: true,",
                 re.S,
@@ -321,18 +322,20 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("loadState.pendingReason = normalizedReason;", self.main_source)
         self.assertIn("loadState.pendingDelayMs = 0;", self.main_source)
 
-    def test_startup_initial_visual_gate_runs_before_first_visible_warmup_and_deferred_work(self):
+    def test_startup_initial_visual_gate_runs_before_first_visible_and_deferred_work(self):
         self.assertTrue(
             "awaitInitialScenarioChunkVisualPromotion" in self.main_source,
             "startup must await the initial visual promotion gate before first visible and warmup checkpoints",
         )
-        gate_index = self.main_source.index("awaitInitialScenarioChunkVisualPromotion")
-        first_visible_index = self.main_source.index("checkpointFirstVisibleFrameMetrics();")
-        warmup_index = self.main_source.index('setBootState("warmup")')
-        finalize_index = self.main_source.index("await finalizeReadyState(renderDispatcher);")
+        boot_start = self.main_source.index("const startupScenarioBoot = getStartupScenarioBootOwner();")
+        boot_end = self.main_source.index("await finalizeReadyState(renderDispatcher);", boot_start)
+        boot_source = self.main_source[boot_start:boot_end]
+        gate_index = boot_source.index("await ensureStartupInitialScenarioChunkVisualReady(")
+        first_visible_index = boot_source.index("assertStartupFirstVisibleFrameAccepted(")
+        warmup_index = boot_source.index('setBootState("warmup")')
         self.assertLess(gate_index, first_visible_index)
         self.assertLess(gate_index, warmup_index)
-        self.assertLess(gate_index, finalize_index)
+        self.assertIn('assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");', boot_source)
 
         ready_work_start = self.main_source.index('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")')
         ready_work_end = self.main_source.index("function startDeferredFullInteractionInfrastructureBuild", ready_work_start)

@@ -69,6 +69,7 @@
 - 如果 startup 是 bundle-first，缩 bundle 边界通常比局部 cache 小技巧更稳。
 - coarse preload、非关键 metadata、focus detail prewarm 这类高成本工作，优先移出首屏阻塞链。
 - exact pass、mesh、contour、hit canvas 这类大成本路径，先缓存可见集和 clean frame，再谈 draw 性能。
+- 首屏政治填色 gate 只等待政治首帧所需 chunk；water、relief、Atlantropa 等非政治可见层不要进入 boot-critical path。
 
 ### 调度与刷新语义必须精确
 - `flushPending` 的语义是“只冲刷待处理工作”，不要先清 pending 再判断是否启动 refresh。
