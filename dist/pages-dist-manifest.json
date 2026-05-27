@@ -6842,11 +6842,11 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 17690
+      "size_bytes": 17760
     },
     {
       "path": "assets/atlas-physical.webp",
-      "size_bytes": 63760
+      "size_bytes": 51532
     },
     {
       "path": "assets/favicon.png",
@@ -6874,11 +6874,11 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 19672
+      "size_bytes": 19709
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 218093
+      "size_bytes": 218091
     },
     {
       "path": "styles.css",
@@ -6895,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001073053
+  "total_bytes": 1001060930
 }
