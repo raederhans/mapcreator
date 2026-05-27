@@ -8325,6 +8325,142 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
   padding-inline: 9px;
 }
 
+#devScenarioTagCreatorPanel {
+  align-self: start;
+  gap: 6px;
+  padding: 8px 9px;
+}
+
+.dev-scenario-tag-creator-head {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.64fr) minmax(0, 1.36fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.dev-scenario-tag-creator-title-stack {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+#devScenarioTagCreatorPanel .section-header-block {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dev-scenario-tag-creator-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.dev-scenario-tag-creator-meta .dev-workspace-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.92);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+#devScenarioTagCreatorPanel .dev-workspace-meta-row {
+  grid-template-columns: minmax(64px, 0.7fr) minmax(0, 1fr);
+  gap: 4px;
+  font-size: 0.68rem;
+}
+
+.dev-scenario-tag-creator-grid {
+  grid-template-columns: minmax(96px, 0.65fr) minmax(120px, 0.8fr) minmax(150px, 1fr);
+  gap: 6px 8px;
+}
+
+#devScenarioTagCreatorPanel .dev-workspace-form-field {
+  gap: 4px;
+}
+
+#devScenarioTagCreatorPanel .dev-workspace-note {
+  line-height: 1.25;
+}
+
+#devScenarioTagCreatorPanel .dev-workspace-input,
+#devScenarioTagCreatorPanel .dev-workspace-select {
+  min-height: 30px;
+}
+
+#devScenarioTagCreatorPanel .dev-workspace-field-status {
+  min-height: 0;
+  line-height: 1.25;
+}
+
+.dev-scenario-tag-color-field {
+  display: grid;
+  grid-template-columns: minmax(124px, auto) minmax(0, 1fr);
+  gap: 5px 8px;
+  align-items: center;
+}
+
+.dev-scenario-tag-color-field .dev-workspace-inline-row {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.dev-scenario-tag-color-field .dev-workspace-swatch-grid {
+  grid-template-columns: repeat(auto-fit, minmax(22px, 24px));
+  gap: 5px;
+  max-height: 54px;
+  overflow-y: auto;
+}
+
+.dev-scenario-tag-color-field .dev-workspace-swatch-row {
+  gap: 5px;
+}
+
+.dev-scenario-tag-color-field #devScenarioTagRecentWrap {
+  grid-column: 1 / -1;
+}
+
+.dev-scenario-tag-color-field .dev-workspace-color-popover {
+  top: calc(100% + 6px);
+  right: 0;
+}
+
+.dev-scenario-tag-color-field .color-swatch {
+  --color-swatch-size: 24px;
+}
+
+.dev-scenario-tag-color-field .dev-workspace-native-color-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dev-scenario-tag-creator-actions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+#devScenarioTagCreatorPanel .dev-scenario-tag-creator-actions > .btn-secondary,
+#devScenarioTagCreatorPanel .dev-scenario-tag-creator-actions > .btn-primary {
+  flex: 0 1 auto;
+  min-width: 92px;
+  min-height: 30px;
+  padding-inline: 10px;
+}
+
+.dev-scenario-tag-creator-status:empty {
+  display: none;
+}
+
 .dev-workspace-meta {
   display: grid;
   gap: 6px;
@@ -9517,6 +9653,26 @@ body.right-drawer-open::after {
 
   .dev-workspace-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dev-scenario-tag-creator-head,
+  .dev-scenario-tag-creator-grid,
+  .dev-scenario-tag-color-field {
+    grid-template-columns: 1fr;
+  }
+
+  #devScenarioTagCreatorPanel .dev-workspace-form-field-span-2,
+  .dev-scenario-tag-color-field .dev-workspace-swatch-grid {
+    grid-column: auto;
+  }
+
+  .dev-scenario-tag-creator-actions {
+    justify-content: stretch;
+  }
+
+  #devScenarioTagCreatorPanel .dev-scenario-tag-creator-actions > .btn-secondary,
+  #devScenarioTagCreatorPanel .dev-scenario-tag-creator-actions > .btn-primary {
+    flex: 1 1 calc(50% - 6px);
   }
 
   .dev-workspace-category-tabs {

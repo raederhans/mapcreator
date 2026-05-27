@@ -6,8 +6,10 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
+DIST_DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
 DEV_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "dev_state.js"
 STYLE_CSS = REPO_ROOT / "css" / "style.css"
+DIST_STYLE_CSS = REPO_ROOT / "dist" / "app" / "css" / "style.css"
 
 
 class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
@@ -115,6 +117,61 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
             "#devScenarioTagInspectorPanel .dev-workspace-actions > .btn-secondary,",
         ]:
             self.assertIn(token, css_content)
+
+    def test_tag_creator_panel_uses_compact_bottom_dock_layout(self):
+        owner_content = DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+
+        for token in [
+            'class="dev-scenario-tag-creator-head"',
+            'class="dev-workspace-meta dev-scenario-tag-creator-meta"',
+            'class="dev-workspace-form-grid dev-scenario-tag-creator-grid"',
+            'class="dev-workspace-form-field dev-workspace-form-field-span-2 dev-scenario-tag-color-field"',
+            'class="dev-workspace-actions dev-scenario-tag-creator-actions"',
+            'class="dev-workspace-note dev-scenario-tag-creator-status"',
+        ]:
+            self.assertIn(token, owner_content)
+
+        for token in [
+            "#devScenarioTagCreatorPanel {",
+            ".dev-scenario-tag-creator-head {",
+            "grid-template-columns: minmax(150px, 0.64fr) minmax(0, 1.36fr);",
+            ".dev-scenario-tag-creator-grid {",
+            "grid-template-columns: minmax(96px, 0.65fr) minmax(120px, 0.8fr) minmax(150px, 1fr);",
+            ".dev-scenario-tag-color-field .dev-workspace-swatch-grid {",
+            "max-height: 54px;",
+            ".dev-scenario-tag-color-field #devScenarioTagRecentWrap {",
+            ".dev-scenario-tag-color-field .dev-workspace-color-popover {",
+            "top: calc(100% + 6px);",
+            "grid-column: 1 / -1;",
+            ".dev-scenario-tag-creator-status:empty {",
+            "display: none;",
+        ]:
+            self.assertIn(token, css_content)
+
+    def test_tag_creator_compact_layout_is_synced_to_dist_app(self):
+        owner_content = DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        dist_owner_content = DIST_DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+        dist_css_content = DIST_STYLE_CSS.read_text(encoding="utf-8")
+
+        for token in [
+            'class="dev-scenario-tag-creator-head"',
+            'id="devScenarioTagColorPopoverAnchor"',
+            'id="devScenarioTagColorPopover"',
+            'class="dev-workspace-actions dev-scenario-tag-creator-actions"',
+        ]:
+            self.assertIn(token, owner_content)
+            self.assertIn(token, dist_owner_content)
+
+        for token in [
+            "#devScenarioTagCreatorPanel {",
+            ".dev-scenario-tag-creator-grid {",
+            ".dev-scenario-tag-color-field .dev-workspace-color-popover {",
+            ".dev-scenario-tag-creator-status:empty {",
+        ]:
+            self.assertIn(token, css_content)
+            self.assertIn(token, dist_css_content)
 
 
 if __name__ == "__main__":

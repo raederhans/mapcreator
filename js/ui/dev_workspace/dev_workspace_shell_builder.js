@@ -48,10 +48,14 @@ export function createDevWorkspacePanel(bottomDock) {
         <div id="devScenarioOwnershipStatus" class="dev-workspace-note"></div>
       </div>
       <div id="devScenarioTagCreatorPanel" class="dev-workspace-panel dev-workspace-panel-wide hidden" data-dev-category="scenario">
-        <div id="devScenarioTagCreatorLabel" class="dev-workspace-panel-title" data-i18n="Scenario Tag Creator"></div>
-        <div id="devScenarioTagCreatorTitle" class="section-header-block"></div>
-        <div id="devScenarioTagCreatorMeta" class="dev-workspace-meta"></div>
-        <div class="dev-workspace-form-grid">
+        <div class="dev-scenario-tag-creator-head">
+          <div class="dev-scenario-tag-creator-title-stack">
+            <div id="devScenarioTagCreatorLabel" class="dev-workspace-panel-title" data-i18n="Scenario Tag Creator"></div>
+            <div id="devScenarioTagCreatorTitle" class="section-header-block"></div>
+          </div>
+          <div id="devScenarioTagCreatorMeta" class="dev-workspace-meta dev-scenario-tag-creator-meta"></div>
+        </div>
+        <div class="dev-workspace-form-grid dev-scenario-tag-creator-grid">
           <div class="dev-workspace-form-field">
             <label id="devScenarioTagLabel" class="dev-workspace-note" for="devScenarioTagInput" data-i18n="Tag"></label>
             <input id="devScenarioTagInput" class="input dev-workspace-input" type="text" autocomplete="off" spellcheck="false" maxlength="4" placeholder="ABC" />
@@ -89,36 +93,36 @@ export function createDevWorkspacePanel(bottomDock) {
               <option value="" data-i18n="Select anchor region"></option>
             </select>
           </div>
-          <div class="dev-workspace-form-field dev-workspace-form-field-span-2">
+          <div class="dev-workspace-form-field dev-workspace-form-field-span-2 dev-scenario-tag-color-field">
             <div class="dev-workspace-inline-row">
               <label id="devScenarioTagColorPaletteLabel" class="dev-workspace-note" for="devScenarioTagColorPreviewBtn" data-i18n="Color Palette"></label>
-              <button id="devScenarioTagColorPreviewBtn" type="button" class="dev-workspace-color-preview-button">
-                <span id="devScenarioTagColorPreview" class="dev-workspace-color-preview">#5D7CBA</span>
-              </button>
+              <div id="devScenarioTagColorPopoverAnchor" class="dev-workspace-color-popover-anchor">
+                <button id="devScenarioTagColorPreviewBtn" type="button" class="dev-workspace-color-preview-button">
+                  <span id="devScenarioTagColorPreview" class="dev-workspace-color-preview">#5D7CBA</span>
+                </button>
+                <div id="devScenarioTagColorPopover" class="dev-workspace-color-popover hidden" role="dialog" aria-modal="false">
+                  <div id="devScenarioTagColorPopoverLabel" class="dev-workspace-note" data-i18n="Custom Color"></div>
+                  <div class="dev-workspace-actions">
+                    <button id="devScenarioTagColorSampleBtn" type="button" class="btn-secondary" data-i18n="Sample Selected"></button>
+                    <button id="devScenarioTagColorCustomBtn" type="button" class="btn-secondary" data-i18n="Custom..."></button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div id="devScenarioTagPalette" class="dev-workspace-swatch-grid" role="listbox" data-i18n-aria-label="Scenario tag color palette"></div>
             <div id="devScenarioTagRecentWrap" class="dev-workspace-form-field hidden">
               <label id="devScenarioTagRecentLabel" class="dev-workspace-note" for="devScenarioTagRecentColors" data-i18n="Recent Colors"></label>
               <div id="devScenarioTagRecentColors" class="dev-workspace-swatch-row" role="listbox" data-i18n-aria-label="Recent scenario tag colors"></div>
             </div>
-            <div id="devScenarioTagColorPopoverAnchor" class="dev-workspace-color-popover-anchor">
-              <div id="devScenarioTagColorPopover" class="dev-workspace-color-popover hidden" role="dialog" aria-modal="false">
-                <div id="devScenarioTagColorPopoverLabel" class="dev-workspace-note" data-i18n="Custom Color"></div>
-                <div class="dev-workspace-actions">
-                  <button id="devScenarioTagColorSampleBtn" type="button" class="btn-secondary" data-i18n="Sample Selected"></button>
-                  <button id="devScenarioTagColorCustomBtn" type="button" class="btn-secondary" data-i18n="Custom..."></button>
-                </div>
-              </div>
-            </div>
             <input id="devScenarioTagColorInput" class="dev-workspace-native-color-input" type="color" value="#5d7cba" tabindex="-1" aria-hidden="true" />
           </div>
         </div>
-        <div class="dev-workspace-actions">
+        <div class="dev-workspace-actions dev-scenario-tag-creator-actions">
           <button id="devScenarioClearTagSelectionBtn" type="button" class="btn-secondary" data-i18n="Clear Selection"></button>
           <button id="devScenarioClearTagBtn" type="button" class="btn-secondary" data-i18n="Clear"></button>
           <button id="devScenarioCreateTagBtn" type="button" class="btn-primary" data-i18n="Create Tag"></button>
         </div>
-        <div id="devScenarioTagCreatorStatus" class="dev-workspace-note"></div>
+        <div id="devScenarioTagCreatorStatus" class="dev-workspace-note dev-scenario-tag-creator-status"></div>
       </div>
       <div class="dev-workspace-panel" data-dev-category="selection">
         <div id="devSelectionClipboardLabel" class="dev-workspace-panel-title" data-i18n="Selection Clipboard"></div>

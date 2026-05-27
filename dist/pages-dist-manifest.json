@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 235456
+      "size_bytes": 239300
     },
     {
       "path": "app/data/CATALOG.json",
@@ -6530,7 +6530,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_shell_builder.js",
-      "size_bytes": 28501
+      "size_bytes": 28272
     },
     {
       "path": "app/js/ui/dev_workspace/district_editor_controller.js",
