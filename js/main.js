@@ -442,6 +442,27 @@ function flushPendingScenarioChunkRefreshAfterReady(reason = "post-ready") {
   });
 }
 
+async function ensureStartupInitialScenarioChunkVisualReady({
+  reason = "startup-initial-visual",
+  d3Client = globalThis.d3,
+} = {}) {
+  if (typeof runtimeState.awaitInitialScenarioChunkVisualPromotionFn !== "function") {
+    return null;
+  }
+  const result = await runtimeState.awaitInitialScenarioChunkVisualPromotionFn({
+    reason,
+    d3Client,
+    renderNow: true,
+  });
+  runtimeState.startupInitialScenarioChunkVisualPromotion = result;
+  if (result && result.ok === false) {
+    throw new Error(
+      `[boot] Initial scenario chunk visual promotion did not reach visible readiness: ${result.status || "unknown"}`
+    );
+  }
+  return result;
+}
+
 function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state") {
   // ready 是启动链的交接点：同步完成可交互指标与首轮 chunk flush；detail promotion 单独调度，交互基础设施和数据补水进入 post-ready 任务。
   checkpointBootMetric("time-to-interactive");
@@ -1093,6 +1114,11 @@ async function bootstrap() {
       d3Client,
       scenarioBundlePromise,
       startupInteractionMode: runtimeState.startupInteractionMode,
+    });
+
+    await ensureStartupInitialScenarioChunkVisualReady({
+      reason: "startup-initial-visual",
+      d3Client,
     });
 
     setBootState("warmup");

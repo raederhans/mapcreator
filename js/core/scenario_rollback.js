@@ -9,7 +9,10 @@ import {
   createDefaultRuntimeChunkLoadState,
 } from "./state/scenario_runtime_state.js";
 import { ensureScenarioAuditUiState, setScenarioAuditUiState } from "./scenario_ui_sync.js";
-import { scheduleScenarioChunkRefresh } from "./scenario_resources.js";
+import {
+  awaitInitialScenarioChunkVisualPromotion,
+  scheduleScenarioChunkRefresh,
+} from "./scenario_resources.js";
 import { cloneScenarioStateValue } from "./scenario/shared.js";
 const state = runtimeState;
 
@@ -85,6 +88,7 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "activeScenarioChunks",
   "runtimeChunkLoadState",
   "scheduleScenarioChunkRefreshEnabled",
+  "awaitInitialScenarioChunkVisualPromotionEnabled",
   "renderProfile",
   "dynamicBordersEnabled",
   "showCityPoints",
@@ -181,6 +185,8 @@ function captureScenarioRuntimeSnapshot() {
     }),
     scheduleScenarioChunkRefreshEnabled:
       readRegisteredRuntimeHookSource(runtimeState, "scheduleScenarioChunkRefreshFn") === scheduleScenarioChunkRefresh,
+    awaitInitialScenarioChunkVisualPromotionEnabled:
+      readRegisteredRuntimeHookSource(runtimeState, "awaitInitialScenarioChunkVisualPromotionFn") === awaitInitialScenarioChunkVisualPromotion,
     renderProfile: String(runtimeState.renderProfile || "auto"),
     dynamicBordersEnabled: runtimeState.dynamicBordersEnabled !== false,
     showCityPoints: runtimeState.showCityPoints !== false,
@@ -301,6 +307,9 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   runtimeState.runtimeChunkLoadState =
     cloneScenarioStateValue(snapshot.runtimeChunkLoadState) || createDefaultRuntimeChunkLoadState();
   runtimeState.scheduleScenarioChunkRefreshFn = snapshot.scheduleScenarioChunkRefreshEnabled ? scheduleScenarioChunkRefresh : null;
+  runtimeState.awaitInitialScenarioChunkVisualPromotionFn = snapshot.awaitInitialScenarioChunkVisualPromotionEnabled
+    ? awaitInitialScenarioChunkVisualPromotion
+    : null;
   runtimeState.renderProfile = String(snapshot.renderProfile || "auto");
   runtimeState.dynamicBordersEnabled = snapshot.dynamicBordersEnabled !== false;
   runtimeState.showCityPoints = snapshot.showCityPoints !== false;

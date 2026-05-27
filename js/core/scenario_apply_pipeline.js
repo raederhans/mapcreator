@@ -47,6 +47,7 @@ function createScenarioApplyPipeline({
   syncScenarioOceanFillForActivation,
   applyScenarioPerformanceHints,
   scheduleScenarioChunkRefresh,
+  awaitInitialScenarioChunkVisualPromotion,
   resetScenarioChunkRuntimeState,
   ensureRuntimeChunkLoadState,
   hasRenderableScenarioPoliticalTopology,
@@ -211,8 +212,12 @@ function createScenarioApplyPipeline({
     // chunk runtime 的壳状态和 payload cache 在这里统一接管。
     // 非 chunked 场景直接 reset，避免旧场景留下的 detail/chunk 状态混进新场景。
     // 这里的 reset 不是保守清空，而是显式把 owner 交回当前场景，避免上一场景的缓存继续冒充已加载。
-    runtimeState.scheduleScenarioChunkRefreshFn = scenarioSupportsChunkedRuntime(bundle) ? scheduleScenarioChunkRefresh : null;
-    if (scenarioSupportsChunkedRuntime(bundle)) {
+    const supportsChunkedRuntime = scenarioSupportsChunkedRuntime(bundle);
+    runtimeState.scheduleScenarioChunkRefreshFn = supportsChunkedRuntime ? scheduleScenarioChunkRefresh : null;
+    runtimeState.awaitInitialScenarioChunkVisualPromotionFn = supportsChunkedRuntime
+      ? awaitInitialScenarioChunkVisualPromotion
+      : null;
+    if (supportsChunkedRuntime) {
       resetScenarioChunkRuntimeState({ scenarioId: staged.scenarioId });
       const chunkIds = Object.keys(bundle.chunkPayloadCacheById || {});
       if (chunkIds.length) {

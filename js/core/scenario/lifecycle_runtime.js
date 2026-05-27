@@ -227,6 +227,7 @@ function createScenarioLifecycleRuntime({
     runtimeState.detailPromotionCompleted = hasBaselineDetailTopology;
     resetScenarioChunkRuntimeState({ scenarioId: "" });
     runtimeState.scheduleScenarioChunkRefreshFn = null;
+    runtimeState.awaitInitialScenarioChunkVisualPromotionFn = null;
     runtimeState.scenarioWaterRegionsData = null;
     runtimeState.scenarioAtlantropaData = null;
     runtimeState.scenarioWaterOverlayVersionTag = "";

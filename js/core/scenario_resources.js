@@ -518,6 +518,7 @@ const {
   resetScenarioChunkRuntimeState,
   preloadScenarioCoarseChunks,
   preloadScenarioFocusCountryPoliticalDetailChunk,
+  awaitInitialScenarioChunkVisualPromotion,
   scheduleScenarioChunkRefresh,
 } = createScenarioChunkRuntimeController({
   // chunk runtime 需要反向调用 getCachedScenarioBundle / ensureScenarioChunkRegistryLoaded；
@@ -991,6 +992,7 @@ export {
   resetScenarioChunkRuntimeState,
   preloadScenarioCoarseChunks,
   preloadScenarioFocusCountryPoliticalDetailChunk,
+  awaitInitialScenarioChunkVisualPromotion,
   scheduleScenarioChunkRefresh,
   scenarioBundleHasChunkedData,
   scenarioSupportsChunkedRuntime,

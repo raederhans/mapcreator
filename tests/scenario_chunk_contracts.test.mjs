@@ -73,6 +73,7 @@ function getRingSignedArea(ring) {
 test("scheduled chunk refresh starts without seeded pending reason", async () => {
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
+  const timerCallbacks = [];
   const chunk = {
     id: "political.detail.test",
     url: "political.detail.test.json",
@@ -98,8 +99,8 @@ test("scheduled chunk refresh starts without seeded pending reason", async () =>
   let selectCalls = 0;
 
   globalThis.setTimeout = (callback) => {
-    callback();
-    return 1;
+    timerCallbacks.push(callback);
+    return timerCallbacks.length;
   };
   globalThis.clearTimeout = () => {};
 
@@ -153,10 +154,15 @@ test("scheduled chunk refresh starts without seeded pending reason", async () =>
     });
 
     const status = controller.scheduleScenarioChunkRefresh({ reason: "visibility:political", delayMs: 0 });
+    assert.equal(status, "scheduled");
+    assert.equal(typeof status, "string");
+    assert.equal(typeof status?.then, "undefined");
+    assert.equal(selectCalls, 0);
+
+    timerCallbacks.splice(0).forEach((callback) => callback());
     await Promise.resolve();
     await Promise.resolve();
 
-    assert.equal(status, "scheduled");
     assert.equal(selectCalls, 1);
   } finally {
     globalThis.setTimeout = originalSetTimeout;

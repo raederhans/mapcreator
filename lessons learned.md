@@ -74,6 +74,7 @@
 - `flushPending` 的语义是“只冲刷待处理工作”，不要先清 pending 再判断是否启动 refresh。
 - exact-after-settle、defer、post-ready 只负责冲刷真实 pending；退出 defer 后要补一次受控 flush。
 - chunk promotion、视觉刷新、spatial、hit canvas 要作为同一世代提交。
+- 首屏 ready 不能只看 schedule 是否发出；chunked 场景的首个可见帧要等真实 promotion 提交到 `selectionVersion`、`landData` 和 `colors`。
 
 ### 性能验证要基于真实 idle
 - benchmark idle 必须包含 runtime chunk work、post-commit replay、post-ready 基础设施任务。

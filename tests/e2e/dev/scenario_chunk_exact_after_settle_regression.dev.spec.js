@@ -272,8 +272,12 @@ test("large chunked startup shows coarse first frame before async detail prewarm
     const visualPromotionMetric = state.renderPerfMetrics?.scenarioChunkPromotionVisualStage || null;
     return !!prewarmMetric
       && prewarmMetric.mode === "async"
-      && Number(prewarmMetric.prewarmCompletedAt || 0) > 0
-      && Number(prewarmMetric.refreshScheduledAt || 0) >= Number(prewarmMetric.prewarmCompletedAt || 0)
+      && prewarmMetric.synchronous === false
+      && prewarmMetric.awaited === false
+      && prewarmMetric.chunkPrewarmDeferred === true
+      && Number(prewarmMetric.refreshScheduledAt || 0) > 0
+      && Number(prewarmMetric.detailPrewarmStartedAt || 0) > 0
+      && Number(prewarmMetric.detailPrewarmCompletedAt || 0) >= Number(prewarmMetric.detailPrewarmStartedAt || 0)
       && !!visualPromotionMetric
       && String(visualPromotionMetric.activeScenarioId || "") === "hoi4_1939"
       && Number(visualPromotionMetric.promotionVersion || 0) >= 1;
@@ -294,13 +298,12 @@ test("large chunked startup shows coarse first frame before async detail prewarm
   expect(stageOrder.prewarmMetric).toBeTruthy();
   expect(stageOrder.prewarmMetric.mode).toBe("async");
   expect(stageOrder.prewarmMetric.synchronous).toBe(false);
-  expect(Number(stageOrder.prewarmMetric.prewarmCompletedAt || 0)).toBeGreaterThan(0);
-  expect(Number(stageOrder.prewarmMetric.refreshScheduledAt || 0))
-    .toBeGreaterThanOrEqual(Number(stageOrder.prewarmMetric.prewarmCompletedAt || 0));
-  if (Number(stageOrder.prewarmMetric.detailPrewarmStartedAt || 0) > 0) {
-    expect(Number(stageOrder.prewarmMetric.detailPrewarmStartedAt || 0))
-      .toBeGreaterThanOrEqual(Number(stageOrder.prewarmMetric.refreshScheduledAt || 0));
-  }
+  expect(stageOrder.prewarmMetric.awaited).toBe(false);
+  expect(stageOrder.prewarmMetric.chunkPrewarmDeferred).toBe(true);
+  expect(Number(stageOrder.prewarmMetric.refreshScheduledAt || 0)).toBeGreaterThan(0);
+  expect(Number(stageOrder.prewarmMetric.detailPrewarmStartedAt || 0)).toBeGreaterThan(0);
+  expect(Number(stageOrder.prewarmMetric.detailPrewarmCompletedAt || 0))
+    .toBeGreaterThanOrEqual(Number(stageOrder.prewarmMetric.detailPrewarmStartedAt || 0));
   expect(String(stageOrder.visualPromotionMetric?.activeScenarioId || "")).toBe("hoi4_1939");
   expect(Number(stageOrder.visualPromotionMetric?.promotionVersion || 0)).toBeGreaterThanOrEqual(1);
 });
@@ -441,6 +444,11 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   }, landProbes);
 
   expect(beforeZoom.activeScenarioId).toBe("tno_1962");
+  for (const probe of beforeZoom.results) {
+    expect(probe.featureId, `missing feature before zoom at ${probe.id}`).toBeTruthy();
+    expect(probe.countryCode, `missing country before zoom at ${probe.id}`).toBeTruthy();
+    expect(probe.resolvedColor, `missing color before zoom at ${probe.id}`).toBeTruthy();
+  }
 
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -528,8 +536,11 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   expect(afterZoom.blackFrameCount).toBe(beforeZoom.blackFrameCount);
   expect(afterZoom.requiredChunkIds).toContain("political.detail.country.gco");
   expect(afterZoom.loadedChunkIds).toContain("political.detail.country.gco");
-  for (const probe of afterZoom.results) {
+  for (const [index, probe] of afterZoom.results.entries()) {
+    const beforeProbe = beforeZoom.results[index];
     expect(probe.featureId, `missing feature after zoom at ${probe.id}`).toBeTruthy();
+    expect(probe.countryCode, `country changed after zoom at ${probe.id}`).toBe(beforeProbe.countryCode);
     expect(probe.resolvedColor, `missing color after zoom at ${probe.id}`).toBeTruthy();
+    expect(probe.resolvedColor, `color changed after zoom at ${probe.id}`).toBe(beforeProbe.resolvedColor);
   }
 });

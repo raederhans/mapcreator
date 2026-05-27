@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_PATH = ROOT / "js/core/map_renderer.js"
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
+SCENARIO_MANAGER_PATH = ROOT / "js/core/scenario_manager.js"
 SCENARIO_CHUNK_RUNTIME_PATH = ROOT / "js/core/scenario/chunk_runtime.js"
 SCENARIO_POST_APPLY_EFFECTS_PATH = ROOT / "js/core/scenario_post_apply_effects.js"
 SCENARIO_APPLY_PIPELINE_PATH = ROOT / "js/core/scenario_apply_pipeline.js"
@@ -18,6 +19,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
     def setUpClass(cls):
         cls.map_renderer_source = MAP_RENDERER_PATH.read_text(encoding="utf-8")
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
+        cls.scenario_manager_source = SCENARIO_MANAGER_PATH.read_text(encoding="utf-8")
         cls.scenario_chunk_runtime_source = SCENARIO_CHUNK_RUNTIME_PATH.read_text(encoding="utf-8")
         cls.scenario_post_apply_effects_source = SCENARIO_POST_APPLY_EFFECTS_PATH.read_text(encoding="utf-8")
         cls.scenario_apply_pipeline_source = SCENARIO_APPLY_PIPELINE_PATH.read_text(encoding="utf-8")
@@ -82,7 +84,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'if \(shouldDeferScenarioChunkRefresh\(\)\) \{[\s\S]*?markPendingScenarioChunkRefresh\(\s*resolvedPendingPromotion\.reason \|\| loadState\.pendingReason \|\| "chunk-promotion-deferred",\s*retryDelayMs,\s*\);\s*recordScenarioChunkRuntimeMetric\("chunkPromotionDeferredRetryMs", retryDelayMs, \{\s*scenarioId,',
+                r'if \(shouldDeferScenarioChunkRefreshFor\(\{ allowStartupInitialVisual \}\)\) \{[\s\S]*?markPendingScenarioChunkRefresh\(\s*resolvedPendingPromotion\.reason \|\| loadState\.pendingReason \|\| "chunk-promotion-deferred",\s*retryDelayMs,\s*\);\s*recordScenarioChunkRuntimeMetric\("chunkPromotionDeferredRetryMs", retryDelayMs, \{\s*scenarioId,',
                 re.S,
             ),
         )
@@ -230,6 +232,74 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         )
         self.assertIn('setScenarioChunkShellStatus("ready", loadState);', self.scenario_chunk_runtime_source)
 
+    def test_initial_visual_promotion_gate_is_awaitable_without_changing_schedule_return(self):
+        self.assertTrue(
+            "awaitInitialScenarioChunkVisualPromotion" in self.scenario_chunk_runtime_source,
+            "chunk runtime must expose an awaitable initial visual promotion gate",
+        )
+        self.assertRegex(
+            self.scenario_chunk_runtime_source,
+            re.compile(
+                r"async function awaitInitialScenarioChunkVisualPromotion\([\s\S]*?\)\s*\{[\s\S]*?"
+                r'buildInitialScenarioChunkVisualPromotionResult\("missing-bundle"[\s\S]*?'
+                r"await ensureScenarioChunkRegistryLoaded\(bundle, \{ d3Client \}\);[\s\S]*?"
+                r"await refreshActiveScenarioChunks\(\{[\s\S]*?"
+                r"allowStartupInitialVisual: true,[\s\S]*?"
+                r"await commitPendingScenarioChunkPromotion\(\{[\s\S]*?"
+                r"allowStartupInitialVisual: true,",
+                re.S,
+            ),
+        )
+        schedule_source = self.scenario_chunk_runtime_source[
+            self.scenario_chunk_runtime_source.index("function scheduleScenarioChunkRefresh("):
+            self.scenario_chunk_runtime_source.index("\n  return {", self.scenario_chunk_runtime_source.index("function scheduleScenarioChunkRefresh("))
+        ]
+        self.assertNotIn("awaitInitialScenarioChunkVisualPromotion(", schedule_source)
+        self.assertNotRegex(schedule_source, re.compile(r"return\s+(?:promotionCommitPromise|Promise\.)"))
+        self.assertIn('return "scheduled";', schedule_source)
+        self.assertIn('return "promotion-commit-started";', self.scenario_chunk_runtime_source)
+        self.assertTrue(
+            "awaitInitialScenarioChunkVisualPromotion," in self.scenario_chunk_runtime_source,
+            "chunk runtime controller return surface must include the awaitable gate",
+        )
+        self.assertIn(
+            "awaitInitialScenarioChunkVisualPromotion,",
+            self.scenario_resources_source,
+            "scenario_resources must export the awaitable gate",
+        )
+        self.assertRegex(
+            self.scenario_manager_source,
+            re.compile(
+                r"import \{[\s\S]*?awaitInitialScenarioChunkVisualPromotion,[\s\S]*?\} from \"\.\/scenario_resources\.js\";",
+                re.S,
+            ),
+            "scenario_manager must import the awaitable gate before wiring the apply pipeline",
+        )
+        self.assertRegex(
+            self.scenario_manager_source,
+            re.compile(
+                r"createScenarioApplyPipeline\(\{[\s\S]*?scheduleScenarioChunkRefresh,\s*"
+                r"awaitInitialScenarioChunkVisualPromotion,\s*"
+                r"resetScenarioChunkRuntimeState,",
+                re.S,
+            ),
+            "scenario_manager must pass the awaitable gate into scenario_apply_pipeline",
+        )
+        refresh_source = self.scenario_chunk_runtime_source[
+            self.scenario_chunk_runtime_source.index("async function refreshActiveScenarioChunks("):
+            self.scenario_chunk_runtime_source.index("async function awaitInitialScenarioChunkVisualPromotion", self.scenario_chunk_runtime_source.index("async function refreshActiveScenarioChunks("))
+        ]
+        self.assertRegex(
+            refresh_source,
+            re.compile(
+                r"if \(!scenarioBundleUsesChunkedLayer\(bundle\)\) \{[\s\S]*?"
+                r"await ensureScenarioChunkRegistryLoaded\(bundle, \{ d3Client \}\);[\s\S]*?"
+                r"if \(!scenarioBundleUsesChunkedLayer\(bundle\)\) return null;",
+                re.S,
+            ),
+            "refreshActiveScenarioChunks must hydrate the detail chunk registry before treating a startup bundle as non-chunked",
+        )
+
     def test_ready_state_flushes_pending_scenario_chunk_refresh_before_deferred_full_interaction(self):
         self.assertIn('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")', self.main_source)
         self.assertRegex(
@@ -250,6 +320,34 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("const shouldSeedFirstReadyFlush = !!(", self.main_source)
         self.assertIn("loadState.pendingReason = normalizedReason;", self.main_source)
         self.assertIn("loadState.pendingDelayMs = 0;", self.main_source)
+
+    def test_startup_initial_visual_gate_runs_before_first_visible_warmup_and_deferred_work(self):
+        self.assertTrue(
+            "awaitInitialScenarioChunkVisualPromotion" in self.main_source,
+            "startup must await the initial visual promotion gate before first visible and warmup checkpoints",
+        )
+        gate_index = self.main_source.index("awaitInitialScenarioChunkVisualPromotion")
+        first_visible_index = self.main_source.index("checkpointFirstVisibleFrameMetrics();")
+        warmup_index = self.main_source.index('setBootState("warmup")')
+        finalize_index = self.main_source.index("await finalizeReadyState(renderDispatcher);")
+        self.assertLess(gate_index, first_visible_index)
+        self.assertLess(gate_index, warmup_index)
+        self.assertLess(gate_index, finalize_index)
+
+        ready_work_start = self.main_source.index('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")')
+        ready_work_end = self.main_source.index("function startDeferredFullInteractionInfrastructureBuild", ready_work_start)
+        ready_work_source = self.main_source[ready_work_start:ready_work_end]
+        self.assertRegex(
+            ready_work_source,
+            re.compile(
+                r"flushPendingScenarioChunkRefreshAfterReady\(reason\);[\s\S]*?"
+                r"scheduleDeferredDetailPromotion\(renderDispatcher\);[\s\S]*?"
+                r"startDeferredFullInteractionInfrastructureBuild\(reason\);[\s\S]*?"
+                r"schedulePostReadyDeferredContextWarmup\(\);[\s\S]*?"
+                r"schedulePostReadyVisualWarmup\(\);",
+                re.S,
+            ),
+        )
 
     def test_detail_promotion_political_reconcile_uses_post_ready_task(self):
         self.assertIn("function reconcileDetailPromotionPoliticalPass(reason = \"detail-promotion-political-reconcile\")", self.map_renderer_source)
@@ -400,15 +498,18 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'function shouldDeferScenarioChunkRefreshFor\(\{ allowZoomEndSettling = false \} = \{\}\) \{[\s\S]*?'
+                r'function shouldDeferScenarioChunkRefreshFor\(\{[\s\S]*?'
+                r'allowZoomEndSettling = false,[\s\S]*?'
+                r'allowStartupInitialVisual = false,[\s\S]*?'
                 r'const renderPhase = String\(runtimeState\.renderPhase \|\| "idle"\);[\s\S]*?'
                 r'const renderPhaseBlocksRefresh = renderPhase !== "idle" && !\(allowZoomEndSettling && renderPhase === "settling"\);[\s\S]*?'
+                r'const bootBlockingRefresh = !!runtimeState\.bootBlocking[\s\S]*?allowStartupInitialVisual[\s\S]*?'
                 r'\|\| renderPhaseBlocksRefresh',
                 re.S,
             ),
         )
         self.assertIn("const allowZoomEndSettling = shouldZoomEndPromoteImmediately(bundle, reason);", self.scenario_chunk_runtime_source)
-        self.assertIn("shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling })", self.scenario_chunk_runtime_source)
+        self.assertIn("shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling, allowStartupInitialVisual })", self.scenario_chunk_runtime_source)
         self.assertIn("shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })", self.scenario_chunk_runtime_source)
 
     def test_zoom_end_detail_chunks_are_protected_through_exact_settle_replay(self):

@@ -50,6 +50,7 @@ import {
 import { syncScenarioLocalizationState } from "./scenario_localization_state.js";
 import {
   applyBlankScenarioPresentationDefaults,
+  awaitInitialScenarioChunkVisualPromotion,
   ensureRuntimeChunkLoadState,
   ensureActiveScenarioOptionalLayerLoaded,
   ensureScenarioGeoLocalePatchForLanguage,
@@ -481,6 +482,7 @@ const {
   syncScenarioOceanFillForActivation,
   applyScenarioPerformanceHints,
   scheduleScenarioChunkRefresh,
+  awaitInitialScenarioChunkVisualPromotion,
   resetScenarioChunkRuntimeState,
   ensureRuntimeChunkLoadState,
   hasRenderableScenarioPoliticalTopology,

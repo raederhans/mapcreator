@@ -26,6 +26,13 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn('setBootState?.("scenario-apply");', owner_content)
         self.assertIn('startBootMetric?.("scenario-apply");', owner_content)
         self.assertIn("await applyScenarioBundleCommand(defaultScenarioBundle, {", owner_content)
+        self.assertIn('import { normalizeScenarioId } from "../core/scenario/shared.js";', owner_content)
+        self.assertIn("function cacheStartupScenarioBundle(runtimeState, bundle)", owner_content)
+        self.assertIn("const scenarioId = normalizeScenarioId(bundle?.manifest?.scenario_id || bundle?.meta?.scenario_id);", owner_content)
+        self.assertRegex(
+            owner_content,
+            r'if \(!defaultScenarioBundle\?\.manifest\) \{[\s\S]*?\}\s*cacheStartupScenarioBundle\(runtimeState, defaultScenarioBundle\);\s*finishBootMetric\?\.\("scenario-bundle"',
+        )
         self.assertIn('scenarioBundleSource === "startup-bundle"', owner_content)
         self.assertIn("defaultScenarioBundle?.loadDiagnostics?.startupBundle === true", owner_content)
         self.assertIn("deferChunkPrewarm: canDeferStartupChunkPrewarm,", owner_content)
@@ -39,6 +46,7 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn('scenarioBundleSource !== "startup-bundle"', owner_content)
         self.assertIn("defaultScenarioBundle = await loadScenarioBundle(String(defaultScenarioBundle.manifest?.scenario_id || \"\"), {", owner_content)
         self.assertIn('scenarioBundleSource = "legacy-bootstrap-recovery";', owner_content)
+        self.assertIn("cacheStartupScenarioBundle(runtimeState, defaultScenarioBundle);", owner_content)
         self.assertIn("warnOnStartupBundleIntegrity?.(defaultScenarioBundle, {", owner_content)
         self.assertIn('finishBootMetric?.("scenario-apply", {', owner_content)
         self.assertIn("runtimeState.scenarioApplyInFlight = true;", owner_content)
