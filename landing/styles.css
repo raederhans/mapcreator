@@ -287,13 +287,13 @@ a.button {
   margin: 0;
   max-width: 10.8ch;
   font-size: clamp(3.6rem, 7vw, 6.7rem);
-  line-height: 0.9;
-  letter-spacing: -0.065em;
+  line-height: 0.96;
+  letter-spacing: 0;
 }
 
 .hero__title-accent {
   display: block;
-  color: rgba(255, 255, 255, 0.62);
+  color: inherit;
   font-style: italic;
 }
 
@@ -847,7 +847,7 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
   .hero h1 {
     max-width: none;
     font-size: clamp(3.1rem, 16vw, 4.8rem);
-    letter-spacing: -0.055em;
+    letter-spacing: 0;
   }
 
   .hero__actions,
