@@ -296,6 +296,10 @@ a.button {
   z-index: 1;
 }
 
+.hero__copy {
+  align-self: center;
+}
+
 .hero h1 {
   margin: 0;
   max-width: 10.8ch;
@@ -350,14 +354,6 @@ a.button {
   margin-top: 30px;
 }
 
-.hero__metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 34px;
-}
-
-.hero__metrics span,
 .hero__chips span {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
@@ -365,10 +361,6 @@ a.button {
   color: rgba(255, 255, 255, 0.78);
   font-size: 0.9rem;
   font-weight: 700;
-}
-
-.hero__metrics span {
-  padding: 9px 13px;
 }
 
 .product-stage {
@@ -871,7 +863,6 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
     align-items: stretch;
   }
 
-  .hero__metrics,
   .hero__chips {
     display: none;
   }

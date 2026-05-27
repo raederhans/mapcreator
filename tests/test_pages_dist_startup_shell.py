@@ -36,7 +36,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
-            'data-i18n-aria-label="heroMetricsLabel"',
             'data-i18n-aria-label="productPreviewLabel"',
             'data-i18n-aria-label="brandHomeLabel"',
             'data-i18n-aria-label="primaryNavLabel"',
@@ -53,6 +52,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, html)
+
+        self.assertNotIn('class="hero__metrics"', html)
+        self.assertNotIn('data-i18n-aria-label="heroMetricsLabel"', html)
 
         for expected_fragment in (
             "scenario_forge_landing_lang",
@@ -124,7 +126,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
-            'data-i18n-aria-label="heroMetricsLabel"',
             'data-i18n-aria-label="productPreviewLabel"',
             'data-i18n-aria-label="brandHomeLabel"',
             'data-i18n-aria-label="primaryNavLabel"',
@@ -137,6 +138,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, html)
+
+        self.assertNotIn('class="hero__metrics"', html)
+        self.assertNotIn('data-i18n-aria-label="heroMetricsLabel"', html)
 
     def test_dist_app_js_keeps_landing_i18n_contract(self) -> None:
         if not DIST_APP_JS.exists():
