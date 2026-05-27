@@ -306,6 +306,29 @@ if (!rejected) {
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
 
+    def test_node_route_registry_expands_common_npm_run_forms(self) -> None:
+        script = """
+const { buildNodeRoutes } = await import('./tools/test_route_registry.mjs');
+const packageJson = {
+  scripts: {
+    'test:node:aggregate': 'npm run -s test:node:first && npm run-script --if-present test:node:second -- --grep owner',
+    'test:node:first': 'node --test tests/transport_workbench_event_owner_behavior.test.mjs',
+    'test:node:second': 'node --test tests/transport_workbench_shell_owner_behavior.test.mjs',
+  },
+};
+const route = buildNodeRoutes(packageJson).find((candidate) => candidate.id === 'node:test:node:aggregate');
+if (!route) {
+  throw new Error('missing aggregate route');
+}
+for (const sourceRef of ['tests/transport_workbench_event_owner_behavior.test.mjs', 'tests/transport_workbench_shell_owner_behavior.test.mjs']) {
+  if (!route.sourceRef.includes(sourceRef)) {
+    throw new Error(`aggregate route must expand ${sourceRef}: ${route.sourceRef}`);
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
     def test_e2e_routes_are_spec_level_and_unique(self) -> None:
         script = """
 const { buildE2eRoutes } = await import('./tools/test_route_registry.mjs');

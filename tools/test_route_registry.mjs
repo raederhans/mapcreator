@@ -415,8 +415,18 @@ function extractCommandPaths(command, extensionPattern) {
 }
 
 function extractNpmScriptRefs(command, prefix) {
-  return [...String(command || "").matchAll(new RegExp(`npm\\s+run\\s+(${prefix}[\\w:-]+)`, "g"))]
-    .map((match) => match[1]);
+  const refs = [];
+  const npmRunExpression = /\bnpm\s+(?:run|run-script)\s+([^&|;]+)/g;
+  for (const match of String(command || "").matchAll(npmRunExpression)) {
+    const args = String(match[1] || "").trim().split(/\s+/).filter(Boolean);
+    for (const arg of args) {
+      if (arg === "--") break;
+      if (arg.startsWith("-")) continue;
+      if (arg.startsWith(prefix)) refs.push(arg);
+      break;
+    }
+  }
+  return refs;
 }
 
 function resolveNodeScriptTestFiles(scripts, scriptName, command, seen = new Set()) {

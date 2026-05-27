@@ -125,3 +125,6 @@
 
 ### 测试路由要展开聚合入口
 - 具名 npm script 作为测试入口时，route registry 要递归展开到真实 leaf test 文件；只记录聚合脚本会让 agent 误判具体测试已经可定向运行。
+
+### 静态合同要锁 owner 面，避免整文件误伤
+- 为了禁止某个 owner 回退到 `innerHTML` 这类旧实现，测试应列出该 owner 的具体禁止 token；整文件级禁令会把无关 sidebar 改动也变成假失败。

@@ -84,7 +84,17 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn("const buildCheckboxLabel = (id, label, className) => {", content)
         self.assertIn("const buildCombatBar = ({ id, label, className }) => {", content)
         self.assertIn('button.textContent = t(label, "ui");', content)
-        self.assertNotIn("innerHTML = `", content)
+        for forbidden_owner in [
+            "enableToggle.innerHTML",
+            "emptyState.innerHTML",
+            "frontlineLabelToggle.innerHTML",
+            "unitCombatBars.innerHTML",
+            "unitLabelToggle.innerHTML",
+            "unitScaleShell.innerHTML",
+            "unitListHeader.innerHTML",
+            "strategicCommandBar.innerHTML",
+        ]:
+            self.assertNotIn(forbidden_owner, content)
 
     def test_controller_refreshes_strategic_annotation_publish_status(self):
         content = STRATEGIC_OVERLAY_CONTROLLER_JS.read_text(encoding="utf-8")
