@@ -6870,15 +6870,15 @@
     },
     {
       "path": "assets/workspace-overview.webp",
-      "size_bytes": 64792
+      "size_bytes": 79108
     },
     {
       "path": "index.html",
-      "size_bytes": 19678
+      "size_bytes": 19672
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 218101
+      "size_bytes": 218094
     },
     {
       "path": "styles.css",
@@ -6895,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001093033
+  "total_bytes": 1001107336
 }
