@@ -193,6 +193,8 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn('"git", "rev-parse", "HEAD"', script)
         self.assertIn('SCENARIO_IDS = ["none", "hoi4_1939", "tno_1962"]', script)
         self.assertIn('"politicalRasterWorker": political_raster_worker', script)
+        self.assertIn("def resolve_runtime_output_path", script)
+        self.assertIn("resolved.relative_to(runtime_root)", script)
         self.assertIn("acceptedCount: Number(source.acceptedCount || 0)", script)
         self.assertIn("rejectedStaleCount: Number(source.rejectedStaleCount || 0)", script)
         self.assertIn("fallbackCount: Number(source.fallbackCount || 0)", script)
@@ -202,6 +204,13 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("return timeOrigin && sampledAt ? timeOrigin + sampledAt : sampledAt;", script)
         self.assertNotIn("metricRecordedAt: sampleContext?.sampledAt || 0", script)
         self.assertNotIn("metricRecordedAt: Math.max(0, Number(sampleContext?.sampledAt || 0))", script)
+
+    def test_editor_benchmark_output_paths_stay_inside_runtime(self):
+        benchmark = load_editor_benchmark_module()
+        inside = benchmark.resolve_runtime_output_path(".runtime/output/perf/report.json", label="test")
+        self.assertEqual(inside, (REPO_ROOT / ".runtime" / "output" / "perf" / "report.json").resolve())
+        with self.assertRaises(ValueError):
+            benchmark.resolve_runtime_output_path("../outside.json", label="test")
 
     def test_repeated_zoom_regions_metric_summarizes_degradation_black_longtask_and_memory(self):
         benchmark = load_editor_benchmark_module()

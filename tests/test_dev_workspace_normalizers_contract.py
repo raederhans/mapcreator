@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SCENARIO_TAG_CREATOR_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_tag_creator_controller.js"
 
 
 def run_normalizers(payload):
@@ -63,6 +64,14 @@ class DevWorkspaceNormalizersContractTest(unittest.TestCase):
         })
         self.assertEqual(output["color"], "#AB12EF")
         self.assertEqual(output["colors"], ["#AB12EF", "#123456"])
+
+    def test_tag_creator_color_swatches_use_dom_nodes(self):
+        content = SCENARIO_TAG_CREATOR_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("const syncTagColorSwatches = (container, colors, effectiveColor, label) => {", content)
+        self.assertIn("container.replaceChildren(...buttons);", content)
+        self.assertNotIn("scenarioTagPalette.innerHTML", content)
+        self.assertNotIn("scenarioTagRecentColors.innerHTML", content)
 
 
 if __name__ == "__main__":

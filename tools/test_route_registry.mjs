@@ -414,6 +414,22 @@ function extractCommandPaths(command, extensionPattern) {
     .map((match) => match[0]);
 }
 
+function extractNpmScriptRefs(command, prefix) {
+  return [...String(command || "").matchAll(new RegExp(`npm\\s+run\\s+(${prefix}[\\w:-]+)`, "g"))]
+    .map((match) => match[1]);
+}
+
+function resolveNodeScriptTestFiles(scripts, scriptName, command, seen = new Set()) {
+  if (seen.has(scriptName)) {
+    return [];
+  }
+  seen.add(scriptName);
+  const directFiles = extractCommandPaths(command, "mjs");
+  const childFiles = extractNpmScriptRefs(command, "test:node:")
+    .flatMap((childName) => resolveNodeScriptTestFiles(scripts, childName, scripts[childName] || "", new Set(seen)));
+  return uniqueValues([...directFiles, ...childFiles]);
+}
+
 function collectFileDependencies(baseRepoPath) {
   const absolutePath = path.join(REPO_ROOT, baseRepoPath);
   if (!fs.existsSync(absolutePath)) {
@@ -482,7 +498,7 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
   return Object.entries(scripts)
     .filter(([name]) => name.startsWith("test:node:"))
     .map(([name, command]) => {
-      const testFiles = extractCommandPaths(command, "mjs");
+      const testFiles = resolveNodeScriptTestFiles(scripts, name, command);
       const sourceRefs = uniqueValues([
         ...testFiles,
         ...testFiles.flatMap((testFile) => collectFileDependencies(testFile)),

@@ -78,6 +78,14 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('publishStatus.setAttribute("aria-live", "polite");', content)
         self.assertIn('invalidateFrontlineOverlayState,', content)
 
+    def test_sidebar_strategic_overlay_static_dom_uses_text_nodes_for_translated_copy(self):
+        content = SIDEBAR_JS.read_text(encoding="utf-8")
+
+        self.assertIn("const buildCheckboxLabel = (id, label, className) => {", content)
+        self.assertIn("const buildCombatBar = ({ id, label, className }) => {", content)
+        self.assertIn('button.textContent = t(label, "ui");', content)
+        self.assertNotIn("innerHTML = `", content)
+
     def test_controller_refreshes_strategic_annotation_publish_status(self):
         content = STRATEGIC_OVERLAY_CONTROLLER_JS.read_text(encoding="utf-8")
 

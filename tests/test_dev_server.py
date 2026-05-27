@@ -74,6 +74,67 @@ def _write_failing_geo_builder_script(path: Path, *, stderr: str = "builder fail
 
 
 class DevServerTest(unittest.TestCase):
+    def test_active_server_metadata_runtime_root_stays_inside_runtime(self):
+        with mock.patch.dict(os.environ, {"MAPCREATOR_RUNTIME_ROOT": ".runtime/custom"}, clear=False):
+            self.assertEqual(
+                dev_server.resolve_runtime_active_server_path(),
+                dev_server.ROOT / ".runtime" / "custom" / "dev" / "active_server.json",
+            )
+        with mock.patch.dict(os.environ, {"MAPCREATOR_RUNTIME_ROOT": "../outside-runtime"}, clear=False):
+            with self.assertRaises(dev_server.DevServerError):
+                dev_server.resolve_runtime_active_server_path()
+
+    def test_active_server_metadata_clear_only_removes_current_process_entry(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            metadata_path = Path(tmp_dir) / "active_server.json"
+            dev_server.write_json_atomic(
+                metadata_path,
+                {"pid": os.getpid(), "port": 8123},
+                ensure_ascii=True,
+                indent=2,
+                trailing_newline=True,
+            )
+
+            self.assertFalse(dev_server.clear_active_server_metadata(metadata_path, port=8124))
+            self.assertTrue(metadata_path.exists())
+            self.assertTrue(dev_server.clear_active_server_metadata(metadata_path, port=8123))
+            self.assertFalse(metadata_path.exists())
+
+    def test_start_server_clears_active_metadata_on_graceful_stop(self):
+        class FakeServer:
+            def __init__(self, address, _handler):
+                self.server_address = address
+                self.dev_token = ""
+                self.closed = False
+
+            def serve_forever(self):
+                return
+
+            def server_close(self):
+                self.closed = True
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            metadata_path = root / ".runtime" / "dev-test" / "dev" / "active_server.json"
+            instances: list[FakeServer] = []
+
+            def make_server(address, handler):
+                server = FakeServer(address, handler)
+                instances.append(server)
+                return server
+
+            with (
+                mock.patch.object(dev_server, "ROOT", root),
+                mock.patch.dict(os.environ, {"MAPCREATOR_RUNTIME_ROOT": ".runtime/dev-test"}, clear=False),
+                mock.patch.object(dev_server, "DevServerTCPServer", side_effect=make_server),
+                mock.patch.object(dev_server, "should_open_browser", return_value=False),
+            ):
+                dev_server.start_server("/", preferred_port=8125)
+
+            self.assertFalse(metadata_path.exists())
+            self.assertEqual(len(instances), 1)
+            self.assertTrue(instances[0].closed)
+
     def _build_handler_for_static_response(
         self,
         *,

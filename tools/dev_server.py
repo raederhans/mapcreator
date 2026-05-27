@@ -84,7 +84,7 @@ from tools.check_scenario_contracts import (
 PORT_START = 8000
 PORT_END = 8030
 BIND_ADDRESS = "127.0.0.1"
-RUNTIME_ACTIVE_SERVER_PATH = Path(".runtime") / "dev" / "active_server.json"
+RUNTIME_ACTIVE_SERVER_PATH = ROOT / ".runtime" / "dev" / "active_server.json"
 STARTUP_SUPPORT_KEY_USAGE_REPORT_DIR = ROOT / ".runtime" / "reports" / "generated" / "scenarios"
 DEFAULT_SHARED_DISTRICT_TEMPLATES_PATH = ROOT / "data" / "scenarios" / "district_templates.shared.json"
 MAX_JSON_BODY_BYTES = 1024 * 1024
@@ -2511,7 +2511,19 @@ def resolve_open_path(cli_path: str = ""):
 def resolve_runtime_active_server_path():
     runtime_root = os.environ.get("MAPCREATOR_RUNTIME_ROOT", "").strip()
     if runtime_root:
-        return Path(runtime_root) / "dev" / "active_server.json"
+        runtime_root_path = Path(runtime_root).expanduser()
+        if not runtime_root_path.is_absolute():
+            runtime_root_path = ROOT / runtime_root_path
+        resolved_runtime_root = runtime_root_path.resolve()
+        allowed_root = (ROOT / ".runtime").resolve()
+        try:
+            resolved_runtime_root.relative_to(allowed_root)
+        except ValueError as error:
+            raise DevServerError(
+                "runtime_root_outside_workspace",
+                f"MAPCREATOR_RUNTIME_ROOT must resolve inside {allowed_root}: {runtime_root}",
+            ) from error
+        return resolved_runtime_root / "dev" / "active_server.json"
     return RUNTIME_ACTIVE_SERVER_PATH
 
 
@@ -2535,8 +2547,24 @@ def write_active_server_metadata(base_url, open_path, port):
         "topology_variant": (query.get("topology_variant") or [""])[0],
         "render_profile_default": (query.get("render_profile") or [""])[0],
     }
-    metadata_path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+    write_json_atomic(metadata_path, payload, ensure_ascii=True, indent=2, trailing_newline=True)
     return metadata_path
+
+
+def clear_active_server_metadata(metadata_path: Path, *, port: int, pid: int | None = None) -> bool:
+    if not metadata_path.exists():
+        return False
+    expected_pid = os.getpid() if pid is None else pid
+    try:
+        payload = _read_json(metadata_path)
+    except Exception:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("pid") != expected_pid or payload.get("port") != port:
+        return False
+    metadata_path.unlink(missing_ok=True)
+    return True
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -2970,8 +2998,12 @@ def start_server(open_path=DEFAULT_OPEN_PATH, preferred_port: int | None = None)
             else:
                 print(f"[INFO] Browser auto-open disabled. Visit {open_url} manually if needed.")
 
-            # Start serving
-            httpd.serve_forever()
+            # Keep active_server.json truthful for tools that discover an already running server.
+            try:
+                httpd.serve_forever()
+            finally:
+                clear_active_server_metadata(metadata_path, port=port)
+                httpd.server_close()
             return  # Exit function after server stops (though serve_forever usually blocks)
 
         except OSError as e:

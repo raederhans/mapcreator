@@ -122,3 +122,6 @@
 - Project import / export 这类异步闭环要在事务完成和失败时通知 UI，不能只在按钮点击时写 started 状态。
 - observer 只做旁路通知；observer 报错应记录为 observer failure，不能把已经成功的导入事务改判成失败。
 - 保存状态类 live region 要接到 `markDirty` / `clearDirty` 共同路径，覆盖 appearance、transport、special zones 等跨入口编辑。
+
+### 测试路由要展开聚合入口
+- 具名 npm script 作为测试入口时，route registry 要递归展开到真实 leaf test 文件；只记录聚合脚本会让 agent 误判具体测试已经可定向运行。

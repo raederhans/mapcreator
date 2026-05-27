@@ -39,19 +39,53 @@ export function createAppearanceParentBorderOwner({
   nodes = {},
   translateGeo = (value) => value,
   renderDirty = () => {},
+  clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
   documentRef = globalThis.document,
 } = {}) {
   const {
     visibleToggle = null,
     colorInput = null,
     opacityInput = null,
+    opacityValue = null,
     widthInput = null,
+    widthValue = null,
     enableAllButton = null,
     disableAllButton = null,
     countryList = null,
     emptyNode = null,
   } = nodes;
   const checkboxByCountryCode = new Map();
+
+  const getParentBorderStyle = () => {
+    if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
+      runtimeState.styleConfig = {};
+    }
+    if (!runtimeState.styleConfig.parentBorders || typeof runtimeState.styleConfig.parentBorders !== "object") {
+      runtimeState.styleConfig.parentBorders = {};
+    }
+    return runtimeState.styleConfig.parentBorders;
+  };
+
+  const syncStyleControls = () => {
+    const style = getParentBorderStyle();
+    const color = String(style.color || "#4b5563");
+    const opacity = clamp(
+      Math.round((Number.isFinite(Number(style.opacity)) ? Number(style.opacity) : 0.85) * 100),
+      0,
+      100
+    );
+    const width = clamp(
+      Number.isFinite(Number(style.width)) ? Number(style.width) : 1.1,
+      0.2,
+      4
+    );
+
+    if (colorInput) colorInput.value = color;
+    if (opacityInput) opacityInput.value = String(opacity);
+    if (opacityValue) opacityValue.textContent = `${opacity}%`;
+    if (widthInput) widthInput.value = String(width);
+    if (widthValue) widthValue.textContent = Number(width).toFixed(2);
+  };
 
   const syncVisibilityUi = () => {
     const enabled = runtimeState.parentBordersVisible !== false;
@@ -135,9 +169,80 @@ export function createAppearanceParentBorderOwner({
     return { rebuilt: true, rows: rows.length };
   };
 
+  const bindEvents = () => {
+    syncStyleControls();
+    syncVisibilityUi();
+
+    if (colorInput && colorInput.dataset.parentBorderBound !== "true") {
+      colorInput.addEventListener("input", (event) => {
+        getParentBorderStyle().color = event.target.value;
+        renderDirty("parent-border-color");
+      });
+      colorInput.dataset.parentBorderBound = "true";
+    }
+
+    if (opacityInput && opacityInput.dataset.parentBorderBound !== "true") {
+      opacityInput.addEventListener("input", (event) => {
+        const value = Number(event.target.value);
+        const opacity = clamp(Number.isFinite(value) ? value / 100 : 0.85, 0, 1);
+        getParentBorderStyle().opacity = opacity;
+        if (opacityValue) opacityValue.textContent = `${Math.round(opacity * 100)}%`;
+        renderDirty("parent-border-opacity");
+      });
+      opacityInput.dataset.parentBorderBound = "true";
+    }
+
+    if (widthInput && widthInput.dataset.parentBorderBound !== "true") {
+      widthInput.addEventListener("input", (event) => {
+        const value = Number(event.target.value);
+        const width = clamp(Number.isFinite(value) ? value : 1.1, 0.2, 4);
+        getParentBorderStyle().width = width;
+        if (widthValue) widthValue.textContent = width.toFixed(2);
+        renderDirty("parent-border-width");
+      });
+      widthInput.dataset.parentBorderBound = "true";
+    }
+
+    if (visibleToggle && visibleToggle.dataset.parentBorderBound !== "true") {
+      visibleToggle.addEventListener("change", (event) => {
+        runtimeState.parentBordersVisible = !!event.target.checked;
+        syncVisibilityUi();
+        renderCountryList();
+        renderDirty("parent-border-visibility");
+      });
+      visibleToggle.dataset.parentBorderBound = "true";
+    }
+
+    if (enableAllButton && enableAllButton.dataset.parentBorderBound !== "true") {
+      enableAllButton.addEventListener("click", () => {
+        const enabledMap = normalizeParentBorderEnabledMap(runtimeState);
+        Object.keys(enabledMap).forEach((countryCode) => {
+          enabledMap[countryCode] = true;
+        });
+        renderCountryList();
+        renderDirty("parent-border-enable-all");
+      });
+      enableAllButton.dataset.parentBorderBound = "true";
+    }
+
+    if (disableAllButton && disableAllButton.dataset.parentBorderBound !== "true") {
+      disableAllButton.addEventListener("click", () => {
+        const enabledMap = normalizeParentBorderEnabledMap(runtimeState);
+        Object.keys(enabledMap).forEach((countryCode) => {
+          enabledMap[countryCode] = false;
+        });
+        renderCountryList();
+        renderDirty("parent-border-disable-all");
+      });
+      disableAllButton.dataset.parentBorderBound = "true";
+    }
+  };
+
   return {
+    bindEvents,
     normalizeEnabledMap: () => normalizeParentBorderEnabledMap(runtimeState),
     renderCountryList,
     syncVisibilityUi,
+    syncStyleControls,
   };
 }

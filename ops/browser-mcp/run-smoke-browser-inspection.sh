@@ -319,12 +319,13 @@ else
 fi
 SHOT_DIR="$ART_DIR/screenshots"
 LOG_DIR="$ART_DIR/logs"
+HOME_PROBE_DIR="$ROOT_DIR/.runtime/tmp/browser-inspection"
 if [[ "$OUTPUT_REPORT_PATH" = /* ]]; then
   REPORT_OUT="$OUTPUT_REPORT_PATH"
 else
   REPORT_OUT="$ROOT_DIR/$OUTPUT_REPORT_PATH"
 fi
-mkdir -p "$ART_DIR" "$SHOT_DIR" "$LOG_DIR"
+mkdir -p "$ART_DIR" "$SHOT_DIR" "$LOG_DIR" "$HOME_PROBE_DIR"
 mkdir -p "$(dirname "$REPORT_OUT")"
 
 TS="$(date +%Y%m%d-%H%M%S)"
@@ -412,8 +413,10 @@ cleanup() {
   fi
   if [[ "$WINDOWS_SERVER_STARTED" == "1" && -f "$WIN_PID_FILE" ]]; then
     WIN_PID="$(cat "$WIN_PID_FILE" 2>/dev/null || true)"
-    if [[ -n "$WIN_PID" ]]; then
+    if [[ "$WIN_PID" =~ ^[0-9]+$ ]]; then
       powershell.exe -NoProfile -Command "Stop-Process -Id $WIN_PID -Force -ErrorAction SilentlyContinue" >/dev/null 2>&1 || true
+    elif [[ -n "$WIN_PID" ]]; then
+      echo "[WARN] Ignoring invalid Windows fallback PID content in $WIN_PID_FILE." | tee -a "$RUN_LOG" >/dev/null
     fi
   fi
   run_pwcli close >/dev/null 2>&1 || true
@@ -679,8 +682,10 @@ find_wsl_server_port() {
   local start="$DEFAULT_PORT_START"
   local end="$DEFAULT_PORT_END"
   for p in $(seq "$start" "$end"); do
-    if curl -fsS "http://127.0.0.1:${p}/" > "/tmp/mapcreator-home-$p.html" 2>/dev/null; then
-      if match_quiet_i "$DEFAULT_SERVER_TITLE_PATTERN" "/tmp/mapcreator-home-$p.html"; then
+    local home_probe
+    home_probe="$(mktemp "$HOME_PROBE_DIR/mapcreator-home-${p}-XXXXXX.html")"
+    if curl -fsS "http://127.0.0.1:${p}/" > "$home_probe" 2>/dev/null; then
+      if match_quiet_i "$DEFAULT_SERVER_TITLE_PATTERN" "$home_probe"; then
         echo "$p"
         return 0
       fi
@@ -705,8 +710,10 @@ parse_started_port_from_dev_log() {
 
 port_matches_expected_home() {
   local port="$1"
-  if curl -fsS "http://127.0.0.1:${port}/" > "/tmp/mapcreator-home-$port.html" 2>/dev/null; then
-    if match_quiet_i "$DEFAULT_SERVER_TITLE_PATTERN" "/tmp/mapcreator-home-$port.html"; then
+  local home_probe
+  home_probe="$(mktemp "$HOME_PROBE_DIR/mapcreator-home-${port}-XXXXXX.html")"
+  if curl -fsS "http://127.0.0.1:${port}/" > "$home_probe" 2>/dev/null; then
+    if match_quiet_i "$DEFAULT_SERVER_TITLE_PATTERN" "$home_probe"; then
       return 0
     fi
   fi
@@ -852,13 +859,33 @@ ensure_windows_server_for_edge() {
     exit 1
   fi
 
-  local win_root win_pid_path win_stdout_path win_stderr_path
+  local win_root win_pid_path win_stdout_path win_stderr_path ps_script win_ps_script
   win_root="$(wslpath -w "$ROOT_DIR")"
   win_pid_path="$(wslpath -w "$WIN_PID_FILE")"
   win_stdout_path="$(wslpath -w "$LOG_DIR/win-dev-server-$TS.out.log")"
   win_stderr_path="$(wslpath -w "$LOG_DIR/win-dev-server-$TS.err.log")"
+  ps_script="$LOG_DIR/win-dev-server-$TS.ps1"
+  cat > "$ps_script" <<'PS1'
+param(
+  [string]$Port,
+  [string]$Root,
+  [string]$StdoutPath,
+  [string]$StderrPath,
+  [string]$PidPath
+)
+$process = Start-Process `
+  -FilePath py `
+  -ArgumentList @('-3', 'tools/dev_server.py', '--port', $Port, '/app/') `
+  -WorkingDirectory $Root `
+  -RedirectStandardOutput $StdoutPath `
+  -RedirectStandardError $StderrPath `
+  -PassThru `
+  -WindowStyle Hidden
+$process.Id | Out-File -Encoding ascii $PidPath
+PS1
+  win_ps_script="$(wslpath -w "$ps_script")"
 
-  powershell.exe -NoProfile -Command "\$p=Start-Process -FilePath py -ArgumentList '-3','tools/dev_server.py','--port','${port}','/app/' -WorkingDirectory '${win_root}' -RedirectStandardOutput '${win_stdout_path}' -RedirectStandardError '${win_stderr_path}' -PassThru -WindowStyle Hidden; \$p.Id | Out-File -Encoding ascii '${win_pid_path}'" >/dev/null
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$win_ps_script" -Port "$port" -Root "$win_root" -StdoutPath "$win_stdout_path" -StderrPath "$win_stderr_path" -PidPath "$win_pid_path" >/dev/null
   WINDOWS_SERVER_STARTED="1"
   for _ in $(seq 1 20); do
     sleep 0.5

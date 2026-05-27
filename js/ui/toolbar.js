@@ -333,14 +333,6 @@ function initToolbar({ render } = {}) {
   const empireBorderWidth = document.getElementById("empireBorderWidth");
   const coastlineColor = document.getElementById("coastlineColor");
   const coastlineWidth = document.getElementById("coastlineWidth");
-  const parentBordersVisible = document.getElementById("parentBordersVisible");
-  const parentBorderColor = document.getElementById("parentBorderColor");
-  const parentBorderOpacity = document.getElementById("parentBorderOpacity");
-  const parentBorderWidth = document.getElementById("parentBorderWidth");
-  const parentBorderCountryList = document.getElementById("parentBorderCountryList");
-  const parentBorderEnableAll = document.getElementById("parentBorderEnableAll");
-  const parentBorderDisableAll = document.getElementById("parentBorderDisableAll");
-  const parentBorderEmpty = document.getElementById("parentBorderEmpty");
   const oceanFillColor = document.getElementById("oceanFillColor");
   const lakeLinkToOcean = document.getElementById("lakeLinkToOcean");
   const lakeFillColor = document.getElementById("lakeFillColor");
@@ -368,8 +360,6 @@ function initToolbar({ render } = {}) {
   const internalBorderWidthValue = document.getElementById("internalBorderWidthValue");
   const empireBorderWidthValue = document.getElementById("empireBorderWidthValue");
   const coastlineWidthValue = document.getElementById("coastlineWidthValue");
-  const parentBorderOpacityValue = document.getElementById("parentBorderOpacityValue");
-  const parentBorderWidthValue = document.getElementById("parentBorderWidthValue");
   const oceanTextureOpacityValue = document.getElementById("oceanTextureOpacityValue");
   const oceanTextureScaleValue = document.getElementById("oceanTextureScaleValue");
   const oceanContourStrengthValue = document.getElementById("oceanContourStrengthValue");
@@ -3006,81 +2996,6 @@ function initToolbar({ render } = {}) {
         coastlineWidthValue.textContent = value.toFixed(1);
       }
       renderDirty("coastline-width");
-    });
-  }
-
-  if (parentBorderColor) {
-    parentBorderColor.value = runtimeState.styleConfig.parentBorders.color || "#4b5563";
-    parentBorderColor.addEventListener("input", (event) => {
-      runtimeState.styleConfig.parentBorders.color = event.target.value;
-      renderDirty("parent-border-color");
-    });
-  }
-  if (parentBorderOpacity) {
-    const initial = Math.round((runtimeState.styleConfig.parentBorders.opacity || 0.85) * 100);
-    parentBorderOpacity.value = String(clamp(initial, 0, 100));
-    if (parentBorderOpacityValue) {
-      parentBorderOpacityValue.textContent = `${parentBorderOpacity.value}%`;
-    }
-    parentBorderOpacity.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.parentBorders.opacity = clamp(
-        Number.isFinite(value) ? value / 100 : 0.85,
-        0,
-        1
-      );
-      if (parentBorderOpacityValue) {
-        parentBorderOpacityValue.textContent = `${event.target.value}%`;
-      }
-      renderDirty("parent-border-opacity");
-    });
-  }
-  if (parentBorderWidth) {
-    const initial = Number(runtimeState.styleConfig.parentBorders.width || 1.1);
-    parentBorderWidth.value = String(clamp(initial, 0.2, 4));
-    if (parentBorderWidthValue) {
-      parentBorderWidthValue.textContent = Number(parentBorderWidth.value).toFixed(2);
-    }
-    parentBorderWidth.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.parentBorders.width = clamp(Number.isFinite(value) ? value : 1.1, 0.2, 4);
-      if (parentBorderWidthValue) {
-        parentBorderWidthValue.textContent = runtimeState.styleConfig.parentBorders.width.toFixed(2);
-      }
-      renderDirty("parent-border-width");
-    });
-  }
-  if (parentBordersVisible) {
-    parentBordersVisible.checked = runtimeState.parentBordersVisible !== false;
-    parentBordersVisible.addEventListener("change", (event) => {
-      runtimeState.parentBordersVisible = !!event.target.checked;
-      syncParentBorderVisibilityUI();
-      renderParentBorderCountryList();
-      renderDirty("parent-border-visibility");
-    });
-  }
-  if (parentBorderEnableAll) {
-    parentBorderEnableAll.addEventListener("click", () => {
-      const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
-        ? runtimeState.parentBorderSupportedCountries
-        : [];
-      supported.forEach((countryCode) => {
-        runtimeState.parentBorderEnabledByCountry[countryCode] = true;
-      });
-      renderParentBorderCountryList();
-      renderDirty("parent-border-enable-all");
-    });
-  }
-  if (parentBorderDisableAll) {
-    parentBorderDisableAll.addEventListener("click", () => {
-      const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
-        ? runtimeState.parentBorderSupportedCountries
-        : [];
-      supported.forEach((countryCode) => {
-        runtimeState.parentBorderEnabledByCountry[countryCode] = false;
-      });
-      renderParentBorderCountryList();
-      renderDirty("parent-border-disable-all");
     });
   }
 

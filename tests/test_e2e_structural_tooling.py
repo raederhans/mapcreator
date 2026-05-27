@@ -264,6 +264,15 @@ const dataHealthRoute = routes.find((route) => route.id === 'infra:data-health')
 if (!dataHealthRoute || dataHealthRoute.executionOwner !== 'child-safe' || dataHealthRoute.resourceLocks.length !== 0) {
   throw new Error(`data health route must stay child-safe and lock-free: ${JSON.stringify(dataHealthRoute)}`);
 }
+const transportWorkbenchControllerRoute = routes.find((route) => route.id === 'node:test:node:transport-workbench-controller');
+if (!transportWorkbenchControllerRoute) {
+  throw new Error('missing transport workbench aggregate node route');
+}
+for (const sourceRef of ['tests/transport_workbench_event_owner_behavior.test.mjs', 'tests/transport_workbench_shell_owner_behavior.test.mjs']) {
+  if (!transportWorkbenchControllerRoute.sourceRef.includes(sourceRef)) {
+    throw new Error(`aggregate node route must expand ${sourceRef}: ${transportWorkbenchControllerRoute.sourceRef}`);
+  }
+}
 """
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)

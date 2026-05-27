@@ -283,6 +283,13 @@
       "ownerHint": "transport-workbench"
     },
     {
+      "specPath": "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "primaryLayer": "feature",
+      "executionMode": "browser",
+      "domain": "transport-workbench",
+      "ownerHint": "transport-workbench"
+    },
+    {
       "specPath": "tests/e2e/ui_contract_foundation.spec.js",
       "primaryLayer": "smoke",
       "executionMode": "browser",

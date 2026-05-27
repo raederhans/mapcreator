@@ -180,6 +180,27 @@ export function createScenarioTagCreatorController({
       recentColors,
     };
   };
+  const buildTagColorSwatchButton = (color, effectiveColor, label) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `color-swatch${color === effectiveColor ? " is-selected" : ""}`;
+    button.dataset.devTagColor = color;
+    button.title = color;
+    button.setAttribute("aria-label", `${label}: ${color}`);
+    button.setAttribute("aria-pressed", color === effectiveColor ? "true" : "false");
+    button.style.backgroundColor = color;
+    return button;
+  };
+  const syncTagColorSwatches = (container, colors, effectiveColor, label) => {
+    const swatchSignature = JSON.stringify({
+      label,
+      colors: colors.map((color) => [color, color === effectiveColor]),
+    });
+    if (container.dataset.swatchSignature === swatchSignature) return;
+    const buttons = colors.map((color) => buildTagColorSwatchButton(color, effectiveColor, label));
+    container.replaceChildren(...buttons);
+    container.dataset.swatchSignature = swatchSignature;
+  };
 
   const deriveTagCreatorUiState = (tagValue = "") => {
     const normalizedTag = normalizeScenarioTagInput(tagValue);
@@ -761,38 +782,12 @@ export function createScenarioTagCreatorController({
       scenarioTagColorPopover.classList.toggle("hidden", !tagCreatorState.isColorPopoverOpen);
     }
     if (scenarioTagPalette) {
-      const paletteMarkup = tagPaletteRows.paletteColors.map((color) => `
-        <button
-          type="button"
-          class="color-swatch${color === effectiveTagColor ? " is-selected" : ""}"
-          data-dev-tag-color="${color}"
-          title="${color}"
-          aria-label="${ui("Color Palette")}: ${color}"
-          aria-pressed="${color === effectiveTagColor ? "true" : "false"}"
-          style="background-color:${color};"
-        ></button>
-      `).join("");
-      if (scenarioTagPalette.innerHTML !== paletteMarkup) {
-        scenarioTagPalette.innerHTML = paletteMarkup;
-      }
+      syncTagColorSwatches(scenarioTagPalette, tagPaletteRows.paletteColors, effectiveTagColor, ui("Color Palette"));
       scenarioTagPalette.classList.toggle("is-disabled", !hasActiveScenario || !!tagCreatorState.isSaving);
     }
     if (scenarioTagRecentWrap && scenarioTagRecentColors) {
       scenarioTagRecentWrap.classList.toggle("hidden", tagPaletteRows.recentColors.length === 0);
-      const recentMarkup = tagPaletteRows.recentColors.map((color) => `
-        <button
-          type="button"
-          class="color-swatch${color === effectiveTagColor ? " is-selected" : ""}"
-          data-dev-tag-color="${color}"
-          title="${color}"
-          aria-label="${ui("Recent Colors")}: ${color}"
-          aria-pressed="${color === effectiveTagColor ? "true" : "false"}"
-          style="background-color:${color};"
-        ></button>
-      `).join("");
-      if (scenarioTagRecentColors.innerHTML !== recentMarkup) {
-        scenarioTagRecentColors.innerHTML = recentMarkup;
-      }
+      syncTagColorSwatches(scenarioTagRecentColors, tagPaletteRows.recentColors, effectiveTagColor, ui("Recent Colors"));
       scenarioTagRecentColors.classList.toggle("is-disabled", !hasActiveScenario || !!tagCreatorState.isSaving);
     }
     if (scenarioTagParentInput && scenarioTagParentInput.value !== normalizeScenarioTagInput(tagCreatorState.parentOwnerTag)) {

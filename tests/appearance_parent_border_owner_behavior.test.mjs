@@ -49,6 +49,7 @@ class TestElement {
     this.dataset = {};
     this.listeners = new Map();
     this.textContent = "";
+    this.value = "";
     this.checked = false;
     this.disabled = false;
     this.type = "";
@@ -93,6 +94,13 @@ function createHarness(runtimeOverrides = {}) {
     parentBorderSupportedCountries: ["FRA", "DEU"],
     parentBorderEnabledByCountry: { FRA: true, DEU: false, OLD: true },
     parentBordersVisible: true,
+    styleConfig: {
+      parentBorders: {
+        color: "#123456",
+        opacity: 0.5,
+        width: 1.25,
+      },
+    },
     countryNames: {
       FRA: "France",
       DEU: "Germany",
@@ -103,7 +111,9 @@ function createHarness(runtimeOverrides = {}) {
     visibleToggle: new TestElement("input"),
     colorInput: new TestElement("input"),
     opacityInput: new TestElement("input"),
+    opacityValue: new TestElement("span"),
     widthInput: new TestElement("input"),
+    widthValue: new TestElement("span"),
     enableAllButton: new TestElement("button"),
     disableAllButton: new TestElement("button"),
     countryList: new TestElement("div"),
@@ -199,6 +209,52 @@ test("parent border owner checkbox changes update state and mark dirty", () => {
 
   assert.equal(harness.runtimeState.parentBorderEnabledByCountry.FRA, false);
   assert.deepEqual(harness.dirtyReasons, ["parent-border-country"]);
+});
+
+test("parent border owner binds style, visibility, and batch controls", () => {
+  const harness = createHarness();
+
+  harness.owner.bindEvents();
+
+  assert.equal(harness.nodes.colorInput.value, "#123456");
+  assert.equal(harness.nodes.opacityInput.value, "50");
+  assert.equal(harness.nodes.opacityValue.textContent, "50%");
+  assert.equal(harness.nodes.widthInput.value, "1.25");
+  assert.equal(harness.nodes.widthValue.textContent, "1.25");
+
+  harness.nodes.colorInput.value = "#abcdef";
+  harness.nodes.colorInput.dispatch("input");
+  assert.equal(harness.runtimeState.styleConfig.parentBorders.color, "#abcdef");
+
+  harness.nodes.opacityInput.value = "75";
+  harness.nodes.opacityInput.dispatch("input");
+  assert.equal(harness.runtimeState.styleConfig.parentBorders.opacity, 0.75);
+  assert.equal(harness.nodes.opacityValue.textContent, "75%");
+
+  harness.nodes.widthInput.value = "2.4";
+  harness.nodes.widthInput.dispatch("input");
+  assert.equal(harness.runtimeState.styleConfig.parentBorders.width, 2.4);
+  assert.equal(harness.nodes.widthValue.textContent, "2.40");
+
+  harness.nodes.visibleToggle.checked = false;
+  harness.nodes.visibleToggle.dispatch("change");
+  assert.equal(harness.runtimeState.parentBordersVisible, false);
+  assert.equal(harness.nodes.countryList.classList.contains("opacity-60"), true);
+
+  harness.nodes.enableAllButton.dispatch("click");
+  assert.deepEqual(harness.runtimeState.parentBorderEnabledByCountry, { FRA: true, DEU: true });
+
+  harness.nodes.disableAllButton.dispatch("click");
+  assert.deepEqual(harness.runtimeState.parentBorderEnabledByCountry, { FRA: false, DEU: false });
+
+  assert.deepEqual(harness.dirtyReasons, [
+    "parent-border-color",
+    "parent-border-opacity",
+    "parent-border-width",
+    "parent-border-visibility",
+    "parent-border-enable-all",
+    "parent-border-disable-all",
+  ]);
 });
 
 test("parent border owner shows empty state and skips repeated empty renders", () => {

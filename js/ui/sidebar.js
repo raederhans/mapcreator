@@ -1550,6 +1550,33 @@ function initSidebar({ render } = {}) {
     }
     return input;
   };
+  const buildCheckboxLabel = (id, label, className) => {
+    const shell = document.createElement("label");
+    shell.className = className;
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = "checkbox";
+    input.className = "checkbox-input";
+    const text = document.createElement("span");
+    text.textContent = t(label, "ui");
+    shell.append(input, text);
+    return shell;
+  };
+  const buildCombatBar = ({ id, label, className }) => {
+    const row = document.createElement("div");
+    row.className = className;
+    const labelNode = document.createElement("span");
+    labelNode.className = "unit-counter-combat-bar-label";
+    labelNode.textContent = t(label, "ui");
+    const track = document.createElement("span");
+    track.className = "unit-counter-combat-bar-track";
+    const fill = document.createElement("span");
+    fill.id = id;
+    fill.className = "unit-counter-combat-bar-fill";
+    track.appendChild(fill);
+    row.append(labelNode, track);
+    return row;
+  };
   const buildSegmentedChoiceField = (id, options, {
     groupClassName = "frontline-segmented-field",
     buttonClassName = "frontline-segmented-choice",
@@ -2298,17 +2325,16 @@ function initSidebar({ render } = {}) {
     statusRow.appendChild(statusTitleGroup);
 
     const enableRow = buildRow();
-    const enableToggle = document.createElement("label");
-    enableToggle.className = "toggle-label";
-    enableToggle.innerHTML = `<input id="frontlineEnabledToggle" type="checkbox" class="checkbox-input" /> <span>${t("Enable derived frontlines", "ui")}</span>`;
+    const enableToggle = buildCheckboxLabel("frontlineEnabledToggle", "Enable derived frontlines", "toggle-label");
     enableRow.appendChild(enableToggle);
 
     const emptyState = document.createElement("div");
     emptyState.id = "frontlineEmptyState";
     emptyState.className = "inspector-empty-state frontline-empty-state";
-    emptyState.innerHTML = `
-      <h3 class="section-header-block">${t("Frontline is off", "ui")}</h3>
-    `;
+    const emptyTitle = document.createElement("h3");
+    emptyTitle.className = "section-header-block";
+    emptyTitle.textContent = t("Frontline is off", "ui");
+    emptyState.appendChild(emptyTitle);
 
     const settings = document.createElement("div");
     settings.id = "frontlineSettingsPanel";
@@ -2330,9 +2356,7 @@ function initSidebar({ render } = {}) {
       ["teeth", "Teeth"],
     ]);
     const frontlineStyleSelect = frontlineStyleField.select;
-    const frontlineLabelToggle = document.createElement("label");
-    frontlineLabelToggle.className = "checkbox-row";
-    frontlineLabelToggle.innerHTML = `<input id="strategicFrontlineLabelsToggle" type="checkbox" class="checkbox-input" /> <span>${t("Labels", "ui")}</span>`;
+    const frontlineLabelToggle = buildCheckboxLabel("strategicFrontlineLabelsToggle", "Labels", "checkbox-row");
     const frontlineLabelPlacement = buildSelect("strategicLabelPlacementSelect", [
       ["midpoint", "Midpoint"],
       ["centroid", "Centroid"],
@@ -2812,16 +2836,18 @@ function initSidebar({ render } = {}) {
 
     const unitCombatBars = document.createElement("div");
     unitCombatBars.className = "unit-counter-combat-bar-stack mt-2";
-    unitCombatBars.innerHTML = `
-      <div class="unit-counter-combat-bar is-org">
-        <span class="unit-counter-combat-bar-label">${t("Organization", "ui")}</span>
-        <span class="unit-counter-combat-bar-track"><span id="unitCounterOrganizationBar" class="unit-counter-combat-bar-fill"></span></span>
-      </div>
-      <div class="unit-counter-combat-bar is-equipment">
-        <span class="unit-counter-combat-bar-label">${t("Equipment", "ui")}</span>
-        <span class="unit-counter-combat-bar-track"><span id="unitCounterEquipmentBar" class="unit-counter-combat-bar-fill"></span></span>
-      </div>
-    `;
+    unitCombatBars.append(
+      buildCombatBar({
+        id: "unitCounterOrganizationBar",
+        label: "Organization",
+        className: "unit-counter-combat-bar is-org",
+      }),
+      buildCombatBar({
+        id: "unitCounterEquipmentBar",
+        label: "Equipment",
+        className: "unit-counter-combat-bar is-equipment",
+      })
+    );
     unitCombatBlock.appendChild(unitCombatPresetStack);
     unitCombatBlock.appendChild(unitStatInputs);
     unitCombatBlock.appendChild(unitCombatBars);
@@ -2863,18 +2889,22 @@ function initSidebar({ render } = {}) {
 
     const unitOptionsRow = buildRow();
     unitOptionsRow.className = "mt-2 flex flex-wrap items-center justify-between gap-2 strategic-counter-visual-options";
-    const unitLabelToggle = document.createElement("label");
-    unitLabelToggle.className = "checkbox-row";
-    unitLabelToggle.innerHTML = `<input id="unitCounterLabelsToggle" type="checkbox" class="checkbox-input" /> <span>${t("Show Labels", "ui")}</span>`;
+    const unitLabelToggle = buildCheckboxLabel("unitCounterLabelsToggle", "Show Labels", "checkbox-row");
     unitOptionsRow.appendChild(unitLabelToggle);
     const unitScaleShell = document.createElement("div");
     unitScaleShell.className = "strategic-counter-scale-shell";
-    unitScaleShell.innerHTML = `
-      <div class="range-row">
-        <label class="range-label" for="unitCounterFixedScaleRange">${t("Counter Scale", "ui")}</label>
-        <span id="unitCounterFixedScaleValue" class="range-value">1.50x</span>
-      </div>
-    `;
+    const unitScaleRow = document.createElement("div");
+    unitScaleRow.className = "range-row";
+    const unitScaleLabel = document.createElement("label");
+    unitScaleLabel.className = "range-label";
+    unitScaleLabel.setAttribute("for", "unitCounterFixedScaleRange");
+    unitScaleLabel.textContent = t("Counter Scale", "ui");
+    const unitScaleValue = document.createElement("span");
+    unitScaleValue.id = "unitCounterFixedScaleValue";
+    unitScaleValue.className = "range-value";
+    unitScaleValue.textContent = "1.50x";
+    unitScaleRow.append(unitScaleLabel, unitScaleValue);
+    unitScaleShell.appendChild(unitScaleRow);
     const unitScaleRange = document.createElement("input");
     unitScaleRange.id = "unitCounterFixedScaleRange";
     unitScaleRange.type = "range";
@@ -2908,9 +2938,10 @@ function initSidebar({ render } = {}) {
 
     const unitListHeader = document.createElement("div");
     unitListHeader.className = "unit-counter-list-header mt-3 strategic-counter-list-header";
-    unitListHeader.innerHTML = `
-      <div class="section-header">${t("Placed Counters", "ui")}</div>
-    `;
+    const unitListTitle = document.createElement("div");
+    unitListTitle.className = "section-header";
+    unitListTitle.textContent = t("Placed Counters", "ui");
+    unitListHeader.appendChild(unitListTitle);
 
     const unitList = document.createElement("select");
     unitList.id = "unitCounterList";
@@ -3009,12 +3040,20 @@ function initSidebar({ render } = {}) {
     strategicCommandBar = document.createElement("div");
     strategicCommandBar.id = "strategicCommandBar";
     strategicCommandBar.className = "strategic-command-bar";
-    strategicCommandBar.innerHTML = `
-      <button id="strategicCommandFrontlineBtn" type="button" class="strategic-command-btn" data-line-kind="frontline">${t("作战前线", "ui")}</button>
-      <button id="strategicCommandOffensiveBtn" type="button" class="strategic-command-btn" data-line-kind="offensive_line">${t("进攻线", "ui")}</button>
-      <button id="strategicCommandSpearheadBtn" type="button" class="strategic-command-btn" data-line-kind="spearhead_line">${t("穿插线", "ui")}</button>
-      <button id="strategicCommandDefensiveBtn" type="button" class="strategic-command-btn" data-line-kind="defensive_line">${t("防守线", "ui")}</button>
-    `;
+    [
+      ["strategicCommandFrontlineBtn", "frontline", "作战前线"],
+      ["strategicCommandOffensiveBtn", "offensive_line", "进攻线"],
+      ["strategicCommandSpearheadBtn", "spearhead_line", "穿插线"],
+      ["strategicCommandDefensiveBtn", "defensive_line", "防守线"],
+    ].forEach(([id, lineKind, label]) => {
+      const button = document.createElement("button");
+      button.id = id;
+      button.type = "button";
+      button.className = "strategic-command-btn";
+      button.dataset.lineKind = lineKind;
+      button.textContent = t(label, "ui");
+      strategicCommandBar.appendChild(button);
+    });
     document.body.appendChild(strategicCommandBar);
   }
 

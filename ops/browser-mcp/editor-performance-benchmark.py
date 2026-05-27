@@ -17,6 +17,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
+RUNTIME_DIR = ROOT_DIR / ".runtime"
 PWCLI_WORKDIR = ROOT_DIR / ".runtime" / "browser" / "playwright-cli"
 SESSION_ID = "editor-perf-benchmark"
 BROWSER_OPENED = False
@@ -552,6 +553,19 @@ def parse_args() -> argparse.Namespace:
         help="Wheel events per repeated zoom cycle.",
     )
     return parser.parse_args()
+
+
+def resolve_runtime_output_path(raw_path: str, *, label: str) -> Path:
+    candidate = Path(str(raw_path or "").strip()).expanduser()
+    if not candidate.is_absolute():
+      candidate = ROOT_DIR / candidate
+    resolved = candidate.resolve()
+    runtime_root = RUNTIME_DIR.resolve()
+    try:
+      resolved.relative_to(runtime_root)
+    except ValueError as error:
+      raise ValueError(f"{label} must resolve inside {runtime_root}: {raw_path}") from error
+    return resolved
 
 
 def positive_int(value: str) -> int:
@@ -4542,9 +4556,9 @@ def main() -> None:
           pass
     PWCLI_WORKDIR.mkdir(parents=True, exist_ok=True)
 
-    out_path = (ROOT_DIR / args.out).resolve()
-    water_cache_out_path = (ROOT_DIR / WATER_CACHE_REPORT_PATH).resolve()
-    screenshot_dir = (ROOT_DIR / args.screenshot_dir).resolve()
+    out_path = resolve_runtime_output_path(args.out, label="--out")
+    water_cache_out_path = resolve_runtime_output_path(WATER_CACHE_REPORT_PATH, label="water cache summary")
+    screenshot_dir = resolve_runtime_output_path(args.screenshot_dir, label="--screenshot-dir")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     water_cache_out_path.parent.mkdir(parents=True, exist_ok=True)
     screenshot_dir.mkdir(parents=True, exist_ok=True)
