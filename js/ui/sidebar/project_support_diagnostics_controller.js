@@ -64,14 +64,14 @@ export function createProjectSupportDiagnosticsController({
 
   const createAuditValueRow = (label, value) => {
     const row = document.createElement("div");
-    row.className = "flex items-center justify-between gap-3";
+    row.className = "scenario-audit-row";
 
     const left = document.createElement("span");
-    left.className = "inspector-mini-label";
+    left.className = "inspector-mini-label scenario-audit-label";
     left.textContent = label;
 
     const right = document.createElement("span");
-    right.className = "country-row-title";
+    right.className = "country-row-title scenario-audit-value";
     right.textContent = String(value);
 
     row.appendChild(left);
@@ -81,7 +81,7 @@ export function createProjectSupportDiagnosticsController({
 
   const createAuditList = (items = [], renderItem) => {
     const list = document.createElement("div");
-    list.className = "mt-2 flex flex-col gap-2";
+    list.className = "mt-2 flex flex-col gap-2 scenario-audit-list";
     if (!items.length) {
       list.appendChild(createEmptyNote(t("None", "ui")));
       return list;
@@ -204,13 +204,13 @@ export function createProjectSupportDiagnosticsController({
     const violations = Array.isArray(diagnosticsReport.violations) ? diagnosticsReport.violations.slice(0, 8) : [];
     wrapper.appendChild(createAuditList(violations, (item) => {
       const row = document.createElement("div");
-      row.className = "flex flex-col gap-1";
+      row.className = "scenario-audit-stack-row";
       row.appendChild(Object.assign(document.createElement("span"), {
-        className: "inspector-mini-label",
+        className: "inspector-mini-label scenario-audit-label",
         textContent: String(item?.fix_class || "info"),
       }));
       row.appendChild(Object.assign(document.createElement("span"), {
-        className: "body-text",
+        className: "body-text scenario-audit-note",
         textContent: String(item?.message || ""),
       }));
       return row;
@@ -304,14 +304,14 @@ export function createProjectSupportDiagnosticsController({
     section.appendChild(createAuditList(items, ({ regionId, status, notes }) => {
       if (notes) {
         const details = document.createElement("details");
-        details.className = "inspector-preset-details";
+        details.className = "inspector-preset-details scenario-audit-check-details";
 
         const summary = document.createElement("summary");
-        summary.className = "inspector-accordion-btn";
+        summary.className = "inspector-accordion-btn scenario-audit-check-summary";
         summary.textContent = `${regionId} · ${status}`;
 
         const body = document.createElement("div");
-        body.className = "preset-country-body";
+        body.className = "preset-country-body scenario-audit-note";
         body.textContent = notes;
 
         details.appendChild(summary);
@@ -320,13 +320,13 @@ export function createProjectSupportDiagnosticsController({
       }
 
       const row = document.createElement("div");
-      row.className = "flex items-center justify-between gap-3";
+      row.className = "scenario-audit-row scenario-audit-check-row";
       row.appendChild(Object.assign(document.createElement("span"), {
-        className: "body-text",
+        className: "body-text scenario-audit-key",
         textContent: regionId,
       }));
       row.appendChild(Object.assign(document.createElement("span"), {
-        className: "inspector-mini-label",
+        className: "inspector-mini-label scenario-audit-status",
         textContent: status,
       }));
       return row;
@@ -348,14 +348,14 @@ export function createProjectSupportDiagnosticsController({
       Array.isArray(auditPayload?.topology_blockers) ? auditPayload.topology_blockers : [],
       (item) => {
         const row = document.createElement("div");
-        row.className = "flex flex-col gap-1";
+        row.className = "scenario-audit-stack-row";
         row.appendChild(Object.assign(document.createElement("span"), {
-          className: "body-text",
+          className: "body-text scenario-audit-key",
           textContent: String(item?.blocker_id || item?.id || "unknown"),
         }));
         if (item?.notes) {
           row.appendChild(Object.assign(document.createElement("span"), {
-            className: "inspector-mini-label",
+            className: "inspector-mini-label scenario-audit-note",
             textContent: String(item.notes),
           }));
         }
@@ -372,14 +372,14 @@ export function createProjectSupportDiagnosticsController({
       Array.isArray(auditPayload?.scenario_rule_blockers) ? auditPayload.scenario_rule_blockers : [],
       (item) => {
         const row = document.createElement("div");
-        row.className = "flex flex-col gap-1";
+        row.className = "scenario-audit-stack-row";
         row.appendChild(Object.assign(document.createElement("span"), {
-          className: "body-text",
+          className: "body-text scenario-audit-key",
           textContent: String(item?.rule_id || item?.blocker_id || "unknown"),
         }));
         if (item?.notes) {
           row.appendChild(Object.assign(document.createElement("span"), {
-            className: "inspector-mini-label",
+            className: "inspector-mini-label scenario-audit-note",
             textContent: String(item.notes),
           }));
         }

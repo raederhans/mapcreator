@@ -9,6 +9,7 @@ PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "sidebar" 
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 INTERACTION_FUNNEL_UI_SYNC_JS = REPO_ROOT / "js" / "core" / "interaction_funnel" / "ui_sync.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+STYLE_CSS = REPO_ROOT / "css" / "style.css"
 
 
 class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
@@ -26,8 +27,40 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('const renderScenarioAuditPanel = () => {', owner_content)
         self.assertIn('const refreshLegendEditor = () => {', owner_content)
         self.assertIn('const bindEvents = () => {', owner_content)
+        self.assertIn('scenarioAuditSection.className = "inspector-tool-card scenario-audit-panel";', sidebar_content)
         self.assertIsNone(re.search(r"const\s+renderScenarioAuditPanel\s*=\s*\(\)\s*=>", sidebar_content))
         self.assertIsNone(re.search(r"const\s+refreshLegendEditor\s*=\s*\(\)\s*=>", sidebar_content))
+
+    def test_scenario_audit_panel_has_overflow_safe_visual_contract(self):
+        owner_content = PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS.read_text(encoding="utf-8")
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+
+        for token in [
+            'row.className = "scenario-audit-row";',
+            'left.className = "inspector-mini-label scenario-audit-label";',
+            'right.className = "country-row-title scenario-audit-value";',
+            'list.className = "mt-2 flex flex-col gap-2 scenario-audit-list";',
+            'row.className = "scenario-audit-row scenario-audit-check-row";',
+            'className: "body-text scenario-audit-key",',
+            'className: "inspector-mini-label scenario-audit-status",',
+            'details.className = "inspector-preset-details scenario-audit-check-details";',
+            'summary.className = "inspector-accordion-btn scenario-audit-check-summary";',
+        ]:
+            self.assertIn(token, owner_content)
+
+        for token in [
+            "#scenarioAuditPanel {",
+            "  overflow: hidden;",
+            ".scenario-audit-row {",
+            "grid-template-columns: minmax(0, 1fr) minmax(0, 9ch);",
+            ".scenario-audit-value,",
+            ".scenario-audit-status {",
+            "text-overflow: ellipsis;",
+            ".scenario-audit-key,",
+            ".scenario-audit-check-summary {",
+            "overflow-wrap: anywhere;",
+        ]:
+            self.assertIn(token, css_content)
 
     def test_sidebar_keeps_project_support_facade_contract(self):
         content = SIDEBAR_JS.read_text(encoding="utf-8")

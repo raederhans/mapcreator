@@ -3022,7 +3022,7 @@ function initSidebar({ render } = {}) {
   if (!scenarioAuditSection && diagnosticStack) {
     scenarioAuditSection = document.createElement("div");
     scenarioAuditSection.id = "scenarioAuditPanel";
-    scenarioAuditSection.className = "inspector-tool-card";
+    scenarioAuditSection.className = "inspector-tool-card scenario-audit-panel";
     diagnosticStack.appendChild(scenarioAuditSection);
   }
 

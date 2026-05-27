@@ -6243,6 +6243,78 @@ body.counter-editor-modal-open {
   padding-bottom: 2px;
 }
 
+#scenarioAuditPanel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+#scenarioAuditPanel .sidebar-tool-title,
+#scenarioAuditPanel .sidebar-tool-hint,
+#scenarioAuditPanel .section-header-block,
+#scenarioAuditPanel .body-text,
+#scenarioAuditPanel .inspector-mini-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#scenarioAuditPanel .sidebar-tool-hint,
+.scenario-audit-key,
+.scenario-audit-label,
+.scenario-audit-note {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.scenario-audit-list,
+.scenario-audit-stack-row,
+.scenario-audit-check-details,
+.scenario-audit-check-summary,
+.scenario-audit-note {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.scenario-audit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 9ch);
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.scenario-audit-value,
+.scenario-audit-status {
+  justify-self: end;
+  max-width: 9ch;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-audit-status {
+  font-size: var(--inspector-font-meta, 0.68rem);
+  letter-spacing: 0.04em;
+}
+
+.scenario-audit-stack-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scenario-audit-check-details {
+  overflow: hidden;
+}
+
+.scenario-audit-check-summary {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 #countryInspectorSection,
 #selectedCountryActionsSection,
 #specialRegionInspectorSection,
