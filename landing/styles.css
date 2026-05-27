@@ -135,7 +135,10 @@ a.button {
   justify-content: center;
   flex-wrap: wrap;
   gap: 20px;
+  padding: 7px 18px;
+  border-block: 1px solid rgba(7, 17, 31, 0.1);
   font-size: 0.94rem;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
