@@ -6858,7 +6858,7 @@
     },
     {
       "path": "assets/night-lights-political.webp",
-      "size_bytes": 86892
+      "size_bytes": 52610
     },
     {
       "path": "assets/social-preview.png",
@@ -6878,7 +6878,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 218094
+      "size_bytes": 218093
     },
     {
       "path": "styles.css",
@@ -6895,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001107336
+  "total_bytes": 1001073053
 }
