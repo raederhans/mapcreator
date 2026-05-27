@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 229003
+      "size_bytes": 234127
     },
     {
       "path": "app/data/CATALOG.json",
@@ -6878,7 +6878,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 218089
+      "size_bytes": 218087
     },
     {
       "path": "styles.css",
@@ -6895,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001062265
+  "total_bytes": 1001067387
 }

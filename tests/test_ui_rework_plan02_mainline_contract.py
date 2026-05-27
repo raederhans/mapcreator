@@ -318,6 +318,27 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn("#inspectorUtilitiesSection,", css_content)
         self.assertIn("#diagnosticsSection {", css_content)
 
+    def test_special_zone_workbench_uses_sidebar_visual_contract(self):
+        css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+
+        for token in [
+            ".special-zone-layers-workbench {\n  display: flex;",
+            "  margin-top: 12px;",
+            "  background: transparent;",
+            ".special-zone-workbench-card {\n  display: grid;",
+            "border: 1px solid rgba(37, 54, 73, 0.08);",
+            "border-radius: 12px;",
+            ".special-zone-layers-workbench .secondary-btn,",
+            ".special-zone-layers-workbench .danger-btn {",
+            ".special-zone-member-drawer .secondary-btn {",
+            "font-size: var(--left-panel-font-control, 0.74rem);",
+            ".special-zone-layer-row {\n  padding: 6px;",
+            ".special-zone-workbench-field input[type=\"text\"],",
+            ".special-zone-member-list > summary,",
+            ".special-zone-member-chip:hover,",
+        ]:
+            self.assertIn(token, css_content)
+
 
 if __name__ == "__main__":
     unittest.main()
