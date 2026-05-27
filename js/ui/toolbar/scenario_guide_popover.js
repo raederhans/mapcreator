@@ -9,8 +9,6 @@ function createScenarioGuidePopoverController({
   scenarioGuideBackdrop = null,
   scenarioGuidePopover = null,
   scenarioGuideCloseBtn = null,
-  scenarioGuideStatus = null,
-  scenarioGuideStatusChips = null,
   scenarioGuideNavButtons = [],
   scenarioGuidePanels = [],
   getGuideSectionFromUrl = null,
@@ -54,43 +52,6 @@ function createScenarioGuidePopoverController({
     if (button && typeof button.focus === "function") {
       button.focus({ preventScroll: true });
     }
-  };
-
-  const renderScenarioGuideStatus = ({
-    activeScenario = "",
-    modeLabel = "",
-    scenarioViewLabel = "",
-    splitCount = 0,
-  } = {}) => {
-    if (!scenarioGuideStatusChips) return;
-    const statusChips = [
-      { label: t("Mode", "ui"), value: modeLabel },
-    ];
-    if (activeScenario) {
-      statusChips.push(
-        { label: t("View", "ui"), value: scenarioViewLabel },
-        { label: t("Split", "ui"), value: String(splitCount) }
-      );
-    }
-    scenarioGuideStatusChips.replaceChildren();
-    statusChips
-      .filter((chip) => String(chip.value || "").trim())
-      .forEach((chip) => {
-        const pill = document.createElement("span");
-        pill.className = "scenario-guide-status-pill";
-
-        const label = document.createElement("span");
-        label.className = "scenario-guide-status-pill-label";
-        label.textContent = `${chip.label}:`;
-
-        const value = document.createElement("span");
-        value.textContent = chip.value;
-
-        pill.appendChild(label);
-        pill.appendChild(value);
-        scenarioGuideStatusChips.appendChild(pill);
-      });
-    scenarioGuideStatus?.classList.toggle("hidden", !scenarioGuideStatusChips.childElementCount);
   };
 
   const syncScenarioGuideTriggerButtons = ({
@@ -212,7 +173,6 @@ function createScenarioGuidePopoverController({
     focusScenarioGuideSectionButton,
     openScenarioGuideSurface,
     renderScenarioGuideSection,
-    renderScenarioGuideStatus,
     syncScenarioGuideTriggerButtons,
   };
 }

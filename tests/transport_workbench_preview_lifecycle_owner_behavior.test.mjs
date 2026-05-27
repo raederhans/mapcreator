@@ -80,7 +80,7 @@ test("transport workbench preview lifecycle owner selection listeners refresh th
     isOpen: true,
     family: { id: "road" },
     config: { roadClass: ["motorway"] },
-    compareHeld: true,
+    compareHeld: false,
   };
 
   const owner = createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
@@ -104,10 +104,10 @@ test("transport workbench preview lifecycle owner selection listeners refresh th
   selectionListeners.get("road")();
 
   assert.deepEqual(lensCalls, [
-    { familyId: "road", config: { roadClass: ["motorway"] }, compareHeld: true },
+    { familyId: "road", config: { roadClass: ["motorway"] }, compareHeld: false },
   ]);
   assert.deepEqual(inspectorCalls, [
-    { familyId: "road", config: { roadClass: ["motorway"] }, compareHeld: true },
+    { familyId: "road", config: { roadClass: ["motorway"] }, compareHeld: false },
   ]);
 
   context = { ...context, family: { id: "port" } };

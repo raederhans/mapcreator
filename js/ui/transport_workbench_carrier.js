@@ -12,6 +12,8 @@ const COLOR_TOKENS = {
 };
 const FIT_PADDING_PX = 24;
 const MAX_CAMERA_SCALE = 8;
+const DEFAULT_ROTATION_QUARTER_TURNS = 1;
+const ALTERNATE_ROTATION_QUARTER_TURNS = 0;
 
 let assetPromise = null;
 let mountNode = null;
@@ -27,7 +29,7 @@ let pointerDrag = null;
 let camera = { scale: 1, translateX: 0, translateY: 0, minScale: 1, maxScale: 3 };
 let currentLodKey = "overview";
 let frameContexts = {};
-let rotationQuarterTurns = 0;
+let rotationQuarterTurns = DEFAULT_ROTATION_QUARTER_TURNS;
 let sceneBaseBounds = null;
 let viewChangeListener = null;
 
@@ -57,6 +59,16 @@ function createSvgNode(tagName) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeQuarterTurns(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return ((numericValue % 4) + 4) % 4;
+}
+
+function getDefaultRotationQuarterTurns() {
+  return normalizeQuarterTurns(asset?.defaultCamera?.rotationQuarterTurns ?? DEFAULT_ROTATION_QUARTER_TURNS);
 }
 
 function getResolvedCameraDefaults() {
@@ -110,7 +122,7 @@ function getSceneBaseBounds() {
 function getOrientationLayout() {
   const baseBounds = getSceneBaseBounds();
   const { width: viewWidth, height: viewHeight } = getViewBoxSize();
-  const quarterTurns = ((rotationQuarterTurns % 4) + 4) % 4;
+  const quarterTurns = normalizeQuarterTurns(rotationQuarterTurns);
   const rotated = quarterTurns % 2 === 1;
   const paddedWidth = baseBounds.width + FIT_PADDING_PX * 2;
   const paddedHeight = baseBounds.height + FIT_PADDING_PX * 2;
@@ -579,6 +591,7 @@ export async function ensureTransportWorkbenchCarrier(nextMountNode) {
     orientationNode = built.orientationLayer;
     screenLabelLayerNode = built.screenLabelLayer;
     currentLodKey = "overview";
+    rotationQuarterTurns = getDefaultRotationQuarterTurns();
     camera = clampCamera(asset.defaultCamera || camera);
     renderLodIfNeeded(true);
     applyCamera();
@@ -608,7 +621,7 @@ export function setTransportWorkbenchCarrierFamily(familyId) {
 
 export function resetTransportWorkbenchCarrierView() {
   if (!asset) return;
-  rotationQuarterTurns = 0;
+  rotationQuarterTurns = getDefaultRotationQuarterTurns();
   camera = clampCamera(getResolvedCameraDefaults());
   applyCamera();
 }
@@ -622,7 +635,10 @@ export function stepTransportWorkbenchCarrierZoom(direction) {
 
 export function toggleTransportWorkbenchCarrierQuarterTurn() {
   if (!asset) return 0;
-  rotationQuarterTurns = rotationQuarterTurns === 0 ? 1 : 0;
+  const defaultQuarterTurns = getDefaultRotationQuarterTurns();
+  rotationQuarterTurns = normalizeQuarterTurns(rotationQuarterTurns) === defaultQuarterTurns
+    ? ALTERNATE_ROTATION_QUARTER_TURNS
+    : defaultQuarterTurns;
   camera = clampCamera({ ...camera });
   applyCamera();
   return rotationQuarterTurns;
@@ -634,7 +650,8 @@ export function getTransportWorkbenchCarrierViewState() {
     scale: camera.scale,
     translateX: camera.translateX,
     translateY: camera.translateY,
-    quarterTurns: rotationQuarterTurns,
+    quarterTurns: orientationLayout.quarterTurns,
+    defaultQuarterTurns: getDefaultRotationQuarterTurns(),
     fitScale: orientationLayout.fitScale,
     minScale: camera.minScale,
     maxScale: camera.maxScale,
@@ -651,7 +668,7 @@ export function setTransportWorkbenchCarrierViewChangeListener(listener) {
 
 export function destroyTransportWorkbenchCarrier() {
   pointerDrag = null;
-  rotationQuarterTurns = 0;
+  rotationQuarterTurns = getDefaultRotationQuarterTurns();
   viewChangeListener = null;
   if (asset) {
     camera = clampCamera(getResolvedCameraDefaults());

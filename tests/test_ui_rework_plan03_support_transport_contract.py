@@ -26,17 +26,56 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
 
     def test_support_surface_tool_panels_keep_help_copy_and_drop_export_tooltip(self):
         content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
         self.assertIn('id="scenarioGuideBackdrop"', content)
         self.assertIn('id="scenarioGuidePopover"', content)
         self.assertIn('id="scenarioGuideCloseBtn"', content)
         self.assertIn("scenario-guide-modal", content)
-        self.assertIn("Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.", content)
-        self.assertIn("Reference: After you upload a local image, the most stable alignment order is opacity", content)
-        self.assertIn("Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.", content)
-        self.assertIn("Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.", content)
+        self.assertNotIn("scenarioGuideSupportHint", content)
+        self.assertNotIn("scenarioGuideStatus", content)
+        self.assertNotIn("scenarioGuideStatusChips", content)
+        self.assertNotIn("Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.", content)
+        self.assertIn("Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit.", content)
+        self.assertIn("Before a broad edit or before loading another project file, download the current project JSON from Project Management.", content)
+        self.assertIn("After loading, return to Inspector to confirm the target country and active owner", content)
+        self.assertNotIn("Save the current working state before you load a different project file.", content)
+        self.assertNotIn("You can open Guide from the top scenario bar or from Project › Utilities.", content)
+        self.assertIn("scenario-guide-tool-accordion", content)
+        self.assertIn('class="scenario-guide-tool-panel" open', content)
+        self.assertIn("Use Project tools as a publish checklist: save the project, add strategic context, align references, then export.", content)
+        self.assertIn("Contains Download Project, Load Project, selected file status, and import safety checks.", content)
+        self.assertIn("Contains derived frontlines, operational lines, operation graphics, and unit counters.", content)
+        self.assertIn("Contains local image upload, opacity, scale, horizontal offset, and vertical offset controls.", content)
+        self.assertIn("Contains target selection, format, export resolution, preview, layer order, text stacks, and image adjustments.", content)
+        self.assertIn("Treat saving and exporting as two separate handoff steps: save the editable project first", content)
+        self.assertIn("Project JSON save", content)
+        self.assertIn("Use Download Project to save the current editable state: scenario choice, ownership edits, appearance, transport, strategic annotations, reference alignment values, and export settings.", content)
+        self.assertIn("Export workflow", content)
+        self.assertIn("Export creates the final image, per-layer PNG set, or bake pack; it does not replace the editable project JSON.", content)
+        self.assertIn("Final handoff check", content)
+        self.assertIn("keep one editable project JSON and one exported output from the same reviewed state", content)
+        self.assertNotIn("Before publishing, confirm strategic annotations are present, map labels are readable", content)
+        self.assertNotIn("For project handoff, save a project JSON, reload it once", content)
+        self.assertNotIn("Reference: After you upload a local image, the most stable alignment order is opacity", content)
+        self.assertNotIn("Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.", content)
+        self.assertNotIn("Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.", content)
         self.assertNotIn("Use Guide for workflow steps and Reference for visual alignment. Both stay in the Project tab so you can check instructions without losing context.", content)
         self.assertNotIn("Use Frontline after you apply a scenario. This section combines", content)
         self.assertNotIn("lblExportInfoTooltip", content)
+        for token in [
+            "width: min(680px, calc(100vw - 32px));",
+            ".scenario-guide-tool-accordion {",
+            ".scenario-guide-tool-summary {",
+            ".scenario-guide-tool-steps li {",
+            "grid-template-columns: 74px minmax(0, 1fr);",
+        ]:
+            self.assertIn(token, css_content)
+        for removed in [
+            ".scenario-guide-status {",
+            ".scenario-guide-status-chips {",
+            ".scenario-guide-status-pill {",
+        ]:
+            self.assertNotIn(removed, css_content)
 
 
     def test_left_sidebar_typography_and_redundant_copy_contract(self):
@@ -109,14 +148,17 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             'id="transportWorkbenchInfoTitle" class="transport-workbench-info-title" data-i18n="Transport guide"',
             'class="transport-workbench-column-kicker" data-i18n="Lens">Lens',
             'class="transport-workbench-column-kicker" data-i18n="Inspector">Inspector',
-            'id="transportWorkbenchCompareStatus" class="transport-workbench-preview-compare-status" data-i18n="Live working state" aria-live="polite"',
             'id="transportWorkbenchInspectorEmptyTitle" class="transport-workbench-empty-title" data-i18n="No transport schema loaded yet"',
         ]
         for token in required_tokens:
             self.assertIn(token, content)
+        self.assertNotIn("transportWorkbenchPreviewActions", content)
+        self.assertNotIn("transportWorkbenchCompareBtn", content)
+        self.assertNotIn("transportWorkbenchCompareStatus", content)
 
     def test_appearance_transport_visual_mode_dom_and_controller_contract(self):
         index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js").read_text(encoding="utf-8")
         state_defaults_content = (REPO_ROOT / "js" / "core" / "state_defaults.js").read_text(encoding="utf-8")
         registry_content = (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
@@ -133,6 +175,15 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         ]:
             self.assertIn(token, index_content)
         self.assertNotIn("transportVisualModeHint", index_content)
+
+        for token in [
+            "#appearancePanelTransport .transport-visual-mode-card #transportVisualMode {",
+            "appearance: none;",
+            "background-position: 0 0, right 11px center;",
+            "#appearancePanelTransport .transport-visual-mode-card #transportVisualMode:focus-visible {",
+            "#appearancePanelTransport .transport-visual-mode-card #transportVisualMode:disabled {",
+        ]:
+            self.assertIn(token, css_content)
 
         for token in [
             'const transportVisualMode = document.getElementById("transportVisualMode");',
@@ -208,12 +259,22 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js").read_text(encoding="utf-8")
         shell_owner_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_shell_owner.js").read_text(encoding="utf-8")
         self.assertNotIn("renderTransportWorkbenchInfoPopoverLegacy", toolbar_content)
-        self.assertIn("compareStatus,", shell_owner_content)
         self.assertIn("inspectorTitle,", shell_owner_content)
-        self.assertIn("syncTextContent(compareStatus, compareStatusLabel)", shell_owner_content)
         self.assertIn('syncTextContent(inspectorTitle, `${translate(family.label)} ${translate("inspector")}`)', shell_owner_content)
         self.assertIn("transportWorkbenchShellOwner.render(context);", controller_content)
+        self.assertNotIn("transportWorkbenchCompareBtn", toolbar_content)
+        self.assertNotIn("transportWorkbenchCompareStatus", toolbar_content)
         self.assertNotIn("transportWorkbenchCompareStatus.textContent", controller_content)
+
+    def test_toolbar_language_toggle_displays_current_language_state(self):
+        toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
+        self.assertIn('const currentLangLabel = runtimeState.currentLanguage === "zh" ? "ZH" : "EN";', toolbar_content)
+        self.assertIn("toggleLang.textContent = currentLangLabel;", toolbar_content)
+        self.assertIn("toggleLang.setAttribute(\"title\", `${t(\"Language\", \"ui\")}: ${currentLangLabel}`);", toolbar_content)
+        self.assertIn("renderSpecialZoneEditorUI();\n    updateLanguageToggleUi();", toolbar_content)
+        self.assertIn("updateUIText();\n  updateLanguageToggleUi();", toolbar_content)
+        self.assertNotIn('"ZH / EN"', toolbar_content)
+        self.assertNotIn('"EN / ZH"', toolbar_content)
 
     def test_adaptive_popover_and_palette_contracts_are_wired(self):
         index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")

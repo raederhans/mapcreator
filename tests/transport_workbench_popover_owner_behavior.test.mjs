@@ -166,10 +166,10 @@ test("transport workbench popover owner keeps info and section help mutually exc
   assert.equal(testDom.infoPopover.classList.contains("hidden"), false);
   assert.equal(testDom.infoButton.getAttribute("aria-expanded"), "true");
   assert.equal(testDom.infoBody.replaceChildrenCallCount, 1);
-  assert.equal(testDom.infoBody.children.length, 6);
-  assert.equal(testDom.infoBody.children[4].children[0].textContent, "t:Capability matrix");
-  assert.match(testDom.infoBody.children[4].children[1].textContent, /t:Road: t:main map apply/);
-  assert.match(testDom.infoBody.children[4].children[1].textContent, /t:Layers: t:workbench board/);
+  assert.equal(testDom.infoBody.children.length, 5);
+  assert.equal(testDom.infoBody.children[3].children[0].textContent, "t:Capability matrix");
+  assert.match(testDom.infoBody.children[3].children[1].textContent, /t:Road: t:main map apply/);
+  assert.match(testDom.infoBody.children[3].children[1].textContent, /t:Layers: t:workbench board/);
   assert.equal(testDom.focusedSurface, testDom.infoPopover);
   assert.deepEqual(testDom.rememberedTrigger, {
     surface: testDom.infoPopover,

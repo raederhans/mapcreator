@@ -92,13 +92,10 @@ export function createTransportWorkbenchController({
   transportWorkbenchPreviewMode = null,
   transportWorkbenchPreviewTitle = null,
   transportWorkbenchPreviewCanvas = null,
-  transportWorkbenchPreviewActions = null,
   transportWorkbenchPreviewControls = null,
   transportWorkbenchCarrierMount = null,
   transportWorkbenchLayerOrderPanel = null,
   transportWorkbenchLayerOrderList = null,
-  transportWorkbenchCompareBtn = null,
-  transportWorkbenchCompareStatus = null,
   transportWorkbenchZoomOutBtn = null,
   transportWorkbenchZoomInBtn = null,
   transportWorkbenchRotateBtn = null,
@@ -188,12 +185,9 @@ export function createTransportWorkbenchController({
     previewMode: transportWorkbenchPreviewMode,
     previewTitle: transportWorkbenchPreviewTitle,
     previewCanvas: transportWorkbenchPreviewCanvas,
-    previewActions: transportWorkbenchPreviewActions,
     previewControls: transportWorkbenchPreviewControls,
     carrierMount: transportWorkbenchCarrierMount,
     layerOrderPanel: transportWorkbenchLayerOrderPanel,
-    compareButton: transportWorkbenchCompareBtn,
-    compareStatus: transportWorkbenchCompareStatus,
     zoomOutButton: transportWorkbenchZoomOutBtn,
     zoomInButton: transportWorkbenchZoomInBtn,
     rotateButton: transportWorkbenchRotateBtn,
@@ -249,7 +243,6 @@ export function createTransportWorkbenchController({
     infoButton: transportWorkbenchInfoBtn,
     closeButton: transportWorkbenchCloseBtn,
     resetButton: transportWorkbenchResetBtn,
-    compareButton: transportWorkbenchCompareBtn,
     zoomOutButton: transportWorkbenchZoomOutBtn,
     zoomInButton: transportWorkbenchZoomInBtn,
     rotateButton: transportWorkbenchRotateBtn,
@@ -262,7 +255,6 @@ export function createTransportWorkbenchController({
       setOpen: (nextOpen, options) => setTransportWorkbenchState(nextOpen, options),
       toggleInfoPopover: () => transportWorkbenchPopoverOwner.toggleInfoPopover(getTransportWorkbenchFamilyMeta()),
       resetView: () => resetTransportWorkbenchView(),
-      setCompareHeld: (nextHeld) => setTransportWorkbenchCompareHeld(nextHeld),
       stepCarrierZoom: (step) => stepTransportWorkbenchCarrierZoom(step),
       rotateCarrier: () => toggleTransportWorkbenchCarrierQuarterTurn(),
       syncPreviewControls: () => syncTransportWorkbenchPreviewControls(),
@@ -281,13 +273,12 @@ export function createTransportWorkbenchController({
 
   const getTransportWorkbenchFamilyMeta = () => transportWorkbenchStateOwner.getFamilyMeta();
 
-  const getTransportWorkbenchWorkingConfig = (familyId, { baseline = false } = {}) => {
-    // baseline 只给按住 Compare 时的临时预览使用，不能回写 familyConfigs。
-    return transportWorkbenchStateOwner.getWorkingConfig(familyId, { baseline });
+  const getTransportWorkbenchWorkingConfig = (familyId) => {
+    return transportWorkbenchStateOwner.getWorkingConfig(familyId);
   };
 
-  const getTransportWorkbenchDisplayConfig = (familyId, { baseline = false } = {}) => {
-    return transportWorkbenchStateOwner.getDisplayConfig(familyId, { baseline });
+  const getTransportWorkbenchDisplayConfig = (familyId) => {
+    return transportWorkbenchStateOwner.getDisplayConfig(familyId);
   };
 
   const buildTransportWorkbenchResolvedConfig = (familyId, familyConfig, displayConfig) => {
@@ -329,12 +320,6 @@ export function createTransportWorkbenchController({
     transportWorkbenchApplyBridgeOwner.applyFamilyToMainMap(context)
   );
 
-  const setTransportWorkbenchCompareHeld = (nextHeld) => {
-    if (transportWorkbenchStateOwner.setCompareHeld(nextHeld)) {
-      renderTransportWorkbenchUi();
-    }
-  };
-
   const updateTransportWorkbenchFamilyConfig = (familyId, key, nextValue, { appendValue = null } = {}) => {
     if (!transportWorkbenchStateOwner.updateFamilyConfig(familyId, key, nextValue, { appendValue })) return;
     // 控件改动先落到工作台 state，再即时刷新预览；这里不直接改 renderer 的正式图层状态。
@@ -346,7 +331,6 @@ export function createTransportWorkbenchController({
   };
 
   const updateTransportWorkbenchDisplayConfig = (familyId, updateFn) => {
-    if (runtimeState.transportWorkbenchUi?.compareHeld) return;
     if (!transportWorkbenchStateOwner.updateDisplayConfig(familyId, updateFn)) return;
     markDirty("transport-workbench-display-config");
     const nextContext = getTransportWorkbenchRenderContext();
@@ -414,11 +398,10 @@ export function createTransportWorkbenchController({
     const uiState = runtimeState.transportWorkbenchUi;
     const family = getTransportWorkbenchFamilyMeta();
     const isOpen = !!uiState.open;
-    const compareHeld = !!uiState.compareHeld && !!family.supportsDetailedControls;
-    const familyConfig = getTransportWorkbenchWorkingConfig(family.id, { baseline: compareHeld });
-    const displayConfig = getTransportWorkbenchDisplayConfig(family.id, { baseline: compareHeld });
+    const compareHeld = false;
+    const familyConfig = getTransportWorkbenchWorkingConfig(family.id);
+    const displayConfig = getTransportWorkbenchDisplayConfig(family.id);
     // context 是 shell、lens、inspect 和 preview 的共同输入，避免四处重复读取 runtimeState。
-    // compare-held 模式也在这里一次性切到 baseline 视角，防止某个子面板还在读 live config、另一个已经切到对比快照。
     const config = buildTransportWorkbenchResolvedConfig(family.id, familyConfig, displayConfig);
     const activePackId = getTransportWorkbenchActivePackId(family.id);
     const activePackMeta = getTargetMainMapPackMeta(activePackId);

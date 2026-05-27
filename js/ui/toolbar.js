@@ -225,8 +225,6 @@ function initToolbar({ render } = {}) {
   const scenarioGuideBackdrop = document.getElementById("scenarioGuideBackdrop");
   const scenarioGuidePopover = document.getElementById("scenarioGuidePopover");
   const scenarioGuideCloseBtn = document.getElementById("scenarioGuideCloseBtn");
-  const scenarioGuideStatus = document.getElementById("scenarioGuideStatus");
-  const scenarioGuideStatusChips = document.getElementById("scenarioGuideStatusChips");
   const scenarioGuideNavButtons = Array.from(document.querySelectorAll(".scenario-guide-nav-btn"));
   const scenarioGuidePanels = Array.from(document.querySelectorAll("[data-guide-panel]"));
   const dockConfigGroup = document.getElementById("dockConfigGroup");
@@ -286,13 +284,10 @@ function initToolbar({ render } = {}) {
   const transportWorkbenchPreviewMode = document.getElementById("transportWorkbenchPreviewMode");
   const transportWorkbenchPreviewTitle = document.getElementById("transportWorkbenchPreviewTitle");
   const transportWorkbenchPreviewCanvas = document.getElementById("transportWorkbenchPreviewCanvas");
-  const transportWorkbenchPreviewActions = document.getElementById("transportWorkbenchPreviewActions");
   const transportWorkbenchPreviewControls = document.getElementById("transportWorkbenchPreviewControls");
   const transportWorkbenchCarrierMount = document.getElementById("transportWorkbenchCarrierMount");
   const transportWorkbenchLayerOrderPanel = document.getElementById("transportWorkbenchLayerOrderPanel");
   const transportWorkbenchLayerOrderList = document.getElementById("transportWorkbenchLayerOrderList");
-  const transportWorkbenchCompareBtn = document.getElementById("transportWorkbenchCompareBtn");
-  const transportWorkbenchCompareStatus = document.getElementById("transportWorkbenchCompareStatus");
   const transportWorkbenchZoomOutBtn = document.getElementById("transportWorkbenchZoomOutBtn");
   const transportWorkbenchZoomInBtn = document.getElementById("transportWorkbenchZoomInBtn");
   const transportWorkbenchRotateBtn = document.getElementById("transportWorkbenchRotateBtn");
@@ -422,8 +417,6 @@ function initToolbar({ render } = {}) {
     scenarioGuideBackdrop,
     scenarioGuidePopover,
     scenarioGuideCloseBtn,
-    scenarioGuideStatus,
-    scenarioGuideStatusChips,
     scenarioGuideNavButtons,
     scenarioGuidePanels,
     getGuideSectionFromUrl: getScenarioGuideSectionFromUrl,
@@ -435,7 +428,6 @@ function initToolbar({ render } = {}) {
     closeScenarioGuideSurface,
     openScenarioGuideSurface,
     renderScenarioGuideSection,
-    renderScenarioGuideStatus,
     syncScenarioGuideTriggerButtons,
   } = scenarioGuidePopoverController;
 
@@ -468,10 +460,10 @@ function initToolbar({ render } = {}) {
 
   const updateLanguageToggleUi = () => {
     if (!toggleLang) return;
-    const nextLang = runtimeState.currentLanguage === "zh" ? "EN" : "ZH";
-    const buttonLabel = runtimeState.currentLanguage === "zh" ? "ZH / EN" : "EN / ZH";
-    toggleLang.textContent = buttonLabel;
-    toggleLang.setAttribute("title", `${t("Language", "ui")}: ${nextLang}`);
+    const currentLangLabel = runtimeState.currentLanguage === "zh" ? "ZH" : "EN";
+    toggleLang.textContent = currentLangLabel;
+    toggleLang.setAttribute("title", `${t("Language", "ui")}: ${currentLangLabel}`);
+    toggleLang.setAttribute("aria-label", `${t("Language", "ui")}: ${currentLangLabel}`);
   };
 
   const syncDeveloperModeUi = () => {
@@ -557,13 +549,10 @@ function initToolbar({ render } = {}) {
     transportWorkbenchPreviewMode,
     transportWorkbenchPreviewTitle,
     transportWorkbenchPreviewCanvas,
-    transportWorkbenchPreviewActions,
     transportWorkbenchPreviewControls,
     transportWorkbenchCarrierMount,
     transportWorkbenchLayerOrderPanel,
     transportWorkbenchLayerOrderList,
-    transportWorkbenchCompareBtn,
-    transportWorkbenchCompareStatus,
     transportWorkbenchZoomOutBtn,
     transportWorkbenchZoomInBtn,
     transportWorkbenchRotateBtn,
@@ -1107,12 +1096,6 @@ function initToolbar({ render } = {}) {
         : t("Open transport workbench", "ui"));
     }
     refreshScenarioSelectionChip();
-    renderScenarioGuideStatus({
-      activeScenario,
-      modeLabel,
-      scenarioViewLabel,
-      splitCount,
-    });
     refreshWorkspaceStatus();
     applyScenarioOverlaySafeLayout();
   };
@@ -1932,6 +1915,7 @@ function initToolbar({ render } = {}) {
     renderTextureUI();
     renderDayNightUI();
     renderSpecialZoneEditorUI();
+    updateLanguageToggleUi();
   });
   registerRuntimeHook(state, "updateTextureUIFn", renderTextureUI);
 
@@ -3043,7 +3027,6 @@ function initToolbar({ render } = {}) {
     applyDialogContract(scenarioGuidePopover, {
       tone: "info",
       labelledBy: "scenarioGuideTitle",
-      describedBy: ["scenarioGuideSupportHint"],
     });
     scenarioGuidePopover.setAttribute("aria-hidden", "true");
   }
@@ -3068,6 +3051,7 @@ function initToolbar({ render } = {}) {
     }
   }
   updateUIText();
+  updateLanguageToggleUi();
 }
 
 

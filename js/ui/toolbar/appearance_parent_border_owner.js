@@ -12,6 +12,8 @@ export function normalizeParentBorderEnabledMap(runtimeState) {
   supported.forEach((countryCode) => {
     next[countryCode] = !!previous[countryCode];
   });
+  // enabled map 每次都裁到“当前支持的国家集合”，
+  // 这样场景、数据包或 locale 切换后不会把陈旧 country code 留在 runtimeState 里继续影响渲染。
   runtimeState.parentBorderEnabledByCountry = next;
   return next;
 }
@@ -157,6 +159,8 @@ export function createAppearanceParentBorderOwner({
     }
     emptyNode?.classList.add("hidden");
 
+    // 行签名不变时只同步 checkbox 状态，不重建 DOM。
+    // parent border 面板会被高频 render，保住节点复用能减少滚动位置和焦点抖动。
     if (countryList.dataset.parentBorderRowsSignature === nextSignature) {
       syncCountryCheckboxes(rows, enabled);
       return { rebuilt: false, rows: rows.length };

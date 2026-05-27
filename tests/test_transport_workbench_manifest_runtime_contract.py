@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import re
 import unittest
 
@@ -23,6 +24,9 @@ TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "tra
 TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_apply_bridge_owner.js"
 TRANSPORT_WORKBENCH_INSPECTOR_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_inspector_owner.js"
 TRANSPORT_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
+CARRIER_JSON = REPO_ROOT / "data" / "transport_layers" / "japan_corridor" / "carrier.json"
+CARRIER_PROVENANCE_JSON = REPO_ROOT / "data" / "transport_layers" / "japan_corridor" / "provenance.json"
+CARRIER_BUILDER_PY = REPO_ROOT / "tools" / "build_transport_workbench_japan_carrier.py"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 STARTUP_LOCALE_FILES = [
     REPO_ROOT / "data" / "scenarios" / "hoi4_1936" / "locales.startup.json",
@@ -169,6 +173,18 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertNotIn("resolveDataAssetUrl", carrier_content)
         self.assertNotIn("fetch(DEFAULT_ASSET_URL)", carrier_content)
         self.assertIn('registerMapcreatorSnapshotProvider("loadStatus", "data_service"', data_service_content)
+
+    def test_japan_carrier_default_orientation_is_data_driven(self) -> None:
+        carrier_payload = json.loads(CARRIER_JSON.read_text(encoding="utf-8"))
+        provenance_payload = json.loads(CARRIER_PROVENANCE_JSON.read_text(encoding="utf-8"))
+        builder_content = CARRIER_BUILDER_PY.read_text(encoding="utf-8")
+        carrier_content = TRANSPORT_CARRIER_JS.read_text(encoding="utf-8")
+
+        self.assertEqual(carrier_payload["defaultCamera"]["rotationQuarterTurns"], 1)
+        self.assertEqual(provenance_payload["defaultCamera"]["rotationQuarterTurns"], 1)
+        self.assertIn('"rotationQuarterTurns": 1', builder_content)
+        self.assertIn("getDefaultRotationQuarterTurns()", carrier_content)
+        self.assertIn("defaultQuarterTurns: getDefaultRotationQuarterTurns()", carrier_content)
 
 
     def test_family_preview_dispatch_is_config_driven(self) -> None:

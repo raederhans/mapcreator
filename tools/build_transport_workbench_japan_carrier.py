@@ -44,6 +44,7 @@ DEFAULT_CAMERA = {
     "translateY": 0.0,
     "minScale": 1.0,
     "maxScale": 3.0,
+    "rotationQuarterTurns": 1,
 }
 
 LOD_SWITCH = {

@@ -85,10 +85,9 @@ function createOwner(mount, closeEvents = []) {
       row.textContent = `${label}: ${value}`;
       return row;
     },
-    buildLensSummaryRows({ previewSnapshot, compareHeld, rightDeckLabel }) {
+    buildLensSummaryRows({ previewSnapshot, rightDeckLabel }) {
       return [
         ["Status", previewSnapshot?.status || "pending"],
-        ["Compare", compareHeld ? "baseline" : "working"],
         ["Right deck", rightDeckLabel],
       ];
     },
@@ -121,19 +120,19 @@ test("transport workbench lens owner reuses unchanged rendered lens output", () 
   assert.equal(firstRender.reused, false);
   assert.equal(secondRender.reused, true);
   assert.equal(mount.replaceChildrenCallCount, 1);
-  assert.equal(mount.childElementCount, 2);
+  assert.equal(mount.childElementCount, 1);
+  assert.doesNotMatch(textOf(mount), /Review focus|Review road filters|Check map impact/);
   assert.equal(closeEvents.length, 2);
   assert.match(textOf(mount), /Status: ready/);
 
-  const compareRender = owner.render({
+  const deckRender = owner.render({
     family,
     previewSnapshot: { status: "ready" },
-    compareHeld: true,
-    rightDeckLabel: "Deck",
+    rightDeckLabel: "Updated deck",
   });
-  assert.equal(compareRender.reused, false);
+  assert.equal(deckRender.reused, false);
   assert.equal(mount.replaceChildrenCallCount, 2);
-  assert.match(textOf(mount), /Compare: baseline/);
+  assert.match(textOf(mount), /Right deck: Updated deck/);
 }));
 
 test("transport workbench lens owner rebuilds when lens family or row content changes", () => withTestDocument(() => {

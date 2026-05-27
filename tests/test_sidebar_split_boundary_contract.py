@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SIDEBAR_JS = REPO_ROOT / "js" / "ui" / "sidebar.js"
 COUNTRY_INSPECTOR_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "sidebar" / "country_inspector_controller.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
 
 
 class SidebarSplitBoundaryContractTest(unittest.TestCase):
@@ -49,6 +50,18 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "refreshCountryInspectorDetailFn", renderCountryInspectorDetail);', content)
         self.assertIn("bindCountryInspectorEvents();", content)
 
+    def test_sidebar_collapse_labels_are_localized(self):
+        sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
+        catalog_content = I18N_CATALOG_JS.read_text(encoding="utf-8")
+
+        for label in [
+            "Collapse left sidebar",
+            "Expand left sidebar",
+            "Collapse right sidebar",
+            "Expand right sidebar",
+        ]:
+            self.assertIn(label, sidebar_content)
+            self.assertIn(label, catalog_content)
 
     def test_country_inspector_state_preserves_feature_count_fields(self):
         content = SIDEBAR_JS.read_text(encoding="utf-8")
@@ -60,9 +73,19 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const ownerFeatureCount = Number(", state_prefix)
         self.assertIn("const controllerFeatureCount = Number(", state_prefix)
         self.assertIn("const featureCount = ownerFeatureCount;", state_prefix)
+        self.assertIn("const normalizedEntryCode = normalizeCountryCode(", state_prefix)
+        self.assertIn("const fallbackDisplayName = normalizeCountryDisplayNameCandidate(", state_prefix)
+        self.assertIn("const displayName = t(displayNameSource, \"geo\") || displayNameSource || normalizedEntryCode;", state_prefix)
+        self.assertIn("code: normalizedEntryCode || entry.code,", state_body)
+        self.assertIn("name,", state_body)
+        self.assertIn("displayName,", state_body)
         self.assertIn("featureCount,", state_body)
         self.assertIn("ownerFeatureCount,", state_body)
         self.assertIn("controllerFeatureCount,", state_body)
+
+        self.assertIn("display_name_en: releasableEntry.display_name_en,", content)
+        self.assertIn("display_name_zh: releasableEntry.display_name_zh,", content)
+        self.assertIn("preset_source: releasableEntry.preset_source,", content)
 
 
     def test_auto_fill_refreshes_country_rows_before_full_list_fallback(self):

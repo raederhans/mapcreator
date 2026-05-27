@@ -697,6 +697,8 @@ function buildCountryColorTree(entries) {
     }
   });
 
+  // 这里先补齐“顶层分组顺序”，再回填国家成员。
+  // 这样 scenario-only 分组既能挂到真实 continent 前后，又不会在后续 entries 遍历时被重复插入。
   entries.forEach((entry) => {
     const groupMeta = getInspectorTopLevelGroupMeta(entry);
 
@@ -1027,6 +1029,8 @@ function applyScenarioOwnerControllerAssignments(
 
   // 这是 sidebar 内的批量 ownership 入口；视觉覆盖不要走到这里，
   // 否则颜色预览会变成真实政治状态修改。
+  // owner/controller 拆成两个按 code 聚合的批次，是为了尽量复用下层批量写口，
+  // 同时只对真正变动的 feature 触发颜色刷新、边界重算和 history 快照。
   const ownerFeatureIdsByCode = new Map();
   const changedFeatureIds = new Set();
 
@@ -1422,7 +1426,14 @@ function initSidebar({ render } = {}) {
   const presetTree = document.getElementById("presetTree");
   const searchInput = document.getElementById("countrySearch");
   const resetBtn = document.getElementById("resetCountryColors");
+  const leftSidebar = document.getElementById("leftSidebar");
+  const leftSidebarContent = document.getElementById("leftSidebarContent");
+  const leftSidebarCollapseBtn = document.getElementById("leftSidebarCollapseBtn");
+  const leftSidebarCollapseIcon = document.getElementById("leftSidebarCollapseIcon");
   const sidebar = document.getElementById("rightSidebar");
+  const rightSidebarContent = document.getElementById("rightSidebarContent");
+  const rightSidebarCollapseBtn = document.getElementById("rightSidebarCollapseBtn");
+  const rightSidebarCollapseIcon = document.getElementById("rightSidebarCollapseIcon");
   const projectLegendStack = document.getElementById("projectLegendStack");
   const diagnosticStack = document.getElementById("diagnosticStack");
 
@@ -3445,6 +3456,10 @@ function initSidebar({ render } = {}) {
       : INSPECTOR_VH_BASELINE.selectedActionsBodyCap
   );
 
+  const isSelectedActionsEmptyState = () => (
+    !!selectedCountryActionsSection?.classList.contains("is-empty-selection-panel")
+  );
+
   const syncAdaptiveInspectorHeights = () => {
     adaptiveInspectorHeightFrame = 0;
     applyAdaptiveInspectorHeight(
@@ -3473,11 +3488,15 @@ function initSidebar({ render } = {}) {
       220
     );
     releaseAdaptiveInspectorHeight(presetTree);
-    applyAdaptiveInspectorHeight(
-      selectedCountryActionsBody,
-      toViewportPixels(INSPECTOR_VH_BASELINE.selectedActionsBody),
-      toViewportPixels(getSelectedActionsBodyCap())
-    );
+    if (isSelectedActionsEmptyState()) {
+      releaseAdaptiveInspectorHeight(selectedCountryActionsBody);
+    } else {
+      applyAdaptiveInspectorHeight(
+        selectedCountryActionsBody,
+        toViewportPixels(INSPECTOR_VH_BASELINE.selectedActionsBody),
+        toViewportPixels(getSelectedActionsBodyCap())
+      );
+    }
     sidebar?.querySelectorAll(".preset-country-body").forEach((element) => {
       applyAdaptiveInspectorHeight(
         element,
@@ -3492,6 +3511,139 @@ function initSidebar({ render } = {}) {
       globalThis.cancelAnimationFrame(adaptiveInspectorHeightFrame);
     }
     adaptiveInspectorHeightFrame = globalThis.requestAnimationFrame(syncAdaptiveInspectorHeights);
+  };
+
+  const LEFT_SIDEBAR_COLLAPSED_KEY = "map_left_sidebar_collapsed";
+  const RIGHT_SIDEBAR_COLLAPSED_KEY = "map_right_sidebar_collapsed";
+  const leftSidebarCollapseMedia = typeof globalThis.matchMedia === "function"
+    ? globalThis.matchMedia("(min-width: 1280px)")
+    : null;
+  const rightSidebarCollapseMedia = typeof globalThis.matchMedia === "function"
+    ? globalThis.matchMedia("(min-width: 1280px)")
+    : null;
+  let leftSidebarCollapsePreference = false;
+  let leftSidebarLayoutRefreshTimer = 0;
+  let rightSidebarCollapsePreference = false;
+  let rightSidebarLayoutRefreshTimer = 0;
+
+  const canCollapseLeftSidebar = () => (
+    !leftSidebarCollapseMedia || !!leftSidebarCollapseMedia.matches
+  );
+
+  const canCollapseRightSidebar = () => (
+    !rightSidebarCollapseMedia || !!rightSidebarCollapseMedia.matches
+  );
+
+  const requestLeftSidebarLayoutRefresh = () => {
+    if (leftSidebarLayoutRefreshTimer) {
+      globalThis.clearTimeout(leftSidebarLayoutRefreshTimer);
+    }
+    globalThis.requestAnimationFrame(() => {
+      scheduleAdaptiveInspectorHeights();
+      globalThis.dispatchEvent(new Event("resize"));
+      if (typeof render === "function") render();
+      leftSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
+        scheduleAdaptiveInspectorHeights();
+        globalThis.dispatchEvent(new Event("resize"));
+        if (typeof render === "function") render();
+        leftSidebarLayoutRefreshTimer = 0;
+      }, 260);
+    });
+  };
+
+  const requestRightSidebarLayoutRefresh = () => {
+    if (rightSidebarLayoutRefreshTimer) {
+      globalThis.clearTimeout(rightSidebarLayoutRefreshTimer);
+    }
+    globalThis.requestAnimationFrame(() => {
+      scheduleAdaptiveInspectorHeights();
+      globalThis.dispatchEvent(new Event("resize"));
+      if (typeof render === "function") render();
+      rightSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
+        scheduleAdaptiveInspectorHeights();
+        globalThis.dispatchEvent(new Event("resize"));
+        if (typeof render === "function") render();
+        rightSidebarLayoutRefreshTimer = 0;
+      }, 260);
+    });
+  };
+
+  const setLeftSidebarCollapsed = (collapsed, { persist = true, refreshLayout = true } = {}) => {
+    leftSidebarCollapsePreference = !!collapsed;
+    const effectiveCollapsed = leftSidebarCollapsePreference && canCollapseLeftSidebar();
+    document.body.classList.toggle("left-sidebar-collapsed", effectiveCollapsed);
+    leftSidebar?.classList.toggle("is-collapsed", effectiveCollapsed);
+    leftSidebarContent?.toggleAttribute("inert", effectiveCollapsed);
+    leftSidebarContent?.setAttribute("aria-hidden", effectiveCollapsed ? "true" : "false");
+    leftSidebarCollapseBtn?.setAttribute("aria-expanded", effectiveCollapsed ? "false" : "true");
+    const nextSidebarLabel = effectiveCollapsed ? "Expand left sidebar" : "Collapse left sidebar";
+    leftSidebarCollapseBtn?.setAttribute("data-i18n-aria-label", nextSidebarLabel);
+    leftSidebarCollapseBtn?.setAttribute("aria-label", t(nextSidebarLabel, "ui"));
+    if (leftSidebarCollapseIcon) {
+      leftSidebarCollapseIcon.textContent = effectiveCollapsed ? ">" : "<";
+    }
+    if (persist) {
+      try {
+        globalThis.localStorage?.setItem(LEFT_SIDEBAR_COLLAPSED_KEY, leftSidebarCollapsePreference ? "true" : "false");
+      } catch (_error) {
+        // localStorage can be unavailable in privacy-restricted contexts.
+      }
+    }
+    if (refreshLayout) {
+      requestLeftSidebarLayoutRefresh();
+    }
+  };
+
+  const setRightSidebarCollapsed = (collapsed, { persist = true, refreshLayout = true } = {}) => {
+    rightSidebarCollapsePreference = !!collapsed;
+    const effectiveCollapsed = rightSidebarCollapsePreference && canCollapseRightSidebar();
+    document.body.classList.toggle("right-sidebar-collapsed", effectiveCollapsed);
+    sidebar?.classList.toggle("is-collapsed", effectiveCollapsed);
+    rightSidebarContent?.toggleAttribute("inert", effectiveCollapsed);
+    rightSidebarContent?.setAttribute("aria-hidden", effectiveCollapsed ? "true" : "false");
+    rightSidebarCollapseBtn?.setAttribute("aria-expanded", effectiveCollapsed ? "false" : "true");
+    const nextSidebarLabel = effectiveCollapsed ? "Expand right sidebar" : "Collapse right sidebar";
+    rightSidebarCollapseBtn?.setAttribute("data-i18n-aria-label", nextSidebarLabel);
+    rightSidebarCollapseBtn?.setAttribute("aria-label", t(nextSidebarLabel, "ui"));
+    if (rightSidebarCollapseIcon) {
+      rightSidebarCollapseIcon.textContent = effectiveCollapsed ? "<" : ">";
+    }
+    if (persist) {
+      try {
+        globalThis.localStorage?.setItem(RIGHT_SIDEBAR_COLLAPSED_KEY, rightSidebarCollapsePreference ? "true" : "false");
+      } catch (_error) {
+        // localStorage can be unavailable in privacy-restricted contexts.
+      }
+    }
+    if (refreshLayout) {
+      requestRightSidebarLayoutRefresh();
+    }
+  };
+
+  const restoreLeftSidebarCollapsedState = () => {
+    try {
+      leftSidebarCollapsePreference = globalThis.localStorage?.getItem(LEFT_SIDEBAR_COLLAPSED_KEY) === "true";
+    } catch (_error) {
+      leftSidebarCollapsePreference = false;
+    }
+    setLeftSidebarCollapsed(leftSidebarCollapsePreference, { persist: false, refreshLayout: false });
+  };
+
+  const restoreRightSidebarCollapsedState = () => {
+    try {
+      rightSidebarCollapsePreference = globalThis.localStorage?.getItem(RIGHT_SIDEBAR_COLLAPSED_KEY) === "true";
+    } catch (_error) {
+      rightSidebarCollapsePreference = false;
+    }
+    setRightSidebarCollapsed(rightSidebarCollapsePreference, { persist: false, refreshLayout: false });
+  };
+
+  const syncLeftSidebarCollapsedMedia = () => {
+    setLeftSidebarCollapsed(leftSidebarCollapsePreference, { persist: false });
+  };
+
+  const syncRightSidebarCollapsedMedia = () => {
+    setRightSidebarCollapsed(rightSidebarCollapsePreference, { persist: false });
   };
 
 
@@ -3578,6 +3730,12 @@ function initSidebar({ render } = {}) {
     return labels[normalizedKind] || normalizedKind.replace(/_/g, " ");
   };
 
+  const normalizeCountryDisplayNameCandidate = (value) => {
+    const text = String(value ?? "").trim();
+    if (!text || /^(undefined|null)$/i.test(text)) return "";
+    return text;
+  };
+
   const buildCountryRowMetaText = (countryState, { showRelationMeta = false } = {}) => {
     const metaBits = [countryState?.subregionDisplayLabel].filter(Boolean);
     if (countryState?.releasable && showRelationMeta) {
@@ -3605,6 +3763,24 @@ function initSidebar({ render } = {}) {
     const scenarioMeta = inlineReleasableMeta
       ? (entry || getScenarioCountryMeta(entry.code) || {})
       : (getScenarioCountryMeta(entry.code) || entry || {});
+    const normalizedEntryCode = normalizeCountryCode(entry?.code || scenarioMeta.code || scenarioMeta.tag);
+    const fallbackDisplayName = normalizeCountryDisplayNameCandidate(
+      entry?.displayName
+      || entry?.name
+      || scenarioMeta?.preset_source?.name
+      || scenarioMeta?.presetSource?.name
+      || runtimeState.countryNames?.[normalizedEntryCode]
+      || countryNames[normalizedEntryCode]
+      || normalizedEntryCode
+    );
+    const scenarioDisplayName = normalizeCountryDisplayNameCandidate(
+      getScenarioCountryDisplayName(scenarioMeta, fallbackDisplayName)
+    );
+    const displayNameSource = scenarioDisplayName.toUpperCase() === normalizedEntryCode && fallbackDisplayName
+      ? fallbackDisplayName
+      : (scenarioDisplayName || fallbackDisplayName || normalizedEntryCode);
+    const displayName = t(displayNameSource, "geo") || displayNameSource || normalizedEntryCode;
+    const name = normalizeCountryDisplayNameCandidate(displayNameSource || entry?.name || normalizedEntryCode) || normalizedEntryCode;
     const lookupIso2 = resolveScenarioLookupCode(entry);
     const inspectorDataCode = resolveInspectorDataCode(entry);
     const presetLookupCode = resolveScenarioLookupCode(entry);
@@ -3645,6 +3821,9 @@ function initSidebar({ render } = {}) {
     // 列表分组、预设读取和详情展示可能各自指向不同来源，不能在这里合并成一个 code。
     return {
       ...entry,
+      code: normalizedEntryCode || entry.code,
+      name,
+      displayName,
       fallbackIndex,
       lookupIso2,
       inspectorDataCode,
@@ -3782,6 +3961,8 @@ function initSidebar({ render } = {}) {
           return createCountryInspectorState({
             code: normalizedChild,
             display_name: releasableEntry.display_name,
+            display_name_en: releasableEntry.display_name_en,
+            display_name_zh: releasableEntry.display_name_zh,
             color_hex: releasableEntry.color_hex,
             feature_count: Number(releasableEntry.resolved_feature_count_hint || 0),
             release_lookup_iso2: releasableEntry.release_lookup_iso2,
@@ -3803,6 +3984,7 @@ function initSidebar({ render } = {}) {
             companion_actions: Array.isArray(releasableEntry.companion_actions)
               ? releasableEntry.companion_actions
               : [],
+            preset_source: releasableEntry.preset_source,
             notes: String(releasableEntry.notes || "").trim(),
             continent_id: releasableEntry.continent_id,
             continent_label: releasableEntry.continent_label,
@@ -5138,6 +5320,7 @@ function initSidebar({ render } = {}) {
     }
 
     if (!countryState) {
+      container.appendChild(createEmptyNote(t("Select a country to inspect territories, presets, and releasables.", "ui")));
       return;
     }
 
@@ -5157,6 +5340,7 @@ function initSidebar({ render } = {}) {
 
     const selectedCode = ensureSelectedInspectorCountry();
     const countryState = selectedCode ? latestCountryStatesByCode.get(selectedCode) : null;
+    selectedCountryActionsSection?.classList.toggle("is-empty-selection-panel", !countryState);
 
     if (runtimeState.activeScenarioId) {
       renderScenarioActionsPanel(presetTree, countryState);
@@ -5165,6 +5349,7 @@ function initSidebar({ render } = {}) {
     }
 
     if (!countryState) {
+      presetTree.appendChild(createEmptyNote(t("Select a country to inspect territories, presets, and releasables.", "ui")));
       scheduleAdaptiveInspectorHeights();
       return;
     }
@@ -5499,6 +5684,40 @@ function initSidebar({ render } = {}) {
   setRightSidebarTab(requestedSidebarTab || runtimeState.ui?.rightSidebarTab || "inspector");
   callRuntimeHook(state, "restoreSupportSurfaceFromUrlFn");
   refreshStrategicOverlayUI();
+  restoreLeftSidebarCollapsedState();
+  restoreRightSidebarCollapsedState();
+
+  if (leftSidebarCollapseBtn && !leftSidebarCollapseBtn.dataset.bound) {
+    leftSidebarCollapseBtn.addEventListener("click", () => {
+      setLeftSidebarCollapsed(!leftSidebarCollapsePreference);
+    });
+    leftSidebarCollapseBtn.dataset.bound = "true";
+  }
+
+  if (rightSidebarCollapseBtn && !rightSidebarCollapseBtn.dataset.bound) {
+    rightSidebarCollapseBtn.addEventListener("click", () => {
+      setRightSidebarCollapsed(!rightSidebarCollapsePreference);
+    });
+    rightSidebarCollapseBtn.dataset.bound = "true";
+  }
+
+  if (leftSidebarCollapseMedia && leftSidebar && !leftSidebar.dataset.collapseMediaBound) {
+    if (typeof leftSidebarCollapseMedia.addEventListener === "function") {
+      leftSidebarCollapseMedia.addEventListener("change", syncLeftSidebarCollapsedMedia);
+    } else if (typeof leftSidebarCollapseMedia.addListener === "function") {
+      leftSidebarCollapseMedia.addListener(syncLeftSidebarCollapsedMedia);
+    }
+    leftSidebar.dataset.collapseMediaBound = "true";
+  }
+
+  if (rightSidebarCollapseMedia && sidebar && !sidebar.dataset.collapseMediaBound) {
+    if (typeof rightSidebarCollapseMedia.addEventListener === "function") {
+      rightSidebarCollapseMedia.addEventListener("change", syncRightSidebarCollapsedMedia);
+    } else if (typeof rightSidebarCollapseMedia.addListener === "function") {
+      rightSidebarCollapseMedia.addListener(syncRightSidebarCollapsedMedia);
+    }
+    sidebar.dataset.collapseMediaBound = "true";
+  }
 
   inspectorSidebarTabButtons.forEach((button) => {
     if (button.dataset.bound) return;

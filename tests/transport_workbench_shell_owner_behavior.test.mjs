@@ -152,7 +152,7 @@ test("transport workbench pack select reuses options while refreshing value and 
   assert.equal(selectNode.disabled, true);
 }));
 
-function createShellHarness() {
+function createShellHarness({ carrierViewState = { quarterTurns: 1 } } = {}) {
   const nodes = {
     body: new TestElement("body"),
     scenarioButton: new TestElement("button"),
@@ -165,12 +165,9 @@ function createShellHarness() {
     previewMode: new TestElement("div"),
     previewTitle: new TestElement("div"),
     previewCanvas: new TestElement("canvas"),
-    previewActions: new TestElement("div"),
     previewControls: new TestElement("div"),
     carrierMount: new TestElement("div"),
     layerOrderPanel: new TestElement("div"),
-    compareButton: new TestElement("button"),
-    compareStatus: new TestElement("div"),
     zoomOutButton: new TestElement("button"),
     zoomInButton: new TestElement("button"),
     rotateButton: new TestElement("button"),
@@ -193,7 +190,7 @@ function createShellHarness() {
       label: familyId === "road" ? "Apply road" : "Unavailable",
       reason: familyId === "road" ? "" : "Reserved",
     }),
-    getCarrierViewState: () => ({ quarterTurns: 1 }),
+    getCarrierViewState: () => typeof carrierViewState === "function" ? carrierViewState() : carrierViewState,
     setCarrierFamily: (familyId) => carrierFamilies.push(familyId),
     isInfoPopoverOpen: () => true,
     renderInfoContent: () => {
@@ -286,14 +283,28 @@ test("transport workbench shell owner updates changed family and preview control
   assert.equal(harness.nodes.packSelect.replaceChildrenCallCount, 2);
   assert.equal(harness.nodes.previewMode.textContent, "t:Layer order");
   assert.equal(harness.nodes.previewCanvas.classList.contains("is-layer-order-mode"), true);
-  assert.equal(harness.nodes.previewActions.classList.contains("hidden"), true);
   assert.equal(harness.nodes.carrierMount.classList.contains("hidden"), true);
   assert.equal(harness.nodes.layerOrderPanel.classList.contains("hidden"), false);
-  assert.equal(harness.nodes.compareButton.disabled, true);
-  assert.equal(harness.nodes.compareButton.getAttribute("aria-disabled"), "true");
-  assert.equal(harness.nodes.compareButton.textContent, "t:Baseline unavailable");
   assert.equal(harness.nodes.familyTabs[1].getAttribute("aria-selected"), "true");
   assert.equal(harness.nodes.applyButton.disabled, true);
   assert.equal(harness.nodes.applyButton.title, "Reserved");
   assert.equal(harness.nodes.applyButton.getAttribute("aria-label"), "Unavailable: Reserved");
+}));
+
+test("transport workbench shell owner treats configured quarter turn as the default view", () => withTestDocument(() => {
+  let carrierViewState = { quarterTurns: 1, defaultQuarterTurns: 1 };
+  const harness = createShellHarness({ carrierViewState: () => carrierViewState });
+  const context = createRoadContext();
+
+  harness.owner.render(context);
+
+  assert.equal(harness.nodes.rotateButton.getAttribute("aria-pressed"), "false");
+  assert.equal(harness.nodes.rotateButton.classList.contains("is-active"), false);
+
+  carrierViewState = { quarterTurns: 0, defaultQuarterTurns: 1 };
+  const changedRender = harness.owner.render(context);
+
+  assert.ok(changedRender.updated > 0);
+  assert.equal(harness.nodes.rotateButton.getAttribute("aria-pressed"), "true");
+  assert.equal(harness.nodes.rotateButton.classList.contains("is-active"), true);
 }));

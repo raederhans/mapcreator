@@ -6,9 +6,8 @@
 
 - canonical 输入、checked-in 产物、运行时 contract 要共用同一份真相源。
 - owner / facade / support surface 拆分要同波次收口验证链、发布链、依赖注入、state writer 和真实运行分支。
-- toolbar / sidebar 的 state-bus hook 注册要排在被调用 facade 初始化之后；startup 回放会同步触发这些 hook，顺序漂移会把首帧卡在进度条阶段。
 - live test、长构建、browser smoke、bundle/checkpoint builder 一律单 owner，长流程默认后台日志。
-- scenario-aware asset 的 pending / settled 真状态要先钉住，再接保存、可见性和 reload 链。
+- pending / settled 真状态要先钉住，再接保存、可见性和 reload 链。
 
 ## 构建、发布与真相源
 
@@ -111,6 +110,7 @@
 - active 目录只保留当前仍在推进的主线。
 - 任务已完成、验证已补齐、后续故事已转入别的 active 目录时，原目录立刻归档。
 - archive 里保留可复用的计划、上下文、任务闭环；空目录和纯残留目录直接清理。
+- 根目录文档声称已经有 canonical archive 副本时，先验证 archive 目标真实存在，再决定删不删根目录版本。
 
 ### 旧 worktree 只能移植合同，不能移植旧结论
 - 从旧 worktree 抢救功能时，先对照当前 main 的既有回归测试；颜色、数据、policy 这类 checked-in 合同以当前测试和现有数据为准。

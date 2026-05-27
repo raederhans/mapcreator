@@ -49,6 +49,30 @@ const uiMap = [
             self.assertIn("Create Tag", result["covered_default_literals"])
             self.assertIn("Scenario Tag Creator", result["covered_default_literals"])
 
+    def test_counts_select_option_with_data_i18n_as_covered_literal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            self._write_repo_file(
+                repo_root,
+                "index.html",
+                """
+<!doctype html>
+<html>
+  <body>
+    <select>
+      <option value="manual" data-i18n="Manual">Manual</option>
+    </select>
+  </body>
+</html>
+                """.strip(),
+            )
+
+            result = collect_code_strings(repo_root)
+
+            self.assertIn("Manual", result["declarative_ui_keys"])
+            self.assertIn("Manual", result["covered_default_literals"])
+            self.assertNotIn("Manual", result["uncovered_user_visible_literals"])
+
     def test_splits_uncovered_a11y_and_non_translatable_literals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir)
@@ -290,6 +314,9 @@ const config = {
         geo = locales.get("geo") or {}
         high_risk_terms = {
             "Classes": "类别",
+            "Road": "道路",
+            "Rail": "铁路",
+            "Airport": "机场",
             "Airport inspector": "机场检查器",
             "Rail inspector": "铁路检查器",
             "Port inspector": "港口检查器",
@@ -299,6 +326,8 @@ const config = {
             "Industrial land carrier": "工业用地预览面板",
             "Road lens": "道路视图",
             "Lens": "视图",
+            "Layers": "图层",
+            "Guide": "指南",
             "Mineral inspector": "矿产检查器",
             "Station opacity": "车站不透明度",
         }

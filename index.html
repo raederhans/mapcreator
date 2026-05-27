@@ -59,7 +59,18 @@
   <body class="app-booting">
     <div id="appShell" class="app-layout">
       <aside id="leftSidebar" class="sidebar sidebar-left">
-        <div class="sidebar-sections">
+        <button
+          id="leftSidebarCollapseBtn"
+          class="left-sidebar-collapse-btn"
+          type="button"
+          aria-controls="leftSidebarContent"
+          aria-expanded="true"
+          aria-label="Collapse left sidebar"
+          data-i18n-aria-label="Collapse left sidebar"
+        >
+          <span id="leftSidebarCollapseIcon" aria-hidden="true">&lsaquo;</span>
+        </button>
+        <div id="leftSidebarContent" class="sidebar-sections">
           <div class="sidebar-header-block">
             <div class="sidebar-shell-heading" data-i18n="Workspace">Workspace</div>
             <div class="sidebar-brand-row">
@@ -513,7 +524,7 @@
                                   <input id="physicalClassBadlands" type="checkbox" class="checkbox-input" checked />
                                   <span id="lblPhysicalClassBadlands" data-i18n="Badlands & Canyon">Badlands &amp; Canyon</span>
                                 </label>
-                                <label class="toggle-label">
+                                <label class="toggle-label physical-atlas-group-start">
                                   <input id="physicalClassPlains" type="checkbox" class="checkbox-input" checked />
                                   <span id="lblPhysicalClassPlains" data-i18n="Plains Lowlands">Plains Lowlands</span>
                                 </label>
@@ -525,7 +536,7 @@
                                   <input id="physicalClassWetlands" type="checkbox" class="checkbox-input" checked />
                                   <span id="lblPhysicalClassWetlands" data-i18n="Wetlands & Delta">Wetlands &amp; Delta</span>
                                 </label>
-                                <label class="toggle-label">
+                                <label class="toggle-label physical-atlas-group-start">
                                   <input id="physicalClassForestTemperate" type="checkbox" class="checkbox-input" checked />
                                   <span id="lblPhysicalClassForestTemperate" data-i18n="Temperate Forest">Temperate Forest</span>
                                 </label>
@@ -629,7 +640,7 @@
                           </div>
                           <select id="urbanMode" class="select-input mt-2">
                             <option value="adaptive" selected data-i18n="Adaptive">Adaptive</option>
-                            <option value="manual">Manual</option>
+                            <option value="manual" data-i18n="Manual">Manual</option>
                           </select>
                           <p id="urbanAdaptiveStatus" class="sidebar-tool-hint mt-2 hidden"></p>
                         </div>
@@ -2018,7 +2029,18 @@
       </main>
 
       <aside id="rightSidebar" class="sidebar-right">
-        <div class="sidebar-sections inspector-sidebar-sections">
+        <button
+          id="rightSidebarCollapseBtn"
+          class="right-sidebar-collapse-btn"
+          type="button"
+          aria-controls="rightSidebarContent"
+          aria-expanded="true"
+          aria-label="Collapse right sidebar"
+          data-i18n-aria-label="Collapse right sidebar"
+        >
+          <span id="rightSidebarCollapseIcon" aria-hidden="true">&rsaquo;</span>
+        </button>
+        <div id="rightSidebarContent" class="sidebar-sections inspector-sidebar-sections">
           <div class="inspector-sidebar-tab-row" role="tablist" aria-label="Inspector panels" data-i18n-aria-label="Inspector panels">
             <button
               id="inspectorSidebarTabInspector"
@@ -2411,9 +2433,6 @@
                 </span>
               </summary>
               <div class="inspector-panel-body">
-                <p class="sidebar-help-copy" data-i18n="Preview layers, format, and resolution before export.">
-                  Preview layers, format, and resolution before export.
-                </p>
                 <div class="sidebar-support-summary-row" aria-label="Export summary" data-i18n-aria-label="Export summary">
                   <div class="sidebar-support-summary-pill">
                     <span class="sidebar-support-summary-label" data-i18n="Target">Target</span>
@@ -2568,14 +2587,6 @@
               <section class="transport-workbench-column transport-workbench-column-preview" aria-labelledby="transportWorkbenchPreviewTitle">
                 <h3 id="transportWorkbenchPreviewTitle" class="visually-hidden" data-i18n="Japan preview">Japan preview</h3>
                 <div class="transport-workbench-preview-shell">
-                  <div id="transportWorkbenchPreviewActions" class="transport-workbench-preview-actions">
-                    <button id="transportWorkbenchCompareBtn" type="button" class="transport-workbench-compare-btn" data-i18n="Compare baseline">
-                      Compare baseline
-                    </button>
-                    <span id="transportWorkbenchCompareStatus" class="transport-workbench-preview-compare-status" data-i18n="Live working state" aria-live="polite">
-                      Live working state
-                    </span>
-                  </div>
                   <div id="transportWorkbenchPreviewCanvas" class="transport-workbench-preview-canvas" aria-hidden="true">
                     <div id="transportWorkbenchPreviewControls" class="transport-workbench-preview-controls" role="group" aria-label="Preview controls" data-i18n-aria-label="Preview controls">
                       <button id="transportWorkbenchZoomOutBtn" type="button" class="transport-workbench-preview-control-btn" aria-label="Zoom out" data-i18n-aria-label="Zoom out" title="Zoom out">&minus;</button>
@@ -2823,10 +2834,6 @@
           Close
         </button>
       </div>
-      <p id="scenarioGuideSupportHint" class="sidebar-help-copy" data-i18n="Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.">Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.</p>
-      <div id="scenarioGuideStatus" class="scenario-guide-status mt-2">
-        <div id="scenarioGuideStatusChips" class="scenario-guide-status-chips"></div>
-      </div>
       <div id="scenarioGuideNav" class="scenario-guide-nav mt-3" role="tablist" aria-label="Guide sections" data-i18n-aria-label="Guide sections">
         <button id="scenarioGuideTabQuick" type="button" class="scenario-guide-nav-btn is-active" data-guide-section="quick" role="tab" aria-selected="true" aria-controls="scenarioGuideSectionQuick" data-i18n="Quick path">Quick path</button>
         <button id="scenarioGuideTabPrepare" type="button" class="scenario-guide-nav-btn" data-guide-section="prepare" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionPrepare" data-i18n="Before you edit">Before you edit</button>
@@ -2860,36 +2867,125 @@
         <section id="scenarioGuideSectionPrepare" class="scenario-guide-manual-section hidden" data-guide-panel="prepare" role="tabpanel" aria-labelledby="scenarioGuideTabPrepare scenarioGuidePreparationTitle" hidden>
           <h4 id="scenarioGuidePreparationTitle" class="scenario-guide-manual-title" data-i18n="Before you edit">Before you edit</h4>
           <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Save the current working state before you load a different project file. Loading a project replaces the current map state, and the app prompts for confirmation when the saved scenario baseline differs from the current assets.">Save the current working state before you load a different project file. Loading a project replaces the current map state, and the app prompts for confirmation when the saved scenario baseline differs from the current assets.</p>
+            <p data-i18n="Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit. If the state is off, switch back to the right scenario or project before changing ownership, frontlines, or annotations.">Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit. If the state is off, switch back to the right scenario or project before changing ownership, frontlines, or annotations.</p>
           </div>
           <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="You can open Guide from the top scenario bar or from Project › Utilities. Both buttons open the same panel; the only difference is which workspace you were using when you opened it.">You can open Guide from the top scenario bar or from Project › Utilities. Both buttons open the same panel; the only difference is which workspace you were using when you opened it.</p>
+            <p data-i18n="Before a broad edit or before loading another project file, download the current project JSON from Project Management. Loading a project replaces the current map, strategic annotations, and export settings; baseline mismatches require confirmation.">Before a broad edit or before loading another project file, download the current project JSON from Project Management. Loading a project replaces the current map, strategic annotations, and export settings; baseline mismatches require confirmation.</p>
+          </div>
+          <div class="scenario-guide-bilingual-copy">
+            <p data-i18n="After loading, return to Inspector to confirm the target country and active owner, then use Project tools to review frontlines, reference image alignment, and export settings. Once those match, continue with Activate, Scenario Actions, or Export.">After loading, return to Inspector to confirm the target country and active owner, then use Project tools to review frontlines, reference image alignment, and export settings. Once those match, continue with Activate, Scenario Actions, or Export.</p>
           </div>
         </section>
 
         <section id="scenarioGuideSectionTools" class="scenario-guide-manual-section hidden" data-guide-panel="tools" role="tabpanel" aria-labelledby="scenarioGuideTabTools scenarioGuideProjectToolsTitle" hidden>
           <h4 id="scenarioGuideProjectToolsTitle" class="scenario-guide-manual-title" data-i18n="Publishable map tools">Publishable map tools</h4>
-          <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Project Management: Download the current map state or restore it from a local JSON file. Use it before major ownership, frontline, or overlay changes.">Project Management: Download the current map state or restore it from a local JSON file. Use it before major ownership, frontline, or overlay changes.</p>
-          </div>
-          <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.">Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.</p>
-          </div>
-          <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Reference: After you upload a local image, the most stable alignment order is opacity → scale → offsets. The project preserves the alignment values, while the image file itself must be uploaded again.">Reference: After you upload a local image, the most stable alignment order is opacity → scale → offsets. The project preserves the alignment values, while the image file itself must be uploaded again.</p>
-          </div>
-          <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.">Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.</p>
+          <p class="scenario-guide-manual-lead" data-i18n="Use Project tools as a publish checklist: save the project, add strategic context, align references, then export.">Use Project tools as a publish checklist: save the project, add strategic context, align references, then export.</p>
+          <div class="scenario-guide-tool-accordion">
+            <details class="scenario-guide-tool-panel" open>
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Project Management">Project Management</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Save and restore the complete working state.">Save and restore the complete working state.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Contains Download Project, Load Project, selected file status, and import safety checks.">Contains Download Project, Load Project, selected file status, and import safety checks.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You are about to make broad ownership, frontline, transport, or overlay changes.">You are about to make broad ownership, frontline, transport, or overlay changes.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Download a project JSON first, load another file only after confirming the current state can be replaced, then re-check the top status chips.">Download a project JSON first, load another file only after confirming the current state can be replaced, then re-check the top status chips.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="After import, confirm scenario baseline, current owner, strategic annotations, and export settings before continuing.">After import, confirm scenario baseline, current owner, strategic annotations, and export settings before continuing.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Frontlines & Annotations">Frontlines & Annotations</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Build the publishable strategic layer.">Build the publishable strategic layer.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Contains derived frontlines, operational lines, operation graphics, and unit counters. These are project-local strategic annotations for export and handoff.">Contains derived frontlines, operational lines, operation graphics, and unit counters. These are project-local strategic annotations for export and handoff.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="The political map needs readable conflict edges, arrows, planned operations, or visible unit counts.">The political map needs readable conflict edges, arrows, planned operations, or visible unit counts.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Turn on derived frontlines first, then add operational lines and graphics, then place counters near the final composition.">Turn on derived frontlines first, then add operational lines and graphics, then place counters near the final composition.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="Before export, make sure Strategic annotations are enabled and no line, label, or counter hides the country you want to show.">Before export, make sure Strategic annotations are enabled and no line, label, or counter hides the country you want to show.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Reference Image">Reference Image</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Align an external map or sketch.">Align an external map or sketch.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Contains local image upload, opacity, scale, horizontal offset, and vertical offset controls. The project stores alignment values, while the image file must be uploaded again after reload.">Contains local image upload, opacity, scale, horizontal offset, and vertical offset controls. The project stores alignment values, while the image file must be uploaded again after reload.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You need to trace historical borders, compare a source map, or keep a visual planning layer beside the scenario.">You need to trace historical borders, compare a source map, or keep a visual planning layer beside the scenario.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Upload the image, set opacity for readability, adjust scale, then fine-tune horizontal and vertical offsets.">Upload the image, set opacity for readability, adjust scale, then fine-tune horizontal and vertical offsets.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="Hide or lower the reference before final export unless you intentionally want it visible in the composition.">Hide or lower the reference before final export unless you intentionally want it visible in the composition.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Export">Export</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Preview layers, resolution, and final output.">Preview layers, resolution, and final output.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Contains target selection, format, export resolution, preview, layer order, text stacks, and image adjustments. Final export is capped at 8K.">Contains target selection, format, export resolution, preview, layer order, text stacks, and image adjustments. Final export is capped at 8K.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="The map is ready for a composite image, per-layer PNG set, or bake pack handoff.">The map is ready for a composite image, per-layer PNG set, or bake pack handoff.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Choose target and resolution, check the preview, confirm layer order, then run the export.">Choose target and resolution, check the preview, confirm layer order, then run the export.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="Keep Strategic annotations enabled when frontlines, operational graphics, or unit counters must appear in the final output.">Keep Strategic annotations enabled when frontlines, operational graphics, or unit counters must appear in the final output.</span></li>
+                </ul>
+              </div>
+            </details>
           </div>
         </section>
 
         <section id="scenarioGuideSectionChecks" class="scenario-guide-manual-section hidden" data-guide-panel="checks" role="tabpanel" aria-labelledby="scenarioGuideTabChecks scenarioGuideChecksTitle" hidden>
           <h4 id="scenarioGuideChecksTitle" class="scenario-guide-manual-title" data-i18n="Success checks">Success checks</h4>
-          <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Before publishing, confirm strategic annotations are present, map labels are readable, and Export includes Strategic annotations.">Before publishing, confirm strategic annotations are present, map labels are readable, and Export includes Strategic annotations.</p>
-          </div>
-          <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="For project handoff, save a project JSON, reload it once, and confirm annotations, labels, and export settings still match the map you intend to publish.">For project handoff, save a project JSON, reload it once, and confirm annotations, labels, and export settings still match the map you intend to publish.</p>
+          <p class="scenario-guide-manual-lead" data-i18n="Treat saving and exporting as two separate handoff steps: save the editable project first, then export the publishable image or layer package.">Treat saving and exporting as two separate handoff steps: save the editable project first, then export the publishable image or layer package.</p>
+          <div class="scenario-guide-tool-accordion">
+            <details class="scenario-guide-tool-panel" open>
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Project JSON save">Project JSON save</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="The editable handoff file.">The editable handoff file.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Use Download Project to save the current editable state: scenario choice, ownership edits, appearance, transport, strategic annotations, reference alignment values, and export settings.">Use Download Project to save the current editable state: scenario choice, ownership edits, appearance, transport, strategic annotations, reference alignment values, and export settings.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You need a recovery point, a handoff file, or a before-and-after checkpoint before a broad edit.">You need a recovery point, a handoff file, or a before-and-after checkpoint before a broad edit.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Download the JSON, reload it once with Load Project, then confirm the same scenario, annotations, labels, and export settings return.">Download the JSON, reload it once with Load Project, then confirm the same scenario, annotations, labels, and export settings return.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="The image file used by Reference Image is not embedded; upload it again after loading, then verify the stored alignment values still fit.">The image file used by Reference Image is not embedded; upload it again after loading, then verify the stored alignment values still fit.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Export workflow">Export workflow</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="The publishable output step.">The publishable output step.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Use Open workbench to choose the output target, format, resolution, layer order, text stacks, and image adjustments. Export creates the final image, per-layer PNG set, or bake pack; it does not replace the editable project JSON.">Use Open workbench to choose the output target, format, resolution, layer order, text stacks, and image adjustments. Export creates the final image, per-layer PNG set, or bake pack; it does not replace the editable project JSON.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="The map is ready for publishing, screenshot handoff, layered editing, or bake-pack delivery.">The map is ready for publishing, screenshot handoff, layered editing, or bake-pack delivery.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Pick the target, set resolution, inspect preview, confirm layer order and strategic annotation visibility, then run export.">Pick the target, set resolution, inspect preview, confirm layer order and strategic annotation visibility, then run export.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="Composite image is for final viewing; per-layer PNG is for later editing; bake pack is for a bundled delivery with expected layers.">Composite image is for final viewing; per-layer PNG is for later editing; bake pack is for a bundled delivery with expected layers.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Final handoff check">Final handoff check</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="The last pass before sending files out.">The last pass before sending files out.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Before sending files out, keep one editable project JSON and one exported output from the same reviewed state. This keeps later fixes traceable.">Before sending files out, keep one editable project JSON and one exported output from the same reviewed state. This keeps later fixes traceable.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You are preparing a final image, sharing the scenario with another editor, or archiving a stable milestone.">You are preparing a final image, sharing the scenario with another editor, or archiving a stable milestone.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Review labels, borders, strategic annotations, reference visibility, and export target before the final click.">Review labels, borders, strategic annotations, reference visibility, and export target before the final click.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="If the exported result looks wrong, reopen the saved project JSON, fix the editable state, then export again from that corrected state.">If the exported result looks wrong, reopen the saved project JSON, fix the editable state, then export again from that corrected state.</span></li>
+                </ul>
+              </div>
+            </details>
           </div>
         </section>
       </div>

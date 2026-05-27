@@ -126,7 +126,7 @@
     },
     "Airport": {
       "en": "Airport",
-      "zh": "飞机场"
+      "zh": "机场"
     },
     "Airport carrier": {
       "en": "Airport carrier",
@@ -419,22 +419,6 @@
     "Base opacity": {
       "en": "Base opacity",
       "zh": "基础不透明度"
-    },
-    "Baseline compare unavailable": {
-      "en": "Baseline compare unavailable",
-      "zh": "基线比较不可用"
-    },
-    "Baseline preview": {
-      "en": "Baseline preview",
-      "zh": "基线预览中"
-    },
-    "Baseline unavailable": {
-      "en": "Baseline unavailable",
-      "zh": "基线不可用"
-    },
-    "Baseline unavailable for this family": {
-      "en": "Baseline unavailable for this family",
-      "zh": "这个家族没有可用基线"
     },
     "Basins & Valleys": {
       "en": "Basins & Valleys",
@@ -956,6 +940,10 @@
       "en": "Collapse",
       "zh": "收起"
     },
+    "Collapse left sidebar": {
+      "en": "Collapse left sidebar",
+      "zh": "收起左侧栏"
+    },
     "Collapse development dock": {
       "en": "Collapse development dock",
       "zh": "折叠开发工作区停靠栏"
@@ -963,6 +951,10 @@
     "Collapse quick dock": {
       "en": "Collapse quick dock",
       "zh": "折叠快捷编辑栏"
+    },
+    "Collapse right sidebar": {
+      "en": "Collapse right sidebar",
+      "zh": "收起右侧栏"
     },
     "Collapse scenario context": {
       "en": "Collapse scenario context",
@@ -1023,10 +1015,6 @@
     "Company managed": {
       "en": "Company managed",
       "zh": "公司管理"
-    },
-    "Compare baseline": {
-      "en": "Compare baseline",
-      "zh": "比较基线"
     },
     "Condominium": {
       "en": "Condominium",
@@ -1896,9 +1884,17 @@
       "en": "Expand",
       "zh": "展开"
     },
+    "Expand left sidebar": {
+      "en": "Expand left sidebar",
+      "zh": "展开左侧栏"
+    },
     "Expand quick dock": {
       "en": "Expand quick dock",
       "zh": "展开快捷栏"
+    },
+    "Expand right sidebar": {
+      "en": "Expand right sidebar",
+      "zh": "展开右侧栏"
     },
     "Expanded": {
       "en": "Expanded",
@@ -2226,7 +2222,7 @@
     },
     "Guide": {
       "en": "Guide",
-      "zh": "指导"
+      "zh": "指南"
     },
     "HOI4 Library": {
       "en": "HOI4 Library",
@@ -2802,7 +2798,7 @@
     },
     "Layers": {
       "en": "Layers",
-      "zh": "层数"
+      "zh": "图层"
     },
     "Legal designations": {
       "en": "Legal designations",
@@ -2879,10 +2875,6 @@
     "Live config": {
       "en": "Live config",
       "zh": "实时配置"
-    },
-    "Live working state": {
-      "en": "Live working state",
-      "zh": "当前工作状态"
     },
     "Load Anyway": {
       "en": "Load Anyway",
@@ -4126,7 +4118,7 @@
     },
     "Rail": {
       "en": "Rail",
-      "zh": "轨"
+      "zh": "铁路"
     },
     "Rail cargo station": {
       "en": "Rail cargo station",
@@ -4374,7 +4366,7 @@
     },
     "Road": {
       "en": "Road",
-      "zh": "路"
+      "zh": "道路"
     },
     "Road carrier": {
       "en": "Road carrier",

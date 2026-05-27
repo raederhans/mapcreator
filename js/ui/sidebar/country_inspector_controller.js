@@ -211,13 +211,21 @@ export function createCountryInspectorController({
     const side = document.createElement("div");
     side.className = "country-select-side";
 
+    let childrenMeta = null;
     if (hasChildren) {
-      const corner = document.createElement("div");
-      corner.className = "country-select-corner";
+      childrenMeta = document.createElement("div");
+      childrenMeta.className = "country-children-meta";
+      const metaCopy = document.createElement("span");
+      metaCopy.className = "country-children-meta-copy";
       const countBadge = document.createElement("span");
       countBadge.className = "country-children-count";
       countBadge.textContent = String(childCount);
-      corner.appendChild(countBadge);
+      const countLabel = document.createElement("span");
+      countLabel.className = "country-children-meta-label";
+      countLabel.textContent = t("Related Countries", "ui");
+      metaCopy.appendChild(countBadge);
+      metaCopy.appendChild(countLabel);
+      childrenMeta.appendChild(metaCopy);
 
       if (!hideExpandToggle) {
         const toggleBtn = document.createElement("button");
@@ -225,6 +233,7 @@ export function createCountryInspectorController({
         toggleBtn.className = "country-action-btn country-children-toggle";
         toggleBtn.textContent = isExpanded ? "v" : ">";
         toggleBtn.setAttribute("aria-label", `${childCount} ${t("Related Countries", "ui")}`);
+        toggleBtn.setAttribute("aria-expanded", String(isExpanded));
         toggleBtn.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -235,9 +244,8 @@ export function createCountryInspectorController({
           }
           renderList();
         });
-        corner.appendChild(toggleBtn);
+        childrenMeta.appendChild(toggleBtn);
       }
-      side.appendChild(corner);
     }
 
     const swatch = document.createElement("span");
@@ -250,6 +258,9 @@ export function createCountryInspectorController({
 
     side.appendChild(swatch);
     row.appendChild(side);
+    if (childrenMeta) {
+      row.appendChild(childrenMeta);
+    }
 
     if (!hasChildren && !hasReleasableActivateAction) {
       registerCountryRowRef(countryState.code, {
@@ -303,8 +314,9 @@ export function createCountryInspectorController({
           childList.appendChild(sectionLabel);
         }
         (Array.isArray(section?.states) ? section.states : []).forEach((childState) => {
+          const childShowsRelationMeta = !childState?.scenarioSubject;
           renderCountrySelectRow(childList, childState, {
-            showRelationMeta: true,
+            showRelationMeta: childShowsRelationMeta,
           });
         });
       });

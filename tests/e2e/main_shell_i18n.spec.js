@@ -33,7 +33,7 @@ test("main shell static i18n updates key shell labels", async ({ page }, testInf
       currentLanguage: "en",
       leftPanelText: "Panels",
       rightPanelText: "Inspector",
-      languageButtonText: "EN / ZH",
+      languageButtonText: "EN",
     });
   } catch (error) {
     const smokeFailureSnapshot = await readSmokeFailureSnapshot(page, mergeSmokeFailureSelectors(

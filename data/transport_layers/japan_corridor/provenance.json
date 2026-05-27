@@ -27,7 +27,8 @@
     "translateX": 0.0,
     "translateY": 0.0,
     "minScale": 1.0,
-    "maxScale": 3.0
+    "maxScale": 3.0,
+    "rotationQuarterTurns": 1
   },
   "lod": {
     "overview": {

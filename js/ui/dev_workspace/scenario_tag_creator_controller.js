@@ -33,6 +33,7 @@ const TAG_CREATOR_FALLBACK_SWATCHES = [
   "#708238",
   "#8E6C88",
 ];
+const TAG_CREATOR_PALETTE_SWATCH_LIMIT = 14;
 const DEFAULT_TAG_CREATOR_COLOR = TAG_CREATOR_FALLBACK_SWATCHES[0];
 
 function ui(key) {
@@ -69,7 +70,6 @@ export function createScenarioTagCreatorController({
 }) {
   const scenarioTagCreatorPanel = panel.querySelector("#devScenarioTagCreatorPanel");
   const scenarioTagCreatorTitle = panel.querySelector("#devScenarioTagCreatorTitle");
-  const scenarioTagCreatorHint = panel.querySelector("#devScenarioTagCreatorHint");
   const scenarioTagCreatorMeta = panel.querySelector("#devScenarioTagCreatorMeta");
   const scenarioTagInput = panel.querySelector("#devScenarioTagInput");
   const scenarioTagFieldStatus = panel.querySelector("#devScenarioTagFieldStatus");
@@ -119,6 +119,9 @@ export function createScenarioTagCreatorController({
     const nextRecentColors = needsRecentLoad
       ? readStoredTagCreatorRecentColors()
       : sanitizeScenarioColorList(current.recentColors);
+    // 这里每次都走一次轻量归一化：
+    // localStorage、旧 runtimeState 和当前默认值都会汇到同一份面板状态，
+    // 避免 tag creator 首次打开和场景切换后留下半旧半新的字段。
     const nextState = {
       duplicateTag: false,
       tagLengthHint: "",
@@ -173,7 +176,7 @@ export function createScenarioTagCreatorController({
       : [];
     const paletteColors = Array.from(new Set([...paletteSwatches, ...TAG_CREATOR_FALLBACK_SWATCHES]))
       .filter((color) => /^#[0-9A-F]{6}$/.test(color))
-      .slice(0, 18);
+      .slice(0, TAG_CREATOR_PALETTE_SWATCH_LIMIT);
     const recentColors = sanitizeScenarioColorList(ensureTagCreatorState().recentColors);
     return {
       paletteColors,
@@ -279,16 +282,6 @@ export function createScenarioTagCreatorController({
     };
   };
 
-  const resolveTagCreatorHint = (model) => {
-    if (!runtimeState.activeScenarioId) {
-      return ui("Activate a scenario to create and assign a new tag.");
-    }
-    if (!model.selectionCount) {
-      return ui("Select one or more land features to create a new scenario tag.");
-    }
-    return ui("Create a new scenario tag, optionally set a parent owner, and assign the current selection immediately.");
-  };
-
   const normalizeScenarioInspectorGroupIdInput = (value) => {
     return String(value || "")
       .trim()
@@ -346,6 +339,9 @@ export function createScenarioTagCreatorController({
     const draftGroupLabel = normalizeScenarioNameInput(input.inspectorGroupLabel);
     const draftGroupAnchorId = String(input.inspectorGroupAnchorId || "").trim();
     const hasDraftValues = !!(draftGroupId || draftGroupLabel || draftGroupAnchorId);
+    // tag creator 支持两条路：
+    // 直接选已有 inspector group，或者现场创建一组新的 id/label/anchor。
+    // 只要草稿字段出现，就优先按“新建组”合同校验，避免选中旧组时悄悄吞掉半写好的新组输入。
     if (hasDraftValues) {
       if (!draftGroupId) {
         return { ok: false, message: ui("New inspector group id is required.") };
@@ -613,6 +609,8 @@ export function createScenarioTagCreatorController({
       : (response?.country && typeof response.country === "object"
         ? response.country
         : (response?.scenarioCountry && typeof response.scenarioCountry === "object" ? response.scenarioCountry : null));
+    // 服务端回包只覆盖它真正确认过的字段；
+    // 本地先用 payload 组一份完整 entry，再让 response 覆盖，能保证新建后 sidebar/runtime 立刻有可用对象。
     const nextCountryEntry = responseCountry ? { ...createdEntry, ...responseCountry, tag: normalizedTag } : createdEntry;
     upsertScenarioCountryRuntimeEntry(normalizedTag, nextCountryEntry);
     applyOwnerControllerAssignmentsToFeatureIds(
@@ -738,9 +736,6 @@ export function createScenarioTagCreatorController({
       scenarioTagCreatorTitle.textContent = hasActiveScenario
         ? String(runtimeState.activeScenarioManifest?.display_name || runtimeState.activeScenarioId || "")
         : ui("No active scenario");
-    }
-    if (scenarioTagCreatorHint) {
-      scenarioTagCreatorHint.textContent = resolveTagCreatorHint(tagCreatorModel);
     }
     renderMetaRows(scenarioTagCreatorMeta, buildOwnershipMetaRows(tagCreatorModel));
 

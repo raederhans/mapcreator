@@ -137,7 +137,7 @@ test("project support panels and inspector search stay polished and inset", asyn
     }
   });
 
-  await expect(page.locator("#exportProjectSection .sidebar-help-copy")).toHaveText("Preview layers, format, and resolution before export.");
+  await expect(page.locator("#exportProjectSection > .inspector-panel-body > .sidebar-help-copy")).toHaveCount(0);
   await expect(page.locator("#inspectorUtilitiesSection > .inspector-panel-body > .inspector-utilities-shell > .sidebar-help-copy")).toHaveCount(0);
 
   const projectMetrics = await page.evaluate(() => {
@@ -559,7 +559,7 @@ test("phase 03 guide modal closes cleanly from backdrop without leaving drawer s
   await expect(page.locator("#scenarioGuideBtn")).toBeFocused();
 });
 
-test("phase 03 transport compare runtime strings localize across live states", async ({ page }) => {
+test("phase 03 transport preview omits compare controls", async ({ page }) => {
   test.setTimeout(240_000);
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
@@ -567,39 +567,14 @@ test("phase 03 transport compare runtime strings localize across live states", a
   const transportTrigger = page.locator("#zoomControls #scenarioTransportWorkbenchBtn");
   const compareBtn = page.locator("#transportWorkbenchCompareBtn");
   const compareStatus = page.locator("#transportWorkbenchCompareStatus");
-  const roadTab = page.locator('[data-transport-family="road"]');
-  const layersTab = page.locator('[data-transport-family="layers"]');
 
   await transportTrigger.click();
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
-  await expect(compareBtn).toHaveText("Compare baseline");
-  await expect(compareStatus).toHaveText("Live working state");
-
-  await compareBtn.focus();
-  await page.keyboard.down("Enter");
-  await expect(compareStatus).toHaveText("Baseline preview");
-  await page.keyboard.up("Enter");
-  await expect(compareStatus).toHaveText("Live working state");
-
-  await layersTab.click();
-  await expect(compareBtn).toHaveText("Baseline unavailable");
-  await expect(compareStatus).toHaveText("Local layer board");
-
-  await page.evaluate(() => {
-    document.getElementById("btnToggleLang")?.click();
-  });
-  await expect(compareBtn).toHaveText("\u57fa\u7ebf\u4e0d\u53ef\u7528");
-  await expect(compareStatus).toHaveText("\u672c\u5730\u56fe\u5c42\u6392\u5e8f\u677f");
-
-  await roadTab.click();
-  await expect(compareBtn).toHaveText("\u6bd4\u8f83\u57fa\u7ebf");
-  await expect(compareStatus).toHaveText("\u5f53\u524d\u5de5\u4f5c\u72b6\u6001");
-
-  await compareBtn.focus();
-  await page.keyboard.down("Enter");
-  await expect(compareStatus).toHaveText("\u57fa\u7ebf\u9884\u89c8\u4e2d");
-  await page.keyboard.up("Enter");
-  await expect(compareStatus).toHaveText("\u5f53\u524d\u5de5\u4f5c\u72b6\u6001");
+  await expect(page.locator("#transportWorkbenchPreviewTitle")).toHaveCount(1);
+  await expect(page.locator("#transportWorkbenchZoomInBtn")).toHaveCount(1);
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveCount(1);
+  await expect(compareBtn).toHaveCount(0);
+  await expect(compareStatus).toHaveCount(0);
 });
 
 test("transport visual mode and apply bridge stay aligned across appearance and workbench", async ({ page }) => {
@@ -667,7 +642,7 @@ test("transport visual mode and apply bridge stay aligned across appearance and 
   await page.locator('[data-transport-family="layers"]').click();
   await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench-only family");
   await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
-  await expect(page.locator("#transportWorkbenchCompareStatus")).toHaveText("Local layer board");
+  await expect(page.locator("#transportWorkbenchCompareStatus")).toHaveCount(0);
 
   await page.locator('[data-transport-family="mineral_resources"]').click();
   await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");

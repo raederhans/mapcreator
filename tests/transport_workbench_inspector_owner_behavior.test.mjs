@@ -424,11 +424,10 @@ test("owner factory injects layer metadata and keeps translated lens label", () 
     family: { label: "Road", previewTitle: "Japan road" },
     previewSnapshot: { status: "ready" },
     dataContract: { packs: ["japan_road"], geometryKind: "line" },
-    compareHeld: true,
     rightDeckLabel: "Translated right deck",
   });
   assert.equal(rowValue(summaryRows, "Right deck"), "Translated right deck");
-  assert.equal(rowValue(summaryRows, "Compare"), "Holding baseline");
+  assert.equal(summaryRows.some(([label]) => label === "Compare"), false);
 });
 
 test("inspector owner skips detail DOM rebuilds when the rendered model is unchanged", () => {

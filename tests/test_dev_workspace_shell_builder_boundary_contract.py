@@ -6,6 +6,8 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
+DEV_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "dev_state.js"
+STYLE_CSS = REPO_ROOT / "css" / "style.css"
 
 
 class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
@@ -54,6 +56,65 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
         self.assertIn('id="devQuickRebuildBordersBtn"', owner_content)
         self.assertIn('applyDeclarativeTranslations(section);', owner_content)
         self.assertIn('applyDeclarativeTranslations(quickbar);', owner_content)
+        self.assertNotIn('id="devScenarioTagCreatorHint"', owner_content)
+        self.assertNotIn('id="devLocalRuntimeLabel"', owner_content)
+        self.assertNotIn('id="devRuntimeMeta"', owner_content)
+
+    def test_local_runtime_diagnostics_panel_is_removed(self):
+        host_content = DEV_WORKSPACE_JS.read_text(encoding="utf-8")
+        owner_content = DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        state_content = DEV_STATE_JS.read_text(encoding="utf-8")
+
+        for token in [
+            "Local Runtime",
+            "devRuntimeTitle",
+            "devRuntimeHint",
+            "devRuntimeMeta",
+            "resolveRuntimeRows",
+            "loadRuntimeMeta",
+            "/.runtime/dev/active_server.json",
+        ]:
+            self.assertNotIn(token, host_content)
+            self.assertNotIn(token, owner_content)
+            self.assertNotIn(token, state_content)
+
+    def test_tag_creator_hint_copy_is_removed_from_controller(self):
+        owner_content = DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        controller_content = (REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_tag_creator_controller.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("devScenarioTagCreatorHint", owner_content)
+        self.assertNotIn("devScenarioTagCreatorHint", controller_content)
+        self.assertNotIn("resolveTagCreatorHint", controller_content)
+        self.assertNotIn("Create a new scenario tag, optionally set a parent owner", controller_content)
+
+    def test_collapsed_dev_quickbar_keeps_usable_width(self):
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+
+        for token in [
+            ".bottom-dock.dev-workspace-mode.is-collapsed {",
+            "width: min(760px, calc(100% - 44px));",
+            "height: auto;",
+            "padding: 8px 54px 8px 10px;",
+            "contain: none;",
+            ".bottom-dock.dev-workspace-mode.is-collapsed .dev-workspace-quickbar {",
+            "width: 100%;",
+        ]:
+            self.assertIn(token, css_content)
+
+    def test_tag_inspector_panel_uses_compact_self_sized_layout(self):
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+
+        for token in [
+            "#devScenarioTagInspectorPanel {",
+            "align-self: start;",
+            "gap: 5px;",
+            "padding: 8px 9px;",
+            "#devScenarioTagInspectorPanel .dev-workspace-input,",
+            "#devScenarioTagInspectorPanel .dev-workspace-select {",
+            "min-height: 30px;",
+            "#devScenarioTagInspectorPanel .dev-workspace-actions > .btn-secondary,",
+        ]:
+            self.assertIn(token, css_content)
 
 
 if __name__ == "__main__":

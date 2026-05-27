@@ -50,7 +50,6 @@ export function createDevWorkspacePanel(bottomDock) {
       <div id="devScenarioTagCreatorPanel" class="dev-workspace-panel dev-workspace-panel-wide hidden" data-dev-category="scenario">
         <div id="devScenarioTagCreatorLabel" class="dev-workspace-panel-title" data-i18n="Scenario Tag Creator"></div>
         <div id="devScenarioTagCreatorTitle" class="section-header-block"></div>
-        <p id="devScenarioTagCreatorHint" class="dev-workspace-note"></p>
         <div id="devScenarioTagCreatorMeta" class="dev-workspace-meta"></div>
         <div class="dev-workspace-form-grid">
           <div class="dev-workspace-form-field">
@@ -275,12 +274,6 @@ export function createDevWorkspacePanel(bottomDock) {
           <button id="devMacroOwnerBtn" type="button" class="btn-secondary" data-i18n="Fill Owner Scope"></button>
           <button id="devMacroSelectionBtn" type="button" class="btn-secondary" data-i18n="Fill Multi-Selection"></button>
         </div>
-      </div>
-      <div class="dev-workspace-panel" data-dev-category="runtime">
-        <div id="devLocalRuntimeLabel" class="dev-workspace-panel-title" data-i18n="Local Runtime"></div>
-        <div id="devRuntimeTitle" class="section-header-block" data-i18n="Runtime metadata unavailable"></div>
-        <p id="devRuntimeHint" class="dev-workspace-note"></p>
-        <div id="devRuntimeMeta" class="dev-workspace-meta"></div>
       </div>
     </div>
   `;

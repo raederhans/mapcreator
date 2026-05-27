@@ -39,7 +39,6 @@ import {
 const state = runtimeState;
 
 const DEV_WORKSPACE_STORAGE_KEY = "mapcreator_dev_workspace_expanded";
-const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 function ui(key) {
   return t(key, "ui");
@@ -59,11 +58,6 @@ function formatUi(key, replacements = {}) {
 
 function localizeSelectionSummary(count) {
   return formatUi("{count} features selected.", { count });
-}
-
-function isLocalHost() {
-  const host = String(globalThis.location?.hostname || "").trim().toLowerCase();
-  return LOCAL_HOSTS.has(host);
 }
 
 function readStoredExpanded() {
@@ -658,33 +652,6 @@ function resolveRenderRows() {
   ].filter(([, value]) => String(value || "").trim());
 }
 
-function resolveRuntimeRows() {
-  const runtimeMeta = runtimeState.devRuntimeMeta;
-  if (!runtimeMeta || typeof runtimeMeta !== "object") {
-    return {
-      title: "Runtime metadata unavailable",
-      hint: isLocalHost()
-        ? (runtimeState.devRuntimeMetaError || ui("Runtime metadata not available yet."))
-        : ui("Runtime metadata is only available on the local dev server."),
-      rows: [],
-    };
-  }
-  return {
-    title: String(runtimeMeta.url || "Local runtime"),
-    hint: String(runtimeMeta.open_path || "/"),
-    rows: [
-      ["URL", String(runtimeMeta.url || "")],
-      [ui("Port"), String(runtimeMeta.port || "")],
-      ["PID", String(runtimeMeta.pid || "")],
-      [ui("Started"), String(runtimeMeta.started_at || "")],
-      [ui("Open Path"), String(runtimeMeta.open_path || "")],
-      ["CWD", String(runtimeMeta.cwd || "")],
-      [ui("Render Profile"), String(runtimeMeta.render_profile_default || "")],
-      [ui("Topology Variant"), String(runtimeMeta.topology_variant || "")],
-    ].filter(([, value]) => String(value || "").trim()),
-  };
-}
-
 function renderMetaRows(container, rows) {
   if (!container) return;
   container.replaceChildren();
@@ -739,30 +706,6 @@ function syncSelectOptions(select, options, { placeholderLabel = "", placeholder
   });
   select.replaceChildren(fragment);
   select.dataset.optionSignature = signature;
-}
-
-async function loadRuntimeMeta() {
-  if (!isLocalHost()) {
-    runtimeState.devRuntimeMeta = null;
-    runtimeState.devRuntimeMetaError = ui("Runtime metadata is only available on localhost.");
-    runtimeState.updateDevWorkspaceUIFn?.();
-    return;
-  }
-
-  try {
-    const url = new URL("/.runtime/dev/active_server.json", globalThis.location?.origin || globalThis.location?.href);
-    url.searchParams.set("ts", String(Date.now()));
-    const response = await fetch(url.href, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    runtimeState.devRuntimeMeta = await response.json();
-    runtimeState.devRuntimeMetaError = "";
-  } catch (error) {
-    runtimeState.devRuntimeMeta = null;
-    runtimeState.devRuntimeMetaError = String(error?.message || ui("Unable to fetch runtime metadata."));
-  }
-  runtimeState.updateDevWorkspaceUIFn?.();
 }
 
 function bindButtonAction(button, action) {
@@ -863,9 +806,6 @@ function initDevWorkspace() {
   const scenarioOwnershipPanel = panel.querySelector("#devScenarioOwnershipPanel");
   const devQuickRebuildBordersBtn = quickbar.querySelector("#devQuickRebuildBordersBtn");
   const renderStatusMeta = panel.querySelector("#devRenderStatusMeta");
-  const runtimeTitle = panel.querySelector("#devRuntimeTitle");
-  const runtimeHint = panel.querySelector("#devRuntimeHint");
-  const runtimeMeta = panel.querySelector("#devRuntimeMeta");
   const selectionSummary = panel.querySelector("#devSelectionSummary");
   const selectionPreview = panel.querySelector("#devSelectionPreview");
   const selectionSortMode = panel.querySelector("#devSelectionSortMode");
@@ -932,15 +872,6 @@ function initDevWorkspace() {
     });
 
     renderMetaRows(renderStatusMeta, resolveRenderRows());
-
-    const runtime = resolveRuntimeRows();
-    if (runtimeTitle) {
-      runtimeTitle.textContent = runtime.title;
-    }
-    if (runtimeHint) {
-      runtimeHint.textContent = runtime.hint;
-    }
-    renderMetaRows(runtimeMeta, runtime.rows);
 
     if (selectionSortMode && selectionSortMode.value !== runtimeState.devSelectionSortMode) {
       selectionSortMode.value = runtimeState.devSelectionSortMode;
@@ -1043,7 +974,6 @@ function initDevWorkspace() {
     const next = !runtimeState.ui.devWorkspaceExpanded;
     setExpandedState(next, { bottomDock, panel, toggleBtn });
     if (next) {
-      loadRuntimeMeta();
       panel.scrollTop = 0;
       panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
@@ -1157,7 +1087,6 @@ function initDevWorkspace() {
     persist: false,
   });
   renderWorkspace();
-  loadRuntimeMeta();
 }
 
 export { getScenarioGeoLocaleEntry, initDevWorkspace };

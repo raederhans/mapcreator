@@ -68,7 +68,7 @@ test("transport workbench state owner restores family-local active pack choices"
 });
 
 test("transport workbench state owner returns and clears drawer restore flags on close", () => {
-  const { owner, runtimeState } = createOwner({ compareHeld: true });
+  const { owner, runtimeState } = createOwner({});
 
   owner.prepareOpenState({ restoreLeftDrawer: true, restoreRightDrawer: true });
   owner.setOpenState(true);
@@ -80,23 +80,22 @@ test("transport workbench state owner returns and clears drawer restore flags on
     restoreRightDrawer: true,
   });
   assert.equal(runtimeState.transportWorkbenchUi.open, false);
-  assert.equal(runtimeState.transportWorkbenchUi.compareHeld, false);
   assert.equal(runtimeState.transportWorkbenchUi.restoreLeftDrawer, false);
   assert.equal(runtimeState.transportWorkbenchUi.restoreRightDrawer, false);
 });
 
-test("transport workbench state owner keeps compare mode read-only for family config updates", () => {
+test("transport workbench state owner removes stale compare state before config updates", () => {
   const { owner } = createOwner({
     activeFamily: "road",
+    compareHeld: true,
     familyConfigs: { road: { roadClass: ["motorway"] } },
   });
-  owner.ensureUiState();
+  const uiState = owner.ensureUiState();
 
-  assert.equal(owner.setCompareHeld(true), true);
-  const beforeConfig = owner.getWorkingConfig("road");
-  assert.equal(owner.updateFamilyConfig("road", "roadClass", true, { appendValue: "trunk" }), false);
+  assert.equal(Object.hasOwn(uiState, "compareHeld"), false);
+  assert.equal(owner.updateFamilyConfig("road", "roadClass", true, { appendValue: "trunk" }), true);
 
-  assert.deepEqual(owner.getWorkingConfig("road"), beforeConfig);
+  assert.deepEqual(owner.getWorkingConfig("road").roadClass, ["motorway", "trunk"]);
 });
 
 test("transport workbench state owner limits display config writes to density families", () => {

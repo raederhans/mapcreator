@@ -73,7 +73,6 @@ function createHarness({ applyEnabled = true, rejectApply = false, popoverHandle
     infoButton: new TestElement("button"),
     closeButton: new TestElement("button"),
     resetButton: new TestElement("button"),
-    compareButton: new TestElement("button"),
     zoomOutButton: new TestElement("button"),
     zoomInButton: new TestElement("button"),
     rotateButton: new TestElement("button"),
@@ -104,7 +103,6 @@ function createHarness({ applyEnabled = true, rejectApply = false, popoverHandle
       },
       toggleInfoPopover: () => events.push("info"),
       resetView: () => events.push("reset"),
-      setCompareHeld: (nextHeld) => events.push(`compare:${!!nextHeld}`),
       stepCarrierZoom: (step) => events.push(`zoom:${step}`),
       rotateCarrier: () => events.push("rotate"),
       syncPreviewControls: () => events.push("sync-preview"),
@@ -144,7 +142,6 @@ test("transport workbench event owner binds chrome actions once", async () => {
   harness.owner.bind();
 
   assert.equal(harness.nodes.scenarioButton.listenerCount("click"), 1);
-  assert.equal(harness.nodes.compareButton.listenerCount("pointerdown"), 1);
   assert.equal(harness.documentRef.listenerCount("keydown"), 1);
   assert.equal(harness.documentRef.body.dataset.transportWorkbenchEscapeBound, "true");
 
@@ -163,36 +160,6 @@ test("transport workbench event owner binds chrome actions once", async () => {
     "reset",
     "open:false:none",
   ]);
-});
-
-test("transport workbench event owner preserves compare pointer and keyboard semantics", async () => {
-  const harness = createHarness();
-  let preventDefaultCount = 0;
-  harness.owner.bind();
-
-  await harness.nodes.compareButton.dispatch("pointerdown", { button: 2 });
-  await harness.nodes.compareButton.dispatch("pointerdown", { button: 0 });
-  await harness.nodes.compareButton.dispatch("pointerleave");
-  await harness.nodes.compareButton.dispatch("keydown", {
-    key: " ",
-    preventDefault() {
-      preventDefaultCount += 1;
-    },
-  });
-  await harness.nodes.compareButton.dispatch("keyup", {
-    key: "Enter",
-    preventDefault() {
-      preventDefaultCount += 1;
-    },
-  });
-
-  assert.deepEqual(harness.events, [
-    "compare:true",
-    "compare:false",
-    "compare:true",
-    "compare:false",
-  ]);
-  assert.equal(preventDefaultCount, 2);
 });
 
 test("transport workbench event owner keeps preview controls, pack, family, and inspector dispatch narrow", async () => {
