@@ -235,6 +235,16 @@ a.button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
+#why.section--muted {
+  border-color: rgba(31, 111, 235, 0.14);
+  background:
+    linear-gradient(145deg, rgba(31, 111, 235, 0.08), rgba(31, 111, 235, 0) 34rem),
+    linear-gradient(180deg, #eaf3ff 0%, #edf7ff 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 26px 72px rgba(31, 111, 235, 0.08);
+}
+
 .section--dark,
 .section--closing {
   color: #fff;
