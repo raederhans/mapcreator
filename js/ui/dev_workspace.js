@@ -578,7 +578,6 @@ function resolveInspectorRows() {
   if (!hit?.id) {
     return {
       title: "No active feature",
-      hint: ui("Hover a region or click one to inspect live debug metadata."),
       rows: [],
     };
   }
@@ -611,7 +610,6 @@ function resolveInspectorRows() {
 
   return {
     title: resolveFeatureName(feature, hit.id),
-    hint: tooltipModel.countryDisplayName || tooltipModel.countryCode || "",
     rows,
   };
 }
@@ -788,7 +786,6 @@ function initDevWorkspace() {
   const categoryTabButtons = Array.from(panel.querySelectorAll("[data-dev-workspace-category]"));
 
   const featureInspectorTitle = panel.querySelector("#devFeatureInspectorTitle");
-  const featureInspectorHint = panel.querySelector("#devFeatureInspectorHint");
   const featureInspectorMeta = panel.querySelector("#devFeatureInspectorMeta");
   const scenarioTagCreatorPanel = panel.querySelector("#devScenarioTagCreatorPanel");
   const scenarioTagInspectorPanel = panel.querySelector("#devScenarioTagInspectorPanel");
@@ -825,9 +822,6 @@ function initDevWorkspace() {
     const inspector = resolveInspectorRows();
     if (featureInspectorTitle) {
       featureInspectorTitle.textContent = inspector.title;
-    }
-    if (featureInspectorHint) {
-      featureInspectorHint.textContent = inspector.hint || ui("Hover a region or click one to inspect live debug metadata.");
     }
     renderMetaRows(featureInspectorMeta, inspector.rows);
 

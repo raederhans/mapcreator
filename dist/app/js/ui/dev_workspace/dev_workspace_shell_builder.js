@@ -150,7 +150,6 @@ export function createDevWorkspacePanel(bottomDock) {
       <div class="dev-workspace-panel" data-dev-category="selection">
         <div id="devFeatureInspectorLabel" class="dev-workspace-panel-title" data-i18n="Feature Inspector"></div>
         <div id="devFeatureInspectorTitle" class="section-header-block" data-i18n="No active feature"></div>
-        <p id="devFeatureInspectorHint" class="dev-workspace-note" data-i18n="Hover a region or click one to inspect live debug metadata."></p>
         <div id="devFeatureInspectorMeta" class="dev-workspace-meta"></div>
       </div>
       <div id="devScenarioTagInspectorPanel" class="dev-workspace-panel hidden" data-dev-category="selection">

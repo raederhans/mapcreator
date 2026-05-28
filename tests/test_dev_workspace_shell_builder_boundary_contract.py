@@ -5,6 +5,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
+DIST_DEV_WORKSPACE_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace.js"
 DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
 DIST_DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
 DEV_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "dev_state.js"
@@ -61,6 +62,21 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
         self.assertNotIn('id="devScenarioTagCreatorHint"', owner_content)
         self.assertNotIn('id="devLocalRuntimeLabel"', owner_content)
         self.assertNotIn('id="devRuntimeMeta"', owner_content)
+
+    def test_feature_inspector_duplicate_hint_is_removed(self):
+        contents = [
+            DEV_WORKSPACE_JS.read_text(encoding="utf-8"),
+            DIST_DEV_WORKSPACE_JS.read_text(encoding="utf-8"),
+            DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8"),
+            DIST_DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8"),
+        ]
+
+        for token in [
+            "devFeatureInspectorHint",
+            "Hover a region or click one to inspect live debug metadata.",
+        ]:
+            for content in contents:
+                self.assertNotIn(token, content)
 
     def test_local_runtime_diagnostics_panel_is_removed(self):
         host_content = DEV_WORKSPACE_JS.read_text(encoding="utf-8")

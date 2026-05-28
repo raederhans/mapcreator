@@ -6530,7 +6530,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_shell_builder.js",
-      "size_bytes": 27801
+      "size_bytes": 27652
     },
     {
       "path": "app/js/ui/dev_workspace/district_editor_controller.js",
@@ -6550,7 +6550,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace.js",
-      "size_bytes": 46870
+      "size_bytes": 46450
     },
     {
       "path": "app/js/ui/i18n.js",
@@ -6874,7 +6874,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217988
+      "size_bytes": 217987
     },
     {
       "path": "styles.css",
@@ -6891,5 +6891,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001060726
+  "total_bytes": 1001060156
 }
