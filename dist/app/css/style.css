@@ -8003,8 +8003,16 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
 }
 
 .dev-workspace-quick-owner-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) minmax(120px, 0.82fr);
   align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dev-workspace-quick-owner-controls {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(30px, 1fr));
   gap: 6px;
   min-width: 0;
 }
@@ -8033,6 +8041,14 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
   white-space: nowrap;
   font-size: 0.74rem;
   min-width: 0;
+}
+
+.dev-workspace-quick-owner-controls .btn-secondary {
+  min-height: 30px;
+  padding: 0 8px;
+  white-space: normal;
+  line-height: 1.1;
+  font-size: 0.71rem;
 }
 
 .dev-workspace-quick-secondary .btn-secondary,

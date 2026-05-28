@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 SELECTION_OWNERSHIP_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "selection_ownership_controller.js"
+DIST_SELECTION_OWNERSHIP_CONTROLLER_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "selection_ownership_controller.js"
 
 
 class DevWorkspaceSelectionOwnershipBoundaryContractTest(unittest.TestCase):
@@ -26,6 +27,10 @@ class DevWorkspaceSelectionOwnershipBoundaryContractTest(unittest.TestCase):
         self.assertIn('bindButtonAction(applyOwnerBtn, () => {', owner_content)
         self.assertIn('bindButtonAction(resetOwnerBtn, () => {', owner_content)
         self.assertIn('bindButtonAction(saveOwnersBtn, async () => {', owner_content)
+        self.assertIn('const devQuickRemoveSelectedBtn = quickbar.querySelector("#devQuickRemoveSelectedBtn");', owner_content)
+        self.assertIn('const devSelectionToggleSelectedBtn = panel.querySelector("#devSelectionToggleSelectedBtn");', owner_content)
+        self.assertIn('bindButtonAction(devQuickRemoveSelectedBtn, () => {', owner_content)
+        self.assertIn('devSelectionToggleSelectedBtn?.click();', owner_content)
         self.assertIn('bindButtonAction(devQuickUseTagBtn, () => {', owner_content)
         self.assertIsNone(re.search(r'bindButtonAction\(panel\.querySelector\("#devScenarioApplyOwnerBtn"\),', donor_content))
         self.assertIsNone(re.search(r'bindButtonAction\(panel\.querySelector\("#devScenarioResetOwnerBtn"\),', donor_content))
@@ -55,6 +60,24 @@ class DevWorkspaceSelectionOwnershipBoundaryContractTest(unittest.TestCase):
         self.assertIn('postDevScenarioMutation("/__dev/scenario/ownership/save", {', owner_content)
         self.assertNotIn('fetch("/__dev/scenario/ownership/save"', owner_content)
         self.assertIn('runtimeState.devScenarioEditor = {', owner_content)
+
+    def test_selection_ownership_controller_is_synced_to_dist_app(self):
+        self.assertEqual(
+            SELECTION_OWNERSHIP_CONTROLLER_JS.read_text(encoding="utf-8"),
+            DIST_SELECTION_OWNERSHIP_CONTROLLER_JS.read_text(encoding="utf-8"),
+        )
+
+    def test_quickbar_remove_selected_reuses_selection_clipboard_toggle(self):
+        owner_content = SELECTION_OWNERSHIP_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn('const devQuickRemoveSelectedBtn = quickbar.querySelector("#devQuickRemoveSelectedBtn");', owner_content)
+        self.assertIn('const devSelectionToggleSelectedBtn = panel.querySelector("#devSelectionToggleSelectedBtn");', owner_content)
+        self.assertIn('const resolveSelectedSelectionId = () => {', owner_content)
+        self.assertIn("const selectedFeature = selectedId ? runtimeState.landIndex?.get(selectedId) : null;", owner_content)
+        self.assertIn('runtimeState.devSelectionFeatureIds.has(selectedId)', owner_content)
+        self.assertIn('devQuickRemoveSelectedBtn.disabled = !hasActiveScenario || !resolveSelectedSelectionId() || !devSelectionToggleSelectedBtn;', owner_content)
+        self.assertIn('bindButtonAction(devQuickRemoveSelectedBtn, () => {', owner_content)
+        self.assertIn('devSelectionToggleSelectedBtn?.click();', owner_content)
 
 
 if __name__ == "__main__":

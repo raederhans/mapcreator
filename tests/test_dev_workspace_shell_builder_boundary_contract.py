@@ -57,11 +57,40 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
         self.assertIn('id="devScenarioDistrictPanel"', owner_content)
         self.assertIn('quickbar.id = "devWorkspaceQuickbar";', owner_content)
         self.assertIn('id="devQuickRebuildBordersBtn"', owner_content)
+        self.assertIn('class="dev-workspace-quick-owner-controls"', owner_content)
+        self.assertIn('id="devQuickRemoveSelectedBtn"', owner_content)
+        self.assertIn('id="devQuickUseTagBtn"', owner_content)
         self.assertIn('applyDeclarativeTranslations(section);', owner_content)
         self.assertIn('applyDeclarativeTranslations(quickbar);', owner_content)
         self.assertNotIn('id="devScenarioTagCreatorHint"', owner_content)
         self.assertNotIn('id="devLocalRuntimeLabel"', owner_content)
         self.assertNotIn('id="devRuntimeMeta"', owner_content)
+
+    def test_quickbar_owner_controls_keep_compact_stacked_layout(self):
+        owner_content = DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        dist_owner_content = DIST_DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+        dist_css_content = DIST_STYLE_CSS.read_text(encoding="utf-8")
+
+        for token in [
+            'class="dev-workspace-quick-owner-controls"',
+            'id="devQuickRemoveSelectedBtn"',
+            'data-i18n="Remove Selection"',
+            'id="devQuickUseTagBtn"',
+        ]:
+            self.assertIn(token, owner_content)
+            self.assertIn(token, dist_owner_content)
+
+        for token in [
+            ".dev-workspace-quick-owner-row {",
+            "grid-template-columns: minmax(96px, 1fr) minmax(120px, 0.82fr);",
+            ".dev-workspace-quick-owner-controls {",
+            "grid-template-rows: repeat(2, minmax(30px, 1fr));",
+            ".dev-workspace-quick-owner-controls .btn-secondary {",
+            "white-space: normal;",
+        ]:
+            self.assertIn(token, css_content)
+            self.assertIn(token, dist_css_content)
 
     def test_feature_inspector_duplicate_hint_is_removed(self):
         contents = [

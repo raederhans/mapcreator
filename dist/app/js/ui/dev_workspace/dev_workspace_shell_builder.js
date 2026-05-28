@@ -321,7 +321,10 @@ export function createDevWorkspaceQuickbar(bottomDock) {
           placeholder="GER"
           data-i18n-title="Enter owner tag (e.g. GER, FRA, BRA)"
         />
-        <button id="devQuickUseTagBtn" type="button" class="btn-secondary" data-i18n="Use Selection Tag" data-i18n-title="Copy the selected feature's tag into the owner input"></button>
+        <div class="dev-workspace-quick-owner-controls">
+          <button id="devQuickRemoveSelectedBtn" type="button" class="btn-secondary" data-i18n="Remove Selection"></button>
+          <button id="devQuickUseTagBtn" type="button" class="btn-secondary" data-i18n="Use Selection Tag" data-i18n-title="Copy the selected feature's tag into the owner input"></button>
+        </div>
       </div>
     </div>
     <div class="dev-workspace-quick-actions" role="toolbar" aria-label="Development quick actions" data-i18n-aria-label="Development quick actions">

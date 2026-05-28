@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 239300
+      "size_bytes": 239821
     },
     {
       "path": "app/data/CATALOG.json",
@@ -6530,7 +6530,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_shell_builder.js",
-      "size_bytes": 27652
+      "size_bytes": 27847
     },
     {
       "path": "app/js/ui/dev_workspace/district_editor_controller.js",
@@ -6546,7 +6546,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace/selection_ownership_controller.js",
-      "size_bytes": 13310
+      "size_bytes": 14539
     },
     {
       "path": "app/js/ui/dev_workspace.js",
@@ -6874,7 +6874,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217987
+      "size_bytes": 217985
     },
     {
       "path": "styles.css",
@@ -6891,5 +6891,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001060156
+  "total_bytes": 1001062101
 }

@@ -51,10 +51,22 @@ export function createSelectionOwnershipController({
   const devQuickOwnerValue = quickbar.querySelector("#devQuickOwnerValue");
   const devQuickControllerValue = quickbar.querySelector("#devQuickControllerValue");
   const devQuickOwnerInput = quickbar.querySelector("#devQuickOwnerInput");
+  const devQuickRemoveSelectedBtn = quickbar.querySelector("#devQuickRemoveSelectedBtn");
   const devQuickUseTagBtn = quickbar.querySelector("#devQuickUseTagBtn");
   const devQuickApplyOwnerBtn = quickbar.querySelector("#devQuickApplyOwnerBtn");
   const devQuickResetOwnerBtn = quickbar.querySelector("#devQuickResetOwnerBtn");
   const devQuickSaveOwnersBtn = quickbar.querySelector("#devQuickSaveOwnersBtn");
+  const devSelectionToggleSelectedBtn = panel.querySelector("#devSelectionToggleSelectedBtn");
+
+  const resolveSelectedSelectionId = () => {
+    const selectedId = runtimeState.devSelectedHit?.targetType === "land"
+      ? String(runtimeState.devSelectedHit.id || "").trim()
+      : "";
+    const selectedFeature = selectedId ? runtimeState.landIndex?.get(selectedId) : null;
+    return selectedId && selectedFeature && runtimeState.devSelectionFeatureIds instanceof Set && runtimeState.devSelectionFeatureIds.has(selectedId)
+      ? selectedId
+      : "";
+  };
 
   const render = ({ hasActiveScenario }) => {
     const ownershipModel = resolveOwnershipEditorModel();
@@ -147,6 +159,9 @@ export function createSelectionOwnershipController({
       devQuickOwnerInput.placeholder = fallbackOwnerCode || "GER";
       devQuickOwnerInput.disabled = !hasActiveScenario || !!editorState.isSaving;
     }
+    if (devQuickRemoveSelectedBtn) {
+      devQuickRemoveSelectedBtn.disabled = !hasActiveScenario || !resolveSelectedSelectionId() || !devSelectionToggleSelectedBtn;
+    }
     if (devQuickUseTagBtn) {
       devQuickUseTagBtn.disabled = !hasActiveScenario || ownershipModel.selectionCount <= 0;
     }
@@ -227,6 +242,22 @@ export function createSelectionOwnershipController({
 
     bindButtonAction(devQuickResetOwnerBtn, () => {
       resetOwnerBtn?.click();
+    });
+
+    bindButtonAction(devQuickRemoveSelectedBtn, () => {
+      if (!resolveSelectedSelectionId()) {
+        showToast(ui("No selection"), {
+          title: ui("Selection Clipboard"),
+          tone: "warning",
+        });
+        renderWorkspace();
+        return;
+      }
+      if (!devSelectionToggleSelectedBtn) {
+        renderWorkspace();
+        return;
+      }
+      devSelectionToggleSelectedBtn?.click();
     });
 
     bindButtonAction(saveOwnersBtn, async () => {
