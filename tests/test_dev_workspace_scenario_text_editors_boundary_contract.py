@@ -6,8 +6,20 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
+DEV_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "dev_state.js"
 SCENARIO_TEXT_EDITORS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_text_editors_controller.js"
+DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
 SCENARIO_COUNTRY_COLOR_EDITOR_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "scenario_country_color_editor.js"
+DIST_DEV_STATE_JS = REPO_ROOT / "dist" / "app" / "js" / "core" / "state" / "dev_state.js"
+DIST_SCENARIO_TEXT_EDITORS_CONTROLLER_JS = (
+    REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "scenario_text_editors_controller.js"
+)
+DIST_DEV_WORKSPACE_SHELL_BUILDER_JS = (
+    REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
+)
+DIST_SCENARIO_COUNTRY_COLOR_EDITOR_JS = (
+    REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "scenario_country_color_editor.js"
+)
 
 
 class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
@@ -59,15 +71,8 @@ class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
 
     def test_controller_keeps_country_capital_locale_runtime_contracts(self):
         owner_content = SCENARIO_TEXT_EDITORS_CONTROLLER_JS.read_text(encoding="utf-8")
-        color_editor_content = SCENARIO_COUNTRY_COLOR_EDITOR_JS.read_text(encoding="utf-8")
 
         self.assertIn('flushDevWorkspaceRender("dev-workspace-country-save");', owner_content)
-        self.assertIn('const scenarioCountryColorInput = panel.querySelector("#devScenarioCountryColorInput");', owner_content)
-        self.assertIn("renderScenarioCountryColorEditor({", owner_content)
-        self.assertIn("buildScenarioCountryColorSavePayload({", owner_content)
-        self.assertIn("const nameEn = normalizeScenarioNameInput(", color_editor_content)
-        self.assertNotIn("editorState?.nameEn", color_editor_content)
-        self.assertNotIn("editorState?.nameZh", color_editor_content)
         self.assertIn('flushDevWorkspaceRender("dev-workspace-capital-save");', owner_content)
         self.assertIn('flushDevWorkspaceRender("dev-workspace-locale-save");', owner_content)
         self.assertIn("syncRuntimeScenarioCityOverrides(nextOverrides);", owner_content)
@@ -81,6 +86,43 @@ class DevWorkspaceScenarioTextEditorsBoundaryContractTest(unittest.TestCase):
         self.assertIn("new URL(savedGeoLocalePatchUrl,", owner_content)
         self.assertIn('const patchResponse = await fetch(patchUrl.href, { cache: "no-store" });', owner_content)
         self.assertNotIn("new URL(geoLocalePatchUrl,", owner_content)
+
+    def test_country_name_editor_color_controls_are_removed(self):
+        shell_content = DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        owner_content = SCENARIO_TEXT_EDITORS_CONTROLLER_JS.read_text(encoding="utf-8")
+        dist_shell_content = DIST_DEV_WORKSPACE_SHELL_BUILDER_JS.read_text(encoding="utf-8")
+        dist_owner_content = DIST_SCENARIO_TEXT_EDITORS_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertFalse(SCENARIO_COUNTRY_COLOR_EDITOR_JS.exists())
+        self.assertFalse(DIST_SCENARIO_COUNTRY_COLOR_EDITOR_JS.exists())
+
+        state_blocks = []
+        for content in [
+            DEV_STATE_JS.read_text(encoding="utf-8"),
+            DIST_DEV_STATE_JS.read_text(encoding="utf-8"),
+        ]:
+            match = re.search(r"devScenarioCountryEditor:\s*\{(?P<body>.*?)\n    \},", content, re.DOTALL)
+            self.assertIsNotNone(match)
+            state_blocks.append(match.group("body"))
+
+        for token in [
+            "devScenarioCountryColorInput",
+            "devScenarioSaveCountryColorBtn",
+            "devScenarioCountryColorStatus",
+            "scenario_country_color_editor.js",
+            "renderScenarioCountryColorEditor",
+            "buildScenarioCountryColorSavePayload",
+            "syncScenarioCountryColorEditorState",
+            "lastColorSaveMessage",
+            "lastColorSaveTone",
+        ]:
+            for content in [shell_content, owner_content, dist_shell_content, dist_owner_content]:
+                self.assertNotIn(token, content)
+            for state_block in state_blocks:
+                self.assertNotIn(token, state_block)
+
+        for state_block in state_blocks:
+            self.assertNotIn("colorHex", state_block)
 
 
 if __name__ == "__main__":

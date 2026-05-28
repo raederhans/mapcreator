@@ -187,12 +187,6 @@ export function createDevWorkspacePanel(bottomDock) {
           <button id="devScenarioSaveCountryBtn" type="button" class="btn-primary" data-i18n="Save Country Names"></button>
         </div>
         <div id="devScenarioCountryStatus" class="dev-workspace-note"></div>
-        <label class="dev-workspace-note" for="devScenarioCountryColorInput">${ui("Color")}</label>
-        <div class="dev-workspace-actions">
-          <input id="devScenarioCountryColorInput" class="input dev-workspace-input" type="color" value="#000000" />
-          <button id="devScenarioSaveCountryColorBtn" type="button" class="btn-secondary">${ui("Save")}</button>
-        </div>
-        <div id="devScenarioCountryColorStatus" class="dev-workspace-note"></div>
       </div>
       <div id="devScenarioCapitalPanel" class="dev-workspace-panel hidden" data-dev-category="scenario">
         <div id="devScenarioCapitalLabel" class="dev-workspace-panel-title" data-i18n="Capital Editor"></div>

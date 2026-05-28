@@ -201,6 +201,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         records_by_path = {record["path"]: record for record in payload["files"]}
         required_files = set(payload.get("required_files", []))
 
+        for record in payload["files"]:
+            manifest_path = record["path"]
+            with self.subTest(manifest_path=manifest_path):
+                self.assertTrue((REPO_ROOT / "dist" / manifest_path).exists())
+
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
         self.assertEqual(payload["max_allowed_bytes"], 995 * 1024 * 1024)
         self.assertEqual(
@@ -252,6 +257,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/europe_topology.highres.json",
             "app/data/europe_topology.json.bak",
             "app/data/europe_topology.na_v1.json",
+            "app/js/ui/dev_workspace/scenario_country_color_editor.js",
         ):
             with self.subTest(excluded_path=excluded_path):
                 self.assertNotIn(excluded_path, paths)
