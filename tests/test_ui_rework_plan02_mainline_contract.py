@@ -18,7 +18,8 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         zoom_controls_end = content.index('<section id="bottomDock"', zoom_controls_start)
         zoom_controls = content[zoom_controls_start:zoom_controls_end]
         self.assertNotIn('id="scenarioTransportWorkbenchBtn"', zoom_controls)
-        self.assertIn('shell-utility-group-workspace', zoom_controls)
+        self.assertIn('id="zoomUtilityWorkspaceGroup" class="shell-utility-group shell-utility-group-workspace hidden"', zoom_controls)
+        self.assertIn('aria-hidden="true"', zoom_controls)
 
         project_panel_start = content.index('id="projectSidebarPanel"')
         project_panel_end = content.index("</section>", project_panel_start)
@@ -70,6 +71,18 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn("syncRightSidebarUrlState", sidebar)
         self.assertIn("UI_URL_STATE_KEYS.scope", sidebar)
         self.assertIn("UI_URL_STATE_KEYS.section", sidebar)
+
+    def test_dev_workspace_top_group_follows_developer_mode(self):
+        toolbar = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
+
+        for token in [
+            'const zoomUtilityWorkspaceGroup = document.getElementById("zoomUtilityWorkspaceGroup");',
+            'zoomUtilityWorkspaceGroup?.classList.toggle("hidden", !runtimeState.ui.developerMode);',
+            'zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");',
+            'devWorkspaceToggleBtn?.classList.toggle("hidden", !runtimeState.ui.developerMode);',
+            'devWorkspaceToggleBtn?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");',
+        ]:
+            self.assertIn(token, toolbar)
 
     def test_sidebar_hands_export_view_restore_back_to_toolbar(self):
         sidebar = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")

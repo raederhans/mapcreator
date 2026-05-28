@@ -5982,7 +5982,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 214901
+      "size_bytes": 214927
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -6734,7 +6734,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 138469
+      "size_bytes": 138944
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",

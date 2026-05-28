@@ -207,6 +207,7 @@ function initToolbar({ render } = {}) {
   const zoomPercentInput = document.getElementById("zoomPercentInput");
   const zoomControls = document.getElementById("zoomControls");
   const developerModeBtn = document.getElementById("developerModeBtn");
+  const zoomUtilityWorkspaceGroup = document.getElementById("zoomUtilityWorkspaceGroup");
   const toolHudChip = document.getElementById("toolHudChip");
   const mapOnboardingHint = document.getElementById("mapOnboardingHint");
   const scenarioContextBar = document.getElementById("scenarioContextBar");
@@ -495,6 +496,10 @@ function initToolbar({ render } = {}) {
       developerModeBtn.setAttribute("aria-label", buttonLabel);
       developerModeBtn.setAttribute("title", buttonLabel);
     }
+    zoomUtilityWorkspaceGroup?.classList.toggle("hidden", !runtimeState.ui.developerMode);
+    zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");
+    devWorkspaceToggleBtn?.classList.toggle("hidden", !runtimeState.ui.developerMode);
+    devWorkspaceToggleBtn?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");
     if (!runtimeState.ui.developerMode && runtimeState.ui.devWorkspaceExpanded) {
       if (typeof runtimeState.setDevWorkspaceExpandedFn === "function") {
         callRuntimeHook(state, "setDevWorkspaceExpandedFn", false);
