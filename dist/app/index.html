@@ -1865,17 +1865,6 @@
             </div>
             <div id="zoomUtilityWorkspaceGroup" class="shell-utility-group shell-utility-group-workspace" role="group" aria-label="Workspace entry" data-i18n-aria-label="Workspace entry">
               <button
-                id="scenarioTransportWorkbenchBtn"
-                type="button"
-                class="zoom-btn zoom-pill-btn shell-workspace-entry-btn"
-                aria-haspopup="dialog"
-                aria-controls="transportWorkbenchOverlay"
-                aria-expanded="false"
-                data-i18n="Transport"
-              >
-                Transport
-              </button>
-              <button
                 id="devWorkspaceToggleBtn"
                 class="zoom-btn dev-workspace-toggle dev-only hidden shell-workspace-entry-btn"
                 type="button"
@@ -2396,6 +2385,36 @@
                   Frontlines and strategic annotations workspace.
                 </p>
                 <div id="frontlineTabStack" class="inspector-frontline-stack"></div>
+              </div>
+            </details>
+
+            <h2 id="transportProjectHeading" class="visually-hidden" data-i18n="Transport workbench">Transport workbench</h2>
+            <details id="transportProjectSection" class="card inspector-section inspector-section-secondary sidebar-section-shell is-secondary" aria-labelledby="transportProjectHeading lblTransportProject">
+              <summary id="lblTransportProject" class="sidebar-section-head">
+                <span class="sidebar-section-title is-secondary" data-i18n="Transport workbench">Transport workbench</span>
+                <span class="summary-info-trigger info-trigger sidebar-section-info-trigger" aria-hidden="true">
+                  <svg class="info-icon summary-info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
+                    <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                  </svg>
+                  <span class="info-tooltip" data-i18n="Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls.">Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls.</span>
+                </span>
+              </summary>
+              <div class="inspector-panel-body">
+                <div class="sidebar-support-actions" role="group" aria-label="Transport actions" data-i18n-aria-label="Transport actions">
+                  <button
+                    id="scenarioTransportWorkbenchBtn"
+                    type="button"
+                    class="btn-secondary sidebar-support-entry-btn"
+                    aria-haspopup="dialog"
+                    aria-controls="transportWorkbenchOverlay"
+                    aria-expanded="false"
+                    data-transport-entry-label="Open workbench"
+                    data-i18n="Open workbench"
+                  >
+                    Open workbench
+                  </button>
+                </div>
               </div>
             </details>
 

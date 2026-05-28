@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 239821
+      "size_bytes": 239992
     },
     {
       "path": "app/data/CATALOG.json",
@@ -5982,7 +5982,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 213222
+      "size_bytes": 214901
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -6734,7 +6734,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 138329
+      "size_bytes": 138469
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6874,7 +6874,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217985
+      "size_bytes": 217974
     },
     {
       "path": "styles.css",

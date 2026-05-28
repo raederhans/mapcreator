@@ -141,3 +141,6 @@
 
 ### Quickbar 复用开发工具动作要锁行为
 - quickbar 新按钮如果代理点击主开发工具按钮，要同时加 source/dist 镜像合同和轻量 node 行为测试；只查 token 容易漏掉“代理到了按钮但行为已变”的回退。
+
+### 手改 dist manifest 要同步自引用尺寸
+- 直接修改 `dist/app` 和 `dist/pages-dist-manifest.json` 时，除了改动文件本身的 `size_bytes`，还要复查 `pages-dist-manifest.json` 自己的尺寸记录；`tests.test_pages_dist_startup_shell` 会校验这个自引用值。

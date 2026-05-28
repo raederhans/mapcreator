@@ -6,7 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class UiReworkPlan02MainlineContractTest(unittest.TestCase):
-    def test_transport_moves_to_zoom_utility_and_leaves_context_bar(self):
+    def test_transport_moves_to_project_sidebar_and_leaves_top_rails(self):
         content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         scenario_bar_start = content.index('<div id="scenarioContextBar"')
         scenario_bar_end = content.index('<div id="toastViewport"', scenario_bar_start)
@@ -17,8 +17,21 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         zoom_controls_start = content.index('<div id="zoomControls"')
         zoom_controls_end = content.index('<section id="bottomDock"', zoom_controls_start)
         zoom_controls = content[zoom_controls_start:zoom_controls_end]
-        self.assertIn('id="scenarioTransportWorkbenchBtn"', zoom_controls)
+        self.assertNotIn('id="scenarioTransportWorkbenchBtn"', zoom_controls)
         self.assertIn('shell-utility-group-workspace', zoom_controls)
+
+        project_panel_start = content.index('id="projectSidebarPanel"')
+        project_panel_end = content.index("</section>", project_panel_start)
+        project_panel = content[project_panel_start:project_panel_end]
+        transport_start = project_panel.index('id="transportProjectSection"')
+        transport_end = project_panel.index('id="exportProjectSection"', transport_start)
+        transport_section = project_panel[transport_start:transport_end]
+        self.assertIn('id="scenarioTransportWorkbenchBtn"', transport_section)
+        self.assertIn('class="btn-secondary sidebar-support-entry-btn"', transport_section)
+        self.assertIn('aria-haspopup="dialog"', transport_section)
+        self.assertIn('aria-controls="transportWorkbenchOverlay"', transport_section)
+        self.assertIn('aria-expanded="false"', transport_section)
+        self.assertIn('data-transport-entry-label="Open workbench"', transport_section)
 
     def test_support_entries_are_text_buttons_and_dock_drops_long_config_and_clear(self):
         content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
@@ -37,6 +50,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         order = [
             'id="projectLegendSection"',
             'id="frontlineProjectSection"',
+            'id="transportProjectSection"',
             'id="exportProjectSection"',
             'id="inspectorUtilitiesSection"',
             'id="diagnosticsSection"',
@@ -315,6 +329,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         ]:
             self.assertIn(token, water_special_content)
         self.assertIn("#projectLegendSection,", css_content)
+        self.assertIn("#transportProjectSection,", css_content)
         self.assertIn("#inspectorUtilitiesSection,", css_content)
         self.assertIn("#diagnosticsSection {", css_content)
 

@@ -1111,7 +1111,8 @@ function initToolbar({ render } = {}) {
       tutorialEntryVisible: !!runtimeState.ui.tutorialEntryVisible,
     });
     if (scenarioTransportWorkbenchBtn) {
-      scenarioTransportWorkbenchBtn.textContent = t("Transport", "ui");
+      const transportEntryLabel = scenarioTransportWorkbenchBtn.dataset.transportEntryLabel || "Transport";
+      scenarioTransportWorkbenchBtn.textContent = t(transportEntryLabel, "ui");
       scenarioTransportWorkbenchBtn.setAttribute("title", runtimeState.transportWorkbenchUi?.open
         ? t("Close transport workbench", "ui")
         : t("Open transport workbench", "ui"));

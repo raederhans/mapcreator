@@ -8,7 +8,14 @@ test("phase 02 shell and sidebar mainline stays on the new rails", async ({ page
   await waitForAppInteractive(page);
 
   await expect(page.locator("#scenarioContextBar #scenarioTransportWorkbenchBtn")).toHaveCount(0);
-  await expect(page.locator("#zoomControls #scenarioTransportWorkbenchBtn")).toBeVisible();
+  await expect(page.locator("#zoomControls #scenarioTransportWorkbenchBtn")).toHaveCount(0);
+  await page.locator("#inspectorSidebarTabProject").click();
+  await page.evaluate(() => {
+    const transport = document.querySelector("#transportProjectSection");
+    if (transport instanceof HTMLDetailsElement) transport.open = true;
+  });
+  await expect(page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn")).toBeVisible();
+  await expect(page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn")).toHaveText("Open workbench");
   await expect(page.locator("#scenarioGuideBtn")).toHaveText("Guide");
 
   await expect(page.locator("#dockEditPopoverBtn")).toHaveCount(0);

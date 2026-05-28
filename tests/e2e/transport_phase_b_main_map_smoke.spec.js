@@ -46,7 +46,12 @@ test("transport Phase B country packs apply to the main map", async ({ page }) =
   await gotoApp(page, "/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page, { timeout: 120_000 });
 
-  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
+  await page.locator("#inspectorSidebarTabProject").click();
+  await page.evaluate(() => {
+    const transport = document.querySelector("#transportProjectSection");
+    if (transport instanceof HTMLDetailsElement) transport.open = true;
+  });
+  await page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn").click();
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
   await expect(page.locator("#transportWorkbenchPackSelect")).toBeVisible();
 

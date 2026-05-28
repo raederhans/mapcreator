@@ -16,6 +16,15 @@ async function activateSupportTrigger(page, selector) {
   await page.keyboard.press("Enter");
 }
 
+async function openTransportWorkbenchFromProject(page) {
+  await page.locator("#inspectorSidebarTabProject").click();
+  await page.evaluate(() => {
+    const transport = document.querySelector("#transportProjectSection");
+    if (transport instanceof HTMLDetailsElement) transport.open = true;
+  });
+  await page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn").click();
+}
+
 test("special zone layer workbench gates members and applies rectangular presets", async ({ page }) => {
   test.setTimeout(120_000);
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
@@ -105,7 +114,7 @@ test("phase 03 support and transport surfaces stay unified", async ({ page }) =>
   await expectSupportPopoverVisibility(page, { guide: false, reference: false, export: false });
   await expect(page.locator("#utilitiesGuideBtn")).toBeFocused();
 
-  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
+  await openTransportWorkbenchFromProject(page);
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
   await expect(page.locator("#transportWorkbenchLensTitle")).toBeVisible();
   await expect(page.locator(".transport-workbench-meta-strip")).toBeVisible();
@@ -115,7 +124,7 @@ test("phase 03 support and transport surfaces stay unified", async ({ page }) =>
 
   await page.locator("#transportWorkbenchCloseBtn").click();
   await expect(page.locator("#transportWorkbenchOverlay")).toBeHidden();
-  await expect(page.locator("#zoomControls #scenarioTransportWorkbenchBtn")).toBeVisible();
+  await expect(page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn")).toBeVisible();
 });
 
 test("project support panels and inspector search stay polished and inset", async ({ page }) => {
@@ -169,6 +178,7 @@ test("project support panels and inspector search stay polished and inset", asyn
     const projectSectionIds = [
       "projectLegendSection",
       "frontlineProjectSection",
+      "transportProjectSection",
       "exportProjectSection",
       "inspectorUtilitiesSection",
       "diagnosticsSection",
@@ -564,10 +574,15 @@ test("phase 03 transport preview omits compare controls", async ({ page }) => {
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
 
-  const transportTrigger = page.locator("#zoomControls #scenarioTransportWorkbenchBtn");
+  const transportTrigger = page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn");
   const compareBtn = page.locator("#transportWorkbenchCompareBtn");
   const compareStatus = page.locator("#transportWorkbenchCompareStatus");
 
+  await page.locator("#inspectorSidebarTabProject").click();
+  await page.evaluate(() => {
+    const transport = document.querySelector("#transportProjectSection");
+    if (transport instanceof HTMLDetailsElement) transport.open = true;
+  });
   await transportTrigger.click();
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
   await expect(page.locator("#transportWorkbenchPreviewTitle")).toHaveCount(1);
@@ -610,7 +625,7 @@ test("transport visual mode and apply bridge stay aligned across appearance and 
     showPorts: true,
   });
 
-  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
+  await openTransportWorkbenchFromProject(page);
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
 
   await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map", { timeout: 30_000 });
@@ -739,7 +754,7 @@ test("adaptive support, transport, and palette surfaces stay contained", async (
   expect(supportMetrics.bodyScrollWidth).toBeLessThanOrEqual(supportMetrics.viewportWidth + 1);
 
   await page.keyboard.press("Escape");
-  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
+  await openTransportWorkbenchFromProject(page);
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
   await page.locator("#transportWorkbenchInfoBtn").click();
   await expect(page.locator("#transportWorkbenchInfoPopover")).toBeVisible();

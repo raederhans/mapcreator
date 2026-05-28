@@ -6319,6 +6319,7 @@ body.counter-editor-modal-open {
 #waterInspectorSection,
 #projectLegendSection,
 #frontlineProjectSection,
+#transportProjectSection,
 #exportProjectSection,
 #inspectorUtilitiesSection,
 #diagnosticsSection {
@@ -6340,6 +6341,7 @@ body.counter-editor-modal-open {
 #waterInspectorSection > summary,
 #projectLegendSection > summary,
 #frontlineProjectSection > summary,
+#transportProjectSection > summary,
 #exportProjectSection > summary,
 #inspectorUtilitiesSection > summary,
 #diagnosticsSection > summary {
@@ -6354,6 +6356,7 @@ body.counter-editor-modal-open {
 #waterInspectorSection[open] > summary,
 #projectLegendSection[open] > summary,
 #frontlineProjectSection[open] > summary,
+#transportProjectSection[open] > summary,
 #exportProjectSection[open] > summary,
 #inspectorUtilitiesSection[open] > summary,
 #diagnosticsSection[open] > summary {
@@ -6366,6 +6369,7 @@ body.counter-editor-modal-open {
 #waterInspectorSection .sidebar-section-title,
 #projectLegendSection .sidebar-anchor-title,
 #frontlineProjectSection .sidebar-section-title,
+#transportProjectSection .sidebar-section-title,
 #exportProjectSection .sidebar-section-title,
 #inspectorUtilitiesSection .sidebar-support-title,
 #diagnosticsSection .sidebar-appendix-title {
@@ -6379,6 +6383,7 @@ body.counter-editor-modal-open {
 #waterInspectorSection .inspector-panel-body,
 #projectLegendSection .inspector-panel-body,
 #frontlineProjectSection .inspector-panel-body,
+#transportProjectSection .inspector-panel-body,
 #exportProjectSection .inspector-panel-body,
 #inspectorUtilitiesSection .inspector-panel-body,
 #diagnosticsSection .inspector-panel-body {

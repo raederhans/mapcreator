@@ -2,7 +2,12 @@ const { test, expect } = require("@playwright/test");
 const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
 
 async function openTransportWorkbench(page) {
-  await page.locator("#zoomControls #scenarioTransportWorkbenchBtn").click();
+  await page.locator("#inspectorSidebarTabProject").click();
+  await page.evaluate(() => {
+    const transport = document.querySelector("#transportProjectSection");
+    if (transport instanceof HTMLDetailsElement) transport.open = true;
+  });
+  await page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn").click();
   await page.waitForFunction(() => {
     const panel = document.querySelector("#transportWorkbenchOverlay");
     return !!panel && panel.getAttribute("aria-hidden") === "false";
