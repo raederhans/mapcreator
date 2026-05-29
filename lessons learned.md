@@ -144,3 +144,7 @@
 
 ### 手改 dist manifest 要同步自引用尺寸
 - 直接修改 `dist/app` 和 `dist/pages-dist-manifest.json` 时，除了改动文件本身的 `size_bytes`，还要复查 `pages-dist-manifest.json` 自己的尺寸记录；`tests.test_pages_dist_startup_shell` 会校验这个自引用值。
+
+### 本地后端接入要同时锁 API 和 UI 状态机
+- 同源后端即使只是本地开发框架，私有读接口也要走 dev token / same-origin 边界；GET 读取用户数据时不能弱于 POST。
+- UI 的“已加载 / 已发布”状态要绑定真实事务完成点；异步导入只启动时，应写 started 状态，把 success/error 留给 callback。

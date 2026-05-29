@@ -1499,8 +1499,93 @@ function initSidebar({ render } = {}) {
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);
 
+    const cloudTitle = document.createElement("div");
+    cloudTitle.className = "section-header sidebar-tool-title mt-3";
+    cloudTitle.textContent = t("Cloud Saves", "ui");
+
+    const cloudStatus = document.createElement("p");
+    cloudStatus.id = "backendCloudStatus";
+    cloudStatus.className = "sidebar-tool-hint project-save-status";
+    cloudStatus.setAttribute("role", "status");
+    cloudStatus.setAttribute("aria-live", "polite");
+    cloudStatus.setAttribute("aria-atomic", "true");
+    cloudStatus.textContent = t("Local backend cloud saves are available after login.", "ui");
+
+    const cloudUsername = document.createElement("input");
+    cloudUsername.id = "backendCloudUsername";
+    cloudUsername.type = "text";
+    cloudUsername.autocomplete = "username";
+    cloudUsername.placeholder = t("Username", "ui");
+    cloudUsername.className = "input mt-2";
+
+    const cloudPassword = document.createElement("input");
+    cloudPassword.id = "backendCloudPassword";
+    cloudPassword.type = "password";
+    cloudPassword.autocomplete = "current-password";
+    cloudPassword.placeholder = t("Password", "ui");
+    cloudPassword.className = "input mt-2";
+
+    const cloudTitleInput = document.createElement("input");
+    cloudTitleInput.id = "backendCloudSaveTitle";
+    cloudTitleInput.type = "text";
+    cloudTitleInput.placeholder = t("Save title", "ui");
+    cloudTitleInput.className = "input mt-2";
+
+    const cloudActions = document.createElement("div");
+    cloudActions.className = "sidebar-support-actions mt-2";
+
+    const registerCloudBtn = document.createElement("button");
+    registerCloudBtn.id = "backendCloudRegisterBtn";
+    registerCloudBtn.type = "button";
+    registerCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+    registerCloudBtn.textContent = t("Register", "ui");
+
+    const loginCloudBtn = document.createElement("button");
+    loginCloudBtn.id = "backendCloudLoginBtn";
+    loginCloudBtn.type = "button";
+    loginCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+    loginCloudBtn.textContent = t("Login", "ui");
+
+    const logoutCloudBtn = document.createElement("button");
+    logoutCloudBtn.id = "backendCloudLogoutBtn";
+    logoutCloudBtn.type = "button";
+    logoutCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+    logoutCloudBtn.textContent = t("Logout", "ui");
+
+    const saveCloudBtn = document.createElement("button");
+    saveCloudBtn.id = "backendCloudSaveBtn";
+    saveCloudBtn.type = "button";
+    saveCloudBtn.className = "btn-primary sidebar-support-entry-btn";
+    saveCloudBtn.textContent = t("Save Cloud Copy", "ui");
+
+    const publishCloudBtn = document.createElement("button");
+    publishCloudBtn.id = "backendCloudPublishBtn";
+    publishCloudBtn.type = "button";
+    publishCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+    publishCloudBtn.textContent = t("Publish Latest", "ui");
+
+    const refreshCommunityBtn = document.createElement("button");
+    refreshCommunityBtn.id = "backendCommunityRefreshBtn";
+    refreshCommunityBtn.type = "button";
+    refreshCommunityBtn.className = "btn-secondary sidebar-support-entry-btn";
+    refreshCommunityBtn.textContent = t("Refresh Community", "ui");
+
+    cloudActions.append(
+      registerCloudBtn,
+      loginCloudBtn,
+      logoutCloudBtn,
+      saveCloudBtn,
+      publishCloudBtn,
+      refreshCommunityBtn
+    );
+
+    const communityList = document.createElement("div");
+    communityList.id = "backendCommunityList";
+    communityList.className = "mt-2 flex flex-col gap-2";
+
     projectSection.appendChild(title);
     projectSection.appendChild(actions);
+    projectSection.append(cloudTitle, cloudStatus, cloudUsername, cloudPassword, cloudTitleInput, cloudActions, communityList);
     projectLegendStack.appendChild(projectSection);
   }
 
@@ -3127,6 +3212,17 @@ function initSidebar({ render } = {}) {
   const projectFileInput = document.getElementById("projectFileInput");
   const projectFileName = document.getElementById("projectFileName");
   const projectSaveStatus = document.getElementById("projectSaveStatus");
+  const backendCloudStatus = document.getElementById("backendCloudStatus");
+  const backendCloudUsername = document.getElementById("backendCloudUsername");
+  const backendCloudPassword = document.getElementById("backendCloudPassword");
+  const backendCloudSaveTitle = document.getElementById("backendCloudSaveTitle");
+  const backendCloudRegisterBtn = document.getElementById("backendCloudRegisterBtn");
+  const backendCloudLoginBtn = document.getElementById("backendCloudLoginBtn");
+  const backendCloudLogoutBtn = document.getElementById("backendCloudLogoutBtn");
+  const backendCloudSaveBtn = document.getElementById("backendCloudSaveBtn");
+  const backendCloudPublishBtn = document.getElementById("backendCloudPublishBtn");
+  const backendCommunityRefreshBtn = document.getElementById("backendCommunityRefreshBtn");
+  const backendCommunityList = document.getElementById("backendCommunityList");
   const legendList = document.getElementById("legendEditorList");
   const inspectorSidebarTabButtons = Array.from(document.querySelectorAll("[data-inspector-tab]"));
   const inspectorSidebarTabPanels = Array.from(document.querySelectorAll("[data-inspector-panel]"));
@@ -5492,6 +5588,17 @@ function initSidebar({ render } = {}) {
       projectFileInput,
       projectFileName,
       projectSaveStatus,
+      backendCloudStatus,
+      backendCloudUsername,
+      backendCloudPassword,
+      backendCloudSaveTitle,
+      backendCloudRegisterBtn,
+      backendCloudLoginBtn,
+      backendCloudLogoutBtn,
+      backendCloudSaveBtn,
+      backendCloudPublishBtn,
+      backendCommunityRefreshBtn,
+      backendCommunityList,
       debugModeSelect,
     },
     helpers: {

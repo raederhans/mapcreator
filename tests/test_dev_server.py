@@ -1588,6 +1588,46 @@ class DevServerTest(unittest.TestCase):
 
         dev_server.Handler._validate_same_origin_request(handler)
 
+    def test_do_get_dispatches_backend_api_as_json(self) -> None:
+        events: list[tuple[str, object]] = []
+        handler = object.__new__(dev_server.Handler)
+        handler.path = "/api/backend/missing"
+        handler.headers = {"Cookie": "mapcreator_dev_token=expected-token"}
+        handler.wfile = io.BytesIO()
+        handler.server = SimpleNamespace(
+            dev_token="expected-token",
+            server_address=(dev_server.BIND_ADDRESS, 8000),
+        )
+        handler.translate_path = lambda _path: str(Path(__file__).resolve())
+        handler.send_response = lambda status: events.append(("status", status))
+        handler.send_header = lambda name, value: events.append(("header", (name, value)))
+        handler.end_headers = lambda: events.append(("end_headers", None))
+
+        handler.do_GET()
+
+        self.assertIn(("status", 404), events)
+        self.assertEqual(json.loads(handler.wfile.getvalue().decode("utf-8"))["code"], "not_found")
+
+    def test_do_get_rejects_backend_api_without_dev_token(self) -> None:
+        events: list[tuple[str, object]] = []
+        handler = object.__new__(dev_server.Handler)
+        handler.path = "/api/backend/community/saves"
+        handler.headers = {}
+        handler.wfile = io.BytesIO()
+        handler.server = SimpleNamespace(
+            dev_token="expected-token",
+            server_address=(dev_server.BIND_ADDRESS, 8000),
+        )
+        handler.translate_path = lambda _path: str(Path(__file__).resolve())
+        handler.send_response = lambda status: events.append(("status", status))
+        handler.send_header = lambda name, value: events.append(("header", (name, value)))
+        handler.end_headers = lambda: events.append(("end_headers", None))
+
+        handler.do_GET()
+
+        self.assertIn(("status", 403), events)
+        self.assertEqual(json.loads(handler.wfile.getvalue().decode("utf-8"))["code"], "invalid_dev_token")
+
     def test_maybe_send_gzip_static_compresses_static_json_when_client_accepts_gzip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir) / "sample.json"

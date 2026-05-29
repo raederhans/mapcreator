@@ -2,6 +2,19 @@ import { setScenarioDiagnosticsState } from "../../core/state.js";
 import {
   createSpecialZonePatternPreviewStyle,
 } from "../../core/special_zone_layers.js";
+import {
+  addCommunityComment,
+  createBackendSave,
+  downloadCommunitySave,
+  listBackendSaves,
+  listCommunitySaves,
+  loginBackendUser,
+  logoutBackendUser,
+  publishBackendSave,
+  refreshBackendSession,
+  registerBackendUser,
+  reportCommunitySave,
+} from "../../api/backend_client.js";
 
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
@@ -27,6 +40,17 @@ export function createProjectSupportDiagnosticsController({
     projectFileInput,
     projectFileName,
     projectSaveStatus,
+    backendCloudStatus,
+    backendCloudUsername,
+    backendCloudPassword,
+    backendCloudSaveTitle,
+    backendCloudRegisterBtn,
+    backendCloudLoginBtn,
+    backendCloudLogoutBtn,
+    backendCloudSaveBtn,
+    backendCloudPublishBtn,
+    backendCommunityRefreshBtn,
+    backendCommunityList,
     debugModeSelect,
   } = elements;
 
@@ -49,6 +73,126 @@ export function createProjectSupportDiagnosticsController({
   const getScenarioAuditSummary = (auditPayload) => (
     auditPayload?.summary && typeof auditPayload.summary === "object" ? auditPayload.summary : {}
   );
+  let latestCloudSaveId = "";
+
+  const setBackendCloudStatus = (message) => {
+    if (backendCloudStatus) {
+      backendCloudStatus.textContent = message;
+    }
+  };
+
+  const getBackendCredentials = () => ({
+    username: String(backendCloudUsername?.value || "").trim(),
+    password: String(backendCloudPassword?.value || ""),
+  });
+
+  const getCloudSaveTitle = () => (
+    String(backendCloudSaveTitle?.value || "").trim()
+    || String(state.activeScenarioManifest?.display_name || state.activeScenarioId || "Map project").trim()
+    || "Map project"
+  );
+
+  const resolveLatestCloudSaveId = async () => {
+    if (latestCloudSaveId) return latestCloudSaveId;
+    const payload = await listBackendSaves();
+    const saves = Array.isArray(payload?.saves) ? payload.saves : [];
+    const latestSave = saves.find((save) => save?.id);
+    latestCloudSaveId = String(latestSave?.id || "");
+    return latestCloudSaveId;
+  };
+
+  const hydrateProjectFromCommunitySave = async (saveId) => {
+    const payload = await downloadCommunitySave(saveId);
+    const project = payload?.save?.project;
+    if (!project || typeof project !== "object") {
+      throw new Error("Community save did not include a project payload.");
+    }
+    const filename = String(payload?.filename || "community-mapcreator-save.json");
+    const blob = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
+    const file = typeof File === "function" ? new File([blob], filename, { type: "application/json" }) : blob;
+    importProjectThroughFunnel(file, {
+      ui: {
+        t,
+        showAppDialog,
+        showToast,
+      },
+      hooks: {
+        refreshColorState: mapRenderer.refreshColorState,
+        invalidateFrontlineOverlayState,
+        onProjectImportComplete: () => {
+          refreshProjectSaveStatus();
+          setBackendCloudStatus(t("Community save loaded into the editor.", "ui"));
+        },
+        onProjectImportError: () => {
+          const message = t("Project import failed before completion. Review the current map state.", "ui");
+          refreshProjectSaveStatus(message);
+          setBackendCloudStatus(message);
+        },
+      },
+    });
+  };
+
+  const renderCommunitySaves = (saves = []) => {
+    if (!backendCommunityList) return;
+    backendCommunityList.replaceChildren();
+    if (!saves.length) {
+      backendCommunityList.appendChild(createEmptyNote(t("No community saves yet", "ui")));
+      return;
+    }
+    saves.forEach((save) => {
+      const row = document.createElement("div");
+      row.className = "scenario-audit-stack-row";
+      const title = document.createElement("span");
+      title.className = "body-text scenario-audit-key";
+      title.textContent = String(save?.title || "Community save");
+      const meta = document.createElement("span");
+      meta.className = "inspector-mini-label scenario-audit-note";
+      meta.textContent = String(save?.owner?.displayName || save?.owner?.username || "unknown");
+      const loadButton = document.createElement("button");
+      loadButton.type = "button";
+      loadButton.className = "btn-secondary";
+      loadButton.textContent = t("Load", "ui");
+      loadButton.addEventListener("click", async () => {
+        try {
+          await hydrateProjectFromCommunitySave(String(save.id || ""));
+          setBackendCloudStatus(t("Community save import started.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      const commentButton = document.createElement("button");
+      commentButton.type = "button";
+      commentButton.className = "btn-secondary";
+      commentButton.textContent = t("Comment", "ui");
+      commentButton.addEventListener("click", async () => {
+        try {
+          await addCommunityComment(String(save.id || ""), "Tried this save locally.");
+          setBackendCloudStatus(t("Comment posted.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      const reportButton = document.createElement("button");
+      reportButton.type = "button";
+      reportButton.className = "btn-secondary";
+      reportButton.textContent = t("Report", "ui");
+      reportButton.addEventListener("click", async () => {
+        try {
+          await reportCommunitySave(String(save.id || ""), "other", "Reported from the local editor.");
+          setBackendCloudStatus(t("Report submitted for review.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      row.append(title, meta, loadButton, commentButton, reportButton);
+      backendCommunityList.appendChild(row);
+    });
+  };
+
+  const refreshCommunitySaves = async () => {
+    const payload = await listCommunitySaves();
+    renderCommunitySaves(Array.isArray(payload?.saves) ? payload.saves : []);
+  };
 
   const getScenarioAuditBlockerCount = (summary = {}) => {
     const flattened = Number(summary.blocker_count);
@@ -707,6 +851,104 @@ export function createProjectSupportDiagnosticsController({
       debugModeSelect.dataset.bound = "true";
     }
 
+    if (backendCloudRegisterBtn && !backendCloudRegisterBtn.dataset.bound) {
+      backendCloudRegisterBtn.addEventListener("click", async () => {
+        try {
+          const credentials = getBackendCredentials();
+          const payload = await registerBackendUser({
+            ...credentials,
+            displayName: credentials.username,
+          });
+          setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || credentials.username}`);
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      backendCloudRegisterBtn.dataset.bound = "true";
+    }
+
+    if (backendCloudLoginBtn && !backendCloudLoginBtn.dataset.bound) {
+      backendCloudLoginBtn.addEventListener("click", async () => {
+        try {
+          const credentials = getBackendCredentials();
+          const payload = await loginBackendUser(credentials);
+          setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || credentials.username}`);
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      backendCloudLoginBtn.dataset.bound = "true";
+    }
+
+    if (backendCloudLogoutBtn && !backendCloudLogoutBtn.dataset.bound) {
+      backendCloudLogoutBtn.addEventListener("click", async () => {
+        try {
+          await logoutBackendUser();
+          latestCloudSaveId = "";
+          setBackendCloudStatus(t("Logged out.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      backendCloudLogoutBtn.dataset.bound = "true";
+    }
+
+    if (backendCloudSaveBtn && !backendCloudSaveBtn.dataset.bound) {
+      backendCloudSaveBtn.addEventListener("click", async () => {
+        try {
+          const project = fileManager.buildProjectPayload?.(state);
+          if (!project) throw new Error("Project state is unavailable.");
+          const payload = await createBackendSave({
+            title: getCloudSaveTitle(),
+            description: String(state.activeScenarioId || ""),
+            project,
+          });
+          latestCloudSaveId = String(payload?.save?.id || "");
+          setBackendCloudStatus(t("Cloud save created.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      backendCloudSaveBtn.dataset.bound = "true";
+    }
+
+    if (backendCloudPublishBtn && !backendCloudPublishBtn.dataset.bound) {
+      backendCloudPublishBtn.addEventListener("click", async () => {
+        try {
+          const saveId = await resolveLatestCloudSaveId();
+          if (!saveId) throw new Error("Create a cloud save before publishing.");
+          await publishBackendSave(saveId);
+          await refreshCommunitySaves();
+          setBackendCloudStatus(t("Latest cloud save published.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      backendCloudPublishBtn.dataset.bound = "true";
+    }
+
+    if (backendCommunityRefreshBtn && !backendCommunityRefreshBtn.dataset.bound) {
+      backendCommunityRefreshBtn.addEventListener("click", async () => {
+        try {
+          await refreshCommunitySaves();
+          setBackendCloudStatus(t("Community saves refreshed.", "ui"));
+        } catch (error) {
+          setBackendCloudStatus(String(error?.message || error || ""));
+        }
+      });
+      backendCommunityRefreshBtn.dataset.bound = "true";
+    }
+
+    if (backendCloudStatus && !backendCloudStatus.dataset.sessionChecked) {
+      refreshBackendSession()
+        .then((payload) => {
+          setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || payload?.user?.username || ""}`);
+        })
+        .catch(() => {})
+        .finally(() => {
+          backendCloudStatus.dataset.sessionChecked = "true";
+        });
+    }
 
   };
 
