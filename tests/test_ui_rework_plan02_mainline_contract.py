@@ -84,6 +84,29 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         ]:
             self.assertIn(token, toolbar)
 
+    def test_sidebar_transport_entry_tests_use_real_details_clicks(self):
+        for relative_path in [
+            "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+            "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+            "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+            "tests/e2e/transport_workbench_industrial_variants.spec.js",
+            "tests/e2e/transport_workbench_label_rotation.spec.js",
+            "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+        ]:
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertIn('page.locator("#lblTransportProject").click()', content)
+            self.assertIn('toHaveJSProperty("open", true)', content)
+            self.assertNotIn("transport.open = true", content)
+
+    def test_sidebar_keeps_preset_batch_out_of_production_console_log(self):
+        for relative_path in [
+            "js/ui/sidebar.js",
+            "dist/app/js/ui/sidebar.js",
+        ]:
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertNotIn('console.log(`Applied preset "', content)
+            self.assertNotIn('Applied preset "', content)
+
     def test_sidebar_hands_export_view_restore_back_to_toolbar(self):
         sidebar = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")
 

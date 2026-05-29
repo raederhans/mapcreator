@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 239992
+      "size_bytes": 240059
     },
     {
       "path": "app/data/CATALOG.json",
@@ -82,7 +82,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8653141
+      "size_bytes": 8653265
     },
     {
       "path": "app/data/manifest.json",
@@ -5014,7 +5014,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_corridor/carrier.json",
-      "size_bytes": 2081246
+      "size_bytes": 2081273
     },
     {
       "path": "app/data/transport_layers/japan_corridor/manifest.json",
@@ -5022,7 +5022,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_corridor/provenance.json",
-      "size_bytes": 2361
+      "size_bytes": 2388
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/build_audit.json",
@@ -5982,7 +5982,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 214927
+      "size_bytes": 215023
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -6446,7 +6446,7 @@
     },
     {
       "path": "app/js/core/state/dev_state.js",
-      "size_bytes": 2948
+      "size_bytes": 2957
     },
     {
       "path": "app/js/core/state/history_state.js",
@@ -6486,7 +6486,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 55008
+      "size_bytes": 55013
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
@@ -6538,7 +6538,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_tag_creator_controller.js",
-      "size_bytes": 50133
+      "size_bytes": 50145
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_text_editors_controller.js",
@@ -6550,15 +6550,15 @@
     },
     {
       "path": "app/js/ui/dev_workspace.js",
-      "size_bytes": 46450
+      "size_bytes": 46467
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47339
+      "size_bytes": 47344
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 66226
+      "size_bytes": 66229
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -6602,7 +6602,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 235905
+      "size_bytes": 235810
     },
     {
       "path": "app/js/ui/toast.js",
@@ -6734,7 +6734,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 138944
+      "size_bytes": 138966
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6742,7 +6742,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_carrier.js",
-      "size_bytes": 23580
+      "size_bytes": 24265
     },
     {
       "path": "app/js/ui/transport_workbench_density_helpers.js",
@@ -6874,7 +6874,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217974
+      "size_bytes": 217994
     },
     {
       "path": "styles.css",
@@ -6891,5 +6891,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001062101
+  "total_bytes": 1001069218
 }

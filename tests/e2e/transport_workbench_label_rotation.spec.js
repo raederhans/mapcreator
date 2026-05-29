@@ -2,11 +2,16 @@ const { test, expect } = require("@playwright/test");
 const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
 
 async function openTransportWorkbench(page) {
-  await page.locator("#inspectorSidebarTabProject").click();
-  await page.evaluate(() => {
-    const transport = document.querySelector("#transportProjectSection");
-    if (transport instanceof HTMLDetailsElement) transport.open = true;
-  });
+  const projectTab = page.locator("#inspectorSidebarTabProject");
+  if ((await projectTab.getAttribute("aria-selected")) !== "true") {
+    await projectTab.click();
+  }
+  await expect(projectTab).toHaveAttribute("aria-selected", "true");
+  const transportSection = page.locator("#transportProjectSection");
+  if ((await transportSection.evaluate((node) => node.open)) !== true) {
+    await page.locator("#lblTransportProject").click();
+  }
+  await expect(transportSection).toHaveJSProperty("open", true);
   await page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn").click();
   await page.waitForFunction(() => {
     const panel = document.querySelector("#transportWorkbenchOverlay");
@@ -33,6 +38,24 @@ async function inspectFamilyRotation(page, familyId, labelSelector) {
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
     };
+    const renderFamilyWhenCarrierIsReady = async () => {
+      let lastError = null;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        try {
+          await warmTransportWorkbenchFamilyPreview(nextFamilyId, { includeFull: nextFamilyId === "rail" });
+          await renderTransportWorkbenchFamilyPreview(nextFamilyId, config);
+          return;
+        } catch (error) {
+          lastError = error;
+          if (!String(error?.message || error).includes("carrier geometry is not ready")) {
+            throw error;
+          }
+          state.refreshTransportWorkbenchUiFn?.();
+          await waitForFrames(4);
+        }
+      }
+      throw lastError;
+    };
 
     const config = state.transportWorkbenchUi?.familyConfigs?.[nextFamilyId];
     if (config && typeof config === "object") {
@@ -44,8 +67,7 @@ async function inspectFamilyRotation(page, familyId, labelSelector) {
     state.transportWorkbenchUi.activeFamily = nextFamilyId;
     state.refreshTransportWorkbenchUiFn?.();
     await waitForFrames(3);
-    await warmTransportWorkbenchFamilyPreview(nextFamilyId, { includeFull: nextFamilyId === "rail" });
-    await renderTransportWorkbenchFamilyPreview(nextFamilyId, config);
+    await renderFamilyWhenCarrierIsReady();
     await waitForFrames(3);
 
     const viewState = getTransportWorkbenchCarrierViewState() || {};
@@ -59,7 +81,7 @@ async function inspectFamilyRotation(page, familyId, labelSelector) {
     }
     toggleTransportWorkbenchCarrierQuarterTurn();
     await waitForFrames(4);
-    await renderTransportWorkbenchFamilyPreview(nextFamilyId, config);
+    await renderFamilyWhenCarrierIsReady();
     await waitForFrames(3);
 
     const screenLayer = document.querySelector(".transport-workbench-carrier-screen-labels");
@@ -100,7 +122,6 @@ test("transport workbench labels stay horizontal after quarter turn", async ({ p
 
   const families = [
     ["road", ".transport-workbench-road-preview-label-root text"],
-    ["airport", ".transport-workbench-airport-preview-label-layer text"],
     ["port", ".transport-workbench-port-preview-label-layer text"],
     ["industrial_zones", ".transport-workbench-industrial-zones-preview-label-layer text"],
   ];

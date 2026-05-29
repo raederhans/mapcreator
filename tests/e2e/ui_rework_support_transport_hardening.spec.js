@@ -17,11 +17,16 @@ async function activateSupportTrigger(page, selector) {
 }
 
 async function openTransportWorkbenchFromProject(page) {
-  await page.locator("#inspectorSidebarTabProject").click();
-  await page.evaluate(() => {
-    const transport = document.querySelector("#transportProjectSection");
-    if (transport instanceof HTMLDetailsElement) transport.open = true;
-  });
+  const projectTab = page.locator("#inspectorSidebarTabProject");
+  if ((await projectTab.getAttribute("aria-selected")) !== "true") {
+    await projectTab.click();
+  }
+  await expect(projectTab).toHaveAttribute("aria-selected", "true");
+  const transportSection = page.locator("#transportProjectSection");
+  if ((await transportSection.evaluate((node) => node.open)) !== true) {
+    await page.locator("#lblTransportProject").click();
+  }
+  await expect(transportSection).toHaveJSProperty("open", true);
   await page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn").click();
 }
 
@@ -578,11 +583,16 @@ test("phase 03 transport preview omits compare controls", async ({ page }) => {
   const compareBtn = page.locator("#transportWorkbenchCompareBtn");
   const compareStatus = page.locator("#transportWorkbenchCompareStatus");
 
-  await page.locator("#inspectorSidebarTabProject").click();
-  await page.evaluate(() => {
-    const transport = document.querySelector("#transportProjectSection");
-    if (transport instanceof HTMLDetailsElement) transport.open = true;
-  });
+  const projectTab = page.locator("#inspectorSidebarTabProject");
+  if ((await projectTab.getAttribute("aria-selected")) !== "true") {
+    await projectTab.click();
+  }
+  await expect(projectTab).toHaveAttribute("aria-selected", "true");
+  const transportSection = page.locator("#transportProjectSection");
+  if ((await transportSection.evaluate((node) => node.open)) !== true) {
+    await page.locator("#lblTransportProject").click();
+  }
+  await expect(transportSection).toHaveJSProperty("open", true);
   await transportTrigger.click();
   await expect(page.locator("#transportWorkbenchOverlay")).toBeVisible();
   await expect(page.locator("#transportWorkbenchPreviewTitle")).toHaveCount(1);

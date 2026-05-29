@@ -1328,7 +1328,6 @@ function applyPresetWithMode(
     historyKind: visualHistoryKind,
     dirtyReason: visualDirtyReason,
   });
-  console.log(`Applied preset "${preset.name}" with ${targetIds.length} visible regions`);
   return {
     ...result,
     matchedCount: targetIds.length,

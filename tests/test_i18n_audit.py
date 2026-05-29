@@ -308,6 +308,41 @@ const config = {
         self.assertIn('setAttribute("alt", t(altKey, "ui"))', i18n_js)
         self.assertIn("[data-i18n-alt]", i18n_js)
 
+    def test_transport_shell_copy_is_localized_and_transport_headings_are_wired(self) -> None:
+        locales = json.loads((REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8"))
+        ui = locales.get("ui") or {}
+
+        for index_path in [
+            REPO_ROOT / "index.html",
+            REPO_ROOT / "dist" / "app" / "index.html",
+        ]:
+            index_html = index_path.read_text(encoding="utf-8")
+            self.assertIn(
+                'id="appearanceTabTransport"\n'
+                '                  type="button"\n'
+                '                  class="appearance-tab-btn"\n'
+                '                  data-appearance-tab="transport"\n'
+                '                  role="tab"\n'
+                '                  aria-selected="false"\n'
+                '                  aria-controls="appearancePanelTransport"\n'
+                '                  data-i18n="Transport"',
+                index_html,
+            )
+            self.assertIn(
+                '<h2 id="lblTransportPanel" class="section-header" data-i18n="Transport">Transport</h2>',
+                index_html,
+            )
+            self.assertIn(
+                'data-i18n="Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls."',
+                index_html,
+            )
+            self.assertIn('data-i18n-aria-label="Transport actions"', index_html)
+        self.assertIn("Transport actions", ui)
+        self.assertIn(
+            "Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls.",
+            ui,
+        )
+
     def test_locale_ui_domain_terms_avoid_obvious_machine_mistranslations(self) -> None:
         locales = json.loads((REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8"))
         ui = locales.get("ui") or {}

@@ -5556,6 +5556,10 @@
       "en": "Transport",
       "zh": "运输"
     },
+    "Transport actions": {
+      "en": "Transport actions",
+      "zh": "交通操作"
+    },
     "Transport Workbench": {
       "en": "Transport Workbench",
       "zh": "交通工作台"
@@ -5571,6 +5575,10 @@
     "Transport guide": {
       "en": "Transport guide",
       "zh": "运输指南"
+    },
+    "Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls.": {
+      "en": "Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls.",
+      "zh": "打开交通工作台，查看交通预览、图层顺序、诊断和应用到地图控制。"
     },
     "Transport pack": {
       "en": "Transport pack",

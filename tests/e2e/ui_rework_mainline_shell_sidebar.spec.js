@@ -10,10 +10,11 @@ test("phase 02 shell and sidebar mainline stays on the new rails", async ({ page
   await expect(page.locator("#scenarioContextBar #scenarioTransportWorkbenchBtn")).toHaveCount(0);
   await expect(page.locator("#zoomControls #scenarioTransportWorkbenchBtn")).toHaveCount(0);
   await page.locator("#inspectorSidebarTabProject").click();
-  await page.evaluate(() => {
-    const transport = document.querySelector("#transportProjectSection");
-    if (transport instanceof HTMLDetailsElement) transport.open = true;
-  });
+  const transportSection = page.locator("#transportProjectSection");
+  if ((await transportSection.evaluate((node) => node.open)) !== true) {
+    await page.locator("#lblTransportProject").click();
+  }
+  await expect(transportSection).toHaveJSProperty("open", true);
   await expect(page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn")).toBeVisible();
   await expect(page.locator("#projectSidebarPanel #scenarioTransportWorkbenchBtn")).toHaveText("Open workbench");
   await expect(page.locator("#scenarioGuideBtn")).toHaveText("Guide");
@@ -239,6 +240,7 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
     const actionBodyStyle = actionBody ? getComputedStyle(actionBody) : null;
     const specialSection = document.querySelector("#specialRegionInspectorSection");
     const specialList = document.querySelector("#specialRegionList");
+    const specialEmpty = document.querySelector("#specialRegionInspectorEmpty");
     const waterSection = document.querySelector("#waterInspectorSection");
     const colorRow = document.querySelector("#countryInspectorColorRow");
     const firstGroup = document.querySelector("#countryList > .country-explorer-group:not(.country-select-card)");
@@ -311,9 +313,12 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
       actionSectionRadius: getComputedStyle(actionSection).borderRadius,
       specialSectionRadius: specialSection ? getComputedStyle(specialSection).borderRadius : "",
       specialSectionHidden: specialSection ? specialSection.classList.contains("hidden") : true,
+      specialSectionEmptyPanel: specialSection ? specialSection.classList.contains("is-empty-scenario-panel") : false,
       specialSectionDisplay: specialSection ? getComputedStyle(specialSection).display : "",
+      specialListHidden: specialList ? specialList.classList.contains("hidden") : true,
       specialListClientHeight: specialList?.clientHeight || 0,
       specialListMaxHeight: specialList ? getComputedStyle(specialList).maxHeight : "",
+      specialEmptyClientHeight: specialEmpty?.clientHeight || 0,
       waterSectionRadius: waterSection ? getComputedStyle(waterSection).borderRadius : "",
       colorRowVisible: colorRow ? getComputedStyle(colorRow).display !== "none" : false,
       firstGroupBackground: firstGroup ? getComputedStyle(firstGroup).backgroundImage : "",
@@ -346,7 +351,12 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
   expect(metrics.specialSectionRadius).toBe("18px");
   expect(metrics.specialSectionHidden).toBe(false);
   expect(metrics.specialSectionDisplay).not.toBe("none");
-  expect(metrics.specialListClientHeight).toBeGreaterThan(0);
+  if (metrics.specialSectionEmptyPanel) {
+    expect(metrics.specialEmptyClientHeight).toBeGreaterThan(0);
+  } else {
+    expect(metrics.specialListHidden).toBe(false);
+    expect(metrics.specialListClientHeight).toBeGreaterThan(0);
+  }
   expect(metrics.specialListMaxHeight).not.toBe("none");
   expect(metrics.waterSectionRadius).toBe("18px");
   expect(metrics.colorRowVisible).toBe(false);
@@ -385,20 +395,25 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
   await page.waitForFunction(() => {
     const section = document.querySelector("#specialRegionInspectorSection");
     const list = document.querySelector("#specialRegionList");
-    return !!section && !section.classList.contains("hidden") && (list?.getBoundingClientRect().height || 0) > 0;
+    const empty = document.querySelector("#specialRegionInspectorEmpty");
+    return !!section
+      && !section.classList.contains("hidden")
+      && ((list?.getBoundingClientRect().height || 0) > 0 || (empty?.getBoundingClientRect().height || 0) > 0);
   });
   const specialAfterToggleOff = await page.evaluate(() => {
     const section = document.querySelector("#specialRegionInspectorSection");
     const list = document.querySelector("#specialRegionList");
+    const empty = document.querySelector("#specialRegionInspectorEmpty");
     return {
       hidden: section?.classList.contains("hidden") ?? true,
       display: section ? getComputedStyle(section).display : "",
       listHeight: list?.getBoundingClientRect().height || 0,
+      emptyHeight: empty?.getBoundingClientRect().height || 0,
     };
   });
   expect(specialAfterToggleOff.hidden).toBe(false);
   expect(specialAfterToggleOff.display).not.toBe("none");
-  expect(specialAfterToggleOff.listHeight).toBeGreaterThan(0);
+  expect(specialAfterToggleOff.listHeight > 0 || specialAfterToggleOff.emptyHeight > 0).toBe(true);
 
   await page.evaluate(() => {
     const reliefToggle = document.querySelector("#scenarioReliefOverlayVisibilityToggle");

@@ -204,8 +204,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for record in payload["files"]:
             manifest_path = record["path"]
             with self.subTest(manifest_path=manifest_path):
-                self.assertTrue((REPO_ROOT / "dist" / manifest_path).exists())
+                dist_path = REPO_ROOT / "dist" / manifest_path
+                self.assertTrue(dist_path.exists())
+                self.assertEqual(record["size_bytes"], dist_path.stat().st_size)
 
+        self.assertEqual(
+            payload["total_bytes"],
+            sum((REPO_ROOT / "dist" / record["path"]).stat().st_size for record in payload["files"]),
+        )
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
         self.assertEqual(payload["max_allowed_bytes"], 995 * 1024 * 1024)
         self.assertEqual(
