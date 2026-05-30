@@ -16,6 +16,41 @@ USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,32}$")
 SAVE_VISIBILITY_PUBLIC = "public"
 SAVE_VISIBILITY_PRIVATE = "private"
 SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
+SHARED_PROJECT_FIELD_ALLOWLIST = {
+    "schemaVersion",
+    "countryBaseColors",
+    "featureOverrides",
+    "sovereignBaseColors",
+    "visualOverrides",
+    "waterRegionOverrides",
+    "specialZoneLayers",
+    "sovereigntyByFeatureId",
+    "mapSemanticMode",
+    "paintMode",
+    "interactionGranularity",
+    "batchFillScope",
+    "activeSovereignCode",
+    "activePaletteId",
+    "specialZoneMembershipBrushMode",
+    "specialZones",
+    "parentBordersVisible",
+    "parentBorderEnabledByCountry",
+    "manualSpecialZones",
+    "annotationView",
+    "operationalLines",
+    "operationGraphics",
+    "unitCounters",
+    "customPresets",
+    "recentColors",
+    "layerVisibility",
+    "styleConfig",
+    "transportWorkbenchUi",
+    "transportCountryOverlayState",
+    "exportWorkbenchUi",
+    "scenario",
+    "releasableBoundaryVariantByTag",
+    "timestamp",
+}
 
 
 class BackendService:
@@ -26,7 +61,10 @@ class BackendService:
     def register(self, payload: dict[str, object]) -> dict[str, object]:
         username = self._normalize_username(payload.get("username"))
         password = self._normalize_password(payload.get("password"))
-        display_name = self._normalize_display_name(payload.get("displayName") or username)
+        raw_display_name = payload.get("displayName")
+        display_name = self._normalize_display_name(
+            raw_display_name if raw_display_name is not None and raw_display_name != "" else username
+        )
         user_id = now_token()
         with self.store.connect() as connection:
             try:
@@ -177,7 +215,7 @@ class BackendService:
 
     def download_community_save(self, save_id: str) -> dict[str, object]:
         save = self.get_community_save(save_id)
-        save["project"] = self._read_project_payload(save_id)
+        save["project"] = self._share_project_payload(self._read_project_payload(save_id))
         return {
             "save": save,
             "filename": f"community-mapcreator-save-{save_id[:8]}.json",
@@ -340,6 +378,29 @@ class BackendService:
         encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 
+    def _share_project_payload(self, payload: dict[str, object]) -> dict[str, object]:
+        # Public community downloads keep the importable project contract while dropping local-only/private runtime fields.
+        return {
+            key: payload[key]
+            for key in SHARED_PROJECT_FIELD_ALLOWLIST
+            if key in payload
+        }
+
+    def _normalize_text_field(
+        self,
+        value: object,
+        *,
+        code: str,
+        message: str,
+        allow_missing: bool = False,
+        trim: bool = True,
+    ) -> str:
+        if value is None and allow_missing:
+            return ""
+        if not isinstance(value, str):
+            raise BackendError(code, message, status=400)
+        return value.strip() if trim else value
+
     def _normalize_project(self, value: object) -> dict[str, object]:
         if not isinstance(value, dict):
             raise BackendError("invalid_project", "Project payload must be a JSON object.", status=400)
@@ -348,43 +409,73 @@ class BackendService:
         return value
 
     def _normalize_username(self, value: object) -> str:
-        username = str(value or "").strip().lower()
+        username = self._normalize_text_field(
+            value,
+            code="invalid_username",
+            message="Username must be 3-32 letters, numbers, or underscores.",
+        ).lower()
         if not USERNAME_RE.fullmatch(username):
             raise BackendError("invalid_username", "Username must be 3-32 letters, numbers, or underscores.", status=400)
         return username
 
     def _normalize_password(self, value: object) -> str:
-        password = str(value or "")
+        password = self._normalize_text_field(
+            value,
+            code="invalid_password",
+            message="Password must be at least 8 characters.",
+            trim=False,
+        )
         if len(password) < 8:
             raise BackendError("invalid_password", "Password must be at least 8 characters.", status=400)
         return password
 
     def _normalize_display_name(self, value: object) -> str:
-        display_name = str(value or "").strip()
+        display_name = self._normalize_text_field(
+            value,
+            code="invalid_display_name",
+            message="Display name is required and must fit within 80 characters.",
+        )
         if not display_name or len(display_name) > 80:
             raise BackendError("invalid_display_name", "Display name is required and must fit within 80 characters.", status=400)
         return display_name
 
     def _normalize_title(self, value: object) -> str:
-        title = str(value or "").strip()
+        title = self._normalize_text_field(
+            value,
+            code="invalid_title",
+            message="Title is required and must fit within 120 characters.",
+        )
         if not title or len(title) > 120:
             raise BackendError("invalid_title", "Title is required and must fit within 120 characters.", status=400)
         return title
 
     def _normalize_description(self, value: object) -> str:
-        description = str(value or "").strip()
+        description = self._normalize_text_field(
+            value,
+            code="invalid_description",
+            message="Description must fit within 500 characters.",
+            allow_missing=True,
+        )
         if len(description) > 500:
             raise BackendError("invalid_description", "Description must fit within 500 characters.", status=400)
         return description
 
     def _normalize_comment(self, value: object) -> str:
-        body = str(value or "").strip()
+        body = self._normalize_text_field(
+            value,
+            code="invalid_comment",
+            message="Comment is required and must fit within 1000 characters.",
+        )
         if not body or len(body) > 1000:
             raise BackendError("invalid_comment", "Comment is required and must fit within 1000 characters.", status=400)
         return body
 
     def _normalize_report_reason(self, value: object) -> str:
-        reason = str(value or "").strip().lower()
+        reason = self._normalize_text_field(
+            value,
+            code="invalid_report_reason",
+            message="Report reason is not supported.",
+        ).lower()
         allowed = {"spam", "abuse", "copyright", "unsafe", "other"}
         if reason not in allowed:
             raise BackendError("invalid_report_reason", "Report reason is not supported.", status=400)

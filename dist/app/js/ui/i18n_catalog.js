@@ -3,9 +3,22 @@
 
 export const UI_COPY_CATALOG = Object.freeze({
   Guide: { zh: "\u6307\u5357", en: "Guide" },
+  Road: { zh: "\u9053\u8def", en: "Road" },
+  Rail: { zh: "\u94c1\u8def", en: "Rail" },
+  Airport: { zh: "\u673a\u573a", en: "Airport" },
+  Port: { zh: "\u6e2f\u53e3", en: "Port" },
+  "Mineral Resources": { zh: "\u77ff\u4ea7\u8d44\u6e90", en: "Mineral Resources" },
+  "Energy Facilities": { zh: "\u80fd\u6e90\u8bbe\u65bd", en: "Energy Facilities" },
+  "Industrial Land": { zh: "\u5de5\u4e1a\u7528\u5730", en: "Industrial Land" },
+  "Logistics Hubs": { zh: "\u7269\u6d41\u67a2\u7ebd", en: "Logistics Hubs" },
+  Layers: { zh: "\u56fe\u5c42", en: "Layers" },
   Reference: { zh: "\u53c2\u8003", en: "Reference" },
   Export: { zh: "\u5bfc\u51fa", en: "Export" },
   Language: { zh: "\u8bed\u8a00", en: "Language" },
+  "Collapse left sidebar": { zh: "\u6536\u8d77\u5de6\u4fa7\u680f", en: "Collapse left sidebar" },
+  "Expand left sidebar": { zh: "\u5c55\u5f00\u5de6\u4fa7\u680f", en: "Expand left sidebar" },
+  "Collapse right sidebar": { zh: "\u6536\u8d77\u53f3\u4fa7\u680f", en: "Collapse right sidebar" },
+  "Expand right sidebar": { zh: "\u5c55\u5f00\u53f3\u4fa7\u680f", en: "Expand right sidebar" },
   "Viewport controls": { zh: "\u89c6\u53e3\u63a7\u5236", en: "Viewport controls" },
   "System status": { zh: "\u7cfb\u7edf\u72b6\u6001", en: "System status" },
   "Workspace entry": { zh: "\u5de5\u4f5c\u533a\u5165\u53e3", en: "Workspace entry" },
@@ -85,10 +98,6 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Historical Light Density": { zh: "\u5386\u53f2\u706f\u5149\u5bc6\u5ea6", en: "Historical Light Density" },
   "Secondary City Retention": { zh: "\u6b21\u7ea7\u57ce\u5e02\u4fdd\u7559", en: "Secondary City Retention" },
   "Reference Image": { zh: "\u53c2\u8003\u56fe\u50cf", en: "Reference Image" },
-  "Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.": {
-    zh: "\u53ef\u4ee5\u4ece\u9876\u90e8 scenario bar \u6216 Utilities \u9762\u677f\u6253\u5f00\u8fd9\u4efd\u624b\u518c\u3002\u4e24\u4e2a Guide \u6309\u94ae\u6253\u5f00\u7684\u662f\u540c\u4e00\u4e2a\u5e2e\u52a9\u9762\u677f\uff0c\u8fd9\u6837\u4f60\u53ef\u4ee5\u4e00\u8fb9\u64cd\u4f5c\uff0c\u4e00\u8fb9\u4fdd\u6301\u4e0b\u4e00\u6b65\u53ef\u89c1\u3002",
-    en: "Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.",
-  },
   "Upload a local image, align it with opacity / scale / offsets, then keep those alignment values in the project. The image file itself needs to be uploaded again when you restore the project.": {
     zh: "\u4e0a\u4f20\u4e00\u5f20\u672c\u5730\u56fe\u50cf\uff0c\u518d\u7528 opacity / scale / offsets \u5b8c\u6210\u5bf9\u4f4d\u3002\u9879\u76ee\u4f1a\u4fdd\u5b58\u8fd9\u4e9b\u5bf9\u4f4d\u53c2\u6570\uff0c\u4f46\u56fe\u50cf\u6587\u4ef6\u672c\u8eab\u5728\u91cd\u65b0\u6253\u5f00\u9879\u76ee\u65f6\u9700\u8981\u518d\u6b21\u4e0a\u4f20\u3002",
     en: "Upload a local image, align it with opacity / scale / offsets, then keep those alignment values in the project. The image file itself needs to be uploaded again when you restore the project.",
@@ -216,7 +225,6 @@ export const UI_COPY_CATALOG = Object.freeze({
   },
   "Current lens": { zh: "\u5f53\u524d\u955c\u5934", en: "Current lens" },
   Baseline: { zh: "\u57fa\u7ebf", en: "Baseline" },
-  "Compare action": { zh: "\u5bf9\u6bd4\u52a8\u4f5c", en: "Compare action" },
   Availability: { zh: "\u53ef\u7528\u6027", en: "Availability" },
   "Preview controls": { zh: "\u9884\u89c8\u63a7\u5236", en: "Preview controls" },
   "Data path": { zh: "\u6570\u636e\u8def\u5f84", en: "Data path" },
@@ -313,11 +321,6 @@ export const UI_COPY_CATALOG = Object.freeze({
   "No facility details available yet.": { zh: "\u6682\u65f6\u6ca1\u6709\u53ef\u7528\u7684 facility \u8be6\u60c5\u3002", en: "No facility details available yet." },
   Yes: { zh: "\u662f", en: "Yes" },
   No: { zh: "\u5426", en: "No" },
-  "Compare baseline": { zh: "\u5bf9\u6bd4\u57fa\u7ebf", en: "Compare baseline" },
-  "Baseline unavailable": { zh: "\u57fa\u7ebf\u4e0d\u53ef\u7528", en: "Baseline unavailable" },
-  "Baseline unavailable for this family": { zh: "\u8fd9\u4e2a family \u6ca1\u6709\u53ef\u7528\u57fa\u7ebf", en: "Baseline unavailable for this family" },
-  "Baseline preview": { zh: "\u57fa\u7ebf\u9884\u89c8\u4e2d", en: "Baseline preview" },
-  "Live working state": { zh: "\u5f53\u524d\u5de5\u4f5c\u72b6\u6001", en: "Live working state" },
   Labels: { zh: "\u6807\u7b7e", en: "Labels" },
   "Visual Preset": { zh: "\u89c6\u89c9\u9884\u8bbe", en: "Visual Preset" },
   "Political Clean": { zh: "\u653f\u6cbb\u4f18\u5148", en: "Political Clean" },
@@ -382,21 +385,111 @@ export const UI_COPY_CATALOG = Object.freeze({
   },
   "Frontlines and strategic annotations workspace.": { zh: "前线与战略标注工作区。", en: "Frontlines and strategic annotations workspace." },
   "Publishable map tools": { zh: "发布级地图工具", en: "Publishable map tools" },
-  "Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.": {
-    zh: "前线与战略标注：用推导前线查看冲突边界，再添加作战线、作战图形和单位计数器作为导出用战略标注。",
-    en: "Frontlines & Annotations: Use derived frontlines for conflict edges, then add operational lines, graphics, and unit counters as strategic annotations for export.",
+  "Project Management": { zh: "项目管理", en: "Project Management" },
+  "Use Project tools as a publish checklist: save the project, add strategic context, align references, then export.": {
+    zh: "把项目工具当成发布检查清单：先保存项目，再补战略信息、对齐参考图，最后导出。",
+    en: "Use Project tools as a publish checklist: save the project, add strategic context, align references, then export.",
   },
-  "Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.": {
-    zh: "导出：最终图片或 bake pack 需要前线、作战线、作战图形和单位计数器时，保持战略标注开启。",
-    en: "Export: Keep Strategic annotations enabled when you want frontlines, operational lines, graphics, and unit counters in the final image or bake pack.",
+  "Save and restore the complete working state.": {
+    zh: "保存和恢复完整工作状态。",
+    en: "Save and restore the complete working state.",
   },
-  "Before publishing, confirm strategic annotations are present, map labels are readable, and Export includes Strategic annotations.": {
-    zh: "发布前，确认战略标注已显示、地图标签可读，并且导出包含战略标注。",
-    en: "Before publishing, confirm strategic annotations are present, map labels are readable, and Export includes Strategic annotations.",
+  "Contains Download Project, Load Project, selected file status, and import safety checks.": {
+    zh: "包含下载项目、加载项目、当前文件状态和导入安全检查。",
+    en: "Contains Download Project, Load Project, selected file status, and import safety checks.",
   },
-  "For project handoff, save a project JSON, reload it once, and confirm annotations, labels, and export settings still match the map you intend to publish.": {
-    zh: "交接项目前，保存项目 JSON，重新加载一次，确认标注、标签和导出设置仍然符合要发布的地图。",
-    en: "For project handoff, save a project JSON, reload it once, and confirm annotations, labels, and export settings still match the map you intend to publish.",
+  "Use when": { zh: "使用场景", en: "Use when" },
+  Order: { zh: "操作顺序", en: "Order" },
+  Check: { zh: "复查", en: "Check" },
+  "You are about to make broad ownership, frontline, transport, or overlay changes.": {
+    zh: "准备大范围修改归属、前线、交通或叠加层时使用。",
+    en: "You are about to make broad ownership, frontline, transport, or overlay changes.",
+  },
+  "Download a project JSON first, load another file only after confirming the current state can be replaced, then re-check the top status chips.": {
+    zh: "先下载项目 JSON；确认当前状态可以被替换后再加载其他文件；加载后复查顶部状态条。",
+    en: "Download a project JSON first, load another file only after confirming the current state can be replaced, then re-check the top status chips.",
+  },
+  "After import, confirm scenario baseline, current owner, strategic annotations, and export settings before continuing.": {
+    zh: "导入后先确认场景基线、当前归属、战略标注和导出设置，再继续操作。",
+    en: "After import, confirm scenario baseline, current owner, strategic annotations, and export settings before continuing.",
+  },
+  "Build the publishable strategic layer.": {
+    zh: "制作可发布的战略标注层。",
+    en: "Build the publishable strategic layer.",
+  },
+  "Contains derived frontlines, operational lines, operation graphics, and unit counters. These are project-local strategic annotations for export and handoff.": {
+    zh: "包含推导前线、作战线、作战图形和单位计数器。这些都是用于导出和交接的项目本地战略标注。",
+    en: "Contains derived frontlines, operational lines, operation graphics, and unit counters. These are project-local strategic annotations for export and handoff.",
+  },
+  "The political map needs readable conflict edges, arrows, planned operations, or visible unit counts.": {
+    zh: "政治地图需要清晰的冲突边界、箭头、行动计划或单位数量时使用。",
+    en: "The political map needs readable conflict edges, arrows, planned operations, or visible unit counts.",
+  },
+  "Turn on derived frontlines first, then add operational lines and graphics, then place counters near the final composition.": {
+    zh: "先开启推导前线，再添加作战线和图形，最后按最终构图摆放单位计数器。",
+    en: "Turn on derived frontlines first, then add operational lines and graphics, then place counters near the final composition.",
+  },
+  "Before export, make sure Strategic annotations are enabled and no line, label, or counter hides the country you want to show.": {
+    zh: "导出前确认战略标注已开启，并且线条、标签或计数器没有遮住要展示的国家。",
+    en: "Before export, make sure Strategic annotations are enabled and no line, label, or counter hides the country you want to show.",
+  },
+  "Treat saving and exporting as two separate handoff steps: save the editable project first, then export the publishable image or layer package.": {
+    zh: "把保存和导出当成两个独立交接步骤：先保存可继续编辑的项目，再导出可发布的图片或图层包。",
+    en: "Treat saving and exporting as two separate handoff steps: save the editable project first, then export the publishable image or layer package.",
+  },
+  "Project JSON save": { zh: "项目 JSON 保存", en: "Project JSON save" },
+  "The editable handoff file.": { zh: "可继续编辑的交接文件。", en: "The editable handoff file." },
+  "Use Download Project to save the current editable state: scenario choice, ownership edits, appearance, transport, strategic annotations, reference alignment values, and export settings.": {
+    zh: "使用“下载项目”保存当前可编辑状态：场景选择、归属修改、外观、交通、战略标注、参考图对齐参数和导出设置。",
+    en: "Use Download Project to save the current editable state: scenario choice, ownership edits, appearance, transport, strategic annotations, reference alignment values, and export settings.",
+  },
+  "You need a recovery point, a handoff file, or a before-and-after checkpoint before a broad edit.": {
+    zh: "需要恢复点、交接文件，或在大改前保留前后对照时使用。",
+    en: "You need a recovery point, a handoff file, or a before-and-after checkpoint before a broad edit.",
+  },
+  "Download the JSON, reload it once with Load Project, then confirm the same scenario, annotations, labels, and export settings return.": {
+    zh: "下载 JSON 后，用“加载项目”重新打开一次，并确认同一场景、标注、标签和导出设置都能恢复。",
+    en: "Download the JSON, reload it once with Load Project, then confirm the same scenario, annotations, labels, and export settings return.",
+  },
+  "The image file used by Reference Image is not embedded; upload it again after loading, then verify the stored alignment values still fit.": {
+    zh: "参考图像文件不会嵌入项目；加载后需要再次上传，再检查已保存的对齐参数是否仍然贴合。",
+    en: "The image file used by Reference Image is not embedded; upload it again after loading, then verify the stored alignment values still fit.",
+  },
+  "Export workflow": { zh: "导出工作流", en: "Export workflow" },
+  "The publishable output step.": { zh: "生成可发布产物的步骤。", en: "The publishable output step." },
+  "Use Open workbench to choose the output target, format, resolution, layer order, text stacks, and image adjustments. Export creates the final image, per-layer PNG set, or bake pack; it does not replace the editable project JSON.": {
+    zh: "使用“打开工作台”选择输出目标、格式、分辨率、图层顺序、文字堆栈和图像调整。导出会生成最终图片、分层 PNG 或 bake pack；它不会替代可编辑的项目 JSON。",
+    en: "Use Open workbench to choose the output target, format, resolution, layer order, text stacks, and image adjustments. Export creates the final image, per-layer PNG set, or bake pack; it does not replace the editable project JSON.",
+  },
+  "The map is ready for publishing, screenshot handoff, layered editing, or bake-pack delivery.": {
+    zh: "地图已经准备好用于发布、截图交接、分层编辑或 bake pack 交付时使用。",
+    en: "The map is ready for publishing, screenshot handoff, layered editing, or bake-pack delivery.",
+  },
+  "Pick the target, set resolution, inspect preview, confirm layer order and strategic annotation visibility, then run export.": {
+    zh: "选择目标，设置分辨率，检查预览，确认图层顺序和战略标注可见性，然后执行导出。",
+    en: "Pick the target, set resolution, inspect preview, confirm layer order and strategic annotation visibility, then run export.",
+  },
+  "Composite image is for final viewing; per-layer PNG is for later editing; bake pack is for a bundled delivery with expected layers.": {
+    zh: "合成图片用于最终查看；分层 PNG 用于后续编辑；bake pack 用于带预期图层的打包交付。",
+    en: "Composite image is for final viewing; per-layer PNG is for later editing; bake pack is for a bundled delivery with expected layers.",
+  },
+  "Final handoff check": { zh: "最终交付检查", en: "Final handoff check" },
+  "The last pass before sending files out.": { zh: "发送文件前的最后一轮检查。", en: "The last pass before sending files out." },
+  "Before sending files out, keep one editable project JSON and one exported output from the same reviewed state. This keeps later fixes traceable.": {
+    zh: "发送文件前，保留一份可编辑项目 JSON 和一份来自同一已复查状态的导出产物。这样后续修正有迹可循。",
+    en: "Before sending files out, keep one editable project JSON and one exported output from the same reviewed state. This keeps later fixes traceable.",
+  },
+  "You are preparing a final image, sharing the scenario with another editor, or archiving a stable milestone.": {
+    zh: "准备最终图片、把场景交给其他编辑者，或归档稳定阶段时使用。",
+    en: "You are preparing a final image, sharing the scenario with another editor, or archiving a stable milestone.",
+  },
+  "Review labels, borders, strategic annotations, reference visibility, and export target before the final click.": {
+    zh: "最终点击前检查标签、边界、战略标注、参考图可见性和导出目标。",
+    en: "Review labels, borders, strategic annotations, reference visibility, and export target before the final click.",
+  },
+  "If the exported result looks wrong, reopen the saved project JSON, fix the editable state, then export again from that corrected state.": {
+    zh: "如果导出结果看起来不对，重新打开已保存的项目 JSON，修正可编辑状态，再从修正后的状态重新导出。",
+    en: "If the exported result looks wrong, reopen the saved project JSON, fix the editable state, then export again from that corrected state.",
   },
   "Derived Frontlines": { zh: "推导前线", en: "Derived Frontlines" },
   "Enable derived frontlines": { zh: "启用推导前线", en: "Enable derived frontlines" },
@@ -417,17 +510,17 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Operation graphics": { zh: "作战图形", en: "Operation graphics" },
   "Unit counters": { zh: "单位计数器", en: "Unit counters" },
   "No strategic annotations currently visible": { zh: "当前没有可见战略标注", en: "No strategic annotations currently visible" },
-  "Save the current working state before you load a different project file. Loading a project replaces the current map state, and the app prompts for confirmation when the saved scenario baseline differs from the current assets.": {
-    zh: "加载其他项目文件前，先保存当前工作状态。加载项目会替换当前地图状态；当保存时使用的场景基线和当前资源不一致时，应用会先要求确认。",
-    en: "Save the current working state before you load a different project file. Loading a project replaces the current map state, and the app prompts for confirmation when the saved scenario baseline differs from the current assets.",
+  "Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit. If the state is off, switch back to the right scenario or project before changing ownership, frontlines, or annotations.": {
+    zh: "先看顶部状态条：确认模式、视图和分裂计数符合你准备编辑的场景。状态不对时，先切回正确的场景或项目，再开始改归属、前线和标注。",
+    en: "Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit. If the state is off, switch back to the right scenario or project before changing ownership, frontlines, or annotations.",
   },
-  "You can open Guide from the top scenario bar or from Project › Utilities. Both buttons open the same panel; the only difference is which workspace you were using when you opened it.": {
-    zh: "指南可以从顶部场景栏打开，也可以从“项目 › 工具”打开。两个按钮指向同一个面板，只会保留你打开时所在的工作区上下文。",
-    en: "You can open Guide from the top scenario bar or from Project › Utilities. Both buttons open the same panel; the only difference is which workspace you were using when you opened it.",
+  "Before a broad edit or before loading another project file, download the current project JSON from Project Management. Loading a project replaces the current map, strategic annotations, and export settings; baseline mismatches require confirmation.": {
+    zh: "做大改或加载其他项目文件前，先在“项目管理”下载当前项目 JSON。加载项目会替换当前地图、战略标注和导出设置；基线不一致时，应用会要求你确认。",
+    en: "Before a broad edit or before loading another project file, download the current project JSON from Project Management. Loading a project replaces the current map, strategic annotations, and export settings; baseline mismatches require confirmation.",
   },
-  "Project Management: Download the current map state or restore it from a local JSON file. Use it before major ownership, frontline, or overlay changes.": {
-    zh: "项目管理：下载当前地图状态，或从本地 JSON 文件恢复。适合在大改归属、前线或叠加层前做阶段性保存。",
-    en: "Project Management: Download the current map state or restore it from a local JSON file. Use it before major ownership, frontline, or overlay changes.",
+  "After loading, return to Inspector to confirm the target country and active owner, then use Project tools to review frontlines, reference image alignment, and export settings. Once those match, continue with Activate, Scenario Actions, or Export.": {
+    zh: "加载完成后，回到检查器确认目标国家和当前归属，再打开“项目工具”检查前线、参考图和导出设置。确认这些状态吻合后，再执行激活、场景操作或导出。",
+    en: "After loading, return to Inspector to confirm the target country and active owner, then use Project tools to review frontlines, reference image alignment, and export settings. Once those match, continue with Activate, Scenario Actions, or Export.",
   },
   "Project export includes appearance and transport settings.": { zh: "项目导出会包含外观和交通设置。", en: "Project export includes appearance and transport settings." },
   "Unsaved project changes.": { zh: "项目有未保存改动。", en: "Unsaved project changes." },
@@ -445,13 +538,45 @@ export const UI_COPY_CATALOG = Object.freeze({
     en: "Frontline: This section combines the derived frontline overlay with the project-local strategic workspace. Use the first for fast conflict-edge reading and the second for operational lines, graphics, and unit counters.",
   },
   "Project export saves Strategic annotations.": { zh: "项目导出会保存战略标注。", en: "Project export saves Strategic annotations." },
-  "Reference: After you upload a local image, the most stable alignment order is opacity → scale → offsets. The project preserves the alignment values, while the image file itself must be uploaded again.": {
-    zh: "参考图：上传本地图像后，最稳的对齐顺序是透明度、缩放、偏移。项目会保存对齐参数，图像文件本身需要再次上传。",
-    en: "Reference: After you upload a local image, the most stable alignment order is opacity → scale → offsets. The project preserves the alignment values, while the image file itself must be uploaded again.",
+  "Align an external map or sketch.": {
+    zh: "对齐外部地图或草图。",
+    en: "Align an external map or sketch.",
   },
-  "Export: After you open the workbench, the left column handles image adjustments, the center handles preview, and the right manages layer order and text stacks. Export is capped at 8K and only one export job runs at a time.": {
-    zh: "导出：打开工作台后，左侧处理图像调整，中间负责预览，右侧管理图层顺序和文字堆栈。导出上限是 8K，同一时间只处理一个导出任务。",
-    en: "Export: After you open the workbench, the left column handles image adjustments, the center handles preview, and the right manages layer order and text stacks. Export is capped at 8K and only one export job runs at a time.",
+  "Contains local image upload, opacity, scale, horizontal offset, and vertical offset controls. The project stores alignment values, while the image file must be uploaded again after reload.": {
+    zh: "包含本地图像上传、透明度、缩放、水平偏移和垂直偏移。项目会保存对齐参数，重新加载后仍需要再次上传图像文件。",
+    en: "Contains local image upload, opacity, scale, horizontal offset, and vertical offset controls. The project stores alignment values, while the image file must be uploaded again after reload.",
+  },
+  "You need to trace historical borders, compare a source map, or keep a visual planning layer beside the scenario.": {
+    zh: "需要描摹历史边界、对照来源地图，或在场景旁保留视觉规划层时使用。",
+    en: "You need to trace historical borders, compare a source map, or keep a visual planning layer beside the scenario.",
+  },
+  "Upload the image, set opacity for readability, adjust scale, then fine-tune horizontal and vertical offsets.": {
+    zh: "上传图像，先调透明度保证可读，再调缩放，最后微调水平和垂直偏移。",
+    en: "Upload the image, set opacity for readability, adjust scale, then fine-tune horizontal and vertical offsets.",
+  },
+  "Hide or lower the reference before final export unless you intentionally want it visible in the composition.": {
+    zh: "最终导出前隐藏或降低参考图，除非你明确希望它出现在构图里。",
+    en: "Hide or lower the reference before final export unless you intentionally want it visible in the composition.",
+  },
+  "Preview layers, resolution, and final output.": {
+    zh: "预览图层、分辨率和最终输出。",
+    en: "Preview layers, resolution, and final output.",
+  },
+  "Contains target selection, format, export resolution, preview, layer order, text stacks, and image adjustments. Final export is capped at 8K.": {
+    zh: "包含目标选择、格式、导出分辨率、预览、图层顺序、文字堆栈和图像调整。最终导出上限为 8K。",
+    en: "Contains target selection, format, export resolution, preview, layer order, text stacks, and image adjustments. Final export is capped at 8K.",
+  },
+  "The map is ready for a composite image, per-layer PNG set, or bake pack handoff.": {
+    zh: "地图已经准备好输出为合成图片、分层 PNG 或 bake pack 交接包时使用。",
+    en: "The map is ready for a composite image, per-layer PNG set, or bake pack handoff.",
+  },
+  "Choose target and resolution, check the preview, confirm layer order, then run the export.": {
+    zh: "选择目标和分辨率，检查预览，确认图层顺序，然后执行导出。",
+    en: "Choose target and resolution, check the preview, confirm layer order, then run the export.",
+  },
+  "Keep Strategic annotations enabled when frontlines, operational graphics, or unit counters must appear in the final output.": {
+    zh: "最终输出需要前线、作战图形或单位计数器时，保持战略标注开启。",
+    en: "Keep Strategic annotations enabled when frontlines, operational graphics, or unit counters must appear in the final output.",
   },
   "Success checks": { zh: "成功信号与常见漏项", en: "Success checks" },
   "The Mode / View / Split chips are the fastest self-check. When they match your expectation, the current editing context is usually correct.": {

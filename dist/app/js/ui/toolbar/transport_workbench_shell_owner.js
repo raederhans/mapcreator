@@ -40,6 +40,12 @@ function syncProperty(node, key, value) {
   return true;
 }
 
+function normalizeQuarterTurns(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return ((numericValue % 4) + 4) % 4;
+}
+
 export function getTransportWorkbenchPackOptionsSignature(packOptions) {
   return JSON.stringify((packOptions || []).map((pack) => [pack.packId, pack.label]));
 }
@@ -81,12 +87,9 @@ export function createTransportWorkbenchShellOwner({
   previewMode = null,
   previewTitle = null,
   previewCanvas = null,
-  previewActions = null,
   previewControls = null,
   carrierMount = null,
   layerOrderPanel = null,
-  compareButton = null,
-  compareStatus = null,
   zoomOutButton = null,
   zoomInButton = null,
   rotateButton = null,
@@ -106,7 +109,9 @@ export function createTransportWorkbenchShellOwner({
   const syncPreviewControls = () => {
     let updated = 0;
     const carrierViewState = getCarrierViewState() || {};
-    const isAlternateTurn = carrierViewState.quarterTurns !== 0;
+    const currentQuarterTurns = normalizeQuarterTurns(carrierViewState.quarterTurns);
+    const defaultQuarterTurns = normalizeQuarterTurns(carrierViewState.defaultQuarterTurns);
+    const isAlternateTurn = currentQuarterTurns !== defaultQuarterTurns;
     if (syncTextContent(zoomOutButton, "-")) updated += 1;
     if (syncTextContent(zoomInButton, "+")) updated += 1;
     if (syncTextContent(rotateButton, "90°")) updated += 1;
@@ -126,7 +131,7 @@ export function createTransportWorkbenchShellOwner({
   };
 
   const render = (context = {}) => {
-    const { uiState = {}, family = {}, isOpen = false, compareHeld = false } = context;
+    const { uiState = {}, family = {}, isOpen = false } = context;
     let updated = 0;
     if (syncClassToggle(body, "transport-workbench-open", isOpen)) updated += 1;
     if (syncClassToggle(overlay, "hidden", !isOpen)) updated += 1;
@@ -155,20 +160,6 @@ export function createTransportWorkbenchShellOwner({
       : (uiState.sampleCountry === "Japan" ? translate("Japan preview") : `${uiState.sampleCountry} preview`);
     if (syncTextContent(previewTitle, previewTitleLabel)) updated += 1;
     const applyButtonState = getApplyButtonState(family.id) || {};
-    if (compareButton) {
-      if (syncProperty(compareButton, "disabled", !family.supportsDetailedControls)) updated += 1;
-      if (syncAttribute(compareButton, "aria-disabled", family.supportsDetailedControls ? "false" : "true")) updated += 1;
-      if (syncClassToggle(compareButton, "is-held", compareHeld)) updated += 1;
-      if (syncTextContent(compareButton, family.supportsDetailedControls ? translate("Compare baseline") : translate("Baseline unavailable"))) updated += 1;
-    }
-    if (compareStatus) {
-      const compareStatusLabel = !family.supportsDetailedControls
-        ? (family.id === "layers" ? translate("Local layer board") : translate("Workbench runtime state"))
-        : compareHeld
-          ? translate("Baseline preview")
-          : translate("Live working state");
-      if (syncTextContent(compareStatus, compareStatusLabel)) updated += 1;
-    }
     if (isInfoPopoverOpen()) {
       renderInfoContent(family);
     }
@@ -177,7 +168,6 @@ export function createTransportWorkbenchShellOwner({
     if (syncTextContent(inspectorEmptyBody, translate(family.inspectorEmptyBody))) updated += 1;
     const isLayerMode = family.id === "layers";
     if (syncClassToggle(previewCanvas, "is-layer-order-mode", isLayerMode)) updated += 1;
-    if (syncClassToggle(previewActions, "hidden", isLayerMode)) updated += 1;
     if (syncClassToggle(previewControls, "hidden", isLayerMode)) updated += 1;
     if (syncClassToggle(carrierMount, "hidden", isLayerMode)) updated += 1;
     if (syncClassToggle(layerOrderPanel, "hidden", !isLayerMode)) updated += 1;

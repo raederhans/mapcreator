@@ -16,10 +16,6 @@ export function bindTransportWorkbenchEventOnce(node, bind) {
   return true;
 }
 
-function isCompareKey(event) {
-  return event.key === " " || event.key === "Enter";
-}
-
 export function createTransportWorkbenchEventOwner({
   documentRef = globalThis.document,
   body = documentRef?.body || null,
@@ -28,7 +24,6 @@ export function createTransportWorkbenchEventOwner({
   infoButton = null,
   closeButton = null,
   resetButton = null,
-  compareButton = null,
   zoomOutButton = null,
   zoomInButton = null,
   rotateButton = null,
@@ -76,29 +71,6 @@ export function createTransportWorkbenchEventOwner({
       const resetView = requireAction(actions, "resetView");
       button.addEventListener("click", () => {
         resetView();
-      });
-    });
-
-    bindTransportWorkbenchEventOnce(compareButton, (button) => {
-      const setCompareHeld = requireAction(actions, "setCompareHeld");
-      button.addEventListener("pointerdown", (event) => {
-        if (event.button !== 0) return;
-        setCompareHeld(true);
-      });
-      ["pointerup", "pointercancel", "pointerleave", "blur"].forEach((eventName) => {
-        button.addEventListener(eventName, () => {
-          setCompareHeld(false);
-        });
-      });
-      button.addEventListener("keydown", (event) => {
-        if (!isCompareKey(event)) return;
-        event.preventDefault();
-        setCompareHeld(true);
-      });
-      button.addEventListener("keyup", (event) => {
-        if (!isCompareKey(event)) return;
-        event.preventDefault();
-        setCompareHeld(false);
       });
     });
 

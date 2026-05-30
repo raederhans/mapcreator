@@ -241,3 +241,223 @@ test("publish latest recovers newest cloud save after session refresh", async ()
     globalThis.fetch = previousFetch;
   }
 });
+
+test("login clears previous cloud save before publishing", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudStatus = createStatusNode();
+  const backendCloudUsername = { value: "bob" };
+  const backendCloudPassword = { value: "correct horse" };
+  const backendCloudSaveTitle = { value: "First save" };
+  const backendCloudSaveBtn = createButtonNode();
+  const backendCloudLoginBtn = createButtonNode();
+  const backendCloudPublishBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+  const requested = [];
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push([String(url), options.method || "GET", options.body ? JSON.parse(String(options.body)) : null]);
+    return {
+      ok: true,
+      json: async () => {
+        if (String(url).endsWith("/auth/me")) {
+          return { user: { displayName: "Alice" }, csrfToken: "initial-csrf" };
+        }
+        if (String(url).endsWith("/api/backend/saves") && (options.method || "GET") === "POST") {
+          return { save: { id: "save-1" } };
+        }
+        if (String(url).endsWith("/auth/login")) {
+          return { user: { displayName: "Bob" }, csrfToken: "bob-csrf" };
+        }
+        if (String(url).endsWith("/api/backend/saves")) {
+          return { saves: [{ id: "save-2", title: "Bob save" }] };
+        }
+        if (String(url).endsWith("/publish")) {
+          return { save: { id: "save-2", visibility: "public" } };
+        }
+        if (String(url).endsWith("/community/saves")) {
+          return { saves: [] };
+        }
+        return {};
+      },
+    };
+  };
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        backendCloudUsername,
+        backendCloudPassword,
+        backendCloudSaveTitle,
+        backendCloudSaveBtn,
+        backendCloudLoginBtn,
+        backendCloudPublishBtn,
+        backendCommunityList,
+      },
+      helpers: {
+        fileManager: {
+          buildProjectPayload: () => ({ schemaVersion: 21, paintMode: "visual" }),
+        },
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await backendCloudSaveBtn.listeners.click();
+    await backendCloudLoginBtn.listeners.click();
+    await backendCloudPublishBtn.listeners.click();
+
+    assert.deepEqual(
+      requested.some(([url, method]) => url.endsWith("/api/backend/saves/save-2/publish") && method === "POST"),
+      true
+    );
+    assert.deepEqual(
+      requested.some(([url]) => url.endsWith("/api/backend/saves/save-1/publish")),
+      false
+    );
+    assert.equal(backendCloudStatus.textContent, "Latest cloud save published.");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("register clears previous cloud save before publishing", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudStatus = createStatusNode();
+  const backendCloudUsername = { value: "bob" };
+  const backendCloudPassword = { value: "correct horse" };
+  const backendCloudSaveTitle = { value: "First save" };
+  const backendCloudSaveBtn = createButtonNode();
+  const backendCloudRegisterBtn = createButtonNode();
+  const backendCloudPublishBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+  const requested = [];
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push([String(url), options.method || "GET"]);
+    return {
+      ok: true,
+      json: async () => {
+        if (String(url).endsWith("/auth/me")) {
+          return { user: { username: "alice" }, csrfToken: "initial-csrf" };
+        }
+        if (String(url).endsWith("/api/backend/saves") && (options.method || "GET") === "POST") {
+          return { save: { id: "save-1" } };
+        }
+        if (String(url).endsWith("/auth/register")) {
+          return { user: { username: "bob" }, csrfToken: "bob-csrf" };
+        }
+        if (String(url).endsWith("/api/backend/saves")) {
+          return { saves: [{ id: "save-2", title: "Bob save" }] };
+        }
+        if (String(url).endsWith("/publish")) {
+          return { save: { id: "save-2", visibility: "public" } };
+        }
+        if (String(url).endsWith("/community/saves")) {
+          return { saves: [] };
+        }
+        return {};
+      },
+    };
+  };
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        backendCloudUsername,
+        backendCloudPassword,
+        backendCloudSaveTitle,
+        backendCloudSaveBtn,
+        backendCloudRegisterBtn,
+        backendCloudPublishBtn,
+        backendCommunityList,
+      },
+      helpers: {
+        fileManager: {
+          buildProjectPayload: () => ({ schemaVersion: 21, paintMode: "visual" }),
+        },
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await backendCloudSaveBtn.listeners.click();
+    await backendCloudRegisterBtn.listeners.click();
+    await backendCloudPublishBtn.listeners.click();
+
+    assert.deepEqual(
+      requested.some(([url, method]) => url.endsWith("/api/backend/saves/save-2/publish") && method === "POST"),
+      true
+    );
+    assert.deepEqual(
+      requested.some(([url]) => url.endsWith("/api/backend/saves/save-1/publish")),
+      false
+    );
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("backend session probe disables cloud controls when local backend fails unexpectedly", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudStatus = createStatusNode();
+  const backendCloudUsername = { value: "" };
+  const backendCloudPassword = { value: "" };
+  const backendCloudSaveTitle = { value: "" };
+  const backendCloudRegisterBtn = createButtonNode();
+  const backendCloudLoginBtn = createButtonNode();
+  const backendCloudLogoutBtn = createButtonNode();
+  const backendCloudSaveBtn = createButtonNode();
+  const backendCloudPublishBtn = createButtonNode();
+  const backendCommunityRefreshBtn = createButtonNode();
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async () => ({
+    ok: false,
+    status: 500,
+    json: async () => ({ code: "internal_error", message: "Unexpected backend failure." }),
+  });
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        backendCloudUsername,
+        backendCloudPassword,
+        backendCloudSaveTitle,
+        backendCloudRegisterBtn,
+        backendCloudLoginBtn,
+        backendCloudLogoutBtn,
+        backendCloudSaveBtn,
+        backendCloudPublishBtn,
+        backendCommunityRefreshBtn,
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(backendCloudStatus.textContent, "Local backend unavailable. Start the local dev server to use Cloud Saves.");
+    assert.equal(backendCloudSaveBtn.disabled, true);
+    assert.equal(backendCommunityRefreshBtn.disabled, true);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});

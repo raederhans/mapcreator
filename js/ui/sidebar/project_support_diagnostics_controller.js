@@ -74,11 +74,45 @@ export function createProjectSupportDiagnosticsController({
     auditPayload?.summary && typeof auditPayload.summary === "object" ? auditPayload.summary : {}
   );
   let latestCloudSaveId = "";
+  let activeCloudUserKey = "";
+  let latestCloudSaveUserKey = "";
 
   const setBackendCloudStatus = (message) => {
     if (backendCloudStatus) {
       backendCloudStatus.textContent = message;
     }
+  };
+
+  const setBackendCloudControlsEnabled = (enabled) => {
+    [
+      backendCloudUsername,
+      backendCloudPassword,
+      backendCloudSaveTitle,
+      backendCloudRegisterBtn,
+      backendCloudLoginBtn,
+      backendCloudLogoutBtn,
+      backendCloudSaveBtn,
+      backendCloudPublishBtn,
+      backendCommunityRefreshBtn,
+    ].forEach((element) => {
+      if (element && typeof element === "object") {
+        element.disabled = !enabled;
+      }
+    });
+  };
+
+  const resolveCloudUserKey = (user) => (
+    String(user?.id || user?.username || user?.displayName || "").trim()
+  );
+
+  const updateActiveCloudUser = (user) => {
+    const nextUserKey = resolveCloudUserKey(user);
+    if (nextUserKey && activeCloudUserKey && nextUserKey !== activeCloudUserKey) {
+      latestCloudSaveId = "";
+      latestCloudSaveUserKey = "";
+    }
+    activeCloudUserKey = nextUserKey;
+    return nextUserKey;
   };
 
   const getBackendCredentials = () => ({
@@ -93,11 +127,12 @@ export function createProjectSupportDiagnosticsController({
   );
 
   const resolveLatestCloudSaveId = async () => {
-    if (latestCloudSaveId) return latestCloudSaveId;
+    if (latestCloudSaveId && latestCloudSaveUserKey === activeCloudUserKey) return latestCloudSaveId;
     const payload = await listBackendSaves();
     const saves = Array.isArray(payload?.saves) ? payload.saves : [];
     const latestSave = saves.find((save) => save?.id);
     latestCloudSaveId = String(latestSave?.id || "");
+    latestCloudSaveUserKey = activeCloudUserKey;
     return latestCloudSaveId;
   };
 
@@ -859,6 +894,9 @@ export function createProjectSupportDiagnosticsController({
             ...credentials,
             displayName: credentials.username,
           });
+          latestCloudSaveId = "";
+          latestCloudSaveUserKey = "";
+          updateActiveCloudUser(payload?.user);
           setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || credentials.username}`);
         } catch (error) {
           setBackendCloudStatus(String(error?.message || error || ""));
@@ -872,6 +910,9 @@ export function createProjectSupportDiagnosticsController({
         try {
           const credentials = getBackendCredentials();
           const payload = await loginBackendUser(credentials);
+          latestCloudSaveId = "";
+          latestCloudSaveUserKey = "";
+          updateActiveCloudUser(payload?.user);
           setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || credentials.username}`);
         } catch (error) {
           setBackendCloudStatus(String(error?.message || error || ""));
@@ -885,6 +926,8 @@ export function createProjectSupportDiagnosticsController({
         try {
           await logoutBackendUser();
           latestCloudSaveId = "";
+          latestCloudSaveUserKey = "";
+          activeCloudUserKey = "";
           setBackendCloudStatus(t("Logged out.", "ui"));
         } catch (error) {
           setBackendCloudStatus(String(error?.message || error || ""));
@@ -904,6 +947,7 @@ export function createProjectSupportDiagnosticsController({
             project,
           });
           latestCloudSaveId = String(payload?.save?.id || "");
+          latestCloudSaveUserKey = activeCloudUserKey;
           setBackendCloudStatus(t("Cloud save created.", "ui"));
         } catch (error) {
           setBackendCloudStatus(String(error?.message || error || ""));
@@ -942,9 +986,18 @@ export function createProjectSupportDiagnosticsController({
     if (backendCloudStatus && !backendCloudStatus.dataset.sessionChecked) {
       refreshBackendSession()
         .then((payload) => {
+          updateActiveCloudUser(payload?.user);
+          setBackendCloudControlsEnabled(true);
           setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || payload?.user?.username || ""}`);
         })
-        .catch(() => {})
+        .catch((error) => {
+          if (error?.code === "auth_required" || error?.status === 401) {
+            setBackendCloudControlsEnabled(true);
+            return;
+          }
+          setBackendCloudControlsEnabled(false);
+          setBackendCloudStatus(t("Local backend unavailable. Start the local dev server to use Cloud Saves.", "ui"));
+        })
         .finally(() => {
           backendCloudStatus.dataset.sessionChecked = "true";
         });

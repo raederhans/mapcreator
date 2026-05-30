@@ -1628,6 +1628,95 @@ class DevServerTest(unittest.TestCase):
         self.assertIn(("status", 403), events)
         self.assertEqual(json.loads(handler.wfile.getvalue().decode("utf-8"))["code"], "invalid_dev_token")
 
+    def test_do_post_dispatches_backend_register_and_forwards_session_cookie(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            events: list[tuple[str, object]] = []
+            payload = {
+                "username": "alice",
+                "password": "correct horse",
+                "displayName": "Alice",
+            }
+            encoded = json.dumps(payload).encode("utf-8")
+            handler = object.__new__(dev_server.Handler)
+            handler.path = "/api/backend/auth/register"
+            handler.headers = {
+                "Cookie": "mapcreator_dev_token=expected-token",
+                "Content-Type": "application/json",
+                "Content-Length": str(len(encoded)),
+            }
+            handler.rfile = io.BytesIO(encoded)
+            handler.wfile = io.BytesIO()
+            handler.server = SimpleNamespace(
+                dev_token="expected-token",
+                server_address=(dev_server.BIND_ADDRESS, 8000),
+            )
+            handler.translate_path = lambda _path: str(Path(__file__).resolve())
+            handler.send_response = lambda status: events.append(("status", status))
+            handler.send_header = lambda name, value: events.append(("header", (name, value)))
+            handler.end_headers = lambda: events.append(("end_headers", None))
+
+            with mock.patch.object(dev_server, "ROOT", Path(tmp_dir)):
+                handler.do_POST()
+
+            self.assertIn(("status", 201), events)
+            self.assertTrue(
+                any(
+                    name == "header"
+                    and header[0] == "Set-Cookie"
+                    and "mapcreator_session=" in header[1]
+                    for name, header in events
+                )
+            )
+            self.assertEqual(json.loads(handler.wfile.getvalue().decode("utf-8"))["user"]["username"], "alice")
+
+    def test_do_post_rejects_backend_api_without_dev_token_before_backend_dispatch(self) -> None:
+        events: list[tuple[str, object]] = []
+        encoded = json.dumps({"username": "alice"}).encode("utf-8")
+        handler = object.__new__(dev_server.Handler)
+        handler.path = "/api/backend/auth/register"
+        handler.headers = {
+            "Content-Type": "application/json",
+            "Content-Length": str(len(encoded)),
+        }
+        handler.rfile = io.BytesIO(encoded)
+        handler.wfile = io.BytesIO()
+        handler.server = SimpleNamespace(
+            dev_token="expected-token",
+            server_address=(dev_server.BIND_ADDRESS, 8000),
+        )
+        handler.translate_path = lambda _path: str(Path(__file__).resolve())
+        handler.send_response = lambda status: events.append(("status", status))
+        handler.send_header = lambda name, value: events.append(("header", (name, value)))
+        handler.end_headers = lambda: events.append(("end_headers", None))
+
+        handler.do_POST()
+
+        self.assertIn(("status", 403), events)
+        self.assertEqual(json.loads(handler.wfile.getvalue().decode("utf-8"))["code"], "invalid_dev_token")
+
+    def test_backend_internal_error_response_hides_exception_details(self) -> None:
+        events: list[tuple[str, object]] = []
+        handler = object.__new__(dev_server.Handler)
+        handler.path = "/api/backend/community/saves"
+        handler.headers = {"Cookie": "mapcreator_dev_token=expected-token"}
+        handler.wfile = io.BytesIO()
+        handler.server = SimpleNamespace(
+            dev_token="expected-token",
+            server_address=(dev_server.BIND_ADDRESS, 8000),
+        )
+        handler.translate_path = lambda _path: str(Path(__file__).resolve())
+        handler.send_response = lambda status: events.append(("status", status))
+        handler.send_header = lambda name, value: events.append(("header", (name, value)))
+        handler.end_headers = lambda: events.append(("end_headers", None))
+
+        with mock.patch.object(dev_server, "handle_backend_request", side_effect=RuntimeError("secret local path")):
+            handler.do_GET()
+
+        payload = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertIn(("status", 500), events)
+        self.assertEqual(payload["message"], "Unexpected backend failure.")
+        self.assertNotIn("secret local path", json.dumps(payload))
+
     def test_maybe_send_gzip_static_compresses_static_json_when_client_accepts_gzip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir) / "sample.json"

@@ -2816,12 +2816,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             )
             return
         except Exception as error:  # pragma: no cover - safety net
+            print(f"[backend] Unexpected backend failure: {error}", file=sys.stderr)
             self._send_json(
                 500,
                 {
                     "ok": False,
                     "code": "internal_error",
-                    "message": f"Unexpected backend failure: {error}",
+                    "message": "Unexpected backend failure.",
                 },
             )
             return
@@ -3022,12 +3023,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 },
             )
         except Exception as error:  # pragma: no cover - safety net
+            print(f"[dev-server] Unexpected route failure: {error}", file=sys.stderr)
             self._send_json(
                 500,
                 {
                     "ok": False,
                     "code": "internal_error",
-                    "message": f"Unexpected dev server failure: {error}",
+                    "message": "Unexpected dev server failure.",
                 },
             )
 

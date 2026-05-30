@@ -15,6 +15,7 @@
     "test:node:appearance-reference-owner": "node --test tests/appearance_reference_owner_behavior.test.mjs",
     "test:node:appearance-rivers-owner": "node --test tests/appearance_rivers_owner_behavior.test.mjs",
     "test:node:appearance-texture-owner": "node --test tests/appearance_texture_owner_behavior.test.mjs",
+    "test:node:backend-cloud-support": "node --test tests/backend_client_behavior.test.mjs tests/project_support_diagnostics_controller_behavior.test.mjs",
     "test:node:transport-facility-render-owner": "node --test tests/transport_facility_render_owner_behavior.test.mjs",
     "test:node:transport-workbench-controller": "npm run test:node:transport-workbench-event-owner && npm run test:node:transport-workbench-shell-owner",
     "test:node:transport-workbench-event-owner": "node --test tests/transport_workbench_event_owner_behavior.test.mjs",

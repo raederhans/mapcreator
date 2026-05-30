@@ -39,8 +39,8 @@ def handle_backend_request(
         return None
     service = BackendService(root)
     request_payload = payload or {}
-    session_id = read_cookie(str(headers.get("Cookie") or ""), SESSION_COOKIE_NAME)
-    csrf_token = str(headers.get("X-MapCreator-CSRF") or headers.get("x-mapcreator-csrf") or "")
+    session_id = read_cookie(_read_header(headers, "Cookie"), SESSION_COOKIE_NAME)
+    csrf_token = _read_header(headers, "X-MapCreator-CSRF")
 
     try:
         if method == "POST" and route == "/api/backend/auth/register":
@@ -115,3 +115,21 @@ def _session_response(status: int, payload: dict[str, object], session_id: str) 
         payload,
         [("Set-Cookie", build_session_cookie(session_id, max_age=SESSION_MAX_AGE_SECONDS))],
     )
+
+
+def _read_header(headers: object, name: str) -> str:
+    try:
+        value = headers.get(name)  # type: ignore[attr-defined]
+    except AttributeError:
+        value = None
+    if value:
+        return str(value)
+    expected = name.lower()
+    try:
+        items = headers.items()  # type: ignore[attr-defined]
+    except AttributeError:
+        return ""
+    for key, candidate in items:
+        if str(key).lower() == expected:
+            return str(candidate or "")
+    return ""

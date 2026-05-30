@@ -669,7 +669,6 @@ function updateUIText() {
     ["utilitiesGuideBtn", "Guide"],
     ["dockReferenceBtn", "Reference"],
     ["dockExportBtn", "Open workbench"],
-    ["scenarioGuideSupportHint", "Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work."],
     ["referenceToolHint", "Upload a local image, align it with opacity / scale / offsets, then keep those alignment values in the project. The image file itself needs to be uploaded again when you restore the project."],
     ["lblExportTarget", "Target"],
     ["optExportTargetComposite", "Composite image"],

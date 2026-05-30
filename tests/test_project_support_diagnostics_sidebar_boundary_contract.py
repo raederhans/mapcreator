@@ -17,6 +17,7 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         content = SIDEBAR_JS.read_text(encoding="utf-8")
 
         self.assertIn('import { createProjectSupportDiagnosticsController } from "./sidebar/project_support_diagnostics_controller.js";', content)
+        self.assertIn('import { isLocalBackendRuntimeAvailable } from "../api/backend_client.js";', content)
         self.assertIn('createProjectSupportDiagnosticsController', content)
 
     def test_project_support_owner_moves_to_controller(self):
@@ -105,6 +106,7 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('projectSaveStatus,', sidebar_content)
         self.assertIn('projectSaveStatus,', owner_content)
         self.assertIn('backendCloudStatus,', sidebar_content)
+        self.assertIn('if (localBackendRuntimeAvailable) {', sidebar_content)
         self.assertIn('backendCloudSaveBtn,', owner_content)
         self.assertIn('createBackendSave({', owner_content)
         self.assertIn('const saveId = await resolveLatestCloudSaveId();', owner_content)

@@ -60,7 +60,9 @@ export function createAppearanceControlsController({
   const parentBordersVisible = document.getElementById("parentBordersVisible");
   const parentBorderColor = document.getElementById("parentBorderColor");
   const parentBorderOpacity = document.getElementById("parentBorderOpacity");
+  const parentBorderOpacityValue = document.getElementById("parentBorderOpacityValue");
   const parentBorderWidth = document.getElementById("parentBorderWidth");
+  const parentBorderWidthValue = document.getElementById("parentBorderWidthValue");
   const parentBorderEnableAll = document.getElementById("parentBorderEnableAll");
   const parentBorderDisableAll = document.getElementById("parentBorderDisableAll");
   const parentBorderCountryList = document.getElementById("parentBorderCountryList");
@@ -117,7 +119,9 @@ export function createAppearanceControlsController({
       visibleToggle: parentBordersVisible,
       colorInput: parentBorderColor,
       opacityInput: parentBorderOpacity,
+      opacityValue: parentBorderOpacityValue,
       widthInput: parentBorderWidth,
+      widthValue: parentBorderWidthValue,
       enableAllButton: parentBorderEnableAll,
       disableAllButton: parentBorderDisableAll,
       countryList: parentBorderCountryList,
@@ -296,6 +300,7 @@ export function createAppearanceControlsController({
     physicalOwner.bindEvents();
     riversOwner.bindEvents();
     referenceOwner.bindEvents();
+    parentBorderOwner.bindEvents();
 
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
       toggleUrban.checked = !!runtimeState.showUrban;

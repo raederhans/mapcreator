@@ -60,7 +60,6 @@ export function createDefaultTransportWorkbenchUiState() {
       translateX: 0,
       translateY: 0,
     },
-    compareHeld: false,
     layerOrder: [...TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS],
     familyConfigs: Object.fromEntries(
       TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.map((familyId) => [familyId, {}])
@@ -88,7 +87,7 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
   );
   const familyId = String(patch.familyId || "").trim();
   // 这里负责 workbench -> main map 的窄桥接：只把 renderer 真正消费的 overview
-  // 配置写回 styleConfig，preview camera 和 compareHeld 这类本地 UI 状态继续留在 workbench。
+  // 配置写回 styleConfig，preview camera 这类本地 UI 状态继续留在 workbench。
   const nextOverviewConfig = {
     ...currentOverviewConfig,
     visualMode: patch.visualMode,

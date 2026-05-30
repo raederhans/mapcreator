@@ -78,6 +78,8 @@ export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
     if (transportWorkbenchPackGatePromiseByPackId.has(normalizedPackId)) {
       return transportWorkbenchPackGatePromiseByPackId.get(normalizedPackId);
     }
+    // pack source gate 是异步且可能被多个 family render 同时触发；
+    // 这里先缓存 promise，保证同一个 pack 在 pending 期间只发一次 manifest 请求。
     const promise = getTransportAsset(resolveTransportManifestUrl(normalizedPackId), {
       cachePolicy: "no-cache",
       label: `transport-workbench-pack-gate:${normalizedPackId}`,
@@ -155,6 +157,8 @@ export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
     const activePackId = context?.activePackId || getTransportWorkbenchActivePackId(runtimeState, familyId);
     const gateReport = await refreshPackGateReport(activePackId);
     if (!gateReport?.passed) return false;
+    // apply 顺序固定为：source gate -> patch -> overlay state -> overview state -> data preload -> UI/render。
+    // overlay 要先写入 runtimeState，后面的 appearance UI 和主图渲染才能看到同一份 family/pack 真相。
     const patch = resolveTransportOverviewPatchFromWorkbench(
       familyId,
       {
@@ -183,6 +187,8 @@ export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
         );
       }
     } finally {
+      // 无论 preload 成功还是失败，都要把 workbench UI、dirty 状态和主图刷新推到同一出口，
+      // 避免按钮状态已经切换而主图仍停在旧 family/pack。
       runtimeState.updateTransportAppearanceUIFn?.();
       markDirty("transport-workbench-apply");
       if (typeof runtimeState.renderNowFn === "function") {

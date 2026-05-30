@@ -72,6 +72,35 @@ class BackendServiceTest(unittest.TestCase):
         self.assertEqual(downloaded["save"]["project"]["schemaVersion"], 21)
         self.assertIn("community-mapcreator-save-", downloaded["filename"])
 
+    def test_community_download_omits_local_only_project_fields(self) -> None:
+        session = self._register()
+        session_id = str(session["sessionId"])
+        csrf = str(session["csrfToken"])
+        save = self.service.create_save(
+            session_id,
+            csrf,
+            {
+                "title": "Shareable project",
+                "project": {
+                    "schemaVersion": 21,
+                    "paintMode": "visual",
+                    "referenceImageState": {"dataUrl": "data:image/png;base64,private"},
+                    "dynamicBordersDirty": True,
+                    "dynamicBordersDirtyReason": "local-edit",
+                },
+            },
+        )
+        self.service.publish_save(session_id, csrf, str(save["id"]), {"visibility": "public"})
+
+        downloaded = self.service.download_community_save(str(save["id"]))
+        project = downloaded["save"]["project"]
+
+        self.assertEqual(project["schemaVersion"], 21)
+        self.assertEqual(project["paintMode"], "visual")
+        self.assertNotIn("referenceImageState", project)
+        self.assertNotIn("dynamicBordersDirty", project)
+        self.assertNotIn("dynamicBordersDirtyReason", project)
+
     def test_private_save_is_hidden_from_other_user(self) -> None:
         owner = self._register("owner")
         stranger = self._register("stranger")
@@ -105,6 +134,77 @@ class BackendServiceTest(unittest.TestCase):
 
         self.assertEqual(exc_info.exception.code, "invalid_csrf")
         self.assertEqual(exc_info.exception.status, 403)
+
+    def test_login_replaces_previous_session_and_logout_expires_access(self) -> None:
+        first_session = self._register()
+        second_session = self.service.login({
+            "username": "alice",
+            "password": "correct horse",
+        })
+
+        with self.assertRaises(BackendError) as exc_info:
+            self.service.current_session(str(first_session["sessionId"]))
+        self.assertEqual(exc_info.exception.code, "auth_required")
+
+        self.assertEqual(
+            self.service.current_session(str(second_session["sessionId"]))["user"]["username"],
+            "alice",
+        )
+        self.service.logout(str(second_session["sessionId"]))
+        with self.assertRaises(BackendError) as logout_exc:
+            self.service.list_my_saves(str(second_session["sessionId"]))
+        self.assertEqual(logout_exc.exception.code, "auth_required")
+
+    def test_public_save_is_readable_by_other_user(self) -> None:
+        owner = self._register("owner")
+        stranger = self._register("stranger")
+        save = self.service.create_save(
+            str(owner["sessionId"]),
+            str(owner["csrfToken"]),
+            {
+                "title": "Shared draft",
+                "project": {"schemaVersion": 21, "paintMode": "visual"},
+            },
+        )
+
+        self.service.publish_save(str(owner["sessionId"]), str(owner["csrfToken"]), str(save["id"]), {"visibility": "public"})
+        public_save = self.service.get_save(str(stranger["sessionId"]), str(save["id"]))
+
+        self.assertEqual(public_save["project"]["schemaVersion"], 21)
+        self.assertEqual(public_save["title"], "Shared draft")
+
+    def test_invalid_write_payloads_return_contract_codes(self) -> None:
+        session = self._register()
+        session_id = str(session["sessionId"])
+        csrf = str(session["csrfToken"])
+
+        invalid_cases = [
+            lambda: self.service.create_save(session_id, csrf, {"title": "Missing project"}),
+            lambda: self.service.create_save(session_id, csrf, {"title": "", "project": {"schemaVersion": 21}}),
+            lambda: self.service.create_save(session_id, csrf, {"title": "Bad project", "project": []}),
+            lambda: self.service.create_save(session_id, csrf, {"title": ["bad"], "project": {"schemaVersion": 21}}),
+        ]
+        for action in invalid_cases:
+            with self.assertRaises(BackendError):
+                action()
+
+        save = self.service.create_save(
+            session_id,
+            csrf,
+            {"title": "Draft", "project": {"schemaVersion": 21}},
+        )
+        with self.assertRaises(BackendError) as visibility_exc:
+            self.service.publish_save(session_id, csrf, str(save["id"]), {"visibility": "friends"})
+        self.assertEqual(visibility_exc.exception.code, "invalid_visibility")
+
+        self.service.publish_save(session_id, csrf, str(save["id"]), {"visibility": "public"})
+        with self.assertRaises(BackendError) as comment_exc:
+            self.service.add_comment(session_id, csrf, str(save["id"]), {"body": ""})
+        self.assertEqual(comment_exc.exception.code, "invalid_comment")
+
+        with self.assertRaises(BackendError) as report_exc:
+            self.service.report_save(session_id, csrf, str(save["id"]), {"reason": "duplicate"})
+        self.assertEqual(report_exc.exception.code, "invalid_report_reason")
 
 
 if __name__ == "__main__":

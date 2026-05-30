@@ -132,7 +132,6 @@ export function createTransportWorkbenchPopoverOwner({
     if (!infoBody || !family) return { blockCount: 0 };
     infoBody.replaceChildren();
     const dataContract = getDataContract(family.id);
-    const familyLabel = String(family.label || "transport").toLowerCase();
     const defaultBlocks = [
       {
         title: "Current lens",
@@ -143,17 +142,14 @@ export function createTransportWorkbenchPopoverOwner({
         body: family.lensNext,
       },
       family.supportsDetailedControls
-        ? {
-          title: "Compare action",
-          body: `Compare baseline temporarily swaps the preview to the locked ${familyLabel} baseline while the control is held. It never overwrites the working values in the left column.`,
-        }
+        ? null
         : {
           title: "Availability",
           body: `${family.label} is still a reserved shell. Detailed controls stay closed until the live Japan schema and packs are wired.`,
         },
       {
         title: "Preview controls",
-        body: "Use mouse wheel or the + / - controls to zoom. The 90° button swaps between the default north-up view and the quarter-turn inspection view. Reset View restores the framed default preview.",
+        body: "Use mouse wheel or the + / - controls to zoom. The 90° button swaps between the framed Japan default view and the north-up reference view. Reset View restores the framed default preview.",
       },
       {
         title: "Capability matrix",
