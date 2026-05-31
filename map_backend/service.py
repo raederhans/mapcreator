@@ -88,10 +88,9 @@ class BackendService:
                 raise BackendError("invalid_credentials", "Username or password is incorrect.", status=401)
             return self._create_session_response(connection, str(user["id"]))
 
-    def logout(self, session_id: str) -> None:
-        if not session_id:
-            return
+    def logout(self, session_id: str, csrf_token: str) -> None:
         with self.store.connect() as connection:
+            self._require_session(connection, session_id, csrf_token)
             connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
 
     def current_session(self, session_id: str) -> dict[str, object]:
@@ -149,10 +148,12 @@ class BackendService:
         with self.store.connect() as connection:
             session = self._load_session(connection, session_id)
             row = self._load_save_row(connection, save_id)
-            if row["owner_user_id"] != session["user"]["id"] and row["visibility"] != SAVE_VISIBILITY_PUBLIC:
+            is_owner = row["owner_user_id"] == session["user"]["id"]
+            if not is_owner and row["visibility"] != SAVE_VISIBILITY_PUBLIC:
                 raise BackendError("save_not_found", "Save was not found.", status=404)
             payload = self._save_payload(row, include_owner=True)
-            payload["project"] = self._read_project_payload(save_id)
+            project = self._read_project_payload(save_id)
+            payload["project"] = project if is_owner else self._share_project_payload(project)
             return payload
 
     def export_save(self, session_id: str, save_id: str) -> dict[str, object]:

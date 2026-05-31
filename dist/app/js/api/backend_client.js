@@ -1,14 +1,5 @@
 let csrfToken = "";
 
-export function isLocalBackendRuntimeAvailable(locationLike = globalThis.location) {
-  const protocol = String(locationLike?.protocol || "").trim().toLowerCase();
-  const hostname = String(locationLike?.hostname || "").trim().toLowerCase();
-  return (
-    (protocol === "http:" || protocol === "https:")
-    && (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]")
-  );
-}
-
 async function requestJson(path, { method = "GET", body = null } = {}) {
   const headers = {};
   if (body !== null) {
@@ -43,7 +34,16 @@ export function getBackendCsrfToken() {
 }
 
 export async function refreshBackendSession() {
-  return requestJson("/api/backend/auth/me");
+  const payload = await requestJson("/api/backend/auth/me");
+  if (!payload?.csrfToken || !payload?.user || typeof payload.user !== "object") {
+    csrfToken = "";
+    const error = new Error("Backend capability probe did not return a session contract.");
+    error.status = 404;
+    error.code = "backend_unavailable";
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
 }
 
 export async function registerBackendUser({ username, password, displayName }) {

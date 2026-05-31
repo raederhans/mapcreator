@@ -150,7 +150,7 @@ class BackendServiceTest(unittest.TestCase):
             self.service.current_session(str(second_session["sessionId"]))["user"]["username"],
             "alice",
         )
-        self.service.logout(str(second_session["sessionId"]))
+        self.service.logout(str(second_session["sessionId"]), str(second_session["csrfToken"]))
         with self.assertRaises(BackendError) as logout_exc:
             self.service.list_my_saves(str(second_session["sessionId"]))
         self.assertEqual(logout_exc.exception.code, "auth_required")
@@ -163,14 +163,28 @@ class BackendServiceTest(unittest.TestCase):
             str(owner["csrfToken"]),
             {
                 "title": "Shared draft",
-                "project": {"schemaVersion": 21, "paintMode": "visual"},
+                "project": {
+                    "schemaVersion": 21,
+                    "paintMode": "visual",
+                    "referenceImageState": {"dataUrl": "data:image/png;base64,private"},
+                    "dynamicBordersDirty": True,
+                    "dynamicBordersDirtyReason": "local-edit",
+                    "__privateLocalProbe": "private",
+                },
             },
         )
 
         self.service.publish_save(str(owner["sessionId"]), str(owner["csrfToken"]), str(save["id"]), {"visibility": "public"})
         public_save = self.service.get_save(str(stranger["sessionId"]), str(save["id"]))
+        public_export = self.service.export_save(str(stranger["sessionId"]), str(save["id"]))
 
         self.assertEqual(public_save["project"]["schemaVersion"], 21)
+        self.assertEqual(public_save["project"]["paintMode"], "visual")
+        self.assertNotIn("referenceImageState", public_save["project"])
+        self.assertNotIn("dynamicBordersDirty", public_save["project"])
+        self.assertNotIn("dynamicBordersDirtyReason", public_save["project"])
+        self.assertNotIn("__privateLocalProbe", public_save["project"])
+        self.assertNotIn("__privateLocalProbe", public_export["save"]["project"])
         self.assertEqual(public_save["title"], "Shared draft")
 
     def test_invalid_write_payloads_return_contract_codes(self) -> None:

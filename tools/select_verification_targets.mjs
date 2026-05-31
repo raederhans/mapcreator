@@ -128,6 +128,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
     return BOOTSTRAP_FALLBACK_ROUTE_IDS.has(route.id);
   }
 
+  if (changedFile.startsWith("map_backend/") || changedFile === "js/api/backend_client.js") {
+    return route.domain === "backend-cloud-support";
+  }
+
   if (changedFile.startsWith("js/") && changedFile.includes("city")) return route.domain === "city-runtime";
   if (changedFile.startsWith("js/") && changedFile.includes("scenario")) return route.domain === "scenario-runtime";
   if (changedFile.startsWith("js/") && changedFile.includes("palette")) return route.domain === "palette-runtime";

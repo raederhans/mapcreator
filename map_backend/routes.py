@@ -52,7 +52,7 @@ def handle_backend_request(
             session_id = str(body.pop("sessionId"))
             return _session_response(200, body, session_id)
         if method == "POST" and route == "/api/backend/auth/logout":
-            service.logout(session_id)
+            service.logout(session_id, csrf_token)
             return BackendResponse(200, {"ok": True}, [("Set-Cookie", expire_session_cookie())])
         if method == "GET" and route == "/api/backend/auth/me":
             return BackendResponse(200, service.current_session(session_id))

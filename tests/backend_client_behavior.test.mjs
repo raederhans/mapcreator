@@ -125,11 +125,54 @@ test("backend client surfaces backend error messages", async () => {
   }
 });
 
-test("backend runtime availability is limited to local http origins", async () => {
+test("backend session probe rejects non backend success payloads", async () => {
+  const previousFetch = globalThis.fetch;
   const client = await freshClient();
 
-  assert.equal(client.isLocalBackendRuntimeAvailable({ protocol: "http:", hostname: "localhost" }), true);
-  assert.equal(client.isLocalBackendRuntimeAvailable({ protocol: "http:", hostname: "127.0.0.1" }), true);
-  assert.equal(client.isLocalBackendRuntimeAvailable({ protocol: "https:", hostname: "example.com" }), false);
-  assert.equal(client.isLocalBackendRuntimeAvailable({ protocol: "file:", hostname: "" }), false);
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({}),
+  });
+
+  try {
+    await assert.rejects(
+      () => client.refreshBackendSession(),
+      /Backend capability probe/
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("backend community helpers encode save ids in paths", async () => {
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+  const client = await freshClient();
+  const rawSaveId = "save/1?draft=true";
+  const encodedSaveId = encodeURIComponent(rawSaveId);
+
+  globalThis.fetch = async (url, options = {}) => {
+    requests.push([String(url), options.method || "GET", options.body ? JSON.parse(String(options.body)) : null]);
+    return {
+      ok: true,
+      json: async () => ({}),
+    };
+  };
+
+  try {
+    await client.downloadCommunitySave(rawSaveId);
+    await client.addCommunityComment(rawSaveId, "Works locally.");
+    await client.reportCommunitySave(rawSaveId, "other", "Needs review.");
+
+    assert.deepEqual(requests.map(([url]) => url), [
+      `/api/backend/community/saves/${encodedSaveId}/download`,
+      `/api/backend/community/saves/${encodedSaveId}/comments`,
+      `/api/backend/community/saves/${encodedSaveId}/reports`,
+    ]);
+    assert.equal(requests[1][1], "POST");
+    assert.deepEqual(requests[1][2], { body: "Works locally." });
+    assert.deepEqual(requests[2][2], { reason: "other", details: "Needs review." });
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
 });

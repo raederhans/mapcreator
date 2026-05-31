@@ -16,6 +16,7 @@ function createStatusNode() {
 function createButtonNode() {
   return {
     dataset: {},
+    disabled: false,
     listeners: {},
     addEventListener(type, handler) {
       this.listeners[type] = handler;
@@ -43,6 +44,8 @@ function createElementNode(tagName = "div") {
     textContent: "",
     type: "",
     dataset: {},
+    disabled: false,
+    hidden: false,
     addEventListener(type, handler) {
       this.listeners = this.listeners || {};
       this.listeners[type] = handler;
@@ -411,9 +414,86 @@ test("register clears previous cloud save before publishing", async () => {
   }
 });
 
+test("anonymous backend probe enables only public cloud actions", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudSection = { hidden: true };
+  const backendCloudStatus = createStatusNode();
+  const backendCloudUsername = { value: "", disabled: false };
+  const backendCloudPassword = { value: "", disabled: false };
+  const backendCloudSaveTitle = { value: "", disabled: false };
+  const backendCloudRegisterBtn = createButtonNode();
+  const backendCloudLoginBtn = createButtonNode();
+  const backendCloudLogoutBtn = createButtonNode();
+  const backendCloudSaveBtn = createButtonNode();
+  const backendCloudPublishBtn = createButtonNode();
+  const backendCommunityRefreshBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url) => ({
+    ok: !String(url).endsWith("/auth/me"),
+    status: String(url).endsWith("/auth/me") ? 401 : 200,
+    json: async () => {
+      if (String(url).endsWith("/auth/me")) {
+        return { code: "auth_required", message: "Login is required." };
+      }
+      if (String(url).endsWith("/community/saves")) {
+        return { saves: [{ id: "save-1", title: "Shared Save", owner: { displayName: "Alice" } }] };
+      }
+      return {};
+    },
+  });
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudSection,
+        backendCloudStatus,
+        backendCloudUsername,
+        backendCloudPassword,
+        backendCloudSaveTitle,
+        backendCloudRegisterBtn,
+        backendCloudLoginBtn,
+        backendCloudLogoutBtn,
+        backendCloudSaveBtn,
+        backendCloudPublishBtn,
+        backendCommunityRefreshBtn,
+        backendCommunityList,
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(backendCloudSection.hidden, false);
+    assert.equal(backendCloudUsername.disabled, false);
+    assert.equal(backendCloudPassword.disabled, false);
+    assert.equal(backendCloudRegisterBtn.disabled, false);
+    assert.equal(backendCloudLoginBtn.disabled, false);
+    assert.equal(backendCommunityRefreshBtn.disabled, false);
+    assert.equal(backendCloudSaveTitle.disabled, true);
+    assert.equal(backendCloudLogoutBtn.disabled, true);
+    assert.equal(backendCloudSaveBtn.disabled, true);
+    assert.equal(backendCloudPublishBtn.disabled, true);
+
+    await backendCommunityRefreshBtn.listeners.click();
+    const row = backendCommunityList.children[0];
+    assert.equal(row.children.find((child) => child.textContent === "Load").disabled, false);
+    assert.equal(row.children.find((child) => child.textContent === "Comment").disabled, true);
+    assert.equal(row.children.find((child) => child.textContent === "Report").disabled, true);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("backend session probe disables cloud controls when local backend fails unexpectedly", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
+  const backendCloudSection = { hidden: true };
   const backendCloudStatus = createStatusNode();
   const backendCloudUsername = { value: "" };
   const backendCloudPassword = { value: "" };
@@ -438,6 +518,7 @@ test("backend session probe disables cloud controls when local backend fails une
   try {
     const controller = createController(createStatusNode(), {
       elements: {
+        backendCloudSection,
         backendCloudStatus,
         backendCloudUsername,
         backendCloudPassword,
@@ -454,7 +535,47 @@ test("backend session probe disables cloud controls when local backend fails une
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     assert.equal(backendCloudStatus.textContent, "Local backend unavailable. Start the local dev server to use Cloud Saves.");
+    assert.equal(backendCloudSection.hidden, false);
     assert.equal(backendCloudSaveBtn.disabled, true);
+    assert.equal(backendCommunityRefreshBtn.disabled, true);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("backend session probe hides cloud section for non backend success payloads", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudSection = { hidden: true };
+  const backendCloudStatus = createStatusNode();
+  const backendCloudRegisterBtn = createButtonNode();
+  const backendCommunityRefreshBtn = createButtonNode();
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({}),
+  });
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudSection,
+        backendCloudStatus,
+        backendCloudRegisterBtn,
+        backendCommunityRefreshBtn,
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(backendCloudSection.hidden, true);
+    assert.equal(backendCloudRegisterBtn.disabled, true);
     assert.equal(backendCommunityRefreshBtn.disabled, true);
   } finally {
     globalThis.document = previousDocument;

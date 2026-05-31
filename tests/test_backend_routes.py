@@ -147,7 +147,15 @@ class BackendRoutesTest(unittest.TestCase):
         self.assertEqual(export_response.status, 200)
         self.assertEqual(export_response.payload["save"]["project"]["schemaVersion"], 21)
 
-        logout_response = self._request("POST", "/api/backend/auth/logout", headers={"Cookie": session_cookie})
+        rejected_logout = self._request("POST", "/api/backend/auth/logout", headers={"Cookie": session_cookie})
+        self.assertEqual(rejected_logout.status, 403)
+        self.assertEqual(rejected_logout.payload["code"], "invalid_csrf")
+
+        logout_response = self._request(
+            "POST",
+            "/api/backend/auth/logout",
+            headers={"Cookie": session_cookie, "X-MapCreator-CSRF": str(login.payload["csrfToken"])},
+        )
         self.assertEqual(logout_response.status, 200)
         self.assertIn("Max-Age=0", dict(logout_response.headers)["Set-Cookie"])
 

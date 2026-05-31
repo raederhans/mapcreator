@@ -5982,7 +5982,7 @@
     },
     {
       "path": "app/js/api/backend_client.js",
-      "size_bytes": 3313
+      "size_bytes": 3237
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -6574,7 +6574,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 39594
+      "size_bytes": 40982
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -6602,7 +6602,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 252613
+      "size_bytes": 252793
     },
     {
       "path": "app/js/ui/toast.js",
@@ -6891,5 +6891,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001522200
+  "total_bytes": 1001523692
 }

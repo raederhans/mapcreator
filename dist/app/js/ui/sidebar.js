@@ -57,7 +57,6 @@ import { createCountryInspectorController } from "./sidebar/country_inspector_co
 import { createStrategicOverlayController } from "./sidebar/strategic_overlay_controller.js";
 import { createWaterSpecialRegionController } from "./sidebar/water_special_region_controller.js";
 import { createProjectSupportDiagnosticsController } from "./sidebar/project_support_diagnostics_controller.js";
-import { isLocalBackendRuntimeAvailable } from "../api/backend_client.js";
 import { importProjectThroughFunnel } from "../core/interaction_funnel.js";
 import { flushRenderBoundary } from "../core/render_boundary.js";
 import {
@@ -95,7 +94,6 @@ import {
   saveHoi4UnitIconReviewDraft,
 } from "../core/unit_counter_icon_libraries.js";
 const state = runtimeState;
-const localBackendRuntimeAvailable = isLocalBackendRuntimeAvailable();
 
 // Batch 5: sidebar controllers consume a curated renderer helper surface so
 // renderer API drift stays visible in one place instead of hiding in namespace imports.
@@ -1503,7 +1501,11 @@ function initSidebar({ render } = {}) {
 
     projectSection.appendChild(title);
     projectSection.appendChild(actions);
-    if (localBackendRuntimeAvailable) {
+    {
+      const cloudSection = document.createElement("div");
+      cloudSection.id = "backendCloudSection";
+      cloudSection.hidden = true;
+
       const cloudTitle = document.createElement("div");
       cloudTitle.className = "section-header sidebar-tool-title mt-3";
       cloudTitle.textContent = t("Cloud Saves", "ui");
@@ -1588,7 +1590,8 @@ function initSidebar({ render } = {}) {
       communityList.id = "backendCommunityList";
       communityList.className = "mt-2 flex flex-col gap-2";
 
-      projectSection.append(cloudTitle, cloudStatus, cloudUsername, cloudPassword, cloudTitleInput, cloudActions, communityList);
+      cloudSection.append(cloudTitle, cloudStatus, cloudUsername, cloudPassword, cloudTitleInput, cloudActions, communityList);
+      projectSection.appendChild(cloudSection);
     }
     projectLegendStack.appendChild(projectSection);
   }
@@ -3216,6 +3219,7 @@ function initSidebar({ render } = {}) {
   const projectFileInput = document.getElementById("projectFileInput");
   const projectFileName = document.getElementById("projectFileName");
   const projectSaveStatus = document.getElementById("projectSaveStatus");
+  const backendCloudSection = document.getElementById("backendCloudSection");
   const backendCloudStatus = document.getElementById("backendCloudStatus");
   const backendCloudUsername = document.getElementById("backendCloudUsername");
   const backendCloudPassword = document.getElementById("backendCloudPassword");
@@ -5592,6 +5596,7 @@ function initSidebar({ render } = {}) {
       projectFileInput,
       projectFileName,
       projectSaveStatus,
+      backendCloudSection,
       backendCloudStatus,
       backendCloudUsername,
       backendCloudPassword,
