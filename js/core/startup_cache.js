@@ -61,6 +61,7 @@ function getScenarioSourceShaCacheKeyParts(source = null) {
     `sourceRuntime=${normalizeCacheKeyPart(payload.runtime_topology_sha256, "missing-runtime-sha")}`,
     `sourceBootstrap=${normalizeCacheKeyPart(payload.runtime_bootstrap_topology_sha256, "missing-bootstrap-sha")}`,
     `sourceChunks=${normalizeCacheKeyPart(payload.detail_chunk_manifest_sha256, "no-detail-chunks-sha")}`,
+    `sourceCountries=${normalizeCacheKeyPart(payload.countries_sha256, "missing-countries-sha")}`,
   ];
 }
 

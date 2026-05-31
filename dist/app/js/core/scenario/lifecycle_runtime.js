@@ -122,6 +122,7 @@ function createScenarioLifecycleRuntime({
     if (!runtimeState.activeScenarioId || !runtimeState.scenarioBaselineOwnersByFeatureId) {
       return false;
     }
+    // reset 只回到当前 scenario baseline，保留 inspector 展开上下文，方便用户继续核对同一批区域。
     const previousSelectedInspectorCountryCode = String(runtimeState.selectedInspectorCountryCode || "").trim().toUpperCase();
     const previousExpandedInspectorContinents = runtimeState.expandedInspectorContinents instanceof Set
       ? new Set(runtimeState.expandedInspectorContinents)
@@ -220,7 +221,7 @@ function createScenarioLifecycleRuntime({
     runtimeState.scenarioContextLandMaskVersionTag = "";
     runtimeState.mapSemanticMode = "blank";
     runtimeState.runtimePoliticalTopology = runtimeState.defaultRuntimePoliticalTopology || null;
-    // startup coarse mode can still carry defaultRuntimePoliticalTopology while detail promotion remains deferred
+    // 清空 scenario 后回到 startup baseline；coarse topology 可见时仍允许 detail promotion 延后完成。
     runtimeState.topologyBundleMode = hasBaselineDetailTopology ? "composite" : "single";
     runtimeState.detailDeferred = hasBaselineRuntimeTopology && !hasBaselineDetailTopology;
     runtimeState.detailPromotionInFlight = false;
@@ -266,6 +267,7 @@ function createScenarioLifecycleRuntime({
     restorePaintModeAfterScenario();
     restoreScenarioOceanFillAfterExit();
     restoreScenarioDisplaySettingsAfterExit();
+    // clear 是完整退出事务，最后才跑 post-clear effects，避免 UI 在中间态读取到半清空状态。
     runPostScenarioClearEffects({ renderNow });
     if (markDirtyReason) {
       markDirty(markDirtyReason);

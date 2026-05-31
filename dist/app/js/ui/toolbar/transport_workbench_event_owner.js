@@ -16,10 +16,6 @@ export function bindTransportWorkbenchEventOnce(node, bind) {
   return true;
 }
 
-function isCompareKey(event) {
-  return event.key === " " || event.key === "Enter";
-}
-
 export function createTransportWorkbenchEventOwner({
   documentRef = globalThis.document,
   body = documentRef?.body || null,
@@ -28,7 +24,6 @@ export function createTransportWorkbenchEventOwner({
   infoButton = null,
   closeButton = null,
   resetButton = null,
-  compareButton = null,
   zoomOutButton = null,
   zoomInButton = null,
   rotateButton = null,
@@ -79,29 +74,6 @@ export function createTransportWorkbenchEventOwner({
       });
     });
 
-    bindTransportWorkbenchEventOnce(compareButton, (button) => {
-      const setCompareHeld = requireAction(actions, "setCompareHeld");
-      button.addEventListener("pointerdown", (event) => {
-        if (event.button !== 0) return;
-        setCompareHeld(true);
-      });
-      ["pointerup", "pointercancel", "pointerleave", "blur"].forEach((eventName) => {
-        button.addEventListener(eventName, () => {
-          setCompareHeld(false);
-        });
-      });
-      button.addEventListener("keydown", (event) => {
-        if (!isCompareKey(event)) return;
-        event.preventDefault();
-        setCompareHeld(true);
-      });
-      button.addEventListener("keyup", (event) => {
-        if (!isCompareKey(event)) return;
-        event.preventDefault();
-        setCompareHeld(false);
-      });
-    });
-
     bindTransportWorkbenchEventOnce(zoomOutButton, (button) => {
       const stepCarrierZoom = requireAction(actions, "stepCarrierZoom");
       const syncPreviewControls = requireAction(actions, "syncPreviewControls");
@@ -135,6 +107,7 @@ export function createTransportWorkbenchEventOwner({
       const applyFamilyToMainMap = requireAction(actions, "applyFamilyToMainMap");
       const renderShell = requireAction(actions, "renderShell");
       button.addEventListener("click", async () => {
+        // Apply 是 workbench -> main map 的单向桥接；点击瞬间重新取 context，确保 pack/family gate 用最新状态。
         const context = getRenderContext();
         const applyState = getApplyButtonState(context.family.id);
         if (!applyState.enabled) return;

@@ -248,6 +248,12 @@ let pathHitCanvas = null;
 let zoomBehavior = null;
 let mapContainerResizeObserver = null;
 let mapContainerResizeFrame = 0;
+let mapContainerResizeTimer = 0;
+let pendingMapResizeReason = "";
+let browserPixelRatioMediaQuery = null;
+let browserPixelRatioMediaQueryHandler = null;
+let visualViewportResizeHandler = null;
+let resizeSpatialRefreshHandle = null;
 let interactionInfrastructureBasicPromise = null;
 let interactionInfrastructureFullPromise = null;
 let activeContextMetricSession = null;
@@ -2395,8 +2401,23 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
   if (String(frame.contextFlagSignature || "") !== identity.contextFlagSignature) {
     return reject("context-flag-mismatch");
   }
-  if (Number(frame.pixelWidth || 0) !== identity.pixelWidth || Number(frame.pixelHeight || 0) !== identity.pixelHeight) {
-    return reject("canvas-size-mismatch");
+  const framePixelWidth = Math.max(1, Number(frame.pixelWidth || fallbackCanvas.width || 0));
+  const framePixelHeight = Math.max(1, Number(frame.pixelHeight || fallbackCanvas.height || 0));
+  const canvasSizeMismatch = framePixelWidth !== identity.pixelWidth || framePixelHeight !== identity.pixelHeight;
+  if (canvasSizeMismatch) {
+    const canRelaxCanvasSize = runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle;
+    if (!canRelaxCanvasSize) {
+      return reject("canvas-size-mismatch");
+    }
+    recordRenderPerfMetric("continuityFrameRelaxedReuse", 0, {
+      reasons: "canvas-size-mismatch",
+      staleAgeMs,
+      activeScenarioId: identity.scenarioId,
+      framePixelWidth,
+      framePixelHeight,
+      currentPixelWidth: identity.pixelWidth,
+      currentPixelHeight: identity.pixelHeight,
+    });
   }
   if (Math.abs(Number(frame.dpr || 1) - identity.dpr) > 0.01) {
     recordRenderPerfMetric("continuityFrameRelaxedReuse", 0, {
@@ -2419,13 +2440,15 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
   const current = cloneZoomTransform(currentTransform);
   const reference = cloneZoomTransform(referenceTransform);
   const scaleRatio = current.k / Math.max(reference.k, 0.0001);
+  const canvasScaleX = canvasSizeMismatch ? identity.pixelWidth / framePixelWidth : 1;
+  const canvasScaleY = canvasSizeMismatch ? identity.pixelHeight / framePixelHeight : 1;
   const dx = current.x - (reference.x * scaleRatio);
   const dy = current.y - (reference.y * scaleRatio);
   resetMainCanvas();
   context.save();
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
-  context.scale(scaleRatio, scaleRatio);
+  context.scale(scaleRatio * canvasScaleX, scaleRatio * canvasScaleY);
   context.drawImage(fallbackCanvas, 0, 0);
   context.restore();
   incrementPerfCounter("lastGoodFrameReuses");
@@ -7041,8 +7064,9 @@ function setCanvasSize({
   targetPassesOnDprChange = null,
   targetPassesOnResize = null,
   targetPassesOnCanvasResize = null,
+  forceDprInvalidation = false,
 } = {}) {
-  if (!mapCanvas || !mapSvg) return;
+  if (!mapCanvas || !mapSvg) return false;
 
   const previousWidth = Number(runtimeState.width || 0);
   const previousHeight = Number(runtimeState.height || 0);
@@ -7062,9 +7086,9 @@ function setCanvasSize({
   const scaledW = Math.floor(runtimeState.width * runtimeState.dpr);
   const scaledH = Math.floor(runtimeState.height * runtimeState.dpr);
   const sizeChanged = previousWidth !== runtimeState.width || previousHeight !== runtimeState.height;
-  const dprChanged = Math.abs(previousDpr - runtimeState.dpr) >= 0.01;
+  const dprChanged = forceDprInvalidation || Math.abs(previousDpr - runtimeState.dpr) >= 0.01;
   if (!sizeChanged && !dprChanged) {
-    return;
+    return false;
   }
 
   mapCanvas.width = scaledW;
@@ -7102,6 +7126,7 @@ function setCanvasSize({
   const svg = globalThis.d3.select(mapSvg);
   svg.attr("width", runtimeState.width).attr("height", runtimeState.height);
   interactionRect.attr("x", 0).attr("y", 0).attr("width", runtimeState.width).attr("height", runtimeState.height);
+  return true;
 }
 
 function rebuildDynamicBorders() {
@@ -23298,11 +23323,65 @@ function updateMap(transform) {
   drawCanvas();
 }
 
-function resetZoomToFit() {
+function getProjectedRenderableContentBounds() {
+  if (!runtimeState.landData?.features?.length || runtimeState.width <= 0 || runtimeState.height <= 0) {
+    return null;
+  }
+  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+  const renderableFeatures = getRenderableLandFeatures(canvasWidth, canvasHeight, {
+    forceProd: true,
+  });
+  const features = renderableFeatures.length ? renderableFeatures : runtimeState.landData.features;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const feature of features) {
+    const featureId = getFeatureId(feature);
+    const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
+      || getProjectedFeatureBounds(feature, { featureId });
+    if (!bounds) continue;
+    minX = Math.min(minX, Number(bounds.minX));
+    minY = Math.min(minY, Number(bounds.minY));
+    maxX = Math.max(maxX, Number(bounds.maxX));
+    maxY = Math.max(maxY, Number(bounds.maxY));
+  }
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+    return null;
+  }
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+  };
+}
+
+function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {}) {
+  const identity = globalThis.d3?.zoomIdentity;
+  if (!identity) return null;
+  const bounds = getProjectedRenderableContentBounds();
+  if (!bounds) return identity;
+  const viewportWidth = Math.max(1, Number(runtimeState.width || 1));
+  const viewportHeight = Math.max(1, Number(runtimeState.height || 1));
+  const nextX = centerX && bounds.width < viewportWidth
+    ? ((viewportWidth - bounds.width) / 2) - bounds.minX
+    : 0;
+  const nextY = centerY && bounds.height < viewportHeight
+    ? ((viewportHeight - bounds.height) / 2) - bounds.minY
+    : 0;
+  return identity.translate(nextX, nextY);
+}
+
+function resetZoomToFit({ centerContent = false, centerX = true, centerY = false } = {}) {
   if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  const identity = globalThis.d3.zoomIdentity;
-  runtimeState.zoomTransform = identity;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.transform, identity);
+  const transform = centerContent
+    ? (getCenteredFitZoomTransform({ centerX, centerY }) || globalThis.d3.zoomIdentity)
+    : globalThis.d3.zoomIdentity;
+  runtimeState.zoomTransform = transform;
+  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.transform, transform);
 }
 
 function zoomByStep(direction = 1) {
@@ -23362,14 +23441,80 @@ function getResizeReason(reason, fallback = "resize") {
   return typeof reason === "string" && reason.trim() ? reason.trim() : fallback;
 }
 
+function isInteractiveLayoutResize(reason) {
+  return reason === "map-container-resize" || reason === "sidebar-layout-refresh";
+}
+
+function scheduleResizeSpatialRefresh(reason = "resize") {
+  cancelDeferredWork(resizeSpatialRefreshHandle);
+  resizeSpatialRefreshHandle = scheduleDeferredWork(() => {
+    resizeSpatialRefreshHandle = null;
+    if (!runtimeState.landData?.features?.length) return;
+    const startedAt = nowMs();
+    buildSpatialIndex();
+    runtimeState.hitCanvasDirty = true;
+    scheduleHitCanvasBuildIfNeeded({ reason: "resize-spatial-refresh" });
+    recordRenderPerfMetric("resizeSpatialRefresh", nowMs() - startedAt, {
+      reason: getResizeReason(reason),
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+  }, {
+    timeout: 360,
+  });
+}
+
+function shouldPreferFullResizeReason(currentReason, nextReason) {
+  return currentReason === "browser-dpr-change" && nextReason !== "browser-dpr-change";
+}
+
 function requestMapContainerResizeSync(reason = "map-container-resize") {
-  if (mapContainerResizeFrame) return;
+  const resizeReason = getResizeReason(reason, "map-container-resize");
+  if (resizeReason === "browser-dpr-change") {
+    if (mapContainerResizeFrame) {
+      pendingMapResizeReason = pendingMapResizeReason || resizeReason;
+      return;
+    }
+    pendingMapResizeReason = resizeReason;
+    const requestFrame = typeof globalThis.requestAnimationFrame === "function"
+      ? globalThis.requestAnimationFrame
+      : (callback) => globalThis.setTimeout(callback, 0);
+    mapContainerResizeFrame = requestFrame(() => {
+      mapContainerResizeFrame = 0;
+      const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
+      pendingMapResizeReason = "";
+      if (pendingReason === "browser-dpr-change") {
+        handleBrowserPixelRatioRefresh(pendingReason);
+      } else {
+        handleResize(pendingReason);
+      }
+    });
+    return;
+  }
+  if (resizeReason === "map-container-resize") {
+    if (mapContainerResizeTimer) {
+      globalThis.clearTimeout(mapContainerResizeTimer);
+    }
+    mapContainerResizeTimer = globalThis.setTimeout(() => {
+      mapContainerResizeTimer = 0;
+      handleResize(resizeReason);
+    }, 120);
+    return;
+  }
+  if (mapContainerResizeFrame) {
+    if (shouldPreferFullResizeReason(pendingMapResizeReason, resizeReason)) {
+      pendingMapResizeReason = resizeReason;
+    }
+    return;
+  }
+  pendingMapResizeReason = resizeReason;
   const requestFrame = typeof globalThis.requestAnimationFrame === "function"
     ? globalThis.requestAnimationFrame
     : (callback) => globalThis.setTimeout(callback, 0);
   mapContainerResizeFrame = requestFrame(() => {
     mapContainerResizeFrame = 0;
-    handleResize(reason);
+    const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
+    pendingMapResizeReason = "";
+    handleResize(pendingReason);
   });
 }
 
@@ -23389,14 +23534,112 @@ function bindMapContainerResizeObserver() {
   mapContainerResizeObserver.observe(mapContainer);
 }
 
-function handleResize(reason = "resize") {
-  const resizeReason = getResizeReason(reason);
-  setCanvasSize({ reason: resizeReason });
-  fitProjection();
-  resetZoomToFit();
-  enforceZoomConstraints();
+function getDevicePixelRatioMediaQuery() {
+  const dpr = Math.max(1, Number(globalThis.devicePixelRatio || 1));
+  return `(resolution: ${dpr}dppx)`;
+}
+
+function unbindBrowserPixelRatioObserver() {
+  if (!browserPixelRatioMediaQuery || !browserPixelRatioMediaQueryHandler) {
+    browserPixelRatioMediaQuery = null;
+    browserPixelRatioMediaQueryHandler = null;
+    return;
+  }
+  if (typeof browserPixelRatioMediaQuery.removeEventListener === "function") {
+    browserPixelRatioMediaQuery.removeEventListener("change", browserPixelRatioMediaQueryHandler);
+  } else if (typeof browserPixelRatioMediaQuery.removeListener === "function") {
+    browserPixelRatioMediaQuery.removeListener(browserPixelRatioMediaQueryHandler);
+  }
+  browserPixelRatioMediaQuery = null;
+  browserPixelRatioMediaQueryHandler = null;
+}
+
+function bindBrowserPixelRatioObserver() {
+  if (typeof globalThis.matchMedia !== "function") return;
+  unbindBrowserPixelRatioObserver();
+  const mediaQuery = globalThis.matchMedia(getDevicePixelRatioMediaQuery());
+  const handleBrowserPixelRatioChange = () => {
+    requestMapContainerResizeSync("browser-dpr-change");
+    bindBrowserPixelRatioObserver();
+  };
+  if (typeof mediaQuery.addEventListener === "function") {
+    mediaQuery.addEventListener("change", handleBrowserPixelRatioChange);
+  } else if (typeof mediaQuery.addListener === "function") {
+    mediaQuery.addListener(handleBrowserPixelRatioChange);
+  } else {
+    return;
+  }
+  browserPixelRatioMediaQuery = mediaQuery;
+  browserPixelRatioMediaQueryHandler = handleBrowserPixelRatioChange;
+}
+
+function bindVisualViewportResizeObserver() {
+  const viewport = globalThis.visualViewport;
+  if (!viewport || typeof viewport.addEventListener !== "function") return;
+  if (visualViewportResizeHandler && typeof viewport.removeEventListener === "function") {
+    viewport.removeEventListener("resize", visualViewportResizeHandler);
+  }
+  visualViewportResizeHandler = () => requestMapContainerResizeSync("visual-viewport-resize");
+  viewport.addEventListener("resize", visualViewportResizeHandler, { passive: true });
+}
+
+function bindBrowserZoomObservers() {
+  bindBrowserPixelRatioObserver();
+  bindVisualViewportResizeObserver();
+}
+
+function handleBrowserPixelRatioRefresh(reason = "browser-dpr-change") {
+  const resizeReason = getResizeReason(reason, "browser-dpr-change");
+  const canvasSizeChanged = setCanvasSize({
+    reason: resizeReason,
+    forceDprInvalidation: true,
+  });
+  if (!canvasSizeChanged) return;
   markAllOverlaysDirty();
   render();
+}
+
+function handleResize(reason = "resize") {
+  const resizeReason = getResizeReason(reason);
+  const interactiveLayoutResize = isInteractiveLayoutResize(resizeReason);
+  const previousViewport = {
+    width: Number(runtimeState.width || 0),
+    height: Number(runtimeState.height || 0),
+  };
+  if (interactiveLayoutResize) {
+    setRenderPhase(RENDER_PHASE_INTERACTING);
+  }
+  const canvasSizeChanged = setCanvasSize({ reason: resizeReason });
+  const layoutSizeChangedDuringPhase = interactiveLayoutResize && (
+    previousViewport.width !== Number(runtimeState.width || 0)
+    || previousViewport.height !== Number(runtimeState.height || 0)
+  );
+  if (!canvasSizeChanged && !layoutSizeChangedDuringPhase) {
+    if (interactiveLayoutResize) {
+      scheduleRenderPhaseIdle();
+    }
+    return;
+  }
+  fitProjection({ skipSpatialIndex: interactiveLayoutResize });
+  resetZoomToFit({
+    centerContent: interactiveLayoutResize,
+    centerX: true,
+    centerY: false,
+  });
+  if (!interactiveLayoutResize) {
+    enforceZoomConstraints();
+  }
+  markAllOverlaysDirty();
+  render();
+  if (interactiveLayoutResize) {
+    scheduleResizeSpatialRefresh(resizeReason);
+    scheduleRenderPhaseIdle();
+  }
+}
+
+function handleSidebarLayoutStart() {
+  setRenderPhase(RENDER_PHASE_INTERACTING);
+  scheduleRenderPhaseIdle();
 }
 
 function initZoom() {
@@ -23489,7 +23732,10 @@ function bindEvents() {
     flushBrushSession();
   });
   window.addEventListener("resize", handleResize);
+  window.addEventListener("mapcreator:sidebar-layout-start", handleSidebarLayoutStart);
+  window.addEventListener("mapcreator:sidebar-layout-refresh", () => handleResize("sidebar-layout-refresh"));
   bindMapContainerResizeObserver();
+  bindBrowserZoomObservers();
 }
 
 function initMap({

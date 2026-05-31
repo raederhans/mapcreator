@@ -228,7 +228,6 @@ export function buildTransportWorkbenchLensSummaryRows({
   family,
   previewSnapshot,
   dataContract,
-  compareHeld = false,
   rightDeckLabel,
 } = {}) {
   return [
@@ -237,7 +236,6 @@ export function buildTransportWorkbenchLensSummaryRows({
     ["Geometry", dataContract?.geometryKind || "reserved"],
     ["Pack status", previewSnapshot?.status || "pending"],
     ["Right deck", rightDeckLabel || ""],
-    ["Compare", compareHeld ? "Holding baseline" : "Working state"],
   ];
 }
 
@@ -275,7 +273,6 @@ export function buildTransportWorkbenchInspectorModel({
       ["Filtered roads", String(previewSnapshot.stats?.filteredRoads || 0)],
       ["N06 matched", String(previewSnapshot.audit?.n06_matched_count || 0)],
       ["Name conflicts", String(previewSnapshot.audit?.name_conflict_count || 0)],
-      ["Compare mode", compareHeld ? "Holding baseline" : "Working state"],
     ];
     if (selected?.type === "road") {
       rows.push(
@@ -699,7 +696,6 @@ export function buildTransportWorkbenchInspectorModel({
   } else {
     rows = [
       ["Adapter", "Reserved shell only"],
-      ["Compare mode", "No baseline yet"],
       ["Pack status", `Waiting for ${family?.label || "selected family"} Japan adapter`],
     ];
   }

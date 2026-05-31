@@ -349,6 +349,7 @@ function initToolbar({ render } = {}) {
   const oceanScenarioSyntheticContourFadeEndZoom = document.getElementById("oceanScenarioSyntheticContourFadeEndZoom");
   const oceanScenarioShallowContourFadeEndZoom = document.getElementById("oceanScenarioShallowContourFadeEndZoom");
   const toggleLang = document.getElementById("btnToggleLang");
+  const scenarioGuideLanguageToggle = document.getElementById("scenarioGuideLanguageToggle");
   const themeSelect = document.getElementById("themeSelect");
   const paletteLibraryToggleLabel = document.getElementById("paletteLibraryToggleLabel");
 
@@ -460,11 +461,13 @@ function initToolbar({ render } = {}) {
   };
 
   const updateLanguageToggleUi = () => {
-    if (!toggleLang) return;
     const currentLangLabel = runtimeState.currentLanguage === "zh" ? "ZH" : "EN";
-    toggleLang.textContent = currentLangLabel;
-    toggleLang.setAttribute("title", `${t("Language", "ui")}: ${currentLangLabel}`);
-    toggleLang.setAttribute("aria-label", `${t("Language", "ui")}: ${currentLangLabel}`);
+    [toggleLang, scenarioGuideLanguageToggle].forEach((button) => {
+      if (!button) return;
+      button.textContent = currentLangLabel;
+      button.setAttribute("title", `${t("Language", "ui")}: ${currentLangLabel}`);
+      button.setAttribute("aria-label", `${t("Language", "ui")}: ${currentLangLabel}`);
+    });
   };
 
   const syncDeveloperModeUi = () => {
@@ -478,10 +481,11 @@ function initToolbar({ render } = {}) {
       developerModeBtn.setAttribute("aria-label", buttonLabel);
       developerModeBtn.setAttribute("title", buttonLabel);
     }
-    zoomUtilityWorkspaceGroup?.classList.toggle("hidden", !runtimeState.ui.developerMode);
-    zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");
-    devWorkspaceToggleBtn?.classList.toggle("hidden", !runtimeState.ui.developerMode);
-    devWorkspaceToggleBtn?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");
+    zoomUtilityWorkspaceGroup?.classList.add("hidden");
+    zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", "true");
+    devWorkspaceToggleBtn?.classList.add("hidden");
+    devWorkspaceToggleBtn?.setAttribute("aria-hidden", "true");
+    devWorkspaceToggleBtn?.setAttribute("tabindex", "-1");
     if (!runtimeState.ui.developerMode && runtimeState.ui.devWorkspaceExpanded) {
       if (typeof runtimeState.setDevWorkspaceExpandedFn === "function") {
         callRuntimeHook(state, "setDevWorkspaceExpandedFn", false);
@@ -2032,6 +2036,11 @@ function initToolbar({ render } = {}) {
     toggleLang.dataset.bound = "true";
   }
 
+  if (scenarioGuideLanguageToggle && !scenarioGuideLanguageToggle.dataset.bound) {
+    scenarioGuideLanguageToggle.addEventListener("click", toggleLanguage);
+    scenarioGuideLanguageToggle.dataset.bound = "true";
+  }
+
   if (developerModeBtn && !developerModeBtn.dataset.bound) {
     developerModeBtn.addEventListener("click", () => {
       runtimeState.toggleDeveloperModeFn?.();
@@ -2990,12 +2999,14 @@ function initToolbar({ render } = {}) {
   }
 
   if (!runtimeState.ui.overlayResizeBound) {
-    globalThis.addEventListener("resize", () => {
+    const refreshResponsiveChromeLayout = () => {
       applyResponsiveChromeDefaults();
       updateDockCollapsedUi();
       refreshScenarioContextBar();
       handlePaletteLibraryResize();
-    });
+    };
+    globalThis.addEventListener("resize", refreshResponsiveChromeLayout);
+    globalThis.addEventListener("mapcreator:sidebar-layout-refresh", refreshResponsiveChromeLayout);
     runtimeState.ui.overlayResizeBound = true;
   }
 

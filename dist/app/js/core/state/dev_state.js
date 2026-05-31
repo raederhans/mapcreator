@@ -1,4 +1,6 @@
 export function createDefaultDevState() {
+  // devState 是 dev workspace 各个子编辑器共享的一份 runtime 草稿仓库。
+  // 这里保留每个 editor 自己的 save/status 字段，避免导入、选区变化或面板切换时互相踩掉彼此状态。
   return {
     devHoverHit: null,
     devSelectedHit: null,
@@ -10,8 +12,6 @@ export function createDefaultDevState() {
     devSelectionSortMode: "selection",
     devClipboardPreviewFormat: "names_with_ids",
     devClipboardFallbackText: "",
-    devRuntimeMeta: null,
-    devRuntimeMetaError: "",
     devScenarioEditor: {
       targetOwnerCode: "",
       isSaving: false,
@@ -104,6 +104,8 @@ export function resetDevTransientImportState(
   if (!target || typeof target !== "object") {
     return null;
   }
+  // import/reset 只清“与当前选区强耦合的临时态”。
+  // editor 草稿和最近一次保存反馈继续保留，这样用户在导入后还能看见自己刚才的工作上下文。
   Object.assign(target, {
     devHoverHit: null,
     devSelectedHit: null,

@@ -59,6 +59,7 @@ export function createTransportWorkbenchRightDeckOwner({
     return (TRANSPORT_WORKBENCH_CONTROL_SCHEMAS[familyId] || []).filter((section) => allowedSectionKeys.has(section.key));
   };
 
+  // 单个 control 只负责 schema -> DOM -> config update；compareHeld 锁住交互，保留对比基线不被拖拽误写。
   const renderControl = (familyId, control, config, compareHeld) => {
     const previewSnapshot = getPreviewSnapshot(familyId, config);
     const resolvedOptions = typeof control.options === "function"
@@ -248,6 +249,7 @@ export function createTransportWorkbenchRightDeckOwner({
     if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)) {
       return null;
     }
+    // density families 有 displayConfig 这一层运行时壳；它展示当前显示策略，避免把聚合/标签细调塞进普通 section schema。
     const displayConfig = getDisplayConfig(family.id);
     const card = document.createElement("div");
     card.className = "transport-workbench-note-card transport-workbench-note-card-soft transport-workbench-shell-card";

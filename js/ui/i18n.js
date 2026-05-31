@@ -604,7 +604,6 @@ function updateUIText() {
     ["lblDiagnostics", "Diagnostics"],
     ["lblCountryColors", "Country Colors"],
     ["lblWaterLegend", "Water Overrides"],
-    ["lblSpecialRegionLegend", "Special Region Reference"],
     ["countryInspectorOrderingHint", "Key scenario countries first. Releasables appear under parent countries."],
     ["countryInspectorEmptyTitle", "Select a country to inspect"],
     ["countryInspectorEmptyHint", "Choose a country above, then use Active Owner and the Territories & Presets panel."],

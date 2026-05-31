@@ -15,9 +15,7 @@ async function gotoDevWorkspace(page) {
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
     state.ui.devWorkspaceCategory = "scenario";
-  });
-  await page.evaluate(() => {
-    document.getElementById("devWorkspaceToggleBtn")?.click();
+    state.setDevWorkspaceExpandedFn?.(true);
   });
   await expect(page.locator("#devWorkspacePanel")).toBeVisible();
   await expect(page.locator("#devScenarioTagCreatorLabel")).toBeVisible();

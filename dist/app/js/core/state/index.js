@@ -22,10 +22,12 @@ const handlerFnsByHookName = new Map();
 const handlerDispatchersByHookName = new Map();
 const compatTargets = new WeakSet();
 
+// Runtime hook 分为通知型 bus 和有返回值的 handler；两类共享注册入口，但分发语义分开维护。
 function normalizeRuntimeHook(hook) {
   return typeof hook === "function" ? hook : null;
 }
 
+// bus payload 只能带一个值，因此多参数 hook 统一包成显式 envelope，再在 listener 侧还原。
 function packRuntimeHookArgs(args) {
   if (!Array.isArray(args) || !args.length) {
     return undefined;
@@ -160,6 +162,7 @@ export function registerRuntimeHook(target, hookName, hook) {
   }
   bindStateCompatSurface(target);
   if (isRuntimeHookBusEventName(normalizedHookName)) {
+    // 通知型 hook 暴露 dispatcher，兼容旧代码直接调用 state.someHook(...) 的写法。
     registerRuntimeHookBusListener(target, normalizedHookName, hook);
     return readRuntimeHookBusDispatcher(target, normalizedHookName);
   }
@@ -202,6 +205,7 @@ export function bindStateCompatSurface(target) {
   }
   compatTargets.add(target);
 
+  // 兼容层把旧的 state 属性读写映射到集中 hook registry，避免各 owner 继续互相保存闭包引用。
   STATE_NOTIFICATION_HOOK_NAMES.forEach((hookName) => {
     Object.defineProperty(target, hookName, {
       configurable: true,

@@ -35,12 +35,6 @@ export function buildTransportWorkbenchLensModel({
   return {
     cards: [
       {
-        type: "note",
-        tone: "emphasis",
-        title: translate("Review focus"),
-        body: `${family?.lensBody || ""} ${family?.lensNext || ""}`.trim(),
-      },
-      {
         type: "summary",
         tone: "soft",
         title: translate("Current context"),

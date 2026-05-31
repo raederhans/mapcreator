@@ -1699,31 +1699,38 @@ class TnoBundleBuilderTest(unittest.TestCase):
 
         self.assertEqual(
             tno_bundle.TNO_1962_MANUAL_COUNTRY_OVERRIDES["KOR"]["color_hex"],
-            "#009163",
+            "#82132e",
         )
         gng_rule = next(
             rule for rule in east_asia_rules["country_rules"]
             if rule.get("rule_id") == "japan_guangdong_client_1962"
         )
         self.assertEqual(gng_rule["color_hex"], "#7A2E41")
-        self.assertEqual(manual_overrides["countries"]["MAG"]["color_hex"], "#cac6b2")
-        self.assertEqual(manual_overrides["countries"]["ONG"]["color_hex"], "#51875b")
-        self.assertEqual(manual_overrides["countries"]["GAY"]["color_hex"], "#4b4150")
+        self.assertEqual(manual_overrides["countries"]["MAG"]["color_hex"], "#415638")
+        self.assertEqual(manual_overrides["countries"]["ONG"]["color_hex"], "#0d4510")
+        self.assertEqual(manual_overrides["countries"]["GAY"]["color_hex"], "#4f4f4f")
 
-    def test_second_wave_runtime_colors_match_tno_audit_targets(self) -> None:
+    def test_second_wave_runtime_colors_keep_manual_sources_locked(self) -> None:
         countries_payload = json.loads(
             Path("data/scenarios/tno_1962/countries.json").read_text(encoding="utf-8")
         )["countries"]
-        audit_entries = json.loads(
-            Path("data/palette-maps/tno.audit.json").read_text(encoding="utf-8")
-        )["entries"]
+        manual_overrides = json.loads(
+            Path("data/scenarios/tno_1962/scenario_manual_overrides.json").read_text(encoding="utf-8")
+        )
+        expected_colors = {
+            "KOR": tno_bundle.TNO_1962_MANUAL_COUNTRY_OVERRIDES["KOR"]["color_hex"],
+            "MAG": manual_overrides["countries"]["MAG"]["color_hex"],
+            "ONG": manual_overrides["countries"]["ONG"]["color_hex"],
+            "GAY": manual_overrides["countries"]["GAY"]["color_hex"],
+        }
 
-        expected_tags = ["KOR", "GNG", "MAG", "ONG", "GAY"]
-        for tag in expected_tags:
+        for tag, expected_color in expected_colors.items():
             self.assertEqual(
-                countries_payload[tag]["color_hex"],
-                audit_entries[tag]["map_hex"],
+                countries_payload[tag]["color_hex"].lower(),
+                expected_color.lower(),
             )
+            self.assertEqual(countries_payload[tag]["color_policy"], "locked")
+        self.assertEqual(countries_payload["GNG"]["color_policy"], "palette")
 
     def test_final_wave_runtime_colors_match_tno_audit_targets(self) -> None:
         countries_payload = json.loads(
@@ -1840,6 +1847,8 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 self.assertEqual(country_hex, palette_priority_tags[tag])
                 self.assertEqual(country_hex, audit_hex)
                 continue
+            if country_entry.get("color_policy") == "locked":
+                continue
             if not audit_hex:
                 continue
             if country_hex != audit_hex:
@@ -1856,7 +1865,20 @@ class TnoBundleBuilderTest(unittest.TestCase):
     def test_apply_tno_country_color_policy_backfill_marks_locked_and_palette_entries(self) -> None:
         countries_payload = {
             "countries": {
-                "KOR": {"tag": "KOR", "color_hex": "#009163"},
+                "KOR": {
+                    "tag": "KOR",
+                    "color_hex": "#009163",
+                    "source": "manual_rule",
+                    "source_type": "scenario_extension",
+                    "primary_rule_source": "tno_1962_kor_manual_override",
+                },
+                "GNG": {
+                    "tag": "GNG",
+                    "color_hex": "#7a2e41",
+                    "source": "manual_rule",
+                    "source_type": "scenario_extension",
+                    "primary_rule_source": "japan_guangdong_client_1962",
+                },
                 "AAA": {"tag": "AAA", "color_hex": "#111111"},
                 "BBB": {"tag": "BBB", "color_hex": "#222222", "color_policy": "locked"},
                 "MAG": {"tag": "MAG", "color_hex": "#cac6b2", "color_policy": "locked"},
@@ -1867,6 +1889,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             "load_tno_palette_audit_entries",
             return_value={
                 "KOR": {"map_hex": "#009163"},
+                "GNG": {"map_hex": "#7a2e41"},
                 "AAA": {"map_hex": "#abcdef"},
                 "BBB": {"map_hex": "#123456"},
             },
@@ -1874,11 +1897,54 @@ class TnoBundleBuilderTest(unittest.TestCase):
             tno_bundle.apply_tno_country_color_policy_backfill(countries_payload)
 
         self.assertEqual(countries_payload["countries"]["KOR"]["color_hex"], "#009163")
-        self.assertEqual(countries_payload["countries"]["KOR"]["color_policy"], "palette")
+        self.assertEqual(countries_payload["countries"]["KOR"]["color_policy"], "locked")
+        self.assertEqual(countries_payload["countries"]["GNG"]["color_policy"], "palette")
         self.assertEqual(countries_payload["countries"]["AAA"]["color_policy"], "palette")
         self.assertEqual(countries_payload["countries"]["BBB"]["color_policy"], "locked")
         self.assertEqual(countries_payload["countries"]["MAG"]["color_hex"], "#cac6b2")
         self.assertEqual(countries_payload["countries"]["MAG"]["color_policy"], "locked")
+
+    def test_current_tno_explicit_country_colors_are_locked_and_bundled(self) -> None:
+        countries_payload = json.loads(
+            Path("data/scenarios/tno_1962/countries.json").read_text(encoding="utf-8")
+        )["countries"]
+        explicit_tags = sorted(
+            tag for tag, entry in countries_payload.items()
+            if entry.get("color_hex") and (
+                entry.get("source") in {"controller_rule", "scenario_generated"}
+                or entry.get("entry_kind") == "controller_only"
+                or entry.get("primary_rule_source") == "dev_manual_tag_create"
+                or str(entry.get("primary_rule_source") or "").endswith("_manual_override")
+            )
+        )
+        for expected_tag in ("KOR", "MAG", "ONG", "GAY", "XIK", "PRC", "SIC", "SIK", "XSM"):
+            self.assertIn(expected_tag, explicit_tags)
+        self.assertNotIn("GNG", explicit_tags)
+
+        for tag in explicit_tags:
+            self.assertEqual(countries_payload[tag]["color_policy"], "locked", tag)
+        audit_entries = json.loads(
+            Path("data/palette-maps/tno.audit.json").read_text(encoding="utf-8")
+        )["entries"]
+        for tag, entry in countries_payload.items():
+            if entry.get("color_hex") and audit_entries.get(tag, {}).get("map_hex"):
+                self.assertIn(entry.get("color_policy"), {"locked", "palette"}, tag)
+
+        for bundle_name in ("startup.bundle.en.json", "startup.bundle.zh.json"):
+            bundled_countries = json.loads(
+                Path(f"data/scenarios/tno_1962/{bundle_name}").read_text(encoding="utf-8")
+            )["scenario"]["countries"]["countries"]
+            for tag in explicit_tags:
+                self.assertEqual(
+                    bundled_countries[tag]["color_hex"],
+                    countries_payload[tag]["color_hex"],
+                    f"{bundle_name}:{tag}:color_hex",
+                )
+                self.assertEqual(
+                    bundled_countries[tag].get("color_policy"),
+                    countries_payload[tag]["color_policy"],
+                    f"{bundle_name}:{tag}:color_policy",
+                )
 
     def test_sync_tno_country_colors_from_palette_audit_only_updates_palette_entries(self) -> None:
         countries_payload = {

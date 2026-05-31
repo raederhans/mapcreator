@@ -18,6 +18,7 @@ function buildScenarioBundleBootMetrics(bundle) {
 function cacheStartupScenarioBundle(runtimeState, bundle) {
   const scenarioId = normalizeScenarioId(bundle?.manifest?.scenario_id || bundle?.meta?.scenario_id);
   if (!scenarioId) return;
+  // startup bundle 先作为 warm cache 落到 runtime，后续用户打开同一 scenario 时复用同一份已校验对象。
   runtimeState.scenarioBundleCacheById = runtimeState.scenarioBundleCacheById
     && typeof runtimeState.scenarioBundleCacheById === "object"
     ? runtimeState.scenarioBundleCacheById
@@ -53,6 +54,7 @@ export function createStartupScenarioBootOwner({
     let defaultScenarioBundle = scenarioBundleResult.bundle;
     let scenarioBundleSource = String(scenarioBundleResult.source || "legacy").trim() || "legacy";
     let startupRecoveryReason = "";
+    // startup-bundle 已包含首屏所需切片时，把 chunk prewarm 推到 ready 后，缩短 boot 关键路径。
     let canDeferStartupChunkPrewarm = scenarioBundleSource === "startup-bundle"
       && defaultScenarioBundle?.loadDiagnostics?.startupBundle === true;
 

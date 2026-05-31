@@ -36,6 +36,7 @@ STARTUP_LOCALE_FILES = [
 
 
 class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
+    # 这些测试锁住 transport workbench 的静态合同：registry、owner、state 和 checked-in 数据必须一起改。
     def test_shared_variant_helper_exposes_shared_manifest_contract(self) -> None:
         content = VARIANT_HELPER_JS.read_text(encoding="utf-8")
 
@@ -211,6 +212,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("export function listTransportWorkbenchFamilyPreviewConfigs", registry_content)
 
     def test_apply_bridge_routes_through_active_pack_contract(self) -> None:
+        # Apply 链路按 gate -> patch -> overlay -> runtime state -> context layer 的顺序推进，顺序错会造成主图读到半套状态。
         registry_content = TRANSPORT_CAPABILITY_REGISTRY_JS.read_text(encoding="utf-8")
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
         apply_owner_content = TRANSPORT_WORKBENCH_APPLY_BRIDGE_OWNER_JS.read_text(encoding="utf-8")

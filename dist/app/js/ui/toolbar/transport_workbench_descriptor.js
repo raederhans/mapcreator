@@ -248,11 +248,13 @@ const TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET = new Set([
   "industrial_zones",
   "logistics_hubs",
 ]);
+// 这里暴露成只读 membership/list 接口，避免调用方拿到 Set 后误改 family 分类真相源。
 export const TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS = Object.freeze({
   has: (familyId) => TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET.has(familyId),
   values: () => TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET.values(),
   [Symbol.iterator]: () => TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET[Symbol.iterator](),
 });
+// default config 是 workbench 首次打开时的 canonical 草稿；后续 owner 只能按 key 覆盖，不在渲染层补默认值。
 export const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS = deepFreeze({
   road: {
     roadClass: ["motorway", "trunk", "primary"],

@@ -24,6 +24,7 @@ const PREVIEW_MODULES_BY_KEY = Object.freeze({
   rail: railPreview,
 });
 
+// handler 由 family registry 的 exports 描述生成；新增 family 时先补 registry，再让这里按 moduleKey 接线。
 const previewHandlerCache = new Map();
 
 function createEmptyPreviewSnapshot() {
@@ -97,6 +98,7 @@ export async function renderTransportWorkbenchFamilyPreview(familyId, config, op
   const normalizedFamilyId = String(familyId || "").trim();
   const handler = getFamilyHandler(normalizedFamilyId);
   if (!handler?.render) return null;
+  // 同一时间只保留当前 family 的 preview，避免旧 canvas/selection listener 继续影响 inspector。
   forEachPreviewHandler((candidateFamilyId, candidateHandler) => {
     if (candidateFamilyId === normalizedFamilyId) return;
     candidateHandler.clear?.();

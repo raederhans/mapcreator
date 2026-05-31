@@ -72,15 +72,17 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn("UI_URL_STATE_KEYS.scope", sidebar)
         self.assertIn("UI_URL_STATE_KEYS.section", sidebar)
 
-    def test_dev_workspace_top_group_follows_developer_mode(self):
+    def test_dev_workspace_top_entry_stays_hidden_under_developer_button(self):
         toolbar = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
 
         for token in [
             'const zoomUtilityWorkspaceGroup = document.getElementById("zoomUtilityWorkspaceGroup");',
-            'zoomUtilityWorkspaceGroup?.classList.toggle("hidden", !runtimeState.ui.developerMode);',
-            'zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");',
-            'devWorkspaceToggleBtn?.classList.toggle("hidden", !runtimeState.ui.developerMode);',
-            'devWorkspaceToggleBtn?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");',
+            'zoomUtilityWorkspaceGroup?.classList.add("hidden");',
+            'zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", "true");',
+            'devWorkspaceToggleBtn?.classList.add("hidden");',
+            'devWorkspaceToggleBtn?.setAttribute("aria-hidden", "true");',
+            'devWorkspaceToggleBtn?.setAttribute("tabindex", "-1");',
+            'callRuntimeHook(state, "setDevWorkspaceExpandedFn", true);',
         ]:
             self.assertIn(token, toolbar)
 
@@ -130,6 +132,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
     def test_right_sidebar_has_smooth_collapse_handle(self):
         html_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+        dist_css_content = (REPO_ROOT / "dist" / "app" / "css" / "style.css").read_text(encoding="utf-8")
         sidebar_content = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")
 
         for token in [
@@ -145,7 +148,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "overflow-y: auto;",
             ".right-sidebar-collapse-btn {",
             "top: 50%;",
-            "@media (min-width: 1280px) {",
+            "@media (min-width: 1024px) {",
             "body.right-sidebar-collapsed .sidebar-right {",
             "flex-basis: 0;",
             "body.right-sidebar-collapsed .sidebar-right > .sidebar-sections {",
@@ -155,11 +158,25 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             self.assertIn(token, css_content)
 
         for token in [
+            "@media (min-width: 1024px) {",
+            "body.right-sidebar-collapsed .sidebar-right {",
+            "flex: 0 0 288px;",
+            "max-width: 288px;",
+            "@media (max-width: 1023px) {",
+            "body.right-drawer-open .sidebar-right {",
+            ".panel-toggle-right {",
+        ]:
+            self.assertIn(token, dist_css_content)
+
+        for token in [
             'const RIGHT_SIDEBAR_COLLAPSED_KEY = "map_right_sidebar_collapsed";',
             "const rightSidebarCollapseMedia = typeof globalThis.matchMedia === \"function\"",
+            'globalThis.matchMedia("(min-width: 1024px)")',
             "rightSidebarContent?.toggleAttribute(\"inert\", effectiveCollapsed);",
             'rightSidebarCollapseBtn?.setAttribute("data-i18n-aria-label", nextSidebarLabel);',
-            "globalThis.dispatchEvent(new Event(\"resize\"));",
+            'const SIDEBAR_LAYOUT_START_EVENT = "mapcreator:sidebar-layout-start";',
+            'const SIDEBAR_LAYOUT_REFRESH_EVENT = "mapcreator:sidebar-layout-refresh";',
+            "globalThis.dispatchEvent(new CustomEvent(SIDEBAR_LAYOUT_REFRESH_EVENT));",
             "rightSidebarCollapseBtn.addEventListener(\"click\"",
         ]:
             self.assertIn(token, sidebar_content)
@@ -197,10 +214,21 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "const leftSidebarCollapseMedia = typeof globalThis.matchMedia === \"function\"",
             "leftSidebarContent?.toggleAttribute(\"inert\", effectiveCollapsed);",
             'leftSidebarCollapseBtn?.setAttribute("data-i18n-aria-label", nextSidebarLabel);',
-            "globalThis.dispatchEvent(new Event(\"resize\"));",
+            "beginCollapsedSidebarLayout();",
+            "requestLeftSidebarLayoutRefresh();",
             "leftSidebarCollapseBtn.addEventListener(\"click\"",
         ]:
             self.assertIn(token, sidebar_content)
+
+        toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
+        for token in [
+            "const refreshResponsiveChromeLayout = () => {",
+            'globalThis.addEventListener("resize", refreshResponsiveChromeLayout);',
+            'globalThis.addEventListener("mapcreator:sidebar-layout-refresh", refreshResponsiveChromeLayout);',
+            "refreshScenarioContextBar();",
+            "handlePaletteLibraryResize();",
+        ]:
+            self.assertIn(token, toolbar_content)
 
     def test_physical_atlas_classes_are_visually_grouped_without_nested_containers(self):
         html_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
@@ -280,7 +308,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "#countryList > .country-explorer-group:not(.country-select-card)",
             "scrollbar-gutter: stable;",
             "#countryList.inspector-scroll",
-            "max-height: 30vh;",
+            "max-height: 34vh;",
             "linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(239, 244, 249, 0.82))",
             ".inspector-action-disclosure-body {",
             "max-height: min(34vh, 320px);",
@@ -315,7 +343,8 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             self.assertIn(token, css_content)
 
         for token in [
-            "countryListCompactCap: 30",
+            "countryListCompactCap: 34",
+            "countryListCap: 42",
             "presetTreeCompactCap: 48",
             "selectedActionsBodyCompactCap: 54",
             "const getCountryInspectorListCap = () => {",

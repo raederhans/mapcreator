@@ -479,7 +479,7 @@ body.transport-workbench-open.right-drawer-open::after {
   border-radius: 4px;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   body.left-sidebar-collapsed .sidebar-left {
     flex-basis: 0;
     width: 0;
@@ -1772,7 +1772,7 @@ input[type="checkbox"].checkbox-input {
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.02em;
-  text-align: left;
+  text-align: center;
   white-space: normal;
   cursor: pointer;
   transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
@@ -6604,7 +6604,7 @@ body.counter-editor-modal-open {
 
 #countryList.inspector-scroll {
   margin-top: 8px;
-  max-height: 30vh;
+  max-height: 34vh;
   gap: 8px;
 }
 
@@ -7362,6 +7362,37 @@ body.counter-editor-modal-open {
   gap: 16px;
 }
 
+.scenario-guide-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.scenario-guide-language-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(22, 35, 51, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-primary);
+  font: 700 0.72rem var(--font-body);
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.scenario-guide-language-btn:hover,
+.scenario-guide-language-btn:focus-visible {
+  border-color: rgba(32, 76, 119, 0.24);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(32, 76, 119, 0.1);
+}
+
 .scenario-guide-close-btn {
   border: 1px solid rgba(22, 35, 51, 0.14);
   border-radius: 12px;
@@ -7491,13 +7522,27 @@ body.counter-editor-modal-open {
   display: none;
 }
 
+.scenario-guide-tool-summary::marker {
+  font-size: 0;
+}
+
 .scenario-guide-tool-summary::after {
   content: ">";
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: center;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-secondary);
   transform: rotate(0deg);
+  transform-origin: center;
   transition: transform var(--transition-fast), color var(--transition-fast);
+}
+
+.scenario-guide-tool-title,
+.scenario-guide-tool-summary-copy {
+  grid-column: 1;
 }
 
 .scenario-guide-tool-panel[open] .scenario-guide-tool-summary::after {
@@ -7519,7 +7564,7 @@ body.counter-editor-modal-open {
 }
 
 .scenario-guide-tool-summary-copy {
-  grid-column: 1 / -1;
+  grid-column: 1;
   min-width: 0;
   font-size: 0.72rem;
   line-height: 1.35;
@@ -8421,9 +8466,9 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
   line-height: 1.25;
 }
 
-.dev-scenario-tag-color-field {
+#devScenarioTagCreatorPanel .dev-scenario-tag-color-field {
   display: grid;
-  grid-template-columns: minmax(124px, auto) minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 5px 8px;
   align-items: center;
 }
@@ -8431,13 +8476,19 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
 .dev-scenario-tag-color-field .dev-workspace-inline-row {
   justify-content: flex-start;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .dev-scenario-tag-color-field .dev-workspace-swatch-grid {
-  grid-template-columns: repeat(auto-fit, minmax(22px, 24px));
+  grid-auto-flow: column;
+  grid-auto-columns: 24px;
+  grid-template-columns: none;
+  align-items: center;
   gap: 5px;
-  max-height: 54px;
-  overflow-y: auto;
+  max-width: 100%;
+  max-height: 32px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .dev-scenario-tag-color-field .dev-workspace-swatch-row {
@@ -9592,33 +9643,16 @@ body.right-drawer-open::after {
   z-index: 19;
 }
 
+@media (min-width: 1024px) {
+  body.left-drawer-open::after,
+  body.right-drawer-open::after {
+    display: none;
+  }
+}
+
 @media (max-width: 1279px) {
   .dock-shell-hint {
     max-width: 36ch;
-  }
-
-  .sidebar-right {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(340px, 84vw);
-    transform: translateX(104%);
-    transition: transform var(--transition-medium);
-    z-index: 20;
-  }
-
-  body.right-drawer-open .sidebar-right {
-    transform: translateX(0);
-  }
-
-  .left-sidebar-collapse-btn,
-  .right-sidebar-collapse-btn {
-    display: none;
-  }
-
-  .panel-toggle-right {
-    display: inline-flex;
   }
 
   .zoom-controls {
@@ -9659,6 +9693,30 @@ body.right-drawer-open::after {
     display: inline-flex;
   }
 
+  .sidebar-right {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, 84vw);
+    transform: translateX(104%);
+    transition: transform var(--transition-medium);
+    z-index: 20;
+  }
+
+  body.right-drawer-open .sidebar-right {
+    transform: translateX(0);
+  }
+
+  .left-sidebar-collapse-btn,
+  .right-sidebar-collapse-btn {
+    display: none;
+  }
+
+  .panel-toggle-right {
+    display: inline-flex;
+  }
+
   .zoom-controls {
     top: 72px;
     right: 18px;
@@ -9677,9 +9735,12 @@ body.right-drawer-open::after {
   }
 
   .dev-scenario-tag-creator-head,
-  .dev-scenario-tag-creator-grid,
-  .dev-scenario-tag-color-field {
+  .dev-scenario-tag-creator-grid {
     grid-template-columns: 1fr;
+  }
+
+  #devScenarioTagCreatorPanel .dev-scenario-tag-color-field {
+    grid-template-columns: max-content minmax(0, 1fr);
   }
 
   #devScenarioTagCreatorPanel .dev-workspace-form-field-span-2,
@@ -10316,15 +10377,15 @@ body.right-drawer-open::after {
   min-width: 0;
 }
 
+@media (min-width: 768px) {
+  body.left-sidebar-collapsed.right-sidebar-collapsed .bottom-dock.dev-workspace-mode.is-collapsed {
+    left: calc(50% + var(--bottom-dock-center-offset, 0px));
+    right: auto;
+    transform: translateX(-50%);
+  }
+}
+
 @media (max-width: 1279px) {
-  .scenario-context-bar {
-    top: 78px;
-  }
-
-  .panel-toggle-right {
-    top: 76px;
-  }
-
   .dock-group-history-colors {
     flex: 1 1 100%;
     margin-left: 0;
@@ -10344,7 +10405,33 @@ body.right-drawer-open::after {
   }
 }
 
+@media (min-width: 1024px) {
+  .sidebar-right {
+    position: relative;
+    flex: 0 0 288px;
+    width: 288px;
+    max-width: 288px;
+    transform: none;
+  }
+
+  .sidebar-right > .sidebar-sections {
+    width: 288px;
+  }
+
+  .panel-toggle-right {
+    display: none;
+  }
+}
+
 @media (max-width: 1023px) {
+  .scenario-context-bar {
+    top: 78px;
+  }
+
+  .panel-toggle-right {
+    top: 76px;
+  }
+
   .bottom-dock {
     left: 14px;
     right: 14px;

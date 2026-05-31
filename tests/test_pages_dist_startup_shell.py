@@ -79,6 +79,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             styles_css,
             re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
         )
+        self.assertRegex(
+            styles_css,
+            re.compile(r"\.work-card__media\s*\{[^}]*aspect-ratio:\s*16\s*/\s*9;", re.S),
+        )
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")
@@ -178,6 +182,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertRegex(
             styles_css,
             re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
+        )
+        self.assertRegex(
+            styles_css,
+            re.compile(r"\.work-card__media\s*\{[^}]*aspect-ratio:\s*16\s*/\s*9;", re.S),
         )
 
     def test_dist_app_index_keeps_pages_startup_contract(self) -> None:

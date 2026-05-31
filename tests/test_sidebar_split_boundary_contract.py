@@ -26,14 +26,14 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const selectInspectorCountry = (code) => {", owner_content)
         self.assertIn("const renderCountrySelectRow = (", owner_content)
         self.assertIn("const renderCountryInspectorDetail = () => {", owner_content)
-        self.assertIn("const renderList = () => {", owner_content)
+        self.assertIn("const renderList = ({ anchorGroupKey = \"\", previousHeaderTop = null } = {}) => {", owner_content)
         self.assertIn("const refreshCountryRows = ({", owner_content)
         self.assertIn("const closeCountryInspectorColorPicker = () => {", owner_content)
         self.assertIsNone(re.search(r"const\s+ensureSelectedInspectorCountry\s*=\s*\(\)\s*=>", sidebar_content))
         self.assertIsNone(re.search(r"const\s+selectInspectorCountry\s*=\s*\(code\)\s*=>", sidebar_content))
         self.assertIsNone(re.search(r"const\s+renderCountrySelectRow\s*=\s*\(", sidebar_content))
         self.assertIsNone(re.search(r"const\s+renderCountryInspectorDetail\s*=\s*\(\)\s*=>", sidebar_content))
-        self.assertIsNone(re.search(r"const\s+renderList\s*=\s*\(\)\s*=>", sidebar_content))
+        self.assertIsNone(re.search(r"const\s+renderList\s*=\s*\(", sidebar_content))
         self.assertIsNone(re.search(r"const\s+refreshCountryRows\s*=\s*\(\{", sidebar_content))
 
     def test_sidebar_keeps_country_inspector_facade_contract(self):
@@ -62,6 +62,56 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
         ]:
             self.assertIn(label, sidebar_content)
             self.assertIn(label, catalog_content)
+
+    def test_country_inspector_virtual_region_labels_and_scroll_anchor_are_wired(self):
+        sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
+        owner_content = COUNTRY_INSPECTOR_CONTROLLER_JS.read_text(encoding="utf-8")
+        catalog_content = I18N_CATALOG_JS.read_text(encoding="utf-8")
+
+        for token in [
+            "function localizeInspectorGroupLabel(label) {",
+            "const INSPECTOR_GROUP_LABEL_CATALOG = Object.freeze({",
+            '"China Region": Object.freeze({ zh: "中国区域", en: "China Region" })',
+            '"Russia Region": Object.freeze({ zh: "俄罗斯区域", en: "Russia Region" })',
+            'return t(normalizedLabel, "ui") || geoLabel;',
+            'label: "China Region",',
+            'label: "Russia Region",',
+        ]:
+            self.assertIn(token, sidebar_content)
+
+        for token in [
+            '"China Region": {"zh": "中国区域", "en": "China Region"}',
+            '"Russia Region": {"zh": "俄罗斯区域", "en": "Russia Region"}',
+        ]:
+            self.assertIn(token, catalog_content)
+
+        for token in [
+            "const keepGroupHeaderAtSameScrollPosition = (groupKey, previousHeaderTop = null) => {",
+            "header.dataset.inspectorGroupKey = groupKey;",
+            "const previousHeaderTop = header.getBoundingClientRect().top;",
+            "renderList({ anchorGroupKey: groupKey, previousHeaderTop });",
+        ]:
+            self.assertIn(token, owner_content)
+
+    def test_territories_presets_infers_country_from_selected_land(self):
+        sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
+        catalog_content = I18N_CATALOG_JS.read_text(encoding="utf-8")
+
+        for token in [
+            "getFeatureOwnerCode,",
+            "const getSelectedLandFeatureIdsForCountryInference = () => {",
+            "const inferCountryCodesFromSelectedLand = () => {",
+            "const resolvePresetTreeCountryState = () => {",
+            "const { countryState, reason } = resolvePresetTreeCountryState();",
+            'reason: "multi-selection",',
+            'createEmptyNote(t("Multiple countries are selected. Narrow the map selection to one country or choose a country in the inspector.", "ui"))',
+        ]:
+            self.assertIn(token, sidebar_content)
+
+        self.assertIn(
+            '"Multiple countries are selected. Narrow the map selection to one country or choose a country in the inspector.":',
+            catalog_content,
+        )
 
     def test_country_inspector_state_preserves_feature_count_fields(self):
         content = SIDEBAR_JS.read_text(encoding="utf-8")

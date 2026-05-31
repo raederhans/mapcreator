@@ -16,19 +16,14 @@ async function openDevWorkspace(page) {
   });
   await page.waitForFunction(() => {
     const developerModeBtn = document.querySelector("#developerModeBtn");
-    const workspaceToggleBtn = document.querySelector("#devWorkspaceToggleBtn");
-    return !!developerModeBtn && !!workspaceToggleBtn;
+    const dock = document.querySelector("#bottomDock");
+    return !!developerModeBtn && !!dock;
   });
   const developerModeBtn = page.locator("#developerModeBtn");
   if ((await developerModeBtn.getAttribute("aria-pressed")) !== "true") {
     await developerModeBtn.click();
   }
-  const workspaceToggleBtn = page.locator("#devWorkspaceToggleBtn");
-  await expect(workspaceToggleBtn).toBeVisible();
-  if ((await workspaceToggleBtn.getAttribute("aria-expanded")) !== "true") {
-    await workspaceToggleBtn.click();
-  }
-  await expect(workspaceToggleBtn).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#devWorkspacePanel")).toBeVisible();
 }
 
 test("dev workspace declarative i18n updates static labels and placeholders", async ({ page }) => {

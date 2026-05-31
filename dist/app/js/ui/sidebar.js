@@ -60,6 +60,7 @@ import { createProjectSupportDiagnosticsController } from "./sidebar/project_sup
 import { importProjectThroughFunnel } from "../core/interaction_funnel.js";
 import { flushRenderBoundary } from "../core/render_boundary.js";
 import {
+  getFeatureOwnerCode,
   setFeatureOwnerCodes,
   markLegacyColorStateDirty,
 } from "../core/sovereignty_manager.js";
@@ -377,6 +378,10 @@ const TNO_RUSSIA_INSPECTOR_GROUP = Object.freeze({
   label: "Russia Region",
   anchorId: "continent_europe",
 });
+const INSPECTOR_GROUP_LABEL_CATALOG = Object.freeze({
+  "China Region": Object.freeze({ zh: "中国区域", en: "China Region" }),
+  "Russia Region": Object.freeze({ zh: "俄罗斯区域", en: "Russia Region" }),
+});
 
 function readExplicitInspectorGroupMeta(entry = {}) {
   const id = String(entry?.inspector_group_id || entry?.inspectorGroupId || "").trim();
@@ -612,6 +617,18 @@ function getInspectorGroupExpansionKey(groupId) {
   return `group::${String(groupId || "").trim()}`;
 }
 
+function localizeInspectorGroupLabel(label) {
+  const normalizedLabel = String(label || "").trim();
+  if (!normalizedLabel) return "";
+  const inlineLabel = INSPECTOR_GROUP_LABEL_CATALOG[normalizedLabel];
+  if (inlineLabel) {
+    return inlineLabel[runtimeState.currentLanguage === "zh" ? "zh" : "en"] || inlineLabel.en || normalizedLabel;
+  }
+  const geoLabel = t(normalizedLabel, "geo") || normalizedLabel;
+  if (geoLabel !== normalizedLabel) return geoLabel;
+  return t(normalizedLabel, "ui") || geoLabel;
+}
+
 function getInspectorTopLevelGroupMeta(entry = {}) {
   const fallbackContinentId = String(entry?.continentId || "continent_other").trim() || "continent_other";
   const fallbackContinentLabel = String(entry?.continentLabel || "Other").trim() || "Other";
@@ -621,7 +638,7 @@ function getInspectorTopLevelGroupMeta(entry = {}) {
   return {
     id: groupId,
     label: groupLabel,
-    displayLabel: t(groupLabel, "geo") || groupLabel,
+    displayLabel: localizeInspectorGroupLabel(groupLabel),
     anchorId: groupAnchorId,
   };
 }
@@ -681,7 +698,7 @@ function buildCountryColorTree(entries) {
     pushTopLevelGroup({
       id: continentId,
       label: continentLabel,
-      displayLabel: t(continentLabel, "geo") || continentLabel,
+      displayLabel: localizeInspectorGroupLabel(continentLabel),
       anchorId: "",
     });
   });
@@ -697,6 +714,8 @@ function buildCountryColorTree(entries) {
     }
   });
 
+  // 这里先补齐“顶层分组顺序”，再回填国家成员。
+  // 这样 scenario-only 分组既能挂到真实 continent 前后，又不会在后续 entries 遍历时被重复插入。
   entries.forEach((entry) => {
     const groupMeta = getInspectorTopLevelGroupMeta(entry);
 
@@ -1027,6 +1046,8 @@ function applyScenarioOwnerControllerAssignments(
 
   // 这是 sidebar 内的批量 ownership 入口；视觉覆盖不要走到这里，
   // 否则颜色预览会变成真实政治状态修改。
+  // owner/controller 拆成两个按 code 聚合的批次，是为了尽量复用下层批量写口，
+  // 同时只对真正变动的 feature 触发颜色刷新、边界重算和 history 快照。
   const ownerFeatureIdsByCode = new Map();
   const changedFeatureIds = new Set();
 
@@ -1421,7 +1442,14 @@ function initSidebar({ render } = {}) {
   const presetTree = document.getElementById("presetTree");
   const searchInput = document.getElementById("countrySearch");
   const resetBtn = document.getElementById("resetCountryColors");
+  const leftSidebar = document.getElementById("leftSidebar");
+  const leftSidebarContent = document.getElementById("leftSidebarContent");
+  const leftSidebarCollapseBtn = document.getElementById("leftSidebarCollapseBtn");
+  const leftSidebarCollapseIcon = document.getElementById("leftSidebarCollapseIcon");
   const sidebar = document.getElementById("rightSidebar");
+  const rightSidebarContent = document.getElementById("rightSidebarContent");
+  const rightSidebarCollapseBtn = document.getElementById("rightSidebarCollapseBtn");
+  const rightSidebarCollapseIcon = document.getElementById("rightSidebarCollapseIcon");
   const projectLegendStack = document.getElementById("projectLegendStack");
   const diagnosticStack = document.getElementById("diagnosticStack");
 
@@ -1548,6 +1576,33 @@ function initSidebar({ render } = {}) {
       input.placeholder = t(placeholder, "ui");
     }
     return input;
+  };
+  const buildCheckboxLabel = (id, label, className) => {
+    const shell = document.createElement("label");
+    shell.className = className;
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = "checkbox";
+    input.className = "checkbox-input";
+    const text = document.createElement("span");
+    text.textContent = t(label, "ui");
+    shell.append(input, text);
+    return shell;
+  };
+  const buildCombatBar = ({ id, label, className }) => {
+    const row = document.createElement("div");
+    row.className = className;
+    const labelNode = document.createElement("span");
+    labelNode.className = "unit-counter-combat-bar-label";
+    labelNode.textContent = t(label, "ui");
+    const track = document.createElement("span");
+    track.className = "unit-counter-combat-bar-track";
+    const fill = document.createElement("span");
+    fill.id = id;
+    fill.className = "unit-counter-combat-bar-fill";
+    track.appendChild(fill);
+    row.append(labelNode, track);
+    return row;
   };
   const buildSegmentedChoiceField = (id, options, {
     groupClassName = "frontline-segmented-field",
@@ -2297,17 +2352,16 @@ function initSidebar({ render } = {}) {
     statusRow.appendChild(statusTitleGroup);
 
     const enableRow = buildRow();
-    const enableToggle = document.createElement("label");
-    enableToggle.className = "toggle-label";
-    enableToggle.innerHTML = `<input id="frontlineEnabledToggle" type="checkbox" class="checkbox-input" /> <span>${t("Enable derived frontlines", "ui")}</span>`;
+    const enableToggle = buildCheckboxLabel("frontlineEnabledToggle", "Enable derived frontlines", "toggle-label");
     enableRow.appendChild(enableToggle);
 
     const emptyState = document.createElement("div");
     emptyState.id = "frontlineEmptyState";
     emptyState.className = "inspector-empty-state frontline-empty-state";
-    emptyState.innerHTML = `
-      <h3 class="section-header-block">${t("Frontline is off", "ui")}</h3>
-    `;
+    const emptyTitle = document.createElement("h3");
+    emptyTitle.className = "section-header-block";
+    emptyTitle.textContent = t("Frontline is off", "ui");
+    emptyState.appendChild(emptyTitle);
 
     const settings = document.createElement("div");
     settings.id = "frontlineSettingsPanel";
@@ -2329,9 +2383,7 @@ function initSidebar({ render } = {}) {
       ["teeth", "Teeth"],
     ]);
     const frontlineStyleSelect = frontlineStyleField.select;
-    const frontlineLabelToggle = document.createElement("label");
-    frontlineLabelToggle.className = "checkbox-row";
-    frontlineLabelToggle.innerHTML = `<input id="strategicFrontlineLabelsToggle" type="checkbox" class="checkbox-input" /> <span>${t("Labels", "ui")}</span>`;
+    const frontlineLabelToggle = buildCheckboxLabel("strategicFrontlineLabelsToggle", "Labels", "checkbox-row");
     const frontlineLabelPlacement = buildSelect("strategicLabelPlacementSelect", [
       ["midpoint", "Midpoint"],
       ["centroid", "Centroid"],
@@ -2811,16 +2863,18 @@ function initSidebar({ render } = {}) {
 
     const unitCombatBars = document.createElement("div");
     unitCombatBars.className = "unit-counter-combat-bar-stack mt-2";
-    unitCombatBars.innerHTML = `
-      <div class="unit-counter-combat-bar is-org">
-        <span class="unit-counter-combat-bar-label">${t("Organization", "ui")}</span>
-        <span class="unit-counter-combat-bar-track"><span id="unitCounterOrganizationBar" class="unit-counter-combat-bar-fill"></span></span>
-      </div>
-      <div class="unit-counter-combat-bar is-equipment">
-        <span class="unit-counter-combat-bar-label">${t("Equipment", "ui")}</span>
-        <span class="unit-counter-combat-bar-track"><span id="unitCounterEquipmentBar" class="unit-counter-combat-bar-fill"></span></span>
-      </div>
-    `;
+    unitCombatBars.append(
+      buildCombatBar({
+        id: "unitCounterOrganizationBar",
+        label: "Organization",
+        className: "unit-counter-combat-bar is-org",
+      }),
+      buildCombatBar({
+        id: "unitCounterEquipmentBar",
+        label: "Equipment",
+        className: "unit-counter-combat-bar is-equipment",
+      })
+    );
     unitCombatBlock.appendChild(unitCombatPresetStack);
     unitCombatBlock.appendChild(unitStatInputs);
     unitCombatBlock.appendChild(unitCombatBars);
@@ -2862,18 +2916,22 @@ function initSidebar({ render } = {}) {
 
     const unitOptionsRow = buildRow();
     unitOptionsRow.className = "mt-2 flex flex-wrap items-center justify-between gap-2 strategic-counter-visual-options";
-    const unitLabelToggle = document.createElement("label");
-    unitLabelToggle.className = "checkbox-row";
-    unitLabelToggle.innerHTML = `<input id="unitCounterLabelsToggle" type="checkbox" class="checkbox-input" /> <span>${t("Show Labels", "ui")}</span>`;
+    const unitLabelToggle = buildCheckboxLabel("unitCounterLabelsToggle", "Show Labels", "checkbox-row");
     unitOptionsRow.appendChild(unitLabelToggle);
     const unitScaleShell = document.createElement("div");
     unitScaleShell.className = "strategic-counter-scale-shell";
-    unitScaleShell.innerHTML = `
-      <div class="range-row">
-        <label class="range-label" for="unitCounterFixedScaleRange">${t("Counter Scale", "ui")}</label>
-        <span id="unitCounterFixedScaleValue" class="range-value">1.50x</span>
-      </div>
-    `;
+    const unitScaleRow = document.createElement("div");
+    unitScaleRow.className = "range-row";
+    const unitScaleLabel = document.createElement("label");
+    unitScaleLabel.className = "range-label";
+    unitScaleLabel.setAttribute("for", "unitCounterFixedScaleRange");
+    unitScaleLabel.textContent = t("Counter Scale", "ui");
+    const unitScaleValue = document.createElement("span");
+    unitScaleValue.id = "unitCounterFixedScaleValue";
+    unitScaleValue.className = "range-value";
+    unitScaleValue.textContent = "1.50x";
+    unitScaleRow.append(unitScaleLabel, unitScaleValue);
+    unitScaleShell.appendChild(unitScaleRow);
     const unitScaleRange = document.createElement("input");
     unitScaleRange.id = "unitCounterFixedScaleRange";
     unitScaleRange.type = "range";
@@ -2907,9 +2965,10 @@ function initSidebar({ render } = {}) {
 
     const unitListHeader = document.createElement("div");
     unitListHeader.className = "unit-counter-list-header mt-3 strategic-counter-list-header";
-    unitListHeader.innerHTML = `
-      <div class="section-header">${t("Placed Counters", "ui")}</div>
-    `;
+    const unitListTitle = document.createElement("div");
+    unitListTitle.className = "section-header";
+    unitListTitle.textContent = t("Placed Counters", "ui");
+    unitListHeader.appendChild(unitListTitle);
 
     const unitList = document.createElement("select");
     unitList.id = "unitCounterList";
@@ -3008,12 +3067,20 @@ function initSidebar({ render } = {}) {
     strategicCommandBar = document.createElement("div");
     strategicCommandBar.id = "strategicCommandBar";
     strategicCommandBar.className = "strategic-command-bar";
-    strategicCommandBar.innerHTML = `
-      <button id="strategicCommandFrontlineBtn" type="button" class="strategic-command-btn" data-line-kind="frontline">${t("作战前线", "ui")}</button>
-      <button id="strategicCommandOffensiveBtn" type="button" class="strategic-command-btn" data-line-kind="offensive_line">${t("进攻线", "ui")}</button>
-      <button id="strategicCommandSpearheadBtn" type="button" class="strategic-command-btn" data-line-kind="spearhead_line">${t("穿插线", "ui")}</button>
-      <button id="strategicCommandDefensiveBtn" type="button" class="strategic-command-btn" data-line-kind="defensive_line">${t("防守线", "ui")}</button>
-    `;
+    [
+      ["strategicCommandFrontlineBtn", "frontline", "作战前线"],
+      ["strategicCommandOffensiveBtn", "offensive_line", "进攻线"],
+      ["strategicCommandSpearheadBtn", "spearhead_line", "穿插线"],
+      ["strategicCommandDefensiveBtn", "defensive_line", "防守线"],
+    ].forEach(([id, lineKind, label]) => {
+      const button = document.createElement("button");
+      button.id = id;
+      button.type = "button";
+      button.className = "strategic-command-btn";
+      button.dataset.lineKind = lineKind;
+      button.textContent = t(label, "ui");
+      strategicCommandBar.appendChild(button);
+    });
     document.body.appendChild(strategicCommandBar);
   }
 
@@ -3328,8 +3395,8 @@ function initSidebar({ render } = {}) {
 
   const INSPECTOR_VH_BASELINE = {
     countryList: 14,
-    countryListCap: 38,
-    countryListCompactCap: 30,
+    countryListCap: 42,
+    countryListCompactCap: 34,
     presetTreeCap: 52,
     presetTreeCompactCap: 48,
     selectedActionsBody: 26,
@@ -3405,6 +3472,10 @@ function initSidebar({ render } = {}) {
       : INSPECTOR_VH_BASELINE.selectedActionsBodyCap
   );
 
+  const isSelectedActionsEmptyState = () => (
+    !!selectedCountryActionsSection?.classList.contains("is-empty-selection-panel")
+  );
+
   const syncAdaptiveInspectorHeights = () => {
     adaptiveInspectorHeightFrame = 0;
     applyAdaptiveInspectorHeight(
@@ -3433,11 +3504,15 @@ function initSidebar({ render } = {}) {
       220
     );
     releaseAdaptiveInspectorHeight(presetTree);
-    applyAdaptiveInspectorHeight(
-      selectedCountryActionsBody,
-      toViewportPixels(INSPECTOR_VH_BASELINE.selectedActionsBody),
-      toViewportPixels(getSelectedActionsBodyCap())
-    );
+    if (isSelectedActionsEmptyState()) {
+      releaseAdaptiveInspectorHeight(selectedCountryActionsBody);
+    } else {
+      applyAdaptiveInspectorHeight(
+        selectedCountryActionsBody,
+        toViewportPixels(INSPECTOR_VH_BASELINE.selectedActionsBody),
+        toViewportPixels(getSelectedActionsBodyCap())
+      );
+    }
     sidebar?.querySelectorAll(".preset-country-body").forEach((element) => {
       applyAdaptiveInspectorHeight(
         element,
@@ -3452,6 +3527,141 @@ function initSidebar({ render } = {}) {
       globalThis.cancelAnimationFrame(adaptiveInspectorHeightFrame);
     }
     adaptiveInspectorHeightFrame = globalThis.requestAnimationFrame(syncAdaptiveInspectorHeights);
+  };
+
+  const LEFT_SIDEBAR_COLLAPSED_KEY = "map_left_sidebar_collapsed";
+  const RIGHT_SIDEBAR_COLLAPSED_KEY = "map_right_sidebar_collapsed";
+  const leftSidebarCollapseMedia = typeof globalThis.matchMedia === "function"
+    ? globalThis.matchMedia("(min-width: 1024px)")
+    : null;
+  const rightSidebarCollapseMedia = typeof globalThis.matchMedia === "function"
+    ? globalThis.matchMedia("(min-width: 1024px)")
+    : null;
+  const SIDEBAR_LAYOUT_START_EVENT = "mapcreator:sidebar-layout-start";
+  const SIDEBAR_LAYOUT_REFRESH_EVENT = "mapcreator:sidebar-layout-refresh";
+  const SIDEBAR_LAYOUT_REFRESH_DELAY_MS = 280;
+  let leftSidebarCollapsePreference = false;
+  let leftSidebarLayoutRefreshTimer = 0;
+  let rightSidebarCollapsePreference = false;
+  let rightSidebarLayoutRefreshTimer = 0;
+
+  const canCollapseLeftSidebar = () => (
+    !leftSidebarCollapseMedia || !!leftSidebarCollapseMedia.matches
+  );
+
+  const canCollapseRightSidebar = () => (
+    !rightSidebarCollapseMedia || !!rightSidebarCollapseMedia.matches
+  );
+
+  const refreshCollapsedSidebarLayout = () => {
+    scheduleAdaptiveInspectorHeights();
+    globalThis.dispatchEvent(new CustomEvent(SIDEBAR_LAYOUT_REFRESH_EVENT));
+  };
+
+  const beginCollapsedSidebarLayout = () => {
+    globalThis.dispatchEvent(new CustomEvent(SIDEBAR_LAYOUT_START_EVENT));
+  };
+
+  const requestLeftSidebarLayoutRefresh = () => {
+    if (leftSidebarLayoutRefreshTimer) {
+      globalThis.clearTimeout(leftSidebarLayoutRefreshTimer);
+    }
+    scheduleAdaptiveInspectorHeights();
+    leftSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
+      refreshCollapsedSidebarLayout();
+      leftSidebarLayoutRefreshTimer = 0;
+    }, SIDEBAR_LAYOUT_REFRESH_DELAY_MS);
+  };
+
+  const requestRightSidebarLayoutRefresh = () => {
+    if (rightSidebarLayoutRefreshTimer) {
+      globalThis.clearTimeout(rightSidebarLayoutRefreshTimer);
+    }
+    scheduleAdaptiveInspectorHeights();
+    rightSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
+      refreshCollapsedSidebarLayout();
+      rightSidebarLayoutRefreshTimer = 0;
+    }, SIDEBAR_LAYOUT_REFRESH_DELAY_MS);
+  };
+
+  const setLeftSidebarCollapsed = (collapsed, { persist = true, refreshLayout = true } = {}) => {
+    leftSidebarCollapsePreference = !!collapsed;
+    const effectiveCollapsed = leftSidebarCollapsePreference && canCollapseLeftSidebar();
+    document.body.classList.toggle("left-sidebar-collapsed", effectiveCollapsed);
+    leftSidebar?.classList.toggle("is-collapsed", effectiveCollapsed);
+    leftSidebarContent?.toggleAttribute("inert", effectiveCollapsed);
+    leftSidebarContent?.setAttribute("aria-hidden", effectiveCollapsed ? "true" : "false");
+    leftSidebarCollapseBtn?.setAttribute("aria-expanded", effectiveCollapsed ? "false" : "true");
+    const nextSidebarLabel = effectiveCollapsed ? "Expand left sidebar" : "Collapse left sidebar";
+    leftSidebarCollapseBtn?.setAttribute("data-i18n-aria-label", nextSidebarLabel);
+    leftSidebarCollapseBtn?.setAttribute("aria-label", t(nextSidebarLabel, "ui"));
+    if (leftSidebarCollapseIcon) {
+      leftSidebarCollapseIcon.textContent = effectiveCollapsed ? ">" : "<";
+    }
+    if (persist) {
+      try {
+        globalThis.localStorage?.setItem(LEFT_SIDEBAR_COLLAPSED_KEY, leftSidebarCollapsePreference ? "true" : "false");
+      } catch (_error) {
+        // localStorage can be unavailable in privacy-restricted contexts.
+      }
+    }
+    if (refreshLayout) {
+      beginCollapsedSidebarLayout();
+      requestLeftSidebarLayoutRefresh();
+    }
+  };
+
+  const setRightSidebarCollapsed = (collapsed, { persist = true, refreshLayout = true } = {}) => {
+    rightSidebarCollapsePreference = !!collapsed;
+    const effectiveCollapsed = rightSidebarCollapsePreference && canCollapseRightSidebar();
+    document.body.classList.toggle("right-sidebar-collapsed", effectiveCollapsed);
+    sidebar?.classList.toggle("is-collapsed", effectiveCollapsed);
+    rightSidebarContent?.toggleAttribute("inert", effectiveCollapsed);
+    rightSidebarContent?.setAttribute("aria-hidden", effectiveCollapsed ? "true" : "false");
+    rightSidebarCollapseBtn?.setAttribute("aria-expanded", effectiveCollapsed ? "false" : "true");
+    const nextSidebarLabel = effectiveCollapsed ? "Expand right sidebar" : "Collapse right sidebar";
+    rightSidebarCollapseBtn?.setAttribute("data-i18n-aria-label", nextSidebarLabel);
+    rightSidebarCollapseBtn?.setAttribute("aria-label", t(nextSidebarLabel, "ui"));
+    if (rightSidebarCollapseIcon) {
+      rightSidebarCollapseIcon.textContent = effectiveCollapsed ? "<" : ">";
+    }
+    if (persist) {
+      try {
+        globalThis.localStorage?.setItem(RIGHT_SIDEBAR_COLLAPSED_KEY, rightSidebarCollapsePreference ? "true" : "false");
+      } catch (_error) {
+        // localStorage can be unavailable in privacy-restricted contexts.
+      }
+    }
+    if (refreshLayout) {
+      beginCollapsedSidebarLayout();
+      requestRightSidebarLayoutRefresh();
+    }
+  };
+
+  const restoreLeftSidebarCollapsedState = () => {
+    try {
+      leftSidebarCollapsePreference = globalThis.localStorage?.getItem(LEFT_SIDEBAR_COLLAPSED_KEY) === "true";
+    } catch (_error) {
+      leftSidebarCollapsePreference = false;
+    }
+    setLeftSidebarCollapsed(leftSidebarCollapsePreference, { persist: false, refreshLayout: false });
+  };
+
+  const restoreRightSidebarCollapsedState = () => {
+    try {
+      rightSidebarCollapsePreference = globalThis.localStorage?.getItem(RIGHT_SIDEBAR_COLLAPSED_KEY) === "true";
+    } catch (_error) {
+      rightSidebarCollapsePreference = false;
+    }
+    setRightSidebarCollapsed(rightSidebarCollapsePreference, { persist: false, refreshLayout: false });
+  };
+
+  const syncLeftSidebarCollapsedMedia = () => {
+    setLeftSidebarCollapsed(leftSidebarCollapsePreference, { persist: false });
+  };
+
+  const syncRightSidebarCollapsedMedia = () => {
+    setRightSidebarCollapsed(rightSidebarCollapsePreference, { persist: false });
   };
 
 
@@ -3538,6 +3748,12 @@ function initSidebar({ render } = {}) {
     return labels[normalizedKind] || normalizedKind.replace(/_/g, " ");
   };
 
+  const normalizeCountryDisplayNameCandidate = (value) => {
+    const text = String(value ?? "").trim();
+    if (!text || /^(undefined|null)$/i.test(text)) return "";
+    return text;
+  };
+
   const buildCountryRowMetaText = (countryState, { showRelationMeta = false } = {}) => {
     const metaBits = [countryState?.subregionDisplayLabel].filter(Boolean);
     if (countryState?.releasable && showRelationMeta) {
@@ -3565,6 +3781,24 @@ function initSidebar({ render } = {}) {
     const scenarioMeta = inlineReleasableMeta
       ? (entry || getScenarioCountryMeta(entry.code) || {})
       : (getScenarioCountryMeta(entry.code) || entry || {});
+    const normalizedEntryCode = normalizeCountryCode(entry?.code || scenarioMeta.code || scenarioMeta.tag);
+    const fallbackDisplayName = normalizeCountryDisplayNameCandidate(
+      entry?.displayName
+      || entry?.name
+      || scenarioMeta?.preset_source?.name
+      || scenarioMeta?.presetSource?.name
+      || runtimeState.countryNames?.[normalizedEntryCode]
+      || countryNames[normalizedEntryCode]
+      || normalizedEntryCode
+    );
+    const scenarioDisplayName = normalizeCountryDisplayNameCandidate(
+      getScenarioCountryDisplayName(scenarioMeta, fallbackDisplayName)
+    );
+    const displayNameSource = scenarioDisplayName.toUpperCase() === normalizedEntryCode && fallbackDisplayName
+      ? fallbackDisplayName
+      : (scenarioDisplayName || fallbackDisplayName || normalizedEntryCode);
+    const displayName = t(displayNameSource, "geo") || displayNameSource || normalizedEntryCode;
+    const name = normalizeCountryDisplayNameCandidate(displayNameSource || entry?.name || normalizedEntryCode) || normalizedEntryCode;
     const lookupIso2 = resolveScenarioLookupCode(entry);
     const inspectorDataCode = resolveInspectorDataCode(entry);
     const presetLookupCode = resolveScenarioLookupCode(entry);
@@ -3605,6 +3839,9 @@ function initSidebar({ render } = {}) {
     // 列表分组、预设读取和详情展示可能各自指向不同来源，不能在这里合并成一个 code。
     return {
       ...entry,
+      code: normalizedEntryCode || entry.code,
+      name,
+      displayName,
       fallbackIndex,
       lookupIso2,
       inspectorDataCode,
@@ -3742,6 +3979,8 @@ function initSidebar({ render } = {}) {
           return createCountryInspectorState({
             code: normalizedChild,
             display_name: releasableEntry.display_name,
+            display_name_en: releasableEntry.display_name_en,
+            display_name_zh: releasableEntry.display_name_zh,
             color_hex: releasableEntry.color_hex,
             feature_count: Number(releasableEntry.resolved_feature_count_hint || 0),
             release_lookup_iso2: releasableEntry.release_lookup_iso2,
@@ -3763,6 +4002,7 @@ function initSidebar({ render } = {}) {
             companion_actions: Array.isArray(releasableEntry.companion_actions)
               ? releasableEntry.companion_actions
               : [],
+            preset_source: releasableEntry.preset_source,
             notes: String(releasableEntry.notes || "").trim(),
             continent_id: releasableEntry.continent_id,
             continent_label: releasableEntry.continent_label,
@@ -5098,6 +5338,7 @@ function initSidebar({ render } = {}) {
     }
 
     if (!countryState) {
+      container.appendChild(createEmptyNote(t("Select a country to inspect territories, presets, and releasables.", "ui")));
       return;
     }
 
@@ -5109,14 +5350,80 @@ function initSidebar({ render } = {}) {
     renderScenarioVisualAdjustments(container, countryState);
   };
 
+  const getSelectedLandFeatureIdsForCountryInference = () => {
+    const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
+      ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    const validOrderedIds = orderedIds.filter((featureId) => runtimeState.landIndex?.has(featureId));
+    if (validOrderedIds.length) {
+      return Array.from(new Set(validOrderedIds));
+    }
+
+    const selectedId = runtimeState.devSelectedHit?.targetType === "land"
+      ? String(runtimeState.devSelectedHit.id || "").trim()
+      : "";
+    return selectedId && runtimeState.landIndex?.has(selectedId) ? [selectedId] : [];
+  };
+
+  const inferCountryCodesFromSelectedLand = () => {
+    const codes = new Set();
+    getSelectedLandFeatureIdsForCountryInference().forEach((featureId) => {
+      const feature = runtimeState.landIndex?.get(featureId);
+      const ownerCode = normalizeCountryCode(getFeatureOwnerCode(featureId));
+      const featureCode = normalizeCountryCode(
+        getSharedFeatureCountryCode(feature || { id: featureId }, { useIdFallback: true })
+      );
+      const code = ownerCode || featureCode;
+      if (code) {
+        codes.add(code);
+      }
+    });
+    return Array.from(codes);
+  };
+
+  const resolvePresetTreeCountryState = () => {
+    const selectedCode = ensureSelectedInspectorCountry();
+    if (selectedCode) {
+      return {
+        countryState: latestCountryStatesByCode.get(selectedCode) || null,
+        reason: "inspector",
+      };
+    }
+
+    const inferredCodes = inferCountryCodesFromSelectedLand()
+      .filter((code) => latestCountryStatesByCode.has(code));
+    if (inferredCodes.length === 1) {
+      return {
+        countryState: latestCountryStatesByCode.get(inferredCodes[0]) || null,
+        reason: "selection",
+      };
+    }
+    if (inferredCodes.length > 1) {
+      return {
+        countryState: null,
+        reason: "multi-selection",
+      };
+    }
+    return {
+      countryState: null,
+      reason: "empty",
+    };
+  };
+
   const renderPresetTree = () => {
     if (!presetTree) return;
     incrementSidebarCounter("presetTreeRenders");
     updateScenarioInspectorLayout();
     presetTree.innerHTML = "";
 
-    const selectedCode = ensureSelectedInspectorCountry();
-    const countryState = selectedCode ? latestCountryStatesByCode.get(selectedCode) : null;
+    const { countryState, reason } = resolvePresetTreeCountryState();
+    selectedCountryActionsSection?.classList.toggle("is-empty-selection-panel", !countryState);
+
+    if (reason === "multi-selection") {
+      presetTree.appendChild(createEmptyNote(t("Multiple countries are selected. Narrow the map selection to one country or choose a country in the inspector.", "ui")));
+      scheduleAdaptiveInspectorHeights();
+      return;
+    }
 
     if (runtimeState.activeScenarioId) {
       renderScenarioActionsPanel(presetTree, countryState);
@@ -5125,6 +5432,7 @@ function initSidebar({ render } = {}) {
     }
 
     if (!countryState) {
+      presetTree.appendChild(createEmptyNote(t("Select a country to inspect territories, presets, and releasables.", "ui")));
       scheduleAdaptiveInspectorHeights();
       return;
     }
@@ -5459,6 +5767,40 @@ function initSidebar({ render } = {}) {
   setRightSidebarTab(requestedSidebarTab || runtimeState.ui?.rightSidebarTab || "inspector");
   callRuntimeHook(state, "restoreSupportSurfaceFromUrlFn");
   refreshStrategicOverlayUI();
+  restoreLeftSidebarCollapsedState();
+  restoreRightSidebarCollapsedState();
+
+  if (leftSidebarCollapseBtn && !leftSidebarCollapseBtn.dataset.bound) {
+    leftSidebarCollapseBtn.addEventListener("click", () => {
+      setLeftSidebarCollapsed(!leftSidebarCollapsePreference);
+    });
+    leftSidebarCollapseBtn.dataset.bound = "true";
+  }
+
+  if (rightSidebarCollapseBtn && !rightSidebarCollapseBtn.dataset.bound) {
+    rightSidebarCollapseBtn.addEventListener("click", () => {
+      setRightSidebarCollapsed(!rightSidebarCollapsePreference);
+    });
+    rightSidebarCollapseBtn.dataset.bound = "true";
+  }
+
+  if (leftSidebarCollapseMedia && leftSidebar && !leftSidebar.dataset.collapseMediaBound) {
+    if (typeof leftSidebarCollapseMedia.addEventListener === "function") {
+      leftSidebarCollapseMedia.addEventListener("change", syncLeftSidebarCollapsedMedia);
+    } else if (typeof leftSidebarCollapseMedia.addListener === "function") {
+      leftSidebarCollapseMedia.addListener(syncLeftSidebarCollapsedMedia);
+    }
+    leftSidebar.dataset.collapseMediaBound = "true";
+  }
+
+  if (rightSidebarCollapseMedia && sidebar && !sidebar.dataset.collapseMediaBound) {
+    if (typeof rightSidebarCollapseMedia.addEventListener === "function") {
+      rightSidebarCollapseMedia.addEventListener("change", syncRightSidebarCollapsedMedia);
+    } else if (typeof rightSidebarCollapseMedia.addListener === "function") {
+      rightSidebarCollapseMedia.addListener(syncRightSidebarCollapsedMedia);
+    }
+    sidebar.dataset.collapseMediaBound = "true";
+  }
 
   inspectorSidebarTabButtons.forEach((button) => {
     if (button.dataset.bound) return;

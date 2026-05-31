@@ -393,6 +393,7 @@ test("startup scenario cache keys change when source sha metadata changes", () =
       runtime_topology_sha256: "full-a",
       runtime_bootstrap_topology_sha256: "boot-a",
       detail_chunk_manifest_sha256: "chunks-a",
+      countries_sha256: "countries-a",
     },
   };
   const manifestB = {
@@ -400,6 +401,13 @@ test("startup scenario cache keys change when source sha metadata changes", () =
     source: {
       ...manifestA.source,
       runtime_bootstrap_topology_sha256: "boot-b",
+    },
+  };
+  const manifestC = {
+    ...manifestA,
+    source: {
+      ...manifestA.source,
+      countries_sha256: "countries-c",
     },
   };
 
@@ -417,6 +425,24 @@ test("startup scenario cache keys change when source sha metadata changes", () =
     createStartupScenarioBootstrapCacheKey({
       ...common,
       manifest: manifestB,
+      currentLanguage: "en",
+      geoLocalePatchUrl: "data/scenarios/sample/geo_locale_patch.en.json",
+    }),
+  );
+  assert.notEqual(
+    createStartupScenarioBootstrapCoreCacheKey({ ...common, manifest: manifestA }),
+    createStartupScenarioBootstrapCoreCacheKey({ ...common, manifest: manifestC }),
+  );
+  assert.notEqual(
+    createStartupScenarioBootstrapCacheKey({
+      ...common,
+      manifest: manifestA,
+      currentLanguage: "en",
+      geoLocalePatchUrl: "data/scenarios/sample/geo_locale_patch.en.json",
+    }),
+    createStartupScenarioBootstrapCacheKey({
+      ...common,
+      manifest: manifestC,
       currentLanguage: "en",
       geoLocalePatchUrl: "data/scenarios/sample/geo_locale_patch.en.json",
     }),

@@ -226,8 +226,6 @@ function initToolbar({ render } = {}) {
   const scenarioGuideBackdrop = document.getElementById("scenarioGuideBackdrop");
   const scenarioGuidePopover = document.getElementById("scenarioGuidePopover");
   const scenarioGuideCloseBtn = document.getElementById("scenarioGuideCloseBtn");
-  const scenarioGuideStatus = document.getElementById("scenarioGuideStatus");
-  const scenarioGuideStatusChips = document.getElementById("scenarioGuideStatusChips");
   const scenarioGuideNavButtons = Array.from(document.querySelectorAll(".scenario-guide-nav-btn"));
   const scenarioGuidePanels = Array.from(document.querySelectorAll("[data-guide-panel]"));
   const dockConfigGroup = document.getElementById("dockConfigGroup");
@@ -287,13 +285,10 @@ function initToolbar({ render } = {}) {
   const transportWorkbenchPreviewMode = document.getElementById("transportWorkbenchPreviewMode");
   const transportWorkbenchPreviewTitle = document.getElementById("transportWorkbenchPreviewTitle");
   const transportWorkbenchPreviewCanvas = document.getElementById("transportWorkbenchPreviewCanvas");
-  const transportWorkbenchPreviewActions = document.getElementById("transportWorkbenchPreviewActions");
   const transportWorkbenchPreviewControls = document.getElementById("transportWorkbenchPreviewControls");
   const transportWorkbenchCarrierMount = document.getElementById("transportWorkbenchCarrierMount");
   const transportWorkbenchLayerOrderPanel = document.getElementById("transportWorkbenchLayerOrderPanel");
   const transportWorkbenchLayerOrderList = document.getElementById("transportWorkbenchLayerOrderList");
-  const transportWorkbenchCompareBtn = document.getElementById("transportWorkbenchCompareBtn");
-  const transportWorkbenchCompareStatus = document.getElementById("transportWorkbenchCompareStatus");
   const transportWorkbenchZoomOutBtn = document.getElementById("transportWorkbenchZoomOutBtn");
   const transportWorkbenchZoomInBtn = document.getElementById("transportWorkbenchZoomInBtn");
   const transportWorkbenchRotateBtn = document.getElementById("transportWorkbenchRotateBtn");
@@ -334,14 +329,6 @@ function initToolbar({ render } = {}) {
   const empireBorderWidth = document.getElementById("empireBorderWidth");
   const coastlineColor = document.getElementById("coastlineColor");
   const coastlineWidth = document.getElementById("coastlineWidth");
-  const parentBordersVisible = document.getElementById("parentBordersVisible");
-  const parentBorderColor = document.getElementById("parentBorderColor");
-  const parentBorderOpacity = document.getElementById("parentBorderOpacity");
-  const parentBorderWidth = document.getElementById("parentBorderWidth");
-  const parentBorderCountryList = document.getElementById("parentBorderCountryList");
-  const parentBorderEnableAll = document.getElementById("parentBorderEnableAll");
-  const parentBorderDisableAll = document.getElementById("parentBorderDisableAll");
-  const parentBorderEmpty = document.getElementById("parentBorderEmpty");
   const oceanFillColor = document.getElementById("oceanFillColor");
   const lakeLinkToOcean = document.getElementById("lakeLinkToOcean");
   const lakeFillColor = document.getElementById("lakeFillColor");
@@ -362,6 +349,7 @@ function initToolbar({ render } = {}) {
   const oceanScenarioSyntheticContourFadeEndZoom = document.getElementById("oceanScenarioSyntheticContourFadeEndZoom");
   const oceanScenarioShallowContourFadeEndZoom = document.getElementById("oceanScenarioShallowContourFadeEndZoom");
   const toggleLang = document.getElementById("btnToggleLang");
+  const scenarioGuideLanguageToggle = document.getElementById("scenarioGuideLanguageToggle");
   const themeSelect = document.getElementById("themeSelect");
   const paletteLibraryToggleLabel = document.getElementById("paletteLibraryToggleLabel");
 
@@ -369,8 +357,6 @@ function initToolbar({ render } = {}) {
   const internalBorderWidthValue = document.getElementById("internalBorderWidthValue");
   const empireBorderWidthValue = document.getElementById("empireBorderWidthValue");
   const coastlineWidthValue = document.getElementById("coastlineWidthValue");
-  const parentBorderOpacityValue = document.getElementById("parentBorderOpacityValue");
-  const parentBorderWidthValue = document.getElementById("parentBorderWidthValue");
   const oceanTextureOpacityValue = document.getElementById("oceanTextureOpacityValue");
   const oceanTextureScaleValue = document.getElementById("oceanTextureScaleValue");
   const oceanContourStrengthValue = document.getElementById("oceanContourStrengthValue");
@@ -433,8 +419,6 @@ function initToolbar({ render } = {}) {
     scenarioGuideBackdrop,
     scenarioGuidePopover,
     scenarioGuideCloseBtn,
-    scenarioGuideStatus,
-    scenarioGuideStatusChips,
     scenarioGuideNavButtons,
     scenarioGuidePanels,
     getGuideSectionFromUrl: getScenarioGuideSectionFromUrl,
@@ -446,7 +430,6 @@ function initToolbar({ render } = {}) {
     closeScenarioGuideSurface,
     openScenarioGuideSurface,
     renderScenarioGuideSection,
-    renderScenarioGuideStatus,
     syncScenarioGuideTriggerButtons,
   } = scenarioGuidePopoverController;
 
@@ -478,11 +461,13 @@ function initToolbar({ render } = {}) {
   };
 
   const updateLanguageToggleUi = () => {
-    if (!toggleLang) return;
-    const nextLang = runtimeState.currentLanguage === "zh" ? "EN" : "ZH";
-    const buttonLabel = runtimeState.currentLanguage === "zh" ? "ZH / EN" : "EN / ZH";
-    toggleLang.textContent = buttonLabel;
-    toggleLang.setAttribute("title", `${t("Language", "ui")}: ${nextLang}`);
+    const currentLangLabel = runtimeState.currentLanguage === "zh" ? "ZH" : "EN";
+    [toggleLang, scenarioGuideLanguageToggle].forEach((button) => {
+      if (!button) return;
+      button.textContent = currentLangLabel;
+      button.setAttribute("title", `${t("Language", "ui")}: ${currentLangLabel}`);
+      button.setAttribute("aria-label", `${t("Language", "ui")}: ${currentLangLabel}`);
+    });
   };
 
   const syncDeveloperModeUi = () => {
@@ -496,10 +481,11 @@ function initToolbar({ render } = {}) {
       developerModeBtn.setAttribute("aria-label", buttonLabel);
       developerModeBtn.setAttribute("title", buttonLabel);
     }
-    zoomUtilityWorkspaceGroup?.classList.toggle("hidden", !runtimeState.ui.developerMode);
-    zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");
-    devWorkspaceToggleBtn?.classList.toggle("hidden", !runtimeState.ui.developerMode);
-    devWorkspaceToggleBtn?.setAttribute("aria-hidden", runtimeState.ui.developerMode ? "false" : "true");
+    zoomUtilityWorkspaceGroup?.classList.add("hidden");
+    zoomUtilityWorkspaceGroup?.setAttribute("aria-hidden", "true");
+    devWorkspaceToggleBtn?.classList.add("hidden");
+    devWorkspaceToggleBtn?.setAttribute("aria-hidden", "true");
+    devWorkspaceToggleBtn?.setAttribute("tabindex", "-1");
     if (!runtimeState.ui.developerMode && runtimeState.ui.devWorkspaceExpanded) {
       if (typeof runtimeState.setDevWorkspaceExpandedFn === "function") {
         callRuntimeHook(state, "setDevWorkspaceExpandedFn", false);
@@ -572,13 +558,10 @@ function initToolbar({ render } = {}) {
     transportWorkbenchPreviewMode,
     transportWorkbenchPreviewTitle,
     transportWorkbenchPreviewCanvas,
-    transportWorkbenchPreviewActions,
     transportWorkbenchPreviewControls,
     transportWorkbenchCarrierMount,
     transportWorkbenchLayerOrderPanel,
     transportWorkbenchLayerOrderList,
-    transportWorkbenchCompareBtn,
-    transportWorkbenchCompareStatus,
     transportWorkbenchZoomOutBtn,
     transportWorkbenchZoomInBtn,
     transportWorkbenchRotateBtn,
@@ -1123,12 +1106,6 @@ function initToolbar({ render } = {}) {
         : t("Open transport workbench", "ui"));
     }
     refreshScenarioSelectionChip();
-    renderScenarioGuideStatus({
-      activeScenario,
-      modeLabel,
-      scenarioViewLabel,
-      splitCount,
-    });
     refreshWorkspaceStatus();
     applyScenarioOverlaySafeLayout();
   };
@@ -1948,6 +1925,7 @@ function initToolbar({ render } = {}) {
     renderTextureUI();
     renderDayNightUI();
     renderSpecialZoneEditorUI();
+    updateLanguageToggleUi();
   });
   registerRuntimeHook(state, "updateTextureUIFn", renderTextureUI);
 
@@ -2056,6 +2034,11 @@ function initToolbar({ render } = {}) {
   if (toggleLang && !toggleLang.dataset.bound) {
     toggleLang.addEventListener("click", toggleLanguage);
     toggleLang.dataset.bound = "true";
+  }
+
+  if (scenarioGuideLanguageToggle && !scenarioGuideLanguageToggle.dataset.bound) {
+    scenarioGuideLanguageToggle.addEventListener("click", toggleLanguage);
+    scenarioGuideLanguageToggle.dataset.bound = "true";
   }
 
   if (developerModeBtn && !developerModeBtn.dataset.bound) {
@@ -3015,88 +2998,15 @@ function initToolbar({ render } = {}) {
     });
   }
 
-  if (parentBorderColor) {
-    parentBorderColor.value = runtimeState.styleConfig.parentBorders.color || "#4b5563";
-    parentBorderColor.addEventListener("input", (event) => {
-      runtimeState.styleConfig.parentBorders.color = event.target.value;
-      renderDirty("parent-border-color");
-    });
-  }
-  if (parentBorderOpacity) {
-    const initial = Math.round((runtimeState.styleConfig.parentBorders.opacity || 0.85) * 100);
-    parentBorderOpacity.value = String(clamp(initial, 0, 100));
-    if (parentBorderOpacityValue) {
-      parentBorderOpacityValue.textContent = `${parentBorderOpacity.value}%`;
-    }
-    parentBorderOpacity.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.parentBorders.opacity = clamp(
-        Number.isFinite(value) ? value / 100 : 0.85,
-        0,
-        1
-      );
-      if (parentBorderOpacityValue) {
-        parentBorderOpacityValue.textContent = `${event.target.value}%`;
-      }
-      renderDirty("parent-border-opacity");
-    });
-  }
-  if (parentBorderWidth) {
-    const initial = Number(runtimeState.styleConfig.parentBorders.width || 1.1);
-    parentBorderWidth.value = String(clamp(initial, 0.2, 4));
-    if (parentBorderWidthValue) {
-      parentBorderWidthValue.textContent = Number(parentBorderWidth.value).toFixed(2);
-    }
-    parentBorderWidth.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.parentBorders.width = clamp(Number.isFinite(value) ? value : 1.1, 0.2, 4);
-      if (parentBorderWidthValue) {
-        parentBorderWidthValue.textContent = runtimeState.styleConfig.parentBorders.width.toFixed(2);
-      }
-      renderDirty("parent-border-width");
-    });
-  }
-  if (parentBordersVisible) {
-    parentBordersVisible.checked = runtimeState.parentBordersVisible !== false;
-    parentBordersVisible.addEventListener("change", (event) => {
-      runtimeState.parentBordersVisible = !!event.target.checked;
-      syncParentBorderVisibilityUI();
-      renderParentBorderCountryList();
-      renderDirty("parent-border-visibility");
-    });
-  }
-  if (parentBorderEnableAll) {
-    parentBorderEnableAll.addEventListener("click", () => {
-      const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
-        ? runtimeState.parentBorderSupportedCountries
-        : [];
-      supported.forEach((countryCode) => {
-        runtimeState.parentBorderEnabledByCountry[countryCode] = true;
-      });
-      renderParentBorderCountryList();
-      renderDirty("parent-border-enable-all");
-    });
-  }
-  if (parentBorderDisableAll) {
-    parentBorderDisableAll.addEventListener("click", () => {
-      const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
-        ? runtimeState.parentBorderSupportedCountries
-        : [];
-      supported.forEach((countryCode) => {
-        runtimeState.parentBorderEnabledByCountry[countryCode] = false;
-      });
-      renderParentBorderCountryList();
-      renderDirty("parent-border-disable-all");
-    });
-  }
-
   if (!runtimeState.ui.overlayResizeBound) {
-    globalThis.addEventListener("resize", () => {
+    const refreshResponsiveChromeLayout = () => {
       applyResponsiveChromeDefaults();
       updateDockCollapsedUi();
       refreshScenarioContextBar();
       handlePaletteLibraryResize();
-    });
+    };
+    globalThis.addEventListener("resize", refreshResponsiveChromeLayout);
+    globalThis.addEventListener("mapcreator:sidebar-layout-refresh", refreshResponsiveChromeLayout);
     runtimeState.ui.overlayResizeBound = true;
   }
 
@@ -3134,7 +3044,6 @@ function initToolbar({ render } = {}) {
     applyDialogContract(scenarioGuidePopover, {
       tone: "info",
       labelledBy: "scenarioGuideTitle",
-      describedBy: ["scenarioGuideSupportHint"],
     });
     scenarioGuidePopover.setAttribute("aria-hidden", "true");
   }
@@ -3159,6 +3068,7 @@ function initToolbar({ render } = {}) {
     }
   }
   updateUIText();
+  updateLanguageToggleUi();
 }
 
 

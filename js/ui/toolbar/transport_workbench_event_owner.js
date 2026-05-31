@@ -107,6 +107,7 @@ export function createTransportWorkbenchEventOwner({
       const applyFamilyToMainMap = requireAction(actions, "applyFamilyToMainMap");
       const renderShell = requireAction(actions, "renderShell");
       button.addEventListener("click", async () => {
+        // Apply 是 workbench -> main map 的单向桥接；点击瞬间重新取 context，确保 pack/family gate 用最新状态。
         const context = getRenderContext();
         const applyState = getApplyButtonState(context.family.id);
         if (!applyState.enabled) return;

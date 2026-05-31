@@ -438,6 +438,14 @@ export function createCountryInspectorController({
     });
   };
 
+  const keepGroupHeaderAtSameScrollPosition = (groupKey, previousHeaderTop = null) => {
+    if (!list || !groupKey || previousHeaderTop == null) return;
+    const nextHeader = list.querySelector(`[data-inspector-group-key="${groupKey}"]`);
+    if (!nextHeader) return;
+    const nextHeaderTop = nextHeader.getBoundingClientRect().top;
+    list.scrollTop += nextHeaderTop - previousHeaderTop;
+  };
+
   const renderGroupedCountryExplorer = (countryStates) => {
     const latestCountryStatesByCode = getLatestCountryStatesByCode();
     const hasCountryGrouping =
@@ -473,14 +481,16 @@ export function createCountryInspectorController({
       const header = document.createElement("button");
       header.type = "button";
       header.className = "inspector-accordion-btn country-explorer-header";
+      header.dataset.inspectorGroupKey = groupKey;
       header.setAttribute("aria-expanded", String(isOpen));
       header.addEventListener("click", () => {
+        const previousHeaderTop = header.getBoundingClientRect().top;
         if (runtimeState.expandedInspectorContinents.has(groupKey)) {
           runtimeState.expandedInspectorContinents.delete(groupKey);
         } else {
           runtimeState.expandedInspectorContinents.add(groupKey);
         }
-        renderList();
+        renderList({ anchorGroupKey: groupKey, previousHeaderTop });
       });
 
       const heading = document.createElement("div");
@@ -593,7 +603,7 @@ export function createCountryInspectorController({
     scheduleAdaptiveInspectorHeights();
   };
 
-  const renderList = () => {
+  const renderList = ({ anchorGroupKey = "", previousHeaderTop = null } = {}) => {
     incrementSidebarCounter?.("fullListRenders");
     updateScenarioInspectorLayout();
     const term = getSearchTerm();
@@ -618,6 +628,7 @@ export function createCountryInspectorController({
       renderCountrySearchResults(visibleCountryStates, term, priorityOrderMap);
     } else {
       renderGroupedCountryExplorer(topLevelCountryStates);
+      keepGroupHeaderAtSameScrollPosition(anchorGroupKey, previousHeaderTop);
     }
 
     renderCountryInspectorDetail();

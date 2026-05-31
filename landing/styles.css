@@ -481,6 +481,7 @@ a.button {
 .work-card__media {
   position: relative;
   overflow: hidden;
+  aspect-ratio: 16 / 9;
   min-height: 270px;
   background: linear-gradient(180deg, rgba(7, 17, 31, 0.06), rgba(7, 17, 31, 0));
 }

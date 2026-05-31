@@ -1,9 +1,11 @@
 from pathlib import Path
+import json
 import re
 import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+ATLANTROPA_DETAIL_CHUNK = REPO_ROOT / "data" / "scenarios" / "tno_1962" / "chunks" / "political.detail.country.atl.json"
 SIDEBAR_JS = REPO_ROOT / "js" / "ui" / "sidebar.js"
 WATER_SPECIAL_REGION_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "sidebar" / "water_special_region_controller.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
@@ -11,6 +13,17 @@ HISTORY_MANAGER_JS = REPO_ROOT / "js" / "core" / "history_manager.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 INTERACTION_FUNNEL_UI_SYNC_JS = REPO_ROOT / "js" / "core" / "interaction_funnel" / "ui_sync.js"
 I18N_JS = REPO_ROOT / "js" / "ui" / "i18n.js"
+
+
+def iter_features(value):
+    if isinstance(value, dict):
+        if value.get("type") == "Feature" and isinstance(value.get("properties"), dict):
+            yield value
+        for child in value.get("features", []):
+            yield from iter_features(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from iter_features(child)
 
 
 class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
@@ -76,15 +89,46 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('updateSpecialZoneEditorUi: () => callRuntimeHook(state, "updateSpecialZoneEditorUIFn"),', sidebar_content)
         self.assertIn('updateWorkspaceStatus: () => callRuntimeHook(state, "updateWorkspaceStatusFn"),', sidebar_content)
 
+    def test_water_region_list_groups_fragment_rows_without_merging_geometry(self):
+        owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("const WATER_FRAGMENT_SUFFIX_PATTERN = ", owner_content)
+        self.assertIn("const getWaterFeatureAggregateKey = (feature) => {", owner_content)
+        self.assertIn("const getWaterListDisplayItems = (features) => {", owner_content)
+        self.assertIn("syncWaterAggregateMemberIndex(displayItems);", owner_content)
+        self.assertIn('button.dataset.regionIds = memberIds.join("|");', owner_content)
+        self.assertIn("waterRowRefsById.set(memberId, button);", owner_content)
+        self.assertIn("candidateIds = getWaterAggregateMemberIds(normalizedSelectedId);", owner_content)
+        self.assertIn(
+            'applyWaterOverrideScope(selectedIds, nextColor, "inspector-water-region-color", "inspector-water-region-color");',
+            owner_content,
+        )
+        self.assertNotIn("runtimeState.waterRegionOverrides[selectedId] = nextColor;", owner_content)
+
+    def test_atlantropa_water_fragments_keep_real_feature_ids(self):
+        data = json.loads(ATLANTROPA_DETAIL_CHUNK.read_text(encoding="utf-8"))
+        gabes_fragments = [
+            feature
+            for feature in iter_features(data)
+            if feature["properties"].get("region_group") == "atlantropa_gulf_of_gabes_exposure_sea"
+        ]
+
+        self.assertGreaterEqual(len(gabes_fragments), 3)
+        self.assertTrue(all(feature["properties"].get("id", "").startswith(("ATLSEA_", "ATLSEA_FILL_")) for feature in gabes_fragments))
+        self.assertTrue(any(re.search(r"\d+-\d+-\d+$", feature["properties"].get("name", "")) for feature in gabes_fragments))
+        self.assertTrue(any(re.search(r"Completion \d+$", feature["properties"].get("name", "")) for feature in gabes_fragments))
+
     def test_special_region_sidebar_is_read_only_after_override_retirement(self):
         owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         i18n_content = I18N_JS.read_text(encoding="utf-8")
 
-        self.assertIn('createEmptyNote(t("Special region color overrides retired. Use Special Zones layers for editable narrative regions.", "ui"))', owner_content)
+        self.assertNotIn("specialRegionLegendList", owner_content)
+        self.assertNotIn("renderSpecialRegionLegend", owner_content)
+        self.assertNotIn('createEmptyNote(t("Special region color overrides retired. Use Special Zones layers for editable narrative regions.", "ui"))', owner_content)
         self.assertIn("specialRegionColorInput.disabled = true;", owner_content)
         self.assertIn("clearSpecialRegionColorBtn.disabled = true;", owner_content)
-        self.assertIn('["lblSpecialRegionLegend", "Special Region Reference"]', i18n_content)
+        self.assertNotIn('["lblSpecialRegionLegend", "Special Region Reference"]', i18n_content)
         self.assertIn('["clearSpecialRegionColorBtn", "Special Region Overrides Retired"]', i18n_content)
         self.assertNotIn('["lblSpecialRegionLegend", "Special Region Overrides"]', i18n_content)
         self.assertNotIn('["clearSpecialRegionColorBtn", "Clear Special Region Override"]', i18n_content)

@@ -30,14 +30,18 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertIn('id="scenarioGuideBackdrop"', content)
         self.assertIn('id="scenarioGuidePopover"', content)
         self.assertIn('id="scenarioGuideCloseBtn"', content)
+        self.assertIn('id="scenarioGuideLanguageToggle"', content)
+        self.assertIn("scenario-guide-title-row", content)
         self.assertIn("scenario-guide-modal", content)
         self.assertNotIn("scenarioGuideSupportHint", content)
         self.assertNotIn("scenarioGuideStatus", content)
         self.assertNotIn("scenarioGuideStatusChips", content)
         self.assertNotIn("Open this manual from the scenario bar or the Utilities panel. Both Guide buttons open the same help surface, so you can keep the next editing step visible while you work.", content)
-        self.assertIn("Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit.", content)
-        self.assertIn("Before a broad edit or before loading another project file, download the current project JSON from Project Management.", content)
-        self.assertIn("After loading, return to Inspector to confirm the target country and active owner", content)
+        self.assertIn("Before editing, look at the chips at the top of the map.", content)
+        self.assertIn("Mode shows the active tool, View shows the map state you are seeing, and Split shows how many countries have split ownership.", content)
+        self.assertIn("Before a large edit or before loading another project, save a backup: open Project Management and download the current project JSON.", content)
+        self.assertIn("After loading a project, check the Inspector again.", content)
+        self.assertIn("Confirm the target country and active owner, then review frontlines, reference image alignment, and export settings.", content)
         self.assertNotIn("Save the current working state before you load a different project file.", content)
         self.assertNotIn("You can open Guide from the top scenario bar or from Project › Utilities.", content)
         self.assertIn("scenario-guide-tool-accordion", content)
@@ -64,8 +68,14 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertNotIn("lblExportInfoTooltip", content)
         for token in [
             "width: min(680px, calc(100vw - 32px));",
+            ".scenario-guide-language-btn {",
             ".scenario-guide-tool-accordion {",
             ".scenario-guide-tool-summary {",
+            ".scenario-guide-tool-summary::marker {",
+            "grid-row: 1 / span 2;",
+            "transform-origin: center;",
+            ".scenario-guide-tool-title,",
+            ".scenario-guide-tool-summary-copy {\n  grid-column: 1;",
             ".scenario-guide-tool-steps li {",
             "grid-template-columns: 74px minmax(0, 1fr);",
         ]:
@@ -268,9 +278,12 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
 
     def test_toolbar_language_toggle_displays_current_language_state(self):
         toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
+        self.assertIn('const scenarioGuideLanguageToggle = document.getElementById("scenarioGuideLanguageToggle");', toolbar_content)
         self.assertIn('const currentLangLabel = runtimeState.currentLanguage === "zh" ? "ZH" : "EN";', toolbar_content)
-        self.assertIn("toggleLang.textContent = currentLangLabel;", toolbar_content)
-        self.assertIn("toggleLang.setAttribute(\"title\", `${t(\"Language\", \"ui\")}: ${currentLangLabel}`);", toolbar_content)
+        self.assertIn("[toggleLang, scenarioGuideLanguageToggle].forEach((button) => {", toolbar_content)
+        self.assertIn("button.textContent = currentLangLabel;", toolbar_content)
+        self.assertIn("button.setAttribute(\"title\", `${t(\"Language\", \"ui\")}: ${currentLangLabel}`);", toolbar_content)
+        self.assertIn("scenarioGuideLanguageToggle.addEventListener(\"click\", toggleLanguage);", toolbar_content)
         self.assertIn("renderSpecialZoneEditorUI();\n    updateLanguageToggleUi();", toolbar_content)
         self.assertIn("updateUIText();\n  updateLanguageToggleUi();", toolbar_content)
         self.assertNotIn('"ZH / EN"', toolbar_content)

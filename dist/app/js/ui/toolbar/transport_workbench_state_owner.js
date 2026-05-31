@@ -93,7 +93,7 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     uiState.previewCamera.scale = Number(uiState.previewCamera.scale) || 1;
     uiState.previewCamera.translateX = Number(uiState.previewCamera.translateX) || 0;
     uiState.previewCamera.translateY = Number(uiState.previewCamera.translateY) || 0;
-    uiState.compareHeld = !!uiState.compareHeld;
+    delete uiState.compareHeld;
     uiState.activeInspectorTab = normalizeTransportWorkbenchInspectorTab(uiState.activeInspectorTab);
     uiState.layerOrder = normalizeTransportWorkbenchLayerOrder(previousLayerOrder || uiState.layerOrder);
     if (!uiState.familyConfigs || typeof uiState.familyConfigs !== "object") {
@@ -192,20 +192,10 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     return uiState.sectionOpen;
   };
 
-  const setCompareHeld = (nextHeld) => {
-    const uiState = ensureUiState();
-    const family = getFamilyMeta();
-    if (!family.supportsDetailedControls) return false;
-    const normalized = !!nextHeld;
-    if (uiState.compareHeld === normalized) return false;
-    uiState.compareHeld = normalized;
-    return true;
-  };
-
   const updateFamilyConfig = (familyId, key, nextValue, { appendValue = null } = {}) => {
     const uiState = ensureUiState();
     const family = TRANSPORT_WORKBENCH_FAMILIES.find((entry) => entry.id === familyId);
-    if (!family?.supportsDetailedControls || uiState.compareHeld) return false;
+    if (!family?.supportsDetailedControls) return false;
     const current = clonePlainObject(getWorkingConfig(familyId) || {});
     if (appendValue !== null) {
       const currentValues = Array.isArray(current[key]) ? [...current[key]] : [];
@@ -266,7 +256,6 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
       uiState.activePackIdByFamily = {};
     }
     uiState.activePackIdByFamily[activeFamily] = activePackId;
-    uiState.compareHeld = false;
     const activePackMeta = getTargetMainMapPackMeta(activePackId);
     if (activePackMeta?.country) uiState.sampleCountry = activePackMeta.country;
     return activeFamily;
@@ -282,7 +271,6 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     const uiState = ensureUiState();
     uiState.restoreLeftDrawer = !!restoreLeftDrawer;
     uiState.restoreRightDrawer = !!restoreRightDrawer;
-    uiState.compareHeld = false;
     return uiState;
   };
 
@@ -298,7 +286,6 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
       restoreLeftDrawer: !!uiState.restoreLeftDrawer,
       restoreRightDrawer: !!uiState.restoreRightDrawer,
     };
-    uiState.compareHeld = false;
     uiState.restoreLeftDrawer = false;
     uiState.restoreRightDrawer = false;
     return restoreState;
@@ -331,7 +318,6 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     resetSectionState,
     setActiveFamily,
     setActivePackId,
-    setCompareHeld,
     setInspectorTab,
     setOpenState,
     toggleSection,

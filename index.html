@@ -1885,7 +1885,7 @@
                 title="Toggle development workspace"
                 data-i18n-title="Toggle development workspace"
               >
-                <span data-i18n="Dev">Dev</span>
+                <span class="dev-workspace-toggle-label" data-i18n="Dev">Dev</span>
               </button>
             </div>
           </div>
@@ -2218,10 +2218,6 @@
                     <button id="clearSpecialRegionColorBtn" type="button" class="sidebar-action-secondary is-danger mt-3">Special Region Overrides Retired</button>
                   </div>
                 </div>
-              </div>
-              <div class="inspector-detail-section mt-3 sidebar-detail-group">
-                <h3 id="lblSpecialRegionLegend" class="sidebar-group-label">Special Region Reference</h3>
-                <div id="specialRegionLegendList" class="inspector-scroll mt-3"></div>
               </div>
             </div>
           </details>
@@ -2842,7 +2838,10 @@
     <div id="scenarioGuideBackdrop" class="scenario-guide-backdrop hidden" aria-hidden="true"></div>
     <div id="scenarioGuidePopover" class="scenario-guide-popover scenario-guide-modal sidebar-tool-panel hidden" role="dialog" aria-labelledby="scenarioGuideTitle" aria-hidden="true">
       <div class="scenario-guide-modal-header">
-        <h3 id="scenarioGuideTitle" class="sidebar-tool-title" data-i18n="Scenario Quick Start">Scenario Quick Start</h3>
+        <div class="scenario-guide-title-row">
+          <h3 id="scenarioGuideTitle" class="sidebar-tool-title" data-i18n="Scenario Quick Start">Scenario Quick Start</h3>
+          <button id="scenarioGuideLanguageToggle" class="scenario-guide-language-btn" type="button" aria-label="Language" data-i18n-aria-label="Language" title="Language" data-i18n-title="Language">EN</button>
+        </div>
         <button
           id="scenarioGuideCloseBtn"
           type="button"
@@ -2887,13 +2886,13 @@
         <section id="scenarioGuideSectionPrepare" class="scenario-guide-manual-section hidden" data-guide-panel="prepare" role="tabpanel" aria-labelledby="scenarioGuideTabPrepare scenarioGuidePreparationTitle" hidden>
           <h4 id="scenarioGuidePreparationTitle" class="scenario-guide-manual-title" data-i18n="Before you edit">Before you edit</h4>
           <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit. If the state is off, switch back to the right scenario or project before changing ownership, frontlines, or annotations.">Check the top status chips first: confirm Mode, View, and Split match the scenario you are about to edit. If the state is off, switch back to the right scenario or project before changing ownership, frontlines, or annotations.</p>
+            <p data-i18n="Before editing, look at the chips at the top of the map. Mode shows the active tool, View shows the map state you are seeing, and Split shows how many countries have split ownership. If any chip looks wrong, switch to the correct scenario or project first.">Before editing, look at the chips at the top of the map. Mode shows the active tool, View shows the map state you are seeing, and Split shows how many countries have split ownership. If any chip looks wrong, switch to the correct scenario or project first.</p>
           </div>
           <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="Before a broad edit or before loading another project file, download the current project JSON from Project Management. Loading a project replaces the current map, strategic annotations, and export settings; baseline mismatches require confirmation.">Before a broad edit or before loading another project file, download the current project JSON from Project Management. Loading a project replaces the current map, strategic annotations, and export settings; baseline mismatches require confirmation.</p>
+            <p data-i18n="Before a large edit or before loading another project, save a backup: open Project Management and download the current project JSON. Loading a project replaces the current map, notes, and export settings.">Before a large edit or before loading another project, save a backup: open Project Management and download the current project JSON. Loading a project replaces the current map, notes, and export settings.</p>
           </div>
           <div class="scenario-guide-bilingual-copy">
-            <p data-i18n="After loading, return to Inspector to confirm the target country and active owner, then use Project tools to review frontlines, reference image alignment, and export settings. Once those match, continue with Activate, Scenario Actions, or Export.">After loading, return to Inspector to confirm the target country and active owner, then use Project tools to review frontlines, reference image alignment, and export settings. Once those match, continue with Activate, Scenario Actions, or Export.</p>
+            <p data-i18n="After loading a project, check the Inspector again. Confirm the target country and active owner, then review frontlines, reference image alignment, and export settings. When these match your plan, continue with Activate, Scenario Actions, or Export.">After loading a project, check the Inspector again. Confirm the target country and active owner, then review frontlines, reference image alignment, and export settings. When these match your plan, continue with Activate, Scenario Actions, or Export.</p>
           </div>
         </section>
 

@@ -186,6 +186,31 @@ test("texture owner binds range inputs once and commits texture history on chang
   assert.deepEqual(harness.historyEntries[0].after.stylePaths, TEXTURE_STYLE_PATHS);
 });
 
+test("texture paper scale roundtrips back to one-to-one size", () => {
+  const harness = createHarness([
+    "texturePaperScale",
+    "texturePaperScaleValue",
+  ], {
+    styleConfig: {
+      texture: {
+        mode: "paper",
+        paper: { scale: 1 },
+      },
+    },
+  });
+
+  harness.owner.bindEvents();
+  harness.nodes.texturePaperScale.value = "90";
+  harness.nodes.texturePaperScale.dispatch("input");
+  harness.nodes.texturePaperScale.value = "100";
+  harness.nodes.texturePaperScale.dispatch("input");
+  harness.nodes.texturePaperScale.dispatch("change");
+
+  assert.equal(harness.runtimeState.styleConfig.texture.paper.scale, 1);
+  assert.equal(harness.nodes.texturePaperScaleValue.textContent, "1.00x");
+  assert.deepEqual(harness.dirtyReasons, ["texture-style", "texture-style", "texture-style"]);
+});
+
 test("day-night owner syncs computer UTC time into the manual slider", () => {
   const harness = createHarness([
     "dayNightEnabled",

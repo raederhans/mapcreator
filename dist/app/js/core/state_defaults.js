@@ -1147,7 +1147,6 @@ function normalizeTransportWorkbenchUiState(rawUi) {
       translateX: toFiniteNumber(rawPreviewCamera.translateX, 0),
       translateY: toFiniteNumber(rawPreviewCamera.translateY, 0),
     },
-    compareHeld: !!raw.compareHeld,
     layerOrder: TRANSPORT_WORKBENCH_FAMILY_IDS.filter((familyId) => {
       const savedOrder = Array.isArray(raw.layerOrder) ? raw.layerOrder : [];
       return savedOrder.includes(familyId);

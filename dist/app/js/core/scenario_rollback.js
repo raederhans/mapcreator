@@ -16,6 +16,8 @@ import {
 import { cloneScenarioStateValue } from "./scenario/shared.js";
 const state = runtimeState;
 
+// 回滚快照是 scenario apply 的最后一道事务边界；这里的字段清单必须和
+// capture/restore 两侧同步，避免新增 runtime 状态后只回滚一半。
 const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "activeScenarioId",
   "scenarioBorderMode",
@@ -173,6 +175,7 @@ function captureScenarioRuntimeSnapshot() {
     activeScenarioPerformanceHints: cloneScenarioStateValue(runtimeState.activeScenarioPerformanceHints),
     scenarioPoliticalChunkData: cloneScenarioStateValue(runtimeState.scenarioPoliticalChunkData),
     activeScenarioChunks: cloneScenarioStateValue(runtimeState.activeScenarioChunks),
+    // 定时器和 in-flight commit 不能直接带入快照；回滚只恢复“是否需要重新挂钩”的稳定语义。
     runtimeChunkLoadState: cloneScenarioStateValue({
       ...(runtimeState.runtimeChunkLoadState || {}),
       refreshTimerId: null,
@@ -306,6 +309,7 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
     cloneScenarioStateValue(snapshot.activeScenarioChunks) || createDefaultActiveScenarioChunksState();
   runtimeState.runtimeChunkLoadState =
     cloneScenarioStateValue(snapshot.runtimeChunkLoadState) || createDefaultRuntimeChunkLoadState();
+  // Hook 只按 capture 时记录的布尔语义恢复，避免把旧闭包或已取消的任务重新挂回 runtime。
   runtimeState.scheduleScenarioChunkRefreshFn = snapshot.scheduleScenarioChunkRefreshEnabled ? scheduleScenarioChunkRefresh : null;
   runtimeState.awaitInitialScenarioChunkVisualPromotionFn = snapshot.awaitInitialScenarioChunkVisualPromotionEnabled
     ? awaitInitialScenarioChunkVisualPromotion

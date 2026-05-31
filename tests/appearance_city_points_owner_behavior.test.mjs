@@ -240,3 +240,29 @@ test("city-points owner clamps numeric inputs and updates value labels", () => {
     "city-points-label-size",
   ]);
 });
+
+test("city-points marker scale roundtrips back to one-to-one size", () => {
+  const harness = createHarness([
+    "cityPointsMarkerScale",
+    "cityPointsMarkerScaleValue",
+  ], {
+    styleConfig: {
+      cityPoints: {
+        markerScale: 1,
+      },
+    },
+  });
+
+  harness.owner.bindEvents();
+  harness.nodes.cityPointsMarkerScale.value = "1.30";
+  harness.nodes.cityPointsMarkerScale.dispatch("input");
+  harness.nodes.cityPointsMarkerScale.value = "1.00";
+  harness.nodes.cityPointsMarkerScale.dispatch("input");
+
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.markerScale, 1);
+  assert.equal(harness.nodes.cityPointsMarkerScaleValue.textContent, "1.00x");
+  assert.deepEqual(harness.dirtyReasons, [
+    "city-points-marker-scale",
+    "city-points-marker-scale",
+  ]);
+});

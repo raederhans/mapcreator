@@ -12,6 +12,7 @@ const TARGET_MAIN_MAP_PACKS = Object.freeze({
 
 export const TARGET_MAIN_MAP_PACK_IDS = Object.freeze(Object.keys(TARGET_MAIN_MAP_PACKS));
 
+// main map 只消费各 family 的稳定输出键；workbench 预览字段留在 manifest/preview owner 内部。
 export const MAIN_MAP_CONSUMER_KEYS_BY_FAMILY = Object.freeze({
   road: Object.freeze(["roads", "road_labels"]),
   rail: Object.freeze(["railways", "rail_stations_major"]),
@@ -97,6 +98,7 @@ export function createTransportPackSourceGateReport(packId, manifest = null) {
   const signatureTokens = listSignatureTokens(manifest.source_signature);
   const signatureText = signatureTokens.join("\n").toLowerCase();
 
+  // Gate report 用原因码暴露真实阻塞点，调用方据此决定禁用 Apply 或展示诊断。
   if (manifest.pack_id && normalizeId(manifest.pack_id) !== normalizedPackId) reasons.push("pack_id_mismatch");
   if (meta && manifestFamily !== meta.family) reasons.push("family_mismatch");
   if (meta && normalizeText(manifest.source_policy) !== meta.sourcePolicy) reasons.push("source_policy_mismatch");
@@ -146,6 +148,7 @@ export function resolveTransportActivePack({
   const normalizedFamilyId = normalizeId(familyId);
   const requestedPackId = normalizeId(activePackId) || getDefaultMainMapPackIdForFamily(normalizedFamilyId);
   const meta = getTargetMainMapPackMeta(requestedPackId);
+  // resolver 只决定当前 pack 是否能进入 main map；具体加载和绘制继续由对应 owner 执行。
   if (!meta) {
     return {
       ok: false,

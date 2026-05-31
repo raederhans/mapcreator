@@ -4094,7 +4094,7 @@ TNO_1962_MANUAL_COUNTRY_OVERRIDES = {
         "base_iso2": "KR",
         "lookup_iso2": "KR",
         "provenance_iso2": "KR",
-        "color_hex": "#009163",
+        "color_hex": "#82132e",
         "notes": "Japanese colonial administration over Korea restyled as the Korean Residency-General in the 1962 scenario.",
         "entry_kind": "scenario_subject",
         "parent_owner_tag": "JAP",
@@ -6223,6 +6223,7 @@ def build_checkpoint_chunk_assets(checkpoint_dir: Path) -> None:
     source_payload = manifest_payload.get("source") if isinstance(manifest_payload.get("source"), dict) else {}
     source_payload = dict(source_payload)
     source_payload["base_topology_sha256"] = file_content_hash(ROOT / "data" / "europe_topology.json")
+    source_payload["countries_sha256"] = file_content_hash(checkpoint_dir / "countries.json")
     source_payload["runtime_topology_sha256"] = file_content_hash(checkpoint_dir / CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME)
     if runtime_bootstrap_path.exists():
         source_payload["runtime_bootstrap_topology_sha256"] = file_content_hash(runtime_bootstrap_path)
@@ -6978,10 +6979,26 @@ def apply_tno_country_color_policy_backfill(countries_payload: dict) -> None:
         if existing_policy == COLOR_POLICY_LOCKED:
             raw_entry["color_policy"] = COLOR_POLICY_LOCKED
             continue
+        if is_tno_explicit_country_color_entry(raw_entry) and existing_hex:
+            raw_entry["color_policy"] = COLOR_POLICY_LOCKED
+            raw_entry["color_hex"] = existing_hex
+            continue
         audit_entry = audit_entries.get(tag, {})
         audit_hex = normalize_hex(audit_entry.get("map_hex")) if isinstance(audit_entry, dict) else ""
         if audit_hex:
             raw_entry["color_policy"] = COLOR_POLICY_PALETTE
+
+
+def is_tno_explicit_country_color_entry(entry: dict) -> bool:
+    source = str(entry.get("source") or "").strip().lower()
+    entry_kind = str(entry.get("entry_kind") or "").strip().lower()
+    primary_rule_source = str(entry.get("primary_rule_source") or "").strip().lower()
+    return (
+        source in {"controller_rule", "scenario_generated"}
+        or entry_kind == "controller_only"
+        or primary_rule_source == "dev_manual_tag_create"
+        or primary_rule_source.endswith("_manual_override")
+    )
 
 
 def sync_tno_country_colors_from_palette_audit(countries_payload: dict) -> dict[str, list[str]]:
@@ -11988,6 +12005,7 @@ def build_runtime_topology_state(
     manifest_payload["excluded_water_region_groups"] = ["mediterranean"]
     manifest_payload["excluded_water_region_ids"] = list(TNO_MANIFEST_EXCLUDED_BASE_WATER_REGION_IDS)
     source_payload = manifest_payload.get("source") if isinstance(manifest_payload.get("source"), dict) else {}
+    source_payload["countries_sha256"] = compact_written_json_hash(countries_payload)
     source_payload["runtime_topology_sha256"] = compact_written_json_hash(runtime_topology_payload)
     manifest_payload["source"] = source_payload
     audit_payload["source"] = copy.deepcopy(source_payload)

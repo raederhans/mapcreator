@@ -60,6 +60,7 @@ import { createProjectSupportDiagnosticsController } from "./sidebar/project_sup
 import { importProjectThroughFunnel } from "../core/interaction_funnel.js";
 import { flushRenderBoundary } from "../core/render_boundary.js";
 import {
+  getFeatureOwnerCode,
   setFeatureOwnerCodes,
   markLegacyColorStateDirty,
 } from "../core/sovereignty_manager.js";
@@ -377,6 +378,10 @@ const TNO_RUSSIA_INSPECTOR_GROUP = Object.freeze({
   label: "Russia Region",
   anchorId: "continent_europe",
 });
+const INSPECTOR_GROUP_LABEL_CATALOG = Object.freeze({
+  "China Region": Object.freeze({ zh: "中国区域", en: "China Region" }),
+  "Russia Region": Object.freeze({ zh: "俄罗斯区域", en: "Russia Region" }),
+});
 
 function readExplicitInspectorGroupMeta(entry = {}) {
   const id = String(entry?.inspector_group_id || entry?.inspectorGroupId || "").trim();
@@ -612,6 +617,18 @@ function getInspectorGroupExpansionKey(groupId) {
   return `group::${String(groupId || "").trim()}`;
 }
 
+function localizeInspectorGroupLabel(label) {
+  const normalizedLabel = String(label || "").trim();
+  if (!normalizedLabel) return "";
+  const inlineLabel = INSPECTOR_GROUP_LABEL_CATALOG[normalizedLabel];
+  if (inlineLabel) {
+    return inlineLabel[runtimeState.currentLanguage === "zh" ? "zh" : "en"] || inlineLabel.en || normalizedLabel;
+  }
+  const geoLabel = t(normalizedLabel, "geo") || normalizedLabel;
+  if (geoLabel !== normalizedLabel) return geoLabel;
+  return t(normalizedLabel, "ui") || geoLabel;
+}
+
 function getInspectorTopLevelGroupMeta(entry = {}) {
   const fallbackContinentId = String(entry?.continentId || "continent_other").trim() || "continent_other";
   const fallbackContinentLabel = String(entry?.continentLabel || "Other").trim() || "Other";
@@ -621,7 +638,7 @@ function getInspectorTopLevelGroupMeta(entry = {}) {
   return {
     id: groupId,
     label: groupLabel,
-    displayLabel: t(groupLabel, "geo") || groupLabel,
+    displayLabel: localizeInspectorGroupLabel(groupLabel),
     anchorId: groupAnchorId,
   };
 }
@@ -681,7 +698,7 @@ function buildCountryColorTree(entries) {
     pushTopLevelGroup({
       id: continentId,
       label: continentLabel,
-      displayLabel: t(continentLabel, "geo") || continentLabel,
+      displayLabel: localizeInspectorGroupLabel(continentLabel),
       anchorId: "",
     });
   });
@@ -3378,8 +3395,8 @@ function initSidebar({ render } = {}) {
 
   const INSPECTOR_VH_BASELINE = {
     countryList: 14,
-    countryListCap: 38,
-    countryListCompactCap: 30,
+    countryListCap: 42,
+    countryListCompactCap: 34,
     presetTreeCap: 52,
     presetTreeCompactCap: 48,
     selectedActionsBody: 26,
@@ -3515,11 +3532,14 @@ function initSidebar({ render } = {}) {
   const LEFT_SIDEBAR_COLLAPSED_KEY = "map_left_sidebar_collapsed";
   const RIGHT_SIDEBAR_COLLAPSED_KEY = "map_right_sidebar_collapsed";
   const leftSidebarCollapseMedia = typeof globalThis.matchMedia === "function"
-    ? globalThis.matchMedia("(min-width: 1280px)")
+    ? globalThis.matchMedia("(min-width: 1024px)")
     : null;
   const rightSidebarCollapseMedia = typeof globalThis.matchMedia === "function"
-    ? globalThis.matchMedia("(min-width: 1280px)")
+    ? globalThis.matchMedia("(min-width: 1024px)")
     : null;
+  const SIDEBAR_LAYOUT_START_EVENT = "mapcreator:sidebar-layout-start";
+  const SIDEBAR_LAYOUT_REFRESH_EVENT = "mapcreator:sidebar-layout-refresh";
+  const SIDEBAR_LAYOUT_REFRESH_DELAY_MS = 280;
   let leftSidebarCollapsePreference = false;
   let leftSidebarLayoutRefreshTimer = 0;
   let rightSidebarCollapsePreference = false;
@@ -3533,38 +3553,35 @@ function initSidebar({ render } = {}) {
     !rightSidebarCollapseMedia || !!rightSidebarCollapseMedia.matches
   );
 
+  const refreshCollapsedSidebarLayout = () => {
+    scheduleAdaptiveInspectorHeights();
+    globalThis.dispatchEvent(new CustomEvent(SIDEBAR_LAYOUT_REFRESH_EVENT));
+  };
+
+  const beginCollapsedSidebarLayout = () => {
+    globalThis.dispatchEvent(new CustomEvent(SIDEBAR_LAYOUT_START_EVENT));
+  };
+
   const requestLeftSidebarLayoutRefresh = () => {
     if (leftSidebarLayoutRefreshTimer) {
       globalThis.clearTimeout(leftSidebarLayoutRefreshTimer);
     }
-    globalThis.requestAnimationFrame(() => {
-      scheduleAdaptiveInspectorHeights();
-      globalThis.dispatchEvent(new Event("resize"));
-      if (typeof render === "function") render();
-      leftSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
-        scheduleAdaptiveInspectorHeights();
-        globalThis.dispatchEvent(new Event("resize"));
-        if (typeof render === "function") render();
-        leftSidebarLayoutRefreshTimer = 0;
-      }, 260);
-    });
+    scheduleAdaptiveInspectorHeights();
+    leftSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
+      refreshCollapsedSidebarLayout();
+      leftSidebarLayoutRefreshTimer = 0;
+    }, SIDEBAR_LAYOUT_REFRESH_DELAY_MS);
   };
 
   const requestRightSidebarLayoutRefresh = () => {
     if (rightSidebarLayoutRefreshTimer) {
       globalThis.clearTimeout(rightSidebarLayoutRefreshTimer);
     }
-    globalThis.requestAnimationFrame(() => {
-      scheduleAdaptiveInspectorHeights();
-      globalThis.dispatchEvent(new Event("resize"));
-      if (typeof render === "function") render();
-      rightSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
-        scheduleAdaptiveInspectorHeights();
-        globalThis.dispatchEvent(new Event("resize"));
-        if (typeof render === "function") render();
-        rightSidebarLayoutRefreshTimer = 0;
-      }, 260);
-    });
+    scheduleAdaptiveInspectorHeights();
+    rightSidebarLayoutRefreshTimer = globalThis.setTimeout(() => {
+      refreshCollapsedSidebarLayout();
+      rightSidebarLayoutRefreshTimer = 0;
+    }, SIDEBAR_LAYOUT_REFRESH_DELAY_MS);
   };
 
   const setLeftSidebarCollapsed = (collapsed, { persist = true, refreshLayout = true } = {}) => {
@@ -3589,6 +3606,7 @@ function initSidebar({ render } = {}) {
       }
     }
     if (refreshLayout) {
+      beginCollapsedSidebarLayout();
       requestLeftSidebarLayoutRefresh();
     }
   };
@@ -3615,6 +3633,7 @@ function initSidebar({ render } = {}) {
       }
     }
     if (refreshLayout) {
+      beginCollapsedSidebarLayout();
       requestRightSidebarLayoutRefresh();
     }
   };
@@ -5331,15 +5350,80 @@ function initSidebar({ render } = {}) {
     renderScenarioVisualAdjustments(container, countryState);
   };
 
+  const getSelectedLandFeatureIdsForCountryInference = () => {
+    const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
+      ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    const validOrderedIds = orderedIds.filter((featureId) => runtimeState.landIndex?.has(featureId));
+    if (validOrderedIds.length) {
+      return Array.from(new Set(validOrderedIds));
+    }
+
+    const selectedId = runtimeState.devSelectedHit?.targetType === "land"
+      ? String(runtimeState.devSelectedHit.id || "").trim()
+      : "";
+    return selectedId && runtimeState.landIndex?.has(selectedId) ? [selectedId] : [];
+  };
+
+  const inferCountryCodesFromSelectedLand = () => {
+    const codes = new Set();
+    getSelectedLandFeatureIdsForCountryInference().forEach((featureId) => {
+      const feature = runtimeState.landIndex?.get(featureId);
+      const ownerCode = normalizeCountryCode(getFeatureOwnerCode(featureId));
+      const featureCode = normalizeCountryCode(
+        getSharedFeatureCountryCode(feature || { id: featureId }, { useIdFallback: true })
+      );
+      const code = ownerCode || featureCode;
+      if (code) {
+        codes.add(code);
+      }
+    });
+    return Array.from(codes);
+  };
+
+  const resolvePresetTreeCountryState = () => {
+    const selectedCode = ensureSelectedInspectorCountry();
+    if (selectedCode) {
+      return {
+        countryState: latestCountryStatesByCode.get(selectedCode) || null,
+        reason: "inspector",
+      };
+    }
+
+    const inferredCodes = inferCountryCodesFromSelectedLand()
+      .filter((code) => latestCountryStatesByCode.has(code));
+    if (inferredCodes.length === 1) {
+      return {
+        countryState: latestCountryStatesByCode.get(inferredCodes[0]) || null,
+        reason: "selection",
+      };
+    }
+    if (inferredCodes.length > 1) {
+      return {
+        countryState: null,
+        reason: "multi-selection",
+      };
+    }
+    return {
+      countryState: null,
+      reason: "empty",
+    };
+  };
+
   const renderPresetTree = () => {
     if (!presetTree) return;
     incrementSidebarCounter("presetTreeRenders");
     updateScenarioInspectorLayout();
     presetTree.innerHTML = "";
 
-    const selectedCode = ensureSelectedInspectorCountry();
-    const countryState = selectedCode ? latestCountryStatesByCode.get(selectedCode) : null;
+    const { countryState, reason } = resolvePresetTreeCountryState();
     selectedCountryActionsSection?.classList.toggle("is-empty-selection-panel", !countryState);
+
+    if (reason === "multi-selection") {
+      presetTree.appendChild(createEmptyNote(t("Multiple countries are selected. Narrow the map selection to one country or choose a country in the inspector.", "ui")));
+      scheduleAdaptiveInspectorHeights();
+      return;
+    }
 
     if (runtimeState.activeScenarioId) {
       renderScenarioActionsPanel(presetTree, countryState);

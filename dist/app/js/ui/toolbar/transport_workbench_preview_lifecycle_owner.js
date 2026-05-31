@@ -58,6 +58,7 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     console.warn(`[transport-workbench] Failed to warm ${familyId} preview pack.`, reason);
   },
 } = {}) {
+  // 每次 preview 刷新都会递增 generation；异步 pack/render 返回后先比对 generation，防止旧 family 写回新 UI。
   let renderGeneration = 0;
   let previewViewSyncRaf = 0;
   let previewLastViewKey = "";
@@ -153,6 +154,7 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
   const schedulePreviewWarmup = () => {
     if (previewWarmupScheduled) return;
     previewWarmupScheduled = true;
+    // warmup 延后到首屏之后的 idle，减少打开页面时 transport pack 预热和主图启动争抢。
     const runWarmup = () => {
       const warmupPlans = listWarmupPlans();
       Promise.allSettled(

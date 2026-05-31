@@ -31,7 +31,9 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
         self.assertIn("export function applyDevWorkspaceExpandedChrome", owner_content)
         self.assertIn('section.id = "devWorkspacePanel";', owner_content)
         self.assertIn('quickbar.id = "devWorkspaceQuickbar";', owner_content)
-        self.assertIn('toggleBtn.textContent = ui("Dev");', owner_content)
+        self.assertIn('label.className = "dev-workspace-toggle-label";', owner_content)
+        self.assertIn('toggleBtn.replaceChildren(label);', owner_content)
+        self.assertIn('label.textContent = ui("Dev");', owner_content)
         self.assertIn('dockCollapseBtn.setAttribute("aria-label", t("Collapse quick dock", "ui"));', owner_content)
 
         self.assertIsNone(re.search(r"function\s+createDevWorkspacePanel\s*\(", donor_content))
@@ -145,6 +147,9 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
             "contain: none;",
             ".bottom-dock.dev-workspace-mode.is-collapsed .dev-workspace-quickbar {",
             "width: 100%;",
+            "body.left-sidebar-collapsed.right-sidebar-collapsed .bottom-dock.dev-workspace-mode.is-collapsed {",
+            "left: calc(50% + var(--bottom-dock-center-offset, 0px));",
+            "transform: translateX(-50%);",
         ]:
             self.assertIn(token, css_content)
 
@@ -183,8 +188,15 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
             "grid-template-columns: minmax(150px, 0.64fr) minmax(0, 1.36fr);",
             ".dev-scenario-tag-creator-grid {",
             "grid-template-columns: minmax(96px, 0.65fr) minmax(120px, 0.8fr) minmax(150px, 1fr);",
+            "#devScenarioTagCreatorPanel .dev-scenario-tag-color-field {",
+            "display: grid;",
             ".dev-scenario-tag-color-field .dev-workspace-swatch-grid {",
-            "max-height: 54px;",
+            "grid-template-columns: max-content minmax(0, 1fr);",
+            "grid-auto-flow: column;",
+            "grid-auto-columns: 24px;",
+            "overflow-x: auto;",
+            "overflow-y: hidden;",
+            "white-space: nowrap;",
             ".dev-scenario-tag-color-field #devScenarioTagRecentWrap {",
             ".dev-scenario-tag-color-field .dev-workspace-color-popover {",
             "top: calc(100% + 6px);",
@@ -212,6 +224,9 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
         for token in [
             "#devScenarioTagCreatorPanel {",
             ".dev-scenario-tag-creator-grid {",
+            "#devScenarioTagCreatorPanel .dev-scenario-tag-color-field {",
+            "display: grid;",
+            "grid-template-columns: max-content minmax(0, 1fr);",
             ".dev-scenario-tag-color-field .dev-workspace-color-popover {",
             ".dev-scenario-tag-creator-status:empty {",
         ]:

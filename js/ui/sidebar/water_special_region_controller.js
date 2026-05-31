@@ -55,7 +55,6 @@ export function createWaterSpecialRegionController({
     scenarioReliefOverlayVisibilityHint,
     specialRegionSearchInput,
     specialRegionList,
-    specialRegionLegendList,
     specialRegionInspectorEmpty,
     specialRegionInspectorSelected,
     specialRegionInspectorDetailHint,
@@ -87,7 +86,9 @@ export function createWaterSpecialRegionController({
   let specialRegionColorPickerOpen = false;
   const waterInspectorDetail = waterInspectorEmpty?.closest?.("#waterInspectorDetail") || null;
   const waterRowRefsById = new Map();
+  const waterAggregateMemberIdsById = new Map();
   const specialRegionRowRefsById = new Map();
+  const WATER_FRAGMENT_SUFFIX_PATTERN = /\s+(?:\d+-\d+(?:-\d+)?|completion\s+\d+)$/i;
 
   const closeWaterInspectorColorPicker = () => {
     if (!waterInspectorColorInput) return;
@@ -153,6 +154,77 @@ export function createWaterSpecialRegionController({
     const regionGroup = formatWaterTokenLabel(getWaterFeatureGroup(feature));
     const sourceLabel = formatWaterTokenLabel(getWaterFeatureSource(feature));
     return [waterType, regionGroup, sourceLabel].filter(Boolean).join(" · ");
+  };
+
+  const getWaterFeatureListName = (feature) => {
+    const displayName = getWaterFeatureDisplayName(feature);
+    return displayName.replace(WATER_FRAGMENT_SUFFIX_PATTERN, "").trim() || displayName;
+  };
+
+  const getWaterFeatureAggregateKey = (feature) => {
+    const featureId = getWaterFeatureId(feature);
+    const regionGroup = getWaterFeatureGroup(feature);
+    const displayName = getWaterFeatureDisplayName(feature);
+    const listName = getWaterFeatureListName(feature);
+    if (!featureId || !regionGroup || listName === displayName) return "";
+    return [
+      regionGroup,
+      getWaterFeatureType(feature),
+      getWaterFeatureParentId(feature),
+      getWaterFeatureSource(feature),
+      listName.toLowerCase(),
+    ].join("|");
+  };
+
+  const getWaterListDisplayItems = (features) => {
+    const items = [];
+    const groupedItemsByKey = new Map();
+    features.forEach((feature) => {
+      const featureId = getWaterFeatureId(feature);
+      if (!featureId) return;
+      const aggregateKey = getWaterFeatureAggregateKey(feature);
+      if (!aggregateKey) {
+        items.push({ feature, featureId, memberIds: [featureId], listName: getWaterFeatureDisplayName(feature) });
+        return;
+      }
+      let item = groupedItemsByKey.get(aggregateKey);
+      if (!item) {
+        item = {
+          feature,
+          featureId,
+          memberIds: [],
+          listName: getWaterFeatureListName(feature),
+        };
+        groupedItemsByKey.set(aggregateKey, item);
+        items.push(item);
+      }
+      item.memberIds.push(featureId);
+    });
+    return items.map((item) => ({
+      ...item,
+      memberIds: Array.from(new Set(item.memberIds.filter(Boolean))),
+    }));
+  };
+
+  const syncWaterAggregateMemberIndex = (items) => {
+    waterAggregateMemberIdsById.clear();
+    items.forEach((item) => {
+      if (!item?.memberIds?.length) return;
+      item.memberIds.forEach((memberId) => {
+        waterAggregateMemberIdsById.set(memberId, item.memberIds);
+      });
+    });
+  };
+
+  const getWaterAggregateMemberIds = (featureId) => {
+    const normalizedId = String(featureId || "").trim();
+    if (!normalizedId) return [];
+    return waterAggregateMemberIdsById.get(normalizedId) || [normalizedId];
+  };
+
+  const getWaterSelectedFeatureIds = () => {
+    const selectedId = ensureSelectedWaterRegion();
+    return selectedId ? getWaterAggregateMemberIds(selectedId) : [];
   };
 
   const isOpenOceanWaterFeature = (feature) =>
@@ -291,7 +363,7 @@ export function createWaterSpecialRegionController({
         break;
       case "selected":
       default:
-        candidateIds = [normalizedSelectedId];
+        candidateIds = getWaterAggregateMemberIds(normalizedSelectedId);
         break;
     }
     if (!candidateIds.includes(normalizedSelectedId)) {
@@ -377,8 +449,11 @@ export function createWaterSpecialRegionController({
     );
     if (waterInspectorResultCount) {
       const filteredFeatures = getFilteredWaterFeatures();
-      const overrideCount = filteredFeatures.filter((feature) => getWaterFeatureHasOverride(getWaterFeatureId(feature))).length;
-      waterInspectorResultCount.textContent = `${filteredFeatures.length} ${t("regions", "ui") || "regions"} · ${overrideCount} ${t("overrides", "ui") || "overrides"}`;
+      const displayItems = getWaterListDisplayItems(filteredFeatures);
+      const overrideCount = displayItems.filter((item) =>
+        item.memberIds.some((featureId) => getWaterFeatureHasOverride(featureId))
+      ).length;
+      waterInspectorResultCount.textContent = `${displayItems.length} ${t("regions", "ui") || "regions"} · ${overrideCount} ${t("overrides", "ui") || "overrides"}`;
     }
   };
 
@@ -487,6 +562,7 @@ export function createWaterSpecialRegionController({
     }
 
     const featureColor = getWaterFeatureColor(selectedId);
+    const selectedIds = getWaterAggregateMemberIds(selectedId);
     const defaultColor = normalizeHexColor(
       mapRenderer.getWaterRegionDefaultFillColorById?.(selectedId)
     ) || featureColor;
@@ -499,7 +575,8 @@ export function createWaterSpecialRegionController({
     if (waterInspectorDetailHint) {
       const meta = [
         getWaterFeatureMeta(feature),
-        getWaterFeatureHasOverride(selectedId)
+        selectedIds.length > 1 ? `${selectedIds.length} ${t("fragments", "ui") || "fragments"}` : "",
+        selectedIds.some((featureId) => getWaterFeatureHasOverride(featureId))
           ? `Override active · ${featureColor.toUpperCase()}`
           : `Default color · ${defaultColor.toUpperCase()}`,
       ].filter(Boolean).join(" · ");
@@ -511,6 +588,7 @@ export function createWaterSpecialRegionController({
       waterInspectorMetaList.replaceChildren();
       const rows = [
         ["ID", selectedId],
+        ...(selectedIds.length > 1 ? [["Fragments", selectedIds.length]] : []),
         ["Type", formatWaterTokenLabel(getWaterFeatureType(feature), "Water")],
         ["Group", formatWaterTokenLabel(getWaterFeatureGroup(feature))],
         ["Parent", featureParentId || "None"],
@@ -594,7 +672,7 @@ export function createWaterSpecialRegionController({
     if (waterInspectorScopePreview) {
       const sampleNames = scopeIds
         .slice(0, 4)
-        .map((featureId) => getWaterFeatureDisplayName(runtimeState.waterRegionsById?.get(featureId)))
+        .map((featureId) => getWaterFeatureListName(runtimeState.waterRegionsById?.get(featureId)))
         .filter(Boolean);
       waterInspectorScopePreview.classList.toggle("hidden", scopeIds.length === 0);
       waterInspectorScopePreview.textContent = scopeIds.length
@@ -608,11 +686,13 @@ export function createWaterSpecialRegionController({
     if (!waterRegionList) return;
     renderWaterFilterUi();
     const filteredFeatures = getFilteredWaterFeatures();
+    const displayItems = getWaterListDisplayItems(filteredFeatures);
+    syncWaterAggregateMemberIndex(displayItems);
 
     waterRowRefsById.clear();
     waterRegionList.replaceChildren();
 
-    if (!filteredFeatures.length) {
+    if (!displayItems.length) {
       waterRegionList.appendChild(createEmptyNote(t("No matching water regions", "ui")));
       renderWaterInspectorDetail();
       renderWaterLegend();
@@ -620,15 +700,16 @@ export function createWaterSpecialRegionController({
       return;
     }
 
-    filteredFeatures.forEach((feature) => {
-      const featureId = getWaterFeatureId(feature);
+    displayItems.forEach((item) => {
+      const { feature, featureId, memberIds, listName } = item;
       if (!featureId) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "inspector-item-btn";
       button.dataset.regionId = featureId;
+      button.dataset.regionIds = memberIds.join("|");
       button.dataset.regionScope = "water";
-      button.classList.toggle("is-active", featureId === runtimeState.selectedWaterRegionId);
+      button.classList.toggle("is-active", memberIds.includes(runtimeState.selectedWaterRegionId));
       button.addEventListener("click", () => {
         runtimeState.selectedWaterRegionId = featureId;
         waterInspectorSection?.setAttribute("open", "");
@@ -637,11 +718,14 @@ export function createWaterSpecialRegionController({
 
       const name = document.createElement("div");
       name.className = "country-row-title";
-      name.textContent = getWaterFeatureDisplayName(feature);
+      name.textContent = listName;
 
       const meta = document.createElement("div");
       meta.className = "country-select-meta";
-      meta.textContent = getWaterFeatureMeta(feature);
+      meta.textContent = [
+        getWaterFeatureMeta(feature),
+        memberIds.length > 1 ? `${memberIds.length} ${t("fragments", "ui") || "fragments"}` : "",
+      ].filter(Boolean).join(" · ");
 
       const swatch = document.createElement("span");
       swatch.className = "country-select-swatch";
@@ -650,7 +734,7 @@ export function createWaterSpecialRegionController({
       const actions = document.createElement("div");
       actions.className = "country-row-actions";
       actions.appendChild(swatch);
-      if (getWaterFeatureHasOverride(featureId)) {
+      if (memberIds.some((memberId) => getWaterFeatureHasOverride(memberId))) {
         const badge = document.createElement("span");
         badge.className = "country-select-meta";
         badge.textContent = t("Override", "ui");
@@ -665,12 +749,14 @@ export function createWaterSpecialRegionController({
       button.appendChild(copy);
       button.appendChild(actions);
       waterRegionList.appendChild(button);
-      waterRowRefsById.set(featureId, button);
+      memberIds.forEach((memberId) => {
+        waterRowRefsById.set(memberId, button);
+      });
     });
 
     renderWaterInspectorDetail();
     renderWaterLegend();
-      updateWorkspaceStatus();
+    updateWorkspaceStatus();
     scheduleAdaptiveInspectorHeights();
   };
 
@@ -701,7 +787,12 @@ export function createWaterSpecialRegionController({
         needsFullRender = true;
         return;
       }
+      if ((row.dataset.regionIds || "").includes("|") || getWaterAggregateMemberIds(featureId).length > 1) {
+        needsFullRender = true;
+        return;
+      }
       row.dataset.regionId = featureId;
+      row.dataset.regionIds = featureId;
       row.dataset.regionScope = "water";
       row.classList.toggle("is-active", featureId === runtimeState.selectedWaterRegionId);
       const title = row.querySelector(".country-row-title");
@@ -807,12 +898,6 @@ export function createWaterSpecialRegionController({
     scenarioReliefOverlayVisibilityHint?.classList.add("hidden");
   };
 
-  const renderSpecialRegionLegend = () => {
-    if (!specialRegionLegendList) return;
-    specialRegionLegendList.replaceChildren();
-    specialRegionLegendList.appendChild(createEmptyNote(t("Special region color overrides retired. Use Special Zones layers for editable narrative regions.", "ui")));
-  };
-
   const renderSpecialRegionInspectorDetail = () => {
     if (!specialRegionInspectorEmpty || !specialRegionInspectorSelected) return;
     const selectedId = ensureSelectedSpecialRegion();
@@ -881,7 +966,6 @@ export function createWaterSpecialRegionController({
     if (!features.length) {
       specialRegionList.classList.add("hidden");
       renderSpecialRegionInspectorDetail();
-      renderSpecialRegionLegend();
       scheduleAdaptiveInspectorHeights();
       return;
     }
@@ -899,7 +983,6 @@ export function createWaterSpecialRegionController({
     if (!filteredFeatures.length) {
       specialRegionList.appendChild(createEmptyNote(t("No matching special regions", "ui")));
       renderSpecialRegionInspectorDetail();
-      renderSpecialRegionLegend();
       scheduleAdaptiveInspectorHeights();
       return;
     }
@@ -947,7 +1030,6 @@ export function createWaterSpecialRegionController({
     });
 
     renderSpecialRegionInspectorDetail();
-    renderSpecialRegionLegend();
     updateWorkspaceStatus();
     scheduleAdaptiveInspectorHeights();
   };
@@ -986,7 +1068,6 @@ export function createWaterSpecialRegionController({
     }
     if (refreshInspector) {
       renderSpecialRegionInspectorDetail();
-      renderSpecialRegionLegend();
     }
     updateWorkspaceStatus();
     scheduleAdaptiveInspectorHeights();
@@ -1097,21 +1178,16 @@ export function createWaterSpecialRegionController({
     waterInspectorColorInput.addEventListener("change", (event) => {
       const selectedId = ensureSelectedWaterRegion();
       if (!selectedId) return;
+      const selectedIds = getWaterSelectedFeatureIds();
       const nextColor = normalizeHexColor(event.target.value);
       const currentColor = getWaterFeatureColor(selectedId);
-      if (!nextColor || nextColor === currentColor) {
+      const selectionAlreadyMatches = selectedIds.every((featureId) => getWaterFeatureColor(featureId) === nextColor);
+      if (!nextColor || (nextColor === currentColor && selectionAlreadyMatches)) {
         closeWaterInspectorColorPicker();
         renderWaterRegionList();
         return;
       }
-      const historyBefore = captureHistoryState({ waterRegionIds: [selectedId] });
-      runtimeState.waterRegionOverrides[selectedId] = nextColor;
-      pushHistoryEntry({
-        kind: "inspector-water-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ waterRegionIds: [selectedId] }),
-      });
-      markDirty("inspector-water-region-color");
+      applyWaterOverrideScope(selectedIds, nextColor, "inspector-water-region-color", "inspector-water-region-color");
       if (render) render();
       closeWaterInspectorColorPicker();
       renderWaterRegionList();
@@ -1126,17 +1202,8 @@ export function createWaterSpecialRegionController({
     clearWaterRegionColorBtn.addEventListener("click", () => {
       const selectedId = ensureSelectedWaterRegion();
       if (!selectedId) return;
-      if (!Object.prototype.hasOwnProperty.call(runtimeState.waterRegionOverrides || {}, selectedId)) {
-        return;
-      }
-      const historyBefore = captureHistoryState({ waterRegionIds: [selectedId] });
-      delete runtimeState.waterRegionOverrides[selectedId];
-      pushHistoryEntry({
-        kind: "clear-water-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ waterRegionIds: [selectedId] }),
-      });
-      markDirty("clear-water-region-color");
+      const selectedIds = getWaterSelectedFeatureIds();
+      if (!clearWaterOverrideScope(selectedIds, "clear-water-region-color", "clear-water-region-color")) return;
       if (render) render();
       renderWaterRegionList();
     });

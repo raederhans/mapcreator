@@ -346,12 +346,18 @@ export function createDevWorkspaceQuickbar(bottomDock) {
 function updateToggleButton(toggleBtn) {
   if (!toggleBtn) return;
   const expanded = !!runtimeState.ui.devWorkspaceExpanded;
+  let label = toggleBtn.querySelector(".dev-workspace-toggle-label");
+  if (!label) {
+    label = document.createElement("span");
+    label.className = "dev-workspace-toggle-label";
+    toggleBtn.replaceChildren(label);
+  }
   toggleBtn.classList.toggle("is-active", expanded);
   toggleBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
   toggleBtn.setAttribute("aria-pressed", expanded ? "true" : "false");
   toggleBtn.setAttribute("aria-label", expanded ? ui("Hide development workspace") : ui("Show development workspace"));
   toggleBtn.setAttribute("title", expanded ? ui("Hide development workspace") : ui("Show development workspace"));
-  toggleBtn.textContent = ui("Dev");
+  label.textContent = ui("Dev");
 }
 
 function syncDockState(bottomDock, expanded) {
