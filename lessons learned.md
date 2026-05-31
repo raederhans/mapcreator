@@ -245,3 +245,7 @@
 
 ### geo locale 生成要分离值变化和格式变化
 - `build_tno_1962_geo_locale_patch.py` 可能改变 checked-in patch 文件的顶层顺序或语言文件结构；地名修正后要保留已提交结构，只回写审定后的 `geo` 值，避免把格式重排混进 localization diff。
+
+### startup chunk visual gate 要等真实 selection
+- readonly startup 下首个 chunk visual gate 需要等到 `selectionVersion`、政治 chunk、`landData` 和 `colors` 一起就绪；只等 pending promotion 清空会把“尚未开始 selection”误判成失败。
+- Playwright 长套件使用任务专属 `--output` 目录，避免清理整棵 `.runtime/tests/playwright` 导致测试启动阶段长时间无输出。

@@ -1,8 +1,8 @@
 {
   "artifact_counts": {
     "chunk_count": 189,
-    "feature_count": 12865,
-    "water_count": 139
+    "feature_count": 12781,
+    "water_count": 129
   },
   "controller_changes": [
     {
@@ -5667,7 +5667,16 @@
     "bathymetry_stats": {
       "band_feature_count": 90,
       "contour_feature_count": 74,
-      "excluded_region_ids": [],
+      "excluded_region_ids": [
+        "adriatica",
+        "aegean",
+        "gabes",
+        "levant",
+        "libya_suez",
+        "sicily_tunis",
+        "tyrrhenian",
+        "west_med"
+      ],
       "observed_region_ids": [
         "adriatica",
         "aegean",
@@ -5892,8 +5901,8 @@
       }
     },
     "congo_lake_topology_mode": "true_water_preserved",
-    "context_land_mask_arc_refs": 33465,
-    "context_land_mask_area_delta_ratio": 0.009049578699125939,
+    "context_land_mask_arc_refs": 33582,
+    "context_land_mask_area_delta_ratio": 0.008866196792832596,
     "context_land_mask_fallback_used": false,
     "context_land_mask_tolerance": 0.35,
     "controller_rule_count": 8,
@@ -7278,10 +7287,7 @@
           "RU_RAY_50074027B96478141616654"
         ]
       },
-      "derived_feature_count": 10,
-      "feature_count": 1233,
-      "ignored_missing_feature_count": 0,
-      "ignored_missing_feature_ids": []
+      "feature_count": 1226
     },
     "finland_greater_finland_applied": true,
     "german_baseline_annex_sets_applied": [
@@ -10337,10 +10343,6 @@
       "tno_english_channel",
       "tno_poole_bay",
       "tno_solent",
-      "tno_weymouth_bay",
-      "tno_lyme_bay",
-      "tno_plymouth_sound",
-      "tno_mounts_bay",
       "tno_gulf_of_st_lawrence",
       "tno_bering_sea",
       "tno_sea_of_japan",
@@ -10363,10 +10365,8 @@
       "tno_barnstaple_bideford_bay",
       "tno_severn_estuary",
       "tno_north_channel",
-      "tno_belfast_lough",
       "tno_st_georges_channel",
       "tno_strait_of_dover",
-      "tno_rye_bay",
       "tno_skagerrak",
       "tno_kattegat",
       "tno_baltic_sea",
@@ -10389,7 +10389,6 @@
       "tno_labrador_sea",
       "tno_baffin_bay",
       "tno_hudson_bay",
-      "tno_hudson_strait",
       "tno_bay_of_biscay",
       "tno_north_sea",
       "tno_wadden_sea",
@@ -10402,10 +10401,7 @@
       "tno_pentland_firth",
       "tno_irish_sea",
       "tno_cardigan_bay",
-      "tno_caernarfon_bay",
-      "tno_menai_strait",
       "tno_liverpool_bay",
-      "tno_morecambe_bay",
       "tno_solway_firth",
       "tno_caribbean_sea",
       "tno_gulf_of_mexico",
@@ -10579,12 +10575,6 @@
       "tno_banda_sea",
       "tno_molucca_sea",
       "tno_halmahera_sea",
-      "caspian_sea",
-      "lake_superior",
-      "lake_michigan",
-      "lake_huron",
-      "lake_erie",
-      "lake_ontario",
       "congo_lake",
       "tno_qyzylorda_inland_water"
     ],
@@ -96340,7 +96330,7 @@
       "to_tag": "SOV"
     }
   ],
-  "generated_at": "2026-05-31T23:17:04Z",
+  "generated_at": "2026-05-31T18:56:42Z",
   "owner_bucket_mismatch_count": 0,
   "owner_stats": {
     "AFA": {
@@ -97266,10 +97256,10 @@
     "CAN": {
       "base_iso2": "CA",
       "continent_label": "North America",
-      "controller_feature_count": 378,
+      "controller_feature_count": 349,
       "display_name": "Canada",
       "entry_kind": "",
-      "feature_count": 378,
+      "feature_count": 349,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -97282,7 +97272,7 @@
       "provenance_iso2": "CA",
       "quality": "direct_country_copy",
       "quality_breakdown": {
-        "direct_country_copy": 378
+        "direct_country_copy": 349
       },
       "rule_sources": [],
       "scenario_only": false,
@@ -100668,10 +100658,10 @@
     "RKK": {
       "base_iso2": "GE",
       "continent_label": "Asia",
-      "controller_feature_count": 336,
+      "controller_feature_count": 317,
       "display_name": "Reichskommissariat Kaukasien",
       "entry_kind": "scenario_country",
-      "feature_count": 336,
+      "feature_count": 317,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -100686,7 +100676,7 @@
       "provenance_iso2": "GE",
       "quality": "manual_reviewed",
       "quality_breakdown": {
-        "manual_reviewed": 336
+        "manual_reviewed": 317
       },
       "rule_sources": [
         "tno_baseline_rkk"
@@ -102103,10 +102093,10 @@
     "USA": {
       "base_iso2": "US",
       "continent_label": "North America",
-      "controller_feature_count": 946,
+      "controller_feature_count": 910,
       "display_name": "America",
       "entry_kind": "",
-      "feature_count": 946,
+      "feature_count": 910,
       "hidden_from_country_list": false,
       "historical_fidelity": "tno_baseline",
       "historical_fidelity_summary": [
@@ -102119,7 +102109,7 @@
       "provenance_iso2": "US",
       "quality": "direct_country_copy",
       "quality_breakdown": {
-        "direct_country_copy": 946
+        "direct_country_copy": 910
       },
       "rule_sources": [],
       "scenario_only": false,
@@ -102762,21 +102752,21 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "e343ef0dff102b4a1edb96b217344570953829947ae391b5489c58c22d6dfd5a",
+  "snapshot_fingerprint": "81e1ada5c0d092ded95513e5a9c8cd0e74556c2fcec058e5bed5764e3389a252",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "84e558aef0f6494d46b952762575fbbb8a12d7c00233bb6a5e25493aa0f97476",
-    "detail_chunk_manifest_sha256": "b919c073b82c1c36b540ff7c6d472a3dacf22109afd2dadaf13114638f27e223",
-    "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
-    "runtime_topology_sha256": "34b1c5b61dfbcad685de589470025e3f5498e33a5b4133ead65114012b0efb6a"
+    "build_snapshot_sha256": "11760504f4a8b80c72b41d16256b88ef2afe556d05221855c0fe14a74194b852",
+    "detail_chunk_manifest_sha256": "e51e3e09f45875cb37d098ac4a5716a7e69d6cf76752c3c20a20f2da630abbd8",
+    "runtime_bootstrap_topology_sha256": "24046f9f6cc328d844f320ff099b2f7bb4e7ff9180710df678a48df4c755bab8",
+    "runtime_topology_sha256": "cce5437da72607528bfacd0711aaf0ff6b2512896348917b062f34a7fb59f6f3"
   },
   "summary": {
     "approximate_count": 919,
     "belarus_hybrid_feature_count": 0,
     "blocker_count": 0,
     "changed_feature_count": 2032,
-    "context_land_mask_arc_refs": 33465,
-    "context_land_mask_area_delta_ratio": 0.009049578699125939,
+    "context_land_mask_arc_refs": 33582,
+    "context_land_mask_area_delta_ratio": 0.008866196792832596,
     "context_land_mask_fallback_used": false,
     "context_land_mask_tolerance": 0.35,
     "controller_count": 174,
@@ -102784,37 +102774,37 @@
     "critical_region_check_count": 0,
     "critical_unresolved_count": 0,
     "failed_region_check_count": 0,
-    "feature_count": 12865,
+    "feature_count": 12781,
     "geometry_blocker_count": 0,
-    "manual_reviewed_feature_count": 9368,
+    "manual_reviewed_feature_count": 9349,
     "manual_reviewed_region_count": 0,
     "owner_controller_split_feature_count": 606,
     "owner_count": 174,
     "quality_counts": {
       "approx_existing_geometry": 919,
-      "direct_country_copy": 2578,
-      "manual_reviewed": 9368
+      "direct_country_copy": 2513,
+      "manual_reviewed": 9349
     },
     "scenario_atlantropa_feature_count": 897,
     "scenario_rule_blocker_count": 0,
     "scenario_runtime_topology_object_count": 6,
     "source_counts": {
       "controller_rule": 0,
-      "direct_active_owner": 4354,
+      "direct_active_owner": 4289,
       "fallback_mapped_tag": 3,
       "manual_rule": 6236,
       "scenario_generated": 444,
-      "tno_reichskommissariat_baseline": 1828
+      "tno_reichskommissariat_baseline": 1809
     },
     "synthetic_count": 446,
     "synthetic_owner_feature_count": 446,
     "tno_bathymetry_band_count": 90,
     "tno_bathymetry_contour_count": 74,
-    "tno_named_marginal_water_count": 111,
+    "tno_named_marginal_water_count": 101,
     "tno_reichskommissariat_count": 8,
     "tno_relief_overlay_count": 25,
     "tno_special_region_count": 0,
-    "tno_water_region_count": 139,
+    "tno_water_region_count": 129,
     "topology_blocker_count": 0
   },
   "topology_blockers": [],
