@@ -161,6 +161,7 @@ export function createDefaultRenderPassCacheState() {
       composites: 0,
       interactionCompositeBuilds: 0,
       interactionCompositeReuses: 0,
+      interactionCompositeContinuityReuses: 0,
       transformedFrames: 0,
       drawCanvas: 0,
       backgroundPassRenders: 0,

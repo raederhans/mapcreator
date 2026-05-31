@@ -984,6 +984,38 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertEqual(tuple(sea_of_japan_spec.get("exclude_base_ids") or ()), ())
         self.assertEqual(tuple(black_sea_spec.get("exclude_base_ids") or ()), ("marine_black_sea",))
 
+    def test_base_geography_water_clones_preserve_global_ids_and_runtime_contract(self) -> None:
+        feature_index = {}
+        for index, feature_id in enumerate(tno_bundle.TNO_BASE_GEOGRAPHY_WATER_CLONE_IDS):
+            feature_index[feature_id] = {
+                "type": "Feature",
+                "properties": {
+                    "id": feature_id,
+                    "name": feature_id.replace("_", " ").title(),
+                    "label": feature_id,
+                    "water_type": "inland_sea" if feature_id == "caspian_sea" else "lake",
+                    "region_group": "eurasia_lakes" if feature_id == "caspian_sea" else "great_lakes",
+                    "neighbors": "lake_huron" if feature_id == "lake_michigan" else "",
+                },
+                "geometry": mapping(_square(float(index * 3), 0.0, 1.0)),
+            }
+
+        with patch.object(tno_bundle, "load_global_water_regions_feature_index", return_value=feature_index):
+            clone_features = tno_bundle.build_tno_base_geography_water_clone_features()
+
+        self.assertEqual(
+            [feature["properties"]["id"] for feature in clone_features],
+            list(tno_bundle.TNO_BASE_GEOGRAPHY_WATER_CLONE_IDS),
+        )
+        for feature in clone_features:
+            props = feature["properties"]
+            self.assertEqual(props["scenario_id"], "tno_1962")
+            self.assertEqual(props["source_standard"], "tno_cloned_from_global_water_regions")
+            self.assertEqual(props["source_feature_id"], props["id"])
+            self.assertTrue(props["interactive"])
+            self.assertTrue(props["render_as_base_geography"])
+            self.assertIn(props["id"], tno_bundle.TNO_MANIFEST_EXCLUDED_BASE_WATER_REGION_IDS)
+
     def test_clip_named_water_features_to_land_mask_removes_macro_land_overlap(self) -> None:
         named_features = [
             {
@@ -2824,6 +2856,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 ) as rebuild_maps_mock,
                 patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
                 patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", side_effect=fake_repair) as repair_mock,
+                patch.object(tno_bundle, "record_runtime_topology_stage_signature", return_value=None),
             ):
                 result = tno_bundle._run_changed_domain_plan(
                     changed_domain="water",
@@ -2873,6 +2906,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 ) as rebuild_maps_mock,
                 patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
                 patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", return_value=[]),
+                patch.object(tno_bundle, "record_runtime_topology_stage_signature", return_value=None),
             ):
                 tno_bundle._run_changed_domain_plan(
                     changed_domain="water",

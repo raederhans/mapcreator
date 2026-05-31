@@ -36,6 +36,14 @@ TARGET_OPEN_OCEAN_IDS = {
 TRACKED_INLAND_WATER_IDS = {
     "tno_qyzylorda_inland_water",
 }
+TRACKED_BASE_GEOGRAPHY_WATER_IDS = {
+    "caspian_sea",
+    "lake_superior",
+    "lake_michigan",
+    "lake_huron",
+    "lake_erie",
+    "lake_ontario",
+}
 TARGET_OPEN_OCEAN_MAX_COMPONENTS = {
     "tno_northwest_pacific_ocean": 7,
     "tno_northeast_pacific_ocean": 6,
@@ -567,7 +575,7 @@ def test_tno_water_chunk_feature_ids_cover_tracked_new_family_regions():
         str(feature.get("properties", {}).get("id") or "")
         for feature in _load_water_chunk_features()
     }
-    tracked_ids = TRACKED_NAMED_WATER_IDS | TRACKED_INLAND_WATER_IDS
+    tracked_ids = TRACKED_NAMED_WATER_IDS | TRACKED_INLAND_WATER_IDS | TRACKED_BASE_GEOGRAPHY_WATER_IDS
     missing = sorted(feature_id for feature_id in tracked_ids if feature_id not in chunk_ids)
     assert missing == []
 
@@ -767,6 +775,28 @@ def test_tno_tracked_inland_water_regions_keep_source_contract():
     assert props.get("source_feature_id") == "KAZ-3197"
     assert bool(props.get("interactive")) is True
     assert bool(props.get("render_as_base_geography")) is True
+
+
+def test_tno_base_geography_water_clones_keep_source_contract():
+    feature_map = _feature_map(_load_scenario_water_features())
+    expected_groups = {
+        "caspian_sea": ("inland_sea", "eurasia_lakes"),
+        "lake_superior": ("lake", "great_lakes"),
+        "lake_michigan": ("lake", "great_lakes"),
+        "lake_huron": ("lake", "great_lakes"),
+        "lake_erie": ("lake", "great_lakes"),
+        "lake_ontario": ("lake", "great_lakes"),
+    }
+    for feature_id, (water_type, region_group) in expected_groups.items():
+        feature = feature_map.get(feature_id)
+        assert feature is not None, feature_id
+        props = feature.get("properties", {})
+        assert props.get("water_type") == water_type
+        assert props.get("region_group") == region_group
+        assert props.get("source_standard") == "tno_cloned_from_global_water_regions"
+        assert props.get("source_feature_id") == feature_id
+        assert bool(props.get("interactive")) is True
+        assert bool(props.get("render_as_base_geography")) is True
 
 
 def test_tno_tracked_detail_regions_exist_and_have_parent_ids():

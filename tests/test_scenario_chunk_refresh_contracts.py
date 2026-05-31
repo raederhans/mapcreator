@@ -243,13 +243,26 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 r"async function awaitInitialScenarioChunkVisualPromotion\([\s\S]*?\)\s*\{[\s\S]*?"
                 r'buildInitialScenarioChunkVisualPromotionResult\("missing-bundle"[\s\S]*?'
                 r"await ensureScenarioChunkRegistryLoaded\(bundle, \{ d3Client \}\);[\s\S]*?"
+                r"const commitStartupInitialVisualPromotionIfPending = async \(\) => \{[\s\S]*?"
+                r"const retryStartupInitialVisualRefreshIfStillUnselected = async \(\) => \{[\s\S]*?"
+                r"Math\.max\(0, Number\(loadState\.selectionVersion \|\| 0\)\) > 0[\s\S]*?"
                 r"await refreshActiveScenarioChunks\(\{[\s\S]*?"
                 r"allowStartupInitialVisual: true,[\s\S]*?"
                 r"startupInitialPoliticalOnly: true,[\s\S]*?"
-                r"await commitPendingScenarioChunkPromotion\(\{[\s\S]*?"
-                r"allowStartupInitialVisual: true,",
+                r"await commitStartupInitialVisualPromotionIfPending\(\);[\s\S]*?"
+                r"while \(!result\.ok && getMonotonicNowMs\(\) - readinessStartedAt < STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS\)",
                 re.S,
             ),
+        )
+        self.assertIn("const STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS = 8000;", self.scenario_chunk_runtime_source)
+        self.assertRegex(
+            self.scenario_chunk_runtime_source,
+            re.compile(
+                r"const renderPhaseBlocksRefresh = renderPhase !== \"idle\"[\s\S]*?"
+                r"&& !startupInitialVisualAllowed;",
+                re.S,
+            ),
+            "startup initial visual promotion must pass the render-phase gate during boot",
         )
         schedule_source = self.scenario_chunk_runtime_source[
             self.scenario_chunk_runtime_source.index("function scheduleScenarioChunkRefresh("):
@@ -505,8 +518,12 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 r'allowZoomEndSettling = false,[\s\S]*?'
                 r'allowStartupInitialVisual = false,[\s\S]*?'
                 r'const renderPhase = String\(runtimeState\.renderPhase \|\| "idle"\);[\s\S]*?'
-                r'const renderPhaseBlocksRefresh = renderPhase !== "idle" && !\(allowZoomEndSettling && renderPhase === "settling"\);[\s\S]*?'
-                r'const bootBlockingRefresh = !!runtimeState\.bootBlocking[\s\S]*?allowStartupInitialVisual[\s\S]*?'
+                r'const startupInitialVisualAllowed = !!\([\s\S]*?allowStartupInitialVisual[\s\S]*?'
+                r'const renderPhaseBlocksRefresh = renderPhase !== "idle"[\s\S]*?'
+                r'&& !\(allowZoomEndSettling && renderPhase === "settling"\)[\s\S]*?'
+                r'&& !startupInitialVisualAllowed;[\s\S]*?'
+                r'const bootBlockingRefresh = !!runtimeState\.bootBlocking && !startupInitialVisualAllowed;[\s\S]*?'
+                r'const startupInteractionRefreshBlocked = !!\([\s\S]*?runtimeState\.startupReadonly[\s\S]*?!startupInitialVisualAllowed[\s\S]*?'
                 r'\|\| renderPhaseBlocksRefresh',
                 re.S,
             ),

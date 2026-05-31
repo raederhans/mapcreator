@@ -5,6 +5,7 @@ import path from "node:path";
 import vm from "node:vm";
 import { createScenarioChunkRuntimeController } from "../js/core/scenario/chunk_runtime.js";
 import { buildViewportGeoBounds, normalizeScenarioChunkManifest, selectScenarioChunks } from "../js/core/scenario_chunk_manager.js";
+import { createRenderCacheOwner } from "../js/core/renderer/render_cache_owner.js";
 
 const REPO_ROOT = process.cwd();
 
@@ -793,7 +794,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     interactionCompositeUsesSingleMainPassCache:
       rendererSource.includes("const INTERACTION_COMPOSITE_PASS_NAMES = [")
       && rendererSource.includes('recordRenderPerfMetric("interactionCompositeBuild"')
-      && /function composeTransformedFrameToBuffer\([\s\S]*?useInteractionComposite = true[\s\S]*?drawInteractionComposite\(currentTransform\)[\s\S]*?composeRenderPassesToTarget\(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(rendererSource),
+      && rendererSource.includes('recordRenderPerfMetric("interactionCompositeContinuityReuse"')
+      && renderCacheOwnerSource.includes("function getInteractionCompositeReuseDecision(")
+      && renderCacheOwnerSource.includes('new Set(["selection-version-mismatch", "topology-revision-mismatch"])')
+      && /function composeTransformedFrameToBuffer\([\s\S]*?useInteractionComposite = true[\s\S]*?allowInteractionCompositeContinuity = false[\s\S]*?drawInteractionComposite\(currentTransform, \{[\s\S]*?allowSelectionTopologyContinuity: allowInteractionCompositeContinuity[\s\S]*?composeRenderPassesToTarget\(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(rendererSource),
     continuityFrameSkipsBaseFillDuringInteraction:
       rendererSource.includes("const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;")
       && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?cache\.lastGoodFrame\.stale = true;[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
@@ -990,7 +994,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes("function getRuntimeChunkSelectionVersion()")
       && rendererSource.includes("function getVisibleContextFlagSignature()")
       && /function getVisibleFrameIdentity[\s\S]*?selectionVersion: getRuntimeChunkSelectionVersion\(\)[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)/.test(rendererSource)
-      && /function getInteractionCompositeRejectReason[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(renderCacheOwnerSource)
+      && /function getInteractionCompositeMismatchReasons[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(renderCacheOwnerSource)
+      && /function getInteractionCompositeReuseDecision[\s\S]*?allowSelectionTopologyContinuity[\s\S]*?continuityReasons\.has\(reason\)/.test(renderCacheOwnerSource)
       && /function captureLastGoodFrame[\s\S]*?cache\.lastGoodFrame\.colorRevision = identity\.colorRevision/.test(rendererSource)
       && /function drawLastGoodFrameFallback[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(rendererSource)
       && rendererRuntimeStateSource.includes("selectionVersion: 0")
@@ -2029,4 +2034,79 @@ test("political raster worker flag parser accepts both explicit keys", async () 
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?ENABLE_POLITICAL_RASTER_WORKER=yes"), true);
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker=0"), false);
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag(""), false);
+});
+
+test("interaction composite continuity only tolerates selection and topology drift", () => {
+  const identity = {
+    scenarioId: "tno_1962",
+    selectionVersion: 2,
+    contextFlagSignature: "water:on|context:on",
+    topologyRevision: 7,
+    dpr: 2,
+    pixelWidth: 1600,
+    pixelHeight: 900,
+    colorRevision: 4,
+  };
+  const referenceTransform = { x: 0, y: 0, k: 1 };
+  const createHarness = (compositeOverrides = {}, signatureOverrides = {}) => {
+    const cache = {
+      signatures: {
+        political: "political-v1",
+        contextScenario: "context-v1",
+        ...signatureOverrides,
+      },
+      referenceTransform,
+      referenceTransforms: {
+        political: referenceTransform,
+        contextScenario: referenceTransform,
+      },
+      interactionComposite: {
+        valid: true,
+        canvas: {},
+        referenceTransform,
+        signature: "political@political-v1@ref|contextScenario@context-v1@ref",
+        ...identity,
+        ...compositeOverrides,
+      },
+    };
+    const owner = createRenderCacheOwner({
+      constants: {
+        interactionCompositePassNames: ["political", "contextScenario"],
+        renderPassNames: [],
+      },
+      helpers: {
+        cloneZoomTransform: (transform) => ({ ...(transform || {}) }),
+        ensureRenderPassCacheState: () => cache,
+        getTransformSignature: () => "ref",
+        getVisibleFrameIdentity: () => identity,
+      },
+    });
+    return owner;
+  };
+
+  const continuity = createHarness({
+    selectionVersion: 1,
+    topologyRevision: 6,
+  }).getInteractionCompositeReuseDecision(referenceTransform, undefined, {
+    allowSelectionTopologyContinuity: true,
+  });
+  assert.equal(continuity.ok, true);
+  assert.equal(continuity.mode, "continuity");
+  assert.deepEqual(continuity.reasons, ["selection-version-mismatch", "topology-revision-mismatch"]);
+
+  [
+    ["scenario mismatch", { scenarioId: "hoi4_1939" }, {}],
+    ["context mismatch", { contextFlagSignature: "water:off" }, {}],
+    ["dpr mismatch", { dpr: 1 }, {}],
+    ["canvas size mismatch", { pixelWidth: 1599 }, {}],
+    ["color mismatch", { colorRevision: 3 }, {}],
+    ["signature mismatch", {}, { political: "political-v2" }],
+  ].forEach(([label, compositeOverrides, signatureOverrides]) => {
+    const decision = createHarness(compositeOverrides, signatureOverrides)
+      .getInteractionCompositeReuseDecision(referenceTransform, undefined, {
+        allowSelectionTopologyContinuity: true,
+      });
+    assert.equal(decision.ok, false, label);
+    assert.equal(decision.mode, "reject", label);
+  });
 });

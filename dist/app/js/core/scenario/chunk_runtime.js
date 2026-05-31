@@ -9,6 +9,7 @@ import {
 import { registerRuntimeHook } from "../state/index.js";
 
 const FOCUS_COUNTRY_OVERRIDE_TTL_MS = 5000;
+const STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS = 8000;
 
 // zoom-end 之后短时间保留刚刚可见的 detail chunk，避免视图刚停稳就被立即驱逐，
 // 造成 detail geometry 闪烁或 post-apply 刷新反复打架。
@@ -499,17 +500,23 @@ function createScenarioChunkRuntimeController({
     allowStartupInitialVisual = false,
   } = {}) {
     const renderPhase = String(runtimeState.renderPhase || "idle");
-    const renderPhaseBlocksRefresh = renderPhase !== "idle" && !(allowZoomEndSettling && renderPhase === "settling");
-    const bootBlockingRefresh = !!runtimeState.bootBlocking && !(
+    const startupInitialVisualAllowed = !!(
       allowStartupInitialVisual
       && !runtimeState.scenarioApplyInFlight
       && !!normalizeScenarioId(runtimeState.activeScenarioId)
     );
+    const renderPhaseBlocksRefresh = renderPhase !== "idle"
+      && !(allowZoomEndSettling && renderPhase === "settling")
+      && !startupInitialVisualAllowed;
+    const bootBlockingRefresh = !!runtimeState.bootBlocking && !startupInitialVisualAllowed;
+    const startupInteractionRefreshBlocked = !!(
+      (runtimeState.startupReadonly || runtimeState.startupReadonlyUnlockInFlight)
+      && !startupInitialVisualAllowed
+    );
     return !!(
       bootBlockingRefresh
       || runtimeState.scenarioApplyInFlight
-      || runtimeState.startupReadonly
-      || runtimeState.startupReadonlyUnlockInFlight
+      || startupInteractionRefreshBlocked
       || runtimeState.isInteracting
       || renderPhaseBlocksRefresh
     );
@@ -1963,6 +1970,10 @@ function createScenarioChunkRuntimeController({
     return Object.keys(runtimeState.colors || {}).length;
   }
 
+  function getMonotonicNowMs() {
+    return globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+  }
+
   function getRequiredPoliticalChunkCount(bundle, loadState) {
     const politicalChunkIdSet = getScenarioChunkIdSetByLayer(bundle, "political");
     return (Array.isArray(loadState?.lastSelection?.requiredChunkIds) ? loadState.lastSelection.requiredChunkIds : [])
@@ -2019,7 +2030,7 @@ function createScenarioChunkRuntimeController({
     d3Client = globalThis.d3,
     renderNow = true,
   } = {}) {
-    const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const startedAt = getMonotonicNowMs();
     const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
     if (!scenarioId) {
       return buildInitialScenarioChunkVisualPromotionResult("no-active-scenario", { scenarioId });
@@ -2044,6 +2055,35 @@ function createScenarioChunkRuntimeController({
     });
     if (alreadyReady.ok) return alreadyReady;
 
+    const commitStartupInitialVisualPromotionIfPending = async () => {
+      if (loadState.promotionTimerId) {
+        globalThis.clearTimeout(loadState.promotionTimerId);
+        loadState.promotionTimerId = null;
+        loadState.promotionScheduled = false;
+      }
+      if (loadState.pendingPromotion || promotionCommitPromise || loadState.promotionCommitInFlight) {
+        await commitPendingScenarioChunkPromotion({
+          bundle,
+          renderNow,
+          allowStartupInitialVisual: true,
+        });
+      }
+    };
+
+    const retryStartupInitialVisualRefreshIfStillUnselected = async () => {
+      if (Math.max(0, Number(loadState.selectionVersion || 0)) > 0) return;
+      if (loadState.pendingPromotion || loadState.pendingVisualPromotion || loadState.promotionCommitInFlight) return;
+      if (loadState.promotionScheduled || runtimeState.scenarioApplyInFlight) return;
+      if (scenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) return;
+      await refreshActiveScenarioChunks({
+        reason,
+        d3Client,
+        renderNow,
+        allowStartupInitialVisual: true,
+        startupInitialPoliticalOnly: true,
+      });
+    };
+
     await refreshActiveScenarioChunks({
       reason,
       d3Client,
@@ -2054,25 +2094,30 @@ function createScenarioChunkRuntimeController({
     if (scenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
       return buildInitialScenarioChunkVisualPromotionResult("stale", { bundle, loadState, scenarioId });
     }
-    if (loadState.promotionTimerId) {
-      globalThis.clearTimeout(loadState.promotionTimerId);
-      loadState.promotionTimerId = null;
-      loadState.promotionScheduled = false;
-    }
-    if (loadState.pendingPromotion || promotionCommitPromise || loadState.promotionCommitInFlight) {
-      await commitPendingScenarioChunkPromotion({
-        bundle,
-        renderNow,
-        allowStartupInitialVisual: true,
-      });
-    }
+    await commitStartupInitialVisualPromotionIfPending();
     await yieldToFrame();
-    const result = buildInitialScenarioChunkVisualPromotionResult("promoted", {
+    let result = buildInitialScenarioChunkVisualPromotionResult("promoted", {
       bundle,
       loadState,
       scenarioId,
     });
-    const endedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const readinessStartedAt = getMonotonicNowMs();
+    while (!result.ok && getMonotonicNowMs() - readinessStartedAt < STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS) {
+      if (scenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
+        result = buildInitialScenarioChunkVisualPromotionResult("stale", { bundle, loadState, scenarioId });
+        break;
+      }
+      await retryStartupInitialVisualRefreshIfStillUnselected();
+      await commitStartupInitialVisualPromotionIfPending();
+      await yieldToFrame();
+      result = buildInitialScenarioChunkVisualPromotionResult("promoted", {
+        bundle,
+        loadState,
+        scenarioId,
+      });
+      if (result.status === "stale") break;
+    }
+    const endedAt = getMonotonicNowMs();
     recordScenarioRenderMetric("initialScenarioChunkVisualPromotion", Math.max(0, endedAt - startedAt), result);
     return result;
   }

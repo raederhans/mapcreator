@@ -2168,6 +2168,14 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "simplify_tolerance": 0.006,
     },
 )
+TNO_BASE_GEOGRAPHY_WATER_CLONE_IDS = (
+    "caspian_sea",
+    "lake_superior",
+    "lake_michigan",
+    "lake_huron",
+    "lake_erie",
+    "lake_ontario",
+)
 TNO_MANIFEST_EXCLUDED_BASE_WATER_REGION_IDS = sorted({
     spec["source_id"]
     for spec in TNO_OPEN_OCEAN_SPLIT_SPECS
@@ -2180,6 +2188,9 @@ TNO_MANIFEST_EXCLUDED_BASE_WATER_REGION_IDS = sorted({
     for spec in TNO_NAMED_MARGINAL_WATER_SPECS
     for base_id in tuple(spec.get("exclude_base_ids") or ())
     if str(base_id).strip()
+} | {
+    feature_id
+    for feature_id in TNO_BASE_GEOGRAPHY_WATER_CLONE_IDS
 })
 # This list feeds manifest_payload["excluded_water_region_ids"] for the fallback global-clone lane.
 # Named-water geometry trimming stays on subtract_base_ids.
@@ -5515,6 +5526,38 @@ def build_tno_named_marginal_water_features(snapshot_payload: dict) -> tuple[lis
         named_features.append(make_feature(final_geom, properties))
         diagnostics[named_feature_id]["geometry_area"] = round(float(final_geom.area), 6)
     return named_features, diagnostics
+
+
+def build_tno_base_geography_water_clone_features() -> list[dict]:
+    feature_index = load_global_water_regions_feature_index()
+    clone_features: list[dict] = []
+    for feature_id in TNO_BASE_GEOGRAPHY_WATER_CLONE_IDS:
+        base_feature = feature_index.get(feature_id)
+        if base_feature is None:
+            raise ValueError(f"Unable to locate base geography water region '{feature_id}'.")
+        base_props = dict(base_feature.get("properties", {}))
+        geom = normalize_polygonal(shape(base_feature.get("geometry")))
+        if geom is None:
+            raise ValueError(f"Base geography water region '{feature_id}' has empty geometry.")
+        props = {
+            "id": feature_id,
+            "name": str(base_props.get("name") or feature_id),
+            "label": str(base_props.get("label") or base_props.get("name") or feature_id),
+            "water_type": str(base_props.get("water_type") or "lake"),
+            "region_group": str(base_props.get("region_group") or "base_geography_water"),
+            "parent_id": str(base_props.get("parent_id") or ""),
+            "neighbors": str(base_props.get("neighbors") or ""),
+            "is_chokepoint": bool(base_props.get("is_chokepoint")),
+            "interactive": True,
+            "scenario_id": SCENARIO_ID,
+            "source_standard": "tno_cloned_from_global_water_regions",
+            "source_feature_id": feature_id,
+            "source_water_region_id": feature_id,
+            "topology_mode": "true_water",
+            "render_as_base_geography": True,
+        }
+        clone_features.append(make_feature(geom, props))
+    return clone_features
 
 
 def apply_tno_named_water_supplements(named_features: list[dict], land_mask_geom) -> list[dict]:
@@ -11785,6 +11828,7 @@ def build_water_stage_state_from_countries_state(
     )
     scenario_water_features.extend(named_marginal_water_features)
     qyzylorda_water_feature = build_qyzylorda_inland_water_feature(scenario_political_gdf)
+    scenario_water_features.extend(build_tno_base_geography_water_clone_features())
     scenario_water_features.append(congo_feature)
     scenario_water_features.append(qyzylorda_water_feature)
     validate_tno_water_geometries(

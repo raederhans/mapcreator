@@ -26,6 +26,37 @@ async function primeStateRef(page) {
   // so shared ready gates pin the live singleton state onto `globalThis` first and then poll
   // it synchronously inside `waitForFunction`.
   await page.evaluate(async () => {
+    globalThis.__playwrightIsScenarioRuntimeReady = (state) => {
+      const loadState = state?.runtimeChunkLoadState || {};
+      const shellOwnerCount = Object.keys(state?.scenarioAutoShellOwnerByFeatureId || {}).length;
+      const selectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
+      const politicalFeatureCount = Array.isArray(state?.scenarioPoliticalChunkData?.features)
+        ? state.scenarioPoliticalChunkData.features.length
+        : 0;
+      const landFeatureCount = Array.isArray(state?.landData?.features) ? state.landData.features.length : 0;
+      const colorCount = Object.keys(state?.colors || {}).length;
+      const usesChunkRuntime = !!(
+        state?.activeScenarioManifest?.detail_chunk_manifest_url
+        || state?.activeScenarioManifest?.runtime_meta_url
+        || state?.activeScenarioManifest?.runtime_topology_url
+        || selectionVersion > 0
+        || politicalFeatureCount > 0
+      );
+      const chunkIdle = !loadState.pendingPromotion
+        && !loadState.promotionScheduled
+        && !loadState.refreshScheduled
+        && !loadState.promotionCommitInFlight
+        && !loadState.pendingVisualPromotion;
+      const chunkVisualReady = (
+        selectionVersion > 0
+        && politicalFeatureCount > 0
+        && landFeatureCount > 0
+        && colorCount > 0
+        && chunkIdle
+      );
+      if (usesChunkRuntime) return chunkVisualReady;
+      return shellOwnerCount > 0 || (landFeatureCount > 0 && colorCount > 0 && chunkIdle);
+    };
     if (globalThis.__playwrightStateRef) {
       return true;
     }
@@ -457,11 +488,10 @@ async function applyScenarioAndWaitIdle(page, scenarioId, {
   await waitForScenarioSelectReady(page, { scenarioId: expectedScenarioId, timeout });
   const currentScenarioState = await page.evaluate(() => {
     const state = globalThis.__playwrightStateRef || null;
-    const shellOwnerCount = Object.keys(state?.scenarioAutoShellOwnerByFeatureId || {}).length;
     return {
       activeScenarioId: String(state?.activeScenarioId || ""),
       scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
-      shellReady: shellOwnerCount > 0,
+      runtimeReady: globalThis.__playwrightIsScenarioRuntimeReady(state),
     };
   });
   if (
@@ -469,7 +499,7 @@ async function applyScenarioAndWaitIdle(page, scenarioId, {
     &&
     currentScenarioState.activeScenarioId === expectedScenarioId
     && !currentScenarioState.scenarioApplyInFlight
-    && currentScenarioState.shellReady
+    && currentScenarioState.runtimeReady
   ) {
     return;
   }
@@ -543,11 +573,9 @@ async function applyScenarioAndWaitIdle(page, scenarioId, {
       throw new Error(`[playwright-app] scenario apply failed: ${applyState.error}`);
     }
     if (!state) return false;
-    const shellOwnerCount = Object.keys(state.scenarioAutoShellOwnerByFeatureId || {}).length;
-    const shellReady = shellOwnerCount > 0;
     return state.activeScenarioId === targetScenarioId
       && !state.scenarioApplyInFlight
-      && shellReady;
+      && globalThis.__playwrightIsScenarioRuntimeReady(state);
   }, expectedScenarioId, { timeout });
 }
 

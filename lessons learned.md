@@ -174,3 +174,7 @@
 
 ### 社区后台要先分清用户视角和管理视角
 - 后台预览页要把游客社区、登录用户中心、管理员治理面板拆成独立状态机；登录框、注册框和治理动作混在同一屏会掩盖权限边界。
+
+### startup chunk visual gate 要等真实 selection
+- readonly startup 下首个 chunk visual gate 需要等到 `selectionVersion`、政治 chunk、`landData` 和 `colors` 一起就绪；只等 pending promotion 清空会把“尚未开始 selection”误判成失败。
+- Playwright 长套件使用任务专属 `--output` 目录，避免清理整棵 `.runtime/tests/playwright` 导致测试启动阶段长时间无输出。

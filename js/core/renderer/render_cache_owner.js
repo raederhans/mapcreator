@@ -196,27 +196,62 @@ export function createRenderCacheOwner({
     ].join("@")).join("|");
   }
 
-  function getInteractionCompositeRejectReason(composite, currentTransform, cache = getRenderPassCacheState()) {
-    if (!composite?.valid) return "invalid";
-    if (!composite.canvas || !composite.referenceTransform) return "missing-canvas-or-transform";
-    if (composite.signature !== getInteractionCompositeSignature(cache)) return "signature-mismatch";
-    const identity = getVisibleFrameIdentity(currentTransform);
-    if (String(composite.scenarioId || "") !== identity.scenarioId) return "scenario-mismatch";
-    if (Number(composite.selectionVersion || 0) !== identity.selectionVersion) return "selection-version-mismatch";
-    if (String(composite.contextFlagSignature || "") !== identity.contextFlagSignature) return "context-flag-mismatch";
-    if (Number(composite.topologyRevision || 0) !== identity.topologyRevision) return "topology-revision-mismatch";
-    if (Math.abs(Number(composite.dpr || 1) - identity.dpr) > 0.01) return "dpr-mismatch";
-    if (Number(composite.pixelWidth || 0) !== identity.pixelWidth || Number(composite.pixelHeight || 0) !== identity.pixelHeight) {
-      return "canvas-size-mismatch";
+  function getInteractionCompositeMismatchReasons(composite, currentTransform, cache = getRenderPassCacheState()) {
+    if (!composite?.valid) return ["invalid"];
+    if (!composite.canvas || !composite.referenceTransform) return ["missing-canvas-or-transform"];
+    const mismatchReasons = [];
+    if (composite.signature !== getInteractionCompositeSignature(cache)) {
+      mismatchReasons.push("signature-mismatch");
     }
-    if (Number(composite.colorRevision || 0) !== identity.colorRevision) return "color-revision-mismatch";
-    return "";
+    const identity = getVisibleFrameIdentity(currentTransform);
+    if (String(composite.scenarioId || "") !== identity.scenarioId) mismatchReasons.push("scenario-mismatch");
+    if (Number(composite.selectionVersion || 0) !== identity.selectionVersion) mismatchReasons.push("selection-version-mismatch");
+    if (String(composite.contextFlagSignature || "") !== identity.contextFlagSignature) mismatchReasons.push("context-flag-mismatch");
+    if (Number(composite.topologyRevision || 0) !== identity.topologyRevision) mismatchReasons.push("topology-revision-mismatch");
+    if (Math.abs(Number(composite.dpr || 1) - identity.dpr) > 0.01) mismatchReasons.push("dpr-mismatch");
+    if (Number(composite.pixelWidth || 0) !== identity.pixelWidth || Number(composite.pixelHeight || 0) !== identity.pixelHeight) {
+      mismatchReasons.push("canvas-size-mismatch");
+    }
+    if (Number(composite.colorRevision || 0) !== identity.colorRevision) mismatchReasons.push("color-revision-mismatch");
+    return mismatchReasons;
+  }
+
+  function getInteractionCompositeReuseDecision(
+    currentTransform,
+    cache = getRenderPassCacheState(),
+    { allowSelectionTopologyContinuity = false } = {},
+  ) {
+    const composite = cache.interactionComposite || {};
+    const mismatchReasons = getInteractionCompositeMismatchReasons(composite, currentTransform, cache);
+    if (!mismatchReasons.length) {
+      return { ok: true, mode: "strict", reason: "", reasons: [] };
+    }
+    const continuityReasons = new Set(["selection-version-mismatch", "topology-revision-mismatch"]);
+    const canContinuityReuse = allowSelectionTopologyContinuity
+      && mismatchReasons.every((reason) => continuityReasons.has(reason));
+    if (canContinuityReuse) {
+      return {
+        ok: true,
+        mode: "continuity",
+        reason: mismatchReasons.join(","),
+        reasons: mismatchReasons,
+      };
+    }
+    return {
+      ok: false,
+      mode: "reject",
+      reason: mismatchReasons[0] || "unknown",
+      reasons: mismatchReasons,
+    };
   }
 
   function canDrawInteractionComposite(currentTransform, cache = getRenderPassCacheState()) {
     const composite = cache.interactionComposite || {};
-    const rejectReason = getInteractionCompositeRejectReason(composite, currentTransform, cache);
-    if (!rejectReason) return true;
+    const decision = getInteractionCompositeReuseDecision(currentTransform, cache, {
+      allowSelectionTopologyContinuity: false,
+    });
+    if (decision.ok) return true;
+    const rejectReason = decision.reason;
     if (composite && typeof composite === "object") {
       composite.rejectedReason = rejectReason;
     }
@@ -234,6 +269,7 @@ export function createRenderCacheOwner({
     ensureLastGoodFrameCanvas,
     ensureRenderPassCanvas,
     getInteractionCompositeSignature,
+    getInteractionCompositeReuseDecision,
     getPassFullReferenceTransform,
     getPassReferenceTransform,
     getRenderPassCacheState,

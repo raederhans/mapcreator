@@ -2202,6 +2202,14 @@ function getInteractionCompositeSignature(cache = getRenderPassCacheState()) {
   return getRenderCacheOwner().getInteractionCompositeSignature(cache);
 }
 
+function getInteractionCompositeReuseDecision(
+  currentTransform,
+  cache = getRenderPassCacheState(),
+  options = {},
+) {
+  return getRenderCacheOwner().getInteractionCompositeReuseDecision(currentTransform, cache, options);
+}
+
 function canDrawInteractionComposite(currentTransform, cache = getRenderPassCacheState()) {
   return getRenderCacheOwner().canDrawInteractionComposite(currentTransform, cache);
 }
@@ -18610,10 +18618,20 @@ function buildInteractionComposite(currentTransform, timings) {
   return true;
 }
 
-function drawInteractionComposite(currentTransform) {
+function drawInteractionComposite(
+  currentTransform,
+  { allowSelectionTopologyContinuity = false } = {},
+) {
   const cache = getRenderPassCacheState();
   const composite = cache.interactionComposite || {};
-  if (!canDrawInteractionComposite(currentTransform, cache)) {
+  const reuseDecision = getInteractionCompositeReuseDecision(currentTransform, cache, {
+    allowSelectionTopologyContinuity,
+  });
+  if (!reuseDecision.ok) {
+    composite.rejectedReason = reuseDecision.reason || "unknown";
+    if (reuseDecision.reason !== "invalid") {
+      invalidateInteractionComposite(reuseDecision.reason);
+    }
     return false;
   }
   const current = cloneZoomTransform(currentTransform);
@@ -18628,6 +18646,18 @@ function drawInteractionComposite(currentTransform) {
   context.drawImage(composite.canvas, 0, 0);
   context.restore();
   incrementPerfCounter("interactionCompositeReuses");
+  if (reuseDecision.mode === "continuity") {
+    incrementPerfCounter("interactionCompositeContinuityReuses");
+    recordRenderPerfMetric("interactionCompositeContinuityReuse", 0, {
+      reasons: reuseDecision.reason,
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      phase: String(runtimeState.renderPhase || ""),
+      cachedSelectionVersion: Number(composite.selectionVersion || 0),
+      currentSelectionVersion: getRuntimeChunkSelectionVersion(),
+      cachedTopologyRevision: Number(composite.topologyRevision || 0),
+      currentTopologyRevision: Number(runtimeState.topologyRevision || 0),
+    });
+  }
   return true;
 }
 
@@ -18753,7 +18783,11 @@ function renderExportPassesToCanvas(passNames) {
 function composeTransformedFrameToBuffer(
   currentTransform,
   transformedPasses,
-  { interactiveBorders = false, useInteractionComposite = true } = {},
+  {
+    interactiveBorders = false,
+    useInteractionComposite = true,
+    allowInteractionCompositeContinuity = false,
+  } = {},
 ) {
   const bufferCanvas = ensureCompositeBufferCanvas();
   const bufferContext = bufferCanvas.getContext("2d");
@@ -18762,7 +18796,9 @@ function composeTransformedFrameToBuffer(
   let ok = false;
   withRenderTarget(bufferContext, () => {
     const interactionOk = useInteractionComposite
-      ? drawInteractionComposite(currentTransform)
+      ? drawInteractionComposite(currentTransform, {
+        allowSelectionTopologyContinuity: allowInteractionCompositeContinuity,
+      })
       : composeRenderPassesToTarget(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES, currentTransform, {
         requireAllPasses: true,
       }).ok;
@@ -18803,7 +18839,16 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
   }))) {
     return false;
   }
-  const canReuseComposite = canDrawInteractionComposite(currentTransform, cache);
+  const compositeReuseDecision = getInteractionCompositeReuseDecision(currentTransform, cache, {
+    allowSelectionTopologyContinuity: runtimeState.renderPhase === RENDER_PHASE_INTERACTING,
+  });
+  const canReuseComposite = compositeReuseDecision.ok;
+  if (!canReuseComposite) {
+    cache.interactionComposite.rejectedReason = compositeReuseDecision.reason || "unknown";
+    if (compositeReuseDecision.reason !== "invalid") {
+      invalidateInteractionComposite(compositeReuseDecision.reason);
+    }
+  }
   const canBuildCompositeNow = runtimeState.renderPhase !== RENDER_PHASE_INTERACTING;
   const canDrawDirtyInteractionPasses = allowDirtyFastFrame
     && !canReuseComposite
@@ -18819,11 +18864,11 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       deferredBuild: !canBuildCompositeNow,
       allowDirtyFastFrame,
-      reason: cache.interactionComposite?.rejectedReason || "missing-interaction-composite",
+      reason: compositeReuseDecision.reason || cache.interactionComposite?.rejectedReason || "missing-interaction-composite",
     });
     return false;
   }
-  if (!canDrawDirtyInteractionPasses && !canDrawInteractionComposite(currentTransform, cache)) {
+  if (!canDrawDirtyInteractionPasses && !canReuseComposite && !canDrawInteractionComposite(currentTransform, cache)) {
     return false;
   }
   if (
@@ -18853,6 +18898,7 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
   const drewAll = composeTransformedFrameToBuffer(currentTransform, transformedPasses, {
     interactiveBorders,
     useInteractionComposite: !canDrawDirtyInteractionPasses,
+    allowInteractionCompositeContinuity: compositeReuseDecision.mode === "continuity",
   });
   if (!drewAll) {
     recordRenderPerfMetric("transformedFrameBufferComposeFailure", 0, {
