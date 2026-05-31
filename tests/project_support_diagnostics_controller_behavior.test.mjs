@@ -490,6 +490,70 @@ test("anonymous backend probe enables only public cloud actions", async () => {
   }
 });
 
+test("community action buttons refresh after anonymous user logs in", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudSection = { hidden: true };
+  const backendCloudStatus = createStatusNode();
+  const backendCloudUsername = { value: "alice", disabled: false };
+  const backendCloudPassword = { value: "correct horse", disabled: false };
+  const backendCloudRegisterBtn = createButtonNode();
+  const backendCloudLoginBtn = createButtonNode();
+  const backendCommunityRefreshBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url) => ({
+    ok: !String(url).endsWith("/auth/me"),
+    status: String(url).endsWith("/auth/me") ? 401 : 200,
+    json: async () => {
+      if (String(url).endsWith("/auth/me")) {
+        return { code: "auth_required", message: "Login is required." };
+      }
+      if (String(url).endsWith("/auth/login")) {
+        return { user: { username: "alice" }, csrfToken: "csrf-token" };
+      }
+      if (String(url).endsWith("/community/saves")) {
+        return { saves: [{ id: "save-1", title: "Shared Save", owner: { displayName: "Alice" } }] };
+      }
+      return {};
+    },
+  });
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudSection,
+        backendCloudStatus,
+        backendCloudUsername,
+        backendCloudPassword,
+        backendCloudRegisterBtn,
+        backendCloudLoginBtn,
+        backendCommunityRefreshBtn,
+        backendCommunityList,
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await backendCommunityRefreshBtn.listeners.click();
+    const anonymousRow = backendCommunityList.children[0];
+    assert.equal(anonymousRow.children.find((child) => child.textContent === "Comment").disabled, true);
+    assert.equal(anonymousRow.children.find((child) => child.textContent === "Report").disabled, true);
+
+    await backendCloudLoginBtn.listeners.click();
+    const authenticatedRow = backendCommunityList.children[0];
+    assert.equal(authenticatedRow.children.find((child) => child.textContent === "Comment").disabled, false);
+    assert.equal(authenticatedRow.children.find((child) => child.textContent === "Report").disabled, false);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("backend session probe disables cloud controls when local backend fails unexpectedly", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;

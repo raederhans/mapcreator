@@ -84,9 +84,14 @@ class BackendServiceTest(unittest.TestCase):
                 "project": {
                     "schemaVersion": 21,
                     "paintMode": "visual",
+                    "specialZoneLayers": {"zones": []},
+                    "operationGraphics": [{"id": "op-1"}],
+                    "unitCounters": {"counters": []},
+                    "transportCountryOverlayState": {"country": "JPN"},
                     "referenceImageState": {"dataUrl": "data:image/png;base64,private"},
                     "dynamicBordersDirty": True,
                     "dynamicBordersDirtyReason": "local-edit",
+                    "__privateLocalProbe": "private",
                 },
             },
         )
@@ -97,9 +102,18 @@ class BackendServiceTest(unittest.TestCase):
 
         self.assertEqual(project["schemaVersion"], 21)
         self.assertEqual(project["paintMode"], "visual")
+        self.assertEqual(
+            list(project.keys()),
+            ["schemaVersion", "specialZoneLayers", "paintMode", "operationGraphics", "unitCounters", "transportCountryOverlayState"],
+        )
+        self.assertEqual(project["specialZoneLayers"], {"zones": []})
+        self.assertEqual(project["operationGraphics"], [{"id": "op-1"}])
+        self.assertEqual(project["unitCounters"], {"counters": []})
+        self.assertEqual(project["transportCountryOverlayState"], {"country": "JPN"})
         self.assertNotIn("referenceImageState", project)
         self.assertNotIn("dynamicBordersDirty", project)
         self.assertNotIn("dynamicBordersDirtyReason", project)
+        self.assertNotIn("__privateLocalProbe", project)
 
     def test_private_save_is_hidden_from_other_user(self) -> None:
         owner = self._register("owner")

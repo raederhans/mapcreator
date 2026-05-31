@@ -132,6 +132,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
     return route.domain === "backend-cloud-support";
   }
 
+  if (changedFile === "js/ui/sidebar/project_support_diagnostics_controller.js" && route.domain === "backend-cloud-support") {
+    return true;
+  }
+
   if (changedFile.startsWith("js/") && changedFile.includes("city")) return route.domain === "city-runtime";
   if (changedFile.startsWith("js/") && changedFile.includes("scenario")) return route.domain === "scenario-runtime";
   if (changedFile.startsWith("js/") && changedFile.includes("palette")) return route.domain === "palette-runtime";

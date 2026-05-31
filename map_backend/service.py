@@ -16,7 +16,7 @@ USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,32}$")
 SAVE_VISIBILITY_PUBLIC = "public"
 SAVE_VISIBILITY_PRIVATE = "private"
 SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
-SHARED_PROJECT_FIELD_ALLOWLIST = {
+SHARED_PROJECT_FIELD_ALLOWLIST = (
     "schemaVersion",
     "countryBaseColors",
     "featureOverrides",
@@ -50,7 +50,7 @@ SHARED_PROJECT_FIELD_ALLOWLIST = {
     "scenario",
     "releasableBoundaryVariantByTag",
     "timestamp",
-}
+)
 
 
 class BackendService:
