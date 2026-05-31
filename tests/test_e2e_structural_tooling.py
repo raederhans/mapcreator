@@ -369,6 +369,23 @@ for (const filePath of ['tools/select_verification_targets.mjs', 'tools/test_rou
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
 
+    def test_verification_selector_routes_backend_cloud_support_files(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+const expectedCommands = ['test:node:backend-cloud-support', 'test:py:backend-cloud-support'];
+for (const filePath of ['map_backend/routes.py', 'js/api/backend_client.js', 'js/ui/sidebar/project_support_diagnostics_controller.js']) {
+  const report = buildRecommendation([filePath]);
+  const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+  for (const expectedCommand of expectedCommands) {
+    if (!commands.includes(expectedCommand)) {
+      throw new Error(`missing ${expectedCommand} route for ${filePath}: ${commands.join(', ')}`);
+    }
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
     def test_verification_selector_routes_tno_water_health_gate(self) -> None:
         script = """
 const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');

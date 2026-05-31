@@ -127,9 +127,37 @@
 - DPR 监听用 `matchMedia("(resolution: ...dppx)")` 后，每次 change 都重新绑定当前 DPR 查询。
 - 侧栏 resize 期间 `setRenderPhase("interacting")` 可能先更新 canvas size；后续 resize handler 仍要识别这次尺寸变化并继续执行 projection fit / zoom reset。
 
+### 异步闭环要有完成和失败 observer
+- Project import / export 这类异步闭环要在事务完成和失败时通知 UI，不能只在按钮点击时写 started 状态。
+- observer 只做旁路通知；observer 报错应记录为 observer failure，不能把已经成功的导入事务改判成失败。
+- 保存状态类 live region 要接到 `markDirty` / `clearDirty` 共同路径，覆盖 appearance、transport、special zones 等跨入口编辑。
+- 公开分享、community download、已登录读取要共用 public DTO / allowlist，避免旁路泄露本地私有字段。
+
 ### inspector 聚合只放展示层
 - Water Region 这类由碎片 feature 组成的列表可以合并显示；selection、history、override 仍保存真实 feature id 数组。
 
 ### 场景颜色要显式声明管理权
 - 手工、controller-only、生成型国家颜色需要写入 `color_policy: "locked"`；缺少 policy 的 checked-in 场景色会在重建时被 palette audit 同步回去。
 - startup cache key 要包含 `countries_sha256`；只改国家颜色时，runtime topology hash 不变，缺少 countries hash 会让浏览器继续读取旧 IndexedDB 场景启动缓存。
+
+### 静态合同要锁 owner 面，避免整文件误伤
+- 为了禁止某个 owner 回退到 `innerHTML` 这类旧实现，测试应列出该 owner 的具体禁止 token；整文件级禁令会把无关 sidebar 改动也变成假失败。
+
+### 局部 UI 类必须有作用域样式
+- 新增 `.secondary-btn`、`.danger-btn` 这类局部按钮类时，要同时在对应工作台作用域内定义完整按钮状态；只创建 class 不补 CSS 会回落成浏览器默认控件。
+
+### 窄侧栏长文本用 scoped grid
+- 右侧栏诊断、审计这类窄面板里，长 id 与状态值不要复用通用 `justify-between` flex 行；用面板专属 grid、固定状态列和 `overflow-wrap:anywhere` 锁住横向宽度。
+
+### 同步 dist/app 时先判断漂移范围
+- 如果源码和 `dist/app` 已经存在历史漂移，CSS 这类共享大文件优先做 scoped patch；全量复制前先看 diff，否则会把无关旧差异卷进当前任务。
+
+### Quickbar 复用开发工具动作要锁行为
+- quickbar 新按钮如果代理点击主开发工具按钮，要同时加 source/dist 镜像合同和轻量 node 行为测试；只查 token 容易漏掉“代理到了按钮但行为已变”的回退。
+
+### 手改 dist manifest 要同步自引用尺寸
+- 直接修改 `dist/app` 和 `dist/pages-dist-manifest.json` 时，除了改动文件本身的 `size_bytes`，还要复查 `pages-dist-manifest.json` 自己的尺寸记录；`tests.test_pages_dist_startup_shell` 会校验这个自引用值。
+
+### 本地后端接入要同时锁 API 和 UI 状态机
+- 同源后端即使只是本地开发框架，私有读接口也要走 dev token / same-origin 边界；GET 读取用户数据时不能弱于 POST。
+- UI 的“已加载 / 已发布”状态要绑定真实事务完成点；异步导入只启动时，应写 started 状态，把 success/error 留给 callback。

@@ -79,6 +79,7 @@ from tools.check_scenario_contracts import (
     discover_scenario_dirs as discover_scenario_contract_dirs,
     inspect_scenario_contract as inspect_scenario_contract_report,
 )
+from map_backend import handle_backend_request
 
 # Define the range of ports to try
 PORT_START = 8000
@@ -2636,7 +2637,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _resolve_cache_headers(self) -> dict[str, str]:
         route = urlparse(self.path or "").path
-        if route.startswith("/__dev/"):
+        if route.startswith("/__dev/") or route.startswith("/api/backend/"):
             return {
                 "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
                 "Pragma": "no-cache",
@@ -2676,11 +2677,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header(header_name, header_value)
         super().end_headers()
 
-    def _send_json(self, status: int, payload: dict[str, object]) -> None:
+    def _send_json(
+        self,
+        status: int,
+        payload: dict[str, object],
+        *,
+        extra_headers: list[tuple[str, str]] | None = None,
+    ) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        for header_name, header_value in extra_headers or []:
+            self.send_header(header_name, header_value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -2690,7 +2699,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _resolve_static_gzip_target(self) -> Path | None:
         route = urlparse(self.path or "").path
-        if route.startswith("/__dev/"):
+        if route.startswith("/__dev/") or route.startswith("/api/backend/"):
             return None
         filesystem_path = self._resolve_static_path()
         if not filesystem_path.is_file():
@@ -2777,11 +2786,46 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Allow", "GET, HEAD, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Origin", f"http://{BIND_ADDRESS}:{self.server.server_address[1]}")
         self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-MapCreator-CSRF")
         self.end_headers()
 
     def do_GET(self):
         route = urlparse(self.path or "").path
+        try:
+            if route.startswith("/api/backend/"):
+                self._validate_same_origin_request()
+            backend_response = handle_backend_request(
+                "GET",
+                route,
+                headers=dict(self.headers.items()),
+                payload=None,
+                root=ROOT,
+            )
+            if backend_response is not None:
+                self._send_json(backend_response.status, backend_response.payload, extra_headers=backend_response.headers)
+                return
+        except DevServerError as error:
+            self._send_json(
+                error.status,
+                {
+                    "ok": False,
+                    "code": error.code,
+                    "message": error.message,
+                    "details": error.details,
+                },
+            )
+            return
+        except Exception as error:  # pragma: no cover - safety net
+            print(f"[backend] Unexpected backend failure: {error}", file=sys.stderr)
+            self._send_json(
+                500,
+                {
+                    "ok": False,
+                    "code": "internal_error",
+                    "message": "Unexpected backend failure.",
+                },
+            )
+            return
         diagnostics_match = SCENARIO_DIAGNOSTICS_ROUTE_RE.fullmatch(route)
         if diagnostics_match:
             try:
@@ -2829,6 +2873,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             self._validate_same_origin_request()
             payload = self._read_json_body()
+            backend_response = handle_backend_request(
+                "POST",
+                route,
+                headers=dict(self.headers.items()),
+                payload=payload,
+                root=ROOT,
+            )
+            if backend_response is not None:
+                self._send_json(
+                    backend_response.status,
+                    backend_response.payload,
+                    extra_headers=backend_response.headers,
+                )
+                return
             diagnostics_preview_match = SCENARIO_DIAGNOSTICS_PREVIEW_ROUTE_RE.fullmatch(route)
             if diagnostics_preview_match:
                 response = preview_scenario_safe_repair(diagnostics_preview_match.group("scenario_id"))
@@ -2965,12 +3023,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 },
             )
         except Exception as error:  # pragma: no cover - safety net
+            print(f"[dev-server] Unexpected route failure: {error}", file=sys.stderr)
             self._send_json(
                 500,
                 {
                     "ok": False,
                     "code": "internal_error",
-                    "message": f"Unexpected dev server failure: {error}",
+                    "message": "Unexpected dev server failure.",
                 },
             )
 

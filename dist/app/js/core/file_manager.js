@@ -450,11 +450,11 @@ function normalizeUnitCounters(rawCounters) {
 }
 
 class FileManager {
-  static exportProject(appState) {
-    if (!appState) return;
+  static buildProjectPayload(appState) {
+    if (!appState) return null;
     // export 的职责是把当前 runtimeState 收敛成稳定 schema。
     // 这里宁可集中做一次 normalize，也不要让读取方承担多套历史字段和 UI 派生状态。
-    const payload = {
+    return {
       schemaVersion: 21,
       countryBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       featureOverrides: appState.visualOverrides || appState.featureOverrides || {},
@@ -550,6 +550,11 @@ class FileManager {
       releasableBoundaryVariantByTag: normalizeBoundaryVariantSelectionMap(appState.releasableBoundaryVariantByTag),
       timestamp: Date.now(),
     };
+  }
+
+  static exportProject(appState) {
+    const payload = FileManager.buildProjectPayload(appState);
+    if (!payload) return;
 
     const data = JSON.stringify(payload, null, 2);
     const blob = new Blob([data], { type: "application/json" });

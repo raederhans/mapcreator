@@ -89,6 +89,20 @@ async function importProjectPayload(payload, observerHooks = {}) {
   }
 }
 
+test("project payload builder returns export schema without triggering download", () => {
+  const payload = FileManager.buildProjectPayload({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+  });
+
+  assert.equal(payload.schemaVersion, 21);
+  assert.equal(payload.scenario.id, "tno_1962");
+  assert.equal(payload.scenario.version, 3);
+});
+
 test("project export preserves strategic overlay counters and legacy kind values", async () => {
   const payload = await exportProjectPayload({
     activePaletteId: "hoi4_vanilla",

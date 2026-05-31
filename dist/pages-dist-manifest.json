@@ -5985,6 +5985,10 @@
       "size_bytes": 227028
     },
     {
+      "path": "app/js/api/backend_client.js",
+      "size_bytes": 3256
+    },
+    {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
       "size_bytes": 18201
     },
@@ -6054,7 +6058,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 39869
+      "size_bytes": 40018
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6574,7 +6578,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 27972
+      "size_bytes": 41096
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -6602,7 +6606,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 250012
+      "size_bytes": 255960
     },
     {
       "path": "app/js/ui/toast.js",
@@ -6838,7 +6842,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 17734
+      "size_bytes": 17695
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -6870,15 +6874,15 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 19327
+      "size_bytes": 19286
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217994
+      "size_bytes": 218082
     },
     {
       "path": "styles.css",
-      "size_bytes": 19073
+      "size_bytes": 19020
     }
   ],
   "max_allowed_bytes": 1043333120,
@@ -6891,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001120738
+  "total_bytes": 1001143170
 }
