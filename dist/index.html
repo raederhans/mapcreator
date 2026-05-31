@@ -50,9 +50,10 @@
 
         <nav class="topnav" aria-label="Primary" data-i18n-aria-label="primaryNavLabel">
           <a href="#works" data-i18n="navWorks">Works</a>
-          <a href="#workflow" data-i18n="navWorkflow">Workflow</a>
+          <a href="#product" data-i18n="navProduct">Product</a>
           <a href="#features" data-i18n="navFeatures">Features</a>
-          <a href="#roadmap" data-i18n="navRoadmap">In progress</a>
+          <a href="#data" data-i18n="navData">Data</a>
+          <a href="#faq" data-i18n="navFaq">FAQ</a>
         </nav>
 
         <a class="button button--primary topbar__cta" href="./app/?view=guide" data-i18n="headerOpenApp">Open demo</a>
@@ -89,6 +90,7 @@
                   src="./assets/workspace-overview.webp"
                   alt="Scenario Forge editor showing a world political map with side panels and toolbars." data-i18n-alt="productPreviewAlt"
                   loading="eager"
+                  fetchpriority="high"
                   width="1440"
                   height="960"
                 />
@@ -148,6 +150,101 @@
           </div>
         </section>
 
+        <section id="product" class="section section--muted product-preview">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="previewEyebrow">Live product preview</p>
+            <h2 data-i18n="previewTitle">Use a real pilot dataset as the first thing people can touch.</h2>
+            <p data-i18n="previewBody">
+              The Japan transport pack is the strongest current sample: road and rail previews are checked in, counted, and tied back to source manifests.
+            </p>
+          </div>
+
+          <div class="product-preview__grid">
+            <article class="mini-map" data-preview-root data-preview-mode="transport" data-reveal>
+              <div class="mini-map__topline">
+                <div>
+                  <p class="mini-map__label" data-i18n="miniMapLabel">Japan pilot preview</p>
+                  <h3 data-i18n="miniMapTitle">Road, rail, cities, terrain, and night-light context in one compact view.</h3>
+                </div>
+                <span class="status-badge" data-i18n="miniMapBadge">Checked-in sample</span>
+              </div>
+
+              <div class="mini-map__surface" aria-hidden="true">
+                <svg class="japan-preview-map" viewBox="0 0 560 360" focusable="false">
+                  <defs>
+                    <linearGradient id="preview-sea" x1="0" x2="1" y1="0" y2="1">
+                      <stop offset="0" stop-color="#dbeafe" />
+                      <stop offset="1" stop-color="#a7f3d0" />
+                    </linearGradient>
+                    <linearGradient id="preview-land" x1="0" x2="1" y1="0" y2="1">
+                      <stop offset="0" stop-color="#f8fafc" />
+                      <stop offset="1" stop-color="#d9f99d" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="560" height="360" rx="22" fill="url(#preview-sea)" />
+                  <path class="mini-map__terrain" d="M88 282 C126 244 164 236 196 200 C226 168 260 156 298 130 C334 106 376 82 432 54" />
+                  <path class="mini-map__terrain" d="M116 300 C156 266 198 246 238 210 C272 180 310 152 354 124 C396 98 432 78 476 64" />
+                  <path class="mini-map__land" d="M426 38 C456 58 456 96 424 116 C394 136 386 166 410 188 C434 210 420 240 382 248 C344 256 330 286 300 314 C270 342 226 328 232 292 C238 252 202 238 208 202 C214 164 260 160 284 132 C314 98 354 24 426 38Z" />
+                  <path class="mini-map__land mini-map__land--west" d="M122 238 C150 218 184 222 198 248 C214 278 184 316 146 314 C112 312 92 262 122 238Z" />
+                  <path class="mini-map__land mini-map__land--north" d="M458 42 C494 48 520 72 512 104 C504 136 456 132 438 104 C418 74 426 38 458 42Z" />
+                  <g class="mini-map__roads">
+                    <path d="M142 292 C190 258 228 228 274 188 C320 148 360 114 424 78" />
+                    <path d="M238 286 C272 248 310 220 350 190 C384 164 406 130 438 94" />
+                    <path d="M174 264 C214 260 256 238 292 208" />
+                    <path d="M304 178 C350 176 386 154 420 118" />
+                  </g>
+                  <g class="mini-map__rails">
+                    <path d="M158 300 C210 270 252 238 300 192 C342 152 382 112 434 66" />
+                    <path d="M254 282 C284 242 316 214 360 176 C396 144 420 112 456 82" />
+                  </g>
+                  <g class="mini-map__night">
+                    <circle cx="285" cy="224" r="54" />
+                    <circle cx="342" cy="166" r="36" />
+                    <circle cx="402" cy="104" r="28" />
+                  </g>
+                  <g class="mini-map__cities">
+                    <circle cx="284" cy="224" r="7" />
+                    <circle cx="342" cy="166" r="6" />
+                    <circle cx="402" cy="104" r="6" />
+                    <circle cx="178" cy="276" r="5" />
+                    <circle cx="446" cy="78" r="5" />
+                  </g>
+                </svg>
+              </div>
+
+              <div class="preview-tabs" role="tablist" aria-label="Preview layers" data-i18n-aria-label="previewTabsLabel">
+                <button id="preview-tab-transport" type="button" role="tab" aria-selected="true" aria-controls="preview-panel-transport" data-preview-tab="transport" data-i18n="previewTabTransport">Transport</button>
+                <button id="preview-tab-cities" type="button" role="tab" aria-selected="false" aria-controls="preview-panel-cities" data-preview-tab="cities" tabindex="-1" data-i18n="previewTabCities">Cities</button>
+                <button id="preview-tab-terrain" type="button" role="tab" aria-selected="false" aria-controls="preview-panel-terrain" data-preview-tab="terrain" tabindex="-1" data-i18n="previewTabTerrain">Terrain</button>
+                <button id="preview-tab-night" type="button" role="tab" aria-selected="false" aria-controls="preview-panel-night" data-preview-tab="night" tabindex="-1" data-i18n="previewTabNight">Night context</button>
+              </div>
+            </article>
+
+            <div class="preview-panels" data-reveal>
+              <article id="preview-panel-transport" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-transport" data-preview-panel="transport">
+                <span class="status-badge" data-i18n="previewPanelTransportBadge">Japan road + rail</span>
+                <h3 data-i18n="previewPanelTransportTitle">4794 road preview features and 1105 rail preview features.</h3>
+                <p data-i18n="previewPanelTransportBody">Use the checked-in Japan transport manifests as a compact proof that infrastructure layers can become a real product surface.</p>
+              </article>
+              <article id="preview-panel-cities" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-cities" data-preview-panel="cities" hidden>
+                <span class="status-badge" data-i18n="previewPanelCitiesBadge">City points</span>
+                <h3 data-i18n="previewPanelCitiesTitle">Show settlement anchors, labels, and density cues before opening the editor.</h3>
+                <p data-i18n="previewPanelCitiesBody">The landing page can preview how world city assets become readable map context instead of a plain feature list.</p>
+              </article>
+              <article id="preview-panel-terrain" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-terrain" data-preview-panel="terrain" hidden>
+                <span class="status-badge" data-i18n="previewPanelTerrainBadge">Relief and physical context</span>
+                <h3 data-i18n="previewPanelTerrainTitle">Terrain, bathymetry, rivers, and physical semantics give the map a real surface.</h3>
+                <p data-i18n="previewPanelTerrainBody">This turns cartographic styling into a visible product claim instead of a hidden appearance panel.</p>
+              </article>
+              <article id="preview-panel-night" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-night" data-preview-panel="night" hidden>
+                <span class="status-badge" data-i18n="previewPanelNightBadge">Night-light layer</span>
+                <h3 data-i18n="previewPanelNightTitle">Night-light and political overlays help the same geography tell a different story.</h3>
+                <p data-i18n="previewPanelNightBody">Use this mode to explain presentation maps, campaign atlases, and dense storytelling exports.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <section id="why" class="section section--muted">
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="whyEyebrow">Why Scenario Forge</p>
@@ -203,8 +300,9 @@
 
         <section id="features" class="section section--muted">
           <div class="section-heading" data-reveal>
-            <p class="eyebrow" data-i18n="featuresEyebrow">Feature groups</p>
-            <h2 data-i18n="featuresTitle">Organized around tasks, not just panels.</h2>
+            <p class="eyebrow" data-i18n="featuresEyebrow">Product capabilities</p>
+            <h2 data-i18n="featuresTitle">Organized like a serious map product.</h2>
+            <p data-i18n="featuresBody">Each capability group starts from what already exists and points toward the product surface it can become.</p>
           </div>
 
           <div class="feature-groups">
@@ -212,29 +310,43 @@
               <span class="feature-icon feature-icon--blue" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 7.5 10 4l10 3.5v9L14 20l-10-3.5z"/><path d="M10 4v16M14 6v14"/></svg>
               </span>
-              <h3 data-i18n="featureGroupOneTitle">Scenario baselines</h3>
-              <p data-i18n="featureGroupOneBody">Named starting points, default scenarios, palette packs, and scenario-aware startup flow.</p>
+              <h3 data-i18n="featureGroupOneTitle">Cartographic design</h3>
+              <p data-i18n="featureGroupOneBody">Layer order, color palettes, borders, labels, legends, city points, water regions, and export-ready map presentation.</p>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--green" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M6 18 9 6l4 9 5-7"/><path d="M5 19h14"/></svg>
               </span>
-              <h3 data-i18n="featureGroupTwoTitle">Political editing</h3>
-              <p data-i18n="featureGroupTwoBody">Ownership, controller, frontline-style views, brushes, selected objects, and scenario-level map changes.</p>
+              <h3 data-i18n="featureGroupTwoTitle">Scenario editing</h3>
+              <p data-i18n="featureGroupTwoBody">Named world states, ownership, controller, frontlines, special regions, country metadata, and scenario-aware startup.</p>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--amber" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/><path d="M8 5v14M16 5v14"/></svg>
               </span>
-              <h3 data-i18n="featureGroupThreeTitle">Presentation layers</h3>
-              <p data-i18n="featureGroupThreeBody">Physical regions, rivers, urban areas, city points, water regions, special zones, legends, and display tuning.</p>
+              <h3 data-i18n="featureGroupThreeTitle">Spatial data and analysis</h3>
+              <p data-i18n="featureGroupThreeBody">Source ledgers, asset catalogs, health checks, provenance sidecars, hierarchy data, and reusable geography pipelines.</p>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--violet" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg>
               </span>
-              <h3 data-i18n="featureGroupFourTitle">Project and export</h3>
-              <p data-i18n="featureGroupFourBody">Project save/load, bilingual UI, snapshot export, and a workspace that keeps editorial polish close to the map itself.</p>
+              <h3 data-i18n="featureGroupFourTitle">Transport and infrastructure</h3>
+              <p data-i18n="featureGroupFourBody">Road and rail previews are the current proof point; airports, ports, energy, industrial, and resource families are tracked as in-progress data packs.</p>
+            </article>
+            <article class="feature-group" data-reveal>
+              <span class="feature-icon feature-icon--rose" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 16c3-6 7-9 12-9"/><path d="M8 18c2-4 5-6 9-6"/><path d="M5 20h14"/></svg>
+              </span>
+              <h3 data-i18n="featureGroupFiveTitle">Imagery and context layers</h3>
+              <p data-i18n="featureGroupFiveBody">Relief, bathymetry, contours, rivers, night lights, urban areas, and physical semantics for richer map reading.</p>
+            </article>
+            <article class="feature-group" data-reveal>
+              <span class="feature-icon feature-icon--slate" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+              </span>
+              <h3 data-i18n="featureGroupSixTitle">Project management</h3>
+              <p data-i18n="featureGroupSixBody">Local save/load, bilingual UI, export workflows, future cloud save surfaces, and repeatable publishing contracts.</p>
             </article>
           </div>
         </section>
@@ -251,6 +363,121 @@
             <article class="audience-item" data-reveal><span>03</span><strong data-i18n="audienceThree">Scenario and campaign designers</strong></article>
             <article class="audience-item" data-reveal><span>04</span><strong data-i18n="audienceFour">Geopolitical storytellers</strong></article>
             <article class="audience-item" data-reveal><span>05</span><strong data-i18n="audienceFive">Researchers and presenters</strong></article>
+          </div>
+        </section>
+
+        <section id="data" class="section section--muted data-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="dataEyebrow">Data foundation</p>
+            <h2 data-i18n="dataTitle">A map product needs visible data trust.</h2>
+            <p data-i18n="dataBody">Scenario Forge already tracks source ledgers, asset catalogs, build audits, and provenance sidecars. The landing page should make that trust layer visible.</p>
+          </div>
+
+          <div class="data-grid">
+            <article class="data-card" data-reveal>
+              <span class="data-card__tag" data-i18n="dataCardOneTag">Base geography</span>
+              <h3 data-i18n="dataCardOneTitle">Boundaries and populated places</h3>
+              <p data-i18n="dataCardOneBody">Natural Earth, geoBoundaries, GeoNames, hierarchy data, and country policy assets provide the political and settlement backbone.</p>
+            </article>
+            <article class="data-card" data-reveal>
+              <span class="data-card__tag" data-i18n="dataCardTwoTag">Physical context</span>
+              <h3 data-i18n="dataCardTwoTitle">Relief, bathymetry, rivers, and semantics</h3>
+              <p data-i18n="dataCardTwoBody">NOAA ETOPO, bathymetry packs, contours, rivers, and physical semantics help maps read like geography instead of flat color blocks.</p>
+            </article>
+            <article class="data-card" data-reveal>
+              <span class="data-card__tag" data-i18n="dataCardThreeTag">Infrastructure</span>
+              <h3 data-i18n="dataCardThreeTitle">Transport packs with manifests</h3>
+              <p data-i18n="dataCardThreeBody">Japan road and rail previews are checked in with manifests. Additional infrastructure families stay visible as expansion work.</p>
+            </article>
+            <article class="data-card" data-reveal>
+              <span class="data-card__tag" data-i18n="dataCardFourTag">Governance</span>
+              <h3 data-i18n="dataCardFourTitle">Cataloged, reproducible, and inspectable</h3>
+              <p data-i18n="dataCardFourBody">The checked-in catalog, source ledger, provenance files, and strict contract tests keep source claims tied to files instead of marketing copy.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="editions" class="section editions-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="editionsEyebrow">Editions and license direction</p>
+            <h2 data-i18n="editionsTitle">Explain how people can try it today and where the product can grow.</h2>
+          </div>
+
+          <div class="edition-grid">
+            <article class="edition-card" data-reveal>
+              <span class="status-badge" data-i18n="editionOneBadge">Available now</span>
+              <h3 data-i18n="editionOneTitle">Live demo</h3>
+              <p data-i18n="editionOneBody">Open the browser workbench, explore built-in scenarios, tune layers, and export presentation snapshots.</p>
+            </article>
+            <article class="edition-card" data-reveal>
+              <span class="status-badge" data-i18n="editionTwoBadge">Local creator workflow</span>
+              <h3 data-i18n="editionTwoTitle">Project files and reproducible data</h3>
+              <p data-i18n="editionTwoBody">Keep scenario work local, inspect data assets, and use source manifests when a map needs a clear provenance trail.</p>
+            </article>
+            <article class="edition-card" data-reveal>
+              <span class="status-badge" data-i18n="editionThreeBadge">Future direction</span>
+              <h3 data-i18n="editionThreeTitle">Team and cloud surfaces</h3>
+              <p data-i18n="editionThreeBody">Future product packaging can extend the backend direction into cloud saves, shared project spaces, permissioned publishing, and larger data packs.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="cases" class="section section--muted cases-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="casesEyebrow">Sample use cases</p>
+            <h2 data-i18n="casesTitle">Show product stories without inventing customer claims.</h2>
+          </div>
+
+          <div class="case-grid">
+            <article class="case-card" data-reveal>
+              <p class="case-card__label" data-i18n="caseOneLabel">Campaign atlas</p>
+              <h3 data-i18n="caseOneTitle">Build a TNO 1962 political briefing map.</h3>
+              <p data-i18n="caseOneBody">Start from a named world state, adjust presentation layers, add city and water context, and export a map ready for a scenario brief.</p>
+            </article>
+            <article class="case-card" data-reveal>
+              <p class="case-card__label" data-i18n="caseTwoLabel">Infrastructure review</p>
+              <h3 data-i18n="caseTwoTitle">Inspect Japan road and rail density.</h3>
+              <p data-i18n="caseTwoBody">Use preview packs to explain corridors, rail hubs, ports, and transport readiness before deeper editor work.</p>
+            </article>
+            <article class="case-card" data-reveal>
+              <p class="case-card__label" data-i18n="caseThreeLabel">Presentation map pack</p>
+              <h3 data-i18n="caseThreeTitle">Turn one geography into multiple story views.</h3>
+              <p data-i18n="caseThreeBody">Move between political color, terrain, night-light, city, and infrastructure views to prepare a consistent visual set.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="faq" class="section faq-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="faqEyebrow">FAQ</p>
+            <h2 data-i18n="faqTitle">Answer the questions a real map product page creates.</h2>
+          </div>
+
+          <div class="faq-list" data-reveal>
+            <details open>
+              <summary data-i18n="faqOneQuestion">Is Scenario Forge a GIS tool or a map editor?</summary>
+              <p data-i18n="faqOneAnswer">It is a scenario-first map workbench. It borrows GIS-style data discipline, then focuses the interface around political scenarios and presentation output.</p>
+            </details>
+            <details>
+              <summary data-i18n="faqTwoQuestion">What data sources does it use?</summary>
+              <p data-i18n="faqTwoAnswer">The current asset families include Natural Earth, geoBoundaries, GeoNames, NOAA ETOPO, NASA Black Marble style night-light assets, OpenStreetMap, Geofabrik, and country transport sources.</p>
+            </details>
+            <details>
+              <summary data-i18n="faqThreeQuestion">Can it work offline?</summary>
+              <p data-i18n="faqThreeAnswer">The checked-in demo assets run as a static web app. Larger source refresh and backend sharing workflows use local tooling or the local development backend.</p>
+            </details>
+            <details>
+              <summary data-i18n="faqFourQuestion">What can I export?</summary>
+              <p data-i18n="faqFourAnswer">The editor supports presentation snapshots such as PNG and JPG, with layer styling kept close to the map workspace.</p>
+            </details>
+            <details>
+              <summary data-i18n="faqFiveQuestion">How mature are the transport layers?</summary>
+              <p data-i18n="faqFiveAnswer">Japan road and rail previews are the clearest current sample. Other infrastructure families are visible as expansion work and should be read through the in-progress roadmap.</p>
+            </details>
+            <details>
+              <summary data-i18n="faqSixQuestion">What is the license model?</summary>
+              <p data-i18n="faqSixAnswer">The current page should describe the demo and repository honestly, then leave room for future creator, team, and cloud editions after product packaging is formalized.</p>
+            </details>
           </div>
         </section>
 

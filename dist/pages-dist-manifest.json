@@ -6842,7 +6842,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 17695
+      "size_bytes": 32761
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -6874,7 +6874,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 19286
+      "size_bytes": 36599
     },
     {
       "path": "pages-dist-manifest.json",
@@ -6882,7 +6882,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 19020
+      "size_bytes": 25400
     }
   ],
   "max_allowed_bytes": 1043333120,
@@ -6895,5 +6895,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001143170
+  "total_bytes": 1001181929
 }
