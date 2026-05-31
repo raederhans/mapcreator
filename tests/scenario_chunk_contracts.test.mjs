@@ -47,6 +47,88 @@ function getTopologyGeometryId(geometry) {
   return String(geometry?.properties?.id || geometry?.id || "").trim();
 }
 
+function getCoordinateBounds(coordinates, bounds = {
+  minLon: Infinity,
+  minLat: Infinity,
+  maxLon: -Infinity,
+  maxLat: -Infinity,
+}) {
+  if (!Array.isArray(coordinates)) return bounds;
+  if (typeof coordinates[0] === "number" && typeof coordinates[1] === "number") {
+    const lon = Number(coordinates[0]);
+    const lat = Number(coordinates[1]);
+    if (Number.isFinite(lon) && Number.isFinite(lat)) {
+      bounds.minLon = Math.min(bounds.minLon, lon);
+      bounds.minLat = Math.min(bounds.minLat, lat);
+      bounds.maxLon = Math.max(bounds.maxLon, lon);
+      bounds.maxLat = Math.max(bounds.maxLat, lat);
+    }
+    return bounds;
+  }
+  coordinates.forEach((child) => getCoordinateBounds(child, bounds));
+  return bounds;
+}
+
+function extractRendererFunction(source, functionName) {
+  const startToken = `function ${functionName}`;
+  const start = source.indexOf(startToken);
+  assert.notEqual(start, -1, `${functionName} must exist`);
+  const bodyStart = source.indexOf("{", start);
+  assert.notEqual(bodyStart, -1, `${functionName} must have a body`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+  assert.fail(`${functionName} body must close`);
+}
+
+function createRendererShellPolicyHarness(rendererSource) {
+  const functionNames = [
+    "isScenarioShellFeature",
+    "isRuntimeOnlyShellFallbackPoliticalFeature",
+    "isPoliticalShellUnderlayFeature",
+    "orderPoliticalShellUnderlayFirst",
+    "shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature",
+    "isBaseGeographyScenarioFeature",
+    "isPoliticalVisualRenderableFeature",
+    "isPoliticalInteractionRenderableFeature",
+    "getRuntimePoliticalBaseCollection",
+  ];
+  const source = `
+    const runtimeState = { mapSemanticMode: "ownership" };
+    const getFeatureId = (feature) => String(feature?.properties?.id || feature?.id || "").trim();
+    const isAtlantropaFieldDrivenFeature = () => false;
+    const isScenarioAtlantropaVisible = () => true;
+    const isAntarcticSectorFeature = () => false;
+    const isAtlantropaVisualSupportHelperFeature = () => false;
+    const isAtlantropaSupportHelperFeature = () => false;
+    ${functionNames.map((name) => extractRendererFunction(rendererSource, name)).join("\n")}
+    globalThis.__shellPolicyHarness = {
+      isScenarioShellFeature,
+      isRuntimeOnlyShellFallbackPoliticalFeature,
+      isPoliticalShellUnderlayFeature,
+      orderPoliticalShellUnderlayFirst,
+      shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature,
+      isPoliticalVisualRenderableFeature,
+      isPoliticalInteractionRenderableFeature,
+      getRuntimePoliticalBaseCollection,
+      setMapSemanticMode: (value) => { runtimeState.mapSemanticMode = value; },
+    };
+  `;
+  const context = { globalThis: {} };
+  context.globalThis = context;
+  vm.createContext(context);
+  vm.runInContext(source, context);
+  return context.__shellPolicyHarness;
+}
+
 function getPolygonCoordinateSets(geometry) {
   if (!geometry || typeof geometry !== "object") return [];
   if (geometry.type === "Polygon") {
@@ -1203,8 +1285,16 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /function isAtlantropaSupportHelperFeature\(feature, featureId = null\) \{[\s\S]*?isInteractiveAtlantropaBooleanWeldIslandFeature\(feature, featureId\)[\s\S]*?return false;[\s\S]*?joinMode === "boolean_weld"[\s\S]*?\}/.test(rendererSource)
       && /function isPoliticalInteractionRenderableFeature\(feature, featureId = null\) \{[\s\S]*?feature\?\.properties\?\.interactive === false[\s\S]*?isAtlantropaSupportHelperFeature\(feature, featureId\)/.test(rendererSource),
     arcticShellCanRenderWithoutBecomingInteractive:
-      !/isScenarioShellFeature/.test(visualRenderableBody)
+      !/shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature/.test(visualRenderableBody)
+      && !/isScenarioShellFeature/.test(visualRenderableBody)
       && /function isPoliticalInteractionRenderableFeature\(feature, featureId = null\) \{[\s\S]*?isScenarioShellFeature\(feature, featureId\)[\s\S]*?feature\?\.properties\?\.interactive === false/.test(rendererSource),
+    arcticShellUnderlayDrawsBeforeDetailFeatures:
+      /function isPoliticalShellUnderlayFeature\(feature, featureId = null\) \{[\s\S]*?isRuntimeOnlyShellFallbackPoliticalFeature\(feature, featureId\)/.test(rendererSource)
+      && /function orderPoliticalShellUnderlayFirst\(entries = \[\]\) \{[\s\S]*?const shellEntries = \[\];[\s\S]*?const detailEntries = \[\];[\s\S]*?isPoliticalShellUnderlayFeature\(feature, featureId\)[\s\S]*?return shellEntries\.length \? \[\.\.\.shellEntries, \.\.\.detailEntries\] : detailEntries;/.test(rendererSource)
+      && /orderPoliticalShellUnderlayFirst\(redrawEntries\)\.forEach/.test(rendererSource)
+      && /orderPoliticalShellUnderlayFirst\(visibleItems\)\.forEach/.test(rendererSource)
+      && /const featureEntries = runtimeState\.landData\.features\.map/.test(rendererSource)
+      && /orderPoliticalShellUnderlayFirst\(featureEntries\)\.forEach/.test(rendererSource),
     arcticShellOwnerHintsCanColorCoalescedShells:
       /scenario_shell_owner_hint/.test(rendererSource)
       && /scenario_shell_controller_hint/.test(rendererSource),
@@ -1279,6 +1369,98 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
 
   Object.entries(checks).forEach(([label, ok]) => {
     assert.equal(ok, true, label);
+  });
+});
+
+test("renderer shell fallback policy behaves as visual-only underlay coverage", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const harness = createRendererShellPolicyHarness(rendererSource);
+  const shellFeature = {
+    id: "RU_ARCTIC_FB_TYM_042",
+    properties: {
+      id: "RU_ARCTIC_FB_TYM_042",
+      scenario_helper_kind: "shell_fallback",
+      render_as_base_geography: false,
+      interactive: false,
+    },
+  };
+  const baseFeature = {
+    id: "REAL_TYM",
+    properties: {
+      id: "REAL_TYM",
+      cntr_code: "RU",
+    },
+  };
+
+  assert.equal(harness.isScenarioShellFeature(shellFeature, shellFeature.id), true);
+  assert.equal(harness.isRuntimeOnlyShellFallbackPoliticalFeature(shellFeature, shellFeature.id), true);
+  assert.equal(harness.isPoliticalVisualRenderableFeature(shellFeature, shellFeature.id), true);
+  assert.equal(harness.isPoliticalInteractionRenderableFeature(shellFeature, shellFeature.id), false);
+  assert.equal(harness.isPoliticalVisualRenderableFeature(baseFeature, baseFeature.id), true);
+  assert.equal(harness.isPoliticalInteractionRenderableFeature(baseFeature, baseFeature.id), true);
+  assert.deepEqual(
+    Array.from(harness.orderPoliticalShellUnderlayFirst([
+      { id: baseFeature.id, feature: baseFeature },
+      { id: shellFeature.id, feature: shellFeature },
+    ]), (entry) => entry.id),
+    [shellFeature.id, baseFeature.id],
+  );
+
+  const mixedCollection = {
+    type: "FeatureCollection",
+    features: [shellFeature, baseFeature],
+  };
+  assert.deepEqual(
+    harness.getRuntimePoliticalBaseCollection(mixedCollection).features.map((feature) => feature.id),
+    [baseFeature.id],
+  );
+  harness.setMapSemanticMode("blank");
+  assert.equal(harness.getRuntimePoliticalBaseCollection({ type: "FeatureCollection", features: [shellFeature] }).features.length, 1);
+});
+
+test("TNO Russian Arctic shell fallbacks remain visual-only political coverage", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const visualRenderableBody = rendererSource.match(/function isPoliticalVisualRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
+  const interactionRenderableBody = rendererSource.match(/function isPoliticalInteractionRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
+  const coarsePoliticalChunk = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "chunks", "political.coarse.r0c0.json"));
+  const countries = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "countries.json")).countries || {};
+  const ownersByFeature = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "owners.by_feature.json"));
+  const arcticShells = (coarsePoliticalChunk.features || [])
+    .filter((feature) => getFeatureId(feature).startsWith("RU_ARCTIC_FB_"))
+    .map((feature) => ({
+      feature,
+      featureId: getFeatureId(feature),
+      bounds: getCoordinateBounds(feature?.geometry?.coordinates),
+    }))
+    .filter((entry) => entry.bounds.maxLat >= 73);
+
+  assert.ok(arcticShells.length >= 3, `expected high-latitude RU_ARCTIC_FB shell coverage, found ${arcticShells.length}`);
+  assert.equal(
+    visualRenderableBody.includes("shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature"),
+    false,
+    "runtime-only shell collection filtering must not block per-feature political fill",
+  );
+  assert.match(
+    interactionRenderableBody,
+    /isScenarioShellFeature\(feature, featureId\)/,
+    "scenario shells must remain excluded from political interaction",
+  );
+  assert.match(
+    rendererSource,
+    /function getRuntimePoliticalBaseCollection\(collection\) \{[\s\S]*?shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature\(/,
+    "runtime political base collection still filters shell-only payloads",
+  );
+
+  arcticShells.forEach(({ feature, featureId, bounds }) => {
+    const properties = feature?.properties || {};
+    const ownerHint = String(properties.scenario_shell_owner_hint || "").trim().toUpperCase();
+    assert.equal(properties.scenario_helper_kind, "shell_fallback", `${featureId} must stay marked as a shell fallback`);
+    assert.equal(properties.render_as_base_geography, false, `${featureId} should be political fill coverage, not base geography`);
+    assert.equal(properties.interactive, false, `${featureId} must stay non-interactive`);
+    assert.equal(Object.hasOwn(ownersByFeature, featureId), false, `${featureId} should rely on owner hints instead of owners.by_feature`);
+    assert.ok(ownerHint, `${featureId} needs a scenario shell owner hint`);
+    assert.match(String(countries[ownerHint]?.color_hex || ""), /^#[0-9a-f]{6}$/i, `${featureId} owner hint ${ownerHint} needs a country color`);
+    assert.ok(bounds.maxLat >= 73, `${featureId} should cover the reported high-latitude band`);
   });
 });
 

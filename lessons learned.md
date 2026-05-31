@@ -161,3 +161,7 @@
 ### 本地后端接入要同时锁 API 和 UI 状态机
 - 同源后端即使只是本地开发框架，私有读接口也要走 dev token / same-origin 边界；GET 读取用户数据时不能弱于 POST。
 - UI 的“已加载 / 已发布”状态要绑定真实事务完成点；异步导入只启动时，应写 started 状态，把 success/error 留给 callback。
+
+### shell 兜底可见性要分清集合级和要素级
+- shell-only runtime 集合是否能当政治底图，和单个 shell fallback 是否能参与视觉填色，是两个不同 gate；集合级过滤保 startup 安全，要素级视觉过滤保承重补洞。
+- 只允许视觉填色的兜底块要在政治 pass 中先画成 underlay，再让 detail feature 覆盖，并用行为级 fixture 锁住“可见但不可交互”。
