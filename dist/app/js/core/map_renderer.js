@@ -5587,6 +5587,24 @@ function isRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId = null) {
     && feature?.properties?.render_as_base_geography === false;
 }
 
+function isPoliticalShellUnderlayFeature(feature, featureId = null) {
+  return isRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId);
+}
+
+function orderPoliticalShellUnderlayFirst(entries = []) {
+  const shellEntries = [];
+  const detailEntries = [];
+  entries.forEach((entry) => {
+    const feature = entry?.feature || entry;
+    const featureId = entry?.id || getFeatureId(feature);
+    const target = isPoliticalShellUnderlayFeature(feature, featureId)
+      ? shellEntries
+      : detailEntries;
+    target.push(entry);
+  });
+  return shellEntries.length ? [...shellEntries, ...detailEntries] : detailEntries;
+}
+
 function shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId = null) {
   if (String(runtimeState.mapSemanticMode || "").trim().toLowerCase() === "blank") {
     return false;
@@ -5669,7 +5687,6 @@ function isPoliticalVisualRenderableFeature(feature, featureId = null) {
   if (isAtlantropaFieldDrivenFeature(feature) && !isScenarioAtlantropaVisible()) return false;
   if (isAntarcticSectorFeature(feature, featureId)) return false;
   if (isBaseGeographyScenarioFeature(feature)) return false;
-  if (shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId)) return false;
   if (isAtlantropaVisualSupportHelperFeature(feature, featureId)) return false;
   return true;
 }
@@ -17445,7 +17462,7 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
   passContext.scale(transform.k, transform.k);
   withRenderTarget(passContext, () => {
     backgroundGroupCount = drawPoliticalBackgroundFillsForEntries(redrawEntries);
-    redrawEntries.forEach(({ feature, index, path }) => {
+    orderPoliticalShellUnderlayFirst(redrawEntries).forEach(({ feature, index, path }) => {
       drawPoliticalFeature(feature, index, {
         k: transform.k,
         canvasWidth,
@@ -17594,7 +17611,7 @@ function drawPoliticalPass(k) {
     renderedCount: 0,
   };
   if (Array.isArray(visibleItems)) {
-    visibleItems.forEach((item) => {
+    orderPoliticalShellUnderlayFirst(visibleItems).forEach((item) => {
       drawPoliticalFeature(item.feature, item.drawOrder, {
         k,
         canvasWidth,
@@ -17609,7 +17626,7 @@ function drawPoliticalPass(k) {
       });
     });
   } else {
-    runtimeState.landData.features.forEach((feature, index) => {
+    const drawFeature = (feature, index) => {
       drawPoliticalFeature(feature, index, {
         k,
         canvasWidth,
@@ -17621,7 +17638,13 @@ function drawPoliticalPass(k) {
         countPathBuild: false,
         metricsCollector: featureMetrics,
       });
-    });
+    };
+    const featureEntries = runtimeState.landData.features.map((feature, index) => ({
+      feature,
+      index,
+      id: getFeatureId(feature) || `feature-${index}`,
+    }));
+    orderPoliticalShellUnderlayFirst(featureEntries).forEach(({ feature, index }) => drawFeature(feature, index));
   }
   recordRenderPerfMetric("drawPoliticalFeatureFillLoop", Number(featureMetrics.fillMs || 0), {
     renderedCount: Number(featureMetrics.renderedCount || 0),

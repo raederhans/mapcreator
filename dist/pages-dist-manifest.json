@@ -5981,6 +5981,10 @@
       "size_bytes": 227028
     },
     {
+      "path": "app/js/api/backend_client.js",
+      "size_bytes": 3256
+    },
+    {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
       "size_bytes": 18201
     },
@@ -6050,7 +6054,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 39882
+      "size_bytes": 40018
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6110,7 +6114,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 941622
+      "size_bytes": 942515
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -6570,7 +6574,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 28064
+      "size_bytes": 41096
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -6598,7 +6602,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 250490
+      "size_bytes": 255960
     },
     {
       "path": "app/js/ui/toast.js",
@@ -6834,7 +6838,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 17762
+      "size_bytes": 32761
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -6866,15 +6870,15 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 19340
+      "size_bytes": 36599
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217847
+      "size_bytes": 217935
     },
     {
       "path": "styles.css",
-      "size_bytes": 19170
+      "size_bytes": 25400
     }
   ],
   "max_allowed_bytes": 1043333120,
@@ -6887,5 +6891,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 999912415
+  "total_bytes": 999973778
 }

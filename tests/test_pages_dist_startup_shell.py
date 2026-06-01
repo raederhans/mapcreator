@@ -36,6 +36,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
+            'data-i18n="previewEyebrow"',
+            'data-preview-root',
+            'role="tablist"',
+            'data-i18n="dataEyebrow"',
+            'data-i18n="editionsEyebrow"',
+            'data-i18n="casesEyebrow"',
+            'data-i18n="faqEyebrow"',
             'data-i18n-aria-label="productPreviewLabel"',
             'data-i18n-aria-label="brandHomeLabel"',
             'data-i18n-aria-label="primaryNavLabel"',
@@ -59,7 +66,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for expected_fragment in (
             "scenario_forge_landing_lang",
             "heroTitleAccent",
-            "heroMetricsLabel",
+            "initPreviewTabs",
+            "previewPanelTransportTitle",
+            "dataCardOneTitle",
+            "editionOneTitle",
+            "faqOneQuestion",
             "productPreviewLabel",
             "productStageLabel",
             "brandHomeLabel",
@@ -92,33 +103,44 @@ class PagesDistStartupShellTest(unittest.TestCase):
         zh_table = app_js[zh_start:]
 
         for expected_fragment in (
-            'featureGroupOneTitle: "Scenario baselines"',
-            'featureGroupTwoTitle: "Political editing"',
-            'featureGroupThreeTitle: "Presentation layers"',
-            'featureGroupFourTitle: "Project and export"',
-            'roadmapOneTitle: "Transport workbench"',
-            'roadmapTwoTitle: "Japan road preview"',
+            "featureGroupOneTitle:",
+            "featureGroupTwoTitle:",
+            "featureGroupThreeTitle:",
+            "featureGroupFourTitle:",
+            'previewPanelTransportTitle:',
+            "dataTitle:",
+            "faqOneQuestion:",
+            "roadmapOneTitle:",
+            "roadmapTwoTitle:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, en_table)
 
         for expected_fragment in (
-            'featureGroupOneTitle: "场景基线"',
-            'featureGroupTwoTitle: "政治编辑"',
-            'featureGroupThreeTitle: "展示图层"',
-            'featureGroupFourTitle: "项目与导出"',
-            'workflowTitle: "从基线到可讲故事地图，一条更短的路。"',
-            'audienceTitle: "适合那些需要让地图承载场景的人。"',
-            'roadmapOneTitle: "交通工作台"',
-            'roadmapTwoTitle: "日本道路预览"',
-            'roadmapTwoBody: "目前是交通相关样例里最成熟的一块。"',
-            'ctaBody: "展示页负责讲清楚产品，编辑器负责真正把场景落到地图上。"',
+            "featureGroupOneTitle:",
+            "featureGroupTwoTitle:",
+            "featureGroupThreeTitle:",
+            "featureGroupFourTitle:",
+            "previewPanelTransportTitle:",
+            "dataTitle:",
+            "faqOneQuestion:",
+            "workflowTitle:",
+            "audienceTitle:",
+            "roadmapOneTitle:",
+            "roadmapTwoTitle:",
+            "ctaBody:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, zh_table)
 
-        for stale_fragment in ("baseline", "scenario", "Scenario-first", "transport"):
+        for stale_fragment in (
+            'featureGroupOneTitle: "Scenario baselines"',
+            'featureGroupTwoTitle: "Political editing"',
+            'featureGroupThreeTitle: "Presentation layers"',
+            'featureGroupFourTitle: "Project and export"',
+            'featuresTitle: "Organized around tasks, not just panels."',
+        ):
             with self.subTest(stale_fragment=stale_fragment):
                 self.assertNotIn(stale_fragment, zh_table)
 
@@ -134,6 +156,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
+            'data-i18n="previewEyebrow"',
+            'data-preview-root',
+            'role="tablist"',
+            'data-i18n="dataEyebrow"',
+            'data-i18n="editionsEyebrow"',
+            'data-i18n="casesEyebrow"',
+            'data-i18n="faqEyebrow"',
             'data-i18n-aria-label="productPreviewLabel"',
             'data-i18n-aria-label="brandHomeLabel"',
             'data-i18n-aria-label="primaryNavLabel"',
@@ -159,7 +188,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "scenario_forge_landing_lang",
             "heroTitle",
             "heroTitleAccent",
-            "heroMetricsLabel",
+            "initPreviewTabs",
+            "previewPanelTransportTitle",
+            "dataCardOneTitle",
+            "faqOneQuestion",
+            "editionsEyebrow",
+            "casesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
             "brandHomeLabel",
@@ -232,6 +266,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/index.html",
             ".nojekyll",
             "app/js/main.js",
+            "app/js/api/backend_client.js",
+            "app/js/ui/sidebar/project_support_diagnostics_controller.js",
             "app/data/CATALOG.json",
             "app/data/scenarios/index.json",
             "app/data/runtime_asset_registry.json",

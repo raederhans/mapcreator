@@ -283,6 +283,18 @@ const INFRASTRUCTURE_ROUTES = [
 
 const PYTHON_FAST_CONTRACTS = [
   {
+    id: "python:backend-cloud-support",
+    commandRef: "test:py:backend-cloud-support",
+    sourceRef: "map_backend,tools/dev_server.py,tests/test_backend_service.py,tests/test_backend_routes.py,tests/test_dev_server.py",
+    domain: "backend-cloud-support",
+    ownerHint: "backend-cloud-support",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "python:tests.test_app_entry_resolver",
     commandRef: "python -m unittest tests.test_app_entry_resolver -q",
     sourceRef: "tests/test_app_entry_resolver.py",
@@ -455,6 +467,7 @@ function collectFileDependencies(baseRepoPath) {
 
 function resolveNodeRouteDomain(scriptName, sourceRefs) {
   const haystack = `${scriptName},${sourceRefs.join(",")}`;
+  if (haystack.includes("backend")) return "backend-cloud-support";
   if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";
   if (haystack.includes("startup")) return "startup";
   if (haystack.includes("scenario") || haystack.includes("lifecycle_runtime")) return "scenario-runtime";
