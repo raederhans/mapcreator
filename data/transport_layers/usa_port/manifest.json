@@ -1,0 +1,79 @@
+{
+  "adapter_id": "usa_port_v1",
+  "pack_id": "usa_port",
+  "family": "port",
+  "geometry_kind": "point",
+  "country": "United States",
+  "schema_version": 1,
+  "generated_at": "2026-06-01T00:13:56.461151Z",
+  "recipe_path": "data/transport_layers/usa_port/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "ports": "data/transport_layers/usa_port/ports.preview.geojson"
+    },
+    "full": {
+      "ports": "data/transport_layers/usa_port/ports.geojson"
+    },
+    "build_audit": "data/transport_layers/usa_port/build_audit.json"
+  },
+  "source_signature": {
+    "unlocode_2025_1_release": {
+      "filename": "unlocode_2025-1_artifacts.zip",
+      "path": ".runtime/source-cache/transport/unlocode/unlocode_2025-1_artifacts.zip",
+      "size_bytes": 13507338,
+      "sha256": "ad409fc7149b10f98d61190c34d9daf78b78bb8b31464cc66de1a89d09b01b5d"
+    }
+  },
+  "recipe_version": "usa_port_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "ports": 260
+    },
+    "full": {
+      "ports": 1549
+    }
+  },
+  "clip_bbox": [
+    -178.133333,
+    20.65,
+    177.566667,
+    71.283333
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack usa_port",
+  "runtime_consumer": "transport_workbench_port_preview",
+  "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "port",
+    "supported_keys": [
+      "ports"
+    ]
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "ports": "data/transport_layers/usa_port/ports.preview.geojson"
+        },
+        "full": {
+          "ports": "data/transport_layers/usa_port/ports.geojson"
+        },
+        "build_audit": "data/transport_layers/usa_port/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "ports": 260
+        },
+        "full": {
+          "ports": 1549
+        }
+      }
+    }
+  }
+}

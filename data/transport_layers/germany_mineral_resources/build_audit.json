@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-06-01T00:22:09.146200Z",
+  "adapter_id": "germany_mineral_resources_v1",
+  "pack_id": "germany_mineral_resources",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "BKG DLM250 quarry and open-pit objects",
+  "geometry_truth": "BKG DLM250 AX_TagebauGrubeSteinbruch polygons converted to representative points",
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 1371
+    },
+    "full": {
+      "mineral_resources": 1371
+    }
+  },
+  "source_row_count": {
+    "AX_TagebauGrubeSteinbruch": 1371
+  },
+  "matched_count": 1371,
+  "preview_rule": "DLM250 quarry/open-pit polygons converted to representative points."
+}

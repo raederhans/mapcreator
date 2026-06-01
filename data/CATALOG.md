@@ -1,8 +1,8 @@
 # Data Catalog
 
-- generated_at: 2026-05-12T22:39:56.105848Z
+- generated_at: 2026-06-01T00:22:27.201591Z
 - version: 1
-- entries: 391
+- entries: 459
 
 ## Counts by role
 
@@ -38,11 +38,11 @@
 | special_zones | 1 |
 | terrain_contours_major_topology | 1 |
 | terrain_contours_minor_topology | 1 |
-| transport_build_audit | 81 |
+| transport_build_audit | 97 |
 | transport_carrier_payload | 1 |
 | transport_catalog | 2 |
-| transport_manifest | 82 |
-| transport_pack | 178 |
+| transport_manifest | 98 |
+| transport_pack | 214 |
 | transport_provenance_payload | 1 |
 | transport_subtype_catalog | 1 |
 | unit_counter_manifest | 1 |
@@ -97,12 +97,54 @@
 | transport:china_airport:preview:airports | data/transport_layers/china_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack china_airport |  |
 | transport:china_airport:build_audit | data/transport_layers/china_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack china_airport |  |
 | transport_manifest:china_airport | data/transport_layers/china_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack china_airport |  |
+| transport:china_port:build_audit | data/transport_layers/china_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack china_port |  |
+| transport_manifest:china_port | data/transport_layers/china_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack china_port |  |
+| transport:china_port:full:ports | data/transport_layers/china_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack china_port |  |
+| transport:china_port:preview:ports | data/transport_layers/china_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack china_port |  |
+| transport:france_airport:full:airports | data/transport_layers/france_airport/airports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack france_airport |  |
+| transport:france_airport:preview:airports | data/transport_layers/france_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack france_airport |  |
+| transport:france_airport:build_audit | data/transport_layers/france_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack france_airport |  |
+| transport_manifest:france_airport | data/transport_layers/france_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack france_airport |  |
+| transport:france_port:build_audit | data/transport_layers/france_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack france_port |  |
+| transport_manifest:france_port | data/transport_layers/france_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack france_port |  |
+| transport:france_port:full:ports | data/transport_layers/france_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack france_port |  |
+| transport:france_port:preview:ports | data/transport_layers/france_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack france_port |  |
 | transport:france_rail:build_audit | data/transport_layers/france_rail/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack france_rail |  |
 | transport_manifest:france_rail | data/transport_layers/france_rail/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack france_rail |  |
 | transport:france_rail:full:rail_stations_major | data/transport_layers/france_rail/rail_stations_major.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack france_rail |  |
 | transport:france_rail:preview:rail_stations_major | data/transport_layers/france_rail/rail_stations_major.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack france_rail |  |
 | transport:france_rail:preview:railways | data/transport_layers/france_rail/railways.preview.topo.json | transport_pack | topojson | json | python tools/build_transport_country_real_packs.py --pack france_rail |  |
 | transport:france_rail:full:railways | data/transport_layers/france_rail/railways.topo.json | transport_pack | topojson | json | python tools/build_transport_country_real_packs.py --pack france_rail |  |
+| transport:germany_airport:full:airports | data/transport_layers/germany_airport/airports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_airport |  |
+| transport:germany_airport:preview:airports | data/transport_layers/germany_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_airport |  |
+| transport:germany_airport:build_audit | data/transport_layers/germany_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_airport |  |
+| transport_manifest:germany_airport | data/transport_layers/germany_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_airport |  |
+| transport:germany_energy_facilities:build_audit | data/transport_layers/germany_energy_facilities/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_energy_facilities |  |
+| transport:germany_energy_facilities:full:energy_facilities | data/transport_layers/germany_energy_facilities/energy_facilities.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_energy_facilities |  |
+| transport:germany_energy_facilities:preview:energy_facilities | data/transport_layers/germany_energy_facilities/energy_facilities.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_energy_facilities |  |
+| transport_manifest:germany_energy_facilities | data/transport_layers/germany_energy_facilities/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_energy_facilities |  |
+| transport:germany_industrial_zones:build_audit | data/transport_layers/germany_industrial_zones/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_industrial_zones |  |
+| transport:germany_industrial_zones:full:industrial_zones | data/transport_layers/germany_industrial_zones/industrial_zones.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_industrial_zones |  |
+| transport:germany_industrial_zones:preview:industrial_zones | data/transport_layers/germany_industrial_zones/industrial_zones.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_industrial_zones |  |
+| transport_manifest:germany_industrial_zones | data/transport_layers/germany_industrial_zones/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_industrial_zones |  |
+| transport:germany_logistics_hubs:build_audit | data/transport_layers/germany_logistics_hubs/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_logistics_hubs |  |
+| transport:germany_logistics_hubs:full:logistics_hubs | data/transport_layers/germany_logistics_hubs/logistics_hubs.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_logistics_hubs |  |
+| transport:germany_logistics_hubs:preview:logistics_hubs | data/transport_layers/germany_logistics_hubs/logistics_hubs.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_logistics_hubs |  |
+| transport_manifest:germany_logistics_hubs | data/transport_layers/germany_logistics_hubs/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_logistics_hubs |  |
+| transport:germany_mineral_resources:build_audit | data/transport_layers/germany_mineral_resources/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_mineral_resources |  |
+| transport_manifest:germany_mineral_resources | data/transport_layers/germany_mineral_resources/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_mineral_resources |  |
+| transport:germany_mineral_resources:full:mineral_resources | data/transport_layers/germany_mineral_resources/mineral_resources.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_mineral_resources |  |
+| transport:germany_mineral_resources:preview:mineral_resources | data/transport_layers/germany_mineral_resources/mineral_resources.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_mineral_resources |  |
+| transport:germany_port:build_audit | data/transport_layers/germany_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_port |  |
+| transport_manifest:germany_port | data/transport_layers/germany_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_port |  |
+| transport:germany_port:full:ports | data/transport_layers/germany_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_port |  |
+| transport:germany_port:preview:ports | data/transport_layers/germany_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_port |  |
+| transport:germany_rail:build_audit | data/transport_layers/germany_rail/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_rail |  |
+| transport_manifest:germany_rail | data/transport_layers/germany_rail/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_rail |  |
+| transport:germany_rail:full:rail_stations_major | data/transport_layers/germany_rail/rail_stations_major.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_rail |  |
+| transport:germany_rail:preview:rail_stations_major | data/transport_layers/germany_rail/rail_stations_major.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_rail |  |
+| transport:germany_rail:preview:railways | data/transport_layers/germany_rail/railways.preview.topo.json | transport_pack | topojson | json | python tools/build_transport_country_real_packs.py --pack germany_rail |  |
+| transport:germany_rail:full:railways | data/transport_layers/germany_rail/railways.topo.json | transport_pack | topojson | json | python tools/build_transport_country_real_packs.py --pack germany_rail |  |
 | transport:germany_road:build_audit | data/transport_layers/germany_road/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack germany_road |  |
 | transport_manifest:germany_road | data/transport_layers/germany_road/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack germany_road |  |
 | transport:germany_road:full:road_labels | data/transport_layers/germany_road/road_labels.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack germany_road |  |
@@ -379,6 +421,10 @@
 | transport:india_airport:preview:airports | data/transport_layers/india_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack india_airport |  |
 | transport:india_airport:build_audit | data/transport_layers/india_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack india_airport |  |
 | transport_manifest:india_airport | data/transport_layers/india_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack india_airport |  |
+| transport:india_port:build_audit | data/transport_layers/india_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack india_port |  |
+| transport_manifest:india_port | data/transport_layers/india_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack india_port |  |
+| transport:india_port:full:ports | data/transport_layers/india_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack india_port |  |
+| transport:india_port:preview:ports | data/transport_layers/india_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack india_port |  |
 | transport:airport:full:airports | data/transport_layers/japan_airport/airports.geojson | transport_pack | geojson | json | python tools/build_transport_workbench_japan_airports.py |  |
 | transport:airport:preview:airports | data/transport_layers/japan_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_workbench_japan_airports.py |  |
 | transport:airport:build_audit | data/transport_layers/japan_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_workbench_japan_airports.py |  |
@@ -429,6 +475,18 @@
 | transport:russia_airport:preview:airports | data/transport_layers/russia_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack russia_airport |  |
 | transport:russia_airport:build_audit | data/transport_layers/russia_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack russia_airport |  |
 | transport_manifest:russia_airport | data/transport_layers/russia_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack russia_airport |  |
+| transport:russia_port:build_audit | data/transport_layers/russia_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack russia_port |  |
+| transport_manifest:russia_port | data/transport_layers/russia_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack russia_port |  |
+| transport:russia_port:full:ports | data/transport_layers/russia_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack russia_port |  |
+| transport:russia_port:preview:ports | data/transport_layers/russia_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack russia_port |  |
+| transport:uk_airport:full:airports | data/transport_layers/uk_airport/airports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack uk_airport |  |
+| transport:uk_airport:preview:airports | data/transport_layers/uk_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack uk_airport |  |
+| transport:uk_airport:build_audit | data/transport_layers/uk_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack uk_airport |  |
+| transport_manifest:uk_airport | data/transport_layers/uk_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack uk_airport |  |
+| transport:uk_port:build_audit | data/transport_layers/uk_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack uk_port |  |
+| transport_manifest:uk_port | data/transport_layers/uk_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack uk_port |  |
+| transport:uk_port:full:ports | data/transport_layers/uk_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack uk_port |  |
+| transport:uk_port:preview:ports | data/transport_layers/uk_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack uk_port |  |
 | transport:uk_road:build_audit | data/transport_layers/uk_road/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack uk_road |  |
 | transport_manifest:uk_road | data/transport_layers/uk_road/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack uk_road |  |
 | transport:uk_road:full:road_labels | data/transport_layers/uk_road/road_labels.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack uk_road |  |
@@ -439,6 +497,16 @@
 | transport:usa_airport:preview:airports | data/transport_layers/usa_airport/airports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack usa_airport |  |
 | transport:usa_airport:build_audit | data/transport_layers/usa_airport/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack usa_airport |  |
 | transport_manifest:usa_airport | data/transport_layers/usa_airport/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack usa_airport |  |
+| transport:usa_port:build_audit | data/transport_layers/usa_port/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack usa_port |  |
+| transport_manifest:usa_port | data/transport_layers/usa_port/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack usa_port |  |
+| transport:usa_port:full:ports | data/transport_layers/usa_port/ports.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack usa_port |  |
+| transport:usa_port:preview:ports | data/transport_layers/usa_port/ports.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack usa_port |  |
+| transport:usa_road:build_audit | data/transport_layers/usa_road/build_audit.json | transport_build_audit | json | json | python tools/build_transport_country_real_packs.py --pack usa_road |  |
+| transport_manifest:usa_road | data/transport_layers/usa_road/manifest.json | transport_manifest | json | json | python tools/build_transport_country_real_packs.py --pack usa_road |  |
+| transport:usa_road:full:road_labels | data/transport_layers/usa_road/road_labels.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack usa_road |  |
+| transport:usa_road:preview:road_labels | data/transport_layers/usa_road/road_labels.preview.geojson | transport_pack | geojson | json | python tools/build_transport_country_real_packs.py --pack usa_road |  |
+| transport:usa_road:preview:roads | data/transport_layers/usa_road/roads.preview.topo.json | transport_pack | topojson | json | python tools/build_transport_country_real_packs.py --pack usa_road |  |
+| transport:usa_road:full:roads | data/transport_layers/usa_road/roads.topo.json | transport_pack | topojson | json | python tools/build_transport_country_real_packs.py --pack usa_road |  |
 | unit_counter_manifest:hoi4 | data/unit_counter_libraries/hoi4/manifest.json | unit_counter_manifest | json | json | runtime_asset_registry.assets.unit_counter_manifest:hoi4 |  |
 | world_cities | data/world_cities.geojson | world_cities | geojson | json | init_map_data.world_cities |  |
 | manifest_output:js/core/city_lights_historical_1930_asset.js | js/core/city_lights_historical_1930_asset.js | historical_1930_city_lights_asset | javascript | module | init_map_data.city_lights_assets |  |

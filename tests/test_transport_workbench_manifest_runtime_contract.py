@@ -242,7 +242,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn('germany_road: Object.freeze({ packId: "germany_road", family: "road"', resolver_content)
         self.assertIn('france_rail: Object.freeze({ packId: "france_rail", family: "rail"', resolver_content)
         self.assertIn('usa_airport: Object.freeze({ packId: "usa_airport", family: "airport"', resolver_content)
-        self.assertNotIn('family: "port"', resolver_content)
+        self.assertIn('usa_port: Object.freeze({ packId: "usa_port", family: "port"', resolver_content)
         self.assertIn('reason: "consumer_missing"', resolver_content)
         self.assertNotRegex(registry_content, re.compile(r"return\s*\{[\s\S]*?\bdisplayConfig\s*,[\s\S]*?\};"))
         self.assertIn('label: t("Workbench preview only", "ui")', apply_owner_content)

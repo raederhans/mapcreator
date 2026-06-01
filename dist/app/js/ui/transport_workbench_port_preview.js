@@ -17,6 +17,7 @@ function getCoverageVariantMeta(manifest, variantId) {
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "port",
   manifestUrl: resolveTransportManifestUrl("port"),
+  resolveManifestUrl: (packId) => resolveTransportManifestUrl(packId || "port"),
   packKey: "ports",
   selectionType: "port",
   fullPackScaleThreshold: 1.18,

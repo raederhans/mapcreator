@@ -14,7 +14,7 @@ import geopandas as gpd
 import pandas as pd
 import topojson as tp
 from pyproj import Transformer
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import transform as shapely_transform
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +32,18 @@ from map_builder.transport_workbench_contracts import finalize_transport_manifes
 
 OUTPUT_ROOT = PROJECT_ROOT / "data" / "transport_layers"
 INDIA_TRAFFIC_RANK_PATH = PROJECT_ROOT / "map_builder" / "transport_country_india_airport_traffic_rank.manual.json"
+
+MAIN_MAP_KEYS_BY_FAMILY = {
+    "road": ("roads", "road_labels"),
+    "rail": ("railways", "rail_stations_major"),
+    "airport": ("airports",),
+    "port": ("ports",),
+}
+
+MAIN_MAP_SIDECARS_BY_FAMILY = {
+    "road": {"road_labels": {"required": True}},
+    "rail": {"rail_stations_major": {"required": True}},
+}
 
 
 def utc_now() -> str:
@@ -172,6 +184,7 @@ def write_pack(
     write_json(output_dir / "build_audit.json", audit)
     manifest = {
         "adapter_id": f"{pack_id}_v1",
+        "pack_id": pack_id,
         "family": family,
         "geometry_kind": geometry_kind,
         "country": COUNTRY_SOURCE_SPECS[pack_id].country,
@@ -188,6 +201,22 @@ def write_pack(
         "runtime_consumer": f"transport_workbench_{family}_preview",
         "source_policy": "real_source_cache_only",
     }
+    consumer_keys = MAIN_MAP_KEYS_BY_FAMILY.get(family)
+    if consumer_keys:
+        manifest.update(
+            {
+                "mainMapEligible": True,
+                "apply_bridge_supported": True,
+                "coverage_scope": "country",
+                "main_map_consumer": {
+                    "family": family,
+                    "supported_keys": list(consumer_keys),
+                },
+            }
+        )
+        sidecars = MAIN_MAP_SIDECARS_BY_FAMILY.get(family)
+        if sidecars:
+            manifest["sidecars"] = sidecars
     manifest = finalize_transport_manifest(
         manifest,
         default_variant="default",
@@ -302,6 +331,193 @@ def line_labels(gdf: gpd.GeoDataFrame, name_col: str = "name", *, max_labels: in
     return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
 
 
+UNLOCODE_COLUMNS = [
+    "change",
+    "country",
+    "code",
+    "name",
+    "name_without_diacritics",
+    "subdivision",
+    "function",
+    "status",
+    "date",
+    "iata",
+    "coordinates",
+    "remarks",
+]
+
+
+def get_gml_id(elem: ET.Element) -> str:
+    return elem.attrib.get("{http://www.opengis.net/gml/3.2}id", "")
+
+
+def first_text(elem: ET.Element, tag_name: str) -> str:
+    for child in elem.findall(f".//{{*}}{tag_name}"):
+        value = normalize_text(child.text)
+        if value:
+            return value
+    return ""
+
+
+def parse_xy_pairs(value: str) -> list[tuple[float, float]]:
+    values = [float(part) for part in normalize_text(value).split()]
+    return list(zip(values[0::2], values[1::2]))
+
+
+def transform_dlm_point(x: float, y: float) -> Point:
+    transformer = Transformer.from_crs("EPSG:25832", "EPSG:4326", always_xy=True)
+    lon, lat = transformer.transform(x, y)
+    return Point(lon, lat)
+
+
+def transform_dlm_geometry(geom):
+    transformer = Transformer.from_crs("EPSG:25832", "EPSG:4326", always_xy=True)
+    return shapely_transform(transformer.transform, geom)
+
+
+def dlm_line_from_pos_list(value: str):
+    coords = parse_xy_pairs(value)
+    if len(coords) < 2:
+        return None
+    return transform_dlm_geometry(LineString(coords))
+
+
+def dlm_polygon_from_pos_list(value: str):
+    coords = parse_xy_pairs(value)
+    if len(coords) < 4:
+        return None
+    if coords[0] != coords[-1]:
+        coords.append(coords[0])
+    geom = transform_dlm_geometry(Polygon(coords))
+    if not geom.is_valid:
+        geom = geom.buffer(0)
+    return geom if geom is not None and not geom.is_empty else None
+
+
+def dlm_point_from_pos(value: str):
+    coords = parse_xy_pairs(value)
+    if not coords:
+        return None
+    x, y = coords[0]
+    return transform_dlm_point(x, y)
+
+
+def representative_point(geom):
+    if geom is None or geom.is_empty:
+        return None
+    if geom.geom_type == "Point":
+        return geom
+    return geom.representative_point()
+
+
+def dlm_source_zip() -> Path:
+    return DEFAULT_SOURCE_CACHE_ROOT / "germany_road" / "dlm250.utm32s.nas_bda.kompakt.zip"
+
+
+def read_unlocode_frame() -> pd.DataFrame:
+    zip_path = DEFAULT_SOURCE_CACHE_ROOT / "unlocode" / "unlocode_2025-1_artifacts.zip"
+    parts: list[pd.DataFrame] = []
+    with zipfile.ZipFile(zip_path) as z:
+        names = sorted(name for name in z.namelist() if name.startswith("release/csv/UNLOCODE CodeListPart"))
+        for name in names:
+            with z.open(name) as handle:
+                parts.append(
+                    pd.read_csv(
+                        handle,
+                        header=None,
+                        names=UNLOCODE_COLUMNS,
+                        encoding="latin1",
+                        dtype=str,
+                        keep_default_na=False,
+                    )
+                )
+    if not parts:
+        raise SystemExit("UN/LOCODE release has no CSV code-list parts.")
+    return pd.concat(parts, ignore_index=True)
+
+
+def parse_unlocode_coordinate(value: Any):
+    text = normalize_text(value).upper()
+    match = re.match(r"^(\d{2})(\d{2})([NS])\s+(\d{3})(\d{2})([EW])$", text)
+    if not match:
+        return None
+    lat_deg, lat_min, lat_dir, lon_deg, lon_min, lon_dir = match.groups()
+    lat = int(lat_deg) + int(lat_min) / 60
+    lon = int(lon_deg) + int(lon_min) / 60
+    if lat_dir == "S":
+        lat *= -1
+    if lon_dir == "W":
+        lon *= -1
+    return Point(lon, lat)
+
+
+def build_unlocode_point_pack(
+    pack_id: str,
+    *,
+    family: str,
+    collection_key: str,
+    country_code: str,
+    function_index: int,
+    marker: str,
+    preview_limit: int,
+) -> None:
+    df = read_unlocode_frame()
+    df = df[df["country"].str.upper().eq(country_code.upper())].copy()
+    df["function"] = df["function"].fillna("").astype(str)
+    df = df[df["function"].str.len().gt(function_index)]
+    df = df[df["function"].str[function_index].eq(marker)].copy()
+    rows = []
+    for _, row in df.iterrows():
+        geom = parse_unlocode_coordinate(row.get("coordinates"))
+        if geom is None:
+            continue
+        code = normalize_text(row.get("code")).upper()
+        country = normalize_text(row.get("country")).upper()
+        name = normalize_text(row.get("name")) or normalize_text(row.get("name_without_diacritics")) or f"{country}{code}"
+        rows.append(
+            {
+                "id": f"{country.lower()}-{family}-{code.lower()}",
+                "name": name,
+                "unlocode": f"{country}{code}",
+                "subdivision": normalize_text(row.get("subdivision")),
+                "function": normalize_text(row.get("function")),
+                "status": normalize_text(row.get("status")),
+                "date": normalize_text(row.get("date")),
+                "iata": normalize_text(row.get("iata")),
+                "importance_rank_source": "unlocode_status_iata",
+                "geometry": geom,
+            }
+        )
+    gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    if gdf.empty:
+        raise SystemExit(f"{pack_id}: UN/LOCODE selection produced no coordinate rows.")
+    gdf = apply_point_importance(
+        gdf,
+        family,
+        gdf.apply(lambda row: unlocode_importance_rank(family, row.get("status"), row.get("iata")), axis=1),
+    )
+    status_rank = {"AA": 0, "AC": 1, "AI": 2, "RL": 3, "RQ": 4}
+    gdf["_status_rank"] = gdf["status"].map(lambda value: status_rank.get(normalize_text(value).upper(), 9))
+    gdf["_date_rank"] = gdf["date"].map(safe_int)
+    preview = gdf.sort_values(["_status_rank", "_date_rank", "name"], ascending=[True, False, True]).head(preview_limit).copy()
+    gdf = gdf.drop(columns=["_status_rank", "_date_rank"])
+    preview = preview.drop(columns=["_status_rank", "_date_rank"])
+    write_pack(
+        pack_id,
+        family,
+        "point",
+        {collection_key: preview},
+        {collection_key: gdf},
+        {
+            "source_row_count": {"unlocode_country_rows": int(len(df))},
+            "matched_count": int(len(gdf)),
+            "preview_rule": f"UN/LOCODE status/date ordering capped at {preview_limit}",
+            "importance_rank_rule": "3 for airport rows with IATA, 2 for AA/AC/AI status rows, 1 for other coordinate rows",
+        },
+        build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
+    )
+
+
 def build_germany_road() -> None:
     pack_id = "germany_road"
     zip_path = DEFAULT_SOURCE_CACHE_ROOT / pack_id / COUNTRY_SOURCE_SPECS[pack_id].sources[0].filename
@@ -372,6 +588,44 @@ def build_uk_road() -> None:
     write_pack(pack_id, "road", "line", {"roads": preview, "road_labels": line_labels(preview)}, {"roads": gdf, "road_labels": line_labels(gdf)}, {"source_row_count": {"os_open_roads_gb": raw_gb, "osni_50k_transport_lines": raw_ni}, "matched_count": len(gdf), "source_region_counts": gdf["source_region"].value_counts().to_dict()}, build_command="python tools/build_transport_country_real_packs.py --pack uk_road")
 
 
+def build_usa_road() -> None:
+    pack_id = "usa_road"
+    zip_path = DEFAULT_SOURCE_CACHE_ROOT / pack_id / "tl_2024_us_primaryroads.zip"
+    with zipfile.ZipFile(zip_path) as z:
+        shp_name = next(name for name in z.namelist() if name.lower().endswith(".shp"))
+    source = gpd.read_file(f"zip://{zip_path.resolve()}!{shp_name}").to_crs("EPSG:4326")
+    rows = []
+    for row in source.itertuples(index=False):
+        row_data = row._asdict()
+        route_type = normalize_text(row_data.get("RTTYP")).upper()
+        road_class = "motorway" if route_type == "I" else ("trunk" if route_type == "U" else "primary")
+        rows.append(
+            {
+                "id": normalize_text(row_data.get("LINEARID")) or f"us-road-{len(rows)}",
+                "name": normalize_text(row_data.get("FULLNAME") or row_data.get("RTTYP") or "Primary Road"),
+                "ref": normalize_text(row_data.get("RTTYP")),
+                "road_class": road_class,
+                "mtfcc": normalize_text(row_data.get("MTFCC")),
+                "geometry": row_data.get("geometry"),
+            }
+        )
+    gdf = simplified_lines(gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326"), tolerance=0.002)
+    preview = gdf[gdf["road_class"].isin(["motorway", "trunk"])].copy()
+    write_pack(
+        pack_id,
+        "road",
+        "line",
+        {"roads": preview, "road_labels": line_labels(preview, max_labels=800)},
+        {"roads": gdf, "road_labels": line_labels(gdf, max_labels=2500)},
+        {
+            "source_row_count": {"tiger_primary_roads": len(source)},
+            "matched_count": len(gdf),
+            "preview_rule": "TIGER RTTYP Interstate and U.S. routes first; full pack keeps all primary-road rows.",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack usa_road",
+    )
+
+
 def build_france_rail() -> None:
     pack_id = "france_rail"
     d = DEFAULT_SOURCE_CACHE_ROOT / pack_id
@@ -391,6 +645,72 @@ def build_france_rail() -> None:
     full_stations = stations[["id", "name", "code_uic", "is_passenger", "geometry"]].copy()
     preview_stations = full_stations[full_stations["is_passenger"]].copy()
     write_pack(pack_id, "rail", "line", {"railways": preview_lines, "rail_stations_major": preview_stations}, {"railways": full_lines, "rail_stations_major": full_stations}, {"source_row_count": {"sncf_lines": len(lines), "sncf_stations": len(stations)}, "matched_count": {"railways": len(full_lines), "rail_stations_major": len(full_stations)}, "preview_rule": "keep only SNCF operating/Exploitee rail lines; passenger stations only"}, build_command="python tools/build_transport_country_real_packs.py --pack france_rail")
+
+
+def build_germany_rail() -> None:
+    pack_id = "germany_rail"
+    zip_path = dlm_source_zip()
+    rows = []
+    raw_lines = 0
+    with zipfile.ZipFile(zip_path) as z, z.open("daten/BDA_42014.xml") as handle:
+        for _, elem in ET.iterparse(handle, events=("end",)):
+            if elem.tag.endswith("AX_Bahnstrecke"):
+                raw_lines += 1
+                geom = dlm_line_from_pos_list(first_text(elem, "posList"))
+                if geom is not None:
+                    line_number = first_text(elem, "nummerDerBahnstrecke")
+                    categories = [normalize_text(node.text) for node in elem.findall(".//{*}bahnkategorie") if normalize_text(node.text)]
+                    rows.append(
+                        {
+                            "id": get_gml_id(elem),
+                            "name": line_number or "Bahnstrecke",
+                            "rail_status": first_text(elem, "zustand"),
+                            "rail_category": ",".join(categories),
+                            "line_number": line_number,
+                            "status": "active",
+                            "geometry": geom,
+                        }
+                    )
+                elem.clear()
+    station_rows = []
+    raw_stations = 0
+    with zipfile.ZipFile(zip_path) as z, z.open("daten/BDA_53004.xml") as handle:
+        for _, elem in ET.iterparse(handle, events=("end",)):
+            if elem.tag.endswith("AX_Bahnverkehrsanlage"):
+                raw_stations += 1
+                geom = dlm_point_from_pos(first_text(elem, "pos"))
+                if geom is not None:
+                    station_rows.append(
+                        {
+                            "id": get_gml_id(elem),
+                            "name": first_text(elem, "name") or first_text(elem, "bezeichnung") or "Bahnhof",
+                            "station_category": first_text(elem, "bahnhofskategorie"),
+                            "rail_category": first_text(elem, "bahnkategorie"),
+                            "geometry": geom,
+                        }
+                    )
+                elem.clear()
+    railways = simplified_lines(gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326"), tolerance=0.0008)
+    stations = gpd.GeoDataFrame(station_rows, geometry="geometry", crs="EPSG:4326")
+    preview_lines = railways[railways["rail_category"].str.contains("1100|1101", na=False)].copy()
+    preview_stations = stations[stations["station_category"].isin(["1010", "1020"])].copy()
+    if preview_lines.empty:
+        raise SystemExit(f"{pack_id}: DLM250 rail preview selection is empty.")
+    if preview_stations.empty:
+        raise SystemExit(f"{pack_id}: DLM250 station preview selection is empty.")
+    write_pack(
+        pack_id,
+        "rail",
+        "line",
+        {"railways": preview_lines, "rail_stations_major": preview_stations},
+        {"railways": railways, "rail_stations_major": stations},
+        {
+            "source_row_count": {"AX_Bahnstrecke": raw_lines, "AX_Bahnverkehrsanlage": raw_stations},
+            "matched_count": {"railways": len(railways), "rail_stations_major": len(stations)},
+            "preview_rule": "DLM250 bahnkategorie 1100/1101 lines and station categories 1010/1020.",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack germany_rail",
+    )
 
 
 def load_osm_points(path: Path) -> gpd.GeoDataFrame:
@@ -436,6 +756,51 @@ def assert_unique_airport_coordinates(pack_id: str, gdf: gpd.GeoDataFrame) -> No
         raise SystemExit(f"{pack_id}: duplicate airport coordinates after strict matching: {names}")
 
 
+POINT_IMPORTANCE_BY_RANK = {
+    3: "national_core",
+    2: "regional_core",
+    1: "local_connector",
+}
+
+
+def apply_point_importance(gdf: gpd.GeoDataFrame, family: str, rank_values: Any) -> gpd.GeoDataFrame:
+    out = gdf.copy()
+    if isinstance(rank_values, pd.Series):
+        raw = rank_values.reindex(out.index)
+    else:
+        raw = pd.Series(rank_values, index=out.index)
+    ranks = pd.to_numeric(raw, errors="coerce").fillna(1).round().clip(1, 3).astype(int)
+    out["importance_rank"] = ranks
+    out["importance"] = ranks.map(POINT_IMPORTANCE_BY_RANK).fillna("local_connector")
+    if family == "airport":
+        out["airport_type"] = ranks.map({3: "national", 2: "specific_local", 1: "local"}).fillna("local")
+        if "status_category" not in out.columns:
+            out["status_category"] = "active"
+        else:
+            out["status_category"] = out["status_category"].map(lambda value: normalize_text(value) or "active")
+    if family == "port":
+        out["legal_designation"] = ranks.map({3: "international_hub", 2: "important", 1: "local"}).fillna("local")
+        out["legal_designation_label"] = ranks.map({
+            3: "International hub port",
+            2: "Important port",
+            1: "Local port",
+        }).fillna("Local port")
+        if "manager_type_code" not in out.columns:
+            out["manager_type_code"] = "1"
+        else:
+            out["manager_type_code"] = out["manager_type_code"].map(lambda value: normalize_text(value) or "1")
+    return out
+
+
+def unlocode_importance_rank(family: str, status: Any, iata: Any = "") -> int:
+    normalized_status = normalize_text(status).upper()
+    if family == "airport" and normalize_text(iata):
+        return 3
+    if normalized_status in {"AA", "AC", "AI"}:
+        return 2
+    return 1
+
+
 def build_usa_airport() -> None:
     pack_id = "usa_airport"
     d = DEFAULT_SOURCE_CACHE_ROOT / pack_id
@@ -458,8 +823,18 @@ def build_usa_airport() -> None:
         loc = str(row.get("ARPT_ID") or "").strip()
         rows.append({"id": f"us-airport-{loc}", "name": normalize_text(row.get("ARPT_NAME")), "iata": loc, "icao": normalize_text(row.get("ICAO_ID")), "enplanements_2024": enp_map.get(loc, 0), "facility_use": facility_use, "geometry": Point(float(row["LONG_DECIMAL"]), float(row["LAT_DECIMAL"]))})
     gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    gdf = apply_point_importance(
+        gdf,
+        "airport",
+        gdf.apply(
+            lambda row: 3 if int(row.get("enplanements_2024") or 0) >= 10_000_000
+            else 2 if int(row.get("enplanements_2024") or 0) >= 1_000_000 or bool(normalize_text(row.get("icao")))
+            else 1,
+            axis=1,
+        ),
+    )
     preview = gdf[(gdf["enplanements_2024"] >= 1000000) | (gdf["icao"].astype(str).str.len() > 0)].sort_values("enplanements_2024", ascending=False).head(250).copy()
-    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"APT_BASE": len(apt), "faa_enplanements": len(enp)}, "matched_count": int(gdf["enplanements_2024"].gt(0).sum()), "unmatched_official_rows": int(len(gdf) - gdf["enplanements_2024"].gt(0).sum()), "excluded_private_rows": int(apt["FACILITY_USE_CODE"].map(normalize_text).eq("PR").sum()), "preview_rule": "CY2024 enplanements >= 1,000,000 plus ICAO-coded public-use airports capped at 250"}, build_command="python tools/build_transport_country_real_packs.py --pack usa_airport")
+    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"APT_BASE": len(apt), "faa_enplanements": len(enp)}, "matched_count": int(gdf["enplanements_2024"].gt(0).sum()), "unmatched_official_rows": int(len(gdf) - gdf["enplanements_2024"].gt(0).sum()), "excluded_private_rows": int(apt["FACILITY_USE_CODE"].map(normalize_text).eq("PR").sum()), "preview_rule": "CY2024 enplanements >= 1,000,000 plus ICAO-coded public-use airports capped at 250", "importance_rank_rule": "3 for >=10M CY2024 enplanements, 2 for >=1M enplanements or ICAO-coded public-use airports, 1 for other public-use airports"}, build_command="python tools/build_transport_country_real_packs.py --pack usa_airport")
 
 
 def build_china_airport() -> None:
@@ -488,8 +863,13 @@ def build_china_airport() -> None:
         rows.append({"id": "tw-airport-" + match_key(name), "name": name, "passengers": 0, "passenger_rank": 0, "source_region": "TW", "geometry": hit.geometry})
     gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
     assert_unique_airport_coordinates(pack_id, gdf)
+    gdf = apply_point_importance(
+        gdf,
+        "airport",
+        gdf["passenger_rank"].map(lambda value: 3 if 0 < safe_int(value) <= 30 else 2 if 0 < safe_int(value) <= 80 else 1),
+    )
     preview = gdf.sort_values("passengers", ascending=False).head(80).copy()
-    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"caac_airport_rows": len(official), "taiwan_caa_airport_rows": len(taiwan_names), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_taiwan_official_rows": taiwan_unmatched, "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "preview_rule": "top 80 CAAC passenger-throughput airports after strict official-name coordinate matching; Taiwan CAA objects join full output"}, build_command="python tools/build_transport_country_real_packs.py --pack china_airport")
+    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"caac_airport_rows": len(official), "taiwan_caa_airport_rows": len(taiwan_names), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_taiwan_official_rows": taiwan_unmatched, "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "preview_rule": "top 80 CAAC passenger-throughput airports after strict official-name coordinate matching; Taiwan CAA objects join full output", "importance_rank_rule": "3 for CAAC passenger rank <= 30, 2 for <= 80, 1 for other matched airports"}, build_command="python tools/build_transport_country_real_packs.py --pack china_airport")
 
 
 def build_russia_airport() -> None:
@@ -509,10 +889,15 @@ def build_russia_airport() -> None:
         rows.append({"id": "ru-airport-" + match_key(name), "name": name, "certificate": normalize_text(row.get("certificate")), "class": normalize_text(row.get("class")), "geometry": hit.geometry})
     gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
     assert_unique_airport_coordinates(pack_id, gdf)
+    gdf = apply_point_importance(
+        gdf,
+        "airport",
+        gdf["class"].map(lambda value: 3 if normalize_text(value).upper() in {"A", "А", "B", "Б"} else 2 if normalize_text(value).upper() in {"C", "В"} else 1),
+    )
     preview = gdf[gdf["class"].isin(["А", "Б", "В", "A", "B", "C"])].copy().head(120)
     if preview.empty:
         raise SystemExit(f"{pack_id}: preview selection is empty; check Rosaviatsiya class parsing.")
-    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"rosaviatsiya_registry_rows": len(registry), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "preview_rule": "official class A/B/Cyrillic А/Б/В first, capped at 120"}, build_command="python tools/build_transport_country_real_packs.py --pack russia_airport")
+    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"rosaviatsiya_registry_rows": len(registry), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "preview_rule": "official class A/B/Cyrillic А/Б/В first, capped at 120", "importance_rank_rule": "3 for class A/B, 2 for class C, 1 for other matched civil aerodromes"}, build_command="python tools/build_transport_country_real_packs.py --pack russia_airport")
 
 
 def build_india_airport() -> None:
@@ -537,20 +922,309 @@ def build_india_airport() -> None:
     traffic_source = load_india_traffic_rank(d / "aai_air_traffic_report_june_2025_TRJun2k25.pdf")
     traffic_rank = traffic_source["rank_by_key"]
     gdf["traffic_report_rank"] = gdf["name"].map(lambda name: traffic_rank.get(match_key(name), 9999))
+    gdf = apply_point_importance(
+        gdf,
+        "airport",
+        gdf["traffic_report_rank"].map(lambda value: 3 if 0 < safe_int(value) <= 20 else 2 if 0 < safe_int(value) <= 100 else 1),
+    )
     preview = gdf[gdf["traffic_report_rank"] < 9999].sort_values("traffic_report_rank").head(100).copy()
     if preview.empty:
         raise SystemExit(f"{pack_id}: AAI traffic-report preview rank matched zero airports.")
-    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"aai_airport_list_rows": len(official), "aai_traffic_rank_rows": len(traffic_source["rows"]), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "traffic_rank_source": {"path": rel(INDIA_TRAFFIC_RANK_PATH), "rows": len(traffic_source["rows"]), "source_pdf_sha256": traffic_source["source_pdf_sha256"], "rank_file_signature": traffic_source["rank_file_signature"]}, "preview_rule": "AAI June 2025 traffic-report audited rank extraction matched against AAI airport-list objects"}, build_command="python tools/build_transport_country_real_packs.py --pack india_airport")
+    write_pack(pack_id, "airport", "point", {"airports": preview}, {"airports": gdf}, {"source_row_count": {"aai_airport_list_rows": len(official), "aai_traffic_rank_rows": len(traffic_source["rows"]), "osm_geometry_rows": len(osm)}, "matched_count": len(gdf), "unmatched_official_rows": unmatched[:80], "unmatched_geometry_rows": max(0, len(osm)-len(gdf)), "traffic_rank_source": {"path": rel(INDIA_TRAFFIC_RANK_PATH), "rows": len(traffic_source["rows"]), "source_pdf_sha256": traffic_source["source_pdf_sha256"], "rank_file_signature": traffic_source["rank_file_signature"]}, "preview_rule": "AAI June 2025 traffic-report audited rank extraction matched against AAI airport-list objects", "importance_rank_rule": "3 for audited traffic rank <= 20, 2 for <= 100, 1 for other matched AAI airports"}, build_command="python tools/build_transport_country_real_packs.py --pack india_airport")
+
+
+def build_germany_airport() -> None:
+    pack_id = "germany_airport"
+    path = DEFAULT_SOURCE_CACHE_ROOT / pack_id / "bkg_poi_open_flughaefen_2025-12.geojson"
+    source = gpd.read_file(path)
+    if source.crs is None:
+        source = source.set_crs("EPSG:4326")
+    source = source.to_crs("EPSG:4326")
+    rows = []
+    for index, row in source.iterrows():
+        properties = row.to_dict()
+        geom = representative_point(properties.get("geometry"))
+        if geom is None:
+            continue
+        name = normalize_text(
+            properties.get("name")
+            or properties.get("NAME")
+            or properties.get("objektname")
+            or properties.get("bezeichnung")
+            or properties.get("typ")
+            or "Flughafen"
+        )
+        rows.append(
+            {
+                "id": normalize_text(properties.get("poi_id") or properties.get("id") or f"de-airport-{index}"),
+                "name": name,
+                "icao": normalize_text(properties.get("icao_code") or properties.get("icao") or properties.get("ICAO")),
+                "facility_type": normalize_text(properties.get("typ") or properties.get("type") or "airport"),
+                "geometry": geom,
+            }
+        )
+    gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    if gdf.empty:
+        raise SystemExit(f"{pack_id}: BKG POI-Open airport layer produced no rows.")
+    gdf = apply_point_importance(gdf, "airport", [2] * len(gdf))
+    write_pack(
+        pack_id,
+        "airport",
+        "point",
+        {"airports": gdf},
+        {"airports": gdf},
+        {
+            "source_row_count": {"bkg_poi_open_airports": len(source)},
+            "matched_count": len(gdf),
+            "preview_rule": "BKG POI-Open airport WFS rows are already airport-scoped.",
+            "importance_rank_rule": "2 for BKG POI-Open airport-scoped rows without traffic ranking fields",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack germany_airport",
+    )
+
+
+def build_france_airport() -> None:
+    build_unlocode_point_pack(
+        "france_airport",
+        family="airport",
+        collection_key="airports",
+        country_code="FR",
+        function_index=3,
+        marker="4",
+        preview_limit=160,
+    )
+
+
+def build_uk_airport() -> None:
+    build_unlocode_point_pack(
+        "uk_airport",
+        family="airport",
+        collection_key="airports",
+        country_code="GB",
+        function_index=3,
+        marker="4",
+        preview_limit=160,
+    )
+
+
+def build_usa_port() -> None:
+    build_unlocode_point_pack("usa_port", family="port", collection_key="ports", country_code="US", function_index=0, marker="1", preview_limit=260)
+
+
+def build_germany_port() -> None:
+    build_unlocode_point_pack("germany_port", family="port", collection_key="ports", country_code="DE", function_index=0, marker="1", preview_limit=220)
+
+
+def build_france_port() -> None:
+    build_unlocode_point_pack("france_port", family="port", collection_key="ports", country_code="FR", function_index=0, marker="1", preview_limit=220)
+
+
+def build_uk_port() -> None:
+    build_unlocode_point_pack("uk_port", family="port", collection_key="ports", country_code="GB", function_index=0, marker="1", preview_limit=220)
+
+
+def build_china_port() -> None:
+    build_unlocode_point_pack("china_port", family="port", collection_key="ports", country_code="CN", function_index=0, marker="1", preview_limit=260)
+
+
+def build_india_port() -> None:
+    build_unlocode_point_pack("india_port", family="port", collection_key="ports", country_code="IN", function_index=0, marker="1", preview_limit=220)
+
+
+def build_russia_port() -> None:
+    build_unlocode_point_pack("russia_port", family="port", collection_key="ports", country_code="RU", function_index=0, marker="1", preview_limit=220)
+
+
+def build_germany_energy_facilities() -> None:
+    pack_id = "germany_energy_facilities"
+    zip_path = dlm_source_zip()
+    rows = []
+    raw_rows = 0
+    with zipfile.ZipFile(zip_path) as z, z.open("daten/BDA_51002.xml") as handle:
+        for _, elem in ET.iterparse(handle, events=("end",)):
+            if elem.tag.endswith("AX_BauwerkOderAnlageFuerIndustrieUndGewerbe"):
+                raw_rows += 1
+                function_code = first_text(elem, "bauwerksfunktion")
+                if function_code != "2530":
+                    elem.clear()
+                    continue
+                geom = dlm_point_from_pos(first_text(elem, "pos"))
+                if geom is not None:
+                    rows.append(
+                        {
+                            "id": get_gml_id(elem),
+                            "name": first_text(elem, "name") or first_text(elem, "bezeichnung") or "Kraftwerk",
+                            "facility_type": "power_plant",
+                            "facility_subtype": "thermal_power",
+                            "status": "existing",
+                            "source_function_code": function_code,
+                            "geometry": geom,
+                        }
+                    )
+                elem.clear()
+    gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    if gdf.empty:
+        raise SystemExit(f"{pack_id}: DLM250 energy facility selection is empty.")
+    write_pack(
+        pack_id,
+        "energy_facilities",
+        "point",
+        {"energy_facilities": gdf},
+        {"energy_facilities": gdf},
+        {
+            "source_row_count": {"AX_BauwerkOderAnlageFuerIndustrieUndGewerbe": raw_rows},
+            "matched_count": len(gdf),
+            "preview_rule": "DLM250 bauwerksfunktion 2530 power-plant objects.",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack germany_energy_facilities",
+    )
+
+
+def build_germany_mineral_resources() -> None:
+    pack_id = "germany_mineral_resources"
+    zip_path = dlm_source_zip()
+    rows = []
+    raw_rows = 0
+    with zipfile.ZipFile(zip_path) as z, z.open("daten/BDA_41005.xml") as handle:
+        for _, elem in ET.iterparse(handle, events=("end",)):
+            if elem.tag.endswith("AX_TagebauGrubeSteinbruch"):
+                raw_rows += 1
+                polygon = dlm_polygon_from_pos_list(first_text(elem, "posList"))
+                geom = representative_point(polygon)
+                if geom is not None:
+                    rows.append(
+                        {
+                            "id": get_gml_id(elem),
+                            "name": first_text(elem, "name") or "Tagebau/Steinbruch",
+                            "resource_type": "quarry_open_pit",
+                            "normalized_resource_group": "construction_materials",
+                            "geometry": geom,
+                        }
+                    )
+                elem.clear()
+    gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    if gdf.empty:
+        raise SystemExit(f"{pack_id}: DLM250 mineral selection is empty.")
+    write_pack(
+        pack_id,
+        "mineral_resources",
+        "point",
+        {"mineral_resources": gdf},
+        {"mineral_resources": gdf},
+        {
+            "source_row_count": {"AX_TagebauGrubeSteinbruch": raw_rows},
+            "matched_count": len(gdf),
+            "preview_rule": "DLM250 quarry/open-pit polygons converted to representative points.",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack germany_mineral_resources",
+    )
+
+
+def build_germany_industrial_zones() -> None:
+    pack_id = "germany_industrial_zones"
+    zip_path = dlm_source_zip()
+    rows = []
+    raw_rows = 0
+    with zipfile.ZipFile(zip_path) as z, z.open("daten/BDA_41002.xml") as handle:
+        for _, elem in ET.iterparse(handle, events=("end",)):
+            if elem.tag.endswith("AX_IndustrieUndGewerbeflaeche"):
+                raw_rows += 1
+                geom = dlm_polygon_from_pos_list(first_text(elem, "posList"))
+                if geom is not None:
+                    rows.append(
+                        {
+                            "id": get_gml_id(elem),
+                            "name": first_text(elem, "name") or "Industrie- und Gewerbeflaeche",
+                            "zone_type": "industrial_commercial_area",
+                            "site_class": "industrial_landuse",
+                            "coastal_inland_label": "inland",
+                            "geometry": geom,
+                        }
+                    )
+                elem.clear()
+    gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    if gdf.empty:
+        raise SystemExit(f"{pack_id}: DLM250 industrial zone selection is empty.")
+    preview = gdf.head(3500).copy()
+    write_pack(
+        pack_id,
+        "industrial_zones",
+        "polygon",
+        {"industrial_zones": preview},
+        {"industrial_zones": gdf},
+        {
+            "source_row_count": {"AX_IndustrieUndGewerbeflaeche": raw_rows},
+            "matched_count": len(gdf),
+            "preview_rule": "First 3500 DLM250 industrial/commercial polygons in source order; full pack keeps all.",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack germany_industrial_zones",
+    )
+
+
+def build_germany_logistics_hubs() -> None:
+    pack_id = "germany_logistics_hubs"
+    zip_path = dlm_source_zip()
+    rows = []
+    raw_rows = 0
+    with zipfile.ZipFile(zip_path) as z, z.open("daten/BDA_51004.xml") as handle:
+        for _, elem in ET.iterparse(handle, events=("end",)):
+            if elem.tag.endswith("AX_Transportanlage"):
+                raw_rows += 1
+                geom = representative_point(dlm_line_from_pos_list(first_text(elem, "posList")))
+                if geom is not None:
+                    rows.append(
+                        {
+                            "id": get_gml_id(elem),
+                            "name": first_text(elem, "name") or first_text(elem, "bezeichnung") or "Transportanlage",
+                            "hub_type": "truck_terminal",
+                            "source_function_code": first_text(elem, "bauwerksfunktion") or "",
+                            "operator_classification": "other",
+                            "geometry": geom,
+                        }
+                    )
+                elem.clear()
+    gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    if gdf.empty:
+        raise SystemExit(f"{pack_id}: DLM250 logistics hub selection is empty.")
+    write_pack(
+        pack_id,
+        "logistics_hubs",
+        "point",
+        {"logistics_hubs": gdf},
+        {"logistics_hubs": gdf},
+        {
+            "source_row_count": {"AX_Transportanlage": raw_rows},
+            "matched_count": len(gdf),
+            "preview_rule": "DLM250 transport facility geometry converted to representative points.",
+        },
+        build_command="python tools/build_transport_country_real_packs.py --pack germany_logistics_hubs",
+    )
 
 
 BUILDERS = {
     "germany_road": build_germany_road,
     "uk_road": build_uk_road,
+    "usa_road": build_usa_road,
     "france_rail": build_france_rail,
+    "germany_rail": build_germany_rail,
     "usa_airport": build_usa_airport,
     "china_airport": build_china_airport,
     "russia_airport": build_russia_airport,
     "india_airport": build_india_airport,
+    "germany_airport": build_germany_airport,
+    "france_airport": build_france_airport,
+    "uk_airport": build_uk_airport,
+    "usa_port": build_usa_port,
+    "germany_port": build_germany_port,
+    "france_port": build_france_port,
+    "uk_port": build_uk_port,
+    "china_port": build_china_port,
+    "india_port": build_india_port,
+    "russia_port": build_russia_port,
+    "germany_energy_facilities": build_germany_energy_facilities,
+    "germany_mineral_resources": build_germany_mineral_resources,
+    "germany_industrial_zones": build_germany_industrial_zones,
+    "germany_logistics_hubs": build_germany_logistics_hubs,
 }
 
 

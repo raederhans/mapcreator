@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-06-01T00:13:55.089710Z",
+  "adapter_id": "france_airport_v1",
+  "pack_id": "france_airport",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "UN/LOCODE 2025-1 function-coded airport entries",
+  "geometry_truth": "UN/LOCODE coordinates for France airport-function locations",
+  "source_signature": {
+    "unlocode_2025_1_release": {
+      "filename": "unlocode_2025-1_artifacts.zip",
+      "path": ".runtime/source-cache/transport/unlocode/unlocode_2025-1_artifacts.zip",
+      "size_bytes": 13507338,
+      "sha256": "ad409fc7149b10f98d61190c34d9daf78b78bb8b31464cc66de1a89d09b01b5d"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "airports": 141
+    },
+    "full": {
+      "airports": 141
+    }
+  },
+  "source_row_count": {
+    "unlocode_country_rows": 142
+  },
+  "matched_count": 141,
+  "preview_rule": "UN/LOCODE status/date ordering capped at 160",
+  "importance_rank_rule": "3 for airport rows with IATA, 2 for AA/AC/AI status rows, 1 for other coordinate rows"
+}

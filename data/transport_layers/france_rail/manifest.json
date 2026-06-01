@@ -1,10 +1,11 @@
 {
   "adapter_id": "france_rail_v1",
+  "pack_id": "france_rail",
   "family": "rail",
   "geometry_kind": "line",
   "country": "France",
   "schema_version": 1,
-  "generated_at": "2026-05-12T22:27:35.401530Z",
+  "generated_at": "2026-05-31T22:59:18.913172Z",
   "recipe_path": "data/transport_layers/france_rail/source_recipe.manual.json",
   "distribution_tier": "single_pack",
   "paths": {
@@ -52,6 +53,21 @@
   "build_command": "python tools/build_transport_country_real_packs.py --pack france_rail",
   "runtime_consumer": "transport_workbench_rail_preview",
   "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "rail",
+    "supported_keys": [
+      "railways",
+      "rail_stations_major"
+    ]
+  },
+  "sidecars": {
+    "rail_stations_major": {
+      "required": true
+    }
+  },
   "default_variant": "default",
   "variants": {
     "default": {
@@ -79,25 +95,5 @@
         }
       }
     }
-  },
-  "coverage_scope": "country",
-  "mainMapEligible": true,
-  "apply_bridge_supported": true,
-  "main_map_consumer": {
-    "consumer_id": "main_map_rail_country_overlay_v1",
-    "family": "rail",
-    "supported_keys": [
-      "railways",
-      "rail_stations_major"
-    ],
-    "mode": "country_overlay"
-  },
-  "sidecars": {
-    "rail_stations_major": {
-      "required": true,
-      "consumer": "main_map"
-    }
-  },
-  "country_label": "France",
-  "pack_id": "france_rail"
+  }
 }

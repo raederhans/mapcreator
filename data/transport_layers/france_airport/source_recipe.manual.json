@@ -1,0 +1,47 @@
+{
+  "version": "france_airport_real_sources_v1",
+  "pack_id": "france_airport",
+  "family": "airport",
+  "country": "France",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/unlocode",
+  "source_truth": "UN/LOCODE 2025-1 function-coded airport entries",
+  "geometry_truth": "UN/LOCODE coordinates for France airport-function locations",
+  "sources": [
+    {
+      "id": "unlocode_2025_1_release",
+      "role": "primary_airport_registry_geometry",
+      "expected_path": ".runtime/source-cache/transport/unlocode/unlocode_2025-1_artifacts.zip",
+      "url": "https://opensource.unicc.org/un/unece/uncefact/vocab-locode/-/jobs/artifacts/2025-1/download?job=package-release",
+      "license": "UNECE UN/LOCODE Terms and Conditions of Use",
+      "required_fields": [
+        "Country",
+        "Code",
+        "Name",
+        "Function",
+        "Coordinates"
+      ],
+      "filter_rule": "Keep France rows where UN/LOCODE Function position 4 is airport and coordinates are present.",
+      "notes": "",
+      "signature": {
+        "filename": "unlocode_2025-1_artifacts.zip",
+        "path": ".runtime/source-cache/transport/unlocode/unlocode_2025-1_artifacts.zip",
+        "size_bytes": 13507338,
+        "sha256": "ad409fc7149b10f98d61190c34d9daf78b78bb8b31464cc66de1a89d09b01b5d"
+      }
+    }
+  ],
+  "source_signature": {
+    "unlocode_2025_1_release": {
+      "filename": "unlocode_2025-1_artifacts.zip",
+      "path": ".runtime/source-cache/transport/unlocode/unlocode_2025-1_artifacts.zip",
+      "size_bytes": 13507338,
+      "sha256": "ad409fc7149b10f98d61190c34d9daf78b78bb8b31464cc66de1a89d09b01b5d"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "airports.preview.geojson",
+    "airports.geojson"
+  ]
+}

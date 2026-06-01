@@ -472,6 +472,7 @@ function createLineRenderOwnerHarness({ k = 4, roadLabelsEnabled = false, railLa
     showTransport: true,
     showRoad: true,
     showRail: true,
+    showPorts: true,
     zoomTransform: { k },
     styleConfig: {
       transportOverview: {
@@ -496,6 +497,14 @@ function createLineRenderOwnerHarness({ k = 4, roadLabelsEnabled = false, railLa
           scope: "mainline_plus_regional",
           importanceThreshold: "secondary",
         },
+        port: {
+          opacity: 1,
+          visualStrength: 0,
+          labelsEnabled: true,
+          labelDensity: "dense",
+          labelMode: "name",
+          importanceThreshold: "all",
+        },
       },
     },
     roadsData: {
@@ -514,6 +523,12 @@ function createLineRenderOwnerHarness({ k = 4, roadLabelsEnabled = false, railLa
       ],
     },
     railStationsMajorData: { type: "FeatureCollection", features: [] },
+    portsData: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", geometry: { type: "Point", coordinates: [0, 0] }, properties: { id: "global-port", name: "Global Port", importance_rank: 2 } },
+      ],
+    },
   };
   const hoverEntries = [];
   const owner = createTransportOverviewRenderOwner({
@@ -674,10 +689,16 @@ test("transport workbench apply patch exposes only main-map bridge fields", () =
     family: "airport",
     supportedKeys: ["airports"],
   }));
+  const portGate = createTransportPackSourceGateReport("usa_port", createApplyBridgeManifest({
+    packId: "usa_port",
+    family: "port",
+    supportedKeys: ["ports"],
+  }));
 
   assert.equal(roadGate.passed, true);
   assert.equal(railGate.passed, true);
   assert.equal(airportGate.passed, true);
+  assert.equal(portGate.passed, true);
 
   const roadPatch = resolveTransportOverviewPatchFromWorkbench("road", {
     activePackId: "germany_road",
@@ -723,6 +744,15 @@ test("transport workbench apply patch exposes only main-map bridge fields", () =
     baseOpacity: 84,
   });
   assert.deepEqual(airportPatch.dataLayerKeys, ["airports"]);
+
+  const portPatch = resolveTransportOverviewPatchFromWorkbench("port", {
+    activePackId: "usa_port",
+    packGateReport: portGate,
+    importanceThreshold: "national_core",
+    showLabels: true,
+    baseOpacity: 84,
+  });
+  assert.deepEqual(portPatch.dataLayerKeys, ["ports"]);
 
   const missingPortPack = getTransportWorkbenchOverviewBridgeSupport("port", {});
   assert.equal(missingPortPack.supported, false);
@@ -867,6 +897,32 @@ test("country rail overlay consumes rail_stations_major sidecar with pack-scoped
   const stationHoverUpdate = hoverEntries.findLast((entry) => entry.options?.packId === "france_rail");
   assert.equal(stationHoverUpdate?.options?.append, true);
   assert.equal(stationHoverUpdate?.entries?.[0]?.packId, "france_rail");
+});
+
+test("country port overlay consumes ports collection with pack-scoped hover keys", () => {
+  const zoom = 4;
+  const { metrics, owner, appRuntime, hoverEntries } = createLineRenderOwnerHarness({ k: zoom });
+  appRuntime.transportCountryOverlayState = {
+    status: "ready",
+    activePackId: "usa_port",
+    family: "port",
+    collectionsByLayer: {
+      ports: {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "Point", coordinates: [0.25, 0.25] }, properties: { id: "port-1", name: "Country Port", importance_rank: 2 } },
+        ],
+      },
+    },
+  };
+
+  owner.drawPortsLayer(zoom);
+
+  const portMetric = metrics.findLast((entry) => entry.name === "drawCountryPortsLayer");
+  assert.equal(portMetric?.detail?.visibleFeatureCount, 1);
+  const portHoverUpdate = hoverEntries.findLast((entry) => entry.options?.packId === "usa_port");
+  assert.equal(portHoverUpdate?.options?.append, true);
+  assert.equal(portHoverUpdate?.entries?.[0]?.packId, "usa_port");
 });
 
 

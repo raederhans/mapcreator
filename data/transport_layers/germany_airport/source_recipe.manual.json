@@ -1,0 +1,46 @@
+{
+  "version": "germany_airport_real_sources_v1",
+  "pack_id": "germany_airport",
+  "family": "airport",
+  "country": "Germany",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/germany_airport",
+  "source_truth": "BKG POI-Open airport WFS",
+  "geometry_truth": "BKG POI-Open flughaefen point features",
+  "sources": [
+    {
+      "id": "bkg_poi_open_airports_wfs",
+      "role": "primary_airport_registry_geometry",
+      "expected_path": ".runtime/source-cache/transport/germany_airport/bkg_poi_open_flughaefen_2025-12.geojson",
+      "url": "https://sgx.geodatenzentrum.de/wfs_poi_open?service=WFS&version=2.0.0&request=GetFeature&typeNames=poi-open:flughaefen&outputFormat=application/json",
+      "license": "Datenlizenz Deutschland Namensnennung 2.0",
+      "required_fields": [
+        "poi_id",
+        "icao_code",
+        "typ",
+        "geom"
+      ],
+      "filter_rule": "Use BKG airport POI features as Germany airport scope and coordinates.",
+      "notes": "",
+      "signature": {
+        "filename": "bkg_poi_open_flughaefen_2025-12.geojson",
+        "path": ".runtime/source-cache/transport/germany_airport/bkg_poi_open_flughaefen_2025-12.geojson",
+        "size_bytes": 17418,
+        "sha256": "90532c403b9af58469448491bebd9b1808223aff1f690a3650fa64b5d81f1511"
+      }
+    }
+  ],
+  "source_signature": {
+    "bkg_poi_open_airports_wfs": {
+      "filename": "bkg_poi_open_flughaefen_2025-12.geojson",
+      "path": ".runtime/source-cache/transport/germany_airport/bkg_poi_open_flughaefen_2025-12.geojson",
+      "size_bytes": 17418,
+      "sha256": "90532c403b9af58469448491bebd9b1808223aff1f690a3650fa64b5d81f1511"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "airports.preview.geojson",
+    "airports.geojson"
+  ]
+}

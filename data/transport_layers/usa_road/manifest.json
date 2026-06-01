@@ -1,0 +1,93 @@
+{
+  "adapter_id": "usa_road_v1",
+  "pack_id": "usa_road",
+  "family": "road",
+  "geometry_kind": "line",
+  "country": "United States",
+  "schema_version": 1,
+  "generated_at": "2026-05-31T22:51:44.732306Z",
+  "recipe_path": "data/transport_layers/usa_road/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "roads": "data/transport_layers/usa_road/roads.preview.topo.json",
+      "road_labels": "data/transport_layers/usa_road/road_labels.preview.geojson"
+    },
+    "full": {
+      "roads": "data/transport_layers/usa_road/roads.topo.json",
+      "road_labels": "data/transport_layers/usa_road/road_labels.geojson"
+    },
+    "build_audit": "data/transport_layers/usa_road/build_audit.json"
+  },
+  "source_signature": {
+    "census_tiger_2024_primary_roads": {
+      "filename": "tl_2024_us_primaryroads.zip",
+      "path": ".runtime/source-cache/transport/usa_road/tl_2024_us_primaryroads.zip",
+      "size_bytes": 38334565,
+      "sha256": "10ecc0a5978ac8f7cda970e85c150663b6f08d76bc7cab644975128b7be5c98c"
+    }
+  },
+  "recipe_version": "usa_road_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "roads": 9361,
+      "road_labels": 518
+    },
+    "full": {
+      "roads": 17522,
+      "road_labels": 2436
+    }
+  },
+  "clip_bbox": [
+    -158.104187,
+    17.974175,
+    -65.648979,
+    61.57107
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack usa_road",
+  "runtime_consumer": "transport_workbench_road_preview",
+  "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "road",
+    "supported_keys": [
+      "roads",
+      "road_labels"
+    ]
+  },
+  "sidecars": {
+    "road_labels": {
+      "required": true
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "roads": "data/transport_layers/usa_road/roads.preview.topo.json",
+          "road_labels": "data/transport_layers/usa_road/road_labels.preview.geojson"
+        },
+        "full": {
+          "roads": "data/transport_layers/usa_road/roads.topo.json",
+          "road_labels": "data/transport_layers/usa_road/road_labels.geojson"
+        },
+        "build_audit": "data/transport_layers/usa_road/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "roads": 9361,
+          "road_labels": 518
+        },
+        "full": {
+          "roads": 17522,
+          "road_labels": 2436
+        }
+      }
+    }
+  }
+}

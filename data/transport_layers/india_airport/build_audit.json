@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T22:39:56.105848Z",
+  "generated_at": "2026-06-01T00:13:54.503242Z",
   "adapter_id": "india_airport_v1",
   "pack_id": "india_airport",
   "source_policy": "real_source_cache_only",
@@ -131,5 +131,6 @@
       "sha256": "8c8492c998a494d86842c59ef0e4b9b0fb9a07152f2ecafab6e5166edb084922"
     }
   },
-  "preview_rule": "AAI June 2025 traffic-report audited rank extraction matched against AAI airport-list objects"
+  "preview_rule": "AAI June 2025 traffic-report audited rank extraction matched against AAI airport-list objects",
+  "importance_rank_rule": "3 for audited traffic rank <= 20, 2 for <= 100, 1 for other matched AAI airports"
 }

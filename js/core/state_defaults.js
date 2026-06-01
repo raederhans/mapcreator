@@ -9,7 +9,9 @@ import {
 } from "./transport_capability_registry.js";
 import {
   getDefaultMainMapPackIdForFamily,
+  getDefaultTransportWorkbenchPackIdForFamily,
   getTargetMainMapPackMeta,
+  getTransportWorkbenchPackMeta,
 } from "./transport_pack_resolver.js";
 import { normalizeHexColorWithFallback } from "./color_hex_utils.js";
 
@@ -1098,9 +1100,9 @@ function normalizeTransportWorkbenchDisplayConfigs(rawConfigs) {
 function normalizeTransportWorkbenchActivePackId(value, familyId = "road") {
   const normalizedFamilyId = String(familyId || "road").trim().toLowerCase() || "road";
   const candidate = String(value || "").trim().toLowerCase();
-  const meta = getTargetMainMapPackMeta(candidate);
+  const meta = getTransportWorkbenchPackMeta(candidate) || getTargetMainMapPackMeta(candidate);
   if (meta && meta.family === normalizedFamilyId) return meta.packId;
-  return getDefaultMainMapPackIdForFamily(normalizedFamilyId) || "";
+  return getDefaultTransportWorkbenchPackIdForFamily(normalizedFamilyId) || getDefaultMainMapPackIdForFamily(normalizedFamilyId) || "";
 }
 
 function normalizeTransportWorkbenchActivePackIdByFamily(rawValue, activeFamily = "road", activePackId = "") {

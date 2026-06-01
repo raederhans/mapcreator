@@ -37,6 +37,7 @@ function getMineralGroupKey(feature) {
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "mineral_resources",
   manifestUrl: resolveTransportManifestUrl("mineral_resources"),
+  resolveManifestUrl: (packId) => resolveTransportManifestUrl(packId || "mineral_resources"),
   packKey: "mineral_resources",
   selectionType: "mineral_resource",
   fullPackScaleThreshold: 1.24,

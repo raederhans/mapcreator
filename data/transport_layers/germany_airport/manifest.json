@@ -1,0 +1,79 @@
+{
+  "adapter_id": "germany_airport_v1",
+  "pack_id": "germany_airport",
+  "family": "airport",
+  "geometry_kind": "point",
+  "country": "Germany",
+  "schema_version": 1,
+  "generated_at": "2026-06-01T00:13:54.642291Z",
+  "recipe_path": "data/transport_layers/germany_airport/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "airports": "data/transport_layers/germany_airport/airports.preview.geojson"
+    },
+    "full": {
+      "airports": "data/transport_layers/germany_airport/airports.geojson"
+    },
+    "build_audit": "data/transport_layers/germany_airport/build_audit.json"
+  },
+  "source_signature": {
+    "bkg_poi_open_airports_wfs": {
+      "filename": "bkg_poi_open_flughaefen_2025-12.geojson",
+      "path": ".runtime/source-cache/transport/germany_airport/bkg_poi_open_flughaefen_2025-12.geojson",
+      "size_bytes": 17418,
+      "sha256": "90532c403b9af58469448491bebd9b1808223aff1f690a3650fa64b5d81f1511"
+    }
+  },
+  "recipe_version": "germany_airport_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "airports": 39
+    },
+    "full": {
+      "airports": 39
+    }
+  },
+  "clip_bbox": [
+    6.150405,
+    47.673089,
+    14.138934,
+    54.913875
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack germany_airport",
+  "runtime_consumer": "transport_workbench_airport_preview",
+  "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "airport",
+    "supported_keys": [
+      "airports"
+    ]
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "airports": "data/transport_layers/germany_airport/airports.preview.geojson"
+        },
+        "full": {
+          "airports": "data/transport_layers/germany_airport/airports.geojson"
+        },
+        "build_audit": "data/transport_layers/germany_airport/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "airports": 39
+        },
+        "full": {
+          "airports": 39
+        }
+      }
+    }
+  }
+}

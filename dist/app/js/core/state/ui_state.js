@@ -24,7 +24,7 @@ import {
   normalizeUrbanStyleConfig,
 } from "../state_defaults.js";
 import { listTransportRuntimeCapabilityFamilyIds } from "../transport_capability_registry.js";
-import { getDefaultMainMapPackIdForFamily } from "../transport_pack_resolver.js";
+import { getDefaultTransportWorkbenchPackIdForFamily } from "../transport_pack_resolver.js";
 import { createEmptySpecialZoneLayersState } from "../special_zone_layers.js";
 
 const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportRuntimeCapabilityFamilyIds();
@@ -42,12 +42,12 @@ export function createDefaultTransportWorkbenchUiState() {
   const activePackIdByFamily = Object.fromEntries(
     TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS
       .filter((familyId) => familyId !== "layers")
-      .map((familyId) => [familyId, getDefaultMainMapPackIdForFamily(familyId)])
+      .map((familyId) => [familyId, getDefaultTransportWorkbenchPackIdForFamily(familyId)])
   );
   return {
     open: false,
     activeFamily: "road",
-    activePackId: activePackIdByFamily.road || getDefaultMainMapPackIdForFamily("road"),
+    activePackId: activePackIdByFamily.road || getDefaultTransportWorkbenchPackIdForFamily("road"),
     activePackIdByFamily,
     activeInspectorTab: "inspect",
     sampleCountry: "Japan",

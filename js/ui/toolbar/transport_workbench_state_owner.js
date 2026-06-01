@@ -7,8 +7,8 @@ import {
   normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
 import {
-  getDefaultMainMapPackIdForFamily,
-  getTargetMainMapPackMeta,
+  getDefaultTransportWorkbenchPackIdForFamily,
+  getTransportWorkbenchPackMeta,
 } from "../../core/transport_pack_resolver.js";
 import {
   TRANSPORT_WORKBENCH_FAMILIES,
@@ -52,9 +52,9 @@ function resolveTransportWorkbenchPackIdForFamily(uiState, familyId) {
   const candidatePackId = String(
     uiState?.activePackIdByFamily?.[familyId] || uiState?.activePackId || ""
   ).trim().toLowerCase();
-  const candidatePackMeta = getTargetMainMapPackMeta(candidatePackId);
+  const candidatePackMeta = getTransportWorkbenchPackMeta(candidatePackId);
   if (candidatePackMeta?.family === familyId) return candidatePackMeta.packId;
-  return getDefaultMainMapPackIdForFamily(familyId);
+  return getDefaultTransportWorkbenchPackIdForFamily(familyId);
 }
 
 function writeTransportWorkbenchFamilyConfig(uiState, familyId, config) {
@@ -85,7 +85,7 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     const activePackId = resolveTransportWorkbenchPackIdForFamily(uiState, uiState.activeFamily);
     uiState.activePackId = activePackId;
     uiState.activePackIdByFamily[uiState.activeFamily] = activePackId;
-    const activePackMeta = getTargetMainMapPackMeta(activePackId);
+    const activePackMeta = getTransportWorkbenchPackMeta(activePackId);
     if (activePackMeta?.country) uiState.sampleCountry = activePackMeta.country;
     if (!uiState.previewCamera || typeof uiState.previewCamera !== "object") {
       uiState.previewCamera = {};
@@ -234,7 +234,7 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
   const setActivePackId = (packId) => {
     const uiState = ensureUiState();
     const normalizedPackId = String(packId || "").trim().toLowerCase();
-    const meta = getTargetMainMapPackMeta(normalizedPackId);
+    const meta = getTransportWorkbenchPackMeta(normalizedPackId);
     if (!meta) return null;
     uiState.activeFamily = meta.family;
     if (!uiState.activePackIdByFamily || typeof uiState.activePackIdByFamily !== "object") {
@@ -256,7 +256,7 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
       uiState.activePackIdByFamily = {};
     }
     uiState.activePackIdByFamily[activeFamily] = activePackId;
-    const activePackMeta = getTargetMainMapPackMeta(activePackId);
+    const activePackMeta = getTransportWorkbenchPackMeta(activePackId);
     if (activePackMeta?.country) uiState.sampleCountry = activePackMeta.country;
     return activeFamily;
   };

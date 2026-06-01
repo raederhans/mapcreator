@@ -1,10 +1,11 @@
 {
   "adapter_id": "uk_road_v1",
+  "pack_id": "uk_road",
   "family": "road",
   "geometry_kind": "line",
   "country": "United Kingdom",
   "schema_version": 1,
-  "generated_at": "2026-05-12T21:26:05.097682Z",
+  "generated_at": "2026-05-31T22:50:51.041990Z",
   "recipe_path": "data/transport_layers/uk_road/source_recipe.manual.json",
   "distribution_tier": "single_pack",
   "paths": {
@@ -36,11 +37,11 @@
   "feature_counts": {
     "preview": {
       "roads": 37769,
-      "road_labels": 709
+      "road_labels": 708
     },
     "full": {
       "roads": 116594,
-      "road_labels": 3570
+      "road_labels": 3569
     }
   },
   "clip_bbox": [
@@ -52,6 +53,21 @@
   "build_command": "python tools/build_transport_country_real_packs.py --pack uk_road",
   "runtime_consumer": "transport_workbench_road_preview",
   "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "road",
+    "supported_keys": [
+      "roads",
+      "road_labels"
+    ]
+  },
+  "sidecars": {
+    "road_labels": {
+      "required": true
+    }
+  },
   "default_variant": "default",
   "variants": {
     "default": {
@@ -71,33 +87,13 @@
       "feature_counts": {
         "preview": {
           "roads": 37769,
-          "road_labels": 709
+          "road_labels": 708
         },
         "full": {
           "roads": 116594,
-          "road_labels": 3570
+          "road_labels": 3569
         }
       }
     }
-  },
-  "coverage_scope": "country",
-  "mainMapEligible": true,
-  "apply_bridge_supported": true,
-  "main_map_consumer": {
-    "consumer_id": "main_map_road_country_overlay_v1",
-    "family": "road",
-    "supported_keys": [
-      "roads",
-      "road_labels"
-    ],
-    "mode": "country_overlay"
-  },
-  "sidecars": {
-    "road_labels": {
-      "required": true,
-      "consumer": "main_map"
-    }
-  },
-  "country_label": "United Kingdom",
-  "pack_id": "uk_road"
+  }
 }

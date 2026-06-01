@@ -1,0 +1,45 @@
+{
+  "version": "germany_mineral_resources_real_sources_v1",
+  "pack_id": "germany_mineral_resources",
+  "family": "mineral_resources",
+  "country": "Germany",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/germany_road",
+  "source_truth": "BKG DLM250 quarry and open-pit objects",
+  "geometry_truth": "BKG DLM250 AX_TagebauGrubeSteinbruch polygons converted to representative points",
+  "sources": [
+    {
+      "id": "bkg_dlm250_compact_nas_bda",
+      "role": "primary_mineral_geometry",
+      "expected_path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "url": "https://daten.gdz.bkg.bund.de/produkte/dlm/dlm250/aktuell/dlm250.utm32s.nas_bda.kompakt.zip",
+      "license": "Datenlizenz Deutschland Namensnennung 2.0",
+      "required_fields": [
+        "AX_TagebauGrubeSteinbruch",
+        "name",
+        "posList"
+      ],
+      "filter_rule": "Build resource points from official quarry/open-pit polygons.",
+      "notes": "",
+      "signature": {
+        "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+        "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+        "size_bytes": 199176519,
+        "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+      }
+    }
+  ],
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "mineral_resources.preview.geojson",
+    "mineral_resources.geojson"
+  ]
+}

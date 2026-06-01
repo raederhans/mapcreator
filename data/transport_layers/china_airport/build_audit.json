@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T21:26:31.015924Z",
+  "generated_at": "2026-06-01T00:13:48.136361Z",
   "adapter_id": "china_airport_v1",
   "pack_id": "china_airport",
   "source_policy": "real_source_cache_only",
@@ -72,5 +72,6 @@
     "嘉義機場"
   ],
   "unmatched_geometry_rows": 566,
-  "preview_rule": "top 80 CAAC passenger-throughput airports after strict official-name coordinate matching; Taiwan CAA objects join full output"
+  "preview_rule": "top 80 CAAC passenger-throughput airports after strict official-name coordinate matching; Taiwan CAA objects join full output",
+  "importance_rank_rule": "3 for CAAC passenger rank <= 30, 2 for <= 80, 1 for other matched airports"
 }
