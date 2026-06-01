@@ -6245,6 +6245,10 @@
       "size_bytes": 1172
     },
     {
+      "path": "app/js/core/export_artifact_package.js",
+      "size_bytes": 4987
+    },
+    {
       "path": "app/js/core/feature_identity.js",
       "size_bytes": 938
     },
@@ -6254,7 +6258,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 40018
+      "size_bytes": 41733
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6758,7 +6762,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 76823
+      "size_bytes": 77166
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -6850,7 +6854,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 33920
+      "size_bytes": 33731
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -6934,7 +6938,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 134714
+      "size_bytes": 137629
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -7021,6 +7025,14 @@
       "size_bytes": 279708
     },
     {
+      "path": "app/vendor/fflate.browser.js",
+      "size_bytes": 93614
+    },
+    {
+      "path": "app/vendor/fflate.LICENSE.txt",
+      "size_bytes": 1089
+    },
+    {
       "path": "app/vendor/milsymbol.js",
       "size_bytes": 861744
     },
@@ -7074,7 +7086,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 223933
+      "size_bytes": 224209
     },
     {
       "path": "styles.css",
@@ -7091,5 +7103,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1015943599
+  "total_bytes": 1016048349
 }

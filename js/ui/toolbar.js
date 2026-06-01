@@ -30,6 +30,7 @@ import {
   getPaletteSourceOptions,
   normalizeHexColor,
 } from "../core/palette_manager.js";
+import { buildExportArtifactPackage } from "../core/export_artifact_package.js";
 import { ensureActiveScenarioOptionalLayerLoaded } from "../core/scenario_resources.js";
 import { resetScenarioToBaselineCommand } from "../core/scenario_dispatcher.js";
 import { toggleLanguage, updateUIText, t } from "./i18n.js";
@@ -1748,7 +1749,9 @@ function initToolbar({ render } = {}) {
     buildSingleExportSourceCanvas: (...args) => buildSingleExportSourceCanvas(...args),
     applyExportAdjustmentsToCanvas: (...args) => applyExportAdjustmentsToCanvas(...args),
     buildPerLayerExportOutputs: (...args) => buildPerLayerExportOutputs(...args),
+    buildPerLayerExportPackage: (...args) => buildPerLayerExportPackage(...args),
     buildBakePackOutputs: (...args) => buildBakePackOutputs(...args),
+    buildBakePackPackage: (...args) => buildBakePackPackage(...args),
     buildCompositeExportCanvas: (...args) => buildCompositeExportCanvas(...args),
     getSelectedExportScale: (...args) => getSelectedExportScale(...args),
     triggerCanvasDownload: (...args) => triggerCanvasDownload(...args),
@@ -2628,6 +2631,50 @@ function initToolbar({ render } = {}) {
     return outputs;
   };
 
+  const buildExportArtifactScenarioContext = () => {
+    const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+    if (!scenarioId) return null;
+    return {
+      id: scenarioId,
+      version: Number(runtimeState.activeScenarioManifest?.version || 1) || 1,
+      baselineHash: String(runtimeState.scenarioBaselineHash || "").trim(),
+    };
+  };
+
+  const buildExportArtifactProjectContext = () => ({
+    dirtyRevision: Number(runtimeState.dirtyRevision || 0) || 0,
+    colorRevision: Number(runtimeState.colorRevision || 0) || 0,
+    topologyRevision: Number(runtimeState.topologyRevision || 0) || 0,
+  });
+
+  const buildExportUiManifestSnapshot = (exportUi) => ({
+    target: exportUi.target,
+    format: exportUi.format,
+    scale: exportUi.scale,
+    layerOrder: [...(exportUi.layerOrder || [])],
+    visibility: { ...(exportUi.visibility || {}) },
+    textVisibility: { ...(exportUi.textVisibility || {}) },
+    adjustments: { ...(exportUi.adjustments || {}) },
+    bakeArtifacts: Array.isArray(exportUi.bakeArtifacts) ? exportUi.bakeArtifacts : [],
+  });
+
+  const buildPerLayerExportPackage = async (exportUi, scaleMultiplier) => {
+    const outputs = await buildPerLayerExportOutputs(exportUi, scaleMultiplier);
+    return buildExportArtifactPackage({
+      artifactKind: "per-layer",
+      fileStem: "map_layers",
+      scenario: buildExportArtifactScenarioContext(),
+      project: buildExportArtifactProjectContext(),
+      exportUi: buildExportUiManifestSnapshot(exportUi),
+      files: outputs.map((output) => ({
+        path: `layers/map_layer_${output.id}.png`,
+        role: "layer",
+        mime: "image/png",
+        canvas: output.canvas,
+      })),
+    });
+  };
+
   const buildBakePackOutputs = async (exportUi, scaleMultiplier) => {
     const outputs = [];
     const bakeLayerIds = getBakePackLayerIds(exportUi);
@@ -2660,6 +2707,33 @@ function initToolbar({ render } = {}) {
       fileStem: "map_bake_manifest",
     });
     return outputs;
+  };
+
+  const buildBakePackPackage = async (exportUi, scaleMultiplier) => {
+    const outputs = await buildBakePackOutputs(exportUi, scaleMultiplier);
+    return buildExportArtifactPackage({
+      artifactKind: "bake-pack",
+      fileStem: "map_bake_pack",
+      scenario: buildExportArtifactScenarioContext(),
+      project: buildExportArtifactProjectContext(),
+      exportUi: buildExportUiManifestSnapshot(exportUi),
+      files: outputs.map((output) => {
+        if (output.canvas) {
+          return {
+            path: `layers/map_bake_${output.id}.png`,
+            role: "bake-layer",
+            mime: "image/png",
+            canvas: output.canvas,
+          };
+        }
+        return {
+          path: `${output.fileStem || output.id}.${output.extension || "json"}`,
+          role: "legacy-metadata",
+          mime: "application/json",
+          blob: output.blob,
+        };
+      }),
+    });
   };
 
   const triggerCanvasDownload = (canvas, extension, fileStem) => {

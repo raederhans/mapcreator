@@ -104,6 +104,12 @@ class PublishScenarioOutputsTest(unittest.TestCase):
             self.assertEqual(published_patch["generated_at"], "publish-pass")
             self.assertEqual(result["geoLocale"]["publishMode"], "copied_from_checkpoint")
             self.assertEqual(build_state_payload["published_targets"][0]["target"], "geo-locale")
+            artifact_manifest = build_state_payload["published_targets"][0]["artifact_manifest"]
+            self.assertEqual(artifact_manifest["artifactKind"], "scenario-publish")
+            self.assertEqual(artifact_manifest["publishedTarget"]["target"], "geo-locale")
+            self.assertEqual(artifact_manifest["scenario"]["id"], "tno_1962")
+            self.assertEqual(artifact_manifest["generatedAt"], build_state_payload["published_targets"][0]["published_at"])
+            self.assertGreaterEqual(len(artifact_manifest["files"]), 1)
 
     def test_publish_startup_assets_target_for_tno_copies_checkpoint_bundles(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

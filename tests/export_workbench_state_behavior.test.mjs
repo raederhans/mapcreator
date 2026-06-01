@@ -2,11 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+import { strFromU8, unzipSync } from "../vendor/fflate.browser.js";
+import { buildExportArtifactPackage } from "../js/core/export_artifact_package.js";
 import { normalizeExportWorkbenchUiState } from "../js/core/state_defaults.js";
 import { replaceExportWorkbenchUiState } from "../js/core/state/ui_state.js";
 import {
+  ensureExportWorkbenchUiState,
   getExportAnnotationCountSummary,
   getExportAnnotationFamilyCounts,
+  resolveExportPassSequence,
 } from "../js/ui/toolbar/export_workbench_controller.js";
 
 test("export workbench state normalizes legacy visibility and text aliases", () => {
@@ -60,6 +64,94 @@ test("replaceExportWorkbenchUiState writes normalized export workbench state", (
   assert.equal(target.exportWorkbenchUi, nextState);
   assert.equal(nextState.includeTextLayer, true);
   assert.equal(nextState.textVisibility["svg-annotations"], true);
+});
+
+test("export workbench state normalizes layer order aliases and bake artifacts", () => {
+  const normalized = normalizeExportWorkbenchUiState({
+    layerOrder: ["paint", "background", "paint", "unknown"],
+    bakeArtifacts: [
+      {
+        layerId: "color",
+        updatedAt: 12.4,
+        dependencies: ["a", "a", "b"],
+        canvasSize: { width: 10.6, height: -3 },
+      },
+      { layerId: "unknown", dependencies: ["drop"] },
+    ],
+  });
+
+  assert.deepEqual(normalized.layerOrder, ["political", "background", "context", "effects", "labels"]);
+  assert.deepEqual(normalized.bakeArtifacts, [{
+    layerId: "color",
+    updatedAt: 12,
+    dependencies: ["a", "b"],
+    canvasSize: { width: 11, height: 0 },
+    dirtyFlag: true,
+  }]);
+});
+
+test("export pass sequence follows normalized order and visibility", () => {
+  const passNames = ["background", "physicalBase", "political", "labels"];
+  const sequence = resolveExportPassSequence({
+    layerOrder: ["labels", "political", "background", "effects"],
+    visibility: {
+      labels: true,
+      political: true,
+      background: false,
+      effects: true,
+    },
+  }, passNames);
+
+  assert.deepEqual(sequence, ["labels", "physicalBase", "political"]);
+});
+
+test("export workbench runtime state keeps bake cache runtime-only", () => {
+  const existingCache = new Map([["color", { hash: "abc" }]]);
+  const state = {
+    exportWorkbenchUi: {
+      bakeCache: existingCache,
+      bakeArtifacts: [{ layerId: "text", dependencies: ["x", "x"], canvasSize: { width: 2, height: 3 } }],
+    },
+  };
+
+  const normalized = ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState);
+
+  assert.equal(normalized.bakeCache, existingCache);
+  assert.deepEqual(normalized.bakeArtifacts, [{
+    layerId: "text",
+    updatedAt: 0,
+    dependencies: ["x"],
+    canvasSize: { width: 2, height: 3 },
+    dirtyFlag: true,
+  }]);
+
+  const fromJson = ensureExportWorkbenchUiState({ exportWorkbenchUi: { bakeCache: {} } }, normalizeExportWorkbenchUiState);
+  assert.ok(fromJson.bakeCache instanceof Map);
+});
+
+test("export artifact package writes a zip manifest and payload files", async () => {
+  const artifact = await buildExportArtifactPackage({
+    artifactKind: "per-layer",
+    fileStem: "map layers",
+    scenario: { id: "tno_1962" },
+    exportUi: { target: "per-layer" },
+    files: [{
+      path: "layers/political.png",
+      role: "layer",
+      mime: "image/png",
+      text: "png-bytes",
+    }],
+  });
+  const zipBytes = new Uint8Array(await artifact.blob.arrayBuffer());
+  const entries = unzipSync(zipBytes);
+  const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
+
+  assert.equal(artifact.fileStem, "map-layers");
+  assert.equal(manifest.artifactKind, "per-layer");
+  assert.equal(manifest.scenario.id, "tno_1962");
+  assert.equal(manifest.files[0].path, "layers/political.png");
+  assert.equal(manifest.files[0].byteLength, 9);
+  assert.equal(strFromU8(entries["layers/political.png"]), "png-bytes");
 });
 
 test("export annotation family counts use strategic overlay selectors", () => {

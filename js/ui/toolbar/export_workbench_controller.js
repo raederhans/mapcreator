@@ -88,6 +88,9 @@ function getExportAnnotationCountSummary(mapSvg = null) {
 }
 
 function ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState) {
+  const existingBakeCache = state.exportWorkbenchUi?.bakeCache instanceof Map
+    ? state.exportWorkbenchUi.bakeCache
+    : null;
   const exportWorkbenchUi = replaceExportWorkbenchUiState(state, state.exportWorkbenchUi, {
     normalizeState: normalizeExportWorkbenchUiState,
   });
@@ -119,9 +122,7 @@ function ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState) {
     saturation: Math.max(0, Math.min(200, Math.round(Number(adjustments.saturation) || 100))),
     clarity: Math.max(0, Math.min(200, Math.round(Number(adjustments.clarity) || 100))),
   };
-  exportWorkbenchUi.bakeCache = exportWorkbenchUi.bakeCache instanceof Map
-    ? exportWorkbenchUi.bakeCache
-    : new Map();
+  exportWorkbenchUi.bakeCache = existingBakeCache || new Map();
   return exportWorkbenchUi;
 }
 
@@ -179,7 +180,9 @@ function createExportWorkbenchController({
   buildSingleExportSourceCanvas,
   applyExportAdjustmentsToCanvas,
   buildPerLayerExportOutputs,
+  buildPerLayerExportPackage,
   buildBakePackOutputs,
+  buildBakePackPackage,
   buildCompositeExportCanvas,
   getSelectedExportScale,
   triggerCanvasDownload,
@@ -601,27 +604,17 @@ function createExportWorkbenchController({
       }
       const exportTargetKind = exportUi.target;
       if (exportTargetKind === "per-layer") {
-        const perLayerOutputs = await buildPerLayerExportOutputs(exportUi, scaleMultiplier);
-        perLayerOutputs.forEach((output) => {
-          triggerCanvasDownload(output.canvas, "png", `map_layer_${output.id}`);
-        });
-        showToast(t("Layer export finished.", "ui"), {
-          title: t("Layers exported", "ui"),
+        const layerPackage = await buildPerLayerExportPackage(exportUi, scaleMultiplier);
+        triggerBlobDownload(layerPackage.blob, layerPackage.extension, layerPackage.fileStem);
+        showToast(t("Layer package downloaded.", "ui"), {
+          title: t("Layer package exported", "ui"),
           tone: "success",
         });
       } else if (exportTargetKind === "bake-pack") {
-        const bakeOutputs = await buildBakePackOutputs(exportUi, scaleMultiplier);
-        bakeOutputs.forEach((output) => {
-          if (output.canvas) {
-            triggerCanvasDownload(output.canvas, "png", `map_bake_${output.id}`);
-            return;
-          }
-          if (output.blob) {
-            triggerBlobDownload(output.blob, output.extension || "json", output.fileStem || output.id);
-          }
-        });
+        const bakePackage = await buildBakePackPackage(exportUi, scaleMultiplier);
+        triggerBlobDownload(bakePackage.blob, bakePackage.extension, bakePackage.fileStem);
         renderExportWorkbenchUi(true);
-        showToast(t("Bake pack downloaded as multiple files.", "ui"), {
+        showToast(t("Bake package downloaded.", "ui"), {
           title: t("Bake pack exported", "ui"),
           tone: "success",
         });

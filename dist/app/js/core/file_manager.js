@@ -19,6 +19,7 @@ import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import { clearDirty } from "./dirty_state.js";
+import { buildExportArtifactManifest } from "./export_artifact_package.js";
 import {
   normalizeSpecialZoneMembershipBrushModeState,
   normalizeSpecialZoneLayersState,
@@ -452,9 +453,10 @@ function normalizeUnitCounters(rawCounters) {
 class FileManager {
   static buildProjectPayload(appState) {
     if (!appState) return null;
+    const timestamp = Date.now();
     // export 的职责是把当前 runtimeState 收敛成稳定 schema。
     // 这里宁可集中做一次 normalize，也不要让读取方承担多套历史字段和 UI 派生状态。
-    return {
+    const payload = {
       schemaVersion: 21,
       countryBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       featureOverrides: appState.visualOverrides || appState.featureOverrides || {},
@@ -548,8 +550,26 @@ class FileManager {
         }
         : null,
       releasableBoundaryVariantByTag: normalizeBoundaryVariantSelectionMap(appState.releasableBoundaryVariantByTag),
-      timestamp: Date.now(),
+      timestamp,
     };
+    payload.exportHandoff = buildExportArtifactManifest({
+      artifactKind: "project-json",
+      generatedAt: new Date(timestamp).toISOString(),
+      scenario: payload.scenario,
+      project: {
+        schemaVersion: payload.schemaVersion,
+        timestamp: payload.timestamp,
+      },
+      exportUi: payload.exportWorkbenchUi,
+      files: [{
+        path: "map_project.json",
+        role: "editable-project",
+        mime: "application/json",
+        byteLength: 0,
+        checksum: "created-at-download",
+      }],
+    });
+    return payload;
   }
 
   static exportProject(appState) {
@@ -721,6 +741,24 @@ class FileManager {
             data.scenario = null;
           }
         }
+        data.exportHandoff = data.exportHandoff && typeof data.exportHandoff === "object"
+          ? buildExportArtifactManifest({
+            artifactKind: data.exportHandoff.artifactKind || "project-json",
+            generatedAt: data.exportHandoff.generatedAt || new Date().toISOString(),
+            scenario: data.scenario,
+            project: data.exportHandoff.project && typeof data.exportHandoff.project === "object"
+              ? {
+                schemaVersion: Number(data.exportHandoff.project.schemaVersion || data.schemaVersion || 21) || 21,
+                timestamp: Number(data.exportHandoff.project.timestamp || data.timestamp || 0) || 0,
+              }
+              : {
+                schemaVersion: Number(data.schemaVersion || 21) || 21,
+                timestamp: Number(data.timestamp || 0) || 0,
+              },
+            exportUi: data.exportWorkbenchUi,
+            files: Array.isArray(data.exportHandoff.files) ? data.exportHandoff.files : [],
+          })
+          : null;
         data.releasableBoundaryVariantByTag = normalizeBoundaryVariantSelectionMap(data.releasableBoundaryVariantByTag);
         if (!data.transportWorkbenchUi || typeof data.transportWorkbenchUi !== "object") {
           data.transportWorkbenchUi = null;

@@ -151,6 +151,8 @@ def update_scenario_build_state(
     stage_signature: dict[str, object] | None = None,
     published_target: str | None = None,
     published_files: list[str] | tuple[str, ...] | None = None,
+    published_artifact_manifest: dict[str, object] | None = None,
+    published_at: str | None = None,
 ) -> dict[str, object]:
     resolved_build_dir = Path(build_dir).resolve()
     state_path = resolved_build_dir / SCENARIO_BUILD_STATE_FILENAME
@@ -170,8 +172,10 @@ def update_scenario_build_state(
         entry = {
             "target": str(published_target),
             "files": list(published_files or []),
-            "published_at": _now_iso(),
+            "published_at": published_at or _now_iso(),
         }
+        if isinstance(published_artifact_manifest, dict):
+            entry["artifact_manifest"] = dict(published_artifact_manifest)
         current_published_targets = [
             existing
             for existing in current_published_targets
@@ -221,6 +225,66 @@ def stage_signature_matches(build_dir: Path, stage: str, signature: str) -> bool
     return isinstance(entry, dict) and str(entry.get("signature") or "") == str(signature or "").strip()
 
 
+def _build_published_file_manifest_entry(path: Path, root: Path) -> dict[str, object]:
+    resolved_path = Path(path).resolve()
+    try:
+        relative_path = resolved_path.relative_to(root).as_posix()
+    except ValueError:
+        relative_path = str(resolved_path)
+    entry: dict[str, object] = {
+        "path": relative_path,
+        "exists": resolved_path.exists(),
+        "kind": "directory" if resolved_path.is_dir() else "file",
+    }
+    if resolved_path.exists() and resolved_path.is_file():
+        entry["byteLength"] = int(resolved_path.stat().st_size)
+        entry["checksum"] = f"sha256_{_hash_file(resolved_path)}"
+    return entry
+
+
+def _infer_scenario_id_from_published_paths(
+    published_paths: list[Path] | tuple[Path, ...],
+    root: Path,
+) -> str:
+    scenario_root = Path(root).resolve() / "data" / "scenarios"
+    for path in published_paths:
+        resolved_path = Path(path).resolve()
+        try:
+            relative_parts = resolved_path.relative_to(scenario_root).parts
+        except ValueError:
+            continue
+        if relative_parts:
+            return str(relative_parts[0] or "").strip()
+    return ""
+
+
+def build_published_artifact_manifest(
+    *,
+    target: str,
+    build_dir: Path,
+    published_paths: list[Path] | tuple[Path, ...],
+    root: Path,
+    generated_at: str | None = None,
+) -> dict[str, object]:
+    state_payload = load_scenario_build_state(build_dir)
+    resolved_root = Path(root).resolve()
+    scenario_id = str(state_payload.get("scenario_id") or "").strip() or _infer_scenario_id_from_published_paths(
+        published_paths,
+        resolved_root,
+    )
+    return {
+        "artifactVersion": 1,
+        "artifactKind": "scenario-publish",
+        "generatedAt": generated_at or _now_iso(),
+        "scenario": {"id": scenario_id} if scenario_id else None,
+        "publishedTarget": {"target": str(target or "").strip()},
+        "files": [
+            _build_published_file_manifest_entry(path, resolved_root)
+            for path in published_paths
+        ],
+    }
+
+
 def record_published_target(
     *,
     build_dir: Path,
@@ -231,14 +295,24 @@ def record_published_target(
 ) -> dict[str, object]:
     resolved_root = Path(root).resolve()
     relative_paths: list[str] = []
-    for published_file in list(published_files or published_paths or []):
-        resolved_path = Path(published_file).resolve()
+    resolved_published_paths = [Path(path).resolve() for path in list(published_files or published_paths or [])]
+    for resolved_path in resolved_published_paths:
         try:
             relative_paths.append(resolved_path.relative_to(resolved_root).as_posix())
         except ValueError:
             relative_paths.append(str(resolved_path))
+    published_at = _now_iso()
+    artifact_manifest = build_published_artifact_manifest(
+        target=target,
+        build_dir=build_dir,
+        published_paths=resolved_published_paths,
+        root=resolved_root,
+        generated_at=published_at,
+    )
     return update_scenario_build_state(
         build_dir,
         published_target=target,
         published_files=relative_paths,
+        published_artifact_manifest=artifact_manifest,
+        published_at=published_at,
     )

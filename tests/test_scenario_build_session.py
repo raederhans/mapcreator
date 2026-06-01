@@ -9,6 +9,7 @@ from map_builder.scenario_build_session import (
     SCENARIO_BUILD_ROOT_RELATIVE,
     SCENARIO_BUILD_STATE_FILENAME,
     load_stage_signature,
+    record_published_target,
     record_stage_outputs,
     resolve_scenario_build_session,
     stable_stage_signature,
@@ -106,6 +107,56 @@ class ScenarioBuildSessionTest(unittest.TestCase):
             self.assertIsNotNone(saved_signature)
             self.assertEqual(saved_signature["signature"], signature)
             self.assertTrue(stage_signature_matches(build_dir, "countries", signature))
+
+    def test_record_published_target_persists_artifact_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = root / "data" / "scenarios" / "example_scenario"
+            _write_json(scenario_dir / "manifest.json", {"scenario_id": "example_scenario"})
+            _write_json(
+                scenario_dir / "scenario_mutations.json",
+                {
+                    "version": 1,
+                    "scenario_id": "example_scenario",
+                    "generated_at": "",
+                    "tags": {},
+                    "countries": {},
+                    "assignments_by_feature_id": {},
+                    "capitals": {},
+                    "geo_locale": {},
+                    "district_groups": {},
+                },
+            )
+            session = resolve_scenario_build_session(
+                root=root,
+                scenario_id="example_scenario",
+                scenario_dir=scenario_dir,
+            )
+            build_dir = Path(session["buildDir"])
+            published_file = scenario_dir / "countries.json"
+            published_dir = scenario_dir / "chunks"
+            _write_json(published_file, {"countries": {"AAA": {"name": "Alpha"}}})
+            published_dir.mkdir(parents=True, exist_ok=True)
+
+            state_payload = record_published_target(
+                build_dir=build_dir,
+                target="scenario-data",
+                published_files=[published_file, published_dir],
+                root=root,
+            )
+
+            target_entry = state_payload["published_targets"][0]
+            artifact_manifest = target_entry["artifact_manifest"]
+            self.assertEqual(target_entry["target"], "scenario-data")
+            self.assertEqual(artifact_manifest["artifactKind"], "scenario-publish")
+            self.assertEqual(artifact_manifest["scenario"]["id"], "example_scenario")
+            self.assertEqual(artifact_manifest["publishedTarget"]["target"], "scenario-data")
+            self.assertEqual(artifact_manifest["generatedAt"], target_entry["published_at"])
+            self.assertEqual(artifact_manifest["files"][0]["path"], "data/scenarios/example_scenario/countries.json")
+            self.assertEqual(artifact_manifest["files"][0]["kind"], "file")
+            self.assertIn("sha256_", artifact_manifest["files"][0]["checksum"])
+            self.assertEqual(artifact_manifest["files"][1]["path"], "data/scenarios/example_scenario/chunks")
+            self.assertEqual(artifact_manifest["files"][1]["kind"], "directory")
 
 
 if __name__ == "__main__":

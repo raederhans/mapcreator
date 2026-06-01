@@ -184,3 +184,6 @@
 
 ### 主图 transport 恢复不能写死 family 列表
 - project import/export 保存的是已 Apply 到主图的 pack 身份；恢复时应从已保存的 family map 读取，并用主图 pack registry 过滤 workbench-only pack。
+
+### no-bundler 依赖要同步 vendor 和 Pages manifest
+- 给浏览器端新增 npm 依赖时，要把可直接 import 的 ESM 文件 vendored 到 `vendor/`，再跑 `verify:pages-dist` 确认 `dist/app/vendor` 和 `pages-dist-manifest.json` 同步。

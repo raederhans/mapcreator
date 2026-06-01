@@ -102,6 +102,11 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(payload.schemaVersion, 21);
   assert.equal(payload.scenario.id, "tno_1962");
   assert.equal(payload.scenario.version, 3);
+  assert.equal(payload.exportHandoff.artifactKind, "project-json");
+  assert.equal(payload.exportHandoff.scenario.id, "tno_1962");
+  assert.equal(payload.exportHandoff.project.schemaVersion, 21);
+  assert.equal(payload.exportHandoff.exportUi.target, "composite");
+  assert.equal(payload.exportHandoff.files[0].path, "map_project.json");
 });
 
 test("project export preserves strategic overlay counters and legacy kind values", async () => {
@@ -245,6 +250,9 @@ test("project export preserves strategic overlay counters and legacy kind values
     family: "road",
     activePackIdByFamily: { road: "germany_road", rail: "france_rail" },
   });
+  assert.equal(payload.exportHandoff.artifactKind, "project-json");
+  assert.equal(payload.exportHandoff.exportUi.target, "composite");
+  assert.equal(Object.hasOwn(payload.exportHandoff.exportUi, "bakeCache"), false);
   assert.deepEqual(payload.manualSpecialZones, { type: "FeatureCollection", features: [] });
   assert.equal(Object.hasOwn(payload, "specialRegionOverrides"), false);
 });
@@ -271,6 +279,8 @@ test("project import notifies observers after successful import", async () => {
   assert.equal(result.successes.length, 1);
   assert.equal(result.errors.length, 0);
   assert.equal(result.successes[0].styleConfig.transportOverview.activePackIdByFamily.road, "germany_road");
+  assert.equal(result.successes[0].exportHandoff.artifactKind, "project-json");
+  assert.equal(result.successes[0].exportHandoff.exportUi.target, "composite");
 });
 
 test("project import overlay resolver preserves every main-map transport family", () => {
