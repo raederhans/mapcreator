@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { getDefaultMainMapPackIdForFamily } from "../js/core/transport_pack_resolver.js";
+import { getDefaultTransportWorkbenchPackIdForFamily } from "../js/core/transport_pack_resolver.js";
 import { createTransportWorkbenchStateOwner } from "../js/ui/toolbar/transport_workbench_state_owner.js";
 
 function createOwner(initialUi = {}) {
@@ -26,7 +26,7 @@ test("transport workbench state owner preserves the UI object while normalizing 
 
   assert.equal(normalized, existingUi);
   assert.equal(runtimeState.transportWorkbenchUi, existingUi);
-  assert.equal(normalized.activePackIdByFamily.road, getDefaultMainMapPackIdForFamily("road"));
+  assert.equal(normalized.activePackIdByFamily.road, getDefaultTransportWorkbenchPackIdForFamily("road"));
   assert.equal(normalized.previewCamera.scale, 2);
   assert.equal(normalized.previewCamera.translateX, 12);
   assert.equal(normalized.previewCamera.translateY, -4);
@@ -44,6 +44,20 @@ test("transport workbench state owner updates active pack and family-local pack 
   assert.equal(runtimeState.transportWorkbenchUi.activePackId, "germany_road");
   assert.equal(runtimeState.transportWorkbenchUi.activePackIdByFamily.road, "germany_road");
   assert.equal(runtimeState.transportWorkbenchUi.sampleCountry, "Germany");
+});
+
+test("transport workbench state owner keeps workbench-only active pack choices", () => {
+  const { owner, runtimeState } = createOwner({});
+
+  const meta = owner.setActivePackId("germany_energy_facilities");
+
+  assert.equal(meta.packId, "germany_energy_facilities");
+  assert.equal(runtimeState.transportWorkbenchUi.activeFamily, "energy_facilities");
+  assert.equal(runtimeState.transportWorkbenchUi.activePackId, "germany_energy_facilities");
+  assert.equal(runtimeState.transportWorkbenchUi.activePackIdByFamily.energy_facilities, "germany_energy_facilities");
+  owner.ensureUiState();
+  assert.equal(runtimeState.transportWorkbenchUi.activePackId, "germany_energy_facilities");
+  assert.equal(runtimeState.transportWorkbenchUi.activePackIdByFamily.energy_facilities, "germany_energy_facilities");
 });
 
 test("transport workbench state owner restores family-local active pack choices", () => {

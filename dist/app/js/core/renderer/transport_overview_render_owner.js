@@ -125,7 +125,12 @@ function getTransportCountryOverlayCollection(familyId, layerKey) {
 }
 
 function collectTransportCountryOverlayMetric(metricName, familyId, reason) {
-  const collectionKey = familyId === "road" ? "roads" : familyId === "rail" ? "railways" : "airports";
+  const collectionKey = {
+    road: "roads",
+    rail: "railways",
+    airport: "airports",
+    port: "ports",
+  }[familyId] || "airports";
   const collection = getTransportCountryOverlayCollection(familyId, collectionKey);
   collectContextMetric(metricName, 0, {
     featureCount: getFeatureCollectionFeatureCount(collection),
@@ -601,6 +606,21 @@ function drawAirportsLayer(k, { interactive = false } = {}) {
 
 function drawPortsLayer(k, { interactive = false } = {}) {
   syncRenderTargets();
+  drawPortPointCollection("drawPortsLayer", runtimeState.portsData, k, { interactive });
+  drawCountryPortsLayer(k, { interactive });
+}
+
+function drawCountryPortsLayer(k, { interactive = false } = {}) {
+  const overlayState = getTransportCountryOverlayStateForFamily("port");
+  if (!overlayState) return;
+  drawPortPointCollection("drawCountryPortsLayer", overlayState.collectionsByLayer?.ports, k, {
+    interactive,
+    packId: overlayState.activePackId,
+    appendHoverEntries: true,
+  });
+}
+
+function drawPortPointCollection(metricName, collection, k, { interactive = false, packId = "global", appendHoverEntries = false } = {}) {
   const portConfig = getTransportOverviewFamilyConfig("port");
   const labelZoomConfig = getTransportOverviewLabelZoomConfig("port", portConfig.labelDensity);
   const visualStyle = getTransportOverviewPortVisualStyle(portConfig.primaryColor, portConfig.visualStrength);
@@ -608,7 +628,7 @@ function drawPortsLayer(k, { interactive = false } = {}) {
     scale: k,
     visualMode: getTransportOverviewVisualMode(),
   });
-  drawContextFacilityPointLayer("drawPortsLayer", runtimeState.portsData, k, {
+  drawContextFacilityPointLayer(metricName, collection, k, {
     familyId: "port",
     interactive,
     visible: !!runtimeState.showTransport && !!runtimeState.showPorts,
@@ -631,6 +651,8 @@ function drawPortsLayer(k, { interactive = false } = {}) {
       ...labelOptions,
       labelSize: portConfig.labelSize,
     }),
+    packId,
+    appendHoverEntries,
   });
 }
 

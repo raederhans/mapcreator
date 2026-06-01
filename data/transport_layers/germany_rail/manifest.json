@@ -1,0 +1,93 @@
+{
+  "adapter_id": "germany_rail_v1",
+  "pack_id": "germany_rail",
+  "family": "rail",
+  "geometry_kind": "line",
+  "country": "Germany",
+  "schema_version": 1,
+  "generated_at": "2026-05-31T23:00:19.943644Z",
+  "recipe_path": "data/transport_layers/germany_rail/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/germany_rail/railways.preview.topo.json",
+      "rail_stations_major": "data/transport_layers/germany_rail/rail_stations_major.preview.geojson"
+    },
+    "full": {
+      "railways": "data/transport_layers/germany_rail/railways.topo.json",
+      "rail_stations_major": "data/transport_layers/germany_rail/rail_stations_major.geojson"
+    },
+    "build_audit": "data/transport_layers/germany_rail/build_audit.json"
+  },
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "recipe_version": "germany_rail_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "railways": 17090,
+      "rail_stations_major": 4579
+    },
+    "full": {
+      "railways": 21872,
+      "rail_stations_major": 8778
+    }
+  },
+  "clip_bbox": [
+    5.980463,
+    47.397609,
+    15.032298,
+    54.907976
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack germany_rail",
+  "runtime_consumer": "transport_workbench_rail_preview",
+  "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "rail",
+    "supported_keys": [
+      "railways",
+      "rail_stations_major"
+    ]
+  },
+  "sidecars": {
+    "rail_stations_major": {
+      "required": true
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/germany_rail/railways.preview.topo.json",
+          "rail_stations_major": "data/transport_layers/germany_rail/rail_stations_major.preview.geojson"
+        },
+        "full": {
+          "railways": "data/transport_layers/germany_rail/railways.topo.json",
+          "rail_stations_major": "data/transport_layers/germany_rail/rail_stations_major.geojson"
+        },
+        "build_audit": "data/transport_layers/germany_rail/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 17090,
+          "rail_stations_major": 4579
+        },
+        "full": {
+          "railways": 21872,
+          "rail_stations_major": 8778
+        }
+      }
+    }
+  }
+}

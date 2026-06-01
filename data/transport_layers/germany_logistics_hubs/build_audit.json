@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-06-01T00:22:27.201591Z",
+  "adapter_id": "germany_logistics_hubs_v1",
+  "pack_id": "germany_logistics_hubs",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "BKG DLM250 transport facility objects",
+  "geometry_truth": "BKG DLM250 AX_Transportanlage geometry converted to representative points",
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "logistics_hubs": 454
+    },
+    "full": {
+      "logistics_hubs": 454
+    }
+  },
+  "source_row_count": {
+    "AX_Transportanlage": 454
+  },
+  "matched_count": 454,
+  "preview_rule": "DLM250 transport facility geometry converted to representative points."
+}

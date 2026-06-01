@@ -15,6 +15,7 @@ function getEnergySubtypeFill(subtype) {
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "energy_facilities",
   manifestUrl: resolveTransportManifestUrl("energy_facilities"),
+  resolveManifestUrl: (packId) => resolveTransportManifestUrl(packId || "energy_facilities"),
   packKey: "energy_facilities",
   selectionType: "energy_facility",
   fullPackScaleThreshold: 1.14,

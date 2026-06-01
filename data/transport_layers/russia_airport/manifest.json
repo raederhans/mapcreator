@@ -1,10 +1,11 @@
 {
   "adapter_id": "russia_airport_v1",
+  "pack_id": "russia_airport",
   "family": "airport",
   "geometry_kind": "point",
   "country": "Russia",
   "schema_version": 1,
-  "generated_at": "2026-05-12T21:26:32.809116Z",
+  "generated_at": "2026-06-01T00:13:52.496064Z",
   "recipe_path": "data/transport_layers/russia_airport/source_recipe.manual.json",
   "distribution_tier": "single_pack",
   "paths": {
@@ -48,6 +49,15 @@
   "build_command": "python tools/build_transport_country_real_packs.py --pack russia_airport",
   "runtime_consumer": "transport_workbench_airport_preview",
   "source_policy": "real_source_cache_only",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "airport",
+    "supported_keys": [
+      "airports"
+    ]
+  },
   "default_variant": "default",
   "variants": {
     "default": {
@@ -71,19 +81,5 @@
         }
       }
     }
-  },
-  "coverage_scope": "country",
-  "mainMapEligible": true,
-  "apply_bridge_supported": true,
-  "main_map_consumer": {
-    "consumer_id": "main_map_airport_country_overlay_v1",
-    "family": "airport",
-    "supported_keys": [
-      "airports"
-    ],
-    "mode": "country_overlay"
-  },
-  "sidecars": {},
-  "country_label": "Russia",
-  "pack_id": "russia_airport"
+  }
 }

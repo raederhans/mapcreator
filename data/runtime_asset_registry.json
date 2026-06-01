@@ -208,6 +208,86 @@
       "url": "data/transport_layers/india_airport/manifest.json",
       "role": "transport_manifest",
       "family_id": "india_airport"
+    },
+    "transport_manifest:usa_road": {
+      "url": "data/transport_layers/usa_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_road"
+    },
+    "transport_manifest:germany_rail": {
+      "url": "data/transport_layers/germany_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_rail"
+    },
+    "transport_manifest:germany_airport": {
+      "url": "data/transport_layers/germany_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_airport"
+    },
+    "transport_manifest:france_airport": {
+      "url": "data/transport_layers/france_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_airport"
+    },
+    "transport_manifest:uk_airport": {
+      "url": "data/transport_layers/uk_airport/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_airport"
+    },
+    "transport_manifest:usa_port": {
+      "url": "data/transport_layers/usa_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_port"
+    },
+    "transport_manifest:germany_port": {
+      "url": "data/transport_layers/germany_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_port"
+    },
+    "transport_manifest:france_port": {
+      "url": "data/transport_layers/france_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_port"
+    },
+    "transport_manifest:uk_port": {
+      "url": "data/transport_layers/uk_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_port"
+    },
+    "transport_manifest:china_port": {
+      "url": "data/transport_layers/china_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_port"
+    },
+    "transport_manifest:india_port": {
+      "url": "data/transport_layers/india_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_port"
+    },
+    "transport_manifest:russia_port": {
+      "url": "data/transport_layers/russia_port/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_port"
+    },
+    "transport_manifest:germany_energy_facilities": {
+      "url": "data/transport_layers/germany_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_energy_facilities"
+    },
+    "transport_manifest:germany_mineral_resources": {
+      "url": "data/transport_layers/germany_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_mineral_resources"
+    },
+    "transport_manifest:germany_industrial_zones": {
+      "url": "data/transport_layers/germany_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_industrial_zones"
+    },
+    "transport_manifest:germany_logistics_hubs": {
+      "url": "data/transport_layers/germany_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "germany_logistics_hubs"
     }
   },
   "scenario_registry_key": "scenario_registry",
@@ -228,7 +308,29 @@
     "usa_airport": "transport_manifest:usa_airport",
     "china_airport": "transport_manifest:china_airport",
     "russia_airport": "transport_manifest:russia_airport",
-    "india_airport": "transport_manifest:india_airport"
+    "india_airport": "transport_manifest:india_airport",
+    "usa_road": "transport_manifest:usa_road",
+    "germany_rail": "transport_manifest:germany_rail",
+    "germany_airport": "transport_manifest:germany_airport",
+    "france_airport": "transport_manifest:france_airport",
+    "uk_airport": "transport_manifest:uk_airport",
+    "usa_port": "transport_manifest:usa_port",
+    "germany_port": "transport_manifest:germany_port",
+    "france_port": "transport_manifest:france_port",
+    "uk_port": "transport_manifest:uk_port",
+    "china_port": "transport_manifest:china_port",
+    "india_port": "transport_manifest:india_port",
+    "russia_port": "transport_manifest:russia_port",
+    "germany_energy_facilities": "transport_manifest:germany_energy_facilities",
+    "germany_mineral_resources": "transport_manifest:germany_mineral_resources",
+    "germany_industrial_zones": "transport_manifest:germany_industrial_zones",
+    "germany_logistics_hubs": "transport_manifest:germany_logistics_hubs",
+    "japan_airport": "transport_manifest:airport",
+    "japan_port": "transport_manifest:port",
+    "japan_mineral_resources": "transport_manifest:mineral_resources",
+    "japan_energy_facilities": "transport_manifest:energy_facilities",
+    "japan_industrial_zones": "transport_manifest:industrial_zones",
+    "japan_logistics_hubs": "transport_manifest:logistics_hubs"
   },
   "city_lights": {
     "historical_1930": {

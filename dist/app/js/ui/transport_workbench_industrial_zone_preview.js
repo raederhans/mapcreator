@@ -25,7 +25,7 @@ import { registerMapcreatorSnapshotProvider } from "../core/mapcreator_snapshot.
 const PACK_MODE_PREVIEW = "preview";
 const PACK_MODE_FULL = "full";
 
-const MANIFEST_URL = resolveTransportManifestUrl("industrial_zones");
+const DEFAULT_MANIFEST_URL = resolveTransportManifestUrl("industrial_zones");
 const PACK_KEY = "industrial_zones";
 const INTERNAL_LABEL_THRESHOLD = 1.2;
 const OPEN_LABEL_THRESHOLD = 1.32;
@@ -481,6 +481,8 @@ const runtime = {
     fullStatus: "idle",
   },
   activePackMode: null,
+  activePackId: "",
+  activeManifestUrl: DEFAULT_MANIFEST_URL,
   activeVariantId: null,
   rootGroup: null,
   labelsGroup: null,
@@ -500,9 +502,9 @@ const runtime = {
 
 async function loadManifest() {
   if (!runtime.manifestPromise) {
-    runtime.manifestPromise = getTransportAsset(MANIFEST_URL, {
+    runtime.manifestPromise = getTransportAsset(runtime.activeManifestUrl || DEFAULT_MANIFEST_URL, {
       cachePolicy: "no-cache",
-      label: "transport-manifest:industrial_zones",
+      label: `transport-manifest:industrial_zones:${runtime.activePackId || "default"}`,
     })
       .then(async (manifest) => {
         if (!manifest) {
@@ -530,6 +532,21 @@ async function loadManifest() {
       });
   }
   return runtime.manifestPromise;
+}
+
+function setActivePack(packId = "", manifestUrl = "") {
+  const normalizedPackId = String(packId || "").trim().toLowerCase();
+  const normalizedManifestUrl = String(manifestUrl || DEFAULT_MANIFEST_URL).trim();
+  if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
+  runtime.activePackId = normalizedPackId;
+  runtime.activeManifestUrl = normalizedManifestUrl;
+  runtime.manifestPromise = null;
+  runtime.auditPromise = null;
+  runtime.packPromises.clear();
+  runtime.projectedPacks.clear();
+  runtime.loadState.audit = null;
+  runtime.loadState.manifest = null;
+  runtime.selectedFeature = null;
 }
 
 function startAuditLoad(manifest) {
@@ -638,6 +655,9 @@ function emitSelectionChange() {
 }
 
 export async function renderJapanIndustrialZonePreview(config = {}) {
+  if (config?.activePackId) {
+    setActivePack(config.activePackId, resolveTransportManifestUrl(config.activePackId));
+  }
   ensureRootGroups(runtime);
   runtime.lastRenderedConfig = { ...(config || {}) };
   runtime.renderedConfigSignature = "";

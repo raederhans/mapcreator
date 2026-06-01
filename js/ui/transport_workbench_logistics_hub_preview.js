@@ -15,6 +15,7 @@ function getLogisticsHubLabel(categoryValue) {
 const controller = createTransportWorkbenchPointPreviewController({
   familyId: "logistics_hubs",
   manifestUrl: resolveTransportManifestUrl("logistics_hubs"),
+  resolveManifestUrl: (packId) => resolveTransportManifestUrl(packId || "logistics_hubs"),
   packKey: "logistics_hubs",
   selectionType: "logistics_hub",
   fullPackScaleThreshold: 1.14,

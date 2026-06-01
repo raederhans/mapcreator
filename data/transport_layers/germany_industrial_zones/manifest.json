@@ -1,0 +1,70 @@
+{
+  "adapter_id": "germany_industrial_zones_v1",
+  "pack_id": "germany_industrial_zones",
+  "family": "industrial_zones",
+  "geometry_kind": "polygon",
+  "country": "Germany",
+  "schema_version": 1,
+  "generated_at": "2026-06-01T00:22:23.582312Z",
+  "recipe_path": "data/transport_layers/germany_industrial_zones/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "industrial_zones": "data/transport_layers/germany_industrial_zones/industrial_zones.preview.geojson"
+    },
+    "full": {
+      "industrial_zones": "data/transport_layers/germany_industrial_zones/industrial_zones.geojson"
+    },
+    "build_audit": "data/transport_layers/germany_industrial_zones/build_audit.json"
+  },
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "recipe_version": "germany_industrial_zones_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 3500
+    },
+    "full": {
+      "industrial_zones": 5205
+    }
+  },
+  "clip_bbox": [
+    6.028214,
+    47.53461,
+    14.974578,
+    54.896224
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack germany_industrial_zones",
+  "runtime_consumer": "transport_workbench_industrial_zones_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "industrial_zones": "data/transport_layers/germany_industrial_zones/industrial_zones.preview.geojson"
+        },
+        "full": {
+          "industrial_zones": "data/transport_layers/germany_industrial_zones/industrial_zones.geojson"
+        },
+        "build_audit": "data/transport_layers/germany_industrial_zones/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "industrial_zones": 3500
+        },
+        "full": {
+          "industrial_zones": 5205
+        }
+      }
+    }
+  }
+}

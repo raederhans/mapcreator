@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T21:26:32.809116Z",
+  "generated_at": "2026-06-01T00:13:52.496064Z",
   "adapter_id": "russia_airport_v1",
   "pack_id": "russia_airport",
   "source_policy": "real_source_cache_only",
@@ -108,5 +108,6 @@
     "Московский"
   ],
   "unmatched_geometry_rows": 1504,
-  "preview_rule": "official class A/B/Cyrillic А/Б/В first, capped at 120"
+  "preview_rule": "official class A/B/Cyrillic А/Б/В first, capped at 120",
+  "importance_rank_rule": "3 for class A/B, 2 for class C, 1 for other matched civil aerodromes"
 }

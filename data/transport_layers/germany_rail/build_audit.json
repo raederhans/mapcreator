@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-05-31T23:00:19.943644Z",
+  "adapter_id": "germany_rail_v1",
+  "pack_id": "germany_rail",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "BKG DLM250 compact railway objects",
+  "geometry_truth": "BKG DLM250 AX_Bahnstrecke and AX_Bahnverkehrsanlage objects",
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "railways": 17090,
+      "rail_stations_major": 4579
+    },
+    "full": {
+      "railways": 21872,
+      "rail_stations_major": 8778
+    }
+  },
+  "source_row_count": {
+    "AX_Bahnstrecke": 21872,
+    "AX_Bahnverkehrsanlage": 8778
+  },
+  "matched_count": {
+    "railways": 21872,
+    "rail_stations_major": 8778
+  },
+  "preview_rule": "DLM250 bahnkategorie 1100/1101 lines and station categories 1010/1020."
+}

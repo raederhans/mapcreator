@@ -27,8 +27,8 @@ import {
   isTransportWorkbenchManifestOnlyRuntimeFamily,
 } from "../transport_workbench_family_registry.js";
 import {
-  getTargetMainMapPackMeta,
-  listTargetMainMapPacks,
+  getTransportWorkbenchPackMeta,
+  listTransportWorkbenchPacks,
 } from "../../core/transport_pack_resolver.js";
 import {
   createTransportWorkbenchApplyBridgeOwner,
@@ -197,7 +197,7 @@ export function createTransportWorkbenchController({
     familyTabs: transportWorkbenchFamilyTabs,
     applyButton: transportWorkbenchApplyBtn,
     translate: (label) => t(label, "ui"),
-    listPackOptions: ({ familyId }) => listTargetMainMapPacks({ familyId }),
+    listPackOptions: ({ familyId }) => listTransportWorkbenchPacks({ familyId }),
     getApplyButtonState: (familyId) => getTransportWorkbenchApplyButtonState(familyId),
     getCarrierViewState: () => getTransportWorkbenchCarrierViewState(),
     setCarrierFamily: (familyId) => setTransportWorkbenchCarrierFamily(familyId),
@@ -404,7 +404,7 @@ export function createTransportWorkbenchController({
     // context 是 shell、lens、inspect 和 preview 的共同输入，避免四处重复读取 runtimeState。
     const config = buildTransportWorkbenchResolvedConfig(family.id, familyConfig, displayConfig);
     const activePackId = getTransportWorkbenchActivePackId(family.id);
-    const activePackMeta = getTargetMainMapPackMeta(activePackId);
+    const activePackMeta = getTransportWorkbenchPackMeta(activePackId);
     return {
       uiState,
       family,

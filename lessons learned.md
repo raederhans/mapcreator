@@ -166,3 +166,6 @@
 ### shell 兜底可见性要分清集合级和要素级
 - shell-only runtime 集合是否能当政治底图，和单个 shell fallback 是否能参与视觉填色，是两个不同 gate；集合级过滤保 startup 安全，要素级视觉过滤保承重补洞。
 - 只允许视觉填色的兜底块要在政治 pass 中先画成 underlay，再让 detail feature 覆盖，并用行为级 fixture 锁住“可见但不可交互”。
+
+### 交通工作台数据必须带渲染契约字段
+- 非 Japan 交通 pack 不能只满足 manifest 合同；点状 preview 还需要 `clip_bbox` 投影路径，以及工作台筛选会读取的 `airport_type/status_category`、`legal_designation/manager_type_code`、facility subtype/status 等字段。

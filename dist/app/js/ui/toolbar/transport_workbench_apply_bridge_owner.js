@@ -10,8 +10,9 @@ import { markDirty } from "../../core/dirty_state.js";
 import { resolveTransportManifestUrl } from "../../core/runtime_asset_registry.js";
 import {
   createTransportPackSourceGateReport,
-  getDefaultMainMapPackIdForFamily,
   getTargetMainMapPackMeta,
+  getDefaultTransportWorkbenchPackIdForFamily,
+  getTransportWorkbenchPackMeta,
 } from "../../core/transport_pack_resolver.js";
 import {
   applyTransportCountryOverlayState,
@@ -53,9 +54,9 @@ export function getTransportWorkbenchActivePackId(runtimeState, familyId) {
   const currentPackId = String(
     currentByFamily[normalizedFamilyId] || runtimeState?.transportWorkbenchUi?.activePackId || ""
   ).trim().toLowerCase();
-  const meta = getTargetMainMapPackMeta(currentPackId);
+  const meta = getTransportWorkbenchPackMeta(currentPackId);
   if (meta && meta.family === normalizedFamilyId) return meta.packId;
-  return getDefaultMainMapPackIdForFamily(normalizedFamilyId);
+  return getDefaultTransportWorkbenchPackIdForFamily(normalizedFamilyId);
 }
 
 export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
@@ -92,7 +93,7 @@ export function createTransportWorkbenchApplyBridgeOwner(runtimeState, {
       .catch((error) => {
         const gateReport = {
           packId: normalizedPackId,
-          family: getTargetMainMapPackMeta(normalizedPackId)?.family || "",
+          family: getTransportWorkbenchPackMeta(normalizedPackId)?.family || "",
           passed: false,
           reasons: ["manifest_load_failed"],
           error: error?.message || String(error || "Unknown pack gate failure"),

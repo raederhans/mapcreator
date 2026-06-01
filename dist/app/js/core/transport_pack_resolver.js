@@ -3,20 +3,49 @@ const TARGET_MAIN_MAP_PACKS = Object.freeze({
   japan_rail: Object.freeze({ packId: "japan_rail", family: "rail", label: "Japan rail", country: "Japan", sourcePolicy: "local_source_cache_only" }),
   germany_road: Object.freeze({ packId: "germany_road", family: "road", label: "Germany road", country: "Germany", sourcePolicy: "real_source_cache_only" }),
   uk_road: Object.freeze({ packId: "uk_road", family: "road", label: "United Kingdom road", country: "United Kingdom", sourcePolicy: "real_source_cache_only" }),
+  usa_road: Object.freeze({ packId: "usa_road", family: "road", label: "United States road", country: "United States", sourcePolicy: "real_source_cache_only" }),
   france_rail: Object.freeze({ packId: "france_rail", family: "rail", label: "France rail", country: "France", sourcePolicy: "real_source_cache_only" }),
+  germany_rail: Object.freeze({ packId: "germany_rail", family: "rail", label: "Germany rail", country: "Germany", sourcePolicy: "real_source_cache_only" }),
   usa_airport: Object.freeze({ packId: "usa_airport", family: "airport", label: "United States airport", country: "United States", sourcePolicy: "real_source_cache_only" }),
   china_airport: Object.freeze({ packId: "china_airport", family: "airport", label: "China airport", country: "China", sourcePolicy: "real_source_cache_only" }),
   russia_airport: Object.freeze({ packId: "russia_airport", family: "airport", label: "Russia airport", country: "Russia", sourcePolicy: "real_source_cache_only" }),
   india_airport: Object.freeze({ packId: "india_airport", family: "airport", label: "India airport", country: "India", sourcePolicy: "real_source_cache_only" }),
+  germany_airport: Object.freeze({ packId: "germany_airport", family: "airport", label: "Germany airport", country: "Germany", sourcePolicy: "real_source_cache_only" }),
+  france_airport: Object.freeze({ packId: "france_airport", family: "airport", label: "France airport", country: "France", sourcePolicy: "real_source_cache_only" }),
+  uk_airport: Object.freeze({ packId: "uk_airport", family: "airport", label: "United Kingdom airport", country: "United Kingdom", sourcePolicy: "real_source_cache_only" }),
+  usa_port: Object.freeze({ packId: "usa_port", family: "port", label: "United States port", country: "United States", sourcePolicy: "real_source_cache_only" }),
+  germany_port: Object.freeze({ packId: "germany_port", family: "port", label: "Germany port", country: "Germany", sourcePolicy: "real_source_cache_only" }),
+  france_port: Object.freeze({ packId: "france_port", family: "port", label: "France port", country: "France", sourcePolicy: "real_source_cache_only" }),
+  uk_port: Object.freeze({ packId: "uk_port", family: "port", label: "United Kingdom port", country: "United Kingdom", sourcePolicy: "real_source_cache_only" }),
+  china_port: Object.freeze({ packId: "china_port", family: "port", label: "China port", country: "China", sourcePolicy: "real_source_cache_only" }),
+  india_port: Object.freeze({ packId: "india_port", family: "port", label: "India port", country: "India", sourcePolicy: "real_source_cache_only" }),
+  russia_port: Object.freeze({ packId: "russia_port", family: "port", label: "Russia port", country: "Russia", sourcePolicy: "real_source_cache_only" }),
 });
 
 export const TARGET_MAIN_MAP_PACK_IDS = Object.freeze(Object.keys(TARGET_MAIN_MAP_PACKS));
+
+const WORKBENCH_SELECTABLE_PACKS = Object.freeze({
+  ...TARGET_MAIN_MAP_PACKS,
+  japan_airport: Object.freeze({ packId: "japan_airport", family: "airport", label: "Japan airport", country: "Japan", sourcePolicy: "local_source_cache_only" }),
+  japan_port: Object.freeze({ packId: "japan_port", family: "port", label: "Japan port", country: "Japan", sourcePolicy: "local_source_cache_only_internal_trial" }),
+  japan_energy_facilities: Object.freeze({ packId: "japan_energy_facilities", family: "energy_facilities", label: "Japan energy facilities", country: "Japan", sourcePolicy: "local_source_cache_only" }),
+  japan_mineral_resources: Object.freeze({ packId: "japan_mineral_resources", family: "mineral_resources", label: "Japan mineral resources", country: "Japan", sourcePolicy: "local_source_cache_only" }),
+  japan_industrial_zones: Object.freeze({ packId: "japan_industrial_zones", family: "industrial_zones", label: "Japan industrial zones", country: "Japan", sourcePolicy: "local_source_cache_with_download" }),
+  japan_logistics_hubs: Object.freeze({ packId: "japan_logistics_hubs", family: "logistics_hubs", label: "Japan logistics hubs", country: "Japan", sourcePolicy: "local_source_cache_with_download" }),
+  germany_energy_facilities: Object.freeze({ packId: "germany_energy_facilities", family: "energy_facilities", label: "Germany energy facilities", country: "Germany", sourcePolicy: "real_source_cache_only" }),
+  germany_mineral_resources: Object.freeze({ packId: "germany_mineral_resources", family: "mineral_resources", label: "Germany mineral resources", country: "Germany", sourcePolicy: "real_source_cache_only" }),
+  germany_industrial_zones: Object.freeze({ packId: "germany_industrial_zones", family: "industrial_zones", label: "Germany industrial zones", country: "Germany", sourcePolicy: "real_source_cache_only" }),
+  germany_logistics_hubs: Object.freeze({ packId: "germany_logistics_hubs", family: "logistics_hubs", label: "Germany logistics hubs", country: "Germany", sourcePolicy: "real_source_cache_only" }),
+});
+
+export const WORKBENCH_SELECTABLE_PACK_IDS = Object.freeze(Object.keys(WORKBENCH_SELECTABLE_PACKS));
 
 // main map 只消费各 family 的稳定输出键；workbench 预览字段留在 manifest/preview owner 内部。
 export const MAIN_MAP_CONSUMER_KEYS_BY_FAMILY = Object.freeze({
   road: Object.freeze(["roads", "road_labels"]),
   rail: Object.freeze(["railways", "rail_stations_major"]),
   airport: Object.freeze(["airports"]),
+  port: Object.freeze(["ports"]),
 });
 
 const FORBIDDEN_SOURCE_SIGNATURE_TOKENS = Object.freeze([
@@ -58,6 +87,10 @@ export function getTargetMainMapPackMeta(packId) {
   return TARGET_MAIN_MAP_PACKS[normalizeId(packId)] || null;
 }
 
+export function getTransportWorkbenchPackMeta(packId) {
+  return WORKBENCH_SELECTABLE_PACKS[normalizeId(packId)] || null;
+}
+
 export function isTargetMainMapPackId(packId) {
   return !!getTargetMainMapPackMeta(packId);
 }
@@ -70,9 +103,22 @@ export function listTargetMainMapPacks({ familyId = "" } = {}) {
     .map((entry) => ({ ...entry }));
 }
 
+export function listTransportWorkbenchPacks({ familyId = "" } = {}) {
+  const normalizedFamilyId = normalizeId(familyId);
+  return WORKBENCH_SELECTABLE_PACK_IDS
+    .map((packId) => WORKBENCH_SELECTABLE_PACKS[packId])
+    .filter((entry) => !normalizedFamilyId || entry.family === normalizedFamilyId)
+    .map((entry) => ({ ...entry }));
+}
+
 export function getDefaultMainMapPackIdForFamily(familyId) {
   const normalizedFamilyId = normalizeId(familyId);
   return listTargetMainMapPacks({ familyId: normalizedFamilyId })[0]?.packId || "";
+}
+
+export function getDefaultTransportWorkbenchPackIdForFamily(familyId) {
+  const normalizedFamilyId = normalizeId(familyId);
+  return listTransportWorkbenchPacks({ familyId: normalizedFamilyId })[0]?.packId || "";
 }
 
 export function createTransportPackSourceGateReport(packId, manifest = null) {

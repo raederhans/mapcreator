@@ -1,0 +1,70 @@
+{
+  "adapter_id": "germany_mineral_resources_v1",
+  "pack_id": "germany_mineral_resources",
+  "family": "mineral_resources",
+  "geometry_kind": "point",
+  "country": "Germany",
+  "schema_version": 1,
+  "generated_at": "2026-06-01T00:22:09.146200Z",
+  "recipe_path": "data/transport_layers/germany_mineral_resources/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "mineral_resources": "data/transport_layers/germany_mineral_resources/mineral_resources.preview.geojson"
+    },
+    "full": {
+      "mineral_resources": "data/transport_layers/germany_mineral_resources/mineral_resources.geojson"
+    },
+    "build_audit": "data/transport_layers/germany_mineral_resources/build_audit.json"
+  },
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "recipe_version": "germany_mineral_resources_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 1371
+    },
+    "full": {
+      "mineral_resources": 1371
+    }
+  },
+  "clip_bbox": [
+    6.081323,
+    47.617101,
+    14.816871,
+    54.798623
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack germany_mineral_resources",
+  "runtime_consumer": "transport_workbench_mineral_resources_preview",
+  "source_policy": "real_source_cache_only",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "mineral_resources": "data/transport_layers/germany_mineral_resources/mineral_resources.preview.geojson"
+        },
+        "full": {
+          "mineral_resources": "data/transport_layers/germany_mineral_resources/mineral_resources.geojson"
+        },
+        "build_audit": "data/transport_layers/germany_mineral_resources/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "mineral_resources": 1371
+        },
+        "full": {
+          "mineral_resources": 1371
+        }
+      }
+    }
+  }
+}

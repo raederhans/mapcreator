@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-06-01T00:22:23.582312Z",
+  "adapter_id": "germany_industrial_zones_v1",
+  "pack_id": "germany_industrial_zones",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "BKG DLM250 industrial and commercial area objects",
+  "geometry_truth": "BKG DLM250 AX_IndustrieUndGewerbeflaeche polygons",
+  "source_signature": {
+    "bkg_dlm250_compact_nas_bda": {
+      "filename": "dlm250.utm32s.nas_bda.kompakt.zip",
+      "path": ".runtime/source-cache/transport/germany_road/dlm250.utm32s.nas_bda.kompakt.zip",
+      "size_bytes": 199176519,
+      "sha256": "b190d8cd32e84f9d39548b55595c26bce4d0912dbbbfbaacabbac7e7dab8fa9b"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 3500
+    },
+    "full": {
+      "industrial_zones": 5205
+    }
+  },
+  "source_row_count": {
+    "AX_IndustrieUndGewerbeflaeche": 5205
+  },
+  "matched_count": 5205,
+  "preview_rule": "First 3500 DLM250 industrial/commercial polygons in source order; full pack keeps all."
+}
