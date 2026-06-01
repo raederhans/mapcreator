@@ -108,6 +108,32 @@ showToast(`Copied ${count} region entries to the clipboard.`);
             self.assertIn("berlin", result["non_translatable_tokens"])
             self.assertIn("0px", result["non_translatable_tokens"])
 
+    def test_treats_known_data_source_names_as_non_translatable_literals(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            self._write_repo_file(
+                repo_root,
+                "index.html",
+                """
+<!doctype html>
+<html>
+  <body>
+    <span>GeoNames</span>
+    <span>Natural Earth</span>
+    <span>OpenStreetMap</span>
+    <span>geoBoundaries</span>
+  </body>
+</html>
+                """.strip(),
+            )
+
+            result = collect_code_strings(repo_root)
+
+            for token in ("GeoNames", "Natural Earth", "OpenStreetMap", "geoBoundaries"):
+                with self.subTest(token=token):
+                    self.assertIn(token, result["non_translatable_tokens"])
+                    self.assertNotIn(token, result["uncovered_user_visible_literals"])
+
     def test_keeps_literal_translated_ui_alias_in_sync_with_ui_t_keys(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir)
@@ -342,6 +368,47 @@ const config = {
             "Open the transport workbench for transport preview, layer order, diagnostics, and apply-to-map controls.",
             ui,
         )
+
+    def test_cloud_save_and_fragment_ui_keys_exist_in_source_and_dist_locales(self) -> None:
+        required_ui_keys = {
+            "Cloud Saves",
+            "Cloud save created.",
+            "Comment",
+            "Comment posted.",
+            "Community save import started.",
+            "Community save loaded into the editor.",
+            "Community saves refreshed.",
+            "Latest cloud save published.",
+            "Load",
+            "Local backend cloud saves are available after login.",
+            "Local backend unavailable. Start the local dev server to use Cloud Saves.",
+            "Logged in as",
+            "Logged out.",
+            "Login",
+            "Logout",
+            "No community saves yet",
+            "Password",
+            "Publish Latest",
+            "Refresh Community",
+            "Register",
+            "Report",
+            "Report submitted for review.",
+            "Save Cloud Copy",
+            "Save title",
+            "Username",
+            "fragments",
+        }
+
+        for locales_path in [
+            REPO_ROOT / "data" / "locales.json",
+            REPO_ROOT / "dist" / "app" / "data" / "locales.json",
+        ]:
+            locales = json.loads(locales_path.read_text(encoding="utf-8"))
+            ui = locales.get("ui") or {}
+            for key in required_ui_keys:
+                with self.subTest(locales_path=locales_path, key=key):
+                    self.assertIn(key, ui)
+                    self.assertTrue(str((ui.get(key) or {}).get("zh", "")).strip())
 
     def test_locale_ui_domain_terms_avoid_obvious_machine_mistranslations(self) -> None:
         locales = json.loads((REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8"))

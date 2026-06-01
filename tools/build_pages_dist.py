@@ -104,6 +104,12 @@ TRANSPORT_SMALL_DIRECT_RUNTIME_FILES = {
     "data/transport_layers/japan_port/ports.expanded.geojson",
     "data/transport_layers/japan_port/ports.geojson",
 }
+DISPOSABLE_DIST_NAMES = {"__pycache__"}
+DISPOSABLE_DIST_SUFFIXES = {".pyc", ".pyo"}
+
+
+def should_skip_disposable_dist_path(path: Path) -> bool:
+    return any(part in DISPOSABLE_DIST_NAMES for part in path.parts) or path.suffix.lower() in DISPOSABLE_DIST_SUFFIXES
 
 
 def reset_dist() -> None:
@@ -117,9 +123,16 @@ def copy_tree_contents(source_dir: Path, destination_dir: Path) -> None:
         return
     destination_dir.mkdir(parents=True, exist_ok=True)
     for child in source_dir.iterdir():
+        if should_skip_disposable_dist_path(child):
+            continue
         target_path = destination_dir / child.name
         if child.is_dir():
-            shutil.copytree(child, target_path, dirs_exist_ok=True)
+            shutil.copytree(
+                child,
+                target_path,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns(*DISPOSABLE_DIST_NAMES, "*.pyc", "*.pyo"),
+            )
         else:
             shutil.copy2(child, target_path)
 
@@ -131,6 +144,8 @@ def copy_tree_filtered(source_dir: Path, destination_dir: Path, should_copy_file
         if not source_file.is_file():
             continue
         relative_path = source_file.relative_to(source_dir)
+        if should_skip_disposable_dist_path(relative_path):
+            continue
         if not should_copy_file(relative_path, source_file):
             continue
         target_path = destination_dir / relative_path
@@ -405,7 +420,11 @@ def write_nojekyll() -> None:
 
 
 def iter_dist_files() -> list[Path]:
-    return sorted(path for path in DIST_ROOT.rglob("*") if path.is_file())
+    return sorted(
+        path
+        for path in DIST_ROOT.rglob("*")
+        if path.is_file() and not should_skip_disposable_dist_path(path.relative_to(DIST_ROOT))
+    )
 
 
 def get_dist_file_records() -> tuple[list[dict[str, int | str]], int]:

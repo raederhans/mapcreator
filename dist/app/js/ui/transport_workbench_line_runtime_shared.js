@@ -30,6 +30,7 @@ export function getTransportWorkbenchPackPath(manifest, mode, key) {
 }
 
 export function createTransportWorkbenchLinePackRuntime(definition) {
+  // 每个 line family 共用这组 runtime 字段：manifest、preview pack、full pack 与 selection 快照必须同生同灭。
   const runtime = {
     manifestPromise: null,
     auditPromise: null,
@@ -72,6 +73,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
   }
 
   function setActivePack(packId = "", manifestUrl = "") {
+    // packId/manifestUrl 是国家包切换的真实边界；其中任一变化都要丢弃旧 promise 与投影结果。
     const normalizedPackId = String(packId || "").trim().toLowerCase();
     const normalizedManifestUrl = String(manifestUrl || definition.manifestUrl || "").trim();
     if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
@@ -79,6 +81,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
     runtime.activeManifestUrl = normalizedManifestUrl;
     resetLoadStateForActivePack();
   }
+
   async function loadManifest() {
     if (!runtime.manifestPromise) {
       runtime.manifestPromise = (async () => {
@@ -217,6 +220,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
   }
 
   function startBackgroundFullPackLoad({ onAuditReady, onHydrated } = {}) {
+    // full pack 只在 preview 可用后后台补齐；主图继续先用轻量 preview，避免工作台首开被完整包阻塞。
     if (runtime.projectedPacks[PACK_MODE_FULL] || runtime.packPromises[PACK_MODE_FULL]) return;
     loadPack(PACK_MODE_FULL, onAuditReady)
       .then((pack) => {

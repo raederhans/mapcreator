@@ -87,6 +87,7 @@
 - 带子节点的 summary / heading 容器不要整块写 `textContent`。
 - routine i18n sweep 先 audit 再同步翻译；补 key 优先定点 patch。
 - source-of-truth、baseline、runtime locale 一起同步。
+- Cloud Saves / community 这类 JS 动态面板新增 copy 时，要同轮补 `data/locales.json` 和 `dist/app/data/locales.json`；数据源品牌名如 `OpenStreetMap`、`Natural Earth` 这类固定来源词要进 audit 的 non-translatable 规则，避免把来源标签误报成 UI 漏翻。
 
 ### Project 状态类异步闭环要完整
 - import / export 这类异步闭环在事务完成和失败时都通知 UI。

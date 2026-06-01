@@ -100,6 +100,16 @@ NON_TRANSLATABLE_PATTERNS = (
     re.compile(r"^\d{1,2}:\d{2}(?:\s*(?:UTC|AM|PM))?$", re.IGNORECASE),
     re.compile(r"^[+\-]?\d+(?:\.\d+)?$"),
 )
+NON_TRANSLATABLE_EXACT_TOKENS = {
+    "GeoNames",
+    "Geofabrik",
+    "MLIT Japan",
+    "NASA Black Marble",
+    "NOAA ETOPO",
+    "Natural Earth",
+    "OpenStreetMap",
+    "geoBoundaries",
+}
 PLACEHOLDER_SAMPLE_RE = re.compile(r"^[a-z][a-z0-9_-]{2,}$")
 UNICODE_ESCAPE_RE = re.compile(r"\\u([0-9a-fA-F]{4})")
 HEX_ESCAPE_RE = re.compile(r"\\x([0-9a-fA-F]{2})")
@@ -137,6 +147,8 @@ def is_user_visible_candidate(value: str) -> bool:
 def is_non_translatable_token(value: str, attr_name: str | None = None) -> bool:
     text = decode_js_string(value)
     if not text:
+        return True
+    if text in NON_TRANSLATABLE_EXACT_TOKENS:
         return True
     if any(pattern.fullmatch(text) for pattern in NON_TRANSLATABLE_PATTERNS):
         return True

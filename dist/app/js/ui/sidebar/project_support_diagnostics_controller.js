@@ -145,6 +145,7 @@ export function createProjectSupportDiagnosticsController({
   );
 
   const resolveLatestCloudSaveId = async () => {
+    // 发布动作以“当前登录用户的最新保存”为边界；切换用户后清空缓存，避免复用上一位用户的 save id。
     if (latestCloudSaveId && latestCloudSaveUserKey === activeCloudUserKey) return latestCloudSaveId;
     const payload = await listBackendSaves();
     const saves = Array.isArray(payload?.saves) ? payload.saves : [];
@@ -155,6 +156,7 @@ export function createProjectSupportDiagnosticsController({
   };
 
   const hydrateProjectFromCommunitySave = async (saveId) => {
+    // Community 下载结果重新包成 File/Blob 后走统一导入漏斗，保持确认弹窗、dirty 状态和渲染回调一致。
     const payload = await downloadCommunitySave(saveId);
     const project = payload?.save?.project;
     if (!project || typeof project !== "object") {
@@ -302,6 +304,7 @@ export function createProjectSupportDiagnosticsController({
   );
 
   const refreshProjectSaveStatus = (message = "") => {
+    // 保存状态只读 dirty contract 与最近一次项目事务，避免各按钮各自拼接状态文案。
     if (!projectSaveStatus) return;
     const lastChange = String(state.lastDirtyReason || "").trim();
     if (message) {
@@ -633,6 +636,7 @@ export function createProjectSupportDiagnosticsController({
   const renderScenarioAuditPanel = () => {
     if (!scenarioAuditSection) return;
 
+    // Audit 与 diagnostics 分开记录 loadedForScenarioId，切换场景时只展示当前场景的已加载结果。
     const activeScenarioId = String(state.activeScenarioId || "").trim();
     const auditUi = state.scenarioAuditUi || {};
     const diagnosticsUi = state.scenarioDiagnosticsUi || {};

@@ -6719,6 +6719,110 @@
     "Stroke": {
       "en": "Stroke",
       "zh": "描边"
+    },
+    "Cloud Saves": {
+      "en": "Cloud Saves",
+      "zh": "云端存档"
+    },
+    "Cloud save created.": {
+      "en": "Cloud save created.",
+      "zh": "云端存档已创建。"
+    },
+    "Comment": {
+      "en": "Comment",
+      "zh": "评论"
+    },
+    "Comment posted.": {
+      "en": "Comment posted.",
+      "zh": "评论已提交。"
+    },
+    "Community save import started.": {
+      "en": "Community save import started.",
+      "zh": "社区存档导入已开始。"
+    },
+    "Community save loaded into the editor.": {
+      "en": "Community save loaded into the editor.",
+      "zh": "社区存档已加载到编辑器。"
+    },
+    "Community saves refreshed.": {
+      "en": "Community saves refreshed.",
+      "zh": "社区存档已刷新。"
+    },
+    "Latest cloud save published.": {
+      "en": "Latest cloud save published.",
+      "zh": "最新云端存档已发布。"
+    },
+    "Load": {
+      "en": "Load",
+      "zh": "加载"
+    },
+    "Local backend cloud saves are available after login.": {
+      "en": "Local backend cloud saves are available after login.",
+      "zh": "登录后即可使用本地后端云端存档。"
+    },
+    "Local backend unavailable. Start the local dev server to use Cloud Saves.": {
+      "en": "Local backend unavailable. Start the local dev server to use Cloud Saves.",
+      "zh": "本地后端不可用。启动本地 dev server 后即可使用云端存档。"
+    },
+    "Logged in as": {
+      "en": "Logged in as",
+      "zh": "已登录为"
+    },
+    "Logged out.": {
+      "en": "Logged out.",
+      "zh": "已退出登录。"
+    },
+    "Login": {
+      "en": "Login",
+      "zh": "登录"
+    },
+    "Logout": {
+      "en": "Logout",
+      "zh": "退出登录"
+    },
+    "No community saves yet": {
+      "en": "No community saves yet",
+      "zh": "暂无社区存档"
+    },
+    "Password": {
+      "en": "Password",
+      "zh": "密码"
+    },
+    "Publish Latest": {
+      "en": "Publish Latest",
+      "zh": "发布最新存档"
+    },
+    "Refresh Community": {
+      "en": "Refresh Community",
+      "zh": "刷新社区"
+    },
+    "Register": {
+      "en": "Register",
+      "zh": "注册"
+    },
+    "Report": {
+      "en": "Report",
+      "zh": "举报"
+    },
+    "Report submitted for review.": {
+      "en": "Report submitted for review.",
+      "zh": "举报已提交审核。"
+    },
+    "Save Cloud Copy": {
+      "en": "Save Cloud Copy",
+      "zh": "保存云端副本"
+    },
+    "Save title": {
+      "en": "Save title",
+      "zh": "存档标题"
+    },
+    "Username": {
+      "en": "Username",
+      "zh": "用户名"
+    },
+    "fragments": {
+      "en": "fragments",
+      "zh": "碎片"
     }
   },
   "geo": {
