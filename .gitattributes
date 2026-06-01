@@ -6,4 +6,6 @@ data/scenarios/**/runtime_meta.json text eol=lf
 data/scenarios/**/mesh_pack.json text eol=lf
 data/scenarios/**/build_snapshot.json text eol=lf
 data/scenarios/**/audit.json text eol=lf
+data/scenarios/**/manifest.json text eol=lf
+data/scenarios/**/geo_locale_patch*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json text eol=lf

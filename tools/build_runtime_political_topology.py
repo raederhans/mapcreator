@@ -39,15 +39,6 @@ except Exception:  # pragma: no cover - unavailable on some platforms
     resource = None
 
 MAX_SHELL_COVERAGE_REPAIR_PASSES = 6
-PRIMARY_DETAIL_COMPONENT_OVERLAP_THRESHOLD = 0.05
-PRIMARY_COMPONENT_RETENTION_COUNTRIES = {"FR"}
-FRENCH_OVERSEAS_PRIMARY_COMPONENTS = (
-    ("GF", "GF_PRIMARY", "French Guiana", (-55.0, 1.5, -51.0, 6.5)),
-    ("GP", "GP_PRIMARY", "Guadeloupe", (-62.2, 15.5, -60.6, 16.8)),
-    ("MQ", "MQ_PRIMARY", "Martinique", (-61.4, 14.2, -60.7, 15.1)),
-    ("RE", "RE_PRIMARY", "Reunion", (55.0, -21.6, 56.1, -20.7)),
-    ("YT", "YT_PRIMARY", "Mayotte", (44.8, -13.2, 45.5, -12.4)),
-)
 
 
 def _get_peak_memory_mb() -> float | None:
@@ -445,9 +436,13 @@ def _contains_point(bounds: tuple[float, float, float, float], x: float, y: floa
     return min_x <= x <= max_x and min_y <= y <= max_y
 
 
-def _match_french_overseas_component(component) -> tuple[str, str, str] | None:
+def _match_primary_component_retention_rule(country_code: str, component) -> tuple[str, str, str] | None:
     point = component.representative_point()
-    for code, feature_id, name, bounds in FRENCH_OVERSEAS_PRIMARY_COMPONENTS:
+    for rule in cfg.RUNTIME_PRIMARY_COMPONENT_RETENTION_RULES.get(country_code, ()):
+        code = str(rule["code"])
+        feature_id = str(rule["id"])
+        name = str(rule["name"])
+        bounds = tuple(rule["bounds"])
         if _contains_point(bounds, point.x, point.y):
             return code, feature_id, name
     return None
@@ -474,17 +469,16 @@ def _build_generic_primary_gap_feature(
     component,
     component_index: int,
 ) -> dict:
-    if country_code == "FR":
-        match = _match_french_overseas_component(component)
-        if match is not None:
-            code, feature_id, name = match
-            return _build_primary_gap_feature(
-                props,
-                component,
-                country_code=code,
-                feature_id=feature_id,
-                name=name,
-            )
+    match = _match_primary_component_retention_rule(country_code, component)
+    if match is not None:
+        code, feature_id, name = match
+        return _build_primary_gap_feature(
+            props,
+            component,
+            country_code=code,
+            feature_id=feature_id,
+            name=name,
+        )
 
     base_id = _get_feature_id(props, component_index)
     feature_id = f"{base_id}_PRIMARY_GAP_{component_index + 1}"
@@ -511,13 +505,12 @@ def _retain_primary_gap_components(feature: dict, country_code: str, detail_geom
     grouped_parts: dict[tuple[str, str, str], list[Polygon]] = {}
     for component_index, component in enumerate(_iter_polygonal_parts(geometry)):
         overlap_ratio = _primary_component_overlap_ratio(component, detail_geometry)
-        if overlap_ratio >= PRIMARY_DETAIL_COMPONENT_OVERLAP_THRESHOLD:
+        if overlap_ratio >= cfg.RUNTIME_PRIMARY_COMPONENT_OVERLAP_THRESHOLD:
             continue
-        if country_code == "FR":
-            match = _match_french_overseas_component(component)
-            if match is not None:
-                grouped_parts.setdefault(match, []).append(component)
-                continue
+        match = _match_primary_component_retention_rule(country_code, component)
+        if match is not None:
+            grouped_parts.setdefault(match, []).append(component)
+            continue
         retained.append(_build_generic_primary_gap_feature(props, country_code, component, component_index))
 
     for (code, feature_id, name), parts in grouped_parts.items():
@@ -563,7 +556,7 @@ def _compose_political_features(
         detail_countries.discard("")
         detail_retention_geometries = _build_detail_country_geometries(
             detail_gdf,
-            detail_countries & PRIMARY_COMPONENT_RETENTION_COUNTRIES,
+            detail_countries & set(cfg.RUNTIME_PRIMARY_COMPONENT_RETENTION_RULES),
         )
         seen_ids: set[str] = set()
         base_features = []

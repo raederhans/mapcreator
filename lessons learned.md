@@ -122,6 +122,7 @@
 - 如果源码和 `dist/app` 已有历史漂移，共享大文件优先做 scoped patch。
 - 修改 `dist/pages-dist-manifest.json` 时，顺手复核自引用尺寸记录。
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
+- 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
 
 ### 浏览器原生 zoom 是独立渲染输入
 - `devicePixelRatio` 可能降到 1 以下且被 runtime DPR 上限/下限钳住；监听到 browser zoom 时仍要强制失效 overlay/texture pass。

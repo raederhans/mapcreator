@@ -178,6 +178,42 @@ COUNTRY_CODE_ALIASES = {
     "UK": "GB",
     "EL": "GR",
 }
+# Primary components listed here survive detail replacement when they represent detached territories.
+RUNTIME_PRIMARY_COMPONENT_OVERLAP_THRESHOLD = 0.05
+RUNTIME_PRIMARY_COMPONENT_RETENTION_RULES = {
+    "FR": (
+        {
+            "code": "GF",
+            "id": "GF_PRIMARY",
+            "name": "French Guiana",
+            "bounds": (-55.0, 1.5, -51.0, 6.5),
+        },
+        {
+            "code": "GP",
+            "id": "GP_PRIMARY",
+            "name": "Guadeloupe",
+            "bounds": (-62.2, 15.5, -60.6, 16.8),
+        },
+        {
+            "code": "MQ",
+            "id": "MQ_PRIMARY",
+            "name": "Martinique",
+            "bounds": (-61.4, 14.2, -60.7, 15.1),
+        },
+        {
+            "code": "RE",
+            "id": "RE_PRIMARY",
+            "name": "Reunion",
+            "bounds": (55.0, -21.6, 56.1, -20.7),
+        },
+        {
+            "code": "YT",
+            "id": "YT_PRIMARY",
+            "name": "Mayotte",
+            "bounds": (44.8, -13.2, 45.5, -12.4),
+        },
+    ),
+}
 COUNTRY_CODES = {"DE", "PL", "IT", "FR", "NL", "BE", "LU", "AT", "CH"}
 SUBDIVISIONS = {"DE", "JP", "GB", "CZ"}
 DETAIL_PARENT_SUBDIVISIONS = {"US", "CA", "MX"}

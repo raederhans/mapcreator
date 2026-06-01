@@ -257,7 +257,6 @@ def _build_ne_country_features(
 def _build_geo_boundaries_features(
     iso_code: str,
     spec: dict,
-    shell_geom,
 ) -> gpd.GeoDataFrame:
     source = fetch_or_load_geojson(
         spec["url"],
@@ -281,6 +280,7 @@ def _build_geo_boundaries_features(
     source["cntr_code"] = iso_code
     source["admin1_group"] = source["name"]
     source["detail_tier"] = "adm1_basic"
+    # geoBoundaries is authoritative for override countries; the NE shell can miss disputed regions.
     source_shell = _build_source_union_shell(source, iso_code)
     return _finalize_country(
         source,
@@ -304,7 +304,7 @@ def apply_africa_admin1_replacement(detail_gdf: gpd.GeoDataFrame) -> gpd.GeoData
 
     primary_shell_source = _load_primary_political_shells()
     shells: dict[str, object] = {}
-    for code in sorted(target_codes):
+    for code in sorted(cfg.AFRICA_BASIC_NE_COUNTRIES):
         shell = _get_country_shell(detail_gdf, code, label="detail")
         if shell is None and not primary_shell_source.empty:
             shell = _get_country_shell(primary_shell_source, code, label="primary")
@@ -330,7 +330,6 @@ def apply_africa_admin1_replacement(detail_gdf: gpd.GeoDataFrame) -> gpd.GeoData
         country_gdf = _build_geo_boundaries_features(
             iso_code,
             spec,
-            shells[iso_code],
         )
         print(f"[Africa] {iso_code} features: {len(country_gdf)}")
         outputs.append(country_gdf)
