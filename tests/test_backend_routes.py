@@ -431,6 +431,15 @@ class BackendRoutesTest(unittest.TestCase):
         self.assertEqual(comments_closed.status, 200)
         self.assertFalse(comments_closed.payload["save"]["commentsEnabled"])
 
+        invalid_image = self._request(
+            "POST",
+            f"/api/backend/admin/saves/{save_id}/image",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"imageUrl": "//evil.example/pixel.png"},
+        )
+        self.assertEqual(invalid_image.status, 400)
+        self.assertEqual(invalid_image.payload["code"], "invalid_image_url")
+
         image_cleared = self._request(
             "POST",
             f"/api/backend/admin/saves/{save_id}/image",
@@ -448,6 +457,15 @@ class BackendRoutesTest(unittest.TestCase):
         )
         self.assertEqual(hidden_comment.status, 200)
         self.assertEqual(hidden_comment.payload["comment"]["status"], "hidden")
+
+        last_admin_demote = self._request(
+            "POST",
+            f"/api/backend/admin/users/{admin.payload['user']['id']}",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"role": "moderator"},
+        )
+        self.assertEqual(last_admin_demote.status, 400)
+        self.assertEqual(last_admin_demote.payload["code"], "cannot_remove_last_admin")
 
         updated_user = self._request(
             "POST",

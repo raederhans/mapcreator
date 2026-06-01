@@ -1,5 +1,12 @@
 let csrfToken = "";
 
+export function isLocalBackendRuntimeAvailable() {
+  const location = globalThis.location;
+  const protocol = String(location?.protocol || "");
+  const hostname = String(location?.hostname || "");
+  return protocol === "http:" && (hostname === "127.0.0.1" || hostname === "localhost");
+}
+
 async function requestJson(path, { method = "GET", body = null } = {}) {
   const headers = {};
   if (body !== null) {

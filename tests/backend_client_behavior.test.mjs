@@ -193,6 +193,7 @@ test("backend client exposes save detail export community detail and admin route
 
 test("backend runtime availability is limited to local http origins", async () => {
   const previousFetch = globalThis.fetch;
+  const previousLocation = globalThis.location;
   const client = await freshClient();
 
   globalThis.fetch = async () => ({
@@ -201,12 +202,28 @@ test("backend runtime availability is limited to local http origins", async () =
   });
 
   try {
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: { protocol: "http:", hostname: "127.0.0.1" },
+    });
+    assert.equal(client.isLocalBackendRuntimeAvailable(), true);
+
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: { protocol: "https:", hostname: "example.com" },
+    });
+    assert.equal(client.isLocalBackendRuntimeAvailable(), false);
+
     await assert.rejects(
       () => client.refreshBackendSession(),
       /Backend capability probe/
     );
   } finally {
     globalThis.fetch = previousFetch;
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: previousLocation,
+    });
   }
 });
 

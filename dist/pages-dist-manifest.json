@@ -6182,7 +6182,7 @@
     },
     {
       "path": "app/js/api/backend_client.js",
-      "size_bytes": 5456
+      "size_bytes": 5742
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -7038,7 +7038,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 37548
+      "size_bytes": 37553
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -7091,5 +7091,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1015943298
+  "total_bytes": 1015943589
 }

@@ -381,6 +381,107 @@ class BackendServiceTest(unittest.TestCase):
             self.service.current_session(str(member["sessionId"]))
         self.assertEqual(banned_exc.exception.code, "account_banned")
 
+    def test_image_url_rejects_external_or_css_breakout_urls(self) -> None:
+        session = self._register()
+        session_id = str(session["sessionId"])
+        csrf = str(session["csrfToken"])
+        valid_urls = [
+            "/backend/assets/demo-plains.svg",
+            "http://localhost:8000/backend/assets/demo-plains.svg",
+            "https://127.0.0.1:8000/backend/assets/demo-plains.svg",
+        ]
+        for image_url in valid_urls:
+            save = self.service.create_save(
+                session_id,
+                csrf,
+                {
+                    "title": "Safe image",
+                    "imageUrl": image_url,
+                    "project": {"schemaVersion": 21},
+                },
+            )
+            self.assertEqual(save["imageUrl"], image_url)
+
+        rejected_urls = [
+            "//evil.example/pixel.png",
+            "http://localhost.evil.example/pixel.png",
+            "http://localhost:bad/pixel.png",
+            "http://localhost:8000.evil/pixel.png",
+            "http://127.0.0.1.evil.example/pixel.png",
+            "http://127.0.0.1:8000.evil/pixel.png",
+            "/backend/assets/demo-plains.svg');background-image:url('//evil.example/pixel')",
+        ]
+        for image_url in rejected_urls:
+            with self.assertRaises(BackendError) as exc_info:
+                self.service.create_save(
+                    session_id,
+                    csrf,
+                    {
+                        "title": "Unsafe image",
+                        "imageUrl": image_url,
+                        "project": {"schemaVersion": 21},
+                    },
+                )
+            self.assertEqual(exc_info.exception.code, "invalid_image_url")
+
+    def test_legacy_invalid_image_url_is_hidden_from_payloads(self) -> None:
+        session = self._register()
+        session_id = str(session["sessionId"])
+        csrf = str(session["csrfToken"])
+        save = self.service.create_save(
+            session_id,
+            csrf,
+            {
+                "title": "Legacy unsafe image",
+                "imageUrl": "/backend/assets/demo-plains.svg",
+                "project": {"schemaVersion": 21},
+            },
+        )
+        self.service.publish_save(session_id, csrf, str(save["id"]), {"visibility": "public"})
+        with self.service.store.connect() as connection:
+            connection.execute(
+                "UPDATE saves SET image_url = ? WHERE id = ?",
+                ("//evil.example/pixel.png", str(save["id"])),
+            )
+
+        self.assertEqual(self.service.get_save(session_id, str(save["id"]))["imageUrl"], "")
+        self.assertEqual(self.service.list_community_saves()["saves"][0]["imageUrl"], "")
+
+    def test_admin_cannot_remove_last_active_admin(self) -> None:
+        admin = self._register("admin")
+        with self.assertRaises(BackendError) as only_admin_exc:
+            self.service.admin_update_user(
+                str(admin["sessionId"]),
+                str(admin["csrfToken"]),
+                str(admin["user"]["id"]),
+                {"role": "moderator"},
+            )
+        self.assertEqual(only_admin_exc.exception.code, "cannot_remove_last_admin")
+
+        backup = self._register("backup")
+        promoted = self.service.admin_update_user(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(backup["user"]["id"]),
+            {"role": "admin"},
+        )
+        self.assertEqual(promoted["user"]["role"], "admin")
+        demoted = self.service.admin_update_user(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(admin["user"]["id"]),
+            {"role": "moderator"},
+        )
+        self.assertEqual(demoted["user"]["role"], "moderator")
+        with self.assertRaises(BackendError) as backup_admin_exc:
+            self.service.admin_update_user(
+                str(backup["sessionId"]),
+                str(backup["csrfToken"]),
+                str(backup["user"]["id"]),
+                {"role": "member"},
+            )
+        self.assertEqual(backup_admin_exc.exception.code, "cannot_remove_last_admin")
+
     def test_moderator_can_review_content_but_cannot_manage_users_or_seed(self) -> None:
         admin = self._register("admin")
         moderator = self._register("moderator")

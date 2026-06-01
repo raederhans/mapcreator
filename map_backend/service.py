@@ -5,6 +5,7 @@ import json
 import re
 from pathlib import Path
 import sqlite3
+from urllib.parse import urlparse
 
 from .errors import BackendError
 from .security import hash_password, now_token, verify_password
@@ -466,6 +467,8 @@ class BackendService:
                 raise BackendError("invalid_user_update", "User update must include role or status.", status=400)
             values.append(user_id)
             connection.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", values)
+            if self._active_admin_count(connection) < 1:
+                raise BackendError("cannot_remove_last_admin", "At least one active administrator is required.", status=400)
             updated = connection.execute(
                 """
                 SELECT users.id, users.username, users.display_name, users.role, users.status, users.created_at,
@@ -659,7 +662,7 @@ class BackendService:
             "projectHash": str(row["project_hash"]),
             "visibility": str(row["visibility"]),
             "commentsEnabled": bool(int(row["comments_enabled"])) if "comments_enabled" in row.keys() else True,
-            "imageUrl": str(row["image_url"] or "") if "image_url" in row.keys() else "",
+            "imageUrl": self._safe_payload_image_url(str(row["image_url"] or "")) if "image_url" in row.keys() else "",
             "createdAt": str(row["created_at"]),
             "updatedAt": str(row["updated_at"]),
             "publishedAt": row["published_at"],
@@ -834,6 +837,13 @@ class BackendService:
     def _user_count(self, connection) -> int:
         return int(connection.execute("SELECT COUNT(*) AS count FROM users").fetchone()["count"])
 
+    def _active_admin_count(self, connection) -> int:
+        row = connection.execute(
+            "SELECT COUNT(*) AS count FROM users WHERE role = ? AND status = ?",
+            (USER_ROLE_ADMIN, USER_STATUS_ACTIVE),
+        ).fetchone()
+        return int(row["count"])
+
     def _project_hash(self, payload: dict[str, object]) -> str:
         encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
@@ -975,12 +985,25 @@ class BackendService:
         )
         if len(image_url) > 300:
             raise BackendError("invalid_image_url", "Image URL must be a local path or URL within 300 characters.", status=400)
-        if image_url and not (
-            image_url.startswith("/")
-            or image_url.startswith("http://localhost")
-            or image_url.startswith("http://127.0.0.1")
-            or image_url.startswith("https://localhost")
-            or image_url.startswith("https://127.0.0.1")
-        ):
+        if image_url and not self._is_allowed_image_url(image_url):
             raise BackendError("invalid_image_url", "Image URL must be a local path or URL within 300 characters.", status=400)
         return image_url
+
+    def _is_allowed_image_url(self, image_url: str) -> bool:
+        if any(ord(char) < 32 or char in {"'", "\"", "`", "(", ")", "<", ">", "\\"} for char in image_url):
+            return False
+        if image_url.startswith("/"):
+            return not image_url.startswith("//")
+        parsed = urlparse(image_url)
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"localhost", "127.0.0.1"}:
+            return False
+        try:
+            parsed.port
+        except ValueError:
+            return False
+        return bool(parsed.netloc)
+
+    def _safe_payload_image_url(self, image_url: str) -> str:
+        if not image_url:
+            return ""
+        return image_url if self._is_allowed_image_url(image_url) else ""
