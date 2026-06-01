@@ -24,6 +24,7 @@ const translations = {
     brandHomeLabel: "Scenario Forge home",
     primaryNavLabel: "Primary navigation",
     languageSwitcherLabel: "Language switcher",
+    statsLabel: "Scenario Forge product statistics",
     productPreviewAlt: "Scenario Forge editor showing a world political map with side panels and toolbars.",
     workOneAlt: "A wide overview of Scenario Forge editing a global political scenario.",
     workTwoAlt: "Scenario Forge combining political ownership with night lights and labels.",
@@ -32,6 +33,15 @@ const translations = {
     chipModern: "Modern",
     chipHoi4: "HOI4 1939",
     chipTno: "TNO 1962",
+    statScenarios: "built-in scenarios",
+    statCities: "world city points",
+    statAliases: "city aliases",
+    statCatalog: "cataloged data assets",
+    statJapan: "Japan road + rail preview features",
+    sourcesEyebrow: "Data sources",
+    sourcesTitle: "Built on recognizable map data families.",
+    sourcesBody:
+      "Every source claim below is tied to checked-in manifests, ledgers, or build audits.",
     worksEyebrow: "Selected works",
     worksTitle: "Show the result first.",
     worksBody:
@@ -75,7 +85,7 @@ const translations = {
     previewPanelTerrainTitle:
       "Terrain, bathymetry, rivers, and physical semantics give the map a real surface.",
     previewPanelTerrainBody:
-      "This turns cartographic styling into a visible product claim instead of a hidden appearance panel.",
+      "Relief, bathymetry, and river context make the preview read like geography before the full editor opens.",
     previewPanelNightBadge: "Night-light layer",
     previewPanelNightTitle:
       "Night-light and political overlays help the same geography tell a different story.",
@@ -109,19 +119,29 @@ const translations = {
     featuresEyebrow: "Product capabilities",
     featuresTitle: "Organized like a serious map product.",
     featuresBody:
-      "Each capability group starts from what already exists and points toward the product surface it can become.",
+      "Each capability group is organized around a real creator workflow and the data contracts behind it.",
     featureGroupOneTitle: "Cartographic design",
     featureGroupOneBody:
       "Layer order, color palettes, borders, labels, legends, city points, water regions, and export-ready map presentation.",
+    featurePointPalettes:
+      "Mod palettes for HOI4, Kaiserreich, TNO, Red Flood, and Vanilla-style maps.",
+    featurePointExport: "Export workbench with 1x-4x presentation snapshots.",
     featureGroupTwoTitle: "Scenario editing",
     featureGroupTwoBody:
       "Named world states, ownership, controller, frontlines, special regions, country metadata, and scenario-aware startup.",
+    featurePointUndo: "80-step undo and redo for map editing sessions.",
+    featurePointDistricts:
+      "Administrative districts and hierarchy editing for deep scenario work.",
     featureGroupThreeTitle: "Spatial data and analysis",
     featureGroupThreeBody:
       "Source ledgers, asset catalogs, health checks, provenance sidecars, hierarchy data, and reusable geography pipelines.",
     featureGroupFourTitle: "Transport and infrastructure",
     featureGroupFourBody:
       "Road and rail previews are the current proof point; airports, ports, energy, industrial, and resource families are tracked as in-progress data packs.",
+    featurePointTransport:
+      "Japan roads, rail, airports, ports, energy, industry, logistics, and resource families.",
+    featurePointAudits:
+      "Source signatures and build audits keep infrastructure packs reproducible.",
     featureGroupFiveTitle: "Imagery and context layers",
     featureGroupFiveBody:
       "Relief, bathymetry, contours, rivers, night lights, urban areas, and physical semantics for richer map reading.",
@@ -135,10 +155,22 @@ const translations = {
     audienceThree: "Scenario and campaign designers",
     audienceFour: "Geopolitical storytellers",
     audienceFive: "Researchers and presenters",
+    templatesEyebrow: "Scenario templates",
+    templatesTitle: "Start from a real world state.",
+    templatesBody:
+      "The first action can be choosing the political universe, not rebuilding a base map.",
+    templateBlankTag: "Clean base",
+    templateBlankTitle: "Blank Map",
+    templateModernTag: "Current world",
+    templateModernTitle: "Modern World",
+    templateHoi4Tag: "Strategy baseline",
+    templateHoi4Title: "HOI4 1936 / 1939",
+    templateTnoTag: "Alternate history",
+    templateTnoTitle: "TNO 1962",
     dataEyebrow: "Data foundation",
     dataTitle: "A map product needs visible data trust.",
     dataBody:
-      "Scenario Forge already tracks source ledgers, asset catalogs, build audits, and provenance sidecars. The landing page should make that trust layer visible.",
+      "Scenario Forge tracks source ledgers, asset catalogs, build audits, and provenance sidecars so map claims stay tied to real files.",
     dataCardOneTag: "Base geography",
     dataCardOneTitle: "Boundaries and populated places",
     dataCardOneBody:
@@ -171,7 +203,7 @@ const translations = {
     editionThreeBody:
       "Future product packaging can extend the backend direction into cloud saves, shared project spaces, permissioned publishing, and larger data packs.",
     casesEyebrow: "Sample use cases",
-    casesTitle: "Show product stories without inventing customer claims.",
+    casesTitle: "Show the workflows a map product should own.",
     caseOneLabel: "Campaign atlas",
     caseOneTitle: "Build a TNO 1962 political briefing map.",
     caseOneBody:
@@ -203,7 +235,7 @@ const translations = {
       "Japan road and rail previews are the clearest current sample. Other infrastructure families are visible as expansion work and should be read through the in-progress roadmap.",
     faqSixQuestion: "What is the license model?",
     faqSixAnswer:
-      "The current page should describe the demo and repository honestly, then leave room for future creator, team, and cloud editions after product packaging is formalized.",
+      "The current public surface is a live demo and repository. Creator, team, and cloud packaging are product directions for a later release.",
     roadmapEyebrow: "In progress",
     roadmapTitle: "Transparent about what is ready and what is not.",
     roadmapBody:
@@ -211,14 +243,28 @@ const translations = {
     roadmapStatusOne: "Active preview",
     roadmapOneTitle: "Transport workbench",
     roadmapOneBody:
-      "Partially complete. It exists, but it is not yet the center of the product story.",
+      "The workbench already carries transport pack inspection, manifest review, and route-density preview into the product surface.",
     roadmapStatusTwo: "Mature sample",
     roadmapTwoTitle: "Japan road preview",
     roadmapTwoBody: "Currently the most mature transport sample inside the project.",
     roadmapStatusThree: "Shell stage",
     roadmapThreeTitle: "Rail and other infrastructure families",
     roadmapThreeBody:
-      "Still closer to baseline or shell stage and should be treated as in-progress, not product-defining yet.",
+      "Rail, airport, port, energy, industrial, logistics, and resource packs are moving through the same manifest-led pipeline.",
+    updatesEyebrow: "What’s new",
+    updatesTitle: "A product surface that keeps moving.",
+    updateOneDate: "May 31, 2026",
+    updateOneTitle: "Product-grade landing showcase",
+    updateOneBody:
+      "The homepage now exposes live preview, data trust, editions, use cases, and FAQ in the first product narrative.",
+    updateTwoDate: "May 31, 2026",
+    updateTwoTitle: "Cloud save foundation",
+    updateTwoBody:
+      "Local backend boundaries and shared project contracts are now visible as the foundation for future team surfaces.",
+    updateThreeDate: "May 12, 2026",
+    updateThreeTitle: "Cataloged data foundation",
+    updateThreeBody:
+      "The checked-in catalog tracks 391 assets across source ledgers, transport manifests, topology, palettes, and runtime data.",
     ctaEyebrow: "Ready to open the workbench?",
     ctaTitle: "Step into the editor when you want to move from idea to map.",
     ctaBody:
@@ -260,6 +306,7 @@ const translations = {
     brandHomeLabel: "Scenario Forge 首页",
     primaryNavLabel: "主导航",
     languageSwitcherLabel: "语言切换",
+    statsLabel: "Scenario Forge 产品数据",
     productPreviewAlt: "Scenario Forge 编辑器界面，展示世界政治地图、侧边面板和工具栏。",
     workOneAlt: "Scenario Forge 正在编辑全球政治场景的宽幅总览。",
     workTwoAlt: "Scenario Forge 将政治归属、夜间灯光和标签叠加在一起。",
@@ -268,6 +315,14 @@ const translations = {
     chipModern: "现代世界",
     chipHoi4: "HOI4 1939",
     chipTno: "TNO 1962",
+    statScenarios: "内置场景",
+    statCities: "世界城市点",
+    statAliases: "城市别名",
+    statCatalog: "入库数据资产",
+    statJapan: "日本道路与铁路预览要素",
+    sourcesEyebrow: "数据来源",
+    sourcesTitle: "建立在可识别的地图数据家族上。",
+    sourcesBody: "这里的每一条来源声明，都能回到入库清单、来源台账或构建审计。",
     worksEyebrow: "作品预览",
     worksTitle: "先看结果，再理解工具。",
     worksBody: "Scenario Forge 最容易理解的地方，是它最终能做出什么样的地图结果。",
@@ -299,7 +354,7 @@ const translations = {
     previewPanelCitiesBody: "展示页可以让世界城市点数据变成可读地图语境，而不是一串功能名。",
     previewPanelTerrainBadge: "地形和物理上下文",
     previewPanelTerrainTitle: "地形、水深、河流和物理语义让地图有真实表面。",
-    previewPanelTerrainBody: "这能把制图样式变成可见的产品承诺，而不是藏在外观面板里。",
+    previewPanelTerrainBody: "地形、水深和河流上下文让预览在打开完整编辑器前就读起来像真实地理空间。",
     previewPanelNightBadge: "夜光图层",
     previewPanelNightTitle: "夜光和政治叠加能让同一块地理空间讲出不同故事。",
     previewPanelNightBody: "这个模式适合解释展示地图、战役图集和高密度叙事导出。",
@@ -325,15 +380,21 @@ const translations = {
     stepThreeBody: "叠加河流、城市点、水域、特殊区域、图例和展示层，然后导出干净的 PNG 或 JPG。",
     featuresEyebrow: "产品能力",
     featuresTitle: "按真正的地图产品来组织。",
-    featuresBody: "每个能力组都从现有基础出发，同时指向它未来能成为的产品表面。",
+    featuresBody: "每个能力组都围绕真实创作者工作流，以及背后的数据合同来组织。",
     featureGroupOneTitle: "制图设计",
     featureGroupOneBody: "图层顺序、调色板、边界、标签、图例、城市点、水域和可导出的地图呈现。",
+    featurePointPalettes: "HOI4、Kaiserreich、TNO、Red Flood 和 Vanilla 风格调色板。",
+    featurePointExport: "导出工作台支持 1x-4x 展示截图。",
     featureGroupTwoTitle: "场景编辑",
     featureGroupTwoBody: "命名世界状态、归属、控制方、前线、特殊区域、国家元数据和场景感知启动。",
+    featurePointUndo: "地图编辑会话支持 80 步撤销与重做。",
+    featurePointDistricts: "行政区和层级编辑支撑更深的场景制作。",
     featureGroupThreeTitle: "空间数据与分析",
     featureGroupThreeBody: "来源台账、资产目录、健康检查、溯源附表、层级数据和可复用地理流水线。",
     featureGroupFourTitle: "交通与基础设施",
     featureGroupFourBody: "道路和铁路预览是当前样例核心；机场、港口、能源、工业和资源族作为进行中的数据包继续展示。",
+    featurePointTransport: "日本道路、铁路、机场、港口、能源、工业、物流和资源数据族。",
+    featurePointAudits: "来源签名和构建审计让基础设施包可以复现。",
     featureGroupFiveTitle: "影像与上下文图层",
     featureGroupFiveBody: "地形、水深、等高线、河流、夜光、城市区域和物理语义，让地图读起来更丰富。",
     featureGroupSixTitle: "项目管理",
@@ -345,9 +406,20 @@ const translations = {
     audienceThree: "场景与战役设计者",
     audienceFour: "地缘政治叙事创作者",
     audienceFive: "研究者与展示者",
+    templatesEyebrow: "场景模板",
+    templatesTitle: "从真实世界状态开始。",
+    templatesBody: "第一步可以是选择政治宇宙，而不是重新搭一张底图。",
+    templateBlankTag: "干净基线",
+    templateBlankTitle: "Blank Map",
+    templateModernTag: "当代世界",
+    templateModernTitle: "Modern World",
+    templateHoi4Tag: "策略基线",
+    templateHoi4Title: "HOI4 1936 / 1939",
+    templateTnoTag: "架空历史",
+    templateTnoTitle: "TNO 1962",
     dataEyebrow: "数据基础",
     dataTitle: "地图产品需要把数据可信度展示出来。",
-    dataBody: "Scenario Forge 已经跟踪来源台账、资产目录、构建审计和溯源附表。展示页应该让这层可信度可见。",
+    dataBody: "Scenario Forge 跟踪来源台账、资产目录、构建审计和溯源附表，让地图声明始终绑定到真实文件。",
     dataCardOneTag: "基础地理",
     dataCardOneTitle: "边界和聚落",
     dataCardOneBody: "Natural Earth、geoBoundaries、GeoNames、层级数据和国家规则资产，构成政治与聚落骨架。",
@@ -372,7 +444,7 @@ const translations = {
     editionThreeTitle: "团队和云端表面",
     editionThreeBody: "未来产品包装可以沿着后端方向，继续发展云端保存、共享项目空间、权限发布和更大的数据包。",
     casesEyebrow: "样例用例",
-    casesTitle: "用产品故事展示能力，同时保持客户声明诚实。",
+    casesTitle: "展示地图产品应该承接的工作流。",
     caseOneLabel: "战役图集",
     caseOneTitle: "制作一张 TNO 1962 政治 briefing 地图。",
     caseOneBody: "从命名世界状态开始，调整展示图层，叠加城市和水域上下文，导出适合场景简报的地图。",
@@ -395,19 +467,30 @@ const translations = {
     faqFiveQuestion: "交通图层成熟度如何？",
     faqFiveAnswer: "日本道路和铁路预览是当前最清楚的样例。其他基础设施族作为扩展工作展示，并通过进行中路线图说明成熟度。",
     faqSixQuestion: "许可模式是什么？",
-    faqSixAnswer: "当前页面应诚实描述 demo 和仓库，同时为未来创作者版、团队版和云端版本留下产品包装空间。",
+    faqSixAnswer: "当前公开表面是在线演示和仓库。创作者版、团队版和云端包装属于后续产品方向。",
     roadmapEyebrow: "进行中",
     roadmapTitle: "清楚说明什么已经可用，什么还没完成。",
     roadmapBody: "Scenario Forge 的核心已经很鲜明，但交通相关能力目前仍然是有意保持透明的进行中状态。",
     roadmapStatusOne: "预览中",
     roadmapOneTitle: "交通工作台",
-    roadmapOneBody: "已经有基础，但还不是这个产品当下的主叙事中心。",
+    roadmapOneBody: "交通工作台已经把数据包检查、清单审阅和线路密度预览带进产品表面。",
     roadmapStatusTwo: "成熟样例",
     roadmapTwoTitle: "日本道路预览",
     roadmapTwoBody: "目前是交通相关样例里最成熟的一块。",
     roadmapStatusThree: "Shell 阶段",
     roadmapThreeTitle: "铁路和其他基础设施族",
-    roadmapThreeBody: "目前更接近基线或外壳阶段，应被视为进行中能力。",
+    roadmapThreeBody: "铁路、机场、港口、能源、工业、物流和资源数据包正在进入同一套清单驱动流水线。",
+    updatesEyebrow: "最近更新",
+    updatesTitle: "一个持续推进的产品表面。",
+    updateOneDate: "2026 年 5 月 31 日",
+    updateOneTitle: "产品级首页展示",
+    updateOneBody: "首页现在把实时预览、数据可信度、版本方向、用例和 FAQ 纳入第一层产品叙事。",
+    updateTwoDate: "2026 年 5 月 31 日",
+    updateTwoTitle: "云端保存基础",
+    updateTwoBody: "本地后端边界和共享项目合同已经成为未来团队表面的基础。",
+    updateThreeDate: "2026 年 5 月 12 日",
+    updateThreeTitle: "入库数据基础",
+    updateThreeBody: "入库目录跟踪 391 个资产，覆盖来源台账、交通清单、拓扑、调色板和运行时数据。",
     ctaEyebrow: "准备打开工作台了吗？",
     ctaTitle: "当你想从想法走到地图，就进入编辑器。",
     ctaBody: "展示页负责讲清楚产品，编辑器负责真正把场景落到地图上。",
@@ -470,12 +553,23 @@ function applyLanguage(language) {
   if (twitterDescription) twitterDescription.setAttribute("content", copy.metaDescription);
   if (ogTitle) ogTitle.setAttribute("content", copy.metaTitle);
   if (twitterTitle) twitterTitle.setAttribute("content", copy.metaTitle);
+  formatMetricNumbers(language);
 
   try {
     globalThis.localStorage?.setItem(STORAGE_KEY, language);
   } catch (_error) {
     // noop
   }
+}
+
+function formatMetricNumbers(language) {
+  const locale = language === "zh" ? "zh-CN" : "en-US";
+  const formatter = new Intl.NumberFormat(locale);
+  document.querySelectorAll("[data-stat-value]").forEach((node) => {
+    const value = Number.parseInt(node.getAttribute("data-stat-value") || "", 10);
+    if (Number.isNaN(value)) return;
+    node.textContent = formatter.format(value);
+  });
 }
 
 function initScrollReveal() {

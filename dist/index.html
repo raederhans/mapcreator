@@ -56,6 +56,11 @@
           <a href="#faq" data-i18n="navFaq">FAQ</a>
         </nav>
 
+        <div class="lang-switch topbar__language" role="group" aria-label="Language switcher" data-i18n-aria-label="languageSwitcherLabel">
+          <button type="button" class="lang-switch__btn is-active" data-lang="en">EN</button>
+          <button type="button" class="lang-switch__btn" data-lang="zh">中文</button>
+        </div>
+
         <a class="button button--primary topbar__cta" href="./app/?view=guide" data-i18n="headerOpenApp">Open demo</a>
       </header>
 
@@ -102,6 +107,47 @@
               <span data-i18n="chipHoi4">HOI4 1939</span>
               <span data-i18n="chipTno">TNO 1962</span>
             </div>
+          </div>
+        </section>
+
+        <section id="stats" class="stats-strip" aria-label="Scenario Forge product statistics" data-i18n-aria-label="statsLabel">
+          <article class="stat-card" data-reveal>
+            <span class="stat-card__value" data-stat-value="5">5</span>
+            <span class="stat-card__label" data-i18n="statScenarios">built-in scenarios</span>
+          </article>
+          <article class="stat-card" data-reveal>
+            <span class="stat-card__value" data-stat-value="21338">21338</span>
+            <span class="stat-card__label" data-i18n="statCities">world city points</span>
+          </article>
+          <article class="stat-card" data-reveal>
+            <span class="stat-card__value" data-stat-value="189269">189269</span>
+            <span class="stat-card__label" data-i18n="statAliases">city aliases</span>
+          </article>
+          <article class="stat-card" data-reveal>
+            <span class="stat-card__value" data-stat-value="391">391</span>
+            <span class="stat-card__label" data-i18n="statCatalog">cataloged data assets</span>
+          </article>
+          <article class="stat-card" data-reveal>
+            <span class="stat-card__value" data-stat-value="5899">5899</span>
+            <span class="stat-card__label" data-i18n="statJapan">Japan road + rail preview features</span>
+          </article>
+        </section>
+
+        <section id="sources" class="section source-strip-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="sourcesEyebrow">Data sources</p>
+            <h2 data-i18n="sourcesTitle">Built on recognizable map data families.</h2>
+            <p data-i18n="sourcesBody">Every source claim below is tied to checked-in manifests, ledgers, or build audits.</p>
+          </div>
+          <div class="source-strip" data-reveal>
+            <span>Natural Earth</span>
+            <span>geoBoundaries</span>
+            <span>GeoNames</span>
+            <span>NOAA ETOPO</span>
+            <span>NASA Black Marble</span>
+            <span>OpenStreetMap</span>
+            <span>Geofabrik</span>
+            <span>MLIT Japan</span>
           </div>
         </section>
 
@@ -234,7 +280,7 @@
               <article id="preview-panel-terrain" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-terrain" data-preview-panel="terrain" hidden>
                 <span class="status-badge" data-i18n="previewPanelTerrainBadge">Relief and physical context</span>
                 <h3 data-i18n="previewPanelTerrainTitle">Terrain, bathymetry, rivers, and physical semantics give the map a real surface.</h3>
-                <p data-i18n="previewPanelTerrainBody">This turns cartographic styling into a visible product claim instead of a hidden appearance panel.</p>
+                <p data-i18n="previewPanelTerrainBody">Relief, bathymetry, and river context make the preview read like geography before the full editor opens.</p>
               </article>
               <article id="preview-panel-night" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-night" data-preview-panel="night" hidden>
                 <span class="status-badge" data-i18n="previewPanelNightBadge">Night-light layer</span>
@@ -302,7 +348,7 @@
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="featuresEyebrow">Product capabilities</p>
             <h2 data-i18n="featuresTitle">Organized like a serious map product.</h2>
-            <p data-i18n="featuresBody">Each capability group starts from what already exists and points toward the product surface it can become.</p>
+            <p data-i18n="featuresBody">Each capability group is organized around a real creator workflow and the data contracts behind it.</p>
           </div>
 
           <div class="feature-groups">
@@ -312,6 +358,10 @@
               </span>
               <h3 data-i18n="featureGroupOneTitle">Cartographic design</h3>
               <p data-i18n="featureGroupOneBody">Layer order, color palettes, borders, labels, legends, city points, water regions, and export-ready map presentation.</p>
+              <ul class="feature-points">
+                <li data-i18n="featurePointPalettes">Mod palettes for HOI4, Kaiserreich, TNO, Red Flood, and Vanilla-style maps.</li>
+                <li data-i18n="featurePointExport">Export workbench with 1x-4x presentation snapshots.</li>
+              </ul>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--green" aria-hidden="true">
@@ -319,6 +369,10 @@
               </span>
               <h3 data-i18n="featureGroupTwoTitle">Scenario editing</h3>
               <p data-i18n="featureGroupTwoBody">Named world states, ownership, controller, frontlines, special regions, country metadata, and scenario-aware startup.</p>
+              <ul class="feature-points">
+                <li data-i18n="featurePointUndo">80-step undo and redo for map editing sessions.</li>
+                <li data-i18n="featurePointDistricts">Administrative districts and hierarchy editing for deep scenario work.</li>
+              </ul>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--amber" aria-hidden="true">
@@ -333,6 +387,10 @@
               </span>
               <h3 data-i18n="featureGroupFourTitle">Transport and infrastructure</h3>
               <p data-i18n="featureGroupFourBody">Road and rail previews are the current proof point; airports, ports, energy, industrial, and resource families are tracked as in-progress data packs.</p>
+              <ul class="feature-points">
+                <li data-i18n="featurePointTransport">Japan roads, rail, airports, ports, energy, industry, logistics, and resource families.</li>
+                <li data-i18n="featurePointAudits">Source signatures and build audits keep infrastructure packs reproducible.</li>
+              </ul>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--rose" aria-hidden="true">
@@ -366,11 +424,37 @@
           </div>
         </section>
 
+        <section id="templates" class="section template-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="templatesEyebrow">Scenario templates</p>
+            <h2 data-i18n="templatesTitle">Start from a real world state.</h2>
+            <p data-i18n="templatesBody">The first action can be choosing the political universe, not rebuilding a base map.</p>
+          </div>
+          <div class="template-grid">
+            <article class="template-card template-card--blank" data-reveal>
+              <span data-i18n="templateBlankTag">Clean base</span>
+              <h3 data-i18n="templateBlankTitle">Blank Map</h3>
+            </article>
+            <article class="template-card template-card--modern" data-reveal>
+              <span data-i18n="templateModernTag">Current world</span>
+              <h3 data-i18n="templateModernTitle">Modern World</h3>
+            </article>
+            <article class="template-card template-card--hoi4" data-reveal>
+              <span data-i18n="templateHoi4Tag">Strategy baseline</span>
+              <h3 data-i18n="templateHoi4Title">HOI4 1936 / 1939</h3>
+            </article>
+            <article class="template-card template-card--tno" data-reveal>
+              <span data-i18n="templateTnoTag">Alternate history</span>
+              <h3 data-i18n="templateTnoTitle">TNO 1962</h3>
+            </article>
+          </div>
+        </section>
+
         <section id="data" class="section section--muted data-section">
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="dataEyebrow">Data foundation</p>
             <h2 data-i18n="dataTitle">A map product needs visible data trust.</h2>
-            <p data-i18n="dataBody">Scenario Forge already tracks source ledgers, asset catalogs, build audits, and provenance sidecars. The landing page should make that trust layer visible.</p>
+            <p data-i18n="dataBody">Scenario Forge tracks source ledgers, asset catalogs, build audits, and provenance sidecars so map claims stay tied to real files.</p>
           </div>
 
           <div class="data-grid">
@@ -425,7 +509,7 @@
         <section id="cases" class="section section--muted cases-section">
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="casesEyebrow">Sample use cases</p>
-            <h2 data-i18n="casesTitle">Show product stories without inventing customer claims.</h2>
+            <h2 data-i18n="casesTitle">Show the workflows a map product should own.</h2>
           </div>
 
           <div class="case-grid">
@@ -475,8 +559,8 @@
               <p data-i18n="faqFiveAnswer">Japan road and rail previews are the clearest current sample. Other infrastructure families are visible as expansion work and should be read through the in-progress roadmap.</p>
             </details>
             <details>
-              <summary data-i18n="faqSixQuestion">What is the license model?</summary>
-              <p data-i18n="faqSixAnswer">The current page should describe the demo and repository honestly, then leave room for future creator, team, and cloud editions after product packaging is formalized.</p>
+            <summary data-i18n="faqSixQuestion">What is the license model?</summary>
+              <p data-i18n="faqSixAnswer">The current public surface is a live demo and repository. Creator, team, and cloud packaging are product directions for a later release.</p>
             </details>
           </div>
         </section>
@@ -485,14 +569,14 @@
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="roadmapEyebrow">In progress</p>
             <h2 data-i18n="roadmapTitle">Transparent about what is ready and what is not.</h2>
-            <p data-i18n="roadmapBody">Scenario Forge already has a strong core. Some transport-related surfaces are still intentionally presented as work in progress.</p>
+              <p data-i18n="roadmapBody">Scenario Forge already has a strong core. Some transport-related surfaces are still intentionally presented as work in progress.</p>
           </div>
 
           <div class="roadmap-list">
             <article class="roadmap-item" data-reveal>
               <span class="status-badge" data-i18n="roadmapStatusOne">Active preview</span>
               <h3 data-i18n="roadmapOneTitle">Transport workbench</h3>
-              <p data-i18n="roadmapOneBody">Partially complete. It exists, but it is not yet the center of the product story.</p>
+              <p data-i18n="roadmapOneBody">The workbench already carries transport pack inspection, manifest review, and route-density preview into the product surface.</p>
             </article>
             <article class="roadmap-item" data-reveal>
               <span class="status-badge" data-i18n="roadmapStatusTwo">Mature sample</span>
@@ -502,7 +586,31 @@
             <article class="roadmap-item" data-reveal>
               <span class="status-badge" data-i18n="roadmapStatusThree">Shell stage</span>
               <h3 data-i18n="roadmapThreeTitle">Rail and other infrastructure families</h3>
-              <p data-i18n="roadmapThreeBody">Still closer to baseline or shell stage and should be treated as in-progress, not product-defining yet.</p>
+              <p data-i18n="roadmapThreeBody">Rail, airport, port, energy, industrial, logistics, and resource packs are moving through the same manifest-led pipeline.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="updates" class="section updates-section">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="updatesEyebrow">What’s new</p>
+            <h2 data-i18n="updatesTitle">A product surface that keeps moving.</h2>
+          </div>
+          <div class="update-list">
+            <article class="update-item" data-reveal>
+              <time datetime="2026-05-31" data-i18n="updateOneDate">May 31, 2026</time>
+              <h3 data-i18n="updateOneTitle">Product-grade landing showcase</h3>
+              <p data-i18n="updateOneBody">The homepage now exposes live preview, data trust, editions, use cases, and FAQ in the first product narrative.</p>
+            </article>
+            <article class="update-item" data-reveal>
+              <time datetime="2026-05-31" data-i18n="updateTwoDate">May 31, 2026</time>
+              <h3 data-i18n="updateTwoTitle">Cloud save foundation</h3>
+              <p data-i18n="updateTwoBody">Local backend boundaries and shared project contracts are now visible as the foundation for future team surfaces.</p>
+            </article>
+            <article class="update-item" data-reveal>
+              <time datetime="2026-05-12" data-i18n="updateThreeDate">May 12, 2026</time>
+              <h3 data-i18n="updateThreeTitle">Cataloged data foundation</h3>
+              <p data-i18n="updateThreeBody">The checked-in catalog tracks 391 assets across source ledgers, transport manifests, topology, palettes, and runtime data.</p>
             </article>
           </div>
         </section>
