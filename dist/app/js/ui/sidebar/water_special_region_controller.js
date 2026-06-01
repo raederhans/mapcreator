@@ -117,6 +117,25 @@ export function createWaterSpecialRegionController({
     runtimeState.showOpenOceanRegions = !!(isOpenOceanSelectionEnabled() || isOpenOceanPaintEnabled());
   };
 
+  const clearHiddenOpenOceanInteractionState = () => {
+    let changed = false;
+    const hoveredFeature = runtimeState.hoveredWaterRegionId
+      ? runtimeState.waterRegionsById?.get(runtimeState.hoveredWaterRegionId)
+      : null;
+    if (hoveredFeature && !isWaterFeatureVisibleInInspector(hoveredFeature)) {
+      runtimeState.hoveredWaterRegionId = null;
+      changed = true;
+    }
+    const selectedFeature = runtimeState.selectedWaterRegionId
+      ? runtimeState.waterRegionsById?.get(runtimeState.selectedWaterRegionId)
+      : null;
+    if (selectedFeature && !isWaterFeatureVisibleInInspector(selectedFeature)) {
+      runtimeState.selectedWaterRegionId = "";
+      changed = true;
+    }
+    return changed;
+  };
+
   const formatWaterTokenLabel = (value, fallback = "Unknown") => {
     const normalized = String(value || "").trim();
     if (!normalized) return fallback;
@@ -488,6 +507,7 @@ export function createWaterSpecialRegionController({
         if (typeof runtimeState.renderWaterRegionListFn === "function") {
           runtimeState.renderWaterRegionListFn();
         }
+        if (render) render();
       });
 
       const copy = document.createElement("div");
@@ -634,6 +654,7 @@ export function createWaterSpecialRegionController({
         button.addEventListener("click", () => {
           runtimeState.selectedWaterRegionId = childId;
           renderWaterRegionList();
+          if (render) render();
         });
         const copy = document.createElement("div");
         copy.className = "scenario-action-card-copy";
@@ -714,6 +735,7 @@ export function createWaterSpecialRegionController({
         runtimeState.selectedWaterRegionId = featureId;
         waterInspectorSection?.setAttribute("open", "");
         renderWaterRegionList();
+        if (render) render();
       });
 
       const name = document.createElement("div");
@@ -1082,9 +1104,7 @@ export function createWaterSpecialRegionController({
     waterInspectorOpenOceanSelectToggle.addEventListener("change", (event) => {
       runtimeState.allowOpenOceanSelect = !!event.target.checked;
       syncOpenOceanInspectorState();
-      if (!runtimeState.showOpenOceanRegions) {
-        runtimeState.hoveredWaterRegionId = null;
-      }
+      clearHiddenOpenOceanInteractionState();
       markDirty("toggle-open-ocean-select");
       renderWaterInteractionUi();
       renderWaterRegionList();
@@ -1098,9 +1118,7 @@ export function createWaterSpecialRegionController({
     waterInspectorOpenOceanPaintToggle.addEventListener("change", (event) => {
       runtimeState.allowOpenOceanPaint = !!event.target.checked;
       syncOpenOceanInspectorState();
-      if (!runtimeState.showOpenOceanRegions) {
-        runtimeState.hoveredWaterRegionId = null;
-      }
+      clearHiddenOpenOceanInteractionState();
       markDirty("toggle-open-ocean-paint");
       renderWaterInteractionUi();
       renderWaterRegionList();
@@ -1218,6 +1236,7 @@ export function createWaterSpecialRegionController({
       if (!parentId || !runtimeState.waterRegionsById?.has(parentId)) return;
       runtimeState.selectedWaterRegionId = parentId;
       renderWaterRegionList();
+      if (render) render();
     });
     waterInspectorJumpToParentBtn.dataset.bound = "true";
   }

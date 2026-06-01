@@ -6246,7 +6246,7 @@
     },
     {
       "path": "app/js/core/export_artifact_package.js",
-      "size_bytes": 6501
+      "size_bytes": 6578
     },
     {
       "path": "app/js/core/feature_identity.js",
@@ -6258,7 +6258,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 41661
+      "size_bytes": 41667
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6318,7 +6318,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 944474
+      "size_bytes": 945313
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -6802,7 +6802,7 @@
     },
     {
       "path": "app/js/ui/sidebar/water_special_region_controller.js",
-      "size_bytes": 54752
+      "size_bytes": 55470
     },
     {
       "path": "app/js/ui/sidebar.js",
@@ -7103,5 +7103,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1016049791
+  "total_bytes": 1016051431
 }

@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools import patch_tno_1962_bundle as tno_bundle
+from tools.audit_tno_water_family_refinement import build_report as build_family_refinement_report
 from tools.validate_tno_water_geometries import (
     OCEAN_REFINEMENT_PHASE_TARGET_IDS,
     collect_d3_spherical_metrics,
@@ -619,6 +620,69 @@ def test_tno_ocean_refinement_phase_targets_are_synchronized():
             if feature_id not in manifest_chunk_ids:
                 failures.append(f"{phase}:{feature_id}:manifest_chunks")
     assert failures == []
+
+
+def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
+    macro_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_macro",
+            "name": "Fixture Macro",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "tno_cloned_from_global_water_regions",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 0.0]]],
+        },
+    }
+    detailed_macro_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_detailed_macro",
+            "name": "Fixture Detailed Macro",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "iho",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[2.0, 0.0], [3.0, 0.0], [3.0, 1.0], [2.0, 0.0]]],
+        },
+    }
+    detail_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_detail",
+            "name": "Fixture Detail",
+            "region_group": "marine_detail",
+            "parent_id": "fixture_detailed_macro",
+            "water_type": "bay",
+            "source_standard": "iho",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[2.0, 0.0], [2.5, 0.0], [2.5, 0.5], [2.0, 0.0]]],
+        },
+    }
+    report = build_family_refinement_report(
+        {"type": "FeatureCollection", "features": [macro_feature, detailed_macro_feature, detail_feature]},
+        generated_at="2026-06-01T00:00:00Z",
+    )
+
+    assert report["contract"]["schema_version"] == 2
+    assert report["summary"]["marine_macro_count"] == 2
+    assert report["summary"]["marine_macro_with_children_count"] == 1
+    assert report["summary"]["low_precision_candidate_count"] == 1
+    candidate = report["low_precision_candidates"][0]
+    assert candidate["id"] == "fixture_macro"
+    assert candidate["vertex_count"] == 4
+    assert candidate["suggested_priority"] == "high"
+    assert "uses global water clone source" in candidate["reasons"]
+    detailed_row = next(row for row in report["families"] if row["id"] == "fixture_detailed_macro")
+    assert detailed_row["child_count"] == 1
+    assert detailed_row["children"][0]["vertex_count"] == 4
 
 
 def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():

@@ -2882,6 +2882,7 @@ function getScenarioWaterVisualRevisionToken() {
     runtimeState.showOpenOceanRegions ? "open-ocean:on" : "open-ocean:off",
     runtimeState.allowOpenOceanSelect ? "open-ocean-select:on" : "open-ocean-select:off",
     runtimeState.allowOpenOceanPaint ? "open-ocean-paint:on" : "open-ocean-paint:off",
+    `water-selected:${String(runtimeState.selectedWaterRegionId || "").trim()}`,
     `ocean-fill:${getOceanBaseFillColor()}`,
     `lake-fill:${getLakeBaseFillColor()}`,
     `lake-style:${stableJson(getLakeStyleConfig())}`,
@@ -17919,7 +17920,6 @@ function getScenarioWaterFeaturePath(feature, parts) {
 function drawScenarioWaterHighlightLayer(k) {
   const highlightIds = new Set([
     String(runtimeState.selectedWaterRegionId || "").trim(),
-    String(runtimeState.hoveredWaterRegionId || "").trim(),
   ].filter(Boolean));
   let highlightedCount = 0;
   highlightIds.forEach((id) => {
@@ -20933,7 +20933,9 @@ function renderHoverOverlay() {
     .attr("d", pathSVG)
     .attr("fill", "none")
     .attr("stroke", "#f1c40f")
-    .attr("stroke-width", 2.0);
+    .attr("stroke-linejoin", "round")
+    .attr("stroke-linecap", "round")
+    .attr("stroke-width", () => (runtimeState.hoveredWaterRegionId ? 1.25 : 2.0));
 
   selection.exit().remove();
 
@@ -22935,7 +22937,21 @@ async function handleClick(event, _interactionContext = null) {
   // City points may influence hover messaging, but paint/select stays bound to
   // the canonical land/water/special hit pipeline only.
   const id = hit.id;
-  if (!id) return;
+  if (!id) {
+    if (runtimeState.selectedWaterRegionId) {
+      const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
+      runtimeState.selectedWaterRegionId = "";
+      refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
+      requestInteractionRender("clear-water-selection-empty-click");
+    }
+    if (runtimeState.selectedSpecialRegionId) {
+      const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
+      runtimeState.selectedSpecialRegionId = "";
+      refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
+      requestInteractionRender("clear-special-selection-empty-click");
+    }
+    return;
+  }
   updateDevSelectedHit(hit);
   if (handleSpecialZoneMembershipClick(hit, event)) return;
   if (hit.targetType === "special") {

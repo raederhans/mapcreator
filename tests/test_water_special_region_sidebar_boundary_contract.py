@@ -105,6 +105,45 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         )
         self.assertNotIn("runtimeState.waterRegionOverrides[selectedId] = nextColor;", owner_content)
 
+    def test_water_region_selection_handlers_request_map_render(self):
+        owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
+        selection_patterns = [
+            r"runtimeState\.selectedWaterRegionId = featureId;\s*"
+            r"waterInspectorSection\?\.setAttribute\(\"open\", \"\"\);\s*"
+            r"if \(typeof runtimeState\.renderWaterRegionListFn === \"function\"\) \{[\s\S]*?"
+            r"if \(render\) render\(\);",
+            r"runtimeState\.selectedWaterRegionId = childId;\s*"
+            r"renderWaterRegionList\(\);\s*"
+            r"if \(render\) render\(\);",
+            r"runtimeState\.selectedWaterRegionId = featureId;\s*"
+            r"waterInspectorSection\?\.setAttribute\(\"open\", \"\"\);\s*"
+            r"renderWaterRegionList\(\);\s*"
+            r"if \(render\) render\(\);",
+            r"runtimeState\.selectedWaterRegionId = parentId;\s*"
+            r"renderWaterRegionList\(\);\s*"
+            r"if \(render\) render\(\);",
+        ]
+
+        for pattern in selection_patterns:
+            self.assertRegex(owner_content, pattern)
+
+    def test_hidden_open_ocean_toggle_clears_hover_and_selected_state(self):
+        owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
+        clear_body = owner_content.split("const clearHiddenOpenOceanInteractionState = () => {", 1)[1].split(
+            "\n  const formatWaterTokenLabel",
+            1,
+        )[0]
+        toggle_handlers = owner_content.split("if (waterInspectorOpenOceanSelectToggle", 1)[1].split(
+            "\n  if (waterInspectorChokepointToggle",
+            1,
+        )[0]
+
+        self.assertIn("runtimeState.hoveredWaterRegionId = null;", clear_body)
+        self.assertIn("runtimeState.selectedWaterRegionId = \"\";", clear_body)
+        self.assertIn("!isWaterFeatureVisibleInInspector(hoveredFeature)", clear_body)
+        self.assertIn("!isWaterFeatureVisibleInInspector(selectedFeature)", clear_body)
+        self.assertEqual(toggle_handlers.count("clearHiddenOpenOceanInteractionState();"), 2)
+
     def test_atlantropa_water_fragments_keep_real_feature_ids(self):
         data = json.loads(ATLANTROPA_DETAIL_CHUNK.read_text(encoding="utf-8"))
         gabes_fragments = [
