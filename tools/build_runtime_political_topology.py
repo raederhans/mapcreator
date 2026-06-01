@@ -10,7 +10,7 @@ import tempfile
 import time
 
 import geopandas as gpd
-from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
+from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, mapping, shape
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 from topojson.utils import serialize_as_geodataframe, serialize_as_geojson
@@ -39,6 +39,15 @@ except Exception:  # pragma: no cover - unavailable on some platforms
     resource = None
 
 MAX_SHELL_COVERAGE_REPAIR_PASSES = 6
+PRIMARY_DETAIL_COMPONENT_OVERLAP_THRESHOLD = 0.05
+PRIMARY_COMPONENT_RETENTION_COUNTRIES = {"FR"}
+FRENCH_OVERSEAS_PRIMARY_COMPONENTS = (
+    ("GF", "GF_PRIMARY", "French Guiana", (-55.0, 1.5, -51.0, 6.5)),
+    ("GP", "GP_PRIMARY", "Guadeloupe", (-62.2, 15.5, -60.6, 16.8)),
+    ("MQ", "MQ_PRIMARY", "Martinique", (-61.4, 14.2, -60.7, 15.1)),
+    ("RE", "RE_PRIMARY", "Reunion", (55.0, -21.6, 56.1, -20.7)),
+    ("YT", "YT_PRIMARY", "Mayotte", (44.8, -13.2, 45.5, -12.4)),
+)
 
 
 def _get_peak_memory_mb() -> float | None:
@@ -399,6 +408,134 @@ def _assign_source(features: list[dict], source_name: str) -> list[dict]:
     return normalized
 
 
+def _build_detail_country_geometries(
+    detail_gdf: gpd.GeoDataFrame,
+    target_country_codes: set[str],
+) -> dict[str, object]:
+    geometries_by_country: dict[str, list[object]] = {}
+    for _index, row in detail_gdf.iterrows():
+        props = {key: row[key] for key in detail_gdf.columns if key != "geometry"}
+        country_code = _get_feature_country_code(props)
+        if not country_code or country_code not in target_country_codes:
+            continue
+        geometry = _normalize_polygonal_geometry(row.geometry)
+        if geometry is None or geometry.is_empty:
+            continue
+        geometries_by_country.setdefault(country_code, []).append(geometry)
+
+    country_geometries: dict[str, object] = {}
+    for country_code, geometries in geometries_by_country.items():
+        geometry = _normalize_polygonal_geometry(unary_union(geometries))
+        if geometry is not None and not geometry.is_empty:
+            country_geometries[country_code] = geometry
+    return country_geometries
+
+
+def _primary_component_overlap_ratio(component, detail_geometry) -> float:
+    if detail_geometry is None or detail_geometry.is_empty or component.area <= 0:
+        return 0.0
+    overlap = component.intersection(detail_geometry)
+    if overlap is None or overlap.is_empty:
+        return 0.0
+    return float(overlap.area) / float(component.area)
+
+
+def _contains_point(bounds: tuple[float, float, float, float], x: float, y: float) -> bool:
+    min_x, min_y, max_x, max_y = bounds
+    return min_x <= x <= max_x and min_y <= y <= max_y
+
+
+def _match_french_overseas_component(component) -> tuple[str, str, str] | None:
+    point = component.representative_point()
+    for code, feature_id, name, bounds in FRENCH_OVERSEAS_PRIMARY_COMPONENTS:
+        if _contains_point(bounds, point.x, point.y):
+            return code, feature_id, name
+    return None
+
+
+def _build_primary_gap_feature(props: dict, geometry, *, country_code: str, feature_id: str, name: str) -> dict:
+    out = dict(props)
+    out["id"] = feature_id
+    out["name"] = name
+    out["cntr_code"] = country_code
+    out["admin1_group"] = ""
+    out["detail_tier"] = "primary_gap"
+    out["__source"] = "primary_gap"
+    return {
+        "type": "Feature",
+        "properties": out,
+        "geometry": mapping(geometry),
+    }
+
+
+def _build_generic_primary_gap_feature(
+    props: dict,
+    country_code: str,
+    component,
+    component_index: int,
+) -> dict:
+    if country_code == "FR":
+        match = _match_french_overseas_component(component)
+        if match is not None:
+            code, feature_id, name = match
+            return _build_primary_gap_feature(
+                props,
+                component,
+                country_code=code,
+                feature_id=feature_id,
+                name=name,
+            )
+
+    base_id = _get_feature_id(props, component_index)
+    feature_id = f"{base_id}_PRIMARY_GAP_{component_index + 1}"
+    name = str(props.get("name") or feature_id).strip() or feature_id
+    return _build_primary_gap_feature(
+        props,
+        component,
+        country_code=country_code,
+        feature_id=feature_id,
+        name=name,
+    )
+
+
+def _retain_primary_gap_components(feature: dict, country_code: str, detail_geometry) -> list[dict]:
+    geometry_payload = feature.get("geometry")
+    if not geometry_payload:
+        return []
+    geometry = _normalize_polygonal_geometry(shape(geometry_payload))
+    if geometry is None or geometry.is_empty:
+        return []
+
+    props = dict(feature.get("properties") or {})
+    retained: list[dict] = []
+    grouped_parts: dict[tuple[str, str, str], list[Polygon]] = {}
+    for component_index, component in enumerate(_iter_polygonal_parts(geometry)):
+        overlap_ratio = _primary_component_overlap_ratio(component, detail_geometry)
+        if overlap_ratio >= PRIMARY_DETAIL_COMPONENT_OVERLAP_THRESHOLD:
+            continue
+        if country_code == "FR":
+            match = _match_french_overseas_component(component)
+            if match is not None:
+                grouped_parts.setdefault(match, []).append(component)
+                continue
+        retained.append(_build_generic_primary_gap_feature(props, country_code, component, component_index))
+
+    for (code, feature_id, name), parts in grouped_parts.items():
+        geometry = _normalize_polygonal_geometry(MultiPolygon(parts) if len(parts) > 1 else parts[0])
+        if geometry is None or geometry.is_empty:
+            continue
+        retained.append(
+            _build_primary_gap_feature(
+                props,
+                geometry,
+                country_code=code,
+                feature_id=feature_id,
+                name=name,
+            )
+        )
+    return retained
+
+
 def _compose_political_features(
     primary_topology: dict,
     detail_topology: dict | None,
@@ -424,6 +561,10 @@ def _compose_political_features(
             for feature in detail_features
         }
         detail_countries.discard("")
+        detail_retention_geometries = _build_detail_country_geometries(
+            detail_gdf,
+            detail_countries & PRIMARY_COMPONENT_RETENTION_COUNTRIES,
+        )
         seen_ids: set[str] = set()
         base_features = []
         for feature in detail_features:
@@ -437,6 +578,18 @@ def _compose_political_features(
             feature_id = _get_feature_id(props, len(base_features))
             country_code = _get_feature_country_code(props)
             if country_code and country_code in detail_countries:
+                if country_code in detail_retention_geometries:
+                    for retained_feature in _retain_primary_gap_components(
+                        feature,
+                        country_code,
+                        detail_retention_geometries.get(country_code),
+                    ):
+                        retained_props = retained_feature.get("properties") or {}
+                        retained_id = _get_feature_id(retained_props, len(base_features))
+                        if retained_id in seen_ids:
+                            continue
+                        seen_ids.add(retained_id)
+                        base_features.append(retained_feature)
                 continue
             if feature_id in seen_ids:
                 continue

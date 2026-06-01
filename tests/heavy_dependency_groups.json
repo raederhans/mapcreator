@@ -11,7 +11,8 @@
       "tests/test_patch_checked_in_urban_artifacts.py",
       "tests/test_city_assets.py",
       "tests/test_global_transport_builder_contracts.py",
-      "tests/test_local_canonicalization.py"
+      "tests/test_local_canonicalization.py",
+      "tests/test_political_topology_gap_contract.py"
     ]
   }
 }

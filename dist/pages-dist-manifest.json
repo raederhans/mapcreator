@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 248856
+      "size_bytes": 250333
     },
     {
       "path": "app/data/CATALOG.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -34,11 +34,11 @@
     },
     {
       "path": "app/data/europe_topology.na_v2.json",
-      "size_bytes": 19240920
+      "size_bytes": 19326019
     },
     {
       "path": "app/data/europe_topology.runtime_political_v1.json",
-      "size_bytes": 15682866
+      "size_bytes": 14128976
     },
     {
       "path": "app/data/europe_urban.geojson",
@@ -78,11 +78,11 @@
     },
     {
       "path": "app/data/historical_city_lights_1930_exclusions.json",
-      "size_bytes": 331
+      "size_bytes": 339
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8653265
+      "size_bytes": 8653407
     },
     {
       "path": "app/data/manifest.json",
@@ -94,7 +94,7 @@
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.manual.json",
-      "size_bytes": 4828
+      "size_bytes": 5095
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.map.json",
@@ -102,27 +102,27 @@
     },
     {
       "path": "app/data/palette-maps/kaiserreich.audit.json",
-      "size_bytes": 107146
+      "size_bytes": 110736
     },
     {
       "path": "app/data/palette-maps/kaiserreich.manual.json",
-      "size_bytes": 2144
+      "size_bytes": 2248
     },
     {
       "path": "app/data/palette-maps/kaiserreich.map.json",
-      "size_bytes": 26822
+      "size_bytes": 28093
     },
     {
       "path": "app/data/palette-maps/red_flood.audit.json",
-      "size_bytes": 101053
+      "size_bytes": 104377
     },
     {
       "path": "app/data/palette-maps/red_flood.manual.json",
-      "size_bytes": 2258
+      "size_bytes": 2372
     },
     {
       "path": "app/data/palette-maps/red_flood.map.json",
-      "size_bytes": 23917
+      "size_bytes": 25090
     },
     {
       "path": "app/data/palette-maps/tno.audit.json",
@@ -146,11 +146,11 @@
     },
     {
       "path": "app/data/palettes/kaiserreich.palette.json",
-      "size_bytes": 149011
+      "size_bytes": 153690
     },
     {
       "path": "app/data/palettes/red_flood.palette.json",
-      "size_bytes": 140841
+      "size_bytes": 145184
     },
     {
       "path": "app/data/palettes/tno.palette.json",
@@ -158,19 +158,19 @@
     },
     {
       "path": "app/data/releasables/hoi4_japan_victory.internal.phase1.overlay.json",
-      "size_bytes": 23008
+      "size_bytes": 23776
     },
     {
       "path": "app/data/releasables/hoi4_reichskommissariat_boundaries.internal.json",
-      "size_bytes": 91605
+      "size_bytes": 93809
     },
     {
       "path": "app/data/releasables/hoi4_vanilla.internal.phase1.catalog.json",
-      "size_bytes": 274641
+      "size_bytes": 282434
     },
     {
       "path": "app/data/releasables/hoi4_vanilla.internal.phase1.source.json",
-      "size_bytes": 217588
+      "size_bytes": 223233
     },
     {
       "path": "app/data/releasables/tno_1962.internal.phase1.catalog.json",
@@ -178,19 +178,15 @@
     },
     {
       "path": "app/data/releasables/tno_1962.internal.phase1.source.json",
-      "size_bytes": 24771
+      "size_bytes": 25714
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
       "size_bytes": 8852
-    },
-    {
-      "path": "app/data/scenario-rules/__pycache__/tno_1962.east_asia_ownership.manual.cpython-312.pyc",
-      "size_bytes": 9560
     },
     {
       "path": "app/data/scenario-rules/hoi4_1936.manual.json",
@@ -198,11 +194,11 @@
     },
     {
       "path": "app/data/scenario-rules/hoi4_1939.manual.json",
-      "size_bytes": 17756
+      "size_bytes": 17920
     },
     {
       "path": "app/data/scenario-rules/targets/hoi4_1939_cz_sk_targets.json",
-      "size_bytes": 1511
+      "size_bytes": 1564
     },
     {
       "path": "app/data/scenario-rules/tno_1962.africa_ownership.manual.json",
@@ -210,11 +206,11 @@
     },
     {
       "path": "app/data/scenario-rules/tno_1962.decolonization.manual.json",
-      "size_bytes": 3858
+      "size_bytes": 3963
     },
     {
       "path": "app/data/scenario-rules/tno_1962.east_asia_ownership.manual.json",
-      "size_bytes": 17686
+      "size_bytes": 18180
     },
     {
       "path": "app/data/scenario-rules/tno_1962.russia_ownership.manual.json",
@@ -222,7 +218,7 @@
     },
     {
       "path": "app/data/scenario-rules/tno_1962.south_asia_ownership.manual.json",
-      "size_bytes": 1346
+      "size_bytes": 1385
     },
     {
       "path": "app/data/scenarios/blank_base/build_snapshot.json",
@@ -238,11 +234,11 @@
     },
     {
       "path": "app/data/scenarios/blank_base/cores.by_feature.json",
-      "size_bytes": 18
+      "size_bytes": 21
     },
     {
       "path": "app/data/scenarios/blank_base/countries.json",
-      "size_bytes": 170193
+      "size_bytes": 176117
     },
     {
       "path": "app/data/scenarios/blank_base/manifest.json",
@@ -250,7 +246,7 @@
     },
     {
       "path": "app/data/scenarios/blank_base/owners.by_feature.json",
-      "size_bytes": 19
+      "size_bytes": 22
     },
     {
       "path": "app/data/scenarios/blank_base/runtime_topology.topo.json",
@@ -262,7 +258,7 @@
     },
     {
       "path": "app/data/scenarios/district_templates.shared.json",
-      "size_bytes": 60
+      "size_bytes": 65
     },
     {
       "path": "app/data/scenarios/expectations/hoi4_1936.expectation.json",
@@ -786,11 +782,11 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/cores.by_feature.json",
-      "size_bytes": 1078498
+      "size_bytes": 1146012
     },
     {
       "path": "app/data/scenarios/hoi4_1936/countries.json",
-      "size_bytes": 132371
+      "size_bytes": 136848
     },
     {
       "path": "app/data/scenarios/hoi4_1936/detail_chunks.manifest.json",
@@ -802,15 +798,15 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/geo_locale_patch.en.json",
-      "size_bytes": 136
+      "size_bytes": 143
     },
     {
       "path": "app/data/scenarios/hoi4_1936/geo_locale_patch.json",
-      "size_bytes": 116
+      "size_bytes": 122
     },
     {
       "path": "app/data/scenarios/hoi4_1936/geo_locale_patch.zh.json",
-      "size_bytes": 136
+      "size_bytes": 143
     },
     {
       "path": "app/data/scenarios/hoi4_1936/locales.startup.json",
@@ -826,7 +822,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/owners.by_feature.json",
-      "size_bytes": 763471
+      "size_bytes": 785981
     },
     {
       "path": "app/data/scenarios/hoi4_1936/runtime_meta.json",
@@ -2122,11 +2118,11 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/cores.by_feature.json",
-      "size_bytes": 1078498
+      "size_bytes": 1146012
     },
     {
       "path": "app/data/scenarios/hoi4_1939/countries.json",
-      "size_bytes": 129005
+      "size_bytes": 133334
     },
     {
       "path": "app/data/scenarios/hoi4_1939/detail_chunks.manifest.json",
@@ -2138,15 +2134,15 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/geo_locale_patch.en.json",
-      "size_bytes": 136
+      "size_bytes": 143
     },
     {
       "path": "app/data/scenarios/hoi4_1939/geo_locale_patch.json",
-      "size_bytes": 116
+      "size_bytes": 122
     },
     {
       "path": "app/data/scenarios/hoi4_1939/geo_locale_patch.zh.json",
-      "size_bytes": 136
+      "size_bytes": 143
     },
     {
       "path": "app/data/scenarios/hoi4_1939/locales.startup.json",
@@ -2162,7 +2158,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/owners.by_feature.json",
-      "size_bytes": 763471
+      "size_bytes": 785981
     },
     {
       "path": "app/data/scenarios/hoi4_1939/runtime_meta.json",
@@ -3766,7 +3762,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/district_groups.manual.json",
-      "size_bytes": 84
+      "size_bytes": 90
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_aliases.startup.json",
@@ -3790,11 +3786,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_name_overrides.manual.json",
-      "size_bytes": 7130
+      "size_bytes": 7477
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3802594
+      "size_bytes": 3802789
     },
     {
       "path": "app/data/scenarios/tno_1962/manifest.json",
@@ -3850,19 +3846,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json",
-      "size_bytes": 6192571
+      "size_bytes": 6200169
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378225
+      "size_bytes": 1378218
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
-      "size_bytes": 6192571
+      "size_bytes": 6200169
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378225
+      "size_bytes": 1378219
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
@@ -4398,7 +4394,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e010_e012/manifest.json",
-      "size_bytes": 2743
+      "size_bytes": 2744
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e010_e012/road_labels.preview.geojson",
@@ -4414,7 +4410,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e012_e014/manifest.json",
-      "size_bytes": 2743
+      "size_bytes": 2744
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e012_e014/road_labels.preview.geojson",
@@ -4430,7 +4426,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e014_e016/manifest.json",
-      "size_bytes": 2743
+      "size_bytes": 2744
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e014_e016/road_labels.preview.geojson",
@@ -4446,7 +4442,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e016_e018/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2743
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e016_e018/road_labels.preview.geojson",
@@ -4910,7 +4906,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w085_w082p5/manifest.json",
-      "size_bytes": 2769
+      "size_bytes": 2770
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w085_w082p5/road_labels.preview.geojson",
@@ -4974,7 +4970,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w180_w150/manifest.json",
-      "size_bytes": 2743
+      "size_bytes": 2744
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w180_w150/road_labels.preview.geojson",
@@ -5014,7 +5010,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_corridor/carrier.json",
-      "size_bytes": 2081273
+      "size_bytes": 2081278
     },
     {
       "path": "app/data/transport_layers/japan_corridor/manifest.json",
@@ -5022,7 +5018,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_corridor/provenance.json",
-      "size_bytes": 2388
+      "size_bytes": 2393
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/build_audit.json",
@@ -5038,7 +5034,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/overrides/facility_subtype_reference.json",
-      "size_bytes": 1625
+      "size_bytes": 1681
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/subtype_catalog.json",
@@ -5058,7 +5054,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_industrial_zones/manifest.json",
-      "size_bytes": 14748
+      "size_bytes": 14750
     },
     {
       "path": "app/data/transport_layers/japan_logistics_hubs/build_audit.json",
@@ -5086,15 +5082,15 @@
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/overrides/resource_class_overrides.json",
-      "size_bytes": 214
+      "size_bytes": 223
     },
     {
       "path": "app/data/transport_layers/japan_port/build_audit.json",
-      "size_bytes": 1718
+      "size_bytes": 1720
     },
     {
       "path": "app/data/transport_layers/japan_port/manifest.json",
-      "size_bytes": 4087
+      "size_bytes": 4089
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.core.geojson",
@@ -5130,11 +5126,11 @@
     },
     {
       "path": "app/data/transport_layers/japan_rail/overrides/line_class_overrides.json",
-      "size_bytes": 935
+      "size_bytes": 963
     },
     {
       "path": "app/data/transport_layers/japan_rail/overrides/major_station_overrides.json",
-      "size_bytes": 7077
+      "size_bytes": 7324
     },
     {
       "path": "app/data/transport_layers/japan_rail/rail_stations_major.preview.geojson",
@@ -5994,7 +5990,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_bootstrap_support.js",
-      "size_bytes": 13896
+      "size_bytes": 13911
     },
     {
       "path": "app/js/bootstrap/startup_data_pipeline.js",
@@ -6002,7 +5998,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_scenario_boot.js",
-      "size_bytes": 5833
+      "size_bytes": 5843
     },
     {
       "path": "app/js/core/city_lights_historical_1930_asset.js",
@@ -6014,27 +6010,27 @@
     },
     {
       "path": "app/js/core/color_hex_utils.js",
-      "size_bytes": 1879
+      "size_bytes": 1943
     },
     {
       "path": "app/js/core/color_manager.js",
-      "size_bytes": 24506
+      "size_bytes": 25226
     },
     {
       "path": "app/js/core/color_resolver.js",
-      "size_bytes": 2796
+      "size_bytes": 2877
     },
     {
       "path": "app/js/core/country_code_aliases.js",
-      "size_bytes": 339
+      "size_bytes": 354
     },
     {
       "path": "app/js/core/country_feature_policies.js",
-      "size_bytes": 1119
+      "size_bytes": 1148
     },
     {
       "path": "app/js/core/data_loader.js",
-      "size_bytes": 65374
+      "size_bytes": 65587
     },
     {
       "path": "app/js/core/data_service.js",
@@ -6046,15 +6042,15 @@
     },
     {
       "path": "app/js/core/feature_identity.js",
-      "size_bytes": 902
+      "size_bytes": 938
     },
     {
       "path": "app/js/core/feature_identity_shared.js",
-      "size_bytes": 4535
+      "size_bytes": 4683
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 39869
+      "size_bytes": 39882
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6066,7 +6062,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel/import_apply_orchestration.js",
-      "size_bytes": 6081
+      "size_bytes": 6261
     },
     {
       "path": "app/js/core/interaction_funnel/ui_sync.js",
@@ -6074,7 +6070,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel/wait_readiness.js",
-      "size_bytes": 1373
+      "size_bytes": 1416
     },
     {
       "path": "app/js/core/interaction_funnel.js",
@@ -6082,11 +6078,11 @@
     },
     {
       "path": "app/js/core/legend_manager.js",
-      "size_bytes": 1543
+      "size_bytes": 1606
     },
     {
       "path": "app/js/core/load_status_display.js",
-      "size_bytes": 4836
+      "size_bytes": 4990
     },
     {
       "path": "app/js/core/logic.js",
@@ -6094,51 +6090,51 @@
     },
     {
       "path": "app/js/core/map_renderer/facade_border_runtime.js",
-      "size_bytes": 2071
+      "size_bytes": 2129
     },
     {
       "path": "app/js/core/map_renderer/facade_data_runtime.js",
-      "size_bytes": 4652
+      "size_bytes": 4777
     },
     {
       "path": "app/js/core/map_renderer/facade_overlay_runtime.js",
-      "size_bytes": 4847
+      "size_bytes": 4997
     },
     {
       "path": "app/js/core/map_renderer/facade_spatial_runtime.js",
-      "size_bytes": 976
+      "size_bytes": 1009
     },
     {
       "path": "app/js/core/map_renderer/public.js",
-      "size_bytes": 2180
+      "size_bytes": 2258
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 941240
+      "size_bytes": 941622
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
-      "size_bytes": 6733
+      "size_bytes": 6954
     },
     {
       "path": "app/js/core/palette_manager.js",
-      "size_bytes": 12165
+      "size_bytes": 12228
     },
     {
       "path": "app/js/core/palette_runtime_bridge.js",
-      "size_bytes": 7308
+      "size_bytes": 7539
     },
     {
       "path": "app/js/core/perf_probe.js",
-      "size_bytes": 3888
+      "size_bytes": 3916
     },
     {
       "path": "app/js/core/political_raster_worker_client.js",
-      "size_bytes": 11372
+      "size_bytes": 11681
     },
     {
       "path": "app/js/core/preset_state.js",
-      "size_bytes": 702
+      "size_bytes": 710
     },
     {
       "path": "app/js/core/releasable_manager.js",
@@ -6146,11 +6142,11 @@
     },
     {
       "path": "app/js/core/render_boundary.js",
-      "size_bytes": 2246
+      "size_bytes": 2332
     },
     {
       "path": "app/js/core/renderer/asset_url_policy.js",
-      "size_bytes": 1895
+      "size_bytes": 1960
     },
     {
       "path": "app/js/core/renderer/border_draw_owner.js",
@@ -6158,27 +6154,27 @@
     },
     {
       "path": "app/js/core/renderer/border_mesh_diagnostics.js",
-      "size_bytes": 6076
+      "size_bytes": 6249
     },
     {
       "path": "app/js/core/renderer/border_mesh_dynamic_runtime.js",
-      "size_bytes": 4396
+      "size_bytes": 4530
     },
     {
       "path": "app/js/core/renderer/border_mesh_owner.js",
-      "size_bytes": 14252
+      "size_bytes": 14522
     },
     {
       "path": "app/js/core/renderer/border_mesh_source_selection.js",
-      "size_bytes": 8126
+      "size_bytes": 8362
     },
     {
       "path": "app/js/core/renderer/city_label_owner.js",
-      "size_bytes": 3730
+      "size_bytes": 3817
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
-      "size_bytes": 2555
+      "size_bytes": 2624
     },
     {
       "path": "app/js/core/renderer/context_layer_resolver.js",
@@ -6186,15 +6182,15 @@
     },
     {
       "path": "app/js/core/renderer/facility_surface.js",
-      "size_bytes": 12609
+      "size_bytes": 12888
     },
     {
       "path": "app/js/core/renderer/interaction_border_snapshot_owner.js",
-      "size_bytes": 5511
+      "size_bytes": 5659
     },
     {
       "path": "app/js/core/renderer/political_collection_owner.js",
-      "size_bytes": 16580
+      "size_bytes": 17085
     },
     {
       "path": "app/js/core/renderer/render_cache_owner.js",
@@ -6202,15 +6198,15 @@
     },
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
-      "size_bytes": 7467
+      "size_bytes": 7649
     },
     {
       "path": "app/js/core/renderer/river_layer_render_owner.js",
-      "size_bytes": 7451
+      "size_bytes": 7691
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_builders.js",
-      "size_bytes": 5429
+      "size_bytes": 5434
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_derivation.js",
@@ -6222,27 +6218,27 @@
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_state_ops.js",
-      "size_bytes": 2798
+      "size_bytes": 2868
     },
     {
       "path": "app/js/core/renderer/special_zone_layers_render_owner.js",
-      "size_bytes": 15096
+      "size_bytes": 15477
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_helpers.js",
-      "size_bytes": 28404
+      "size_bytes": 28419
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js",
-      "size_bytes": 10368
+      "size_bytes": 10604
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/special_zones_runtime_domain.js",
-      "size_bytes": 2431
+      "size_bytes": 2515
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_domain.js",
-      "size_bytes": 16057
+      "size_bytes": 16401
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_helpers.js",
@@ -6250,11 +6246,11 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime_owner.js",
-      "size_bytes": 16753
+      "size_bytes": 17175
     },
     {
       "path": "app/js/core/renderer/transport_facility_display_policy.js",
-      "size_bytes": 7981
+      "size_bytes": 8169
     },
     {
       "path": "app/js/core/renderer/transport_facility_icon_atlas.png",
@@ -6262,35 +6258,35 @@
     },
     {
       "path": "app/js/core/renderer/transport_facility_icons.js",
-      "size_bytes": 5869
+      "size_bytes": 5905
     },
     {
       "path": "app/js/core/renderer/transport_line_label_policy.js",
-      "size_bytes": 5127
+      "size_bytes": 5276
     },
     {
       "path": "app/js/core/renderer/transport_overview_render_owner.js",
-      "size_bytes": 53766
+      "size_bytes": 54222
     },
     {
       "path": "app/js/core/renderer/transport_overview_style_policy.js",
-      "size_bytes": 4924
+      "size_bytes": 5013
     },
     {
       "path": "app/js/core/renderer/urban_city_policy.js",
-      "size_bytes": 20628
+      "size_bytes": 21139
     },
     {
       "path": "app/js/core/runtime_asset_registry.js",
-      "size_bytes": 1888
+      "size_bytes": 1935
     },
     {
       "path": "app/js/core/scenario/bundle_loader.js",
-      "size_bytes": 42458
+      "size_bytes": 43578
     },
     {
       "path": "app/js/core/scenario/bundle_runtime.js",
-      "size_bytes": 20381
+      "size_bytes": 20436
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
@@ -6298,7 +6294,7 @@
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
-      "size_bytes": 13647
+      "size_bytes": 13666
     },
     {
       "path": "app/js/core/scenario/locale_asset_contract.js",
@@ -6306,23 +6302,23 @@
     },
     {
       "path": "app/js/core/scenario/presentation_display_restore.js",
-      "size_bytes": 3979
+      "size_bytes": 4076
     },
     {
       "path": "app/js/core/scenario/presentation_hint_helpers.js",
-      "size_bytes": 2096
+      "size_bytes": 2152
     },
     {
       "path": "app/js/core/scenario/presentation_ocean_fill_restore.js",
-      "size_bytes": 4941
+      "size_bytes": 5075
     },
     {
       "path": "app/js/core/scenario/presentation_runtime.js",
-      "size_bytes": 815
+      "size_bytes": 848
     },
     {
       "path": "app/js/core/scenario/pure_helpers.js",
-      "size_bytes": 3544
+      "size_bytes": 3556
     },
     {
       "path": "app/js/core/scenario/scenario_renderer_bridge.js",
@@ -6342,7 +6338,7 @@
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
-      "size_bytes": 25256
+      "size_bytes": 25629
     },
     {
       "path": "app/js/core/scenario_country_display.js",
@@ -6350,15 +6346,15 @@
     },
     {
       "path": "app/js/core/scenario_data_health.js",
-      "size_bytes": 3932
+      "size_bytes": 3990
     },
     {
       "path": "app/js/core/scenario_dispatcher.js",
-      "size_bytes": 2631
+      "size_bytes": 2711
     },
     {
       "path": "app/js/core/scenario_districts.js",
-      "size_bytes": 5393
+      "size_bytes": 5537
     },
     {
       "path": "app/js/core/scenario_localization_state.js",
@@ -6370,15 +6366,15 @@
     },
     {
       "path": "app/js/core/scenario_ownership_editor.js",
-      "size_bytes": 11220
+      "size_bytes": 11253
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 15510
+      "size_bytes": 15521
     },
     {
       "path": "app/js/core/scenario_recovery.js",
-      "size_bytes": 6242
+      "size_bytes": 6252
     },
     {
       "path": "app/js/core/scenario_resources.js",
@@ -6386,23 +6382,23 @@
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 24326
+      "size_bytes": 24341
     },
     {
       "path": "app/js/core/scenario_runtime_queries.js",
-      "size_bytes": 1785
+      "size_bytes": 1799
     },
     {
       "path": "app/js/core/scenario_shell_overlay.js",
-      "size_bytes": 7663
+      "size_bytes": 7713
     },
     {
       "path": "app/js/core/scenario_ui_sync.js",
-      "size_bytes": 1159
+      "size_bytes": 1193
     },
     {
       "path": "app/js/core/sovereignty_manager.js",
-      "size_bytes": 18104
+      "size_bytes": 18151
     },
     {
       "path": "app/js/core/special_zone_layers.js",
@@ -6410,31 +6406,31 @@
     },
     {
       "path": "app/js/core/startup_bundle_compaction.js",
-      "size_bytes": 7211
+      "size_bytes": 7417
     },
     {
       "path": "app/js/core/startup_cache.js",
-      "size_bytes": 19872
+      "size_bytes": 20419
     },
     {
       "path": "app/js/core/startup_worker_client.js",
-      "size_bytes": 7663
+      "size_bytes": 7903
     },
     {
       "path": "app/js/core/state/boot_state.js",
-      "size_bytes": 4350
+      "size_bytes": 4509
     },
     {
       "path": "app/js/core/state/border_cache_state.js",
-      "size_bytes": 1092
+      "size_bytes": 1124
     },
     {
       "path": "app/js/core/state/bus.js",
-      "size_bytes": 1391
+      "size_bytes": 1437
     },
     {
       "path": "app/js/core/state/color_state.js",
-      "size_bytes": 12578
+      "size_bytes": 12981
     },
     {
       "path": "app/js/core/state/config.js",
@@ -6446,19 +6442,19 @@
     },
     {
       "path": "app/js/core/state/dev_state.js",
-      "size_bytes": 3208
+      "size_bytes": 3329
     },
     {
       "path": "app/js/core/state/history_state.js",
-      "size_bytes": 128
+      "size_bytes": 135
     },
     {
       "path": "app/js/core/state/index.js",
-      "size_bytes": 7713
+      "size_bytes": 7950
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 16095
+      "size_bytes": 16106
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
@@ -6466,15 +6462,15 @@
     },
     {
       "path": "app/js/core/state/spatial_index_state.js",
-      "size_bytes": 1015
+      "size_bytes": 1050
     },
     {
       "path": "app/js/core/state/strategic_overlay_state.js",
-      "size_bytes": 3399
+      "size_bytes": 3532
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 25994
+      "size_bytes": 26002
     },
     {
       "path": "app/js/core/state.js",
@@ -6482,11 +6478,11 @@
     },
     {
       "path": "app/js/core/state_catalog.js",
-      "size_bytes": 3576
+      "size_bytes": 3602
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 54965
+      "size_bytes": 54976
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
@@ -6494,23 +6490,23 @@
     },
     {
       "path": "app/js/core/transport_country_overlay.js",
-      "size_bytes": 6401
+      "size_bytes": 6445
     },
     {
       "path": "app/js/core/transport_overview_visibility_policy.js",
-      "size_bytes": 4178
+      "size_bytes": 4278
     },
     {
       "path": "app/js/core/transport_pack_resolver.js",
-      "size_bytes": 8693
+      "size_bytes": 8712
     },
     {
       "path": "app/js/core/unit_counter_icon_libraries.js",
-      "size_bytes": 10294
+      "size_bytes": 10562
     },
     {
       "path": "app/js/core/unit_counter_presets.js",
-      "size_bytes": 14224
+      "size_bytes": 14677
     },
     {
       "path": "app/js/main.js",
@@ -6518,11 +6514,11 @@
     },
     {
       "path": "app/js/ui/app_dialog.js",
-      "size_bytes": 5075
+      "size_bytes": 5235
     },
     {
       "path": "app/js/ui/dev_workspace/dev_mutation_service.js",
-      "size_bytes": 1266
+      "size_bytes": 1293
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_normalizers.js",
@@ -6530,7 +6526,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_shell_builder.js",
-      "size_bytes": 28057
+      "size_bytes": 28145
     },
     {
       "path": "app/js/ui/dev_workspace/district_editor_controller.js",
@@ -6538,27 +6534,27 @@
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_tag_creator_controller.js",
-      "size_bytes": 50277
+      "size_bytes": 50331
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_text_editors_controller.js",
-      "size_bytes": 46191
+      "size_bytes": 46239
     },
     {
       "path": "app/js/ui/dev_workspace/selection_ownership_controller.js",
-      "size_bytes": 14539
+      "size_bytes": 14589
     },
     {
       "path": "app/js/ui/dev_workspace.js",
-      "size_bytes": 43710
+      "size_bytes": 43745
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47066
+      "size_bytes": 47073
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 76609
+      "size_bytes": 76823
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -6570,27 +6566,27 @@
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 31198
+      "size_bytes": 31274
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 27972
+      "size_bytes": 28064
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
-      "size_bytes": 29047
+      "size_bytes": 29684
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_catalog_helper.js",
-      "size_bytes": 11975
+      "size_bytes": 12269
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_modal_helper.js",
-      "size_bytes": 3180
+      "size_bytes": 3272
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_render_helpers.js",
-      "size_bytes": 12831
+      "size_bytes": 13138
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay_controller.js",
@@ -6598,19 +6594,19 @@
     },
     {
       "path": "app/js/ui/sidebar/water_special_region_controller.js",
-      "size_bytes": 54510
+      "size_bytes": 54752
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 250012
+      "size_bytes": 250490
     },
     {
       "path": "app/js/ui/toast.js",
-      "size_bytes": 3707
+      "size_bytes": 3839
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_descriptor.js",
-      "size_bytes": 3823
+      "size_bytes": 3899
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
@@ -6622,11 +6618,11 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
-      "size_bytes": 9562
+      "size_bytes": 9587
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 16414
+      "size_bytes": 16441
     },
     {
       "path": "app/js/ui/toolbar/appearance_reference_owner.js",
@@ -6638,7 +6634,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
-      "size_bytes": 38365
+      "size_bytes": 38409
     },
     {
       "path": "app/js/ui/toolbar/appearance_transport_summary.js",
@@ -6646,11 +6642,11 @@
     },
     {
       "path": "app/js/ui/toolbar/export_failure_handler.js",
-      "size_bytes": 1861
+      "size_bytes": 1910
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 33886
+      "size_bytes": 33920
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -6662,11 +6658,11 @@
     },
     {
       "path": "app/js/ui/toolbar/scenario_guide_popover.js",
-      "size_bytes": 7583
+      "size_bytes": 7592
     },
     {
       "path": "app/js/ui/toolbar/special_zone_editor.js",
-      "size_bytes": 1797
+      "size_bytes": 1844
     },
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
@@ -6678,7 +6674,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_apply_bridge_owner.js",
-      "size_bytes": 9274
+      "size_bytes": 9315
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_config_owner.js",
@@ -6686,19 +6682,19 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_controller.js",
-      "size_bytes": 25746
+      "size_bytes": 25786
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_descriptor.js",
-      "size_bytes": 61361
+      "size_bytes": 61501
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_event_owner.js",
-      "size_bytes": 6456
+      "size_bytes": 6470
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_inspector_owner.js",
-      "size_bytes": 43658
+      "size_bytes": 43684
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_layer_order_owner.js",
@@ -6706,27 +6702,27 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_lens_owner.js",
-      "size_bytes": 4987
+      "size_bytes": 4992
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_popover_owner.js",
-      "size_bytes": 10816
+      "size_bytes": 10832
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js",
-      "size_bytes": 8377
+      "size_bytes": 8406
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_right_deck_owner.js",
-      "size_bytes": 26048
+      "size_bytes": 26075
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_shell_owner.js",
-      "size_bytes": 8334
+      "size_bytes": 8366
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_state_owner.js",
-      "size_bytes": 14684
+      "size_bytes": 14707
     },
     {
       "path": "app/js/ui/toolbar/workspace_chrome_support_surface_controller.js",
@@ -6734,7 +6730,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 134614
+      "size_bytes": 134714
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -6742,11 +6738,11 @@
     },
     {
       "path": "app/js/ui/transport_workbench_carrier.js",
-      "size_bytes": 24381
+      "size_bytes": 25083
     },
     {
       "path": "app/js/ui/transport_workbench_density_helpers.js",
-      "size_bytes": 10648
+      "size_bytes": 10881
     },
     {
       "path": "app/js/ui/transport_workbench_energy_facility_preview.js",
@@ -6754,7 +6750,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_family_preview.js",
-      "size_bytes": 4984
+      "size_bytes": 5000
     },
     {
       "path": "app/js/ui/transport_workbench_family_registry.js",
@@ -6762,7 +6758,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 30540
+      "size_bytes": 30614
     },
     {
       "path": "app/js/ui/transport_workbench_line_runtime_shared.js",
@@ -6774,11 +6770,11 @@
     },
     {
       "path": "app/js/ui/transport_workbench_manifest_preview.js",
-      "size_bytes": 5940
+      "size_bytes": 6021
     },
     {
       "path": "app/js/ui/transport_workbench_manifest_variants.js",
-      "size_bytes": 2044
+      "size_bytes": 2101
     },
     {
       "path": "app/js/ui/transport_workbench_mineral_resource_preview.js",
@@ -6806,19 +6802,19 @@
     },
     {
       "path": "app/js/ui/ui_surface_url_state.js",
-      "size_bytes": 2551
+      "size_bytes": 2608
     },
     {
       "path": "app/js/workers/political_raster.worker.js",
-      "size_bytes": 2593
+      "size_bytes": 2680
     },
     {
       "path": "app/js/workers/startup_boot.worker.js",
-      "size_bytes": 21934
+      "size_bytes": 22514
     },
     {
       "path": "app/vendor/d3.v7.min.js",
-      "size_bytes": 279706
+      "size_bytes": 279708
     },
     {
       "path": "app/vendor/milsymbol.js",
@@ -6826,19 +6822,19 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 2938
+      "size_bytes": 3007
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 863
+      "size_bytes": 880
     },
     {
       "path": "app/vendor/topojson-client.min.js",
-      "size_bytes": 7169
+      "size_bytes": 7171
     },
     {
       "path": "app.js",
-      "size_bytes": 17734
+      "size_bytes": 17762
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -6870,15 +6866,15 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 19327
+      "size_bytes": 19340
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 217994
+      "size_bytes": 217847
     },
     {
       "path": "styles.css",
-      "size_bytes": 19073
+      "size_bytes": 19170
     }
   ],
   "max_allowed_bytes": 1043333120,
@@ -6891,5 +6887,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1001120738
+  "total_bytes": 999912415
 }

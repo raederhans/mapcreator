@@ -156,6 +156,16 @@ def _clip_features_to_shell(
     return clipped
 
 
+def _build_source_union_shell(source_gdf: gpd.GeoDataFrame, iso_code: str):
+    source_shell_gdf = _sanitize_polygon_layer(ensure_crs(source_gdf.copy()))
+    if source_shell_gdf.empty:
+        raise SystemExit(f"[Africa] {iso_code} source layer has no polygon shell.")
+    shell = _make_valid_geom(unary_union(source_shell_gdf.geometry.tolist()))
+    if shell is None or shell.is_empty:
+        raise SystemExit(f"[Africa] {iso_code} source union shell is empty.")
+    return shell
+
+
 def _ensure_unique_ids(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     out = gdf.copy()
     seen: dict[str, int] = {}
@@ -271,11 +281,12 @@ def _build_geo_boundaries_features(
     source["cntr_code"] = iso_code
     source["admin1_group"] = source["name"]
     source["detail_tier"] = "adm1_basic"
+    source_shell = _build_source_union_shell(source, iso_code)
     return _finalize_country(
         source,
         iso_code=iso_code,
         expected_count=int(spec["expected_count"]),
-        shell_geom=shell_geom,
+        shell_geom=source_shell,
     )
 
 
