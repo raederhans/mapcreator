@@ -151,6 +151,7 @@ class BackendServiceTest(unittest.TestCase):
 
     def test_login_replaces_previous_session_and_logout_expires_access(self) -> None:
         first_session = self._register()
+        self.assertEqual(first_session["user"]["role"], "admin")
         second_session = self.service.login({
             "username": "alice",
             "password": "correct horse",
@@ -169,7 +170,7 @@ class BackendServiceTest(unittest.TestCase):
             self.service.list_my_saves(str(second_session["sessionId"]))
         self.assertEqual(logout_exc.exception.code, "auth_required")
 
-    def test_public_save_is_readable_by_other_user(self) -> None:
+    def test_public_save_owner_route_is_owner_only(self) -> None:
         owner = self._register("owner")
         stranger = self._register("stranger")
         save = self.service.create_save(
@@ -189,17 +190,25 @@ class BackendServiceTest(unittest.TestCase):
         )
 
         self.service.publish_save(str(owner["sessionId"]), str(owner["csrfToken"]), str(save["id"]), {"visibility": "public"})
-        public_save = self.service.get_save(str(stranger["sessionId"]), str(save["id"]))
-        public_export = self.service.export_save(str(stranger["sessionId"]), str(save["id"]))
+        owner_save = self.service.get_save(str(owner["sessionId"]), str(save["id"]))
+        public_save = self.service.get_community_save(str(save["id"]))
+        downloaded = self.service.download_community_save(str(save["id"]))
 
-        self.assertEqual(public_save["project"]["schemaVersion"], 21)
-        self.assertEqual(public_save["project"]["paintMode"], "visual")
-        self.assertNotIn("referenceImageState", public_save["project"])
-        self.assertNotIn("dynamicBordersDirty", public_save["project"])
-        self.assertNotIn("dynamicBordersDirtyReason", public_save["project"])
-        self.assertNotIn("__privateLocalProbe", public_save["project"])
-        self.assertNotIn("__privateLocalProbe", public_export["save"]["project"])
+        self.assertEqual(owner_save["project"]["schemaVersion"], 21)
+        self.assertIn("referenceImageState", owner_save["project"])
         self.assertEqual(public_save["title"], "Shared draft")
+        self.assertEqual(downloaded["save"]["project"]["schemaVersion"], 21)
+        self.assertEqual(downloaded["save"]["project"]["paintMode"], "visual")
+        self.assertNotIn("referenceImageState", downloaded["save"]["project"])
+        self.assertNotIn("dynamicBordersDirty", downloaded["save"]["project"])
+        self.assertNotIn("dynamicBordersDirtyReason", downloaded["save"]["project"])
+        self.assertNotIn("__privateLocalProbe", downloaded["save"]["project"])
+        with self.assertRaises(BackendError) as get_exc:
+            self.service.get_save(str(stranger["sessionId"]), str(save["id"]))
+        self.assertEqual(get_exc.exception.code, "save_not_found")
+        with self.assertRaises(BackendError) as export_exc:
+            self.service.export_save(str(stranger["sessionId"]), str(save["id"]))
+        self.assertEqual(export_exc.exception.code, "save_not_found")
 
     def test_invalid_write_payloads_return_contract_codes(self) -> None:
         session = self._register()
@@ -233,6 +242,168 @@ class BackendServiceTest(unittest.TestCase):
         with self.assertRaises(BackendError) as report_exc:
             self.service.report_save(session_id, csrf, str(save["id"]), {"reason": "duplicate"})
         self.assertEqual(report_exc.exception.code, "invalid_report_reason")
+
+    def test_admin_overview_and_review_queue_are_limited_to_admin(self) -> None:
+        admin = self._register("admin")
+        member = self._register("member")
+        save = self.service.create_save(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            {"title": "Reviewed save", "project": {"schemaVersion": 21}},
+        )
+        self.service.publish_save(str(admin["sessionId"]), str(admin["csrfToken"]), str(save["id"]), {"visibility": "public"})
+        report = self.service.report_save(
+            str(member["sessionId"]),
+            str(member["csrfToken"]),
+            str(save["id"]),
+            {"reason": "other", "details": "needs review"},
+        )
+
+        with self.assertRaises(BackendError) as member_exc:
+            self.service.admin_overview(str(member["sessionId"]))
+        self.assertEqual(member_exc.exception.code, "admin_required")
+
+        overview = self.service.admin_overview(str(admin["sessionId"]))
+        self.assertEqual(overview["stats"]["users"], 2)
+        self.assertEqual(overview["stats"]["openReports"], 1)
+        save_counts = {item["username"]: item["saveCount"] for item in overview["users"]}
+        self.assertEqual(save_counts["admin"], 1)
+        self.assertEqual(save_counts["member"], 0)
+        self.assertTrue(any(item["role"] == "admin" for item in overview["users"]))
+
+        reviewed = self.service.admin_review_report(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(report["report"]["id"]),
+        )
+        self.assertEqual(reviewed["report"]["status"], "reviewed")
+        self.assertEqual(self.service.admin_overview(str(admin["sessionId"]))["stats"]["openReports"], 0)
+
+    def test_admin_can_hide_public_save(self) -> None:
+        admin = self._register("admin")
+        save = self.service.create_save(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            {"title": "Public save", "project": {"schemaVersion": 21}},
+        )
+        self.service.publish_save(str(admin["sessionId"]), str(admin["csrfToken"]), str(save["id"]), {"visibility": "public"})
+
+        updated = self.service.admin_set_save_visibility(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(save["id"]),
+            {"visibility": "private"},
+        )
+
+        self.assertEqual(updated["save"]["visibility"], "private")
+        self.assertEqual(self.service.list_community_saves()["saves"], [])
+
+    def test_admin_can_preview_other_users_private_save(self) -> None:
+        admin = self._register("admin")
+        member = self._register("member")
+        private_save = self.service.create_save(
+            str(member["sessionId"]),
+            str(member["csrfToken"]),
+            {
+                "title": "Private moderation target",
+                "project": {"schemaVersion": 21, "referenceImageState": {"private": True}},
+            },
+        )
+
+        preview = self.service.admin_get_save(str(admin["sessionId"]), str(private_save["id"]))
+
+        self.assertEqual(preview["title"], "Private moderation target")
+        self.assertEqual(preview["project"]["referenceImageState"]["private"], True)
+
+    def test_admin_manages_comments_images_users_and_demo_seed(self) -> None:
+        admin = self._register("admin")
+        member = self._register("member")
+        seeded = self.service.admin_seed_demo(str(admin["sessionId"]), str(admin["csrfToken"]))
+        self.assertEqual(len(seeded["created"]), 3)
+        self.assertEqual(len(self.service.list_community_saves()["saves"]), 3)
+
+        save = self.service.create_save(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            {
+                "title": "Moderated save",
+                "imageUrl": "/backend/assets/demo-plains.svg",
+                "project": {"schemaVersion": 21},
+            },
+        )
+        self.service.publish_save(str(admin["sessionId"]), str(admin["csrfToken"]), str(save["id"]), {"visibility": "public"})
+        comment = self.service.add_comment(
+            str(member["sessionId"]),
+            str(member["csrfToken"]),
+            str(save["id"]),
+            {"body": "needs a look"},
+        )
+
+        closed = self.service.admin_set_save_comments(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(save["id"]),
+            {"enabled": False},
+        )
+        self.assertFalse(closed["save"]["commentsEnabled"])
+        with self.assertRaises(BackendError) as comment_exc:
+            self.service.add_comment(
+                str(member["sessionId"]),
+                str(member["csrfToken"]),
+                str(save["id"]),
+                {"body": "closed"},
+            )
+        self.assertEqual(comment_exc.exception.code, "comments_closed")
+
+        hidden = self.service.admin_hide_comment(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(comment["comment"]["id"]),
+        )
+        self.assertEqual(hidden["comment"]["status"], "hidden")
+        image = self.service.admin_set_save_image(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(save["id"]),
+            {"imageUrl": ""},
+        )
+        self.assertEqual(image["save"]["imageUrl"], "")
+
+        updated_user = self.service.admin_update_user(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(member["user"]["id"]),
+            {"role": "moderator", "status": "banned"},
+        )
+        self.assertEqual(updated_user["user"]["role"], "moderator")
+        self.assertEqual(updated_user["user"]["status"], "banned")
+        with self.assertRaises(BackendError) as banned_exc:
+            self.service.current_session(str(member["sessionId"]))
+        self.assertEqual(banned_exc.exception.code, "account_banned")
+
+    def test_moderator_can_review_content_but_cannot_manage_users_or_seed(self) -> None:
+        admin = self._register("admin")
+        moderator = self._register("moderator")
+        self.service.admin_update_user(
+            str(admin["sessionId"]),
+            str(admin["csrfToken"]),
+            str(moderator["user"]["id"]),
+            {"role": "moderator"},
+        )
+        moderator_session = self.service.login({"username": "moderator", "password": "correct horse"})
+
+        self.assertIn("stats", self.service.admin_overview(str(moderator_session["sessionId"])))
+        with self.assertRaises(BackendError) as update_exc:
+            self.service.admin_update_user(
+                str(moderator_session["sessionId"]),
+                str(moderator_session["csrfToken"]),
+                str(admin["user"]["id"]),
+                {"status": "banned"},
+            )
+        self.assertEqual(update_exc.exception.code, "admin_required")
+        with self.assertRaises(BackendError) as seed_exc:
+            self.service.admin_seed_demo(str(moderator_session["sessionId"]), str(moderator_session["csrfToken"]))
+        self.assertEqual(seed_exc.exception.code, "admin_required")
 
 
 if __name__ == "__main__":

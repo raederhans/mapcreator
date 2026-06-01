@@ -1628,6 +1628,34 @@ class DevServerTest(unittest.TestCase):
         self.assertIn(("status", 403), events)
         self.assertEqual(json.loads(handler.wfile.getvalue().decode("utf-8"))["code"], "invalid_dev_token")
 
+    def test_resolve_static_request_path_serves_backend_console(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            backend_index = root / "backend" / "index.html"
+            backend_index.parent.mkdir(parents=True)
+            backend_index.write_text("<!doctype html>", encoding="utf-8")
+            backend_app = root / "backend" / "app.js"
+            backend_app.write_text("export {};", encoding="utf-8")
+
+            self.assertEqual(
+                dev_server.resolve_static_request_path("/backend/", root=root),
+                backend_index,
+            )
+            self.assertEqual(
+                dev_server.resolve_static_request_path("/backend/app.js", root=root),
+                backend_app.resolve(),
+            )
+
+    def test_backend_console_exposes_chinese_default_and_language_toggle(self) -> None:
+        html = (dev_server.ROOT / "backend" / "index.html").read_text(encoding="utf-8")
+        app_js = (dev_server.ROOT / "backend" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('lang="zh-Hans"', html)
+        self.assertIn("Scenario Forge 社区与后台", html)
+        self.assertIn('id="languageToggle"', html)
+        self.assertIn("localStorage.getItem(\"backendConsoleLocale\")", app_js)
+        self.assertIn("languageButton", app_js)
+
     def test_do_post_dispatches_backend_register_and_forwards_session_cookie(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             events: list[tuple[str, object]] = []

@@ -229,6 +229,290 @@ class BackendRoutesTest(unittest.TestCase):
         self.assertEqual(response.status, 400)
         self.assertEqual(response.payload["code"], "invalid_username")
 
+    def test_admin_overview_report_review_and_save_visibility_routes(self) -> None:
+        admin = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "admin",
+                "password": "correct horse",
+                "displayName": "Admin",
+            },
+        )
+        admin_cookie = dict(admin.headers)["Set-Cookie"].split(";", 1)[0]
+        admin_csrf = str(admin.payload["csrfToken"])
+        member = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "member",
+                "password": "correct horse",
+                "displayName": "Member",
+            },
+        )
+        member_cookie = dict(member.headers)["Set-Cookie"].split(";", 1)[0]
+        member_csrf = str(member.payload["csrfToken"])
+        save_response = self._request(
+            "POST",
+            "/api/backend/saves",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"title": "Admin save", "project": {"schemaVersion": 21}},
+        )
+        save_id = str(save_response.payload["save"]["id"])
+        self._request(
+            "POST",
+            f"/api/backend/saves/{save_id}/publish",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"visibility": "public"},
+        )
+        report = self._request(
+            "POST",
+            f"/api/backend/community/saves/{save_id}/reports",
+            headers={"Cookie": member_cookie, "X-MapCreator-CSRF": member_csrf},
+            payload={"reason": "other", "details": "review this"},
+        )
+        report_id = str(report.payload["report"]["id"])
+
+        member_overview = self._request("GET", "/api/backend/admin/overview", headers={"Cookie": member_cookie})
+        self.assertEqual(member_overview.status, 403)
+        self.assertEqual(member_overview.payload["code"], "admin_required")
+
+        overview = self._request("GET", "/api/backend/admin/overview", headers={"Cookie": admin_cookie})
+        self.assertEqual(overview.status, 200)
+        self.assertEqual(overview.payload["stats"]["openReports"], 1)
+
+        reviewed = self._request(
+            "POST",
+            f"/api/backend/admin/reports/{report_id}/review",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={},
+        )
+        self.assertEqual(reviewed.status, 200)
+        self.assertEqual(reviewed.payload["report"]["status"], "reviewed")
+
+        hidden = self._request(
+            "POST",
+            f"/api/backend/admin/saves/{save_id}/visibility",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"visibility": "private"},
+        )
+        self.assertEqual(hidden.status, 200)
+        self.assertEqual(hidden.payload["save"]["visibility"], "private")
+
+    def test_public_save_owner_routes_reject_other_users_and_admin_can_preview_private(self) -> None:
+        admin = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "admin",
+                "password": "correct horse",
+                "displayName": "Admin",
+            },
+        )
+        admin_cookie = dict(admin.headers)["Set-Cookie"].split(";", 1)[0]
+        admin_csrf = str(admin.payload["csrfToken"])
+        member = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "member",
+                "password": "correct horse",
+                "displayName": "Member",
+            },
+        )
+        member_cookie = dict(member.headers)["Set-Cookie"].split(";", 1)[0]
+        member_csrf = str(member.payload["csrfToken"])
+        save_response = self._request(
+            "POST",
+            "/api/backend/saves",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={
+                "title": "Public owner-only save",
+                "project": {"schemaVersion": 21, "referenceImageState": {"private": True}},
+            },
+        )
+        save_id = str(save_response.payload["save"]["id"])
+        self._request(
+            "POST",
+            f"/api/backend/saves/{save_id}/publish",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"visibility": "public"},
+        )
+
+        stranger_detail = self._request("GET", f"/api/backend/saves/{save_id}", headers={"Cookie": member_cookie})
+        stranger_export = self._request("GET", f"/api/backend/saves/{save_id}/export", headers={"Cookie": member_cookie})
+        community_download = self._request("GET", f"/api/backend/community/saves/{save_id}/download")
+        admin_preview = self._request("GET", f"/api/backend/admin/saves/{save_id}", headers={"Cookie": admin_cookie})
+
+        self.assertEqual(stranger_detail.status, 404)
+        self.assertEqual(stranger_export.status, 404)
+        self.assertNotIn("referenceImageState", community_download.payload["save"]["project"])
+        self.assertEqual(admin_preview.status, 200)
+        self.assertTrue(admin_preview.payload["save"]["project"]["referenceImageState"]["private"])
+
+        private_save = self._request(
+            "POST",
+            "/api/backend/saves",
+            headers={"Cookie": member_cookie, "X-MapCreator-CSRF": member_csrf},
+            payload={"title": "Private staff preview", "project": {"schemaVersion": 21}},
+        )
+        private_id = str(private_save.payload["save"]["id"])
+        private_admin_preview = self._request(
+            "GET",
+            f"/api/backend/admin/saves/{private_id}",
+            headers={"Cookie": admin_cookie},
+        )
+        self.assertEqual(private_admin_preview.status, 200)
+        self.assertEqual(private_admin_preview.payload["save"]["title"], "Private staff preview")
+
+    def test_admin_moderation_routes_cover_comments_users_images_and_seed(self) -> None:
+        admin = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "admin",
+                "password": "correct horse",
+                "displayName": "Admin",
+            },
+        )
+        admin_cookie = dict(admin.headers)["Set-Cookie"].split(";", 1)[0]
+        admin_csrf = str(admin.payload["csrfToken"])
+        member = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "member",
+                "password": "correct horse",
+                "displayName": "Member",
+            },
+        )
+        member_cookie = dict(member.headers)["Set-Cookie"].split(";", 1)[0]
+        member_csrf = str(member.payload["csrfToken"])
+        seeded = self._request(
+            "POST",
+            "/api/backend/admin/demo/seed",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={},
+        )
+        self.assertEqual(seeded.status, 201)
+        self.assertEqual(len(seeded.payload["created"]), 3)
+
+        save_response = self._request(
+            "POST",
+            "/api/backend/saves",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={
+                "title": "Moderated save",
+                "imageUrl": "/backend/assets/demo-plains.svg",
+                "project": {"schemaVersion": 21},
+            },
+        )
+        save_id = str(save_response.payload["save"]["id"])
+        self._request(
+            "POST",
+            f"/api/backend/saves/{save_id}/publish",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"visibility": "public"},
+        )
+        comment = self._request(
+            "POST",
+            f"/api/backend/community/saves/{save_id}/comments",
+            headers={"Cookie": member_cookie, "X-MapCreator-CSRF": member_csrf},
+            payload={"body": "visible comment"},
+        )
+        comment_id = str(comment.payload["comment"]["id"])
+
+        comments_closed = self._request(
+            "POST",
+            f"/api/backend/admin/saves/{save_id}/comments",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"enabled": False},
+        )
+        self.assertEqual(comments_closed.status, 200)
+        self.assertFalse(comments_closed.payload["save"]["commentsEnabled"])
+
+        image_cleared = self._request(
+            "POST",
+            f"/api/backend/admin/saves/{save_id}/image",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"imageUrl": ""},
+        )
+        self.assertEqual(image_cleared.status, 200)
+        self.assertEqual(image_cleared.payload["save"]["imageUrl"], "")
+
+        hidden_comment = self._request(
+            "POST",
+            f"/api/backend/admin/comments/{comment_id}/hide",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={},
+        )
+        self.assertEqual(hidden_comment.status, 200)
+        self.assertEqual(hidden_comment.payload["comment"]["status"], "hidden")
+
+        updated_user = self._request(
+            "POST",
+            f"/api/backend/admin/users/{member.payload['user']['id']}",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"role": "moderator", "status": "banned"},
+        )
+        self.assertEqual(updated_user.status, 200)
+        self.assertEqual(updated_user.payload["user"]["role"], "moderator")
+        self.assertEqual(updated_user.payload["user"]["status"], "banned")
+
+    def test_moderator_routes_can_review_but_cannot_manage_users_or_seed_demo(self) -> None:
+        admin = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "admin",
+                "password": "correct horse",
+                "displayName": "Admin",
+            },
+        )
+        admin_cookie = dict(admin.headers)["Set-Cookie"].split(";", 1)[0]
+        admin_csrf = str(admin.payload["csrfToken"])
+        moderator = self._request(
+            "POST",
+            "/api/backend/auth/register",
+            payload={
+                "username": "moderator",
+                "password": "correct horse",
+                "displayName": "Moderator",
+            },
+        )
+        moderator_user_id = str(moderator.payload["user"]["id"])
+        self._request(
+            "POST",
+            f"/api/backend/admin/users/{moderator_user_id}",
+            headers={"Cookie": admin_cookie, "X-MapCreator-CSRF": admin_csrf},
+            payload={"role": "moderator"},
+        )
+        moderator_login = self._request(
+            "POST",
+            "/api/backend/auth/login",
+            payload={"username": "moderator", "password": "correct horse"},
+        )
+        moderator_cookie = dict(moderator_login.headers)["Set-Cookie"].split(";", 1)[0]
+        moderator_csrf = str(moderator_login.payload["csrfToken"])
+
+        overview = self._request("GET", "/api/backend/admin/overview", headers={"Cookie": moderator_cookie})
+        seed = self._request(
+            "POST",
+            "/api/backend/admin/demo/seed",
+            headers={"Cookie": moderator_cookie, "X-MapCreator-CSRF": moderator_csrf},
+            payload={},
+        )
+        user_update = self._request(
+            "POST",
+            f"/api/backend/admin/users/{admin.payload['user']['id']}",
+            headers={"Cookie": moderator_cookie, "X-MapCreator-CSRF": moderator_csrf},
+            payload={"status": "banned"},
+        )
+
+        self.assertEqual(overview.status, 200)
+        self.assertEqual(seed.status, 403)
+        self.assertEqual(user_update.status, 403)
+
 
 if __name__ == "__main__":
     unittest.main()

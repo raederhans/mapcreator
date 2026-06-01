@@ -2483,6 +2483,15 @@ def resolve_static_request_path(route: str, *, root: Path = ROOT) -> Path | None
             preferred_root=resolve_editor_source_path(root=root).parent,
             fallback_root=root,
         )
+    if normalized_route in {"/backend", "/backend/"}:
+        return root / "backend" / "index.html"
+    if normalized_route.startswith("/backend/"):
+        relative_path = normalized_route[len("/backend/"):]
+        return _resolve_prefixed_asset_path(
+            relative_path,
+            preferred_root=root / "backend",
+            fallback_root=root,
+        )
     landing_source_path = resolve_landing_source_path(root=root)
     landing_root = landing_source_path.parent
     if landing_root != root:

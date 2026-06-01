@@ -15,6 +15,11 @@ from .store import BackendStore, utc_iso, utc_now
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,32}$")
 SAVE_VISIBILITY_PUBLIC = "public"
 SAVE_VISIBILITY_PRIVATE = "private"
+USER_ROLE_ADMIN = "admin"
+USER_ROLE_MODERATOR = "moderator"
+USER_ROLE_MEMBER = "member"
+USER_STATUS_ACTIVE = "active"
+USER_STATUS_BANNED = "banned"
 SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 SHARED_PROJECT_FIELD_ALLOWLIST = (
     "schemaVersion",
@@ -67,13 +72,14 @@ class BackendService:
         )
         user_id = now_token()
         with self.store.connect() as connection:
+            role = USER_ROLE_ADMIN if self._user_count(connection) == 0 else USER_ROLE_MEMBER
             try:
                 connection.execute(
                     """
-                    INSERT INTO users (id, username, display_name, password_hash, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO users (id, username, display_name, password_hash, role, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (user_id, username, display_name, hash_password(password), utc_iso()),
+                    (user_id, username, display_name, hash_password(password), role, USER_STATUS_ACTIVE, utc_iso()),
                 )
             except sqlite3.IntegrityError as exc:
                 raise BackendError("username_taken", "Username is already registered.", status=409) from exc
@@ -86,6 +92,8 @@ class BackendService:
             user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
             if user is None or not verify_password(password, str(user["password_hash"])):
                 raise BackendError("invalid_credentials", "Username or password is incorrect.", status=401)
+            if str(user["status"]) == USER_STATUS_BANNED:
+                raise BackendError("account_banned", "This account is banned.", status=403)
             return self._create_session_response(connection, str(user["id"]))
 
     def logout(self, session_id: str, csrf_token: str) -> None:
@@ -103,6 +111,7 @@ class BackendService:
             project = self._normalize_project(payload.get("project"))
             title = self._normalize_title(payload.get("title"))
             description = self._normalize_description(payload.get("description"))
+            image_url = self._normalize_image_url(payload.get("imageUrl"))
             save_id = now_token()
             project_hash = self._project_hash(project)
             now = utc_iso()
@@ -110,9 +119,9 @@ class BackendService:
                 """
                 INSERT INTO saves (
                   id, owner_user_id, title, description, project_hash,
-                  visibility, created_at, updated_at
+                  visibility, comments_enabled, image_url, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     save_id,
@@ -121,6 +130,8 @@ class BackendService:
                     description,
                     project_hash,
                     SAVE_VISIBILITY_PRIVATE,
+                    1,
+                    image_url,
                     now,
                     now,
                 ),
@@ -148,12 +159,10 @@ class BackendService:
         with self.store.connect() as connection:
             session = self._load_session(connection, session_id)
             row = self._load_save_row(connection, save_id)
-            is_owner = row["owner_user_id"] == session["user"]["id"]
-            if not is_owner and row["visibility"] != SAVE_VISIBILITY_PUBLIC:
+            if row["owner_user_id"] != session["user"]["id"]:
                 raise BackendError("save_not_found", "Save was not found.", status=404)
             payload = self._save_payload(row, include_owner=True)
-            project = self._read_project_payload(save_id)
-            payload["project"] = project if is_owner else self._share_project_payload(project)
+            payload["project"] = self._read_project_payload(save_id)
             return payload
 
     def export_save(self, session_id: str, save_id: str) -> dict[str, object]:
@@ -186,10 +195,15 @@ class BackendService:
         with self.store.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT saves.*, users.username, users.display_name
+                SELECT saves.*, users.username, users.display_name,
+                       COUNT(DISTINCT comments.id) AS comment_count,
+                       COUNT(DISTINCT reports.id) AS open_report_count
                 FROM saves
                 JOIN users ON users.id = saves.owner_user_id
+                LEFT JOIN comments ON comments.save_id = saves.id AND comments.status = 'visible'
+                LEFT JOIN reports ON reports.save_id = saves.id AND reports.status = 'open'
                 WHERE saves.visibility = ?
+                GROUP BY saves.id
                 ORDER BY saves.published_at DESC, saves.updated_at DESC
                 LIMIT 50
                 """,
@@ -226,7 +240,9 @@ class BackendService:
         body = self._normalize_comment(payload.get("body"))
         with self.store.connect() as connection:
             session = self._require_session(connection, session_id, csrf_token)
-            self._load_public_save_row(connection, save_id)
+            save = self._load_public_save_row(connection, save_id)
+            if not int(save["comments_enabled"]):
+                raise BackendError("comments_closed", "Comments are closed for this save.", status=403)
             comment_id = now_token()
             connection.execute(
                 """
@@ -269,6 +285,278 @@ class BackendService:
                 }
             }
 
+    def admin_overview(self, session_id: str) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id)
+            stats = self._admin_stats(connection)
+            users = connection.execute(
+                """
+                SELECT users.id, users.username, users.display_name, users.role, users.status, users.created_at,
+                       COUNT(DISTINCT saves.id) AS save_count
+                FROM users
+                LEFT JOIN saves ON saves.owner_user_id = users.id
+                GROUP BY users.id
+                ORDER BY users.created_at DESC
+                LIMIT 50
+                """
+            ).fetchall()
+            saves = connection.execute(
+                """
+                SELECT saves.*, users.username, users.display_name,
+                       COUNT(DISTINCT comments.id) AS comment_count,
+                       COUNT(DISTINCT reports.id) AS open_report_count
+                FROM saves
+                JOIN users ON users.id = saves.owner_user_id
+                LEFT JOIN comments ON comments.save_id = saves.id AND comments.status = 'visible'
+                LEFT JOIN reports ON reports.save_id = saves.id AND reports.status = 'open'
+                GROUP BY saves.id
+                ORDER BY saves.updated_at DESC
+                LIMIT 100
+                """
+            ).fetchall()
+            reports = connection.execute(
+                """
+                SELECT reports.*, saves.title AS save_title, saves.visibility AS save_visibility,
+                       reporter.username AS reporter_username,
+                       reporter.display_name AS reporter_display_name,
+                       owner.username AS owner_username,
+                       owner.display_name AS owner_display_name
+                FROM reports
+                JOIN saves ON saves.id = reports.save_id
+                JOIN users AS reporter ON reporter.id = reports.reporter_user_id
+                JOIN users AS owner ON owner.id = saves.owner_user_id
+                ORDER BY reports.created_at DESC
+                LIMIT 100
+                """
+            ).fetchall()
+            comments = connection.execute(
+                """
+                SELECT comments.*, saves.title AS save_title,
+                       users.username, users.display_name
+                FROM comments
+                JOIN saves ON saves.id = comments.save_id
+                JOIN users ON users.id = comments.user_id
+                ORDER BY comments.created_at DESC
+                LIMIT 100
+                """
+            ).fetchall()
+            return {
+                "stats": stats,
+                "users": [self._admin_user_payload(row) for row in users],
+                "saves": [self._admin_save_payload(row) for row in saves],
+                "reports": [self._admin_report_payload(row) for row in reports],
+                "comments": [self._admin_comment_payload(row) for row in comments],
+                "activity": self._admin_activity(connection),
+            }
+
+    def admin_get_save(self, session_id: str, save_id: str) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id)
+            row = self._load_admin_save_row(connection, save_id)
+            payload = self._admin_save_payload(row)
+            payload["project"] = self._read_project_payload(save_id)
+            return payload
+
+    def admin_review_report(self, session_id: str, csrf_token: str, report_id: str) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id, csrf_token)
+            report = connection.execute("SELECT * FROM reports WHERE id = ?", (report_id,)).fetchone()
+            if report is None:
+                raise BackendError("report_not_found", "Report was not found.", status=404)
+            connection.execute("UPDATE reports SET status = 'reviewed' WHERE id = ?", (report_id,))
+            refreshed = connection.execute("SELECT * FROM reports WHERE id = ?", (report_id,)).fetchone()
+            return {"report": self._report_payload(refreshed)}
+
+    def admin_set_save_visibility(
+        self,
+        session_id: str,
+        csrf_token: str,
+        save_id: str,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id, csrf_token)
+            self._load_save_row(connection, save_id)
+            visibility = str(payload.get("visibility") or "").strip().lower()
+            if visibility not in {SAVE_VISIBILITY_PUBLIC, SAVE_VISIBILITY_PRIVATE}:
+                raise BackendError("invalid_visibility", "Visibility must be public or private.", status=400)
+            published_at = utc_iso() if visibility == SAVE_VISIBILITY_PUBLIC else None
+            connection.execute(
+                """
+                UPDATE saves
+                SET visibility = ?, published_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (visibility, published_at, utc_iso(), save_id),
+            )
+            row = connection.execute(
+                """
+                SELECT saves.*, users.username, users.display_name
+                FROM saves
+                JOIN users ON users.id = saves.owner_user_id
+                WHERE saves.id = ?
+                """,
+                (save_id,),
+            ).fetchone()
+            return {"save": self._save_payload(row, include_owner=True)}
+
+    def admin_set_save_comments(
+        self,
+        session_id: str,
+        csrf_token: str,
+        save_id: str,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id, csrf_token)
+            self._load_save_row(connection, save_id)
+            enabled = self._normalize_bool(payload.get("enabled"))
+            connection.execute(
+                "UPDATE saves SET comments_enabled = ?, updated_at = ? WHERE id = ?",
+                (1 if enabled else 0, utc_iso(), save_id),
+            )
+            return {"save": self._load_admin_save(connection, save_id)}
+
+    def admin_set_save_image(
+        self,
+        session_id: str,
+        csrf_token: str,
+        save_id: str,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id, csrf_token)
+            self._load_save_row(connection, save_id)
+            image_url = self._normalize_image_url(payload.get("imageUrl"))
+            connection.execute(
+                "UPDATE saves SET image_url = ?, updated_at = ? WHERE id = ?",
+                (image_url, utc_iso(), save_id),
+            )
+            return {"save": self._load_admin_save(connection, save_id)}
+
+    def admin_hide_comment(self, session_id: str, csrf_token: str, comment_id: str) -> dict[str, object]:
+        with self.store.connect() as connection:
+            self._require_staff_session(connection, session_id, csrf_token)
+            comment = connection.execute("SELECT * FROM comments WHERE id = ?", (comment_id,)).fetchone()
+            if comment is None:
+                raise BackendError("comment_not_found", "Comment was not found.", status=404)
+            connection.execute("UPDATE comments SET status = 'hidden' WHERE id = ?", (comment_id,))
+            refreshed = connection.execute("SELECT * FROM comments WHERE id = ?", (comment_id,)).fetchone()
+            return {"comment": self._comment_payload(refreshed)}
+
+    def admin_update_user(self, session_id: str, csrf_token: str, user_id: str, payload: dict[str, object]) -> dict[str, object]:
+        with self.store.connect() as connection:
+            admin_session = self._require_admin_session(connection, session_id, csrf_token)
+            user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+            if user is None:
+                raise BackendError("user_not_found", "User was not found.", status=404)
+            updates: list[str] = []
+            values: list[object] = []
+            if "role" in payload:
+                role = self._normalize_role(payload.get("role"))
+                updates.append("role = ?")
+                values.append(role)
+            if "status" in payload:
+                status = self._normalize_user_status(payload.get("status"))
+                if user_id == admin_session["user"]["id"] and status == USER_STATUS_BANNED:
+                    raise BackendError("cannot_ban_self", "Administrators cannot ban their own active session.", status=400)
+                updates.append("status = ?")
+                values.append(status)
+            if not updates:
+                raise BackendError("invalid_user_update", "User update must include role or status.", status=400)
+            values.append(user_id)
+            connection.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", values)
+            updated = connection.execute(
+                """
+                SELECT users.id, users.username, users.display_name, users.role, users.status, users.created_at,
+                       COUNT(DISTINCT saves.id) AS save_count
+                FROM users
+                LEFT JOIN saves ON saves.owner_user_id = users.id
+                WHERE users.id = ?
+                GROUP BY users.id
+                """,
+                (user_id,),
+            ).fetchone()
+            return {"user": self._admin_user_payload(updated)}
+
+    def admin_seed_demo(self, session_id: str, csrf_token: str) -> dict[str, object]:
+        with self.store.connect() as connection:
+            session = self._require_admin_session(connection, session_id, csrf_token)
+            created: list[dict[str, object]] = []
+            demo_rows = [
+                ("demo_cartographer", "制图师示例", "高山边境设定", "把山脉作为天然边界，附带铁路节点。", "/backend/assets/demo-mountain.svg"),
+                ("demo_moderator", "社区版主示例", "群岛贸易航线", "海峡、港口和补给线的共享方案。", "/backend/assets/demo-islands.svg"),
+                ("demo_player", "玩家示例", "东部平原战役", "适合多人对战的平原推进存档。", "/backend/assets/demo-plains.svg"),
+            ]
+            now = utc_iso()
+            for username, display_name, title, description, image_url in demo_rows:
+                user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+                if user is None:
+                    user_id = now_token()
+                    connection.execute(
+                        """
+                        INSERT INTO users (id, username, display_name, password_hash, role, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            user_id,
+                            username,
+                            display_name,
+                            hash_password(now_token()),
+                            USER_ROLE_MEMBER,
+                            USER_STATUS_ACTIVE,
+                            now,
+                        ),
+                    )
+                else:
+                    user_id = str(user["id"])
+                existing = connection.execute(
+                    "SELECT * FROM saves WHERE owner_user_id = ? AND title = ?",
+                    (user_id, title),
+                ).fetchone()
+                if existing is not None:
+                    created.append(self._save_payload(existing, include_owner=False))
+                    continue
+                save_id = now_token()
+                project = {
+                    "schemaVersion": 21,
+                    "paintMode": "visual",
+                    "mapSemanticMode": "scenario",
+                    "scenario": {"id": username},
+                    "timestamp": now,
+                }
+                connection.execute(
+                    """
+                    INSERT INTO saves (
+                      id, owner_user_id, title, description, project_hash,
+                      visibility, comments_enabled, image_url, created_at, updated_at, published_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+                    """,
+                    (
+                        save_id,
+                        user_id,
+                        title,
+                        description,
+                        self._project_hash(project),
+                        SAVE_VISIBILITY_PUBLIC,
+                        image_url,
+                        now,
+                        now,
+                        now,
+                    ),
+                )
+                self.storage.write_project(save_id, project)
+                connection.execute(
+                    """
+                    INSERT INTO comments (id, save_id, user_id, body, status, created_at)
+                    VALUES (?, ?, ?, ?, 'visible', ?)
+                    """,
+                    (now_token(), save_id, session["user"]["id"], "已通过初始内容巡检。", now),
+                )
+                created.append(self._save_payload(self._load_save_row(connection, save_id), include_owner=False))
+            return {"created": created}
+
     def _create_session_response(self, connection, user_id: str) -> dict[str, object]:
         session_id = now_token()
         csrf_token = now_token()
@@ -289,7 +577,7 @@ class BackendService:
             raise BackendError("auth_required", "Login is required.", status=401)
         row = connection.execute(
             """
-            SELECT sessions.*, users.username, users.display_name
+            SELECT sessions.*, users.username, users.display_name, users.role, users.status
             FROM sessions
             JOIN users ON users.id = sessions.user_id
             WHERE sessions.id = ?
@@ -298,11 +586,15 @@ class BackendService:
         ).fetchone()
         if row is None or str(row["expires_at"]) <= utc_iso(utc_now()):
             raise BackendError("auth_required", "Login is required.", status=401)
+        if str(row["status"]) == USER_STATUS_BANNED:
+            raise BackendError("account_banned", "This account is banned.", status=403)
         return {
             "user": {
                 "id": str(row["user_id"]),
                 "username": str(row["username"]),
                 "displayName": str(row["display_name"]),
+                "role": str(row["role"]),
+                "status": str(row["status"]),
             },
             "csrfToken": str(row["csrf_token"]),
         }
@@ -311,6 +603,22 @@ class BackendService:
         session = self._load_session(connection, session_id)
         if not csrf_token or csrf_token != session["csrfToken"]:
             raise BackendError("invalid_csrf", "CSRF token is missing or invalid.", status=403)
+        return session
+
+    def _require_admin_session(self, connection, session_id: str, csrf_token: str | None = None) -> dict[str, object]:
+        session = self._load_session(connection, session_id)
+        if csrf_token is not None and (not csrf_token or csrf_token != session["csrfToken"]):
+            raise BackendError("invalid_csrf", "CSRF token is missing or invalid.", status=403)
+        if session["user"].get("role") != USER_ROLE_ADMIN:
+            raise BackendError("admin_required", "Administrator access is required.", status=403)
+        return session
+
+    def _require_staff_session(self, connection, session_id: str, csrf_token: str | None = None) -> dict[str, object]:
+        session = self._load_session(connection, session_id)
+        if csrf_token is not None and (not csrf_token or csrf_token != session["csrfToken"]):
+            raise BackendError("invalid_csrf", "CSRF token is missing or invalid.", status=403)
+        if session["user"].get("role") not in {USER_ROLE_ADMIN, USER_ROLE_MODERATOR}:
+            raise BackendError("admin_required", "Administrator access is required.", status=403)
         return session
 
     def _load_save_row(self, connection, save_id: str):
@@ -350,6 +658,8 @@ class BackendService:
             "description": str(row["description"] or ""),
             "projectHash": str(row["project_hash"]),
             "visibility": str(row["visibility"]),
+            "commentsEnabled": bool(int(row["comments_enabled"])) if "comments_enabled" in row.keys() else True,
+            "imageUrl": str(row["image_url"] or "") if "image_url" in row.keys() else "",
             "createdAt": str(row["created_at"]),
             "updatedAt": str(row["updated_at"]),
             "publishedAt": row["published_at"],
@@ -367,13 +677,162 @@ class BackendService:
             "id": str(row["id"]),
             "saveId": str(row["save_id"]),
             "body": str(row["body"]),
+            "status": str(row["status"]) if "status" in row.keys() else "visible",
             "createdAt": str(row["created_at"]),
             "author": {
                 "id": str(row["user_id"]),
-                "username": str(row["username"]),
-                "displayName": str(row["display_name"]),
+                "username": str(row["username"]) if "username" in row.keys() else "",
+                "displayName": str(row["display_name"]) if "display_name" in row.keys() else "",
             },
         }
+
+    def _report_payload(self, row) -> dict[str, object]:
+        return {
+            "id": str(row["id"]),
+            "saveId": str(row["save_id"]),
+            "reason": str(row["reason"]),
+            "details": str(row["details"] or ""),
+            "status": str(row["status"]),
+            "createdAt": str(row["created_at"]),
+        }
+
+    def _admin_user_payload(self, row) -> dict[str, object]:
+        return {
+            "id": str(row["id"]),
+            "username": str(row["username"]),
+            "displayName": str(row["display_name"]),
+            "role": str(row["role"]),
+            "status": str(row["status"]),
+            "createdAt": str(row["created_at"]),
+            "saveCount": int(row["save_count"] or 0),
+        }
+
+    def _admin_save_payload(self, row) -> dict[str, object]:
+        payload = self._save_payload(row, include_owner=True)
+        payload["commentCount"] = int(row["comment_count"] or 0)
+        payload["openReportCount"] = int(row["open_report_count"] or 0)
+        return payload
+
+    def _admin_comment_payload(self, row) -> dict[str, object]:
+        payload = self._comment_payload(row)
+        payload["save"] = {
+            "id": str(row["save_id"]),
+            "title": str(row["save_title"]),
+        }
+        return payload
+
+    def _admin_report_payload(self, row) -> dict[str, object]:
+        payload = self._report_payload(row)
+        payload["save"] = {
+            "id": str(row["save_id"]),
+            "title": str(row["save_title"]),
+            "visibility": str(row["save_visibility"]),
+            "owner": {
+                "username": str(row["owner_username"]),
+                "displayName": str(row["owner_display_name"]),
+            },
+        }
+        payload["reporter"] = {
+            "username": str(row["reporter_username"]),
+            "displayName": str(row["reporter_display_name"]),
+        }
+        return payload
+
+    def _admin_stats(self, connection) -> dict[str, int]:
+        return {
+            "users": int(connection.execute("SELECT COUNT(*) AS count FROM users").fetchone()["count"]),
+            "saves": int(connection.execute("SELECT COUNT(*) AS count FROM saves").fetchone()["count"]),
+            "publicSaves": int(
+                connection.execute(
+                    "SELECT COUNT(*) AS count FROM saves WHERE visibility = ?",
+                    (SAVE_VISIBILITY_PUBLIC,),
+                ).fetchone()["count"]
+            ),
+            "openReports": int(
+                connection.execute("SELECT COUNT(*) AS count FROM reports WHERE status = 'open'").fetchone()["count"]
+            ),
+            "comments": int(connection.execute("SELECT COUNT(*) AS count FROM comments").fetchone()["count"]),
+            "bannedUsers": int(
+                connection.execute(
+                    "SELECT COUNT(*) AS count FROM users WHERE status = ?",
+                    (USER_STATUS_BANNED,),
+                ).fetchone()["count"]
+            ),
+        }
+
+    def _admin_activity(self, connection) -> list[dict[str, object]]:
+        save_rows = connection.execute(
+            """
+            SELECT 'save' AS type, saves.id, saves.title AS label, saves.updated_at AS created_at,
+                   users.display_name AS actor
+            FROM saves
+            JOIN users ON users.id = saves.owner_user_id
+            ORDER BY saves.updated_at DESC
+            LIMIT 8
+            """
+        ).fetchall()
+        comment_rows = connection.execute(
+            """
+            SELECT 'comment' AS type, comments.id, saves.title AS label, comments.created_at AS created_at,
+                   users.display_name AS actor
+            FROM comments
+            JOIN saves ON saves.id = comments.save_id
+            JOIN users ON users.id = comments.user_id
+            ORDER BY comments.created_at DESC
+            LIMIT 8
+            """
+        ).fetchall()
+        report_rows = connection.execute(
+            """
+            SELECT 'report' AS type, reports.id, saves.title AS label, reports.created_at AS created_at,
+                   users.display_name AS actor
+            FROM reports
+            JOIN saves ON saves.id = reports.save_id
+            JOIN users ON users.id = reports.reporter_user_id
+            ORDER BY reports.created_at DESC
+            LIMIT 8
+            """
+        ).fetchall()
+        rows = sorted(
+            [*save_rows, *comment_rows, *report_rows],
+            key=lambda row: str(row["created_at"]),
+            reverse=True,
+        )[:16]
+        return [
+            {
+                "type": str(row["type"]),
+                "id": str(row["id"]),
+                "label": str(row["label"]),
+                "actor": str(row["actor"]),
+                "createdAt": str(row["created_at"]),
+            }
+            for row in rows
+        ]
+
+    def _load_admin_save(self, connection, save_id: str) -> dict[str, object]:
+        return self._admin_save_payload(self._load_admin_save_row(connection, save_id))
+
+    def _load_admin_save_row(self, connection, save_id: str):
+        row = connection.execute(
+            """
+            SELECT saves.*, users.username, users.display_name,
+                   COUNT(DISTINCT comments.id) AS comment_count,
+                   COUNT(DISTINCT reports.id) AS open_report_count
+            FROM saves
+            JOIN users ON users.id = saves.owner_user_id
+            LEFT JOIN comments ON comments.save_id = saves.id AND comments.status = 'visible'
+            LEFT JOIN reports ON reports.save_id = saves.id AND reports.status = 'open'
+            WHERE saves.id = ?
+            GROUP BY saves.id
+            """,
+            (save_id,),
+        ).fetchone()
+        if row is None:
+            raise BackendError("save_not_found", "Save was not found.", status=404)
+        return row
+
+    def _user_count(self, connection) -> int:
+        return int(connection.execute("SELECT COUNT(*) AS count FROM users").fetchone()["count"])
 
     def _project_hash(self, payload: dict[str, object]) -> str:
         encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -481,3 +940,47 @@ class BackendService:
         if reason not in allowed:
             raise BackendError("invalid_report_reason", "Report reason is not supported.", status=400)
         return reason
+
+    def _normalize_bool(self, value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        raise BackendError("invalid_boolean", "Expected a boolean value.", status=400)
+
+    def _normalize_role(self, value: object) -> str:
+        role = self._normalize_text_field(
+            value,
+            code="invalid_role",
+            message="Role is not supported.",
+        ).lower()
+        if role not in {USER_ROLE_MEMBER, USER_ROLE_MODERATOR, USER_ROLE_ADMIN}:
+            raise BackendError("invalid_role", "Role is not supported.", status=400)
+        return role
+
+    def _normalize_user_status(self, value: object) -> str:
+        status = self._normalize_text_field(
+            value,
+            code="invalid_user_status",
+            message="User status is not supported.",
+        ).lower()
+        if status not in {USER_STATUS_ACTIVE, USER_STATUS_BANNED}:
+            raise BackendError("invalid_user_status", "User status is not supported.", status=400)
+        return status
+
+    def _normalize_image_url(self, value: object) -> str:
+        image_url = self._normalize_text_field(
+            value,
+            code="invalid_image_url",
+            message="Image URL must be a local path or URL within 300 characters.",
+            allow_missing=True,
+        )
+        if len(image_url) > 300:
+            raise BackendError("invalid_image_url", "Image URL must be a local path or URL within 300 characters.", status=400)
+        if image_url and not (
+            image_url.startswith("/")
+            or image_url.startswith("http://localhost")
+            or image_url.startswith("http://127.0.0.1")
+            or image_url.startswith("https://localhost")
+            or image_url.startswith("https://127.0.0.1")
+        ):
+            raise BackendError("invalid_image_url", "Image URL must be a local path or URL within 300 characters.", status=400)
+        return image_url

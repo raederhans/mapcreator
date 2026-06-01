@@ -171,3 +171,6 @@
 
 ### 交通工作台数据必须带渲染契约字段
 - 非 Japan 交通 pack 不能只满足 manifest 合同；点状 preview 还需要 `clip_bbox` 投影路径，以及工作台筛选会读取的 `airport_type/status_category`、`legal_designation/manager_type_code`、facility subtype/status 等字段。
+
+### 社区后台要先分清用户视角和管理视角
+- 后台预览页要把游客社区、登录用户中心、管理员治理面板拆成独立状态机；登录框、注册框和治理动作混在同一屏会掩盖权限边界。

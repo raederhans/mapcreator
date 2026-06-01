@@ -18,6 +18,19 @@ SAVE_ROUTE_RE = re.compile(r"^/api/backend/saves/(?P<save_id>[A-Za-z0-9_-]+)(?P<
 COMMUNITY_ROUTE_RE = re.compile(
     r"^/api/backend/community/saves/(?P<save_id>[A-Za-z0-9_-]+)(?P<suffix>/download|/comments|/reports)?$"
 )
+ADMIN_REPORT_ROUTE_RE = re.compile(r"^/api/backend/admin/reports/(?P<report_id>[A-Za-z0-9_-]+)/review$")
+ADMIN_COMMENT_HIDE_ROUTE_RE = re.compile(r"^/api/backend/admin/comments/(?P<comment_id>[A-Za-z0-9_-]+)/hide$")
+ADMIN_SAVE_ROUTE_RE = re.compile(r"^/api/backend/admin/saves/(?P<save_id>[A-Za-z0-9_-]+)$")
+ADMIN_SAVE_VISIBILITY_ROUTE_RE = re.compile(
+    r"^/api/backend/admin/saves/(?P<save_id>[A-Za-z0-9_-]+)/visibility$"
+)
+ADMIN_SAVE_COMMENTS_ROUTE_RE = re.compile(
+    r"^/api/backend/admin/saves/(?P<save_id>[A-Za-z0-9_-]+)/comments$"
+)
+ADMIN_SAVE_IMAGE_ROUTE_RE = re.compile(
+    r"^/api/backend/admin/saves/(?P<save_id>[A-Za-z0-9_-]+)/image$"
+)
+ADMIN_USER_ROUTE_RE = re.compile(r"^/api/backend/admin/users/(?P<user_id>[A-Za-z0-9_-]+)$")
 
 
 @dataclass
@@ -88,6 +101,78 @@ def handle_backend_request(
                 return BackendResponse(201, service.add_comment(session_id, csrf_token, save_id, request_payload))
             if method == "POST" and suffix == "/reports":
                 return BackendResponse(201, service.report_save(session_id, csrf_token, save_id, request_payload))
+
+        if method == "GET" and route == "/api/backend/admin/overview":
+            return BackendResponse(200, service.admin_overview(session_id))
+
+        if method == "POST" and route == "/api/backend/admin/demo/seed":
+            return BackendResponse(201, service.admin_seed_demo(session_id, csrf_token))
+
+        admin_save_match = ADMIN_SAVE_ROUTE_RE.fullmatch(route)
+        if admin_save_match and method == "GET":
+            return BackendResponse(200, {"save": service.admin_get_save(session_id, admin_save_match.group("save_id"))})
+
+        admin_report_match = ADMIN_REPORT_ROUTE_RE.fullmatch(route)
+        if admin_report_match and method == "POST":
+            return BackendResponse(
+                200,
+                service.admin_review_report(session_id, csrf_token, admin_report_match.group("report_id")),
+            )
+
+        admin_save_visibility_match = ADMIN_SAVE_VISIBILITY_ROUTE_RE.fullmatch(route)
+        if admin_save_visibility_match and method == "POST":
+            return BackendResponse(
+                200,
+                service.admin_set_save_visibility(
+                    session_id,
+                    csrf_token,
+                    admin_save_visibility_match.group("save_id"),
+                    request_payload,
+                ),
+            )
+
+        admin_save_comments_match = ADMIN_SAVE_COMMENTS_ROUTE_RE.fullmatch(route)
+        if admin_save_comments_match and method == "POST":
+            return BackendResponse(
+                200,
+                service.admin_set_save_comments(
+                    session_id,
+                    csrf_token,
+                    admin_save_comments_match.group("save_id"),
+                    request_payload,
+                ),
+            )
+
+        admin_save_image_match = ADMIN_SAVE_IMAGE_ROUTE_RE.fullmatch(route)
+        if admin_save_image_match and method == "POST":
+            return BackendResponse(
+                200,
+                service.admin_set_save_image(
+                    session_id,
+                    csrf_token,
+                    admin_save_image_match.group("save_id"),
+                    request_payload,
+                ),
+            )
+
+        admin_comment_hide_match = ADMIN_COMMENT_HIDE_ROUTE_RE.fullmatch(route)
+        if admin_comment_hide_match and method == "POST":
+            return BackendResponse(
+                200,
+                service.admin_hide_comment(session_id, csrf_token, admin_comment_hide_match.group("comment_id")),
+            )
+
+        admin_user_match = ADMIN_USER_ROUTE_RE.fullmatch(route)
+        if admin_user_match and method == "POST":
+            return BackendResponse(
+                200,
+                service.admin_update_user(
+                    session_id,
+                    csrf_token,
+                    admin_user_match.group("user_id"),
+                    request_payload,
+                ),
+            )
     except BackendError as error:
         return BackendResponse(
             error.status,

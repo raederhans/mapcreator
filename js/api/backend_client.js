@@ -70,15 +70,23 @@ export async function logoutBackendUser() {
   return payload;
 }
 
-export async function createBackendSave({ title, description, project }) {
+export async function createBackendSave({ title, description, project, imageUrl = "" }) {
   return requestJson("/api/backend/saves", {
     method: "POST",
-    body: { title, description, project },
+    body: { title, description, project, imageUrl },
   });
 }
 
 export async function listBackendSaves() {
   return requestJson("/api/backend/saves");
+}
+
+export async function getBackendSave(saveId) {
+  return requestJson(`/api/backend/saves/${encodeURIComponent(saveId)}`);
+}
+
+export async function exportBackendSave(saveId) {
+  return requestJson(`/api/backend/saves/${encodeURIComponent(saveId)}/export`);
 }
 
 export async function publishBackendSave(saveId) {
@@ -90,6 +98,10 @@ export async function publishBackendSave(saveId) {
 
 export async function listCommunitySaves() {
   return requestJson("/api/backend/community/saves");
+}
+
+export async function getCommunitySave(saveId) {
+  return requestJson(`/api/backend/community/saves/${encodeURIComponent(saveId)}`);
 }
 
 export async function downloadCommunitySave(saveId) {
@@ -107,5 +119,62 @@ export async function reportCommunitySave(saveId, reason = "other", details = ""
   return requestJson(`/api/backend/community/saves/${encodeURIComponent(saveId)}/reports`, {
     method: "POST",
     body: { reason, details },
+  });
+}
+
+export async function getBackendAdminOverview() {
+  return requestJson("/api/backend/admin/overview");
+}
+
+export async function getBackendAdminSave(saveId) {
+  return requestJson(`/api/backend/admin/saves/${encodeURIComponent(saveId)}`);
+}
+
+export async function reviewBackendReport(reportId) {
+  return requestJson(`/api/backend/admin/reports/${encodeURIComponent(reportId)}/review`, {
+    method: "POST",
+    body: {},
+  });
+}
+
+export async function setBackendSaveVisibility(saveId, visibility) {
+  return requestJson(`/api/backend/admin/saves/${encodeURIComponent(saveId)}/visibility`, {
+    method: "POST",
+    body: { visibility },
+  });
+}
+
+export async function setBackendSaveComments(saveId, enabled) {
+  return requestJson(`/api/backend/admin/saves/${encodeURIComponent(saveId)}/comments`, {
+    method: "POST",
+    body: { enabled },
+  });
+}
+
+export async function setBackendSaveImage(saveId, imageUrl) {
+  return requestJson(`/api/backend/admin/saves/${encodeURIComponent(saveId)}/image`, {
+    method: "POST",
+    body: { imageUrl },
+  });
+}
+
+export async function hideBackendComment(commentId) {
+  return requestJson(`/api/backend/admin/comments/${encodeURIComponent(commentId)}/hide`, {
+    method: "POST",
+    body: {},
+  });
+}
+
+export async function updateBackendUser(userId, patch) {
+  return requestJson(`/api/backend/admin/users/${encodeURIComponent(userId)}`, {
+    method: "POST",
+    body: patch,
+  });
+}
+
+export async function seedBackendDemoCommunity() {
+  return requestJson("/api/backend/admin/demo/seed", {
+    method: "POST",
+    body: {},
   });
 }

@@ -125,7 +125,73 @@ test("backend client surfaces backend error messages", async () => {
   }
 });
 
-test("backend session probe rejects non backend success payloads", async () => {
+test("backend client exposes save detail export community detail and admin routes", async () => {
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+  const client = await freshClient();
+
+  globalThis.fetch = async (url, options = {}) => {
+    requests.push([String(url), options]);
+    return {
+      ok: true,
+      json: async () => {
+        if (String(url).endsWith("/auth/login")) {
+          return { csrfToken: "csrf-admin" };
+        }
+        return { ok: true };
+      },
+    };
+  };
+
+  try {
+    await client.loginBackendUser({ username: "admin", password: "correct horse" });
+    await client.getBackendSave("save-1");
+    await client.exportBackendSave("save-1");
+    await client.getCommunitySave("save-1");
+    await client.getBackendAdminOverview();
+    await client.getBackendAdminSave("save-1");
+    await client.reviewBackendReport("report-1");
+    await client.setBackendSaveVisibility("save-1", "private");
+    await client.setBackendSaveComments("save-1", false);
+    await client.setBackendSaveImage("save-1", "");
+    await client.hideBackendComment("comment-1");
+    await client.updateBackendUser("user-1", { status: "banned" });
+    await client.seedBackendDemoCommunity();
+
+    assert.deepEqual(
+      requests.map(([url]) => url),
+      [
+        "/api/backend/auth/login",
+        "/api/backend/saves/save-1",
+        "/api/backend/saves/save-1/export",
+        "/api/backend/community/saves/save-1",
+        "/api/backend/admin/overview",
+        "/api/backend/admin/saves/save-1",
+        "/api/backend/admin/reports/report-1/review",
+        "/api/backend/admin/saves/save-1/visibility",
+        "/api/backend/admin/saves/save-1/comments",
+        "/api/backend/admin/saves/save-1/image",
+        "/api/backend/admin/comments/comment-1/hide",
+        "/api/backend/admin/users/user-1",
+        "/api/backend/admin/demo/seed",
+      ]
+    );
+    const adminWrites = requests.slice(6).map(([, options]) => options.headers["X-MapCreator-CSRF"]);
+    assert.deepEqual(adminWrites, [
+      "csrf-admin",
+      "csrf-admin",
+      "csrf-admin",
+      "csrf-admin",
+      "csrf-admin",
+      "csrf-admin",
+      "csrf-admin",
+    ]);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("backend runtime availability is limited to local http origins", async () => {
   const previousFetch = globalThis.fetch;
   const client = await freshClient();
 
