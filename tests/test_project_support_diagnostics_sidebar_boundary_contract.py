@@ -13,6 +13,8 @@ STYLE_CSS = REPO_ROOT / "css" / "style.css"
 
 
 class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
+    # 这组静态合同锁 sidebar facade 与 controller owner 的边界；
+    # 后续拆分要保持事件绑定和 runtime hook 继续留在 controller 外层。
     def test_sidebar_imports_project_support_diagnostics_controller(self):
         content = SIDEBAR_JS.read_text(encoding="utf-8")
 

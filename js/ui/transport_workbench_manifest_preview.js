@@ -29,6 +29,7 @@ function createEmptyState() {
 }
 
 function getFamilyState(familyId) {
+  // manifest-only family 没有本地 geometry pack；这里缓存 manifest/audit/subtype，供 inspector 与快照读取同一状态。
   const normalizedFamilyId = String(familyId || "").trim();
   if (!familyState.has(normalizedFamilyId)) {
     familyState.set(normalizedFamilyId, {
@@ -42,6 +43,7 @@ function getFamilyState(familyId) {
 }
 
 async function startManifestOnlyPreviewLoad(familyId) {
+  // 404 代表这个 manifest-only family 还在预留阶段，状态写成 pending 让 UI 显示“未接线”的真实进度。
   const normalizedFamilyId = String(familyId || "").trim();
   if (!MANIFEST_ONLY_FAMILIES.has(normalizedFamilyId)) return createEmptyState();
   const previewRuntime = getFamilyState(normalizedFamilyId);
@@ -150,7 +152,7 @@ export function clearJapanManifestOnlyFamilyPreview(familyId) {
 export function destroyJapanManifestOnlyFamilyPreview(familyId) {
   const normalizedFamilyId = String(familyId || "").trim();
   if (!familyState.has(normalizedFamilyId)) return;
-const previewRuntime = familyState.get(normalizedFamilyId);
+  const previewRuntime = familyState.get(normalizedFamilyId);
   previewRuntime.snapshot = createEmptyState();
   familyState.delete(normalizedFamilyId);
 }

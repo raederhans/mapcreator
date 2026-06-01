@@ -34,6 +34,7 @@ export function getBackendCsrfToken() {
 }
 
 export async function refreshBackendSession() {
+  // 这个请求同时承担能力探测和会话恢复：静态页面环境缺少这份合同，调用方据此隐藏 Cloud Saves。
   const payload = await requestJson("/api/backend/auth/me");
   if (!payload?.csrfToken || !payload?.user || typeof payload.user !== "object") {
     csrfToken = "";
