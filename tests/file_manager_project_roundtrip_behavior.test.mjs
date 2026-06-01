@@ -107,6 +107,8 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(payload.exportHandoff.project.schemaVersion, 21);
   assert.equal(payload.exportHandoff.exportUi.target, "composite");
   assert.equal(payload.exportHandoff.files[0].path, "map_project.json");
+  assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "byteLength"), false);
+  assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "checksum"), false);
 });
 
 test("project export preserves strategic overlay counters and legacy kind values", async () => {

@@ -1,9 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { strFromU8, unzipSync } from "../vendor/fflate.browser.js";
-import { buildExportArtifactPackage } from "../js/core/export_artifact_package.js";
+import {
+  buildExportArtifactManifest,
+  buildExportArtifactPackage,
+} from "../js/core/export_artifact_package.js";
 import { normalizeExportWorkbenchUiState } from "../js/core/state_defaults.js";
 import { replaceExportWorkbenchUiState } from "../js/core/state/ui_state.js";
 import {
@@ -151,7 +155,42 @@ test("export artifact package writes a zip manifest and payload files", async ()
   assert.equal(manifest.scenario.id, "tno_1962");
   assert.equal(manifest.files[0].path, "layers/political.png");
   assert.equal(manifest.files[0].byteLength, 9);
+  assert.equal(manifest.files[0].checksum, `sha256_${createHash("sha256").update("png-bytes").digest("hex")}`);
   assert.equal(strFromU8(entries["layers/political.png"]), "png-bytes");
+});
+
+test("export artifact package rejects payload manifest path collisions", async () => {
+  await assert.rejects(
+    () => buildExportArtifactPackage({
+      artifactKind: "per-layer",
+      files: [{
+        path: "manifest.json",
+        role: "metadata",
+        mime: "application/json",
+        text: "{}",
+      }],
+    }),
+    /manifest path conflicts/
+  );
+});
+
+test("export artifact manifest normalizes raw file entries", () => {
+  const manifest = buildExportArtifactManifest({
+    artifactKind: "project-json",
+    files: [{
+      path: "../Map Project.JSON",
+      role: "Editable Project",
+      mime: "application/json",
+      byteLength: -1,
+      dimensions: { width: "4.6", height: "bad" },
+    }],
+  });
+
+  assert.equal(manifest.files[0].path, "map-project.json");
+  assert.equal(manifest.files[0].role, "editable-project");
+  assert.equal(manifest.files[0].mime, "application/json");
+  assert.equal(Object.hasOwn(manifest.files[0], "byteLength"), false);
+  assert.deepEqual(manifest.files[0].dimensions, { width: 5, height: 0 });
 });
 
 test("export annotation family counts use strategic overlay selectors", () => {

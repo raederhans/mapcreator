@@ -6246,7 +6246,7 @@
     },
     {
       "path": "app/js/core/export_artifact_package.js",
-      "size_bytes": 4987
+      "size_bytes": 6501
     },
     {
       "path": "app/js/core/feature_identity.js",
@@ -6258,7 +6258,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 41733
+      "size_bytes": 41661
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -7103,5 +7103,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1016048349
+  "total_bytes": 1016049791
 }

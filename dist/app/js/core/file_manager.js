@@ -565,8 +565,6 @@ class FileManager {
         path: "map_project.json",
         role: "editable-project",
         mime: "application/json",
-        byteLength: 0,
-        checksum: "created-at-download",
       }],
     });
     return payload;

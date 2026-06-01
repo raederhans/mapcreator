@@ -20,13 +20,39 @@ function normalizeArtifactPath(value, fallback = "file.bin") {
   return cleaned || fallback;
 }
 
-function fnv1aBytes(bytes) {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < bytes.length; index += 1) {
-    hash ^= bytes[index];
-    hash = Math.imul(hash, 0x01000193);
+function bytesToHex(bytes) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Bytes(bytes) {
+  if (!globalThis.crypto?.subtle?.digest) {
+    throw new Error("SHA-256 digest API is unavailable.");
   }
-  return `fnv1a_${(hash >>> 0).toString(16).padStart(8, "0")}`;
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return `sha256_${bytesToHex(new Uint8Array(digest))}`;
+}
+
+function normalizeManifestFileEntry(file = {}, fallbackPath = "file.bin") {
+  const source = file?.meta && typeof file.meta === "object" ? file.meta : file;
+  const path = normalizeArtifactPath(source?.path || source?.name, fallbackPath);
+  const role = normalizeArtifactToken(source?.role, "payload");
+  const mime = String(source?.mime || "application/octet-stream").trim() || "application/octet-stream";
+  const entry = { path, role, mime };
+  const byteLength = Number(source?.byteLength);
+  if (Number.isFinite(byteLength) && byteLength >= 0) {
+    entry.byteLength = Math.round(byteLength);
+  }
+  const checksum = String(source?.checksum || "").trim();
+  if (checksum) {
+    entry.checksum = checksum;
+  }
+  const dimensions = source?.dimensions && typeof source.dimensions === "object" ? source.dimensions : null;
+  const width = Math.max(0, Math.round(Number(dimensions?.width || 0) || 0));
+  const height = Math.max(0, Math.round(Number(dimensions?.height || 0) || 0));
+  if (width || height) {
+    entry.dimensions = { width, height };
+  }
+  return entry;
 }
 
 function serializeJsonBytes(value) {
@@ -71,6 +97,7 @@ async function normalizeArtifactFiles(files = []) {
     const bytes = await resolveArtifactFileBytes(file);
     const width = Math.max(0, Math.round(Number(file?.width || file?.canvas?.width || 0) || 0));
     const height = Math.max(0, Math.round(Number(file?.height || file?.canvas?.height || 0) || 0));
+    const checksum = await sha256Bytes(bytes);
     normalized.push({
       path,
       bytes,
@@ -79,7 +106,7 @@ async function normalizeArtifactFiles(files = []) {
         role: normalizeArtifactToken(file?.role, "payload"),
         mime: String(file?.mime || "application/octet-stream").trim(),
         byteLength: bytes.byteLength,
-        checksum: fnv1aBytes(bytes),
+        checksum,
         ...(width || height ? { dimensions: { width, height } } : {}),
       },
     });
@@ -104,7 +131,7 @@ function buildExportArtifactManifest({
     project,
     exportUi,
     publishedTarget,
-    files: files.map((file) => file.meta || file),
+    files: files.map((file, index) => normalizeManifestFileEntry(file, `file-${index + 1}.bin`)),
   };
 }
 
@@ -120,6 +147,10 @@ async function buildExportArtifactPackage({
   manifestPath = "manifest.json",
 } = {}) {
   const normalizedFiles = await normalizeArtifactFiles(files);
+  const normalizedManifestPath = normalizeArtifactPath(manifestPath, "manifest.json");
+  if (normalizedFiles.some((file) => file.path === normalizedManifestPath)) {
+    throw new Error(`Artifact manifest path conflicts with payload file: ${normalizedManifestPath}`);
+  }
   const manifest = buildExportArtifactManifest({
     artifactKind,
     files: normalizedFiles,
@@ -130,7 +161,7 @@ async function buildExportArtifactPackage({
     generatedAt,
   });
   const zipEntries = Object.fromEntries(normalizedFiles.map((file) => [file.path, file.bytes]));
-  zipEntries[normalizeArtifactPath(manifestPath, "manifest.json")] = serializeJsonBytes(manifest);
+  zipEntries[normalizedManifestPath] = serializeJsonBytes(manifest);
   const zipBytes = zipSync(zipEntries);
   return {
     blob: new Blob([zipBytes], { type: EXPORT_ARTIFACT_MIME }),
@@ -145,7 +176,8 @@ export {
   EXPORT_ARTIFACT_VERSION,
   buildExportArtifactManifest,
   buildExportArtifactPackage,
-  fnv1aBytes,
+  sha256Bytes,
+  normalizeManifestFileEntry,
   normalizeArtifactPath,
   normalizeArtifactToken,
 };
