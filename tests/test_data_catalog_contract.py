@@ -14,7 +14,8 @@ from tools.data_health import SCENARIO_REGISTRY_URL, collect_health
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_JSON = REPO_ROOT / "data" / "CATALOG.json"
 CATALOG_MD = REPO_ROOT / "data" / "CATALOG.md"
-EXPECTED_ENTRY_COUNT = 391
+LANDING_INDEX = REPO_ROOT / "landing" / "index.html"
+LANDING_APP = REPO_ROOT / "landing" / "app.js"
 EXPECTED_SCHEMA_REF_COUNT = 20
 
 
@@ -36,15 +37,29 @@ class DataCatalogContractTest(unittest.TestCase):
         entries = payload.get("entries") or []
         schema_counts = Counter(entry.get("schemaRef") for entry in entries)
 
-        self.assertEqual(len(entries), EXPECTED_ENTRY_COUNT)
-        self.assertEqual(payload.get("counts", {}).get("entries"), EXPECTED_ENTRY_COUNT)
+        self.assertEqual(payload.get("counts", {}).get("entries"), len(entries))
         self.assertEqual(len(schema_counts), EXPECTED_SCHEMA_REF_COUNT)
-        self.assertEqual(schema_counts["schema://transport/manifest/v1"], 82)
-        self.assertEqual(schema_counts["schema://transport/build_audit/v1"], 81)
-        self.assertEqual(schema_counts["schema://topojson/line_collection/roads_v1"], 84)
-        self.assertEqual(schema_counts["schema://topojson/line_collection/railways_v1"], 54)
+        self.assertEqual(schema_counts["schema://transport/manifest/v1"], 98)
+        self.assertEqual(schema_counts["schema://transport/build_audit/v1"], 97)
+        self.assertEqual(schema_counts["schema://topojson/line_collection/roads_v1"], 86)
+        self.assertEqual(schema_counts["schema://topojson/line_collection/railways_v1"], 56)
         self.assertIn("schema://transport/carrier_payload/v1", schema_counts)
         self.assertIn("schema://transport/provenance_payload/v1", schema_counts)
+
+    def test_landing_catalog_count_matches_checked_in_catalog(self) -> None:
+        payload = self._load_catalog()
+        expected_count = payload.get("counts", {}).get("entries")
+        self.assertIsInstance(expected_count, int)
+        english_copy = f"The checked-in catalog tracks {expected_count} assets"
+        chinese_copy = f"入库目录跟踪 {expected_count} 个资产"
+
+        landing_index = LANDING_INDEX.read_text(encoding="utf-8")
+        landing_app = LANDING_APP.read_text(encoding="utf-8")
+
+        self.assertIn(f'data-stat-value="{expected_count}"', landing_index)
+        self.assertIn(english_copy, landing_index)
+        self.assertIn(english_copy, landing_app)
+        self.assertIn(chinese_copy, landing_app)
 
     def test_catalog_excludes_optional_cache_source_assets(self) -> None:
         payload = self._load_catalog()
@@ -94,9 +109,10 @@ class DataCatalogContractTest(unittest.TestCase):
     def test_data_health_static_governance_domain_is_clean(self) -> None:
         report = collect_health(CATALOG_JSON, large_file_warn_bytes=0)
 
+        expected_entry_count = self._load_catalog().get("counts", {}).get("entries")
         self.assertEqual(report.errors, [])
-        self.assertEqual(report.checked_catalog_urls, EXPECTED_ENTRY_COUNT)
-        self.assertEqual(report.checked_transport_manifests, 82)
+        self.assertEqual(report.checked_catalog_urls, expected_entry_count)
+        self.assertEqual(report.checked_transport_manifests, 98)
         self.assertGreaterEqual(report.checked_transport_paths, 460)
         self.assertEqual(len(report.schema_ref_counts), EXPECTED_SCHEMA_REF_COUNT)
 

@@ -28,6 +28,7 @@ import {
   clearTransportCountryOverlayState,
   loadTransportCountryOverlayState,
 } from "./transport_country_overlay.js";
+import { isTargetMainMapPackId } from "./transport_pack_resolver.js";
 import { syncProjectImportUiState as syncProjectImportUiStateHelper } from "./interaction_funnel/ui_sync.js";
 import {
   normalizeSpecialZoneLayersState,
@@ -125,20 +126,24 @@ function syncProjectImportUiState({ scenarioImportAudit, hooks }) {
 
 // project import 既要恢复文件里显式保存的 overlay pack，也要兼容旧工程只留下
 // activePackId 的形态；这里统一收集 pack id，后面按 pack 顺序逐个恢复。
-function resolveImportedTransportCountryOverlayPackIds(target, importedState = {}) {
+export function resolveImportedTransportCountryOverlayPackIds(target, importedState = {}) {
   const packIds = [];
   const pushPackId = (packId) => {
     const normalizedPackId = String(packId || "").trim().toLowerCase();
-    if (normalizedPackId && !packIds.includes(normalizedPackId)) packIds.push(normalizedPackId);
+    if (normalizedPackId && isTargetMainMapPackId(normalizedPackId) && !packIds.includes(normalizedPackId)) {
+      packIds.push(normalizedPackId);
+    }
+  };
+  const pushPackIdsFromFamilyMap = (packIdsByFamily) => {
+    if (!packIdsByFamily || typeof packIdsByFamily !== "object") return;
+    Object.values(packIdsByFamily).forEach(pushPackId);
   };
   const importedPackIdsByFamily = importedState?.transportCountryOverlayState?.activePackIdByFamily || {};
-  if (importedPackIdsByFamily && typeof importedPackIdsByFamily === "object") {
-    ["road", "rail", "airport"].forEach((familyId) => pushPackId(importedPackIdsByFamily[familyId]));
-  }
+  pushPackIdsFromFamilyMap(importedPackIdsByFamily);
   const explicitPackId = String(importedState?.transportCountryOverlayState?.activePackId || "").trim().toLowerCase();
   pushPackId(explicitPackId);
   const activePackIdByFamily = target?.styleConfig?.transportOverview?.activePackIdByFamily || {};
-  ["road", "rail", "airport"].forEach((familyId) => pushPackId(activePackIdByFamily[familyId]));
+  pushPackIdsFromFamilyMap(activePackIdByFamily);
   return packIds;
 }
 

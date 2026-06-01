@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { FileManager } from "../js/core/file_manager.js";
+import { resolveImportedTransportCountryOverlayPackIds } from "../js/core/interaction_funnel.js";
 
 async function exportProjectPayload(appState) {
   let capturedBlob = null;
@@ -270,6 +271,34 @@ test("project import notifies observers after successful import", async () => {
   assert.equal(result.successes.length, 1);
   assert.equal(result.errors.length, 0);
   assert.equal(result.successes[0].styleConfig.transportOverview.activePackIdByFamily.road, "germany_road");
+});
+
+test("project import overlay resolver preserves every main-map transport family", () => {
+  const packIds = resolveImportedTransportCountryOverlayPackIds(
+    {
+      styleConfig: {
+        transportOverview: {
+          activePackIdByFamily: {
+            port: "germany_port",
+          },
+        },
+      },
+    },
+    {
+      transportCountryOverlayState: {
+        activePackId: "france_rail",
+        activePackIdByFamily: {
+          road: "germany_road",
+          rail: "france_rail",
+          airport: "usa_airport",
+          port: "usa_port",
+          mineral_resources: "germany_mineral_resources",
+        },
+      },
+    }
+  );
+
+  assert.deepEqual(packIds, ["germany_road", "france_rail", "usa_airport", "usa_port", "germany_port"]);
 });
 
 test("project import success is not reclassified when status observer fails", async () => {
