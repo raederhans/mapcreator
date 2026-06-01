@@ -359,7 +359,9 @@
         "feature_ids": [
           "US_CNTY_48049",
           "US_ZN_46_003__R",
-          "US_ZN_55_015"
+          "US_ZN_55_015__tno1962_1",
+          "US_ZN_55_015__tno1962_2",
+          "US_ZN_55_015__tno1962_3"
         ],
         "raw_name": "Brown County"
       },
@@ -784,7 +786,8 @@
           "US_ZN_27_003__R",
           "US_ZN_31_006__R",
           "US_ZN_41_001__R",
-          "US_ZN_55_002__R"
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
         ],
         "raw_name": "Douglas County"
       },
@@ -855,7 +858,8 @@
           "US_ZN_42_003__R"
         ],
         "feature_ids": [
-          "US_CNTY_36029",
+          "US_CNTY_36029__tno1962_1",
+          "US_CNTY_36029__tno1962_2",
           "US_ZN_42_003__R"
         ],
         "raw_name": "Erie County"
@@ -1777,7 +1781,8 @@
           "AZE-1735"
         ],
         "feature_ids": [
-          "AZE-1707",
+          "AZE-1707__tno1962_1",
+          "AZE-1707__tno1962_2",
           "AZE-1735"
         ],
         "raw_name": "Lankaran"
@@ -2419,7 +2424,7 @@
       "non_unique_raw_name": 0
     },
     "cross_base_collision_count": 0,
-    "duplicate_raw_name_count": 393,
+    "duplicate_raw_name_count": 420,
     "excluded_feature_count": 0,
     "excluded_feature_prefixes": [
       "ATLISL_",
@@ -11150,7 +11155,7 @@
         "reason": "non_unique_raw_name"
       },
       {
-        "feature_id": "AZE-1707",
+        "feature_id": "AZE-1707__tno1962_1",
         "locale_en": "Lankaran",
         "locale_zh": "连科兰",
         "matching_base_feature_ids": [
@@ -11158,7 +11163,25 @@
           "AZE-1735"
         ],
         "matching_feature_ids": [
+          "AZE-1707__tno1962_1",
+          "AZE-1707__tno1962_2",
+          "AZE-1735"
+        ],
+        "owner_tag": "RKK",
+        "raw_name": "Lankaran",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "AZE-1707__tno1962_2",
+        "locale_en": "Lankaran",
+        "locale_zh": "连科兰",
+        "matching_base_feature_ids": [
           "AZE-1707",
+          "AZE-1735"
+        ],
+        "matching_feature_ids": [
+          "AZE-1707__tno1962_1",
+          "AZE-1707__tno1962_2",
           "AZE-1735"
         ],
         "owner_tag": "RKK",
@@ -11190,7 +11213,8 @@
           "AZE-1735"
         ],
         "matching_feature_ids": [
-          "AZE-1707",
+          "AZE-1707__tno1962_1",
+          "AZE-1707__tno1962_2",
           "AZE-1735"
         ],
         "owner_tag": "RKK",
@@ -15630,7 +15654,7 @@
         "reason": "non_unique_raw_name"
       },
       {
-        "feature_id": "US_CNTY_36029",
+        "feature_id": "US_CNTY_36029__tno1962_1",
         "locale_en": "Erie County",
         "locale_zh": "伊利县",
         "matching_base_feature_ids": [
@@ -15638,7 +15662,25 @@
           "US_ZN_42_003__R"
         ],
         "matching_feature_ids": [
+          "US_CNTY_36029__tno1962_1",
+          "US_CNTY_36029__tno1962_2",
+          "US_ZN_42_003__R"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Erie County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_CNTY_36029__tno1962_2",
+        "locale_en": "Erie County",
+        "locale_zh": "伊利县",
+        "matching_base_feature_ids": [
           "US_CNTY_36029",
+          "US_ZN_42_003__R"
+        ],
+        "matching_feature_ids": [
+          "US_CNTY_36029__tno1962_1",
+          "US_CNTY_36029__tno1962_2",
           "US_ZN_42_003__R"
         ],
         "owner_tag": "USA",
@@ -15851,7 +15893,9 @@
         "matching_feature_ids": [
           "US_CNTY_48049",
           "US_ZN_46_003__R",
-          "US_ZN_55_015"
+          "US_ZN_55_015__tno1962_1",
+          "US_ZN_55_015__tno1962_2",
+          "US_ZN_55_015__tno1962_3"
         ],
         "owner_tag": "USA",
         "raw_name": "Brown County",
@@ -16811,7 +16855,8 @@
           "US_ZN_27_003__R",
           "US_ZN_31_006__R",
           "US_ZN_41_001__R",
-          "US_ZN_55_002__R"
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
         ],
         "owner_tag": "USA",
         "raw_name": "Douglas County",
@@ -17465,7 +17510,8 @@
           "US_ZN_27_003__R",
           "US_ZN_31_006__R",
           "US_ZN_41_001__R",
-          "US_ZN_55_002__R"
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
         ],
         "owner_tag": "USA",
         "raw_name": "Douglas County",
@@ -17815,7 +17861,8 @@
           "US_ZN_27_003__R",
           "US_ZN_31_006__R",
           "US_ZN_41_001__R",
-          "US_ZN_55_002__R"
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
         ],
         "owner_tag": "USA",
         "raw_name": "Douglas County",
@@ -17933,7 +17980,11 @@
         ],
         "matching_feature_ids": [
           "US_ZN_36_007__R",
-          "US_ZN_55_005__R"
+          "US_ZN_55_005__R__tno1962_1",
+          "US_ZN_55_005__R__tno1962_2",
+          "US_ZN_55_005__R__tno1962_3",
+          "US_ZN_55_005__R__tno1962_4",
+          "US_ZN_55_005__R__tno1962_5"
         ],
         "owner_tag": "USA",
         "raw_name": "Oneida County",
@@ -18363,7 +18414,8 @@
           "US_ZN_27_003__R",
           "US_ZN_31_006__R",
           "US_ZN_41_001__R",
-          "US_ZN_55_002__R"
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
         ],
         "owner_tag": "USA",
         "raw_name": "Douglas County",
@@ -18476,7 +18528,8 @@
           "US_ZN_42_003__R"
         ],
         "matching_feature_ids": [
-          "US_CNTY_36029",
+          "US_CNTY_36029__tno1962_1",
+          "US_CNTY_36029__tno1962_2",
           "US_ZN_42_003__R"
         ],
         "owner_tag": "USA",
@@ -18551,7 +18604,9 @@
         "matching_feature_ids": [
           "US_CNTY_48049",
           "US_ZN_46_003__R",
-          "US_ZN_55_015"
+          "US_ZN_55_015__tno1962_1",
+          "US_ZN_55_015__tno1962_2",
+          "US_ZN_55_015__tno1962_3"
         ],
         "owner_tag": "USA",
         "raw_name": "Brown County",
@@ -18880,7 +18935,7 @@
         "reason": "non_unique_raw_name"
       },
       {
-        "feature_id": "US_ZN_55_002__R",
+        "feature_id": "US_ZN_55_002__R__tno1962_1",
         "locale_en": "Douglas County",
         "locale_zh": "道格拉斯县",
         "matching_base_feature_ids": [
@@ -18895,14 +18950,38 @@
           "US_ZN_27_003__R",
           "US_ZN_31_006__R",
           "US_ZN_41_001__R",
-          "US_ZN_55_002__R"
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
         ],
         "owner_tag": "USA",
         "raw_name": "Douglas County",
         "reason": "non_unique_raw_name"
       },
       {
-        "feature_id": "US_ZN_55_005__R",
+        "feature_id": "US_ZN_55_002__R__tno1962_2",
+        "locale_en": "Douglas County",
+        "locale_zh": "道格拉斯县",
+        "matching_base_feature_ids": [
+          "US_ZN_08_010__R",
+          "US_ZN_27_003__R",
+          "US_ZN_31_006__R",
+          "US_ZN_41_001__R",
+          "US_ZN_55_002__R"
+        ],
+        "matching_feature_ids": [
+          "US_ZN_08_010__R",
+          "US_ZN_27_003__R",
+          "US_ZN_31_006__R",
+          "US_ZN_41_001__R",
+          "US_ZN_55_002__R__tno1962_1",
+          "US_ZN_55_002__R__tno1962_2"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Douglas County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_005__R__tno1962_1",
         "locale_en": "Oneida County",
         "locale_zh": "奥奈达县",
         "matching_base_feature_ids": [
@@ -18911,7 +18990,91 @@
         ],
         "matching_feature_ids": [
           "US_ZN_36_007__R",
+          "US_ZN_55_005__R__tno1962_1",
+          "US_ZN_55_005__R__tno1962_2",
+          "US_ZN_55_005__R__tno1962_3",
+          "US_ZN_55_005__R__tno1962_4",
+          "US_ZN_55_005__R__tno1962_5"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Oneida County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_005__R__tno1962_2",
+        "locale_en": "Oneida County",
+        "locale_zh": "奥奈达县",
+        "matching_base_feature_ids": [
+          "US_ZN_36_007__R",
           "US_ZN_55_005__R"
+        ],
+        "matching_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R__tno1962_1",
+          "US_ZN_55_005__R__tno1962_2",
+          "US_ZN_55_005__R__tno1962_3",
+          "US_ZN_55_005__R__tno1962_4",
+          "US_ZN_55_005__R__tno1962_5"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Oneida County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_005__R__tno1962_3",
+        "locale_en": "Oneida County",
+        "locale_zh": "奥奈达县",
+        "matching_base_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R"
+        ],
+        "matching_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R__tno1962_1",
+          "US_ZN_55_005__R__tno1962_2",
+          "US_ZN_55_005__R__tno1962_3",
+          "US_ZN_55_005__R__tno1962_4",
+          "US_ZN_55_005__R__tno1962_5"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Oneida County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_005__R__tno1962_4",
+        "locale_en": "Oneida County",
+        "locale_zh": "奥奈达县",
+        "matching_base_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R"
+        ],
+        "matching_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R__tno1962_1",
+          "US_ZN_55_005__R__tno1962_2",
+          "US_ZN_55_005__R__tno1962_3",
+          "US_ZN_55_005__R__tno1962_4",
+          "US_ZN_55_005__R__tno1962_5"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Oneida County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_005__R__tno1962_5",
+        "locale_en": "Oneida County",
+        "locale_zh": "奥奈达县",
+        "matching_base_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R"
+        ],
+        "matching_feature_ids": [
+          "US_ZN_36_007__R",
+          "US_ZN_55_005__R__tno1962_1",
+          "US_ZN_55_005__R__tno1962_2",
+          "US_ZN_55_005__R__tno1962_3",
+          "US_ZN_55_005__R__tno1962_4",
+          "US_ZN_55_005__R__tno1962_5"
         ],
         "owner_tag": "USA",
         "raw_name": "Oneida County",
@@ -18972,7 +19135,7 @@
         "reason": "non_unique_raw_name"
       },
       {
-        "feature_id": "US_ZN_55_015",
+        "feature_id": "US_ZN_55_015__tno1962_1",
         "locale_en": "Brown County",
         "locale_zh": "布朗县",
         "matching_base_feature_ids": [
@@ -18983,7 +19146,49 @@
         "matching_feature_ids": [
           "US_CNTY_48049",
           "US_ZN_46_003__R",
+          "US_ZN_55_015__tno1962_1",
+          "US_ZN_55_015__tno1962_2",
+          "US_ZN_55_015__tno1962_3"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Brown County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_015__tno1962_2",
+        "locale_en": "Brown County",
+        "locale_zh": "布朗县",
+        "matching_base_feature_ids": [
+          "US_CNTY_48049",
+          "US_ZN_46_003__R",
           "US_ZN_55_015"
+        ],
+        "matching_feature_ids": [
+          "US_CNTY_48049",
+          "US_ZN_46_003__R",
+          "US_ZN_55_015__tno1962_1",
+          "US_ZN_55_015__tno1962_2",
+          "US_ZN_55_015__tno1962_3"
+        ],
+        "owner_tag": "USA",
+        "raw_name": "Brown County",
+        "reason": "non_unique_raw_name"
+      },
+      {
+        "feature_id": "US_ZN_55_015__tno1962_3",
+        "locale_en": "Brown County",
+        "locale_zh": "布朗县",
+        "matching_base_feature_ids": [
+          "US_CNTY_48049",
+          "US_ZN_46_003__R",
+          "US_ZN_55_015"
+        ],
+        "matching_feature_ids": [
+          "US_CNTY_48049",
+          "US_ZN_46_003__R",
+          "US_ZN_55_015__tno1962_1",
+          "US_ZN_55_015__tno1962_2",
+          "US_ZN_55_015__tno1962_3"
         ],
         "owner_tag": "USA",
         "raw_name": "Brown County",
@@ -22971,16 +23176,16 @@
         "reason": "non_unique_raw_name"
       }
     ],
-    "reviewed_collision_exception_count": 937,
+    "reviewed_collision_exception_count": 946,
     "reviewed_collision_reason_counts": {
       "locale_en_mismatch": 1,
-      "non_unique_raw_name": 936
+      "non_unique_raw_name": 945
     },
-    "safe_feature_copies": 10862,
-    "split_clone_safe_copy_count": 31,
-    "unique_raw_name_safe_copy_count": 10831
+    "safe_feature_copies": 10937,
+    "split_clone_safe_copy_count": 134,
+    "unique_raw_name_safe_copy_count": 10803
   },
-  "generated_at": "2026-05-31T18:56:42Z",
+  "generated_at": "2026-05-31T23:17:04Z",
   "geo": {
     "AD_ADM1_AND-4876": {
       "en": "Andorra la Vella",
@@ -25290,7 +25495,11 @@
       "en": "Brantford—Brant South—Six Nations",
       "zh": "布兰特福德—布兰特南—六国"
     },
-    "CA_FED_35016": {
+    "CA_FED_35016__tno1962_1": {
+      "en": "Bruce—Grey—Owen Sound",
+      "zh": "布鲁斯—格雷—欧文·桑德"
+    },
+    "CA_FED_35016__tno1962_2": {
       "en": "Bruce—Grey—Owen Sound",
       "zh": "布鲁斯—格雷—欧文·桑德"
     },
@@ -25310,7 +25519,11 @@
       "en": "Carleton",
       "zh": "卡尔顿"
     },
-    "CA_FED_35021": {
+    "CA_FED_35021__tno1962_1": {
+      "en": "Chatham-Kent—Leamington",
+      "zh": "查塔姆-肯特—利明顿"
+    },
+    "CA_FED_35021__tno1962_2": {
       "en": "Chatham-Kent—Leamington",
       "zh": "查塔姆-肯特—利明顿"
     },
@@ -25386,7 +25599,23 @@
       "en": "Hamilton West—Ancaster—Dundas",
       "zh": "汉密尔顿西—安卡斯特—邓达斯"
     },
-    "CA_FED_35040": {
+    "CA_FED_35040__tno1962_1": {
+      "en": "Hastings—Lennox and Addington—Tyendinaga",
+      "zh": "黑斯廷斯—伦诺克斯和阿丁顿—蒂恩迪纳加"
+    },
+    "CA_FED_35040__tno1962_2": {
+      "en": "Hastings—Lennox and Addington—Tyendinaga",
+      "zh": "黑斯廷斯—伦诺克斯和阿丁顿—蒂恩迪纳加"
+    },
+    "CA_FED_35040__tno1962_3": {
+      "en": "Hastings—Lennox and Addington—Tyendinaga",
+      "zh": "黑斯廷斯—伦诺克斯和阿丁顿—蒂恩迪纳加"
+    },
+    "CA_FED_35040__tno1962_4": {
+      "en": "Hastings—Lennox and Addington—Tyendinaga",
+      "zh": "黑斯廷斯—伦诺克斯和阿丁顿—蒂恩迪纳加"
+    },
+    "CA_FED_35040__tno1962_5": {
       "en": "Hastings—Lennox and Addington—Tyendinaga",
       "zh": "黑斯廷斯—伦诺克斯和阿丁顿—蒂恩迪纳加"
     },
@@ -25410,7 +25639,19 @@
       "en": "Kenora—Kiiwetinoong",
       "zh": "凯诺拉—基维蒂农"
     },
-    "CA_FED_35046": {
+    "CA_FED_35046__tno1962_1": {
+      "en": "Kingston and the Islands",
+      "zh": "金斯顿和群岛"
+    },
+    "CA_FED_35046__tno1962_2": {
+      "en": "Kingston and the Islands",
+      "zh": "金斯顿和群岛"
+    },
+    "CA_FED_35046__tno1962_3": {
+      "en": "Kingston and the Islands",
+      "zh": "金斯顿和群岛"
+    },
+    "CA_FED_35046__tno1962_4": {
       "en": "Kingston and the Islands",
       "zh": "金斯顿和群岛"
     },
@@ -25434,7 +25675,11 @@
       "en": "Lanark—Frontenac",
       "zh": "拉纳克—芳特纳克"
     },
-    "CA_FED_35052": {
+    "CA_FED_35052__tno1962_1": {
+      "en": "Leeds—Grenville—Thousand Islands—Rideau Lakes",
+      "zh": "利兹—格伦维尔—千岛群岛—里多湖"
+    },
+    "CA_FED_35052__tno1962_2": {
       "en": "Leeds—Grenville—Thousand Islands—Rideau Lakes",
       "zh": "利兹—格伦维尔—千岛群岛—里多湖"
     },
@@ -25558,7 +25803,11 @@
       "en": "Oxford",
       "zh": "牛津"
     },
-    "CA_FED_35084": {
+    "CA_FED_35084__tno1962_1": {
+      "en": "Parry Sound—Muskoka",
+      "zh": "帕里湾—马斯科卡"
+    },
+    "CA_FED_35084__tno1962_2": {
       "en": "Parry Sound—Muskoka",
       "zh": "帕里湾—马斯科卡"
     },
@@ -25582,7 +25831,19 @@
       "en": "Sarnia—Lambton—Bkejwanong",
       "zh": "萨尼亚—兰姆顿—Bkejwanong"
     },
-    "CA_FED_35091": {
+    "CA_FED_35091__tno1962_1": {
+      "en": "Sault Ste. Marie—Algoma",
+      "zh": "苏圣。玛丽—阿尔戈马"
+    },
+    "CA_FED_35091__tno1962_2": {
+      "en": "Sault Ste. Marie—Algoma",
+      "zh": "苏圣。玛丽—阿尔戈马"
+    },
+    "CA_FED_35091__tno1962_3": {
+      "en": "Sault Ste. Marie—Algoma",
+      "zh": "苏圣。玛丽—阿尔戈马"
+    },
+    "CA_FED_35091__tno1962_4": {
       "en": "Sault Ste. Marie—Algoma",
       "zh": "苏圣。玛丽—阿尔戈马"
     },
@@ -25614,7 +25875,11 @@
       "en": "Simcoe—Grey",
       "zh": "西姆科—灰色"
     },
-    "CA_FED_35099": {
+    "CA_FED_35099__tno1962_1": {
+      "en": "Simcoe North",
+      "zh": "西姆科北"
+    },
+    "CA_FED_35099__tno1962_2": {
       "en": "Simcoe North",
       "zh": "西姆科北"
     },
@@ -25634,7 +25899,31 @@
       "en": "Sudbury",
       "zh": "萨德伯里"
     },
-    "CA_FED_35104": {
+    "CA_FED_35104__tno1962_1": {
+      "en": "Sudbury East—Manitoulin—Nickel Belt",
+      "zh": "萨德伯里东—马尼图林—镍矿带"
+    },
+    "CA_FED_35104__tno1962_2": {
+      "en": "Sudbury East—Manitoulin—Nickel Belt",
+      "zh": "萨德伯里东—马尼图林—镍矿带"
+    },
+    "CA_FED_35104__tno1962_3": {
+      "en": "Sudbury East—Manitoulin—Nickel Belt",
+      "zh": "萨德伯里东—马尼图林—镍矿带"
+    },
+    "CA_FED_35104__tno1962_4": {
+      "en": "Sudbury East—Manitoulin—Nickel Belt",
+      "zh": "萨德伯里东—马尼图林—镍矿带"
+    },
+    "CA_FED_35104__tno1962_5": {
+      "en": "Sudbury East—Manitoulin—Nickel Belt",
+      "zh": "萨德伯里东—马尼图林—镍矿带"
+    },
+    "CA_FED_35104__tno1962_6": {
+      "en": "Sudbury East—Manitoulin—Nickel Belt",
+      "zh": "萨德伯里东—马尼图林—镍矿带"
+    },
+    "CA_FED_35104__tno1962_7": {
       "en": "Sudbury East—Manitoulin—Nickel Belt",
       "zh": "萨德伯里东—马尼图林—镍矿带"
     },
@@ -25646,11 +25935,43 @@
       "en": "Thornhill",
       "zh": "康希尔"
     },
-    "CA_FED_35107": {
+    "CA_FED_35107__tno1962_1": {
       "en": "Thunder Bay—Rainy River",
       "zh": "桑德贝—雷尼河"
     },
-    "CA_FED_35108": {
+    "CA_FED_35107__tno1962_2": {
+      "en": "Thunder Bay—Rainy River",
+      "zh": "桑德贝—雷尼河"
+    },
+    "CA_FED_35108__tno1962_1": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_2": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_3": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_4": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_5": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_6": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_7": {
+      "en": "Thunder Bay—Superior North",
+      "zh": "桑德贝—高级北区"
+    },
+    "CA_FED_35108__tno1962_8": {
       "en": "Thunder Bay—Superior North",
       "zh": "桑德贝—高级北区"
     },
@@ -50746,7 +51067,15 @@
       "en": "Dubrovsky District",
       "zh": "杜布罗夫斯基区"
     },
-    "RU_RAY_50074027B17781956857402": {
+    "RU_RAY_50074027B17781956857402__tno1962_1": {
+      "en": "Lagansky District",
+      "zh": "拉甘斯基区"
+    },
+    "RU_RAY_50074027B17781956857402__tno1962_2": {
+      "en": "Lagansky District",
+      "zh": "拉甘斯基区"
+    },
+    "RU_RAY_50074027B17781956857402__tno1962_3": {
       "en": "Lagansky District",
       "zh": "拉甘斯基区"
     },
@@ -52070,10 +52399,6 @@
       "en": "Terengulsky District",
       "zh": "捷伦古斯基区"
     },
-    "RU_RAY_50074027B30798664015080": {
-      "en": "городской округ Избербаш",
-      "zh": "伊兹贝尔巴什市区"
-    },
     "RU_RAY_50074027B30801426940346": {
       "en": "Bykovsky District",
       "zh": "拜科夫斯基区"
@@ -53382,7 +53707,23 @@
       "en": "Nizhny Novgorod",
       "zh": "下诺夫哥罗德"
     },
-    "RU_RAY_50074027B44442883085225": {
+    "RU_RAY_50074027B44442883085225__tno1962_1": {
+      "en": "Limansky District",
+      "zh": "利曼斯基区"
+    },
+    "RU_RAY_50074027B44442883085225__tno1962_2": {
+      "en": "Limansky District",
+      "zh": "利曼斯基区"
+    },
+    "RU_RAY_50074027B44442883085225__tno1962_3": {
+      "en": "Limansky District",
+      "zh": "利曼斯基区"
+    },
+    "RU_RAY_50074027B44442883085225__tno1962_4": {
+      "en": "Limansky District",
+      "zh": "利曼斯基区"
+    },
+    "RU_RAY_50074027B44442883085225__tno1962_5": {
       "en": "Limansky District",
       "zh": "利曼斯基区"
     },
@@ -53978,7 +54319,23 @@
       "en": "Ленинск-Кузнецкий городско",
       "zh": "列宁斯克-库兹涅茨基市"
     },
-    "RU_RAY_50074027B51590812616555": {
+    "RU_RAY_50074027B51590812616555__tno1962_1": {
+      "en": "Karabudakhkentsky District",
+      "zh": "卡拉布达肯斯基区"
+    },
+    "RU_RAY_50074027B51590812616555__tno1962_2": {
+      "en": "Karabudakhkentsky District",
+      "zh": "卡拉布达肯斯基区"
+    },
+    "RU_RAY_50074027B51590812616555__tno1962_3": {
+      "en": "Karabudakhkentsky District",
+      "zh": "卡拉布达肯斯基区"
+    },
+    "RU_RAY_50074027B51590812616555__tno1962_4": {
+      "en": "Karabudakhkentsky District",
+      "zh": "卡拉布达肯斯基区"
+    },
+    "RU_RAY_50074027B51590812616555__tno1962_5": {
       "en": "Karabudakhkentsky District",
       "zh": "卡拉布达肯斯基区"
     },
@@ -54658,7 +55015,11 @@
       "en": "Soletsky District",
       "zh": "索列茨基区"
     },
-    "RU_RAY_50074027B5810919802918": {
+    "RU_RAY_50074027B5810919802918__tno1962_1": {
+      "en": "Володарский район",
+      "zh": "沃洛达尔区"
+    },
+    "RU_RAY_50074027B5810919802918__tno1962_2": {
       "en": "Володарский район",
       "zh": "沃洛达尔区"
     },
@@ -54710,7 +55071,19 @@
       "en": "Lukhsky District",
       "zh": "卢赫斯基区"
     },
-    "RU_RAY_50074027B58467356693682": {
+    "RU_RAY_50074027B58467356693682__tno1962_1": {
+      "en": "Kizlyarsky District",
+      "zh": "基兹利亚尔斯克区"
+    },
+    "RU_RAY_50074027B58467356693682__tno1962_2": {
+      "en": "Kizlyarsky District",
+      "zh": "基兹利亚尔斯克区"
+    },
+    "RU_RAY_50074027B58467356693682__tno1962_3": {
+      "en": "Kizlyarsky District",
+      "zh": "基兹利亚尔斯克区"
+    },
+    "RU_RAY_50074027B58467356693682__tno1962_4": {
       "en": "Kizlyarsky District",
       "zh": "基兹利亚尔斯克区"
     },
@@ -56690,7 +57063,27 @@
       "en": "Yarsky District",
       "zh": "亚斯基区"
     },
-    "RU_RAY_50074027B80443359996263": {
+    "RU_RAY_50074027B80443359996263__tno1962_1": {
+      "en": "Makhachkala Urban Okrug",
+      "zh": "马哈奇卡拉市区"
+    },
+    "RU_RAY_50074027B80443359996263__tno1962_2": {
+      "en": "Makhachkala Urban Okrug",
+      "zh": "马哈奇卡拉市区"
+    },
+    "RU_RAY_50074027B80443359996263__tno1962_3": {
+      "en": "Makhachkala Urban Okrug",
+      "zh": "马哈奇卡拉市区"
+    },
+    "RU_RAY_50074027B80443359996263__tno1962_4": {
+      "en": "Makhachkala Urban Okrug",
+      "zh": "马哈奇卡拉市区"
+    },
+    "RU_RAY_50074027B80443359996263__tno1962_5": {
+      "en": "Makhachkala Urban Okrug",
+      "zh": "马哈奇卡拉市区"
+    },
+    "RU_RAY_50074027B80443359996263__tno1962_6": {
       "en": "Makhachkala Urban Okrug",
       "zh": "马哈奇卡拉市区"
     },
@@ -63818,7 +64211,11 @@
       "en": "Oakland County",
       "zh": "奥克兰"
     },
-    "US_CNTY_26163": {
+    "US_CNTY_26163__tno1962_1": {
+      "en": "Detroit",
+      "zh": "底特律"
+    },
+    "US_CNTY_26163__tno1962_2": {
       "en": "Detroit",
       "zh": "底特律"
     },
@@ -65198,11 +65595,31 @@
       "en": "Houghton County",
       "zh": "霍顿县"
     },
-    "US_ZN_26_002__R": {
+    "US_ZN_26_002__R__tno1962_1": {
       "en": "Keweenaw County",
       "zh": "基威诺县"
     },
-    "US_ZN_26_003__R": {
+    "US_ZN_26_002__R__tno1962_2": {
+      "en": "Keweenaw County",
+      "zh": "基威诺县"
+    },
+    "US_ZN_26_003__R__tno1962_1": {
+      "en": "Marquette County",
+      "zh": "马凯特县"
+    },
+    "US_ZN_26_003__R__tno1962_2": {
+      "en": "Marquette County",
+      "zh": "马凯特县"
+    },
+    "US_ZN_26_003__R__tno1962_3": {
+      "en": "Marquette County",
+      "zh": "马凯特县"
+    },
+    "US_ZN_26_003__R__tno1962_4": {
+      "en": "Marquette County",
+      "zh": "马凯特县"
+    },
+    "US_ZN_26_003__R__tno1962_5": {
       "en": "Marquette County",
       "zh": "马凯特县"
     },
@@ -65218,11 +65635,55 @@
       "en": "Muskegon County",
       "zh": "马斯基根县"
     },
-    "US_ZN_26_007__R": {
+    "US_ZN_26_007__R__tno1962_1": {
       "en": "Chippewa County",
       "zh": "奇珀瓦县"
     },
-    "US_ZN_26_008__R": {
+    "US_ZN_26_007__R__tno1962_2": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_007__R__tno1962_3": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_007__R__tno1962_4": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_007__R__tno1962_5": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_007__R__tno1962_6": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_007__R__tno1962_7": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_007__R__tno1962_8": {
+      "en": "Chippewa County",
+      "zh": "奇珀瓦县"
+    },
+    "US_ZN_26_008__R__tno1962_1": {
+      "en": "Grand Traverse County",
+      "zh": "大特拉弗斯县"
+    },
+    "US_ZN_26_008__R__tno1962_2": {
+      "en": "Grand Traverse County",
+      "zh": "大特拉弗斯县"
+    },
+    "US_ZN_26_008__R__tno1962_3": {
+      "en": "Grand Traverse County",
+      "zh": "大特拉弗斯县"
+    },
+    "US_ZN_26_008__R__tno1962_4": {
+      "en": "Grand Traverse County",
+      "zh": "大特拉弗斯县"
+    },
+    "US_ZN_26_008__R__tno1962_5": {
       "en": "Grand Traverse County",
       "zh": "大特拉弗斯县"
     },
@@ -65230,7 +65691,15 @@
       "en": "Isabella County",
       "zh": "伊莎贝拉县"
     },
-    "US_ZN_26_011__R": {
+    "US_ZN_26_011__R__tno1962_1": {
+      "en": "Emmet County",
+      "zh": "埃米特县"
+    },
+    "US_ZN_26_011__R__tno1962_2": {
+      "en": "Emmet County",
+      "zh": "埃米特县"
+    },
+    "US_ZN_26_011__R__tno1962_3": {
       "en": "Emmet County",
       "zh": "埃米特县"
     },
@@ -65242,7 +65711,15 @@
       "en": "Saginaw County",
       "zh": "萨吉诺县"
     },
-    "US_ZN_26_014__R": {
+    "US_ZN_26_014__R__tno1962_1": {
+      "en": "Alpena County",
+      "zh": "阿尔皮纳县"
+    },
+    "US_ZN_26_014__R__tno1962_2": {
+      "en": "Alpena County",
+      "zh": "阿尔皮纳县"
+    },
+    "US_ZN_26_014__R__tno1962_3": {
       "en": "Alpena County",
       "zh": "阿尔皮纳县"
     },
@@ -65486,7 +65963,11 @@
       "en": "Chautauqua County",
       "zh": "肖托夸县"
     },
-    "US_ZN_36_002__R": {
+    "US_ZN_36_002__R__tno1962_1": {
+      "en": "Niagara County",
+      "zh": "尼亚加拉县"
+    },
+    "US_ZN_36_002__R__tno1962_2": {
       "en": "Niagara County",
       "zh": "尼亚加拉县"
     },
@@ -65502,7 +65983,23 @@
       "en": "Broome County",
       "zh": "布鲁姆县"
     },
-    "US_ZN_36_006__R": {
+    "US_ZN_36_006__R__tno1962_1": {
+      "en": "Onondaga County",
+      "zh": "奥农达加县"
+    },
+    "US_ZN_36_006__R__tno1962_2": {
+      "en": "Onondaga County",
+      "zh": "奥农达加县"
+    },
+    "US_ZN_36_006__R__tno1962_3": {
+      "en": "Onondaga County",
+      "zh": "奥农达加县"
+    },
+    "US_ZN_36_006__R__tno1962_4": {
+      "en": "Onondaga County",
+      "zh": "奥农达加县"
+    },
+    "US_ZN_36_006__R__tno1962_5": {
       "en": "Onondaga County",
       "zh": "奥农达加县"
     },
@@ -65586,7 +66083,15 @@
       "en": "Morton County",
       "zh": "莫顿县"
     },
-    "US_ZN_39_003__R": {
+    "US_ZN_39_003__R__tno1962_1": {
+      "en": "Lucas County",
+      "zh": "卢卡斯县"
+    },
+    "US_ZN_39_003__R__tno1962_2": {
+      "en": "Lucas County",
+      "zh": "卢卡斯县"
+    },
+    "US_ZN_39_003__R__tno1962_3": {
       "en": "Lucas County",
       "zh": "卢卡斯县"
     },

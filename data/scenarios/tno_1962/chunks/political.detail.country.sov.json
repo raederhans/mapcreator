@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": 8261,
+      "id": 8300,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B83535390579003",
@@ -109,7 +109,7 @@
       }
     },
     {
-      "id": 8501,
+      "id": 8549,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B61241799946425",
@@ -604,7 +604,7 @@
       }
     },
     {
-      "id": 8518,
+      "id": 8566,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B3226583010199",
@@ -683,7 +683,7 @@
       }
     },
     {
-      "id": 8531,
+      "id": 8579,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B75699624456558",
@@ -716,7 +716,7 @@
       }
     },
     {
-      "id": 8714,
+      "id": 8762,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B50737742198919",
@@ -795,7 +795,7 @@
       }
     },
     {
-      "id": 9189,
+      "id": 9237,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B92507175778930",
@@ -832,7 +832,7 @@
       }
     },
     {
-      "id": 9230,
+      "id": 9278,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B26230494769673",
@@ -865,7 +865,7 @@
       }
     },
     {
-      "id": 9399,
+      "id": 9447,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B61637716128052",
@@ -906,7 +906,7 @@
       }
     },
     {
-      "id": 9403,
+      "id": 9451,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B5650924989435",
@@ -943,7 +943,7 @@
       }
     },
     {
-      "id": 9405,
+      "id": 9453,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B96751570188026",
@@ -996,7 +996,7 @@
       }
     },
     {
-      "id": 9411,
+      "id": 9459,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B57393083089327",
@@ -1159,7 +1159,7 @@
       }
     },
     {
-      "id": 9458,
+      "id": 9506,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B64035112017093",
@@ -1196,7 +1196,7 @@
       }
     },
     {
-      "id": 9524,
+      "id": 9572,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B36818181528757",
@@ -1237,7 +1237,7 @@
       }
     },
     {
-      "id": 9683,
+      "id": 9731,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B27848812268076",
@@ -1270,7 +1270,7 @@
       }
     },
     {
-      "id": 9697,
+      "id": 9745,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B66496080811175",
@@ -1315,7 +1315,7 @@
       }
     },
     {
-      "id": 9778,
+      "id": 9826,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B87665702460834",
@@ -1356,7 +1356,7 @@
       }
     },
     {
-      "id": 10024,
+      "id": 10072,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B62563831900502",
@@ -1393,7 +1393,7 @@
       }
     },
     {
-      "id": 10278,
+      "id": 10326,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B87273501478717",
@@ -1602,7 +1602,7 @@
       }
     },
     {
-      "id": 10289,
+      "id": 10337,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B15083426907231",
@@ -1639,7 +1639,7 @@
       }
     },
     {
-      "id": 10311,
+      "id": 10359,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B679557218720",
@@ -1676,7 +1676,7 @@
       }
     },
     {
-      "id": 11920,
+      "id": 12004,
       "type": "Feature",
       "properties": {
         "id": "RU_ARCTIC_FB_SOV_038",

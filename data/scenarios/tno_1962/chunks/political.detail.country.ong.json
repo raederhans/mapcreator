@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": 10196,
+      "id": 10244,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B5291843877359",
@@ -325,7 +325,7 @@
       }
     },
     {
-      "id": 10197,
+      "id": 10245,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B41643930675404",
@@ -540,7 +540,7 @@
       }
     },
     {
-      "id": 10207,
+      "id": 10255,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B39041476138502",
@@ -853,7 +853,7 @@
       }
     },
     {
-      "id": 10208,
+      "id": 10256,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B45493241507504",
@@ -1256,7 +1256,7 @@
       }
     },
     {
-      "id": 10209,
+      "id": 10257,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B66770935409727",
@@ -1927,7 +1927,7 @@
       }
     },
     {
-      "id": 10254,
+      "id": 10302,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B49390035135032",
@@ -2198,7 +2198,7 @@
       }
     },
     {
-      "id": 10255,
+      "id": 10303,
       "type": "Feature",
       "properties": {
         "id": "RU_RAY_50074027B51176471238152",
@@ -2769,7 +2769,7 @@
       }
     },
     {
-      "id": 11904,
+      "id": 11988,
       "type": "Feature",
       "properties": {
         "id": "RU_ARCTIC_FB_ONG_022",

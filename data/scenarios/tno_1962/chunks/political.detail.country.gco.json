@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": 6827,
+      "id": 6857,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1462",
@@ -313,7 +313,7 @@
       }
     },
     {
-      "id": 6828,
+      "id": 6858,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1476",
@@ -646,7 +646,7 @@
       }
     },
     {
-      "id": 6829,
+      "id": 6859,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1477",
@@ -801,7 +801,7 @@
       }
     },
     {
-      "id": 6830,
+      "id": 6860,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1480",
@@ -1140,7 +1140,7 @@
       }
     },
     {
-      "id": 6831,
+      "id": 6861,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1481",
@@ -1559,7 +1559,7 @@
       }
     },
     {
-      "id": 6832,
+      "id": 6862,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1482",
@@ -1810,7 +1810,7 @@
       }
     },
     {
-      "id": 6833,
+      "id": 6863,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-1483",
@@ -2085,7 +2085,7 @@
       }
     },
     {
-      "id": 6834,
+      "id": 6864,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-798",
@@ -2260,7 +2260,7 @@
       }
     },
     {
-      "id": 6835,
+      "id": 6865,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-799",
@@ -2583,7 +2583,7 @@
       }
     },
     {
-      "id": 6836,
+      "id": 6866,
       "type": "Feature",
       "properties": {
         "id": "CM_ADM1_CMR-803",
@@ -2826,7 +2826,7 @@
       }
     },
     {
-      "id": 6859,
+      "id": 6889,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-1460",
@@ -2865,7 +2865,7 @@
       }
     },
     {
-      "id": 6860,
+      "id": 6890,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-4856",
@@ -3108,7 +3108,7 @@
       }
     },
     {
-      "id": 6861,
+      "id": 6891,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-794",
@@ -3315,7 +3315,7 @@
       }
     },
     {
-      "id": 6862,
+      "id": 6892,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-795",
@@ -3462,7 +3462,7 @@
       }
     },
     {
-      "id": 6863,
+      "id": 6893,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-801",
@@ -3689,7 +3689,7 @@
       }
     },
     {
-      "id": 6864,
+      "id": 6894,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-802",
@@ -3832,7 +3832,7 @@
       }
     },
     {
-      "id": 6865,
+      "id": 6895,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-804",
@@ -4059,7 +4059,7 @@
       }
     },
     {
-      "id": 6866,
+      "id": 6896,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-805",
@@ -4302,7 +4302,7 @@
       }
     },
     {
-      "id": 6867,
+      "id": 6897,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-806",
@@ -4649,7 +4649,7 @@
       }
     },
     {
-      "id": 6868,
+      "id": 6898,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-807",
@@ -4856,7 +4856,7 @@
       }
     },
     {
-      "id": 6869,
+      "id": 6899,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-808",
@@ -5039,7 +5039,7 @@
       }
     },
     {
-      "id": 6870,
+      "id": 6900,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-809",
@@ -5370,7 +5370,7 @@
       }
     },
     {
-      "id": 6871,
+      "id": 6901,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-810",
@@ -5653,7 +5653,7 @@
       }
     },
     {
-      "id": 6872,
+      "id": 6902,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-812",
@@ -5888,7 +5888,7 @@
       }
     },
     {
-      "id": 6873,
+      "id": 6903,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-866",
@@ -6279,7 +6279,7 @@
       }
     },
     {
-      "id": 6874,
+      "id": 6904,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-867",
@@ -6770,7 +6770,7 @@
       }
     },
     {
-      "id": 6875,
+      "id": 6905,
       "type": "Feature",
       "properties": {
         "id": "CF_ADM1_CAF-868",
@@ -7157,7 +7157,7 @@
       }
     },
     {
-      "id": 6876,
+      "id": 6906,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1464",
@@ -7440,7 +7440,7 @@
       }
     },
     {
-      "id": 6881,
+      "id": 6911,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1474",
@@ -7683,7 +7683,7 @@
       }
     },
     {
-      "id": 6883,
+      "id": 6913,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1484",
@@ -7802,7 +7802,7 @@
       }
     },
     {
-      "id": 6884,
+      "id": 6914,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1485",
@@ -8009,7 +8009,7 @@
       }
     },
     {
-      "id": 6885,
+      "id": 6915,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1486",
@@ -8192,7 +8192,7 @@
       }
     },
     {
-      "id": 6886,
+      "id": 6916,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1487",
@@ -8355,7 +8355,7 @@
       }
     },
     {
-      "id": 6887,
+      "id": 6917,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1488",
@@ -8502,7 +8502,7 @@
       }
     },
     {
-      "id": 6888,
+      "id": 6918,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-1489",
@@ -8761,7 +8761,7 @@
       }
     },
     {
-      "id": 6890,
+      "id": 6920,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-4858",
@@ -8880,7 +8880,7 @@
       }
     },
     {
-      "id": 6894,
+      "id": 6924,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-5580",
@@ -9147,7 +9147,7 @@
       }
     },
     {
-      "id": 6896,
+      "id": 6926,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-5582",
@@ -9354,7 +9354,7 @@
       }
     },
     {
-      "id": 6897,
+      "id": 6927,
       "type": "Feature",
       "properties": {
         "id": "TD_ADM1_TCD-5583",
@@ -9593,7 +9593,7 @@
       }
     },
     {
-      "id": 6901,
+      "id": 6931,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1559",
@@ -10740,7 +10740,7 @@
       }
     },
     {
-      "id": 6902,
+      "id": 6932,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1883",
@@ -11057,7 +11057,7 @@
       }
     },
     {
-      "id": 6903,
+      "id": 6933,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1884",
@@ -11192,7 +11192,7 @@
       }
     },
     {
-      "id": 6904,
+      "id": 6934,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1894",
@@ -11459,7 +11459,7 @@
       }
     },
     {
-      "id": 6905,
+      "id": 6935,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1895",
@@ -11898,7 +11898,7 @@
       }
     },
     {
-      "id": 6906,
+      "id": 6936,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1897",
@@ -12729,7 +12729,7 @@
       }
     },
     {
-      "id": 6907,
+      "id": 6937,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1898",
@@ -13044,7 +13044,7 @@
       }
     },
     {
-      "id": 6942,
+      "id": 6972,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2168",
@@ -13339,7 +13339,7 @@
       }
     },
     {
-      "id": 6943,
+      "id": 6973,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2186",
@@ -13562,7 +13562,7 @@
       }
     },
     {
-      "id": 6944,
+      "id": 6974,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2187",
@@ -13725,7 +13725,7 @@
       }
     },
     {
-      "id": 6945,
+      "id": 6975,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2621",
@@ -13916,7 +13916,7 @@
       }
     },
     {
-      "id": 6946,
+      "id": 6976,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2622",
@@ -14135,7 +14135,7 @@
       }
     },
     {
-      "id": 6947,
+      "id": 6977,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2623",
@@ -14298,7 +14298,7 @@
       }
     },
     {
-      "id": 6948,
+      "id": 6978,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2624",
@@ -14843,7 +14843,7 @@
       }
     },
     {
-      "id": 6949,
+      "id": 6979,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2627",
@@ -15118,7 +15118,7 @@
       }
     },
     {
-      "id": 6950,
+      "id": 6980,
       "type": "Feature",
       "properties": {
         "id": "GA_ADM1_GAB-2628",
@@ -15277,7 +15277,7 @@
       }
     },
     {
-      "id": 7116,
+      "id": 7146,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-2626",
@@ -15460,7 +15460,7 @@
       }
     },
     {
-      "id": 7117,
+      "id": 7147,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-2880",
@@ -15699,7 +15699,7 @@
       }
     },
     {
-      "id": 7118,
+      "id": 7148,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3342",
@@ -15802,7 +15802,7 @@
       }
     },
     {
-      "id": 7119,
+      "id": 7149,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3343",
@@ -15953,7 +15953,7 @@
       }
     },
     {
-      "id": 7120,
+      "id": 7150,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3344",
@@ -16188,7 +16188,7 @@
       }
     },
     {
-      "id": 7121,
+      "id": 7151,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3345",
@@ -16511,7 +16511,7 @@
       }
     },
     {
-      "id": 7122,
+      "id": 7152,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-4855",
@@ -16606,7 +16606,7 @@
       }
     },
     {
-      "id": 7123,
+      "id": 7153,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-5855",
@@ -16645,7 +16645,7 @@
       }
     },
     {
-      "id": 11850,
+      "id": 11934,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1461__tno1962_1",
@@ -17180,7 +17180,7 @@
       }
     },
     {
-      "id": 11851,
+      "id": 11935,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1461__tno1962_2",
@@ -17263,7 +17263,7 @@
       }
     },
     {
-      "id": 11852,
+      "id": 11936,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1461__tno1962_3",
@@ -17594,7 +17594,7 @@
       }
     },
     {
-      "id": 11853,
+      "id": 11937,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1461__tno1962_4",
@@ -17633,7 +17633,7 @@
       }
     },
     {
-      "id": 11854,
+      "id": 11938,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1461__tno1962_5",
@@ -17704,7 +17704,7 @@
       }
     },
     {
-      "id": 11855,
+      "id": 11939,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1461__tno1962_6",
@@ -17751,7 +17751,7 @@
       }
     },
     {
-      "id": 11856,
+      "id": 11940,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_1",
@@ -18270,7 +18270,7 @@
       }
     },
     {
-      "id": 11857,
+      "id": 11941,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_2",
@@ -18309,7 +18309,7 @@
       }
     },
     {
-      "id": 11858,
+      "id": 11942,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_3",
@@ -18368,7 +18368,7 @@
       }
     },
     {
-      "id": 11859,
+      "id": 11943,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_4",
@@ -18515,7 +18515,7 @@
       }
     },
     {
-      "id": 11860,
+      "id": 11944,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_5",
@@ -18566,7 +18566,7 @@
       }
     },
     {
-      "id": 11861,
+      "id": 11945,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_6",
@@ -18580,18 +18580,6 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [
-              18.579170786550733,
-              -3.495140211735768
-            ],
-            [
-              18.464506107087594,
-              -3.455509758856542
-            ],
-            [
-              18.386840660196643,
-              -3.546022117118384
-            ],
             [
               18.452197675297672,
               -3.654576340676686
@@ -18651,13 +18639,25 @@
             [
               18.579170786550733,
               -3.495140211735768
+            ],
+            [
+              18.464506107087594,
+              -3.455509758856542
+            ],
+            [
+              18.386840660196643,
+              -3.546022117118384
+            ],
+            [
+              18.452197675297672,
+              -3.654576340676686
             ]
           ]
         ]
       }
     },
     {
-      "id": 11862,
+      "id": 11946,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1871__tno1962_7",
@@ -18671,18 +18671,6 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [
-              17.91358130157976,
-              -3.8958838869118395
-            ],
-            [
-              17.820351567639403,
-              -3.875076258615788
-            ],
-            [
-              17.73259822028805,
-              -3.9941632980819075
-            ],
             [
               17.812253100927585,
               -4.225875546287776
@@ -18698,13 +18686,25 @@
             [
               17.91358130157976,
               -3.8958838869118395
+            ],
+            [
+              17.820351567639403,
+              -3.875076258615788
+            ],
+            [
+              17.73259822028805,
+              -3.9941632980819075
+            ],
+            [
+              17.812253100927585,
+              -4.225875546287776
             ]
           ]
         ]
       }
     },
     {
-      "id": 11863,
+      "id": 11947,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_1",
@@ -19071,7 +19071,7 @@
       }
     },
     {
-      "id": 11864,
+      "id": 11948,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_2",
@@ -19110,7 +19110,7 @@
       }
     },
     {
-      "id": 11865,
+      "id": 11949,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_3",
@@ -19169,7 +19169,7 @@
       }
     },
     {
-      "id": 11866,
+      "id": 11950,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_4",
@@ -19260,7 +19260,7 @@
       }
     },
     {
-      "id": 11867,
+      "id": 11951,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_5",
@@ -19303,7 +19303,7 @@
       }
     },
     {
-      "id": 11868,
+      "id": 11952,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_6",
@@ -19426,7 +19426,7 @@
       }
     },
     {
-      "id": 11869,
+      "id": 11953,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_7",
@@ -19469,7 +19469,7 @@
       }
     },
     {
-      "id": 11870,
+      "id": 11954,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1872__tno1962_8",
@@ -19524,7 +19524,7 @@
       }
     },
     {
-      "id": 11871,
+      "id": 11955,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1896__tno1962_1",
@@ -19563,7 +19563,7 @@
       }
     },
     {
-      "id": 11872,
+      "id": 11956,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1896__tno1962_2",
@@ -20130,7 +20130,7 @@
       }
     },
     {
-      "id": 11873,
+      "id": 11957,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1896__tno1962_3",
@@ -20245,7 +20245,7 @@
       }
     },
     {
-      "id": 11874,
+      "id": 11958,
       "type": "Feature",
       "properties": {
         "id": "CD_ADM1_COD-1896__tno1962_4",
@@ -20300,7 +20300,7 @@
       }
     },
     {
-      "id": 11875,
+      "id": 11959,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-2185__tno1962_1",
@@ -20427,7 +20427,7 @@
       }
     },
     {
-      "id": 11876,
+      "id": 11960,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-2185__tno1962_2",
@@ -20514,7 +20514,7 @@
       }
     },
     {
-      "id": 11877,
+      "id": 11961,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-2185__tno1962_3",
@@ -20569,7 +20569,7 @@
       }
     },
     {
-      "id": 11878,
+      "id": 11962,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-2185__tno1962_4",
@@ -20624,7 +20624,7 @@
       }
     },
     {
-      "id": 11879,
+      "id": 11963,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3341__tno1962_1",
@@ -20707,7 +20707,7 @@
       }
     },
     {
-      "id": 11880,
+      "id": 11964,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3341__tno1962_2",
@@ -20950,7 +20950,7 @@
       }
     },
     {
-      "id": 11881,
+      "id": 11965,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3346__tno1962_1",
@@ -20989,7 +20989,7 @@
       }
     },
     {
-      "id": 11882,
+      "id": 11966,
       "type": "Feature",
       "properties": {
         "id": "CG_ADM1_COG-3346__tno1962_2",

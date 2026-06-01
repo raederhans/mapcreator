@@ -21,42 +21,58 @@ const { getWebServerConfig } = require("./playwright-web-server");
 // 3. waitForScenarioReadyGate / waitForScenarioApplyIdle -> 场景切换稳定。
 // 4. waitForRenderIdle -> render/chunk/exact-after-settle 全部稳定，可做视觉采样。
 
+function isScenarioRuntimeReadyForPlaywright(state) {
+  const loadState = state?.runtimeChunkLoadState || {};
+  const shellOwnerCount = Object.keys(state?.scenarioAutoShellOwnerByFeatureId || {}).length;
+  const selectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
+  const politicalFeatureCount = Array.isArray(state?.scenarioPoliticalChunkData?.features)
+    ? state.scenarioPoliticalChunkData.features.length
+    : 0;
+  const landFeatureCount = Array.isArray(state?.landData?.features) ? state.landData.features.length : 0;
+  const colorCount = Object.keys(state?.colors || {}).length;
+  const activeScenarioId = String(state?.activeScenarioId || "");
+  const activeChunkScenarioId = String(state?.activeScenarioChunks?.scenarioId || "");
+  const loadedChunkCount = Array.isArray(state?.activeScenarioChunks?.loadedChunkIds)
+    ? state.activeScenarioChunks.loadedChunkIds.length
+    : 0;
+  const chunkStateMatchesScenario = !!activeScenarioId && activeChunkScenarioId === activeScenarioId;
+  const manifestUsesChunkRuntime = !!state?.activeScenarioManifest?.detail_chunk_manifest_url;
+  const chunkRuntimeStateActive = !!(
+    chunkStateMatchesScenario
+    && (
+      selectionVersion > 0
+      || politicalFeatureCount > 0
+      || loadedChunkCount > 0
+      || loadState.pendingPromotion
+      || loadState.pendingVisualPromotion
+      || loadState.refreshScheduled
+      || loadState.promotionScheduled
+      || loadState.promotionCommitInFlight
+    )
+  );
+  const chunkIdle = !loadState.pendingPromotion
+    && !loadState.promotionScheduled
+    && !loadState.refreshScheduled
+    && !loadState.promotionCommitInFlight
+    && !loadState.pendingVisualPromotion;
+  const chunkVisualReady = (
+    selectionVersion > 0
+    && politicalFeatureCount > 0
+    && landFeatureCount > 0
+    && colorCount > 0
+    && chunkIdle
+  );
+  const usesChunkRuntime = manifestUsesChunkRuntime || chunkRuntimeStateActive;
+  if (usesChunkRuntime) return chunkVisualReady;
+  return shellOwnerCount > 0 || (landFeatureCount > 0 && colorCount > 0 && chunkIdle);
+}
+
 async function primeStateRef(page) {
   // Playwright `waitForFunction(async ...)` only waits on the returned Promise object itself,
   // so shared ready gates pin the live singleton state onto `globalThis` first and then poll
   // it synchronously inside `waitForFunction`.
-  await page.evaluate(async () => {
-    globalThis.__playwrightIsScenarioRuntimeReady = (state) => {
-      const loadState = state?.runtimeChunkLoadState || {};
-      const shellOwnerCount = Object.keys(state?.scenarioAutoShellOwnerByFeatureId || {}).length;
-      const selectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
-      const politicalFeatureCount = Array.isArray(state?.scenarioPoliticalChunkData?.features)
-        ? state.scenarioPoliticalChunkData.features.length
-        : 0;
-      const landFeatureCount = Array.isArray(state?.landData?.features) ? state.landData.features.length : 0;
-      const colorCount = Object.keys(state?.colors || {}).length;
-      const usesChunkRuntime = !!(
-        state?.activeScenarioManifest?.detail_chunk_manifest_url
-        || state?.activeScenarioManifest?.runtime_meta_url
-        || state?.activeScenarioManifest?.runtime_topology_url
-        || selectionVersion > 0
-        || politicalFeatureCount > 0
-      );
-      const chunkIdle = !loadState.pendingPromotion
-        && !loadState.promotionScheduled
-        && !loadState.refreshScheduled
-        && !loadState.promotionCommitInFlight
-        && !loadState.pendingVisualPromotion;
-      const chunkVisualReady = (
-        selectionVersion > 0
-        && politicalFeatureCount > 0
-        && landFeatureCount > 0
-        && colorCount > 0
-        && chunkIdle
-      );
-      if (usesChunkRuntime) return chunkVisualReady;
-      return shellOwnerCount > 0 || (landFeatureCount > 0 && colorCount > 0 && chunkIdle);
-    };
+  await page.evaluate(async (readyPredicateSource) => {
+    globalThis.__playwrightIsScenarioRuntimeReady = Function(`return (${readyPredicateSource});`)();
     if (globalThis.__playwrightStateRef) {
       return true;
     }
@@ -64,7 +80,7 @@ async function primeStateRef(page) {
     const stateModule = await import(stateModuleUrl);
     globalThis.__playwrightStateRef = stateModule?.state || null;
     return !!globalThis.__playwrightStateRef;
-  });
+  }, isScenarioRuntimeReadyForPlaywright.toString());
 }
 
 async function primeInteractionFunnelDebugRef(page) {
@@ -624,4 +640,5 @@ module.exports = {
   waitForProjectImportCompletion,
   openProjectFrontlineSection,
   waitForAppInteractive,
+  isScenarioRuntimeReadyForPlaywright,
 };

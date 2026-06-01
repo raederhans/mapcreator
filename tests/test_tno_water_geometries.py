@@ -1,6 +1,7 @@
 import json
 import hashlib
 import sys
+import unittest
 from pathlib import Path
 
 from shapely.geometry import Point, shape
@@ -55,6 +56,7 @@ MACRO_LAND_OVERLAP_AREA_MIN = 20.0
 MACRO_LAND_OVERLAP_RATIO_MAX = 0.08
 MACRO_LAND_OVERLAP_ABS_MAX = 1.0
 MACRO_INFLATION_LAND_DELTA_MAX = 0.05
+BASE_GEOGRAPHY_WATER_LAND_OVERLAP_ABS_MAX = 1e-5
 
 TRACKED_DETAIL_IDS = {
     "tno_severn_estuary",
@@ -412,6 +414,16 @@ def _load_runtime_land_union():
     geometries = [
         shape(feature["geometry"])
         for feature in _load_runtime_political_features()
+        if feature.get("geometry")
+    ]
+    return unary_union(geometries)
+
+
+def _load_runtime_object_union(object_name):
+    feature_collection = _load_runtime_topology_feature_collection(object_name)
+    geometries = [
+        shape(feature["geometry"])
+        for feature in feature_collection.get("features", [])
         if feature.get("geometry")
     ]
     return unary_union(geometries)
@@ -797,6 +809,38 @@ def test_tno_base_geography_water_clones_keep_source_contract():
         assert props.get("source_feature_id") == feature_id
         assert bool(props.get("interactive")) is True
         assert bool(props.get("render_as_base_geography")) is True
+
+
+def _assert_tno_base_geography_water_clones_are_cut_out_of_runtime_land_surfaces():
+    runtime_water_map = _feature_map(_load_runtime_water_features())
+    runtime_political_union = _load_runtime_object_union("political")
+    runtime_land_mask_union = _load_runtime_object_union("land_mask")
+    failures = []
+
+    for feature_id in sorted(TRACKED_BASE_GEOGRAPHY_WATER_IDS):
+        feature = runtime_water_map.get(feature_id)
+        assert feature is not None, feature_id
+        geometry = shape(feature["geometry"])
+        political_overlap = float(geometry.intersection(runtime_political_union).area)
+        land_mask_overlap = float(geometry.intersection(runtime_land_mask_union).area)
+        if (
+            political_overlap > BASE_GEOGRAPHY_WATER_LAND_OVERLAP_ABS_MAX
+            or land_mask_overlap > BASE_GEOGRAPHY_WATER_LAND_OVERLAP_ABS_MAX
+        ):
+            failures.append(
+                f"{feature_id}: political={political_overlap:.6f} land_mask={land_mask_overlap:.6f}"
+            )
+
+    assert failures == []
+
+
+def test_tno_base_geography_water_clones_are_cut_out_of_runtime_land_surfaces():
+    _assert_tno_base_geography_water_clones_are_cut_out_of_runtime_land_surfaces()
+
+
+class TnoWaterGeometryDataContractTest(unittest.TestCase):
+    def test_tno_base_geography_water_clones_are_cut_out_of_runtime_land_surfaces(self):
+        _assert_tno_base_geography_water_clones_are_cut_out_of_runtime_land_surfaces()
 
 
 def test_tno_tracked_detail_regions_exist_and_have_parent_ids():

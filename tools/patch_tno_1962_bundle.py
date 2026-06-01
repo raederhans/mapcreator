@@ -5560,6 +5560,19 @@ def build_tno_base_geography_water_clone_features() -> list[dict]:
     return clone_features
 
 
+def build_tno_base_geography_water_clone_union(clone_features: list[dict] | None = None):
+    features = clone_features if clone_features is not None else build_tno_base_geography_water_clone_features()
+    clone_geometries = [
+        normalize_polygonal(shape(feature.get("geometry")))
+        for feature in features
+        if feature.get("geometry")
+    ]
+    clone_union = safe_unary_union(clone_geometries)
+    if clone_union is None:
+        raise ValueError("TNO base geography water clone union collapsed to empty geometry.")
+    return clone_union
+
+
 def apply_tno_named_water_supplements(named_features: list[dict], land_mask_geom) -> list[dict]:
     feature_map = {
         str(feature.get("properties", {}).get("id") or "").strip(): feature
@@ -9812,6 +9825,8 @@ def apply_tno_feature_assignment_overrides(
     controllers_payload: dict,
     cores_payload: dict,
     scenario_political_gdf: gpd.GeoDataFrame | None = None,
+    ignored_missing_feature_ids: set[str] | None = None,
+    source_feature_id_by_new_id: dict[str, str] | None = None,
 ) -> dict[str, object]:
     override_map: dict[str, str] = {}
     for raw_tag, feature_ids in TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES.items():
@@ -9843,10 +9858,33 @@ def apply_tno_feature_assignment_overrides(
             if str(feature_id).strip()
         )
 
-    missing_feature_ids = sorted(
-        feature_id for feature_id in override_map
-        if feature_id not in known_feature_ids
-    )
+    ignored_missing_ids = {
+        str(feature_id).strip()
+        for feature_id in (ignored_missing_feature_ids or set())
+        if str(feature_id).strip()
+    }
+    derived_ids_by_source_id: dict[str, list[str]] = {}
+    for new_id, source_id in (source_feature_id_by_new_id or {}).items():
+        normalized_new_id = str(new_id or "").strip()
+        normalized_source_id = str(source_id or "").strip()
+        if normalized_new_id and normalized_source_id:
+            derived_ids_by_source_id.setdefault(normalized_source_id, []).append(normalized_new_id)
+    effective_override_map: dict[str, str] = {}
+    missing_feature_ids: list[str] = []
+    for feature_id, tag in override_map.items():
+        if feature_id in ignored_missing_ids:
+            continue
+        target_feature_ids = [feature_id] if feature_id in known_feature_ids else sorted(derived_ids_by_source_id.get(feature_id, []))
+        if not target_feature_ids:
+            missing_feature_ids.append(feature_id)
+            continue
+        for target_feature_id in target_feature_ids:
+            existing = effective_override_map.get(target_feature_id)
+            if existing and existing != tag:
+                raise ValueError(f"Conflicting manual assignment override for {target_feature_id}: {existing} vs {tag}")
+            effective_override_map[target_feature_id] = tag
+
+    missing_feature_ids = sorted(missing_feature_ids)
     if missing_feature_ids:
         preview = ", ".join(missing_feature_ids[:10])
         raise ValueError(
@@ -9855,7 +9893,7 @@ def apply_tno_feature_assignment_overrides(
     if scenario_political_gdf is not None and not scenario_political_gdf.empty:
         shell_fragment_override_ids = sorted(
             feature_id
-            for feature_id in override_map
+            for feature_id in effective_override_map
             if feature_id in {
                 str(row.get("id") or "").strip()
                 for row in scenario_political_gdf.to_dict("records")
@@ -9872,19 +9910,22 @@ def apply_tno_feature_assignment_overrides(
     owners = owners_payload.setdefault("owners", {})
     controllers = controllers_payload.setdefault("controllers", {})
     cores = cores_payload.setdefault("cores", {})
-    for feature_id, tag in override_map.items():
+    for feature_id, tag in effective_override_map.items():
         owners[feature_id] = tag
         controllers[feature_id] = tag
         set_feature_core_tags(cores, feature_id, [tag])
 
     if scenario_political_gdf is not None and not scenario_political_gdf.empty:
         id_series = scenario_political_gdf["id"].fillna("").astype(str).str.strip()
-        mask = id_series.isin(override_map) & ~id_series.str.startswith("ATLISL_")
+        mask = id_series.isin(effective_override_map) & ~id_series.str.startswith("ATLISL_")
         if mask.any():
-            scenario_political_gdf.loc[mask, "cntr_code"] = id_series.loc[mask].map(override_map)
+            scenario_political_gdf.loc[mask, "cntr_code"] = id_series.loc[mask].map(effective_override_map)
 
     return {
-        "feature_count": len(override_map),
+        "feature_count": len(effective_override_map),
+        "ignored_missing_feature_count": len([feature_id for feature_id in override_map if feature_id in ignored_missing_ids]),
+        "ignored_missing_feature_ids": sorted(feature_id for feature_id in override_map if feature_id in ignored_missing_ids),
+        "derived_feature_count": sum(1 for feature_id in effective_override_map if feature_id not in override_map),
         "by_tag": {
             tag: sorted(feature_ids)
             for tag, feature_ids in sorted(TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES.items())
@@ -10022,9 +10063,10 @@ def load_runtime_political_gdf() -> gpd.GeoDataFrame:
 def cut_political_features(
     political_gdf: gpd.GeoDataFrame,
     cut_geom,
-) -> tuple[gpd.GeoDataFrame, dict[str, str]]:
+) -> tuple[gpd.GeoDataFrame, dict[str, str], set[str]]:
     rows: list[dict] = []
     source_feature_id_by_new_id: dict[str, str] = {}
+    removed_feature_ids: set[str] = set()
     cut_union = normalize_polygonal(cut_geom)
     if cut_union is None:
         raise ValueError("Expected non-empty cut geometry.")
@@ -10039,6 +10081,7 @@ def cut_political_features(
             diff = normalize_polygonal(geom.difference(cut_union))
             parts = iter_polygon_parts(diff)
         if not parts:
+            removed_feature_ids.add(feature_id)
             continue
         for index, part in enumerate(parts, start=1):
             new_id = feature_id if len(parts) == 1 else f"{feature_id}__tno1962_{index}"
@@ -10059,7 +10102,7 @@ def cut_political_features(
     out = out.reset_index(drop=True)
     if out["id"].duplicated().any():
         raise ValueError("Scenario political topology contains duplicate feature ids after cutting.")
-    return out, source_feature_id_by_new_id
+    return out, source_feature_id_by_new_id, removed_feature_ids
 
 
 def canonicalize_feature_code_map(feature_map: dict[str, str]) -> dict[str, str]:
@@ -11587,7 +11630,15 @@ def build_countries_stage_state(
     atl_sea_feature_ids = [str(feature["properties"]["id"]).strip() for feature in atl_sea_collection]
     atl_sea_gdf = geopandas_from_features(atl_sea_collection)
 
-    scenario_cut_political_gdf, source_feature_id_by_new_id = cut_political_features(runtime_owned_political_gdf, lake_geom)
+    base_geography_water_clone_features = build_tno_base_geography_water_clone_features()
+    base_geography_water_clone_union = build_tno_base_geography_water_clone_union(base_geography_water_clone_features)
+    political_water_cut_geom = safe_unary_union([lake_geom, base_geography_water_clone_union])
+    if political_water_cut_geom is None:
+        raise ValueError("Scenario political water cut geometry collapsed to empty geometry.")
+    scenario_cut_political_gdf, source_feature_id_by_new_id, water_cut_removed_feature_ids = cut_political_features(
+        runtime_owned_political_gdf,
+        political_water_cut_geom,
+    )
     scenario_political_gdf = gpd.GeoDataFrame(
         pd_concat_geodataframes([scenario_cut_political_gdf, shell_fragment_gdf, antarctic_gdf, atl_political_gdf, atl_sea_gdf]),
         geometry="geometry",
@@ -11626,6 +11677,8 @@ def build_countries_stage_state(
         controllers_payload,
         cores_payload,
         scenario_political_gdf,
+        ignored_missing_feature_ids=water_cut_removed_feature_ids,
+        source_feature_id_by_new_id=source_feature_id_by_new_id,
     )
     owner_only_backfill_diagnostics = apply_tno_owner_only_backfill(
         owners_payload,
@@ -11715,6 +11768,8 @@ def build_countries_stage_state(
         "manifest_payload": manifest_payload,
         "audit_payload": audit_payload,
         "scenario_political_gdf": scenario_political_gdf,
+        "base_geography_water_clone_features": base_geography_water_clone_features,
+        "base_geography_water_clone_union": base_geography_water_clone_union,
         "stage_metadata": stage_metadata,
     }
 
@@ -11816,6 +11871,12 @@ def build_water_stage_state_from_countries_state(
             raise ValueError(f"Named marginal water '{spec['id']}' has empty geometry after extraction.")
         for split_id in spec.get("clip_open_ocean_ids", ()) or ():
             clip_open_ocean_geometries_by_id.setdefault(str(split_id).strip(), []).append(clip_geom)
+    base_geography_water_clone_features = copy.deepcopy(
+        countries_state.get("base_geography_water_clone_features")
+        or build_tno_base_geography_water_clone_features()
+    )
+    base_geography_water_clone_union = countries_state.get("base_geography_water_clone_union") \
+        or build_tno_base_geography_water_clone_union(base_geography_water_clone_features)
     scenario_water_features = clip_tno_open_ocean_split_features(
         build_tno_open_ocean_split_features(
             land_mask_geom=ocean_land_mask_geom,
@@ -11828,7 +11889,7 @@ def build_water_stage_state_from_countries_state(
     )
     scenario_water_features.extend(named_marginal_water_features)
     qyzylorda_water_feature = build_qyzylorda_inland_water_feature(scenario_political_gdf)
-    scenario_water_features.extend(build_tno_base_geography_water_clone_features())
+    scenario_water_features.extend(base_geography_water_clone_features)
     scenario_water_features.append(congo_feature)
     scenario_water_features.append(qyzylorda_water_feature)
     validate_tno_water_geometries(
@@ -11851,6 +11912,9 @@ def build_water_stage_state_from_countries_state(
         land_without_lake = normalize_polygonal(land_without_lake.difference(atl_sea_union))
     if land_without_lake is None:
         raise ValueError("Scenario land mask lost all land after ATL sea subtraction.")
+    land_without_lake = normalize_polygonal(land_without_lake.difference(base_geography_water_clone_union))
+    if land_without_lake is None:
+        raise ValueError("Scenario land mask lost all land after base geography water subtraction.")
     land_mask_geom = safe_unary_union([land_without_lake, atl_land_union])
     if land_mask_geom is None:
         raise ValueError("Scenario land mask collapsed to empty geometry.")

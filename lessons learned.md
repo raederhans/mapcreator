@@ -178,3 +178,6 @@
 ### startup chunk visual gate 要等真实 selection
 - readonly startup 下首个 chunk visual gate 需要等到 `selectionVersion`、政治 chunk、`landData` 和 `colors` 一起就绪；只等 pending promotion 清空会把“尚未开始 selection”误判成失败。
 - Playwright 长套件使用任务专属 `--output` 目录，避免清理整棵 `.runtime/tests/playwright` 导致测试启动阶段长时间无输出。
+
+### scenario checkpoint 要固定到已验证目录
+- 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。

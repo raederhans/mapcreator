@@ -2211,6 +2211,99 @@ class TnoBundleBuilderTest(unittest.TestCase):
         finally:
             tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES = original_overrides
 
+    def test_apply_tno_feature_assignment_overrides_skips_water_cut_ids(self) -> None:
+        political_gdf = gpd.GeoDataFrame(
+            [
+                {
+                    "id": "LIVE-LAND",
+                    "name": "Live Land",
+                    "cntr_code": "OLD",
+                    "geometry": _square(0, 0),
+                },
+            ],
+            geometry="geometry",
+            crs="EPSG:4326",
+        )
+        original_overrides = tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES
+        tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES = {
+            "RKK": ["LIVE-LAND", "REMOVED-WATER"],
+        }
+        try:
+            owners_payload = {"owners": {"LIVE-LAND": "OLD"}}
+            controllers_payload = {"controllers": {"LIVE-LAND": "OLD"}}
+            cores_payload = {"cores": {"LIVE-LAND": ["OLD"]}}
+
+            diagnostics = apply_tno_feature_assignment_overrides(
+                owners_payload=owners_payload,
+                controllers_payload=controllers_payload,
+                cores_payload=cores_payload,
+                scenario_political_gdf=political_gdf,
+                ignored_missing_feature_ids={"REMOVED-WATER"},
+            )
+
+            self.assertEqual(diagnostics["feature_count"], 1)
+            self.assertEqual(diagnostics["ignored_missing_feature_ids"], ["REMOVED-WATER"])
+            self.assertEqual(owners_payload["owners"], {"LIVE-LAND": "RKK"})
+            self.assertNotIn("REMOVED-WATER", owners_payload["owners"])
+            self.assertEqual(political_gdf.iloc[0]["cntr_code"], "RKK")
+        finally:
+            tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES = original_overrides
+
+    def test_apply_tno_feature_assignment_overrides_follows_cut_feature_source_map(self) -> None:
+        political_gdf = gpd.GeoDataFrame(
+            [
+                {
+                    "id": "SOURCE-LAND__tno1962_1",
+                    "name": "Cut Land 1",
+                    "cntr_code": "OLD",
+                    "geometry": _square(0, 0),
+                },
+                {
+                    "id": "SOURCE-LAND__tno1962_2",
+                    "name": "Cut Land 2",
+                    "cntr_code": "OLD",
+                    "geometry": _square(2, 0),
+                },
+            ],
+            geometry="geometry",
+            crs="EPSG:4326",
+        )
+        original_overrides = tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES
+        tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES = {
+            "RKK": ["SOURCE-LAND"],
+        }
+        try:
+            owners_payload = {"owners": {
+                "SOURCE-LAND__tno1962_1": "OLD",
+                "SOURCE-LAND__tno1962_2": "OLD",
+            }}
+            controllers_payload = {"controllers": {
+                "SOURCE-LAND__tno1962_1": "OLD",
+                "SOURCE-LAND__tno1962_2": "OLD",
+            }}
+            cores_payload = {"cores": {
+                "SOURCE-LAND__tno1962_1": ["OLD"],
+                "SOURCE-LAND__tno1962_2": ["OLD"],
+            }}
+
+            diagnostics = apply_tno_feature_assignment_overrides(
+                owners_payload=owners_payload,
+                controllers_payload=controllers_payload,
+                cores_payload=cores_payload,
+                scenario_political_gdf=political_gdf,
+                source_feature_id_by_new_id={
+                    "SOURCE-LAND__tno1962_1": "SOURCE-LAND",
+                    "SOURCE-LAND__tno1962_2": "SOURCE-LAND",
+                },
+            )
+
+            self.assertEqual(diagnostics["feature_count"], 2)
+            self.assertEqual(diagnostics["derived_feature_count"], 2)
+            self.assertEqual(set(owners_payload["owners"].values()), {"RKK"})
+            self.assertEqual(political_gdf["cntr_code"].tolist(), ["RKK", "RKK"])
+        finally:
+            tno_bundle.TNO_1962_FEATURE_ASSIGNMENT_OVERRIDES = original_overrides
+
     def test_apply_tno_owner_only_backfill_updates_only_owners_and_runtime_cntr_code(self) -> None:
         feature_ids = list(TNO_1962_OWNER_ONLY_BACKFILL.keys())
         political_gdf = gpd.GeoDataFrame(
