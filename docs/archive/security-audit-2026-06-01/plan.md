@@ -18,7 +18,7 @@
 - [x] Apply minimal fixes for confirmed findings.
 - [x] Run targeted and delivery verification.
 - [x] Run final review self-check.
-- [ ] Archive this task folder after commit and push.
+- [x] Archive this task folder after commit and push.
 
 ## Acceptance Criteria
 - Confirmed findings have a trigger path, fix point, and verification command.

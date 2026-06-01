@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+from ipaddress import ip_address
 import json
 import re
 from pathlib import Path
 import sqlite3
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from .errors import BackendError
 from .security import hash_password, now_token, verify_password
@@ -22,6 +23,7 @@ USER_ROLE_MEMBER = "member"
 USER_STATUS_ACTIVE = "active"
 USER_STATUS_BANNED = "banned"
 SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
+UNSAFE_IMAGE_URL_CHARS = {"'", "\"", "`", "(", ")", "<", ">", "\\"}
 SHARED_PROJECT_FIELD_ALLOWLIST = (
     "schemaVersion",
     "countryBaseColors",
@@ -990,16 +992,21 @@ class BackendService:
         return image_url
 
     def _is_allowed_image_url(self, image_url: str) -> bool:
-        if any(ord(char) < 32 or char in {"'", "\"", "`", "(", ")", "<", ">", "\\"} for char in image_url):
+        if self._has_unsafe_image_url_chars(image_url):
             return False
         if image_url.startswith("/"):
-            return not image_url.startswith("//")
+            return not image_url.startswith("//") and not self._has_unsafe_image_url_chars(unquote(image_url))
         parsed = urlparse(image_url)
-        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"localhost", "127.0.0.1"}:
+        if parsed.scheme not in {"http", "https"} or not self._is_loopback_image_host(parsed.hostname):
+            return False
+        if self._has_unsafe_image_url_chars(unquote(parsed.netloc)):
             return False
         try:
             parsed.port
         except ValueError:
+            return False
+        resource = f"{parsed.path}?{parsed.query}#{parsed.fragment}"
+        if self._has_unsafe_image_url_chars(unquote(resource)):
             return False
         return bool(parsed.netloc)
 
@@ -1007,3 +1014,17 @@ class BackendService:
         if not image_url:
             return ""
         return image_url if self._is_allowed_image_url(image_url) else ""
+
+    def _has_unsafe_image_url_chars(self, value: str) -> bool:
+        return any(ord(char) < 32 or ord(char) == 127 or char in UNSAFE_IMAGE_URL_CHARS for char in value)
+
+    def _is_loopback_image_host(self, hostname: str | None) -> bool:
+        if not hostname:
+            return False
+        host = hostname.rstrip(".").lower()
+        if host == "localhost":
+            return True
+        try:
+            return ip_address(host).is_loopback
+        except ValueError:
+            return False

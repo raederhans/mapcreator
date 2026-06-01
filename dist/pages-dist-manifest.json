@@ -6182,7 +6182,7 @@
     },
     {
       "path": "app/js/api/backend_client.js",
-      "size_bytes": 5742
+      "size_bytes": 5752
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
@@ -7091,5 +7091,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1015943589
+  "total_bytes": 1015943599
 }

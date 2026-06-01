@@ -388,7 +388,9 @@ class BackendServiceTest(unittest.TestCase):
         valid_urls = [
             "/backend/assets/demo-plains.svg",
             "http://localhost:8000/backend/assets/demo-plains.svg",
+            "http://localhost./backend/assets/demo-plains.svg",
             "https://127.0.0.1:8000/backend/assets/demo-plains.svg",
+            "http://[::1]:8000/backend/assets/demo-plains.svg",
         ]
         for image_url in valid_urls:
             save = self.service.create_save(
@@ -407,8 +409,15 @@ class BackendServiceTest(unittest.TestCase):
             "http://localhost.evil.example/pixel.png",
             "http://localhost:bad/pixel.png",
             "http://localhost:8000.evil/pixel.png",
+            "http://localhost/%0Afoo",
+            "http://localhost/%5Cfoo",
+            "http://localhost/%28foo%29",
+            "http://%0A@127.0.0.1/pixel.png",
+            "http://%5C@127.0.0.1/pixel.png",
+            "http://%28@127.0.0.1/pixel.png",
             "http://127.0.0.1.evil.example/pixel.png",
             "http://127.0.0.1:8000.evil/pixel.png",
+            "/backend/assets/%28demo%29.svg",
             "/backend/assets/demo-plains.svg');background-image:url('//evil.example/pixel')",
         ]
         for image_url in rejected_urls:
@@ -445,7 +454,11 @@ class BackendServiceTest(unittest.TestCase):
             )
 
         self.assertEqual(self.service.get_save(session_id, str(save["id"]))["imageUrl"], "")
+        self.assertEqual(self.service.list_my_saves(session_id)["saves"][0]["imageUrl"], "")
         self.assertEqual(self.service.list_community_saves()["saves"][0]["imageUrl"], "")
+        self.assertEqual(self.service.get_community_save(str(save["id"]))["imageUrl"], "")
+        self.assertEqual(self.service.download_community_save(str(save["id"]))["save"]["imageUrl"], "")
+        self.assertEqual(self.service.admin_get_save(session_id, str(save["id"]))["imageUrl"], "")
 
     def test_admin_cannot_remove_last_active_admin(self) -> None:
         admin = self._register("admin")
