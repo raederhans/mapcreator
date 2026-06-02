@@ -21,7 +21,8 @@ Continue the ocean refinement program after Scotia Sea by turning remaining high
 - [x] Synchronize generated assets.
 - [x] Extend tests.
 - [x] Validate and review.
-- [ ] Merge, push, and clean up.
+- [x] Merge into main.
+- [ ] Push main and clean up.
 
 ## Candidate Decision
 

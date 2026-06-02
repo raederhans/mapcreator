@@ -26,3 +26,9 @@ The main agent owns all live validation commands. Subagents may do static analys
 - Full changed-domain rebuild failed in the fresh worktree because countries checkpoints were absent.
 - Countries stage then failed because the external `historic geographic overhaul` donor root was absent in this worktree.
 - Scoped sync script `.runtime/tmp/sync_ocean_splits.py` was used as a disposable TTL script and should remain untracked.
+
+## Closeout
+
+- Branch commit: `11e223a2` (`Split Hudson Strait and source Weddell Sea`).
+- Merged into main after confirming the newer main commits touched transport/project surfaces and did not overlap the ocean data files.
+- Final external actions after archive update: run post-merge validation, push main, deactivate ultrawork, remove the temporary worktree.

@@ -9,4 +9,4 @@
 - [x] Tests updated.
 - [x] Validation passed.
 - [x] Review passed.
-- [ ] Archived on completion.
+- [x] Archived on completion.
