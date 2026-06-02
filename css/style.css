@@ -6414,6 +6414,46 @@ body.counter-editor-modal-open {
   min-width: 0;
 }
 
+.project-file-option .sidebar-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.project-file-option .select-input {
+  min-height: 46px;
+  padding: 10px 38px 10px 14px;
+  border: 1px solid rgba(37, 54, 73, 0.1);
+  border-radius: 12px;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    rgba(255, 255, 255, 0.92);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.25;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.82), 0 10px 22px rgba(15, 23, 42, 0.04);
+  appearance: none;
+}
+
+.project-file-option .select-input:hover {
+  border-color: rgba(32, 76, 119, 0.18);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--color-accent) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--color-accent) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    rgba(255, 255, 255, 0.98);
+}
+
+.project-file-option .select-input:focus {
+  border-color: rgba(32, 76, 119, 0.32);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--color-accent) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--color-accent) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    #ffffff;
+  box-shadow: 0 0 0 3px rgba(32, 76, 119, 0.12), 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
 .project-account-dock {
   display: flex;
   justify-content: flex-end;

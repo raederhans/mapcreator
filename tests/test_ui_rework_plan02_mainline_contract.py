@@ -399,6 +399,10 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn("#transportProjectSection,", css_content)
         self.assertIn("#inspectorUtilitiesSection,", css_content)
         self.assertIn("#diagnosticsSection {", css_content)
+        self.assertIn(".project-file-option .select-input {", css_content)
+        self.assertIn("appearance: none;", css_content)
+        self.assertIn(".project-file-option .select-input:hover {", css_content)
+        self.assertIn(".project-file-option .select-input:focus {", css_content)
 
     def test_special_zone_workbench_uses_sidebar_visual_contract(self):
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")

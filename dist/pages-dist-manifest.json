@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 252367
+      "size_bytes": 253888
     },
     {
       "path": "app/data/CATALOG.json",
@@ -7187,5 +7187,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1023704973
+  "total_bytes": 1023706494
 }
