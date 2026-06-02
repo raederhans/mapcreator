@@ -15,6 +15,7 @@ import {
   registerBackendUser,
   reportCommunitySave,
 } from "../../api/backend_client.js";
+import { strFromU8, unzipSync } from "../../../vendor/fflate.browser.js";
 
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
@@ -83,6 +84,7 @@ export function createProjectSupportDiagnosticsController({
   let activeCloudUserKey = "";
   let latestCloudSaveUserKey = "";
   let latestCommunitySaves = [];
+  let backendCloudSessionMode = "hidden";
 
   const setBackendCloudStatus = (message) => {
     if (backendCloudStatus) {
@@ -111,6 +113,7 @@ export function createProjectSupportDiagnosticsController({
   };
 
   const setBackendCloudSessionState = (mode) => {
+    backendCloudSessionMode = mode;
     const backendAvailable = mode === "anonymous" || mode === "authenticated";
     const authenticated = mode === "authenticated";
     setBackendCloudSectionVisible(backendAvailable || mode === "unavailable");
@@ -156,6 +159,71 @@ export function createProjectSupportDiagnosticsController({
     || String(state.activeScenarioManifest?.display_name || state.activeScenarioId || "Map project").trim()
     || "Map project"
   );
+
+  const confirmReplaceCurrentProject = async () => {
+    if (!state.isDirty) return true;
+    return showAppDialog({
+      title: t("Load Project", "ui"),
+      message: t("You have unsaved changes. Loading a project will replace the current map.", "ui"),
+      details: t(
+        "Continue only if you are ready to discard the current working state or have already exported it.",
+        "ui"
+      ),
+      confirmLabel: t("Discard and Load", "ui"),
+      cancelLabel: t("Stay on Current Map", "ui"),
+      tone: "warning",
+    });
+  };
+
+  const runExclusiveButtonTask = async (button, task, restore = null) => {
+    if (!button || button.dataset?.busy === "true") return false;
+    const wasDisabled = !!button.disabled;
+    button.disabled = true;
+    if (button.dataset) button.dataset.busy = "true";
+    try {
+      await task();
+      return true;
+    } finally {
+      if (button.dataset) delete button.dataset.busy;
+      button.disabled = wasDisabled;
+      if (typeof restore === "function") restore();
+    }
+  };
+
+  const restoreBackendCloudControls = () => {
+    setBackendCloudSessionState(backendCloudSessionMode);
+  };
+
+  const fileLooksLikeZip = (file) => {
+    const name = String(file?.name || "").trim().toLowerCase();
+    const type = String(file?.type || "").trim().toLowerCase();
+    return name.endsWith(".zip") || type === "application/zip" || type === "application/x-zip-compressed";
+  };
+
+  const buildJsonProjectFile = (text, filename = "map_project.json") => {
+    const blob = new Blob([text], { type: "application/json" });
+    if (typeof File === "function") {
+      return new File([blob], filename, { type: "application/json" });
+    }
+    Object.defineProperty(blob, "name", {
+      value: filename,
+      configurable: true,
+    });
+    return blob;
+  };
+
+  const resolveProjectImportFile = async (file) => {
+    if (!fileLooksLikeZip(file)) return file;
+    if (!file || typeof file.arrayBuffer !== "function") {
+      throw new Error(t("Project ZIP cannot be read by this browser.", "ui"));
+    }
+    const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+    const projectBytes = entries["map_project.json"];
+    if (!projectBytes) {
+      throw new Error(t("Project ZIP must include map_project.json.", "ui"));
+    }
+    return buildJsonProjectFile(strFromU8(projectBytes), "map_project.json");
+  };
 
   const resolveLatestCloudSaveId = async () => {
     // 发布动作以“当前登录用户的最新保存”为边界；切换用户后清空缓存，避免复用上一位用户的 save id。
@@ -224,12 +292,15 @@ export function createProjectSupportDiagnosticsController({
       loadButton.className = "btn-secondary";
       loadButton.textContent = t("Load", "ui");
       loadButton.addEventListener("click", async () => {
-        try {
-          await hydrateProjectFromCommunitySave(String(save.id || ""));
-          setBackendCloudStatus(t("Community save import started.", "ui"));
-        } catch (error) {
-          setBackendCloudStatus(String(error?.message || error || ""));
-        }
+        await runExclusiveButtonTask(loadButton, async () => {
+          try {
+            if (!(await confirmReplaceCurrentProject())) return;
+            await hydrateProjectFromCommunitySave(String(save.id || ""));
+            setBackendCloudStatus(t("Community save import started.", "ui"));
+          } catch (error) {
+            setBackendCloudStatus(String(error?.message || error || ""));
+          }
+        });
       });
       const commentButton = document.createElement("button");
       commentButton.type = "button";
@@ -884,27 +955,14 @@ export function createProjectSupportDiagnosticsController({
           }
           return;
         }
-        if (state.isDirty) {
-          const shouldContinue = await showAppDialog({
-            title: t("Load Project", "ui"),
-            message: t("You have unsaved changes. Loading a project will replace the current map.", "ui"),
-            details: t(
-              "Continue only if you are ready to discard the current working state or have already exported it.",
-              "ui"
-            ),
-            confirmLabel: t("Discard and Load", "ui"),
-            cancelLabel: t("Stay on Current Map", "ui"),
-            tone: "warning",
-          });
-          if (!shouldContinue) return;
-        }
+        if (!(await confirmReplaceCurrentProject())) return;
         projectFileInput.click();
       });
       uploadProjectBtn.dataset.bound = "true";
     }
 
     if (projectFileInput && !projectFileInput.dataset.bound) {
-      projectFileInput.addEventListener("change", () => {
+      projectFileInput.addEventListener("change", async () => {
         const file = projectFileInput.files?.[0];
         if (!file) {
           if (projectFileName) {
@@ -917,19 +975,31 @@ export function createProjectSupportDiagnosticsController({
           projectFileName.textContent = file.name;
         }
         refreshProjectSaveStatus(t("Project import started. Appearance and transport settings will be restored from the file.", "ui"));
-        importProjectThroughFunnel(file, {
-          ui: {
-            t,
-            showAppDialog,
-            showToast,
-          },
-          hooks: {
-            refreshColorState: mapRenderer.refreshColorState,
-            invalidateFrontlineOverlayState,
-            onProjectImportComplete: () => refreshProjectSaveStatus(),
-            onProjectImportError: () => refreshProjectSaveStatus(t("Project import failed before completion. Review the current map state.", "ui")),
-          },
-        });
+        try {
+          const importFile = await resolveProjectImportFile(file);
+          importProjectThroughFunnel(importFile, {
+            ui: {
+              t,
+              showAppDialog,
+              showToast,
+            },
+            hooks: {
+              refreshColorState: mapRenderer.refreshColorState,
+              invalidateFrontlineOverlayState,
+              onProjectImportComplete: () => refreshProjectSaveStatus(),
+              onProjectImportError: () => refreshProjectSaveStatus(t("Project import failed before completion. Review the current map state.", "ui")),
+            },
+          });
+        } catch (error) {
+          const message = String(error?.message || error || "");
+          refreshProjectSaveStatus(message);
+          if (typeof showToast === "function") {
+            showToast(message, {
+              title: t("Project import failed", "ui"),
+              tone: "error",
+            });
+          }
+        }
         projectFileInput.value = "";
       });
       projectFileInput.dataset.bound = "true";
@@ -1004,47 +1074,53 @@ export function createProjectSupportDiagnosticsController({
 
     if (backendCloudSaveBtn && !backendCloudSaveBtn.dataset.bound) {
       backendCloudSaveBtn.addEventListener("click", async () => {
-        try {
-          const project = fileManager.buildProjectPayload?.(state);
-          if (!project) throw new Error("Project state is unavailable.");
-          const payload = await createBackendSave({
-            title: getCloudSaveTitle(),
-            description: String(state.activeScenarioId || ""),
-            project,
-          });
-          latestCloudSaveId = String(payload?.save?.id || "");
-          latestCloudSaveUserKey = activeCloudUserKey;
-          setBackendCloudStatus(t("Cloud save created.", "ui"));
-        } catch (error) {
-          setBackendCloudStatus(String(error?.message || error || ""));
-        }
+        await runExclusiveButtonTask(backendCloudSaveBtn, async () => {
+          try {
+            const project = fileManager.buildProjectPayload?.(state);
+            if (!project) throw new Error("Project state is unavailable.");
+            const payload = await createBackendSave({
+              title: getCloudSaveTitle(),
+              description: String(state.activeScenarioId || ""),
+              project,
+            });
+            latestCloudSaveId = String(payload?.save?.id || "");
+            latestCloudSaveUserKey = activeCloudUserKey;
+            setBackendCloudStatus(t("Cloud save created.", "ui"));
+          } catch (error) {
+            setBackendCloudStatus(String(error?.message || error || ""));
+          }
+        }, restoreBackendCloudControls);
       });
       backendCloudSaveBtn.dataset.bound = "true";
     }
 
     if (backendCloudPublishBtn && !backendCloudPublishBtn.dataset.bound) {
       backendCloudPublishBtn.addEventListener("click", async () => {
-        try {
-          const saveId = await resolveLatestCloudSaveId();
-          if (!saveId) throw new Error("Create a cloud save before publishing.");
-          await publishBackendSave(saveId);
-          await refreshCommunitySaves();
-          setBackendCloudStatus(t("Latest cloud save published.", "ui"));
-        } catch (error) {
-          setBackendCloudStatus(String(error?.message || error || ""));
-        }
+        await runExclusiveButtonTask(backendCloudPublishBtn, async () => {
+          try {
+            const saveId = await resolveLatestCloudSaveId();
+            if (!saveId) throw new Error("Create a cloud save before publishing.");
+            await publishBackendSave(saveId);
+            await refreshCommunitySaves();
+            setBackendCloudStatus(t("Latest cloud save published.", "ui"));
+          } catch (error) {
+            setBackendCloudStatus(String(error?.message || error || ""));
+          }
+        }, restoreBackendCloudControls);
       });
       backendCloudPublishBtn.dataset.bound = "true";
     }
 
     if (backendCommunityRefreshBtn && !backendCommunityRefreshBtn.dataset.bound) {
       backendCommunityRefreshBtn.addEventListener("click", async () => {
-        try {
-          await refreshCommunitySaves();
-          setBackendCloudStatus(t("Community saves refreshed.", "ui"));
-        } catch (error) {
-          setBackendCloudStatus(String(error?.message || error || ""));
-        }
+        await runExclusiveButtonTask(backendCommunityRefreshBtn, async () => {
+          try {
+            await refreshCommunitySaves();
+            setBackendCloudStatus(t("Community saves refreshed.", "ui"));
+          } catch (error) {
+            setBackendCloudStatus(String(error?.message || error || ""));
+          }
+        }, restoreBackendCloudControls);
       });
       backendCommunityRefreshBtn.dataset.bound = "true";
     }

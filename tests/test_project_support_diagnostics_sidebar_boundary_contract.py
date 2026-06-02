@@ -10,6 +10,7 @@ INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 INTERACTION_FUNNEL_UI_SYNC_JS = REPO_ROOT / "js" / "core" / "interaction_funnel" / "ui_sync.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 STYLE_CSS = REPO_ROOT / "css" / "style.css"
+I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
 
 
 class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
@@ -77,6 +78,23 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
             content.index('registerRuntimeHook(state, "renderScenarioAuditPanelFn", renderScenarioAuditPanel);'),
             content.index('bindProjectSupportDiagnosticsEvents();')
         )
+
+    def test_project_support_release_surface_matches_source(self):
+        pairs = [
+            (SIDEBAR_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "sidebar.js"),
+            (
+                PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS,
+                REPO_ROOT / "dist" / "app" / "js" / "ui" / "sidebar" / "project_support_diagnostics_controller.js",
+            ),
+            (I18N_CATALOG_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n_catalog.js"),
+        ]
+
+        for source_path, dist_path in pairs:
+            with self.subTest(source=source_path.name):
+                self.assertEqual(
+                    source_path.read_text(encoding="utf-8"),
+                    dist_path.read_text(encoding="utf-8"),
+                )
 
     def test_project_support_events_move_to_controller(self):
         sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")

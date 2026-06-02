@@ -1522,10 +1522,15 @@ function initSidebar({ render } = {}) {
     uploadBtn.className = "btn-secondary";
     uploadBtn.textContent = t("Load Project", "ui");
 
+    const projectLoadHint = document.createElement("p");
+    projectLoadHint.id = "projectLoadHint";
+    projectLoadHint.className = "sidebar-tool-hint project-load-hint";
+    projectLoadHint.textContent = t("Local load accepts project JSON or project ZIP packages. Community saves open from Account.", "ui");
+
     const fileInput = document.createElement("input");
     fileInput.id = "projectFileInput";
     fileInput.type = "file";
-    fileInput.accept = ".json,application/json";
+    fileInput.accept = ".json,.zip,application/json,application/zip,application/x-zip-compressed";
     fileInput.className = "hidden";
 
     const fileMeta = document.createElement("div");
@@ -1586,6 +1591,7 @@ function initSidebar({ render } = {}) {
     actions.appendChild(downloadBtn);
     actions.appendChild(projectDownloadOptions);
     actions.appendChild(uploadBtn);
+    actions.appendChild(projectLoadHint);
     actions.appendChild(projectSaveStatus);
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);

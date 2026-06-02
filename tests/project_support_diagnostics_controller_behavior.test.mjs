@@ -5,6 +5,7 @@ import { state } from "../js/core/state.js";
 import { registerRuntimeHook } from "../js/core/state/index.js";
 import { markDirty, clearDirty } from "../js/core/dirty_state.js";
 import { createProjectSupportDiagnosticsController } from "../js/ui/sidebar/project_support_diagnostics_controller.js";
+import { strToU8, zipSync } from "../vendor/fflate.browser.js";
 
 function createStatusNode() {
   return {
@@ -184,6 +185,83 @@ test("project download failure is shown in project status", async () => {
   assert.equal(projectSaveStatus.textContent, "Save dialog failed");
 });
 
+test("local project zip load unwraps editable project before import funnel", async () => {
+  const projectSaveStatus = createStatusNode();
+  const projectFileName = createStatusNode();
+  const projectZipBytes = zipSync({
+    "map_project.json": strToU8(JSON.stringify({ schemaVersion: 21, activePaletteId: "hoi4_vanilla" })),
+    "map_project_manifest.json": strToU8(JSON.stringify({ artifactKind: "project-zip" })),
+  });
+  const projectZip = new Blob([projectZipBytes], { type: "application/zip" });
+  Object.defineProperty(projectZip, "name", { value: "map_project.zip" });
+  const projectFileInput = {
+    ...createButtonNode(),
+    files: [projectZip],
+    value: "map_project.zip",
+  };
+  let importedFile = null;
+  const controller = createController(projectSaveStatus, {
+    elements: {
+      projectFileInput,
+      projectFileName,
+    },
+    helpers: {
+      importProjectThroughFunnel: (file) => {
+        importedFile = file;
+        return true;
+      },
+      mapRenderer: { refreshColorState: () => {} },
+    },
+  });
+
+  controller.bindEvents();
+  await projectFileInput.listeners.change();
+
+  assert.equal(projectFileName.textContent, "map_project.zip");
+  assert.equal(importedFile.name, "map_project.json");
+  assert.match(await importedFile.text(), /"schemaVersion":21/);
+  assert.equal(projectFileInput.value, "");
+});
+
+test("local project zip load reports missing editable project", async () => {
+  const projectSaveStatus = createStatusNode();
+  const projectZipBytes = zipSync({
+    "map_project_manifest.json": strToU8(JSON.stringify({ artifactKind: "project-zip" })),
+  });
+  const projectZip = new Blob([projectZipBytes], { type: "application/zip" });
+  Object.defineProperty(projectZip, "name", { value: "map_project.zip" });
+  const projectFileInput = {
+    ...createButtonNode(),
+    files: [projectZip],
+    value: "map_project.zip",
+  };
+  const toasts = [];
+  const controller = createController(projectSaveStatus, {
+    elements: {
+      projectFileInput,
+    },
+    helpers: {
+      importProjectThroughFunnel: () => {
+        throw new Error("should not import an invalid zip");
+      },
+      showToast: (message, options) => toasts.push({ message, options }),
+    },
+  });
+
+  controller.bindEvents();
+  await projectFileInput.listeners.change();
+
+  assert.equal(projectSaveStatus.textContent, "Project ZIP must include map_project.json.");
+  assert.deepEqual(toasts, [{
+    message: "Project ZIP must include map_project.json.",
+    options: {
+      title: "Project import failed",
+      tone: "error",
+    },
+  }]);
+  assert.equal(projectFileInput.value, "");
+});
+
 test("community load source opens account popover and refreshes community saves", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
@@ -301,6 +379,74 @@ test("community load waits for import callback before showing loaded status", as
   }
 });
 
+test("community load respects unsaved project confirmation", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const previousDirty = state.isDirty;
+  const previousLastDirtyReason = state.lastDirtyReason;
+  const backendCloudStatus = createStatusNode();
+  const backendCommunityRefreshBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+  let downloaded = false;
+  let imported = false;
+  let dialogCount = 0;
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url) => ({
+    ok: !String(url).includes("/auth/me"),
+    json: async () => {
+      if (String(url).endsWith("/community/saves")) {
+        return { saves: [{ id: "save-1", title: "Shared Save", owner: { displayName: "Alice" } }] };
+      }
+      if (String(url).endsWith("/community/saves/save-1/download")) {
+        downloaded = true;
+        return { filename: "shared.json", save: { project: { schemaVersion: 21 } } };
+      }
+      return {};
+    },
+  });
+
+  try {
+    state.isDirty = true;
+    state.lastDirtyReason = "paint";
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        backendCommunityRefreshBtn,
+        backendCommunityList,
+      },
+      helpers: {
+        showAppDialog: async () => {
+          dialogCount += 1;
+          return false;
+        },
+        importProjectThroughFunnel: () => {
+          imported = true;
+          return true;
+        },
+      },
+    });
+    controller.bindEvents();
+
+    await backendCommunityRefreshBtn.listeners.click();
+    const row = backendCommunityList.children[0];
+    const loadButton = row.children.find((child) => child.textContent === "Load");
+    await loadButton.listeners.click();
+
+    assert.equal(dialogCount, 1);
+    assert.equal(downloaded, false);
+    assert.equal(imported, false);
+  } finally {
+    state.isDirty = previousDirty;
+    state.lastDirtyReason = previousLastDirtyReason;
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("publish latest recovers newest cloud save after session refresh", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
@@ -349,6 +495,149 @@ test("publish latest recovers newest cloud save after session refresh", async ()
 
     assert.deepEqual(requested.some(([url]) => url.endsWith("/api/backend/saves")), true);
     assert.deepEqual(requested.some(([url, method]) => url.endsWith("/api/backend/saves/save-2/publish") && method === "POST"), true);
+    assert.equal(backendCloudStatus.textContent, "Latest cloud save published.");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("cloud save button ignores duplicate clicks while save is in flight", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudStatus = createStatusNode();
+  const backendCloudSaveTitle = { value: "Race save" };
+  const backendCloudSaveBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+  let savePostCount = 0;
+  let releaseSave = null;
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).endsWith("/auth/me")) {
+      return {
+        ok: true,
+        json: async () => ({ user: { displayName: "Alice" }, csrfToken: "csrf-token" }),
+      };
+    }
+    if (String(url).endsWith("/api/backend/saves") && (options.method || "GET") === "POST") {
+      savePostCount += 1;
+      await new Promise((resolve) => {
+        releaseSave = resolve;
+      });
+      return {
+        ok: true,
+        json: async () => ({ save: { id: "save-1" } }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({}),
+    };
+  };
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        backendCloudSaveTitle,
+        backendCloudSaveBtn,
+        backendCommunityList,
+      },
+      helpers: {
+        fileManager: {
+          buildProjectPayload: () => ({ schemaVersion: 21, paintMode: "visual" }),
+        },
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const first = backendCloudSaveBtn.listeners.click();
+    const second = backendCloudSaveBtn.listeners.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(savePostCount, 1);
+    releaseSave();
+    await Promise.all([first, second]);
+
+    assert.equal(savePostCount, 1);
+    assert.equal(backendCloudStatus.textContent, "Cloud save created.");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("publish button ignores duplicate clicks while publish is in flight", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudStatus = createStatusNode();
+  const backendCloudPublishBtn = createButtonNode();
+  const backendCommunityList = createListNode();
+  let publishPostCount = 0;
+  let releasePublish = null;
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).endsWith("/auth/me")) {
+      return {
+        ok: true,
+        json: async () => ({ user: { displayName: "Alice" }, csrfToken: "csrf-token" }),
+      };
+    }
+    if (String(url).endsWith("/api/backend/saves")) {
+      return {
+        ok: true,
+        json: async () => ({ saves: [{ id: "save-2", title: "Newest Save" }] }),
+      };
+    }
+    if (String(url).endsWith("/publish") && (options.method || "GET") === "POST") {
+      publishPostCount += 1;
+      await new Promise((resolve) => {
+        releasePublish = resolve;
+      });
+      return {
+        ok: true,
+        json: async () => ({ save: { id: "save-2", visibility: "public" } }),
+      };
+    }
+    if (String(url).endsWith("/community/saves")) {
+      return {
+        ok: true,
+        json: async () => ({ saves: [] }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({}),
+    };
+  };
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        backendCloudPublishBtn,
+        backendCommunityList,
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const first = backendCloudPublishBtn.listeners.click();
+    const second = backendCloudPublishBtn.listeners.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(publishPostCount, 1);
+    releasePublish();
+    await Promise.all([first, second]);
+
+    assert.equal(publishPostCount, 1);
     assert.equal(backendCloudStatus.textContent, "Latest cloud save published.");
   } finally {
     globalThis.document = previousDocument;

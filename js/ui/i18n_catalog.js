@@ -549,6 +549,13 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Project export includes appearance and transport settings.": { zh: "项目导出会包含外观和交通设置。", en: "Project export includes appearance and transport settings." },
   "Project file downloaded.": { zh: "项目文件已下载。", en: "Project file downloaded." },
   "Project ZIP package downloaded.": { zh: "项目 ZIP 包已下载。", en: "Project ZIP package downloaded." },
+  "Project ZIP cannot be read by this browser.": { zh: "当前浏览器无法读取项目 ZIP。", en: "Project ZIP cannot be read by this browser." },
+  "Project ZIP must include map_project.json.": { zh: "项目 ZIP 必须包含 map_project.json。", en: "Project ZIP must include map_project.json." },
+  "Project import failed": { zh: "项目导入失败", en: "Project import failed" },
+  "Local load accepts project JSON or project ZIP packages. Community saves open from Account.": {
+    zh: "本地加载支持项目 JSON 或项目 ZIP 包。社区保存从账号入口打开。",
+    en: "Local load accepts project JSON or project ZIP packages. Community saves open from Account.",
+  },
   "Project saved": { zh: "项目已保存", en: "Project saved" },
   "Unsaved project changes.": { zh: "项目有未保存改动。", en: "Unsaved project changes." },
   "Exporting project file with appearance and transport settings.": { zh: "正在导出包含外观和交通设置的项目文件。", en: "Exporting project file with appearance and transport settings." },
