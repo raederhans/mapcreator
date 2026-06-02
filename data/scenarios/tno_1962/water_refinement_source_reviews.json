@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "scenario_id": "tno_1962",
+  "reviewed_at": "2026-06-02",
+  "features": [
+    {
+      "id": "tno_norwegian_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-02",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24024'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_r='23617'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX mrgid_sr='24024' returns Norwegian Sea as an Arctic Ocean sub_region with no level_1, level_2, level_3, or level_4 child identifiers.",
+        "Marine Regions SeaVoX mrgid_r='23617' lists Norwegian Sea beside Greenland Sea, Iceland Sea, and Barents Sea as Arctic sub_region siblings."
+      ]
+    },
+    {
+      "id": "tno_caribbean_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-02",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4287 OR mrgid=4288"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='CARIBBEAN SEA' OR sub_region='STRAITS OF FLORIDA' OR sub_region='GULF OF MEXICO'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4287 returns Caribbean Sea as a single polygon record; mrgid=4288 is Gulf of Mexico.",
+        "Marine Regions SeaVoX identifies Caribbean Sea as mrgid_sr='24042' with no level_3 or level_4 child identifiers; Straits of Florida and Gulf of Mexico are sibling sub_region records under Northwest Atlantic Ocean."
+      ]
+    },
+    {
+      "id": "tno_philippine_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-02",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24109'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l2='23640'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX mrgid_sr='24109' returns Philippine Sea as a Northwest Pacific Ocean sub_region with no level_3 or level_4 child identifiers.",
+        "Marine Regions SeaVoX mrgid_l2='23640' lists Philippine Sea beside Yellow Sea, East China Sea, Japan Sea, Taiwan Strait, and other Northwest Pacific sub_region siblings."
+      ]
+    }
+  ]
+}

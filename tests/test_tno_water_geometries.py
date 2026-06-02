@@ -1053,13 +1053,15 @@ def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
         generated_at="2026-06-01T00:00:00Z",
     )
 
-    assert report["contract"]["schema_version"] == 3
+    assert report["contract"]["schema_version"] == 4
     assert report["contract"]["high_vertex_review_percentile"] == 0.90
+    assert report["contract"]["terminal_public_source_status"] == "terminal_public_source"
     assert report["summary"]["marine_macro_count"] == 14
     assert report["summary"]["marine_macro_with_children_count"] == 2
     assert report["summary"]["marine_macro_without_children_count"] == 12
     assert report["summary"]["low_precision_candidate_count"] == 1
     assert report["summary"]["source_replacement_candidate_count"] == 3
+    assert report["summary"]["terminal_public_source_candidate_count"] == 0
     assert report["summary"]["backlog_candidate_count"] == 12
     assert report["summary"]["provenance_gap_count"] == 0
     assert report["summary"]["source_summary"] == {"local_clone": 3, "other": 1, "marine_regions": 10}
@@ -1109,7 +1111,7 @@ def test_tno_water_family_refinement_audit_reports_high_precision_review_candida
 
     features = [
         make_macro(index, vertex_count)
-        for index, vertex_count in enumerate([100, 101, 102, 103, 104, 105, 106, 107, 108, 130, 140], start=1)
+        for index, vertex_count in enumerate([100, 101, 102, 103, 104, 105, 106, 107, 108, 130, 140, 150], start=1)
     ]
     features.append({
         "type": "Feature",
@@ -1142,23 +1144,132 @@ def test_tno_water_family_refinement_audit_reports_high_precision_review_candida
     report = build_family_refinement_report(
         {"type": "FeatureCollection", "features": features},
         provenance_payload=provenance_payload,
+        source_review_payload={
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{
+                "id": "fixture_macro_10",
+                "review_status": "terminal_public_source",
+                "reviewed_at": "2026-06-02",
+                "source_queries": [{
+                    "source_layer": "seavox_v19",
+                    "cql_filter": "fixture=terminal",
+                }],
+                "evidence": ["Fixture source review found no child polygon source."],
+            }],
+        },
         generated_at="2026-06-01T00:00:00Z",
     )
 
     assert report["contract"]["high_vertex_review_threshold"] == 130
     assert report["summary"]["high_precision_split_candidate_count"] == 1
+    assert report["summary"]["terminal_public_source_candidate_count"] == 1
     assert report["summary"]["simplification_review_candidate_count"] == 1
-    assert report["summary"]["precision_summary"]["high_review"] == 2
+    assert report["summary"]["precision_summary"]["high_review"] == 3
     assert [item["id"] for item in report["high_precision_split_candidates"]] == [
-        "fixture_macro_10",
+        "fixture_macro_12",
     ]
     assert report["high_precision_split_candidates"][0]["recommended_action"] == "split_child_water_candidates"
     assert "high-detail macro still needs child water split review" in report["high_precision_split_candidates"][0]["reasons"]
+    assert [item["id"] for item in report["terminal_public_source_candidates"]] == [
+        "fixture_macro_10",
+    ]
+    assert report["terminal_public_source_candidates"][0]["recommended_action"] == "monitor_terminal_public_source"
+    assert "public source review found no verified child polygon source" in report["terminal_public_source_candidates"][0]["reasons"]
+    assert report["terminal_public_source_candidates"][0]["source_review"]["source_queries"][0]["cql_filter"] == "fixture=terminal"
     assert [item["id"] for item in report["simplification_review_candidates"]] == [
         "fixture_macro_11",
     ]
     assert report["simplification_review_candidates"][0]["recommended_action"] == "monitor_simplification_only_if_performance_requires"
     assert "high-detail macro already has child water coverage" in report["simplification_review_candidates"][0]["reasons"]
+
+
+def test_tno_water_family_refinement_rejects_invalid_source_review_contract():
+    feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_macro",
+            "name": "Fixture Macro",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "marine_regions_seavox_v19",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [float(point_index), 0.0]
+                for point_index in range(140)
+            ]],
+        },
+    }
+    base_record = {
+        "id": "fixture_macro",
+        "review_status": "terminal_public_source",
+        "reviewed_at": "2026-06-02",
+        "source_queries": [{
+            "source_layer": "seavox_v19",
+            "cql_filter": "fixture=terminal",
+        }],
+        "evidence": ["Fixture source review found no child polygon source."],
+    }
+
+    invalid_payloads = [
+        ("scenario_id must be tno_1962", {
+            "schema_version": 1,
+            "scenario_id": "wrong_scenario",
+            "reviewed_at": "2026-06-02",
+            "features": [base_record],
+        }),
+        ("unknown source review_status", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{**base_record, "review_status": "unreviewed"}],
+        }),
+        ("duplicate source review record", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [base_record, base_record],
+        }),
+        ("source review reviewed_at must use YYYY-MM-DD", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "not-a-date",
+            "features": [base_record],
+        }),
+        ("source review reviewed_at: fixture_macro must use YYYY-MM-DD", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{**base_record, "reviewed_at": "not-a-date"}],
+        }),
+        ("requires source_queries", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{**base_record, "source_queries": []}],
+        }),
+        ("requires evidence", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{**base_record, "evidence": []}],
+        }),
+    ]
+
+    for expected_message, source_review_payload in invalid_payloads:
+        try:
+            build_family_refinement_report(
+                {"type": "FeatureCollection", "features": [feature]},
+                source_review_payload=source_review_payload,
+                generated_at="2026-06-01T00:00:00Z",
+            )
+        except ValueError as exc:
+            assert expected_message in str(exc)
+        else:
+            raise AssertionError(f"invalid source review payload was accepted: {expected_message}")
 
 
 def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():

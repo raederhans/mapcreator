@@ -1,0 +1,32 @@
+# Ocean Next Refinement Context
+
+- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-next-refinement-20260602`
+- Branch: `codex/ocean-next-refinement-20260602`
+- Base: `origin/main` at `de3c6dff`.
+- Parent checkout has unrelated dirty files and is behind `origin/main`; this worktree isolates ocean changes.
+- Live process owner: main agent owns audit/build/test commands.
+- Subagents: read-only audit, mapping, and review lanes only unless explicitly assigned disjoint write scopes.
+- Relevant lessons:
+  - Marine Regions snapshots near 100 MiB need explicit `snapshot_simplify_tolerance`.
+  - Water-only rebuilds should replace only `scenario_water` in checked-in runtime topology.
+  - Open-ocean subtraction should reuse existing `component_min_area` pruning contracts.
+- Prior backlog rule: high-precision parent seas that still need child waters are split candidates, not automatic simplification candidates.
+- Current audit after source-review metadata:
+  - `high_precision_split_candidate_count=0`
+  - `terminal_public_source_candidate_count=3`
+  - `backlog_candidate_count=45`
+  - terminal monitored IDs: `tno_norwegian_sea`, `tno_caribbean_sea`, `tno_philippine_sea`
+- WFS child-source evidence:
+  - `mrgid_l4='23735'` returns Dover Strait plus Rye Bay (`mrgid_sr='24198'`).
+  - `mrgid_l4='23739'` returns Belfast Lough (`mrgid_sr='24233'`) plus North Channel.
+- Builder finding:
+  - Rebuilding water from generated checkpoints failed before publish on unrelated global ocean validation issues: `tno_southwest_pacific_ocean` / `tno_southern_indian_ocean` overlap, `tno_bering_sea` / `tno_gulf_of_alaska` seam gap, and `tno_south_indian_antarctic_ocean` D3 invalid.
+  - The checked-in scenario validator still passes, so this phase keeps the source-review audit improvement and defers `tno_rye_bay` / `tno_belfast_lough` geometry publication until the builder path is repaired.
+- Validation evidence:
+  - `python -c "import tests.test_tno_water_geometries as t; t.test_tno_water_family_refinement_audit_reports_low_precision_candidates(); t.test_tno_water_family_refinement_audit_reports_high_precision_review_candidates(); print('targeted audit tests passed')"` passed.
+  - `python tools\audit_tno_water_family_refinement.py` reports `high_precision_split_candidate_count=0`, `terminal_public_source_candidate_count=3`, and `backlog_candidate_count=45`.
+  - `python tools\validate_tno_water_geometries.py --scenario-dir data\scenarios\tno_1962 --report-path .runtime\reports\generated\ocean_next_refinement_geometry.json` passed.
+- Review fix:
+  - Source review metadata now requires `schema_version=1`, `scenario_id=tno_1962`, known `review_status`, unique macro IDs, `YYYY-MM-DD` reviewed dates, non-empty source queries, and non-empty evidence before it can move a high-detail macro into `monitor_terminal_public_source`.
+  - Backlog membership now uses an explicit actionable recommendation set instead of a string prefix check.
+  - Added a direct regression test for invalid source review contracts, including file-level and record-level illegal date strings.

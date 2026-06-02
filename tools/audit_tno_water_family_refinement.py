@@ -7,10 +7,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_WATER_PATH = ROOT / 'data' / 'scenarios' / 'tno_1962' / 'water_regions.geojson'
 PROVENANCE_PATH = ROOT / 'data' / 'scenarios' / 'tno_1962' / 'water_regions.provenance.json'
+SOURCE_REVIEW_PATH = ROOT / 'data' / 'scenarios' / 'tno_1962' / 'water_refinement_source_reviews.json'
 OUTPUT_PATH = ROOT / '.runtime' / 'reports' / 'generated' / 'ocean_family_refine_audit.json'
+SCENARIO_ID = 'tno_1962'
 LOW_VERTEX_COUNT_THRESHOLD = 100
 HIGH_VERTEX_REVIEW_PERCENTILE = 0.90
 GLOBAL_CLONE_SOURCE_STANDARD = 'tno_cloned_from_global_water_regions'
+TERMINAL_PUBLIC_SOURCE_STATUS = 'terminal_public_source'
+SOURCE_REVIEW_SCHEMA_VERSION = 1
+SOURCE_REVIEW_STATUSES = {TERMINAL_PUBLIC_SOURCE_STATUS}
+ACTIONABLE_RECOMMENDED_ACTIONS = {
+    'replace_or_refine_with_public_source',
+    'split_child_water_candidates',
+    'add_child_detail_candidates',
+}
 
 
 def _count_coordinate_positions(value) -> int:
@@ -93,6 +103,65 @@ def _build_provenance_index(provenance_payload: dict | None) -> dict[str, dict]:
     return records
 
 
+def _require_review_date(value, label: str) -> str:
+    text = str(value or '').strip()
+    try:
+        parsed = datetime.strptime(text, '%Y-%m-%d')
+    except ValueError as exc:
+        raise ValueError(f'{label} must use YYYY-MM-DD') from exc
+    if parsed.strftime('%Y-%m-%d') != text:
+        raise ValueError(f'{label} must use YYYY-MM-DD')
+    return text
+
+
+def _build_source_review_index(source_review_payload: dict | None, *, valid_feature_ids: set[str]) -> dict[str, dict]:
+    if not source_review_payload:
+        return {}
+    if int(source_review_payload.get('schema_version') or 0) != SOURCE_REVIEW_SCHEMA_VERSION:
+        raise ValueError(f'source review schema_version must be {SOURCE_REVIEW_SCHEMA_VERSION}')
+    if str(source_review_payload.get('scenario_id') or '').strip() != SCENARIO_ID:
+        raise ValueError(f'source review scenario_id must be {SCENARIO_ID}')
+    _require_review_date(source_review_payload.get('reviewed_at'), 'source review reviewed_at')
+    records: dict[str, dict] = {}
+    for item in source_review_payload.get('features', []) or []:
+        feature_id = str(item.get('id') or '').strip()
+        review_status = str(item.get('review_status') or '').strip()
+        if not feature_id or not review_status:
+            raise ValueError('source review records require id and review_status')
+        if feature_id in records:
+            raise ValueError(f'duplicate source review record: {feature_id}')
+        if feature_id not in valid_feature_ids:
+            raise ValueError(f'source review references unknown marine_macro id: {feature_id}')
+        if review_status not in SOURCE_REVIEW_STATUSES:
+            raise ValueError(f'unknown source review_status for {feature_id}: {review_status}')
+        reviewed_at = _require_review_date(item.get('reviewed_at'), f'source review reviewed_at: {feature_id}')
+        source_queries = item.get('source_queries') or []
+        if not isinstance(source_queries, list) or not source_queries:
+            raise ValueError(f'source review requires source_queries: {feature_id}')
+        for query in source_queries:
+            if not isinstance(query, dict):
+                raise ValueError(f'source review source_queries entries must be objects: {feature_id}')
+            source_layer = str(query.get('source_layer') or '').strip()
+            source_filter = str(query.get('cql_filter') or query.get('source_query') or '').strip()
+            if not source_layer or not source_filter:
+                raise ValueError(f'source review source_queries require source_layer and query/filter: {feature_id}')
+        evidence = item.get('evidence') or []
+        if not isinstance(evidence, list) or not any(str(entry or '').strip() for entry in evidence):
+            raise ValueError(f'source review requires evidence: {feature_id}')
+        records[feature_id] = {
+            'review_status': review_status,
+            'reviewed_at': reviewed_at,
+            'source_queries': list(source_queries),
+            'evidence': list(evidence),
+        }
+    return records
+
+
+def _has_terminal_public_source_review(row: dict) -> bool:
+    review = row.get('source_review') or {}
+    return review.get('review_status') == TERMINAL_PUBLIC_SOURCE_STATUS
+
+
 def _candidate_reasons(row: dict) -> list[str]:
     reasons = []
     if row.get('child_count', 0) == 0:
@@ -102,7 +171,10 @@ def _candidate_reasons(row: dict) -> list[str]:
     if int(row.get('vertex_count') or 0) < LOW_VERTEX_COUNT_THRESHOLD:
         reasons.append(f'vertex_count below {LOW_VERTEX_COUNT_THRESHOLD}')
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) == 0:
-        reasons.append('high-detail macro still needs child water split review')
+        if _has_terminal_public_source_review(row):
+            reasons.append('public source review found no verified child polygon source')
+        else:
+            reasons.append('high-detail macro still needs child water split review')
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) > 0:
         reasons.append('high-detail macro already has child water coverage')
     if row.get('provenance_status') != 'recorded':
@@ -139,6 +211,12 @@ def _candidate_priority(row: dict) -> str:
 def _recommended_action(row: dict) -> str:
     if row.get('source_family') == 'local_clone' or row.get('precision_band') == 'low':
         return 'replace_or_refine_with_public_source'
+    if (
+        row.get('precision_band') == 'high_review'
+        and row.get('child_count', 0) == 0
+        and _has_terminal_public_source_review(row)
+    ):
+        return 'monitor_terminal_public_source'
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) == 0:
         return 'split_child_water_candidates'
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) > 0:
@@ -148,7 +226,18 @@ def _recommended_action(row: dict) -> str:
     return 'monitor'
 
 
-def build_report(payload: dict, *, provenance_payload: dict | None = None, generated_at: str | None = None) -> dict:
+def _is_actionable_backlog(row: dict) -> bool:
+    action = str(row.get('recommended_action') or '').strip()
+    return action in ACTIONABLE_RECOMMENDED_ACTIONS
+
+
+def build_report(
+    payload: dict,
+    *,
+    provenance_payload: dict | None = None,
+    source_review_payload: dict | None = None,
+    generated_at: str | None = None,
+) -> dict:
     features = payload.get('features', []) or []
     children_by_parent: dict[str, list[dict]] = {}
     macros: list[dict] = []
@@ -161,10 +250,15 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
             children_by_parent.setdefault(parent_id, []).append(_feature_record(feature))
         if str(props.get('region_group') or '').strip() == 'marine_macro':
             macros.append(feature)
+    source_review_by_id = _build_source_review_index(
+        source_review_payload,
+        valid_feature_ids={_feature_record(feature)['id'] for feature in macros},
+    )
 
     family_rows = []
     unrefined = []
     high_precision_split_candidates = []
+    terminal_public_source_candidates = []
     simplification_review_candidates = []
     provenance_gaps = []
     macro_vertex_counts = [_geometry_vertex_count(feature) for feature in macros]
@@ -184,6 +278,7 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
         )
         row['provenance_status'] = 'recorded' if provenance else 'missing'
         row['provenance'] = provenance or {}
+        row['source_review'] = source_review_by_id.get(feature_id, {})
         row['recommended_action'] = _recommended_action(row)
         row['candidate_score'] = _candidate_score(row)
         family_rows.append(row)
@@ -200,7 +295,11 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
                 'reasons': _candidate_reasons(row),
             }
             if row['child_count'] == 0:
-                high_precision_split_candidates.append(high_precision_record)
+                if row['recommended_action'] == 'monitor_terminal_public_source':
+                    high_precision_record['source_review'] = row['source_review']
+                    terminal_public_source_candidates.append(high_precision_record)
+                else:
+                    high_precision_split_candidates.append(high_precision_record)
             elif row['recommended_action'] == 'monitor_simplification_only_if_performance_requires':
                 simplification_review_candidates.append(high_precision_record)
         if row['provenance_status'] != 'recorded':
@@ -223,6 +322,7 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
                 'precision_band': row['precision_band'],
                 'child_count': row['child_count'],
                 'provenance_status': row['provenance_status'],
+                'source_review': row['source_review'],
                 'candidate_score': row['candidate_score'],
                 'reasons': reasons,
                 'suggested_priority': _candidate_priority(row),
@@ -240,7 +340,7 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
     ]
     backlog_candidates = [
         row for row in unrefined
-        if row['recommended_action'] != 'monitor'
+        if _is_actionable_backlog(row)
     ]
     source_summary = {}
     precision_summary = {}
@@ -250,13 +350,14 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
 
     report = {
         'generated_at': generated_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
-        'scenario_id': 'tno_1962',
+        'scenario_id': SCENARIO_ID,
         'contract': {
-            'schema_version': 3,
+            'schema_version': 4,
             'low_vertex_count_threshold': LOW_VERTEX_COUNT_THRESHOLD,
             'high_vertex_review_percentile': HIGH_VERTEX_REVIEW_PERCENTILE,
             'high_vertex_review_threshold': high_vertex_review_threshold,
             'global_clone_source_standard': GLOBAL_CLONE_SOURCE_STANDARD,
+            'terminal_public_source_status': TERMINAL_PUBLIC_SOURCE_STATUS,
         },
         'summary': {
             'marine_macro_count': len(family_rows),
@@ -265,6 +366,7 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
             'low_precision_candidate_count': len(low_precision_candidates),
             'source_replacement_candidate_count': len(source_replacement_candidates),
             'high_precision_split_candidate_count': len(high_precision_split_candidates),
+            'terminal_public_source_candidate_count': len(terminal_public_source_candidates),
             'simplification_review_candidate_count': len(simplification_review_candidates),
             'provenance_gap_count': len(provenance_gaps),
             'backlog_candidate_count': len(backlog_candidates),
@@ -294,6 +396,10 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
             high_precision_split_candidates,
             key=lambda item: (-item['vertex_count'], item['name']),
         ),
+        'terminal_public_source_candidates': sorted(
+            terminal_public_source_candidates,
+            key=lambda item: (-item['vertex_count'], item['name']),
+        ),
         'simplification_review_candidates': sorted(
             simplification_review_candidates,
             key=lambda item: (-item['vertex_count'], item['name']),
@@ -306,7 +412,12 @@ def build_report(payload: dict, *, provenance_payload: dict | None = None, gener
 def main() -> int:
     payload = json.loads(SCENARIO_WATER_PATH.read_text(encoding='utf-8'))
     provenance_payload = json.loads(PROVENANCE_PATH.read_text(encoding='utf-8')) if PROVENANCE_PATH.exists() else None
-    report = build_report(payload, provenance_payload=provenance_payload)
+    source_review_payload = json.loads(SOURCE_REVIEW_PATH.read_text(encoding='utf-8')) if SOURCE_REVIEW_PATH.exists() else None
+    report = build_report(
+        payload,
+        provenance_payload=provenance_payload,
+        source_review_payload=source_review_payload,
+    )
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report['summary'], ensure_ascii=False))

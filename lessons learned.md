@@ -187,6 +187,7 @@
 
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
+- 发布 water 几何前先让 builder 复用已验证 checkpoint；从旧 checkpoint 全量重建会把非目标 global ocean 拓扑问题提前拉进本轮发布。
 
 ### 主图 transport 恢复不能写死 family 列表
 - project import/export 保存的是已 Apply 到主图的 pack 身份；恢复时应从已保存的 family map 读取，并用主图 pack registry 过滤 workbench-only pack。
