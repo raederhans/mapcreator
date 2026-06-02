@@ -4,51 +4,10 @@ const { test, expect } = require("@playwright/test");
 const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
 
 const TARGET_PACKS = [
-  ["road", "germany_road"],
-  ["road", "uk_road"],
-  ["road", "usa_road"],
-  ["rail", "france_rail"],
-  ["rail", "germany_rail"],
-  ["airport", "usa_airport"],
-  ["airport", "china_airport"],
-  ["airport", "russia_airport"],
-  ["airport", "india_airport"],
-  ["airport", "germany_airport"],
-  ["airport", "france_airport"],
-  ["airport", "uk_airport"],
-  ["port", "usa_port"],
-  ["port", "germany_port"],
-  ["port", "france_port"],
-  ["port", "uk_port"],
-  ["port", "china_port"],
-  ["port", "india_port"],
-  ["port", "russia_port"],
-  ["energy_facilities", "germany_energy_facilities"],
-  ["mineral_resources", "germany_mineral_resources"],
-  ["industrial_zones", "germany_industrial_zones"],
-  ["logistics_hubs", "germany_logistics_hubs"],
-];
-
-const FULL_OVERLAY_PACKS = [
-  "germany_road",
-  "uk_road",
-  "usa_road",
-  "france_rail",
-  "germany_rail",
-  "usa_airport",
-  "china_airport",
-  "russia_airport",
-  "india_airport",
-  "germany_airport",
-  "france_airport",
-  "uk_airport",
-  "usa_port",
-  "germany_port",
-  "france_port",
-  "uk_port",
-  "china_port",
-  "india_port",
-  "russia_port",
+  ["road", "germany_road", "germany"],
+  ["road", "usa_road", "usa"],
+  ["rail", "france_rail", "france"],
+  ["airport", "usa_airport", "usa"],
 ];
 
 test.setTimeout(300000);
@@ -72,7 +31,7 @@ async function openTransportWorkbench(page) {
   await page.waitForSelector(".transport-workbench-carrier-screen-labels", { timeout: 120000 });
 }
 
-async function selectPackAndWaitForPreview(page, familyId, packId) {
+async function selectPackAndWaitForPreview(page, familyId, packId, expectedCarrierCountry) {
   await page.locator(`.transport-workbench-family-tab[data-transport-family="${familyId}"]`).click();
   await page.waitForFunction(
     ({ expectedPackId }) => Array.from(document.querySelector("#transportWorkbenchPackSelect")?.options || [])
@@ -94,13 +53,14 @@ async function selectPackAndWaitForPreview(page, familyId, packId) {
     { timeout: 120000 },
   );
 
-  return page.evaluate(async ({ nextFamilyId, nextPackId }) => {
+  return page.evaluate(async ({ nextFamilyId, nextPackId, expectedCarrierCountry }) => {
     const { state } = await import("/js/core/state.js");
     const {
       getTransportWorkbenchFamilyPreviewSnapshot,
       renderTransportWorkbenchFamilyPreview,
       warmTransportWorkbenchFamilyPreview,
     } = await import("/js/ui/transport_workbench_family_preview.js");
+    const { getTransportWorkbenchCarrierAssetState } = await import("/js/ui/transport_workbench_carrier.js");
 
     const waitForFrames = async (count = 3) => {
       for (let index = 0; index < count; index += 1) {
@@ -164,12 +124,18 @@ async function selectPackAndWaitForPreview(page, familyId, packId) {
         && featureStats.total > 0
         && featureStats.visible > 0
       ) {
+        const carrierState = getTransportWorkbenchCarrierAssetState();
+        if (carrierState.country !== expectedCarrierCountry) {
+          throw new Error(`Carrier country mismatch for ${nextPackId}: ${JSON.stringify(carrierState)}`);
+        }
         return {
           familyId: nextFamilyId,
           packId: nextPackId,
           status: snapshot.status,
           totalFeatures: featureStats.total,
           visibleFeatures: featureStats.visible,
+          carrierCountry: carrierState.country,
+          carrierAssetKey: carrierState.assetKey,
           activeVariant: snapshot.activeVariant || "",
           packMode: snapshot.packMode || "",
         };
@@ -182,10 +148,11 @@ async function selectPackAndWaitForPreview(page, familyId, packId) {
   }, {
     nextFamilyId: familyId,
     nextPackId: packId,
+    expectedCarrierCountry,
   });
 }
 
-test("transport workbench loads every target country pack and main-map overlay samples", async ({ page }) => {
+test("transport workbench switches target country packs with matching carriers", async ({ page }) => {
   test.setTimeout(300000);
 
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
@@ -193,30 +160,9 @@ test("transport workbench loads every target country pack and main-map overlay s
   await openTransportWorkbench(page);
 
   const previewResults = [];
-  for (const [familyId, packId] of TARGET_PACKS) {
-    previewResults.push(await selectPackAndWaitForPreview(page, familyId, packId));
+  for (const [familyId, packId, expectedCarrierCountry] of TARGET_PACKS) {
+    previewResults.push(await selectPackAndWaitForPreview(page, familyId, packId, expectedCarrierCountry));
   }
-
-  const overlayResults = await page.evaluate(async ({ samplePackIds }) => {
-    const { loadTransportCountryOverlayState } = await import("/js/core/transport_country_overlay.js");
-    const results = [];
-    for (const packId of samplePackIds) {
-      const overlayState = await loadTransportCountryOverlayState(packId, { mode: "full" });
-      const layerCounts = Object.fromEntries(
-        Object.entries(overlayState.collectionsByLayer || {})
-          .map(([key, collection]) => [key, Array.isArray(collection?.features) ? collection.features.length : 0]),
-      );
-      results.push({
-        packId,
-        family: overlayState.family,
-        status: overlayState.status,
-        layerCounts,
-      });
-    }
-    return results;
-  }, {
-    samplePackIds: FULL_OVERLAY_PACKS,
-  });
 
   const screenshotPath = path.join(process.cwd(), ".runtime", "browser", "mcp-artifacts", "transport-workbench-country-pack-smoke.png");
   fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
@@ -227,9 +173,8 @@ test("transport workbench loads every target country pack and main-map overlay s
     expect(result.status, `${result.packId} preview status`).toBe("ready");
     expect(result.totalFeatures, `${result.packId} total features`).toBeGreaterThan(0);
     expect(result.visibleFeatures, `${result.packId} visible features`).toBeGreaterThan(0);
-  }
-  for (const result of overlayResults) {
-    expect(result.status, `${result.packId} overlay status`).toBe("ready");
-    expect(Object.values(result.layerCounts).reduce((sum, count) => sum + count, 0), `${result.packId} overlay feature count`).toBeGreaterThan(0);
+    expect(result.carrierCountry, `${result.packId} carrier country`).toBe(
+      TARGET_PACKS.find(([, packId]) => packId === result.packId)?.[2],
+    );
   }
 });

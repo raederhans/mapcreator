@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-06-02T01:48:37.729280Z",
+  "carrierId": "usa",
+  "source": "data/ne_10m_admin_1_states_provinces.shp",
+  "sourceKind": "Natural Earth 10m admin1",
+  "projection": {
+    "proj4": "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=38.0 +lon_0=-96.0 +datum=WGS84 +units=m +no_defs",
+    "type": "geoConicEqualArea",
+    "center": [
+      -96.0,
+      38.0
+    ],
+    "parallels": [
+      29.5,
+      45.5
+    ],
+    "precision": 0.2
+  },
+  "viewBox": {
+    "width": 1600,
+    "height": 900
+  },
+  "defaultCamera": {
+    "scale": 1.0,
+    "translateX": 0.0,
+    "translateY": 0.0,
+    "minScale": 1.0,
+    "maxScale": 3.6,
+    "rotationQuarterTurns": 0
+  },
+  "lod": {
+    "overview": {
+      "tolerance_m": 2800.0,
+      "min_area_m2": 12000000.0
+    },
+    "detail": {
+      "tolerance_m": 650.0,
+      "min_area_m2": 1500000.0
+    }
+  },
+  "frames": {
+    "main": {
+      "type": "main",
+      "extent": {
+        "x": 18,
+        "y": 18,
+        "width": 1188,
+        "height": 864
+      },
+      "prefectureCodes": [
+        "US-WA",
+        "US-ID",
+        "US-MT",
+        "US-ND",
+        "US-MN",
+        "US-MI",
+        "US-OH",
+        "US-PA",
+        "US-NY",
+        "US-VT",
+        "US-NH",
+        "US-ME",
+        "US-AZ",
+        "US-CA",
+        "US-NM",
+        "US-TX",
+        "US-LA",
+        "US-MS",
+        "US-AL",
+        "US-FL",
+        "US-GA",
+        "US-SC",
+        "US-NC",
+        "US-VA",
+        "US-DC",
+        "US-MD",
+        "US-DE",
+        "US-NJ",
+        "US-CT",
+        "US-RI",
+        "US-MA",
+        "US-OR",
+        "US-UT",
+        "US-WY",
+        "US-NV",
+        "US-CO",
+        "US-SD",
+        "US-NE",
+        "US-KS",
+        "US-OK",
+        "US-IA",
+        "US-MO",
+        "US-WI",
+        "US-IL",
+        "US-KY",
+        "US-AR",
+        "US-TN",
+        "US-WV",
+        "US-IN"
+      ],
+      "featureCount": 49
+    },
+    "alaska": {
+      "type": "inset",
+      "extent": {
+        "x": 1236,
+        "y": 82,
+        "width": 324,
+        "height": 342
+      },
+      "prefectureCodes": [
+        "US-AK"
+      ],
+      "featureCount": 1
+    },
+    "hawaii": {
+      "type": "inset",
+      "extent": {
+        "x": 1258,
+        "y": 510,
+        "width": 282,
+        "height": 188
+      },
+      "prefectureCodes": [
+        "US-HI"
+      ],
+      "featureCount": 1
+    }
+  },
+  "scopePolicy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs."
+}

@@ -75,5 +75,13 @@
         }
       }
     }
+  },
+  "carrier_asset_key": "transport_carrier:russia",
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:russia",
+      "scope_policy": "pack country carrier",
+      "projection_profile": "russia"
+    }
   }
 }

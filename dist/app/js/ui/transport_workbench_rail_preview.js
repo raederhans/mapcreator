@@ -2,6 +2,7 @@ import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
+  ensureTransportWorkbenchCarrierForManifest,
   projectTransportWorkbenchCarrierGeometry,
   projectTransportWorkbenchCarrierPoint,
   projectTransportWorkbenchCarrierScenePoint,
@@ -79,6 +80,7 @@ const lineRuntime = createTransportWorkbenchLinePackRuntime({
     totalStations: 0,
     filteredLines: 0,
   },
+  prepareCarrier: ensureTransportWorkbenchCarrierForManifest,
   async buildPack({ mode, manifest, getPackPath, loadTransportAsset }) {
     const railwaysPath = getPackPath(manifest, mode, "railways");
     const stationsPath = getPackPath(manifest, mode, "rail_stations_major");
@@ -176,7 +178,7 @@ function normalizeImportance(value) {
 
 function createRailFeature(rawFeature) {
   const properties = rawFeature?.properties || {};
-  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature.geometry, "main");
+  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature.geometry);
   if (!projected?.geometry) return null;
   const name = String(properties.name || properties.line_name || "").trim();
   return {
@@ -199,7 +201,7 @@ function createStationFeature(rawFeature) {
   const properties = rawFeature?.properties || {};
   const coordinates = rawFeature?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
-  const projected = projectTransportWorkbenchCarrierPoint(coordinates[0], coordinates[1], "main");
+  const projected = projectTransportWorkbenchCarrierPoint(coordinates[0], coordinates[1]);
   if (!projected) return null;
   return {
     id: String(properties.id || rawFeature.id || properties.name || ""),

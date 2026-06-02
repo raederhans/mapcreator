@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-06-02T01:48:29.253252Z",
+  "carrierId": "germany",
+  "source": "data/ne_10m_admin_1_states_provinces.shp",
+  "sourceKind": "Natural Earth 10m admin1",
+  "projection": {
+    "proj4": "+proj=lcc +lat_1=48.5 +lat_2=54.0 +lat_0=51.1 +lon_0=10.4 +datum=WGS84 +units=m +no_defs",
+    "type": "geoConicConformal",
+    "center": [
+      10.4,
+      51.1
+    ],
+    "parallels": [
+      48.5,
+      54.0
+    ],
+    "precision": 0.2
+  },
+  "viewBox": {
+    "width": 1600,
+    "height": 900
+  },
+  "defaultCamera": {
+    "scale": 1.0,
+    "translateX": 0.0,
+    "translateY": 0.0,
+    "minScale": 1.0,
+    "maxScale": 4.0,
+    "rotationQuarterTurns": 0
+  },
+  "lod": {
+    "overview": {
+      "tolerance_m": 2800.0,
+      "min_area_m2": 12000000.0
+    },
+    "detail": {
+      "tolerance_m": 650.0,
+      "min_area_m2": 1500000.0
+    }
+  },
+  "frames": {
+    "main": {
+      "type": "main",
+      "extent": {
+        "x": 18,
+        "y": 18,
+        "width": 1564,
+        "height": 864
+      },
+      "prefectureCodes": [
+        "DE-SN",
+        "DE-BY",
+        "DE-RP",
+        "DE-SL",
+        "DE-SH",
+        "DE-NI",
+        "DE-NW",
+        "DE-BW",
+        "DE-BB",
+        "DE-MV",
+        "DE-HB",
+        "DE-HH",
+        "DE-HE",
+        "DE-TH",
+        "DE-ST",
+        "DE-BE"
+      ],
+      "featureCount": 16
+    }
+  },
+  "scopePolicy": "Germany national mainland and islands represented by Natural Earth admin1."
+}

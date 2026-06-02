@@ -1,4 +1,5 @@
 import {
+  ensureTransportWorkbenchCarrierForManifest,
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
   projectTransportWorkbenchCarrierPoint,
@@ -97,64 +98,15 @@ function shouldUseFullPack(config, definition, scale) {
   return scale >= normalizeNumber(definition.fullPackScaleThreshold, 1.26);
 }
 
-function getManifestClipBbox(manifest) {
-  const bbox = Array.isArray(manifest?.clip_bbox) ? manifest.clip_bbox.map(Number) : [];
-  if (bbox.length !== 4 || bbox.some((value) => !Number.isFinite(value))) return null;
-  const [minLon, minLat, maxLon, maxLat] = bbox;
-  if (minLon >= maxLon || minLat >= maxLat) return null;
-  return { minLon, minLat, maxLon, maxLat };
-}
-
-function getMainCarrierPreviewBounds() {
-  const mainRoot = getTransportWorkbenchCarrierOverlayRoots()?.land?.main || null;
-  const box = mainRoot?.getBBox?.();
-  if (box && Number(box.width) > 0 && Number(box.height) > 0) {
-    return {
-      x: Number(box.x),
-      y: Number(box.y),
-      width: Number(box.width),
-      height: Number(box.height),
-    };
-  }
-  const svg = mainRoot?.ownerSVGElement || document.querySelector(".transport-workbench-carrier-svg");
-  const viewBox = svg?.viewBox?.baseVal || null;
-  if (viewBox && Number(viewBox.width) > 0 && Number(viewBox.height) > 0) {
-    const insetX = Number(viewBox.width) * 0.12;
-    const insetY = Number(viewBox.height) * 0.12;
-    return {
-      x: Number(viewBox.x) + insetX,
-      y: Number(viewBox.y) + insetY,
-      width: Number(viewBox.width) - (insetX * 2),
-      height: Number(viewBox.height) - (insetY * 2),
-    };
-  }
-  return null;
-}
-
-function projectManifestClipPoint(lon, lat, manifest) {
-  const bbox = getManifestClipBbox(manifest);
-  const bounds = getMainCarrierPreviewBounds();
-  if (!bbox || !bounds) return null;
-  const xRatio = (Number(lon) - bbox.minLon) / (bbox.maxLon - bbox.minLon);
-  const yRatio = (Number(lat) - bbox.minLat) / (bbox.maxLat - bbox.minLat);
-  if (!Number.isFinite(xRatio) || !Number.isFinite(yRatio)) return null;
-  return {
-    frameId: "main",
-    x: bounds.x + Math.max(0, Math.min(1, xRatio)) * bounds.width,
-    y: bounds.y + (1 - Math.max(0, Math.min(1, yRatio))) * bounds.height,
-  };
-}
-
 function createDiamondPath(x, y, radius) {
   return `M ${x} ${y - radius} L ${x + radius} ${y} L ${x} ${y + radius} L ${x - radius} ${y} Z`;
 }
 
-function createPointFeature(rawFeature, definition, variantId = "", manifest = null) {
+function createPointFeature(rawFeature, definition, variantId = "") {
   const properties = rawFeature?.properties || {};
   const coordinates = rawFeature?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
-  const projected = projectTransportWorkbenchCarrierPoint(coordinates[0], coordinates[1], "main")
-    || projectManifestClipPoint(coordinates[0], coordinates[1], manifest);
+  const projected = projectTransportWorkbenchCarrierPoint(coordinates[0], coordinates[1]);
   if (!projected) return null;
   const featureId = typeof definition.getFeatureId === "function"
     ? definition.getFeatureId(rawFeature)
@@ -543,6 +495,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     }
     startAuditLoad(manifest);
     startSubtypeCatalogLoad(manifest);
+    await ensureTransportWorkbenchCarrierForManifest(manifest);
     const variantId = resolveVariantId(manifest, definition, config);
     const cacheKey = getPackCacheKey(mode, variantId);
     runtime.loadState.singlePack = isSinglePackPath(manifest, definition.packKey, definition, variantId);
@@ -595,7 +548,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
         });
         const sourceFeatures = Array.isArray(collection?.features) ? collection.features : [];
         const features = sourceFeatures
-          .map((feature) => createPointFeature(feature, definition, variantId, manifest))
+          .map((feature) => createPointFeature(feature, definition, variantId))
           .filter(Boolean);
         if (sourceFeatures.length > 0 && features.length === 0) {
           const variantPrefix = variantId ? `${variantId}/` : "";

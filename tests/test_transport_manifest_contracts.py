@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from map_builder.transport_carrier_registry import CARRIER_RUNTIME_ASSETS, PACK_CARRIER_ASSET_KEYS
 from map_builder.transport_workbench_contracts import validate_transport_manifest
 from tools.check_transport_workbench_manifests import discover_manifest_paths, inspect_transport_manifests
 
@@ -310,20 +311,53 @@ class TransportManifestContractsTest(unittest.TestCase):
             for field_name in legacy_field_names:
                 self.assertNotIn(f'"{field_name}"', content, builder_path.as_posix())
 
+    def test_target_pack_manifests_declare_registered_carrier_asset_key(self) -> None:
+        runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
+        runtime_assets = runtime_asset_registry.get("assets") or {}
+        failures: list[str] = []
+        for pack_id, expected_asset_key in sorted(PACK_CARRIER_ASSET_KEYS.items()):
+            manifest_path = PROJECT_ROOT / "data" / "transport_layers" / pack_id / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            carrier_extension = manifest.get("extensions", {}).get("carrier", {})
+            if manifest.get("carrier_asset_key") != expected_asset_key:
+                failures.append(f"{pack_id}: carrier_asset_key")
+            if carrier_extension.get("carrier_asset_key") != expected_asset_key:
+                failures.append(f"{pack_id}: extensions.carrier.carrier_asset_key")
+            if expected_asset_key not in runtime_assets:
+                failures.append(f"{pack_id}: runtime asset {expected_asset_key}")
+
+        self.assertFalse(failures, failures)
+
     def test_carrier_manifest_is_valid_under_shared_contract(self) -> None:
-        carrier_manifest = json.loads(
-            (PROJECT_ROOT / "data" / "transport_layers" / "japan_corridor" / "manifest.json").read_text(encoding="utf-8")
-        )
-        errors = validate_transport_manifest(carrier_manifest, source_label="carrier")
-        self.assertFalse(errors, errors)
+        manifest_paths = [PROJECT_ROOT / "data" / "transport_layers" / "japan_corridor" / "manifest.json"]
+        manifest_paths.extend(sorted((PROJECT_ROOT / "data" / "transport_layers").glob("*_carrier/manifest.json")))
+        failures: list[str] = []
+        for manifest_path in manifest_paths:
+            carrier_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            errors = validate_transport_manifest(carrier_manifest, source_label=manifest_path.as_posix())
+            if errors:
+                failures.extend(errors)
+        self.assertFalse(failures, failures)
 
     def test_carrier_runtime_asset_key_and_catalog_key_share_the_same_url(self) -> None:
         runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
         catalog_payload = json.loads(CATALOG_JSON.read_text(encoding="utf-8"))
         catalog_entries = {entry["key"]: entry for entry in catalog_payload.get("entries") or []}
+        expected_urls = {
+            "transport_carrier:japan_corridor": "data/transport_layers/japan_corridor/carrier.json",
+            **CARRIER_RUNTIME_ASSETS,
+        }
+        failures: list[str] = []
+        for asset_key, expected_url in sorted(expected_urls.items()):
+            runtime_entry = runtime_asset_registry.get("assets", {}).get(asset_key) or {}
+            if runtime_entry.get("url") != expected_url:
+                failures.append(f"{asset_key}:runtime_url:{runtime_entry.get('url')}")
+            catalog_namespace = Path(expected_url).parent.name
+            catalog_key = f"transport:{catalog_namespace}:carrier"
+            catalog_entry = catalog_entries.get(catalog_key) or {}
+            if catalog_entry.get("url") != expected_url:
+                failures.append(f"{asset_key}:catalog_url:{catalog_entry.get('url')}")
+            if catalog_entry.get("role") != "transport_carrier_payload":
+                failures.append(f"{asset_key}:catalog_role:{catalog_entry.get('role')}")
 
-        runtime_url = runtime_asset_registry["assets"]["transport_carrier:japan_corridor"]["url"]
-        catalog_url = catalog_entries["transport:japan_corridor:carrier"]["url"]
-
-        self.assertEqual(runtime_url, "data/transport_layers/japan_corridor/carrier.json")
-        self.assertEqual(catalog_url, runtime_url)
+        self.assertFalse(failures, failures)

@@ -288,6 +288,41 @@
       "url": "data/transport_layers/germany_logistics_hubs/manifest.json",
       "role": "transport_manifest",
       "family_id": "germany_logistics_hubs"
+    },
+    "transport_carrier:china": {
+      "url": "data/transport_layers/china_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "china"
+    },
+    "transport_carrier:france": {
+      "url": "data/transport_layers/france_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "france"
+    },
+    "transport_carrier:germany": {
+      "url": "data/transport_layers/germany_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "germany"
+    },
+    "transport_carrier:india": {
+      "url": "data/transport_layers/india_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "india"
+    },
+    "transport_carrier:russia": {
+      "url": "data/transport_layers/russia_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "russia"
+    },
+    "transport_carrier:uk": {
+      "url": "data/transport_layers/uk_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "uk"
+    },
+    "transport_carrier:usa": {
+      "url": "data/transport_layers/usa_carrier/carrier.json",
+      "role": "transport_workbench_carrier",
+      "family_id": "usa"
     }
   },
   "scenario_registry_key": "scenario_registry",

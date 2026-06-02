@@ -262,6 +262,12 @@
   "extensions": {
     "industrial_zones": {
       "variant_axis": "distribution"
+    },
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:japan_corridor",
+      "scope_policy": "pack country carrier",
+      "projection_profile": "japan_corridor"
     }
-  }
+  },
+  "carrier_asset_key": "transport_carrier:japan_corridor"
 }

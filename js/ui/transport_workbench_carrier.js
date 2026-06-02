@@ -15,7 +15,7 @@ const MAX_CAMERA_SCALE = 8;
 const DEFAULT_ROTATION_QUARTER_TURNS = 1;
 const ALTERNATE_ROTATION_QUARTER_TURNS = 0;
 
-let assetPromise = null;
+const assetPromiseByKey = new Map();
 let mountNode = null;
 let svgNode = null;
 let cameraNode = null;
@@ -32,6 +32,7 @@ let frameContexts = {};
 let rotationQuarterTurns = DEFAULT_ROTATION_QUARTER_TURNS;
 let sceneBaseBounds = null;
 let viewChangeListener = null;
+let activeAssetKey = DEFAULT_ASSET_KEY;
 
 const overlayRoots = {
   land: { main: null },
@@ -46,11 +47,25 @@ function getD3() {
   return globalThis.d3;
 }
 
-function loadAsset() {
-  if (!assetPromise) {
-    assetPromise = getAsset(DEFAULT_ASSET_KEY);
+function resolveCarrierAssetKey(assetKey) {
+  const normalized = String(assetKey || "").trim();
+  return normalized || DEFAULT_ASSET_KEY;
+}
+
+function resolveCarrierAssetKeyFromManifest(manifest) {
+  return resolveCarrierAssetKey(
+    manifest?.carrier_asset_key
+      || manifest?.extensions?.carrier?.carrier_asset_key
+      || DEFAULT_ASSET_KEY
+  );
+}
+
+function loadAsset(assetKey = DEFAULT_ASSET_KEY) {
+  const resolvedKey = resolveCarrierAssetKey(assetKey);
+  if (!assetPromiseByKey.has(resolvedKey)) {
+    assetPromiseByKey.set(resolvedKey, getAsset(resolvedKey));
   }
-  return assetPromise;
+  return assetPromiseByKey.get(resolvedKey);
 }
 
 function createSvgNode(tagName) {
@@ -163,9 +178,19 @@ function getFrameRectPath(frameDefinition) {
 function createProjection(frameDefinition) {
   const d3 = getD3();
   const projectionConfig = asset.projection || {};
-  const projection = d3.geoConicConformal();
-  projection.parallels(projectionConfig.parallels || [33, 37]);
-  projection.center(projectionConfig.center || [136.5, 35]);
+  const projectionType = String(projectionConfig.type || "geoConicConformal");
+  const projectionFactory = projectionType === "geoConicEqualArea" && typeof d3.geoConicEqualArea === "function"
+    ? d3.geoConicEqualArea
+    : projectionType === "geoMercator" && typeof d3.geoMercator === "function"
+      ? d3.geoMercator
+      : d3.geoConicConformal;
+  const projection = projectionFactory();
+  if (typeof projection.parallels === "function") {
+    projection.parallels(projectionConfig.parallels || [33, 37]);
+  }
+  if (typeof projection.center === "function") {
+    projection.center(projectionConfig.center || [136.5, 35]);
+  }
   projection.precision(Number(projectionConfig.precision) || 0.2);
 
   const extent = frameDefinition.extent;
@@ -479,7 +504,9 @@ function buildCarrierSvg(carrierAsset) {
   svg.setAttribute("viewBox", `0 0 ${carrierAsset.viewBox.width} ${carrierAsset.viewBox.height}`);
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", t("Japan transport workbench carrier", "ui"));
+  svg.setAttribute("aria-label", String(carrierAsset.label || carrierAsset.country || carrierAsset.carrier_id || "Transport workbench carrier"));
+  svg.dataset.transportCarrierAssetKey = activeAssetKey;
+  svg.dataset.transportCarrierCountry = String(carrierAsset.country || carrierAsset.carrier_id || "");
 
   const defs = createSvgNode("defs");
   const seaBackground = createSvgNode("rect");
@@ -519,13 +546,53 @@ function ensureResizeObserver() {
   resizeObserver.observe(mountNode);
 }
 
+function clearOverlayRoots() {
+  Object.keys(overlayRoots.land).forEach((key) => {
+    delete overlayRoots.land[key];
+  });
+  Object.keys(overlayRoots.sea).forEach((key) => {
+    delete overlayRoots.sea[key];
+  });
+  Object.keys(overlayRoots.labels).forEach((key) => {
+    delete overlayRoots.labels[key];
+  });
+  overlayRoots.land.main = null;
+  overlayRoots.sea.main = null;
+  overlayRoots.labels.main = null;
+}
+
+function resetCarrierScene({ keepMount = true } = {}) {
+  pointerDrag = null;
+  if (mountNode && svgNode && mountNode.contains(svgNode)) {
+    mountNode.replaceChildren();
+  }
+  svgNode = null;
+  cameraNode = null;
+  sceneNode = null;
+  orientationNode = null;
+  screenLabelLayerNode = null;
+  frameContexts = {};
+  sceneBaseBounds = null;
+  clearOverlayRoots();
+  if (!keepMount) {
+    mountNode = null;
+  }
+}
+
 function resolveTransportWorkbenchCarrierFrame(lon, lat, preferredFrame) {
   if (!asset) return null;
   const d3 = getD3();
   if (preferredFrame && frameContexts[preferredFrame]) {
-    return d3.geoContains(frameContexts[preferredFrame].routeMask, [lon, lat]) ? preferredFrame : null;
+    if (d3.geoContains(frameContexts[preferredFrame].routeMask, [lon, lat])) {
+      return preferredFrame;
+    }
   }
-  return frameContexts.main && d3.geoContains(frameContexts.main.routeMask, [lon, lat]) ? "main" : null;
+  for (const [frameId, frameContext] of Object.entries(frameContexts)) {
+    if (d3.geoContains(frameContext.routeMask, [lon, lat])) {
+      return frameId;
+    }
+  }
+  return null;
 }
 
 export function projectTransportWorkbenchCarrierPoint(lon, lat, preferredFrame = null) {
@@ -545,17 +612,39 @@ function projectCoordinates(coordinates, projector) {
   return coordinates.map((part) => projectCoordinates(part, projector));
 }
 
-export function projectTransportWorkbenchCarrierGeometry(geometry, frameId) {
-  if (!geometry || typeof geometry !== "object" || !frameContexts[frameId]) {
+function findFirstCoordinate(coordinates) {
+  if (!Array.isArray(coordinates)) return null;
+  if (!Array.isArray(coordinates[0])) {
+    const lon = Number(coordinates[0]);
+    const lat = Number(coordinates[1]);
+    return Number.isFinite(lon) && Number.isFinite(lat) ? [lon, lat] : null;
+  }
+  for (const child of coordinates) {
+    const coordinate = findFirstCoordinate(child);
+    if (coordinate) return coordinate;
+  }
+  return null;
+}
+
+export function projectTransportWorkbenchCarrierGeometry(geometry, frameId = null) {
+  if (!geometry || typeof geometry !== "object") {
     return null;
   }
-  const projector = frameContexts[frameId].projection;
   const type = String(geometry.type || "");
   if (!type || !Array.isArray(geometry.coordinates)) {
     return null;
   }
+  const firstCoordinate = findFirstCoordinate(geometry.coordinates);
+  if (!firstCoordinate) return null;
+  const resolvedFrameId = frameId && frameContexts[frameId]
+    ? resolveTransportWorkbenchCarrierFrame(firstCoordinate[0], firstCoordinate[1], frameId)
+    : resolveTransportWorkbenchCarrierFrame(firstCoordinate[0], firstCoordinate[1]);
+  if (!resolvedFrameId || !frameContexts[resolvedFrameId]) {
+    return null;
+  }
+  const projector = frameContexts[resolvedFrameId].projection;
   return {
-    frameId,
+    frameId: resolvedFrameId,
     geometry: {
       type,
       coordinates: projectCoordinates(geometry.coordinates, projector),
@@ -578,11 +667,21 @@ export function projectTransportWorkbenchCarrierScenePoint(x, y) {
   return { x: transformed.x, y: transformed.y };
 }
 
-export async function ensureTransportWorkbenchCarrier(nextMountNode) {
-  if (!nextMountNode) return null;
-  mountNode = nextMountNode;
+export async function ensureTransportWorkbenchCarrier(nextMountNode, options = {}) {
+  if (nextMountNode) {
+    mountNode = nextMountNode;
+  }
+  if (!mountNode) return null;
+  const resolvedAssetKey = resolveCarrierAssetKey(options.assetKey);
+  if (activeAssetKey !== resolvedAssetKey) {
+    activeAssetKey = resolvedAssetKey;
+    asset = null;
+    resetCarrierScene();
+  }
   mountNode.dataset.transportFamily = activeFamily;
-  asset = await loadAsset();
+  mountNode.dataset.transportCarrierAssetKey = activeAssetKey;
+  asset = await loadAsset(activeAssetKey);
+  mountNode.dataset.transportCarrierCountry = String(asset?.country || asset?.carrier_id || "");
   if (!svgNode) {
     const built = buildCarrierSvg(asset);
     svgNode = built.svg;
@@ -607,6 +706,12 @@ export async function ensureTransportWorkbenchCarrier(nextMountNode) {
     sea: overlayRoots.sea,
     labels: overlayRoots.labels,
   };
+}
+
+export function ensureTransportWorkbenchCarrierForManifest(manifest, nextMountNode = null) {
+  return ensureTransportWorkbenchCarrier(nextMountNode, {
+    assetKey: resolveCarrierAssetKeyFromManifest(manifest),
+  });
 }
 
 export function setTransportWorkbenchCarrierFamily(familyId) {
@@ -675,20 +780,7 @@ export function destroyTransportWorkbenchCarrier() {
   }
   resizeObserver?.disconnect();
   resizeObserver = null;
-  if (mountNode && svgNode && mountNode.contains(svgNode)) {
-    mountNode.replaceChildren();
-  }
-  mountNode = null;
-  svgNode = null;
-  cameraNode = null;
-  sceneNode = null;
-  orientationNode = null;
-  screenLabelLayerNode = null;
-  frameContexts = {};
-  sceneBaseBounds = null;
-  overlayRoots.land.main = null;
-  overlayRoots.sea.main = null;
-  overlayRoots.labels.main = null;
+  resetCarrierScene({ keepMount: false });
 }
 
 export function getTransportWorkbenchCarrierOverlayRoots() {
@@ -696,6 +788,15 @@ export function getTransportWorkbenchCarrierOverlayRoots() {
     land: overlayRoots.land,
     sea: overlayRoots.sea,
     labels: overlayRoots.labels,
+  };
+}
+
+export function getTransportWorkbenchCarrierAssetState() {
+  return {
+    assetKey: activeAssetKey,
+    carrierId: String(asset?.carrier_id || ""),
+    country: String(asset?.country || asset?.carrier_id || ""),
+    frameIds: Object.keys(frameContexts),
   };
 }
 

@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-06-01T00:22:27.201591Z",
+  "generated_at": "2026-06-02T01:48:37.729280Z",
   "counts": {
-    "entries": 459,
+    "entries": 480,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -35,11 +35,11 @@
       "terrain_contours_major_topology": 1,
       "terrain_contours_minor_topology": 1,
       "transport_build_audit": 97,
-      "transport_carrier_payload": 1,
+      "transport_carrier_payload": 8,
       "transport_catalog": 2,
-      "transport_manifest": 98,
+      "transport_manifest": 105,
       "transport_pack": 214,
-      "transport_provenance_payload": 1,
+      "transport_provenance_payload": 8,
       "transport_subtype_catalog": 1,
       "unit_counter_manifest": 1,
       "world_cities": 1
@@ -47,11 +47,11 @@
     "by_format": {
       "geojson": 81,
       "javascript": 2,
-      "json": 226,
+      "json": 247,
       "topojson": 150
     },
     "by_read_mode": {
-      "json": 457,
+      "json": 478,
       "module": 2
     }
   },
@@ -668,6 +668,54 @@
       "aliases": []
     },
     {
+      "key": "transport:china_carrier:carrier",
+      "url": "data/transport_layers/china_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier china",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:china_carrier:default:paths:carrier",
+        "transport_carrier:china",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_carrier",
+      "url": "data/transport_layers/china_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier china",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_carrier:provenance",
+      "url": "data/transport_layers/china_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier china",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:china_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
+    },
+    {
       "key": "transport:china_port:build_audit",
       "url": "data/transport_layers/china_port/build_audit.json",
       "role": "transport_build_audit",
@@ -794,6 +842,54 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "transport:france_carrier:carrier",
+      "url": "data/transport_layers/france_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier france",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:france_carrier:default:paths:carrier",
+        "transport_carrier:france",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_carrier",
+      "url": "data/transport_layers/france_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier france",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_carrier:provenance",
+      "url": "data/transport_layers/france_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier france",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:france_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
     },
     {
       "key": "transport:france_port:build_audit",
@@ -1020,6 +1116,54 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "transport:germany_carrier:carrier",
+      "url": "data/transport_layers/germany_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier germany",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:germany_carrier:default:paths:carrier",
+        "transport_carrier:germany",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:germany_carrier",
+      "url": "data/transport_layers/germany_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier germany",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:germany_carrier:provenance",
+      "url": "data/transport_layers/germany_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier germany",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:germany_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
     },
     {
       "key": "transport:germany_energy_facilities:build_audit",
@@ -5850,6 +5994,54 @@
       "aliases": []
     },
     {
+      "key": "transport:india_carrier:carrier",
+      "url": "data/transport_layers/india_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier india",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:india_carrier:default:paths:carrier",
+        "transport_carrier:india",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_carrier",
+      "url": "data/transport_layers/india_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier india",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_carrier:provenance",
+      "url": "data/transport_layers/india_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier india",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:india_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
+    },
+    {
       "key": "transport:india_port:build_audit",
       "url": "data/transport_layers/india_port/build_audit.json",
       "role": "transport_build_audit",
@@ -6709,6 +6901,54 @@
       "aliases": []
     },
     {
+      "key": "transport:russia_carrier:carrier",
+      "url": "data/transport_layers/russia_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier russia",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:russia_carrier:default:paths:carrier",
+        "transport_carrier:russia",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_carrier",
+      "url": "data/transport_layers/russia_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier russia",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_carrier:provenance",
+      "url": "data/transport_layers/russia_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier russia",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:russia_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
+    },
+    {
       "key": "transport:russia_port:build_audit",
       "url": "data/transport_layers/russia_port/build_audit.json",
       "role": "transport_build_audit",
@@ -6835,6 +7075,54 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "transport:uk_carrier:carrier",
+      "url": "data/transport_layers/uk_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier uk",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:uk_carrier:default:paths:carrier",
+        "transport_carrier:uk",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_carrier",
+      "url": "data/transport_layers/uk_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier uk",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_carrier:provenance",
+      "url": "data/transport_layers/uk_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier uk",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:uk_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
     },
     {
       "key": "transport:uk_port:build_audit",
@@ -7061,6 +7349,54 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "transport:usa_carrier:carrier",
+      "url": "data/transport_layers/usa_carrier/carrier.json",
+      "role": "transport_carrier_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/carrier_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier usa",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.carrier",
+        "transport:usa_carrier:default:paths:carrier",
+        "transport_carrier:usa",
+        "variants.default.paths.carrier"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_carrier",
+      "url": "data/transport_layers/usa_carrier/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier usa",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:usa_carrier:provenance",
+      "url": "data/transport_layers/usa_carrier/provenance.json",
+      "role": "transport_provenance_payload",
+      "format": "json",
+      "schemaRef": "schema://transport/provenance_payload/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_carriers.py --carrier usa",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.provenance",
+        "transport:usa_carrier:default:paths:provenance",
+        "variants.default.paths.provenance"
+      ]
     },
     {
       "key": "transport:usa_port:build_audit",

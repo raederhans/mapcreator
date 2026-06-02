@@ -39,7 +39,7 @@ class DataCatalogContractTest(unittest.TestCase):
 
         self.assertEqual(payload.get("counts", {}).get("entries"), len(entries))
         self.assertEqual(len(schema_counts), EXPECTED_SCHEMA_REF_COUNT)
-        self.assertEqual(schema_counts["schema://transport/manifest/v1"], 98)
+        self.assertEqual(schema_counts["schema://transport/manifest/v1"], 105)
         self.assertEqual(schema_counts["schema://transport/build_audit/v1"], 97)
         self.assertEqual(schema_counts["schema://topojson/line_collection/roads_v1"], 86)
         self.assertEqual(schema_counts["schema://topojson/line_collection/railways_v1"], 56)
@@ -112,7 +112,7 @@ class DataCatalogContractTest(unittest.TestCase):
         expected_entry_count = self._load_catalog().get("counts", {}).get("entries")
         self.assertEqual(report.errors, [])
         self.assertEqual(report.checked_catalog_urls, expected_entry_count)
-        self.assertEqual(report.checked_transport_manifests, 98)
+        self.assertEqual(report.checked_transport_manifests, 105)
         self.assertGreaterEqual(report.checked_transport_paths, 460)
         self.assertEqual(len(report.schema_ref_counts), EXPECTED_SCHEMA_REF_COUNT)
 

@@ -157,6 +157,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
           return null;
         }
         startAuditLoad(manifest, onAuditReady);
+        await definition.prepareCarrier?.(manifest);
         const pack = await definition.buildPack({
           mode,
           manifest,

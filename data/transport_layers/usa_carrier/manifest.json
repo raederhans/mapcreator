@@ -1,0 +1,44 @@
+{
+  "adapter_id": "usa_carrier_v1",
+  "pack_id": "usa_carrier",
+  "family": "carrier",
+  "geometry_kind": "carrier",
+  "country": "usa",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T01:48:37.729280Z",
+  "recipe_path": "tools/build_transport_country_carriers.py",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "carrier": "data/transport_layers/usa_carrier/carrier.json",
+    "provenance": "data/transport_layers/usa_carrier/provenance.json"
+  },
+  "source_signature": {
+    "natural_earth_admin1": "data/ne_10m_admin_1_states_provinces.shp"
+  },
+  "recipe_version": "usa_carrier_v1",
+  "feature_counts": {},
+  "build_command": "python tools/build_transport_country_carriers.py --carrier usa",
+  "runtime_consumer": "transport_workbench_carrier",
+  "source_policy": "checked_in_natural_earth_admin1",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "carrier": "data/transport_layers/usa_carrier/carrier.json",
+        "provenance": "data/transport_layers/usa_carrier/provenance.json"
+      },
+      "feature_counts": {}
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_source_kind": "natural_earth_admin1",
+      "carrier_asset_key": "transport_carrier:usa",
+      "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+      "projection_profile": "geoConicEqualArea",
+      "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames."
+    }
+  }
+}
