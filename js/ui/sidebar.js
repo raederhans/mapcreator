@@ -1450,14 +1450,17 @@ function initSidebar({ render } = {}) {
   const rightSidebarContent = document.getElementById("rightSidebarContent");
   const rightSidebarCollapseBtn = document.getElementById("rightSidebarCollapseBtn");
   const rightSidebarCollapseIcon = document.getElementById("rightSidebarCollapseIcon");
-  const projectLegendStack = document.getElementById("projectLegendStack");
+  const projectManagementStack = document.getElementById("projectManagementStack")
+    || document.getElementById("projectLegendStack");
+  const legendEditorStack = document.getElementById("legendEditorStack")
+    || projectManagementStack;
   const diagnosticStack = document.getElementById("diagnosticStack");
 
   let projectSection = document.getElementById("projectManagement");
-  if (!projectSection && projectLegendStack) {
+  if (!projectSection && projectManagementStack) {
     projectSection = document.createElement("div");
     projectSection.id = "projectManagement";
-    projectSection.className = "inspector-tool-card";
+    projectSection.className = "inspector-tool-card project-management-card";
 
     const title = document.createElement("div");
     title.id = "lblProjectManagement";
@@ -1466,6 +1469,46 @@ function initSidebar({ render } = {}) {
 
     const actions = document.createElement("div");
     actions.className = "mt-3 flex flex-col gap-2";
+
+    const buildProjectSelect = (id, labelText, options) => {
+      const field = document.createElement("label");
+      field.className = "project-file-option";
+      field.htmlFor = id;
+      const label = document.createElement("span");
+      label.className = "sidebar-field-label";
+      label.textContent = t(labelText, "ui");
+      const select = document.createElement("select");
+      select.id = id;
+      select.className = "select-input";
+      options.forEach(([value, text]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = t(text, "ui");
+        select.appendChild(option);
+      });
+      field.append(label, select);
+      return { field, select };
+    };
+
+    const projectDownloadOptions = document.createElement("div");
+    projectDownloadOptions.className = "project-file-options";
+    const projectDownloadFormat = buildProjectSelect("projectDownloadFormat", "File type", [
+      ["json", "Editable project JSON"],
+      ["zip", "Project ZIP package"],
+    ]);
+    const projectDownloadDestination = buildProjectSelect("projectDownloadDestination", "Download to", [
+      ["browser", "Browser downloads"],
+      ["picker", "Save As dialog"],
+    ]);
+    const projectLoadSource = buildProjectSelect("projectLoadSource", "Load source", [
+      ["local", "Local project file"],
+      ["community", "Community save"],
+    ]);
+    projectDownloadOptions.append(
+      projectDownloadFormat.field,
+      projectDownloadDestination.field,
+      projectLoadSource.field
+    );
 
     const downloadBtn = document.createElement("button");
     downloadBtn.id = "downloadProjectBtn";
@@ -1510,14 +1553,47 @@ function initSidebar({ render } = {}) {
     projectSaveStatus.setAttribute("aria-atomic", "true");
     projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
 
+    const accountDock = document.createElement("div");
+    accountDock.className = "project-account-dock";
+
+    const accountHint = document.createElement("span");
+    accountHint.className = "project-account-hint";
+    accountHint.textContent = t("Account", "ui");
+
+    const accountToggleBtn = document.createElement("button");
+    accountToggleBtn.id = "backendAccountToggleBtn";
+    accountToggleBtn.type = "button";
+    accountToggleBtn.className = "project-account-toggle";
+    accountToggleBtn.setAttribute("aria-haspopup", "dialog");
+    accountToggleBtn.setAttribute("aria-expanded", "false");
+    accountToggleBtn.setAttribute("aria-controls", "backendAccountPopover");
+    accountToggleBtn.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
+    accountToggleBtn.title = t("Account and Cloud Saves", "ui");
+    accountToggleBtn.innerHTML = `
+      <svg class="project-account-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"></circle>
+        <path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+      </svg>
+    `;
+    accountDock.append(accountHint, accountToggleBtn);
+
+    const accountPopover = document.createElement("div");
+    accountPopover.id = "backendAccountPopover";
+    accountPopover.className = "project-account-popover hidden";
+    accountPopover.setAttribute("role", "dialog");
+    accountPopover.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
+
     actions.appendChild(downloadBtn);
+    actions.appendChild(projectDownloadOptions);
     actions.appendChild(uploadBtn);
     actions.appendChild(projectSaveStatus);
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);
+    actions.appendChild(accountDock);
 
     projectSection.appendChild(title);
     projectSection.appendChild(actions);
+    projectSection.appendChild(accountPopover);
     {
       const cloudSection = document.createElement("div");
       cloudSection.id = "backendCloudSection";
@@ -1608,13 +1684,13 @@ function initSidebar({ render } = {}) {
       communityList.className = "mt-2 flex flex-col gap-2";
 
       cloudSection.append(cloudTitle, cloudStatus, cloudUsername, cloudPassword, cloudTitleInput, cloudActions, communityList);
-      projectSection.appendChild(cloudSection);
+      accountPopover.appendChild(cloudSection);
     }
-    projectLegendStack.appendChild(projectSection);
+    projectManagementStack.appendChild(projectSection);
   }
 
   let legendSection = document.getElementById("legendEditor");
-  if (!legendSection && projectLegendStack) {
+  if (!legendSection && legendEditorStack) {
     legendSection = document.createElement("div");
     legendSection.id = "legendEditor";
     legendSection.className = "inspector-tool-card";
@@ -1630,7 +1706,7 @@ function initSidebar({ render } = {}) {
 
     legendSection.appendChild(title);
     legendSection.appendChild(list);
-    projectLegendStack.appendChild(legendSection);
+    legendEditorStack.appendChild(legendSection);
   }
 
   const frontlineTabStack = document.getElementById("frontlineTabStack");
@@ -3233,11 +3309,16 @@ function initSidebar({ render } = {}) {
 
   const downloadProjectBtn = document.getElementById("downloadProjectBtn");
   const uploadProjectBtn = document.getElementById("uploadProjectBtn");
+  const projectDownloadFormat = document.getElementById("projectDownloadFormat");
+  const projectDownloadDestination = document.getElementById("projectDownloadDestination");
+  const projectLoadSource = document.getElementById("projectLoadSource");
   const projectFileInput = document.getElementById("projectFileInput");
   const projectFileName = document.getElementById("projectFileName");
   const projectSaveStatus = document.getElementById("projectSaveStatus");
   const backendCloudSection = document.getElementById("backendCloudSection");
   const backendCloudStatus = document.getElementById("backendCloudStatus");
+  const backendAccountToggleBtn = document.getElementById("backendAccountToggleBtn");
+  const backendAccountPopover = document.getElementById("backendAccountPopover");
   const backendCloudUsername = document.getElementById("backendCloudUsername");
   const backendCloudPassword = document.getElementById("backendCloudPassword");
   const backendCloudSaveTitle = document.getElementById("backendCloudSaveTitle");
@@ -3473,6 +3554,7 @@ function initSidebar({ render } = {}) {
   const selectedCountryActionsBody = selectedCountryActionsSection?.querySelector(".inspector-panel-body") || null;
   const frontlineProjectSection = document.getElementById("frontlineProjectSection");
   const projectLegendSection = document.getElementById("lblProjectLegend")?.closest("details");
+  const legendProjectSection = document.getElementById("legendProjectSection");
   const diagnosticsSection = document.getElementById("lblDiagnostics")?.closest("details");
   initDevWorkspace();
 
@@ -3486,6 +3568,7 @@ function initSidebar({ render } = {}) {
       lastScenarioInspectorDefaultsKey = scenarioDefaultsKey;
     }
     projectLegendSection?.classList.toggle("inspector-section-secondary", isScenarioMode);
+    legendProjectSection?.classList.toggle("inspector-section-secondary", isScenarioMode);
     diagnosticsSection?.classList.toggle("inspector-section-secondary", isScenarioMode);
     if (selectedCountryActionsSection) {
       selectedCountryActionsSection.classList.remove("hidden");
@@ -3493,6 +3576,7 @@ function initSidebar({ render } = {}) {
     }
     if (projectLegendSection && diagnosticsSection && isScenarioMode) {
       projectLegendSection.open = false;
+      if (legendProjectSection) legendProjectSection.open = false;
       diagnosticsSection.open = false;
     }
   };
@@ -5677,11 +5761,16 @@ function initSidebar({ render } = {}) {
       legendList,
       downloadProjectBtn,
       uploadProjectBtn,
+      projectDownloadFormat,
+      projectDownloadDestination,
+      projectLoadSource,
       projectFileInput,
       projectFileName,
       projectSaveStatus,
       backendCloudSection,
       backendCloudStatus,
+      backendAccountToggleBtn,
+      backendAccountPopover,
       backendCloudUsername,
       backendCloudPassword,
       backendCloudSaveTitle,

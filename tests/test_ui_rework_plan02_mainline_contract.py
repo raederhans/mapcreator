@@ -50,6 +50,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         project_panel = content[project_panel_start:project_panel_end]
         order = [
             'id="projectLegendSection"',
+            'id="legendProjectSection"',
             'id="frontlineProjectSection"',
             'id="transportProjectSection"',
             'id="exportProjectSection"',
@@ -394,6 +395,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         ]:
             self.assertIn(token, water_special_content)
         self.assertIn("#projectLegendSection,", css_content)
+        self.assertIn("#legendProjectSection,", css_content)
         self.assertIn("#transportProjectSection,", css_content)
         self.assertIn("#inspectorUtilitiesSection,", css_content)
         self.assertIn("#diagnosticsSection {", css_content)

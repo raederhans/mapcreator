@@ -6318,6 +6318,7 @@ body.counter-editor-modal-open {
 #specialRegionInspectorSection,
 #waterInspectorSection,
 #projectLegendSection,
+#legendProjectSection,
 #frontlineProjectSection,
 #transportProjectSection,
 #exportProjectSection,
@@ -6340,6 +6341,7 @@ body.counter-editor-modal-open {
 #specialRegionInspectorSection > summary,
 #waterInspectorSection > summary,
 #projectLegendSection > summary,
+#legendProjectSection > summary,
 #frontlineProjectSection > summary,
 #transportProjectSection > summary,
 #exportProjectSection > summary,
@@ -6355,6 +6357,7 @@ body.counter-editor-modal-open {
 #specialRegionInspectorSection[open] > summary,
 #waterInspectorSection[open] > summary,
 #projectLegendSection[open] > summary,
+#legendProjectSection[open] > summary,
 #frontlineProjectSection[open] > summary,
 #transportProjectSection[open] > summary,
 #exportProjectSection[open] > summary,
@@ -6368,6 +6371,7 @@ body.counter-editor-modal-open {
 #specialRegionInspectorSection .sidebar-section-title,
 #waterInspectorSection .sidebar-section-title,
 #projectLegendSection .sidebar-anchor-title,
+#legendProjectSection .sidebar-section-title,
 #frontlineProjectSection .sidebar-section-title,
 #transportProjectSection .sidebar-section-title,
 #exportProjectSection .sidebar-section-title,
@@ -6382,6 +6386,7 @@ body.counter-editor-modal-open {
 #specialRegionInspectorSection .inspector-panel-body,
 #waterInspectorSection .inspector-panel-body,
 #projectLegendSection .inspector-panel-body,
+#legendProjectSection .inspector-panel-body,
 #frontlineProjectSection .inspector-panel-body,
 #transportProjectSection .inspector-panel-body,
 #exportProjectSection .inspector-panel-body,
@@ -6390,6 +6395,72 @@ body.counter-editor-modal-open {
   margin-top: 12px;
   padding-inline: 3px;
   padding-bottom: 2px;
+}
+
+.project-management-card {
+  position: relative;
+}
+
+.project-file-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.project-file-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+}
+
+.project-account-dock {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.project-account-hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.project-account-toggle {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.project-account-toggle:hover,
+.project-account-toggle:focus-visible {
+  border-color: rgba(0, 47, 167, 0.3);
+  color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(0, 47, 167, 0.08);
+  outline: none;
+}
+
+.project-account-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.project-account-popover {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
 }
 
 #scenarioAuditPanel {

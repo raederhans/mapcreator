@@ -317,6 +317,7 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
 
         for token in [
             "#projectLegendSection,",
+            "#legendProjectSection,",
             "#frontlineProjectSection,",
             "#transportProjectSection,",
             "#exportProjectSection,",

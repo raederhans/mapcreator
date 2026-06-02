@@ -20,6 +20,7 @@ import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import { clearDirty } from "./dirty_state.js";
 import { buildExportArtifactManifest } from "./export_artifact_package.js";
+import { strToU8, zipSync } from "../../vendor/fflate.browser.js";
 import {
   normalizeSpecialZoneMembershipBrushModeState,
   normalizeSpecialZoneLayersState,
@@ -570,26 +571,87 @@ class FileManager {
     return payload;
   }
 
-  static exportProject(appState) {
-    const payload = FileManager.buildProjectPayload(appState);
-    if (!payload) return;
+  static async writeBlobDownload(blob, filename, { destination = "browser" } = {}) {
+    const normalizedDestination = String(destination || "browser").trim().toLowerCase();
+    if (
+      normalizedDestination === "picker"
+      && typeof globalThis.showSaveFilePicker === "function"
+      && typeof blob?.stream === "function"
+    ) {
+      try {
+        const handle = await globalThis.showSaveFilePicker({
+          suggestedName: filename,
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return true;
+      } catch (error) {
+        if (error?.name === "AbortError") return false;
+        throw error;
+      }
+    }
 
-    const data = JSON.stringify(payload, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
     link.href = url;
-    link.download = "map_project.json";
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 100);
-    showToast(t("Project file downloaded.", "ui"), {
+    return true;
+  }
+
+  static buildProjectDownloadPayload(payload, { format = "json" } = {}) {
+    const normalizedFormat = String(format || "json").trim().toLowerCase();
+    const data = JSON.stringify(payload, null, 2);
+    if (normalizedFormat === "zip") {
+      const manifest = buildExportArtifactManifest({
+        artifactKind: "project-zip",
+        generatedAt: new Date().toISOString(),
+        scenario: payload.scenario,
+        project: {
+          schemaVersion: payload.schemaVersion,
+          timestamp: payload.timestamp,
+        },
+        exportUi: payload.exportWorkbenchUi,
+        files: [{
+          path: "map_project.json",
+          role: "editable-project",
+          mime: "application/json",
+        }],
+      });
+      const zipBytes = zipSync({
+        "map_project.json": strToU8(data),
+        "map_project_manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
+      });
+      return {
+        blob: new Blob([zipBytes], { type: "application/zip" }),
+        filename: "map_project.zip",
+        label: "Project ZIP package downloaded.",
+      };
+    }
+    return {
+      blob: new Blob([data], { type: "application/json" }),
+      filename: "map_project.json",
+      label: "Project file downloaded.",
+    };
+  }
+
+  static async exportProject(appState, options = {}) {
+    const payload = FileManager.buildProjectPayload(appState);
+    if (!payload) return;
+
+    const download = FileManager.buildProjectDownloadPayload(payload, options);
+    const wroteFile = await FileManager.writeBlobDownload(download.blob, download.filename, options);
+    if (!wroteFile) return false;
+    showToast(t(download.label, "ui"), {
       title: t("Project saved", "ui"),
       tone: "success",
     });
     clearDirty("project-export");
+    return true;
   }
 
   static importProject(file, callback, observers = {}) {

@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 250333
+      "size_bytes": 251838
     },
     {
       "path": "app/data/CATALOG.json",
@@ -6178,7 +6178,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 227028
+      "size_bytes": 228393
     },
     {
       "path": "app/js/api/backend_client.js",
@@ -6258,7 +6258,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 41667
+      "size_bytes": 43799
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6758,11 +6758,11 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47073
+      "size_bytes": 47106
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 77166
+      "size_bytes": 78784
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -6778,7 +6778,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 41618
+      "size_bytes": 43199
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -6802,11 +6802,11 @@
     },
     {
       "path": "app/js/ui/sidebar/water_special_region_controller.js",
-      "size_bytes": 55470
+      "size_bytes": 55497
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 255960
+      "size_bytes": 260146
     },
     {
       "path": "app/js/ui/toast.js",
@@ -7103,5 +7103,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1016051431
+  "total_bytes": 1016063878
 }

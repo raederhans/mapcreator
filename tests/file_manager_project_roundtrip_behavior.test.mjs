@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { FileManager } from "../js/core/file_manager.js";
 import { resolveImportedTransportCountryOverlayPackIds } from "../js/core/interaction_funnel.js";
+import { unzipSync, strFromU8 } from "../vendor/fflate.browser.js";
 
 async function exportProjectPayload(appState) {
   let capturedBlob = null;
@@ -35,9 +36,50 @@ async function exportProjectPayload(appState) {
   };
 
   try {
-    FileManager.exportProject(appState);
+    await FileManager.exportProject(appState);
     assert.ok(capturedBlob, "exportProject should create a project blob");
     return JSON.parse(await capturedBlob.text());
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.URL = previousUrl;
+    globalThis.setTimeout = previousSetTimeout;
+  }
+}
+
+async function exportProjectBlob(appState, options = {}) {
+  let capturedBlob = null;
+  const previousDocument = globalThis.document;
+  const previousUrl = globalThis.URL;
+  const previousSetTimeout = globalThis.setTimeout;
+
+  globalThis.document = {
+    body: {
+      appendChild: () => {},
+    },
+    getElementById: () => null,
+    createElement: () => ({
+      click: () => {},
+      remove: () => {},
+      set download(_value) {},
+      set href(_value) {},
+    }),
+  };
+  globalThis.URL = {
+    createObjectURL: (blob) => {
+      capturedBlob = blob;
+      return "blob:project-export";
+    },
+    revokeObjectURL: () => {},
+  };
+  globalThis.setTimeout = (callback) => {
+    if (typeof callback === "function") callback();
+    return 0;
+  };
+
+  try {
+    await FileManager.exportProject(appState, options);
+    assert.ok(capturedBlob, "exportProject should create a project blob");
+    return capturedBlob;
   } finally {
     globalThis.document = previousDocument;
     globalThis.URL = previousUrl;
@@ -109,6 +151,52 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(payload.exportHandoff.files[0].path, "map_project.json");
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "byteLength"), false);
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "checksum"), false);
+});
+
+test("project zip download keeps editable project and manifest files", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  assert.ok(entries["map_project.json"], "zip should include editable project JSON");
+  assert.ok(entries["map_project_manifest.json"], "zip should include project manifest");
+  const projectPayload = JSON.parse(strFromU8(entries["map_project.json"]));
+  const manifest = JSON.parse(strFromU8(entries["map_project_manifest.json"]));
+
+  assert.equal(projectPayload.schemaVersion, 21);
+  assert.equal(manifest.artifactKind, "project-zip");
+  assert.equal(manifest.files[0].path, "map_project.json");
+});
+
+test("project save picker cancel keeps export dirty state unchanged", async () => {
+  const previousShowSaveFilePicker = globalThis.showSaveFilePicker;
+  const previousDirty = globalThis.__mapcreatorDirtyState;
+  globalThis.showSaveFilePicker = async () => {
+    const error = new Error("cancelled");
+    error.name = "AbortError";
+    throw error;
+  };
+
+  try {
+    const result = await FileManager.exportProject({
+      activeScenarioId: "tno_1962",
+      activeScenarioManifest: { version: 3 },
+      scenarioBaselineHash: "baseline-1",
+      transportWorkbenchUi: {},
+      exportWorkbenchUi: {},
+      styleConfig: {},
+    }, { destination: "picker" });
+    assert.equal(result, false);
+  } finally {
+    globalThis.showSaveFilePicker = previousShowSaveFilePicker;
+    globalThis.__mapcreatorDirtyState = previousDirty;
+  }
 });
 
 test("project export preserves strategic overlay counters and legacy kind values", async () => {

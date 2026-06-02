@@ -37,11 +37,16 @@ export function createProjectSupportDiagnosticsController({
     legendList,
     downloadProjectBtn,
     uploadProjectBtn,
+    projectDownloadFormat,
+    projectDownloadDestination,
+    projectLoadSource,
     projectFileInput,
     projectFileName,
     projectSaveStatus,
     backendCloudSection,
     backendCloudStatus,
+    backendAccountToggleBtn,
+    backendAccountPopover,
     backendCloudUsername,
     backendCloudPassword,
     backendCloudSaveTitle,
@@ -90,6 +95,14 @@ export function createProjectSupportDiagnosticsController({
       backendCloudSection.hidden = !visible;
     }
   };
+
+  const setBackendAccountPopoverOpen = (isOpen) => {
+    if (!backendAccountPopover || !backendAccountToggleBtn) return;
+    backendAccountPopover.classList.toggle("hidden", !isOpen);
+    backendAccountToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  };
+
+  const openBackendAccountPopover = () => setBackendAccountPopoverOpen(true);
 
   const setDisabled = (element, disabled) => {
     if (element && typeof element === "object") {
@@ -844,16 +857,33 @@ export function createProjectSupportDiagnosticsController({
   const bindEvents = () => {
     refreshProjectSaveStatus();
     if (downloadProjectBtn && !downloadProjectBtn.dataset.bound) {
-      downloadProjectBtn.addEventListener("click", () => {
+      downloadProjectBtn.addEventListener("click", async () => {
         refreshProjectSaveStatus(t("Exporting project file with appearance and transport settings.", "ui"));
-        fileManager.exportProject(state);
-        refreshProjectSaveStatus();
+        try {
+          const exported = await fileManager.exportProject(state, {
+            format: projectDownloadFormat?.value || "json",
+            destination: projectDownloadDestination?.value || "browser",
+          });
+          refreshProjectSaveStatus(exported === false ? t("Project export cancelled.", "ui") : "");
+        } catch (error) {
+          refreshProjectSaveStatus(String(error?.message || error || ""));
+        }
       });
       downloadProjectBtn.dataset.bound = "true";
     }
 
     if (uploadProjectBtn && projectFileInput && !uploadProjectBtn.dataset.bound) {
       uploadProjectBtn.addEventListener("click", async () => {
+        if (String(projectLoadSource?.value || "local") === "community") {
+          openBackendAccountPopover();
+          try {
+            await refreshCommunitySaves();
+            setBackendCloudStatus(t("Community saves refreshed.", "ui"));
+          } catch (error) {
+            setBackendCloudStatus(String(error?.message || error || ""));
+          }
+          return;
+        }
         if (state.isDirty) {
           const shouldContinue = await showAppDialog({
             title: t("Load Project", "ui"),
@@ -903,6 +933,14 @@ export function createProjectSupportDiagnosticsController({
         projectFileInput.value = "";
       });
       projectFileInput.dataset.bound = "true";
+    }
+
+    if (backendAccountToggleBtn && backendAccountPopover && !backendAccountToggleBtn.dataset.bound) {
+      backendAccountToggleBtn.addEventListener("click", () => {
+        const isOpen = !backendAccountPopover.classList.contains("hidden");
+        setBackendAccountPopoverOpen(!isOpen);
+      });
+      backendAccountToggleBtn.dataset.bound = "true";
     }
 
     if (debugModeSelect && !debugModeSelect.dataset.bound) {

@@ -134,6 +134,117 @@ test("project save status refreshes when dirty state changes", () => {
   }
 });
 
+test("project download passes selected file format and destination", async () => {
+  const projectSaveStatus = createStatusNode();
+  const downloadProjectBtn = createButtonNode();
+  const calls = [];
+  const controller = createController(projectSaveStatus, {
+    elements: {
+      downloadProjectBtn,
+      projectDownloadFormat: { value: "zip" },
+      projectDownloadDestination: { value: "picker" },
+    },
+    helpers: {
+      fileManager: {
+        exportProject: async (_state, options) => {
+          calls.push(options);
+        },
+      },
+    },
+  });
+
+  controller.bindEvents();
+  await downloadProjectBtn.listeners.click();
+
+  assert.deepEqual(calls, [{ format: "zip", destination: "picker" }]);
+  assert.equal(projectSaveStatus.textContent, "Project export includes appearance and transport settings.");
+});
+
+test("project download failure is shown in project status", async () => {
+  const projectSaveStatus = createStatusNode();
+  const downloadProjectBtn = createButtonNode();
+  const controller = createController(projectSaveStatus, {
+    elements: {
+      downloadProjectBtn,
+      projectDownloadFormat: { value: "zip" },
+      projectDownloadDestination: { value: "picker" },
+    },
+    helpers: {
+      fileManager: {
+        exportProject: async () => {
+          throw new Error("Save dialog failed");
+        },
+      },
+    },
+  });
+
+  controller.bindEvents();
+  await downloadProjectBtn.listeners.click();
+
+  assert.equal(projectSaveStatus.textContent, "Save dialog failed");
+});
+
+test("community load source opens account popover and refreshes community saves", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const backendCloudStatus = createStatusNode();
+  const uploadProjectBtn = createButtonNode();
+  const projectFileInput = createButtonNode();
+  const backendAccountToggleBtn = {
+    dataset: {},
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    addEventListener(type, handler) {
+      this.listeners = this.listeners || {};
+      this.listeners[type] = handler;
+    },
+  };
+  const backendAccountPopover = {
+    hiddenClass: true,
+    classList: {
+      contains: () => backendAccountPopover.hiddenClass,
+      toggle: (_name, hidden) => {
+        backendAccountPopover.hiddenClass = hidden;
+      },
+    },
+  };
+  const backendCommunityList = createListNode();
+
+  globalThis.document = {
+    createElement: createElementNode,
+    getElementById: () => null,
+  };
+  globalThis.fetch = async (url) => ({
+    ok: true,
+    json: async () => (String(url).endsWith("/community/saves") ? { saves: [] } : {}),
+  });
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudStatus,
+        uploadProjectBtn,
+        projectFileInput,
+        projectLoadSource: { value: "community" },
+        backendAccountToggleBtn,
+        backendAccountPopover,
+        backendCommunityList,
+      },
+    });
+    controller.bindEvents();
+    await uploadProjectBtn.listeners.click();
+
+    assert.equal(backendAccountPopover.hiddenClass, false);
+    assert.equal(backendAccountToggleBtn.attributes["aria-expanded"], "true");
+    assert.equal(backendCloudStatus.textContent, "Community saves refreshed.");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("community load waits for import callback before showing loaded status", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;

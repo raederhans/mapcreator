@@ -2372,19 +2372,34 @@
           >
             <div class="sidebar-shell-heading sidebar-shell-heading-right sidebar-shell-anchor" data-i18n="Project">Project</div>
 
-            <h2 id="projectLegendHeading" class="visually-hidden" data-i18n="Project & Legend">Project & Legend</h2>
+            <h2 id="projectLegendHeading" class="visually-hidden" data-i18n="Project Management">Project Management</h2>
             <details id="projectLegendSection" class="card inspector-section sidebar-section-shell" aria-labelledby="projectLegendHeading lblProjectLegend">
               <summary id="lblProjectLegend" class="sidebar-section-head">
-                <span class="sidebar-anchor-title">Project &amp; Legend</span>
+                <span class="sidebar-anchor-title" data-i18n="Project Management">Project Management</span>
                 <span class="summary-info-trigger info-trigger sidebar-section-info-trigger" aria-hidden="true">
                   <svg class="info-icon summary-info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
                     <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
                   </svg>
-                  <span class="info-tooltip" data-i18n="Manage project-level legend entries and working map references.">Manage project-level legend entries and working map references.</span>
+                  <span class="info-tooltip" data-i18n="Manage project files, loading choices, and account-backed saves.">Manage project files, loading choices, and account-backed saves.</span>
                 </span>
               </summary>
-              <div id="projectLegendStack" class="inspector-panel-body inspector-stack"></div>
+              <div id="projectManagementStack" class="inspector-panel-body inspector-stack"></div>
+            </details>
+
+            <h2 id="legendProjectHeading" class="visually-hidden" data-i18n="Legend">Legend</h2>
+            <details id="legendProjectSection" class="card inspector-section inspector-section-secondary sidebar-section-shell is-secondary" aria-labelledby="legendProjectHeading lblLegendProject">
+              <summary id="lblLegendProject" class="sidebar-section-head">
+                <span class="sidebar-section-title is-secondary" data-i18n="Legend">Legend</span>
+                <span class="summary-info-trigger info-trigger sidebar-section-info-trigger" aria-hidden="true">
+                  <svg class="info-icon summary-info-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
+                    <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                  </svg>
+                  <span class="info-tooltip" data-i18n="Edit the small project legend list for the current working map.">Edit the small project legend list for the current working map.</span>
+                </span>
+              </summary>
+              <div id="legendEditorStack" class="inspector-panel-body inspector-stack"></div>
             </details>
 
             <h2 id="frontlineProjectHeading" class="visually-hidden">Frontlines & Annotations</h2>
@@ -2438,7 +2453,7 @@
             </details>
 
             <h2 id="exportProjectHeading" class="visually-hidden">Export</h2>
-            <details id="exportProjectSection" class="card inspector-section inspector-section-secondary sidebar-section-shell is-secondary" aria-labelledby="exportProjectHeading lblExportProject">
+            <details id="exportProjectSection" class="card inspector-section inspector-section-secondary sidebar-section-shell is-secondary" aria-labelledby="exportProjectHeading lblExportProject" open>
               <summary id="lblExportProject" class="sidebar-section-head">
                 <span class="sidebar-section-title is-secondary" data-i18n="Export">Export</span>
                 <span class="summary-info-trigger info-trigger sidebar-section-info-trigger" aria-hidden="true">
