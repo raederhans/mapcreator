@@ -48,4 +48,5 @@ Continue the ocean refinement program by replacing or refining the next low-prec
 - [x] Extend or reuse tests.
 - [x] Validate.
 - [x] Review.
-- [ ] Merge, push, and clean up worktree.
+- [x] Merge into main.
+- [ ] Push main and clean up worktree.

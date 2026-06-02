@@ -9,4 +9,4 @@
 - [x] Tests updated: Scotia source precision and tracked probe coverage.
 - [x] Validation passed.
 - [x] Review passed.
-- [ ] Archived on completion.
+- [x] Archived on completion.

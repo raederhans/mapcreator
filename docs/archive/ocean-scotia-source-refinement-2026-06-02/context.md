@@ -36,3 +36,9 @@ The coarser Marine Regions `MRGID 4329` record was kept as name/range context du
 - 7 source replacement candidates remain in the local clone lane.
 - 4 high-precision macro seas remain better suited to child-water splits.
 - 2 simplification review candidates remain for possible tolerance adjustment after split planning.
+
+## Closeout
+
+- Branch commit: `dd3bc99d` (`Refine Scotia Sea from Marine Regions SeaVoX geometry`).
+- Merged into main after confirming the new main commits touched transport/dist/catalog surfaces and did not overlap this ocean data change.
+- Final external actions after this archive update: push main, deactivate ultrawork state, remove the temporary worktree.
