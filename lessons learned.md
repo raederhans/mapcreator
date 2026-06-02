@@ -125,6 +125,8 @@
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
 - Marine Regions source snapshot 接近 GitHub 100MiB 限制时，要把简化规则写进 source spec/provenance，比如 `snapshot_simplify_tolerance`；只压最终 water feature 会留下不可推送的大 snapshot。
+- 只改 water layer 时，优先在现有 `runtime_topology.topo.json` 上替换 `scenario_water`；从 political/land/context 反提再重建会丢失独立的 `scenario_atlantropa` 对象。
+- open-ocean 扣减后沿用既有 `component_min_area` 裁剪合同，避免生成小碎片打破 component 上限。
 
 ### 浏览器原生 zoom 是独立渲染输入
 - `devicePixelRatio` 可能降到 1 以下且被 runtime DPR 上限/下限钳住；监听到 browser zoom 时仍要强制失效 overlay/texture pass。

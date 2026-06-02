@@ -1780,8 +1780,10 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "water_type": "sea",
         "region_group": "marine_macro",
         "is_chokepoint": False,
-        "global_source_id": "marine_south_china_sea",
-        "source_standard": "tno_cloned_from_global_water_regions",
+        "source_layer": "seavox_v19",
+        "source_query": "mrgid_sr='24144'",
+        "source_standard": "marine_regions_seavox_v19",
+        "snapshot_simplify_tolerance": 0.03,
         "subtract_named_ids": (
             "tno_taiwan_strait",
             "tno_gulf_of_tonkin",

@@ -851,6 +851,32 @@ class TnoBundleBuilderTest(unittest.TestCase):
             ),
         )
 
+    def test_tno_south_china_sea_source_spec_keeps_child_seams_closed(self) -> None:
+        south_china_sea_spec = next(
+            spec for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+            if spec["id"] == "tno_south_china_sea"
+        )
+
+        self.assertEqual(south_china_sea_spec["source_layer"], "seavox_v19")
+        self.assertEqual(south_china_sea_spec["source_query"], "mrgid_sr='24144'")
+        self.assertEqual(south_china_sea_spec["snapshot_simplify_tolerance"], 0.03)
+        self.assertEqual(
+            south_china_sea_spec["subtract_named_ids"],
+            (
+                "tno_taiwan_strait",
+                "tno_gulf_of_tonkin",
+                "tno_gulf_of_thailand",
+                "tno_natuna_sea",
+                "tno_singapore_strait",
+                "tno_java_sea",
+                "tno_sulu_sea",
+            ),
+        )
+        self.assertEqual(
+            south_china_sea_spec["clip_open_ocean_ids"],
+            tno_bundle.TNO_PACIFIC_OPEN_OCEAN_IDS,
+        )
+
     def test_tno_arctic_open_ocean_split_boundary_matches_barents_regression(self) -> None:
         arctic_spec = next(
             spec for spec in tno_bundle.TNO_OPEN_OCEAN_SPLIT_SPECS

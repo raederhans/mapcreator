@@ -38,6 +38,7 @@ STARTUP_BUNDLE_ZH_GZIP_PATH = STARTUP_BUNDLE_ZH_PATH.with_suffix(f"{STARTUP_BUND
 TARGET_OPEN_OCEAN_IDS = {
     "tno_northwest_pacific_ocean",
     "tno_northeast_pacific_ocean",
+    "tno_west_central_pacific_ocean",
 }
 TRACKED_INLAND_WATER_IDS = {
     "tno_qyzylorda_inland_water",
@@ -53,6 +54,7 @@ TRACKED_BASE_GEOGRAPHY_WATER_IDS = {
 TARGET_OPEN_OCEAN_MAX_COMPONENTS = {
     "tno_northwest_pacific_ocean": 7,
     "tno_northeast_pacific_ocean": 6,
+    "tno_west_central_pacific_ocean": 5,
 }
 MIN_COMPONENT_AREA = 0.05
 WORLD_BBOX_WIDTH_THRESHOLD = 300.0
@@ -766,6 +768,43 @@ def test_tno_irish_sea_uses_seavox_source_backed_refinement_precision():
     assert extract_by_id["tno_irish_sea"].get("source_feature_count") == 19
     assert extract_by_id["tno_irish_sea"].get("snapshot_simplify_tolerance") == 0.002
     assert "tno_irish_sea" not in clone_ids
+
+
+def test_tno_south_china_sea_uses_seavox_source_backed_refinement_precision():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_south_china_sea"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    assert props.get("source_standard") == "marine_regions_seavox_v19"
+    assert props.get("region_group") == "marine_macro"
+    assert 5000 <= _polygonal_vertex_count(geometry) <= 50000
+    assert 170 <= geometry.area <= 240
+    minx, miny, maxx, maxy = geometry.bounds
+    assert 101.5 <= minx <= 103.0
+    assert 0.0 <= miny <= 2.0
+    assert 121.0 <= maxx <= 123.0
+    assert 22.0 <= maxy <= 24.5
+    snapshot_feature_map = _feature_map(_load_named_water_snapshot_features())
+    snapshot_props = snapshot_feature_map["tno_south_china_sea"].get("properties", {})
+    assert snapshot_props.get("source_layer") == "seavox_v19"
+    assert snapshot_props.get("source_query") == "mrgid_sr='24144'"
+    assert snapshot_props.get("source_record_ids") == ["mrgid_r:23623", "mrgid_sr:24144"]
+    assert snapshot_props.get("snapshot_simplify_tolerance") == 0.03
+    provenance = _load_water_provenance()
+    extract_by_id = {
+        str(entry.get("id") or ""): entry
+        for entry in provenance.get("water_extracts", [])
+    }
+    clone_ids = {
+        str(entry.get("id") or "")
+        for entry in provenance.get("local_clone_extracts", [])
+    }
+    assert extract_by_id["tno_south_china_sea"].get("source_layer") == "seavox_v19"
+    assert extract_by_id["tno_south_china_sea"].get("source_query") == "mrgid_sr='24144'"
+    assert extract_by_id["tno_south_china_sea"].get("source_record_ids") == ["mrgid_r:23623", "mrgid_sr:24144"]
+    assert extract_by_id["tno_south_china_sea"].get("source_feature_count") == 1
+    assert extract_by_id["tno_south_china_sea"].get("snapshot_simplify_tolerance") == 0.03
+    assert "tno_south_china_sea" not in clone_ids
 
 
 def test_tno_hudson_strait_splits_hudson_bay_as_source_backed_detail():
