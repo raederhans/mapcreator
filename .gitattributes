@@ -1,3 +1,5 @@
+.gitattributes text eol=lf
+
 # Scenario contracts store byte-exact sizes and sha256 values for these assets.
 data/scenarios/**/chunks/*.json text eol=lf
 data/scenarios/**/detail_chunks.manifest.json text eol=lf
@@ -9,3 +11,4 @@ data/scenarios/**/audit.json text eol=lf
 data/scenarios/**/manifest.json text eol=lf
 data/scenarios/**/geo_locale_patch*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json text eol=lf
+data/scenarios/**/startup.bundle.*.json.gz binary

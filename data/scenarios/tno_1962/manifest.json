@@ -166,7 +166,7 @@
   "snapshot_fingerprint": "451eca51d78e0af4527a6c9f1a2f6a85d39f422e2cfbdb746435bedc02a5a6e9",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "53cb62478b6a2cd0db151a1e0758234390f7290a806f52e7949ca8871ca4a34f",
+    "detail_chunk_manifest_sha256": "6271d767e02f2765d9c52926c25317374eceddd6c021c5de719a077e3cb0e184",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
     "runtime_topology_sha256": "15cc98dbf4b30a988d2d60669efa3ff2ab0e690ce9bef7379413faf886f44d07"
   },

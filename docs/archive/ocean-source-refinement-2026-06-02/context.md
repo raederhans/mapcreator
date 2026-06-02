@@ -75,6 +75,12 @@
 - Added test coverage for manifest source runtime/detail-manifest hashes and gzip sidecar source parity.
 - Architecture review confirmed the phase boundary: one source-backed candidate, no global sweep, and high-detail macro seas kept for child-water splits.
 
+## Post-Merge Fix
+
+- Main checkout exposed a Windows line-ending hash mismatch for `water.detail.r1c1.json`.
+- Added exact `.gitattributes` rules for the changed TNO water JSON files and startup gzip sidecars.
+- Recomputed `detail_chunks.manifest.json`, `manifest.json`, startup bundle source hashes, and gzip sidecars after the LF contract was in place.
+
 ## Remaining Ocean Queue
 
 - `tno_scotia_sea` is now the only low-precision macro sea in the audit output.
