@@ -95,7 +95,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "gulf_of_guinea", "point": (3.05, 3.25), "allowed_ids": {"tno_gulf_of_guinea"}},
     {"label": "ross_sea", "point": (-168.0911, -78.5673), "allowed_ids": {"tno_ross_sea"}},
     {"label": "weddell_sea", "point": (-54.8111, -77.2919), "allowed_ids": {"tno_weddell_sea"}},
-    {"label": "scotia_sea", "point": (-54.5037, -61.2189), "allowed_ids": {"tno_scotia_sea"}},
+    {"label": "scotia_sea", "point": (-48.964392, -60.640768), "allowed_ids": {"tno_scotia_sea"}},
     {"label": "bering_sea", "point": (-170.8823, 58.7917), "allowed_ids": {"tno_bering_sea"}},
     {"label": "gulf_of_alaska", "point": (-147.3894, 57.3575), "allowed_ids": {"tno_gulf_of_alaska"}},
     {"label": "beaufort_sea", "point": (-136.1302, 72.7404), "allowed_ids": {"tno_beaufort_sea"}},
