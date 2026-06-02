@@ -33,6 +33,7 @@ let rotationQuarterTurns = DEFAULT_ROTATION_QUARTER_TURNS;
 let sceneBaseBounds = null;
 let viewChangeListener = null;
 let activeAssetKey = DEFAULT_ASSET_KEY;
+// carrier asset 可以随 active pack 切换；generation 防止旧异步加载结果回写新底图。
 let ensureGeneration = 0;
 
 const overlayRoots = {
@@ -438,6 +439,7 @@ function buildFrame(frameId, frameDefinition, defs, scene) {
 
   defs.append(landDefinition, landClip, seaClip);
 
+  // 每个 frame 独立保留 land/sea/label overlay root，点线面 preview 可以按投影 frame 精确挂载。
   const seaOverlay = createSvgNode("g");
   seaOverlay.classList.add("transport-workbench-carrier-overlay", "transport-workbench-carrier-overlay-sea");
   seaOverlay.setAttribute("clip-path", `url(#${seaClipId})`);

@@ -370,6 +370,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
   };
 
   function resetLoadStateForActivePack() {
+    // active pack 改变时整批丢弃 manifest/audit/pack promise，避免旧 country pack 的异步结果污染新选择。
     runtime.loadGeneration += 1;
     runtime.manifestPromise = null;
     runtime.auditPromise = null;
@@ -534,6 +535,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
         runtime.packPaths.set(cacheKey, packPath);
         const aliasMode = mode === PACK_MODE_PREVIEW ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
         const aliasCacheKey = getPackCacheKey(aliasMode, variantId);
+        // preview/full 指向同一份 pack 时共用投影结果，保留 single-pack 产物的缓存优势。
         if (runtime.packPaths.get(aliasCacheKey) && runtime.packPaths.get(aliasCacheKey) === packPath) {
           if (runtime.projectedPacks.has(aliasCacheKey)) {
             const aliasPack = runtime.projectedPacks.get(aliasCacheKey);

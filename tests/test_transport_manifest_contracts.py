@@ -353,6 +353,7 @@ class TransportManifestContractsTest(unittest.TestCase):
         self.assertFalse(failures, failures)
 
     def test_carrier_manifests_declare_runtime_asset_key(self) -> None:
+        # 同时锁 manifest extension 和 runtime asset registry，避免只改一端导致 workbench 无法加载底图。
         runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
         runtime_assets = runtime_asset_registry.get("assets") or {}
         expected_asset_keys = {
@@ -375,6 +376,7 @@ class TransportManifestContractsTest(unittest.TestCase):
         self.assertFalse(failures, failures)
 
     def test_carrier_runtime_asset_key_and_catalog_key_share_the_same_url(self) -> None:
+        # runtime asset key 与 catalog key 指向同一 carrier.json，保证 UI 预览和数据目录读取同一份底图。
         runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
         catalog_payload = json.loads(CATALOG_JSON.read_text(encoding="utf-8"))
         catalog_entries = {entry["key"]: entry for entry in catalog_payload.get("entries") or []}

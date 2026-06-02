@@ -364,6 +364,7 @@ def build_carrier(spec: CarrierSpec, source: gpd.GeoDataFrame) -> None:
         frames[frame_id] = build_frame_payload(frame_id, frame, selected, forward, inverse)
 
     generated_at = utc_now()
+    # carrier、provenance、manifest 同步生成，保持 runtime 入口、审计材料和构建合同指向同一版 source。
     carrier_payload = {
         "version": f"{spec.carrier_id}_carrier_v1",
         "carrier_id": spec.carrier_id,
@@ -446,6 +447,7 @@ def update_pack_manifest(path: Path) -> bool:
     carrier_asset_key = PACK_CARRIER_ASSET_KEYS.get(pack_id)
     if not carrier_asset_key:
         return False
+    # 普通交通 pack 通过 carrier_asset_key 接到国家底图；registry 是 pack->carrier 关系的唯一写入源。
     payload["carrier_asset_key"] = carrier_asset_key
     carrier_extension = payload.setdefault("extensions", {}).setdefault("carrier", {})
     carrier_extension.update(resolve_pack_carrier_extension(pack_id))
