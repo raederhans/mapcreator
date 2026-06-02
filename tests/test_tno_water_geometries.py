@@ -28,6 +28,7 @@ SCENARIO_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_regions.
 RUNTIME_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.topo.json"
 RUNTIME_BOOTSTRAP_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.bootstrap.topo.json"
 SCENARIO_NAMED_WATER_SNAPSHOT_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "marine_regions_named_waters.snapshot.geojson"
+SCENARIO_WATER_PROVENANCE_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "water_regions.provenance.json"
 SCENARIO_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "manifest.json"
 DETAIL_CHUNK_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "detail_chunks.manifest.json"
 STARTUP_BUNDLE_EN_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "startup.bundle.en.json"
@@ -111,6 +112,7 @@ TRACKED_NAMED_WATER_IDS = TRACKED_DETAIL_IDS | {
     "tno_sea_of_azov",
     "tno_sea_of_marmara",
     "tno_bosporus_dardanelles",
+    "tno_bay_of_biscay",
     "tno_greenland_sea",
     "tno_norwegian_sea",
     "tno_barents_sea",
@@ -170,6 +172,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "severn_estuary", "point": (-2.74, 51.55), "allowed_ids": {"tno_severn_estuary"}},
     {"label": "st_brides_bay", "point": (-5.12, 51.79), "allowed_ids": {"tno_st_brides_bay"}},
     {"label": "bay_of_brest", "point": (-4.496007, 48.334829), "allowed_ids": {"tno_bay_of_brest"}},
+    {"label": "bay_of_biscay", "point": (-4.65, 45.2), "allowed_ids": {"tno_bay_of_biscay"}},
     {"label": "swansea_bay", "point": (-3.99, 51.58), "allowed_ids": {"tno_swansea_bay"}},
     {"label": "carmarthen_bay", "point": (-4.41, 51.68), "allowed_ids": {"tno_carmarthen_bay"}},
     {"label": "bridgwater_bay", "point": (-3.18, 51.25), "allowed_ids": {"tno_bridgwater_bay"}},
@@ -251,6 +254,7 @@ TRACKED_COVERAGE_PROBES = [
 
 TRACKED_SEAM_PAIRS = [
     ("tno_celtic_sea", "tno_northeast_atlantic_ocean"),
+    ("tno_bay_of_biscay", "tno_northeast_atlantic_ocean"),
     ("tno_celtic_sea", "tno_english_channel"),
     ("tno_irish_sea", "tno_north_channel"),
     ("tno_baltic_sea", "tno_kattegat"),
@@ -348,6 +352,10 @@ def _load_runtime_topology_feature_collections_for_d3(object_names):
 def _load_named_water_snapshot_features():
     payload = json.loads(SCENARIO_NAMED_WATER_SNAPSHOT_PATH.read_text(encoding="utf-8"))
     return payload.get("features", [])
+
+
+def _load_water_provenance():
+    return json.loads(SCENARIO_WATER_PROVENANCE_PATH.read_text(encoding="utf-8"))
 
 
 def _load_water_chunk_features():
@@ -606,6 +614,36 @@ def test_tno_north_sea_uses_iho_source_backed_refinement_precision():
     assert props.get("source_standard") == "marine_regions_iho_v3"
     assert props.get("region_group") == "marine_macro"
     assert _polygonal_vertex_count(geometry) >= 1000
+
+
+def test_tno_bay_of_biscay_uses_iho_source_backed_refinement_precision():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_bay_of_biscay"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    assert props.get("source_standard") == "marine_regions_iho_v3"
+    assert props.get("region_group") == "marine_macro"
+    assert 1000 <= _polygonal_vertex_count(geometry) <= 5000
+    snapshot_feature_map = _feature_map(_load_named_water_snapshot_features())
+    snapshot_props = snapshot_feature_map["tno_bay_of_biscay"].get("properties", {})
+    assert snapshot_props.get("source_layer") == "iho"
+    assert snapshot_props.get("source_query") == "mrgid=2359"
+    assert snapshot_props.get("source_record_ids") == ["mrgid:2359"]
+    assert snapshot_props.get("snapshot_simplify_tolerance") == 0.004
+    provenance = _load_water_provenance()
+    extract_by_id = {
+        str(entry.get("id") or ""): entry
+        for entry in provenance.get("water_extracts", [])
+    }
+    clone_ids = {
+        str(entry.get("id") or "")
+        for entry in provenance.get("local_clone_extracts", [])
+    }
+    assert extract_by_id["tno_bay_of_biscay"].get("source_layer") == "iho"
+    assert extract_by_id["tno_bay_of_biscay"].get("source_query") == "mrgid=2359"
+    assert extract_by_id["tno_bay_of_biscay"].get("source_record_ids") == ["mrgid:2359"]
+    assert extract_by_id["tno_bay_of_biscay"].get("snapshot_simplify_tolerance") == 0.004
+    assert "tno_bay_of_biscay" not in clone_ids
 
 
 def test_tno_hudson_strait_splits_hudson_bay_as_source_backed_detail():

@@ -1428,8 +1428,11 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "water_type": "gulf",
         "region_group": "marine_macro",
         "is_chokepoint": False,
-        "global_source_id": "marine_bay_of_biscay",
-        "source_standard": "tno_cloned_from_global_water_regions",
+        "source_layer": "iho",
+        "source_query": "mrgid=2359",
+        "source_standard": "marine_regions_iho_v3",
+        "exclude_base_ids": ("marine_bay_of_biscay",),
+        "snapshot_simplify_tolerance": 0.004,
         "subtract_named_ids": ("tno_bay_of_brest",),
         "clip_open_ocean_ids": TNO_ATLANTIC_OPEN_OCEAN_IDS,
     },
@@ -5941,8 +5944,13 @@ def build_marine_regions_named_water_snapshot_payload() -> tuple[dict, dict]:
         source_geom = normalize_polygonal(safe_unary_union(source_gdf.geometry.tolist()))
         if source_geom is None:
             raise ValueError(f"Marine Regions geometry collapsed for {spec['id']}.")
+        snapshot_simplify_tolerance = float(spec.get("snapshot_simplify_tolerance") or 0.0)
+        if snapshot_simplify_tolerance > 0:
+            source_geom = smooth_polygonal(source_geom, simplify_tolerance=snapshot_simplify_tolerance)
+            if source_geom is None:
+                raise ValueError(f"Marine Regions geometry collapsed after snapshot simplification for {spec['id']}.")
         source_record_ids = collect_marine_regions_source_record_ids(spec["source_layer"], source_features)
-        snapshot_features.append(make_feature(source_geom, {
+        snapshot_props = {
             "id": spec["id"],
             "name": spec["name"],
             "label": spec.get("label") or spec["name"],
@@ -5951,8 +5959,8 @@ def build_marine_regions_named_water_snapshot_payload() -> tuple[dict, dict]:
             "source_record_ids": source_record_ids,
             "source_standard": spec["source_standard"],
             "snapshot_generated_at": snapshot_generated_at,
-        }))
-        water_extracts.append({
+        }
+        extract_entry = {
             "id": spec["id"],
             "name": spec["name"],
             "label": spec.get("label") or spec["name"],
@@ -5961,7 +5969,12 @@ def build_marine_regions_named_water_snapshot_payload() -> tuple[dict, dict]:
             "source_record_ids": source_record_ids,
             "source_standard": spec["source_standard"],
             "source_feature_count": int(len(source_gdf)),
-        })
+        }
+        if snapshot_simplify_tolerance > 0:
+            snapshot_props["snapshot_simplify_tolerance"] = snapshot_simplify_tolerance
+            extract_entry["snapshot_simplify_tolerance"] = snapshot_simplify_tolerance
+        snapshot_features.append(make_feature(source_geom, snapshot_props))
+        water_extracts.append(extract_entry)
         source_layers_used.add(str(spec["source_layer"]).strip())
         total_source_feature_count += int(len(source_gdf))
 

@@ -52,6 +52,7 @@ OCEAN_REFINEMENT_PHASE_TARGET_IDS = {
         "tno_mozambique_channel",
     ),
     "phase6_european_source_replacement": (
+        "tno_bay_of_biscay",
         "tno_north_sea",
     ),
 }
