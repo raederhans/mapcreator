@@ -3702,7 +3702,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
-      "size_bytes": 16437967
+      "size_bytes": 16540279
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c0.json",
@@ -3726,11 +3726,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c1.json",
-      "size_bytes": 20424676
+      "size_bytes": 20749340
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
-      "size_bytes": 26912383
+      "size_bytes": 27096854
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
@@ -3850,7 +3850,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378915
+      "size_bytes": 1378911
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
@@ -3858,11 +3858,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378916
+      "size_bytes": 1378911
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 16437966
+      "size_bytes": 16540278
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.provenance.json",
@@ -6342,7 +6342,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 44208
+      "size_bytes": 44244
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6430,7 +6430,7 @@
     },
     {
       "path": "app/js/core/project_package_io.js",
-      "size_bytes": 13244
+      "size_bytes": 16027
     },
     {
       "path": "app/js/core/releasable_manager.js",
@@ -6850,7 +6850,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 80715
+      "size_bytes": 80738
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -6866,7 +6866,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 47399
+      "size_bytes": 47478
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -6894,7 +6894,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 260735
+      "size_bytes": 260761
     },
     {
       "path": "app/js/ui/toast.js",
@@ -7191,5 +7191,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1032163598
+  "total_bytes": 1032880295
 }

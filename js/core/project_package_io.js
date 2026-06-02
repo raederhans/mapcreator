@@ -12,6 +12,9 @@ const PROJECT_PACKAGE_MANIFEST_PATH = "manifest.json";
 const PROJECT_PACKAGE_PROJECT_PATH = "project/map_project.json";
 const LEGACY_PROJECT_PATH = "map_project.json";
 const LEGACY_PROJECT_MANIFEST_PATH = "map_project_manifest.json";
+const MAX_PROJECT_PACKAGE_ZIP_BYTES = 32 * 1024 * 1024;
+const MAX_PROJECT_PACKAGE_ENTRY_COUNT = 128;
+const MAX_PROJECT_PACKAGE_UNZIPPED_BYTES = 64 * 1024 * 1024;
 
 const PROJECT_PACKAGE_CONTENT_PRESETS = Object.freeze({
   minimal: Object.freeze({
@@ -69,8 +72,11 @@ function buildProjectPackageSummary(payload = {}) {
 }
 
 function buildProjectResourceIndex(payload = {}, options = {}) {
+  const editableProjectPath = options.includeProjectDirectory
+    ? PROJECT_PACKAGE_PROJECT_PATH
+    : LEGACY_PROJECT_PATH;
   const resources = {
-    editableProject: PROJECT_PACKAGE_PROJECT_PATH,
+    editableProject: editableProjectPath,
     legacyEditableProject: LEGACY_PROJECT_PATH,
   };
   if (options.includeExportSettings) {
@@ -247,6 +253,27 @@ function buildJsonProjectFile(text, filename = "map_project.json") {
   return blob;
 }
 
+function assertProjectZipFileBudget(file) {
+  const size = Number(file?.size || 0) || 0;
+  if (size > MAX_PROJECT_PACKAGE_ZIP_BYTES) {
+    throw new Error("Project ZIP is too large for editable project import.");
+  }
+}
+
+function assertProjectZipEntryBudget(entries = {}) {
+  const entryNames = Object.keys(entries);
+  if (entryNames.length > MAX_PROJECT_PACKAGE_ENTRY_COUNT) {
+    throw new Error("Project ZIP contains too many files for editable project import.");
+  }
+  const totalBytes = entryNames.reduce((sum, name) => {
+    const entry = entries[name];
+    return sum + (entry instanceof Uint8Array ? entry.byteLength : 0);
+  }, 0);
+  if (totalBytes > MAX_PROJECT_PACKAGE_UNZIPPED_BYTES) {
+    throw new Error("Project ZIP expands beyond the editable project import limit.");
+  }
+}
+
 function parseJsonBytes(bytes, fallback = null) {
   if (!bytes) return fallback;
   try {
@@ -254,6 +281,21 @@ function parseJsonBytes(bytes, fallback = null) {
   } catch {
     return fallback;
   }
+}
+
+function parseProjectPackageManifest(entries = {}) {
+  if (entries[PROJECT_PACKAGE_MANIFEST_PATH]) {
+    try {
+      return JSON.parse(strFromU8(entries[PROJECT_PACKAGE_MANIFEST_PATH]));
+    } catch {
+      throw new Error("Project package manifest cannot be parsed.");
+    }
+  }
+  const legacyManifest = parseJsonBytes(entries[LEGACY_PROJECT_MANIFEST_PATH], null);
+  if (legacyManifest?.manifestPath === PROJECT_PACKAGE_MANIFEST_PATH) {
+    throw new Error("Project ZIP is missing manifest.json.");
+  }
+  return legacyManifest || {};
 }
 
 function buildProjectPackagePreview({ file, entries, manifest, projectPayload }) {
@@ -313,18 +355,38 @@ function projectManifestMatchesPayload(manifest = {}, projectPayload = {}) {
   return true;
 }
 
+function isStrictProjectPackageManifest(manifest = {}) {
+  return manifest?.packageKind === "editable-project-package"
+    || Number(manifest?.artifactVersion || 0) === PROJECT_PACKAGE_VERSION;
+}
+
 async function validateManifestProjectEntry({ manifest, projectBytes, selectedProjectPath }) {
   const files = Array.isArray(manifest?.files) ? manifest.files : [];
-  if (!files.length) return;
-  const projectEntries = files.filter((file) => (
+  const strictManifest = isStrictProjectPackageManifest(manifest);
+  if (!files.length) {
+    if (strictManifest) {
+      throw new Error("Project package manifest does not list the editable project file.");
+    }
+    return;
+  }
+  const selectedEntries = files.filter((file) => (
     file?.path === selectedProjectPath
-    || file?.path === PROJECT_PACKAGE_PROJECT_PATH
-    || file?.path === LEGACY_PROJECT_PATH
+    && String(file?.role || "editable-project") === "editable-project"
   ));
+  const projectEntries = strictManifest
+    ? selectedEntries
+    : files.filter((file) => (
+      file?.path === selectedProjectPath
+      || file?.path === PROJECT_PACKAGE_PROJECT_PATH
+      || file?.path === LEGACY_PROJECT_PATH
+    ));
   if (!projectEntries.length) {
     throw new Error("Project package manifest does not list the editable project file.");
   }
   const checksumEntries = projectEntries.filter((file) => String(file?.checksum || "").trim());
+  if (strictManifest && !checksumEntries.length) {
+    throw new Error("Project package manifest must include editable project checksum.");
+  }
   if (!checksumEntries.length) return;
   const checksum = await sha256Bytes(projectBytes);
   if (!checksumEntries.some((file) => file.checksum === checksum)) {
@@ -339,7 +401,9 @@ async function prepareProjectImportFile(file) {
   if (!file || typeof file.arrayBuffer !== "function") {
     throw new Error("Project ZIP cannot be read by this browser.");
   }
+  assertProjectZipFileBudget(file);
   const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+  assertProjectZipEntryBudget(entries);
   const selectedProjectPath = entries[PROJECT_PACKAGE_PROJECT_PATH]
     ? PROJECT_PACKAGE_PROJECT_PATH
     : LEGACY_PROJECT_PATH;
@@ -347,9 +411,7 @@ async function prepareProjectImportFile(file) {
   if (!projectBytes) {
     throw new Error("Project ZIP must include project/map_project.json or map_project.json.");
   }
-  const manifest = parseJsonBytes(entries[PROJECT_PACKAGE_MANIFEST_PATH], null)
-    || parseJsonBytes(entries[LEGACY_PROJECT_MANIFEST_PATH], null)
-    || {};
+  const manifest = parseProjectPackageManifest(entries);
   const projectText = strFromU8(projectBytes);
   const projectPayload = JSON.parse(projectText);
   await validateManifestProjectEntry({ manifest, projectBytes, selectedProjectPath });

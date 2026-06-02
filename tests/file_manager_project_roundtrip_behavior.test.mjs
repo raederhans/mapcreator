@@ -227,6 +227,30 @@ test("project package resource index only references included optional files", a
   assert.equal(Object.hasOwn(resourceIndex.resources, "diagnostics"), false);
 });
 
+test("project package resource index follows actual editable project path", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, {
+    format: "zip",
+    packageContents: {
+      includeProjectDirectory: false,
+      includeExportSettings: false,
+      includeResourceIndex: true,
+      includeDiagnostics: false,
+    },
+  });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const resourceIndex = JSON.parse(strFromU8(entries["resources/project_resource_index.json"]));
+
+  assert.equal(Boolean(entries["project/map_project.json"]), false);
+  assert.equal(resourceIndex.resources.editableProject, "map_project.json");
+});
+
 test("project package import prepares editable project and preview", async () => {
   const blob = await exportProjectBlob({
     activeScenarioId: "tno_1962",
@@ -267,6 +291,145 @@ test("project package import rejects manifest identity mismatch", async () => {
   await assert.rejects(
     () => prepareProjectImportFile(tampered),
     /Project package manifest does not match editable project/
+  );
+});
+
+test("project package import rejects unparsable primary manifest", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const tampered = new Blob([zipSync({
+    ...entries,
+    "manifest.json": strToU8("{broken"),
+  })], { type: "application/zip" });
+  Object.defineProperty(tampered, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(tampered),
+    /Project package manifest cannot be parsed/
+  );
+});
+
+test("project package import rejects missing primary manifest pointer", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const entriesWithoutManifest = { ...entries };
+  delete entriesWithoutManifest["manifest.json"];
+  const tampered = new Blob([zipSync(entriesWithoutManifest)], { type: "application/zip" });
+  Object.defineProperty(tampered, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(tampered),
+    /Project ZIP is missing manifest\.json/
+  );
+});
+
+test("project package import rejects strict manifest without project files", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
+  manifest.files = [];
+  const tampered = new Blob([zipSync({
+    ...entries,
+    "manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
+  })], { type: "application/zip" });
+  Object.defineProperty(tampered, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(tampered),
+    /Project package manifest does not list the editable project file/
+  );
+});
+
+test("project package import rejects strict manifest without project checksum", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
+  manifest.files = manifest.files.map((file) => {
+    if (file.path !== "project/map_project.json") return file;
+    const entryWithoutChecksum = { ...file };
+    delete entryWithoutChecksum.checksum;
+    return entryWithoutChecksum;
+  });
+  const tampered = new Blob([zipSync({
+    ...entries,
+    "manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
+  })], { type: "application/zip" });
+  Object.defineProperty(tampered, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(tampered),
+    /Project package manifest must include editable project checksum/
+  );
+});
+
+test("project package import rejects oversized zip before unzip", async () => {
+  const oversizedFile = {
+    name: "map_project.zip",
+    size: 33 * 1024 * 1024,
+    arrayBuffer: async () => new ArrayBuffer(0),
+  };
+
+  await assert.rejects(
+    () => prepareProjectImportFile(oversizedFile),
+    /Project ZIP is too large/
+  );
+});
+
+test("project package import rejects too many zip entries", async () => {
+  const entries = {
+    "map_project.json": strToU8(JSON.stringify({ schemaVersion: 21 })),
+  };
+  for (let index = 0; index < 129; index += 1) {
+    entries[`metadata/extra-${index}.json`] = strToU8("{}");
+  }
+  const blob = new Blob([zipSync(entries)], { type: "application/zip" });
+  Object.defineProperty(blob, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(blob),
+    /Project ZIP contains too many files/
+  );
+});
+
+test("project package import rejects expanded zip beyond import budget", async () => {
+  const entries = {
+    "map_project.json": strToU8(JSON.stringify({ schemaVersion: 21 })),
+    "metadata/oversized.bin": new Uint8Array((64 * 1024 * 1024) + 1),
+  };
+  const blob = new Blob([zipSync(entries)], { type: "application/zip" });
+  Object.defineProperty(blob, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(blob),
+    /Project ZIP expands beyond/
   );
 });
 
