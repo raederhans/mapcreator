@@ -571,17 +571,20 @@ class FileManager {
     return payload;
   }
 
-  static async writeBlobDownload(blob, filename, { destination = "browser" } = {}) {
-    const normalizedDestination = String(destination || "browser").trim().toLowerCase();
+  static async writeBlobDownload(blob, filename, { destination = "picker", pickerTypes = [] } = {}) {
+    const normalizedDestination = String(destination || "picker").trim().toLowerCase();
     if (
       normalizedDestination === "picker"
       && typeof globalThis.showSaveFilePicker === "function"
       && typeof blob?.stream === "function"
     ) {
       try {
-        const handle = await globalThis.showSaveFilePicker({
-          suggestedName: filename,
-        });
+        const pickerOptions = { suggestedName: filename };
+        if (Array.isArray(pickerTypes) && pickerTypes.length) {
+          pickerOptions.types = pickerTypes;
+          pickerOptions.excludeAcceptAllOption = true;
+        }
+        const handle = await globalThis.showSaveFilePicker(pickerOptions);
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
@@ -629,12 +632,24 @@ class FileManager {
       return {
         blob: new Blob([zipBytes], { type: "application/zip" }),
         filename: "map_project.zip",
+        pickerTypes: [{
+          description: "Project ZIP package",
+          accept: {
+            "application/zip": [".zip"],
+          },
+        }],
         label: "Project ZIP package downloaded.",
       };
     }
     return {
       blob: new Blob([data], { type: "application/json" }),
       filename: "map_project.json",
+      pickerTypes: [{
+        description: "Editable project JSON",
+        accept: {
+          "application/json": [".json"],
+        },
+      }],
       label: "Project file downloaded.",
     };
   }
@@ -644,7 +659,10 @@ class FileManager {
     if (!payload) return;
 
     const download = FileManager.buildProjectDownloadPayload(payload, options);
-    const wroteFile = await FileManager.writeBlobDownload(download.blob, download.filename, options);
+    const wroteFile = await FileManager.writeBlobDownload(download.blob, download.filename, {
+      ...options,
+      pickerTypes: download.pickerTypes,
+    });
     if (!wroteFile) return false;
     showToast(t(download.label, "ui"), {
       title: t("Project saved", "ui"),

@@ -1492,7 +1492,6 @@ function initSidebar({ render } = {}) {
       ["zip", "Project ZIP package"],
     ]);
     const projectDownloadDestination = buildProjectSelect("projectDownloadDestination", "Download to", [
-      ["browser", "Browser downloads"],
       ["picker", "Save As dialog"],
     ]);
     const projectLoadSource = buildProjectSelect("projectLoadSource", "Load source", [

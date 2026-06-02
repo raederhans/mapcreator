@@ -82,7 +82,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8655967
+      "size_bytes": 8656265
     },
     {
       "path": "app/data/manifest.json",
@@ -6342,7 +6342,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 43884
+      "size_bytes": 44437
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -6862,7 +6862,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 46318
+      "size_bytes": 46324
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -6890,7 +6890,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 260615
+      "size_bytes": 260571
     },
     {
       "path": "app/js/ui/toast.js",
@@ -7187,5 +7187,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1023706494
+  "total_bytes": 1023707307
 }

@@ -400,7 +400,7 @@ export function createProjectSupportDiagnosticsController({
       return;
     }
     if (lastChange === "project-export") {
-      projectSaveStatus.textContent = t("Project exported. Appearance and transport settings are saved in the JSON file.", "ui");
+      projectSaveStatus.textContent = t("Project exported. Appearance and transport settings are saved in the selected project file.", "ui");
       return;
     }
     if (lastChange === "project-import") {
@@ -933,7 +933,7 @@ export function createProjectSupportDiagnosticsController({
         try {
           const exported = await fileManager.exportProject(state, {
             format: projectDownloadFormat?.value || "json",
-            destination: projectDownloadDestination?.value || "browser",
+            destination: projectDownloadDestination?.value || "picker",
           });
           refreshProjectSaveStatus(exported === false ? t("Project export cancelled.", "ui") : "");
         } catch (error) {

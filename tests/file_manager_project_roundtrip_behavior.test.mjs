@@ -199,6 +199,86 @@ test("project save picker cancel keeps export dirty state unchanged", async () =
   }
 });
 
+test("project save picker receives json file type options by default", async () => {
+  const previousShowSaveFilePicker = globalThis.showSaveFilePicker;
+  const previousDocument = globalThis.document;
+  const calls = [];
+  const writes = [];
+
+  globalThis.document = {
+    getElementById: () => null,
+  };
+  globalThis.showSaveFilePicker = async (options) => {
+    calls.push(options);
+    return {
+      createWritable: async () => ({
+        write: async (blob) => {
+          writes.push(blob);
+        },
+        close: async () => {},
+      }),
+    };
+  };
+
+  try {
+    const result = await FileManager.exportProject({
+      activeScenarioId: "tno_1962",
+      activeScenarioManifest: { version: 3 },
+      scenarioBaselineHash: "baseline-1",
+      transportWorkbenchUi: {},
+      exportWorkbenchUi: {},
+      styleConfig: {},
+    });
+
+    assert.equal(result, true);
+    assert.equal(calls[0].suggestedName, "map_project.json");
+    assert.equal(calls[0].excludeAcceptAllOption, true);
+    assert.deepEqual(calls[0].types[0].accept, { "application/json": [".json"] });
+    assert.equal(writes[0].type, "application/json");
+  } finally {
+    globalThis.showSaveFilePicker = previousShowSaveFilePicker;
+    globalThis.document = previousDocument;
+  }
+});
+
+test("project zip save picker receives zip file type options", async () => {
+  const previousShowSaveFilePicker = globalThis.showSaveFilePicker;
+  const previousDocument = globalThis.document;
+  const calls = [];
+
+  globalThis.document = {
+    getElementById: () => null,
+  };
+  globalThis.showSaveFilePicker = async (options) => {
+    calls.push(options);
+    return {
+      createWritable: async () => ({
+        write: async () => {},
+        close: async () => {},
+      }),
+    };
+  };
+
+  try {
+    const result = await FileManager.exportProject({
+      activeScenarioId: "tno_1962",
+      activeScenarioManifest: { version: 3 },
+      scenarioBaselineHash: "baseline-1",
+      transportWorkbenchUi: {},
+      exportWorkbenchUi: {},
+      styleConfig: {},
+    }, { format: "zip" });
+
+    assert.equal(result, true);
+    assert.equal(calls[0].suggestedName, "map_project.zip");
+    assert.equal(calls[0].excludeAcceptAllOption, true);
+    assert.deepEqual(calls[0].types[0].accept, { "application/zip": [".zip"] });
+  } finally {
+    globalThis.showSaveFilePicker = previousShowSaveFilePicker;
+    globalThis.document = previousDocument;
+  }
+});
+
 test("project export preserves strategic overlay counters and legacy kind values", async () => {
   const payload = await exportProjectPayload({
     activePaletteId: "hoi4_vanilla",

@@ -126,7 +126,7 @@ test("project save status refreshes when dirty state changes", () => {
     assert.match(projectSaveStatus.textContent, /Unsaved project changes/);
 
     clearDirty("project-export");
-    assert.equal(projectSaveStatus.textContent, "Project exported. Appearance and transport settings are saved in the JSON file.");
+    assert.equal(projectSaveStatus.textContent, "Project exported. Appearance and transport settings are saved in the selected project file.");
   } finally {
     registerRuntimeHook(state, "updateProjectSaveStatusFn", null);
     state.isDirty = previousDirty;
@@ -159,6 +159,30 @@ test("project download passes selected file format and destination", async () =>
 
   assert.deepEqual(calls, [{ format: "zip", destination: "picker" }]);
   assert.equal(projectSaveStatus.textContent, "Project export includes appearance and transport settings.");
+});
+
+test("project download defaults to save dialog destination", async () => {
+  const projectSaveStatus = createStatusNode();
+  const downloadProjectBtn = createButtonNode();
+  const calls = [];
+  const controller = createController(projectSaveStatus, {
+    elements: {
+      downloadProjectBtn,
+      projectDownloadFormat: { value: "json" },
+    },
+    helpers: {
+      fileManager: {
+        exportProject: async (_state, options) => {
+          calls.push(options);
+        },
+      },
+    },
+  });
+
+  controller.bindEvents();
+  await downloadProjectBtn.listeners.click();
+
+  assert.deepEqual(calls, [{ format: "json", destination: "picker" }]);
 });
 
 test("project download failure is shown in project status", async () => {

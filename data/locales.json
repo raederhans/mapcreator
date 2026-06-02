@@ -4068,6 +4068,10 @@
       "en": "Project file loaded successfully.",
       "zh": "项目文件加载成功。"
     },
+    "Project exported. Appearance and transport settings are saved in the selected project file.": {
+      "en": "Project exported. Appearance and transport settings are saved in the selected project file.",
+      "zh": "项目已导出。外观和交通设置已保存在所选项目文件中。"
+    },
     "Project import cancelled because the saved scenario baseline does not match the current assets.": {
       "en": "Project import cancelled because the saved scenario baseline does not match the current assets.",
       "zh": "由于保存的剧本基线与当前资源不匹配，项目导入已取消。"
