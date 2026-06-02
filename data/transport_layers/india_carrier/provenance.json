@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-06-02T01:48:29.915207Z",
+  "carrierId": "india",
+  "source": "data/ne_10m_admin_1_states_provinces.shp",
+  "sourceKind": "Natural Earth 10m admin1",
+  "projection": {
+    "proj4": "+proj=lcc +lat_1=13.0 +lat_2=30.0 +lat_0=22.8 +lon_0=78.9 +datum=WGS84 +units=m +no_defs",
+    "type": "geoConicConformal",
+    "center": [
+      78.9,
+      22.8
+    ],
+    "parallels": [
+      13.0,
+      30.0
+    ],
+    "precision": 0.2
+  },
+  "viewBox": {
+    "width": 1600,
+    "height": 900
+  },
+  "defaultCamera": {
+    "scale": 1.0,
+    "translateX": 0.0,
+    "translateY": 0.0,
+    "minScale": 1.0,
+    "maxScale": 3.8,
+    "rotationQuarterTurns": 0
+  },
+  "lod": {
+    "overview": {
+      "tolerance_m": 2800.0,
+      "min_area_m2": 12000000.0
+    },
+    "detail": {
+      "tolerance_m": 650.0,
+      "min_area_m2": 1500000.0
+    }
+  },
+  "frames": {
+    "main": {
+      "type": "main",
+      "extent": {
+        "x": 18,
+        "y": 18,
+        "width": 1564,
+        "height": 864
+      },
+      "prefectureCodes": [
+        "IN-LA",
+        "IN-AR",
+        "IN-SK",
+        "IN-WB",
+        "IN-AS",
+        "IN-UT",
+        "IN-NL",
+        "IN-MN",
+        "IN-MZ",
+        "IN-TR",
+        "IN-ML",
+        "IN-PB",
+        "IN-RJ",
+        "IN-GJ",
+        "IN-HP",
+        "IN-JK",
+        "IN-BR",
+        "IN-UP",
+        "IN-AP",
+        "IN-OR",
+        "IN-DH",
+        "IN-MH",
+        "IN-GA",
+        "IN-KA",
+        "IN-KL",
+        "IN-PY",
+        "IN-TN",
+        "IN-LD",
+        "IN-AN",
+        "IN-JH",
+        "IN-DL",
+        "IN-CH",
+        "IN-MP",
+        "IN-CT",
+        "IN-HR",
+        "IN-TG"
+      ],
+      "featureCount": 36
+    }
+  },
+  "scopePolicy": "India admin1 preview scope follows Natural Earth polygons used by checked-in data."
+}

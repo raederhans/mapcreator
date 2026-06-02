@@ -118,7 +118,7 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
         if (!isRenderGenerationCurrent(candidateGeneration, context.family.id)) {
           return null;
         }
-        console.error("[transport-workbench] Failed to prepare Japan carrier preview.", error);
+        console.error("[transport-workbench] Failed to prepare transport carrier preview.", error);
         if (!isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
           clearAllTransportWorkbenchFamilyPreviews();
         }

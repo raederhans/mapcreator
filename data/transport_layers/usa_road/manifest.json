@@ -89,5 +89,13 @@
         }
       }
     }
+  },
+  "carrier_asset_key": "transport_carrier:usa",
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:usa",
+      "scope_policy": "pack country carrier",
+      "projection_profile": "usa"
+    }
   }
 }

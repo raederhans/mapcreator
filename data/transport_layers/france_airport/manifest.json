@@ -75,5 +75,13 @@
         }
       }
     }
+  },
+  "carrier_asset_key": "transport_carrier:france",
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "pack country carrier",
+      "projection_profile": "france"
+    }
   }
 }

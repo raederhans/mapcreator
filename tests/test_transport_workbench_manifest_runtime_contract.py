@@ -164,15 +164,26 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertNotIn("fetch(packPath", point_content)
         self.assertNotIn("fetch(packPath", industrial_content)
 
-    def test_transport_carrier_uses_runtime_asset_key_through_data_service(self) -> None:
+    def test_transport_carrier_uses_active_pack_runtime_asset_key_through_data_service(self) -> None:
         carrier_content = TRANSPORT_CARRIER_JS.read_text(encoding="utf-8")
+        point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
+        line_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
         data_service_content = DATA_SERVICE_JS.read_text(encoding="utf-8")
 
         self.assertIn("../core/data_service.js", carrier_content)
         self.assertIn('const DEFAULT_ASSET_KEY = "transport_carrier:japan_corridor";', carrier_content)
-        self.assertIn("getAsset(DEFAULT_ASSET_KEY)", carrier_content)
+        self.assertIn("resolveCarrierAssetKeyFromManifest", carrier_content)
+        self.assertIn("ensureTransportWorkbenchCarrierForManifest", carrier_content)
+        self.assertIn("getAsset(resolvedKey)", carrier_content)
+        self.assertIn("activeAssetKey", carrier_content)
+        self.assertIn("transportCarrierAssetKey", carrier_content)
+        self.assertNotIn("getAsset(DEFAULT_ASSET_KEY)", carrier_content)
         self.assertNotIn("resolveDataAssetUrl", carrier_content)
         self.assertNotIn("fetch(DEFAULT_ASSET_URL)", carrier_content)
+        self.assertIn("await definition.prepareCarrier?.(manifest);", line_content)
+        self.assertIn("await ensureTransportWorkbenchCarrierForManifest(manifest);", point_content)
+        self.assertNotIn("projectManifestClipPoint", point_content)
+        self.assertNotIn("getManifestClipBbox", point_content)
         self.assertIn('registerMapcreatorSnapshotProvider("loadStatus", "data_service"', data_service_content)
 
     def test_japan_carrier_default_orientation_is_data_driven(self) -> None:

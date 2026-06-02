@@ -2,6 +2,7 @@ import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
+  ensureTransportWorkbenchCarrierForManifest,
   projectTransportWorkbenchCarrierGeometry,
   projectTransportWorkbenchCarrierPoint,
   projectTransportWorkbenchCarrierScenePoint,
@@ -91,6 +92,7 @@ const lineRuntime = createTransportWorkbenchLinePackRuntime({
     totalLabels: 0,
     filteredRoads: 0,
   },
+  prepareCarrier: ensureTransportWorkbenchCarrierForManifest,
   async buildPack({ mode, manifest, getPackPath, loadTransportAsset }) {
     const roadsPath = getPackPath(manifest, mode, "roads");
     const labelsPath = getPackPath(manifest, mode, "road_labels");
@@ -217,7 +219,7 @@ function buildProjectedLines(geometry) {
 
 function createRoadFeature(rawFeature) {
   const properties = rawFeature?.properties || {};
-  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature.geometry, "main");
+  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature.geometry);
   if (!projected?.geometry) return null;
   const projectedLines = buildProjectedLines(projected.geometry);
   return {
@@ -248,7 +250,7 @@ function createLabelFeature(rawFeature, roadFeatureById) {
   const properties = rawFeature?.properties || {};
   const coordinates = rawFeature?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
-  const projected = projectTransportWorkbenchCarrierPoint(coordinates[0], coordinates[1], "main");
+  const projected = projectTransportWorkbenchCarrierPoint(coordinates[0], coordinates[1]);
   if (!projected) return null;
   const roadId = String(properties.road_id || "").trim();
   const linkedRoad = roadFeatureById?.get(roadId) || null;

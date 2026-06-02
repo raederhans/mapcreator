@@ -1,0 +1,44 @@
+{
+  "adapter_id": "germany_carrier_v1",
+  "pack_id": "germany_carrier",
+  "family": "carrier",
+  "geometry_kind": "carrier",
+  "country": "germany",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T01:48:29.253252Z",
+  "recipe_path": "tools/build_transport_country_carriers.py",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "carrier": "data/transport_layers/germany_carrier/carrier.json",
+    "provenance": "data/transport_layers/germany_carrier/provenance.json"
+  },
+  "source_signature": {
+    "natural_earth_admin1": "data/ne_10m_admin_1_states_provinces.shp"
+  },
+  "recipe_version": "germany_carrier_v1",
+  "feature_counts": {},
+  "build_command": "python tools/build_transport_country_carriers.py --carrier germany",
+  "runtime_consumer": "transport_workbench_carrier",
+  "source_policy": "checked_in_natural_earth_admin1",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "carrier": "data/transport_layers/germany_carrier/carrier.json",
+        "provenance": "data/transport_layers/germany_carrier/provenance.json"
+      },
+      "feature_counts": {}
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_source_kind": "natural_earth_admin1",
+      "carrier_asset_key": "transport_carrier:germany",
+      "scope_policy": "Germany national mainland and islands represented by Natural Earth admin1.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 Länder carrier."
+    }
+  }
+}

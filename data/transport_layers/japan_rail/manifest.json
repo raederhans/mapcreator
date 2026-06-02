@@ -121,5 +121,13 @@
     }
   },
   "country_label": "Japan",
-  "pack_id": "japan_rail"
+  "pack_id": "japan_rail",
+  "carrier_asset_key": "transport_carrier:japan_corridor",
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:japan_corridor",
+      "scope_policy": "pack country carrier",
+      "projection_profile": "japan_corridor"
+    }
+  }
 }

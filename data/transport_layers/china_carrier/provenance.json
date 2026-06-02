@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-06-02T01:48:28.555303Z",
+  "carrierId": "china",
+  "source": "data/ne_10m_admin_1_states_provinces.shp",
+  "sourceKind": "Natural Earth 10m admin1",
+  "projection": {
+    "proj4": "+proj=lcc +lat_1=25.0 +lat_2=47.0 +lat_0=35.5 +lon_0=104.0 +datum=WGS84 +units=m +no_defs",
+    "type": "geoConicConformal",
+    "center": [
+      104.0,
+      35.5
+    ],
+    "parallels": [
+      25.0,
+      47.0
+    ],
+    "precision": 0.2
+  },
+  "viewBox": {
+    "width": 1600,
+    "height": 900
+  },
+  "defaultCamera": {
+    "scale": 1.0,
+    "translateX": 0.0,
+    "translateY": 0.0,
+    "minScale": 1.0,
+    "maxScale": 3.6,
+    "rotationQuarterTurns": 0
+  },
+  "lod": {
+    "overview": {
+      "tolerance_m": 2800.0,
+      "min_area_m2": 12000000.0
+    },
+    "detail": {
+      "tolerance_m": 650.0,
+      "min_area_m2": 1500000.0
+    }
+  },
+  "frames": {
+    "main": {
+      "type": "main",
+      "extent": {
+        "x": 18,
+        "y": 18,
+        "width": 1564,
+        "height": 864
+      },
+      "prefectureCodes": [
+        "CN-XJ",
+        "CN-XZ",
+        "CN-NM",
+        "CN-GS",
+        "CN-YN",
+        "CN-HL",
+        "CN-JL",
+        "CN-LN",
+        "CN-GX",
+        "CN-GD",
+        "CN-HI",
+        "CN-FJ",
+        "CN-ZJ",
+        "CN-SH",
+        "CN-JS",
+        "CN-SD",
+        "CN-HE",
+        "CN-TJ",
+        "CN-X01~",
+        "CN-BJ",
+        "CN-SC",
+        "CN-CQ",
+        "CN-GZ",
+        "CN-HN",
+        "CN-NX",
+        "CN-SN",
+        "CN-QH",
+        "CN-SX",
+        "CN-JX",
+        "CN-HA",
+        "CN-HB",
+        "CN-AH"
+      ],
+      "featureCount": 32
+    }
+  },
+  "scopePolicy": "Admin1 preview scope follows Natural Earth CHN polygons used by checked-in data."
+}
