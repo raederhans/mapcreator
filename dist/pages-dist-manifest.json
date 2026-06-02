@@ -5198,7 +5198,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_corridor/manifest.json",
-      "size_bytes": 1254
+      "size_bytes": 1473
     },
     {
       "path": "app/data/transport_layers/japan_corridor/provenance.json",
@@ -6894,7 +6894,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 260761
+      "size_bytes": 260801
     },
     {
       "path": "app/js/ui/toast.js",
@@ -7054,7 +7054,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 32772
+      "size_bytes": 33374
     },
     {
       "path": "app/js/ui/transport_workbench_line_runtime_shared.js",
@@ -7191,5 +7191,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1032880295
+  "total_bytes": 1032881156
 }

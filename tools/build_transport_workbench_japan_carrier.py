@@ -18,6 +18,11 @@ except ImportError as exc:
 from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPolygon, Polygon, box, mapping
 from shapely.ops import linemerge, transform, unary_union
 
+from map_builder.transport_carrier_registry import (
+    CARRIER_EXTENSION_METADATA,
+    JAPAN_CARRIER_ASSET_KEY,
+    resolve_carrier_source_kind,
+)
 from map_builder.transport_workbench_contracts import finalize_transport_manifest
 
 
@@ -336,8 +341,9 @@ def main() -> None:
             }
         },
         extension={
-            "carrier_source_kind": "natural_earth_admin1",
-            "carrier_asset_key": "transport_carrier:japan_corridor",
+            "carrier_source_kind": resolve_carrier_source_kind(JAPAN_CARRIER_ASSET_KEY),
+            "carrier_asset_key": JAPAN_CARRIER_ASSET_KEY,
+            **CARRIER_EXTENSION_METADATA[JAPAN_CARRIER_ASSET_KEY],
         },
     )
 

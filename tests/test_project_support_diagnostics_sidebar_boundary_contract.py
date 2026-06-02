@@ -130,7 +130,7 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('projectDownloadFormat,', sidebar_content)
         self.assertIn('projectDownloadDestination,', sidebar_content)
         self.assertIn('["picker", "Save As dialog"]', sidebar_content)
-        self.assertNotIn('["browser", "Browser downloads"]', sidebar_content)
+        self.assertIn('["browser", "Browser download"]', sidebar_content)
         self.assertIn('projectLoadSource,', sidebar_content)
         self.assertIn('projectSaveStatus,', sidebar_content)
         self.assertIn('projectSaveStatus,', owner_content)

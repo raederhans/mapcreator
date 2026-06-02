@@ -22,6 +22,7 @@ from map_builder.transport_carrier_registry import (  # noqa: E402
     CARRIER_EXTENSION_METADATA,
     CARRIER_RUNTIME_ASSETS,
     PACK_CARRIER_ASSET_KEYS,
+    resolve_carrier_source_kind,
     resolve_pack_carrier_extension,
 )
 from map_builder.transport_workbench_contracts import finalize_transport_manifest  # noqa: E402
@@ -430,7 +431,7 @@ def build_carrier(spec: CarrierSpec, source: gpd.GeoDataFrame) -> None:
             }
         },
         extension={
-            "carrier_source_kind": "natural_earth_admin1",
+            "carrier_source_kind": resolve_carrier_source_kind(f"transport_carrier:{spec.carrier_id}"),
             "carrier_asset_key": f"transport_carrier:{spec.carrier_id}",
             **CARRIER_EXTENSION_METADATA[f"transport_carrier:{spec.carrier_id}"],
         },

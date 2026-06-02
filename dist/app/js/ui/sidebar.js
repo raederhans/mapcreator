@@ -1493,6 +1493,7 @@ function initSidebar({ render } = {}) {
     ]);
     const projectDownloadDestination = buildProjectSelect("projectDownloadDestination", "Download to", [
       ["picker", "Save As dialog"],
+      ["browser", "Browser download"],
     ]);
     const projectPackageContents = buildProjectSelect("projectPackageContents", "Package contents", [
       ["minimal", "Project only"],

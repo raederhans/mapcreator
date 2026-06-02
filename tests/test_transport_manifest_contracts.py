@@ -5,7 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from map_builder.transport_carrier_registry import CARRIER_EXTENSION_METADATA, CARRIER_RUNTIME_ASSETS, PACK_CARRIER_ASSET_KEYS
+from map_builder.transport_carrier_registry import (
+    CARRIER_EXTENSION_METADATA,
+    CARRIER_RUNTIME_ASSETS,
+    CARRIER_SOURCE_KIND_BY_ASSET_KEY,
+    PACK_CARRIER_ASSET_KEYS,
+)
+from map_builder.transport_country_real_source_contracts import TARGET_COUNTRY_PACK_IDS
 from map_builder.transport_workbench_contracts import validate_transport_manifest
 from tools.check_transport_workbench_manifests import discover_manifest_paths, inspect_transport_manifests
 
@@ -315,6 +321,10 @@ class TransportManifestContractsTest(unittest.TestCase):
         runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
         runtime_assets = runtime_asset_registry.get("assets") or {}
         failures: list[str] = []
+        target_pack_ids = set(TARGET_COUNTRY_PACK_IDS)
+        missing_registry_pack_ids = sorted(target_pack_ids - set(PACK_CARRIER_ASSET_KEYS))
+        if missing_registry_pack_ids:
+            failures.append(f"missing carrier registry entries: {missing_registry_pack_ids}")
         for pack_id, expected_asset_key in sorted(PACK_CARRIER_ASSET_KEYS.items()):
             manifest_path = PROJECT_ROOT / "data" / "transport_layers" / pack_id / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -370,6 +380,12 @@ class TransportManifestContractsTest(unittest.TestCase):
             carrier_extension = manifest.get("extensions", {}).get("carrier", {})
             if carrier_extension.get("carrier_asset_key") != expected_asset_key:
                 failures.append(f"{carrier_dir}: extensions.carrier.carrier_asset_key")
+            if carrier_extension.get("carrier_source_kind") != CARRIER_SOURCE_KIND_BY_ASSET_KEY[expected_asset_key]:
+                failures.append(f"{carrier_dir}: extensions.carrier.carrier_source_kind")
+            expected_extension = CARRIER_EXTENSION_METADATA[expected_asset_key]
+            for field_name, expected_value in expected_extension.items():
+                if carrier_extension.get(field_name) != expected_value:
+                    failures.append(f"{carrier_dir}: extensions.carrier.{field_name}")
             if expected_asset_key not in runtime_assets:
                 failures.append(f"{carrier_dir}: runtime asset {expected_asset_key}")
 

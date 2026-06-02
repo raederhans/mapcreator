@@ -4,6 +4,7 @@ from typing import Final
 
 
 JAPAN_CARRIER_ASSET_KEY: Final = "transport_carrier:japan_corridor"
+NATURAL_EARTH_ADMIN1_SOURCE_KIND: Final = "natural_earth_admin1"
 
 CARRIER_ASSET_KEY_BY_COUNTRY: Final[dict[str, str]] = {
     "china": "transport_carrier:china",
@@ -65,6 +66,14 @@ CARRIER_RUNTIME_ASSETS: Final[dict[str, str]] = {
     "transport_carrier:usa": "data/transport_layers/usa_carrier/carrier.json",
 }
 
+CARRIER_SOURCE_KIND_BY_ASSET_KEY: Final[dict[str, str]] = {
+    JAPAN_CARRIER_ASSET_KEY: NATURAL_EARTH_ADMIN1_SOURCE_KIND,
+    **{
+        asset_key: NATURAL_EARTH_ADMIN1_SOURCE_KIND
+        for asset_key in CARRIER_RUNTIME_ASSETS
+    },
+}
+
 
 CARRIER_EXTENSION_METADATA: Final[dict[str, dict[str, str]]] = {
     JAPAN_CARRIER_ASSET_KEY: {
@@ -113,6 +122,11 @@ CARRIER_EXTENSION_METADATA: Final[dict[str, dict[str, str]]] = {
 def resolve_pack_carrier_asset_key(pack_id: str) -> str:
     normalized_pack_id = str(pack_id or "").strip()
     return PACK_CARRIER_ASSET_KEYS.get(normalized_pack_id, "")
+
+
+def resolve_carrier_source_kind(asset_key: str) -> str:
+    normalized_asset_key = str(asset_key or "").strip()
+    return CARRIER_SOURCE_KIND_BY_ASSET_KEY.get(normalized_asset_key, "")
 
 
 def resolve_pack_carrier_extension(pack_id: str) -> dict[str, str]:

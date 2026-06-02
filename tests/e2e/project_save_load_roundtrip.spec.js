@@ -162,8 +162,17 @@ async function waitForProjectUiReady(page) {
 
 async function exportProjectJson(page, outputPath) {
   logProjectSaveLoadStep("exportProjectJson:start", { outputPath });
+  await page.getByRole("tablist", { name: "Inspector panels" }).getByRole("tab", { name: "Project" }).click();
+  await page.locator("#projectManagement").evaluate((section) => {
+    const details = section.closest("details");
+    if (details) details.open = true;
+  });
+  const downloadButton = page.locator("#downloadProjectBtn");
+  await downloadButton.scrollIntoViewIfNeeded();
+  await expect(downloadButton).toBeVisible({ timeout: 30000 });
+  await page.locator("#projectDownloadDestination").selectOption("browser");
   const downloadPromise = page.waitForEvent("download", { timeout: 120000 });
-  await page.locator("#downloadProjectBtn").evaluate((button) => button.click());
+  await downloadButton.click();
   let download;
   try {
     download = await downloadPromise;
@@ -305,6 +314,27 @@ async function getScenarioOwnershipFeature(page) {
     };
   });
 }
+
+function isAnonymousBackendProbeFailure(entry) {
+  if (entry?.status !== 401) return false;
+  try {
+    return new URL(entry.url).pathname === "/api/backend/auth/me";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function filterExpectedBackendProbeConsoleErrors(consoleErrors, networkFailures) {
+  const filtered = [...consoleErrors];
+  const expectedProbeCount = networkFailures.filter(isAnonymousBackendProbeFailure).length;
+  for (let index = 0; index < expectedProbeCount; index += 1) {
+    const matchIndex = filtered.indexOf("Failed to load resource: the server responded with a status of 401 (Unauthorized)");
+    if (matchIndex === -1) break;
+    filtered.splice(matchIndex, 1);
+  }
+  return filtered;
+}
+
 test("project save/load roundtrip preserves extended runtime state", async ({ page }) => {
   test.setTimeout(120000);
   const consoleErrors = [];
@@ -766,8 +796,11 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
     preset: "balanced",
   });
 
-  expect(consoleErrors, `Console errors: ${JSON.stringify(consoleErrors, null, 2)}`).toEqual([]);
-  expect(networkFailures, `Network failures: ${JSON.stringify(networkFailures, null, 2)}`).toEqual([]);
+  const unexpectedConsoleErrors = filterExpectedBackendProbeConsoleErrors(consoleErrors, networkFailures);
+  const unexpectedNetworkFailures = networkFailures.filter((entry) => !isAnonymousBackendProbeFailure(entry));
+
+  expect(unexpectedConsoleErrors, `Console errors: ${JSON.stringify(consoleErrors, null, 2)}`).toEqual([]);
+  expect(unexpectedNetworkFailures, `Network failures: ${JSON.stringify(networkFailures, null, 2)}`).toEqual([]);
 
 });
 

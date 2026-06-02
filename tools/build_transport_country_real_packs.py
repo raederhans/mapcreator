@@ -206,8 +206,9 @@ def write_pack(
         "source_policy": "real_source_cache_only",
     }
     carrier_asset_key = resolve_pack_carrier_asset_key(pack_id)
-    if carrier_asset_key:
-        manifest["carrier_asset_key"] = carrier_asset_key
+    if not carrier_asset_key:
+        raise RuntimeError(f"{pack_id}: missing carrier_asset_key registry entry")
+    manifest["carrier_asset_key"] = carrier_asset_key
     consumer_keys = MAIN_MAP_KEYS_BY_FAMILY.get(family)
     if consumer_keys:
         manifest.update(
@@ -228,7 +229,7 @@ def write_pack(
         manifest,
         default_variant="default",
         variants={"default": {"label": "default", "distribution_tier": "single_pack", "paths": paths, "feature_counts": counts}},
-        extension=resolve_pack_carrier_extension(pack_id) if carrier_asset_key else None,
+        extension=resolve_pack_carrier_extension(pack_id),
     )
     write_json(output_dir / "manifest.json", manifest)
     print(f"[build] {pack_id}: {counts}")

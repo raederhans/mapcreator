@@ -143,7 +143,7 @@ test("project download passes selected file format and destination", async () =>
     elements: {
       downloadProjectBtn,
       projectDownloadFormat: { value: "zip" },
-      projectDownloadDestination: { value: "picker" },
+      projectDownloadDestination: { value: "browser" },
       projectPackageContents: { value: "diagnostic", disabled: false, setAttribute() {} },
     },
     helpers: {
@@ -158,7 +158,7 @@ test("project download passes selected file format and destination", async () =>
   controller.bindEvents();
   await downloadProjectBtn.listeners.click();
 
-  assert.deepEqual(calls, [{ format: "zip", destination: "picker", packageContents: "diagnostic" }]);
+  assert.deepEqual(calls, [{ format: "zip", destination: "browser", packageContents: "diagnostic" }]);
   assert.equal(projectSaveStatus.textContent, "Project export includes appearance and transport settings.");
 });
 

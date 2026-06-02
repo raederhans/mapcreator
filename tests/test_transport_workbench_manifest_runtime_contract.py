@@ -193,10 +193,25 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("await ensureTransportWorkbenchCarrierForManifest(manifest);", industrial_content)
         self.assertIn("loadGeneration", industrial_content)
         self.assertIn("isLoadGenerationCurrent", industrial_content)
+        self.assertIn("renderJapanIndustrialZonePreview(config = {}, options = {})", industrial_content)
+        self.assertIn('typeof options.isCurrent === "function" && !options.isCurrent()', industrial_content)
         self.assertNotIn("projectManifestClipPoint", point_content)
         self.assertNotIn('projectTransportWorkbenchCarrierGeometry(rawFeature?.geometry, "main")', industrial_content)
         self.assertNotIn("getManifestClipBbox", point_content)
         self.assertIn('registerMapcreatorSnapshotProvider("loadStatus", "data_service"', data_service_content)
+
+    def test_industrial_preview_resets_load_snapshot_on_active_pack_change(self) -> None:
+        industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function createInitialLoadState()", industrial_content)
+        self.assertIn("function createInitialRenderStats()", industrial_content)
+        self.assertIn("function resetLoadStateForActivePack()", industrial_content)
+        self.assertIn("runtime.loadState = createInitialLoadState();", industrial_content)
+        self.assertIn("runtime.renderStats = createInitialRenderStats();", industrial_content)
+        self.assertIn("runtime.activePackMode = null;", industrial_content)
+        self.assertIn("runtime.activeVariantId = null;", industrial_content)
+        self.assertIn("runtime.renderedConfigSignature = \"\";", industrial_content)
+        self.assertIn("resetLoadStateForActivePack();", industrial_content)
 
     def test_japan_carrier_default_orientation_is_data_driven(self) -> None:
         carrier_payload = json.loads(CARRIER_JSON.read_text(encoding="utf-8"))

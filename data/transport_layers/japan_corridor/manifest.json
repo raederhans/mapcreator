@@ -30,8 +30,11 @@
   },
   "extensions": {
     "carrier": {
-      "carrier_source_kind": "Natural Earth 10m admin1",
-      "carrier_asset_key": "transport_carrier:japan_corridor"
+      "carrier_source_kind": "natural_earth_admin1",
+      "carrier_asset_key": "transport_carrier:japan_corridor",
+      "scope_policy": "Japan main corridor preview excludes Okinawa per existing workbench carrier.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 prefecture carrier."
     }
   }
 }

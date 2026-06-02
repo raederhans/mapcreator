@@ -10,8 +10,17 @@ const {
 } = require("./support/playwright-app");
 
 async function exportProjectJson(page, outputPath) {
+  await page.getByRole("tablist", { name: "Inspector panels" }).getByRole("tab", { name: "Project" }).click();
+  await page.locator("#projectManagement").evaluate((section) => {
+    const details = section.closest("details");
+    if (details) details.open = true;
+  });
+  const downloadButton = page.locator("#downloadProjectBtn");
+  await downloadButton.scrollIntoViewIfNeeded();
+  await expect(downloadButton).toBeVisible({ timeout: 30000 });
+  await page.locator("#projectDownloadDestination").selectOption("browser");
   const downloadPromise = page.waitForEvent("download");
-  await page.locator("#downloadProjectBtn").evaluate((button) => button.click());
+  await downloadButton.click();
   const download = await downloadPromise;
   await download.saveAs(outputPath);
   return JSON.parse(fs.readFileSync(outputPath, "utf8"));

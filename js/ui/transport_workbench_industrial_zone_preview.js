@@ -38,6 +38,28 @@ const INDUSTRIAL_LABEL_GRID_BY_DENSITY = {
   very_dense: 108,
 };
 
+function createInitialLoadState() {
+  return {
+    status: "idle",
+    error: null,
+    manifest: null,
+    audit: null,
+    previewStatus: "idle",
+    fullStatus: "idle",
+  };
+}
+
+function createInitialRenderStats() {
+  return {
+    renderMode: "inspect",
+    totalFeatures: 0,
+    visibleFeatures: 0,
+    filteredFeatures: 0,
+    visibleLabels: 0,
+    aggregateUnits: 0,
+  };
+}
+
 function createSvgNode(tagName) {
   return document.createElementNS("http://www.w3.org/2000/svg", tagName);
 }
@@ -473,14 +495,7 @@ const runtime = {
   auditPromise: null,
   packPromises: new Map(),
   projectedPacks: new Map(),
-  loadState: {
-    status: "idle",
-    error: null,
-    manifest: null,
-    audit: null,
-    previewStatus: "idle",
-    fullStatus: "idle",
-  },
+  loadState: createInitialLoadState(),
   activePackMode: null,
   activePackId: "",
   activeManifestUrl: DEFAULT_MANIFEST_URL,
@@ -490,20 +505,28 @@ const runtime = {
   labelsGroup: null,
   selectedFeature: null,
   selectionChangeListener: null,
-  renderStats: {
-    renderMode: "inspect",
-    totalFeatures: 0,
-    visibleFeatures: 0,
-    filteredFeatures: 0,
-    visibleLabels: 0,
-    aggregateUnits: 0,
-  },
+  renderStats: createInitialRenderStats(),
   renderedConfigSignature: "",
   lastRenderedConfig: null,
 };
 
 function isLoadGenerationCurrent(loadGeneration) {
   return loadGeneration === runtime.loadGeneration;
+}
+
+function resetLoadStateForActivePack() {
+  runtime.loadGeneration += 1;
+  runtime.manifestPromise = null;
+  runtime.auditPromise = null;
+  runtime.packPromises.clear();
+  runtime.projectedPacks.clear();
+  runtime.loadState = createInitialLoadState();
+  runtime.activePackMode = null;
+  runtime.activeVariantId = null;
+  runtime.selectedFeature = null;
+  runtime.renderStats = createInitialRenderStats();
+  runtime.renderedConfigSignature = "";
+  runtime.lastRenderedConfig = null;
 }
 
 async function loadManifest() {
@@ -551,14 +574,7 @@ function setActivePack(packId = "", manifestUrl = "") {
   if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
   runtime.activePackId = normalizedPackId;
   runtime.activeManifestUrl = normalizedManifestUrl;
-  runtime.loadGeneration += 1;
-  runtime.manifestPromise = null;
-  runtime.auditPromise = null;
-  runtime.packPromises.clear();
-  runtime.projectedPacks.clear();
-  runtime.loadState.audit = null;
-  runtime.loadState.manifest = null;
-  runtime.selectedFeature = null;
+  resetLoadStateForActivePack();
 }
 
 function startAuditLoad(manifest) {
@@ -675,7 +691,7 @@ function emitSelectionChange() {
   runtime.selectionChangeListener?.(buildSnapshot(runtime));
 }
 
-export async function renderJapanIndustrialZonePreview(config = {}) {
+export async function renderJapanIndustrialZonePreview(config = {}, options = {}) {
   if (config?.activePackId) {
     setActivePack(config.activePackId, resolveTransportManifestUrl(config.activePackId));
   }
@@ -684,6 +700,7 @@ export async function renderJapanIndustrialZonePreview(config = {}) {
   runtime.renderedConfigSignature = "";
   const manifest = await loadManifest();
   if (!isLoadGenerationCurrent(renderGeneration)) return null;
+  if (typeof options.isCurrent === "function" && !options.isCurrent()) return null;
   if (!manifest) {
     clearGroups(runtime);
     runtime.activeVariantId = null;
@@ -698,6 +715,7 @@ export async function renderJapanIndustrialZonePreview(config = {}) {
   const targetMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
   const pack = await loadPack(variantId, targetMode);
   if (!isLoadGenerationCurrent(renderGeneration)) return null;
+  if (typeof options.isCurrent === "function" && !options.isCurrent()) return null;
   if (!pack) {
     clearGroups(runtime);
     runtime.activeVariantId = variantId;
