@@ -8,7 +8,11 @@ import unittest
 from scenario_builder.hoi4.crosswalk import build_iso2_to_mapped_tag
 from tools.import_country_palette import (
     PaletteEntry,
+    build_palette_entries,
     ensure_exposed_runtime_default_bridges,
+    find_source_root,
+    parse_localisation_catalog,
+    parse_country_tags,
     resolve_mapping_state,
 )
 
@@ -32,6 +36,73 @@ def _entry(tag: str, *, localized_name: str) -> PaletteEntry:
 
 
 class ImportCountryPaletteTest(unittest.TestCase):
+    def test_find_source_root_accepts_mod_specific_country_tag_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            country_tags = root / "common" / "country_tags"
+            country_tags.mkdir(parents=True)
+            (country_tags / "HGO_countries.txt").write_text('ABK = "countries/Abkhazia.txt"\n', encoding="utf-8")
+
+            self.assertEqual(find_source_root(str(root)), root)
+
+    def test_parse_country_tags_reads_all_mod_country_tag_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            country_tags = root / "common" / "country_tags"
+            country_tags.mkdir(parents=True)
+            (country_tags / "HGO_countries.txt").write_text('ABK = "countries/Abkhazia.txt"\n', encoding="utf-8")
+            (country_tags / "HGO2_countries.txt").write_text('ALG = "countries/Algeria.txt"\n', encoding="utf-8")
+            (country_tags / "my_dynamic_topic_countries.txt").write_text(
+                'AIC = "countries/Ainu.txt"\n',
+                encoding="utf-8",
+            )
+            (country_tags / "zz_dynamic_countries.txt").write_text(
+                'DYN = "countries/Dynamic.txt"\n',
+                encoding="utf-8",
+            )
+
+            tags = parse_country_tags(root)
+
+        self.assertEqual(tags["ABK"], ("countries/Abkhazia.txt", False))
+        self.assertEqual(tags["ALG"], ("countries/Algeria.txt", False))
+        self.assertEqual(tags["AIC"], ("countries/Ainu.txt", False))
+        self.assertEqual(tags["DYN"], ("countries/Dynamic.txt", True))
+
+    def test_build_palette_entries_falls_back_ui_hex_to_map_hex(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            country_dir = root / "common" / "countries"
+            country_dir.mkdir(parents=True)
+            (country_dir / "Abkhazia.txt").write_text("color = { 100 100 150 }\n", encoding="utf-8")
+
+            entries = build_palette_entries(
+                root,
+                {"ABK": ("countries/Abkhazia.txt", False)},
+                {},
+                {"ABK": "Abkhazia"},
+                {},
+                {},
+            )
+
+        self.assertEqual(entries["ABK"].map_hex, "#646496")
+        self.assertEqual(entries["ABK"].ui_hex, "#646496")
+        self.assertEqual(entries["ABK"].ui_source, "map_hex_fallback")
+
+    def test_parse_localisation_catalog_accepts_custom_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            loc_root = root / "localisation"
+            loc_root.mkdir()
+            (loc_root / "HGO_countries_l_english.yml").write_text(
+                'l_english:\n ABK:0 "Abkhazia"\n ALG_fascism:0 "Kingdom of Algeria"\n',
+                encoding="utf-8",
+            )
+
+            exact_names, suffix_names = parse_localisation_catalog(root, ["fascism"], Path("localisation"))
+
+        self.assertEqual(exact_names["ABK"], "Abkhazia")
+        self.assertEqual(suffix_names["ALG"]["fascism"], "Kingdom of Algeria")
+
     def test_resolve_mapping_state_marks_non_default_runtime_tags(self) -> None:
         entries = {
             "MAN": _entry("MAN", localized_name="Manchuria"),

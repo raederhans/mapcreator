@@ -205,3 +205,6 @@
 - carrier / pack 切换会并发触发 manifest、audit、pack、carrier asset 加载；每条异步链路都要带 generation，过期结果不能回写新状态。
 - pack manifest 的 `carrier_asset_key` 只解决路由；`extensions.carrier` 还要带 scope/projection/basemap 元数据，并由 builder 统一写入 checked-in 数据。
 - carrier rebuild 后要同时跑 manifest 合同、catalog 检查和 `verify:pages-dist`，俄罗斯这类跨境外观数据还要用 provenance 锁住真实行政代码范围。
+
+### 公开 catalog 要进入 manifest 治理面
+- 通过 palette registry 或 runtime asset registry 暴露的新数据入口，要同步写入 artifact contract 并刷新 `data/manifest.json`，否则 catalog 可见但 hash/owner 治理链会漂。

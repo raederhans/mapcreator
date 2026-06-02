@@ -1,0 +1,11 @@
+{
+  "filename": "hgo_flags.index.json",
+  "configured_source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2241701657",
+  "resolved_source_url": null,
+  "fallback_candidates": [],
+  "sha256": "df0a7916fc89370687b924d9d67fbb652995d86dbb573d4f8cc5c68309c2693e",
+  "content_length": 1621812,
+  "captured_at_utc": "2026-06-02T23:04:30Z",
+  "capture_mode": "local_hgo_catalog_build",
+  "validator_name": "hgo_flags_index_v1"
+}

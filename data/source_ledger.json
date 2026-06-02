@@ -434,5 +434,28 @@
     "provenance_sidecar": "data/poland_powiaty.provenance.json",
     "status": "frozen_verified",
     "local_presence": "required"
+  },
+  {
+    "source_id": "hgo_mod_2241701657",
+    "local_path": "historic geographic overhaul/descriptor.mod",
+    "origin_kind": "manual_import",
+    "upstream_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2241701657",
+    "immutable_ref": "descriptor.mod version=1.9.* supported_version=1.9.3 remote_file_id=2241701657",
+    "current_local_sha256": "6c7a6c0bc2a7f618dfedd1d20597c88ebe7c1aca28da3f2b88fbc0dc2990cc3e",
+    "license": "Steam Workshop UGC; redistribution review required before committing converted image assets",
+    "citation": "Historic Geographical Overhaul, Steam Workshop 2241701657",
+    "consumers": [
+      "tools/import_country_palette.py",
+      "tools/build_hgo_name_catalog.py",
+      "tools/build_hgo_flag_index.py",
+      "data/hgo_catalogs/index.json",
+      "data/hgo_catalogs/hgo_place_names.json",
+      "data/hgo_catalogs/hgo_flags.index.json",
+      "data/palettes/hgo.palette.json"
+    ],
+    "rebuild_command": "python tools/import_country_palette.py --source-root \"historic geographic overhaul\" --palette-id hgo --display-name \"Historic Geographical Overhaul\" --source-variant hgo --source-workshop-id 2241701657 --localisation-root localisation --manual-map data/palette-maps/hgo.manual.json && python tools/build_hgo_name_catalog.py --source-root \"historic geographic overhaul\" && python tools/build_hgo_flag_index.py --source-root \"historic geographic overhaul\"",
+    "provenance_sidecar": "data/hgo_catalogs/hgo_descriptor.provenance.json",
+    "status": "frozen_local_only",
+    "local_presence": "optional_cache"
   }
 ]

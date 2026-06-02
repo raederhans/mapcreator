@@ -217,6 +217,13 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         description="Red Flood palette pack.",
     ),
     DataArtifactSpec(
+        path="palettes/hgo.palette.json",
+        role="palette_pack",
+        artifact_class=ARTIFACT_CLASS_PUBLISH,
+        owner="init_map_data.palette_assets",
+        description="Historic Geographical Overhaul palette pack.",
+    ),
+    DataArtifactSpec(
         path="palette-maps/hoi4_vanilla.map.json",
         role="palette_map",
         artifact_class=ARTIFACT_CLASS_MANUAL,
@@ -245,6 +252,13 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         description="Manual mapping layer for Red Flood palette import.",
     ),
     DataArtifactSpec(
+        path="palette-maps/hgo.map.json",
+        role="palette_map",
+        artifact_class=ARTIFACT_CLASS_MANUAL,
+        owner="tools.import_country_palette",
+        description="Catalog-only mapping layer for Historic Geographical Overhaul palette import.",
+    ),
+    DataArtifactSpec(
         path="palette-maps/hoi4_vanilla.audit.json",
         role="palette_audit",
         artifact_class=ARTIFACT_CLASS_DERIVED,
@@ -271,6 +285,34 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="init_map_data.palette_assets",
         description="Generated audit for Red Flood palette mapping coverage.",
+    ),
+    DataArtifactSpec(
+        path="palette-maps/hgo.audit.json",
+        role="palette_audit",
+        artifact_class=ARTIFACT_CLASS_DERIVED,
+        owner="init_map_data.palette_assets",
+        description="Generated audit for Historic Geographical Overhaul palette mapping coverage.",
+    ),
+    DataArtifactSpec(
+        path="hgo_catalogs/index.json",
+        role="hgo_tier_a_catalog",
+        artifact_class=ARTIFACT_CLASS_DERIVED,
+        owner="tools.build_hgo_flag_index",
+        description="Historic Geographical Overhaul Tier-A catalog index.",
+    ),
+    DataArtifactSpec(
+        path="hgo_catalogs/hgo_place_names.json",
+        role="hgo_place_names",
+        artifact_class=ARTIFACT_CLASS_DERIVED,
+        owner="tools.build_hgo_name_catalog",
+        description="Historic Geographical Overhaul reusable place-name catalog.",
+    ),
+    DataArtifactSpec(
+        path="hgo_catalogs/hgo_flags.index.json",
+        role="hgo_flags_index",
+        artifact_class=ARTIFACT_CLASS_DERIVED,
+        owner="tools.build_hgo_flag_index",
+        description="Historic Geographical Overhaul source-only flag index.",
     ),
     DataArtifactSpec(
         path="js/core/city_lights_modern_asset.js",

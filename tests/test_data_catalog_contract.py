@@ -68,6 +68,38 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertIn("source:gb_chn_adm2", entries)
         self.assertNotIn("source:gb_bfa_adm1", entries)
         self.assertNotIn("source:gb_ukr_adm2", entries)
+        self.assertNotIn("source:hgo_mod_2241701657", entries)
+
+    def test_catalog_contains_hgo_tier_a_assets(self) -> None:
+        payload = self._load_catalog()
+        entries = {entry["key"]: entry for entry in payload.get("entries") or []}
+
+        expected = {
+            "hgo_tier_a_catalog": ("data/hgo_catalogs/index.json", "hgo_tier_a_catalog", "tools.build_hgo_flag_index"),
+            "hgo_place_names": ("data/hgo_catalogs/hgo_place_names.json", "hgo_place_names", "tools.build_hgo_name_catalog"),
+            "hgo_flags_index": ("data/hgo_catalogs/hgo_flags.index.json", "hgo_flags_index", "tools.build_hgo_flag_index"),
+        }
+        for key, (url, role, owner) in expected.items():
+            self.assertIn(key, entries)
+            self.assertEqual(entries[key]["url"], url)
+            self.assertEqual(entries[key]["role"], role)
+            self.assertEqual(entries[key]["format"], "json")
+            self.assertEqual(entries[key]["readMode"], "json")
+            self.assertEqual(entries[key]["schemaRef"], "schema://json/object/v1")
+            self.assertEqual(entries[key]["owner"], owner)
+            self.assertEqual(entries[key]["hashRef"], f"data/manifest.json::outputs::{url.removeprefix('data/')}::sha256")
+            self.assertIn(f"manifest_output:{url.removeprefix('data/')}", entries[key].get("aliases") or [])
+
+    def test_catalog_keeps_hgo_tier_a_checked_in_surface_clean(self) -> None:
+        payload = self._load_catalog()
+        urls = [str(entry.get("url") or "") for entry in payload.get("entries") or []]
+
+        self.assertIn("data/hgo_catalogs/index.json", urls)
+        self.assertIn("data/hgo_catalogs/hgo_place_names.json", urls)
+        self.assertIn("data/hgo_catalogs/hgo_flags.index.json", urls)
+        for url in urls:
+            self.assertNotIn("historic geographic overhaul", url)
+            self.assertFalse(url.endswith(".tga"), url)
 
     def test_catalog_contains_transport_preview_and_manifest_entries(self) -> None:
         payload = self._load_catalog()

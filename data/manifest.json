@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-02T20:22:13.492583+00:00",
+  "generated_at": "2026-06-02T23:10:59.042619+00:00",
   "outputs": {
     "europe_topology.json": {
       "role": "primary_topology",
@@ -9,6 +9,12 @@
       "description": "Primary political topology emitted by the coarse GIS pipeline.",
       "size_bytes": 4860961,
       "sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+      "schema_ref": "schema://topology/political_bundle_v1",
+      "simplification": "coarse_publish_v1",
+      "target_zoom_range": [
+        0.0,
+        1.7
+      ],
       "type": "topology",
       "object_names": [
         "land",
@@ -25,13 +31,7 @@
       "arc_count": 67765,
       "arc_point_count": 421346,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0,
-      "schema_ref": "schema://topology/political_bundle_v1",
-      "simplification": "coarse_publish_v1",
-      "target_zoom_range": [
-        0.0,
-        1.7
-      ]
+      "raw_world_bounds_geometries": 0
     },
     "europe_topology.na_v1.json": {
       "role": "detail_topology_na_v1",
@@ -40,6 +40,12 @@
       "description": "Legacy North America detail topology checkpoint.",
       "size_bytes": 8569107,
       "sha256": "e7f423f07204a9f863bd63f6d068a8ea304222774dfbc9700bfd8814fd24fecd",
+      "schema_ref": "schema://topology/detail_political_bundle_v1",
+      "simplification": "detail_publish_legacy_v1",
+      "target_zoom_range": [
+        1.7,
+        20.0
+      ],
       "type": "topology",
       "object_names": [
         "land",
@@ -55,21 +61,21 @@
       "arc_count": 120462,
       "arc_point_count": 533080,
       "world_bounds_geometries": 1,
-      "raw_world_bounds_geometries": 64,
-      "schema_ref": "schema://topology/detail_political_bundle_v1",
-      "simplification": "detail_publish_legacy_v1",
-      "target_zoom_range": [
-        1.7,
-        20.0
-      ]
+      "raw_world_bounds_geometries": 64
     },
     "europe_topology.na_v2.json": {
       "role": "detail_topology_na_v2",
       "artifact_class": "derived",
       "owner": "init_map_data.detail_topology",
       "description": "Current detail political topology used for runtime enrichment.",
-      "size_bytes": 19240920,
-      "sha256": "c2eb27387574b0c5ef911491710938ae3f950ec2e85da7e86f294c6b61b65740",
+      "size_bytes": 19326019,
+      "sha256": "6f06117cc2e023269cc6ba74e85fa0859c3a3dc35d74e801e420492bcafb7f35",
+      "schema_ref": "schema://topology/detail_political_bundle_v2",
+      "simplification": "detail_publish_v2",
+      "target_zoom_range": [
+        1.7,
+        20.0
+      ],
       "type": "topology",
       "object_names": [
         "land",
@@ -83,40 +89,34 @@
       ],
       "political_geometries": 22527,
       "has_computed_neighbors": true,
-      "arc_count": 172671,
-      "arc_point_count": 787094,
+      "arc_count": 173529,
+      "arc_point_count": 788986,
       "world_bounds_geometries": 11,
-      "raw_world_bounds_geometries": 45,
-      "schema_ref": "schema://topology/detail_political_bundle_v2",
-      "simplification": "detail_publish_v2",
-      "target_zoom_range": [
-        1.7,
-        20.0
-      ]
+      "raw_world_bounds_geometries": 44
     },
     "europe_topology.runtime_political_v1.json": {
       "role": "runtime_political_topology",
       "artifact_class": "publish",
       "owner": "init_map_data.runtime_political_topology",
       "description": "Unified runtime political topology consumed by the app and scenarios.",
-      "size_bytes": 15682866,
-      "sha256": "2b09751a2d144cfdb853ad2677f2c0cdc25ea6266b81c8a29a4de68a9977db78",
-      "type": "topology",
-      "object_names": [
-        "political"
-      ],
-      "political_geometries": 22502,
-      "has_computed_neighbors": true,
-      "arc_count": 144926,
-      "arc_point_count": 613401,
-      "world_bounds_geometries": 7,
-      "raw_world_bounds_geometries": 81,
+      "size_bytes": 14128976,
+      "sha256": "e4a9046db2c70895427a9d190cba67bfe4e7dd7a853eefaaaefb2b083ff3208f",
       "schema_ref": "schema://topology/runtime_political_v1",
       "simplification": "runtime_projection_v1",
       "target_zoom_range": [
         1.7,
         20.0
-      ]
+      ],
+      "type": "topology",
+      "object_names": [
+        "political"
+      ],
+      "political_geometries": 23426,
+      "has_computed_neighbors": true,
+      "arc_count": 147909,
+      "arc_point_count": 618868,
+      "world_bounds_geometries": 177,
+      "raw_world_bounds_geometries": 527
     },
     "global_physical_semantics.topo.json": {
       "role": "physical_semantics_topology",
@@ -125,6 +125,12 @@
       "description": "Physical semantics topology shipped with the runtime bundle.",
       "size_bytes": 729934,
       "sha256": "d1416c4897fbedce563408de7365c2af9bd67a2df8748a0984a787cf3140d3e5",
+      "schema_ref": "schema://topology/physical_semantics_v1",
+      "simplification": "semantic_dissolve_v1",
+      "target_zoom_range": [
+        0.0,
+        20.0
+      ],
       "type": "topology",
       "object_names": [
         "physical_semantics"
@@ -134,13 +140,7 @@
       "arc_count": 5991,
       "arc_point_count": 35367,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0,
-      "schema_ref": "schema://topology/physical_semantics_v1",
-      "simplification": "semantic_dissolve_v1",
-      "target_zoom_range": [
-        0.0,
-        20.0
-      ]
+      "raw_world_bounds_geometries": 0
     },
     "global_contours.major.topo.json": {
       "role": "terrain_contours_major_topology",
@@ -149,6 +149,12 @@
       "description": "Major contour topology published for runtime relief rendering.",
       "size_bytes": 3381519,
       "sha256": "2787e99490aa7a5f62b91b3c4e61212efe9e4706c14e38243e469a65249d60a5",
+      "schema_ref": "schema://topology/terrain_contours_major_v1",
+      "simplification": "contour_major_publish_v1",
+      "target_zoom_range": [
+        0.0,
+        20.0
+      ],
       "type": "topology",
       "object_names": [
         "contours"
@@ -158,13 +164,7 @@
       "arc_count": 16411,
       "arc_point_count": 221202,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0,
-      "schema_ref": "schema://topology/terrain_contours_major_v1",
-      "simplification": "contour_major_publish_v1",
-      "target_zoom_range": [
-        0.0,
-        20.0
-      ]
+      "raw_world_bounds_geometries": 0
     },
     "global_contours.minor.topo.json": {
       "role": "terrain_contours_minor_topology",
@@ -173,6 +173,12 @@
       "description": "Minor contour topology published for runtime relief rendering.",
       "size_bytes": 20712299,
       "sha256": "eaccca87418f8a36792c5d8b2b644fe2de82c756c6257a9050440e8ef5376e0f",
+      "schema_ref": "schema://topology/terrain_contours_minor_v1",
+      "simplification": "contour_minor_publish_v1",
+      "target_zoom_range": [
+        0.0,
+        20.0
+      ],
       "type": "topology",
       "object_names": [
         "contours"
@@ -182,13 +188,7 @@
       "arc_count": 198350,
       "arc_point_count": 1423560,
       "world_bounds_geometries": 0,
-      "raw_world_bounds_geometries": 0,
-      "schema_ref": "schema://topology/terrain_contours_minor_v1",
-      "simplification": "contour_minor_publish_v1",
-      "target_zoom_range": [
-        0.0,
-        20.0
-      ]
+      "raw_world_bounds_geometries": 0
     },
     "hierarchy.json": {
       "role": "hierarchy",
@@ -243,11 +243,11 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8651920,
-      "sha256": "0b048a2fc36ad891b15bd712d4d67f10702352d80ced3787c7213197bb96e799",
+      "size_bytes": 8656527,
+      "sha256": "feb7bfb76985bd2243b5aab7538be9dfeafa1c71ea75b57f560b51e0657f6feb",
       "type": "locales",
       "geo_entry_count": 72641,
-      "ui_entry_count": 1671
+      "ui_entry_count": 1707
     },
     "country_feature_policies.json": {
       "role": "country_feature_policies",
@@ -262,19 +262,19 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 8760,
-      "sha256": "47c97de4362451ccfb115b02b3fc8ae683918c9fd97a5d5d8ae48c5ca8322dc0"
+      "size_bytes": 15011,
+      "sha256": "ed04338bc3546d6039981a57d60c7a6b48a3a33310d98be549b7a2bc435b0498"
     },
     "palettes/index.json": {
       "role": "palette_registry",
       "artifact_class": "publish",
       "owner": "init_map_data.palette_assets",
       "description": "Palette registry exposed to runtime and scenario builders.",
-      "size_bytes": 1415,
-      "sha256": "03960b8b59596565d60b4f32b0f1e05bf6c67bda3d45e32a121482f7febcafef",
+      "size_bytes": 1755,
+      "sha256": "89d5f3f10a5d0c70addf8f529a685a0fa6667b262f684beee11418f28b74de1e",
       "type": "palette_registry",
       "default_palette_id": "hoi4_vanilla",
-      "palette_count": 4
+      "palette_count": 5
     },
     "palettes/hoi4_vanilla.palette.json": {
       "role": "palette_pack",
@@ -293,8 +293,8 @@
       "artifact_class": "publish",
       "owner": "init_map_data.palette_assets",
       "description": "Kaiserreich palette pack.",
-      "size_bytes": 149011,
-      "sha256": "d3f6fe0ac7ddfe1aaeb7a0240c95906b64d77aa165b46962cfff751829986e6b",
+      "size_bytes": 153690,
+      "sha256": "662ccdf3047674c78dd890c6fc86e491bd2ef159cf098bcca019f87c491f69e5",
       "type": "palette_pack",
       "palette_id": "kaiserreich",
       "entry_count": 331,
@@ -317,12 +317,24 @@
       "artifact_class": "publish",
       "owner": "init_map_data.palette_assets",
       "description": "Red Flood palette pack.",
-      "size_bytes": 140841,
-      "sha256": "41ac666be9ba6ed26a026968411ad5048bf3a6772667b3f7ff7ac632dab9215e",
+      "size_bytes": 145184,
+      "sha256": "2128ae6f27ad26ba930be5e87fff8cc31ba6324bdacb28685d6601ce86530109",
       "type": "palette_pack",
       "palette_id": "red_flood",
       "entry_count": 307,
       "quick_tag_count": 23
+    },
+    "palettes/hgo.palette.json": {
+      "role": "palette_pack",
+      "artifact_class": "publish",
+      "owner": "init_map_data.palette_assets",
+      "description": "Historic Geographical Overhaul palette pack.",
+      "size_bytes": 636584,
+      "sha256": "8b6e34dc60fe5430cc848b749c9d3a9ab265d3a78159444b052f43132a208076",
+      "type": "palette_pack",
+      "palette_id": "hgo",
+      "entry_count": 1284,
+      "quick_tag_count": 0
     },
     "palette-maps/hoi4_vanilla.map.json": {
       "role": "palette_map",
@@ -341,8 +353,8 @@
       "artifact_class": "manual",
       "owner": "tools.import_country_palette",
       "description": "Manual mapping layer for Kaiserreich palette import.",
-      "size_bytes": 26822,
-      "sha256": "e230d3f51668baa87d1f12964ab4a4f3166be17dd63fb85b94814d5ed48b8971",
+      "size_bytes": 28093,
+      "sha256": "0f1531c9ae2b938f6fbb0ca9fc83b0ca74f583a37f11685ff7def7642e04409d",
       "type": "palette_map",
       "palette_id": "kaiserreich",
       "mapped_count": 127,
@@ -365,12 +377,24 @@
       "artifact_class": "manual",
       "owner": "tools.import_country_palette",
       "description": "Manual mapping layer for Red Flood palette import.",
-      "size_bytes": 23917,
-      "sha256": "110e78028a91dc4cbfbf0f4103c007b071ecf79e353b281dc844a7fa1e6c4d13",
+      "size_bytes": 25090,
+      "sha256": "6ff86857cef01a798d1c067ac97b5999b7beaebbddbba459cccffa63421e46fa",
       "type": "palette_map",
       "palette_id": "red_flood",
       "mapped_count": 110,
       "unmapped_count": 197
+    },
+    "palette-maps/hgo.map.json": {
+      "role": "palette_map",
+      "artifact_class": "manual",
+      "owner": "tools.import_country_palette",
+      "description": "Catalog-only mapping layer for Historic Geographical Overhaul palette import.",
+      "size_bytes": 67870,
+      "sha256": "af78ae721d98c0f1dbfd3622c9a8a0278352b5a6665508c0f0aa5cffe2faf2df",
+      "type": "palette_map",
+      "palette_id": "hgo",
+      "mapped_count": 0,
+      "unmapped_count": 1284
     },
     "palette-maps/hoi4_vanilla.audit.json": {
       "role": "palette_audit",
@@ -390,8 +414,8 @@
       "artifact_class": "derived",
       "owner": "init_map_data.palette_assets",
       "description": "Generated audit for Kaiserreich palette mapping coverage.",
-      "size_bytes": 107146,
-      "sha256": "56a4fdbd0b06188bd20b63bd500ca7c2f60e7c3833f896d48e0fc895300ea7e5",
+      "size_bytes": 110736,
+      "sha256": "d2cbc8b673821914fd3192824f8f23e0901ccf2751bc315895723f34e491b6c4",
       "type": "palette_audit",
       "palette_id": "kaiserreich",
       "entry_count": 331,
@@ -416,13 +440,50 @@
       "artifact_class": "derived",
       "owner": "init_map_data.palette_assets",
       "description": "Generated audit for Red Flood palette mapping coverage.",
-      "size_bytes": 101053,
-      "sha256": "000a3a2e6c8d631af985e838d45f9f189406835ea4ff7fc58b73f4556469277e",
+      "size_bytes": 104377,
+      "sha256": "95a7023fcba2b0e621f1a25f7aefe34f35c1d0065b6fed8ea8e31dc1afdaa004",
       "type": "palette_audit",
       "palette_id": "red_flood",
       "entry_count": 307,
       "mapped_count": 110,
       "unmapped_count": 197
+    },
+    "palette-maps/hgo.audit.json": {
+      "role": "palette_audit",
+      "artifact_class": "derived",
+      "owner": "init_map_data.palette_assets",
+      "description": "Generated audit for Historic Geographical Overhaul palette mapping coverage.",
+      "size_bytes": 393749,
+      "sha256": "f1bce07666952af4cc83ebd0684c66dfd37faa1158cba0320ff841e2a61b6153",
+      "type": "palette_audit",
+      "palette_id": "hgo",
+      "entry_count": 1284,
+      "mapped_count": 0,
+      "unmapped_count": 1284
+    },
+    "hgo_catalogs/index.json": {
+      "role": "hgo_tier_a_catalog",
+      "artifact_class": "derived",
+      "owner": "tools.build_hgo_flag_index",
+      "description": "Historic Geographical Overhaul Tier-A catalog index.",
+      "size_bytes": 919,
+      "sha256": "f16cf6d4437583a16ff24f2abdc14655ff6d1714cd0ddb3a7ffc4f39aad2da0d"
+    },
+    "hgo_catalogs/hgo_place_names.json": {
+      "role": "hgo_place_names",
+      "artifact_class": "derived",
+      "owner": "tools.build_hgo_name_catalog",
+      "description": "Historic Geographical Overhaul reusable place-name catalog.",
+      "size_bytes": 5164039,
+      "sha256": "750a80293ae05d212dd4e0208d59d800647337a5dee9915f2eec530e2055f378"
+    },
+    "hgo_catalogs/hgo_flags.index.json": {
+      "role": "hgo_flags_index",
+      "artifact_class": "derived",
+      "owner": "tools.build_hgo_flag_index",
+      "description": "Historic Geographical Overhaul source-only flag index.",
+      "size_bytes": 1621812,
+      "sha256": "df0a7916fc89370687b924d9d67fbb652995d86dbb573d4f8cc5c68309c2693e"
     },
     "js/core/city_lights_modern_asset.js": {
       "role": "modern_city_lights_asset",
@@ -553,6 +614,21 @@
         "url": "data/palettes/index.json",
         "role": "palette_registry"
       },
+      "hgo_tier_a_catalog": {
+        "url": "data/hgo_catalogs/index.json",
+        "role": "hgo_tier_a_catalog",
+        "family_id": "hgo"
+      },
+      "hgo_place_names": {
+        "url": "data/hgo_catalogs/hgo_place_names.json",
+        "role": "hgo_place_names",
+        "family_id": "hgo"
+      },
+      "hgo_flags_index": {
+        "url": "data/hgo_catalogs/hgo_flags.index.json",
+        "role": "hgo_flags_index",
+        "family_id": "hgo"
+      },
       "releasable_catalog": {
         "url": "data/releasables/hoi4_vanilla.internal.phase1.catalog.json",
         "role": "releasable_catalog"
@@ -676,12 +752,129 @@
         "url": "data/transport_layers/india_airport/manifest.json",
         "role": "transport_manifest",
         "family_id": "india_airport"
+      },
+      "transport_manifest:usa_road": {
+        "url": "data/transport_layers/usa_road/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "usa_road"
+      },
+      "transport_manifest:germany_rail": {
+        "url": "data/transport_layers/germany_rail/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_rail"
+      },
+      "transport_manifest:germany_airport": {
+        "url": "data/transport_layers/germany_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_airport"
+      },
+      "transport_manifest:france_airport": {
+        "url": "data/transport_layers/france_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "france_airport"
+      },
+      "transport_manifest:uk_airport": {
+        "url": "data/transport_layers/uk_airport/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "uk_airport"
+      },
+      "transport_manifest:usa_port": {
+        "url": "data/transport_layers/usa_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "usa_port"
+      },
+      "transport_manifest:germany_port": {
+        "url": "data/transport_layers/germany_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_port"
+      },
+      "transport_manifest:france_port": {
+        "url": "data/transport_layers/france_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "france_port"
+      },
+      "transport_manifest:uk_port": {
+        "url": "data/transport_layers/uk_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "uk_port"
+      },
+      "transport_manifest:china_port": {
+        "url": "data/transport_layers/china_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "china_port"
+      },
+      "transport_manifest:india_port": {
+        "url": "data/transport_layers/india_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "india_port"
+      },
+      "transport_manifest:russia_port": {
+        "url": "data/transport_layers/russia_port/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "russia_port"
+      },
+      "transport_manifest:germany_energy_facilities": {
+        "url": "data/transport_layers/germany_energy_facilities/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_energy_facilities"
+      },
+      "transport_manifest:germany_mineral_resources": {
+        "url": "data/transport_layers/germany_mineral_resources/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_mineral_resources"
+      },
+      "transport_manifest:germany_industrial_zones": {
+        "url": "data/transport_layers/germany_industrial_zones/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_industrial_zones"
+      },
+      "transport_manifest:germany_logistics_hubs": {
+        "url": "data/transport_layers/germany_logistics_hubs/manifest.json",
+        "role": "transport_manifest",
+        "family_id": "germany_logistics_hubs"
+      },
+      "transport_carrier:china": {
+        "url": "data/transport_layers/china_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "china"
+      },
+      "transport_carrier:france": {
+        "url": "data/transport_layers/france_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "france"
+      },
+      "transport_carrier:germany": {
+        "url": "data/transport_layers/germany_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "germany"
+      },
+      "transport_carrier:india": {
+        "url": "data/transport_layers/india_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "india"
+      },
+      "transport_carrier:russia": {
+        "url": "data/transport_layers/russia_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "russia"
+      },
+      "transport_carrier:uk": {
+        "url": "data/transport_layers/uk_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "uk"
+      },
+      "transport_carrier:usa": {
+        "url": "data/transport_layers/usa_carrier/carrier.json",
+        "role": "transport_workbench_carrier",
+        "family_id": "usa"
       }
     },
     "scenario_registry_key": "scenario_registry",
     "transport_manifest_keys": {
       "road": "transport_manifest:road",
       "rail": "transport_manifest:rail",
+      "japan_road": "transport_manifest:road",
+      "japan_rail": "transport_manifest:rail",
       "airport": "transport_manifest:airport",
       "port": "transport_manifest:port",
       "mineral_resources": "transport_manifest:mineral_resources",
@@ -694,7 +887,29 @@
       "usa_airport": "transport_manifest:usa_airport",
       "china_airport": "transport_manifest:china_airport",
       "russia_airport": "transport_manifest:russia_airport",
-      "india_airport": "transport_manifest:india_airport"
+      "india_airport": "transport_manifest:india_airport",
+      "usa_road": "transport_manifest:usa_road",
+      "germany_rail": "transport_manifest:germany_rail",
+      "germany_airport": "transport_manifest:germany_airport",
+      "france_airport": "transport_manifest:france_airport",
+      "uk_airport": "transport_manifest:uk_airport",
+      "usa_port": "transport_manifest:usa_port",
+      "germany_port": "transport_manifest:germany_port",
+      "france_port": "transport_manifest:france_port",
+      "uk_port": "transport_manifest:uk_port",
+      "china_port": "transport_manifest:china_port",
+      "india_port": "transport_manifest:india_port",
+      "russia_port": "transport_manifest:russia_port",
+      "germany_energy_facilities": "transport_manifest:germany_energy_facilities",
+      "germany_mineral_resources": "transport_manifest:germany_mineral_resources",
+      "germany_industrial_zones": "transport_manifest:germany_industrial_zones",
+      "germany_logistics_hubs": "transport_manifest:germany_logistics_hubs",
+      "japan_airport": "transport_manifest:airport",
+      "japan_port": "transport_manifest:port",
+      "japan_mineral_resources": "transport_manifest:mineral_resources",
+      "japan_energy_facilities": "transport_manifest:energy_facilities",
+      "japan_industrial_zones": "transport_manifest:industrial_zones",
+      "japan_logistics_hubs": "transport_manifest:logistics_hubs"
     },
     "city_lights": {
       "historical_1930": {

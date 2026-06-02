@@ -1,0 +1,3891 @@
+{
+  "version": 2,
+  "palette_id": "hgo",
+  "canonical_key_type": "iso2",
+  "mapping_policy": "conservative",
+  "mapped": {},
+  "unmapped": {
+    "2RA": {
+      "reason": "unreviewed"
+    },
+    "ABD": {
+      "reason": "unreviewed"
+    },
+    "ABK": {
+      "reason": "unreviewed"
+    },
+    "ABM": {
+      "reason": "unreviewed"
+    },
+    "ABS": {
+      "reason": "unreviewed"
+    },
+    "ACH": {
+      "reason": "unreviewed"
+    },
+    "ACR": {
+      "reason": "unreviewed"
+    },
+    "ACT": {
+      "reason": "unreviewed"
+    },
+    "ADE": {
+      "reason": "unreviewed"
+    },
+    "ADH": {
+      "reason": "unreviewed"
+    },
+    "ADJ": {
+      "reason": "unreviewed"
+    },
+    "ADN": {
+      "reason": "unreviewed"
+    },
+    "ADR": {
+      "reason": "unreviewed",
+      "suggested_iso2": "AD"
+    },
+    "ADY": {
+      "reason": "unreviewed"
+    },
+    "AFA": {
+      "reason": "unreviewed"
+    },
+    "AGC": {
+      "reason": "unreviewed"
+    },
+    "AGD": {
+      "reason": "unreviewed"
+    },
+    "AGL": {
+      "reason": "unreviewed"
+    },
+    "AGS": {
+      "reason": "unreviewed"
+    },
+    "AGV": {
+      "reason": "unreviewed"
+    },
+    "AHB": {
+      "reason": "unreviewed"
+    },
+    "AHD": {
+      "reason": "unreviewed"
+    },
+    "AHI": {
+      "reason": "unreviewed"
+    },
+    "AHK": {
+      "reason": "unreviewed"
+    },
+    "AHL": {
+      "reason": "unreviewed"
+    },
+    "AHN": {
+      "reason": "unreviewed"
+    },
+    "AIB": {
+      "reason": "unreviewed"
+    },
+    "AIC": {
+      "reason": "unreviewed"
+    },
+    "AIQ": {
+      "reason": "unreviewed"
+    },
+    "AJG": {
+      "reason": "unreviewed"
+    },
+    "AJM": {
+      "reason": "unreviewed"
+    },
+    "AJR": {
+      "reason": "unreviewed"
+    },
+    "AKI": {
+      "reason": "unreviewed"
+    },
+    "AKS": {
+      "reason": "unreviewed"
+    },
+    "AKT": {
+      "reason": "unreviewed"
+    },
+    "ALA": {
+      "reason": "unreviewed"
+    },
+    "ALC": {
+      "reason": "unreviewed"
+    },
+    "ALI": {
+      "reason": "unreviewed"
+    },
+    "ALM": {
+      "reason": "unreviewed"
+    },
+    "ALN": {
+      "reason": "unreviewed",
+      "suggested_iso2": "AX"
+    },
+    "ALR": {
+      "reason": "unreviewed"
+    },
+    "ALT": {
+      "reason": "unreviewed"
+    },
+    "ALW": {
+      "reason": "unreviewed"
+    },
+    "AMB": {
+      "reason": "unreviewed"
+    },
+    "AMP": {
+      "reason": "unreviewed"
+    },
+    "AMU": {
+      "reason": "unreviewed"
+    },
+    "AMZ": {
+      "reason": "unreviewed"
+    },
+    "ANA": {
+      "reason": "unreviewed"
+    },
+    "ANB": {
+      "reason": "unreviewed"
+    },
+    "ANC": {
+      "reason": "unreviewed"
+    },
+    "ANH": {
+      "reason": "unreviewed"
+    },
+    "ANI": {
+      "reason": "unreviewed"
+    },
+    "ANJ": {
+      "reason": "unreviewed"
+    },
+    "ANK": {
+      "reason": "unreviewed"
+    },
+    "ANN": {
+      "reason": "unreviewed"
+    },
+    "ANT": {
+      "reason": "unreviewed"
+    },
+    "ANW": {
+      "reason": "unreviewed"
+    },
+    "AOM": {
+      "reason": "unreviewed"
+    },
+    "AOS": {
+      "reason": "unreviewed"
+    },
+    "AQR": {
+      "reason": "unreviewed"
+    },
+    "AQT": {
+      "reason": "unreviewed"
+    },
+    "ARA": {
+      "reason": "unreviewed"
+    },
+    "ARB": {
+      "reason": "unreviewed"
+    },
+    "ARH": {
+      "reason": "unreviewed"
+    },
+    "ARL": {
+      "reason": "unreviewed"
+    },
+    "ART": {
+      "reason": "unreviewed"
+    },
+    "ARU": {
+      "reason": "unreviewed"
+    },
+    "ARZ": {
+      "reason": "unreviewed"
+    },
+    "ASB": {
+      "reason": "unreviewed"
+    },
+    "ASH": {
+      "reason": "unreviewed"
+    },
+    "ASK": {
+      "reason": "unreviewed"
+    },
+    "ASL": {
+      "reason": "unreviewed"
+    },
+    "ASM": {
+      "reason": "unreviewed"
+    },
+    "ASS": {
+      "reason": "unreviewed"
+    },
+    "ASY": {
+      "reason": "unreviewed"
+    },
+    "ATC": {
+      "reason": "unreviewed"
+    },
+    "ATK": {
+      "reason": "unreviewed"
+    },
+    "ATR": {
+      "reason": "unreviewed"
+    },
+    "ATT": {
+      "reason": "unreviewed"
+    },
+    "AUN": {
+      "reason": "unreviewed"
+    },
+    "AWH": {
+      "reason": "unreviewed"
+    },
+    "AWI": {
+      "reason": "unreviewed"
+    },
+    "AWR": {
+      "reason": "unreviewed"
+    },
+    "AYD": {
+      "reason": "unreviewed"
+    },
+    "AZO": {
+      "reason": "unreviewed"
+    },
+    "AZW": {
+      "reason": "unreviewed"
+    },
+    "BAD": {
+      "reason": "unreviewed"
+    },
+    "BAL": {
+      "reason": "unreviewed"
+    },
+    "BAO": {
+      "reason": "unreviewed"
+    },
+    "BAR": {
+      "reason": "unreviewed"
+    },
+    "BCS": {
+      "reason": "unreviewed"
+    },
+    "BDA": {
+      "reason": "unreviewed"
+    },
+    "BDB": {
+      "reason": "unreviewed"
+    },
+    "BDH": {
+      "reason": "unreviewed"
+    },
+    "BDI": {
+      "reason": "unreviewed"
+    },
+    "BDT": {
+      "reason": "unreviewed"
+    },
+    "BDW": {
+      "reason": "unreviewed"
+    },
+    "BEG": {
+      "reason": "unreviewed"
+    },
+    "BEI": {
+      "reason": "unreviewed",
+      "suggested_iso2": "BN"
+    },
+    "BEO": {
+      "reason": "unreviewed"
+    },
+    "BER": {
+      "reason": "unreviewed"
+    },
+    "BFD": {
+      "reason": "unreviewed"
+    },
+    "BGN": {
+      "reason": "unreviewed"
+    },
+    "BGV": {
+      "reason": "unreviewed"
+    },
+    "BHA": {
+      "reason": "unreviewed"
+    },
+    "BHH": {
+      "reason": "unreviewed"
+    },
+    "BHM": {
+      "reason": "unreviewed"
+    },
+    "BHN": {
+      "reason": "unreviewed"
+    },
+    "BHO": {
+      "reason": "unreviewed"
+    },
+    "BHP": {
+      "reason": "unreviewed"
+    },
+    "BHR": {
+      "reason": "unreviewed",
+      "suggested_iso2": "BH"
+    },
+    "BHV": {
+      "reason": "unreviewed"
+    },
+    "BHW": {
+      "reason": "unreviewed"
+    },
+    "BIA": {
+      "reason": "unreviewed"
+    },
+    "BIH": {
+      "reason": "unreviewed"
+    },
+    "BIJ": {
+      "reason": "unreviewed"
+    },
+    "BIK": {
+      "reason": "unreviewed"
+    },
+    "BIY": {
+      "reason": "unreviewed"
+    },
+    "BJA": {
+      "reason": "unreviewed"
+    },
+    "BJH": {
+      "reason": "unreviewed"
+    },
+    "BKH": {
+      "reason": "unreviewed"
+    },
+    "BKN": {
+      "reason": "unreviewed"
+    },
+    "BKT": {
+      "reason": "unreviewed"
+    },
+    "BLO": {
+      "reason": "unreviewed"
+    },
+    "BLS": {
+      "reason": "unreviewed"
+    },
+    "BML": {
+      "reason": "unreviewed"
+    },
+    "BMM": {
+      "reason": "unreviewed"
+    },
+    "BND": {
+      "reason": "unreviewed"
+    },
+    "BNG": {
+      "reason": "unreviewed"
+    },
+    "BNJ": {
+      "reason": "unreviewed"
+    },
+    "BNP": {
+      "reason": "unreviewed"
+    },
+    "BNR": {
+      "reason": "unreviewed"
+    },
+    "BNS": {
+      "reason": "unreviewed"
+    },
+    "BNT": {
+      "reason": "unreviewed"
+    },
+    "BNY": {
+      "reason": "unreviewed"
+    },
+    "BOH": {
+      "reason": "unreviewed"
+    },
+    "BON": {
+      "reason": "unreviewed"
+    },
+    "BOR": {
+      "reason": "unreviewed"
+    },
+    "BRB": {
+      "reason": "unreviewed"
+    },
+    "BRC": {
+      "reason": "unreviewed"
+    },
+    "BRE": {
+      "reason": "unreviewed"
+    },
+    "BRG": {
+      "reason": "unreviewed"
+    },
+    "BRL": {
+      "reason": "unreviewed"
+    },
+    "BRR": {
+      "reason": "unreviewed"
+    },
+    "BRS": {
+      "reason": "unreviewed"
+    },
+    "BRU": {
+      "reason": "unreviewed"
+    },
+    "BRX": {
+      "reason": "unreviewed"
+    },
+    "BRY": {
+      "reason": "unreviewed"
+    },
+    "BSA": {
+      "reason": "unreviewed"
+    },
+    "BSG": {
+      "reason": "unreviewed"
+    },
+    "BSH": {
+      "reason": "unreviewed"
+    },
+    "BSL": {
+      "reason": "unreviewed"
+    },
+    "BSM": {
+      "reason": "unreviewed"
+    },
+    "BSP": {
+      "reason": "unreviewed"
+    },
+    "BSQ": {
+      "reason": "unreviewed"
+    },
+    "BTR": {
+      "reason": "unreviewed"
+    },
+    "BUG": {
+      "reason": "unreviewed"
+    },
+    "BUK": {
+      "reason": "unreviewed"
+    },
+    "BUN": {
+      "reason": "unreviewed"
+    },
+    "BUR": {
+      "reason": "unreviewed"
+    },
+    "BWH": {
+      "reason": "unreviewed"
+    },
+    "BWL": {
+      "reason": "unreviewed"
+    },
+    "BWR": {
+      "reason": "unreviewed"
+    },
+    "BYB": {
+      "reason": "unreviewed"
+    },
+    "BYR": {
+      "reason": "unreviewed"
+    },
+    "CAB": {
+      "reason": "unreviewed"
+    },
+    "CAL": {
+      "reason": "unreviewed"
+    },
+    "CAP": {
+      "reason": "unreviewed"
+    },
+    "CAS": {
+      "reason": "unreviewed"
+    },
+    "CAU": {
+      "reason": "unreviewed"
+    },
+    "CBA": {
+      "reason": "unreviewed"
+    },
+    "CBI": {
+      "reason": "unreviewed"
+    },
+    "CBR": {
+      "reason": "unreviewed"
+    },
+    "CBY": {
+      "reason": "unreviewed"
+    },
+    "CCG": {
+      "reason": "unreviewed"
+    },
+    "CCH": {
+      "reason": "unreviewed"
+    },
+    "CCI": {
+      "reason": "unreviewed"
+    },
+    "CED": {
+      "reason": "unreviewed"
+    },
+    "CET": {
+      "reason": "unreviewed"
+    },
+    "CGG": {
+      "reason": "unreviewed"
+    },
+    "CGR": {
+      "reason": "unreviewed"
+    },
+    "CH2": {
+      "reason": "unreviewed"
+    },
+    "CHB": {
+      "reason": "unreviewed"
+    },
+    "CHC": {
+      "reason": "unreviewed"
+    },
+    "CHE": {
+      "reason": "unreviewed"
+    },
+    "CHH": {
+      "reason": "unreviewed"
+    },
+    "CHK": {
+      "reason": "unreviewed"
+    },
+    "CHM": {
+      "reason": "unreviewed"
+    },
+    "CHN": {
+      "reason": "unreviewed"
+    },
+    "CHP": {
+      "reason": "unreviewed"
+    },
+    "CHR": {
+      "reason": "unreviewed"
+    },
+    "CHS": {
+      "reason": "unreviewed"
+    },
+    "CHT": {
+      "reason": "unreviewed"
+    },
+    "CHW": {
+      "reason": "unreviewed"
+    },
+    "CHY": {
+      "reason": "unreviewed"
+    },
+    "CIH": {
+      "reason": "unreviewed"
+    },
+    "CIL": {
+      "reason": "unreviewed"
+    },
+    "CKC": {
+      "reason": "unreviewed"
+    },
+    "CKD": {
+      "reason": "unreviewed"
+    },
+    "CKG": {
+      "reason": "unreviewed"
+    },
+    "CKH": {
+      "reason": "unreviewed"
+    },
+    "CKI": {
+      "reason": "unreviewed"
+    },
+    "CKL": {
+      "reason": "unreviewed"
+    },
+    "CLC": {
+      "reason": "unreviewed"
+    },
+    "CLI": {
+      "reason": "unreviewed"
+    },
+    "CLM": {
+      "reason": "unreviewed"
+    },
+    "CLR": {
+      "reason": "unreviewed"
+    },
+    "CMC": {
+      "reason": "unreviewed"
+    },
+    "CMX": {
+      "reason": "unreviewed"
+    },
+    "CNB": {
+      "reason": "unreviewed"
+    },
+    "CNC": {
+      "reason": "unreviewed"
+    },
+    "CNG": {
+      "reason": "unreviewed"
+    },
+    "CNK": {
+      "reason": "unreviewed"
+    },
+    "CNL": {
+      "reason": "unreviewed"
+    },
+    "CNR": {
+      "reason": "unreviewed"
+    },
+    "COC": {
+      "reason": "unreviewed"
+    },
+    "COM": {
+      "reason": "unreviewed",
+      "suggested_iso2": "KM"
+    },
+    "COU": {
+      "reason": "unreviewed"
+    },
+    "CPC": {
+      "reason": "unreviewed"
+    },
+    "CPV": {
+      "reason": "unreviewed"
+    },
+    "CRA": {
+      "reason": "unreviewed"
+    },
+    "CRE": {
+      "reason": "unreviewed"
+    },
+    "CRG": {
+      "reason": "unreviewed"
+    },
+    "CRK": {
+      "reason": "unreviewed"
+    },
+    "CRM": {
+      "reason": "unreviewed"
+    },
+    "CRN": {
+      "reason": "unreviewed"
+    },
+    "CRP": {
+      "reason": "unreviewed"
+    },
+    "CRT": {
+      "reason": "unreviewed"
+    },
+    "CSI": {
+      "reason": "unreviewed"
+    },
+    "CSM": {
+      "reason": "unreviewed"
+    },
+    "CSS": {
+      "reason": "unreviewed"
+    },
+    "CST": {
+      "reason": "unreviewed"
+    },
+    "CTL": {
+      "reason": "unreviewed"
+    },
+    "CTM": {
+      "reason": "unreviewed"
+    },
+    "CTU": {
+      "reason": "unreviewed"
+    },
+    "CUD": {
+      "reason": "unreviewed"
+    },
+    "CUU": {
+      "reason": "unreviewed"
+    },
+    "CVD": {
+      "reason": "unreviewed"
+    },
+    "CVS": {
+      "reason": "unreviewed"
+    },
+    "CWD": {
+      "reason": "unreviewed"
+    },
+    "CYA": {
+      "reason": "unreviewed"
+    },
+    "CYG": {
+      "reason": "unreviewed"
+    },
+    "CYM": {
+      "reason": "unreviewed"
+    },
+    "CYR": {
+      "reason": "unreviewed"
+    },
+    "CZC": {
+      "reason": "unreviewed",
+      "suggested_iso2": "CZ"
+    },
+    "DAG": {
+      "reason": "unreviewed"
+    },
+    "DAN": {
+      "reason": "unreviewed"
+    },
+    "DDN": {
+      "reason": "unreviewed"
+    },
+    "DDS": {
+      "reason": "unreviewed"
+    },
+    "DEE": {
+      "reason": "unreviewed"
+    },
+    "DEL": {
+      "reason": "unreviewed"
+    },
+    "DGB": {
+      "reason": "unreviewed"
+    },
+    "DGC": {
+      "reason": "unreviewed"
+    },
+    "DGH": {
+      "reason": "unreviewed"
+    },
+    "DGP": {
+      "reason": "unreviewed"
+    },
+    "DHA": {
+      "reason": "unreviewed"
+    },
+    "DHB": {
+      "reason": "unreviewed"
+    },
+    "DHK": {
+      "reason": "unreviewed"
+    },
+    "DIR": {
+      "reason": "unreviewed"
+    },
+    "DJN": {
+      "reason": "unreviewed"
+    },
+    "DLH": {
+      "reason": "unreviewed"
+    },
+    "DLK": {
+      "reason": "unreviewed"
+    },
+    "DLL": {
+      "reason": "unreviewed"
+    },
+    "DLM": {
+      "reason": "unreviewed"
+    },
+    "DLP": {
+      "reason": "unreviewed"
+    },
+    "DMC": {
+      "reason": "unreviewed"
+    },
+    "DML": {
+      "reason": "unreviewed"
+    },
+    "DNG": {
+      "reason": "unreviewed"
+    },
+    "DNT": {
+      "reason": "unreviewed"
+    },
+    "DOB": {
+      "reason": "unreviewed"
+    },
+    "DON": {
+      "reason": "unreviewed"
+    },
+    "DPK": {
+      "reason": "unreviewed",
+      "suggested_iso2": "KP"
+    },
+    "DRF": {
+      "reason": "unreviewed"
+    },
+    "DRG": {
+      "reason": "unreviewed"
+    },
+    "DRL": {
+      "reason": "unreviewed"
+    },
+    "DRN": {
+      "reason": "unreviewed"
+    },
+    "DRP": {
+      "reason": "unreviewed"
+    },
+    "DRV": {
+      "reason": "unreviewed"
+    },
+    "DST": {
+      "reason": "unreviewed"
+    },
+    "DTA": {
+      "reason": "unreviewed"
+    },
+    "DTH": {
+      "reason": "unreviewed"
+    },
+    "DUB": {
+      "reason": "unreviewed"
+    },
+    "DWI": {
+      "reason": "unreviewed"
+    },
+    "DWJ": {
+      "reason": "unreviewed"
+    },
+    "DWR": {
+      "reason": "unreviewed"
+    },
+    "DWS": {
+      "reason": "unreviewed"
+    },
+    "EAN": {
+      "reason": "unreviewed"
+    },
+    "EAS": {
+      "reason": "unreviewed"
+    },
+    "EDN": {
+      "reason": "unreviewed"
+    },
+    "EGL": {
+      "reason": "unreviewed"
+    },
+    "EHC": {
+      "reason": "unreviewed"
+    },
+    "EHI": {
+      "reason": "unreviewed"
+    },
+    "ELB": {
+      "reason": "unreviewed"
+    },
+    "EMC": {
+      "reason": "unreviewed"
+    },
+    "ENR": {
+      "reason": "unreviewed"
+    },
+    "EPR": {
+      "reason": "unreviewed"
+    },
+    "ERE": {
+      "reason": "unreviewed"
+    },
+    "ERL": {
+      "reason": "unreviewed"
+    },
+    "ERU": {
+      "reason": "unreviewed"
+    },
+    "ESH": {
+      "reason": "unreviewed"
+    },
+    "ESM": {
+      "reason": "unreviewed"
+    },
+    "ESS": {
+      "reason": "unreviewed"
+    },
+    "ESX": {
+      "reason": "unreviewed"
+    },
+    "ETC": {
+      "reason": "unreviewed"
+    },
+    "ETM": {
+      "reason": "unreviewed",
+      "suggested_iso2": "TL"
+    },
+    "EVI": {
+      "reason": "unreviewed"
+    },
+    "EVK": {
+      "reason": "unreviewed"
+    },
+    "EXD": {
+      "reason": "unreviewed"
+    },
+    "EZO": {
+      "reason": "unreviewed"
+    },
+    "FAL": {
+      "reason": "unreviewed"
+    },
+    "FAR": {
+      "reason": "unreviewed"
+    },
+    "FAS": {
+      "reason": "unreviewed"
+    },
+    "FCK": {
+      "reason": "unreviewed"
+    },
+    "FDH": {
+      "reason": "unreviewed"
+    },
+    "FEA": {
+      "reason": "unreviewed"
+    },
+    "FIU": {
+      "reason": "unreviewed"
+    },
+    "FKK": {
+      "reason": "unreviewed"
+    },
+    "FKL": {
+      "reason": "unreviewed"
+    },
+    "FKS": {
+      "reason": "unreviewed"
+    },
+    "FKU": {
+      "reason": "unreviewed"
+    },
+    "FLA": {
+      "reason": "unreviewed"
+    },
+    "FLO": {
+      "reason": "unreviewed"
+    },
+    "FND": {
+      "reason": "unreviewed"
+    },
+    "FPR": {
+      "reason": "unreviewed"
+    },
+    "FR2": {
+      "reason": "unreviewed"
+    },
+    "FRK": {
+      "reason": "unreviewed"
+    },
+    "FRN": {
+      "reason": "unreviewed"
+    },
+    "FRR": {
+      "reason": "unreviewed"
+    },
+    "FRS": {
+      "reason": "unreviewed"
+    },
+    "FRU": {
+      "reason": "unreviewed"
+    },
+    "FUJ": {
+      "reason": "unreviewed"
+    },
+    "FUK": {
+      "reason": "unreviewed"
+    },
+    "FWA": {
+      "reason": "unreviewed"
+    },
+    "FZN": {
+      "reason": "unreviewed"
+    },
+    "GAL": {
+      "reason": "unreviewed"
+    },
+    "GAU": {
+      "reason": "unreviewed"
+    },
+    "GB2": {
+      "reason": "unreviewed"
+    },
+    "GBL": {
+      "reason": "unreviewed"
+    },
+    "GCO": {
+      "reason": "unreviewed"
+    },
+    "GDA": {
+      "reason": "unreviewed"
+    },
+    "GEL": {
+      "reason": "unreviewed"
+    },
+    "GEN": {
+      "reason": "unreviewed"
+    },
+    "GFB": {
+      "reason": "unreviewed"
+    },
+    "GGP": {
+      "reason": "unreviewed"
+    },
+    "GIB": {
+      "reason": "unreviewed"
+    },
+    "GIF": {
+      "reason": "unreviewed"
+    },
+    "GJR": {
+      "reason": "unreviewed"
+    },
+    "GKS": {
+      "reason": "unreviewed"
+    },
+    "GLE": {
+      "reason": "unreviewed"
+    },
+    "GLN": {
+      "reason": "unreviewed"
+    },
+    "GMA": {
+      "reason": "unreviewed"
+    },
+    "GMY": {
+      "reason": "unreviewed"
+    },
+    "GND": {
+      "reason": "unreviewed"
+    },
+    "GNH": {
+      "reason": "unreviewed"
+    },
+    "GNL": {
+      "reason": "unreviewed"
+    },
+    "GNW": {
+      "reason": "unreviewed"
+    },
+    "GOA": {
+      "reason": "unreviewed"
+    },
+    "GOI": {
+      "reason": "unreviewed"
+    },
+    "GOL": {
+      "reason": "unreviewed"
+    },
+    "GOS": {
+      "reason": "unreviewed"
+    },
+    "GOT": {
+      "reason": "unreviewed"
+    },
+    "GOZ": {
+      "reason": "unreviewed"
+    },
+    "GQE": {
+      "reason": "unreviewed"
+    },
+    "GQW": {
+      "reason": "unreviewed"
+    },
+    "GRG": {
+      "reason": "unreviewed",
+      "suggested_iso2": "GE"
+    },
+    "GRI": {
+      "reason": "unreviewed"
+    },
+    "GRL": {
+      "reason": "unreviewed",
+      "suggested_iso2": "GL"
+    },
+    "GRN": {
+      "reason": "unreviewed"
+    },
+    "GRR": {
+      "reason": "unreviewed"
+    },
+    "GSC": {
+      "reason": "unreviewed"
+    },
+    "GSH": {
+      "reason": "unreviewed"
+    },
+    "GSY": {
+      "reason": "unreviewed",
+      "suggested_iso2": "GG"
+    },
+    "GUN": {
+      "reason": "unreviewed"
+    },
+    "GWA": {
+      "reason": "unreviewed"
+    },
+    "GZK": {
+      "reason": "unreviewed"
+    },
+    "HAM": {
+      "reason": "unreviewed"
+    },
+    "HDA": {
+      "reason": "unreviewed"
+    },
+    "HDL": {
+      "reason": "unreviewed"
+    },
+    "HEN": {
+      "reason": "unreviewed"
+    },
+    "HES": {
+      "reason": "unreviewed"
+    },
+    "HGL": {
+      "reason": "unreviewed"
+    },
+    "HHH": {
+      "reason": "unreviewed"
+    },
+    "HHO": {
+      "reason": "unreviewed"
+    },
+    "HHS": {
+      "reason": "unreviewed"
+    },
+    "HIR": {
+      "reason": "unreviewed"
+    },
+    "HJZ": {
+      "reason": "unreviewed"
+    },
+    "HKA": {
+      "reason": "unreviewed"
+    },
+    "HKG": {
+      "reason": "unreviewed"
+    },
+    "HLS": {
+      "reason": "unreviewed"
+    },
+    "HMD": {
+      "reason": "unreviewed"
+    },
+    "HMI": {
+      "reason": "unreviewed"
+    },
+    "HNN": {
+      "reason": "unreviewed"
+    },
+    "HNT": {
+      "reason": "unreviewed"
+    },
+    "HNU": {
+      "reason": "unreviewed"
+    },
+    "HOA": {
+      "reason": "unreviewed"
+    },
+    "HOB": {
+      "reason": "unreviewed"
+    },
+    "HOH": {
+      "reason": "unreviewed"
+    },
+    "HOK": {
+      "reason": "unreviewed"
+    },
+    "HPC": {
+      "reason": "unreviewed"
+    },
+    "HPH": {
+      "reason": "unreviewed"
+    },
+    "HRP": {
+      "reason": "unreviewed"
+    },
+    "HRR": {
+      "reason": "unreviewed"
+    },
+    "HSH": {
+      "reason": "unreviewed"
+    },
+    "HSL": {
+      "reason": "unreviewed"
+    },
+    "HSN": {
+      "reason": "unreviewed"
+    },
+    "HTY": {
+      "reason": "unreviewed"
+    },
+    "HUM": {
+      "reason": "unreviewed"
+    },
+    "HYD": {
+      "reason": "unreviewed"
+    },
+    "HYO": {
+      "reason": "unreviewed"
+    },
+    "HZA": {
+      "reason": "unreviewed"
+    },
+    "HZB": {
+      "reason": "unreviewed"
+    },
+    "HZR": {
+      "reason": "unreviewed"
+    },
+    "IBA": {
+      "reason": "unreviewed"
+    },
+    "IDH": {
+      "reason": "unreviewed"
+    },
+    "IDR": {
+      "reason": "unreviewed"
+    },
+    "IDS": {
+      "reason": "unreviewed",
+      "suggested_iso2": "ID"
+    },
+    "IFN": {
+      "reason": "unreviewed"
+    },
+    "IGC": {
+      "reason": "unreviewed"
+    },
+    "IGU": {
+      "reason": "unreviewed"
+    },
+    "IKR": {
+      "reason": "unreviewed"
+    },
+    "ILL": {
+      "reason": "unreviewed"
+    },
+    "ILY": {
+      "reason": "unreviewed"
+    },
+    "IMO": {
+      "reason": "unreviewed",
+      "suggested_iso2": "OM"
+    },
+    "INA": {
+      "reason": "unreviewed"
+    },
+    "INC": {
+      "reason": "unreviewed"
+    },
+    "IND": {
+      "reason": "unreviewed",
+      "suggested_iso2": "IN"
+    },
+    "ING": {
+      "reason": "unreviewed"
+    },
+    "INI": {
+      "reason": "unreviewed"
+    },
+    "INN": {
+      "reason": "unreviewed"
+    },
+    "INR": {
+      "reason": "unreviewed"
+    },
+    "INT": {
+      "reason": "unreviewed"
+    },
+    "ION": {
+      "reason": "unreviewed"
+    },
+    "IOW": {
+      "reason": "unreviewed"
+    },
+    "ISB": {
+      "reason": "unreviewed"
+    },
+    "ISI": {
+      "reason": "unreviewed"
+    },
+    "IST": {
+      "reason": "unreviewed"
+    },
+    "IVN": {
+      "reason": "unreviewed"
+    },
+    "IWN": {
+      "reason": "unreviewed"
+    },
+    "IWT": {
+      "reason": "unreviewed"
+    },
+    "IZH": {
+      "reason": "unreviewed"
+    },
+    "JAF": {
+      "reason": "unreviewed"
+    },
+    "JAN": {
+      "reason": "unreviewed"
+    },
+    "JAO": {
+      "reason": "unreviewed"
+    },
+    "JAV": {
+      "reason": "unreviewed"
+    },
+    "JBL": {
+      "reason": "unreviewed"
+    },
+    "JDP": {
+      "reason": "unreviewed"
+    },
+    "JEB": {
+      "reason": "unreviewed"
+    },
+    "JFR": {
+      "reason": "unreviewed"
+    },
+    "JGH": {
+      "reason": "unreviewed"
+    },
+    "JGN": {
+      "reason": "unreviewed"
+    },
+    "JHB": {
+      "reason": "unreviewed"
+    },
+    "JHL": {
+      "reason": "unreviewed"
+    },
+    "JIP": {
+      "reason": "unreviewed"
+    },
+    "JJA": {
+      "reason": "unreviewed"
+    },
+    "JJT": {
+      "reason": "unreviewed"
+    },
+    "JLS": {
+      "reason": "unreviewed"
+    },
+    "JMK": {
+      "reason": "unreviewed"
+    },
+    "JMY": {
+      "reason": "unreviewed"
+    },
+    "JND": {
+      "reason": "unreviewed"
+    },
+    "JOH": {
+      "reason": "unreviewed"
+    },
+    "JRA": {
+      "reason": "unreviewed"
+    },
+    "JRN": {
+      "reason": "unreviewed"
+    },
+    "JSM": {
+      "reason": "unreviewed"
+    },
+    "JSO": {
+      "reason": "unreviewed"
+    },
+    "JSP": {
+      "reason": "unreviewed"
+    },
+    "JSY": {
+      "reason": "unreviewed",
+      "suggested_iso2": "JE"
+    },
+    "JTH": {
+      "reason": "unreviewed"
+    },
+    "JUB": {
+      "reason": "unreviewed"
+    },
+    "JUL": {
+      "reason": "unreviewed"
+    },
+    "JWH": {
+      "reason": "unreviewed"
+    },
+    "KAG": {
+      "reason": "unreviewed"
+    },
+    "KAH": {
+      "reason": "unreviewed"
+    },
+    "KAI": {
+      "reason": "unreviewed"
+    },
+    "KAN": {
+      "reason": "unreviewed"
+    },
+    "KAP": {
+      "reason": "unreviewed"
+    },
+    "KAR": {
+      "reason": "unreviewed"
+    },
+    "KAS": {
+      "reason": "unreviewed"
+    },
+    "KAW": {
+      "reason": "unreviewed"
+    },
+    "KBA": {
+      "reason": "unreviewed"
+    },
+    "KBE": {
+      "reason": "unreviewed"
+    },
+    "KBK": {
+      "reason": "unreviewed"
+    },
+    "KBL": {
+      "reason": "unreviewed"
+    },
+    "KBS": {
+      "reason": "unreviewed"
+    },
+    "KBY": {
+      "reason": "unreviewed"
+    },
+    "KCA": {
+      "reason": "unreviewed"
+    },
+    "KCH": {
+      "reason": "unreviewed"
+    },
+    "KCK": {
+      "reason": "unreviewed"
+    },
+    "KDH": {
+      "reason": "unreviewed"
+    },
+    "KED": {
+      "reason": "unreviewed"
+    },
+    "KEL": {
+      "reason": "unreviewed"
+    },
+    "KET": {
+      "reason": "unreviewed"
+    },
+    "KFR": {
+      "reason": "unreviewed"
+    },
+    "KGE": {
+      "reason": "unreviewed"
+    },
+    "KGG": {
+      "reason": "unreviewed"
+    },
+    "KGH": {
+      "reason": "unreviewed"
+    },
+    "KGL": {
+      "reason": "unreviewed"
+    },
+    "KGN": {
+      "reason": "unreviewed"
+    },
+    "KGR": {
+      "reason": "unreviewed"
+    },
+    "KGS": {
+      "reason": "unreviewed"
+    },
+    "KGW": {
+      "reason": "unreviewed"
+    },
+    "KHA": {
+      "reason": "unreviewed"
+    },
+    "KHD": {
+      "reason": "unreviewed"
+    },
+    "KHG": {
+      "reason": "unreviewed"
+    },
+    "KHH": {
+      "reason": "unreviewed"
+    },
+    "KHI": {
+      "reason": "unreviewed"
+    },
+    "KHL": {
+      "reason": "unreviewed"
+    },
+    "KHM": {
+      "reason": "unreviewed"
+    },
+    "KHO": {
+      "reason": "unreviewed"
+    },
+    "KHP": {
+      "reason": "unreviewed"
+    },
+    "KHR": {
+      "reason": "unreviewed"
+    },
+    "KHS": {
+      "reason": "unreviewed"
+    },
+    "KHZ": {
+      "reason": "unreviewed"
+    },
+    "KIE": {
+      "reason": "unreviewed"
+    },
+    "KIR": {
+      "reason": "unreviewed"
+    },
+    "KJH": {
+      "reason": "unreviewed"
+    },
+    "KJU": {
+      "reason": "unreviewed"
+    },
+    "KKG": {
+      "reason": "unreviewed"
+    },
+    "KKS": {
+      "reason": "unreviewed"
+    },
+    "KKV": {
+      "reason": "unreviewed"
+    },
+    "KLA": {
+      "reason": "unreviewed"
+    },
+    "KLC": {
+      "reason": "unreviewed"
+    },
+    "KLG": {
+      "reason": "unreviewed"
+    },
+    "KLU": {
+      "reason": "unreviewed"
+    },
+    "KMI": {
+      "reason": "unreviewed"
+    },
+    "KMK": {
+      "reason": "unreviewed"
+    },
+    "KMN": {
+      "reason": "unreviewed"
+    },
+    "KNB": {
+      "reason": "unreviewed"
+    },
+    "KNE": {
+      "reason": "unreviewed"
+    },
+    "KNG": {
+      "reason": "unreviewed"
+    },
+    "KNI": {
+      "reason": "unreviewed"
+    },
+    "KNK": {
+      "reason": "unreviewed"
+    },
+    "KNM": {
+      "reason": "unreviewed"
+    },
+    "KNS": {
+      "reason": "unreviewed"
+    },
+    "KNT": {
+      "reason": "unreviewed"
+    },
+    "KNW": {
+      "reason": "unreviewed"
+    },
+    "KOC": {
+      "reason": "unreviewed"
+    },
+    "KOI": {
+      "reason": "unreviewed"
+    },
+    "KOK": {
+      "reason": "unreviewed"
+    },
+    "KON": {
+      "reason": "unreviewed"
+    },
+    "KOS": {
+      "reason": "unreviewed",
+      "suggested_iso2": "XK"
+    },
+    "KOT": {
+      "reason": "unreviewed"
+    },
+    "KOW": {
+      "reason": "unreviewed"
+    },
+    "KPK": {
+      "reason": "unreviewed"
+    },
+    "KPT": {
+      "reason": "unreviewed"
+    },
+    "KPU": {
+      "reason": "unreviewed"
+    },
+    "KPY": {
+      "reason": "unreviewed"
+    },
+    "KRA": {
+      "reason": "unreviewed"
+    },
+    "KRC": {
+      "reason": "unreviewed"
+    },
+    "KRF": {
+      "reason": "unreviewed"
+    },
+    "KRI": {
+      "reason": "unreviewed"
+    },
+    "KRM": {
+      "reason": "unreviewed"
+    },
+    "KRR": {
+      "reason": "unreviewed"
+    },
+    "KRS": {
+      "reason": "unreviewed"
+    },
+    "KRV": {
+      "reason": "unreviewed"
+    },
+    "KRW": {
+      "reason": "unreviewed"
+    },
+    "KSA": {
+      "reason": "unreviewed"
+    },
+    "KSC": {
+      "reason": "unreviewed"
+    },
+    "KSG": {
+      "reason": "unreviewed"
+    },
+    "KSH": {
+      "reason": "unreviewed"
+    },
+    "KSO": {
+      "reason": "unreviewed"
+    },
+    "KSS": {
+      "reason": "unreviewed"
+    },
+    "KSW": {
+      "reason": "unreviewed"
+    },
+    "KSZ": {
+      "reason": "unreviewed"
+    },
+    "KTG": {
+      "reason": "unreviewed"
+    },
+    "KTH": {
+      "reason": "unreviewed"
+    },
+    "KTI": {
+      "reason": "unreviewed"
+    },
+    "KTM": {
+      "reason": "unreviewed"
+    },
+    "KTR": {
+      "reason": "unreviewed"
+    },
+    "KTW": {
+      "reason": "unreviewed"
+    },
+    "KUB": {
+      "reason": "unreviewed"
+    },
+    "KUK": {
+      "reason": "unreviewed"
+    },
+    "KUL": {
+      "reason": "unreviewed"
+    },
+    "KUM": {
+      "reason": "unreviewed"
+    },
+    "KUN": {
+      "reason": "unreviewed"
+    },
+    "KUR": {
+      "reason": "unreviewed"
+    },
+    "KUT": {
+      "reason": "unreviewed"
+    },
+    "KVA": {
+      "reason": "unreviewed"
+    },
+    "KVD": {
+      "reason": "unreviewed"
+    },
+    "KVN": {
+      "reason": "unreviewed"
+    },
+    "KVS": {
+      "reason": "unreviewed"
+    },
+    "KWC": {
+      "reason": "unreviewed"
+    },
+    "KWN": {
+      "reason": "unreviewed"
+    },
+    "KWZ": {
+      "reason": "unreviewed"
+    },
+    "KYB": {
+      "reason": "unreviewed"
+    },
+    "KYC": {
+      "reason": "unreviewed"
+    },
+    "KYK": {
+      "reason": "unreviewed"
+    },
+    "KYM": {
+      "reason": "unreviewed"
+    },
+    "KYO": {
+      "reason": "unreviewed"
+    },
+    "KYY": {
+      "reason": "unreviewed"
+    },
+    "KZG": {
+      "reason": "unreviewed"
+    },
+    "KZH": {
+      "reason": "unreviewed"
+    },
+    "KZN": {
+      "reason": "unreviewed"
+    },
+    "LAG": {
+      "reason": "unreviewed"
+    },
+    "LAQ": {
+      "reason": "unreviewed"
+    },
+    "LAR": {
+      "reason": "unreviewed"
+    },
+    "LAS": {
+      "reason": "unreviewed"
+    },
+    "LBC": {
+      "reason": "unreviewed"
+    },
+    "LBD": {
+      "reason": "unreviewed"
+    },
+    "LBE": {
+      "reason": "unreviewed"
+    },
+    "LBG": {
+      "reason": "unreviewed"
+    },
+    "LBL": {
+      "reason": "unreviewed"
+    },
+    "LBN": {
+      "reason": "unreviewed"
+    },
+    "LBW": {
+      "reason": "unreviewed"
+    },
+    "LCC": {
+      "reason": "unreviewed"
+    },
+    "LCH": {
+      "reason": "unreviewed"
+    },
+    "LCN": {
+      "reason": "unreviewed"
+    },
+    "LCS": {
+      "reason": "unreviewed"
+    },
+    "LCT": {
+      "reason": "unreviewed"
+    },
+    "LDF": {
+      "reason": "unreviewed"
+    },
+    "LDZ": {
+      "reason": "unreviewed"
+    },
+    "LEG": {
+      "reason": "unreviewed"
+    },
+    "LEI": {
+      "reason": "unreviewed"
+    },
+    "LEO": {
+      "reason": "unreviewed"
+    },
+    "LES": {
+      "reason": "unreviewed",
+      "suggested_iso2": "LS"
+    },
+    "LEY": {
+      "reason": "unreviewed"
+    },
+    "LGC": {
+      "reason": "unreviewed"
+    },
+    "LGN": {
+      "reason": "unreviewed"
+    },
+    "LGP": {
+      "reason": "unreviewed"
+    },
+    "LHJ": {
+      "reason": "unreviewed"
+    },
+    "LHR": {
+      "reason": "unreviewed"
+    },
+    "LIE": {
+      "reason": "unreviewed",
+      "suggested_iso2": "LI"
+    },
+    "LIM": {
+      "reason": "unreviewed"
+    },
+    "LIN": {
+      "reason": "unreviewed"
+    },
+    "LIP": {
+      "reason": "unreviewed"
+    },
+    "LIV": {
+      "reason": "unreviewed"
+    },
+    "LKB": {
+      "reason": "unreviewed"
+    },
+    "LKE": {
+      "reason": "unreviewed"
+    },
+    "LKF": {
+      "reason": "unreviewed"
+    },
+    "LKM": {
+      "reason": "unreviewed"
+    },
+    "LKS": {
+      "reason": "unreviewed"
+    },
+    "LKT": {
+      "reason": "unreviewed"
+    },
+    "LMC": {
+      "reason": "unreviewed"
+    },
+    "LMK": {
+      "reason": "unreviewed"
+    },
+    "LMS": {
+      "reason": "unreviewed"
+    },
+    "LMU": {
+      "reason": "unreviewed"
+    },
+    "LNG": {
+      "reason": "unreviewed"
+    },
+    "LNT": {
+      "reason": "unreviewed"
+    },
+    "LNV": {
+      "reason": "unreviewed"
+    },
+    "LOM": {
+      "reason": "unreviewed"
+    },
+    "LON": {
+      "reason": "unreviewed"
+    },
+    "LOR": {
+      "reason": "unreviewed"
+    },
+    "LOU": {
+      "reason": "unreviewed"
+    },
+    "LRS": {
+      "reason": "unreviewed"
+    },
+    "LSA": {
+      "reason": "unreviewed"
+    },
+    "LSB": {
+      "reason": "unreviewed"
+    },
+    "LSU": {
+      "reason": "unreviewed"
+    },
+    "LTG": {
+      "reason": "unreviewed"
+    },
+    "LUB": {
+      "reason": "unreviewed"
+    },
+    "LUS": {
+      "reason": "unreviewed"
+    },
+    "LWO": {
+      "reason": "unreviewed"
+    },
+    "LYF": {
+      "reason": "unreviewed"
+    },
+    "LZG": {
+      "reason": "unreviewed"
+    },
+    "MAH": {
+      "reason": "unreviewed"
+    },
+    "MAJ": {
+      "reason": "unreviewed"
+    },
+    "MAR": {
+      "reason": "unreviewed"
+    },
+    "MAS": {
+      "reason": "unreviewed"
+    },
+    "MAT": {
+      "reason": "unreviewed"
+    },
+    "MAZ": {
+      "reason": "unreviewed"
+    },
+    "MBJ": {
+      "reason": "unreviewed"
+    },
+    "MBV": {
+      "reason": "unreviewed"
+    },
+    "MCD": {
+      "reason": "unreviewed"
+    },
+    "MCH": {
+      "reason": "unreviewed"
+    },
+    "MCO": {
+      "reason": "unreviewed",
+      "suggested_iso2": "MC"
+    },
+    "MCR": {
+      "reason": "unreviewed"
+    },
+    "MCU": {
+      "reason": "unreviewed"
+    },
+    "MDC": {
+      "reason": "unreviewed"
+    },
+    "MDD": {
+      "reason": "unreviewed"
+    },
+    "MDH": {
+      "reason": "unreviewed"
+    },
+    "MDN": {
+      "reason": "unreviewed"
+    },
+    "MDP": {
+      "reason": "unreviewed"
+    },
+    "MDR": {
+      "reason": "unreviewed"
+    },
+    "MER": {
+      "reason": "unreviewed"
+    },
+    "MET": {
+      "reason": "unreviewed"
+    },
+    "MFL": {
+      "reason": "unreviewed"
+    },
+    "MGN": {
+      "reason": "unreviewed"
+    },
+    "MGS": {
+      "reason": "unreviewed"
+    },
+    "MHA": {
+      "reason": "unreviewed"
+    },
+    "MHB": {
+      "reason": "unreviewed"
+    },
+    "MHC": {
+      "reason": "unreviewed"
+    },
+    "MHD": {
+      "reason": "unreviewed"
+    },
+    "MHL": {
+      "reason": "unreviewed"
+    },
+    "MHM": {
+      "reason": "unreviewed"
+    },
+    "MHR": {
+      "reason": "unreviewed"
+    },
+    "MIE": {
+      "reason": "unreviewed"
+    },
+    "MIM": {
+      "reason": "unreviewed"
+    },
+    "MIY": {
+      "reason": "unreviewed"
+    },
+    "MKN": {
+      "reason": "unreviewed"
+    },
+    "MKO": {
+      "reason": "unreviewed"
+    },
+    "MKR": {
+      "reason": "unreviewed"
+    },
+    "MLC": {
+      "reason": "unreviewed"
+    },
+    "MLK": {
+      "reason": "unreviewed"
+    },
+    "MLV": {
+      "reason": "unreviewed"
+    },
+    "MMB": {
+      "reason": "unreviewed"
+    },
+    "MML": {
+      "reason": "unreviewed"
+    },
+    "MNA": {
+      "reason": "unreviewed"
+    },
+    "MNB": {
+      "reason": "unreviewed"
+    },
+    "MNE": {
+      "reason": "unreviewed"
+    },
+    "MNP": {
+      "reason": "unreviewed"
+    },
+    "MNS": {
+      "reason": "unreviewed"
+    },
+    "MNU": {
+      "reason": "unreviewed"
+    },
+    "MNX": {
+      "reason": "unreviewed",
+      "suggested_iso2": "IM"
+    },
+    "MOH": {
+      "reason": "unreviewed"
+    },
+    "MOV": {
+      "reason": "unreviewed"
+    },
+    "MPL": {
+      "reason": "unreviewed"
+    },
+    "MRC": {
+      "reason": "unreviewed"
+    },
+    "MRD": {
+      "reason": "unreviewed"
+    },
+    "MRE": {
+      "reason": "unreviewed"
+    },
+    "MRG": {
+      "reason": "unreviewed"
+    },
+    "MRH": {
+      "reason": "unreviewed"
+    },
+    "MRL": {
+      "reason": "unreviewed"
+    },
+    "MRM": {
+      "reason": "unreviewed"
+    },
+    "MRN": {
+      "reason": "unreviewed"
+    },
+    "MRS": {
+      "reason": "unreviewed",
+      "suggested_iso2": "MU"
+    },
+    "MRV": {
+      "reason": "unreviewed"
+    },
+    "MRW": {
+      "reason": "unreviewed"
+    },
+    "MRY": {
+      "reason": "unreviewed"
+    },
+    "MSC": {
+      "reason": "unreviewed"
+    },
+    "MSG": {
+      "reason": "unreviewed"
+    },
+    "MSI": {
+      "reason": "unreviewed"
+    },
+    "MSO": {
+      "reason": "unreviewed"
+    },
+    "MSQ": {
+      "reason": "unreviewed"
+    },
+    "MSR": {
+      "reason": "unreviewed"
+    },
+    "MSS": {
+      "reason": "unreviewed"
+    },
+    "MST": {
+      "reason": "unreviewed"
+    },
+    "MSV": {
+      "reason": "unreviewed"
+    },
+    "MTB": {
+      "reason": "unreviewed"
+    },
+    "MTG": {
+      "reason": "unreviewed"
+    },
+    "MTQ": {
+      "reason": "unreviewed"
+    },
+    "MTS": {
+      "reason": "unreviewed"
+    },
+    "MUL": {
+      "reason": "unreviewed"
+    },
+    "MUN": {
+      "reason": "unreviewed"
+    },
+    "MWD": {
+      "reason": "unreviewed"
+    },
+    "MWL": {
+      "reason": "unreviewed"
+    },
+    "MWN": {
+      "reason": "unreviewed"
+    },
+    "MWR": {
+      "reason": "unreviewed"
+    },
+    "MXC": {
+      "reason": "unreviewed"
+    },
+    "MXS": {
+      "reason": "unreviewed"
+    },
+    "MYG": {
+      "reason": "unreviewed"
+    },
+    "MYL": {
+      "reason": "unreviewed"
+    },
+    "MYS": {
+      "reason": "unreviewed"
+    },
+    "MYT": {
+      "reason": "unreviewed"
+    },
+    "MZD": {
+      "reason": "unreviewed"
+    },
+    "NA2": {
+      "reason": "unreviewed"
+    },
+    "NAF": {
+      "reason": "unreviewed"
+    },
+    "NAG": {
+      "reason": "unreviewed"
+    },
+    "NAK": {
+      "reason": "unreviewed"
+    },
+    "NAN": {
+      "reason": "unreviewed"
+    },
+    "NAP": {
+      "reason": "unreviewed"
+    },
+    "NAR": {
+      "reason": "unreviewed"
+    },
+    "NAS": {
+      "reason": "unreviewed"
+    },
+    "NAT": {
+      "reason": "unreviewed"
+    },
+    "NAU": {
+      "reason": "unreviewed"
+    },
+    "NBH": {
+      "reason": "unreviewed"
+    },
+    "NBK": {
+      "reason": "unreviewed"
+    },
+    "NBO": {
+      "reason": "unreviewed"
+    },
+    "NBP": {
+      "reason": "unreviewed"
+    },
+    "NBR": {
+      "reason": "unreviewed"
+    },
+    "NCL": {
+      "reason": "unreviewed"
+    },
+    "NCM": {
+      "reason": "unreviewed"
+    },
+    "NCR": {
+      "reason": "unreviewed"
+    },
+    "NCZ": {
+      "reason": "unreviewed"
+    },
+    "NDA": {
+      "reason": "unreviewed"
+    },
+    "NEA": {
+      "reason": "unreviewed"
+    },
+    "NEB": {
+      "reason": "unreviewed"
+    },
+    "NEG": {
+      "reason": "unreviewed"
+    },
+    "NEV": {
+      "reason": "unreviewed"
+    },
+    "NFI": {
+      "reason": "unreviewed"
+    },
+    "NFL": {
+      "reason": "unreviewed"
+    },
+    "NFT": {
+      "reason": "unreviewed"
+    },
+    "NG1": {
+      "reason": "unreviewed"
+    },
+    "NGC": {
+      "reason": "unreviewed"
+    },
+    "NGG": {
+      "reason": "unreviewed"
+    },
+    "NGH": {
+      "reason": "unreviewed"
+    },
+    "NGK": {
+      "reason": "unreviewed"
+    },
+    "NGL": {
+      "reason": "unreviewed"
+    },
+    "NGN": {
+      "reason": "unreviewed"
+    },
+    "NGO": {
+      "reason": "unreviewed"
+    },
+    "NGS": {
+      "reason": "unreviewed"
+    },
+    "NGU": {
+      "reason": "unreviewed"
+    },
+    "NGW": {
+      "reason": "unreviewed"
+    },
+    "NHM": {
+      "reason": "unreviewed"
+    },
+    "NHO": {
+      "reason": "unreviewed"
+    },
+    "NII": {
+      "reason": "unreviewed"
+    },
+    "NIU": {
+      "reason": "unreviewed"
+    },
+    "NIX": {
+      "reason": "unreviewed"
+    },
+    "NJR": {
+      "reason": "unreviewed"
+    },
+    "NKH": {
+      "reason": "unreviewed"
+    },
+    "NLE": {
+      "reason": "unreviewed"
+    },
+    "NLG": {
+      "reason": "unreviewed"
+    },
+    "NLN": {
+      "reason": "unreviewed"
+    },
+    "NLW": {
+      "reason": "unreviewed"
+    },
+    "NMI": {
+      "reason": "unreviewed"
+    },
+    "NML": {
+      "reason": "unreviewed"
+    },
+    "NMM": {
+      "reason": "unreviewed"
+    },
+    "NMR": {
+      "reason": "unreviewed"
+    },
+    "NMX": {
+      "reason": "unreviewed"
+    },
+    "NND": {
+      "reason": "unreviewed"
+    },
+    "NNI": {
+      "reason": "unreviewed"
+    },
+    "NNK": {
+      "reason": "unreviewed"
+    },
+    "NNL": {
+      "reason": "unreviewed"
+    },
+    "NNP": {
+      "reason": "unreviewed"
+    },
+    "NNS": {
+      "reason": "unreviewed"
+    },
+    "NNZ": {
+      "reason": "unreviewed"
+    },
+    "NOC": {
+      "reason": "unreviewed"
+    },
+    "NOF": {
+      "reason": "unreviewed"
+    },
+    "NOL": {
+      "reason": "unreviewed"
+    },
+    "NOM": {
+      "reason": "unreviewed"
+    },
+    "NOS": {
+      "reason": "unreviewed"
+    },
+    "NOV": {
+      "reason": "unreviewed"
+    },
+    "NOW": {
+      "reason": "unreviewed"
+    },
+    "NQS": {
+      "reason": "unreviewed"
+    },
+    "NRG": {
+      "reason": "unreviewed"
+    },
+    "NRW": {
+      "reason": "unreviewed"
+    },
+    "NSA": {
+      "reason": "unreviewed"
+    },
+    "NSE": {
+      "reason": "unreviewed"
+    },
+    "NSM": {
+      "reason": "unreviewed"
+    },
+    "NST": {
+      "reason": "unreviewed"
+    },
+    "NSU": {
+      "reason": "unreviewed"
+    },
+    "NSW": {
+      "reason": "unreviewed"
+    },
+    "NTL": {
+      "reason": "unreviewed"
+    },
+    "NUD": {
+      "reason": "unreviewed"
+    },
+    "NUM": {
+      "reason": "unreviewed"
+    },
+    "NUN": {
+      "reason": "unreviewed"
+    },
+    "NVA": {
+      "reason": "unreviewed"
+    },
+    "NVI": {
+      "reason": "unreviewed"
+    },
+    "NVJ": {
+      "reason": "unreviewed"
+    },
+    "NVN": {
+      "reason": "unreviewed"
+    },
+    "NVO": {
+      "reason": "unreviewed"
+    },
+    "NVS": {
+      "reason": "unreviewed"
+    },
+    "NWA": {
+      "reason": "unreviewed"
+    },
+    "NWR": {
+      "reason": "unreviewed"
+    },
+    "NWT": {
+      "reason": "unreviewed"
+    },
+    "NWY": {
+      "reason": "unreviewed"
+    },
+    "NYC": {
+      "reason": "unreviewed"
+    },
+    "NYG": {
+      "reason": "unreviewed"
+    },
+    "NYR": {
+      "reason": "unreviewed"
+    },
+    "NZG": {
+      "reason": "unreviewed"
+    },
+    "OHI": {
+      "reason": "unreviewed"
+    },
+    "OIT": {
+      "reason": "unreviewed"
+    },
+    "OKA": {
+      "reason": "unreviewed"
+    },
+    "OKH": {
+      "reason": "unreviewed"
+    },
+    "OKI": {
+      "reason": "unreviewed"
+    },
+    "OLA": {
+      "reason": "unreviewed"
+    },
+    "OLD": {
+      "reason": "unreviewed"
+    },
+    "OML": {
+      "reason": "unreviewed"
+    },
+    "OMN": {
+      "reason": "unreviewed"
+    },
+    "OMS": {
+      "reason": "unreviewed"
+    },
+    "ONT": {
+      "reason": "unreviewed"
+    },
+    "ORA": {
+      "reason": "unreviewed"
+    },
+    "ORC": {
+      "reason": "unreviewed"
+    },
+    "ORG": {
+      "reason": "unreviewed"
+    },
+    "ORI": {
+      "reason": "unreviewed"
+    },
+    "ORK": {
+      "reason": "unreviewed"
+    },
+    "ORL": {
+      "reason": "unreviewed"
+    },
+    "ORN": {
+      "reason": "unreviewed"
+    },
+    "ORV": {
+      "reason": "unreviewed"
+    },
+    "OSA": {
+      "reason": "unreviewed"
+    },
+    "OSG": {
+      "reason": "unreviewed"
+    },
+    "OST": {
+      "reason": "unreviewed"
+    },
+    "OTM": {
+      "reason": "unreviewed"
+    },
+    "OTT": {
+      "reason": "unreviewed"
+    },
+    "OVJ": {
+      "reason": "unreviewed"
+    },
+    "OVM": {
+      "reason": "unreviewed"
+    },
+    "OXC": {
+      "reason": "unreviewed"
+    },
+    "PAA": {
+      "reason": "unreviewed"
+    },
+    "PAC": {
+      "reason": "unreviewed"
+    },
+    "PAG": {
+      "reason": "unreviewed"
+    },
+    "PAS": {
+      "reason": "unreviewed"
+    },
+    "PAT": {
+      "reason": "unreviewed"
+    },
+    "PBD": {
+      "reason": "unreviewed"
+    },
+    "PBL": {
+      "reason": "unreviewed"
+    },
+    "PCR": {
+      "reason": "unreviewed"
+    },
+    "PCZ": {
+      "reason": "unreviewed"
+    },
+    "PEI": {
+      "reason": "unreviewed"
+    },
+    "PEN": {
+      "reason": "unreviewed"
+    },
+    "PEP": {
+      "reason": "unreviewed"
+    },
+    "PET": {
+      "reason": "unreviewed"
+    },
+    "PHG": {
+      "reason": "unreviewed"
+    },
+    "PHT": {
+      "reason": "unreviewed"
+    },
+    "PIC": {
+      "reason": "unreviewed"
+    },
+    "PIE": {
+      "reason": "unreviewed"
+    },
+    "PIL": {
+      "reason": "unreviewed"
+    },
+    "PKG": {
+      "reason": "unreviewed"
+    },
+    "PKM": {
+      "reason": "unreviewed"
+    },
+    "PLD": {
+      "reason": "unreviewed"
+    },
+    "PLH": {
+      "reason": "unreviewed"
+    },
+    "PLP": {
+      "reason": "unreviewed"
+    },
+    "PLS": {
+      "reason": "unreviewed"
+    },
+    "PLU": {
+      "reason": "unreviewed"
+    },
+    "PMR": {
+      "reason": "unreviewed"
+    },
+    "PNA": {
+      "reason": "unreviewed"
+    },
+    "PNB": {
+      "reason": "unreviewed"
+    },
+    "PNC": {
+      "reason": "unreviewed"
+    },
+    "PNN": {
+      "reason": "unreviewed"
+    },
+    "PNP": {
+      "reason": "unreviewed"
+    },
+    "PNZ": {
+      "reason": "unreviewed"
+    },
+    "POM": {
+      "reason": "unreviewed"
+    },
+    "PON": {
+      "reason": "unreviewed"
+    },
+    "POS": {
+      "reason": "unreviewed"
+    },
+    "PPN": {
+      "reason": "unreviewed"
+    },
+    "PR2": {
+      "reason": "unreviewed"
+    },
+    "PRA": {
+      "reason": "unreviewed"
+    },
+    "PRB": {
+      "reason": "unreviewed"
+    },
+    "PRG": {
+      "reason": "unreviewed"
+    },
+    "PRI": {
+      "reason": "unreviewed"
+    },
+    "PRJ": {
+      "reason": "unreviewed"
+    },
+    "PRK": {
+      "reason": "unreviewed"
+    },
+    "PRM": {
+      "reason": "unreviewed"
+    },
+    "PRR": {
+      "reason": "unreviewed"
+    },
+    "PSC": {
+      "reason": "unreviewed"
+    },
+    "PSE": {
+      "reason": "unreviewed"
+    },
+    "PSH": {
+      "reason": "unreviewed"
+    },
+    "PTC": {
+      "reason": "unreviewed"
+    },
+    "PTD": {
+      "reason": "unreviewed"
+    },
+    "PTG": {
+      "reason": "unreviewed"
+    },
+    "PTH": {
+      "reason": "unreviewed"
+    },
+    "PTI": {
+      "reason": "unreviewed"
+    },
+    "PTN": {
+      "reason": "unreviewed"
+    },
+    "PTS": {
+      "reason": "unreviewed"
+    },
+    "PUD": {
+      "reason": "unreviewed"
+    },
+    "PUI": {
+      "reason": "unreviewed"
+    },
+    "PUN": {
+      "reason": "unreviewed"
+    },
+    "PVC": {
+      "reason": "unreviewed"
+    },
+    "PVD": {
+      "reason": "unreviewed"
+    },
+    "PWN": {
+      "reason": "unreviewed"
+    },
+    "PWP": {
+      "reason": "unreviewed"
+    },
+    "QNS": {
+      "reason": "unreviewed"
+    },
+    "QPW": {
+      "reason": "unreviewed"
+    },
+    "QTA": {
+      "reason": "unreviewed"
+    },
+    "QTI": {
+      "reason": "unreviewed"
+    },
+    "QTR": {
+      "reason": "unreviewed"
+    },
+    "QTT": {
+      "reason": "unreviewed"
+    },
+    "QUE": {
+      "reason": "unreviewed"
+    },
+    "QWQ": {
+      "reason": "unreviewed"
+    },
+    "RAG": {
+      "reason": "unreviewed"
+    },
+    "RAK": {
+      "reason": "unreviewed"
+    },
+    "RAP": {
+      "reason": "unreviewed"
+    },
+    "RBR": {
+      "reason": "unreviewed"
+    },
+    "RDJ": {
+      "reason": "unreviewed"
+    },
+    "RDN": {
+      "reason": "unreviewed"
+    },
+    "RDO": {
+      "reason": "unreviewed"
+    },
+    "REU": {
+      "reason": "unreviewed"
+    },
+    "REW": {
+      "reason": "unreviewed"
+    },
+    "RFC": {
+      "reason": "unreviewed"
+    },
+    "RGA": {
+      "reason": "unreviewed"
+    },
+    "RGB": {
+      "reason": "unreviewed"
+    },
+    "RGC": {
+      "reason": "unreviewed"
+    },
+    "RGE": {
+      "reason": "unreviewed"
+    },
+    "RGH": {
+      "reason": "unreviewed"
+    },
+    "RGN": {
+      "reason": "unreviewed"
+    },
+    "RGR": {
+      "reason": "unreviewed"
+    },
+    "RHB": {
+      "reason": "unreviewed"
+    },
+    "RHD": {
+      "reason": "unreviewed"
+    },
+    "RHI": {
+      "reason": "unreviewed"
+    },
+    "RHO": {
+      "reason": "unreviewed"
+    },
+    "RHP": {
+      "reason": "unreviewed"
+    },
+    "RIF": {
+      "reason": "unreviewed"
+    },
+    "RIL": {
+      "reason": "unreviewed"
+    },
+    "RIO": {
+      "reason": "unreviewed"
+    },
+    "RJG": {
+      "reason": "unreviewed"
+    },
+    "RJK": {
+      "reason": "unreviewed"
+    },
+    "RKH": {
+      "reason": "unreviewed"
+    },
+    "RKL": {
+      "reason": "unreviewed"
+    },
+    "RLM": {
+      "reason": "unreviewed"
+    },
+    "RLP": {
+      "reason": "unreviewed"
+    },
+    "RMP": {
+      "reason": "unreviewed"
+    },
+    "RMZ": {
+      "reason": "unreviewed"
+    },
+    "RND": {
+      "reason": "unreviewed"
+    },
+    "ROJ": {
+      "reason": "unreviewed"
+    },
+    "ROK": {
+      "reason": "unreviewed",
+      "suggested_iso2": "KR"
+    },
+    "ROR": {
+      "reason": "unreviewed"
+    },
+    "RPL": {
+      "reason": "unreviewed"
+    },
+    "RPN": {
+      "reason": "unreviewed"
+    },
+    "RSE": {
+      "reason": "unreviewed"
+    },
+    "RSI": {
+      "reason": "unreviewed"
+    },
+    "RSL": {
+      "reason": "unreviewed"
+    },
+    "RSS": {
+      "reason": "unreviewed"
+    },
+    "RUM": {
+      "reason": "unreviewed"
+    },
+    "RUS": {
+      "reason": "unreviewed",
+      "suggested_iso2": "RU"
+    },
+    "RUU": {
+      "reason": "unreviewed"
+    },
+    "RWE": {
+      "reason": "unreviewed"
+    },
+    "RYU": {
+      "reason": "unreviewed"
+    },
+    "SAA": {
+      "reason": "unreviewed"
+    },
+    "SAB": {
+      "reason": "unreviewed"
+    },
+    "SAG": {
+      "reason": "unreviewed"
+    },
+    "SAI": {
+      "reason": "unreviewed"
+    },
+    "SAL": {
+      "reason": "unreviewed"
+    },
+    "SAO": {
+      "reason": "unreviewed"
+    },
+    "SAP": {
+      "reason": "unreviewed"
+    },
+    "SAR": {
+      "reason": "unreviewed"
+    },
+    "SAS": {
+      "reason": "unreviewed"
+    },
+    "SAT": {
+      "reason": "unreviewed"
+    },
+    "SAZ": {
+      "reason": "unreviewed"
+    },
+    "SBR": {
+      "reason": "unreviewed"
+    },
+    "SBT": {
+      "reason": "unreviewed"
+    },
+    "SCB": {
+      "reason": "unreviewed"
+    },
+    "SCG": {
+      "reason": "unreviewed"
+    },
+    "SCH": {
+      "reason": "unreviewed"
+    },
+    "SCL": {
+      "reason": "unreviewed"
+    },
+    "SCM": {
+      "reason": "unreviewed"
+    },
+    "SCN": {
+      "reason": "unreviewed"
+    },
+    "SCR": {
+      "reason": "unreviewed"
+    },
+    "SDA": {
+      "reason": "unreviewed"
+    },
+    "SDJ": {
+      "reason": "unreviewed"
+    },
+    "SDK": {
+      "reason": "unreviewed"
+    },
+    "SDR": {
+      "reason": "unreviewed"
+    },
+    "SDT": {
+      "reason": "unreviewed"
+    },
+    "SEH": {
+      "reason": "unreviewed"
+    },
+    "SEP": {
+      "reason": "unreviewed"
+    },
+    "SEU": {
+      "reason": "unreviewed"
+    },
+    "SEY": {
+      "reason": "unreviewed",
+      "suggested_iso2": "SC"
+    },
+    "SFO": {
+      "reason": "unreviewed"
+    },
+    "SG1": {
+      "reason": "unreviewed"
+    },
+    "SGA": {
+      "reason": "unreviewed"
+    },
+    "SGE": {
+      "reason": "unreviewed"
+    },
+    "SGG": {
+      "reason": "unreviewed"
+    },
+    "SGH": {
+      "reason": "unreviewed"
+    },
+    "SGJ": {
+      "reason": "unreviewed"
+    },
+    "SGN": {
+      "reason": "unreviewed"
+    },
+    "SGO": {
+      "reason": "unreviewed"
+    },
+    "SGP": {
+      "reason": "unreviewed",
+      "suggested_iso2": "SG"
+    },
+    "SGR": {
+      "reason": "unreviewed"
+    },
+    "SGT": {
+      "reason": "unreviewed"
+    },
+    "SGY": {
+      "reason": "unreviewed"
+    },
+    "SH2": {
+      "reason": "unreviewed"
+    },
+    "SHA": {
+      "reason": "unreviewed"
+    },
+    "SHB": {
+      "reason": "unreviewed"
+    },
+    "SHC": {
+      "reason": "unreviewed"
+    },
+    "SHG": {
+      "reason": "unreviewed"
+    },
+    "SHH": {
+      "reason": "unreviewed"
+    },
+    "SHI": {
+      "reason": "unreviewed"
+    },
+    "SHJ": {
+      "reason": "unreviewed"
+    },
+    "SHO": {
+      "reason": "unreviewed"
+    },
+    "SHT": {
+      "reason": "unreviewed"
+    },
+    "SIC": {
+      "reason": "unreviewed"
+    },
+    "SIG": {
+      "reason": "unreviewed"
+    },
+    "SIL": {
+      "reason": "unreviewed"
+    },
+    "SIN": {
+      "reason": "unreviewed"
+    },
+    "SJM": {
+      "reason": "unreviewed"
+    },
+    "SKA": {
+      "reason": "unreviewed"
+    },
+    "SKH": {
+      "reason": "unreviewed"
+    },
+    "SKI": {
+      "reason": "unreviewed"
+    },
+    "SKK": {
+      "reason": "unreviewed"
+    },
+    "SKL": {
+      "reason": "unreviewed"
+    },
+    "SKM": {
+      "reason": "unreviewed"
+    },
+    "SKT": {
+      "reason": "unreviewed"
+    },
+    "SLA": {
+      "reason": "unreviewed"
+    },
+    "SLB": {
+      "reason": "unreviewed"
+    },
+    "SLD": {
+      "reason": "unreviewed"
+    },
+    "SLG": {
+      "reason": "unreviewed"
+    },
+    "SLI": {
+      "reason": "unreviewed"
+    },
+    "SLL": {
+      "reason": "unreviewed"
+    },
+    "SLP": {
+      "reason": "unreviewed"
+    },
+    "SLW": {
+      "reason": "unreviewed"
+    },
+    "SLZ": {
+      "reason": "unreviewed"
+    },
+    "SM1": {
+      "reason": "unreviewed"
+    },
+    "SMA": {
+      "reason": "unreviewed"
+    },
+    "SMD": {
+      "reason": "unreviewed"
+    },
+    "SME": {
+      "reason": "unreviewed"
+    },
+    "SMK": {
+      "reason": "unreviewed"
+    },
+    "SML": {
+      "reason": "unreviewed"
+    },
+    "SMN": {
+      "reason": "unreviewed"
+    },
+    "SMR": {
+      "reason": "unreviewed",
+      "suggested_iso2": "SM"
+    },
+    "SMS": {
+      "reason": "unreviewed"
+    },
+    "SMT": {
+      "reason": "unreviewed"
+    },
+    "SNC": {
+      "reason": "unreviewed"
+    },
+    "SND": {
+      "reason": "unreviewed"
+    },
+    "SNI": {
+      "reason": "unreviewed"
+    },
+    "SNL": {
+      "reason": "unreviewed"
+    },
+    "SNP": {
+      "reason": "unreviewed"
+    },
+    "SNT": {
+      "reason": "unreviewed"
+    },
+    "SNV": {
+      "reason": "unreviewed"
+    },
+    "SNW": {
+      "reason": "unreviewed"
+    },
+    "SNZ": {
+      "reason": "unreviewed"
+    },
+    "SOG": {
+      "reason": "unreviewed"
+    },
+    "SOK": {
+      "reason": "unreviewed"
+    },
+    "SON": {
+      "reason": "unreviewed"
+    },
+    "SOS": {
+      "reason": "unreviewed"
+    },
+    "SP2": {
+      "reason": "unreviewed"
+    },
+    "SPL": {
+      "reason": "unreviewed"
+    },
+    "SPM": {
+      "reason": "unreviewed"
+    },
+    "SPU": {
+      "reason": "unreviewed"
+    },
+    "SRC": {
+      "reason": "unreviewed"
+    },
+    "SRD": {
+      "reason": "unreviewed"
+    },
+    "SRG": {
+      "reason": "unreviewed"
+    },
+    "SRH": {
+      "reason": "unreviewed"
+    },
+    "SRM": {
+      "reason": "unreviewed"
+    },
+    "SRN": {
+      "reason": "unreviewed"
+    },
+    "SRP": {
+      "reason": "unreviewed"
+    },
+    "SRT": {
+      "reason": "unreviewed"
+    },
+    "SRU": {
+      "reason": "unreviewed"
+    },
+    "SRW": {
+      "reason": "unreviewed"
+    },
+    "SSM": {
+      "reason": "unreviewed"
+    },
+    "SSO": {
+      "reason": "unreviewed"
+    },
+    "SSU": {
+      "reason": "unreviewed",
+      "suggested_iso2": "SS"
+    },
+    "SSX": {
+      "reason": "unreviewed"
+    },
+    "STC": {
+      "reason": "unreviewed"
+    },
+    "STE": {
+      "reason": "unreviewed"
+    },
+    "STH": {
+      "reason": "unreviewed",
+      "suggested_iso2": "SH"
+    },
+    "STI": {
+      "reason": "unreviewed"
+    },
+    "STL": {
+      "reason": "unreviewed"
+    },
+    "STR": {
+      "reason": "unreviewed"
+    },
+    "STW": {
+      "reason": "unreviewed"
+    },
+    "STY": {
+      "reason": "unreviewed"
+    },
+    "SUI": {
+      "reason": "unreviewed"
+    },
+    "SUM": {
+      "reason": "unreviewed"
+    },
+    "SUO": {
+      "reason": "unreviewed"
+    },
+    "SUP": {
+      "reason": "unreviewed"
+    },
+    "SUT": {
+      "reason": "unreviewed"
+    },
+    "SVA": {
+      "reason": "unreviewed"
+    },
+    "SVC": {
+      "reason": "unreviewed"
+    },
+    "SVE": {
+      "reason": "unreviewed"
+    },
+    "SVI": {
+      "reason": "unreviewed"
+    },
+    "SVN": {
+      "reason": "unreviewed"
+    },
+    "SVR": {
+      "reason": "unreviewed"
+    },
+    "SVV": {
+      "reason": "unreviewed"
+    },
+    "SW2": {
+      "reason": "unreviewed"
+    },
+    "SWM": {
+      "reason": "unreviewed"
+    },
+    "SWT": {
+      "reason": "unreviewed"
+    },
+    "SWZ": {
+      "reason": "unreviewed"
+    },
+    "SXE": {
+      "reason": "unreviewed"
+    },
+    "SYN": {
+      "reason": "unreviewed"
+    },
+    "SZK": {
+      "reason": "unreviewed"
+    },
+    "TAC": {
+      "reason": "unreviewed"
+    },
+    "TAP": {
+      "reason": "unreviewed"
+    },
+    "TAS": {
+      "reason": "unreviewed"
+    },
+    "TBR": {
+      "reason": "unreviewed"
+    },
+    "TBS": {
+      "reason": "unreviewed"
+    },
+    "TCG": {
+      "reason": "unreviewed"
+    },
+    "TCH": {
+      "reason": "unreviewed"
+    },
+    "TCT": {
+      "reason": "unreviewed"
+    },
+    "TEK": {
+      "reason": "unreviewed"
+    },
+    "TES": {
+      "reason": "unreviewed"
+    },
+    "TEU": {
+      "reason": "unreviewed"
+    },
+    "TEX": {
+      "reason": "unreviewed"
+    },
+    "TGA": {
+      "reason": "unreviewed"
+    },
+    "TGN": {
+      "reason": "unreviewed"
+    },
+    "TGR": {
+      "reason": "unreviewed"
+    },
+    "TGW": {
+      "reason": "unreviewed"
+    },
+    "THD": {
+      "reason": "unreviewed"
+    },
+    "THR": {
+      "reason": "unreviewed"
+    },
+    "THS": {
+      "reason": "unreviewed"
+    },
+    "THU": {
+      "reason": "unreviewed"
+    },
+    "TKI": {
+      "reason": "unreviewed"
+    },
+    "TKL": {
+      "reason": "unreviewed"
+    },
+    "TKO": {
+      "reason": "unreviewed"
+    },
+    "TKW": {
+      "reason": "unreviewed"
+    },
+    "TKY": {
+      "reason": "unreviewed"
+    },
+    "TLC": {
+      "reason": "unreviewed"
+    },
+    "TLG": {
+      "reason": "unreviewed"
+    },
+    "TML": {
+      "reason": "unreviewed"
+    },
+    "TMU": {
+      "reason": "unreviewed"
+    },
+    "TMY": {
+      "reason": "unreviewed"
+    },
+    "TNA": {
+      "reason": "unreviewed"
+    },
+    "TNK": {
+      "reason": "unreviewed"
+    },
+    "TNS": {
+      "reason": "unreviewed"
+    },
+    "TNT": {
+      "reason": "unreviewed"
+    },
+    "TOK": {
+      "reason": "unreviewed"
+    },
+    "TOM": {
+      "reason": "unreviewed"
+    },
+    "TON": {
+      "reason": "unreviewed"
+    },
+    "TOR": {
+      "reason": "unreviewed"
+    },
+    "TOT": {
+      "reason": "unreviewed"
+    },
+    "TOY": {
+      "reason": "unreviewed"
+    },
+    "TPA": {
+      "reason": "unreviewed"
+    },
+    "TRA": {
+      "reason": "unreviewed"
+    },
+    "TRB": {
+      "reason": "unreviewed"
+    },
+    "TRH": {
+      "reason": "unreviewed"
+    },
+    "TRK": {
+      "reason": "unreviewed"
+    },
+    "TRM": {
+      "reason": "unreviewed"
+    },
+    "TRN": {
+      "reason": "unreviewed"
+    },
+    "TRP": {
+      "reason": "unreviewed"
+    },
+    "TRR": {
+      "reason": "unreviewed"
+    },
+    "TRS": {
+      "reason": "unreviewed"
+    },
+    "TRT": {
+      "reason": "unreviewed"
+    },
+    "TRV": {
+      "reason": "unreviewed"
+    },
+    "TSC": {
+      "reason": "unreviewed"
+    },
+    "TSK": {
+      "reason": "unreviewed"
+    },
+    "TSV": {
+      "reason": "unreviewed"
+    },
+    "TSW": {
+      "reason": "unreviewed"
+    },
+    "TTR": {
+      "reason": "unreviewed"
+    },
+    "TUG": {
+      "reason": "unreviewed"
+    },
+    "TUS": {
+      "reason": "unreviewed"
+    },
+    "TUV": {
+      "reason": "unreviewed"
+    },
+    "TVC": {
+      "reason": "unreviewed"
+    },
+    "TVL": {
+      "reason": "unreviewed"
+    },
+    "TWN": {
+      "reason": "unreviewed",
+      "suggested_iso2": "TW"
+    },
+    "TXC": {
+      "reason": "unreviewed"
+    },
+    "TYR": {
+      "reason": "unreviewed"
+    },
+    "TYU": {
+      "reason": "unreviewed"
+    },
+    "UAQ": {
+      "reason": "unreviewed"
+    },
+    "UAS": {
+      "reason": "unreviewed"
+    },
+    "UBM": {
+      "reason": "unreviewed"
+    },
+    "UCL": {
+      "reason": "unreviewed"
+    },
+    "UDM": {
+      "reason": "unreviewed"
+    },
+    "UDP": {
+      "reason": "unreviewed"
+    },
+    "UHH": {
+      "reason": "unreviewed"
+    },
+    "ULA": {
+      "reason": "unreviewed"
+    },
+    "UNC": {
+      "reason": "unreviewed"
+    },
+    "UP2": {
+      "reason": "unreviewed"
+    },
+    "URB": {
+      "reason": "unreviewed"
+    },
+    "URL": {
+      "reason": "unreviewed"
+    },
+    "UTH": {
+      "reason": "unreviewed"
+    },
+    "UTR": {
+      "reason": "unreviewed"
+    },
+    "UTT": {
+      "reason": "unreviewed"
+    },
+    "UYF": {
+      "reason": "unreviewed"
+    },
+    "VAL": {
+      "reason": "unreviewed"
+    },
+    "VAN": {
+      "reason": "unreviewed"
+    },
+    "VCI": {
+      "reason": "unreviewed"
+    },
+    "VCR": {
+      "reason": "unreviewed"
+    },
+    "VCT": {
+      "reason": "unsupported_runtime_country",
+      "suggested_iso2": "VA"
+    },
+    "VDS": {
+      "reason": "unreviewed"
+    },
+    "VEP": {
+      "reason": "unreviewed"
+    },
+    "VER": {
+      "reason": "unreviewed"
+    },
+    "VGR": {
+      "reason": "unreviewed"
+    },
+    "VIJ": {
+      "reason": "unreviewed"
+    },
+    "VIR": {
+      "reason": "unreviewed"
+    },
+    "VJD": {
+      "reason": "unreviewed"
+    },
+    "VLD": {
+      "reason": "unreviewed"
+    },
+    "VLG": {
+      "reason": "unreviewed"
+    },
+    "VLH": {
+      "reason": "unreviewed"
+    },
+    "VMO": {
+      "reason": "unreviewed"
+    },
+    "VNA": {
+      "reason": "unreviewed"
+    },
+    "VNC": {
+      "reason": "unreviewed"
+    },
+    "VND": {
+      "reason": "unreviewed"
+    },
+    "VOR": {
+      "reason": "unreviewed"
+    },
+    "VOT": {
+      "reason": "unreviewed"
+    },
+    "VRC": {
+      "reason": "unreviewed"
+    },
+    "WAA": {
+      "reason": "unreviewed"
+    },
+    "WAD": {
+      "reason": "unreviewed"
+    },
+    "WAF": {
+      "reason": "unreviewed"
+    },
+    "WAK": {
+      "reason": "unreviewed"
+    },
+    "WAP": {
+      "reason": "unreviewed"
+    },
+    "WAS": {
+      "reason": "unreviewed"
+    },
+    "WAT": {
+      "reason": "unreviewed"
+    },
+    "WBA": {
+      "reason": "unreviewed"
+    },
+    "WBH": {
+      "reason": "unreviewed"
+    },
+    "WBL": {
+      "reason": "unreviewed"
+    },
+    "WDC": {
+      "reason": "unreviewed"
+    },
+    "WDN": {
+      "reason": "unreviewed"
+    },
+    "WFL": {
+      "reason": "unreviewed"
+    },
+    "WGC": {
+      "reason": "unreviewed"
+    },
+    "WKR": {
+      "reason": "unreviewed"
+    },
+    "WLC": {
+      "reason": "unreviewed"
+    },
+    "WLL": {
+      "reason": "unreviewed"
+    },
+    "WLN": {
+      "reason": "unreviewed"
+    },
+    "WMC": {
+      "reason": "unreviewed"
+    },
+    "WPP": {
+      "reason": "unreviewed"
+    },
+    "WPR": {
+      "reason": "unreviewed"
+    },
+    "WRS": {
+      "reason": "unreviewed"
+    },
+    "WRZ": {
+      "reason": "unreviewed"
+    },
+    "WSC": {
+      "reason": "unreviewed"
+    },
+    "WSF": {
+      "reason": "unreviewed"
+    },
+    "WSH": {
+      "reason": "unreviewed"
+    },
+    "WST": {
+      "reason": "unreviewed"
+    },
+    "WSW": {
+      "reason": "unreviewed"
+    },
+    "WSX": {
+      "reason": "unreviewed"
+    },
+    "WTC": {
+      "reason": "unreviewed"
+    },
+    "WTO": {
+      "reason": "unreviewed"
+    },
+    "WTR": {
+      "reason": "unreviewed"
+    },
+    "WUK": {
+      "reason": "unreviewed"
+    },
+    "WVI": {
+      "reason": "unreviewed"
+    },
+    "WVR": {
+      "reason": "unreviewed"
+    },
+    "WYD": {
+      "reason": "unreviewed"
+    },
+    "WYO": {
+      "reason": "unreviewed"
+    },
+    "XIG": {
+      "reason": "unreviewed"
+    },
+    "XJK": {
+      "reason": "unreviewed"
+    },
+    "YAM": {
+      "reason": "unreviewed"
+    },
+    "YKT": {
+      "reason": "unreviewed"
+    },
+    "YLN": {
+      "reason": "unreviewed"
+    },
+    "YMG": {
+      "reason": "unreviewed"
+    },
+    "YML": {
+      "reason": "unreviewed"
+    },
+    "YMM": {
+      "reason": "unreviewed"
+    },
+    "YMN": {
+      "reason": "unreviewed"
+    },
+    "YOR": {
+      "reason": "unreviewed"
+    },
+    "YSH": {
+      "reason": "unreviewed"
+    },
+    "YUC": {
+      "reason": "unreviewed"
+    },
+    "YUK": {
+      "reason": "unreviewed"
+    },
+    "ZAN": {
+      "reason": "unreviewed"
+    },
+    "ZCT": {
+      "reason": "unreviewed"
+    },
+    "ZEE": {
+      "reason": "unreviewed"
+    },
+    "ZGH": {
+      "reason": "unreviewed"
+    },
+    "ZHJ": {
+      "reason": "unreviewed"
+    },
+    "ZLU": {
+      "reason": "unreviewed"
+    },
+    "ZUL": {
+      "reason": "unreviewed"
+    }
+  }
+}

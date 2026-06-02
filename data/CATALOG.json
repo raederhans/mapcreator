@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-06-02T13:13:40.686297Z",
+  "generated_at": "2026-06-02T23:10:59.042619+00:00",
   "counts": {
-    "entries": 480,
+    "entries": 486,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -16,13 +16,16 @@
       "detail_topology_na_v2": 1,
       "feature_migration_table": 1,
       "geo_aliases": 1,
+      "hgo_flags_index": 1,
+      "hgo_place_names": 1,
+      "hgo_tier_a_catalog": 1,
       "hierarchy": 1,
       "historical_1930_city_lights_asset": 1,
       "locales": 1,
       "modern_city_lights_asset": 1,
-      "palette_audit": 4,
-      "palette_map": 4,
-      "palette_pack": 4,
+      "palette_audit": 5,
+      "palette_map": 5,
+      "palette_pack": 5,
       "palette_registry": 1,
       "physical_semantics_topology": 1,
       "primary_topology": 1,
@@ -47,11 +50,11 @@
     "by_format": {
       "geojson": 81,
       "javascript": 2,
-      "json": 247,
+      "json": 253,
       "topojson": 150
     },
     "by_read_mode": {
-      "json": 478,
+      "json": 484,
       "module": 2
     }
   },
@@ -303,6 +306,51 @@
       "aliases": []
     },
     {
+      "key": "hgo_flags_index",
+      "url": "data/hgo_catalogs/hgo_flags.index.json",
+      "role": "hgo_flags_index",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::hgo_catalogs/hgo_flags.index.json::sha256",
+      "owner": "tools.build_hgo_flag_index",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "manifest_output:hgo_catalogs/hgo_flags.index.json"
+      ]
+    },
+    {
+      "key": "hgo_place_names",
+      "url": "data/hgo_catalogs/hgo_place_names.json",
+      "role": "hgo_place_names",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::hgo_catalogs/hgo_place_names.json::sha256",
+      "owner": "tools.build_hgo_name_catalog",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "manifest_output:hgo_catalogs/hgo_place_names.json"
+      ]
+    },
+    {
+      "key": "hgo_tier_a_catalog",
+      "url": "data/hgo_catalogs/index.json",
+      "role": "hgo_tier_a_catalog",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::hgo_catalogs/index.json::sha256",
+      "owner": "tools.build_hgo_flag_index",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "manifest_output:hgo_catalogs/index.json"
+      ]
+    },
+    {
       "key": "manifest_output:hierarchy.json",
       "url": "data/hierarchy.json",
       "role": "hierarchy",
@@ -350,6 +398,32 @@
       "hashRef": "",
       "owner": "runtime_asset_registry.assets.build_manifest",
       "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:palette-maps/hgo.audit.json",
+      "url": "data/palette-maps/hgo.audit.json",
+      "role": "palette_audit",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::palette-maps/hgo.audit.json::sha256",
+      "owner": "init_map_data.palette_assets",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:palette-maps/hgo.map.json",
+      "url": "data/palette-maps/hgo.map.json",
+      "role": "palette_map",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::palette-maps/hgo.map.json::sha256",
+      "owner": "tools.import_country_palette",
+      "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
       "aliases": []
@@ -453,6 +527,19 @@
       "schemaRef": "schema://json/object/v1",
       "hashRef": "data/manifest.json::outputs::palette-maps/tno.map.json::sha256",
       "owner": "tools.import_country_palette",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:palettes/hgo.palette.json",
+      "url": "data/palettes/hgo.palette.json",
+      "role": "palette_pack",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::palettes/hgo.palette.json::sha256",
+      "owner": "init_map_data.palette_assets",
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",

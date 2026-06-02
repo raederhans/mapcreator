@@ -85,6 +85,21 @@
       "url": "data/palettes/index.json",
       "role": "palette_registry"
     },
+    "hgo_tier_a_catalog": {
+      "url": "data/hgo_catalogs/index.json",
+      "role": "hgo_tier_a_catalog",
+      "family_id": "hgo"
+    },
+    "hgo_place_names": {
+      "url": "data/hgo_catalogs/hgo_place_names.json",
+      "role": "hgo_place_names",
+      "family_id": "hgo"
+    },
+    "hgo_flags_index": {
+      "url": "data/hgo_catalogs/hgo_flags.index.json",
+      "role": "hgo_flags_index",
+      "family_id": "hgo"
+    },
     "releasable_catalog": {
       "url": "data/releasables/hoi4_vanilla.internal.phase1.catalog.json",
       "role": "releasable_catalog"

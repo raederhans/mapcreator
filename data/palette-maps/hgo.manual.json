@@ -1,0 +1,14 @@
+{
+  "palette_id": "hgo",
+  "mapping_policy": "catalog_only",
+  "display_name_suffix_priority": [
+    "democratic",
+    "fascism",
+    "neutrality",
+    "communism",
+    "monarchism",
+    "ADJ",
+    "DEF"
+  ],
+  "ocean_fill": "#2d4769"
+}

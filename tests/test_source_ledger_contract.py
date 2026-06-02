@@ -6,7 +6,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.check_source_ledger import validate_source_ledger_entries
+from tools.check_source_ledger import (
+    ALLOWED_LOCAL_PRESENCE,
+    ALLOWED_STATUS,
+    REQUIRED_FIELDS,
+    validate_source_ledger_entries,
+)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -61,6 +69,43 @@ class SourceLedgerContractTest(unittest.TestCase):
             self.assertEqual(report["failures"], [])
             self.assertEqual(report["validated_entries"], 0)
             self.assertIn("[fixture_pending] missing optional local_path=", report["warnings"][0])
+
+    def test_frozen_local_only_optional_cache_missing_source_warns(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            consumer_path = project_root / "consumer.py"
+            consumer_path.write_text("# fixture\n", encoding="utf-8")
+            entry = _ledger_entry(
+                source_id="fixture_hgo_optional",
+                local_path="historic geographic overhaul/descriptor.mod",
+                local_sha="",
+                provenance_sidecar="data/hgo_catalogs/index.provenance.json",
+                status="frozen_local_only",
+                local_presence="optional_cache",
+                consumers=["consumer.py"],
+            )
+
+            report = validate_source_ledger_entries([entry], project_root=project_root)
+
+            self.assertEqual(report["failures"], [])
+            self.assertEqual(report["validated_entries"], 0)
+            self.assertIn("[fixture_hgo_optional] missing optional local_path=", report["warnings"][0])
+
+    def test_checked_in_source_ledger_entries_keep_required_checker_fields(self) -> None:
+        payload = json.loads((REPO_ROOT / "data/source_ledger.json").read_text(encoding="utf-8"))
+        seen_ids: set[str] = set()
+
+        for entry in payload:
+            self.assertTrue(REQUIRED_FIELDS.issubset(entry), entry.get("source_id"))
+            self.assertNotIn(entry["source_id"], seen_ids)
+            seen_ids.add(entry["source_id"])
+            self.assertIn(entry["status"], ALLOWED_STATUS)
+            self.assertIn(entry["local_presence"], ALLOWED_LOCAL_PRESENCE)
+
+        hgo_entry = next(entry for entry in payload if entry["source_id"] == "hgo_mod_2241701657")
+        self.assertEqual(hgo_entry["origin_kind"], "manual_import")
+        self.assertEqual(hgo_entry["status"], "frozen_local_only")
+        self.assertEqual(hgo_entry["local_presence"], "optional_cache")
 
     def test_frozen_verified_missing_local_source_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -1,0 +1,11 @@
+{
+  "filename": "hgo_place_names.json",
+  "configured_source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2241701657",
+  "resolved_source_url": null,
+  "fallback_candidates": [],
+  "sha256": "750a80293ae05d212dd4e0208d59d800647337a5dee9915f2eec530e2055f378",
+  "content_length": 5164039,
+  "captured_at_utc": "2026-06-02T22:46:47Z",
+  "capture_mode": "local_hgo_catalog_build",
+  "validator_name": "hgo_place_names_catalog_v1"
+}

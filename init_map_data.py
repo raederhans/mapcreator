@@ -3187,6 +3187,28 @@ def run_palette_imports(output_dir: Path, strict: bool = False) -> None:
             ),
             "source_workshop_id": "2815832636",
         },
+        {
+            "palette_id": "hgo",
+            "display_name": "Historic Geographical Overhaul",
+            "source_variant": "hgo",
+            "manual_map": PROJECT_ROOT / "data/palette-maps/hgo.manual.json",
+            "source_root": _resolve_palette_source_root(
+                [
+                    PROJECT_ROOT / "historic geographic overhaul",
+                    *_build_cross_platform_source_candidates(
+                        r"C:\Program Files (x86)\Steam\steamapps\workshop\content\394360\2241701657"
+                    ),
+                ]
+            ),
+            "source_root_candidates": [
+                PROJECT_ROOT / "historic geographic overhaul",
+                *_build_cross_platform_source_candidates(
+                    r"C:\Program Files (x86)\Steam\steamapps\workshop\content\394360\2241701657"
+                ),
+            ],
+            "source_workshop_id": "2241701657",
+            "localisation_root": "localisation",
+        },
     ]
 
     for job in palette_jobs:
@@ -3215,6 +3237,8 @@ def run_palette_imports(output_dir: Path, strict: bool = False) -> None:
             str(job["source_variant"]),
             "--manual-map",
             str(job["manual_map"]),
+            "--localisation-root",
+            str(job.get("localisation_root") or "localisation/english"),
             "--output-dir",
             str(output_dir),
             "--primary-topology",

@@ -1,8 +1,8 @@
 # Data Catalog
 
-- generated_at: 2026-06-02T13:13:40.686297Z
+- generated_at: 2026-06-02T23:10:59.042619+00:00
 - version: 1
-- entries: 480
+- entries: 486
 
 ## Counts by role
 
@@ -20,13 +20,16 @@
 | detail_topology_na_v2 | 1 |
 | feature_migration_table | 1 |
 | geo_aliases | 1 |
+| hgo_flags_index | 1 |
+| hgo_place_names | 1 |
+| hgo_tier_a_catalog | 1 |
 | hierarchy | 1 |
 | historical_1930_city_lights_asset | 1 |
 | locales | 1 |
 | modern_city_lights_asset | 1 |
-| palette_audit | 4 |
-| palette_map | 4 |
-| palette_pack | 4 |
+| palette_audit | 5 |
+| palette_map | 5 |
+| palette_pack | 5 |
 | palette_registry | 1 |
 | physical_semantics_topology | 1 |
 | primary_topology | 1 |
@@ -70,10 +73,15 @@
 | manifest_output:global_contours.minor.topo.json | data/global_contours.minor.topo.json | terrain_contours_minor_topology | topojson | json | init_map_data.primary_topology_bundle |  |
 | manifest_output:global_physical_semantics.topo.json | data/global_physical_semantics.topo.json | physical_semantics_topology | topojson | json | init_map_data.primary_topology_bundle |  |
 | context_layer:rivers | data/global_rivers.geojson | context_layer | geojson | json | runtime_asset_registry.assets.context_layer:rivers |  |
+| hgo_flags_index | data/hgo_catalogs/hgo_flags.index.json | hgo_flags_index | json | json | tools.build_hgo_flag_index |  |
+| hgo_place_names | data/hgo_catalogs/hgo_place_names.json | hgo_place_names | json | json | tools.build_hgo_name_catalog |  |
+| hgo_tier_a_catalog | data/hgo_catalogs/index.json | hgo_tier_a_catalog | json | json | tools.build_hgo_flag_index |  |
 | manifest_output:hierarchy.json | data/hierarchy.json | hierarchy | json | json | init_map_data.hierarchy_locales |  |
 | city_lights:historical_1930:exclusions | data/historical_city_lights_1930_exclusions.json | city_lights_source | json | json | runtime_asset_registry.assets.city_lights:historical_1930:exclusions |  |
 | manifest_output:locales.json | data/locales.json | locales | json | json | init_map_data.hierarchy_locales |  |
 | build_manifest | data/manifest.json | build_manifest | json | json | runtime_asset_registry.assets.build_manifest |  |
+| manifest_output:palette-maps/hgo.audit.json | data/palette-maps/hgo.audit.json | palette_audit | json | json | init_map_data.palette_assets |  |
+| manifest_output:palette-maps/hgo.map.json | data/palette-maps/hgo.map.json | palette_map | json | json | tools.import_country_palette |  |
 | manifest_output:palette-maps/hoi4_vanilla.audit.json | data/palette-maps/hoi4_vanilla.audit.json | palette_audit | json | json | init_map_data.palette_assets |  |
 | manifest_output:palette-maps/hoi4_vanilla.map.json | data/palette-maps/hoi4_vanilla.map.json | palette_map | json | json | tools.import_country_palette |  |
 | manifest_output:palette-maps/kaiserreich.audit.json | data/palette-maps/kaiserreich.audit.json | palette_audit | json | json | init_map_data.palette_assets |  |
@@ -82,6 +90,7 @@
 | manifest_output:palette-maps/red_flood.map.json | data/palette-maps/red_flood.map.json | palette_map | json | json | tools.import_country_palette |  |
 | manifest_output:palette-maps/tno.audit.json | data/palette-maps/tno.audit.json | palette_audit | json | json | init_map_data.palette_assets |  |
 | manifest_output:palette-maps/tno.map.json | data/palette-maps/tno.map.json | palette_map | json | json | tools.import_country_palette |  |
+| manifest_output:palettes/hgo.palette.json | data/palettes/hgo.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |
 | manifest_output:palettes/hoi4_vanilla.palette.json | data/palettes/hoi4_vanilla.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |
 | palette_registry | data/palettes/index.json | palette_registry | json | json | init_map_data.palette_assets |  |
 | manifest_output:palettes/kaiserreich.palette.json | data/palettes/kaiserreich.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |

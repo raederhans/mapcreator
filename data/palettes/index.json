@@ -36,6 +36,15 @@
       "map_url": "data/palette-maps/red_flood.map.json",
       "audit_url": "data/palette-maps/red_flood.audit.json",
       "source_workshop_id": "2815832636"
+    },
+    {
+      "palette_id": "hgo",
+      "display_name": "Historic Geographical Overhaul",
+      "source_type": "game_mod",
+      "palette_url": "data/palettes/hgo.palette.json",
+      "map_url": "data/palette-maps/hgo.map.json",
+      "audit_url": "data/palette-maps/hgo.audit.json",
+      "source_workshop_id": "2241701657"
     }
   ]
 }

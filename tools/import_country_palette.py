@@ -42,6 +42,11 @@ DEFAULT_OCEAN_META = {
         "fill_color": "#373b42",
         "source": "map/terrain/reflection.dds:average",
     },
+    "hgo": {
+        "apply_on_autofill": True,
+        "fill_color": "#2d4769",
+        "source": "palette_manual_default",
+    },
 }
 
 PALETTE_SORT_ORDER = {
@@ -49,6 +54,7 @@ PALETTE_SORT_ORDER = {
     "kaiserreich": 1,
     "tno": 2,
     "red_flood": 3,
+    "hgo": 4,
 }
 
 SUPPORTED_UNMAPPED_REASONS = {
@@ -157,7 +163,7 @@ def find_source_root(explicit_root: str | None) -> Path:
     candidates = [Path(explicit_root)] if explicit_root else []
     candidates.extend(DEFAULT_SOURCE_ROOTS)
     for candidate in candidates:
-        if (candidate / "common/country_tags/00_countries.txt").exists():
+        if any((candidate / "common/country_tags").glob("*.txt")):
             return candidate
     raise SystemExit(
         "Unable to locate HOI4/mod source root. Pass --source-root with the installation or workshop path."
@@ -183,11 +189,9 @@ def parse_tag_file(path: Path, dynamic: bool) -> dict[str, tuple[str, bool]]:
 
 def parse_country_tags(root: Path) -> dict[str, tuple[str, bool]]:
     results: dict[str, tuple[str, bool]] = {}
-    for rel_path, dynamic in [
-        ("common/country_tags/00_countries.txt", False),
-        ("common/country_tags/zz_dynamic_countries.txt", True),
-    ]:
-        results.update(parse_tag_file(root / rel_path, dynamic))
+    for path in sorted((root / "common/country_tags").glob("*.txt")):
+        dynamic = path.stem in {"zz_dynamic_countries", "dynamic_countries"}
+        results.update(parse_tag_file(path, dynamic))
     return results
 
 
@@ -376,11 +380,12 @@ def build_country_file_usage(tag_map: dict[str, tuple[str, bool]]) -> Counter:
 def parse_localisation_catalog(
     root: Path,
     suffix_priority: list[str],
+    localisation_root: Path = DEFAULT_LOCALISATION_ROOT,
 ) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     exact_names: dict[str, str] = {}
     suffix_names: dict[str, dict[str, str]] = defaultdict(dict)
     suffix_allowlist = set(suffix_priority)
-    loc_root = root / DEFAULT_LOCALISATION_ROOT
+    loc_root = root / localisation_root
     if not loc_root.exists():
         return exact_names, suffix_names
 
@@ -470,6 +475,9 @@ def build_palette_entries(
 
         if not map_hex:
             continue
+        if not ui_hex:
+            ui_hex = map_hex
+            ui_source = "map_hex_fallback"
 
         entries[tag] = PaletteEntry(
             tag=tag,
@@ -847,6 +855,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-variant", default="vanilla")
     parser.add_argument("--source-workshop-id", default="")
     parser.add_argument("--manual-map", default="data/palette-maps/hoi4_vanilla.manual.json")
+    parser.add_argument("--localisation-root", default=str(DEFAULT_LOCALISATION_ROOT))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--primary-topology", default=str(DEFAULT_PRIMARY_TOPOLOGY))
     parser.add_argument("--runtime-topology", default=str(DEFAULT_RUNTIME_TOPOLOGY))
@@ -873,7 +882,7 @@ def main() -> None:
     primary_iso2_to_name, primary_name_to_iso2 = load_primary_country_names(primary_topology)
     runtime_country_codes = load_runtime_country_codes(runtime_topology)
     suffix_priority = normalize_suffix_priority(manual.get("display_name_suffix_priority"))
-    exact_names, suffix_names = parse_localisation_catalog(root, suffix_priority)
+    exact_names, suffix_names = parse_localisation_catalog(root, suffix_priority, Path(args.localisation_root))
     tag_map = parse_country_tags(root)
     colors_txt_data = parse_colors_txt(root / "common/countries/colors.txt")
     raw_entries = build_palette_entries(root, tag_map, colors_txt_data, exact_names, suffix_names, manual)
