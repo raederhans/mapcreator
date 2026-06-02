@@ -1071,6 +1071,22 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "source_query": "mrgid_l4='23739'",
         "source_standard": "marine_regions_seavox_v19",
         "subtract_base_ids": ("marine_irish_sea",),
+        "subtract_named_ids": ("tno_belfast_lough",),
+        "clip_open_ocean_ids": ("tno_northeast_atlantic_ocean",),
+        "simplify_tolerance": 0.004,
+    },
+    {
+        "id": "tno_belfast_lough",
+        "name": "Belfast Lough",
+        "label": "Belfast Lough",
+        "water_type": "bay",
+        "region_group": "marine_detail",
+        "parent_id": "tno_north_channel",
+        "is_chokepoint": False,
+        "source_layer": "seavox_v19",
+        "source_query": "mrgid_sr='24233'",
+        "source_standard": "marine_regions_seavox_v19",
+        "subtract_base_ids": (),
         "clip_open_ocean_ids": ("tno_northeast_atlantic_ocean",),
         "simplify_tolerance": 0.004,
     },
@@ -1097,6 +1113,22 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "is_chokepoint": True,
         "source_layer": "seavox_v19",
         "source_query": "mrgid_l4='23735'",
+        "source_standard": "marine_regions_seavox_v19",
+        "subtract_base_ids": (),
+        "subtract_named_ids": ("tno_rye_bay",),
+        "clip_open_ocean_ids": ("tno_northeast_atlantic_ocean",),
+        "simplify_tolerance": 0.004,
+    },
+    {
+        "id": "tno_rye_bay",
+        "name": "Rye Bay",
+        "label": "Rye Bay",
+        "water_type": "bay",
+        "region_group": "marine_detail",
+        "parent_id": "tno_strait_of_dover",
+        "is_chokepoint": False,
+        "source_layer": "seavox_v19",
+        "source_query": "mrgid_sr='24198'",
         "source_standard": "marine_regions_seavox_v19",
         "subtract_base_ids": (),
         "clip_open_ocean_ids": ("tno_northeast_atlantic_ocean",),
@@ -5963,6 +5995,32 @@ def sync_checkpoint_audit_summary_from_manifest(checkpoint_dir: Path) -> None:
         manifest_payload.get("summary") if isinstance(manifest_payload.get("summary"), dict) else {}
     )
     write_checkpoint_json(checkpoint_dir, "audit.json", audit_payload)
+
+
+def sync_tno_water_summary_from_scenario(scenario_dir: Path) -> list[str]:
+    water_regions_path = scenario_dir / "water_regions.geojson"
+    manifest_path = scenario_dir / "manifest.json"
+    audit_path = scenario_dir / "audit.json"
+    water_payload = json.loads(water_regions_path.read_text(encoding="utf-8"))
+    water_feature_count = len(water_payload.get("features", []) or [])
+    named_marginal_water_ids = [str(spec["id"]) for spec in TNO_NAMED_MARGINAL_WATER_SPECS]
+    named_marginal_water_count = len(named_marginal_water_ids)
+    changed = False
+
+    for path in (manifest_path, audit_path):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        before = copy.deepcopy(payload)
+        summary = payload.setdefault("summary", {})
+        summary["tno_water_region_count"] = water_feature_count
+        summary["tno_named_marginal_water_count"] = named_marginal_water_count
+        if path == audit_path:
+            diagnostics = payload.setdefault("diagnostics", {})
+            diagnostics["tno_named_marginal_water_ids"] = named_marginal_water_ids
+        if payload != before:
+            write_json(path, payload)
+            changed = True
+
+    return ["water_summary"] if changed else []
 
 
 def build_water_runtime_from_scenario_stage(scenario_dir: Path, checkpoint_dir: Path) -> dict:
@@ -13138,17 +13196,20 @@ def _run_changed_domain_plan(
         # Chunk assets carry byte-exact hashes into manifest/source/startup bundles.
         # Refresh the derived contract surfaces after chunk rebuilds so strict mode
         # validates the final published artifact set, not an earlier checkpoint view.
-        safe_fixes_applied = apply_safe_scenario_contract_repairs(
+        safe_fixes_applied.extend(sync_tno_water_summary_from_scenario(scenario_dir))
+        safe_fixes_applied.extend(apply_safe_scenario_contract_repairs(
             scenario_dir,
             report_path=ROOT / ".runtime" / "reports" / "generated" / f"{SCENARIO_ID}.changed_domain_contract_repair.json",
             rebuild_chunk_assets=False,
-        )
+        ))
+        safe_fixes_applied.extend(sync_tno_water_summary_from_scenario(scenario_dir))
         before_second_pass = _capture_changed_domain_safe_repair_hashes(scenario_dir)
         second_pass_fixes = apply_safe_scenario_contract_repairs(
             scenario_dir,
             report_path=ROOT / ".runtime" / "reports" / "generated" / f"{SCENARIO_ID}.changed_domain_contract_repair.json",
             rebuild_chunk_assets=False,
         )
+        second_pass_fixes.extend(sync_tno_water_summary_from_scenario(scenario_dir))
         after_second_pass = _capture_changed_domain_safe_repair_hashes(scenario_dir)
         if before_second_pass != after_second_pass:
             raise ValueError(

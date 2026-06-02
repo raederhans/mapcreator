@@ -2,6 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
+      "id": "9",
       "type": "Feature",
       "properties": {
         "id": "tno_arafura_sea",
@@ -6937,6 +6938,7 @@
       }
     },
     {
+      "id": "12",
       "type": "Feature",
       "properties": {
         "id": "tno_banda_sea",
@@ -34264,6 +34266,7 @@
       }
     },
     {
+      "id": "15",
       "type": "Feature",
       "properties": {
         "id": "tno_bass_strait",
@@ -44233,6 +44236,7 @@
       }
     },
     {
+      "id": "35",
       "type": "Feature",
       "properties": {
         "id": "tno_coral_sea",
@@ -116180,6 +116184,7 @@
       }
     },
     {
+      "id": "40",
       "type": "Feature",
       "properties": {
         "id": "tno_eastern_indian_ocean",
@@ -177231,6 +177236,7 @@
       }
     },
     {
+      "id": "43",
       "type": "Feature",
       "properties": {
         "id": "tno_great_australian_bight",
@@ -181728,6 +181734,7 @@
       }
     },
     {
+      "id": "44",
       "type": "Feature",
       "properties": {
         "id": "tno_great_barrier_reef_coastal_waters",
@@ -205733,6 +205740,7 @@
       }
     },
     {
+      "id": "48",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_carpentaria",
@@ -216246,6 +216254,7 @@
       }
     },
     {
+      "id": "53",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_papua",
@@ -219957,6 +219966,7 @@
       }
     },
     {
+      "id": "58",
       "type": "Feature",
       "properties": {
         "id": "tno_halmahera_sea",
@@ -236474,6 +236484,7 @@
       }
     },
     {
+      "id": "63",
       "type": "Feature",
       "properties": {
         "id": "tno_java_sea",
@@ -249221,6 +249232,7 @@
       }
     },
     {
+      "id": "69",
       "type": "Feature",
       "properties": {
         "id": "tno_makassar_strait",
@@ -259308,6 +259320,7 @@
       }
     },
     {
+      "id": "71",
       "type": "Feature",
       "properties": {
         "id": "tno_molucca_sea",
@@ -268497,6 +268510,7 @@
       }
     },
     {
+      "id": "74",
       "type": "Feature",
       "properties": {
         "id": "tno_natuna_sea",
@@ -300406,6 +300420,7 @@
       }
     },
     {
+      "id": "89",
       "type": "Feature",
       "properties": {
         "id": "tno_ross_sea",
@@ -302497,6 +302512,7 @@
       }
     },
     {
+      "id": "103",
       "type": "Feature",
       "properties": {
         "id": "tno_south_indian_antarctic_ocean",
@@ -303464,6 +303480,7 @@
       }
     },
     {
+      "id": "104",
       "type": "Feature",
       "properties": {
         "id": "tno_south_pacific_antarctic_ocean",
@@ -304045,6 +304062,7 @@
       }
     },
     {
+      "id": "107",
       "type": "Feature",
       "properties": {
         "id": "tno_southern_indian_ocean",
@@ -312902,6 +312920,7 @@
       }
     },
     {
+      "id": "109",
       "type": "Feature",
       "properties": {
         "id": "tno_southwest_pacific_ocean",
@@ -320705,6 +320724,7 @@
       }
     },
     {
+      "id": "118",
       "type": "Feature",
       "properties": {
         "id": "tno_tasman_sea",
@@ -334906,6 +334926,7 @@
       }
     },
     {
+      "id": "123",
       "type": "Feature",
       "properties": {
         "id": "tno_timor_sea",
@@ -341025,6 +341046,7 @@
       }
     },
     {
+      "id": "124",
       "type": "Feature",
       "properties": {
         "id": "tno_torres_strait",
@@ -346324,6 +346346,7 @@
       }
     },
     {
+      "id": "128",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",

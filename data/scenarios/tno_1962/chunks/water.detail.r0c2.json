@@ -2,6 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
+      "id": "1",
       "type": "Feature",
       "properties": {
         "id": "congo_lake",
@@ -1793,6 +1794,7 @@
       }
     },
     {
+      "id": "8",
       "type": "Feature",
       "properties": {
         "id": "tno_arabian_sea",
@@ -15540,6 +15542,7 @@
       }
     },
     {
+      "id": "36",
       "type": "Feature",
       "properties": {
         "id": "tno_east_central_atlantic_ocean",
@@ -18177,6 +18180,7 @@
       }
     },
     {
+      "id": "40",
       "type": "Feature",
       "properties": {
         "id": "tno_eastern_indian_ocean",
@@ -79228,6 +79232,7 @@
       }
     },
     {
+      "id": "50",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_guinea",
@@ -87745,6 +87750,7 @@
       }
     },
     {
+      "id": "73",
       "type": "Feature",
       "properties": {
         "id": "tno_mozambique_channel",
@@ -105332,6 +105338,7 @@
       }
     },
     {
+      "id": "89",
       "type": "Feature",
       "properties": {
         "id": "tno_ross_sea",
@@ -107423,6 +107430,7 @@
       }
     },
     {
+      "id": "101",
       "type": "Feature",
       "properties": {
         "id": "tno_south_atlantic_antarctic_ocean",
@@ -109400,6 +109408,7 @@
       }
     },
     {
+      "id": "103",
       "type": "Feature",
       "properties": {
         "id": "tno_south_indian_antarctic_ocean",
@@ -110367,6 +110376,7 @@
       }
     },
     {
+      "id": "104",
       "type": "Feature",
       "properties": {
         "id": "tno_south_pacific_antarctic_ocean",
@@ -110948,6 +110958,7 @@
       }
     },
     {
+      "id": "105",
       "type": "Feature",
       "properties": {
         "id": "tno_southeast_atlantic_ocean",
@@ -111641,6 +111652,7 @@
       }
     },
     {
+      "id": "107",
       "type": "Feature",
       "properties": {
         "id": "tno_southern_indian_ocean",
@@ -120498,6 +120510,7 @@
       }
     },
     {
+      "id": "109",
       "type": "Feature",
       "properties": {
         "id": "tno_southwest_pacific_ocean",
@@ -128301,6 +128314,7 @@
       }
     },
     {
+      "id": "128",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -130444,6 +130458,7 @@
       }
     },
     {
+      "id": "130",
       "type": "Feature",
       "properties": {
         "id": "tno_western_indian_ocean",

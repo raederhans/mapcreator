@@ -13,4 +13,8 @@
 - [x] Connect `--changed-domain water` to the narrow checkpoint path.
 - [x] Validate normal water changed-domain entrypoint on a `.runtime/tmp` scenario copy.
 - [x] Run final review.
+- [x] Add `tno_rye_bay` and `tno_belfast_lough` source-backed child waters.
+- [x] Refresh water runtime, chunks, startup bundles, manifest, audit, and provenance.
+- [x] Fix final review finding for 130/132 water summary drift.
+- [x] Run child-water audit, geometry validator, targeted water tests, builder tests, py_compile, and diff check.
 - [ ] Commit, push, merge, cleanup.

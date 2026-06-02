@@ -2,6 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
+      "id": "6",
       "type": "Feature",
       "properties": {
         "id": "lake_superior",
@@ -903,6 +904,7 @@
       }
     },
     {
+      "id": "20",
       "type": "Feature",
       "properties": {
         "id": "tno_beaufort_sea",
@@ -25834,6 +25836,7 @@
       }
     },
     {
+      "id": "21",
       "type": "Feature",
       "properties": {
         "id": "tno_bering_sea",
@@ -65921,6 +65924,7 @@
       }
     },
     {
+      "id": "37",
       "type": "Feature",
       "properties": {
         "id": "tno_east_central_pacific_ocean",
@@ -66352,6 +66356,7 @@
       }
     },
     {
+      "id": "47",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_alaska",
@@ -91705,6 +91710,7 @@
       }
     },
     {
+      "id": "51",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_mexico",
@@ -130276,6 +130282,7 @@
       }
     },
     {
+      "id": "59",
       "type": "Feature",
       "properties": {
         "id": "tno_hudson_bay",
@@ -130287,9 +130294,16 @@
         "neighbors": "",
         "is_chokepoint": false,
         "interactive": true,
-        "scenario_id": "tno_1962",
         "source_standard": "marine_regions_iho_v3",
-        "render_as_base_geography": false
+        "scenario_id": "tno_1962",
+        "render_as_base_geography": false,
+        "named_exclusion_area_before": null,
+        "named_exclusion_area_after": null,
+        "named_exclusion_subtract_count": null,
+        "source_feature_id": null,
+        "source_water_region_id": null,
+        "topology_mode": null,
+        "source_province_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -288574,6 +288588,7 @@
       }
     },
     {
+      "id": "79",
       "type": "Feature",
       "properties": {
         "id": "tno_northeast_pacific_ocean",
@@ -309765,6 +309780,7 @@
       }
     },
     {
+      "id": "80",
       "type": "Feature",
       "properties": {
         "id": "tno_northwest_atlantic_ocean",
@@ -319864,6 +319880,7 @@
       }
     },
     {
+      "id": "128",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -322007,6 +322024,7 @@
       }
     },
     {
+      "id": "129",
       "type": "Feature",
       "properties": {
         "id": "tno_western_arctic_ocean",

@@ -827,6 +827,24 @@ class TnoBundleBuilderTest(unittest.TestCase):
             ),
         )
 
+    def test_tno_channel_child_source_specs_keep_parent_seams_closed(self) -> None:
+        spec_map = {
+            spec["id"]: spec
+            for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+        }
+
+        self.assertEqual(spec_map["tno_strait_of_dover"]["source_query"], "mrgid_l4='23735'")
+        self.assertEqual(spec_map["tno_strait_of_dover"]["subtract_named_ids"], ("tno_rye_bay",))
+        self.assertEqual(spec_map["tno_rye_bay"]["source_layer"], "seavox_v19")
+        self.assertEqual(spec_map["tno_rye_bay"]["source_query"], "mrgid_sr='24198'")
+        self.assertEqual(spec_map["tno_rye_bay"]["parent_id"], "tno_strait_of_dover")
+
+        self.assertEqual(spec_map["tno_north_channel"]["source_query"], "mrgid_l4='23739'")
+        self.assertEqual(spec_map["tno_north_channel"]["subtract_named_ids"], ("tno_belfast_lough",))
+        self.assertEqual(spec_map["tno_belfast_lough"]["source_layer"], "seavox_v19")
+        self.assertEqual(spec_map["tno_belfast_lough"]["source_query"], "mrgid_sr='24233'")
+        self.assertEqual(spec_map["tno_belfast_lough"]["parent_id"], "tno_north_channel")
+
     def test_tno_baltic_sea_source_spec_keeps_child_seams_closed(self) -> None:
         baltic_sea_spec = next(
             spec for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
@@ -3012,6 +3030,14 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 events.append("safe_repair")
                 return ["build_snapshot"]
 
+            summary_sync_calls = 0
+
+            def fake_water_summary_sync(*_args, **_kwargs):
+                nonlocal summary_sync_calls
+                summary_sync_calls += 1
+                events.append("water_summary")
+                return ["water_summary"] if summary_sync_calls == 1 else []
+
             with (
                 patch.object(tno_bundle, "_stage_signature_is_current", return_value=False),
                 patch.object(tno_bundle, "_stage_outputs_are_ready", return_value=False),
@@ -3022,6 +3048,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 ) as rebuild_maps_mock,
                 patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
                 patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", side_effect=fake_repair) as repair_mock,
+                patch.object(tno_bundle, "sync_tno_water_summary_from_scenario", side_effect=fake_water_summary_sync) as summary_sync_mock,
                 patch.object(tno_bundle, "record_runtime_topology_stage_signature", return_value=None),
             ):
                 result = tno_bundle._run_changed_domain_plan(
@@ -3033,13 +3060,17 @@ class TnoBundleBuilderTest(unittest.TestCase):
                     refresh_named_water_snapshot=False,
                 )
 
-            self.assertEqual(events[-3:], ["stage:chunk_assets", "safe_repair", "safe_repair"])
+            self.assertEqual(
+                events[-6:],
+                ["stage:chunk_assets", "water_summary", "safe_repair", "water_summary", "safe_repair", "water_summary"],
+            )
             self.assertLess(events.index("stage:water_runtime_from_scenario"), events.index("checkpoint_chunks"))
             self.assertLess(events.index("checkpoint_chunks"), events.index("stage:write_bundle"))
             self.assertLess(events.index("stage:write_bundle"), events.index("stage:chunk_assets"))
             rebuild_maps_mock.assert_not_called()
             self.assertEqual(repair_mock.call_count, 2)
-            self.assertEqual(result["safe_fixes_applied"], ["build_snapshot"])
+            self.assertEqual(summary_sync_mock.call_count, 3)
+            self.assertEqual(result["safe_fixes_applied"], ["water_summary", "build_snapshot"])
 
     def test_run_changed_domain_plan_for_water_repairs_maps_when_runtime_stage_is_skipped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -3067,6 +3098,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 ) as rebuild_maps_mock,
                 patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
                 patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", return_value=[]),
+                patch.object(tno_bundle, "sync_tno_water_summary_from_scenario", return_value=[]),
                 patch.object(tno_bundle, "record_runtime_topology_stage_signature", return_value=None),
             ):
                 tno_bundle._run_changed_domain_plan(
@@ -3204,6 +3236,58 @@ class TnoBundleBuilderTest(unittest.TestCase):
             self.assertEqual(synced_audit["generated_at"], "2026-06-02T00:00:00Z")
             self.assertEqual(synced_audit["summary"], manifest_payload["summary"])
             self.assertEqual(synced_audit["checks"], [{"id": "kept"}])
+
+    def test_sync_tno_water_summary_from_scenario_tracks_checked_in_water_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "scenario"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            water_payload = {
+                "type": "FeatureCollection",
+                "features": [
+                    {"type": "Feature", "properties": {"id": "water_a"}, "geometry": mapping(_square(0, 0))},
+                    {"type": "Feature", "properties": {"id": "water_b"}, "geometry": mapping(_square(2, 0))},
+                ],
+            }
+            stale_summary = {
+                "feature_count": 10,
+                "tno_water_region_count": 1,
+                "tno_named_marginal_water_count": 1,
+            }
+            (scenario_dir / "manifest.json").write_text(
+                json.dumps({"scenario_id": "tno_1962", "summary": dict(stale_summary)}),
+                encoding="utf-8",
+            )
+            (scenario_dir / "audit.json").write_text(
+                json.dumps({
+                    "scenario_id": "tno_1962",
+                    "summary": dict(stale_summary),
+                    "diagnostics": {"tno_named_marginal_water_ids": ["stale_water"]},
+                }),
+                encoding="utf-8",
+            )
+            (scenario_dir / "water_regions.geojson").write_text(
+                json.dumps(water_payload),
+                encoding="utf-8",
+            )
+
+            applied = tno_bundle.sync_tno_water_summary_from_scenario(scenario_dir)
+            second_applied = tno_bundle.sync_tno_water_summary_from_scenario(scenario_dir)
+
+            self.assertEqual(applied, ["water_summary"])
+            self.assertEqual(second_applied, [])
+            for filename in ("manifest.json", "audit.json"):
+                payload = json.loads((scenario_dir / filename).read_text(encoding="utf-8"))
+                self.assertEqual(payload["summary"]["feature_count"], 10)
+                self.assertEqual(payload["summary"]["tno_water_region_count"], 2)
+                self.assertEqual(
+                    payload["summary"]["tno_named_marginal_water_count"],
+                    len(tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS),
+                )
+            audit_payload = json.loads((scenario_dir / "audit.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                audit_payload["diagnostics"]["tno_named_marginal_water_ids"],
+                [spec["id"] for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS],
+            )
 
     def test_water_runtime_from_scenario_stage_requires_shared_checkpoint_surface(self) -> None:
         checkpoint_dir = Path("/tmp/checkpoint")

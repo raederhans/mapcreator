@@ -2,6 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
+      "id": "7",
       "type": "Feature",
       "properties": {
         "id": "tno_andaman_sea",
@@ -43871,6 +43872,7 @@
       }
     },
     {
+      "id": "16",
       "type": "Feature",
       "properties": {
         "id": "tno_bay_of_bengal",
@@ -62432,6 +62434,7 @@
       }
     },
     {
+      "id": "21",
       "type": "Feature",
       "properties": {
         "id": "tno_bering_sea",
@@ -102519,6 +102522,7 @@
       }
     },
     {
+      "id": "24",
       "type": "Feature",
       "properties": {
         "id": "tno_bo_hai",
@@ -105984,6 +105988,7 @@
       }
     },
     {
+      "id": "32",
       "type": "Feature",
       "properties": {
         "id": "tno_celebes_sea",
@@ -128351,6 +128356,7 @@
       }
     },
     {
+      "id": "38",
       "type": "Feature",
       "properties": {
         "id": "tno_east_china_sea",
@@ -179306,6 +179312,7 @@
       }
     },
     {
+      "id": "39",
       "type": "Feature",
       "properties": {
         "id": "tno_eastern_arctic_ocean",
@@ -179851,6 +179858,7 @@
       }
     },
     {
+      "id": "40",
       "type": "Feature",
       "properties": {
         "id": "tno_eastern_indian_ocean",
@@ -240902,6 +240910,7 @@
       }
     },
     {
+      "id": "56",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_thailand",
@@ -255411,6 +255420,7 @@
       }
     },
     {
+      "id": "57",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_tonkin",
@@ -287476,6 +287486,7 @@
       }
     },
     {
+      "id": "58",
       "type": "Feature",
       "properties": {
         "id": "tno_halmahera_sea",
@@ -303993,6 +304004,7 @@
       }
     },
     {
+      "id": "66",
       "type": "Feature",
       "properties": {
         "id": "tno_liaodong_wan",
@@ -305160,6 +305172,7 @@
       }
     },
     {
+      "id": "69",
       "type": "Feature",
       "properties": {
         "id": "tno_makassar_strait",
@@ -315247,6 +315260,7 @@
       }
     },
     {
+      "id": "70",
       "type": "Feature",
       "properties": {
         "id": "tno_malacca_strait",
@@ -331384,6 +331398,7 @@
       }
     },
     {
+      "id": "71",
       "type": "Feature",
       "properties": {
         "id": "tno_molucca_sea",
@@ -340573,6 +340588,7 @@
       }
     },
     {
+      "id": "74",
       "type": "Feature",
       "properties": {
         "id": "tno_natuna_sea",
@@ -372482,6 +372498,7 @@
       }
     },
     {
+      "id": "81",
       "type": "Feature",
       "properties": {
         "id": "tno_northwest_pacific_ocean",
@@ -376315,6 +376332,7 @@
       }
     },
     {
+      "id": "85",
       "type": "Feature",
       "properties": {
         "id": "tno_philippine_sea",
@@ -428758,6 +428776,7 @@
       }
     },
     {
+      "id": "92",
       "type": "Feature",
       "properties": {
         "id": "tno_sea_of_japan",
@@ -467213,6 +467232,7 @@
       }
     },
     {
+      "id": "94",
       "type": "Feature",
       "properties": {
         "id": "tno_sea_of_okhotsk",
@@ -495222,6 +495242,7 @@
       }
     },
     {
+      "id": "95",
       "type": "Feature",
       "properties": {
         "id": "tno_seto_naikai",
@@ -509709,6 +509730,7 @@
       }
     },
     {
+      "id": "97",
       "type": "Feature",
       "properties": {
         "id": "tno_singapore_strait",
@@ -510976,6 +510998,7 @@
       }
     },
     {
+      "id": "102",
       "type": "Feature",
       "properties": {
         "id": "tno_south_china_sea",
@@ -510989,7 +511012,14 @@
         "interactive": true,
         "source_standard": "marine_regions_seavox_v19",
         "scenario_id": "tno_1962",
-        "render_as_base_geography": false
+        "render_as_base_geography": false,
+        "named_exclusion_area_before": null,
+        "named_exclusion_area_after": null,
+        "named_exclusion_subtract_count": null,
+        "source_feature_id": null,
+        "source_water_region_id": null,
+        "topology_mode": null,
+        "source_province_ids": null
       },
       "geometry": {
         "type": "Polygon",
@@ -542412,6 +542442,7 @@
       }
     },
     {
+      "id": "115",
       "type": "Feature",
       "properties": {
         "id": "tno_sulu_sea",
@@ -569625,6 +569656,7 @@
       }
     },
     {
+      "id": "117",
       "type": "Feature",
       "properties": {
         "id": "tno_taiwan_strait",
@@ -590318,6 +590350,7 @@
       }
     },
     {
+      "id": "119",
       "type": "Feature",
       "properties": {
         "id": "tno_tatarskiy_proliv",
@@ -593403,6 +593436,7 @@
       }
     },
     {
+      "id": "128",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -595546,6 +595580,7 @@
       }
     },
     {
+      "id": "131",
       "type": "Feature",
       "properties": {
         "id": "tno_yellow_sea",
