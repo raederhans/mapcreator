@@ -598,6 +598,16 @@ def test_tno_weddell_sea_uses_source_backed_refinement_precision():
     assert 400 <= _polygonal_vertex_count(geometry) <= 700
 
 
+def test_tno_north_sea_uses_iho_source_backed_refinement_precision():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_north_sea"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    assert props.get("source_standard") == "marine_regions_iho_v3"
+    assert props.get("region_group") == "marine_macro"
+    assert _polygonal_vertex_count(geometry) >= 1000
+
+
 def test_tno_hudson_strait_splits_hudson_bay_as_source_backed_detail():
     feature_map = _feature_map(_load_scenario_water_features())
     feature = feature_map["tno_hudson_strait"]

@@ -1098,7 +1098,7 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "source_standard": "marine_regions_seavox_v19",
         "subtract_base_ids": (),
         "clip_open_ocean_ids": ("tno_northeast_atlantic_ocean",),
-        "simplify_tolerance": 0.01,
+        "simplify_tolerance": 0.004,
     },
     {
         "id": "tno_skagerrak",
@@ -1439,8 +1439,11 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "water_type": "sea",
         "region_group": "marine_macro",
         "is_chokepoint": False,
-        "global_source_id": "marine_north_sea",
-        "source_standard": "tno_cloned_from_global_water_regions",
+        "source_layer": "iho",
+        "source_query": "mrgid=2350",
+        "source_standard": "marine_regions_iho_v3",
+        "exclude_base_ids": ("marine_north_sea",),
+        "simplify_tolerance": 0.02,
         "subtract_named_ids": (
             "tno_english_channel",
             "tno_strait_of_dover",
