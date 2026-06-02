@@ -802,6 +802,31 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 f"{feature_id} should keep a supplement bbox covering validator regression probe {point.wkt}",
             )
 
+    def test_tno_irish_sea_source_spec_keeps_child_seams_closed(self) -> None:
+        irish_sea_spec = next(
+            spec for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+            if spec["id"] == "tno_irish_sea"
+        )
+
+        self.assertEqual(irish_sea_spec["source_layer"], "seavox_v19")
+        self.assertEqual(
+            irish_sea_spec["source_query"],
+            "mrgid_l3='23731' OR mrgid_l4='23739' OR mrgid_sr='24210' OR mrgid_sr='24214'",
+        )
+        self.assertEqual(irish_sea_spec["snapshot_simplify_tolerance"], 0.002)
+        self.assertEqual(irish_sea_spec["exclude_base_ids"], ("marine_irish_sea",))
+        self.assertEqual(
+            irish_sea_spec["subtract_named_ids"],
+            (
+                "tno_north_channel",
+                "tno_st_georges_channel",
+                "tno_st_brides_bay",
+                "tno_cardigan_bay",
+                "tno_liverpool_bay",
+                "tno_solway_firth",
+            ),
+        )
+
     def test_tno_arctic_open_ocean_split_boundary_matches_barents_regression(self) -> None:
         arctic_spec = next(
             spec for spec in tno_bundle.TNO_OPEN_OCEAN_SPLIT_SPECS

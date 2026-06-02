@@ -113,6 +113,7 @@ TRACKED_NAMED_WATER_IDS = TRACKED_DETAIL_IDS | {
     "tno_sea_of_marmara",
     "tno_bosporus_dardanelles",
     "tno_bay_of_biscay",
+    "tno_irish_sea",
     "tno_greenland_sea",
     "tno_norwegian_sea",
     "tno_barents_sea",
@@ -188,6 +189,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "poole_bay", "point": (-1.86, 50.62), "allowed_ids": {"tno_poole_bay"}},
     {"label": "solent", "point": (-1.23, 50.77), "allowed_ids": {"tno_solent"}},
     {"label": "cardigan_bay", "point": (-4.63, 52.12), "allowed_ids": {"tno_cardigan_bay"}},
+    {"label": "irish_sea", "point": (-5.0, 53.4), "allowed_ids": {"tno_irish_sea"}},
     {"label": "liverpool_bay", "point": (-3.26, 53.46), "allowed_ids": {"tno_liverpool_bay"}},
     {"label": "solway_firth", "point": (-3.47, 54.93), "allowed_ids": {"tno_solway_firth"}},
     {"label": "black_sea", "point": (34.7, 43.4), "allowed_ids": {"tno_black_sea"}},
@@ -256,7 +258,10 @@ TRACKED_SEAM_PAIRS = [
     ("tno_celtic_sea", "tno_northeast_atlantic_ocean"),
     ("tno_bay_of_biscay", "tno_northeast_atlantic_ocean"),
     ("tno_celtic_sea", "tno_english_channel"),
+    ("tno_irish_sea", "tno_northeast_atlantic_ocean"),
     ("tno_irish_sea", "tno_north_channel"),
+    ("tno_irish_sea", "tno_st_georges_channel"),
+    ("tno_irish_sea", "tno_st_brides_bay"),
     ("tno_baltic_sea", "tno_kattegat"),
     ("tno_baltic_sea", "tno_the_sound"),
     ("tno_north_sea", "tno_wadden_sea"),
@@ -644,6 +649,78 @@ def test_tno_bay_of_biscay_uses_iho_source_backed_refinement_precision():
     assert extract_by_id["tno_bay_of_biscay"].get("source_record_ids") == ["mrgid:2359"]
     assert extract_by_id["tno_bay_of_biscay"].get("snapshot_simplify_tolerance") == 0.004
     assert "tno_bay_of_biscay" not in clone_ids
+
+
+def test_tno_irish_sea_uses_seavox_source_backed_refinement_precision():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_irish_sea"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    source_query = "mrgid_l3='23731' OR mrgid_l4='23739' OR mrgid_sr='24210' OR mrgid_sr='24214'"
+    source_record_ids = [
+        "mrgid_l1:23629",
+        "mrgid_l2:23637",
+        "mrgid_l3:23729",
+        "mrgid_l3:23730",
+        "mrgid_l3:23731",
+        "mrgid_l4:23739",
+        "mrgid_l4:23740",
+        "mrgid_l4:23741",
+        "mrgid_l4:23742",
+        "mrgid_r:23618",
+        "mrgid_sr:24210",
+        "mrgid_sr:24212",
+        "mrgid_sr:24213",
+        "mrgid_sr:24214",
+        "mrgid_sr:24220",
+        "mrgid_sr:24221",
+        "mrgid_sr:24222",
+        "mrgid_sr:24223",
+        "mrgid_sr:24224",
+        "mrgid_sr:24225",
+        "mrgid_sr:24226",
+        "mrgid_sr:24227",
+        "mrgid_sr:24228",
+        "mrgid_sr:24229",
+        "mrgid_sr:24230",
+        "mrgid_sr:24231",
+        "mrgid_sr:24232",
+        "mrgid_sr:24233",
+        "mrgid_sr:24236",
+    ]
+    assert props.get("source_standard") == "marine_regions_seavox_v19"
+    assert props.get("region_group") == "marine_macro"
+    assert 1500 <= _polygonal_vertex_count(geometry) <= 4000
+    assert 4.7 <= geometry.area <= 5.1
+    atlantic_geometry = shape(feature_map["tno_northeast_atlantic_ocean"]["geometry"])
+    assert geometry.distance(atlantic_geometry) <= SEAM_DISTANCE_EPSILON
+    assert geometry.intersection(atlantic_geometry).area == 0
+    minx, miny, maxx, maxy = geometry.bounds
+    assert -6.7 <= minx <= -6.4
+    assert 51.6 <= miny <= 51.9
+    assert -2.9 <= maxx <= -2.6
+    assert 55.2 <= maxy <= 55.4
+    snapshot_feature_map = _feature_map(_load_named_water_snapshot_features())
+    snapshot_props = snapshot_feature_map["tno_irish_sea"].get("properties", {})
+    assert snapshot_props.get("source_layer") == "seavox_v19"
+    assert snapshot_props.get("source_query") == source_query
+    assert snapshot_props.get("source_record_ids") == source_record_ids
+    assert snapshot_props.get("snapshot_simplify_tolerance") == 0.002
+    provenance = _load_water_provenance()
+    extract_by_id = {
+        str(entry.get("id") or ""): entry
+        for entry in provenance.get("water_extracts", [])
+    }
+    clone_ids = {
+        str(entry.get("id") or "")
+        for entry in provenance.get("local_clone_extracts", [])
+    }
+    assert extract_by_id["tno_irish_sea"].get("source_layer") == "seavox_v19"
+    assert extract_by_id["tno_irish_sea"].get("source_query") == source_query
+    assert extract_by_id["tno_irish_sea"].get("source_record_ids") == source_record_ids
+    assert extract_by_id["tno_irish_sea"].get("source_feature_count") == 19
+    assert extract_by_id["tno_irish_sea"].get("snapshot_simplify_tolerance") == 0.002
+    assert "tno_irish_sea" not in clone_ids
 
 
 def test_tno_hudson_strait_splits_hudson_bay_as_source_backed_detail():

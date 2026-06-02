@@ -1,0 +1,22 @@
+# Ocean Irish Sea Source 2026-06-02 Context
+
+- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-irish-sea-source-20260602`
+- Branch: `codex/ocean-irish-sea-source-20260602`
+- Base: `origin/main` at `a2b39736`.
+- Main workspace has unrelated dirty files; this worktree isolates ocean changes.
+- Current authoritative audit from `origin/main`: low_precision=0, source_replacement=4, high_precision_split=3, simplification_review=3, provenance_gap=0.
+- Live process owner: main agent owns source fetch/build/test commands.
+- Candidate target: `tno_irish_sea`, currently a local clone from `marine_irish_sea`, with existing child/subtraction coverage.
+- Direct SeaVoX `mrgid_sr='24212'` is semantically narrow but leaves a seam gap to `tno_north_channel`.
+- Final source query is `mrgid_l3='23731' OR mrgid_l4='23739' OR mrgid_sr='24210' OR mrgid_sr='24214'`; it keeps North Channel, St George's Channel, St Brides Bay, Cardigan Bay, Liverpool Bay, and Solway Firth seams closed.
+- `snapshot_simplify_tolerance=0.002` keeps the source snapshot under the GitHub 100 MiB file limit and produces a moderate final geometry.
+- Current generated `tno_irish_sea`: 1868 vertices, area about 4.83, bounds about `(-6.5582, 51.7336, -2.8278, 55.2906)`.
+- Irish Sea to Northeast Atlantic is also explicitly locked: distance 0 and overlap area 0.
+- Validation evidence:
+  - `python tools\audit_tno_water_family_refinement.py`: low_precision=0, source_replacement=3, local_clone=3, provenance_gap=0.
+  - `python tools\validate_tno_water_geometries.py --scenario-dir data\scenarios\tno_1962 --report-path .runtime\reports\generated\tno_water_geometry_report.irish_sea_source.composite.final.json`: passed.
+  - `pytest tests/test_tno_water_geometries.py::test_tno_irish_sea_uses_seavox_source_backed_refinement_precision tests/test_tno_water_geometries.py::test_tno_tracked_neighbor_pairs_do_not_leave_gaps -q`: 2 passed.
+  - Targeted pytest set: 7 passed, 189 subtests passed.
+  - `pytest tests/test_tno_water_geometries.py -q`: 33 passed after final seam contract.
+  - `git diff --check`: passed with Windows line-ending warnings only.
+  - Large file scan: no file at or above 100 MiB; source snapshot is 99.19 MiB.

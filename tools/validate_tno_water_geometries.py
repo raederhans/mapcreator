@@ -53,6 +53,7 @@ OCEAN_REFINEMENT_PHASE_TARGET_IDS = {
     ),
     "phase6_european_source_replacement": (
         "tno_bay_of_biscay",
+        "tno_irish_sea",
         "tno_north_sea",
     ),
 }
@@ -152,7 +153,10 @@ TRACKED_COVERAGE_PROBES = [
 TRACKED_SEAM_PAIRS = [
     ("tno_celtic_sea", "tno_northeast_atlantic_ocean"),
     ("tno_celtic_sea", "tno_english_channel"),
+    ("tno_irish_sea", "tno_northeast_atlantic_ocean"),
     ("tno_irish_sea", "tno_north_channel"),
+    ("tno_irish_sea", "tno_st_georges_channel"),
+    ("tno_irish_sea", "tno_st_brides_bay"),
     ("tno_baltic_sea", "tno_kattegat"),
     ("tno_baltic_sea", "tno_the_sound"),
     ("tno_north_sea", "tno_wadden_sea"),

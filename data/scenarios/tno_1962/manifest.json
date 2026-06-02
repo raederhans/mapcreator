@@ -166,9 +166,9 @@
   "snapshot_fingerprint": "451eca51d78e0af4527a6c9f1a2f6a85d39f422e2cfbdb746435bedc02a5a6e9",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "41de2f4525edab4b36899493fd9a39787ef3b0efda6e2cd433d82f509a1cba05",
+    "detail_chunk_manifest_sha256": "e397466dc569eb20dae497ae657efaa9c1d9db13178646fb04b6707f6cacb60e",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
-    "runtime_topology_sha256": "7b9a33de99d9b325fe815c358dc0bf1a8e3d0435a3fd0067ce57e867ede642fb"
+    "runtime_topology_sha256": "6ec0941469a5601f72947e1390166766744e9e3c5efb588dd5ace0e2da6f3a2c"
   },
   "special_regions_url": "data/scenarios/tno_1962/special_regions.geojson",
   "special_zone_layers_url": "data/scenarios/tno_1962/special_zone_layers.json",

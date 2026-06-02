@@ -1585,8 +1585,11 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "water_type": "sea",
         "region_group": "marine_macro",
         "is_chokepoint": False,
-        "global_source_id": "marine_irish_sea",
-        "source_standard": "tno_cloned_from_global_water_regions",
+        "source_layer": "seavox_v19",
+        "source_query": "mrgid_l3='23731' OR mrgid_l4='23739' OR mrgid_sr='24210' OR mrgid_sr='24214'",
+        "source_standard": "marine_regions_seavox_v19",
+        "snapshot_simplify_tolerance": 0.002,
+        "exclude_base_ids": ("marine_irish_sea",),
         "subtract_named_ids": (
             "tno_north_channel",
             "tno_st_georges_channel",
