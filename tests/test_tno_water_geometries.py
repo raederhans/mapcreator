@@ -637,6 +637,23 @@ def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
             "coordinates": [[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 0.0]]],
         },
     }
+    standard_clone_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_standard_clone",
+            "name": "Fixture Standard Clone",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "tno_cloned_from_global_water_regions",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [float(point_index), 4.0]
+                for point_index in range(120)
+            ]],
+        },
+    }
     detailed_macro_feature = {
         "type": "Feature",
         "properties": {
@@ -648,7 +665,27 @@ def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
         },
         "geometry": {
             "type": "Polygon",
-            "coordinates": [[[2.0, 0.0], [3.0, 0.0], [3.0, 1.0], [2.0, 0.0]]],
+            "coordinates": [[
+                [float(point_index), 2.0]
+                for point_index in range(122)
+            ]],
+        },
+    }
+    detailed_clone_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_detailed_clone",
+            "name": "Fixture Detailed Clone",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "tno_cloned_from_global_water_regions",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [float(point_index), 5.0]
+                for point_index in range(121)
+            ]],
         },
     }
     detail_feature = {
@@ -666,23 +703,197 @@ def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
             "coordinates": [[[2.0, 0.0], [2.5, 0.0], [2.5, 0.5], [2.0, 0.0]]],
         },
     }
+    clone_detail_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_detailed_clone_detail",
+            "name": "Fixture Detailed Clone Detail",
+            "region_group": "marine_detail",
+            "parent_id": "fixture_detailed_clone",
+            "water_type": "bay",
+            "source_standard": "marine_regions_seavox_v19",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[5.0, 0.0], [5.5, 0.0], [5.5, 0.5], [5.0, 0.0]]],
+        },
+    }
+    support_macro_features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "id": f"fixture_support_macro_{index}",
+                "name": f"Fixture Support Macro {index}",
+                "region_group": "marine_macro",
+                "water_type": "sea",
+                "source_standard": "marine_regions_seavox_v19",
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [float(point_index), float(index)]
+                    for point_index in range(130 + index)
+                ]],
+            },
+        }
+        for index in range(10)
+    ]
     report = build_family_refinement_report(
-        {"type": "FeatureCollection", "features": [macro_feature, detailed_macro_feature, detail_feature]},
+        {
+            "type": "FeatureCollection",
+            "features": [
+                macro_feature,
+                standard_clone_feature,
+                detailed_macro_feature,
+                detailed_clone_feature,
+                detail_feature,
+                clone_detail_feature,
+                *support_macro_features,
+            ],
+        },
+        provenance_payload={
+            "water_extracts": [{
+                "id": "fixture_detailed_macro",
+                "source_layer": "iho",
+                "source_query": "mrgid=fixture",
+                "source_record_ids": ["mrgid:fixture"],
+                "source_feature_count": 1,
+            }, *[
+                {
+                    "id": feature["properties"]["id"],
+                    "source_layer": "seavox_v19",
+                    "source_query": f"fixture={feature['properties']['id']}",
+                    "source_record_ids": [feature["properties"]["id"]],
+                    "source_feature_count": 1,
+                }
+                for feature in support_macro_features
+            ]],
+            "local_clone_extracts": [{
+                "id": "fixture_macro",
+                "source_water_region_id": "fixture_global_macro",
+                "source_water_region_name": "Fixture Global Macro",
+                "source_feature_count": 1,
+            }, {
+                "id": "fixture_standard_clone",
+                "source_water_region_id": "fixture_standard_clone_global",
+                "source_water_region_name": "Fixture Standard Clone Global",
+                "source_feature_count": 1,
+            }, {
+                "id": "fixture_detailed_clone",
+                "source_water_region_id": "fixture_detailed_clone_global",
+                "source_water_region_name": "Fixture Detailed Clone Global",
+                "source_feature_count": 1,
+            }],
+        },
         generated_at="2026-06-01T00:00:00Z",
     )
 
-    assert report["contract"]["schema_version"] == 2
-    assert report["summary"]["marine_macro_count"] == 2
-    assert report["summary"]["marine_macro_with_children_count"] == 1
+    assert report["contract"]["schema_version"] == 3
+    assert report["contract"]["high_vertex_review_percentile"] == 0.90
+    assert report["summary"]["marine_macro_count"] == 14
+    assert report["summary"]["marine_macro_with_children_count"] == 2
+    assert report["summary"]["marine_macro_without_children_count"] == 12
     assert report["summary"]["low_precision_candidate_count"] == 1
+    assert report["summary"]["source_replacement_candidate_count"] == 3
+    assert report["summary"]["backlog_candidate_count"] == 12
+    assert report["summary"]["provenance_gap_count"] == 0
+    assert report["summary"]["source_summary"] == {"local_clone": 3, "other": 1, "marine_regions": 10}
     candidate = report["low_precision_candidates"][0]
     assert candidate["id"] == "fixture_macro"
     assert candidate["vertex_count"] == 4
+    assert candidate["precision_band"] == "low"
+    assert candidate["source_family"] == "local_clone"
+    assert candidate["provenance_status"] == "recorded"
     assert candidate["suggested_priority"] == "high"
+    assert candidate["recommended_action"] == "replace_or_refine_with_public_source"
     assert "uses global water clone source" in candidate["reasons"]
+    assert {item["id"] for item in report["source_replacement_candidates"]} == {
+        "fixture_macro",
+        "fixture_standard_clone",
+        "fixture_detailed_clone",
+    }
+    assert {item["id"] for item in report["low_precision_candidates"]} == {"fixture_macro"}
+    standard_clone_row = next(row for row in report["source_replacement_candidates"] if row["id"] == "fixture_standard_clone")
+    assert standard_clone_row["precision_band"] == "standard"
+    assert standard_clone_row["source_family"] == "local_clone"
     detailed_row = next(row for row in report["families"] if row["id"] == "fixture_detailed_macro")
     assert detailed_row["child_count"] == 1
     assert detailed_row["children"][0]["vertex_count"] == 4
+    assert detailed_row["provenance_status"] == "recorded"
+
+
+def test_tno_water_family_refinement_audit_reports_high_precision_review_candidates():
+    def make_macro(index, vertex_count):
+        return {
+            "type": "Feature",
+            "properties": {
+                "id": f"fixture_macro_{index}",
+                "name": f"Fixture Macro {index:02d}",
+                "region_group": "marine_macro",
+                "water_type": "sea",
+                "source_standard": "marine_regions_seavox_v19",
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [float(point_index), float(index)]
+                    for point_index in range(vertex_count)
+                ]],
+            },
+        }
+
+    features = [
+        make_macro(index, vertex_count)
+        for index, vertex_count in enumerate([100, 101, 102, 103, 104, 105, 106, 107, 108, 130, 140], start=1)
+    ]
+    features.append({
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_macro_11_detail",
+            "name": "Fixture Macro 11 Detail",
+            "region_group": "marine_detail",
+            "parent_id": "fixture_macro_11",
+            "water_type": "bay",
+            "source_standard": "marine_regions_seavox_v19",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[0.0, 11.0], [1.0, 11.0], [1.0, 12.0], [0.0, 11.0]]],
+        },
+    })
+    provenance_payload = {
+        "water_extracts": [
+            {
+                "id": feature["properties"]["id"],
+                "source_layer": "seavox_v19",
+                "source_query": f"fixture={feature['properties']['id']}",
+                "source_record_ids": [feature["properties"]["id"]],
+                "source_feature_count": 1,
+            }
+            for feature in features
+        ],
+    }
+
+    report = build_family_refinement_report(
+        {"type": "FeatureCollection", "features": features},
+        provenance_payload=provenance_payload,
+        generated_at="2026-06-01T00:00:00Z",
+    )
+
+    assert report["contract"]["high_vertex_review_threshold"] == 130
+    assert report["summary"]["high_precision_split_candidate_count"] == 1
+    assert report["summary"]["simplification_review_candidate_count"] == 1
+    assert report["summary"]["precision_summary"]["high_review"] == 2
+    assert [item["id"] for item in report["high_precision_split_candidates"]] == [
+        "fixture_macro_10",
+    ]
+    assert report["high_precision_split_candidates"][0]["recommended_action"] == "split_child_water_candidates"
+    assert "high-detail macro still needs child water split review" in report["high_precision_split_candidates"][0]["reasons"]
+    assert [item["id"] for item in report["simplification_review_candidates"]] == [
+        "fixture_macro_11",
+    ]
+    assert report["simplification_review_candidates"][0]["recommended_action"] == "monitor_simplification_only_if_performance_requires"
+    assert "high-detail macro already has child water coverage" in report["simplification_review_candidates"][0]["reasons"]
 
 
 def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():
