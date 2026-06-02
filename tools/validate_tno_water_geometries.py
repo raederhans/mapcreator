@@ -51,6 +51,9 @@ OCEAN_REFINEMENT_PHASE_TARGET_IDS = {
         "tno_great_australian_bight",
         "tno_mozambique_channel",
     ),
+    "phase6_european_source_replacement": (
+        "tno_north_sea",
+    ),
 }
 OCEAN_REFINEMENT_TARGET_IDS = tuple(
     sorted({feature_id for ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.values() for feature_id in ids})
