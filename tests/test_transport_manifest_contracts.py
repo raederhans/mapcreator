@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from map_builder.transport_carrier_registry import CARRIER_RUNTIME_ASSETS, PACK_CARRIER_ASSET_KEYS
+from map_builder.transport_carrier_registry import CARRIER_EXTENSION_METADATA, CARRIER_RUNTIME_ASSETS, PACK_CARRIER_ASSET_KEYS
 from map_builder.transport_workbench_contracts import validate_transport_manifest
 from tools.check_transport_workbench_manifests import discover_manifest_paths, inspect_transport_manifests
 
@@ -323,10 +323,23 @@ class TransportManifestContractsTest(unittest.TestCase):
                 failures.append(f"{pack_id}: carrier_asset_key")
             if carrier_extension.get("carrier_asset_key") != expected_asset_key:
                 failures.append(f"{pack_id}: extensions.carrier.carrier_asset_key")
+            expected_extension = CARRIER_EXTENSION_METADATA[expected_asset_key]
+            for field_name, expected_value in expected_extension.items():
+                if carrier_extension.get(field_name) != expected_value:
+                    failures.append(f"{pack_id}: extensions.carrier.{field_name}")
             if expected_asset_key not in runtime_assets:
                 failures.append(f"{pack_id}: runtime asset {expected_asset_key}")
 
         self.assertFalse(failures, failures)
+
+    def test_russia_carrier_keeps_kaliningrad_and_excludes_foreign_admin_codes(self) -> None:
+        provenance_path = PROJECT_ROOT / "data" / "transport_layers" / "russia_carrier" / "provenance.json"
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+        codes = provenance["frames"]["main"]["prefectureCodes"]
+        foreign_codes = [code for code in codes if not str(code).startswith("RU-")]
+
+        self.assertIn("RU-KGD", codes)
+        self.assertFalse(foreign_codes, foreign_codes)
 
     def test_carrier_manifest_is_valid_under_shared_contract(self) -> None:
         manifest_paths = [PROJECT_ROOT / "data" / "transport_layers" / "japan_corridor" / "manifest.json"]

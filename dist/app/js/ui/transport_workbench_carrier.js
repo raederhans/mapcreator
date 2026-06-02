@@ -33,6 +33,7 @@ let rotationQuarterTurns = DEFAULT_ROTATION_QUARTER_TURNS;
 let sceneBaseBounds = null;
 let viewChangeListener = null;
 let activeAssetKey = DEFAULT_ASSET_KEY;
+let ensureGeneration = 0;
 
 const overlayRoots = {
   land: { main: null },
@@ -53,11 +54,16 @@ function resolveCarrierAssetKey(assetKey) {
 }
 
 function resolveCarrierAssetKeyFromManifest(manifest) {
-  return resolveCarrierAssetKey(
+  const manifestAssetKey = String(
     manifest?.carrier_asset_key
       || manifest?.extensions?.carrier?.carrier_asset_key
-      || DEFAULT_ASSET_KEY
-  );
+      || ""
+  ).trim();
+  if (!manifestAssetKey) {
+    const packId = String(manifest?.pack_id || manifest?.adapter_id || "unknown").trim() || "unknown";
+    throw new Error(`Transport workbench manifest ${packId} is missing carrier_asset_key.`);
+  }
+  return resolveCarrierAssetKey(manifestAssetKey);
 }
 
 function loadAsset(assetKey = DEFAULT_ASSET_KEY) {
@@ -673,6 +679,8 @@ export async function ensureTransportWorkbenchCarrier(nextMountNode, options = {
   }
   if (!mountNode) return null;
   const resolvedAssetKey = resolveCarrierAssetKey(options.assetKey);
+  const currentEnsureGeneration = ensureGeneration + 1;
+  ensureGeneration = currentEnsureGeneration;
   if (activeAssetKey !== resolvedAssetKey) {
     activeAssetKey = resolvedAssetKey;
     asset = null;
@@ -680,7 +688,11 @@ export async function ensureTransportWorkbenchCarrier(nextMountNode, options = {
   }
   mountNode.dataset.transportFamily = activeFamily;
   mountNode.dataset.transportCarrierAssetKey = activeAssetKey;
-  asset = await loadAsset(activeAssetKey);
+  const loadedAsset = await loadAsset(resolvedAssetKey);
+  if (currentEnsureGeneration !== ensureGeneration || activeAssetKey !== resolvedAssetKey) {
+    return null;
+  }
+  asset = loadedAsset;
   mountNode.dataset.transportCarrierCountry = String(asset?.country || asset?.carrier_id || "");
   if (!svgNode) {
     const built = buildCarrierSvg(asset);

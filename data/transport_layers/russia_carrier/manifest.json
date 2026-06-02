@@ -5,7 +5,7 @@
   "geometry_kind": "carrier",
   "country": "russia",
   "schema_version": 1,
-  "generated_at": "2026-06-02T01:48:34.562569Z",
+  "generated_at": "2026-06-02T13:13:37.390816Z",
   "recipe_path": "tools/build_transport_country_carriers.py",
   "distribution_tier": "single_pack",
   "paths": {

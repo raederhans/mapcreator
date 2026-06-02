@@ -80,8 +80,9 @@
   "extensions": {
     "carrier": {
       "carrier_asset_key": "transport_carrier:india",
-      "scope_policy": "pack country carrier",
-      "projection_profile": "india"
+      "scope_policy": "India admin1 preview scope follows Natural Earth polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 state carrier."
     }
   }
 }

@@ -94,8 +94,9 @@
   "extensions": {
     "carrier": {
       "carrier_asset_key": "transport_carrier:usa",
-      "scope_policy": "pack country carrier",
-      "projection_profile": "usa"
+      "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+      "projection_profile": "geoConicEqualArea",
+      "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames."
     }
   }
 }

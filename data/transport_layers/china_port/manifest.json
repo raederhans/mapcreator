@@ -80,8 +80,9 @@
   "extensions": {
     "carrier": {
       "carrier_asset_key": "transport_carrier:china",
-      "scope_policy": "pack country carrier",
-      "projection_profile": "china"
+      "scope_policy": "Admin1 preview scope follows Natural Earth CHN polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 provincial carrier."
     }
   }
 }

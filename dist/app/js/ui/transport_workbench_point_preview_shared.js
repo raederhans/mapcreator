@@ -366,9 +366,11 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     lastRenderedConfig: null,
     activePackId: "",
     activeManifestUrl: definition.manifestUrl,
+    loadGeneration: 0,
   };
 
   function resetLoadStateForActivePack() {
+    runtime.loadGeneration += 1;
     runtime.manifestPromise = null;
     runtime.auditPromise = null;
     runtime.subtypeCatalogPromise = null;
@@ -400,13 +402,21 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     runtime.activeManifestUrl = normalizedManifestUrl;
     resetLoadStateForActivePack();
   }
+  function isLoadGenerationCurrent(loadGeneration) {
+    return loadGeneration === runtime.loadGeneration;
+  }
+
   async function loadManifest() {
     if (!runtime.manifestPromise) {
-      runtime.manifestPromise = getTransportAsset(runtime.activeManifestUrl || definition.manifestUrl, {
+      const loadGeneration = runtime.loadGeneration;
+      const manifestUrl = runtime.activeManifestUrl || definition.manifestUrl;
+      const activePackId = runtime.activePackId || "default";
+      runtime.manifestPromise = getTransportAsset(manifestUrl, {
         cachePolicy: "no-cache",
-        label: `transport-manifest:${definition.familyId}:${runtime.activePackId || "default"}`,
+        label: `transport-manifest:${definition.familyId}:${activePackId}`,
       })
         .then(async (manifest) => {
+          if (!isLoadGenerationCurrent(loadGeneration)) return null;
           if (!manifest) {
             runtime.loadState.status = "pending";
             runtime.loadState.previewStatus = "pending";
@@ -418,6 +428,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
           return manifest;
         })
         .catch((error) => {
+          if (!isLoadGenerationCurrent(loadGeneration)) return null;
           if (Number(error?.httpStatus || 0) === 404) {
             runtime.loadState.status = "pending";
             runtime.loadState.previewStatus = "pending";
@@ -436,16 +447,19 @@ export function createTransportWorkbenchPointPreviewController(definition) {
 
   function startAuditLoad(manifest) {
     if (!manifest?.paths?.build_audit || runtime.loadState.audit || runtime.auditPromise) return runtime.auditPromise;
+    const loadGeneration = runtime.loadGeneration;
     runtime.auditPromise = getTransportAsset(manifest.paths.build_audit, {
       cachePolicy: "no-cache",
       label: `transport-audit:${definition.familyId}`,
     })
       .then((audit) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         runtime.loadState.audit = audit;
         emitSelectionChange();
         return audit;
       })
       .catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         console.warn(`[transport-workbench] Failed to load ${definition.familyId} audit.`, error);
         return null;
       });
@@ -456,16 +470,19 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     if (!manifest?.paths?.subtype_catalog || runtime.loadState.subtypeCatalog || runtime.subtypeCatalogPromise) {
       return runtime.subtypeCatalogPromise;
     }
+    const loadGeneration = runtime.loadGeneration;
     runtime.subtypeCatalogPromise = getTransportAsset(manifest.paths.subtype_catalog, {
       cachePolicy: "no-cache",
       label: `transport-subtype-catalog:${definition.familyId}`,
     })
       .then((subtypeCatalog) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         runtime.loadState.subtypeCatalog = Array.isArray(subtypeCatalog) ? subtypeCatalog : null;
         emitSelectionChange();
         return runtime.loadState.subtypeCatalog;
       })
       .catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         console.warn(`[transport-workbench] Failed to load ${definition.familyId} subtype catalog.`, error);
         return null;
       });
@@ -473,6 +490,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
   }
 
   async function loadPack(mode = PACK_MODE_PREVIEW, config = {}) {
+    const loadGeneration = runtime.loadGeneration;
     const isPreview = mode === PACK_MODE_PREVIEW;
     if (isPreview) {
       runtime.loadState.status = "loading";
@@ -482,6 +500,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
       runtime.loadState.fullStatus = "loading";
     }
     const manifest = await loadManifest();
+    if (!isLoadGenerationCurrent(loadGeneration)) return null;
     if (!manifest) {
       runtime.activeVariantId = null;
       runtime.loadState.singlePack = false;
@@ -496,6 +515,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     startAuditLoad(manifest);
     startSubtypeCatalogLoad(manifest);
     await ensureTransportWorkbenchCarrierForManifest(manifest);
+    if (!isLoadGenerationCurrent(loadGeneration)) return null;
     const variantId = resolveVariantId(manifest, definition, config);
     const cacheKey = getPackCacheKey(mode, variantId);
     runtime.loadState.singlePack = isSinglePackPath(manifest, definition.packKey, definition, variantId);
@@ -517,6 +537,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
         if (runtime.packPaths.get(aliasCacheKey) && runtime.packPaths.get(aliasCacheKey) === packPath) {
           if (runtime.projectedPacks.has(aliasCacheKey)) {
             const aliasPack = runtime.projectedPacks.get(aliasCacheKey);
+            if (!isLoadGenerationCurrent(loadGeneration)) return null;
             runtime.projectedPacks.set(cacheKey, aliasPack);
             if (isPreview) {
               runtime.loadState.status = "ready";
@@ -528,6 +549,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
           }
           if (runtime.packPromises.has(aliasCacheKey)) {
             const aliasPack = await runtime.packPromises.get(aliasCacheKey);
+            if (!isLoadGenerationCurrent(loadGeneration)) return null;
             runtime.projectedPacks.set(cacheKey, aliasPack);
             if (isPreview) {
               runtime.loadState.status = "ready";
@@ -563,6 +585,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
           features,
           featureById: new Map(features.map((feature) => [feature.id, feature])),
         };
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         runtime.projectedPacks.set(cacheKey, pack);
         if (isPreview) {
           runtime.loadState.status = "ready";
@@ -572,6 +595,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
         }
         return pack;
       })().catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         runtime.packPromises.delete(cacheKey);
         runtime.projectedPacks.delete(cacheKey);
         if (mode === PACK_MODE_PREVIEW) {
@@ -595,7 +619,6 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     if (config?.activePackId && typeof definition.resolveManifestUrl === "function") {
       setActivePack(config.activePackId, definition.resolveManifestUrl(config.activePackId));
     }
-    ensureRootGroups(runtime);
     runtime.lastRenderedConfig = { ...(config || {}) };
     runtime.renderedConfigSignature = "";
     const scale = getCurrentScale();
@@ -612,6 +635,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     }
     runtime.activePackMode = targetMode;
     runtime.activeVariantId = String(pack.variantId || "").trim() || null;
+    ensureRootGroups(runtime);
     if (runtime.selectedFeature && !pack.featureById.has(runtime.selectedFeature.id)) {
       runtime.selectedFeature = null;
     }

@@ -100,8 +100,9 @@
   "extensions": {
     "carrier": {
       "carrier_asset_key": "transport_carrier:uk",
-      "scope_policy": "pack country carrier",
-      "projection_profile": "uk"
+      "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography."
     }
   }
 }

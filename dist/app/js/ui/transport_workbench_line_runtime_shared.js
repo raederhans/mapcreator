@@ -51,10 +51,12 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
     renderStats: { ...(definition.initialRenderStats || {}) },
     activePackId: "",
     activeManifestUrl: definition.manifestUrl,
+    loadGeneration: 0,
   };
   const fetchOptions = definition.fetchOptions || { cache: "no-cache" };
 
   function resetLoadStateForActivePack() {
+    runtime.loadGeneration += 1;
     runtime.manifestPromise = null;
     runtime.auditPromise = null;
     runtime.packPromises = {
@@ -82,14 +84,22 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
     resetLoadStateForActivePack();
   }
 
+  function isLoadGenerationCurrent(loadGeneration) {
+    return loadGeneration === runtime.loadGeneration;
+  }
+
   async function loadManifest() {
     if (!runtime.manifestPromise) {
+      const loadGeneration = runtime.loadGeneration;
+      const manifestUrl = runtime.activeManifestUrl || definition.manifestUrl;
+      const activePackId = runtime.activePackId || "default";
       runtime.manifestPromise = (async () => {
         definition.ensureClient?.();
-        const manifest = await getTransportAsset(runtime.activeManifestUrl || definition.manifestUrl, {
+        const manifest = await getTransportAsset(manifestUrl, {
           cachePolicy: fetchOptions.cache,
-          label: `transport-manifest:${definition.familyId}:${runtime.activePackId || "default"}`,
+          label: `transport-manifest:${definition.familyId}:${activePackId}`,
         });
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         if (!manifest) {
           runtime.loadState.status = "pending";
           runtime.loadState.previewStatus = "pending";
@@ -100,6 +110,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
         runtime.loadState.manifest = manifest;
         return manifest;
       })().catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         if (Number(error?.httpStatus || 0) === 404 && definition.allowPendingManifest) {
           runtime.loadState.status = "pending";
           runtime.loadState.previewStatus = "pending";
@@ -118,16 +129,19 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
 
   function startAuditLoad(manifest, onAuditReady) {
     if (!manifest?.paths?.build_audit || runtime.loadState.audit || runtime.auditPromise) return runtime.auditPromise;
+    const loadGeneration = runtime.loadGeneration;
     runtime.auditPromise = getTransportAsset(manifest.paths.build_audit, {
       cachePolicy: fetchOptions.cache,
       label: `transport-audit:${definition.familyId}`,
     })
       .then((audit) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         runtime.loadState.audit = audit;
         onAuditReady?.(audit);
         return audit;
       })
       .catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         console.warn(`[transport-workbench] Failed to load ${definition.familyId} audit.`, error);
         return null;
       });
@@ -137,6 +151,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
   async function loadPack(mode = PACK_MODE_PREVIEW, onAuditReady) {
     if (runtime.projectedPacks[mode]) return runtime.projectedPacks[mode];
     if (!runtime.packPromises[mode]) {
+      const loadGeneration = runtime.loadGeneration;
       runtime.packPromises[mode] = (async () => {
         const isPreview = mode === PACK_MODE_PREVIEW;
         if (isPreview) {
@@ -147,6 +162,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
           runtime.loadState.fullStatus = "loading";
         }
         const manifest = await loadManifest();
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         if (!manifest) {
           if (isPreview) {
             runtime.loadState.status = "pending";
@@ -158,6 +174,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
         }
         startAuditLoad(manifest, onAuditReady);
         await definition.prepareCarrier?.(manifest);
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         const pack = await definition.buildPack({
           mode,
           manifest,
@@ -169,6 +186,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
             label: overrides.label || `transport-pack:${definition.familyId}:${mode}`,
           }),
         });
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         runtime.projectedPacks[mode] = pack;
         if (isPreview) {
           runtime.loadState.status = "ready";
@@ -179,6 +197,7 @@ export function createTransportWorkbenchLinePackRuntime(definition) {
         }
         return pack;
       })().catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         if (mode === PACK_MODE_PREVIEW) {
           runtime.loadState.status = "error";
           runtime.loadState.previewStatus = "error";

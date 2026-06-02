@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-02T01:48:34.562569Z",
+  "generatedAt": "2026-06-02T13:13:37.390816Z",
   "carrierId": "russia",
   "source": "data/ne_10m_admin_1_states_provinces.shp",
   "sourceKind": "Natural Earth 10m admin1",
@@ -84,10 +84,8 @@
         "RU-SAR",
         "RU-AST",
         "RU-VGG",
-        "UA-43",
         "RU-MAG",
         "RU-SAK",
-        "UA-40",
         "RU-CHU",
         "RU-YAN",
         "RU-NEN",
@@ -135,7 +133,7 @@
         "RU-STA",
         "RU-AD"
       ],
-      "featureCount": 86
+      "featureCount": 84
     }
   },
   "scopePolicy": "Russia admin1 preview includes Kaliningrad as part of the national carrier."

@@ -80,8 +80,9 @@
   "extensions": {
     "carrier": {
       "carrier_asset_key": "transport_carrier:russia",
-      "scope_policy": "pack country carrier",
-      "projection_profile": "russia"
+      "scope_policy": "Russia admin1 preview includes Kaliningrad as part of the national carrier.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 federal subject carrier."
     }
   }
 }

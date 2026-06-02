@@ -91,8 +91,9 @@
   "extensions": {
     "carrier": {
       "carrier_asset_key": "transport_carrier:japan_corridor",
-      "scope_policy": "pack country carrier",
-      "projection_profile": "japan_corridor"
+      "scope_policy": "Japan main corridor preview excludes Okinawa per existing workbench carrier.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 prefecture carrier."
     }
   }
 }

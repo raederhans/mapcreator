@@ -1,6 +1,6 @@
 # Data Catalog
 
-- generated_at: 2026-06-02T01:48:37.729280Z
+- generated_at: 2026-06-02T13:13:40.686297Z
 - version: 1
 - entries: 480
 

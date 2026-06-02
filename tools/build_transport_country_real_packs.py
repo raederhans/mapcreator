@@ -28,7 +28,10 @@ from map_builder.transport_country_real_source_contracts import (  # noqa: E402
     build_source_recipe,
     check_country_sources,
 )
-from map_builder.transport_carrier_registry import resolve_pack_carrier_asset_key  # noqa: E402
+from map_builder.transport_carrier_registry import (  # noqa: E402
+    resolve_pack_carrier_asset_key,
+    resolve_pack_carrier_extension,
+)
 from map_builder.transport_workbench_contracts import finalize_transport_manifest  # noqa: E402
 
 OUTPUT_ROOT = PROJECT_ROOT / "data" / "transport_layers"
@@ -225,7 +228,7 @@ def write_pack(
         manifest,
         default_variant="default",
         variants={"default": {"label": "default", "distribution_tier": "single_pack", "paths": paths, "feature_counts": counts}},
-        extension={"carrier_asset_key": carrier_asset_key} if carrier_asset_key else None,
+        extension=resolve_pack_carrier_extension(pack_id) if carrier_asset_key else None,
     )
     write_json(output_dir / "manifest.json", manifest)
     print(f"[build] {pack_id}: {counts}")

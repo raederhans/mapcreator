@@ -19,8 +19,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from map_builder.transport_carrier_registry import (  # noqa: E402
+    CARRIER_EXTENSION_METADATA,
     CARRIER_RUNTIME_ASSETS,
     PACK_CARRIER_ASSET_KEYS,
+    resolve_pack_carrier_extension,
 )
 from map_builder.transport_workbench_contracts import finalize_transport_manifest  # noqa: E402
 
@@ -41,6 +43,7 @@ class FrameSpec:
     label: str
     extent: dict[str, float]
     include_codes: tuple[str, ...] | None = None
+    code_prefixes: tuple[str, ...] | None = None
     clip_bounds: tuple[float, float, float, float] | None = None
 
 
@@ -160,7 +163,7 @@ SPECS = {
         adm0_a3="RUS",
         label="Russia carrier",
         projection={"type": "geoConicConformal", "center": [95.0, 61.0], "parallels": [50.0, 70.0], "precision": 0.2},
-        frames={"main": FrameSpec(label="Russia with Kaliningrad", extent={"x": 18, "y": 18, "width": 1564, "height": 864})},
+        frames={"main": FrameSpec(label="Russia with Kaliningrad", extent={"x": 18, "y": 18, "width": 1564, "height": 864}, code_prefixes=("RU-",))},
         scope_policy="Russia admin1 preview includes Kaliningrad as part of the national carrier.",
         basemap_profile="Natural Earth admin1 federal subject carrier.",
         default_camera={"scale": 1.0, "translateX": 0.0, "translateY": 0.0, "minScale": 1.0, "maxScale": 3.4, "rotationQuarterTurns": 0},
@@ -301,6 +304,8 @@ def select_frame_features(source: gpd.GeoDataFrame, spec: CarrierSpec, frame: Fr
     selected = source[source["adm0_a3"] == spec.adm0_a3].copy()
     if frame.include_codes:
         selected = selected[selected["iso_3166_2"].isin(frame.include_codes)].copy()
+    if frame.code_prefixes:
+        selected = selected[selected["iso_3166_2"].str.startswith(frame.code_prefixes)].copy()
     if frame.clip_bounds:
         clip_box = box(*frame.clip_bounds)
         selected["geometry"] = selected.geometry.intersection(clip_box)
@@ -426,9 +431,7 @@ def build_carrier(spec: CarrierSpec, source: gpd.GeoDataFrame) -> None:
         extension={
             "carrier_source_kind": "natural_earth_admin1",
             "carrier_asset_key": f"transport_carrier:{spec.carrier_id}",
-            "scope_policy": spec.scope_policy,
-            "projection_profile": spec.projection["type"],
-            "basemap_profile": spec.basemap_profile,
+            **CARRIER_EXTENSION_METADATA[f"transport_carrier:{spec.carrier_id}"],
         },
     )
     write_json(carrier_path, carrier_payload, compact=True)
@@ -445,9 +448,7 @@ def update_pack_manifest(path: Path) -> bool:
         return False
     payload["carrier_asset_key"] = carrier_asset_key
     carrier_extension = payload.setdefault("extensions", {}).setdefault("carrier", {})
-    carrier_extension["carrier_asset_key"] = carrier_asset_key
-    carrier_extension.setdefault("scope_policy", "pack country carrier")
-    carrier_extension.setdefault("projection_profile", carrier_asset_key.removeprefix("transport_carrier:"))
+    carrier_extension.update(resolve_pack_carrier_extension(pack_id))
     write_json(path, payload)
     return True
 
@@ -491,6 +492,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-

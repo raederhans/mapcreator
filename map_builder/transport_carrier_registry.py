@@ -66,6 +66,60 @@ CARRIER_RUNTIME_ASSETS: Final[dict[str, str]] = {
 }
 
 
+CARRIER_EXTENSION_METADATA: Final[dict[str, dict[str, str]]] = {
+    JAPAN_CARRIER_ASSET_KEY: {
+        "scope_policy": "Japan main corridor preview excludes Okinawa per existing workbench carrier.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 prefecture carrier.",
+    },
+    "transport_carrier:china": {
+        "scope_policy": "Admin1 preview scope follows Natural Earth CHN polygons used by checked-in data.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 provincial carrier.",
+    },
+    "transport_carrier:france": {
+        "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe.",
+    },
+    "transport_carrier:germany": {
+        "scope_policy": "Germany national mainland and islands represented by Natural Earth admin1.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 Länder carrier.",
+    },
+    "transport_carrier:india": {
+        "scope_policy": "India admin1 preview scope follows Natural Earth polygons used by checked-in data.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 state carrier.",
+    },
+    "transport_carrier:russia": {
+        "scope_policy": "Russia admin1 preview includes Kaliningrad as part of the national carrier.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 federal subject carrier.",
+    },
+    "transport_carrier:uk": {
+        "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography.",
+    },
+    "transport_carrier:usa": {
+        "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+        "projection_profile": "geoConicEqualArea",
+        "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames.",
+    },
+}
+
+
 def resolve_pack_carrier_asset_key(pack_id: str) -> str:
     normalized_pack_id = str(pack_id or "").strip()
     return PACK_CARRIER_ASSET_KEYS.get(normalized_pack_id, "")
+
+
+def resolve_pack_carrier_extension(pack_id: str) -> dict[str, str]:
+    carrier_asset_key = resolve_pack_carrier_asset_key(pack_id)
+    if not carrier_asset_key:
+        return {}
+    return {
+        "carrier_asset_key": carrier_asset_key,
+        **CARRIER_EXTENSION_METADATA.get(carrier_asset_key, {}),
+    }

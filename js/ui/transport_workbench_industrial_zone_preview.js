@@ -1,5 +1,6 @@
 import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
+  ensureTransportWorkbenchCarrierForManifest,
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
   projectTransportWorkbenchCarrierGeometry,
@@ -150,7 +151,7 @@ function collectGeometryBounds(geometry) {
 
 function createPolygonFeature(rawFeature, variantId) {
   const properties = rawFeature?.properties || {};
-  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature?.geometry, "main");
+  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature?.geometry);
   if (!projected?.geometry) return null;
   const pathData = buildPolygonPath(projected.geometry);
   if (!pathData) return null;
@@ -484,6 +485,7 @@ const runtime = {
   activePackId: "",
   activeManifestUrl: DEFAULT_MANIFEST_URL,
   activeVariantId: null,
+  loadGeneration: 0,
   rootGroup: null,
   labelsGroup: null,
   selectedFeature: null,
@@ -500,13 +502,21 @@ const runtime = {
   lastRenderedConfig: null,
 };
 
+function isLoadGenerationCurrent(loadGeneration) {
+  return loadGeneration === runtime.loadGeneration;
+}
+
 async function loadManifest() {
   if (!runtime.manifestPromise) {
-    runtime.manifestPromise = getTransportAsset(runtime.activeManifestUrl || DEFAULT_MANIFEST_URL, {
+    const loadGeneration = runtime.loadGeneration;
+    const manifestUrl = runtime.activeManifestUrl || DEFAULT_MANIFEST_URL;
+    const activePackId = runtime.activePackId || "default";
+    runtime.manifestPromise = getTransportAsset(manifestUrl, {
       cachePolicy: "no-cache",
-      label: `transport-manifest:industrial_zones:${runtime.activePackId || "default"}`,
+      label: `transport-manifest:industrial_zones:${activePackId}`,
     })
       .then(async (manifest) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         if (!manifest) {
           runtime.loadState.status = "pending";
           runtime.loadState.previewStatus = "pending";
@@ -518,6 +528,7 @@ async function loadManifest() {
         return manifest;
       })
       .catch((error) => {
+        if (!isLoadGenerationCurrent(loadGeneration)) return null;
         if (Number(error?.httpStatus || 0) === 404) {
           runtime.loadState.status = "pending";
           runtime.loadState.previewStatus = "pending";
@@ -540,6 +551,7 @@ function setActivePack(packId = "", manifestUrl = "") {
   if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
   runtime.activePackId = normalizedPackId;
   runtime.activeManifestUrl = normalizedManifestUrl;
+  runtime.loadGeneration += 1;
   runtime.manifestPromise = null;
   runtime.auditPromise = null;
   runtime.packPromises.clear();
@@ -551,16 +563,19 @@ function setActivePack(packId = "", manifestUrl = "") {
 
 function startAuditLoad(manifest) {
   if (!manifest?.paths?.build_audit || runtime.loadState.audit || runtime.auditPromise) return runtime.auditPromise;
+  const loadGeneration = runtime.loadGeneration;
   runtime.auditPromise = getTransportAsset(manifest.paths.build_audit, {
     cachePolicy: "no-cache",
     label: "transport-audit:industrial_zones",
   })
     .then((audit) => {
+      if (!isLoadGenerationCurrent(loadGeneration)) return null;
       runtime.loadState.audit = audit;
       runtime.selectionChangeListener?.(buildSnapshot(runtime));
       return audit;
     })
     .catch((error) => {
+      if (!isLoadGenerationCurrent(loadGeneration)) return null;
       console.warn("[transport-workbench] Failed to load industrial_zones audit.", error);
       return null;
     });
@@ -572,6 +587,7 @@ function getPackCacheKey(variantId, mode) {
 }
 
 async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
+  const loadGeneration = runtime.loadGeneration;
   const cacheKey = getPackCacheKey(variantId, mode);
   if (runtime.projectedPacks.has(cacheKey)) return runtime.projectedPacks.get(cacheKey);
   if (!runtime.packPromises.has(cacheKey)) {
@@ -585,6 +601,7 @@ async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
         runtime.loadState.fullStatus = "loading";
       }
       const manifest = await loadManifest();
+      if (!isLoadGenerationCurrent(loadGeneration)) return null;
       if (!manifest) {
         if (isPreview) {
           runtime.loadState.status = "pending";
@@ -595,6 +612,8 @@ async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
         return null;
       }
       startAuditLoad(manifest);
+      await ensureTransportWorkbenchCarrierForManifest(manifest);
+      if (!isLoadGenerationCurrent(loadGeneration)) return null;
       const packPath = getPackPath(manifest, variantId, mode);
       if (!packPath) {
         throw new Error(`Missing industrial_zones pack path for ${variantId}/${mode}.`);
@@ -622,6 +641,7 @@ async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
         features,
         featureById: new Map(features.map((feature) => [feature.id, feature])),
       };
+      if (!isLoadGenerationCurrent(loadGeneration)) return null;
       runtime.projectedPacks.set(cacheKey, pack);
       if (isPreview) {
         runtime.loadState.status = "ready";
@@ -631,6 +651,7 @@ async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
       }
       return pack;
     })().catch((error) => {
+      if (!isLoadGenerationCurrent(loadGeneration)) return null;
       runtime.packPromises.delete(cacheKey);
       runtime.projectedPacks.delete(cacheKey);
       if (mode === PACK_MODE_PREVIEW) {
@@ -658,10 +679,11 @@ export async function renderJapanIndustrialZonePreview(config = {}) {
   if (config?.activePackId) {
     setActivePack(config.activePackId, resolveTransportManifestUrl(config.activePackId));
   }
-  ensureRootGroups(runtime);
+  const renderGeneration = runtime.loadGeneration;
   runtime.lastRenderedConfig = { ...(config || {}) };
   runtime.renderedConfigSignature = "";
   const manifest = await loadManifest();
+  if (!isLoadGenerationCurrent(renderGeneration)) return null;
   if (!manifest) {
     clearGroups(runtime);
     runtime.activeVariantId = null;
@@ -675,6 +697,7 @@ export async function renderJapanIndustrialZonePreview(config = {}) {
   const variantId = resolveVariantId(manifest, config);
   const targetMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
   const pack = await loadPack(variantId, targetMode);
+  if (!isLoadGenerationCurrent(renderGeneration)) return null;
   if (!pack) {
     clearGroups(runtime);
     runtime.activeVariantId = variantId;
@@ -686,6 +709,7 @@ export async function renderJapanIndustrialZonePreview(config = {}) {
 
   runtime.activeVariantId = variantId;
   runtime.activePackMode = targetMode;
+  ensureRootGroups(runtime);
   if (runtime.selectedFeature && runtime.selectedFeature.variant !== variantId) {
     runtime.selectedFeature = null;
   }

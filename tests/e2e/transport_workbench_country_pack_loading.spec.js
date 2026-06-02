@@ -5,6 +5,7 @@ const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
 
 const TARGET_PACKS = [
   ["road", "germany_road", "germany"],
+  ["industrial_zones", "germany_industrial_zones", "germany"],
   ["road", "usa_road", "usa"],
   ["rail", "france_rail", "france"],
   ["airport", "usa_airport", "usa"],
@@ -128,12 +129,23 @@ async function selectPackAndWaitForPreview(page, familyId, packId, expectedCarri
         if (carrierState.country !== expectedCarrierCountry) {
           throw new Error(`Carrier country mismatch for ${nextPackId}: ${JSON.stringify(carrierState)}`);
         }
+        const domSelectorsByFamily = {
+          road: ".transport-workbench-road-preview-roads [data-road-id], .transport-workbench-road-preview-labels [data-label-id]",
+          rail: ".transport-workbench-rail-preview-lines [data-rail-line-id], .transport-workbench-rail-preview-stations [data-rail-station-id]",
+          industrial_zones: ".transport-workbench-industrial-zones-preview-layer [data-feature-id], .transport-workbench-industrial-zones-preview-label-layer [data-feature-id]",
+        };
+        const defaultSelector = `.transport-workbench-${nextFamilyId}-preview-layer [data-feature-id], .transport-workbench-${nextFamilyId}-preview-label-layer [data-feature-id]`;
+        const visibleDomNodes = document.querySelectorAll(domSelectorsByFamily[nextFamilyId] || defaultSelector).length;
+        if (visibleDomNodes <= 0) {
+          throw new Error(`Preview DOM did not render feature nodes for ${nextPackId}: ${JSON.stringify(snapshot)}`);
+        }
         return {
           familyId: nextFamilyId,
           packId: nextPackId,
           status: snapshot.status,
           totalFeatures: featureStats.total,
           visibleFeatures: featureStats.visible,
+          visibleDomNodes,
           carrierCountry: carrierState.country,
           carrierAssetKey: carrierState.assetKey,
           activeVariant: snapshot.activeVariant || "",
@@ -173,6 +185,7 @@ test("transport workbench switches target country packs with matching carriers",
     expect(result.status, `${result.packId} preview status`).toBe("ready");
     expect(result.totalFeatures, `${result.packId} total features`).toBeGreaterThan(0);
     expect(result.visibleFeatures, `${result.packId} visible features`).toBeGreaterThan(0);
+    expect(result.visibleDomNodes, `${result.packId} visible DOM nodes`).toBeGreaterThan(0);
     expect(result.carrierCountry, `${result.packId} carrier country`).toBe(
       TARGET_PACKS.find(([, packId]) => packId === result.packId)?.[2],
     );
