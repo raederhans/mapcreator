@@ -1134,8 +1134,10 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "water_type": "sea",
         "region_group": "marine_macro",
         "is_chokepoint": False,
-        "global_source_id": "marine_baltic_sea",
-        "source_standard": "tno_cloned_from_global_water_regions",
+        "source_layer": "iho",
+        "source_query": "mrgid=2401",
+        "source_standard": "marine_regions_iho_v3",
+        "snapshot_simplify_tolerance": 0.008,
         "subtract_named_ids": (
             "tno_kattegat",
             "tno_gulf_of_riga",

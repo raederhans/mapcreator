@@ -827,6 +827,30 @@ class TnoBundleBuilderTest(unittest.TestCase):
             ),
         )
 
+    def test_tno_baltic_sea_source_spec_keeps_child_seams_closed(self) -> None:
+        baltic_sea_spec = next(
+            spec for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+            if spec["id"] == "tno_baltic_sea"
+        )
+
+        self.assertEqual(baltic_sea_spec["source_layer"], "iho")
+        self.assertEqual(baltic_sea_spec["source_query"], "mrgid=2401")
+        self.assertEqual(baltic_sea_spec["snapshot_simplify_tolerance"], 0.008)
+        self.assertEqual(
+            baltic_sea_spec["subtract_named_ids"],
+            (
+                "tno_kattegat",
+                "tno_gulf_of_riga",
+                "tno_bothnian_sea",
+                "tno_bay_of_bothnia",
+                "tno_gulf_of_finland",
+                "tno_central_baltic_sea",
+                "tno_the_sound",
+                "tno_storebaelt",
+                "tno_lillebaelt",
+            ),
+        )
+
     def test_tno_arctic_open_ocean_split_boundary_matches_barents_regression(self) -> None:
         arctic_spec = next(
             spec for spec in tno_bundle.TNO_OPEN_OCEAN_SPLIT_SPECS

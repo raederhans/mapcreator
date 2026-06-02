@@ -159,6 +159,13 @@ TRACKED_SEAM_PAIRS = [
     ("tno_irish_sea", "tno_st_brides_bay"),
     ("tno_baltic_sea", "tno_kattegat"),
     ("tno_baltic_sea", "tno_the_sound"),
+    ("tno_baltic_sea", "tno_storebaelt"),
+    ("tno_baltic_sea", "tno_lillebaelt"),
+    ("tno_baltic_sea", "tno_central_baltic_sea"),
+    ("tno_baltic_sea", "tno_gulf_of_riga"),
+    ("tno_baltic_sea", "tno_gulf_of_finland"),
+    ("tno_baltic_sea", "tno_bothnian_sea"),
+    # Bay of Bothnia is separated from the Baltic parent remnant by Bothnian Sea.
     ("tno_north_sea", "tno_wadden_sea"),
     ("tno_north_sea", "tno_thames_estuary"),
     ("tno_north_sea", "tno_blackwater_estuary"),
