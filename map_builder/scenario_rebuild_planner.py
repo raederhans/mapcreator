@@ -30,6 +30,7 @@ CHANGED_DOMAIN_CHOICES = (
 
 STAGE_COUNTRIES = "countries"
 STAGE_WATER_STATE = "water_state"
+STAGE_WATER_RUNTIME_FROM_SCENARIO = "water_runtime_from_scenario"
 STAGE_RUNTIME_TOPOLOGY = "runtime_topology"
 STAGE_GEO_LOCALE = "geo_locale"
 STAGE_STARTUP_SUPPORT_ASSETS = "startup_support_assets"
@@ -69,11 +70,7 @@ def resolve_tno_rebuild_plan(changed_domain: str) -> TnoRebuildPlan:
         CHANGED_DOMAIN_WATER: TnoRebuildPlan(
             changed_domain=normalized,
             stage_sequence=(
-                STAGE_WATER_STATE,
-                STAGE_RUNTIME_TOPOLOGY,
-                STAGE_GEO_LOCALE,
-                STAGE_STARTUP_SUPPORT_ASSETS,
-                STAGE_STARTUP_BUNDLE_ASSETS,
+                STAGE_WATER_RUNTIME_FROM_SCENARIO,
                 STAGE_WRITE_BUNDLE,
                 STAGE_CHUNK_ASSETS,
             ),
@@ -198,6 +195,15 @@ def compute_tno_stage_signature_payload(
                 Path(hgo_root) / "map" / "provinces.bmp",
                 Path(hgo_root) / "map" / "definition.csv",
             ]) if hgo_root else []),
+        ],
+        STAGE_WATER_RUNTIME_FROM_SCENARIO: [
+            scenario_dir / "water_regions.geojson",
+            scenario_dir / "runtime_topology.topo.json",
+            scenario_dir / "runtime_topology.bootstrap.topo.json",
+            scenario_dir / "derived" / "marine_regions_named_waters.snapshot.geojson",
+            scenario_dir / "derived" / "water_regions.provenance.json",
+            scenario_dir / "manifest.json",
+            ROOT / "tools" / "patch_tno_1962_bundle.py",
         ],
         STAGE_RUNTIME_TOPOLOGY: [
             checkpoint_dir / "countries.json",

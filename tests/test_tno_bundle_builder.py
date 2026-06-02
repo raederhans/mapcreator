@@ -2769,8 +2769,10 @@ class TnoBundleBuilderTest(unittest.TestCase):
         self.assertIn("startup_assets", descriptors)
         self.assertIn("chunk_assets", descriptors)
         self.assertIn("water_state", descriptors)
+        self.assertIn("water_runtime_from_scenario", descriptors)
         self.assertEqual(descriptors["geo_locale"].outputs, ("geo locale checkpoint variants",))
         self.assertEqual(descriptors["water_state"].outputs, ("water state checkpoint artifacts",))
+        self.assertEqual(descriptors["water_runtime_from_scenario"].outputs, ("water runtime checkpoint artifacts",))
         self.assertEqual(descriptors["startup_assets"].outputs, ("startup bootstrap topology", "startup bundles"))
         self.assertEqual(descriptors["chunk_assets"].outputs, ("published scenario chunk assets",))
 
@@ -2999,12 +3001,9 @@ class TnoBundleBuilderTest(unittest.TestCase):
                         kwargs["validate_publish_checkpoint_dir"],
                         tno_bundle.validate_tno_prechunk_publish_checkpoint_dir,
                     )
-                if stage == tno_bundle.STAGE_RUNTIME_TOPOLOGY:
+                if stage == tno_bundle.STAGE_WATER_RUNTIME_FROM_SCENARIO:
                     return {"runtime_topology_payload": {"objects": {}}}
                 return None
-
-            def fake_rebuild_maps(*_args, **_kwargs):
-                events.append("rebuild_maps")
 
             def fake_checkpoint_chunks(*_args, **_kwargs):
                 events.append("checkpoint_chunks")
@@ -3020,7 +3019,6 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 patch.object(
                     tno_bundle,
                     "rebuild_water_domain_feature_maps_from_validated_scenario",
-                    side_effect=fake_rebuild_maps,
                 ) as rebuild_maps_mock,
                 patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
                 patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", side_effect=fake_repair) as repair_mock,
@@ -3036,11 +3034,10 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 )
 
             self.assertEqual(events[-3:], ["stage:chunk_assets", "safe_repair", "safe_repair"])
-            self.assertLess(events.index("stage:runtime_topology"), events.index("rebuild_maps"))
-            self.assertLess(events.index("rebuild_maps"), events.index("checkpoint_chunks"))
+            self.assertLess(events.index("stage:water_runtime_from_scenario"), events.index("checkpoint_chunks"))
             self.assertLess(events.index("checkpoint_chunks"), events.index("stage:write_bundle"))
             self.assertLess(events.index("stage:write_bundle"), events.index("stage:chunk_assets"))
-            rebuild_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
+            rebuild_maps_mock.assert_not_called()
             self.assertEqual(repair_mock.call_count, 2)
             self.assertEqual(result["safe_fixes_applied"], ["build_snapshot"])
 
@@ -3057,9 +3054,6 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 events.append(f"stage:{stage}")
                 return None
 
-            def fake_rebuild_maps(*_args, **_kwargs):
-                events.append("rebuild_maps")
-
             def fake_checkpoint_chunks(*_args, **_kwargs):
                 events.append("checkpoint_chunks")
 
@@ -3070,7 +3064,6 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 patch.object(
                     tno_bundle,
                     "rebuild_water_domain_feature_maps_from_validated_scenario",
-                    side_effect=fake_rebuild_maps,
                 ) as rebuild_maps_mock,
                 patch.object(tno_bundle, "build_checkpoint_chunk_assets", side_effect=fake_checkpoint_chunks),
                 patch.object(tno_bundle, "apply_safe_scenario_contract_repairs", return_value=[]),
@@ -3085,9 +3078,151 @@ class TnoBundleBuilderTest(unittest.TestCase):
                     refresh_named_water_snapshot=False,
                 )
 
+            rebuild_maps_mock.assert_not_called()
+            self.assertEqual(events, ["checkpoint_chunks", "stage:write_bundle"])
+
+    def test_water_runtime_from_scenario_stage_uses_checked_in_water_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = root / "scenario"
+            checkpoint_dir = root / "checkpoint"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            def write_json(path: Path, payload: object) -> None:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+            water_payload = {
+                "type": "FeatureCollection",
+                "features": [{
+                    "type": "Feature",
+                    "properties": {
+                        "id": "fixture_checked_in_water",
+                        "name": "Fixture Checked-In Water",
+                        "region_group": "marine_detail",
+                        "water_type": "bay",
+                    },
+                    "geometry": mapping(_square(0.0, 0.0)),
+                }],
+            }
+            runtime_payload = {
+                "type": "Topology",
+                "objects": {
+                    "scenario_water": {
+                        "type": "GeometryCollection",
+                        "geometries": [{
+                            "type": "Polygon",
+                            "properties": {"id": "stale_water"},
+                            "arcs": [],
+                        }],
+                    },
+                    "political": {"type": "GeometryCollection", "geometries": []},
+                },
+                "arcs": [],
+            }
+            write_json(scenario_dir / "water_regions.geojson", water_payload)
+            write_json(scenario_dir / "runtime_topology.topo.json", runtime_payload)
+            write_json(scenario_dir / "runtime_topology.bootstrap.topo.json", runtime_payload)
+            write_json(scenario_dir / "manifest.json", {"summary": {"feature_count": 0}})
+
+            def fake_chunk_assets(path: Path) -> None:
+                write_json(path / "detail_chunks.manifest.json", {"chunks": []})
+                (path / "chunks").mkdir(parents=True, exist_ok=True)
+
+            events: list[str] = []
+
+            with (
+                patch.object(tno_bundle, "validate_runtime_topology_water_outputs", return_value={"ok": True}) as validate_mock,
+                patch.object(
+                    tno_bundle,
+                    "rebuild_water_domain_feature_maps_from_validated_scenario",
+                    side_effect=lambda *_args, **_kwargs: events.append("rebuild_maps"),
+                ) as rebuild_maps_mock,
+                patch.object(tno_bundle, "record_runtime_topology_stage_signature", return_value=None),
+                patch.object(
+                    tno_bundle,
+                    "build_checkpoint_chunk_assets",
+                    side_effect=lambda path: (events.append("chunks"), fake_chunk_assets(path)),
+                ) as chunks_mock,
+                patch.object(
+                    tno_bundle,
+                    "sync_checkpoint_audit_summary_from_manifest",
+                    side_effect=lambda path: events.append("sync_audit"),
+                ) as sync_audit_mock,
+                patch.object(tno_bundle, "validate_tno_prechunk_publish_checkpoint_dir", return_value=[]) as validate_publish_mock,
+            ):
+                state = tno_bundle.build_water_runtime_from_scenario_stage(scenario_dir, checkpoint_dir)
+
+            checkpoint_water = json.loads((checkpoint_dir / "water_regions.geojson").read_text(encoding="utf-8"))
+            checkpoint_runtime = json.loads((checkpoint_dir / "runtime_topology.topo.json").read_text(encoding="utf-8"))
+            water_ids = {
+                feature["properties"]["id"]
+                for feature in checkpoint_water["features"]
+            }
+            runtime_water_ids = {
+                geometry["properties"]["id"]
+                for geometry in checkpoint_runtime["objects"]["scenario_water"]["geometries"]
+            }
+            self.assertEqual(water_ids, {"fixture_checked_in_water"})
+            self.assertEqual(runtime_water_ids, water_ids)
+            self.assertEqual(state["water_feature_count"], 1)
+            self.assertEqual(events, ["rebuild_maps", "chunks", "sync_audit"])
+            validate_mock.assert_called_once()
             rebuild_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
-            self.assertLess(events.index("rebuild_maps"), events.index("checkpoint_chunks"))
-            self.assertEqual(events, ["rebuild_maps", "checkpoint_chunks", "stage:write_bundle"])
+            chunks_mock.assert_called_once_with(checkpoint_dir)
+            sync_audit_mock.assert_called_once_with(checkpoint_dir)
+            validate_publish_mock.assert_called_once_with(checkpoint_dir)
+
+    def test_sync_checkpoint_audit_summary_from_manifest_keeps_checkpoint_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            checkpoint_dir = Path(tmp_dir)
+            manifest_payload = {
+                "scenario_id": "tno_1962",
+                "generated_at": "2026-06-02T00:00:00Z",
+                "summary": {"feature_count": 130, "water_feature_count": 130},
+            }
+            audit_payload = {
+                "scenario_id": "stale",
+                "generated_at": "stale",
+                "summary": {"feature_count": 1},
+                "checks": [{"id": "kept"}],
+            }
+            (checkpoint_dir / "manifest.json").write_text(
+                json.dumps(manifest_payload),
+                encoding="utf-8",
+            )
+            (checkpoint_dir / "audit.json").write_text(
+                json.dumps(audit_payload),
+                encoding="utf-8",
+            )
+
+            tno_bundle.sync_checkpoint_audit_summary_from_manifest(checkpoint_dir)
+
+            synced_audit = json.loads((checkpoint_dir / "audit.json").read_text(encoding="utf-8"))
+            self.assertEqual(synced_audit["scenario_id"], "tno_1962")
+            self.assertEqual(synced_audit["generated_at"], "2026-06-02T00:00:00Z")
+            self.assertEqual(synced_audit["summary"], manifest_payload["summary"])
+            self.assertEqual(synced_audit["checks"], [{"id": "kept"}])
+
+    def test_water_runtime_from_scenario_stage_requires_shared_checkpoint_surface(self) -> None:
+        checkpoint_dir = Path("/tmp/checkpoint")
+        required = {
+            str(path.relative_to(checkpoint_dir)).replace("\\", "/")
+            for path in tno_bundle._stage_required_paths(
+                tno_bundle.STAGE_WATER_RUNTIME_FROM_SCENARIO,
+                scenario_dir=Path("/tmp/scenario"),
+                checkpoint_dir=checkpoint_dir,
+            )
+        }
+        expected = {
+            *tno_bundle.resolve_publish_filenames(tno_bundle.PUBLISH_SCOPE_ALL),
+            "controllers.by_feature.json",
+            "detail_chunks.manifest.json",
+            "chunks",
+        }
+
+        self.assertEqual(required, expected)
 
     def test_d3_orientation_flags_are_registered_on_source_orientation_owner(self) -> None:
         flagged_ids = {

@@ -380,6 +380,13 @@ SCENARIO_BUNDLE_STAGE_DESCRIPTORS: tuple[StageDescriptor, ...] = (
         failure_surface=("water geometry validation failure", "named-water snapshot drift"),
     ),
     StageDescriptor(
+        name="water_runtime_from_scenario",
+        owner="tools/patch_tno_1962_bundle.py",
+        inputs=("checked-in water regions", "checked-in runtime topology"),
+        outputs=("water runtime checkpoint artifacts",),
+        failure_surface=("published water/runtime divergence", "chunk asset regeneration failure"),
+    ),
+    StageDescriptor(
         name="runtime_topology",
         owner="tools/patch_tno_1962_bundle.py",
         inputs=("countries stage checkpoints", "water state checkpoints"),

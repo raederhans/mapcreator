@@ -23,11 +23,7 @@ class ScenarioRebuildPlannerTest(unittest.TestCase):
         self.assertEqual(
             plan.stage_sequence,
             (
-                "water_state",
-                "runtime_topology",
-                "geo_locale",
-                "startup_support_assets",
-                "startup_bundle_assets",
+                "water_runtime_from_scenario",
                 "write_bundle",
                 "chunk_assets",
             ),

@@ -355,6 +355,27 @@ def ensure_runtime_topology_checkpoints(
 ) -> None:
     countries_stage_required = [artifact.filename for artifact in SCENARIO_COUNTRIES_STAGE_ARTIFACTS]
     water_stage_required = [artifact.filename for artifact in SCENARIO_WATER_STAGE_ARTIFACTS]
+    runtime_publish_ready_required = [
+        artifact.filename
+        for artifact in SCENARIO_COUNTRIES_STAGE_ARTIFACTS
+        if artifact.state_key in {
+            "countries_payload",
+            "owners_payload",
+            "cores_payload",
+            "manifest_payload",
+            "audit_payload",
+        }
+    ]
+    runtime_publish_ready_required.extend(
+        artifact.filename
+        for artifact in (
+            *SCENARIO_RUNTIME_STAGE_EXTRA_ARTIFACTS,
+            *SCENARIO_OPTIONAL_RUNTIME_STAGE_ARTIFACTS,
+        )
+    )
+    if all_checkpoint_files_exist(checkpoint_dir, runtime_publish_ready_required):
+        return
+
     required = [
         *countries_stage_required,
         *water_stage_required,

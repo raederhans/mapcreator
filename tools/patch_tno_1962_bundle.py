@@ -126,6 +126,7 @@ TNO_ARCTIC_SHELL_SIMPLIFY_TOLERANCE = 0.01
 STAGE_ALL = "all"
 STAGE_COUNTRIES = "countries"
 STAGE_WATER_STATE = "water_state"
+STAGE_WATER_RUNTIME_FROM_SCENARIO = "water_runtime_from_scenario"
 STAGE_RUNTIME_TOPOLOGY = "runtime_topology"
 STAGE_GEO_LOCALE = "geo_locale"
 STAGE_STARTUP_SUPPORT_ASSETS = "startup_support_assets"
@@ -144,6 +145,7 @@ STAGE_CHOICES = [
     STAGE_ALL,
     STAGE_COUNTRIES,
     STAGE_WATER_STATE,
+    STAGE_WATER_RUNTIME_FROM_SCENARIO,
     STAGE_RUNTIME_TOPOLOGY,
     STAGE_GEO_LOCALE,
     STAGE_STARTUP_SUPPORT_ASSETS,
@@ -355,7 +357,7 @@ def _build_stage_signature_entry(
     tno_root: Path | None = None,
     hgo_root: Path | None = None,
 ) -> dict[str, object]:
-    if stage in {STAGE_WATER_STATE, STAGE_RUNTIME_TOPOLOGY}:
+    if stage == STAGE_WATER_STATE:
         tno_root = Path(tno_root).resolve() if tno_root is not None else resolve_tno_root()
         hgo_root = Path(hgo_root).resolve() if hgo_root is not None else resolve_hgo_root()
     payload = compute_tno_stage_signature_payload(
@@ -382,8 +384,8 @@ def _stage_signature_is_current(
 ) -> bool:
     if stage == STAGE_WATER_STATE and refresh_named_water_snapshot:
         return False
-    resolved_tno_root = resolve_tno_root() if stage in {STAGE_WATER_STATE, STAGE_RUNTIME_TOPOLOGY} else None
-    resolved_hgo_root = resolve_hgo_root() if stage in {STAGE_WATER_STATE, STAGE_RUNTIME_TOPOLOGY} else None
+    resolved_tno_root = resolve_tno_root() if stage == STAGE_WATER_STATE else None
+    resolved_hgo_root = resolve_hgo_root() if stage == STAGE_WATER_STATE else None
     entry = _build_stage_signature_entry(
         stage,
         scenario_dir=scenario_dir,
@@ -5896,6 +5898,113 @@ def rebuild_published_scenario_chunk_assets(scenario_dir: Path, checkpoint_dir: 
         default_startup_topology_url=DEFAULT_STARTUP_TOPOLOGY_URL,
     )
     write_json_atomic(manifest_path, manifest_payload, ensure_ascii=False, indent=2, trailing_newline=True)
+
+
+def _copy_existing_scenario_files_to_checkpoint(
+    scenario_dir: Path,
+    checkpoint_dir: Path,
+    filenames: tuple[str, ...],
+) -> None:
+    for filename in filenames:
+        source_path = scenario_dir / filename
+        if not source_path.exists():
+            continue
+        target_path = checkpoint_dir / filename
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, target_path)
+
+
+def rebuild_checkpoint_water_runtime_from_scenario(scenario_dir: Path, checkpoint_dir: Path) -> dict:
+    """Rebuild checkpoint water runtime artifacts from checked-in scenario water.
+
+    This path is intentionally scoped to the already validated published
+    `water_regions.geojson` surface. It lets narrow public-source water edits
+    refresh runtime/chunk inputs without invoking the full ocean generator.
+    """
+
+    source_water_payload = load_json(scenario_dir / "water_regions.geojson")
+    source_water_payload = orient_source_water_features_for_d3(source_water_payload)
+    water_gdf = geopandas_from_features(source_water_payload.get("features", []) or [])
+    checkpoint_water_payload = gdf_to_feature_collection(water_gdf)
+    runtime_topology_payload = load_json(scenario_dir / CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME)
+    replace_topology_object_from_gdf_for_d3(runtime_topology_payload, "scenario_water", water_gdf)
+    compact_topology_arcs(runtime_topology_payload)
+    named_water_snapshot_path = scenario_dir / MARINE_REGIONS_NAMED_WATER_SNAPSHOT_FILENAME
+    named_water_snapshot_payload = (
+        load_json(named_water_snapshot_path)
+        if named_water_snapshot_path.exists()
+        else feature_collection_from_features([])
+    )
+    validate_runtime_topology_water_outputs(
+        runtime_topology_payload,
+        checkpoint_water_payload,
+        named_water_snapshot_payload,
+    )
+    write_checkpoint_json(checkpoint_dir, CHECKPOINT_WATER_FILENAME, checkpoint_water_payload)
+    write_checkpoint_json(checkpoint_dir, CHECKPOINT_SCENARIO_WATER_SEED_FILENAME, checkpoint_water_payload)
+    write_checkpoint_json(checkpoint_dir, CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME, runtime_topology_payload)
+    write_checkpoint_json(
+        checkpoint_dir,
+        CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME,
+        build_bootstrap_runtime_topology(runtime_topology_payload),
+    )
+    return {
+        "water_feature_count": len(checkpoint_water_payload.get("features", []) or []),
+        "runtime_topology_payload": runtime_topology_payload,
+    }
+
+
+def sync_checkpoint_audit_summary_from_manifest(checkpoint_dir: Path) -> None:
+    manifest_payload = load_checkpoint_json(checkpoint_dir, "manifest.json")
+    audit_payload = load_checkpoint_json(checkpoint_dir, "audit.json")
+    audit_payload["scenario_id"] = str(manifest_payload.get("scenario_id") or SCENARIO_ID).strip()
+    audit_payload["generated_at"] = str(manifest_payload.get("generated_at") or "").strip()
+    audit_payload["summary"] = copy.deepcopy(
+        manifest_payload.get("summary") if isinstance(manifest_payload.get("summary"), dict) else {}
+    )
+    write_checkpoint_json(checkpoint_dir, "audit.json", audit_payload)
+
+
+def build_water_runtime_from_scenario_stage(scenario_dir: Path, checkpoint_dir: Path) -> dict:
+    with _scenario_build_session_lock(scenario_dir):
+        with _checkpoint_build_lock(checkpoint_dir, stage=STAGE_WATER_RUNTIME_FROM_SCENARIO):
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            _copy_existing_scenario_files_to_checkpoint(
+                scenario_dir,
+                checkpoint_dir,
+                (
+                    *resolve_publish_filenames(PUBLISH_SCOPE_ALL),
+                    "controllers.by_feature.json",
+                ),
+            )
+            state = rebuild_checkpoint_water_runtime_from_scenario(scenario_dir, checkpoint_dir)
+            rebuild_water_domain_feature_maps_from_validated_scenario(scenario_dir, checkpoint_dir)
+            record_runtime_topology_stage_signature(scenario_dir, checkpoint_dir)
+            build_checkpoint_chunk_assets(checkpoint_dir)
+            sync_checkpoint_audit_summary_from_manifest(checkpoint_dir)
+            errors = validate_tno_prechunk_publish_checkpoint_dir(checkpoint_dir)
+            if errors:
+                raise ValueError(
+                    "Water runtime-from-scenario checkpoint failed validation:\n- "
+                    + "\n- ".join(errors)
+                )
+            _record_checkpoint_stage_outputs(
+                checkpoint_dir,
+                scenario_dir=scenario_dir,
+                stage=STAGE_WATER_RUNTIME_FROM_SCENARIO,
+                filenames=[
+                    *resolve_publish_filenames(PUBLISH_SCOPE_ALL),
+                    "controllers.by_feature.json",
+                    "detail_chunks.manifest.json",
+                    "chunks",
+                ],
+                stage_signature=_build_stage_signature_entry(
+                    STAGE_WATER_RUNTIME_FROM_SCENARIO,
+                    scenario_dir=scenario_dir,
+                    checkpoint_dir=checkpoint_dir,
+                ),
+            )
+            return state
 
 
 def collect_marine_regions_source_record_ids(source_layer: str, features: list[dict]) -> list[str]:
@@ -12837,6 +12946,12 @@ def _stage_required_paths(stage: str, *, scenario_dir: Path, checkpoint_dir: Pat
             checkpoint_dir / artifact.filename
             for artifact in scenario_bundle_platform.SCENARIO_WATER_STAGE_ARTIFACTS
         ],
+        STAGE_WATER_RUNTIME_FROM_SCENARIO: [
+            *(checkpoint_dir / filename for filename in resolve_publish_filenames(PUBLISH_SCOPE_ALL)),
+            checkpoint_dir / "controllers.by_feature.json",
+            checkpoint_dir / "detail_chunks.manifest.json",
+            checkpoint_dir / "chunks",
+        ],
         STAGE_RUNTIME_TOPOLOGY: [
             checkpoint_dir / artifact.filename
             for artifact in (
@@ -12899,6 +13014,8 @@ def _run_single_stage(
         )
         write_water_stage_checkpoints(state, checkpoint_dir, scenario_dir=scenario_dir)
         return None
+    if stage == STAGE_WATER_RUNTIME_FROM_SCENARIO:
+        return build_water_runtime_from_scenario_stage(scenario_dir, checkpoint_dir)
     if stage == STAGE_RUNTIME_TOPOLOGY:
         ensure_water_stage_checkpoints(
             scenario_dir,
@@ -12999,9 +13116,9 @@ def _run_changed_domain_plan(
             refresh_named_water_snapshot=refresh_named_water_snapshot,
             validate_publish_checkpoint_dir=validate_publish_checkpoint_dir,
         )
-        if isinstance(result, dict) and stage == STAGE_RUNTIME_TOPOLOGY:
+        if isinstance(result, dict) and stage in {STAGE_RUNTIME_TOPOLOGY, STAGE_WATER_RUNTIME_FROM_SCENARIO}:
             latest_runtime_state = result
-            if changed_domain == CHANGED_DOMAIN_WATER:
+            if changed_domain == CHANGED_DOMAIN_WATER and stage == STAGE_RUNTIME_TOPOLOGY:
                 rebuild_water_domain_feature_maps_from_validated_scenario(scenario_dir, checkpoint_dir)
                 record_runtime_topology_stage_signature(scenario_dir, checkpoint_dir)
         executed.append(stage)
@@ -13097,7 +13214,16 @@ def main() -> None:
             )
             runtime_state = plan_result.get("runtime_state")
             if isinstance(runtime_state, dict):
-                print_bundle_summary(runtime_state)
+                if {"runtime_water_regions", "owners_payload", "owner_baseline_hash"}.issubset(runtime_state):
+                    print_bundle_summary(runtime_state)
+                elif "water_feature_count" in runtime_state:
+                    print(
+                        "Rebuilt water runtime checkpoint from checked-in scenario data:",
+                        json.dumps(
+                            {"water_feature_count": runtime_state["water_feature_count"]},
+                            ensure_ascii=False,
+                        ),
+                    )
             print(
                 json.dumps(
                     {
@@ -13129,6 +13255,20 @@ def main() -> None:
                     refresh_named_water_snapshot=args.refresh_named_water_snapshot,
                 )
                 print(f"Updated water-state checkpoints in {checkpoint_dir}")
+                return
+
+            if args.stage == STAGE_WATER_RUNTIME_FROM_SCENARIO:
+                state = build_water_runtime_from_scenario_stage(scenario_dir, checkpoint_dir)
+                print(
+                    "Rebuilt water runtime checkpoint from checked-in scenario data:",
+                    json.dumps(
+                        {
+                            "checkpoint_dir": str(checkpoint_dir),
+                            "water_feature_count": state["water_feature_count"],
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
                 return
 
             if args.stage == STAGE_RUNTIME_TOPOLOGY:

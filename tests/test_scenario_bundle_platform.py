@@ -216,6 +216,44 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
             self.assertTrue((scenario_dir / "derived" / "water_regions.provenance.json").exists())
             self.assertFalse((scenario_dir / "controllers.by_feature.json").exists())
 
+    def test_ensure_runtime_topology_checkpoints_accepts_runtime_publish_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = root / "scenario"
+            checkpoint_dir = root / "checkpoint"
+            checkpoint_dir.mkdir()
+            for filename in (
+                "countries.json",
+                "owners.by_feature.json",
+                "cores.by_feature.json",
+                "manifest.json",
+                "audit.json",
+                "special_regions.geojson",
+                "special_zone_layers.json",
+                "water_regions.geojson",
+                "runtime_topology.topo.json",
+                "scenario_atlantropa.topo.json",
+                "scenario_atlantropa_metadata.json",
+            ):
+                _write_json(checkpoint_dir / filename, {"ok": True})
+
+            def fail_builder(*_args, **_kwargs):
+                self.fail("runtime-ready publish surface should not rebuild stage inputs")
+
+            scenario_bundle_platform.ensure_runtime_topology_checkpoints(
+                scenario_dir,
+                checkpoint_dir,
+                refresh_named_water_snapshot=False,
+                build_countries_stage_state=fail_builder,
+                build_water_stage_state=fail_builder,
+                build_runtime_topology_state=fail_builder,
+                load_countries_stage_checkpoints=fail_builder,
+                load_water_stage_checkpoints=fail_builder,
+                write_countries_stage_checkpoints=fail_builder,
+                write_water_stage_checkpoints=fail_builder,
+                write_runtime_topology_stage_checkpoints=fail_builder,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
