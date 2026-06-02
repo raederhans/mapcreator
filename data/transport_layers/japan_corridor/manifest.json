@@ -30,7 +30,8 @@
   },
   "extensions": {
     "carrier": {
-      "carrier_source_kind": "Natural Earth 10m admin1"
+      "carrier_source_kind": "Natural Earth 10m admin1",
+      "carrier_asset_key": "transport_carrier:japan_corridor"
     }
   }
 }

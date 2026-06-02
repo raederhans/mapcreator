@@ -352,6 +352,28 @@ class TransportManifestContractsTest(unittest.TestCase):
                 failures.extend(errors)
         self.assertFalse(failures, failures)
 
+    def test_carrier_manifests_declare_runtime_asset_key(self) -> None:
+        runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
+        runtime_assets = runtime_asset_registry.get("assets") or {}
+        expected_asset_keys = {
+            "japan_corridor": "transport_carrier:japan_corridor",
+            **{
+                Path(url).parent.name: asset_key
+                for asset_key, url in CARRIER_RUNTIME_ASSETS.items()
+            },
+        }
+        failures: list[str] = []
+        for carrier_dir, expected_asset_key in sorted(expected_asset_keys.items()):
+            manifest_path = PROJECT_ROOT / "data" / "transport_layers" / carrier_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            carrier_extension = manifest.get("extensions", {}).get("carrier", {})
+            if carrier_extension.get("carrier_asset_key") != expected_asset_key:
+                failures.append(f"{carrier_dir}: extensions.carrier.carrier_asset_key")
+            if expected_asset_key not in runtime_assets:
+                failures.append(f"{carrier_dir}: runtime asset {expected_asset_key}")
+
+        self.assertFalse(failures, failures)
+
     def test_carrier_runtime_asset_key_and_catalog_key_share_the_same_url(self) -> None:
         runtime_asset_registry = json.loads(RUNTIME_ASSET_REGISTRY.read_text(encoding="utf-8"))
         catalog_payload = json.loads(CATALOG_JSON.read_text(encoding="utf-8"))

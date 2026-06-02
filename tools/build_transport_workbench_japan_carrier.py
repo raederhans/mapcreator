@@ -335,7 +335,10 @@ def main() -> None:
                 "feature_counts": {},
             }
         },
-        extension={"carrier_source_kind": "natural_earth_admin1"},
+        extension={
+            "carrier_source_kind": "natural_earth_admin1",
+            "carrier_asset_key": "transport_carrier:japan_corridor",
+        },
     )
 
     CARRIER_PATH.write_text(json.dumps(carrier_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
