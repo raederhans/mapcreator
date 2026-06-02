@@ -6422,6 +6422,23 @@ body.counter-editor-modal-open {
   margin-top: 2px;
 }
 
+.right-sidebar-account-shelf {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: auto;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.right-sidebar-account-shelf .project-account-dock {
+  margin-top: 0;
+}
+
 .project-account-hint {
   font-size: 0.74rem;
   color: var(--text-muted);
@@ -6461,6 +6478,11 @@ body.counter-editor-modal-open {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+}
+
+.right-sidebar-account-shelf .project-account-popover {
+  margin-top: 0;
+  margin-bottom: 10px;
 }
 
 #scenarioAuditPanel {

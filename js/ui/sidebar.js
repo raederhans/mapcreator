@@ -1583,6 +1583,11 @@ function initSidebar({ render } = {}) {
     accountPopover.setAttribute("role", "dialog");
     accountPopover.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
 
+    const accountShelf = document.createElement("div");
+    accountShelf.id = "rightSidebarAccountShelf";
+    accountShelf.className = "right-sidebar-account-shelf";
+    accountShelf.append(accountPopover, accountDock);
+
     actions.appendChild(downloadBtn);
     actions.appendChild(projectDownloadOptions);
     actions.appendChild(uploadBtn);
@@ -1590,10 +1595,8 @@ function initSidebar({ render } = {}) {
     actions.appendChild(projectSaveStatus);
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);
-    actions.appendChild(accountDock);
 
     projectSection.appendChild(actions);
-    projectSection.appendChild(accountPopover);
     {
       const cloudSection = document.createElement("div");
       cloudSection.id = "backendCloudSection";
@@ -1687,6 +1690,7 @@ function initSidebar({ render } = {}) {
       accountPopover.appendChild(cloudSection);
     }
     projectManagementStack.appendChild(projectSection);
+    rightSidebarContent?.appendChild(accountShelf);
   }
 
   let legendSection = document.getElementById("legendEditor");
