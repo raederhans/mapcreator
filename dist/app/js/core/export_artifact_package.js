@@ -114,6 +114,7 @@ async function normalizeArtifactFiles(files = []) {
   return normalized;
 }
 
+// manifest 记录的是可审计的导出合同；zip 里的 payload path、checksum 和尺寸在这里一次性归一化。
 function buildExportArtifactManifest({
   artifactKind = "artifact",
   files = [],
@@ -148,6 +149,7 @@ async function buildExportArtifactPackage({
 } = {}) {
   const normalizedFiles = await normalizeArtifactFiles(files);
   const normalizedManifestPath = normalizeArtifactPath(manifestPath, "manifest.json");
+  // manifest 本身占用独立路径，防止 payload 覆盖审计入口。
   if (normalizedFiles.some((file) => file.path === normalizedManifestPath)) {
     throw new Error(`Artifact manifest path conflicts with payload file: ${normalizedManifestPath}`);
   }

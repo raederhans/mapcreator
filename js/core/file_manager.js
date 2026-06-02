@@ -20,7 +20,10 @@ import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import { clearDirty } from "./dirty_state.js";
 import { buildExportArtifactManifest } from "./export_artifact_package.js";
-import { strToU8, zipSync } from "../../vendor/fflate.browser.js";
+import {
+  buildProjectPackagePayload,
+  prepareProjectImportFile,
+} from "./project_package_io.js";
 import {
   normalizeSpecialZoneMembershipBrushModeState,
   normalizeSpecialZoneLayersState,
@@ -606,38 +609,15 @@ class FileManager {
     return true;
   }
 
-  static buildProjectDownloadPayload(payload, { format = "json" } = {}) {
+  static async buildProjectDownloadPayload(payload, { format = "json", packageContents = "recommended" } = {}) {
     const normalizedFormat = String(format || "json").trim().toLowerCase();
     const data = JSON.stringify(payload, null, 2);
     if (normalizedFormat === "zip") {
-      const manifest = buildExportArtifactManifest({
-        artifactKind: "project-zip",
-        generatedAt: new Date().toISOString(),
-        scenario: payload.scenario,
-        project: {
-          schemaVersion: payload.schemaVersion,
-          timestamp: payload.timestamp,
-        },
-        exportUi: payload.exportWorkbenchUi,
-        files: [{
-          path: "map_project.json",
-          role: "editable-project",
-          mime: "application/json",
-        }],
-      });
-      const zipBytes = zipSync({
-        "map_project.json": strToU8(data),
-        "map_project_manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
+      const projectPackage = await buildProjectPackagePayload(payload, {
+        contentPreset: packageContents,
       });
       return {
-        blob: new Blob([zipBytes], { type: "application/zip" }),
-        filename: "map_project.zip",
-        pickerTypes: [{
-          description: "Project ZIP package",
-          accept: {
-            "application/zip": [".zip"],
-          },
-        }],
+        ...projectPackage,
         label: "Project ZIP package downloaded.",
       };
     }
@@ -658,7 +638,7 @@ class FileManager {
     const payload = FileManager.buildProjectPayload(appState);
     if (!payload) return;
 
-    const download = FileManager.buildProjectDownloadPayload(payload, options);
+    const download = await FileManager.buildProjectDownloadPayload(payload, options);
     const wroteFile = await FileManager.writeBlobDownload(download.blob, download.filename, {
       ...options,
       pickerTypes: download.pickerTypes,
@@ -928,7 +908,19 @@ class FileManager {
       notifyObserver(notifyError, reader.error, "read-error");
     };
 
-    reader.readAsText(file);
+    prepareProjectImportFile(file)
+      .then(({ file: importFile }) => {
+        reader.readAsText(importFile);
+      })
+      .catch((error) => {
+        console.error("Failed to read project package:", error);
+        showToast(String(error?.message || t("Unable to read the selected file.", "ui")), {
+          title: t("Import failed", "ui"),
+          tone: "error",
+          duration: 4200,
+        });
+        notifyObserver(notifyError, error, "read-error");
+      });
   }
 }
 

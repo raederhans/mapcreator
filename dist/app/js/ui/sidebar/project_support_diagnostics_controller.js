@@ -15,7 +15,7 @@ import {
   registerBackendUser,
   reportCommunitySave,
 } from "../../api/backend_client.js";
-import { strFromU8, unzipSync } from "../../../vendor/fflate.browser.js";
+import { prepareProjectImportFile } from "../../core/project_package_io.js";
 
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
@@ -40,6 +40,7 @@ export function createProjectSupportDiagnosticsController({
     uploadProjectBtn,
     projectDownloadFormat,
     projectDownloadDestination,
+    projectPackageContents,
     projectLoadSource,
     projectFileInput,
     projectFileName,
@@ -194,35 +195,34 @@ export function createProjectSupportDiagnosticsController({
     setBackendCloudSessionState(backendCloudSessionMode);
   };
 
-  const fileLooksLikeZip = (file) => {
-    const name = String(file?.name || "").trim().toLowerCase();
-    const type = String(file?.type || "").trim().toLowerCase();
-    return name.endsWith(".zip") || type === "application/zip" || type === "application/x-zip-compressed";
+  const formatProjectPackagePreviewDetails = (preview) => {
+    if (!preview) return "";
+    const scenario = preview.scenario && typeof preview.scenario === "object"
+      ? String(preview.scenario.id || "").trim()
+      : "";
+    const project = preview.project && typeof preview.project === "object" ? preview.project : {};
+    const summary = preview.summary && typeof preview.summary === "object" ? preview.summary : {};
+    const generatedAt = String(preview.generatedAt || "").trim();
+    return [
+      `${t("Package", "ui")}: ${preview.filename}`,
+      `${t("Schema", "ui")}: ${project.schemaVersion || summary.schemaVersion || "-"}`,
+      `${t("Scenario", "ui")}: ${scenario || t("None", "ui")}`,
+      `${t("Entries", "ui")}: ${preview.entryCount || 0}`,
+      `${t("Export target", "ui")}: ${summary.exportTarget || "-"}`,
+      generatedAt ? `${t("Generated", "ui")}: ${generatedAt}` : "",
+    ].filter(Boolean).join("\n");
   };
 
-  const buildJsonProjectFile = (text, filename = "map_project.json") => {
-    const blob = new Blob([text], { type: "application/json" });
-    if (typeof File === "function") {
-      return new File([blob], filename, { type: "application/json" });
-    }
-    Object.defineProperty(blob, "name", {
-      value: filename,
-      configurable: true,
+  const confirmProjectPackagePreview = async (preview) => {
+    if (!preview) return true;
+    return showAppDialog({
+      title: t("Load Project Package", "ui"),
+      message: t("This ZIP contains an editable project. Review the package summary before loading.", "ui"),
+      details: formatProjectPackagePreviewDetails(preview),
+      confirmLabel: t("Load Package", "ui"),
+      cancelLabel: t("Cancel", "ui"),
+      tone: "info",
     });
-    return blob;
-  };
-
-  const resolveProjectImportFile = async (file) => {
-    if (!fileLooksLikeZip(file)) return file;
-    if (!file || typeof file.arrayBuffer !== "function") {
-      throw new Error(t("Project ZIP cannot be read by this browser.", "ui"));
-    }
-    const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
-    const projectBytes = entries["map_project.json"];
-    if (!projectBytes) {
-      throw new Error(t("Project ZIP must include map_project.json.", "ui"));
-    }
-    return buildJsonProjectFile(strFromU8(projectBytes), "map_project.json");
   };
 
   const resolveLatestCloudSaveId = async () => {
@@ -408,6 +408,13 @@ export function createProjectSupportDiagnosticsController({
       return;
     }
     projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
+  };
+
+  const syncProjectPackageContentAvailability = () => {
+    if (!projectPackageContents) return;
+    const isZip = String(projectDownloadFormat?.value || "json").trim().toLowerCase() === "zip";
+    projectPackageContents.disabled = !isZip;
+    projectPackageContents.setAttribute?.("aria-disabled", String(!isZip));
   };
 
   const appendSpecialZoneLegendRows = (layers = getVisibleSpecialZoneLegendLayers()) => {
@@ -927,6 +934,11 @@ export function createProjectSupportDiagnosticsController({
 
   const bindEvents = () => {
     refreshProjectSaveStatus();
+    syncProjectPackageContentAvailability();
+    if (projectDownloadFormat?.dataset && !projectDownloadFormat.dataset.packageContentsBound) {
+      projectDownloadFormat.addEventListener?.("change", syncProjectPackageContentAvailability);
+      projectDownloadFormat.dataset.packageContentsBound = "true";
+    }
     if (downloadProjectBtn && !downloadProjectBtn.dataset.bound) {
       downloadProjectBtn.addEventListener("click", async () => {
         refreshProjectSaveStatus(t("Exporting project file with appearance and transport settings.", "ui"));
@@ -934,6 +946,7 @@ export function createProjectSupportDiagnosticsController({
           const exported = await fileManager.exportProject(state, {
             format: projectDownloadFormat?.value || "json",
             destination: projectDownloadDestination?.value || "picker",
+            packageContents: projectPackageContents?.value || "recommended",
           });
           refreshProjectSaveStatus(exported === false ? t("Project export cancelled.", "ui") : "");
         } catch (error) {
@@ -976,7 +989,11 @@ export function createProjectSupportDiagnosticsController({
         }
         refreshProjectSaveStatus(t("Project import started. Appearance and transport settings will be restored from the file.", "ui"));
         try {
-          const importFile = await resolveProjectImportFile(file);
+          const { file: importFile, preview } = await prepareProjectImportFile(file);
+          if (!(await confirmProjectPackagePreview(preview))) {
+            refreshProjectSaveStatus(t("Project import cancelled.", "ui"));
+            return;
+          }
           importProjectThroughFunnel(importFile, {
             ui: {
               t,
@@ -999,8 +1016,9 @@ export function createProjectSupportDiagnosticsController({
               tone: "error",
             });
           }
+        } finally {
+          projectFileInput.value = "";
         }
-        projectFileInput.value = "";
       });
       projectFileInput.dataset.bound = "true";
     }

@@ -152,6 +152,9 @@
 ### 窄侧栏长文本用 scoped grid
 - 右侧栏诊断、审计这类窄面板里，长 id 与状态值不要复用通用 `justify-between` flex 行；用面板专属 grid、固定状态列和 `overflow-wrap:anywhere` 锁住横向宽度。
 
+### worktree 补丁要锚定真实路径
+- 在隔离 worktree 开发时，`apply_patch` 使用 worktree 绝对路径；工具默认根目录可能仍指向主 checkout。
+
 ### 同步 dist/app 时先判断漂移范围
 - 如果源码和 `dist/app` 已经存在历史漂移，CSS 这类共享大文件优先做 scoped patch；全量复制前先看 diff，否则会把无关旧差异卷进当前任务。
 

@@ -1494,12 +1494,18 @@ function initSidebar({ render } = {}) {
     const projectDownloadDestination = buildProjectSelect("projectDownloadDestination", "Download to", [
       ["picker", "Save As dialog"],
     ]);
+    const projectPackageContents = buildProjectSelect("projectPackageContents", "Package contents", [
+      ["minimal", "Project only"],
+      ["recommended", "Project + metadata"],
+      ["diagnostic", "Project + diagnostics"],
+    ]);
     const projectLoadSource = buildProjectSelect("projectLoadSource", "Load source", [
       ["local", "Local project file"],
       ["community", "Community save"],
     ]);
     projectDownloadOptions.append(
       projectDownloadFormat.field,
+      projectPackageContents.field,
       projectDownloadDestination.field,
       projectLoadSource.field
     );
@@ -3308,6 +3314,7 @@ function initSidebar({ render } = {}) {
   const uploadProjectBtn = document.getElementById("uploadProjectBtn");
   const projectDownloadFormat = document.getElementById("projectDownloadFormat");
   const projectDownloadDestination = document.getElementById("projectDownloadDestination");
+  const projectPackageContents = document.getElementById("projectPackageContents");
   const projectLoadSource = document.getElementById("projectLoadSource");
   const projectFileInput = document.getElementById("projectFileInput");
   const projectFileName = document.getElementById("projectFileName");
@@ -5760,6 +5767,7 @@ function initSidebar({ render } = {}) {
       uploadProjectBtn,
       projectDownloadFormat,
       projectDownloadDestination,
+      projectPackageContents,
       projectLoadSource,
       projectFileInput,
       projectFileName,

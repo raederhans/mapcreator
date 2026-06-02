@@ -144,6 +144,7 @@ test("project download passes selected file format and destination", async () =>
       downloadProjectBtn,
       projectDownloadFormat: { value: "zip" },
       projectDownloadDestination: { value: "picker" },
+      projectPackageContents: { value: "diagnostic", disabled: false, setAttribute() {} },
     },
     helpers: {
       fileManager: {
@@ -157,7 +158,7 @@ test("project download passes selected file format and destination", async () =>
   controller.bindEvents();
   await downloadProjectBtn.listeners.click();
 
-  assert.deepEqual(calls, [{ format: "zip", destination: "picker" }]);
+  assert.deepEqual(calls, [{ format: "zip", destination: "picker", packageContents: "diagnostic" }]);
   assert.equal(projectSaveStatus.textContent, "Project export includes appearance and transport settings.");
 });
 
@@ -182,7 +183,7 @@ test("project download defaults to save dialog destination", async () => {
   controller.bindEvents();
   await downloadProjectBtn.listeners.click();
 
-  assert.deepEqual(calls, [{ format: "json", destination: "picker" }]);
+  assert.deepEqual(calls, [{ format: "json", destination: "picker", packageContents: "recommended" }]);
 });
 
 test("project download failure is shown in project status", async () => {
@@ -224,6 +225,7 @@ test("local project zip load unwraps editable project before import funnel", asy
     value: "map_project.zip",
   };
   let importedFile = null;
+  const dialogs = [];
   const controller = createController(projectSaveStatus, {
     elements: {
       projectFileInput,
@@ -234,6 +236,10 @@ test("local project zip load unwraps editable project before import funnel", asy
         importedFile = file;
         return true;
       },
+      showAppDialog: async (options) => {
+        dialogs.push(options);
+        return true;
+      },
       mapRenderer: { refreshColorState: () => {} },
     },
   });
@@ -242,8 +248,47 @@ test("local project zip load unwraps editable project before import funnel", asy
   await projectFileInput.listeners.change();
 
   assert.equal(projectFileName.textContent, "map_project.zip");
+  assert.equal(dialogs[0].title, "Load Project Package");
+  assert.match(dialogs[0].details, /Package: map_project\.zip/);
   assert.equal(importedFile.name, "map_project.json");
   assert.match(await importedFile.text(), /"schemaVersion":21/);
+  assert.equal(projectFileInput.value, "");
+});
+
+test("local project zip preview cancel clears selected file input", async () => {
+  const projectSaveStatus = createStatusNode();
+  const projectFileName = createStatusNode();
+  const projectZipBytes = zipSync({
+    "map_project.json": strToU8(JSON.stringify({ schemaVersion: 21, activePaletteId: "hoi4_vanilla" })),
+    "map_project_manifest.json": strToU8(JSON.stringify({ artifactKind: "project-zip" })),
+  });
+  const projectZip = new Blob([projectZipBytes], { type: "application/zip" });
+  Object.defineProperty(projectZip, "name", { value: "map_project.zip" });
+  const projectFileInput = {
+    ...createButtonNode(),
+    files: [projectZip],
+    value: "map_project.zip",
+  };
+  let importCalled = false;
+  const controller = createController(projectSaveStatus, {
+    elements: {
+      projectFileInput,
+      projectFileName,
+    },
+    helpers: {
+      importProjectThroughFunnel: () => {
+        importCalled = true;
+      },
+      showAppDialog: async () => false,
+      mapRenderer: { refreshColorState: () => {} },
+    },
+  });
+
+  controller.bindEvents();
+  await projectFileInput.listeners.change();
+
+  assert.equal(importCalled, false);
+  assert.equal(projectSaveStatus.textContent, "Project import cancelled.");
   assert.equal(projectFileInput.value, "");
 });
 
@@ -275,9 +320,9 @@ test("local project zip load reports missing editable project", async () => {
   controller.bindEvents();
   await projectFileInput.listeners.change();
 
-  assert.equal(projectSaveStatus.textContent, "Project ZIP must include map_project.json.");
+  assert.equal(projectSaveStatus.textContent, "Project ZIP must include project/map_project.json or map_project.json.");
   assert.deepEqual(toasts, [{
-    message: "Project ZIP must include map_project.json.",
+    message: "Project ZIP must include project/map_project.json or map_project.json.",
     options: {
       title: "Project import failed",
       tone: "error",

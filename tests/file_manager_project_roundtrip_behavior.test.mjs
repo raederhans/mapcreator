@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 
 import { FileManager } from "../js/core/file_manager.js";
 import { resolveImportedTransportCountryOverlayPackIds } from "../js/core/interaction_funnel.js";
-import { unzipSync, strFromU8 } from "../vendor/fflate.browser.js";
+import { prepareProjectImportFile } from "../js/core/project_package_io.js";
+import { unzipSync, zipSync, strFromU8, strToU8 } from "../vendor/fflate.browser.js";
 
 async function exportProjectPayload(appState) {
   let capturedBlob = null;
@@ -165,13 +166,134 @@ test("project zip download keeps editable project and manifest files", async () 
 
   const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
   assert.ok(entries["map_project.json"], "zip should include editable project JSON");
-  assert.ok(entries["map_project_manifest.json"], "zip should include project manifest");
+  assert.ok(entries["project/map_project.json"], "zip should include canonical project directory");
+  assert.ok(entries["manifest.json"], "zip should include package manifest");
+  assert.ok(entries["map_project_manifest.json"], "zip should include legacy project manifest pointer");
+  assert.ok(entries["metadata/export_settings.json"], "recommended package should include export settings");
+  assert.ok(entries["resources/project_resource_index.json"], "recommended package should include resource index");
   const projectPayload = JSON.parse(strFromU8(entries["map_project.json"]));
-  const manifest = JSON.parse(strFromU8(entries["map_project_manifest.json"]));
+  const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
 
   assert.equal(projectPayload.schemaVersion, 21);
   assert.equal(manifest.artifactKind, "project-zip");
+  assert.equal(manifest.packageKind, "editable-project-package");
   assert.equal(manifest.files[0].path, "map_project.json");
+  assert.equal(manifest.files[0].role, "editable-project");
+  assert.match(manifest.files[0].checksum, /^sha256_/);
+  assert.equal(manifest.files.some((file) => file.path === "metadata/export_settings.json"), true);
+});
+
+test("project zip content preset controls optional package directories", async () => {
+  const minimalBlob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip", packageContents: "minimal" });
+  const minimalEntries = unzipSync(new Uint8Array(await minimalBlob.arrayBuffer()));
+  assert.ok(minimalEntries["project/map_project.json"]);
+  assert.equal(Boolean(minimalEntries["metadata/export_settings.json"]), false);
+  assert.equal(Boolean(minimalEntries["diagnostics/package_report.json"]), false);
+
+  const diagnosticBlob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip", packageContents: "diagnostic" });
+  const diagnosticEntries = unzipSync(new Uint8Array(await diagnosticBlob.arrayBuffer()));
+  assert.ok(diagnosticEntries["metadata/export_settings.json"]);
+  assert.ok(diagnosticEntries["resources/project_resource_index.json"]);
+  assert.ok(diagnosticEntries["diagnostics/package_report.json"]);
+});
+
+test("project package resource index only references included optional files", async () => {
+  const recommendedBlob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip", packageContents: "recommended" });
+  const entries = unzipSync(new Uint8Array(await recommendedBlob.arrayBuffer()));
+  const resourceIndex = JSON.parse(strFromU8(entries["resources/project_resource_index.json"]));
+
+  assert.equal(resourceIndex.resources.exportSettings, "metadata/export_settings.json");
+  assert.equal(Object.hasOwn(resourceIndex.resources, "diagnostics"), false);
+});
+
+test("project package import prepares editable project and preview", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: { target: "per-layer" },
+    styleConfig: {},
+  }, { format: "zip", packageContents: "diagnostic" });
+  Object.defineProperty(blob, "name", { value: "map_project.zip" });
+
+  const prepared = await prepareProjectImportFile(blob);
+  assert.equal(prepared.file.name, "map_project.json");
+  assert.equal(prepared.preview.packageKind, "editable-project-package");
+  assert.equal(prepared.preview.scenario.id, "tno_1962");
+  assert.equal(prepared.preview.summary.exportTarget, "per-layer");
+  assert.match(await prepared.file.text(), /"schemaVersion": 21/);
+});
+
+test("project package import rejects manifest identity mismatch", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
+  manifest.scenario = { id: "other_scenario", version: 3, baselineHash: "baseline-1" };
+  const tampered = new Blob([zipSync({
+    ...entries,
+    "manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
+  })], { type: "application/zip" });
+  Object.defineProperty(tampered, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(tampered),
+    /Project package manifest does not match editable project/
+  );
+});
+
+test("project package import rejects project checksum mismatch", async () => {
+  const blob = await exportProjectBlob({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  }, { format: "zip" });
+  const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const project = JSON.parse(strFromU8(entries["project/map_project.json"]));
+  project.activePaletteId = "kaiserreich";
+  const tamperedProjectBytes = strToU8(JSON.stringify(project, null, 2));
+  const tampered = new Blob([zipSync({
+    ...entries,
+    "project/map_project.json": tamperedProjectBytes,
+    "map_project.json": tamperedProjectBytes,
+  })], { type: "application/zip" });
+  Object.defineProperty(tampered, "name", { value: "map_project.zip" });
+
+  await assert.rejects(
+    () => prepareProjectImportFile(tampered),
+    /Project package manifest does not match editable project/
+  );
 });
 
 test("project save picker cancel keeps export dirty state unchanged", async () => {
