@@ -1070,7 +1070,7 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "source_standard": "marine_regions_seavox_v19",
         "subtract_base_ids": ("marine_irish_sea",),
         "clip_open_ocean_ids": ("tno_northeast_atlantic_ocean",),
-        "simplify_tolerance": 0.01,
+        "simplify_tolerance": 0.004,
     },
     {
         "id": "tno_st_georges_channel",

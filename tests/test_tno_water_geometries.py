@@ -1,5 +1,6 @@
 import json
 import hashlib
+import gzip
 import sys
 import unittest
 from pathlib import Path
@@ -31,6 +32,8 @@ SCENARIO_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "manifest.js
 DETAIL_CHUNK_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "detail_chunks.manifest.json"
 STARTUP_BUNDLE_EN_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "startup.bundle.en.json"
 STARTUP_BUNDLE_ZH_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "startup.bundle.zh.json"
+STARTUP_BUNDLE_EN_GZIP_PATH = STARTUP_BUNDLE_EN_PATH.with_suffix(f"{STARTUP_BUNDLE_EN_PATH.suffix}.gz")
+STARTUP_BUNDLE_ZH_GZIP_PATH = STARTUP_BUNDLE_ZH_PATH.with_suffix(f"{STARTUP_BUNDLE_ZH_PATH.suffix}.gz")
 TARGET_OPEN_OCEAN_IDS = {
     "tno_northwest_pacific_ocean",
     "tno_northeast_pacific_ocean",
@@ -379,6 +382,10 @@ def _load_startup_bundle(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_startup_bundle_gzip(path: Path):
+    return json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
+
+
 def _sha256_path(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -409,6 +416,14 @@ def _iter_polygon_parts(geometry):
 def _bbox_width(geometry):
     min_x, _, max_x, _ = geometry.bounds
     return max_x - min_x
+
+
+def _polygonal_vertex_count(geometry):
+    total = 0
+    for part in _iter_polygon_parts(geometry):
+        total += len(part.exterior.coords)
+        total += sum(len(ring.coords) for ring in part.interiors)
+    return total
 
 
 def _load_runtime_land_union():
@@ -552,6 +567,15 @@ def test_large_marine_macros_do_not_increase_land_overlap_far_beyond_snapshot_so
                 f"final_land_overlap_ratio={final_land_overlap_ratio:.6f}"
             )
     assert failures == []
+
+
+def test_tno_north_channel_uses_source_backed_refinement_precision():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_north_channel"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    assert props.get("source_standard") == "marine_regions_seavox_v19"
+    assert _polygonal_vertex_count(geometry) >= 120
 
 
 def test_tno_runtime_water_feature_ids_match_source():
@@ -1143,17 +1167,27 @@ def test_tno_open_ocean_regions_stay_non_interactive():
 def test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap():
     source_feature_count = len(_load_scenario_water_features())
     manifest = _load_scenario_manifest()
-    bundle_paths = (STARTUP_BUNDLE_EN_PATH, STARTUP_BUNDLE_ZH_PATH)
+    bundle_paths = (
+        (STARTUP_BUNDLE_EN_PATH, STARTUP_BUNDLE_EN_GZIP_PATH),
+        (STARTUP_BUNDLE_ZH_PATH, STARTUP_BUNDLE_ZH_GZIP_PATH),
+    )
     expected_runtime_sha = _sha256_path(RUNTIME_WATER_PATH)
     expected_bootstrap_sha = _sha256_path(RUNTIME_BOOTSTRAP_WATER_PATH)
+    expected_detail_manifest_sha = _sha256_path(DETAIL_CHUNK_MANIFEST_PATH)
     expected_named_marginal_count = len(tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS)
 
     assert int(manifest.get("summary", {}).get("tno_water_region_count") or 0) == source_feature_count
     assert int(manifest.get("summary", {}).get("tno_named_marginal_water_count") or 0) == expected_named_marginal_count
     assert str(manifest.get("water_regions_mode") or "") == "exclusive"
+    manifest_source = manifest.get("source", {})
+    assert str(manifest_source.get("runtime_topology_sha256") or "") == expected_runtime_sha
+    assert str(manifest_source.get("runtime_bootstrap_topology_sha256") or "") == expected_bootstrap_sha
+    assert str(manifest_source.get("detail_chunk_manifest_sha256") or "") == expected_detail_manifest_sha
 
-    for bundle_path in bundle_paths:
+    for bundle_path, gzip_path in bundle_paths:
         bundle = _load_startup_bundle(bundle_path)
+        gzip_bundle = _load_startup_bundle_gzip(gzip_path)
+        assert gzip_bundle.get("source") == bundle.get("source")
         manifest_subset = bundle.get("manifest_subset", {})
         source_meta = bundle.get("source", {})
 
@@ -1164,6 +1198,7 @@ def test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap():
         assert int(manifest_subset.get("summary", {}).get("tno_named_marginal_water_count") or 0) == expected_named_marginal_count
         assert str(source_meta.get("runtime_topology_sha256") or "") == expected_runtime_sha
         assert str(source_meta.get("runtime_bootstrap_topology_sha256") or "") == expected_bootstrap_sha
+        assert str(source_meta.get("detail_chunk_manifest_sha256") or "") == expected_detail_manifest_sha
         runtime_meta = bundle.get("scenario", {}).get("runtime_political_meta", {})
         runtime_feature_ids = runtime_meta.get("featureIds", []) or []
         assert len(runtime_feature_ids) > 1000
