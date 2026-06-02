@@ -803,10 +803,11 @@ class TnoBundleBuilderTest(unittest.TestCase):
             )
 
     def test_tno_irish_sea_source_spec_keeps_child_seams_closed(self) -> None:
-        irish_sea_spec = next(
-            spec for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
-            if spec["id"] == "tno_irish_sea"
-        )
+        spec_map = {
+            spec["id"]: spec
+            for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+        }
+        irish_sea_spec = spec_map["tno_irish_sea"]
 
         self.assertEqual(irish_sea_spec["source_layer"], "seavox_v19")
         self.assertEqual(
@@ -822,10 +823,19 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 "tno_st_georges_channel",
                 "tno_st_brides_bay",
                 "tno_cardigan_bay",
+                "tno_caernarfon_bay",
+                "tno_menai_strait",
                 "tno_liverpool_bay",
+                "tno_morecambe_bay",
                 "tno_solway_firth",
             ),
         )
+        self.assertEqual(spec_map["tno_caernarfon_bay"]["source_query"], "mrgid_sr='24220'")
+        self.assertEqual(spec_map["tno_caernarfon_bay"]["parent_id"], "tno_irish_sea")
+        self.assertEqual(spec_map["tno_menai_strait"]["source_query"], "mrgid_sr='24222'")
+        self.assertEqual(spec_map["tno_menai_strait"]["parent_id"], "tno_irish_sea")
+        self.assertEqual(spec_map["tno_morecambe_bay"]["source_query"], "mrgid_sr='24227'")
+        self.assertEqual(spec_map["tno_morecambe_bay"]["parent_id"], "tno_irish_sea")
 
     def test_tno_channel_child_source_specs_keep_parent_seams_closed(self) -> None:
         spec_map = {

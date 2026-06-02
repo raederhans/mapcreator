@@ -434,7 +434,7 @@
       }
     },
     {
-      "id": "89",
+      "id": "92",
       "type": "Feature",
       "properties": {
         "id": "tno_ross_sea",
@@ -2526,7 +2526,7 @@
       }
     },
     {
-      "id": "104",
+      "id": "107",
       "type": "Feature",
       "properties": {
         "id": "tno_south_pacific_antarctic_ocean",
@@ -3108,7 +3108,7 @@
       }
     },
     {
-      "id": "106",
+      "id": "109",
       "type": "Feature",
       "properties": {
         "id": "tno_southeast_pacific_ocean",
@@ -4874,7 +4874,7 @@
       }
     },
     {
-      "id": "109",
+      "id": "112",
       "type": "Feature",
       "properties": {
         "id": "tno_southwest_pacific_ocean",
@@ -12678,7 +12678,7 @@
       }
     },
     {
-      "id": "128",
+      "id": "131",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",

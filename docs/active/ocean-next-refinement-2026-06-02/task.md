@@ -17,4 +17,7 @@
 - [x] Refresh water runtime, chunks, startup bundles, manifest, audit, and provenance.
 - [x] Fix final review finding for 130/132 water summary drift.
 - [x] Run child-water audit, geometry validator, targeted water tests, builder tests, py_compile, and diff check.
+- [x] Add `tno_caernarfon_bay`, `tno_menai_strait`, and `tno_morecambe_bay` source-backed Irish Sea child waters.
+- [x] Refresh water runtime, chunks, startup bundles, manifest, audit, and provenance to 135/107 counts.
+- [x] Run Irish Sea child-water audit, geometry validator, targeted water tests, builder tests, py_compile, and diff check.
 - [ ] Commit, push, merge, cleanup.

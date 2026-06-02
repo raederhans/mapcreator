@@ -1,8 +1,8 @@
 # Ocean Next Refinement Context
 
-- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-child-waters-20260602`
-- Branch: `codex/ocean-child-waters-20260602`
-- Base: `origin/main` at `b5617bb6`.
+- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-next-child-waters-20260602b`
+- Branch: `codex/ocean-next-child-waters-20260602b`
+- Base: `origin/main` at `740ba688`.
 - Parent checkout has unrelated dirty files and is behind `origin/main`; this worktree isolates ocean changes.
 - Live process owner: main agent owns audit/build/test commands.
 - Subagents: read-only audit, mapping, and review lanes only unless explicitly assigned disjoint write scopes.
@@ -22,9 +22,13 @@
 - Current child-water publication:
   - Added `tno_rye_bay` from SeaVoX `mrgid_sr='24198'` under `tno_strait_of_dover`.
   - Added `tno_belfast_lough` from SeaVoX `mrgid_sr='24233'` under `tno_north_channel`.
-  - `water_regions.geojson` now has 132 features.
+  - Added `tno_caernarfon_bay` from SeaVoX `mrgid_sr='24220'` under `tno_irish_sea`.
+  - Added `tno_menai_strait` from SeaVoX `mrgid_sr='24222'` under `tno_irish_sea`.
+  - Added `tno_morecambe_bay` from SeaVoX `mrgid_sr='24227'` under `tno_irish_sea`.
+  - `water_regions.geojson` now has 135 features.
   - `tno_rye_bay` and `tno_belfast_lough` both have zero area overlap with their parent water after subtraction.
-  - Root and derived `water_regions.provenance.json` include both child source queries and source record IDs.
+  - `tno_caernarfon_bay`, `tno_menai_strait`, and `tno_morecambe_bay` all have zero area overlap with `tno_irish_sea` after subtraction.
+  - Root and derived `water_regions.provenance.json` include all child source queries and source record IDs.
 - Builder finding:
   - Rebuilding water from generated checkpoints failed before publish on unrelated global ocean validation issues: `tno_southwest_pacific_ocean` / `tno_southern_indian_ocean` overlap, `tno_bering_sea` / `tno_gulf_of_alaska` seam gap, and `tno_south_indian_antarctic_ocean` D3 invalid.
   - The checked-in scenario validator still passes, so this phase keeps the source-review audit improvement and defers `tno_rye_bay` / `tno_belfast_lough` geometry publication until the builder path is repaired.
@@ -35,7 +39,7 @@
   - `--changed-domain water` now routes through `water_runtime_from_scenario`, `write_bundle`, and `chunk_assets`, so the normal water edit entrypoint no longer re-enters `water_state` / full `runtime_topology`.
   - `water_runtime_from_scenario` stage readiness now requires the full copied scenario publish surface plus `controllers.by_feature.json`, `detail_chunks.manifest.json`, and `chunks`, so downstream checkpoint helpers can see a complete water/runtime surface.
   - Shared runtime checkpoint readiness now accepts a complete runtime publish surface without requiring older intermediate `water_state` files, preventing downstream helpers from re-triggering the old water builder after a narrow water runtime checkpoint.
-  - Water changed-domain safe repair now syncs `manifest.summary`, `audit.summary`, startup bundle subsets, and gzip startup bundle subsets from checked-in `water_regions.geojson` before rebuilding derived contract assets. This keeps `tno_water_region_count=132` and `tno_named_marginal_water_count=104` across all publish surfaces.
+  - Water changed-domain safe repair now syncs `manifest.summary`, `audit.summary`, startup bundle subsets, and gzip startup bundle subsets from checked-in `water_regions.geojson` before rebuilding derived contract assets. This keeps `tno_water_region_count=135` and `tno_named_marginal_water_count=107` across all publish surfaces.
 - Validation evidence:
   - `python -c "import tests.test_tno_water_geometries as t; t.test_tno_water_family_refinement_audit_reports_low_precision_candidates(); t.test_tno_water_family_refinement_audit_reports_high_precision_review_candidates(); print('targeted audit tests passed')"` passed.
   - `python tools\audit_tno_water_family_refinement.py` reports `high_precision_split_candidate_count=0`, `terminal_public_source_candidate_count=3`, and `backlog_candidate_count=45`.
@@ -54,6 +58,15 @@
   - `python tools\audit_tno_water_family_refinement.py` reports `marine_macro_with_children_count=15`, `backlog_candidate_count=43`, and `provenance_gap_count=0`.
   - `python tools\validate_tno_water_geometries.py --scenario-dir data\scenarios\tno_1962 --report-path .runtime\reports\generated\ocean_child_waters_geometry_final.json` passed.
   - `python -c "import tests.test_tno_named_marginal_water_contract as named; import tests.test_tno_water_geometries as geo; named.test_target_named_waters_exist_with_expected_contract(); named.test_named_water_subtractions_remove_expected_overlap(); geo.test_tno_runtime_water_feature_ids_match_source(); geo.test_tno_runtime_bootstrap_water_feature_ids_match_source(); geo.test_tno_water_chunk_feature_ids_cover_current_detail_regions(); geo.test_tno_water_chunk_feature_ids_cover_tracked_new_family_regions(); geo.test_tno_ocean_refinement_phase_targets_are_synchronized(); geo.test_tno_water_family_refinement_audit_reports_low_precision_candidates(); geo.test_tno_water_family_refinement_audit_reports_high_precision_review_candidates(); geo.test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap(); print('targeted plain water tests passed')"` passed.
+  - `python -m unittest tests.test_tno_bundle_builder tests.test_tno_water_geometries.TnoWaterGeometryDataContractTest -q` passed: 106 tests.
+  - `python -m py_compile tools\patch_tno_1962_bundle.py tests\test_tno_bundle_builder.py tests\test_tno_water_geometries.py tests\test_tno_named_marginal_water_contract.py` passed.
+  - `git diff --check` passed.
+- Irish Sea child-water validation evidence:
+  - WFS evidence showed unclaimed SeaVoX records under Irish Sea: `mrgid_sr='24220'` Caernarfon Bay, `mrgid_sr='24222'` Menai Strait, and `mrgid_sr='24227'` Morecambe Bay.
+  - `python tools\patch_tno_1962_bundle.py --changed-domain water --checkpoint-dir .runtime\build\scenario\tno_1962\irish_sea_child_waters_20260602` passed with executed stages `water_runtime_from_scenario`, `write_bundle`, `chunk_assets` and `water_feature_count=135`.
+  - `python tools\audit_tno_water_family_refinement.py` reports `provenance_gap_count=0`.
+  - `python tools\validate_tno_water_geometries.py --scenario-dir data\scenarios\tno_1962 --report-path .runtime\reports\generated\ocean_irish_sea_children_geometry.json` passed.
+  - `python -c "import json; from pathlib import Path; from tools import patch_tno_1962_bundle as tno_bundle; import tests.test_tno_named_marginal_water_contract as named; import tests.test_tno_water_geometries as geo; named.test_target_named_waters_exist_with_expected_contract(); named.test_named_water_subtractions_remove_expected_overlap(); geo.test_tno_runtime_water_feature_ids_match_source(); geo.test_tno_runtime_bootstrap_water_feature_ids_match_source(); geo.test_tno_water_chunk_feature_ids_cover_current_detail_regions(); geo.test_tno_water_chunk_feature_ids_cover_tracked_new_family_regions(); geo.test_tno_ocean_refinement_phase_targets_are_synchronized(); geo.test_tno_water_family_refinement_audit_reports_low_precision_candidates(); geo.test_tno_water_family_refinement_audit_reports_high_precision_review_candidates(); geo.test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap(); audit=json.loads(Path('data/scenarios/tno_1962/audit.json').read_text(encoding='utf-8')); assert audit['diagnostics']['tno_named_marginal_water_ids'] == [spec['id'] for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS]; print('targeted plain water tests passed')"` passed.
   - `python -m unittest tests.test_tno_bundle_builder tests.test_tno_water_geometries.TnoWaterGeometryDataContractTest -q` passed: 106 tests.
   - `python -m py_compile tools\patch_tno_1962_bundle.py tests\test_tno_bundle_builder.py tests\test_tno_water_geometries.py tests\test_tno_named_marginal_water_contract.py` passed.
   - `git diff --check` passed.
