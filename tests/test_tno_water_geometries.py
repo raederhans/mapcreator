@@ -103,6 +103,7 @@ TRACKED_DETAIL_IDS = {
     "tno_torres_strait",
     "tno_great_barrier_reef_coastal_waters",
     "tno_bass_strait",
+    "tno_hudson_strait",
 }
 
 TRACKED_NAMED_WATER_IDS = TRACKED_DETAIL_IDS | {
@@ -196,7 +197,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "mozambique_channel", "point": (40.88, -19.30), "allowed_ids": {"tno_mozambique_channel"}},
     {"label": "gulf_of_guinea", "point": (3.05, 3.25), "allowed_ids": {"tno_gulf_of_guinea"}},
     {"label": "ross_sea", "point": (-168.0911, -78.5673), "allowed_ids": {"tno_ross_sea"}},
-    {"label": "weddell_sea", "point": (-54.8111, -77.2919), "allowed_ids": {"tno_weddell_sea"}},
+    {"label": "weddell_sea", "point": (-37.425662, -68.672356), "allowed_ids": {"tno_weddell_sea"}},
     {"label": "scotia_sea", "point": (-48.964392, -60.640768), "allowed_ids": {"tno_scotia_sea"}},
     {"label": "bering_sea", "point": (-170.8823, 58.7917), "allowed_ids": {"tno_bering_sea"}},
     {"label": "gulf_of_alaska", "point": (-147.3894, 57.3575), "allowed_ids": {"tno_gulf_of_alaska"}},
@@ -204,6 +205,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "labrador_sea", "point": (-52.7329, 53.9977), "allowed_ids": {"tno_labrador_sea"}},
     {"label": "gulf_of_st_lawrence", "point": (-61.3940, 48.9139), "allowed_ids": {"tno_gulf_of_st_lawrence"}},
     {"label": "hudson_bay", "point": (-86.1234, 60.2827), "allowed_ids": {"tno_hudson_bay"}},
+    {"label": "hudson_strait", "point": (-71.0908, 61.8610), "allowed_ids": {"tno_hudson_strait"}},
     {"label": "caribbean_sea", "point": (-72.7250, 15.5764), "allowed_ids": {"tno_caribbean_sea"}},
     {"label": "gulf_of_mexico", "point": (-89.2272, 25.5858), "allowed_ids": {"tno_gulf_of_mexico"}},
     {"label": "sea_of_okhotsk", "point": (147.8, 53.9), "allowed_ids": {"tno_sea_of_okhotsk"}},
@@ -585,6 +587,27 @@ def test_tno_scotia_sea_uses_source_backed_refinement_precision():
     geometry = shape(feature["geometry"])
     assert props.get("source_standard") == "marine_regions_seavox_v19"
     assert 300 <= _polygonal_vertex_count(geometry) <= 700
+
+
+def test_tno_weddell_sea_uses_source_backed_refinement_precision():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_weddell_sea"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    assert props.get("source_standard") == "marine_regions_seavox_v19"
+    assert 400 <= _polygonal_vertex_count(geometry) <= 700
+
+
+def test_tno_hudson_strait_splits_hudson_bay_as_source_backed_detail():
+    feature_map = _feature_map(_load_scenario_water_features())
+    feature = feature_map["tno_hudson_strait"]
+    props = feature.get("properties", {})
+    geometry = shape(feature["geometry"])
+    assert props.get("region_group") == "marine_detail"
+    assert props.get("parent_id") == "tno_hudson_bay"
+    assert props.get("source_standard") == "marine_regions_seavox_v19"
+    assert props.get("is_chokepoint") is True
+    assert _polygonal_vertex_count(geometry) >= 1000
 
 
 def test_tno_runtime_water_feature_ids_match_source():

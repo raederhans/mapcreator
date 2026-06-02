@@ -166,9 +166,9 @@
   "snapshot_fingerprint": "451eca51d78e0af4527a6c9f1a2f6a85d39f422e2cfbdb746435bedc02a5a6e9",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "a37d12caa86fb7d503e45cc4a11e72e1436107b82d2067909c2225a175e72b11",
+    "detail_chunk_manifest_sha256": "15ecd44dfaae9f13348a62bebcb25d7e35fc9638f0bba575fe7da24c26b5807f",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
-    "runtime_topology_sha256": "8d021213277434470c43353e4b33b39d9300c3e4de2276189146d729926ff687"
+    "runtime_topology_sha256": "e8bbf4044953d4b1bab7f88154773b368adbf01112d2bb7d80c9bedf26a218f6"
   },
   "special_regions_url": "data/scenarios/tno_1962/special_regions.geojson",
   "special_zone_layers_url": "data/scenarios/tno_1962/special_zone_layers.json",
@@ -231,11 +231,11 @@
     "synthetic_owner_feature_count": 446,
     "tno_bathymetry_band_count": 90,
     "tno_bathymetry_contour_count": 74,
-    "tno_named_marginal_water_count": 101,
+    "tno_named_marginal_water_count": 102,
     "tno_reichskommissariat_count": 8,
     "tno_relief_overlay_count": 25,
     "tno_special_region_count": 0,
-    "tno_water_region_count": 129,
+    "tno_water_region_count": 130,
     "topology_blocker_count": 0
   },
   "version": 2,
