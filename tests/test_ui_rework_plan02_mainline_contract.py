@@ -60,6 +60,13 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         positions = [project_panel.index(token) for token in order]
         self.assertEqual(positions, sorted(positions))
 
+    def test_legend_editor_uses_outer_section_heading_only(self):
+        sidebar = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")
+
+        self.assertIn('list.id = "legendEditorList";', sidebar)
+        self.assertNotIn('title.id = "lblLegendEditor";', sidebar)
+        self.assertNotIn('title.textContent = t("Legend Editor", "ui");', sidebar)
+
     def test_toolbar_and_sidebar_write_url_contract_keys(self):
         toolbar = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
         support_surface = (REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js").read_text(encoding="utf-8")

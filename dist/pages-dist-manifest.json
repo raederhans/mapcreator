@@ -6890,7 +6890,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 260571
+      "size_bytes": 260329
     },
     {
       "path": "app/js/ui/toast.js",
@@ -7187,5 +7187,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1023707307
+  "total_bytes": 1023707065
 }

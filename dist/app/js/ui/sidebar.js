@@ -1698,16 +1698,10 @@ function initSidebar({ render } = {}) {
     legendSection.id = "legendEditor";
     legendSection.className = "inspector-tool-card";
 
-    const title = document.createElement("div");
-    title.id = "lblLegendEditor";
-    title.className = "section-header sidebar-tool-title";
-    title.textContent = t("Legend Editor", "ui");
-
     const list = document.createElement("div");
     list.id = "legendEditorList";
     list.className = "mt-3";
 
-    legendSection.appendChild(title);
     legendSection.appendChild(list);
     legendEditorStack.appendChild(legendSection);
   }
