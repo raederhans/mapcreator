@@ -1462,11 +1462,6 @@ function initSidebar({ render } = {}) {
     projectSection.id = "projectManagement";
     projectSection.className = "inspector-tool-card project-management-card";
 
-    const title = document.createElement("div");
-    title.id = "lblProjectManagement";
-    title.className = "section-header sidebar-tool-title";
-    title.textContent = t("Project Management", "ui");
-
     const actions = document.createElement("div");
     actions.className = "mt-3 flex flex-col gap-2";
 
@@ -1597,7 +1592,6 @@ function initSidebar({ render } = {}) {
     actions.appendChild(fileInput);
     actions.appendChild(accountDock);
 
-    projectSection.appendChild(title);
     projectSection.appendChild(actions);
     projectSection.appendChild(accountPopover);
     {
