@@ -27,6 +27,7 @@ from tools.validate_tno_water_geometries import (
 SCENARIO_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_regions.geojson"
 RUNTIME_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.topo.json"
 RUNTIME_BOOTSTRAP_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.bootstrap.topo.json"
+SCENARIO_WATER_SOURCE_REVIEW_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_refinement_source_reviews.json"
 SCENARIO_NAMED_WATER_SNAPSHOT_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "marine_regions_named_waters.snapshot.geojson"
 SCENARIO_WATER_PROVENANCE_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "water_regions.provenance.json"
 SCENARIO_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "manifest.json"
@@ -1109,6 +1110,125 @@ def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
     assert detailed_row["child_count"] == 1
     assert detailed_row["children"][0]["vertex_count"] == 4
     assert detailed_row["provenance_status"] == "recorded"
+
+
+def test_tno_water_family_refinement_terminal_review_monitors_local_clone():
+    reviewed_clone_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_reviewed_clone",
+            "name": "Fixture Reviewed Clone",
+            "region_group": "marine_macro",
+            "water_type": "chokepoint",
+            "source_standard": "tno_cloned_from_global_water_regions",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [float(point_index), 4.0]
+                for point_index in range(120)
+            ]],
+        },
+    }
+    reviewed_clone_detail_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_reviewed_clone_detail",
+            "name": "Fixture Reviewed Clone Detail",
+            "region_group": "marine_detail",
+            "parent_id": "fixture_reviewed_clone",
+            "water_type": "strait",
+            "source_standard": "marine_regions_seavox_v19",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[0.0, 4.0], [1.0, 4.0], [1.0, 5.0], [0.0, 4.0]]],
+        },
+    }
+    support_macro_features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "id": f"fixture_support_macro_{index}",
+                "name": f"Fixture Support Macro {index}",
+                "region_group": "marine_macro",
+                "water_type": "sea",
+                "source_standard": "marine_regions_seavox_v19",
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [float(point_index), float(index)]
+                    for point_index in range(130 + index)
+                ]],
+            },
+        }
+        for index in range(10)
+    ]
+    report = build_family_refinement_report(
+        {
+            "type": "FeatureCollection",
+            "features": [reviewed_clone_feature, reviewed_clone_detail_feature, *support_macro_features],
+        },
+        provenance_payload={
+            "water_extracts": [
+                {
+                    "id": feature["properties"]["id"],
+                    "source_layer": "seavox_v19",
+                    "source_query": f"fixture={feature['properties']['id']}",
+                    "source_record_ids": [feature["properties"]["id"]],
+                    "source_feature_count": 1,
+                }
+                for feature in support_macro_features
+            ],
+            "local_clone_extracts": [{
+                "id": "fixture_reviewed_clone",
+                "source_water_region_id": "fixture_reviewed_clone_global",
+                "source_water_region_name": "Fixture Reviewed Clone Global",
+                "source_feature_count": 1,
+            }],
+        },
+        source_review_payload={
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{
+                "id": "fixture_reviewed_clone",
+                "review_status": "terminal_public_source",
+                "reviewed_at": "2026-06-02",
+                "source_queries": [{
+                    "source_layer": "gazetteer_polygon",
+                    "cql_filter": "mrgid IN (fixture_bosporus, fixture_dardanelles)",
+                }],
+                "evidence": ["Fixture source review found no replacement polygon source."],
+            }],
+        },
+        generated_at="2026-06-02T00:00:00Z",
+    )
+
+    assert report["summary"]["source_replacement_candidate_count"] == 0
+    assert report["summary"]["terminal_public_source_candidate_count"] == 1
+    assert {item["id"] for item in report["source_replacement_candidates"]} == set()
+    assert "fixture_reviewed_clone" not in {item["id"] for item in report["backlog_candidates"]}
+    reviewed_row = next(row for row in report["families"] if row["id"] == "fixture_reviewed_clone")
+    assert reviewed_row["child_count"] == 1
+    assert reviewed_row["recommended_action"] == "monitor_terminal_public_source"
+    terminal_row = report["terminal_public_source_candidates"][0]
+    assert terminal_row["id"] == "fixture_reviewed_clone"
+    assert "public source review found no verified replacement polygon source" in terminal_row["reasons"]
+
+
+def test_tno_bosporus_source_review_records_terminal_public_source():
+    payload = json.loads(SCENARIO_WATER_SOURCE_REVIEW_PATH.read_text(encoding="utf-8"))
+    assert payload["reviewed_at"] == "2026-06-02"
+    records_by_id = {item["id"]: item for item in payload["features"]}
+    record = records_by_id["tno_bosporus_dardanelles"]
+    assert record["review_status"] == "terminal_public_source"
+    assert record["reviewed_at"] == "2026-06-02"
+    source_queries = record["source_queries"]
+    assert {"source_layer": "gazetteer_details", "cql_filter": "mrgid=3721 OR mrgid=3725"} in source_queries
+    assert {"source_layer": "gazetteer_line", "cql_filter": "mrgid IN (3721,3725)"} in source_queries
+    assert any("direct public polygon or line source" in item for item in record["evidence"])
 
 
 def test_tno_water_family_refinement_audit_reports_high_precision_review_candidates():

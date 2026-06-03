@@ -92,3 +92,22 @@
   - Source review metadata now requires `schema_version=1`, `scenario_id=tno_1962`, known `review_status`, unique macro IDs, `YYYY-MM-DD` reviewed dates, non-empty source queries, and non-empty evidence before it can move a high-detail macro into `monitor_terminal_public_source`.
   - Backlog membership now uses an explicit actionable recommendation set instead of a string prefix check.
   - Added a direct regression test for invalid source review contracts, including file-level and record-level illegal date strings.
+- Bosporus continuation:
+  - Worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-bosporus`
+  - Branch: `codex/ocean-bosporus-source-replacement`
+  - Base: `origin/main` at `81dcfb22`.
+  - Parent checkout remains dirty and behind; this worktree isolates ocean changes.
+  - Live process owner: main agent owns all audit/build/test commands and logs.
+  - Current audit from `81dcfb22` reports `source_replacement_candidate_count=1`, `terminal_public_source_candidate_count=3`, `backlog_candidate_count=43`, and the only local clone is `tno_bosporus_dardanelles`.
+  - Prior archived source review found Marine Regions Gazetteer records for Dardanelles (`mrgid=3721`) and Bosporus (`mrgid=3725`) as `Strait` records, with WFS geometry layers returning no direct target polygon or line.
+  - Fresh WFS check confirmed `mrgid IN (3721,3725)` returns zero features from `iho`, `gazetteer_polygon`, `gazetteer_line`, `world_bay_gulf`, and `eez_iho`; `seavox_v19` and `goas` do not expose those MRGIDs through the same geometry filter.
+  - Fresh bbox check around `25.3,39.6,30.0,41.2` returned broader polygons: Aegean Sea, Sea of Marmara, Black Sea, Mediterranean Region, Greece - Aegean Sea and Eastern Mediterranean, and EEZ/IHO intersections. `gazetteer_line` and `world_bay_gulf` returned zero bbox features.
+  - Implementation decision: keep the checked-in local clone geometry for the chokepoint and record terminal public-source review metadata, because replacing it with a point record or neighboring broad polygon would invent geometry.
+  - Audit logic now treats a local clone with terminal source review as `monitor_terminal_public_source`, so reviewed unavailable replacements leave `source_replacement_candidates` and actionable backlog.
+  - Validation:
+    - `python tools\audit_tno_water_family_refinement.py` reports `source_replacement_candidate_count=0`, `terminal_public_source_candidate_count=4`, `backlog_candidate_count=42`, and `provenance_gap_count=0`.
+    - Targeted source-review direct checks passed, including the new local clone terminal-review regression.
+    - `python tools\validate_tno_water_geometries.py --scenario-dir data\scenarios\tno_1962 --report-path .runtime\reports\generated\ocean_bosporus_source_review_geometry.json` passed.
+    - `python -m unittest tests.test_tno_bundle_builder tests.test_tno_water_geometries.TnoWaterGeometryDataContractTest -q` passed: 106 tests.
+    - `python -m py_compile tools\audit_tno_water_family_refinement.py tests\test_tno_water_geometries.py` passed.
+    - `git diff --check` passed.

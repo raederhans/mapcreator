@@ -100,6 +100,7 @@
 - 红灯保留为显式风险。
 - static contract 从 E2E 拆出后，要接入具名入口和现有路由体系。
 - selector explain、列表入口、变更入口、grep 规则、workflow paths 共用同一份真相源。
+- source replacement 经公开源复核确认缺少可用几何时，要写入 source-review metadata 并退出 actionable 队列，避免同一个不可替换候选被重复重开。
 
 ### 测试锁真实合同
 - 新边界优先补 source contract、node contract、targeted Python contract，再决定是否上更重的 E2E。

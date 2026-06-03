@@ -23,4 +23,10 @@
 - [x] Add `tno_lyme_bay`, `tno_weymouth_bay`, `tno_plymouth_sound`, and `tno_mounts_bay` source-backed English Channel child waters.
 - [x] Refresh water runtime, chunks, startup bundles, manifest, audit, and provenance to 139 water features / 110 source-backed water extracts.
 - [x] Run English Channel child-water audit, geometry validator, targeted water tests, builder tests, py_compile, and diff check.
-- [ ] Commit, push, merge, cleanup.
+- [x] Commit, push, merge, cleanup English Channel phase at `81dcfb22`.
+- [x] Re-run current audit from `81dcfb22`.
+- [x] Re-evaluate `tno_bosporus_dardanelles` public source availability.
+- [x] Add source review metadata for `tno_bosporus_dardanelles`.
+- [x] Update audit logic so reviewed terminal local clones leave the actionable source replacement queue.
+- [x] Run Bosporus source-review audit, targeted tests, geometry validator, py_compile, and diff check.
+- [x] Commit, push, merge, cleanup Bosporus phase.

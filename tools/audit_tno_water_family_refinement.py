@@ -175,6 +175,8 @@ def _candidate_reasons(row: dict) -> list[str]:
             reasons.append('public source review found no verified child polygon source')
         else:
             reasons.append('high-detail macro still needs child water split review')
+    if row.get('source_family') == 'local_clone' and _has_terminal_public_source_review(row):
+        reasons.append('public source review found no verified replacement polygon source')
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) > 0:
         reasons.append('high-detail macro already has child water coverage')
     if row.get('provenance_status') != 'recorded':
@@ -209,6 +211,8 @@ def _candidate_priority(row: dict) -> str:
 
 
 def _recommended_action(row: dict) -> str:
+    if row.get('source_family') == 'local_clone' and _has_terminal_public_source_review(row):
+        return 'monitor_terminal_public_source'
     if row.get('source_family') == 'local_clone' or row.get('precision_band') == 'low':
         return 'replace_or_refine_with_public_source'
     if (
@@ -259,6 +263,7 @@ def build_report(
     unrefined = []
     high_precision_split_candidates = []
     terminal_public_source_candidates = []
+    terminal_public_source_ids = set()
     simplification_review_candidates = []
     provenance_gaps = []
     macro_vertex_counts = [_geometry_vertex_count(feature) for feature in macros]
@@ -298,10 +303,25 @@ def build_report(
                 if row['recommended_action'] == 'monitor_terminal_public_source':
                     high_precision_record['source_review'] = row['source_review']
                     terminal_public_source_candidates.append(high_precision_record)
+                    terminal_public_source_ids.add(feature_id)
                 else:
                     high_precision_split_candidates.append(high_precision_record)
             elif row['recommended_action'] == 'monitor_simplification_only_if_performance_requires':
                 simplification_review_candidates.append(high_precision_record)
+        if row['recommended_action'] == 'monitor_terminal_public_source' and feature_id not in terminal_public_source_ids:
+            terminal_public_source_candidates.append({
+                'id': feature_id,
+                'name': row['name'],
+                'source_standard': row['source_standard'],
+                'geometry_type': row['geometry_type'],
+                'vertex_count': row['vertex_count'],
+                'precision_band': row['precision_band'],
+                'child_count': row['child_count'],
+                'recommended_action': row['recommended_action'],
+                'reasons': _candidate_reasons(row),
+                'source_review': row['source_review'],
+            })
+            terminal_public_source_ids.add(feature_id)
         if row['provenance_status'] != 'recorded':
             provenance_gaps.append({
                 'id': feature_id,
@@ -335,8 +355,7 @@ def build_report(
     ]
     source_replacement_candidates = [
         row for row in family_rows
-        if row['source_family'] == 'local_clone'
-        or row['precision_band'] == 'low'
+        if row['recommended_action'] == 'replace_or_refine_with_public_source'
     ]
     backlog_candidates = [
         row for row in unrefined

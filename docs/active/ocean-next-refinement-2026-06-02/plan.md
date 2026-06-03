@@ -30,7 +30,11 @@ Continue TNO ocean refinement after South China Sea by selecting evidence-backed
 - [x] Publish checked-in water runtime, chunks, startup bundles, manifest, audit, and provenance with 135 water features.
 - [x] Add English Channel child waters from existing SeaVoX source records.
 - [x] Publish checked-in water runtime, chunks, startup bundles, manifest, audit, and provenance with 139 water features and 110 source-backed water extracts.
-- [ ] Commit, push, merge, and cleanup.
+- [x] Commit, push, merge, and cleanup English Channel child-water phase at `81dcfb22`.
+- [x] Re-evaluate `tno_bosporus_dardanelles` as the remaining local clone source replacement candidate.
+- [x] Record terminal public-source review for `tno_bosporus_dardanelles` and route reviewed local clones out of the actionable source replacement queue.
+- [x] Verify Bosporus source-review contract, audit summary, geometry validator, targeted unittest, py_compile, and diff check.
+- [x] Commit, push, merge, and cleanup Bosporus source-review phase.
 
 ## Current Decision
 
@@ -39,4 +43,5 @@ Continue TNO ocean refinement after South China Sea by selecting evidence-backed
 - `tno_irish_sea` has additional verified SeaVoX child records published as `tno_caernarfon_bay`, `tno_menai_strait`, and `tno_morecambe_bay`, with parent geometry cut to zero child overlap.
 - `tno_english_channel` already carries unclaimed SeaVoX child record IDs `24204` through `24207`, so this phase promotes Lyme Bay, Weymouth Bay, Plymouth Sound, and Mounts Bay into explicit child waters and subtracts them from the English Channel remnant.
 - `tno_bosporus_dardanelles` is the only current source replacement candidate and should be evaluated after the narrow stage is landed, because it is a local clone with low score.
+- `tno_bosporus_dardanelles` now has a source-review path: Marine Regions records Dardanelles (`mrgid=3721`) and Bosporus (`mrgid=3725`) as Gazetteer `Strait` point records, while WFS geometry review found broader neighboring polygons and no direct replacement polygon or line for the combined chokepoint.
 - The publish blocker for water-only checked-in edits is reduced: `water_runtime_from_scenario` now passes prechunk checkpoint validation with 135 water features, and the normal `--changed-domain water` path executes `water_runtime_from_scenario -> write_bundle -> chunk_assets`. The older full generator still carries unrelated global ocean topology failures and should be treated as a separate repair lane.
