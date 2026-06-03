@@ -163,12 +163,12 @@
   "scenario_atlantropa_topology_url": "data/scenarios/tno_1962/scenario_atlantropa.topo.json",
   "scenario_contract_profile": "tno_full",
   "scenario_id": "tno_1962",
-  "snapshot_fingerprint": "15e5fdd934938be8b7b8e22e01d526ff733601f46a2183e61d910734a5498b2f",
+  "snapshot_fingerprint": "e343ef0dff102b4a1edb96b217344570953829947ae391b5489c58c22d6dfd5a",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "97e0c43adaae583e0ae6427e3df8d57d27043a997e61dc434d1da2e27b042ae2",
+    "detail_chunk_manifest_sha256": "b919c073b82c1c36b540ff7c6d472a3dacf22109afd2dadaf13114638f27e223",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
-    "runtime_topology_sha256": "2fe67f351d9de0924e2909e56581446fe2975d46aa405cc6bd362efc24ebf1a8"
+    "runtime_topology_sha256": "34b1c5b61dfbcad685de589470025e3f5498e33a5b4133ead65114012b0efb6a"
   },
   "special_regions_url": "data/scenarios/tno_1962/special_regions.geojson",
   "special_zone_layers_url": "data/scenarios/tno_1962/special_zone_layers.json",

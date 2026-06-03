@@ -303,6 +303,7 @@ TRACKED_SEAM_PAIRS = [
     ("tno_norwegian_sea", "tno_northeast_atlantic_ocean"),
     ("tno_barents_sea", "tno_western_arctic_ocean"),
     ("tno_mozambique_channel", "tno_western_indian_ocean"),
+    ("tno_english_channel", "tno_strait_of_dover"),
     ("tno_english_channel", "tno_poole_bay"),
     ("tno_english_channel", "tno_solent"),
     ("tno_english_channel", "tno_weymouth_bay"),
@@ -333,6 +334,8 @@ TRACKED_SEAM_PAIRS = [
     ("tno_south_china_sea", "tno_gulf_of_tonkin"),
     ("tno_south_china_sea", "tno_gulf_of_thailand"),
     ("tno_south_china_sea", "tno_natuna_sea"),
+    ("tno_south_china_sea", "tno_singapore_strait"),
+    ("tno_south_china_sea", "tno_sulu_sea"),
     ("tno_andaman_sea", "tno_malacca_strait"),
     ("tno_malacca_strait", "tno_singapore_strait"),
     ("tno_philippine_sea", "tno_sulu_sea"),
@@ -1744,3 +1747,46 @@ def test_tno_tracked_neighbor_pairs_do_not_leave_gaps():
                 f"right={tuple(round(v, 4) for v in right_point.coords[0])}"
             )
     assert failures == []
+
+
+class TnoWaterRecentRefinementContractTest(unittest.TestCase):
+    """Expose recent ocean refinement contracts through unittest discovery."""
+
+    def test_runtime_water_feature_ids_match_source(self):
+        test_tno_runtime_water_feature_ids_match_source()
+
+    def test_runtime_bootstrap_water_feature_ids_match_source(self):
+        test_tno_runtime_bootstrap_water_feature_ids_match_source()
+
+    def test_water_chunks_cover_current_detail_regions(self):
+        test_tno_water_chunk_feature_ids_cover_current_detail_regions()
+
+    def test_water_chunks_cover_tracked_new_family_regions(self):
+        test_tno_water_chunk_feature_ids_cover_tracked_new_family_regions()
+
+    def test_ocean_refinement_phase_targets_are_synchronized(self):
+        test_tno_ocean_refinement_phase_targets_are_synchronized()
+
+    def test_tracked_probe_points_are_covered_by_expected_water_regions(self):
+        test_tno_tracked_probe_points_are_covered_by_expected_water_regions()
+
+    def test_tracked_neighbor_pairs_do_not_leave_gaps(self):
+        test_tno_tracked_neighbor_pairs_do_not_leave_gaps()
+
+    def test_family_refinement_audit_reports_low_precision_candidates(self):
+        test_tno_water_family_refinement_audit_reports_low_precision_candidates()
+
+    def test_family_refinement_terminal_review_monitors_local_clone(self):
+        test_tno_water_family_refinement_terminal_review_monitors_local_clone()
+
+    def test_bosporus_source_review_records_terminal_public_source(self):
+        test_tno_bosporus_source_review_records_terminal_public_source()
+
+    def test_family_refinement_audit_reports_high_precision_review_candidates(self):
+        test_tno_water_family_refinement_audit_reports_high_precision_review_candidates()
+
+    def test_family_refinement_rejects_invalid_source_review_contract(self):
+        test_tno_water_family_refinement_rejects_invalid_source_review_contract()
+
+    def test_manifest_and_startup_bundles_reflect_current_water_bootstrap(self):
+        test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap()
