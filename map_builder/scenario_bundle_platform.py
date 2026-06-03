@@ -355,6 +355,7 @@ def ensure_runtime_topology_checkpoints(
 ) -> None:
     countries_stage_required = [artifact.filename for artifact in SCENARIO_COUNTRIES_STAGE_ARTIFACTS]
     water_stage_required = [artifact.filename for artifact in SCENARIO_WATER_STAGE_ARTIFACTS]
+    # runtime publish 只需要主图可读的最小集合；完整 water stage 缺失时再回补上游 checkpoint。
     runtime_publish_ready_required = [
         artifact.filename
         for artifact in SCENARIO_COUNTRIES_STAGE_ARTIFACTS
@@ -547,6 +548,7 @@ def validate_strict_publish_bundle(
     all_scope: str,
     validate_publish_bundle_dir: Callable[[Path], list[str]],
 ) -> None:
+    # strict 校验只挡会写回 scenario 数据面的发布，轻量 runtime-only scope 继续走前置 checkpoint 合同。
     if publish_scope not in {scenario_data_scope, all_scope}:
         return
     strict_contract_errors = validate_publish_bundle_dir(checkpoint_dir)
@@ -566,6 +568,7 @@ def publish_checkpoint_bundle(
     write_json: Callable[[Path, dict], None],
 ) -> None:
     scenario_dir.mkdir(parents=True, exist_ok=True)
+    # checkpoint 是冻结点；发布阶段只复制已验证 payload，避免从当前 scenario 目录反向拼装数据。
     for filename in resolve_scenario_publish_filenames(publish_scope):
         payload = load_checkpoint_json(checkpoint_dir, filename)
         output_path = scenario_dir / filename

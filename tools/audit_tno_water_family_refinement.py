@@ -117,6 +117,7 @@ def _require_review_date(value, label: str) -> str:
 def _build_source_review_index(source_review_payload: dict | None, *, valid_feature_ids: set[str]) -> dict[str, dict]:
     if not source_review_payload:
         return {}
+    # source review 是人工查源后的终局记录；这里强校验 schema / feature id，避免审计报告吞掉脏结论。
     if int(source_review_payload.get('schema_version') or 0) != SOURCE_REVIEW_SCHEMA_VERSION:
         raise ValueError(f'source review schema_version must be {SOURCE_REVIEW_SCHEMA_VERSION}')
     if str(source_review_payload.get('scenario_id') or '').strip() != SCENARIO_ID:
@@ -267,6 +268,7 @@ def build_report(
     simplification_review_candidates = []
     provenance_gaps = []
     macro_vertex_counts = [_geometry_vertex_count(feature) for feature in macros]
+    # high_review 阈值随当前 macro 分布计算，能把新增超复杂水域推入人工拆分队列。
     high_vertex_review_threshold = _percentile_threshold(macro_vertex_counts, HIGH_VERTEX_REVIEW_PERCENTILE)
     for feature in sorted(macros, key=lambda item: str((item.get('properties') or {}).get('name') or '')):
         row = _feature_record(feature)
@@ -309,6 +311,7 @@ def build_report(
             elif row['recommended_action'] == 'monitor_simplification_only_if_performance_requires':
                 simplification_review_candidates.append(high_precision_record)
         if row['recommended_action'] == 'monitor_terminal_public_source' and feature_id not in terminal_public_source_ids:
+            # terminal_public_source 进入独立队列，表示已查无可用公共面源，后续只做再验证和性能观察。
             terminal_public_source_candidates.append({
                 'id': feature_id,
                 'name': row['name'],

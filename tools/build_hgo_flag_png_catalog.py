@@ -86,6 +86,7 @@ def convert_tga_to_png(source_path: Path, output_path: Path) -> tuple[int, int, 
 
 def build_png_manifest(source_root: Path, output_root: Path, *, manifest_output: Path) -> dict[str, object]:
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # PNG catalog 是可分发产物，重建前清空旧 shard，防止已删除旗帜继续留在 Pages delivery 集合里。
     clear_png_output_root(output_root)
 
     tags: dict[str, dict[str, object]] = {}
@@ -99,6 +100,7 @@ def build_png_manifest(source_root: Path, output_root: Path, *, manifest_output:
             continue
         for source_path in iter_tga_files(source_dir):
             tag, variant, variant_source = split_flag_stem(source_path.stem)
+            # 按 tag 前两位分片，保持单目录文件数可控，也让 manifest 成为唯一的索引入口。
             output_path = output_root / tier / shard_for_tag(tag) / f"{source_path.stem}.png"
             width, height, mode = convert_tga_to_png(source_path, output_path)
             byte_length = output_path.stat().st_size
@@ -175,6 +177,7 @@ def write_provenance(output_path: Path, payload: dict[str, object], *, validator
 def update_catalog_index(catalog_index_path: Path, manifest_payload: dict[str, object], *, manifest_output: Path) -> None:
     payload = json.loads(catalog_index_path.read_text(encoding="utf-8"))
     assets = payload.setdefault("assets", {})
+    # 总 catalog 只登记 PNG manifest 的位置和规模，具体图片清单继续由 manifest 自己承载。
     assets["flags_png_manifest"] = {
         "url": manifest_output.as_posix(),
         "role": "hgo_flags_png_manifest",

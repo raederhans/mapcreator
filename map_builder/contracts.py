@@ -293,6 +293,8 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         owner="init_map_data.palette_assets",
         description="Generated audit for Historic Geographical Overhaul palette mapping coverage.",
     ),
+    # HGO catalog 拆成三层：总索引负责能力发现，place names / flags index 保留源语义，
+    # PNG manifest 只描述已授权、已转换、可随 Pages 分发的图片产物。
     DataArtifactSpec(
         path="hgo_catalogs/index.json",
         role="hgo_tier_a_catalog",
@@ -666,12 +668,14 @@ SCENARIO_PROFILE_LIGHTWEIGHT_BASE = ScenarioContractProfile(
 
 
 def resolve_scenario_publish_filenames(scope: str) -> tuple[str, ...]:
+    # publish scope 是 scenario builder 和 strict checker 的共同入口；新增 scope 时先补这里的文件集合。
     if scope not in SCENARIO_PUBLISH_FILENAMES_BY_SCOPE:
         raise ValueError(f"Unsupported publish scope: {scope}")
     return SCENARIO_PUBLISH_FILENAMES_BY_SCOPE[scope]
 
 
 def normalize_scenario_contract_tag(raw_value: object) -> str:
+    # contract tag 进入 snapshot fingerprint 前先收敛成稳定 ID，避免大小写或符号差异制造伪漂移。
     text = "".join(ch for ch in str(raw_value or "").strip().upper() if ch.isalnum())
     return text
 

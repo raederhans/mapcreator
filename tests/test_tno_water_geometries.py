@@ -897,6 +897,7 @@ def test_tno_ocean_refinement_phase_targets_are_synchronized():
     manifest_chunk_ids = _load_water_manifest_chunk_feature_ids()
 
     failures = []
+    # 阶段目标必须同时落到 source、runtime、chunk 和 manifest；缺一层都会让首屏或 detail promotion 读到旧水域。
     for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items():
         for feature_id in target_ids:
             if feature_id not in source_ids:
@@ -911,6 +912,7 @@ def test_tno_ocean_refinement_phase_targets_are_synchronized():
 
 
 def test_tno_water_family_refinement_audit_reports_low_precision_candidates():
+    # 这个 fixture 同时覆盖低精度 clone、已有 detail、provenance 记录，锁住候选分类与优先级判定语义。
     macro_feature = {
         "type": "Feature",
         "properties": {
@@ -1670,6 +1672,7 @@ def test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap():
     expected_detail_manifest_sha = _sha256_path(DETAIL_CHUNK_MANIFEST_PATH)
     expected_named_marginal_count = len(tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS)
 
+    # manifest 和双语 startup bundle 共用同一组水域 hash，防止重建只刷新场景数据却漏掉首屏缓存。
     assert int(manifest.get("summary", {}).get("tno_water_region_count") or 0) == source_feature_count
     assert int(manifest.get("summary", {}).get("tno_named_marginal_water_count") or 0) == expected_named_marginal_count
     assert str(manifest.get("water_regions_mode") or "") == "exclusive"
