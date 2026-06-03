@@ -46,3 +46,15 @@
 - `npm run verify:scenario-contracts`: passed for `tno_1962`.
 - `npm run verify:pages-dist`: passed; Pages dist rebuilt and 18 startup shell tests completed.
 - Pages dist rebuild updated `dist/pages-dist-manifest.json`; `dist/app/js/core/export_artifact_package.js` had no content diff after index refresh.
+
+## 2026-06-03 cleanup result
+
+- Pushed `main` from `56f6d646` to `5c774c37`.
+- Removed worktrees:
+  - `C:\Users\raede\Desktop\dev\mapcreator-live-main-20260603`
+  - `C:\Users\raede\Desktop\dev\mapcreator-backend-ui-preview`
+  - `C:\Users\raede\Desktop\dev\mapcreator-tno-toponym-zh-audit`
+  - `C:\Users\raede\Desktop\dev\mapcreator-tno-zoom-water-fill-repair`
+- Deleted local merged branches and superseded replay branches. Remaining local branches are `main`, `backup/pre-push-cleanup-20260413-1`, `backup/pre-push-secret-block-20260425-1`, and `main-pre-raster-cleanup`.
+- Dropped only the temporary closeout stash for `.omx/metrics.json`; older stashes were preserved.
+- Final pre-archive status: `main` equals `origin/main`, and only the main worktree remains.

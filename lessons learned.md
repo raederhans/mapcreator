@@ -250,5 +250,8 @@
 - readonly startup 下首个 chunk visual gate 需要等到 `selectionVersion`、政治 chunk、`landData` 和 `colors` 一起就绪；只等 pending promotion 清空会把“尚未开始 selection”误判成失败。
 - Playwright 长套件使用任务专属 `--output` 目录，避免清理整棵 `.runtime/tests/playwright` 导致测试启动阶段长时间无输出。
 
+### worktree 重放后用内容合同判断清理
+- cherry-pick 到新 main 后，旧分支 commit id 可能仍显示未合入；清理前要用目标文件 diff、patch 等价和验证结果一起确认，避免误删尚未吸收的工作。
+
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。

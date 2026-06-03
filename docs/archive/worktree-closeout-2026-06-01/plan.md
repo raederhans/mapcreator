@@ -11,9 +11,9 @@ Bring all local mapcreator worktrees back into one clean pushed `main` state, pr
 - [x] Commit current `main` doc cleanup without runtime metric drift.
 - [x] Replay branch commits onto latest `origin/main` in a clean integration path.
 - [x] Merge integrated work back into `main`.
-- [ ] Push `main`.
-- [ ] Remove merged worktrees and prune stale records.
-- [ ] Run final status and clean-worktree check.
+- [x] Push `main`.
+- [x] Remove merged worktrees and prune stale records.
+- [x] Run final status and clean-worktree check.
 
 ## Live Process Ownership
 
