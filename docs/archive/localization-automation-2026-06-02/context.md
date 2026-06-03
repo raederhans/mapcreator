@@ -1,0 +1,25 @@
+# Localization Automation Context
+
+- 2026-06-02: Main agent owns live audit and test commands for this run.
+- Current repo dirt before work:
+  - `.omx/metrics.json`
+  - `docs/REFACTOR_ARCHITECTURE_SPLIT_AUDIT_2026-04-19.md`
+  - `lessons learned.md`
+  - `docs/archive/standup-summary-doc-hygiene-2026-06-01/`
+- Current focus:
+  - rerun localization audit
+  - check UI coverage drift
+  - reconfirm local-state/scenario patch override order
+- Prior stable override chain from recent runs:
+  - `baseGeoLocales -> patch.geo -> synchronizedNamePatch.geo -> scenarioGeoPatch`
+- Notes:
+  - keep changes tightly scoped to localization-related files only
+  - do not touch unrelated dirty worktree files
+- Current run findings:
+  - `python tools/i18n_audit.py` stayed fully clean for UI and scenario coverage in the current tree.
+  - `dynamic_ui=2` and `shell_fallback_missing_like=32663` remain existing known buckets, with no new override signal.
+  - Override-safe load/save order is unchanged in current source:
+    - locale-specific patch URL resolves before shared fallback
+    - locale merge order stays `baseGeoLocales -> patch.geo -> synchronizedNamePatch.geo -> scenarioGeoPatch`
+    - dev workspace locale save still reloads saved patch from disk and replays `syncScenarioLocalizationState(...)`
+  - Targeted unittest verification passed with `Ran 76 tests ... OK`.

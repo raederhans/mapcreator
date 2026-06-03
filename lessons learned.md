@@ -1,6 +1,6 @@
 # Lessons Learned
 
-只保留跨任务会反复复用的长期规则。重复口径合并到单处；一次性修补过程、已收口的窄问题、纯执行快照直接移除。
+只保留跨任务会反复复用的长期规则、项目级合同和长期决策。重复口径合并到单处；一次性修补过程、已收口的窄问题、纯执行快照直接移除。
 
 ## 构建、发布与真相源
 
@@ -89,11 +89,6 @@
 - source-of-truth、baseline、runtime locale 一起同步。
 - Cloud Saves / community 这类 JS 动态面板新增 copy 时，要同轮补 `data/locales.json` 和 `dist/app/data/locales.json`；数据源品牌名如 `OpenStreetMap`、`Natural Earth` 这类固定来源词要进 audit 的 non-translatable 规则，避免把来源标签误报成 UI 漏翻。
 
-### Project 状态类异步闭环要完整
-- import / export 这类异步闭环在事务完成和失败时都通知 UI。
-- observer 只做旁路通知，observer failure 不改判已成功事务。
-- 保存状态类 live region 接到 `markDirty` / `clearDirty` 共同路径。
-
 ## 测试、审计与留档
 
 ### review lane 的职责是暴露真实缺口
@@ -105,7 +100,7 @@
 ### 测试锁真实合同
 - 新边界优先补 source contract、node contract、targeted Python contract，再决定是否上更重的 E2E。
 - static contract 进入具名入口后，route registry 递归展开到真实 leaf test 文件。
-- owner boundary 测试锁具体 owner token，避免整文件级禁令误伤。
+- owner boundary 测试锁具体 owner token，必要时把旧实现 token 一起列入禁令，避免整文件级禁令误伤无关 sidebar 或邻近 owner 的改动。
 - 退休一个 spec 时，同步删除 manifest、test list、allowlist、引用关系。
 - data URL harness、import-safe tool、CLI/library mode 这类特殊运行环境单独有合同。
 - 交通工作台新增国家资源包时，先确认 family runtime 的 geometry contract；`industrial_zones` 已是显式 `polygon_or_point` 合同，新增点状或面状工业源都要让 capability、descriptor、inspector、Pages dist 合同一起同步。
@@ -123,7 +118,7 @@
 
 ### source/dist 同步先看漂移范围
 - 如果源码和 `dist/app` 已有历史漂移，共享大文件优先做 scoped patch。
-- 修改 `dist/pages-dist-manifest.json` 时，顺手复核自引用尺寸记录。
+- 修改 `dist/pages-dist-manifest.json` 时，顺手复核自引用尺寸记录；`tests.test_pages_dist_startup_shell` 会校验这个自引用值。
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
 - Marine Regions source snapshot 接近 GitHub 100MiB 限制时，要把简化规则写进 source spec/provenance，比如 `snapshot_simplify_tolerance`；只压最终 water feature 会留下不可推送的大 snapshot。
@@ -147,9 +142,6 @@
 ### 场景颜色要显式声明管理权
 - 手工、controller-only、生成型国家颜色需要写入 `color_policy: "locked"`；缺少 policy 的 checked-in 场景色会在重建时被 palette audit 同步回去。
 - startup cache key 要包含 `countries_sha256`；只改国家颜色时，runtime topology hash 不变，缺少 countries hash 会让浏览器继续读取旧 IndexedDB 场景启动缓存。
-
-### 静态合同要锁 owner 面，避免整文件误伤
-- 为了禁止某个 owner 回退到 `innerHTML` 这类旧实现，测试应列出该 owner 的具体禁止 token；整文件级禁令会把无关 sidebar 改动也变成假失败。
 
 ### 局部 UI 类必须有作用域样式
 - 新增 `.secondary-btn`、`.danger-btn` 这类局部按钮类时，要同时在对应工作台作用域内定义完整按钮状态；只创建 class 不补 CSS 会回落成浏览器默认控件。
@@ -182,10 +174,6 @@
 
 ### 社区后台要先分清用户视角和管理视角
 - 后台预览页要把游客社区、登录用户中心、管理员治理面板拆成独立状态机；登录框、注册框和治理动作混在同一屏会掩盖权限边界。
-
-### startup chunk visual gate 要等真实 selection
-- readonly startup 下首个 chunk visual gate 需要等到 `selectionVersion`、政治 chunk、`landData` 和 `colors` 一起就绪；只等 pending promotion 清空会把“尚未开始 selection”误判成失败。
-- Playwright 长套件使用任务专属 `--output` 目录，避免清理整棵 `.runtime/tests/playwright` 导致测试启动阶段长时间无输出。
 
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。

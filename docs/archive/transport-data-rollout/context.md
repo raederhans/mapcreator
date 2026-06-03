@@ -21,6 +21,7 @@
 - Browser smoke passed for 23 target pack previews plus road/rail/airport/port full overlay samples.
 - Final `npm run verify:pages-dist` passed after JS/data changes; dist size reported as 970.04 MiB.
 - Final catalog check passed after the dist rebuild: 459 entries validated.
+- Follow-up research snapshot from 2026-06-02 is preserved in `research-2026-06-02.md` for the later resource-pack expansion phase.
 - Local rollout scope is complete and ready for repository closeout.
 
 ## Live Process Ownership
