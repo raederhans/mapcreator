@@ -87,6 +87,10 @@ TARGET_DETAIL_PARENT_MAP = {
     'tno_pentland_firth': 'tno_north_sea',
     'tno_poole_bay': 'tno_english_channel',
     'tno_solent': 'tno_english_channel',
+    'tno_weymouth_bay': 'tno_english_channel',
+    'tno_lyme_bay': 'tno_english_channel',
+    'tno_plymouth_sound': 'tno_english_channel',
+    'tno_mounts_bay': 'tno_english_channel',
     'tno_rye_bay': 'tno_strait_of_dover',
     'tno_cardigan_bay': 'tno_irish_sea',
     'tno_caernarfon_bay': 'tno_irish_sea',
@@ -106,6 +110,13 @@ TARGET_DETAIL_PARENT_MAP = {
     'tno_torres_strait': 'tno_coral_sea',
     'tno_great_barrier_reef_coastal_waters': 'tno_coral_sea',
     'tno_bass_strait': 'tno_tasman_sea',
+}
+
+TARGET_DETAIL_WATER_TYPES = {
+    'tno_weymouth_bay': 'bay',
+    'tno_lyme_bay': 'bay',
+    'tno_plymouth_sound': 'sound',
+    'tno_mounts_bay': 'bay',
 }
 
 NON_OVERLAP_PAIRS = [
@@ -138,6 +149,16 @@ NON_OVERLAP_PAIRS = [
     ('tno_mozambique_channel', 'tno_western_indian_ocean'),
     ('tno_english_channel', 'tno_poole_bay'),
     ('tno_english_channel', 'tno_solent'),
+    ('tno_english_channel', 'tno_weymouth_bay'),
+    ('tno_english_channel', 'tno_lyme_bay'),
+    ('tno_english_channel', 'tno_plymouth_sound'),
+    ('tno_english_channel', 'tno_mounts_bay'),
+    ('tno_weymouth_bay', 'tno_lyme_bay'),
+    ('tno_weymouth_bay', 'tno_plymouth_sound'),
+    ('tno_weymouth_bay', 'tno_mounts_bay'),
+    ('tno_lyme_bay', 'tno_plymouth_sound'),
+    ('tno_lyme_bay', 'tno_mounts_bay'),
+    ('tno_plymouth_sound', 'tno_mounts_bay'),
     ('tno_strait_of_dover', 'tno_rye_bay'),
     ('tno_irish_sea', 'tno_cardigan_bay'),
     ('tno_irish_sea', 'tno_caernarfon_bay'),
@@ -240,6 +261,9 @@ def test_target_named_waters_exist_with_expected_contract():
         props = feature.get('properties', {})
         assert str(props.get('region_group') or '').strip() == 'marine_detail', feature_id
         assert str(props.get('parent_id') or '').strip() == parent_id, feature_id
+        expected_water_type = TARGET_DETAIL_WATER_TYPES.get(feature_id)
+        if expected_water_type is not None:
+            assert str(props.get('water_type') or '').strip() == expected_water_type, feature_id
         assert bool(props.get('interactive')) is True, feature_id
         assert str(props.get('scenario_id') or '').strip() == 'tno_1962', feature_id
 

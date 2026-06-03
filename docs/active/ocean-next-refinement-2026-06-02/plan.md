@@ -28,6 +28,8 @@ Continue TNO ocean refinement after South China Sea by selecting evidence-backed
 - [x] Run final review and fix water summary drift.
 - [x] Add `tno_caernarfon_bay`, `tno_menai_strait`, and `tno_morecambe_bay` as source-backed Irish Sea child waters.
 - [x] Publish checked-in water runtime, chunks, startup bundles, manifest, audit, and provenance with 135 water features.
+- [x] Add English Channel child waters from existing SeaVoX source records.
+- [x] Publish checked-in water runtime, chunks, startup bundles, manifest, audit, and provenance with 139 water features and 110 source-backed water extracts.
 - [ ] Commit, push, merge, and cleanup.
 
 ## Current Decision
@@ -35,5 +37,6 @@ Continue TNO ocean refinement after South China Sea by selecting evidence-backed
 - `tno_norwegian_sea`, `tno_caribbean_sea`, and `tno_philippine_sea` are high precision, but Marine Regions WFS evidence shows terminal public-source records without verified child polygon sources. They are now monitored through source review metadata instead of treated as immediate split work.
 - `tno_strait_of_dover` and `tno_north_channel` now have verified SeaVoX child records published as `tno_rye_bay` and `tno_belfast_lough`, with parent geometries cut to zero child overlap.
 - `tno_irish_sea` has additional verified SeaVoX child records published as `tno_caernarfon_bay`, `tno_menai_strait`, and `tno_morecambe_bay`, with parent geometry cut to zero child overlap.
+- `tno_english_channel` already carries unclaimed SeaVoX child record IDs `24204` through `24207`, so this phase promotes Lyme Bay, Weymouth Bay, Plymouth Sound, and Mounts Bay into explicit child waters and subtracts them from the English Channel remnant.
 - `tno_bosporus_dardanelles` is the only current source replacement candidate and should be evaluated after the narrow stage is landed, because it is a local clone with low score.
 - The publish blocker for water-only checked-in edits is reduced: `water_runtime_from_scenario` now passes prechunk checkpoint validation with 135 water features, and the normal `--changed-domain water` path executes `water_runtime_from_scenario -> write_bundle -> chunk_assets`. The older full generator still carries unrelated global ocean topology failures and should be treated as a separate repair lane.

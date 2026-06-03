@@ -843,11 +843,32 @@ class TnoBundleBuilderTest(unittest.TestCase):
             for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
         }
 
+        self.assertEqual(
+            spec_map["tno_english_channel"]["subtract_named_ids"],
+            (
+                "tno_strait_of_dover",
+                "tno_poole_bay",
+                "tno_solent",
+                "tno_weymouth_bay",
+                "tno_lyme_bay",
+                "tno_plymouth_sound",
+                "tno_mounts_bay",
+            ),
+        )
         self.assertEqual(spec_map["tno_strait_of_dover"]["source_query"], "mrgid_l4='23735'")
         self.assertEqual(spec_map["tno_strait_of_dover"]["subtract_named_ids"], ("tno_rye_bay",))
         self.assertEqual(spec_map["tno_rye_bay"]["source_layer"], "seavox_v19")
         self.assertEqual(spec_map["tno_rye_bay"]["source_query"], "mrgid_sr='24198'")
         self.assertEqual(spec_map["tno_rye_bay"]["parent_id"], "tno_strait_of_dover")
+
+        self.assertEqual(spec_map["tno_weymouth_bay"]["source_query"], "mrgid_sr='24204'")
+        self.assertEqual(spec_map["tno_weymouth_bay"]["parent_id"], "tno_english_channel")
+        self.assertEqual(spec_map["tno_lyme_bay"]["source_query"], "mrgid_sr='24205'")
+        self.assertEqual(spec_map["tno_lyme_bay"]["parent_id"], "tno_english_channel")
+        self.assertEqual(spec_map["tno_plymouth_sound"]["source_query"], "mrgid_sr='24206'")
+        self.assertEqual(spec_map["tno_plymouth_sound"]["parent_id"], "tno_english_channel")
+        self.assertEqual(spec_map["tno_mounts_bay"]["source_query"], "mrgid_sr='24207'")
+        self.assertEqual(spec_map["tno_mounts_bay"]["parent_id"], "tno_english_channel")
 
         self.assertEqual(spec_map["tno_north_channel"]["source_query"], "mrgid_l4='23739'")
         self.assertEqual(spec_map["tno_north_channel"]["subtract_named_ids"], ("tno_belfast_lough",))
@@ -3167,6 +3188,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             write_json(scenario_dir / "runtime_topology.topo.json", runtime_payload)
             write_json(scenario_dir / "runtime_topology.bootstrap.topo.json", runtime_payload)
             write_json(scenario_dir / "manifest.json", {"summary": {"feature_count": 0}})
+            write_json(scenario_dir / "audit.json", {"summary": {"feature_count": 0}, "diagnostics": {}})
 
             def fake_chunk_assets(path: Path) -> None:
                 write_json(path / "detail_chunks.manifest.json", {"chunks": []})
@@ -3209,6 +3231,12 @@ class TnoBundleBuilderTest(unittest.TestCase):
             self.assertEqual(water_ids, {"fixture_checked_in_water"})
             self.assertEqual(runtime_water_ids, water_ids)
             self.assertEqual(state["water_feature_count"], 1)
+            checkpoint_manifest = json.loads((checkpoint_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(checkpoint_manifest["summary"]["tno_water_region_count"], 1)
+            self.assertEqual(
+                checkpoint_manifest["summary"]["tno_named_marginal_water_count"],
+                len(tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS),
+            )
             self.assertEqual(events, ["rebuild_maps", "chunks", "sync_audit"])
             validate_mock.assert_called_once()
             rebuild_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)

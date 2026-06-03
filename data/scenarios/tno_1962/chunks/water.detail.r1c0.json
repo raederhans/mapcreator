@@ -23,7 +23,10 @@
         "source_feature_id": "lake_superior",
         "source_water_region_id": "lake_superior",
         "topology_mode": "true_water",
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "Polygon",
@@ -925,7 +928,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -25857,7 +25863,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -65945,7 +65954,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "Polygon",
@@ -66356,7 +66368,7 @@
       }
     },
     {
-      "id": "47",
+      "id": "51",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_alaska",
@@ -66377,7 +66389,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -91710,7 +91725,7 @@
       }
     },
     {
-      "id": "51",
+      "id": "55",
       "type": "Feature",
       "properties": {
         "id": "tno_gulf_of_mexico",
@@ -91731,7 +91746,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -130282,7 +130300,7 @@
       }
     },
     {
-      "id": "59",
+      "id": "63",
       "type": "Feature",
       "properties": {
         "id": "tno_hudson_bay",
@@ -130303,7 +130321,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -288588,7 +288609,7 @@
       }
     },
     {
-      "id": "82",
+      "id": "86",
       "type": "Feature",
       "properties": {
         "id": "tno_northeast_pacific_ocean",
@@ -288609,7 +288630,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -309780,7 +309804,7 @@
       }
     },
     {
-      "id": "83",
+      "id": "87",
       "type": "Feature",
       "properties": {
         "id": "tno_northwest_atlantic_ocean",
@@ -309801,7 +309825,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -319880,7 +319907,7 @@
       }
     },
     {
-      "id": "131",
+      "id": "135",
       "type": "Feature",
       "properties": {
         "id": "tno_west_central_pacific_ocean",
@@ -319901,7 +319928,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",
@@ -322024,7 +322054,7 @@
       }
     },
     {
-      "id": "132",
+      "id": "136",
       "type": "Feature",
       "properties": {
         "id": "tno_western_arctic_ocean",
@@ -322045,7 +322075,10 @@
         "source_feature_id": null,
         "source_water_region_id": null,
         "topology_mode": null,
-        "source_province_ids": null
+        "source_province_ids": null,
+        "source_layer": null,
+        "source_query": null,
+        "source_record_ids": null
       },
       "geometry": {
         "type": "MultiPolygon",

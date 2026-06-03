@@ -208,3 +208,6 @@
 
 ### 公开 catalog 要进入 manifest 治理面
 - 通过 palette registry 或 runtime asset registry 暴露的新数据入口，要同步写入 artifact contract 并刷新 `data/manifest.json`，否则 catalog 可见但 hash/owner 治理链会漂。
+
+### 子海域拆分要锁 sibling 合同
+- 新增 source-backed child waters 时，除了父水域 subtraction，还要给 sibling non-overlap 和 detail `water_type` 加 focused contract，避免相邻子海域或类型语义在后续批次漂移。

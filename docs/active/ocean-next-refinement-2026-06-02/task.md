@@ -20,4 +20,7 @@
 - [x] Add `tno_caernarfon_bay`, `tno_menai_strait`, and `tno_morecambe_bay` source-backed Irish Sea child waters.
 - [x] Refresh water runtime, chunks, startup bundles, manifest, audit, and provenance to 135/107 counts.
 - [x] Run Irish Sea child-water audit, geometry validator, targeted water tests, builder tests, py_compile, and diff check.
+- [x] Add `tno_lyme_bay`, `tno_weymouth_bay`, `tno_plymouth_sound`, and `tno_mounts_bay` source-backed English Channel child waters.
+- [x] Refresh water runtime, chunks, startup bundles, manifest, audit, and provenance to 139 water features / 110 source-backed water extracts.
+- [x] Run English Channel child-water audit, geometry validator, targeted water tests, builder tests, py_compile, and diff check.
 - [ ] Commit, push, merge, cleanup.

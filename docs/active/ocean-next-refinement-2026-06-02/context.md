@@ -3,6 +3,9 @@
 - Worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-next-child-waters-20260602b`
 - Branch: `codex/ocean-next-child-waters-20260602b`
 - Base: `origin/main` at `740ba688`.
+- Current continuation worktree: `C:\Users\raede\Desktop\dev\mapcreator-ocean-english-channel-children-20260602`
+- Current continuation branch: `codex/ocean-english-channel-children-20260602`
+- Current continuation base: `origin/main` at `732333f1`.
 - Parent checkout has unrelated dirty files and is behind `origin/main`; this worktree isolates ocean changes.
 - Live process owner: main agent owns audit/build/test commands.
 - Subagents: read-only audit, mapping, and review lanes only unless explicitly assigned disjoint write scopes.
@@ -70,6 +73,21 @@
   - `python -m unittest tests.test_tno_bundle_builder tests.test_tno_water_geometries.TnoWaterGeometryDataContractTest -q` passed: 106 tests.
   - `python -m py_compile tools\patch_tno_1962_bundle.py tests\test_tno_bundle_builder.py tests\test_tno_water_geometries.py tests\test_tno_named_marginal_water_contract.py` passed.
   - `git diff --check` passed.
+- English Channel continuation:
+  - Candidate audit found `tno_english_channel` provenance already includes unclaimed SeaVoX source records `mrgid_sr:24204`, `mrgid_sr:24205`, `mrgid_sr:24206`, and `mrgid_sr:24207`.
+  - This phase promotes those records to `tno_weymouth_bay`, `tno_lyme_bay`, `tno_plymouth_sound`, and `tno_mounts_bay`, all parented to `tno_english_channel`.
+  - Checked-in publish now has `water_regions.geojson=139` and `water_extracts=110`.
+  - Targeted generation log `.runtime\logs\english_channel_targeted_publish_20260602.log` shows all four new child waters have non-zero area and zero overlap with `tno_english_channel`.
+  - Normal water changed-domain log `.runtime\logs\changed_domain_water_english_channel_children_20260602_v2.log` passed with executed stages `water_runtime_from_scenario`, `write_bundle`, and `chunk_assets`; checkpoint and root summaries report `tno_water_region_count=139` and `tno_named_marginal_water_count=111`.
+  - `python tools\audit_tno_water_family_refinement.py` passed through `.runtime\logs\audit_tno_water_family_refinement_english_channel_children_20260602.log` with `provenance_gap_count=0`.
+  - `python tools\validate_tno_water_geometries.py --scenario-dir data\scenarios\tno_1962 --report-path .runtime\reports\generated\ocean_english_channel_children_geometry.json` passed.
+  - Targeted plain water contract checks passed through `.runtime\logs\targeted_plain_water_tests_english_channel_children_20260602.log`.
+  - `python -m unittest tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_water_runtime_from_scenario_stage_uses_checked_in_water_surface tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_sync_tno_water_summary_from_scenario_tracks_checked_in_water_source tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_tno_channel_child_source_specs_keep_parent_seams_closed -q` passed: 3 tests.
+  - `python -m unittest tests.test_tno_bundle_builder tests.test_tno_water_geometries.TnoWaterGeometryDataContractTest -q` passed: 106 tests.
+  - `python -m py_compile tools\patch_tno_1962_bundle.py tests\test_tno_bundle_builder.py tests\test_tno_water_geometries.py tests\test_tno_named_marginal_water_contract.py` passed.
+  - `git diff --check` passed.
+  - Read-only reviewer found no blocking issue and flagged two test coverage gaps; follow-up tests now lock the four new English Channel detail `water_type` values and all six sibling non-overlap pairs.
+  - Post-review regression passed: named marginal contract direct check, targeted plain water checks, 106 related unittests, py_compile, and `git diff --check`.
 - Review fix:
   - Source review metadata now requires `schema_version=1`, `scenario_id=tno_1962`, known `review_status`, unique macro IDs, `YYYY-MM-DD` reviewed dates, non-empty source queries, and non-empty evidence before it can move a high-detail macro into `monitor_terminal_public_source`.
   - Backlog membership now uses an explicit actionable recommendation set instead of a string prefix check.
