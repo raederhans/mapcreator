@@ -1,0 +1,11 @@
+{
+  "filename": "hgo_flags.png_manifest.json",
+  "configured_source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2241701657",
+  "resolved_source_url": null,
+  "fallback_candidates": [],
+  "sha256": "f799e1bde0e22cbfd86376f524cb8b6adc7756c18c829bde982f22209b72451d",
+  "content_length": 4744356,
+  "captured_at_utc": "2026-06-03T02:23:49Z",
+  "capture_mode": "local_hgo_flag_png_catalog_build",
+  "validator_name": "hgo_flags_png_manifest_v1"
+}

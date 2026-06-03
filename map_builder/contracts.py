@@ -315,6 +315,13 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         description="Historic Geographical Overhaul source-only flag index.",
     ),
     DataArtifactSpec(
+        path="hgo_catalogs/hgo_flags.png_manifest.json",
+        role="hgo_flags_png_manifest",
+        artifact_class=ARTIFACT_CLASS_DERIVED,
+        owner="tools.build_hgo_flag_png_catalog",
+        description="Historic Geographical Overhaul authorized converted flag PNG manifest.",
+    ),
+    DataArtifactSpec(
         path="js/core/city_lights_modern_asset.js",
         role="modern_city_lights_asset",
         artifact_class=ARTIFACT_CLASS_PUBLISH,

@@ -211,3 +211,6 @@
 
 ### 子海域拆分要锁 sibling 合同
 - 新增 source-backed child waters 时，除了父水域 subtraction，还要给 sibling non-overlap 和 detail `water_type` 加 focused contract，避免相邻子海域或类型语义在后续批次漂移。
+
+### 大批量图片目录要有实体合同
+- catalog 入口只登记 manifest JSON 时，要另加实体文件合同校验路径、数量、大小和 hash；否则批量 PNG 丢文件也可能绕过 data health。

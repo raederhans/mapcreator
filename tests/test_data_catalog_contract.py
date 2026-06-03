@@ -78,6 +78,11 @@ class DataCatalogContractTest(unittest.TestCase):
             "hgo_tier_a_catalog": ("data/hgo_catalogs/index.json", "hgo_tier_a_catalog", "tools.build_hgo_flag_index"),
             "hgo_place_names": ("data/hgo_catalogs/hgo_place_names.json", "hgo_place_names", "tools.build_hgo_name_catalog"),
             "hgo_flags_index": ("data/hgo_catalogs/hgo_flags.index.json", "hgo_flags_index", "tools.build_hgo_flag_index"),
+            "hgo_flags_png_manifest": (
+                "data/hgo_catalogs/hgo_flags.png_manifest.json",
+                "hgo_flags_png_manifest",
+                "tools.build_hgo_flag_png_catalog",
+            ),
         }
         for key, (url, role, owner) in expected.items():
             self.assertIn(key, entries)
@@ -97,6 +102,7 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertIn("data/hgo_catalogs/index.json", urls)
         self.assertIn("data/hgo_catalogs/hgo_place_names.json", urls)
         self.assertIn("data/hgo_catalogs/hgo_flags.index.json", urls)
+        self.assertIn("data/hgo_catalogs/hgo_flags.png_manifest.json", urls)
         for url in urls:
             self.assertNotIn("historic geographic overhaul", url)
             self.assertFalse(url.endswith(".tga"), url)

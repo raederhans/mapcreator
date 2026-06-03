@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-02T23:10:59.042619+00:00",
+  "generated_at": "2026-06-03T02:24:37.597358+00:00",
   "outputs": {
     "europe_topology.json": {
       "role": "primary_topology",
@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 15011,
-      "sha256": "ed04338bc3546d6039981a57d60c7a6b48a3a33310d98be549b7a2bc435b0498"
+      "size_bytes": 15169,
+      "sha256": "3b9a3c0c564200a2d1237ad2e0499782e77e9fc31d140915b586a7a0602e3f63"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -466,8 +466,8 @@
       "artifact_class": "derived",
       "owner": "tools.build_hgo_flag_index",
       "description": "Historic Geographical Overhaul Tier-A catalog index.",
-      "size_bytes": 919,
-      "sha256": "f16cf6d4437583a16ff24f2abdc14655ff6d1714cd0ddb3a7ffc4f39aad2da0d"
+      "size_bytes": 1141,
+      "sha256": "a438604c7585b42092c7d83fe4f0b087adf1b8aca2ef822696eb9113ef31c46f"
     },
     "hgo_catalogs/hgo_place_names.json": {
       "role": "hgo_place_names",
@@ -482,8 +482,16 @@
       "artifact_class": "derived",
       "owner": "tools.build_hgo_flag_index",
       "description": "Historic Geographical Overhaul source-only flag index.",
-      "size_bytes": 1621812,
-      "sha256": "df0a7916fc89370687b924d9d67fbb652995d86dbb573d4f8cc5c68309c2693e"
+      "size_bytes": 1947346,
+      "sha256": "1accd58eecbe63524ca482955b898d41f650d752da724a935f04220ed7188658"
+    },
+    "hgo_catalogs/hgo_flags.png_manifest.json": {
+      "role": "hgo_flags_png_manifest",
+      "artifact_class": "derived",
+      "owner": "tools.build_hgo_flag_png_catalog",
+      "description": "Historic Geographical Overhaul authorized converted flag PNG manifest.",
+      "size_bytes": 4744356,
+      "sha256": "f799e1bde0e22cbfd86376f524cb8b6adc7756c18c829bde982f22209b72451d"
     },
     "js/core/city_lights_modern_asset.js": {
       "role": "modern_city_lights_asset",
@@ -627,6 +635,11 @@
       "hgo_flags_index": {
         "url": "data/hgo_catalogs/hgo_flags.index.json",
         "role": "hgo_flags_index",
+        "family_id": "hgo"
+      },
+      "hgo_flags_png_manifest": {
+        "url": "data/hgo_catalogs/hgo_flags.png_manifest.json",
+        "role": "hgo_flags_png_manifest",
         "family_id": "hgo"
       },
       "releasable_catalog": {

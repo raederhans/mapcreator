@@ -2,7 +2,7 @@
   "schema_version": 1,
   "catalog_id": "hgo_tier_a",
   "source_id": "hgo_mod_2241701657",
-  "generated_at_utc": "2026-06-02T23:04:30Z",
+  "generated_at_utc": "2026-06-03T02:23:49Z",
   "source": {
     "display_name": "Historic Geographical Overhaul",
     "workshop_id": "2241701657",
@@ -20,18 +20,25 @@
       "role": "hgo_flags_index",
       "available": true,
       "tag_count": 1455
+    },
+    "flags_png_manifest": {
+      "url": "data/hgo_catalogs/hgo_flags.png_manifest.json",
+      "role": "hgo_flags_png_manifest",
+      "available": true,
+      "file_count": 11253,
+      "total_png_bytes": 12908285
     }
   },
   "scope": {
     "included": [
       "country palette",
       "place names",
-      "flag source index"
+      "flag source index",
+      "converted flag PNG manifest"
     ],
     "excluded": [
       "projected geometry",
-      "scenario owners",
-      "converted flag image redistribution"
+      "scenario owners"
     ]
   }
 }

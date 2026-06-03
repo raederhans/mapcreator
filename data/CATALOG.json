@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-06-02T23:10:59.042619+00:00",
+  "generated_at": "2026-06-03T02:24:37.597358+00:00",
   "counts": {
-    "entries": 486,
+    "entries": 487,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -17,6 +17,7 @@
       "feature_migration_table": 1,
       "geo_aliases": 1,
       "hgo_flags_index": 1,
+      "hgo_flags_png_manifest": 1,
       "hgo_place_names": 1,
       "hgo_tier_a_catalog": 1,
       "hierarchy": 1,
@@ -50,11 +51,11 @@
     "by_format": {
       "geojson": 81,
       "javascript": 2,
-      "json": 253,
+      "json": 254,
       "topojson": 150
     },
     "by_read_mode": {
-      "json": 484,
+      "json": 485,
       "module": 2
     }
   },
@@ -318,6 +319,21 @@
       "readMode": "json",
       "aliases": [
         "manifest_output:hgo_catalogs/hgo_flags.index.json"
+      ]
+    },
+    {
+      "key": "hgo_flags_png_manifest",
+      "url": "data/hgo_catalogs/hgo_flags.png_manifest.json",
+      "role": "hgo_flags_png_manifest",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::hgo_catalogs/hgo_flags.png_manifest.json::sha256",
+      "owner": "tools.build_hgo_flag_png_catalog",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "manifest_output:hgo_catalogs/hgo_flags.png_manifest.json"
       ]
     },
     {

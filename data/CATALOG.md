@@ -1,8 +1,8 @@
 # Data Catalog
 
-- generated_at: 2026-06-02T23:10:59.042619+00:00
+- generated_at: 2026-06-03T02:24:37.597358+00:00
 - version: 1
-- entries: 486
+- entries: 487
 
 ## Counts by role
 
@@ -21,6 +21,7 @@
 | feature_migration_table | 1 |
 | geo_aliases | 1 |
 | hgo_flags_index | 1 |
+| hgo_flags_png_manifest | 1 |
 | hgo_place_names | 1 |
 | hgo_tier_a_catalog | 1 |
 | hierarchy | 1 |
@@ -74,6 +75,7 @@
 | manifest_output:global_physical_semantics.topo.json | data/global_physical_semantics.topo.json | physical_semantics_topology | topojson | json | init_map_data.primary_topology_bundle |  |
 | context_layer:rivers | data/global_rivers.geojson | context_layer | geojson | json | runtime_asset_registry.assets.context_layer:rivers |  |
 | hgo_flags_index | data/hgo_catalogs/hgo_flags.index.json | hgo_flags_index | json | json | tools.build_hgo_flag_index |  |
+| hgo_flags_png_manifest | data/hgo_catalogs/hgo_flags.png_manifest.json | hgo_flags_png_manifest | json | json | tools.build_hgo_flag_png_catalog |  |
 | hgo_place_names | data/hgo_catalogs/hgo_place_names.json | hgo_place_names | json | json | tools.build_hgo_name_catalog |  |
 | hgo_tier_a_catalog | data/hgo_catalogs/index.json | hgo_tier_a_catalog | json | json | tools.build_hgo_flag_index |  |
 | manifest_output:hierarchy.json | data/hierarchy.json | hierarchy | json | json | init_map_data.hierarchy_locales |  |

@@ -23,6 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", default="data/hgo_catalogs/hgo_flags.index.json")
     parser.add_argument("--catalog-index-output", default="data/hgo_catalogs/index.json")
     parser.add_argument("--place-names", default="data/hgo_catalogs/hgo_place_names.json")
+    parser.add_argument("--png-manifest", default="data/hgo_catalogs/hgo_flags.png_manifest.json")
     parser.add_argument("--provenance-output", default="")
     return parser.parse_args()
 
@@ -32,11 +33,15 @@ def dump_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def split_flag_stem(stem: str) -> tuple[str, str]:
+def iter_tga_files(source_dir: Path) -> list[Path]:
+    return sorted(path for path in source_dir.iterdir() if path.is_file() and path.suffix.lower() == ".tga")
+
+
+def split_flag_stem(stem: str) -> tuple[str, str, str]:
     if "_" not in stem:
-        return stem.upper(), "base"
+        return stem.upper(), "base", "base"
     tag, variant = stem.split("_", 1)
-    return tag.upper(), variant
+    return tag.upper(), variant.lower(), variant
 
 
 def build_flag_index(root: Path) -> dict[str, object]:
@@ -47,8 +52,8 @@ def build_flag_index(root: Path) -> dict[str, object]:
         source_dir = root / rel_dir
         if not source_dir.exists():
             continue
-        for path in sorted(source_dir.glob("*.tga")):
-            tag, variant = split_flag_stem(path.stem)
+        for path in iter_tga_files(source_dir):
+            tag, variant, variant_source = split_flag_stem(path.stem)
             tag_entry = tags.setdefault(tag, {"base": {}, "variants": {}})
             rel_path = rel_dir / path.name
             record = {
@@ -58,6 +63,7 @@ def build_flag_index(root: Path) -> dict[str, object]:
             if variant == "base":
                 tag_entry["base"][tier] = record
             else:
+                record["variant_source"] = variant_source
                 variants = tag_entry["variants"]
                 variants.setdefault(variant, {})[tier] = record
                 variant_counts[variant] += 1
@@ -76,11 +82,11 @@ def build_flag_index(root: Path) -> dict[str, object]:
             "source_root": "historic geographic overhaul",
         },
         "distribution_policy": {
-            "png_generation": "deferred",
-            "redistribution_review": "required_before_committing_converted_images",
+            "png_generation": "companion_manifest",
+            "redistribution_review": "authorized_by_user_confirmation_2026_06_03",
             "notes": [
-                "This index references local HGO TGA source paths only.",
-                "No converted flag images are generated or committed in this phase."
+                "This index keeps local HGO TGA source paths.",
+                "Converted PNG assets are described by data/hgo_catalogs/hgo_flags.png_manifest.json."
             ],
         },
         "counts": {
@@ -94,35 +100,61 @@ def build_flag_index(root: Path) -> dict[str, object]:
     }
 
 
-def build_catalog_index(flags_payload: dict[str, object], *, place_names_path: Path, flags_path: Path) -> dict[str, object]:
+def build_catalog_index(
+    flags_payload: dict[str, object],
+    *,
+    place_names_path: Path,
+    flags_path: Path,
+    png_manifest_path: Path | None = None,
+) -> dict[str, object]:
     place_names_exists = place_names_path.exists()
     place_names_count = 0
     if place_names_exists:
         place_names_payload = json.loads(place_names_path.read_text(encoding="utf-8"))
         place_names_count = int((place_names_payload.get("counts") or {}).get("entries") or 0)
+    assets: dict[str, dict[str, object]] = {
+        "place_names": {
+            "url": place_names_path.as_posix(),
+            "role": "hgo_place_names",
+            "available": place_names_exists,
+            "entry_count": place_names_count,
+        },
+        "flags_index": {
+            "url": flags_path.as_posix(),
+            "role": "hgo_flags_index",
+            "available": True,
+            "tag_count": int((flags_payload.get("counts") or {}).get("tags") or 0),
+        },
+    }
+    included = ["country palette", "place names", "flag source index"]
+    excluded = ["projected geometry", "scenario owners"]
+    if png_manifest_path is not None:
+        png_manifest_exists = png_manifest_path.exists()
+        png_file_count = 0
+        total_png_bytes = 0
+        if png_manifest_exists:
+            png_manifest_payload = json.loads(png_manifest_path.read_text(encoding="utf-8"))
+            png_manifest_counts = png_manifest_payload.get("counts") or {}
+            png_file_count = int(png_manifest_counts.get("files") or 0)
+            total_png_bytes = int(png_manifest_counts.get("total_png_bytes") or 0)
+        assets["flags_png_manifest"] = {
+            "url": png_manifest_path.as_posix(),
+            "role": "hgo_flags_png_manifest",
+            "available": png_manifest_exists,
+            "file_count": png_file_count,
+            "total_png_bytes": total_png_bytes,
+        }
+        included.append("converted flag PNG manifest")
     return {
         "schema_version": 1,
         "catalog_id": "hgo_tier_a",
         "source_id": SOURCE_ID,
         "generated_at_utc": flags_payload["generated_at_utc"],
         "source": flags_payload["source"],
-        "assets": {
-            "place_names": {
-                "url": place_names_path.as_posix(),
-                "role": "hgo_place_names",
-                "available": place_names_exists,
-                "entry_count": place_names_count,
-            },
-            "flags_index": {
-                "url": flags_path.as_posix(),
-                "role": "hgo_flags_index",
-                "available": True,
-                "tag_count": int((flags_payload.get("counts") or {}).get("tags") or 0),
-            },
-        },
+        "assets": assets,
         "scope": {
-            "included": ["country palette", "place names", "flag source index"],
-            "excluded": ["projected geometry", "scenario owners", "converted flag image redistribution"],
+            "included": included,
+            "excluded": excluded,
         },
     }
 
@@ -154,7 +186,13 @@ def main() -> None:
     dump_json(provenance_path, build_provenance(output_path, payload, "hgo_flags_index_v1"))
 
     catalog_index_path = Path(args.catalog_index_output)
-    catalog_payload = build_catalog_index(payload, place_names_path=Path(args.place_names), flags_path=output_path)
+    png_manifest_path = Path(args.png_manifest)
+    catalog_payload = build_catalog_index(
+        payload,
+        place_names_path=Path(args.place_names),
+        flags_path=output_path,
+        png_manifest_path=png_manifest_path if png_manifest_path.exists() else None,
+    )
     dump_json(catalog_index_path, catalog_payload)
     dump_json(
         catalog_index_path.with_suffix(".provenance.json"),
