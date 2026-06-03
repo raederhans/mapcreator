@@ -49,3 +49,22 @@
 - 验证通过：`python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`，10 个测试通过。
 - 验证通过：`git diff --check`。输出仅有 Git 行尾转换提示。
 - 第一性原理复核：本轮继续改 canonical 源表 `data/locales.json`，再通过现有 builder 同步交付产物；这是当前最短且稳健的路径。直接改 patch 或 bundle 会在后续生成时丢失。
+
+## 2026-06-03 第三轮专项
+
+- 新目标：专项审查中国境内 TNO 地名里的奇怪音译错误和同音错字。
+- 外部对照：ChinaFile/NBS 官方地名 CSV 说明、GB/T 2260 文档、`yescallop/areacodes` 县级以上行政区划历史数据。
+- 本轮只写回唯一匹配的高置信项：`CN_*` 且英文名以 `xian` 结尾、当前中文未以 `县` 结尾，并且行政区划拼音索引只对应一个县级中文名。
+- 已生成 runtime 复核文件：`.runtime/tmp/china-toponyms/china-xian-updates.json`、`.runtime/tmp/china-toponyms/china-locales-applied.json`。
+- 已写回 `data/locales.json`：271 个 feature 修正，覆盖 542 个 locale 键。
+- 示例：`Xintianxian -> 新田县`、`Antuxian -> 安图县`、`Dahuayaozuzizhixian -> 大化瑶族自治县`、`Longlingezuzizhixian -> 隆林各族自治县`、`Ledonglizuzizhixian -> 乐东黎族自治县`。
+- 已追加人工高置信修正：66 个 feature 拼写变体，覆盖 131 个 locale 键；另修 `Huizhexian -> 会泽县`、`Linyi -> 临沂`。
+- 追加示例：`Luohuoxian -> 炉霍县`、`Celexian -> 策勒县`、`Panxiantequ -> 盘县特区`、`Jinpingmiaozhuyaozhudaizuzizhixian -> 金平苗族瑶族傣族自治县`、`Qinglongxian -> 晴隆县`。
+- 已运行 `python tools\build_tno_1962_geo_locale_patch.py`，结果仍为 11022 条 feature locales，0 个 cross-base collision。
+- 已运行 `python tools\build_startup_bootstrap_assets.py --report-path .runtime\reports\generated\tno-startup-support-toponym-china-zh.json`，`startup_geo_entry_count=44541`，`startup_alias_count=222`。
+- 已运行 `python tools\build_startup_bundle.py ... --report-path .runtime\reports\generated\tno-startup-bundle-toponym-china-zh.json`，en/zh gzip 均为 1378919 bytes，未超 5000000 bytes 预算。
+- 残留扫描：339 个预期修正全部进入 `geo_locale_patch`；实际 diff 为 677 个 locale `zh` 值变化；剩余 22 个候选多为 `Xixian/Gongyanxian` 这类同音、多省重名或 TNO 拼写变体，保留给下一轮人工定位。
+- 已新增 `tests.test_tno_geo_locale_patch.TnoGeoLocalePatchTest.test_checked_in_tno_china_toponym_fixes_stay_synced`，锁住主源、TNO patch、中文 patch、startup locale 的关键样例同步。
+- 验证通过：`python tools\i18n_audit.py`，关键结果 `scenario_geo_missing=0`、`corrupted_translations=0`。
+- 验证通过：`python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`，11 个测试通过。
+- 验证通过：`git diff --check`。输出仅有 Git 行尾转换提示。

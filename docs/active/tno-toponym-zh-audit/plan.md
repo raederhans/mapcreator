@@ -39,3 +39,20 @@
 - `python tools\i18n_audit.py`
 - `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
 - `git diff --check`
+
+## 第三轮：中国境内地名
+
+- [x] 抽取 `CN_*` 中国境内地名候选。
+- [x] 联网对照 NBS/ChinaFile、GB/T 2260、县级以上行政区划历史数据。
+- [x] 只修唯一匹配的高置信 `xian` 后缀错译和同音错字。
+- [x] 刷新 TNO geo locale patch。
+- [x] 刷新 startup locale/support/bundle 产物。
+- [x] 运行残留扫描、审计和定向测试。
+- [x] 提交并推送第三轮专项修正。
+
+## 第三轮验证记录
+
+- 残留扫描：339 个预期修正全部进入 `geo_locale_patch`，实际 diff 为 677 个 locale `zh` 值变化，剩余 22 个同音/拼写变体候选保留人工判读。
+- `python tools\i18n_audit.py`
+- `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
+- `git diff --check`

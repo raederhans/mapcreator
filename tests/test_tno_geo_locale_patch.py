@@ -28,6 +28,46 @@ def _write_locale_fixture(locales_path: Path, raw_name: str, zh_name: str) -> No
 
 
 class TnoGeoLocalePatchTest(unittest.TestCase):
+    def test_checked_in_tno_china_toponym_fixes_stay_synced(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        locales = json.loads((root / "data" / "locales.json").read_text(encoding="utf-8"))["geo"]
+        startup_locales = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "locales.startup.json").read_text(encoding="utf-8")
+        )["geo"]
+        patch = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "geo_locale_patch.json").read_text(encoding="utf-8")
+        )["geo"]
+        zh_patch = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "geo_locale_patch.zh.json").read_text(encoding="utf-8")
+        )["geo"]
+
+        expected = {
+            "Antuxian": ("CN_CITY_17275852B10463544903813", "安图县"),
+            "Huizhexian": ("CN_CITY_17275852B10474076998029", "会泽县"),
+            "Linyi": ("CN_CITY_17275852B67564907021397", "临沂"),
+            "Luohuoxian": ("CN_CITY_17275852B11052099771689", "炉霍县"),
+            "Celexian": ("CN_CITY_17275852B11484115656970", "策勒县"),
+            "Ledonglizuzizhixian": ("CN_CITY_17275852B50589627480209", "乐东黎族自治县"),
+        }
+        retained_ambiguous = {
+            "Gongyanxian": ("CN_CITY_17275852B1257312703969", "公彦贤"),
+            "Xixian": ("CN_CITY_17275852B18660143588191", "西贤"),
+        }
+
+        for english_name, (feature_id, zh_name) in expected.items():
+            with self.subTest(english_name=english_name):
+                self.assertEqual(locales[english_name]["zh"], zh_name)
+                self.assertEqual(locales[f"id::{feature_id}"]["zh"], zh_name)
+                self.assertEqual(startup_locales[english_name]["zh"], zh_name)
+                self.assertEqual(patch[feature_id]["zh"], zh_name)
+                self.assertEqual(zh_patch[feature_id]["zh"], zh_name)
+
+        # These names are still ambiguous or malformed in TNO romanization, so this pass leaves them for manual review.
+        for english_name, (feature_id, zh_name) in retained_ambiguous.items():
+            with self.subTest(retained=english_name):
+                self.assertEqual(locales[english_name]["zh"], zh_name)
+                self.assertEqual(patch[feature_id]["zh"], zh_name)
+
     def test_build_patch_writes_locale_specific_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
