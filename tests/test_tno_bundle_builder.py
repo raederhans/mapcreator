@@ -1198,7 +1198,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             for feature in repaired_features
         }
         self.assertAlmostEqual(repaired_by_id["macro"].intersection(repaired_by_id["detail"]).area, 0.0)
-        self.assertAlmostEqual(repaired_by_id["macro"].area, 3.0)
+        self.assertAlmostEqual(repaired_by_id["macro"].area, 3.0, delta=0.0001)
 
     def test_apply_tno_named_water_exclusions_rejects_area_collapse(self) -> None:
         named_features = [

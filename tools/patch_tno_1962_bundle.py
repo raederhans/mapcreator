@@ -663,6 +663,7 @@ TNO_WATER_REGIONS_PROVENANCE_FILENAME = "derived/water_regions.provenance.json"
 LEGACY_MARINE_REGIONS_NAMED_WATER_SNAPSHOT_FILENAME = "marine_regions_named_waters.snapshot.geojson"
 LEGACY_TNO_WATER_REGIONS_PROVENANCE_FILENAME = "water_regions.provenance.json"
 TNO_WATER_SUBTRACT_BUFFER_DEGREES = 0.0
+TNO_FINAL_NAMED_WATER_EXCLUSION_BUFFER_DEGREES = 0.000002
 D3_SPHERICAL_SAFE_BBOX_WIDTH_THRESHOLD = 300.0
 D3_SPHERICAL_SAFE_SPLIT_EPSILON = 1e-6
 D3_SPHERICAL_SAFE_LONGITUDE_SPLIT_BBOXES = (
@@ -5861,7 +5862,12 @@ def apply_tno_named_water_exclusions(named_features: list[dict]) -> list[dict]:
                 raise ValueError(f"Named water '{feature_id}' references missing final named exclusion '{region_id}'.")
             overlap_geom = normalize_polygonal(current_geom.intersection(other_geom))
             if overlap_geom is not None:
-                subtract_geometries.append(overlap_geom)
+                buffered_overlap_geom = buffer_polygonal(
+                    overlap_geom,
+                    TNO_FINAL_NAMED_WATER_EXCLUSION_BUFFER_DEGREES,
+                )
+                if buffered_overlap_geom is not None:
+                    subtract_geometries.append(buffered_overlap_geom)
         repaired_geom = subtract_geometry_list(current_geom, subtract_geometries)
         if repaired_geom is None:
             raise ValueError(f"Named water feature '{feature_id}' collapsed after final named exclusions.")

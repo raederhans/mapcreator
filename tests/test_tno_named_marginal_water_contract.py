@@ -1,4 +1,5 @@
 ﻿import json
+import unittest
 from pathlib import Path
 
 from shapely.geometry import shape
@@ -147,6 +148,7 @@ NON_OVERLAP_PAIRS = [
     ('tno_norwegian_sea', 'tno_northeast_atlantic_ocean'),
     ('tno_barents_sea', 'tno_western_arctic_ocean'),
     ('tno_mozambique_channel', 'tno_western_indian_ocean'),
+    ('tno_english_channel', 'tno_strait_of_dover'),
     ('tno_english_channel', 'tno_poole_bay'),
     ('tno_english_channel', 'tno_solent'),
     ('tno_english_channel', 'tno_weymouth_bay'),
@@ -282,3 +284,13 @@ def test_named_water_subtractions_remove_expected_overlap():
         if overlap_area > 1e-6:
             failures.append((left_id, right_id, overlap_area))
     assert failures == []
+
+
+class TnoNamedMarginalWaterContractTest(unittest.TestCase):
+    """Expose named-water split contracts through unittest discovery."""
+
+    def test_target_named_waters_exist_with_expected_contract(self):
+        test_target_named_waters_exist_with_expected_contract()
+
+    def test_named_water_subtractions_remove_expected_overlap(self):
+        test_named_water_subtractions_remove_expected_overlap()
