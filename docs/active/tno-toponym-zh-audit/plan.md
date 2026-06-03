@@ -1,0 +1,32 @@
+# TNO 地名汉化审查计划
+
+## 目标
+
+集中审查 `tno_1962` 场景里的地名和城市名中文显示，修正明显机翻、误译和不符合常用中文地名的条目。
+
+## 范围
+
+- `data/scenarios/tno_1962/geo_locale_patch.zh.json`
+- `data/scenarios/tno_1962/geo_locale_patch.json`
+- `data/scenarios/tno_1962/geo_locale_patch.en.json`
+- `data/scenarios/tno_1962/geo_name_overrides.manual.json`
+- `data/scenarios/tno_1962/city_overrides.json`
+- 相关生成脚本与测试
+
+## 验收标准
+
+- 找出 TNO 地名/城市名里明显错误的中文条目。
+- 修正 live 数据源，避免只改生成产物。
+- 运行 `python tools/i18n_audit.py`。
+- 运行 `python -m unittest tests.test_tno_geo_locale_patch -v`。
+- 运行与城市 override 相关的定向测试。
+
+## 任务清单
+
+- [x] 建立候选表，列出英文名、当前中文、来源文件和问题类型。
+- [x] 对照 repo 内 TNO/HOI4 资料和常见中文地名，确定第一批高置信修正。
+- [x] 修改最小必要数据文件。
+- [x] 刷新 TNO geo locale patch。
+- [x] 刷新 startup locale/support/bundle 产物。
+- [x] 运行定向测试与审计。
+- [ ] 最终复核是否有更简单稳健的实现方式。

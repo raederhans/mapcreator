@@ -242,3 +242,6 @@
 
 ### runtime registry 改动要同步 data manifest hash
 - 修改 `data/runtime_asset_registry.json` 后要同步 `data/manifest.json` 里的 `runtime_asset_registry.json` size/hash；只重建 catalog 不能更新这个自校验输出项。
+
+### geo locale 生成要分离值变化和格式变化
+- `build_tno_1962_geo_locale_patch.py` 可能改变 checked-in patch 文件的顶层顺序或语言文件结构；地名修正后要保留已提交结构，只回写审定后的 `geo` 值，避免把格式重排混进 localization diff。
