@@ -308,7 +308,7 @@
       "aliases": []
     },
     {
-      "key": "hgo_flags_index",
+      "key": "manifest_output:hgo_catalogs/hgo_flags.index.json",
       "url": "data/hgo_catalogs/hgo_flags.index.json",
       "role": "hgo_flags_index",
       "format": "json",
@@ -318,9 +318,7 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": [
-        "manifest_output:hgo_catalogs/hgo_flags.index.json"
-      ]
+      "aliases": []
     },
     {
       "key": "hgo_flags_png_manifest",

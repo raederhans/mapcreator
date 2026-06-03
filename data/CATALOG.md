@@ -75,7 +75,7 @@
 | manifest_output:global_contours.minor.topo.json | data/global_contours.minor.topo.json | terrain_contours_minor_topology | topojson | json | init_map_data.primary_topology_bundle |  |
 | manifest_output:global_physical_semantics.topo.json | data/global_physical_semantics.topo.json | physical_semantics_topology | topojson | json | init_map_data.primary_topology_bundle |  |
 | context_layer:rivers | data/global_rivers.geojson | context_layer | geojson | json | runtime_asset_registry.assets.context_layer:rivers |  |
-| hgo_flags_index | data/hgo_catalogs/hgo_flags.index.json | hgo_flags_index | json | json | tools.build_hgo_flag_index |  |
+| manifest_output:hgo_catalogs/hgo_flags.index.json | data/hgo_catalogs/hgo_flags.index.json | hgo_flags_index | json | json | tools.build_hgo_flag_index |  |
 | hgo_flags_png_manifest | data/hgo_catalogs/hgo_flags.png_manifest.json | hgo_flags_png_manifest | json | json | tools.build_hgo_flag_png_catalog |  |
 | hgo_identity_aliases | data/hgo_catalogs/hgo_identity_aliases.json | hgo_identity_aliases | json | json | hgo_identity_aliases.manual_review |  |
 | hgo_place_names | data/hgo_catalogs/hgo_place_names.json | hgo_place_names | json | json | tools.build_hgo_name_catalog |  |

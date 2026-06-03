@@ -220,3 +220,6 @@
 ### runtime registry 新资产要同步 Pages 发布面
 - 新增浏览器直接读取的 `runtime_asset_registry` key 后，要同步 `tools/build_pages_dist.py` 的 allowlist 和 `tests.test_pages_dist_startup_shell`；source 下能读取不代表 Pages dist 已发布。
 - runtime manifest 内部如果继续暴露二级资源 URL，Pages 合同要遍历这些 URL，确认每个发布 URL 都在 `dist/pages-dist-manifest.json` 中。
+
+### byte-exact JSON 要固定换行
+- `data/manifest.json` 记录 size/hash 的 JSON 资产要在 `.gitattributes` 固定 LF；Windows checkout 的 CRLF 会让 byte-exact 合同漂移。

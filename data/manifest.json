@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 15465,
-      "sha256": "429cb2df38ed5ef32041ad4c8814d5cae106aaddfc8db27abd4d70ba395751a6"
+      "size_bytes": 14933,
+      "sha256": "67ca12889a0b3552d8338bde38fb8310741b60704e3382cbe799a96f7005b77c"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -643,11 +643,6 @@
       "hgo_palette_pack": {
         "url": "data/palettes/hgo.palette.json",
         "role": "palette_pack",
-        "family_id": "hgo"
-      },
-      "hgo_flags_index": {
-        "url": "data/hgo_catalogs/hgo_flags.index.json",
-        "role": "hgo_flags_index",
         "family_id": "hgo"
       },
       "hgo_flags_png_manifest": {

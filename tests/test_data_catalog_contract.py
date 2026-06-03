@@ -77,7 +77,11 @@ class DataCatalogContractTest(unittest.TestCase):
         expected = {
             "hgo_tier_a_catalog": ("data/hgo_catalogs/index.json", "hgo_tier_a_catalog", "tools.build_hgo_flag_index"),
             "hgo_place_names": ("data/hgo_catalogs/hgo_place_names.json", "hgo_place_names", "tools.build_hgo_name_catalog"),
-            "hgo_flags_index": ("data/hgo_catalogs/hgo_flags.index.json", "hgo_flags_index", "tools.build_hgo_flag_index"),
+            "manifest_output:hgo_catalogs/hgo_flags.index.json": (
+                "data/hgo_catalogs/hgo_flags.index.json",
+                "hgo_flags_index",
+                "tools.build_hgo_flag_index",
+            ),
             "hgo_flags_png_manifest": (
                 "data/hgo_catalogs/hgo_flags.png_manifest.json",
                 "hgo_flags_png_manifest",
@@ -89,6 +93,7 @@ class DataCatalogContractTest(unittest.TestCase):
                 "hgo_identity_aliases.manual_review",
             ),
         }
+        self.assertNotIn("hgo_flags_index", entries)
         for key, (url, role, owner) in expected.items():
             self.assertIn(key, entries)
             self.assertEqual(entries[key]["url"], url)
@@ -98,7 +103,8 @@ class DataCatalogContractTest(unittest.TestCase):
             self.assertEqual(entries[key]["schemaRef"], "schema://json/object/v1")
             self.assertEqual(entries[key]["owner"], owner)
             self.assertEqual(entries[key]["hashRef"], f"data/manifest.json::outputs::{url.removeprefix('data/')}::sha256")
-            self.assertIn(f"manifest_output:{url.removeprefix('data/')}", entries[key].get("aliases") or [])
+            if not key.startswith("manifest_output:"):
+                self.assertIn(f"manifest_output:{url.removeprefix('data/')}", entries[key].get("aliases") or [])
 
     def test_catalog_keeps_hgo_tier_a_checked_in_surface_clean(self) -> None:
         payload = self._load_catalog()

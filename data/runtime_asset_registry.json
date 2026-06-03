@@ -100,11 +100,6 @@
       "role": "palette_pack",
       "family_id": "hgo"
     },
-    "hgo_flags_index": {
-      "url": "data/hgo_catalogs/hgo_flags.index.json",
-      "role": "hgo_flags_index",
-      "family_id": "hgo"
-    },
     "hgo_flags_png_manifest": {
       "url": "data/hgo_catalogs/hgo_flags.png_manifest.json",
       "role": "hgo_flags_png_manifest",

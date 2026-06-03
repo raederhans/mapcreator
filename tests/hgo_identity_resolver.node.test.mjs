@@ -36,6 +36,11 @@ const flagsManifest = {
           width: 10,
           height: 7,
         },
+        medium: {
+          png_path: "data/hgo_catalogs/flags_png/medium/AB/ABK.png",
+          width: 41,
+          height: 26,
+        },
       },
       variants: {
         SOV: {
@@ -130,6 +135,22 @@ test("exact tag lookup returns HGO names, base flag, variants, and palette", () 
   assert.equal(identity.flag.variants[0].variantSource, "SOV");
   assert.equal(identity.paletteColor, "#930000");
   assert.ok(identity.searchTokens.includes("Abkhazie"));
+});
+
+test("preferred flag tier controls the selected base preview", () => {
+  const resolver = createResolver();
+  const small = resolver.resolveIdentity(
+    { tag: "ABK", displayName: "Scenario Abkhazia" },
+    { preferredFlagTier: "small" },
+  );
+  const medium = resolver.resolveIdentity(
+    { tag: "ABK", displayName: "Scenario Abkhazia" },
+    { preferredFlagTier: "medium" },
+  );
+
+  assert.equal(small.flag.preferredBaseFlag.tier, "small");
+  assert.equal(medium.flag.preferredBaseFlag.tier, "medium");
+  assert.equal(medium.flag.preferredBaseFlag.pngPath, "data/hgo_catalogs/flags_png/medium/AB/ABK.png");
 });
 
 test("reviewed aliases are strong HGO identity matches", () => {
