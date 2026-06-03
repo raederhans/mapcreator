@@ -68,3 +68,22 @@
 - 验证通过：`python tools\i18n_audit.py`，关键结果 `scenario_geo_missing=0`、`corrupted_translations=0`。
 - 验证通过：`python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`，11 个测试通过。
 - 验证通过：`git diff --check`。输出仅有 Git 行尾转换提示。
+
+## 2026-06-03 第四轮专项
+
+- 新目标：专项审查法国与德国地名；德国部分优先核对战前/战时旧德名。
+- 候选范围：`FR_*` 313 条；owner/core 涉及 `FRA`、`GER`、`BRG` 的 TNO 地名共 1175 条。
+- 外部对照：东普鲁士/柯尼斯堡旧名、波兰境内旧德名、阿尔萨斯历史德语地名。
+- 初步原则：法国只修明显词义机翻；德国只修已有 TNO 德国控制区内可证的旧德名或明显机翻，不强行重命名所有行政县。
+- 已写回 `data/locales.json`：155 个 locale 键，覆盖法国明显词义机翻、波兰旧德名、东普鲁士旧名和俄文 raw name 精确上下文项。
+- 法国示例：`Gap -> 加普`、`Nice -> 尼斯`、`Condom -> 孔东`、`Tours -> 图尔`、`Provins -> 普罗万`。
+- 德国旧名示例：`Gorzów Wielkopolski -> 瓦尔特河畔兰茨贝格`、`Słupsk -> 施托尔普`、`Gusevsky District -> 贡宾嫩`、`Chernyakhovsky District -> 因斯特堡`、`Советский городской округ -> 蒂尔西特`。
+- 已运行 `python tools\build_tno_1962_geo_locale_patch.py`，结果仍为 11022 条 feature locales，0 个 cross-base collision。
+- 已恢复 `geo_locale_patch*.json` checked-in 结构，仅同步生成后的 `geo` 值，英文 patch 保持原状。
+- 已运行 `python tools\build_startup_bootstrap_assets.py --report-path .runtime\reports\generated\tno-startup-support-toponym-fr-de-zh.json`，`startup_geo_entry_count=44541`，`startup_alias_count=222`。
+- 已运行 `python tools\build_startup_bundle.py ... --report-path .runtime\reports\generated\tno-startup-bundle-toponym-fr-de-zh.json`，en/zh gzip 均为 1374201 bytes，未超 5000000 bytes 预算。
+- 残留扫描：法国/德国目标范围坏词命中为 0。
+- 已新增 `tests.test_tno_geo_locale_patch.TnoGeoLocalePatchTest.test_checked_in_tno_france_germany_toponym_fixes_stay_synced`，锁住法国机翻和德国旧名关键样例同步。
+- 验证通过：`python tools\i18n_audit.py`，关键结果 `scenario_geo_missing=0`、`corrupted_translations=0`。
+- 验证通过：`python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`，12 个测试通过。
+- 验证通过：`git diff --check`。输出仅有 Git 行尾转换提示。

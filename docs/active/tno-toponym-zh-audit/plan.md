@@ -56,3 +56,20 @@
 - `python tools\i18n_audit.py`
 - `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
 - `git diff --check`
+
+## 第四轮：法国与德国地名
+
+- [x] 抽取 `FR_*`、`FRA`、`GER`、`BRG` 相关 TNO 地名候选。
+- [x] 联网核对德国战前/战时旧德名，重点覆盖东普鲁士、波兰旧德城市和阿尔萨斯-洛林。
+- [x] 修改 canonical 源表里的高置信法国机翻和德国旧名条目。
+- [x] 刷新 TNO geo locale patch。
+- [x] 刷新 startup locale/support/bundle 产物。
+- [x] 运行残留扫描、审计和定向测试。
+- [x] 提交并推送第四轮专项修正。
+
+## 第四轮验证记录
+
+- 残留扫描：法国/德国目标范围内坏词命中为 0。
+- `python tools\i18n_audit.py`
+- `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
+- `git diff --check`

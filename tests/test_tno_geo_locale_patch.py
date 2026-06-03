@@ -68,6 +68,51 @@ class TnoGeoLocalePatchTest(unittest.TestCase):
                 self.assertEqual(locales[english_name]["zh"], zh_name)
                 self.assertEqual(patch[feature_id]["zh"], zh_name)
 
+    def test_checked_in_tno_france_germany_toponym_fixes_stay_synced(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        locales = json.loads((root / "data" / "locales.json").read_text(encoding="utf-8"))["geo"]
+        startup_locales = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "locales.startup.json").read_text(encoding="utf-8")
+        )["geo"]
+        patch = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "geo_locale_patch.json").read_text(encoding="utf-8")
+        )["geo"]
+        zh_patch = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "geo_locale_patch.zh.json").read_text(encoding="utf-8")
+        )["geo"]
+
+        expected = {
+            "Gap": ("FR_ARR_05002", "加普"),
+            "Nice": ("FR_ARR_06002", "尼斯"),
+            "Condom": ("FR_ARR_32002", "孔东"),
+            "Tours": ("FR_ARR_37002", "图尔"),
+            "Provins": ("FR_ARR_77003", "普罗万"),
+            "Gorzów Wielkopolski": ("PL_POW_0861", "瓦尔特河畔兰茨贝格"),
+            "Słupsk": ("PL_POW_2263", "施托尔普"),
+            "Gusevsky District": ("RU_RAY_50074027B27880509956465", "贡宾嫩"),
+            "Chernyakhovsky District": ("RU_RAY_50074027B90959697167325", "因斯特堡"),
+        }
+
+        for english_name, (feature_id, zh_name) in expected.items():
+            with self.subTest(english_name=english_name):
+                self.assertEqual(locales[english_name]["zh"], zh_name)
+                self.assertEqual(locales[f"id::{feature_id}"]["zh"], zh_name)
+                self.assertEqual(startup_locales[english_name]["zh"], zh_name)
+                self.assertEqual(patch[feature_id]["zh"], zh_name)
+                self.assertEqual(zh_patch[feature_id]["zh"], zh_name)
+
+        context_specific = {
+            "id::RU_RAY_50074027B93509676978918": ("Советский городской округ", "蒂尔西特"),
+            "id::RU_RAY_50074027B78200612798540": ("Пионерский городской округ", "诺伊库伦"),
+        }
+        for locale_key, (english_name, zh_name) in context_specific.items():
+            feature_id = locale_key.removeprefix("id::")
+            with self.subTest(context_specific=feature_id):
+                self.assertEqual(locales[locale_key]["zh"], zh_name)
+                self.assertEqual(startup_locales[english_name]["zh"], zh_name)
+                self.assertEqual(patch[feature_id]["zh"], zh_name)
+                self.assertEqual(zh_patch[feature_id]["zh"], zh_name)
+
     def test_build_patch_writes_locale_specific_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
