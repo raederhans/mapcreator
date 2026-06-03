@@ -83,6 +83,11 @@ class DataCatalogContractTest(unittest.TestCase):
                 "hgo_flags_png_manifest",
                 "tools.build_hgo_flag_png_catalog",
             ),
+            "hgo_identity_aliases": (
+                "data/hgo_catalogs/hgo_identity_aliases.json",
+                "hgo_identity_aliases",
+                "hgo_identity_aliases.manual_review",
+            ),
         }
         for key, (url, role, owner) in expected.items():
             self.assertIn(key, entries)

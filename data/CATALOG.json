@@ -2,7 +2,7 @@
   "version": 1,
   "generated_at": "2026-06-03T02:24:37.597358+00:00",
   "counts": {
-    "entries": 487,
+    "entries": 488,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -18,6 +18,7 @@
       "geo_aliases": 1,
       "hgo_flags_index": 1,
       "hgo_flags_png_manifest": 1,
+      "hgo_identity_aliases": 1,
       "hgo_place_names": 1,
       "hgo_tier_a_catalog": 1,
       "hierarchy": 1,
@@ -51,11 +52,11 @@
     "by_format": {
       "geojson": 81,
       "javascript": 2,
-      "json": 254,
+      "json": 255,
       "topojson": 150
     },
     "by_read_mode": {
-      "json": 485,
+      "json": 486,
       "module": 2
     }
   },
@@ -337,6 +338,21 @@
       ]
     },
     {
+      "key": "hgo_identity_aliases",
+      "url": "data/hgo_catalogs/hgo_identity_aliases.json",
+      "role": "hgo_identity_aliases",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::hgo_catalogs/hgo_identity_aliases.json::sha256",
+      "owner": "hgo_identity_aliases.manual_review",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "manifest_output:hgo_catalogs/hgo_identity_aliases.json"
+      ]
+    },
+    {
       "key": "hgo_place_names",
       "url": "data/hgo_catalogs/hgo_place_names.json",
       "role": "hgo_place_names",
@@ -549,7 +565,7 @@
       "aliases": []
     },
     {
-      "key": "manifest_output:palettes/hgo.palette.json",
+      "key": "hgo_palette_pack",
       "url": "data/palettes/hgo.palette.json",
       "role": "palette_pack",
       "format": "json",
@@ -559,7 +575,9 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": []
+      "aliases": [
+        "manifest_output:palettes/hgo.palette.json"
+      ]
     },
     {
       "key": "manifest_output:palettes/hoi4_vanilla.palette.json",

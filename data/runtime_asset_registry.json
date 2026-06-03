@@ -95,6 +95,11 @@
       "role": "hgo_place_names",
       "family_id": "hgo"
     },
+    "hgo_palette_pack": {
+      "url": "data/palettes/hgo.palette.json",
+      "role": "palette_pack",
+      "family_id": "hgo"
+    },
     "hgo_flags_index": {
       "url": "data/hgo_catalogs/hgo_flags.index.json",
       "role": "hgo_flags_index",
@@ -103,6 +108,11 @@
     "hgo_flags_png_manifest": {
       "url": "data/hgo_catalogs/hgo_flags.png_manifest.json",
       "role": "hgo_flags_png_manifest",
+      "family_id": "hgo"
+    },
+    "hgo_identity_aliases": {
+      "url": "data/hgo_catalogs/hgo_identity_aliases.json",
+      "role": "hgo_identity_aliases",
       "family_id": "hgo"
     },
     "releasable_catalog": {

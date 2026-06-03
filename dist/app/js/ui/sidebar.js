@@ -76,6 +76,8 @@ import {
   setReleasableBoundaryVariant,
 } from "../core/releasable_manager.js";
 import { getScenarioCountryDisplayName } from "../core/scenario_country_display.js";
+import { createHgoIdentityResolver } from "../core/hgo_identity_resolver.js";
+import { resolveDataAssetUrl } from "../core/runtime_asset_registry.js";
 import {
   DEFAULT_UNIT_COUNTER_PRESET_ID,
   getUnitCounterCatalogCategories,
@@ -128,6 +130,15 @@ const mapRenderer = Object.freeze({
 
 function flushSidebarRender(reason = "") {
   return flushRenderBoundary(reason);
+}
+
+async function loadRuntimeJsonAsset(assetKey) {
+  const url = resolveDataAssetUrl(assetKey);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`[hgo_identity] Failed to load ${assetKey}: ${response.status}`);
+  }
+  return response.json();
 }
 
 function extractCountryCodeFromId(value) {
@@ -3883,6 +3894,57 @@ function initSidebar({ render } = {}) {
 
   let latestCountryStatesByCode = new Map();
   const countryRowRefsByCode = new Map();
+  let hgoIdentityResolver = null;
+  const hgoIdentityLoadState = {
+    status: "idle",
+    error: "",
+  };
+  const ensureHgoIdentityRuntimeState = () => {
+    if (!runtimeState.hgoIdentity || typeof runtimeState.hgoIdentity !== "object") {
+      runtimeState.hgoIdentity = {};
+    }
+    runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled !== false;
+    runtimeState.hgoIdentity.nameMode = runtimeState.hgoIdentity.nameMode === "hgo" ? "hgo" : "scenario";
+    runtimeState.hgoIdentity.showSuggestedAliases = runtimeState.hgoIdentity.showSuggestedAliases !== false;
+    return runtimeState.hgoIdentity;
+  };
+  const resolveHgoIdentityForCountry = (countryState, options = {}) => {
+    ensureHgoIdentityRuntimeState();
+    if (!hgoIdentityResolver) return null;
+    return hgoIdentityResolver.resolveIdentity(countryState, options);
+  };
+  const getHgoIdentityCoverage = (countryStates, options = {}) => (
+    hgoIdentityResolver ? hgoIdentityResolver.summarizeCoverage(countryStates, options) : null
+  );
+  const ensureHgoIdentityAssetsLoaded = () => {
+    if (hgoIdentityLoadState.status === "loading" || hgoIdentityLoadState.status === "ready") {
+      return;
+    }
+    hgoIdentityLoadState.status = "loading";
+    hgoIdentityLoadState.error = "";
+    Promise.all([
+      loadRuntimeJsonAsset("hgo_place_names"),
+      loadRuntimeJsonAsset("hgo_flags_png_manifest"),
+      loadRuntimeJsonAsset("hgo_identity_aliases"),
+      loadRuntimeJsonAsset("hgo_palette_pack"),
+    ])
+      .then(([placeNames, flagsManifest, aliases, palettePack]) => {
+        hgoIdentityResolver = createHgoIdentityResolver({
+          placeNames,
+          flagsManifest,
+          aliases,
+          palettePack,
+        });
+        hgoIdentityLoadState.status = "ready";
+        renderList();
+      })
+      .catch((error) => {
+        hgoIdentityLoadState.status = "error";
+        hgoIdentityLoadState.error = error?.message || String(error || "");
+        console.warn("[hgo_identity] HGO identity assets unavailable.", error);
+        renderList();
+      });
+  };
   const incrementSidebarCounter = (counterName, amount = 1) => {
     const sidebarPerf = ensureSidebarPerfState(state);
     if (!Number.isFinite(Number(sidebarPerf.counters[counterName]))) {
@@ -4386,6 +4448,21 @@ function initSidebar({ render } = {}) {
     incrementSidebarCounter,
     markDirty,
     showToast,
+    getHgoIdentity: resolveHgoIdentityForCountry,
+  getHgoIdentityCoverage,
+  getHgoIdentityStatus: () => hgoIdentityLoadState,
+  onHgoIdentityRetry: () => {
+    if (hgoIdentityLoadState.status === "error") {
+      hgoIdentityLoadState.status = "idle";
+    }
+    ensureHgoIdentityAssetsLoaded();
+    renderList();
+  },
+  onHgoIdentitySettingsChange: () => {
+    ensureHgoIdentityRuntimeState();
+    ensureHgoIdentityAssetsLoaded();
+    renderList();
+  },
   });
   const {
     bindEvents: bindCountryInspectorEvents,
@@ -4400,6 +4477,8 @@ function initSidebar({ render } = {}) {
   } = countryInspectorController;
 
   bindCountryInspectorEvents();
+  ensureHgoIdentityRuntimeState();
+  ensureHgoIdentityAssetsLoaded();
 
   let bindWaterSpecialRegionEvents = () => {};
   let closeWaterInspectorColorPicker = () => {};

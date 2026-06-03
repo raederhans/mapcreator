@@ -83,6 +83,13 @@ DATA_RUNTIME_DIRS = (
     "scenario-rules",
     "unit_counter_libraries",
 )
+HGO_IDENTITY_RUNTIME_FILES = (
+    "index.json",
+    "hgo_place_names.json",
+    "hgo_flags.png_manifest.json",
+    "hgo_identity_aliases.json",
+)
+HGO_IDENTITY_FLAG_TIERS = ("small", "medium")
 SCENARIO_EXCLUDED_DIR_NAMES = {"derived"}
 SCENARIO_EXCLUDED_FILE_NAMES = {"audit.json"}
 SCENARIO_EXCLUDED_RELATIVE_FILES = {
@@ -405,11 +412,21 @@ def copy_transport_runtime_data() -> None:
     copy_tree_filtered(source_dir, destination_dir, should_copy_file)
 
 
+def copy_hgo_identity_runtime_data() -> None:
+    source_dir = ROOT / "data" / "hgo_catalogs"
+    destination_dir = APP_DIST_ROOT / "data" / "hgo_catalogs"
+    for file_name in HGO_IDENTITY_RUNTIME_FILES:
+        copy_relative_file(f"data/hgo_catalogs/{file_name}")
+    for tier in HGO_IDENTITY_FLAG_TIERS:
+        copy_tree_contents(source_dir / "flags_png" / tier, destination_dir / "flags_png" / tier)
+
+
 def copy_runtime_data() -> None:
     for relative_file in DATA_RUNTIME_FILES:
         copy_relative_file(f"data/{relative_file}")
     for directory_name in DATA_RUNTIME_DIRS:
         copy_tree_contents(ROOT / "data" / directory_name, APP_DIST_ROOT / "data" / directory_name)
+    copy_hgo_identity_runtime_data()
     copy_scenario_runtime_data()
     copy_transport_runtime_data()
     validate_dist_scenario_startup_urls()

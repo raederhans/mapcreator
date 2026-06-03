@@ -2,7 +2,7 @@
 
 - generated_at: 2026-06-03T02:24:37.597358+00:00
 - version: 1
-- entries: 487
+- entries: 488
 
 ## Counts by role
 
@@ -22,6 +22,7 @@
 | geo_aliases | 1 |
 | hgo_flags_index | 1 |
 | hgo_flags_png_manifest | 1 |
+| hgo_identity_aliases | 1 |
 | hgo_place_names | 1 |
 | hgo_tier_a_catalog | 1 |
 | hierarchy | 1 |
@@ -76,6 +77,7 @@
 | context_layer:rivers | data/global_rivers.geojson | context_layer | geojson | json | runtime_asset_registry.assets.context_layer:rivers |  |
 | hgo_flags_index | data/hgo_catalogs/hgo_flags.index.json | hgo_flags_index | json | json | tools.build_hgo_flag_index |  |
 | hgo_flags_png_manifest | data/hgo_catalogs/hgo_flags.png_manifest.json | hgo_flags_png_manifest | json | json | tools.build_hgo_flag_png_catalog |  |
+| hgo_identity_aliases | data/hgo_catalogs/hgo_identity_aliases.json | hgo_identity_aliases | json | json | hgo_identity_aliases.manual_review |  |
 | hgo_place_names | data/hgo_catalogs/hgo_place_names.json | hgo_place_names | json | json | tools.build_hgo_name_catalog |  |
 | hgo_tier_a_catalog | data/hgo_catalogs/index.json | hgo_tier_a_catalog | json | json | tools.build_hgo_flag_index |  |
 | manifest_output:hierarchy.json | data/hierarchy.json | hierarchy | json | json | init_map_data.hierarchy_locales |  |
@@ -92,7 +94,7 @@
 | manifest_output:palette-maps/red_flood.map.json | data/palette-maps/red_flood.map.json | palette_map | json | json | tools.import_country_palette |  |
 | manifest_output:palette-maps/tno.audit.json | data/palette-maps/tno.audit.json | palette_audit | json | json | init_map_data.palette_assets |  |
 | manifest_output:palette-maps/tno.map.json | data/palette-maps/tno.map.json | palette_map | json | json | tools.import_country_palette |  |
-| manifest_output:palettes/hgo.palette.json | data/palettes/hgo.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |
+| hgo_palette_pack | data/palettes/hgo.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |
 | manifest_output:palettes/hoi4_vanilla.palette.json | data/palettes/hoi4_vanilla.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |
 | palette_registry | data/palettes/index.json | palette_registry | json | json | init_map_data.palette_assets |  |
 | manifest_output:palettes/kaiserreich.palette.json | data/palettes/kaiserreich.palette.json | palette_pack | json | json | init_map_data.palette_assets |  |

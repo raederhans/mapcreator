@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "catalog_id": "hgo_identity_aliases",
+  "source_id": "hgo_mod_2241701657",
+  "generated_at_utc": "2026-06-03T00:00:00Z",
+  "description": "Reviewed and suggested scenario tag aliases for HGO inspector identity matching.",
+  "review_policy": {
+    "reviewed_aliases": "Strong matches. The inspector may display HGO names and flags directly.",
+    "suggested_aliases": "Weak matches. The inspector must mark these as suggested."
+  },
+  "reviewed_aliases": {
+    "AEF": {
+      "target_tag": "FEA",
+      "label": "French Equatorial Africa",
+      "reason": "Scenario macro-tag uses the same country identity under a different HGO tag."
+    },
+    "AOF": {
+      "target_tag": "FWA",
+      "label": "French West Africa",
+      "reason": "Scenario macro-tag uses the same country identity under a different HGO tag."
+    }
+  },
+  "suggested_aliases": {
+    "CEY": {
+      "target_tag": "LKA",
+      "label": "Ceylon / Sri Lanka",
+      "reason": "Candidate modern-successor flag family; requires human review before strong matching."
+    }
+  }
+}

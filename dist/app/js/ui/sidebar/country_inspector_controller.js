@@ -53,8 +53,193 @@ export function createCountryInspectorController({
   incrementSidebarCounter,
   markDirty,
   showToast,
+  getHgoIdentity = null,
+  getHgoIdentityCoverage = null,
+  getHgoIdentityStatus = null,
+  onHgoIdentityRetry = null,
+  onHgoIdentitySettingsChange = null,
 }) {
   const getSearchTerm = () => (searchInput?.value || "").trim().toLowerCase();
+
+  const ensureHgoIdentitySettings = () => {
+    if (!runtimeState.hgoIdentity || typeof runtimeState.hgoIdentity !== "object") {
+      runtimeState.hgoIdentity = {};
+    }
+    runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled !== false;
+    runtimeState.hgoIdentity.nameMode = runtimeState.hgoIdentity.nameMode === "hgo" ? "hgo" : "scenario";
+    runtimeState.hgoIdentity.showSuggestedAliases = runtimeState.hgoIdentity.showSuggestedAliases !== false;
+    return runtimeState.hgoIdentity;
+  };
+
+  const getCountryHgoIdentity = (countryState) => {
+    const settings = ensureHgoIdentitySettings();
+    if (!settings.enabled || typeof getHgoIdentity !== "function") return null;
+    return getHgoIdentity(countryState, {
+      nameMode: settings.nameMode,
+      allowSuggestedAliases: settings.showSuggestedAliases,
+    });
+  };
+
+  const getCountryInspectorDisplayName = (countryState, identity = null) => {
+    const settings = ensureHgoIdentitySettings();
+    if (settings.enabled && settings.nameMode === "hgo" && identity?.displayName) {
+      return identity.displayName;
+    }
+    return countryState?.displayName || countryState?.name || countryState?.code || "";
+  };
+
+  const getHgoMatchLabel = (matchKind = "") => {
+    const labels = {
+      exact: "exact",
+      reviewed_alias: "reviewed alias",
+      suggested_alias: "suggested alias",
+      missing: "missing",
+    };
+    return labels[String(matchKind || "").trim()] || "missing";
+  };
+
+  const getHgoBadgeTone = (matchKind = "") => (
+    String(matchKind || "").trim() === "suggested_alias" ? "weak" : "strong"
+  );
+
+  const appendHgoBadge = (parent, text, { tone = "strong" } = {}) => {
+    if (!parent || !text) return null;
+    const badge = document.createElement("span");
+    badge.className = `hgo-identity-badge hgo-identity-badge-${tone}`;
+    badge.textContent = text;
+    parent.appendChild(badge);
+    return badge;
+  };
+
+  const getFlagTierUrl = (identity, preferredTier = "small") => {
+    const tier = (identity?.flag?.preferredBaseFlag?.pngPath || identity?.flag?.preferredBaseFlag?.png_path)
+      ? identity.flag.preferredBaseFlag
+      : identity?.flag?.base?.[preferredTier];
+    return String(tier?.pngPath || tier?.png_path || "").trim();
+  };
+
+  const getRowMetaText = (countryState, identity, { showRelationMeta = false } = {}) => {
+    const metaBits = [
+      buildCountryRowMetaText(countryState, { showRelationMeta }),
+      countryState?.code ? `tag ${countryState.code}` : "",
+    ].filter(Boolean);
+    if (identity) {
+      metaBits.push(getHgoMatchLabel(identity.matchKind));
+      const variantCount = Number(identity.flag?.variantCount || identity.flag?.variants?.length || 0) || 0;
+      if (variantCount > 0) {
+        metaBits.push(`${variantCount} variants`);
+      }
+    }
+    return metaBits.join(" · ");
+  };
+
+  const updateFlagImage = (image, identity, preferredTier = "small") => {
+    if (!image) return;
+    const flagUrl = getFlagTierUrl(identity, preferredTier);
+    image.classList.toggle("hidden", !flagUrl);
+    if (flagUrl) {
+      image.src = flagUrl;
+      image.alt = "";
+    } else {
+      image.removeAttribute("src");
+    }
+  };
+
+  const renderHgoIdentityControls = (countryStates = []) => {
+    const host = list?.parentElement;
+    if (!host) return;
+    const settings = ensureHgoIdentitySettings();
+    let controls = host.querySelector("[data-hgo-identity-controls]");
+    if (!controls) {
+      controls = document.createElement("div");
+      controls.className = "hgo-identity-controls";
+      controls.dataset.hgoIdentityControls = "true";
+      host.insertBefore(controls, list);
+    }
+    const status = typeof getHgoIdentityStatus === "function" ? getHgoIdentityStatus() : { status: "disabled" };
+    const coverage = typeof getHgoIdentityCoverage === "function"
+      ? getHgoIdentityCoverage(countryStates, { allowSuggestedAliases: settings.showSuggestedAliases })
+      : null;
+    const coverageText = coverage
+      ? `${coverage.flags}/${coverage.total} flags matched`
+      : (status?.status === "loading" ? "HGO loading" : "HGO unavailable");
+
+    controls.replaceChildren();
+
+    const topRow = document.createElement("div");
+    topRow.className = "hgo-identity-control-row";
+
+    const enabledLabel = document.createElement("label");
+    enabledLabel.className = "toggle-label hgo-identity-toggle";
+    const enabledInput = document.createElement("input");
+    enabledInput.type = "checkbox";
+    enabledInput.className = "checkbox-input";
+    enabledInput.checked = settings.enabled;
+    enabledInput.addEventListener("change", () => {
+      settings.enabled = !!enabledInput.checked;
+      onHgoIdentitySettingsChange?.();
+    });
+    const enabledText = document.createElement("span");
+    enabledText.textContent = "HGO identity";
+    enabledLabel.appendChild(enabledInput);
+    enabledLabel.appendChild(enabledText);
+
+    const summary = document.createElement("span");
+    summary.className = "hgo-identity-summary";
+    summary.textContent = coverageText;
+
+    topRow.appendChild(enabledLabel);
+    topRow.appendChild(summary);
+    if (status?.status === "error") {
+      const retryButton = document.createElement("button");
+      retryButton.type = "button";
+      retryButton.className = "hgo-identity-retry-btn";
+      retryButton.textContent = "Retry";
+      retryButton.addEventListener("click", () => {
+        onHgoIdentityRetry?.();
+      });
+      topRow.appendChild(retryButton);
+    }
+    controls.appendChild(topRow);
+
+    const modeRow = document.createElement("div");
+    modeRow.className = "hgo-identity-mode-row";
+    [
+      ["scenario", "Scenario names"],
+      ["hgo", "HGO names"],
+    ].forEach(([mode, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "hgo-identity-mode-btn";
+      button.classList.toggle("is-active", settings.nameMode === mode);
+      button.setAttribute("aria-pressed", String(settings.nameMode === mode));
+      button.textContent = label;
+      button.disabled = !settings.enabled;
+      button.addEventListener("click", () => {
+        settings.nameMode = mode;
+        onHgoIdentitySettingsChange?.();
+      });
+      modeRow.appendChild(button);
+    });
+    controls.appendChild(modeRow);
+
+    const suggestedLabel = document.createElement("label");
+    suggestedLabel.className = "toggle-label hgo-identity-suggested-toggle";
+    const suggestedInput = document.createElement("input");
+    suggestedInput.type = "checkbox";
+    suggestedInput.className = "checkbox-input";
+    suggestedInput.checked = settings.showSuggestedAliases;
+    suggestedInput.disabled = !settings.enabled;
+    suggestedInput.addEventListener("change", () => {
+      settings.showSuggestedAliases = !!suggestedInput.checked;
+      onHgoIdentitySettingsChange?.();
+    });
+    const suggestedText = document.createElement("span");
+    suggestedText.textContent = "Show suggested aliases";
+    suggestedLabel.appendChild(suggestedInput);
+    suggestedLabel.appendChild(suggestedText);
+    controls.appendChild(suggestedLabel);
+  };
 
   const registerCountryRowRef = (countryCode, ref) => {
     const normalized = normalizeCountryCode(countryCode);
@@ -91,11 +276,13 @@ export function createCountryInspectorController({
     if (ref.swatch) {
       ref.swatch.style.backgroundColor = getResolvedCountryColor(countryState);
     }
+    const identity = getCountryHgoIdentity(countryState);
+    updateFlagImage(ref.flag, identity, "small");
     if (ref.title) {
-      ref.title.textContent = `${countryState.displayName} (${countryState.code})`;
+      ref.title.textContent = `${getCountryInspectorDisplayName(countryState, identity)} (${countryState.code})`;
     }
     if (ref.meta) {
-      ref.meta.textContent = buildCountryRowMetaText(countryState, {
+      ref.meta.textContent = getRowMetaText(countryState, identity, {
         showRelationMeta: !!ref.showRelationMeta,
       });
     }
@@ -200,13 +387,20 @@ export function createCountryInspectorController({
       selectInspectorCountry(countryState.code);
     });
 
+    const identity = getCountryHgoIdentity(countryState);
+    const flag = document.createElement("img");
+    flag.className = "hgo-identity-row-flag";
+    flag.loading = "lazy";
+    flag.decoding = "async";
+    updateFlagImage(flag, identity, "small");
+
     const title = document.createElement("div");
     title.className = "country-select-title";
-    title.textContent = `${countryState.displayName} (${countryState.code})`;
+    title.textContent = `${getCountryInspectorDisplayName(countryState, identity)} (${countryState.code})`;
 
     const meta = document.createElement("div");
     meta.className = "country-select-meta";
-    meta.textContent = buildCountryRowMetaText(countryState, { showRelationMeta });
+    meta.textContent = getRowMetaText(countryState, identity, { showRelationMeta });
 
     const side = document.createElement("div");
     side.className = "country-select-side";
@@ -252,7 +446,11 @@ export function createCountryInspectorController({
     swatch.className = "country-select-swatch";
     swatch.style.backgroundColor = getResolvedCountryColor(countryState);
 
-    main.appendChild(title);
+    const identityLine = document.createElement("div");
+    identityLine.className = "country-select-identity-line";
+    identityLine.appendChild(flag);
+    identityLine.appendChild(title);
+    main.appendChild(identityLine);
     main.appendChild(meta);
     row.appendChild(main);
 
@@ -267,6 +465,7 @@ export function createCountryInspectorController({
         row,
         wrapper: null,
         main,
+        flag,
         swatch,
         title,
         meta,
@@ -326,6 +525,7 @@ export function createCountryInspectorController({
       row,
       wrapper,
       main,
+      flag,
       swatch,
       title,
       meta,
@@ -340,13 +540,26 @@ export function createCountryInspectorController({
     const code = String(countryState?.code || "").trim().toUpperCase();
     const subregion = String(countryState?.subregionDisplayLabel || "").trim().toLowerCase();
     const continent = String(countryState?.continentDisplayLabel || "").trim().toLowerCase();
+    const identity = getCountryHgoIdentity(countryState);
+    const hgoTokens = (identity?.searchTokens || [])
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
     if (!displayName && !name && !code) return null;
-    if (!(displayName.includes(term) || name.includes(term) || code.includes(upperTerm) || subregion.includes(term) || continent.includes(term))) {
+    if (!(
+      displayName.includes(term)
+      || name.includes(term)
+      || code.includes(upperTerm)
+      || subregion.includes(term)
+      || continent.includes(term)
+      || hgoTokens.some((token) => token.includes(term))
+    )) {
       return null;
     }
     if (code === upperTerm) return 0;
     if (displayName === term || name === term) return 1;
+    if (hgoTokens.some((token) => token === term)) return 1;
     if (displayName.startsWith(term) || name.startsWith(term)) return 2;
+    if (hgoTokens.some((token) => token.startsWith(term))) return 2;
     if (code.startsWith(upperTerm)) return 3;
     if (subregion.startsWith(term) || continent.startsWith(term)) return 4;
     return 5;
@@ -436,6 +649,111 @@ export function createCountryInspectorController({
         showRelationMeta: !!group.parentState?.releasable,
       });
     });
+  };
+
+  const ensureHgoIdentityDetail = () => {
+    if (!countryInspectorSelected) return null;
+    let detail = countryInspectorSelected.querySelector("[data-hgo-identity-detail]");
+    if (!detail) {
+      detail = document.createElement("div");
+      detail.className = "hgo-identity-detail";
+      detail.dataset.hgoIdentityDetail = "true";
+      countryInspectorSelected.insertBefore(detail, countryInspectorSelected.firstElementChild);
+    }
+    return detail;
+  };
+
+  const renderHgoIdentityDetail = (countryState) => {
+    const detail = ensureHgoIdentityDetail();
+    if (!detail) return;
+    const identity = getCountryHgoIdentity(countryState);
+    detail.replaceChildren();
+    if (!countryState || !identity) {
+      detail.classList.add("hidden");
+      return;
+    }
+    detail.classList.remove("hidden");
+
+    const header = document.createElement("div");
+    header.className = "hgo-identity-detail-header";
+    const flagUrl = getFlagTierUrl(identity, "medium") || getFlagTierUrl(identity, "full") || getFlagTierUrl(identity, "small");
+    if (flagUrl) {
+      const flag = document.createElement("img");
+      flag.className = "hgo-identity-detail-flag";
+      flag.src = flagUrl;
+      flag.alt = "";
+      flag.loading = "lazy";
+      flag.decoding = "async";
+      header.appendChild(flag);
+    }
+
+    const copy = document.createElement("div");
+    copy.className = "hgo-identity-detail-copy";
+    const title = document.createElement("div");
+    title.className = "hgo-identity-detail-title";
+    title.textContent = getCountryInspectorDisplayName(countryState, identity);
+    const badges = document.createElement("div");
+    badges.className = "hgo-identity-badges";
+    appendHgoBadge(badges, getHgoMatchLabel(identity.matchKind), {
+      tone: getHgoBadgeTone(identity.matchKind),
+    });
+    if (identity.targetTag && identity.targetTag !== identity.tag) {
+      appendHgoBadge(badges, `${identity.tag} -> ${identity.targetTag}`, {
+        tone: getHgoBadgeTone(identity.matchKind),
+      });
+    }
+    copy.appendChild(title);
+    copy.appendChild(badges);
+    header.appendChild(copy);
+    detail.appendChild(header);
+
+    const names = identity.hgoNames || {};
+    if (Object.keys(names).length > 0) {
+      const namesList = document.createElement("div");
+      namesList.className = "hgo-identity-name-list";
+      Object.entries(names).forEach(([language, name]) => {
+        const row = document.createElement("div");
+        row.className = "hgo-identity-name-row";
+        const key = document.createElement("span");
+        key.className = "hgo-identity-name-lang";
+        key.textContent = language;
+        const value = document.createElement("span");
+        value.className = "hgo-identity-name-value";
+        value.textContent = name;
+        row.appendChild(key);
+        row.appendChild(value);
+        namesList.appendChild(row);
+      });
+      detail.appendChild(namesList);
+    }
+
+    const variants = Array.isArray(identity.flag?.variants) ? identity.flag.variants : [];
+    const variantList = document.createElement("div");
+    variantList.className = "hgo-identity-variant-list";
+    if (identity.flag?.preferredBaseFlag || Object.keys(identity.flag?.base || {}).length > 0) {
+      appendHgoBadge(variantList, "base", {
+        tone: identity.matchKind === "suggested_alias" ? "weak" : "strong",
+      });
+    }
+    variants.forEach((variant) => {
+      appendHgoBadge(variantList, variant.variantSource || variant.key, {
+        tone: identity.matchKind === "suggested_alias" ? "weak" : "strong",
+      });
+    });
+    detail.appendChild(variantList);
+
+    if (identity.paletteColor) {
+      const palette = document.createElement("div");
+      palette.className = "hgo-identity-palette-row";
+      const swatch = document.createElement("span");
+      swatch.className = "hgo-identity-palette-swatch";
+      swatch.style.backgroundColor = identity.paletteColor;
+      const label = document.createElement("span");
+      label.textContent = `HGO palette ${identity.paletteColor}`;
+      palette.appendChild(swatch);
+      palette.appendChild(label);
+      detail.appendChild(palette);
+    }
   };
 
   const keepGroupHeaderAtSameScrollPosition = (groupKey, previousHeaderTop = null) => {
@@ -562,6 +880,7 @@ export function createCountryInspectorController({
         countryInspectorColorInput.style.removeProperty("left");
         countryInspectorColorInput.style.removeProperty("top");
       }
+      renderHgoIdentityDetail(null);
       setCountryInspectorColorPickerOpen(false);
       scheduleAdaptiveInspectorHeights();
       return;
@@ -591,6 +910,8 @@ export function createCountryInspectorController({
       }
     }
 
+    renderHgoIdentityDetail(countryState);
+
     if (countryInspectorColorRow) {
       countryInspectorColorRow.classList.add("hidden");
     }
@@ -615,6 +936,7 @@ export function createCountryInspectorController({
     setLatestCountryStatesByCode(new Map(countryStates.map((countryState) => [countryState.code, countryState])));
     countryRowRefsByCode.clear();
     ensureSelectedInspectorCountry();
+    renderHgoIdentityControls(visibleCountryStates);
     list.replaceChildren();
 
     if (!visibleCountryStates.length) {

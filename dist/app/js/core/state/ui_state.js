@@ -316,6 +316,11 @@ export function createDefaultUiState() {
     showRail: false,
     showRoad: false,
     showSpecialZones: false,
+    hgoIdentity: {
+      enabled: true,
+      nameMode: "scenario",
+      showSuggestedAliases: true,
+    },
     specialZoneMembershipBrushMode: "add",
     cityLayerRevision: 0,
     specialZoneLayers: createEmptySpecialZoneLayersState(),

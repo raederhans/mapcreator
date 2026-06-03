@@ -215,3 +215,6 @@
 
 ### 大批量图片目录要有实体合同
 - catalog 入口只登记 manifest JSON 时，要另加实体文件合同校验路径、数量、大小和 hash；否则批量 PNG 丢文件也可能绕过 data health。
+
+### runtime registry 新资产要同步 Pages 发布面
+- 新增浏览器直接读取的 `runtime_asset_registry` key 后，要同步 `tools/build_pages_dist.py` 的 allowlist 和 `tests.test_pages_dist_startup_shell`；source 下能读取不代表 Pages dist 已发布。
