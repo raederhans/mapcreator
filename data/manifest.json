@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 15169,
-      "sha256": "3b9a3c0c564200a2d1237ad2e0499782e77e9fc31d140915b586a7a0602e3f63"
+      "size_bytes": 15182,
+      "sha256": "766e249e319844896e516357bcd908590e0d8a5a2aee0d5c43c18791d45cde8b"
     },
     "palettes/index.json": {
       "role": "palette_registry",
