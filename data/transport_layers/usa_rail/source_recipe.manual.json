@@ -1,0 +1,97 @@
+{
+  "version": "usa_rail_real_sources_v1",
+  "pack_id": "usa_rail",
+  "family": "rail",
+  "country": "United States",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/usa_rail",
+  "source_truth": "FRA/BTS NTAD North American Rail Network mainline subset plus NTAD Amtrak Stations",
+  "geometry_truth": "FRA/BTS ArcGIS FeatureServer exports cached as GeoJSON",
+  "sources": [
+    {
+      "id": "fra_ntad_narn_lines_us_mainline",
+      "role": "arcgis_feature_service_query",
+      "expected_path": ".runtime/source-cache/transport/usa_rail/fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+      "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_North_American_Rail_Network_Lines/FeatureServer/0",
+      "license": "U.S. federal public data; unrestricted public use",
+      "required_fields": [
+        "OBJECTID",
+        "FRAARCID",
+        "STATEAB",
+        "COUNTRY",
+        "RROWNER1",
+        "PASSNGR",
+        "STRACNET",
+        "NET",
+        "MILES",
+        "geometry"
+      ],
+      "filter_rule": "Cache only United States NARN mainline rows where COUNTRY='US' and NET='M'; preview emphasizes passenger and STRACNET rows.",
+      "notes": "FRA identifies NARN as the authoritative U.S. rail geospatial dataset; the cache is a paginated ArcGIS GeoJSON export.",
+      "query_params": {
+        "where": "COUNTRY='US' AND NET='M'",
+        "outFields": "OBJECTID,FRAARCID,STATEAB,COUNTRY,RROWNER1,PASSNGR,STRACNET,NET,MILES",
+        "returnGeometry": "true",
+        "f": "geojson",
+        "resultRecordCount": "2000"
+      },
+      "signature": {
+        "filename": "fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+        "path": ".runtime/source-cache/transport/usa_rail/fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+        "size_bytes": 101894929,
+        "sha256": "9e9df30bbbb9b59a61c9dd19dbe8eecb09030f2b8770f7855539406dde757f57"
+      }
+    },
+    {
+      "id": "fra_ntad_amtrak_stations",
+      "role": "arcgis_feature_service_query",
+      "expected_path": ".runtime/source-cache/transport/usa_rail/fra_ntad_amtrak_stations_2026-04-22.geojson",
+      "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Stations/FeatureServer/0",
+      "license": "U.S. federal public data; unrestricted public use",
+      "required_fields": [
+        "OBJECTID",
+        "Code",
+        "StationName",
+        "StationFacilityName",
+        "StaType",
+        "geometry"
+      ],
+      "filter_rule": "Use NTAD Amtrak station points as the major passenger-station sidecar for the U.S. rail pack.",
+      "notes": "The NTAD layer contains Amtrak intercity railroad and bus passenger terminals in the United States.",
+      "query_params": {
+        "where": "1=1",
+        "outFields": "OBJECTID,Code,StationName,StationFacilityName,StationAliases,StaType",
+        "returnGeometry": "true",
+        "f": "geojson",
+        "resultRecordCount": "2000"
+      },
+      "signature": {
+        "filename": "fra_ntad_amtrak_stations_2026-04-22.geojson",
+        "path": ".runtime/source-cache/transport/usa_rail/fra_ntad_amtrak_stations_2026-04-22.geojson",
+        "size_bytes": 289015,
+        "sha256": "eb41c49e2e6e5ae951cfb1c71b6c10e25896c6066f03f9fffa7c68e86b1638eb"
+      }
+    }
+  ],
+  "source_signature": {
+    "fra_ntad_narn_lines_us_mainline": {
+      "filename": "fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+      "path": ".runtime/source-cache/transport/usa_rail/fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+      "size_bytes": 101894929,
+      "sha256": "9e9df30bbbb9b59a61c9dd19dbe8eecb09030f2b8770f7855539406dde757f57"
+    },
+    "fra_ntad_amtrak_stations": {
+      "filename": "fra_ntad_amtrak_stations_2026-04-22.geojson",
+      "path": ".runtime/source-cache/transport/usa_rail/fra_ntad_amtrak_stations_2026-04-22.geojson",
+      "size_bytes": 289015,
+      "sha256": "eb41c49e2e6e5ae951cfb1c71b6c10e25896c6066f03f9fffa7c68e86b1638eb"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "railways.preview.topo.json",
+    "railways.topo.json",
+    "rail_stations_major.preview.geojson",
+    "rail_stations_major.geojson"
+  ]
+}

@@ -50,5 +50,6 @@ export const clearJapanAirportPreview = controller.clear;
 export const destroyJapanAirportPreview = controller.destroy;
 export const getJapanAirportPreviewSnapshot = controller.getSnapshot;
 export const renderJapanAirportPreview = controller.render;
+export const selectJapanAirportPreviewFeature = controller.selectFeature;
 export const setJapanAirportPreviewSelectionListener = controller.setSelectionListener;
 export const warmJapanAirportPreviewPack = controller.warm;

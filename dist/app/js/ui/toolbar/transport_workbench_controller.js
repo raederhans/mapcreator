@@ -117,6 +117,8 @@ export function createTransportWorkbenchController({
   const transportWorkbenchStateOwner = createTransportWorkbenchStateOwner(runtimeState);
   const ensureTransportWorkbenchUiState = () => transportWorkbenchStateOwner.ensureUiState();
   const resetTransportWorkbenchSectionState = () => transportWorkbenchStateOwner.resetSectionState();
+  let pendingWorkbenchRefreshFrame = 0;
+  let pendingWorkbenchAllowCarrierPrep = false;
 
   const transportWorkbenchApplyBridgeOwner = createTransportWorkbenchApplyBridgeOwner(runtimeState, {
     shouldRerender: (normalizedPackId) => isCurrentTransportWorkbenchPackGate(normalizedPackId),
@@ -234,6 +236,9 @@ export function createTransportWorkbenchController({
     toggleSection: (familyId, sectionKey, nextOpen) => toggleTransportWorkbenchSection(familyId, sectionKey, nextOpen),
     createSectionHelpButton: (familyId, section) => transportWorkbenchPopoverOwner.createSectionHelpButton(familyId, section),
     renderDiagnosticsBody: (familyId, config) => transportWorkbenchInspectorOwner.renderDiagnosticsBody(familyId, config),
+    getEditOverlay: (familyId) => transportWorkbenchStateOwner.getEditOverlay(familyId),
+    addEditOverlayPoint: (familyId, point) => addTransportWorkbenchEditOverlayPoint(familyId, point),
+    removeEditOverlayPoint: (familyId, featureId) => removeTransportWorkbenchEditOverlayPoint(familyId, featureId),
   });
   const transportWorkbenchEventOwner = createTransportWorkbenchEventOwner({
     documentRef: document,
@@ -320,23 +325,68 @@ export function createTransportWorkbenchController({
     transportWorkbenchApplyBridgeOwner.applyFamilyToMainMap(context)
   );
 
+  const requestWorkbenchRefreshFrame = (callback) => {
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      return globalThis.requestAnimationFrame(callback);
+    }
+    return globalThis.setTimeout(callback, 16);
+  };
+
+  const cancelWorkbenchRefreshFrame = (frameId) => {
+    if (!frameId) return;
+    if (typeof globalThis.cancelAnimationFrame === "function") {
+      globalThis.cancelAnimationFrame(frameId);
+    } else {
+      globalThis.clearTimeout(frameId);
+    }
+  };
+
+  const scheduleTransportWorkbenchSurfaceRefresh = ({ allowCarrierPrep = false } = {}) => {
+    pendingWorkbenchAllowCarrierPrep = pendingWorkbenchAllowCarrierPrep || !!allowCarrierPrep;
+    if (pendingWorkbenchRefreshFrame) return;
+    pendingWorkbenchRefreshFrame = requestWorkbenchRefreshFrame(() => {
+      pendingWorkbenchRefreshFrame = 0;
+      const allowCarrierPrepForFrame = pendingWorkbenchAllowCarrierPrep;
+      pendingWorkbenchAllowCarrierPrep = false;
+      const nextContext = getTransportWorkbenchRenderContext();
+      if (!nextContext.isOpen) return;
+      renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
+      renderTransportWorkbenchInspector(nextContext.family, nextContext.config, nextContext.compareHeld);
+      refreshTransportWorkbenchPreview(nextContext, { allowCarrierPrep: allowCarrierPrepForFrame });
+    });
+  };
+
   const updateTransportWorkbenchFamilyConfig = (familyId, key, nextValue, { appendValue = null } = {}) => {
     if (!transportWorkbenchStateOwner.updateFamilyConfig(familyId, key, nextValue, { appendValue })) return;
-    // 控件改动先落到工作台 state，再即时刷新预览；这里不直接改 renderer 的正式图层状态。
+    // 控件改动先落到工作台 state，再合并到下一帧刷新；这里不直接改 renderer 的正式图层状态。
     markDirty("transport-workbench-config");
-    const nextContext = getTransportWorkbenchRenderContext();
-    renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
-    renderTransportWorkbenchInspector(nextContext.family, nextContext.config, nextContext.compareHeld);
-    refreshTransportWorkbenchPreview(nextContext, { allowCarrierPrep: false });
+    scheduleTransportWorkbenchSurfaceRefresh({ allowCarrierPrep: false });
   };
 
   const updateTransportWorkbenchDisplayConfig = (familyId, updateFn) => {
     if (!transportWorkbenchStateOwner.updateDisplayConfig(familyId, updateFn)) return;
     markDirty("transport-workbench-display-config");
+    scheduleTransportWorkbenchSurfaceRefresh({ allowCarrierPrep: false });
+  };
+
+  const refreshTransportWorkbenchAfterEditOverlayChange = () => {
+    markDirty("transport-workbench-point-deltas");
     const nextContext = getTransportWorkbenchRenderContext();
-    renderTransportWorkbenchLensSections(nextContext.family, nextContext.config, nextContext.compareHeld);
-    renderTransportWorkbenchInspector(nextContext.family, nextContext.config, nextContext.compareHeld);
-    refreshTransportWorkbenchPreview(nextContext, { allowCarrierPrep: false });
+    scheduleTransportWorkbenchSurfaceRefresh({ allowCarrierPrep: false });
+    return nextContext;
+  };
+
+  const addTransportWorkbenchEditOverlayPoint = (familyId, point) => {
+    const created = transportWorkbenchStateOwner.addEditOverlayPoint(familyId, point);
+    if (!created) return null;
+    refreshTransportWorkbenchAfterEditOverlayChange();
+    return created;
+  };
+
+  const removeTransportWorkbenchEditOverlayPoint = (familyId, featureId) => {
+    if (!transportWorkbenchStateOwner.removeEditOverlayPoint(familyId, featureId)) return false;
+    refreshTransportWorkbenchAfterEditOverlayChange();
+    return true;
   };
 
   const toggleTransportWorkbenchSection = (familyId, sectionKey, nextOpen) => {
@@ -491,6 +541,9 @@ export function createTransportWorkbenchController({
       focusOverlaySurface(transportWorkbenchPanel);
       return;
     }
+    cancelWorkbenchRefreshFrame(pendingWorkbenchRefreshFrame);
+    pendingWorkbenchRefreshFrame = 0;
+    pendingWorkbenchAllowCarrierPrep = false;
     const restoreState = transportWorkbenchStateOwner.prepareCloseState();
     transportWorkbenchPreviewLifecycleOwner.dispose();
     closeTransportWorkbenchInfoPopover({ restoreFocus: false });

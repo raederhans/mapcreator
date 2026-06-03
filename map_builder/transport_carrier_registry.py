@@ -19,10 +19,21 @@ CARRIER_ASSET_KEY_BY_COUNTRY: Final[dict[str, str]] = {
 
 COUNTRY_BY_PACK_ID: Final[dict[str, str]] = {
     "china_airport": "china",
+    "china_energy_facilities": "china",
+    "china_industrial_zones": "china",
+    "china_logistics_hubs": "china",
+    "china_mineral_resources": "china",
     "china_port": "china",
+    "china_rail": "china",
+    "china_road": "china",
     "france_airport": "france",
+    "france_energy_facilities": "france",
+    "france_industrial_zones": "france",
+    "france_logistics_hubs": "france",
+    "france_mineral_resources": "france",
     "france_port": "france",
     "france_rail": "france",
+    "france_road": "france",
     "germany_airport": "germany",
     "germany_energy_facilities": "germany",
     "germany_industrial_zones": "germany",
@@ -32,7 +43,13 @@ COUNTRY_BY_PACK_ID: Final[dict[str, str]] = {
     "germany_rail": "germany",
     "germany_road": "germany",
     "india_airport": "india",
+    "india_energy_facilities": "india",
+    "india_industrial_zones": "india",
+    "india_logistics_hubs": "india",
+    "india_mineral_resources": "india",
     "india_port": "india",
+    "india_rail": "india",
+    "india_road": "india",
     "japan_airport": "japan",
     "japan_energy_facilities": "japan",
     "japan_industrial_zones": "japan",
@@ -42,12 +59,28 @@ COUNTRY_BY_PACK_ID: Final[dict[str, str]] = {
     "japan_rail": "japan",
     "japan_road": "japan",
     "russia_airport": "russia",
+    "russia_energy_facilities": "russia",
+    "russia_industrial_zones": "russia",
+    "russia_logistics_hubs": "russia",
+    "russia_mineral_resources": "russia",
     "russia_port": "russia",
+    "russia_rail": "russia",
+    "russia_road": "russia",
     "uk_airport": "uk",
+    "uk_energy_facilities": "uk",
+    "uk_industrial_zones": "uk",
+    "uk_logistics_hubs": "uk",
+    "uk_mineral_resources": "uk",
     "uk_port": "uk",
+    "uk_rail": "uk",
     "uk_road": "uk",
     "usa_airport": "usa",
+    "usa_energy_facilities": "usa",
+    "usa_industrial_zones": "usa",
+    "usa_logistics_hubs": "usa",
+    "usa_mineral_resources": "usa",
     "usa_port": "usa",
+    "usa_rail": "usa",
     "usa_road": "usa",
 }
 
@@ -118,6 +151,14 @@ CARRIER_EXTENSION_METADATA: Final[dict[str, dict[str, str]]] = {
     },
 }
 
+PACK_CARRIER_EXTENSION_METADATA: Final[dict[str, dict[str, str]]] = {
+    "uk_rail": {
+        "scope_policy": "Great Britain rail scope only; Northern Ireland rail remains a future UK source gap, and overseas territories are excluded.",
+        "projection_profile": "geoConicConformal",
+        "basemap_profile": "Natural Earth admin1 carrier clipped to Great Britain for this rail pack.",
+    },
+}
+
 
 def resolve_pack_carrier_asset_key(pack_id: str) -> str:
     normalized_pack_id = str(pack_id or "").strip()
@@ -133,7 +174,8 @@ def resolve_pack_carrier_extension(pack_id: str) -> dict[str, str]:
     carrier_asset_key = resolve_pack_carrier_asset_key(pack_id)
     if not carrier_asset_key:
         return {}
+    pack_metadata = PACK_CARRIER_EXTENSION_METADATA.get(str(pack_id or "").strip())
     return {
         "carrier_asset_key": carrier_asset_key,
-        **CARRIER_EXTENSION_METADATA.get(carrier_asset_key, {}),
+        **(pack_metadata or CARRIER_EXTENSION_METADATA.get(carrier_asset_key, {})),
     }

@@ -738,6 +738,65 @@ test("project import notifies observers after successful import", async () => {
   assert.equal(result.successes[0].exportHandoff.exportUi.target, "composite");
 });
 
+test("project export and import preserve transport workbench point deltas", async () => {
+  const payload = await exportProjectPayload({
+    activePaletteId: "hoi4_vanilla",
+    annotationView: {},
+    exportWorkbenchUi: {},
+    transportWorkbenchPointDeltas: {
+      byFamily: {
+        airport: {
+          created: [{
+            id: "airport_edit_1",
+            name: "Project Airfield",
+            lon: 139.77,
+            lat: 35.68,
+            packId: "usa_airport",
+            properties: { status_category: "active" },
+          }, {
+            id: "bad_airport",
+            name: "Bad",
+            lon: "not-a-number",
+            lat: 35,
+          }],
+          updated: [{
+            id: "airport_source_1",
+            name: "Edited Source Airport",
+            lon: 139.76,
+            lat: 35.67,
+            packId: "usa_airport",
+            properties: { status_category: "inactive" },
+          }],
+          deleted: ["airport_source_2"],
+        },
+      },
+    },
+    transportWorkbenchUi: {
+      activeFamily: "airport",
+      activePackIdByFamily: { airport: "usa_airport" },
+    },
+  });
+
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.created.length, 1);
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.created[0].properties.source, "user_overlay");
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.updated.length, 1);
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.updated[0].properties.status_category, "inactive");
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.updated[0].properties.source, undefined);
+  assert.deepEqual(payload.transportWorkbenchPointDeltas.byFamily.airport.deleted, ["airport_source_2"]);
+
+  const result = await importProjectPayload(payload);
+
+  assert.equal(result.callbacks.length, 1);
+  assert.equal(result.successes[0].transportWorkbenchPointDeltas.byFamily.airport.created[0].id, "airport_edit_1");
+  const importedUpdate = result.successes[0].transportWorkbenchPointDeltas.byFamily.airport.updated[0];
+  assert.equal(importedUpdate.id, "airport_source_1");
+  assert.equal(importedUpdate.packId, "usa_airport");
+  assert.equal(importedUpdate.properties.status_category, "inactive");
+  assert.equal(importedUpdate.properties.source, undefined);
+  assert.deepEqual(result.successes[0].transportWorkbenchPointDeltas.byFamily.airport.deleted, ["airport_source_2"]);
+  assert.equal(result.successes[0].transportWorkbenchPointDeltas.byFamily.port.created.length, 0);
+});
+
 test("project import overlay resolver preserves every main-map transport family", () => {
   const packIds = resolveImportedTransportCountryOverlayPackIds(
     {

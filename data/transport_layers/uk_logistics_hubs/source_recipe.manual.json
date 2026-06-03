@@ -1,0 +1,53 @@
+{
+  "version": "uk_logistics_hubs_real_sources_v1",
+  "pack_id": "uk_logistics_hubs",
+  "family": "logistics_hubs",
+  "country": "United Kingdom",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/uk_logistics_hubs",
+  "source_truth": "OpenStreetMap UK freight yard, container terminal, loading dock, and logistics tags via Overpass API",
+  "geometry_truth": "Overpass JSON node coordinates and way/relation centers filtered through the UK carrier scope",
+  "sources": [
+    {
+      "id": "osm_overpass_uk_logistics_facilities",
+      "role": "overpass_json_query",
+      "expected_path": ".runtime/source-cache/transport/uk_logistics_hubs/uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "url": "https://overpass-api.de/api/interpreter",
+      "license": "OpenStreetMap data under ODbL 1.0",
+      "required_layers": [],
+      "required_fields": [
+        "elements",
+        "type",
+        "id",
+        "tags",
+        "lat",
+        "lon",
+        "center"
+      ],
+      "filter_rule": "Keep UK railway yards, railway container terminals, freight rail landuse, industrial=logistics, and loading_dock elements; builder converts nodes/centers to point hubs and clips to the UK carrier.",
+      "notes": "This first UK logistics slice is a compact freight-facility point layer; it complements existing airport and port packs without publishing a country-sized OSM extract.",
+      "query_params": {
+        "data": "[out:json][timeout:120];\narea[\"ISO3166-1\"=\"GB\"][admin_level=2]->.uk;\n(\n  nwr[\"railway\"=\"yard\"](area.uk);\n  nwr[\"railway\"=\"container_terminal\"](area.uk);\n  nwr[\"landuse\"=\"railway\"][\"freight\"=\"yes\"](area.uk);\n  nwr[\"industrial\"=\"logistics\"](area.uk);\n  nwr[\"amenity\"=\"loading_dock\"](area.uk);\n);\nout center tags;"
+      },
+      "signature": {
+        "filename": "uk_logistics_hubs_osm_overpass_2026-06-02.json",
+        "path": ".runtime/source-cache/transport/uk_logistics_hubs/uk_logistics_hubs_osm_overpass_2026-06-02.json",
+        "size_bytes": 180231,
+        "sha256": "721514f9663923fea454ae1491f496c9b440e54d4f3a8bd26c44055b2ffb9e7f"
+      }
+    }
+  ],
+  "source_signature": {
+    "osm_overpass_uk_logistics_facilities": {
+      "filename": "uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "path": ".runtime/source-cache/transport/uk_logistics_hubs/uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "size_bytes": 180231,
+      "sha256": "721514f9663923fea454ae1491f496c9b440e54d4f3a8bd26c44055b2ffb9e7f"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "logistics_hubs.preview.geojson",
+    "logistics_hubs.geojson"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "adapter_id": "france_mineral_resources_v1",
+  "pack_id": "france_mineral_resources",
+  "family": "mineral_resources",
+  "geometry_kind": "point",
+  "country": "France",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T21:29:36.689349Z",
+  "recipe_path": "data/transport_layers/france_mineral_resources/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "mineral_resources": "data/transport_layers/france_mineral_resources/mineral_resources.preview.geojson"
+    },
+    "full": {
+      "mineral_resources": "data/transport_layers/france_mineral_resources/mineral_resources.geojson"
+    },
+    "build_audit": "data/transport_layers/france_mineral_resources/build_audit.json"
+  },
+  "source_signature": {
+    "camino_titles_geojson": {
+      "filename": "camino_titres_2026-06-02.geojson",
+      "path": ".runtime/source-cache/transport/france_mineral_resources/camino_titres_2026-06-02.geojson",
+      "size_bytes": 22355756,
+      "sha256": "f4d198df38052bfceab9196a9fb63dc89faac5b853994d375f20e79ce06ec014"
+    }
+  },
+  "recipe_version": "france_mineral_resources_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 300
+    },
+    "full": {
+      "mineral_resources": 3147
+    }
+  },
+  "clip_bbox": [
+    -4.759111,
+    42.312341,
+    8.965724,
+    50.832628
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack france_mineral_resources",
+  "runtime_consumer": "transport_workbench_mineral_resources_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:france",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "mineral_resources": "data/transport_layers/france_mineral_resources/mineral_resources.preview.geojson"
+        },
+        "full": {
+          "mineral_resources": "data/transport_layers/france_mineral_resources/mineral_resources.geojson"
+        },
+        "build_audit": "data/transport_layers/france_mineral_resources/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "mineral_resources": 300
+        },
+        "full": {
+          "mineral_resources": 3147
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe."
+    }
+  }
+}

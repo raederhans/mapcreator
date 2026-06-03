@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-06-03T02:24:37.597358+00:00",
+  "generated_at": "2026-06-03T16:28:29.249685+00:00",
   "counts": {
-    "entries": 488,
+    "entries": 638,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -39,24 +39,24 @@
       "special_zones": 1,
       "terrain_contours_major_topology": 1,
       "terrain_contours_minor_topology": 1,
-      "transport_build_audit": 97,
+      "transport_build_audit": 130,
       "transport_carrier_payload": 8,
       "transport_catalog": 2,
-      "transport_manifest": 105,
-      "transport_pack": 214,
+      "transport_manifest": 138,
+      "transport_pack": 298,
       "transport_provenance_payload": 8,
       "transport_subtype_catalog": 1,
       "unit_counter_manifest": 1,
       "world_cities": 1
     },
     "by_format": {
-      "geojson": 81,
+      "geojson": 147,
       "javascript": 2,
-      "json": 255,
-      "topojson": 150
+      "json": 321,
+      "topojson": 168
     },
     "by_read_mode": {
-      "json": 486,
+      "json": 636,
       "module": 2
     }
   },
@@ -835,6 +835,262 @@
       ]
     },
     {
+      "key": "transport:china_energy_facilities:build_audit",
+      "url": "data/transport_layers/china_energy_facilities/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_energy_facilities:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:china_energy_facilities:full:energy_facilities",
+      "url": "data/transport_layers/china_energy_facilities/energy_facilities.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.energy_facilities",
+        "transport:china_energy_facilities:default:paths:full:energy_facilities",
+        "variants.default.paths.full.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport:china_energy_facilities:preview:energy_facilities",
+      "url": "data/transport_layers/china_energy_facilities/energy_facilities.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.energy_facilities",
+        "transport:china_energy_facilities:default:paths:preview:energy_facilities",
+        "variants.default.paths.preview.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_energy_facilities",
+      "url": "data/transport_layers/china_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_industrial_zones:build_audit",
+      "url": "data/transport_layers/china_industrial_zones/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_industrial_zones:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:china_industrial_zones:full:industrial_zones",
+      "url": "data/transport_layers/china_industrial_zones/industrial_zones.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.industrial_zones",
+        "transport:china_industrial_zones:default:paths:full:industrial_zones",
+        "variants.default.paths.full.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport:china_industrial_zones:preview:industrial_zones",
+      "url": "data/transport_layers/china_industrial_zones/industrial_zones.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.industrial_zones",
+        "transport:china_industrial_zones:default:paths:preview:industrial_zones",
+        "variants.default.paths.preview.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_industrial_zones",
+      "url": "data/transport_layers/china_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_logistics_hubs:build_audit",
+      "url": "data/transport_layers/china_logistics_hubs/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_logistics_hubs:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:china_logistics_hubs:full:logistics_hubs",
+      "url": "data/transport_layers/china_logistics_hubs/logistics_hubs.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.logistics_hubs",
+        "transport:china_logistics_hubs:default:paths:full:logistics_hubs",
+        "variants.default.paths.full.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport:china_logistics_hubs:preview:logistics_hubs",
+      "url": "data/transport_layers/china_logistics_hubs/logistics_hubs.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.logistics_hubs",
+        "transport:china_logistics_hubs:default:paths:preview:logistics_hubs",
+        "variants.default.paths.preview.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_logistics_hubs",
+      "url": "data/transport_layers/china_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_mineral_resources:build_audit",
+      "url": "data/transport_layers/china_mineral_resources/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_mineral_resources:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_mineral_resources",
+      "url": "data/transport_layers/china_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_mineral_resources:full:mineral_resources",
+      "url": "data/transport_layers/china_mineral_resources/mineral_resources.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.mineral_resources",
+        "transport:china_mineral_resources:default:paths:full:mineral_resources",
+        "variants.default.paths.full.mineral_resources"
+      ]
+    },
+    {
+      "key": "transport:china_mineral_resources:preview:mineral_resources",
+      "url": "data/transport_layers/china_mineral_resources/mineral_resources.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.mineral_resources",
+        "transport:china_mineral_resources:default:paths:preview:mineral_resources",
+        "variants.default.paths.preview.mineral_resources"
+      ]
+    },
+    {
       "key": "transport:china_port:build_audit",
       "url": "data/transport_layers/china_port/build_audit.json",
       "role": "transport_build_audit",
@@ -896,6 +1152,202 @@
         "paths.preview.ports",
         "transport:china_port:default:paths:preview:ports",
         "variants.default.paths.preview.ports"
+      ]
+    },
+    {
+      "key": "transport:china_rail:build_audit",
+      "url": "data/transport_layers/china_rail/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_rail:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_rail",
+      "url": "data/transport_layers/china_rail/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_rail:full:rail_stations_major",
+      "url": "data/transport_layers/china_rail/rail_stations_major.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.rail_stations_major",
+        "transport:china_rail:default:paths:full:rail_stations_major",
+        "variants.default.paths.full.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:china_rail:preview:rail_stations_major",
+      "url": "data/transport_layers/china_rail/rail_stations_major.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.rail_stations_major",
+        "transport:china_rail:default:paths:preview:rail_stations_major",
+        "variants.default.paths.preview.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:china_rail:preview:railways",
+      "url": "data/transport_layers/china_rail/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:china_rail:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:china_rail:full:railways",
+      "url": "data/transport_layers/china_rail/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:china_rail:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:china_road:build_audit",
+      "url": "data/transport_layers/china_road/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:china_road:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:china_road",
+      "url": "data/transport_layers/china_road/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:china_road:full:road_labels",
+      "url": "data/transport_layers/china_road/road_labels.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.road_labels",
+        "transport:china_road:default:paths:full:road_labels",
+        "variants.default.paths.full.road_labels"
+      ]
+    },
+    {
+      "key": "transport:china_road:preview:road_labels",
+      "url": "data/transport_layers/china_road/road_labels.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.road_labels",
+        "transport:china_road:default:paths:preview:road_labels",
+        "variants.default.paths.preview.road_labels"
+      ]
+    },
+    {
+      "key": "transport:china_road:preview:roads",
+      "url": "data/transport_layers/china_road/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:china_road:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:china_road:full:roads",
+      "url": "data/transport_layers/china_road/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack china_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:china_road:default:paths:full:roads",
+        "variants.default.paths.full.roads"
       ]
     },
     {
@@ -1008,6 +1460,262 @@
         "paths.provenance",
         "transport:france_carrier:default:paths:provenance",
         "variants.default.paths.provenance"
+      ]
+    },
+    {
+      "key": "transport:france_energy_facilities:build_audit",
+      "url": "data/transport_layers/france_energy_facilities/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:france_energy_facilities:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:france_energy_facilities:full:energy_facilities",
+      "url": "data/transport_layers/france_energy_facilities/energy_facilities.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.energy_facilities",
+        "transport:france_energy_facilities:default:paths:full:energy_facilities",
+        "variants.default.paths.full.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport:france_energy_facilities:preview:energy_facilities",
+      "url": "data/transport_layers/france_energy_facilities/energy_facilities.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.energy_facilities",
+        "transport:france_energy_facilities:default:paths:preview:energy_facilities",
+        "variants.default.paths.preview.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_energy_facilities",
+      "url": "data/transport_layers/france_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_industrial_zones:build_audit",
+      "url": "data/transport_layers/france_industrial_zones/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:france_industrial_zones:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:france_industrial_zones:full:industrial_zones",
+      "url": "data/transport_layers/france_industrial_zones/industrial_zones.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/polygon/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.industrial_zones",
+        "transport:france_industrial_zones:default:paths:full:industrial_zones",
+        "variants.default.paths.full.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport:france_industrial_zones:preview:industrial_zones",
+      "url": "data/transport_layers/france_industrial_zones/industrial_zones.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/polygon/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.industrial_zones",
+        "transport:france_industrial_zones:default:paths:preview:industrial_zones",
+        "variants.default.paths.preview.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_industrial_zones",
+      "url": "data/transport_layers/france_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_logistics_hubs:build_audit",
+      "url": "data/transport_layers/france_logistics_hubs/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:france_logistics_hubs:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:france_logistics_hubs:full:logistics_hubs",
+      "url": "data/transport_layers/france_logistics_hubs/logistics_hubs.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.logistics_hubs",
+        "transport:france_logistics_hubs:default:paths:full:logistics_hubs",
+        "variants.default.paths.full.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport:france_logistics_hubs:preview:logistics_hubs",
+      "url": "data/transport_layers/france_logistics_hubs/logistics_hubs.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.logistics_hubs",
+        "transport:france_logistics_hubs:default:paths:preview:logistics_hubs",
+        "variants.default.paths.preview.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_logistics_hubs",
+      "url": "data/transport_layers/france_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_mineral_resources:build_audit",
+      "url": "data/transport_layers/france_mineral_resources/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:france_mineral_resources:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_mineral_resources",
+      "url": "data/transport_layers/france_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_mineral_resources:full:mineral_resources",
+      "url": "data/transport_layers/france_mineral_resources/mineral_resources.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.mineral_resources",
+        "transport:france_mineral_resources:default:paths:full:mineral_resources",
+        "variants.default.paths.full.mineral_resources"
+      ]
+    },
+    {
+      "key": "transport:france_mineral_resources:preview:mineral_resources",
+      "url": "data/transport_layers/france_mineral_resources/mineral_resources.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.mineral_resources",
+        "transport:france_mineral_resources:default:paths:preview:mineral_resources",
+        "variants.default.paths.preview.mineral_resources"
       ]
     },
     {
@@ -1170,6 +1878,104 @@
         "paths.full.railways",
         "transport:france_rail:default:paths:full:railways",
         "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:france_road:build_audit",
+      "url": "data/transport_layers/france_road/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:france_road:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:france_road",
+      "url": "data/transport_layers/france_road/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:france_road:full:road_labels",
+      "url": "data/transport_layers/france_road/road_labels.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.road_labels",
+        "transport:france_road:default:paths:full:road_labels",
+        "variants.default.paths.full.road_labels"
+      ]
+    },
+    {
+      "key": "transport:france_road:preview:road_labels",
+      "url": "data/transport_layers/france_road/road_labels.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.road_labels",
+        "transport:france_road:default:paths:preview:road_labels",
+        "variants.default.paths.preview.road_labels"
+      ]
+    },
+    {
+      "key": "transport:france_road:preview:roads",
+      "url": "data/transport_layers/france_road/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:france_road:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:france_road:full:roads",
+      "url": "data/transport_layers/france_road/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack france_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:france_road:default:paths:full:roads",
+        "variants.default.paths.full.roads"
       ]
     },
     {
@@ -6161,6 +6967,262 @@
       ]
     },
     {
+      "key": "transport:india_energy_facilities:build_audit",
+      "url": "data/transport_layers/india_energy_facilities/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_energy_facilities:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:india_energy_facilities:full:energy_facilities",
+      "url": "data/transport_layers/india_energy_facilities/energy_facilities.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.energy_facilities",
+        "transport:india_energy_facilities:default:paths:full:energy_facilities",
+        "variants.default.paths.full.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport:india_energy_facilities:preview:energy_facilities",
+      "url": "data/transport_layers/india_energy_facilities/energy_facilities.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.energy_facilities",
+        "transport:india_energy_facilities:default:paths:preview:energy_facilities",
+        "variants.default.paths.preview.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_energy_facilities",
+      "url": "data/transport_layers/india_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_industrial_zones:build_audit",
+      "url": "data/transport_layers/india_industrial_zones/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_industrial_zones:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:india_industrial_zones:full:industrial_zones",
+      "url": "data/transport_layers/india_industrial_zones/industrial_zones.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.industrial_zones",
+        "transport:india_industrial_zones:default:paths:full:industrial_zones",
+        "variants.default.paths.full.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport:india_industrial_zones:preview:industrial_zones",
+      "url": "data/transport_layers/india_industrial_zones/industrial_zones.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.industrial_zones",
+        "transport:india_industrial_zones:default:paths:preview:industrial_zones",
+        "variants.default.paths.preview.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_industrial_zones",
+      "url": "data/transport_layers/india_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_logistics_hubs:build_audit",
+      "url": "data/transport_layers/india_logistics_hubs/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_logistics_hubs:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:india_logistics_hubs:full:logistics_hubs",
+      "url": "data/transport_layers/india_logistics_hubs/logistics_hubs.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.logistics_hubs",
+        "transport:india_logistics_hubs:default:paths:full:logistics_hubs",
+        "variants.default.paths.full.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport:india_logistics_hubs:preview:logistics_hubs",
+      "url": "data/transport_layers/india_logistics_hubs/logistics_hubs.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.logistics_hubs",
+        "transport:india_logistics_hubs:default:paths:preview:logistics_hubs",
+        "variants.default.paths.preview.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_logistics_hubs",
+      "url": "data/transport_layers/india_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_mineral_resources:build_audit",
+      "url": "data/transport_layers/india_mineral_resources/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_mineral_resources:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_mineral_resources",
+      "url": "data/transport_layers/india_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_mineral_resources:full:mineral_resources",
+      "url": "data/transport_layers/india_mineral_resources/mineral_resources.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.mineral_resources",
+        "transport:india_mineral_resources:default:paths:full:mineral_resources",
+        "variants.default.paths.full.mineral_resources"
+      ]
+    },
+    {
+      "key": "transport:india_mineral_resources:preview:mineral_resources",
+      "url": "data/transport_layers/india_mineral_resources/mineral_resources.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.mineral_resources",
+        "transport:india_mineral_resources:default:paths:preview:mineral_resources",
+        "variants.default.paths.preview.mineral_resources"
+      ]
+    },
+    {
       "key": "transport:india_port:build_audit",
       "url": "data/transport_layers/india_port/build_audit.json",
       "role": "transport_build_audit",
@@ -6222,6 +7284,202 @@
         "paths.preview.ports",
         "transport:india_port:default:paths:preview:ports",
         "variants.default.paths.preview.ports"
+      ]
+    },
+    {
+      "key": "transport:india_rail:build_audit",
+      "url": "data/transport_layers/india_rail/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_rail:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_rail",
+      "url": "data/transport_layers/india_rail/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_rail:full:rail_stations_major",
+      "url": "data/transport_layers/india_rail/rail_stations_major.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.rail_stations_major",
+        "transport:india_rail:default:paths:full:rail_stations_major",
+        "variants.default.paths.full.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:india_rail:preview:rail_stations_major",
+      "url": "data/transport_layers/india_rail/rail_stations_major.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.rail_stations_major",
+        "transport:india_rail:default:paths:preview:rail_stations_major",
+        "variants.default.paths.preview.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:india_rail:preview:railways",
+      "url": "data/transport_layers/india_rail/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:india_rail:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:india_rail:full:railways",
+      "url": "data/transport_layers/india_rail/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:india_rail:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:india_road:build_audit",
+      "url": "data/transport_layers/india_road/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:india_road:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:india_road",
+      "url": "data/transport_layers/india_road/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:india_road:full:road_labels",
+      "url": "data/transport_layers/india_road/road_labels.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.road_labels",
+        "transport:india_road:default:paths:full:road_labels",
+        "variants.default.paths.full.road_labels"
+      ]
+    },
+    {
+      "key": "transport:india_road:preview:road_labels",
+      "url": "data/transport_layers/india_road/road_labels.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.road_labels",
+        "transport:india_road:default:paths:preview:road_labels",
+        "variants.default.paths.preview.road_labels"
+      ]
+    },
+    {
+      "key": "transport:india_road:preview:roads",
+      "url": "data/transport_layers/india_road/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:india_road:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:india_road:full:roads",
+      "url": "data/transport_layers/india_road/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack india_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:india_road:default:paths:full:roads",
+        "variants.default.paths.full.roads"
       ]
     },
     {
@@ -7068,6 +8326,262 @@
       ]
     },
     {
+      "key": "transport:russia_energy_facilities:build_audit",
+      "url": "data/transport_layers/russia_energy_facilities/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_energy_facilities:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:russia_energy_facilities:full:energy_facilities",
+      "url": "data/transport_layers/russia_energy_facilities/energy_facilities.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.energy_facilities",
+        "transport:russia_energy_facilities:default:paths:full:energy_facilities",
+        "variants.default.paths.full.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport:russia_energy_facilities:preview:energy_facilities",
+      "url": "data/transport_layers/russia_energy_facilities/energy_facilities.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.energy_facilities",
+        "transport:russia_energy_facilities:default:paths:preview:energy_facilities",
+        "variants.default.paths.preview.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_energy_facilities",
+      "url": "data/transport_layers/russia_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_industrial_zones:build_audit",
+      "url": "data/transport_layers/russia_industrial_zones/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_industrial_zones:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:russia_industrial_zones:full:industrial_zones",
+      "url": "data/transport_layers/russia_industrial_zones/industrial_zones.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.industrial_zones",
+        "transport:russia_industrial_zones:default:paths:full:industrial_zones",
+        "variants.default.paths.full.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport:russia_industrial_zones:preview:industrial_zones",
+      "url": "data/transport_layers/russia_industrial_zones/industrial_zones.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.industrial_zones",
+        "transport:russia_industrial_zones:default:paths:preview:industrial_zones",
+        "variants.default.paths.preview.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_industrial_zones",
+      "url": "data/transport_layers/russia_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_logistics_hubs:build_audit",
+      "url": "data/transport_layers/russia_logistics_hubs/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_logistics_hubs:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:russia_logistics_hubs:full:logistics_hubs",
+      "url": "data/transport_layers/russia_logistics_hubs/logistics_hubs.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.logistics_hubs",
+        "transport:russia_logistics_hubs:default:paths:full:logistics_hubs",
+        "variants.default.paths.full.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport:russia_logistics_hubs:preview:logistics_hubs",
+      "url": "data/transport_layers/russia_logistics_hubs/logistics_hubs.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.logistics_hubs",
+        "transport:russia_logistics_hubs:default:paths:preview:logistics_hubs",
+        "variants.default.paths.preview.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_logistics_hubs",
+      "url": "data/transport_layers/russia_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_mineral_resources:build_audit",
+      "url": "data/transport_layers/russia_mineral_resources/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_mineral_resources:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_mineral_resources",
+      "url": "data/transport_layers/russia_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_mineral_resources:full:mineral_resources",
+      "url": "data/transport_layers/russia_mineral_resources/mineral_resources.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.mineral_resources",
+        "transport:russia_mineral_resources:default:paths:full:mineral_resources",
+        "variants.default.paths.full.mineral_resources"
+      ]
+    },
+    {
+      "key": "transport:russia_mineral_resources:preview:mineral_resources",
+      "url": "data/transport_layers/russia_mineral_resources/mineral_resources.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.mineral_resources",
+        "transport:russia_mineral_resources:default:paths:preview:mineral_resources",
+        "variants.default.paths.preview.mineral_resources"
+      ]
+    },
+    {
       "key": "transport:russia_port:build_audit",
       "url": "data/transport_layers/russia_port/build_audit.json",
       "role": "transport_build_audit",
@@ -7129,6 +8643,202 @@
         "paths.preview.ports",
         "transport:russia_port:default:paths:preview:ports",
         "variants.default.paths.preview.ports"
+      ]
+    },
+    {
+      "key": "transport:russia_rail:build_audit",
+      "url": "data/transport_layers/russia_rail/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_rail:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_rail",
+      "url": "data/transport_layers/russia_rail/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_rail:full:rail_stations_major",
+      "url": "data/transport_layers/russia_rail/rail_stations_major.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.rail_stations_major",
+        "transport:russia_rail:default:paths:full:rail_stations_major",
+        "variants.default.paths.full.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:russia_rail:preview:rail_stations_major",
+      "url": "data/transport_layers/russia_rail/rail_stations_major.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.rail_stations_major",
+        "transport:russia_rail:default:paths:preview:rail_stations_major",
+        "variants.default.paths.preview.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:russia_rail:preview:railways",
+      "url": "data/transport_layers/russia_rail/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:russia_rail:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:russia_rail:full:railways",
+      "url": "data/transport_layers/russia_rail/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:russia_rail:default:paths:full:railways",
+        "variants.default.paths.full.railways"
+      ]
+    },
+    {
+      "key": "transport:russia_road:build_audit",
+      "url": "data/transport_layers/russia_road/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:russia_road:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:russia_road",
+      "url": "data/transport_layers/russia_road/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_road",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:russia_road:full:road_labels",
+      "url": "data/transport_layers/russia_road/road_labels.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.road_labels",
+        "transport:russia_road:default:paths:full:road_labels",
+        "variants.default.paths.full.road_labels"
+      ]
+    },
+    {
+      "key": "transport:russia_road:preview:road_labels",
+      "url": "data/transport_layers/russia_road/road_labels.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.road_labels",
+        "transport:russia_road:default:paths:preview:road_labels",
+        "variants.default.paths.preview.road_labels"
+      ]
+    },
+    {
+      "key": "transport:russia_road:preview:roads",
+      "url": "data/transport_layers/russia_road/roads.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.roads",
+        "transport:russia_road:default:paths:preview:roads",
+        "variants.default.paths.preview.roads"
+      ]
+    },
+    {
+      "key": "transport:russia_road:full:roads",
+      "url": "data/transport_layers/russia_road/roads.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/roads_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack russia_road",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.roads",
+        "transport:russia_road:default:paths:full:roads",
+        "variants.default.paths.full.roads"
       ]
     },
     {
@@ -7244,6 +8954,262 @@
       ]
     },
     {
+      "key": "transport:uk_energy_facilities:build_audit",
+      "url": "data/transport_layers/uk_energy_facilities/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:uk_energy_facilities:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:uk_energy_facilities:full:energy_facilities",
+      "url": "data/transport_layers/uk_energy_facilities/energy_facilities.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.energy_facilities",
+        "transport:uk_energy_facilities:default:paths:full:energy_facilities",
+        "variants.default.paths.full.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport:uk_energy_facilities:preview:energy_facilities",
+      "url": "data/transport_layers/uk_energy_facilities/energy_facilities.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.energy_facilities",
+        "transport:uk_energy_facilities:default:paths:preview:energy_facilities",
+        "variants.default.paths.preview.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_energy_facilities",
+      "url": "data/transport_layers/uk_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_industrial_zones:build_audit",
+      "url": "data/transport_layers/uk_industrial_zones/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:uk_industrial_zones:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:uk_industrial_zones:full:industrial_zones",
+      "url": "data/transport_layers/uk_industrial_zones/industrial_zones.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.industrial_zones",
+        "transport:uk_industrial_zones:default:paths:full:industrial_zones",
+        "variants.default.paths.full.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport:uk_industrial_zones:preview:industrial_zones",
+      "url": "data/transport_layers/uk_industrial_zones/industrial_zones.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.industrial_zones",
+        "transport:uk_industrial_zones:default:paths:preview:industrial_zones",
+        "variants.default.paths.preview.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_industrial_zones",
+      "url": "data/transport_layers/uk_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_logistics_hubs:build_audit",
+      "url": "data/transport_layers/uk_logistics_hubs/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:uk_logistics_hubs:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:uk_logistics_hubs:full:logistics_hubs",
+      "url": "data/transport_layers/uk_logistics_hubs/logistics_hubs.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.logistics_hubs",
+        "transport:uk_logistics_hubs:default:paths:full:logistics_hubs",
+        "variants.default.paths.full.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport:uk_logistics_hubs:preview:logistics_hubs",
+      "url": "data/transport_layers/uk_logistics_hubs/logistics_hubs.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.logistics_hubs",
+        "transport:uk_logistics_hubs:default:paths:preview:logistics_hubs",
+        "variants.default.paths.preview.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_logistics_hubs",
+      "url": "data/transport_layers/uk_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_mineral_resources:build_audit",
+      "url": "data/transport_layers/uk_mineral_resources/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:uk_mineral_resources:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_mineral_resources",
+      "url": "data/transport_layers/uk_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_mineral_resources:full:mineral_resources",
+      "url": "data/transport_layers/uk_mineral_resources/mineral_resources.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.mineral_resources",
+        "transport:uk_mineral_resources:default:paths:full:mineral_resources",
+        "variants.default.paths.full.mineral_resources"
+      ]
+    },
+    {
+      "key": "transport:uk_mineral_resources:preview:mineral_resources",
+      "url": "data/transport_layers/uk_mineral_resources/mineral_resources.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.mineral_resources",
+        "transport:uk_mineral_resources:default:paths:preview:mineral_resources",
+        "variants.default.paths.preview.mineral_resources"
+      ]
+    },
+    {
       "key": "transport:uk_port:build_audit",
       "url": "data/transport_layers/uk_port/build_audit.json",
       "role": "transport_build_audit",
@@ -7305,6 +9271,104 @@
         "paths.preview.ports",
         "transport:uk_port:default:paths:preview:ports",
         "variants.default.paths.preview.ports"
+      ]
+    },
+    {
+      "key": "transport:uk_rail:build_audit",
+      "url": "data/transport_layers/uk_rail/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:uk_rail:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:uk_rail",
+      "url": "data/transport_layers/uk_rail/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:uk_rail:full:rail_stations_major",
+      "url": "data/transport_layers/uk_rail/rail_stations_major.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.rail_stations_major",
+        "transport:uk_rail:default:paths:full:rail_stations_major",
+        "variants.default.paths.full.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:uk_rail:preview:rail_stations_major",
+      "url": "data/transport_layers/uk_rail/rail_stations_major.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.rail_stations_major",
+        "transport:uk_rail:default:paths:preview:rail_stations_major",
+        "variants.default.paths.preview.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:uk_rail:preview:railways",
+      "url": "data/transport_layers/uk_rail/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:uk_rail:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:uk_rail:full:railways",
+      "url": "data/transport_layers/uk_rail/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:uk_rail:default:paths:full:railways",
+        "variants.default.paths.full.railways"
       ]
     },
     {
@@ -7518,6 +9582,262 @@
       ]
     },
     {
+      "key": "transport:usa_energy_facilities:build_audit",
+      "url": "data/transport_layers/usa_energy_facilities/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:usa_energy_facilities:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:usa_energy_facilities:full:energy_facilities",
+      "url": "data/transport_layers/usa_energy_facilities/energy_facilities.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.energy_facilities",
+        "transport:usa_energy_facilities:default:paths:full:energy_facilities",
+        "variants.default.paths.full.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport:usa_energy_facilities:preview:energy_facilities",
+      "url": "data/transport_layers/usa_energy_facilities/energy_facilities.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_energy_facilities",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.energy_facilities",
+        "transport:usa_energy_facilities:default:paths:preview:energy_facilities",
+        "variants.default.paths.preview.energy_facilities"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_energy_facilities",
+      "url": "data/transport_layers/usa_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_energy_facilities",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:usa_industrial_zones:build_audit",
+      "url": "data/transport_layers/usa_industrial_zones/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:usa_industrial_zones:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:usa_industrial_zones:full:industrial_zones",
+      "url": "data/transport_layers/usa_industrial_zones/industrial_zones.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/polygon/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.industrial_zones",
+        "transport:usa_industrial_zones:default:paths:full:industrial_zones",
+        "variants.default.paths.full.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport:usa_industrial_zones:preview:industrial_zones",
+      "url": "data/transport_layers/usa_industrial_zones/industrial_zones.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/polygon/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_industrial_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.industrial_zones",
+        "transport:usa_industrial_zones:default:paths:preview:industrial_zones",
+        "variants.default.paths.preview.industrial_zones"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_industrial_zones",
+      "url": "data/transport_layers/usa_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_industrial_zones",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:usa_logistics_hubs:build_audit",
+      "url": "data/transport_layers/usa_logistics_hubs/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:usa_logistics_hubs:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport:usa_logistics_hubs:full:logistics_hubs",
+      "url": "data/transport_layers/usa_logistics_hubs/logistics_hubs.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.logistics_hubs",
+        "transport:usa_logistics_hubs:default:paths:full:logistics_hubs",
+        "variants.default.paths.full.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport:usa_logistics_hubs:preview:logistics_hubs",
+      "url": "data/transport_layers/usa_logistics_hubs/logistics_hubs.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_logistics_hubs",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.logistics_hubs",
+        "transport:usa_logistics_hubs:default:paths:preview:logistics_hubs",
+        "variants.default.paths.preview.logistics_hubs"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_logistics_hubs",
+      "url": "data/transport_layers/usa_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_logistics_hubs",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:usa_mineral_resources:build_audit",
+      "url": "data/transport_layers/usa_mineral_resources/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:usa_mineral_resources:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_mineral_resources",
+      "url": "data/transport_layers/usa_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_mineral_resources",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:usa_mineral_resources:full:mineral_resources",
+      "url": "data/transport_layers/usa_mineral_resources/mineral_resources.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.mineral_resources",
+        "transport:usa_mineral_resources:default:paths:full:mineral_resources",
+        "variants.default.paths.full.mineral_resources"
+      ]
+    },
+    {
+      "key": "transport:usa_mineral_resources:preview:mineral_resources",
+      "url": "data/transport_layers/usa_mineral_resources/mineral_resources.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_mineral_resources",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.mineral_resources",
+        "transport:usa_mineral_resources:default:paths:preview:mineral_resources",
+        "variants.default.paths.preview.mineral_resources"
+      ]
+    },
+    {
       "key": "transport:usa_port:build_audit",
       "url": "data/transport_layers/usa_port/build_audit.json",
       "role": "transport_build_audit",
@@ -7579,6 +9899,104 @@
         "paths.preview.ports",
         "transport:usa_port:default:paths:preview:ports",
         "variants.default.paths.preview.ports"
+      ]
+    },
+    {
+      "key": "transport:usa_rail:build_audit",
+      "url": "data/transport_layers/usa_rail/build_audit.json",
+      "role": "transport_build_audit",
+      "format": "json",
+      "schemaRef": "schema://transport/build_audit/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.build_audit",
+        "transport:usa_rail:default:paths:build_audit",
+        "variants.default.paths.build_audit"
+      ]
+    },
+    {
+      "key": "transport_manifest:usa_rail",
+      "url": "data/transport_layers/usa_rail/manifest.json",
+      "role": "transport_manifest",
+      "format": "json",
+      "schemaRef": "schema://transport/manifest/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "transport:usa_rail:full:rail_stations_major",
+      "url": "data/transport_layers/usa_rail/rail_stations_major.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.rail_stations_major",
+        "transport:usa_rail:default:paths:full:rail_stations_major",
+        "variants.default.paths.full.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:usa_rail:preview:rail_stations_major",
+      "url": "data/transport_layers/usa_rail/rail_stations_major.preview.geojson",
+      "role": "transport_pack",
+      "format": "geojson",
+      "schemaRef": "schema://geojson/feature_collection/point/v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.rail_stations_major",
+        "transport:usa_rail:default:paths:preview:rail_stations_major",
+        "variants.default.paths.preview.rail_stations_major"
+      ]
+    },
+    {
+      "key": "transport:usa_rail:preview:railways",
+      "url": "data/transport_layers/usa_rail/railways.preview.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.preview.railways",
+        "transport:usa_rail:default:paths:preview:railways",
+        "variants.default.paths.preview.railways"
+      ]
+    },
+    {
+      "key": "transport:usa_rail:full:railways",
+      "url": "data/transport_layers/usa_rail/railways.topo.json",
+      "role": "transport_pack",
+      "format": "topojson",
+      "schemaRef": "schema://topojson/line_collection/railways_v1",
+      "hashRef": "",
+      "owner": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "paths.full.railways",
+        "transport:usa_rail:default:paths:full:railways",
+        "variants.default.paths.full.railways"
       ]
     },
     {

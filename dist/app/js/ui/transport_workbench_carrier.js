@@ -32,6 +32,8 @@ let frameContexts = {};
 let rotationQuarterTurns = DEFAULT_ROTATION_QUARTER_TURNS;
 let sceneBaseBounds = null;
 let viewChangeListener = null;
+let viewChangeNotificationFrame = 0;
+let pendingViewChangeState = null;
 let activeAssetKey = DEFAULT_ASSET_KEY;
 // carrier asset 可以随 active pack 切换；generation 防止旧异步加载结果回写新底图。
 let ensureGeneration = 0;
@@ -290,6 +292,34 @@ function renderLodIfNeeded(force = false) {
   });
 }
 
+function requestCarrierFrame(callback) {
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    return globalThis.requestAnimationFrame(callback);
+  }
+  return globalThis.setTimeout(callback, 16);
+}
+
+function cancelCarrierFrame(frameId) {
+  if (!frameId) return;
+  if (typeof globalThis.cancelAnimationFrame === "function") {
+    globalThis.cancelAnimationFrame(frameId);
+  } else {
+    globalThis.clearTimeout(frameId);
+  }
+}
+
+function notifyCarrierViewChange() {
+  if (!viewChangeListener) return;
+  pendingViewChangeState = getTransportWorkbenchCarrierViewState();
+  if (viewChangeNotificationFrame) return;
+  viewChangeNotificationFrame = requestCarrierFrame(() => {
+    viewChangeNotificationFrame = 0;
+    const nextViewState = pendingViewChangeState || getTransportWorkbenchCarrierViewState();
+    pendingViewChangeState = null;
+    viewChangeListener?.(nextViewState);
+  });
+}
+
 function applyCamera() {
   if (!cameraNode || !orientationNode) return;
   renderLodIfNeeded();
@@ -303,7 +333,7 @@ function applyCamera() {
     `translate(${orientationLayout.centerX} ${orientationLayout.centerY}) rotate(${orientationLayout.angle}) scale(${orientationLayout.fitScale}) translate(${-orientationLayout.baseCenterX} ${-orientationLayout.baseCenterY})`
   );
   syncInteractiveState();
-  viewChangeListener?.(getTransportWorkbenchCarrierViewState());
+  notifyCarrierViewChange();
 }
 
 function getViewBoxPointerPosition(event) {
@@ -783,12 +813,20 @@ export function resizeTransportWorkbenchCarrier() {
 
 export function setTransportWorkbenchCarrierViewChangeListener(listener) {
   viewChangeListener = typeof listener === "function" ? listener : null;
+  if (!viewChangeListener) {
+    cancelCarrierFrame(viewChangeNotificationFrame);
+    viewChangeNotificationFrame = 0;
+    pendingViewChangeState = null;
+  }
 }
 
 export function destroyTransportWorkbenchCarrier() {
   pointerDrag = null;
   rotationQuarterTurns = getDefaultRotationQuarterTurns();
   viewChangeListener = null;
+  cancelCarrierFrame(viewChangeNotificationFrame);
+  viewChangeNotificationFrame = 0;
+  pendingViewChangeState = null;
   if (asset) {
     camera = clampCamera(getResolvedCameraDefaults());
   }

@@ -51,6 +51,7 @@ const STATION_LABEL_GRID_BY_DENSITY = {
 const INACTIVE_STATUS = new Set(["disused", "abandoned", "construction"]);
 const SELECTED_LINE_STROKE = "#0f172a";
 const SELECTED_STATION_STROKE = "#0f172a";
+const DATA_ROW_LIMIT = 240;
 
 let rootGroup = null;
 let labelRootGroup = null;
@@ -474,6 +475,73 @@ function buildSelectedSnapshot(config) {
   };
 }
 
+function buildLineDataRow(line, config, scale) {
+  const hiddenReason = getLineVisibilityReason(line, config || {}, scale);
+  return {
+    id: line.id,
+    family: "rail",
+    kind: "line",
+    name: line.name || line.operator || line.id,
+    source: line.source || "",
+    visible: !hiddenReason,
+    hiddenReason,
+    lengthMeters: line.lengthMeters,
+    railTypeCode: line.railTypeCode,
+    lineClass: line.lineClass,
+    selected: runtime.selectedFeature?.type === "line" && runtime.selectedFeature.id === line.id,
+    properties: {
+      operator: line.operator,
+      rail_type_code: line.railTypeCode,
+      operator_type_code: line.operatorTypeCode,
+      status: line.status,
+      line_class: line.lineClass,
+      source_flags: [...(line.sourceFlags || [])],
+      length_meters: line.lengthMeters,
+    },
+  };
+}
+
+function buildStationDataRow(station, config, scale) {
+  const visible = shouldShowStation(station, config || {}, scale);
+  return {
+    id: station.id,
+    family: "rail",
+    kind: "station",
+    name: station.name || station.stationCode || station.id,
+    source: station.source || "",
+    visible,
+    hiddenReason: visible ? null : "station_filtered",
+    importance: station.importance,
+    selected: runtime.selectedFeature?.type === "station" && runtime.selectedFeature.id === station.id,
+    properties: {
+      city_key: station.cityKey,
+      station_code: station.stationCode,
+      group_code: station.groupCode,
+      importance: station.importance,
+      linked_line_classes: [...(station.linkedLineClasses || [])],
+    },
+  };
+}
+
+function buildDataRows(config = runtime.lastRenderedConfig) {
+  const pack = runtime.activePack || lineRuntime.pickActivePack();
+  if (!pack) return [];
+  const scale = getCurrentScale();
+  const lines = Array.isArray(pack.lineFeatures)
+    ? pack.lineFeatures.map((line) => buildLineDataRow(line, config, scale))
+    : [];
+  const stations = Array.isArray(pack.stationFeatures)
+    ? pack.stationFeatures.map((station) => buildStationDataRow(station, config, scale))
+    : [];
+  return [...lines, ...stations]
+    .sort((left, right) => {
+      if (left.visible !== right.visible) return left.visible ? -1 : 1;
+      if (left.kind !== right.kind) return left.kind === "line" ? -1 : 1;
+      return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+    })
+    .slice(0, DATA_ROW_LIMIT);
+}
+
 function renderSelectedHighlight(selectedLine, selectedStation) {
   if (selectedLineHighlightNode) {
     if (selectedLine) {
@@ -702,6 +770,27 @@ export function setJapanRailPreviewSelectionListener(listener) {
   lineRuntime.setSelectionListener(listener);
 }
 
+export function selectJapanRailPreviewFeature(selection) {
+  const featureId = String(selection?.id || selection || "").trim();
+  const kind = String(selection?.kind || selection?.type || "").trim();
+  if (!featureId) return false;
+  const pack = runtime.activePack || lineRuntime.pickActivePack();
+  if (kind === "station" || pack?.stationFeatureById?.has(featureId)) {
+    const station = pack?.stationFeatureById?.get(featureId) || null;
+    if (!station) return false;
+    runtime.selectedFeature = { type: "station", id: station.id };
+    renderSelectedHighlight(null, station);
+    emitSelectionChange();
+    return true;
+  }
+  const line = pack?.lineFeatureById?.get(featureId) || null;
+  if (!line) return false;
+  runtime.selectedFeature = { type: "line", id: line.id };
+  renderSelectedHighlight(line, null);
+  emitSelectionChange();
+  return true;
+}
+
 export async function renderJapanRailPreview(config, options = {}) {
   await loadJapanRailPack(PACK_MODE_PREVIEW, config);
   if (typeof options.isCurrent === "function" && !options.isCurrent()) {
@@ -788,7 +877,15 @@ export function destroyJapanRailPreview() {
 }
 
 export function getJapanRailPreviewSnapshot(config = runtime.lastRenderedConfig) {
-  return lineRuntime.getSnapshot(config ? buildSelectedSnapshot : null);
+  const snapshot = lineRuntime.getSnapshot(config ? buildSelectedSnapshot : null);
+  const pack = runtime.activePack || lineRuntime.pickActivePack();
+  const totalRows = (pack?.lineFeatures?.length || 0) + (pack?.stationFeatures?.length || 0);
+  return {
+    ...snapshot,
+    dataRows: buildDataRows(config),
+    dataRowCount: totalRows,
+    dataRowLimit: DATA_ROW_LIMIT,
+  };
 }
 
 export function formatJapanRailVisibilityReason(reason) {

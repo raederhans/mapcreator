@@ -19,7 +19,7 @@ from tools.app_entry_resolver import (
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
-MAX_PAGES_DIST_BYTES = 995 * 1024 * 1024
+MAX_PAGES_DIST_BYTES = 1020 * 1024 * 1024
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",
@@ -409,6 +409,110 @@ def copy_transport_runtime_data() -> None:
         return False
 
     copy_tree_filtered(source_dir, destination_dir, should_copy_file)
+    prune_transport_manifests_to_published_paths(destination_dir)
+    prune_dist_catalog_to_published_files()
+
+
+def prune_transport_manifest_path_section(
+    paths: dict,
+    feature_counts: dict | None,
+) -> bool:
+    changed = False
+    for mode in ("preview", "full"):
+        mode_paths = paths.get(mode)
+        if not isinstance(mode_paths, dict):
+            continue
+        mode_counts = feature_counts.get(mode) if isinstance(feature_counts, dict) else None
+        if not isinstance(mode_counts, dict):
+            mode_counts = None
+        for key, runtime_path in list(mode_paths.items()):
+            if not isinstance(runtime_path, str) or not runtime_path.startswith("data/transport_layers/"):
+                continue
+            if (APP_DIST_ROOT / runtime_path).is_file():
+                continue
+            del mode_paths[key]
+            changed = True
+            if mode_counts is not None and key in mode_counts:
+                del mode_counts[key]
+        if not mode_paths:
+            del paths[mode]
+            changed = True
+        if mode_counts is not None and not mode_counts and isinstance(feature_counts, dict):
+            del feature_counts[mode]
+            changed = True
+    return changed
+
+
+def prune_transport_manifests_to_published_paths(destination_dir: Path) -> None:
+    """Keep Pages transport manifests aligned with the reduced transport payload."""
+    for manifest_path in destination_dir.rglob("manifest.json"):
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        paths = manifest.get("paths")
+        if not isinstance(paths, dict):
+            continue
+        feature_counts = manifest.get("feature_counts") if isinstance(manifest.get("feature_counts"), dict) else None
+        changed = prune_transport_manifest_path_section(paths, feature_counts)
+        variants = manifest.get("variants") if isinstance(manifest.get("variants"), dict) else {}
+        for variant in variants.values():
+            if not isinstance(variant, dict):
+                continue
+            variant_paths = variant.get("paths") if isinstance(variant.get("paths"), dict) else {}
+            variant_counts = variant.get("feature_counts") if isinstance(variant.get("feature_counts"), dict) else None
+            changed = prune_transport_manifest_path_section(variant_paths, variant_counts) or changed
+        if changed:
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def recalculate_catalog_counts(entries: list[dict]) -> dict:
+    counts = {
+        "entries": len(entries),
+        "by_role": {},
+        "by_format": {},
+        "by_read_mode": {},
+    }
+    for entry in entries:
+        for field_name, bucket_name in (
+            ("role", "by_role"),
+            ("format", "by_format"),
+            ("readMode", "by_read_mode"),
+        ):
+            value = str(entry.get(field_name) or "").strip()
+            if value:
+                counts[bucket_name][value] = counts[bucket_name].get(value, 0) + 1
+    return {
+        "entries": counts["entries"],
+        "by_role": dict(sorted(counts["by_role"].items())),
+        "by_format": dict(sorted(counts["by_format"].items())),
+        "by_read_mode": dict(sorted(counts["by_read_mode"].items())),
+    }
+
+
+def prune_dist_catalog_to_published_files() -> None:
+    catalog_path = APP_DIST_ROOT / "data" / "CATALOG.json"
+    if not catalog_path.is_file():
+        return
+    payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    entries = payload.get("entries")
+    if not isinstance(entries, list):
+        return
+    published_entries = []
+    changed = False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        runtime_url = entry.get("url")
+        if isinstance(runtime_url, str) and runtime_url.startswith("data/") and not (APP_DIST_ROOT / runtime_url).is_file():
+            changed = True
+            continue
+        published_entries.append(entry)
+    if not changed:
+        return
+    payload["entries"] = published_entries
+    payload["counts"] = recalculate_catalog_counts(published_entries)
+    catalog_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def filter_hgo_png_manifest_for_pages(payload: dict) -> dict:

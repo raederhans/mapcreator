@@ -26,6 +26,7 @@ TRANSPORT_WORKBENCH_POPOVER_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "tr
 TRANSPORT_WORKBENCH_RIGHT_DECK_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_right_deck_owner.js"
 TRANSPORT_WORKBENCH_SHELL_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_shell_owner.js"
 TRANSPORT_WORKBENCH_EVENT_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_event_owner.js"
+TRANSPORT_WORKBENCH_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
@@ -784,6 +785,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_transport_workbench_preview_lifecycle_owner_guards_render_and_view_sync(self):
         controller_content = TRANSPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
         preview_owner_content = TRANSPORT_WORKBENCH_PREVIEW_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
+        carrier_content = TRANSPORT_WORKBENCH_CARRIER_JS.read_text(encoding="utf-8")
 
         self.assertRegex(preview_owner_content, r"const \w+Generation = \+\+renderGeneration;")
         self.assertRegex(
@@ -803,8 +805,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (!isRenderGenerationCurrent(candidateGeneration, context.family.id))", preview_owner_content)
         self.assertIn("resizeTransportWorkbenchCarrier();", preview_owner_content)
         self.assertIn("syncPreviewControls();", preview_owner_content)
-        self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", preview_owner_content)
-        self.assertIn("createTransportWorkbenchPreviewViewKey(getTransportWorkbenchCarrierViewState())", preview_owner_content)
+        self.assertIn("renderFamilyPreview(context.family.id, context.config, {", preview_owner_content)
+        self.assertIn("createTransportWorkbenchPreviewViewKey(getCarrierViewState())", preview_owner_content)
         self.assertRegex(preview_owner_content, r'console\.error\("\[transport-workbench\][^"]*", error\);')
         self.assertIn("cancelAnimationFrame(previewViewSyncRaf);", preview_owner_content)
         self.assertIn("renderGeneration += 1;", preview_owner_content)
@@ -815,7 +817,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (previewLastViewKey === nextViewKey) {", preview_owner_content)
         self.assertIn("const context = getRenderContext();", preview_owner_content)
         self.assertIn("if (!context.isOpen || context.family.id !== activeFamily) return;", preview_owner_content)
-        self.assertIn("refreshPreview(context, { allowCarrierPrep: false });", preview_owner_content)
+        self.assertIn("refreshPreview(context, { allowCarrierPrep: false, viewOnly: true });", preview_owner_content)
         self.assertIn("const schedulePreviewWarmup = () => {", preview_owner_content)
         self.assertIn("let previewWarmupScheduled = false;", preview_owner_content)
         self.assertIn("Promise.allSettled(", preview_owner_content)
@@ -828,6 +830,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("scheduleViewSync();", preview_owner_content)
         self.assertIn("runtimeFamilyIds.forEach((familyId) => {", preview_owner_content)
         self.assertIn("setFamilyPreviewSelectionListener(familyId, () => {", preview_owner_content)
+        self.assertIn("const pendingSelectionFamilyIds = new Set();", preview_owner_content)
+        self.assertIn("selectionSyncRaf = requestAnimationFrame(() => {", preview_owner_content)
         self.assertIn("renderLensSections(context.family, context.config, context.compareHeld);", preview_owner_content)
         self.assertIn("renderInspector(context.family, context.config, context.compareHeld);", preview_owner_content)
         self.assertRegex(
@@ -838,8 +842,16 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("setTransportWorkbenchCarrierViewChangeListener(() => {", controller_content)
         self.assertNotIn("setTransportWorkbenchFamilyPreviewSelectionListener(familyId, () => {", controller_content)
         self.assertNotIn("warmTransportWorkbenchFamilyPreview(plan.familyId", controller_content)
+        self.assertIn("const scheduleTransportWorkbenchSurfaceRefresh = ({ allowCarrierPrep = false } = {}) => {", controller_content)
+        self.assertIn("pendingWorkbenchRefreshFrame = requestWorkbenchRefreshFrame(() => {", controller_content)
+        self.assertIn("scheduleTransportWorkbenchSurfaceRefresh({ allowCarrierPrep: false });", controller_content)
+        self.assertIn("cancelWorkbenchRefreshFrame(pendingWorkbenchRefreshFrame);", controller_content)
         self.assertIn("stepCarrierZoom: (step) => stepTransportWorkbenchCarrierZoom(step),", controller_content)
         self.assertIn("rotateCarrier: () => toggleTransportWorkbenchCarrierQuarterTurn(),", controller_content)
+        self.assertIn("function notifyCarrierViewChange()", carrier_content)
+        self.assertIn("viewChangeNotificationFrame = requestCarrierFrame(() => {", carrier_content)
+        self.assertIn("notifyCarrierViewChange();", carrier_content)
+        self.assertNotIn("viewChangeListener?.(getTransportWorkbenchCarrierViewState());", carrier_content)
 
     def test_toolbar_keeps_transport_workbench_facade_and_surface_coordination_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")

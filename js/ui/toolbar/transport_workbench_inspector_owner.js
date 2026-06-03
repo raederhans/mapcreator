@@ -559,13 +559,13 @@ export function buildTransportWorkbenchInspectorModel({
     }
     rows = [
       ["Source track", activeVariant],
-      ["Visible polygons", String(visibleFeatures)],
+      ["Visible sites", String(visibleFeatures)],
       ["Filtered out", String(filteredFeatures)],
       ["Visible labels", String(visibleLabels)],
     ];
     if (selected) {
       rows.push(
-        ["Selected polygon", selected.name || "Unnamed industrial polygon"],
+        ["Selected site", selected.name || "Unnamed industrial site"],
         ["Land type", selectedProps.site_class || "--"],
       );
       if (activeVariant === "internal") {
@@ -585,11 +585,11 @@ export function buildTransportWorkbenchInspectorModel({
       }
     }
     rows.push(
-      ["Loaded polygons", String(totalFeatures)],
+      ["Loaded sites", String(totalFeatures)],
       ["Pack mode", previewSnapshot.packMode || "preview"],
       ["Variant tier", variantMeta?.distribution_tier || "unknown"],
       ["License tier", variantMeta?.license_tier || "unknown"],
-      ["Pack version", previewSnapshot.manifest?.adapter_id || "japan_industrial_zones_v2"],
+      ["Pack version", previewSnapshot.manifest?.adapter_id || "active_industrial_zones_manifest"],
       ["Recipe version", previewSnapshot.manifest?.recipe_version || previewSnapshot.audit?.recipe_version || "unknown"],
       ["Last build", formatTransportWorkbenchManifestTimestamp(previewSnapshot.manifest?.generated_at)],
     );
@@ -602,14 +602,14 @@ export function buildTransportWorkbenchInspectorModel({
   } else if (familyId === "industrial_zones" && previewSnapshot?.status === "error") {
     stateCards.push(createStateCard(
       "Industrial land preview failed",
-      previewSnapshot.error || "The industrial polygon pack could not be loaded.",
+      previewSnapshot.error || "The industrial land pack could not be loaded.",
       "emphasis",
     ));
     rows = [["Data path", dataContract?.governance || "Deferred pack governance pending"]];
   } else if (familyId === "industrial_zones") {
     stateCards.push(createStateCard(
       "Preparing industrial land preview",
-      "The current source track is still loading into the Japan carrier.",
+      "The current source track is still loading into the active carrier.",
       "soft",
     ));
     rows = [

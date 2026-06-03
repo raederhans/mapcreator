@@ -23,10 +23,13 @@ import {
 } from "./transport_workbench_config_owner.js";
 
 function createTransportWorkbenchPreviewViewKey(viewState = {}) {
+  const scale = Number(viewState.scale || 1);
+  const translateX = Number(viewState.translateX || 0);
+  const translateY = Number(viewState.translateY || 0);
   return [
-    Number(viewState.scale || 1).toFixed(4),
-    Number(viewState.translateX || 0).toFixed(2),
-    Number(viewState.translateY || 0).toFixed(2),
+    Math.round(scale * 100) / 100,
+    Math.round(translateX / 2) * 2,
+    Math.round(translateY / 2) * 2,
     String(viewState.quarterTurns || 0),
   ].join(":");
 }
@@ -39,6 +42,8 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
   renderLayerOrderPanel = () => {},
   renderLensSections = () => {},
   syncPreviewControls = () => {},
+  getCarrierViewState = getTransportWorkbenchCarrierViewState,
+  renderFamilyPreview = renderTransportWorkbenchFamilyPreview,
   listWarmupPlans = listTransportWorkbenchWarmupPlans,
   warmFamilyPreview = warmTransportWorkbenchFamilyPreview,
   setCarrierViewChangeListener = setTransportWorkbenchCarrierViewChangeListener,
@@ -47,6 +52,8 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
   destroyCarrier = destroyTransportWorkbenchCarrier,
   destroyFamilyPreviews = destroyAllTransportWorkbenchFamilyPreviews,
   scheduleTimeout = (callback, delay) => globalThis.setTimeout(callback, delay),
+  requestAnimationFrame = (callback) => globalThis.requestAnimationFrame(callback),
+  cancelAnimationFrame = (id) => globalThis.cancelAnimationFrame(id),
   requestIdle = (callback, options) => {
     if (typeof globalThis.requestIdleCallback === "function") {
       return globalThis.requestIdleCallback(callback, options);
@@ -63,6 +70,8 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
   let previewViewSyncRaf = 0;
   let previewLastViewKey = "";
   let previewWarmupScheduled = false;
+  let selectionSyncRaf = 0;
+  const pendingSelectionFamilyIds = new Set();
 
   const isRenderGenerationCurrent = (candidateGeneration, familyId) => (
     candidateGeneration === renderGeneration
@@ -70,7 +79,7 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     && normalizeTransportWorkbenchFamily(runtimeState.transportWorkbenchUi?.activeFamily) === familyId
   );
 
-  const refreshPreview = (context, { allowCarrierPrep = true } = {}) => {
+  const refreshPreview = (context, { allowCarrierPrep = true, viewOnly = false } = {}) => {
     const candidateGeneration = ++renderGeneration;
     if (!context.isOpen) {
       clearAllTransportWorkbenchFamilyPreviews();
@@ -97,13 +106,14 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
         syncPreviewControls();
         // Preview family modules consume the resolved config; this owner only keeps lifecycle ordering stable.
         if (isTransportWorkbenchFamilyLivePreviewCapable(context.family.id)) {
-          return renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {
+          return renderFamilyPreview(context.family.id, context.config, {
             isCurrent: () => isRenderGenerationCurrent(candidateGeneration, context.family.id),
+            viewOnly,
           }).then(() => {
             if (!isRenderGenerationCurrent(candidateGeneration, context.family.id)) {
               return null;
             }
-            previewLastViewKey = createTransportWorkbenchPreviewViewKey(getTransportWorkbenchCarrierViewState());
+            previewLastViewKey = createTransportWorkbenchPreviewViewKey(getCarrierViewState());
             renderInspector(context.family, context.config, context.compareHeld);
             return null;
           });
@@ -135,7 +145,7 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     if (!runtimeState.transportWorkbenchUi?.open || !isTransportWorkbenchFamilyLivePreviewCapable(activeFamily)) {
       return;
     }
-    const nextViewKey = createTransportWorkbenchPreviewViewKey(getTransportWorkbenchCarrierViewState());
+    const nextViewKey = createTransportWorkbenchPreviewViewKey(getCarrierViewState());
     if (previewLastViewKey === nextViewKey) {
       return;
     }
@@ -147,7 +157,7 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
       previewViewSyncRaf = 0;
       const context = getRenderContext();
       if (!context.isOpen || context.family.id !== activeFamily) return;
-      refreshPreview(context, { allowCarrierPrep: false });
+      refreshPreview(context, { allowCarrierPrep: false, viewOnly: true });
     });
   };
 
@@ -177,12 +187,22 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     });
     runtimeFamilyIds.forEach((familyId) => {
       setFamilyPreviewSelectionListener(familyId, () => {
-        const context = getRenderContext();
-        if (!context?.isOpen || context.family?.id !== familyId) {
+        pendingSelectionFamilyIds.add(familyId);
+        if (selectionSyncRaf) {
           return;
         }
-        renderLensSections(context.family, context.config, context.compareHeld);
-        renderInspector(context.family, context.config, context.compareHeld);
+        selectionSyncRaf = requestAnimationFrame(() => {
+          selectionSyncRaf = 0;
+          const context = getRenderContext();
+          const activeFamilyId = context?.family?.id || "";
+          const shouldRefresh = pendingSelectionFamilyIds.has(activeFamilyId);
+          pendingSelectionFamilyIds.clear();
+          if (!context?.isOpen || !shouldRefresh) {
+            return;
+          }
+          renderLensSections(context.family, context.config, context.compareHeld);
+          renderInspector(context.family, context.config, context.compareHeld);
+        });
       });
     });
   };
@@ -196,6 +216,11 @@ export function createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
     if (previewViewSyncRaf) {
       cancelAnimationFrame(previewViewSyncRaf);
       previewViewSyncRaf = 0;
+    }
+    if (selectionSyncRaf) {
+      cancelAnimationFrame(selectionSyncRaf);
+      selectionSyncRaf = 0;
+      pendingSelectionFamilyIds.clear();
     }
     renderGeneration += 1;
     previewLastViewKey = "";

@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-06-03T13:53:13.991274Z",
+  "adapter_id": "china_energy_facilities_v1",
+  "pack_id": "china_energy_facilities",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "WRI Global Power Plant Database global CSV",
+  "geometry_truth": "WRI plant latitude/longitude points filtered to the China workbench carrier",
+  "source_signature": {
+    "wri_global_power_plant_database_csv": {
+      "filename": "global_power_plant_database.csv",
+      "path": ".runtime/source-cache/transport/china_energy_facilities/global_power_plant_database.csv",
+      "size_bytes": 11973385,
+      "sha256": "4b1f93e0fd93664f18684d9b05d0a52ed9658c6a8cf0d21ff2520791379ba7fc"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 1000
+    },
+    "full": {
+      "energy_facilities": 4086
+    }
+  },
+  "source_row_count": {
+    "wri_global_power_plants": 34936,
+    "wri_china_power_plants": 4235
+  },
+  "matched_count": 4086,
+  "preview_rule": "Largest 1000 WRI China power plants by reported capacity after China carrier clip.",
+  "scope_rule": "Filtered through the China carrier fitGeometry; out-of-scope coordinate rows are excluded."
+}

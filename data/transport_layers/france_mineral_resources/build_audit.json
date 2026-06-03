@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-06-02T21:29:36.689349Z",
+  "adapter_id": "france_mineral_resources_v1",
+  "pack_id": "france_mineral_resources",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "Camino open French mining cadastre titles GeoJSON",
+  "geometry_truth": "Camino title MultiPolygon perimeters converted to representative points and filtered to the metropolitan France carrier scope",
+  "source_signature": {
+    "camino_titles_geojson": {
+      "filename": "camino_titres_2026-06-02.geojson",
+      "path": ".runtime/source-cache/transport/france_mineral_resources/camino_titres_2026-06-02.geojson",
+      "size_bytes": 22355756,
+      "sha256": "f4d198df38052bfceab9196a9fb63dc89faac5b853994d375f20e79ce06ec014"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 300
+    },
+    "full": {
+      "mineral_resources": 3147
+    }
+  },
+  "source_row_count": {
+    "camino_titles": 5427,
+    "camino_mining_titles": 4907
+  },
+  "matched_count": 3147,
+  "preview_rule": "Largest 300 metropolitan France Camino mineral/mining titles by declared surface.",
+  "scope_rule": "Representative points are filtered through the France carrier fitGeometry; overseas territories are excluded."
+}

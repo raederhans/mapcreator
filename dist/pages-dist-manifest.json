@@ -6,11 +6,11 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 258117
+      "size_bytes": 263513
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 302947
+      "size_bytes": 298152
     },
     {
       "path": "app/data/city_aliases.json",
@@ -29658,11 +29658,11 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8656527
+      "size_bytes": 8658821
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 35944
+      "size_bytes": 45236
     },
     {
       "path": "app/data/palette-maps/hgo.audit.json",
@@ -29778,7 +29778,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 14933
+      "size_bytes": 23827
     },
     {
       "path": "app/data/scenario-rules/hoi4_1936.manual.json",
@@ -33478,7 +33478,7 @@
     },
     {
       "path": "app/data/transport_layers/china_airport/manifest.json",
-      "size_bytes": 3392
+      "size_bytes": 3082
     },
     {
       "path": "app/data/transport_layers/china_carrier/carrier.json",
@@ -33493,16 +33493,96 @@
       "size_bytes": 1818
     },
     {
+      "path": "app/data/transport_layers/china_energy_facilities/build_audit.json",
+      "size_bytes": 1204
+    },
+    {
+      "path": "app/data/transport_layers/china_energy_facilities/energy_facilities.preview.geojson",
+      "size_bytes": 440369
+    },
+    {
+      "path": "app/data/transport_layers/china_energy_facilities/manifest.json",
+      "size_bytes": 2340
+    },
+    {
+      "path": "app/data/transport_layers/china_industrial_zones/build_audit.json",
+      "size_bytes": 11568
+    },
+    {
+      "path": "app/data/transport_layers/china_industrial_zones/industrial_zones.preview.geojson",
+      "size_bytes": 241845
+    },
+    {
+      "path": "app/data/transport_layers/china_industrial_zones/manifest.json",
+      "size_bytes": 11354
+    },
+    {
+      "path": "app/data/transport_layers/china_logistics_hubs/build_audit.json",
+      "size_bytes": 13613
+    },
+    {
+      "path": "app/data/transport_layers/china_logistics_hubs/logistics_hubs.preview.geojson",
+      "size_bytes": 225594
+    },
+    {
+      "path": "app/data/transport_layers/china_logistics_hubs/manifest.json",
+      "size_bytes": 11320
+    },
+    {
+      "path": "app/data/transport_layers/china_mineral_resources/build_audit.json",
+      "size_bytes": 1178
+    },
+    {
+      "path": "app/data/transport_layers/china_mineral_resources/manifest.json",
+      "size_bytes": 2345
+    },
+    {
+      "path": "app/data/transport_layers/china_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 282078
+    },
+    {
       "path": "app/data/transport_layers/china_port/build_audit.json",
       "size_bytes": 1028
     },
     {
       "path": "app/data/transport_layers/china_port/manifest.json",
-      "size_bytes": 2575
+      "size_bytes": 2289
     },
     {
       "path": "app/data/transport_layers/china_port/ports.preview.geojson",
       "size_bytes": 112549
+    },
+    {
+      "path": "app/data/transport_layers/china_rail/build_audit.json",
+      "size_bytes": 13205
+    },
+    {
+      "path": "app/data/transport_layers/china_rail/manifest.json",
+      "size_bytes": 11775
+    },
+    {
+      "path": "app/data/transport_layers/china_rail/rail_stations_major.preview.geojson",
+      "size_bytes": 99197
+    },
+    {
+      "path": "app/data/transport_layers/china_rail/railways.preview.topo.json",
+      "size_bytes": 1113833
+    },
+    {
+      "path": "app/data/transport_layers/china_road/build_audit.json",
+      "size_bytes": 11463
+    },
+    {
+      "path": "app/data/transport_layers/china_road/manifest.json",
+      "size_bytes": 11690
+    },
+    {
+      "path": "app/data/transport_layers/china_road/road_labels.preview.geojson",
+      "size_bytes": 34487
+    },
+    {
+      "path": "app/data/transport_layers/china_road/roads.preview.topo.json",
+      "size_bytes": 1052013
     },
     {
       "path": "app/data/transport_layers/france_airport/airports.preview.geojson",
@@ -33514,7 +33594,7 @@
     },
     {
       "path": "app/data/transport_layers/france_airport/manifest.json",
-      "size_bytes": 2719
+      "size_bytes": 2407
     },
     {
       "path": "app/data/transport_layers/france_carrier/carrier.json",
@@ -33529,12 +33609,60 @@
       "size_bytes": 2993
     },
     {
+      "path": "app/data/transport_layers/france_energy_facilities/build_audit.json",
+      "size_bytes": 1239
+    },
+    {
+      "path": "app/data/transport_layers/france_energy_facilities/energy_facilities.preview.geojson",
+      "size_bytes": 1270428
+    },
+    {
+      "path": "app/data/transport_layers/france_energy_facilities/manifest.json",
+      "size_bytes": 2489
+    },
+    {
+      "path": "app/data/transport_layers/france_industrial_zones/build_audit.json",
+      "size_bytes": 1144
+    },
+    {
+      "path": "app/data/transport_layers/france_industrial_zones/industrial_zones.preview.geojson",
+      "size_bytes": 3708758
+    },
+    {
+      "path": "app/data/transport_layers/france_industrial_zones/manifest.json",
+      "size_bytes": 2433
+    },
+    {
+      "path": "app/data/transport_layers/france_logistics_hubs/build_audit.json",
+      "size_bytes": 1145
+    },
+    {
+      "path": "app/data/transport_layers/france_logistics_hubs/logistics_hubs.preview.geojson",
+      "size_bytes": 215692
+    },
+    {
+      "path": "app/data/transport_layers/france_logistics_hubs/manifest.json",
+      "size_bytes": 2338
+    },
+    {
+      "path": "app/data/transport_layers/france_mineral_resources/build_audit.json",
+      "size_bytes": 1256
+    },
+    {
+      "path": "app/data/transport_layers/france_mineral_resources/manifest.json",
+      "size_bytes": 2396
+    },
+    {
+      "path": "app/data/transport_layers/france_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 133159
+    },
+    {
       "path": "app/data/transport_layers/france_port/build_audit.json",
       "size_bytes": 1031
     },
     {
       "path": "app/data/transport_layers/france_port/manifest.json",
-      "size_bytes": 2636
+      "size_bytes": 2348
     },
     {
       "path": "app/data/transport_layers/france_port/ports.preview.geojson",
@@ -33546,7 +33674,7 @@
     },
     {
       "path": "app/data/transport_layers/france_rail/manifest.json",
-      "size_bytes": 3761
+      "size_bytes": 3179
     },
     {
       "path": "app/data/transport_layers/france_rail/rail_stations_major.preview.geojson",
@@ -33555,6 +33683,22 @@
     {
       "path": "app/data/transport_layers/france_rail/railways.preview.topo.json",
       "size_bytes": 1193315
+    },
+    {
+      "path": "app/data/transport_layers/france_road/build_audit.json",
+      "size_bytes": 1599
+    },
+    {
+      "path": "app/data/transport_layers/france_road/manifest.json",
+      "size_bytes": 3099
+    },
+    {
+      "path": "app/data/transport_layers/france_road/road_labels.preview.geojson",
+      "size_bytes": 5852
+    },
+    {
+      "path": "app/data/transport_layers/france_road/roads.preview.topo.json",
+      "size_bytes": 1792074
     },
     {
       "path": "app/data/transport_layers/germany_airport/airports.preview.geojson",
@@ -33566,7 +33710,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_airport/manifest.json",
-      "size_bytes": 2706
+      "size_bytes": 2394
     },
     {
       "path": "app/data/transport_layers/germany_carrier/carrier.json",
@@ -33590,7 +33734,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_energy_facilities/manifest.json",
-      "size_bytes": 2735
+      "size_bytes": 2347
     },
     {
       "path": "app/data/transport_layers/germany_industrial_zones/build_audit.json",
@@ -33602,7 +33746,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_industrial_zones/manifest.json",
-      "size_bytes": 2715
+      "size_bytes": 2333
     },
     {
       "path": "app/data/transport_layers/germany_logistics_hubs/build_audit.json",
@@ -33614,7 +33758,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_logistics_hubs/manifest.json",
-      "size_bytes": 2660
+      "size_bytes": 2296
     },
     {
       "path": "app/data/transport_layers/germany_mineral_resources/build_audit.json",
@@ -33622,7 +33766,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_mineral_resources/manifest.json",
-      "size_bytes": 2739
+      "size_bytes": 2349
     },
     {
       "path": "app/data/transport_layers/germany_mineral_resources/mineral_resources.preview.geojson",
@@ -33634,7 +33778,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_port/manifest.json",
-      "size_bytes": 2603
+      "size_bytes": 2313
     },
     {
       "path": "app/data/transport_layers/germany_port/ports.preview.geojson",
@@ -33646,7 +33790,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_rail/manifest.json",
-      "size_bytes": 3347
+      "size_bytes": 2759
     },
     {
       "path": "app/data/transport_layers/germany_rail/rail_stations_major.preview.geojson",
@@ -33662,7 +33806,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_road/manifest.json",
-      "size_bytes": 3192
+      "size_bytes": 2672
     },
     {
       "path": "app/data/transport_layers/germany_road/road_labels.preview.geojson",
@@ -33714,7 +33858,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/manifest.json",
-      "size_bytes": 3194
+      "size_bytes": 2790
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/rail_stations_major.preview.geojson",
@@ -33730,7 +33874,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/manifest.json",
-      "size_bytes": 3194
+      "size_bytes": 2790
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/rail_stations_major.preview.geojson",
@@ -33746,7 +33890,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/manifest.json",
-      "size_bytes": 3193
+      "size_bytes": 2791
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/rail_stations_major.preview.geojson",
@@ -33762,7 +33906,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/manifest.json",
-      "size_bytes": 3097
+      "size_bytes": 2711
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/rail_stations_major.preview.geojson",
@@ -33778,7 +33922,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/manifest.json",
-      "size_bytes": 3098
+      "size_bytes": 2712
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/rail_stations_major.preview.geojson",
@@ -33794,7 +33938,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/manifest.json",
-      "size_bytes": 3088
+      "size_bytes": 2708
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/rail_stations_major.preview.geojson",
@@ -33810,7 +33954,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/manifest.json",
-      "size_bytes": 3068
+      "size_bytes": 2688
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/rail_stations_major.preview.geojson",
@@ -33826,7 +33970,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/manifest.json",
-      "size_bytes": 3068
+      "size_bytes": 2688
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/rail_stations_major.preview.geojson",
@@ -33842,7 +33986,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/manifest.json",
-      "size_bytes": 3069
+      "size_bytes": 2689
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/rail_stations_major.preview.geojson",
@@ -33858,7 +34002,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/manifest.json",
-      "size_bytes": 3059
+      "size_bytes": 2681
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/rail_stations_major.preview.geojson",
@@ -33874,7 +34018,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/manifest.json",
-      "size_bytes": 3140
+      "size_bytes": 2746
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/rail_stations_major.preview.geojson",
@@ -33890,7 +34034,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/manifest.json",
-      "size_bytes": 3143
+      "size_bytes": 2749
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/rail_stations_major.preview.geojson",
@@ -33906,7 +34050,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/manifest.json",
-      "size_bytes": 3142
+      "size_bytes": 2748
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/rail_stations_major.preview.geojson",
@@ -33922,7 +34066,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/manifest.json",
-      "size_bytes": 3134
+      "size_bytes": 2744
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/rail_stations_major.preview.geojson",
@@ -33938,7 +34082,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/manifest.json",
-      "size_bytes": 3066
+      "size_bytes": 2686
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/rail_stations_major.preview.geojson",
@@ -33954,7 +34098,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/manifest.json",
-      "size_bytes": 3066
+      "size_bytes": 2686
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/rail_stations_major.preview.geojson",
@@ -33970,7 +34114,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/manifest.json",
-      "size_bytes": 3065
+      "size_bytes": 2687
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/rail_stations_major.preview.geojson",
@@ -33986,7 +34130,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/manifest.json",
-      "size_bytes": 3066
+      "size_bytes": 2688
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/rail_stations_major.preview.geojson",
@@ -34002,7 +34146,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/manifest.json",
-      "size_bytes": 3058
+      "size_bytes": 2684
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/rail_stations_major.preview.geojson",
@@ -34018,7 +34162,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/manifest.json",
-      "size_bytes": 3137
+      "size_bytes": 2745
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/rail_stations_major.preview.geojson",
@@ -34034,7 +34178,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/manifest.json",
-      "size_bytes": 3137
+      "size_bytes": 2745
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/rail_stations_major.preview.geojson",
@@ -34050,7 +34194,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/manifest.json",
-      "size_bytes": 3304
+      "size_bytes": 2878
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/rail_stations_major.preview.geojson",
@@ -34066,7 +34210,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/manifest.json",
-      "size_bytes": 3305
+      "size_bytes": 2879
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/rail_stations_major.preview.geojson",
@@ -34082,7 +34226,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/manifest.json",
-      "size_bytes": 3306
+      "size_bytes": 2880
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/rail_stations_major.preview.geojson",
@@ -34098,7 +34242,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/manifest.json",
-      "size_bytes": 3302
+      "size_bytes": 2878
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/rail_stations_major.preview.geojson",
@@ -34118,7 +34262,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e000_e005/manifest.json",
-      "size_bytes": 2738
+      "size_bytes": 2410
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e000_e005/road_labels.preview.geojson",
@@ -34134,7 +34278,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e005_e010/manifest.json",
-      "size_bytes": 2740
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e005_e010/road_labels.preview.geojson",
@@ -34150,7 +34294,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e010_e012/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e010_e012/road_labels.preview.geojson",
@@ -34166,7 +34310,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e012_e014/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e012_e014/road_labels.preview.geojson",
@@ -34182,7 +34326,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e014_e016/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e014_e016/road_labels.preview.geojson",
@@ -34198,7 +34342,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e016_e018/manifest.json",
-      "size_bytes": 2743
+      "size_bytes": 2411
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e016_e018/road_labels.preview.geojson",
@@ -34214,7 +34358,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e018_e020/manifest.json",
-      "size_bytes": 2738
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e018_e020/road_labels.preview.geojson",
@@ -34230,7 +34374,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e020_e025/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e020_e025/road_labels.preview.geojson",
@@ -34246,7 +34390,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e025_e030/manifest.json",
-      "size_bytes": 2740
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e025_e030/road_labels.preview.geojson",
@@ -34262,7 +34406,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e030_e045/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e030_e045/road_labels.preview.geojson",
@@ -34278,7 +34422,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e045_e060/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e045_e060/road_labels.preview.geojson",
@@ -34294,7 +34438,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e060_e090/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e060_e090/road_labels.preview.geojson",
@@ -34310,7 +34454,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e090_e095/manifest.json",
-      "size_bytes": 2738
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e090_e095/road_labels.preview.geojson",
@@ -34326,7 +34470,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e095_e100/manifest.json",
-      "size_bytes": 2740
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e095_e100/road_labels.preview.geojson",
@@ -34342,7 +34486,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e100_e105/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e100_e105/road_labels.preview.geojson",
@@ -34358,7 +34502,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e105_e110/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e105_e110/road_labels.preview.geojson",
@@ -34374,7 +34518,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e110_e115/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e110_e115/road_labels.preview.geojson",
@@ -34390,7 +34534,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e115_e120/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e115_e120/road_labels.preview.geojson",
@@ -34406,7 +34550,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e120_e125/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e120_e125/road_labels.preview.geojson",
@@ -34422,7 +34566,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e125_e130/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e125_e130/road_labels.preview.geojson",
@@ -34438,7 +34582,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e130_e135/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e130_e135/road_labels.preview.geojson",
@@ -34454,7 +34598,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e135_e140/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e135_e140/road_labels.preview.geojson",
@@ -34470,7 +34614,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e140_e145/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e140_e145/road_labels.preview.geojson",
@@ -34486,7 +34630,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e145_e150/manifest.json",
-      "size_bytes": 2740
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e145_e150/road_labels.preview.geojson",
@@ -34502,7 +34646,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e150_e180/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e150_e180/road_labels.preview.geojson",
@@ -34518,7 +34662,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w010_e000/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w010_e000/road_labels.preview.geojson",
@@ -34534,7 +34678,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w020_w010/manifest.json",
-      "size_bytes": 2740
+      "size_bytes": 2414
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w020_w010/road_labels.preview.geojson",
@@ -34550,7 +34694,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w030_w020/manifest.json",
-      "size_bytes": 2736
+      "size_bytes": 2412
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w030_w020/road_labels.preview.geojson",
@@ -34566,7 +34710,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w060_w030/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w060_w030/road_labels.preview.geojson",
@@ -34582,7 +34726,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w065_w060/manifest.json",
-      "size_bytes": 2742
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w065_w060/road_labels.preview.geojson",
@@ -34598,7 +34742,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w070_w065/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w070_w065/road_labels.preview.geojson",
@@ -34614,7 +34758,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w075_w070/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w075_w070/road_labels.preview.geojson",
@@ -34630,7 +34774,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w080_w075/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w080_w075/road_labels.preview.geojson",
@@ -34646,7 +34790,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w082p5_w080/manifest.json",
-      "size_bytes": 2766
+      "size_bytes": 2434
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w082p5_w080/road_labels.preview.geojson",
@@ -34662,7 +34806,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w085_w082p5/manifest.json",
-      "size_bytes": 2770
+      "size_bytes": 2434
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w085_w082p5/road_labels.preview.geojson",
@@ -34678,7 +34822,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w090_w085/manifest.json",
-      "size_bytes": 2746
+      "size_bytes": 2418
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w090_w085/road_labels.preview.geojson",
@@ -34694,7 +34838,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w120_w090/manifest.json",
-      "size_bytes": 2750
+      "size_bytes": 2420
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w120_w090/road_labels.preview.geojson",
@@ -34710,7 +34854,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w150_w120/manifest.json",
-      "size_bytes": 2748
+      "size_bytes": 2420
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w150_w120/road_labels.preview.geojson",
@@ -34726,7 +34870,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w180_w150/manifest.json",
-      "size_bytes": 2744
+      "size_bytes": 2416
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w180_w150/road_labels.preview.geojson",
@@ -34746,7 +34890,7 @@
     },
     {
       "path": "app/data/transport_layers/india_airport/manifest.json",
-      "size_bytes": 3749
+      "size_bytes": 3441
     },
     {
       "path": "app/data/transport_layers/india_carrier/carrier.json",
@@ -34761,16 +34905,96 @@
       "size_bytes": 1888
     },
     {
+      "path": "app/data/transport_layers/india_energy_facilities/build_audit.json",
+      "size_bytes": 1142
+    },
+    {
+      "path": "app/data/transport_layers/india_energy_facilities/energy_facilities.preview.geojson",
+      "size_bytes": 341367
+    },
+    {
+      "path": "app/data/transport_layers/india_energy_facilities/manifest.json",
+      "size_bytes": 2308
+    },
+    {
+      "path": "app/data/transport_layers/india_industrial_zones/build_audit.json",
+      "size_bytes": 3254
+    },
+    {
+      "path": "app/data/transport_layers/india_industrial_zones/industrial_zones.preview.geojson",
+      "size_bytes": 243359
+    },
+    {
+      "path": "app/data/transport_layers/india_industrial_zones/manifest.json",
+      "size_bytes": 3925
+    },
+    {
+      "path": "app/data/transport_layers/india_logistics_hubs/build_audit.json",
+      "size_bytes": 3672
+    },
+    {
+      "path": "app/data/transport_layers/india_logistics_hubs/logistics_hubs.preview.geojson",
+      "size_bytes": 229159
+    },
+    {
+      "path": "app/data/transport_layers/india_logistics_hubs/manifest.json",
+      "size_bytes": 3891
+    },
+    {
+      "path": "app/data/transport_layers/india_mineral_resources/build_audit.json",
+      "size_bytes": 1174
+    },
+    {
+      "path": "app/data/transport_layers/india_mineral_resources/manifest.json",
+      "size_bytes": 2338
+    },
+    {
+      "path": "app/data/transport_layers/india_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 215645
+    },
+    {
       "path": "app/data/transport_layers/india_port/build_audit.json",
       "size_bytes": 1025
     },
     {
       "path": "app/data/transport_layers/india_port/manifest.json",
-      "size_bytes": 2572
+      "size_bytes": 2288
     },
     {
       "path": "app/data/transport_layers/india_port/ports.preview.geojson",
       "size_bytes": 33209
+    },
+    {
+      "path": "app/data/transport_layers/india_rail/build_audit.json",
+      "size_bytes": 3542
+    },
+    {
+      "path": "app/data/transport_layers/india_rail/manifest.json",
+      "size_bytes": 4346
+    },
+    {
+      "path": "app/data/transport_layers/india_rail/rail_stations_major.preview.geojson",
+      "size_bytes": 101330
+    },
+    {
+      "path": "app/data/transport_layers/india_rail/railways.preview.topo.json",
+      "size_bytes": 1178982
+    },
+    {
+      "path": "app/data/transport_layers/india_road/build_audit.json",
+      "size_bytes": 3111
+    },
+    {
+      "path": "app/data/transport_layers/india_road/manifest.json",
+      "size_bytes": 4258
+    },
+    {
+      "path": "app/data/transport_layers/india_road/road_labels.preview.geojson",
+      "size_bytes": 14354
+    },
+    {
+      "path": "app/data/transport_layers/india_road/roads.preview.topo.json",
+      "size_bytes": 1096475
     },
     {
       "path": "app/data/transport_layers/japan_airport/airports.geojson",
@@ -34810,7 +35034,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/manifest.json",
-      "size_bytes": 3620
+      "size_bytes": 3236
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/overrides/facility_subtype_reference.json",
@@ -34834,7 +35058,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_industrial_zones/manifest.json",
-      "size_bytes": 15122
+      "size_bytes": 14519
     },
     {
       "path": "app/data/transport_layers/japan_logistics_hubs/build_audit.json",
@@ -34846,7 +35070,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_logistics_hubs/manifest.json",
-      "size_bytes": 10591
+      "size_bytes": 10229
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/build_audit.json",
@@ -34854,7 +35078,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/manifest.json",
-      "size_bytes": 3702
+      "size_bytes": 3314
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/mineral_resources.preview.geojson",
@@ -34902,7 +35126,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_rail/manifest.json",
-      "size_bytes": 4802
+      "size_bytes": 4226
     },
     {
       "path": "app/data/transport_layers/japan_rail/overrides/line_class_overrides.json",
@@ -34926,7 +35150,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_road/manifest.json",
-      "size_bytes": 3660
+      "size_bytes": 3146
     },
     {
       "path": "app/data/transport_layers/japan_road/road_labels.preview.geojson",
@@ -34946,7 +35170,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_airport/manifest.json",
-      "size_bytes": 3120
+      "size_bytes": 2808
     },
     {
       "path": "app/data/transport_layers/russia_carrier/carrier.json",
@@ -34961,16 +35185,96 @@
       "size_bytes": 2810
     },
     {
+      "path": "app/data/transport_layers/russia_energy_facilities/build_audit.json",
+      "size_bytes": 1208
+    },
+    {
+      "path": "app/data/transport_layers/russia_energy_facilities/energy_facilities.preview.geojson",
+      "size_bytes": 231891
+    },
+    {
+      "path": "app/data/transport_layers/russia_energy_facilities/manifest.json",
+      "size_bytes": 2356
+    },
+    {
+      "path": "app/data/transport_layers/russia_industrial_zones/build_audit.json",
+      "size_bytes": 5021
+    },
+    {
+      "path": "app/data/transport_layers/russia_industrial_zones/industrial_zones.preview.geojson",
+      "size_bytes": 264160
+    },
+    {
+      "path": "app/data/transport_layers/russia_industrial_zones/manifest.json",
+      "size_bytes": 5442
+    },
+    {
+      "path": "app/data/transport_layers/russia_logistics_hubs/build_audit.json",
+      "size_bytes": 5695
+    },
+    {
+      "path": "app/data/transport_layers/russia_logistics_hubs/logistics_hubs.preview.geojson",
+      "size_bytes": 243941
+    },
+    {
+      "path": "app/data/transport_layers/russia_logistics_hubs/manifest.json",
+      "size_bytes": 5407
+    },
+    {
+      "path": "app/data/transport_layers/russia_mineral_resources/build_audit.json",
+      "size_bytes": 1184
+    },
+    {
+      "path": "app/data/transport_layers/russia_mineral_resources/manifest.json",
+      "size_bytes": 2359
+    },
+    {
+      "path": "app/data/transport_layers/russia_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 280690
+    },
+    {
       "path": "app/data/transport_layers/russia_port/build_audit.json",
       "size_bytes": 1031
     },
     {
       "path": "app/data/transport_layers/russia_port/manifest.json",
-      "size_bytes": 2587
+      "size_bytes": 2299
     },
     {
       "path": "app/data/transport_layers/russia_port/ports.preview.geojson",
       "size_bytes": 71150
+    },
+    {
+      "path": "app/data/transport_layers/russia_rail/build_audit.json",
+      "size_bytes": 5521
+    },
+    {
+      "path": "app/data/transport_layers/russia_rail/manifest.json",
+      "size_bytes": 5861
+    },
+    {
+      "path": "app/data/transport_layers/russia_rail/rail_stations_major.preview.geojson",
+      "size_bytes": 108079
+    },
+    {
+      "path": "app/data/transport_layers/russia_rail/railways.preview.topo.json",
+      "size_bytes": 1200732
+    },
+    {
+      "path": "app/data/transport_layers/russia_road/build_audit.json",
+      "size_bytes": 4881
+    },
+    {
+      "path": "app/data/transport_layers/russia_road/manifest.json",
+      "size_bytes": 5776
+    },
+    {
+      "path": "app/data/transport_layers/russia_road/road_labels.preview.geojson",
+      "size_bytes": 4852
+    },
+    {
+      "path": "app/data/transport_layers/russia_road/roads.preview.topo.json",
+      "size_bytes": 1141046
     },
     {
       "path": "app/data/transport_layers/uk_airport/airports.preview.geojson",
@@ -34982,7 +35286,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_airport/manifest.json",
-      "size_bytes": 2661
+      "size_bytes": 2359
     },
     {
       "path": "app/data/transport_layers/uk_carrier/carrier.json",
@@ -34997,16 +35301,80 @@
       "size_bytes": 5648
     },
     {
+      "path": "app/data/transport_layers/uk_energy_facilities/build_audit.json",
+      "size_bytes": 1094
+    },
+    {
+      "path": "app/data/transport_layers/uk_energy_facilities/energy_facilities.preview.geojson",
+      "size_bytes": 1513806
+    },
+    {
+      "path": "app/data/transport_layers/uk_energy_facilities/manifest.json",
+      "size_bytes": 2340
+    },
+    {
+      "path": "app/data/transport_layers/uk_industrial_zones/build_audit.json",
+      "size_bytes": 1252
+    },
+    {
+      "path": "app/data/transport_layers/uk_industrial_zones/industrial_zones.preview.geojson",
+      "size_bytes": 89728
+    },
+    {
+      "path": "app/data/transport_layers/uk_industrial_zones/manifest.json",
+      "size_bytes": 2369
+    },
+    {
+      "path": "app/data/transport_layers/uk_logistics_hubs/build_audit.json",
+      "size_bytes": 1262
+    },
+    {
+      "path": "app/data/transport_layers/uk_logistics_hubs/logistics_hubs.preview.geojson",
+      "size_bytes": 85305
+    },
+    {
+      "path": "app/data/transport_layers/uk_logistics_hubs/manifest.json",
+      "size_bytes": 2332
+    },
+    {
+      "path": "app/data/transport_layers/uk_mineral_resources/build_audit.json",
+      "size_bytes": 2579
+    },
+    {
+      "path": "app/data/transport_layers/uk_mineral_resources/manifest.json",
+      "size_bytes": 2356
+    },
+    {
+      "path": "app/data/transport_layers/uk_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 530701
+    },
+    {
       "path": "app/data/transport_layers/uk_port/build_audit.json",
       "size_bytes": 1034
     },
     {
       "path": "app/data/transport_layers/uk_port/manifest.json",
-      "size_bytes": 2588
+      "size_bytes": 2306
     },
     {
       "path": "app/data/transport_layers/uk_port/ports.preview.geojson",
       "size_bytes": 97489
+    },
+    {
+      "path": "app/data/transport_layers/uk_rail/build_audit.json",
+      "size_bytes": 1684
+    },
+    {
+      "path": "app/data/transport_layers/uk_rail/manifest.json",
+      "size_bytes": 3415
+    },
+    {
+      "path": "app/data/transport_layers/uk_rail/rail_stations_major.preview.geojson",
+      "size_bytes": 153569
+    },
+    {
+      "path": "app/data/transport_layers/uk_rail/railways.preview.topo.json",
+      "size_bytes": 1011539
     },
     {
       "path": "app/data/transport_layers/uk_road/build_audit.json",
@@ -35014,7 +35382,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_road/manifest.json",
-      "size_bytes": 3472
+      "size_bytes": 2968
     },
     {
       "path": "app/data/transport_layers/uk_road/road_labels.preview.geojson",
@@ -35034,7 +35402,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_airport/manifest.json",
-      "size_bytes": 3037
+      "size_bytes": 2729
     },
     {
       "path": "app/data/transport_layers/usa_carrier/carrier.json",
@@ -35049,16 +35417,80 @@
       "size_bytes": 2624
     },
     {
+      "path": "app/data/transport_layers/usa_energy_facilities/build_audit.json",
+      "size_bytes": 1149
+    },
+    {
+      "path": "app/data/transport_layers/usa_energy_facilities/energy_facilities.preview.geojson",
+      "size_bytes": 1235925
+    },
+    {
+      "path": "app/data/transport_layers/usa_energy_facilities/manifest.json",
+      "size_bytes": 2331
+    },
+    {
+      "path": "app/data/transport_layers/usa_industrial_zones/build_audit.json",
+      "size_bytes": 16001
+    },
+    {
+      "path": "app/data/transport_layers/usa_industrial_zones/industrial_zones.preview.geojson",
+      "size_bytes": 402334
+    },
+    {
+      "path": "app/data/transport_layers/usa_industrial_zones/manifest.json",
+      "size_bytes": 17159
+    },
+    {
+      "path": "app/data/transport_layers/usa_logistics_hubs/build_audit.json",
+      "size_bytes": 2034
+    },
+    {
+      "path": "app/data/transport_layers/usa_logistics_hubs/logistics_hubs.preview.geojson",
+      "size_bytes": 678273
+    },
+    {
+      "path": "app/data/transport_layers/usa_logistics_hubs/manifest.json",
+      "size_bytes": 3057
+    },
+    {
+      "path": "app/data/transport_layers/usa_mineral_resources/build_audit.json",
+      "size_bytes": 1154
+    },
+    {
+      "path": "app/data/transport_layers/usa_mineral_resources/manifest.json",
+      "size_bytes": 2367
+    },
+    {
+      "path": "app/data/transport_layers/usa_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 1436450
+    },
+    {
       "path": "app/data/transport_layers/usa_port/build_audit.json",
       "size_bytes": 1026
     },
     {
       "path": "app/data/transport_layers/usa_port/manifest.json",
-      "size_bytes": 2620
+      "size_bytes": 2336
     },
     {
       "path": "app/data/transport_layers/usa_port/ports.preview.geojson",
       "size_bytes": 113256
+    },
+    {
+      "path": "app/data/transport_layers/usa_rail/build_audit.json",
+      "size_bytes": 1741
+    },
+    {
+      "path": "app/data/transport_layers/usa_rail/manifest.json",
+      "size_bytes": 3487
+    },
+    {
+      "path": "app/data/transport_layers/usa_rail/rail_stations_major.preview.geojson",
+      "size_bytes": 125520
+    },
+    {
+      "path": "app/data/transport_layers/usa_rail/railways.preview.topo.json",
+      "size_bytes": 2848882
     },
     {
       "path": "app/data/transport_layers/usa_road/build_audit.json",
@@ -35066,7 +35498,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_road/manifest.json",
-      "size_bytes": 3182
+      "size_bytes": 2676
     },
     {
       "path": "app/data/transport_layers/usa_road/road_labels.preview.geojson",
@@ -35938,7 +36370,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 44244
+      "size_bytes": 44527
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -36366,7 +36798,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 26150
+      "size_bytes": 26596
     },
     {
       "path": "app/js/core/state.js",
@@ -36378,11 +36810,11 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 55169
+      "size_bytes": 60095
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
-      "size_bytes": 25487
+      "size_bytes": 25503
     },
     {
       "path": "app/js/core/transport_country_overlay.js",
@@ -36394,7 +36826,7 @@
     },
     {
       "path": "app/js/core/transport_pack_resolver.js",
-      "size_bytes": 13547
+      "size_bytes": 19846
     },
     {
       "path": "app/js/core/unit_counter_icon_libraries.js",
@@ -36450,7 +36882,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 80738
+      "size_bytes": 82452
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -36578,11 +37010,11 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_controller.js",
-      "size_bytes": 25806
+      "size_bytes": 28052
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_descriptor.js",
-      "size_bytes": 61501
+      "size_bytes": 61520
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_event_owner.js",
@@ -36590,7 +37022,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_inspector_owner.js",
-      "size_bytes": 43684
+      "size_bytes": 43677
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_layer_order_owner.js",
@@ -36606,11 +37038,11 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js",
-      "size_bytes": 8410
+      "size_bytes": 9450
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_right_deck_owner.js",
-      "size_bytes": 26075
+      "size_bytes": 43276
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_shell_owner.js",
@@ -36618,7 +37050,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_state_owner.js",
-      "size_bytes": 14754
+      "size_bytes": 23155
     },
     {
       "path": "app/js/ui/toolbar/workspace_chrome_support_surface_controller.js",
@@ -36630,11 +37062,11 @@
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
-      "size_bytes": 2044
+      "size_bytes": 2119
     },
     {
       "path": "app/js/ui/transport_workbench_carrier.js",
-      "size_bytes": 29551
+      "size_bytes": 30801
     },
     {
       "path": "app/js/ui/transport_workbench_density_helpers.js",
@@ -36642,19 +37074,19 @@
     },
     {
       "path": "app/js/ui/transport_workbench_energy_facility_preview.js",
-      "size_bytes": 4274
+      "size_bytes": 4356
     },
     {
       "path": "app/js/ui/transport_workbench_family_preview.js",
-      "size_bytes": 5000
+      "size_bytes": 5293
     },
     {
       "path": "app/js/ui/transport_workbench_family_registry.js",
-      "size_bytes": 4904
+      "size_bytes": 5370
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 33374
+      "size_bytes": 39137
     },
     {
       "path": "app/js/ui/transport_workbench_line_runtime_shared.js",
@@ -36662,7 +37094,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_logistics_hub_preview.js",
-      "size_bytes": 3971
+      "size_bytes": 4051
     },
     {
       "path": "app/js/ui/transport_workbench_manifest_preview.js",
@@ -36674,23 +37106,23 @@
     },
     {
       "path": "app/js/ui/transport_workbench_mineral_resource_preview.js",
-      "size_bytes": 4742
+      "size_bytes": 4825
     },
     {
       "path": "app/js/ui/transport_workbench_point_preview_shared.js",
-      "size_bytes": 34306
+      "size_bytes": 44103
     },
     {
       "path": "app/js/ui/transport_workbench_port_preview.js",
-      "size_bytes": 4236
+      "size_bytes": 4308
     },
     {
       "path": "app/js/ui/transport_workbench_rail_preview.js",
-      "size_bytes": 32372
+      "size_bytes": 36056
     },
     {
       "path": "app/js/ui/transport_workbench_road_preview.js",
-      "size_bytes": 27159
+      "size_bytes": 29668
     },
     {
       "path": "app/js/ui/ui_contract.js",
@@ -36738,7 +37170,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 37550
+      "size_bytes": 37548
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -36770,18 +37202,18 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 43188
+      "size_bytes": 43186
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1074988
+      "size_bytes": 1088613
     },
     {
       "path": "styles.css",
       "size_bytes": 29789
     }
   ],
-  "max_allowed_bytes": 1043333120,
+  "max_allowed_bytes": 1069547520,
   "required_files": [
     "index.html",
     "app/index.html",
@@ -36791,5 +37223,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1040658553
+  "total_bytes": 1068630645
 }

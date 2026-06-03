@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createTransportWorkbenchPreviewLifecycleOwner } from "../js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js";
+import {
+  __transportWorkbenchPointPreviewTestInternals,
+} from "../js/ui/transport_workbench_point_preview_shared.js";
 
 async function flushMicrotasks() {
   await Promise.resolve();
@@ -71,11 +74,12 @@ test("transport workbench preview lifecycle owner schedules warmup once during r
   assert.equal(typeof selectionListeners.get("port"), "function");
 });
 
-test("transport workbench preview lifecycle owner selection listeners refresh the active family shell", () => {
+test("transport workbench preview lifecycle owner batches selection listeners to one frame", () => {
   const runtimeState = { transportWorkbenchUi: { open: true, activeFamily: "road" } };
   const selectionListeners = new Map();
   const lensCalls = [];
   const inspectorCalls = [];
+  const rafCallbacks = [];
   let context = {
     isOpen: true,
     family: { id: "road" },
@@ -92,6 +96,10 @@ test("transport workbench preview lifecycle owner selection listeners refresh th
     },
     runtimeFamilyIds: ["road", "port"],
     scheduleTimeout: () => 0,
+    requestAnimationFrame: (callback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    },
     renderLensSections: (family, config, compareHeld) => {
       lensCalls.push({ familyId: family.id, config, compareHeld });
     },
@@ -102,7 +110,12 @@ test("transport workbench preview lifecycle owner selection listeners refresh th
 
   owner.initializeRuntimeHooks();
   selectionListeners.get("road")();
+  selectionListeners.get("road")();
 
+  assert.equal(lensCalls.length, 0);
+  assert.equal(inspectorCalls.length, 0);
+  assert.equal(rafCallbacks.length, 1);
+  rafCallbacks.shift()();
   assert.deepEqual(lensCalls, [
     { familyId: "road", config: { roadClass: ["motorway"] }, compareHeld: false },
   ]);
@@ -112,8 +125,10 @@ test("transport workbench preview lifecycle owner selection listeners refresh th
 
   context = { ...context, family: { id: "port" } };
   selectionListeners.get("road")();
+  rafCallbacks.shift()();
   context = { ...context, isOpen: false, family: { id: "road" } };
   selectionListeners.get("road")();
+  rafCallbacks.shift()();
 
   assert.equal(lensCalls.length, 1);
   assert.equal(inspectorCalls.length, 1);
@@ -146,4 +161,147 @@ test("transport workbench preview lifecycle owner restores runtime listeners aft
 
   assert.equal(typeof carrierListener, "function");
   assert.deepEqual(registeredFamilies, ["road", "port", "road", "port"]);
+});
+
+test("transport workbench preview lifecycle owner schedules carrier view sync as view-only preview refresh", async () => {
+  const runtimeState = { transportWorkbenchUi: { open: true, activeFamily: "airport" } };
+  const refreshCalls = [];
+  let carrierListener = null;
+  let rafCallback = null;
+  let viewState = { scale: 1, translateX: 0, translateY: 0, quarterTurns: 0 };
+
+  const owner = createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
+    getRenderContext: () => ({
+      isOpen: true,
+      family: { id: "airport" },
+      config: { airportType: ["international"] },
+      compareHeld: false,
+    }),
+    getCarrierMount: () => ({}),
+    getCarrierViewState: () => viewState,
+    listWarmupPlans: () => [],
+    renderFamilyPreview: async (familyId, config, options) => {
+      refreshCalls.push({ familyId, config, viewOnly: !!options?.viewOnly });
+      return null;
+    },
+    setCarrierViewChangeListener: (listener) => {
+      carrierListener = listener;
+    },
+    setFamilyPreviewSelectionListener: () => {},
+    runtimeFamilyIds: ["airport"],
+    scheduleTimeout: () => 0,
+    requestAnimationFrame: (callback) => {
+      rafCallback = callback;
+      return 7;
+    },
+    cancelAnimationFrame: () => {},
+  });
+
+  owner.initializeRuntimeHooks();
+  viewState = { ...viewState, scale: 1.25 };
+  carrierListener();
+  assert.equal(refreshCalls.length, 0);
+  assert.equal(typeof rafCallback, "function");
+
+  rafCallback();
+  await flushMicrotasks();
+
+  assert.deepEqual(refreshCalls, [
+    {
+      familyId: "airport",
+      config: { airportType: ["international"] },
+      viewOnly: true,
+    },
+  ]);
+
+  rafCallback = null;
+  viewState = { ...viewState, scale: 1.254, translateX: 0.9, translateY: -0.9 };
+  carrierListener();
+  assert.equal(rafCallback, null);
+
+  viewState = { ...viewState, translateX: 3 };
+  carrierListener();
+  assert.equal(typeof rafCallback, "function");
+});
+
+test("point preview effective pack merges update patches and removes deleted source features", () => {
+  const sourcePack = {
+    mode: "preview",
+    variantId: "fixture",
+    features: [{
+      id: "source_port_1",
+      name: "Original Port",
+      label: "Original Port",
+      lon: 10,
+      lat: 20,
+      x: 100,
+      y: 200,
+      properties: {
+        id: "source_port_1",
+        name: "Original Port",
+        source: "official_registry",
+        manager_type_code: "1",
+        legal_designation: "international_hub",
+      },
+    }, {
+      id: "source_port_2",
+      name: "Deleted Port",
+      lon: 11,
+      lat: 21,
+      x: 110,
+      y: 210,
+      properties: {
+        id: "source_port_2",
+        source: "official_registry",
+        manager_type_code: "1",
+      },
+    }],
+    featureById: new Map(),
+  };
+  const config = {
+    editOverlay: {
+      updated: [{
+        id: "source_port_1",
+        name: "Edited Port",
+        lon: 10.5,
+        lat: 20.5,
+        properties: { manager_type_code: "2" },
+      }],
+      deleted: ["source_port_2"],
+    },
+  };
+  const projectFeature = (rawFeature, definition, variantId) => {
+    const [lon, lat] = rawFeature.geometry.coordinates;
+    return {
+      id: rawFeature.id,
+      name: rawFeature.properties.name,
+      label: rawFeature.properties.name,
+      lon,
+      lat,
+      x: lon * 10,
+      y: lat * 10,
+      kind: definition.selectionType,
+      variant: variantId,
+      properties: rawFeature.properties,
+      editOverlay: !!rawFeature.properties.edit_overlay,
+    };
+  };
+
+  const pack = __transportWorkbenchPointPreviewTestInternals.createEffectivePointPack(
+    sourcePack,
+    config,
+    { selectionType: "port" },
+    { projectFeature }
+  );
+
+  assert.equal(pack.features.length, 1);
+  assert.equal(pack.featureById.has("source_port_2"), false);
+  const updated = pack.featureById.get("source_port_1");
+  assert.equal(updated.name, "Edited Port");
+  assert.equal(updated.lon, 10.5);
+  assert.equal(updated.lat, 20.5);
+  assert.equal(updated.properties.source, "official_registry");
+  assert.equal(updated.properties.legal_designation, "international_hub");
+  assert.equal(updated.properties.manager_type_code, "2");
+  assert.equal(updated.properties.edit_overlay_mode, "updated");
 });

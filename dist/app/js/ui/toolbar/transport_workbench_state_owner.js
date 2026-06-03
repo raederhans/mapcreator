@@ -4,6 +4,7 @@
 import {
   createDefaultTransportWorkbenchDisplayConfig,
   normalizeTransportWorkbenchDisplayConfig,
+  normalizeTransportWorkbenchPointDeltas,
   normalizeTransportWorkbenchUiState,
 } from "../../core/state.js";
 import {
@@ -33,6 +34,15 @@ import {
 } from "./transport_workbench_config_owner.js";
 
 const clonePlainObject = (value) => JSON.parse(JSON.stringify(value || {}));
+const EDIT_OVERLAY_FAMILY_IDS = new Set(["airport", "port"]);
+const isEditOverlayCoordinate = (lon, lat) => (
+  Number.isFinite(lon)
+  && Number.isFinite(lat)
+  && lon >= -180
+  && lon <= 180
+  && lat >= -90
+  && lat <= 90
+);
 
 function normalizeTransportWorkbenchFamilyConfig(familyId, value) {
   if (familyId === "road") return normalizeRoadTransportWorkbenchConfig(value);
@@ -102,6 +112,7 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     if (!uiState.displayConfigs || typeof uiState.displayConfigs !== "object") {
       uiState.displayConfigs = {};
     }
+    runtimeState.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
     TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS.forEach((familyId) => {
       uiState.familyConfigs[familyId] = normalizeTransportWorkbenchFamilyConfig(familyId, uiState.familyConfigs[familyId]);
       uiState.displayConfigs[familyId] = normalizeTransportWorkbenchDisplayConfig(
@@ -155,8 +166,17 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
   };
 
   const buildResolvedConfig = (familyId, familyConfig, displayConfig, activePackId) => {
+    const uiState = ensureUiState();
+    const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
+    const familyDeltas = pointDeltas.byFamily?.[familyId] || {};
+    const editOverlay = {
+      created: familyDeltas.created || [],
+      updated: familyDeltas.updated || [],
+      deleted: familyDeltas.deleted || [],
+      features: familyDeltas.created || [],
+    };
     if (!TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(familyId)) {
-      return { ...(familyConfig || {}), activePackId };
+      return { ...(familyConfig || {}), activePackId, editOverlay };
     }
     // density family 既要保留嵌套 displayConfig 供持久化/回显，
     // 也要展开出 preview renderer 直接消费的平铺字段，避免下游每次再手动解包。
@@ -164,6 +184,7 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     return {
       ...(familyConfig || {}),
       activePackId,
+      editOverlay,
       displayConfig: resolvedDisplayConfig,
       displayMode: resolvedDisplayConfig.mode,
       displayPreset: resolvedDisplayConfig.preset,
@@ -306,22 +327,180 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     return true;
   };
 
+  const getEditOverlay = (familyId) => {
+    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
+    const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
+    const familyDeltas = pointDeltas.byFamily?.[normalizedFamilyId] || {};
+    return {
+      features: familyDeltas.created || [],
+      created: familyDeltas.created || [],
+      updated: familyDeltas.updated || [],
+      deleted: familyDeltas.deleted || [],
+    };
+  };
+
+  const addEditOverlayPoint = (familyId, point = {}, { createId = null } = {}) => {
+    const uiState = ensureUiState();
+    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
+    if (!EDIT_OVERLAY_FAMILY_IDS.has(normalizedFamilyId)) return null;
+    const lon = Number(point.lon);
+    const lat = Number(point.lat);
+    if (!isEditOverlayCoordinate(lon, lat)) return null;
+    const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
+    const familyDeltas = pointDeltas.byFamily[normalizedFamilyId];
+    const features = Array.isArray(familyDeltas?.created)
+      ? [...familyDeltas.created]
+      : [];
+    const packId = resolveTransportWorkbenchPackIdForFamily(uiState, normalizedFamilyId);
+    const fallbackId = typeof createId === "function"
+      ? createId(normalizedFamilyId, features.length + 1)
+      : `${normalizedFamilyId}_edit_${Date.now().toString(36)}_${features.length + 1}`;
+    const nextFeature = {
+      id: String(point.id || fallbackId).trim(),
+      family: normalizedFamilyId,
+      packId,
+      name: String(point.name || "").trim(),
+      lon,
+      lat,
+      properties: point.properties && typeof point.properties === "object" ? { ...point.properties } : {},
+    };
+    features.push(nextFeature);
+    pointDeltas.byFamily[normalizedFamilyId] = {
+      ...familyDeltas,
+      created: features,
+      revision: Number(familyDeltas.revision || 0) + 1,
+      sourcePackId: packId,
+      updatedAt: new Date().toISOString(),
+    };
+    runtimeState.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(pointDeltas);
+    return runtimeState.transportWorkbenchPointDeltas.byFamily[normalizedFamilyId].created
+      .find((feature) => feature.id === nextFeature.id) || null;
+  };
+
+  const updateEditOverlayPoint = (familyId, featureId, point = {}) => {
+    const uiState = ensureUiState();
+    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
+    const normalizedFeatureId = String(featureId || point.id || "").trim();
+    if (!EDIT_OVERLAY_FAMILY_IDS.has(normalizedFamilyId) || !normalizedFeatureId) return null;
+    const lon = Number(point.lon);
+    const lat = Number(point.lat);
+    if (!isEditOverlayCoordinate(lon, lat)) return null;
+    const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
+    const familyDeltas = pointDeltas.byFamily[normalizedFamilyId];
+    const packId = resolveTransportWorkbenchPackIdForFamily(uiState, normalizedFamilyId);
+    const nextFeature = {
+      id: normalizedFeatureId,
+      family: normalizedFamilyId,
+      packId,
+      name: String(point.name || "").trim(),
+      lon,
+      lat,
+      properties: point.properties && typeof point.properties === "object" ? { ...point.properties } : {},
+    };
+    const created = Array.isArray(familyDeltas?.created) ? [...familyDeltas.created] : [];
+    const createdIndex = created.findIndex((feature) => feature.id === normalizedFeatureId);
+    if (createdIndex !== -1) {
+      created[createdIndex] = { ...created[createdIndex], ...nextFeature };
+    }
+    const updated = Array.isArray(familyDeltas?.updated)
+      ? familyDeltas.updated.filter((feature) => feature.id !== normalizedFeatureId)
+      : [];
+    if (createdIndex === -1) {
+      updated.push(nextFeature);
+    }
+    const deleted = Array.isArray(familyDeltas?.deleted)
+      ? familyDeltas.deleted.filter((id) => id !== normalizedFeatureId)
+      : [];
+    pointDeltas.byFamily[normalizedFamilyId] = {
+      ...familyDeltas,
+      created,
+      updated,
+      deleted,
+      revision: Number(familyDeltas.revision || 0) + 1,
+      sourcePackId: packId,
+      updatedAt: new Date().toISOString(),
+    };
+    runtimeState.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(pointDeltas);
+    const nextFamilyDeltas = runtimeState.transportWorkbenchPointDeltas.byFamily[normalizedFamilyId];
+    return [...(nextFamilyDeltas.created || []), ...(nextFamilyDeltas.updated || [])]
+      .find((feature) => feature.id === normalizedFeatureId) || null;
+  };
+
+  const removeEditOverlayPoint = (familyId, featureId) => {
+    const uiState = ensureUiState();
+    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
+    if (!EDIT_OVERLAY_FAMILY_IDS.has(normalizedFamilyId)) return false;
+    const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
+    const familyDeltas = pointDeltas.byFamily[normalizedFamilyId];
+    const features = Array.isArray(familyDeltas?.created)
+      ? familyDeltas.created
+      : [];
+    const normalizedFeatureId = String(featureId || "").trim();
+    const nextFeatures = features.filter((feature) => feature.id !== normalizedFeatureId);
+    if (nextFeatures.length === features.length) return false;
+    pointDeltas.byFamily[normalizedFamilyId] = {
+      ...familyDeltas,
+      created: nextFeatures,
+      revision: Number(familyDeltas.revision || 0) + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    runtimeState.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(pointDeltas);
+    return true;
+  };
+
+  const deleteEditOverlayPoint = (familyId, featureId) => {
+    const uiState = ensureUiState();
+    const normalizedFamilyId = normalizeTransportWorkbenchFamily(familyId);
+    const normalizedFeatureId = String(featureId || "").trim();
+    if (!EDIT_OVERLAY_FAMILY_IDS.has(normalizedFamilyId) || !normalizedFeatureId) return false;
+    const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
+    const familyDeltas = pointDeltas.byFamily[normalizedFamilyId];
+    const created = Array.isArray(familyDeltas?.created)
+      ? familyDeltas.created.filter((feature) => feature.id !== normalizedFeatureId)
+      : [];
+    const updated = Array.isArray(familyDeltas?.updated)
+      ? familyDeltas.updated.filter((feature) => feature.id !== normalizedFeatureId)
+      : [];
+    const deleted = new Set(Array.isArray(familyDeltas?.deleted) ? familyDeltas.deleted : []);
+    if ((familyDeltas?.created || []).some((feature) => feature.id === normalizedFeatureId)) {
+      deleted.delete(normalizedFeatureId);
+    } else {
+      deleted.add(normalizedFeatureId);
+    }
+    pointDeltas.byFamily[normalizedFamilyId] = {
+      ...familyDeltas,
+      created,
+      updated,
+      deleted: Array.from(deleted),
+      revision: Number(familyDeltas.revision || 0) + 1,
+      sourcePackId: resolveTransportWorkbenchPackIdForFamily(uiState, normalizedFamilyId),
+      updatedAt: new Date().toISOString(),
+    };
+    runtimeState.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(pointDeltas);
+    return true;
+  };
+
   return {
     buildResolvedConfig,
     ensureUiState,
     getDisplayConfig,
+    getEditOverlay,
     getFamilyMeta,
     getWorkingConfig,
     moveLayerOrder,
     prepareCloseState,
     prepareOpenState,
     resetSectionState,
+    addEditOverlayPoint,
+    deleteEditOverlayPoint,
+    removeEditOverlayPoint,
     setActiveFamily,
     setActivePackId,
     setInspectorTab,
     setOpenState,
     toggleSection,
     updateDisplayConfig,
+    updateEditOverlayPoint,
     updateFamilyConfig,
   };
 }

@@ -66,6 +66,7 @@ const METRO_GUARD_BONUS = {
 };
 const SELECTED_STROKE = "#12202d";
 const CONFLICT_STROKE = "#a22f2a";
+const DATA_ROW_LIMIT = 240;
 const ROAD_RENDER_PRIORITY = {
   primary: 1,
   trunk: 2,
@@ -484,6 +485,50 @@ function buildSelectedSnapshot(config) {
   };
 }
 
+function buildDataRows(config = runtime.lastRenderedConfig) {
+  const pack = runtime.activePack || lineRuntime.pickActivePack();
+  if (!pack?.roadFeatures) return [];
+  const scale = getCurrentScale();
+  return pack.roadFeatures
+    .map((road) => {
+      const hiddenReason = getRoadVisibilityReason(road, config || {}, scale);
+      return {
+        id: road.id,
+        family: "road",
+        kind: "road",
+        name: road.name || road.officialName || road.ref || road.id,
+        source: road.source || "",
+        visible: !hiddenReason,
+        hiddenReason,
+        lengthMeters: road.lengthMeters,
+        roadClass: road.roadClass,
+        ref: road.ref,
+        officialRef: road.officialRef,
+        selected: runtime.selectedFeature?.type === "road"
+          ? runtime.selectedFeature.id === road.id
+          : runtime.selectedFeature?.roadId === road.id,
+        properties: {
+          ref: road.ref,
+          official_name: road.officialName,
+          official_ref: road.officialRef,
+          road_class: road.roadClass,
+          is_link: road.isLink,
+          dense_metro: road.denseMetro,
+          source_flags: [...(road.sourceFlags || [])],
+          length_meters: road.lengthMeters,
+          n06_match_distance_meters: road.n06MatchDistanceMeters,
+        },
+      };
+    })
+    .sort((left, right) => {
+      if (left.visible !== right.visible) return left.visible ? -1 : 1;
+      const classDelta = (ROAD_RENDER_PRIORITY[right.roadClass] || 0) - (ROAD_RENDER_PRIORITY[left.roadClass] || 0);
+      if (classDelta !== 0) return classDelta;
+      return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+    })
+    .slice(0, DATA_ROW_LIMIT);
+}
+
 function renderSelectedHighlight(selectedRoad) {
   if (!selectedHighlightNode) return;
   if (!selectedRoad) {
@@ -649,6 +694,18 @@ export function setJapanRoadPreviewSelectionListener(listener) {
   lineRuntime.setSelectionListener(listener);
 }
 
+export function selectJapanRoadPreviewFeature(selection) {
+  const roadId = String(selection?.roadId || selection?.id || selection || "").trim();
+  if (!roadId) return false;
+  const pack = runtime.activePack || lineRuntime.pickActivePack();
+  const road = pack?.roadFeatureById?.get(roadId) || null;
+  if (!road) return false;
+  runtime.selectedFeature = { type: "road", id: road.id };
+  renderSelectedHighlight(road);
+  emitSelectionChange();
+  return true;
+}
+
 export async function renderJapanRoadPreview(config, options = {}) {
   await loadJapanRoadPack(PACK_MODE_PREVIEW, config);
   if (typeof options.isCurrent === "function" && !options.isCurrent()) {
@@ -724,5 +781,12 @@ export function destroyJapanRoadPreview() {
 }
 
 export function getJapanRoadPreviewSnapshot(config = runtime.lastRenderedConfig) {
-  return lineRuntime.getSnapshot(config ? buildSelectedSnapshot : null);
+  const snapshot = lineRuntime.getSnapshot(config ? buildSelectedSnapshot : null);
+  const totalRows = (runtime.activePack || lineRuntime.pickActivePack())?.roadFeatures?.length || 0;
+  return {
+    ...snapshot,
+    dataRows: buildDataRows(config),
+    dataRowCount: totalRows,
+    dataRowLimit: DATA_ROW_LIMIT,
+  };
 }

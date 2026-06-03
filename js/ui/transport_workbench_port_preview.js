@@ -96,5 +96,6 @@ export const clearJapanPortPreview = controller.clear;
 export const destroyJapanPortPreview = controller.destroy;
 export const getJapanPortPreviewSnapshot = controller.getSnapshot;
 export const renderJapanPortPreview = controller.render;
+export const selectJapanPortPreviewFeature = controller.selectFeature;
 export const setJapanPortPreviewSelectionListener = controller.setSelectionListener;
 export const warmJapanPortPreviewPack = controller.warm;

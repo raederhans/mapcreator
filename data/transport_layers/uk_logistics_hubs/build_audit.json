@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-06-02T22:14:50.025859Z",
+  "adapter_id": "uk_logistics_hubs_v1",
+  "pack_id": "uk_logistics_hubs",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "OpenStreetMap UK freight yard, container terminal, loading dock, and logistics tags via Overpass API",
+  "geometry_truth": "Overpass JSON node coordinates and way/relation centers filtered through the UK carrier scope",
+  "source_signature": {
+    "osm_overpass_uk_logistics_facilities": {
+      "filename": "uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "path": ".runtime/source-cache/transport/uk_logistics_hubs/uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "size_bytes": 180231,
+      "sha256": "721514f9663923fea454ae1491f496c9b440e54d4f3a8bd26c44055b2ffb9e7f"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "logistics_hubs": 200
+    },
+    "full": {
+      "logistics_hubs": 1428
+    }
+  },
+  "source_row_count": {
+    "overpass_elements": 1454
+  },
+  "matched_count": 1428,
+  "preview_rule": "Top 200 UK OSM freight/logistics elements by tag rank and named status after carrier clip.",
+  "scope_rule": "Filtered through the United Kingdom carrier; OSM relation scope is GB and excludes overseas territories."
+}

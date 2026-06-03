@@ -1,0 +1,79 @@
+{
+  "adapter_id": "uk_logistics_hubs_v1",
+  "pack_id": "uk_logistics_hubs",
+  "family": "logistics_hubs",
+  "geometry_kind": "point",
+  "country": "United Kingdom",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T22:14:50.025859Z",
+  "recipe_path": "data/transport_layers/uk_logistics_hubs/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "logistics_hubs": "data/transport_layers/uk_logistics_hubs/logistics_hubs.preview.geojson"
+    },
+    "full": {
+      "logistics_hubs": "data/transport_layers/uk_logistics_hubs/logistics_hubs.geojson"
+    },
+    "build_audit": "data/transport_layers/uk_logistics_hubs/build_audit.json"
+  },
+  "source_signature": {
+    "osm_overpass_uk_logistics_facilities": {
+      "filename": "uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "path": ".runtime/source-cache/transport/uk_logistics_hubs/uk_logistics_hubs_osm_overpass_2026-06-02.json",
+      "size_bytes": 180231,
+      "sha256": "721514f9663923fea454ae1491f496c9b440e54d4f3a8bd26c44055b2ffb9e7f"
+    }
+  },
+  "recipe_version": "uk_logistics_hubs_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "logistics_hubs": 200
+    },
+    "full": {
+      "logistics_hubs": 1428
+    }
+  },
+  "clip_bbox": [
+    -6.43869,
+    50.128198,
+    1.421127,
+    58.513119
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack uk_logistics_hubs",
+  "runtime_consumer": "transport_workbench_logistics_hubs_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:uk",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "logistics_hubs": "data/transport_layers/uk_logistics_hubs/logistics_hubs.preview.geojson"
+        },
+        "full": {
+          "logistics_hubs": "data/transport_layers/uk_logistics_hubs/logistics_hubs.geojson"
+        },
+        "build_audit": "data/transport_layers/uk_logistics_hubs/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "logistics_hubs": 200
+        },
+        "full": {
+          "logistics_hubs": 1428
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:uk",
+      "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography."
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "adapter_id": "france_road_v1",
+  "pack_id": "france_road",
+  "family": "road",
+  "geometry_kind": "line",
+  "country": "France",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T16:26:50.732262Z",
+  "recipe_path": "data/transport_layers/france_road/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "roads": "data/transport_layers/france_road/roads.preview.topo.json",
+      "road_labels": "data/transport_layers/france_road/road_labels.preview.geojson"
+    },
+    "full": {
+      "roads": "data/transport_layers/france_road/roads.topo.json",
+      "road_labels": "data/transport_layers/france_road/road_labels.geojson"
+    },
+    "build_audit": "data/transport_layers/france_road/build_audit.json"
+  },
+  "source_signature": {
+    "ign_bdcarto_5_0_fxx_gpkg": {
+      "filename": "BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "path": ".runtime/source-cache/transport/france_road/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "size_bytes": 982698328,
+      "sha256": "df1cd8b0fa5bb01e9c064bcabdce91c3a866fa074738c73990804e27f7e8e732"
+    }
+  },
+  "recipe_version": "france_road_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "roads": 6000,
+      "road_labels": 34
+    },
+    "full": {
+      "roads": 50000,
+      "road_labels": 432
+    }
+  },
+  "clip_bbox": [
+    -4.445502,
+    42.463903,
+    8.157676,
+    51.057886
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack france_road",
+  "runtime_consumer": "transport_workbench_road_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:france",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "road",
+    "supported_keys": [
+      "roads",
+      "road_labels"
+    ]
+  },
+  "sidecars": {
+    "road_labels": {
+      "required": true
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "roads": "data/transport_layers/france_road/roads.preview.topo.json",
+          "road_labels": "data/transport_layers/france_road/road_labels.preview.geojson"
+        },
+        "full": {
+          "roads": "data/transport_layers/france_road/roads.topo.json",
+          "road_labels": "data/transport_layers/france_road/road_labels.geojson"
+        },
+        "build_audit": "data/transport_layers/france_road/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "roads": 6000,
+          "road_labels": 34
+        },
+        "full": {
+          "roads": 50000,
+          "road_labels": 432
+        }
+      }
+    }
+  },
+  "extensions": {
+    "road": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe."
+    },
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe."
+    }
+  }
+}

@@ -51,6 +51,7 @@ function createPreviewHandler(previewConfig) {
     destroy: previewModule[exportsConfig.destroy],
     getSnapshot: previewModule[exportsConfig.getSnapshot],
     render: previewModule[exportsConfig.render],
+    selectFeature: previewModule[exportsConfig.selectFeature],
     setSelectionListener: previewModule[exportsConfig.setSelectionListener],
     warm: previewModule[exportsConfig.warm],
     previewOnly: !!previewConfig.previewOnly,
@@ -92,6 +93,12 @@ export function getTransportWorkbenchFamilyPreviewSnapshot(familyId, config) {
   const handler = getFamilyHandler(familyId);
   if (!handler?.getSnapshot) return createEmptyPreviewSnapshot();
   return handler.getSnapshot(config);
+}
+
+export function selectTransportWorkbenchFamilyPreviewFeature(familyId, selection) {
+  const handler = getFamilyHandler(familyId);
+  if (!handler?.selectFeature) return false;
+  return !!handler.selectFeature(selection);
 }
 
 export async function renderTransportWorkbenchFamilyPreview(familyId, config, options = {}) {

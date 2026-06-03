@@ -1,0 +1,341 @@
+{
+  "version": "russia_road_real_sources_v1",
+  "pack_id": "russia_road",
+  "family": "road",
+  "country": "Russia",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/russia_osm_gpkg",
+  "source_truth": "Geofabrik Russia OpenStreetMap free GeoPackage federal-district extracts",
+  "geometry_truth": "OSM road lines from Geofabrik Russia federal-district GeoPackages clipped to the Russia workbench carrier",
+  "sources": [
+    {
+      "id": "geofabrik_gpkg_central_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/central-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/central-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "central-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/central-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 1676475740,
+        "sha256": "e8e3db419737cf581d7c7c8f6b0e62c4f4ff81d23fd8e6112e8dcd80bd390bec"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_crimean_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/crimean-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/crimean-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "crimean-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/crimean-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 73366060,
+        "sha256": "09b79007d224e10710b0fb81ead15b9c128aad4701f4f66eb81773dbcba27c42"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_far_eastern_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/far-eastern-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/far-eastern-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "far-eastern-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/far-eastern-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 807644771,
+        "sha256": "07f1d6c1082ea20a09194996451e08ca2f9582e889bc43f41142d11e157131ef"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_kaliningrad",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/kaliningrad-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/kaliningrad-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "kaliningrad-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/kaliningrad-latest-free.gpkg.zip",
+        "size_bytes": 55358967,
+        "sha256": "ed518891eab2270de14dea359b6b5843eaf3867a84ca0b8078d5f5708f96eebf"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_north_caucasus_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/north-caucasus-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/north-caucasus-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "north-caucasus-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/north-caucasus-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 284444611,
+        "sha256": "d9d3b9baa918781a1e01f8714ce5e663b8c482051450e279046d591b66faf5ae"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_northwestern_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/northwestern-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/northwestern-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "northwestern-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/northwestern-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 1379106613,
+        "sha256": "8081d8cd4d4fcd231b9b34ad296e31d8214461ceafa750551b2fa00c8f36fbb4"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_siberian_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/siberian-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/siberian-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "siberian-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/siberian-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 1404789540,
+        "sha256": "7c70d493679c90d52ad8add863654a0d518e08493181aed5e9fae141ecf8c762"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_south_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/south-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/south-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "south-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/south-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 637245224,
+        "sha256": "49346a5a6994d689982bd9289a122ed337b016cfe48f0012bb32e9ffdad4eea3"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_ural_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/ural-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/ural-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "ural-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/ural-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 811929268,
+        "sha256": "de3879a4b2b49b956212d5e86cbfe80198ce4ff59530cea9afc0e8ca140edcab"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_volga_fed_district",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/russia_osm_gpkg/volga-fed-district-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/russia/volga-fed-district-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_roads_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "ref",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "volga-fed-district-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/russia_osm_gpkg/volga-fed-district-latest-free.gpkg.zip",
+        "size_bytes": 1681339327,
+        "sha256": "200c0fa46d3ba347a3b0ff874c82ecc11b4ba6a53adc640dbecd6a2682cb65c5"
+      }
+    }
+  ],
+  "source_signature": {
+    "geofabrik_gpkg_central_fed_district": {
+      "filename": "central-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/central-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1676475740,
+      "sha256": "e8e3db419737cf581d7c7c8f6b0e62c4f4ff81d23fd8e6112e8dcd80bd390bec"
+    },
+    "geofabrik_gpkg_crimean_fed_district": {
+      "filename": "crimean-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/crimean-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 73366060,
+      "sha256": "09b79007d224e10710b0fb81ead15b9c128aad4701f4f66eb81773dbcba27c42"
+    },
+    "geofabrik_gpkg_far_eastern_fed_district": {
+      "filename": "far-eastern-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/far-eastern-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 807644771,
+      "sha256": "07f1d6c1082ea20a09194996451e08ca2f9582e889bc43f41142d11e157131ef"
+    },
+    "geofabrik_gpkg_kaliningrad": {
+      "filename": "kaliningrad-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/kaliningrad-latest-free.gpkg.zip",
+      "size_bytes": 55358967,
+      "sha256": "ed518891eab2270de14dea359b6b5843eaf3867a84ca0b8078d5f5708f96eebf"
+    },
+    "geofabrik_gpkg_north_caucasus_fed_district": {
+      "filename": "north-caucasus-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/north-caucasus-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 284444611,
+      "sha256": "d9d3b9baa918781a1e01f8714ce5e663b8c482051450e279046d591b66faf5ae"
+    },
+    "geofabrik_gpkg_northwestern_fed_district": {
+      "filename": "northwestern-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/northwestern-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1379106613,
+      "sha256": "8081d8cd4d4fcd231b9b34ad296e31d8214461ceafa750551b2fa00c8f36fbb4"
+    },
+    "geofabrik_gpkg_siberian_fed_district": {
+      "filename": "siberian-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/siberian-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1404789540,
+      "sha256": "7c70d493679c90d52ad8add863654a0d518e08493181aed5e9fae141ecf8c762"
+    },
+    "geofabrik_gpkg_south_fed_district": {
+      "filename": "south-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/south-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 637245224,
+      "sha256": "49346a5a6994d689982bd9289a122ed337b016cfe48f0012bb32e9ffdad4eea3"
+    },
+    "geofabrik_gpkg_ural_fed_district": {
+      "filename": "ural-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/ural-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 811929268,
+      "sha256": "de3879a4b2b49b956212d5e86cbfe80198ce4ff59530cea9afc0e8ca140edcab"
+    },
+    "geofabrik_gpkg_volga_fed_district": {
+      "filename": "volga-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/volga-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1681339327,
+      "sha256": "200c0fa46d3ba347a3b0ff874c82ecc11b4ba6a53adc640dbecd6a2682cb65c5"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "roads.preview.topo.json",
+    "roads.topo.json",
+    "road_labels.preview.geojson",
+    "road_labels.geojson"
+  ]
+}

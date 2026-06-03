@@ -209,10 +209,20 @@
       "role": "transport_manifest",
       "family_id": "uk_road"
     },
+    "transport_manifest:uk_rail": {
+      "url": "data/transport_layers/uk_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_rail"
+    },
     "transport_manifest:france_rail": {
       "url": "data/transport_layers/france_rail/manifest.json",
       "role": "transport_manifest",
       "family_id": "france_rail"
+    },
+    "transport_manifest:france_road": {
+      "url": "data/transport_layers/france_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_road"
     },
     "transport_manifest:usa_airport": {
       "url": "data/transport_layers/usa_airport/manifest.json",
@@ -238,6 +248,66 @@
       "url": "data/transport_layers/usa_road/manifest.json",
       "role": "transport_manifest",
       "family_id": "usa_road"
+    },
+    "transport_manifest:usa_rail": {
+      "url": "data/transport_layers/usa_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_rail"
+    },
+    "transport_manifest:usa_energy_facilities": {
+      "url": "data/transport_layers/usa_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_energy_facilities"
+    },
+    "transport_manifest:usa_mineral_resources": {
+      "url": "data/transport_layers/usa_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_mineral_resources"
+    },
+    "transport_manifest:usa_industrial_zones": {
+      "url": "data/transport_layers/usa_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_industrial_zones"
+    },
+    "transport_manifest:usa_logistics_hubs": {
+      "url": "data/transport_layers/usa_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "usa_logistics_hubs"
+    },
+    "transport_manifest:uk_energy_facilities": {
+      "url": "data/transport_layers/uk_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_energy_facilities"
+    },
+    "transport_manifest:uk_industrial_zones": {
+      "url": "data/transport_layers/uk_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_industrial_zones"
+    },
+    "transport_manifest:uk_logistics_hubs": {
+      "url": "data/transport_layers/uk_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_logistics_hubs"
+    },
+    "transport_manifest:france_energy_facilities": {
+      "url": "data/transport_layers/france_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_energy_facilities"
+    },
+    "transport_manifest:france_industrial_zones": {
+      "url": "data/transport_layers/france_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_industrial_zones"
+    },
+    "transport_manifest:france_mineral_resources": {
+      "url": "data/transport_layers/france_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_mineral_resources"
+    },
+    "transport_manifest:france_logistics_hubs": {
+      "url": "data/transport_layers/france_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "france_logistics_hubs"
     },
     "transport_manifest:germany_rail": {
       "url": "data/transport_layers/germany_rail/manifest.json",
@@ -348,6 +418,101 @@
       "url": "data/transport_layers/usa_carrier/carrier.json",
       "role": "transport_workbench_carrier",
       "family_id": "usa"
+    },
+    "transport_manifest:china_road": {
+      "url": "data/transport_layers/china_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_road"
+    },
+    "transport_manifest:china_rail": {
+      "url": "data/transport_layers/china_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_rail"
+    },
+    "transport_manifest:china_energy_facilities": {
+      "url": "data/transport_layers/china_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_energy_facilities"
+    },
+    "transport_manifest:china_industrial_zones": {
+      "url": "data/transport_layers/china_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_industrial_zones"
+    },
+    "transport_manifest:china_logistics_hubs": {
+      "url": "data/transport_layers/china_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_logistics_hubs"
+    },
+    "transport_manifest:china_mineral_resources": {
+      "url": "data/transport_layers/china_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "china_mineral_resources"
+    },
+    "transport_manifest:india_road": {
+      "url": "data/transport_layers/india_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_road"
+    },
+    "transport_manifest:india_rail": {
+      "url": "data/transport_layers/india_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_rail"
+    },
+    "transport_manifest:india_energy_facilities": {
+      "url": "data/transport_layers/india_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_energy_facilities"
+    },
+    "transport_manifest:india_industrial_zones": {
+      "url": "data/transport_layers/india_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_industrial_zones"
+    },
+    "transport_manifest:india_logistics_hubs": {
+      "url": "data/transport_layers/india_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_logistics_hubs"
+    },
+    "transport_manifest:india_mineral_resources": {
+      "url": "data/transport_layers/india_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "india_mineral_resources"
+    },
+    "transport_manifest:russia_road": {
+      "url": "data/transport_layers/russia_road/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_road"
+    },
+    "transport_manifest:russia_rail": {
+      "url": "data/transport_layers/russia_rail/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_rail"
+    },
+    "transport_manifest:russia_energy_facilities": {
+      "url": "data/transport_layers/russia_energy_facilities/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_energy_facilities"
+    },
+    "transport_manifest:russia_industrial_zones": {
+      "url": "data/transport_layers/russia_industrial_zones/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_industrial_zones"
+    },
+    "transport_manifest:russia_logistics_hubs": {
+      "url": "data/transport_layers/russia_logistics_hubs/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_logistics_hubs"
+    },
+    "transport_manifest:russia_mineral_resources": {
+      "url": "data/transport_layers/russia_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "russia_mineral_resources"
+    },
+    "transport_manifest:uk_mineral_resources": {
+      "url": "data/transport_layers/uk_mineral_resources/manifest.json",
+      "role": "transport_manifest",
+      "family_id": "uk_mineral_resources"
     }
   },
   "scenario_registry_key": "scenario_registry",
@@ -364,12 +529,26 @@
     "logistics_hubs": "transport_manifest:logistics_hubs",
     "germany_road": "transport_manifest:germany_road",
     "uk_road": "transport_manifest:uk_road",
+    "uk_rail": "transport_manifest:uk_rail",
     "france_rail": "transport_manifest:france_rail",
+    "france_road": "transport_manifest:france_road",
     "usa_airport": "transport_manifest:usa_airport",
     "china_airport": "transport_manifest:china_airport",
     "russia_airport": "transport_manifest:russia_airport",
     "india_airport": "transport_manifest:india_airport",
     "usa_road": "transport_manifest:usa_road",
+    "usa_rail": "transport_manifest:usa_rail",
+    "usa_energy_facilities": "transport_manifest:usa_energy_facilities",
+    "usa_mineral_resources": "transport_manifest:usa_mineral_resources",
+    "usa_industrial_zones": "transport_manifest:usa_industrial_zones",
+    "usa_logistics_hubs": "transport_manifest:usa_logistics_hubs",
+    "uk_energy_facilities": "transport_manifest:uk_energy_facilities",
+    "uk_industrial_zones": "transport_manifest:uk_industrial_zones",
+    "uk_logistics_hubs": "transport_manifest:uk_logistics_hubs",
+    "france_energy_facilities": "transport_manifest:france_energy_facilities",
+    "france_industrial_zones": "transport_manifest:france_industrial_zones",
+    "france_mineral_resources": "transport_manifest:france_mineral_resources",
+    "france_logistics_hubs": "transport_manifest:france_logistics_hubs",
     "germany_rail": "transport_manifest:germany_rail",
     "germany_airport": "transport_manifest:germany_airport",
     "france_airport": "transport_manifest:france_airport",
@@ -390,7 +569,26 @@
     "japan_mineral_resources": "transport_manifest:mineral_resources",
     "japan_energy_facilities": "transport_manifest:energy_facilities",
     "japan_industrial_zones": "transport_manifest:industrial_zones",
-    "japan_logistics_hubs": "transport_manifest:logistics_hubs"
+    "japan_logistics_hubs": "transport_manifest:logistics_hubs",
+    "china_road": "transport_manifest:china_road",
+    "china_rail": "transport_manifest:china_rail",
+    "china_energy_facilities": "transport_manifest:china_energy_facilities",
+    "china_industrial_zones": "transport_manifest:china_industrial_zones",
+    "china_logistics_hubs": "transport_manifest:china_logistics_hubs",
+    "china_mineral_resources": "transport_manifest:china_mineral_resources",
+    "india_road": "transport_manifest:india_road",
+    "india_rail": "transport_manifest:india_rail",
+    "india_energy_facilities": "transport_manifest:india_energy_facilities",
+    "india_industrial_zones": "transport_manifest:india_industrial_zones",
+    "india_logistics_hubs": "transport_manifest:india_logistics_hubs",
+    "india_mineral_resources": "transport_manifest:india_mineral_resources",
+    "russia_road": "transport_manifest:russia_road",
+    "russia_rail": "transport_manifest:russia_rail",
+    "russia_energy_facilities": "transport_manifest:russia_energy_facilities",
+    "russia_industrial_zones": "transport_manifest:russia_industrial_zones",
+    "russia_logistics_hubs": "transport_manifest:russia_logistics_hubs",
+    "russia_mineral_resources": "transport_manifest:russia_mineral_resources",
+    "uk_mineral_resources": "transport_manifest:uk_mineral_resources"
   },
   "city_lights": {
     "historical_1930": {

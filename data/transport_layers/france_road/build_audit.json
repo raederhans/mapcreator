@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-06-02T16:26:50.732262Z",
+  "adapter_id": "france_road_v1",
+  "pack_id": "france_road",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "IGN BD CARTO 5.0 September 2025 all themes for France metropolitaine",
+  "geometry_truth": "IGN BDCARTO GeoPackage LAMB93 France metropolitaine archive",
+  "source_signature": {
+    "ign_bdcarto_5_0_fxx_gpkg": {
+      "filename": "BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "path": ".runtime/source-cache/transport/france_road/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "size_bytes": 982698328,
+      "sha256": "df1cd8b0fa5bb01e9c064bcabdce91c3a866fa074738c73990804e27f7e8e732"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "roads": 6000,
+      "road_labels": 34
+    },
+    "full": {
+      "roads": 50000,
+      "road_labels": 432
+    }
+  },
+  "source_row_count": {
+    "bdcarto_troncon_de_route": 2586859
+  },
+  "matched_count": 50000,
+  "preview_rule": "BDCARTO metropolitan France motorway/trunk/high-importance roads capped at 6000 rows.",
+  "scope_rule": "IGN BDCARTO FXX France metropolitaine archive; overseas territory archives are separate and excluded.",
+  "source_gpkg": ".runtime/tmp/transport/france_road_bdcarto_target_7z/troncon_de_route.gpkg",
+  "source_gpkg_signature": {
+    "filename": "troncon_de_route.gpkg",
+    "path": ".runtime/tmp/transport/france_road_bdcarto_target_7z/troncon_de_route.gpkg",
+    "size_bytes": 2532630528,
+    "sha256": "3aa8c47fcca2bd2e6d47f6a9da1ce7b3469f4d79ca903d5cb5c9c385a04992e3"
+  }
+}

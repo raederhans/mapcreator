@@ -1,0 +1,57 @@
+{
+  "version": "india_mineral_resources_real_sources_v1",
+  "pack_id": "india_mineral_resources",
+  "family": "mineral_resources",
+  "country": "India",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/india_mineral_resources",
+  "source_truth": "USGS Mineral Resources Data System global point layer",
+  "geometry_truth": "USGS MRDS point records filtered to the India workbench carrier",
+  "sources": [
+    {
+      "id": "usgs_mrds_feature_service",
+      "role": "arcgis_feature_service_query",
+      "expected_path": ".runtime/source-cache/transport/india_mineral_resources/usgs_mrds_global_2026-06-02.geojson",
+      "url": "https://energy.usgs.gov/arcgis/rest/services/Hosted/Mineral_Resource_Data_System/FeatureServer/0",
+      "license": "U.S. Geological Survey public data",
+      "required_layers": [],
+      "required_fields": [
+        "objectid_1",
+        "dep_id",
+        "site_name",
+        "dev_stat",
+        "code_list",
+        "grade",
+        "geometry"
+      ],
+      "filter_rule": "Cache global MRDS point rows, filter to the India carrier scope locally, and keep best-ranked producer/plant/prospect records first.",
+      "notes": "MRDS is a global historical mineral occurrence database; this first India resource slice uses carrier filtering instead of country-name fields.",
+      "query_params": {
+        "where": "1=1",
+        "outFields": "objectid_1,dep_id,site_name,dev_stat,code_list,grade",
+        "returnGeometry": "true",
+        "f": "geojson",
+        "resultRecordCount": "2000"
+      },
+      "signature": {
+        "filename": "usgs_mrds_global_2026-06-02.geojson",
+        "path": ".runtime/source-cache/transport/india_mineral_resources/usgs_mrds_global_2026-06-02.geojson",
+        "size_bytes": 80841782,
+        "sha256": "c2c91b9b8c9c3613e2ba390b2244b456f1603a99176cf55f37571274160511e7"
+      }
+    }
+  ],
+  "source_signature": {
+    "usgs_mrds_feature_service": {
+      "filename": "usgs_mrds_global_2026-06-02.geojson",
+      "path": ".runtime/source-cache/transport/india_mineral_resources/usgs_mrds_global_2026-06-02.geojson",
+      "size_bytes": 80841782,
+      "sha256": "c2c91b9b8c9c3613e2ba390b2244b456f1603a99176cf55f37571274160511e7"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "mineral_resources.preview.geojson",
+    "mineral_resources.geojson"
+  ]
+}

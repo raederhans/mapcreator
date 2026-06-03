@@ -1,0 +1,79 @@
+{
+  "adapter_id": "india_energy_facilities_v1",
+  "pack_id": "india_energy_facilities",
+  "family": "energy_facilities",
+  "geometry_kind": "point",
+  "country": "India",
+  "schema_version": 1,
+  "generated_at": "2026-06-03T02:13:01.449841Z",
+  "recipe_path": "data/transport_layers/india_energy_facilities/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "energy_facilities": "data/transport_layers/india_energy_facilities/energy_facilities.preview.geojson"
+    },
+    "full": {
+      "energy_facilities": "data/transport_layers/india_energy_facilities/energy_facilities.geojson"
+    },
+    "build_audit": "data/transport_layers/india_energy_facilities/build_audit.json"
+  },
+  "source_signature": {
+    "wri_global_power_plant_database_india_csv": {
+      "filename": "database_IND.csv",
+      "path": ".runtime/source-cache/transport/india_energy_facilities/database_IND.csv",
+      "size_bytes": 177796,
+      "sha256": "166c27856fb13c00895e51b10219e5cde334a52899783bd503d58aa9d1f0a2e9"
+    }
+  },
+  "recipe_version": "india_energy_facilities_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 846
+    },
+    "full": {
+      "energy_facilities": 846
+    }
+  },
+  "clip_bbox": [
+    68.6447,
+    8.1689,
+    95.408,
+    34.649
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack india_energy_facilities",
+  "runtime_consumer": "transport_workbench_energy_facilities_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:india",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "energy_facilities": "data/transport_layers/india_energy_facilities/energy_facilities.preview.geojson"
+        },
+        "full": {
+          "energy_facilities": "data/transport_layers/india_energy_facilities/energy_facilities.geojson"
+        },
+        "build_audit": "data/transport_layers/india_energy_facilities/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "energy_facilities": 846
+        },
+        "full": {
+          "energy_facilities": 846
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:india",
+      "scope_policy": "India admin1 preview scope follows Natural Earth polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 state carrier."
+    }
+  }
+}

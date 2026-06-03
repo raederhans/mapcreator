@@ -1,0 +1,61 @@
+{
+  "version": "france_industrial_zones_real_sources_v1",
+  "pack_id": "france_industrial_zones",
+  "family": "industrial_zones",
+  "country": "France",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/france_industrial_zones",
+  "source_truth": "IGN BD TOPO zone d'activite ou d'interet WFS",
+  "geometry_truth": "IGN BD TOPO V3 zone_d_activite_ou_d_interet polygons filtered to industrial and commercial activity categories",
+  "sources": [
+    {
+      "id": "ign_bdtopo_zone_activite_wfs",
+      "role": "wfs_feature_collection",
+      "expected_path": ".runtime/source-cache/transport/france_industrial_zones/ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "url": "https://data.geopf.fr/wfs/ows",
+      "license": "Licence Ouverte / Etalab 2.0 for IGN open datasets",
+      "required_layers": [],
+      "required_fields": [
+        "cleabs",
+        "categorie",
+        "nature",
+        "nature_detaillee",
+        "toponyme",
+        "importance",
+        "etat_de_l_objet",
+        "geometry"
+      ],
+      "filter_rule": "WFS CQL filter keeps categorie='Industriel et commercial'; builder further keeps industrial, activity, commercial, market, and factory polygons visible under the industrial_zones contract.",
+      "notes": "",
+      "query_params": {
+        "SERVICE": "WFS",
+        "VERSION": "2.0.0",
+        "REQUEST": "GetFeature",
+        "TYPENAMES": "BDTOPO_V3:zone_d_activite_ou_d_interet",
+        "OUTPUTFORMAT": "application/json",
+        "SRSNAME": "EPSG:4326",
+        "COUNT": "5000",
+        "CQL_FILTER": "categorie='Industriel et commercial'"
+      },
+      "signature": {
+        "filename": "ign_bdtopo_zone_activite_industriel_commercial.geojson",
+        "path": ".runtime/source-cache/transport/france_industrial_zones/ign_bdtopo_zone_activite_industriel_commercial.geojson",
+        "size_bytes": 86046022,
+        "sha256": "09bc80eaecfeb6a583220a7ab924c92292ae1492d6c59641f55b5b5e2a4a6050"
+      }
+    }
+  ],
+  "source_signature": {
+    "ign_bdtopo_zone_activite_wfs": {
+      "filename": "ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "path": ".runtime/source-cache/transport/france_industrial_zones/ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "size_bytes": 86046022,
+      "sha256": "09bc80eaecfeb6a583220a7ab924c92292ae1492d6c59641f55b5b5e2a4a6050"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "industrial_zones.preview.geojson",
+    "industrial_zones.geojson"
+  ]
+}

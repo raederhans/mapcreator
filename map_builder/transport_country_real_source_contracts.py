@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -13,8 +15,41 @@ TARGET_COUNTRY_PACK_IDS = (
     "germany_road",
     "uk_road",
     "usa_road",
+    "france_road",
+    "china_road",
+    "india_road",
+    "russia_road",
     "france_rail",
+    "usa_rail",
+    "china_rail",
+    "china_energy_facilities",
+    "china_industrial_zones",
+    "china_logistics_hubs",
+    "china_mineral_resources",
+    "india_rail",
+    "india_energy_facilities",
+    "india_industrial_zones",
+    "india_logistics_hubs",
+    "india_mineral_resources",
+    "russia_rail",
+    "russia_energy_facilities",
+    "russia_industrial_zones",
+    "russia_logistics_hubs",
+    "russia_mineral_resources",
+    "usa_energy_facilities",
+    "usa_mineral_resources",
+    "usa_industrial_zones",
+    "usa_logistics_hubs",
+    "uk_energy_facilities",
+    "uk_industrial_zones",
+    "uk_logistics_hubs",
+    "uk_mineral_resources",
+    "france_energy_facilities",
+    "france_industrial_zones",
+    "france_mineral_resources",
+    "france_logistics_hubs",
     "germany_rail",
+    "uk_rail",
     "usa_airport",
     "china_airport",
     "russia_airport",
@@ -52,9 +87,11 @@ class SourceRequirement:
     filename: str
     url: str
     license: str
+    required_layers: tuple[str, ...] = ()
     required_fields: tuple[str, ...] = ()
     filter_rule: str = ""
     notes: str = ""
+    query_params: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -76,9 +113,11 @@ def _source(
     url: str,
     license: str,
     *,
+    required_layers: Iterable[str] = (),
     required_fields: Iterable[str] = (),
     filter_rule: str = "",
     notes: str = "",
+    query_params: dict[str, str] | None = None,
 ) -> SourceRequirement:
     return SourceRequirement(
         id=id,
@@ -86,9 +125,206 @@ def _source(
         filename=filename,
         url=url,
         license=license,
+        required_layers=tuple(required_layers),
         required_fields=tuple(required_fields),
         filter_rule=filter_rule,
         notes=notes,
+        query_params=dict(query_params or {}),
+    )
+
+
+USA_STATE_FIPS_FOR_AREALM: tuple[str, ...] = (
+    "01", "02", "04", "05", "06", "08", "09", "10", "11", "12",
+    "13", "15", "16", "17", "18", "19", "20", "21", "22", "23",
+    "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
+    "34", "35", "36", "37", "38", "39", "40", "41", "42", "44",
+    "45", "46", "47", "48", "49", "50", "51", "53", "54", "55",
+    "56",
+)
+
+
+def _usa_arealm_sources() -> tuple[SourceRequirement, ...]:
+    return tuple(
+        _source(
+            f"census_tiger_2025_arealm_{state_fips}",
+            "state_polygon_geometry",
+            f"tl_2025_{state_fips}_arealm.zip",
+            f"https://www2.census.gov/geo/tiger/TIGER2025/AREALM/tl_2025_{state_fips}_arealm.zip",
+            "U.S. Census Bureau public data",
+            required_fields=("STATEFP", "AREAID", "FULLNAME", "MTFCC", "ALAND", "AWATER", "INTPTLAT", "INTPTLON", "PARTFLG", "geometry"),
+            filter_rule="Keep MTFCC K2362 Industrial Building or Industrial Park polygons.",
+            notes="State-based AREALM shapefiles cover the 50 states plus DC; U.S. territories are intentionally excluded for USA carrier parity.",
+        )
+        for state_fips in USA_STATE_FIPS_FOR_AREALM
+    )
+
+
+CHINA_GEOFABRIK_SUBREGIONS: tuple[str, ...] = (
+    "anhui",
+    "beijing",
+    "chongqing",
+    "fujian",
+    "gansu",
+    "guangdong",
+    "guangxi",
+    "guizhou",
+    "hainan",
+    "hebei",
+    "heilongjiang",
+    "henan",
+    "hubei",
+    "hunan",
+    "inner-mongolia",
+    "jiangsu",
+    "jiangxi",
+    "jilin",
+    "liaoning",
+    "ningxia",
+    "qinghai",
+    "shaanxi",
+    "shandong",
+    "shanghai",
+    "shanxi",
+    "sichuan",
+    "tianjin",
+    "tibet",
+    "xinjiang",
+    "yunnan",
+    "zhejiang",
+)
+
+INDIA_GEOFABRIK_SUBREGIONS: tuple[str, ...] = (
+    "central-zone",
+    "eastern-zone",
+    "north-eastern-zone",
+    "northern-zone",
+    "southern-zone",
+    "western-zone",
+)
+
+RUSSIA_GEOFABRIK_SUBREGIONS: tuple[str, ...] = (
+    "central-fed-district",
+    "crimean-fed-district",
+    "far-eastern-fed-district",
+    "kaliningrad",
+    "north-caucasus-fed-district",
+    "northwestern-fed-district",
+    "siberian-fed-district",
+    "south-fed-district",
+    "ural-fed-district",
+    "volga-fed-district",
+)
+
+UK_LOGISTICS_OVERPASS_QUERY = """
+[out:json][timeout:120];
+area["ISO3166-1"="GB"][admin_level=2]->.uk;
+(
+  nwr["railway"="yard"](area.uk);
+  nwr["railway"="container_terminal"](area.uk);
+  nwr["landuse"="railway"]["freight"="yes"](area.uk);
+  nwr["industrial"="logistics"](area.uk);
+  nwr["amenity"="loading_dock"](area.uk);
+);
+out center tags;
+""".strip()
+
+UK_INDUSTRIAL_OVERPASS_QUERY = """
+[out:json][timeout:180];
+area["ISO3166-1"="GB"][admin_level=2]->.uk;
+(
+  way["landuse"="industrial"](area.uk);
+  relation["landuse"="industrial"](area.uk);
+);
+out center tags;
+""".strip()
+
+
+def _geofabrik_gpkg_sources(
+    *,
+    base_path: str,
+    subregions: Iterable[str],
+    family: str,
+) -> tuple[SourceRequirement, ...]:
+    if family == "road":
+        required_layers = ("gis_osm_roads_free",)
+        required_fields = ("osm_id", "fclass", "name", "ref", "geometry")
+        filter_rule = "Read the free GeoPackage road layer, keep major road classes, then clip to the workbench carrier scope."
+    else:
+        required_layers = ("gis_osm_railways_free", "gis_osm_transport_free")
+        required_fields = ("osm_id", "fclass", "name", "geometry")
+        filter_rule = "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope."
+    return tuple(
+        _source(
+            f"geofabrik_gpkg_{subregion.replace('-', '_')}",
+            "osm_gpkg_subregion_extract",
+            f"{subregion}-latest-free.gpkg.zip",
+            f"https://download.geofabrik.de/{base_path}/{subregion}-latest-free.gpkg.zip",
+            "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+            required_layers=required_layers,
+            required_fields=required_fields,
+            filter_rule=filter_rule,
+            notes="Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+        )
+        for subregion in subregions
+    )
+
+
+def _geofabrik_facility_gpkg_sources(
+    *,
+    base_path: str,
+    subregions: Iterable[str],
+    family: str,
+) -> tuple[SourceRequirement, ...]:
+    if family == "industrial_zones":
+        required_layers = ("gis_osm_landuse_a_free",)
+        filter_rule = "Read the free GeoPackage landuse polygon layer, keep industrial landuse polygons, then filter representative points to the workbench carrier scope."
+    elif family == "logistics_hubs":
+        required_layers = ("gis_osm_transport_free", "gis_osm_transport_a_free")
+        filter_rule = "Read the free GeoPackage transport point and area layers, keep terminal classes, then filter representative points to the workbench carrier scope."
+    else:
+        raise ValueError(f"Unsupported Geofabrik facility family: {family}")
+    return tuple(
+        _source(
+            f"geofabrik_gpkg_{subregion.replace('-', '_')}",
+            "osm_gpkg_subregion_extract",
+            f"{subregion}-latest-free.gpkg.zip",
+            f"https://download.geofabrik.de/{base_path}/{subregion}-latest-free.gpkg.zip",
+            "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+            required_layers=required_layers,
+            required_fields=("osm_id", "fclass", "name", "geometry"),
+            filter_rule=filter_rule,
+            notes="Free GeoPackage extracts are pre-layered by Geofabrik and reused across large-country road, rail, and first-wave facility packs.",
+        )
+        for subregion in subregions
+    )
+
+
+def _geofabrik_osm_gpkg_spec(
+    *,
+    pack_id: str,
+    family: str,
+    country: str,
+    cache_subdir: str,
+    source_truth: str,
+    geometry_truth: str,
+    base_path: str,
+    subregions: Iterable[str],
+    filter_rule: str,
+    notes: str,
+) -> CountrySourceSpec:
+    return CountrySourceSpec(
+        pack_id=pack_id,
+        family=family,
+        country=country,
+        cache_subdir=cache_subdir,
+        source_truth=source_truth,
+        geometry_truth=geometry_truth,
+        output_contract=(
+            ("roads.preview.topo.json", "roads.topo.json", "road_labels.preview.geojson", "road_labels.geojson")
+            if family == "road"
+            else ("railways.preview.topo.json", "railways.topo.json", "rail_stations_major.preview.geojson", "rail_stations_major.geojson")
+        ),
+        sources=_geofabrik_gpkg_sources(base_path=base_path, subregions=subregions, family=family),
     )
 
 
@@ -164,6 +400,64 @@ COUNTRY_SOURCE_SPECS: dict[str, CountrySourceSpec] = {
             ),
         ),
     ),
+    "france_road": CountrySourceSpec(
+        pack_id="france_road",
+        family="road",
+        country="France",
+        cache_subdir="france_road",
+        source_truth="IGN BD CARTO 5.0 September 2025 all themes for France metropolitaine",
+        geometry_truth="IGN BDCARTO GeoPackage LAMB93 France metropolitaine archive",
+        output_contract=("roads.preview.topo.json", "roads.topo.json", "road_labels.preview.geojson", "road_labels.geojson"),
+        sources=(
+            _source(
+                "ign_bdcarto_5_0_fxx_gpkg",
+                "primary_geometry",
+                "BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+                "https://data.geopf.fr/telechargement/download/BDCARTO/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+                "Licence Ouverte / Etalab 2.0 for IGN open datasets",
+                required_layers=("troncon_de_route",),
+                required_fields=("cleabs", "cleabs_ge", "nature", "importance", "cpx_numero", "cpx_numero_route_europeenne", "cpx_classement_administratif", "cpx_toponyme_route_nommee", "geometry"),
+                filter_rule="Use France metropolitaine FXX territory only; keep motorway and high-importance route segments for preview and broader numbered/important road context for full.",
+                notes="Géoservices lists overseas territories as separate GLP/MTQ/GUF/etc archives, so the FXX archive is the intended metropolitan-France scope.",
+            ),
+        ),
+    ),
+    "china_road": _geofabrik_osm_gpkg_spec(
+        pack_id="china_road",
+        family="road",
+        country="China",
+        cache_subdir="china_osm_gpkg",
+        source_truth="Geofabrik China OpenStreetMap free GeoPackage subregion extracts",
+        geometry_truth="OSM road lines from Geofabrik China subregion GeoPackages clipped to the China workbench carrier",
+        base_path="asia/china",
+        subregions=CHINA_GEOFABRIK_SUBREGIONS,
+        filter_rule="Keep OSM highway motorway/trunk/primary/secondary/tertiary and link classes; clip to the China carrier scope.",
+        notes="Mainland China road preview starts from the China extract; Taiwan remains a separate future sub-scope rather than being merged into this pack.",
+    ),
+    "india_road": _geofabrik_osm_gpkg_spec(
+        pack_id="india_road",
+        family="road",
+        country="India",
+        cache_subdir="india_osm_gpkg",
+        source_truth="Geofabrik India OpenStreetMap free GeoPackage zone extracts",
+        geometry_truth="OSM road lines from Geofabrik India zone GeoPackages clipped to the India workbench carrier",
+        base_path="asia/india",
+        subregions=INDIA_GEOFABRIK_SUBREGIONS,
+        filter_rule="Keep OSM highway motorway/trunk/primary/secondary/tertiary and link classes; clip to the India carrier scope.",
+        notes="The first India road pack uses OSM classes as geometry truth, with national highway references retained from OSM tags when present.",
+    ),
+    "russia_road": _geofabrik_osm_gpkg_spec(
+        pack_id="russia_road",
+        family="road",
+        country="Russia",
+        cache_subdir="russia_osm_gpkg",
+        source_truth="Geofabrik Russia OpenStreetMap free GeoPackage federal-district extracts",
+        geometry_truth="OSM road lines from Geofabrik Russia federal-district GeoPackages clipped to the Russia workbench carrier",
+        base_path="russia",
+        subregions=RUSSIA_GEOFABRIK_SUBREGIONS,
+        filter_rule="Keep OSM highway motorway/trunk/primary/secondary/tertiary and link classes; clip to the Russia carrier scope.",
+        notes="Russia scope uses the national extract and carrier clipping so Kaliningrad remains in scope while foreign admin bleed is removed.",
+    ),
     "france_rail": CountrySourceSpec(
         pack_id="france_rail",
         family="rail",
@@ -193,6 +487,591 @@ COUNTRY_SOURCE_SPECS: dict[str, CountrySourceSpec] = {
             ),
         ),
     ),
+    "usa_rail": CountrySourceSpec(
+        pack_id="usa_rail",
+        family="rail",
+        country="United States",
+        cache_subdir="usa_rail",
+        source_truth="FRA/BTS NTAD North American Rail Network mainline subset plus NTAD Amtrak Stations",
+        geometry_truth="FRA/BTS ArcGIS FeatureServer exports cached as GeoJSON",
+        output_contract=("railways.preview.topo.json", "railways.topo.json", "rail_stations_major.preview.geojson", "rail_stations_major.geojson"),
+        sources=(
+            _source(
+                "fra_ntad_narn_lines_us_mainline",
+                "arcgis_feature_service_query",
+                "fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+                "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_North_American_Rail_Network_Lines/FeatureServer/0",
+                "U.S. federal public data; unrestricted public use",
+                required_fields=("OBJECTID", "FRAARCID", "STATEAB", "COUNTRY", "RROWNER1", "PASSNGR", "STRACNET", "NET", "MILES", "geometry"),
+                filter_rule="Cache only United States NARN mainline rows where COUNTRY='US' and NET='M'; preview emphasizes passenger and STRACNET rows.",
+                notes="FRA identifies NARN as the authoritative U.S. rail geospatial dataset; the cache is a paginated ArcGIS GeoJSON export.",
+                query_params={
+                    "where": "COUNTRY='US' AND NET='M'",
+                    "outFields": "OBJECTID,FRAARCID,STATEAB,COUNTRY,RROWNER1,PASSNGR,STRACNET,NET,MILES",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+            _source(
+                "fra_ntad_amtrak_stations",
+                "arcgis_feature_service_query",
+                "fra_ntad_amtrak_stations_2026-04-22.geojson",
+                "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Stations/FeatureServer/0",
+                "U.S. federal public data; unrestricted public use",
+                required_fields=("OBJECTID", "Code", "StationName", "StationFacilityName", "StaType", "geometry"),
+                filter_rule="Use NTAD Amtrak station points as the major passenger-station sidecar for the U.S. rail pack.",
+                notes="The NTAD layer contains Amtrak intercity railroad and bus passenger terminals in the United States.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "OBJECTID,Code,StationName,StationFacilityName,StationAliases,StaType",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+        ),
+    ),
+    "china_rail": _geofabrik_osm_gpkg_spec(
+        pack_id="china_rail",
+        family="rail",
+        country="China",
+        cache_subdir="china_osm_gpkg",
+        source_truth="Geofabrik China OpenStreetMap free GeoPackage subregion extracts",
+        geometry_truth="OSM rail lines and railway-station points from Geofabrik China subregion GeoPackages clipped to the China workbench carrier",
+        base_path="asia/china",
+        subregions=CHINA_GEOFABRIK_SUBREGIONS,
+        filter_rule="Keep OSM railway=rail/light_rail/subway/tram/narrow_gauge, remove service yard/siding/spur/crossover from preview, derive station sidecar from OSM point tags, and clip to the China carrier scope.",
+        notes="Mainland China rail preview starts from the China extract; Taiwan rail remains a separate future sub-scope.",
+    ),
+    "china_energy_facilities": CountrySourceSpec(
+        pack_id="china_energy_facilities",
+        family="energy_facilities",
+        country="China",
+        cache_subdir="china_energy_facilities",
+        source_truth="WRI Global Power Plant Database global CSV",
+        geometry_truth="WRI plant latitude/longitude points filtered to the China workbench carrier",
+        output_contract=("energy_facilities.preview.geojson", "energy_facilities.geojson"),
+        sources=(
+            _source(
+                "wri_global_power_plant_database_csv",
+                "direct_power_plant_csv",
+                "global_power_plant_database.csv",
+                "https://raw.githubusercontent.com/wri/global-power-plant-database/master/output_database/global_power_plant_database.csv",
+                "Creative Commons Attribution 4.0 (CC BY 4.0)",
+                required_fields=("country", "country_long", "name", "gppd_idnr", "capacity_mw", "latitude", "longitude", "primary_fuel", "owner", "source", "url"),
+                filter_rule="Keep CHN plant rows with valid WGS84 coordinates and filter them through the China carrier scope.",
+                notes="WRI publishes a global CSV release; country-specific CHN/RUS CSV files are not available in the upstream repository.",
+            ),
+        ),
+    ),
+    "china_industrial_zones": CountrySourceSpec(
+        pack_id="china_industrial_zones",
+        family="industrial_zones",
+        country="China",
+        cache_subdir="china_osm_gpkg",
+        source_truth="Geofabrik China OpenStreetMap free GeoPackage subregion extracts",
+        geometry_truth="OSM landuse=industrial polygon representative points from Geofabrik China subregion GeoPackages clipped to the China workbench carrier",
+        output_contract=("industrial_zones.preview.geojson", "industrial_zones.geojson"),
+        sources=_geofabrik_facility_gpkg_sources(base_path="asia/china", subregions=CHINA_GEOFABRIK_SUBREGIONS, family="industrial_zones"),
+    ),
+    "china_logistics_hubs": CountrySourceSpec(
+        pack_id="china_logistics_hubs",
+        family="logistics_hubs",
+        country="China",
+        cache_subdir="china_osm_gpkg",
+        source_truth="Geofabrik China OpenStreetMap free GeoPackage subregion extracts",
+        geometry_truth="OSM transport terminal point and area representative points from Geofabrik China subregion GeoPackages clipped to the China workbench carrier",
+        output_contract=("logistics_hubs.preview.geojson", "logistics_hubs.geojson"),
+        sources=_geofabrik_facility_gpkg_sources(base_path="asia/china", subregions=CHINA_GEOFABRIK_SUBREGIONS, family="logistics_hubs"),
+    ),
+    "china_mineral_resources": CountrySourceSpec(
+        pack_id="china_mineral_resources",
+        family="mineral_resources",
+        country="China",
+        cache_subdir="china_mineral_resources",
+        source_truth="USGS Mineral Resources Data System global point layer",
+        geometry_truth="USGS MRDS point records filtered to the China workbench carrier",
+        output_contract=("mineral_resources.preview.geojson", "mineral_resources.geojson"),
+        sources=(
+            _source(
+                "usgs_mrds_feature_service",
+                "arcgis_feature_service_query",
+                "usgs_mrds_global_2026-06-02.geojson",
+                "https://energy.usgs.gov/arcgis/rest/services/Hosted/Mineral_Resource_Data_System/FeatureServer/0",
+                "U.S. Geological Survey public data",
+                required_fields=("objectid_1", "dep_id", "site_name", "dev_stat", "code_list", "grade", "geometry"),
+                filter_rule="Cache global MRDS point rows, filter to the China carrier scope locally, and keep best-ranked producer/plant/prospect records first.",
+                notes="MRDS is a global historical mineral occurrence database; this first China resource slice uses carrier filtering because the layer does not expose a country field.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "objectid_1,dep_id,site_name,dev_stat,code_list,grade",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+        ),
+    ),
+    "india_rail": _geofabrik_osm_gpkg_spec(
+        pack_id="india_rail",
+        family="rail",
+        country="India",
+        cache_subdir="india_osm_gpkg",
+        source_truth="Geofabrik India OpenStreetMap free GeoPackage zone extracts",
+        geometry_truth="OSM rail lines and railway-station points from Geofabrik India zone GeoPackages clipped to the India workbench carrier",
+        base_path="asia/india",
+        subregions=INDIA_GEOFABRIK_SUBREGIONS,
+        filter_rule="Keep OSM railway=rail/light_rail/subway/tram/narrow_gauge, remove service yard/siding/spur/crossover from preview, derive station sidecar from OSM point tags, and clip to the India carrier scope.",
+        notes="The builder keeps station ref/name/operator tags where present so later Indian Railways importance ranking can enrich the sidecar.",
+    ),
+    "india_energy_facilities": CountrySourceSpec(
+        pack_id="india_energy_facilities",
+        family="energy_facilities",
+        country="India",
+        cache_subdir="india_energy_facilities",
+        source_truth="WRI Global Power Plant Database India country CSV",
+        geometry_truth="WRI plant latitude/longitude points filtered to the India workbench carrier",
+        output_contract=("energy_facilities.preview.geojson", "energy_facilities.geojson"),
+        sources=(
+            _source(
+                "wri_global_power_plant_database_india_csv",
+                "direct_power_plant_csv",
+                "database_IND.csv",
+                "https://raw.githubusercontent.com/wri/global-power-plant-database/master/source_databases_csv/database_IND.csv",
+                "Creative Commons Attribution 4.0 (CC BY 4.0)",
+                required_fields=("country", "country_long", "name", "gppd_idnr", "capacity_mw", "latitude", "longitude", "primary_fuel", "owner", "source", "url"),
+                filter_rule="Keep India plant rows with valid WGS84 coordinates and filter them through the India carrier scope.",
+                notes="WRI publishes country-level source CSV files and the Global Power Plant Database release under CC BY 4.0.",
+            ),
+        ),
+    ),
+    "india_industrial_zones": CountrySourceSpec(
+        pack_id="india_industrial_zones",
+        family="industrial_zones",
+        country="India",
+        cache_subdir="india_osm_gpkg",
+        source_truth="Geofabrik India OpenStreetMap free GeoPackage zone extracts",
+        geometry_truth="OSM landuse=industrial polygon representative points from Geofabrik India zone GeoPackages clipped to the India workbench carrier",
+        output_contract=("industrial_zones.preview.geojson", "industrial_zones.geojson"),
+        sources=_geofabrik_facility_gpkg_sources(base_path="asia/india", subregions=INDIA_GEOFABRIK_SUBREGIONS, family="industrial_zones"),
+    ),
+    "india_logistics_hubs": CountrySourceSpec(
+        pack_id="india_logistics_hubs",
+        family="logistics_hubs",
+        country="India",
+        cache_subdir="india_osm_gpkg",
+        source_truth="Geofabrik India OpenStreetMap free GeoPackage zone extracts",
+        geometry_truth="OSM transport terminal point and area representative points from Geofabrik India zone GeoPackages clipped to the India workbench carrier",
+        output_contract=("logistics_hubs.preview.geojson", "logistics_hubs.geojson"),
+        sources=_geofabrik_facility_gpkg_sources(base_path="asia/india", subregions=INDIA_GEOFABRIK_SUBREGIONS, family="logistics_hubs"),
+    ),
+    "india_mineral_resources": CountrySourceSpec(
+        pack_id="india_mineral_resources",
+        family="mineral_resources",
+        country="India",
+        cache_subdir="india_mineral_resources",
+        source_truth="USGS Mineral Resources Data System global point layer",
+        geometry_truth="USGS MRDS point records filtered to the India workbench carrier",
+        output_contract=("mineral_resources.preview.geojson", "mineral_resources.geojson"),
+        sources=(
+            _source(
+                "usgs_mrds_feature_service",
+                "arcgis_feature_service_query",
+                "usgs_mrds_global_2026-06-02.geojson",
+                "https://energy.usgs.gov/arcgis/rest/services/Hosted/Mineral_Resource_Data_System/FeatureServer/0",
+                "U.S. Geological Survey public data",
+                required_fields=("objectid_1", "dep_id", "site_name", "dev_stat", "code_list", "grade", "geometry"),
+                filter_rule="Cache global MRDS point rows, filter to the India carrier scope locally, and keep best-ranked producer/plant/prospect records first.",
+                notes="MRDS is a global historical mineral occurrence database; this first India resource slice uses carrier filtering instead of country-name fields.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "objectid_1,dep_id,site_name,dev_stat,code_list,grade",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+        ),
+    ),
+    "russia_rail": _geofabrik_osm_gpkg_spec(
+        pack_id="russia_rail",
+        family="rail",
+        country="Russia",
+        cache_subdir="russia_osm_gpkg",
+        source_truth="Geofabrik Russia OpenStreetMap free GeoPackage federal-district extracts",
+        geometry_truth="OSM rail lines and railway-station points from Geofabrik Russia federal-district GeoPackages clipped to the Russia workbench carrier",
+        base_path="russia",
+        subregions=RUSSIA_GEOFABRIK_SUBREGIONS,
+        filter_rule="Keep OSM railway=rail/light_rail/subway/tram/narrow_gauge, remove service yard/siding/spur/crossover from preview, derive station sidecar from OSM point tags, and clip to the Russia carrier scope.",
+        notes="Russia scope uses the national extract and carrier clipping so Kaliningrad remains in scope while foreign admin bleed is removed.",
+    ),
+    "russia_energy_facilities": CountrySourceSpec(
+        pack_id="russia_energy_facilities",
+        family="energy_facilities",
+        country="Russia",
+        cache_subdir="russia_energy_facilities",
+        source_truth="WRI Global Power Plant Database global CSV",
+        geometry_truth="WRI plant latitude/longitude points filtered to the Russia workbench carrier",
+        output_contract=("energy_facilities.preview.geojson", "energy_facilities.geojson"),
+        sources=(
+            _source(
+                "wri_global_power_plant_database_csv",
+                "direct_power_plant_csv",
+                "global_power_plant_database.csv",
+                "https://raw.githubusercontent.com/wri/global-power-plant-database/master/output_database/global_power_plant_database.csv",
+                "Creative Commons Attribution 4.0 (CC BY 4.0)",
+                required_fields=("country", "country_long", "name", "gppd_idnr", "capacity_mw", "latitude", "longitude", "primary_fuel", "owner", "source", "url"),
+                filter_rule="Keep RUS plant rows with valid WGS84 coordinates and filter them through the Russia carrier scope.",
+                notes="WRI publishes a global CSV release; country-specific CHN/RUS CSV files are not available in the upstream repository.",
+            ),
+        ),
+    ),
+    "russia_industrial_zones": CountrySourceSpec(
+        pack_id="russia_industrial_zones",
+        family="industrial_zones",
+        country="Russia",
+        cache_subdir="russia_osm_gpkg",
+        source_truth="Geofabrik Russia OpenStreetMap free GeoPackage federal-district extracts",
+        geometry_truth="OSM landuse=industrial polygon representative points from Geofabrik Russia federal-district GeoPackages clipped to the Russia workbench carrier",
+        output_contract=("industrial_zones.preview.geojson", "industrial_zones.geojson"),
+        sources=_geofabrik_facility_gpkg_sources(base_path="russia", subregions=RUSSIA_GEOFABRIK_SUBREGIONS, family="industrial_zones"),
+    ),
+    "russia_logistics_hubs": CountrySourceSpec(
+        pack_id="russia_logistics_hubs",
+        family="logistics_hubs",
+        country="Russia",
+        cache_subdir="russia_osm_gpkg",
+        source_truth="Geofabrik Russia OpenStreetMap free GeoPackage federal-district extracts",
+        geometry_truth="OSM transport terminal point and area representative points from Geofabrik Russia federal-district GeoPackages clipped to the Russia workbench carrier",
+        output_contract=("logistics_hubs.preview.geojson", "logistics_hubs.geojson"),
+        sources=_geofabrik_facility_gpkg_sources(base_path="russia", subregions=RUSSIA_GEOFABRIK_SUBREGIONS, family="logistics_hubs"),
+    ),
+    "russia_mineral_resources": CountrySourceSpec(
+        pack_id="russia_mineral_resources",
+        family="mineral_resources",
+        country="Russia",
+        cache_subdir="russia_mineral_resources",
+        source_truth="USGS Mineral Resources Data System global point layer",
+        geometry_truth="USGS MRDS point records filtered to the Russia workbench carrier",
+        output_contract=("mineral_resources.preview.geojson", "mineral_resources.geojson"),
+        sources=(
+            _source(
+                "usgs_mrds_feature_service",
+                "arcgis_feature_service_query",
+                "usgs_mrds_global_2026-06-02.geojson",
+                "https://energy.usgs.gov/arcgis/rest/services/Hosted/Mineral_Resource_Data_System/FeatureServer/0",
+                "U.S. Geological Survey public data",
+                required_fields=("objectid_1", "dep_id", "site_name", "dev_stat", "code_list", "grade", "geometry"),
+                filter_rule="Cache global MRDS point rows, filter to the Russia carrier scope locally, and keep best-ranked producer/plant/prospect records first.",
+                notes="MRDS is a global historical mineral occurrence database; this first Russia resource slice uses carrier filtering because the layer does not expose a country field.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "objectid_1,dep_id,site_name,dev_stat,code_list,grade",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+        ),
+    ),
+    "usa_energy_facilities": CountrySourceSpec(
+        pack_id="usa_energy_facilities",
+        family="energy_facilities",
+        country="United States",
+        cache_subdir="usa_energy_facilities",
+        source_truth="EIA Form EIA-860 final 2024 plant and generator files",
+        geometry_truth="EIA-860 plant latitude/longitude fields filtered to the United States carrier scope",
+        output_contract=("energy_facilities.preview.geojson", "energy_facilities.geojson"),
+        sources=(
+            _source(
+                "eia_860_2024_final",
+                "primary_registry_geometry",
+                "eia8602024.zip",
+                "https://www.eia.gov/electricity/data/eia860/xls/eia8602024.zip",
+                "U.S. federal public data; preserve EIA source notice",
+                required_fields=("Plant Code", "Plant Name", "State", "County", "Latitude", "Longitude", "Nameplate Capacity (MW)", "Energy Source 1", "Status"),
+                filter_rule="Use plant coordinates and aggregate operable generator capacity by plant; preview sorts by capacity.",
+                notes="EIA describes EIA-860 as plant/generator data for power plants with at least 1 MW combined nameplate capacity.",
+            ),
+        ),
+    ),
+    "usa_mineral_resources": CountrySourceSpec(
+        pack_id="usa_mineral_resources",
+        family="mineral_resources",
+        country="United States",
+        cache_subdir="usa_mineral_resources",
+        source_truth="USGS Mineral Resources Data System FeatureServer",
+        geometry_truth="USGS MRDS point layer filtered to the United States carrier scope",
+        output_contract=("mineral_resources.preview.geojson", "mineral_resources.geojson"),
+        sources=(
+            _source(
+                "usgs_mrds_feature_service",
+                "arcgis_feature_service_query",
+                "usgs_mrds_2026-06-02.geojson",
+                "https://energy.usgs.gov/arcgis/rest/services/Hosted/Mineral_Resource_Data_System/FeatureServer/0",
+                "USGS public data; preserve USGS source notice",
+                required_fields=("objectid_1", "dep_id", "site_name", "dev_stat", "code_list", "grade", "geometry"),
+                filter_rule="Cache MRDS point rows, filter to USA carrier scope locally, and keep best-ranked producer/plant/prospect records first.",
+                notes="MRDS is global, but USGS states the database was intended to cover the United States completely.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "objectid_1,dep_id,site_name,dev_stat,code_list,grade",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+        ),
+    ),
+    "usa_industrial_zones": CountrySourceSpec(
+        pack_id="usa_industrial_zones",
+        family="industrial_zones",
+        country="United States",
+        cache_subdir="usa_industrial_zones",
+        source_truth="U.S. Census TIGER/Line 2025 state area landmarks",
+        geometry_truth="Census AREALM polygons filtered to MTFCC K2362 Industrial Building or Industrial Park",
+        output_contract=("industrial_zones.preview.geojson", "industrial_zones.geojson"),
+        sources=_usa_arealm_sources(),
+    ),
+    "usa_logistics_hubs": CountrySourceSpec(
+        pack_id="usa_logistics_hubs",
+        family="logistics_hubs",
+        country="United States",
+        cache_subdir="usa_logistics_hubs",
+        source_truth="BTS NTAD Intermodal Freight Facilities FeatureServer layers",
+        geometry_truth="BTS ArcGIS FeatureServer point exports for rail, air-to-truck, and pipeline-terminal intermodal facilities",
+        output_contract=("logistics_hubs.preview.geojson", "logistics_hubs.geojson"),
+        sources=(
+            _source(
+                "bts_intermodal_rail_tofc_cofc",
+                "arcgis_feature_service_query",
+                "bts_intermodal_rail_tofc_cofc_2022-07-22.geojson",
+                "https://services.arcgis.com/xOi1kZaI0eWDREZv/ArcGIS/rest/services/NTAD_Intermodal_Freight_Facilities_Rail_TOFC_COFC/FeatureServer/0",
+                "U.S. federal public data; acknowledgment of BTS",
+                required_fields=("OBJECTID", "TERMINAL", "RAIL_CO", "SPLC", "geometry"),
+                filter_rule="Rail TOFC/COFC intermodal freight terminals.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "*",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+            _source(
+                "bts_intermodal_air_to_truck",
+                "arcgis_feature_service_query",
+                "bts_intermodal_air_to_truck_2020-02-24.geojson",
+                "https://services.arcgis.com/xOi1kZaI0eWDREZv/ArcGIS/rest/services/NTAD_Intermodal_Freight_Facilities_Air_to_Truck/FeatureServer/0",
+                "U.S. federal public data; acknowledgment of BTS",
+                required_fields=("OBJECTID", "LOCID", "FACILITY_C", "geometry"),
+                filter_rule="Air-to-truck freight intermodal facilities at major freight airports.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "*",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+            _source(
+                "bts_intermodal_pipeline_terminals",
+                "arcgis_feature_service_query",
+                "bts_intermodal_pipeline_terminals_2021-04-21.geojson",
+                "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Intermodal_Freight_Facilities_Pipeline_Terminals/FeatureServer/0",
+                "U.S. federal public data; acknowledgment of BTS",
+                required_fields=("OBJECTID", "TERM_NAME", "COMP_NAME", "TRUCK", "RAIL", "WATER", "geometry"),
+                filter_rule="Pipeline terminals with truck/rail/water intermodal links.",
+                query_params={
+                    "where": "1=1",
+                    "outFields": "*",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "resultRecordCount": "2000",
+                },
+            ),
+        ),
+    ),
+    "uk_energy_facilities": CountrySourceSpec(
+        pack_id="uk_energy_facilities",
+        family="energy_facilities",
+        country="United Kingdom",
+        cache_subdir="uk_energy_facilities",
+        source_truth="DESNZ Renewable Energy Planning Database April 2026 quarterly extract",
+        geometry_truth="REPD British National Grid X/Y project coordinates transformed to WGS84 and clipped to the UK carrier scope",
+        output_contract=("energy_facilities.preview.geojson", "energy_facilities.geojson"),
+        sources=(
+            _source(
+                "desnz_repd_q1_2026_csv",
+                "primary_registry_geometry",
+                "REPD_publication_Q1_2026.csv",
+                "https://assets.publishing.service.gov.uk/media/69fc56908cc72d2f863ea58d/REPD_publication_Q1_2026.csv",
+                "UK Open Government Licence v3.0",
+                required_fields=("Ref ID", "Operator (or Applicant)", "Site Name", "Technology Type", "Installed Capacity (MWelec)", "Development Status", "Country", "X-coordinate", "Y-coordinate"),
+                filter_rule="Keep rows with valid British National Grid coordinates, transform EPSG:27700 to EPSG:4326, and sort preview by installed capacity.",
+                notes="REPD is a UK renewable electricity project database for schemes above 150 kW and is updated quarterly by DESNZ.",
+            ),
+        ),
+    ),
+    "uk_industrial_zones": CountrySourceSpec(
+        pack_id="uk_industrial_zones",
+        family="industrial_zones",
+        country="United Kingdom",
+        cache_subdir="uk_industrial_zones",
+        source_truth="OpenStreetMap UK landuse=industrial polygons via Overpass API",
+        geometry_truth="Overpass JSON way/relation center coordinates for landuse=industrial polygons filtered through the UK carrier scope",
+        output_contract=("industrial_zones.preview.geojson", "industrial_zones.geojson"),
+        sources=(
+            _source(
+                "osm_overpass_uk_industrial_landuse",
+                "overpass_json_query",
+                "uk_industrial_zones_osm_overpass_2026-06-02.json",
+                "https://overpass-api.de/api/interpreter",
+                "OpenStreetMap data under ODbL 1.0",
+                required_fields=("elements", "type", "id", "tags", "center"),
+                filter_rule="Keep UK way/relation landuse=industrial elements; builder converts Overpass centers to point industrial-zone features and clips to the UK carrier.",
+                notes="This first UK industrial slice uses real OSM industrial polygon centers because full polygon geometry is too heavy for a stable Pages-oriented rollout.",
+                query_params={"data": UK_INDUSTRIAL_OVERPASS_QUERY},
+            ),
+        ),
+    ),
+    "uk_logistics_hubs": CountrySourceSpec(
+        pack_id="uk_logistics_hubs",
+        family="logistics_hubs",
+        country="United Kingdom",
+        cache_subdir="uk_logistics_hubs",
+        source_truth="OpenStreetMap UK freight yard, container terminal, loading dock, and logistics tags via Overpass API",
+        geometry_truth="Overpass JSON node coordinates and way/relation centers filtered through the UK carrier scope",
+        output_contract=("logistics_hubs.preview.geojson", "logistics_hubs.geojson"),
+        sources=(
+            _source(
+                "osm_overpass_uk_logistics_facilities",
+                "overpass_json_query",
+                "uk_logistics_hubs_osm_overpass_2026-06-02.json",
+                "https://overpass-api.de/api/interpreter",
+                "OpenStreetMap data under ODbL 1.0",
+                required_fields=("elements", "type", "id", "tags", "lat", "lon", "center"),
+                filter_rule="Keep UK railway yards, railway container terminals, freight rail landuse, industrial=logistics, and loading_dock elements; builder converts nodes/centers to point hubs and clips to the UK carrier.",
+                notes="This first UK logistics slice is a compact freight-facility point layer; it complements existing airport and port packs without publishing a country-sized OSM extract.",
+                query_params={"data": UK_LOGISTICS_OVERPASS_QUERY},
+            ),
+        ),
+    ),
+    "uk_mineral_resources": CountrySourceSpec(
+        pack_id="uk_mineral_resources",
+        family="mineral_resources",
+        country="United Kingdom",
+        cache_subdir="uk_mineral_resources",
+        source_truth="GSNI Northern Ireland Mineral Resources public GeoJSON package",
+        geometry_truth="OpenDataNI GeoJSON mineral resource polygons converted to representative points and filtered through the UK carrier scope",
+        output_contract=("mineral_resources.preview.geojson", "mineral_resources.geojson"),
+        sources=(
+            _source(
+                "gsni_northern_ireland_mineral_resources_json",
+                "opendatani_geojson_zip",
+                "mineralresourcesjson.zip",
+                "https://admin.opendatani.gov.uk/dataset/a47e1630-086f-4b92-9416-1197cc8c633a/resource/d9e9d0ba-3072-4efc-ba4c-6ff26fad1c22/download/mineralresourcesjson.zip",
+                "UK Open Government Licence v3.0",
+                required_fields=("RESOURCE", "geometry"),
+                filter_rule="Read the OpenDataNI mineral resource GeoJSON layers, convert polygons to representative points, and filter through the UK carrier scope.",
+                notes="This first UK mineral resource pack covers Northern Ireland's open GSNI mineral resource layers; Great Britain BGS premium mineral-resource polygons remain a future licensed-source track.",
+            ),
+        ),
+    ),
+    "france_energy_facilities": CountrySourceSpec(
+        pack_id="france_energy_facilities",
+        family="energy_facilities",
+        country="France",
+        cache_subdir="france_energy_facilities",
+        source_truth="Registre national electricity production/storage above 250 kW merged with OpenStreetMap geometry",
+        geometry_truth="Osmose OSM+opendata CSV.bz2 point export with lon/lat, clipped to the France metropolitan carrier scope",
+        output_contract=("energy_facilities.preview.geojson", "energy_facilities.geojson"),
+        sources=(
+            _source(
+                "osmose_fr_power_register_opendata_250kw",
+                "primary_registry_geometry",
+                "registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+                "https://osmose.openstreetmap.fr/export/osm_opendata/Registre%20national%20des%20installations%20de%20production%20d'%c3%a9lectricit%c3%a9%20et%20de%20stockage-Analyser_Merge_Power_Plant_FR.byOSM.csv.bz2",
+                "Open Data Commons Open Database License (ODbL)",
+                required_fields=("osm_id", "lon", "lat", "name", "operator", "plant:source", "plant:method", "plant:output:electricity"),
+                filter_rule="Use explicit lon/lat point rows and keep metropolitan France through the carrier scope.",
+                notes="The upstream data.gouv dataset merges the French national register with OpenStreetMap power plant geometry for installations above 250 kW.",
+            ),
+        ),
+    ),
+    "france_industrial_zones": CountrySourceSpec(
+        pack_id="france_industrial_zones",
+        family="industrial_zones",
+        country="France",
+        cache_subdir="france_industrial_zones",
+        source_truth="IGN BD TOPO zone d'activite ou d'interet WFS",
+        geometry_truth="IGN BD TOPO V3 zone_d_activite_ou_d_interet polygons filtered to industrial and commercial activity categories",
+        output_contract=("industrial_zones.preview.geojson", "industrial_zones.geojson"),
+        sources=(
+            _source(
+                "ign_bdtopo_zone_activite_wfs",
+                "wfs_feature_collection",
+                "ign_bdtopo_zone_activite_industriel_commercial.geojson",
+                "https://data.geopf.fr/wfs/ows",
+                "Licence Ouverte / Etalab 2.0 for IGN open datasets",
+                required_fields=("cleabs", "categorie", "nature", "nature_detaillee", "toponyme", "importance", "etat_de_l_objet", "geometry"),
+                filter_rule="WFS CQL filter keeps categorie='Industriel et commercial'; builder further keeps industrial, activity, commercial, market, and factory polygons visible under the industrial_zones contract.",
+                query_params={
+                    "SERVICE": "WFS",
+                    "VERSION": "2.0.0",
+                    "REQUEST": "GetFeature",
+                    "TYPENAMES": "BDTOPO_V3:zone_d_activite_ou_d_interet",
+                    "OUTPUTFORMAT": "application/json",
+                    "SRSNAME": "EPSG:4326",
+                    "COUNT": "5000",
+                    "CQL_FILTER": "categorie='Industriel et commercial'",
+                },
+            ),
+        ),
+    ),
+    "france_mineral_resources": CountrySourceSpec(
+        pack_id="france_mineral_resources",
+        family="mineral_resources",
+        country="France",
+        cache_subdir="france_mineral_resources",
+        source_truth="Camino open French mining cadastre titles GeoJSON",
+        geometry_truth="Camino title MultiPolygon perimeters converted to representative points and filtered to the metropolitan France carrier scope",
+        output_contract=("mineral_resources.preview.geojson", "mineral_resources.geojson"),
+        sources=(
+            _source(
+                "camino_titles_geojson",
+                "primary_cadastre_geojson",
+                "camino_titres_2026-06-02.geojson",
+                "https://api.camino.beta.gouv.fr/titres?format=geojson",
+                "Licence Ouverte / Open Licence 2.0 via data.gouv.fr API Camino",
+                required_fields=("id", "nom", "type", "domaine", "statut", "substances", "surface_totale", "departements", "regions", "geometry"),
+                filter_rule="Convert public title perimeters to representative points, keep mineral/mining domains, and filter through the metropolitan France carrier scope; overseas territories are excluded by the carrier.",
+                notes="Camino exposes public French mining cadastre titles and authorizations as GeoJSON through api.camino.beta.gouv.fr.",
+            ),
+        ),
+    ),
+    "france_logistics_hubs": CountrySourceSpec(
+        pack_id="france_logistics_hubs",
+        family="logistics_hubs",
+        country="France",
+        cache_subdir="france_logistics_hubs",
+        source_truth="Cerema ITE 3000 French freight private sidings database",
+        geometry_truth="ITE 3000 GeoJSON point locations filtered to the metropolitan France carrier scope",
+        output_contract=("logistics_hubs.preview.geojson", "logistics_hubs.geojson"),
+        sources=(
+            _source(
+                "cerema_ite3000_geojson",
+                "primary_logistics_geojson",
+                "base-ite-3000_2026-04-15.geojson",
+                "https://static.data.gouv.fr/resources/base-de-donnees-des-installations-terminales-embranchees-fret-en-france-ite-3000/20260415-093501/base-ite-3000.geojson",
+                "Licence Ouverte / Open Licence 2.0",
+                required_fields=("ID_ITE", "Raison_sociale", "Commune", "Utilisation_ITE", "Etat_ITE", "Convention_active", "Circulation_récente", "Produit_transporté", "geometry"),
+                filter_rule="Keep point ITE records inside the metropolitan France carrier scope and map them to rail_cargo_station logistics hubs.",
+                notes="ITE 3000 identifies French freight private sidings used for loading or unloading goods at industrial sites.",
+            ),
+        ),
+    ),
     "germany_rail": CountrySourceSpec(
         pack_id="germany_rail",
         family="rail",
@@ -211,6 +1090,37 @@ COUNTRY_SOURCE_SPECS: dict[str, CountrySourceSpec] = {
                 required_fields=("AX_Bahnstrecke", "AX_Bahnverkehrsanlage", "bahnkategorie", "geometry"),
                 filter_rule="Build rail line geometry from AX_Bahnstrecke and station points from AX_Bahnverkehrsanlage.",
                 notes="The cache directory intentionally reuses the Germany DLM250 source already required by germany_road.",
+            ),
+        ),
+    ),
+    "uk_rail": CountrySourceSpec(
+        pack_id="uk_rail",
+        family="rail",
+        country="United Kingdom",
+        cache_subdir="uk_rail",
+        source_truth="Network Rail Infrastructure Network Model EIR release mirrored by openraildata",
+        geometry_truth="Network Rail network-model GeoPackage VectorReferenceLines/VectorLinks",
+        output_contract=("railways.preview.topo.json", "railways.topo.json", "rail_stations_major.preview.geojson", "rail_stations_major.geojson"),
+        sources=(
+            _source(
+                "network_rail_inm_network_model_gpkg",
+                "primary_line_geometry",
+                "network-model.gpkg",
+                "https://github.com/openraildata/network-rail-gis/releases/download/20230711-01/network-model.gpkg",
+                "UK Open Government Licence via Network Rail EIR release mirror",
+                required_fields=("VectorReferenceLines", "VectorNodes", "ELR", "geometry"),
+                filter_rule="Use VectorReferenceLines where present, otherwise VectorLinks; station sidecar comes from named nodes.",
+                notes="The upstream mirror is archived and points users to Rail Data Marketplace for current feeds; it remains the most reproducible open OGL geometry source found for this preview phase.",
+            ),
+            _source(
+                "dft_naptan_national_access_nodes_csv",
+                "major_station_scope",
+                "naptan_access_nodes_2026-06-02.csv",
+                "https://naptan.api.dft.gov.uk/v1/access-nodes?dataFormat=csv",
+                "UK Open Government Licence v3.0",
+                required_fields=("ATCOCode", "CommonName", "StopType", "Status", "Longitude", "Latitude"),
+                filter_rule="Keep Great Britain rail station and station entrance stop types; Northern Ireland stations need a later Translink/OpenDataNI source.",
+                notes="NaPTAN covers England, Scotland and Wales and is the official DfT access-node register.",
             ),
         ),
     ),
@@ -652,6 +1562,76 @@ def file_signature(path: Path) -> dict[str, Any]:
     }
 
 
+def validate_overpass_json_source(path: Path) -> list[str]:
+    errors: list[str] = []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"invalid Overpass JSON: {exc}"]
+    if str(payload.get("remark") or "").strip():
+        errors.append(f"Overpass response contains remark: {payload.get('remark')}")
+    elements = payload.get("elements")
+    if not isinstance(elements, list) or not elements:
+        errors.append("Overpass response has no elements")
+        return errors
+    for index, element in enumerate(elements):
+        if not isinstance(element, dict):
+            errors.append(f"element[{index}] is not an object")
+            continue
+        if not element.get("type") or element.get("id") is None:
+            errors.append(f"element[{index}] missing type/id")
+        if not isinstance(element.get("tags"), dict):
+            errors.append(f"element[{index}] missing tags object")
+        if element.get("type") == "node":
+            if element.get("lat") is None or element.get("lon") is None:
+                errors.append(f"node element[{index}] missing lat/lon")
+        else:
+            center = element.get("center")
+            if not isinstance(center, dict) or center.get("lat") is None or center.get("lon") is None:
+                errors.append(f"{element.get('type') or 'non-node'} element[{index}] missing center lat/lon")
+        if errors:
+            break
+    return errors
+
+
+def validate_opendatani_geojson_zip_source(path: Path) -> list[str]:
+    errors: list[str] = []
+    try:
+        with zipfile.ZipFile(path) as archive:
+            json_names = [name for name in archive.namelist() if name.casefold().endswith(".json")]
+            if not json_names:
+                return ["GeoJSON ZIP has no .json members"]
+            for name in json_names:
+                with archive.open(name) as handle:
+                    payload = json.load(handle)
+                if payload.get("type") != "FeatureCollection":
+                    errors.append(f"{name} is not a FeatureCollection")
+                    break
+                features = payload.get("features")
+                if not isinstance(features, list) or not features:
+                    errors.append(f"{name} has no features")
+                    break
+                properties = features[0].get("properties") or {}
+                geometry = features[0].get("geometry") or {}
+                if "RESOURCE" not in properties:
+                    errors.append(f"{name} first feature missing RESOURCE")
+                    break
+                if not geometry.get("type"):
+                    errors.append(f"{name} first feature missing geometry")
+                    break
+    except (OSError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
+        return [f"invalid GeoJSON ZIP: {exc}"]
+    return errors
+
+
+def validate_source_file(source: SourceRequirement, path: Path) -> list[str]:
+    if source.role == "overpass_json_query":
+        return validate_overpass_json_source(path)
+    if source.role == "opendatani_geojson_zip":
+        return validate_opendatani_geojson_zip_source(path)
+    return []
+
+
 def check_country_sources(
     spec: CountrySourceSpec,
     *,
@@ -660,6 +1640,7 @@ def check_country_sources(
     cache_dir = source_cache_root / spec.cache_subdir
     sources: list[dict[str, Any]] = []
     missing: list[dict[str, str]] = []
+    invalid: list[dict[str, Any]] = []
     for source in spec.sources:
         path = cache_dir / source.filename
         record: dict[str, Any] = {
@@ -668,12 +1649,18 @@ def check_country_sources(
             "expected_path": path.as_posix(),
             "url": source.url,
             "license": source.license,
+            "required_layers": list(source.required_layers),
             "required_fields": list(source.required_fields),
             "filter_rule": source.filter_rule,
             "notes": source.notes,
+            "query_params": dict(source.query_params),
         }
         if path.is_file():
             record["signature"] = file_signature(path)
+            validation_errors = validate_source_file(source, path)
+            if validation_errors:
+                record["validation_errors"] = validation_errors
+                invalid.append({"id": source.id, "expected_path": path.as_posix(), "errors": validation_errors})
         else:
             record["missing"] = True
             missing.append({"id": source.id, "expected_path": path.as_posix(), "url": source.url})
@@ -687,7 +1674,8 @@ def check_country_sources(
         "source_cache_dir": cache_dir.as_posix(),
         "sources": sources,
         "missing_sources": missing,
-        "ready": not missing,
+        "invalid_sources": invalid,
+        "ready": not missing and not invalid,
     }
 
 

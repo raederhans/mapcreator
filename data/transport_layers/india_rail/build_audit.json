@@ -1,0 +1,89 @@
+{
+  "generated_at": "2026-06-02T19:32:39.996792Z",
+  "adapter_id": "india_rail_v1",
+  "pack_id": "india_rail",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "Geofabrik India OpenStreetMap free GeoPackage zone extracts",
+  "geometry_truth": "OSM rail lines and railway-station points from Geofabrik India zone GeoPackages clipped to the India workbench carrier",
+  "source_signature": {
+    "geofabrik_gpkg_central_zone": {
+      "filename": "central-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/central-zone-latest-free.gpkg.zip",
+      "size_bytes": 902544040,
+      "sha256": "0c432dd919ec5994a030a8716ef4117390603cafb03f0aa90d809591287c5b52"
+    },
+    "geofabrik_gpkg_eastern_zone": {
+      "filename": "eastern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/eastern-zone-latest-free.gpkg.zip",
+      "size_bytes": 592318120,
+      "sha256": "31d009c07f7592b74edc8e32a457f370bb7136272624db75d492d88216e10dd1"
+    },
+    "geofabrik_gpkg_north_eastern_zone": {
+      "filename": "north-eastern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/north-eastern-zone-latest-free.gpkg.zip",
+      "size_bytes": 277027260,
+      "sha256": "8de115add4f63b177cbc44a68b81d192932482039e300c8032908253423c74f1"
+    },
+    "geofabrik_gpkg_northern_zone": {
+      "filename": "northern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/northern-zone-latest-free.gpkg.zip",
+      "size_bytes": 497974772,
+      "sha256": "bc88daefc059deca34f336ef8f5eab5f5aa19c1d8d33f22351005cd48d4e6680"
+    },
+    "geofabrik_gpkg_southern_zone": {
+      "filename": "southern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/southern-zone-latest-free.gpkg.zip",
+      "size_bytes": 1256763484,
+      "sha256": "7fc516d96a208481b283993d4add22bbdd3c3d528f3e91a1b414c2ce5d15cbcb"
+    },
+    "geofabrik_gpkg_western_zone": {
+      "filename": "western-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/western-zone-latest-free.gpkg.zip",
+      "size_bytes": 496669922,
+      "sha256": "6ad42adb43e16abdd011692af41fc0b6c20e4e78f2416baad6a2669d28cc4b8e"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "railways": 4000,
+      "rail_stations_major": 400
+    },
+    "full": {
+      "railways": 50000,
+      "rail_stations_major": 2500
+    }
+  },
+  "source_row_count": {
+    "geofabrik_gpkg_central_zone": {
+      "railways": 22011,
+      "transport": 1876
+    },
+    "geofabrik_gpkg_eastern_zone": {
+      "railways": 22796,
+      "transport": 1935
+    },
+    "geofabrik_gpkg_north_eastern_zone": {
+      "railways": 5032,
+      "transport": 368
+    },
+    "geofabrik_gpkg_northern_zone": {
+      "railways": 13377,
+      "transport": 1464
+    },
+    "geofabrik_gpkg_southern_zone": {
+      "railways": 25324,
+      "transport": 1833
+    },
+    "geofabrik_gpkg_western_zone": {
+      "railways": 16542,
+      "transport": 1567
+    }
+  },
+  "matched_count": {
+    "railways": 50000,
+    "rail_stations_major": 2500
+  },
+  "preview_rule": "Geofabrik free GeoPackage rail classes capped at 4000; station sidecar capped at 400 preview points.",
+  "scope_rule": "Subregion GeoPackages clipped to transport_carrier:india.",
+  "filter_rule": "OSM fclass railway whitelist and transport fclass railway_station sidecar."
+}

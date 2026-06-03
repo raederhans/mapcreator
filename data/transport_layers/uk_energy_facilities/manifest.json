@@ -1,0 +1,79 @@
+{
+  "adapter_id": "uk_energy_facilities_v1",
+  "pack_id": "uk_energy_facilities",
+  "family": "energy_facilities",
+  "geometry_kind": "point",
+  "country": "United Kingdom",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T17:55:32.168501Z",
+  "recipe_path": "data/transport_layers/uk_energy_facilities/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "energy_facilities": "data/transport_layers/uk_energy_facilities/energy_facilities.preview.geojson"
+    },
+    "full": {
+      "energy_facilities": "data/transport_layers/uk_energy_facilities/energy_facilities.geojson"
+    },
+    "build_audit": "data/transport_layers/uk_energy_facilities/build_audit.json"
+  },
+  "source_signature": {
+    "desnz_repd_q1_2026_csv": {
+      "filename": "REPD_publication_Q1_2026.csv",
+      "path": ".runtime/source-cache/transport/uk_energy_facilities/REPD_publication_Q1_2026.csv",
+      "size_bytes": 4951077,
+      "sha256": "3aa6752bfdc6b5275f8be0585ad8bd00a8646bd522d686cfb57d95cc9d8688a3"
+    }
+  },
+  "recipe_version": "uk_energy_facilities_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 4000
+    },
+    "full": {
+      "energy_facilities": 13989
+    }
+  },
+  "clip_bbox": [
+    -8.093027,
+    50.044743,
+    1.761501,
+    60.704105
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack uk_energy_facilities",
+  "runtime_consumer": "transport_workbench_energy_facilities_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:uk",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "energy_facilities": "data/transport_layers/uk_energy_facilities/energy_facilities.preview.geojson"
+        },
+        "full": {
+          "energy_facilities": "data/transport_layers/uk_energy_facilities/energy_facilities.geojson"
+        },
+        "build_audit": "data/transport_layers/uk_energy_facilities/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "energy_facilities": 4000
+        },
+        "full": {
+          "energy_facilities": 13989
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:uk",
+      "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography."
+    }
+  }
+}

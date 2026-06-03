@@ -1,0 +1,52 @@
+{
+  "version": "france_energy_facilities_real_sources_v1",
+  "pack_id": "france_energy_facilities",
+  "family": "energy_facilities",
+  "country": "France",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/france_energy_facilities",
+  "source_truth": "Registre national electricity production/storage above 250 kW merged with OpenStreetMap geometry",
+  "geometry_truth": "Osmose OSM+opendata CSV.bz2 point export with lon/lat, clipped to the France metropolitan carrier scope",
+  "sources": [
+    {
+      "id": "osmose_fr_power_register_opendata_250kw",
+      "role": "primary_registry_geometry",
+      "expected_path": ".runtime/source-cache/transport/france_energy_facilities/registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "url": "https://osmose.openstreetmap.fr/export/osm_opendata/Registre%20national%20des%20installations%20de%20production%20d'%c3%a9lectricit%c3%a9%20et%20de%20stockage-Analyser_Merge_Power_Plant_FR.byOSM.csv.bz2",
+      "license": "Open Data Commons Open Database License (ODbL)",
+      "required_layers": [],
+      "required_fields": [
+        "osm_id",
+        "lon",
+        "lat",
+        "name",
+        "operator",
+        "plant:source",
+        "plant:method",
+        "plant:output:electricity"
+      ],
+      "filter_rule": "Use explicit lon/lat point rows and keep metropolitan France through the carrier scope.",
+      "notes": "The upstream data.gouv dataset merges the French national register with OpenStreetMap power plant geometry for installations above 250 kW.",
+      "query_params": {},
+      "signature": {
+        "filename": "registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+        "path": ".runtime/source-cache/transport/france_energy_facilities/registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+        "size_bytes": 440662,
+        "sha256": "f1e73543d891ece7bc4f5fa76a6391358922ed4c86d218beff303433cdcf8acc"
+      }
+    }
+  ],
+  "source_signature": {
+    "osmose_fr_power_register_opendata_250kw": {
+      "filename": "registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "path": ".runtime/source-cache/transport/france_energy_facilities/registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "size_bytes": 440662,
+      "sha256": "f1e73543d891ece7bc4f5fa76a6391358922ed4c86d218beff303433cdcf8acc"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "energy_facilities.preview.geojson",
+    "energy_facilities.geojson"
+  ]
+}

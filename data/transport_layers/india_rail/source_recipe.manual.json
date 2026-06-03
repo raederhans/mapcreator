@@ -1,0 +1,213 @@
+{
+  "version": "india_rail_real_sources_v1",
+  "pack_id": "india_rail",
+  "family": "rail",
+  "country": "India",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/india_osm_gpkg",
+  "source_truth": "Geofabrik India OpenStreetMap free GeoPackage zone extracts",
+  "geometry_truth": "OSM rail lines and railway-station points from Geofabrik India zone GeoPackages clipped to the India workbench carrier",
+  "sources": [
+    {
+      "id": "geofabrik_gpkg_central_zone",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/india_osm_gpkg/central-zone-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/asia/india/central-zone-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_railways_free",
+        "gis_osm_transport_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "central-zone-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/india_osm_gpkg/central-zone-latest-free.gpkg.zip",
+        "size_bytes": 902544040,
+        "sha256": "0c432dd919ec5994a030a8716ef4117390603cafb03f0aa90d809591287c5b52"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_eastern_zone",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/india_osm_gpkg/eastern-zone-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/asia/india/eastern-zone-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_railways_free",
+        "gis_osm_transport_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "eastern-zone-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/india_osm_gpkg/eastern-zone-latest-free.gpkg.zip",
+        "size_bytes": 592318120,
+        "sha256": "31d009c07f7592b74edc8e32a457f370bb7136272624db75d492d88216e10dd1"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_north_eastern_zone",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/india_osm_gpkg/north-eastern-zone-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/asia/india/north-eastern-zone-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_railways_free",
+        "gis_osm_transport_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "north-eastern-zone-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/india_osm_gpkg/north-eastern-zone-latest-free.gpkg.zip",
+        "size_bytes": 277027260,
+        "sha256": "8de115add4f63b177cbc44a68b81d192932482039e300c8032908253423c74f1"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_northern_zone",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/india_osm_gpkg/northern-zone-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/asia/india/northern-zone-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_railways_free",
+        "gis_osm_transport_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "northern-zone-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/india_osm_gpkg/northern-zone-latest-free.gpkg.zip",
+        "size_bytes": 497974772,
+        "sha256": "bc88daefc059deca34f336ef8f5eab5f5aa19c1d8d33f22351005cd48d4e6680"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_southern_zone",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/india_osm_gpkg/southern-zone-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/asia/india/southern-zone-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_railways_free",
+        "gis_osm_transport_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "southern-zone-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/india_osm_gpkg/southern-zone-latest-free.gpkg.zip",
+        "size_bytes": 1256763484,
+        "sha256": "7fc516d96a208481b283993d4add22bbdd3c3d528f3e91a1b414c2ce5d15cbcb"
+      }
+    },
+    {
+      "id": "geofabrik_gpkg_western_zone",
+      "role": "osm_gpkg_subregion_extract",
+      "expected_path": ".runtime/source-cache/transport/india_osm_gpkg/western-zone-latest-free.gpkg.zip",
+      "url": "https://download.geofabrik.de/asia/india/western-zone-latest-free.gpkg.zip",
+      "license": "OpenStreetMap data under ODbL 1.0 via Geofabrik public free GeoPackage extract",
+      "required_layers": [
+        "gis_osm_railways_free",
+        "gis_osm_transport_free"
+      ],
+      "required_fields": [
+        "osm_id",
+        "fclass",
+        "name",
+        "geometry"
+      ],
+      "filter_rule": "Read the free GeoPackage rail and transport layers, keep rail lines and railway_station points, then clip to the workbench carrier scope.",
+      "notes": "Free GeoPackage extracts are pre-layered by Geofabrik and avoid direct country-sized PBF scans.",
+      "query_params": {},
+      "signature": {
+        "filename": "western-zone-latest-free.gpkg.zip",
+        "path": ".runtime/source-cache/transport/india_osm_gpkg/western-zone-latest-free.gpkg.zip",
+        "size_bytes": 496669922,
+        "sha256": "6ad42adb43e16abdd011692af41fc0b6c20e4e78f2416baad6a2669d28cc4b8e"
+      }
+    }
+  ],
+  "source_signature": {
+    "geofabrik_gpkg_central_zone": {
+      "filename": "central-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/central-zone-latest-free.gpkg.zip",
+      "size_bytes": 902544040,
+      "sha256": "0c432dd919ec5994a030a8716ef4117390603cafb03f0aa90d809591287c5b52"
+    },
+    "geofabrik_gpkg_eastern_zone": {
+      "filename": "eastern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/eastern-zone-latest-free.gpkg.zip",
+      "size_bytes": 592318120,
+      "sha256": "31d009c07f7592b74edc8e32a457f370bb7136272624db75d492d88216e10dd1"
+    },
+    "geofabrik_gpkg_north_eastern_zone": {
+      "filename": "north-eastern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/north-eastern-zone-latest-free.gpkg.zip",
+      "size_bytes": 277027260,
+      "sha256": "8de115add4f63b177cbc44a68b81d192932482039e300c8032908253423c74f1"
+    },
+    "geofabrik_gpkg_northern_zone": {
+      "filename": "northern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/northern-zone-latest-free.gpkg.zip",
+      "size_bytes": 497974772,
+      "sha256": "bc88daefc059deca34f336ef8f5eab5f5aa19c1d8d33f22351005cd48d4e6680"
+    },
+    "geofabrik_gpkg_southern_zone": {
+      "filename": "southern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/southern-zone-latest-free.gpkg.zip",
+      "size_bytes": 1256763484,
+      "sha256": "7fc516d96a208481b283993d4add22bbdd3c3d528f3e91a1b414c2ce5d15cbcb"
+    },
+    "geofabrik_gpkg_western_zone": {
+      "filename": "western-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/western-zone-latest-free.gpkg.zip",
+      "size_bytes": 496669922,
+      "sha256": "6ad42adb43e16abdd011692af41fc0b6c20e4e78f2416baad6a2669d28cc4b8e"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "railways.preview.topo.json",
+    "railways.topo.json",
+    "rail_stations_major.preview.geojson",
+    "rail_stations_major.geojson"
+  ]
+}

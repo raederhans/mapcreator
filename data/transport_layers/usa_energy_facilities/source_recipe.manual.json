@@ -1,0 +1,53 @@
+{
+  "version": "usa_energy_facilities_real_sources_v1",
+  "pack_id": "usa_energy_facilities",
+  "family": "energy_facilities",
+  "country": "United States",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/usa_energy_facilities",
+  "source_truth": "EIA Form EIA-860 final 2024 plant and generator files",
+  "geometry_truth": "EIA-860 plant latitude/longitude fields filtered to the United States carrier scope",
+  "sources": [
+    {
+      "id": "eia_860_2024_final",
+      "role": "primary_registry_geometry",
+      "expected_path": ".runtime/source-cache/transport/usa_energy_facilities/eia8602024.zip",
+      "url": "https://www.eia.gov/electricity/data/eia860/xls/eia8602024.zip",
+      "license": "U.S. federal public data; preserve EIA source notice",
+      "required_layers": [],
+      "required_fields": [
+        "Plant Code",
+        "Plant Name",
+        "State",
+        "County",
+        "Latitude",
+        "Longitude",
+        "Nameplate Capacity (MW)",
+        "Energy Source 1",
+        "Status"
+      ],
+      "filter_rule": "Use plant coordinates and aggregate operable generator capacity by plant; preview sorts by capacity.",
+      "notes": "EIA describes EIA-860 as plant/generator data for power plants with at least 1 MW combined nameplate capacity.",
+      "query_params": {},
+      "signature": {
+        "filename": "eia8602024.zip",
+        "path": ".runtime/source-cache/transport/usa_energy_facilities/eia8602024.zip",
+        "size_bytes": 22100342,
+        "sha256": "0aaae04812cd4ab87a3e346bdf93848a3cc15053fd4dc2a4cf82d2aeac95f12b"
+      }
+    }
+  ],
+  "source_signature": {
+    "eia_860_2024_final": {
+      "filename": "eia8602024.zip",
+      "path": ".runtime/source-cache/transport/usa_energy_facilities/eia8602024.zip",
+      "size_bytes": 22100342,
+      "sha256": "0aaae04812cd4ab87a3e346bdf93848a3cc15053fd4dc2a4cf82d2aeac95f12b"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "energy_facilities.preview.geojson",
+    "energy_facilities.geojson"
+  ]
+}

@@ -206,9 +206,9 @@ export const TRANSPORT_CAPABILITY_REGISTRY = Object.freeze({
   industrial_zones: createTransportCapabilityFamily({
     id: "industrial_zones",
     label: "Industrial Land",
-    baseCapability: "polygon",
-    runtimeKind: "polygon",
-    geometryKind: "polygon",
+    baseCapability: "polygon_or_point",
+    runtimeKind: "mixed",
+    geometryKind: "polygon_or_point",
     overviewSupport: false,
     warmup: Object.freeze({ enabled: false, includeFull: false }),
   }),

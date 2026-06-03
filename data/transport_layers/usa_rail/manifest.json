@@ -1,0 +1,114 @@
+{
+  "adapter_id": "usa_rail_v1",
+  "pack_id": "usa_rail",
+  "family": "rail",
+  "geometry_kind": "line",
+  "country": "United States",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T14:46:46.262504Z",
+  "recipe_path": "data/transport_layers/usa_rail/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/usa_rail/railways.preview.topo.json",
+      "rail_stations_major": "data/transport_layers/usa_rail/rail_stations_major.preview.geojson"
+    },
+    "full": {
+      "railways": "data/transport_layers/usa_rail/railways.topo.json",
+      "rail_stations_major": "data/transport_layers/usa_rail/rail_stations_major.geojson"
+    },
+    "build_audit": "data/transport_layers/usa_rail/build_audit.json"
+  },
+  "source_signature": {
+    "fra_ntad_narn_lines_us_mainline": {
+      "filename": "fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+      "path": ".runtime/source-cache/transport/usa_rail/fra_ntad_narn_lines_us_mainline_2026-04-28.geojson",
+      "size_bytes": 101894929,
+      "sha256": "9e9df30bbbb9b59a61c9dd19dbe8eecb09030f2b8770f7855539406dde757f57"
+    },
+    "fra_ntad_amtrak_stations": {
+      "filename": "fra_ntad_amtrak_stations_2026-04-22.geojson",
+      "path": ".runtime/source-cache/transport/usa_rail/fra_ntad_amtrak_stations_2026-04-22.geojson",
+      "size_bytes": 289015,
+      "sha256": "eb41c49e2e6e5ae951cfb1c71b6c10e25896c6066f03f9fffa7c68e86b1638eb"
+    }
+  },
+  "recipe_version": "usa_rail_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "railways": 8000,
+      "rail_stations_major": 500
+    },
+    "full": {
+      "railways": 81531,
+      "rail_stations_major": 1031
+    }
+  },
+  "clip_bbox": [
+    -150.127216,
+    25.466524,
+    -67.29062,
+    64.926145
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack usa_rail",
+  "runtime_consumer": "transport_workbench_rail_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:usa",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "rail",
+    "supported_keys": [
+      "railways",
+      "rail_stations_major"
+    ]
+  },
+  "sidecars": {
+    "rail_stations_major": {
+      "required": true
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/usa_rail/railways.preview.topo.json",
+          "rail_stations_major": "data/transport_layers/usa_rail/rail_stations_major.preview.geojson"
+        },
+        "full": {
+          "railways": "data/transport_layers/usa_rail/railways.topo.json",
+          "rail_stations_major": "data/transport_layers/usa_rail/rail_stations_major.geojson"
+        },
+        "build_audit": "data/transport_layers/usa_rail/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 8000,
+          "rail_stations_major": 500
+        },
+        "full": {
+          "railways": 81531,
+          "rail_stations_major": 1031
+        }
+      }
+    }
+  },
+  "extensions": {
+    "rail": {
+      "carrier_asset_key": "transport_carrier:usa",
+      "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+      "projection_profile": "geoConicEqualArea",
+      "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames."
+    },
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:usa",
+      "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+      "projection_profile": "geoConicEqualArea",
+      "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames."
+    }
+  }
+}

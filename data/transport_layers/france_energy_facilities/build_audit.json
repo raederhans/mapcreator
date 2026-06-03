@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-06-02T17:41:34.086828Z",
+  "adapter_id": "france_energy_facilities_v1",
+  "pack_id": "france_energy_facilities",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "Registre national electricity production/storage above 250 kW merged with OpenStreetMap geometry",
+  "geometry_truth": "Osmose OSM+opendata CSV.bz2 point export with lon/lat, clipped to the France metropolitan carrier scope",
+  "source_signature": {
+    "osmose_fr_power_register_opendata_250kw": {
+      "filename": "registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "path": ".runtime/source-cache/transport/france_energy_facilities/registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "size_bytes": 440662,
+      "sha256": "f1e73543d891ece7bc4f5fa76a6391358922ed4c86d218beff303433cdcf8acc"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 4000
+    },
+    "full": {
+      "energy_facilities": 16397
+    }
+  },
+  "source_row_count": {
+    "osmose_fr_power_register_opendata_250kw": 17508
+  },
+  "matched_count": 16397,
+  "preview_rule": "Top 4000 France metropolitan power/storage points by parsed MW after carrier clip."
+}

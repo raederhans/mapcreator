@@ -124,6 +124,50 @@ test("transport workbench state owner limits display config writes to density fa
   assert.equal(owner.getDisplayConfig("port").labels.budget, 12);
 });
 
+test("transport workbench state owner stores point deltas outside workbench UI", () => {
+  const runtimeState = { transportWorkbenchUi: { activePackIdByFamily: { airport: "usa_airport" } } };
+  const owner = createTransportWorkbenchStateOwner(runtimeState);
+
+  const created = owner.addEditOverlayPoint("airport", {
+    id: "airport_edit_test",
+    name: "Test Airfield",
+    lon: "-77.0365",
+    lat: "38.8977",
+  });
+
+  assert.equal(created.id, "airport_edit_test");
+  assert.equal(created.packId, "usa_airport");
+  assert.equal(runtimeState.transportWorkbenchUi.editOverlay, undefined);
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.airport.created.length, 1);
+  assert.equal(owner.getEditOverlay("airport").features[0].properties.source, "user_overlay");
+
+  assert.equal(owner.removeEditOverlayPoint("airport", "airport_edit_test"), true);
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.airport.created.length, 0);
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.airport.revision, 2);
+});
+
+test("transport workbench state owner records point update and source delete deltas", () => {
+  const runtimeState = { transportWorkbenchUi: { activePackIdByFamily: { port: "uk_port" } } };
+  const owner = createTransportWorkbenchStateOwner(runtimeState);
+
+  assert.equal(owner.addEditOverlayPoint("port", { id: "bad_port", lon: 181, lat: 51 }), null);
+  const updated = owner.updateEditOverlayPoint("port", "source_port_1", {
+    name: "Edited Port",
+    lon: "-4.21",
+    lat: "55.86",
+    properties: { manager_type_code: "2" },
+  });
+
+  assert.equal(updated.id, "source_port_1");
+  assert.equal(updated.packId, "uk_port");
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated.length, 1);
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated[0].properties.manager_type_code, "2");
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated[0].properties.source, undefined);
+  assert.equal(owner.deleteEditOverlayPoint("port", "source_port_1"), true);
+  assert.deepEqual(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated, []);
+  assert.deepEqual(runtimeState.transportWorkbenchPointDeltas.byFamily.port.deleted, ["source_port_1"]);
+});
+
 test("transport workbench state owner moves layer order without duplicating families", () => {
   const { owner } = createOwner({
     layerOrder: ["road", "rail", "airport", "port"],

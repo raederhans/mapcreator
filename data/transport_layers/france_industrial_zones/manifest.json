@@ -1,0 +1,79 @@
+{
+  "adapter_id": "france_industrial_zones_v1",
+  "pack_id": "france_industrial_zones",
+  "family": "industrial_zones",
+  "geometry_kind": "polygon",
+  "country": "France",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T17:41:40.063887Z",
+  "recipe_path": "data/transport_layers/france_industrial_zones/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "industrial_zones": "data/transport_layers/france_industrial_zones/industrial_zones.preview.geojson"
+    },
+    "full": {
+      "industrial_zones": "data/transport_layers/france_industrial_zones/industrial_zones.geojson"
+    },
+    "build_audit": "data/transport_layers/france_industrial_zones/build_audit.json"
+  },
+  "source_signature": {
+    "ign_bdtopo_zone_activite_wfs": {
+      "filename": "ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "path": ".runtime/source-cache/transport/france_industrial_zones/ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "size_bytes": 86046022,
+      "sha256": "09bc80eaecfeb6a583220a7ab924c92292ae1492d6c59641f55b5b5e2a4a6050"
+    }
+  },
+  "recipe_version": "france_industrial_zones_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 3500
+    },
+    "full": {
+      "industrial_zones": 25486
+    }
+  },
+  "clip_bbox": [
+    -4.750291,
+    41.559688,
+    9.503799,
+    51.064226
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack france_industrial_zones",
+  "runtime_consumer": "transport_workbench_industrial_zones_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:france",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "industrial_zones": "data/transport_layers/france_industrial_zones/industrial_zones.preview.geojson"
+        },
+        "full": {
+          "industrial_zones": "data/transport_layers/france_industrial_zones/industrial_zones.geojson"
+        },
+        "build_audit": "data/transport_layers/france_industrial_zones/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "industrial_zones": 3500
+        },
+        "full": {
+          "industrial_zones": 25486
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe."
+    }
+  }
+}

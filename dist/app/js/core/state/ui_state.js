@@ -11,6 +11,7 @@ import {
   createDefaultTextureStyleConfig,
   createDefaultTransportOverviewStyleConfig,
   createDefaultTransportWorkbenchDisplayConfigs,
+  createDefaultTransportWorkbenchPointDeltas,
   createDefaultUrbanStyleConfig,
   defaultZoom,
   normalizeAnnotationView,
@@ -20,6 +21,7 @@ import {
   normalizeLakeStyleConfig,
   normalizePhysicalStyleConfig,
   normalizeTransportOverviewStyleConfig,
+  normalizeTransportWorkbenchPointDeltas,
   normalizeTransportWorkbenchUiState,
   normalizeUrbanStyleConfig,
 } from "../state_defaults.js";
@@ -329,6 +331,7 @@ export function createDefaultUiState() {
     operationalLines: [],
     operationGraphics: [],
     unitCounters: [],
+    transportWorkbenchPointDeltas: createDefaultTransportWorkbenchPointDeltas(),
     transportWorkbenchUi: createDefaultTransportWorkbenchUiState(),
     exportWorkbenchUi: normalizeExportWorkbenchUiState(null),
   };
@@ -614,6 +617,9 @@ export function restoreImportedWorkbenchUiState(
       ...(importedState.referenceImageState || {}),
     },
     transportWorkbenchUi: nextTransportWorkbenchUi,
+    transportWorkbenchPointDeltas: importedState.transportWorkbenchPointDeltas
+      ? normalizeTransportWorkbenchPointDeltas(clone(importedState.transportWorkbenchPointDeltas))
+      : normalizeTransportWorkbenchPointDeltas(clone(target.transportWorkbenchPointDeltas)),
     exportWorkbenchUi: nextExportWorkbenchUi,
   });
   if (

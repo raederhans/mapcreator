@@ -19,6 +19,7 @@ import { registerMapcreatorSnapshotProvider } from "../core/mapcreator_snapshot.
 
 const PACK_MODE_PREVIEW = "preview";
 const PACK_MODE_FULL = "full";
+const DATA_ROW_LIMIT = 240;
 const POINT_LABEL_GRID_BY_DENSITY = {
   very_sparse: 192,
   sparse: 164,
@@ -133,6 +134,108 @@ function createPointFeature(rawFeature, definition, variantId = "") {
     label: String(featureLabel || "").trim(),
     kind: definition.selectionType,
     variant: String(variantId || "").trim(),
+    editOverlay: !!properties.edit_overlay,
+  };
+}
+
+function createEditOverlayRawFeature(entry, definition) {
+  const raw = entry && typeof entry === "object" ? entry : {};
+  const lon = normalizeNumber(raw.lon, NaN);
+  const lat = normalizeNumber(raw.lat, NaN);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  const properties = raw.properties && typeof raw.properties === "object" ? { ...raw.properties } : {};
+  properties.id = String(raw.id || properties.id || "").trim();
+  properties.name = String(raw.name || properties.name || "").trim();
+  properties.source = "user_overlay";
+  properties.source_label = "User overlay";
+  properties.edit_overlay = true;
+  properties.importance = properties.importance || "local_connector";
+  properties.importance_rank = normalizeNumber(properties.importance_rank, 1);
+  if (definition.familyId === "airport") {
+    properties.airport_type = String(properties.airport_type || "other").trim() || "other";
+    properties.status_category = String(properties.status_category || "active").trim() || "active";
+  } else if (definition.familyId === "port") {
+    properties.legal_designation = String(properties.legal_designation || "local").trim() || "local";
+    properties.manager_type_code = String(properties.manager_type_code || "5").trim() || "5";
+  }
+  return {
+    type: "Feature",
+    id: properties.id,
+    properties,
+    geometry: {
+      type: "Point",
+      coordinates: [lon, lat],
+    },
+  };
+}
+
+function buildEditOverlayRawFeatures(config, definition) {
+  const entries = Array.isArray(config?.editOverlay?.created)
+    ? config.editOverlay.created
+    : (Array.isArray(config?.editOverlay?.features) ? config.editOverlay.features : []);
+  return entries
+    .map((entry) => createEditOverlayRawFeature(entry, definition))
+    .filter(Boolean);
+}
+
+function createUpdatedPointFeature(sourceFeature, entry, definition, variantId = "", projectFeature = createPointFeature) {
+  if (!sourceFeature || !entry || typeof entry !== "object") return null;
+  const lon = normalizeNumber(entry.lon, sourceFeature.lon);
+  const lat = normalizeNumber(entry.lat, sourceFeature.lat);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  const sourceProperties = sourceFeature.properties && typeof sourceFeature.properties === "object"
+    ? sourceFeature.properties
+    : {};
+  const patchProperties = entry.properties && typeof entry.properties === "object"
+    ? entry.properties
+    : {};
+  const properties = {
+    ...sourceProperties,
+    ...patchProperties,
+    id: sourceFeature.id,
+    name: String(entry.name || sourceProperties.name || sourceFeature.name || "").trim(),
+    edit_overlay: true,
+    edit_overlay_mode: "updated",
+  };
+  return projectFeature({
+    type: "Feature",
+    id: sourceFeature.id,
+    properties,
+    geometry: {
+      type: "Point",
+      coordinates: [lon, lat],
+    },
+  }, definition, variantId);
+}
+
+function createEffectivePointPack(sourcePack, config, definition, options = {}) {
+  const projectFeature = typeof options.projectFeature === "function" ? options.projectFeature : createPointFeature;
+  const deletedIds = new Set(
+    Array.isArray(config?.editOverlay?.deleted)
+      ? config.editOverlay.deleted.map((id) => String(id || "").trim()).filter(Boolean)
+      : []
+  );
+  const updatedEntriesById = new Map(
+    (Array.isArray(config?.editOverlay?.updated) ? config.editOverlay.updated : [])
+      .map((entry) => [String(entry?.id || "").trim(), entry])
+      .filter(([id]) => !!id)
+  );
+  const sourceFeatures = (Array.isArray(sourcePack?.features) ? sourcePack.features : [])
+    .filter((feature) => !deletedIds.has(feature.id))
+    .map((feature) => (
+      updatedEntriesById.has(feature.id)
+        ? (createUpdatedPointFeature(feature, updatedEntriesById.get(feature.id), definition, sourcePack?.variantId || "", projectFeature) || feature)
+        : feature
+    ));
+  const overlayFeatures = buildEditOverlayRawFeatures(config, definition)
+    .map((feature) => projectFeature(feature, definition, sourcePack?.variantId || ""))
+    .filter(Boolean);
+  if (!deletedIds.size && !updatedEntriesById.size && !overlayFeatures.length) return sourcePack;
+  const features = [...sourceFeatures, ...overlayFeatures];
+  return {
+    ...sourcePack,
+    features,
+    featureById: new Map(features.map((feature) => [feature.id, feature])),
   };
 }
 
@@ -167,6 +270,7 @@ function ensureRootGroups(runtime) {
 function clearGroups(runtime) {
   runtime.rootGroup?.replaceChildren();
   runtime.labelsGroup?.replaceChildren();
+  runtime.labelDescriptors = [];
 }
 
 function createMarkerNode(feature, markerStyle, onSelect) {
@@ -229,6 +333,38 @@ function createLabelNode(feature, markerStyle, onSelect) {
   return label;
 }
 
+function createLabelDescriptor(feature, markerStyle, onSelectFeature) {
+  return {
+    feature: { ...feature },
+    markerStyle: { ...markerStyle },
+    onSelectFeature,
+  };
+}
+
+function renderLabelDescriptors(runtime) {
+  if (!runtime.labelsGroup) return;
+  runtime.labelsGroup.replaceChildren();
+  runtime.labelDescriptors.forEach((descriptor) => {
+    const labelNode = createLabelNode(
+      descriptor.feature,
+      descriptor.markerStyle,
+      () => descriptor.onSelectFeature(descriptor.feature)
+    );
+    if (labelNode) {
+      runtime.labelsGroup.appendChild(labelNode);
+    }
+  });
+  runtime.renderStats.visibleLabels = runtime.labelsGroup.querySelectorAll("[data-feature-id]").length;
+  applySelectionHighlight(runtime);
+}
+
+function createViewRenderSignature(mode, scale) {
+  return [
+    String(mode || ""),
+    Number(scale || 1).toFixed(1),
+  ].join(":");
+}
+
 function createAggregateSelection(aggregateEntry, definition) {
   const dominantFeature = aggregateEntry.sampleFeature || {};
   return {
@@ -280,6 +416,7 @@ function selectVisibleLabelEntries(visibleEntries, config) {
 }
 
 function applySelectionHighlight(runtime) {
+  if (!runtime.rootGroup || !runtime.labelsGroup) return;
   const markerStyle = runtime.definition.getMarkerStyle(getCurrentScale(), runtime.lastRenderedConfig || {});
   runtime.rootGroup.querySelectorAll("[data-feature-id]").forEach((node) => {
     const id = node.dataset.featureId || "";
@@ -291,6 +428,48 @@ function applySelectionHighlight(runtime) {
     const id = node.dataset.featureId || "";
     node.setAttribute("font-weight", runtime.selectedFeature?.id === id ? "700" : (node.dataset.baseLabelWeight || String(normalizeNumber(markerStyle.labelWeight, 600))));
   });
+}
+
+function getActivePointPack(runtime) {
+  if (runtime.activePack) return runtime.activePack;
+  const activeCacheKey = getPackCacheKey(runtime.activePackMode, runtime.activeVariantId);
+  return runtime.projectedPacks.get(activeCacheKey)
+    || runtime.projectedPacks.get(getPackCacheKey(PACK_MODE_FULL, runtime.activeVariantId))
+    || runtime.projectedPacks.get(getPackCacheKey(PACK_MODE_PREVIEW, runtime.activeVariantId))
+    || Array.from(runtime.projectedPacks.values()).find(Boolean)
+    || null;
+}
+
+function createPointDataRow(feature, runtime, config, scale) {
+  const visibility = buildVisibilityState(feature, config, runtime.definition, scale);
+  return {
+    id: feature.id,
+    family: runtime.definition.familyId,
+    kind: feature.kind,
+    name: feature.name || feature.label || feature.id,
+    source: String(feature.properties?.source || feature.properties?.data_source || feature.properties?.source_label || "").trim(),
+    visible: visibility.visible,
+    hiddenReason: visibility.hiddenReason,
+    lon: feature.lon,
+    lat: feature.lat,
+    variant: feature.variant || "",
+    selected: runtime.selectedFeature?.id === feature.id,
+    properties: feature.properties || {},
+  };
+}
+
+function buildDataRows(runtime) {
+  const pack = getActivePointPack(runtime);
+  const config = runtime.lastRenderedConfig || {};
+  const scale = getCurrentScale();
+  const features = Array.isArray(pack?.features) ? pack.features : [];
+  return features
+    .map((feature) => createPointDataRow(feature, runtime, config, scale))
+    .sort((left, right) => {
+      if (left.visible !== right.visible) return left.visible ? -1 : 1;
+      return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+    })
+    .slice(0, DATA_ROW_LIMIT);
 }
 
 function buildSnapshot(runtime) {
@@ -326,8 +505,15 @@ function buildSnapshot(runtime) {
     },
     renderedConfigSignature: runtime.renderedConfigSignature || "",
     selected: runtime.selectedFeature,
+    dataRows: buildDataRows(runtime),
+    dataRowCount: getActivePointPack(runtime)?.features?.length || 0,
+    dataRowLimit: DATA_ROW_LIMIT,
   };
 }
+
+export const __transportWorkbenchPointPreviewTestInternals = Object.freeze({
+  createEffectivePointPack,
+});
 
 export function createTransportWorkbenchPointPreviewController(definition) {
   const runtime = {
@@ -350,10 +536,12 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     },
     activePackMode: null,
     activeVariantId: null,
+    activePack: null,
     rootGroup: null,
     labelsGroup: null,
     selectedFeature: null,
     selectionChangeListener: null,
+    labelDescriptors: [],
     renderStats: {
       renderMode: "inspect",
       totalFeatures: 0,
@@ -363,6 +551,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
       aggregateUnits: 0,
     },
     renderedConfigSignature: "",
+    renderedViewSignature: "",
     lastRenderedConfig: null,
     activePackId: "",
     activeManifestUrl: definition.manifestUrl,
@@ -390,8 +579,11 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     };
     runtime.activePackMode = null;
     runtime.activeVariantId = null;
+    runtime.activePack = null;
     runtime.selectedFeature = null;
     runtime.renderedConfigSignature = "";
+    runtime.renderedViewSignature = "";
+    runtime.labelDescriptors = [];
     runtime.lastRenderedConfig = null;
   }
 
@@ -621,22 +813,39 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     if (config?.activePackId && typeof definition.resolveManifestUrl === "function") {
       setActivePack(config.activePackId, definition.resolveManifestUrl(config.activePackId));
     }
+    const nextConfigSignature = JSON.stringify(config || {});
     runtime.lastRenderedConfig = { ...(config || {}) };
-    runtime.renderedConfigSignature = "";
     const scale = getCurrentScale();
     const targetMode = shouldUseFullPack(config, definition, scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
-    const pack = await loadPack(targetMode, config);
+    const nextViewSignature = createViewRenderSignature(targetMode, scale);
+    if (
+      options.viewOnly
+      && runtime.renderedConfigSignature === nextConfigSignature
+      && runtime.renderedViewSignature === nextViewSignature
+      && runtime.rootGroup
+      && runtime.labelsGroup
+    ) {
+      renderLabelDescriptors(runtime);
+      emitSelectionChange();
+      return null;
+    }
+    runtime.renderedConfigSignature = "";
+    runtime.renderedViewSignature = "";
+    const sourcePack = await loadPack(targetMode, config);
     if (typeof options.isCurrent === "function" && !options.isCurrent()) {
       return null;
     }
-    if (!pack) {
+    if (!sourcePack) {
       runtime.activeVariantId = null;
+      runtime.activePack = null;
       clearGroups(runtime);
       emitSelectionChange();
       return null;
     }
+    const pack = createEffectivePointPack(sourcePack, config, definition);
     runtime.activePackMode = targetMode;
     runtime.activeVariantId = String(pack.variantId || "").trim() || null;
+    runtime.activePack = pack;
     ensureRootGroups(runtime);
     if (runtime.selectedFeature && !pack.featureById.has(runtime.selectedFeature.id)) {
       runtime.selectedFeature = null;
@@ -666,6 +875,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
       emitSelectionChange();
     };
     let labelEntries = [];
+    const labelDescriptors = [];
     if (displayMode === "inspect") {
       const visibleLabelEntries = selectVisibleLabelEntries(visibleEntries, config);
       const visibleLabelIds = new Set(visibleLabelEntries.map((entry) => entry.feature.id));
@@ -679,6 +889,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
           if (labelNode) {
             runtime.labelsGroup.appendChild(labelNode);
             labelEntries.push(feature.id);
+            labelDescriptors.push(createLabelDescriptor(feature, featureMarkerStyle, onFeatureSelect));
           }
         }
       });
@@ -749,6 +960,9 @@ export function createTransportWorkbenchPointPreviewController(definition) {
             if (labelNode) {
               runtime.labelsGroup.appendChild(labelNode);
               labelEntries.push(aggregateEntry.id);
+              labelDescriptors.push(createLabelDescriptor(aggregateEntry, aggregateStyle, (entry) => {
+                onFeatureSelect(createAggregateSelection(entry, definition));
+              }));
             }
           }
         });
@@ -759,7 +973,9 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     runtime.renderStats.filteredFeatures = Math.max(0, features.length - visibleEntries.length);
     runtime.renderStats.visibleLabels = labelEntries.length;
     runtime.renderStats.renderMode = displayMode;
-    runtime.renderedConfigSignature = JSON.stringify(config || {});
+    runtime.labelDescriptors = labelDescriptors;
+    runtime.renderedConfigSignature = nextConfigSignature;
+    runtime.renderedViewSignature = nextViewSignature;
     applySelectionHighlight(runtime);
     emitSelectionChange();
     return pack;
@@ -767,17 +983,21 @@ export function createTransportWorkbenchPointPreviewController(definition) {
 
   function clear() {
     runtime.activeVariantId = null;
+    runtime.activePack = null;
     runtime.loadState.singlePack = false;
     clearGroups(runtime);
   }
 
   function destroy() {
     runtime.activeVariantId = null;
+    runtime.activePack = null;
     runtime.loadState.singlePack = false;
     runtime.rootGroup?.remove();
     runtime.labelsGroup?.remove();
     runtime.rootGroup = null;
     runtime.labelsGroup = null;
+    runtime.renderedViewSignature = "";
+    runtime.labelDescriptors = [];
   }
 
   function getSnapshot() {
@@ -796,6 +1016,21 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     runtime.selectionChangeListener = typeof listener === "function" ? listener : null;
   }
 
+  function selectFeature(selection) {
+    const selectionId = String(selection?.id || selection || "").trim();
+    if (!selectionId) return false;
+    const pack = getActivePointPack(runtime);
+    const feature = pack?.featureById?.get(selectionId)
+      || Array.from(runtime.projectedPacks.values()).find((candidatePack) => candidatePack?.featureById?.has(selectionId))?.featureById?.get(selectionId)
+      || null;
+    if (!feature) return false;
+    const visibility = buildVisibilityState(feature, runtime.lastRenderedConfig || {}, definition, getCurrentScale());
+    runtime.selectedFeature = { ...feature, visible: visibility.visible, hiddenReason: visibility.hiddenReason };
+    applySelectionHighlight(runtime);
+    emitSelectionChange();
+    return true;
+  }
+
   registerMapcreatorSnapshotProvider("loadStatus", `transport_preview:${definition.familyId}`, () => (
     getSnapshot()
   ));
@@ -805,6 +1040,7 @@ export function createTransportWorkbenchPointPreviewController(definition) {
     destroy,
     getSnapshot,
     render,
+    selectFeature,
     setSelectionListener,
     warm,
     setActivePack,

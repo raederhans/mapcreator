@@ -111,5 +111,6 @@ export const clearJapanMineralResourcePreview = controller.clear;
 export const destroyJapanMineralResourcePreview = controller.destroy;
 export const getJapanMineralResourcePreviewSnapshot = controller.getSnapshot;
 export const renderJapanMineralResourcePreview = controller.render;
+export const selectJapanMineralResourcePreviewFeature = controller.selectFeature;
 export const setJapanMineralResourcePreviewSelectionListener = controller.setSelectionListener;
 export const warmJapanMineralResourcePreviewPack = controller.warm;

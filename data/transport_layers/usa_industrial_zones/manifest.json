@@ -1,0 +1,379 @@
+{
+  "adapter_id": "usa_industrial_zones_v1",
+  "pack_id": "usa_industrial_zones",
+  "family": "industrial_zones",
+  "geometry_kind": "polygon",
+  "country": "United States",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T17:11:48.956206Z",
+  "recipe_path": "data/transport_layers/usa_industrial_zones/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "industrial_zones": "data/transport_layers/usa_industrial_zones/industrial_zones.preview.geojson"
+    },
+    "full": {
+      "industrial_zones": "data/transport_layers/usa_industrial_zones/industrial_zones.geojson"
+    },
+    "build_audit": "data/transport_layers/usa_industrial_zones/build_audit.json"
+  },
+  "source_signature": {
+    "census_tiger_2025_arealm_01": {
+      "filename": "tl_2025_01_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_01_arealm.zip",
+      "size_bytes": 891664,
+      "sha256": "be0d57f1f29dd8ac9abb0f4314a6c4cc2caf22b4377367db08161947ae575ac8"
+    },
+    "census_tiger_2025_arealm_02": {
+      "filename": "tl_2025_02_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_02_arealm.zip",
+      "size_bytes": 22619225,
+      "sha256": "e20f75af834e25e6edef895cd834b1ae723551a6ed32c645538e09df8c827a26"
+    },
+    "census_tiger_2025_arealm_04": {
+      "filename": "tl_2025_04_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_04_arealm.zip",
+      "size_bytes": 922271,
+      "sha256": "72d20e549d2bcf8389f6c956a715c527e5c312a5ff02d49f8b2a05cc5f5fa50c"
+    },
+    "census_tiger_2025_arealm_05": {
+      "filename": "tl_2025_05_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_05_arealm.zip",
+      "size_bytes": 803131,
+      "sha256": "592841f167a376161b4996e15e69d6d4c974293cc36e71d5803ab3d9f3cb44cb"
+    },
+    "census_tiger_2025_arealm_06": {
+      "filename": "tl_2025_06_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_06_arealm.zip",
+      "size_bytes": 5632849,
+      "sha256": "57bacfb6540a779d6814cbc2299c84a815ea863162f309b5d857b8a2229c9172"
+    },
+    "census_tiger_2025_arealm_08": {
+      "filename": "tl_2025_08_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_08_arealm.zip",
+      "size_bytes": 732025,
+      "sha256": "72c4d69a4b216f4dad37d45c5604bf7077907d3d94d8bb31802fc8a70c20280e"
+    },
+    "census_tiger_2025_arealm_09": {
+      "filename": "tl_2025_09_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_09_arealm.zip",
+      "size_bytes": 226280,
+      "sha256": "b0c653160a5412bdcfc9753bdb0a9007970c19da38504e5579f6decb1ae9dc62"
+    },
+    "census_tiger_2025_arealm_10": {
+      "filename": "tl_2025_10_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_10_arealm.zip",
+      "size_bytes": 114471,
+      "sha256": "ef40bea912a001d447dde3c184e62771b91b3085e22dedcb5273cdf01e88a015"
+    },
+    "census_tiger_2025_arealm_11": {
+      "filename": "tl_2025_11_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_11_arealm.zip",
+      "size_bytes": 138385,
+      "sha256": "478abd3d0a161dfa013e86c08e799797e772f5b97c5ae2cde311f5c6c6376dce"
+    },
+    "census_tiger_2025_arealm_12": {
+      "filename": "tl_2025_12_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_12_arealm.zip",
+      "size_bytes": 1301493,
+      "sha256": "8071564049cd2eb6bc2cfb1f28fb53c48992a5d13f756940a9e91f5a22d3c7c3"
+    },
+    "census_tiger_2025_arealm_13": {
+      "filename": "tl_2025_13_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_13_arealm.zip",
+      "size_bytes": 1109109,
+      "sha256": "516e1592019173ee8cb1f76f204177c565cd042e8c197a09c9e5949f9a1397cb"
+    },
+    "census_tiger_2025_arealm_15": {
+      "filename": "tl_2025_15_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_15_arealm.zip",
+      "size_bytes": 744579,
+      "sha256": "743f2895b676144eb2fa16f142c861e06ec3d4b5de4076a9d04982aae8b74569"
+    },
+    "census_tiger_2025_arealm_16": {
+      "filename": "tl_2025_16_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_16_arealm.zip",
+      "size_bytes": 253500,
+      "sha256": "cb97c9fed86bd24003819647f9ac6a2225d87728b9450c92ad43c9be754c370d"
+    },
+    "census_tiger_2025_arealm_17": {
+      "filename": "tl_2025_17_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_17_arealm.zip",
+      "size_bytes": 1755703,
+      "sha256": "ec61f596e9076c063433255c1f1756cf6aca99d77863c698e4e1d955b6aed5ca"
+    },
+    "census_tiger_2025_arealm_18": {
+      "filename": "tl_2025_18_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_18_arealm.zip",
+      "size_bytes": 778916,
+      "sha256": "a5c7e163f6c26164bde3088fe78d673f1cb32ec736330dc4138f53cf89dd6b5a"
+    },
+    "census_tiger_2025_arealm_19": {
+      "filename": "tl_2025_19_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_19_arealm.zip",
+      "size_bytes": 1305861,
+      "sha256": "d546dbf8461b146416fd6343bc977f932910141a307556f08532cd6b98883377"
+    },
+    "census_tiger_2025_arealm_20": {
+      "filename": "tl_2025_20_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_20_arealm.zip",
+      "size_bytes": 838730,
+      "sha256": "ad3a1bd94f5a592417c977ba6419c04ca15b1a34e8ebdf5b45e643315e775ad6"
+    },
+    "census_tiger_2025_arealm_21": {
+      "filename": "tl_2025_21_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_21_arealm.zip",
+      "size_bytes": 799232,
+      "sha256": "52ce4cd0eb291464206a573dee1caab392d64e0236fceeac9e89a354aeed4e8e"
+    },
+    "census_tiger_2025_arealm_22": {
+      "filename": "tl_2025_22_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_22_arealm.zip",
+      "size_bytes": 456628,
+      "sha256": "dc603688fd9f818d71428170bbdb261bbe22ecb3c63fb7230665910b8386871f"
+    },
+    "census_tiger_2025_arealm_23": {
+      "filename": "tl_2025_23_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_23_arealm.zip",
+      "size_bytes": 813872,
+      "sha256": "190f641960f8eef9328086c84082c29fd8d1b887cb641331d6d06e4fda9f439a"
+    },
+    "census_tiger_2025_arealm_24": {
+      "filename": "tl_2025_24_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_24_arealm.zip",
+      "size_bytes": 1011789,
+      "sha256": "ba83f4af371f7ee41eb9ab6f4a0d8a3fe786aa8d1c99ac42be153aa128fc7896"
+    },
+    "census_tiger_2025_arealm_25": {
+      "filename": "tl_2025_25_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_25_arealm.zip",
+      "size_bytes": 671596,
+      "sha256": "48bc67d2b8de5fb902ace983995861d0417bda87c4eae47dc2eca00e1dc7f62b"
+    },
+    "census_tiger_2025_arealm_26": {
+      "filename": "tl_2025_26_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_26_arealm.zip",
+      "size_bytes": 838467,
+      "sha256": "0ee7e85707ffab0d3da143bc7de845eefd2a5bc2db59fec9f3d5ef339f719205"
+    },
+    "census_tiger_2025_arealm_27": {
+      "filename": "tl_2025_27_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_27_arealm.zip",
+      "size_bytes": 1627555,
+      "sha256": "2ac40bfa08b486d77086e4a5ac0b32bd7a472a42ff8ff7fae79dd959cd58b318"
+    },
+    "census_tiger_2025_arealm_28": {
+      "filename": "tl_2025_28_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_28_arealm.zip",
+      "size_bytes": 657155,
+      "sha256": "4f2534b45950ae133a2a55272646cd32c28ba43722eaa3a3a277e5d0a7413181"
+    },
+    "census_tiger_2025_arealm_29": {
+      "filename": "tl_2025_29_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_29_arealm.zip",
+      "size_bytes": 1303296,
+      "sha256": "cdf88c61b5edf8a91d73fa7fc3928996198b122d2465fd54573d7e8646a5ef00"
+    },
+    "census_tiger_2025_arealm_30": {
+      "filename": "tl_2025_30_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_30_arealm.zip",
+      "size_bytes": 443309,
+      "sha256": "21112915bcbab6f8a71c6b5374ab15b530fedb7fc53fd524aade317e851522bd"
+    },
+    "census_tiger_2025_arealm_31": {
+      "filename": "tl_2025_31_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_31_arealm.zip",
+      "size_bytes": 806229,
+      "sha256": "6be423ae28a1a90b2db0dd6c5df2536f8bb15cfa129af61670526ad703cc2e1a"
+    },
+    "census_tiger_2025_arealm_32": {
+      "filename": "tl_2025_32_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_32_arealm.zip",
+      "size_bytes": 169750,
+      "sha256": "24ac5f049b91f86d3ae08d42509a0ecc5869090cd8c72823f504c937a31fa5a7"
+    },
+    "census_tiger_2025_arealm_33": {
+      "filename": "tl_2025_33_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_33_arealm.zip",
+      "size_bytes": 225259,
+      "sha256": "dfa1bf9836a717442bddda956109c60994f1f22b177dd30d8de4499af7af3e31"
+    },
+    "census_tiger_2025_arealm_34": {
+      "filename": "tl_2025_34_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_34_arealm.zip",
+      "size_bytes": 636627,
+      "sha256": "1d60e66d1dbae98c958610b4ae29d3e4971b539d0894cc3a7e1c1439ce592c28"
+    },
+    "census_tiger_2025_arealm_35": {
+      "filename": "tl_2025_35_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_35_arealm.zip",
+      "size_bytes": 448858,
+      "sha256": "879d9524dd08eaf063171efcc12203351f688d97f43e0ceb4b14d6425752d885"
+    },
+    "census_tiger_2025_arealm_36": {
+      "filename": "tl_2025_36_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_36_arealm.zip",
+      "size_bytes": 1945849,
+      "sha256": "2c40daa05cec76eafb0bc1f5dc4e15f6077aa94031453a876638107e116912d8"
+    },
+    "census_tiger_2025_arealm_37": {
+      "filename": "tl_2025_37_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_37_arealm.zip",
+      "size_bytes": 944169,
+      "sha256": "60948925a33c79c4f090086e42e63e9f2f1b02bce443fc47826c99a0ba47740d"
+    },
+    "census_tiger_2025_arealm_38": {
+      "filename": "tl_2025_38_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_38_arealm.zip",
+      "size_bytes": 315017,
+      "sha256": "d9ff0512749ec9c59ad739dc12964f88bf529a434091195084f5c4c3dd953179"
+    },
+    "census_tiger_2025_arealm_39": {
+      "filename": "tl_2025_39_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_39_arealm.zip",
+      "size_bytes": 1020582,
+      "sha256": "4bbda4bc1089cd08518a0c13657053780e0cd929fae7bc02e7ef751f64b9e2b8"
+    },
+    "census_tiger_2025_arealm_40": {
+      "filename": "tl_2025_40_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_40_arealm.zip",
+      "size_bytes": 601311,
+      "sha256": "bd4246a264a164a9b6953c8467e255fbf9d58d9e625359a62e37cdf6bbb52b4d"
+    },
+    "census_tiger_2025_arealm_41": {
+      "filename": "tl_2025_41_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_41_arealm.zip",
+      "size_bytes": 675447,
+      "sha256": "089373a49f41e5e601bceb143757e3c286b4c24cbc9f2fbf0c0b7127354477ec"
+    },
+    "census_tiger_2025_arealm_42": {
+      "filename": "tl_2025_42_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_42_arealm.zip",
+      "size_bytes": 1802467,
+      "sha256": "b6393cd1dbc7b82ac32442e608bd055d451f63a0c7f1d8d011e5e22186834c8b"
+    },
+    "census_tiger_2025_arealm_44": {
+      "filename": "tl_2025_44_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_44_arealm.zip",
+      "size_bytes": 123451,
+      "sha256": "e2e43e997990e50a7757b401bc596b2735cdeff9a91f4ece4de52fd9cccebe51"
+    },
+    "census_tiger_2025_arealm_45": {
+      "filename": "tl_2025_45_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_45_arealm.zip",
+      "size_bytes": 488605,
+      "sha256": "e77199ecdf0e610d9dc511e432f87a47b162c83d30218e790d1b64b4589c5ce2"
+    },
+    "census_tiger_2025_arealm_46": {
+      "filename": "tl_2025_46_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_46_arealm.zip",
+      "size_bytes": 377055,
+      "sha256": "e46b7513fc963bf7f3928b1a05adb11ae441f57f73dc3cb3df098a3e72c7d464"
+    },
+    "census_tiger_2025_arealm_47": {
+      "filename": "tl_2025_47_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_47_arealm.zip",
+      "size_bytes": 1380948,
+      "sha256": "7d83a8bb598c072ccca3336ef847b497f83deeb4f0b0d9fd59ddf6ae4cfca13a"
+    },
+    "census_tiger_2025_arealm_48": {
+      "filename": "tl_2025_48_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_48_arealm.zip",
+      "size_bytes": 2046526,
+      "sha256": "b7f9593d12b119a4969e4a6a8e356990ce733d3636ddcf048a5974ed85b0eed4"
+    },
+    "census_tiger_2025_arealm_49": {
+      "filename": "tl_2025_49_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_49_arealm.zip",
+      "size_bytes": 975553,
+      "sha256": "f38d1119a660e3f681ec525a06d6e41a1b74dfb3757fc91a286b34545e03f675"
+    },
+    "census_tiger_2025_arealm_50": {
+      "filename": "tl_2025_50_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_50_arealm.zip",
+      "size_bytes": 175290,
+      "sha256": "dc3cdfeb873603d0184ec876fa19696ba4db2e066adcf39c5673e1447485602a"
+    },
+    "census_tiger_2025_arealm_51": {
+      "filename": "tl_2025_51_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_51_arealm.zip",
+      "size_bytes": 1347717,
+      "sha256": "e6dd8086cc7f69fc6cda6c2a14b4e6da5fb590e7fb0b77d5d35b884109ecff9b"
+    },
+    "census_tiger_2025_arealm_53": {
+      "filename": "tl_2025_53_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_53_arealm.zip",
+      "size_bytes": 1679204,
+      "sha256": "a17274ab8d614ae55fd4d12b6e88208b8642e8d37b3eb62e43d860c93e49ae84"
+    },
+    "census_tiger_2025_arealm_54": {
+      "filename": "tl_2025_54_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_54_arealm.zip",
+      "size_bytes": 546314,
+      "sha256": "4b8397a3cdce2950dc42586a00cdd6a1f2f6a0e641528b066cf8863615feabb2"
+    },
+    "census_tiger_2025_arealm_55": {
+      "filename": "tl_2025_55_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_55_arealm.zip",
+      "size_bytes": 1779396,
+      "sha256": "38dcd79d231eb76bc89b4d066f65ac6be030d067a1c7fb22069cab3261309a63"
+    },
+    "census_tiger_2025_arealm_56": {
+      "filename": "tl_2025_56_arealm.zip",
+      "path": ".runtime/source-cache/transport/usa_industrial_zones/tl_2025_56_arealm.zip",
+      "size_bytes": 234100,
+      "sha256": "9c0a066a5e4cd55f958426dfafdfc498d7907b4455178f98a30682237b7caaba"
+    }
+  },
+  "recipe_version": "usa_industrial_zones_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 174
+    },
+    "full": {
+      "industrial_zones": 174
+    }
+  },
+  "clip_bbox": [
+    -158.133759,
+    21.349793,
+    -68.806167,
+    48.501514
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack usa_industrial_zones",
+  "runtime_consumer": "transport_workbench_industrial_zones_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:usa",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "industrial_zones": "data/transport_layers/usa_industrial_zones/industrial_zones.preview.geojson"
+        },
+        "full": {
+          "industrial_zones": "data/transport_layers/usa_industrial_zones/industrial_zones.geojson"
+        },
+        "build_audit": "data/transport_layers/usa_industrial_zones/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "industrial_zones": 174
+        },
+        "full": {
+          "industrial_zones": 174
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:usa",
+      "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+      "projection_profile": "geoConicEqualArea",
+      "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames."
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "version": "france_logistics_hubs_real_sources_v1",
+  "pack_id": "france_logistics_hubs",
+  "family": "logistics_hubs",
+  "country": "France",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/france_logistics_hubs",
+  "source_truth": "Cerema ITE 3000 French freight private sidings database",
+  "geometry_truth": "ITE 3000 GeoJSON point locations filtered to the metropolitan France carrier scope",
+  "sources": [
+    {
+      "id": "cerema_ite3000_geojson",
+      "role": "primary_logistics_geojson",
+      "expected_path": ".runtime/source-cache/transport/france_logistics_hubs/base-ite-3000_2026-04-15.geojson",
+      "url": "https://static.data.gouv.fr/resources/base-de-donnees-des-installations-terminales-embranchees-fret-en-france-ite-3000/20260415-093501/base-ite-3000.geojson",
+      "license": "Licence Ouverte / Open Licence 2.0",
+      "required_layers": [],
+      "required_fields": [
+        "ID_ITE",
+        "Raison_sociale",
+        "Commune",
+        "Utilisation_ITE",
+        "Etat_ITE",
+        "Convention_active",
+        "Circulation_récente",
+        "Produit_transporté",
+        "geometry"
+      ],
+      "filter_rule": "Keep point ITE records inside the metropolitan France carrier scope and map them to rail_cargo_station logistics hubs.",
+      "notes": "ITE 3000 identifies French freight private sidings used for loading or unloading goods at industrial sites.",
+      "query_params": {},
+      "signature": {
+        "filename": "base-ite-3000_2026-04-15.geojson",
+        "path": ".runtime/source-cache/transport/france_logistics_hubs/base-ite-3000_2026-04-15.geojson",
+        "size_bytes": 5110895,
+        "sha256": "37c76148d17ed2877e097873547e8258a600cb2b285b0ab60829e90de6c07837"
+      }
+    }
+  ],
+  "source_signature": {
+    "cerema_ite3000_geojson": {
+      "filename": "base-ite-3000_2026-04-15.geojson",
+      "path": ".runtime/source-cache/transport/france_logistics_hubs/base-ite-3000_2026-04-15.geojson",
+      "size_bytes": 5110895,
+      "sha256": "37c76148d17ed2877e097873547e8258a600cb2b285b0ab60829e90de6c07837"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "logistics_hubs.preview.geojson",
+    "logistics_hubs.geojson"
+  ]
+}

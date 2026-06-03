@@ -45,6 +45,14 @@ class DataManifestContractTest(unittest.TestCase):
 
         self.assertEqual(mismatches, [])
 
+    def test_runtime_asset_registry_manifest_hash_matches_source_file(self) -> None:
+        manifest = json.loads(DATA_MANIFEST.read_text(encoding="utf-8"))
+        metadata = manifest.get("outputs", {}).get("runtime_asset_registry.json") or {}
+        output_bytes = RUNTIME_ASSET_REGISTRY_SOURCE.read_bytes()
+
+        self.assertEqual(metadata.get("size_bytes"), RUNTIME_ASSET_REGISTRY_SOURCE.stat().st_size)
+        self.assertEqual(metadata.get("sha256"), hashlib.sha256(output_bytes).hexdigest())
+
     def test_runtime_asset_registry_declares_phase1_assets(self) -> None:
         manifest = json.loads(DATA_MANIFEST.read_text(encoding="utf-8"))
         registry = manifest.get("runtime_asset_registry") or {}

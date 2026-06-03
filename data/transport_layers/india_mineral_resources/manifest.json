@@ -1,0 +1,79 @@
+{
+  "adapter_id": "india_mineral_resources_v1",
+  "pack_id": "india_mineral_resources",
+  "family": "mineral_resources",
+  "geometry_kind": "point",
+  "country": "India",
+  "schema_version": 1,
+  "generated_at": "2026-06-03T02:13:56.671814Z",
+  "recipe_path": "data/transport_layers/india_mineral_resources/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "mineral_resources": "data/transport_layers/india_mineral_resources/mineral_resources.preview.geojson"
+    },
+    "full": {
+      "mineral_resources": "data/transport_layers/india_mineral_resources/mineral_resources.geojson"
+    },
+    "build_audit": "data/transport_layers/india_mineral_resources/build_audit.json"
+  },
+  "source_signature": {
+    "usgs_mrds_feature_service": {
+      "filename": "usgs_mrds_global_2026-06-02.geojson",
+      "path": ".runtime/source-cache/transport/india_mineral_resources/usgs_mrds_global_2026-06-02.geojson",
+      "size_bytes": 80841782,
+      "sha256": "c2c91b9b8c9c3613e2ba390b2244b456f1603a99176cf55f37571274160511e7"
+    }
+  },
+  "recipe_version": "india_mineral_resources_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 780
+    },
+    "full": {
+      "mineral_resources": 780
+    }
+  },
+  "clip_bbox": [
+    69.33062,
+    8.20077,
+    95.99992,
+    34.57853
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack india_mineral_resources",
+  "runtime_consumer": "transport_workbench_mineral_resources_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:india",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "mineral_resources": "data/transport_layers/india_mineral_resources/mineral_resources.preview.geojson"
+        },
+        "full": {
+          "mineral_resources": "data/transport_layers/india_mineral_resources/mineral_resources.geojson"
+        },
+        "build_audit": "data/transport_layers/india_mineral_resources/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "mineral_resources": 780
+        },
+        "full": {
+          "mineral_resources": 780
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:india",
+      "scope_policy": "India admin1 preview scope follows Natural Earth polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 state carrier."
+    }
+  }
+}

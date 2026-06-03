@@ -10,6 +10,7 @@ from map_builder.transport_carrier_registry import (
     CARRIER_RUNTIME_ASSETS,
     CARRIER_SOURCE_KIND_BY_ASSET_KEY,
     PACK_CARRIER_ASSET_KEYS,
+    resolve_pack_carrier_extension,
 )
 from map_builder.transport_country_real_source_contracts import TARGET_COUNTRY_PACK_IDS
 from map_builder.transport_workbench_contracts import validate_transport_manifest
@@ -22,6 +23,72 @@ INDUSTRIAL_BUILDER = PROJECT_ROOT / "tools" / "build_transport_workbench_japan_i
 RUNTIME_ASSET_REGISTRY = PROJECT_ROOT / "data" / "runtime_asset_registry.json"
 CATALOG_JSON = PROJECT_ROOT / "data" / "CATALOG.json"
 
+PHASE_B_BRIDGE_KEYS_BY_PACK = {
+    "japan_road": ["roads", "road_labels"],
+    "japan_rail": ["railways", "rail_stations_major"],
+    "germany_road": ["roads", "road_labels"],
+    "uk_road": ["roads", "road_labels"],
+    "usa_road": ["roads", "road_labels"],
+    "france_road": ["roads", "road_labels"],
+    "china_road": ["roads", "road_labels"],
+    "india_road": ["roads", "road_labels"],
+    "russia_road": ["roads", "road_labels"],
+    "france_rail": ["railways", "rail_stations_major"],
+    "germany_rail": ["railways", "rail_stations_major"],
+    "uk_rail": ["railways", "rail_stations_major"],
+    "usa_rail": ["railways", "rail_stations_major"],
+    "china_rail": ["railways", "rail_stations_major"],
+    "india_rail": ["railways", "rail_stations_major"],
+    "russia_rail": ["railways", "rail_stations_major"],
+    "usa_airport": ["airports"],
+    "china_airport": ["airports"],
+    "russia_airport": ["airports"],
+    "india_airport": ["airports"],
+    "germany_airport": ["airports"],
+    "france_airport": ["airports"],
+    "uk_airport": ["airports"],
+    "usa_port": ["ports"],
+    "germany_port": ["ports"],
+    "france_port": ["ports"],
+    "uk_port": ["ports"],
+    "china_port": ["ports"],
+    "india_port": ["ports"],
+    "russia_port": ["ports"],
+}
+
+PHASE_B_BRIDGE_SOURCE_POLICY_BY_PACK = {
+    "japan_road": "local_source_cache_only",
+    "japan_rail": "local_source_cache_only",
+    "germany_road": "real_source_cache_only",
+    "uk_road": "real_source_cache_only",
+    "usa_road": "real_source_cache_only",
+    "france_road": "real_source_cache_only",
+    "china_road": "real_source_cache_only",
+    "india_road": "real_source_cache_only",
+    "russia_road": "real_source_cache_only",
+    "france_rail": "real_source_cache_only",
+    "germany_rail": "real_source_cache_only",
+    "uk_rail": "real_source_cache_only",
+    "usa_rail": "real_source_cache_only",
+    "china_rail": "real_source_cache_only",
+    "india_rail": "real_source_cache_only",
+    "russia_rail": "real_source_cache_only",
+    "usa_airport": "real_source_cache_only",
+    "china_airport": "real_source_cache_only",
+    "russia_airport": "real_source_cache_only",
+    "india_airport": "real_source_cache_only",
+    "germany_airport": "real_source_cache_only",
+    "france_airport": "real_source_cache_only",
+    "uk_airport": "real_source_cache_only",
+    "usa_port": "real_source_cache_only",
+    "germany_port": "real_source_cache_only",
+    "france_port": "real_source_cache_only",
+    "uk_port": "real_source_cache_only",
+    "china_port": "real_source_cache_only",
+    "india_port": "real_source_cache_only",
+    "russia_port": "real_source_cache_only",
+}
+
 
 class TransportManifestContractsTest(unittest.TestCase):
     def test_checked_in_transport_manifests_pass_shared_contract(self) -> None:
@@ -32,54 +99,8 @@ class TransportManifestContractsTest(unittest.TestCase):
 
 
     def test_target_main_map_packs_declare_phase_b_bridge_contract(self) -> None:
-        expected_keys_by_pack = {
-            "japan_road": ["roads", "road_labels"],
-            "japan_rail": ["railways", "rail_stations_major"],
-            "germany_road": ["roads", "road_labels"],
-            "uk_road": ["roads", "road_labels"],
-            "usa_road": ["roads", "road_labels"],
-            "france_rail": ["railways", "rail_stations_major"],
-            "germany_rail": ["railways", "rail_stations_major"],
-            "usa_airport": ["airports"],
-            "china_airport": ["airports"],
-            "russia_airport": ["airports"],
-            "india_airport": ["airports"],
-            "germany_airport": ["airports"],
-            "france_airport": ["airports"],
-            "uk_airport": ["airports"],
-            "usa_port": ["ports"],
-            "germany_port": ["ports"],
-            "france_port": ["ports"],
-            "uk_port": ["ports"],
-            "china_port": ["ports"],
-            "india_port": ["ports"],
-            "russia_port": ["ports"],
-        }
-        expected_policy_by_pack = {
-            "japan_road": "local_source_cache_only",
-            "japan_rail": "local_source_cache_only",
-            "germany_road": "real_source_cache_only",
-            "uk_road": "real_source_cache_only",
-            "usa_road": "real_source_cache_only",
-            "france_rail": "real_source_cache_only",
-            "germany_rail": "real_source_cache_only",
-            "usa_airport": "real_source_cache_only",
-            "china_airport": "real_source_cache_only",
-            "russia_airport": "real_source_cache_only",
-            "india_airport": "real_source_cache_only",
-            "germany_airport": "real_source_cache_only",
-            "france_airport": "real_source_cache_only",
-            "uk_airport": "real_source_cache_only",
-            "usa_port": "real_source_cache_only",
-            "germany_port": "real_source_cache_only",
-            "france_port": "real_source_cache_only",
-            "uk_port": "real_source_cache_only",
-            "china_port": "real_source_cache_only",
-            "india_port": "real_source_cache_only",
-            "russia_port": "real_source_cache_only",
-        }
         failures: list[str] = []
-        for pack_id, expected_keys in expected_keys_by_pack.items():
+        for pack_id, expected_keys in PHASE_B_BRIDGE_KEYS_BY_PACK.items():
             manifest_path = PROJECT_ROOT / "data" / "transport_layers" / pack_id / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             if manifest.get("pack_id") != pack_id:
@@ -90,7 +111,7 @@ class TransportManifestContractsTest(unittest.TestCase):
                 failures.append(f"{pack_id}: apply_bridge_supported")
             if manifest.get("coverage_scope") != "country":
                 failures.append(f"{pack_id}: coverage_scope")
-            if manifest.get("source_policy") != expected_policy_by_pack[pack_id]:
+            if manifest.get("source_policy") != PHASE_B_BRIDGE_SOURCE_POLICY_BY_PACK[pack_id]:
                 failures.append(f"{pack_id}: source_policy")
             if not manifest.get("source_signature"):
                 failures.append(f"{pack_id}: source_signature")
@@ -333,8 +354,10 @@ class TransportManifestContractsTest(unittest.TestCase):
                 failures.append(f"{pack_id}: carrier_asset_key")
             if carrier_extension.get("carrier_asset_key") != expected_asset_key:
                 failures.append(f"{pack_id}: extensions.carrier.carrier_asset_key")
-            expected_extension = CARRIER_EXTENSION_METADATA[expected_asset_key]
+            expected_extension = resolve_pack_carrier_extension(pack_id)
             for field_name, expected_value in expected_extension.items():
+                if field_name == "carrier_asset_key":
+                    continue
                 if carrier_extension.get(field_name) != expected_value:
                     failures.append(f"{pack_id}: extensions.carrier.{field_name}")
             if expected_asset_key not in runtime_assets:

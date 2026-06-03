@@ -1,0 +1,132 @@
+{
+  "adapter_id": "india_road_v1",
+  "pack_id": "india_road",
+  "family": "road",
+  "geometry_kind": "line",
+  "country": "India",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T19:32:26.654060Z",
+  "recipe_path": "data/transport_layers/india_road/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "roads": "data/transport_layers/india_road/roads.preview.topo.json",
+      "road_labels": "data/transport_layers/india_road/road_labels.preview.geojson"
+    },
+    "full": {
+      "roads": "data/transport_layers/india_road/roads.topo.json",
+      "road_labels": "data/transport_layers/india_road/road_labels.geojson"
+    },
+    "build_audit": "data/transport_layers/india_road/build_audit.json"
+  },
+  "source_signature": {
+    "geofabrik_gpkg_central_zone": {
+      "filename": "central-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/central-zone-latest-free.gpkg.zip",
+      "size_bytes": 902544040,
+      "sha256": "0c432dd919ec5994a030a8716ef4117390603cafb03f0aa90d809591287c5b52"
+    },
+    "geofabrik_gpkg_eastern_zone": {
+      "filename": "eastern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/eastern-zone-latest-free.gpkg.zip",
+      "size_bytes": 592318120,
+      "sha256": "31d009c07f7592b74edc8e32a457f370bb7136272624db75d492d88216e10dd1"
+    },
+    "geofabrik_gpkg_north_eastern_zone": {
+      "filename": "north-eastern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/north-eastern-zone-latest-free.gpkg.zip",
+      "size_bytes": 277027260,
+      "sha256": "8de115add4f63b177cbc44a68b81d192932482039e300c8032908253423c74f1"
+    },
+    "geofabrik_gpkg_northern_zone": {
+      "filename": "northern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/northern-zone-latest-free.gpkg.zip",
+      "size_bytes": 497974772,
+      "sha256": "bc88daefc059deca34f336ef8f5eab5f5aa19c1d8d33f22351005cd48d4e6680"
+    },
+    "geofabrik_gpkg_southern_zone": {
+      "filename": "southern-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/southern-zone-latest-free.gpkg.zip",
+      "size_bytes": 1256763484,
+      "sha256": "7fc516d96a208481b283993d4add22bbdd3c3d528f3e91a1b414c2ce5d15cbcb"
+    },
+    "geofabrik_gpkg_western_zone": {
+      "filename": "western-zone-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/india_osm_gpkg/western-zone-latest-free.gpkg.zip",
+      "size_bytes": 496669922,
+      "sha256": "6ad42adb43e16abdd011692af41fc0b6c20e4e78f2416baad6a2669d28cc4b8e"
+    }
+  },
+  "recipe_version": "india_road_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "roads": 4000,
+      "road_labels": 84
+    },
+    "full": {
+      "roads": 50000,
+      "road_labels": 1943
+    }
+  },
+  "clip_bbox": [
+    68.545214,
+    8.188008,
+    96.43885,
+    34.601831
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack india_road",
+  "runtime_consumer": "transport_workbench_road_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:india",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "road",
+    "supported_keys": [
+      "roads",
+      "road_labels"
+    ]
+  },
+  "sidecars": {
+    "road_labels": {
+      "required": true
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "roads": "data/transport_layers/india_road/roads.preview.topo.json",
+          "road_labels": "data/transport_layers/india_road/road_labels.preview.geojson"
+        },
+        "full": {
+          "roads": "data/transport_layers/india_road/roads.topo.json",
+          "road_labels": "data/transport_layers/india_road/road_labels.geojson"
+        },
+        "build_audit": "data/transport_layers/india_road/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "roads": 4000,
+          "road_labels": 84
+        },
+        "full": {
+          "roads": 50000,
+          "road_labels": 1943
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:india",
+      "scope_policy": "India admin1 preview scope follows Natural Earth polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 state carrier."
+    }
+  }
+}

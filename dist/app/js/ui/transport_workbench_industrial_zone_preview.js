@@ -28,6 +28,7 @@ const PACK_MODE_FULL = "full";
 
 const DEFAULT_MANIFEST_URL = resolveTransportManifestUrl("industrial_zones");
 const PACK_KEY = "industrial_zones";
+const DATA_ROW_LIMIT = 240;
 const INTERNAL_LABEL_THRESHOLD = 1.2;
 const OPEN_LABEL_THRESHOLD = 1.32;
 const INDUSTRIAL_LABEL_GRID_BY_DENSITY = {
@@ -184,6 +185,7 @@ function createPolygonFeature(rawFeature, variantId) {
     id: String(properties.id || rawFeature?.id || "").trim(),
     name: String(properties.name || "").trim(),
     variant: variantId,
+    geometryKind: "polygon",
     properties,
     pathData,
     bounds,
@@ -192,6 +194,43 @@ function createPolygonFeature(rawFeature, variantId) {
     lon: rawBounds.centerX,
     lat: rawBounds.centerY,
   };
+}
+
+function createPointFeature(rawFeature, variantId) {
+  const properties = rawFeature?.properties || {};
+  const projected = projectTransportWorkbenchCarrierGeometry(rawFeature?.geometry);
+  if (projected?.geometry?.type !== "Point" || !isFiniteCoordinatePair(projected.geometry.coordinates)) return null;
+  if (!isFiniteCoordinatePair(rawFeature?.geometry?.coordinates)) return null;
+  const [x, y] = projected.geometry.coordinates;
+  const [lon, lat] = rawFeature.geometry.coordinates;
+  return {
+    id: String(properties.id || rawFeature?.id || "").trim(),
+    name: String(properties.name || "").trim(),
+    variant: variantId,
+    geometryKind: "point",
+    properties,
+    pathData: "",
+    bounds: {
+      minX: x,
+      minY: y,
+      maxX: x,
+      maxY: y,
+      width: 0,
+      height: 0,
+      centerX: x,
+      centerY: y,
+    },
+    x,
+    y,
+    lon,
+    lat,
+  };
+}
+
+function createIndustrialFeature(rawFeature, variantId) {
+  return String(rawFeature?.geometry?.type || "") === "Point"
+    ? createPointFeature(rawFeature, variantId)
+    : createPolygonFeature(rawFeature, variantId);
 }
 
 function getVariantStyle(config, variantId) {
@@ -303,6 +342,33 @@ function createPolygonNode(feature, style, onSelect) {
   return node;
 }
 
+function createPointNode(feature, style, onSelect) {
+  const node = createSvgNode("circle");
+  node.setAttribute("cx", String(feature.x));
+  node.setAttribute("cy", String(feature.y));
+  node.setAttribute("r", "4.4");
+  node.setAttribute("fill", style.fill);
+  node.setAttribute("fill-opacity", String(Math.min(0.96, Math.max(0.42, style.fillOpacity + 0.12))));
+  node.setAttribute("stroke", style.stroke);
+  node.setAttribute("stroke-opacity", String(style.strokeOpacity));
+  node.setAttribute("stroke-width", String(Math.max(1.1, style.strokeWidth)));
+  node.setAttribute("vector-effect", "non-scaling-stroke");
+  node.dataset.featureId = feature.id;
+  node.style.cursor = "pointer";
+  node.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelect(feature);
+  });
+  return node;
+}
+
+function createIndustrialNode(feature, style, onSelect) {
+  return feature.geometryKind === "point"
+    ? createPointNode(feature, style, onSelect)
+    : createPolygonNode(feature, style, onSelect);
+}
+
 function createAggregateMarkerNode(aggregateEntry, style, onSelect) {
   const node = createSvgNode("circle");
   node.setAttribute("cx", String(aggregateEntry.x));
@@ -314,7 +380,7 @@ function createAggregateMarkerNode(aggregateEntry, style, onSelect) {
   node.setAttribute("stroke-opacity", String(style.strokeOpacity ?? 1));
   node.setAttribute("stroke-width", String(style.strokeWidth));
   node.setAttribute("vector-effect", "non-scaling-stroke");
-  node.dataset.featureId = aggregateEntry.id;
+  node.dataset.featureId = getAggregateSelectionFeatureId(aggregateEntry);
   node.style.cursor = "pointer";
   node.addEventListener("click", (event) => {
     event.preventDefault();
@@ -366,7 +432,7 @@ function createAggregateLabelNode(aggregateEntry, style, onSelect) {
   label.setAttribute("stroke-width", "2.8");
   label.setAttribute("stroke-linejoin", "round");
   label.textContent = aggregateEntry.label;
-  label.dataset.featureId = aggregateEntry.id;
+  label.dataset.featureId = getAggregateSelectionFeatureId(aggregateEntry);
   label.style.cursor = "pointer";
   label.addEventListener("click", (event) => {
     event.preventDefault();
@@ -376,25 +442,34 @@ function createAggregateLabelNode(aggregateEntry, style, onSelect) {
   return label;
 }
 
+function getAggregateSelectionFeatureId(aggregateEntry) {
+  return String(aggregateEntry?.sampleFeature?.id || aggregateEntry?.id || "").trim();
+}
+
 function createAggregateSelection(aggregateEntry) {
   const sampleFeature = aggregateEntry.sampleFeature || null;
+  const properties = {
+    ...(sampleFeature?.properties || {}),
+    aggregate_count: aggregateEntry.aggregateCount,
+    dominant_category: aggregateEntry.dominantCategory,
+    dominant_category_label: aggregateEntry.dominantCategoryLabel,
+  };
   return {
-    id: aggregateEntry.id,
-    name: aggregateEntry.label,
+    ...(sampleFeature || {}),
+    id: getAggregateSelectionFeatureId(aggregateEntry),
+    aggregateId: aggregateEntry.id,
+    name: sampleFeature?.name || aggregateEntry.label,
     variant: sampleFeature?.variant || aggregateEntry.variant || "",
     aggregateCount: aggregateEntry.aggregateCount,
     dominantCategory: aggregateEntry.dominantCategory,
     dominantCategoryLabel: aggregateEntry.dominantCategoryLabel,
-    properties: {
-      aggregate_count: aggregateEntry.aggregateCount,
-      dominant_category: aggregateEntry.dominantCategory,
-      dominant_category_label: aggregateEntry.dominantCategoryLabel,
-    },
-    x: aggregateEntry.x,
-    y: aggregateEntry.y,
-    lon: aggregateEntry.lon,
-    lat: aggregateEntry.lat,
-    kind: "industrial_zone_aggregate",
+    properties,
+    x: sampleFeature?.x ?? aggregateEntry.x,
+    y: sampleFeature?.y ?? aggregateEntry.y,
+    lon: sampleFeature?.lon ?? aggregateEntry.lon,
+    lat: sampleFeature?.lat ?? aggregateEntry.lat,
+    kind: sampleFeature?.kind || "industrial_zones",
+    aggregateKind: "industrial_zone_aggregate",
     sampleFeatureId: sampleFeature?.id || "",
   };
 }
@@ -465,7 +540,48 @@ function applySelectionHighlight(runtime) {
   });
 }
 
+function getActiveIndustrialPack(runtime) {
+  const activeCacheKey = getPackCacheKey(runtime.activeVariantId, runtime.activePackMode);
+  return runtime.projectedPacks.get(activeCacheKey)
+    || runtime.projectedPacks.get(getPackCacheKey(runtime.activeVariantId, PACK_MODE_FULL))
+    || runtime.projectedPacks.get(getPackCacheKey(runtime.activeVariantId, PACK_MODE_PREVIEW))
+    || Array.from(runtime.projectedPacks.values()).find(Boolean)
+    || null;
+}
+
+function createIndustrialDataRow(feature, runtime, config) {
+  const hiddenReason = getHiddenReason(feature, config, feature.variant || runtime.activeVariantId || "");
+  return {
+    id: feature.id,
+    family: "industrial_zones",
+    kind: "industrial_zones",
+    name: feature.name || feature.id,
+    source: String(feature.properties?.source || feature.properties?.data_source || feature.properties?.source_label || "").trim(),
+    visible: !hiddenReason,
+    hiddenReason,
+    lon: feature.lon,
+    lat: feature.lat,
+    variant: feature.variant || "",
+    selected: runtime.selectedFeature?.id === feature.id,
+    properties: feature.properties || {},
+  };
+}
+
+function buildDataRows(runtime) {
+  const pack = getActiveIndustrialPack(runtime);
+  const config = runtime.lastRenderedConfig || {};
+  const features = Array.isArray(pack?.features) ? pack.features : [];
+  return features
+    .map((feature) => createIndustrialDataRow(feature, runtime, config))
+    .sort((left, right) => {
+      if (left.visible !== right.visible) return left.visible ? -1 : 1;
+      return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+    })
+    .slice(0, DATA_ROW_LIMIT);
+}
+
 function buildSnapshot(runtime) {
+  const activePack = getActiveIndustrialPack(runtime);
   const activePackStatus = runtime.activePackMode === PACK_MODE_FULL
     ? runtime.loadState.fullStatus
     : runtime.loadState.previewStatus;
@@ -487,6 +603,9 @@ function buildSnapshot(runtime) {
     stats: { ...runtime.renderStats },
     renderedConfigSignature: runtime.renderedConfigSignature || "",
     selected: runtime.selectedFeature,
+    dataRows: buildDataRows(runtime),
+    dataRowCount: activePack?.features?.length || 0,
+    dataRowLimit: DATA_ROW_LIMIT,
   };
 }
 
@@ -640,7 +759,7 @@ async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
       });
       const sourceFeatures = Array.isArray(collection?.features) ? collection.features : [];
       const features = sourceFeatures
-        .map((feature) => createPolygonFeature(feature, variantId))
+        .map((feature) => createIndustrialFeature(feature, variantId))
         .filter(Boolean);
       if (sourceFeatures.length > 0 && features.length === 0) {
         throw new Error(`Projected zero industrial_zones features for ${variantId}/${mode}; carrier geometry is not ready.`);
@@ -687,6 +806,10 @@ function shouldUseFullPack(scale) {
   return scale >= 1.22;
 }
 
+function hasPackPath(manifest, variantId, mode) {
+  return !!getPackPath(manifest, mode, PACK_KEY, variantId);
+}
+
 function emitSelectionChange() {
   runtime.selectionChangeListener?.(buildSnapshot(runtime));
 }
@@ -712,7 +835,8 @@ export async function renderJapanIndustrialZonePreview(config = {}, options = {}
 
   const scale = getCurrentScale();
   const variantId = resolveVariantId(manifest, config);
-  const targetMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
+  const requestedMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;
+  const targetMode = hasPackPath(manifest, variantId, requestedMode) ? requestedMode : PACK_MODE_PREVIEW;
   const pack = await loadPack(variantId, targetMode);
   if (!isLoadGenerationCurrent(renderGeneration)) return null;
   if (typeof options.isCurrent === "function" && !options.isCurrent()) return null;
@@ -760,7 +884,7 @@ export async function renderJapanIndustrialZonePreview(config = {}, options = {}
     const visibleLabelEntries = selectVisibleLabelEntries(visibleEntries, config);
     const visibleLabelIds = new Set(visibleLabelEntries.map((entry) => entry.feature.id));
     visibleEntries.forEach(({ feature, showLabel }) => {
-      runtime.rootGroup.appendChild(createPolygonNode(feature, style, onFeatureSelect));
+      runtime.rootGroup.appendChild(createIndustrialNode(feature, style, onFeatureSelect));
       if (showLabel && visibleLabelIds.has(feature.id)) {
         const labelNode = createLabelNode(feature, style, onFeatureSelect);
         if (labelNode) {
@@ -847,7 +971,7 @@ export async function warmJapanIndustrialZonePreviewPack({ includeFull = false }
   if (!manifest) return buildSnapshot(runtime);
   const variantId = getDefaultVariantId(manifest);
   await loadPack(variantId, PACK_MODE_PREVIEW);
-  if (includeFull) {
+  if (includeFull && hasPackPath(manifest, variantId, PACK_MODE_FULL)) {
     loadPack(variantId, PACK_MODE_FULL).catch((error) => {
       console.warn("[transport-workbench] Failed to warm industrial_zones full pack.", error);
     });
@@ -857,6 +981,25 @@ export async function warmJapanIndustrialZonePreviewPack({ includeFull = false }
 
 export function getJapanIndustrialZonePreviewSnapshot() {
   return buildSnapshot(runtime);
+}
+
+export function selectJapanIndustrialZonePreviewFeature(selection) {
+  const selectionId = String(selection?.id || selection || "").trim();
+  if (!selectionId) return false;
+  const pack = getActiveIndustrialPack(runtime);
+  const feature = pack?.featureById?.get(selectionId)
+    || Array.from(runtime.projectedPacks.values()).find((candidatePack) => candidatePack?.featureById?.has(selectionId))?.featureById?.get(selectionId)
+    || null;
+  if (!feature) return false;
+  const hiddenReason = getHiddenReason(feature, runtime.lastRenderedConfig || {}, feature.variant || runtime.activeVariantId || "");
+  runtime.selectedFeature = {
+    ...feature,
+    visible: !hiddenReason,
+    hiddenReason,
+  };
+  applySelectionHighlight(runtime);
+  emitSelectionChange();
+  return true;
 }
 
 export function setJapanIndustrialZonePreviewSelectionListener(listener) {

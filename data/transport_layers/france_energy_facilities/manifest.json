@@ -1,0 +1,79 @@
+{
+  "adapter_id": "france_energy_facilities_v1",
+  "pack_id": "france_energy_facilities",
+  "family": "energy_facilities",
+  "geometry_kind": "point",
+  "country": "France",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T17:41:34.086828Z",
+  "recipe_path": "data/transport_layers/france_energy_facilities/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "energy_facilities": "data/transport_layers/france_energy_facilities/energy_facilities.preview.geojson"
+    },
+    "full": {
+      "energy_facilities": "data/transport_layers/france_energy_facilities/energy_facilities.geojson"
+    },
+    "build_audit": "data/transport_layers/france_energy_facilities/build_audit.json"
+  },
+  "source_signature": {
+    "osmose_fr_power_register_opendata_250kw": {
+      "filename": "registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "path": ".runtime/source-cache/transport/france_energy_facilities/registre-national-installations-electricite-250kw-osm-opendata.csv.bz2",
+      "size_bytes": 440662,
+      "sha256": "f1e73543d891ece7bc4f5fa76a6391358922ed4c86d218beff303433cdcf8acc"
+    }
+  },
+  "recipe_version": "france_energy_facilities_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 4000
+    },
+    "full": {
+      "energy_facilities": 16397
+    }
+  },
+  "clip_bbox": [
+    -5.08678,
+    42.416896,
+    8.178394,
+    51.047874
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack france_energy_facilities",
+  "runtime_consumer": "transport_workbench_energy_facilities_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:france",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "energy_facilities": "data/transport_layers/france_energy_facilities/energy_facilities.preview.geojson"
+        },
+        "full": {
+          "energy_facilities": "data/transport_layers/france_energy_facilities/energy_facilities.geojson"
+        },
+        "build_audit": "data/transport_layers/france_energy_facilities/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "energy_facilities": 4000
+        },
+        "full": {
+          "energy_facilities": 16397
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe."
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "version": "uk_industrial_zones_real_sources_v1",
+  "pack_id": "uk_industrial_zones",
+  "family": "industrial_zones",
+  "country": "United Kingdom",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/uk_industrial_zones",
+  "source_truth": "OpenStreetMap UK landuse=industrial polygons via Overpass API",
+  "geometry_truth": "Overpass JSON way/relation center coordinates for landuse=industrial polygons filtered through the UK carrier scope",
+  "sources": [
+    {
+      "id": "osm_overpass_uk_industrial_landuse",
+      "role": "overpass_json_query",
+      "expected_path": ".runtime/source-cache/transport/uk_industrial_zones/uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "url": "https://overpass-api.de/api/interpreter",
+      "license": "OpenStreetMap data under ODbL 1.0",
+      "required_layers": [],
+      "required_fields": [
+        "elements",
+        "type",
+        "id",
+        "tags",
+        "center"
+      ],
+      "filter_rule": "Keep UK way/relation landuse=industrial elements; builder converts Overpass centers to point industrial-zone features and clips to the UK carrier.",
+      "notes": "This first UK industrial slice uses real OSM industrial polygon centers because full polygon geometry is too heavy for a stable Pages-oriented rollout.",
+      "query_params": {
+        "data": "[out:json][timeout:180];\narea[\"ISO3166-1\"=\"GB\"][admin_level=2]->.uk;\n(\n  way[\"landuse\"=\"industrial\"](area.uk);\n  relation[\"landuse\"=\"industrial\"](area.uk);\n);\nout center tags;"
+      },
+      "signature": {
+        "filename": "uk_industrial_zones_osm_overpass_2026-06-02.json",
+        "path": ".runtime/source-cache/transport/uk_industrial_zones/uk_industrial_zones_osm_overpass_2026-06-02.json",
+        "size_bytes": 5722887,
+        "sha256": "5d7929221e10582c5512894fda2006964d569b012c9efdd44192fba8d6ff40a1"
+      }
+    }
+  ],
+  "source_signature": {
+    "osm_overpass_uk_industrial_landuse": {
+      "filename": "uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "path": ".runtime/source-cache/transport/uk_industrial_zones/uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "size_bytes": 5722887,
+      "sha256": "5d7929221e10582c5512894fda2006964d569b012c9efdd44192fba8d6ff40a1"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "industrial_zones.preview.geojson",
+    "industrial_zones.geojson"
+  ]
+}

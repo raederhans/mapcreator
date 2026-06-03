@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-06-02T17:41:40.063887Z",
+  "adapter_id": "france_industrial_zones_v1",
+  "pack_id": "france_industrial_zones",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "IGN BD TOPO zone d'activite ou d'interet WFS",
+  "geometry_truth": "IGN BD TOPO V3 zone_d_activite_ou_d_interet polygons filtered to industrial and commercial activity categories",
+  "source_signature": {
+    "ign_bdtopo_zone_activite_wfs": {
+      "filename": "ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "path": ".runtime/source-cache/transport/france_industrial_zones/ign_bdtopo_zone_activite_industriel_commercial.geojson",
+      "size_bytes": 86046022,
+      "sha256": "09bc80eaecfeb6a583220a7ab924c92292ae1492d6c59641f55b5b5e2a4a6050"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 3500
+    },
+    "full": {
+      "industrial_zones": 25486
+    }
+  },
+  "source_row_count": {
+    "ign_bdtopo_zone_activite_wfs": 61998
+  },
+  "matched_count": 25486,
+  "preview_rule": "First 3500 industrial/commercial BD TOPO polygons after France metropolitan carrier clip."
+}

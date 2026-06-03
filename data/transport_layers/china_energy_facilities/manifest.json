@@ -1,0 +1,79 @@
+{
+  "adapter_id": "china_energy_facilities_v1",
+  "pack_id": "china_energy_facilities",
+  "family": "energy_facilities",
+  "geometry_kind": "point",
+  "country": "China",
+  "schema_version": 1,
+  "generated_at": "2026-06-03T13:53:13.991274Z",
+  "recipe_path": "data/transport_layers/china_energy_facilities/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "energy_facilities": "data/transport_layers/china_energy_facilities/energy_facilities.preview.geojson"
+    },
+    "full": {
+      "energy_facilities": "data/transport_layers/china_energy_facilities/energy_facilities.geojson"
+    },
+    "build_audit": "data/transport_layers/china_energy_facilities/build_audit.json"
+  },
+  "source_signature": {
+    "wri_global_power_plant_database_csv": {
+      "filename": "global_power_plant_database.csv",
+      "path": ".runtime/source-cache/transport/china_energy_facilities/global_power_plant_database.csv",
+      "size_bytes": 11973385,
+      "sha256": "4b1f93e0fd93664f18684d9b05d0a52ed9658c6a8cf0d21ff2520791379ba7fc"
+    }
+  },
+  "recipe_version": "china_energy_facilities_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 1000
+    },
+    "full": {
+      "energy_facilities": 4086
+    }
+  },
+  "clip_bbox": [
+    75.5727,
+    18.32,
+    132.9553,
+    50.246
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack china_energy_facilities",
+  "runtime_consumer": "transport_workbench_energy_facilities_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:china",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "energy_facilities": "data/transport_layers/china_energy_facilities/energy_facilities.preview.geojson"
+        },
+        "full": {
+          "energy_facilities": "data/transport_layers/china_energy_facilities/energy_facilities.geojson"
+        },
+        "build_audit": "data/transport_layers/china_energy_facilities/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "energy_facilities": 1000
+        },
+        "full": {
+          "energy_facilities": 4086
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:china",
+      "scope_policy": "Admin1 preview scope follows Natural Earth CHN polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 provincial carrier."
+    }
+  }
+}

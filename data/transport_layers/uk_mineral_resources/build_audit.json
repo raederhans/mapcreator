@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-06-03T15:51:15.592100Z",
+  "adapter_id": "uk_mineral_resources_v1",
+  "pack_id": "uk_mineral_resources",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "GSNI Northern Ireland Mineral Resources public GeoJSON package",
+  "geometry_truth": "OpenDataNI GeoJSON mineral resource polygons converted to representative points and filtered through the UK carrier scope",
+  "source_signature": {
+    "gsni_northern_ireland_mineral_resources_json": {
+      "filename": "mineralresourcesjson.zip",
+      "path": ".runtime/source-cache/transport/uk_mineral_resources/mineralresourcesjson.zip",
+      "size_bytes": 22179509,
+      "sha256": "193bb590609ff537dfb7cbb222e05d3717ff6372c9dc126a91611403271b3e14"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 1000
+    },
+    "full": {
+      "mineral_resources": 14914
+    }
+  },
+  "source_row_count": {
+    "Clay_50k_Dissolve_v1.json": 89,
+    "Clay_Bauxitic_50k_v1.json": 212,
+    "Coal_and_Lignite_50k_Dissolve_v1.json": 23,
+    "Conglomerate_50k_Dissolved_v1.json": 31,
+    "Dolomite_50k_Dissolve_v1.json": 79,
+    "Igneous_and_Metaigneous_rock_250k_Areas_Not_Covered_By_50k_Only_Dissolve_v1.json": 6,
+    "Igneous_and_Metaigneous_rock_50k_Dissolve_v1.json": 655,
+    "Lignite_Assessment_50k_Dissolved_v1.json": 2,
+    "Limestone_250k_Areas_Not_Covered_By_50k_Only_Dissolve_v1.json": 2,
+    "Limestone_50k_Buffer_100m_Dissolve_v1.json": 8,
+    "Limestone_50k_Dissolve_v1.json": 588,
+    "MetaSedimentary_250k_Areas_Not_Covered_By_50k_Only_Dissolve_v1.json": 1,
+    "MetaSedimentary_50k_Dissolve_v1.json": 145,
+    "Peat_250k_Areas_Not_Covered_By_50k_Only_Dissolved_v1.json": 116,
+    "Peat_50k_Dissolve_v1.json": 8110,
+    "Perlite_50k_Dissolve_v1.json": 7,
+    "Salt_50k_Dissolve_v1.json": 1,
+    "Sand_and_gravel_250k_Areas_Not_Covered_By_50k_Only_Dissolve_v1.json": 19,
+    "Sand_and_Gravel_50k_Dissolve_v1.json": 4827,
+    "Sandstone_250k_Areas_Not_covered_By_50k_Only_Dissolve_v1.json": 57,
+    "Sandstone_50k_Dissolve_v1.json": 251,
+    "Silica_Sand_50k_Dissolve_v1.json": 14
+  },
+  "matched_count": 14914,
+  "preview_rule": "First 1000 grouped GSNI mineral resource polygon representative points after UK carrier clip.",
+  "scope_rule": "OpenDataNI mineral resource layers cover Northern Ireland; UK carrier filtering keeps the pack inside United Kingdom scope.",
+  "filter_rule": "GeoJSON polygons are converted to representative points to reuse the existing mineral_resources point-family preview contract."
+}

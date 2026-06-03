@@ -9,6 +9,7 @@ import {
   normalizeReferenceImageState,
   normalizeRiversStyleConfig,
   normalizeTransportOverviewStyleConfig,
+  normalizeTransportWorkbenchPointDeltas,
   normalizeUrbanStyleConfig,
   normalizeTransportWorkbenchUiState,
   normalizeExportWorkbenchUiState,
@@ -536,6 +537,7 @@ class FileManager {
         texture: normalizeTextureStyleConfig(appState.styleConfig?.texture),
         dayNight: normalizeDayNightStyleConfig(appState.styleConfig?.dayNight),
       },
+      transportWorkbenchPointDeltas: normalizeTransportWorkbenchPointDeltas(appState.transportWorkbenchPointDeltas),
       transportWorkbenchUi: normalizeTransportWorkbenchUiState(appState.transportWorkbenchUi),
       // workbench 当前选中的 pack 只是预览态；项目文件只持久化真正已经 Apply 到主图的 overlay 身份。
       transportCountryOverlayState: normalizeTransportCountryOverlayProjectState(appState.transportCountryOverlayState),
@@ -764,6 +766,7 @@ class FileManager {
         data.styleConfig.texture = normalizeTextureStyleConfig(data.styleConfig.texture);
         data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
         data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
+        data.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(data.transportWorkbenchPointDeltas);
         // 导入后只恢复主图已应用 overlay 的 family->pack 映射；
         // 具体 collection 仍由运行时按 manifest/source gate 重新加载。
         data.transportCountryOverlayState = normalizeTransportCountryOverlayProjectState(data.transportCountryOverlayState);

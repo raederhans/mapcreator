@@ -7,8 +7,20 @@ const TARGET_PACKS = [
   ["road", "germany_road", "germany"],
   ["industrial_zones", "germany_industrial_zones", "germany"],
   ["road", "usa_road", "usa"],
+  ["road", "france_road", "france"],
   ["rail", "france_rail", "france"],
+  ["rail", "uk_rail", "uk"],
+  ["rail", "usa_rail", "usa"],
   ["airport", "usa_airport", "usa"],
+  ["energy_facilities", "china_energy_facilities", "china"],
+  ["industrial_zones", "china_industrial_zones", "china"],
+  ["logistics_hubs", "china_logistics_hubs", "china"],
+  ["mineral_resources", "china_mineral_resources", "china"],
+  ["mineral_resources", "uk_mineral_resources", "uk"],
+  ["energy_facilities", "russia_energy_facilities", "russia"],
+  ["industrial_zones", "russia_industrial_zones", "russia"],
+  ["logistics_hubs", "russia_logistics_hubs", "russia"],
+  ["mineral_resources", "russia_mineral_resources", "russia"],
 ];
 
 test.setTimeout(300000);

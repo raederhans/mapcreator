@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-06-02T22:32:23.259763Z",
+  "adapter_id": "uk_industrial_zones_v1",
+  "pack_id": "uk_industrial_zones",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "OpenStreetMap UK landuse=industrial polygons via Overpass API",
+  "geometry_truth": "Overpass JSON way/relation center coordinates for landuse=industrial polygons filtered through the UK carrier scope",
+  "source_signature": {
+    "osm_overpass_uk_industrial_landuse": {
+      "filename": "uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "path": ".runtime/source-cache/transport/uk_industrial_zones/uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "size_bytes": 5722887,
+      "sha256": "5d7929221e10582c5512894fda2006964d569b012c9efdd44192fba8d6ff40a1"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 200
+    },
+    "full": {
+      "industrial_zones": 37706
+    }
+  },
+  "source_row_count": {
+    "overpass_elements": 38312
+  },
+  "matched_count": 37706,
+  "preview_rule": "Top 200 named-first UK OSM landuse=industrial polygon centers after carrier clip.",
+  "scope_rule": "Filtered through the United Kingdom carrier; OSM relation scope is GB and excludes overseas territories."
+}

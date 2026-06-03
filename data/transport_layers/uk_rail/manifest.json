@@ -1,0 +1,114 @@
+{
+  "adapter_id": "uk_rail_v1",
+  "pack_id": "uk_rail",
+  "family": "rail",
+  "geometry_kind": "line",
+  "country": "United Kingdom",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T14:46:01.522606Z",
+  "recipe_path": "data/transport_layers/uk_rail/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "railways": "data/transport_layers/uk_rail/railways.preview.topo.json",
+      "rail_stations_major": "data/transport_layers/uk_rail/rail_stations_major.preview.geojson"
+    },
+    "full": {
+      "railways": "data/transport_layers/uk_rail/railways.topo.json",
+      "rail_stations_major": "data/transport_layers/uk_rail/rail_stations_major.geojson"
+    },
+    "build_audit": "data/transport_layers/uk_rail/build_audit.json"
+  },
+  "source_signature": {
+    "network_rail_inm_network_model_gpkg": {
+      "filename": "network-model.gpkg",
+      "path": ".runtime/source-cache/transport/uk_rail/network-model.gpkg",
+      "size_bytes": 78266368,
+      "sha256": "c3f40f0b371735a71c0bc53b6c73b670b8d9975a9e586cc3ffe1192b57757599"
+    },
+    "dft_naptan_national_access_nodes_csv": {
+      "filename": "naptan_access_nodes_2026-06-02.csv",
+      "path": ".runtime/source-cache/transport/uk_rail/naptan_access_nodes_2026-06-02.csv",
+      "size_bytes": 101166265,
+      "sha256": "e910676cfe9ba67781897a076ddf71c8c39e9499a3cba3e82a22b194a36cff85"
+    }
+  },
+  "recipe_version": "uk_rail_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "railways": 3180,
+      "rail_stations_major": 600
+    },
+    "full": {
+      "railways": 3180,
+      "rail_stations_major": 2148
+    }
+  },
+  "clip_bbox": [
+    -5.845873,
+    50.121143,
+    1.833279,
+    58.590865
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack uk_rail",
+  "runtime_consumer": "transport_workbench_rail_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:uk",
+  "mainMapEligible": true,
+  "apply_bridge_supported": true,
+  "coverage_scope": "country",
+  "main_map_consumer": {
+    "family": "rail",
+    "supported_keys": [
+      "railways",
+      "rail_stations_major"
+    ]
+  },
+  "sidecars": {
+    "rail_stations_major": {
+      "required": true
+    }
+  },
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "railways": "data/transport_layers/uk_rail/railways.preview.topo.json",
+          "rail_stations_major": "data/transport_layers/uk_rail/rail_stations_major.preview.geojson"
+        },
+        "full": {
+          "railways": "data/transport_layers/uk_rail/railways.topo.json",
+          "rail_stations_major": "data/transport_layers/uk_rail/rail_stations_major.geojson"
+        },
+        "build_audit": "data/transport_layers/uk_rail/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "railways": 3180,
+          "rail_stations_major": 600
+        },
+        "full": {
+          "railways": 3180,
+          "rail_stations_major": 2148
+        }
+      }
+    }
+  },
+  "extensions": {
+    "rail": {
+      "carrier_asset_key": "transport_carrier:uk",
+      "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography."
+    },
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:uk",
+      "scope_policy": "Great Britain rail scope only; Northern Ireland rail remains a future UK source gap, and overseas territories are excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 carrier clipped to Great Britain for this rail pack."
+    }
+  }
+}

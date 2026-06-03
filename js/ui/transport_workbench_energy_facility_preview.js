@@ -96,5 +96,6 @@ export const clearJapanEnergyFacilityPreview = controller.clear;
 export const destroyJapanEnergyFacilityPreview = controller.destroy;
 export const getJapanEnergyFacilityPreviewSnapshot = controller.getSnapshot;
 export const renderJapanEnergyFacilityPreview = controller.render;
+export const selectJapanEnergyFacilityPreviewFeature = controller.selectFeature;
 export const setJapanEnergyFacilityPreviewSelectionListener = controller.setSelectionListener;
 export const warmJapanEnergyFacilityPreviewPack = controller.warm;

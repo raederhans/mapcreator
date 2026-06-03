@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-06-03T02:13:01.449841Z",
+  "adapter_id": "india_energy_facilities_v1",
+  "pack_id": "india_energy_facilities",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "WRI Global Power Plant Database India country CSV",
+  "geometry_truth": "WRI plant latitude/longitude points filtered to the India workbench carrier",
+  "source_signature": {
+    "wri_global_power_plant_database_india_csv": {
+      "filename": "database_IND.csv",
+      "path": ".runtime/source-cache/transport/india_energy_facilities/database_IND.csv",
+      "size_bytes": 177796,
+      "sha256": "166c27856fb13c00895e51b10219e5cde334a52899783bd503d58aa9d1f0a2e9"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 846
+    },
+    "full": {
+      "energy_facilities": 846
+    }
+  },
+  "source_row_count": {
+    "wri_india_power_plants": 907
+  },
+  "matched_count": 846,
+  "preview_rule": "Largest 1000 WRI India power plants by reported capacity after India carrier clip.",
+  "scope_rule": "Filtered through the India carrier fitGeometry; out-of-scope coordinate rows are excluded."
+}

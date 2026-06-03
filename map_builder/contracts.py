@@ -324,6 +324,13 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         description="Historic Geographical Overhaul authorized converted flag PNG manifest.",
     ),
     DataArtifactSpec(
+        path="hgo_catalogs/hgo_identity_aliases.json",
+        role="hgo_identity_aliases",
+        artifact_class=ARTIFACT_CLASS_MANUAL,
+        owner="hgo_identity_aliases.manual_review",
+        description="Historic Geographical Overhaul manually reviewed identity alias catalog.",
+    ),
+    DataArtifactSpec(
         path="js/core/city_lights_modern_asset.js",
         role="modern_city_lights_asset",
         artifact_class=ARTIFACT_CLASS_PUBLISH,

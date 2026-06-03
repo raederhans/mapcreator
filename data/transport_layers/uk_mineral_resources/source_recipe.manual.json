@@ -1,0 +1,46 @@
+{
+  "version": "uk_mineral_resources_real_sources_v1",
+  "pack_id": "uk_mineral_resources",
+  "family": "mineral_resources",
+  "country": "United Kingdom",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/uk_mineral_resources",
+  "source_truth": "GSNI Northern Ireland Mineral Resources public GeoJSON package",
+  "geometry_truth": "OpenDataNI GeoJSON mineral resource polygons converted to representative points and filtered through the UK carrier scope",
+  "sources": [
+    {
+      "id": "gsni_northern_ireland_mineral_resources_json",
+      "role": "opendatani_geojson_zip",
+      "expected_path": ".runtime/source-cache/transport/uk_mineral_resources/mineralresourcesjson.zip",
+      "url": "https://admin.opendatani.gov.uk/dataset/a47e1630-086f-4b92-9416-1197cc8c633a/resource/d9e9d0ba-3072-4efc-ba4c-6ff26fad1c22/download/mineralresourcesjson.zip",
+      "license": "UK Open Government Licence v3.0",
+      "required_layers": [],
+      "required_fields": [
+        "RESOURCE",
+        "geometry"
+      ],
+      "filter_rule": "Read the OpenDataNI mineral resource GeoJSON layers, convert polygons to representative points, and filter through the UK carrier scope.",
+      "notes": "This first UK mineral resource pack covers Northern Ireland's open GSNI mineral resource layers; Great Britain BGS premium mineral-resource polygons remain a future licensed-source track.",
+      "query_params": {},
+      "signature": {
+        "filename": "mineralresourcesjson.zip",
+        "path": ".runtime/source-cache/transport/uk_mineral_resources/mineralresourcesjson.zip",
+        "size_bytes": 22179509,
+        "sha256": "193bb590609ff537dfb7cbb222e05d3717ff6372c9dc126a91611403271b3e14"
+      }
+    }
+  ],
+  "source_signature": {
+    "gsni_northern_ireland_mineral_resources_json": {
+      "filename": "mineralresourcesjson.zip",
+      "path": ".runtime/source-cache/transport/uk_mineral_resources/mineralresourcesjson.zip",
+      "size_bytes": 22179509,
+      "sha256": "193bb590609ff537dfb7cbb222e05d3717ff6372c9dc126a91611403271b3e14"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "mineral_resources.preview.geojson",
+    "mineral_resources.geojson"
+  ]
+}

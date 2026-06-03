@@ -86,5 +86,6 @@ export const clearJapanLogisticsHubPreview = controller.clear;
 export const destroyJapanLogisticsHubPreview = controller.destroy;
 export const getJapanLogisticsHubPreviewSnapshot = controller.getSnapshot;
 export const renderJapanLogisticsHubPreview = controller.render;
+export const selectJapanLogisticsHubPreviewFeature = controller.selectFeature;
 export const setJapanLogisticsHubPreviewSelectionListener = controller.setSelectionListener;
 export const warmJapanLogisticsHubPreviewPack = controller.warm;

@@ -1117,6 +1117,117 @@ function normalizeTransportWorkbenchActivePackIdByFamily(rawValue, activeFamily 
   }
   return entries;
 }
+
+const TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS = ["airport", "port"];
+
+function createDefaultTransportWorkbenchPointDeltas() {
+  return {
+    schemaVersion: 1,
+    byFamily: {
+      airport: { created: [], updated: [], deleted: [], revision: 0, sourcePackId: "", updatedAt: "" },
+      port: { created: [], updated: [], deleted: [], revision: 0, sourcePackId: "", updatedAt: "" },
+    },
+  };
+}
+
+function normalizeTransportWorkbenchPointDeltaFeature(rawFeature, familyId, index = 0) {
+  const raw = rawFeature && typeof rawFeature === "object" ? rawFeature : {};
+  const lon = toFiniteNumber(raw.lon, NaN);
+  const lat = toFiniteNumber(raw.lat, NaN);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  const normalizedFamilyId = TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS.includes(familyId) ? familyId : "airport";
+  const rawProperties = raw.properties && typeof raw.properties === "object" ? raw.properties : {};
+  const properties = {
+    ...rawProperties,
+    source: "user_overlay",
+    source_label: "User overlay",
+    edit_overlay: true,
+  };
+  if (normalizedFamilyId === "airport") {
+    properties.airport_type = String(properties.airport_type || "other").trim() || "other";
+    properties.status_category = String(properties.status_category || "active").trim() || "active";
+  } else if (normalizedFamilyId === "port") {
+    properties.legal_designation = String(properties.legal_designation || "local").trim() || "local";
+    properties.manager_type_code = String(properties.manager_type_code || "5").trim() || "5";
+  }
+  return {
+    id: String(raw.id || `${normalizedFamilyId}_edit_${index + 1}`).trim(),
+    family: normalizedFamilyId,
+    packId: normalizeTransportWorkbenchActivePackId(raw.packId, normalizedFamilyId),
+    name: String(raw.name || rawProperties.name || "").trim(),
+    lon: Math.max(-180, Math.min(180, lon)),
+    lat: Math.max(-90, Math.min(90, lat)),
+    properties,
+  };
+}
+
+function normalizeTransportWorkbenchPointDeltaPatch(rawFeature, familyId, index = 0) {
+  const raw = rawFeature && typeof rawFeature === "object" ? rawFeature : {};
+  const lon = toFiniteNumber(raw.lon, NaN);
+  const lat = toFiniteNumber(raw.lat, NaN);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  const normalizedFamilyId = TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS.includes(familyId) ? familyId : "airport";
+  const rawProperties = raw.properties && typeof raw.properties === "object" ? raw.properties : {};
+  const {
+    source: _source,
+    source_label: _sourceLabel,
+    edit_overlay: _editOverlay,
+    edit_overlay_mode: _editOverlayMode,
+    ...properties
+  } = rawProperties;
+  return {
+    id: String(raw.id || `${normalizedFamilyId}_update_${index + 1}`).trim(),
+    family: normalizedFamilyId,
+    packId: normalizeTransportWorkbenchActivePackId(raw.packId, normalizedFamilyId),
+    name: String(raw.name || rawProperties.name || "").trim(),
+    lon: Math.max(-180, Math.min(180, lon)),
+    lat: Math.max(-90, Math.min(90, lat)),
+    properties,
+  };
+}
+
+function normalizeTransportWorkbenchPointDeltaFamily(rawFamily, familyId) {
+  const raw = rawFamily && typeof rawFamily === "object" ? rawFamily : {};
+  const rawCreated = Array.isArray(raw.created)
+    ? raw.created
+    : (Array.isArray(raw.features) ? raw.features : []);
+  const created = rawCreated
+    .map((feature, index) => normalizeTransportWorkbenchPointDeltaFeature(feature, familyId, index))
+    .filter(Boolean);
+  const updated = Array.isArray(raw.updated)
+    ? raw.updated
+      .map((feature, index) => normalizeTransportWorkbenchPointDeltaPatch(feature, familyId, index))
+      .filter(Boolean)
+    : [];
+  const deleted = Array.isArray(raw.deleted)
+    ? Array.from(new Set(raw.deleted.map((value) => String(value || "").trim()).filter(Boolean)))
+    : [];
+  return {
+    created,
+    updated,
+    deleted,
+    revision: Math.max(0, Math.floor(toFiniteNumber(raw.revision, created.length + updated.length + deleted.length))),
+    sourcePackId: normalizeTransportWorkbenchActivePackId(raw.sourcePackId, familyId),
+    updatedAt: String(raw.updatedAt || "").trim(),
+  };
+}
+
+function normalizeTransportWorkbenchPointDeltas(rawDeltas) {
+  const defaults = createDefaultTransportWorkbenchPointDeltas();
+  const raw = rawDeltas && typeof rawDeltas === "object" ? rawDeltas : {};
+  const sourceFamilies = raw.byFamily && typeof raw.byFamily === "object" ? raw.byFamily : raw;
+  return {
+    schemaVersion: 1,
+    byFamily: Object.fromEntries(TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS.map((familyId) => [
+      familyId,
+      {
+        ...defaults.byFamily[familyId],
+        ...normalizeTransportWorkbenchPointDeltaFamily(sourceFamilies[familyId], familyId),
+      },
+    ])),
+  };
+}
+
 function normalizeTransportWorkbenchUiState(rawUi) {
   const raw = rawUi && typeof rawUi === "object" ? rawUi : {};
   const rawPreviewCamera = raw.previewCamera && typeof raw.previewCamera === "object" ? raw.previewCamera : {};
@@ -1334,6 +1445,7 @@ export {
   normalizePhysicalStyleConfig,
   createDefaultLakeStyleConfig,
   normalizeLakeStyleConfig,
+  createDefaultTransportWorkbenchPointDeltas,
   createDefaultUrbanStyleConfig,
   normalizeUrbanStyleConfig,
   createDefaultCityLayerStyleConfig,
@@ -1358,6 +1470,7 @@ export {
   createDefaultTransportWorkbenchDisplayConfigs,
   normalizeTransportWorkbenchDisplayConfig,
   normalizeTransportWorkbenchDisplayConfigs,
+  normalizeTransportWorkbenchPointDeltas,
   normalizeTransportWorkbenchUiState,
   normalizeExportWorkbenchUiState,
 };

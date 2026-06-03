@@ -1,0 +1,55 @@
+{
+  "version": "china_energy_facilities_real_sources_v1",
+  "pack_id": "china_energy_facilities",
+  "family": "energy_facilities",
+  "country": "China",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/china_energy_facilities",
+  "source_truth": "WRI Global Power Plant Database global CSV",
+  "geometry_truth": "WRI plant latitude/longitude points filtered to the China workbench carrier",
+  "sources": [
+    {
+      "id": "wri_global_power_plant_database_csv",
+      "role": "direct_power_plant_csv",
+      "expected_path": ".runtime/source-cache/transport/china_energy_facilities/global_power_plant_database.csv",
+      "url": "https://raw.githubusercontent.com/wri/global-power-plant-database/master/output_database/global_power_plant_database.csv",
+      "license": "Creative Commons Attribution 4.0 (CC BY 4.0)",
+      "required_layers": [],
+      "required_fields": [
+        "country",
+        "country_long",
+        "name",
+        "gppd_idnr",
+        "capacity_mw",
+        "latitude",
+        "longitude",
+        "primary_fuel",
+        "owner",
+        "source",
+        "url"
+      ],
+      "filter_rule": "Keep CHN plant rows with valid WGS84 coordinates and filter them through the China carrier scope.",
+      "notes": "WRI publishes a global CSV release; country-specific CHN/RUS CSV files are not available in the upstream repository.",
+      "query_params": {},
+      "signature": {
+        "filename": "global_power_plant_database.csv",
+        "path": ".runtime/source-cache/transport/china_energy_facilities/global_power_plant_database.csv",
+        "size_bytes": 11973385,
+        "sha256": "4b1f93e0fd93664f18684d9b05d0a52ed9658c6a8cf0d21ff2520791379ba7fc"
+      }
+    }
+  ],
+  "source_signature": {
+    "wri_global_power_plant_database_csv": {
+      "filename": "global_power_plant_database.csv",
+      "path": ".runtime/source-cache/transport/china_energy_facilities/global_power_plant_database.csv",
+      "size_bytes": 11973385,
+      "sha256": "4b1f93e0fd93664f18684d9b05d0a52ed9658c6a8cf0d21ff2520791379ba7fc"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "energy_facilities.preview.geojson",
+    "energy_facilities.geojson"
+  ]
+}

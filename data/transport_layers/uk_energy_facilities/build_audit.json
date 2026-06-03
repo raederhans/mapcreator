@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-06-02T17:55:32.168501Z",
+  "adapter_id": "uk_energy_facilities_v1",
+  "pack_id": "uk_energy_facilities",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "DESNZ Renewable Energy Planning Database April 2026 quarterly extract",
+  "geometry_truth": "REPD British National Grid X/Y project coordinates transformed to WGS84 and clipped to the UK carrier scope",
+  "source_signature": {
+    "desnz_repd_q1_2026_csv": {
+      "filename": "REPD_publication_Q1_2026.csv",
+      "path": ".runtime/source-cache/transport/uk_energy_facilities/REPD_publication_Q1_2026.csv",
+      "size_bytes": 4951077,
+      "sha256": "3aa6752bfdc6b5275f8be0585ad8bd00a8646bd522d686cfb57d95cc9d8688a3"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 4000
+    },
+    "full": {
+      "energy_facilities": 13989
+    }
+  },
+  "source_row_count": {
+    "desnz_repd_q1_2026_csv": 14316
+  },
+  "matched_count": 13989,
+  "preview_rule": "Top 4000 REPD renewable electricity projects by installed capacity after UK carrier clip."
+}

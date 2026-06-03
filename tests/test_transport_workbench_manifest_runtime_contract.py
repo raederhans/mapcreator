@@ -33,6 +33,7 @@ STARTUP_LOCALE_FILES = [
     REPO_ROOT / "data" / "scenarios" / "hoi4_1939" / "locales.startup.json",
     REPO_ROOT / "data" / "scenarios" / "tno_1962" / "locales.startup.json",
 ]
+PACK_RESOLVER_JS = REPO_ROOT / "js" / "core" / "transport_pack_resolver.js"
 
 
 class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
@@ -109,6 +110,13 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("export const TRANSPORT_WORKBENCH_CONTROL_SCHEMAS", descriptor_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_DEFAULT_CONFIGS", descriptor_content)
         self.assertIn("export const TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS", descriptor_content)
+        self.assertIn('baseCapability: "polygon_or_point"', registry_content)
+        self.assertIn('runtimeKind: "mixed"', registry_content)
+        self.assertIn('geometryKind: "polygon_or_point"', registry_content)
+        self.assertIn('adapterId: "active_industrial_zones_manifest"', descriptor_content)
+        self.assertIn('geometryKind: "polygon_or_point"', descriptor_content)
+        self.assertIn("Polygon packs and OSM center-point packs keep their own geometry contract", descriptor_content)
+        self.assertNotIn('adapterId: "japan_industrial_zones_v2"', descriptor_content)
         self.assertIn("deepFreeze({", descriptor_content)
         self.assertIn("TRANSPORT_WORKBENCH_DENSITY_FAMILY_ID_SET", descriptor_content)
         self.assertIn("export function buildEnergyFacilitySubtypeControlOptions", descriptor_content)
@@ -163,6 +171,50 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("getTransportAsset", manifest_content)
         self.assertNotIn("fetch(packPath", point_content)
         self.assertNotIn("fetch(packPath", industrial_content)
+
+    def test_industrial_preview_supports_polygon_and_point_runtime_shapes(self) -> None:
+        industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function createPolygonFeature", industrial_content)
+        self.assertIn("function createPointFeature", industrial_content)
+        self.assertIn("function createIndustrialFeature", industrial_content)
+        self.assertIn("function createPointNode", industrial_content)
+        self.assertIn("function createIndustrialNode", industrial_content)
+        self.assertIn("function hasPackPath", industrial_content)
+        self.assertIn(".map((feature) => createIndustrialFeature(feature, variantId))", industrial_content)
+        self.assertIn("const requestedMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;", industrial_content)
+        self.assertIn("const targetMode = hasPackPath(manifest, variantId, requestedMode) ? requestedMode : PACK_MODE_PREVIEW;", industrial_content)
+        self.assertIn("if (includeFull && hasPackPath(manifest, variantId, PACK_MODE_FULL))", industrial_content)
+        self.assertIn("runtime.rootGroup.appendChild(createIndustrialNode(feature, style, onFeatureSelect));", industrial_content)
+        self.assertIn("function getAggregateSelectionFeatureId", industrial_content)
+        self.assertIn("node.dataset.featureId = getAggregateSelectionFeatureId(aggregateEntry);", industrial_content)
+        self.assertIn("id: getAggregateSelectionFeatureId(aggregateEntry),", industrial_content)
+
+    def test_point_preview_keeps_view_only_camera_sync_on_the_light_path(self) -> None:
+        point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
+        lifecycle_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js").read_text(encoding="utf-8")
+
+        self.assertIn("viewOnly", lifecycle_content)
+        self.assertIn("viewOnly: true", lifecycle_content)
+        self.assertIn("renderLabelDescriptors(runtime)", point_content)
+        self.assertIn("runtime.labelDescriptors", point_content)
+        self.assertIn("runtime.renderedConfigSignature === nextConfigSignature", point_content)
+        self.assertIn("runtime.renderedViewSignature === nextViewSignature", point_content)
+        self.assertIn("createViewRenderSignature(targetMode, scale)", point_content)
+        self.assertIn("const sourcePack = await loadPack(targetMode, config);", point_content)
+        self.assertIn("const pack = createEffectivePointPack(sourcePack, config, definition);", point_content)
+        self.assertIn("config?.editOverlay?.deleted", point_content)
+        self.assertIn("config?.editOverlay?.updated", point_content)
+        self.assertIn(".filter((feature) => !deletedIds.has(feature.id))", point_content)
+        self.assertIn("function createUpdatedPointFeature", point_content)
+        self.assertIn("const updatedEntriesById = new Map", point_content)
+        self.assertIn("...sourceProperties", point_content)
+        self.assertIn("...patchProperties", point_content)
+        self.assertIn('edit_overlay_mode: "updated"', point_content)
+        self.assertLess(
+            point_content.index("options.viewOnly"),
+            point_content.index("const sourcePack = await loadPack")
+        )
 
     def test_transport_carrier_uses_active_pack_runtime_asset_key_through_data_service(self) -> None:
         carrier_content = TRANSPORT_CARRIER_JS.read_text(encoding="utf-8")
@@ -235,6 +287,8 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("getTransportWorkbenchFamilyPreviewConfig", preview_content)
         self.assertIn("listTransportWorkbenchFamilyPreviewConfigs", preview_content)
         self.assertIn("PREVIEW_MODULES_BY_KEY", preview_content)
+        self.assertIn("selectTransportWorkbenchFamilyPreviewFeature", preview_content)
+        self.assertIn("return !!handler.selectFeature(selection);", preview_content)
         self.assertIn("candidateFamilyId === normalizedFamilyId", preview_content)
         self.assertIn("candidateHandler.clear?.();", preview_content)
         self.assertIn("return handler.render(config, options);", preview_content)
@@ -243,11 +297,35 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertNotIn("querySelector", preview_content)
         self.assertNotIn("FAMILY_PREVIEW_HANDLERS", preview_content)
         self.assertIn("TRANSPORT_WORKBENCH_FAMILY_PREVIEW_EXPORTS", registry_content)
+        self.assertIn('selectFeature: "selectJapanRoadPreviewFeature"', registry_content)
+        self.assertIn('selectFeature: "selectJapanRailPreviewFeature"', registry_content)
+        self.assertIn('selectFeature: "selectJapanAirportPreviewFeature"', registry_content)
+        self.assertIn('selectFeature: "selectJapanIndustrialZonePreviewFeature"', registry_content)
         self.assertIn("previewOnly: true", registry_content)
         self.assertIn('moduleKey: "road"', registry_content)
         self.assertIn('moduleKey: "rail"', registry_content)
         self.assertIn("export function getTransportWorkbenchFamilyPreviewConfig", registry_content)
         self.assertIn("export function listTransportWorkbenchFamilyPreviewConfigs", registry_content)
+
+    def test_data_tab_family_rows_have_selection_contracts(self) -> None:
+        registry_content = FAMILY_REGISTRY_JS.read_text(encoding="utf-8")
+        modules = {
+            "road": (REPO_ROOT / "js" / "ui" / "transport_workbench_road_preview.js").read_text(encoding="utf-8"),
+            "rail": (REPO_ROOT / "js" / "ui" / "transport_workbench_rail_preview.js").read_text(encoding="utf-8"),
+            "airport": (REPO_ROOT / "js" / "ui" / "transport_workbench_airport_preview.js").read_text(encoding="utf-8"),
+            "port": (REPO_ROOT / "js" / "ui" / "transport_workbench_port_preview.js").read_text(encoding="utf-8"),
+            "logistics_hubs": (REPO_ROOT / "js" / "ui" / "transport_workbench_logistics_hub_preview.js").read_text(encoding="utf-8"),
+            "mineral_resources": (REPO_ROOT / "js" / "ui" / "transport_workbench_mineral_resource_preview.js").read_text(encoding="utf-8"),
+            "energy_facilities": (REPO_ROOT / "js" / "ui" / "transport_workbench_energy_facility_preview.js").read_text(encoding="utf-8"),
+            "industrial_zones": (REPO_ROOT / "js" / "ui" / "transport_workbench_industrial_zone_preview.js").read_text(encoding="utf-8"),
+        }
+        for family_id, module_content in modules.items():
+            if "dataRows" not in module_content:
+                continue
+            registry_block_start = registry_content.index(f"{family_id}: Object.freeze")
+            registry_block_end = registry_content.index("}),", registry_block_start)
+            registry_block = registry_content[registry_block_start:registry_block_end]
+            self.assertIn("selectFeature:", registry_block, family_id)
 
     def test_apply_bridge_routes_through_active_pack_contract(self) -> None:
         # Apply 链路按 gate -> patch -> overlay -> runtime state -> context layer 的顺序推进，顺序错会造成主图读到半套状态。
@@ -297,6 +375,71 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
             next_index = apply_owner_content.index(needle)
             self.assertGreater(next_index, last_index)
             last_index = next_index
+
+    def test_main_map_target_packs_resolve_runtime_manifests_with_carriers(self) -> None:
+        runtime_registry = json.loads((REPO_ROOT / "data" / "runtime_asset_registry.json").read_text(encoding="utf-8"))
+        resolver_content = PACK_RESOLVER_JS.read_text(encoding="utf-8")
+        target_block = resolver_content.split("const WORKBENCH_SELECTABLE_PACKS", 1)[0]
+        target_pack_ids = re.findall(r'^\s+([a-z0-9_]+): Object\.freeze\(\{ packId: "\1"', target_block, re.MULTILINE)
+        expected_target_pack_ids: list[str] = []
+        for pack_id, asset_key in sorted((runtime_registry.get("transport_manifest_keys") or {}).items()):
+            asset_url = (runtime_registry.get("assets") or {}).get(asset_key, {}).get("url")
+            if not asset_url:
+                continue
+            manifest_path = REPO_ROOT / asset_url
+            if not manifest_path.is_file():
+                continue
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if (
+                manifest.get("mainMapEligible") is True
+                and manifest.get("apply_bridge_supported") is True
+                and manifest.get("coverage_scope") == "country"
+                and manifest.get("carrier_asset_key")
+            ):
+                expected_target_pack_ids.append(str(manifest.get("pack_id") or pack_id))
+        missing_from_resolver = sorted(set(expected_target_pack_ids) - set(target_pack_ids))
+        self.assertFalse(missing_from_resolver, missing_from_resolver)
+        failures: list[str] = []
+
+        for pack_id in target_pack_ids:
+            asset_key = (runtime_registry.get("transport_manifest_keys") or {}).get(pack_id)
+            if not asset_key:
+                failures.append(f"{pack_id}: missing runtime manifest key")
+                continue
+            asset_url = (runtime_registry.get("assets") or {}).get(asset_key, {}).get("url")
+            if not asset_url:
+                failures.append(f"{pack_id}: missing runtime manifest url")
+                continue
+            manifest_path = REPO_ROOT / asset_url
+            if not manifest_path.is_file():
+                failures.append(f"{pack_id}: missing manifest file {asset_url}")
+                continue
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("pack_id") != pack_id:
+                failures.append(f"{pack_id}: manifest pack_id {manifest.get('pack_id')}")
+            if not manifest.get("carrier_asset_key"):
+                failures.append(f"{pack_id}: missing carrier_asset_key")
+            if not manifest.get("mainMapEligible"):
+                failures.append(f"{pack_id}: missing mainMapEligible")
+            if not manifest.get("apply_bridge_supported"):
+                failures.append(f"{pack_id}: missing apply_bridge_supported")
+
+        self.assertFalse(failures, failures)
+
+    def test_runtime_registered_workbench_facility_packs_are_selectable(self) -> None:
+        runtime_registry = json.loads((REPO_ROOT / "data" / "runtime_asset_registry.json").read_text(encoding="utf-8"))
+        resolver_content = (REPO_ROOT / "js" / "core" / "transport_pack_resolver.js").read_text(encoding="utf-8")
+        facility_families = {"energy_facilities", "mineral_resources", "industrial_zones", "logistics_hubs"}
+        missing: list[str] = []
+        for pack_id, asset_key in sorted((runtime_registry.get("transport_manifest_keys") or {}).items()):
+            if pack_id.startswith("japan_"):
+                continue
+            family_id = pack_id.split("_", 1)[1] if "_" in pack_id else ""
+            if family_id in facility_families:
+                if f'{pack_id}: Object.freeze({{ packId: "{pack_id}"' not in resolver_content:
+                    missing.append(f"{pack_id}:{asset_key}")
+
+        self.assertFalse(missing, missing)
 
     def test_transport_copy_drops_road_only_legacy_phrases_from_runtime_and_startup_locales(self) -> None:
         stale_phrases = [

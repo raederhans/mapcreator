@@ -1,0 +1,79 @@
+{
+  "adapter_id": "uk_industrial_zones_v1",
+  "pack_id": "uk_industrial_zones",
+  "family": "industrial_zones",
+  "geometry_kind": "point",
+  "country": "United Kingdom",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T22:32:23.259763Z",
+  "recipe_path": "data/transport_layers/uk_industrial_zones/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "industrial_zones": "data/transport_layers/uk_industrial_zones/industrial_zones.preview.geojson"
+    },
+    "full": {
+      "industrial_zones": "data/transport_layers/uk_industrial_zones/industrial_zones.geojson"
+    },
+    "build_audit": "data/transport_layers/uk_industrial_zones/build_audit.json"
+  },
+  "source_signature": {
+    "osm_overpass_uk_industrial_landuse": {
+      "filename": "uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "path": ".runtime/source-cache/transport/uk_industrial_zones/uk_industrial_zones_osm_overpass_2026-06-02.json",
+      "size_bytes": 5722887,
+      "sha256": "5d7929221e10582c5512894fda2006964d569b012c9efdd44192fba8d6ff40a1"
+    }
+  },
+  "recipe_version": "uk_industrial_zones_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "industrial_zones": 200
+    },
+    "full": {
+      "industrial_zones": 37706
+    }
+  },
+  "clip_bbox": [
+    -8.135752,
+    49.91505,
+    1.7608,
+    60.827316
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack uk_industrial_zones",
+  "runtime_consumer": "transport_workbench_industrial_zones_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:uk",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "industrial_zones": "data/transport_layers/uk_industrial_zones/industrial_zones.preview.geojson"
+        },
+        "full": {
+          "industrial_zones": "data/transport_layers/uk_industrial_zones/industrial_zones.geojson"
+        },
+        "build_audit": "data/transport_layers/uk_industrial_zones/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "industrial_zones": 200
+        },
+        "full": {
+          "industrial_zones": 37706
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:uk",
+      "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography."
+    }
+  }
+}

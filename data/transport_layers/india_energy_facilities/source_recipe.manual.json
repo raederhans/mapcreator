@@ -1,0 +1,55 @@
+{
+  "version": "india_energy_facilities_real_sources_v1",
+  "pack_id": "india_energy_facilities",
+  "family": "energy_facilities",
+  "country": "India",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/india_energy_facilities",
+  "source_truth": "WRI Global Power Plant Database India country CSV",
+  "geometry_truth": "WRI plant latitude/longitude points filtered to the India workbench carrier",
+  "sources": [
+    {
+      "id": "wri_global_power_plant_database_india_csv",
+      "role": "direct_power_plant_csv",
+      "expected_path": ".runtime/source-cache/transport/india_energy_facilities/database_IND.csv",
+      "url": "https://raw.githubusercontent.com/wri/global-power-plant-database/master/source_databases_csv/database_IND.csv",
+      "license": "Creative Commons Attribution 4.0 (CC BY 4.0)",
+      "required_layers": [],
+      "required_fields": [
+        "country",
+        "country_long",
+        "name",
+        "gppd_idnr",
+        "capacity_mw",
+        "latitude",
+        "longitude",
+        "primary_fuel",
+        "owner",
+        "source",
+        "url"
+      ],
+      "filter_rule": "Keep India plant rows with valid WGS84 coordinates and filter them through the India carrier scope.",
+      "notes": "WRI publishes country-level source CSV files and the Global Power Plant Database release under CC BY 4.0.",
+      "query_params": {},
+      "signature": {
+        "filename": "database_IND.csv",
+        "path": ".runtime/source-cache/transport/india_energy_facilities/database_IND.csv",
+        "size_bytes": 177796,
+        "sha256": "166c27856fb13c00895e51b10219e5cde334a52899783bd503d58aa9d1f0a2e9"
+      }
+    }
+  ],
+  "source_signature": {
+    "wri_global_power_plant_database_india_csv": {
+      "filename": "database_IND.csv",
+      "path": ".runtime/source-cache/transport/india_energy_facilities/database_IND.csv",
+      "size_bytes": 177796,
+      "sha256": "166c27856fb13c00895e51b10219e5cde334a52899783bd503d58aa9d1f0a2e9"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "energy_facilities.preview.geojson",
+    "energy_facilities.geojson"
+  ]
+}

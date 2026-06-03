@@ -1,0 +1,54 @@
+{
+  "version": "france_mineral_resources_real_sources_v1",
+  "pack_id": "france_mineral_resources",
+  "family": "mineral_resources",
+  "country": "France",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/france_mineral_resources",
+  "source_truth": "Camino open French mining cadastre titles GeoJSON",
+  "geometry_truth": "Camino title MultiPolygon perimeters converted to representative points and filtered to the metropolitan France carrier scope",
+  "sources": [
+    {
+      "id": "camino_titles_geojson",
+      "role": "primary_cadastre_geojson",
+      "expected_path": ".runtime/source-cache/transport/france_mineral_resources/camino_titres_2026-06-02.geojson",
+      "url": "https://api.camino.beta.gouv.fr/titres?format=geojson",
+      "license": "Licence Ouverte / Open Licence 2.0 via data.gouv.fr API Camino",
+      "required_layers": [],
+      "required_fields": [
+        "id",
+        "nom",
+        "type",
+        "domaine",
+        "statut",
+        "substances",
+        "surface_totale",
+        "departements",
+        "regions",
+        "geometry"
+      ],
+      "filter_rule": "Convert public title perimeters to representative points, keep mineral/mining domains, and filter through the metropolitan France carrier scope; overseas territories are excluded by the carrier.",
+      "notes": "Camino exposes public French mining cadastre titles and authorizations as GeoJSON through api.camino.beta.gouv.fr.",
+      "query_params": {},
+      "signature": {
+        "filename": "camino_titres_2026-06-02.geojson",
+        "path": ".runtime/source-cache/transport/france_mineral_resources/camino_titres_2026-06-02.geojson",
+        "size_bytes": 22355756,
+        "sha256": "f4d198df38052bfceab9196a9fb63dc89faac5b853994d375f20e79ce06ec014"
+      }
+    }
+  ],
+  "source_signature": {
+    "camino_titles_geojson": {
+      "filename": "camino_titres_2026-06-02.geojson",
+      "path": ".runtime/source-cache/transport/france_mineral_resources/camino_titres_2026-06-02.geojson",
+      "size_bytes": 22355756,
+      "sha256": "f4d198df38052bfceab9196a9fb63dc89faac5b853994d375f20e79ce06ec014"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "mineral_resources.preview.geojson",
+    "mineral_resources.geojson"
+  ]
+}

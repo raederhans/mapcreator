@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-06-03T13:54:03.528039Z",
+  "adapter_id": "russia_energy_facilities_v1",
+  "pack_id": "russia_energy_facilities",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "WRI Global Power Plant Database global CSV",
+  "geometry_truth": "WRI plant latitude/longitude points filtered to the Russia workbench carrier",
+  "source_signature": {
+    "wri_global_power_plant_database_csv": {
+      "filename": "global_power_plant_database.csv",
+      "path": ".runtime/source-cache/transport/russia_energy_facilities/global_power_plant_database.csv",
+      "size_bytes": 11973385,
+      "sha256": "4b1f93e0fd93664f18684d9b05d0a52ed9658c6a8cf0d21ff2520791379ba7fc"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 538
+    },
+    "full": {
+      "energy_facilities": 538
+    }
+  },
+  "source_row_count": {
+    "wri_global_power_plants": 34936,
+    "wri_russia_power_plants": 545
+  },
+  "matched_count": 538,
+  "preview_rule": "Largest 1000 WRI Russia power plants by reported capacity after Russia carrier clip.",
+  "scope_rule": "Filtered through the Russia carrier fitGeometry; out-of-scope coordinate rows are excluded."
+}

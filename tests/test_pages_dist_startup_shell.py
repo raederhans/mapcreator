@@ -279,7 +279,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             sum((REPO_ROOT / "dist" / record["path"]).stat().st_size for record in payload["files"]),
         )
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
-        self.assertEqual(payload["max_allowed_bytes"], 995 * 1024 * 1024)
+        self.assertEqual(payload["max_allowed_bytes"], build_pages_dist.MAX_PAGES_DIST_BYTES)
         self.assertEqual(
             records_by_path["pages-dist-manifest.json"]["size_bytes"],
             DIST_MANIFEST.stat().st_size,
@@ -419,6 +419,107 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 for runtime_path in full_paths.values():
                     with self.subTest(manifest=manifest_relative_path, runtime_path=runtime_path):
                         self.assertIn(f"app/{runtime_path}", dist_paths)
+
+    def test_dist_transport_manifests_reference_only_published_pack_files(self) -> None:
+        transport_root = REPO_ROOT / "dist" / "app" / "data" / "transport_layers"
+        if not transport_root.exists():
+            self.skipTest("dist transport layers are only available after build_pages_dist runs")
+        missing: list[str] = []
+        for manifest_path in transport_root.rglob("manifest.json"):
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            path_sections = [manifest.get("paths", {})]
+            variants = manifest.get("variants", {})
+            if isinstance(variants, dict):
+                path_sections.extend(
+                    variant.get("paths", {}) for variant in variants.values() if isinstance(variant, dict)
+                )
+            for path_section in path_sections:
+                if not isinstance(path_section, dict):
+                    continue
+                for mode in ("preview", "full"):
+                    mode_paths = path_section.get(mode, {})
+                    if not isinstance(mode_paths, dict):
+                        continue
+                    for runtime_path in mode_paths.values():
+                        if isinstance(runtime_path, str) and runtime_path.startswith("data/transport_layers/"):
+                            if not (REPO_ROOT / "dist" / "app" / runtime_path).is_file():
+                                missing.append(f"{manifest_path.relative_to(transport_root)} -> {runtime_path}")
+
+        self.assertFalse(missing[:20], missing[:20])
+
+    def test_dist_catalog_references_only_published_files(self) -> None:
+        catalog_path = REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json"
+        if not catalog_path.exists():
+            self.skipTest("dist catalog is only available after build_pages_dist runs")
+        payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+        missing: list[str] = []
+        entries = payload.get("entries") or []
+        for entry in entries:
+            runtime_path = entry.get("url") if isinstance(entry, dict) else None
+            if isinstance(runtime_path, str) and runtime_path.startswith("data/"):
+                if not (REPO_ROOT / "dist" / "app" / runtime_path).is_file():
+                    missing.append(runtime_path)
+
+        self.assertEqual(payload.get("counts", {}).get("entries"), len(entries))
+        self.assertFalse(missing[:20], missing[:20])
+
+    def test_dist_transport_manifests_do_not_alias_full_paths_to_preview(self) -> None:
+        transport_root = REPO_ROOT / "dist" / "app" / "data" / "transport_layers"
+        if not transport_root.exists():
+            self.skipTest("dist transport layers are only available after build_pages_dist runs")
+        aliased: list[str] = []
+        orphaned_counts: list[str] = []
+        for manifest_path in transport_root.rglob("manifest.json"):
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            sections = [(manifest.get("paths", {}), manifest.get("feature_counts", {}), manifest_path)]
+            variants = manifest.get("variants", {})
+            if isinstance(variants, dict):
+                sections.extend(
+                    (variant.get("paths", {}), variant.get("feature_counts", {}), manifest_path)
+                    for variant in variants.values()
+                    if isinstance(variant, dict)
+                )
+            for path_section, count_section, source_path in sections:
+                if not isinstance(path_section, dict):
+                    continue
+                preview_paths = path_section.get("preview") if isinstance(path_section.get("preview"), dict) else {}
+                full_paths = path_section.get("full") if isinstance(path_section.get("full"), dict) else {}
+                if isinstance(count_section, dict):
+                    for mode, counts in count_section.items():
+                        mode_paths = path_section.get(mode)
+                        if isinstance(counts, dict) and isinstance(mode_paths, dict):
+                            missing_count_keys = set(counts).difference(mode_paths)
+                            orphaned_counts.extend(
+                                f"{source_path.relative_to(transport_root)}:{mode}:{key}"
+                                for key in sorted(missing_count_keys)
+                            )
+                for key, runtime_path in full_paths.items():
+                    if preview_paths.get(key) == runtime_path:
+                        aliased.append(f"{source_path.relative_to(transport_root)}:{key}:{runtime_path}")
+
+        self.assertFalse(aliased[:20], aliased[:20])
+        self.assertFalse(orphaned_counts[:20], orphaned_counts[:20])
+
+    def test_dist_uk_industrial_manifest_uses_preview_only_reduced_contract(self) -> None:
+        source_manifest_path = REPO_ROOT / "data" / "transport_layers" / "uk_industrial_zones" / "manifest.json"
+        dist_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "transport_layers" / "uk_industrial_zones" / "manifest.json"
+        if not dist_manifest_path.exists():
+            self.skipTest("dist transport layers are only available after build_pages_dist runs")
+
+        source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+        dist_manifest = json.loads(dist_manifest_path.read_text(encoding="utf-8"))
+        self.assertIn("full", source_manifest.get("paths", {}))
+        self.assertIn("preview", dist_manifest.get("paths", {}))
+        self.assertNotIn("full", dist_manifest.get("paths", {}))
+
+        variants = dist_manifest.get("variants", {})
+        self.assertIsInstance(variants, dict)
+        for variant in variants.values():
+            if not isinstance(variant, dict):
+                continue
+            with self.subTest(variant=variant.get("label") or "default"):
+                self.assertIn("preview", variant.get("paths", {}))
+                self.assertNotIn("full", variant.get("paths", {}))
 
     def test_dist_scenario_manifests_reference_only_published_runtime_files(self) -> None:
         if not DIST_MANIFEST.exists():

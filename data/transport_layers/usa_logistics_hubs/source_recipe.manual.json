@@ -1,0 +1,128 @@
+{
+  "version": "usa_logistics_hubs_real_sources_v1",
+  "pack_id": "usa_logistics_hubs",
+  "family": "logistics_hubs",
+  "country": "United States",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/usa_logistics_hubs",
+  "source_truth": "BTS NTAD Intermodal Freight Facilities FeatureServer layers",
+  "geometry_truth": "BTS ArcGIS FeatureServer point exports for rail, air-to-truck, and pipeline-terminal intermodal facilities",
+  "sources": [
+    {
+      "id": "bts_intermodal_rail_tofc_cofc",
+      "role": "arcgis_feature_service_query",
+      "expected_path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_rail_tofc_cofc_2022-07-22.geojson",
+      "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/ArcGIS/rest/services/NTAD_Intermodal_Freight_Facilities_Rail_TOFC_COFC/FeatureServer/0",
+      "license": "U.S. federal public data; acknowledgment of BTS",
+      "required_layers": [],
+      "required_fields": [
+        "OBJECTID",
+        "TERMINAL",
+        "RAIL_CO",
+        "SPLC",
+        "geometry"
+      ],
+      "filter_rule": "Rail TOFC/COFC intermodal freight terminals.",
+      "notes": "",
+      "query_params": {
+        "where": "1=1",
+        "outFields": "*",
+        "returnGeometry": "true",
+        "f": "geojson",
+        "resultRecordCount": "2000"
+      },
+      "signature": {
+        "filename": "bts_intermodal_rail_tofc_cofc_2022-07-22.geojson",
+        "path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_rail_tofc_cofc_2022-07-22.geojson",
+        "size_bytes": 94893,
+        "sha256": "956b00956680bb81f8f85ae6e2fa90d66afe6652cda3d3c0a307fbb56069b5d7"
+      }
+    },
+    {
+      "id": "bts_intermodal_air_to_truck",
+      "role": "arcgis_feature_service_query",
+      "expected_path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_air_to_truck_2020-02-24.geojson",
+      "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/ArcGIS/rest/services/NTAD_Intermodal_Freight_Facilities_Air_to_Truck/FeatureServer/0",
+      "license": "U.S. federal public data; acknowledgment of BTS",
+      "required_layers": [],
+      "required_fields": [
+        "OBJECTID",
+        "LOCID",
+        "FACILITY_C",
+        "geometry"
+      ],
+      "filter_rule": "Air-to-truck freight intermodal facilities at major freight airports.",
+      "notes": "",
+      "query_params": {
+        "where": "1=1",
+        "outFields": "*",
+        "returnGeometry": "true",
+        "f": "geojson",
+        "resultRecordCount": "2000"
+      },
+      "signature": {
+        "filename": "bts_intermodal_air_to_truck_2020-02-24.geojson",
+        "path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_air_to_truck_2020-02-24.geojson",
+        "size_bytes": 89414,
+        "sha256": "0ef49d5070057be506c2bb5f1415722fc45e391320f6c81ff9ae4cd9cecf51bc"
+      }
+    },
+    {
+      "id": "bts_intermodal_pipeline_terminals",
+      "role": "arcgis_feature_service_query",
+      "expected_path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_pipeline_terminals_2021-04-21.geojson",
+      "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Intermodal_Freight_Facilities_Pipeline_Terminals/FeatureServer/0",
+      "license": "U.S. federal public data; acknowledgment of BTS",
+      "required_layers": [],
+      "required_fields": [
+        "OBJECTID",
+        "TERM_NAME",
+        "COMP_NAME",
+        "TRUCK",
+        "RAIL",
+        "WATER",
+        "geometry"
+      ],
+      "filter_rule": "Pipeline terminals with truck/rail/water intermodal links.",
+      "notes": "",
+      "query_params": {
+        "where": "1=1",
+        "outFields": "*",
+        "returnGeometry": "true",
+        "f": "geojson",
+        "resultRecordCount": "2000"
+      },
+      "signature": {
+        "filename": "bts_intermodal_pipeline_terminals_2021-04-21.geojson",
+        "path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_pipeline_terminals_2021-04-21.geojson",
+        "size_bytes": 1287463,
+        "sha256": "1ebeddcdfad6867d2d9bf5ceca27eec922f5b224bc06b1f4ab0e87edc5c6813a"
+      }
+    }
+  ],
+  "source_signature": {
+    "bts_intermodal_rail_tofc_cofc": {
+      "filename": "bts_intermodal_rail_tofc_cofc_2022-07-22.geojson",
+      "path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_rail_tofc_cofc_2022-07-22.geojson",
+      "size_bytes": 94893,
+      "sha256": "956b00956680bb81f8f85ae6e2fa90d66afe6652cda3d3c0a307fbb56069b5d7"
+    },
+    "bts_intermodal_air_to_truck": {
+      "filename": "bts_intermodal_air_to_truck_2020-02-24.geojson",
+      "path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_air_to_truck_2020-02-24.geojson",
+      "size_bytes": 89414,
+      "sha256": "0ef49d5070057be506c2bb5f1415722fc45e391320f6c81ff9ae4cd9cecf51bc"
+    },
+    "bts_intermodal_pipeline_terminals": {
+      "filename": "bts_intermodal_pipeline_terminals_2021-04-21.geojson",
+      "path": ".runtime/source-cache/transport/usa_logistics_hubs/bts_intermodal_pipeline_terminals_2021-04-21.geojson",
+      "size_bytes": 1287463,
+      "sha256": "1ebeddcdfad6867d2d9bf5ceca27eec922f5b224bc06b1f4ab0e87edc5c6813a"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "logistics_hubs.preview.geojson",
+    "logistics_hubs.geojson"
+  ]
+}

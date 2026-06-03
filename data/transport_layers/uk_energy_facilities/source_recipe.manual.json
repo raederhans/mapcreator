@@ -1,0 +1,53 @@
+{
+  "version": "uk_energy_facilities_real_sources_v1",
+  "pack_id": "uk_energy_facilities",
+  "family": "energy_facilities",
+  "country": "United Kingdom",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/uk_energy_facilities",
+  "source_truth": "DESNZ Renewable Energy Planning Database April 2026 quarterly extract",
+  "geometry_truth": "REPD British National Grid X/Y project coordinates transformed to WGS84 and clipped to the UK carrier scope",
+  "sources": [
+    {
+      "id": "desnz_repd_q1_2026_csv",
+      "role": "primary_registry_geometry",
+      "expected_path": ".runtime/source-cache/transport/uk_energy_facilities/REPD_publication_Q1_2026.csv",
+      "url": "https://assets.publishing.service.gov.uk/media/69fc56908cc72d2f863ea58d/REPD_publication_Q1_2026.csv",
+      "license": "UK Open Government Licence v3.0",
+      "required_layers": [],
+      "required_fields": [
+        "Ref ID",
+        "Operator (or Applicant)",
+        "Site Name",
+        "Technology Type",
+        "Installed Capacity (MWelec)",
+        "Development Status",
+        "Country",
+        "X-coordinate",
+        "Y-coordinate"
+      ],
+      "filter_rule": "Keep rows with valid British National Grid coordinates, transform EPSG:27700 to EPSG:4326, and sort preview by installed capacity.",
+      "notes": "REPD is a UK renewable electricity project database for schemes above 150 kW and is updated quarterly by DESNZ.",
+      "query_params": {},
+      "signature": {
+        "filename": "REPD_publication_Q1_2026.csv",
+        "path": ".runtime/source-cache/transport/uk_energy_facilities/REPD_publication_Q1_2026.csv",
+        "size_bytes": 4951077,
+        "sha256": "3aa6752bfdc6b5275f8be0585ad8bd00a8646bd522d686cfb57d95cc9d8688a3"
+      }
+    }
+  ],
+  "source_signature": {
+    "desnz_repd_q1_2026_csv": {
+      "filename": "REPD_publication_Q1_2026.csv",
+      "path": ".runtime/source-cache/transport/uk_energy_facilities/REPD_publication_Q1_2026.csv",
+      "size_bytes": 4951077,
+      "sha256": "3aa6752bfdc6b5275f8be0585ad8bd00a8646bd522d686cfb57d95cc9d8688a3"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "energy_facilities.preview.geojson",
+    "energy_facilities.geojson"
+  ]
+}

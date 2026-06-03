@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-06-03T13:55:44.684169Z",
+  "adapter_id": "russia_logistics_hubs_v1",
+  "pack_id": "russia_logistics_hubs",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "Geofabrik Russia OpenStreetMap free GeoPackage federal-district extracts",
+  "geometry_truth": "OSM transport terminal point and area representative points from Geofabrik Russia federal-district GeoPackages clipped to the Russia workbench carrier",
+  "source_signature": {
+    "geofabrik_gpkg_central_fed_district": {
+      "filename": "central-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/central-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1676475740,
+      "sha256": "e8e3db419737cf581d7c7c8f6b0e62c4f4ff81d23fd8e6112e8dcd80bd390bec"
+    },
+    "geofabrik_gpkg_crimean_fed_district": {
+      "filename": "crimean-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/crimean-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 73366060,
+      "sha256": "09b79007d224e10710b0fb81ead15b9c128aad4701f4f66eb81773dbcba27c42"
+    },
+    "geofabrik_gpkg_far_eastern_fed_district": {
+      "filename": "far-eastern-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/far-eastern-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 807644771,
+      "sha256": "07f1d6c1082ea20a09194996451e08ca2f9582e889bc43f41142d11e157131ef"
+    },
+    "geofabrik_gpkg_kaliningrad": {
+      "filename": "kaliningrad-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/kaliningrad-latest-free.gpkg.zip",
+      "size_bytes": 55358967,
+      "sha256": "ed518891eab2270de14dea359b6b5843eaf3867a84ca0b8078d5f5708f96eebf"
+    },
+    "geofabrik_gpkg_north_caucasus_fed_district": {
+      "filename": "north-caucasus-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/north-caucasus-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 284444611,
+      "sha256": "d9d3b9baa918781a1e01f8714ce5e663b8c482051450e279046d591b66faf5ae"
+    },
+    "geofabrik_gpkg_northwestern_fed_district": {
+      "filename": "northwestern-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/northwestern-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1379106613,
+      "sha256": "8081d8cd4d4fcd231b9b34ad296e31d8214461ceafa750551b2fa00c8f36fbb4"
+    },
+    "geofabrik_gpkg_siberian_fed_district": {
+      "filename": "siberian-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/siberian-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1404789540,
+      "sha256": "7c70d493679c90d52ad8add863654a0d518e08493181aed5e9fae141ecf8c762"
+    },
+    "geofabrik_gpkg_south_fed_district": {
+      "filename": "south-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/south-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 637245224,
+      "sha256": "49346a5a6994d689982bd9289a122ed337b016cfe48f0012bb32e9ffdad4eea3"
+    },
+    "geofabrik_gpkg_ural_fed_district": {
+      "filename": "ural-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/ural-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 811929268,
+      "sha256": "de3879a4b2b49b956212d5e86cbfe80198ce4ff59530cea9afc0e8ca140edcab"
+    },
+    "geofabrik_gpkg_volga_fed_district": {
+      "filename": "volga-fed-district-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/russia_osm_gpkg/volga-fed-district-latest-free.gpkg.zip",
+      "size_bytes": 1681339327,
+      "sha256": "200c0fa46d3ba347a3b0ff874c82ecc11b4ba6a53adc640dbecd6a2682cb65c5"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "logistics_hubs": 500
+    },
+    "full": {
+      "logistics_hubs": 5000
+    }
+  },
+  "source_row_count": {
+    "geofabrik_gpkg_central_fed_district": {
+      "transport_points": 1879,
+      "transport_areas": 278
+    },
+    "geofabrik_gpkg_crimean_fed_district": {
+      "transport_points": 109,
+      "transport_areas": 30
+    },
+    "geofabrik_gpkg_far_eastern_fed_district": {
+      "transport_points": 890,
+      "transport_areas": 250
+    },
+    "geofabrik_gpkg_kaliningrad": {
+      "transport_points": 54,
+      "transport_areas": 19
+    },
+    "geofabrik_gpkg_north_caucasus_fed_district": {
+      "transport_points": 169,
+      "transport_areas": 26
+    },
+    "geofabrik_gpkg_northwestern_fed_district": {
+      "transport_points": 1608,
+      "transport_areas": 219
+    },
+    "geofabrik_gpkg_siberian_fed_district": {
+      "transport_points": 1408,
+      "transport_areas": 165
+    },
+    "geofabrik_gpkg_south_fed_district": {
+      "transport_points": 790,
+      "transport_areas": 195
+    },
+    "geofabrik_gpkg_ural_fed_district": {
+      "transport_points": 922,
+      "transport_areas": 103
+    },
+    "geofabrik_gpkg_volga_fed_district": {
+      "transport_points": 1476,
+      "transport_areas": 194
+    }
+  },
+  "matched_count": 5000,
+  "preview_rule": "Top 500 OSM transport terminals by terminal class rank and named status after russia carrier clip.",
+  "scope_rule": "Filtered through transport_carrier:russia; Geofabrik zone extracts are carrier-clipped to the russia workbench scope.",
+  "filter_rule": "Geofabrik transport point/area terminal classes airport, port, ferry_terminal, and railway_station mapped to existing logistics hub preview categories."
+}

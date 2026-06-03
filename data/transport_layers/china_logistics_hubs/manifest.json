@@ -1,0 +1,259 @@
+{
+  "adapter_id": "china_logistics_hubs_v1",
+  "pack_id": "china_logistics_hubs",
+  "family": "logistics_hubs",
+  "geometry_kind": "point",
+  "country": "China",
+  "schema_version": 1,
+  "generated_at": "2026-06-03T13:53:59.410008Z",
+  "recipe_path": "data/transport_layers/china_logistics_hubs/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "logistics_hubs": "data/transport_layers/china_logistics_hubs/logistics_hubs.preview.geojson"
+    },
+    "full": {
+      "logistics_hubs": "data/transport_layers/china_logistics_hubs/logistics_hubs.geojson"
+    },
+    "build_audit": "data/transport_layers/china_logistics_hubs/build_audit.json"
+  },
+  "source_signature": {
+    "geofabrik_gpkg_anhui": {
+      "filename": "anhui-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/anhui-latest-free.gpkg.zip",
+      "size_bytes": 100808579,
+      "sha256": "dc7e2543962d1348303367d6bb727213d62cfd07bd7bcb76b1eed57986d7690b"
+    },
+    "geofabrik_gpkg_beijing": {
+      "filename": "beijing-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/beijing-latest-free.gpkg.zip",
+      "size_bytes": 73892570,
+      "sha256": "0ef6a2c73c7dce1f2397b0abc60af8a83aa7e43cd4c313f0270a706666a69eb6"
+    },
+    "geofabrik_gpkg_chongqing": {
+      "filename": "chongqing-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/chongqing-latest-free.gpkg.zip",
+      "size_bytes": 69927677,
+      "sha256": "c0b10d407e0c33704c11d86a96eb5e8eed0a2d85a0940023ad3cea3dacf0c71b"
+    },
+    "geofabrik_gpkg_fujian": {
+      "filename": "fujian-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/fujian-latest-free.gpkg.zip",
+      "size_bytes": 93399325,
+      "sha256": "42fa24d44fcfc35eaf49756e3c82d5452faeb3bad840483bed73f1e782d300d9"
+    },
+    "geofabrik_gpkg_gansu": {
+      "filename": "gansu-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/gansu-latest-free.gpkg.zip",
+      "size_bytes": 137909257,
+      "sha256": "909dfd4fa020376de080f42b17b11a0d778eed7edf52a6da395dcc0c5184ba7c"
+    },
+    "geofabrik_gpkg_guangdong": {
+      "filename": "guangdong-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/guangdong-latest-free.gpkg.zip",
+      "size_bytes": 325343586,
+      "sha256": "592d9b2e46af9729c1f48c4f9d289a5bf05cd2575e29c9920078343ebd2a2438"
+    },
+    "geofabrik_gpkg_guangxi": {
+      "filename": "guangxi-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/guangxi-latest-free.gpkg.zip",
+      "size_bytes": 122085557,
+      "sha256": "da6366911f697dbef534ebc905f8b5bfed5ec080606260efa9f3becf6c3dc649"
+    },
+    "geofabrik_gpkg_guizhou": {
+      "filename": "guizhou-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/guizhou-latest-free.gpkg.zip",
+      "size_bytes": 64274754,
+      "sha256": "3ea4a5915935539e98403d7eb5dd6e3b3ffa9185967b14e38b20349a1a92d27f"
+    },
+    "geofabrik_gpkg_hainan": {
+      "filename": "hainan-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/hainan-latest-free.gpkg.zip",
+      "size_bytes": 20104049,
+      "sha256": "ba53926ce24167548925b0fdc071357cd1083dce50946c5379c0ddb9aaaeb576"
+    },
+    "geofabrik_gpkg_hebei": {
+      "filename": "hebei-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/hebei-latest-free.gpkg.zip",
+      "size_bytes": 230009963,
+      "sha256": "173c11f404fb2d90b489d7c9e6b94702913d2517f58301f1e35fd35a614a0d14"
+    },
+    "geofabrik_gpkg_heilongjiang": {
+      "filename": "heilongjiang-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/heilongjiang-latest-free.gpkg.zip",
+      "size_bytes": 76513767,
+      "sha256": "328c19db162dbe82fc9a1404c212a1c056118daed3b9d50a5f7a0f9f65019ba3"
+    },
+    "geofabrik_gpkg_henan": {
+      "filename": "henan-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/henan-latest-free.gpkg.zip",
+      "size_bytes": 104874890,
+      "sha256": "fba95123a8f164b4726125471b82e7773ce5bc012410612b2b484ea4e5af5b28"
+    },
+    "geofabrik_gpkg_hubei": {
+      "filename": "hubei-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/hubei-latest-free.gpkg.zip",
+      "size_bytes": 122804179,
+      "sha256": "973347e340154884df418aee6832c1b34e12c94a347bdca89a2a60b267f5bc75"
+    },
+    "geofabrik_gpkg_hunan": {
+      "filename": "hunan-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/hunan-latest-free.gpkg.zip",
+      "size_bytes": 119094003,
+      "sha256": "ff7c0eeccdc7aa5c2264dcbb25e5651d7399fe160a39f2cd7b0a3fa71e4cf249"
+    },
+    "geofabrik_gpkg_inner_mongolia": {
+      "filename": "inner-mongolia-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/inner-mongolia-latest-free.gpkg.zip",
+      "size_bytes": 87915030,
+      "sha256": "9bf9d30d9370921e70930ed09dabc79acb0a6a3915edd66761f27c917d515a2a"
+    },
+    "geofabrik_gpkg_jiangsu": {
+      "filename": "jiangsu-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/jiangsu-latest-free.gpkg.zip",
+      "size_bytes": 170475382,
+      "sha256": "fe423b63881cf6caddbedd7fb45c0cdeaa7a37af73b5da218ac060f75552dc1a"
+    },
+    "geofabrik_gpkg_jiangxi": {
+      "filename": "jiangxi-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/jiangxi-latest-free.gpkg.zip",
+      "size_bytes": 129653710,
+      "sha256": "f076e1632798bd01654427be25f675c46b01c6978d0e52951c19790e749060a9"
+    },
+    "geofabrik_gpkg_jilin": {
+      "filename": "jilin-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/jilin-latest-free.gpkg.zip",
+      "size_bytes": 57470191,
+      "sha256": "78c5097fbebc2e05f7685304c70177a36524a7bf45b724ff8795c1ac7628c1d5"
+    },
+    "geofabrik_gpkg_liaoning": {
+      "filename": "liaoning-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/liaoning-latest-free.gpkg.zip",
+      "size_bytes": 54945225,
+      "sha256": "b89892a3eeb6cf66e9319ad06e7b32bb8084b7b2a7a33a04ecd2d3db3476efe6"
+    },
+    "geofabrik_gpkg_ningxia": {
+      "filename": "ningxia-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/ningxia-latest-free.gpkg.zip",
+      "size_bytes": 17151164,
+      "sha256": "42faceeda5d93b7d7afa93ff97a28cf6fff7ff8751f7f36b6ddcd562ca71e482"
+    },
+    "geofabrik_gpkg_qinghai": {
+      "filename": "qinghai-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/qinghai-latest-free.gpkg.zip",
+      "size_bytes": 44104104,
+      "sha256": "a4732c727243056086dd25138fc1e74de54035a18eab766082b47eded0943917"
+    },
+    "geofabrik_gpkg_shaanxi": {
+      "filename": "shaanxi-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/shaanxi-latest-free.gpkg.zip",
+      "size_bytes": 157337869,
+      "sha256": "8820a464f3767374e2b58af5c00401c0677fbb41c59682a079226b4249ed4e01"
+    },
+    "geofabrik_gpkg_shandong": {
+      "filename": "shandong-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/shandong-latest-free.gpkg.zip",
+      "size_bytes": 139390831,
+      "sha256": "e2072794b2dff9e8194da5046962d0df2620f882cfcfc49f565172881fc4f015"
+    },
+    "geofabrik_gpkg_shanghai": {
+      "filename": "shanghai-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/shanghai-latest-free.gpkg.zip",
+      "size_bytes": 47681647,
+      "sha256": "5983b23cf0232db8da115899fe6c2ef47ac63a7a5a3722c91cb8337d69abbe91"
+    },
+    "geofabrik_gpkg_shanxi": {
+      "filename": "shanxi-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/shanxi-latest-free.gpkg.zip",
+      "size_bytes": 71734576,
+      "sha256": "26cd057b0c27e63f454b6cf6e78099d471f9a275be5b057e10c6f25baadc74b7"
+    },
+    "geofabrik_gpkg_sichuan": {
+      "filename": "sichuan-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/sichuan-latest-free.gpkg.zip",
+      "size_bytes": 242810604,
+      "sha256": "ec741538492b6e0fd17dee6460f072620d7ed099952681dcbc3213e24bd0bacc"
+    },
+    "geofabrik_gpkg_tianjin": {
+      "filename": "tianjin-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/tianjin-latest-free.gpkg.zip",
+      "size_bytes": 28969614,
+      "sha256": "0dc5befa84531363b795e3a96e45f7c0ef61871af6de00a6172ee6ee27c8417a"
+    },
+    "geofabrik_gpkg_tibet": {
+      "filename": "tibet-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/tibet-latest-free.gpkg.zip",
+      "size_bytes": 109167508,
+      "sha256": "8a56976220b3514725111c631acd8bfa67ac44411880a386d3f1e02fea6bded5"
+    },
+    "geofabrik_gpkg_xinjiang": {
+      "filename": "xinjiang-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/xinjiang-latest-free.gpkg.zip",
+      "size_bytes": 108964220,
+      "sha256": "18b33e6a9024930fe85146065499255bac05829755c63ad81f0a0824be385bcc"
+    },
+    "geofabrik_gpkg_yunnan": {
+      "filename": "yunnan-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/yunnan-latest-free.gpkg.zip",
+      "size_bytes": 212656322,
+      "sha256": "84c12a11200641bf9d20bda5dd1da5a19228d454d22c116cf36d2cf7d93ac182"
+    },
+    "geofabrik_gpkg_zhejiang": {
+      "filename": "zhejiang-latest-free.gpkg.zip",
+      "path": ".runtime/source-cache/transport/china_osm_gpkg/zhejiang-latest-free.gpkg.zip",
+      "size_bytes": 211887820,
+      "sha256": "d6907fcdc6a890261d2f7904d600e1000746990c70271140787950e002730846"
+    }
+  },
+  "recipe_version": "china_logistics_hubs_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "logistics_hubs": 500
+    },
+    "full": {
+      "logistics_hubs": 5000
+    }
+  },
+  "clip_bbox": [
+    75.291064,
+    15.784338,
+    134.361102,
+    52.913164
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack china_logistics_hubs",
+  "runtime_consumer": "transport_workbench_logistics_hubs_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:china",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "logistics_hubs": "data/transport_layers/china_logistics_hubs/logistics_hubs.preview.geojson"
+        },
+        "full": {
+          "logistics_hubs": "data/transport_layers/china_logistics_hubs/logistics_hubs.geojson"
+        },
+        "build_audit": "data/transport_layers/china_logistics_hubs/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "logistics_hubs": 500
+        },
+        "full": {
+          "logistics_hubs": 5000
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:china",
+      "scope_policy": "Admin1 preview scope follows Natural Earth CHN polygons used by checked-in data.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 provincial carrier."
+    }
+  }
+}

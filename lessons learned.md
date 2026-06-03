@@ -108,6 +108,7 @@
 - owner boundary 测试锁具体 owner token，避免整文件级禁令误伤。
 - 退休一个 spec 时，同步删除 manifest、test list、allowlist、引用关系。
 - data URL harness、import-safe tool、CLI/library mode 这类特殊运行环境单独有合同。
+- 交通工作台新增国家资源包时，先确认 family runtime 的 geometry contract；`industrial_zones` 已是显式 `polygon_or_point` 合同，新增点状或面状工业源都要让 capability、descriptor、inspector、Pages dist 合同一起同步。
 
 ### 留档要短、准、可清理
 - active 目录只保留当前仍在推进的主线。
@@ -223,3 +224,33 @@
 
 ### byte-exact JSON 要固定换行
 - `data/manifest.json` 记录 size/hash 的 JSON 资产要在 `.gitattributes` 固定 LF；Windows checkout 的 CRLF 会让 byte-exact 合同漂移。
+
+### 用户编辑层保持 delta/source 分离
+- 工作台用户点位编辑应保存为项目级 delta state；preview 只能合成临时 effective pack，不能把用户点写回 source pack、manifest 或 projected pack cache。
+
+### ArcGIS FeatureServer 分页以短页结束
+- FeatureServer 的 GeoJSON 查询可能在中段缺少稳定的 `exceededTransferLimit` 标志；分页导出应按“返回行数少于请求页大小”结束，并用独立 count/manifest 检查确认缓存完整。
+
+### BDCARTO 大归档要抽目标文件到短路径
+- IGN BDCARTO `.7z` 在 Windows 上用 bsdtar 全量抽取会遇到长路径可见性问题；交通 pack 构建应优先用 PATH 或 `TRANSPORT_7Z_EXE` 指定的 `7z e -r` 抽目标 GPKG 到短 `.runtime` 路径，并把 extract marker 绑定源 archive 签名，再用 `pyogrio` 选列和源头过滤控制内存。
+
+### 大国 OSM 交通包优先用预分层 GeoPackage
+- China/India/Russia 这类国家级 OSM PBF 可以被 `pyogrio` 识别，但直接读入 GeoDataFrame 会长时间无输出且内存风险高；生产构建优先用 Geofabrik free GeoPackage 子区域、`fclass` 源端过滤、逐源 cap，再合并写 pack。
+
+### Facility preview 也要算入 Pages 体积
+- 新增点状 facility pack 时，full 可以留在仓库数据包，preview 会进入 Pages dist；先按工作台可读性设 preview cap，再用 `verify:pages-dist` 校验体积，不要等发布门槛失败后再回头缩数据。
+
+### Overpass 源下载要用明确工具标识
+- Overpass API 会拒绝部分 Mozilla-style User-Agent；交通源 downloader 里的 Overpass 分支应使用稳定工具名 User-Agent，并把查询写入 source contract 保持可复现。
+
+### Content-Length 校验要控制压缩
+- 直接 HTTP 下载如果用 `Content-Length` 校验落盘大小，请求头要固定 `Accept-Encoding: identity`；否则服务端可能返回压缩长度，`requests` 写入解压后的文件，导致真实下载被误判为 size mismatch。
+
+### WRI 电厂数据用 global CSV 过滤国家
+- WRI Global Power Plant Database 的部分 country raw CSV 路径可能返回 404；交通 energy pack 应下载官方 global output CSV，再按 `country` 字段过滤 CHN/RUS 等国家代码。
+
+### Registry alias 测试要读真实 manifest pack_id
+- `runtime_asset_registry.transport_manifest_keys` 里可能存在 `road -> japan_road` 这类旧别名；resolver 覆盖测试应从 manifest 的真实 `pack_id` 建 expected set，避免别名误报，同时抓住 `france_road` 这类真实漏接。
+
+### runtime registry 改动要同步 data manifest hash
+- 修改 `data/runtime_asset_registry.json` 后要同步 `data/manifest.json` 里的 `runtime_asset_registry.json` size/hash；只重建 catalog 不能更新这个自校验输出项。

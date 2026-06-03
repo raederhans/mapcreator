@@ -1,0 +1,79 @@
+{
+  "adapter_id": "usa_energy_facilities_v1",
+  "pack_id": "usa_energy_facilities",
+  "family": "energy_facilities",
+  "geometry_kind": "point",
+  "country": "United States",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T17:11:45.989562Z",
+  "recipe_path": "data/transport_layers/usa_energy_facilities/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "energy_facilities": "data/transport_layers/usa_energy_facilities/energy_facilities.preview.geojson"
+    },
+    "full": {
+      "energy_facilities": "data/transport_layers/usa_energy_facilities/energy_facilities.geojson"
+    },
+    "build_audit": "data/transport_layers/usa_energy_facilities/build_audit.json"
+  },
+  "source_signature": {
+    "eia_860_2024_final": {
+      "filename": "eia8602024.zip",
+      "path": ".runtime/source-cache/transport/usa_energy_facilities/eia8602024.zip",
+      "size_bytes": 22100342,
+      "sha256": "0aaae04812cd4ab87a3e346bdf93848a3cc15053fd4dc2a4cf82d2aeac95f12b"
+    }
+  },
+  "recipe_version": "usa_energy_facilities_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "energy_facilities": 4000
+    },
+    "full": {
+      "energy_facilities": 15962
+    }
+  },
+  "clip_bbox": [
+    -171.712439,
+    18.9742,
+    -67.4012,
+    71.292
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack usa_energy_facilities",
+  "runtime_consumer": "transport_workbench_energy_facilities_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:usa",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "energy_facilities": "data/transport_layers/usa_energy_facilities/energy_facilities.preview.geojson"
+        },
+        "full": {
+          "energy_facilities": "data/transport_layers/usa_energy_facilities/energy_facilities.geojson"
+        },
+        "build_audit": "data/transport_layers/usa_energy_facilities/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "energy_facilities": 4000
+        },
+        "full": {
+          "energy_facilities": 15962
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:usa",
+      "scope_policy": "CONUS plus Alaska and Hawaii; territories excluded for workbench preview parity with current packs.",
+      "projection_profile": "geoConicEqualArea",
+      "basemap_profile": "Natural Earth admin1 state-level carrier with Alaska/Hawaii inset frames."
+    }
+  }
+}

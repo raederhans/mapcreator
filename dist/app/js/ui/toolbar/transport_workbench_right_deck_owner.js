@@ -3,6 +3,7 @@
 
 import {
   getTransportWorkbenchFamilyPreviewSnapshot,
+  selectTransportWorkbenchFamilyPreviewFeature,
 } from "../transport_workbench_family_preview.js";
 import {
   TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,
@@ -21,6 +22,22 @@ const TAB_MOUNTS = {
   coverage: "coverage",
   data: "data",
 };
+const DATA_TAB_VISIBLE_ROW_LIMIT = 80;
+const EDIT_OVERLAY_FAMILY_IDS = new Set(["airport", "port"]);
+const DATA_TAB_COLUMNS = Object.freeze([
+  { key: "name", label: "Name", defaultVisible: true },
+  { key: "kind", label: "Kind", defaultVisible: true },
+  { key: "visible", label: "Visible", defaultVisible: true },
+  { key: "source", label: "Source", defaultVisible: true },
+  { key: "location", label: "Location", defaultVisible: true },
+]);
+const DATA_TAB_SORT_OPTIONS = Object.freeze([
+  { value: "default", label: "Default" },
+  { value: "name", label: "Name" },
+  { value: "visible", label: "Visible first" },
+  { value: "source", label: "Source" },
+]);
+const dataTabStateByFamily = new Map();
 
 const isElementLike = (node) => (
   !!node
@@ -35,6 +52,114 @@ const formatRangeValue = (rawValue, control) => {
     return `${numericValue.toFixed(2).replace(/\.?0+$/, "")}${control.unit || ""}`;
   }
   return `${numericValue}${control.unit || ""}`;
+};
+
+const formatDataValue = (value) => {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "—";
+    return Math.abs(value) >= 1000 ? value.toLocaleString("en-US", { maximumFractionDigits: 0 }) : String(Number(value.toFixed(4)));
+  }
+  if (Array.isArray(value)) return value.filter(Boolean).join(", ") || "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+};
+
+const formatDataCoordinate = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue.toFixed(4) : "—";
+};
+
+const createDataMetaNode = (label, value) => {
+  const item = document.createElement("div");
+  item.className = "transport-workbench-data-meta-item";
+  const labelNode = document.createElement("span");
+  labelNode.className = "transport-workbench-data-meta-label";
+  labelNode.textContent = label;
+  const valueNode = document.createElement("strong");
+  valueNode.className = "transport-workbench-data-meta-value";
+  valueNode.textContent = formatDataValue(value);
+  item.append(labelNode, valueNode);
+  return item;
+};
+
+const createDataFieldSummary = (properties = {}) => {
+  const entries = Object.entries(properties || {})
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .slice(0, 6);
+  if (entries.length === 0) return "";
+  return entries.map(([key, value]) => `${key}: ${formatDataValue(value)}`).join(" · ");
+};
+
+const getDefaultDataTabColumnState = () => Object.fromEntries(
+  DATA_TAB_COLUMNS.map((column) => [column.key, !!column.defaultVisible])
+);
+
+const getDataTabViewState = (familyId) => {
+  const key = String(familyId || "default").trim() || "default";
+  if (!dataTabStateByFamily.has(key)) {
+    dataTabStateByFamily.set(key, {
+      search: "",
+      sort: "default",
+      columns: getDefaultDataTabColumnState(),
+    });
+  }
+  const state = dataTabStateByFamily.get(key);
+  state.columns = { ...getDefaultDataTabColumnState(), ...(state.columns || {}) };
+  return state;
+};
+
+const getDataRowSearchText = (row = {}) => [
+  row.id,
+  row.name,
+  row.kind,
+  row.source,
+  row.hiddenReason,
+  row.lon,
+  row.lat,
+  row.lengthMeters,
+  ...Object.values(row.properties || {}),
+].map((value) => formatDataValue(value).toLowerCase()).join(" ");
+
+const compareDataRows = (sortKey) => (left, right) => {
+  if (sortKey === "name") {
+    return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+  }
+  if (sortKey === "visible") {
+    if (!!left.visible !== !!right.visible) return left.visible ? -1 : 1;
+    return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+  }
+  if (sortKey === "source") {
+    const sourceOrder = String(left.source || "").localeCompare(String(right.source || ""), "ja");
+    if (sourceOrder !== 0) return sourceOrder;
+    return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+  }
+  return 0;
+};
+
+const prepareDataRowsForView = (rows, viewState) => {
+  const searchText = String(viewState.search || "").trim().toLowerCase();
+  const filtered = searchText
+    ? rows.filter((row) => getDataRowSearchText(row).includes(searchText))
+    : [...rows];
+  if (viewState.sort && viewState.sort !== "default") {
+    filtered.sort(compareDataRows(viewState.sort));
+  }
+  return filtered;
+};
+
+const getDataCellText = (row, columnKey) => {
+  if (columnKey === "name") return formatDataValue(row.name || row.id);
+  if (columnKey === "kind") return formatDataValue(row.kind);
+  if (columnKey === "visible") return row.visible ? "Visible" : (row.hiddenReason || "Filtered");
+  if (columnKey === "source") return formatDataValue(row.source);
+  if (columnKey === "location") {
+    if (Number.isFinite(Number(row.lon)) || Number.isFinite(Number(row.lat))) {
+      return `${formatDataCoordinate(row.lon)}, ${formatDataCoordinate(row.lat)}`;
+    }
+    return formatDataValue(row.lengthMeters ? `${Math.round(Number(row.lengthMeters))} m` : "");
+  }
+  return formatDataValue(row[columnKey]);
 };
 
 export function createTransportWorkbenchRightDeckOwner({
@@ -52,11 +177,254 @@ export function createTransportWorkbenchRightDeckOwner({
   toggleSection = () => {},
   createSectionHelpButton = () => null,
   renderDiagnosticsBody = () => document.createElement("div"),
+  getEditOverlay = () => ({ features: [] }),
+  addEditOverlayPoint = () => null,
+  removeEditOverlayPoint = () => false,
+  selectPreviewFeature = selectTransportWorkbenchFamilyPreviewFeature,
 } = {}) {
   const getSectionsForTab = (familyId, tabId) => {
     const sectionMap = TRANSPORT_WORKBENCH_TAB_SECTION_MAP[familyId] || {};
     const allowedSectionKeys = new Set(sectionMap[tabId] || []);
     return (TRANSPORT_WORKBENCH_CONTROL_SCHEMAS[familyId] || []).filter((section) => allowedSectionKeys.has(section.key));
+  };
+
+  const createEditOverlayNode = (family, previewSnapshot) => {
+    if (!EDIT_OVERLAY_FAMILY_IDS.has(family.id)) return null;
+    const overlay = getEditOverlay(family.id) || { features: [] };
+    const features = Array.isArray(overlay.features) ? overlay.features : [];
+    const updatedFeatures = Array.isArray(overlay.updated) ? overlay.updated : [];
+    const deletedFeatureIds = Array.isArray(overlay.deleted) ? overlay.deleted : [];
+    const selected = previewSnapshot?.selected || {};
+    const card = document.createElement("div");
+    card.className = "transport-workbench-note-card transport-workbench-edit-overlay-card";
+    const title = document.createElement("div");
+    title.className = "transport-workbench-note-title";
+    title.textContent = translate("User Points");
+    card.appendChild(title);
+    const form = document.createElement("div");
+    form.className = "transport-workbench-edit-overlay-form";
+    const nameInput = document.createElement("input");
+    nameInput.className = "text-input transport-workbench-edit-overlay-input";
+    nameInput.type = "text";
+    nameInput.placeholder = translate("Name");
+    nameInput.value = selected?.name || "";
+    const lonInput = document.createElement("input");
+    lonInput.className = "text-input transport-workbench-edit-overlay-input";
+    lonInput.type = "number";
+    lonInput.step = "0.0001";
+    lonInput.placeholder = translate("Longitude");
+    lonInput.value = Number.isFinite(Number(selected?.lon)) ? String(selected.lon) : "";
+    const latInput = document.createElement("input");
+    latInput.className = "text-input transport-workbench-edit-overlay-input";
+    latInput.type = "number";
+    latInput.step = "0.0001";
+    latInput.placeholder = translate("Latitude");
+    latInput.value = Number.isFinite(Number(selected?.lat)) ? String(selected.lat) : "";
+    const addButton = document.createElement("button");
+    addButton.type = "button";
+    addButton.className = "transport-workbench-data-action-button";
+    addButton.textContent = translate("Add point");
+    addButton.addEventListener("click", () => {
+      addEditOverlayPoint(family.id, {
+        name: nameInput.value,
+        lon: lonInput.value,
+        lat: latInput.value,
+      });
+    });
+    form.append(nameInput, lonInput, latInput, addButton);
+    card.appendChild(form);
+    const list = document.createElement("div");
+    list.className = "transport-workbench-edit-overlay-list";
+    if (!features.length) {
+      const empty = document.createElement("p");
+      empty.className = "transport-workbench-note-text";
+      empty.textContent = translate("No user points in this family yet.");
+      list.appendChild(empty);
+    } else {
+      features.forEach((feature) => {
+        const row = document.createElement("div");
+        row.className = "transport-workbench-edit-overlay-row";
+        const label = document.createElement("button");
+        label.type = "button";
+        label.className = "transport-workbench-data-row-button";
+        label.textContent = formatDataValue(feature.name || feature.id);
+        label.addEventListener("click", () => {
+          selectPreviewFeature(family.id, { id: feature.id, kind: family.id });
+        });
+        const meta = document.createElement("span");
+        meta.className = "transport-workbench-edit-overlay-row-meta";
+        meta.textContent = `${formatDataCoordinate(feature.lon)}, ${formatDataCoordinate(feature.lat)}`;
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "transport-workbench-data-action-button transport-workbench-data-action-button-subtle";
+        removeButton.textContent = translate("Remove");
+        removeButton.addEventListener("click", () => {
+          removeEditOverlayPoint(family.id, feature.id);
+        });
+        row.append(label, meta, removeButton);
+        list.appendChild(row);
+      });
+    }
+    card.appendChild(list);
+    if (updatedFeatures.length || deletedFeatureIds.length) {
+      const status = document.createElement("div");
+      status.className = "transport-workbench-edit-overlay-delta-status";
+      const updated = document.createElement("span");
+      updated.textContent = `${translate("Updated")}: ${formatDataValue(updatedFeatures.length)}`;
+      const deleted = document.createElement("span");
+      deleted.textContent = `${translate("Deleted")}: ${formatDataValue(deletedFeatureIds.length)}`;
+      status.append(updated, deleted);
+      card.appendChild(status);
+    }
+    return card;
+  };
+
+  const createDataTabNode = (family, config) => {
+    const previewSnapshot = getPreviewSnapshot(family.id, config) || {};
+    const rows = Array.isArray(previewSnapshot.dataRows) ? previewSnapshot.dataRows : [];
+    const viewState = getDataTabViewState(family.id);
+    const viewRows = prepareDataRowsForView(rows, viewState);
+    const visibleRows = viewRows.slice(0, DATA_TAB_VISIBLE_ROW_LIMIT);
+    const totalRows = Number.isFinite(Number(previewSnapshot.dataRowCount))
+      ? Number(previewSnapshot.dataRowCount)
+      : rows.length;
+    const card = document.createElement("div");
+    card.className = "transport-workbench-note-card transport-workbench-data-card";
+    const header = document.createElement("div");
+    header.className = "transport-workbench-data-header";
+    const title = document.createElement("div");
+    title.className = "transport-workbench-note-title";
+    title.textContent = translate("Loaded Data");
+    const meta = document.createElement("div");
+    meta.className = "transport-workbench-data-meta";
+    meta.append(
+      createDataMetaNode(translate("Pack Rows"), totalRows),
+      createDataMetaNode(translate("Table Rows"), rows.length),
+      createDataMetaNode(translate("Mode"), previewSnapshot.packMode || previewSnapshot.status || "idle"),
+      createDataMetaNode(translate("Shown"), Math.min(visibleRows.length, viewRows.length))
+    );
+    header.append(title, meta);
+    card.appendChild(header);
+    if (rows.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "transport-workbench-note-text";
+      empty.textContent = translate("No loaded feature rows for the current preview pack.");
+      card.appendChild(empty);
+      return card;
+    }
+    const controls = document.createElement("div");
+    controls.className = "transport-workbench-data-controls";
+    const searchInput = document.createElement("input");
+    searchInput.className = "text-input transport-workbench-data-search";
+    searchInput.type = "search";
+    searchInput.placeholder = translate("Search table rows");
+    searchInput.value = viewState.search || "";
+    const sortSelect = document.createElement("select");
+    sortSelect.className = "select-input transport-workbench-data-sort";
+    DATA_TAB_SORT_OPTIONS.forEach((option) => {
+      const optionNode = document.createElement("option");
+      optionNode.value = option.value;
+      optionNode.textContent = translate(option.label);
+      optionNode.selected = option.value === viewState.sort;
+      sortSelect.appendChild(optionNode);
+    });
+    const columnControls = document.createElement("div");
+    columnControls.className = "transport-workbench-data-column-controls";
+    DATA_TAB_COLUMNS.forEach((column) => {
+      const label = document.createElement("label");
+      label.className = "transport-workbench-data-column-toggle";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = !!viewState.columns[column.key];
+      input.dataset.transportDataColumn = column.key;
+      input.addEventListener("change", () => {
+        viewState.columns[column.key] = input.checked;
+        if (!DATA_TAB_COLUMNS.some((candidate) => viewState.columns[candidate.key])) {
+          viewState.columns.name = true;
+        }
+        renderTableRows();
+      });
+      const text = document.createElement("span");
+      text.textContent = translate(column.label);
+      label.append(input, text);
+      columnControls.appendChild(label);
+    });
+    controls.append(searchInput, sortSelect, columnControls);
+    card.appendChild(controls);
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "transport-workbench-data-table-wrap";
+    const table = document.createElement("table");
+    table.className = "transport-workbench-data-table";
+    const thead = document.createElement("thead");
+    const tbody = document.createElement("tbody");
+    const renderTableRows = () => {
+      const activeColumns = DATA_TAB_COLUMNS.filter((column) => viewState.columns[column.key]);
+      const nextRows = prepareDataRowsForView(rows, viewState).slice(0, DATA_TAB_VISIBLE_ROW_LIMIT);
+      thead.replaceChildren();
+      tbody.replaceChildren();
+      const headerRow = document.createElement("tr");
+      activeColumns.forEach((column) => {
+        const cell = document.createElement("th");
+        cell.scope = "col";
+        cell.textContent = translate(column.label);
+        headerRow.appendChild(cell);
+      });
+      thead.appendChild(headerRow);
+      nextRows.forEach((row) => {
+        const tableRow = document.createElement("tr");
+        if (row.selected) {
+          tableRow.classList.add("is-selected");
+        }
+        activeColumns.forEach((column) => {
+          const cell = document.createElement("td");
+          if (column.key === "name") {
+            const selectButton = document.createElement("button");
+            selectButton.type = "button";
+            selectButton.className = "transport-workbench-data-row-button";
+            selectButton.textContent = getDataCellText(row, column.key);
+            selectButton.dataset.transportDataRowId = row.id || "";
+            selectButton.dataset.transportDataRowKind = row.kind || "";
+            selectButton.addEventListener("click", () => {
+              selectPreviewFeature(family.id, row);
+            });
+            cell.appendChild(selectButton);
+            const fieldSummary = createDataFieldSummary(row.properties);
+            if (fieldSummary) {
+              const sub = document.createElement("div");
+              sub.className = "transport-workbench-data-row-subtext";
+              sub.textContent = fieldSummary;
+              cell.appendChild(sub);
+            }
+          } else {
+            cell.textContent = column.key === "visible"
+              ? translate(getDataCellText(row, column.key))
+              : getDataCellText(row, column.key);
+          }
+          tableRow.appendChild(cell);
+        });
+        tbody.appendChild(tableRow);
+      });
+    };
+    searchInput.addEventListener("input", () => {
+      viewState.search = searchInput.value;
+      renderTableRows();
+    });
+    sortSelect.addEventListener("change", () => {
+      viewState.sort = sortSelect.value || "default";
+      renderTableRows();
+    });
+    renderTableRows();
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    card.appendChild(tableWrap);
+    if (viewRows.length > visibleRows.length || totalRows > rows.length) {
+      const note = document.createElement("p");
+      note.className = "transport-workbench-note-text transport-workbench-data-limit-note";
+      note.textContent = translate("Search and sort use the current table sample; the side panel keeps a bounded row set to stay responsive.");
+      card.appendChild(note);
+    }
+    return card;
   };
 
   // 单个 control 只负责 schema -> DOM -> config update；compareHeld 锁住交互，保留对比基线不被拖拽误写。
@@ -494,6 +862,14 @@ export function createTransportWorkbenchRightDeckOwner({
     const shellCard = createShellCard(family, tabId, config, compareHeld);
     if (shellCard) {
       mountNode.appendChild(shellCard);
+    }
+    if (tabId === "data") {
+      const previewSnapshot = getPreviewSnapshot(family.id, config) || {};
+      const editOverlayNode = createEditOverlayNode(family, previewSnapshot);
+      if (editOverlayNode) {
+        mountNode.appendChild(editOverlayNode);
+      }
+      mountNode.appendChild(createDataTabNode(family, config));
     }
     const skipDefaultSections = TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS.has(family.id)
       && (tabId === "aggregation" || tabId === "labels");

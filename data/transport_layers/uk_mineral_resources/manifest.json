@@ -1,0 +1,79 @@
+{
+  "adapter_id": "uk_mineral_resources_v1",
+  "pack_id": "uk_mineral_resources",
+  "family": "mineral_resources",
+  "geometry_kind": "point",
+  "country": "United Kingdom",
+  "schema_version": 1,
+  "generated_at": "2026-06-03T15:51:15.592100Z",
+  "recipe_path": "data/transport_layers/uk_mineral_resources/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "mineral_resources": "data/transport_layers/uk_mineral_resources/mineral_resources.preview.geojson"
+    },
+    "full": {
+      "mineral_resources": "data/transport_layers/uk_mineral_resources/mineral_resources.geojson"
+    },
+    "build_audit": "data/transport_layers/uk_mineral_resources/build_audit.json"
+  },
+  "source_signature": {
+    "gsni_northern_ireland_mineral_resources_json": {
+      "filename": "mineralresourcesjson.zip",
+      "path": ".runtime/source-cache/transport/uk_mineral_resources/mineralresourcesjson.zip",
+      "size_bytes": 22179509,
+      "sha256": "193bb590609ff537dfb7cbb222e05d3717ff6372c9dc126a91611403271b3e14"
+    }
+  },
+  "recipe_version": "uk_mineral_resources_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 1000
+    },
+    "full": {
+      "mineral_resources": 14914
+    }
+  },
+  "clip_bbox": [
+    -8.155051,
+    54.040301,
+    -5.436557,
+    55.310899
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack uk_mineral_resources",
+  "runtime_consumer": "transport_workbench_mineral_resources_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:uk",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "mineral_resources": "data/transport_layers/uk_mineral_resources/mineral_resources.preview.geojson"
+        },
+        "full": {
+          "mineral_resources": "data/transport_layers/uk_mineral_resources/mineral_resources.geojson"
+        },
+        "build_audit": "data/transport_layers/uk_mineral_resources/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "mineral_resources": 1000
+        },
+        "full": {
+          "mineral_resources": 14914
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:uk",
+      "scope_policy": "England, Scotland, Wales, and Northern Ireland scope; overseas territories excluded.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 local authority carrier clipped to UK main geography."
+    }
+  }
+}

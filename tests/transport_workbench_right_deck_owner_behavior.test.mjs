@@ -143,6 +143,10 @@ function findByText(node, pattern) {
   return walk(node).find((candidate) => pattern.test(candidate.textContent || ""));
 }
 
+function findAllByClass(node, className) {
+  return walk(node).filter((candidate) => candidate.classList?.contains(className));
+}
+
 function textOf(node) {
   return [node.textContent, ...(node.children || []).map(textOf)].join(" ");
 }
@@ -383,6 +387,138 @@ test("right deck owner renders diagnostics body in the data tab", () => withTest
   assert.deepEqual(events, [["road", true]]);
   assert.match(textOf(mount), /diagnostic-body/);
   assert.match(textOf(mount), /Explain rule intent only/);
+}));
+
+test("right deck owner renders preview data rows and selects rows without mutating config", () => withTestDocument(() => {
+  const selectionEvents = [];
+  const configEvents = [];
+  const mount = new TestElement("div");
+  const owner = createTransportWorkbenchRightDeckOwner({
+    updateFamilyConfig: (...args) => configEvents.push(args),
+    selectPreviewFeature: (familyId, row) => selectionEvents.push([familyId, row.id, row.kind]),
+    getPreviewSnapshot: () => ({
+      status: "ready",
+      packMode: "preview",
+      dataRowCount: 20,
+      dataRows: [
+        {
+          id: "road-1",
+          kind: "road",
+          name: "Route 1",
+          source: "osm",
+          visible: true,
+          lengthMeters: 1200,
+          selected: true,
+          properties: { road_class: "motorway", ref: "E1" },
+        },
+        {
+          id: "road-2",
+          kind: "road",
+          name: "Route 2",
+          source: "osm",
+          visible: false,
+          hiddenReason: "class_filtered",
+          lengthMeters: 800,
+          properties: { road_class: "primary" },
+        },
+      ],
+    }),
+  });
+
+  owner.renderTabSections(
+    { id: "road" },
+    { visible: true },
+    false,
+    "data",
+    mount
+  );
+
+  assert.match(textOf(mount), /Loaded Data/);
+  assert.match(textOf(mount), /Pack Rows/);
+  assert.match(textOf(mount), /Table Rows/);
+  const metaItems = findAllByClass(mount, "transport-workbench-data-meta-item").map((item) => textOf(item).replace(/\s+/g, " ").trim());
+  assert.deepEqual(metaItems.slice(0, 2), ["Pack Rows 20", "Table Rows 2"]);
+  assert.match(textOf(mount), /current table sample/);
+  assert.match(textOf(mount), /bounded row set/);
+  assert.match(textOf(mount), /Route 1/);
+  assert.match(textOf(mount), /road_class: motorway/);
+  const selectedButton = findAllByTag(mount, "button").find((button) => button.dataset.transportDataRowId === "road-1");
+  selectedButton.dispatch("click");
+  const searchInput = findAllByTag(mount, "input").find((input) => input.type === "search");
+  assert.equal(searchInput.placeholder, "Search table rows");
+  searchInput.value = "Route 2";
+  searchInput.dispatch("input");
+  assert.doesNotMatch(textOf(mount), /Route 1/);
+  assert.match(textOf(mount), /Route 2/);
+  searchInput.value = "Route 99";
+  searchInput.dispatch("input");
+  assert.doesNotMatch(textOf(mount), /Route 1/);
+  assert.doesNotMatch(textOf(mount), /Route 2/);
+  const locationToggle = findAllByTag(mount, "input").find((input) => input.dataset.transportDataColumn === "location");
+  locationToggle.checked = false;
+  locationToggle.dispatch("change");
+  const tableHeaders = findAllByTag(mount, "th").map((header) => header.textContent);
+  assert.deepEqual(tableHeaders, ["Name", "Kind", "Visible", "Source"]);
+
+  assert.deepEqual(selectionEvents, [["road", "road-1", "road"]]);
+  assert.deepEqual(configEvents, []);
+}));
+
+test("right deck owner adds and removes airport edit overlay points from the data tab", () => withTestDocument(() => {
+  const events = [];
+  const mount = new TestElement("div");
+  const owner = createTransportWorkbenchRightDeckOwner({
+    getPreviewSnapshot: () => ({
+      status: "ready",
+      selected: { name: "Selected Airport", lon: 139.77, lat: 35.68 },
+      dataRows: [],
+    }),
+    getEditOverlay: () => ({
+      features: [{
+        id: "airport_edit_1",
+        name: "Overlay Airport",
+        lon: 139.77,
+        lat: 35.68,
+      }],
+      updated: [{ id: "airport_source_1" }],
+      deleted: ["airport_source_2"],
+    }),
+    addEditOverlayPoint: (familyId, point) => {
+      events.push(["add", familyId, point.name, point.lon, point.lat]);
+      return { id: "airport_edit_2", ...point };
+    },
+    removeEditOverlayPoint: (familyId, featureId) => {
+      events.push(["remove", familyId, featureId]);
+      return true;
+    },
+    selectPreviewFeature: (familyId, row) => events.push(["select", familyId, row.id]),
+  });
+
+  owner.renderTabSections(
+    { id: "airport" },
+    {},
+    false,
+    "data",
+    mount
+  );
+
+  assert.match(textOf(mount), /User Points/);
+  assert.match(textOf(mount), /Overlay Airport/);
+  assert.match(textOf(mount), /Updated: 1/);
+  assert.match(textOf(mount), /Deleted: 1/);
+  const inputs = findAllByTag(mount, "input");
+  assert.equal(inputs[0].value, "Selected Airport");
+  assert.equal(inputs[1].value, "139.77");
+  assert.equal(inputs[2].value, "35.68");
+  const addButton = findAllByTag(mount, "button").find((button) => button.textContent === "Add point");
+  addButton.dispatch("click");
+  const removeButton = findAllByTag(mount, "button").find((button) => button.textContent === "Remove");
+  removeButton.dispatch("click");
+
+  assert.deepEqual(events, [
+    ["add", "airport", "Selected Airport", "139.77", "35.68"],
+    ["remove", "airport", "airport_edit_1"],
+  ]);
 }));
 
 test("right deck owner replaces the active mount when tab and family change", () => withTestDocument(() => {

@@ -1,0 +1,57 @@
+{
+  "version": "france_road_real_sources_v1",
+  "pack_id": "france_road",
+  "family": "road",
+  "country": "France",
+  "source_policy": "real_source_cache_only",
+  "source_cache_dir": ".runtime/source-cache/transport/france_road",
+  "source_truth": "IGN BD CARTO 5.0 September 2025 all themes for France metropolitaine",
+  "geometry_truth": "IGN BDCARTO GeoPackage LAMB93 France metropolitaine archive",
+  "sources": [
+    {
+      "id": "ign_bdcarto_5_0_fxx_gpkg",
+      "role": "primary_geometry",
+      "expected_path": ".runtime/source-cache/transport/france_road/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "url": "https://data.geopf.fr/telechargement/download/BDCARTO/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "license": "Licence Ouverte / Etalab 2.0 for IGN open datasets",
+      "required_layers": [
+        "troncon_de_route"
+      ],
+      "required_fields": [
+        "cleabs",
+        "cleabs_ge",
+        "nature",
+        "importance",
+        "cpx_numero",
+        "cpx_numero_route_europeenne",
+        "cpx_classement_administratif",
+        "cpx_toponyme_route_nommee",
+        "geometry"
+      ],
+      "filter_rule": "Use France metropolitaine FXX territory only; keep motorway and high-importance route segments for preview and broader numbered/important road context for full.",
+      "notes": "Géoservices lists overseas territories as separate GLP/MTQ/GUF/etc archives, so the FXX archive is the intended metropolitan-France scope.",
+      "query_params": {},
+      "signature": {
+        "filename": "BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+        "path": ".runtime/source-cache/transport/france_road/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+        "size_bytes": 982698328,
+        "sha256": "df1cd8b0fa5bb01e9c064bcabdce91c3a866fa074738c73990804e27f7e8e732"
+      }
+    }
+  ],
+  "source_signature": {
+    "ign_bdcarto_5_0_fxx_gpkg": {
+      "filename": "BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "path": ".runtime/source-cache/transport/france_road/BDCARTO_5-0_TOUSTHEMES_GPKG_LAMB93_FXX_2025-09-15.7z",
+      "size_bytes": 982698328,
+      "sha256": "df1cd8b0fa5bb01e9c064bcabdce91c3a866fa074738c73990804e27f7e8e732"
+    }
+  },
+  "field_mapping_status": "declared_source_requirements_only_until_source_check_is_ready",
+  "output_contract": [
+    "roads.preview.topo.json",
+    "roads.topo.json",
+    "road_labels.preview.geojson",
+    "road_labels.geojson"
+  ]
+}

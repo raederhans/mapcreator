@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-06-03T13:55:48.431644Z",
+  "adapter_id": "russia_mineral_resources_v1",
+  "pack_id": "russia_mineral_resources",
+  "source_policy": "real_source_cache_only",
+  "source_truth": "USGS Mineral Resources Data System global point layer",
+  "geometry_truth": "USGS MRDS point records filtered to the Russia workbench carrier",
+  "source_signature": {
+    "usgs_mrds_feature_service": {
+      "filename": "usgs_mrds_global_2026-06-02.geojson",
+      "path": ".runtime/source-cache/transport/russia_mineral_resources/usgs_mrds_global_2026-06-02.geojson",
+      "size_bytes": 80841782,
+      "sha256": "c2c91b9b8c9c3613e2ba390b2244b456f1603a99176cf55f37571274160511e7"
+    }
+  },
+  "feature_counts": {
+    "preview": {
+      "mineral_resources": 1000
+    },
+    "full": {
+      "mineral_resources": 1396
+    }
+  },
+  "source_row_count": {
+    "usgs_mrds_features_after_carrier_filter": 1396
+  },
+  "matched_count": 1396,
+  "full_cap": 50000,
+  "preview_rule": "Best-ranked 1000 MRDS Russia points by development status, grade, and site name.",
+  "scope_rule": "Global MRDS point rows filtered through the Russia carrier fitGeometry."
+}

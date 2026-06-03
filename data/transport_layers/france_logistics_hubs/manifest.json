@@ -1,0 +1,79 @@
+{
+  "adapter_id": "france_logistics_hubs_v1",
+  "pack_id": "france_logistics_hubs",
+  "family": "logistics_hubs",
+  "geometry_kind": "point",
+  "country": "France",
+  "schema_version": 1,
+  "generated_at": "2026-06-02T21:29:45.816665Z",
+  "recipe_path": "data/transport_layers/france_logistics_hubs/source_recipe.manual.json",
+  "distribution_tier": "single_pack",
+  "paths": {
+    "preview": {
+      "logistics_hubs": "data/transport_layers/france_logistics_hubs/logistics_hubs.preview.geojson"
+    },
+    "full": {
+      "logistics_hubs": "data/transport_layers/france_logistics_hubs/logistics_hubs.geojson"
+    },
+    "build_audit": "data/transport_layers/france_logistics_hubs/build_audit.json"
+  },
+  "source_signature": {
+    "cerema_ite3000_geojson": {
+      "filename": "base-ite-3000_2026-04-15.geojson",
+      "path": ".runtime/source-cache/transport/france_logistics_hubs/base-ite-3000_2026-04-15.geojson",
+      "size_bytes": 5110895,
+      "sha256": "37c76148d17ed2877e097873547e8258a600cb2b285b0ab60829e90de6c07837"
+    }
+  },
+  "recipe_version": "france_logistics_hubs_real_sources_v1",
+  "feature_counts": {
+    "preview": {
+      "logistics_hubs": 300
+    },
+    "full": {
+      "logistics_hubs": 2792
+    }
+  },
+  "clip_bbox": [
+    -4.37797,
+    42.44155,
+    8.18112,
+    51.05564
+  ],
+  "build_command": "python tools/build_transport_country_real_packs.py --pack france_logistics_hubs",
+  "runtime_consumer": "transport_workbench_logistics_hubs_preview",
+  "source_policy": "real_source_cache_only",
+  "carrier_asset_key": "transport_carrier:france",
+  "default_variant": "default",
+  "variants": {
+    "default": {
+      "label": "default",
+      "distribution_tier": "single_pack",
+      "paths": {
+        "preview": {
+          "logistics_hubs": "data/transport_layers/france_logistics_hubs/logistics_hubs.preview.geojson"
+        },
+        "full": {
+          "logistics_hubs": "data/transport_layers/france_logistics_hubs/logistics_hubs.geojson"
+        },
+        "build_audit": "data/transport_layers/france_logistics_hubs/build_audit.json"
+      },
+      "feature_counts": {
+        "preview": {
+          "logistics_hubs": 300
+        },
+        "full": {
+          "logistics_hubs": 2792
+        }
+      }
+    }
+  },
+  "extensions": {
+    "carrier": {
+      "carrier_asset_key": "transport_carrier:france",
+      "scope_policy": "Metropolitan France only; overseas departments and collectivities excluded unless a future pack covers them.",
+      "projection_profile": "geoConicConformal",
+      "basemap_profile": "Natural Earth admin1 metropolitan carrier clipped to Europe."
+    }
+  }
+}
