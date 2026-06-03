@@ -23,3 +23,26 @@
   - `codex/tno-zoom-water-fill-repair` is clean; commits `71b91375..417c7b27` are not ancestors of `origin/main`.
 - Integration shape: replay branch commits onto latest `origin/main` rather than merging stale branch histories directly, because branch-to-origin diffs include unrelated changes from old branch bases.
 - Main thread owns live tests, builds, pushes, merges, and worktree deletion.
+
+## 2026-06-03 integration result before verification
+
+- Local docs cleanup was committed as `6ee428c2` after rebasing onto `origin/main`.
+- TNO toponym branch commits were replayed as `6d2830a9`, `4e6e8baf`, `6ac14b3c`, `acb5e352`, and `9d838fd7`.
+- TNO water repair branch commits were replayed as `09009845` and `e6be7e2e`.
+- Backend preview code from branch `5a721ea1` was already present in the refreshed mainline shape; its untracked task notes were preserved under `docs/archive/backend-ui-preview/` in `e80ccadc`.
+- Conflict policy used during replay:
+  - keep current `main` backend safety checks for image URLs, public DTO stripping, and last-admin protection;
+  - take TNO water runtime data from the water repair branch;
+  - keep generated startup bundles and Pages manifest on the current mainline until verification rebuilds them.
+- Runtime drift from the starting dirty tree is parked in `stash@{0}` as `closeout-runtime-drift-20260603`; it contains `.omx/metrics.json` and `js/core/file_manager.js` status noise and is excluded from product commits.
+- Verification owner remains the main thread. Planned checks: `git diff --check`, `npm run verify:backend-preview`, `npm run test:py:tno-water-repair-contracts`, `npm run verify:scenario-contracts`, and `npm run verify:pages-dist`.
+
+## 2026-06-03 verification before push
+
+- `git diff --check`: passed; only CRLF conversion warnings were printed by Git.
+- Conflict marker scan: passed; no `<<<<<<<`, `=======`, or `>>>>>>>` markers in the repo scan.
+- `npm run verify:backend-preview`: passed; 25 Python tests, 7 Node tests, and Node syntax checks completed.
+- `npm run test:py:tno-water-repair-contracts`: passed; 7 Python tests completed.
+- `npm run verify:scenario-contracts`: passed for `tno_1962`.
+- `npm run verify:pages-dist`: passed; Pages dist rebuilt and 18 startup shell tests completed.
+- Pages dist rebuild updated `dist/pages-dist-manifest.json`; `dist/app/js/core/export_artifact_package.js` had no content diff after index refresh.
