@@ -17,6 +17,11 @@ import {
   setInteractionInfrastructureStateFields,
 } from "../js/core/state/renderer_runtime_state.js";
 import {
+  createDefaultUiState,
+  normalizeOpenOceanLayerVisibility,
+  restoreImportedLayerVisibilityState,
+} from "../js/core/state/ui_state.js";
+import {
   createDefaultSpatialIndexState,
 } from "../js/core/state/spatial_index_state.js";
 import {
@@ -82,6 +87,42 @@ test("renderer supporting factories keep cache shapes aligned", () => {
   assert.equal(spatialIndex.landIndex.size, 0);
   assert.equal(spatialIndex.waterSpatialItems.length, 0);
   assert.equal(spatialIndex.specialSpatialGrid.size, 0);
+});
+
+test("open ocean defaults keep selection available while paint stays explicit", () => {
+  const state = createDefaultUiState();
+
+  assert.equal(state.showWaterRegions, true);
+  assert.equal(state.showOpenOceanRegions, true);
+  assert.equal(state.allowOpenOceanSelect, true);
+  assert.equal(state.allowOpenOceanPaint, false);
+  assert.deepEqual(normalizeOpenOceanLayerVisibility({}), {
+    showOpenOceanRegions: true,
+    allowOpenOceanSelect: true,
+    allowOpenOceanPaint: false,
+  });
+  assert.deepEqual(normalizeOpenOceanLayerVisibility({ showOpenOceanRegions: false }), {
+    showOpenOceanRegions: false,
+    allowOpenOceanSelect: false,
+    allowOpenOceanPaint: false,
+  });
+  assert.deepEqual(normalizeOpenOceanLayerVisibility({ showOpenOceanRegions: true }), {
+    showOpenOceanRegions: true,
+    allowOpenOceanSelect: true,
+    allowOpenOceanPaint: true,
+  });
+
+  const restoredTarget = {};
+  const restored = restoreImportedLayerVisibilityState(restoredTarget, {
+    showWaterRegions: true,
+  });
+  assert.deepEqual(restored, {
+    allowOpenOceanSelect: true,
+    allowOpenOceanPaint: false,
+  });
+  assert.equal(restoredTarget.showOpenOceanRegions, true);
+  assert.equal(restoredTarget.allowOpenOceanSelect, true);
+  assert.equal(restoredTarget.allowOpenOceanPaint, false);
 });
 
 

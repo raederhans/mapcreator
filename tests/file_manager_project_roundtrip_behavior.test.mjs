@@ -154,6 +154,36 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "checksum"), false);
 });
 
+test("project payload builder keeps open ocean selectable by default", () => {
+  const payload = FileManager.buildProjectPayload({
+    transportWorkbenchUi: {},
+    exportWorkbenchUi: {},
+  });
+
+  assert.equal(payload.layerVisibility.showWaterRegions, true);
+  assert.equal(payload.layerVisibility.showOpenOceanRegions, true);
+  assert.equal(payload.layerVisibility.allowOpenOceanSelect, true);
+  assert.equal(payload.layerVisibility.allowOpenOceanPaint, false);
+});
+
+test("project import restores missing open ocean flags as selectable without paint", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  });
+  delete payload.layerVisibility.showOpenOceanRegions;
+  delete payload.layerVisibility.allowOpenOceanSelect;
+  delete payload.layerVisibility.allowOpenOceanPaint;
+
+  const result = await importProjectPayload(payload);
+
+  assert.equal(result.successes.length, 1);
+  assert.equal(result.successes[0].layerVisibility.showOpenOceanRegions, true);
+  assert.equal(result.successes[0].layerVisibility.allowOpenOceanSelect, true);
+  assert.equal(result.successes[0].layerVisibility.allowOpenOceanPaint, false);
+});
+
 test("project zip download keeps editable project and manifest files", async () => {
   const blob = await exportProjectBlob({
     activeScenarioId: "tno_1962",

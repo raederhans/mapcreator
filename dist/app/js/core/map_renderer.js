@@ -9945,7 +9945,7 @@ function syncScenarioSecondaryRegionIndexes({
       .map((layerKey) => String(layerKey || "").trim().toLowerCase())
       .filter(Boolean)
   );
-  const hasWaterChange = normalizedLayerKeys.has("water");
+  const hasWaterChange = normalizedLayerKeys.has("water") || normalizedLayerKeys.has("scenario_atlantropa");
   const hasSpecialChange = normalizedLayerKeys.has("special");
   if (!hasWaterChange && !hasSpecialChange) {
     return false;

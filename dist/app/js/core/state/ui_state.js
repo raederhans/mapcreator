@@ -278,9 +278,28 @@ export function createDefaultUiPanelState() {
   };
 }
 
+export function normalizeOpenOceanLayerVisibility(layerVisibility = null) {
+  const source = layerVisibility && typeof layerVisibility === "object" ? layerVisibility : {};
+  const hasLegacyOpenOceanVisibility = source.showOpenOceanRegions !== undefined;
+  const allowOpenOceanSelect =
+    source.allowOpenOceanSelect === undefined
+      ? (hasLegacyOpenOceanVisibility ? !!source.showOpenOceanRegions : true)
+      : !!source.allowOpenOceanSelect;
+  const allowOpenOceanPaint =
+    source.allowOpenOceanPaint === undefined
+      ? (hasLegacyOpenOceanVisibility ? !!source.showOpenOceanRegions : false)
+      : !!source.allowOpenOceanPaint;
+  return {
+    allowOpenOceanSelect,
+    allowOpenOceanPaint,
+    showOpenOceanRegions: !!(allowOpenOceanSelect || allowOpenOceanPaint),
+  };
+}
+
 export function createDefaultUiState() {
   // createDefaultUiState 只收口运行中的 UI/runtime dirty 标记与开关；
   // 更细的 panel/workbench/style 默认值继续分散到专门 helper，避免这里再长出第二套 schema。
+  const openOceanLayerVisibility = normalizeOpenOceanLayerVisibility();
   return {
     activeDockPopover: "",
     isDirty: false,
@@ -302,9 +321,9 @@ export function createDefaultUiState() {
     selectedSpecialRegionId: "",
     zoomTransform: defaultZoom,
     showWaterRegions: true,
-    showOpenOceanRegions: false,
-    allowOpenOceanSelect: false,
-    allowOpenOceanPaint: false,
+    showOpenOceanRegions: openOceanLayerVisibility.showOpenOceanRegions,
+    allowOpenOceanSelect: openOceanLayerVisibility.allowOpenOceanSelect,
+    allowOpenOceanPaint: openOceanLayerVisibility.allowOpenOceanPaint,
     showScenarioSpecialRegions: true,
     showScenarioAtlantropa: true,
     showScenarioReliefOverlays: true,
@@ -415,24 +434,13 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
   if (!layerVisibility || typeof layerVisibility !== "object") {
     return null;
   }
-  const allowOpenOceanSelect =
-    layerVisibility.allowOpenOceanSelect === undefined
-      ? (layerVisibility.showOpenOceanRegions === undefined
-          ? false
-          : !!layerVisibility.showOpenOceanRegions)
-      : !!layerVisibility.allowOpenOceanSelect;
-  const allowOpenOceanPaint =
-    layerVisibility.allowOpenOceanPaint === undefined
-      ? (layerVisibility.showOpenOceanRegions === undefined
-          ? false
-          : !!layerVisibility.showOpenOceanRegions)
-      : !!layerVisibility.allowOpenOceanPaint;
+  const openOceanLayerVisibility = normalizeOpenOceanLayerVisibility(layerVisibility);
   Object.assign(target, {
     showWaterRegions:
       layerVisibility.showWaterRegions === undefined ? true : !!layerVisibility.showWaterRegions,
-    allowOpenOceanSelect,
-    allowOpenOceanPaint,
-    showOpenOceanRegions: !!(allowOpenOceanSelect || allowOpenOceanPaint),
+    allowOpenOceanSelect: openOceanLayerVisibility.allowOpenOceanSelect,
+    allowOpenOceanPaint: openOceanLayerVisibility.allowOpenOceanPaint,
+    showOpenOceanRegions: openOceanLayerVisibility.showOpenOceanRegions,
     showScenarioSpecialRegions:
       layerVisibility.showScenarioSpecialRegions === undefined
         ? true
@@ -459,8 +467,8 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
       layerVisibility.showSpecialZones === undefined ? false : !!layerVisibility.showSpecialZones,
   });
   return {
-    allowOpenOceanSelect,
-    allowOpenOceanPaint,
+    allowOpenOceanSelect: openOceanLayerVisibility.allowOpenOceanSelect,
+    allowOpenOceanPaint: openOceanLayerVisibility.allowOpenOceanPaint,
   };
 }
 

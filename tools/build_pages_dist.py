@@ -19,7 +19,9 @@ from tools.app_entry_resolver import (
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
-MAX_PAGES_DIST_BYTES = 1020 * 1024 * 1024
+# TNO source-backed water refinements push the already-allowlisted runtime
+# scenario payload above the previous 1020 MiB cap.
+MAX_PAGES_DIST_BYTES = 1050 * 1024 * 1024
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",

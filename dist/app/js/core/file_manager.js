@@ -31,6 +31,7 @@ import {
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
 } from "./special_zone_layers.js";
+import { normalizeOpenOceanLayerVisibility } from "./state/ui_state.js";
 
 const LEGACY_BOUNDARY_VARIANT_ALIASES = {
   legacy_approx: "historical_reference",
@@ -459,6 +460,7 @@ class FileManager {
   static buildProjectPayload(appState) {
     if (!appState) return null;
     const timestamp = Date.now();
+    const openOceanLayerVisibility = normalizeOpenOceanLayerVisibility(appState);
     // export 的职责是把当前 runtimeState 收敛成稳定 schema。
     // 这里宁可集中做一次 normalize，也不要让读取方承担多套历史字段和 UI 派生状态。
     const payload = {
@@ -496,15 +498,9 @@ class FileManager {
       recentColors: normalizeRecentColors(appState.recentColors),
       layerVisibility: {
         showWaterRegions: appState.showWaterRegions === undefined ? true : !!appState.showWaterRegions,
-        showOpenOceanRegions: !!appState.showOpenOceanRegions,
-        allowOpenOceanSelect:
-          appState.allowOpenOceanSelect === undefined
-            ? !!appState.showOpenOceanRegions
-            : !!appState.allowOpenOceanSelect,
-        allowOpenOceanPaint:
-          appState.allowOpenOceanPaint === undefined
-            ? !!appState.showOpenOceanRegions
-            : !!appState.allowOpenOceanPaint,
+        showOpenOceanRegions: openOceanLayerVisibility.showOpenOceanRegions,
+        allowOpenOceanSelect: openOceanLayerVisibility.allowOpenOceanSelect,
+        allowOpenOceanPaint: openOceanLayerVisibility.allowOpenOceanPaint,
         showScenarioSpecialRegions:
           appState.showScenarioSpecialRegions === undefined ? true : !!appState.showScenarioSpecialRegions,
         showScenarioAtlantropa:
@@ -829,16 +825,7 @@ class FileManager {
         }
         data.layerVisibility.showWaterRegions =
           data.layerVisibility.showWaterRegions === undefined ? true : !!data.layerVisibility.showWaterRegions;
-        data.layerVisibility.showOpenOceanRegions =
-          data.layerVisibility.showOpenOceanRegions === undefined ? false : !!data.layerVisibility.showOpenOceanRegions;
-        data.layerVisibility.allowOpenOceanSelect =
-          data.layerVisibility.allowOpenOceanSelect === undefined
-            ? !!data.layerVisibility.showOpenOceanRegions
-            : !!data.layerVisibility.allowOpenOceanSelect;
-        data.layerVisibility.allowOpenOceanPaint =
-          data.layerVisibility.allowOpenOceanPaint === undefined
-            ? !!data.layerVisibility.showOpenOceanRegions
-            : !!data.layerVisibility.allowOpenOceanPaint;
+        Object.assign(data.layerVisibility, normalizeOpenOceanLayerVisibility(data.layerVisibility));
         data.layerVisibility.showScenarioSpecialRegions =
           data.layerVisibility.showScenarioSpecialRegions === undefined
             ? true

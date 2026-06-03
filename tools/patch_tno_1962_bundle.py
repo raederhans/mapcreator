@@ -1535,6 +1535,9 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "exclude_base_ids": ("marine_bay_of_biscay",),
         "snapshot_simplify_tolerance": 0.004,
         "subtract_named_ids": ("tno_bay_of_brest",),
+        "supplement_bboxes": (
+            (-7.965, 43.768, -7.865, 43.815),
+        ),
         "clip_open_ocean_ids": TNO_ATLANTIC_OPEN_OCEAN_IDS,
     },
     {
@@ -2041,6 +2044,9 @@ TNO_NAMED_MARGINAL_WATER_SPECS = (
         "source_query": "mrgid=4312",
         "source_standard": "marine_regions_iho_v3",
         "exclude_base_ids": ("marine_gulf_of_alaska",),
+        "supplement_bboxes": (
+            (-163.3580, 54.8103, -163.3575, 54.8110),
+        ),
         "clip_open_ocean_ids": TNO_PACIFIC_OPEN_OCEAN_IDS,
         "simplify_tolerance": 0.01,
     },

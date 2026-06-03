@@ -2,7 +2,7 @@
   "artifact_counts": {
     "chunk_count": 189,
     "feature_count": 12865,
-    "water_count": 129
+    "water_count": 139
   },
   "controller_changes": [
     {
@@ -10337,6 +10337,10 @@
       "tno_english_channel",
       "tno_poole_bay",
       "tno_solent",
+      "tno_weymouth_bay",
+      "tno_lyme_bay",
+      "tno_plymouth_sound",
+      "tno_mounts_bay",
       "tno_gulf_of_st_lawrence",
       "tno_bering_sea",
       "tno_sea_of_japan",
@@ -10359,8 +10363,10 @@
       "tno_barnstaple_bideford_bay",
       "tno_severn_estuary",
       "tno_north_channel",
+      "tno_belfast_lough",
       "tno_st_georges_channel",
       "tno_strait_of_dover",
+      "tno_rye_bay",
       "tno_skagerrak",
       "tno_kattegat",
       "tno_baltic_sea",
@@ -10383,6 +10389,7 @@
       "tno_labrador_sea",
       "tno_baffin_bay",
       "tno_hudson_bay",
+      "tno_hudson_strait",
       "tno_bay_of_biscay",
       "tno_north_sea",
       "tno_wadden_sea",
@@ -10395,7 +10402,10 @@
       "tno_pentland_firth",
       "tno_irish_sea",
       "tno_cardigan_bay",
+      "tno_caernarfon_bay",
+      "tno_menai_strait",
       "tno_liverpool_bay",
+      "tno_morecambe_bay",
       "tno_solway_firth",
       "tno_caribbean_sea",
       "tno_gulf_of_mexico",
@@ -102752,13 +102762,13 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "451eca51d78e0af4527a6c9f1a2f6a85d39f422e2cfbdb746435bedc02a5a6e9",
+  "snapshot_fingerprint": "24cd826e6dd7accc91fad2a19eb744bec76045100e93dddecf0393115870a156",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "edc38d31d3bd5a6c1ba0f167c3eab9ce83e93bc75a7f125fa239e118b972a216",
-    "detail_chunk_manifest_sha256": "3bf719e27081f6037cd2654e5754dd053d32d23903f0a9e92dbebd6edbd4d531",
+    "build_snapshot_sha256": "429202ff85bba9fa62da0800c9b645c78dcb3222a8895d0484725e6aaab767a6",
+    "detail_chunk_manifest_sha256": "44506572749cafb39ca64de20c1ce4ca826a782446f28201a0e1ef5c28fdf6b3",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
-    "runtime_topology_sha256": "70dcae0f95be9ee2322eb9de3adf4905cd5dc9370e395384bf9fbfbf6341bbab"
+    "runtime_topology_sha256": "1ab8208848a57f1f0b7204880675480d59baf3f44a71c5a8fa8b4611c52ced23"
   },
   "summary": {
     "approximate_count": 919,
@@ -102800,11 +102810,11 @@
     "synthetic_owner_feature_count": 446,
     "tno_bathymetry_band_count": 90,
     "tno_bathymetry_contour_count": 74,
-    "tno_named_marginal_water_count": 101,
+    "tno_named_marginal_water_count": 111,
     "tno_reichskommissariat_count": 8,
     "tno_relief_overlay_count": 25,
     "tno_special_region_count": 0,
-    "tno_water_region_count": 129,
+    "tno_water_region_count": 139,
     "topology_blocker_count": 0
   },
   "topology_blockers": [],

@@ -177,6 +177,9 @@
 
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
+
+### 水域 source、runtime、chunk 要一起验证
+- TNO 水域精细化后要同时跑 source 几何、runtime topology、chunk id consistency 和 named/open-ocean seam 合同；只看 source 或只看 chunk 会漏掉视觉存在但无法命中的漂移。
 - 发布 water 几何前先让 builder 复用已验证 checkpoint；从旧 checkpoint 全量重建会把非目标 global ocean 拓扑问题提前拉进本轮发布。
 - checked-in `water_regions.geojson` 已经通过 D3 几何验证时，水域窄发布应直接替换 runtime topology 的 `scenario_water`，避免再次调用 full water generator 或 source split 步骤引入旧拓扑失败。
 - water changed-domain 在 safe repair/startup bundle 之前要从 checked-in `water_regions.geojson` 同步 `manifest.summary` 和 `audit.summary`，否则 bundle subset 会保留旧 water count。
