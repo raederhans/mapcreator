@@ -317,7 +317,7 @@ export function createDefaultUiState() {
     showRoad: false,
     showSpecialZones: false,
     hgoIdentity: {
-      enabled: true,
+      enabled: false,
       nameMode: "scenario",
       showSuggestedAliases: true,
     },

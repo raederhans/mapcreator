@@ -58,6 +58,8 @@
     "test:node:startup-hydration-behavior": "node --test tests/startup_hydration_behavior.test.mjs",
     "test:node:dev-workspace-selection-ownership": "node --test tests/dev_workspace_selection_ownership_behavior.test.mjs",
     "test:node:hgo-identity-resolver": "node --test tests/hgo_identity_resolver.node.test.mjs",
+    "test:node:country-inspector-controller": "node --test tests/country_inspector_controller_behavior.test.mjs",
+    "test:node:sidebar-hgo-identity-startup": "node --test tests/sidebar_hgo_identity_startup_behavior.test.mjs",
     "test:node:palette-runtime-bridge": "node --test tests/palette_runtime_bridge.node.test.mjs",
     "test:node:transport-overview-line-contract": "node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs",
     "test:node:renderer-runtime-state-behavior": "node --test tests/renderer_runtime_state_behavior.test.mjs",

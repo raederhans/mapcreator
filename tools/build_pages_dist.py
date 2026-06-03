@@ -86,7 +86,6 @@ DATA_RUNTIME_DIRS = (
 HGO_IDENTITY_RUNTIME_FILES = (
     "index.json",
     "hgo_place_names.json",
-    "hgo_flags.png_manifest.json",
     "hgo_identity_aliases.json",
 )
 HGO_IDENTITY_FLAG_TIERS = ("small", "medium")
@@ -412,6 +411,75 @@ def copy_transport_runtime_data() -> None:
     copy_tree_filtered(source_dir, destination_dir, should_copy_file)
 
 
+def filter_hgo_png_manifest_for_pages(payload: dict) -> dict:
+    allowed_tiers = set(HGO_IDENTITY_FLAG_TIERS)
+    next_payload = dict(payload)
+    files_by_tier = {tier: 0 for tier in HGO_IDENTITY_FLAG_TIERS}
+    total_png_bytes = 0
+    largest_png: dict[str, int | str] = {"path": "", "byte_length": 0}
+
+    def filter_tiers(tiers: object) -> dict:
+        nonlocal total_png_bytes, largest_png
+        filtered: dict = {}
+        if not isinstance(tiers, dict):
+            return filtered
+        for tier, record in tiers.items():
+            if tier not in allowed_tiers or not isinstance(record, dict):
+                continue
+            png_path = str(record.get("png_path") or "").strip()
+            if not png_path:
+                continue
+            filtered[tier] = record
+            files_by_tier[tier] += 1
+            byte_length = int(record.get("byte_length") or 0)
+            total_png_bytes += byte_length
+            if byte_length > int(largest_png["byte_length"]):
+                largest_png = {"path": png_path, "byte_length": byte_length}
+        return filtered
+
+    filtered_tags = {}
+    source_tags = payload.get("tags") if isinstance(payload, dict) else {}
+    for tag, tag_record in sorted((source_tags or {}).items()):
+        if not isinstance(tag_record, dict):
+            continue
+        base = filter_tiers(tag_record.get("base"))
+        variants = {}
+        source_variants = tag_record.get("variants")
+        for variant_key, variant_tiers in sorted((source_variants or {}).items()):
+            filtered_variant = filter_tiers(variant_tiers)
+            if filtered_variant:
+                variants[variant_key] = filtered_variant
+        if base or variants:
+            next_record = dict(tag_record)
+            next_record["base"] = base
+            next_record["variants"] = variants
+            filtered_tags[tag] = next_record
+
+    counts = dict(payload.get("counts") or {})
+    counts["files"] = sum(files_by_tier.values())
+    counts["files_by_tier"] = files_by_tier
+    counts["tags"] = len(filtered_tags)
+    counts["total_png_bytes"] = total_png_bytes
+    counts["largest_png"] = largest_png
+    policy = dict(payload.get("distribution_policy") or {})
+    policy["pages_dist_flag_tiers"] = list(HGO_IDENTITY_FLAG_TIERS)
+    next_payload["counts"] = counts
+    next_payload["distribution_policy"] = policy
+    next_payload["tags"] = filtered_tags
+    return next_payload
+
+
+def write_pages_hgo_png_manifest(source_path: Path, destination_path: Path) -> None:
+    if not source_path.is_file():
+        return
+    payload = json.loads(source_path.read_text(encoding="utf-8"))
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    destination_path.write_text(
+        json.dumps(filter_hgo_png_manifest_for_pages(payload), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def copy_hgo_identity_runtime_data() -> None:
     source_dir = ROOT / "data" / "hgo_catalogs"
     destination_dir = APP_DIST_ROOT / "data" / "hgo_catalogs"
@@ -419,6 +487,10 @@ def copy_hgo_identity_runtime_data() -> None:
         copy_relative_file(f"data/hgo_catalogs/{file_name}")
     for tier in HGO_IDENTITY_FLAG_TIERS:
         copy_tree_contents(source_dir / "flags_png" / tier, destination_dir / "flags_png" / tier)
+    write_pages_hgo_png_manifest(
+        source_dir / "hgo_flags.png_manifest.json",
+        destination_dir / "hgo_flags.png_manifest.json",
+    )
 
 
 def copy_runtime_data() -> None:

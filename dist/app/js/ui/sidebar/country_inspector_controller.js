@@ -65,7 +65,7 @@ export function createCountryInspectorController({
     if (!runtimeState.hgoIdentity || typeof runtimeState.hgoIdentity !== "object") {
       runtimeState.hgoIdentity = {};
     }
-    runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled !== false;
+    runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled === true;
     runtimeState.hgoIdentity.nameMode = runtimeState.hgoIdentity.nameMode === "hgo" ? "hgo" : "scenario";
     runtimeState.hgoIdentity.showSuggestedAliases = runtimeState.hgoIdentity.showSuggestedAliases !== false;
     return runtimeState.hgoIdentity;
@@ -111,10 +111,9 @@ export function createCountryInspectorController({
     return badge;
   };
 
-  const getFlagTierUrl = (identity, preferredTier = "small") => {
-    const tier = (identity?.flag?.preferredBaseFlag?.pngPath || identity?.flag?.preferredBaseFlag?.png_path)
-      ? identity.flag.preferredBaseFlag
-      : identity?.flag?.base?.[preferredTier];
+  const getFlagTierUrl = (identity, preferredTier = "small", { allowPreferredFallback = true } = {}) => {
+    const tier = identity?.flag?.base?.[preferredTier]
+      || (allowPreferredFallback ? identity?.flag?.preferredBaseFlag : null);
     return String(tier?.pngPath || tier?.png_path || "").trim();
   };
 
@@ -157,12 +156,12 @@ export function createCountryInspectorController({
       host.insertBefore(controls, list);
     }
     const status = typeof getHgoIdentityStatus === "function" ? getHgoIdentityStatus() : { status: "disabled" };
-    const coverage = typeof getHgoIdentityCoverage === "function"
+    const coverage = settings.enabled && typeof getHgoIdentityCoverage === "function"
       ? getHgoIdentityCoverage(countryStates, { allowSuggestedAliases: settings.showSuggestedAliases })
       : null;
     const coverageText = coverage
       ? `${coverage.flags}/${coverage.total} flags matched`
-      : (status?.status === "loading" ? "HGO loading" : "HGO unavailable");
+      : (!settings.enabled ? "HGO disabled" : (status?.status === "loading" ? "HGO loading" : "HGO unavailable"));
 
     controls.replaceChildren();
 
@@ -676,7 +675,9 @@ export function createCountryInspectorController({
 
     const header = document.createElement("div");
     header.className = "hgo-identity-detail-header";
-    const flagUrl = getFlagTierUrl(identity, "medium") || getFlagTierUrl(identity, "full") || getFlagTierUrl(identity, "small");
+    const flagUrl = getFlagTierUrl(identity, "medium", { allowPreferredFallback: false })
+      || getFlagTierUrl(identity, "full", { allowPreferredFallback: false })
+      || getFlagTierUrl(identity, "small");
     if (flagUrl) {
       const flag = document.createElement("img");
       flag.className = "hgo-identity-detail-flag";

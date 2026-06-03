@@ -98,6 +98,12 @@ import {
 } from "../core/unit_counter_icon_libraries.js";
 const state = runtimeState;
 
+function requestHgoIdentityAssetsForSettings(settings, loadAssets) {
+  if (settings?.enabled === true && typeof loadAssets === "function") {
+    loadAssets();
+  }
+}
+
 // Batch 5: sidebar controllers consume a curated renderer helper surface so
 // renderer API drift stays visible in one place instead of hiding in namespace imports.
 const mapRenderer = Object.freeze({
@@ -3903,7 +3909,7 @@ function initSidebar({ render } = {}) {
     if (!runtimeState.hgoIdentity || typeof runtimeState.hgoIdentity !== "object") {
       runtimeState.hgoIdentity = {};
     }
-    runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled !== false;
+    runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled === true;
     runtimeState.hgoIdentity.nameMode = runtimeState.hgoIdentity.nameMode === "hgo" ? "hgo" : "scenario";
     runtimeState.hgoIdentity.showSuggestedAliases = runtimeState.hgoIdentity.showSuggestedAliases !== false;
     return runtimeState.hgoIdentity;
@@ -4459,8 +4465,8 @@ function initSidebar({ render } = {}) {
     renderList();
   },
   onHgoIdentitySettingsChange: () => {
-    ensureHgoIdentityRuntimeState();
-    ensureHgoIdentityAssetsLoaded();
+    const settings = ensureHgoIdentityRuntimeState();
+    requestHgoIdentityAssetsForSettings(settings, ensureHgoIdentityAssetsLoaded);
     renderList();
   },
   });
@@ -4477,8 +4483,10 @@ function initSidebar({ render } = {}) {
   } = countryInspectorController;
 
   bindCountryInspectorEvents();
-  ensureHgoIdentityRuntimeState();
-  ensureHgoIdentityAssetsLoaded();
+  requestHgoIdentityAssetsForSettings(
+    ensureHgoIdentityRuntimeState(),
+    ensureHgoIdentityAssetsLoaded,
+  );
 
   let bindWaterSpecialRegionEvents = () => {};
   let closeWaterInspectorColorPicker = () => {};
@@ -6183,4 +6191,4 @@ function initSidebar({ render } = {}) {
   scheduleAdaptiveInspectorHeights();
 }
 
-export { initSidebar };
+export { initSidebar, requestHgoIdentityAssetsForSettings };

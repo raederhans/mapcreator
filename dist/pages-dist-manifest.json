@@ -6,11 +6,11 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 257908
+      "size_bytes": 258117
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 295240
+      "size_bytes": 302982
     },
     {
       "path": "app/data/city_aliases.json",
@@ -29634,11 +29634,11 @@
     },
     {
       "path": "app/data/hgo_catalogs/hgo_flags.png_manifest.json",
-      "size_bytes": 4744356
+      "size_bytes": 3195370
     },
     {
       "path": "app/data/hgo_catalogs/hgo_identity_aliases.json",
-      "size_bytes": 1069
+      "size_bytes": 1099
     },
     {
       "path": "app/data/hgo_catalogs/hgo_place_names.json",
@@ -29662,7 +29662,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 36099
+      "size_bytes": 37054
     },
     {
       "path": "app/data/palette-maps/hgo.audit.json",
@@ -29778,7 +29778,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 15465
+      "size_bytes": 15487
     },
     {
       "path": "app/data/scenario-rules/hoi4_1936.manual.json",
@@ -35946,7 +35946,7 @@
     },
     {
       "path": "app/js/core/hgo_identity_resolver.js",
-      "size_bytes": 9787
+      "size_bytes": 10087
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36366,7 +36366,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 26141
+      "size_bytes": 26144
     },
     {
       "path": "app/js/core/state.js",
@@ -36462,7 +36462,7 @@
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 43807
+      "size_bytes": 44301
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
@@ -36494,7 +36494,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 263794
+      "size_bytes": 264175
     },
     {
       "path": "app/js/ui/toast.js",
@@ -36738,7 +36738,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 37548
+      "size_bytes": 37550
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -36770,11 +36770,11 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 43186
+      "size_bytes": 43188
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1074987
+      "size_bytes": 1074988
     },
     {
       "path": "styles.css",
@@ -36791,5 +36791,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1042199064
+  "total_bytes": 1040660219
 }

@@ -344,6 +344,56 @@ class PagesDistStartupShellTest(unittest.TestCase):
             with self.subTest(excluded_path=excluded_path):
                 self.assertNotIn(excluded_path, paths)
 
+    def test_dist_hgo_png_manifest_references_only_published_assets(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+        hgo_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json"
+        hgo_manifest = json.loads(hgo_manifest_path.read_text(encoding="utf-8"))
+        seen_paths: set[str] = set()
+        allowed_tiers = set(build_pages_dist.HGO_IDENTITY_FLAG_TIERS)
+
+        def assert_record_published(tier: str, record: dict) -> None:
+            self.assertIn(tier, allowed_tiers)
+            png_path = record["png_path"]
+            self.assertIn(f"app/{png_path}", dist_paths)
+            seen_paths.add(png_path)
+
+        for tag, tag_entry in hgo_manifest["tags"].items():
+            with self.subTest(tag=tag):
+                for tier, record in tag_entry.get("base", {}).items():
+                    assert_record_published(tier, record)
+                for variant_key, variants in tag_entry.get("variants", {}).items():
+                    for tier, record in variants.items():
+                        with self.subTest(variant_key=variant_key, tier=tier):
+                            assert_record_published(tier, record)
+
+        counts = hgo_manifest["counts"]
+        self.assertGreater(len(seen_paths), 0)
+        self.assertEqual(counts["files"], len(seen_paths))
+        self.assertEqual(counts["tags"], len(hgo_manifest["tags"]))
+        self.assertEqual(set(counts["files_by_tier"].keys()), allowed_tiers)
+        self.assertNotIn("data/hgo_catalogs/flags_png/full/DK/DKU.png", seen_paths)
+
+        source_hgo_manifest = json.loads(
+            (REPO_ROOT / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json").read_text(encoding="utf-8")
+        )
+        expected_published_tags: set[str] = set()
+        full_only_tags: set[str] = set()
+        for tag, tag_entry in source_hgo_manifest["tags"].items():
+            source_tiers = set(tag_entry.get("base", {}).keys())
+            for variants in tag_entry.get("variants", {}).values():
+                source_tiers.update(variants.keys())
+            if source_tiers.intersection(allowed_tiers):
+                expected_published_tags.add(tag)
+            else:
+                full_only_tags.add(tag)
+
+        self.assertGreater(len(full_only_tags), 0)
+        self.assertEqual(set(hgo_manifest["tags"].keys()), expected_published_tags)
+        self.assertEqual(set(source_hgo_manifest["tags"].keys()) - set(hgo_manifest["tags"].keys()), full_only_tags)
+
     def test_dist_manifest_keeps_japan_point_workbench_full_pack_targets(self) -> None:
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
