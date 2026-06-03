@@ -73,3 +73,20 @@
 - `python tools\i18n_audit.py`
 - `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
 - `git diff --check`
+
+## 第五轮：欧洲其余国家地名
+
+- [x] 抽取排除荷兰、俄罗斯、法国、德国后的欧洲 TNO 地名候选。
+- [x] 联网核对高置信错译项，重点覆盖斯洛伐克、波兰、乌克兰、阿塞拜疆、保加利亚、摩尔多瓦、罗马尼亚和土耳其。
+- [x] 修改 canonical 源表里的明显词义机翻和乱码音译。
+- [x] 刷新 TNO geo locale patch。
+- [x] 刷新 startup locale/support/bundle 产物。
+- [x] 运行残留扫描、审计和定向测试。
+- [ ] 提交并推送第五轮专项修正。
+
+## 第五轮验证记录
+
+- 残留扫描：欧洲其余国家目标坏词命中为 0。
+- `python tools\i18n_audit.py`
+- `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
+- `git diff --check`

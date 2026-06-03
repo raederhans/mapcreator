@@ -113,6 +113,51 @@ class TnoGeoLocalePatchTest(unittest.TestCase):
                 self.assertEqual(patch[feature_id]["zh"], zh_name)
                 self.assertEqual(zh_patch[feature_id]["zh"], zh_name)
 
+    def test_checked_in_tno_rest_of_europe_toponym_fixes_stay_synced(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        locales = json.loads((root / "data" / "locales.json").read_text(encoding="utf-8"))["geo"]
+        startup_locales = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "locales.startup.json").read_text(encoding="utf-8")
+        )["geo"]
+        patch = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "geo_locale_patch.json").read_text(encoding="utf-8")
+        )["geo"]
+        zh_patch = json.loads(
+            (root / "data" / "scenarios" / "tno_1962" / "geo_locale_patch.zh.json").read_text(encoding="utf-8")
+        )["geo"]
+
+        expected = {
+            "Tovuz": ("AZE-1687", "托武兹"),
+            "Masallı": ("AZE-1708", "马萨雷"),
+            "Видин": ("BG311", "维丁"),
+            "Ungheni": ("MDA-1623", "温盖尼"),
+            "łaski": ("PL_POW_1003", "瓦斯克"),
+            "Vaslui": ("RO216", "瓦斯卢伊"),
+            "District of Bansks Bystrica": ("SK_ADM2_56367889B14109704827124", "班斯卡-比斯特里察"),
+            "District of Nova Mesto nad Va*": ("SK_ADM2_56367889B79509103276820", "瓦赫河畔新梅斯托"),
+            "District of Partizonske": ("SK_ADM2_56367889B98642751890096", "帕尔蒂赞斯凯"),
+            "Bursa": ("TR411", "布尔萨"),
+            "Turka": ("UA_RAY_74538382B48347776111848", "图尔卡"),
+            "Liubeshiv": ("UA_RAY_74538382B51989583187875", "柳别希夫"),
+        }
+
+        for english_name, (feature_id, zh_name) in expected.items():
+            with self.subTest(english_name=english_name):
+                self.assertEqual(locales[english_name]["zh"], zh_name)
+                self.assertEqual(locales[f"id::{feature_id}"]["zh"], zh_name)
+                self.assertEqual(startup_locales[english_name]["zh"], zh_name)
+                self.assertEqual(patch[feature_id]["zh"], zh_name)
+                self.assertEqual(zh_patch[feature_id]["zh"], zh_name)
+
+        variants = {
+            "Bursa (TR)": "布尔萨",
+            "District of Bansks Bystrica (SK)": "班斯卡-比斯特里察",
+            "District of Bansks Bystrica [Banskobystrický kraj]": "班斯卡-比斯特里察",
+        }
+        for locale_key, zh_name in variants.items():
+            with self.subTest(variant=locale_key):
+                self.assertEqual(locales[locale_key]["zh"], zh_name)
+
     def test_build_patch_writes_locale_specific_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)

@@ -87,3 +87,22 @@
 - 验证通过：`python tools\i18n_audit.py`，关键结果 `scenario_geo_missing=0`、`corrupted_translations=0`。
 - 验证通过：`python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`，12 个测试通过。
 - 验证通过：`git diff --check`。输出仅有 Git 行尾转换提示。
+
+## 2026-06-03 第五轮专项
+
+- 新目标：审查欧洲其余未专项扫描国家，排除荷兰、俄罗斯、法国、德国、中国、印度和南亚专项范围。
+- 子代理只读审查补充了阿塞拜疆、保加利亚、摩尔多瓦、罗马尼亚、土耳其等明显词义机翻候选；主线程负责源表修改和所有生成/测试。
+- 外部对照：斯洛伐克 79 个 district 列表、波兰 Łask/Turek/Strzelce 县页、乌克兰 Turka/Varva/Liubeshiv 地名页、阿塞拜疆行政区列表、保加利亚省份列表、摩尔多瓦 Toponymic Factfile、土耳其省份列表。
+- 已写回 `data/locales.json`：221 个 locale `zh` 值，覆盖全局键、国家后缀键、上下文键和 `id::` 精确键。
+- 示例：`Masallı -> 马萨雷`、`Tovuz -> 托武兹`、`Видин -> 维丁`、`Ungheni -> 温盖尼`、`łaski -> 瓦斯克`、`Vaslui -> 瓦斯卢伊`、`Bursa -> 布尔萨`、`Turka -> 图尔卡`。
+- 斯洛伐克乱码示例：`District of Bansks Bystrica -> 班斯卡-比斯特里察`、`District of Nova Mesto nad Va* -> 瓦赫河畔新梅斯托`、`District of Partizonske -> 帕尔蒂赞斯凯`。
+- 已运行 `python tools\build_tno_1962_geo_locale_patch.py`，结果仍为 11022 条 feature locales，0 个 cross-base collision。
+- 已恢复 `geo_locale_patch*.json` checked-in 结构，仅同步生成后的 `geo` 值，英文 patch 保持原状。
+- 已运行 `python tools\build_startup_bootstrap_assets.py --report-path .runtime\reports\generated\tno-startup-support-toponym-europe-rest-zh.json`，`startup_geo_entry_count=44541`，`startup_alias_count=222`。
+- 已运行 `python tools\build_startup_bundle.py ... --report-path .runtime\reports\generated\tno-startup-bundle-toponym-europe-rest-zh.json`，en/zh gzip 均为 1374201 bytes，未超 5000000 bytes 预算。
+- 残留扫描：欧洲其余国家目标坏词命中为 0。
+- 已新增 `tests.test_tno_geo_locale_patch.TnoGeoLocalePatchTest.test_checked_in_tno_rest_of_europe_toponym_fixes_stay_synced`，锁住关键样例同步。
+- 验证通过：`python tools\i18n_audit.py`，关键结果 `scenario_geo_missing=0`、`corrupted_translations=0`。
+- 验证通过：`python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`，13 个测试通过。
+- 验证通过：`git diff --check`。输出仅有 Git 行尾转换提示。
+- 第一性原理复核：本轮继续采用源表到生成产物的单向同步；普通行政后缀风格项暂不纳入，避免把低风险样式清理混进明显错译修正。

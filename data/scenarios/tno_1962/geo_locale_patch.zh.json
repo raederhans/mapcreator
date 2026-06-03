@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-03T16:08:28Z",
+  "generated_at": "2026-06-03T16:35:31Z",
   "geo": {
     "AD_ADM1_AND-4876": {
       "en": "Andorra la Vella",
@@ -639,7 +639,7 @@
     },
     "AZE-1687": {
       "en": "Tovuz",
-      "zh": "孔雀"
+      "zh": "托武兹"
     },
     "AZE-1688": {
       "en": "Yevlakh Rayon",
@@ -719,7 +719,7 @@
     },
     "AZE-1708": {
       "en": "Masallı",
-      "zh": "童话"
+      "zh": "马萨雷"
     },
     "AZE-1709": {
       "en": "Lerik",
@@ -771,7 +771,7 @@
     },
     "AZE-1721": {
       "en": "Zərdab",
-      "zh": "血清"
+      "zh": "泽尔达布"
     },
     "AZE-1722": {
       "en": "Ağcabədi",
@@ -799,7 +799,7 @@
     },
     "AZE-1729": {
       "en": "Qusar",
-      "zh": "呕吐"
+      "zh": "库萨尔"
     },
     "AZE-1730": {
       "en": "Xaçmaz",
@@ -819,7 +819,7 @@
     },
     "AZE-1738": {
       "en": "Tərtər",
-      "zh": "鞑靼"
+      "zh": "塔尔塔尔"
     },
     "AZE-1739": {
       "en": "Xocalı",
@@ -1107,7 +1107,7 @@
     },
     "BG311": {
       "en": "Видин",
-      "zh": "见过"
+      "zh": "维丁"
     },
     "BG312": {
       "en": "Монтана",
@@ -1155,7 +1155,7 @@
     },
     "BG333": {
       "en": "Шумен",
-      "zh": "嘈杂"
+      "zh": "舒门"
     },
     "BG334": {
       "en": "Търговище",
@@ -1191,7 +1191,7 @@
     },
     "BG414": {
       "en": "Перник",
-      "zh": "枕套"
+      "zh": "佩尔尼克"
     },
     "BG415": {
       "en": "Кюстендил",
@@ -21999,7 +21999,7 @@
     },
     "MDA-1623": {
       "en": "Ungheni",
-      "zh": "膏抹"
+      "zh": "温盖尼"
     },
     "MDA-1624": {
       "en": "Cahul",
@@ -22007,7 +22007,7 @@
     },
     "MDA-1625": {
       "en": "Taraclia",
-      "zh": "混乱"
+      "zh": "塔拉克利亚"
     },
     "MDA-1626": {
       "en": "Comrat",
@@ -22071,7 +22071,7 @@
     },
     "MDA-1642": {
       "en": "Nisporeni",
-      "zh": "雪堆"
+      "zh": "尼斯波雷尼"
     },
     "MDA-1643": {
       "en": "Orhei",
@@ -25319,7 +25319,7 @@
     },
     "PL_POW_0414": {
       "en": "świecki",
-      "zh": "世俗"
+      "zh": "希维茨基"
     },
     "PL_POW_0415": {
       "en": "toruński",
@@ -25503,7 +25503,7 @@
     },
     "PL_POW_1003": {
       "en": "łaski",
-      "zh": "优雅"
+      "zh": "瓦斯克"
     },
     "PL_POW_1004": {
       "en": "łęczycki",
@@ -25859,7 +25859,7 @@
     },
     "PL_POW_1611": {
       "en": "strzelecki",
-      "zh": "射击"
+      "zh": "斯切尔采"
     },
     "PL_POW_1661": {
       "en": "Opole",
@@ -25943,7 +25943,7 @@
     },
     "PL_POW_1821": {
       "en": "leski",
-      "zh": "寡妇"
+      "zh": "莱斯科"
     },
     "PL_POW_1861": {
       "en": "Krosno",
@@ -26475,7 +26475,7 @@
     },
     "PL_POW_3027": {
       "en": "turecki",
-      "zh": "土耳其"
+      "zh": "图雷克"
     },
     "PL_POW_3028": {
       "en": "wągrowiecki",
@@ -26899,7 +26899,7 @@
     },
     "RO216": {
       "en": "Vaslui",
-      "zh": "排"
+      "zh": "瓦斯卢伊"
     },
     "RO221": {
       "en": "Brăila",
@@ -36015,11 +36015,11 @@
     },
     "SK_ADM2_56367889B14109704827124": {
       "en": "District of Bansks Bystrica",
-      "zh": "班克斯区 比斯特里察"
+      "zh": "班斯卡-比斯特里察"
     },
     "SK_ADM2_56367889B1447043738985": {
       "en": "District of Kovice - okolie",
-      "zh": "科维采区 - 奥科列"
+      "zh": "科希策周边"
     },
     "SK_ADM2_56367889B14569056094647": {
       "en": "District of Snina",
@@ -36039,7 +36039,7 @@
     },
     "SK_ADM2_56367889B16879144707830": {
       "en": "District of Kolice I",
-      "zh": "科利策一区"
+      "zh": "科希策 I"
     },
     "SK_ADM2_56367889B17286119603144": {
       "en": "District of Trencon",
@@ -36051,23 +36051,23 @@
     },
     "SK_ADM2_56367889B24002183790147": {
       "en": "District of Stark Lubovna",
-      "zh": "斯塔克卢博夫纳区"
+      "zh": "旧柳博夫尼亚"
     },
     "SK_ADM2_56367889B25974753894430": {
       "en": "District of Numestovo",
-      "zh": "努梅斯托沃区"
+      "zh": "纳梅斯托沃"
     },
     "SK_ADM2_56367889B26614689162342": {
       "en": "District of Bonovce nad Bebra*",
-      "zh": "贝布拉河畔博诺夫采区*"
+      "zh": "贝布拉瓦河畔巴诺夫采"
     },
     "SK_ADM2_56367889B27848609458937": {
       "en": "District of Komprno",
-      "zh": "科普诺区"
+      "zh": "科马尔诺"
     },
     "SK_ADM2_56367889B2947656286883": {
       "en": "District of Povacskn Bystrica",
-      "zh": "波瓦茨肯区 比斯特里察"
+      "zh": "波瓦日斯卡-比斯特里察"
     },
     "SK_ADM2_56367889B31819457643233": {
       "en": "District of Turcianske Teplice",
@@ -36075,7 +36075,7 @@
     },
     "SK_ADM2_56367889B31823009041462": {
       "en": "District of Revnca",
-      "zh": "雷文卡区"
+      "zh": "雷武察"
     },
     "SK_ADM2_56367889B34538662559621": {
       "en": "District of Skalica",
@@ -36083,7 +36083,7 @@
     },
     "SK_ADM2_56367889B36066360363210": {
       "en": "District of Liptovsk",
-      "zh": "利托夫斯克区"
+      "zh": "利普托夫斯基米库拉什"
     },
     "SK_ADM2_56367889B37832117679378": {
       "en": "District of Gelnica",
@@ -36091,7 +36091,7 @@
     },
     "SK_ADM2_56367889B38418286781664": {
       "en": "District of Piertany",
-      "zh": "皮尔塔尼区"
+      "zh": "皮耶什佳尼"
     },
     "SK_ADM2_56367889B40145685208334": {
       "en": "District of Martin",
@@ -36103,27 +36103,27 @@
     },
     "SK_ADM2_56367889B42847558326348": {
       "en": "District of Zlatc Moravce",
-      "zh": "兹拉茨莫拉夫采区"
+      "zh": "兹拉特莫拉夫采"
     },
     "SK_ADM2_56367889B45513137004516": {
       "en": "District of Predov",
-      "zh": "普雷多夫区"
+      "zh": "普雷绍夫"
     },
     "SK_ADM2_56367889B46930466225258": {
       "en": "District of Kolice II",
-      "zh": "科利采二区"
+      "zh": "科希策 II"
     },
     "SK_ADM2_56367889B47622109691322": {
       "en": "District of Spieskn Novo Ves",
-      "zh": "新斯皮斯克恩区"
+      "zh": "斯皮什新村"
     },
     "SK_ADM2_56367889B48474668858137": {
       "en": "District of Pilina",
-      "zh": "皮利纳区"
+      "zh": "日利纳"
     },
     "SK_ADM2_56367889B4918056975771": {
       "en": "District of Gala",
-      "zh": "加拉区"
+      "zh": "沙拉"
     },
     "SK_ADM2_56367889B50353875052402": {
       "en": "District of Bytca",
@@ -36131,7 +36131,7 @@
     },
     "SK_ADM2_56367889B50490339994693": {
       "en": "District of Ronnava",
-      "zh": "龙纳瓦区"
+      "zh": "罗日尼亚瓦"
     },
     "SK_ADM2_56367889B51237059400968": {
       "en": "District of Bratislava IV",
@@ -36139,7 +36139,7 @@
     },
     "SK_ADM2_56367889B51496625279666": {
       "en": "District of Kermarok",
-      "zh": "克马洛克区"
+      "zh": "克日马罗克"
     },
     "SK_ADM2_56367889B51514564384482": {
       "en": "District of Nitra",
@@ -36147,7 +36147,7 @@
     },
     "SK_ADM2_56367889B52678955481324": {
       "en": "District of Kysucki Novi Mesto",
-      "zh": "基苏基新梅斯托区"
+      "zh": "基苏采新梅斯托"
     },
     "SK_ADM2_56367889B53553144532917": {
       "en": "District of Brezno",
@@ -36159,7 +36159,7 @@
     },
     "SK_ADM2_56367889B57985107422825": {
       "en": "District of Kolice IV",
-      "zh": "科利采四区"
+      "zh": "科希策 IV"
     },
     "SK_ADM2_56367889B58167623425022": {
       "en": "District of Malacky",
@@ -36175,7 +36175,7 @@
     },
     "SK_ADM2_56367889B61609274598716": {
       "en": "District of Giar nad Hronom",
-      "zh": "赫罗农河畔贾尔区"
+      "zh": "赫龙河畔日亚尔"
     },
     "SK_ADM2_56367889B62094256812316": {
       "en": "District of Senec",
@@ -36183,7 +36183,7 @@
     },
     "SK_ADM2_56367889B62553648042075": {
       "en": "District of Nova Zkmky",
-      "zh": "新兹克姆基区"
+      "zh": "新扎姆基"
     },
     "SK_ADM2_56367889B62739535395269": {
       "en": "District of Trnava",
@@ -36191,11 +36191,11 @@
     },
     "SK_ADM2_56367889B62817588919968": {
       "en": "District of Cadca",
-      "zh": "卡德卡区"
+      "zh": "查德察"
     },
     "SK_ADM2_56367889B65708067786299": {
       "en": "District of Trebi ov",
-      "zh": "特雷比奥夫区"
+      "zh": "特雷比绍夫"
     },
     "SK_ADM2_56367889B65848289259275": {
       "en": "District of Senica",
@@ -36207,7 +36207,7 @@
     },
     "SK_ADM2_56367889B67356758961124": {
       "en": "District of Humennn",
-      "zh": "胡门区"
+      "zh": "胡门内"
     },
     "SK_ADM2_56367889B68595341554064": {
       "en": "District of Stropkov",
@@ -36223,7 +36223,7 @@
     },
     "SK_ADM2_56367889B75362220391655": {
       "en": "District of Prchov",
-      "zh": "普尔霍夫区"
+      "zh": "普霍夫"
     },
     "SK_ADM2_56367889B76322005427385": {
       "en": "District of Bratislava III",
@@ -36231,19 +36231,19 @@
     },
     "SK_ADM2_56367889B77247555880458": {
       "en": "District of Ruromberok",
-      "zh": "鲁龙贝洛克区"
+      "zh": "鲁容贝罗克"
     },
     "SK_ADM2_56367889B7741755639355": {
       "en": "District of Kolice III",
-      "zh": "科利采三区"
+      "zh": "科希策 III"
     },
     "SK_ADM2_56367889B78366861694162": {
       "en": "District of Dunajskn Streda",
-      "zh": "多瑙斯特雷达区"
+      "zh": "多瑙斯特雷达"
     },
     "SK_ADM2_56367889B79509103276820": {
       "en": "District of Nova Mesto nad Va*",
-      "zh": "弗吉尼亚州新梅斯托区*"
+      "zh": "瓦赫河畔新梅斯托"
     },
     "SK_ADM2_56367889B79782640664984": {
       "en": "District of Topolcany",
@@ -36259,15 +36259,15 @@
     },
     "SK_ADM2_56367889B83569782265262": {
       "en": "District of Tvrdo",
-      "zh": "特夫尔多区"
+      "zh": "特夫尔多欣"
     },
     "SK_ADM2_56367889B87068302757109": {
       "en": "District of Banskk vtiavnica",
-      "zh": "伏季亚夫尼察班斯克区"
+      "zh": "班斯卡-什佳夫尼察"
     },
     "SK_ADM2_56367889B88920022363437": {
       "en": "District of Dolne Kub",
-      "zh": "下库布区"
+      "zh": "下库宾"
     },
     "SK_ADM2_56367889B89309998682201": {
       "en": "District of Vranov nad Toplou",
@@ -36279,7 +36279,7 @@
     },
     "SK_ADM2_56367889B9282010334294": {
       "en": "District of Poltcr",
-      "zh": "波尔特地区"
+      "zh": "波尔塔尔"
     },
     "SK_ADM2_56367889B94927774956455": {
       "en": "District of Poprad",
@@ -36291,11 +36291,11 @@
     },
     "SK_ADM2_56367889B96980961358907": {
       "en": "District of Velka Krta",
-      "zh": "大克尔塔区"
+      "zh": "大克尔蒂什"
     },
     "SK_ADM2_56367889B97071895480744": {
       "en": "District of Svidnsk",
-      "zh": "斯维金斯克区"
+      "zh": "斯维德尼克"
     },
     "SK_ADM2_56367889B9717038533065": {
       "en": "District of Hlohovec",
@@ -36311,7 +36311,7 @@
     },
     "SK_ADM2_56367889B98642751890096": {
       "en": "District of Partizonske",
-      "zh": "分区分区"
+      "zh": "帕尔蒂赞斯凯"
     },
     "SK_ADM2_56367889B99469568447767": {
       "en": "District of Medzilaborce",
@@ -37251,7 +37251,7 @@
     },
     "TR411": {
       "en": "Bursa",
-      "zh": "囊"
+      "zh": "布尔萨"
     },
     "TR412": {
       "en": "Eskişehir",
@@ -37387,7 +37387,7 @@
     },
     "TR832": {
       "en": "Tokat",
-      "zh": "拍击"
+      "zh": "托卡特"
     },
     "TR833": {
       "en": "Çorum",
@@ -37491,7 +37491,7 @@
     },
     "TRC13": {
       "en": "Kilis",
-      "zh": "教会"
+      "zh": "基利斯"
     },
     "TRC21": {
       "en": "Şanlıurfa",
@@ -38647,7 +38647,7 @@
     },
     "UA_RAY_74538382B48347776111848": {
       "en": "Turka",
-      "zh": "土耳其"
+      "zh": "图尔卡"
     },
     "UA_RAY_74538382B48526487653487": {
       "en": "Pokrovske",
@@ -38731,7 +38731,7 @@
     },
     "UA_RAY_74538382B51989583187875": {
       "en": "Liubeshiv",
-      "zh": "爱"
+      "zh": "柳别希夫"
     },
     "UA_RAY_74538382B52051409545176": {
       "en": "Blyzniuky",
@@ -39035,7 +39035,7 @@
     },
     "UA_RAY_74538382B64867960998855": {
       "en": "Varva",
-      "zh": "备用"
+      "zh": "瓦尔瓦"
     },
     "UA_RAY_74538382B65177906747126": {
       "en": "Hornostaivka",
