@@ -29,4 +29,13 @@
 - [x] 刷新 TNO geo locale patch。
 - [x] 刷新 startup locale/support/bundle 产物。
 - [x] 运行定向测试与审计。
-- [ ] 最终复核是否有更简单稳健的实现方式。
+- [x] 第二轮专项：非洲和印度明显错译候选提取。
+- [x] 第二轮专项：修改 canonical 源表并刷新产物。
+- [x] 第二轮专项：验证与复核。
+- [x] 最终复核是否有更简单稳健的实现方式。
+
+## 第二轮验证记录
+
+- `python tools\i18n_audit.py`
+- `python -m unittest tests.test_tno_geo_locale_patch tests.test_scenario_city_overrides_composer tests.test_startup_bootstrap_assets.StartupBootstrapAssetsTest.test_tno_1962_checked_in_startup_bundle_includes_arctic_shell -v`
+- `git diff --check`
