@@ -529,19 +529,23 @@ export function createProjectSupportDiagnosticsController({
     });
     actionRow.appendChild(applyButton);
 
-    const syncVisibility = () => {
+    const syncVisibility = ({ markUserChange = false } = {}) => {
       const mode = modeSelect.value;
       continentLabel.hidden = mode !== "continent-area";
       modernOrderLabel.hidden = mode === "weighted-random";
-      legendManager.updateConfig(state, {
+      const previousConfig = legendManager.getConfig(state);
+      const nextConfig = legendManager.updateConfig(state, {
         mode,
         continent: continentSelect.value,
         useModernMajorOrder: modernOrderInput.checked,
       });
+      if (markUserChange && JSON.stringify(previousConfig) !== JSON.stringify(nextConfig)) {
+        markDirty("legend-generator-config");
+      }
     };
-    modeSelect.addEventListener("change", syncVisibility);
-    continentSelect.addEventListener("change", syncVisibility);
-    modernOrderInput.addEventListener("change", syncVisibility);
+    modeSelect.addEventListener("change", () => syncVisibility({ markUserChange: true }));
+    continentSelect.addEventListener("change", () => syncVisibility({ markUserChange: true }));
+    modernOrderInput.addEventListener("change", () => syncVisibility({ markUserChange: true }));
     syncVisibility();
 
     shell.append(modeLabel, continentLabel, modernOrderLabel, actionRow);

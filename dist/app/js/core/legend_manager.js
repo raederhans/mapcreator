@@ -1,6 +1,7 @@
 // Legend manager (Phase 13)
 
 import { getScenarioCountryDisplayName } from "./scenario_country_display.js";
+import { normalizeHexColor } from "./color_hex_utils.js";
 import {
   getFeatureId,
   getFeatureOwnerCode,
@@ -76,8 +77,7 @@ function normalizeCode(value) {
 }
 
 function normalizeColor(value) {
-  const color = String(value || "").trim().toLowerCase();
-  return color || "";
+  return normalizeHexColor(value) || "";
 }
 
 function normalizeLabels(value) {
@@ -314,7 +314,9 @@ function collectPaletteColors(appState, count) {
   };
   Object.values(appState?.sovereignBaseColors || {}).forEach(push);
   Object.values(appState?.countryBaseColors || {}).forEach(push);
-  (appState?.paletteQuickSwatches || []).forEach(push);
+  (appState?.paletteQuickSwatches || []).forEach((entry) => {
+    push(entry?.color ?? entry);
+  });
   Object.values(appState?.resolvedDefaultCountryPalette || {}).forEach(push);
   FALLBACK_LEGEND_COLORS.forEach(push);
   return colors.slice(0, Math.max(count, 1));
@@ -330,17 +332,19 @@ function buildGeneratedEntries(appState, entries, config) {
 }
 
 class LegendManager {
-  static labels = {};
-  static config = { ...DEFAULT_LEGEND_CONFIG };
-  static maxItems = DEFAULT_LEGEND_CONFIG.maxItems;
-
   static ensureLegendState(appState) {
-    if (!appState) return;
-    appState.legendLabels = normalizeLabels(appState.legendLabels || LegendManager.labels);
-    appState.legendConfig = normalizeLegendConfig(appState.legendConfig || LegendManager.config);
-    LegendManager.labels = appState.legendLabels;
-    LegendManager.config = appState.legendConfig;
-    LegendManager.maxItems = LegendManager.config.maxItems;
+    if (!appState) return null;
+    appState.legendLabels = normalizeLabels(
+      Object.prototype.hasOwnProperty.call(appState, "legendLabels")
+        ? appState.legendLabels
+        : {}
+    );
+    appState.legendConfig = normalizeLegendConfig(
+      Object.prototype.hasOwnProperty.call(appState, "legendConfig")
+        ? appState.legendConfig
+        : DEFAULT_LEGEND_CONFIG
+    );
+    return appState;
   }
 
   static normalizeLabels(value) {
@@ -361,7 +365,7 @@ class LegendManager {
 
   static getConfig(appState) {
     LegendManager.ensureLegendState(appState);
-    return { ...LegendManager.config };
+    return { ...(appState?.legendConfig || DEFAULT_LEGEND_CONFIG) };
   }
 
   static updateConfig(appState, patch = {}) {
@@ -370,13 +374,12 @@ class LegendManager {
       ...(patch || {}),
     });
     if (appState) appState.legendConfig = nextConfig;
-    LegendManager.config = nextConfig;
-    LegendManager.maxItems = nextConfig.maxItems;
     return { ...nextConfig };
   }
 
   static getUniqueColors(appState) {
     LegendManager.ensureLegendState(appState);
+    const maxItems = LegendManager.getConfig(appState).maxItems;
     const colors = [];
     if (!appState || !appState.colors) return colors;
 
@@ -386,34 +389,37 @@ class LegendManager {
       if (!color || seen.has(color)) continue;
       seen.add(color);
       colors.push(color);
-      if (colors.length >= LegendManager.maxItems) break;
+      if (colors.length >= maxItems) break;
     }
 
     return colors;
   }
 
   static setLabel(color, text, appState = null) {
+    if (!appState) return;
     LegendManager.ensureLegendState(appState);
-    if (!color) return;
     const key = normalizeColor(color);
+    if (!key) return;
     const value = String(text || "").trim();
+    const labels = appState.legendLabels;
     if (!value) {
-      delete LegendManager.labels[key];
+      delete labels[key];
     } else {
-      LegendManager.labels[key] = value;
+      labels[key] = value;
     }
-    if (appState) appState.legendLabels = LegendManager.labels;
+    appState.legendLabels = labels;
   }
 
   static getLabel(color, appState = null) {
     LegendManager.ensureLegendState(appState);
     const key = normalizeColor(color);
-    return key ? LegendManager.labels[key] || "" : "";
+    const labels = appState?.legendLabels || {};
+    return key ? labels[key] || "" : "";
   }
 
   static getLabels(appState = null) {
     LegendManager.ensureLegendState(appState);
-    return LegendManager.labels;
+    return appState?.legendLabels || {};
   }
 
   static generate(appState, patch = {}) {

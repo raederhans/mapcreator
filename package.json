@@ -61,6 +61,7 @@
     "test:node:country-inspector-controller": "node --test tests/country_inspector_controller_behavior.test.mjs",
     "test:node:sidebar-hgo-identity-startup": "node --test tests/sidebar_hgo_identity_startup_behavior.test.mjs",
     "test:node:palette-runtime-bridge": "node --test tests/palette_runtime_bridge.node.test.mjs",
+    "test:node:legend-generation": "node --test tests/legend_manager_generation_behavior.test.mjs",
     "test:node:political-collection-fragment-camouflage": "node --test tests/political_collection_fragment_camouflage_behavior.test.mjs",
     "test:node:transport-overview-line-contract": "node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs",
     "test:node:renderer-runtime-state-behavior": "node --test tests/renderer_runtime_state_behavior.test.mjs",

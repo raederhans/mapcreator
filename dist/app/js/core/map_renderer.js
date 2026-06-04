@@ -21108,7 +21108,7 @@ export function renderLegend(uniqueColors = null, labels = null) {
     ? uniqueColors
     : LegendManager.getUniqueColors(state);
   const specialZoneLegendLayers = LegendManager.getSpecialZoneLayers(runtimeState);
-  const labelMap = labels || LegendManager.getLabels();
+  const labelMap = labels || LegendManager.getLabels(state);
   const hasScenarioVisualEdits =
     !!runtimeState.activeScenarioId &&
     (

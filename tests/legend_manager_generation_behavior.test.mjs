@@ -93,6 +93,39 @@ test("generated legend writes owner colors and persisted labels", () => {
   assert.equal(state.legendLabels[generation.entries[0].color], "Germany");
 });
 
+test("generated legend reads quick swatch objects as colors", () => {
+  const state = createLegendState([
+    rectangleFeature("germany", "GER", 3, 3),
+  ], {
+    resolvedDefaultCountryPalette: {},
+    paletteQuickSwatches: [{ color: "#abcdef" }],
+  });
+  const generation = LegendManager.generate(state, { mode: "direct-area" });
+  const owners = LegendManager.applyGeneratedLegend(state, generation);
+
+  assert.deepEqual(owners, ["GER"]);
+  assert.equal(generation.entries[0].color, "#abcdef");
+  assert.equal(state.sovereignBaseColors.GER, "#abcdef");
+  assert.equal(Object.hasOwn(state.sovereignBaseColors, "[object object]"), false);
+});
+
+test("fresh legend state does not inherit labels or config from another project", () => {
+  const previousProject = createLegendState([]);
+  LegendManager.setLabel("#abcdef", "Previous Project", previousProject);
+  LegendManager.updateConfig(previousProject, {
+    mode: "realm-area",
+    continent: "asia",
+    useModernMajorOrder: true,
+  });
+
+  const freshProject = createLegendState([]);
+  LegendManager.ensureLegendState(freshProject);
+
+  assert.deepEqual(freshProject.legendLabels, {});
+  assert.deepEqual(freshProject.legendConfig, LegendManager.getDefaultConfig());
+  assert.deepEqual(LegendManager.getLabels(), {});
+});
+
 test("continent mode filters candidates before area sorting", () => {
   const state = createLegendState([
     rectangleFeature("europe", "GER", 9, 9, "europe"),

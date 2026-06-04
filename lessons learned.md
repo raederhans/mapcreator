@@ -180,6 +180,9 @@
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
 
+### 可保存 UI 状态要只有一个真源
+- legend labels/config 这类会写入项目文件的 UI 状态应以 `runtimeState` 为真源；manager 可以负责 normalize 和派生计算，渲染路径不能再读静态缓存。
+
 ### Pages dist 字节合同要同时锁写入和属性
 - `dist/pages-dist-manifest.json` 记录 app 文件 size/hash 时，生成脚本要用 LF 写入，`.gitattributes` 也要锁住 `dist/app` 文本产物 LF；只修写入层会在 Windows checkout 下继续出现字节漂移风险。
 

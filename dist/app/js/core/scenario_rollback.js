@@ -108,6 +108,8 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "paletteLibraryEntries",
   "paletteQuickSwatches",
   "paletteLoadErrorById",
+  "legendLabels",
+  "legendConfig",
 ]);
 
 function validateScenarioApplyRollbackSnapshot(snapshot) {
@@ -244,6 +246,8 @@ function captureScenarioPaletteSnapshot() {
     paletteLibraryEntries: cloneScenarioStateValue(runtimeState.paletteLibraryEntries),
     paletteQuickSwatches: cloneScenarioStateValue(runtimeState.paletteQuickSwatches),
     paletteLoadErrorById: cloneScenarioStateValue(runtimeState.paletteLoadErrorById),
+    legendLabels: cloneScenarioStateValue(runtimeState.legendLabels),
+    legendConfig: cloneScenarioStateValue(runtimeState.legendConfig),
   };
 }
 
@@ -373,6 +377,8 @@ function restoreScenarioPaletteSnapshot(snapshot) {
   runtimeState.paletteLibraryEntries = cloneScenarioStateValue(snapshot.paletteLibraryEntries) || [];
   runtimeState.paletteQuickSwatches = cloneScenarioStateValue(snapshot.paletteQuickSwatches) || [];
   runtimeState.paletteLoadErrorById = cloneScenarioStateValue(snapshot.paletteLoadErrorById) || {};
+  runtimeState.legendLabels = cloneScenarioStateValue(snapshot.legendLabels) || {};
+  runtimeState.legendConfig = cloneScenarioStateValue(snapshot.legendConfig) || {};
 }
 
 export function restoreScenarioApplyRollbackSnapshot(

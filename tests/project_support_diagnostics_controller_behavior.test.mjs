@@ -44,7 +44,9 @@ function createElementNode(tagName = "div") {
     className: "",
     textContent: "",
     type: "",
+    value: "",
     dataset: {},
+    style: {},
     disabled: false,
     hidden: false,
     addEventListener(type, handler) {
@@ -52,15 +54,29 @@ function createElementNode(tagName = "div") {
       this.listeners[type] = handler;
     },
     append(...children) {
-      this.children.push(...children);
+      children.forEach((child) => this.appendChild(child));
     },
     appendChild(child) {
       this.children.push(child);
+      if (this.tagName === "select" && child?.selected) {
+        this.value = child.value;
+      }
     },
     replaceChildren(...children) {
-      this.children = children;
+      this.children = [];
+      this.append(...children);
     },
   };
+}
+
+function findNode(root, predicate) {
+  if (!root) return null;
+  if (predicate(root)) return root;
+  for (const child of root.children || []) {
+    const found = findNode(child, predicate);
+    if (found) return found;
+  }
+  return null;
 }
 
 function createDirtyIndicator() {
@@ -184,6 +200,144 @@ test("project download defaults to save dialog destination", async () => {
   await downloadProjectBtn.listeners.click();
 
   assert.deepEqual(calls, [{ format: "json", destination: "picker", packageContents: "recommended" }]);
+});
+
+test("legend generator config changes mark the project dirty", () => {
+  const previousDocument = globalThis.document;
+  const previousDirty = state.isDirty;
+  const previousDirtyRevision = state.dirtyRevision;
+  const previousLastDirtyReason = state.lastDirtyReason;
+  const legendList = createElementNode("div");
+  let config = {
+    mode: "weighted-random",
+    continent: "all",
+    useModernMajorOrder: false,
+    maxItems: 15,
+  };
+  const controller = createController(createStatusNode(), {
+    elements: {
+      legendList,
+    },
+    helpers: {
+      legendManager: {
+        getConfig: () => ({ ...config }),
+        updateConfig: (_state, patch = {}) => {
+          config = {
+            ...config,
+            ...patch,
+          };
+          return { ...config };
+        },
+        getContinentOptions: () => [
+          { id: "all", label: "All" },
+          { id: "asia", label: "Asia" },
+        ],
+        getUniqueColors: () => [],
+        getSpecialZoneLayers: () => [],
+        getSpecialZoneSignature: () => "",
+        getSignature: () => "",
+        getLabels: () => ({}),
+      },
+    },
+  });
+
+  try {
+    globalThis.document = {
+      createElement: createElementNode,
+      getElementById: () => null,
+    };
+    state.isDirty = false;
+    state.dirtyRevision = 0;
+    state.lastDirtyReason = "";
+    controller.refreshLegendEditor();
+
+    assert.equal(state.isDirty, false);
+    assert.equal(state.lastDirtyReason, "");
+
+    const modeSelect = findNode(legendList, (node) =>
+      node.tagName === "select" && node.className === "legend-generator-select"
+    );
+    assert.ok(modeSelect);
+    modeSelect.value = "direct-area";
+    modeSelect.listeners.change();
+
+    assert.equal(config.mode, "direct-area");
+    assert.equal(state.isDirty, true);
+    assert.equal(state.lastDirtyReason, "legend-generator-config");
+  } finally {
+    state.isDirty = previousDirty;
+    state.dirtyRevision = previousDirtyRevision;
+    state.lastDirtyReason = previousLastDirtyReason;
+    globalThis.document = previousDocument;
+  }
+});
+
+test("legend label edits render with current project labels", () => {
+  const previousDocument = globalThis.document;
+  const previousColors = state.colors;
+  const previousLegendLabels = state.legendLabels;
+  const legendList = createElementNode("div");
+  const renderCalls = [];
+  const controller = createController(createStatusNode(), {
+    elements: {
+      legendList,
+    },
+    helpers: {
+      legendManager: {
+        getConfig: () => ({
+          mode: "weighted-random",
+          continent: "all",
+          useModernMajorOrder: false,
+          maxItems: 15,
+        }),
+        updateConfig: (_state, patch = {}) => ({
+          mode: patch.mode || "weighted-random",
+          continent: patch.continent || "all",
+          useModernMajorOrder: !!patch.useModernMajorOrder,
+          maxItems: 15,
+        }),
+        getContinentOptions: () => [{ id: "all", label: "All" }],
+        getUniqueColors: () => ["#abcdef"],
+        getSpecialZoneLayers: () => [],
+        getSpecialZoneSignature: () => "",
+        getSignature: () => "",
+        getLabel: (color, appState) => appState.legendLabels?.[color] || "",
+        getLabels: (appState) => appState.legendLabels || {},
+        setLabel: (color, text, appState) => {
+          appState.legendLabels = {
+            ...(appState.legendLabels || {}),
+            [color]: String(text || "").trim(),
+          };
+        },
+      },
+      mapRenderer: {
+        renderLegend: (...args) => renderCalls.push(args),
+      },
+    },
+  });
+
+  try {
+    globalThis.document = {
+      createElement: createElementNode,
+      getElementById: () => null,
+    };
+    state.colors = { GER: "#abcdef" };
+    state.legendLabels = {};
+    controller.refreshLegendEditor();
+
+    const labelInput = findNode(legendList, (node) =>
+      node.tagName === "input" && node.className === "legend-input"
+    );
+    assert.ok(labelInput);
+    labelInput.value = "Germany";
+    labelInput.listeners.input({ target: labelInput });
+
+    assert.deepEqual(renderCalls, [[["#abcdef"], { "#abcdef": "Germany" }]]);
+  } finally {
+    state.colors = previousColors;
+    state.legendLabels = previousLegendLabels;
+    globalThis.document = previousDocument;
+  }
 });
 
 test("project download failure is shown in project status", async () => {

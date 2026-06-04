@@ -13,4 +13,3 @@
 - [x] 用当前 worktree 专属服务补跑编辑器 benchmark。
 - [x] 对照外部 Canvas、Long Animation Frame、OffscreenCanvas、空间索引资料。
 - [x] 形成推进建议和验证口径。
-

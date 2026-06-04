@@ -58,4 +58,3 @@
 - OffscreenCanvas guidance: render work can move into a worker; worker `requestAnimationFrame` is available.
 - Responsiveness guidance: Long Animation Frame entries expose 50ms+ frame delays and script attribution; Long Tasks expose 50ms+ main thread tasks.
 - Spatial index guidance: RBush suits dynamic insert/remove and bulk load; Flatbush suits static packed indexes with ArrayBuffer transfer.
-

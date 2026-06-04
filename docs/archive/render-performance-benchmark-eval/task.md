@@ -11,4 +11,3 @@
 
 - Main agent owned `py -3 ops/browser-mcp/editor-performance-benchmark.py --url http://127.0.0.1:8017/app/?perf_overlay=1`.
 - Dedicated dev server pid `22524` was stopped after benchmark completion.
-

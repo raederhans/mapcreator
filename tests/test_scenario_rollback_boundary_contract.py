@@ -22,7 +22,11 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
         self.assertIn('"activeScenarioMeshPack"', content)
         self.assertIn('"scheduleScenarioChunkRefreshEnabled"', content)
         self.assertIn('"awaitInitialScenarioChunkVisualPromotionEnabled"', content)
+        self.assertIn('"legendLabels"', content)
+        self.assertIn('"legendConfig"', content)
         self.assertIn("activeScenarioMeshPack: cloneScenarioStateValue(runtimeState.activeScenarioMeshPack)", content)
+        self.assertIn("legendLabels: cloneScenarioStateValue(runtimeState.legendLabels)", content)
+        self.assertIn("legendConfig: cloneScenarioStateValue(runtimeState.legendConfig)", content)
         self.assertIn(
             'readRegisteredRuntimeHookSource(runtimeState, "scheduleScenarioChunkRefreshFn") === scheduleScenarioChunkRefresh',
             content,
@@ -32,6 +36,8 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             content,
         )
         self.assertIn("runtimeState.activeScenarioMeshPack = cloneScenarioStateValue(snapshot.activeScenarioMeshPack);", content)
+        self.assertIn("runtimeState.legendLabels = cloneScenarioStateValue(snapshot.legendLabels) || {};", content)
+        self.assertIn("runtimeState.legendConfig = cloneScenarioStateValue(snapshot.legendConfig) || {};", content)
         self.assertIn(
             "runtimeState.scheduleScenarioChunkRefreshFn = snapshot.scheduleScenarioChunkRefreshEnabled ? scheduleScenarioChunkRefresh : null;",
             content,
