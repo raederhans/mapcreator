@@ -180,6 +180,11 @@
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
 
+### render benchmark 优化先看采样窗口
+- post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
+- scenario political background full-pass Path2D cache 构建很贵，但 HOI4 直接 grouped replay 更贵；优化应降低 cache build 成本或复用时机，不能直接关闭 full-pass cache。
+- Pages dist manifest 必须在最终换行形态之后写入；如果构建后再规整 LF，`size_bytes` 会和 checked-in 文件失配。
+
 ### Pages dist 字节合同要同时锁写入和属性
 - `dist/pages-dist-manifest.json` 记录 app 文件 size/hash 时，生成脚本要用 LF 写入，`.gitattributes` 也要锁住 `dist/app` 文本产物 LF；只修写入层会在 Windows checkout 下继续出现字节漂移风险。
 

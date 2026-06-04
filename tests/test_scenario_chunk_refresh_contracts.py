@@ -205,6 +205,44 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("isExactAfterSettleControllerActive()", interaction_blocker.group("body"))
         self.assertNotIn("activePostReadyTaskKey", interaction_blocker.group("body"))
 
+    def test_interaction_recovery_ignores_stale_generation_tasks(self):
+        start = self.map_renderer_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
+        end = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
+        infra_source = self.map_renderer_source[start:end]
+
+        self.assertRegex(
+            infra_source,
+            re.compile(
+                r"if \(promotionVersion !== scenarioChunkPromotionVersion\) \{\s*"
+                r"return false;\s*"
+                r"\}",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            infra_source,
+            re.compile(
+                r"if \(promotionVersion !== scenarioChunkPromotionVersion\) \{\s*"
+                r"return false;\s*"
+                r"\}[\s\S]*?"
+                r"scheduleSecondarySpatialIndexBuild\(",
+                re.S,
+            ),
+        )
+        stale_guard_matches = list(re.finditer(
+            r"if \(promotionVersion !== scenarioChunkPromotionVersion\) \{\s*return false;\s*\}",
+            infra_source,
+            re.S,
+        ))
+        record_index = infra_source.index("recordInteractionRecoveryTaskMetric(taskKey, infraDurationMs")
+        self.assertTrue(
+            any(match.start() < record_index for match in stale_guard_matches),
+            "stale promotion generation must be rejected before recording interaction recovery metrics",
+        )
+        finally_index = infra_source.index("finally {")
+        end_task_index = infra_source.index("endInteractionRecoveryTask(taskKey);", finally_index)
+        self.assertGreater(end_task_index, finally_index)
+
     def test_execute_chunk_refresh_reschedules_pending_promotion_without_active_timer_when_not_flushing(self):
         self.assertRegex(
             self.scenario_chunk_runtime_source,

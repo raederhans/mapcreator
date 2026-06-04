@@ -21390,6 +21390,9 @@ function updatePerfOverlay() {
 
 function render() {
   const startedAt = perfIsEnabled() ? nowMs() : 0;
+  const metricSequenceStartedAt = startedAt > 0
+    ? Math.max(0, Number(runtimeState.renderPerfMetricSequence || 0))
+    : 0;
   const frameSchedulerQueue = getFrameSchedulerQueueLength({ byPriority: true, byLabelGeneration: true });
   recordRenderPerfMetric("frameSchedulerQueueDepth", 0, frameSchedulerQueue);
   recordRenderPerfMetric("renderBoundaryReasons", 0, getRenderBoundaryDebugState());
@@ -21423,6 +21426,11 @@ function render() {
     recordRenderSample(nowMs() - startedAt, {
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       phase: String(runtimeState.renderPhase || ""),
+      politicalBgMs: readRenderPerfMetricDuration("drawPoliticalBackgroundFillsPass", metricSequenceStartedAt),
+      politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt),
+      politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt),
+      contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt),
+      hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt),
     });
   }
 }

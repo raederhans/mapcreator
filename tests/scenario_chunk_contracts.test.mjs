@@ -508,6 +508,53 @@ test("political byte budget limits cold required detail tail", () => {
   assert.equal(selection.selectedByteCountSum, 10);
 });
 
+test("chunk selection requires only current viewport political chunks", () => {
+  const makePoliticalChunk = (id, bounds, estimatedPathCost = 10) => ({
+    id,
+    url: `${id}.json`,
+    layer: "political",
+    lod: "detail",
+    bounds,
+    minZoom: 0,
+    maxZoom: 99,
+    priority: 0,
+    countryCodes: [],
+    featureCount: 1,
+    byteSize: 1,
+    estimatedPathCost,
+  });
+  const selection = selectScenarioChunks({
+    scenarioId: "hoi4_1939",
+    chunkRegistry: normalizeScenarioChunkManifest({
+      chunks: [
+        makePoliticalChunk("political.detail.visible", [-2, -2, 2, 2], 17),
+        makePoliticalChunk("political.detail.outside", [80, 40, 90, 50], 19),
+      ],
+    }),
+    zoom: 6,
+    viewportBbox: [-5, -5, 5, 5],
+    visibleLayers: ["political"],
+    loadedChunkIds: [
+      "political.detail.visible",
+      "political.detail.previous",
+      "political.detail.outside",
+    ],
+    renderBudgetHints: {
+      max_required_chunks: 8,
+      max_required_political_chunks: 8,
+      min_required_political_chunks: 1,
+      max_optional_chunks: 0,
+    },
+  });
+
+  assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["political.detail.visible"]);
+  assert.deepEqual(selection.evictableChunkIds, [
+    "political.detail.previous",
+    "political.detail.outside",
+  ]);
+  assert.equal(selection.selectedEstimatedPathCostSum, 17);
+});
+
 test("feature bounds keep broad owner chunks out of unrelated viewports", () => {
   const selection = selectScenarioChunks({
     scenarioId: "tno_1962",
@@ -1893,6 +1940,51 @@ test("political raster renderer request identity includes viewport and pass sign
   assert.ok(/normalizeViewportIdentity\(request\.viewport\) === normalizeViewportIdentity\(current\.viewport\)/.test(workerClientSource));
   assert.ok(workerSource.includes("passSignature: String(identity.passSignature || \"\")"));
   assert.ok(workerSource.includes("viewport: identity.viewport || null"));
+});
+
+test("startup render samples expose hot-path details", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const renderStart = rendererSource.indexOf("function render()");
+  const renderEnd = rendererSource.indexOf("function autoFillMap(", renderStart);
+  const renderSource = renderStart >= 0 && renderEnd > renderStart
+    ? rendererSource.slice(renderStart, renderEnd)
+    : "";
+
+  assert.ok(renderSource.includes("const metricSequenceStartedAt = startedAt > 0"));
+  assert.ok(renderSource.includes('politicalBgMs: readRenderPerfMetricDuration("drawPoliticalBackgroundFillsPass", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt)'));
+});
+
+test("render perf metric sequence filter excludes previous-frame metrics", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const match = rendererSource.match(/function readRenderPerfMetricDuration\(metricName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(match, "readRenderPerfMetricDuration should stay available for render sample filtering");
+  const readRenderPerfMetricDuration = Function(
+    "runtimeState",
+    `${match[0]}; return readRenderPerfMetricDuration;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        durationMs: 33,
+        sequence: 10,
+      },
+      currentFrame: {
+        durationMs: 44,
+        sequence: 11,
+      },
+      missingSequence: {
+        durationMs: 55,
+      },
+    },
+  });
+
+  assert.equal(readRenderPerfMetricDuration("previousFrame", 10), 0);
+  assert.equal(readRenderPerfMetricDuration("currentFrame", 10), 44);
+  assert.equal(readRenderPerfMetricDuration("previousFrame", 9), 33);
+  assert.equal(readRenderPerfMetricDuration("missingSequence", 10), 0);
 });
 
 test("frame scheduler keeps high-priority exact slices draining under continuous input pressure", async () => {

@@ -157,3 +157,62 @@ test("snapshot render sample median uses the mean of the two middle values for e
     globalThis.__scenarioPerfMetrics = originalScenarioPerfMetrics;
   }
 });
+
+test("render samples keep diagnostic details without changing duration median", () => {
+  const originalLocalStorage = globalThis.localStorage;
+  const originalLocation = globalThis.location;
+  const originalBootMetrics = globalThis.__bootMetrics;
+  const originalRenderPerfMetrics = globalThis.__renderPerfMetrics;
+  const originalScenarioPerfMetrics = globalThis.__scenarioPerfMetrics;
+
+  globalThis.localStorage = {
+    getItem(key) {
+      return key === "mc_perf_enabled" ? "1" : null;
+    },
+    setItem() {},
+    removeItem() {},
+  };
+  globalThis.location = { search: "?perf=1" };
+  globalThis.__bootMetrics = undefined;
+  globalThis.__renderPerfMetrics = undefined;
+  globalThis.__scenarioPerfMetrics = undefined;
+
+  try {
+    perfEnable();
+    clearRenderSamples();
+    recordRenderSample(40, {
+      hitCanvasMs: 7,
+      contextScenarioMs: 9,
+      politicalBgMs: 11,
+      passKey: "frame-a",
+    });
+    recordRenderSample(20, {
+      hitCanvasMs: 3,
+      contextScenarioMs: 5,
+      politicalBgMs: 13,
+      passKey: "frame-b",
+    });
+
+    const firstSnapshot = snapshot();
+    assert.equal(firstSnapshot.renderSamples.count, 2);
+    assert.equal(firstSnapshot.renderSamples.medianMs, 30);
+    assert.equal(firstSnapshot.renderSamples.samples[0].hitCanvasMs, 7);
+    assert.equal(firstSnapshot.renderSamples.samples[0].contextScenarioMs, 9);
+    assert.equal(firstSnapshot.renderSamples.samples[0].politicalBgMs, 11);
+    assert.equal(firstSnapshot.renderSamples.samples[0].passKey, "frame-a");
+
+    firstSnapshot.renderSamples.samples[0].hitCanvasMs = 999;
+    firstSnapshot.renderSamples.samples[0].passKey = "mutated";
+    const secondSnapshot = snapshot();
+
+    assert.equal(secondSnapshot.renderSamples.samples[0].hitCanvasMs, 7);
+    assert.equal(secondSnapshot.renderSamples.samples[0].passKey, "frame-a");
+  } finally {
+    clearRenderSamples();
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.location = originalLocation;
+    globalThis.__bootMetrics = originalBootMetrics;
+    globalThis.__renderPerfMetrics = originalRenderPerfMetrics;
+    globalThis.__scenarioPerfMetrics = originalScenarioPerfMetrics;
+  }
+});

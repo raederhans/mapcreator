@@ -27,12 +27,21 @@ class PagesDistStartupShellTest(unittest.TestCase):
     def test_pages_dist_generated_text_writes_use_lf(self) -> None:
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
         self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)
+        self.assertIn('def normalize_dist_text_files_lf() -> None:', source)
         self.assertIn('newline="\\n"', source)
         self.assertNotIn(".write_text(", source)
+        self.assertLess(
+            source.index("normalize_dist_text_files_lf()"),
+            source.index("total_bytes = write_dist_manifest()"),
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "generated.json"
             build_pages_dist.write_text_lf(path, "{\n  \"ok\": true\n}\n")
             self.assertEqual(path.read_bytes(), b'{\n  "ok": true\n}\n')
+            crlf_path = Path(tmpdir) / "copied.js"
+            crlf_path.write_bytes(b"const ok = true;\r\n")
+            build_pages_dist.normalize_dist_text_file_lf(crlf_path)
+            self.assertEqual(crlf_path.read_bytes(), b"const ok = true;\n")
 
     def test_landing_source_keeps_landing_contract(self) -> None:
         html = LANDING_INDEX.read_text(encoding="utf-8")
