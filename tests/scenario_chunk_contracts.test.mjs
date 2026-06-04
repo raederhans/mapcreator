@@ -1957,6 +1957,7 @@ test("startup render samples expose hot-path details", () => {
   assert.ok(renderSource.includes('politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCachePathCacheSizeBefore: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeBefore", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCachePathCacheSizeAfter: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeAfter", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCachePathCacheResetPreviousReason: readRenderPerfMetricString("scenarioPoliticalBackgroundCacheBuild", "pathCacheResetPreviousReason", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt)'));
@@ -2009,6 +2010,26 @@ test("render perf metric sequence filter excludes previous-frame metrics", () =>
   });
   assert.equal(readRenderPerfMetricNumber("previousFrame", "entryCount", 10), 0);
   assert.equal(readRenderPerfMetricNumber("currentFrame", "entryCount", 10), 88);
+
+  const stringMatch = rendererSource.match(/function readRenderPerfMetricString\(metricName, fieldName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(stringMatch, "readRenderPerfMetricString should share the render sample sequence filter");
+  const readRenderPerfMetricString = Function(
+    "runtimeState",
+    `${stringMatch[0]}; return readRenderPerfMetricString;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        reason: "old",
+        sequence: 10,
+      },
+      currentFrame: {
+        reason: "current",
+        sequence: 11,
+      },
+    },
+  });
+  assert.equal(readRenderPerfMetricString("previousFrame", "reason", 10), "");
+  assert.equal(readRenderPerfMetricString("currentFrame", "reason", 10), "current");
 });
 
 test("political path cache reset exposes invalidation reason and previous size", () => {
@@ -2017,15 +2038,36 @@ test("political path cache reset exposes invalidation reason and previous size",
   assert.ok(invalidateBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
   assert.ok(invalidateBody.includes("previousSize"));
   assert.ok(invalidateBody.includes("previousSignature"));
+  assert.ok(invalidateBody.includes("previousReason"));
 
   const handleBody = rendererSource.match(/function getPoliticalPathCacheHandle\([\s\S]*?\n\}/)?.[0] || "";
   assert.ok(handleBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
   assert.ok(handleBody.includes('reason: "prepare-mismatch"'));
   assert.ok(handleBody.includes("nextSignature: signature"));
+  const signatureBody = rendererSource.match(/function getPoliticalPathCacheSignature\([\s\S]*?\n\}/)?.[0] || "";
+  [
+    "getPoliticalPassStaticSignature(transform)",
+    "getProjectionRenderSignature()",
+    "getViewportRenderSignature()",
+    "String(runtimeState.activeScenarioId || \"\")",
+    "\"ownership\"",
+    "Number(runtimeState.sovereigntyRevision || 0)",
+    "Number(runtimeState.scenarioShellOverlayRevision || 0)",
+  ].forEach((signatureInput) => {
+    assert.ok(signatureBody.includes(signatureInput), `political path cache signature should include ${signatureInput}`);
+  });
+  assert.ok(rendererSource.includes("runtimeState.topologyRevision || 0"));
+  const entryBody = rendererSource.match(/function buildPoliticalFeaturePathEntry\(feature\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(entryBody.includes("path: new globalThis.Path2D(pathString)"));
+  assert.equal(entryBody.includes("featureRef"), false);
+  assert.equal(entryBody.includes("projectionSignature"), false);
+  const getEntryBody = rendererSource.match(/function getPoliticalFeaturePathEntry\([\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(getEntryBody.includes("if (cachedEntry?.path)"));
   assert.ok(rendererSource.includes("pathCacheSizeBefore"));
   assert.ok(rendererSource.includes("pathCacheSizeAfter"));
   assert.ok(rendererSource.includes("pathCacheResetReason"));
   assert.ok(rendererSource.includes("pathCacheResetPreviousSize"));
+  assert.ok(rendererSource.includes("pathCacheResetPreviousReason"));
 });
 
 test("frame scheduler keeps high-priority exact slices draining under continuous input pressure", async () => {

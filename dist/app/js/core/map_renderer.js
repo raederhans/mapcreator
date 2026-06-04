@@ -2552,6 +2552,7 @@ function invalidatePoliticalPathCache(reason = "unspecified") {
     ? cache.politicalPathCache.size
     : 0;
   const previousSignature = String(cache.politicalPathCacheSignature || "");
+  const previousReason = String(cache.politicalPathCacheReason || "");
   if (cache.politicalPathCache instanceof Map) {
     cache.politicalPathCache.clear();
   } else {
@@ -2564,6 +2565,7 @@ function invalidatePoliticalPathCache(reason = "unspecified") {
     reason: String(reason || "unspecified"),
     previousSize,
     previousSignature,
+    previousReason,
   });
 }
 
@@ -2592,6 +2594,7 @@ function getPoliticalPathCacheHandle(
       ? cache.politicalPathCache.size
       : 0;
     const previousSignature = String(cache.politicalPathCacheSignature || "");
+    const previousReason = String(cache.politicalPathCacheReason || "");
     const previousTransform = cache.politicalPathCacheTransform
       ? cloneZoomTransform(cache.politicalPathCacheTransform)
       : null;
@@ -2607,6 +2610,7 @@ function getPoliticalPathCacheHandle(
       reason: "prepare-mismatch",
       previousSize,
       previousSignature,
+      previousReason,
       nextSignature: signature,
       previousTransformK: Number(previousTransform?.k || 0),
       nextTransformK: Number(transform?.k || 1),
@@ -16570,6 +16574,7 @@ function buildPoliticalBackgroundResolvedGroups(
     pathCacheSizeAfter: pathCacheHandle?.map instanceof Map ? pathCacheHandle.map.size : 0,
     pathCacheResetReason: String(pathCacheHandle?.resetSummary?.reason || ""),
     pathCacheResetPreviousSize: Math.max(0, Number(pathCacheHandle?.resetSummary?.previousSize || 0)),
+    pathCacheResetPreviousReason: String(pathCacheHandle?.resetSummary?.previousReason || ""),
     pathCacheResetPreviousTransformK: Math.max(0, Number(pathCacheHandle?.resetSummary?.previousTransformK || 0)),
     pathCacheResetNextTransformK: Math.max(0, Number(pathCacheHandle?.resetSummary?.nextTransformK || 0)),
   };
@@ -16658,6 +16663,7 @@ function getScenarioPoliticalBackgroundFullPassGroups(
     pathCacheSizeAfter: resolvedGroups.pathCacheSizeAfter,
     pathCacheResetReason: resolvedGroups.pathCacheResetReason,
     pathCacheResetPreviousSize: resolvedGroups.pathCacheResetPreviousSize,
+    pathCacheResetPreviousReason: resolvedGroups.pathCacheResetPreviousReason,
     pathCacheResetPreviousTransformK: resolvedGroups.pathCacheResetPreviousTransformK,
     pathCacheResetNextTransformK: resolvedGroups.pathCacheResetNextTransformK,
   });
@@ -19299,6 +19305,15 @@ function readRenderPerfMetricNumber(metricName, fieldName, minSequence = 0) {
   return Math.max(0, Number(entry?.[fieldName] || 0));
 }
 
+function readRenderPerfMetricString(metricName, fieldName, minSequence = 0) {
+  const entry = runtimeState.renderPerfMetrics?.[metricName];
+  const requiredMinSequence = Math.max(0, Number(minSequence || 0));
+  if (requiredMinSequence > 0 && Math.max(0, Number(entry?.sequence || 0)) <= requiredMinSequence) {
+    return "";
+  }
+  return String(entry?.[fieldName] || "");
+}
+
 function recordSettleExactRefreshPhaseBreakdown(plan, durationMs) {
   const targetPasses = Array.isArray(plan?.exactTargetPasses) ? plan.exactTargetPasses : [];
   const deferredTargetPasses = Array.isArray(plan?.deferredExactTargetPasses) ? plan.deferredExactTargetPasses : [];
@@ -21486,6 +21501,7 @@ function render() {
       politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt),
       politicalBgCachePathCacheSizeBefore: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeBefore", metricSequenceStartedAt),
       politicalBgCachePathCacheSizeAfter: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeAfter", metricSequenceStartedAt),
+      politicalBgCachePathCacheResetPreviousReason: readRenderPerfMetricString("scenarioPoliticalBackgroundCacheBuild", "pathCacheResetPreviousReason", metricSequenceStartedAt),
       politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt),
       contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt),
       hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt),
