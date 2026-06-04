@@ -73,6 +73,7 @@
 - benchmark idle 包含 runtime chunk work、post-commit replay、post-ready 基础设施任务。
 - perf gate 变红时先在同机同环境重跑 HEAD，区分补丁回归和环境漂移。
 - 黑帧、长任务、wheel idle、最终 sharpness、真正首屏完成时间分别记录。
+- editor performance benchmark 必须显式绑定当前 worktree 的 active server URL；默认端口可能命中旧服务，导致报告 git head 看似正确但运行页来源漂移。
 
 ## UI、交互与文案
 
