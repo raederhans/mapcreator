@@ -6025,6 +6025,11 @@ function getRuntimePoliticalBaseCollection(collection) {
 
 function rebuildPoliticalLandCollections() {
   const startedAt = nowMs();
+  let runtimeCollectionMs = 0;
+  let composeMs = 0;
+  let atlantropaMs = 0;
+  let interactiveMs = 0;
+  let coverageMs = 0;
   const primaryTopology = runtimeState.topologyPrimary || runtimeState.topology;
   const detailTopology = runtimeState.topologyBundleMode === "composite" ? runtimeState.topologyDetail : null;
   const overrideCollection = runtimeState.topologyBundleMode === "composite" ? runtimeState.ruCityOverrides : null;
@@ -6036,10 +6041,12 @@ function rebuildPoliticalLandCollections() {
     : null;
 
   let fullCollection = runtimeState.landDataFull || runtimeState.landData || null;
+  const runtimeCollectionStartedAt = nowMs();
   const runtimeCollection = runtimeTopology?.objects?.political && globalThis.topojson
     ? getPoliticalFeatureCollection(runtimeTopology, "runtime")
     : null;
   const runtimeBaseCollection = getRuntimePoliticalBaseCollection(runtimeCollection);
+  runtimeCollectionMs = nowMs() - runtimeCollectionStartedAt;
   const hasScenarioRuntimePoliticalSource = !!String(runtimeState.activeScenarioId || "").trim()
     && !!runtimeTopology?.objects?.political;
   if (runtimeBaseCollection) {
@@ -6047,24 +6054,34 @@ function rebuildPoliticalLandCollections() {
   } else if (hasScenarioRuntimePoliticalSource) {
     fullCollection = { type: "FeatureCollection", features: [] };
   } else if (primaryTopology?.objects?.political && globalThis.topojson) {
+    const composeStartedAt = nowMs();
     fullCollection = runtimeState.topologyBundleMode === "composite"
       ? composePoliticalFeatures(primaryTopology, detailTopology, overrideCollection)
       : getPoliticalFeatureCollection(primaryTopology, "primary");
+    composeMs = nowMs() - composeStartedAt;
   }
   if (scenarioPoliticalChunkCollection) {
+    const composeStartedAt = nowMs();
     fullCollection = composePoliticalFeatureCollections(fullCollection, scenarioPoliticalChunkCollection);
+    composeMs += nowMs() - composeStartedAt;
   }
+  const atlantropaStartedAt = nowMs();
   fullCollection = appendUniqueFeatureCollections(
     fullCollection,
     buildAtlantropaLandLikeFeatureCollection()
   );
+  atlantropaMs = nowMs() - atlantropaStartedAt;
 
+  const interactiveStartedAt = nowMs();
   const interactiveCollection = buildInteractiveLandData(fullCollection);
+  interactiveMs = nowMs() - interactiveStartedAt;
   runtimeState.landDataFull = fullCollection;
   runtimeState.landData = interactiveCollection;
+  const coverageStartedAt = nowMs();
   runtimeState.debugCountryCoverage = collectCountryCoverageStats(
     Array.isArray(fullCollection?.features) ? fullCollection.features : []
   );
+  coverageMs = nowMs() - coverageStartedAt;
 
   const fullCount = Array.isArray(fullCollection?.features) ? fullCollection.features.length : 0;
   const interactiveCount = Array.isArray(interactiveCollection?.features) ? interactiveCollection.features.length : 0;
@@ -6077,6 +6094,18 @@ function rebuildPoliticalLandCollections() {
   recordRenderPerfMetric("rebuildPoliticalLandCollections", nowMs() - startedAt, {
     fullFeatureCount: fullCount,
     interactiveFeatureCount: interactiveCount,
+  });
+  recordRenderPerfMetric("rebuildPoliticalLandCollectionsBreakdown", nowMs() - startedAt, {
+    fullFeatureCount: fullCount,
+    interactiveFeatureCount: interactiveCount,
+    scenarioChunkFeatureCount: Array.isArray(scenarioPoliticalChunkCollection?.features)
+      ? scenarioPoliticalChunkCollection.features.length
+      : 0,
+    runtimeCollectionMs: Math.max(0, runtimeCollectionMs),
+    composeMs: Math.max(0, composeMs),
+    atlantropaMs: Math.max(0, atlantropaMs),
+    interactiveMs: Math.max(0, interactiveMs),
+    coverageMs: Math.max(0, coverageMs),
   });
   return { fullCollection, interactiveCollection };
 }

@@ -108,6 +108,72 @@ test("fragment camouflage leaves unmatched countries unchanged", () => {
   assert.equal(owner.buildInteractiveLandData(fullCollection), fullCollection);
 });
 
+test("detail composition normalizes large-area geometry before tagging source", () => {
+  globalThis.d3 = {
+    geoArea: (feature) => {
+      const coordinates = feature?.geometry?.coordinates;
+      const firstPolygon = feature?.geometry?.type === "MultiPolygon" ? coordinates?.[0] : coordinates;
+      const secondPointX = Number(firstPolygon?.[0]?.[1]?.[0]);
+      return secondPointX === 1 ? Math.PI * 4 : 1;
+    },
+  };
+  const detailPolygonFeature = {
+    id: "AA_DETAIL",
+    type: "Feature",
+    properties: {
+      id: "AA_DETAIL",
+      cntr_code: "AA",
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+          [0, 0],
+        ],
+      ],
+    },
+  };
+  const detailMultiPolygonFeature = {
+    id: "BB_DETAIL",
+    type: "Feature",
+    properties: {
+      id: "BB_DETAIL",
+      cntr_code: "BB",
+    },
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: [
+        [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0],
+          ],
+        ],
+      ],
+    },
+  };
+  const owner = createOwner();
+  const result = owner.composePoliticalFeatureCollections(
+    { type: "FeatureCollection", features: [] },
+    { type: "FeatureCollection", features: [detailPolygonFeature, detailMultiPolygonFeature] }
+  );
+
+  assert.equal(result.features.length, 2);
+  assert.equal(result.features[0].properties.__source, "detail");
+  assert.equal(result.features[1].properties.__source, "detail");
+  assert.deepEqual(result.features[0].geometry.coordinates[0][1], [0, 1]);
+  assert.deepEqual(result.features[1].geometry.coordinates[0][0][1], [0, 1]);
+  assert.deepEqual(detailPolygonFeature.geometry.coordinates[0][1], [1, 0]);
+  assert.deepEqual(detailMultiPolygonFeature.geometry.coordinates[0][0][1], [1, 0]);
+});
+
 test("fragment camouflage prunes real Belarus runtime components with d3 area", async () => {
   const d3Source = await readFile(new URL("../vendor/d3.v7.min.js", import.meta.url), "utf8");
   vm.runInThisContext(d3Source);

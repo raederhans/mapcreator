@@ -1270,6 +1270,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
   const startupHydrationSource = readRepoFile("js", "core", "scenario", "startup_hydration.js");
+  const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
 
   const checks = {
     scenarioWaterExclusiveModeComesFromManifestWithLegacyAtlantropaDefault:
@@ -1341,6 +1342,12 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
         "includeSecondary: false",
         "keepReady: true",
       ].every((snippet) => rendererSource.includes(snippet)),
+    rebuildPoliticalLandCollectionsBreakdownExposesSyncSubsteps:
+      /function rebuildPoliticalLandCollections\(\) \{[\s\S]*?let runtimeCollectionMs = 0;[\s\S]*?let composeMs = 0;[\s\S]*?let atlantropaMs = 0;[\s\S]*?let interactiveMs = 0;[\s\S]*?let coverageMs = 0;[\s\S]*?recordRenderPerfMetric\("rebuildPoliticalLandCollectionsBreakdown"[\s\S]*?scenarioChunkFeatureCount:[\s\S]*?runtimeCollectionMs:[\s\S]*?composeMs:[\s\S]*?atlantropaMs:[\s\S]*?interactiveMs:[\s\S]*?coverageMs:/.test(rendererSource),
+    politicalChunkPromotionBreakdownExposesVisualStageSubsteps:
+      /function applyScenarioPoliticalChunkPayload\(bundle, politicalPayload,[\s\S]*?const normalizeStartedAt = startedAt;[\s\S]*?const identityStartedAt = normalizeEndedAt;[\s\S]*?const compareStartedAt = identityEndedAt;[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?normalizeMs:[\s\S]*?identityMs:[\s\S]*?compareMs:[\s\S]*?refreshMs:/.test(chunkRuntimeSource)
+      && /if \(samePayload\) \{[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?samePayload: true,[\s\S]*?refreshMs: 0,/.test(chunkRuntimeSource)
+      && /recordScenarioRenderMetric\("politicalChunkPromotionBreakdown", finishedAt - startedAt,[\s\S]*?samePayload: false,[\s\S]*?resolvedPoliticalFeatureCount: resolvedPoliticalFeatureIds\.length,/.test(chunkRuntimeSource),
     compositeScenarioRebuildKeepsScenarioRuntimeTopology:
       [
         "render_as_base_geography === false",

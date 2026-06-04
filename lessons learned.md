@@ -180,6 +180,9 @@
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
 
+### perf measure 会写 baseline 文件
+- `tools/perf/run_baseline.mjs --mode measure --write-markdown false` 仍会写 `docs/perf/baseline_2026-04-20.json`；只用 `.runtime` 原始样本做实验时，跑完要恢复 docs baseline，避免把测量副作用混进性能改动。
+
 ### 失败的性能实验也要锁合同
 - 渲染链路里被测试并拒绝的 cache 签名收窄、entry 复用等实验，要用合同测试钉住当前边界；只在文档里记录原因，后续容易被同类优化重新引入。
 

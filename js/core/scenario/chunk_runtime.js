@@ -942,14 +942,31 @@ function createScenarioChunkRuntimeController({
     politicalFeatureIds = [],
   } = {}) {
     const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const normalizeStartedAt = startedAt;
     const normalizedPayload = normalizeScenarioFeatureCollection(politicalPayload);
+    const normalizeEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const identityStartedAt = normalizeEndedAt;
     const previousFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalChunkData);
     const nextFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPayload);
+    const identityEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const compareStartedAt = identityEndedAt;
     const samePayload = areScenarioFeatureCollectionsEquivalent(
       runtimeState.scenarioPoliticalChunkData,
       normalizedPayload
     );
+    const compareEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     if (samePayload) {
+      recordScenarioRenderMetric("politicalChunkPromotionBreakdown", compareEndedAt - startedAt, {
+        scenarioId: getScenarioBundleId(bundle),
+        reason: String(reason || "refresh"),
+        samePayload: true,
+        normalizeMs: Math.max(0, normalizeEndedAt - normalizeStartedAt),
+        identityMs: Math.max(0, identityEndedAt - identityStartedAt),
+        compareMs: Math.max(0, compareEndedAt - compareStartedAt),
+        refreshMs: 0,
+        previousFeatureCount: previousFeatureIds.length,
+        nextFeatureCount: nextFeatureIds.length,
+      });
       return false;
     }
     runtimeState.scenarioPoliticalChunkData = normalizedPayload || null;
@@ -958,6 +975,7 @@ function createScenarioChunkRuntimeController({
       ...previousFeatureIds,
       ...nextFeatureIds,
     ]));
+    const refreshStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     refreshMapDataForScenarioChunkPromotion({
       suppressRender: !renderNow,
       reason,
@@ -965,7 +983,20 @@ function createScenarioChunkRuntimeController({
       politicalFeatureIds: resolvedPoliticalFeatureIds,
       hasPoliticalPayloadChange: true,
     });
-    recordScenarioRenderMetric("politicalChunkPromotionMs", (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - startedAt, {
+    const finishedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    recordScenarioRenderMetric("politicalChunkPromotionBreakdown", finishedAt - startedAt, {
+      scenarioId: getScenarioBundleId(bundle),
+      reason: String(reason || "refresh"),
+      samePayload: false,
+      normalizeMs: Math.max(0, normalizeEndedAt - normalizeStartedAt),
+      identityMs: Math.max(0, identityEndedAt - identityStartedAt),
+      compareMs: Math.max(0, compareEndedAt - compareStartedAt),
+      refreshMs: Math.max(0, finishedAt - refreshStartedAt),
+      previousFeatureCount: previousFeatureIds.length,
+      nextFeatureCount: nextFeatureIds.length,
+      resolvedPoliticalFeatureCount: resolvedPoliticalFeatureIds.length,
+    });
+    recordScenarioRenderMetric("politicalChunkPromotionMs", finishedAt - startedAt, {
       scenarioId: getScenarioBundleId(bundle),
       reason: String(reason || "refresh"),
       promotedPoliticalFeatureCount: nextFeatureIds.length,
