@@ -88,8 +88,10 @@ class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):
             "grid-template-columns: minmax(96px, 1fr) minmax(120px, 0.82fr);",
             ".dev-workspace-quick-owner-controls {",
             "grid-template-rows: repeat(2, minmax(30px, 1fr));",
+            ".dev-workspace-quick-actions .btn-primary {",
             ".dev-workspace-quick-owner-controls .btn-secondary {",
             "white-space: normal;",
+            "font-size: 0.71rem;",
         ]:
             self.assertIn(token, css_content)
             self.assertIn(token, dist_css_content)

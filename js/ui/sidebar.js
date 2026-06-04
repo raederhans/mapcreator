@@ -1605,11 +1605,17 @@ function initSidebar({ render } = {}) {
     accountPopover.className = "project-account-popover hidden";
     accountPopover.setAttribute("role", "dialog");
     accountPopover.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
+    accountPopover.setAttribute("aria-modal", "true");
+
+    const accountBackdrop = document.createElement("div");
+    accountBackdrop.id = "backendAccountBackdrop";
+    accountBackdrop.className = "project-account-backdrop hidden";
+    accountBackdrop.setAttribute("aria-hidden", "true");
 
     const accountShelf = document.createElement("div");
     accountShelf.id = "rightSidebarAccountShelf";
     accountShelf.className = "right-sidebar-account-shelf";
-    accountShelf.append(accountPopover, accountDock);
+    accountShelf.append(accountDock);
 
     actions.appendChild(downloadBtn);
     actions.appendChild(projectDownloadOptions);
@@ -1623,42 +1629,64 @@ function initSidebar({ render } = {}) {
     {
       const cloudSection = document.createElement("div");
       cloudSection.id = "backendCloudSection";
+      cloudSection.className = "project-account-panel";
       cloudSection.hidden = true;
 
-      const cloudTitle = document.createElement("div");
-      cloudTitle.className = "section-header sidebar-tool-title mt-3";
+      const cloudHeader = document.createElement("div");
+      cloudHeader.className = "project-account-panel-header";
+
+      const cloudHeaderCopy = document.createElement("div");
+      cloudHeaderCopy.className = "project-account-panel-copy";
+
+      const cloudTitle = document.createElement("h2");
+      cloudTitle.className = "project-account-panel-title";
+      cloudTitle.id = "backendAccountPopoverTitle";
       cloudTitle.textContent = t("Cloud Saves", "ui");
+      accountPopover.setAttribute("aria-labelledby", "backendAccountPopoverTitle");
 
       const cloudStatus = document.createElement("p");
       cloudStatus.id = "backendCloudStatus";
-      cloudStatus.className = "sidebar-tool-hint project-save-status";
+      cloudStatus.className = "project-account-panel-status";
       cloudStatus.setAttribute("role", "status");
       cloudStatus.setAttribute("aria-live", "polite");
       cloudStatus.setAttribute("aria-atomic", "true");
       cloudStatus.textContent = t("Local backend cloud saves are available after login.", "ui");
+      cloudHeaderCopy.append(cloudTitle, cloudStatus);
+
+      const closeAccountBtn = document.createElement("button");
+      closeAccountBtn.id = "backendAccountCloseBtn";
+      closeAccountBtn.type = "button";
+      closeAccountBtn.className = "project-account-close-btn";
+      closeAccountBtn.setAttribute("aria-label", t("Close", "ui"));
+      closeAccountBtn.textContent = "×";
+      cloudHeader.append(cloudHeaderCopy, closeAccountBtn);
+
+      const cloudCredentialGrid = document.createElement("div");
+      cloudCredentialGrid.className = "project-account-field-grid";
 
       const cloudUsername = document.createElement("input");
       cloudUsername.id = "backendCloudUsername";
       cloudUsername.type = "text";
       cloudUsername.autocomplete = "username";
       cloudUsername.placeholder = t("Username", "ui");
-      cloudUsername.className = "input mt-2";
+      cloudUsername.className = "input project-account-input";
 
       const cloudPassword = document.createElement("input");
       cloudPassword.id = "backendCloudPassword";
       cloudPassword.type = "password";
       cloudPassword.autocomplete = "current-password";
       cloudPassword.placeholder = t("Password", "ui");
-      cloudPassword.className = "input mt-2";
+      cloudPassword.className = "input project-account-input";
 
       const cloudTitleInput = document.createElement("input");
       cloudTitleInput.id = "backendCloudSaveTitle";
       cloudTitleInput.type = "text";
       cloudTitleInput.placeholder = t("Save title", "ui");
-      cloudTitleInput.className = "input mt-2";
+      cloudTitleInput.className = "input project-account-input project-account-title-input";
+      cloudCredentialGrid.append(cloudUsername, cloudPassword, cloudTitleInput);
 
       const cloudActions = document.createElement("div");
-      cloudActions.className = "sidebar-support-actions mt-2";
+      cloudActions.className = "project-account-actions";
 
       const registerCloudBtn = document.createElement("button");
       registerCloudBtn.id = "backendCloudRegisterBtn";
@@ -1707,11 +1735,12 @@ function initSidebar({ render } = {}) {
 
       const communityList = document.createElement("div");
       communityList.id = "backendCommunityList";
-      communityList.className = "mt-2 flex flex-col gap-2";
+      communityList.className = "project-account-community-list";
 
-      cloudSection.append(cloudTitle, cloudStatus, cloudUsername, cloudPassword, cloudTitleInput, cloudActions, communityList);
+      cloudSection.append(cloudHeader, cloudCredentialGrid, cloudActions, communityList);
       accountPopover.appendChild(cloudSection);
     }
+    document.body.append(accountBackdrop, accountPopover);
     projectManagementStack.appendChild(projectSection);
     rightSidebarContent?.appendChild(accountShelf);
   }
@@ -3341,6 +3370,8 @@ function initSidebar({ render } = {}) {
   const backendCloudStatus = document.getElementById("backendCloudStatus");
   const backendAccountToggleBtn = document.getElementById("backendAccountToggleBtn");
   const backendAccountPopover = document.getElementById("backendAccountPopover");
+  const backendAccountBackdrop = document.getElementById("backendAccountBackdrop");
+  const backendAccountCloseBtn = document.getElementById("backendAccountCloseBtn");
   const backendCloudUsername = document.getElementById("backendCloudUsername");
   const backendCloudPassword = document.getElementById("backendCloudPassword");
   const backendCloudSaveTitle = document.getElementById("backendCloudSaveTitle");
@@ -3912,12 +3943,19 @@ function initSidebar({ render } = {}) {
     runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled === true;
     runtimeState.hgoIdentity.nameMode = runtimeState.hgoIdentity.nameMode === "hgo" ? "hgo" : "scenario";
     runtimeState.hgoIdentity.showSuggestedAliases = runtimeState.hgoIdentity.showSuggestedAliases !== false;
+    if (!runtimeState.hgoIdentity.variantSelections || typeof runtimeState.hgoIdentity.variantSelections !== "object") {
+      runtimeState.hgoIdentity.variantSelections = {};
+    }
     return runtimeState.hgoIdentity;
   };
   const resolveHgoIdentityForCountry = (countryState, options = {}) => {
-    ensureHgoIdentityRuntimeState();
+    const settings = ensureHgoIdentityRuntimeState();
     if (!hgoIdentityResolver) return null;
-    return hgoIdentityResolver.resolveIdentity(countryState, options);
+    const countryCode = normalizeCountryCode(countryState?.code || countryState?.tag || "");
+    return hgoIdentityResolver.resolveIdentity(countryState, {
+      ...options,
+      preferredVariantKey: options.preferredVariantKey || settings.variantSelections[countryCode] || "",
+    });
   };
   const getHgoIdentityCoverage = (countryStates, options = {}) => (
     hgoIdentityResolver ? hgoIdentityResolver.summarizeCoverage(countryStates, options) : null
@@ -4468,6 +4506,7 @@ function initSidebar({ render } = {}) {
     const settings = ensureHgoIdentityRuntimeState();
     requestHgoIdentityAssetsForSettings(settings, ensureHgoIdentityAssetsLoaded);
     renderList();
+    render();
   },
   });
   const {
@@ -5864,6 +5903,8 @@ function initSidebar({ render } = {}) {
       backendCloudStatus,
       backendAccountToggleBtn,
       backendAccountPopover,
+      backendAccountBackdrop,
+      backendAccountCloseBtn,
       backendCloudUsername,
       backendCloudPassword,
       backendCloudSaveTitle,

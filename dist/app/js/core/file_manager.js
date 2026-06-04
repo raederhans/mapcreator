@@ -21,6 +21,7 @@ import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import { clearDirty } from "./dirty_state.js";
 import { buildExportArtifactManifest } from "./export_artifact_package.js";
+import { LegendManager } from "./legend_manager.js";
 import {
   buildProjectPackagePayload,
   prepareProjectImportFile,
@@ -496,6 +497,8 @@ class FileManager {
       customPresets: appState.customPresets || {},
       referenceImageState: normalizeReferenceImageState(appState.referenceImageState),
       recentColors: normalizeRecentColors(appState.recentColors),
+      legendLabels: LegendManager.normalizeLabels(appState.legendLabels),
+      legendConfig: LegendManager.normalizeConfig(appState.legendConfig),
       layerVisibility: {
         showWaterRegions: appState.showWaterRegions === undefined ? true : !!appState.showWaterRegions,
         showOpenOceanRegions: openOceanLayerVisibility.showOpenOceanRegions,
@@ -727,6 +730,8 @@ class FileManager {
         }
         data.referenceImageState = normalizeReferenceImageState(data.referenceImageState);
         data.recentColors = normalizeRecentColors(data.recentColors);
+        data.legendLabels = LegendManager.normalizeLabels(data.legendLabels);
+        data.legendConfig = LegendManager.normalizeConfig(data.legendConfig);
         data.parentBordersVisible = data.parentBordersVisible !== false;
         if (!data.parentBorderEnabledByCountry || typeof data.parentBorderEnabledByCountry !== "object") {
           data.parentBorderEnabledByCountry = {};

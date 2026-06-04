@@ -162,6 +162,7 @@ class TestElement {
 function createTestDocument() {
   return {
     createElement: (tagName) => new TestElement(tagName),
+    createDocumentFragment: () => new TestElement("#fragment"),
   };
 }
 
@@ -226,7 +227,14 @@ function textOf(node) {
   return [node?.textContent || "", ...(node?.children || []).map(textOf)].join(" ").trim();
 }
 
-function createHarness({ selectedCountry = null, hgoIdentity = null } = {}) {
+function createHarness({
+  selectedCountry = null,
+  hgoIdentity = null,
+  countryEntries = [],
+  countryTree = [],
+  childSectionsByParent = new Map(),
+  buildCountryRowMetaText = () => "",
+} = {}) {
   const host = new TestElement("section");
   const list = new TestElement("div");
   host.appendChild(list);
@@ -270,16 +278,16 @@ function createHarness({ selectedCountry = null, hgoIdentity = null } = {}) {
       note.textContent = value;
       return note;
     },
-    getDynamicCountryEntries: () => [],
+    getDynamicCountryEntries: () => countryEntries,
     createCountryInspectorState: (entry, entryIndex) => ({ ...entry, entryIndex }),
-    buildInspectorTopLevelCountryEntries: () => [],
+    buildInspectorTopLevelCountryEntries: (entries) => entries,
     getPriorityCountryOrderMap: () => new Map(),
     compareInspectorCountries: () => 0,
-    buildCountryColorTree: () => [],
+    buildCountryColorTree: () => countryTree,
     ensureInitialInspectorExpansion: () => {},
     getInspectorGroupExpansionKey: (value) => String(value || ""),
-    getCountryChildSectionsForParent: () => [],
-    buildCountryRowMetaText: () => "",
+    getCountryChildSectionsForParent: (code) => childSectionsByParent.get(String(code || "").trim().toUpperCase()) || [],
+    buildCountryRowMetaText,
     getResolvedCountryColor: () => "#000000",
     getDisplayCountryColor: () => "#000000",
     getPrimaryReleasablePresetRef: () => null,
@@ -288,7 +296,11 @@ function createHarness({ selectedCountry = null, hgoIdentity = null } = {}) {
     incrementSidebarCounter: () => {},
     markDirty: () => {},
     showToast: () => {},
-    getHgoIdentity: hgoIdentity ? () => hgoIdentity : null,
+    getHgoIdentity: hgoIdentity
+      ? ((countryState, options) => (
+        typeof hgoIdentity === "function" ? hgoIdentity(countryState, options) : hgoIdentity
+      ))
+      : null,
     getHgoIdentityCoverage: () => {
       coverageCalls += 1;
       return { flags: 0, total: 0 };
@@ -340,6 +352,7 @@ test("HGO identity controls stay cold until the user enables them", () => {
     const modeButtons = enabledControls.querySelectorAll(".hgo-identity-mode-btn");
     const suggestedInput = enabledControls.querySelector(".hgo-identity-suggested-toggle input");
     assert.equal(harness.coverageCalls, 1);
+    assert.equal(enabledControls.querySelector(".hgo-identity-summary"), null);
     assert.equal(modeButtons.every((button) => button.disabled === false), true);
     assert.equal(suggestedInput.disabled, false);
 
@@ -386,6 +399,155 @@ test("HGO identity detail uses medium artwork before resolver preferred small ar
     const flag = harness.countryInspectorSelected.querySelector(".hgo-identity-detail-flag");
     assert.ok(flag);
     assert.equal(flag.src, "data/hgo_catalogs/flags_png/medium/AB/ABK.png");
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("country inspector renders Other only for real unclassified top-level countries", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  try {
+    const groupedHarness = createHarness({
+      countryEntries: [
+        { code: "GER", displayName: "Germany" },
+        { code: "XIK", displayName: "XiKang" },
+      ],
+      countryTree: [
+        { id: "continent_europe", displayLabel: "Europe", countries: [{ code: "GER" }] },
+        { id: "scenario_group_china_region", displayLabel: "China Region", countries: [{ code: "XIK" }] },
+      ],
+    });
+    groupedHarness.runtimeState.countryGroupsData = { continents: [{ id: "continent_europe" }] };
+    groupedHarness.controller.renderList();
+
+    assert.doesNotMatch(textOf(groupedHarness.host), /Other/);
+
+    const fallbackHarness = createHarness({
+      countryEntries: [
+        { code: "GER", displayName: "Germany" },
+        { code: "UNK", displayName: "Unclassified" },
+      ],
+      countryTree: [
+        { id: "continent_europe", displayLabel: "Europe", countries: [{ code: "GER" }] },
+        { id: "continent_other", displayLabel: "Other", countries: [{ code: "UNK" }] },
+      ],
+    });
+    fallbackHarness.runtimeState.countryGroupsData = { continents: [{ id: "continent_europe" }] };
+    fallbackHarness.controller.renderList();
+
+    assert.match(textOf(fallbackHarness.host), /Other \(1\)/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("related country child rows hide releasable parent lists", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  try {
+    const harness = createHarness({
+      countryEntries: [
+        { code: "GER", displayName: "Germany" },
+      ],
+      countryTree: [
+        { id: "continent_europe", displayLabel: "Europe", countries: [{ code: "GER" }] },
+      ],
+      childSectionsByParent: new Map([
+        ["GER", [{
+          id: "releasables",
+          label: "可释放国家",
+          states: [{
+            code: "CHI",
+            displayName: "Nanjing China",
+            releasable: true,
+            parentOwnerTags: ["ROC", "ENG"],
+            subregionDisplayLabel: "东亚",
+          }],
+        }]],
+      ]),
+      buildCountryRowMetaText: (countryState, _identity, { showRelationMeta = false } = {}) => {
+        const parts = [];
+        if (countryState?.subregionDisplayLabel) parts.push(countryState.subregionDisplayLabel);
+        if (countryState?.releasable && showRelationMeta) {
+          parts.push("可自以下母国释放：中华民国, 英格兰王国");
+        }
+        parts.push(`tag ${countryState.code}`);
+        return parts.join(" · ");
+      },
+    });
+    harness.runtimeState.expandedInspectorContinents.add("continent_europe");
+    harness.runtimeState.expandedInspectorReleaseParents.add("GER");
+
+    harness.controller.renderList();
+
+    const renderedText = textOf(harness.host);
+    assert.match(renderedText, /Nanjing China/);
+    assert.match(renderedText, /东亚/);
+    assert.match(renderedText, /tag CHI/);
+    assert.doesNotMatch(renderedText, /可自以下母国释放/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("HGO identity detail replaces raw variant badges with a selectable flag option", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  try {
+    const harness = createHarness({
+      selectedCountry: { code: "ABK", displayName: "Scenario Abkhazia" },
+      hgoIdentity: (_countryState, options = {}) => {
+        const selected = options.preferredVariantKey === "sov";
+        return {
+          matchKind: "exact",
+          displayName: "Abkhazia",
+          hgoNames: { en: "Abkhazia" },
+          sourceTag: "ABK",
+          tag: "ABK",
+          flag: {
+            base: {
+              medium: { pngPath: "data/hgo_catalogs/flags_png/medium/AB/ABK.png" },
+            },
+            preferredBaseFlag: { tier: "medium", pngPath: "data/hgo_catalogs/flags_png/medium/AB/ABK.png" },
+            preferredVariantKey: selected ? "sov" : "",
+            preferredVariantFlag: selected
+              ? { tier: "medium", pngPath: "data/hgo_catalogs/flags_png/medium/AB/ABK_SOV.png" }
+              : null,
+            variants: [{
+              key: "sov",
+              label: "SOV",
+              variantSource: "SOV",
+              tiers: {
+                medium: { pngPath: "data/hgo_catalogs/flags_png/medium/AB/ABK_SOV.png" },
+              },
+            }],
+          },
+        };
+      },
+    });
+    harness.runtimeState.hgoIdentity = { enabled: true, nameMode: "hgo", showSuggestedAliases: true };
+
+    harness.controller.renderCountryInspectorDetail();
+
+    assert.equal(harness.countryInspectorSelected.querySelector(".hgo-identity-variant-list"), null);
+    const select = harness.countryInspectorSelected.querySelector(".hgo-identity-variant-select");
+    assert.ok(select);
+    assert.equal(select.querySelectorAll("option").length, 2);
+    assert.equal(select.querySelectorAll("option")[1].textContent, "SOV");
+
+    select.value = "sov";
+    select.change();
+
+    assert.equal(harness.runtimeState.hgoIdentity.variantSelections.ABK, "sov");
+    assert.equal(harness.settingsChangeCalls, 1);
+    assert.equal(
+      harness.countryInspectorSelected.querySelector(".hgo-identity-variant-preview").src,
+      "data/hgo_catalogs/flags_png/medium/AB/ABK_SOV.png",
+    );
   } finally {
     globalThis.document = previousDocument;
   }

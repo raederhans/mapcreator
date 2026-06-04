@@ -153,6 +153,17 @@ test("preferred flag tier controls the selected base preview", () => {
   assert.equal(medium.flag.preferredBaseFlag.pngPath, "data/hgo_catalogs/flags_png/medium/AB/ABK.png");
 });
 
+test("preferred variant key controls the selected variant preview", () => {
+  const identity = createResolver().resolveIdentity(
+    { tag: "ABK", displayName: "Scenario Abkhazia" },
+    { preferredFlagTier: "small", preferredVariantKey: "SOV" },
+  );
+
+  assert.equal(identity.flag.preferredVariantKey, "sov");
+  assert.equal(identity.flag.preferredVariant?.variantSource, "SOV");
+  assert.equal(identity.flag.preferredVariantFlag.pngPath, "data/hgo_catalogs/flags_png/small/AB/ABK_SOV.png");
+});
+
 test("reviewed aliases are strong HGO identity matches", () => {
   const identity = createResolver().resolveIdentity(
     { tag: "AEF", displayName: "Afrique Equatoriale Francaise" },

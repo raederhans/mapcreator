@@ -139,6 +139,7 @@
 
 ### inspector 聚合只放展示层
 - Water Region 这类由碎片 feature 组成的列表可以合并显示；selection、history、override 仍保存真实 feature id 数组。
+- TNO inspector 的国家分组修正要同时同步 `countries.json`、manual overrides、scenario mutations 和 patcher 规则；只改最终产物会在下次重建时回退。
 
 ### 场景颜色要显式声明管理权
 - 手工、controller-only、生成型国家颜色需要写入 `color_policy: "locked"`；缺少 policy 的 checked-in 场景色会在重建时被 palette audit 同步回去。
@@ -187,6 +188,15 @@
 
 ### 视觉伪装要统一显示和命中集合
 - 对政治图层做 runtime-only geometry pruning 时，普通绘制、hit/spatial index 和 scenario background merge 都要读同一份可视集合；`landDataFull` 只保留给完整数据、边界和诊断用途。
+
+### project support 改动要同时验证 dist 合同
+- `project_support_diagnostics_controller.js`、`file_manager.js`、`sidebar.js` 这类 support 面文件被静态合同要求源码和 `dist/app` 一致；改源码后要跑 `verify:pages-dist`，再跑对应 boundary contract。
+
+### 大颜色库翻译优先走定向同步
+- HGO 这类 palette 只需要补颜色库可见国名时，使用 palette-only locale 同步；完整 `geo` 同步会扫 7 万级地理项，机器翻译阶段会明显拖慢。
+
+### 大色板分组优先写入导入产物
+- HGO 这类千级色板条目需要在 import 阶段写入可审查的地区 metadata，并把少量异常放进 manual map；浏览器面板只消费稳定字段，避免运行时名称猜测导致分组漂移。
 
 ### 水域 source、runtime、chunk 要一起验证
 - TNO 水域精细化后要同时跑 source 几何、runtime topology、chunk id consistency 和 named/open-ocean seam 合同；只看 source 或只看 chunk 会漏掉视觉存在但无法命中的漂移。

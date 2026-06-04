@@ -344,6 +344,7 @@ export function createDefaultUiState() {
       enabled: false,
       nameMode: "scenario",
       showSuggestedAliases: true,
+      variantSelections: {},
     },
     specialZoneMembershipBrushMode: "add",
     cityLayerRevision: 0,

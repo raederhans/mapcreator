@@ -21927,6 +21927,33 @@ function collectCountryCodesForFeatureIds(featureIds) {
   return Array.from(codes);
 }
 
+function syncInspectorCountryToLandSelection(feature, featureId, hit = null) {
+  const ownerCode = canonicalCountryCode(getFeatureOwnerCode(featureId));
+  const featureCode = canonicalCountryCode(
+    ownerCode
+      || hit?.countryCode
+      || getFeatureCountryCodeNormalized(feature)
+      || getFeatureInteractionCountryCodeNormalized(feature, featureId)
+  );
+  const nextCode = ownerCode || featureCode;
+  if (!nextCode) return false;
+
+  const previousCode = canonicalCountryCode(runtimeState.selectedInspectorCountryCode);
+  runtimeState.selectedInspectorCountryCode = nextCode;
+  runtimeState.inspectorHighlightCountryCode = nextCode;
+
+  if (typeof runtimeState.refreshCountryListRowsFn === "function") {
+    runtimeState.refreshCountryListRowsFn({
+      countryCodes: Array.from(new Set([previousCode, nextCode].filter(Boolean))),
+      refreshInspector: true,
+      refreshPresetTree: true,
+    });
+  } else if (typeof runtimeState.renderPresetTreeFn === "function") {
+    runtimeState.renderPresetTreeFn();
+  }
+  return nextCode !== previousCode;
+}
+
 function hasSelectedOrActiveCountryImpact(countryCodes = []) {
   const impactedCodes = new Set((Array.isArray(countryCodes) ? countryCodes : [])
     .map((code) => canonicalCountryCode(code))
@@ -23139,9 +23166,11 @@ async function handleClick(event, _interactionContext = null) {
   let landId = id;
   let feature = runtimeState.landIndex.get(landId);
   if (!feature) return;
-  if (runtimeState.devSelectionModeEnabled && (event?.ctrlKey || event?.metaKey)) {
-    toggleFeatureInDevSelection(landId);
-    noteRenderAction("dev-selection-toggle", actionStart);
+  if (event?.ctrlKey || event?.metaKey) {
+    if (event?.preventDefault) event.preventDefault();
+    const changedSelection = toggleFeatureInDevSelection(landId);
+    syncInspectorCountryToLandSelection(feature, landId, landHit);
+    noteRenderAction(changedSelection ? "dev-selection-toggle" : "dev-selection-sync", actionStart);
     return;
   }
   let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);

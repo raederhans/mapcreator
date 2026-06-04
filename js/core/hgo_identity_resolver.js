@@ -54,6 +54,12 @@ function pickFlagTier(tiers = {}, preferredTier = "small") {
   return tierKey ? { tier: tierKey, ...tiers[tierKey] } : null;
 }
 
+function pickFlagVariant(variants = [], preferredVariantKey = "") {
+  const selectedKey = normalizeVariantKey(preferredVariantKey);
+  if (!selectedKey || !Array.isArray(variants)) return null;
+  return variants.find((variant) => normalizeVariantKey(variant?.key) === selectedKey) || null;
+}
+
 function normalizeFlagTiers(tiers = {}) {
   const normalized = {};
   FLAG_TIER_ORDER.forEach((tier) => {
@@ -195,6 +201,7 @@ function createHgoIdentityResolver({
       nameMode = "scenario",
       allowSuggestedAliases = true,
       preferredFlagTier = "small",
+      preferredVariantKey = "",
     } = {}
   ) => {
     const tag = normalizeHgoTag(
@@ -219,6 +226,10 @@ function createHgoIdentityResolver({
     const flagEntry = flagEntries[match.targetTag] || null;
     const flag = normalizeFlag(match.targetTag, flagEntry || {});
     const preferredBaseFlag = pickFlagTier(flag.base, preferredFlagTier);
+    const preferredVariant = pickFlagVariant(flag.variants, preferredVariantKey);
+    const preferredVariantFlag = preferredVariant
+      ? pickFlagTier(preferredVariant.tiers, preferredFlagTier)
+      : null;
     const paletteEntry = paletteEntries[match.targetTag] || null;
     const displayName = resolveBestDisplayName({
       scenarioDisplayName,
@@ -255,6 +266,9 @@ function createHgoIdentityResolver({
       flag: {
         ...flag,
         preferredBaseFlag,
+        preferredVariantKey: preferredVariant ? preferredVariant.key : "",
+        preferredVariant,
+        preferredVariantFlag,
       },
       paletteColor: normalizePaletteColor(paletteEntry || {}),
       alias: match.alias,

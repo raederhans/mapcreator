@@ -35,6 +35,16 @@ function createPaletteLibraryPanelController({
     { key: "countries", label: () => t("Countries", "ui"), defaultOpen: false },
     { key: "extra", label: () => t("Extra", "ui"), defaultOpen: false },
   ];
+  const PALETTE_LIBRARY_REGION_LABELS = {
+    europe: () => t("Europe", "ui"),
+    asia: () => t("Asia", "ui"),
+    middle_east: () => t("Middle East", "ui"),
+    africa: () => t("Africa", "ui"),
+    north_america: () => t("North America", "ui"),
+    south_america: () => t("South America", "ui"),
+    oceania: () => t("Oceania", "ui"),
+    antarctica: () => t("Antarctica", "ui"),
+  };
   const PALETTE_LIBRARY_HEIGHT = {
     base: 240,
     cap: 480,
@@ -93,6 +103,7 @@ function createPaletteLibraryPanelController({
       countries: [],
       extra: [],
     };
+    const regionGroups = new Map();
     entries.forEach((entry) => {
       if (Number.isFinite(entry.quickIndex)) {
         groups.essentials.push(entry);
@@ -106,12 +117,32 @@ function createPaletteLibraryPanelController({
         groups.countries.push(entry);
         return;
       }
+      const regionKey = String(entry.paletteRegionKey || "").trim();
+      if (regionKey) {
+        const existing = regionGroups.get(regionKey) || {
+          key: `region:${regionKey}`,
+          label: PALETTE_LIBRARY_REGION_LABELS[regionKey] || (() => entry.paletteRegionLabel || regionKey),
+          defaultOpen: false,
+          entries: [],
+          order: Number.isFinite(entry.paletteRegionOrder) ? entry.paletteRegionOrder : 999,
+          fallbackLabel: entry.paletteRegionLabel || regionKey,
+        };
+        existing.entries.push(entry);
+        regionGroups.set(regionKey, existing);
+        return;
+      }
       groups.extra.push(entry);
     });
-    return PALETTE_LIBRARY_GROUPS.map((group) => ({
+    const baseGroups = PALETTE_LIBRARY_GROUPS.map((group) => ({
       ...group,
       entries: groups[group.key] || [],
-    })).filter((group) => group.entries.length > 0);
+    })).filter((group) => group.entries.length > 0 && group.key !== "extra");
+    const groupedRegions = Array.from(regionGroups.values())
+      .sort((a, b) => a.order - b.order || a.fallbackLabel.localeCompare(b.fallbackLabel));
+    const extraGroup = groups.extra.length
+      ? [{ ...PALETTE_LIBRARY_GROUPS.find((group) => group.key === "extra"), entries: groups.extra }]
+      : [];
+    return [...baseGroups, ...groupedRegions, ...extraGroup];
   };
 
   function formatPaletteReason(entry) {
@@ -147,7 +178,70 @@ function createPaletteLibraryPanelController({
     }
   };
 
+  const createPaletteVariantEntry = (entry, variant) => ({
+    ...entry,
+    key: `${entry.key}:${variant.key}`,
+    color: variant.color,
+    displayColor: variant.color,
+    sourceLabel: variant.label,
+    colorVariantKey: variant.key,
+    colorVariantSource: variant.source,
+  });
+
+  const createPaletteLibraryVariantList = (entry) => {
+    const variants = Array.isArray(entry.colorVariants) ? entry.colorVariants : [];
+    if (variants.length <= 1) return null;
+
+    const details = document.createElement("details");
+    details.className = "palette-library-variant-details";
+
+    const summary = document.createElement("summary");
+    summary.textContent = runtimeState.currentLanguage === "zh"
+      ? `${variants.length} 个颜色变体`
+      : `${variants.length} color variants`;
+    details.appendChild(summary);
+
+    const list = document.createElement("div");
+    list.className = "palette-library-variant-list";
+    variants.forEach((variant) => {
+      const variantEntry = createPaletteVariantEntry(entry, variant);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "palette-library-variant-btn";
+      button.dataset.color = variant.color;
+      button.dataset.paletteRowKey = variantEntry.key;
+      button.tabIndex = -1;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        selectPaletteLibraryEntry(variantEntry);
+      });
+      button.addEventListener("dblclick", (event) => {
+        event.stopPropagation();
+        applyPaletteLibraryEntry(variantEntry);
+      });
+
+      const swatch = document.createElement("span");
+      swatch.className = "palette-library-variant-swatch";
+      swatch.style.backgroundColor = variant.color;
+
+      const label = document.createElement("span");
+      label.className = "palette-library-variant-label";
+      label.textContent = variant.source
+        ? `${t(variant.label, "ui")} · ${variant.source}`
+        : t(variant.label, "ui");
+
+      button.appendChild(swatch);
+      button.appendChild(label);
+      list.appendChild(button);
+    });
+    details.appendChild(list);
+    return details;
+  };
+
   const createPaletteLibraryRow = (entry) => {
+    const shell = document.createElement("div");
+    shell.className = "palette-library-row-shell";
+
     const row = document.createElement("button");
     row.type = "button";
     row.className = "palette-library-row";
@@ -180,11 +274,13 @@ function createPaletteLibraryPanelController({
 
     const subtitle = document.createElement("span");
     subtitle.className = "palette-library-subtitle";
-    const isoTag = entry.mappedIso2 || entry.iso2 || "--";
+    const isoTag = entry.mappedIso2 || entry.iso2 || entry.paletteRegionLabel || "--";
     const sourceTag = entry.sourceLabel || entry.sourceTag || "Palette";
     subtitle.textContent = `${isoTag} · ${sourceTag}`;
     row.title = [
       entry.localizedName || entry.label,
+      entry.localizedNameEn,
+      entry.localizedNameZh,
       entry.sourceTag,
       entry.countryFileLabel,
       entry.mappedIso2
@@ -196,16 +292,23 @@ function createPaletteLibraryPanelController({
     meta.appendChild(subtitle);
     row.appendChild(swatch);
     row.appendChild(meta);
-    return row;
+    shell.appendChild(row);
+    const variantList = createPaletteLibraryVariantList(entry);
+    if (variantList) {
+      shell.appendChild(variantList);
+    }
+    return shell;
   };
 
   function isPaletteLibraryRowVisible(row) {
     const section = row?.closest?.(".palette-library-section");
+    const variantDetails = row?.closest?.(".palette-library-variant-details");
+    if (variantDetails && !variantDetails.open) return false;
     return String(section?.tagName || "").toUpperCase() !== "DETAILS" || section.open;
   }
 
   function getPaletteLibraryRows() {
-    return Array.from(paletteLibraryList?.querySelectorAll(".palette-library-row") || [])
+    return Array.from(paletteLibraryList?.querySelectorAll(".palette-library-row, .palette-library-variant-btn") || [])
       .filter(isPaletteLibraryRowVisible);
   }
 
@@ -217,6 +320,7 @@ function createPaletteLibraryPanelController({
       || rows[0];
     rows.forEach((row) => {
       row.tabIndex = row === selectedRow ? 0 : -1;
+      row.classList.toggle("is-selected", row === selectedRow);
     });
   }
 
@@ -362,6 +466,8 @@ function createPaletteLibraryPanelController({
       return [
         entry.label,
         entry.localizedName,
+        entry.localizedNameEn,
+        entry.localizedNameZh,
         entry.countryFileLabel,
         entry.iso2,
         entry.sourceTag,

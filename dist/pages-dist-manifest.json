@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 263513
+      "size_bytes": 272841
     },
     {
       "path": "app/data/CATALOG.json",
@@ -29658,7 +29658,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8650586
+      "size_bytes": 8726910
     },
     {
       "path": "app/data/manifest.json",
@@ -29670,7 +29670,7 @@
     },
     {
       "path": "app/data/palette-maps/hgo.manual.json",
-      "size_bytes": 251
+      "size_bytes": 1615
     },
     {
       "path": "app/data/palette-maps/hgo.map.json",
@@ -29726,7 +29726,7 @@
     },
     {
       "path": "app/data/palettes/hgo.palette.json",
-      "size_bytes": 636584
+      "size_bytes": 852684
     },
     {
       "path": "app/data/palettes/hoi4_vanilla.palette.json",
@@ -33346,7 +33346,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/countries.json",
-      "size_bytes": 198694
+      "size_bytes": 200274
     },
     {
       "path": "app/data/scenarios/tno_1962/detail_chunks.manifest.json",
@@ -33422,11 +33422,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/scenario_manual_overrides.json",
-      "size_bytes": 18251
+      "size_bytes": 20047
     },
     {
       "path": "app/data/scenarios/tno_1962/scenario_mutations.json",
-      "size_bytes": 25805
+      "size_bytes": 27375
     },
     {
       "path": "app/data/scenarios/tno_1962/special_regions.geojson",
@@ -33438,19 +33438,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json",
-      "size_bytes": 6206436
+      "size_bytes": 6208016
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378914
+      "size_bytes": 1378917
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
-      "size_bytes": 6206436
+      "size_bytes": 6208016
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378914
+      "size_bytes": 1378917
     },
     {
       "path": "app/data/scenarios/tno_1962/water_refinement_source_reviews.json",
@@ -36370,7 +36370,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 43946
+      "size_bytes": 44308
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -36378,7 +36378,7 @@
     },
     {
       "path": "app/js/core/hgo_identity_resolver.js",
-      "size_bytes": 10087
+      "size_bytes": 10766
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36402,7 +36402,7 @@
     },
     {
       "path": "app/js/core/legend_manager.js",
-      "size_bytes": 1606
+      "size_bytes": 15308
     },
     {
       "path": "app/js/core/load_status_display.js",
@@ -36434,7 +36434,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 950124
+      "size_bytes": 951360
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36442,7 +36442,7 @@
     },
     {
       "path": "app/js/core/palette_manager.js",
-      "size_bytes": 12228
+      "size_bytes": 14849
     },
     {
       "path": "app/js/core/palette_runtime_bridge.js",
@@ -36758,7 +36758,7 @@
     },
     {
       "path": "app/js/core/state/color_state.js",
-      "size_bytes": 12981
+      "size_bytes": 13146
     },
     {
       "path": "app/js/core/state/config.js",
@@ -36798,7 +36798,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 27198
+      "size_bytes": 27228
     },
     {
       "path": "app/js/core/state.js",
@@ -36882,7 +36882,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 82452
+      "size_bytes": 83797
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -36894,11 +36894,11 @@
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 44324
+      "size_bytes": 47813
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 47478
+      "size_bytes": 52947
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -36926,7 +36926,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 264209
+      "size_bytes": 266359
     },
     {
       "path": "app/js/ui/toast.js",
@@ -36982,7 +36982,7 @@
     },
     {
       "path": "app/js/ui/toolbar/palette_library_panel.js",
-      "size_bytes": 19684
+      "size_bytes": 24059
     },
     {
       "path": "app/js/ui/toolbar/scenario_guide_popover.js",
@@ -37206,7 +37206,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1051388
+      "size_bytes": 1051390
     },
     {
       "path": "styles.css",
@@ -37223,5 +37223,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1087342942
+  "total_bytes": 1087689795
 }

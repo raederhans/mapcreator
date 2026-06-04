@@ -1,4 +1,6 @@
 import { setScenarioDiagnosticsState } from "../../core/state.js";
+import { markDirty } from "../../core/dirty_state.js";
+import { markLegacyColorStateDirty } from "../../core/sovereignty_manager.js";
 import {
   createSpecialZonePatternPreviewStyle,
 } from "../../core/special_zone_layers.js";
@@ -49,6 +51,8 @@ export function createProjectSupportDiagnosticsController({
     backendCloudStatus,
     backendAccountToggleBtn,
     backendAccountPopover,
+    backendAccountBackdrop,
+    backendAccountCloseBtn,
     backendCloudUsername,
     backendCloudPassword,
     backendCloudSaveTitle,
@@ -102,7 +106,14 @@ export function createProjectSupportDiagnosticsController({
   const setBackendAccountPopoverOpen = (isOpen) => {
     if (!backendAccountPopover || !backendAccountToggleBtn) return;
     backendAccountPopover.classList.toggle("hidden", !isOpen);
+    backendAccountBackdrop?.classList.toggle("hidden", !isOpen);
+    document.body?.classList.toggle("project-account-dialog-open", !!isOpen);
     backendAccountToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    if (isOpen) {
+      window.requestAnimationFrame?.(() => backendCloudUsername?.focus?.());
+    } else {
+      backendAccountToggleBtn.focus?.();
+    }
   };
 
   const openBackendAccountPopover = () => setBackendAccountPopoverOpen(true);
@@ -442,6 +453,99 @@ export function createProjectSupportDiagnosticsController({
     });
     legendList.appendChild(section);
     return true;
+  };
+
+  const createLegendGeneratorControls = () => {
+    const config = legendManager.getConfig(state);
+    const shell = document.createElement("div");
+    shell.className = "legend-generator-card";
+
+    const modeLabel = document.createElement("label");
+    modeLabel.className = "legend-generator-field";
+    const modeText = document.createElement("span");
+    modeText.textContent = t("生成模式", "ui");
+    const modeSelect = document.createElement("select");
+    modeSelect.className = "legend-generator-select";
+    [
+      ["weighted-random", t("加权随机", "ui")],
+      ["direct-area", t("按实控面积", "ui")],
+      ["realm-area", t("按宗主面积", "ui")],
+      ["continent-area", t("大洲聚焦", "ui")],
+    ].forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === config.mode;
+      modeSelect.appendChild(option);
+    });
+    modeLabel.append(modeText, modeSelect);
+
+    const continentLabel = document.createElement("label");
+    continentLabel.className = "legend-generator-field";
+    const continentText = document.createElement("span");
+    continentText.textContent = t("大洲", "ui");
+    const continentSelect = document.createElement("select");
+    continentSelect.className = "legend-generator-select";
+    legendManager.getContinentOptions().forEach((entry) => {
+      const option = document.createElement("option");
+      option.value = entry.id;
+      option.textContent = t(entry.label, "ui");
+      option.selected = entry.id === config.continent;
+      continentSelect.appendChild(option);
+    });
+    continentLabel.append(continentText, continentSelect);
+
+    const modernOrderLabel = document.createElement("label");
+    modernOrderLabel.className = "legend-generator-check";
+    const modernOrderInput = document.createElement("input");
+    modernOrderInput.type = "checkbox";
+    modernOrderInput.checked = !!config.useModernMajorOrder;
+    const modernOrderText = document.createElement("span");
+    modernOrderText.textContent = t("面积模式优先现代大国排序", "ui");
+    modernOrderLabel.append(modernOrderInput, modernOrderText);
+
+    const actionRow = document.createElement("div");
+    actionRow.className = "legend-generator-actions";
+    const applyButton = document.createElement("button");
+    applyButton.type = "button";
+    applyButton.className = "legend-generator-apply";
+    applyButton.textContent = t("生成图例", "ui");
+    applyButton.addEventListener("click", () => {
+      const generation = legendManager.generate(state, {
+        mode: modeSelect.value,
+        continent: continentSelect.value,
+        useModernMajorOrder: modernOrderInput.checked,
+      });
+      const ownerCodes = legendManager.applyGeneratedLegend(state, generation);
+      markLegacyColorStateDirty();
+      markDirty("legend-generator");
+      if (ownerCodes.length && typeof mapRenderer.refreshColorState === "function") {
+        mapRenderer.refreshColorState({ renderNow: true });
+      } else if (typeof mapRenderer.render === "function") {
+        mapRenderer.render();
+      }
+      lastLegendKey = null;
+      refreshLegendEditor();
+    });
+    actionRow.appendChild(applyButton);
+
+    const syncVisibility = () => {
+      const mode = modeSelect.value;
+      continentLabel.hidden = mode !== "continent-area";
+      modernOrderLabel.hidden = mode === "weighted-random";
+      legendManager.updateConfig(state, {
+        mode,
+        continent: continentSelect.value,
+        useModernMajorOrder: modernOrderInput.checked,
+      });
+    };
+    modeSelect.addEventListener("change", syncVisibility);
+    continentSelect.addEventListener("change", syncVisibility);
+    modernOrderInput.addEventListener("change", syncVisibility);
+    syncVisibility();
+
+    shell.append(modeLabel, continentLabel, modernOrderLabel, actionRow);
+    return shell;
   };
 
   const fetchScenarioDiagnosticsReport = async (scenarioId, { preview = false } = {}) => {
@@ -892,16 +996,17 @@ export function createProjectSupportDiagnosticsController({
     const colors = legendManager.getUniqueColors(state);
     const specialZoneLegendLayers = getVisibleSpecialZoneLegendLayers();
     const specialZoneLegendKey = legendManager.getSpecialZoneSignature(state);
-    const key = `${colors.join("|")}::${specialZoneLegendKey}`;
+    const key = `${colors.join("|")}::${specialZoneLegendKey}::${JSON.stringify(legendManager.getConfig(state))}`;
     if (key === lastLegendKey && legendList.dataset.ready === "true") return;
     lastLegendKey = key;
     legendList.dataset.ready = "true";
     legendList.innerHTML = "";
+    legendList.appendChild(createLegendGeneratorControls());
 
     if (!colors.length && !specialZoneLegendKey) {
       const empty = document.createElement("div");
       empty.className = "legend-empty-state";
-      empty.textContent = t("Paint the map first, then rename each color entry here. Empty names clear the label, and the current legend list is kept inside this working session.", "ui");
+      empty.textContent = t("先生成或填充地图颜色，再在这里修改图例名称。", "ui");
       legendList.appendChild(empty);
       return;
     }
@@ -918,10 +1023,11 @@ export function createProjectSupportDiagnosticsController({
       input.type = "text";
       input.className = "legend-input";
       input.placeholder = `Category ${index + 1}`;
-      input.value = legendManager.getLabel(color);
+      input.value = legendManager.getLabel(color, state);
       input.addEventListener("input", (event) => {
-        legendManager.setLabel(color, event.target.value);
-        mapRenderer.renderLegend(colors, legendManager.getLabels());
+        legendManager.setLabel(color, event.target.value, state);
+        markDirty("legend-label");
+        mapRenderer.renderLegend(colors, legendManager.getLabels(state));
       });
 
       row.appendChild(swatch);
@@ -1029,6 +1135,25 @@ export function createProjectSupportDiagnosticsController({
         setBackendAccountPopoverOpen(!isOpen);
       });
       backendAccountToggleBtn.dataset.bound = "true";
+    }
+
+    if (backendAccountBackdrop && !backendAccountBackdrop.dataset.bound) {
+      backendAccountBackdrop.addEventListener("click", () => setBackendAccountPopoverOpen(false));
+      backendAccountBackdrop.dataset.bound = "true";
+    }
+
+    if (backendAccountCloseBtn && !backendAccountCloseBtn.dataset.bound) {
+      backendAccountCloseBtn.addEventListener("click", () => setBackendAccountPopoverOpen(false));
+      backendAccountCloseBtn.dataset.bound = "true";
+    }
+
+    if (backendAccountPopover && !backendAccountPopover.dataset.escapeBound) {
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !backendAccountPopover.classList.contains("hidden")) {
+          setBackendAccountPopoverOpen(false);
+        }
+      });
+      backendAccountPopover.dataset.escapeBound = "true";
     }
 
     if (debugModeSelect && !debugModeSelect.dataset.bound) {

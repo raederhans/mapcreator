@@ -334,6 +334,7 @@ test("local project zip load reports missing editable project", async () => {
 test("community load source opens account popover and refreshes community saves", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
   const backendCloudStatus = createStatusNode();
   const uploadProjectBtn = createButtonNode();
   const projectFileInput = createButtonNode();
@@ -349,6 +350,7 @@ test("community load source opens account popover and refreshes community saves"
     },
   };
   const backendAccountPopover = {
+    dataset: {},
     hiddenClass: true,
     classList: {
       contains: () => backendAccountPopover.hiddenClass,
@@ -360,9 +362,12 @@ test("community load source opens account popover and refreshes community saves"
   const backendCommunityList = createListNode();
 
   globalThis.document = {
+    body: { classList: { toggle: () => {} } },
     createElement: createElementNode,
+    addEventListener: () => {},
     getElementById: () => null,
   };
+  globalThis.window = { requestAnimationFrame: (callback) => callback() };
   globalThis.fetch = async (url) => ({
     ok: true,
     json: async () => (String(url).endsWith("/community/saves") ? { saves: [] } : {}),
@@ -389,6 +394,7 @@ test("community load source opens account popover and refreshes community saves"
   } finally {
     globalThis.document = previousDocument;
     globalThis.fetch = previousFetch;
+    globalThis.window = previousWindow;
   }
 });
 

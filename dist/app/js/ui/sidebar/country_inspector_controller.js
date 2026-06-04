@@ -68,15 +68,20 @@ export function createCountryInspectorController({
     runtimeState.hgoIdentity.enabled = runtimeState.hgoIdentity.enabled === true;
     runtimeState.hgoIdentity.nameMode = runtimeState.hgoIdentity.nameMode === "hgo" ? "hgo" : "scenario";
     runtimeState.hgoIdentity.showSuggestedAliases = runtimeState.hgoIdentity.showSuggestedAliases !== false;
+    if (!runtimeState.hgoIdentity.variantSelections || typeof runtimeState.hgoIdentity.variantSelections !== "object") {
+      runtimeState.hgoIdentity.variantSelections = {};
+    }
     return runtimeState.hgoIdentity;
   };
 
   const getCountryHgoIdentity = (countryState) => {
     const settings = ensureHgoIdentitySettings();
     if (!settings.enabled || typeof getHgoIdentity !== "function") return null;
+    const countryCode = normalizeCountryCode(countryState?.code || countryState?.tag || "");
     return getHgoIdentity(countryState, {
       nameMode: settings.nameMode,
       allowSuggestedAliases: settings.showSuggestedAliases,
+      preferredVariantKey: settings.variantSelections[countryCode] || "",
     });
   };
 
@@ -112,9 +117,34 @@ export function createCountryInspectorController({
   };
 
   const getFlagTierUrl = (identity, preferredTier = "small", { allowPreferredFallback = true } = {}) => {
-    const tier = identity?.flag?.base?.[preferredTier]
+    const tier = identity?.flag?.preferredVariantFlag
+      || identity?.flag?.base?.[preferredTier]
       || (allowPreferredFallback ? identity?.flag?.preferredBaseFlag : null);
     return String(tier?.pngPath || tier?.png_path || "").trim();
+  };
+
+  const formatHgoVariantLabel = (value = "") => {
+    const normalized = String(value || "").trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+    if (!normalized) return "";
+    return normalized.replace(/\b[a-z]/g, (char) => char.toUpperCase());
+  };
+
+  const getHgoVariantFlagUrl = (variant, preferredTier = "medium") => {
+    const tiers = variant?.tiers || {};
+    const tier = tiers?.[preferredTier] || tiers.full || tiers.medium || tiers.small;
+    return String(tier?.pngPath || tier?.png_path || "").trim();
+  };
+
+  const updateHgoVariantPreview = (image, option) => {
+    if (!image || !option) return;
+    const flagUrl = String(option.flagUrl || "").trim();
+    image.classList.toggle("hidden", !flagUrl);
+    if (flagUrl) {
+      image.src = flagUrl;
+      image.alt = "";
+    } else {
+      image.removeAttribute("src");
+    }
   };
 
   const getRowMetaText = (countryState, identity, { showRelationMeta = false } = {}) => {
@@ -159,9 +189,10 @@ export function createCountryInspectorController({
     const coverage = settings.enabled && typeof getHgoIdentityCoverage === "function"
       ? getHgoIdentityCoverage(countryStates, { allowSuggestedAliases: settings.showSuggestedAliases })
       : null;
-    const coverageText = coverage
-      ? `${coverage.flags}/${coverage.total} flags matched`
-      : (!settings.enabled ? "HGO disabled" : (status?.status === "loading" ? "HGO loading" : "HGO unavailable"));
+    const statusText = !settings.enabled
+      ? t("HGO disabled", "ui")
+      : (status?.status === "loading" ? t("HGO loading", "ui") : t("HGO unavailable", "ui"));
+    const coverageText = coverage ? "" : statusText;
 
     controls.replaceChildren();
 
@@ -179,7 +210,7 @@ export function createCountryInspectorController({
       onHgoIdentitySettingsChange?.();
     });
     const enabledText = document.createElement("span");
-    enabledText.textContent = "HGO identity";
+    enabledText.textContent = t("HGO identity", "ui");
     enabledLabel.appendChild(enabledInput);
     enabledLabel.appendChild(enabledText);
 
@@ -188,12 +219,14 @@ export function createCountryInspectorController({
     summary.textContent = coverageText;
 
     topRow.appendChild(enabledLabel);
-    topRow.appendChild(summary);
+    if (coverageText) {
+      topRow.appendChild(summary);
+    }
     if (status?.status === "error") {
       const retryButton = document.createElement("button");
       retryButton.type = "button";
       retryButton.className = "hgo-identity-retry-btn";
-      retryButton.textContent = "Retry";
+      retryButton.textContent = t("Retry", "ui");
       retryButton.addEventListener("click", () => {
         onHgoIdentityRetry?.();
       });
@@ -204,8 +237,8 @@ export function createCountryInspectorController({
     const modeRow = document.createElement("div");
     modeRow.className = "hgo-identity-mode-row";
     [
-      ["scenario", "Scenario names"],
-      ["hgo", "HGO names"],
+      ["scenario", t("Scenario names", "ui")],
+      ["hgo", t("HGO names", "ui")],
     ].forEach(([mode, label]) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -234,7 +267,7 @@ export function createCountryInspectorController({
       onHgoIdentitySettingsChange?.();
     });
     const suggestedText = document.createElement("span");
-    suggestedText.textContent = "Show suggested aliases";
+    suggestedText.textContent = t("Show suggested aliases", "ui");
     suggestedLabel.appendChild(suggestedInput);
     suggestedLabel.appendChild(suggestedText);
     controls.appendChild(suggestedLabel);
@@ -395,7 +428,7 @@ export function createCountryInspectorController({
 
     const title = document.createElement("div");
     title.className = "country-select-title";
-    title.textContent = `${getCountryInspectorDisplayName(countryState, identity)} (${countryState.code})`;
+    title.textContent = getCountryInspectorDisplayName(countryState, identity);
 
     const meta = document.createElement("div");
     meta.className = "country-select-meta";
@@ -449,6 +482,7 @@ export function createCountryInspectorController({
     identityLine.className = "country-select-identity-line";
     identityLine.appendChild(flag);
     identityLine.appendChild(title);
+    identityLine.classList.toggle("has-hgo-flag", !flag.classList.contains("hidden"));
     main.appendChild(identityLine);
     main.appendChild(meta);
     row.appendChild(main);
@@ -512,9 +546,8 @@ export function createCountryInspectorController({
           childList.appendChild(sectionLabel);
         }
         (Array.isArray(section?.states) ? section.states : []).forEach((childState) => {
-          const childShowsRelationMeta = !childState?.scenarioSubject;
           renderCountrySelectRow(childList, childState, {
-            showRelationMeta: childShowsRelationMeta,
+            showRelationMeta: false,
           });
         });
       });
@@ -729,19 +762,62 @@ export function createCountryInspectorController({
     }
 
     const variants = Array.isArray(identity.flag?.variants) ? identity.flag.variants : [];
-    const variantList = document.createElement("div");
-    variantList.className = "hgo-identity-variant-list";
-    if (identity.flag?.preferredBaseFlag || Object.keys(identity.flag?.base || {}).length > 0) {
-      appendHgoBadge(variantList, "base", {
-        tone: identity.matchKind === "suggested_alias" ? "weak" : "strong",
+    const hasBaseFlag = !!(identity.flag?.preferredBaseFlag || Object.keys(identity.flag?.base || {}).length > 0);
+    if (hasBaseFlag || variants.length > 0) {
+      const countryCode = normalizeCountryCode(countryState?.code || identity.sourceTag || identity.tag || "");
+      const selectedVariantKey = identity.flag?.preferredVariantKey || "";
+      const baseFlagUrl = getFlagTierUrl({ flag: { base: identity.flag?.base, preferredBaseFlag: identity.flag?.preferredBaseFlag } }, "medium");
+      const options = [
+        ...(hasBaseFlag ? [{
+          key: "",
+          label: t("Base flag", "ui"),
+          flagUrl: baseFlagUrl,
+        }] : []),
+        ...variants.map((variant) => ({
+          key: variant.key,
+          label: formatHgoVariantLabel(variant.variantSource || variant.label || variant.key),
+          flagUrl: getHgoVariantFlagUrl(variant, "medium"),
+        })),
+      ];
+      const selectedOption = options.find((option) => option.key === selectedVariantKey) || options[0];
+      const picker = document.createElement("div");
+      picker.className = "hgo-identity-variant-picker";
+      const label = document.createElement("label");
+      label.className = "hgo-identity-variant-label";
+      label.textContent = t("Flag option", "ui");
+      const control = document.createElement("div");
+      control.className = "hgo-identity-variant-control";
+      const preview = document.createElement("img");
+      preview.className = "hgo-identity-variant-preview";
+      preview.loading = "lazy";
+      preview.decoding = "async";
+      updateHgoVariantPreview(preview, selectedOption);
+      const select = document.createElement("select");
+      select.className = "hgo-identity-variant-select";
+      options.forEach((option) => {
+        const node = document.createElement("option");
+        node.value = option.key;
+        node.textContent = option.label || option.key || t("Base flag", "ui");
+        select.appendChild(node);
       });
+      select.value = selectedOption?.key || "";
+      select.addEventListener("change", () => {
+        const nextKey = String(select.value || "").trim();
+        const nextSettings = ensureHgoIdentitySettings();
+        if (nextKey) {
+          nextSettings.variantSelections[countryCode] = nextKey;
+        } else {
+          delete nextSettings.variantSelections[countryCode];
+        }
+        updateHgoVariantPreview(preview, options.find((option) => option.key === nextKey) || options[0]);
+        onHgoIdentitySettingsChange?.();
+      });
+      control.appendChild(preview);
+      control.appendChild(select);
+      label.appendChild(control);
+      picker.appendChild(label);
+      detail.appendChild(picker);
     }
-    variants.forEach((variant) => {
-      appendHgoBadge(variantList, variant.variantSource || variant.key, {
-        tone: identity.matchKind === "suggested_alias" ? "weak" : "strong",
-      });
-    });
-    detail.appendChild(variantList);
 
     if (identity.paletteColor) {
       const palette = document.createElement("div");

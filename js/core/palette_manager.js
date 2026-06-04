@@ -65,6 +65,27 @@ function getPaletteUiColor(entry) {
   return normalizeHexColor(entry?.ui_hex || entry?.hex);
 }
 
+function buildPaletteColorVariants(entry) {
+  const candidates = [
+    { key: "map", label: "Map", color: entry?.map_hex || entry?.hex, source: entry?.map_source || "" },
+    { key: "ui", label: "UI", color: entry?.ui_hex || entry?.hex, source: entry?.ui_source || "" },
+    { key: "country_file", label: "Country file", color: entry?.country_file_hex, source: entry?.country_file_source || "" },
+  ];
+  const seenColors = new Set();
+  return candidates.reduce((variants, candidate) => {
+    const color = normalizeHexColor(candidate.color);
+    if (!color || seenColors.has(color)) return variants;
+    seenColors.add(color);
+    variants.push({
+      key: candidate.key,
+      label: candidate.label,
+      color,
+      source: String(candidate.source || "").trim(),
+    });
+    return variants;
+  }, []);
+}
+
 function getPaletteLabel(entry, tag) {
   return (
     String(entry?.localized_name || "").trim() ||
@@ -72,6 +93,33 @@ function getPaletteLabel(entry, tag) {
     String(entry?.label || "").trim() ||
     String(tag || "").trim()
   );
+}
+
+function getGeoLocaleText(name, language) {
+  const key = String(name || "").trim();
+  if (!key) return "";
+  const entry = runtimeState.locales?.geo?.[key];
+  if (!entry || typeof entry !== "object") return "";
+  const primary = language === "zh" ? entry.zh : entry.en;
+  const secondary = language === "zh" ? entry.en : entry.zh;
+  return String(primary || secondary || "").trim();
+}
+
+function resolvePaletteDisplayName(entry, tag) {
+  const englishName = getPaletteLabel(entry, tag);
+  const fileLabel = getPaletteFileLabel(entry, tag);
+  const currentLanguage = runtimeState.currentLanguage === "zh" ? "zh" : "en";
+  const localizedNameZh = getGeoLocaleText(englishName, "zh")
+    || getGeoLocaleText(fileLabel, "zh");
+  const localizedNameEn = getGeoLocaleText(englishName, "en") || englishName;
+  const localizedName = currentLanguage === "zh"
+    ? (localizedNameZh || localizedNameEn || englishName)
+    : (localizedNameEn || englishName);
+  return {
+    localizedName,
+    localizedNameEn: localizedNameEn || englishName,
+    localizedNameZh,
+  };
 }
 
 function getPaletteMetaById(paletteId) {
@@ -148,11 +196,19 @@ function buildPaletteLibraryEntries() {
     const mappedEntry = mapped[tag];
     const unmappedEntry = unmapped[tag];
     const mappedIso2 = getMappedIso2(mappedEntry);
-    const localizedName = getPaletteLabel(entry, tag);
     const countryFileLabel = getPaletteFileLabel(entry, tag);
+    const {
+      localizedName,
+      localizedNameEn,
+      localizedNameZh,
+    } = resolvePaletteDisplayName(entry, tag);
     const displayColor = getPaletteDisplayColor(entry);
     const uiColor = getPaletteUiColor(entry);
     const mappingReason = mappedIso2 ? "" : getUnmappedReason(unmappedEntry);
+    const paletteRegion = entry?.palette_region && typeof entry.palette_region === "object"
+      ? entry.palette_region
+      : null;
+    const paletteRegionOrder = Number(paletteRegion?.order);
     return {
       key: tag,
       sourceTag: tag,
@@ -163,6 +219,8 @@ function buildPaletteLibraryEntries() {
       uiColor,
       label: localizedName,
       localizedName,
+      localizedNameEn,
+      localizedNameZh,
       countryFileLabel,
       sourceLabel: countryFileLabel,
       mappingStatus: mappedIso2 ? "mapped" : "unmapped",
@@ -176,6 +234,11 @@ function buildPaletteLibraryEntries() {
       quickIndex: quickOrder.has(tag) ? quickOrder.get(tag) : Number.POSITIVE_INFINITY,
       matchKind: mappedEntry && typeof mappedEntry === "object" ? String(mappedEntry.match_kind || "") : "",
       decisionSource: mappedEntry && typeof mappedEntry === "object" ? String(mappedEntry.decision_source || "") : "",
+      paletteRegionKey: String(paletteRegion?.key || "").trim(),
+      paletteRegionLabel: String(paletteRegion?.label || "").trim(),
+      paletteRegionOrder: Number.isFinite(paletteRegionOrder) ? paletteRegionOrder : 999,
+      paletteRegionSource: String(paletteRegion?.source || "").trim(),
+      colorVariants: buildPaletteColorVariants(entry),
     };
   });
 
@@ -217,7 +280,7 @@ function buildPaletteQuickSwatches(maxCount = 24) {
       color,
       sourceTag: tag,
       iso2: mappedIso2,
-      label: getPaletteLabel(entries[tag], tag),
+      label: resolvePaletteDisplayName(entries[tag], tag).localizedName,
     });
   });
 

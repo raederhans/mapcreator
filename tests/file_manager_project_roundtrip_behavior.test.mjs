@@ -138,6 +138,8 @@ test("project payload builder returns export schema without triggering download"
     activeScenarioId: "tno_1962",
     activeScenarioManifest: { version: 3 },
     scenarioBaselineHash: "baseline-1",
+    legendLabels: { "#111111": "大日耳曼国" },
+    legendConfig: { mode: "realm-area", continent: "asia", useModernMajorOrder: true },
     transportWorkbenchUi: {},
     exportWorkbenchUi: {},
   });
@@ -152,6 +154,13 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(payload.exportHandoff.files[0].path, "map_project.json");
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "byteLength"), false);
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "checksum"), false);
+  assert.equal(payload.legendLabels["#111111"], "大日耳曼国");
+  assert.deepEqual(payload.legendConfig, {
+    mode: "realm-area",
+    continent: "asia",
+    useModernMajorOrder: true,
+    maxItems: 15,
+  });
 });
 
 test("project payload builder keeps open ocean visible with interaction off by default", () => {
