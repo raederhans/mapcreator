@@ -31,6 +31,7 @@ import {
   applyPrimarySpatialSnapshot,
   applySecondarySpatialSnapshot,
   clearPrimaryIndexMaps,
+  markSecondarySpatialBuildPending,
   resetPrimarySpatialState,
   resetSecondarySpatialState,
 } from "../js/core/renderer/spatial_index_runtime_state_ops.js";
@@ -86,19 +87,21 @@ test("renderer supporting factories keep cache shapes aligned", () => {
   assert.equal(borderCache.cachedParentBordersByCountry.size, 0);
   assert.equal(spatialIndex.landIndex.size, 0);
   assert.equal(spatialIndex.waterSpatialItems.length, 0);
+  assert.equal(spatialIndex.secondarySpatialGeneration, 0);
+  assert.equal(spatialIndex.secondarySpatialBuildPending, false);
   assert.equal(spatialIndex.specialSpatialGrid.size, 0);
 });
 
-test("open ocean defaults keep selection available while paint stays explicit", () => {
+test("open ocean defaults keep visibility separate from interaction", () => {
   const state = createDefaultUiState();
 
   assert.equal(state.showWaterRegions, true);
   assert.equal(state.showOpenOceanRegions, true);
-  assert.equal(state.allowOpenOceanSelect, true);
+  assert.equal(state.allowOpenOceanSelect, false);
   assert.equal(state.allowOpenOceanPaint, false);
   assert.deepEqual(normalizeOpenOceanLayerVisibility({}), {
     showOpenOceanRegions: true,
-    allowOpenOceanSelect: true,
+    allowOpenOceanSelect: false,
     allowOpenOceanPaint: false,
   });
   assert.deepEqual(normalizeOpenOceanLayerVisibility({ showOpenOceanRegions: false }), {
@@ -108,8 +111,8 @@ test("open ocean defaults keep selection available while paint stays explicit", 
   });
   assert.deepEqual(normalizeOpenOceanLayerVisibility({ showOpenOceanRegions: true }), {
     showOpenOceanRegions: true,
-    allowOpenOceanSelect: true,
-    allowOpenOceanPaint: true,
+    allowOpenOceanSelect: false,
+    allowOpenOceanPaint: false,
   });
 
   const restoredTarget = {};
@@ -117,11 +120,11 @@ test("open ocean defaults keep selection available while paint stays explicit", 
     showWaterRegions: true,
   });
   assert.deepEqual(restored, {
-    allowOpenOceanSelect: true,
+    allowOpenOceanSelect: false,
     allowOpenOceanPaint: false,
   });
   assert.equal(restoredTarget.showOpenOceanRegions, true);
-  assert.equal(restoredTarget.allowOpenOceanSelect, true);
+  assert.equal(restoredTarget.allowOpenOceanSelect, false);
   assert.equal(restoredTarget.allowOpenOceanPaint, false);
 });
 
@@ -220,6 +223,7 @@ test("spatial state ops preserve snapshot shapes across reset and apply", () => 
   assert.equal(state.spatialItems.length, 0);
   assert.equal(state.waterSpatialItems.length, 0);
   assert.equal(state.specialSpatialItems.length, 0);
+  assert.equal(state.secondarySpatialBuildPending, false);
 
   const primaryItems = [{ id: "next" }];
   const primaryGrid = new Map([["grid", [1]]]);
@@ -267,6 +271,55 @@ test("spatial state ops preserve snapshot shapes across reset and apply", () => 
   assert.deepEqual(state.specialSpatialGridMeta, { cols: 3 });
   assert.equal(state.specialSpatialItemsById, specialItemsById);
   assert.equal(state.specialSpatialIndex, null);
+  assert.equal(state.secondarySpatialBuildPending, false);
+  assert.equal(state.secondarySpatialLastReason, "secondary-spatial-apply");
+});
+
+test("secondary spatial pending state can preserve the last valid snapshot", () => {
+  const state = createDefaultSpatialIndexState();
+  const waterItems = [{ id: "water-current" }];
+  const specialItems = [{ id: "special-current" }];
+  applySecondarySpatialSnapshot(state, {
+    water: {
+      items: waterItems,
+      grid: new Map([["water", [waterItems[0]]]]),
+      gridMeta: { cols: 1 },
+      itemsById: new Map([["water-current", waterItems[0]]]),
+    },
+    special: {
+      items: specialItems,
+      grid: new Map([["special", [specialItems[0]]]]),
+      gridMeta: { cols: 1 },
+      itemsById: new Map([["special-current", specialItems[0]]]),
+    },
+    reason: "seed",
+  });
+
+  markSecondarySpatialBuildPending(state, {
+    reason: "water-hit-demand",
+    preserveCurrent: true,
+  });
+
+  assert.equal(state.secondarySpatialBuildPending, true);
+  assert.equal(state.secondarySpatialPreservedDuringBuild, true);
+  assert.equal(state.secondarySpatialLastReason, "water-hit-demand");
+  assert.equal(state.waterSpatialItems, waterItems);
+  assert.equal(state.specialSpatialItems, specialItems);
+
+  applySecondarySpatialSnapshot(state, {
+    water: {
+      items: [{ id: "water-next" }],
+    },
+    special: {
+      items: [{ id: "special-next" }],
+    },
+    reason: "rebuilt",
+  });
+
+  assert.equal(state.secondarySpatialBuildPending, false);
+  assert.equal(state.secondarySpatialPreservedDuringBuild, false);
+  assert.equal(state.secondarySpatialLastReason, "rebuilt");
+  assert.deepEqual(state.waterSpatialItems.map((item) => item.id), ["water-next"]);
 });
 
 test("spatial derivation payloads stay pure and explicit", () => {

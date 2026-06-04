@@ -4,6 +4,10 @@
 
 export function createDefaultSecondarySpatialIndexState() {
   return {
+    secondarySpatialGeneration: 0,
+    secondarySpatialBuildPending: false,
+    secondarySpatialLastReason: "",
+    secondarySpatialPreservedDuringBuild: false,
     waterSpatialIndex: null,
     waterSpatialItems: [],
     waterSpatialGrid: new Map(),

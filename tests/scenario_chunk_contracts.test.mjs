@@ -1095,7 +1095,21 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
 
   const checks = {
     politicalPassStartsWithBackgroundFills:
-      /function drawPoliticalPass\(k\) \{[\s\S]*?const visibleItemsResult = debugMode === "PROD" \? collectVisibleLandSpatialItemsWithStats\(\) : null;[\s\S]*?const visibleItems = visibleItemsResult \? visibleItemsResult\.items : null;[\s\S]*?drawPoliticalBackgroundFills\(\{[\s\S]*?returnSummary: true,[\s\S]*?\}\);[\s\S]*?if \(!(?:runtimeState|state)\.landData\?\.features\?\.length\) return;/.test(rendererSource),
+      /function drawPoliticalPass\(k\) \{[\s\S]*?recordPoliticalRasterWorkerSnapshot\(\);[\s\S]*?const politicalOverscanPx = getPoliticalPassViewportOverscanPx\(\);[\s\S]*?collectVisibleLandSpatialItemsWithStats\(\{ overscanPx: politicalOverscanPx \}\)[\s\S]*?const visibleItems = visibleItemsResult \? visibleItemsResult\.items : null;[\s\S]*?drawPoliticalBackgroundFills\(\{[\s\S]*?returnSummary: true,[\s\S]*?\}\);[\s\S]*?if \(!(?:runtimeState|state)\.landData\?\.features\?\.length\) return;/.test(rendererSource),
+    drawTransformedPassRecordsRenderDiagnostics:
+      /function drawTransformedPass\(passName, currentTransform, referenceTransform = null\) \{[\s\S]*?renderDiag\.transformedPasses = \{[\s\S]*?\[passName\]: \{[\s\S]*?current,[\s\S]*?reference,[\s\S]*?scaleRatio,[\s\S]*?dx,[\s\S]*?dy,[\s\S]*?layout,[\s\S]*?publishRenderDiagnostics\(\);/.test(rendererSource),
+    drawInteractionCompositeRecordsStableRenderDiagnostics:
+      (() => {
+        const body = rendererSource.match(/function drawInteractionComposite\([\s\S]*?\r?\n\}\r?\n\r?\nfunction /)?.[0] || "";
+        return body.includes("renderDiag.transformedPasses = {")
+          && body.includes("interactionComposite: {")
+          && body.includes("current,")
+          && body.includes("reference,")
+          && body.includes("scaleRatio,")
+          && body.includes("layout: null,")
+          && body.includes("dirty: false,")
+          && body.includes("publishRenderDiagnostics();");
+      })(),
     backgroundFillHelperKeepsScenarioMergeSplit:
       /function drawPoliticalBackgroundFills\(options = \{\}\) \{[\s\S]*?if \(shouldUseScenarioPoliticalBackgroundMerge\(\)\) \{[\s\S]*?return drawScenarioPoliticalBackgroundFills\(options\);[\s\S]*?\}[\s\S]*?drawAdmin0BackgroundFills\(options\);/.test(rendererSource),
     backgroundFullPassCacheBuildsAndReplays:
@@ -1342,6 +1356,8 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && !rendererSource.includes("atl_water_projection")
       && !rendererSource.includes("collectActiveAtlantropaSeaWaterFeatures")
       && !rendererSource.includes("getActiveAtlantropaSeaWaterProjectionState"),
+    macroOceanOverridesRequirePaintMode:
+      /function getWaterRegionColor\(id, feature = null\) \{[\s\S]*?const defaultStyleFeature = feature \|\| runtimeState\.waterRegionsById\?\.get\(resolvedId\);[\s\S]*?if \(isMacroOceanWaterRegion\(defaultStyleFeature\) && !isOpenOceanPaintEnabled\(\)\) \{[\s\S]*?return getWaterRegionDefaultStyle\(defaultStyleFeature\)\.fill;[\s\S]*?\}[\s\S]*?getSafeCanvasColor\(runtimeState\.waterRegionOverrides\?\.\[resolvedId\], null\)/.test(rendererSource),
     politicalPromotionTreatsAtlantropaLayerAsWaterChange:
       /const hasAtlantropaLayerChange = normalizedChangedLayerKeys\.includes\("scenario_atlantropa"\);/.test(rendererSource)
       && /const effectiveChangedLayerKeys = hasAtlantropaLayerChange[\s\S]*?"water"/.test(rendererSource)

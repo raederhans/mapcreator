@@ -104,17 +104,16 @@ export function createWaterSpecialRegionController({
 
   const getWaterSearchTerm = () => (waterSearchInput?.value || "").trim().toLowerCase();
 
-  const getLegacyOpenOceanFallbackEnabled = () =>
-    !!runtimeState.showOpenOceanRegions && !runtimeState.allowOpenOceanSelect && !runtimeState.allowOpenOceanPaint;
-
   const isOpenOceanSelectionEnabled = () =>
-    !!runtimeState.allowOpenOceanSelect || getLegacyOpenOceanFallbackEnabled();
+    !!runtimeState.allowOpenOceanSelect;
 
   const isOpenOceanPaintEnabled = () =>
-    !!runtimeState.allowOpenOceanPaint || getLegacyOpenOceanFallbackEnabled();
+    !!runtimeState.allowOpenOceanPaint;
 
   const syncOpenOceanInspectorState = () => {
-    runtimeState.showOpenOceanRegions = !!(isOpenOceanSelectionEnabled() || isOpenOceanPaintEnabled());
+    runtimeState.showOpenOceanRegions = !!runtimeState.showOpenOceanRegions
+      || isOpenOceanSelectionEnabled()
+      || isOpenOceanPaintEnabled();
   };
 
   const clearHiddenOpenOceanInteractionState = () => {

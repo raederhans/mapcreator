@@ -17,6 +17,13 @@ const TARGET_SCENARIO_LABEL = "TNO 1962";
 const TARGET_WATER_NAME = "North Sea";
 const TARGET_WATER_ID = "tno_north_sea";
 const MAX_EXACT_REFRESH_DELTA = 200;
+const IGNORED_CONSOLE_ERROR_PATTERNS = [
+  /Failed to load resource: the server responded with a status of 401 \(Unauthorized\)/,
+];
+
+function isIgnoredConsoleError(text) {
+  return IGNORED_CONSOLE_ERROR_PATTERNS.some((pattern) => pattern.test(String(text || "")));
+}
 
 function getPathForWaterCacheMode(mode) {
   return `${FAST_STARTUP_BASE_PATH}&water_cache_mode=${encodeURIComponent(mode)}`;
@@ -101,6 +108,13 @@ async function zoomMap(page, percent) {
     setZoomPercent(targetPercent);
   }, percent);
   await waitForRenderIdle(page, { timeout: 30_000 });
+}
+
+async function zoomMapWithoutWaitingForIdle(page, percent) {
+  await page.evaluate(async (targetPercent) => {
+    const { setZoomPercent } = await import("/js/core/map_renderer.js");
+    setZoomPercent(targetPercent);
+  }, percent);
 }
 
 async function selectWaterRegionByName(page, searchValue, expectedName) {
@@ -189,6 +203,11 @@ async function readWaterRuntimeSnapshot(page) {
       hoveredWaterRegionId: state.hoveredWaterRegionId ? String(state.hoveredWaterRegionId) : null,
       selectedWaterRegionId: String(state.selectedWaterRegionId || ""),
       showOpenOceanRegions: !!state.showOpenOceanRegions,
+      allowOpenOceanSelect: !!state.allowOpenOceanSelect,
+      allowOpenOceanPaint: !!state.allowOpenOceanPaint,
+      secondarySpatialBuildPending: !!state.secondarySpatialBuildPending,
+      secondarySpatialPreservedDuringBuild: !!state.secondarySpatialPreservedDuringBuild,
+      waterSpatialItems: Array.isArray(state.waterSpatialItems) ? state.waterSpatialItems.length : 0,
       blackFrameCount: Number(metrics.blackFrameCount?.count || 0),
       contextScenarioExactRefreshCount: Number(counters.contextScenarioExactRefreshCount || 0),
     };
@@ -201,7 +220,10 @@ for (const mode of WATER_CACHE_MODES) {
 
     page.on("console", (msg) => {
       if (msg.type() === "error") {
-        consoleErrors.push(msg.text());
+        const text = msg.text();
+        if (!isIgnoredConsoleError(text)) {
+          consoleErrors.push(text);
+        }
       }
     });
 
@@ -217,6 +239,10 @@ for (const mode of WATER_CACHE_MODES) {
 
     const seed = await readWaterRuntimeSnapshot(page);
     exactRefreshTimeline.push(seed.contextScenarioExactRefreshCount);
+    expect(seed.showOpenOceanRegions).toBe(true);
+    expect(seed.allowOpenOceanSelect).toBe(false);
+    expect(seed.allowOpenOceanPaint).toBe(false);
+    expect(seed.waterSpatialItems).toBeGreaterThan(0);
 
     await dragMap(page);
     await waitForStableExactRender(page);
@@ -230,6 +256,7 @@ for (const mode of WATER_CACHE_MODES) {
     await waitForStableExactRender(page);
     exactRefreshTimeline.push((await readWaterRuntimeSnapshot(page)).contextScenarioExactRefreshCount);
 
+    await zoomMapWithoutWaitingForIdle(page, 128);
     await hoverWaterFeatureOnMap(page, TARGET_WATER_ID);
     await waitForStableExactRender(page);
     const afterHover = await readWaterRuntimeSnapshot(page);
@@ -255,6 +282,9 @@ for (const mode of WATER_CACHE_MODES) {
     expect(exactRefreshDelta).toBeLessThanOrEqual(MAX_EXACT_REFRESH_DELTA);
     expect(seed.blackFrameCount).toBe(afterToggle.blackFrameCount);
     expect(afterHover.hoveredWaterRegionId).toBe(TARGET_WATER_ID);
+    expect(afterHover.allowOpenOceanSelect).toBe(false);
+    expect(afterHover.allowOpenOceanPaint).toBe(false);
+    expect(afterHover.waterSpatialItems).toBeGreaterThan(0);
     expect(afterToggle.selectedWaterRegionId).toBe(TARGET_WATER_ID);
 
     await expect.poll(() => page.evaluate(() => {

@@ -19,7 +19,10 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             re.compile(
                 r'rebuildAuxiliaryRegionIndexes\(\);'
                 + gap +
-                r'getSpatialIndexRuntimeOwner\(\)\.resetSecondarySpatialIndexState\(\);\s*'
+                r'getSpatialIndexRuntimeOwner\(\)\.resetSecondarySpatialIndexState\(\{\s*'
+                r'preserveCurrent: true,\s*'
+                r'reason:[\s\S]*?'
+                r'\}\);\s*'
                 r'getSpatialIndexRuntimeOwner\(\)\.buildSecondarySpatialIndexes\(\{\s*'
                 r'allowComputeMissingBounds: true,\s*'
                 r'\}\);',
@@ -42,7 +45,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+buildSecondarySpatialIndexes\s*\(")
-        self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();"), 3)
+        self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
         self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
         self.assertIn(
             "buildIndexChunked,\n  buildSpatialIndex,\n  buildSpatialIndexChunked,\n  configureSpatialRuntimeFacade,\n} from \"./map_renderer/facade_spatial_runtime.js\";",
@@ -86,6 +89,12 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         end = self.renderer_content.index("function rebuildRuntimeDerivedState({", start)
         sync_body = self.renderer_content[start:end]
         self.assert_secondary_spatial_rebuild_order(sync_body)
+        self.assertIn(
+            'const hasWaterChange = normalizedLayerKeys.has("water") || normalizedLayerKeys.has("scenario_atlantropa");',
+            sync_body,
+        )
+        self.assertIn("renderWaterRegionList: hasWaterChange,", sync_body)
+        self.assertIn("hasWaterChange,", sync_body)
         self.assertRegex(
             self.renderer_content,
             re.compile(
@@ -97,7 +106,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             ),
         )
 
-    def test_all_secondary_spatial_rebuild_paths_preserve_reset_before_build(self):
+    def test_all_secondary_spatial_rebuild_paths_preserve_current_snapshot_until_next_build(self):
         start = self.renderer_content.index("function scheduleSecondarySpatialIndexBuild({")
         end = self.renderer_content.index("function syncScenarioSecondaryRegionIndexes({", start)
         self.assert_secondary_spatial_rebuild_order(self.renderer_content[start:end])
@@ -112,6 +121,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             self.renderer_content[start:end],
             allow_work_between_rebuild_and_reset=True,
         )
+        self.assertEqual(self.renderer_content.count("preserveCurrent: true"), 3)
 
     def test_secondary_spatial_demand_metric_only_records_new_pending_build(self):
         self.assertRegex(

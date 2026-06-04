@@ -9,8 +9,8 @@ import {
   applyPrimarySpatialSnapshot,
   applySecondarySpatialSnapshot,
   clearPrimaryIndexMaps,
+  markSecondarySpatialBuildPending,
   resetPrimarySpatialState,
-  resetSecondarySpatialState,
 } from "./spatial_index_runtime_state_ops.js";
 import {
   createSpatialIndexPerfPayload,
@@ -86,8 +86,14 @@ export function createSpatialIndexRuntimeOwner({
     finalizeIndexBuildEffects();
   }
 
-  function resetSecondarySpatialIndexState() {
-    resetSecondarySpatialState(state);
+  function resetSecondarySpatialIndexState({
+    preserveCurrent = false,
+    reason = "secondary-spatial-reset",
+  } = {}) {
+    markSecondarySpatialBuildPending(state, {
+      reason,
+      preserveCurrent,
+    });
   }
 
   function rebuildRuntimePrimaryIndex({
@@ -172,6 +178,7 @@ export function createSpatialIndexRuntimeOwner({
         gridMeta: specialGridSnapshot.gridMeta,
         itemsById: specialGridSnapshot.itemsById,
       },
+      reason: "secondary-spatial-build",
     });
   }
 
@@ -183,7 +190,10 @@ export function createSpatialIndexRuntimeOwner({
   } = {}) {
     const startedAt = nowMs();
     resetPrimarySpatialState(state);
-    resetSecondarySpatialState(state);
+    markSecondarySpatialBuildPending(state, {
+      reason: "primary-spatial-rebuild",
+      preserveCurrent: true,
+    });
     if (!state.landData || !state.landData.features || !getPathSvg()) {
       recordRenderPerfMetric(
         "buildSpatialIndex",
@@ -358,7 +368,10 @@ export function createSpatialIndexRuntimeOwner({
       gridMeta: nextGridSnapshot.gridMeta,
       itemsById: nextGridSnapshot.itemsById,
     });
-    resetSecondarySpatialState(state);
+    markSecondarySpatialBuildPending(state, {
+      reason: "primary-spatial-chunked-rebuild",
+      preserveCurrent: true,
+    });
     if (includeSecondary) {
       buildSecondarySpatialIndexes({
         allowComputeMissingBounds,

@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -8,6 +10,10 @@ import topojson as tp
 from map_builder import config as cfg
 from map_builder.processors import africa_admin1
 from tools.build_runtime_political_topology import _compose_political_features
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TNO_RUNTIME_TOPOLOGY = REPO_ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.topo.json"
+TNO_COARSE_POLITICAL_CHUNK = REPO_ROOT / "data" / "scenarios" / "tno_1962" / "chunks" / "political.coarse.r0c0.json"
 
 EXPECTED_FR_RETENTION_RULES = {
     "GF": {
@@ -48,6 +54,43 @@ def _political_topology(gdf: gpd.GeoDataFrame) -> dict:
 
 
 class PoliticalTopologyGapContractTests(unittest.TestCase):
+    def test_checked_in_tno_runtime_keeps_guyana_somaliland_and_russian_arctic_geometry(self) -> None:
+        topology = json.loads(TNO_RUNTIME_TOPOLOGY.read_text(encoding="utf-8"))
+        political_geometries = topology["objects"]["political"]["geometries"]
+
+        def feature_id(geometry: dict) -> str:
+            return str((geometry.get("properties") or {}).get("id") or "")
+
+        def country_code(geometry: dict) -> str:
+            return str((geometry.get("properties") or {}).get("cntr_code") or "").upper()
+
+        by_country = {
+            code: [geometry for geometry in political_geometries if country_code(geometry) == code]
+            for code in ("GY", "SO")
+        }
+        ru_arctic_runtime = [
+            geometry for geometry in political_geometries
+            if feature_id(geometry).startswith("RU_ARCTIC_FB_")
+        ]
+
+        self.assertEqual(len(by_country["GY"]), 10)
+        self.assertEqual(len(by_country["SO"]), 18)
+        self.assertGreaterEqual(len(ru_arctic_runtime), 50)
+        self.assertTrue(all((geometry.get("arcs") or geometry.get("coordinates")) for geometry in by_country["GY"]))
+        self.assertTrue(all((geometry.get("arcs") or geometry.get("coordinates")) for geometry in by_country["SO"]))
+        self.assertTrue(all((geometry.get("arcs") or geometry.get("coordinates")) for geometry in ru_arctic_runtime))
+
+        chunk = json.loads(TNO_COARSE_POLITICAL_CHUNK.read_text(encoding="utf-8"))
+        ru_arctic_chunk = [
+            feature for feature in chunk["features"]
+            if str((feature.get("properties") or {}).get("id") or "").startswith("RU_ARCTIC_FB_")
+        ]
+        self.assertEqual(len(ru_arctic_chunk), len(ru_arctic_runtime))
+        self.assertTrue(all(
+            (feature.get("properties") or {}).get("scenario_helper_kind") == "shell_fallback"
+            for feature in ru_arctic_chunk
+        ))
+
     def test_runtime_composition_keeps_uncovered_french_overseas_components(self) -> None:
         overseas_boxes = {
             "GF": box(-54.6, 2.1, -51.6, 5.8),

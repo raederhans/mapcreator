@@ -857,6 +857,8 @@ const POLITICAL_PATH_WARMUP_QUEUE_MAX = 512;
 const POLITICAL_PATH_WARMUP_MAX_FEATURES_PER_SLICE = 24;
 const POLITICAL_PATH_WARMUP_CPU_BUDGET_MS = 4;
 const POLITICAL_PATH_WARMUP_TIMEOUT_MS = 24;
+const TARGET_GEOMETRY_DIAG_COUNTRIES = new Set(["GY", "SO"]);
+const TARGET_GEOMETRY_DIAG_PREFIXES = ["RU_ARCTIC_FB_"];
 const HEAVY_SCENARIO_STAGED_APPLY_FEATURE_THRESHOLD = 12000;
 const STAGED_CONTEXT_BASE_TIMEOUT_MS = 180;
 const STAGED_HIT_CANVAS_TIMEOUT_MS = 260;
@@ -962,6 +964,10 @@ const renderDiag = {
   skippedByReason: new Map(),
   skippedByCountry: new Map(),
   sampleByReason: new Map(),
+  targetGeometryById: new Map(),
+  politicalPass: null,
+  transformedPasses: {},
+  waterHit: null,
 };
 const rewoundFeatureLogKeys = new Set();
 const urbanGeoCentroidCache = new WeakMap();
@@ -3147,19 +3153,78 @@ function resetRenderDiagnostics() {
   renderDiag.skippedByReason = new Map();
   renderDiag.skippedByCountry = new Map();
   renderDiag.sampleByReason = new Map();
+  renderDiag.targetGeometryById = new Map();
+  renderDiag.politicalPass = null;
+  renderDiag.transformedPasses = {};
+  renderDiag.waterHit = null;
   runtimeState.projectedBoundsDiagnostics = createDefaultProjectedBoundsDiagnostics();
   if (!renderDiag.enabled) {
     delete globalThis.__mapRenderDiag;
   } else {
-    globalThis.__mapRenderDiag = {
-      enabled: true,
-      skippedTotal: 0,
-      skippedByReason: {},
-      skippedByCountry: {},
-      sampleByReason: {},
-    };
+    publishRenderDiagnostics();
     console.info(`[map_renderer] ${RENDER_DIAG_PARAM}=1 enabled. Collecting skip diagnostics.`);
   }
+}
+
+function publishRenderDiagnostics(extra = {}) {
+  if (!renderDiag.enabled) return;
+  const existing = globalThis.__mapRenderDiag && typeof globalThis.__mapRenderDiag === "object"
+    ? globalThis.__mapRenderDiag
+    : {};
+  globalThis.__mapRenderDiag = {
+    ...existing,
+    ...extra,
+    enabled: true,
+    skippedTotal: renderDiag.seenKeys.size,
+    skippedByReason: Object.fromEntries(renderDiag.skippedByReason.entries()),
+    skippedByCountry: Object.fromEntries(renderDiag.skippedByCountry.entries()),
+    sampleByReason: Object.fromEntries(renderDiag.sampleByReason.entries()),
+    targetGeometry: Object.fromEntries(renderDiag.targetGeometryById.entries()),
+    politicalPass: renderDiag.politicalPass,
+    transformedPasses: renderDiag.transformedPasses,
+    waterHit: renderDiag.waterHit,
+  };
+}
+
+function isTargetGeometryDiagnosticFeature(feature, decision = {}) {
+  const featureId = String(decision.featureId || getFeatureId(feature) || "").trim().toUpperCase();
+  const country = String(decision.countryCode || getFeatureCountryCodeNormalized(feature) || "").trim().toUpperCase();
+  return TARGET_GEOMETRY_DIAG_COUNTRIES.has(country)
+    || TARGET_GEOMETRY_DIAG_PREFIXES.some((prefix) => featureId.startsWith(prefix));
+}
+
+function recordTargetGeometryDiagnostic(feature, decision = {}) {
+  if (!renderDiag.enabled || !isTargetGeometryDiagnosticFeature(feature, decision)) return;
+  const featureId = String(decision.featureId || getFeatureId(feature) || "(unknown)").trim() || "(unknown)";
+  renderDiag.targetGeometryById.set(featureId, {
+    id: featureId,
+    country: String(decision.countryCode || getFeatureCountryCodeNormalized(feature) || "UNK").trim() || "UNK",
+    name: String(feature?.properties?.name || "").trim(),
+    skipped: !!decision.skip,
+    reason: decision.reason || null,
+    bounds: decision.bounds || null,
+  });
+  publishRenderDiagnostics();
+}
+
+function recordWaterHitDiagnostic(detail = {}) {
+  if (!renderDiag.enabled) return;
+  renderDiag.waterHit = {
+    phase: String(runtimeState.renderPhase || ""),
+    reason: String(detail.reason || ""),
+    eventType: String(detail.eventType || ""),
+    waterItems: Array.isArray(runtimeState.waterSpatialItems) ? runtimeState.waterSpatialItems.length : 0,
+    waterRegions: Number(runtimeState.waterRegionsById?.size || 0),
+    pendingReasons: Array.from(pendingSecondarySpatialBuildReasons || []),
+    hasPendingBuild: secondarySpatialBuildHandle !== null && secondarySpatialBuildHandle !== undefined,
+    secondarySpatialBuildPending: !!runtimeState.secondarySpatialBuildPending,
+    secondarySpatialPreservedDuringBuild: !!runtimeState.secondarySpatialPreservedDuringBuild,
+    secondarySpatialGeneration: Number(runtimeState.secondarySpatialGeneration || 0),
+    secondarySpatialLastReason: String(runtimeState.secondarySpatialLastReason || ""),
+    hitCanvasDirty: !!runtimeState.hitCanvasDirty,
+    interactionSettled: isInteractionRecoverySettled({ quietMs: 800 }),
+  };
+  publishRenderDiagnostics();
 }
 
 function recordSkipDiagnostic(feature, decision) {
@@ -3185,13 +3250,7 @@ function recordSkipDiagnostic(feature, decision) {
     renderDiag.sampleByReason.set(reason, reasonSamples);
   }
 
-  globalThis.__mapRenderDiag = {
-    enabled: true,
-    skippedTotal: renderDiag.seenKeys.size,
-    skippedByReason: Object.fromEntries(renderDiag.skippedByReason.entries()),
-    skippedByCountry: Object.fromEntries(renderDiag.skippedByCountry.entries()),
-    sampleByReason: Object.fromEntries(renderDiag.sampleByReason.entries()),
-  };
+  publishRenderDiagnostics();
 }
 
 function canonicalCountryCode(rawCode) {
@@ -3244,11 +3303,15 @@ function isMacroOceanWaterRegion(feature) {
 }
 
 function isOpenOceanSelectionEnabled() {
-  return !!runtimeState.allowOpenOceanSelect || (!!runtimeState.showOpenOceanRegions && !runtimeState.allowOpenOceanPaint);
+  return !!runtimeState.allowOpenOceanSelect;
 }
 
 function isOpenOceanPaintEnabled() {
-  return !!runtimeState.allowOpenOceanPaint || (!!runtimeState.showOpenOceanRegions && !runtimeState.allowOpenOceanSelect);
+  return !!runtimeState.allowOpenOceanPaint;
+}
+
+function isOpenOceanRenderable() {
+  return !!runtimeState.showOpenOceanRegions || isOpenOceanPaintEnabled();
 }
 
 function isOpenOceanOverlayActive() {
@@ -3261,7 +3324,7 @@ function isWaterRegionRenderable(feature) {
     return true;
   }
   if (isOpenOceanWaterRegion(feature)) {
-    return isOpenOceanOverlayActive();
+    return isOpenOceanRenderable();
   }
   return feature?.properties?.interactive !== false;
 }
@@ -3284,6 +3347,9 @@ function getWaterRegionDefaultStyle(feature) {
 function getWaterRegionColor(id, feature = null) {
   const resolvedId = String(id || "").trim();
   const defaultStyleFeature = feature || runtimeState.waterRegionsById?.get(resolvedId);
+  if (isMacroOceanWaterRegion(defaultStyleFeature) && !isOpenOceanPaintEnabled()) {
+    return getWaterRegionDefaultStyle(defaultStyleFeature).fill;
+  }
   return (
     getSafeCanvasColor(runtimeState.waterRegionOverrides?.[resolvedId], null) ||
     getWaterRegionDefaultStyle(defaultStyleFeature).fill
@@ -5829,6 +5895,7 @@ function evaluateSkipFeature(feature, canvasWidth, canvasHeight, { forceProd = f
 
 function shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd = false } = {}) {
   const decision = evaluateSkipFeature(feature, canvasWidth, canvasHeight, { forceProd });
+  recordTargetGeometryDiagnostic(feature, decision);
   recordSkipDiagnostic(feature, decision);
   return Boolean(decision.skip);
 }
@@ -7985,10 +8052,9 @@ function publishScenarioCoastlineDecision(decision) {
   recordRenderPerfMetric("resolveScenarioCoastlineSource", 0, publicDecision);
   globalThis.__mapCoastlineDiag = publicDecision;
   if (renderDiag.enabled) {
-    globalThis.__mapRenderDiag = {
-      ...(globalThis.__mapRenderDiag || { enabled: true }),
+    publishRenderDiagnostics({
       coastline: publicDecision,
-    };
+    });
   }
   return decision;
 }
@@ -8785,6 +8851,18 @@ function getProjectedViewportBounds({
   };
 }
 
+function getPoliticalPassViewportOverscanPx() {
+  const layout = getRenderPassLayout("political");
+  const baseOverscanPx = Math.max(
+    VIEWPORT_CULL_OVERSCAN_PX,
+    Math.min(runtimeState.width || 0, runtimeState.height || 0) * 0.08
+  );
+  return Math.max(
+    baseOverscanPx,
+    baseOverscanPx + Math.max(Number(layout?.offsetX || 0), Number(layout?.offsetY || 0))
+  );
+}
+
 function doesSpatialItemIntersectProjectedViewport(item, viewportBounds) {
   if (!item || !viewportBounds) return false;
   return !(
@@ -8795,13 +8873,18 @@ function doesSpatialItemIntersectProjectedViewport(item, viewportBounds) {
   );
 }
 
-function collectVisibleLandSpatialItemsWithStats() {
+function collectVisibleLandSpatialItemsWithStats({
+  overscanPx = undefined,
+} = {}) {
   const meta = runtimeState.spatialGridMeta;
   const grid = runtimeState.spatialGrid;
   if (!meta || !grid || !Array.isArray(runtimeState.spatialItems)) return null;
   const { cellSize, cols, rows, globals } = meta;
   if (!cellSize || cols <= 0 || rows <= 0) return null;
-  const viewportBounds = getProjectedViewportBounds();
+  const resolvedOverscanPx = Number.isFinite(Number(overscanPx))
+    ? Number(overscanPx)
+    : undefined;
+  const viewportBounds = getProjectedViewportBounds({ overscanPx: resolvedOverscanPx });
   if (!viewportBounds) return null;
   const c0 = clamp(Math.floor(viewportBounds.minX / cellSize), 0, cols - 1);
   const c1 = clamp(Math.floor(viewportBounds.maxX / cellSize), 0, cols - 1);
@@ -8837,6 +8920,7 @@ function collectVisibleLandSpatialItemsWithStats() {
       cellCandidateCount,
       globalCandidateCount,
       visitedCellCount,
+      overscanPx: Number(resolvedOverscanPx || 0),
       cellSpan: {
         colStart: c0,
         colEnd: c1,
@@ -9283,6 +9367,10 @@ function getWaterHitFromPointer(
 ) {
   if (!runtimeState.showWaterRegions) return createHitResult();
   if (!runtimeState.waterSpatialItems?.length) {
+    recordWaterHitDiagnostic({
+      reason: "empty-water-spatial-items",
+      eventType,
+    });
     if (runtimeState.waterRegionsById?.size) {
       scheduleSecondarySpatialIndexBuild({
         reason: "water-hit-demand",
@@ -9909,7 +9997,10 @@ function scheduleSecondarySpatialIndexBuild({
     const startedAt = nowMs();
     try {
       rebuildAuxiliaryRegionIndexes();
-      getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();
+      getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({
+        preserveCurrent: true,
+        reason: normalizedReason,
+      });
       getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
         allowComputeMissingBounds: true,
       });
@@ -9955,7 +10046,10 @@ function syncScenarioSecondaryRegionIndexes({
   }
   const startedAt = nowMs();
   rebuildAuxiliaryRegionIndexes();
-  getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();
+  getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({
+    preserveCurrent: true,
+    reason: reason,
+  });
   getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
     allowComputeMissingBounds: true,
   });
@@ -17590,13 +17684,31 @@ function drawPoliticalPass(k) {
     },
   });
   recordPoliticalRasterWorkerSnapshot();
-  const visibleItemsResult = debugMode === "PROD" ? collectVisibleLandSpatialItemsWithStats() : null;
+  const politicalOverscanPx = getPoliticalPassViewportOverscanPx();
+  const visibleItemsResult = debugMode === "PROD"
+    ? collectVisibleLandSpatialItemsWithStats({ overscanPx: politicalOverscanPx })
+    : null;
   const visibleItems = visibleItemsResult ? visibleItemsResult.items : null;
   if (visibleItemsResult?.stats) {
     recordRenderPerfMetric("politicalPassVisibleItems", 0, {
       visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : 0,
       ...visibleItemsResult.stats,
     });
+  }
+  if (renderDiag.enabled) {
+    const layout = getRenderPassLayout("political");
+    renderDiag.politicalPass = {
+      transform: cloneZoomTransform(transform),
+      transformBucket: getTransformBucketSignature(transform),
+      passSignature: getRenderPassSignature("political", transform),
+      visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
+      overscanPx: politicalOverscanPx,
+      layout,
+      stats: visibleItemsResult?.stats || null,
+      dirtyReason: String(getRenderPassCacheState().reasons?.political || ""),
+      phase: String(runtimeState.renderPhase || ""),
+    };
+    publishRenderDiagnostics();
   }
   const backgroundStartedAt = nowMs();
   const backgroundSummary = drawPoliticalBackgroundFills({
@@ -18639,6 +18751,22 @@ function drawInteractionComposite(
   const scaleRatio = current.k / Math.max(reference.k, 0.0001);
   const dx = current.x - (reference.x * scaleRatio);
   const dy = current.y - (reference.y * scaleRatio);
+  if (renderDiag.enabled) {
+    renderDiag.transformedPasses = {
+      ...(renderDiag.transformedPasses || {}),
+      interactionComposite: {
+        current,
+        reference,
+        scaleRatio,
+        dx,
+        dy,
+        layout: null,
+        phase: String(runtimeState.renderPhase || ""),
+        dirty: false,
+      },
+    };
+    publishRenderDiagnostics();
+  }
   context.save();
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
@@ -18673,6 +18801,22 @@ function drawTransformedPass(passName, currentTransform, referenceTransform = nu
   const scaleRatio = current.k / Math.max(reference.k, 0.0001);
   const dx = current.x - (reference.x * scaleRatio);
   const dy = current.y - (reference.y * scaleRatio);
+  if (renderDiag.enabled) {
+    renderDiag.transformedPasses = {
+      ...(renderDiag.transformedPasses || {}),
+      [passName]: {
+        current,
+        reference,
+        scaleRatio,
+        dx,
+        dy,
+        layout,
+        phase: String(runtimeState.renderPhase || ""),
+        dirty: !!cache.dirty?.[passName],
+      },
+    };
+    publishRenderDiagnostics();
+  }
   context.save();
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.translate(
@@ -24608,7 +24752,10 @@ function refreshMapDataForScenarioApply({
     rebuildAuxiliaryRegionIndexes();
     atlantropaWaterIndexCount = Array.from(runtimeState.waterRegionsById?.keys?.() || [])
       .filter((featureId) => String(featureId || "").startsWith("ATLSEA_")).length;
-    getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState();
+    getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({
+      preserveCurrent: true,
+      reason: "scenario-apply-atlantropa-water",
+    });
     getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
       allowComputeMissingBounds: true,
     });

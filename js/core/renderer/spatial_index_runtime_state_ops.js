@@ -29,6 +29,10 @@ export function resetPrimarySpatialState(state) {
 
 export function resetSecondarySpatialState(state) {
   const defaults = createDefaultSecondarySpatialIndexState();
+  state.secondarySpatialGeneration = Number(state.secondarySpatialGeneration || 0) + 1;
+  state.secondarySpatialBuildPending = false;
+  state.secondarySpatialLastReason = "";
+  state.secondarySpatialPreservedDuringBuild = false;
   state.waterSpatialItems = defaults.waterSpatialItems;
   state.waterSpatialIndex = defaults.waterSpatialIndex;
   state.waterSpatialGrid = defaults.waterSpatialGrid;
@@ -39,6 +43,19 @@ export function resetSecondarySpatialState(state) {
   state.specialSpatialGrid = defaults.specialSpatialGrid;
   state.specialSpatialGridMeta = defaults.specialSpatialGridMeta;
   state.specialSpatialItemsById = defaults.specialSpatialItemsById;
+}
+
+export function markSecondarySpatialBuildPending(state, {
+  reason = "secondary-spatial-build",
+  preserveCurrent = false,
+} = {}) {
+  const normalizedReason = String(reason || "secondary-spatial-build");
+  if (!preserveCurrent) {
+    resetSecondarySpatialState(state);
+  }
+  state.secondarySpatialBuildPending = true;
+  state.secondarySpatialLastReason = normalizedReason;
+  state.secondarySpatialPreservedDuringBuild = !!preserveCurrent;
 }
 
 export function applyPrimarySpatialSnapshot(state, {
@@ -57,7 +74,12 @@ export function applyPrimarySpatialSnapshot(state, {
 export function applySecondarySpatialSnapshot(state, {
   water = {},
   special = {},
+  reason = "secondary-spatial-apply",
 } = {}) {
+  state.secondarySpatialGeneration = Number(state.secondarySpatialGeneration || 0) + 1;
+  state.secondarySpatialBuildPending = false;
+  state.secondarySpatialLastReason = String(reason || "secondary-spatial-apply");
+  state.secondarySpatialPreservedDuringBuild = false;
   state.waterSpatialItems = Array.isArray(water.items) ? water.items : [];
   state.waterSpatialIndex = null;
   state.waterSpatialGrid = water.grid instanceof Map ? water.grid : new Map();

@@ -154,7 +154,7 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "checksum"), false);
 });
 
-test("project payload builder keeps open ocean selectable by default", () => {
+test("project payload builder keeps open ocean visible with interaction off by default", () => {
   const payload = FileManager.buildProjectPayload({
     transportWorkbenchUi: {},
     exportWorkbenchUi: {},
@@ -162,11 +162,11 @@ test("project payload builder keeps open ocean selectable by default", () => {
 
   assert.equal(payload.layerVisibility.showWaterRegions, true);
   assert.equal(payload.layerVisibility.showOpenOceanRegions, true);
-  assert.equal(payload.layerVisibility.allowOpenOceanSelect, true);
+  assert.equal(payload.layerVisibility.allowOpenOceanSelect, false);
   assert.equal(payload.layerVisibility.allowOpenOceanPaint, false);
 });
 
-test("project import restores missing open ocean flags as selectable without paint", async () => {
+test("project import restores missing open ocean flags as visible without interaction", async () => {
   const payload = await exportProjectPayload({
     annotationView: {},
     exportWorkbenchUi: {},
@@ -180,7 +180,7 @@ test("project import restores missing open ocean flags as selectable without pai
 
   assert.equal(result.successes.length, 1);
   assert.equal(result.successes[0].layerVisibility.showOpenOceanRegions, true);
-  assert.equal(result.successes[0].layerVisibility.allowOpenOceanSelect, true);
+  assert.equal(result.successes[0].layerVisibility.allowOpenOceanSelect, false);
   assert.equal(result.successes[0].layerVisibility.allowOpenOceanPaint, false);
 });
 

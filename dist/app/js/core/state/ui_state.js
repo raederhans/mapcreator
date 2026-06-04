@@ -280,19 +280,22 @@ export function createDefaultUiPanelState() {
 
 export function normalizeOpenOceanLayerVisibility(layerVisibility = null) {
   const source = layerVisibility && typeof layerVisibility === "object" ? layerVisibility : {};
-  const hasLegacyOpenOceanVisibility = source.showOpenOceanRegions !== undefined;
   const allowOpenOceanSelect =
     source.allowOpenOceanSelect === undefined
-      ? (hasLegacyOpenOceanVisibility ? !!source.showOpenOceanRegions : true)
+      ? false
       : !!source.allowOpenOceanSelect;
   const allowOpenOceanPaint =
     source.allowOpenOceanPaint === undefined
-      ? (hasLegacyOpenOceanVisibility ? !!source.showOpenOceanRegions : false)
+      ? false
       : !!source.allowOpenOceanPaint;
+  const showOpenOceanRegions =
+    source.showOpenOceanRegions === undefined
+      ? true
+      : !!source.showOpenOceanRegions;
   return {
     allowOpenOceanSelect,
     allowOpenOceanPaint,
-    showOpenOceanRegions: !!(allowOpenOceanSelect || allowOpenOceanPaint),
+    showOpenOceanRegions,
   };
 }
 

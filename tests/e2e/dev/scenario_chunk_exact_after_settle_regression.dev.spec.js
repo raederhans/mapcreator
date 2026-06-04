@@ -352,6 +352,36 @@ test("exact-after-settle repaints political pass with stable invalidation metric
   expect(Number(afterRefresh.settleExactRefreshPasses?.politicalInvalidatedAt || 0)).toBeGreaterThan(0);
 });
 
+test("tno zoom diagnostic keeps political pass padded during transformed frames", async ({ page }) => {
+  await gotoApp(page, `${FAST_STARTUP_PATH}&render_diag=1`, { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+  await ensureScenario(page, "tno_1962", "TNO 1962");
+  await waitForStableExactRender(page);
+
+  await setZoomPercent(page, 145, { waitAfterMs: 0 });
+  await page.waitForFunction(() => {
+    const diag = globalThis.__mapRenderDiag || {};
+    const politicalPass = diag.politicalPass || {};
+    return !!politicalPass
+      && Number(politicalPass.visibleItemCount || 0) > 0
+      && Number(politicalPass.overscanPx || 0) > 96;
+  }, { timeout: 30_000 });
+
+  const diag = await page.evaluate(() => {
+    const snapshot = globalThis.__mapRenderDiag || {};
+    return {
+      politicalPass: snapshot.politicalPass || null,
+      transformedPolitical: (snapshot.transformedPasses || {}).political || null,
+    };
+  });
+
+  expect(diag.politicalPass.visibleItemCount).toBeGreaterThan(0);
+  expect(diag.politicalPass.overscanPx).toBeGreaterThan(96);
+  if (diag.transformedPolitical) {
+    expect(Number(diag.transformedPolitical.scaleRatio)).toBeGreaterThan(0);
+  }
+});
+
 test("tno drag interaction settles cleanly without black-frame regression", async ({ page }) => {
   await gotoApp(page, FAST_STARTUP_PATH, { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);

@@ -36370,7 +36370,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 43922
+      "size_bytes": 43946
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -36434,7 +36434,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 945362
+      "size_bytes": 950661
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36542,11 +36542,11 @@
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_owner.js",
-      "size_bytes": 12522
+      "size_bytes": 12853
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_state_ops.js",
-      "size_bytes": 2868
+      "size_bytes": 3837
     },
     {
       "path": "app/js/core/renderer/special_zone_layers_render_owner.js",
@@ -36790,7 +36790,7 @@
     },
     {
       "path": "app/js/core/state/spatial_index_state.js",
-      "size_bytes": 1050
+      "size_bytes": 1207
     },
     {
       "path": "app/js/core/state/strategic_overlay_state.js",
@@ -36798,7 +36798,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 27279
+      "size_bytes": 27178
     },
     {
       "path": "app/js/core/state.js",
@@ -36922,7 +36922,7 @@
     },
     {
       "path": "app/js/ui/sidebar/water_special_region_controller.js",
-      "size_bytes": 55497
+      "size_bytes": 55287
     },
     {
       "path": "app/js/ui/sidebar.js",
@@ -37223,5 +37223,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1087720543
+  "total_bytes": 1087727012
 }
