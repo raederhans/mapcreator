@@ -116,6 +116,11 @@ DISPOSABLE_DIST_NAMES = {"__pycache__"}
 DISPOSABLE_DIST_SUFFIXES = {".pyc", ".pyo"}
 
 
+def write_text_lf(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+
+
 def should_skip_disposable_dist_path(path: Path) -> bool:
     return any(part in DISPOSABLE_DIST_NAMES for part in path.parts) or path.suffix.lower() in DISPOSABLE_DIST_SUFFIXES
 
@@ -200,7 +205,7 @@ def inject_editor_noindex(index_path: Path) -> None:
         return
     if marker in content:
         content = content.replace(marker, marker + noindex, 1)
-        index_path.write_text(content, encoding="utf-8")
+        write_text_lf(index_path, content)
 
 
 def build_editor_dist(editor_entry: Path) -> None:
@@ -280,12 +285,12 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
                     if isinstance(scenario, dict):
                         scenario.pop("audit_url", None)
             payload.pop("audit_url", None)
-            index_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            write_text_lf(index_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     for manifest_path in scenarios_dir.glob("*/manifest.json"):
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         if isinstance(payload, dict) and strip_unpublished_manifest_urls(payload):
-            manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            write_text_lf(manifest_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     for bundle_path in scenarios_dir.glob("*/startup.bundle.*.json"):
         payload = json.loads(bundle_path.read_text(encoding="utf-8"))
@@ -465,7 +470,7 @@ def prune_transport_manifests_to_published_paths(destination_dir: Path) -> None:
             variant_counts = variant.get("feature_counts") if isinstance(variant.get("feature_counts"), dict) else None
             changed = prune_transport_manifest_path_section(variant_paths, variant_counts) or changed
         if changed:
-            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            write_text_lf(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
 
 
 def recalculate_catalog_counts(entries: list[dict]) -> dict:
@@ -514,7 +519,7 @@ def prune_dist_catalog_to_published_files() -> None:
         return
     payload["entries"] = published_entries
     payload["counts"] = recalculate_catalog_counts(published_entries)
-    catalog_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_text_lf(catalog_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
 def filter_hgo_png_manifest_for_pages(payload: dict) -> dict:
@@ -580,9 +585,9 @@ def write_pages_hgo_png_manifest(source_path: Path, destination_path: Path) -> N
         return
     payload = json.loads(source_path.read_text(encoding="utf-8"))
     destination_path.parent.mkdir(parents=True, exist_ok=True)
-    destination_path.write_text(
+    write_text_lf(
+        destination_path,
         json.dumps(filter_hgo_png_manifest_for_pages(payload), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
 
 
@@ -611,7 +616,7 @@ def copy_runtime_data() -> None:
 
 
 def write_nojekyll() -> None:
-    (DIST_ROOT / ".nojekyll").write_text("", encoding="utf-8")
+    write_text_lf(DIST_ROOT / ".nojekyll", "")
 
 
 def iter_dist_files() -> list[Path]:
@@ -659,7 +664,7 @@ def write_dist_manifest() -> int:
         manifest_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
         if manifest_text == last_manifest_text:
             break
-        DIST_MANIFEST_PATH.write_text(manifest_text, encoding="utf-8")
+        write_text_lf(DIST_MANIFEST_PATH, manifest_text)
         last_manifest_text = manifest_text
     _records, total_bytes = get_dist_file_records()
     return total_bytes

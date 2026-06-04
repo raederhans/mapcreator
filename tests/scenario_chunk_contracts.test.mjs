@@ -6,6 +6,7 @@ import vm from "node:vm";
 import { createScenarioChunkRuntimeController } from "../js/core/scenario/chunk_runtime.js";
 import { buildViewportGeoBounds, normalizeScenarioChunkManifest, selectScenarioChunks } from "../js/core/scenario_chunk_manager.js";
 import { createRenderCacheOwner } from "../js/core/renderer/render_cache_owner.js";
+import { buildSpatialGridSnapshot, getSpatialBucketKey } from "../js/core/renderer/spatial_index_runtime_builders.js";
 
 const REPO_ROOT = process.cwd();
 
@@ -88,6 +89,15 @@ function extractRendererFunction(source, functionName) {
     }
   }
   assert.fail(`${functionName} body must close`);
+}
+
+function extractRendererPassSignatureBranch(source, passName) {
+  const marker = `if (passName === "${passName}") {`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `${passName} signature branch must exist`);
+  const next = source.indexOf("\n  if (passName ===", start + marker.length);
+  assert.notEqual(next, -1, `${passName} signature branch must end before the next pass branch`);
+  return source.slice(start, next);
 }
 
 function createRendererShellPolicyHarness(rendererSource) {
@@ -739,6 +749,7 @@ test("viewport geo bounds samples curved projection edges for chunk eligibility"
 
 test("exact-after-settle keeps scenario overlays on the contextScenario reuse path", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const contextScenarioSignatureBranch = extractRendererPassSignatureBranch(rendererSource, "contextScenario");
   const rendererRuntimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
   const frameSchedulerSource = readRepoFile("js", "core", "frame_scheduler.js");
   const scenarioOwnershipEditorSource = readRepoFile("js", "core", "scenario_ownership_editor.js");
@@ -870,6 +881,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('invalidateRenderPasses("contextBase", "refresh-colors-context-base");')
       && /function shouldRefreshContextBaseContoursForColorChanges\(\) \{[\s\S]*?runtimeState\.showPhysical[\s\S]*?physicalContourMajorData/.test(rendererSource)
       && /if \(passName === "contextBase"\) \{[\s\S]*?`context-colors:\$\{shouldRefreshContextBaseForColorChanges\(\) \? Number\(runtimeState\.colorRevision \|\| 0\) : 0\}`/.test(rendererSource)
+      && !contextScenarioSignatureBranch.includes("`colors:${Number(runtimeState.colorRevision || 0)}`")
       && /if \(passName === "labels"\) \{[\s\S]*?`colors:\$\{Number\(runtimeState\.colorRevision \|\| 0\)\}`/.test(rendererSource),
     partialPoliticalRepaintOnlyAcceptsTargetedRefreshColors:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
@@ -919,6 +931,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function clearDevSelection[\s\S]*?requestInteractionRender\("dev-selection-clear"\);/.test(rendererSource)
       && /function applyVisualSubdivisionFill[\s\S]*?requestInteractionRender\(kind\);[\s\S]*?refreshSidebarAfterPaint\(\{ featureIds: resolvedIds \}\);/.test(rendererSource)
       && /function applyWaterRegionFill[\s\S]*?requestInteractionRender\(kind\);[\s\S]*?refreshSidebarAfterPaint\(\{ waterRegionIds: \[resolvedId\] \}\);/.test(rendererSource)
+      && /function applyWaterRegionFill[\s\S]*?if \(currentColor === color\) \{[\s\S]*?refreshWaterRegionSidebarRowsNow\(\[resolvedId\]\);[\s\S]*?requestInteractionRender\(kind\);[\s\S]*?return false;/.test(rendererSource)
       && !rendererSource.includes('flushInteractionRender("dev-selection-add")')
       && !rendererSource.includes('flushInteractionRender("dev-selection-toggle")')
       && !rendererSource.includes('flushInteractionRender("dev-selection-remove-last")')
@@ -1169,6 +1182,32 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
   Object.entries(checks).forEach(([label, ok]) => {
     assert.equal(ok, true, label);
   });
+});
+
+test("spatial grid builder returns stable bucket snapshots without renderer state writes", () => {
+  const localItem = { id: "local", minX: 10, minY: 10, maxX: 80, maxY: 80 };
+  const globalItem = { id: "global", minX: 0, minY: 0, maxX: 500, maxY: 500 };
+  const snapshot = buildSpatialGridSnapshot({
+    items: [localItem, globalItem],
+    canvasWidth: 500,
+    canvasHeight: 500,
+    hitGridTargetCols: 5,
+    hitGridMinCellPx: 100,
+    hitGridMaxCellPx: 100,
+    hitMaxCellsPerItem: 4,
+  });
+
+  assert.equal(snapshot.gridMeta.cellSize, 100);
+  assert.equal(snapshot.gridMeta.cols, 5);
+  assert.equal(snapshot.gridMeta.rows, 5);
+  assert.deepEqual(snapshot.gridMeta.globals.map((item) => item.id), ["global"]);
+  assert.equal(snapshot.itemsById.get("local"), localItem);
+  assert.equal(snapshot.itemsById.get("global"), globalItem);
+  assert.deepEqual(
+    snapshot.grid.get(getSpatialBucketKey(0, 0)).map((item) => item.id),
+    ["local"]
+  );
+  assert.equal(snapshot.grid.has(getSpatialBucketKey(4, 4)), false);
 });
 
 test("TNO water topology contracts keep exclusive scenario water and shared surface version signal", () => {

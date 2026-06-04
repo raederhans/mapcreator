@@ -255,6 +255,17 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             ),
         )
         self.assertIn("const STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS = 8000;", self.scenario_chunk_runtime_source)
+        visual_result_body = self.scenario_chunk_runtime_source[
+            self.scenario_chunk_runtime_source.index("function buildInitialScenarioChunkVisualPromotionResult("):
+            self.scenario_chunk_runtime_source.index("\n  async function awaitInitialScenarioChunkVisualPromotion")
+        ]
+        self.assertIn("const scenarioPoliticalChunkFeatureCount = getFeatureCount(runtimeState.scenarioPoliticalChunkData);", visual_result_body)
+        self.assertIn("const landFeatureCount = getFeatureCount(runtimeState.landData);", visual_result_body)
+        self.assertIn("const colorCount = getColorCount();", visual_result_body)
+        self.assertIn("selectionVersion > 0", visual_result_body)
+        self.assertIn("scenarioPoliticalChunkFeatureCount > 0", visual_result_body)
+        self.assertIn("landFeatureCount > 0", visual_result_body)
+        self.assertIn("colorCount > 0", visual_result_body)
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(

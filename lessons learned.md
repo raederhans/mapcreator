@@ -178,6 +178,9 @@
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
 
+### Pages dist 字节合同要同时锁写入和属性
+- `dist/pages-dist-manifest.json` 记录 app 文件 size/hash 时，生成脚本要用 LF 写入，`.gitattributes` 也要锁住 `dist/app` 文本产物 LF；只修写入层会在 Windows checkout 下继续出现字节漂移风险。
+
 ### open-ocean 可见性和交互开关要分离
 - `showOpenOceanRegions` 只表达视觉可见；`allowOpenOceanSelect` / `allowOpenOceanPaint` 才表达命中与编辑能力。测试或迁移逻辑把 show 当作交互开关时，会让默认场景暴露 open-ocean 列表和点击命中。
 

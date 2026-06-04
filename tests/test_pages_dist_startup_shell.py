@@ -24,6 +24,16 @@ VERIFY_SHARED_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "verify-shared.ym
 
 class PagesDistStartupShellTest(unittest.TestCase):
 
+    def test_pages_dist_generated_text_writes_use_lf(self) -> None:
+        source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
+        self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)
+        self.assertIn('newline="\\n"', source)
+        self.assertNotIn(".write_text(", source)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "generated.json"
+            build_pages_dist.write_text_lf(path, "{\n  \"ok\": true\n}\n")
+            self.assertEqual(path.read_bytes(), b'{\n  "ok": true\n}\n')
+
     def test_landing_source_keeps_landing_contract(self) -> None:
         html = LANDING_INDEX.read_text(encoding="utf-8")
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")

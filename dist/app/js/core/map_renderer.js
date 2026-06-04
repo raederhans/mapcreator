@@ -130,6 +130,7 @@ import {
 import { createBorderDrawOwner } from "./renderer/border_draw_owner.js";
 import { createInteractionBorderSnapshotOwner } from "./renderer/interaction_border_snapshot_owner.js";
 import { createSpatialIndexRuntimeOwner } from "./renderer/spatial_index_runtime_owner.js";
+import { getSpatialBucketKey } from "./renderer/spatial_index_runtime_builders.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import {
@@ -1452,6 +1453,10 @@ function getSpatialIndexRuntimeOwner() {
     constants: {
       chunkedIndexBuildSliceSize: CHUNKED_INDEX_BUILD_SLICE_SIZE,
       chunkedSpatialBuildSliceSize: CHUNKED_SPATIAL_BUILD_SLICE_SIZE,
+      hitGridTargetCols: HIT_GRID_TARGET_COLS,
+      hitGridMinCellPx: HIT_GRID_MIN_CELL_PX,
+      hitGridMaxCellPx: HIT_GRID_MAX_CELL_PX,
+      hitMaxCellsPerItem: HIT_MAX_CELLS_PER_ITEM,
     },
     getters: {
       getPathSvg: () => pathSVG,
@@ -1469,7 +1474,6 @@ function getSpatialIndexRuntimeOwner() {
       getFeatureBorderMeshCountryCodeNormalized,
       shouldExcludePoliticalInteractionFeature,
       shouldExcludePoliticalVisualFeature,
-      buildSpatialGrid,
       nowMs,
       recordRenderPerfMetric,
       setInteractionInfrastructureState,
@@ -8710,69 +8714,10 @@ function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } =
   return createHitResult();
 }
 
-function getSpatialBucketKey(col, row) {
-  return `${col},${row}`;
-}
-
 function getBBoxDistanceToPoint(item, px, py) {
   const dx = px < item.minX ? item.minX - px : px > item.maxX ? px - item.maxX : 0;
   const dy = py < item.minY ? item.minY - py : py > item.maxY ? py - item.maxY : 0;
   return Math.hypot(dx, dy);
-}
-
-function buildSpatialGrid(items, canvasWidth, canvasHeight) {
-  const width = Math.max(1, canvasWidth || 1);
-  const height = Math.max(1, canvasHeight || 1);
-  const cellSize = clamp(
-    Math.round(width / HIT_GRID_TARGET_COLS),
-    HIT_GRID_MIN_CELL_PX,
-    HIT_GRID_MAX_CELL_PX
-  );
-  const cols = Math.max(1, Math.ceil(width / cellSize));
-  const rows = Math.max(1, Math.ceil(height / cellSize));
-  const grid = new Map();
-  const globals = [];
-  const itemsById = new Map();
-
-  const pushToCell = (col, row, item) => {
-    const key = getSpatialBucketKey(col, row);
-    if (!grid.has(key)) {
-      grid.set(key, []);
-    }
-    grid.get(key).push(item);
-  };
-
-  items.forEach((item) => {
-    if (!item?.id) return;
-    itemsById.set(item.id, item);
-    const c0 = clamp(Math.floor(item.minX / cellSize), 0, cols - 1);
-    const c1 = clamp(Math.floor(item.maxX / cellSize), 0, cols - 1);
-    const r0 = clamp(Math.floor(item.minY / cellSize), 0, rows - 1);
-    const r1 = clamp(Math.floor(item.maxY / cellSize), 0, rows - 1);
-    const covered = (c1 - c0 + 1) * (r1 - r0 + 1);
-
-    if (covered > HIT_MAX_CELLS_PER_ITEM) {
-      globals.push(item);
-      return;
-    }
-
-    for (let row = r0; row <= r1; row += 1) {
-      for (let col = c0; col <= c1; col += 1) {
-        pushToCell(col, row, item);
-      }
-    }
-  });
-
-  runtimeState.spatialGrid = grid;
-  runtimeState.spatialGridMeta = {
-    cellSize,
-    cols,
-    rows,
-    width,
-    height,
-    globals,
-  };
-  runtimeState.spatialItemsById = itemsById;
 }
 
 function collectGridCandidates(px, py, radiusProj = 0) {
@@ -22652,6 +22597,7 @@ function applyWaterRegionFill(targetId, selectedColor, { kind = "fill-water-regi
   runtimeState.selectedWaterRegionId = resolvedId;
   if (currentColor === color) {
     refreshWaterRegionSidebarRowsNow([resolvedId]);
+    requestInteractionRender(kind);
     return false;
   }
   const historyBefore = captureHistoryState({
@@ -23107,6 +23053,7 @@ async function handleClick(event, _interactionContext = null) {
     runtimeState.selectedSpecialRegionId = id;
     if (previousWaterRegionId) refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
     refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId, id]);
+    requestInteractionRender("select-special-region");
     if (runtimeState.currentTool === "eyedropper") {
       const picked = getSpecialRegionColor(id, specialFeature);
       if (picked) {
@@ -23133,6 +23080,7 @@ async function handleClick(event, _interactionContext = null) {
     const macroOceanSelectionOnly =
       isMacroOceanWaterRegion(waterFeature) && !isOpenOceanPaintEnabled();
     if (macroOceanSelectionOnly) {
+      requestInteractionRender("click-select-open-ocean");
       noteRenderAction("click-select-open-ocean", actionStart);
       return;
     }
@@ -23158,6 +23106,7 @@ async function handleClick(event, _interactionContext = null) {
           runtimeState.updateSwatchUIFn();
         }
       }
+      requestInteractionRender("eyedropper-water");
       noteRenderAction("eyedropper-water", actionStart);
       return;
     }
@@ -23171,11 +23120,13 @@ async function handleClick(event, _interactionContext = null) {
     const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
     runtimeState.selectedWaterRegionId = "";
     refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
+    requestInteractionRender("clear-water-selection-land-click");
   }
   if (runtimeState.selectedSpecialRegionId) {
     const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
     runtimeState.selectedSpecialRegionId = "";
     refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
+    requestInteractionRender("clear-special-selection-land-click");
   }
   let landHit = hit;
   let landId = id;

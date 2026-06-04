@@ -26,6 +26,10 @@ export function createSpatialIndexRuntimeOwner({
   const {
     chunkedIndexBuildSliceSize = 1000,
     chunkedSpatialBuildSliceSize = 400,
+    hitGridTargetCols,
+    hitGridMinCellPx,
+    hitGridMaxCellPx,
+    hitMaxCellsPerItem,
   } = constants;
 
   const {
@@ -45,7 +49,6 @@ export function createSpatialIndexRuntimeOwner({
     getProjectedFeatureBounds = () => null,
     shouldExcludePoliticalInteractionFeature = () => false,
     shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature,
-    buildSpatialGrid = () => {},
     nowMs = () => 0,
     recordRenderPerfMetric = () => {},
     setInteractionInfrastructureState = () => {},
@@ -145,11 +148,13 @@ export function createSpatialIndexRuntimeOwner({
       shouldExcludeWaterHitGeometry,
     });
     const waterGridSnapshot = captureSpatialGridBuild({
-      state,
       items: waterItems,
       canvasWidth,
       canvasHeight,
-      buildSpatialGrid,
+      hitGridTargetCols,
+      hitGridMinCellPx,
+      hitGridMaxCellPx,
+      hitMaxCellsPerItem,
     });
 
     const specialItems = buildSpecialSpatialItems({
@@ -159,11 +164,13 @@ export function createSpatialIndexRuntimeOwner({
       getProjectedFeatureBounds,
     });
     const specialGridSnapshot = captureSpatialGridBuild({
-      state,
       items: specialItems,
       canvasWidth,
       canvasHeight,
-      buildSpatialGrid,
+      hitGridTargetCols,
+      hitGridMinCellPx,
+      hitGridMaxCellPx,
+      hitMaxCellsPerItem,
     });
     applySecondarySpatialSnapshot(state, {
       water: {
@@ -223,11 +230,13 @@ export function createSpatialIndexRuntimeOwner({
       getFeatureBorderMeshCountryCodeNormalized,
     });
     const nextGridSnapshot = captureSpatialGridBuild({
-      state,
       items: nextSpatialItems,
       canvasWidth,
       canvasHeight,
-      buildSpatialGrid,
+      hitGridTargetCols,
+      hitGridMinCellPx,
+      hitGridMaxCellPx,
+      hitMaxCellsPerItem,
     });
     applyPrimarySpatialSnapshot(state, {
       items: nextSpatialItems,
@@ -249,6 +258,12 @@ export function createSpatialIndexRuntimeOwner({
         spatialItems: state.spatialItems.length,
         waterItems: state.waterSpatialItems.length,
         specialItems: state.specialSpatialItems.length,
+        spatialGridCells: state.spatialGrid?.size || 0,
+        spatialGridGlobals: state.spatialGridMeta?.globals?.length || 0,
+        waterGridCells: state.waterSpatialGrid?.size || 0,
+        waterGridGlobals: state.waterSpatialGridMeta?.globals?.length || 0,
+        specialGridCells: state.specialSpatialGrid?.size || 0,
+        specialGridGlobals: state.specialSpatialGridMeta?.globals?.length || 0,
       }),
     );
   }
@@ -356,11 +371,13 @@ export function createSpatialIndexRuntimeOwner({
       }
     }
     const nextGridSnapshot = captureSpatialGridBuild({
-      state,
       items: nextSpatialItems,
       canvasWidth,
       canvasHeight,
-      buildSpatialGrid,
+      hitGridTargetCols,
+      hitGridMinCellPx,
+      hitGridMaxCellPx,
+      hitMaxCellsPerItem,
     });
     applyPrimarySpatialSnapshot(state, {
       items: nextSpatialItems,
@@ -386,6 +403,12 @@ export function createSpatialIndexRuntimeOwner({
         spatialItems: state.spatialItems.length,
         waterItems: state.waterSpatialItems.length,
         specialItems: state.specialSpatialItems.length,
+        spatialGridCells: state.spatialGrid?.size || 0,
+        spatialGridGlobals: state.spatialGridMeta?.globals?.length || 0,
+        waterGridCells: state.waterSpatialGrid?.size || 0,
+        waterGridGlobals: state.waterSpatialGridMeta?.globals?.length || 0,
+        specialGridCells: state.specialSpatialGrid?.size || 0,
+        specialGridGlobals: state.specialSpatialGridMeta?.globals?.length || 0,
         chunked: true,
       }),
     );

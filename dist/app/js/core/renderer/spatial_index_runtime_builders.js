@@ -1,3 +1,16 @@
+const DEFAULT_HIT_GRID_TARGET_COLS = 24;
+const DEFAULT_HIT_GRID_MIN_CELL_PX = 32;
+const DEFAULT_HIT_GRID_MAX_CELL_PX = 96;
+const DEFAULT_HIT_MAX_CELLS_PER_ITEM = 400;
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function getSpatialBucketKey(col, row) {
+  return `${col},${row}`;
+}
+
 export function appendLandIndexEntriesRange({
   state,
   features = [],
@@ -140,27 +153,87 @@ export function buildSpecialSpatialItems({
   return items;
 }
 
+export function buildSpatialGridSnapshot({
+  items = [],
+  canvasWidth = 1,
+  canvasHeight = 1,
+  hitGridTargetCols = DEFAULT_HIT_GRID_TARGET_COLS,
+  hitGridMinCellPx = DEFAULT_HIT_GRID_MIN_CELL_PX,
+  hitGridMaxCellPx = DEFAULT_HIT_GRID_MAX_CELL_PX,
+  hitMaxCellsPerItem = DEFAULT_HIT_MAX_CELLS_PER_ITEM,
+} = {}) {
+  const width = Math.max(1, canvasWidth || 1);
+  const height = Math.max(1, canvasHeight || 1);
+  const cellSize = clampNumber(
+    Math.round(width / hitGridTargetCols),
+    hitGridMinCellPx,
+    hitGridMaxCellPx
+  );
+  const cols = Math.max(1, Math.ceil(width / cellSize));
+  const rows = Math.max(1, Math.ceil(height / cellSize));
+  const grid = new Map();
+  const globals = [];
+  const itemsById = new Map();
+
+  const pushToCell = (col, row, item) => {
+    const key = getSpatialBucketKey(col, row);
+    if (!grid.has(key)) {
+      grid.set(key, []);
+    }
+    grid.get(key).push(item);
+  };
+
+  items.forEach((item) => {
+    if (!item?.id) return;
+    itemsById.set(item.id, item);
+    const c0 = clampNumber(Math.floor(item.minX / cellSize), 0, cols - 1);
+    const c1 = clampNumber(Math.floor(item.maxX / cellSize), 0, cols - 1);
+    const r0 = clampNumber(Math.floor(item.minY / cellSize), 0, rows - 1);
+    const r1 = clampNumber(Math.floor(item.maxY / cellSize), 0, rows - 1);
+    const covered = (c1 - c0 + 1) * (r1 - r0 + 1);
+
+    if (covered > hitMaxCellsPerItem) {
+      globals.push(item);
+      return;
+    }
+
+    for (let row = r0; row <= r1; row += 1) {
+      for (let col = c0; col <= c1; col += 1) {
+        pushToCell(col, row, item);
+      }
+    }
+  });
+
+  return {
+    grid,
+    gridMeta: {
+      cellSize,
+      cols,
+      rows,
+      width,
+      height,
+      globals,
+    },
+    itemsById,
+  };
+}
+
 export function captureSpatialGridBuild({
-  state,
   items,
   canvasWidth = 1,
   canvasHeight = 1,
-  buildSpatialGrid = () => {},
+  hitGridTargetCols = DEFAULT_HIT_GRID_TARGET_COLS,
+  hitGridMinCellPx = DEFAULT_HIT_GRID_MIN_CELL_PX,
+  hitGridMaxCellPx = DEFAULT_HIT_GRID_MAX_CELL_PX,
+  hitMaxCellsPerItem = DEFAULT_HIT_MAX_CELLS_PER_ITEM,
 } = {}) {
-  const previousItems = state.spatialItems;
-  const previousGrid = state.spatialGrid;
-  const previousGridMeta = state.spatialGridMeta;
-  const previousItemsById = state.spatialItemsById;
-  state.spatialItems = items;
-  buildSpatialGrid(items, canvasWidth, canvasHeight);
-  const snapshot = {
-    grid: state.spatialGrid,
-    gridMeta: state.spatialGridMeta,
-    itemsById: state.spatialItemsById,
-  };
-  state.spatialItems = previousItems;
-  state.spatialGrid = previousGrid;
-  state.spatialGridMeta = previousGridMeta;
-  state.spatialItemsById = previousItemsById;
-  return snapshot;
+  return buildSpatialGridSnapshot({
+    items,
+    canvasWidth,
+    canvasHeight,
+    hitGridTargetCols,
+    hitGridMinCellPx,
+    hitGridMaxCellPx,
+    hitMaxCellsPerItem,
+  });
 }

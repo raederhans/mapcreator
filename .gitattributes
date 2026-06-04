@@ -15,3 +15,9 @@ data/scenarios/**/manifest.json text eol=lf
 data/scenarios/**/geo_locale_patch*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json.gz binary
+
+# Pages dist manifest records byte sizes for checked-in app files.
+dist/pages-dist-manifest.json text eol=lf
+dist/app/index.html text eol=lf
+dist/app/**/*.js text eol=lf
+dist/app/**/*.json text eol=lf

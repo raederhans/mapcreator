@@ -87,6 +87,78 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);", empty_click_body)
         self.assertIn('requestInteractionRender("clear-special-selection-empty-click");', empty_click_body)
 
+    def test_selection_only_water_click_paths_request_interaction_render(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        click_body = renderer_content.split("async function handleClick(event, _interactionContext = null) {", 1)[1].split(
+            "\nfunction handleRectangularSelection",
+            1,
+        )[0]
+        water_click_body = click_body.split('if (hit.targetType === "water") {', 1)[1].split(
+            "\n  if (runtimeState.selectedWaterRegionId)",
+            1,
+        )[0]
+        special_click_body = click_body.split('if (hit.targetType === "special") {', 1)[1].split(
+            '\n  if (hit.targetType === "water")',
+            1,
+        )[0]
+
+        self.assertRegex(
+            special_click_body,
+            re.compile(
+                r'runtimeState\.selectedSpecialRegionId = id;[\s\S]*?'
+                r'refreshSpecialRegionSidebarRowsNow\(\[previousSpecialRegionId, id\]\);[\s\S]*?'
+                r'requestInteractionRender\("select-special-region"\);',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            water_click_body,
+            re.compile(
+                r'if \(macroOceanSelectionOnly\) \{\s*'
+                r'requestInteractionRender\("click-select-open-ocean"\);',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            water_click_body,
+            re.compile(
+                r'if \(runtimeState\.currentTool === "eyedropper"\) \{[\s\S]*?'
+                r'requestInteractionRender\("eyedropper-water"\);[\s\S]*?'
+                r'noteRenderAction\("eyedropper-water"',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            click_body,
+            re.compile(
+                r'if \(runtimeState\.selectedWaterRegionId\) \{[\s\S]*?'
+                r'runtimeState\.selectedWaterRegionId = "";[\s\S]*?'
+                r'refreshWaterRegionSidebarRowsNow\(\[previousWaterRegionId\]\);[\s\S]*?'
+                r'requestInteractionRender\("clear-water-selection-land-click"\);',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            click_body,
+            re.compile(
+                r'if \(runtimeState\.selectedSpecialRegionId\) \{[\s\S]*?'
+                r'runtimeState\.selectedSpecialRegionId = "";[\s\S]*?'
+                r'refreshSpecialRegionSidebarRowsNow\(\[previousSpecialRegionId\]\);[\s\S]*?'
+                r'requestInteractionRender\("clear-special-selection-land-click"\);',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            renderer_content,
+            re.compile(
+                r'function applyWaterRegionFill[\s\S]*?if \(currentColor === color\) \{[\s\S]*?'
+                r'refreshWaterRegionSidebarRowsNow\(\[resolvedId\]\);[\s\S]*?'
+                r'requestInteractionRender\(kind\);[\s\S]*?'
+                r'return false;',
+                re.S,
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
