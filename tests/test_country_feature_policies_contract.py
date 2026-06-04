@@ -25,6 +25,14 @@ class CountryFeaturePoliciesContractTest(unittest.TestCase):
         self.assertIn("DE", country_feature_policies.display_country_names())
         self.assertIn("DE", country_feature_policies.display_presets())
         self.assertEqual(
+            country_feature_policies.display_fragment_camouflage_rules()[0]["countryCode"],
+            "BY",
+        )
+        self.assertIn(
+            "BY_INT_VITEBSK",
+            country_feature_policies.display_fragment_camouflage_rules()[0]["featureIds"],
+        )
+        self.assertEqual(
             display["detailOverlaySupportTiers"],
             policies["country_gate"]["support_tiers"],
         )

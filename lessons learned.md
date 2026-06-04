@@ -185,6 +185,9 @@
 ### open-ocean 可见性和交互开关要分离
 - `showOpenOceanRegions` 只表达视觉可见；`allowOpenOceanSelect` / `allowOpenOceanPaint` 才表达命中与编辑能力。测试或迁移逻辑把 show 当作交互开关时，会让默认场景暴露 open-ocean 列表和点击命中。
 
+### 视觉伪装要统一显示和命中集合
+- 对政治图层做 runtime-only geometry pruning 时，普通绘制、hit/spatial index 和 scenario background merge 都要读同一份可视集合；`landDataFull` 只保留给完整数据、边界和诊断用途。
+
 ### 水域 source、runtime、chunk 要一起验证
 - TNO 水域精细化后要同时跑 source 几何、runtime topology、chunk id consistency 和 named/open-ocean seam 合同；只看 source 或只看 chunk 会漏掉视觉存在但无法命中的漂移。
 - 发布 water 几何前先让 builder 复用已验证 checkpoint；从旧 checkpoint 全量重建会把非目标 global ocean 拓扑问题提前拉进本轮发布。

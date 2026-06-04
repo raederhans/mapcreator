@@ -90,6 +90,7 @@ import {
   resetFeatureOwnerCodes,
 } from "./sovereignty_manager.js";
 import { COUNTRY_CODE_ALIASES, normalizeCountryCodeAlias } from "./country_code_aliases.js";
+import { fragmentCamouflageRules } from "./country_feature_policies.js";
 import {
   DEFAULT_UNIT_COUNTER_PRESET_ID,
   getUnitCounterIconPathById,
@@ -1179,6 +1180,7 @@ function getPoliticalCollectionOwner() {
     constants: {
       highFrequencyCountryDetailWhitelist: HIGH_FREQUENCY_COUNTRY_DETAIL_WHITELIST,
       interactiveAggregateTierFilters: INTERACTIVE_AGGREGATE_TIER_FILTERS,
+      fragmentCamouflageRules,
     },
     helpers: {
       getDetailTier,
@@ -16277,12 +16279,17 @@ function drawTextureLayer(k, { interactive = false } = {}) {
 }
 
 function shouldUseScenarioPoliticalBackgroundMerge() {
+  const landCollection = getScenarioPoliticalBackgroundLandCollection();
   return Boolean(
     debugMode === "PROD" &&
     runtimeState.activeScenarioId &&
-    Array.isArray((runtimeState.landDataFull || runtimeState.landData)?.features) &&
-    (runtimeState.landDataFull || runtimeState.landData).features.length
+    Array.isArray(landCollection?.features) &&
+    landCollection.features.length
   );
+}
+
+function getScenarioPoliticalBackgroundLandCollection() {
+  return runtimeState.landData || runtimeState.landDataFull;
 }
 
 function shouldFallbackScenarioPoliticalBackgroundMergeShape(
@@ -16613,7 +16620,7 @@ function buildScenarioPoliticalBackgroundEntries() {
     return [];
   }
 
-  const landCollection = runtimeState.landDataFull || runtimeState.landData;
+  const landCollection = getScenarioPoliticalBackgroundLandCollection();
   const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
   const featureCount = Array.isArray(landCollection?.features) ? landCollection.features.length : 0;
   const cacheKey = getScenarioPoliticalBackgroundCacheKey({
@@ -16721,7 +16728,7 @@ function collectScenarioPoliticalBackgroundSpatialEntries({
   transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
   visibleItems = null,
 } = {}) {
-  const landCollection = runtimeState.landDataFull || runtimeState.landData;
+  const landCollection = getScenarioPoliticalBackgroundLandCollection();
   if (landCollection !== runtimeState.landData) {
     return null;
   }
