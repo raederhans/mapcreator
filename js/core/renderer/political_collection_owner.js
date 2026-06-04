@@ -6,6 +6,7 @@ export function createPoliticalCollectionOwner({
   const {
     highFrequencyCountryDetailWhitelist = new Set(),
     interactiveAggregateTierFilters = {},
+    fragmentCamouflageRules = [],
   } = constants;
 
   const {
@@ -17,6 +18,7 @@ export function createPoliticalCollectionOwner({
   } = helpers;
 
   const politicalFeatureCollectionCache = new WeakMap();
+  const fragmentCamouflageRuleEntries = normalizeFragmentCamouflageRules(fragmentCamouflageRules);
   let composedPoliticalCollectionCache = {
     primaryRef: null,
     detailRef: null,
@@ -24,6 +26,126 @@ export function createPoliticalCollectionOwner({
     result: null,
   };
   const rewoundFeatureLogKeys = new Set();
+
+  function normalizeFragmentCamouflageRules(rawRules) {
+    if (!Array.isArray(rawRules)) return [];
+    return rawRules
+      .map((rule) => {
+        const countryCode = String(rule?.countryCode || "").trim().toUpperCase();
+        const featureIds = new Set(
+          Array.isArray(rule?.featureIds)
+            ? rule.featureIds
+              .map((item) => String(item || "").trim())
+              .filter(Boolean)
+            : []
+        );
+        const minComponentAreaSteradians = Number(rule?.minComponentAreaSteradians);
+        if (!countryCode || !featureIds.size || !Number.isFinite(minComponentAreaSteradians) || minComponentAreaSteradians <= 0) {
+          return null;
+        }
+        return {
+          countryCode,
+          featureIds,
+          minComponentAreaSteradians,
+          preserveLargestComponent: rule?.preserveLargestComponent !== false,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function getFragmentCamouflageRule(feature, featureId = null) {
+    if (!fragmentCamouflageRuleEntries.length) return null;
+    const resolvedFeatureId = String(featureId || getFeatureId(feature) || "").trim();
+    if (!resolvedFeatureId) return null;
+    const countryCode = getFeatureCountryCodeNormalized(feature);
+    return fragmentCamouflageRuleEntries.find((rule) =>
+      rule.countryCode === countryCode && rule.featureIds.has(resolvedFeatureId)
+    ) || null;
+  }
+
+  function getPolygonComponentAreaSteradians(polygonCoordinates) {
+    if (!globalThis.d3?.geoArea || !Array.isArray(polygonCoordinates)) {
+      return null;
+    }
+    const normalizedPolygonCoordinates = polygonCoordinates.map((ring, index) =>
+      orientRingCoordinates(ring, index === 0)
+    );
+    try {
+      const area = globalThis.d3.geoArea({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: normalizedPolygonCoordinates,
+        },
+      });
+      return Number.isFinite(area) ? area : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function applyFragmentCamouflageToFeature(feature) {
+    if (feature?.geometry?.type !== "MultiPolygon") return feature;
+    const polygonCoordinates = Array.isArray(feature.geometry.coordinates)
+      ? feature.geometry.coordinates
+      : [];
+    if (polygonCoordinates.length < 2) return feature;
+
+    const featureId = getFeatureId(feature);
+    const rule = getFragmentCamouflageRule(feature, featureId);
+    if (!rule) return feature;
+
+    const components = polygonCoordinates.map((polygon, index) => ({
+      index,
+      polygon,
+      area: getPolygonComponentAreaSteradians(polygon),
+    }));
+    if (components.some((component) => !Number.isFinite(component.area))) {
+      return feature;
+    }
+
+    const largestComponent = components.reduce((largest, component) =>
+      component.area > largest.area ? component : largest
+    );
+    const keptComponents = components.filter((component) =>
+      component.area >= rule.minComponentAreaSteradians
+      || (rule.preserveLargestComponent && component.index === largestComponent.index)
+    );
+    if (!keptComponents.length || keptComponents.length === components.length) {
+      return feature;
+    }
+
+    return {
+      ...feature,
+      geometry: {
+        ...feature.geometry,
+        coordinates: keptComponents.map((component) => component.polygon),
+      },
+      properties: {
+        ...(feature.properties || {}),
+        __visualFragmentCamouflage: true,
+        __visualFragmentPrunedCount: components.length - keptComponents.length,
+      },
+    };
+  }
+
+  function applyFragmentCamouflageToCollection(collection) {
+    if (!fragmentCamouflageRuleEntries.length || !Array.isArray(collection?.features) || !collection.features.length) {
+      return collection;
+    }
+    let changed = false;
+    const features = collection.features.map((feature) => {
+      const camouflagedFeature = applyFragmentCamouflageToFeature(feature);
+      if (camouflagedFeature !== feature) changed = true;
+      return camouflagedFeature;
+    });
+    if (!changed) return collection;
+    return {
+      ...collection,
+      features,
+    };
+  }
 
   function parseReplaceFeatureIds(rawValue) {
     if (Array.isArray(rawValue)) {
@@ -473,7 +595,7 @@ export function createPoliticalCollectionOwner({
       Array.from(filterStateByCountry.entries()).filter(([, entry]) => entry.hasLeaf && entry.hasBlocked)
     );
     if (!activeFilters.size) {
-      return explicitCollection;
+      return applyFragmentCamouflageToCollection(explicitCollection);
     }
 
     const filteredFeatures = explicitCollection.features.filter((feature) => {
@@ -484,16 +606,18 @@ export function createPoliticalCollectionOwner({
     });
 
     if (filteredFeatures.length === explicitCollection.features.length) {
-      return explicitCollection;
+      return applyFragmentCamouflageToCollection(explicitCollection);
     }
 
-    return {
+    return applyFragmentCamouflageToCollection({
       type: "FeatureCollection",
       features: filteredFeatures,
-    };
+    });
   }
 
   return {
+    applyFragmentCamouflageToCollection,
+    applyFragmentCamouflageToFeature,
     buildInteractiveLandData,
     collectCountryCoverageStats,
     composePoliticalFeatureCollections,

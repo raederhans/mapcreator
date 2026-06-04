@@ -89,6 +89,34 @@ def _validate_support_tiers(value: object, *, field_name: str) -> dict[str, Any]
     return support_tiers
 
 
+def _validate_fragment_camouflage(value: object, *, field_name: str) -> dict[str, Any]:
+    camouflage = _require_mapping(value, field_name=field_name)
+    rules = _require_sequence(camouflage.get("rules"), field_name=f"{field_name}.rules")
+    for index, rule in enumerate(rules):
+        rule_mapping = _require_mapping(rule, field_name=f"{field_name}.rules[{index}]")
+        country_code = rule_mapping.get("countryCode")
+        if not isinstance(country_code, str) or not country_code.strip():
+            raise ValueError(f"{field_name}.rules[{index}].countryCode must be a non-empty string")
+        feature_ids = _require_sequence(
+            rule_mapping.get("featureIds"),
+            field_name=f"{field_name}.rules[{index}].featureIds",
+        )
+        if not all(isinstance(item, str) and item.strip() for item in feature_ids):
+            raise ValueError(f"{field_name}.rules[{index}].featureIds must contain non-empty strings")
+        try:
+            min_component_area = float(rule_mapping["minComponentAreaSteradians"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"{field_name}.rules[{index}].minComponentAreaSteradians must be numeric"
+            ) from exc
+        if min_component_area <= 0:
+            raise ValueError(f"{field_name}.rules[{index}].minComponentAreaSteradians must be positive")
+        preserve_largest = rule_mapping.get("preserveLargestComponent", True)
+        if not isinstance(preserve_largest, bool):
+            raise ValueError(f"{field_name}.rules[{index}].preserveLargestComponent must be boolean")
+    return camouflage
+
+
 def _validate_country_feature_policies(policies: object) -> dict[str, Any]:
     root = _require_mapping(policies, field_name="country_feature_policies")
     if root.get("schema_version") != _POLICY_SCHEMA_VERSION:
@@ -107,6 +135,7 @@ def _validate_country_feature_policies(policies: object) -> dict[str, Any]:
 
     support_tiers = _validate_support_tiers(gate.get("support_tiers"), field_name="country_gate.support_tiers")
     display = _require_mapping(root.get("display"), field_name="display")
+    _validate_fragment_camouflage(display.get("fragmentCamouflage"), field_name="display.fragmentCamouflage")
     _validate_palette(display)
     _validate_string_mapping(display.get("countryNames"), field_name="display.countryNames")
     _validate_presets(display.get("presets"), field_name="display.presets")
@@ -179,3 +208,7 @@ def display_detail_overlay_support_tier_codes(tier_name: str) -> tuple[str, ...]
         support_tiers[tier_name],
         field_name=f"display.detailOverlaySupportTiers.{tier_name}",
     )
+
+
+def display_fragment_camouflage_rules() -> list[dict[str, Any]]:
+    return display_policy()["fragmentCamouflage"]["rules"]

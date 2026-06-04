@@ -1312,6 +1312,11 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
     backgroundMergeFiltersVisualHelpersButKeepsVisibleNonInteractiveLand:
       /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(feature, id\)/.test(rendererSource)
       && /function buildScenarioPoliticalBackgroundEntriesFromSpatialItems\(items = \[\]\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(entry\.feature, entry\.id\)/.test(rendererSource),
+    scenarioBackgroundMergeUsesVisualLandCollection:
+      /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return runtimeState\.landData \|\| runtimeState\.landDataFull;[\s\S]*?\}/.test(rendererSource)
+      && /function shouldUseScenarioPoliticalBackgroundMerge\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?runtimeState\.activeScenarioId[\s\S]*?landCollection\.features\.length/.test(rendererSource)
+      && /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);/.test(rendererSource)
+      && /function collectScenarioPoliticalBackgroundSpatialEntries\([\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?if \(landCollection !== runtimeState\.landData\)/.test(rendererSource),
     backgroundMergeEntriesCacheIsViewportIndependent:
       (() => {
         const entriesBody = rendererSource.match(/function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction buildScenarioPoliticalBackgroundEntriesFromSpatialItems/)?.[0] || "";

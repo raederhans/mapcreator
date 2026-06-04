@@ -29,6 +29,33 @@
     }
   },
   "display": {
+    "fragmentCamouflage": {
+      "rules": [
+        {
+          "countryCode": "BY",
+          "featureIds": [
+            "BY_INT_BREST",
+            "BY_INT_GOMEL",
+            "BY_INT_GRODNO",
+            "BY_INT_MINSK",
+            "BY_INT_MOGILEV",
+            "BY_INT_VITEBSK"
+          ],
+          "minComponentAreaSteradians": 0.00000125,
+          "preserveLargestComponent": true
+        },
+        {
+          "countryCode": "RU",
+          "featureIds": [
+            "RU_RAY_50074027B24884281398381",
+            "RU_RAY_50074027B51726500082089",
+            "RU_RAY_50074027B64424707524567"
+          ],
+          "minComponentAreaSteradians": 0.00000025,
+          "preserveLargestComponent": true
+        }
+      ]
+    },
     "palette": {
       "themes": {
         "HOI4 Vanilla": [

@@ -7,6 +7,7 @@ const COUNTRY_FEATURE_POLICIES_RUNTIME_ASSET_KEY = "country_feature_policies";
 const COUNTRY_FEATURE_POLICIES = countryFeaturePolicies || {};
 const display = COUNTRY_FEATURE_POLICIES.display || {};
 const paletteDisplay = display.palette || {};
+const fragmentCamouflage = display.fragmentCamouflage || {};
 
 const PALETTE_THEMES = paletteDisplay.themes || {};
 const countryPalette = { ...(paletteDisplay.countryPalette || {}) };
@@ -15,6 +16,9 @@ const defaultCountryPalette = { ...countryPalette };
 const countryNames = display.countryNames || {};
 const countryPresets = display.presets || {};
 const detailOverlaySupportTiers = display.detailOverlaySupportTiers || {};
+const fragmentCamouflageRules = Array.isArray(fragmentCamouflage.rules)
+  ? fragmentCamouflage.rules
+  : [];
 
 export {
   COUNTRY_FEATURE_POLICIES_RUNTIME_ASSET_KEY,
@@ -26,4 +30,5 @@ export {
   countryNames,
   countryPresets,
   detailOverlaySupportTiers,
+  fragmentCamouflageRules,
 };

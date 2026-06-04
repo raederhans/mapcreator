@@ -22,7 +22,7 @@
     },
     {
       "path": "app/data/country_feature_policies.json",
-      "size_bytes": 19169
+      "size_bytes": 19906
     },
     {
       "path": "app/data/europe_physical.geojson",
@@ -36342,7 +36342,7 @@
     },
     {
       "path": "app/js/core/country_feature_policies.js",
-      "size_bytes": 1148
+      "size_bytes": 1331
     },
     {
       "path": "app/js/core/data_loader.js",
@@ -36370,7 +36370,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 43922
+      "size_bytes": 43946
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -36434,7 +36434,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 945362
+      "size_bytes": 945561
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36518,7 +36518,7 @@
     },
     {
       "path": "app/js/core/renderer/political_collection_owner.js",
-      "size_bytes": 17085
+      "size_bytes": 21517
     },
     {
       "path": "app/js/core/renderer/render_cache_owner.js",
@@ -36798,7 +36798,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 27279
+      "size_bytes": 27326
     },
     {
       "path": "app/js/core/state.js",
@@ -37223,5 +37223,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1087720543
+  "total_bytes": 1087726165
 }

@@ -19,8 +19,10 @@ class MapRendererPoliticalCollectionBoundaryContractTest(unittest.TestCase):
             "import { createPoliticalCollectionOwner } from './renderer/political_collection_owner.js';",
             renderer_imports,
         )
+        self.assertIn("import { fragmentCamouflageRules } from './country_feature_policies.js';", renderer_imports)
         self.assertIn("let politicalCollectionOwner = null;", renderer_content)
         self.assertIn("function getPoliticalCollectionOwner() {", renderer_content)
+        self.assertIn("fragmentCamouflageRules,", renderer_content)
         self.assertIn("return readFacadeGetter('getPoliticalCollectionOwner')().getPoliticalFeatureCollection(topology, sourceName);", facade_content)
         self.assertIn("return readFacadeGetter('getPoliticalCollectionOwner')().normalizeFeatureGeometry(feature, { sourceLabel });", facade_content)
         self.assertIn("return readFacadeGetter('getPoliticalCollectionOwner')().mergeOverrideFeatures(baseFeatures, overrideCollection);", facade_content)
@@ -40,6 +42,8 @@ class MapRendererPoliticalCollectionBoundaryContractTest(unittest.TestCase):
         self.assertIn("function composePoliticalFeatures(primaryTopology, detailTopology, overrideCollection = null) {", owner_content)
         self.assertIn("function composePoliticalFeatureCollections(primaryCollection, detailCollection = null, overrideCollection = null) {", owner_content)
         self.assertIn("function collectCountryCoverageStats(features = []) {", owner_content)
+        self.assertIn("function applyFragmentCamouflageToFeature(feature) {", owner_content)
+        self.assertIn("function applyFragmentCamouflageToCollection(collection) {", owner_content)
         self.assertIn("function buildInteractiveLandData(fullCollection) {", owner_content)
 
 
