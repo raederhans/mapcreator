@@ -508,6 +508,53 @@ test("political byte budget limits cold required detail tail", () => {
   assert.equal(selection.selectedByteCountSum, 10);
 });
 
+test("chunk selection requires only current viewport political chunks", () => {
+  const makePoliticalChunk = (id, bounds, estimatedPathCost = 10) => ({
+    id,
+    url: `${id}.json`,
+    layer: "political",
+    lod: "detail",
+    bounds,
+    minZoom: 0,
+    maxZoom: 99,
+    priority: 0,
+    countryCodes: [],
+    featureCount: 1,
+    byteSize: 1,
+    estimatedPathCost,
+  });
+  const selection = selectScenarioChunks({
+    scenarioId: "hoi4_1939",
+    chunkRegistry: normalizeScenarioChunkManifest({
+      chunks: [
+        makePoliticalChunk("political.detail.visible", [-2, -2, 2, 2], 17),
+        makePoliticalChunk("political.detail.outside", [80, 40, 90, 50], 19),
+      ],
+    }),
+    zoom: 6,
+    viewportBbox: [-5, -5, 5, 5],
+    visibleLayers: ["political"],
+    loadedChunkIds: [
+      "political.detail.visible",
+      "political.detail.previous",
+      "political.detail.outside",
+    ],
+    renderBudgetHints: {
+      max_required_chunks: 8,
+      max_required_political_chunks: 8,
+      min_required_political_chunks: 1,
+      max_optional_chunks: 0,
+    },
+  });
+
+  assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["political.detail.visible"]);
+  assert.deepEqual(selection.evictableChunkIds, [
+    "political.detail.previous",
+    "political.detail.outside",
+  ]);
+  assert.equal(selection.selectedEstimatedPathCostSum, 17);
+});
+
 test("feature bounds keep broad owner chunks out of unrelated viewports", () => {
   const selection = selectScenarioChunks({
     scenarioId: "tno_1962",
@@ -842,6 +889,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     exactAfterSettleFinalizesAfterExactCompose:
       /function drawCanvas\(\) \{[\s\S]*?drewExactFrame = composeCachedPasses\(RENDER_PASS_NAMES\);[\s\S]*?if \(drewExactFrame\) \{[\s\S]*?finalizePendingExactAfterSettleRefreshAfterPaint\(\);/.test(rendererSource)
       && /function finalizePendingExactAfterSettleRefreshAfterPaint\(\) \{[\s\S]*?isExactAfterSettleIdentityCurrent\(controller\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshWaitForPaint"[\s\S]*?finalizeExactAfterSettleRefreshPlan\(plan\);[\s\S]*?recordRenderPerfMetric\("settleExactRefreshFinalize"/.test(rendererSource)
+      && /metricSequenceStartedAt: Math\.max\(0, Number\(runtimeState\.renderPerfMetricSequence \|\| 0\)\)/.test(rendererSource)
+      && /function readRenderPerfMetricDuration\(metricName, minSequence = 0\) \{[\s\S]*?requiredMinSequence > 0[\s\S]*?entry\?\.sequence/.test(rendererSource)
+      && /function recordSettleExactRefreshPhaseBreakdown\(plan, durationMs\) \{[\s\S]*?recordRenderPerfMetric\("settleExactRefreshPhaseBreakdown"[\s\S]*?applyMs: readRenderPerfMetricDuration\("settleExactRefreshApply"\)[\s\S]*?passesMs: readRenderPerfMetricDuration\("settleExactRefreshPasses"\)[\s\S]*?hitCanvasMs: readRenderPerfMetricDuration\("buildHitCanvas", metricSequenceStartedAt\)/.test(rendererSource)
+      && /recordRenderPerfMetric\("settleExactRefreshFinalize"[\s\S]*?recordSettleExactRefreshPhaseBreakdown\(plan, Math\.max\(0, nowMs\(\) - Number\(plan\.startedAt \|\| finalizeStartedAt\)\)\);/.test(rendererSource)
       && !/applyScheduledExactAfterSettleRefreshPlan\(generation, plan\);[\s\S]{0,160}?finalizeExactAfterSettleRefreshPlan\(plan\);/.test(rendererSource),
     exactAfterSettleSuccessInvalidatesPoliticalPass:
       /function invalidateExactAfterSettlePoliticalPass\(plan\) \{[\s\S]*?invalidateRenderPasses\("political", "exact-after-settle-political"\);[\s\S]*?plan\.politicalInvalidationReason = "exact-after-settle-political";[\s\S]*?plan\.politicalInvalidatedAt = politicalInvalidatedAt;/.test(rendererSource)
@@ -885,9 +936,11 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /if \(passName === "labels"\) \{[\s\S]*?`colors:\$\{Number\(runtimeState\.colorRevision \|\| 0\)\}`/.test(rendererSource),
     partialPoliticalRepaintOnlyAcceptsTargetedRefreshColors:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
-      && /targetPassNames\.includes\("political"\)[\s\S]*?String\(reason \|\| "unspecified"\) !== "refresh-colors"[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);/.test(rendererSource)
       && !rendererSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
       && !rendererSource.includes('!["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))'),
+    politicalPathCachePreservesTargetedColorAndDeferredFullCacheReady:
+      /const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set\(\[[\s\S]*?"refresh-colors"[\s\S]*?"progressive-political-full-cache-ready"[\s\S]*?\]\);/.test(rendererSource)
+      && /targetPassNames\.includes\("political"\)[\s\S]*?!POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS\.has\(String\(reason \|\| "unspecified"\)\)[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);/.test(rendererSource),
     politicalFullReferenceOnlyWrittenByFullPass:
       /function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?setPassReferenceTransform\(passName, transform\);[\s\S]*?if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(rendererSource)
       && !/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(rendererSource),
@@ -1129,7 +1182,23 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
     backgroundFillHelperKeepsScenarioMergeSplit:
       /function drawPoliticalBackgroundFills\(options = \{\}\) \{[\s\S]*?if \(shouldUseScenarioPoliticalBackgroundMerge\(\)\) \{[\s\S]*?return drawScenarioPoliticalBackgroundFills\(options\);[\s\S]*?\}[\s\S]*?drawAdmin0BackgroundFills\(options\);/.test(rendererSource),
     backgroundFullPassCacheBuildsAndReplays:
-      /function getScenarioPoliticalBackgroundFullPassGroups\([\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheReplay"[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheBuild"/.test(rendererSource),
+      /function getScenarioPoliticalBackgroundFullPassGroups\([\s\S]*?metricName = "scenarioPoliticalBackgroundCacheBuild"[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheReplay"[\s\S]*?recordRenderPerfMetric\(metricName/.test(rendererSource),
+    politicalRecoveryQualityDefaultsProgressiveWithExactOverride:
+      rendererSource.includes('const POLITICAL_RECOVERY_QUALITY_PARAM = "political_recovery_quality";')
+      && /function getPoliticalRecoveryQuality\(\) \{[\s\S]*?raw === POLITICAL_RECOVERY_QUALITY_EXACT[\s\S]*?POLITICAL_RECOVERY_QUALITY_EXACT[\s\S]*?POLITICAL_RECOVERY_QUALITY_PROGRESSIVE[\s\S]*?runtimeState\.politicalRecoveryQuality = resolved;[\s\S]*?return resolved;[\s\S]*?\}/.test(rendererSource),
+    progressivePoliticalRecoveryUsesCoarseUnderlayAndDeferredFullCache:
+      rendererSource.includes("POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT")
+      && rendererSource.includes("POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS")
+      && rendererSource.includes('"progressive-political-full-cache-ready"')
+      && rendererSource.includes("function isScenarioPoliticalBackgroundFullPassCacheKeyReady")
+      && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
+      && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
+      && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)
+      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
+      && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
+      && rendererSource.includes('metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild"')
+      && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice"')
+      && rendererSource.includes('reason: "progressive-coarse-underlay"'),
     chunkedRuntimeSkipsBlockingDetailPromotion:
       /const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?const detailPromoted = \(startupReadonly \|\| supportsChunkedPoliticalRuntime\)\s*\?\s*false\s*:\s*await ensureScenarioDetailTopologyLoaded\(\{ applyMapData: false \}\);/.test(scenarioApplyPipelineSource),
     unconfirmedDetailPromotionStillWarnsBeforeHealthGate:
@@ -1219,6 +1288,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
   const startupHydrationSource = readRepoFile("js", "core", "scenario", "startup_hydration.js");
+  const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
 
   const checks = {
     scenarioWaterExclusiveModeComesFromManifestWithLegacyAtlantropaDefault:
@@ -1290,6 +1360,12 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
         "includeSecondary: false",
         "keepReady: true",
       ].every((snippet) => rendererSource.includes(snippet)),
+    rebuildPoliticalLandCollectionsBreakdownExposesSyncSubsteps:
+      /function rebuildPoliticalLandCollections\(\) \{[\s\S]*?let runtimeCollectionMs = 0;[\s\S]*?let composeMs = 0;[\s\S]*?let atlantropaMs = 0;[\s\S]*?let interactiveMs = 0;[\s\S]*?let coverageMs = 0;[\s\S]*?recordRenderPerfMetric\("rebuildPoliticalLandCollectionsBreakdown"[\s\S]*?scenarioChunkFeatureCount:[\s\S]*?runtimeCollectionMs:[\s\S]*?composeMs:[\s\S]*?atlantropaMs:[\s\S]*?interactiveMs:[\s\S]*?coverageMs:/.test(rendererSource),
+    politicalChunkPromotionBreakdownExposesVisualStageSubsteps:
+      /function applyScenarioPoliticalChunkPayload\(bundle, politicalPayload,[\s\S]*?const normalizeStartedAt = startedAt;[\s\S]*?const identityStartedAt = normalizeEndedAt;[\s\S]*?const compareStartedAt = identityEndedAt;[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?normalizeMs:[\s\S]*?identityMs:[\s\S]*?compareMs:[\s\S]*?refreshMs:/.test(chunkRuntimeSource)
+      && /if \(samePayload\) \{[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?samePayload: true,[\s\S]*?refreshMs: 0,/.test(chunkRuntimeSource)
+      && /recordScenarioRenderMetric\("politicalChunkPromotionBreakdown", finishedAt - startedAt,[\s\S]*?samePayload: false,[\s\S]*?resolvedPoliticalFeatureCount: resolvedPoliticalFeatureIds\.length,/.test(chunkRuntimeSource),
     compositeScenarioRebuildKeepsScenarioRuntimeTopology:
       [
         "render_as_base_geography === false",
@@ -1380,7 +1456,7 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
           && !entriesBody.includes("pathBoundsInScreen")
           && entriesBody.includes("viewport filtering stays in the draw path");
       })()
-      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const visibleEntries = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, screenRects, \{ transform \}\)/.test(rendererSource),
+      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const normalizedScreenRects = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?const visibleEntries = normalizedScreenRects[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, normalizedScreenRects, \{ transform \}\)/.test(rendererSource),
     spatialItemsCanCarryVisibleNonInteractiveLand:
       /function appendLandSpatialItemsRange\([\s\S]*?shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature[\s\S]*?if \(shouldExcludePoliticalVisualFeature\(feature, id\)\) continue;[\s\S]*?interactive: !shouldExcludePoliticalInteractionFeature\(feature, id\)/.test(spatialBuilderSource)
       && /shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature/.test(spatialOwnerSource)
@@ -1889,6 +1965,161 @@ test("political raster renderer request identity includes viewport and pass sign
   assert.ok(/normalizeViewportIdentity\(request\.viewport\) === normalizeViewportIdentity\(current\.viewport\)/.test(workerClientSource));
   assert.ok(workerSource.includes("passSignature: String(identity.passSignature || \"\")"));
   assert.ok(workerSource.includes("viewport: identity.viewport || null"));
+});
+
+test("startup render samples expose hot-path details", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const renderStart = rendererSource.indexOf("function render()");
+  const renderEnd = rendererSource.indexOf("function autoFillMap(", renderStart);
+  const renderSource = renderStart >= 0 && renderEnd > renderStart
+    ? rendererSource.slice(renderStart, renderEnd)
+    : "";
+
+  assert.ok(renderSource.includes("const metricSequenceStartedAt = startedAt > 0"));
+  assert.ok(renderSource.includes('politicalBgMs: readRenderPerfMetricDuration("drawPoliticalBackgroundFillsPass", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalRecoveryQuality: readRenderPerfMetricString("drawPoliticalBackgroundFillsPass", "recoveryQuality", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgProgressive: readRenderPerfMetricBoolean("drawPoliticalBackgroundFillsPass", "progressive", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheScheduled: readRenderPerfMetricBoolean("drawPoliticalBackgroundFillsPass", "deferredFullCacheScheduled", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheReady: readRenderPerfMetricBoolean("drawPoliticalBackgroundFillsPass", "deferredFullCacheReady", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "entryCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCachePathCacheSizeBefore: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeBefore", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCachePathCacheSizeAfter: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeAfter", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCachePathCacheResetPreviousReason: readRenderPerfMetricString("scenarioPoliticalBackgroundCacheBuild", "pathCacheResetPreviousReason", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundDeferredFullCacheBuild", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundDeferredFullCacheBuild", "entryCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundDeferredFullCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt)'));
+});
+
+test("render perf metric sequence filter excludes previous-frame metrics", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const match = rendererSource.match(/function readRenderPerfMetricDuration\(metricName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(match, "readRenderPerfMetricDuration should stay available for render sample filtering");
+  const readRenderPerfMetricDuration = Function(
+    "runtimeState",
+    `${match[0]}; return readRenderPerfMetricDuration;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        durationMs: 33,
+        sequence: 10,
+      },
+      currentFrame: {
+        durationMs: 44,
+        sequence: 11,
+      },
+      missingSequence: {
+        durationMs: 55,
+      },
+    },
+  });
+
+  assert.equal(readRenderPerfMetricDuration("previousFrame", 10), 0);
+  assert.equal(readRenderPerfMetricDuration("currentFrame", 10), 44);
+  assert.equal(readRenderPerfMetricDuration("previousFrame", 9), 33);
+  assert.equal(readRenderPerfMetricDuration("missingSequence", 10), 0);
+
+  const numberMatch = rendererSource.match(/function readRenderPerfMetricNumber\(metricName, fieldName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(numberMatch, "readRenderPerfMetricNumber should share the render sample sequence filter");
+  const readRenderPerfMetricNumber = Function(
+    "runtimeState",
+    `${numberMatch[0]}; return readRenderPerfMetricNumber;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        entryCount: 77,
+        sequence: 10,
+      },
+      currentFrame: {
+        entryCount: 88,
+        sequence: 11,
+      },
+    },
+  });
+  assert.equal(readRenderPerfMetricNumber("previousFrame", "entryCount", 10), 0);
+  assert.equal(readRenderPerfMetricNumber("currentFrame", "entryCount", 10), 88);
+
+  const stringMatch = rendererSource.match(/function readRenderPerfMetricString\(metricName, fieldName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(stringMatch, "readRenderPerfMetricString should share the render sample sequence filter");
+  const readRenderPerfMetricString = Function(
+    "runtimeState",
+    `${stringMatch[0]}; return readRenderPerfMetricString;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        reason: "old",
+        sequence: 10,
+      },
+      currentFrame: {
+        reason: "current",
+        sequence: 11,
+      },
+    },
+  });
+  assert.equal(readRenderPerfMetricString("previousFrame", "reason", 10), "");
+  assert.equal(readRenderPerfMetricString("currentFrame", "reason", 10), "current");
+
+  const booleanMatch = rendererSource.match(/function readRenderPerfMetricBoolean\(metricName, fieldName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(booleanMatch, "readRenderPerfMetricBoolean should share the render sample sequence filter");
+  const readRenderPerfMetricBoolean = Function(
+    "runtimeState",
+    `${booleanMatch[0]}; return readRenderPerfMetricBoolean;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        progressive: true,
+        sequence: 10,
+      },
+      currentFrame: {
+        progressive: true,
+        sequence: 11,
+      },
+    },
+  });
+  assert.equal(readRenderPerfMetricBoolean("previousFrame", "progressive", 10), false);
+  assert.equal(readRenderPerfMetricBoolean("currentFrame", "progressive", 10), true);
+});
+
+test("political path cache reset exposes invalidation reason and previous size", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const invalidateBody = rendererSource.match(/function invalidatePoliticalPathCache\(reason = "unspecified"\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(invalidateBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
+  assert.ok(invalidateBody.includes("previousSize"));
+  assert.ok(invalidateBody.includes("previousSignature"));
+  assert.ok(invalidateBody.includes("previousReason"));
+
+  const handleBody = rendererSource.match(/function getPoliticalPathCacheHandle\([\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(handleBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
+  assert.ok(handleBody.includes('reason: "prepare-mismatch"'));
+  assert.ok(handleBody.includes("nextSignature: signature"));
+  const signatureBody = rendererSource.match(/function getPoliticalPathCacheSignature\([\s\S]*?\n\}/)?.[0] || "";
+  [
+    "getPoliticalPassStaticSignature(transform)",
+    "getProjectionRenderSignature()",
+    "getViewportRenderSignature()",
+    "String(runtimeState.activeScenarioId || \"\")",
+    "\"ownership\"",
+    "Number(runtimeState.sovereigntyRevision || 0)",
+    "Number(runtimeState.scenarioShellOverlayRevision || 0)",
+  ].forEach((signatureInput) => {
+    assert.ok(signatureBody.includes(signatureInput), `political path cache signature should include ${signatureInput}`);
+  });
+  assert.ok(rendererSource.includes("runtimeState.topologyRevision || 0"));
+  const entryBody = rendererSource.match(/function buildPoliticalFeaturePathEntry\(feature\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(entryBody.includes("path: new globalThis.Path2D(pathString)"));
+  assert.equal(entryBody.includes("featureRef"), false);
+  assert.equal(entryBody.includes("projectionSignature"), false);
+  const getEntryBody = rendererSource.match(/function getPoliticalFeaturePathEntry\([\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(getEntryBody.includes("if (cachedEntry?.path)"));
+  assert.ok(rendererSource.includes("pathCacheSizeBefore"));
+  assert.ok(rendererSource.includes("pathCacheSizeAfter"));
+  assert.ok(rendererSource.includes("pathCacheResetReason"));
+  assert.ok(rendererSource.includes("pathCacheResetPreviousSize"));
+  assert.ok(rendererSource.includes("pathCacheResetPreviousReason"));
 });
 
 test("frame scheduler keeps high-priority exact slices draining under continuous input pressure", async () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs/promises";
+import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -230,6 +231,38 @@ function median(values) {
   return numbers[middleIndex];
 }
 
+function percentile(values, percentileValue) {
+  const numbers = values.map((value) => finiteNumber(value, NaN)).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!numbers.length) {
+    return 0;
+  }
+  const clampedPercentile = Math.max(0, Math.min(100, Number(percentileValue) || 0));
+  const rank = (clampedPercentile / 100) * (numbers.length - 1);
+  const lowerIndex = Math.floor(rank);
+  const upperIndex = Math.ceil(rank);
+  if (lowerIndex === upperIndex) {
+    return numbers[lowerIndex];
+  }
+  return numbers[lowerIndex] + ((numbers[upperIndex] - numbers[lowerIndex]) * (rank - lowerIndex));
+}
+
+function summarizeSampleSpread(values) {
+  const numbers = values.map((value) => finiteNumber(value, NaN)).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!numbers.length) {
+    return { count: 0, p50: 0, p90: 0, min: 0, max: 0, spread: 0 };
+  }
+  const min = numbers[0];
+  const max = numbers[numbers.length - 1];
+  return {
+    count: numbers.length,
+    p50: percentile(numbers, 50),
+    p90: percentile(numbers, 90),
+    min,
+    max,
+    spread: max - min,
+  };
+}
+
 function metricAtMs(metric, bootTotal) {
   if (!metric || typeof metric !== "object") {
     return 0;
@@ -280,7 +313,13 @@ function summarizeSnapshot(snapshot) {
     postReadyMaxRetryCount: finiteNumber(renderPerfMetrics.postReadySchedulerState?.maxRetryCount),
     drawContextScenarioPassMs: finiteNumber(renderPerfMetrics.drawContextScenarioPass?.durationMs),
     setMapDataFirstPaintMs: finiteNumber(renderPerfMetrics.setMapDataFirstPaint?.durationMs),
+    buildHitCanvasMs: finiteNumber(renderPerfMetrics.buildHitCanvas?.durationMs),
     settleExactRefreshMs: finiteNumber(renderPerfMetrics.settleExactRefresh?.durationMs),
+    settleExactRefreshApplyMs: finiteNumber(renderPerfMetrics.settleExactRefreshApply?.durationMs),
+    settleExactRefreshPassesMs: finiteNumber(renderPerfMetrics.settleExactRefreshPasses?.durationMs),
+    settleExactRefreshWaitForPaintMs: finiteNumber(renderPerfMetrics.settleExactRefreshWaitForPaint?.durationMs),
+    settleExactRefreshFinalizeMs: finiteNumber(renderPerfMetrics.settleExactRefreshFinalize?.durationMs),
+    settleExactRefreshPhaseBreakdownMs: finiteNumber(renderPerfMetrics.settleExactRefreshPhaseBreakdown?.durationMs),
     renderSampleCount: finiteNumber(renderSamples.count),
     renderSampleTotalMs: finiteNumber(renderSamples.totalMs),
     renderSampleMedianMs: finiteNumber(renderSamples.medianMs),
@@ -353,7 +392,13 @@ function aggregateRuns(runs) {
     "postReadyMaxRetryCount",
     "drawContextScenarioPassMs",
     "setMapDataFirstPaintMs",
+    "buildHitCanvasMs",
     "settleExactRefreshMs",
+    "settleExactRefreshApplyMs",
+    "settleExactRefreshPassesMs",
+    "settleExactRefreshWaitForPaintMs",
+    "settleExactRefreshFinalizeMs",
+    "settleExactRefreshPhaseBreakdownMs",
     "renderSampleCount",
     "renderSampleTotalMs",
     "renderSampleMedianMs",
@@ -368,9 +413,67 @@ function aggregateRuns(runs) {
   return medianSummary;
 }
 
-async function readScenarioFeatureCount(scenarioId) {
-  const manifest = await readJson(SCENARIO_MANIFEST_MAP[scenarioId], {});
-  return finiteNumber(manifest?.summary?.feature_count);
+function buildAggregateSampleSpread(runs) {
+  const summaries = runs.map((run) => run.summary || {});
+  const spread = {};
+  const metricKeys = [
+    ...GATE_METRICS.map((metric) => metric.key),
+    "scenarioChunkPromotionVisualStageMs",
+    "interactionRecoveryWindowMs",
+    "settleExactRefreshMs",
+    "renderSampleCount",
+  ];
+  for (const metricKey of Array.from(new Set(metricKeys))) {
+    spread[metricKey] = summarizeSampleSpread(summaries.map((summary) => summary[metricKey]));
+  }
+  return spread;
+}
+
+function buildScenarioWorkloadIdentity(manifestIdentity, options, baseUrl) {
+  return {
+    ...manifestIdentity,
+    baseUrl,
+    runs: options.runs,
+    warmups: options.warmups,
+    urlQuery: PERF_URL_QUERY,
+  };
+}
+
+function buildReportWorkloadIdentity(options, measurement) {
+  const scenarios = {};
+  for (const [scenarioId, scenario] of Object.entries(measurement.scenarios || {})) {
+    scenarios[scenarioId] = scenario.workloadIdentity || {};
+  }
+  return {
+    scenarioIds: options.scenarios,
+    runs: options.runs,
+    warmups: options.warmups,
+    threshold: options.threshold,
+    urlQuery: PERF_URL_QUERY,
+    baseUrl: measurement.baseUrl,
+    scenarios,
+  };
+}
+
+async function readScenarioManifestIdentity(scenarioId) {
+  const manifestPath = SCENARIO_MANIFEST_MAP[scenarioId];
+  const relativeManifestPath = path.relative(REPO_ROOT, manifestPath).replaceAll("\\", "/");
+  let manifest = {};
+  let manifestSha256 = "";
+  try {
+    const content = await fs.readFile(manifestPath, "utf8");
+    manifestSha256 = crypto.createHash("sha256").update(content).digest("hex");
+    manifest = JSON.parse(content);
+  } catch (_error) {
+    manifest = {};
+  }
+  return {
+    scenarioId,
+    manifestPath: relativeManifestPath,
+    manifestSha256,
+    featureCount: finiteNumber(manifest?.summary?.feature_count),
+    sampleRole: getScenarioSampleRole(scenarioId),
+  };
 }
 
 async function measureOneRun(browser, baseUrl, scenarioId) {
@@ -453,7 +556,8 @@ async function waitForPerfSnapshotReady(page, { timeoutMs = 120_000 } = {}) {
 }
 
 async function runScenarioSeries(browser, baseUrl, scenarioId, options) {
-  const featureCount = await readScenarioFeatureCount(scenarioId);
+  const manifestIdentity = await readScenarioManifestIdentity(scenarioId);
+  const featureCount = finiteNumber(manifestIdentity.featureCount);
   const scenarioDir = path.join(options.rawDir, scenarioId);
   await ensureDir(scenarioDir);
   const warmups = [];
@@ -475,9 +579,11 @@ async function runScenarioSeries(browser, baseUrl, scenarioId, options) {
     scenarioId,
     sampleRole: getScenarioSampleRole(scenarioId),
     featureCount,
+    workloadIdentity: buildScenarioWorkloadIdentity(manifestIdentity, options, baseUrl),
     warmups,
     runs,
     summary: aggregateRuns(runs),
+    sampleSpread: buildAggregateSampleSpread(runs),
   };
 }
 
@@ -538,7 +644,12 @@ function buildMarkdown(report) {
     lines.push(formatMetricRow("post-ready max retry count", summary.postReadyMaxRetryCount));
     lines.push(formatMetricRow("draw context scenario pass", summary.drawContextScenarioPassMs));
     lines.push(formatMetricRow("setMapData first paint", summary.setMapDataFirstPaintMs));
+    lines.push(formatMetricRow("build hit canvas", summary.buildHitCanvasMs));
     lines.push(formatMetricRow("settle exact refresh", summary.settleExactRefreshMs));
+    lines.push(formatMetricRow("settle exact apply", summary.settleExactRefreshApplyMs));
+    lines.push(formatMetricRow("settle exact passes", summary.settleExactRefreshPassesMs));
+    lines.push(formatMetricRow("settle exact wait for paint", summary.settleExactRefreshWaitForPaintMs));
+    lines.push(formatMetricRow("settle exact finalize", summary.settleExactRefreshFinalizeMs));
     lines.push(`- render samples: ${finiteNumber(summary.renderSampleCount).toFixed(0)} calls / ${finiteNumber(summary.renderSampleTotalMs).toFixed(1)} ms total / ${finiteNumber(summary.renderSampleMedianMs).toFixed(1)} ms median`);
     lines.push("");
   }
@@ -783,6 +894,7 @@ async function main() {
       urlQuery: PERF_URL_QUERY,
     },
     environment: collectEnvironment(),
+    workloadIdentity: buildReportWorkloadIdentity(options, measurement),
     scenarios: measurement.scenarios,
   };
 

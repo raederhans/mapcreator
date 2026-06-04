@@ -183,6 +183,20 @@
 ### 可保存 UI 状态要只有一个真源
 - legend labels/config 这类会写入项目文件的 UI 状态应以 `runtimeState` 为真源；manager 可以负责 normalize 和派生计算，渲染路径不能再读静态缓存。
 
+### 渐进恢复要同时移出背景缓存和细节绘制
+- 大场景启动恢复里，只把 full-pass Path2D cache 延后还会留下细粒度 feature fill loop 成本；progressive 模式要把粗 underlay、细节 loop 跳过、idle full cache 三件事一起设计，并让 `refresh-colors` 继续走精确反馈路径。
+
+### perf measure 会写 baseline 文件
+- `tools/perf/run_baseline.mjs --mode measure --write-markdown false` 仍会写 `docs/perf/baseline_2026-04-20.json`；只用 `.runtime` 原始样本做实验时，跑完要恢复 docs baseline，避免把测量副作用混进性能改动。
+
+### 失败的性能实验也要锁合同
+- 渲染链路里被测试并拒绝的 cache 签名收窄、entry 复用等实验，要用合同测试钉住当前边界；只在文档里记录原因，后续容易被同类优化重新引入。
+
+### render benchmark 优化先看采样窗口
+- post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
+- scenario political background full-pass Path2D cache 构建很贵，但 HOI4 直接 grouped replay 更贵；优化应降低 cache build 成本或复用时机，不能直接关闭 full-pass cache。
+- Pages dist manifest 必须在最终换行形态之后写入；如果构建后再规整 LF，`size_bytes` 会和 checked-in 文件失配。
+
 ### Pages dist 字节合同要同时锁写入和属性
 - `dist/pages-dist-manifest.json` 记录 app 文件 size/hash 时，生成脚本要用 LF 写入，`.gitattributes` 也要锁住 `dist/app` 文本产物 LF；只修写入层会在 Windows checkout 下继续出现字节漂移风险。
 

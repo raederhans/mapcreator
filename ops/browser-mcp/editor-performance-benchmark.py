@@ -1708,13 +1708,16 @@ def summarize_interactive_pan_metric(suite: dict) -> dict:
 
 def summarize_fill_action_metric(suite: dict, key: str) -> dict:
     probe = suite.get(key) if isinstance(suite.get(key), dict) else {}
+    last_action = str(probe.get("lastAction") or "").strip()
+    validity = {"valid": True, "reason": "recorded-action"} if last_action else {"valid": False, "reason": "missing-last-action"}
     return summarize_distribution_metric(
-      probe.get("lastActionDurationMs"),
+      probe.get("lastActionDurationMs") if validity["valid"] else None,
       source=f"{key}.lastActionDurationMs",
       count=probe.get("longTaskCountDelta"),
       details={
         "target": probe.get("target"),
-        "lastAction": probe.get("lastAction"),
+        "lastAction": last_action or None,
+        "validity": validity,
         "longTaskCountDelta": probe.get("longTaskCountDelta"),
         "blackPixelRatio": as_finite_number(probe.get("blackPixelRatio")),
         "counterDelta": probe.get("counterDelta"),
@@ -4547,6 +4550,43 @@ def build_water_cache_summary_by_scenario(suites: dict[str, dict]) -> dict[str, 
     return summary
 
 
+def build_metric_validity_by_scenario(suites: dict[str, dict]) -> dict[str, dict]:
+    validity_by_scenario: dict[str, dict] = {}
+    for scenario_id, suite in suites.items():
+      metrics = suite.get("benchmarkMetrics") if isinstance(suite.get("benchmarkMetrics"), dict) else {}
+      first_interaction = metrics.get("firstInteraction") if isinstance(metrics.get("firstInteraction"), dict) else {}
+      first_interaction_validity: dict[str, dict] = {}
+      for metric_name in ("singleFillAction", "doubleClickFillAction"):
+        metric = first_interaction.get(metric_name) if isinstance(first_interaction.get(metric_name), dict) else {}
+        details = metric.get("details") if isinstance(metric.get("details"), dict) else {}
+        validity = details.get("validity") if isinstance(details.get("validity"), dict) else None
+        first_interaction_validity[metric_name] = dict(validity or {
+          "valid": bool(metric.get("present")),
+          "reason": "present" if metric.get("present") else "missing",
+        })
+      validity_by_scenario[scenario_id] = {
+        "firstInteraction": first_interaction_validity,
+      }
+    return validity_by_scenario
+
+
+def build_served_runtime_identity(args: argparse.Namespace, effective_url: str, suite_base_urls: list[str]) -> dict:
+    return {
+      "targetUrl": args.url,
+      "effectiveUrl": effective_url,
+      "appUrl": ensure_app_path_url(effective_url),
+      "candidateUrls": suite_base_urls,
+      "repositoryPath": str(ROOT_DIR),
+      "cwd": os.getcwd(),
+      "gitHead": resolve_git_head(),
+      "processId": os.getpid(),
+      "argv": sys.argv,
+      "scenarioIds": SCENARIO_IDS,
+      "playwrightBackend": PLAYWRIGHT_BACKEND,
+      "localNodeFallbackHeadless": LOCAL_NODE_PLAYWRIGHT_HEADLESS,
+    }
+
+
 def main() -> None:
     args = parse_args()
     if hasattr(sys.stdout, "reconfigure"):
@@ -4594,6 +4634,7 @@ def main() -> None:
         "passAttributionSchema": "mc_pass_attribution_v1",
         "url": args.url,
         "effectiveUrl": effective_url,
+        "servedRuntimeIdentity": build_served_runtime_identity(args, effective_url, suite_base_urls),
         "scenarioIds": SCENARIO_IDS,
         "benchmarkMetricsSchemaVersion": "3.3",
         "config": {
@@ -4609,6 +4650,7 @@ def main() -> None:
           scenario_id: suites[scenario_id].get("scenarioConsistency", {})
           for scenario_id in SCENARIO_IDS
         },
+        "metricValidity": build_metric_validity_by_scenario(suites),
         "waterCacheSummaryByScenario": water_cache_summary_by_scenario,
         "waterCacheSummaryPath": str(water_cache_out_path),
         "suites": suites,

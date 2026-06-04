@@ -14,19 +14,19 @@
     },
     {
       "path": "app/data/city_aliases.json",
-      "size_bytes": 31115167
+      "size_bytes": 30194842
     },
     {
       "path": "app/data/city_lights/historical_1930_entries.json",
-      "size_bytes": 336853
+      "size_bytes": 322615
     },
     {
       "path": "app/data/country_feature_policies.json",
-      "size_bytes": 19936
+      "size_bytes": 19049
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -46,11 +46,11 @@
     },
     {
       "path": "app/data/feature-migrations/by_hybrid_v1.json",
-      "size_bytes": 175360
+      "size_bytes": 169131
     },
     {
       "path": "app/data/geo_aliases.json",
-      "size_bytes": 10132858
+      "size_bytes": 9827487
     },
     {
       "path": "app/data/global_bathymetry.topo.json",
@@ -29642,15 +29642,15 @@
     },
     {
       "path": "app/data/hgo_catalogs/hgo_place_names.json",
-      "size_bytes": 5164039
+      "size_bytes": 4969946
     },
     {
       "path": "app/data/hgo_catalogs/index.json",
-      "size_bytes": 1141
+      "size_bytes": 1097
     },
     {
       "path": "app/data/hierarchy.json",
-      "size_bytes": 497225
+      "size_bytes": 480987
     },
     {
       "path": "app/data/historical_city_lights_1930_exclusions.json",
@@ -29658,7 +29658,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8726910
+      "size_bytes": 8353160
     },
     {
       "path": "app/data/manifest.json",
@@ -29666,19 +29666,19 @@
     },
     {
       "path": "app/data/palette-maps/hgo.audit.json",
-      "size_bytes": 393749
+      "size_bytes": 380867
     },
     {
       "path": "app/data/palette-maps/hgo.manual.json",
-      "size_bytes": 1615
+      "size_bytes": 237
     },
     {
       "path": "app/data/palette-maps/hgo.map.json",
-      "size_bytes": 67870
+      "size_bytes": 63979
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.audit.json",
-      "size_bytes": 144617
+      "size_bytes": 140010
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.manual.json",
@@ -29686,7 +29686,7 @@
     },
     {
       "path": "app/data/palette-maps/hoi4_vanilla.map.json",
-      "size_bytes": 35569
+      "size_bytes": 33953
     },
     {
       "path": "app/data/palette-maps/kaiserreich.audit.json",
@@ -29714,27 +29714,27 @@
     },
     {
       "path": "app/data/palette-maps/tno.audit.json",
-      "size_bytes": 169866
+      "size_bytes": 164409
     },
     {
       "path": "app/data/palette-maps/tno.manual.json",
-      "size_bytes": 3396
+      "size_bytes": 3206
     },
     {
       "path": "app/data/palette-maps/tno.map.json",
-      "size_bytes": 40810
+      "size_bytes": 38893
     },
     {
       "path": "app/data/palettes/hgo.palette.json",
-      "size_bytes": 852684
+      "size_bytes": 618587
     },
     {
       "path": "app/data/palettes/hoi4_vanilla.palette.json",
-      "size_bytes": 209742
+      "size_bytes": 203719
     },
     {
       "path": "app/data/palettes/index.json",
-      "size_bytes": 1755
+      "size_bytes": 1705
     },
     {
       "path": "app/data/palettes/kaiserreich.palette.json",
@@ -29746,7 +29746,7 @@
     },
     {
       "path": "app/data/palettes/tno.palette.json",
-      "size_bytes": 242211
+      "size_bytes": 235007
     },
     {
       "path": "app/data/releasables/hoi4_japan_victory.internal.phase1.overlay.json",
@@ -29766,7 +29766,7 @@
     },
     {
       "path": "app/data/releasables/tno_1962.internal.phase1.catalog.json",
-      "size_bytes": 71181
+      "size_bytes": 68596
     },
     {
       "path": "app/data/releasables/tno_1962.internal.phase1.source.json",
@@ -29774,7 +29774,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -29782,11 +29782,11 @@
     },
     {
       "path": "app/data/scenario-rules/hoi4_1936.manual.json",
-      "size_bytes": 37506
+      "size_bytes": 36469
     },
     {
       "path": "app/data/scenario-rules/hoi4_1939.manual.json",
-      "size_bytes": 17756
+      "size_bytes": 17447
     },
     {
       "path": "app/data/scenario-rules/targets/hoi4_1939_cz_sk_targets.json",
@@ -29794,7 +29794,7 @@
     },
     {
       "path": "app/data/scenario-rules/tno_1962.africa_ownership.manual.json",
-      "size_bytes": 3388
+      "size_bytes": 3290
     },
     {
       "path": "app/data/scenario-rules/tno_1962.decolonization.manual.json",
@@ -29806,7 +29806,7 @@
     },
     {
       "path": "app/data/scenario-rules/tno_1962.russia_ownership.manual.json",
-      "size_bytes": 24900
+      "size_bytes": 24270
     },
     {
       "path": "app/data/scenario-rules/tno_1962.south_asia_ownership.manual.json",
@@ -29818,11 +29818,11 @@
     },
     {
       "path": "app/data/scenarios/blank_base/capital_hints.json",
-      "size_bytes": 122086
+      "size_bytes": 118112
     },
     {
       "path": "app/data/scenarios/blank_base/city_overrides.json",
-      "size_bytes": 123834
+      "size_bytes": 119838
     },
     {
       "path": "app/data/scenarios/blank_base/cores.by_feature.json",
@@ -29842,11 +29842,11 @@
     },
     {
       "path": "app/data/scenarios/blank_base/runtime_topology.topo.json",
-      "size_bytes": 140
+      "size_bytes": 139
     },
     {
       "path": "app/data/scenarios/blank_base/special_zone_layers.json",
-      "size_bytes": 115
+      "size_bytes": 108
     },
     {
       "path": "app/data/scenarios/district_templates.shared.json",
@@ -29854,15 +29854,15 @@
     },
     {
       "path": "app/data/scenarios/expectations/hoi4_1936.expectation.json",
-      "size_bytes": 635
+      "size_bytes": 601
     },
     {
       "path": "app/data/scenarios/expectations/hoi4_1939.expectation.json",
-      "size_bytes": 8297
+      "size_bytes": 7987
     },
     {
       "path": "app/data/scenarios/expectations/tno_1962.expectation.json",
-      "size_bytes": 1631
+      "size_bytes": 1546
     },
     {
       "path": "app/data/scenarios/hoi4_1936/build_snapshot.json",
@@ -29870,7 +29870,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/capital_hints.json",
-      "size_bytes": 85984
+      "size_bytes": 83184
     },
     {
       "path": "app/data/scenarios/hoi4_1936/chunks/political.coarse.r0c0.json",
@@ -30366,7 +30366,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/city_overrides.json",
-      "size_bytes": 90273
+      "size_bytes": 87348
     },
     {
       "path": "app/data/scenarios/hoi4_1936/context_lod.manifest.json",
@@ -30426,7 +30426,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/special_zone_layers.json",
-      "size_bytes": 115
+      "size_bytes": 108
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
@@ -30450,7 +30450,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/capital_hints.json",
-      "size_bytes": 82502
+      "size_bytes": 79817
     },
     {
       "path": "app/data/scenarios/hoi4_1939/chunks/political.coarse.r0c0.json",
@@ -31702,7 +31702,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/city_overrides.json",
-      "size_bytes": 86756
+      "size_bytes": 83946
     },
     {
       "path": "app/data/scenarios/hoi4_1939/context_lod.manifest.json",
@@ -31762,7 +31762,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/special_zone_layers.json",
-      "size_bytes": 115
+      "size_bytes": 108
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
@@ -31782,7 +31782,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
-      "size_bytes": 2728006
+      "size_bytes": 2728005
     },
     {
       "path": "app/data/scenarios/index.json",
@@ -31794,19 +31794,19 @@
     },
     {
       "path": "app/data/scenarios/modern_world/capital_hints.json",
-      "size_bytes": 122088
+      "size_bytes": 118114
     },
     {
       "path": "app/data/scenarios/modern_world/city_overrides.json",
-      "size_bytes": 123836
+      "size_bytes": 119840
     },
     {
       "path": "app/data/scenarios/modern_world/cores.by_feature.json",
-      "size_bytes": 423343
+      "size_bytes": 412045
     },
     {
       "path": "app/data/scenarios/modern_world/countries.json",
-      "size_bytes": 176113
+      "size_bytes": 170189
     },
     {
       "path": "app/data/scenarios/modern_world/manifest.json",
@@ -31814,15 +31814,15 @@
     },
     {
       "path": "app/data/scenarios/modern_world/owners.by_feature.json",
-      "size_bytes": 400756
+      "size_bytes": 389458
     },
     {
       "path": "app/data/scenarios/modern_world/special_zone_layers.json",
-      "size_bytes": 115
+      "size_bytes": 108
     },
     {
       "path": "app/data/scenarios/tno_1962/bathymetry.provenance.json",
-      "size_bytes": 1774
+      "size_bytes": 1693
     },
     {
       "path": "app/data/scenarios/tno_1962/bathymetry.topo.json",
@@ -31834,7 +31834,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/capital_defaults.partial.json",
-      "size_bytes": 117552
+      "size_bytes": 113786
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
@@ -33330,11 +33330,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/city_assets.partial.json",
-      "size_bytes": 307
+      "size_bytes": 294
     },
     {
       "path": "app/data/scenarios/tno_1962/city_overrides.json",
-      "size_bytes": 109006
+      "size_bytes": 105498
     },
     {
       "path": "app/data/scenarios/tno_1962/context_lod.manifest.json",
@@ -33374,7 +33374,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_reviewed_exceptions.json",
-      "size_bytes": 31193
+      "size_bytes": 30227
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_name_overrides.manual.json",
@@ -33398,7 +33398,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/releasable_catalog.manual.json",
-      "size_bytes": 72776
+      "size_bytes": 70130
     },
     {
       "path": "app/data/scenarios/tno_1962/relief_overlays.geojson",
@@ -33422,11 +33422,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/scenario_manual_overrides.json",
-      "size_bytes": 20047
+      "size_bytes": 19222
     },
     {
       "path": "app/data/scenarios/tno_1962/scenario_mutations.json",
-      "size_bytes": 27375
+      "size_bytes": 26207
     },
     {
       "path": "app/data/scenarios/tno_1962/special_regions.geojson",
@@ -33454,7 +33454,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/water_refinement_source_reviews.json",
-      "size_bytes": 4365
+      "size_bytes": 4260
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
@@ -33474,7 +33474,7 @@
     },
     {
       "path": "app/data/transport_layers/china_airport/build_audit.json",
-      "size_bytes": 2843
+      "size_bytes": 2766
     },
     {
       "path": "app/data/transport_layers/china_airport/manifest.json",
@@ -33486,15 +33486,15 @@
     },
     {
       "path": "app/data/transport_layers/china_carrier/manifest.json",
-      "size_bytes": 1595
+      "size_bytes": 1551
     },
     {
       "path": "app/data/transport_layers/china_carrier/provenance.json",
-      "size_bytes": 1818
+      "size_bytes": 1730
     },
     {
       "path": "app/data/transport_layers/china_energy_facilities/build_audit.json",
-      "size_bytes": 1204
+      "size_bytes": 1173
     },
     {
       "path": "app/data/transport_layers/china_energy_facilities/energy_facilities.preview.geojson",
@@ -33506,7 +33506,7 @@
     },
     {
       "path": "app/data/transport_layers/china_industrial_zones/build_audit.json",
-      "size_bytes": 11568
+      "size_bytes": 11327
     },
     {
       "path": "app/data/transport_layers/china_industrial_zones/industrial_zones.preview.geojson",
@@ -33518,7 +33518,7 @@
     },
     {
       "path": "app/data/transport_layers/china_logistics_hubs/build_audit.json",
-      "size_bytes": 13613
+      "size_bytes": 13279
     },
     {
       "path": "app/data/transport_layers/china_logistics_hubs/logistics_hubs.preview.geojson",
@@ -33530,7 +33530,7 @@
     },
     {
       "path": "app/data/transport_layers/china_mineral_resources/build_audit.json",
-      "size_bytes": 1178
+      "size_bytes": 1147
     },
     {
       "path": "app/data/transport_layers/china_mineral_resources/manifest.json",
@@ -33542,7 +33542,7 @@
     },
     {
       "path": "app/data/transport_layers/china_port/build_audit.json",
-      "size_bytes": 1028
+      "size_bytes": 998
     },
     {
       "path": "app/data/transport_layers/china_port/manifest.json",
@@ -33554,7 +33554,7 @@
     },
     {
       "path": "app/data/transport_layers/china_rail/build_audit.json",
-      "size_bytes": 13205
+      "size_bytes": 12866
     },
     {
       "path": "app/data/transport_layers/china_rail/manifest.json",
@@ -33570,7 +33570,7 @@
     },
     {
       "path": "app/data/transport_layers/china_road/build_audit.json",
-      "size_bytes": 11463
+      "size_bytes": 11220
     },
     {
       "path": "app/data/transport_layers/china_road/manifest.json",
@@ -33590,7 +33590,7 @@
     },
     {
       "path": "app/data/transport_layers/france_airport/build_audit.json",
-      "size_bytes": 1049
+      "size_bytes": 1019
     },
     {
       "path": "app/data/transport_layers/france_airport/manifest.json",
@@ -33602,15 +33602,15 @@
     },
     {
       "path": "app/data/transport_layers/france_carrier/manifest.json",
-      "size_bytes": 1653
+      "size_bytes": 1609
     },
     {
       "path": "app/data/transport_layers/france_carrier/provenance.json",
-      "size_bytes": 2993
+      "size_bytes": 2841
     },
     {
       "path": "app/data/transport_layers/france_energy_facilities/build_audit.json",
-      "size_bytes": 1239
+      "size_bytes": 1210
     },
     {
       "path": "app/data/transport_layers/france_energy_facilities/energy_facilities.preview.geojson",
@@ -33622,7 +33622,7 @@
     },
     {
       "path": "app/data/transport_layers/france_industrial_zones/build_audit.json",
-      "size_bytes": 1144
+      "size_bytes": 1115
     },
     {
       "path": "app/data/transport_layers/france_industrial_zones/industrial_zones.preview.geojson",
@@ -33634,7 +33634,7 @@
     },
     {
       "path": "app/data/transport_layers/france_logistics_hubs/build_audit.json",
-      "size_bytes": 1145
+      "size_bytes": 1115
     },
     {
       "path": "app/data/transport_layers/france_logistics_hubs/logistics_hubs.preview.geojson",
@@ -33646,7 +33646,7 @@
     },
     {
       "path": "app/data/transport_layers/france_mineral_resources/build_audit.json",
-      "size_bytes": 1256
+      "size_bytes": 1225
     },
     {
       "path": "app/data/transport_layers/france_mineral_resources/manifest.json",
@@ -33658,7 +33658,7 @@
     },
     {
       "path": "app/data/transport_layers/france_port/build_audit.json",
-      "size_bytes": 1031
+      "size_bytes": 1001
     },
     {
       "path": "app/data/transport_layers/france_port/manifest.json",
@@ -33670,7 +33670,7 @@
     },
     {
       "path": "app/data/transport_layers/france_rail/build_audit.json",
-      "size_bytes": 1517
+      "size_bytes": 1476
     },
     {
       "path": "app/data/transport_layers/france_rail/manifest.json",
@@ -33686,7 +33686,7 @@
     },
     {
       "path": "app/data/transport_layers/france_road/build_audit.json",
-      "size_bytes": 1599
+      "size_bytes": 1560
     },
     {
       "path": "app/data/transport_layers/france_road/manifest.json",
@@ -33706,7 +33706,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_airport/build_audit.json",
-      "size_bytes": 1026
+      "size_bytes": 996
     },
     {
       "path": "app/data/transport_layers/germany_airport/manifest.json",
@@ -33718,15 +33718,15 @@
     },
     {
       "path": "app/data/transport_layers/germany_carrier/manifest.json",
-      "size_bytes": 1606
+      "size_bytes": 1562
     },
     {
       "path": "app/data/transport_layers/germany_carrier/provenance.json",
-      "size_bytes": 1522
+      "size_bytes": 1450
     },
     {
       "path": "app/data/transport_layers/germany_energy_facilities/build_audit.json",
-      "size_bytes": 1028
+      "size_bytes": 999
     },
     {
       "path": "app/data/transport_layers/germany_energy_facilities/energy_facilities.preview.geojson",
@@ -33738,7 +33738,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_industrial_zones/build_audit.json",
-      "size_bytes": 1031
+      "size_bytes": 1002
     },
     {
       "path": "app/data/transport_layers/germany_industrial_zones/industrial_zones.preview.geojson",
@@ -33750,7 +33750,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_logistics_hubs/build_audit.json",
-      "size_bytes": 1004
+      "size_bytes": 975
     },
     {
       "path": "app/data/transport_layers/germany_logistics_hubs/logistics_hubs.preview.geojson",
@@ -33762,7 +33762,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_mineral_resources/build_audit.json",
-      "size_bytes": 1032
+      "size_bytes": 1003
     },
     {
       "path": "app/data/transport_layers/germany_mineral_resources/manifest.json",
@@ -33774,7 +33774,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_port/build_audit.json",
-      "size_bytes": 1034
+      "size_bytes": 1004
     },
     {
       "path": "app/data/transport_layers/germany_port/manifest.json",
@@ -33786,7 +33786,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_rail/build_audit.json",
-      "size_bytes": 1125
+      "size_bytes": 1090
     },
     {
       "path": "app/data/transport_layers/germany_rail/manifest.json",
@@ -33802,7 +33802,7 @@
     },
     {
       "path": "app/data/transport_layers/germany_road/build_audit.json",
-      "size_bytes": 1017
+      "size_bytes": 985
     },
     {
       "path": "app/data/transport_layers/germany_road/manifest.json",
@@ -33826,19 +33826,19 @@
     },
     {
       "path": "app/data/transport_layers/global_airport/build_audit.json",
-      "size_bytes": 580
+      "size_bytes": 563
     },
     {
       "path": "app/data/transport_layers/global_airport/manifest.json",
-      "size_bytes": 1969
+      "size_bytes": 1906
     },
     {
       "path": "app/data/transport_layers/global_port/build_audit.json",
-      "size_bytes": 571
+      "size_bytes": 554
     },
     {
       "path": "app/data/transport_layers/global_port/manifest.json",
-      "size_bytes": 1895
+      "size_bytes": 1832
     },
     {
       "path": "app/data/transport_layers/global_port/ports.geojson",
@@ -33850,11 +33850,11 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/catalog.json",
-      "size_bytes": 16777
+      "size_bytes": 16176
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/build_audit.json",
-      "size_bytes": 2869
+      "size_bytes": 2784
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/manifest.json",
@@ -33870,7 +33870,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/build_audit.json",
-      "size_bytes": 2869
+      "size_bytes": 2784
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/manifest.json",
@@ -33886,7 +33886,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/build_audit.json",
-      "size_bytes": 2867
+      "size_bytes": 2782
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/manifest.json",
@@ -33902,7 +33902,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/build_audit.json",
-      "size_bytes": 2869
+      "size_bytes": 2784
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/manifest.json",
@@ -33918,7 +33918,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/build_audit.json",
-      "size_bytes": 2871
+      "size_bytes": 2786
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/manifest.json",
@@ -33934,7 +33934,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/build_audit.json",
-      "size_bytes": 2848
+      "size_bytes": 2763
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/manifest.json",
@@ -33950,7 +33950,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/build_audit.json",
-      "size_bytes": 2857
+      "size_bytes": 2772
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/manifest.json",
@@ -33966,7 +33966,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/build_audit.json",
-      "size_bytes": 2857
+      "size_bytes": 2772
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/manifest.json",
@@ -33982,7 +33982,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/build_audit.json",
-      "size_bytes": 2858
+      "size_bytes": 2773
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/manifest.json",
@@ -33998,7 +33998,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/build_audit.json",
-      "size_bytes": 2853
+      "size_bytes": 2768
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/manifest.json",
@@ -34014,7 +34014,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/build_audit.json",
-      "size_bytes": 2886
+      "size_bytes": 2801
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/manifest.json",
@@ -34030,7 +34030,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/build_audit.json",
-      "size_bytes": 2892
+      "size_bytes": 2807
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/manifest.json",
@@ -34046,7 +34046,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/build_audit.json",
-      "size_bytes": 2888
+      "size_bytes": 2803
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/manifest.json",
@@ -34062,7 +34062,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/build_audit.json",
-      "size_bytes": 2873
+      "size_bytes": 2788
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/manifest.json",
@@ -34078,7 +34078,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/build_audit.json",
-      "size_bytes": 2854
+      "size_bytes": 2769
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/manifest.json",
@@ -34094,7 +34094,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/build_audit.json",
-      "size_bytes": 2853
+      "size_bytes": 2768
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/manifest.json",
@@ -34110,7 +34110,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/build_audit.json",
-      "size_bytes": 2851
+      "size_bytes": 2766
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/manifest.json",
@@ -34126,7 +34126,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/build_audit.json",
-      "size_bytes": 2852
+      "size_bytes": 2767
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/manifest.json",
@@ -34142,7 +34142,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/build_audit.json",
-      "size_bytes": 2834
+      "size_bytes": 2749
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/manifest.json",
@@ -34158,7 +34158,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/build_audit.json",
-      "size_bytes": 2850
+      "size_bytes": 2765
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/manifest.json",
@@ -34174,7 +34174,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/build_audit.json",
-      "size_bytes": 2850
+      "size_bytes": 2765
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/manifest.json",
@@ -34190,7 +34190,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/build_audit.json",
-      "size_bytes": 2913
+      "size_bytes": 2828
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/manifest.json",
@@ -34206,7 +34206,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/build_audit.json",
-      "size_bytes": 2913
+      "size_bytes": 2828
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/manifest.json",
@@ -34222,7 +34222,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/build_audit.json",
-      "size_bytes": 2915
+      "size_bytes": 2830
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/manifest.json",
@@ -34238,7 +34238,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/build_audit.json",
-      "size_bytes": 2907
+      "size_bytes": 2822
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/manifest.json",
@@ -34254,11 +34254,11 @@
     },
     {
       "path": "app/data/transport_layers/global_road/catalog.json",
-      "size_bytes": 19093
+      "size_bytes": 18382
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e000_e005/build_audit.json",
-      "size_bytes": 2161
+      "size_bytes": 2105
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e000_e005/manifest.json",
@@ -34274,7 +34274,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e005_e010/build_audit.json",
-      "size_bytes": 2164
+      "size_bytes": 2108
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e005_e010/manifest.json",
@@ -34290,7 +34290,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e010_e012/build_audit.json",
-      "size_bytes": 2163
+      "size_bytes": 2107
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e010_e012/manifest.json",
@@ -34306,7 +34306,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e012_e014/build_audit.json",
-      "size_bytes": 2163
+      "size_bytes": 2107
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e012_e014/manifest.json",
@@ -34322,7 +34322,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e014_e016/build_audit.json",
-      "size_bytes": 2163
+      "size_bytes": 2107
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e014_e016/manifest.json",
@@ -34338,7 +34338,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e016_e018/build_audit.json",
-      "size_bytes": 2162
+      "size_bytes": 2106
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e016_e018/manifest.json",
@@ -34354,7 +34354,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e018_e020/build_audit.json",
-      "size_bytes": 2160
+      "size_bytes": 2104
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e018_e020/manifest.json",
@@ -34370,7 +34370,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e020_e025/build_audit.json",
-      "size_bytes": 2164
+      "size_bytes": 2108
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e020_e025/manifest.json",
@@ -34386,7 +34386,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e025_e030/build_audit.json",
-      "size_bytes": 2164
+      "size_bytes": 2108
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e025_e030/manifest.json",
@@ -34402,7 +34402,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e030_e045/build_audit.json",
-      "size_bytes": 2167
+      "size_bytes": 2111
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e030_e045/manifest.json",
@@ -34418,7 +34418,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e045_e060/build_audit.json",
-      "size_bytes": 2165
+      "size_bytes": 2109
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e045_e060/manifest.json",
@@ -34434,7 +34434,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e060_e090/build_audit.json",
-      "size_bytes": 2166
+      "size_bytes": 2110
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e060_e090/manifest.json",
@@ -34450,7 +34450,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e090_e095/build_audit.json",
-      "size_bytes": 2161
+      "size_bytes": 2105
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e090_e095/manifest.json",
@@ -34466,7 +34466,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e095_e100/build_audit.json",
-      "size_bytes": 2163
+      "size_bytes": 2107
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e095_e100/manifest.json",
@@ -34482,7 +34482,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e100_e105/build_audit.json",
-      "size_bytes": 2170
+      "size_bytes": 2114
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e100_e105/manifest.json",
@@ -34498,7 +34498,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e105_e110/build_audit.json",
-      "size_bytes": 2171
+      "size_bytes": 2115
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e105_e110/manifest.json",
@@ -34514,7 +34514,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e110_e115/build_audit.json",
-      "size_bytes": 2171
+      "size_bytes": 2115
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e110_e115/manifest.json",
@@ -34530,7 +34530,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e115_e120/build_audit.json",
-      "size_bytes": 2171
+      "size_bytes": 2115
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e115_e120/manifest.json",
@@ -34546,7 +34546,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e120_e125/build_audit.json",
-      "size_bytes": 2169
+      "size_bytes": 2113
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e120_e125/manifest.json",
@@ -34562,7 +34562,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e125_e130/build_audit.json",
-      "size_bytes": 2168
+      "size_bytes": 2112
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e125_e130/manifest.json",
@@ -34578,7 +34578,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e130_e135/build_audit.json",
-      "size_bytes": 2168
+      "size_bytes": 2112
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e130_e135/manifest.json",
@@ -34594,7 +34594,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e135_e140/build_audit.json",
-      "size_bytes": 2167
+      "size_bytes": 2111
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e135_e140/manifest.json",
@@ -34610,7 +34610,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e140_e145/build_audit.json",
-      "size_bytes": 2166
+      "size_bytes": 2110
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e140_e145/manifest.json",
@@ -34626,7 +34626,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e145_e150/build_audit.json",
-      "size_bytes": 2163
+      "size_bytes": 2107
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e145_e150/manifest.json",
@@ -34642,7 +34642,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e150_e180/build_audit.json",
-      "size_bytes": 2163
+      "size_bytes": 2107
     },
     {
       "path": "app/data/transport_layers/global_road/shards/e150_e180/manifest.json",
@@ -34658,7 +34658,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w010_e000/build_audit.json",
-      "size_bytes": 2166
+      "size_bytes": 2110
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w010_e000/manifest.json",
@@ -34674,7 +34674,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w020_w010/build_audit.json",
-      "size_bytes": 2161
+      "size_bytes": 2105
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w020_w010/manifest.json",
@@ -34690,7 +34690,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w030_w020/build_audit.json",
-      "size_bytes": 2153
+      "size_bytes": 2097
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w030_w020/manifest.json",
@@ -34706,7 +34706,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w060_w030/build_audit.json",
-      "size_bytes": 2168
+      "size_bytes": 2112
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w060_w030/manifest.json",
@@ -34722,7 +34722,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w065_w060/build_audit.json",
-      "size_bytes": 2164
+      "size_bytes": 2108
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w065_w060/manifest.json",
@@ -34738,7 +34738,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w070_w065/build_audit.json",
-      "size_bytes": 2166
+      "size_bytes": 2110
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w070_w065/manifest.json",
@@ -34754,7 +34754,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w075_w070/build_audit.json",
-      "size_bytes": 2169
+      "size_bytes": 2113
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w075_w070/manifest.json",
@@ -34770,7 +34770,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w080_w075/build_audit.json",
-      "size_bytes": 2169
+      "size_bytes": 2113
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w080_w075/manifest.json",
@@ -34786,7 +34786,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w082p5_w080/build_audit.json",
-      "size_bytes": 2172
+      "size_bytes": 2116
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w082p5_w080/manifest.json",
@@ -34802,7 +34802,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w085_w082p5/build_audit.json",
-      "size_bytes": 2172
+      "size_bytes": 2116
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w085_w082p5/manifest.json",
@@ -34818,7 +34818,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w090_w085/build_audit.json",
-      "size_bytes": 2170
+      "size_bytes": 2114
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w090_w085/manifest.json",
@@ -34834,7 +34834,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w120_w090/build_audit.json",
-      "size_bytes": 2175
+      "size_bytes": 2119
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w120_w090/manifest.json",
@@ -34850,7 +34850,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w150_w120/build_audit.json",
-      "size_bytes": 2171
+      "size_bytes": 2115
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w150_w120/manifest.json",
@@ -34866,7 +34866,7 @@
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w180_w150/build_audit.json",
-      "size_bytes": 2159
+      "size_bytes": 2103
     },
     {
       "path": "app/data/transport_layers/global_road/shards/w180_w150/manifest.json",
@@ -34886,7 +34886,7 @@
     },
     {
       "path": "app/data/transport_layers/india_airport/build_audit.json",
-      "size_bytes": 4109
+      "size_bytes": 3973
     },
     {
       "path": "app/data/transport_layers/india_airport/manifest.json",
@@ -34898,15 +34898,15 @@
     },
     {
       "path": "app/data/transport_layers/india_carrier/manifest.json",
-      "size_bytes": 1592
+      "size_bytes": 1548
     },
     {
       "path": "app/data/transport_layers/india_carrier/provenance.json",
-      "size_bytes": 1888
+      "size_bytes": 1796
     },
     {
       "path": "app/data/transport_layers/india_energy_facilities/build_audit.json",
-      "size_bytes": 1142
+      "size_bytes": 1112
     },
     {
       "path": "app/data/transport_layers/india_energy_facilities/energy_facilities.preview.geojson",
@@ -34918,7 +34918,7 @@
     },
     {
       "path": "app/data/transport_layers/india_industrial_zones/build_audit.json",
-      "size_bytes": 3254
+      "size_bytes": 3188
     },
     {
       "path": "app/data/transport_layers/india_industrial_zones/industrial_zones.preview.geojson",
@@ -34930,7 +34930,7 @@
     },
     {
       "path": "app/data/transport_layers/india_logistics_hubs/build_audit.json",
-      "size_bytes": 3672
+      "size_bytes": 3588
     },
     {
       "path": "app/data/transport_layers/india_logistics_hubs/logistics_hubs.preview.geojson",
@@ -34942,7 +34942,7 @@
     },
     {
       "path": "app/data/transport_layers/india_mineral_resources/build_audit.json",
-      "size_bytes": 1174
+      "size_bytes": 1143
     },
     {
       "path": "app/data/transport_layers/india_mineral_resources/manifest.json",
@@ -34954,7 +34954,7 @@
     },
     {
       "path": "app/data/transport_layers/india_port/build_audit.json",
-      "size_bytes": 1025
+      "size_bytes": 995
     },
     {
       "path": "app/data/transport_layers/india_port/manifest.json",
@@ -34966,7 +34966,7 @@
     },
     {
       "path": "app/data/transport_layers/india_rail/build_audit.json",
-      "size_bytes": 3542
+      "size_bytes": 3453
     },
     {
       "path": "app/data/transport_layers/india_rail/manifest.json",
@@ -34982,7 +34982,7 @@
     },
     {
       "path": "app/data/transport_layers/india_road/build_audit.json",
-      "size_bytes": 3111
+      "size_bytes": 3043
     },
     {
       "path": "app/data/transport_layers/india_road/manifest.json",
@@ -35006,27 +35006,27 @@
     },
     {
       "path": "app/data/transport_layers/japan_airport/build_audit.json",
-      "size_bytes": 1919
+      "size_bytes": 1863
     },
     {
       "path": "app/data/transport_layers/japan_airport/manifest.json",
-      "size_bytes": 3217
+      "size_bytes": 3120
     },
     {
       "path": "app/data/transport_layers/japan_corridor/carrier.json",
-      "size_bytes": 2081273
+      "size_bytes": 1994660
     },
     {
       "path": "app/data/transport_layers/japan_corridor/manifest.json",
-      "size_bytes": 1473
+      "size_bytes": 1433
     },
     {
       "path": "app/data/transport_layers/japan_corridor/provenance.json",
-      "size_bytes": 2388
+      "size_bytes": 2269
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/build_audit.json",
-      "size_bytes": 2571
+      "size_bytes": 2499
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/energy_facilities.preview.geojson",
@@ -35042,11 +35042,11 @@
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/subtype_catalog.json",
-      "size_bytes": 2287
+      "size_bytes": 2206
     },
     {
       "path": "app/data/transport_layers/japan_industrial_zones/build_audit.json",
-      "size_bytes": 20173
+      "size_bytes": 19631
     },
     {
       "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
@@ -35062,7 +35062,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_logistics_hubs/build_audit.json",
-      "size_bytes": 10444
+      "size_bytes": 10084
     },
     {
       "path": "app/data/transport_layers/japan_logistics_hubs/logistics_hubs.preview.geojson",
@@ -35074,7 +35074,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/build_audit.json",
-      "size_bytes": 2105
+      "size_bytes": 2055
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/manifest.json",
@@ -35090,11 +35090,11 @@
     },
     {
       "path": "app/data/transport_layers/japan_port/build_audit.json",
-      "size_bytes": 1718
+      "size_bytes": 1670
     },
     {
       "path": "app/data/transport_layers/japan_port/manifest.json",
-      "size_bytes": 4461
+      "size_bytes": 4308
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.core.geojson",
@@ -35122,7 +35122,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_rail/build_audit.json",
-      "size_bytes": 2701
+      "size_bytes": 2640
     },
     {
       "path": "app/data/transport_layers/japan_rail/manifest.json",
@@ -35146,7 +35146,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_road/build_audit.json",
-      "size_bytes": 1935
+      "size_bytes": 1880
     },
     {
       "path": "app/data/transport_layers/japan_road/manifest.json",
@@ -35166,7 +35166,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_airport/build_audit.json",
-      "size_bytes": 4380
+      "size_bytes": 4267
     },
     {
       "path": "app/data/transport_layers/russia_airport/manifest.json",
@@ -35178,15 +35178,15 @@
     },
     {
       "path": "app/data/transport_layers/russia_carrier/manifest.json",
-      "size_bytes": 1605
+      "size_bytes": 1561
     },
     {
       "path": "app/data/transport_layers/russia_carrier/provenance.json",
-      "size_bytes": 2810
+      "size_bytes": 2670
     },
     {
       "path": "app/data/transport_layers/russia_energy_facilities/build_audit.json",
-      "size_bytes": 1208
+      "size_bytes": 1177
     },
     {
       "path": "app/data/transport_layers/russia_energy_facilities/energy_facilities.preview.geojson",
@@ -35198,7 +35198,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_industrial_zones/build_audit.json",
-      "size_bytes": 5021
+      "size_bytes": 4927
     },
     {
       "path": "app/data/transport_layers/russia_industrial_zones/industrial_zones.preview.geojson",
@@ -35210,7 +35210,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_logistics_hubs/build_audit.json",
-      "size_bytes": 5695
+      "size_bytes": 5571
     },
     {
       "path": "app/data/transport_layers/russia_logistics_hubs/logistics_hubs.preview.geojson",
@@ -35222,7 +35222,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_mineral_resources/build_audit.json",
-      "size_bytes": 1184
+      "size_bytes": 1153
     },
     {
       "path": "app/data/transport_layers/russia_mineral_resources/manifest.json",
@@ -35234,7 +35234,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_port/build_audit.json",
-      "size_bytes": 1031
+      "size_bytes": 1001
     },
     {
       "path": "app/data/transport_layers/russia_port/manifest.json",
@@ -35246,7 +35246,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_rail/build_audit.json",
-      "size_bytes": 5521
+      "size_bytes": 5392
     },
     {
       "path": "app/data/transport_layers/russia_rail/manifest.json",
@@ -35262,7 +35262,7 @@
     },
     {
       "path": "app/data/transport_layers/russia_road/build_audit.json",
-      "size_bytes": 4881
+      "size_bytes": 4785
     },
     {
       "path": "app/data/transport_layers/russia_road/manifest.json",
@@ -35282,7 +35282,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_airport/build_audit.json",
-      "size_bytes": 1062
+      "size_bytes": 1032
     },
     {
       "path": "app/data/transport_layers/uk_airport/manifest.json",
@@ -35294,15 +35294,15 @@
     },
     {
       "path": "app/data/transport_layers/uk_carrier/manifest.json",
-      "size_bytes": 1603
+      "size_bytes": 1559
     },
     {
       "path": "app/data/transport_layers/uk_carrier/provenance.json",
-      "size_bytes": 5648
+      "size_bytes": 5360
     },
     {
       "path": "app/data/transport_layers/uk_energy_facilities/build_audit.json",
-      "size_bytes": 1094
+      "size_bytes": 1065
     },
     {
       "path": "app/data/transport_layers/uk_energy_facilities/energy_facilities.preview.geojson",
@@ -35314,7 +35314,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_industrial_zones/build_audit.json",
-      "size_bytes": 1252
+      "size_bytes": 1222
     },
     {
       "path": "app/data/transport_layers/uk_industrial_zones/industrial_zones.preview.geojson",
@@ -35326,7 +35326,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_logistics_hubs/build_audit.json",
-      "size_bytes": 1262
+      "size_bytes": 1232
     },
     {
       "path": "app/data/transport_layers/uk_logistics_hubs/logistics_hubs.preview.geojson",
@@ -35338,7 +35338,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_mineral_resources/build_audit.json",
-      "size_bytes": 2579
+      "size_bytes": 2527
     },
     {
       "path": "app/data/transport_layers/uk_mineral_resources/manifest.json",
@@ -35350,7 +35350,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_port/build_audit.json",
-      "size_bytes": 1034
+      "size_bytes": 1004
     },
     {
       "path": "app/data/transport_layers/uk_port/manifest.json",
@@ -35362,7 +35362,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_rail/build_audit.json",
-      "size_bytes": 1684
+      "size_bytes": 1641
     },
     {
       "path": "app/data/transport_layers/uk_rail/manifest.json",
@@ -35378,7 +35378,7 @@
     },
     {
       "path": "app/data/transport_layers/uk_road/build_audit.json",
-      "size_bytes": 1377
+      "size_bytes": 1336
     },
     {
       "path": "app/data/transport_layers/uk_road/manifest.json",
@@ -35398,7 +35398,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_airport/build_audit.json",
-      "size_bytes": 1522
+      "size_bytes": 1483
     },
     {
       "path": "app/data/transport_layers/usa_airport/manifest.json",
@@ -35410,15 +35410,15 @@
     },
     {
       "path": "app/data/transport_layers/usa_carrier/manifest.json",
-      "size_bytes": 1627
+      "size_bytes": 1583
     },
     {
       "path": "app/data/transport_layers/usa_carrier/provenance.json",
-      "size_bytes": 2624
+      "size_bytes": 2493
     },
     {
       "path": "app/data/transport_layers/usa_energy_facilities/build_audit.json",
-      "size_bytes": 1149
+      "size_bytes": 1118
     },
     {
       "path": "app/data/transport_layers/usa_energy_facilities/energy_facilities.preview.geojson",
@@ -35430,7 +35430,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_industrial_zones/build_audit.json",
-      "size_bytes": 16001
+      "size_bytes": 15670
     },
     {
       "path": "app/data/transport_layers/usa_industrial_zones/industrial_zones.preview.geojson",
@@ -35442,7 +35442,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_logistics_hubs/build_audit.json",
-      "size_bytes": 2034
+      "size_bytes": 1990
     },
     {
       "path": "app/data/transport_layers/usa_logistics_hubs/logistics_hubs.preview.geojson",
@@ -35454,7 +35454,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_mineral_resources/build_audit.json",
-      "size_bytes": 1154
+      "size_bytes": 1123
     },
     {
       "path": "app/data/transport_layers/usa_mineral_resources/manifest.json",
@@ -35466,7 +35466,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_port/build_audit.json",
-      "size_bytes": 1026
+      "size_bytes": 996
     },
     {
       "path": "app/data/transport_layers/usa_port/manifest.json",
@@ -35478,7 +35478,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_rail/build_audit.json",
-      "size_bytes": 1741
+      "size_bytes": 1699
     },
     {
       "path": "app/data/transport_layers/usa_rail/manifest.json",
@@ -35494,7 +35494,7 @@
     },
     {
       "path": "app/data/transport_layers/usa_road/build_audit.json",
-      "size_bytes": 1002
+      "size_bytes": 971
     },
     {
       "path": "app/data/transport_layers/usa_road/manifest.json",
@@ -35942,7 +35942,7 @@
     },
     {
       "path": "app/data/unit_counter_libraries/hoi4/manifest.json",
-      "size_bytes": 120627
+      "size_bytes": 116907
     },
     {
       "path": "app/data/unit_counter_libraries/hoi4/ships_small/onmap_battlecruiser.png",
@@ -36294,35 +36294,35 @@
     },
     {
       "path": "app/js/api/backend_client.js",
-      "size_bytes": 5752
+      "size_bytes": 5565
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
-      "size_bytes": 18201
+      "size_bytes": 17716
     },
     {
       "path": "app/js/bootstrap/startup_boot_overlay.js",
-      "size_bytes": 17183
+      "size_bytes": 16693
     },
     {
       "path": "app/js/bootstrap/startup_bootstrap_support.js",
-      "size_bytes": 13896
+      "size_bytes": 13545
     },
     {
       "path": "app/js/bootstrap/startup_data_pipeline.js",
-      "size_bytes": 28460
+      "size_bytes": 27717
     },
     {
       "path": "app/js/bootstrap/startup_scenario_boot.js",
-      "size_bytes": 5833
+      "size_bytes": 5702
     },
     {
       "path": "app/js/core/city_lights_historical_1930_asset.js",
-      "size_bytes": 1743
+      "size_bytes": 1704
     },
     {
       "path": "app/js/core/city_lights_modern_asset.js",
-      "size_bytes": 842569
+      "size_bytes": 834442
     },
     {
       "path": "app/js/core/color_hex_utils.js",
@@ -36330,7 +36330,7 @@
     },
     {
       "path": "app/js/core/color_manager.js",
-      "size_bytes": 24506
+      "size_bytes": 24505
     },
     {
       "path": "app/js/core/color_resolver.js",
@@ -36342,23 +36342,23 @@
     },
     {
       "path": "app/js/core/country_feature_policies.js",
-      "size_bytes": 1350
+      "size_bytes": 1316
     },
     {
       "path": "app/js/core/data_loader.js",
-      "size_bytes": 65374
+      "size_bytes": 63815
     },
     {
       "path": "app/js/core/data_service.js",
-      "size_bytes": 15023
+      "size_bytes": 14555
     },
     {
       "path": "app/js/core/dirty_state.js",
-      "size_bytes": 1172
+      "size_bytes": 1130
     },
     {
       "path": "app/js/core/export_artifact_package.js",
-      "size_bytes": 6767
+      "size_bytes": 6599
     },
     {
       "path": "app/js/core/feature_identity.js",
@@ -36370,19 +36370,19 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 44308
+      "size_bytes": 43386
     },
     {
       "path": "app/js/core/frame_scheduler.js",
-      "size_bytes": 6288
+      "size_bytes": 6109
     },
     {
       "path": "app/js/core/hgo_identity_resolver.js",
-      "size_bytes": 10766
+      "size_bytes": 10452
     },
     {
       "path": "app/js/core/history_manager.js",
-      "size_bytes": 12024
+      "size_bytes": 11708
     },
     {
       "path": "app/js/core/interaction_funnel/import_apply_orchestration.js",
@@ -36390,7 +36390,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel/ui_sync.js",
-      "size_bytes": 2367
+      "size_bytes": 2315
     },
     {
       "path": "app/js/core/interaction_funnel/wait_readiness.js",
@@ -36398,11 +36398,11 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 16661
+      "size_bytes": 16243
     },
     {
       "path": "app/js/core/legend_manager.js",
-      "size_bytes": 15308
+      "size_bytes": 14842
     },
     {
       "path": "app/js/core/load_status_display.js",
@@ -36410,7 +36410,7 @@
     },
     {
       "path": "app/js/core/logic.js",
-      "size_bytes": 3982
+      "size_bytes": 3864
     },
     {
       "path": "app/js/core/map_renderer/facade_border_runtime.js",
@@ -36434,7 +36434,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 951360
+      "size_bytes": 950834
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36442,7 +36442,7 @@
     },
     {
       "path": "app/js/core/palette_manager.js",
-      "size_bytes": 14849
+      "size_bytes": 14425
     },
     {
       "path": "app/js/core/palette_runtime_bridge.js",
@@ -36450,7 +36450,7 @@
     },
     {
       "path": "app/js/core/perf_probe.js",
-      "size_bytes": 3888
+      "size_bytes": 3767
     },
     {
       "path": "app/js/core/political_raster_worker_client.js",
@@ -36458,15 +36458,15 @@
     },
     {
       "path": "app/js/core/preset_state.js",
-      "size_bytes": 702
+      "size_bytes": 686
     },
     {
       "path": "app/js/core/project_package_io.js",
-      "size_bytes": 16027
+      "size_bytes": 15583
     },
     {
       "path": "app/js/core/releasable_manager.js",
-      "size_bytes": 25479
+      "size_bytes": 24812
     },
     {
       "path": "app/js/core/render_boundary.js",
@@ -36478,7 +36478,7 @@
     },
     {
       "path": "app/js/core/renderer/border_draw_owner.js",
-      "size_bytes": 23446
+      "size_bytes": 22859
     },
     {
       "path": "app/js/core/renderer/border_mesh_diagnostics.js",
@@ -36490,7 +36490,7 @@
     },
     {
       "path": "app/js/core/renderer/border_mesh_owner.js",
-      "size_bytes": 14252
+      "size_bytes": 14142
     },
     {
       "path": "app/js/core/renderer/border_mesh_source_selection.js",
@@ -36498,7 +36498,7 @@
     },
     {
       "path": "app/js/core/renderer/city_label_owner.js",
-      "size_bytes": 3730
+      "size_bytes": 3729
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
@@ -36506,7 +36506,7 @@
     },
     {
       "path": "app/js/core/renderer/context_layer_resolver.js",
-      "size_bytes": 20448
+      "size_bytes": 19956
     },
     {
       "path": "app/js/core/renderer/facility_surface.js",
@@ -36518,11 +36518,11 @@
     },
     {
       "path": "app/js/core/renderer/political_collection_owner.js",
-      "size_bytes": 21662
+      "size_bytes": 21033
     },
     {
       "path": "app/js/core/renderer/render_cache_owner.js",
-      "size_bytes": 10766
+      "size_bytes": 10484
     },
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
@@ -36530,23 +36530,23 @@
     },
     {
       "path": "app/js/core/renderer/river_layer_render_owner.js",
-      "size_bytes": 7451
+      "size_bytes": 7450
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_builders.js",
-      "size_bytes": 7343
+      "size_bytes": 7104
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_derivation.js",
-      "size_bytes": 1652
+      "size_bytes": 1598
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_owner.js",
-      "size_bytes": 14034
+      "size_bytes": 13607
     },
     {
       "path": "app/js/core/renderer/spatial_index_runtime_state_ops.js",
-      "size_bytes": 3872
+      "size_bytes": 3779
     },
     {
       "path": "app/js/core/renderer/special_zone_layers_render_owner.js",
@@ -36554,7 +36554,7 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_helpers.js",
-      "size_bytes": 28404
+      "size_bytes": 27734
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js",
@@ -36570,7 +36570,7 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_helpers.js",
-      "size_bytes": 4923
+      "size_bytes": 4827
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime_owner.js",
@@ -36586,7 +36586,7 @@
     },
     {
       "path": "app/js/core/renderer/transport_facility_icons.js",
-      "size_bytes": 5869
+      "size_bytes": 5744
     },
     {
       "path": "app/js/core/renderer/transport_line_label_policy.js",
@@ -36594,7 +36594,7 @@
     },
     {
       "path": "app/js/core/renderer/transport_overview_render_owner.js",
-      "size_bytes": 54934
+      "size_bytes": 53551
     },
     {
       "path": "app/js/core/renderer/transport_overview_style_policy.js",
@@ -36614,19 +36614,19 @@
     },
     {
       "path": "app/js/core/scenario/bundle_runtime.js",
-      "size_bytes": 20381
+      "size_bytes": 19959
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 105744
+      "size_bytes": 105299
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
-      "size_bytes": 13647
+      "size_bytes": 13372
     },
     {
       "path": "app/js/core/scenario/locale_asset_contract.js",
-      "size_bytes": 1070
+      "size_bytes": 1044
     },
     {
       "path": "app/js/core/scenario/presentation_display_restore.js",
@@ -36646,35 +36646,35 @@
     },
     {
       "path": "app/js/core/scenario/pure_helpers.js",
-      "size_bytes": 3544
+      "size_bytes": 3457
     },
     {
       "path": "app/js/core/scenario/scenario_renderer_bridge.js",
-      "size_bytes": 4721
+      "size_bytes": 4562
     },
     {
       "path": "app/js/core/scenario/shared.js",
-      "size_bytes": 9669
+      "size_bytes": 9337
     },
     {
       "path": "app/js/core/scenario/startup_hydration.js",
-      "size_bytes": 36242
+      "size_bytes": 35394
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 25393
+      "size_bytes": 24861
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
-      "size_bytes": 25256
+      "size_bytes": 25023
     },
     {
       "path": "app/js/core/scenario_country_display.js",
-      "size_bytes": 777
+      "size_bytes": 761
     },
     {
       "path": "app/js/core/scenario_data_health.js",
-      "size_bytes": 3932
+      "size_bytes": 3883
     },
     {
       "path": "app/js/core/scenario_dispatcher.js",
@@ -36686,39 +36686,39 @@
     },
     {
       "path": "app/js/core/scenario_localization_state.js",
-      "size_bytes": 8331
+      "size_bytes": 8127
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 33072
+      "size_bytes": 32182
     },
     {
       "path": "app/js/core/scenario_ownership_editor.js",
-      "size_bytes": 11220
+      "size_bytes": 10873
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 15510
+      "size_bytes": 15108
     },
     {
       "path": "app/js/core/scenario_recovery.js",
-      "size_bytes": 6242
+      "size_bytes": 6096
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 40732
+      "size_bytes": 39715
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 24326
+      "size_bytes": 23943
     },
     {
       "path": "app/js/core/scenario_runtime_queries.js",
-      "size_bytes": 1785
+      "size_bytes": 1743
     },
     {
       "path": "app/js/core/scenario_shell_overlay.js",
-      "size_bytes": 7663
+      "size_bytes": 7516
     },
     {
       "path": "app/js/core/scenario_ui_sync.js",
@@ -36726,11 +36726,11 @@
     },
     {
       "path": "app/js/core/sovereignty_manager.js",
-      "size_bytes": 18104
+      "size_bytes": 17644
     },
     {
       "path": "app/js/core/special_zone_layers.js",
-      "size_bytes": 27109
+      "size_bytes": 26481
     },
     {
       "path": "app/js/core/startup_bundle_compaction.js",
@@ -36754,19 +36754,19 @@
     },
     {
       "path": "app/js/core/state/bus.js",
-      "size_bytes": 1391
+      "size_bytes": 1390
     },
     {
       "path": "app/js/core/state/color_state.js",
-      "size_bytes": 13146
+      "size_bytes": 12736
     },
     {
       "path": "app/js/core/state/config.js",
-      "size_bytes": 8038
+      "size_bytes": 7896
     },
     {
       "path": "app/js/core/state/content_state.js",
-      "size_bytes": 20296
+      "size_bytes": 19698
     },
     {
       "path": "app/js/core/state/dev_state.js",
@@ -36778,19 +36778,19 @@
     },
     {
       "path": "app/js/core/state/index.js",
-      "size_bytes": 7713
+      "size_bytes": 7712
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 16154
+      "size_bytes": 15945
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
-      "size_bytes": 19226
+      "size_bytes": 18793
     },
     {
       "path": "app/js/core/state/spatial_index_state.js",
-      "size_bytes": 1215
+      "size_bytes": 1176
     },
     {
       "path": "app/js/core/state/strategic_overlay_state.js",
@@ -36798,27 +36798,27 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 27228
+      "size_bytes": 26487
     },
     {
       "path": "app/js/core/state.js",
-      "size_bytes": 2343
+      "size_bytes": 2257
     },
     {
       "path": "app/js/core/state_catalog.js",
-      "size_bytes": 3576
+      "size_bytes": 3484
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 60095
+      "size_bytes": 58611
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
-      "size_bytes": 25503
+      "size_bytes": 24864
     },
     {
       "path": "app/js/core/transport_country_overlay.js",
-      "size_bytes": 6401
+      "size_bytes": 6284
     },
     {
       "path": "app/js/core/transport_overview_visibility_policy.js",
@@ -36826,7 +36826,7 @@
     },
     {
       "path": "app/js/core/transport_pack_resolver.js",
-      "size_bytes": 19846
+      "size_bytes": 19556
     },
     {
       "path": "app/js/core/unit_counter_icon_libraries.js",
@@ -36838,7 +36838,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 47059
+      "size_bytes": 45855
     },
     {
       "path": "app/js/ui/app_dialog.js",
@@ -36846,59 +36846,59 @@
     },
     {
       "path": "app/js/ui/dev_workspace/dev_mutation_service.js",
-      "size_bytes": 1266
+      "size_bytes": 1257
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_normalizers.js",
-      "size_bytes": 744
+      "size_bytes": 723
     },
     {
       "path": "app/js/ui/dev_workspace/dev_workspace_shell_builder.js",
-      "size_bytes": 28057
+      "size_bytes": 27762
     },
     {
       "path": "app/js/ui/dev_workspace/district_editor_controller.js",
-      "size_bytes": 48132
+      "size_bytes": 47013
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_tag_creator_controller.js",
-      "size_bytes": 50277
+      "size_bytes": 49116
     },
     {
       "path": "app/js/ui/dev_workspace/scenario_text_editors_controller.js",
-      "size_bytes": 46191
+      "size_bytes": 45219
     },
     {
       "path": "app/js/ui/dev_workspace/selection_ownership_controller.js",
-      "size_bytes": 14539
+      "size_bytes": 14235
     },
     {
       "path": "app/js/ui/dev_workspace.js",
-      "size_bytes": 43710
+      "size_bytes": 42656
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47112
+      "size_bytes": 46011
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 83797
+      "size_bytes": 83016
     },
     {
       "path": "app/js/ui/scenario_controls.js",
-      "size_bytes": 10783
+      "size_bytes": 10536
     },
     {
       "path": "app/js/ui/shortcuts.js",
-      "size_bytes": 8964
+      "size_bytes": 8647
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 47813
+      "size_bytes": 46628
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 52947
+      "size_bytes": 51645
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -36918,15 +36918,15 @@
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay_controller.js",
-      "size_bytes": 54360
+      "size_bytes": 53133
     },
     {
       "path": "app/js/ui/sidebar/water_special_region_controller.js",
-      "size_bytes": 55298
+      "size_bytes": 53956
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 266359
+      "size_bytes": 260124
     },
     {
       "path": "app/js/ui/toast.js",
@@ -36938,35 +36938,35 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
-      "size_bytes": 12136
+      "size_bytes": 11899
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 21474
+      "size_bytes": 21037
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
-      "size_bytes": 9562
+      "size_bytes": 9335
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 16414
+      "size_bytes": 16163
     },
     {
       "path": "app/js/ui/toolbar/appearance_reference_owner.js",
-      "size_bytes": 6918
+      "size_bytes": 6736
     },
     {
       "path": "app/js/ui/toolbar/appearance_rivers_owner.js",
-      "size_bytes": 5519
+      "size_bytes": 5392
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
-      "size_bytes": 38365
+      "size_bytes": 37771
     },
     {
       "path": "app/js/ui/toolbar/appearance_transport_summary.js",
-      "size_bytes": 11186
+      "size_bytes": 10896
     },
     {
       "path": "app/js/ui/toolbar/export_failure_handler.js",
@@ -36974,99 +36974,99 @@
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 33731
+      "size_bytes": 32948
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
-      "size_bytes": 19197
+      "size_bytes": 18689
     },
     {
       "path": "app/js/ui/toolbar/palette_library_panel.js",
-      "size_bytes": 24059
+      "size_bytes": 23429
     },
     {
       "path": "app/js/ui/toolbar/scenario_guide_popover.js",
-      "size_bytes": 7583
+      "size_bytes": 7412
     },
     {
       "path": "app/js/ui/toolbar/special_zone_editor.js",
-      "size_bytes": 1797
+      "size_bytes": 1796
     },
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
-      "size_bytes": 48078
+      "size_bytes": 47015
     },
     {
       "path": "app/js/ui/toolbar/transport_appearance_controller.js",
-      "size_bytes": 43857
+      "size_bytes": 43133
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_apply_bridge_owner.js",
-      "size_bytes": 9381
+      "size_bytes": 9172
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_config_owner.js",
-      "size_bytes": 18021
+      "size_bytes": 17731
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_controller.js",
-      "size_bytes": 28052
+      "size_bytes": 27460
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_descriptor.js",
-      "size_bytes": 61520
+      "size_bytes": 60321
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_event_owner.js",
-      "size_bytes": 6456
+      "size_bytes": 6299
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_inspector_owner.js",
-      "size_bytes": 43677
+      "size_bytes": 42788
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_layer_order_owner.js",
-      "size_bytes": 4129
+      "size_bytes": 4005
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_lens_owner.js",
-      "size_bytes": 4987
+      "size_bytes": 4831
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_popover_owner.js",
-      "size_bytes": 10816
+      "size_bytes": 10558
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js",
-      "size_bytes": 9450
+      "size_bytes": 9211
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_right_deck_owner.js",
-      "size_bytes": 43276
+      "size_bytes": 42321
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_shell_owner.js",
-      "size_bytes": 8334
+      "size_bytes": 8172
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_state_owner.js",
-      "size_bytes": 23155
+      "size_bytes": 22649
     },
     {
       "path": "app/js/ui/toolbar/workspace_chrome_support_surface_controller.js",
-      "size_bytes": 14610
+      "size_bytes": 14269
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 137629
+      "size_bytes": 134479
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
-      "size_bytes": 2119
+      "size_bytes": 2064
     },
     {
       "path": "app/js/ui/transport_workbench_carrier.js",
-      "size_bytes": 30801
+      "size_bytes": 29946
     },
     {
       "path": "app/js/ui/transport_workbench_density_helpers.js",
@@ -37074,31 +37074,31 @@
     },
     {
       "path": "app/js/ui/transport_workbench_energy_facility_preview.js",
-      "size_bytes": 4356
+      "size_bytes": 4255
     },
     {
       "path": "app/js/ui/transport_workbench_family_preview.js",
-      "size_bytes": 5293
+      "size_bytes": 5154
     },
     {
       "path": "app/js/ui/transport_workbench_family_registry.js",
-      "size_bytes": 5370
+      "size_bytes": 5235
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 39137
+      "size_bytes": 38113
     },
     {
       "path": "app/js/ui/transport_workbench_line_runtime_shared.js",
-      "size_bytes": 10326
+      "size_bytes": 10048
     },
     {
       "path": "app/js/ui/transport_workbench_logistics_hub_preview.js",
-      "size_bytes": 4051
+      "size_bytes": 3960
     },
     {
       "path": "app/js/ui/transport_workbench_manifest_preview.js",
-      "size_bytes": 6204
+      "size_bytes": 6129
     },
     {
       "path": "app/js/ui/transport_workbench_manifest_variants.js",
@@ -37106,27 +37106,27 @@
     },
     {
       "path": "app/js/ui/transport_workbench_mineral_resource_preview.js",
-      "size_bytes": 4825
+      "size_bytes": 4709
     },
     {
       "path": "app/js/ui/transport_workbench_point_preview_shared.js",
-      "size_bytes": 44103
+      "size_bytes": 43055
     },
     {
       "path": "app/js/ui/transport_workbench_port_preview.js",
-      "size_bytes": 4308
+      "size_bytes": 4207
     },
     {
       "path": "app/js/ui/transport_workbench_rail_preview.js",
-      "size_bytes": 36056
+      "size_bytes": 35163
     },
     {
       "path": "app/js/ui/transport_workbench_road_preview.js",
-      "size_bytes": 29668
+      "size_bytes": 28876
     },
     {
       "path": "app/js/ui/ui_contract.js",
-      "size_bytes": 9851
+      "size_bytes": 9538
     },
     {
       "path": "app/js/ui/ui_surface_url_state.js",
@@ -37146,7 +37146,7 @@
     },
     {
       "path": "app/vendor/fflate.browser.js",
-      "size_bytes": 93614
+      "size_bytes": 90922
     },
     {
       "path": "app/vendor/fflate.LICENSE.txt",
@@ -37154,15 +37154,15 @@
     },
     {
       "path": "app/vendor/milsymbol.js",
-      "size_bytes": 861744
+      "size_bytes": 861717
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 2938
+      "size_bytes": 3007
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 863
+      "size_bytes": 880
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37206,7 +37206,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1051390
+      "size_bytes": 1051380
     },
     {
       "path": "styles.css",
@@ -37223,5 +37223,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1087689795
+  "total_bytes": 1085322206
 }

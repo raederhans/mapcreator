@@ -114,11 +114,40 @@ TRANSPORT_SMALL_DIRECT_RUNTIME_FILES = {
 }
 DISPOSABLE_DIST_NAMES = {"__pycache__"}
 DISPOSABLE_DIST_SUFFIXES = {".pyc", ".pyo"}
+LF_NORMALIZED_APP_SUFFIXES = {".js", ".json"}
 
 
 def write_text_lf(path: Path, text: str) -> None:
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(text)
+
+
+def should_normalize_dist_text_file_lf(path: Path) -> bool:
+    try:
+        relative_path = path.resolve().relative_to(DIST_ROOT.resolve())
+    except ValueError:
+        return path.suffix.lower() in LF_NORMALIZED_APP_SUFFIXES
+    if relative_path.as_posix() == "app/index.html":
+        return True
+    return (
+        len(relative_path.parts) >= 2
+        and relative_path.parts[0] == "app"
+        and path.suffix.lower() in LF_NORMALIZED_APP_SUFFIXES
+    )
+
+
+def normalize_dist_text_file_lf(path: Path) -> None:
+    if not should_normalize_dist_text_file_lf(path):
+        return
+    data = path.read_bytes()
+    if b"\r\n" not in data:
+        return
+    path.write_bytes(data.replace(b"\r\n", b"\n"))
+
+
+def normalize_dist_text_files_lf() -> None:
+    for path in iter_dist_files():
+        normalize_dist_text_file_lf(path)
 
 
 def should_skip_disposable_dist_path(path: Path) -> bool:
@@ -690,6 +719,7 @@ def main() -> None:
     copy_runtime_data()
     write_nojekyll()
     validate_required_dist_files()
+    normalize_dist_text_files_lf()
     total_bytes = write_dist_manifest()
     enforce_dist_size(total_bytes)
 
