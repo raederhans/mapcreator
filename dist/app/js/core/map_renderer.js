@@ -2548,6 +2548,10 @@ function cancelPoliticalPathWarmup(reason = "unspecified") {
 function invalidatePoliticalPathCache(reason = "unspecified") {
   const cache = getRenderPassCacheState();
   cancelPoliticalPathWarmup(reason);
+  const previousSize = cache.politicalPathCache instanceof Map
+    ? cache.politicalPathCache.size
+    : 0;
+  const previousSignature = String(cache.politicalPathCacheSignature || "");
   if (cache.politicalPathCache instanceof Map) {
     cache.politicalPathCache.clear();
   } else {
@@ -2556,6 +2560,11 @@ function invalidatePoliticalPathCache(reason = "unspecified") {
   cache.politicalPathCacheSignature = "";
   cache.politicalPathCacheTransform = null;
   cache.politicalPathCacheReason = String(reason || "unspecified");
+  recordRenderPerfMetric("politicalPathCacheReset", 0, {
+    reason: String(reason || "unspecified"),
+    previousSize,
+    previousSignature,
+  });
 }
 
 function getPoliticalPathCacheHandle(
@@ -2574,9 +2583,18 @@ function getPoliticalPathCacheHandle(
       signature,
       valid: true,
       map: cache.politicalPathCache,
+      resetSummary: null,
     };
   }
+  let resetSummary = null;
   if (resetIfMismatch) {
+    const previousSize = cache.politicalPathCache instanceof Map
+      ? cache.politicalPathCache.size
+      : 0;
+    const previousSignature = String(cache.politicalPathCacheSignature || "");
+    const previousTransform = cache.politicalPathCacheTransform
+      ? cloneZoomTransform(cache.politicalPathCacheTransform)
+      : null;
     if (!(cache.politicalPathCache instanceof Map)) {
       cache.politicalPathCache = new Map();
     } else {
@@ -2585,12 +2603,24 @@ function getPoliticalPathCacheHandle(
     cache.politicalPathCacheSignature = signature;
     cache.politicalPathCacheTransform = cloneZoomTransform(transform);
     cache.politicalPathCacheReason = "prepared";
+    resetSummary = {
+      reason: "prepare-mismatch",
+      previousSize,
+      previousSignature,
+      nextSignature: signature,
+      previousTransformK: Number(previousTransform?.k || 0),
+      nextTransformK: Number(transform?.k || 1),
+    };
+    recordRenderPerfMetric("politicalPathCacheReset", 0, {
+      ...resetSummary,
+    });
   }
   return {
     cache,
     signature,
     valid: resetIfMismatch,
     map: cache.politicalPathCache instanceof Map ? cache.politicalPathCache : new Map(),
+    resetSummary,
   };
 }
 
@@ -16461,6 +16491,9 @@ function buildPoliticalBackgroundResolvedGroups(
   const pathCacheHandle = allowBuildPaths
     ? getPoliticalPathCacheHandle(transform, { resetIfMismatch: true })
     : null;
+  const pathCacheSizeBefore = pathCacheHandle?.map instanceof Map
+    ? pathCacheHandle.map.size
+    : 0;
 
   (Array.isArray(entries) ? entries : []).forEach((entry) => {
     if (!entry?.feature?.geometry) return;
@@ -16533,6 +16566,12 @@ function buildPoliticalBackgroundResolvedGroups(
     reusedPathCount,
     builtPathCount,
     pathlessEntryCount,
+    pathCacheSizeBefore,
+    pathCacheSizeAfter: pathCacheHandle?.map instanceof Map ? pathCacheHandle.map.size : 0,
+    pathCacheResetReason: String(pathCacheHandle?.resetSummary?.reason || ""),
+    pathCacheResetPreviousSize: Math.max(0, Number(pathCacheHandle?.resetSummary?.previousSize || 0)),
+    pathCacheResetPreviousTransformK: Math.max(0, Number(pathCacheHandle?.resetSummary?.previousTransformK || 0)),
+    pathCacheResetNextTransformK: Math.max(0, Number(pathCacheHandle?.resetSummary?.nextTransformK || 0)),
   };
 }
 
@@ -16615,6 +16654,12 @@ function getScenarioPoliticalBackgroundFullPassGroups(
     reusedPathCount: resolvedGroups.reusedPathCount,
     builtPathCount: resolvedGroups.builtPathCount,
     pathlessEntryCount: resolvedGroups.pathlessEntryCount,
+    pathCacheSizeBefore: resolvedGroups.pathCacheSizeBefore,
+    pathCacheSizeAfter: resolvedGroups.pathCacheSizeAfter,
+    pathCacheResetReason: resolvedGroups.pathCacheResetReason,
+    pathCacheResetPreviousSize: resolvedGroups.pathCacheResetPreviousSize,
+    pathCacheResetPreviousTransformK: resolvedGroups.pathCacheResetPreviousTransformK,
+    pathCacheResetNextTransformK: resolvedGroups.pathCacheResetNextTransformK,
   });
   return {
     cacheHit: false,
@@ -21439,6 +21484,8 @@ function render() {
       politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt),
       politicalBgCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "entryCount", metricSequenceStartedAt),
       politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt),
+      politicalBgCachePathCacheSizeBefore: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeBefore", metricSequenceStartedAt),
+      politicalBgCachePathCacheSizeAfter: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeAfter", metricSequenceStartedAt),
       politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt),
       contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt),
       hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt),

@@ -1955,6 +1955,8 @@ test("startup render samples expose hot-path details", () => {
   assert.ok(renderSource.includes('politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "entryCount", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCachePathCacheSizeBefore: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeBefore", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCachePathCacheSizeAfter: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeAfter", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt)'));
@@ -2007,6 +2009,23 @@ test("render perf metric sequence filter excludes previous-frame metrics", () =>
   });
   assert.equal(readRenderPerfMetricNumber("previousFrame", "entryCount", 10), 0);
   assert.equal(readRenderPerfMetricNumber("currentFrame", "entryCount", 10), 88);
+});
+
+test("political path cache reset exposes invalidation reason and previous size", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const invalidateBody = rendererSource.match(/function invalidatePoliticalPathCache\(reason = "unspecified"\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(invalidateBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
+  assert.ok(invalidateBody.includes("previousSize"));
+  assert.ok(invalidateBody.includes("previousSignature"));
+
+  const handleBody = rendererSource.match(/function getPoliticalPathCacheHandle\([\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(handleBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
+  assert.ok(handleBody.includes('reason: "prepare-mismatch"'));
+  assert.ok(handleBody.includes("nextSignature: signature"));
+  assert.ok(rendererSource.includes("pathCacheSizeBefore"));
+  assert.ok(rendererSource.includes("pathCacheSizeAfter"));
+  assert.ok(rendererSource.includes("pathCacheResetReason"));
+  assert.ok(rendererSource.includes("pathCacheResetPreviousSize"));
 });
 
 test("frame scheduler keeps high-priority exact slices draining under continuous input pressure", async () => {
