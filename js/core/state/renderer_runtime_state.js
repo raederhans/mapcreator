@@ -137,6 +137,7 @@ export function createDefaultRenderPassCacheState() {
     politicalPathWarmupQueue: [],
     politicalPathWarmupHandle: null,
     politicalPathWarmupSignature: "",
+    politicalPathWarmupReason: "",
     contextScenarioReasonMismatchSignature: "",
     dirty: {
       background: true,
@@ -271,6 +272,7 @@ export function createDefaultRendererTransientRuntimeState() {
     debugCountryCoverage: null,
     isInteracting: false,
     renderPhase: "idle",
+    politicalRecoveryQuality: "progressive",
     firstVisibleFramePainted: false,
     phaseEnteredAt: 0,
     renderPhaseTimerId: null,
@@ -355,9 +357,12 @@ export function ensureRenderPassCacheState(
   cache.politicalPathWarmupHandle = cache.politicalPathWarmupHandle && typeof cache.politicalPathWarmupHandle === "object"
     ? cache.politicalPathWarmupHandle
     : defaults.politicalPathWarmupHandle;
-  cache.politicalPathWarmupSignature = typeof cache.politicalPathWarmupSignature === "string"
+    cache.politicalPathWarmupSignature = typeof cache.politicalPathWarmupSignature === "string"
     ? cache.politicalPathWarmupSignature
     : defaults.politicalPathWarmupSignature;
+  cache.politicalPathWarmupReason = typeof cache.politicalPathWarmupReason === "string"
+    ? cache.politicalPathWarmupReason
+    : defaults.politicalPathWarmupReason;
   cache.contextScenarioReasonMismatchSignature = typeof cache.contextScenarioReasonMismatchSignature === "string"
     ? cache.contextScenarioReasonMismatchSignature
     : defaults.contextScenarioReasonMismatchSignature;

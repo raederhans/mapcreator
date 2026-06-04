@@ -936,9 +936,11 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /if \(passName === "labels"\) \{[\s\S]*?`colors:\$\{Number\(runtimeState\.colorRevision \|\| 0\)\}`/.test(rendererSource),
     partialPoliticalRepaintOnlyAcceptsTargetedRefreshColors:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
-      && /targetPassNames\.includes\("political"\)[\s\S]*?String\(reason \|\| "unspecified"\) !== "refresh-colors"[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);/.test(rendererSource)
       && !rendererSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
       && !rendererSource.includes('!["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))'),
+    politicalPathCachePreservesTargetedColorAndDeferredFullCacheReady:
+      /const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set\(\[[\s\S]*?"refresh-colors"[\s\S]*?"progressive-political-full-cache-ready"[\s\S]*?\]\);/.test(rendererSource)
+      && /targetPassNames\.includes\("political"\)[\s\S]*?!POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS\.has\(String\(reason \|\| "unspecified"\)\)[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);/.test(rendererSource),
     politicalFullReferenceOnlyWrittenByFullPass:
       /function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?setPassReferenceTransform\(passName, transform\);[\s\S]*?if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(rendererSource)
       && !/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(rendererSource),
@@ -1180,7 +1182,23 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
     backgroundFillHelperKeepsScenarioMergeSplit:
       /function drawPoliticalBackgroundFills\(options = \{\}\) \{[\s\S]*?if \(shouldUseScenarioPoliticalBackgroundMerge\(\)\) \{[\s\S]*?return drawScenarioPoliticalBackgroundFills\(options\);[\s\S]*?\}[\s\S]*?drawAdmin0BackgroundFills\(options\);/.test(rendererSource),
     backgroundFullPassCacheBuildsAndReplays:
-      /function getScenarioPoliticalBackgroundFullPassGroups\([\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheReplay"[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheBuild"/.test(rendererSource),
+      /function getScenarioPoliticalBackgroundFullPassGroups\([\s\S]*?metricName = "scenarioPoliticalBackgroundCacheBuild"[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheReplay"[\s\S]*?recordRenderPerfMetric\(metricName/.test(rendererSource),
+    politicalRecoveryQualityDefaultsProgressiveWithExactOverride:
+      rendererSource.includes('const POLITICAL_RECOVERY_QUALITY_PARAM = "political_recovery_quality";')
+      && /function getPoliticalRecoveryQuality\(\) \{[\s\S]*?raw === POLITICAL_RECOVERY_QUALITY_EXACT[\s\S]*?POLITICAL_RECOVERY_QUALITY_EXACT[\s\S]*?POLITICAL_RECOVERY_QUALITY_PROGRESSIVE[\s\S]*?runtimeState\.politicalRecoveryQuality = resolved;[\s\S]*?return resolved;[\s\S]*?\}/.test(rendererSource),
+    progressivePoliticalRecoveryUsesCoarseUnderlayAndDeferredFullCache:
+      rendererSource.includes("POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT")
+      && rendererSource.includes("POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS")
+      && rendererSource.includes('"progressive-political-full-cache-ready"')
+      && rendererSource.includes("function isScenarioPoliticalBackgroundFullPassCacheKeyReady")
+      && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
+      && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
+      && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)
+      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
+      && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
+      && rendererSource.includes('metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild"')
+      && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice"')
+      && rendererSource.includes('reason: "progressive-coarse-underlay"'),
     chunkedRuntimeSkipsBlockingDetailPromotion:
       /const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?const detailPromoted = \(startupReadonly \|\| supportsChunkedPoliticalRuntime\)\s*\?\s*false\s*:\s*await ensureScenarioDetailTopologyLoaded\(\{ applyMapData: false \}\);/.test(scenarioApplyPipelineSource),
     unconfirmedDetailPromotionStillWarnsBeforeHealthGate:
@@ -1438,7 +1456,7 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
           && !entriesBody.includes("pathBoundsInScreen")
           && entriesBody.includes("viewport filtering stays in the draw path");
       })()
-      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const visibleEntries = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, screenRects, \{ transform \}\)/.test(rendererSource),
+      && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const normalizedScreenRects = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?const visibleEntries = normalizedScreenRects[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, normalizedScreenRects, \{ transform \}\)/.test(rendererSource),
     spatialItemsCanCarryVisibleNonInteractiveLand:
       /function appendLandSpatialItemsRange\([\s\S]*?shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature[\s\S]*?if \(shouldExcludePoliticalVisualFeature\(feature, id\)\) continue;[\s\S]*?interactive: !shouldExcludePoliticalInteractionFeature\(feature, id\)/.test(spatialBuilderSource)
       && /shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature/.test(spatialOwnerSource)
@@ -1959,12 +1977,19 @@ test("startup render samples expose hot-path details", () => {
 
   assert.ok(renderSource.includes("const metricSequenceStartedAt = startedAt > 0"));
   assert.ok(renderSource.includes('politicalBgMs: readRenderPerfMetricDuration("drawPoliticalBackgroundFillsPass", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalRecoveryQuality: readRenderPerfMetricString("drawPoliticalBackgroundFillsPass", "recoveryQuality", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgProgressive: readRenderPerfMetricBoolean("drawPoliticalBackgroundFillsPass", "progressive", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheScheduled: readRenderPerfMetricBoolean("drawPoliticalBackgroundFillsPass", "deferredFullCacheScheduled", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheReady: readRenderPerfMetricBoolean("drawPoliticalBackgroundFillsPass", "deferredFullCacheReady", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "entryCount", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCachePathCacheSizeBefore: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeBefore", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCachePathCacheSizeAfter: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "pathCacheSizeAfter", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCachePathCacheResetPreviousReason: readRenderPerfMetricString("scenarioPoliticalBackgroundCacheBuild", "pathCacheResetPreviousReason", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundDeferredFullCacheBuild", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundDeferredFullCacheBuild", "entryCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgDeferredFullCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundDeferredFullCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt)'));
@@ -2037,6 +2062,26 @@ test("render perf metric sequence filter excludes previous-frame metrics", () =>
   });
   assert.equal(readRenderPerfMetricString("previousFrame", "reason", 10), "");
   assert.equal(readRenderPerfMetricString("currentFrame", "reason", 10), "current");
+
+  const booleanMatch = rendererSource.match(/function readRenderPerfMetricBoolean\(metricName, fieldName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(booleanMatch, "readRenderPerfMetricBoolean should share the render sample sequence filter");
+  const readRenderPerfMetricBoolean = Function(
+    "runtimeState",
+    `${booleanMatch[0]}; return readRenderPerfMetricBoolean;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        progressive: true,
+        sequence: 10,
+      },
+      currentFrame: {
+        progressive: true,
+        sequence: 11,
+      },
+    },
+  });
+  assert.equal(readRenderPerfMetricBoolean("previousFrame", "progressive", 10), false);
+  assert.equal(readRenderPerfMetricBoolean("currentFrame", "progressive", 10), true);
 });
 
 test("political path cache reset exposes invalidation reason and previous size", () => {

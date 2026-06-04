@@ -90,6 +90,13 @@ test("snapshot preserves render-chain hot-path metric details as isolated copies
       durationMs: 23,
       visibleItemCount: 15,
     },
+    scenarioPoliticalBackgroundDeferredFullCacheBuild: {
+      durationMs: 501,
+      recoveryQuality: "progressive",
+      phase: "idle",
+      entryCount: 1200,
+      builtPathCount: 1200,
+    },
     settleExactRefreshPhaseBreakdown: {
       durationMs: 101,
       applyMs: 5,
@@ -105,10 +112,19 @@ test("snapshot preserves render-chain hot-path metric details as isolated copies
     const firstSnapshot = snapshot();
     firstSnapshot.renderPerfMetrics.settleExactRefreshPhaseBreakdown.targetPasses.push("labels");
     firstSnapshot.renderPerfMetrics.buildHitCanvas.visibleItemCount = 999;
+    firstSnapshot.renderPerfMetrics.scenarioPoliticalBackgroundDeferredFullCacheBuild.builtPathCount = 1;
 
     const secondSnapshot = snapshot();
 
     assert.equal(secondSnapshot.renderPerfMetrics.buildHitCanvas.visibleItemCount, 15);
+    assert.equal(
+      secondSnapshot.renderPerfMetrics.scenarioPoliticalBackgroundDeferredFullCacheBuild.builtPathCount,
+      1200,
+    );
+    assert.equal(
+      secondSnapshot.renderPerfMetrics.scenarioPoliticalBackgroundDeferredFullCacheBuild.recoveryQuality,
+      "progressive",
+    );
     assert.deepEqual(
       secondSnapshot.renderPerfMetrics.settleExactRefreshPhaseBreakdown.targetPasses,
       ["political", "borders"],
