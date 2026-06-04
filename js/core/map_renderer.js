@@ -1753,10 +1753,12 @@ function recordRenderPerfMetric(name, durationMs, details = {}) {
   const metrics = ensureRenderPerfMetrics();
   const normalizedName = String(name || "").trim();
   if (!normalizedName) return null;
+  runtimeState.renderPerfMetricSequence = Math.max(0, Number(runtimeState.renderPerfMetricSequence || 0)) + 1;
   const nextEntry = {
     durationMs: Math.max(0, Number(durationMs) || 0),
     recordedAt: Date.now(),
     ...details,
+    sequence: runtimeState.renderPerfMetricSequence,
   };
   metrics[normalizedName] = nextEntry;
   globalThis.__renderPerfMetrics = metrics;
@@ -4765,6 +4767,7 @@ function finalizePendingExactAfterSettleRefreshAfterPaint() {
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     generation,
   });
+  recordSettleExactRefreshPhaseBreakdown(plan, Math.max(0, nowMs() - Number(plan.startedAt || finalizeStartedAt)));
   resetExactAfterSettleController("finalized", generation);
   return true;
 }
@@ -8603,10 +8606,11 @@ function drawHitCanvas() {
 
 function drawHitCanvasWithMetric(details = {}) {
   const startedAt = nowMs();
+  const dirtyBefore = !!runtimeState.hitCanvasDirty;
   const built = drawHitCanvas();
   recordRenderPerfMetric("buildHitCanvas", nowMs() - startedAt, {
     built: !!built,
-    dirtyBefore: true,
+    dirtyBefore,
     ...(lastHitCanvasBuildStats || {}),
     ...details,
   });
@@ -8642,6 +8646,16 @@ function ensureHitCanvasUpToDate({ force = false } = {}) {
   if (!force) {
     scheduleHitCanvasBuildIfNeeded({ reason: "lazy-hit-validation" });
     return false;
+  }
+  if (!runtimeState.hitCanvasDirty && isHitCanvasCurrent()) {
+    recordRenderPerfMetric("buildHitCanvas", 0, {
+      built: false,
+      skipped: true,
+      reason: "current",
+      mode: "forced",
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    });
+    return true;
   }
   cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
   runtimeState.hitCanvasBuildScheduled = null;
@@ -19152,6 +19166,7 @@ function buildExactAfterSettleRefreshPlan({ profile, scheduleStartedAt, callback
     scheduleStartedAt,
     callbackStartedAt,
     startedAt: callbackStartedAt,
+    metricSequenceStartedAt: Math.max(0, Number(runtimeState.renderPerfMetricSequence || 0)),
     settleWindowElapsedMs: Math.max(0, callbackStartedAt - scheduleStartedAt),
   };
 }
@@ -19219,6 +19234,35 @@ function applyExactAfterSettleRefreshPlan(plan) {
   plan.exactTargetPasses = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
     .map(([passName]) => passName)
     .filter((passName) => targetPassNames.has(passName) && !EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
+}
+
+function readRenderPerfMetricDuration(metricName, minSequence = 0) {
+  const entry = runtimeState.renderPerfMetrics?.[metricName];
+  const requiredMinSequence = Math.max(0, Number(minSequence || 0));
+  if (requiredMinSequence > 0 && Math.max(0, Number(entry?.sequence || 0)) <= requiredMinSequence) {
+    return 0;
+  }
+  return Math.max(0, Number(entry?.durationMs || 0));
+}
+
+function recordSettleExactRefreshPhaseBreakdown(plan, durationMs) {
+  const targetPasses = Array.isArray(plan?.exactTargetPasses) ? plan.exactTargetPasses : [];
+  const deferredTargetPasses = Array.isArray(plan?.deferredExactTargetPasses) ? plan.deferredExactTargetPasses : [];
+  const metricSequenceStartedAt = Math.max(0, Number(plan?.metricSequenceStartedAt || 0));
+  recordRenderPerfMetric("settleExactRefreshPhaseBreakdown", durationMs, {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    applyMs: readRenderPerfMetricDuration("settleExactRefreshApply"),
+    passesMs: readRenderPerfMetricDuration("settleExactRefreshPasses"),
+    waitForPaintMs: readRenderPerfMetricDuration("settleExactRefreshWaitForPaint"),
+    finalizeMs: readRenderPerfMetricDuration("settleExactRefreshFinalize"),
+    hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt),
+    metricSequenceStartedAt,
+    targetPasses,
+    targetPassCount: targetPasses.length,
+    deferredTargetPasses,
+    deferredTargetPassCount: deferredTargetPasses.length,
+    contextBaseRefreshed: !!plan?.exactRefreshApplied,
+  });
 }
 
 function finalizeExactAfterSettleRefreshPlan(plan) {

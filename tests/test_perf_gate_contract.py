@@ -76,6 +76,12 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn('{ key: "applyScenarioBundleMs", label: "applyScenarioBundleMs" }', script)
         self.assertIn('{ key: "refreshScenarioApplyMs", label: "refreshScenarioApplyMs" }', script)
         self.assertIn('{ key: "renderSampleMedianMs", label: "renderSampleMedianMs", threshold: 1.25 }', script)
+        self.assertIn("function summarizeSampleSpread", script)
+        self.assertIn("function buildReportWorkloadIdentity", script)
+        self.assertIn("sampleSpread: buildAggregateSampleSpread(runs)", script)
+        self.assertIn("workloadIdentity: buildScenarioWorkloadIdentity", script)
+        self.assertIn("workloadIdentity: buildReportWorkloadIdentity(options, measurement)", script)
+        self.assertIn("manifestSha256", script)
         self.assertIn("function validateGateCurrentReport(currentReport, scenarioIds", script)
         self.assertIn("Current report has invalid gate metrics for scenarios", script)
         self.assertIn('validateGateCurrentReport(report, options.scenarios, "current report")', script)
@@ -96,7 +102,13 @@ class PerfGateContractTest(unittest.TestCase):
             "loadScenarioBundleMs",
             "drawContextScenarioPassMs",
             "setMapDataFirstPaintMs",
+            "buildHitCanvasMs",
             "settleExactRefreshMs",
+            "settleExactRefreshApplyMs",
+            "settleExactRefreshPassesMs",
+            "settleExactRefreshWaitForPaintMs",
+            "settleExactRefreshFinalizeMs",
+            "settleExactRefreshPhaseBreakdownMs",
         ):
             self.assertIn(field_name, script)
         self.assertIn('bootMetrics["scenario-apply"]?.source', script)
@@ -125,6 +137,10 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn('"interactionProbeSchema": "mc_repeated_zoom_regions_v1"', script)
         self.assertIn('"passAttributionSchema": "mc_pass_attribution_v1"', script)
         self.assertIn('"benchmarkMetricsSchemaVersion": "3.3"', script)
+        self.assertIn('"servedRuntimeIdentity": build_served_runtime_identity', script)
+        self.assertIn('"metricValidity": build_metric_validity_by_scenario', script)
+        self.assertIn('"argv": sys.argv', script)
+        self.assertIn('"processId": os.getpid()', script)
         self.assertIn("--repeated-zoom-regions", script)
         self.assertIn("--repeated-zoom-cycles", script)
         self.assertIn("--repeated-zoom-wheels-per-cycle", script)
@@ -198,6 +214,7 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("acceptedCount: Number(source.acceptedCount || 0)", script)
         self.assertIn("rejectedStaleCount: Number(source.rejectedStaleCount || 0)", script)
         self.assertIn("fallbackCount: Number(source.fallbackCount || 0)", script)
+        self.assertIn('"missing-last-action"', script)
         self.assertIn("const sampleRegions = [", script)
         self.assertIn("sampleContext.drawImage(canvas, sourceX, sourceY", script)
         self.assertIn("const sampleEpochMs = (sampleContext = null) =>", script)
@@ -752,16 +769,63 @@ class PerfGateContractTest(unittest.TestCase):
             },
             "singleFill": {
                 "lastActionDurationMs": 11,
+                "lastAction": "single-fill",
                 "blackPixelRatio": 0.12,
             },
             "doubleClickFill": {
                 "lastActionDurationMs": 22,
+                "lastAction": "double-click-fill",
                 "blackPixelRatio": 0.34,
             },
         }
         metrics = benchmark.build_suite_benchmark_metrics(suite)["firstInteraction"]
         self.assertEqual(metrics["singleFillAction"]["details"]["blackPixelRatio"], 0.12)
         self.assertEqual(metrics["doubleClickFillAction"]["details"]["blackPixelRatio"], 0.34)
+        self.assertTrue(metrics["singleFillAction"]["details"]["validity"]["valid"])
+        self.assertTrue(metrics["doubleClickFillAction"]["details"]["validity"]["valid"])
+
+    def test_fill_action_metric_is_invalid_without_last_action(self):
+        benchmark = load_editor_benchmark_module()
+        suite = {
+            "scenarioId": "tno_1962",
+            "scenarioApply": {
+                "requestedScenarioId": "tno_1962",
+                "activeScenarioId": "tno_1962",
+            },
+            "singleFill": {
+                "lastActionDurationMs": 11,
+                "blackPixelRatio": 0.12,
+            },
+        }
+
+        metric = benchmark.build_suite_benchmark_metrics(suite)["firstInteraction"]["singleFillAction"]
+        self.assertFalse(metric["present"])
+        self.assertIsNone(metric["durationMs"])
+        self.assertEqual(metric["details"]["validity"]["reason"], "missing-last-action")
+
+    def test_editor_metric_validity_report_groups_interaction_validity(self):
+        benchmark = load_editor_benchmark_module()
+        suites = {
+            "tno_1962": {
+                "benchmarkMetrics": {
+                    "firstInteraction": {
+                        "singleFillAction": {
+                            "details": {"validity": {"valid": False, "reason": "missing-last-action"}}
+                        },
+                        "doubleClickFillAction": {
+                            "details": {"validity": {"valid": True, "reason": "recorded-action"}}
+                        },
+                    }
+                }
+            }
+        }
+
+        validity = benchmark.build_metric_validity_by_scenario(suites)
+        self.assertFalse(validity["tno_1962"]["firstInteraction"]["singleFillAction"]["valid"])
+        self.assertEqual(
+            validity["tno_1962"]["firstInteraction"]["singleFillAction"]["reason"],
+            "missing-last-action",
+        )
 
     def test_wheel_anchor_metric_prefers_last_wheel_clock_and_keeps_legacy_fallback(self):
         benchmark = load_editor_benchmark_module()

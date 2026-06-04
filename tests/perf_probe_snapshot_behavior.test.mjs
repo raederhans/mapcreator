@@ -82,6 +82,42 @@ test("snapshot returns safe empty metric objects when structuredClone is unavail
   }
 });
 
+test("snapshot preserves render-chain hot-path metric details as isolated copies", () => {
+  const originalRenderPerfMetrics = globalThis.__renderPerfMetrics;
+
+  globalThis.__renderPerfMetrics = {
+    buildHitCanvas: {
+      durationMs: 23,
+      visibleItemCount: 15,
+    },
+    settleExactRefreshPhaseBreakdown: {
+      durationMs: 101,
+      applyMs: 5,
+      passesMs: 70,
+      waitForPaintMs: 15,
+      finalizeMs: 3,
+      hitCanvasMs: 23,
+      targetPasses: ["political", "borders"],
+    },
+  };
+
+  try {
+    const firstSnapshot = snapshot();
+    firstSnapshot.renderPerfMetrics.settleExactRefreshPhaseBreakdown.targetPasses.push("labels");
+    firstSnapshot.renderPerfMetrics.buildHitCanvas.visibleItemCount = 999;
+
+    const secondSnapshot = snapshot();
+
+    assert.equal(secondSnapshot.renderPerfMetrics.buildHitCanvas.visibleItemCount, 15);
+    assert.deepEqual(
+      secondSnapshot.renderPerfMetrics.settleExactRefreshPhaseBreakdown.targetPasses,
+      ["political", "borders"],
+    );
+  } finally {
+    globalThis.__renderPerfMetrics = originalRenderPerfMetrics;
+  }
+});
+
 test("snapshot render sample median uses the mean of the two middle values for even counts", () => {
   const originalLocalStorage = globalThis.localStorage;
   const originalLocation = globalThis.location;

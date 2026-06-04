@@ -160,6 +160,33 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         self.assertIn('recordRenderPerfMetric("hitCanvasSpatialIndexUnavailable"', draw_hit_canvas)
         self.assertNotIn("runtimeState.landData.features.forEach", draw_hit_canvas)
 
+    def test_forced_hit_canvas_reuses_current_canvas_before_rebuild(self):
+        start = self.renderer_content.index("function ensureHitCanvasUpToDate")
+        end = self.renderer_content.index("function isHitCanvasCurrent", start)
+        ensure_hit_canvas = self.renderer_content[start:end]
+
+        self.assertRegex(
+            ensure_hit_canvas,
+            re.compile(
+                r'if \(!runtimeState\.hitCanvasDirty && isHitCanvasCurrent\(\)\) \{\s*'
+                r'recordRenderPerfMetric\("buildHitCanvas", 0, \{[\s\S]*?'
+                r'built: false,[\s\S]*?'
+                r'skipped: true,[\s\S]*?'
+                r'reason: "current",[\s\S]*?'
+                r'return true;',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            self.renderer_content,
+            re.compile(
+                r'function drawHitCanvasWithMetric\(details = \{\}\) \{[\s\S]*?'
+                r'const dirtyBefore = !!runtimeState\.hitCanvasDirty;[\s\S]*?'
+                r'dirtyBefore,',
+                re.S,
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
