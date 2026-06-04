@@ -1,7 +1,7 @@
 # Render Chain Improvement Task
 
 ## Current Step
-- Render-sample hot path evidence and rejected optimization cleanup.
+- Political Path2D cache first-build timing and cost reduction.
 
 ## Checklist
 - [x] Report identity includes target URL, service/process hints, repository path, git head, benchmark argv, and scenario ids.
@@ -18,9 +18,11 @@
 - [x] Viewport-only required chunk selection is locked by behavior test.
 - [x] Final retained-version `perf:gate` evidence is recorded.
 - [x] Final review issues were fixed: Pages dist manifest drift and render metric sequence behavior test coverage.
+- [x] SVG-string group Path2D construction was tested and rejected.
+- [x] Render samples now expose political background cache entry count and built Path2D count.
 - [ ] Startup and render-sample hot paths are below `perf:gate` thresholds.
 
 ## Remaining Work
 - Reduce `tno_1962.totalStartupMs`, `hoi4_1939.totalStartupMs`, and `hoi4_1939.renderSampleMedianMs` below the existing gate thresholds.
 - Continue optimization on startup render sampling, chunk visual promotion, and interaction recovery using the new render sample hot-path details.
-- Focus the next implementation pass on reducing full-pass political background cache build cost without replacing it with direct grouped replay.
+- Focus the next implementation pass on reducing first-build cost or timing for the full-pass per-feature political Path2D cache while preserving cache replay.

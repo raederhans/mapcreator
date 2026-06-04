@@ -19245,6 +19245,15 @@ function readRenderPerfMetricDuration(metricName, minSequence = 0) {
   return Math.max(0, Number(entry?.durationMs || 0));
 }
 
+function readRenderPerfMetricNumber(metricName, fieldName, minSequence = 0) {
+  const entry = runtimeState.renderPerfMetrics?.[metricName];
+  const requiredMinSequence = Math.max(0, Number(minSequence || 0));
+  if (requiredMinSequence > 0 && Math.max(0, Number(entry?.sequence || 0)) <= requiredMinSequence) {
+    return 0;
+  }
+  return Math.max(0, Number(entry?.[fieldName] || 0));
+}
+
 function recordSettleExactRefreshPhaseBreakdown(plan, durationMs) {
   const targetPasses = Array.isArray(plan?.exactTargetPasses) ? plan.exactTargetPasses : [];
   const deferredTargetPasses = Array.isArray(plan?.deferredExactTargetPasses) ? plan.deferredExactTargetPasses : [];
@@ -21428,6 +21437,8 @@ function render() {
       phase: String(runtimeState.renderPhase || ""),
       politicalBgMs: readRenderPerfMetricDuration("drawPoliticalBackgroundFillsPass", metricSequenceStartedAt),
       politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt),
+      politicalBgCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "entryCount", metricSequenceStartedAt),
+      politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt),
       politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt),
       contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt),
       hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt),

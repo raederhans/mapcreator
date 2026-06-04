@@ -1953,6 +1953,8 @@ test("startup render samples expose hot-path details", () => {
   assert.ok(renderSource.includes("const metricSequenceStartedAt = startedAt > 0"));
   assert.ok(renderSource.includes('politicalBgMs: readRenderPerfMetricDuration("drawPoliticalBackgroundFillsPass", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalBgCacheBuildMs: readRenderPerfMetricDuration("scenarioPoliticalBackgroundCacheBuild", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCacheEntryCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "entryCount", metricSequenceStartedAt)'));
+  assert.ok(renderSource.includes('politicalBgCacheBuiltPathCount: readRenderPerfMetricNumber("scenarioPoliticalBackgroundCacheBuild", "builtPathCount", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('politicalFeatureFillMs: readRenderPerfMetricDuration("drawPoliticalFeatureFillLoop", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('contextScenarioMs: readRenderPerfMetricDuration("drawContextScenarioPass", metricSequenceStartedAt)'));
   assert.ok(renderSource.includes('hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt)'));
@@ -1985,6 +1987,26 @@ test("render perf metric sequence filter excludes previous-frame metrics", () =>
   assert.equal(readRenderPerfMetricDuration("currentFrame", 10), 44);
   assert.equal(readRenderPerfMetricDuration("previousFrame", 9), 33);
   assert.equal(readRenderPerfMetricDuration("missingSequence", 10), 0);
+
+  const numberMatch = rendererSource.match(/function readRenderPerfMetricNumber\(metricName, fieldName, minSequence = 0\) \{[\s\S]*?\n\}/);
+  assert.ok(numberMatch, "readRenderPerfMetricNumber should share the render sample sequence filter");
+  const readRenderPerfMetricNumber = Function(
+    "runtimeState",
+    `${numberMatch[0]}; return readRenderPerfMetricNumber;`,
+  )({
+    renderPerfMetrics: {
+      previousFrame: {
+        entryCount: 77,
+        sequence: 10,
+      },
+      currentFrame: {
+        entryCount: 88,
+        sequence: 11,
+      },
+    },
+  });
+  assert.equal(readRenderPerfMetricNumber("previousFrame", "entryCount", 10), 0);
+  assert.equal(readRenderPerfMetricNumber("currentFrame", "entryCount", 10), 88);
 });
 
 test("frame scheduler keeps high-priority exact slices draining under continuous input pressure", async () => {
