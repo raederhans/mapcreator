@@ -50,3 +50,8 @@ Implement the first vertical slice:
   - Shallow state parsing ignored HOI4 `history` block semantics and dated overrides.
   - Missing controller was exposed as an empty controller tag.
 - Fixed by routing state ownership parsing through `scenario_builder.hoi4.parser.parse_state_file`, adding `--as-of-date`, and adding runtime/controller fallback tests.
+
+## Merge
+
+- Branch `codex/hgo-runtime-poc` was fast-forward merged into `main`.
+- Existing dirty files in the original main worktree were unrelated and preserved.

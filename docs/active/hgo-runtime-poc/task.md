@@ -8,4 +8,4 @@
 - [x] Add named tests.
 - [x] Run focused verification.
 - [x] Run final review pass and fix findings.
-- [ ] Merge branch back to main when safe.
+- [x] Merge branch back to main when safe.
