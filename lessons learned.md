@@ -285,3 +285,6 @@
 
 ### deferred infra 用主派生状态信号控重建
 - chunk visual 阶段已经完成完整 political `landData` / derived state 时，deferred infra 只做收尾和诊断清理；用 `primaryDerivedStateReady` 控制 full restore，避免把同一批政治图层重建第二次。
+
+### 字节级 runtime manifest 要覆盖源文件和发布文件
+- 资产 manifest 记录 size/hash 时，源生成器、`.gitattributes`、Pages dist 字节处理和发布合同测试要同链更新；二级 manifest 还要逐项比对发布后的真实文件。

@@ -112,6 +112,23 @@ test("ignores stale load completion after preview is disabled", async () => {
   assert.equal(harness.storage.values.get(HGO_RUNTIME_PREVIEW_STORAGE_KEY), "false");
 });
 
+test("restores preview target after disabling rendered preview", async () => {
+  let restoreCount = 0;
+  const harness = createController({
+    restorePreviewTarget: () => {
+      restoreCount += 1;
+    },
+  });
+
+  await harness.controller.setEnabled(true);
+  assert.equal(restoreCount, 0);
+
+  await harness.controller.setEnabled(false);
+
+  assert.equal(restoreCount, 1);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary, null);
+});
+
 test("stores unavailable state when preview loaders are not configured", async () => {
   const runtimeState = {};
   const storage = createStorage();

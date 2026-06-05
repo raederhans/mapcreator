@@ -62,6 +62,7 @@ function createHgoRuntimePreviewToolbarController({
   loadSeed = null,
   loadRaster = null,
   renderOptions = {},
+  restorePreviewTarget = null,
   storage = globalThis.localStorage,
   documentRef = globalThis.document,
 } = {}) {
@@ -72,6 +73,7 @@ function createHgoRuntimePreviewToolbarController({
     loadSeed,
     loadRaster,
     renderOptions,
+    restorePreviewTarget,
     storage,
   });
 

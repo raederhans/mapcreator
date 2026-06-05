@@ -63,6 +63,7 @@ test("toolbar preview button stays hidden in developer mode until loaders are co
 test("toolbar preview button enables injected preview loader in developer mode", async () => {
   const runtimeState = { ui: { developerMode: true } };
   const button = createButton();
+  let restoreCount = 0;
   const controller = createHgoRuntimePreviewToolbarController({
     runtimeState,
     button,
@@ -75,6 +76,9 @@ test("toolbar preview button enables injected preview loader in developer mode",
       province_to_state: { 1: 1 },
     }),
     loadRaster: async () => ({ width: 1, height: 1, pixelFormat: "rgb", pixels: [10, 20, 30] }),
+    restorePreviewTarget: () => {
+      restoreCount += 1;
+    },
   });
 
   await controller.setEnabled(true);
@@ -83,4 +87,9 @@ test("toolbar preview button enables injected preview loader in developer mode",
   assert.equal(button.attributes.get("aria-pressed"), "true");
   assert.equal(button.attributes.get("aria-label"), "HGO preview ready");
   assert.equal(runtimeState.hgoRuntimePreview.status, "ready");
+
+  await controller.setEnabled(false);
+
+  assert.equal(restoreCount, 1);
+  assert.equal(button.attributes.get("aria-pressed"), "false");
 });

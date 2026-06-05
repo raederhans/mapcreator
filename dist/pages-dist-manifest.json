@@ -10,7 +10,7 @@
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 290491
+      "size_bytes": 292111
     },
     {
       "path": "app/data/city_aliases.json",
@@ -29649,6 +29649,18 @@
       "size_bytes": 1097
     },
     {
+      "path": "app/data/hgo_runtime/manifest.json",
+      "size_bytes": 2403
+    },
+    {
+      "path": "app/data/hgo_runtime/provinces.bmp",
+      "size_bytes": 39321654
+    },
+    {
+      "path": "app/data/hgo_runtime/seed.json",
+      "size_bytes": 9678303
+    },
+    {
       "path": "app/data/hierarchy.json",
       "size_bytes": 480987
     },
@@ -29662,7 +29674,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 45236
+      "size_bytes": 47667
     },
     {
       "path": "app/data/palette-maps/hgo.audit.json",
@@ -29778,7 +29790,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 23827
+      "size_bytes": 24259
     },
     {
       "path": "app/data/scenario-rules/hoi4_1936.manual.json",
@@ -33294,7 +33306,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
-      "size_bytes": 18578123
+      "size_bytes": 18641688
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c0.json",
@@ -33314,19 +33326,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c0.json",
-      "size_bytes": 10839159
+      "size_bytes": 11040958
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c1.json",
-      "size_bytes": 22485912
+      "size_bytes": 22689481
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
-      "size_bytes": 30239947
+      "size_bytes": 30443516
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
-      "size_bytes": 15742162
+      "size_bytes": 15943961
     },
     {
       "path": "app/data/scenarios/tno_1962/city_assets.partial.json",
@@ -33382,7 +33394,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3802518
+      "size_bytes": 3805601
     },
     {
       "path": "app/data/scenarios/tno_1962/manifest.json",
@@ -33442,7 +33454,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378915
+      "size_bytes": 1378922
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
@@ -33450,19 +33462,19 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378915
+      "size_bytes": 1378922
     },
     {
       "path": "app/data/scenarios/tno_1962/water_refinement_source_reviews.json",
-      "size_bytes": 40897
+      "size_bytes": 48567
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 18578122
+      "size_bytes": 18641687
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.provenance.json",
-      "size_bytes": 33603
+      "size_bytes": 34126
     },
     {
       "path": "app/data/special_zones.geojson",
@@ -36385,12 +36397,16 @@
       "size_bytes": 6813
     },
     {
+      "path": "app/js/core/hgo_runtime_asset_loader.js",
+      "size_bytes": 5858
+    },
+    {
       "path": "app/js/core/hgo_runtime_index.js",
       "size_bytes": 8895
     },
     {
       "path": "app/js/core/hgo_runtime_preview.js",
-      "size_bytes": 7560
+      "size_bytes": 8190
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36990,7 +37006,7 @@
     },
     {
       "path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
-      "size_bytes": 4034
+      "size_bytes": 4091
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -37074,7 +37090,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 135503
+      "size_bytes": 135861
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -37222,14 +37238,14 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1051759
+      "size_bytes": 1052127
     },
     {
       "path": "styles.css",
       "size_bytes": 29789
     }
   ],
-  "max_allowed_bytes": 1101004800,
+  "max_allowed_bytes": 1153433600,
   "required_files": [
     "index.html",
     "app/index.html",
@@ -37239,5 +37255,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1093635609
+  "total_bytes": 1143598879
 }

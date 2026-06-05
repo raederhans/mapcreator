@@ -264,7 +264,7 @@ const translations = {
     updateThreeDate: "May 12, 2026",
     updateThreeTitle: "Cataloged data foundation",
     updateThreeBody:
-      "The checked-in catalog tracks 638 assets across source ledgers, transport manifests, topology, palettes, and runtime data.",
+      "The checked-in catalog tracks 641 assets across source ledgers, transport manifests, topology, palettes, and runtime data.",
     ctaEyebrow: "Ready to open the workbench?",
     ctaTitle: "Step into the editor when you want to move from idea to map.",
     ctaBody:
@@ -490,7 +490,7 @@ const translations = {
     updateTwoBody: "本地后端边界和共享项目合同，为后续团队协作能力打下基础。",
     updateThreeDate: "2026 年 5 月 12 日",
     updateThreeTitle: "数据入库基础",
-    updateThreeBody: "入库目录跟踪 638 个资产，覆盖来源台账、交通清单、拓扑、调色板和运行时数据。",
+    updateThreeBody: "入库目录跟踪 641 个资产，覆盖来源台账、交通清单、拓扑、调色板和运行时数据。",
     ctaEyebrow: "打开工作台",
     ctaTitle: "从想法到地图，下一步在编辑器里完成。",
     ctaBody: "展示页用于介绍产品，编辑器用于完成具体制图工作。",

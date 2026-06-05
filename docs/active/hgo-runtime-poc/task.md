@@ -1,5 +1,22 @@
 # HGO Runtime PoC Task
 
+## Phase 3: Independent HGO Runtime Assets
+
+- [x] Create isolated worktree.
+- [x] Reuse existing task documentation folder.
+- [x] Record Ralph context snapshot and live owner boundary.
+- [x] Map existing runtime asset, manifest, catalog, pages dist, and toolbar contracts.
+- [x] Add checked-in HGO runtime asset builder.
+- [x] Build real HGO runtime seed, manifest, and province raster assets.
+- [x] Register HGO runtime assets in runtime registry and data manifest/catalog.
+- [x] Add browser-side HGO runtime asset loader.
+- [x] Wire developer toolbar preview to the real HGO loader.
+- [x] Add focused Python and Node tests.
+- [x] Run focused HGO and data contract verification.
+- [x] Run `verify:pages-dist`.
+- [x] Run review / bug / first-principles self-check and fix findings.
+- [ ] Merge branch back to main, push, and clean worktree.
+
 ## Phase 2: HGO Runtime Preview
 
 - [x] Create isolated worktree.
