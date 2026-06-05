@@ -43,6 +43,20 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
         self.assertIn("ensureSphericalFeatureDiagnosticsCacheState(state)", content)
         self.assertIn("setInteractionInfrastructureStateFields(state, stage,", content)
 
+    def test_dev_selection_overlay_merges_selected_feature_boundary(self):
+        content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        render_body = content.split("function renderDevSelectionOverlay() {", 1)[1].split(
+            "function renderDevSelectionOverlayIfNeeded", 1
+        )[0]
+
+        self.assertIn("const overlayData = buildDevSelectionOverlayData(orderedIds, data);", render_body)
+        self.assertIn(".data(overlayData,", render_body)
+        self.assertIn('.attr("stroke-width", 1.35);', render_body)
+        self.assertIn("function getRuntimeTopologySelectionGeometries(featureIds) {", content)
+        self.assertIn("function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {", content)
+        self.assertIn("globalThis.topojson.merge(topology, geometries)", content)
+        self.assertIn('devSelectionKey: `merged:${orderedIds.join("|")}`', content)
+
     def test_sidebar_reuses_sidebar_perf_factory(self):
         content = SIDEBAR_JS.read_text(encoding="utf-8")
 

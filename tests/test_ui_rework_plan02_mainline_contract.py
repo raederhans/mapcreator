@@ -165,6 +165,10 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         ]:
             self.assertIn(token, css_content)
 
+        for content in (css_content, dist_css_content):
+            self.assertNotIn(":has(#selectedCountryActionsSection[open] .inspector-action-disclosure[open])", content)
+            self.assertNotIn("width: 328px;", content)
+
         for token in [
             "@media (min-width: 1024px) {",
             "body.right-sidebar-collapsed .sidebar-right {",
@@ -324,7 +328,12 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "max-height: min(34vh, 320px);",
             ".scenario-visual-adjustments-body {",
             "#selectedCountryActionsSection > .inspector-panel-body {",
+            "min-height: auto;",
             "max-height: min(54vh, 520px);",
+            "#selectedCountryActionsSection.has-open-visual-adjustments[open] {",
+            "max-height: min(76vh, 720px);",
+            "#selectedCountryActionsSection.has-open-visual-adjustments > .inspector-panel-body {",
+            "max-height: min(66vh, 640px);",
             "#selectedCountryActionsSection.is-empty-selection-panel > .inspector-panel-body {",
             "min-height: 0;",
             "--inspector-font-card-title: 0.78rem;",
@@ -347,6 +356,16 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "#selectedCountryActionsSection #presetTree.inspector-scroll {",
             "overflow: visible;",
             "scrollbar-gutter: stable;",
+            "#waterRegionList.inspector-scroll {",
+            "scroll-snap-type: y proximity;",
+            "#waterRegionList .inspector-item-btn {",
+            "scroll-snap-align: start;",
+            ".water-filter-card-head {",
+            ".water-filter-controls {",
+            ".water-filter-field {",
+            "grid-template-columns: minmax(38px, 0.42fr) minmax(0, 1fr);",
+            "#waterInspectorSection .water-filter-field .select-input {",
+            "min-height: 32px;",
         ]:
             self.assertIn(token, css_content)
 
@@ -355,10 +374,17 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "countryListCap: 42",
             "presetTreeCompactCap: 48",
             "selectedActionsBodyCompactCap: 54",
+            "selectedActionsBodyVisualOpenCap: 66",
+            "selectedActionsBodyVisualOpenCompactCap: 64",
+            "selectedActionsBodyReserve: 28",
+            "const isScenarioVisualAdjustmentsExpanded = () => (",
             "const getCountryInspectorListCap = () => {",
-            "const getSelectedActionsBodyCap = () => (",
+            "const getSelectedActionsBodyCap = () => {",
+            '"has-open-visual-adjustments"',
             "selectedCountryActionsSection?.open",
             "releaseAdaptiveInspectorHeight(presetTree);",
+            'element.style.height = "";',
+            'element.style.maxHeight = "";',
             "const isSelectedActionsEmptyState = () => (",
             'selectedCountryActionsSection?.classList.contains("is-empty-selection-panel")',
             "releaseAdaptiveInspectorHeight(selectedCountryActionsBody);",
@@ -375,9 +401,10 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             'metaCopy.className = "country-children-meta-copy";',
             'countLabel.className = "country-children-meta-label";',
             'countLabel.textContent = t("Related Countries", "ui");',
-            "const childShowsRelationMeta = !childState?.scenarioSubject;",
-            "showRelationMeta: childShowsRelationMeta,",
+            "renderCountrySelectRow(childList, childState, {",
+            "showRelationMeta: false,",
             'toggleBtn.setAttribute("aria-expanded", String(isExpanded));',
+            "showRelationMeta: !!group.parentState?.releasable,",
         ]:
             self.assertIn(token, (REPO_ROOT / "js" / "ui" / "sidebar" / "country_inspector_controller.js").read_text(encoding="utf-8"))
 
@@ -388,12 +415,63 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "appendScenarioChildCountryRows(section, releasableChildren);",
         ]:
             self.assertIn(token, sidebar_content)
+        self.assertLess(
+            sidebar_content.index('element.style.height = "";'),
+            sidebar_content.index("const scrollHeight = Number(element.scrollHeight || 0);"),
+        )
+        self.assertIn("if (filteredPresetEntries.length > 0) {", sidebar_content)
+        self.assertNotIn('presetSection.appendChild(createEmptyNote(t("No regional presets", "ui")));', sidebar_content)
+        for token in [
+            "buildPaletteColorSuggestionsForCountry,",
+            "ensurePaletteAssetsLoaded,",
+            "setInspectorFeatureHighlight,",
+            "function previewHierarchyGroupHighlight(group, featureIds = []) {",
+            "setInspectorFeatureHighlight(matchedIds, {",
+            "groupMode: true,",
+            "previewHierarchyGroupHighlight(group, targetIds);",
+            'suggestionSelect.className = "inspector-color-suggestion-select";',
+            'suggestionSelect.setAttribute("aria-label", t("Palette color suggestions", "ui"));',
+            'currentOption.textContent = t("Current country color", "ui");',
+            'currentOption.textContent = t("Loading palette suggestions", "ui");',
+            "void loadPaletteColorSuggestionsForCountry(countryState).then((suggestions) => {",
+            "const getLocalizedPaletteSuggestionLabel = (suggestion, countryState = null) => {",
+            "const getLocalizedPaletteSuggestionPaletteLabel = (suggestion) => {",
+            "const formatPaletteColorSuggestionText = (suggestion, countryState = null, { includeColor = false } = {}) => {",
+            'String(countryState?.displayName || "").trim()',
+            "option.textContent = formatPaletteColorSuggestionText(suggestion, countryState, { includeColor: true });",
+            "applyPaletteColorSuggestion(suggestion, compactButton);",
+        ]:
+            self.assertIn(token, sidebar_content)
+        palette_manager_content = (REPO_ROOT / "js" / "core" / "palette_manager.js").read_text(encoding="utf-8")
+        for token in [
+            "function collectCountryPaletteMatchTargets(countryState = {}) {",
+            "function buildPaletteColorSuggestionsForCountry(",
+            'matchKind: "iso2"',
+            'matchKind: "tag"',
+            'matchKind: "name"',
+            "buildPaletteColorSuggestionsForCountry,",
+        ]:
+            self.assertIn(token, palette_manager_content)
+        locales_content = (REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8")
+        self.assertIn('"Country Color": {\n      "en": "Country Color",\n      "zh": "国家配色"', locales_content)
+        self.assertIn('"Palette color suggestions": {', locales_content)
+        self.assertIn('"Current country color": {', locales_content)
+        i18n_catalog_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+        for token in [
+            '"Country Color": { zh: "国家配色", en: "Country Color" }',
+            '"Current country color": { zh: "当前国家颜色", en: "Current country color" }',
+            '"Palette color suggestions": { zh: "色板颜色建议", en: "Palette color suggestions" }',
+            'Kaiserreich: { zh: "凯撒帝国", en: "Kaiserreich" }',
+        ]:
+            self.assertIn(token, i18n_catalog_content)
         self.assertNotIn('appendActionSection(container, t("Notes", "ui"))', sidebar_content)
         self.assertNotIn('appendActionSection(container, t("Navigation", "ui"))', sidebar_content)
 
         self.assertIn("#countryInspectorColorRow {", css_content)
         self.assertIn("#countryList .country-select-row button:hover", css_content)
         self.assertIn("#specialRegionInspectorSection .inspector-detail-section", css_content)
+        self.assertIn(".inspector-color-suggestion-select {", css_content)
+        self.assertIn(".inspector-color-sync-row-compact .inspector-color-sync-copy {", css_content)
         for token in [
             "const hasVisibleSpecialRegions = hasActiveScenario && getVisibleSpecialFeatures().length > 0;",
             "!!runtimeState.showScenarioReliefOverlays",

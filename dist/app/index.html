@@ -2253,32 +2253,44 @@
                   <span data-i18n="When off, macro ocean regions can be inspected but ignore paint, eraser, and eyedropper actions.">When off, macro ocean regions can be inspected but ignore paint, eraser, and eyedropper actions.</span>
                 </p>
               </div>
-              <div class="card-flat inspector-detail-section mt-3">
-                <h3 id="lblWaterFilters" class="sidebar-group-label" data-i18n="Filters">Filters</h3>
-                <div id="waterInspectorResultCount" class="sidebar-tool-hint mt-2">0</div>
-                <label class="toggle-label mt-2" title="Only show water regions that currently have an explicit override." data-i18n-title="Only show water regions that currently have an explicit override.">
-                  <input id="waterInspectorOverridesOnlyToggle" type="checkbox" class="checkbox-input" />
-                  <span id="lblWaterInspectorOverridesOnlyToggle" data-i18n="Overrides Only">Overrides Only</span>
-                </label>
-                <label id="lblWaterFilterType" class="sidebar-field-label mt-3" for="waterInspectorTypeFilter">Type</label>
-                <select id="waterInspectorTypeFilter" class="select-input mt-2">
-                  <option value="" data-i18n="All Types">All Types</option>
-                </select>
-                <label id="lblWaterFilterGroup" class="sidebar-field-label mt-3" for="waterInspectorGroupFilter" data-i18n="Group">Group</label>
-                <select id="waterInspectorGroupFilter" class="select-input mt-2">
-                  <option value="" data-i18n="All Groups">All Groups</option>
-                </select>
-                <label id="lblWaterFilterSource" class="sidebar-field-label mt-3" for="waterInspectorSourceFilter" data-i18n="Source">Source</label>
-                <select id="waterInspectorSourceFilter" class="select-input mt-2">
-                  <option value="" data-i18n="All Sources">All Sources</option>
-                </select>
-                <label id="lblWaterSort" class="sidebar-field-label mt-3" for="waterInspectorSortSelect">Sort</label>
-                <select id="waterInspectorSortSelect" class="select-input mt-2">
-                  <option value="name">Name</option>
-                  <option value="type">Type</option>
-                  <option value="group" data-i18n="Group">Group</option>
-                  <option value="override" data-i18n="Has Override">Has Override</option>
-                </select>
+              <div class="card-flat inspector-detail-section water-filter-card mt-3">
+                <div class="water-filter-card-head">
+                  <h3 id="lblWaterFilters" class="sidebar-group-label" data-i18n="Filters">Filters</h3>
+                  <div id="waterInspectorResultCount" class="sidebar-tool-hint">0</div>
+                </div>
+                <div class="water-filter-controls">
+                  <label class="toggle-label water-filter-toggle" title="Only show water regions that currently have an explicit override." data-i18n-title="Only show water regions that currently have an explicit override.">
+                    <input id="waterInspectorOverridesOnlyToggle" type="checkbox" class="checkbox-input" />
+                    <span id="lblWaterInspectorOverridesOnlyToggle" data-i18n="Overrides Only">Overrides Only</span>
+                  </label>
+                  <div class="water-filter-field">
+                    <label id="lblWaterFilterType" class="sidebar-field-label" for="waterInspectorTypeFilter">Type</label>
+                    <select id="waterInspectorTypeFilter" class="select-input">
+                      <option value="" data-i18n="All Types">All Types</option>
+                    </select>
+                  </div>
+                  <div class="water-filter-field">
+                    <label id="lblWaterFilterGroup" class="sidebar-field-label" for="waterInspectorGroupFilter" data-i18n="Group">Group</label>
+                    <select id="waterInspectorGroupFilter" class="select-input">
+                      <option value="" data-i18n="All Groups">All Groups</option>
+                    </select>
+                  </div>
+                  <div class="water-filter-field">
+                    <label id="lblWaterFilterSource" class="sidebar-field-label" for="waterInspectorSourceFilter" data-i18n="Source">Source</label>
+                    <select id="waterInspectorSourceFilter" class="select-input">
+                      <option value="" data-i18n="All Sources">All Sources</option>
+                    </select>
+                  </div>
+                  <div class="water-filter-field">
+                    <label id="lblWaterSort" class="sidebar-field-label" for="waterInspectorSortSelect">Sort</label>
+                    <select id="waterInspectorSortSelect" class="select-input">
+                      <option value="name">Name</option>
+                      <option value="type">Type</option>
+                      <option value="group" data-i18n="Group">Group</option>
+                      <option value="override" data-i18n="Has Override">Has Override</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <div class="card-flat inspector-search-block">
                 <label id="lblWaterSearch" class="visually-hidden" for="waterRegionSearch">Search Water Regions</label>

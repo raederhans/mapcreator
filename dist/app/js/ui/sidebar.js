@@ -29,6 +29,7 @@ import {
   selectOperationalLineById,
   selectUnitCounterById,
   setDebugMode,
+  setInspectorFeatureHighlight,
   startOperationGraphicDraw,
   startOperationalLineDraw,
   startUnitCounterPlacement,
@@ -39,6 +40,10 @@ import {
   updateSelectedUnitCounter,
 } from "../core/map_renderer/public.js";
 import { applyCountryColor, resetCountryColors } from "../core/logic.js";
+import {
+  buildPaletteColorSuggestionsForCountry,
+  ensurePaletteAssetsLoaded,
+} from "../core/palette_manager.js";
 import { FileManager } from "../core/file_manager.js";
 import { canUndoHistory, captureHistoryState, pushHistoryEntry, undoHistory } from "../core/history_manager.js";
 import { LegendManager } from "../core/legend_manager.js";
@@ -1176,6 +1181,7 @@ function applyHierarchyGroupWithMode(
   const targetIds = Array.isArray(group.children)
     ? Array.from(new Set(group.children.map((id) => String(id || "").trim()).filter(Boolean)))
     : [];
+  previewHierarchyGroupHighlight(group, targetIds);
   const resolvedMode = normalizeActionMode(mode);
   if (resolvedMode === "ownership") {
     return applyOwnershipToFeatureIds(targetIds, ownerCode || runtimeState.activeSovereignCode, {
@@ -1197,6 +1203,14 @@ function applyHierarchyGroup(group, color, render) {
     mode: "auto",
     color,
     render,
+  });
+}
+
+function previewHierarchyGroupHighlight(group, featureIds = []) {
+  const { matchedIds } = filterToVisibleFeatureIds(featureIds);
+  setInspectorFeatureHighlight(matchedIds, {
+    groupMode: true,
+    label: t(group?.label || "Hierarchy group", "geo") || group?.label || "Hierarchy group",
   });
 }
 
@@ -1540,11 +1554,6 @@ function initSidebar({ render } = {}) {
     uploadBtn.className = "btn-secondary";
     uploadBtn.textContent = t("Load Project", "ui");
 
-    const projectLoadHint = document.createElement("p");
-    projectLoadHint.id = "projectLoadHint";
-    projectLoadHint.className = "sidebar-tool-hint project-load-hint";
-    projectLoadHint.textContent = t("Local load accepts project JSON or project ZIP packages. Community saves open from Account.", "ui");
-
     const fileInput = document.createElement("input");
     fileInput.id = "projectFileInput";
     fileInput.type = "file";
@@ -1574,7 +1583,8 @@ function initSidebar({ render } = {}) {
     projectSaveStatus.setAttribute("role", "status");
     projectSaveStatus.setAttribute("aria-live", "polite");
     projectSaveStatus.setAttribute("aria-atomic", "true");
-    projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
+    projectSaveStatus.classList.add("hidden");
+    projectSaveStatus.textContent = "";
 
     const accountDock = document.createElement("div");
     accountDock.className = "project-account-dock";
@@ -1620,7 +1630,6 @@ function initSidebar({ render } = {}) {
     actions.appendChild(downloadBtn);
     actions.appendChild(projectDownloadOptions);
     actions.appendChild(uploadBtn);
-    actions.appendChild(projectLoadHint);
     actions.appendChild(projectSaveStatus);
     actions.appendChild(fileMeta);
     actions.appendChild(fileInput);
@@ -3640,15 +3649,17 @@ function initSidebar({ render } = {}) {
     countryListCompactCap: 34,
     presetTreeCap: 52,
     presetTreeCompactCap: 48,
-    selectedActionsBody: 26,
     selectedActionsBodyCap: 56,
     selectedActionsBodyCompactCap: 54,
+    selectedActionsBodyVisualOpenCap: 66,
+    selectedActionsBodyVisualOpenCompactCap: 64,
   };
   const INSPECTOR_PX_BASELINE = {
     actionList: 120,
     actionListCap: 240,
     presetBody: 240,
     presetBodyCap: 520,
+    selectedActionsBodyReserve: 28,
   };
   let adaptiveInspectorHeightFrame = 0;
   let countryInspectorColorPickerOpen = false;
@@ -3681,6 +3692,8 @@ function initSidebar({ render } = {}) {
 
   const applyAdaptiveInspectorHeight = (element, minimum, maximum) => {
     if (!element) return;
+    element.style.height = "";
+    element.style.maxHeight = "";
     const scrollHeight = Number(element.scrollHeight || 0);
     const nextHeight = clampInspectorHeight(scrollHeight, minimum, maximum);
     element.style.height = `${Math.round(nextHeight)}px`;
@@ -3707,11 +3720,22 @@ function initSidebar({ render } = {}) {
       : INSPECTOR_VH_BASELINE.presetTreeCap
   );
 
-  const getSelectedActionsBodyCap = () => (
-    countryInspectorSection?.open
-      ? INSPECTOR_VH_BASELINE.selectedActionsBodyCompactCap
-      : INSPECTOR_VH_BASELINE.selectedActionsBodyCap
+  const isScenarioVisualAdjustmentsExpanded = () => (
+    !!selectedCountryActionsSection?.open
+    && !!runtimeState.ui?.scenarioVisualAdjustmentsOpen
   );
+
+  const getSelectedActionsBodyCap = () => {
+    const hasOpenVisualAdjustments = isScenarioVisualAdjustmentsExpanded();
+    if (countryInspectorSection?.open) {
+      return hasOpenVisualAdjustments
+        ? INSPECTOR_VH_BASELINE.selectedActionsBodyVisualOpenCompactCap
+        : INSPECTOR_VH_BASELINE.selectedActionsBodyCompactCap;
+    }
+    return hasOpenVisualAdjustments
+      ? INSPECTOR_VH_BASELINE.selectedActionsBodyVisualOpenCap
+      : INSPECTOR_VH_BASELINE.selectedActionsBodyCap;
+  };
 
   const isSelectedActionsEmptyState = () => (
     !!selectedCountryActionsSection?.classList.contains("is-empty-selection-panel")
@@ -3745,12 +3769,17 @@ function initSidebar({ render } = {}) {
       220
     );
     releaseAdaptiveInspectorHeight(presetTree);
+    const hasOpenVisualAdjustments = !isSelectedActionsEmptyState() && isScenarioVisualAdjustmentsExpanded();
+    selectedCountryActionsSection?.classList.toggle(
+      "has-open-visual-adjustments",
+      hasOpenVisualAdjustments
+    );
     if (isSelectedActionsEmptyState()) {
       releaseAdaptiveInspectorHeight(selectedCountryActionsBody);
     } else {
       applyAdaptiveInspectorHeight(
         selectedCountryActionsBody,
-        toViewportPixels(INSPECTOR_VH_BASELINE.selectedActionsBody),
+        INSPECTOR_PX_BASELINE.selectedActionsBodyReserve,
         toViewportPixels(getSelectedActionsBodyCap())
       );
     }
@@ -4361,6 +4390,106 @@ function initSidebar({ render } = {}) {
     const resolvedColor = getDisplayCountryColor(countryState);
     runtimeState.selectedColor = resolvedColor;
     callRuntimeHook(state, "updateSwatchUIFn");
+  };
+
+  const paletteColorSuggestionCache = new Map();
+
+  const getPaletteColorSuggestionCacheKey = (countryState = {}) => JSON.stringify({
+    language: runtimeState.currentLanguage || "en",
+    paletteCount: Array.isArray(runtimeState.paletteRegistry?.palettes)
+      ? runtimeState.paletteRegistry.palettes.length
+      : 0,
+    code: countryState.code || "",
+    lookupIso2: countryState.lookupIso2 || "",
+    baseIso2: countryState.baseIso2 || "",
+    releaseLookupIso2: countryState.releaseLookupIso2 || "",
+    presetLookupCode: countryState.presetLookupCode || "",
+    name: countryState.name || "",
+    displayName: countryState.displayName || "",
+  });
+
+  const loadPaletteColorSuggestionsForCountry = async (countryState) => {
+    const cacheKey = getPaletteColorSuggestionCacheKey(countryState);
+    if (paletteColorSuggestionCache.has(cacheKey)) {
+      return paletteColorSuggestionCache.get(cacheKey);
+    }
+
+    const registryEntries = Array.isArray(runtimeState.paletteRegistry?.palettes)
+      ? runtimeState.paletteRegistry.palettes
+      : [];
+    const assets = (await Promise.all(registryEntries.map(async (meta) => {
+      const paletteId = String(meta?.palette_id || "").trim();
+      if (!paletteId) return null;
+      try {
+        const loaded = await ensurePaletteAssetsLoaded(paletteId);
+        return {
+          paletteId,
+          paletteLabel: String(meta?.display_name || paletteId),
+          meta: loaded.meta || meta,
+          pack: loaded.pack,
+          map: loaded.map,
+        };
+      } catch (error) {
+        console.warn("[sidebar] Failed to load palette suggestions:", error);
+        return null;
+      }
+    }))).filter(Boolean);
+
+    const suggestions = buildPaletteColorSuggestionsForCountry(countryState, assets);
+    paletteColorSuggestionCache.set(cacheKey, suggestions);
+    return suggestions;
+  };
+
+  const getLocalizedPaletteSuggestionLabel = (suggestion, countryState = null) => {
+    if (!suggestion) return "";
+    const language = runtimeState.currentLanguage === "zh" ? "zh" : "en";
+    const localizedName = language === "zh"
+      ? (
+        String(suggestion.localizedNameZh || "").trim()
+        || String(countryState?.displayName || "").trim()
+        || t(suggestion.label, "geo")
+      )
+      : (
+        String(suggestion.localizedNameEn || "").trim()
+        || String(suggestion.label || "").trim()
+      );
+    return String(localizedName || suggestion.label || suggestion.sourceTag || "").trim();
+  };
+
+  const getLocalizedPaletteSuggestionPaletteLabel = (suggestion) => {
+    const paletteLabel = String(suggestion?.paletteLabel || suggestion?.paletteId || "").trim();
+    return t(paletteLabel, "ui") || paletteLabel;
+  };
+
+  const formatPaletteColorSuggestionText = (suggestion, countryState = null, { includeColor = false } = {}) => {
+    const parts = [
+      getLocalizedPaletteSuggestionPaletteLabel(suggestion),
+      getLocalizedPaletteSuggestionLabel(suggestion, countryState),
+    ].filter(Boolean);
+    if (includeColor && suggestion?.color) {
+      parts.push(suggestion.color);
+    }
+    return parts.join(" · ");
+  };
+
+  const applyPaletteColorSuggestion = (suggestion, previewButton) => {
+    if (!suggestion?.color) return;
+    const suggestionText = formatPaletteColorSuggestionText(suggestion);
+    runtimeState.selectedColor = suggestion.color;
+    callRuntimeHook(state, "updateSwatchUIFn");
+    if (previewButton) {
+      previewButton.style.backgroundColor = suggestion.color;
+      previewButton.title = `${t("Palette color suggestion", "ui")}: ${suggestionText}`;
+      previewButton.setAttribute(
+        "aria-label",
+        `${t("Palette color suggestion", "ui")}: ${suggestionText}`
+      );
+    }
+    showToast(suggestionText, {
+      title: t("Palette color suggestion applied", "ui"),
+      tone: "info",
+      duration: 2200,
+    });
   };
 
   const setScenarioVisualAdjustmentsOpen = (nextOpen, { scrollIntoView = false } = {}) => {
@@ -5057,8 +5186,10 @@ function initSidebar({ render } = {}) {
     if (!container || !countryState) return;
 
     const resolvedColor = getDisplayCountryColor(countryState);
+    const suggestionKey = getPaletteColorSuggestionCacheKey(countryState);
     const row = document.createElement("div");
     row.className = "inspector-color-sync-row inspector-color-sync-row-compact";
+    row.dataset.paletteSuggestionKey = suggestionKey;
 
     const copy = document.createElement("div");
     copy.className = "inspector-color-sync-copy";
@@ -5068,22 +5199,80 @@ function initSidebar({ render } = {}) {
     compactTitle.textContent = t("Country Color", "ui");
     copy.appendChild(compactTitle);
 
+    const suggestionSelect = document.createElement("select");
+    suggestionSelect.className = "inspector-color-suggestion-select";
+    suggestionSelect.setAttribute("aria-label", t("Palette color suggestions", "ui"));
+    const currentOption = document.createElement("option");
+    currentOption.value = "current";
+    currentOption.textContent = t("Current country color", "ui");
+    suggestionSelect.appendChild(currentOption);
+
     const compactButton = document.createElement("button");
     compactButton.type = "button";
     compactButton.className = "country-select-swatch inspector-color-sync-swatch inspector-color-sync-trigger";
     compactButton.style.backgroundColor = resolvedColor;
-    compactButton.title = `${t("Use Country Color for Visual Actions", "ui")}: ${countryState.displayName}`;
-    compactButton.setAttribute(
-      "aria-label",
-      `${t("Use Country Color for Visual Actions", "ui")}: ${countryState.displayName}`
-    );
+    const countryColorActionLabel = `${t("Use Country Color for Visual Actions", "ui")}: ${countryState.displayName}`;
+    compactButton.title = countryColorActionLabel;
+    compactButton.setAttribute("aria-label", countryColorActionLabel);
     compactButton.addEventListener("click", () => {
       syncSelectedColorFromCountry(countryState);
+      compactButton.style.backgroundColor = resolvedColor;
+      compactButton.title = countryColorActionLabel;
+      compactButton.setAttribute("aria-label", countryColorActionLabel);
+      suggestionSelect.value = "current";
     });
 
+    suggestionSelect.addEventListener("change", () => {
+      if (suggestionSelect.value === "current") {
+        syncSelectedColorFromCountry(countryState);
+        compactButton.style.backgroundColor = resolvedColor;
+        compactButton.title = countryColorActionLabel;
+        compactButton.setAttribute("aria-label", countryColorActionLabel);
+        return;
+      }
+      const suggestions = Array.isArray(suggestionSelect._paletteColorSuggestions)
+        ? suggestionSelect._paletteColorSuggestions
+        : [];
+      const suggestion = suggestions[Number(suggestionSelect.value)];
+      applyPaletteColorSuggestion(suggestion, compactButton);
+    });
+
+    copy.appendChild(suggestionSelect);
     row.appendChild(copy);
     row.appendChild(compactButton);
     container.appendChild(row);
+
+    suggestionSelect.disabled = true;
+    currentOption.textContent = t("Loading palette suggestions", "ui");
+    void loadPaletteColorSuggestionsForCountry(countryState).then((suggestions) => {
+      if (!row.isConnected || row.dataset.paletteSuggestionKey !== suggestionKey) return;
+      suggestionSelect.innerHTML = "";
+      const baseOption = document.createElement("option");
+      baseOption.value = "current";
+      baseOption.textContent = t("Current country color", "ui");
+      suggestionSelect.appendChild(baseOption);
+      suggestionSelect._paletteColorSuggestions = suggestions;
+
+      if (!suggestions.length) {
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "empty";
+        emptyOption.textContent = t("No palette suggestions", "ui");
+        emptyOption.disabled = true;
+        suggestionSelect.appendChild(emptyOption);
+        suggestionSelect.disabled = false;
+        suggestionSelect.value = "current";
+        return;
+      }
+
+      suggestions.forEach((suggestion, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = formatPaletteColorSuggestionText(suggestion, countryState, { includeColor: true });
+        suggestionSelect.appendChild(option);
+      });
+      suggestionSelect.disabled = false;
+      suggestionSelect.value = "current";
+    });
     return;
   };
 
@@ -5111,13 +5300,13 @@ function initSidebar({ render } = {}) {
       groupSection.appendChild(createEmptyNote(t("No hierarchy groups", "ui")));
     }
 
-    const presetSection = appendActionSection(container, t("Regional Presets", "ui"), {
-      collapsible: true,
-      defaultOpen: false,
-      rememberKey: "territories-presets:regional-presets",
-    });
     const filteredPresetEntries = getFilteredRegionalPresets(countryState);
     if (filteredPresetEntries.length > 0) {
+      const presetSection = appendActionSection(container, t("Regional Presets", "ui"), {
+        collapsible: true,
+        defaultOpen: false,
+        rememberKey: "territories-presets:regional-presets",
+      });
       renderPresetEntryRows(
         presetSection,
         countryState.presetLookupCode || countryState.code,
@@ -5127,8 +5316,6 @@ function initSidebar({ render } = {}) {
           getDisabledInfo: ({ preset }) => getCountryPresetDisabledInfo(countryState, preset),
         }
       );
-    } else {
-      presetSection.appendChild(createEmptyNote(t("No regional presets", "ui")));
     }
   };
 
@@ -5243,30 +5430,32 @@ function initSidebar({ render } = {}) {
     }
 
     const filteredPresetEntries = getFilteredRegionalPresets(countryState);
-    const presetSection = appendActionSection(container, t("Regional Presets", "ui"), {
-      collapsible: true,
-      defaultOpen: false,
-      rememberKey: "territories-presets:regional-presets",
-    });
-    renderPresetEntryRows(
-      presetSection,
-      countryState.presetLookupCode || countryState.code,
-      filteredPresetEntries,
-      t("No regional presets", "ui"),
-      {
-        onApply: ({ presetIndex, presetLookupCode }) => {
-          applyPresetWithMode(presetLookupCode, presetIndex, {
-            mode: "ownership",
-            ownerCode: countryState.code,
-            render,
-            ownershipHistoryKind: "scenario-preset-apply-ownership",
-            ownershipDirtyReason: "scenario-preset-apply-ownership",
-          });
+    if (filteredPresetEntries.length > 0) {
+      const presetSection = appendActionSection(container, t("Regional Presets", "ui"), {
+        collapsible: true,
+        defaultOpen: false,
+        rememberKey: "territories-presets:regional-presets",
+      });
+      renderPresetEntryRows(
+        presetSection,
+        countryState.presetLookupCode || countryState.code,
+        filteredPresetEntries,
+        t("No regional presets", "ui"),
+        {
+          onApply: ({ presetIndex, presetLookupCode }) => {
+            applyPresetWithMode(presetLookupCode, presetIndex, {
+              mode: "ownership",
+              ownerCode: countryState.code,
+              render,
+              ownershipHistoryKind: "scenario-preset-apply-ownership",
+              ownershipDirtyReason: "scenario-preset-apply-ownership",
+            });
+          },
+          getDisabledInfo: ({ preset }) => getCountryPresetDisabledInfo(countryState, preset),
+          requireActiveOwner: false,
         },
-        getDisabledInfo: ({ preset }) => getCountryPresetDisabledInfo(countryState, preset),
-        requireActiveOwner: false,
-      }
-    );
+      );
+    }
   };
 
   const renderScenarioParentReturnAction = (container, countryState) => {
@@ -5446,11 +5635,13 @@ function initSidebar({ render } = {}) {
     const details = document.createElement("details");
     details.className = "scenario-visual-adjustments inspector-action-section";
     details.open = !!runtimeState.ui?.scenarioVisualAdjustmentsOpen;
+    selectedCountryActionsSection?.classList.toggle("has-open-visual-adjustments", details.open);
     details.addEventListener("toggle", () => {
       if (!runtimeState.ui || typeof runtimeState.ui !== "object") {
         runtimeState.ui = {};
       }
       runtimeState.ui.scenarioVisualAdjustmentsOpen = details.open;
+      selectedCountryActionsSection?.classList.toggle("has-open-visual-adjustments", details.open);
       scheduleAdaptiveInspectorHeights();
     });
 

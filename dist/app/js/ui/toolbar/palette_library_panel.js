@@ -14,6 +14,195 @@ import {
 import { t } from "../i18n.js";
 const state = runtimeState;
 
+const PALETTE_LIBRARY_GROUPING_MODES = new Set(["default", "region"]);
+
+const PALETTE_LIBRARY_GROUPS = [
+  { key: "recent", label: () => t("Recent", "ui"), defaultOpen: true },
+  { key: "essentials", label: () => t("Essentials", "ui"), defaultOpen: true },
+  { key: "dynamic", label: () => t("Dynamic / Runtime", "ui"), defaultOpen: false },
+  { key: "countries", label: () => t("Countries", "ui"), defaultOpen: false },
+  { key: "extra", label: () => t("Extra", "ui"), defaultOpen: false },
+];
+
+const PALETTE_LIBRARY_REGION_LABELS = {
+  europe: () => t("Europe", "ui"),
+  asia: () => t("Asia", "ui"),
+  middle_east: () => t("Middle East", "ui"),
+  africa: () => t("Africa", "ui"),
+  north_america: () => t("North America", "ui"),
+  south_america: () => t("South America", "ui"),
+  oceania: () => t("Oceania", "ui"),
+  antarctica: () => t("Antarctica", "ui"),
+};
+
+const PALETTE_LIBRARY_REGION_ORDER = {
+  europe: 10,
+  asia: 20,
+  middle_east: 25,
+  africa: 30,
+  north_america: 40,
+  south_america: 50,
+  oceania: 60,
+  antarctica: 70,
+};
+
+function normalizePaletteLibraryGroupingMode(value) {
+  const mode = String(value || "").trim();
+  return PALETTE_LIBRARY_GROUPING_MODES.has(mode) ? mode : "default";
+}
+
+function normalizePaletteLibraryCountryCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function normalizePaletteLibraryRegionKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^continent_/, "")
+    .replace(/^region_/, "")
+    .replace(/^subregion_/, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function resolvePaletteLibraryRegionFromMeta(meta = {}) {
+  const subregionKey = normalizePaletteLibraryRegionKey(meta.subregionId || meta.subregion_id);
+  if (subregionKey === "western_asia") {
+    return {
+      key: "middle_east",
+      label: "Middle East",
+      order: PALETTE_LIBRARY_REGION_ORDER.middle_east,
+    };
+  }
+  const key = normalizePaletteLibraryRegionKey(meta.continentId || meta.continent_id || meta.continentLabel || meta.continent_label);
+  if (!key) return null;
+  const label = String(meta.continentLabel || meta.continent_label || "").trim() || key;
+  return {
+    key,
+    label,
+    order: PALETTE_LIBRARY_REGION_ORDER[key] || 999,
+  };
+}
+
+function getPaletteLibraryScenarioCountryMeta(entry = {}, appState = runtimeState) {
+  const candidates = [
+    entry.mappedIso2,
+    entry.iso2,
+    entry.sourceTag,
+  ].map(normalizePaletteLibraryCountryCode).filter(Boolean);
+  const metaByCode = appState?.countryGroupMetaByCode;
+  if (metaByCode && typeof metaByCode.get === "function") {
+    for (const code of candidates) {
+      const meta = metaByCode.get(code);
+      if (meta) return meta;
+    }
+  }
+
+  const scenarioCountries = appState?.scenarioCountriesByTag || {};
+  for (const country of Object.values(scenarioCountries)) {
+    const countryCodes = [
+      country?.tag,
+      country?.base_iso2,
+      country?.lookup_iso2,
+      country?.iso2,
+    ].map(normalizePaletteLibraryCountryCode);
+    if (!candidates.some((code) => countryCodes.includes(code))) continue;
+    return {
+      continentId: country.continent_id,
+      continentLabel: country.continent_label,
+      subregionId: country.subregion_id,
+      subregionLabel: country.subregion_label,
+    };
+  }
+  return null;
+}
+
+function resolvePaletteLibraryEntryRegion(entry = {}, appState = runtimeState) {
+  const importedRegionKey = normalizePaletteLibraryRegionKey(entry.paletteRegionKey);
+  if (importedRegionKey) {
+    return {
+      key: importedRegionKey,
+      label: entry.paletteRegionLabel || importedRegionKey,
+      order: Number.isFinite(entry.paletteRegionOrder)
+        ? entry.paletteRegionOrder
+        : (PALETTE_LIBRARY_REGION_ORDER[importedRegionKey] || 999),
+    };
+  }
+  const scenarioMeta = getPaletteLibraryScenarioCountryMeta(entry, appState);
+  return resolvePaletteLibraryRegionFromMeta(scenarioMeta || {});
+}
+
+function createPaletteLibraryRegionGroup(region, entry) {
+  return {
+    key: `region:${region.key}`,
+    label: PALETTE_LIBRARY_REGION_LABELS[region.key] || (() => region.label || region.key),
+    defaultOpen: false,
+    entries: [entry],
+    order: Number.isFinite(region.order) ? region.order : 999,
+    fallbackLabel: region.label || region.key,
+  };
+}
+
+function pushPaletteLibraryRegionEntry(regionGroups, entry, region) {
+  const regionKey = String(region?.key || "").trim();
+  if (!regionKey) return false;
+  const existing = regionGroups.get(regionKey);
+  if (existing) {
+    existing.entries.push(entry);
+  } else {
+    regionGroups.set(regionKey, createPaletteLibraryRegionGroup(region, entry));
+  }
+  return true;
+}
+
+function buildPaletteLibraryGroups(entries, recentEntries = [], {
+  groupingMode = "default",
+  appState = runtimeState,
+} = {}) {
+  const mode = normalizePaletteLibraryGroupingMode(groupingMode);
+  const groups = {
+    recent: recentEntries,
+    essentials: [],
+    dynamic: [],
+    countries: [],
+    extra: [],
+  };
+  const regionGroups = new Map();
+  entries.forEach((entry) => {
+    if (entry.dynamic) {
+      groups.dynamic.push(entry);
+      return;
+    }
+    const region = resolvePaletteLibraryEntryRegion(entry, appState);
+    if (mode === "region" && pushPaletteLibraryRegionEntry(regionGroups, entry, region)) {
+      return;
+    }
+    if (Number.isFinite(entry.quickIndex)) {
+      groups.essentials.push(entry);
+      return;
+    }
+    if (entry.mapped) {
+      groups.countries.push(entry);
+      return;
+    }
+    if (pushPaletteLibraryRegionEntry(regionGroups, entry, region)) {
+      return;
+    }
+    groups.extra.push(entry);
+  });
+  const baseGroups = PALETTE_LIBRARY_GROUPS.map((group) => ({
+    ...group,
+    entries: groups[group.key] || [],
+  })).filter((group) => group.entries.length > 0 && group.key !== "extra");
+  const groupedRegions = Array.from(regionGroups.values())
+    .sort((a, b) => a.order - b.order || a.fallbackLabel.localeCompare(b.fallbackLabel));
+  const extraGroup = groups.extra.length
+    ? [{ ...PALETTE_LIBRARY_GROUPS.find((group) => group.key === "extra"), entries: groups.extra }]
+    : [];
+  return [...baseGroups, ...groupedRegions, ...extraGroup];
+}
+
 function createPaletteLibraryPanelController({
   themeSelect = null,
   paletteLibraryToggle = null,
@@ -28,23 +217,6 @@ function createPaletteLibraryPanelController({
   renderPalette,
   updateSwatchUI,
 } = {}) {
-  const PALETTE_LIBRARY_GROUPS = [
-    { key: "recent", label: () => t("Recent", "ui"), defaultOpen: true },
-    { key: "essentials", label: () => t("Essentials", "ui"), defaultOpen: true },
-    { key: "dynamic", label: () => t("Dynamic / Runtime", "ui"), defaultOpen: false },
-    { key: "countries", label: () => t("Countries", "ui"), defaultOpen: false },
-    { key: "extra", label: () => t("Extra", "ui"), defaultOpen: false },
-  ];
-  const PALETTE_LIBRARY_REGION_LABELS = {
-    europe: () => t("Europe", "ui"),
-    asia: () => t("Asia", "ui"),
-    middle_east: () => t("Middle East", "ui"),
-    africa: () => t("Africa", "ui"),
-    north_america: () => t("North America", "ui"),
-    south_america: () => t("South America", "ui"),
-    oceania: () => t("Oceania", "ui"),
-    antarctica: () => t("Antarctica", "ui"),
-  };
   const PALETTE_LIBRARY_HEIGHT = {
     base: 240,
     cap: 480,
@@ -58,6 +230,7 @@ function createPaletteLibraryPanelController({
   };
   let adaptivePaletteLibraryHeightFrame = 0;
   let activeRowKey = "";
+  let paletteLibraryGroupingControls = null;
 
   const ensurePaletteLibrarySectionState = (sourceId) => {
     const key = String(sourceId || "legacy").trim() || "legacy";
@@ -93,56 +266,6 @@ function createPaletteLibraryPanelController({
         entry.label,
         entry.sourceLabel,
       ].some((value) => String(value || "").toLowerCase().includes(searchTerm)));
-  };
-
-  const buildPaletteLibraryGroups = (entries, recentEntries = []) => {
-    const groups = {
-      recent: recentEntries,
-      essentials: [],
-      dynamic: [],
-      countries: [],
-      extra: [],
-    };
-    const regionGroups = new Map();
-    entries.forEach((entry) => {
-      if (Number.isFinite(entry.quickIndex)) {
-        groups.essentials.push(entry);
-        return;
-      }
-      if (entry.dynamic) {
-        groups.dynamic.push(entry);
-        return;
-      }
-      if (entry.mapped) {
-        groups.countries.push(entry);
-        return;
-      }
-      const regionKey = String(entry.paletteRegionKey || "").trim();
-      if (regionKey) {
-        const existing = regionGroups.get(regionKey) || {
-          key: `region:${regionKey}`,
-          label: PALETTE_LIBRARY_REGION_LABELS[regionKey] || (() => entry.paletteRegionLabel || regionKey),
-          defaultOpen: false,
-          entries: [],
-          order: Number.isFinite(entry.paletteRegionOrder) ? entry.paletteRegionOrder : 999,
-          fallbackLabel: entry.paletteRegionLabel || regionKey,
-        };
-        existing.entries.push(entry);
-        regionGroups.set(regionKey, existing);
-        return;
-      }
-      groups.extra.push(entry);
-    });
-    const baseGroups = PALETTE_LIBRARY_GROUPS.map((group) => ({
-      ...group,
-      entries: groups[group.key] || [],
-    })).filter((group) => group.entries.length > 0 && group.key !== "extra");
-    const groupedRegions = Array.from(regionGroups.values())
-      .sort((a, b) => a.order - b.order || a.fallbackLabel.localeCompare(b.fallbackLabel));
-    const extraGroup = groups.extra.length
-      ? [{ ...PALETTE_LIBRARY_GROUPS.find((group) => group.key === "extra"), entries: groups.extra }]
-      : [];
-    return [...baseGroups, ...groupedRegions, ...extraGroup];
   };
 
   function formatPaletteReason(entry) {
@@ -371,6 +494,53 @@ function createPaletteLibraryPanelController({
     });
   };
 
+  const updatePaletteLibraryGroupingControls = (mode) => {
+    if (!paletteLibraryGroupingControls) return;
+    paletteLibraryGroupingControls.setAttribute("aria-label", t("Palette grouping", "ui"));
+    paletteLibraryGroupingControls
+      .querySelectorAll(".palette-library-grouping-btn")
+      .forEach((button) => {
+        const isActive = button.dataset.groupingMode === mode;
+        button.textContent = button.dataset.groupingMode === "region"
+          ? t("Continents", "ui")
+          : t("Default", "ui");
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+  };
+
+  const ensurePaletteLibraryGroupingControls = (mode) => {
+    if (!paletteLibraryPanel || paletteLibraryGroupingControls) {
+      updatePaletteLibraryGroupingControls(mode);
+      return;
+    }
+    paletteLibraryGroupingControls = document.createElement("div");
+    paletteLibraryGroupingControls.className = "palette-library-grouping-toggle";
+    paletteLibraryGroupingControls.setAttribute("role", "group");
+    paletteLibraryGroupingControls.setAttribute("aria-label", t("Palette grouping", "ui"));
+
+    [
+      { key: "default", label: () => t("Default", "ui") },
+      { key: "region", label: () => t("Continents", "ui") },
+    ].forEach((optionData) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "palette-library-grouping-btn";
+      button.dataset.groupingMode = optionData.key;
+      button.textContent = optionData.label();
+      button.addEventListener("click", () => {
+        const nextMode = normalizePaletteLibraryGroupingMode(optionData.key);
+        if (runtimeState.paletteLibraryGroupingMode === nextMode) return;
+        runtimeState.paletteLibraryGroupingMode = nextMode;
+        renderPaletteLibrary();
+      });
+      paletteLibraryGroupingControls.appendChild(button);
+    });
+
+    paletteLibrarySources?.insertAdjacentElement("afterend", paletteLibraryGroupingControls);
+    updatePaletteLibraryGroupingControls(mode);
+  };
+
   const clampPaletteLibraryHeight = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
   const syncAdaptivePaletteLibraryHeight = () => {
@@ -438,6 +608,9 @@ function createPaletteLibraryPanelController({
     paletteLibrarySearchClear?.classList.toggle("hidden", !searchTerm);
     const sourceOptions = getPaletteSourceOptions();
     renderPaletteLibrarySourceTabs(sourceOptions);
+    const groupingMode = normalizePaletteLibraryGroupingMode(runtimeState.paletteLibraryGroupingMode);
+    runtimeState.paletteLibraryGroupingMode = groupingMode;
+    ensurePaletteLibraryGroupingControls(groupingMode);
     const sourceLabel = runtimeState.activePaletteMeta?.display_name || runtimeState.currentPaletteTheme || "Palette";
     const summarizeResults = (count) => (
       runtimeState.currentLanguage === "zh"
@@ -479,11 +652,12 @@ function createPaletteLibraryPanelController({
       ].some((value) => String(value || "").toLowerCase().includes(searchTerm));
     });
     const recentEntries = buildRecentPaletteEntries(searchTerm);
-    const groupedEntries = buildPaletteLibraryGroups(filtered, recentEntries);
+    const groupedEntries = buildPaletteLibraryGroups(filtered, recentEntries, { groupingMode });
     const activeSourceId = String(runtimeState.activePaletteId || runtimeState.currentPaletteTheme || "legacy").trim() || "legacy";
-    const sectionState = ensurePaletteLibrarySectionState(activeSourceId);
+    const sectionState = ensurePaletteLibrarySectionState(`${activeSourceId}:${groupingMode}`);
 
     paletteLibraryList.replaceChildren();
+    paletteLibraryList.dataset.groupingMode = groupingMode;
     if (paletteLibrarySummary) {
       paletteLibrarySummary.textContent = summarizeResults(filtered.length);
     }
@@ -626,5 +800,10 @@ function createPaletteLibraryPanelController({
   };
 }
 
-export { createPaletteLibraryPanelController };
+export {
+  buildPaletteLibraryGroups,
+  createPaletteLibraryPanelController,
+  normalizePaletteLibraryGroupingMode,
+  resolvePaletteLibraryEntryRegion,
+};
 

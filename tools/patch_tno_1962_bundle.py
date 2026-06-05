@@ -2553,6 +2553,18 @@ TNO_INSPECTOR_GROUP_RUSSIA = {
     "label": "Russia Region",
     "anchor_id": "continent_europe",
 }
+TNO_INSPECTOR_GROUP_CHINA_TAGS = {
+    "XIK",
+}
+TNO_INSPECTOR_GROUP_RUSSIA_TAGS = {
+    "BOP",
+    "GAY",
+    "MAG",
+    "ONG",
+    "ORN",
+    "ORS",
+    "VOK",
+}
 
 GER_PRESET_FEATURE_IDS = {
     "Alsace-Lorraine + Luxembourg": [
@@ -7560,7 +7572,11 @@ def apply_tno_inspector_groups(countries_payload: dict) -> None:
         iso_candidates.discard("")
 
         group_meta = None
-        if "RU" in iso_candidates and not normalized_tag.startswith("RK"):
+        if normalized_tag in TNO_INSPECTOR_GROUP_RUSSIA_TAGS:
+            group_meta = TNO_INSPECTOR_GROUP_RUSSIA
+        elif normalized_tag in TNO_INSPECTOR_GROUP_CHINA_TAGS:
+            group_meta = TNO_INSPECTOR_GROUP_CHINA
+        elif "RU" in iso_candidates and not normalized_tag.startswith("RK"):
             group_meta = TNO_INSPECTOR_GROUP_RUSSIA
         elif "CN" in iso_candidates and normalized_tag != "MAN":
             group_meta = TNO_INSPECTOR_GROUP_CHINA

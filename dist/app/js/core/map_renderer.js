@@ -274,9 +274,13 @@ let specialZoneEditorGroup = null;
 let hoverGroup = null;
 let devSelectionGroup = null;
 let inspectorHighlightGroup = null;
-let legendGroup = null;
-let legendItemsGroup = null;
-let legendBackground = null;
+let legendControlElement = null;
+let legendControlHeaderElement = null;
+let legendControlBodyElement = null;
+let legendOpacityPanelElement = null;
+let legendOpacityInputElement = null;
+let legendDragSession = null;
+let legendResizeSession = null;
 let lastLegendKey = null;
 let brushSession = null;
 let specialZoneMembershipDragSession = null;
@@ -6411,9 +6415,14 @@ function getUnitCountersOverlaySignature() {
 }
 
 function getInspectorOverlaySignature() {
+  const featureIds = Array.isArray(runtimeState.inspectorHighlightFeatureIds)
+    ? runtimeState.inspectorHighlightFeatureIds.map((id) => String(id || "").trim()).filter(Boolean)
+    : [];
   return [
     getOverlayProjectionSignature(),
     String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase(),
+    featureIds.join("|"),
+    runtimeState.inspectorHighlightGroupMode ? "group" : "features",
     Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
   ].join("::");
 }
@@ -6564,10 +6573,11 @@ function renderDevSelectionOverlay() {
   const data = orderedIds
     .map((featureId) => runtimeState.landIndex?.get(featureId) || null)
     .filter(Boolean);
+  const overlayData = buildDevSelectionOverlayData(orderedIds, data);
 
   const selection = devSelectionGroup
     .selectAll("path.dev-selected-feature")
-    .data(data, (feature, index) => getFeatureId(feature) || `dev-selection-${index}`);
+    .data(overlayData, (feature, index) => feature?.devSelectionKey || getFeatureId(feature) || `dev-selection-${index}`);
 
   selection
     .enter()
@@ -6580,12 +6590,53 @@ function renderDevSelectionOverlay() {
     .attr("d", pathSVG)
     .attr("fill", "rgba(14, 165, 233, 0.14)")
     .attr("stroke", "rgba(14, 165, 233, 0.94)")
-    .attr("stroke-width", 1.8);
+    .attr("stroke-width", 1.35);
 
   selection.exit().remove();
   devSelectionGroup
     .attr("aria-hidden", data.length ? "false" : "true")
     .attr("aria-label", data.length ? `Development selection overlay (${data.length})` : "Development selection overlay");
+}
+
+function getRuntimeTopologySelectionGeometries(featureIds) {
+  if (!runtimeState.runtimePoliticalTopology?.objects || !Array.isArray(featureIds) || !featureIds.length) return [];
+  const selectedIds = new Set(featureIds.map((id) => String(id || "").trim()).filter(Boolean));
+  if (!selectedIds.size) return [];
+  const geometries = [];
+  ["political", "scenario_atlantropa"].forEach((objectName) => {
+    const objectGeometries = runtimeState.runtimePoliticalTopology?.objects?.[objectName]?.geometries;
+    if (!Array.isArray(objectGeometries)) return;
+    objectGeometries.forEach((geometry) => {
+      const featureId = getEntityFeatureId(geometry);
+      if (featureId && selectedIds.has(featureId)) {
+        geometries.push(geometry);
+      }
+    });
+  });
+  return geometries;
+}
+
+function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {
+  if (!Array.isArray(fallbackFeatures) || fallbackFeatures.length <= 1 || typeof globalThis.topojson?.merge !== "function") {
+    return fallbackFeatures;
+  }
+  const topology = runtimeState.runtimePoliticalTopology;
+  const geometries = getRuntimeTopologySelectionGeometries(orderedIds);
+  if (!topology || geometries.length !== fallbackFeatures.length) {
+    return fallbackFeatures;
+  }
+  try {
+    const mergedShape = globalThis.topojson.merge(topology, geometries);
+    if (!mergedShape) return fallbackFeatures;
+    return [{
+      type: "Feature",
+      devSelectionKey: `merged:${orderedIds.join("|")}`,
+      properties: { id: "dev-selection-merged-overlay" },
+      geometry: mergedShape,
+    }];
+  } catch {
+    return fallbackFeatures;
+  }
 }
 
 function renderDevSelectionOverlayIfNeeded({ force = false } = {}) {
@@ -7226,28 +7277,8 @@ function ensureHybridLayers() {
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  legendGroup = svg.select("g.legend-group");
-  if (legendGroup.empty()) {
-    legendGroup = svg.append("g").attr("class", "legend-group");
-  }
-  legendGroup.style("pointer-events", "none");
-
-  legendBackground = legendGroup.select("rect.legend-bg");
-  if (legendBackground.empty()) {
-    legendBackground = legendGroup
-      .append("rect")
-      .attr("class", "legend-bg")
-      .attr("fill", "rgba(255,255,255,0.85)")
-      .attr("stroke", "#d1d5db")
-      .attr("stroke-width", 1)
-      .attr("rx", 8)
-      .attr("ry", 8);
-  }
-
-  legendItemsGroup = legendGroup.select("g.legend-items");
-  if (legendItemsGroup.empty()) {
-    legendItemsGroup = legendGroup.append("g").attr("class", "legend-items");
-  }
+  svg.select("g.legend-group").remove();
+  ensureLegendControlElement();
 
   interactionRect = svg.select("rect.interaction-layer");
   if (interactionRect.empty()) {
@@ -21601,16 +21632,35 @@ function renderHoverOverlay() {
 
 function renderInspectorHighlightOverlay() {
   if (!inspectorHighlightGroup || !pathSVG) return;
+  const featureIds = Array.isArray(runtimeState.inspectorHighlightFeatureIds)
+    ? Array.from(new Set(runtimeState.inspectorHighlightFeatureIds.map((id) => String(id || "").trim()).filter(Boolean)))
+    : [];
   const code = String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase();
-  if (!code) {
+  if (!featureIds.length && !code) {
     inspectorHighlightGroup.selectAll("path.inspector-highlight").remove();
     inspectorHighlightGroup.attr("aria-hidden", "true");
     return;
   }
-  const data = (runtimeState.landData?.features || []).filter((feature) => getFeatureCountryCodeNormalized(feature) === code);
+  const landFeatures = runtimeState.landData?.features || [];
+  const featureLookup = runtimeState.landIndex instanceof Map && runtimeState.landIndex.size
+    ? runtimeState.landIndex
+    : new Map(landFeatures.map((feature) => [getFeatureId(feature), feature]).filter(([featureId]) => featureId));
+  const data = featureIds.length
+    ? featureIds
+      .map((featureId) => featureLookup.get(featureId))
+      .filter(Boolean)
+    : landFeatures.filter((feature) => getFeatureCountryCodeNormalized(feature) === code);
+  const renderAsGroup = featureIds.length > 0 && runtimeState.inspectorHighlightGroupMode === true;
+  const overlayData = renderAsGroup && data.length
+    ? [{
+      type: "FeatureCollection",
+      features: data,
+      inspectorHighlightKey: `group:${featureIds.join("|")}`,
+    }]
+    : data;
   const selection = inspectorHighlightGroup
     .selectAll("path.inspector-highlight")
-    .data(data, (d, index) => getFeatureId(d) || `${code}-${index}`);
+    .data(overlayData, (d, index) => d?.inspectorHighlightKey || getFeatureId(d) || `${code}-${index}`);
 
   selection
     .enter()
@@ -21628,11 +21678,401 @@ function renderInspectorHighlightOverlay() {
   selection.exit().remove();
   inspectorHighlightGroup
     .attr("aria-hidden", data.length ? "false" : "true")
-    .attr("aria-label", data.length ? `Inspector highlight overlay for ${code}` : "Inspector highlight overlay");
+    .attr("aria-label", data.length
+      ? `Inspector highlight overlay for ${runtimeState.inspectorHighlightLabel || code || "feature group"}`
+      : "Inspector highlight overlay");
+}
+
+function getLegendControlText(key, count = 0) {
+  const zh = String(runtimeState.currentLanguage || state.currentLanguage || "").toLowerCase().startsWith("zh");
+  const catalog = zh
+    ? {
+      title: "图例",
+      drag: "拖动图例",
+      collapse: "收起图例",
+      expand: "展开图例",
+      close: "关闭图例",
+      resizeWidth: "调整图例宽度",
+      resizeHeight: "调整图例高度",
+      resizeBoth: "调整图例大小",
+      opacity: "透明度",
+      specialZones: "特殊区域图层",
+      count: `${count} 项`,
+    }
+    : {
+      title: "Legend",
+      drag: "Drag legend",
+      collapse: "Collapse legend",
+      expand: "Expand legend",
+      close: "Close legend",
+      resizeWidth: "Resize legend width",
+      resizeHeight: "Resize legend height",
+      resizeBoth: "Resize legend",
+      opacity: "Opacity",
+      specialZones: "Special Zone Layers",
+      count: `${count} items`,
+    };
+  return catalog[key] || catalog.title;
+}
+
+function getLegendControlBounds(element = legendControlElement) {
+  const width = Math.max(1, mapContainer?.clientWidth || runtimeState.width || 1);
+  const height = Math.max(1, mapContainer?.clientHeight || runtimeState.height || 1);
+  const elementWidth = Math.max(1, element?.offsetWidth || 180);
+  const elementHeight = Math.max(1, element?.offsetHeight || 120);
+  const padding = 8;
+  return {
+    maxLeft: Math.max(padding, width - elementWidth - padding),
+    maxTop: Math.max(padding, height - elementHeight - padding),
+    padding,
+  };
+}
+
+function getLegendControlLimits() {
+  return LegendManager.getControlLimits?.() || {
+    minWidth: 180,
+    maxWidth: 420,
+    minHeight: 130,
+    maxHeight: 560,
+    minOpacity: 0.35,
+    maxOpacity: 1,
+  };
+}
+
+function applyLegendControlSize(controlState) {
+  if (!legendControlElement) return;
+  const limits = getLegendControlLimits();
+  const width = clamp(Number(controlState.width || 240), limits.minWidth, limits.maxWidth);
+  const height = clamp(Number(controlState.height || 340), limits.minHeight, limits.maxHeight);
+  const opacity = clamp(Number(controlState.opacity || 0.9), limits.minOpacity, limits.maxOpacity);
+  const collapsedWidth = Math.min(176, limits.minWidth);
+  legendControlElement.style.width = controlState.collapsed ? `${collapsedWidth}px` : `${Math.round(width)}px`;
+  legendControlElement.style.height = controlState.collapsed ? "" : `${Math.round(height)}px`;
+  legendControlElement.style.opacity = String(opacity);
+  if (legendOpacityInputElement) {
+    legendOpacityInputElement.min = String(Math.round(limits.minOpacity * 100));
+    legendOpacityInputElement.max = String(Math.round(limits.maxOpacity * 100));
+    legendOpacityInputElement.value = String(Math.round(opacity * 100));
+    legendOpacityInputElement.setAttribute("aria-label", getLegendControlText("opacity"));
+  }
+}
+
+function showLegendOpacityPanel() {
+  if (!legendControlElement || !legendOpacityPanelElement) return;
+  legendControlElement.classList.add("is-edge-selected");
+  legendOpacityPanelElement.hidden = false;
+}
+
+function hideLegendOpacityPanel() {
+  if (!legendControlElement || !legendOpacityPanelElement || legendResizeSession) return;
+  legendControlElement.classList.remove("is-edge-selected");
+  legendOpacityPanelElement.hidden = true;
+}
+
+function applyLegendControlPosition(controlState) {
+  if (!legendControlElement) return;
+  applyLegendControlSize(controlState);
+  const bounds = getLegendControlBounds(legendControlElement);
+  const left = clamp(Math.round(bounds.maxLeft * Number(controlState.xRatio || 0)), bounds.padding, bounds.maxLeft);
+  const top = clamp(Math.round(bounds.maxTop * Number(controlState.yRatio || 0)), bounds.padding, bounds.maxTop);
+  legendControlElement.style.left = `${left}px`;
+  legendControlElement.style.top = `${top}px`;
+}
+
+function storeLegendControlPosition(left, top) {
+  const bounds = getLegendControlBounds(legendControlElement);
+  const clampedLeft = clamp(left, bounds.padding, bounds.maxLeft);
+  const clampedTop = clamp(top, bounds.padding, bounds.maxTop);
+  const xRatio = bounds.maxLeft > bounds.padding ? clampedLeft / bounds.maxLeft : 0;
+  const yRatio = bounds.maxTop > bounds.padding ? clampedTop / bounds.maxTop : 0;
+  LegendManager.updateControlState(state, { xRatio, yRatio });
+  if (legendControlElement) {
+    legendControlElement.style.left = `${Math.round(clampedLeft)}px`;
+    legendControlElement.style.top = `${Math.round(clampedTop)}px`;
+  }
+}
+
+function storeLegendControlSize(width, height) {
+  if (!legendControlElement) return LegendManager.getControlState(state);
+  const limits = getLegendControlLimits();
+  const rect = legendControlElement.getBoundingClientRect();
+  const containerRect = mapContainer?.getBoundingClientRect?.() || { right: window.innerWidth || rect.right, bottom: window.innerHeight || rect.bottom };
+  const currentLeft = rect.left - (containerRect.left || 0);
+  const currentTop = rect.top - (containerRect.top || 0);
+  const viewportMaxWidth = Math.max(limits.minWidth, containerRect.right - rect.left - 8);
+  const viewportMaxHeight = Math.max(limits.minHeight, containerRect.bottom - rect.top - 8);
+  const nextWidth = clamp(width, limits.minWidth, Math.min(limits.maxWidth, viewportMaxWidth));
+  const nextHeight = clamp(height, limits.minHeight, Math.min(limits.maxHeight, viewportMaxHeight));
+  const sized = LegendManager.updateControlState(state, {
+    width: nextWidth,
+    height: nextHeight,
+  });
+  applyLegendControlSize(sized);
+  const bounds = getLegendControlBounds(legendControlElement);
+  const clampedLeft = clamp(currentLeft, bounds.padding, bounds.maxLeft);
+  const clampedTop = clamp(currentTop, bounds.padding, bounds.maxTop);
+  const xRatio = bounds.maxLeft > bounds.padding ? clampedLeft / bounds.maxLeft : 0;
+  const yRatio = bounds.maxTop > bounds.padding ? clampedTop / bounds.maxTop : 0;
+  const next = LegendManager.updateControlState(state, { xRatio, yRatio });
+  legendControlElement.style.left = `${Math.round(clampedLeft)}px`;
+  legendControlElement.style.top = `${Math.round(clampedTop)}px`;
+  return next;
+}
+
+function stopLegendResize() {
+  if (!legendResizeSession) return;
+  legendControlElement?.classList.remove("is-resizing");
+  document.removeEventListener("pointermove", handleLegendResizeMove);
+  document.removeEventListener("pointerup", stopLegendResize);
+  document.removeEventListener("pointercancel", stopLegendResize);
+  legendResizeSession = null;
+}
+
+function handleLegendResizeMove(event) {
+  if (!legendResizeSession) return;
+  event.preventDefault();
+  const deltaX = event.clientX - legendResizeSession.clientX;
+  const deltaY = event.clientY - legendResizeSession.clientY;
+  const width = legendResizeSession.edge.includes("e")
+    ? legendResizeSession.width + deltaX
+    : legendResizeSession.width;
+  const height = legendResizeSession.edge.includes("s")
+    ? legendResizeSession.height + deltaY
+    : legendResizeSession.height;
+  storeLegendControlSize(width, height);
+}
+
+function startLegendResize(event) {
+  if (!legendControlElement || event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const edge = String(event.currentTarget?.dataset?.legendResize || "se");
+  const controlState = LegendManager.getControlState(state);
+  legendResizeSession = {
+    edge,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    width: Number(controlState.width || legendControlElement.offsetWidth || 240),
+    height: Number(controlState.height || legendControlElement.offsetHeight || 340),
+  };
+  legendControlElement.classList.add("is-resizing");
+  showLegendOpacityPanel();
+  document.addEventListener("pointermove", handleLegendResizeMove);
+  document.addEventListener("pointerup", stopLegendResize);
+  document.addEventListener("pointercancel", stopLegendResize);
+}
+
+function updateLegendControlOpacity(event) {
+  const limits = getLegendControlLimits();
+  const nextOpacity = clamp(Number(event?.currentTarget?.value || 90) / 100, limits.minOpacity, limits.maxOpacity);
+  const next = LegendManager.updateControlState(state, { opacity: nextOpacity });
+  applyLegendControlSize(next);
+}
+
+function stopLegendDrag() {
+  if (!legendDragSession) return;
+  legendControlElement?.classList.remove("is-dragging");
+  document.removeEventListener("pointermove", handleLegendDragMove);
+  document.removeEventListener("pointerup", stopLegendDrag);
+  document.removeEventListener("pointercancel", stopLegendDrag);
+  legendDragSession = null;
+}
+
+function handleLegendDragMove(event) {
+  if (!legendDragSession) return;
+  event.preventDefault();
+  const nextLeft = legendDragSession.left + event.clientX - legendDragSession.clientX;
+  const nextTop = legendDragSession.top + event.clientY - legendDragSession.clientY;
+  storeLegendControlPosition(nextLeft, nextTop);
+}
+
+function startLegendDrag(event) {
+  if (
+    !legendControlElement
+    || event.button !== 0
+    || event.target?.closest?.(".map-legend-control-btn, .map-legend-resize-handle, .map-legend-opacity-panel")
+  ) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const containerRect = mapContainer?.getBoundingClientRect?.() || { left: 0, top: 0 };
+  const rect = legendControlElement.getBoundingClientRect();
+  legendDragSession = {
+    clientX: event.clientX,
+    clientY: event.clientY,
+    left: rect.left - containerRect.left,
+    top: rect.top - containerRect.top,
+  };
+  legendControlElement.classList.add("is-dragging");
+  document.addEventListener("pointermove", handleLegendDragMove);
+  document.addEventListener("pointerup", stopLegendDrag);
+  document.addEventListener("pointercancel", stopLegendDrag);
+}
+
+function ensureLegendControlElement() {
+  if (!mapContainer || typeof document === "undefined") return null;
+  if (legendControlElement && mapContainer.contains(legendControlElement)) return legendControlElement;
+
+  const element = document.createElement("section");
+  element.id = "mapLegendControl";
+  element.className = "map-legend-control";
+  element.setAttribute("aria-live", "polite");
+  element.hidden = true;
+
+  const header = document.createElement("div");
+  header.className = "map-legend-control-header";
+  header.title = getLegendControlText("drag");
+  header.addEventListener("pointerdown", startLegendDrag);
+
+  const title = document.createElement("div");
+  title.className = "map-legend-control-title";
+
+  const count = document.createElement("span");
+  count.className = "map-legend-control-count";
+
+  const actions = document.createElement("div");
+  actions.className = "map-legend-control-actions";
+
+  const toggleButton = document.createElement("button");
+  toggleButton.type = "button";
+  toggleButton.className = "map-legend-control-btn";
+  toggleButton.dataset.legendAction = "toggle";
+  toggleButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const next = LegendManager.toggleControlCollapsed(state);
+    element.classList.toggle("is-collapsed", next.collapsed);
+    toggleButton.textContent = next.collapsed ? "+" : "-";
+    toggleButton.title = getLegendControlText(next.collapsed ? "expand" : "collapse");
+    toggleButton.setAttribute("aria-label", toggleButton.title);
+    applyLegendControlPosition(next);
+  });
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "map-legend-control-btn";
+  closeButton.dataset.legendAction = "close";
+  closeButton.textContent = "x";
+  closeButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    LegendManager.hideControl(state);
+    element.hidden = true;
+  });
+
+  actions.append(toggleButton, closeButton);
+  header.append(title, count, actions);
+
+  const body = document.createElement("div");
+  body.className = "map-legend-control-body";
+
+  const opacityPanel = document.createElement("label");
+  opacityPanel.className = "map-legend-opacity-panel";
+  opacityPanel.hidden = true;
+  const opacityLabel = document.createElement("span");
+  opacityLabel.className = "map-legend-opacity-label";
+  opacityLabel.textContent = getLegendControlText("opacity");
+  const opacityInput = document.createElement("input");
+  opacityInput.type = "range";
+  opacityInput.className = "map-legend-opacity-input";
+  opacityInput.addEventListener("input", updateLegendControlOpacity);
+  opacityPanel.append(opacityLabel, opacityInput);
+
+  const resizeEast = document.createElement("button");
+  resizeEast.type = "button";
+  resizeEast.className = "map-legend-resize-handle is-east";
+  resizeEast.dataset.legendResize = "e";
+  resizeEast.title = getLegendControlText("resizeWidth");
+  resizeEast.setAttribute("aria-label", resizeEast.title);
+  resizeEast.addEventListener("pointerdown", startLegendResize);
+  resizeEast.addEventListener("pointerenter", showLegendOpacityPanel);
+  resizeEast.addEventListener("focus", showLegendOpacityPanel);
+
+  const resizeSouth = document.createElement("button");
+  resizeSouth.type = "button";
+  resizeSouth.className = "map-legend-resize-handle is-south";
+  resizeSouth.dataset.legendResize = "s";
+  resizeSouth.title = getLegendControlText("resizeHeight");
+  resizeSouth.setAttribute("aria-label", resizeSouth.title);
+  resizeSouth.addEventListener("pointerdown", startLegendResize);
+  resizeSouth.addEventListener("pointerenter", showLegendOpacityPanel);
+  resizeSouth.addEventListener("focus", showLegendOpacityPanel);
+
+  const resizeCorner = document.createElement("button");
+  resizeCorner.type = "button";
+  resizeCorner.className = "map-legend-resize-handle is-south-east";
+  resizeCorner.dataset.legendResize = "se";
+  resizeCorner.title = getLegendControlText("resizeBoth");
+  resizeCorner.setAttribute("aria-label", resizeCorner.title);
+  resizeCorner.addEventListener("pointerdown", startLegendResize);
+  resizeCorner.addEventListener("pointerenter", showLegendOpacityPanel);
+  resizeCorner.addEventListener("focus", showLegendOpacityPanel);
+
+  element.append(header, body, opacityPanel, resizeEast, resizeSouth, resizeCorner);
+  element.addEventListener("click", (event) => event.stopPropagation());
+  element.addEventListener("pointerleave", hideLegendOpacityPanel);
+  mapContainer.appendChild(element);
+
+  legendControlElement = element;
+  legendControlHeaderElement = header;
+  legendControlBodyElement = body;
+  legendOpacityPanelElement = opacityPanel;
+  legendOpacityInputElement = opacityInput;
+  return legendControlElement;
+}
+
+function setLegendControlHeader(itemCount, collapsed) {
+  if (!legendControlElement || !legendControlHeaderElement) return;
+  const title = legendControlHeaderElement.querySelector(".map-legend-control-title");
+  const count = legendControlHeaderElement.querySelector(".map-legend-control-count");
+  const toggleButton = legendControlHeaderElement.querySelector('[data-legend-action="toggle"]');
+  const closeButton = legendControlHeaderElement.querySelector('[data-legend-action="close"]');
+  const opacityLabel = legendControlElement.querySelector(".map-legend-opacity-label");
+  legendControlElement.setAttribute("aria-label", getLegendControlText("title"));
+  legendControlHeaderElement.title = getLegendControlText("drag");
+  if (title) title.textContent = getLegendControlText("title");
+  if (count) count.textContent = getLegendControlText("count", itemCount);
+  if (opacityLabel) opacityLabel.textContent = getLegendControlText("opacity");
+  if (toggleButton) {
+    toggleButton.textContent = collapsed ? "+" : "-";
+    toggleButton.title = getLegendControlText(collapsed ? "expand" : "collapse");
+    toggleButton.setAttribute("aria-label", toggleButton.title);
+  }
+  if (closeButton) {
+    closeButton.title = getLegendControlText("close");
+    closeButton.setAttribute("aria-label", closeButton.title);
+  }
+  legendControlElement.querySelectorAll("[data-legend-resize]").forEach((handle) => {
+    const key = handle.dataset.legendResize === "e"
+      ? "resizeWidth"
+      : handle.dataset.legendResize === "s"
+        ? "resizeHeight"
+        : "resizeBoth";
+    handle.title = getLegendControlText(key);
+    handle.setAttribute("aria-label", handle.title);
+  });
+}
+
+function appendLegendRow(parent, { color, label, stroke = "#1f2937", pattern = "solid" }) {
+  const row = document.createElement("div");
+  row.className = "map-legend-row";
+
+  const swatch = document.createElement("span");
+  swatch.className = "map-legend-swatch";
+  swatch.style.backgroundColor = color || "#8b5cf6";
+  swatch.style.borderColor = stroke || "#1f2937";
+  if (String(pattern || "solid") !== "solid") swatch.classList.add("has-pattern");
+
+  const text = document.createElement("span");
+  text.className = "map-legend-label";
+  text.textContent = label || "";
+
+  row.append(swatch, text);
+  parent.appendChild(row);
 }
 
 export function renderLegend(uniqueColors = null, labels = null) {
-  if (!legendGroup || !legendItemsGroup || !legendBackground) return;
+  const controlElement = ensureLegendControlElement();
+  if (!controlElement || !legendControlBodyElement) return;
 
   const colors = Array.isArray(uniqueColors)
     ? uniqueColors
@@ -21659,112 +22099,55 @@ export function renderLegend(uniqueColors = null, labels = null) {
   const shouldRebuild = legendKey !== lastLegendKey;
 
   if (!colors.length && !specialZoneLegendLayers.length) {
-    legendGroup.attr("display", "none");
+    controlElement.hidden = true;
     lastLegendKey = legendKey;
     return;
   }
 
   if (runtimeState.activeScenarioId && !hasMeaningfulLabels && !hasScenarioVisualEdits && !specialZoneLegendLayers.length) {
-    legendGroup.attr("display", "none");
+    controlElement.hidden = true;
     lastLegendKey = `${legendKey}::scenario-hidden`;
     return;
   }
 
-  legendGroup.attr("display", null);
+  const controlState = LegendManager.getControlState(state);
+  if (!controlState.visible) {
+    controlElement.hidden = true;
+    lastLegendKey = legendKey;
+    return;
+  }
+
+  controlElement.hidden = false;
+  controlElement.classList.toggle("is-collapsed", controlState.collapsed);
+  setLegendControlHeader(colors.length + specialZoneLegendLayers.length, controlState.collapsed);
 
   if (shouldRebuild) {
-    legendItemsGroup.selectAll("*").remove();
-    const itemHeight = 18;
-    const swatchSize = 12;
-    const textOffset = swatchSize + 8;
+    legendControlBodyElement.replaceChildren();
 
     colors.forEach((color, index) => {
-      const y = index * itemHeight;
       const normalized = String(color || "").toLowerCase();
       const label = labelMap?.[normalized] || `Category ${index + 1}`;
-
-      legendItemsGroup
-        .append("rect")
-        .attr("x", 0)
-        .attr("y", y)
-        .attr("width", swatchSize)
-        .attr("height", swatchSize)
-        .attr("rx", 2)
-        .attr("ry", 2)
-        .attr("fill", color)
-        .attr("stroke", "#1f2937")
-        .attr("stroke-width", 0.4);
-
-      legendItemsGroup
-        .append("text")
-        .attr("x", textOffset)
-        .attr("y", y - 1)
-        .attr("dominant-baseline", "hanging")
-        .attr("font-size", 11)
-        .attr("fill", "#111827")
-        .text(label);
+      appendLegendRow(legendControlBodyElement, { color, label });
     });
 
     if (specialZoneLegendLayers.length) {
-      const sectionY = colors.length ? colors.length * itemHeight + 6 : 0;
-      legendItemsGroup
-        .append("text")
-        .attr("x", 0)
-        .attr("y", sectionY - 1)
-        .attr("dominant-baseline", "hanging")
-        .attr("font-size", 10)
-        .attr("font-weight", 700)
-        .attr("fill", "#111827")
-        .text("Special Zone Layers");
-      specialZoneLegendLayers.forEach((layer, index) => {
-        const y = sectionY + 15 + index * itemHeight;
+      const section = document.createElement("div");
+      section.className = "map-legend-section-title";
+      section.textContent = getLegendControlText("specialZones");
+      legendControlBodyElement.appendChild(section);
+      specialZoneLegendLayers.forEach((layer) => {
         const style = layer.style || {};
-        legendItemsGroup
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", y)
-          .attr("width", swatchSize)
-          .attr("height", swatchSize)
-          .attr("rx", 2)
-          .attr("ry", 2)
-          .attr("fill", style.fill || "#8b5cf6")
-          .attr("stroke", style.stroke || "#6d28d9")
-          .attr("stroke-width", 1);
-        if (String(style.pattern || "solid") !== "solid") {
-          legendItemsGroup
-            .append("path")
-            .attr("d", `M1 ${y + swatchSize - 2} L${swatchSize - 1} ${y + 2}`)
-            .attr("stroke", style.stroke || "#6d28d9")
-            .attr("stroke-width", 1.2);
-        }
-        legendItemsGroup
-          .append("text")
-          .attr("x", textOffset)
-          .attr("y", y - 1)
-          .attr("dominant-baseline", "hanging")
-          .attr("font-size", 11)
-          .attr("fill", "#111827")
-          .text(layer.name || layer.id);
+        appendLegendRow(legendControlBodyElement, {
+          color: style.fill || "#8b5cf6",
+          label: layer.name || layer.id,
+          stroke: style.stroke || "#6d28d9",
+          pattern: style.pattern || "solid",
+        });
       });
     }
   }
 
-  const bbox = legendItemsGroup.node().getBBox();
-  const padding = 8;
-  const width = bbox.width + padding * 2;
-  const height = bbox.height + padding * 2;
-
-  legendBackground
-    .attr("x", bbox.x - padding)
-    .attr("y", bbox.y - padding)
-    .attr("width", width)
-    .attr("height", height);
-
-  const margin = 14;
-  const x = margin;
-  const y = Math.max(margin, runtimeState.height - height - margin);
-  legendGroup.attr("transform", `translate(${x},${y})`);
-
+  applyLegendControlPosition(controlState);
   lastLegendKey = legendKey;
 }
 
@@ -22491,6 +22874,10 @@ function syncInspectorCountryToLandSelection(feature, featureId, hit = null) {
   const previousCode = canonicalCountryCode(runtimeState.selectedInspectorCountryCode);
   runtimeState.selectedInspectorCountryCode = nextCode;
   runtimeState.inspectorHighlightCountryCode = nextCode;
+  runtimeState.inspectorHighlightFeatureIds = [];
+  runtimeState.inspectorHighlightGroupMode = false;
+  runtimeState.inspectorHighlightLabel = "";
+  runtimeState.inspectorOverlayDirty = true;
 
   if (typeof runtimeState.refreshCountryListRowsFn === "function") {
     runtimeState.refreshCountryListRowsFn({
@@ -22502,6 +22889,21 @@ function syncInspectorCountryToLandSelection(feature, featureId, hit = null) {
     runtimeState.renderPresetTreeFn();
   }
   return nextCode !== previousCode;
+}
+
+export function setInspectorFeatureHighlight(featureIds = [], {
+  groupMode = false,
+  label = "",
+} = {}) {
+  const nextFeatureIds = Array.isArray(featureIds)
+    ? Array.from(new Set(featureIds.map((id) => String(id || "").trim()).filter(Boolean)))
+    : [];
+  runtimeState.inspectorHighlightFeatureIds = nextFeatureIds;
+  runtimeState.inspectorHighlightGroupMode = nextFeatureIds.length > 0 && groupMode === true;
+  runtimeState.inspectorHighlightLabel = String(label || "").trim();
+  runtimeState.inspectorHighlightCountryCode = "";
+  runtimeState.inspectorOverlayDirty = true;
+  renderInspectorHighlightOverlayIfNeeded({ force: true });
 }
 
 function hasSelectedOrActiveCountryImpact(countryCodes = []) {
@@ -23657,10 +24059,25 @@ async function handleClick(event, _interactionContext = null) {
     if (!waterFeature) return;
     const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
     const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
+    const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);
+    if (isSelectionToggle && event?.preventDefault) event.preventDefault();
     runtimeState.selectedSpecialRegionId = "";
+    if (isSelectionToggle && previousWaterRegionId === id) {
+      runtimeState.selectedWaterRegionId = "";
+      if (previousSpecialRegionId) refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
+      refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
+      requestInteractionRender("water-selection-toggle-off");
+      noteRenderAction("water-selection-toggle-off", actionStart);
+      return;
+    }
     runtimeState.selectedWaterRegionId = id;
     if (previousSpecialRegionId) refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
     refreshWaterRegionSidebarRowsNow([previousWaterRegionId, id]);
+    if (isSelectionToggle) {
+      requestInteractionRender("water-selection-toggle-on");
+      noteRenderAction("water-selection-toggle-on", actionStart);
+      return;
+    }
     const macroOceanSelectionOnly =
       isMacroOceanWaterRegion(waterFeature) && !isOpenOceanPaintEnabled();
     if (macroOceanSelectionOnly) {

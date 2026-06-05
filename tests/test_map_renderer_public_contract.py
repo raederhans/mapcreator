@@ -65,6 +65,7 @@ EXPECTED_PUBLIC_EXPORTS = {
     "selectSpecialZoneById",
     "selectUnitCounterById",
     "setDebugMode",
+    "setInspectorFeatureHighlight",
     "setMapData",
     "setZoomPercent",
     "startOperationGraphicDraw",
@@ -192,6 +193,58 @@ class MapRendererPublicContractTest(unittest.TestCase):
                 if target == MAP_RENDERER_ENTRY.resolve():
                     direct_entry_importers.add(path)
         self.assertEqual(ALLOWED_INTERNAL_ENTRY_IMPORTERS, direct_entry_importers)
+
+    def test_map_legend_is_a_floating_control(self):
+        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        styles = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+        self.assertIn("mapLegendControl", renderer)
+        self.assertIn("map-legend-control", styles)
+        self.assertIn("map-legend-resize-handle", renderer)
+        self.assertIn("map-legend-opacity-panel", renderer)
+        self.assertIn("data-legend-resize", renderer)
+        self.assertIn("legendResizeSession", renderer)
+        self.assertIn(".map-legend-resize-handle", styles)
+        self.assertIn(".map-legend-opacity-panel", styles)
+        self.assertNotIn('append("g").attr("class", "legend-group")', renderer)
+
+    def test_map_legend_resize_keeps_anchor_and_exposes_opacity(self):
+        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        resize_start = renderer.index("function storeLegendControlSize(")
+        resize_end = renderer.index("function stopLegendResize()", resize_start)
+        resize_body = renderer[resize_start:resize_end]
+        self.assertIn("const currentLeft = rect.left - (containerRect.left || 0);", resize_body)
+        self.assertIn("const currentTop = rect.top - (containerRect.top || 0);", resize_body)
+        self.assertIn("applyLegendControlSize(sized);", resize_body)
+        self.assertIn("const xRatio = bounds.maxLeft > bounds.padding ? clampedLeft / bounds.maxLeft : 0;", resize_body)
+        self.assertIn("legendControlElement.style.left = `${Math.round(clampedLeft)}px`;", resize_body)
+        self.assertNotIn("applyLegendControlPosition(next);", resize_body)
+
+        size_start = renderer.index("function applyLegendControlSize(")
+        size_end = renderer.index("function showLegendOpacityPanel()", size_start)
+        size_body = renderer[size_start:size_end]
+        self.assertIn("const collapsedWidth = Math.min(176, limits.minWidth);", size_body)
+        self.assertIn("controlState.collapsed ? `${collapsedWidth}px`", size_body)
+        self.assertIn("legendOpacityInputElement.value = String(Math.round(opacity * 100));", size_body)
+
+        self.assertEqual(3, renderer.count('addEventListener("pointerenter", showLegendOpacityPanel);'))
+
+    def test_water_selection_honors_ctrl_toggle_before_paint_tools(self):
+        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        fill_index = renderer.index('applyWaterRegionFill(id, runtimeState.selectedColor, {')
+        branch_start = renderer.rindex('if (hit.targetType === "water") {', 0, fill_index)
+        branch_end = renderer.index('if (runtimeState.selectedWaterRegionId) {', fill_index)
+        water_branch = renderer[branch_start:branch_end]
+        self.assertIn("const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);", water_branch)
+        self.assertIn('requestInteractionRender("water-selection-toggle-off");', water_branch)
+        self.assertIn('requestInteractionRender("water-selection-toggle-on");', water_branch)
+        self.assertLess(
+            water_branch.index("if (isSelectionToggle && previousWaterRegionId === id)"),
+            water_branch.index('if (runtimeState.currentTool === "eraser")'),
+        )
+        self.assertLess(
+            water_branch.index("if (isSelectionToggle)"),
+            water_branch.index('applyWaterRegionFill(id, runtimeState.selectedColor, {'),
+        )
 
 
 if __name__ == "__main__":

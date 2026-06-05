@@ -52,6 +52,7 @@ export function createDefaultColorState() {
     resolvedDefaultCountryPalette: { ...defaultCountryPalette },
     paletteLibraryOpen: true,
     paletteLibrarySearch: "",
+    paletteLibraryGroupingMode: "default",
     paletteLibraryEntries: [],
     paletteQuickSwatches: [],
     currentPaletteTheme: "HOI4 Vanilla",

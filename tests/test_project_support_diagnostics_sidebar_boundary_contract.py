@@ -160,12 +160,26 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "updateProjectSaveStatusFn", refreshProjectSaveStatus);', sidebar_content)
         self.assertIn('updateProjectSaveStatusFn: "sidebar:update-project-save-status"', (REPO_ROOT / "js" / "core" / "state" / "config.js").read_text(encoding="utf-8"))
         self.assertIn('callRuntimeHook(runtimeState, "updateProjectSaveStatusFn");', (REPO_ROOT / "js" / "core" / "dirty_state.js").read_text(encoding="utf-8"))
-        self.assertIn('Project export includes appearance and transport settings.', sidebar_content)
+        self.assertIn('projectSaveStatus.classList.add("hidden");', sidebar_content)
+        self.assertIn('projectSaveStatus.textContent = "";', sidebar_content)
+        self.assertIn('Project export includes appearance and transport settings.', owner_content)
         self.assertIn('Project exported. Appearance and transport settings are saved in the selected project file.', owner_content)
         self.assertIn('onProjectImportComplete: () => refreshProjectSaveStatus()', owner_content)
         self.assertIn('onProjectImportError: () => refreshProjectSaveStatus(t("Project import failed before completion. Review the current map state.", "ui"))', owner_content)
         self.assertIn('importProjectThroughFunnel(file, {', owner_content)
         self.assertIn('invalidateFrontlineOverlayState,', owner_content)
+
+    def test_generated_legend_preserves_map_color_state_and_uses_dynamic_list_height(self):
+        owner_content = PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS.read_text(encoding="utf-8")
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+
+        self.assertIn('legendManager.applyGeneratedLegend(state, generation);', owner_content)
+        self.assertIn('appState.legendColorOrder = colorOrder;', (REPO_ROOT / "js" / "core" / "legend_manager.js").read_text(encoding="utf-8"))
+        self.assertIn('mapRenderer.renderLegend(legendManager.getUniqueColors(state), legendManager.getLabels(state));', owner_content)
+        self.assertIn('legendList.style.setProperty("--legend-editor-dynamic-max-height"', owner_content)
+        self.assertNotIn('markLegacyColorStateDirty();', owner_content)
+        self.assertNotIn('mapRenderer.refreshColorState({ renderNow: true });', owner_content)
+        self.assertIn('max-height: min(52vh, var(--legend-editor-dynamic-max-height, 360px));', css_content)
 
     def test_interaction_funnel_and_renderer_keep_project_support_callbacks(self):
         interaction_funnel_content = INTERACTION_FUNNEL_JS.read_text(encoding="utf-8")

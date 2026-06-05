@@ -409,16 +409,41 @@ function createSpecialZonePatternPreviewStyle(style = {}) {
   const stroke = normalizeHexColor(style.stroke, "#6d28d9");
   const pattern = normalizePatternId(style.pattern, "solid");
   const opacity = clampNumber(style.fillOpacity, 0.32, 0, 1);
-  const stripe = `linear-gradient(135deg, transparent 0 42%, ${stroke} 42% 52%, transparent 52% 100%)`;
-  const dot = `radial-gradient(circle at 35% 35%, ${stroke} 0 2px, transparent 2.5px)`;
-  const patternLayer = pattern === "dots" || pattern === "denseDots"
-    ? dot
-    : pattern === "solid"
-      ? "none"
-      : stripe;
+  const patterns = {
+    solid: { image: "none", size: "12px 12px" },
+    diagonalHatch: { image: `linear-gradient(135deg, transparent 0 42%, ${stroke} 42% 52%, transparent 52% 100%)`, size: "14px 14px" },
+    crossHatch: {
+      image: [
+        `linear-gradient(45deg, transparent 0 42%, ${stroke} 42% 52%, transparent 52% 100%)`,
+        `linear-gradient(135deg, transparent 0 42%, ${stroke} 42% 52%, transparent 52% 100%)`,
+      ].join(", "),
+      size: "14px 14px",
+    },
+    horizontalLines: { image: `linear-gradient(0deg, transparent 0 42%, ${stroke} 42% 52%, transparent 52% 100%)`, size: "14px 12px" },
+    wavyLines: {
+      image: [
+        `radial-gradient(ellipse at 50% 0%, transparent 0 48%, ${stroke} 49% 55%, transparent 56% 100%)`,
+        `radial-gradient(ellipse at 50% 100%, transparent 0 48%, ${stroke} 49% 55%, transparent 56% 100%)`,
+      ].join(", "),
+      size: "18px 10px",
+    },
+    dots: { image: `radial-gradient(circle at 50% 50%, ${stroke} 0 2px, transparent 2.5px)`, size: "12px 12px" },
+    denseDots: { image: `radial-gradient(circle at 50% 50%, ${stroke} 0 1.6px, transparent 2px)`, size: "7px 7px" },
+    concentric: { image: `radial-gradient(circle at 50% 50%, transparent 0 34%, ${stroke} 35% 46%, transparent 47% 100%)`, size: "18px 18px" },
+    chevrons: {
+      image: [
+        `linear-gradient(135deg, transparent 0 42%, ${stroke} 43% 52%, transparent 53% 100%)`,
+        `linear-gradient(45deg, transparent 0 42%, ${stroke} 43% 52%, transparent 53% 100%)`,
+      ].join(", "),
+      size: "18px 18px",
+    },
+    outlineOnly: { image: "none", size: "12px 12px" },
+  };
+  const previewPattern = patterns[pattern] || patterns.solid;
   return {
     backgroundColor: fill,
-    backgroundImage: patternLayer,
+    backgroundImage: previewPattern.image,
+    backgroundSize: previewPattern.size,
     borderColor: stroke,
     opacity: String(Math.max(0.24, opacity)),
   };

@@ -139,6 +139,164 @@ function getPaletteFileLabel(entry, tag) {
   );
 }
 
+function normalizePaletteMatchToken(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/['’`]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function addPaletteMatchToken(targetSet, value) {
+  const token = normalizePaletteMatchToken(value);
+  if (token) targetSet.add(token);
+}
+
+function collectCountryPaletteMatchTargets(countryState = {}) {
+  const iso2 = new Set();
+  const tags = new Set();
+  const names = new Set();
+  [
+    countryState.code,
+    countryState.tag,
+    countryState.lookupIso2,
+    countryState.lookup_iso2,
+    countryState.baseIso2,
+    countryState.base_iso2,
+    countryState.releaseLookupIso2,
+    countryState.release_lookup_iso2,
+    countryState.presetLookupCode,
+    countryState.preset_lookup_code,
+  ].forEach((value) => {
+    const normalized = normalizeCountryCode(value);
+    if (!normalized) return;
+    if (normalized.length === 2) {
+      iso2.add(normalized);
+    } else {
+      tags.add(normalized);
+    }
+  });
+  [
+    countryState.displayName,
+    countryState.name,
+    countryState.localizedName,
+    countryState.localizedNameEn,
+    countryState.localizedNameZh,
+  ].forEach((value) => addPaletteMatchToken(names, value));
+  return { iso2, tags, names };
+}
+
+function getPaletteSuggestionMatchScore({
+  tag,
+  entry,
+  mappedIso2,
+  targets,
+}) {
+  const normalizedTag = normalizeCountryCode(tag);
+  if (mappedIso2 && targets.iso2.has(mappedIso2)) {
+    return { score: 400, matchKind: "iso2" };
+  }
+  if (normalizedTag && targets.tags.has(normalizedTag)) {
+    return { score: 300, matchKind: "tag" };
+  }
+
+  const entryNames = new Set();
+  [
+    getPaletteLabel(entry, tag),
+    getPaletteFileLabel(entry, tag),
+    entry?.localized_name,
+    entry?.country_file_label,
+    entry?.label,
+  ].forEach((value) => addPaletteMatchToken(entryNames, value));
+
+  for (const entryName of entryNames) {
+    if (targets.names.has(entryName)) {
+      return { score: 200, matchKind: "name" };
+    }
+  }
+  return null;
+}
+
+function buildPaletteColorSuggestionsForCountry(
+  countryState,
+  paletteAssets = [],
+  {
+    maxSuggestions = 24,
+  } = {},
+) {
+  const targets = collectCountryPaletteMatchTargets(countryState);
+  if (!targets.iso2.size && !targets.tags.size && !targets.names.size) return [];
+
+  const suggestions = [];
+  const seenKeys = new Set();
+  (Array.isArray(paletteAssets) ? paletteAssets : []).forEach((asset, paletteIndex) => {
+    const entries = asset?.pack?.entries;
+    if (!entries || typeof entries !== "object") return;
+    const mapped = asset?.map?.mapped && typeof asset.map.mapped === "object"
+      ? asset.map.mapped
+      : {};
+    const paletteId = String(
+      asset.paletteId ||
+      asset.palette_id ||
+      asset.meta?.palette_id ||
+      asset.meta?.id ||
+      ""
+    ).trim();
+    const paletteLabel = String(
+      asset.paletteLabel ||
+      asset.palette_label ||
+      asset.meta?.display_name ||
+      asset.meta?.label ||
+      paletteId
+    ).trim() || paletteId;
+
+    Object.entries(entries).forEach(([tag, entry]) => {
+      const color = getPaletteDisplayColor(entry);
+      if (!color) return;
+      const mappedIso2 = getMappedIso2(mapped[tag]);
+      const match = getPaletteSuggestionMatchScore({
+        tag,
+        entry,
+        mappedIso2,
+        targets,
+      });
+      if (!match) return;
+      const suggestionKey = `${paletteId}:${String(tag || "").toUpperCase()}:${color}`;
+      if (seenKeys.has(suggestionKey)) return;
+      seenKeys.add(suggestionKey);
+      const displayName = resolvePaletteDisplayName(entry, tag);
+      suggestions.push({
+        key: suggestionKey,
+        paletteId,
+        paletteLabel,
+        paletteIndex,
+        sourceTag: String(tag || "").toUpperCase(),
+        iso2: mappedIso2,
+        color,
+        label: displayName.localizedName || getPaletteLabel(entry, tag),
+        localizedNameEn: displayName.localizedNameEn,
+        localizedNameZh: displayName.localizedNameZh,
+        sourceLabel: getPaletteFileLabel(entry, tag),
+        matchKind: match.matchKind,
+        score: match.score,
+      });
+    });
+  });
+
+  return suggestions
+    .sort((left, right) => (
+      right.score - left.score
+      || left.paletteIndex - right.paletteIndex
+      || String(left.paletteLabel).localeCompare(String(right.paletteLabel))
+      || String(left.label).localeCompare(String(right.label))
+    ))
+    .slice(0, maxSuggestions);
+}
+
 function buildFixedPaletteColorsByIso2(palettePack, paletteMap) {
   return buildRuntimeDefaultColorsByIso2(palettePack, paletteMap);
 }
@@ -404,6 +562,7 @@ async function setActivePaletteSource(
 export {
   applyActivePaletteState,
   buildFixedPaletteColorsByIso2,
+  buildPaletteColorSuggestionsForCountry,
   buildPaletteLibraryEntries,
   buildPaletteQuickSwatches,
   ensurePaletteAssetsLoaded,

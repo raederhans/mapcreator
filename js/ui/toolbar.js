@@ -403,6 +403,9 @@ function initToolbar({ render } = {}) {
   if (!runtimeState.ui.paletteLibrarySections || typeof runtimeState.ui.paletteLibrarySections !== "object") {
     runtimeState.ui.paletteLibrarySections = {};
   }
+  runtimeState.paletteLibraryGroupingMode = ["default", "region"].includes(runtimeState.paletteLibraryGroupingMode)
+    ? runtimeState.paletteLibraryGroupingMode
+    : "default";
   const uiSurfaceUrlState = createUiSurfaceUrlState({
     uiUrlStateKeys: UI_URL_STATE_KEYS,
   });

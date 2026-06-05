@@ -13,6 +13,7 @@ PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_librar
 SCENARIO_GUIDE_POPOVER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js"
 SPECIAL_ZONE_EDITOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zone_editor.js"
 SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
+STYLE_CSS = REPO_ROOT / "css" / "style.css"
 EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_controller.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 TRANSPORT_WORKBENCH_STATE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_state_owner.js"
@@ -361,6 +362,18 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("special-zone-current-style-preview", owner_content)
         self.assertNotIn("Country / owner id", owner_content)
         self.assertNotIn("special-zone-members-add-country", owner_content)
+
+    def test_special_zone_preset_previews_keep_consistent_rectangles(self):
+        css_content = STYLE_CSS.read_text(encoding="utf-8")
+        card_rule = re.search(r"\.special-zone-preset-card\s*\{(?P<body>[^}]+)\}", css_content)
+        preview_rule = re.search(r"\.special-zone-preset-preview\s*\{(?P<body>[^}]+)\}", css_content)
+
+        self.assertIsNotNone(card_rule)
+        self.assertIsNotNone(preview_rule)
+        self.assertIn("grid-template-columns: 96px minmax(0, 1fr);", card_rule.group("body"))
+        self.assertIn("box-sizing: border-box;", css_content)
+        self.assertIn("height: 38px;", preview_rule.group("body"))
+        self.assertIn("width: 96px;", preview_rule.group("body"))
 
     def test_special_zone_membership_tools_have_explicit_renderer_modes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

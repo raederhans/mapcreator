@@ -18,6 +18,25 @@ const DEFAULT_LEGEND_CONFIG = Object.freeze({
   maxItems: 15,
 });
 
+const DEFAULT_LEGEND_CONTROL = Object.freeze({
+  visible: true,
+  collapsed: false,
+  xRatio: 0.02,
+  yRatio: 0.72,
+  width: 240,
+  height: 340,
+  opacity: 0.9,
+});
+
+const LEGEND_CONTROL_LIMITS = Object.freeze({
+  minWidth: 180,
+  maxWidth: 420,
+  minHeight: 130,
+  maxHeight: 560,
+  minOpacity: 0.35,
+  maxOpacity: 1,
+});
+
 const MODERN_MAJOR_POWER_ORDER = Object.freeze([
   "USA",
   "GER",
@@ -91,6 +110,19 @@ function normalizeLabels(value) {
   return labels;
 }
 
+function normalizeColorOrder(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const colors = [];
+  value.forEach((entry) => {
+    const color = normalizeColor(entry);
+    if (!color || seen.has(color)) return;
+    seen.add(color);
+    colors.push(color);
+  });
+  return colors;
+}
+
 function normalizeLegendConfig(value) {
   const source = value && typeof value === "object" ? value : {};
   const mode = String(source.mode || DEFAULT_LEGEND_CONFIG.mode).trim();
@@ -103,6 +135,40 @@ function normalizeLegendConfig(value) {
     continent,
     useModernMajorOrder: !!source.useModernMajorOrder,
     maxItems,
+  };
+}
+
+function clampNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function normalizeLegendControl(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    visible: source.visible !== false,
+    collapsed: !!source.collapsed,
+    xRatio: clampNumber(source.xRatio, DEFAULT_LEGEND_CONTROL.xRatio, 0, 1),
+    yRatio: clampNumber(source.yRatio, DEFAULT_LEGEND_CONTROL.yRatio, 0, 1),
+    width: Math.round(clampNumber(
+      source.width,
+      DEFAULT_LEGEND_CONTROL.width,
+      LEGEND_CONTROL_LIMITS.minWidth,
+      LEGEND_CONTROL_LIMITS.maxWidth
+    )),
+    height: Math.round(clampNumber(
+      source.height,
+      DEFAULT_LEGEND_CONTROL.height,
+      LEGEND_CONTROL_LIMITS.minHeight,
+      LEGEND_CONTROL_LIMITS.maxHeight
+    )),
+    opacity: clampNumber(
+      source.opacity,
+      DEFAULT_LEGEND_CONTROL.opacity,
+      LEGEND_CONTROL_LIMITS.minOpacity,
+      LEGEND_CONTROL_LIMITS.maxOpacity
+    ),
   };
 }
 
@@ -211,8 +277,76 @@ function getFeatureOwner(feature, appState) {
 function getCountryDisplayName(appState, code) {
   const normalized = normalizeCode(code);
   const record = appState?.scenarioCountriesByTag?.[normalized] || {};
+  const explicitName = getExplicitScenarioCountryDisplayName(appState, record);
+  if (explicitName) return explicitName;
   const name = getScenarioCountryDisplayName(record, "");
-  return name || appState?.countryNames?.[normalized] || normalized;
+  return getLocalizedLegendName(appState, [
+    name,
+    record.display_name,
+    record.displayName,
+    record.display_name_en,
+    record.displayNameEn,
+    appState?.countryNames?.[normalized],
+    normalized,
+  ]) || normalized;
+}
+
+function getExplicitScenarioCountryDisplayName(appState, record = {}) {
+  const language = appState?.currentLanguage === "zh" ? "zh" : "en";
+  const fields = language === "zh"
+    ? [record.display_name_zh, record.displayNameZh]
+    : [record.display_name_en, record.displayNameEn, record.display_name, record.displayName];
+  return String(fields.find((value) => String(value || "").trim()) || "").trim();
+}
+
+function resolveGeoLocaleEntry(appState, key) {
+  const candidate = String(key || "").trim();
+  if (!candidate) return null;
+  const geo = appState?.locales?.geo;
+  if (!geo || typeof geo !== "object") return null;
+  if (geo[candidate] && typeof geo[candidate] === "object") return geo[candidate];
+  const aliasTarget = appState?.geoAliasToStableKey?.[candidate];
+  if (aliasTarget && geo[aliasTarget] && typeof geo[aliasTarget] === "object") {
+    return geo[aliasTarget];
+  }
+  return null;
+}
+
+function getLocalizedLegendName(appState, candidates) {
+  const language = appState?.currentLanguage === "zh" ? "zh" : "en";
+  const fallbackLanguage = language === "zh" ? "en" : "zh";
+  const seen = new Set();
+  for (const rawCandidate of candidates) {
+    const candidate = String(rawCandidate || "").trim();
+    if (!candidate || seen.has(candidate)) continue;
+    seen.add(candidate);
+    const entry = resolveGeoLocaleEntry(appState, candidate);
+    const localized = String(entry?.[language] || "").trim();
+    if (localized) return localized;
+    const fallback = String(entry?.[fallbackLanguage] || "").trim();
+    if (fallback) return fallback;
+  }
+  return String(candidates.find((value) => String(value || "").trim()) || "").trim();
+}
+
+function getOwnerBaseColor(appState, ownerCode) {
+  const normalized = normalizeCode(ownerCode);
+  if (!normalized) return "";
+  return normalizeColor(
+    appState?.sovereignBaseColors?.[normalized]
+    || appState?.countryBaseColors?.[normalized]
+    || appState?.resolvedDefaultCountryPalette?.[normalized]
+  );
+}
+
+function getFeatureDisplayedColor(appState, feature, ownerCode) {
+  const id = getFeatureId(feature);
+  return normalizeColor(
+    appState?.colors?.[id]
+    || appState?.visualOverrides?.[id]
+    || appState?.featureOverrides?.[id]
+    || getOwnerBaseColor(appState, ownerCode)
+  );
 }
 
 function getRealmRootCode(appState, ownerCode) {
@@ -231,7 +365,7 @@ function getRealmRootCode(appState, ownerCode) {
   return parent || normalized;
 }
 
-function addStat(stats, key, ownerCode, area, feature, continentId) {
+function addStat(stats, key, ownerCode, area, feature, continentId, displayColor) {
   if (!key) return;
   const prior = stats.get(key) || {
     code: key,
@@ -239,12 +373,16 @@ function addStat(stats, key, ownerCode, area, feature, continentId) {
     area: 0,
     featureCount: 0,
     continentCounts: new Map(),
+    colorWeights: new Map(),
   };
   prior.ownerCodes.add(ownerCode);
   prior.area += area;
   prior.featureCount += 1;
   if (continentId) {
     prior.continentCounts.set(continentId, (prior.continentCounts.get(continentId) || 0) + 1);
+  }
+  if (displayColor) {
+    prior.colorWeights.set(displayColor, (prior.colorWeights.get(displayColor) || 0) + area);
   }
   prior.sampleFeature = prior.sampleFeature || feature;
   stats.set(key, prior);
@@ -262,7 +400,10 @@ function collectOwnerStats(appState, config) {
     const statKey = config.mode === "realm-area"
       ? getRealmRootCode(appState, ownerCode)
       : ownerCode;
-    addStat(stats, statKey, ownerCode, area, feature, continentId);
+    const displayColor = config.mode === "realm-area"
+      ? getOwnerBaseColor(appState, statKey) || getFeatureDisplayedColor(appState, feature, ownerCode)
+      : getFeatureDisplayedColor(appState, feature, ownerCode);
+    addStat(stats, statKey, ownerCode, area, feature, continentId, displayColor);
   });
   return Array.from(stats.values()).map((entry) => ({
     ...entry,
@@ -312,6 +453,7 @@ function collectPaletteColors(appState, count) {
     seen.add(color);
     colors.push(color);
   };
+  Object.values(appState?.colors || {}).forEach(push);
   Object.values(appState?.sovereignBaseColors || {}).forEach(push);
   Object.values(appState?.countryBaseColors || {}).forEach(push);
   (appState?.paletteQuickSwatches || []).forEach((entry) => {
@@ -322,12 +464,25 @@ function collectPaletteColors(appState, count) {
   return colors.slice(0, Math.max(count, 1));
 }
 
+function getDominantEntryColor(entry) {
+  if (!(entry?.colorWeights instanceof Map) || !entry.colorWeights.size) return "";
+  let selectedColor = "";
+  let selectedWeight = -1;
+  entry.colorWeights.forEach((weight, color) => {
+    if (weight > selectedWeight) {
+      selectedColor = color;
+      selectedWeight = weight;
+    }
+  });
+  return selectedColor;
+}
+
 function buildGeneratedEntries(appState, entries, config) {
   const palette = collectPaletteColors(appState, entries.length);
   return entries.slice(0, config.maxItems).map((entry, index) => ({
     ...entry,
     label: getCountryDisplayName(appState, entry.code),
-    color: palette[index % palette.length],
+    color: getDominantEntryColor(entry) || palette[index % palette.length],
   }));
 }
 
@@ -344,6 +499,12 @@ class LegendManager {
         ? appState.legendConfig
         : DEFAULT_LEGEND_CONFIG
     );
+    appState.legendControl = normalizeLegendControl(
+      Object.prototype.hasOwnProperty.call(appState, "legendControl")
+        ? appState.legendControl
+        : DEFAULT_LEGEND_CONTROL
+    );
+    appState.legendColorOrder = normalizeColorOrder(appState.legendColorOrder);
     return appState;
   }
 
@@ -355,8 +516,20 @@ class LegendManager {
     return normalizeLegendConfig(value);
   }
 
+  static normalizeControl(value) {
+    return normalizeLegendControl(value);
+  }
+
   static getDefaultConfig() {
     return { ...DEFAULT_LEGEND_CONFIG };
+  }
+
+  static getDefaultControl() {
+    return { ...DEFAULT_LEGEND_CONTROL };
+  }
+
+  static getControlLimits() {
+    return { ...LEGEND_CONTROL_LIMITS };
   }
 
   static getContinentOptions() {
@@ -384,6 +557,14 @@ class LegendManager {
     if (!appState || !appState.colors) return colors;
 
     const seen = new Set();
+    const availableColors = new Set(Object.values(appState.colors).map(normalizeColor).filter(Boolean));
+    for (const value of normalizeColorOrder(appState.legendColorOrder)) {
+      const color = normalizeColor(value);
+      if (!color || seen.has(color) || !availableColors.has(color)) continue;
+      seen.add(color);
+      colors.push(color);
+      if (colors.length >= maxItems) return colors;
+    }
     for (const value of Object.values(appState.colors)) {
       const color = normalizeColor(value);
       if (!color || seen.has(color)) continue;
@@ -437,23 +618,53 @@ class LegendManager {
   static applyGeneratedLegend(appState, generation) {
     if (!appState || !generation?.entries?.length) return [];
     LegendManager.ensureLegendState(appState);
-    appState.sovereignBaseColors = appState.sovereignBaseColors || {};
-    appState.countryBaseColors = appState.countryBaseColors || {};
     const touchedOwners = new Set();
+    const colorOrder = [];
     generation.entries.forEach((entry) => {
       const color = normalizeColor(entry.color);
       const label = String(entry.label || "").trim();
       if (!color) return;
+      if (!colorOrder.includes(color)) colorOrder.push(color);
       entry.ownerCodes.forEach((ownerCode) => {
         const normalizedOwner = normalizeCode(ownerCode);
         if (!normalizedOwner) return;
-        appState.sovereignBaseColors[normalizedOwner] = color;
-        appState.countryBaseColors[normalizedOwner] = color;
         touchedOwners.add(normalizedOwner);
       });
       if (label) LegendManager.setLabel(color, label, appState);
     });
+    appState.legendColorOrder = colorOrder;
     return Array.from(touchedOwners);
+  }
+
+  static getControlState(appState) {
+    LegendManager.ensureLegendState(appState);
+    return { ...(appState?.legendControl || DEFAULT_LEGEND_CONTROL) };
+  }
+
+  static updateControlState(appState, patch = {}) {
+    const nextControl = normalizeLegendControl({
+      ...LegendManager.getControlState(appState),
+      ...(patch || {}),
+    });
+    if (appState) appState.legendControl = nextControl;
+    return { ...nextControl };
+  }
+
+  static showControl(appState, patch = {}) {
+    return LegendManager.updateControlState(appState, {
+      ...(patch || {}),
+      visible: true,
+      collapsed: false,
+    });
+  }
+
+  static hideControl(appState) {
+    return LegendManager.updateControlState(appState, { visible: false });
+  }
+
+  static toggleControlCollapsed(appState) {
+    const current = LegendManager.getControlState(appState);
+    return LegendManager.updateControlState(appState, { collapsed: !current.collapsed });
   }
 
   static getSpecialZoneLayers(appState) {

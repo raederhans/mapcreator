@@ -211,7 +211,7 @@ test("first scenario save loads the optional layer asset and posts canonical pay
   }
 });
 
-test("project-scoped special zones expose save status and disabled scenario asset reason", () => {
+test("project-scoped special zones keep status hidden and expose disabled scenario asset reason", () => {
   const previousDocument = globalThis.document;
   globalThis.document = createTestDocument();
 
@@ -238,10 +238,94 @@ test("project-scoped special zones expose save status and disabled scenario asse
     assert.equal(status.id, "specialZoneWorkbenchStatus");
     assert.equal(status.getAttribute("role"), "status");
     assert.equal(status.getAttribute("aria-atomic"), "true");
-    assert.match(status.textContent, /Project export preserves these layers/);
+    assert.ok(status.className.split(/\s+/).includes("visually-hidden"));
+    assert.equal(status.textContent, "");
     assert.equal(saveBtn.disabled, true);
-    assert.equal(saveBtn.getAttribute("aria-describedby"), "specialZoneWorkbenchStatus");
+    assert.equal(saveBtn.getAttribute("aria-describedby"), null);
     assert.match(saveBtn.getAttribute("aria-label"), /Scenario asset save needs an active scenario/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("style presets render as collapsed category groups with rectangular previews", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "project-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "project-layer",
+    },
+  };
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render() {},
+    updateToolUI() {},
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const groups = container.querySelectorAll("details.special-zone-preset-group");
+    assert.ok(groups.length > 1);
+    assert.ok(groups.every((group) => group.open === false));
+    assert.ok(groups.some((group) => getNodeText(group).includes("security (5)")));
+    assert.equal(container.querySelectorAll(".special-zone-preset-tab").length, 0);
+    assert.equal(
+      container.querySelectorAll(".special-zone-preset-preview").length,
+      container.querySelectorAll(".special-zone-preset-card").length,
+    );
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("pattern choices render localized preview buttons and update the active layer", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "project-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "project-layer",
+    },
+  };
+  const dirty = [];
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty: (label) => dirty.push(label),
+    render() {},
+    updateToolUI() {},
+    captureHistoryState: () => ({}),
+    pushHistoryEntry() {},
+    t: (value) => ({ "Cross hatch": "交叉斜线", Pattern: "图案" }[value] || value),
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const styleCard = container.querySelector(".special-zone-style-card");
+    assert.ok(styleCard);
+    const patternGrid = container.querySelector(".special-zone-pattern-choice-grid");
+    assert.ok(patternGrid);
+    assert.equal(patternGrid.getAttribute("role"), "radiogroup");
+    assert.equal(patternGrid.getAttribute("aria-label"), "图案");
+    assert.equal(patternGrid.querySelectorAll("select").length, 0);
+    assert.equal(container.querySelectorAll(".special-zone-pattern-choice-preview").length, 10);
+    const crossHatchButton = Array.from(container.querySelectorAll(".special-zone-pattern-choice"))
+      .find((button) => button.dataset.patternId === "crossHatch");
+    assert.ok(crossHatchButton);
+    assert.match(getNodeText(crossHatchButton), /交叉斜线/);
+    await crossHatchButton.click();
+    const layer = runtimeState.specialZoneLayers.layers.find((entry) => entry.id === "project-layer");
+    assert.equal(layer.style.pattern, "crossHatch");
+    assert.equal(layer.presetId, "custom");
+    assert.ok(dirty.includes("special-zone-layer-style"));
   } finally {
     globalThis.document = previousDocument;
   }
@@ -438,6 +522,77 @@ test("large member lists render capped chips and keep drawer search bounded", ()
     controller.renderSpecialZonesWorkbenchUi();
     assert.equal(container.querySelectorAll(".special-zone-member-chip").length, 30);
     assert.ok(findButtonByText(container, "View all (95)"));
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("member copy select explains empty and selectable source states", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  try {
+    const singleContainer = new TestElement("section");
+    const singleRuntimeState = {
+      specialZoneLayers: {
+        layers: [createLayerFromPreset("custom", { id: "only-layer", name: "Only layer", memberFeatureIds: ["a"] })],
+        activeLayerId: "only-layer",
+      },
+    };
+    createSpecialZonesWorkbenchController({
+      runtimeState: singleRuntimeState,
+      container: singleContainer,
+      markDirty() {},
+      render() {},
+      updateToolUI() {},
+      captureHistoryState: () => ({}),
+      pushHistoryEntry() {},
+      t: (value) => value,
+    }).renderSpecialZonesWorkbenchUi();
+
+    const emptyCopySelect = singleContainer.querySelector(".special-zone-member-copy-select");
+    assert.ok(emptyCopySelect);
+    assert.equal(emptyCopySelect.disabled, true);
+    assert.equal(emptyCopySelect.options[0].textContent, "No layers to copy from");
+    assert.equal(findButtonByText(singleContainer, "Copy members from layer").disabled, true);
+
+    const multiContainer = new TestElement("section");
+    const multiRuntimeState = {
+      specialZoneLayers: {
+        layers: [
+          createLayerFromPreset("custom", { id: "target", name: "Target", memberFeatureIds: ["a"] }),
+          createLayerFromPreset("buffer", { id: "source", name: "Source", memberFeatureIds: ["b", "c"] }),
+        ],
+        activeLayerId: "target",
+      },
+    };
+    const dirty = [];
+    createSpecialZonesWorkbenchController({
+      runtimeState: multiRuntimeState,
+      container: multiContainer,
+      markDirty: (label) => dirty.push(label),
+      render() {},
+      updateToolUI() {},
+      captureHistoryState: () => ({}),
+      pushHistoryEntry() {},
+      t: (value) => value,
+    }).renderSpecialZonesWorkbenchUi();
+
+    const copySelect = multiContainer.querySelector(".special-zone-member-copy-select");
+    const copyButton = findButtonByText(multiContainer, "Copy members from layer");
+    assert.equal(copySelect.disabled, false);
+    assert.equal(copySelect.options[0].textContent, "Select source layer");
+    assert.equal(copySelect.options[1].textContent, "Source (2)");
+    assert.equal(copyButton.disabled, true);
+
+    copySelect.value = "source";
+    for (const handler of copySelect.listeners.get("change") || []) {
+      handler({ target: copySelect, currentTarget: copySelect });
+    }
+    assert.equal(copyButton.disabled, false);
+    await copyButton.click();
+    assert.deepEqual(multiRuntimeState.specialZoneLayers.layers.find((layer) => layer.id === "target").memberFeatureIds, ["b", "c"]);
+    assert.ok(dirty.includes("special-zone-members-copy"));
   } finally {
     globalThis.document = previousDocument;
   }

@@ -59,6 +59,7 @@ export {
   refreshColorState,
   refreshResolvedColorsForFeatures,
   scheduleDynamicBorderRecompute,
+  setInspectorFeatureHighlight,
 
   // Render products and diagnostics.
   getBathymetryPresetStyleDefaults,

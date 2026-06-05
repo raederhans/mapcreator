@@ -119,9 +119,9 @@
 
 ### source/dist 同步先看漂移范围
 - 如果源码和 `dist/app` 已有历史漂移，共享大文件优先做 scoped patch。
-- 修改 `dist/pages-dist-manifest.json` 时，顺手复核自引用尺寸记录；`tests.test_pages_dist_startup_shell` 会校验这个自引用值。
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
+- `dist/pages-dist-manifest.json` 和 `data/manifest.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash，并在 `.gitattributes` 固定 LF。
 - Marine Regions source snapshot 接近 GitHub 100MiB 限制时，要把简化规则写进 source spec/provenance，比如 `snapshot_simplify_tolerance`；只压最终 water feature 会留下不可推送的大 snapshot。
 - 只改 water layer 时，优先在现有 `runtime_topology.topo.json` 上替换 `scenario_water`；从 political/land/context 反提再重建会丢失独立的 `scenario_atlantropa` 对象。
 - open-ocean 扣减后沿用既有 `component_min_area` 裁剪合同，避免生成小碎片打破 component 上限。
@@ -154,22 +154,9 @@
 ### worktree 补丁要锚定真实路径
 - 在隔离 worktree 开发时，`apply_patch` 使用 worktree 绝对路径；工具默认根目录可能仍指向主 checkout。
 
-### 同步 dist/app 时先判断漂移范围
-- 如果源码和 `dist/app` 已经存在历史漂移，CSS 这类共享大文件优先做 scoped patch；全量复制前先看 diff，否则会把无关旧差异卷进当前任务。
-
-### Quickbar 复用开发工具动作要锁行为
-- quickbar 新按钮如果代理点击主开发工具按钮，要同时加 source/dist 镜像合同和轻量 node 行为测试；只查 token 容易漏掉“代理到了按钮但行为已变”的回退。
-
-### 手改 dist manifest 要同步自引用尺寸
-- 直接修改 `dist/app` 和 `dist/pages-dist-manifest.json` 时，除了改动文件本身的 `size_bytes`，还要复查 `pages-dist-manifest.json` 自己的尺寸记录；`tests.test_pages_dist_startup_shell` 会校验这个自引用值。
-
 ### 本地后端接入要同时锁 API 和 UI 状态机
 - 同源后端即使只是本地开发框架，私有读接口也要走 dev token / same-origin 边界；GET 读取用户数据时不能弱于 POST。
 - UI 的“已加载 / 已发布”状态要绑定真实事务完成点；异步导入只启动时，应写 started 状态，把 success/error 留给 callback。
-
-### shell 兜底可见性要分清集合级和要素级
-- shell-only runtime 集合是否能当政治底图，和单个 shell fallback 是否能参与视觉填色，是两个不同 gate；集合级过滤保 startup 安全，要素级视觉过滤保承重补洞。
-- 只允许视觉填色的兜底块要在政治 pass 中先画成 underlay，再让 detail feature 覆盖，并用行为级 fixture 锁住“可见但不可交互”。
 
 ### 交通工作台数据必须带渲染契约字段
 - 非 Japan 交通 pack 不能只满足 manifest 合同；点状 preview 还需要 `clip_bbox` 投影路径，以及工作台筛选会读取的 `airport_type/status_category`、`legal_designation/manager_type_code`、facility subtype/status 等字段。
@@ -179,6 +166,12 @@
 
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
+
+### 浮动控件缩放要保持像素锚点
+- 浮动控件的位置如果用比例存储，缩放时先保留当前像素 left/top，再按新尺寸回算比例；直接用旧比例重算会导致控件在缩放时漂移。
+
+### 图例发布要以源码重建 dist 后复核
+- 图例、侧栏这类同时存在源码和 `dist/app` 的 UI 改动，先改源码，再跑 `verify:pages-dist` 让发布面重建；验证后再查一次源码和 dist 关键标记，避免手动同步顺序掩盖旧实现残留。
 
 ### 可保存 UI 状态要只有一个真源
 - legend labels/config 这类会写入项目文件的 UI 状态应以 `runtimeState` 为真源；manager 可以负责 normalize 和派生计算，渲染路径不能再读静态缓存。
@@ -236,8 +229,10 @@
 - pack manifest 的 `carrier_asset_key` 只解决路由；`extensions.carrier` 还要带 scope/projection/basemap 元数据，并由 builder 统一写入 checked-in 数据。
 - carrier rebuild 后要同时跑 manifest 合同、catalog 检查和 `verify:pages-dist`，俄罗斯这类跨境外观数据还要用 provenance 锁住真实行政代码范围。
 
-### 公开 catalog 要进入 manifest 治理面
-- 通过 palette registry 或 runtime asset registry 暴露的新数据入口，要同步写入 artifact contract 并刷新 `data/manifest.json`，否则 catalog 可见但 hash/owner 治理链会漂。
+### runtime registry、catalog、Pages 发布要同链同步
+- 通过 palette registry 或 runtime asset registry 暴露的新数据入口，要同步写入 artifact contract，并刷新 `data/manifest.json` 的 size/hash。
+- 新增浏览器直接读取的 `runtime_asset_registry` key 后，要同步 `tools/build_pages_dist.py` allowlist、`tests.test_pages_dist_startup_shell`，以及 `dist/pages-dist-manifest.json` 里的发布记录。
+- runtime manifest 如果继续暴露二级资源 URL，Pages 合同要遍历这些 URL，确认每个发布 URL 都被真正发布。
 
 ### 子海域拆分要锁 sibling 合同
 - 新增 source-backed child waters 时，除了父水域 subtraction，还要给 sibling non-overlap 和 detail `water_type` 加 focused contract，避免相邻子海域或类型语义在后续批次漂移。
@@ -246,49 +241,23 @@
 ### 大批量图片目录要有实体合同
 - catalog 入口只登记 manifest JSON 时，要另加实体文件合同校验路径、数量、大小和 hash；否则批量 PNG 丢文件也可能绕过 data health。
 
-### runtime registry 新资产要同步 Pages 发布面
-- 新增浏览器直接读取的 `runtime_asset_registry` key 后，要同步 `tools/build_pages_dist.py` 的 allowlist 和 `tests.test_pages_dist_startup_shell`；source 下能读取不代表 Pages dist 已发布。
-- runtime manifest 内部如果继续暴露二级资源 URL，Pages 合同要遍历这些 URL，确认每个发布 URL 都在 `dist/pages-dist-manifest.json` 中。
-
-### byte-exact JSON 要固定换行
-- `data/manifest.json` 记录 size/hash 的 JSON 资产要在 `.gitattributes` 固定 LF；Windows checkout 的 CRLF 会让 byte-exact 合同漂移。
-
 ### 用户编辑层保持 delta/source 分离
 - 工作台用户点位编辑应保存为项目级 delta state；preview 只能合成临时 effective pack，不能把用户点写回 source pack、manifest 或 projected pack cache。
 
-### ArcGIS FeatureServer 分页以短页结束
-- FeatureServer 的 GeoJSON 查询可能在中段缺少稳定的 `exceededTransferLimit` 标志；分页导出应按“返回行数少于请求页大小”结束，并用独立 count/manifest 检查确认缓存完整。
-
-### BDCARTO 大归档要抽目标文件到短路径
-- IGN BDCARTO `.7z` 在 Windows 上用 bsdtar 全量抽取会遇到长路径可见性问题；交通 pack 构建应优先用 PATH 或 `TRANSPORT_7Z_EXE` 指定的 `7z e -r` 抽目标 GPKG 到短 `.runtime` 路径，并把 extract marker 绑定源 archive 签名，再用 `pyogrio` 选列和源头过滤控制内存。
-
-### 大国 OSM 交通包优先用预分层 GeoPackage
-- China/India/Russia 这类国家级 OSM PBF 可以被 `pyogrio` 识别，但直接读入 GeoDataFrame 会长时间无输出且内存风险高；生产构建优先用 Geofabrik free GeoPackage 子区域、`fclass` 源端过滤、逐源 cap，再合并写 pack。
+### 大体量交通源下载先锁分页、短路径和可复现入口
+- FeatureServer GeoJSON 分页优先按“返回行数少于请求页大小”结束，并用独立 count/manifest 复核完整性；不要依赖中段不稳定的 `exceededTransferLimit`。
+- Windows 下处理 IGN `.7z`、大型 GeoPackage、国家级 OSM 数据时，优先把目标文件抽到短 `.runtime` 路径，并在源端做子区域、选列、过滤和 cap。
+- 直接 HTTP 下载如果要校验落盘大小，请固定 `Accept-Encoding: identity`；需要第三方 API 时，用稳定工具名 User-Agent，并把查询写入 source contract。
+- 国家级公开源如果 country 子路径稳定性差，优先使用官方 global 输出再按国家字段过滤，避免把上游 404 变成 builder 常态失败。
 
 ### Facility preview 也要算入 Pages 体积
 - 新增点状 facility pack 时，full 可以留在仓库数据包，preview 会进入 Pages dist；先按工作台可读性设 preview cap，再用 `verify:pages-dist` 校验体积，不要等发布门槛失败后再回头缩数据。
 
-### Overpass 源下载要用明确工具标识
-- Overpass API 会拒绝部分 Mozilla-style User-Agent；交通源 downloader 里的 Overpass 分支应使用稳定工具名 User-Agent，并把查询写入 source contract 保持可复现。
-
-### Content-Length 校验要控制压缩
-- 直接 HTTP 下载如果用 `Content-Length` 校验落盘大小，请求头要固定 `Accept-Encoding: identity`；否则服务端可能返回压缩长度，`requests` 写入解压后的文件，导致真实下载被误判为 size mismatch。
-
-### WRI 电厂数据用 global CSV 过滤国家
-- WRI Global Power Plant Database 的部分 country raw CSV 路径可能返回 404；交通 energy pack 应下载官方 global output CSV，再按 `country` 字段过滤 CHN/RUS 等国家代码。
-
 ### Registry alias 测试要读真实 manifest pack_id
 - `runtime_asset_registry.transport_manifest_keys` 里可能存在 `road -> japan_road` 这类旧别名；resolver 覆盖测试应从 manifest 的真实 `pack_id` 建 expected set，避免别名误报，同时抓住 `france_road` 这类真实漏接。
 
-### runtime registry 改动要同步 data manifest hash
-- 修改 `data/runtime_asset_registry.json` 后要同步 `data/manifest.json` 里的 `runtime_asset_registry.json` size/hash；只重建 catalog 不能更新这个自校验输出项。
-
 ### geo locale 生成要分离值变化和格式变化
 - `build_tno_1962_geo_locale_patch.py` 可能改变 checked-in patch 文件的顶层顺序或语言文件结构；地名修正后要保留已提交结构，只回写审定后的 `geo` 值，避免把格式重排混进 localization diff。
-
-### startup chunk visual gate 要等真实 selection
-- readonly startup 下首个 chunk visual gate 需要等到 `selectionVersion`、政治 chunk、`landData` 和 `colors` 一起就绪；只等 pending promotion 清空会把“尚未开始 selection”误判成失败。
-- Playwright 长套件使用任务专属 `--output` 目录，避免清理整棵 `.runtime/tests/playwright` 导致测试启动阶段长时间无输出。
 
 ### worktree 重放后用内容合同判断清理
 - cherry-pick 到新 main 后，旧分支 commit id 可能仍显示未合入；清理前要用目标文件 diff、patch 等价和验证结果一起确认，避免误删尚未吸收的工作。

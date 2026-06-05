@@ -40,12 +40,33 @@ function createLabel(text, control) {
   return label;
 }
 
+function createField(text, control) {
+  const field = document.createElement("div");
+  field.className = "special-zone-workbench-field";
+  const span = document.createElement("span");
+  span.textContent = text;
+  field.append(span, control);
+  return field;
+}
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MEMBER_TOOL_IDS = new Set(["single", "multi", "brush"]);
 const MEMBER_BRUSH_MODES = new Set(["add", "remove"]);
 const MEMBER_LIST_INLINE_LIMIT = 60;
 const MEMBER_LIST_INLINE_RENDER_COUNT = 30;
 const MEMBER_DRAWER_RENDER_LIMIT = 80;
+const SPECIAL_ZONE_PATTERN_LABELS = Object.freeze({
+  solid: "Solid",
+  diagonalHatch: "Diagonal hatch",
+  crossHatch: "Cross hatch",
+  horizontalLines: "Horizontal lines",
+  wavyLines: "Wavy lines",
+  dots: "Dots",
+  denseDots: "Dense dots",
+  concentric: "Concentric rings",
+  chevrons: "Chevrons",
+  outlineOnly: "Outline only",
+});
 
 const MEMBER_TOOL_ICONS = Object.freeze({
   single: {
@@ -88,6 +109,15 @@ function createIconButton({ icon, label, active = false, disabled = false } = {}
   button.disabled = disabled;
   button.appendChild(createIcon(icon));
   return button;
+}
+
+function formatPresetCategoryLabel(category, count) {
+  const label = String(category || "custom").trim() || "custom";
+  return `${label} (${count})`;
+}
+
+function getPatternLabel(patternId) {
+  return SPECIAL_ZONE_PATTERN_LABELS[patternId] || patternId;
 }
 
 function featureIdFromDevSelectionEntry(entry) {
@@ -208,6 +238,7 @@ function createSpecialZonesWorkbenchController({
     const preview = createSpecialZonePatternPreviewStyle(style);
     node.style.backgroundColor = preview.backgroundColor;
     node.style.backgroundImage = preview.backgroundImage;
+    node.style.backgroundSize = preview.backgroundSize;
     node.style.borderColor = preview.borderColor;
     node.style.opacity = preview.opacity;
   };
@@ -293,7 +324,7 @@ function createSpecialZonesWorkbenchController({
     });
     statusNode = document.createElement("p");
     statusNode.id = "specialZoneWorkbenchStatus";
-    statusNode.className = "special-zone-workbench-status";
+    statusNode.className = "special-zone-workbench-status visually-hidden";
     statusNode.setAttribute("role", "status");
     statusNode.setAttribute("aria-live", "polite");
     statusNode.setAttribute("aria-atomic", "true");
@@ -311,6 +342,7 @@ function createSpecialZonesWorkbenchController({
       node.className = "special-zone-workbench-card";
       layout.appendChild(node);
     });
+    propertyNode.classList.add("special-zone-style-card");
     root.append(header, diagnosticsNode, layout);
     container.prepend(root);
     return root;
@@ -388,55 +420,61 @@ function createSpecialZonesWorkbenchController({
       presetListNode.appendChild(empty);
       return;
     }
-    const categories = ["all", ...Array.from(new Set(SPECIAL_ZONE_PRESETS.map((preset) => preset.category))).sort((a, b) => a.localeCompare(b))];
-    const selectedCategory = categories.includes(runtimeState.specialZonePresetCategory)
-      ? runtimeState.specialZonePresetCategory
-      : "all";
-    setSpecialZonePresetCategoryState(runtimeState, selectedCategory);
-    const tabs = document.createElement("div");
-    tabs.className = "special-zone-preset-tabs";
-    categories.forEach((category) => {
-      const tab = createButton(category === "all" ? translate("All") : category, "secondary-btn special-zone-preset-tab");
-      tab.setAttribute("aria-pressed", String(category === selectedCategory));
-      tab.addEventListener("click", () => {
-        setSpecialZonePresetCategoryState(runtimeState, category);
-        renderSpecialZonesWorkbenchUi();
-      });
-      tabs.appendChild(tab);
+    setSpecialZonePresetCategoryState(runtimeState, "all");
+    const groups = new Map();
+    SPECIAL_ZONE_PRESETS.forEach((preset) => {
+      const category = String(preset.category || "custom").trim() || "custom";
+      if (!groups.has(category)) groups.set(category, []);
+      groups.get(category).push(preset);
     });
-    presetListNode.appendChild(tabs);
-    const grid = document.createElement("div");
-    grid.className = "special-zone-preset-grid";
-    SPECIAL_ZONE_PRESETS
-      .filter((preset) => selectedCategory === "all" || preset.category === selectedCategory)
-      .forEach((preset) => {
-      const button = createButton("", "secondary-btn special-zone-preset-card");
-      button.title = `${preset.name} - ${preset.category}`;
-      button.setAttribute("aria-pressed", String(layer.presetId === preset.id));
-      const preview = document.createElement("span");
-      preview.className = "special-zone-preset-preview";
-      applyPatternPreviewStyle(preview, preset.style);
-      const name = document.createElement("span");
-      name.className = "special-zone-preset-name";
-      name.textContent = preset.name;
-      button.append(preview, name);
-      button.addEventListener("click", () => {
-        updateState({
-          action: "updateLayer",
-          layerId: layer.id,
-          patch: {
-            presetId: preset.id,
-            category: preset.category,
-            style: {
-              ...preset.style,
-              revision: Number(layer.style?.revision || 1) + 1,
-            },
-          },
-        }, "special-zone-layer-preset-style");
+    const groupList = document.createElement("div");
+    groupList.className = "special-zone-preset-groups";
+    Array.from(groups.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .forEach(([category, presets]) => {
+        const group = document.createElement("details");
+        group.className = "special-zone-preset-group";
+        group.dataset.presetCategory = category;
+        const summary = document.createElement("summary");
+        summary.className = "special-zone-preset-group-summary";
+        const label = document.createElement("span");
+        label.className = "special-zone-preset-group-label";
+        label.textContent = formatPresetCategoryLabel(category, presets.length);
+        summary.appendChild(label);
+        group.appendChild(summary);
+        const grid = document.createElement("div");
+        grid.className = "special-zone-preset-grid";
+        presets.forEach((preset) => {
+          const button = createButton("", "secondary-btn special-zone-preset-card");
+          button.title = `${preset.name} - ${preset.category}`;
+          button.setAttribute("aria-pressed", String(layer.presetId === preset.id));
+          const preview = document.createElement("span");
+          preview.className = "special-zone-preset-preview";
+          applyPatternPreviewStyle(preview, preset.style);
+          const name = document.createElement("span");
+          name.className = "special-zone-preset-name";
+          name.textContent = preset.name;
+          button.append(preview, name);
+          button.addEventListener("click", () => {
+            updateState({
+              action: "updateLayer",
+              layerId: layer.id,
+              patch: {
+                presetId: preset.id,
+                category: preset.category,
+                style: {
+                  ...preset.style,
+                  revision: Number(layer.style?.revision || 1) + 1,
+                },
+              },
+            }, "special-zone-layer-preset-style");
+          });
+          grid.appendChild(button);
+        });
+        group.appendChild(grid);
+        groupList.appendChild(group);
       });
-      grid.appendChild(button);
-    });
-    presetListNode.appendChild(grid);
+    presetListNode.appendChild(groupList);
   };
 
   const renderProperties = (layer) => {
@@ -478,15 +516,28 @@ function createSpecialZonesWorkbenchController({
     opacityInput.value = String(Math.round(layer.style.fillOpacity * 100));
     opacityInput.addEventListener("input", () => applyLayerStylePatch(layer, { fillOpacity: Number(opacityInput.value) / 100 }));
 
-    const patternSelect = document.createElement("select");
+    const patternGrid = document.createElement("div");
+    patternGrid.className = "special-zone-pattern-choice-grid";
+    patternGrid.setAttribute("role", "radiogroup");
+    patternGrid.setAttribute("aria-label", translate("Pattern"));
     SPECIAL_ZONE_PATTERN_IDS.forEach((patternId) => {
-      const option = document.createElement("option");
-      option.value = patternId;
-      option.textContent = patternId;
-      patternSelect.appendChild(option);
+      const label = translate(getPatternLabel(patternId));
+      const button = createButton("", "secondary-btn special-zone-pattern-choice");
+      button.dataset.patternId = patternId;
+      button.title = label;
+      button.setAttribute("role", "radio");
+      button.setAttribute("aria-checked", String(layer.style.pattern === patternId));
+      button.setAttribute("aria-pressed", String(layer.style.pattern === patternId));
+      const preview = document.createElement("span");
+      preview.className = "special-zone-pattern-choice-preview";
+      applyPatternPreviewStyle(preview, { ...layer.style, pattern: patternId });
+      const name = document.createElement("span");
+      name.className = "special-zone-pattern-choice-name";
+      name.textContent = label;
+      button.append(preview, name);
+      button.addEventListener("click", () => applyLayerStylePatch(layer, { pattern: patternId }));
+      patternGrid.appendChild(button);
     });
-    patternSelect.value = layer.style.pattern;
-    patternSelect.addEventListener("change", () => applyLayerStylePatch(layer, { pattern: patternSelect.value }));
 
     const strokeWidth = document.createElement("input");
     strokeWidth.type = "number";
@@ -502,7 +553,7 @@ function createSpecialZonesWorkbenchController({
       createLabel(translate("Fill"), fillInput),
       createLabel(translate("Stroke"), strokeInput),
       createLabel(translate("Opacity"), opacityInput),
-      createLabel(translate("Pattern"), patternSelect),
+      createField(translate("Pattern"), patternGrid),
       createLabel(translate("Stroke width"), strokeWidth)
     );
   };
@@ -705,17 +756,35 @@ function createSpecialZonesWorkbenchController({
     replaceSelectionBtn.disabled = addSelectionBtn.disabled;
     replaceSelectionBtn.addEventListener("click", () => updateState({ action: "replaceMembers", layerId: layer.id, featureIds: getDevSelectionFeatureIds() }, "special-zone-members-replace-selection"));
 
+    const copySourceLayers = state.layers.filter((entry) => entry.id !== layer?.id);
     const copySelect = document.createElement("select");
-    state.layers.filter((entry) => entry.id !== layer?.id).forEach((entry) => {
+    copySelect.className = "select-input special-zone-member-copy-select";
+    copySelect.setAttribute("aria-label", translate("Layer to copy members from"));
+    copySelect.title = translate("Layer to copy members from");
+    const copyPlaceholder = document.createElement("option");
+    copyPlaceholder.value = "";
+    copyPlaceholder.textContent = copySourceLayers.length
+      ? translate("Select source layer")
+      : translate("No layers to copy from");
+    copyPlaceholder.disabled = copySourceLayers.length > 0;
+    copyPlaceholder.selected = true;
+    copySelect.appendChild(copyPlaceholder);
+    copySourceLayers.forEach((entry) => {
       const option = document.createElement("option");
       option.value = entry.id;
-      option.textContent = entry.name;
+      option.textContent = `${entry.name} (${entry.memberFeatureIds.length})`;
       copySelect.appendChild(option);
     });
+    copySelect.disabled = !copySourceLayers.length;
+
     const copyBtn = createButton(translate("Copy members from layer"));
-    copyBtn.disabled = !layer || !copySelect.options.length;
+    copyBtn.disabled = !layer || !copySourceLayers.length || !copySelect.value;
+    copySelect.addEventListener("change", () => {
+      copyBtn.disabled = !layer || !copySelect.value;
+    });
     copyBtn.addEventListener("click", () => {
       const source = state.layers.find((entry) => entry.id === copySelect.value);
+      if (!source) return;
       updateState({ action: "replaceMembers", layerId: layer.id, featureIds: source?.memberFeatureIds || [] }, "special-zone-members-copy");
     });
 
@@ -830,7 +899,7 @@ function createSpecialZonesWorkbenchController({
       saveBtn.disabled = !!disabledReason;
       saveBtn.title = disabledReason;
       if (disabledReason) {
-        saveBtn.setAttribute("aria-describedby", "specialZoneWorkbenchStatus");
+        saveBtn.removeAttribute("aria-describedby");
         saveBtn.setAttribute("aria-label", `${translate("Save scenario layer asset")}: ${disabledReason}`);
       } else {
         saveBtn.removeAttribute("aria-describedby");
@@ -972,14 +1041,6 @@ function createSpecialZonesWorkbenchController({
       && failedScenarioLayerAssetId !== scenarioId
     ) {
       void loadScenarioSpecialZoneLayers();
-    }
-    if (statusNode) {
-      const saveScope = scenarioId
-        ? translate("Scenario asset save is available.")
-        : translate("Project export preserves these layers.");
-      statusNode.textContent = layer
-        ? `${state.layers.length} ${translate("layers")}, ${layer.memberFeatureIds.length} ${translate("active members")}. ${saveScope}`
-        : `${translate("No special zone layers yet.")} ${scenarioId ? "" : translate("Project export preserves project layers.")}`.trim();
     }
     renderLayerList(state);
     renderDiagnostics(state);

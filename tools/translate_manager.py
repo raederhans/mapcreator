@@ -1034,6 +1034,17 @@ def parse_country_codes(raw_value: str | None) -> set[str]:
     }
 
 
+def parse_palette_ids(raw_value: str | None) -> set[str]:
+    if not raw_value:
+        return set()
+    parts = re.split(r"[\s,;|]+", str(raw_value).strip())
+    return {
+        part.strip().lower()
+        for part in parts
+        if part and part.strip()
+    }
+
+
 def iter_topology_properties(topo_path: Path, country_codes: set[str] | None = None) -> list[dict]:
     if not topo_path.exists():
         raise FileNotFoundError(f"Missing topology file: {topo_path}")
@@ -1176,6 +1187,42 @@ def load_scenario_localizable_strings(scenarios_root: Path) -> dict[str, list[st
 
 def load_scenario_geo_names(scenarios_root: Path) -> list[str]:
     return load_scenario_localizable_strings(scenarios_root)["all_names"]
+
+
+def load_palette_geo_names_for_ids(palettes_dir: Path, palette_ids: set[str] | None = None) -> list[str]:
+    target_ids = {
+        str(palette_id or "").strip().lower()
+        for palette_id in (palette_ids or set())
+        if str(palette_id or "").strip()
+    }
+    names = set()
+    if not palettes_dir.exists() or not palettes_dir.is_dir():
+        return []
+
+    for path in sorted(palettes_dir.glob("*.palette.json")):
+        palette_id = path.name.removesuffix(".palette.json").lower()
+        if target_ids and palette_id not in target_ids:
+            continue
+        try:
+            with path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+        except Exception:
+            continue
+        entries = data.get("entries")
+        if not isinstance(entries, dict):
+            continue
+        for entry in entries.values():
+            if not isinstance(entry, dict):
+                continue
+            for field in ("localized_name", "country_file_label"):
+                value = str(entry.get(field) or "").strip()
+                if value and is_user_visible_candidate(value):
+                    names.add(value)
+    return sorted(names)
+
+
+def load_palette_geo_names(palettes_dir: Path) -> list[str]:
+    return load_palette_geo_names_for_ids(palettes_dir)
 
 
 def detect_visible_missing_country_codes(
@@ -1382,13 +1429,18 @@ class MachineTranslator:
         enabled: bool = False,
         delay_seconds: float = 0.0,
         max_requests: int | None = None,
+        max_attempts: int | None = None,
+        timeout_seconds: float = 8.0,
         provider_name: str = EXPERIMENTAL_MACHINE_TRANSLATION_PROVIDER,
     ):
         self.enabled = enabled
         self.delay_seconds = max(0.0, delay_seconds)
         self.max_requests = max_requests if max_requests and max_requests > 0 else None
+        self.max_attempts = max_attempts if max_attempts and max_attempts > 0 else None
+        self.timeout_seconds = max(0.5, float(timeout_seconds or 8.0))
         self.provider_name = provider_name
         self.requests_made = 0
+        self.attempts_made = 0
         self.cache = {}
 
     def translate(self, text: str) -> str | None:
@@ -1401,6 +1453,8 @@ class MachineTranslator:
             return self.cache[value]
         if self.max_requests is not None and self.requests_made >= self.max_requests:
             return None
+        if self.max_attempts is not None and self.attempts_made >= self.max_attempts:
+            return None
 
         if self.provider_name != EXPERIMENTAL_MACHINE_TRANSLATION_PROVIDER:
             return None
@@ -1408,8 +1462,9 @@ class MachineTranslator:
         source_language = detect_translation_source_language(value)
         req = _build_experimental_google_web_request(value, source_language)
         translated = None
+        self.attempts_made += 1
         try:
-            with urllib.request.urlopen(req, timeout=8) as response:
+            with urllib.request.urlopen(req, timeout=self.timeout_seconds) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
             translated = None
@@ -1726,6 +1781,125 @@ def build_translation_review_queue(
     }
 
 
+def sync_palette_geo_translations(
+    *,
+    output_path: Path,
+    palettes_dir: Path,
+    palette_ids: set[str] | None = None,
+    baseline_locales_path: Path | None = None,
+    audit_report_path: Path | None = None,
+    review_queue_path: Path | None = None,
+    machine_translate: bool = False,
+    translator_delay_seconds: float = 0.0,
+    max_machine_translations: int = 0,
+    max_machine_translation_attempts: int = 0,
+    machine_translation_timeout_seconds: float = 8.0,
+    network_mode: str = "off",
+    machine_translation_provider: str = EXPERIMENTAL_MACHINE_TRANSLATION_PROVIDER,
+) -> dict:
+    current_locales = load_existing_locales(output_path)
+    resolved_baseline_path = baseline_locales_path or DEFAULT_BASELINE_LOCALES_PATH
+    baseline_locales = load_baseline_locales(resolved_baseline_path)
+    current_geo = current_locales.get("geo", {}) if isinstance(current_locales.get("geo"), dict) else {}
+    baseline_geo = baseline_locales.get("geo", {}) if isinstance(baseline_locales.get("geo"), dict) else {}
+
+    machine_translate_enabled = bool(machine_translate)
+    machine_translate_available = False
+    if machine_translate_enabled:
+        if network_mode == "off":
+            machine_translate_enabled = False
+        elif network_mode == "auto":
+            machine_translate_available = probe_machine_translation_available(
+                provider_name=machine_translation_provider,
+            )
+            machine_translate_enabled = machine_translate_available
+        else:
+            machine_translate_available = True
+
+    translator = MachineTranslator(
+        enabled=machine_translate_enabled,
+        delay_seconds=translator_delay_seconds,
+        max_requests=max_machine_translations,
+        max_attempts=max_machine_translation_attempts,
+        timeout_seconds=machine_translation_timeout_seconds,
+        provider_name=machine_translation_provider,
+    )
+
+    names = load_palette_geo_names_for_ids(palettes_dir, palette_ids)
+    geo_payload = dict(current_geo)
+    geo_sources: dict[str, str] = {}
+    changed = 0
+    for name in names:
+        existing = normalize_entry(name, geo_payload.get(name, {}))
+        if not is_missing_like(existing.get("zh", ""), existing.get("en", name)):
+            geo_sources[name] = "existing_reuse"
+            continue
+        zh, source = resolve_zh(
+            section="geo",
+            key=name,
+            en_value=name,
+            current_existing=current_geo,
+            baseline_existing=baseline_geo,
+            inline_ui_translations={},
+            translator=translator,
+            alias_to_stable={},
+            stable_to_primary={},
+            resolved_primary_zh={},
+        )
+        next_entry = {"en": name, "zh": zh}
+        if geo_payload.get(name) != next_entry:
+            changed += 1
+        geo_payload[name] = next_entry
+        geo_sources[name] = source
+
+    payload = {
+        **current_locales,
+        "ui": current_locales.get("ui", {}) if isinstance(current_locales.get("ui"), dict) else {},
+        "geo": geo_payload,
+    }
+    write_json_atomic(output_path, payload)
+
+    audit_payload = build_translation_source_audit(
+        ui_payload={},
+        geo_payload={key: geo_payload[key] for key in names if key in geo_payload},
+        ui_sources={},
+        geo_sources=geo_sources,
+        baseline_locales_path=resolved_baseline_path,
+        machine_translate_enabled=machine_translate_enabled,
+        machine_translate_available=machine_translate_available,
+        machine_translation_provider=machine_translation_provider,
+        resolved_country_codes=[],
+    )
+    review_queue_payload = build_translation_review_queue(
+        ui_payload={},
+        geo_payload={key: geo_payload[key] for key in names if key in geo_payload},
+        ui_sources={},
+        geo_sources=geo_sources,
+    )
+    if audit_report_path:
+        write_json_atomic(audit_report_path, audit_payload)
+    if review_queue_path:
+        write_json_atomic(review_queue_path, review_queue_payload)
+
+    missing_like = sum(
+        1
+        for key in names
+        if key in geo_payload
+        and should_track_geo_missing_like(key, geo_payload[key].get("en", ""))
+        and is_missing_like(geo_payload[key].get("zh", ""), geo_payload[key].get("en", key))
+    )
+    return {
+        "palette_ids": sorted(palette_ids or []),
+        "palette_geo_names": len(names),
+        "changed": changed,
+        "missing_like": missing_like,
+        "mt_requests": translator.requests_made,
+        "mt_attempts": translator.attempts_made,
+        "review_queue_entries": int(review_queue_payload.get("entry_count", 0)),
+        "output_path": path_to_report_string(output_path),
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Sync UI/GEO translation dictionary.")
     parser.add_argument(
@@ -1774,6 +1948,17 @@ def parse_args() -> argparse.Namespace:
         help="Optional runtime review queue output path for English fallbacks.",
     )
     parser.add_argument(
+        "--palette-locales-only",
+        action="store_true",
+        help="Only sync palette entry names into locales.geo.",
+    )
+    parser.add_argument(
+        "--palette-ids",
+        type=str,
+        default="",
+        help="Optional comma-separated palette ids for --palette-locales-only.",
+    )
+    parser.add_argument(
         "--machine-translate",
         action="store_true",
         help="Enable fallback machine translation for missing keys.",
@@ -1789,6 +1974,18 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Maximum number of machine translation requests per run (0 = unlimited).",
+    )
+    parser.add_argument(
+        "--max-machine-translation-attempts",
+        type=int,
+        default=0,
+        help="Maximum number of machine translation attempts per run, including failed requests (0 = unlimited).",
+    )
+    parser.add_argument(
+        "--machine-translation-timeout-seconds",
+        type=float,
+        default=8.0,
+        help="Timeout for each machine translation request.",
     )
     parser.add_argument(
         "--no-stable-geo-keys",
@@ -1860,6 +2057,8 @@ def sync_translations(
     machine_translate: bool = False,
     translator_delay_seconds: float = 0.0,
     max_machine_translations: int = 0,
+    max_machine_translation_attempts: int = 0,
+    machine_translation_timeout_seconds: float = 8.0,
     include_stable_geo_keys: bool = True,
     country_codes: set[str] | None = None,
     auto_country_codes: str | None = None,
@@ -1904,6 +2103,7 @@ def sync_translations(
     geo_names |= set(load_hierarchy_geo_names(hierarchy_path))
     if scenarios_root:
         geo_names |= set(load_scenario_geo_names(scenarios_root))
+    geo_names |= set(load_palette_geo_names(base_dir / "data" / "palettes"))
     geo_names |= set(EUROPE_GEO_SEEDS.keys())
     geo_names = sorted(geo_names)
     alias_to_stable, stable_to_primary, search_only_aliases = load_geo_aliases(geo_aliases_path)
@@ -1913,6 +2113,8 @@ def sync_translations(
         enabled=machine_translate_enabled,
         delay_seconds=translator_delay_seconds,
         max_requests=max_machine_translations,
+        max_attempts=max_machine_translation_attempts,
+        timeout_seconds=machine_translation_timeout_seconds,
         provider_name=machine_translation_provider,
     )
 
@@ -2008,6 +2210,7 @@ def sync_translations(
         "scenario_geo_names": scenario_geo_name_count,
         "alias_map": len(alias_to_stable),
         "mt_requests": translator.requests_made,
+        "mt_attempts": translator.attempts_made,
         "ui_english_fallback_count": int(audit_payload.get("ui", {}).get("english_fallback_count", 0)),
         "corrupted_translation_count": corrupted_translation_count,
         "machine_translate_enabled": machine_translate_enabled,
@@ -2037,6 +2240,34 @@ def main() -> None:
     baseline_locales_path = args.baseline_locales or DEFAULT_BASELINE_LOCALES_PATH
     country_codes = parse_country_codes(args.country_codes)
 
+    if args.palette_locales_only:
+        palette_ids = parse_palette_ids(args.palette_ids) or {"hgo"}
+        result = sync_palette_geo_translations(
+            output_path=output_path,
+            palettes_dir=base_dir / "data" / "palettes",
+            palette_ids=palette_ids,
+            baseline_locales_path=baseline_locales_path,
+            audit_report_path=args.audit_report,
+            review_queue_path=args.review_queue,
+            machine_translate=args.machine_translate,
+            translator_delay_seconds=args.translator_delay_seconds,
+            max_machine_translations=args.max_machine_translations,
+            max_machine_translation_attempts=args.max_machine_translation_attempts,
+            machine_translation_timeout_seconds=args.machine_translation_timeout_seconds,
+            network_mode=args.network_mode,
+            machine_translation_provider=args.machine_translation_provider,
+        )
+        print(
+            "OK: synced palette translations. "
+            f"palette_ids={','.join(result['palette_ids'])}, "
+            f"palette_geo_names={result['palette_geo_names']}, "
+            f"changed={result['changed']}, missing_like={result['missing_like']}, "
+            f"mt_requests={result['mt_requests']}, mt_attempts={result['mt_attempts']}, "
+            f"review_queue={result['review_queue_entries']}"
+        )
+        print(f"Saved locales to: {result['output_path']}")
+        return
+
     result = sync_translations(
         topology_path=topo_path,
         output_path=output_path,
@@ -2050,6 +2281,8 @@ def main() -> None:
         machine_translate=args.machine_translate,
         translator_delay_seconds=args.translator_delay_seconds,
         max_machine_translations=args.max_machine_translations,
+        max_machine_translation_attempts=args.max_machine_translation_attempts,
+        machine_translation_timeout_seconds=args.machine_translation_timeout_seconds,
         include_stable_geo_keys=not args.no_stable_geo_keys,
         country_codes=country_codes,
         auto_country_codes=args.auto_country_codes,
@@ -2067,6 +2300,7 @@ def main() -> None:
         f"corrupted_translations={result['corrupted_translation_count']}, "
         f"scenario_geo_names={result['scenario_geo_names']}, "
         f"alias_map={result['alias_map']}, mt_requests={result['mt_requests']}, "
+        f"mt_attempts={result['mt_attempts']}, "
         f"ui_english_fallback={result['ui_english_fallback_count']}, "
         f"review_queue={result['review_queue_entries']}"
     )

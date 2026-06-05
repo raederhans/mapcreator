@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { createCountryInspectorController } from "../js/ui/sidebar/country_inspector_controller.js";
+import { UI_COPY_CATALOG } from "../js/ui/i18n_catalog.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 class TestClassList {
   constructor(node) {
@@ -234,6 +240,7 @@ function createHarness({
   countryTree = [],
   childSectionsByParent = new Map(),
   buildCountryRowMetaText = () => "",
+  t = (value) => value,
 } = {}) {
   const host = new TestElement("section");
   const list = new TestElement("div");
@@ -267,7 +274,7 @@ function createHarness({
     },
     getCountryInspectorColorPickerOpen: () => false,
     setCountryInspectorColorPickerOpen: () => {},
-    t: (value) => value,
+    t,
     normalizeCountryCode: (value) => String(value || "").trim().toUpperCase(),
     normalizeHexColor: (value) => String(value || "").trim(),
     updateScenarioInspectorLayout: () => {},
@@ -544,11 +551,95 @@ test("HGO identity detail replaces raw variant badges with a selectable flag opt
 
     assert.equal(harness.runtimeState.hgoIdentity.variantSelections.ABK, "sov");
     assert.equal(harness.settingsChangeCalls, 1);
-    assert.equal(
-      harness.countryInspectorSelected.querySelector(".hgo-identity-variant-preview").src,
-      "data/hgo_catalogs/flags_png/medium/AB/ABK_SOV.png",
-    );
+    assert.equal(harness.countryInspectorSelected.querySelector(".hgo-identity-variant-preview"), null);
   } finally {
     globalThis.document = previousDocument;
   }
+});
+
+test("HGO identity flag option translates ideology variant labels", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  try {
+    const translations = new Map([
+      ["Anarchism ideology", "无政府主义意识形态"],
+      ["Authoritarian monarchism", "威权君主制"],
+      ["National socialism", "国家社会主义"],
+    ]);
+    const harness = createHarness({
+      selectedCountry: { code: "USA", displayName: "Scenario USA" },
+      t: (value) => translations.get(value) || value,
+      hgoIdentity: {
+        matchKind: "exact",
+        displayName: "USA",
+        hgoNames: { en: "USA" },
+        sourceTag: "USA",
+        tag: "USA",
+        flag: {
+          base: {
+            medium: { pngPath: "data/hgo_catalogs/flags_png/medium/US/USA.png" },
+          },
+          preferredBaseFlag: { tier: "medium", pngPath: "data/hgo_catalogs/flags_png/medium/US/USA.png" },
+          preferredVariantKey: "",
+          preferredVariantFlag: null,
+          variants: [
+            {
+              key: "anarchism_ideology",
+              label: "anarchism_ideology",
+              variantSource: "anarchism_ideology",
+              tiers: {},
+            },
+            {
+              key: "authoritarian_monarchism",
+              label: "authoritarian_monarchism",
+              variantSource: "authoritarian_monarchism",
+              tiers: {},
+            },
+            {
+              key: "usa_national_socialism",
+              label: "usa_national_socialism",
+              variantSource: "usa_national_socialism",
+              tiers: {},
+            },
+          ],
+        },
+      },
+    });
+    harness.runtimeState.hgoIdentity = { enabled: true, nameMode: "hgo", showSuggestedAliases: true };
+
+    harness.controller.renderCountryInspectorDetail();
+
+    const options = Array.from(harness.countryInspectorSelected.querySelectorAll(".hgo-identity-variant-select option"))
+      .map((option) => option.textContent);
+    assert.deepEqual(options, [
+      "Base flag",
+      "无政府主义意识形态",
+      "威权君主制",
+      "USA · 国家社会主义",
+    ]);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("HGO identity ideology labels are present in the startup UI translation catalog", () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, "../js/ui/sidebar/country_inspector_controller.js"),
+    "utf8",
+  );
+  const labelMapBlock = source.match(/const HGO_VARIANT_LABEL_KEYS = Object\.freeze\(\{([\s\S]*?)\}\);/);
+  assert.ok(labelMapBlock, "expected HGO variant label map to be present");
+
+  const labels = Array.from(new Set(
+    Array.from(labelMapBlock[1].matchAll(/:\s*"([^"]+)"/g), (match) => match[1]),
+  ));
+  assert.ok(labels.length > 0, "expected HGO ideology labels to be discovered");
+
+  const missingLabels = labels.filter((label) => {
+    const entry = UI_COPY_CATALOG[label];
+    return !entry?.zh || entry.zh === label || entry.en !== label;
+  });
+
+  assert.deepEqual(missingLabels, []);
 });

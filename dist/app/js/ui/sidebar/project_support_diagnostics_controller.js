@@ -1,6 +1,5 @@
 import { setScenarioDiagnosticsState } from "../../core/state.js";
 import { markDirty } from "../../core/dirty_state.js";
-import { markLegacyColorStateDirty } from "../../core/sovereignty_manager.js";
 import {
   createSpecialZonePatternPreviewStyle,
 } from "../../core/special_zone_layers.js";
@@ -402,23 +401,27 @@ export function createProjectSupportDiagnosticsController({
     // 保存状态只读 dirty contract 与最近一次项目事务，避免各按钮各自拼接状态文案。
     if (!projectSaveStatus) return;
     const lastChange = String(state.lastDirtyReason || "").trim();
+    const setStatusMessage = (text) => {
+      projectSaveStatus.textContent = text;
+      projectSaveStatus.classList.toggle("hidden", !String(text || "").trim());
+    };
     if (message) {
-      projectSaveStatus.textContent = message;
+      setStatusMessage(message);
       return;
     }
     if (state.isDirty) {
-      projectSaveStatus.textContent = `${t("Unsaved project changes.", "ui")} ${t("Project export includes appearance and transport settings.", "ui")}`;
+      setStatusMessage(`${t("Unsaved project changes.", "ui")} ${t("Project export includes appearance and transport settings.", "ui")}`);
       return;
     }
     if (lastChange === "project-export") {
-      projectSaveStatus.textContent = t("Project exported. Appearance and transport settings are saved in the selected project file.", "ui");
+      setStatusMessage(t("Project exported. Appearance and transport settings are saved in the selected project file.", "ui"));
       return;
     }
     if (lastChange === "project-import") {
-      projectSaveStatus.textContent = t("Project imported. Appearance and transport settings were restored from the JSON file.", "ui");
+      setStatusMessage(t("Project imported. Appearance and transport settings were restored from the JSON file.", "ui"));
       return;
     }
-    projectSaveStatus.textContent = t("Project export includes appearance and transport settings.", "ui");
+    setStatusMessage("");
   };
 
   const syncProjectPackageContentAvailability = () => {
@@ -516,13 +519,11 @@ export function createProjectSupportDiagnosticsController({
         continent: continentSelect.value,
         useModernMajorOrder: modernOrderInput.checked,
       });
-      const ownerCodes = legendManager.applyGeneratedLegend(state, generation);
-      markLegacyColorStateDirty();
+      legendManager.applyGeneratedLegend(state, generation);
+      legendManager.showControl?.(state);
       markDirty("legend-generator");
-      if (ownerCodes.length && typeof mapRenderer.refreshColorState === "function") {
-        mapRenderer.refreshColorState({ renderNow: true });
-      } else if (typeof mapRenderer.render === "function") {
-        mapRenderer.render();
+      if (typeof mapRenderer.renderLegend === "function") {
+        mapRenderer.renderLegend(legendManager.getUniqueColors(state), legendManager.getLabels(state));
       }
       lastLegendKey = null;
       refreshLegendEditor();
@@ -1000,6 +1001,8 @@ export function createProjectSupportDiagnosticsController({
     const colors = legendManager.getUniqueColors(state);
     const specialZoneLegendLayers = getVisibleSpecialZoneLegendLayers();
     const specialZoneLegendKey = legendManager.getSpecialZoneSignature(state);
+    const visibleLegendRows = Math.min(Math.max(colors.length + specialZoneLegendLayers.length, 3), 12);
+    legendList.style.setProperty("--legend-editor-dynamic-max-height", `${Math.min(560, 180 + (visibleLegendRows * 46))}px`);
     const key = `${colors.join("|")}::${specialZoneLegendKey}::${JSON.stringify(legendManager.getConfig(state))}`;
     if (key === lastLegendKey && legendList.dataset.ready === "true") return;
     lastLegendKey = key;

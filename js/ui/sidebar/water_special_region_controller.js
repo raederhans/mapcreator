@@ -478,6 +478,7 @@ export function createWaterSpecialRegionController({
   const renderWaterLegend = () => {
     if (!waterLegendList) return;
     waterLegendList.replaceChildren();
+    waterLegendList.classList.add("hidden");
     const overrideEntries = Object.entries(runtimeState.waterRegionOverrides || {})
       .map(([featureId, color]) => {
         const feature = runtimeState.waterRegionsById?.get(featureId);
@@ -492,10 +493,10 @@ export function createWaterSpecialRegionController({
       .sort((a, b) => getWaterFeatureDisplayName(a.feature).localeCompare(getWaterFeatureDisplayName(b.feature)));
 
     if (!overrideEntries.length) {
-      waterLegendList.appendChild(createEmptyNote(t("Paint water regions to create an override list.", "ui")));
       return;
     }
 
+    waterLegendList.classList.remove("hidden");
     overrideEntries.forEach(({ featureId, feature, color }) => {
       const row = document.createElement("button");
       row.type = "button";

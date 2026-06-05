@@ -13,6 +13,9 @@ from tools.translate_manager import (
     collect_ui_keys,
     contains_cjk,
     load_ui_copy_catalog_translations,
+    load_palette_geo_names,
+    load_palette_geo_names_for_ids,
+    parse_palette_ids,
 )
 
 
@@ -127,6 +130,43 @@ export const TRANSPORT_WORKBENCH_FAMILIES = [
             self.assertIn("Road", keys)
             self.assertIn("Japan road now loads a real preview pack.", keys)
 
+    def test_load_palette_geo_names_collects_country_palette_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            palette_dir = repo_root / "data" / "palettes"
+            palette_dir.mkdir(parents=True)
+            (palette_dir / "hgo.palette.json").write_text(
+                """
+{
+  "entries": {
+    "ABK": {
+      "localized_name": "Abkhazia",
+      "country_file_label": "Abkhazia"
+    },
+    "RKM": {
+      "localized_name": "Reichskommissariat Moskowien",
+      "country_file_label": "Moskowien"
+    },
+    "DYN": {
+      "localized_name": "DYN",
+      "country_file_label": "DYN"
+    }
+  }
+}
+                """.strip(),
+                encoding="utf-8",
+            )
+
+            names = load_palette_geo_names(palette_dir)
+
+            self.assertIn("Abkhazia", names)
+            self.assertIn("Reichskommissariat Moskowien", names)
+            self.assertIn("Moskowien", names)
+            self.assertNotIn("DYN", names)
+
+            hgo_names = load_palette_geo_names_for_ids(palette_dir, parse_palette_ids("HGO"))
+            self.assertEqual(names, hgo_names)
+
     def test_collect_ui_keys_ignores_landing_local_i18n_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir)
@@ -199,6 +239,20 @@ export const UI_COPY_CATALOG = Object.freeze({
 
         self.assertEqual(mocked_urlopen.call_count, 2)
         self.assertEqual(translator.requests_made, 0)
+        self.assertEqual(translator.attempts_made, 2)
+        self.assertEqual(translator.cache, {})
+
+    def test_machine_translator_attempt_limit_counts_failed_requests(self) -> None:
+        translator = MachineTranslator(enabled=True, max_requests=1, max_attempts=1, timeout_seconds=1)
+        failure = urllib.error.URLError("temporary outage")
+
+        with mock.patch("tools.translate_manager.urllib.request.urlopen", side_effect=failure) as mocked_urlopen:
+            self.assertIsNone(translator.translate("Hello"))
+            self.assertIsNone(translator.translate("World"))
+
+        self.assertEqual(mocked_urlopen.call_count, 1)
+        self.assertEqual(translator.requests_made, 0)
+        self.assertEqual(translator.attempts_made, 1)
         self.assertEqual(translator.cache, {})
 
     def test_machine_translator_caches_successful_translations(self) -> None:

@@ -105,6 +105,13 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         )
         self.assertNotIn("runtimeState.waterRegionOverrides[selectedId] = nextColor;", owner_content)
 
+    def test_empty_water_override_list_hides_without_placeholder_space(self):
+        owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
+
+        self.assertIn('waterLegendList.classList.add("hidden");', owner_content)
+        self.assertIn('waterLegendList.classList.remove("hidden");', owner_content)
+        self.assertNotIn('createEmptyNote(t("Paint water regions to create an override list.", "ui"))', owner_content)
+
     def test_water_region_selection_handlers_request_map_render(self):
         owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
         selection_patterns = [

@@ -11,6 +11,48 @@
  * - runtimeState callback registration
  * - shared scenario/releasable domain helpers
  */
+const HGO_VARIANT_LABEL_KEYS = Object.freeze({
+  anarchism_ideology: "Anarchism ideology",
+  anarchism_neutrality: "Anarchist neutrality",
+  authoritarian_monarchism: "Authoritarian monarchism",
+  authoritatian_monarchism: "Authoritarian monarchism",
+  centrist_monarchism: "Centrist monarchism",
+  centrist_republic: "Centrist republic",
+  communism: "Communism",
+  communist: "Communism",
+  conservative_constitutionalism: "Conservative constitutionalism",
+  conservative_monarchism: "Conservative monarchism",
+  democracy: "Democracy",
+  democratic: "Democratic",
+  democratic_monarchism: "Democratic monarchism",
+  fascism: "Fascism",
+  left_anarchism: "Left anarchism",
+  liberal_republic: "Liberal republic",
+  monarchism: "Monarchism",
+  monarchisn: "Monarchism",
+  national_socialim: "National socialism",
+  national_socialism: "National socialism",
+  neutrality: "Neutrality",
+  proclaimed_communism: "Proclaimed communism",
+  republican_fascism: "Republican fascism",
+  right_anarchism: "Right anarchism",
+  socialism_ideology: "Socialism ideology",
+  socialism_monarchy: "Socialist monarchy",
+  socialist_ideology: "Socialism ideology",
+  socialist_monarchy: "Socialist monarchy",
+  stratocracy: "Stratocracy",
+  stratocratic: "Stratocratic",
+  stratocratic_monarchism: "Stratocratic monarchism",
+  theocractic: "Theocratic",
+  theocracy: "Theocracy",
+  theocratic: "Theocratic",
+  vanguardism: "Vanguardism",
+});
+
+const HGO_VARIANT_LABEL_SUFFIXES = Object.freeze(
+  Object.keys(HGO_VARIANT_LABEL_KEYS).sort((a, b) => b.length - a.length),
+);
+
 export function createCountryInspectorController({
   runtimeState,
   list,
@@ -123,28 +165,37 @@ export function createCountryInspectorController({
     return String(tier?.pngPath || tier?.png_path || "").trim();
   };
 
-  const formatHgoVariantLabel = (value = "") => {
+  const formatHgoVariantRawLabel = (value = "") => {
     const normalized = String(value || "").trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
     if (!normalized) return "";
     return normalized.replace(/\b[a-z]/g, (char) => char.toUpperCase());
   };
 
-  const getHgoVariantFlagUrl = (variant, preferredTier = "medium") => {
-    const tiers = variant?.tiers || {};
-    const tier = tiers?.[preferredTier] || tiers.full || tiers.medium || tiers.small;
-    return String(tier?.pngPath || tier?.png_path || "").trim();
+  const formatHgoVariantPrefixLabel = (value = "") => {
+    const normalized = String(value || "").trim().replace(/[-\s]+/g, "_").replace(/_+/g, "_");
+    if (/^[a-z0-9]{2,5}$/i.test(normalized)) {
+      return normalized.toUpperCase();
+    }
+    return formatHgoVariantRawLabel(normalized);
   };
 
-  const updateHgoVariantPreview = (image, option) => {
-    if (!image || !option) return;
-    const flagUrl = String(option.flagUrl || "").trim();
-    image.classList.toggle("hidden", !flagUrl);
-    if (flagUrl) {
-      image.src = flagUrl;
-      image.alt = "";
-    } else {
-      image.removeAttribute("src");
+  const formatHgoVariantLabel = (value = "") => {
+    const raw = String(value || "").trim();
+    const normalizedRawKey = raw.replace(/[-\s]+/g, "_").replace(/_+/g, "_");
+    const normalizedKey = normalizedRawKey.toLowerCase();
+    if (!normalizedKey) return "";
+    const exactLabelKey = HGO_VARIANT_LABEL_KEYS[normalizedKey];
+    if (exactLabelKey) return t(exactLabelKey, "ui");
+    const matchedSuffix = HGO_VARIANT_LABEL_SUFFIXES.find(
+      (suffix) => normalizedKey.endsWith(`_${suffix}`),
+    );
+    if (matchedSuffix) {
+      const prefix = normalizedRawKey.slice(0, -(matchedSuffix.length + 1));
+      const prefixLabel = formatHgoVariantPrefixLabel(prefix);
+      const translatedSuffix = t(HGO_VARIANT_LABEL_KEYS[matchedSuffix], "ui");
+      return prefixLabel ? `${prefixLabel} · ${translatedSuffix}` : translatedSuffix;
     }
+    return formatHgoVariantRawLabel(raw);
   };
 
   const getRowMetaText = (countryState, identity, { showRelationMeta = false } = {}) => {
@@ -766,17 +817,14 @@ export function createCountryInspectorController({
     if (hasBaseFlag || variants.length > 0) {
       const countryCode = normalizeCountryCode(countryState?.code || identity.sourceTag || identity.tag || "");
       const selectedVariantKey = identity.flag?.preferredVariantKey || "";
-      const baseFlagUrl = getFlagTierUrl({ flag: { base: identity.flag?.base, preferredBaseFlag: identity.flag?.preferredBaseFlag } }, "medium");
       const options = [
         ...(hasBaseFlag ? [{
           key: "",
           label: t("Base flag", "ui"),
-          flagUrl: baseFlagUrl,
         }] : []),
         ...variants.map((variant) => ({
           key: variant.key,
           label: formatHgoVariantLabel(variant.variantSource || variant.label || variant.key),
-          flagUrl: getHgoVariantFlagUrl(variant, "medium"),
         })),
       ];
       const selectedOption = options.find((option) => option.key === selectedVariantKey) || options[0];
@@ -787,11 +835,6 @@ export function createCountryInspectorController({
       label.textContent = t("Flag option", "ui");
       const control = document.createElement("div");
       control.className = "hgo-identity-variant-control";
-      const preview = document.createElement("img");
-      preview.className = "hgo-identity-variant-preview";
-      preview.loading = "lazy";
-      preview.decoding = "async";
-      updateHgoVariantPreview(preview, selectedOption);
       const select = document.createElement("select");
       select.className = "hgo-identity-variant-select";
       options.forEach((option) => {
@@ -809,10 +852,8 @@ export function createCountryInspectorController({
         } else {
           delete nextSettings.variantSelections[countryCode];
         }
-        updateHgoVariantPreview(preview, options.find((option) => option.key === nextKey) || options[0]);
         onHgoIdentitySettingsChange?.();
       });
-      control.appendChild(preview);
       control.appendChild(select);
       label.appendChild(control);
       picker.appendChild(label);

@@ -11,6 +11,8 @@ from tools.import_country_palette import (
     build_palette_entries,
     ensure_exposed_runtime_default_bridges,
     find_source_root,
+    infer_palette_region_from_lon_lat,
+    normalize_palette_region_overrides,
     parse_localisation_catalog,
     parse_country_tags,
     resolve_mapping_state,
@@ -87,6 +89,43 @@ class ImportCountryPaletteTest(unittest.TestCase):
         self.assertEqual(entries["ABK"].map_hex, "#646496")
         self.assertEqual(entries["ABK"].ui_hex, "#646496")
         self.assertEqual(entries["ABK"].ui_source, "map_hex_fallback")
+
+    def test_build_palette_entries_preserves_inferred_region_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            country_dir = root / "common" / "countries"
+            country_dir.mkdir(parents=True)
+            (country_dir / "Abkhazia.txt").write_text("color = { 100 100 150 }\n", encoding="utf-8")
+
+            entries = build_palette_entries(
+                root,
+                {"ABK": ("countries/Abkhazia.txt", False)},
+                {},
+                {"ABK": "Abkhazia"},
+                {},
+                {},
+                {"ABK": {"key": "europe", "label": "Europe", "source": "test_geometry"}},
+            )
+
+        self.assertEqual(entries["ABK"].palette_region_key, "europe")
+        self.assertEqual(entries["ABK"].palette_region_label, "Europe")
+        self.assertEqual(entries["ABK"].palette_region_source, "test_geometry")
+
+    def test_infer_palette_region_from_lon_lat_uses_broad_world_bands(self) -> None:
+        self.assertEqual(infer_palette_region_from_lon_lat(44.0, 43.0)[0], "europe")
+        self.assertEqual(infer_palette_region_from_lon_lat(54.0, 24.0)[0], "middle_east")
+        self.assertEqual(infer_palette_region_from_lon_lat(78.0, 22.0)[0], "asia")
+        self.assertEqual(infer_palette_region_from_lon_lat(-75.0, -10.0)[0], "south_america")
+
+    def test_normalize_palette_region_overrides_validates_region_keys(self) -> None:
+        overrides = normalize_palette_region_overrides({
+            "ach": "asia",
+            "kag": {"key": "europe"},
+        })
+
+        self.assertEqual(overrides["ACH"]["label"], "Asia")
+        self.assertEqual(overrides["ACH"]["source"], "manual_region_override")
+        self.assertEqual(overrides["KAG"]["key"], "europe")
 
     def test_parse_localisation_catalog_accepts_custom_root(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

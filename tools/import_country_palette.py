@@ -69,6 +69,28 @@ SUPPORTED_UNMAPPED_REASONS = {
     "unreviewed",
 }
 
+PALETTE_REGION_LABELS = {
+    "europe": "Europe",
+    "asia": "Asia",
+    "middle_east": "Middle East",
+    "africa": "Africa",
+    "north_america": "North America",
+    "south_america": "South America",
+    "oceania": "Oceania",
+    "antarctica": "Antarctica",
+}
+
+PALETTE_REGION_ORDER = {
+    "europe": 10,
+    "asia": 20,
+    "middle_east": 30,
+    "africa": 40,
+    "north_america": 50,
+    "south_america": 60,
+    "oceania": 70,
+    "antarctica": 80,
+}
+
 LOCALISATION_ENTRY_RE = re.compile(r'\s*([A-Z0-9]{3}(?:_[A-Za-z0-9_]+)?):0\s+"([^"]+)"')
 COLOR_SPEC_RE = re.compile(
     r"""
@@ -98,6 +120,9 @@ class PaletteEntry:
     country_file_hex: str
     country_file_source: str
     dynamic: bool
+    palette_region_key: str = ""
+    palette_region_label: str = ""
+    palette_region_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -260,6 +285,160 @@ def parse_country_file_color(path: Path) -> tuple[str | None, str | None]:
     return color, f"{path.name}:color"
 
 
+def parse_country_capital_state(path: Path) -> int | None:
+    if not path.exists():
+        return None
+    text = path.read_text(encoding="utf-8-sig", errors="ignore")
+    match = re.search(r"\bcapital\s*=\s*(\d+)", text)
+    return int(match.group(1)) if match else None
+
+
+def parse_state_provinces(path: Path) -> tuple[int | None, list[int]]:
+    if not path.exists():
+        return None, []
+    text = path.read_text(encoding="utf-8-sig", errors="ignore")
+    state_match = re.search(r"\bid\s*=\s*(\d+)", text)
+    province_match = re.search(r"\bprovinces\s*=\s*\{([^}]*)\}", text, re.DOTALL)
+    state_id = int(state_match.group(1)) if state_match else None
+    provinces = [int(value) for value in re.findall(r"\d+", province_match.group(1) if province_match else "")]
+    return state_id, provinces
+
+
+def load_state_provinces(root: Path) -> dict[int, list[int]]:
+    states_dir = root / "history" / "states"
+    results: dict[int, list[int]] = {}
+    if not states_dir.exists():
+        return results
+    for path in states_dir.glob("*.txt"):
+        state_id, provinces = parse_state_provinces(path)
+        if state_id is not None and provinces:
+            results[state_id] = provinces
+    return results
+
+
+def load_definition_color_to_province(root: Path) -> dict[tuple[int, int, int], int]:
+    definition_path = root / "map" / "definition.csv"
+    if not definition_path.exists():
+        return {}
+    results: dict[tuple[int, int, int], int] = {}
+    for raw_line in definition_path.read_text(encoding="utf-8-sig", errors="ignore").splitlines():
+        parts = raw_line.split(";")
+        if len(parts) < 4 or not parts[0].isdigit():
+            continue
+        try:
+            province_id = int(parts[0])
+            color = (int(parts[1]), int(parts[2]), int(parts[3]))
+        except ValueError:
+            continue
+        results[color] = province_id
+    return results
+
+
+def load_province_centroids(root: Path, province_ids: set[int]) -> tuple[dict[int, tuple[float, float]], tuple[int, int] | None]:
+    if not province_ids:
+        return {}, None
+    province_map_path = root / "map" / "provinces.bmp"
+    if not province_map_path.exists():
+        return {}, None
+    try:
+        from PIL import Image
+    except ImportError:
+        return {}, None
+
+    color_to_province = load_definition_color_to_province(root)
+    if not color_to_province:
+        return {}, None
+
+    sums = {province_id: [0.0, 0.0, 0] for province_id in province_ids}
+    with Image.open(province_map_path) as image:
+        rgb_image = image.convert("RGB")
+        width, height = rgb_image.size
+        pixels = rgb_image.load()
+        for y in range(height):
+            for x in range(width):
+                province_id = color_to_province.get(pixels[x, y])
+                if province_id in sums:
+                    current = sums[province_id]
+                    current[0] += x
+                    current[1] += y
+                    current[2] += 1
+
+    centroids: dict[int, tuple[float, float]] = {}
+    for province_id, (sum_x, sum_y, count) in sums.items():
+        if count:
+            centroids[province_id] = (sum_x / count, sum_y / count)
+    return centroids, (width, height)
+
+
+def infer_palette_region_from_lon_lat(lon: float, lat: float) -> tuple[str, str]:
+    if lat <= -55:
+        key = "antarctica"
+    elif lat <= 12 and lon >= 105:
+        key = "oceania"
+    elif lon >= 110 and lat <= -10:
+        key = "oceania"
+    elif -90 <= lon <= -30 and lat < 15:
+        key = "south_america"
+    elif -170 <= lon <= -30 and lat >= 5:
+        key = "north_america"
+    elif -25 <= lon <= 65 and lat >= 35:
+        key = "europe"
+    elif 25 <= lon <= 70 and -5 <= lat <= 40:
+        key = "middle_east"
+    elif -25 <= lon <= 55 and -40 <= lat <= 38:
+        key = "africa"
+    elif 45 <= lon <= 180 and -15 <= lat <= 80:
+        key = "asia"
+    else:
+        key = ""
+    return key, PALETTE_REGION_LABELS.get(key, "")
+
+
+def build_palette_regions_from_source_geometry(
+    root: Path,
+    tag_map: dict[str, tuple[str, bool]],
+) -> dict[str, dict[str, str]]:
+    state_provinces = load_state_provinces(root)
+    if not state_provinces:
+        return {}
+
+    tag_to_provinces: dict[str, list[int]] = {}
+    needed_provinces: set[int] = set()
+    for tag, (country_file, _dynamic) in tag_map.items():
+        capital_state = parse_country_capital_state(root / "history" / "countries" / f"{tag} - {Path(country_file).stem}.txt")
+        if capital_state is None:
+            # Some mods keep history file names independent from country tag paths.
+            matches = list((root / "history" / "countries").glob(f"{tag} - *.txt"))
+            capital_state = parse_country_capital_state(matches[0]) if matches else None
+        provinces = state_provinces.get(capital_state or -1, [])
+        if provinces:
+            tag_to_provinces[tag] = provinces
+            needed_provinces.update(provinces)
+
+    centroids, dimensions = load_province_centroids(root, needed_provinces)
+    if not centroids or not dimensions:
+        return {}
+
+    width, height = dimensions
+    results: dict[str, dict[str, str]] = {}
+    for tag, provinces in tag_to_provinces.items():
+        points = [centroids[province_id] for province_id in provinces if province_id in centroids]
+        if not points:
+            continue
+        x = sum(point[0] for point in points) / len(points)
+        y = sum(point[1] for point in points) / len(points)
+        lon = (x / width) * 360.0 - 180.0
+        lat = 90.0 - (y / height) * 180.0
+        key, label = infer_palette_region_from_lon_lat(lon, lat)
+        if key:
+            results[tag] = {
+                "key": key,
+                "label": label,
+                "source": "capital_state_province_centroid",
+            }
+    return results
+
+
 def load_primary_country_names(path: Path) -> tuple[dict[str, str], dict[str, str]]:
     data = load_json(path)
     geometries = data.get("objects", {}).get("political", {}).get("geometries", [])
@@ -361,6 +540,25 @@ def normalize_display_name_overrides(raw_mapping: dict | None) -> dict[str, str]
     return normalized
 
 
+def normalize_palette_region_overrides(raw_mapping: dict | None) -> dict[str, dict[str, str]]:
+    if not isinstance(raw_mapping, dict):
+        return {}
+    normalized: dict[str, dict[str, str]] = {}
+    for raw_tag, raw_value in raw_mapping.items():
+        tag = str(raw_tag).strip().upper()
+        key = str(raw_value.get("key") if isinstance(raw_value, dict) else raw_value or "").strip()
+        if not tag or not key:
+            continue
+        if key not in PALETTE_REGION_LABELS:
+            raise SystemExit(f"Unsupported palette region override for {tag}: {key}")
+        normalized[tag] = {
+            "key": key,
+            "label": PALETTE_REGION_LABELS[key],
+            "source": "manual_region_override",
+        }
+    return normalized
+
+
 def normalize_suffix_priority(raw_values: list | None) -> list[str]:
     normalized: list[str] = []
     for raw_value in raw_values or []:
@@ -446,10 +644,12 @@ def build_palette_entries(
     exact_names: dict[str, str],
     suffix_names: dict[str, dict[str, str]],
     manual: dict,
+    palette_regions: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, PaletteEntry]:
     display_name_overrides = normalize_display_name_overrides(manual.get("display_name_overrides"))
     suffix_priority = normalize_suffix_priority(manual.get("display_name_suffix_priority"))
     country_file_usage = build_country_file_usage(tag_map)
+    palette_regions = palette_regions or {}
 
     entries: dict[str, PaletteEntry] = {}
     for tag, (country_file, dynamic) in sorted(tag_map.items()):
@@ -478,6 +678,7 @@ def build_palette_entries(
         if not ui_hex:
             ui_hex = map_hex
             ui_source = "map_hex_fallback"
+        palette_region = palette_regions.get(tag, {})
 
         entries[tag] = PaletteEntry(
             tag=tag,
@@ -493,6 +694,9 @@ def build_palette_entries(
             country_file_hex=country_file_hex or "",
             country_file_source=country_file_source or "",
             dynamic=dynamic,
+            palette_region_key=str(palette_region.get("key") or ""),
+            palette_region_label=str(palette_region.get("label") or ""),
+            palette_region_source=str(palette_region.get("source") or ""),
         )
     return entries
 
@@ -733,6 +937,13 @@ def build_palette_payload(
             "country_file_source": entry.country_file_source,
             "dynamic": entry.dynamic,
         }
+        if entry.palette_region_key:
+            serialized_entries[tag]["palette_region"] = {
+                "key": entry.palette_region_key,
+                "label": entry.palette_region_label,
+                "source": entry.palette_region_source,
+                "order": PALETTE_REGION_ORDER.get(entry.palette_region_key, 999),
+            }
 
     source_type = "game_mod" if str(args.source_workshop_id or "").strip() else "game"
     payload = {
@@ -885,7 +1096,9 @@ def main() -> None:
     exact_names, suffix_names = parse_localisation_catalog(root, suffix_priority, Path(args.localisation_root))
     tag_map = parse_country_tags(root)
     colors_txt_data = parse_colors_txt(root / "common/countries/colors.txt")
-    raw_entries = build_palette_entries(root, tag_map, colors_txt_data, exact_names, suffix_names, manual)
+    palette_regions = build_palette_regions_from_source_geometry(root, tag_map)
+    palette_regions.update(normalize_palette_region_overrides(manual.get("palette_region_overrides")))
+    raw_entries = build_palette_entries(root, tag_map, colors_txt_data, exact_names, suffix_names, manual, palette_regions)
     mapped, unmapped, audit_entries = resolve_mapping_state(
         raw_entries,
         manual,

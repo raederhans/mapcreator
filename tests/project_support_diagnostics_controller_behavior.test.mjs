@@ -8,10 +8,29 @@ import { createProjectSupportDiagnosticsController } from "../js/ui/sidebar/proj
 import { strToU8, zipSync } from "../vendor/fflate.browser.js";
 
 function createStatusNode() {
-  return {
+  const node = {
     textContent: "",
     dataset: {},
+    classes: new Set(),
+    classList: {
+      add(className) {
+        this.owner.classes.add(className);
+      },
+      toggle(className, force) {
+        const shouldAdd = force === undefined ? !this.owner.classes.has(className) : !!force;
+        if (shouldAdd) {
+          this.owner.classes.add(className);
+        } else {
+          this.owner.classes.delete(className);
+        }
+      },
+      contains(className) {
+        return this.owner.classes.has(className);
+      },
+    },
   };
+  node.classList.owner = node;
+  return node;
 }
 
 function createButtonNode() {
@@ -38,6 +57,20 @@ function createListNode() {
 }
 
 function createElementNode(tagName = "div") {
+  const style = {
+    values: new Map(),
+    setProperty(name, value) {
+      this.values.set(name, value);
+      this[name] = value;
+    },
+    removeProperty(name) {
+      this.values.delete(name);
+      delete this[name];
+    },
+    getPropertyValue(name) {
+      return this.values.get(name) || "";
+    },
+  };
   return {
     tagName,
     children: [],
@@ -46,7 +79,7 @@ function createElementNode(tagName = "div") {
     type: "",
     value: "",
     dataset: {},
-    style: {},
+    style,
     disabled: false,
     hidden: false,
     addEventListener(type, handler) {
@@ -136,13 +169,16 @@ test("project save status refreshes when dirty state changes", () => {
     registerRuntimeHook(state, "updateProjectSaveStatusFn", controller.refreshProjectSaveStatus);
     controller.bindEvents();
 
-    assert.equal(projectSaveStatus.textContent, "Project export includes appearance and transport settings.");
+    assert.equal(projectSaveStatus.textContent, "");
+    assert.equal(projectSaveStatus.classList.contains("hidden"), true);
 
     markDirty("transport-workbench-config");
     assert.match(projectSaveStatus.textContent, /Unsaved project changes/);
+    assert.equal(projectSaveStatus.classList.contains("hidden"), false);
 
     clearDirty("project-export");
     assert.equal(projectSaveStatus.textContent, "Project exported. Appearance and transport settings are saved in the selected project file.");
+    assert.equal(projectSaveStatus.classList.contains("hidden"), false);
   } finally {
     registerRuntimeHook(state, "updateProjectSaveStatusFn", null);
     state.isDirty = previousDirty;
@@ -175,7 +211,8 @@ test("project download passes selected file format and destination", async () =>
   await downloadProjectBtn.listeners.click();
 
   assert.deepEqual(calls, [{ format: "zip", destination: "browser", packageContents: "diagnostic" }]);
-  assert.equal(projectSaveStatus.textContent, "Project export includes appearance and transport settings.");
+  assert.equal(projectSaveStatus.textContent, "");
+  assert.equal(projectSaveStatus.classList.contains("hidden"), true);
 });
 
 test("project download defaults to save dialog destination", async () => {
