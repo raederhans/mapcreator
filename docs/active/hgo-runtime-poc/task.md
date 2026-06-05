@@ -14,7 +14,7 @@
 - [x] Add preview boundary tests.
 - [x] Run focused verification.
 - [x] Run review / bug / first-principles self-check and fix findings.
-- [ ] Merge branch back to main, push, and clean worktree.
+- [x] Merge branch back to main, push, and clean worktree.
 
 ## Phase 1: HGO Runtime Seed
 

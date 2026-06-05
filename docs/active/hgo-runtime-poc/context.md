@@ -120,3 +120,11 @@ Implement the first vertical slice:
 - Reviewer flagged stale async preview load completion after disable/dispose. Fixed with `loadGeneration` and a regression test.
 - Reviewer flagged a half-connected toolbar entry when app loaders are absent. Fixed by hiding the developer-mode button until both seed and raster loaders are configured.
 - Reviewer flagged untracked source/dist/test files as a submit risk. Commit preparation must add all source, dist, and test files referenced by imports/scripts/manifest.
+
+## 2026-06-05 Preview Phase Closeout
+
+- Implementation commit: `89d0a832`.
+- Merged into `main` with a fast-forward merge after rebasing onto the current main.
+- Pushed `main` to `origin`.
+- Removed worktree `C:\Users\raede\Desktop\dev\mapcreator-hgo-runtime-preview`.
+- Deleted local branch `codex/hgo-runtime-preview`.
