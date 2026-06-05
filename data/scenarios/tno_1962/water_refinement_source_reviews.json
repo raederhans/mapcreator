@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scenario_id": "tno_1962",
-  "reviewed_at": "2026-06-02",
+  "reviewed_at": "2026-06-05",
   "features": [
     {
       "id": "tno_norwegian_sea",
@@ -39,6 +39,96 @@
       "evidence": [
         "Marine Regions IHO mrgid=4287 returns Caribbean Sea as a single polygon record; mrgid=4288 is Gulf of Mexico.",
         "Marine Regions SeaVoX identifies Caribbean Sea as mrgid_sr='24042' with no level_3 or level_4 child identifiers; Straits of Florida and Gulf of Mexico are sibling sub_region records under Northwest Atlantic Ocean."
+      ]
+    },
+    {
+      "id": "tno_gulf_of_mexico",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4288"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF MEXICO' OR level_4='GULF OF MEXICO' OR level_3='GULF OF MEXICO' OR level_2='GULF OF MEXICO' OR level_1='GULF OF MEXICO'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24044' OR mrgid_l2='24044' OR mrgid_l3='24044' OR mrgid_l4='24044'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4288 returns Gulf of Mexico as a single polygon record.",
+        "Marine Regions SeaVoX identifies Gulf of Mexico as mrgid_sr='24044' under Northwest Atlantic Ocean with no lower-level child identifiers.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24044 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4288",
+        "seavox_v19:mrgid_sr=24044"
+      ]
+    },
+    {
+      "id": "tno_beaufort_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4256"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BEAUFORT SEA' OR level_4='BEAUFORT SEA' OR level_3='BEAUFORT SEA' OR level_2='BEAUFORT SEA' OR level_1='BEAUFORT SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24023' OR mrgid_l2='24023' OR mrgid_l3='24023' OR mrgid_l4='24023'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4256 returns Beaufort Sea as a single polygon record.",
+        "Marine Regions SeaVoX identifies Beaufort Sea as mrgid_sr='24023' under Arctic Ocean with no lower-level child identifiers.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24023 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4256",
+        "seavox_v19:mrgid_sr=24023"
+      ]
+    },
+    {
+      "id": "tno_labrador_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4291"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='LABRADOR SEA' OR level_4='LABRADOR SEA' OR level_3='LABRADOR SEA' OR level_2='LABRADOR SEA' OR level_1='LABRADOR SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24050' OR mrgid_l2='24050' OR mrgid_l3='24050' OR mrgid_l4='24050'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4291 returns Labrador Sea as a single polygon record.",
+        "Marine Regions SeaVoX identifies Labrador Sea as mrgid_sr='24050' under Northwest Atlantic Ocean with no lower-level child identifiers.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24050 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4291",
+        "seavox_v19:mrgid_sr=24050"
       ]
     },
     {
@@ -99,6 +189,774 @@
         "Marine Regions WFS mrgid IN (3721,3725) returned zero features from iho, gazetteer_polygon, gazetteer_line, world_bay_gulf, and eez_iho geometry layers.",
         "Marine Regions WFS bbox review around the Turkish Straits returned broader neighboring polygons such as Aegean Sea, Sea of Marmara, Black Sea, Mediterranean Region, Greece - Aegean Sea and Eastern Mediterranean, and EEZ/IHO intersections; gazetteer_line and world_bay_gulf returned zero target bbox features.",
         "The checked-in local clone remains the safest current chokepoint geometry until a direct public polygon or line source for Bosporus and Dardanelles is available."
+      ]
+    },
+    {
+      "id": "tno_singapore_strait",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SINGAPORE STRAIT' OR level_4='SINGAPORE STRAIT' OR level_3='SINGAPORE STRAIT' OR level_2='SINGAPORE STRAIT' OR level_1='SINGAPORE STRAIT'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24165' OR mrgid_l2='24165' OR mrgid_l3='24165' OR mrgid_l4='24165'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Singapore Strait as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > SINGAPORE STRAIT.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24165 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24165"
+      ]
+    },
+    {
+      "id": "tno_malacca_strait",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='MALACCA STRAIT' OR level_4='MALACCA STRAIT' OR level_3='MALACCA STRAIT' OR level_2='MALACCA STRAIT' OR level_1='MALACCA STRAIT'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24140' OR mrgid_l2='24140' OR mrgid_l3='24140' OR mrgid_l4='24140'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Malacca Strait as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > MALACCA STRAIT.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24140 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24140"
+      ]
+    },
+    {
+      "id": "tno_mozambique_channel",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='MOZAMBIQUE CHANNEL' OR level_4='MOZAMBIQUE CHANNEL' OR level_3='MOZAMBIQUE CHANNEL' OR level_2='MOZAMBIQUE CHANNEL' OR level_1='MOZAMBIQUE CHANNEL'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24064' OR mrgid_l2='24064' OR mrgid_l3='24064' OR mrgid_l4='24064'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Mozambique Channel as a single sub_region record: INDIAN OCEAN > MOZAMBIQUE CHANNEL.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24064 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24064"
+      ]
+    },
+    {
+      "id": "tno_scotia_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SCOTIA SEA' OR level_4='SCOTIA SEA' OR level_3='SCOTIA SEA' OR level_2='SCOTIA SEA' OR level_1='SCOTIA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24034' OR mrgid_l2='24034' OR mrgid_l3='24034' OR mrgid_l4='24034'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Scotia Sea as a single sub_region record: SOUTHERN OCEAN > SCOTIA SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24034 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24034"
+      ]
+    },
+    {
+      "id": "tno_sea_of_marmara",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SEA OF MARMARA' OR level_4='SEA OF MARMARA' OR level_3='SEA OF MARMARA' OR level_2='SEA OF MARMARA' OR level_1='SEA OF MARMARA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24087' OR mrgid_l2='24087' OR mrgid_l3='24087' OR mrgid_l4='24087'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Sea of Marmara as a single sub_region record: MEDITERRANEAN REGION > SEA OF MARMARA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24087 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24087"
+      ]
+    },
+    {
+      "id": "tno_weddell_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='WEDDELL SEA' OR level_4='WEDDELL SEA' OR level_3='WEDDELL SEA' OR level_2='WEDDELL SEA' OR level_1='WEDDELL SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24035' OR mrgid_l2='24035' OR mrgid_l3='24035' OR mrgid_l4='24035'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Weddell Sea as a single sub_region record: SOUTHERN OCEAN > WEDDELL SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24035 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24035"
+      ]
+    },
+    {
+      "id": "tno_gulf_of_aden",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF ADEN' OR level_4='GULF OF ADEN' OR level_3='GULF OF ADEN' OR level_2='GULF OF ADEN' OR level_1='GULF OF ADEN'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24071' OR mrgid_l2='24071' OR mrgid_l3='24071' OR mrgid_l4='24071'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Gulf of Aden as a single sub_region record: INDIAN OCEAN > GULF OF ADEN.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24071 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24071"
+      ]
+    },
+    {
+      "id": "tno_gulf_of_oman",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF OMAN' OR level_4='GULF OF OMAN' OR level_3='GULF OF OMAN' OR level_2='GULF OF OMAN' OR level_1='GULF OF OMAN'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24075' OR mrgid_l2='24075' OR mrgid_l3='24075' OR mrgid_l4='24075'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Gulf of Oman as a single sub_region record: INDIAN OCEAN > GULF OF OMAN.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24075 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24075"
+      ]
+    },
+    {
+      "id": "tno_great_australian_bight",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GREAT AUSTRALIAN BIGHT' OR level_4='GREAT AUSTRALIAN BIGHT' OR level_3='GREAT AUSTRALIAN BIGHT' OR level_2='GREAT AUSTRALIAN BIGHT' OR level_1='GREAT AUSTRALIAN BIGHT'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24061' OR mrgid_l2='24061' OR mrgid_l3='24061' OR mrgid_l4='24061'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Great Australian Bight as a single sub_region record: INDIAN OCEAN > GREAT AUSTRALIAN BIGHT.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24061 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24061"
+      ]
+    },
+    {
+      "id": "tno_sea_of_azov",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SEA OF AZOV' OR level_4='SEA OF AZOV' OR level_3='SEA OF AZOV' OR level_2='SEA OF AZOV' OR level_1='SEA OF AZOV'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24094' OR mrgid_l2='24094' OR mrgid_l3='24094' OR mrgid_l4='24094'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Sea of Azov as a single sub_region record: MEDITERRANEAN REGION > SEA OF AZOV.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24094 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24094"
+      ]
+    },
+    {
+      "id": "tno_molucca_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='MOLUCCA SEA' OR level_4='MOLUCCA SEA' OR level_3='MOLUCCA SEA' OR level_2='MOLUCCA SEA' OR level_1='MOLUCCA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24137' OR mrgid_l2='24137' OR mrgid_l3='24137' OR mrgid_l4='24137'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Molucca Sea as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > MOLUCCA SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24137 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24137"
+      ]
+    },
+    {
+      "id": "tno_bay_of_biscay",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BAY OF BISCAY' OR level_4='BAY OF BISCAY' OR level_3='BAY OF BISCAY' OR level_2='BAY OF BISCAY' OR level_1='BAY OF BISCAY'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24046' OR mrgid_l2='24046' OR mrgid_l3='24046' OR mrgid_l4='24046'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Bay of Biscay as a single sub_region record: ATLANTIC OCEAN > NORTH ATLANTIC OCEAN > NORTHEAST ATLANTIC OCEAN (40W) > BAY OF BISCAY.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24046 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24046"
+      ]
+    },
+    {
+      "id": "tno_gulf_of_guinea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF GUINEA' OR level_4='GULF OF GUINEA' OR level_3='GULF OF GUINEA' OR level_2='GULF OF GUINEA' OR level_1='GULF OF GUINEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24041' OR mrgid_l2='24041' OR mrgid_l3='24041' OR mrgid_l4='24041'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Gulf of Guinea as a single sub_region record: ATLANTIC OCEAN > NORTH ATLANTIC OCEAN > NORTHEAST ATLANTIC OCEAN (40W) > GULF OF GUINEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24041 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24041"
+      ]
+    },
+    {
+      "id": "tno_black_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BLACK SEA' OR level_4='BLACK SEA' OR level_3='BLACK SEA' OR level_2='BLACK SEA' OR level_1='BLACK SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24093' OR mrgid_l2='24093' OR mrgid_l3='24093' OR mrgid_l4='24093'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Black Sea as a single sub_region record: MEDITERRANEAN REGION > BLACK SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24093 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24093"
+      ]
+    },
+    {
+      "id": "tno_gulf_of_carpentaria",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF CARPENTARIA' OR level_4='GULF OF CARPENTARIA' OR level_3='GULF OF CARPENTARIA' OR level_2='GULF OF CARPENTARIA' OR level_1='GULF OF CARPENTARIA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24063' OR mrgid_l2='24063' OR mrgid_l3='24063' OR mrgid_l4='24063'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Gulf of Carpentaria as a single sub_region record: INDIAN OCEAN > ARAFURA SEA > GULF OF CARPENTARIA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24063 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24063"
+      ]
+    },
+    {
+      "id": "tno_halmahera_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='HALMAHERA SEA' OR level_4='HALMAHERA SEA' OR level_3='HALMAHERA SEA' OR level_2='HALMAHERA SEA' OR level_1='HALMAHERA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24136' OR mrgid_l2='24136' OR mrgid_l3='24136' OR mrgid_l4='24136'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Halmahera Sea as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > HALMAHERA SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24136 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24136"
+      ]
+    },
+    {
+      "id": "tno_persian_gulf",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='PERSIAN GULF' OR level_4='PERSIAN GULF' OR level_3='PERSIAN GULF' OR level_2='PERSIAN GULF' OR level_1='PERSIAN GULF'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24080' OR mrgid_l2='24080' OR mrgid_l3='24080' OR mrgid_l4='24080'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Persian Gulf as a single sub_region record: INDIAN OCEAN > PERSIAN GULF.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24080 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24080"
+      ]
+    },
+    {
+      "id": "tno_skagerrak",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SKAGERRAK' OR level_4='SKAGERRAK' OR level_3='SKAGERRAK' OR level_2='SKAGERRAK' OR level_1='SKAGERRAK'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24049' OR mrgid_l2='24049' OR mrgid_l3='24049' OR mrgid_l4='24049'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Skagerrak as a single sub_region record: ATLANTIC OCEAN > NORTH ATLANTIC OCEAN > NORTHEAST ATLANTIC OCEAN (40W) > SKAGERRAK.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24049 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24049"
+      ]
+    },
+    {
+      "id": "tno_arabian_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='ARABIAN SEA' OR level_4='ARABIAN SEA' OR level_3='ARABIAN SEA' OR level_2='ARABIAN SEA' OR level_1='ARABIAN SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24074' OR mrgid_l2='24074' OR mrgid_l3='24074' OR mrgid_l4='24074'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Arabian Sea as a single sub_region record: INDIAN OCEAN > ARABIAN SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24074 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24074"
+      ]
+    },
+    {
+      "id": "tno_kattegat",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='KATTEGAT' OR level_4='KATTEGAT' OR level_3='KATTEGAT' OR level_2='KATTEGAT' OR level_1='KATTEGAT'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24055' OR mrgid_l2='24055' OR mrgid_l3='24055' OR mrgid_l4='24055'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Kattegat as a single sub_region record: BALTIC SEA > KATTEGAT.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24055 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24055"
+      ]
+    },
+    {
+      "id": "tno_bay_of_bengal",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BAY OF BENGAL' OR level_4='BAY OF BENGAL' OR level_3='BAY OF BENGAL' OR level_2='BAY OF BENGAL' OR level_1='BAY OF BENGAL'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24073' OR mrgid_l2='24073' OR mrgid_l3='24073' OR mrgid_l4='24073'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Bay of Bengal as a single sub_region record: INDIAN OCEAN > BAY OF BENGAL.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24073 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24073"
+      ]
+    },
+    {
+      "id": "tno_celebes_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='CELEBES SEA' OR level_4='CELEBES SEA' OR level_3='CELEBES SEA' OR level_2='CELEBES SEA' OR level_1='CELEBES SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24139' OR mrgid_l2='24139' OR mrgid_l3='24139' OR mrgid_l4='24139'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Celebes Sea as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > CELEBES SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24139 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24139"
+      ]
+    },
+    {
+      "id": "tno_sea_of_okhotsk",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SEA OF OKHOTSK' OR level_4='SEA OF OKHOTSK' OR level_3='SEA OF OKHOTSK' OR level_2='SEA OF OKHOTSK' OR level_1='SEA OF OKHOTSK'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24120' OR mrgid_l2='24120' OR mrgid_l3='24120' OR mrgid_l4='24120'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Sea of Okhotsk as a single sub_region record: PACIFIC OCEAN > NORTH PACIFIC OCEAN > NORTHWEST PACIFIC OCEAN (180W) > SEA OF OKHOTSK.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24120 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24120"
+      ]
+    },
+    {
+      "id": "tno_banda_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BANDA SEA' OR level_4='BANDA SEA' OR level_3='BANDA SEA' OR level_2='BANDA SEA' OR level_1='BANDA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24133' OR mrgid_l2='24133' OR mrgid_l3='24133' OR mrgid_l4='24133'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Banda Sea as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > BANDA SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24133 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24133"
+      ]
+    },
+    {
+      "id": "tno_sulu_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='SULU SEA' OR level_4='SULU SEA' OR level_3='SULU SEA' OR level_2='SULU SEA' OR level_1='SULU SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24141' OR mrgid_l2='24141' OR mrgid_l3='24141' OR mrgid_l4='24141'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Sulu Sea as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > SULU SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24141 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24141"
+      ]
+    },
+    {
+      "id": "tno_natuna_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='NATUNA SEA' OR level_4='NATUNA SEA' OR level_3='NATUNA SEA' OR level_2='NATUNA SEA' OR level_1='NATUNA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24138' OR mrgid_l2='24138' OR mrgid_l3='24138' OR mrgid_l4='24138'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Natuna Sea as a single sub_region record: SOUTH CHINA AND EASTERN ARCHIPELAGIC SEAS > NATUNA SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24138 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24138"
+      ]
+    },
+    {
+      "id": "tno_gulf_of_st_lawrence",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF ST. LAWRENCE' OR level_4='GULF OF ST. LAWRENCE' OR level_3='GULF OF ST. LAWRENCE' OR level_2='GULF OF ST. LAWRENCE' OR level_1='GULF OF ST. LAWRENCE'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24048' OR mrgid_l2='24048' OR mrgid_l3='24048' OR mrgid_l4='24048'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Gulf of St. Lawrence as a single sub_region record: ATLANTIC OCEAN > NORTH ATLANTIC OCEAN > NORTHWEST ATLANTIC OCEAN (40W) > GULF OF ST. LAWRENCE.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24048 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24048"
+      ]
+    },
+    {
+      "id": "tno_barents_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BARENTS SEA' OR level_4='BARENTS SEA' OR level_3='BARENTS SEA' OR level_2='BARENTS SEA' OR level_1='BARENTS SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24029' OR mrgid_l2='24029' OR mrgid_l3='24029' OR mrgid_l4='24029'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Barents Sea as a single sub_region record: ARCTIC OCEAN > BARENTS SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24029 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24029"
+      ]
+    },
+    {
+      "id": "tno_red_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='RED SEA' OR level_4='RED SEA' OR level_3='RED SEA' OR level_2='RED SEA' OR level_1='RED SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24077' OR mrgid_l2='24077' OR mrgid_l3='24077' OR mrgid_l4='24077'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Red Sea as a single sub_region record: INDIAN OCEAN > RED SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24077 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24077"
+      ]
+    },
+    {
+      "id": "tno_andaman_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='ANDAMAN SEA' OR level_4='ANDAMAN SEA' OR level_3='ANDAMAN SEA' OR level_2='ANDAMAN SEA' OR level_1='ANDAMAN SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24072' OR mrgid_l2='24072' OR mrgid_l3='24072' OR mrgid_l4='24072'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Andaman Sea as a single sub_region record: INDIAN OCEAN > ANDAMAN SEA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24072 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24072"
+      ]
+    },
+    {
+      "id": "tno_baffin_bay",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='BAFFIN BAY' OR level_4='BAFFIN BAY' OR level_3='BAFFIN BAY' OR level_2='BAFFIN BAY' OR level_1='BAFFIN BAY'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24030' OR mrgid_l2='24030' OR mrgid_l3='24030' OR mrgid_l4='24030'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Baffin Bay as a single sub_region record: ARCTIC OCEAN > BAFFIN BAY.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24030 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24030"
+      ]
+    },
+    {
+      "id": "tno_gulf_of_alaska",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='GULF OF ALASKA' OR level_4='GULF OF ALASKA' OR level_3='GULF OF ALASKA' OR level_2='GULF OF ALASKA' OR level_1='GULF OF ALASKA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24118' OR mrgid_l2='24118' OR mrgid_l3='24118' OR mrgid_l4='24118'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX exact-name query returns Gulf of Alaska as a single sub_region record: PACIFIC OCEAN > NORTH PACIFIC OCEAN > NORTHEAST PACIFIC OCEAN (180W) > GULF OF ALASKA.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24118 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24118"
       ]
     }
   ]

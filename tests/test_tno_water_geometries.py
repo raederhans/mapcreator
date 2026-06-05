@@ -28,6 +28,7 @@ SCENARIO_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_regions.
 RUNTIME_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.topo.json"
 RUNTIME_BOOTSTRAP_WATER_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "runtime_topology.bootstrap.topo.json"
 SCENARIO_WATER_SOURCE_REVIEW_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_refinement_source_reviews.json"
+SCENARIO_WATER_PUBLISHED_PROVENANCE_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "water_regions.provenance.json"
 SCENARIO_NAMED_WATER_SNAPSHOT_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "marine_regions_named_waters.snapshot.geojson"
 SCENARIO_WATER_PROVENANCE_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "derived" / "water_regions.provenance.json"
 SCENARIO_MANIFEST_PATH = ROOT / "data" / "scenarios" / "tno_1962" / "manifest.json"
@@ -1223,9 +1224,174 @@ def test_tno_water_family_refinement_terminal_review_monitors_local_clone():
     assert "public source review found no verified replacement polygon source" in terminal_row["reasons"]
 
 
+def test_tno_water_family_refinement_terminal_review_monitors_standard_macro():
+    reviewed_macro = {
+        "type": "Feature",
+        "properties": {
+            "id": "fixture_reviewed_standard",
+            "name": "Fixture Reviewed Standard",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "marine_regions_iho_v3",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [float(point_index), 1.0]
+                for point_index in range(120)
+            ]],
+        },
+    }
+    support_macro_features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "id": f"fixture_standard_support_{index}",
+                "name": f"Fixture Standard Support {index}",
+                "region_group": "marine_macro",
+                "water_type": "sea",
+                "source_standard": "marine_regions_seavox_v19",
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [float(point_index), float(index)]
+                    for point_index in range(200 + index)
+                ]],
+            },
+        }
+        for index in range(10)
+    ]
+    features = [reviewed_macro, *support_macro_features]
+    report = build_family_refinement_report(
+        {"type": "FeatureCollection", "features": features},
+        provenance_payload={
+            "water_extracts": [
+                {
+                    "id": feature["properties"]["id"],
+                    "source_layer": "iho" if feature["properties"]["id"] == "fixture_reviewed_standard" else "seavox_v19",
+                    "source_query": f"fixture={feature['properties']['id']}",
+                    "source_record_ids": [feature["properties"]["id"]],
+                    "source_feature_count": 1,
+                }
+                for feature in features
+            ],
+        },
+        source_review_payload={
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{
+                "id": "fixture_reviewed_standard",
+                "review_status": "terminal_public_source",
+                "reviewed_at": "2026-06-02",
+                "source_queries": [{
+                    "source_layer": "iho",
+                    "cql_filter": "mrgid=fixture",
+                }],
+                "evidence": ["Fixture source review found no child polygon source."],
+            }],
+        },
+        generated_at="2026-06-02T00:00:00Z",
+    )
+
+    reviewed_row = next(row for row in report["families"] if row["id"] == "fixture_reviewed_standard")
+    assert reviewed_row["precision_band"] == "standard"
+    assert reviewed_row["recommended_action"] == "monitor_terminal_public_source"
+    assert "fixture_reviewed_standard" not in {item["id"] for item in report["backlog_candidates"]}
+    assert [item["id"] for item in report["terminal_public_source_candidates"]] == ["fixture_reviewed_standard"]
+    assert "public source review found no verified child polygon source" in report["terminal_public_source_candidates"][0]["reasons"]
+
+
+def test_tno_water_family_refinement_terminal_source_reviews_exit_actionable_queues():
+    water_payload = json.loads(SCENARIO_WATER_PATH.read_text(encoding="utf-8"))
+    provenance_payload = json.loads(SCENARIO_WATER_PUBLISHED_PROVENANCE_PATH.read_text(encoding="utf-8"))
+    source_review_payload = json.loads(SCENARIO_WATER_SOURCE_REVIEW_PATH.read_text(encoding="utf-8"))
+    reviewed_ids = {
+        item["id"]
+        for item in source_review_payload["features"]
+        if item["review_status"] == "terminal_public_source"
+    }
+
+    report = build_family_refinement_report(
+        water_payload,
+        provenance_payload=provenance_payload,
+        source_review_payload=source_review_payload,
+        generated_at="2026-06-02T00:00:00Z",
+    )
+
+    expected_remaining_backlog_ids = {
+        "tno_arafura_sea",
+        "tno_bering_sea",
+        "tno_greenland_sea",
+        "tno_java_sea",
+        "tno_makassar_strait",
+        "tno_ross_sea",
+        "tno_timor_sea",
+    }
+    assert len(reviewed_ids) == 39
+    assert reviewed_ids <= {item["id"] for item in report["terminal_public_source_candidates"]}
+    reviewed_rows = [row for row in report["families"] if row["id"] in reviewed_ids]
+    assert {row["recommended_action"] for row in reviewed_rows} == {"monitor_terminal_public_source"}
+    assert {row["source_review"]["review_status"] for row in reviewed_rows} == {"terminal_public_source"}
+    assert reviewed_ids.isdisjoint({item["id"] for item in report["backlog_candidates"]})
+    assert reviewed_ids.isdisjoint({item["id"] for item in report["high_precision_split_candidates"]})
+    assert reviewed_ids.isdisjoint({item["id"] for item in report["source_replacement_candidates"]})
+    assert {item["id"] for item in report["backlog_candidates"]} == expected_remaining_backlog_ids
+    assert report["summary"]["terminal_public_source_candidate_count"] == len(reviewed_ids)
+    assert report["summary"]["high_precision_split_candidate_count"] == 0
+    assert report["summary"]["backlog_candidate_count"] == len(expected_remaining_backlog_ids)
+
+
+def test_tno_water_family_refinement_recent_terminal_reviews_record_structured_evidence():
+    water_payload = json.loads(SCENARIO_WATER_PATH.read_text(encoding="utf-8"))
+    provenance_payload = json.loads(SCENARIO_WATER_PUBLISHED_PROVENANCE_PATH.read_text(encoding="utf-8"))
+    source_review_payload = json.loads(SCENARIO_WATER_SOURCE_REVIEW_PATH.read_text(encoding="utf-8"))
+    report = build_family_refinement_report(
+        water_payload,
+        provenance_payload=provenance_payload,
+        source_review_payload=source_review_payload,
+        generated_at="2026-06-05T00:00:00Z",
+    )
+    recent_terminal_rows = [
+        row
+        for row in report["families"]
+        if row.get("source_review", {}).get("reviewed_at") == "2026-06-05"
+    ]
+
+    assert len(recent_terminal_rows) == 35
+    assert {row["source_review"]["terminal_reason"] for row in recent_terminal_rows} == {
+        "no_public_child_polygon_source",
+    }
+    assert {row["source_review"]["child_result_count"] for row in recent_terminal_rows} == {0}
+    assert all(row["source_review"]["matched_record_ids"] for row in recent_terminal_rows)
+
+    records_by_id = {
+        item["id"]: item
+        for item in source_review_payload["features"]
+        if item.get("reviewed_at") == "2026-06-05"
+    }
+    assert records_by_id["tno_gulf_of_mexico"]["matched_record_ids"] == [
+        "iho:mrgid=4288",
+        "seavox_v19:mrgid_sr=24044",
+    ]
+    assert records_by_id["tno_beaufort_sea"]["matched_record_ids"] == [
+        "iho:mrgid=4256",
+        "seavox_v19:mrgid_sr=24023",
+    ]
+    assert records_by_id["tno_labrador_sea"]["matched_record_ids"] == [
+        "iho:mrgid=4291",
+        "seavox_v19:mrgid_sr=24050",
+    ]
+    assert all(
+        any("mrgid_l1" in query["cql_filter"] and "mrgid_l4" in query["cql_filter"] for query in record["source_queries"])
+        for record in records_by_id.values()
+    )
+
+
 def test_tno_bosporus_source_review_records_terminal_public_source():
     payload = json.loads(SCENARIO_WATER_SOURCE_REVIEW_PATH.read_text(encoding="utf-8"))
-    assert payload["reviewed_at"] == "2026-06-02"
+    assert payload["reviewed_at"] == "2026-06-05"
     records_by_id = {item["id"]: item for item in payload["features"]}
     record = records_by_id["tno_bosporus_dardanelles"]
     assert record["review_status"] == "terminal_public_source"
@@ -1403,6 +1569,18 @@ def test_tno_water_family_refinement_rejects_invalid_source_review_contract():
             "scenario_id": "tno_1962",
             "reviewed_at": "2026-06-02",
             "features": [{**base_record, "evidence": []}],
+        }),
+        ("child_result_count must be a non-negative integer", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{**base_record, "child_result_count": True}],
+        }),
+        ("matched_record_ids must be non-empty strings", {
+            "schema_version": 1,
+            "scenario_id": "tno_1962",
+            "reviewed_at": "2026-06-02",
+            "features": [{**base_record, "matched_record_ids": []}],
         }),
     ]
 
@@ -1778,6 +1956,15 @@ class TnoWaterRecentRefinementContractTest(unittest.TestCase):
 
     def test_family_refinement_terminal_review_monitors_local_clone(self):
         test_tno_water_family_refinement_terminal_review_monitors_local_clone()
+
+    def test_family_refinement_terminal_review_monitors_standard_macro(self):
+        test_tno_water_family_refinement_terminal_review_monitors_standard_macro()
+
+    def test_family_refinement_terminal_source_reviews_exit_actionable_queues(self):
+        test_tno_water_family_refinement_terminal_source_reviews_exit_actionable_queues()
+
+    def test_family_refinement_recent_terminal_reviews_record_structured_evidence(self):
+        test_tno_water_family_refinement_recent_terminal_reviews_record_structured_evidence()
 
     def test_bosporus_source_review_records_terminal_public_source(self):
         test_tno_bosporus_source_review_records_terminal_public_source()

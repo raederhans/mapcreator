@@ -170,6 +170,9 @@
 ### HOI4 state ownership 复用已验证 parser
 - 新建 HGO / HOI4 seed builder 时，state 的 owner、controller、core、dated history 必须复用 `scenario_builder.hoi4.parser` 语义；浅层正则会误读 `history`、`remove_core_of` 和 `controller -> owner` fallback。
 
+### water-domain builder 输出要先审查派生产物范围
+- `patch_tno_1962_bundle.py --changed-domain water` 可能同步 geo-locale、startup bundle、manifest 和 audit 等派生产物；source-review-only 任务验证后要检查 diff，避免把无关 locale/chunk churn 混入提交。
+
 ### 浮动控件缩放要保持像素锚点
 - 浮动控件的位置如果用比例存储，缩放时先保留当前像素 left/top，再按新尺寸回算比例；直接用旧比例重算会导致控件在缩放时漂移。
 

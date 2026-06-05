@@ -14,6 +14,10 @@ LOW_VERTEX_COUNT_THRESHOLD = 100
 HIGH_VERTEX_REVIEW_PERCENTILE = 0.90
 GLOBAL_CLONE_SOURCE_STANDARD = 'tno_cloned_from_global_water_regions'
 TERMINAL_PUBLIC_SOURCE_STATUS = 'terminal_public_source'
+TERMINAL_SOURCE_REASONS = {
+    'no_public_child_polygon_source',
+    'no_public_replacement_polygon_source',
+}
 SOURCE_REVIEW_SCHEMA_VERSION = 1
 SOURCE_REVIEW_STATUSES = {TERMINAL_PUBLIC_SOURCE_STATUS}
 ACTIONABLE_RECOMMENDED_ACTIONS = {
@@ -149,12 +153,37 @@ def _build_source_review_index(source_review_payload: dict | None, *, valid_feat
         evidence = item.get('evidence') or []
         if not isinstance(evidence, list) or not any(str(entry or '').strip() for entry in evidence):
             raise ValueError(f'source review requires evidence: {feature_id}')
-        records[feature_id] = {
+        review_record = {
             'review_status': review_status,
             'reviewed_at': reviewed_at,
             'source_queries': list(source_queries),
             'evidence': list(evidence),
         }
+        terminal_reason = item.get('terminal_reason')
+        if terminal_reason is not None:
+            terminal_reason = str(terminal_reason or '').strip()
+            if terminal_reason not in TERMINAL_SOURCE_REASONS:
+                raise ValueError(f'unknown source review terminal_reason for {feature_id}: {terminal_reason}')
+            review_record['terminal_reason'] = terminal_reason
+        child_result_count = item.get('child_result_count')
+        if child_result_count is not None:
+            if (
+                isinstance(child_result_count, bool)
+                or not isinstance(child_result_count, int)
+                or child_result_count < 0
+            ):
+                raise ValueError(f'source review child_result_count must be a non-negative integer: {feature_id}')
+            review_record['child_result_count'] = child_result_count
+        matched_record_ids = item.get('matched_record_ids')
+        if matched_record_ids is not None:
+            if (
+                not isinstance(matched_record_ids, list)
+                or not matched_record_ids
+                or not all(str(record_id or '').strip() for record_id in matched_record_ids)
+            ):
+                raise ValueError(f'source review matched_record_ids must be non-empty strings: {feature_id}')
+            review_record['matched_record_ids'] = [str(record_id).strip() for record_id in matched_record_ids]
+        records[feature_id] = review_record
     return records
 
 
@@ -176,6 +205,13 @@ def _candidate_reasons(row: dict) -> list[str]:
             reasons.append('public source review found no verified child polygon source')
         else:
             reasons.append('high-detail macro still needs child water split review')
+    if (
+        _has_terminal_public_source_review(row)
+        and row.get('child_count', 0) == 0
+        and row.get('source_family') != 'local_clone'
+        and row.get('precision_band') != 'high_review'
+    ):
+        reasons.append('public source review found no verified child polygon source')
     if row.get('source_family') == 'local_clone' and _has_terminal_public_source_review(row):
         reasons.append('public source review found no verified replacement polygon source')
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) > 0:
@@ -212,16 +248,10 @@ def _candidate_priority(row: dict) -> str:
 
 
 def _recommended_action(row: dict) -> str:
-    if row.get('source_family') == 'local_clone' and _has_terminal_public_source_review(row):
+    if _has_terminal_public_source_review(row):
         return 'monitor_terminal_public_source'
     if row.get('source_family') == 'local_clone' or row.get('precision_band') == 'low':
         return 'replace_or_refine_with_public_source'
-    if (
-        row.get('precision_band') == 'high_review'
-        and row.get('child_count', 0) == 0
-        and _has_terminal_public_source_review(row)
-    ):
-        return 'monitor_terminal_public_source'
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) == 0:
         return 'split_child_water_candidates'
     if row.get('precision_band') == 'high_review' and row.get('child_count', 0) > 0:
