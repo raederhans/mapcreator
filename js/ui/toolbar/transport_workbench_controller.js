@@ -239,6 +239,8 @@ export function createTransportWorkbenchController({
     getEditOverlay: (familyId) => transportWorkbenchStateOwner.getEditOverlay(familyId),
     addEditOverlayPoint: (familyId, point) => addTransportWorkbenchEditOverlayPoint(familyId, point),
     removeEditOverlayPoint: (familyId, featureId) => removeTransportWorkbenchEditOverlayPoint(familyId, featureId),
+    updateEditOverlayPoint: (familyId, featureId, point) => updateTransportWorkbenchEditOverlayPoint(familyId, featureId, point),
+    deleteEditOverlayPoint: (familyId, featureId) => deleteTransportWorkbenchEditOverlayPoint(familyId, featureId),
   });
   const transportWorkbenchEventOwner = createTransportWorkbenchEventOwner({
     documentRef: document,
@@ -385,6 +387,19 @@ export function createTransportWorkbenchController({
 
   const removeTransportWorkbenchEditOverlayPoint = (familyId, featureId) => {
     if (!transportWorkbenchStateOwner.removeEditOverlayPoint(familyId, featureId)) return false;
+    refreshTransportWorkbenchAfterEditOverlayChange();
+    return true;
+  };
+
+  const updateTransportWorkbenchEditOverlayPoint = (familyId, featureId, point) => {
+    const updated = transportWorkbenchStateOwner.updateEditOverlayPoint(familyId, featureId, point);
+    if (!updated) return null;
+    refreshTransportWorkbenchAfterEditOverlayChange();
+    return updated;
+  };
+
+  const deleteTransportWorkbenchEditOverlayPoint = (familyId, featureId) => {
+    if (!transportWorkbenchStateOwner.deleteEditOverlayPoint(familyId, featureId)) return false;
     refreshTransportWorkbenchAfterEditOverlayChange();
     return true;
   };

@@ -140,6 +140,7 @@ test("project payload builder returns export schema without triggering download"
     scenarioBaselineHash: "baseline-1",
     legendLabels: { "#111111": "大日耳曼国" },
     legendConfig: { mode: "realm-area", continent: "asia", useModernMajorOrder: true },
+    legendControl: { visible: false, collapsed: true, xRatio: 0.2, yRatio: 0.3, width: 260.4, height: 180.6, opacity: 0.5 },
     transportWorkbenchUi: {},
     exportWorkbenchUi: {},
   });
@@ -160,6 +161,15 @@ test("project payload builder returns export schema without triggering download"
     continent: "asia",
     useModernMajorOrder: true,
     maxItems: 15,
+  });
+  assert.deepEqual(payload.legendControl, {
+    visible: false,
+    collapsed: true,
+    xRatio: 0.2,
+    yRatio: 0.3,
+    width: 260,
+    height: 181,
+    opacity: 0.5,
   });
 });
 
@@ -808,11 +818,39 @@ test("project export and import preserve transport workbench point deltas", asyn
           }],
           deleted: ["airport_source_2"],
         },
+        logistics_hubs: {
+          created: [{
+            id: "hub_edit_1",
+            name: "Project Hub",
+            lon: 9.99,
+            lat: 53.55,
+            packId: "germany_logistics_hubs",
+            properties: { hub_type: "intermodal", operator_classification: "rail-road" },
+          }],
+          updated: [{
+            id: "hub_source_1",
+            name: "Edited Hub",
+            lon: 10.01,
+            lat: 53.56,
+            packId: "germany_logistics_hubs",
+            properties: { hub_type: "freight_terminal", operator_classification: "public" },
+          }],
+          deleted: ["hub_source_2"],
+        },
       },
     },
     transportWorkbenchUi: {
       activeFamily: "airport",
       activePackIdByFamily: { airport: "usa_airport" },
+    },
+    legendControl: {
+      visible: true,
+      collapsed: true,
+      xRatio: 0.77,
+      yRatio: 0.12,
+      width: 320,
+      height: 220,
+      opacity: 0.62,
     },
   });
 
@@ -822,6 +860,9 @@ test("project export and import preserve transport workbench point deltas", asyn
   assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.updated[0].properties.status_category, "inactive");
   assert.equal(payload.transportWorkbenchPointDeltas.byFamily.airport.updated[0].properties.source, undefined);
   assert.deepEqual(payload.transportWorkbenchPointDeltas.byFamily.airport.deleted, ["airport_source_2"]);
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.logistics_hubs.created[0].properties.hub_type, "intermodal");
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.logistics_hubs.updated[0].properties.hub_type, "freight_terminal");
+  assert.equal(payload.transportWorkbenchPointDeltas.byFamily.logistics_hubs.updated[0].properties.source, undefined);
 
   const result = await importProjectPayload(payload);
 
@@ -834,6 +875,18 @@ test("project export and import preserve transport workbench point deltas", asyn
   assert.equal(importedUpdate.properties.source, undefined);
   assert.deepEqual(result.successes[0].transportWorkbenchPointDeltas.byFamily.airport.deleted, ["airport_source_2"]);
   assert.equal(result.successes[0].transportWorkbenchPointDeltas.byFamily.port.created.length, 0);
+  assert.equal(result.successes[0].transportWorkbenchPointDeltas.byFamily.logistics_hubs.created[0].properties.operator_classification, "rail-road");
+  assert.equal(result.successes[0].transportWorkbenchPointDeltas.byFamily.logistics_hubs.updated[0].properties.operator_classification, "public");
+  assert.deepEqual(result.successes[0].transportWorkbenchPointDeltas.byFamily.logistics_hubs.deleted, ["hub_source_2"]);
+  assert.deepEqual(result.successes[0].legendControl, {
+    visible: true,
+    collapsed: true,
+    xRatio: 0.77,
+    yRatio: 0.12,
+    width: 320,
+    height: 220,
+    opacity: 0.62,
+  });
 });
 
 test("project import overlay resolver preserves every main-map transport family", () => {

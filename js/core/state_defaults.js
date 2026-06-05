@@ -1118,15 +1118,22 @@ function normalizeTransportWorkbenchActivePackIdByFamily(rawValue, activeFamily 
   return entries;
 }
 
-const TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS = ["airport", "port"];
+const TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS = [
+  "airport",
+  "port",
+  "energy_facilities",
+  "mineral_resources",
+  "logistics_hubs",
+  "industrial_zones",
+];
 
 function createDefaultTransportWorkbenchPointDeltas() {
   return {
     schemaVersion: 1,
-    byFamily: {
-      airport: { created: [], updated: [], deleted: [], revision: 0, sourcePackId: "", updatedAt: "" },
-      port: { created: [], updated: [], deleted: [], revision: 0, sourcePackId: "", updatedAt: "" },
-    },
+    byFamily: Object.fromEntries(TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS.map((familyId) => [
+      familyId,
+      { created: [], updated: [], deleted: [], revision: 0, sourcePackId: "", updatedAt: "" },
+    ])),
   };
 }
 
@@ -1466,6 +1473,7 @@ export {
   createDefaultAnnotationView,
   normalizeAnnotationView,
   TRANSPORT_WORKBENCH_FAMILY_IDS,
+  TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS,
   createDefaultTransportWorkbenchDisplayConfig,
   createDefaultTransportWorkbenchDisplayConfigs,
   normalizeTransportWorkbenchDisplayConfig,

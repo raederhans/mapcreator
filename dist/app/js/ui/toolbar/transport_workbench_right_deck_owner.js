@@ -6,6 +6,9 @@ import {
   selectTransportWorkbenchFamilyPreviewFeature,
 } from "../transport_workbench_family_preview.js";
 import {
+  TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS,
+} from "../../core/state.js";
+import {
   TRANSPORT_WORKBENCH_CONTROL_SCHEMAS,
   TRANSPORT_WORKBENCH_DENSITY_FAMILY_IDS,
   TRANSPORT_WORKBENCH_TAB_SECTION_MAP,
@@ -23,9 +26,10 @@ const TAB_MOUNTS = {
   data: "data",
 };
 const DATA_TAB_VISIBLE_ROW_LIMIT = 80;
-const EDIT_OVERLAY_FAMILY_IDS = new Set(["airport", "port"]);
+const EDIT_OVERLAY_FAMILY_IDS = new Set(TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS);
 const DATA_TAB_COLUMNS = Object.freeze([
   { key: "name", label: "Name", defaultVisible: true },
+  { key: "editStatus", label: "Edit", defaultVisible: true },
   { key: "kind", label: "Kind", defaultVisible: true },
   { key: "visible", label: "Visible", defaultVisible: true },
   { key: "source", label: "Source", defaultVisible: true },
@@ -34,6 +38,7 @@ const DATA_TAB_COLUMNS = Object.freeze([
 const DATA_TAB_SORT_OPTIONS = Object.freeze([
   { value: "default", label: "Default" },
   { value: "name", label: "Name" },
+  { value: "editStatus", label: "Edit status" },
   { value: "visible", label: "Visible first" },
   { value: "source", label: "Source" },
 ]);
@@ -112,6 +117,7 @@ const getDataTabViewState = (familyId) => {
 const getDataRowSearchText = (row = {}) => [
   row.id,
   row.name,
+  row.editStatus,
   row.kind,
   row.source,
   row.hiddenReason,
@@ -127,6 +133,13 @@ const compareDataRows = (sortKey) => (left, right) => {
   }
   if (sortKey === "visible") {
     if (!!left.visible !== !!right.visible) return left.visible ? -1 : 1;
+    return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
+  }
+  if (sortKey === "editStatus") {
+    const statusRank = { deleted: 0, updated: 1, created: 2, source: 3 };
+    const leftRank = statusRank[left.editStatus] ?? 4;
+    const rightRank = statusRank[right.editStatus] ?? 4;
+    if (leftRank !== rightRank) return leftRank - rightRank;
     return String(left.name || left.id).localeCompare(String(right.name || right.id), "ja");
   }
   if (sortKey === "source") {
@@ -150,6 +163,7 @@ const prepareDataRowsForView = (rows, viewState) => {
 
 const getDataCellText = (row, columnKey) => {
   if (columnKey === "name") return formatDataValue(row.name || row.id);
+  if (columnKey === "editStatus") return formatDataValue(row.editStatus || "source");
   if (columnKey === "kind") return formatDataValue(row.kind);
   if (columnKey === "visible") return row.visible ? "Visible" : (row.hiddenReason || "Filtered");
   if (columnKey === "source") return formatDataValue(row.source);
@@ -160,6 +174,57 @@ const getDataCellText = (row, columnKey) => {
     return formatDataValue(row.lengthMeters ? `${Math.round(Number(row.lengthMeters))} m` : "");
   }
   return formatDataValue(row[columnKey]);
+};
+
+const getPointOverlayStatusById = (overlay = {}) => {
+  const statusById = new Map();
+  const markEntries = (entries, status) => {
+    (Array.isArray(entries) ? entries : []).forEach((entry) => {
+      const id = String(entry?.id || entry || "").trim();
+      if (id) statusById.set(id, status);
+    });
+  };
+  markEntries(overlay.created || overlay.features, "created");
+  markEntries(overlay.updated, "updated");
+  markEntries(overlay.deleted, "deleted");
+  return statusById;
+};
+
+const getDataRowEditStatus = (row = {}, overlayStatusById = new Map()) => {
+  const id = String(row.id || "").trim();
+  if (id && overlayStatusById.has(id)) return overlayStatusById.get(id);
+  const properties = row.properties && typeof row.properties === "object" ? row.properties : {};
+  if (properties.edit_overlay_mode === "updated") return "updated";
+  if (row.editOverlay || properties.edit_overlay || properties.source === "user_overlay" || row.source === "user_overlay") return "created";
+  return "source";
+};
+
+const decorateDataRowsWithEditStatus = (rows, overlay = {}) => {
+  const overlayStatusById = getPointOverlayStatusById(overlay);
+  const rowIds = new Set();
+  const decorated = (Array.isArray(rows) ? rows : []).map((row) => {
+    const id = String(row?.id || "").trim();
+    if (id) rowIds.add(id);
+    return {
+      ...row,
+      editStatus: getDataRowEditStatus(row, overlayStatusById),
+    };
+  });
+  (Array.isArray(overlay.deleted) ? overlay.deleted : []).forEach((featureId) => {
+    const id = String(featureId || "").trim();
+    if (!id || rowIds.has(id)) return;
+    decorated.push({
+      id,
+      name: id,
+      kind: "",
+      source: "",
+      visible: false,
+      hiddenReason: "Deleted",
+      editStatus: "deleted",
+      properties: {},
+    });
+  });
+  return decorated;
 };
 
 export function createTransportWorkbenchRightDeckOwner({
@@ -180,6 +245,8 @@ export function createTransportWorkbenchRightDeckOwner({
   getEditOverlay = () => ({ features: [] }),
   addEditOverlayPoint = () => null,
   removeEditOverlayPoint = () => false,
+  updateEditOverlayPoint = () => null,
+  deleteEditOverlayPoint = () => false,
   selectPreviewFeature = selectTransportWorkbenchFamilyPreviewFeature,
 } = {}) {
   const getSectionsForTab = (familyId, tabId) => {
@@ -195,6 +262,7 @@ export function createTransportWorkbenchRightDeckOwner({
     const updatedFeatures = Array.isArray(overlay.updated) ? overlay.updated : [];
     const deletedFeatureIds = Array.isArray(overlay.deleted) ? overlay.deleted : [];
     const selected = previewSnapshot?.selected || {};
+    const hasSelectedFeature = !!String(selected?.id || "").trim();
     const card = document.createElement("div");
     card.className = "transport-workbench-note-card transport-workbench-edit-overlay-card";
     const title = document.createElement("div");
@@ -231,7 +299,27 @@ export function createTransportWorkbenchRightDeckOwner({
         lat: latInput.value,
       });
     });
-    form.append(nameInput, lonInput, latInput, addButton);
+    const updateButton = document.createElement("button");
+    updateButton.type = "button";
+    updateButton.className = "transport-workbench-data-action-button";
+    updateButton.textContent = translate("Save selected");
+    updateButton.disabled = !hasSelectedFeature;
+    updateButton.addEventListener("click", () => {
+      updateEditOverlayPoint(family.id, selected.id, {
+        name: nameInput.value,
+        lon: lonInput.value,
+        lat: latInput.value,
+      });
+    });
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "transport-workbench-data-action-button transport-workbench-data-action-button-subtle";
+    deleteButton.textContent = translate("Delete selected");
+    deleteButton.disabled = !hasSelectedFeature;
+    deleteButton.addEventListener("click", () => {
+      deleteEditOverlayPoint(family.id, selected.id);
+    });
+    form.append(nameInput, lonInput, latInput, addButton, updateButton, deleteButton);
     card.appendChild(form);
     const list = document.createElement("div");
     list.className = "transport-workbench-edit-overlay-list";
@@ -281,7 +369,8 @@ export function createTransportWorkbenchRightDeckOwner({
 
   const createDataTabNode = (family, config) => {
     const previewSnapshot = getPreviewSnapshot(family.id, config) || {};
-    const rows = Array.isArray(previewSnapshot.dataRows) ? previewSnapshot.dataRows : [];
+    const overlay = EDIT_OVERLAY_FAMILY_IDS.has(family.id) ? getEditOverlay(family.id) : {};
+    const rows = decorateDataRowsWithEditStatus(previewSnapshot.dataRows, overlay);
     const viewState = getDataTabViewState(family.id);
     const viewRows = prepareDataRowsForView(rows, viewState);
     const visibleRows = viewRows.slice(0, DATA_TAB_VISIBLE_ROW_LIMIT);

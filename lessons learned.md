@@ -267,6 +267,7 @@
 
 ### worktree 重放后用内容合同判断清理
 - cherry-pick 到新 main 后，旧分支 commit id 可能仍显示未合入；清理前要用目标文件 diff、patch 等价和验证结果一起确认，避免误删尚未吸收的工作。
+- 在脏父 checkout 旁边的隔离 worktree 里打 patch 时，优先使用绝对路径或确认 patch cwd；改完立刻分别查父目录和 worktree 的目标文件状态，避免误写父 checkout。
 
 ### viewport culling 先验证 chunk 粒度
 - 渲染性能优化前先记录 visible/total feature count；如果一个 required chunk 已经包含接近全量 feature，单纯缩小 viewport overscan 只能改善脏交互点探测，启动主路径仍会接近全量绘制。

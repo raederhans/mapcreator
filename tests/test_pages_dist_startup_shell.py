@@ -25,6 +25,12 @@ VERIFY_SHARED_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "verify-shared.ym
 
 class PagesDistStartupShellTest(unittest.TestCase):
 
+    def test_checked_in_pages_dist_manifest_exists(self) -> None:
+        self.assertTrue(
+            DIST_MANIFEST.exists(),
+            "dist/pages-dist-manifest.json is a checked-in Pages dist contract",
+        )
+
     def test_pages_dist_generated_text_writes_use_lf(self) -> None:
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
         self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)

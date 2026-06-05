@@ -3,6 +3,7 @@
 
 import {
   createDefaultTransportWorkbenchDisplayConfig,
+  TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS,
   normalizeTransportWorkbenchDisplayConfig,
   normalizeTransportWorkbenchPointDeltas,
   normalizeTransportWorkbenchUiState,
@@ -34,7 +35,7 @@ import {
 } from "./transport_workbench_config_owner.js";
 
 const clonePlainObject = (value) => JSON.parse(JSON.stringify(value || {}));
-const EDIT_OVERLAY_FAMILY_IDS = new Set(["airport", "port"]);
+const EDIT_OVERLAY_FAMILY_IDS = new Set(TRANSPORT_WORKBENCH_EDIT_OVERLAY_FAMILY_IDS);
 const isEditOverlayCoordinate = (lon, lat) => (
   Number.isFinite(lon)
   && Number.isFinite(lat)
@@ -388,17 +389,24 @@ export function createTransportWorkbenchStateOwner(runtimeState) {
     const pointDeltas = normalizeTransportWorkbenchPointDeltas(runtimeState.transportWorkbenchPointDeltas);
     const familyDeltas = pointDeltas.byFamily[normalizedFamilyId];
     const packId = resolveTransportWorkbenchPackIdForFamily(uiState, normalizedFamilyId);
+    const created = Array.isArray(familyDeltas?.created) ? [...familyDeltas.created] : [];
+    const createdIndex = created.findIndex((feature) => feature.id === normalizedFeatureId);
+    const existingUpdate = Array.isArray(familyDeltas?.updated)
+      ? familyDeltas.updated.find((feature) => feature.id === normalizedFeatureId)
+      : null;
+    const existingFeature = createdIndex !== -1 ? created[createdIndex] : existingUpdate;
+    const nextProperties = point.properties && typeof point.properties === "object"
+      ? { ...point.properties }
+      : { ...((existingFeature?.properties && typeof existingFeature.properties === "object") ? existingFeature.properties : {}) };
     const nextFeature = {
       id: normalizedFeatureId,
       family: normalizedFamilyId,
       packId,
-      name: String(point.name || "").trim(),
+      name: String(point.name ?? existingFeature?.name ?? "").trim(),
       lon,
       lat,
-      properties: point.properties && typeof point.properties === "object" ? { ...point.properties } : {},
+      properties: nextProperties,
     };
-    const created = Array.isArray(familyDeltas?.created) ? [...familyDeltas.created] : [];
-    const createdIndex = created.findIndex((feature) => feature.id === normalizedFeatureId);
     if (createdIndex !== -1) {
       created[createdIndex] = { ...created[createdIndex], ...nextFeature };
     }
