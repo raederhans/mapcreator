@@ -167,6 +167,10 @@
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
 
+### HGO runtime seed 要显式组合 mod 与 vanilla 色源
+- HGO state 历史会引用 base-game owner/controller tag；seed builder 要把 HGO palette 和 `hoi4_vanilla.palette.json` 作为有序显式色源，并继续硬失败剩余缺色 tag。
+- 异步 preview 加载要带 generation token；用户关闭或 dispose 后，旧 loader 结果不能回写 READY 状态。
+
 ### HOI4 state ownership 复用已验证 parser
 - 新建 HGO / HOI4 seed builder 时，state 的 owner、controller、core、dated history 必须复用 `scenario_builder.hoi4.parser` 语义；浅层正则会误读 `history`、`remove_core_of` 和 `controller -> owner` fallback。
 

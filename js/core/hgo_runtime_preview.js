@@ -1,0 +1,245 @@
+import { createHgoRasterRenderer } from "./hgo_raster_renderer.js";
+
+const HGO_RUNTIME_PREVIEW_STORAGE_KEY = "mapcreator:hgo-runtime-preview:enabled";
+
+const HGO_RUNTIME_PREVIEW_STATUS = Object.freeze({
+  IDLE: "idle",
+  LOADING: "loading",
+  READY: "ready",
+  UNAVAILABLE: "unavailable",
+  ERROR: "error",
+});
+
+function createDefaultHgoRuntimePreviewState() {
+  return {
+    enabled: false,
+    status: HGO_RUNTIME_PREVIEW_STATUS.IDLE,
+    errorMessage: "",
+    summary: null,
+    renderSummary: null,
+    inspectResult: null,
+  };
+}
+
+function normalizePreviewState(value) {
+  const state = value && typeof value === "object" ? value : {};
+  const status = Object.values(HGO_RUNTIME_PREVIEW_STATUS).includes(state.status)
+    ? state.status
+    : HGO_RUNTIME_PREVIEW_STATUS.IDLE;
+  return {
+    enabled: !!state.enabled,
+    status,
+    errorMessage: String(state.errorMessage || ""),
+    summary: state.summary || null,
+    renderSummary: state.renderSummary || null,
+    inspectResult: state.inspectResult || null,
+  };
+}
+
+function ensureHgoRuntimePreviewState(runtimeState) {
+  if (!runtimeState || typeof runtimeState !== "object") {
+    throw new TypeError("HGO runtime preview requires a runtime state object.");
+  }
+  const normalized = normalizePreviewState(runtimeState.hgoRuntimePreview);
+  if (runtimeState.hgoRuntimePreview && typeof runtimeState.hgoRuntimePreview === "object") {
+    Object.assign(runtimeState.hgoRuntimePreview, normalized);
+  } else {
+    runtimeState.hgoRuntimePreview = normalized;
+  }
+  return runtimeState.hgoRuntimePreview;
+}
+
+function readPersistedPreviewEnabled(storage) {
+  try {
+    const stored = storage?.getItem?.(HGO_RUNTIME_PREVIEW_STORAGE_KEY);
+    return stored === "true" ? true : stored === "false" ? false : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistPreviewEnabled(storage, enabled) {
+  try {
+    storage?.setItem?.(HGO_RUNTIME_PREVIEW_STORAGE_KEY, enabled ? "true" : "false");
+  } catch {}
+}
+
+function buildRenderSummary(rendered) {
+  if (!rendered) return null;
+  return Object.freeze({
+    width: rendered.width,
+    height: rendered.height,
+    ownershipMode: rendered.ownershipMode,
+    resolvedPixelCount: rendered.resolvedPixelCount,
+    unresolvedPixelCount: rendered.unresolvedPixelCount,
+  });
+}
+
+function setPreviewUnavailable(previewState, message) {
+  previewState.enabled = false;
+  previewState.status = HGO_RUNTIME_PREVIEW_STATUS.UNAVAILABLE;
+  previewState.errorMessage = message;
+  previewState.summary = null;
+  previewState.renderSummary = null;
+  previewState.inspectResult = null;
+  return previewState;
+}
+
+function createHgoRuntimePreviewController(runtimeState, {
+  canvas = null,
+  loadSeed = null,
+  loadRaster = null,
+  storage = globalThis.localStorage,
+  renderOptions = {},
+} = {}) {
+  const previewState = ensureHgoRuntimePreviewState(runtimeState);
+  const persisted = readPersistedPreviewEnabled(storage);
+  if (persisted !== null) {
+    previewState.enabled = persisted;
+  }
+  if (persisted === true && (typeof loadSeed !== "function" || typeof loadRaster !== "function")) {
+    persistPreviewEnabled(storage, false);
+    setPreviewUnavailable(previewState, "HGO runtime preview seed and raster loaders are not configured.");
+  }
+
+  let renderer = null;
+  let loadingPromise = null;
+  let loadGeneration = 0;
+
+  const disposeRenderer = () => {
+    if (renderer) {
+      renderer.dispose();
+      renderer = null;
+    }
+  };
+
+  const renderPreview = () => {
+    if (!renderer) return null;
+    const rendered = canvas ? renderer.renderToCanvas(canvas, renderOptions) : renderer.renderToBuffer(renderOptions);
+    previewState.renderSummary = buildRenderSummary(rendered);
+    return rendered;
+  };
+
+  const loadPreview = async (generation) => {
+    if (renderer) return renderer;
+    if (typeof loadSeed !== "function" || typeof loadRaster !== "function") {
+      return null;
+    }
+    const [seed, raster] = await Promise.all([loadSeed(), loadRaster()]);
+    if (generation !== loadGeneration || !previewState.enabled) {
+      return null;
+    }
+    renderer = createHgoRasterRenderer({ seed, ...raster });
+    previewState.summary = renderer.getSummary();
+    renderPreview();
+    return renderer;
+  };
+
+  const setEnabled = async (nextEnabled) => {
+    const enabled = !!nextEnabled;
+    if (!enabled) {
+      loadGeneration += 1;
+      loadingPromise = null;
+      disposeRenderer();
+      previewState.enabled = false;
+      previewState.status = HGO_RUNTIME_PREVIEW_STATUS.IDLE;
+      previewState.errorMessage = "";
+      previewState.summary = null;
+      previewState.renderSummary = null;
+      previewState.inspectResult = null;
+      persistPreviewEnabled(storage, false);
+      return previewState;
+    }
+
+    if (previewState.enabled && renderer) {
+      previewState.status = HGO_RUNTIME_PREVIEW_STATUS.READY;
+      renderPreview();
+      return previewState;
+    }
+
+    if (typeof loadSeed !== "function" || typeof loadRaster !== "function") {
+      persistPreviewEnabled(storage, false);
+      return setPreviewUnavailable(previewState, "HGO runtime preview seed and raster loaders are not configured.");
+    }
+
+    if (!loadingPromise) {
+      const generation = loadGeneration + 1;
+      loadGeneration = generation;
+      previewState.enabled = true;
+      previewState.status = HGO_RUNTIME_PREVIEW_STATUS.LOADING;
+      previewState.errorMessage = "";
+      persistPreviewEnabled(storage, true);
+      loadingPromise = loadPreview(generation)
+        .then((loadedRenderer) => {
+          if (generation !== loadGeneration || !previewState.enabled || !loadedRenderer) {
+            return previewState;
+          }
+          previewState.enabled = true;
+          previewState.status = HGO_RUNTIME_PREVIEW_STATUS.READY;
+          previewState.errorMessage = "";
+          return previewState;
+        })
+        .catch((error) => {
+          if (generation !== loadGeneration) {
+            return previewState;
+          }
+          disposeRenderer();
+          previewState.enabled = false;
+          previewState.status = HGO_RUNTIME_PREVIEW_STATUS.ERROR;
+          previewState.errorMessage = error?.message || String(error || "HGO runtime preview failed.");
+          previewState.summary = null;
+          previewState.renderSummary = null;
+          previewState.inspectResult = null;
+          persistPreviewEnabled(storage, false);
+          return previewState;
+        })
+        .finally(() => {
+          if (generation === loadGeneration) {
+            loadingPromise = null;
+          }
+        });
+    }
+
+    return loadingPromise;
+  };
+
+  const toggle = () => setEnabled(!previewState.enabled);
+
+  const inspectPoint = (x, y) => {
+    if (!renderer) return null;
+    const hit = renderer.inspectPoint(x, y);
+    previewState.inspectResult = hit;
+    return hit;
+  };
+
+  const dispose = () => {
+    loadGeneration += 1;
+    disposeRenderer();
+    loadingPromise = null;
+    previewState.enabled = false;
+    previewState.status = HGO_RUNTIME_PREVIEW_STATUS.IDLE;
+    previewState.errorMessage = "";
+    previewState.summary = null;
+    previewState.renderSummary = null;
+    previewState.inspectResult = null;
+    persistPreviewEnabled(storage, false);
+  };
+
+  return Object.freeze({
+    dispose,
+    getState: () => previewState,
+    inspectPoint,
+    renderPreview,
+    setEnabled,
+    toggle,
+  });
+}
+
+export {
+  HGO_RUNTIME_PREVIEW_STATUS,
+  HGO_RUNTIME_PREVIEW_STORAGE_KEY,
+  createDefaultHgoRuntimePreviewState,
+  createHgoRuntimePreviewController,
+  ensureHgoRuntimePreviewState,
+  readPersistedPreviewEnabled,
+};

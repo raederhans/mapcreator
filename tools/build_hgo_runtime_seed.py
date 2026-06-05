@@ -3,12 +3,19 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
+import os
 import re
+import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from scenario_builder.hoi4.parser import parse_state_file as parse_hoi4_state_file
 
@@ -16,11 +23,18 @@ from scenario_builder.hoi4.parser import parse_state_file as parse_hoi4_state_fi
 SOURCE_ID = "hgo_mod_2241701657"
 RUNTIME_ID = "hgo_raster_runtime_seed"
 DEFAULT_OUTPUT = Path(".runtime/hgo_runtime/seed.json")
+DEFAULT_SMOKE_REPORT = Path(".runtime/reports/generated/hgo_runtime_seed_smoke.json")
+DEFAULT_COUNTRY_COLOR_SOURCES = (
+    Path("data/palettes/hgo.palette.json"),
+    Path("data/palettes/hoi4_vanilla.palette.json"),
+)
+DEFAULT_COUNTRY_COLOR_SOURCE = DEFAULT_COUNTRY_COLOR_SOURCES[0]
 REQUIRED_SOURCE_PATHS = (
     Path("map/definition.csv"),
     Path("map/provinces.bmp"),
     Path("history/states"),
     Path("common/country_tags"),
+    Path("common/countries"),
 )
 
 ASSIGNMENT_VALUE_RE = r'"([^"]+)"|([A-Za-z0-9_.:-]+)'
@@ -37,12 +51,33 @@ COLOR_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+HEX_COLOR_RE = re.compile(r"^#?([0-9A-Fa-f]{6})$")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build an independent HGO runtime seed.")
-    parser.add_argument("--hgo-root", "--source-root", dest="hgo_root", required=True, help="HGO source root.")
+    parser.add_argument(
+        "--hgo-root",
+        "--source-root",
+        dest="hgo_root",
+        default=os.environ.get("HGO_ROOT", ""),
+        help="HGO source root. Defaults to HGO_ROOT.",
+    )
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Runtime seed output path.")
+    parser.add_argument(
+        "--country-color-source",
+        action="append",
+        default=None,
+        help=(
+            "Optional palette JSON used as an explicit source for owner/controller country colors. "
+            "Can be passed multiple times; pass an empty value to skip color-source packs."
+        ),
+    )
+    parser.add_argument(
+        "--smoke-report",
+        default=str(DEFAULT_SMOKE_REPORT),
+        help="Smoke report output path. Pass an empty value to skip report writing.",
+    )
     parser.add_argument("--as-of-date", default="", help="Optional HOI4 history date, for example 1939.1.1.")
     return parser.parse_args()
 
@@ -54,6 +89,26 @@ def utc_now() -> str:
 def dump_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def resolve_country_color_source_arg(value: str) -> Path | None:
+    if not value:
+        return None
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    cwd_path = Path.cwd() / path
+    if cwd_path.exists():
+        return cwd_path
+    return REPO_ROOT / path
 
 
 def validate_source_root(root: Path) -> None:
@@ -121,6 +176,14 @@ def rgb_to_key(rgb: Iterable[int]) -> int:
 
 def rgb_to_hex(rgb: Iterable[int]) -> str:
     return "#{:02X}{:02X}{:02X}".format(*[max(0, min(255, int(value))) for value in rgb])
+
+
+def parse_hex_color(value: object) -> tuple[list[int], str]:
+    match = HEX_COLOR_RE.match(str(value or "").strip())
+    if not match:
+        return [], ""
+    color_hex = f"#{match.group(1).upper()}"
+    return [int(color_hex[index:index + 2], 16) for index in (1, 3, 5)], color_hex
 
 
 def parse_definition_csv(path: Path) -> dict[int, dict[str, object]]:
@@ -239,6 +302,67 @@ def parse_country_color(path: Path) -> tuple[list[int], str]:
     return rgb, rgb_to_hex(rgb)
 
 
+def country_color_source_label(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
+def load_country_color_source(path: Path | None) -> tuple[dict[str, dict[str, object]], dict[str, object]]:
+    if path is None:
+        return {}, {}
+    resolved = path.resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(f"HGO country color source not found: {resolved}")
+    payload = json.loads(resolved.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or not isinstance(payload.get("entries"), dict):
+        raise ValueError(f"HGO country color source must contain an entries object: {resolved}")
+
+    preferred_field = str(payload.get("preferred_runtime_color_field") or "map_hex")
+    color_fields = list(dict.fromkeys([preferred_field, "map_hex", "color", "ui_hex", "country_file_hex"]))
+    entries: dict[str, dict[str, object]] = {}
+    for raw_tag, raw_entry in sorted(payload["entries"].items()):
+        if not isinstance(raw_entry, dict):
+            continue
+        tag = str(raw_tag).upper()
+        for field in color_fields:
+            rgb, color_hex = parse_hex_color(raw_entry.get(field))
+            if not color_hex:
+                continue
+            entries[tag] = {
+                "tag": tag,
+                "color_rgb": rgb,
+                "color_hex": color_hex,
+                "field": field,
+                "source_path": country_color_source_label(resolved),
+                "palette_id": str(payload.get("palette_id") or ""),
+            }
+            break
+
+    return entries, {
+        "path": country_color_source_label(resolved),
+        "palette_id": str(payload.get("palette_id") or ""),
+        "preferred_runtime_color_field": preferred_field,
+        "available_color_count": len(entries),
+    }
+
+
+def load_country_color_sources(
+    paths: Iterable[Path],
+) -> tuple[dict[str, dict[str, object]], list[dict[str, object]]]:
+    combined_entries: dict[str, dict[str, object]] = {}
+    summaries: list[dict[str, object]] = []
+    for path in paths:
+        entries, summary = load_country_color_source(path)
+        if summary:
+            summaries.append(summary)
+        for tag, entry in entries.items():
+            combined_entries.setdefault(tag, entry)
+    return combined_entries, summaries
+
+
 def country_path_for_ref(root: Path, ref: str) -> Path:
     normalized = ref.replace("\\", "/").lstrip("/")
     if normalized.startswith("common/"):
@@ -246,9 +370,22 @@ def country_path_for_ref(root: Path, ref: str) -> Path:
     return root / "common" / normalized
 
 
-def load_countries(root: Path, states: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+def load_countries(
+    root: Path,
+    states: list[dict[str, object]],
+    country_color_entries: dict[str, dict[str, object]] | None = None,
+) -> dict[str, dict[str, object]]:
+    country_color_entries = country_color_entries or {}
     state_counts = Counter(str(state.get("owner") or "").upper() for state in states if state.get("owner"))
     province_counts: Counter[str] = Counter()
+    used_owner_controller_tags = sorted(
+        {
+            str(state.get(key) or "").upper()
+            for state in states
+            for key in ("owner", "controller")
+            if state.get(key)
+        }
+    )
     for state in states:
         owner = str(state.get("owner") or "").upper()
         if owner:
@@ -259,16 +396,66 @@ def load_countries(root: Path, states: list[dict[str, object]]) -> dict[str, dic
         country_path = country_path_for_ref(root, ref)
         rgb, color_hex = parse_country_color(country_path)
         source_path = country_path.relative_to(root).as_posix() if country_path.exists() else ""
+        color_source = "country_file" if color_hex else ""
+        if not color_hex and country_color_entries.get(tag):
+            source_entry = country_color_entries[tag]
+            rgb = list(source_entry["color_rgb"])
+            color_hex = str(source_entry["color_hex"])
+            color_source = f"palette_pack:{source_entry['palette_id']}:{source_entry['field']}"
         countries[tag] = {
             "tag": tag,
             "definition_path": ref,
             "source_path": source_path,
             "color_rgb": rgb,
             "color_hex": color_hex,
+            "color_source": color_source,
+            "state_count": int(state_counts.get(tag, 0)),
+            "province_count": int(province_counts.get(tag, 0)),
+        }
+        if color_source.startswith("palette_pack:"):
+            countries[tag]["country_color_source_path"] = country_color_entries[tag]["source_path"]
+
+    for tag in used_owner_controller_tags:
+        if tag in countries or tag not in country_color_entries:
+            continue
+        source_entry = country_color_entries[tag]
+        countries[tag] = {
+            "tag": tag,
+            "definition_path": "",
+            "source_path": "",
+            "color_rgb": list(source_entry["color_rgb"]),
+            "color_hex": str(source_entry["color_hex"]),
+            "color_source": f"palette_pack:{source_entry['palette_id']}:{source_entry['field']}",
+            "country_color_source_path": source_entry["source_path"],
             "state_count": int(state_counts.get(tag, 0)),
             "province_count": int(province_counts.get(tag, 0)),
         }
     return countries
+
+
+def validate_country_color_integrity(
+    states: list[dict[str, object]],
+    countries: dict[str, dict[str, object]],
+) -> dict[str, object]:
+    used_tags = sorted(
+        {
+            str(state.get(key) or "").upper()
+            for state in states
+            for key in ("owner", "controller")
+            if state.get(key)
+        }
+    )
+    missing_color_tags = [
+        tag
+        for tag in used_tags
+        if not countries.get(tag) or not countries[tag].get("color_hex")
+    ]
+    if missing_color_tags:
+        raise ValueError(
+            "HGO state owner/controller tags require country color definitions: "
+            + ", ".join(missing_color_tags[:20])
+        )
+    return {"missing_owner_color_tags": missing_color_tags}
 
 
 def build_province_to_state_index(
@@ -332,12 +519,15 @@ def summarize_payload(
         "country_color_count": sum(1 for country in countries.values() if country.get("color_hex")),
         "missing_definition_province_count": len(integrity["missing_definition_province_ids"]),
         "duplicate_state_province_ref_count": len(integrity["duplicate_state_province_refs"]),
+        "missing_owner_color_count": len(integrity["missing_owner_color_tags"]),
     }
 
 
 def build_runtime_seed(
     root: Path,
     *,
+    country_color_source: Path | None = None,
+    country_color_sources: Iterable[Path] | None = None,
     generated_at_utc: str | None = None,
     as_of_date: str | None = None,
 ) -> dict[str, object]:
@@ -347,8 +537,13 @@ def build_runtime_seed(
     # country tag/color、province_to_state。前端索引只消费这些稳定产物。
     provinces = parse_definition_csv(root / "map" / "definition.csv")
     states = load_states(root, as_of_date=as_of_date)
-    countries = load_countries(root, states)
+    resolved_country_color_sources = list(country_color_sources or [])
+    if country_color_source is not None:
+        resolved_country_color_sources.insert(0, country_color_source)
+    country_color_entries, country_color_source_summaries = load_country_color_sources(resolved_country_color_sources)
+    countries = load_countries(root, states, country_color_entries)
     province_to_state, integrity = build_province_to_state_index(provinces, states)
+    integrity.update(validate_country_color_integrity(states, countries))
     summary = summarize_payload(provinces, states, countries, province_to_state, integrity)
 
     return {
@@ -368,6 +563,8 @@ def build_runtime_seed(
                 "common/country_tags",
                 "common/countries",
             ],
+            "country_color_source": country_color_source_summaries[0] if country_color_source_summaries else {},
+            "country_color_sources": country_color_source_summaries,
         },
         "summary": summary,
         "provinces": {str(key): value for key, value in provinces.items()},
@@ -378,14 +575,81 @@ def build_runtime_seed(
     }
 
 
+def describe_required_source_paths(root: Path) -> dict[str, dict[str, object]]:
+    described: dict[str, dict[str, object]] = {}
+    for rel_path in REQUIRED_SOURCE_PATHS:
+        path = root / rel_path
+        entry = {
+            "exists": path.exists(),
+            "kind": "directory" if path.is_dir() else "file" if path.is_file() else "",
+        }
+        if path.is_file():
+            entry["size_bytes"] = path.stat().st_size
+        described[rel_path.as_posix()] = entry
+    return described
+
+
+def build_smoke_report(root: Path, seed_output: Path, payload: dict[str, object]) -> dict[str, object]:
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    integrity = payload.get("integrity") if isinstance(payload.get("integrity"), dict) else {}
+    seed_written = seed_output.exists() and seed_output.is_file()
+    checks = {
+        "seed_written": seed_written,
+        "integrity_clean": not integrity.get("missing_definition_province_ids")
+        and not integrity.get("duplicate_state_province_refs")
+        and not integrity.get("missing_owner_color_tags"),
+        "has_provinces": int(summary.get("province_count") or 0) > 0,
+        "has_states": int(summary.get("state_count") or 0) > 0,
+        "has_countries": int(summary.get("country_count") or 0) > 0,
+        "has_mapped_provinces": int(summary.get("mapped_province_count") or 0) > 0,
+    }
+    return {
+        "schema_version": 1,
+        "report_id": "hgo_runtime_seed_smoke",
+        "status": "pass" if all(checks.values()) else "fail",
+        "generated_at_utc": payload.get("generated_at_utc") or utc_now(),
+        "source": payload.get("source", {}),
+        "source_root": str(root.resolve()),
+        "required_paths": describe_required_source_paths(root),
+        "seed_output": {
+            "path": str(seed_output),
+            "size_bytes": seed_output.stat().st_size if seed_written else 0,
+            "sha256": file_sha256(seed_output) if seed_written else "",
+        },
+        "summary": summary,
+        "integrity": integrity,
+        "checks": checks,
+    }
+
+
 def main() -> None:
     args = parse_args()
+    if not args.hgo_root:
+        raise SystemExit("HGO source root not provided. Pass --hgo-root or set HGO_ROOT.")
     root = Path(args.hgo_root)
     if not root.exists():
         raise SystemExit(f"HGO source root not found: {root}")
-    payload = build_runtime_seed(root, as_of_date=args.as_of_date or None)
+    raw_country_color_sources = (
+        args.country_color_source
+        if args.country_color_source is not None
+        else [str(path) for path in DEFAULT_COUNTRY_COLOR_SOURCES]
+    )
+    country_color_sources = [
+        resolved
+        for value in raw_country_color_sources
+        for resolved in [resolve_country_color_source_arg(value)]
+        if resolved is not None
+    ]
+    payload = build_runtime_seed(
+        root,
+        country_color_sources=country_color_sources,
+        as_of_date=args.as_of_date or None,
+    )
     output = Path(args.output)
     dump_json(output, payload)
+    report_path = Path(args.smoke_report) if args.smoke_report else None
+    if report_path:
+        dump_json(report_path, build_smoke_report(root, output, payload))
     summary = payload["summary"]
     print(
         "[HGO Runtime Seed] "
@@ -394,6 +658,7 @@ def main() -> None:
         f"mapped={summary['mapped_province_count']} "
         f"countries={summary['country_count']} "
         f"output={output}"
+        + (f" smoke_report={report_path}" if report_path else "")
     )
 
 

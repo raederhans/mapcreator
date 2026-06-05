@@ -76,6 +76,7 @@ import {
   TRANSPORT_WORKBENCH_INSPECTOR_TABS,
 } from "./toolbar/transport_workbench_controller.js";
 import { createWorkspaceChromeSupportSurfaceController } from "./toolbar/workspace_chrome_support_surface_controller.js";
+import { createHgoRuntimePreviewToolbarController } from "./toolbar/hgo_runtime_preview_controller.js";
 const state = runtimeState;
 
 // Quick Colors 优先反映当前 palette pack，未启用 pack 时再退回静态主题色。
@@ -454,6 +455,7 @@ function initToolbar({ render } = {}) {
     runtimeState.ui.responsiveChromeTier = nextTier;
   };
   applyResponsiveChromeDefaults();
+  let hgoRuntimePreviewController = null;
 
   const persistDeveloperMode = () => {
     try {
@@ -497,6 +499,7 @@ function initToolbar({ render } = {}) {
         devWorkspaceToggleBtn.click();
       }
     }
+    hgoRuntimePreviewController?.sync?.();
   };
 
   const setDeveloperMode = (nextValue) => {
@@ -516,6 +519,13 @@ function initToolbar({ render } = {}) {
       runtimeState.ui.developerMode = storedDeveloperMode === "true";
     }
   } catch {}
+  hgoRuntimePreviewController = createHgoRuntimePreviewToolbarController({
+    runtimeState,
+    anchorButton: developerModeBtn,
+    canvas: runtimeState.colorCanvas || document.getElementById("colorCanvas"),
+    storage: globalThis.localStorage,
+    documentRef: document,
+  });
   updateLanguageToggleUi();
   syncDeveloperModeUi();
 
@@ -717,6 +727,15 @@ function initToolbar({ render } = {}) {
     setDeveloperMode(false);
     return false;
   });
+  registerRuntimeHook(state, "setHgoRuntimePreviewEnabledFn", (nextEnabled) => (
+    hgoRuntimePreviewController?.setEnabled?.(nextEnabled)
+  ));
+  registerRuntimeHook(state, "toggleHgoRuntimePreviewFn", () => (
+    hgoRuntimePreviewController?.toggle?.()
+  ));
+  registerRuntimeHook(state, "syncHgoRuntimePreviewUiFn", () => (
+    hgoRuntimePreviewController?.sync?.()
+  ));
 
   const syncExportPreviewSourceOptions = () => {
     return exportWorkbenchController?.syncExportPreviewSourceOptions();

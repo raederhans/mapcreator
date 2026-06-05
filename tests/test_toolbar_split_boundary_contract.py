@@ -101,6 +101,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("createTransportWorkbenchController", content)
         self.assertIn('./toolbar/workspace_chrome_support_surface_controller.js', content)
         self.assertIn("createWorkspaceChromeSupportSurfaceController", content)
+        self.assertIn('./toolbar/hgo_runtime_preview_controller.js', content)
+        self.assertIn("createHgoRuntimePreviewToolbarController", content)
         self.assertIn('./ui_surface_url_state.js', content)
         self.assertIn("createUiSurfaceUrlState", content)
         self.assertIn('./toolbar/appearance_controls_controller.js', content)

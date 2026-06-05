@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 283225
+      "size_bytes": 283680
     },
     {
       "path": "app/data/CATALOG.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29774,7 +29774,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -36381,8 +36381,16 @@
       "size_bytes": 10452
     },
     {
+      "path": "app/js/core/hgo_raster_renderer.js",
+      "size_bytes": 6813
+    },
+    {
       "path": "app/js/core/hgo_runtime_index.js",
       "size_bytes": 8895
+    },
+    {
+      "path": "app/js/core/hgo_runtime_preview.js",
+      "size_bytes": 7560
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36981,6 +36989,10 @@
       "size_bytes": 32948
     },
     {
+      "path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
+      "size_bytes": 4034
+    },
+    {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
       "size_bytes": 18689
     },
@@ -37062,7 +37074,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 134658
+      "size_bytes": 135503
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -37162,11 +37174,11 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 2938
+      "size_bytes": 3007
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 863
+      "size_bytes": 880
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37210,7 +37222,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1051472
+      "size_bytes": 1051759
     },
     {
       "path": "styles.css",
@@ -37227,5 +37239,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1093615406
+  "total_bytes": 1093635609
 }

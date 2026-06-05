@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 import unittest
 
-from tools.build_hgo_runtime_seed import DEFAULT_OUTPUT, build_runtime_seed
+from tools.build_hgo_runtime_seed import (
+    DEFAULT_COUNTRY_COLOR_SOURCES,
+    DEFAULT_COUNTRY_COLOR_SOURCE,
+    DEFAULT_OUTPUT,
+    DEFAULT_SMOKE_REPORT,
+    build_runtime_seed,
+    build_smoke_report,
+    dump_json,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def write_minimal_hgo_source(
@@ -64,6 +77,17 @@ state={{
     (root / "common" / "countries" / "BBB - Controller.txt").write_text(
         "color = rgb { 4 5 6 }\n",
         encoding="utf-8",
+    )
+
+
+def write_palette_source(path: Path, entries: dict[str, dict[str, str]]) -> None:
+    dump_json(
+        path,
+        {
+            "palette_id": "test_hgo",
+            "preferred_runtime_color_field": "map_hex",
+            "entries": entries,
+        },
     )
 
 
@@ -132,6 +156,69 @@ class HgoRuntimeSeedBuilderTest(unittest.TestCase):
         self.assertEqual(DEFAULT_OUTPUT.parts[0], ".runtime")
         self.assertEqual(DEFAULT_OUTPUT.as_posix(), ".runtime/hgo_runtime/seed.json")
 
+    def test_default_smoke_report_stays_under_runtime_reports_folder(self) -> None:
+        self.assertEqual(DEFAULT_SMOKE_REPORT.parts[:3], (".runtime", "reports", "generated"))
+        self.assertEqual(DEFAULT_SMOKE_REPORT.as_posix(), ".runtime/reports/generated/hgo_runtime_seed_smoke.json")
+
+    def test_default_country_color_source_points_to_hgo_palette_pack(self) -> None:
+        self.assertEqual(DEFAULT_COUNTRY_COLOR_SOURCE.as_posix(), "data/palettes/hgo.palette.json")
+        self.assertEqual(
+            [path.as_posix() for path in DEFAULT_COUNTRY_COLOR_SOURCES],
+            ["data/palettes/hgo.palette.json", "data/palettes/hoi4_vanilla.palette.json"],
+        )
+
+    def test_smoke_report_records_seed_digest_and_required_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_minimal_hgo_source(root)
+            payload = build_runtime_seed(root, generated_at_utc="2026-06-05T00:00:00Z")
+            output = root / ".runtime" / "hgo_runtime" / "seed.json"
+            dump_json(output, payload)
+
+            report = build_smoke_report(root, output, payload)
+
+            self.assertEqual(report["report_id"], "hgo_runtime_seed_smoke")
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["seed_output"]["size_bytes"], output.stat().st_size)
+            self.assertEqual(len(report["seed_output"]["sha256"]), 64)
+            self.assertTrue(report["checks"]["seed_written"])
+            self.assertTrue(report["checks"]["has_mapped_provinces"])
+            self.assertEqual(report["summary"]["province_count"], 4)
+            self.assertTrue(report["required_paths"]["map/definition.csv"]["exists"])
+            self.assertEqual(report["required_paths"]["history/states"]["kind"], "directory")
+
+    def test_cli_runs_from_non_repo_cwd_and_writes_seed_and_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir) / "hgo"
+            root.mkdir()
+            write_minimal_hgo_source(root)
+            run_dir = Path(tmp_dir) / "run"
+            run_dir.mkdir()
+            output = run_dir / "seed.json"
+            report = run_dir / "smoke.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "build_hgo_runtime_seed.py"),
+                    "--hgo-root",
+                    str(root),
+                    "--output",
+                    str(output),
+                    "--smoke-report",
+                    str(report),
+                ],
+                cwd=run_dir,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(output.exists())
+            self.assertTrue(report.exists())
+            self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["status"], "pass")
+
     def test_missing_required_source_path_hard_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
@@ -139,6 +226,60 @@ class HgoRuntimeSeedBuilderTest(unittest.TestCase):
             (root / "map" / "provinces.bmp").unlink()
 
             with self.assertRaisesRegex(FileNotFoundError, "map/provinces.bmp"):
+                build_runtime_seed(root)
+
+    def test_missing_countries_folder_hard_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_minimal_hgo_source(root)
+            (root / "common" / "countries" / "AAA - Testland.txt").unlink()
+            (root / "common" / "countries" / "BBB - Controller.txt").unlink()
+            (root / "common" / "countries").rmdir()
+
+            with self.assertRaisesRegex(FileNotFoundError, "common/countries"):
+                build_runtime_seed(root)
+
+    def test_country_color_source_supplies_missing_country_file_color(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_minimal_hgo_source(root)
+            (root / "common" / "countries" / "AAA - Testland.txt").write_text("", encoding="utf-8")
+            palette_source = root / "hgo.palette.json"
+            write_palette_source(palette_source, {"AAA": {"map_hex": "#112233"}})
+
+            payload = build_runtime_seed(root, country_color_source=palette_source)
+
+            self.assertEqual(payload["countries"]["AAA"]["color_hex"], "#112233")
+            self.assertEqual(payload["countries"]["AAA"]["color_source"], "palette_pack:test_hgo:map_hex")
+            self.assertEqual(
+                payload["countries"]["AAA"]["country_color_source_path"],
+                str(palette_source.resolve()),
+            )
+            self.assertEqual(payload["summary"]["missing_owner_color_count"], 0)
+            self.assertEqual(payload["source"]["country_color_source"]["palette_id"], "test_hgo")
+
+    def test_country_color_source_supplies_owner_tag_without_country_tag_file_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_minimal_hgo_source(root, state_owner="CCC")
+            palette_source = root / "hgo.palette.json"
+            write_palette_source(palette_source, {"CCC": {"map_hex": "#445566"}})
+
+            payload = build_runtime_seed(root, country_color_source=palette_source)
+
+            self.assertEqual(payload["countries"]["CCC"]["definition_path"], "")
+            self.assertEqual(payload["countries"]["CCC"]["source_path"], "")
+            self.assertEqual(payload["countries"]["CCC"]["color_rgb"], [68, 85, 102])
+            self.assertEqual(payload["countries"]["CCC"]["color_source"], "palette_pack:test_hgo:map_hex")
+            self.assertEqual(payload["countries"]["CCC"]["state_count"], 1)
+
+    def test_owner_and_controller_tags_require_country_colors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_minimal_hgo_source(root)
+            (root / "common" / "countries" / "AAA - Testland.txt").write_text("", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "AAA"):
                 build_runtime_seed(root)
 
     def test_duplicate_province_rgb_hard_fails(self) -> None:
