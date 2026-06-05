@@ -363,12 +363,6 @@ TRACKED_SEAM_PAIRS = [
     ("tno_arafura_sea", "tno_gulf_of_carpentaria"),
     ("tno_arafura_sea", "tno_timor_sea"),
 ]
-TRACKED_PARENT_CHILD_SEAM_PAIRS = [
-    ("tno_greenland_sea", "tno_fram_strait"),
-    ("tno_bering_sea", "tno_anadyrskiy_zaliv"),
-]
-
-
 def _load_scenario_water_features():
     payload = json.loads(SCENARIO_WATER_PATH.read_text(encoding="utf-8"))
     return payload.get("features", [])
@@ -1979,17 +1973,29 @@ def test_tno_tracked_neighbor_pairs_do_not_leave_gaps():
     assert failures == []
 
 
-def test_tno_parent_child_seam_pairs_do_not_overlap():
+def test_tno_parent_child_water_regions_do_not_overlap():
     feature_map = _feature_map(_load_scenario_water_features())
     failures = []
-    for parent_id, child_id in TRACKED_PARENT_CHILD_SEAM_PAIRS:
+    checked_pairs = set()
+    checked_count = 0
+    for child in feature_map.values():
+        child_props = child.get("properties") or {}
+        child_id = child_props.get("id")
+        parent_id = child_props.get("parent_id")
+        if not parent_id:
+            continue
         parent = feature_map.get(parent_id)
-        child = feature_map.get(child_id)
-        assert parent is not None, parent_id
+        if parent is None:
+            continue
+        checked_pairs.add((parent_id, child_id))
+        checked_count += 1
         assert child is not None, child_id
         overlap_area = float(shape(parent["geometry"]).intersection(shape(child["geometry"])).area)
         if overlap_area > PARENT_CHILD_OVERLAP_EPSILON:
             failures.append(f"{parent_id}<->{child_id} overlap_area={overlap_area:.12f}")
+    assert checked_count > 0
+    assert ("tno_greenland_sea", "tno_fram_strait") in checked_pairs
+    assert ("tno_bering_sea", "tno_anadyrskiy_zaliv") in checked_pairs
     assert failures == []
 
 
@@ -2017,8 +2023,8 @@ class TnoWaterRecentRefinementContractTest(unittest.TestCase):
     def test_tracked_neighbor_pairs_do_not_leave_gaps(self):
         test_tno_tracked_neighbor_pairs_do_not_leave_gaps()
 
-    def test_parent_child_seam_pairs_do_not_overlap(self):
-        test_tno_parent_child_seam_pairs_do_not_overlap()
+    def test_parent_child_water_regions_do_not_overlap(self):
+        test_tno_parent_child_water_regions_do_not_overlap()
 
     def test_remaining_ocean_backlog_splits_use_source_backed_details(self):
         test_tno_remaining_ocean_backlog_splits_use_source_backed_details()

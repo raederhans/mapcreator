@@ -229,12 +229,6 @@ TRACKED_SEAM_PAIRS = [
     ("tno_arafura_sea", "tno_gulf_of_carpentaria"),
     ("tno_arafura_sea", "tno_timor_sea"),
 ]
-TRACKED_PARENT_CHILD_SEAM_PAIRS = [
-    ("tno_greenland_sea", "tno_fram_strait"),
-    ("tno_bering_sea", "tno_anadyrskiy_zaliv"),
-]
-
-
 def _load_json(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
@@ -697,12 +691,18 @@ def _collect_named_water_seams(feature_collection: dict) -> dict:
         seam_results.append(result)
         if distance > SEAM_DISTANCE_EPSILON:
             failures.append(result)
+    overlap_results = []
     overlap_failures = []
-    for parent_id, child_id in TRACKED_PARENT_CHILD_SEAM_PAIRS:
+    skipped_external_parent_count = 0
+    for child_feature in feature_collection.get("features") or []:
+        child_props = child_feature.get("properties") or {}
+        child_id = child_props.get("id")
+        parent_id = child_props.get("parent_id")
+        if not parent_id:
+            continue
         parent_feature = feature_map.get(parent_id)
-        child_feature = feature_map.get(child_id)
         if parent_feature is None or child_feature is None:
-            overlap_failures.append({"pair": [parent_id, child_id], "reason": "missing_feature"})
+            skipped_external_parent_count += 1
             continue
         overlap_area = float(
             shape(parent_feature.get("geometry")).intersection(shape(child_feature.get("geometry"))).area
@@ -711,10 +711,17 @@ def _collect_named_water_seams(feature_collection: dict) -> dict:
             "pair": [parent_id, child_id],
             "overlap_area": overlap_area,
         }
+        overlap_results.append(result)
         if overlap_area > PARENT_CHILD_OVERLAP_EPSILON:
             overlap_failures.append(result)
     failures.extend(overlap_failures)
-    return {"pairs": seam_results, "failures": failures}
+    return {
+        "pairs": seam_results,
+        "parent_child_overlap_pairs": overlap_results,
+        "parent_child_overlap_checked_count": len(overlap_results),
+        "parent_child_overlap_skipped_external_parent_count": skipped_external_parent_count,
+        "failures": failures,
+    }
 
 
 def _collect_macro_land_overlap(feature_collection: dict, political_feature_collection: dict) -> dict:
