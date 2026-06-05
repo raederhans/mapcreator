@@ -956,6 +956,7 @@ test("viewport geo bounds samples curved projection edges for chunk eligibility"
 
 test("exact-after-settle keeps scenario overlays on the contextScenario reuse path", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const mainSource = readRepoFile("js", "main.js");
   const contextScenarioSignatureBranch = extractRendererPassSignatureBranch(rendererSource, "contextScenario");
   const rendererRuntimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
   const frameSchedulerSource = readRepoFile("js", "core", "frame_scheduler.js");
@@ -1187,6 +1188,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && frameSchedulerSource.includes("labelGenerationKey")
       && /export function getFrameSchedulerQueueLength\(\{ byPriority = false, byLabelGeneration = false \} = \{\}\) \{[\s\S]*?high:[\s\S]*?normal:[\s\S]*?low:[\s\S]*?total:/.test(frameSchedulerSource)
       && /function render\(\) \{[\s\S]*?getFrameSchedulerQueueLength\(\{ byPriority: true, byLabelGeneration: true \}\);[\s\S]*?recordRenderPerfMetric\("frameSchedulerQueueDepth", 0, frameSchedulerQueue\);/.test(rendererSource),
+    deferredUiYieldPrefersSchedulerYield:
+      /async function yieldToMain\(\) \{[\s\S]*?typeof globalThis\.scheduler\?\.yield === "function"[\s\S]*?await globalThis\.scheduler\.yield\(\);[\s\S]*?globalThis\.setTimeout\(resolve, 0\);/.test(mainSource),
     exactAfterSettleDedupesByGeneration:
       /function enqueueExactAfterSettleSegment\(generation, label, task\) \{[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(rendererSource)
       && /label: `exact-after-settle-pass-\$\{passName\}`,[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(rendererSource)
@@ -1203,6 +1206,18 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     dirtyHitCanvasUsesPointProbeBeforeDeferredFullBuild:
       /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?collectGridCandidates\(projectedX, projectedY, 0\)[\s\S]*?hitContext\.rect\(px - 1, py - 1, 3, 3\);[\s\S]*?hitContext\.clip\(\);[\s\S]*?recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource)
       && /function getValidatedCanvasHit\(event, strictIds = null, \{ forceBuild = false \} = \{\}\) \{[\s\S]*?if \(isHitCanvasCurrent\(\)\) \{[\s\S]*?getHitResultFromCanvas\(event\)[\s\S]*?\} else \{[\s\S]*?scheduleHitCanvasBuildIfNeeded\(\{ reason: forceBuild \? "dirty-point-probe-click" : "dirty-point-probe-hover" \}\);[\s\S]*?getDirtyHitCanvasPointProbeHit\(event\);/.test(rendererSource),
+    startupHitCanvasFullBuildIsDeferred:
+      /function recordDeferredFullHitCanvasMetric\(\{ reason = "deferred-full", keepReady = false \} = \{\}\) \{[\s\S]*?mode: "deferred-full"[\s\S]*?reason,[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "deferred-full"/.test(rendererSource)
+      && /async function buildHitCanvasAfterStartup\(\{ keepReady = false, reason = "startup-deferred-hit-canvas" \} = \{\}\) \{[\s\S]*?recordDeferredFullHitCanvasMetric\(\{[\s\S]*?reason,[\s\S]*?keepReady[\s\S]*?\}\);[\s\S]*?setInteractionInfrastructureState\("hit-canvas-deferred"/.test(rendererSource)
+      && !/async function buildHitCanvasAfterStartup\(\{[\s\S]*?ensureHitCanvasUpToDate\(\{ force: true \}\);[\s\S]*?\n\}/.test(rendererSource),
+    stagedHitCanvasWarmupDefersFullBuild:
+      /function scheduleStagedHitCanvasWarmup\(startedAt, token\) \{[\s\S]*?recordDeferredFullHitCanvasMetric\(\{[\s\S]*?reason: "staged-hit-canvas-warmup"[\s\S]*?recordRenderPerfMetric\("setMapDataHitCanvasReady"/.test(rendererSource)
+      && !/function scheduleStagedHitCanvasWarmup\(startedAt, token\) \{[\s\S]*?ensureHitCanvasUpToDate\(\{ force: true \}\);/.test(rendererSource),
+    buildHitCanvasMetricsSeparateDeferredForcedAndPointProbe:
+      /drawHitCanvasWithMetric\(\{[\s\S]*?mode: "deferred",[\s\S]*?reason,/.test(rendererSource)
+      && /drawHitCanvasWithMetric\(\{[\s\S]*?mode: "forced",[\s\S]*?reason: "strict-validation"/.test(rendererSource)
+      && /recordDeferredFullHitCanvasMetric\(\{[\s\S]*?mode: "deferred-full"[\s\S]*?profile: "deferred-full"/.test(rendererSource)
+      && /recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource),
     hitCanvasPixelReadsUseFiniteDpr:
       /function getHitResultFromCanvas\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?Math\.round\(sy \* dpr\)/.test(rendererSource)
       && /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?hitContext\.setTransform\(dpr, 0, 0, dpr, 0, 0\);/.test(rendererSource),

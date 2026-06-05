@@ -187,3 +187,17 @@
 - Final review fix: `preloadScenarioCoarseChunks()` now uses full-world bounds for startup coarse prewarm. This keeps the first committed coarse payload complete while later visibility refreshes keep current-viewport selection.
 - Final evidence: `npm run perf:gate` passed against `docs\perf\baseline_2026-04-20.json` after the review fix; TNO median `totalStartupMs=5455.3ms`, HOI4 median `totalStartupMs=5853.1ms`; all six benchmark samples recorded `restoredFullPoliticalChunkData=false` and `fullPoliticalRestoreMs=0`.
 - Final verification passed: `node --check` for changed source/dist JS, `npm run test:node:scenario-chunk-contracts` with 43 tests, `python -m unittest tests.test_scenario_chunk_assets tests.test_startup_bootstrap_assets -q` with 31 tests, `npm run test:node:scenario-lifecycle-runtime-behavior` with 9 tests, `npm run verify:scenario-contracts`, `npm run verify:pages-dist`, and `git diff --check`.
+
+## 2026-06-05 Hit Canvas/Yield Low-Risk Pass
+- Execution boundary: isolated worktree `C:\Users\raede\Desktop\dev\mapcreator-render-hit-yield`, branch `codex/render-hit-yield`, based on local `main` at `9d163b27`. Main checkout had unrelated `.omx/metrics.json` and remains excluded from the change.
+- Live process ownership: main agent owns all test/build/perf commands in this pass. No browser smoke has been started because the requested plan makes browser validation optional unless code/test evidence shows a visual risk.
+- Implemented `js/main.js` `yieldToMain()` as `scheduler.yield()` first, with `setTimeout(0)` fallback.
+- Implemented `recordDeferredFullHitCanvasMetric()` in `js/core/map_renderer.js` so `buildHitCanvas` and `hitCanvasViewportProfile` can report `mode: "deferred-full"` and `profile: "deferred-full"` when full hit canvas work is intentionally delayed.
+- Changed `buildHitCanvasAfterStartup()` so startup interaction infrastructure no longer calls `ensureHitCanvasUpToDate({ force: true })`. It records the deferred-full metric, keeps readiness when requested, and lets existing idle render scheduling or dirty point-probe handle later hit canvas needs.
+- Changed `scheduleStagedHitCanvasWarmup()` so staged warmup no longer forces full hit canvas construction. It records reason `staged-hit-canvas-warmup` and leaves the dirty canvas path observable.
+- Existing dirty point-probe path remains intact: dirty hover/click schedules deferred full build and immediately probes local grid candidates.
+- Contract coverage was added to `tests/scenario_chunk_contracts.test.mjs` for scheduler-yield preference, startup deferred-full behavior, staged warmup deferred-full behavior, and separated metric reasons.
+- First verification evidence: `npm run test:node:scenario-chunk-contracts` passed `43/43`.
+- Final verification evidence: perf/report Python contracts passed `28/28`; `npm run verify:pages-dist` passed packaged tests `22/22`; `npm run perf:gate` passed with zero failures and zero contract mismatches.
+- Latest perf gate p50 values: TNO `totalStartupMs=5407.2ms`, `scenarioChunkPromotionVisualStageMs=578.4ms`, `buildHitCanvasMs=197.7ms`; HOI4 `totalStartupMs=5985.0ms`, `scenarioChunkPromotionVisualStageMs=636.4ms`, `buildHitCanvasMs=205.1ms`.
+- Interpretation: full hit canvas work still happens as an idle deferred task in the benchmark sample. The startup/recovery forced-full path is now removed, and the remaining idle/full work is clearly labeled for the next optimization lane.

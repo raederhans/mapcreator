@@ -97,3 +97,25 @@
 - Targeted tests passed: Python scenario chunk/startup tests `31/31`, Node scenario chunk contracts `43/43`, Node lifecycle runtime behavior `9/9`, strict TNO scenario contracts, and `git diff --check`.
 - Review fix completed: startup coarse prewarm now selects full-world bounds instead of the current viewport, so the complete political coarse prewarm contract matches implementation.
 - Performance gate passed after the review fix and after skipping duplicate deferred full political restore when `primaryDerivedStateReady` is already true. Latest median totals: TNO `5455.3ms`, HOI4 `5853.1ms`; all six benchmark runs reported `restoredFullPoliticalChunkData=false` and `fullPoliticalRestoreMs=0`.
+
+## 2026-06-05 Hit Canvas/Yield Checklist
+- [x] Create isolated worktree and keep unrelated `.omx/metrics.json` out of scope.
+- [x] Read existing lessons and reuse current render-chain active docs.
+- [x] Update deferred UI `yieldToMain()` to prefer `scheduler.yield()`.
+- [x] Defer startup full hit canvas construction and record a `deferred-full` metric reason.
+- [x] Defer staged hit-canvas warmup full construction and record `staged-hit-canvas-warmup`.
+- [x] Keep dirty point-probe and forced strict-validation paths available.
+- [x] Extend existing scenario chunk contract tests for scheduler yield and hit canvas metric modes.
+- [x] Run `npm run test:node:scenario-chunk-contracts`: `43/43` passed.
+- [x] Sync `dist/app`.
+- [x] Run perf/report contracts: `28/28` passed.
+- [x] Run `npm run verify:pages-dist`: packaged tests `22/22` passed.
+- [x] Run `npm run perf:gate`: passed with zero failures.
+- [x] Run final static checks and review.
+- [ ] Merge, push, and clean worktree.
+
+## 2026-06-05 Hit Canvas/Yield Current Result
+- Startup and staged recovery now mark full hit canvas work as delayed instead of building it synchronously.
+- `buildHitCanvas` metrics can now distinguish `deferred-full`, idle `deferred`, strict `forced`, and point-probe behavior through `hitCanvasViewportProfile`.
+- Latest gate passed. TNO p50: `totalStartupMs=5407.2ms`, `scenarioChunkPromotionVisualStageMs=578.4ms`, `buildHitCanvasMs=197.7ms`. HOI4 p50: `totalStartupMs=5985.0ms`, `scenarioChunkPromotionVisualStageMs=636.4ms`, `buildHitCanvasMs=205.1ms`.
+- Remaining performance lane: full hit canvas still appears as idle deferred work, so the next improvement should target LOD/data-volume reduction or a dedicated hit-canvas segmentation spike.

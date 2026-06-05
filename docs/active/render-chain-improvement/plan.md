@@ -58,6 +58,25 @@ The previous "visible subset primary promotion" lane remains useful as a diagnos
 - Deferred infra duplicate political restore is gone in the latest six benchmark runs: `restoredFullPoliticalChunkData=false`, `fullPoliticalRestoreMs=0`, and `primaryDerivedStateReady=true`.
 - Review fix completed: `preloadScenarioCoarseChunks()` now uses full-world bounds for startup coarse prewarm, while later active refreshes keep current-viewport selection.
 
+## 2026-06-05 Hit Canvas/Yield Low-Risk Plan
+- [x] Keep implementation in isolated worktree `C:\Users\raede\Desktop\dev\mapcreator-render-hit-yield` on `codex/render-hit-yield`; main checkout keeps unrelated `.omx/metrics.json` out of the change.
+- [x] Prefer `scheduler.yield()` for deferred UI bootstrap yields, with `setTimeout(0)` as the compatibility path.
+- [x] Remove startup/recovery synchronous full hit canvas builds from `buildHitCanvasAfterStartup()` and staged hit-canvas warmup.
+- [x] Record explicit hit canvas metric reasons for deferred full, deferred idle, forced full, and point-probe paths.
+- [x] Extend existing scenario chunk contracts instead of adding a new test harness.
+- [x] Sync `dist/app` after source edits and run packaged verification.
+- [x] Run final verification gates: scenario chunk contracts, perf/report contracts, `verify:pages-dist`, `perf:gate`, syntax/diff checks.
+- [ ] Merge back to `main`, push, and clean the isolated worktree after verification.
+
+LOD and renderer migration remain outside this implementation pass. The next production optimization candidate is a build-time political LOD spike that preserves feature ownership and adds only optional manifest diagnostics.
+
+## 2026-06-05 Hit Canvas/Yield Verification
+- Source/dist sync passed through `npm run verify:pages-dist`; packaged shell tests passed `22/22`, total dist size `1090.63 MiB`.
+- Contract verification passed: `npm run test:node:scenario-chunk-contracts` `43/43`; perf/report boundary tests `28/28`.
+- Syntax and whitespace checks passed: `node --check` for changed source/dist JS and `tests/scenario_chunk_contracts.test.mjs`; `git diff --check` passed with line-ending warnings only.
+- `npm run perf:gate` passed with zero contract mismatches and zero failures. TNO p50: `totalStartupMs=5407.2ms`, `scenarioChunkPromotionVisualStageMs=578.4ms`, `buildHitCanvasMs=197.7ms`. HOI4 p50: `totalStartupMs=5985.0ms`, `scenarioChunkPromotionVisualStageMs=636.4ms`, `buildHitCanvasMs=205.1ms`.
+- Important metric reading: `buildHitCanvasMs` still appears during idle deferred construction. The completed change removes forced startup/recovery construction and adds mode/reason diagnostics; it does not claim that full hit canvas work has been eliminated.
+
 ## Live Process Ownership
 Main agent owns all builds, browser benchmarks, perf gates, and long tests for this task. Subagents may inspect files and propose tests, but they must not run or monitor live processes.
 

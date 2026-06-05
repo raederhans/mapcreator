@@ -8765,6 +8765,26 @@ function drawHitCanvasWithMetric(details = {}) {
   return built;
 }
 
+function recordDeferredFullHitCanvasMetric({ reason = "deferred-full", keepReady = false } = {}) {
+  const metricDetails = {
+    built: false,
+    skipped: true,
+    mode: "deferred-full",
+    reason,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    dirtyBefore: !!runtimeState.hitCanvasDirty,
+    current: isHitCanvasCurrent(),
+    keepReady: !!keepReady,
+  };
+  recordRenderPerfMetric("buildHitCanvas", 0, metricDetails);
+  recordRenderPerfMetric("hitCanvasViewportProfile", 0, {
+    sourceMetric: "buildHitCanvas",
+    profile: "deferred-full",
+    ...metricDetails,
+  });
+  return false;
+}
+
 function scheduleHitCanvasBuildIfNeeded({ reason = "idle-render" } = {}) {
   if (!hitContext || !pathHitCanvas || !runtimeState.hitCanvasDirty) return false;
   if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
@@ -10311,13 +10331,20 @@ function rebuildRuntimeDerivedState({
   return nextColors;
 }
 
-async function buildHitCanvasAfterStartup({ keepReady = false } = {}) {
+async function buildHitCanvasAfterStartup({ keepReady = false, reason = "startup-deferred-hit-canvas" } = {}) {
   setInteractionInfrastructureState("building-hit-canvas", {
     ready: keepReady ? true : false,
     inFlight: true,
   });
   await yieldToMain();
-  ensureHitCanvasUpToDate({ force: true });
+  recordDeferredFullHitCanvasMetric({
+    reason,
+    keepReady,
+  });
+  setInteractionInfrastructureState("hit-canvas-deferred", {
+    ready: keepReady ? true : getInteractionInfrastructureStageRank() >= 1,
+    inFlight: false,
+  });
   await yieldToMain();
 }
 
@@ -10410,9 +10437,15 @@ async function buildFullInteractionInfrastructureAfterStartup({
       });
       if (buildHitCanvas) {
         if (chunked) {
-          await buildHitCanvasAfterStartup({ keepReady: true });
+          await buildHitCanvasAfterStartup({
+            keepReady: true,
+            reason: "startup-deferred-hit-canvas",
+          });
         } else {
-          ensureHitCanvasUpToDate({ force: true });
+          await buildHitCanvasAfterStartup({
+            keepReady: true,
+            reason: "startup-hit-canvas",
+          });
         }
       } else if (runtimeState.hitCanvasDirty) {
         scheduleHitCanvasBuildIfNeeded({
@@ -20140,7 +20173,10 @@ function scheduleStagedHitCanvasWarmup(startedAt, token) {
     }
     runtimeState.deferHitCanvasBuild = false;
     if (runtimeState.hitCanvasDirty) {
-      ensureHitCanvasUpToDate({ force: true });
+      recordDeferredFullHitCanvasMetric({
+        reason: "staged-hit-canvas-warmup",
+        keepReady: true,
+      });
     }
     recordRenderPerfMetric("setMapDataHitCanvasReady", nowMs() - startedAt, {
       staged: true,

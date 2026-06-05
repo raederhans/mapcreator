@@ -281,3 +281,6 @@
 
 ### 隐藏开发工具入口前先释放入口拥有状态
 - 开发者模式会隐藏 toolbar 入口时，入口 controller 要先关闭自己拥有的 preview/overlay 并触发 renderer restore，再同步按钮可见性，保证画布状态随入口一起恢复。
+
+### hit canvas 指标要先看 mode/reason
+- full hit canvas 从 startup/recovery 同步路径移到 idle 后，`buildHitCanvasMs` 仍可能在 perf gate 里出现；判断是否还压启动热路径时，先看 `mode`、`reason` 和 `hitCanvasViewportProfile.profile`。

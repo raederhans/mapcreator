@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 283225
+      "size_bytes": 283680
     },
     {
       "path": "app/data/CATALOG.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29786,7 +29786,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -36462,7 +36462,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 979389
+      "size_bytes": 980462
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36866,7 +36866,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 46921
+      "size_bytes": 47041
     },
     {
       "path": "app/js/ui/app_dialog.js",
@@ -37190,11 +37190,11 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 2938
+      "size_bytes": 3007
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 863
+      "size_bytes": 880
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37255,5 +37255,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1143603846
+  "total_bytes": 1143605703
 }

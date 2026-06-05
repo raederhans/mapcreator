@@ -234,8 +234,12 @@ function getDeferredDetailPromotionOwner() {
   return deferredDetailPromotionOwner;
 }
 
-function yieldToMain() {
-  return new Promise((resolve) => {
+async function yieldToMain() {
+  if (typeof globalThis.scheduler?.yield === "function") {
+    await globalThis.scheduler.yield();
+    return;
+  }
+  await new Promise((resolve) => {
     globalThis.setTimeout(resolve, 0);
   });
 }
