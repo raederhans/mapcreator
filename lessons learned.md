@@ -167,6 +167,9 @@
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
 
+### HOI4 state ownership 复用已验证 parser
+- 新建 HGO / HOI4 seed builder 时，state 的 owner、controller、core、dated history 必须复用 `scenario_builder.hoi4.parser` 语义；浅层正则会误读 `history`、`remove_core_of` 和 `controller -> owner` fallback。
+
 ### 浮动控件缩放要保持像素锚点
 - 浮动控件的位置如果用比例存储，缩放时先保留当前像素 left/top，再按新尺寸回算比例；直接用旧比例重算会导致控件在缩放时漂移。
 
