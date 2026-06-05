@@ -91,6 +91,7 @@ function createHgoRuntimePreviewController(runtimeState, {
   loadRaster = null,
   storage = globalThis.localStorage,
   renderOptions = {},
+  restorePreviewTarget = null,
 } = {}) {
   const previewState = ensureHgoRuntimePreviewState(runtimeState);
   const persisted = readPersistedPreviewEnabled(storage);
@@ -110,6 +111,11 @@ function createHgoRuntimePreviewController(runtimeState, {
     if (renderer) {
       renderer.dispose();
       renderer = null;
+    }
+  };
+  const restoreRenderedTarget = () => {
+    if (typeof restorePreviewTarget === "function") {
+      restorePreviewTarget();
     }
   };
 
@@ -138,6 +144,7 @@ function createHgoRuntimePreviewController(runtimeState, {
   const setEnabled = async (nextEnabled) => {
     const enabled = !!nextEnabled;
     if (!enabled) {
+      const shouldRestoreTarget = !!renderer || !!previewState.renderSummary;
       loadGeneration += 1;
       loadingPromise = null;
       disposeRenderer();
@@ -148,6 +155,9 @@ function createHgoRuntimePreviewController(runtimeState, {
       previewState.renderSummary = null;
       previewState.inspectResult = null;
       persistPreviewEnabled(storage, false);
+      if (shouldRestoreTarget) {
+        restoreRenderedTarget();
+      }
       return previewState;
     }
 
@@ -183,6 +193,7 @@ function createHgoRuntimePreviewController(runtimeState, {
           if (generation !== loadGeneration) {
             return previewState;
           }
+          const shouldRestoreTarget = !!renderer || !!previewState.renderSummary;
           disposeRenderer();
           previewState.enabled = false;
           previewState.status = HGO_RUNTIME_PREVIEW_STATUS.ERROR;
@@ -191,6 +202,9 @@ function createHgoRuntimePreviewController(runtimeState, {
           previewState.renderSummary = null;
           previewState.inspectResult = null;
           persistPreviewEnabled(storage, false);
+          if (shouldRestoreTarget) {
+            restoreRenderedTarget();
+          }
           return previewState;
         })
         .finally(() => {
@@ -213,6 +227,7 @@ function createHgoRuntimePreviewController(runtimeState, {
   };
 
   const dispose = () => {
+    const shouldRestoreTarget = !!renderer || !!previewState.renderSummary;
     loadGeneration += 1;
     disposeRenderer();
     loadingPromise = null;
@@ -223,6 +238,9 @@ function createHgoRuntimePreviewController(runtimeState, {
     previewState.renderSummary = null;
     previewState.inspectResult = null;
     persistPreviewEnabled(storage, false);
+    if (shouldRestoreTarget) {
+      restoreRenderedTarget();
+    }
   };
 
   return Object.freeze({

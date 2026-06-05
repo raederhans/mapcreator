@@ -128,3 +128,72 @@ Implement the first vertical slice:
 - Pushed `main` to `origin`.
 - Removed worktree `C:\Users\raede\Desktop\dev\mapcreator-hgo-runtime-preview`.
 - Deleted local branch `codex/hgo-runtime-preview`.
+
+## 2026-06-05 Independent Runtime Assets Start
+
+- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-hgo-independent-runtime`
+- Branch: `codex/hgo-independent-runtime`
+- Base commit: `7cfeaee9`
+- Main checkout has an unrelated `.omx/metrics.json` modification. This worktree isolates the implementation.
+- Live process owner: main agent only.
+- Current Ralph context snapshot: `.omx/context/hgo-independent-runtime-20260605T120815Z.md`.
+- Subagents:
+  - `code-mapper`: read-only HGO/runtime publish-chain mapping.
+  - `test-engineer`: read-only test and acceptance coverage review.
+- Current phase target: checked-in HGO runtime assets, browser loader, and Pages-published dev preview using real HGO seed/raster data.
+
+## Independent Runtime Assets Acceptance Criteria
+
+- Build real runtime assets from `C:\Users\raede\Desktop\dev\mapcreator\historic geographic overhaul`.
+- Commit `data/hgo_runtime/manifest.json`, `data/hgo_runtime/seed.json`, and `data/hgo_runtime/provinces.bmp`.
+- Validate the province raster as 24-bit uncompressed BMP and record hash/size metadata.
+- Keep the default renderer and scenario startup unchanged.
+- Expose HGO assets only through a dedicated runtime loader and the developer-gated preview path.
+- Synchronize runtime registry, data manifest, data catalog, Pages publishing, and startup shell tests in the same change.
+- Run focused HGO asset tests, HGO PoC gate, manifest/catalog contracts, `verify:pages-dist`, and `git diff --check`.
+
+## 2026-06-05 Independent Runtime Assets Implementation Notes
+
+- Added `tools/build_hgo_runtime_assets.py`.
+  - Reuses the HOI4-aware HGO seed builder.
+  - Copies and validates `map/provinces.bmp` as 24-bit uncompressed BMP.
+  - Writes `data/hgo_runtime/manifest.json`, `seed.json`, and `provinces.bmp`.
+  - Refreshes `data/manifest.json` for HGO runtime outputs and runtime registry metadata.
+- Built real HGO assets from the local HGO source.
+  - Seed: `states=11894`, `provinces=20782`, `mapped=20781`, `countries=1431`.
+  - Raster: `5120x2560`, `24-bit`, uncompressed BMP, `39,321,654` bytes.
+  - Seed size: `9,678,303` bytes after LF-stable JSON output.
+- Added `js/core/hgo_runtime_asset_loader.js`.
+  - Loads HGO runtime seed and raster through `runtime_asset_registry`.
+  - Decodes BMP BGR rows into the renderer's RGB raster source.
+  - Handles BMP bottom-up row order and 4-byte row padding.
+- Wired `js/ui/toolbar.js` so the developer-gated HGO preview receives real `loadSeed` and `loadRaster` functions.
+- Added HGO runtime assets to `data/runtime_asset_registry.json`, `map_builder/contracts.py`, `data/manifest.json`, `data/CATALOG.json`, and Pages publishing.
+- Raised the Pages size gate from `1050 MiB` to `1100 MiB` because the checked-in HGO runtime seed/raster add about `49.5 MiB` to the published runtime surface.
+- Locked byte-level HGO runtime assets with `.gitattributes`, LF-stable JSON writers, and Pages byte-contract handling for `data/hgo_runtime/manifest.json` and `seed.json`.
+- Added a preview restore callback so disabling or disposing the HGO preview triggers the default renderer to repaint the shared canvas.
+
+## 2026-06-05 Independent Runtime Assets Validation Evidence
+
+- `npm run test:py:hgo-runtime-assets`: passed, 22 tests.
+- `npm run test:node:hgo-raster-renderer`: passed, 9 tests.
+- `npm run test:py:hgo-runtime-assets-contract`: passed, 20 tests.
+- `npm run verify:hgo-runtime-poc`: passed.
+  - Python HGO assets: 22 tests passed.
+  - HGO runtime index: 8 tests passed.
+  - HGO raster/loader: 9 tests passed.
+  - HGO preview: 11 tests passed.
+  - Manifest/catalog contracts: 21 tests passed.
+  - JS syntax and Python compile checks passed.
+- `npm run verify:pages-dist`: passed.
+  - Dist total size: `1090.62 MiB`.
+  - Gate: `1100 MiB`.
+  - Startup shell tests: 21 passed.
+- `git diff --check`: passed.
+- Sanity check: source and published HGO runtime manifests both match `seed.json` size `9,678,303` and hash.
+
+## 2026-06-05 Independent Runtime Assets Review Fixes
+
+- Reviewer flagged that Pages LF normalization could make the published `data/hgo_runtime/manifest.json` disagree with the published `seed.json`. Fixed by writing HGO runtime JSON with LF at the source, preserving HGO runtime JSON bytes in Pages dist, and adding a Pages contract that checks published HGO asset size/hash.
+- Reviewer flagged missing proof that the checked-in BMP colors resolve through the checked-in seed. Fixed with a real BMP color-set contract; current raster has `20,781` unique RGB keys and `0` unresolved keys.
+- Architect flagged that HGO preview shares the main canvas and needed to restore the default renderer after close. Fixed by injecting `restorePreviewTarget: render` through the toolbar preview controller and adding regression coverage.

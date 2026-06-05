@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unittest
 import gzip
+import hashlib
 import json
 import tempfile
 from pathlib import Path
@@ -319,6 +320,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/hgo_catalogs/hgo_place_names.json",
             "app/data/hgo_catalogs/hgo_flags.png_manifest.json",
             "app/data/hgo_catalogs/hgo_identity_aliases.json",
+            "app/data/hgo_runtime/manifest.json",
+            "app/data/hgo_runtime/seed.json",
+            "app/data/hgo_runtime/provinces.bmp",
             "app/data/hgo_catalogs/flags_png/small/AB/ABK.png",
             "app/data/hgo_catalogs/flags_png/medium/AB/ABK.png",
             "app/data/city_lights/historical_1930_entries.json",
@@ -412,6 +416,46 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertGreater(len(full_only_tags), 0)
         self.assertEqual(set(hgo_manifest["tags"].keys()), expected_published_tags)
         self.assertEqual(set(source_hgo_manifest["tags"].keys()) - set(hgo_manifest["tags"].keys()), full_only_tags)
+
+    def test_dist_hgo_runtime_registry_references_only_published_files(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+        registry_path = REPO_ROOT / "dist" / "app" / "data" / "runtime_asset_registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        expected = {
+            "hgo_runtime_manifest": "data/hgo_runtime/manifest.json",
+            "hgo_runtime_seed": "data/hgo_runtime/seed.json",
+            "hgo_runtime_provinces_bmp": "data/hgo_runtime/provinces.bmp",
+        }
+
+        for key, url in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(registry.get("assets", {}).get(key, {}).get("url"), url)
+                self.assertIn(f"app/{url}", dist_paths)
+                self.assertTrue((REPO_ROOT / "dist" / "app" / url).is_file())
+
+        catalog = json.loads((REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
+        catalog_entries = {entry["key"]: entry for entry in catalog.get("entries") or []}
+        for key, url in expected.items():
+            with self.subTest(catalog_key=key):
+                self.assertEqual(catalog_entries.get(key, {}).get("url"), url)
+
+    def test_dist_hgo_runtime_manifest_hashes_match_published_files(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        hgo_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "hgo_runtime" / "manifest.json"
+        hgo_manifest = json.loads(hgo_manifest_path.read_text(encoding="utf-8"))
+        assets = hgo_manifest.get("assets") or {}
+
+        for key in ("hgo_runtime_seed", "hgo_runtime_provinces_bmp"):
+            with self.subTest(key=key):
+                metadata = assets.get(key) or {}
+                dist_asset_path = REPO_ROOT / "dist" / "app" / str(metadata.get("url") or "")
+                self.assertTrue(dist_asset_path.is_file())
+                self.assertEqual(metadata.get("size_bytes"), dist_asset_path.stat().st_size)
+                self.assertEqual(metadata.get("sha256"), hashlib.sha256(dist_asset_path.read_bytes()).hexdigest())
 
     def test_dist_manifest_keeps_japan_point_workbench_full_pack_targets(self) -> None:
         if not DIST_MANIFEST.exists():

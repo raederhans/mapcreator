@@ -2,8 +2,16 @@
 
 # Scenario contracts store byte-exact sizes and sha256 values for these assets.
 data/manifest.json text eol=lf
+data/CATALOG.json text eol=lf
+data/CATALOG.md text eol=lf
 data/runtime_asset_registry.json text eol=lf
+data/country_feature_policies.json text eol=lf
+data/locales.json text eol=lf
+data/palette-maps/*.json text eol=lf
+data/palettes/*.json text eol=lf
 data/hgo_catalogs/hgo_identity_aliases.json text eol=lf
+data/hgo_runtime/*.json text eol=lf
+data/hgo_runtime/*.bmp binary
 data/scenarios/**/chunks/*.json text eol=lf
 data/scenarios/**/detail_chunks.manifest.json text eol=lf
 data/scenarios/**/context_lod.manifest.json text eol=lf
@@ -18,6 +26,9 @@ data/scenarios/**/startup.bundle.*.json.gz binary
 
 # Pages dist manifest records byte sizes for checked-in app files.
 dist/pages-dist-manifest.json text eol=lf
+dist/index.html text eol=lf
+dist/app.js text eol=lf
+dist/styles.css text eol=lf
 dist/app/index.html text eol=lf
 dist/app/**/*.js text eol=lf
 dist/app/**/*.json text eol=lf

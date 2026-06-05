@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import subprocess
+import struct
 import sys
 import tempfile
 from pathlib import Path
 import unittest
 
+from tools.build_hgo_runtime_assets import read_bmp_header
 from tools.build_hgo_runtime_seed import (
     DEFAULT_COUNTRY_COLOR_SOURCES,
     DEFAULT_COUNTRY_COLOR_SOURCE,
@@ -18,6 +20,37 @@ from tools.build_hgo_runtime_seed import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def write_bmp24(path: Path, rows: list[list[tuple[int, int, int]]]) -> None:
+    height = len(rows)
+    width = len(rows[0]) if rows else 0
+    row_stride = ((width * 3 + 3) // 4) * 4
+    pixel_bytes = bytearray()
+    for row in reversed(rows):
+        row_bytes = bytearray()
+        for red, green, blue in row:
+            row_bytes.extend([blue, green, red])
+        row_bytes.extend(b"\x00" * (row_stride - len(row_bytes)))
+        pixel_bytes.extend(row_bytes)
+    file_size = 54 + len(pixel_bytes)
+    header = bytearray()
+    header.extend(b"BM")
+    header.extend(struct.pack("<I", file_size))
+    header.extend(struct.pack("<HH", 0, 0))
+    header.extend(struct.pack("<I", 54))
+    header.extend(struct.pack("<I", 40))
+    header.extend(struct.pack("<i", width))
+    header.extend(struct.pack("<i", height))
+    header.extend(struct.pack("<H", 1))
+    header.extend(struct.pack("<H", 24))
+    header.extend(struct.pack("<I", 0))
+    header.extend(struct.pack("<I", len(pixel_bytes)))
+    header.extend(struct.pack("<i", 2835))
+    header.extend(struct.pack("<i", 2835))
+    header.extend(struct.pack("<I", 0))
+    header.extend(struct.pack("<I", 0))
+    path.write_bytes(bytes(header) + bytes(pixel_bytes))
 
 
 def write_minimal_hgo_source(
@@ -34,7 +67,13 @@ def write_minimal_hgo_source(
     (root / "history" / "states").mkdir(parents=True)
     (root / "common" / "country_tags").mkdir(parents=True)
     (root / "common" / "countries").mkdir(parents=True)
-    (root / "map" / "provinces.bmp").write_bytes(b"bmp")
+    write_bmp24(
+        root / "map" / "provinces.bmp",
+        [
+            [(10, 20, 30), (11, 21, 31)],
+            [(12, 22, 32), (0, 0, 0)],
+        ],
+    )
     (root / "map" / "definition.csv").write_text(
         "\n".join(
             [
@@ -186,6 +225,71 @@ class HgoRuntimeSeedBuilderTest(unittest.TestCase):
             self.assertEqual(report["summary"]["province_count"], 4)
             self.assertTrue(report["required_paths"]["map/definition.csv"]["exists"])
             self.assertEqual(report["required_paths"]["history/states"]["kind"], "directory")
+
+    def test_bmp_header_validation_accepts_minimal_rgb24_raster(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "provinces.bmp"
+            write_bmp24(path, [[(10, 20, 30), (11, 21, 31)], [(12, 22, 32), (13, 23, 33)]])
+
+            header = read_bmp_header(path)
+
+        self.assertEqual(header["width"], 2)
+        self.assertEqual(header["height"], 2)
+        self.assertEqual(header["bits_per_pixel"], 24)
+        self.assertEqual(header["compression"], 0)
+        self.assertEqual(header["row_stride"], 8)
+
+    def test_bmp_header_validation_rejects_invalid_source_raster(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "provinces.bmp"
+            path.write_bytes(b"bmp")
+
+            with self.assertRaisesRegex(ValueError, "too small"):
+                read_bmp_header(path)
+
+    def test_assets_cli_writes_seed_raster_manifest_and_smoke_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir) / "hgo"
+            root.mkdir()
+            write_minimal_hgo_source(root)
+            report = Path(tmp_dir) / "assets_smoke.json"
+            data_tmp_root = REPO_ROOT / "data"
+            with tempfile.TemporaryDirectory(dir=data_tmp_root, prefix=".hgo_runtime_test.") as output_dir_text:
+                output_dir = Path(output_dir_text)
+
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(REPO_ROOT / "tools" / "build_hgo_runtime_assets.py"),
+                        "--hgo-root",
+                        str(root),
+                        "--output-dir",
+                        str(output_dir),
+                        "--skip-data-manifest",
+                        "--smoke-report",
+                        str(report),
+                    ],
+                    cwd=REPO_ROOT,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                seed_path = output_dir / "seed.json"
+                raster_path = output_dir / "provinces.bmp"
+                manifest_path = output_dir / "manifest.json"
+                self.assertTrue(seed_path.is_file())
+                self.assertTrue(raster_path.is_file())
+                self.assertTrue(manifest_path.is_file())
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                smoke = json.loads(report.read_text(encoding="utf-8"))
+                self.assertEqual(manifest["runtime_id"], "hgo_raster_runtime_assets")
+                self.assertEqual(manifest["assets"]["hgo_runtime_seed"]["sha256"], smoke["seed"]["sha256"])
+                self.assertEqual(manifest["assets"]["hgo_runtime_provinces_bmp"]["width"], 2)
+                self.assertTrue(manifest["assets"]["hgo_runtime_seed"]["url"].startswith("data/.hgo_runtime_test."))
+                self.assertNotIn("file:///", manifest["assets"]["hgo_runtime_seed"]["url"])
+                self.assertEqual(smoke["status"], "pass")
 
     def test_cli_runs_from_non_repo_cwd_and_writes_seed_and_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

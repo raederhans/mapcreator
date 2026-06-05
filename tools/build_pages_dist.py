@@ -19,9 +19,9 @@ from tools.app_entry_resolver import (
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
-# TNO source-backed water refinements push the already-allowlisted runtime
-# scenario payload above the previous 1020 MiB cap.
-MAX_PAGES_DIST_BYTES = 1050 * 1024 * 1024
+# TNO water refinements and the independent HGO runtime now publish large
+# checked-in runtime assets; the cap stays close to the measured Pages payload.
+MAX_PAGES_DIST_BYTES = 1100 * 1024 * 1024
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",
@@ -90,6 +90,11 @@ HGO_IDENTITY_RUNTIME_FILES = (
     "hgo_place_names.json",
     "hgo_identity_aliases.json",
 )
+HGO_RUNTIME_FILES = (
+    "manifest.json",
+    "seed.json",
+    "provinces.bmp",
+)
 HGO_IDENTITY_FLAG_TIERS = ("small", "medium")
 SCENARIO_EXCLUDED_DIR_NAMES = {"derived"}
 SCENARIO_EXCLUDED_FILE_NAMES = {"audit.json"}
@@ -115,6 +120,10 @@ TRANSPORT_SMALL_DIRECT_RUNTIME_FILES = {
 DISPOSABLE_DIST_NAMES = {"__pycache__"}
 DISPOSABLE_DIST_SUFFIXES = {".pyc", ".pyo"}
 LF_NORMALIZED_APP_SUFFIXES = {".js", ".json"}
+BYTE_EXACT_APP_DATA_PATHS = {
+    Path("app") / "data" / "hgo_runtime" / "manifest.json",
+    Path("app") / "data" / "hgo_runtime" / "seed.json",
+}
 
 
 def write_text_lf(path: Path, text: str) -> None:
@@ -127,6 +136,8 @@ def should_normalize_dist_text_file_lf(path: Path) -> bool:
         relative_path = path.resolve().relative_to(DIST_ROOT.resolve())
     except ValueError:
         return path.suffix.lower() in LF_NORMALIZED_APP_SUFFIXES
+    if relative_path in BYTE_EXACT_APP_DATA_PATHS:
+        return False
     if relative_path.as_posix() == "app/index.html":
         return True
     return (
@@ -633,12 +644,18 @@ def copy_hgo_identity_runtime_data() -> None:
     )
 
 
+def copy_hgo_runtime_data() -> None:
+    for file_name in HGO_RUNTIME_FILES:
+        copy_relative_file(f"data/hgo_runtime/{file_name}")
+
+
 def copy_runtime_data() -> None:
     for relative_file in DATA_RUNTIME_FILES:
         copy_relative_file(f"data/{relative_file}")
     for directory_name in DATA_RUNTIME_DIRS:
         copy_tree_contents(ROOT / "data" / directory_name, APP_DIST_ROOT / "data" / directory_name)
     copy_hgo_identity_runtime_data()
+    copy_hgo_runtime_data()
     copy_scenario_runtime_data()
     copy_transport_runtime_data()
     validate_dist_scenario_startup_urls()

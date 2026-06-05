@@ -29,6 +29,37 @@ Build the next verifiable slice of the parallel HGO data/rendering path. This ph
 - Pages dist output is regenerated and verified for this phase.
 - Full user-facing HGO renderer replacement remains a later phase.
 
+## Phase 3: Independent Runtime Assets
+
+Goal: move the proven HGO source slice from `.runtime/` into a checked-in, browser-published runtime asset lane without changing the default scenario renderer.
+
+Deliverables:
+
+- `data/hgo_runtime/manifest.json` records the real seed and raster assets with size/hash metadata.
+- `data/hgo_runtime/seed.json` is built from the local HGO source through the existing HOI4-aware seed builder.
+- `data/hgo_runtime/provinces.bmp` is copied from the real HGO source and validated as 24-bit uncompressed BMP.
+- `runtime_asset_registry`, `data/manifest.json`, `data/CATALOG.json`, Pages publishing, and startup shell tests agree on the new HGO runtime assets.
+- Browser-side HGO loader can read the seed and decode the province BMP for the dev preview path.
+- Toolbar dev preview uses the loader when assets are published, while the default renderer stays unchanged.
+
+Phase 3 boundaries:
+
+- No user-facing renderer replacement.
+- No editor/export/project-file support for HGO mode.
+- No broad toolbar redesign.
+- No dependency changes.
+- Live build/test owner remains the main agent.
+
+Phase 3 validation:
+
+- `npm run test:py:hgo-runtime-assets`
+- `npm run test:node:hgo-raster-renderer`
+- `npm run test:node:hgo-runtime-preview`
+- `npm run verify:hgo-runtime-poc`
+- `python -m unittest tests.test_data_manifest_contract tests.test_data_catalog_contract -q`
+- `npm run verify:pages-dist`
+- `git diff --check`
+
 ## Validation
 
 - Run the existing HGO PoC gate before and after changes.

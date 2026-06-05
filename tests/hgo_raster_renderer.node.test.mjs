@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  createHgoRuntimePreviewLoaders,
+  decodeHgoProvinceBmp,
+} from "../js/core/hgo_runtime_asset_loader.js";
 import { createHgoRasterRenderer } from "../js/core/hgo_raster_renderer.js";
 
 const seed = {
@@ -61,6 +65,112 @@ function createRenderer() {
     ],
   });
 }
+
+function createBmp24(rows) {
+  const height = rows.length;
+  const width = rows[0]?.length || 0;
+  const rowStride = Math.ceil((width * 3) / 4) * 4;
+  const pixelBytes = [];
+  for (const row of [...rows].reverse()) {
+    const rowBytes = [];
+    for (const [red, green, blue] of row) {
+      rowBytes.push(blue, green, red);
+    }
+    while (rowBytes.length < rowStride) rowBytes.push(0);
+    pixelBytes.push(...rowBytes);
+  }
+  const buffer = new ArrayBuffer(54 + pixelBytes.length);
+  const view = new DataView(buffer);
+  view.setUint8(0, 0x42);
+  view.setUint8(1, 0x4D);
+  view.setUint32(2, buffer.byteLength, true);
+  view.setUint32(10, 54, true);
+  view.setUint32(14, 40, true);
+  view.setInt32(18, width, true);
+  view.setInt32(22, height, true);
+  view.setUint16(26, 1, true);
+  view.setUint16(28, 24, true);
+  view.setUint32(30, 0, true);
+  view.setUint32(34, pixelBytes.length, true);
+  new Uint8Array(buffer, 54).set(pixelBytes);
+  return buffer;
+}
+
+test("decodes 24-bit BMP province pixels into RGB raster source", () => {
+  const raster = decodeHgoProvinceBmp(createBmp24([
+    [[10, 20, 30], [11, 21, 31]],
+    [[12, 22, 32], [255, 255, 255]],
+  ]));
+
+  assert.equal(raster.width, 2);
+  assert.equal(raster.height, 2);
+  assert.equal(raster.pixelFormat, "rgb");
+  assert.equal(raster.source.rowStride, 8);
+  assert.equal(raster.source.topDown, false);
+  assert.deepEqual(Array.from(raster.pixels), [
+    10, 20, 30,
+    11, 21, 31,
+    12, 22, 32,
+    255, 255, 255,
+  ]);
+});
+
+test("renders decoded BMP pixels through HGO runtime ownership colors", () => {
+  const raster = decodeHgoProvinceBmp(createBmp24([
+    [[10, 20, 30], [11, 21, 31]],
+    [[255, 255, 255], [12, 22, 32]],
+  ]));
+  const rendered = createHgoRasterRenderer({ seed, ...raster }).renderToBuffer();
+
+  assert.equal(rendered.resolvedPixelCount, 2);
+  assert.equal(rendered.unresolvedPixelCount, 2);
+  assert.deepEqual(Array.from(rendered.data.slice(0, 4)), [1, 2, 3, 255]);
+  assert.deepEqual(Array.from(rendered.data.slice(4, 8)), [4, 5, 6, 255]);
+});
+
+test("rejects unsupported BMP source encodings", () => {
+  const badMagic = createBmp24([[[10, 20, 30]]]);
+  new Uint8Array(badMagic)[0] = 0x00;
+  assert.throws(() => decodeHgoProvinceBmp(badMagic), /BMP file/);
+
+  const compressed = createBmp24([[[10, 20, 30]]]);
+  new DataView(compressed).setUint32(30, 1, true);
+  assert.throws(() => decodeHgoProvinceBmp(compressed), /uncompressed/);
+
+  const wrongBitDepth = createBmp24([[[10, 20, 30]]]);
+  new DataView(wrongBitDepth).setUint16(28, 8, true);
+  assert.throws(() => decodeHgoProvinceBmp(wrongBitDepth), /24-bit/);
+});
+
+test("preview loaders read configured HGO seed and BMP asset URLs", async () => {
+  const requestedJsonUrls = [];
+  const requestedBinaryUrls = [];
+  const loaders = createHgoRuntimePreviewLoaders({
+    d3Client: {
+      json: async (url) => {
+        requestedJsonUrls.push(url);
+        return { runtime_id: "hgo_raster_runtime_seed" };
+      },
+    },
+    fetchImpl: async (url) => {
+      requestedBinaryUrls.push(url);
+      return {
+        ok: true,
+        arrayBuffer: async () => createBmp24([[[10, 20, 30]]]),
+      };
+    },
+    seedUrl: "data/hgo_runtime/seed.json",
+    rasterUrl: "data/hgo_runtime/provinces.bmp",
+  });
+
+  const seedPayload = await loaders.loadSeed();
+  const raster = await loaders.loadRaster();
+
+  assert.equal(seedPayload.runtime_id, "hgo_raster_runtime_seed");
+  assert.deepEqual(requestedJsonUrls, ["data/hgo_runtime/seed.json"]);
+  assert.deepEqual(requestedBinaryUrls, ["data/hgo_runtime/provinces.bmp"]);
+  assert.deepEqual(Array.from(raster.pixels), [10, 20, 30]);
+});
 
 test("renders owner colors from HGO province RGB pixels", () => {
   const rendered = createRenderer().renderToBuffer();
