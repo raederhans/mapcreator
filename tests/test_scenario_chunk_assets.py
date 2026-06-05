@@ -25,6 +25,14 @@ def _square(x: float, y: float, size: float = 1.0) -> Polygon:
     ])
 
 
+def _redundant_square(x: float, y: float, size: float = 1.0, steps: int = 12) -> Polygon:
+    bottom = [(x + (size * step / steps), y) for step in range(steps + 1)]
+    right = [(x + size, y + (size * step / steps)) for step in range(1, steps + 1)]
+    top = [(x + size - (size * step / steps), y + size) for step in range(1, steps + 1)]
+    left = [(x, y + size - (size * step / steps)) for step in range(1, steps + 1)]
+    return Polygon(bottom + right + top + left)
+
+
 def _chunk_feature_ids(payload: dict) -> list[str]:
     return [str(feature.get("properties", {}).get("id") or "") for feature in payload.get("features", [])]
 
@@ -703,6 +711,62 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                     "scenario_shell_controller_hint",
                     "scenario_shell_owner_hint",
                 ],
+            )
+            expected_text = json.dumps(coarse_payload, ensure_ascii=False, separators=(",", ":")) + "\n"
+            self.assertEqual(coarse_text, expected_text)
+
+    def test_political_coarse_lod_simplifies_geometry_and_reports_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "tno_1962"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+
+            feature_collection = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "id": "AAA-1",
+                            "name": "Alpha",
+                            "cntr_code": "AAA",
+                            "admin1_group": "Alpha Group",
+                            "__source": "detail",
+                            "interactive": True,
+                        },
+                        "geometry": _redundant_square(0, 0, size=4.0, steps=20).__geo_interface__,
+                    }
+                ],
+            }
+
+            chunks, _lod_entries = scenario_chunk_assets._build_chunk_payloads_for_feature_collection(
+                scenario_dir=scenario_dir,
+                scenario_id="tno_1962",
+                layer_key="political",
+                feature_collection=feature_collection,
+                payload_factory=lambda selected_feature_ids: scenario_chunk_assets._slice_feature_collection(
+                    feature_collection,
+                    selected_feature_ids,
+                ),
+                chunk_specs=scenario_chunk_assets.POLITICAL_COARSE_LOD_SPECS,
+            )
+
+            coarse_chunk = next(chunk for chunk in chunks if chunk["id"] == "political.coarse.r0c0")
+            diagnostics = coarse_chunk["lod_diagnostics"]
+            self.assertEqual(diagnostics["tier"], "political-coarse-simplified-v1")
+            self.assertEqual(diagnostics["source_feature_count"], 1)
+            self.assertEqual(diagnostics["optimized_feature_count"], 1)
+            self.assertEqual(coarse_chunk["feature_count"], 1)
+            self.assertEqual(len(coarse_chunk["feature_bounds"]), coarse_chunk["feature_count"])
+            self.assertGreater(diagnostics["source_coord_count"], diagnostics["optimized_coord_count"])
+            self.assertEqual(coarse_chunk["coord_count"], diagnostics["optimized_coord_count"])
+            self.assertGreater(diagnostics["source_estimated_path_cost"], diagnostics["optimized_estimated_path_cost"])
+            coarse_path = scenario_dir / "chunks" / "political.coarse.r0c0.json"
+            coarse_text = coarse_path.read_text(encoding="utf-8")
+            coarse_payload = json.loads(coarse_text)
+            self.assertEqual(_chunk_feature_ids(coarse_payload), ["AAA-1"])
+            self.assertEqual(
+                sorted(coarse_payload["features"][0]["properties"].keys()),
+                ["__source", "admin1_group", "cntr_code", "id", "interactive", "name"],
             )
             expected_text = json.dumps(coarse_payload, ensure_ascii=False, separators=(",", ":")) + "\n"
             self.assertEqual(coarse_text, expected_text)

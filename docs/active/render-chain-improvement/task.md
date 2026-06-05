@@ -112,10 +112,28 @@
 - [x] Run `npm run verify:pages-dist`: packaged tests `22/22` passed.
 - [x] Run `npm run perf:gate`: passed with zero failures.
 - [x] Run final static checks and review.
-- [ ] Merge, push, and clean worktree.
+- [x] Merge, push, and clean worktree.
 
 ## 2026-06-05 Hit Canvas/Yield Current Result
 - Startup and staged recovery now mark full hit canvas work as delayed instead of building it synchronously.
 - `buildHitCanvas` metrics can now distinguish `deferred-full`, idle `deferred`, strict `forced`, and point-probe behavior through `hitCanvasViewportProfile`.
 - Latest gate passed. TNO p50: `totalStartupMs=5407.2ms`, `scenarioChunkPromotionVisualStageMs=578.4ms`, `buildHitCanvasMs=197.7ms`. HOI4 p50: `totalStartupMs=5985.0ms`, `scenarioChunkPromotionVisualStageMs=636.4ms`, `buildHitCanvasMs=205.1ms`.
 - Remaining performance lane: full hit canvas still appears as idle deferred work, so the next improvement should target LOD/data-volume reduction or a dedicated hit-canvas segmentation spike.
+
+## 2026-06-05 Political LOD Spike Checklist
+- [x] Create isolated worktree from pushed `main`.
+- [x] Read Ralph, Ultrawork, lessons learned, and current render-chain active docs.
+- [x] Dispatch read-only subagents for implementation touchpoints and test coverage.
+- [x] Write Ralph context snapshot and PRD/test-spec artifacts.
+- [x] Implement build-time political coarse LOD diagnostics and simplification.
+- [x] Extend existing scenario chunk asset tests.
+- [x] Run targeted Python tests and syntax checks.
+- [x] Run architect verification.
+- [x] Run deslop pass and regression re-verification.
+- [x] Commit, push, merge back to `main`, and clean worktree.
+
+## 2026-06-05 Political LOD Spike Current Result
+- Direction is constrained to `tools/scenario_chunk_assets.py` and `tests/test_scenario_chunk_assets.py`.
+- Runtime JavaScript and checked-in scenario data remain out of scope unless the implementation evidence forces a narrower correction.
+- Architect verification approved the coarse-only scope and additive manifest field.
+- Post-deslop checks passed: `tests.test_scenario_chunk_assets` `14/14`, Python py_compile, `git diff --check`, Node scenario chunk contracts `43/43`, and perf/report Python contracts `28/28`.

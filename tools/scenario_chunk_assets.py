@@ -40,6 +40,9 @@ POLITICAL_COARSE_LOD_SPECS = (
     {"lod": "coarse", "cols": 1, "rows": 1, "min_zoom": 0.0, "max_zoom": 1.35, "global_coverage": True},
 )
 
+POLITICAL_COARSE_LOD_DIAGNOSTIC_TIER = "political-coarse-simplified-v1"
+POLITICAL_COARSE_SIMPLIFY_TOLERANCE = 0.01
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -464,7 +467,7 @@ def _normalize_chunk_atlantropa_features_for_d3(payload: dict[str, Any] | None) 
     return normalized
 
 
-def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict[str, Any]:
+def _summarize_payload_geometry_cost(payload: dict[str, Any]) -> dict[str, int]:
     feature_collection = _layer_payload_to_feature_collection("", payload)
     features = feature_collection.get("features") if isinstance(feature_collection, dict) else []
     if not features and isinstance(payload.get("featureCollection"), dict):
@@ -475,14 +478,24 @@ def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict
         geometry = feature.get("geometry") if isinstance(feature, dict) else None
         coord_count += _count_geometry_coordinates((geometry or {}).get("coordinates") if isinstance(geometry, dict) else None)
         part_count += _count_geometry_parts(geometry)
-    byte_size = int(chunk_path.stat().st_size) if chunk_path.exists() else len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
     estimated_path_cost = max(0, coord_count + (part_count * 8) + (len(features) * 3 if isinstance(features, list) else 0))
     return {
-        "byte_size": byte_size,
-        "sha256": sha256_path(chunk_path) if chunk_path.exists() else "",
+        "feature_count": len(features) if isinstance(features, list) else 0,
         "coord_count": coord_count,
         "part_count": part_count,
         "estimated_path_cost": estimated_path_cost,
+    }
+
+
+def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict[str, Any]:
+    geometry_cost = _summarize_payload_geometry_cost(payload)
+    byte_size = int(chunk_path.stat().st_size) if chunk_path.exists() else len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+    return {
+        "byte_size": byte_size,
+        "sha256": sha256_path(chunk_path) if chunk_path.exists() else "",
+        "coord_count": geometry_cost["coord_count"],
+        "part_count": geometry_cost["part_count"],
+        "estimated_path_cost": geometry_cost["estimated_path_cost"],
     }
 
 
@@ -650,7 +663,7 @@ def _slice_feature_collection(feature_collection: dict[str, Any], selected_featu
 def _round_geometry_coordinates(node: Any, *, decimals: int) -> Any:
     if isinstance(node, (int, float)):
         return round(float(node), decimals)
-    if isinstance(node, list):
+    if isinstance(node, (list, tuple)):
         return [_round_geometry_coordinates(item, decimals=decimals) for item in node]
     return node
 
@@ -663,6 +676,31 @@ def _round_feature_geometry(feature: dict[str, Any], *, decimals: int) -> dict[s
     if "coordinates" in rounded:
         rounded["coordinates"] = _round_geometry_coordinates(rounded["coordinates"], decimals=decimals)
     return rounded
+
+
+def _simplify_political_coarse_geometry(geometry: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(geometry, dict):
+        return geometry
+    try:
+        geom = shape(geometry)
+    except Exception:
+        return geometry
+    if geom.is_empty:
+        return geometry
+    if not geom.is_valid:
+        try:
+            geom = make_valid(geom)
+        except Exception:
+            return geometry
+    simplified = geom.simplify(POLITICAL_COARSE_SIMPLIFY_TOLERANCE, preserve_topology=True)
+    if simplified.is_empty:
+        return geometry
+    if not simplified.is_valid:
+        try:
+            simplified = make_valid(simplified)
+        except Exception:
+            return geometry
+    return mapping(simplified)
 
 
 def _optimize_political_coarse_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -697,12 +735,40 @@ def _optimize_political_coarse_payload(payload: dict[str, Any]) -> dict[str, Any
             {
                 "type": "Feature",
                 "properties": optimized_properties,
-                "geometry": _round_feature_geometry(feature, decimals=4),
+                "geometry": _round_feature_geometry(
+                    {
+                        "geometry": _simplify_political_coarse_geometry(
+                            feature.get("geometry") if isinstance(feature.get("geometry"), dict) else None
+                        )
+                    },
+                    decimals=4,
+                ),
             }
         )
     return {
         "type": "FeatureCollection",
         "features": optimized_features,
+    }
+
+
+def _build_political_coarse_lod_diagnostics(
+    source_summary: dict[str, int],
+    optimized_summary: dict[str, int],
+) -> dict[str, Any]:
+    return {
+        "tier": POLITICAL_COARSE_LOD_DIAGNOSTIC_TIER,
+        "simplify_tolerance": POLITICAL_COARSE_SIMPLIFY_TOLERANCE,
+        "source_feature_count": source_summary["feature_count"],
+        "optimized_feature_count": optimized_summary["feature_count"],
+        "source_coord_count": source_summary["coord_count"],
+        "optimized_coord_count": optimized_summary["coord_count"],
+        "source_estimated_path_cost": source_summary["estimated_path_cost"],
+        "optimized_estimated_path_cost": optimized_summary["estimated_path_cost"],
+        "coord_reduction": max(0, source_summary["coord_count"] - optimized_summary["coord_count"]),
+        "estimated_path_cost_reduction": max(
+            0,
+            source_summary["estimated_path_cost"] - optimized_summary["estimated_path_cost"],
+        ),
     }
 
 
@@ -899,9 +965,16 @@ def _build_chunk_payloads_for_feature_collection(
                 chunk_filename = f"{chunk_id}.json"
                 chunk_path = scenario_dir / "chunks" / chunk_filename
                 chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
+                lod_diagnostics = None
                 if layer_key == "political" and spec["lod"] == "coarse":
+                    source_lod_summary = _summarize_payload_geometry_cost(chunk_payload)
                     chunk_payload = _optimize_political_coarse_payload(chunk_payload)
                     chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
+                    optimized_lod_summary = _summarize_payload_geometry_cost(chunk_payload)
+                    lod_diagnostics = _build_political_coarse_lod_diagnostics(
+                        source_lod_summary,
+                        optimized_lod_summary,
+                    )
                     _write_minified_json(chunk_path, chunk_payload)
                 elif layer_key == "water" and spec["lod"] == "coarse":
                     _write_minified_json(chunk_path, chunk_payload)
@@ -928,6 +1001,7 @@ def _build_chunk_payloads_for_feature_collection(
                     "global_coverage": bool(spec["global_coverage"]),
                     "country_codes": chunk_country_codes,
                     **({"feature_bounds": feature_bounds_summary} if feature_bounds_summary else {}),
+                    **({"lod_diagnostics": lod_diagnostics} if lod_diagnostics else {}),
                 })
                 lod_entries[layer_key].append({
                     "lod": spec["lod"],

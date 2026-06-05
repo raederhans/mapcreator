@@ -82,3 +82,20 @@ Main agent owns all builds, browser benchmarks, perf gates, and long tests for t
 
 ## 2026-06-04 Next Evaluation Live Process Ownership
 Main agent owns `perf:gate`, `bench:editor-performance`, any dev server created by those commands, and all log polling. Other agents may only inspect files or finished artifacts.
+## 2026-06-05 Political LOD Spike Plan
+
+### Intent
+Reduce political coarse chunk geometry cost at build time while preserving complete political ownership and runtime compatibility.
+
+### Implementation Steps
+1. Add a topology-preserving Shapely simplification helper for political coarse payloads in `tools/scenario_chunk_assets.py`.
+2. Apply simplification only inside the existing `layer_key == "political" and lod == "coarse"` builder path.
+3. Add optional manifest diagnostics for source vs optimized coordinate/path counts.
+4. Extend existing scenario chunk asset tests with a redundant polygon fixture that proves coordinate reduction and feature preservation.
+5. Run targeted verification, then architect review, deslop, and regression re-verification.
+
+### Boundaries
+- Keep detail political chunks exact.
+- Keep political ids and existing coarse property whitelist.
+- Keep front-end runtime untouched for this spike.
+- Defer scenario data regeneration and perf-gate comparison to a later measured lane.

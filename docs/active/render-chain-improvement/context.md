@@ -201,3 +201,12 @@
 - Final verification evidence: perf/report Python contracts passed `28/28`; `npm run verify:pages-dist` passed packaged tests `22/22`; `npm run perf:gate` passed with zero failures and zero contract mismatches.
 - Latest perf gate p50 values: TNO `totalStartupMs=5407.2ms`, `scenarioChunkPromotionVisualStageMs=578.4ms`, `buildHitCanvasMs=197.7ms`; HOI4 `totalStartupMs=5985.0ms`, `scenarioChunkPromotionVisualStageMs=636.4ms`, `buildHitCanvasMs=205.1ms`.
 - Interpretation: full hit canvas work still happens as an idle deferred task in the benchmark sample. The startup/recovery forced-full path is now removed, and the remaining idle/full work is clearly labeled for the next optimization lane.
+## 2026-06-05 Political LOD Spike Ralph Context
+- Current branch/worktree: `codex/render-political-lod-spike` at `C:\Users\raede\Desktop\dev\mapcreator-render-political-lod-spike`.
+- Ralph snapshot: `.omx/context/render-political-lod-spike-20260605T233450Z.md`.
+- PRD/test-spec: `.omx/plans/prd-render-political-lod-spike-20260605.md`, `.omx/plans/test-spec-render-political-lod-spike-20260605.md`.
+- Live process owner: main agent only. No subagent may run or poll tests, builds, dev servers, browser benchmarks, or perf gates for this lane.
+- Subagent findings:
+  - Implementation touchpoint is `tools/scenario_chunk_assets.py`; it already owns political coarse chunk generation and manifest cost fields.
+  - Test touchpoint is `tests/test_scenario_chunk_assets.py`; it already covers political coarse source selection, manifest metadata, and payload contracts.
+- Scope decision: implement coarse political build-time simplification plus optional diagnostics; keep detail chunks and runtime full political payload contract unchanged.
