@@ -790,7 +790,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             ("tno_poole_bay", Point(-1.86, 50.62)),
             ("tno_cardigan_bay", Point(-4.63, 52.12)),
             ("tno_humber_estuary", Point(-0.18, 53.63)),
-            ("tno_greenland_sea", Point(-1.73, 76.73)),
+            ("tno_greenland_sea", Point(-14.183779, 76.629887)),
             ("tno_ross_sea", Point(-168.0911, -78.5673)),
         ):
             supplement_bboxes = tuple(spec_map[feature_id].get("supplement_bboxes") or ())
@@ -925,6 +925,28 @@ class TnoBundleBuilderTest(unittest.TestCase):
             south_china_sea_spec["clip_open_ocean_ids"],
             tno_bundle.TNO_PACIFIC_OPEN_OCEAN_IDS,
         )
+
+    def test_tno_remaining_ocean_backlog_source_specs_keep_child_seams_closed(self) -> None:
+        spec_map = {
+            spec["id"]: spec
+            for spec in tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS
+        }
+
+        self.assertEqual(
+            spec_map["tno_bering_sea"]["subtract_named_ids"],
+            ("tno_gulf_of_alaska", "tno_anadyrskiy_zaliv"),
+        )
+        self.assertEqual(spec_map["tno_anadyrskiy_zaliv"]["source_query"], "mrgid_sr='24121'")
+        self.assertEqual(spec_map["tno_anadyrskiy_zaliv"]["parent_id"], "tno_bering_sea")
+        self.assertEqual(spec_map["tno_anadyrskiy_zaliv"]["water_type"], "gulf")
+
+        self.assertEqual(
+            spec_map["tno_greenland_sea"]["subtract_named_ids"],
+            ("tno_norwegian_sea", "tno_fram_strait"),
+        )
+        self.assertEqual(spec_map["tno_fram_strait"]["source_query"], "mrgid_sr='26579'")
+        self.assertEqual(spec_map["tno_fram_strait"]["parent_id"], "tno_greenland_sea")
+        self.assertEqual(spec_map["tno_fram_strait"]["water_type"], "strait")
 
     def test_tno_arctic_open_ocean_split_boundary_matches_barents_regression(self) -> None:
         arctic_spec = next(

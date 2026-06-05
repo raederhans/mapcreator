@@ -16,6 +16,7 @@ DEFAULT_REPORT_PATH = ROOT / ".runtime" / "reports" / "generated" / "tno_water_g
 WORLD_BBOX_WIDTH_THRESHOLD = 300.0
 ANTIMERIDIAN_EPSILON = 1e-3
 SEAM_DISTANCE_EPSILON = 5e-5
+PARENT_CHILD_OVERLAP_EPSILON = 1e-8
 MACRO_LAND_OVERLAP_AREA_MIN = 20.0
 MACRO_LAND_OVERLAP_RATIO_MAX = 0.08
 MACRO_LAND_OVERLAP_ABS_MAX = 1.0
@@ -23,9 +24,11 @@ MACRO_INFLATION_LAND_DELTA_MAX = 0.05
 OCEAN_REFINEMENT_PHASE_TARGET_IDS = {
     "phase2_arctic": (
         "tno_greenland_sea",
+        "tno_fram_strait",
         "tno_barents_sea",
         "tno_beaufort_sea",
         "tno_bering_sea",
+        "tno_anadyrskiy_zaliv",
         "tno_hudson_strait",
     ),
     "phase3_southern_antimeridian": (
@@ -93,7 +96,8 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "black_sea", "point": (34.7, 43.4), "allowed_ids": {"tno_black_sea"}},
     {"label": "sea_of_azov", "point": (36.85, 46.1), "allowed_ids": {"tno_sea_of_azov"}},
     {"label": "sea_of_marmara", "point": (27.7, 40.75), "allowed_ids": {"tno_sea_of_marmara"}},
-    {"label": "greenland_sea", "point": (-1.73, 76.73), "allowed_ids": {"tno_greenland_sea"}},
+    {"label": "greenland_sea", "point": (-14.183779, 76.629887), "allowed_ids": {"tno_greenland_sea"}},
+    {"label": "fram_strait", "point": (-1.5, 76.724494), "allowed_ids": {"tno_fram_strait"}},
     {"label": "norwegian_sea", "point": (1.14, 68.58), "allowed_ids": {"tno_norwegian_sea"}},
     {"label": "barents_sea", "point": (43.11, 74.17), "allowed_ids": {"tno_barents_sea"}},
     {"label": "baffin_bay", "point": (-67.12, 74.50), "allowed_ids": {"tno_baffin_bay"}},
@@ -103,6 +107,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "weddell_sea", "point": (-37.425662, -68.672356), "allowed_ids": {"tno_weddell_sea"}},
     {"label": "scotia_sea", "point": (-48.964392, -60.640768), "allowed_ids": {"tno_scotia_sea"}},
     {"label": "bering_sea", "point": (-170.8823, 58.7917), "allowed_ids": {"tno_bering_sea"}},
+    {"label": "anadyrskiy_zaliv", "point": (-176.994996, 64.436176), "allowed_ids": {"tno_anadyrskiy_zaliv"}},
     {"label": "gulf_of_alaska", "point": (-147.3894, 57.3575), "allowed_ids": {"tno_gulf_of_alaska"}},
     {"label": "beaufort_sea", "point": (-136.1302, 72.7404), "allowed_ids": {"tno_beaufort_sea"}},
     {"label": "labrador_sea", "point": (-52.7329, 53.9977), "allowed_ids": {"tno_labrador_sea"}},
@@ -223,6 +228,10 @@ TRACKED_SEAM_PAIRS = [
     ("tno_tasman_sea", "tno_bass_strait"),
     ("tno_arafura_sea", "tno_gulf_of_carpentaria"),
     ("tno_arafura_sea", "tno_timor_sea"),
+]
+TRACKED_PARENT_CHILD_SEAM_PAIRS = [
+    ("tno_greenland_sea", "tno_fram_strait"),
+    ("tno_bering_sea", "tno_anadyrskiy_zaliv"),
 ]
 
 
@@ -688,6 +697,23 @@ def _collect_named_water_seams(feature_collection: dict) -> dict:
         seam_results.append(result)
         if distance > SEAM_DISTANCE_EPSILON:
             failures.append(result)
+    overlap_failures = []
+    for parent_id, child_id in TRACKED_PARENT_CHILD_SEAM_PAIRS:
+        parent_feature = feature_map.get(parent_id)
+        child_feature = feature_map.get(child_id)
+        if parent_feature is None or child_feature is None:
+            overlap_failures.append({"pair": [parent_id, child_id], "reason": "missing_feature"})
+            continue
+        overlap_area = float(
+            shape(parent_feature.get("geometry")).intersection(shape(child_feature.get("geometry"))).area
+        )
+        result = {
+            "pair": [parent_id, child_id],
+            "overlap_area": overlap_area,
+        }
+        if overlap_area > PARENT_CHILD_OVERLAP_EPSILON:
+            overlap_failures.append(result)
+    failures.extend(overlap_failures)
     return {"pairs": seam_results, "failures": failures}
 
 

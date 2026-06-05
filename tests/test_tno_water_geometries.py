@@ -61,6 +61,7 @@ TARGET_OPEN_OCEAN_MAX_COMPONENTS = {
 MIN_COMPONENT_AREA = 0.05
 WORLD_BBOX_WIDTH_THRESHOLD = 300.0
 SEAM_DISTANCE_EPSILON = 5e-5
+PARENT_CHILD_OVERLAP_EPSILON = 1e-8
 MACRO_LAND_OVERLAP_AREA_MIN = 20.0
 MACRO_LAND_OVERLAP_RATIO_MAX = 0.08
 MACRO_LAND_OVERLAP_ABS_MAX = 1.0
@@ -118,6 +119,8 @@ TRACKED_DETAIL_IDS = {
     "tno_great_barrier_reef_coastal_waters",
     "tno_bass_strait",
     "tno_hudson_strait",
+    "tno_anadyrskiy_zaliv",
+    "tno_fram_strait",
 }
 
 TRACKED_NAMED_WATER_IDS = TRACKED_DETAIL_IDS | {
@@ -218,7 +221,8 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "black_sea", "point": (34.7, 43.4), "allowed_ids": {"tno_black_sea"}},
     {"label": "sea_of_azov", "point": (36.85, 46.1), "allowed_ids": {"tno_sea_of_azov"}},
     {"label": "sea_of_marmara", "point": (27.7, 40.75), "allowed_ids": {"tno_sea_of_marmara"}},
-    {"label": "greenland_sea", "point": (-1.73, 76.73), "allowed_ids": {"tno_greenland_sea"}},
+    {"label": "greenland_sea", "point": (-14.183779, 76.629887), "allowed_ids": {"tno_greenland_sea"}},
+    {"label": "fram_strait", "point": (-1.5, 76.724494), "allowed_ids": {"tno_fram_strait"}},
     {"label": "norwegian_sea", "point": (1.14, 68.58), "allowed_ids": {"tno_norwegian_sea"}},
     {"label": "barents_sea", "point": (43.11, 74.17), "allowed_ids": {"tno_barents_sea"}},
     {"label": "baffin_bay", "point": (-67.12, 74.50), "allowed_ids": {"tno_baffin_bay"}},
@@ -228,6 +232,7 @@ TRACKED_COVERAGE_PROBES = [
     {"label": "weddell_sea", "point": (-37.425662, -68.672356), "allowed_ids": {"tno_weddell_sea"}},
     {"label": "scotia_sea", "point": (-48.964392, -60.640768), "allowed_ids": {"tno_scotia_sea"}},
     {"label": "bering_sea", "point": (-170.8823, 58.7917), "allowed_ids": {"tno_bering_sea"}},
+    {"label": "anadyrskiy_zaliv", "point": (-176.994996, 64.436176), "allowed_ids": {"tno_anadyrskiy_zaliv"}},
     {"label": "gulf_of_alaska", "point": (-147.3894, 57.3575), "allowed_ids": {"tno_gulf_of_alaska"}},
     {"label": "beaufort_sea", "point": (-136.1302, 72.7404), "allowed_ids": {"tno_beaufort_sea"}},
     {"label": "labrador_sea", "point": (-52.7329, 53.9977), "allowed_ids": {"tno_labrador_sea"}},
@@ -301,6 +306,7 @@ TRACKED_SEAM_PAIRS = [
     ("tno_black_sea", "tno_sea_of_azov"),
     ("tno_bosporus_dardanelles", "tno_sea_of_marmara"),
     ("tno_greenland_sea", "tno_norwegian_sea"),
+    ("tno_greenland_sea", "tno_fram_strait"),
     ("tno_norwegian_sea", "tno_northeast_atlantic_ocean"),
     ("tno_barents_sea", "tno_western_arctic_ocean"),
     ("tno_mozambique_channel", "tno_western_indian_ocean"),
@@ -316,6 +322,7 @@ TRACKED_SEAM_PAIRS = [
     ("tno_irish_sea", "tno_solway_firth"),
     ("tno_bering_sea", "tno_northeast_pacific_ocean"),
     ("tno_bering_sea", "tno_gulf_of_alaska"),
+    ("tno_bering_sea", "tno_anadyrskiy_zaliv"),
     ("tno_gulf_of_alaska", "tno_northeast_pacific_ocean"),
     ("tno_beaufort_sea", "tno_western_arctic_ocean"),
     ("tno_labrador_sea", "tno_northwest_atlantic_ocean"),
@@ -355,6 +362,10 @@ TRACKED_SEAM_PAIRS = [
     ("tno_tasman_sea", "tno_bass_strait"),
     ("tno_arafura_sea", "tno_gulf_of_carpentaria"),
     ("tno_arafura_sea", "tno_timor_sea"),
+]
+TRACKED_PARENT_CHILD_SEAM_PAIRS = [
+    ("tno_greenland_sea", "tno_fram_strait"),
+    ("tno_bering_sea", "tno_anadyrskiy_zaliv"),
 ]
 
 
@@ -846,6 +857,37 @@ def test_tno_hudson_strait_splits_hudson_bay_as_source_backed_detail():
     assert _polygonal_vertex_count(geometry) >= 1000
 
 
+def test_tno_remaining_ocean_backlog_splits_use_source_backed_details():
+    feature_map = _feature_map(_load_scenario_water_features())
+    expected = {
+        "tno_anadyrskiy_zaliv": ("tno_bering_sea", "gulf", False),
+        "tno_fram_strait": ("tno_greenland_sea", "strait", True),
+    }
+
+    failures = []
+    for feature_id, (parent_id, water_type, is_chokepoint) in expected.items():
+        feature = feature_map.get(feature_id)
+        if feature is None:
+            failures.append(f"{feature_id}:missing")
+            continue
+        props = feature.get("properties", {})
+        geometry = shape(feature["geometry"])
+        if props.get("region_group") != "marine_detail":
+            failures.append(f"{feature_id}:region_group={props.get('region_group')}")
+        if props.get("parent_id") != parent_id:
+            failures.append(f"{feature_id}:parent_id={props.get('parent_id')}")
+        if props.get("water_type") != water_type:
+            failures.append(f"{feature_id}:water_type={props.get('water_type')}")
+        if bool(props.get("is_chokepoint")) is not is_chokepoint:
+            failures.append(f"{feature_id}:is_chokepoint={props.get('is_chokepoint')}")
+        if props.get("source_standard") != "marine_regions_seavox_v19":
+            failures.append(f"{feature_id}:source_standard={props.get('source_standard')}")
+        if geometry.is_empty or float(geometry.area) <= 0.0:
+            failures.append(f"{feature_id}:empty_geometry")
+
+    assert failures == []
+
+
 def test_tno_runtime_water_feature_ids_match_source():
     source_ids = {
         str(feature.get("properties", {}).get("id") or "")
@@ -1320,16 +1362,8 @@ def test_tno_water_family_refinement_terminal_source_reviews_exit_actionable_que
         generated_at="2026-06-02T00:00:00Z",
     )
 
-    expected_remaining_backlog_ids = {
-        "tno_arafura_sea",
-        "tno_bering_sea",
-        "tno_greenland_sea",
-        "tno_java_sea",
-        "tno_makassar_strait",
-        "tno_ross_sea",
-        "tno_timor_sea",
-    }
-    assert len(reviewed_ids) == 39
+    expected_remaining_backlog_ids = set()
+    assert len(reviewed_ids) == 44
     assert reviewed_ids <= {item["id"] for item in report["terminal_public_source_candidates"]}
     reviewed_rows = [row for row in report["families"] if row["id"] in reviewed_ids]
     assert {row["recommended_action"] for row in reviewed_rows} == {"monitor_terminal_public_source"}
@@ -1359,7 +1393,7 @@ def test_tno_water_family_refinement_recent_terminal_reviews_record_structured_e
         if row.get("source_review", {}).get("reviewed_at") == "2026-06-05"
     ]
 
-    assert len(recent_terminal_rows) == 35
+    assert len(recent_terminal_rows) == 40
     assert {row["source_review"]["terminal_reason"] for row in recent_terminal_rows} == {
         "no_public_child_polygon_source",
     }
@@ -1387,6 +1421,24 @@ def test_tno_water_family_refinement_recent_terminal_reviews_record_structured_e
         any("mrgid_l1" in query["cql_filter"] and "mrgid_l4" in query["cql_filter"] for query in record["source_queries"])
         for record in records_by_id.values()
     )
+    assert records_by_id["tno_timor_sea"]["rejected_child_candidates"] == [
+        {
+            "name": "Joseph Bonaparte Gulf",
+            "source_layer": "seavox_v19",
+            "cql_filter": "mrgid_sr='24062'",
+            "matched_record_id": "seavox_v19:mrgid_sr=24062",
+            "reason": "no_intersection_with_current_parent_geometry",
+        }
+    ]
+    assert records_by_id["tno_ross_sea"]["rejected_child_candidates"] == [
+        {
+            "name": "McMurdo Sound",
+            "source_layer": "seavox_v19",
+            "cql_filter": "mrgid_sr='24145'",
+            "matched_record_id": "seavox_v19:mrgid_sr=24145",
+            "reason": "no_intersection_with_current_parent_geometry",
+        }
+    ]
 
 
 def test_tno_bosporus_source_review_records_terminal_public_source():
@@ -1927,6 +1979,20 @@ def test_tno_tracked_neighbor_pairs_do_not_leave_gaps():
     assert failures == []
 
 
+def test_tno_parent_child_seam_pairs_do_not_overlap():
+    feature_map = _feature_map(_load_scenario_water_features())
+    failures = []
+    for parent_id, child_id in TRACKED_PARENT_CHILD_SEAM_PAIRS:
+        parent = feature_map.get(parent_id)
+        child = feature_map.get(child_id)
+        assert parent is not None, parent_id
+        assert child is not None, child_id
+        overlap_area = float(shape(parent["geometry"]).intersection(shape(child["geometry"])).area)
+        if overlap_area > PARENT_CHILD_OVERLAP_EPSILON:
+            failures.append(f"{parent_id}<->{child_id} overlap_area={overlap_area:.12f}")
+    assert failures == []
+
+
 class TnoWaterRecentRefinementContractTest(unittest.TestCase):
     """Expose recent ocean refinement contracts through unittest discovery."""
 
@@ -1950,6 +2016,12 @@ class TnoWaterRecentRefinementContractTest(unittest.TestCase):
 
     def test_tracked_neighbor_pairs_do_not_leave_gaps(self):
         test_tno_tracked_neighbor_pairs_do_not_leave_gaps()
+
+    def test_parent_child_seam_pairs_do_not_overlap(self):
+        test_tno_parent_child_seam_pairs_do_not_overlap()
+
+    def test_remaining_ocean_backlog_splits_use_source_backed_details(self):
+        test_tno_remaining_ocean_backlog_splits_use_source_backed_details()
 
     def test_family_refinement_audit_reports_low_precision_candidates(self):
         test_tno_water_family_refinement_audit_reports_low_precision_candidates()
