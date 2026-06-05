@@ -2,7 +2,7 @@
   "artifact_counts": {
     "chunk_count": 189,
     "feature_count": 12865,
-    "water_count": 139
+    "water_count": 141
   },
   "controller_changes": [
     {
@@ -10343,6 +10343,7 @@
       "tno_mounts_bay",
       "tno_gulf_of_st_lawrence",
       "tno_bering_sea",
+      "tno_anadyrskiy_zaliv",
       "tno_sea_of_japan",
       "tno_seto_naikai",
       "tno_tatarskiy_proliv",
@@ -10383,6 +10384,7 @@
       "tno_black_sea",
       "tno_sea_of_azov",
       "tno_greenland_sea",
+      "tno_fram_strait",
       "tno_norwegian_sea",
       "tno_barents_sea",
       "tno_beaufort_sea",
@@ -96937,7 +96939,7 @@
     },
     "BOP": {
       "base_iso2": "BOP",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 8,
       "display_name": "вор в законе",
       "entry_kind": "scenario_country",
@@ -96965,7 +96967,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "BOT": {
@@ -97917,7 +97919,7 @@
     },
     "GAY": {
       "base_iso2": "GAY",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 0,
       "display_name": "Gayny",
       "entry_kind": "scenario_country",
@@ -97943,7 +97945,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "GCE": {
@@ -99289,7 +99291,7 @@
     },
     "MAG": {
       "base_iso2": "MAG",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 13,
       "display_name": "Magnitogorsk",
       "entry_kind": "scenario_country",
@@ -99317,7 +99319,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "MAL": {
@@ -99947,7 +99949,7 @@
     },
     "ONG": {
       "base_iso2": "ONG",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 7,
       "display_name": "Onega",
       "entry_kind": "scenario_country",
@@ -99975,7 +99977,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "ORE": {
@@ -100011,7 +100013,7 @@
     },
     "ORN": {
       "base_iso2": "ORN",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 14,
       "display_name": "Orenburg",
       "entry_kind": "scenario_country",
@@ -100039,12 +100041,12 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "ORS": {
       "base_iso2": "ORS",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 12,
       "display_name": "Orsk",
       "entry_kind": "scenario_country",
@@ -100072,7 +100074,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "OUR": {
@@ -102265,7 +102267,7 @@
     },
     "VOK": {
       "base_iso2": "VOK",
-      "continent_label": "",
+      "continent_label": "Europe",
       "controller_feature_count": 1,
       "display_name": "Vorkuta",
       "entry_kind": "scenario_country",
@@ -102293,7 +102295,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Europe",
       "synthetic_owner": false
     },
     "VOL": {
@@ -102461,7 +102463,7 @@
     },
     "XIK": {
       "base_iso2": "XIK",
-      "continent_label": "",
+      "continent_label": "Asia",
       "controller_feature_count": 18,
       "display_name": "XiKang",
       "entry_kind": "scenario_country",
@@ -102489,7 +102491,7 @@
         "scenario_extension"
       ],
       "subject_kind": "",
-      "subregion_label": "",
+      "subregion_label": "Eastern Asia",
       "synthetic_owner": false
     },
     "XIN": {
@@ -102762,13 +102764,13 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "tno_1962",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "fd449d432f460e7bfdd28f60827446f659ffedd76caaf4323a028355648e5e70",
+  "snapshot_fingerprint": "6b14308042d4baa586915ac688a209c0dda439aa3b76860fa7088b6a2f73af5c",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "d941a29fae2b520630abbacb8e641026b40f878200d8d65bfd033d0b4c56ab0a",
-    "detail_chunk_manifest_sha256": "92a89a4452776b0f3e13ba645c62bdd14efe2e137e82186e2f1ee563b772804d",
+    "build_snapshot_sha256": "6010596763940848de00217e0e5ca38fabd5bd50933e2aa7c86051a9e4a92f4a",
+    "detail_chunk_manifest_sha256": "8098080e409f07996ae412a3f100d64da87feffc71245db3d564a2ecb26be2b1",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
-    "runtime_topology_sha256": "1ab8208848a57f1f0b7204880675480d59baf3f44a71c5a8fa8b4611c52ced23"
+    "runtime_topology_sha256": "b224fc4b590d676b2e0014b8ece43e3bb85474dad11f83bd037c92fe8918520d"
   },
   "summary": {
     "approximate_count": 919,
@@ -102810,11 +102812,11 @@
     "synthetic_owner_feature_count": 446,
     "tno_bathymetry_band_count": 90,
     "tno_bathymetry_contour_count": 74,
-    "tno_named_marginal_water_count": 111,
+    "tno_named_marginal_water_count": 113,
     "tno_reichskommissariat_count": 8,
     "tno_relief_overlay_count": 25,
     "tno_special_region_count": 0,
-    "tno_water_region_count": 139,
+    "tno_water_region_count": 141,
     "topology_blocker_count": 0
   },
   "topology_blockers": [],

@@ -958,6 +958,191 @@
       "matched_record_ids": [
         "seavox_v19:mrgid_sr=24118"
       ]
+    },
+    {
+      "id": "tno_makassar_strait",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4339"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24135'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='MAKASSAR STRAIT' OR level_4='MAKASSAR STRAIT' OR level_3='MAKASSAR STRAIT' OR level_2='MAKASSAR STRAIT' OR level_1='MAKASSAR STRAIT'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24135' OR mrgid_l2='24135' OR mrgid_l3='24135' OR mrgid_l4='24135'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4339 returns Makassar Strait as an IHO Sea Area.",
+        "The implemented Marine Regions SeaVoX record mrgid_sr='24135' is SELAT MAKASAR, the source-backed SeaVoX polygon used for Makassar Strait.",
+        "Marine Regions SeaVoX exact-name query for MAKASSAR STRAIT returned zero features, while child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24135 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4339",
+        "seavox_v19:mrgid_sr=24135"
+      ]
+    },
+    {
+      "id": "tno_java_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4338"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24130'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='JAVA SEA' OR level_4='JAVA SEA' OR level_3='JAVA SEA' OR level_2='JAVA SEA' OR level_1='JAVA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24130' OR mrgid_l2='24130' OR mrgid_l3='24130' OR mrgid_l4='24130'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4338 returns Java Sea as an IHO Sea Area.",
+        "The implemented Marine Regions SeaVoX record mrgid_sr='24130' is JAWA SEA, the source-backed SeaVoX polygon used for Java Sea.",
+        "Marine Regions SeaVoX exact-name query for JAVA SEA returned zero features, while child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24130 returned zero features."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4338",
+        "seavox_v19:mrgid_sr=24130"
+      ]
+    },
+    {
+      "id": "tno_arafura_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4347"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24065'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='ARAFURA SEA' OR level_4='ARAFURA SEA' OR level_3='ARAFURA SEA' OR level_2='ARAFURA SEA' OR level_1='ARAFURA SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24065' OR mrgid_l2='24065' OR mrgid_l3='24065' OR mrgid_l4='24065'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4347 returns Arafura Sea as an IHO Sea Area.",
+        "Marine Regions SeaVoX mrgid_sr='24065' returns Arafura Sea as the implemented source-backed polygon.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24065 returned zero features.",
+        "The SeaVoX level-1 Arafura hierarchy contains Arafura Sea plus Gulf of Carpentaria; Gulf of Carpentaria is already modeled as a separate named water and subtracted from Arafura Sea."
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4347",
+        "seavox_v19:mrgid_sr=24065"
+      ]
+    },
+    {
+      "id": "tno_timor_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "iho",
+          "cql_filter": "mrgid=4344"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24066'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='TIMOR SEA' OR level_4='TIMOR SEA' OR level_3='TIMOR SEA' OR level_2='TIMOR SEA' OR level_1='TIMOR SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24066' OR mrgid_l2='24066' OR mrgid_l3='24066' OR mrgid_l4='24066'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions IHO mrgid=4344 returns Timor Sea as an IHO Sea Area.",
+        "Marine Regions SeaVoX mrgid_sr='24066' returns Timor Sea as the implemented source-backed polygon.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24066 returned zero features.",
+        "The broader SeaVoX level-1 Timor hierarchy includes Joseph Bonaparte Gulf, but that polygon does not intersect the current implemented Timor Sea sub_region geometry, so it is not a valid child split for this scenario surface."
+      ],
+      "rejected_child_candidates": [
+        {
+          "name": "Joseph Bonaparte Gulf",
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24062'",
+          "matched_record_id": "seavox_v19:mrgid_sr=24062",
+          "reason": "no_intersection_with_current_parent_geometry"
+        }
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "iho:mrgid=4344",
+        "seavox_v19:mrgid_sr=24066"
+      ]
+    },
+    {
+      "id": "tno_ross_sea",
+      "review_status": "terminal_public_source",
+      "reviewed_at": "2026-06-05",
+      "source_queries": [
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24147'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "sub_region='ROSS SEA' OR level_4='ROSS SEA' OR level_3='ROSS SEA' OR level_2='ROSS SEA' OR level_1='ROSS SEA'"
+        },
+        {
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_l1='24147' OR mrgid_l2='24147' OR mrgid_l3='24147' OR mrgid_l4='24147'"
+        }
+      ],
+      "evidence": [
+        "Marine Regions SeaVoX mrgid_sr='24147' returns Ross Sea as the implemented source-backed polygon.",
+        "Marine Regions SeaVoX child-reference query for mrgid_l1, mrgid_l2, mrgid_l3, or mrgid_l4 equal to 24147 returned zero features.",
+        "The broader SeaVoX level-1 Ross hierarchy includes McMurdo Sound, but that polygon does not intersect the current implemented Ross Sea scenario geometry, so it is not a valid child split for this scenario surface."
+      ],
+      "rejected_child_candidates": [
+        {
+          "name": "McMurdo Sound",
+          "source_layer": "seavox_v19",
+          "cql_filter": "mrgid_sr='24145'",
+          "matched_record_id": "seavox_v19:mrgid_sr=24145",
+          "reason": "no_intersection_with_current_parent_geometry"
+        }
+      ],
+      "terminal_reason": "no_public_child_polygon_source",
+      "child_result_count": 0,
+      "matched_record_ids": [
+        "seavox_v19:mrgid_sr=24147"
+      ]
     }
   ]
 }
