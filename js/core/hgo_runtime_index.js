@@ -1,3 +1,5 @@
+// HGO runtime seed 同时来自 mod 文本、浏览器状态和取色路径；
+// 每个公开查询先把 id/tag/RGB 收口成稳定字符串键，再访问索引表。
 function normalizeHgoRuntimeProvinceId(value) {
   if (value === null || value === undefined || value === "") return "";
   const number = Number(value);
@@ -140,6 +142,8 @@ function buildResolvedProvince({ province, state, country }) {
 
 function createHgoRuntimeIndex(seed = {}) {
   const payload = normalizeSeedObject(seed);
+  // 这里建立三层只读关系图：province 负责像素/RGB 命中，state 负责所有权，
+  // country 负责颜色和国家定义。查询结果只组合引用，不回写原始 seed。
   const provinceById = new Map();
   const provinceIdByRgbKey = new Map();
   const stateById = new Map();
@@ -167,6 +171,8 @@ function createHgoRuntimeIndex(seed = {}) {
     countryByTag.set(country.tag, country);
   });
 
+  // province_to_state 是 builder 已验证过的稀疏映射；runtime 只接受合法键，
+  // 让未知像素自然返回 null，避免在浏览器侧制造假 ownership。
   Object.entries(normalizeSeedObject(payload.province_to_state)).forEach(([rawProvinceId, rawStateId]) => {
     const provinceId = normalizeHgoRuntimeProvinceId(rawProvinceId);
     const stateId = normalizeHgoRuntimeStateId(rawStateId);

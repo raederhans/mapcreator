@@ -52,6 +52,8 @@ export function createDefaultColorState() {
     resolvedDefaultCountryPalette: { ...defaultCountryPalette },
     paletteLibraryOpen: true,
     paletteLibrarySearch: "",
+    // 色板库分组是可保存 UI 状态；default 保留历史平铺顺序，
+    // region 消费 import 阶段写入的地区 metadata。
     paletteLibraryGroupingMode: "default",
     paletteLibraryEntries: [],
     paletteQuickSwatches: [],

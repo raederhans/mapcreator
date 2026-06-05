@@ -57,12 +57,15 @@ def dump_json(path: Path, payload: object) -> None:
 
 
 def validate_source_root(root: Path) -> None:
+    # HGO seed 必须从完整 mod 根目录生成；少任何一个核心目录都直接失败，
+    # 避免用半截 source 生成一个看似可用的 runtime 索引。
     missing_paths = [rel_path.as_posix() for rel_path in REQUIRED_SOURCE_PATHS if not (root / rel_path).exists()]
     if missing_paths:
         raise FileNotFoundError(f"HGO source root is missing required paths: {', '.join(missing_paths)}")
 
 
 def strip_hoi4_comments(text: str) -> str:
+    # HOI4 文本里 # 只在引号外表示注释；国家名和路径字符串里的 # 要保留。
     lines: list[str] = []
     for raw_line in text.splitlines():
         in_quote = False
@@ -272,6 +275,8 @@ def build_province_to_state_index(
     provinces: dict[int, dict[str, object]],
     states: list[dict[str, object]],
 ) -> tuple[dict[str, int], dict[str, object]]:
+    # builder 阶段先把完整性问题暴露出来：未知 province 或一省多州都会让
+    # 浏览器 runtime 无法给像素命中稳定归属，因此这里选择硬失败。
     province_to_state: dict[str, int] = {}
     missing_definition_province_ids: set[int] = set()
     duplicate_refs: list[dict[str, int]] = []
@@ -338,6 +343,8 @@ def build_runtime_seed(
 ) -> dict[str, object]:
     root = root.resolve()
     validate_source_root(root)
+    # 输出 seed 保留四个并列真源：definition province、history state、
+    # country tag/color、province_to_state。前端索引只消费这些稳定产物。
     provinces = parse_definition_csv(root / "map" / "definition.csv")
     states = load_states(root, as_of_date=as_of_date)
     countries = load_countries(root, states)

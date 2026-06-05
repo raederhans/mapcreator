@@ -15,6 +15,8 @@ def write_minimal_hgo_source(
     state_controller: str | None = "BBB",
     extra_history: str = "",
 ) -> None:
+    # 测试源树只保留 builder 必需的 HOI4/HGO 目录形状，确保断言覆盖
+    # parser、source validation、integrity check，而不是依赖真实 mod 安装。
     (root / "map").mkdir(parents=True)
     (root / "history" / "states").mkdir(parents=True)
     (root / "common" / "country_tags").mkdir(parents=True)

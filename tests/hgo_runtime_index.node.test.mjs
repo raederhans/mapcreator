@@ -84,6 +84,8 @@ const seed = {
   },
 };
 
+// 这个 fixture 同时覆盖 province RGB、state ownership、country color 三层，
+// 让 runtime index 的查询合同和 builder 输出结构保持同步。
 function createIndex() {
   return createHgoRuntimeIndex(seed);
 }
