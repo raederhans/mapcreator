@@ -14,15 +14,15 @@
 
 - [x] Load project guidance, lessons, and relevant workflow skills.
 - [x] Fetch remote refs and list worktrees.
-- [ ] Snapshot all dirty diffs and branch diffs into `.runtime/git-closeout/`.
-- [ ] Inspect branch commit/diff surfaces and choose merge order.
-- [ ] Isolate `.omx/metrics.json` runtime noise from `main`.
-- [ ] Commit current main product/docs/test changes.
-- [ ] Merge worktree branches into `main` one by one.
-- [ ] Resolve conflicts and rerun focused checks after each risky merge.
-- [ ] Run final verification and review.
-- [ ] Push `main`.
-- [ ] Remove worktrees whose content is safely merged.
+- [x] Snapshot all dirty diffs and branch diffs into `.runtime/git-closeout/`.
+- [x] Inspect branch commit/diff surfaces and choose merge order.
+- [x] Isolate `.omx/metrics.json` runtime noise from `main`.
+- [x] Commit current main product/docs/test changes.
+- [x] Merge worktree branches into `main` one by one.
+- [x] Resolve conflicts and rerun focused checks after each risky merge.
+- [x] Run final verification.
+- [x] Remove worktrees whose content is safely merged.
+- [ ] Run final code review and push `main`.
 
 ## Live Process Ownership
 
