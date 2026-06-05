@@ -34,6 +34,7 @@ import {
   hydrateViewSettings,
   nowMs,
   processHierarchyData,
+  shouldDisableConfiguredDefaultScenario,
 } from "./startup_bootstrap_support.js";
 import {
   beginBaseCitySupportLoad,
@@ -456,9 +457,12 @@ export function createStartupDataPipelineOwner({
     // 1) 优先走 startup bundle worker，尽量把首屏所需数据一次带齐；
     // 2) 若 bundle 缺失或 contract 不达标，则回退到 legacy bootstrap bundle。
     // 返回 promise 组而不是直接 await，是为了让主启动链能并行准备 registry、bundle 和 fallback 信息。
-    const configuredDefaultScenarioId = getConfiguredDefaultScenarioId();
+    const defaultScenarioDisabled = shouldDisableConfiguredDefaultScenario();
+    const configuredDefaultScenarioId = defaultScenarioDisabled ? "" : getConfiguredDefaultScenarioId();
     const scenarioRegistryPromise = loadScenarioRegistry({ d3Client });
-    const registryDefaultScenarioIdPromise = configuredDefaultScenarioId
+    const registryDefaultScenarioIdPromise = defaultScenarioDisabled
+      ? Promise.resolve("")
+      : configuredDefaultScenarioId
       ? Promise.resolve(configuredDefaultScenarioId)
       : scenarioRegistryPromise.then((registry) => {
         const defaultScenarioId = String(registry?.default_scenario_id || "").trim();
@@ -467,13 +471,23 @@ export function createStartupDataPipelineOwner({
         }
         return defaultScenarioId;
       });
-    const requestedDefaultScenarioIdPromise = configuredDefaultScenarioId
+    const requestedDefaultScenarioIdPromise = defaultScenarioDisabled
+      ? Promise.resolve("")
+      : configuredDefaultScenarioId
       ? Promise.resolve(configuredDefaultScenarioId)
       : registryDefaultScenarioIdPromise;
     const startupBundleLanguage = getStartupBundleLanguage();
     startBootMetric?.("scenario-bundle");
     const startupBundleResultPromise = requestedDefaultScenarioIdPromise
       .then(async (defaultScenarioId) => {
+        if (!defaultScenarioId) {
+          return {
+            ok: true,
+            skipped: true,
+            scenarioId: "",
+            source: "default-scenario-disabled",
+          };
+        }
         const startupScenarioManifest = await loadStartupScenarioManifestFromRegistry({
           d3Client,
           scenarioRegistryPromise,
@@ -547,6 +561,14 @@ export function createStartupDataPipelineOwner({
       }));
     const scenarioBundlePromise = requestedDefaultScenarioIdPromise
       .then(async (defaultScenarioId) => {
+        if (!defaultScenarioId) {
+          return {
+            ok: true,
+            skipped: true,
+            scenarioId: "",
+            source: "default-scenario-disabled",
+          };
+        }
         const startupBundleResult = await startupBundleResultPromise;
         if (startupBundleResult.ok && startupBundleResult.bundle?.manifest) {
           return startupBundleResult;

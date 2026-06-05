@@ -4,7 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { createScenarioChunkRuntimeController } from "../js/core/scenario/chunk_runtime.js";
-import { buildViewportGeoBounds, normalizeScenarioChunkManifest, selectScenarioChunks } from "../js/core/scenario_chunk_manager.js";
+import {
+  buildViewportGeoBounds,
+  mergeScenarioChunkPayloadsForViewport,
+  normalizeScenarioChunkManifest,
+  selectScenarioChunks,
+} from "../js/core/scenario_chunk_manager.js";
 import { createRenderCacheOwner } from "../js/core/renderer/render_cache_owner.js";
 import { buildSpatialGridSnapshot, getSpatialBucketKey } from "../js/core/renderer/spatial_index_runtime_builders.js";
 
@@ -637,6 +642,137 @@ test("edge-touching feature bounds stay eligible for political detail selection"
   assert.deepEqual(selection.requiredChunks.map((chunk) => chunk.id), ["political.detail.country.edge-owner"]);
 });
 
+test("political detail selection reports viewport feature subset counts", () => {
+  const selection = selectScenarioChunks({
+    scenarioId: "tno_1962",
+    chunkRegistry: normalizeScenarioChunkManifest({
+      chunks: [
+        {
+          id: "political.detail.country.multi-owner",
+          url: "multi-owner.json",
+          layer: "political",
+          lod: "detail",
+          bounds: [-180, -60, 180, 80],
+          feature_bounds: [
+            [8, 32, 10, 34],
+            [80, 40, 90, 50],
+            [11, 35, 12, 36],
+          ],
+          min_zoom: 0,
+          max_zoom: 99,
+          feature_count: 3,
+          byte_size: 1,
+          estimated_path_cost: 3,
+        },
+      ],
+    }),
+    zoom: 2.5,
+    viewportBbox: [7, 31, 13, 37],
+    visibleLayers: ["political"],
+    renderBudgetHints: {
+      max_required_chunks: 6,
+      max_required_political_chunks: 6,
+      min_required_political_chunks: 1,
+    },
+  });
+
+  assert.equal(selection.selectedFeatureCountSum, 3);
+  assert.equal(selection.selectedVisibleFeatureCountSum, 2);
+  assert.equal(selection.selectedPoliticalFeatureCountSum, 3);
+  assert.equal(selection.selectedPoliticalVisibleFeatureCountSum, 2);
+  assert.equal(selection.politicalVisibleFeatureSubsetSignature, "political.detail.country.multi-owner:0.2");
+});
+
+test("political chunk payload merge can clip to viewport feature bounds", () => {
+  const chunk = normalizeScenarioChunkManifest({
+    chunks: [
+      {
+        id: "political.detail.country.multi-owner",
+        url: "multi-owner.json",
+        layer: "political",
+        lod: "detail",
+        bounds: [-180, -60, 180, 80],
+        feature_bounds: [
+          [8, 32, 10, 34],
+          [80, 40, 90, 50],
+          [11, 35, 12, 36],
+        ],
+        feature_count: 3,
+      },
+    ],
+  }).chunks[0];
+  const result = mergeScenarioChunkPayloadsForViewport("political", [{
+    chunk,
+    payload: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "visible-a", properties: {}, geometry: null },
+        { type: "Feature", id: "outside-b", properties: {}, geometry: null },
+        { type: "Feature", id: "visible-c", properties: {}, geometry: null },
+      ],
+    },
+  }], [7, 31, 13, 37]);
+
+  assert.deepEqual(result.payload.features.map((feature) => feature.id), ["visible-a", "visible-c"]);
+  assert.equal(result.stats.visibleFeatureCount, 2);
+  assert.equal(result.stats.totalFeatureCount, 3);
+  assert.equal(result.stats.clippedChunkCount, 1);
+});
+
+test("political chunk feature bounds preserve zero-area positional alignment", () => {
+  const selection = selectScenarioChunks({
+    scenarioId: "zero_bounds",
+    chunkRegistry: normalizeScenarioChunkManifest({
+      chunks: [
+        {
+          id: "political.detail.country.zero-owner",
+          url: "zero-owner.json",
+          layer: "political",
+          lod: "detail",
+          bounds: [-180, -60, 180, 80],
+          feature_bounds: [
+            [0, 0, 0, 0],
+            [80, 40, 90, 50],
+          ],
+          min_zoom: 0,
+          max_zoom: 99,
+          feature_count: 2,
+          byte_size: 1,
+          estimated_path_cost: 2,
+        },
+      ],
+    }),
+    zoom: 2.5,
+    viewportBbox: [-1, -1, 1, 1],
+    visibleLayers: ["political"],
+    renderBudgetHints: {
+      max_required_chunks: 6,
+      max_required_political_chunks: 6,
+      min_required_political_chunks: 1,
+    },
+  });
+
+  assert.equal(selection.selectedPoliticalFeatureCountSum, 2);
+  assert.equal(selection.selectedPoliticalVisibleFeatureCountSum, 1);
+  assert.equal(selection.politicalVisibleFeatureSubsetSignature, "political.detail.country.zero-owner:0");
+
+  const result = mergeScenarioChunkPayloadsForViewport("political", [{
+    chunk: selection.requiredChunks[0],
+    payload: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "zero-a", properties: {}, geometry: null },
+        { type: "Feature", id: "outside-b", properties: {}, geometry: null },
+      ],
+    },
+  }], [-1, -1, 1, 1]);
+
+  assert.deepEqual(result.payload.features.map((feature) => feature.id), ["zero-a"]);
+  assert.equal(result.stats.visibleFeatureCount, 1);
+  assert.equal(result.stats.totalFeatureCount, 2);
+  assert.equal(result.stats.clippedChunkCount, 1);
+});
+
 test("tno render budget sets political cold selection caps", () => {
   const manifest = JSON.parse(readRepoFile("data", "scenarios", "tno_1962", "manifest.json"));
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
@@ -648,6 +784,30 @@ test("tno render budget sets political cold selection caps", () => {
   assert.equal(hints.max_required_political_byte_size, 45_000_000);
   assert.match(chunkAssetToolSource, /TNO_1962_RENDER_BUDGET_HINTS = \{[\s\S]*?"max_required_political_chunks": 6/);
   assert.match(chunkAssetToolSource, /\*\*\(TNO_1962_RENDER_BUDGET_HINTS if scenario_id == "tno_1962" else \{\}\)/);
+});
+
+test("checked-in political coarse chunks match complete runtime political geometry", () => {
+  for (const scenarioId of ["tno_1962", "hoi4_1939"]) {
+    const chunkManifest = JSON.parse(readRepoFile("data", "scenarios", scenarioId, "detail_chunks.manifest.json"));
+    const bootstrapTopology = JSON.parse(readRepoFile("data", "scenarios", scenarioId, "runtime_topology.bootstrap.topo.json"));
+    const runtimeTopology = JSON.parse(readRepoFile("data", "scenarios", scenarioId, "runtime_topology.topo.json"));
+    const bootstrapPoliticalCount = bootstrapTopology.objects?.political?.geometries?.length || 0;
+    const runtimePoliticalCount = runtimeTopology.objects?.political?.geometries?.length || 0;
+    const coarseChunk = chunkManifest.chunks.find((chunk) => chunk.id === "political.coarse.r0c0");
+    const coarsePayload = readManifestChunkPayload(coarseChunk);
+
+    assert.ok(bootstrapPoliticalCount > 0, `${scenarioId} bootstrap political geometry must exist`);
+    assert.ok(runtimePoliticalCount > 0, `${scenarioId} runtime political geometry must exist`);
+    assert.equal(coarseChunk.feature_count, runtimePoliticalCount, `${scenarioId} coarse chunk should match runtime political geometry`);
+    assert.equal(coarseChunk.feature_bounds.length, coarseChunk.feature_count, `${scenarioId} coarse chunk should expose per-feature bounds`);
+    assert.equal(coarsePayload.features.length, coarseChunk.feature_count, `${scenarioId} coarse payload should match manifest count`);
+
+    const interactivePoliticalFeatures = coarsePayload.features.filter((feature) => {
+      const props = feature?.properties || {};
+      return props.interactive !== false && props.render_as_base_geography !== true;
+    });
+    assert.ok(interactivePoliticalFeatures.length > 0, `${scenarioId} coarse chunk should retain interactive political features`);
+  }
 });
 
 test("tno mediterranean detail selection keeps Atlantropa scenario layer chunks", () => {
@@ -1033,11 +1193,37 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /priority: "high",[\s\S]*?label: `deferred-exact-context-pass-\$\{passName\}`,[\s\S]*?generation: Number\(plan\.controllerGeneration \|\| 0\),[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(rendererSource),
     buildHitCanvasReportsVisibleAndGridCandidateCounts:
       rendererSource.includes("lastHitCanvasBuildStats")
+      && rendererSource.includes("HIT_CANVAS_VIEWPORT_OVERSCAN_PX")
+      && /const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats\(\{[\s\S]*?overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,[\s\S]*?\}\);/.test(rendererSource)
       && rendererSource.includes("visibleItemCount")
       && rendererSource.includes("cellCandidateCount")
       && rendererSource.includes("globalCandidateCount")
       && rendererSource.includes("globalCount")
       && rendererSource.includes("cellSpan"),
+    dirtyHitCanvasUsesPointProbeBeforeDeferredFullBuild:
+      /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?collectGridCandidates\(projectedX, projectedY, 0\)[\s\S]*?hitContext\.rect\(px - 1, py - 1, 3, 3\);[\s\S]*?hitContext\.clip\(\);[\s\S]*?recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource)
+      && /function getValidatedCanvasHit\(event, strictIds = null, \{ forceBuild = false \} = \{\}\) \{[\s\S]*?if \(isHitCanvasCurrent\(\)\) \{[\s\S]*?getHitResultFromCanvas\(event\)[\s\S]*?\} else \{[\s\S]*?scheduleHitCanvasBuildIfNeeded\(\{ reason: forceBuild \? "dirty-point-probe-click" : "dirty-point-probe-hover" \}\);[\s\S]*?getDirtyHitCanvasPointProbeHit\(event\);/.test(rendererSource),
+    hitCanvasPixelReadsUseFiniteDpr:
+      /function getHitResultFromCanvas\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?Math\.round\(sy \* dpr\)/.test(rendererSource)
+      && /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?hitContext\.setTransform\(dpr, 0, 0, dpr, 0, 0\);/.test(rendererSource),
+    chunkPromotionReportsPrimaryAndDeferredStageMetrics:
+      rendererSource.includes('recordRenderPerfMetric("chunkPromotionPrimaryRefreshMs"')
+      && rendererSource.includes('recordRenderPerfMetric("chunkPromotionDeferredInfraMs"')
+      && rendererSource.includes("promotedVisibleFeatureCount")
+      && rendererSource.includes("promotedTotalFeatureCount")
+      && /const promotionMetricDetails = \{[\s\S]*?selectedByteCountSum[\s\S]*?selectedEstimatedPathCostSum[\s\S]*?\};[\s\S]*?recordRenderPerfMetric\("scenarioChunkPromotionVisualStage", visualDurationMs, \{[\s\S]*?\.\.\.promotionMetricDetails/.test(rendererSource)
+      && /recordScenarioRenderMetric\("politicalChunkPromotionMs"[\s\S]*?promotedVisibleFeatureCount:[\s\S]*?promotedTotalFeatureCount:[\s\S]*?primaryVisibleFeatureCount:[\s\S]*?primaryTotalFeatureCount:/.test(chunkRuntimeSource)
+      && /function buildInitialScenarioChunkVisualPromotionResult[\s\S]*?scenarioPoliticalVisibleFeatureCount[\s\S]*?promotedVisibleFeatureCount: scenarioPoliticalVisibleFeatureCount,[\s\S]*?promotedTotalFeatureCount: scenarioPoliticalChunkFeatureCount/.test(chunkRuntimeSource)
+      && /const ready = !!\([\s\S]*?scenarioPoliticalChunkFeatureCount > 0[\s\S]*?landFeatureCount > 0[\s\S]*?colorCount > 0/.test(chunkRuntimeSource)
+      && /allowStartupInitialVisual = false,[\s\S]*?shouldForceStartupInitialVisualRefresh = !!allowStartupInitialVisual[\s\S]*?getFeatureCount\(runtimeState\.landData\) <= 0[\s\S]*?getColorCount\(\) <= 0[\s\S]*?forceRefresh: !!pendingPromotion\.primaryVisibleFeatureSubsetChanged \|\| shouldForceStartupInitialVisualRefresh/.test(chunkRuntimeSource)
+      && /loadState\.pendingVisualPromotion = \{[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource)
+      && /loadState\.pendingPromotion = \{[\s\S]*?requiredPoliticalChunkCount:[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource),
+    deferredInfraSkipsFullPoliticalRestoreWhenCompleteLandDataAlreadyOwnsRender:
+      /const completePoliticalFeatureCount = Array\.isArray\(runtimeState\.scenarioPoliticalChunkData\?\.features\)[\s\S]*?runtimeState\.scenarioPoliticalChunkData\.features\.length/.test(rendererSource)
+      && /const renderedLandFeatureCount = Array\.isArray\(runtimeState\.landData\?\.features\)[\s\S]*?runtimeState\.landData\.features\.length/.test(rendererSource)
+      && /const shouldRestoreFullPoliticalDerivedState = \([\s\S]*?!primaryDerivedStateReady[\s\S]*?completePoliticalFeatureCount > 0[\s\S]*?renderedLandFeatureCount < completePoliticalFeatureCount[\s\S]*?\);/.test(rendererSource)
+      && /if \(shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(rendererSource)
+      && /restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;/.test(rendererSource),
     exactAfterSettleDefersPoliticalFastExact:
       /function drawTransformedFrameFromCaches[\s\S]*?settlePoliticalFastExactSkipped[\s\S]*?defer-to-sliced-exact-refresh/.test(rendererSource)
       && !/function drawTransformedFrameFromCaches[\s\S]*?renderPassToCache\("political", \(k\) => drawPoliticalPass\(k\)/.test(rendererSource),
@@ -1102,6 +1288,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function blitCompositeBufferToMain\(bufferCanvas\) \{[\s\S]*?context\.globalCompositeOperation = "copy";[\s\S]*?context\.drawImage\(bufferCanvas, 0, 0\);[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(rendererSource),
     coarsePrewarmDoesNotOverwriteActiveDetailChunks:
       /function hasDetailScenarioChunkIds\(chunkIds = \[\]\) \{[\s\S]*?String\(chunkId \|\| ""\)\.includes\("\.detail\."\)/.test(chunkRuntimeSource)
+      && /const SCENARIO_CHUNK_FULL_WORLD_BBOX = Object\.freeze\(\[-180, -90, 180, 90\]\);/.test(chunkRuntimeSource)
+      && /function preloadScenarioCoarseChunks[\s\S]*?viewportBbox: \[\.\.\.SCENARIO_CHUNK_FULL_WORLD_BBOX\],[\s\S]*?focusCountry:/.test(chunkRuntimeSource)
       && /function preloadScenarioCoarseChunks[\s\S]*?hasDetailScenarioChunkIds\(chunkState\.loadedChunkIds\)[\s\S]*?loadState\.promotionCommitInFlight[\s\S]*?return null;/.test(chunkRuntimeSource),
     zoomEndSettleRetainsPreviousRequiredPoliticalDetailChunks:
       chunkRuntimeSource.includes('function applyZoomEndChunkProtectionToSelection(selection, loadState, {')
@@ -1159,6 +1347,8 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const scenarioManagerSource = readRepoFile("js", "core", "scenario_manager.js");
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
+  const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
+  const mainSource = readRepoFile("js", "main.js");
   const benchmarkSource = readRepoFile("ops", "browser-mcp", "editor-performance-benchmark.py");
   const playwrightAppPathsSource = readRepoFile("tests", "e2e", "support", "playwright-app-paths.js");
 
@@ -1205,19 +1395,41 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       /if \(!detailReady && (?:runtimeState|state)\.topologyBundleMode !== "composite"\) \{[\s\S]*?console\.warn\("\[scenario\] Applying bundle without confirmed detail promotion; health gate will validate runtime topology\."\);/.test(scenarioApplyPipelineSource),
     coarseInteractiveMetricRecordedAfterPostApplyEffects:
       /const \{[\s\S]*?chunkPrewarmAwaited = true,[\s\S]*?chunkPrewarmDeferred = false,[\s\S]*?coarsePrewarmCommitted = false,[\s\S]*?\} = await runPostScenarioApplyEffects\([\s\S]*?deferChunkPrewarm,[\s\S]*?const canRecordPostApplyCoarseMetric = !hasChunkedRuntime \|\| coarsePrewarmCommitted;[\s\S]*?if \(chunkPrewarmDeferred\) \{[\s\S]*?recordScenarioPerfMetric\("timeToStartupShellApplyReady"[\s\S]*?source: "post-apply-startup-shell-ready"[\s\S]*?readinessLevel: "startup-shell-apply-ready"[\s\S]*?\} else if[\s\S]*?canRecordPostApplyCoarseMetric[\s\S]*?recordScenarioPerfMetric\([\s\S]*?"timeToPoliticalCoreReady"[\s\S]*?source: "post-apply-coarse-ready"[\s\S]*?if \(!chunkPrewarmDeferred && canRecordPostApplyCoarseMetric\) \{[\s\S]*?recordScenarioPerfMetric\([\s\S]*?"timeToInteractiveCoarseFrame"[\s\S]*?readinessLevel: "coarse-chunk"[\s\S]*?chunkPrewarmAwaited,[\s\S]*?chunkPrewarmDeferred,[\s\S]*?coarsePrewarmCommitted,/.test(scenarioManagerSource),
+    chunkedCoarsePrewarmSuppressesDetailHealthToast:
+      /const suppressChunkedCoarseDataHealthToast =[\s\S]*?scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?chunkPrewarmResult\?\.coarsePrewarmCommitted === true;[\s\S]*?refreshScenarioDataHealth\(\{[\s\S]*?showWarningToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,[\s\S]*?showErrorToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,/.test(readRepoFile("js", "core", "scenario_post_apply_effects.js")),
     startupBootDefersCoarsePrewarm:
       /async function ensureChunkedScenarioFirstFrameReady\(\{[\s\S]*?awaitPrewarm = true,[\s\S]*?coarsePrewarmCommitted: false,[\s\S]*?if \(awaitPrewarm === false && !synchronous\) \{[\s\S]*?scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply"[\s\S]*?coarsePrewarmDeferredAt: refreshScheduledAt[\s\S]*?chunkRefreshScheduledAt: refreshScheduledAt[\s\S]*?return \{[\s\S]*?chunkPrewarmAwaited: false,[\s\S]*?chunkPrewarmDeferred: true,[\s\S]*?coarsePrewarmCommitted: false,/.test(readRepoFile("js", "core", "scenario_post_apply_effects.js"))
       && /canDeferStartupChunkPrewarm = scenarioBundleSource === "startup-bundle"[\s\S]*?defaultScenarioBundle\?\.loadDiagnostics\?\.startupBundle === true[\s\S]*?deferChunkPrewarm: canDeferStartupChunkPrewarm,[\s\S]*?canDeferStartupChunkPrewarm = false;/.test(readRepoFile("js", "bootstrap", "startup_scenario_boot.js")),
+    disabledDefaultScenarioOverrideBootsBaseMap:
+      readRepoFile("js", "bootstrap", "startup_bootstrap_support.js").includes('const DEFAULT_SCENARIO_DISABLED_OVERRIDE = "none";')
+      && /function getConfiguredDefaultScenarioId\(\)[\s\S]*?if \(isDefaultScenarioDisabledOverride\(queryOverride\)\) \{[\s\S]*?return "";[\s\S]*?export function shouldDisableConfiguredDefaultScenario\(\)/.test(readRepoFile("js", "bootstrap", "startup_bootstrap_support.js"))
+      && /const defaultScenarioDisabled = shouldDisableConfiguredDefaultScenario\(\);[\s\S]*?const configuredDefaultScenarioId = defaultScenarioDisabled \? "" : getConfiguredDefaultScenarioId\(\);[\s\S]*?const registryDefaultScenarioIdPromise = defaultScenarioDisabled[\s\S]*?Promise\.resolve\(""\)[\s\S]*?const requestedDefaultScenarioIdPromise = defaultScenarioDisabled[\s\S]*?Promise\.resolve\(""\)/.test(readRepoFile("js", "bootstrap", "startup_data_pipeline.js"))
+      && /if \(scenarioBundleResult\?\.skipped && !scenarioBundleResult\.bundle\) \{[\s\S]*?bundleLevel: "none"[\s\S]*?defaultScenarioBundle: null/.test(readRepoFile("js", "bootstrap", "startup_scenario_boot.js"))
+      && /if \(!scenarioId\) \{[\s\S]*?buildInitialScenarioChunkVisualPromotionResult\("no-active-scenario"[\s\S]*?result\.ok = true;[\s\S]*?return result;/.test(chunkRuntimeSource),
+    startupBootRebuildsBaseMapBeforeInitialChunkVisual:
+      /startupScenarioBoot\.runStartupScenarioBoot\([\s\S]*?if \(!Array\.isArray\(runtimeState\.landData\?\.features\) \|\| !runtimeState\.landData\.features\.length\) \{[\s\S]*?setMapData\(\{[\s\S]*?suppressRender: true,[\s\S]*?interactionLevel: startupInteractionLevel,[\s\S]*?deferInteractionInfrastructure: startupInteractionLevel === "readonly-startup"[\s\S]*?\}\);[\s\S]*?await ensureStartupInitialScenarioChunkVisualReady/.test(mainSource),
     ensureAppPathUrlRewritesRootAndNestedPaths:
       /def ensure_app_path_url\(url: str\) -> str:[\s\S]*?if path\.startswith\("\/app\/"\) or path == "\/app":[\s\S]*?elif path == "\/":[\s\S]*?normalized_path = "\/app\/"[\s\S]*?else:[\s\S]*?normalized_path = f"\/app\{path\}" if path\.startswith\("\/"\) else f"\/app\/\{path\}"/.test(benchmarkSource),
     buildScenarioOpenUrlsAddsPerfOverlayAndScenarioCandidate:
-      /def build_scenario_open_urls\([\s\S]*?perf_url = with_query_overrides\(ensure_app_path_url\(base_url\), perf_overlay="1", runtime_chunk_perf="1"\)[\s\S]*?if normalized_scenario_id and normalized_scenario_id != "none":[\s\S]*?scenario_perf_url = with_query_overrides\(perf_url, default_scenario=normalized_scenario_id\)[\s\S]*?urls\.append\(scenario_perf_url\)[\s\S]*?urls\.append\(perf_url\)/.test(benchmarkSource),
+      /def build_scenario_open_urls\([\s\S]*?perf_url = with_query_overrides\(ensure_app_path_url\(base_url\), perf_overlay="1", runtime_chunk_perf="1"\)[\s\S]*?neutral_perf_url = with_query_overrides\(perf_url, default_scenario="none"\)[\s\S]*?urls\.append\(neutral_perf_url\)[\s\S]*?if normalized_scenario_id == "none":[\s\S]*?pass[\s\S]*?elif normalized_scenario_id:[\s\S]*?scenario_perf_url = with_query_overrides\(perf_url, default_scenario=normalized_scenario_id\)[\s\S]*?urls\.append\(scenario_perf_url\)[\s\S]*?urls\.append\(perf_url\)/.test(benchmarkSource),
     openPageKeepsWrapperThenLocalFallbackAcrossCandidates:
-      /def open_page\(urls: list\[str\] \| tuple\[str, \.\.\.\] \| str\) -> dict:[\s\S]*?if PWCLI\.exists\(\):[\s\S]*?for browser_name in OPEN_BROWSER_CANDIDATES:[\s\S]*?for candidate_url in candidate_urls:[\s\S]*?run_wrapper_pw\("open", candidate_url, "--browser", browser_name,[\s\S]*?for browser_name in OPEN_BROWSER_CANDIDATES:[\s\S]*?for candidate_url in candidate_urls:[\s\S]*?run_local_pw\(\s*"open",\s*candidate_url,\s*"--browser",\s*browser_name,/.test(benchmarkSource),
+      /REQUESTED_PLAYWRIGHT_BACKEND = os\.environ\.get\("EDITOR_PERF_BENCHMARK_BACKEND"/.test(benchmarkSource)
+      && /PLAYWRIGHT_BACKEND = LOCAL_NODE_PLAYWRIGHT_BACKEND if REQUESTED_PLAYWRIGHT_BACKEND == LOCAL_NODE_PLAYWRIGHT_BACKEND else WRAPPER_BACKEND/.test(benchmarkSource)
+      && /SCENARIO_BROWSER_RECYCLE_SETTLE_SEC = 1\.0/.test(benchmarkSource)
+      && /case 'open': \{[\s\S]*?if \(url && payload\.navigate !== false\) \{[\s\S]*?await targetPage\.goto/.test(benchmarkSource)
+      && /"headless": LOCAL_NODE_PLAYWRIGHT_HEADLESS,[\s\S]*?"navigate": False,/.test(benchmarkSource)
+      && /def open_page\(urls: list\[str\] \| tuple\[str, \.\.\.\] \| str\) -> dict:[\s\S]*?if REQUESTED_PLAYWRIGHT_BACKEND in \{"", WRAPPER_BACKEND\} and PWCLI\.exists\(\):[\s\S]*?run_wrapper_pw\("open", candidate_url, "--browser", browser_name,[\s\S]*?if REQUESTED_PLAYWRIGHT_BACKEND in \{"", LOCAL_NODE_PLAYWRIGHT_BACKEND\}:[\s\S]*?run_local_pw\(\s*"open",\s*candidate_url,\s*"--browser",\s*browser_name,/.test(benchmarkSource),
+    scenarioSuitesSettleAfterClosingBrowser:
+      /def run_scenario_suite\([\s\S]*?close_session\(\)[\s\S]*?time\.sleep\(SCENARIO_BROWSER_RECYCLE_SETTLE_SEC\)[\s\S]*?page_load = open_page/.test(benchmarkSource),
+    benchmarkReadyTimeoutReportsBootErrorAndBrowserIssues:
+      /bootError: String\(state\.bootError \|\| ''\),/.test(benchmarkSource)
+      && /if isinstance\(result, dict\):[\s\S]*?result\["consoleIssues"\] = capture_console_issues\(\)[\s\S]*?result\["networkIssues"\] = capture_network_issues\(\)[\s\S]*?Benchmark runtime did not become ready before scenario action/.test(benchmarkSource),
     suiteBaseUrlsKeepOriginalAndAppVariants:
       /suite_base_urls = unique_strings\(\[[\s\S]*?effective_url,[\s\S]*?ensure_app_path_url\(effective_url\),[\s\S]*?args\.url,[\s\S]*?ensure_app_path_url\(args\.url\),/.test(benchmarkSource),
     sameScenarioFreshMetricSelectionIsExplicit:
       /def is_same_scenario_fresh_metric_entry\([\s\S]*?def summarize_freshest_same_scenario_metric_entry\(/.test(benchmarkSource),
+    scenarioConsistencyAcceptsNeutralPageLoadBeforeApply:
+      /neutral_page_load = page_load_active == "" and "default_scenario=none" in page_load_open_url[\s\S]*?or neutral_page_load[\s\S]*?scenario_apply_matches =/.test(benchmarkSource),
     contextProbeReportsPerPassDurations:
       benchmarkSource.includes('("all_context_off", {')
       && benchmarkSource.includes('"contextBaseDurationMs"')
@@ -1225,6 +1437,13 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       && benchmarkSource.includes('("lastFrame", "timings", "contextScenario")')
       && benchmarkSource.includes("'showCityPoints'")
       && benchmarkSource.includes("'showTransport'"),
+    contextProbeScenariosAndCasesAreConfigurable:
+      benchmarkSource.includes('"--context-probe-scenarios"')
+      && benchmarkSource.includes('"--context-probe-cases"')
+      && /def parse_context_probe_scenarios\(value: str\) -> set\[str\]:[\s\S]*?known_scenario_ids = set\(SCENARIO_IDS\)[\s\S]*?Unknown --context-probe-scenarios value\(s\)/.test(benchmarkSource)
+      && /def parse_context_probe_cases\(value: str\) -> list\[tuple\[str, dict\[str, bool\]\]\]:[\s\S]*?unknown = \[label for label in labels if label not in cases_by_label\]/.test(benchmarkSource)
+      && /def measure_context_probes\([\s\S]*?enabled_scenario_ids: set\[str\][\s\S]*?context_probe_cases: list\[tuple\[str, dict\[str, bool\]\][\s\S]*?if scenario_id not in enabled_scenario_ids:[\s\S]*?for label, flags in context_probe_cases:/.test(benchmarkSource)
+      && /context_probe_scenario_ids = parse_context_probe_scenarios\(args\.context_probe_scenarios\)[\s\S]*?context_probe_cases = parse_context_probe_cases\(args\.context_probe_cases\)[\s\S]*?"contextProbeScenarios": sorted\(context_probe_scenario_ids\)[\s\S]*?"contextProbeCases": \[label for label, _flags in context_probe_cases\]/.test(benchmarkSource),
     benchmarkWheelTraceTracksLastWheelAndBlackRatio:
       benchmarkSource.includes("firstIdleAfterLastWheelMs")
       && benchmarkSource.includes("sample_canvas_black_pixel_ratio_js")
@@ -1240,6 +1459,12 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       benchmarkSource.includes("direct_probe_without_scenario_fields")
       && benchmarkSource.includes('"requestedScenarioId"')
       && benchmarkSource.includes('"sameScenario": details_match_scenario or probe_matches_scenario or direct_probe_without_scenario_fields'),
+    fillActionInvalidProbeStaysReportable:
+      benchmarkSource.includes("def build_invalid_fill_probe(precheck: dict, reason: str) -> dict:")
+      && /explicit_validity = probe\.get\("validity"\)[\s\S]*?if explicit_validity and explicit_validity\.get\("valid"\) is False:[\s\S]*?"reason": str\(explicit_validity\.get\("reason"\) or "invalid-probe"\)/.test(benchmarkSource)
+      && /if \(!interaction \|\| !state\.landData\?\.features\?\.length\) \{[\s\S]*?return invalid\('missing-prerequisites'\);/.test(benchmarkSource)
+      && /if \(!candidate\) \{[\s\S]*?return invalid\('missing-target'\);/.test(benchmarkSource)
+      && /if not isinstance\(target, dict\) or target\.get\("valid"\) is False:[\s\S]*?return build_invalid_fill_probe\([\s\S]*?str\(target\.get\("reason"\) if isinstance\(target, dict\) else ""\),/.test(benchmarkSource),
     e2eHarnessDefaultsToAppPath:
       playwrightAppPathsSource.includes("const DEFAULT_OPEN_PATH = DEFAULT_FAST_APP_OPEN_PATH;")
       && playwrightAppPathsSource.includes("const DEFAULT_APP_ORIGIN = `http://127.0.0.1:${DEFAULT_TEST_SERVER_PORT}`;"),
@@ -1361,11 +1586,11 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
         "keepReady: true",
       ].every((snippet) => rendererSource.includes(snippet)),
     rebuildPoliticalLandCollectionsBreakdownExposesSyncSubsteps:
-      /function rebuildPoliticalLandCollections\(\) \{[\s\S]*?let runtimeCollectionMs = 0;[\s\S]*?let composeMs = 0;[\s\S]*?let atlantropaMs = 0;[\s\S]*?let interactiveMs = 0;[\s\S]*?let coverageMs = 0;[\s\S]*?recordRenderPerfMetric\("rebuildPoliticalLandCollectionsBreakdown"[\s\S]*?scenarioChunkFeatureCount:[\s\S]*?runtimeCollectionMs:[\s\S]*?composeMs:[\s\S]*?atlantropaMs:[\s\S]*?interactiveMs:[\s\S]*?coverageMs:/.test(rendererSource),
+      /function rebuildPoliticalLandCollections\(\) \{[\s\S]*?let runtimeCollectionMs = 0;[\s\S]*?let composeMs = 0;[\s\S]*?let atlantropaMs = 0;[\s\S]*?let interactiveMs = 0;[\s\S]*?let coverageMs = 0;[\s\S]*?recordRenderPerfMetric\("rebuildPoliticalLandCollectionsBreakdown"[\s\S]*?scenarioChunkFeatureCount:[\s\S]*?scenarioChunkVisibleFeatureCount:[\s\S]*?runtimeCollectionMs:[\s\S]*?composeMs:[\s\S]*?atlantropaMs:[\s\S]*?interactiveMs:[\s\S]*?coverageMs:/.test(rendererSource),
     politicalChunkPromotionBreakdownExposesVisualStageSubsteps:
       /function applyScenarioPoliticalChunkPayload\(bundle, politicalPayload,[\s\S]*?const normalizeStartedAt = startedAt;[\s\S]*?const identityStartedAt = normalizeEndedAt;[\s\S]*?const compareStartedAt = identityEndedAt;[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?normalizeMs:[\s\S]*?identityMs:[\s\S]*?compareMs:[\s\S]*?refreshMs:/.test(chunkRuntimeSource)
-      && /if \(samePayload\) \{[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?samePayload: true,[\s\S]*?refreshMs: 0,/.test(chunkRuntimeSource)
-      && /recordScenarioRenderMetric\("politicalChunkPromotionBreakdown", finishedAt - startedAt,[\s\S]*?samePayload: false,[\s\S]*?resolvedPoliticalFeatureCount: resolvedPoliticalFeatureIds\.length,/.test(chunkRuntimeSource),
+      && /if \(samePayload && samePrimaryPayload && !forceRefresh\) \{[\s\S]*?recordScenarioRenderMetric\("politicalChunkPromotionBreakdown"[\s\S]*?samePayload: true,[\s\S]*?samePrimaryPayload: true,[\s\S]*?refreshMs: 0,/.test(chunkRuntimeSource)
+      && /recordScenarioRenderMetric\("politicalChunkPromotionBreakdown", finishedAt - startedAt,[\s\S]*?samePayload: false,[\s\S]*?samePrimaryPayload,[\s\S]*?forcedRefresh: !!forceRefresh,[\s\S]*?resolvedPoliticalFeatureCount: resolvedPoliticalFeatureIds\.length,/.test(chunkRuntimeSource),
     compositeScenarioRebuildKeepsScenarioRuntimeTopology:
       [
         "render_as_base_geography === false",
@@ -1376,6 +1601,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
         "if (runtimeBaseCollection)",
         "fullCollection = runtimeBaseCollection;",
         "fullCollection = { type: \"FeatureCollection\", features: [] };",
+        "scenarioPoliticalVisibleChunkCollection",
         "composePoliticalFeatureCollections(fullCollection, scenarioPoliticalChunkCollection)",
         "shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(",
       ].every((snippet) => rendererSource.includes(snippet))
@@ -1462,7 +1688,7 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature/.test(spatialOwnerSource)
       && /shouldExcludePoliticalVisualFeature,/.test(spatialOwnerSource),
     hitCanvasStillFiltersNonInteractiveSpatialItems:
-      /const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats\(\);[\s\S]*?const visibleSpatialItems = visibleSpatialItemsResult\.items;[\s\S]*?visibleSpatialItems\.forEach\(\(item\) => \{[\s\S]*?shouldExcludePoliticalInteractionFeature\(item\.feature, item\.id\)/.test(rendererSource),
+      /const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats\(\{[\s\S]*?overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,[\s\S]*?\}\);[\s\S]*?const visibleSpatialItems = visibleSpatialItemsResult\.items;[\s\S]*?visibleSpatialItems\.forEach\(\(item\) => \{[\s\S]*?shouldExcludePoliticalInteractionFeature\(item\.feature, item\.id\)/.test(rendererSource),
     atlantropaScenarioLayerFeedsScenarioWaterPath:
       /function getScenarioAtlantropaRevisionToken\(\) \{[\s\S]*?runtimeState\.scenarioAtlantropaData[\s\S]*?water:\$\{buckets\.water\.length\}/.test(rendererSource)
       && /function getScenarioAtlantropaRevisionToken\(\) \{[\s\S]*?isScenarioAtlantropaVisible\(\) \? "visible:on" : "visible:off"/.test(rendererSource)
@@ -1881,6 +2107,290 @@ test("zoom-end retained political detail chunks stay in active merge payload", a
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
   }
+});
+
+test("chunk promotion applies viewport-clipped political payload for primary recovery", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const politicalChunk = {
+    id: "political.detail.viewport",
+    layer: "political",
+    lod: "detail",
+    url: "viewport.json",
+    bounds: [-180, -60, 180, 80],
+    featureBounds: [
+      [0, 0, 2, 2],
+      [80, 40, 90, 50],
+      [3, 3, 4, 4],
+    ],
+    featureCount: 3,
+  };
+  const fullPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "visible-a", properties: {}, geometry: null },
+      { type: "Feature", id: "outside-b", properties: {}, geometry: null },
+      { type: "Feature", id: "visible-c", properties: {}, geometry: null },
+    ],
+  };
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: { byLayer: { political: [politicalChunk] } },
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+    chunkPayloadCacheById: {},
+  };
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioChunks: {
+      scenarioId: "tno_1962",
+      loadedChunkIds: [],
+      payloadByChunkId: {},
+      mergedLayerPayloads: {},
+      lruChunkIds: [],
+    },
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 3 },
+    getViewportGeoBoundsFn: () => [-1, -1, 5, 5],
+    landData: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "full-land-a", properties: {}, geometry: null },
+        { type: "Feature", id: "full-land-b", properties: {}, geometry: null },
+        { type: "Feature", id: "full-land-c", properties: {}, geometry: null },
+      ],
+    },
+  };
+  const capturedPrimaryFeatureIds = [];
+  let capturedLandDataFeatureIds = [];
+  let capturedPrimaryVisibleFeatureCount = 0;
+  let capturedPrimaryTotalFeatureCount = 0;
+
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 1;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const controller = createScenarioChunkRuntimeController({
+      runtimeState,
+      getSearchParams: () => new URLSearchParams(),
+      normalizeScenarioId: (value) => String(value || "").trim(),
+      normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+      normalizeScenarioFeatureCollection: (payload) => (
+        Array.isArray(payload?.features)
+          ? { type: "FeatureCollection", features: payload.features }
+          : null
+      ),
+      getScenarioFeatureCollectionIdentityList: (payload) => (
+        Array.isArray(payload?.features) ? payload.features.map((feature) => String(feature?.id || "")) : []
+      ),
+      areScenarioFeatureCollectionsEquivalent: (left, right) => {
+        const leftIds = Array.isArray(left?.features) ? left.features.map((feature) => feature.id) : [];
+        const rightIds = Array.isArray(right?.features) ? right.features.map((feature) => feature.id) : [];
+        return leftIds.length === rightIds.length && leftIds.every((id, index) => id === rightIds[index]);
+      },
+      getScenarioDefaultCountryCode: () => "",
+      getScenarioBundleId: () => "tno_1962",
+      getCachedScenarioBundle: () => bundle,
+      getVisibleScenarioChunkLayers: () => ["political"],
+      selectScenarioChunks: () => ({
+        scenarioId: "tno_1962",
+        requiredChunks: [politicalChunk],
+        optionalChunks: [],
+        evictableChunkIds: [],
+        viewportBbox: [-1, -1, 5, 5],
+        selectedFeatureCountSum: 3,
+        selectedVisibleFeatureCountSum: 2,
+        selectedPoliticalFeatureCountSum: 3,
+        selectedPoliticalVisibleFeatureCountSum: 2,
+        politicalVisibleFeatureSubsetSignature: "political.detail.viewport:0.2",
+      }),
+      mergeScenarioChunkPayloads: (_layerKey, payloads) => ({
+        type: "FeatureCollection",
+        features: payloads.flatMap((payload) => payload?.features || []),
+      }),
+      mergeScenarioChunkPayloadsForViewport,
+      normalizeScenarioRenderBudgetHints: (value) => value || {},
+      loadScenarioChunkFile: async () => ({ payload: fullPayload }),
+      scenarioSupportsChunkedRuntime: () => true,
+      scenarioBundleUsesChunkedLayer: (_bundle, layerKey = "") => !layerKey || layerKey === "political",
+      getScenarioOptionalLayerConfig: () => null,
+      syncScenarioLocalizationState: () => {},
+      refreshMapDataForScenarioChunkPromotion: () => {
+        capturedLandDataFeatureIds = (runtimeState.landData?.features || [])
+          .map((feature) => feature.id);
+        capturedPrimaryFeatureIds.push(
+          ...(runtimeState.scenarioPoliticalVisibleChunkData?.features || [])
+            .map((feature) => feature.id),
+        );
+        capturedPrimaryVisibleFeatureCount = Number(
+          runtimeState.runtimeChunkLoadState?.pendingVisualPromotion?.primaryVisibleFeatureCount || 0,
+        );
+        capturedPrimaryTotalFeatureCount = Number(
+          runtimeState.runtimeChunkLoadState?.pendingVisualPromotion?.primaryTotalFeatureCount || 0,
+        );
+      },
+      flushRenderBoundary: () => {},
+      recordScenarioPerfMetric: () => {},
+      ensureScenarioChunkRegistryLoaded: async () => {},
+    });
+
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "viewport-primary", delayMs: 0 }), "scheduled");
+    for (let i = 0; i < 8; i += 1) {
+      await Promise.resolve();
+    }
+
+    assert.deepEqual(
+      runtimeState.scenarioPoliticalChunkData.features.map((feature) => feature.id),
+      ["visible-a", "outside-b", "visible-c"],
+    );
+    assert.deepEqual(
+      runtimeState.scenarioPoliticalVisibleChunkData.features.map((feature) => feature.id),
+      ["visible-a", "visible-c"],
+    );
+    assert.deepEqual(capturedLandDataFeatureIds, ["full-land-a", "full-land-b", "full-land-c"]);
+    assert.deepEqual(capturedPrimaryFeatureIds, ["visible-a", "visible-c"]);
+    assert.equal(capturedPrimaryVisibleFeatureCount, 2);
+    assert.equal(capturedPrimaryTotalFeatureCount, 3);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
+test("coarse prewarm keeps complete political payload for initial promotion", async () => {
+  const politicalChunk = {
+    id: "political.coarse.world",
+    layer: "political",
+    lod: "coarse",
+    url: "political.coarse.world.json",
+    bounds: [-180, -90, 180, 90],
+    featureBounds: [
+      [0, 0, 2, 2],
+      [80, 40, 90, 50],
+      [3, 3, 4, 4],
+    ],
+    featureCount: 3,
+  };
+  const fullPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "visible-a", properties: {}, geometry: null },
+      { type: "Feature", id: "outside-b", properties: {}, geometry: null },
+      { type: "Feature", id: "visible-c", properties: {}, geometry: null },
+    ],
+  };
+  const bundle = {
+    manifest: {
+      scenario_id: "hoi4_1939",
+      summary: { feature_count: 22502 },
+      render_budget_hints: {},
+      performance_hints: {},
+    },
+    chunkRegistry: { byLayer: { political: [politicalChunk] } },
+    contextLodManifest: {},
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+    chunkPayloadCacheById: {},
+  };
+  const runtimeState = {
+    activeScenarioId: "hoi4_1939",
+    activeScenarioChunks: {
+      scenarioId: "hoi4_1939",
+      loadedChunkIds: [],
+      payloadByChunkId: {},
+      mergedLayerPayloads: {},
+      lruChunkIds: [],
+    },
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 1 },
+    getViewportGeoBoundsFn: () => [-1, -1, 5, 5],
+    landData: {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "full-land-a", properties: {}, geometry: null },
+        { type: "Feature", id: "full-land-b", properties: {}, geometry: null },
+        { type: "Feature", id: "full-land-c", properties: {}, geometry: null },
+      ],
+    },
+  };
+  let selectedViewportBbox = null;
+  let capturedLandDataFeatureIds = [];
+
+  const controller = createScenarioChunkRuntimeController({
+    runtimeState,
+    getSearchParams: () => new URLSearchParams(),
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+    normalizeScenarioPerformanceHints: () => ({
+      waterRegionsDefault: false,
+      specialRegionsDefault: false,
+      scenarioReliefOverlaysDefault: false,
+      scenarioAtlantropaDefault: false,
+    }),
+    normalizeScenarioFeatureCollection: (payload) => (
+      Array.isArray(payload?.features)
+        ? { type: "FeatureCollection", features: payload.features }
+        : null
+    ),
+    getScenarioFeatureCollectionIdentityList: (payload) => (
+      Array.isArray(payload?.features) ? payload.features.map((feature) => String(feature?.id || "")) : []
+    ),
+    areScenarioFeatureCollectionsEquivalent: () => false,
+    getScenarioDefaultCountryCode: () => "",
+    getScenarioBundleId: () => "hoi4_1939",
+    getCachedScenarioBundle: () => bundle,
+    getVisibleScenarioChunkLayers: () => ["political"],
+    selectScenarioChunks: ({ viewportBbox }) => {
+      selectedViewportBbox = viewportBbox;
+      return {
+        scenarioId: "hoi4_1939",
+        requiredChunks: [politicalChunk],
+        optionalChunks: [],
+        evictableChunkIds: [],
+        viewportBbox,
+        selectedFeatureCountSum: 3,
+        selectedVisibleFeatureCountSum: 2,
+        selectedPoliticalFeatureCountSum: 3,
+        selectedPoliticalVisibleFeatureCountSum: 2,
+        politicalVisibleFeatureSubsetSignature: "political.coarse.world:0.2",
+      };
+    },
+    mergeScenarioChunkPayloads: (_layerKey, payloads) => ({
+      type: "FeatureCollection",
+      features: payloads.flatMap((payload) => payload?.features || []),
+    }),
+    mergeScenarioChunkPayloadsForViewport,
+    normalizeScenarioRenderBudgetHints: (value) => value || {},
+    loadScenarioChunkFile: async () => ({ payload: fullPayload }),
+    scenarioSupportsChunkedRuntime: () => true,
+    scenarioBundleUsesChunkedLayer: (_bundle, layerKey = "") => !layerKey || layerKey === "political",
+    getScenarioOptionalLayerConfig: () => null,
+    syncScenarioLocalizationState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {
+      capturedLandDataFeatureIds = (runtimeState.landData?.features || [])
+        .map((feature) => feature.id);
+    },
+    flushRenderBoundary: () => {},
+    recordScenarioPerfMetric: () => {},
+    ensureScenarioChunkRegistryLoaded: async () => {},
+  });
+
+  await controller.preloadScenarioCoarseChunks(bundle);
+
+  assert.deepEqual(selectedViewportBbox, [-180, -90, 180, 90]);
+  assert.deepEqual(
+    runtimeState.scenarioPoliticalChunkData.features.map((feature) => feature.id),
+    ["visible-a", "outside-b", "visible-c"],
+  );
+  assert.equal(runtimeState.scenarioPoliticalVisibleChunkData, null);
+  assert.deepEqual(capturedLandDataFeatureIds, ["full-land-a", "full-land-b", "full-land-c"]);
 });
 
 test("zoom-end retained political detail chunks persist through exact-after-settle within TTL", async () => {

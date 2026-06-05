@@ -60,7 +60,10 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
 
         shell = build_startup_bootstrap_assets.build_bootstrap_runtime_topology(full_topology)
 
-        self.assertEqual(list(shell["objects"].keys()), ["political", "land_mask", "context_land_mask", "scenario_water", "scenario_special_land"])
+        self.assertEqual(
+            list(shell["objects"].keys()),
+            ["political", "land_mask", "context_land_mask", "scenario_water", "scenario_special_land", "scenario_atlantropa"],
+        )
         self.assertEqual(shell["arcs"], [[]])
         shell_political = shell["objects"]["political"]["geometries"]
         self.assertEqual([geometry["properties"]["id"] for geometry in shell_political], ["RU_ARCTIC_FB_001"])
@@ -76,7 +79,7 @@ class StartupBootstrapAssetsTest(unittest.TestCase):
 
         self.assertEqual(
             list(shell["objects"].keys()),
-            ["land_mask", "context_land_mask", "scenario_water", "scenario_special_land"],
+            ["land_mask", "context_land_mask", "scenario_water", "scenario_special_land", "scenario_atlantropa"],
         )
         self.assertEqual(shell["arcs"], [])
 

@@ -33,6 +33,7 @@ import {
 import {
   getVisibleScenarioChunkLayers,
   mergeScenarioChunkPayloads,
+  mergeScenarioChunkPayloadsForViewport,
   normalizeScenarioRenderBudgetHints,
   selectScenarioChunks,
 } from "./scenario_chunk_manager.js";
@@ -537,6 +538,7 @@ const {
   getVisibleScenarioChunkLayers,
   selectScenarioChunks,
   mergeScenarioChunkPayloads,
+  mergeScenarioChunkPayloadsForViewport,
   normalizeScenarioRenderBudgetHints,
   loadScenarioChunkFile,
   scenarioSupportsChunkedRuntime,

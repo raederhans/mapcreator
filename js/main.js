@@ -464,8 +464,22 @@ async function ensureStartupInitialScenarioChunkVisualReady({
   });
   runtimeState.startupInitialScenarioChunkVisualPromotion = result;
   if (result && result.ok === false) {
+    const details = {
+      status: String(result.status || "unknown"),
+      scenarioId: String(result.scenarioId || ""),
+      activeScenarioId: String(result.activeScenarioId || ""),
+      selectionVersion: Number(result.selectionVersion || 0),
+      shellStatus: String(result.shellStatus || ""),
+      promotedVisibleFeatureCount: Number(result.promotedVisibleFeatureCount || 0),
+      promotedTotalFeatureCount: Number(result.promotedTotalFeatureCount || 0),
+      landFeatureCount: Number(result.landFeatureCount || 0),
+      colorCount: Number(result.colorCount || 0),
+      pendingVisualPromotion: !!result.pendingVisualPromotion,
+      pendingPromotion: !!result.pendingPromotion,
+      promotionCommitInFlight: !!result.promotionCommitInFlight,
+    };
     throw new Error(
-      `[boot] Initial scenario chunk visual promotion did not reach visible readiness: ${result.status || "unknown"}`
+      `[boot] Initial scenario chunk visual promotion did not reach visible readiness: ${JSON.stringify(details)}`
     );
   }
   return result;
@@ -1123,6 +1137,14 @@ async function bootstrap() {
       scenarioBundlePromise,
       startupInteractionMode: runtimeState.startupInteractionMode,
     });
+
+    if (!Array.isArray(runtimeState.landData?.features) || !runtimeState.landData.features.length) {
+      setMapData({
+        suppressRender: true,
+        interactionLevel: startupInteractionLevel,
+        deferInteractionInfrastructure: startupInteractionLevel === "readonly-startup",
+      });
+    }
 
     await ensureStartupInitialScenarioChunkVisualReady({
       reason: "startup-initial-visual",

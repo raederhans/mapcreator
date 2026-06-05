@@ -179,6 +179,9 @@
 ### 图例发布要以源码重建 dist 后复核
 - 图例、侧栏这类同时存在源码和 `dist/app` 的 UI 改动，先改源码，再跑 `verify:pages-dist` 让发布面重建；验证后再查一次源码和 dist 关键标记，避免手动同步顺序掩盖旧实现残留。
 
+### progressive 粗粒度可见性要和细节完整性分开
+- chunked/progressive 启动阶段已经提交 coarse prewarm 时，数据健康可以记录 detail 未完整，但用户可见 toast 应表达真实可操作错误；当前视口可用的渐进阶段不应显示成剧本可见性失败。
+
 ### 可保存 UI 状态要只有一个真源
 - legend labels/config 这类会写入项目文件的 UI 状态应以 `runtimeState` 为真源；manager 可以负责 normalize 和派生计算，渲染路径不能再读静态缓存。
 
@@ -270,3 +273,9 @@
 
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
+
+### viewport culling 先验证 chunk 粒度
+- 渲染性能优化前先记录 visible/total feature count；如果一个 required chunk 已经包含接近全量 feature，单纯缩小 viewport overscan 只能改善脏交互点探测，启动主路径仍会接近全量绘制。
+
+### deferred infra 用主派生状态信号控重建
+- chunk visual 阶段已经完成完整 political `landData` / derived state 时，deferred infra 只做收尾和诊断清理；用 `primaryDerivedStateReady` 控制 full restore，避免把同一批政治图层重建第二次。

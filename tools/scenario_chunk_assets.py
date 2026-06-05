@@ -248,6 +248,45 @@ def _is_explicit_political_feature(feature: dict[str, Any]) -> bool:
     return True
 
 
+def _feature_collection_features(feature_collection: dict[str, Any] | None) -> list[dict[str, Any]]:
+    features = feature_collection.get("features") if isinstance(feature_collection, dict) else None
+    return [feature for feature in features if isinstance(feature, dict)] if isinstance(features, list) else []
+
+
+def _feature_collection_has_explicit_political_features(feature_collection: dict[str, Any] | None) -> bool:
+    return any(_is_explicit_political_feature(feature) for feature in _feature_collection_features(feature_collection))
+
+
+def _is_marked_runtime_only_shell_feature(feature: dict[str, Any]) -> bool:
+    props = _feature_properties(feature)
+    helper_kind = str(props.get("scenario_helper_kind") or "").strip().lower()
+    return (
+        _is_shell_helper_feature(feature)
+        and helper_kind == "shell_fallback"
+        and props.get("interactive") is False
+        and props.get("render_as_base_geography") is False
+    )
+
+
+def _feature_collection_is_marked_runtime_only_shell(feature_collection: dict[str, Any] | None) -> bool:
+    features = _feature_collection_features(feature_collection)
+    return bool(features) and all(_is_marked_runtime_only_shell_feature(feature) for feature in features)
+
+
+def _resolve_political_coarse_feature_collection(
+    *,
+    startup_feature_collection: dict[str, Any] | None,
+    runtime_feature_collection: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if _feature_collection_features(runtime_feature_collection):
+        return runtime_feature_collection
+    if _feature_collection_has_explicit_political_features(startup_feature_collection):
+        return startup_feature_collection
+    if _feature_collection_is_marked_runtime_only_shell(startup_feature_collection):
+        return startup_feature_collection
+    return runtime_feature_collection or startup_feature_collection
+
+
 def _iter_line_coords(geometry) -> list[list[list[float]]]:
     if geometry is None or geometry.is_empty:
         return []
@@ -473,10 +512,7 @@ def _bounds_area(bounds: list[float]) -> float:
 def _build_feature_bounds_summary(features: list[dict[str, Any]]) -> list[list[float]]:
     bounds_summary: list[list[float]] = []
     for feature in features:
-        bounds = _feature_bounds(feature)
-        if _bounds_area(bounds) <= 0:
-            continue
-        bounds_summary.append(bounds)
+        bounds_summary.append(_feature_bounds(feature))
     return bounds_summary
 
 
@@ -872,10 +908,11 @@ def _build_chunk_payloads_for_feature_collection(
                 else:
                     _write_json(chunk_path, chunk_payload)
                 chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
-                feature_bounds_summary = _build_feature_bounds_summary(selected_features) if (
-                    layer_key in {"political", SCENARIO_ATLANTROPA_LAYER_KEY}
-                    and spec["lod"] == "detail"
-                ) else []
+                include_feature_bounds = (
+                    layer_key == "political"
+                    or (layer_key == SCENARIO_ATLANTROPA_LAYER_KEY and spec["lod"] == "detail")
+                )
+                feature_bounds_summary = _build_feature_bounds_summary(selected_features) if include_feature_bounds else []
                 manifest_chunks.append({
                     "id": chunk_id,
                     "layer": layer_key,
@@ -932,7 +969,10 @@ def _build_political_chunk_payloads(
 
     startup_feature_collection = _topology_object_to_feature_collection(startup_topology_payload, "political")
     runtime_feature_collection = _topology_object_to_feature_collection(runtime_topology_payload, "political")
-    coarse_feature_collection = runtime_feature_collection or startup_feature_collection
+    coarse_feature_collection = _resolve_political_coarse_feature_collection(
+        startup_feature_collection=startup_feature_collection,
+        runtime_feature_collection=runtime_feature_collection,
+    )
     if coarse_feature_collection:
         chunks, lod_entries = _build_chunk_payloads_for_feature_collection(
             scenario_id=scenario_id,

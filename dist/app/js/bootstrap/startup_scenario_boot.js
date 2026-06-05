@@ -51,6 +51,23 @@ export function createStartupScenarioBootOwner({
       throw scenarioBundleResult?.error || new Error("Default startup scenario bundle failed to load.");
     }
 
+    if (scenarioBundleResult?.skipped && !scenarioBundleResult.bundle) {
+      const scenarioBundleSource = String(scenarioBundleResult.source || "none").trim() || "none";
+      finishBootMetric?.("scenario-bundle", {
+        source: scenarioBundleSource,
+        skipped: true,
+        requiresDetailTopology: false,
+        expectedScenarioFeatureCount: 0,
+        bundleLevel: "none",
+        resourceMetrics: {},
+      });
+      return {
+        defaultScenarioBundle: null,
+        scenarioBundleSource,
+        startupRecoveryReason: "",
+      };
+    }
+
     let defaultScenarioBundle = scenarioBundleResult.bundle;
     let scenarioBundleSource = String(scenarioBundleResult.source || "legacy").trim() || "legacy";
     let startupRecoveryReason = "";

@@ -31718,7 +31718,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/detail_chunks.manifest.json",
-      "size_bytes": 77707
+      "size_bytes": 6273853
     },
     {
       "path": "app/data/scenarios/hoi4_1939/geo_aliases.startup.json",
@@ -31738,7 +31738,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/locales.startup.json",
-      "size_bytes": 1993079
+      "size_bytes": 2009446
     },
     {
       "path": "app/data/scenarios/hoi4_1939/manifest.json",
@@ -31754,11 +31754,11 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/runtime_meta.json",
-      "size_bytes": 431
+      "size_bytes": 523
     },
     {
       "path": "app/data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
-      "size_bytes": 2728004
+      "size_bytes": 2728072
     },
     {
       "path": "app/data/scenarios/hoi4_1939/special_zone_layers.json",
@@ -31766,19 +31766,19 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
-      "size_bytes": 9336413
+      "size_bytes": 9336231
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json.gz",
-      "size_bytes": 1943192
+      "size_bytes": 1942455
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json",
-      "size_bytes": 9336413
+      "size_bytes": 9336231
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json.gz",
-      "size_bytes": 1943193
+      "size_bytes": 1942456
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.runtime_shell.topo.json",
@@ -33350,7 +33350,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/detail_chunks.manifest.json",
-      "size_bytes": 1925673
+      "size_bytes": 3581836
     },
     {
       "path": "app/data/scenarios/tno_1962/district_groups.manual.json",
@@ -33362,7 +33362,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.en.json",
-      "size_bytes": 1065618
+      "size_bytes": 1063281
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.json",
@@ -33382,7 +33382,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3800410
+      "size_bytes": 3802518
     },
     {
       "path": "app/data/scenarios/tno_1962/manifest.json",
@@ -33442,7 +33442,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378917
+      "size_bytes": 1378915
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
@@ -33450,11 +33450,11 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378917
+      "size_bytes": 1378915
     },
     {
       "path": "app/data/scenarios/tno_1962/water_refinement_source_reviews.json",
-      "size_bytes": 4260
+      "size_bytes": 40897
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
@@ -36306,15 +36306,15 @@
     },
     {
       "path": "app/js/bootstrap/startup_bootstrap_support.js",
-      "size_bytes": 13545
+      "size_bytes": 14226
     },
     {
       "path": "app/js/bootstrap/startup_data_pipeline.js",
-      "size_bytes": 27717
+      "size_bytes": 28392
     },
     {
       "path": "app/js/bootstrap/startup_scenario_boot.js",
-      "size_bytes": 5702
+      "size_bytes": 6262
     },
     {
       "path": "app/js/core/city_lights_historical_1930_asset.js",
@@ -36381,6 +36381,10 @@
       "size_bytes": 10452
     },
     {
+      "path": "app/js/core/hgo_runtime_index.js",
+      "size_bytes": 8895
+    },
+    {
       "path": "app/js/core/history_manager.js",
       "size_bytes": 11708
     },
@@ -36434,7 +36438,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 970160
+      "size_bytes": 979389
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36618,7 +36622,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 105299
+      "size_bytes": 115661
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
@@ -36666,7 +36670,7 @@
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
-      "size_bytes": 25023
+      "size_bytes": 29895
     },
     {
       "path": "app/js/core/scenario_country_display.js",
@@ -36674,7 +36678,7 @@
     },
     {
       "path": "app/js/core/scenario_data_health.js",
-      "size_bytes": 3883
+      "size_bytes": 4923
     },
     {
       "path": "app/js/core/scenario_dispatcher.js",
@@ -36698,7 +36702,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 15108
+      "size_bytes": 15340
     },
     {
       "path": "app/js/core/scenario_recovery.js",
@@ -36706,7 +36710,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 39715
+      "size_bytes": 39797
     },
     {
       "path": "app/js/core/scenario_rollback.js",
@@ -36758,7 +36762,7 @@
     },
     {
       "path": "app/js/core/state/color_state.js",
-      "size_bytes": 12779
+      "size_bytes": 12924
     },
     {
       "path": "app/js/core/state/config.js",
@@ -36786,7 +36790,7 @@
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
-      "size_bytes": 18793
+      "size_bytes": 19103
     },
     {
       "path": "app/js/core/state/spatial_index_state.js",
@@ -36838,7 +36842,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 45855
+      "size_bytes": 46921
     },
     {
       "path": "app/js/ui/app_dialog.js",
@@ -37206,7 +37210,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1051381
+      "size_bytes": 1051472
     },
     {
       "path": "styles.css",
@@ -37223,5 +37227,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1085673764
+  "total_bytes": 1093615406
 }

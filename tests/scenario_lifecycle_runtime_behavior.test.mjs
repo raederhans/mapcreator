@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { createScenarioLifecycleRuntime } from "../js/core/scenario/lifecycle_runtime.js";
 import { createScenarioApplyPipeline } from "../js/core/scenario_apply_pipeline.js";
 import { createScenarioOceanFillRestoreRuntime } from "../js/core/scenario/presentation_ocean_fill_restore.js";
+import { evaluateScenarioDataHealth } from "../js/core/scenario_data_health.js";
+import { state as appState } from "../js/core/state.js";
 
 function createLifecycleRuntime(runtimeState, overrides = {}) {
   return createScenarioLifecycleRuntime({
@@ -119,6 +121,30 @@ function createBaseState(overrides = {}) {
     renderProfile: "balanced",
     ...overrides,
   };
+}
+
+function withAppStatePatch(patch, callback) {
+  const previousValues = {};
+  Object.keys(patch).forEach((key) => {
+    previousValues[key] = appState[key];
+    appState[key] = patch[key];
+  });
+  try {
+    return callback();
+  } finally {
+    Object.keys(previousValues).forEach((key) => {
+      appState[key] = previousValues[key];
+    });
+  }
+}
+
+function createFeatures(count) {
+  return Array.from({ length: count }, (_value, index) => ({
+    type: "Feature",
+    id: `feature-${index}`,
+    properties: {},
+    geometry: null,
+  }));
 }
 
 test("scenario apply staging rejects unrenderable political runtime topology before commit", async () => {
@@ -388,4 +414,78 @@ test("resetToScenarioBaseline restores ownership before UI refresh side effects"
   assert.equal(changed, true);
   assert.deepEqual(seenOwners, ["FR"]);
   assert.deepEqual(runtimeState.sovereigntyByFeatureId, { A: "FR", B: "DE" });
+});
+
+test("scenario data health uses chunked political payload as the expected feature count", () => {
+  const health = withAppStatePatch({
+    activeScenarioManifest: {
+      scenario_id: "hoi4_1939",
+      detail_chunk_manifest_url: "data/scenarios/hoi4_1939/detail_chunks.manifest.json",
+      summary: { feature_count: 2200 },
+    },
+    landDataFull: { type: "FeatureCollection", features: createFeatures(1210) },
+    landData: { type: "FeatureCollection", features: createFeatures(1190) },
+    runtimePoliticalTopology: null,
+    scenarioPoliticalChunkData: { type: "FeatureCollection", features: createFeatures(1200) },
+    scenarioPoliticalVisibleChunkData: { type: "FeatureCollection", features: createFeatures(20) },
+    activeScenarioChunks: {
+      mergedLayerPayloads: {
+        political: { type: "FeatureCollection", features: createFeatures(1200) },
+      },
+    },
+    scenarioGeneratedColorTags: [],
+  }, () => evaluateScenarioDataHealth(appState.activeScenarioManifest, { minRatio: 0.7 }));
+
+  assert.equal(health.expectedFeatureCount, 1200);
+  assert.equal(health.runtimeFeatureCount, 1210);
+  assert.ok(health.ratio >= 1);
+  assert.equal(health.warning, "");
+  assert.equal(health.severity, "");
+});
+
+test("scenario data health accepts current coarse collections before chunk payload promotion", () => {
+  const health = withAppStatePatch({
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      detail_chunk_manifest_url: "data/scenarios/tno_1962/detail_chunks.manifest.json",
+      summary: { feature_count: 12865 },
+    },
+    landDataFull: { type: "FeatureCollection", features: createFeatures(209) },
+    landData: { type: "FeatureCollection", features: createFeatures(198) },
+    runtimePoliticalTopology: null,
+    scenarioPoliticalChunkData: null,
+    scenarioPoliticalVisibleChunkData: { type: "FeatureCollection", features: createFeatures(7) },
+    activeScenarioChunks: {
+      mergedLayerPayloads: {},
+    },
+    scenarioGeneratedColorTags: [],
+  }, () => evaluateScenarioDataHealth(appState.activeScenarioManifest, { minRatio: 0.7 }));
+
+  assert.equal(health.expectedFeatureCount, 209);
+  assert.equal(health.runtimeFeatureCount, 209);
+  assert.equal(health.warning, "");
+  assert.equal(health.severity, "");
+});
+
+test("scenario data health keeps manifest totals for non-chunked topology checks", () => {
+  const health = withAppStatePatch({
+    activeScenarioManifest: {
+      scenario_id: "legacy",
+      summary: { feature_count: 2200 },
+    },
+    landDataFull: { type: "FeatureCollection", features: createFeatures(900) },
+    landData: { type: "FeatureCollection", features: createFeatures(900) },
+    runtimePoliticalTopology: null,
+    scenarioPoliticalChunkData: { type: "FeatureCollection", features: createFeatures(1200) },
+    activeScenarioChunks: {
+      mergedLayerPayloads: {
+        political: { type: "FeatureCollection", features: createFeatures(1200) },
+      },
+    },
+    scenarioGeneratedColorTags: [],
+  }, () => evaluateScenarioDataHealth(appState.activeScenarioManifest, { minRatio: 0.7 }));
+
+  assert.equal(health.expectedFeatureCount, 2200);
+  assert.equal(health.runtimeFeatureCount, 900);
+  assert.equal(health.severity, "error");
 });

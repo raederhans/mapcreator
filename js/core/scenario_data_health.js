@@ -20,6 +20,35 @@ function getFeatureCollectionCount(collection) {
   return Array.isArray(collection?.features) ? collection.features.length : 0;
 }
 
+function getChunkedPoliticalExpectedFeatureCount() {
+  return Math.max(
+    getFeatureCollectionCount(runtimeState.scenarioPoliticalChunkData),
+    getFeatureCollectionCount(runtimeState.activeScenarioChunks?.mergedLayerPayloads?.political),
+  );
+}
+
+function getCurrentPoliticalCollectionFeatureCount() {
+  return Math.max(
+    getFeatureCollectionCount(runtimeState.landDataFull),
+    getFeatureCollectionCount(runtimeState.landData),
+  );
+}
+
+function getScenarioHealthExpectedFeatureCount(manifest) {
+  const manifestFeatureCount = Number(manifest?.summary?.feature_count || 0);
+  if (String(manifest?.detail_chunk_manifest_url || "").trim()) {
+    const chunkedExpectedFeatureCount = getChunkedPoliticalExpectedFeatureCount();
+    if (chunkedExpectedFeatureCount > 0) {
+      return chunkedExpectedFeatureCount;
+    }
+    const currentPoliticalFeatureCount = getCurrentPoliticalCollectionFeatureCount();
+    if (currentPoliticalFeatureCount > 0) {
+      return currentPoliticalFeatureCount;
+    }
+  }
+  return manifestFeatureCount;
+}
+
 function getScenarioHealthRuntimeFeatureCount() {
   return Math.max(
     getFeatureCollectionCount(runtimeState.landDataFull),
@@ -36,7 +65,7 @@ function evaluateScenarioDataHealth(
   manifest = runtimeState.activeScenarioManifest,
   { minRatio = SCENARIO_DETAIL_MIN_RATIO_STRICT } = {}
 ) {
-  const expectedFeatureCount = Number(manifest?.summary?.feature_count || 0);
+  const expectedFeatureCount = getScenarioHealthExpectedFeatureCount(manifest);
   const runtimeFeatureCount = getScenarioHealthRuntimeFeatureCount();
   const ratio = expectedFeatureCount > 0 ? runtimeFeatureCount / expectedFeatureCount : 1;
   const normalizedMinRatio = Math.min(Math.max(Number(minRatio) || SCENARIO_DETAIL_MIN_RATIO_STRICT, 0.1), 1);
