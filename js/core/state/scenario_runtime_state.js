@@ -170,6 +170,9 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   if (hasOwn.call(nextState, "scenarioPoliticalChunkData")) {
     target.scenarioPoliticalChunkData = nextState.scenarioPoliticalChunkData || null;
   }
+  if (hasOwn.call(nextState, "scenarioPoliticalVisibleChunkData")) {
+    target.scenarioPoliticalVisibleChunkData = nextState.scenarioPoliticalVisibleChunkData || null;
+  }
   if (hasOwn.call(nextState, "scenarioAtlantropaData")) {
     target.scenarioAtlantropaData = nextState.scenarioAtlantropaData || null;
   }
@@ -288,6 +291,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   setScenarioRuntimeOptionalLayerState(target, {
     activeScenarioMeshPack: nextState.activeScenarioMeshPack || null,
     scenarioPoliticalChunkData: nextState.scenarioPoliticalChunkData || null,
+    scenarioPoliticalVisibleChunkData: nextState.scenarioPoliticalVisibleChunkData || null,
     scenarioAtlantropaData: nextState.scenarioAtlantropaData || null,
     scenarioDistrictGroupsData: nextState.scenarioDistrictGroupsData || null,
     scenarioDistrictGroupByFeatureId: nextState.scenarioDistrictGroupByFeatureId,
@@ -412,6 +416,7 @@ export function createDefaultScenarioRuntimeState({
     scenarioRuntimeTopologyData: null,
     scenarioRuntimeTopologyVersionTag: "",
     scenarioPoliticalChunkData: null,
+    scenarioPoliticalVisibleChunkData: null,
     scenarioLandMaskData: null,
     scenarioContextLandMaskData: null,
     scenarioLandMaskVersionTag: "",

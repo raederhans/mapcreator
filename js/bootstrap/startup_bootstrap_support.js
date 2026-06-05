@@ -18,6 +18,7 @@ const STARTUP_SUPPORT_AUDIT_PARAM = "startup_support_audit";
 const STARTUP_SUPPORT_AUDIT_LABEL_PARAM = "startup_support_audit_label";
 const STARTUP_SUPPORT_AUDIT_DEFER_PARAM = "startup_support_audit_defer";
 const STARTUP_SUPPORT_AUDIT_REPORT_URL = "/__dev/startup-support/key-usage-report";
+const DEFAULT_SCENARIO_DISABLED_OVERRIDE = "none";
 const VIEW_SETTINGS_STORAGE_KEY = "map_view_settings_v1";
 
 /**
@@ -221,6 +222,9 @@ export function getConfiguredDefaultScenarioId() {
       ? new globalThis.URLSearchParams(globalThis.location?.search || "")
       : null;
     const queryOverride = String(params?.get("default_scenario") || "").trim();
+    if (isDefaultScenarioDisabledOverride(queryOverride)) {
+      return "";
+    }
     if (queryOverride) {
       return queryOverride;
     }
@@ -231,6 +235,22 @@ export function getConfiguredDefaultScenarioId() {
     .querySelector('meta[name="default-scenario"]')
     ?.getAttribute("content");
   return String(configured || "").trim();
+}
+
+export function isDefaultScenarioDisabledOverride(value = "") {
+  return String(value || "").trim().toLowerCase() === DEFAULT_SCENARIO_DISABLED_OVERRIDE;
+}
+
+export function shouldDisableConfiguredDefaultScenario() {
+  try {
+    const params = typeof globalThis.URLSearchParams === "function"
+      ? new globalThis.URLSearchParams(globalThis.location?.search || "")
+      : null;
+    return !!params?.has("default_scenario")
+      && isDefaultScenarioDisabledOverride(params.get("default_scenario"));
+  } catch (_error) {
+    return false;
+  }
 }
 
 export function getStartupBundleLanguage() {

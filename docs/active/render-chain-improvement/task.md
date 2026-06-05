@@ -1,7 +1,7 @@
 # Render Chain Improvement Task
 
 ## Current Step
-- Progressive political recovery implementation: reduce full political background Path2D build inside startup render samples while preserving exact mode as a comparison path.
+- Next performance implementation pass after progressive recovery: chunk-internal visible political feature subset for primary promotion, then verify `promotedVisibleFeatureCount < promotedTotalFeatureCount` with perf evidence.
 
 ## Checklist
 - [x] Report identity includes target URL, service/process hints, repository path, git head, benchmark argv, and scenario ids.
@@ -41,3 +41,59 @@
 - Run a targeted visual screenshot smoke when the next browser-owned validation window opens: startup first frame, chunk promotion frame, and idle-ready frame for TNO/HOI4.
 - Run `bench:editor-performance` with an explicit localhost URL for a broader current/baseline/before-fix/after-fix comparison.
 - Continue the next optimization lane on remaining measured costs: `scenarioChunkPromotionVisualStage`, `buildHitCanvas`, and the idle completion shape for deferred full political background cache.
+
+## 2026-06-04 Next Evaluation Checklist
+- [x] Clean worktree created from local `main` merge commit.
+- [x] `perf:gate` current-main evidence recorded.
+- [x] `bench:editor-performance` explicit URL evidence recorded.
+- [x] Screenshot paths and black-frame / hit-test evidence reviewed.
+- [x] HOI4 chunked coarse visibility toast defect fixed and smoke-verified.
+- [x] Next optimization target chosen from fresh evidence.
+- [x] Stage 1 hit canvas point-probe path implemented for dirty hit canvas interactions.
+- [x] Stage 1 hit canvas viewport profile metrics added.
+- [x] Stage 2 chunk promotion primary/deferred metrics added.
+- [x] Stage 2 promotion visible/total feature counts added.
+- [x] Stage 1/2 broader perf validation completed with remaining HOI4 `totalStartupMs` failure.
+- [x] Stage 3 water A/B paired probe completed for both TNO and HOI4.
+- [x] Stage 4 architecture spike evidence completed.
+- [x] Final review pass completed.
+- [x] Review fix: benchmark context probe scenario ids are validated instead of silently skipped on typo.
+- [x] Review fix: hit-canvas pixel reads use a finite positive dpr in both full-canvas reads and dirty point probes.
+- [x] Implement chunk-internal visible feature subset counts and signatures from existing `feature_bounds`.
+- [x] Apply viewport-clipped political payload only to primary recovery while retaining the full chunk payload.
+- [x] Defer full political chunk restoration to the chunk promotion infra stage and record `fullPoliticalRestoreMs`.
+- [x] Add behavior coverage for viewport-clipped primary political promotion.
+
+## 2026-06-04 Next Evaluation Results
+- Progressive recovery remains the right baseline: startup render samples no longer build the near-12k full political Path2D cache in progressive mode.
+- HOI4 still fails `totalStartupMs` in `perf:gate`, mainly because startup long-tail and `scenarioAppliedMs` vary across samples. HOI4 render sample median now stays below the old failing shape.
+- Remaining measured costs are concentrated in `scenarioChunkPromotionVisualStage` and `buildHitCanvas`, with full visible item counts still around 12k after promotion.
+- TNO benchmark correctly flags the single-fill probe invalid when no last action is recorded; double-click remains valid and black-frame counts are zero.
+- HOI4 visual smoke found and fixed an expected-progressive-stage toast that made coarse detail loading look like an error.
+- Stage 1/2 implementation is retained as a correctness and observability improvement, but it does not yet reduce startup work enough because the required political chunk still contains the near-full feature set.
+- Stage 3 is complete for the current lane: benchmark context probes can now target HOI4 and TNO with only `baseline,water_off`; the paired run produced 5 samples per scenario.
+- Water behavior decision: keep the current default. TNO improved by about `235ms` p50 in `contextScenarioDurationDeltaMs`, while HOI4 was essentially flat at about `0.4ms` p50, and both recommendations stayed `delta-signal-insufficient`.
+- Stage 4 evidence supports staying on 2D Canvas for the next production step. Multi-layer canvas, OffscreenCanvas worker, MapLibre, and deck.gl remain useful spikes, but the first local architecture proof should reduce selected feature volume inside the current chunk promotion path.
+- Final review found two concrete correctness risks and fixed both: silent context-probe scenario typos and invalid dpr handling in hit-canvas reads. Independent native review was unavailable because the session had reached the agent thread limit.
+
+## Recommended Next Step
+- Next validation lane: run `perf:gate` and explicit-url `bench:editor-performance` to confirm HOI4/TNO now report `promotedVisibleFeatureCount` below `promotedTotalFeatureCount`, then decide whether the next bottleneck is full restore, hit canvas, or startup non-render long tail.
+
+## 2026-06-05 Correctness Repair Checklist
+- [x] Independently verify the audit report against current source and data.
+- [x] Mark the previous visible-primary ownership direction as superseded for political fill ownership.
+- [x] Update Python generator tests for complete runtime political coarse ownership.
+- [x] Update Node contracts for full land data ownership, complete coarse prewarm, ready gate, and health-count behavior.
+- [x] Fix `tools/scenario_chunk_assets.py`, `js/core/map_renderer.js`, and `js/core/scenario/chunk_runtime.js`.
+- [x] Rebuild `data/scenarios/hoi4_1939` chunk assets.
+- [x] Rebuild `data/scenarios/tno_1962` chunk assets.
+- [x] Verify count probe: HOI4 `22502/22502`, TNO `12019/12019`.
+- [x] Sync `dist/app` output and run packaged verification.
+- [x] Run final verification gates and review.
+
+## 2026-06-05 Correctness Repair Results
+- Complete political coarse ownership verified after regeneration: HOI4 `22502/22502`, TNO `12019/12019`; `feature_bounds` lengths matched payload feature counts.
+- Packaged output verified with `npm run verify:pages-dist`; source and `dist/app` JS syntax checks passed.
+- Targeted tests passed: Python scenario chunk/startup tests `31/31`, Node scenario chunk contracts `43/43`, Node lifecycle runtime behavior `9/9`, strict TNO scenario contracts, and `git diff --check`.
+- Review fix completed: startup coarse prewarm now selects full-world bounds instead of the current viewport, so the complete political coarse prewarm contract matches implementation.
+- Performance gate passed after the review fix and after skipping duplicate deferred full political restore when `primaryDerivedStateReady` is already true. Latest median totals: TNO `5455.3ms`, HOI4 `5853.1ms`; all six benchmark runs reported `restoredFullPoliticalChunkData=false` and `fullPoliticalRestoreMs=0`.

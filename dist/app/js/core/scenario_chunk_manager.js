@@ -89,14 +89,61 @@ function getBoundsCenterDistance(bounds, viewportBbox) {
 function normalizeFeatureBoundsList(rawBoundsList = []) {
   if (!Array.isArray(rawBoundsList)) return [];
   return rawBoundsList
-    .map((bounds) => (Array.isArray(bounds) ? normalizeBounds(bounds) : null))
-    .filter((bounds) => Array.isArray(bounds) && getBoundsArea(bounds) > 0);
+    .map((bounds) => {
+      if (!Array.isArray(bounds) || bounds.length < 4) return null;
+      const values = bounds.slice(0, 4).map((value) => Number(value));
+      if (!values.every(Number.isFinite)) return null;
+      return normalizeBounds(values);
+    })
+    .filter((bounds) => Array.isArray(bounds));
 }
 
 function getChunkSelectionBounds(chunk) {
   return Array.isArray(chunk?.featureBounds) && chunk.featureBounds.length
     ? chunk.featureBounds
     : [chunk?.bounds || [-180, -90, 180, 90]];
+}
+
+function getChunkFeatureBoundsForCount(chunk, expectedFeatureCount = null) {
+  const featureBounds = Array.isArray(chunk?.featureBounds) ? chunk.featureBounds : [];
+  if (!featureBounds.length) return null;
+  const expected = Math.floor(clampNonNegativeNumber(
+    expectedFeatureCount ?? chunk?.featureCount,
+    0,
+  ));
+  if (expected > 0 && featureBounds.length !== expected) return null;
+  return featureBounds;
+}
+
+function getChunkVisibleFeatureIndexes(chunk, viewportBbox, { expectedFeatureCount = null } = {}) {
+  const featureBounds = getChunkFeatureBoundsForCount(chunk, expectedFeatureCount);
+  if (!featureBounds) return null;
+  const normalizedViewportBbox = normalizeBounds(viewportBbox);
+  const indexes = [];
+  featureBounds.forEach((bounds, index) => {
+    if (boundsIntersect(bounds, normalizedViewportBbox)) {
+      indexes.push(index);
+    }
+  });
+  return indexes;
+}
+
+function getChunkVisibleFeatureCount(chunk, viewportBbox) {
+  const visibleIndexes = getChunkVisibleFeatureIndexes(chunk, viewportBbox);
+  if (Array.isArray(visibleIndexes)) return visibleIndexes.length;
+  return Math.max(0, Number(chunk?.featureCount || 0));
+}
+
+function getChunkVisibleFeatureIndexSignature(chunk, viewportBbox) {
+  const visibleIndexes = getChunkVisibleFeatureIndexes(chunk, viewportBbox);
+  if (!Array.isArray(visibleIndexes)) return "*";
+  return visibleIndexes.join(".");
+}
+
+function getVisibleFeatureSubsetSignature(chunks, viewportBbox) {
+  return (Array.isArray(chunks) ? chunks : [])
+    .map((chunk) => `${String(chunk?.id || "").trim()}:${getChunkVisibleFeatureIndexSignature(chunk, viewportBbox)}`)
+    .join("|");
 }
 
 function chunkIntersectsViewport(chunk, viewportBbox) {
@@ -513,6 +560,12 @@ export function selectScenarioChunks({
   const uniqueOptional = Array.from(new Map(optional.map((chunk) => [chunk.id, chunk])).values())
     .filter((chunk) => !uniqueRequired.some((requiredChunk) => requiredChunk.id === chunk.id));
   const selectedFeatureCountSum = uniqueRequired.reduce((sum, chunk) => sum + Math.max(0, Number(chunk.featureCount || 0)), 0);
+  const selectedVisibleFeatureCountSum = uniqueRequired.reduce((sum, chunk) => sum + getChunkVisibleFeatureCount(chunk, viewportBbox), 0);
+  const selectedPoliticalChunks = uniqueRequired.filter((chunk) => chunk.layer === "political");
+  const selectedPoliticalFeatureCountSum = selectedPoliticalChunks
+    .reduce((sum, chunk) => sum + Math.max(0, Number(chunk.featureCount || 0)), 0);
+  const selectedPoliticalVisibleFeatureCountSum = selectedPoliticalChunks
+    .reduce((sum, chunk) => sum + getChunkVisibleFeatureCount(chunk, viewportBbox), 0);
   const selectedByteCountSum = uniqueRequired.reduce((sum, chunk) => sum + Math.max(0, Number(chunk.byteSize || 0)), 0);
   const selectedCoordCountSum = uniqueRequired.reduce((sum, chunk) => sum + Math.max(0, Number(chunk.coordCount || 0)), 0);
   const selectedPartCountSum = uniqueRequired.reduce((sum, chunk) => sum + Math.max(0, Number(chunk.partCount || 0)), 0);
@@ -532,10 +585,15 @@ export function selectScenarioChunks({
     zoom,
     viewportBbox: normalizeBounds(viewportBbox),
     selectedFeatureCountSum,
+    selectedVisibleFeatureCountSum,
+    selectedPoliticalFeatureCountSum,
+    selectedPoliticalVisibleFeatureCountSum,
     selectedByteCountSum,
     selectedCoordCountSum,
     selectedPartCountSum,
     selectedEstimatedPathCostSum,
+    visibleFeatureSubsetSignature: getVisibleFeatureSubsetSignature(uniqueRequired, viewportBbox),
+    politicalVisibleFeatureSubsetSignature: getVisibleFeatureSubsetSignature(selectedPoliticalChunks, viewportBbox),
   };
 }
 
@@ -603,4 +661,74 @@ export function mergeScenarioChunkPayloads(layerKey, payloads = []) {
     return mergeCityOverridePayloads(filteredPayloads);
   }
   return mergeFeatureCollections(filteredPayloads);
+}
+
+export function mergeScenarioChunkPayloadsForViewport(layerKey, chunkPayloadEntries = [], viewportBbox = [-180, -90, 180, 90]) {
+  const normalizedLayerKey = String(layerKey || "").trim().toLowerCase();
+  const entries = (Array.isArray(chunkPayloadEntries) ? chunkPayloadEntries : [])
+    .map((entry) => ({
+      chunk: entry?.chunk || null,
+      payload: entry?.payload || null,
+    }))
+    .filter((entry) => entry.payload);
+  const fullPayload = mergeScenarioChunkPayloads(
+    normalizedLayerKey,
+    entries.map((entry) => entry.payload),
+  );
+  if (!entries.length || normalizedLayerKey !== "political") {
+    const featureCount = Array.isArray(fullPayload?.features) ? fullPayload.features.length : 0;
+    return {
+      payload: fullPayload,
+      stats: {
+        visibleFeatureCount: featureCount,
+        totalFeatureCount: featureCount,
+        clippedChunkCount: 0,
+        fullChunkCount: entries.length,
+        unboundedChunkCount: 0,
+      },
+    };
+  }
+
+  let visibleFeatureCount = 0;
+  let totalFeatureCount = 0;
+  let clippedChunkCount = 0;
+  let fullChunkCount = 0;
+  let unboundedChunkCount = 0;
+  const filteredPayloads = entries.map(({ chunk, payload }) => {
+    const features = Array.isArray(payload?.features) ? payload.features : [];
+    totalFeatureCount += features.length;
+    const visibleIndexes = getChunkVisibleFeatureIndexes(chunk, viewportBbox, {
+      expectedFeatureCount: features.length,
+    });
+    if (!Array.isArray(visibleIndexes)) {
+      visibleFeatureCount += features.length;
+      unboundedChunkCount += 1;
+      fullChunkCount += 1;
+      return payload;
+    }
+    const visibleFeatures = visibleIndexes
+      .map((index) => features[index])
+      .filter(Boolean);
+    visibleFeatureCount += visibleFeatures.length;
+    if (visibleFeatures.length < features.length) {
+      clippedChunkCount += 1;
+    } else {
+      fullChunkCount += 1;
+    }
+    return {
+      ...payload,
+      features: visibleFeatures,
+    };
+  });
+
+  return {
+    payload: mergeFeatureCollections(filteredPayloads),
+    stats: {
+      visibleFeatureCount,
+      totalFeatureCount,
+      clippedChunkCount,
+      fullChunkCount,
+      unboundedChunkCount,
+    },
+  };
 }

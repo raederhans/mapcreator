@@ -11,6 +11,7 @@ import sys
 from queue import Empty, Queue
 import re
 import subprocess
+import time
 from threading import Lock, Thread
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -22,6 +23,7 @@ PWCLI_WORKDIR = ROOT_DIR / ".runtime" / "browser" / "playwright-cli"
 SESSION_ID = "editor-perf-benchmark"
 BROWSER_OPENED = False
 SCENARIO_IDS = ["none", "hoi4_1939", "tno_1962"]
+SCENARIO_BROWSER_RECYCLE_SETTLE_SEC = 1.0
 RENDER_PASS_NAMES = ["background", "political", "effects", "contextBase", "contextScenario", "dayNight", "borders"]
 LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES = {
     "render-pass",
@@ -50,13 +52,19 @@ BROWSER_OPEN_TIMEOUT_SEC = 45
 OPEN_BROWSER_CANDIDATES = ("msedge", "chromium")
 WRAPPER_BACKEND = "wrapper"
 LOCAL_NODE_PLAYWRIGHT_BACKEND = "local-node-playwright"
+REQUESTED_PLAYWRIGHT_BACKEND = os.environ.get("EDITOR_PERF_BENCHMARK_BACKEND", "").strip().lower()
+if REQUESTED_PLAYWRIGHT_BACKEND not in {"", WRAPPER_BACKEND, LOCAL_NODE_PLAYWRIGHT_BACKEND}:
+    raise ValueError(
+      "EDITOR_PERF_BENCHMARK_BACKEND must be unset, "
+      f"{WRAPPER_BACKEND}, or {LOCAL_NODE_PLAYWRIGHT_BACKEND}."
+    )
 LOCAL_NODE_PLAYWRIGHT_HEADLESS = os.environ.get("EDITOR_PERF_BENCHMARK_FALLBACK_HEADLESS", "1").strip().lower() not in {
     "0",
     "false",
     "no",
     "off",
 }
-PLAYWRIGHT_BACKEND = WRAPPER_BACKEND
+PLAYWRIGHT_BACKEND = LOCAL_NODE_PLAYWRIGHT_BACKEND if REQUESTED_PLAYWRIGHT_BACKEND == LOCAL_NODE_PLAYWRIGHT_BACKEND else WRAPPER_BACKEND
 CONTEXT_PROBE_CASES = [
     ("baseline", {}),
     ("physical_off", {"showPhysical": False}),
@@ -256,7 +264,7 @@ async function handleRequest(request) {
       const payload = request.payload || {};
       const targetPage = await ensurePage(payload);
       const url = String(payload.url || '').trim();
-      if (url) {
+      if (url && payload.navigate !== false) {
         await targetPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
       }
       return {
@@ -552,6 +560,16 @@ def parse_args() -> argparse.Namespace:
         default=5,
         help="Wheel events per repeated zoom cycle.",
     )
+    parser.add_argument(
+        "--context-probe-scenarios",
+        default="tno_1962",
+        help="Comma-separated scenario ids that should run context probes.",
+    )
+    parser.add_argument(
+        "--context-probe-cases",
+        default="",
+        help="Comma-separated context probe case labels. Defaults to all built-in cases.",
+    )
     return parser.parse_args()
 
 
@@ -580,6 +598,32 @@ def parse_repeated_zoom_regions(value: str) -> list[str]:
     if not regions:
       raise ValueError("--repeated-zoom-regions must contain at least one region id.")
     return list(dict.fromkeys(regions))
+
+
+def parse_csv_values(value: str) -> list[str]:
+    return list(dict.fromkeys(entry.strip() for entry in str(value or "").split(",") if entry.strip()))
+
+
+def parse_context_probe_scenarios(value: str) -> set[str]:
+    scenario_ids = set(parse_csv_values(value))
+    if not scenario_ids:
+      return set()
+    known_scenario_ids = set(SCENARIO_IDS)
+    unknown = sorted(scenario_id for scenario_id in scenario_ids if scenario_id not in known_scenario_ids)
+    if unknown:
+      raise ValueError(f"Unknown --context-probe-scenarios value(s): {', '.join(unknown)}")
+    return scenario_ids
+
+
+def parse_context_probe_cases(value: str) -> list[tuple[str, dict[str, bool]]]:
+    labels = parse_csv_values(value)
+    if not labels:
+      return list(CONTEXT_PROBE_CASES)
+    cases_by_label = {label: flags for label, flags in CONTEXT_PROBE_CASES}
+    unknown = [label for label in labels if label not in cases_by_label]
+    if unknown:
+      raise ValueError(f"Unknown --context-probe-cases value(s): {', '.join(unknown)}")
+    return [(label, cases_by_label[label]) for label in labels]
 
 
 def run_wrapper_pw(*args: str, expect_json: bool = False, timeout_sec: int = 240) -> dict | list | str:
@@ -629,6 +673,7 @@ def run_local_pw(*args: str, expect_json: bool = False, timeout_sec: int = 240) 
           "url": args[1] if len(args) > 1 else "",
           "browserName": browser_name,
           "headless": LOCAL_NODE_PLAYWRIGHT_HEADLESS,
+          "navigate": False,
       }, timeout_sec=timeout_sec)
       return result if expect_json else str(result)
     if command == "run-code":
@@ -1114,7 +1159,7 @@ def open_page(urls: list[str] | tuple[str, ...] | str) -> dict:
         raise RuntimeError("No benchmark URL candidates were provided.")
     if not BROWSER_OPENED:
       attempts: list[str] = []
-      if PWCLI.exists():
+      if REQUESTED_PLAYWRIGHT_BACKEND in {"", WRAPPER_BACKEND} and PWCLI.exists():
           for browser_name in OPEN_BROWSER_CANDIDATES:
               for candidate_url in candidate_urls:
                   attempts.append(f"{browser_name}:{candidate_url}")
@@ -1133,37 +1178,41 @@ def open_page(urls: list[str] | tuple[str, ...] | str) -> dict:
                   except RuntimeError:
                       close_session()
       else:
-          attempts.append(f"{WRAPPER_BACKEND}:missing-cli-wrapper")
-      for browser_name in OPEN_BROWSER_CANDIDATES:
-          for candidate_url in candidate_urls:
-              attempts.append(f"{LOCAL_NODE_PLAYWRIGHT_BACKEND}:{browser_name}:{candidate_url}")
-              try:
-                  PLAYWRIGHT_BACKEND = LOCAL_NODE_PLAYWRIGHT_BACKEND
-                  fallback_open = run_local_pw(
-                      "open",
-                      candidate_url,
-                      "--browser",
-                      browser_name,
-                      timeout_sec=BROWSER_OPEN_TIMEOUT_SEC,
-                      expect_json=True,
-                  )
-                  BROWSER_OPENED = True
-                  page_load = navigate(candidate_url)
-                  if isinstance(page_load, dict):
-                      page_load["openBrowser"] = (
-                          fallback_open.get("browserName")
-                          if isinstance(fallback_open, dict)
-                          else browser_name
+          attempts.append(
+            f"{WRAPPER_BACKEND}:"
+            + ("disabled-by-env" if REQUESTED_PLAYWRIGHT_BACKEND == LOCAL_NODE_PLAYWRIGHT_BACKEND else "missing-cli-wrapper")
+          )
+      if REQUESTED_PLAYWRIGHT_BACKEND in {"", LOCAL_NODE_PLAYWRIGHT_BACKEND}:
+          for browser_name in OPEN_BROWSER_CANDIDATES:
+              for candidate_url in candidate_urls:
+                  attempts.append(f"{LOCAL_NODE_PLAYWRIGHT_BACKEND}:{browser_name}:{candidate_url}")
+                  try:
+                      PLAYWRIGHT_BACKEND = LOCAL_NODE_PLAYWRIGHT_BACKEND
+                      fallback_open = run_local_pw(
+                          "open",
+                          candidate_url,
+                          "--browser",
+                          browser_name,
+                          timeout_sec=BROWSER_OPEN_TIMEOUT_SEC,
+                          expect_json=True,
                       )
-                      page_load["openUrl"] = candidate_url
-                      page_load["openFallbackUsed"] = True
-                      page_load["openAttempts"] = attempts
-                      page_load["openTransport"] = LOCAL_NODE_PLAYWRIGHT_BACKEND
-                      if isinstance(fallback_open, dict):
-                          page_load["openHeadless"] = bool(fallback_open.get("headless"))
-                  return page_load
-              except RuntimeError:
-                  close_session()
+                      BROWSER_OPENED = True
+                      page_load = navigate(candidate_url)
+                      if isinstance(page_load, dict):
+                          page_load["openBrowser"] = (
+                              fallback_open.get("browserName")
+                              if isinstance(fallback_open, dict)
+                              else browser_name
+                          )
+                          page_load["openUrl"] = candidate_url
+                          page_load["openFallbackUsed"] = True
+                          page_load["openAttempts"] = attempts
+                          page_load["openTransport"] = LOCAL_NODE_PLAYWRIGHT_BACKEND
+                          if isinstance(fallback_open, dict):
+                              page_load["openHeadless"] = bool(fallback_open.get("headless"))
+                      return page_load
+                  except RuntimeError:
+                      close_session()
       raise RuntimeError(
           "Unable to open benchmark browser session. Attempts: "
           + ", ".join(attempts)
@@ -1203,7 +1252,11 @@ def build_scenario_open_urls(base_urls: list[str], scenario_id: str) -> list[str
     normalized_scenario_id = str(scenario_id or "").strip()
     for base_url in unique_strings(base_urls):
       perf_url = with_query_overrides(ensure_app_path_url(base_url), perf_overlay="1", runtime_chunk_perf="1")
-      if normalized_scenario_id and normalized_scenario_id != "none":
+      neutral_perf_url = with_query_overrides(perf_url, default_scenario="none")
+      urls.append(neutral_perf_url)
+      if normalized_scenario_id == "none":
+        pass
+      elif normalized_scenario_id:
         scenario_perf_url = with_query_overrides(perf_url, default_scenario=normalized_scenario_id)
         urls.append(scenario_perf_url)
       urls.append(perf_url)
@@ -1280,6 +1333,7 @@ async (page) => {{
       activePostReadyTaskKey: String(state.activePostReadyTaskKey || ''),
       renderPhase: String(state.renderPhase || ''),
       activeScenarioId: String(state.activeScenarioId || ''),
+      bootError: String(state.bootError || ''),
     }};
   }}, {{ label: {json.dumps(label)}, timeoutMs: {int(timeout_ms)} }});
 }}
@@ -1287,6 +1341,15 @@ async (page) => {{
     result = run_code_json(js)
     if isinstance(result, dict) and result.get("ready"):
       return result
+    if isinstance(result, dict):
+      try:
+        result["consoleIssues"] = capture_console_issues()
+      except RuntimeError as error:
+        result["consoleIssuesError"] = str(error)
+      try:
+        result["networkIssues"] = capture_network_issues()
+      except RuntimeError as error:
+        result["networkIssuesError"] = str(error)
     raise RuntimeError(f"Benchmark runtime did not become ready before scenario action: {result}")
 
 
@@ -1709,7 +1772,14 @@ def summarize_interactive_pan_metric(suite: dict) -> dict:
 def summarize_fill_action_metric(suite: dict, key: str) -> dict:
     probe = suite.get(key) if isinstance(suite.get(key), dict) else {}
     last_action = str(probe.get("lastAction") or "").strip()
-    validity = {"valid": True, "reason": "recorded-action"} if last_action else {"valid": False, "reason": "missing-last-action"}
+    explicit_validity = probe.get("validity") if isinstance(probe.get("validity"), dict) else None
+    if explicit_validity and explicit_validity.get("valid") is False:
+      validity = {
+        "valid": False,
+        "reason": str(explicit_validity.get("reason") or "invalid-probe").strip() or "invalid-probe",
+      }
+    else:
+      validity = {"valid": True, "reason": "recorded-action"} if last_action else {"valid": False, "reason": "missing-last-action"}
     return summarize_distribution_metric(
       probe.get("lastActionDurationMs") if validity["valid"] else None,
       source=f"{key}.lastActionDurationMs",
@@ -2158,12 +2228,14 @@ def build_suite_scenario_consistency(suite: dict) -> dict:
     page_load_open_url = str(page_load.get("openUrl") or "").strip()
     scenario_apply_active = str(scenario_apply.get("activeScenarioId") or "").strip()
     scenario_apply_requested = str(scenario_apply.get("requestedScenarioId") or "").strip()
+    neutral_page_load = page_load_active == "" and "default_scenario=none" in page_load_open_url
     page_load_matches = (
       True
       if requested_scenario_id == "none"
       else (
         page_load_active == expected_active_scenario_id
         or f"default_scenario={expected_active_scenario_id}" in page_load_open_url
+        or neutral_page_load
       )
     )
     scenario_apply_matches = (
@@ -2992,11 +3064,15 @@ def decide_water_cache_low_coverage_recommendation(scenario_id: str, water_cache
     }
 
 
-def measure_context_probes(scenario_id: str) -> dict | None:
-    if scenario_id != "tno_1962":
+def measure_context_probes(
+    scenario_id: str,
+    enabled_scenario_ids: set[str],
+    context_probe_cases: list[tuple[str, dict[str, bool]]],
+) -> dict | None:
+    if scenario_id not in enabled_scenario_ids:
       return None
     probes = {}
-    for label, flags in CONTEXT_PROBE_CASES:
+    for label, flags in context_probe_cases:
       print(f"[benchmark] context probe scenario={scenario_id} case={label}", flush=True)
       try:
         samples = []
@@ -4194,14 +4270,65 @@ async (page) => {{
     return run_code_json(js, timeout_sec=timeout_sec)  # type: ignore[return-value]
 
 
+def build_invalid_fill_probe(precheck: dict, reason: str) -> dict:
+    if not isinstance(precheck, dict):
+      precheck = {}
+    normalized_reason = str(reason or precheck.get("reason") or "invalid-probe").strip() or "invalid-probe"
+    return {
+      "target": None,
+      "lastAction": None,
+      "lastActionDurationMs": None,
+      "lastActionFrame": None,
+      "lastFrame": precheck.get("lastFrame"),
+      "counterDelta": {
+        "drawCanvas": 0,
+        "frames": 0,
+        "transformedFrames": 0,
+        "dynamicBorderRebuilds": 0,
+      },
+      "longTaskCountDelta": 0,
+      "blackPixelRatio": precheck.get("blackPixelRatio"),
+      "renderMetrics": precheck.get("renderMetrics"),
+      "scenarioMetrics": precheck.get("scenarioMetrics"),
+      "overlay": precheck.get("overlay") or "",
+      "validity": {
+        "valid": False,
+        "reason": normalized_reason,
+      },
+      "precheck": {
+        key: value
+        for key, value in precheck.items()
+        if key not in {"renderMetrics", "scenarioMetrics"}
+      },
+    }
+
+
 def measure_single_click_fill() -> dict:
     prepare_js = f"""
 async (page) => {{
   return await page.evaluate(async () => {{
     const {{ state }} = await import('/js/core/state.js');
     const interaction = document.querySelector('#map-svg rect.interaction-layer');
+    const invalid = (reason, details = {{}}) => ({{
+      valid: false,
+      reason,
+      target: null,
+      activeScenarioId: String(state.activeScenarioId || ''),
+      landFeatureCount: Array.isArray(state.landData?.features) ? state.landData.features.length : 0,
+      hasInteractionLayer: !!interaction,
+      canvasSize: {{
+        width: Number(state.width || 0),
+        height: Number(state.height || 0),
+      }},
+      ...details,
+      blackPixelRatio: {sample_canvas_black_pixel_ratio_js()},
+      lastFrame: {clone_frame_js("state.renderPassCache?.lastFrame || null")},
+      renderMetrics: {clone_metrics_js("state.renderPerfMetrics")},
+      scenarioMetrics: {clone_metrics_js("state.scenarioPerfMetrics")},
+      overlay: document.getElementById('perf-overlay')?.textContent || '',
+    }});
     if (!interaction || !state.landData?.features?.length) {{
-      throw new Error('Single-click benchmark prerequisites are unavailable.');
+      return invalid('missing-prerequisites');
     }}
     const padding = Math.max(16, Math.round(Math.min(state.width, state.height) * 0.04));
     const projection = window.d3
@@ -4232,7 +4359,7 @@ async (page) => {{
       ))
       .sort((left, right) => right.area - left.area)[0];
     if (!candidate) {{
-      throw new Error('Unable to resolve a single-click benchmark target.');
+      return invalid('missing-target');
     }}
     window.__benchBaseline = {{
       drawCanvas: Number(state.renderPassCache?.counters?.drawCanvas || 0),
@@ -4242,6 +4369,7 @@ async (page) => {{
       longTasks: Array.isArray(window.__perfBench?.longTasks) ? window.__perfBench.longTasks.length : 0,
     }};
     return {{
+      valid: true,
       ...candidate,
       screenX: bounds.left + candidate.point[0],
       screenY: bounds.top + candidate.point[1],
@@ -4250,6 +4378,11 @@ async (page) => {{
 }}
 """.strip()
     target = run_code_json(prepare_js)
+    if not isinstance(target, dict) or target.get("valid") is False:
+      return build_invalid_fill_probe(
+        target if isinstance(target, dict) else {},
+        str(target.get("reason") if isinstance(target, dict) else ""),
+      )
     action_js = f"""
 async (page) => {{
   await page.mouse.move({json.dumps(target["screenX"])}, {json.dumps(target["screenY"])});
@@ -4296,8 +4429,26 @@ async (page) => {{
   return await page.evaluate(async () => {{
     const {{ state }} = await import('/js/core/state.js');
     const interaction = document.querySelector('#map-svg rect.interaction-layer');
+    const invalid = (reason, details = {{}}) => ({{
+      valid: false,
+      reason,
+      target: null,
+      activeScenarioId: String(state.activeScenarioId || ''),
+      landFeatureCount: Array.isArray(state.landData?.features) ? state.landData.features.length : 0,
+      hasInteractionLayer: !!interaction,
+      canvasSize: {{
+        width: Number(state.width || 0),
+        height: Number(state.height || 0),
+      }},
+      ...details,
+      blackPixelRatio: {sample_canvas_black_pixel_ratio_js()},
+      lastFrame: {clone_frame_js("state.renderPassCache?.lastFrame || null")},
+      renderMetrics: {clone_metrics_js("state.renderPerfMetrics")},
+      scenarioMetrics: {clone_metrics_js("state.scenarioPerfMetrics")},
+      overlay: document.getElementById('perf-overlay')?.textContent || '',
+    }});
     if (!interaction || !state.landData?.features?.length) {{
-      throw new Error('Double-click benchmark prerequisites are unavailable.');
+      return invalid('missing-prerequisites');
     }}
     const padding = Math.max(16, Math.round(Math.min(state.width, state.height) * 0.04));
     const projection = window.d3
@@ -4343,7 +4494,7 @@ async (page) => {{
       }});
     const candidate = doubleClickCandidates.find((item) => item.countryFeatureCount >= 24) || doubleClickCandidates[0];
     if (!candidate) {{
-      throw new Error('Unable to resolve a double-click benchmark target.');
+      return invalid('missing-target');
     }}
     window.__benchBaseline = {{
       drawCanvas: Number(state.renderPassCache?.counters?.drawCanvas || 0),
@@ -4354,6 +4505,7 @@ async (page) => {{
     }};
     const bounds = interaction.getBoundingClientRect();
     return {{
+      valid: true,
       ...candidate,
       screenX: bounds.left + candidate.point[0],
       screenY: bounds.top + candidate.point[1],
@@ -4362,6 +4514,11 @@ async (page) => {{
 }}
 """.strip()
     target = run_code_json(prepare_js)
+    if not isinstance(target, dict) or target.get("valid") is False:
+      return build_invalid_fill_probe(
+        target if isinstance(target, dict) else {},
+        str(target.get("reason") if isinstance(target, dict) else ""),
+      )
     action_js = f"""
 async (page) => {{
   await page.mouse.move({json.dumps(target["screenX"])}, {json.dumps(target["screenY"])});
@@ -4437,12 +4594,15 @@ def run_scenario_suite(
     repeated_zoom_regions: list[str],
     repeated_zoom_cycles: int,
     repeated_zoom_wheels_per_cycle: int,
+    context_probe_scenario_ids: set[str],
+    context_probe_cases: list[tuple[str, dict[str, bool]]],
 ) -> dict:
     print(f"[benchmark] start scenario={scenario_id}", flush=True)
     # Each scenario is intentionally isolated. TNO can inherit enough browser
     # state from a previous heavy scenario to make navigation itself flaky,
     # which pollutes the benchmark before any measured action starts.
     close_session()
+    time.sleep(SCENARIO_BROWSER_RECYCLE_SETTLE_SEC)
     page_load = open_page(build_scenario_open_urls(base_urls, scenario_id))
     startup_ready = wait_for_benchmark_runtime_ready(f"open:{scenario_id}")
     clear_browser_buffers()
@@ -4473,7 +4633,7 @@ def run_scenario_suite(
     )
     print(f"[benchmark] idle redraw scenario={scenario_id}", flush=True)
     idle_full_redraw = force_idle_full_redraw(f"benchmark-{scenario_id}-idle-full-redraw")
-    context_probes = measure_context_probes(scenario_id)
+    context_probes = measure_context_probes(scenario_id, context_probe_scenario_ids, context_probe_cases)
     print(f"[benchmark] zoom settle scenario={scenario_id}", flush=True)
     zoom_settle_redraw = measure_zoom_settle_redraw()
     zoom_end_chunk_visible = measure_zoom_end_chunk_visible(scenario_id)
@@ -4605,6 +4765,8 @@ def main() -> None:
 
     effective_url = normalize_playwright_url(args.url)
     repeated_zoom_regions = parse_repeated_zoom_regions(args.repeated_zoom_regions)
+    context_probe_scenario_ids = parse_context_probe_scenarios(args.context_probe_scenarios)
+    context_probe_cases = parse_context_probe_cases(args.context_probe_cases)
 
     try:
       suite_base_urls = unique_strings([
@@ -4621,6 +4783,8 @@ def main() -> None:
           repeated_zoom_regions,
           int(args.repeated_zoom_cycles),
           int(args.repeated_zoom_wheels_per_cycle),
+          context_probe_scenario_ids,
+          context_probe_cases,
         )
         for scenario_id in SCENARIO_IDS
       }
@@ -4641,6 +4805,8 @@ def main() -> None:
           "repeatedZoomRegions": repeated_zoom_regions,
           "repeatedZoomCycles": int(args.repeated_zoom_cycles),
           "repeatedZoomWheelsPerCycle": int(args.repeated_zoom_wheels_per_cycle),
+          "contextProbeScenarios": sorted(context_probe_scenario_ids),
+          "contextProbeCases": [label for label, _flags in context_probe_cases],
         },
         "benchmarkMetricsByScenario": {
           scenario_id: suites[scenario_id].get("benchmarkMetrics", {})

@@ -325,6 +325,298 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
             self.assertEqual(atl_manifest_chunk["country_codes"], ["ATL"])
             self.assertTrue(atl_manifest_chunk["feature_bounds"])
 
+    def test_political_coarse_uses_complete_runtime_topology_when_startup_is_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "tno_1962"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            (scenario_dir / "owners.by_feature.json").write_text(
+                json.dumps({"owners": {"AAA-detail": "AAA", "BBB-detail": "BBB"}}),
+                encoding="utf-8",
+            )
+
+            startup_political_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "AAA-bootstrap",
+                        "name": "Alpha Bootstrap",
+                        "cntr_code": "AAA",
+                        "admin1_group": "Alpha Group",
+                        "detail_tier": "admin0",
+                        "__source": "bootstrap",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "geometry": _square(0, 0),
+                    }
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            runtime_political_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "AAA-detail",
+                        "name": "Alpha Detail",
+                        "cntr_code": "AAA",
+                        "admin1_group": "Alpha Group",
+                        "detail_tier": "adm2",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "geometry": _square(0, 0),
+                    },
+                    {
+                        "id": "BBB-detail",
+                        "name": "Beta Detail",
+                        "cntr_code": "BBB",
+                        "admin1_group": "Beta Group",
+                        "detail_tier": "adm2",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "geometry": _square(2, 0),
+                    },
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            startup_topology_payload = Topology(
+                [startup_political_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+            runtime_topology_payload = Topology(
+                [runtime_political_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+
+            result = scenario_chunk_assets.build_and_write_scenario_chunk_assets(
+                scenario_dir=scenario_dir,
+                manifest_payload={"scenario_id": "tno_1962", "generated_at": "2026-04-13T00:00:00Z"},
+                layer_payloads={},
+                startup_topology_payload=startup_topology_payload,
+                runtime_topology_payload=runtime_topology_payload,
+                startup_topology_url="data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
+                runtime_topology_url="data/scenarios/tno_1962/runtime_topology.topo.json",
+                generated_at="2026-04-13T00:00:00Z",
+            )
+
+            coarse_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.coarse.r0c0")
+            self.assertEqual(coarse_chunk["feature_count"], 2)
+            self.assertEqual(len(coarse_chunk["feature_bounds"]), coarse_chunk["feature_count"])
+            coarse_payload = json.loads((scenario_dir / "chunks" / "political.coarse.r0c0.json").read_text(encoding="utf-8"))
+            self.assertEqual(_chunk_feature_ids(coarse_payload), ["AAA-detail", "BBB-detail"])
+
+            detail_chunk_ids = {
+                chunk["id"]: chunk["feature_count"]
+                for chunk in result["detail_chunk_manifest"]["chunks"]
+                if str(chunk.get("id", "")).startswith("political.detail.country.")
+            }
+            self.assertEqual(detail_chunk_ids, {
+                "political.detail.country.aaa": 1,
+                "political.detail.country.bbb": 1,
+            })
+
+    def test_feature_bounds_summary_keeps_positional_alignment(self) -> None:
+        features = [
+            {
+                "type": "Feature",
+                "properties": {"id": "flat"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [0, 0], [0, 0], [0, 0]]],
+                },
+            },
+            {
+                "type": "Feature",
+                "properties": {"id": "area"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[1, 1], [2, 1], [2, 2], [1, 1]]],
+                },
+            },
+        ]
+
+        bounds = scenario_chunk_assets._build_feature_bounds_summary(features)
+
+        self.assertEqual(len(bounds), len(features))
+        self.assertEqual(bounds[0], [0.0, 0.0, 0.0, 0.0])
+        self.assertEqual(bounds[1], [1.0, 1.0, 2.0, 2.0])
+
+    def test_political_coarse_uses_runtime_topology_when_startup_political_is_unmarked_shell_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "hoi4_1939"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            (scenario_dir / "owners.by_feature.json").write_text(
+                json.dumps({"owners": {"AAA-detail": "AAA", "RU_ARCTIC_FB_002": "RU"}}),
+                encoding="utf-8",
+            )
+
+            startup_shell_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "RU_ARCTIC_FB_001",
+                        "name": "Russian Arctic shell fallback",
+                        "cntr_code": "RU",
+                        "geometry": _square(0, 0),
+                    }
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            runtime_political_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "AAA-detail",
+                        "name": "Alpha Detail",
+                        "cntr_code": "AAA",
+                        "admin1_group": "Alpha Group",
+                        "detail_tier": "adm2",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "geometry": _square(2, 0),
+                    },
+                    {
+                        "id": "RU_ARCTIC_FB_002",
+                        "name": "Russian Arctic shell fallback",
+                        "cntr_code": "RU",
+                        "geometry": _square(4, 0),
+                    }
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            startup_topology_payload = Topology(
+                [startup_shell_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+            runtime_topology_payload = Topology(
+                [runtime_political_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+
+            result = scenario_chunk_assets.build_and_write_scenario_chunk_assets(
+                scenario_dir=scenario_dir,
+                manifest_payload={"scenario_id": "hoi4_1939", "generated_at": "2026-04-13T00:00:00Z"},
+                layer_payloads={},
+                startup_topology_payload=startup_topology_payload,
+                runtime_topology_payload=runtime_topology_payload,
+                startup_topology_url="data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
+                runtime_topology_url="data/scenarios/hoi4_1939/runtime_topology.topo.json",
+                generated_at="2026-04-13T00:00:00Z",
+            )
+
+            coarse_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.coarse.r0c0")
+            self.assertEqual(coarse_chunk["feature_count"], 2)
+            self.assertEqual(len(coarse_chunk["feature_bounds"]), coarse_chunk["feature_count"])
+            coarse_payload = json.loads((scenario_dir / "chunks" / "political.coarse.r0c0.json").read_text(encoding="utf-8"))
+            self.assertEqual(_chunk_feature_ids(coarse_payload), ["AAA-detail", "RU_ARCTIC_FB_002"])
+
+    def test_political_coarse_uses_runtime_topology_when_startup_has_marked_shell(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir = Path(tmp_dir) / "tno_1962"
+            scenario_dir.mkdir(parents=True, exist_ok=True)
+            (scenario_dir / "owners.by_feature.json").write_text(
+                json.dumps({"owners": {"AAA-detail": "AAA"}}),
+                encoding="utf-8",
+            )
+
+            startup_shell_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "RU_ARCTIC_FB_001",
+                        "name": "Russian Arctic shell fallback",
+                        "cntr_code": "RU",
+                        "detail_tier": "scenario_runtime_shell",
+                        "interactive": False,
+                        "render_as_base_geography": False,
+                        "scenario_helper_kind": "shell_fallback",
+                        "scenario_shell_owner_hint": "RU",
+                        "scenario_shell_controller_hint": "RU",
+                        "geometry": _square(0, 0),
+                    }
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            runtime_political_gdf = gpd.GeoDataFrame(
+                [
+                    {
+                        "id": "AAA-detail",
+                        "name": "Alpha Detail",
+                        "cntr_code": "AAA",
+                        "admin1_group": "Alpha Group",
+                        "detail_tier": "adm2",
+                        "__source": "detail",
+                        "interactive": True,
+                        "render_as_base_geography": False,
+                        "geometry": _square(2, 0),
+                    }
+                ],
+                geometry="geometry",
+                crs="EPSG:4326",
+            )
+            startup_topology_payload = Topology(
+                [startup_shell_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+            runtime_topology_payload = Topology(
+                [runtime_political_gdf],
+                object_name=["political"],
+                topology=True,
+                prequantize=False,
+                topoquantize=False,
+                presimplify=False,
+                toposimplify=False,
+                shared_coords=False,
+            ).to_dict()
+
+            result = scenario_chunk_assets.build_and_write_scenario_chunk_assets(
+                scenario_dir=scenario_dir,
+                manifest_payload={"scenario_id": "tno_1962", "generated_at": "2026-04-13T00:00:00Z"},
+                layer_payloads={},
+                startup_topology_payload=startup_topology_payload,
+                runtime_topology_payload=runtime_topology_payload,
+                startup_topology_url="data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
+                runtime_topology_url="data/scenarios/tno_1962/runtime_topology.topo.json",
+                generated_at="2026-04-13T00:00:00Z",
+            )
+
+            coarse_chunk = next(chunk for chunk in result["detail_chunk_manifest"]["chunks"] if chunk["id"] == "political.coarse.r0c0")
+            self.assertEqual(coarse_chunk["feature_count"], 1)
+            self.assertEqual(len(coarse_chunk["feature_bounds"]), coarse_chunk["feature_count"])
+            coarse_payload = json.loads((scenario_dir / "chunks" / "political.coarse.r0c0.json").read_text(encoding="utf-8"))
+            self.assertEqual(_chunk_feature_ids(coarse_payload), ["AAA-detail"])
+
     def test_political_coarse_falls_back_to_runtime_topology_when_startup_shell_has_no_political(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "tno_1962"

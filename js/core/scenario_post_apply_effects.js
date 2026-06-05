@@ -356,9 +356,12 @@ async function runPostScenarioApplyEffects({
     && !runtimeState.startupReadonly
     && !runtimeState.startupReadonlyUnlockInFlight
     && !runtimeState.detailPromotionInFlight;
+  const suppressChunkedCoarseDataHealthToast =
+    scenarioSupportsChunkedRuntime(bundle)
+    && chunkPrewarmResult?.coarsePrewarmCommitted === true;
   const dataHealth = refreshScenarioDataHealth({
-    showWarningToast: shouldExposeScenarioDataHealthSignals,
-    showErrorToast: shouldExposeScenarioDataHealthSignals,
+    showWarningToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,
+    showErrorToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,
   });
   syncCountryUi({ renderNow: useSingleFinalRender ? true : (renderNow && !suppressRender) });
   return {

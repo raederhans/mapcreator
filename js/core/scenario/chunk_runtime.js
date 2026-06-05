@@ -10,6 +10,7 @@ import { registerRuntimeHook } from "../state/index.js";
 
 const FOCUS_COUNTRY_OVERRIDE_TTL_MS = 5000;
 const STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS = 8000;
+const SCENARIO_CHUNK_FULL_WORLD_BBOX = Object.freeze([-180, -90, 180, 90]);
 
 // zoom-end 之后短时间保留刚刚可见的 detail chunk，避免视图刚停稳就被立即驱逐，
 // 造成 detail geometry 闪烁或 post-apply 刷新反复打架。
@@ -203,6 +204,7 @@ function createScenarioChunkRuntimeController({
   getVisibleScenarioChunkLayers,
   selectScenarioChunks,
   mergeScenarioChunkPayloads,
+  mergeScenarioChunkPayloadsForViewport = null,
   normalizeScenarioRenderBudgetHints,
   loadScenarioChunkFile,
   scenarioSupportsChunkedRuntime,
@@ -851,6 +853,31 @@ function createScenarioChunkRuntimeController({
       .map(({ chunkId }) => chunkId);
   }
 
+  function getScenarioChunkMetaById(bundle, chunkId = "") {
+    const normalizedChunkId = String(chunkId || "").trim();
+    if (!normalizedChunkId) return null;
+    const byLayer = bundle?.chunkRegistry?.byLayer && typeof bundle.chunkRegistry.byLayer === "object"
+      ? bundle.chunkRegistry.byLayer
+      : {};
+    for (const chunks of Object.values(byLayer)) {
+      const match = (Array.isArray(chunks) ? chunks : [])
+        .find((chunk) => String(chunk?.id || "").trim() === normalizedChunkId);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  function getScenarioChunkPayloadEntriesForLayer(bundle, chunkState, layerKey, activeChunkIdSet = null) {
+    return chunkState.loadedChunkIds
+      .filter((chunkId) => !activeChunkIdSet || activeChunkIdSet.has(String(chunkId || "").trim()))
+      .map((chunkId) => ({
+        chunkId,
+        chunk: getScenarioChunkMetaById(bundle, chunkId),
+        entry: chunkState.payloadByChunkId?.[chunkId] || null,
+      }))
+      .filter(({ entry }) => entry && entry.layerKey === layerKey);
+  }
+
   function buildScenarioChunkLayerSelectionSignatures(bundle, activeChunkIds = null) {
     const chunkState = ensureActiveScenarioChunkState();
     const activeChunkIdSet = Array.isArray(activeChunkIds)
@@ -940,40 +967,59 @@ function createScenarioChunkRuntimeController({
     reason = "refresh",
     changedLayerKeys = [],
     politicalFeatureIds = [],
+    primaryPoliticalPayload = null,
+    forceRefresh = false,
   } = {}) {
     const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     const normalizeStartedAt = startedAt;
     const normalizedPayload = normalizeScenarioFeatureCollection(politicalPayload);
+    const normalizedPrimaryPayload = normalizeScenarioFeatureCollection(primaryPoliticalPayload);
     const normalizeEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     const identityStartedAt = normalizeEndedAt;
     const previousFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalChunkData);
     const nextFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPayload);
+    const previousPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalVisibleChunkData);
+    const nextPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPrimaryPayload);
     const identityEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     const compareStartedAt = identityEndedAt;
     const samePayload = areScenarioFeatureCollectionsEquivalent(
       runtimeState.scenarioPoliticalChunkData,
       normalizedPayload
     );
+    const primaryPayloadHasSubset = normalizedPrimaryPayload
+      && Array.isArray(normalizedPrimaryPayload.features)
+      && normalizedPrimaryPayload.features.length < nextFeatureIds.length;
+    const nextPrimaryPoliticalChunkData = primaryPayloadHasSubset ? normalizedPrimaryPayload : null;
+    const samePrimaryPayload = areScenarioFeatureCollectionsEquivalent(
+      runtimeState.scenarioPoliticalVisibleChunkData,
+      nextPrimaryPoliticalChunkData
+    );
     const compareEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
-    if (samePayload) {
+    if (samePayload && samePrimaryPayload && !forceRefresh) {
       recordScenarioRenderMetric("politicalChunkPromotionBreakdown", compareEndedAt - startedAt, {
         scenarioId: getScenarioBundleId(bundle),
         reason: String(reason || "refresh"),
         samePayload: true,
+        samePrimaryPayload: true,
         normalizeMs: Math.max(0, normalizeEndedAt - normalizeStartedAt),
         identityMs: Math.max(0, identityEndedAt - identityStartedAt),
         compareMs: Math.max(0, compareEndedAt - compareStartedAt),
         refreshMs: 0,
         previousFeatureCount: previousFeatureIds.length,
         nextFeatureCount: nextFeatureIds.length,
+        previousPrimaryFeatureCount: previousPrimaryFeatureIds.length,
+        nextPrimaryFeatureCount: nextPrimaryFeatureIds.length,
       });
       return false;
     }
     runtimeState.scenarioPoliticalChunkData = normalizedPayload || null;
+    runtimeState.scenarioPoliticalVisibleChunkData = nextPrimaryPoliticalChunkData || null;
     const resolvedPoliticalFeatureIds = Array.from(new Set([
       ...(Array.isArray(politicalFeatureIds) ? politicalFeatureIds : []),
       ...previousFeatureIds,
       ...nextFeatureIds,
+      ...previousPrimaryFeatureIds,
+      ...nextPrimaryFeatureIds,
     ]));
     const refreshStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     refreshMapDataForScenarioChunkPromotion({
@@ -988,18 +1034,28 @@ function createScenarioChunkRuntimeController({
       scenarioId: getScenarioBundleId(bundle),
       reason: String(reason || "refresh"),
       samePayload: false,
+      samePrimaryPayload,
+      forcedRefresh: !!forceRefresh,
       normalizeMs: Math.max(0, normalizeEndedAt - normalizeStartedAt),
       identityMs: Math.max(0, identityEndedAt - identityStartedAt),
       compareMs: Math.max(0, compareEndedAt - compareStartedAt),
       refreshMs: Math.max(0, finishedAt - refreshStartedAt),
       previousFeatureCount: previousFeatureIds.length,
       nextFeatureCount: nextFeatureIds.length,
+      previousPrimaryFeatureCount: previousPrimaryFeatureIds.length,
+      nextPrimaryFeatureCount: nextPrimaryFeatureIds.length,
       resolvedPoliticalFeatureCount: resolvedPoliticalFeatureIds.length,
     });
+    const promotedPrimaryFeatureCount = primaryPayloadHasSubset ? nextPrimaryFeatureIds.length : nextFeatureIds.length;
     recordScenarioRenderMetric("politicalChunkPromotionMs", finishedAt - startedAt, {
       scenarioId: getScenarioBundleId(bundle),
       reason: String(reason || "refresh"),
       promotedPoliticalFeatureCount: nextFeatureIds.length,
+      promotedPrimaryPoliticalFeatureCount: promotedPrimaryFeatureCount,
+      promotedVisibleFeatureCount: promotedPrimaryFeatureCount,
+      promotedTotalFeatureCount: nextFeatureIds.length,
+      primaryVisibleFeatureCount: promotedPrimaryFeatureCount,
+      primaryTotalFeatureCount: nextFeatureIds.length,
     });
     return true;
   }
@@ -1106,6 +1162,7 @@ function createScenarioChunkRuntimeController({
   async function applyPendingScenarioChunkPromotion(bundle, pendingPromotion, loadState = ensureRuntimeChunkLoadState(), {
     renderNowOverride = null,
     runId = 0,
+    allowStartupInitialVisual = false,
   } = {}) {
     if (!pendingPromotion || typeof pendingPromotion !== "object") {
       return false;
@@ -1146,6 +1203,7 @@ function createScenarioChunkRuntimeController({
     const previousRenderLock = !!runtimeState.scenarioChunkPromotionRenderLocked;
     const mergedLayerSnapshot = captureMergedLayerRuntimeSnapshot(mergedLayerPayloads);
     const previousPoliticalChunkData = runtimeState.scenarioPoliticalChunkData;
+    const previousPoliticalVisibleChunkData = runtimeState.scenarioPoliticalVisibleChunkData;
     runtimeState.scenarioChunkPromotionRenderLocked = true;
     let mergedLayerResult = { changed: false, changedLayerKeys: [] };
     let politicalPayloadChanged = false;
@@ -1173,17 +1231,31 @@ function createScenarioChunkRuntimeController({
 
       setPromotionCommitStatus(loadState, "applying-visual", { inFlight: true, runId, scenarioId });
       const visualStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+      const primaryMergedLayerPayloads =
+        pendingPromotion.primaryMergedLayerPayloads && typeof pendingPromotion.primaryMergedLayerPayloads === "object"
+          ? pendingPromotion.primaryMergedLayerPayloads
+          : {};
+      const shouldForceStartupInitialVisualRefresh = !!allowStartupInitialVisual && (
+        getFeatureCount(runtimeState.landData) <= 0
+        || getColorCount() <= 0
+      );
+      const effectiveChangedLayerKeys = Array.from(new Set([
+        ...(Array.isArray(pendingPromotion.changedLayerKeys) ? pendingPromotion.changedLayerKeys : []),
+        ...(Array.isArray(mergedLayerResult?.changedLayerKeys) ? mergedLayerResult.changedLayerKeys : []),
+      ]));
       politicalPayloadChanged = applyScenarioPoliticalChunkPayload(bundle, mergedLayerPayloads.political || null, {
         renderNow: false,
         reason: pendingPromotion.reason,
-        changedLayerKeys: mergedLayerResult?.changedLayerKeys || [],
+        changedLayerKeys: effectiveChangedLayerKeys,
         politicalFeatureIds: pendingPromotion.politicalFeatureIds || [],
+        primaryPoliticalPayload: primaryMergedLayerPayloads.political || null,
+        forceRefresh: !!pendingPromotion.primaryVisibleFeatureSubsetChanged || shouldForceStartupInitialVisualRefresh,
       });
       if (!politicalPayloadChanged) {
         refreshScenarioAtlantropaChunkPayloadChange({
           renderNow: false,
           reason: pendingPromotion.reason,
-          changedLayerKeys: mergedLayerResult?.changedLayerKeys || [],
+          changedLayerKeys: effectiveChangedLayerKeys,
         });
       }
       // Keep the render lock across this frame break so a half-applied visual payload
@@ -1192,10 +1264,11 @@ function createScenarioChunkRuntimeController({
       if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
         if (canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })) {
           runtimeState.scenarioPoliticalChunkData = previousPoliticalChunkData;
+          runtimeState.scenarioPoliticalVisibleChunkData = previousPoliticalVisibleChunkData || null;
           refreshMapDataForScenarioChunkPromotion({
             suppressRender: true,
             reason: "scenario-chunk-promotion-stale-rollback",
-            changedLayerKeys: mergedLayerResult?.changedLayerKeys || [],
+            changedLayerKeys: effectiveChangedLayerKeys,
             politicalFeatureIds: pendingPromotion.politicalFeatureIds || [],
             hasPoliticalPayloadChange: true,
           });
@@ -1352,6 +1425,7 @@ function createScenarioChunkRuntimeController({
     return applyPendingScenarioChunkPromotion(resolvedBundle, resolvedPendingPromotion, loadState, {
       renderNowOverride: renderNow,
       runId,
+      allowStartupInitialVisual,
     });
   }
 
@@ -1482,18 +1556,22 @@ function createScenarioChunkRuntimeController({
     nextSignatures = {},
     previousMergedLayerPayloads = {},
     activeChunkIds = null,
+    viewportBbox = null,
   } = {}) {
     const chunkState = ensureActiveScenarioChunkState();
     const activeChunkIdSet = Array.isArray(activeChunkIds)
       ? new Set(activeChunkIds.map((chunkId) => String(chunkId || "").trim()).filter(Boolean))
       : null;
     const mergedLayerPayloads = {};
+    const primaryMergedLayerPayloads = {};
+    const primaryLayerStats = {};
     const changedLayerKeys = [];
     const layerKeys = new Set([
       ...Object.keys(bundle?.chunkRegistry?.byLayer || {}),
       ...Object.keys(previousMergedLayerPayloads || {}),
     ]);
     layerKeys.forEach((layerKey) => {
+      const layerChunkPayloadEntries = getScenarioChunkPayloadEntriesForLayer(bundle, chunkState, layerKey, activeChunkIdSet);
       const previousSignature = String(previousSignatures?.[layerKey] || "");
       const nextSignature = String(nextSignatures?.[layerKey] || "");
       if (
@@ -1501,25 +1579,42 @@ function createScenarioChunkRuntimeController({
         && Object.prototype.hasOwnProperty.call(previousMergedLayerPayloads || {}, layerKey)
       ) {
         mergedLayerPayloads[layerKey] = previousMergedLayerPayloads[layerKey] || null;
+        if (layerKey === "political" && typeof mergeScenarioChunkPayloadsForViewport === "function") {
+          const primaryResult = mergeScenarioChunkPayloadsForViewport(layerKey, layerChunkPayloadEntries.map(({ chunk, entry }) => ({
+            chunk,
+            payload: entry?.payload || null,
+          })), viewportBbox || [-180, -90, 180, 90]);
+          primaryMergedLayerPayloads[layerKey] = primaryResult?.payload || null;
+          primaryLayerStats[layerKey] = primaryResult?.stats || null;
+        }
         return;
       }
-      const layerChunkPayloads = chunkState.loadedChunkIds
-        .filter((chunkId) => !activeChunkIdSet || activeChunkIdSet.has(String(chunkId || "").trim()))
-        .map((chunkId) => chunkState.payloadByChunkId?.[chunkId] || null)
-        .filter((entry) => entry && entry.layerKey === layerKey)
-        .map((entry) => entry.payload)
+      const layerChunkPayloads = layerChunkPayloadEntries
+        .map(({ entry }) => entry?.payload || null)
         .filter(Boolean);
       if (!layerChunkPayloads.length) {
         mergedLayerPayloads[layerKey] = null;
+        primaryMergedLayerPayloads[layerKey] = null;
+        primaryLayerStats[layerKey] = null;
         changedLayerKeys.push(layerKey);
         return;
       }
       mergedLayerPayloads[layerKey] = mergeScenarioChunkPayloads(layerKey, layerChunkPayloads);
+      if (layerKey === "political" && typeof mergeScenarioChunkPayloadsForViewport === "function") {
+        const primaryResult = mergeScenarioChunkPayloadsForViewport(layerKey, layerChunkPayloadEntries.map(({ chunk, entry }) => ({
+          chunk,
+          payload: entry?.payload || null,
+        })), viewportBbox || [-180, -90, 180, 90]);
+        primaryMergedLayerPayloads[layerKey] = primaryResult?.payload || null;
+        primaryLayerStats[layerKey] = primaryResult?.stats || null;
+      }
       changedLayerKeys.push(layerKey);
     });
     chunkState.mergedLayerPayloads = mergedLayerPayloads;
     return {
       mergedLayerPayloads,
+      primaryMergedLayerPayloads,
+      primaryLayerStats,
       changedLayerKeys,
     };
   }
@@ -1563,6 +1658,12 @@ function createScenarioChunkRuntimeController({
     return loadPromise;
   }
 
+  function getCurrentScenarioChunkViewportBbox() {
+    return typeof runtimeState.getViewportGeoBoundsFn === "function"
+      ? runtimeState.getViewportGeoBoundsFn()
+      : [...SCENARIO_CHUNK_FULL_WORLD_BBOX];
+  }
+
   async function preloadScenarioCoarseChunks(
     bundle,
     {
@@ -1587,7 +1688,7 @@ function createScenarioChunkRuntimeController({
       chunkRegistry: bundle.chunkRegistry,
       contextLodManifest: bundle.contextLodManifest,
       zoom: 1,
-      viewportBbox: [-180, -90, 180, 90],
+      viewportBbox: [...SCENARIO_CHUNK_FULL_WORLD_BBOX],
       focusCountry: getScenarioDefaultCountryCode(bundle.manifest, bundle.countriesPayload?.countries || {}),
       renderBudgetHints: bundle.runtimeShell?.renderBudgetHints || bundle.manifest?.render_budget_hints || {},
       visibleLayers,
@@ -1630,6 +1731,7 @@ function createScenarioChunkRuntimeController({
         previousSignatures: {},
         nextSignatures: layerSignatures,
         previousMergedLayerPayloads: {},
+        viewportBbox: coarseSelection.viewportBbox || [...SCENARIO_CHUNK_FULL_WORLD_BBOX],
       });
       const mergedLayerPayloads = mergedResult.mergedLayerPayloads;
       loadState.layerSelectionSignatures = layerSignatures;
@@ -1639,6 +1741,7 @@ function createScenarioChunkRuntimeController({
         renderNow: false,
         reason: "coarse-prewarm",
         changedLayerKeys: mergedResult.changedLayerKeys,
+        primaryPoliticalPayload: mergedResult.primaryMergedLayerPayloads?.political || null,
       });
       if (!politicalPayloadChanged) {
         refreshScenarioAtlantropaChunkPayloadChange({
@@ -1709,9 +1812,7 @@ function createScenarioChunkRuntimeController({
       if (!scenarioBundleUsesChunkedLayer(bundle)) return null;
     }
     clearPendingScenarioChunkRefresh(loadState);
-    const viewportBbox = typeof runtimeState.getViewportGeoBoundsFn === "function"
-      ? runtimeState.getViewportGeoBoundsFn()
-      : [-180, -90, 180, 90];
+    const viewportBbox = getCurrentScenarioChunkViewportBbox();
     const visibleLayers = startupInitialPoliticalOnly
       ? getVisibleScenarioChunkLayers({
         includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
@@ -1767,6 +1868,9 @@ function createScenarioChunkRuntimeController({
       scenarioId,
       reason: String(reason || "refresh"),
       selectedFeatureCountSum: Math.max(0, Number(selection.selectedFeatureCountSum || 0)),
+      selectedVisibleFeatureCountSum: Math.max(0, Number(selection.selectedVisibleFeatureCountSum || 0)),
+      selectedPoliticalFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalFeatureCountSum || 0)),
+      selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalVisibleFeatureCountSum || 0)),
       selectedByteCountSum: Math.max(0, Number(selection.selectedByteCountSum || 0)),
       selectedCoordCountSum: Math.max(0, Number(selection.selectedCoordCountSum || 0)),
       selectedPartCountSum: Math.max(0, Number(selection.selectedPartCountSum || 0)),
@@ -1775,6 +1879,9 @@ function createScenarioChunkRuntimeController({
     recordScenarioChunkRuntimeMetric("selectedFeatureCountSum", selection.selectedFeatureCountSum || 0, {
       scenarioId,
       reason: String(reason || "refresh"),
+      selectedVisibleFeatureCountSum: Math.max(0, Number(selection.selectedVisibleFeatureCountSum || 0)),
+      selectedPoliticalFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalFeatureCountSum || 0)),
+      selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalVisibleFeatureCountSum || 0)),
       selectedByteCountSum: Math.max(0, Number(selection.selectedByteCountSum || 0)),
       selectedCoordCountSum: Math.max(0, Number(selection.selectedCoordCountSum || 0)),
       selectedPartCountSum: Math.max(0, Number(selection.selectedPartCountSum || 0)),
@@ -1784,6 +1891,7 @@ function createScenarioChunkRuntimeController({
     const nextOptionalChunkIds = selection.optionalChunks.map((chunk) => chunk.id);
     const nextCacheOnlyChunkIds = Array.isArray(selection.cacheOnlyChunkIds) ? [...selection.cacheOnlyChunkIds] : [];
     const nextRetainedActiveChunkIds = Array.isArray(selection.retainedActiveChunkIds) ? [...selection.retainedActiveChunkIds] : [];
+    const nextPoliticalVisibleFeatureSubsetSignature = String(selection.politicalVisibleFeatureSubsetSignature || "");
     const previousZoomEndProtectionUntil = Math.max(0, Number(previousSelection?.zoomEndProtectionUntil || 0));
     const shouldCarryZoomEndProtection = nextRetainedActiveChunkIds.length > 0 && previousZoomEndProtectionUntil > Date.now();
     const carriedZoomEndRecordedAt = Math.max(0, Number(previousSelection?.recordedAt || 0));
@@ -1793,6 +1901,7 @@ function createScenarioChunkRuntimeController({
       && getChunkIdListSignature(previousSelection?.optionalChunkIds) === getChunkIdListSignature(nextOptionalChunkIds)
       && getChunkIdListSignature(previousSelection?.cacheOnlyChunkIds) === getChunkIdListSignature(nextCacheOnlyChunkIds)
       && getChunkIdListSignature(previousSelection?.retainedActiveChunkIds) === getChunkIdListSignature(nextRetainedActiveChunkIds)
+      && String(previousSelection?.politicalVisibleFeatureSubsetSignature || "") === nextPoliticalVisibleFeatureSubsetSignature
       && selection.evictableChunkIds.length === 0
       && nextRequiredChunkIds.every((chunkId) => !!chunkState.payloadByChunkId?.[chunkId]);
     const currentSelectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
@@ -1806,6 +1915,11 @@ function createScenarioChunkRuntimeController({
       optionalChunkIds: nextOptionalChunkIds,
       cacheOnlyChunkIds: nextCacheOnlyChunkIds,
       retainedActiveChunkIds: nextRetainedActiveChunkIds,
+      visibleFeatureSubsetSignature: String(selection.visibleFeatureSubsetSignature || ""),
+      politicalVisibleFeatureSubsetSignature: nextPoliticalVisibleFeatureSubsetSignature,
+      selectedVisibleFeatureCountSum: Math.max(0, Number(selection.selectedVisibleFeatureCountSum || 0)),
+      selectedPoliticalFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalFeatureCountSum || 0)),
+      selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalVisibleFeatureCountSum || 0)),
       selectionVersion: nextSelectionVersion,
       focusCountry: String(focusCountry || "").trim().toUpperCase(),
       recordedAt: shouldCarryZoomEndProtection && carriedZoomEndRecordedAt > 0 ? carriedZoomEndRecordedAt : selectionRecordedAt,
@@ -1904,6 +2018,7 @@ function createScenarioChunkRuntimeController({
       nextSignatures: nextLayerSignatures,
       previousMergedLayerPayloads: loadState.mergedLayerPayloadCache || chunkState.mergedLayerPayloads || {},
       activeChunkIds: activeMergeChunkIds,
+      viewportBbox: selection.viewportBbox || viewportBbox,
     });
     const chunkMergeEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     recordScenarioChunkRuntimeMetric("chunkMergeMs", chunkMergeEndedAt - chunkMergeStartedAt, {
@@ -1912,6 +2027,12 @@ function createScenarioChunkRuntimeController({
       changedLayerCount: mergedResult.changedLayerKeys.length,
     });
     const mergedLayerPayloads = mergedResult.mergedLayerPayloads;
+    const primaryMergedLayerPayloads = mergedResult.primaryMergedLayerPayloads || {};
+    const primaryLayerStats = mergedResult.primaryLayerStats || {};
+    const primaryVisibleFeatureCount = Array.isArray(primaryMergedLayerPayloads?.political?.features)
+      ? primaryMergedLayerPayloads.political.features.length
+      : Math.max(0, Number(primaryLayerStats?.political?.visibleFeatureCount || 0));
+    const primaryTotalFeatureCount = Math.max(0, Number(primaryLayerStats?.political?.totalFeatureCount || 0));
     loadState.layerSelectionSignatures = nextLayerSignatures;
     loadState.mergedLayerPayloadCache = mergedLayerPayloads;
     const politicalRequired = selection.requiredChunks.some((chunk) => chunk.layer === "political");
@@ -1934,7 +2055,11 @@ function createScenarioChunkRuntimeController({
       return !cacheOnlyChunkIdSet.has(normalizedChunkId) || retainedActiveChunkIdSet.has(normalizedChunkId);
     });
     const politicalFeatureIds = collectScenarioPoliticalFeatureIdsForChunkIds(bundle, changedPoliticalChunkIds);
-    const hasMergedLayerChange = mergedResult.changedLayerKeys.length > 0;
+    const primaryVisibleFeatureSubsetChanged = String(previousSelection?.politicalVisibleFeatureSubsetSignature || "") !== nextPoliticalVisibleFeatureSubsetSignature;
+    const effectiveChangedLayerKeys = primaryVisibleFeatureSubsetChanged
+      ? Array.from(new Set([...mergedResult.changedLayerKeys, "political"]))
+      : mergedResult.changedLayerKeys;
+    const hasMergedLayerChange = effectiveChangedLayerKeys.length > 0;
     const hasPoliticalFeatureChange = politicalFeatureIds.length > 0;
     if (!hasMergedLayerChange && !hasPoliticalFeatureChange) {
       clearPendingScenarioChunkPromotion(loadState);
@@ -1954,13 +2079,22 @@ function createScenarioChunkRuntimeController({
       reason,
       selectionVersion: nextSelectionVersion,
       requiredChunkIds: nextRequiredChunkIds,
+      selectedFeatureCountSum: Math.max(0, Number(selection.selectedFeatureCountSum || 0)),
+      selectedVisibleFeatureCountSum: Math.max(0, Number(selection.selectedVisibleFeatureCountSum || 0)),
+      selectedPoliticalFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalFeatureCountSum || 0)),
+      selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalVisibleFeatureCountSum || 0)),
+      primaryVisibleFeatureCount,
+      primaryTotalFeatureCount,
+      selectedByteCountSum: Math.max(0, Number(selection.selectedByteCountSum || 0)),
+      selectedEstimatedPathCostSum: Math.max(0, Number(selection.selectedEstimatedPathCostSum || 0)),
+      politicalVisibleFeatureSubsetSignature: nextPoliticalVisibleFeatureSubsetSignature,
       queuedAt: promotionQueuedAt,
       renderNow,
     };
     loadState.pendingInfraPromotion = {
       scenarioId,
       reason,
-      changedLayerKeys: mergedResult.changedLayerKeys,
+      changedLayerKeys: effectiveChangedLayerKeys,
       selectionVersion: nextSelectionVersion,
       queuedAt: promotionQueuedAt,
     };
@@ -1969,13 +2103,25 @@ function createScenarioChunkRuntimeController({
       reason,
       renderNow,
       mergedLayerPayloads,
-      changedLayerKeys: mergedResult.changedLayerKeys,
+      primaryMergedLayerPayloads,
+      primaryLayerStats,
+      changedLayerKeys: effectiveChangedLayerKeys,
+      primaryVisibleFeatureSubsetChanged,
       politicalRequired,
       requiredPoliticalChunkCount: selection.requiredChunks.filter((chunk) => chunk.layer === "political").length,
       requiredChunkIds: nextRequiredChunkIds,
       cacheOnlyChunkIds: Array.isArray(selection.cacheOnlyChunkIds) ? [...selection.cacheOnlyChunkIds] : [],
       retainedActiveChunkIds: nextRetainedActiveChunkIds,
       selectionVersion: nextSelectionVersion,
+      selectedFeatureCountSum: Math.max(0, Number(selection.selectedFeatureCountSum || 0)),
+      selectedVisibleFeatureCountSum: Math.max(0, Number(selection.selectedVisibleFeatureCountSum || 0)),
+      selectedPoliticalFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalFeatureCountSum || 0)),
+      selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalVisibleFeatureCountSum || 0)),
+      primaryVisibleFeatureCount,
+      primaryTotalFeatureCount,
+      selectedByteCountSum: Math.max(0, Number(selection.selectedByteCountSum || 0)),
+      selectedEstimatedPathCostSum: Math.max(0, Number(selection.selectedEstimatedPathCostSum || 0)),
+      politicalVisibleFeatureSubsetSignature: nextPoliticalVisibleFeatureSubsetSignature,
       politicalFeatureIds,
       queuedAt: promotionQueuedAt,
     };
@@ -2020,6 +2166,10 @@ function createScenarioChunkRuntimeController({
     const expectedScenarioId = normalizeScenarioId(scenarioId || runtimeState.activeScenarioId);
     const activeScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
     const scenarioPoliticalChunkFeatureCount = getFeatureCount(runtimeState.scenarioPoliticalChunkData);
+    const hasVisiblePoliticalChunkData = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features);
+    const scenarioPoliticalVisibleFeatureCount = hasVisiblePoliticalChunkData
+      ? getFeatureCount(runtimeState.scenarioPoliticalVisibleChunkData)
+      : scenarioPoliticalChunkFeatureCount;
     const landFeatureCount = getFeatureCount(runtimeState.landData);
     const colorCount = getColorCount();
     const selectionVersion = Math.max(0, Number(loadState?.selectionVersion || 0));
@@ -2047,6 +2197,11 @@ function createScenarioChunkRuntimeController({
       shellStatus: String(loadState?.shellStatus || ""),
       requiredPoliticalChunkCount,
       promotedFeatureCount: scenarioPoliticalChunkFeatureCount,
+      promotedPrimaryFeatureCount: scenarioPoliticalVisibleFeatureCount,
+      promotedVisibleFeatureCount: scenarioPoliticalVisibleFeatureCount,
+      promotedTotalFeatureCount: scenarioPoliticalChunkFeatureCount,
+      primaryVisibleFeatureCount: scenarioPoliticalVisibleFeatureCount,
+      primaryTotalFeatureCount: scenarioPoliticalChunkFeatureCount,
       landFeatureCount,
       colorCount,
       pendingVisualPromotion,
@@ -2064,7 +2219,9 @@ function createScenarioChunkRuntimeController({
     const startedAt = getMonotonicNowMs();
     const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
     if (!scenarioId) {
-      return buildInitialScenarioChunkVisualPromotionResult("no-active-scenario", { scenarioId });
+      const result = buildInitialScenarioChunkVisualPromotionResult("no-active-scenario", { scenarioId });
+      result.ok = true;
+      return result;
     }
     const bundle = getCachedScenarioBundle(scenarioId);
     const loadState = ensureRuntimeChunkLoadState();

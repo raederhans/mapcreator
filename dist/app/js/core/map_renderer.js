@@ -874,6 +874,7 @@ const TARGET_GEOMETRY_DIAG_PREFIXES = ["RU_ARCTIC_FB_"];
 const HEAVY_SCENARIO_STAGED_APPLY_FEATURE_THRESHOLD = 12000;
 const STAGED_CONTEXT_BASE_TIMEOUT_MS = 180;
 const STAGED_HIT_CANVAS_TIMEOUT_MS = 260;
+const HIT_CANVAS_VIEWPORT_OVERSCAN_PX = 24;
 const CHUNKED_INDEX_BUILD_SLICE_SIZE = 1200;
 const CHUNKED_SPATIAL_BUILD_SLICE_SIZE = 900;
 const HOVER_INTERACTION_METRIC_SAMPLE_RATE = 10;
@@ -6077,6 +6078,9 @@ function rebuildPoliticalLandCollections() {
   const scenarioPoliticalChunkCollection = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
     ? runtimeState.scenarioPoliticalChunkData
     : null;
+  const scenarioPoliticalVisibleChunkCollection = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
+    ? runtimeState.scenarioPoliticalVisibleChunkData
+    : null;
 
   let fullCollection = runtimeState.landDataFull || runtimeState.landData || null;
   const runtimeCollectionStartedAt = nowMs();
@@ -6138,6 +6142,9 @@ function rebuildPoliticalLandCollections() {
     interactiveFeatureCount: interactiveCount,
     scenarioChunkFeatureCount: Array.isArray(scenarioPoliticalChunkCollection?.features)
       ? scenarioPoliticalChunkCollection.features.length
+      : 0,
+    scenarioChunkVisibleFeatureCount: Array.isArray(scenarioPoliticalVisibleChunkCollection?.features)
+      ? scenarioPoliticalVisibleChunkCollection.features.length
       : 0,
     runtimeCollectionMs: Math.max(0, runtimeCollectionMs),
     composeMs: Math.max(0, composeMs),
@@ -8667,7 +8674,9 @@ function drawHitCanvas() {
   hitContext.translate(t.x, t.y);
   hitContext.scale(k, k);
 
-  const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats();
+  const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats({
+    overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,
+  });
   if (visibleSpatialItemsResult === null) {
     hitContext.restore();
     runtimeState.hitCanvasDirty = true;
@@ -8709,11 +8718,18 @@ function drawHitCanvasWithMetric(details = {}) {
   const startedAt = nowMs();
   const dirtyBefore = !!runtimeState.hitCanvasDirty;
   const built = drawHitCanvas();
-  recordRenderPerfMetric("buildHitCanvas", nowMs() - startedAt, {
+  const durationMs = nowMs() - startedAt;
+  const metricDetails = {
     built: !!built,
     dirtyBefore,
     ...(lastHitCanvasBuildStats || {}),
     ...details,
+  };
+  recordRenderPerfMetric("buildHitCanvas", durationMs, metricDetails);
+  recordRenderPerfMetric("hitCanvasViewportProfile", durationMs, {
+    sourceMetric: "buildHitCanvas",
+    profile: "viewport-full",
+    ...metricDetails,
   });
   return built;
 }
@@ -8780,8 +8796,11 @@ function getHitResultFromCanvas(event) {
   }
   const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
   if (![sx, sy].every(Number.isFinite)) return createHitResult();
-  const px = Math.max(0, Math.min((hitCanvas?.width || 1) - 1, Math.round(sx * runtimeState.dpr)));
-  const py = Math.max(0, Math.min((hitCanvas?.height || 1) - 1, Math.round(sy * runtimeState.dpr)));
+  const dpr = Number.isFinite(Number(runtimeState.dpr)) && Number(runtimeState.dpr) > 0
+    ? Number(runtimeState.dpr)
+    : 1;
+  const px = Math.max(0, Math.min((hitCanvas?.width || 1) - 1, Math.round(sx * dpr)));
+  const py = Math.max(0, Math.min((hitCanvas?.height || 1) - 1, Math.round(sy * dpr)));
 
   let pixel = null;
   try {
@@ -8817,15 +8836,113 @@ function getHitResultFromCanvas(event) {
   });
 }
 
-function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } = {}) {
-  if (
-    runtimeState.renderPhase !== RENDER_PHASE_IDLE
-    || (!isHitCanvasCurrent() && !ensureHitCanvasUpToDate({ force: !!forceBuild }))
-    || !isHitCanvasCurrent()
-  ) {
+function getDirtyHitCanvasPointProbeHit(event) {
+  if (!mapSvg || !hitContext || !pathHitCanvas || !runtimeState.keyToId?.size || !globalThis.d3?.pointer) {
     return createHitResult();
   }
-  const hit = getHitResultFromCanvas(event);
+  const startedAt = nowMs();
+  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  if (![sx, sy].every(Number.isFinite)) return createHitResult();
+  const t = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  const k = Math.max(0.0001, Number(t.k) || 1);
+  const projectedX = (Number(sx) - Number(t.x || 0)) / k;
+  const projectedY = (Number(sy) - Number(t.y || 0)) / k;
+  if (![projectedX, projectedY].every(Number.isFinite)) return createHitResult();
+  const candidates = collectGridCandidates(projectedX, projectedY, 0)
+    .sort((left, right) => (left?.item?.drawOrder ?? 0) - (right?.item?.drawOrder ?? 0));
+  const dpr = Number.isFinite(Number(runtimeState.dpr)) && Number(runtimeState.dpr) > 0
+    ? Number(runtimeState.dpr)
+    : 1;
+  const px = Math.max(0, Math.min((hitCanvas?.width || 1) - 1, Math.round(sx * dpr)));
+  const py = Math.max(0, Math.min((hitCanvas?.height || 1) - 1, Math.round(sy * dpr)));
+  let drawnItemCount = 0;
+  let hit = createHitResult();
+  try {
+    hitContext.save();
+    hitContext.setTransform(1, 0, 0, 1, 0, 0);
+    hitContext.clearRect(px - 1, py - 1, 3, 3);
+    hitContext.beginPath();
+    hitContext.rect(px - 1, py - 1, 3, 3);
+    hitContext.clip();
+    hitContext.globalCompositeOperation = "source-over";
+    hitContext.globalAlpha = 1;
+    hitContext.filter = "none";
+    hitContext.shadowBlur = 0;
+    hitContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+    hitContext.translate(t.x, t.y);
+    hitContext.scale(k, k);
+    candidates.forEach(({ item }) => {
+      const key = runtimeState.idToKey.get(item?.id);
+      if (!key || !item?.feature) return;
+      if (shouldExcludePoliticalInteractionFeature(item.feature, item.id)) return;
+      hitContext.beginPath();
+      pathHitCanvas(item.feature);
+      hitContext.fillStyle = keyToHitColor(key);
+      hitContext.fill();
+      drawnItemCount += 1;
+    });
+    hitContext.restore();
+    const pixel = hitContext.getImageData(px, py, 1, 1).data;
+    const key = hitColorToKey(pixel);
+    const id = key ? runtimeState.keyToId.get(key) : "";
+    const feature = id ? runtimeState.landIndex.get(id) : null;
+    const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+    if (
+      id
+      && feature
+      && !shouldExcludePoliticalInteractionFeature(feature, id)
+      && !shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })
+    ) {
+      hit = createHitResult({
+        id,
+        countryCode: getFeatureInteractionCountryCodeNormalized(feature, id),
+        runtimeCountryCode: getFeatureCountryCodeNormalized(feature),
+        targetType: "land",
+        feature,
+        hitSource: "point-probe",
+        bboxArea: Number(runtimeState.spatialItemsById?.get(id)?.bboxArea || Infinity),
+        viaSnap: false,
+        strict: true,
+        distancePx: 0,
+      });
+    }
+  } catch (_error) {
+    try {
+      hitContext.restore();
+    } catch (_restoreError) {
+      // Already restored.
+    }
+    hit = createHitResult();
+  }
+  const durationMs = nowMs() - startedAt;
+  const details = {
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    candidateCount: candidates.length,
+    drawnItemCount,
+    hit: !!hit.id,
+    hitSource: "point-probe",
+    dirtyBefore: !!runtimeState.hitCanvasDirty,
+  };
+  recordRenderPerfMetric("hitCanvasPointProbe", durationMs, details);
+  recordRenderPerfMetric("hitCanvasViewportProfile", durationMs, {
+    sourceMetric: "hitCanvasPointProbe",
+    profile: "point-probe",
+    ...details,
+  });
+  return hit;
+}
+
+function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } = {}) {
+  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    return createHitResult();
+  }
+  let hit = createHitResult();
+  if (isHitCanvasCurrent()) {
+    hit = getHitResultFromCanvas(event);
+  } else {
+    scheduleHitCanvasBuildIfNeeded({ reason: forceBuild ? "dirty-point-probe-click" : "dirty-point-probe-hover" });
+    hit = getDirtyHitCanvasPointProbeHit(event);
+  }
   if (!hit.id) return hit;
   if (!strictIds?.size || strictIds.has(hit.id)) return hit;
   return createHitResult();
@@ -24944,6 +25061,8 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
   const previousInteractionInfrastructureStage = String(runtimeState.interactionInfrastructureStage || "");
   let restoredInteractionInfrastructureState = false;
   let yieldCount = 0;
+  let fullPoliticalRestoreMs = 0;
+  let restoredFullPoliticalChunkData = false;
   try {
     if (!primaryDerivedStateReady) {
       buildIndex();
@@ -24956,6 +25075,39 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
         includeSecondary: false,
         keepReady: true,
       });
+    }
+    if (hasPoliticalGeometryChange && Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)) {
+      const fullRestoreStartedAt = nowMs();
+      runtimeState.scenarioPoliticalVisibleChunkData = null;
+      const completePoliticalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+        ? runtimeState.scenarioPoliticalChunkData.features.length
+        : 0;
+      const renderedLandFeatureCount = Array.isArray(runtimeState.landData?.features)
+        ? runtimeState.landData.features.length
+        : 0;
+      const shouldRestoreFullPoliticalDerivedState = (
+        !primaryDerivedStateReady
+        && completePoliticalFeatureCount > 0
+        && renderedLandFeatureCount < completePoliticalFeatureCount
+      );
+      if (shouldRestoreFullPoliticalDerivedState) {
+        rebuildPoliticalLandCollections();
+        rebuildRuntimeDerivedState({
+          includeRuntimePoliticalMeta: true,
+          scheduleUiMode: "deferred",
+          buildSpatial: true,
+          includeSecondarySpatial: false,
+        });
+        runtimeState.hitCanvasDirty = true;
+        runtimeState.hitCanvasTopologyRevision = 0;
+        await yieldToMain();
+        yieldCount += 1;
+      }
+      fullPoliticalRestoreMs = nowMs() - fullRestoreStartedAt;
+      restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;
+      if (promotionVersion !== scenarioChunkPromotionVersion) {
+        return false;
+      }
     }
     setInteractionInfrastructureState(previousInteractionInfrastructureStage || "basic-ready", {
       ready: true,
@@ -24999,6 +25151,8 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
       promotionVersion,
       hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
       primaryDerivedStateReady: !!primaryDerivedStateReady,
+      restoredFullPoliticalChunkData,
+      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
     });
     recordRenderPerfMetric("chunkPromotionInfraMs", infraDurationMs, {
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
@@ -25006,6 +25160,17 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
       promotionVersion,
       hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
       primaryDerivedStateReady: !!primaryDerivedStateReady,
+      restoredFullPoliticalChunkData,
+      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
+    });
+    recordRenderPerfMetric("chunkPromotionDeferredInfraMs", infraDurationMs, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      suppressRender: !!suppressRender,
+      promotionVersion,
+      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+      primaryDerivedStateReady: !!primaryDerivedStateReady,
+      restoredFullPoliticalChunkData,
+      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
     });
     recordInteractionRecoveryTaskMetric(taskKey, infraDurationMs, {
       reason: String(reason || "scenario-chunk-promotion"),
@@ -25014,6 +25179,8 @@ async function runDeferredScenarioChunkPromotionInfraRefresh({
       hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
       primaryDerivedStateReady: !!primaryDerivedStateReady,
       refreshOpeningOwnerBorders: refreshOpeningOwnerBorders !== false,
+      restoredFullPoliticalChunkData,
+      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
       yieldCount,
     });
     return true;
@@ -25146,7 +25313,25 @@ function refreshMapDataForScenarioChunkPromotion({
       refreshOpeningOwnerBorders: !shouldRefreshOpeningOwnerBordersInVisual,
     });
   }
-  recordRenderPerfMetric("scenarioChunkPromotionVisualStage", nowMs() - startedAt, {
+  const visualDurationMs = nowMs() - startedAt;
+  const promotedTotalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+    ? runtimeState.scenarioPoliticalChunkData.features.length
+    : 0;
+  const promotedPrimaryFeatureCount = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
+    ? runtimeState.scenarioPoliticalVisibleChunkData.features.length
+    : promotedTotalFeatureCount;
+  const promotedVisibleFeatureCount = Math.max(0, Number(
+    pendingVisualPromotion?.primaryVisibleFeatureCount
+      || pendingPromotion?.primaryVisibleFeatureCount
+      || pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum
+      || pendingPromotion?.selectedPoliticalVisibleFeatureCountSum
+      || promotedPrimaryFeatureCount
+      || pendingVisualPromotion?.selectedFeatureCountSum
+      || pendingPromotion?.selectedFeatureCountSum
+      || promotedTotalFeatureCount
+      || 0,
+  ));
+  const promotionMetricDetails = {
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     reason: String(reason || "scenario-chunk-promotion"),
     selectionVersion: Math.max(0, Number(pendingVisualPromotion?.selectionVersion || pendingPromotion?.selectionVersion || runtimeChunkLoadState?.selectionVersion || 0)),
@@ -25158,30 +25343,46 @@ function refreshMapDataForScenarioChunkPromotion({
     renderNow: !suppressRender,
     hasPoliticalGeometryChange: hasPoliticalChange,
     suppressRender: !!suppressRender,
-    promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-      ? runtimeState.scenarioPoliticalChunkData.features.length
-      : 0,
+    promotedFeatureCount: promotedTotalFeatureCount,
+    promotedPrimaryFeatureCount,
+    promotedVisibleFeatureCount,
+    promotedTotalFeatureCount,
+    selectedVisibleFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedVisibleFeatureCountSum || pendingPromotion?.selectedVisibleFeatureCountSum || 0)),
+    selectedPoliticalFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedPoliticalFeatureCountSum || pendingPromotion?.selectedPoliticalFeatureCountSum || 0)),
+    selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum || pendingPromotion?.selectedPoliticalVisibleFeatureCountSum || 0)),
+    primaryTotalFeatureCount: Math.max(0, Number(pendingVisualPromotion?.primaryTotalFeatureCount || pendingPromotion?.primaryTotalFeatureCount || promotedTotalFeatureCount || 0)),
+    primaryVisibleFeatureCount: Math.max(0, Number(pendingVisualPromotion?.primaryVisibleFeatureCount || pendingPromotion?.primaryVisibleFeatureCount || promotedPrimaryFeatureCount || 0)),
+    selectedByteCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedByteCountSum || pendingPromotion?.selectedByteCountSum || 0)),
+    selectedEstimatedPathCostSum: Math.max(0, Number(pendingVisualPromotion?.selectedEstimatedPathCostSum || pendingPromotion?.selectedEstimatedPathCostSum || 0)),
     changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
     promotionVersion: scenarioChunkPromotionVersion,
     synchronizedSecondaryRegionIndexes,
+  };
+  recordRenderPerfMetric("scenarioChunkPromotionVisualStage", visualDurationMs, {
+    ...promotionMetricDetails,
   });
-  recordRenderPerfMetric("chunkPromotionVisualMs", nowMs() - startedAt, {
+  recordRenderPerfMetric("chunkPromotionPrimaryRefreshMs", visualDurationMs, {
+    ...promotionMetricDetails,
+  });
+  recordRenderPerfMetric("chunkPromotionVisualMs", visualDurationMs, {
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     suppressRender: !!suppressRender,
-    promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-      ? runtimeState.scenarioPoliticalChunkData.features.length
-      : 0,
+    promotedFeatureCount: promotedTotalFeatureCount,
+    promotedPrimaryFeatureCount,
+    promotedVisibleFeatureCount,
+    promotedTotalFeatureCount,
     changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
     promotionVersion: scenarioChunkPromotionVersion,
     hasPoliticalGeometryChange: hasPoliticalChange,
     synchronizedSecondaryRegionIndexes,
   });
-  recordRenderPerfMetric("scenarioChunkPoliticalPromotion", nowMs() - startedAt, {
+  recordRenderPerfMetric("scenarioChunkPoliticalPromotion", visualDurationMs, {
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     suppressRender: !!suppressRender,
-    promotedFeatureCount: Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-      ? runtimeState.scenarioPoliticalChunkData.features.length
-      : 0,
+    promotedFeatureCount: promotedTotalFeatureCount,
+    promotedPrimaryFeatureCount,
+    promotedVisibleFeatureCount,
+    promotedTotalFeatureCount,
     changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
     promotionVersion: scenarioChunkPromotionVersion,
     synchronizedSecondaryRegionIndexes,
