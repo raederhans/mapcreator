@@ -93,3 +93,35 @@ test("toolbar preview button enables injected preview loader in developer mode",
   assert.equal(restoreCount, 1);
   assert.equal(button.attributes.get("aria-pressed"), "false");
 });
+
+test("developer mode sync disables active preview before hiding the control", async () => {
+  const runtimeState = { ui: { developerMode: true } };
+  const button = createButton();
+  let restoreCount = 0;
+  const controller = createHgoRuntimePreviewToolbarController({
+    runtimeState,
+    button,
+    documentRef: null,
+    storage: null,
+    loadSeed: async () => ({
+      provinces: { 1: { id: 1, rgb: [10, 20, 30], rgb_key: 660510, rgb_hex: "#0A141E" } },
+      states: [{ id: 1, owner: "AAA", controller: "AAA", province_ids: [1], province_count: 1 }],
+      countries: { AAA: { tag: "AAA", color_hex: "#010203", color_rgb: [1, 2, 3] } },
+      province_to_state: { 1: 1 },
+    }),
+    loadRaster: async () => ({ width: 1, height: 1, pixelFormat: "rgb", pixels: [10, 20, 30] }),
+    restorePreviewTarget: () => {
+      restoreCount += 1;
+    },
+  });
+
+  await controller.setEnabled(true);
+  runtimeState.ui.developerMode = false;
+  controller.sync();
+
+  assert.equal(runtimeState.hgoRuntimePreview.enabled, false);
+  assert.equal(runtimeState.hgoRuntimePreview.renderSummary, null);
+  assert.equal(restoreCount, 1);
+  assert.equal(button.classList.contains("hidden"), true);
+  assert.equal(button.attributes.get("aria-pressed"), "false");
+});

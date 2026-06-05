@@ -15,7 +15,15 @@
 - [x] Run focused HGO and data contract verification.
 - [x] Run `verify:pages-dist`.
 - [x] Run review / bug / first-principles self-check and fix findings.
-- [ ] Merge branch back to main, push, and clean worktree.
+- [x] Merge branch back to main, push, and clean worktree.
+
+## Post-Closeout Review
+
+- [x] Audit current HGO runtime changes with a code-review subagent.
+- [x] Fix developer-mode-off preview state cleanup before hiding the toolbar entry.
+- [x] Centralize HGO Pages startup-shell required paths on the build publish list.
+- [x] Add regression coverage for developer-mode-off preview cleanup.
+- [x] Re-run HGO and Pages dist verification.
 
 ## Phase 2: HGO Runtime Preview
 

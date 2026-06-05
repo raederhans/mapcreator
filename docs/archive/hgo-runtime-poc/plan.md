@@ -50,6 +50,13 @@ Phase 3 boundaries:
 - No dependency changes.
 - Live build/test owner remains the main agent.
 
+Phase 3 status:
+
+- Checked-in HGO runtime assets are built, published, and verified.
+- Developer-gated preview now loads real checked-in HGO seed/raster assets.
+- Runtime registry, data catalog, data manifest, Pages dist, and startup shell contracts are synchronized.
+- Worktree has been merged, pushed, and cleaned.
+
 Phase 3 validation:
 
 - `npm run test:py:hgo-runtime-assets`
@@ -59,6 +66,17 @@ Phase 3 validation:
 - `python -m unittest tests.test_data_manifest_contract tests.test_data_catalog_contract -q`
 - `npm run verify:pages-dist`
 - `git diff --check`
+
+## Post-Closeout Review Plan
+
+Goal: audit the merged HGO runtime lane for state and publish-contract regressions before starting the next HGO phase.
+
+Status:
+
+- Code review completed with one HGO preview state finding.
+- Developer-mode-off preview cleanup is fixed in the toolbar preview controller.
+- HGO Pages startup-shell required paths now reuse the build publish list.
+- Regression coverage and HGO/Pages verification passed.
 
 ## Validation
 

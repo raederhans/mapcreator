@@ -77,7 +77,16 @@ function createHgoRuntimePreviewToolbarController({
     storage,
   });
 
-  const sync = () => syncButton(previewButton, runtimeState, { loadersConfigured });
+  const disablePreviewWhenDeveloperModeIsOff = () => {
+    if (runtimeState?.ui?.developerMode) return;
+    const previewState = previewController.getState();
+    if (!previewState.enabled && !previewState.renderSummary) return;
+    void previewController.setEnabled(false);
+  };
+  const sync = () => {
+    disablePreviewWhenDeveloperModeIsOff();
+    return syncButton(previewButton, runtimeState, { loadersConfigured });
+  };
   const setEnabled = async (nextEnabled) => {
     const state = await previewController.setEnabled(nextEnabled);
     sync();

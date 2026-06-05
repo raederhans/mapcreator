@@ -305,6 +305,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             DIST_MANIFEST.stat().st_size,
         )
         self.assertIn("app/data/CATALOG.json", required_files)
+        expected_hgo_runtime_paths = tuple(
+            f"app/data/hgo_runtime/{file_name}" for file_name in build_pages_dist.HGO_RUNTIME_FILES
+        )
         for expected_path in (
             "index.html",
             "app/index.html",
@@ -320,9 +323,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/hgo_catalogs/hgo_place_names.json",
             "app/data/hgo_catalogs/hgo_flags.png_manifest.json",
             "app/data/hgo_catalogs/hgo_identity_aliases.json",
-            "app/data/hgo_runtime/manifest.json",
-            "app/data/hgo_runtime/seed.json",
-            "app/data/hgo_runtime/provinces.bmp",
+            *expected_hgo_runtime_paths,
             "app/data/hgo_catalogs/flags_png/small/AB/ABK.png",
             "app/data/hgo_catalogs/flags_png/medium/AB/ABK.png",
             "app/data/city_lights/historical_1930_entries.json",

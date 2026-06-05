@@ -122,7 +122,7 @@
 - 如果源码和 `dist/app` 已有历史漂移，共享大文件优先做 scoped patch。
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
-- `dist/pages-dist-manifest.json` 和 `data/manifest.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash，并在 `.gitattributes` 固定 LF。
+- `dist/pages-dist-manifest.json`、`data/manifest.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash；生成脚本和 `dist/app` 文本产物都要在 `.gitattributes` 固定 LF。
 - Marine Regions source snapshot 接近 GitHub 100MiB 限制时，要把简化规则写进 source spec/provenance，比如 `snapshot_simplify_tolerance`；只压最终 water feature 会留下不可推送的大 snapshot。
 - 只改 water layer 时，优先在现有 `runtime_topology.topo.json` 上替换 `scenario_water`；从 political/land/context 反提再重建会丢失独立的 `scenario_atlantropa` 对象。
 - open-ocean 扣减后沿用既有 `component_min_area` 裁剪合同，避免生成小碎片打破 component 上限。
@@ -181,9 +181,6 @@
 ### 浮动控件缩放要保持像素锚点
 - 浮动控件的位置如果用比例存储，缩放时先保留当前像素 left/top，再按新尺寸回算比例；直接用旧比例重算会导致控件在缩放时漂移。
 
-### 图例发布要以源码重建 dist 后复核
-- 图例、侧栏这类同时存在源码和 `dist/app` 的 UI 改动，先改源码，再跑 `verify:pages-dist` 让发布面重建；验证后再查一次源码和 dist 关键标记，避免手动同步顺序掩盖旧实现残留。
-
 ### progressive 粗粒度可见性要和细节完整性分开
 - chunked/progressive 启动阶段已经提交 coarse prewarm 时，数据健康可以记录 detail 未完整，但用户可见 toast 应表达真实可操作错误；当前视口可用的渐进阶段不应显示成剧本可见性失败。
 
@@ -204,17 +201,11 @@
 - scenario political background full-pass Path2D cache 构建很贵，但 HOI4 直接 grouped replay 更贵；优化应降低 cache build 成本或复用时机，不能直接关闭 full-pass cache。
 - Pages dist manifest 必须在最终换行形态之后写入；如果构建后再规整 LF，`size_bytes` 会和 checked-in 文件失配。
 
-### Pages dist 字节合同要同时锁写入和属性
-- `dist/pages-dist-manifest.json` 记录 app 文件 size/hash 时，生成脚本要用 LF 写入，`.gitattributes` 也要锁住 `dist/app` 文本产物 LF；只修写入层会在 Windows checkout 下继续出现字节漂移风险。
-
 ### open-ocean 可见性和交互开关要分离
 - `showOpenOceanRegions` 只表达视觉可见；`allowOpenOceanSelect` / `allowOpenOceanPaint` 才表达命中与编辑能力。测试或迁移逻辑把 show 当作交互开关时，会让默认场景暴露 open-ocean 列表和点击命中。
 
 ### 视觉伪装要统一显示和命中集合
 - 对政治图层做 runtime-only geometry pruning 时，普通绘制、hit/spatial index 和 scenario background merge 都要读同一份可视集合；`landDataFull` 只保留给完整数据、边界和诊断用途。
-
-### project support 改动要同时验证 dist 合同
-- `project_support_diagnostics_controller.js`、`file_manager.js`、`sidebar.js` 这类 support 面文件被静态合同要求源码和 `dist/app` 一致；改源码后要跑 `verify:pages-dist`，再跑对应 boundary contract。
 
 ### 大颜色库翻译优先走定向同步
 - HGO 这类 palette 只需要补颜色库可见国名时，使用 palette-only locale 同步；完整 `geo` 同步会扫 7 万级地理项，机器翻译阶段会明显拖慢。
@@ -277,9 +268,6 @@
 ### worktree 重放后用内容合同判断清理
 - cherry-pick 到新 main 后，旧分支 commit id 可能仍显示未合入；清理前要用目标文件 diff、patch 等价和验证结果一起确认，避免误删尚未吸收的工作。
 
-### scenario checkpoint 要固定到已验证目录
-- 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
-
 ### viewport culling 先验证 chunk 粒度
 - 渲染性能优化前先记录 visible/total feature count；如果一个 required chunk 已经包含接近全量 feature，单纯缩小 viewport overscan 只能改善脏交互点探测，启动主路径仍会接近全量绘制。
 
@@ -288,3 +276,6 @@
 
 ### 字节级 runtime manifest 要覆盖源文件和发布文件
 - 资产 manifest 记录 size/hash 时，源生成器、`.gitattributes`、Pages dist 字节处理和发布合同测试要同链更新；二级 manifest 还要逐项比对发布后的真实文件。
+
+### 隐藏开发工具入口前先释放入口拥有状态
+- 开发者模式会隐藏 toolbar 入口时，入口 controller 要先关闭自己拥有的 preview/overlay 并触发 renderer restore，再同步按钮可见性，保证画布状态随入口一起恢复。

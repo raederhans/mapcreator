@@ -197,3 +197,21 @@ Implement the first vertical slice:
 - Reviewer flagged that Pages LF normalization could make the published `data/hgo_runtime/manifest.json` disagree with the published `seed.json`. Fixed by writing HGO runtime JSON with LF at the source, preserving HGO runtime JSON bytes in Pages dist, and adding a Pages contract that checks published HGO asset size/hash.
 - Reviewer flagged missing proof that the checked-in BMP colors resolve through the checked-in seed. Fixed with a real BMP color-set contract; current raster has `20,781` unique RGB keys and `0` unresolved keys.
 - Architect flagged that HGO preview shares the main canvas and needed to restore the default renderer after close. Fixed by injecting `restorePreviewTarget: render` through the toolbar preview controller and adding regression coverage.
+
+## 2026-06-05 Independent Runtime Assets Closeout
+
+- Implementation commit: `bb5edfb1`.
+- Merged into `main` and pushed to `origin/main`.
+- Removed worktree `C:\Users\raede\Desktop\dev\mapcreator-hgo-independent-runtime`.
+- Deleted local branch `codex/hgo-independent-runtime`.
+
+## 2026-06-05 Post-Closeout Review Fix
+
+- Static review found one HGO preview state bug: when developer mode turned off while HGO preview was active, the toolbar entry became hidden before the preview was explicitly disabled.
+- Fixed the toolbar preview controller so sync first disables the active HGO preview and restores the renderer, then applies hidden button state.
+- Centralized the Pages startup-shell HGO required-path check on `build_pages_dist.HGO_RUNTIME_FILES`, so the source publish allowlist and startup contract share one HGO runtime file list.
+- Validation after the fix:
+  - `npm run test:node:hgo-runtime-preview`: passed, 12 tests.
+  - `npm run verify:hgo-runtime-poc`: passed.
+  - `npm run verify:pages-dist`: passed, dist total size `1090.62 MiB`, startup shell 21 tests passed.
+  - `git diff --check`: passed with line-ending warnings only.
