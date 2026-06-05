@@ -64,3 +64,7 @@ Validation evidence:
 Validation gaps:
 - Full water group command exposed two existing bundle-builder failures outside this source-review change: `test_macro_named_seas_keep_validator_probes_without_extra_supplements` and `test_tno_runtime_country_colors_follow_mixed_palette_policy`.
 - The water-domain builder rewrote geo-locale/startup derived files; those generated changes were reverted from this task diff after successful builder validation.
+
+Closeout:
+- Rebased onto `main` after HGO runtime seed commits, resolving the `lessons learned.md` conflict by keeping both notes.
+- Merged and pushed to `origin/main` at `bfeb9068`, then removed `C:\Users\raede\Desktop\dev\mapcreator-ocean-refinement-completion-20260605` and deleted branch `codex/ocean-refinement-completion-20260605`.

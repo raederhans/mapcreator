@@ -13,7 +13,7 @@
 - [x] Run geometry and water publish validation.
 - [x] Run diff validation.
 - [x] Run final review and fix findings.
-- [ ] Commit, merge, push, and clean up worktree.
+- [x] Commit, merge, push, and clean up worktree.
 
 ## Remaining implementation work
 
