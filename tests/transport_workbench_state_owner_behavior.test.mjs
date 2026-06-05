@@ -163,9 +163,53 @@ test("transport workbench state owner records point update and source delete del
   assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated.length, 1);
   assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated[0].properties.manager_type_code, "2");
   assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated[0].properties.source, undefined);
+  const refreshedUpdate = owner.updateEditOverlayPoint("port", "source_port_1", {
+    name: "Edited Port",
+    lon: "-4.22",
+    lat: "55.87",
+  });
+  assert.equal(refreshedUpdate.properties.manager_type_code, "2");
   assert.equal(owner.deleteEditOverlayPoint("port", "source_port_1"), true);
   assert.deepEqual(runtimeState.transportWorkbenchPointDeltas.byFamily.port.updated, []);
   assert.deepEqual(runtimeState.transportWorkbenchPointDeltas.byFamily.port.deleted, ["source_port_1"]);
+});
+
+test("transport workbench state owner supports point delta families beyond airport and port", () => {
+  const runtimeState = {
+    transportWorkbenchUi: {
+      activePackIdByFamily: {
+        energy_facilities: "germany_energy_facilities",
+      },
+    },
+  };
+  const owner = createTransportWorkbenchStateOwner(runtimeState);
+
+  const created = owner.addEditOverlayPoint("energy_facilities", {
+    id: "energy_edit_1",
+    name: "Project Plant",
+    lon: "13.4",
+    lat: "52.5",
+  });
+  const updated = owner.updateEditOverlayPoint("energy_facilities", "energy_source_1", {
+    name: "Edited Plant",
+    lon: "13.5",
+    lat: "52.6",
+    properties: { category: "power" },
+  });
+
+  assert.equal(created.packId, "germany_energy_facilities");
+  assert.equal(updated.packId, "germany_energy_facilities");
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.energy_facilities.created.length, 1);
+  assert.equal(owner.updateEditOverlayPoint("energy_facilities", "energy_edit_1", {
+    name: "Moved Plant",
+    lon: "13.41",
+    lat: "52.51",
+  }).properties.source, "user_overlay");
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.energy_facilities.updated.length, 1);
+  assert.equal(runtimeState.transportWorkbenchPointDeltas.byFamily.energy_facilities.updated[0].properties.category, "power");
+  assert.equal(owner.deleteEditOverlayPoint("energy_facilities", "energy_source_1"), true);
+  assert.deepEqual(runtimeState.transportWorkbenchPointDeltas.byFamily.energy_facilities.updated, []);
+  assert.deepEqual(runtimeState.transportWorkbenchPointDeltas.byFamily.energy_facilities.deleted, ["energy_source_1"]);
 });
 
 test("transport workbench state owner moves layer order without duplicating families", () => {

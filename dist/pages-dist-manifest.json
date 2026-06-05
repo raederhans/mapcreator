@@ -36382,7 +36382,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 43386
+      "size_bytes": 43544
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -36838,7 +36838,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 58611
+      "size_bytes": 58742
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
@@ -37042,7 +37042,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_controller.js",
-      "size_bytes": 27460
+      "size_bytes": 28257
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_descriptor.js",
@@ -37074,7 +37074,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_right_deck_owner.js",
-      "size_bytes": 42321
+      "size_bytes": 46002
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_shell_owner.js",
@@ -37082,7 +37082,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_state_owner.js",
-      "size_bytes": 22649
+      "size_bytes": 23171
     },
     {
       "path": "app/js/ui/toolbar/workspace_chrome_support_surface_controller.js",
@@ -37255,5 +37255,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1143598879
+  "total_bytes": 1143604168
 }

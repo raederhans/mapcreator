@@ -499,6 +499,7 @@ class FileManager {
       recentColors: normalizeRecentColors(appState.recentColors),
       legendLabels: LegendManager.normalizeLabels(appState.legendLabels),
       legendConfig: LegendManager.normalizeConfig(appState.legendConfig),
+      legendControl: LegendManager.normalizeControl(appState.legendControl),
       layerVisibility: {
         showWaterRegions: appState.showWaterRegions === undefined ? true : !!appState.showWaterRegions,
         showOpenOceanRegions: openOceanLayerVisibility.showOpenOceanRegions,
@@ -732,6 +733,7 @@ class FileManager {
         data.recentColors = normalizeRecentColors(data.recentColors);
         data.legendLabels = LegendManager.normalizeLabels(data.legendLabels);
         data.legendConfig = LegendManager.normalizeConfig(data.legendConfig);
+        data.legendControl = LegendManager.normalizeControl(data.legendControl);
         data.parentBordersVisible = data.parentBordersVisible !== false;
         if (!data.parentBorderEnabledByCountry || typeof data.parentBorderEnabledByCountry !== "object") {
           data.parentBorderEnabledByCountry = {};

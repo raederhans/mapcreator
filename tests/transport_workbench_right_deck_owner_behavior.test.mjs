@@ -458,10 +458,83 @@ test("right deck owner renders preview data rows and selects rows without mutati
   locationToggle.checked = false;
   locationToggle.dispatch("change");
   const tableHeaders = findAllByTag(mount, "th").map((header) => header.textContent);
-  assert.deepEqual(tableHeaders, ["Name", "Kind", "Visible", "Source"]);
+  assert.deepEqual(tableHeaders, ["Name", "Edit", "Kind", "Visible", "Source"]);
 
   assert.deepEqual(selectionEvents, [["road", "road-1", "road"]]);
   assert.deepEqual(configEvents, []);
+}));
+
+test("right deck owner marks point data rows with edit status", () => withTestDocument(() => {
+  const mount = new TestElement("div");
+  const owner = createTransportWorkbenchRightDeckOwner({
+    getPreviewSnapshot: () => ({
+      status: "ready",
+      packMode: "preview",
+      dataRowCount: 4,
+      dataRows: [
+        {
+          id: "airport_source_1",
+          kind: "airport",
+          name: "Source Airport",
+          source: "source-pack",
+          visible: true,
+          lon: 139.7,
+          lat: 35.6,
+          properties: {},
+        },
+        {
+          id: "airport_source_2",
+          kind: "airport",
+          name: "Updated Airport",
+          source: "source-pack",
+          visible: true,
+          lon: 139.8,
+          lat: 35.7,
+          properties: { edit_overlay_mode: "updated" },
+        },
+        {
+          id: "airport_edit_1",
+          kind: "airport",
+          name: "Created Airport",
+          source: "user_overlay",
+          visible: true,
+          lon: 139.9,
+          lat: 35.8,
+          editOverlay: true,
+          properties: { source: "user_overlay", edit_overlay: true },
+        },
+      ],
+    }),
+    getEditOverlay: () => ({
+      created: [{ id: "airport_edit_1" }],
+      updated: [{ id: "airport_source_2" }],
+      deleted: ["airport_source_3"],
+    }),
+  });
+
+  owner.renderTabSections(
+    { id: "airport" },
+    {},
+    false,
+    "data",
+    mount
+  );
+
+  assert.match(textOf(mount), /Source Airport/);
+  assert.match(textOf(mount), /Updated Airport/);
+  assert.match(textOf(mount), /Created Airport/);
+  assert.match(textOf(mount), /airport_source_3/);
+  assert.match(textOf(mount), /source/);
+  assert.match(textOf(mount), /updated/);
+  assert.match(textOf(mount), /created/);
+  assert.match(textOf(mount), /deleted/);
+  const sortOptions = findAllByTag(mount, "option").map((option) => option.textContent);
+  assert.ok(sortOptions.includes("Edit status"));
+  const searchInput = findAllByTag(mount, "input").find((input) => input.type === "search");
+  searchInput.value = "deleted";
+  searchInput.dispatch("input");
+  assert.doesNotMatch(textOf(mount), /Source Airport/);
+  assert.match(textOf(mount), /airport_source_3/);
 }));
 
 test("right deck owner adds and removes airport edit overlay points from the data tab", () => withTestDocument(() => {
@@ -470,7 +543,7 @@ test("right deck owner adds and removes airport edit overlay points from the dat
   const owner = createTransportWorkbenchRightDeckOwner({
     getPreviewSnapshot: () => ({
       status: "ready",
-      selected: { name: "Selected Airport", lon: 139.77, lat: 35.68 },
+      selected: { id: "airport_source_1", name: "Selected Airport", lon: 139.77, lat: 35.68 },
       dataRows: [],
     }),
     getEditOverlay: () => ({
@@ -489,6 +562,14 @@ test("right deck owner adds and removes airport edit overlay points from the dat
     },
     removeEditOverlayPoint: (familyId, featureId) => {
       events.push(["remove", familyId, featureId]);
+      return true;
+    },
+    updateEditOverlayPoint: (familyId, featureId, point) => {
+      events.push(["update", familyId, featureId, point.name, point.lon, point.lat]);
+      return { id: featureId, ...point };
+    },
+    deleteEditOverlayPoint: (familyId, featureId) => {
+      events.push(["delete", familyId, featureId]);
       return true;
     },
     selectPreviewFeature: (familyId, row) => events.push(["select", familyId, row.id]),
@@ -512,11 +593,19 @@ test("right deck owner adds and removes airport edit overlay points from the dat
   assert.equal(inputs[2].value, "35.68");
   const addButton = findAllByTag(mount, "button").find((button) => button.textContent === "Add point");
   addButton.dispatch("click");
+  const updateButton = findAllByTag(mount, "button").find((button) => button.textContent === "Save selected");
+  assert.equal(updateButton.disabled, false);
+  updateButton.dispatch("click");
+  const deleteButton = findAllByTag(mount, "button").find((button) => button.textContent === "Delete selected");
+  assert.equal(deleteButton.disabled, false);
+  deleteButton.dispatch("click");
   const removeButton = findAllByTag(mount, "button").find((button) => button.textContent === "Remove");
   removeButton.dispatch("click");
 
   assert.deepEqual(events, [
     ["add", "airport", "Selected Airport", "139.77", "35.68"],
+    ["update", "airport", "airport_source_1", "Selected Airport", "139.77", "35.68"],
+    ["delete", "airport", "airport_source_1"],
     ["remove", "airport", "airport_edit_1"],
   ]);
 }));

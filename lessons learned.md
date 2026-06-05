@@ -276,6 +276,7 @@
 
 ### worktree 重放后用内容合同判断清理
 - cherry-pick 到新 main 后，旧分支 commit id 可能仍显示未合入；清理前要用目标文件 diff、patch 等价和验证结果一起确认，避免误删尚未吸收的工作。
+- 在脏父 checkout 旁边的隔离 worktree 里打 patch 时，优先使用绝对路径或确认 patch cwd；改完立刻分别查父目录和 worktree 的目标文件状态，避免误写父 checkout。
 
 ### scenario checkpoint 要固定到已验证目录
 - 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
