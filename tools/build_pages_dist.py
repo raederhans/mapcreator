@@ -17,7 +17,7 @@ from tools.app_entry_resolver import (
     resolve_editor_entry_path,
     resolve_landing_entry_path,
 )
-from tools.build_landing_europe_1936_showcase import build_showcase as build_landing_europe_1936_showcase
+from tools.build_landing_europe_1936_showcase import build_landing_assets as build_landing_europe_1936_showcase
 from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview
 
 DIST_ROOT = ROOT / "dist"

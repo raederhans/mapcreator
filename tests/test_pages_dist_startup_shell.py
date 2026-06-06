@@ -23,6 +23,12 @@ DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
 DIST_APP_INDEX = REPO_ROOT / "dist" / "app" / "index.html"
 DIST_MANIFEST = REPO_ROOT / "dist" / "pages-dist-manifest.json"
 VERIFY_SHARED_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "verify-shared.yml"
+HERO_SCENARIO_ASSETS = (
+    ("blank", "blank_base", "hero-blank.svg", "hero-blank.json"),
+    ("hoi4-1936", "hoi4_1936", "hero-hoi4-1936.svg", "hero-hoi4-1936.json"),
+    ("hoi4-1939", "hoi4_1939", "hero-hoi4-1939.svg", "hero-hoi4-1939.json"),
+    ("tno-1962", "tno_1962", "hero-tno-1962.svg", "hero-tno-1962.json"),
+)
 
 
 class PagesDistStartupShellTest(unittest.TestCase):
@@ -36,6 +42,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
     def test_landing_generated_cartography_assets_exist(self) -> None:
         for asset_name in (
             "hero-cartography.svg",
+            "hero-blank.svg",
+            "hero-hoi4-1936.svg",
+            "hero-hoi4-1939.svg",
+            "hero-tno-1962.svg",
             "showcase-final-map.svg",
             "europe-1936-showcase.svg",
             "japan-preview-transport.svg",
@@ -57,6 +67,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 ET.fromstring(text)
                 if asset_name.startswith("japan-preview-"):
                     size_limit = 340_000
+                elif asset_name.startswith("hero-") and asset_name != "hero-cartography.svg":
+                    size_limit = 320_000
                 else:
                     size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
                 self.assertLess(asset.stat().st_size, size_limit)
@@ -68,6 +80,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("animateTransform", text)
                     self.assertNotIn("data-showcase-viewport transform=", text)
                     self.assertNotIn('data-layer="scenario"', text)
+                if asset_name.startswith("hero-") and asset_name != "hero-cartography.svg":
+                    expected_mode = asset_name.removeprefix("hero-").removesuffix(".svg")
+                    self.assertIn(f'data-hero-scenario="{expected_mode}"', text)
+                    self.assertIn('data-layer="political"', text)
                 if asset_name.startswith("japan-preview-"):
                     self.assertIn('data-preview-map="japan"', text)
                     self.assertIn('data-source="japan-corridor-carrier"', text)
@@ -205,6 +221,60 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 build_landing_europe_1936_showcase.SHOWCASE_SVG = previous_svg
                 build_landing_europe_1936_showcase.SHOWCASE_METADATA = previous_metadata
 
+    def test_landing_hero_scenario_metadata_uses_real_sources(self) -> None:
+        for mode, scenario_id, svg_name, metadata_name in HERO_SCENARIO_ASSETS:
+            with self.subTest(mode=mode):
+                svg_text = (LANDING_ASSETS / svg_name).read_text(encoding="utf-8")
+                ET.fromstring(svg_text)
+                payload = json.loads((LANDING_ASSETS / metadata_name).read_text(encoding="utf-8"))
+                self.assertEqual(payload["asset_type"], "landing_hero_scenario_map")
+                self.assertEqual(payload["mode"], mode)
+                self.assertEqual(payload["scenario_id"], scenario_id)
+                self.assertEqual(payload["viewport"]["bbox"], [-12.5, 34.0, 41.5, 72.5])
+                self.assertEqual(payload["viewport"]["canvas_width"], 980)
+                self.assertEqual(payload["viewport"]["canvas_height"], 680)
+                self.assertGreater(len(payload["source_files"]), 1)
+                self.assertIsInstance(payload["feature_counts"], dict)
+                self.assertEqual(payload["counts"], payload["feature_counts"])
+                if mode == "blank":
+                    self.assertIn("data/scenarios/blank_base/manifest.json", payload["source_files"])
+                    self.assertIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
+                    self.assertTrue(payload["selection_policy"]["blank_canvas"])
+                    self.assertGreater(payload["feature_counts"]["land_paths"], 0)
+                    self.assertEqual(payload["selection_policy"]["land_path_limit"], 900)
+                    self.assertEqual(
+                        payload["feature_counts"]["land_paths_available"] - payload["feature_counts"]["land_paths"],
+                        payload["feature_counts"]["land_paths_dropped"],
+                    )
+                    self.assertLessEqual(payload["feature_counts"]["land_paths"], 900)
+                    self.assertEqual(payload["territory_tags"], [])
+                else:
+                    self.assertIn(f"data/scenarios/{scenario_id}/manifest.json", payload["source_files"])
+                    self.assertIn(f"data/scenarios/{scenario_id}/runtime_topology.topo.json", payload["source_files"])
+                    self.assertIn(f"data/scenarios/{scenario_id}/owners.by_feature.json", payload["source_files"])
+                    self.assertIn(f"data/scenarios/{scenario_id}/countries.json", payload["source_files"])
+                    self.assertFalse(payload["selection_policy"]["blank_canvas"])
+                    self.assertGreater(payload["feature_counts"]["territories"], 20)
+                    self.assertGreater(payload["feature_counts"]["political_features"], payload["feature_counts"]["territories"])
+                    self.assertGreater(payload["feature_counts"]["capitals"], 8)
+                if mode == "tno-1962":
+                    self.assertIn("data/scenarios/tno_1962/capital_defaults.partial.json", payload["source_files"])
+                    self.assertIn("data/scenarios/tno_1962/scenario_atlantropa.topo.json", payload["source_files"])
+                    self.assertIn("data/scenarios/tno_1962/scenario_atlantropa_metadata.json", payload["source_files"])
+                    self.assertGreater(payload["feature_counts"]["atlantropa_paths"], 0)
+
+    def test_landing_hero_scenario_assets_match_builder_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir)
+            build_landing_europe_1936_showcase.build_hero_scenario_maps(output_dir=tmp_root)
+            for _mode, _scenario_id, svg_name, metadata_name in HERO_SCENARIO_ASSETS:
+                with self.subTest(svg_name=svg_name):
+                    generated_svg = tmp_root / svg_name
+                    generated_metadata = tmp_root / metadata_name
+                    ET.fromstring(generated_svg.read_text(encoding="utf-8"))
+                    self.assertEqual(generated_svg.read_bytes(), (LANDING_ASSETS / svg_name).read_bytes())
+                    self.assertEqual(generated_metadata.read_bytes(), (LANDING_ASSETS / metadata_name).read_bytes())
+
     def test_landing_japan_preview_assets_match_builder_output(self) -> None:
         previous_svg_paths = build_landing_japan_preview.JAPAN_PREVIEW_SVGS
         previous_metadata_path = build_landing_japan_preview.JAPAN_PREVIEW_METADATA
@@ -244,7 +314,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('def normalize_dist_text_files_lf() -> None:', source)
         self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
         self.assertIn('newline="\\n"', source)
-        self.assertIn("from tools.build_landing_europe_1936_showcase import build_showcase as build_landing_europe_1936_showcase", source)
+        self.assertIn("from tools.build_landing_europe_1936_showcase import build_landing_assets as build_landing_europe_1936_showcase", source)
         self.assertIn("from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview", source)
         self.assertLess(source.index("build_landing_europe_1936_showcase()"), source.index("    reset_dist()"))
         self.assertLess(source.index("build_landing_japan_preview()"), source.index("    reset_dist()"))
@@ -332,9 +402,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
-            './assets/hero-cartography.svg',
+            './assets/hero-hoi4-1936.svg',
             'data-hero-map',
-            'data-hero-chip="modern"',
+            'data-hero-chip="blank"',
+            'data-hero-chip="hoi4-1936"',
+            'data-hero-chip="hoi4-1939"',
+            'data-hero-chip="tno-1962"',
             'data-stat-value="21338"',
             'data-i18n="sourcesEyebrow"',
             'class="source-marquee"',
@@ -392,7 +465,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-alt="workTwoAlt"',
             'data-i18n-alt="workThreeAlt"',
             'data-i18n="chipBlank"',
-            'data-i18n="chipModern"',
+            'data-i18n="chipHoi41936"',
+            'data-i18n="chipHoi41939"',
+            'data-i18n="chipTno1962"',
             'data-reveal',
             'footer',
             'data-lang="zh"',
@@ -432,6 +507,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "dblclick",
             "initPreviewTabs",
             "initHeroMap",
+            "DEFAULT_HERO_MODE",
+            "HERO_SCENARIO_ASSETS",
+            "hero-hoi4-1936.json",
+            "hero-hoi4-1939.svg",
+            "hero-tno-1962.svg",
+            "syncHeroMap",
             "initMetricCountUp",
             "previewPanelTransportTitle",
             "dataCardOneTitle",
@@ -445,6 +526,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "brandHomeLabel",
             "languageSwitcherLabel",
             "productPreviewAlt",
+            "heroAltHoi41936",
+            "heroAltHoi41939",
+            "heroAltTno1962",
             "data-i18n-alt",
             "data-i18n-aria-label",
             "zh:",
@@ -465,6 +549,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("line-height: 1.1", styles_css)
         self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
+        self.assertIn('[data-hero-transition="loading"]', styles_css)
+        self.assertIn('[data-hero-mode="blank"]', styles_css)
+        self.assertIn('[data-hero-mode="hoi4-1936"]', styles_css)
+        self.assertIn('[data-hero-mode="hoi4-1939"]', styles_css)
+        self.assertIn('[data-hero-mode="tno-1962"]', styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn("[data-showcase-object]", app_js)
@@ -511,6 +600,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerDayNightTitle:",
+            "chipHoi41936:",
+            "chipHoi41939:",
+            "chipTno1962:",
+            "heroAltHoi41936:",
+            "heroAltHoi41939:",
+            "heroAltTno1962:",
             "templateModernAlt:",
             "updatesTitle:",
         ):
@@ -537,6 +632,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerDayNightTitle:",
+            "chipHoi41936:",
+            "chipHoi41939:",
+            "chipTno1962:",
+            "heroAltHoi41936:",
+            "heroAltHoi41939:",
+            "heroAltTno1962:",
             "templateModernAlt:",
             "updatesTitle:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
@@ -600,9 +701,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
-            './assets/hero-cartography.svg',
+            './assets/hero-hoi4-1936.svg',
             'data-hero-map',
-            'data-hero-chip="modern"',
+            'data-hero-chip="blank"',
+            'data-hero-chip="hoi4-1936"',
+            'data-hero-chip="hoi4-1939"',
+            'data-hero-chip="tno-1962"',
             'data-stat-value="21338"',
             'data-i18n="sourcesEyebrow"',
             'data-i18n="showcaseEyebrow"',
@@ -680,6 +784,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "brandHomeLabel",
             "languageSwitcherLabel",
             "productPreviewAlt",
+            "DEFAULT_HERO_MODE",
+            "HERO_SCENARIO_ASSETS",
+            "hero-hoi4-1936.json",
+            "hero-hoi4-1939.svg",
+            "hero-tno-1962.svg",
+            "syncHeroMap",
+            "heroAltHoi41936",
+            "heroAltHoi41939",
+            "heroAltTno1962",
             "data-i18n-alt",
             "zh:",
         ):
@@ -695,6 +808,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
+        self.assertIn('[data-hero-transition="loading"]', styles_css)
+        self.assertIn('[data-hero-mode="blank"]', styles_css)
+        self.assertIn('[data-hero-mode="hoi4-1936"]', styles_css)
+        self.assertIn('[data-hero-mode="hoi4-1939"]', styles_css)
+        self.assertIn('[data-hero-mode="tno-1962"]', styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn(".showcase-map__object", styles_css)
@@ -754,6 +872,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         )
         expected_landing_asset_paths = (
             "assets/hero-cartography.svg",
+            "assets/hero-blank.svg",
+            "assets/hero-blank.json",
+            "assets/hero-hoi4-1936.svg",
+            "assets/hero-hoi4-1936.json",
+            "assets/hero-hoi4-1939.svg",
+            "assets/hero-hoi4-1939.json",
+            "assets/hero-tno-1962.svg",
+            "assets/hero-tno-1962.json",
             "assets/showcase-final-map.svg",
             "assets/europe-1936-showcase.svg",
             "assets/europe-1936-showcase.json",
@@ -821,6 +947,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertEqual(
                     (REPO_ROOT / "dist" / expected_path).read_bytes(),
                     (REPO_ROOT / "landing" / expected_path).read_bytes(),
+                )
+
+        for relative_path in ("index.html", "app.js", "styles.css"):
+            with self.subTest(root_copy=relative_path):
+                self.assertEqual(
+                    (REPO_ROOT / "dist" / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
+                    (REPO_ROOT / "landing" / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
                 )
 
         for excluded_path in (
