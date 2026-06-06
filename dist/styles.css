@@ -1260,20 +1260,30 @@ a.button {
 .footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 24px;
+  gap: 20px 24px;
+  align-items: start;
   padding: 36px 0 12px;
   border-top: 1px solid var(--line-soft);
   color: var(--text-secondary);
+}
+
+.footer__brand,
+.footer__sources {
+  display: grid;
+  align-content: start;
+  gap: 12px;
 }
 
 .footer strong {
   color: var(--text-primary);
 }
 
-.footer__meta {
-  display: grid;
-  gap: 12px;
-  justify-items: start;
+.footer__actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 18px;
 }
 
 .footer__links {
@@ -1318,6 +1328,10 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
   .cta-panel,
   .footer {
     grid-template-columns: 1fr;
+  }
+
+  .footer__actions {
+    grid-column: auto;
   }
 
   .product-stage {

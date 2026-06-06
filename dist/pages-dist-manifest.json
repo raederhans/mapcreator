@@ -37278,7 +37278,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 43220
+      "size_bytes": 43298
     },
     {
       "path": "pages-dist-manifest.json",
@@ -37286,7 +37286,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 30000
+      "size_bytes": 30212
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37299,5 +37299,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109480828
+  "total_bytes": 1109481118
 }
