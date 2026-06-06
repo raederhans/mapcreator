@@ -155,6 +155,7 @@
 
 ### 嵌入式 SVG 交互不要抢页面滚动
 - 首页、展示页里的 `<object>` SVG 地图要默认保留页面滚动；缩放按钮可以做主交互，滚轮缩放应绑定明确修饰键，触摸拖拽只在地图已放大时接管。
+- 展示页 SVG 改 layer 或动画节点时，测试要直接 XML parse 生成资产；浏览器 `<object>` 会把 XML 格式错误渲染成粉色错误页。
 
 ### 窄侧栏长文本用 scoped grid
 - 右侧栏诊断、审计这类窄面板里，长 id 与状态值不要复用通用 `justify-between` flex 行；用面板专属 grid、固定状态列和 `overflow-wrap:anywhere` 锁住横向宽度。

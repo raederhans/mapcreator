@@ -33,13 +33,13 @@ RAIL_LINE_LIMIT = 220
 RAIL_MIN_LINES_PER_SHARD = 55
 RAIL_MIN_PROJECTED_PX = 8.0
 RAIL_DEDUPE_PIXEL_GRID = 2.0
-SCENARIO_FOCUS_TAGS = {"GER", "POL", "CZE", "ROM", "SOV", "YUG", "ITA", "FRA", "ENG"}
+SHOWCASE_FOCUS_TAGS = {"GER", "POL", "CZE", "ROM", "SOV", "YUG", "ITA", "FRA", "ENG"}
 TRANSREGIONAL_EUROPE_SHOWCASE_TAGS = {"TUR"}
 SHOWCASE_LAYERS = (
     {"id": "political", "label": "1936 political ownership"},
     {"id": "rail", "label": "Europe rail network"},
     {"id": "cities", "label": "capital anchors"},
-    {"id": "scenario", "label": "scenario focus countries"},
+    {"id": "day-night", "label": "day-night cycle"},
 )
 TAG_PATTERN = re.compile(r"^[A-Z0-9_]{2,12}$")
 
@@ -318,7 +318,7 @@ def load_capitals(canvas: Canvas) -> list[dict]:
                 "country": country.get("display_name") or tag,
                 "x": x,
                 "y": y,
-                "focus": tag in SCENARIO_FOCUS_TAGS,
+                "focus": tag in SHOWCASE_FOCUS_TAGS,
             }
         )
     return sorted(capitals, key=lambda item: (not item["focus"], item["tag"]))[:22]
@@ -396,11 +396,11 @@ def territory_nodes(territories: list[dict]) -> str:
     for item in territories:
         tag = validate_tag(item["tag"])
         escaped_tag = xml_escape(tag)
-        focus_class = " territory--focus" if tag in SCENARIO_FOCUS_TAGS else ""
-        scenario_class = " territory--scenario" if item["scenario_only"] else ""
+        focus_class = " territory--focus" if tag in SHOWCASE_FOCUS_TAGS else ""
+        scenario_only_class = " territory--scenario-only" if item["scenario_only"] else ""
         for path in item["paths"]:
             nodes.append(
-                f'      <path class="territory territory--{tag.lower()}{focus_class}{scenario_class}" '
+                f'      <path class="territory territory--{tag.lower()}{focus_class}{scenario_only_class}" '
                 f'data-tag="{escaped_tag}" fill="{item["color"]}" d="{path}" />'
             )
     return "\n".join(nodes)
@@ -425,19 +425,38 @@ def capital_nodes(capitals: list[dict]) -> str:
     return "\n".join(nodes)
 
 
-def scenario_nodes(capitals: list[dict]) -> str:
-    focus = [item for item in capitals if item["focus"]]
+def day_night_nodes(canvas: Canvas, capitals: list[dict]) -> str:
+    shade_start = -canvas.width * 0.64
+    shade_end = canvas.width * 0.64
+    band_x = -canvas.width
+    band_width = canvas.width * 1.32
+    terminator_path = (
+        f"M{fmt(canvas.width * 0.24)} {fmt(-canvas.height * 0.06)} "
+        f"C{fmt(canvas.width * 0.33)} {fmt(canvas.height * 0.19)} "
+        f"{fmt(canvas.width * 0.31)} {fmt(canvas.height * 0.4)} "
+        f"{fmt(canvas.width * 0.39)} {fmt(canvas.height * 0.63)} "
+        f"C{fmt(canvas.width * 0.44)} {fmt(canvas.height * 0.81)} "
+        f"{fmt(canvas.width * 0.52)} {fmt(canvas.height * 0.92)} "
+        f"{fmt(canvas.width * 0.6)} {fmt(canvas.height * 1.06)}"
+    )
     nodes: list[str] = []
-    for item in focus:
+    for item in capitals:
         tag = validate_tag(item["tag"])
         escaped_tag = xml_escape(tag)
+        radius = 7.8 if item["focus"] else 5.8
         nodes.append(
-            f'      <g class="scenario-marker" data-tag="{escaped_tag}">'
-            f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="16" />'
-            f'<text x="{fmt(item["x"])}" y="{fmt(item["y"] + 4)}">{escaped_tag}</text>'
-            "</g>"
+            f'      <circle class="night-light" data-tag="{escaped_tag}" '
+            f'cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="{fmt(radius)}" />'
         )
-    return "\n".join(nodes)
+    light_nodes = "\n".join(nodes)
+    return f"""    <g class="day-night-shade" aria-hidden="true">
+      <animateTransform attributeName="transform" type="translate" values="{fmt(shade_start)} 0;{fmt(shade_end)} 0;{fmt(shade_start)} 0" dur="24s" repeatCount="indefinite" />
+      <rect class="night-band" x="{fmt(band_x)}" y="0" width="{fmt(band_width)}" height="{fmt(canvas.height)}" />
+      <path class="terminator-line" d="{terminator_path}" />
+    </g>
+    <g class="night-lights" aria-hidden="true">
+{light_nodes}
+    </g>"""
 
 
 def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rails: list[str]) -> str:
@@ -447,38 +466,50 @@ def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rai
       <stop offset="0" stop-color="#17395a" />
       <stop offset="1" stop-color="#081523" />
     </radialGradient>
+    <linearGradient id="nightCycleGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0" stop-color="#04111f" stop-opacity=".9" />
+      <stop offset="44%" stop-color="#071a2c" stop-opacity=".82" />
+      <stop offset="56%" stop-color="#132f49" stop-opacity=".42" />
+      <stop offset="72%" stop-color="#f8d77f" stop-opacity=".1" />
+      <stop offset="100%" stop-color="#f8d77f" stop-opacity="0" />
+    </linearGradient>
     <filter id="capitalGlow"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="nightLightGlow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <style>
       .graticule path {{ fill: none; stroke: rgba(255,255,255,.12); stroke-width: 1; }}
       .territory {{ stroke: #091426; stroke-width: 1.05; vector-effect: non-scaling-stroke; opacity: .78; }}
       .territory--focus {{ stroke: #f8d77f; stroke-width: 1.45; opacity: .92; }}
-      .territory--scenario {{ stroke-dasharray: 5 4; }}
+      .territory--scenario-only {{ stroke-dasharray: 5 4; }}
       .rail-line {{ fill: none; stroke: #f2a65a; stroke-width: 2.1; stroke-linecap: round; opacity: .22; vector-effect: non-scaling-stroke; }}
       .capital circle {{ fill: #fff0af; stroke: #143044; stroke-width: 2; filter: url(#capitalGlow); opacity: .42; }}
       .capital text {{ fill: #f8fbff; font: 700 15px Arial, sans-serif; letter-spacing: 1px; paint-order: stroke; stroke: #07111f; stroke-width: 4; opacity: .5; }}
-      .scenario-marker circle {{ fill: rgba(248,215,127,.14); stroke: #f8d77f; stroke-width: 2.4; }}
-      .scenario-marker text {{ fill: #06111f; font: 800 12px Arial, sans-serif; text-anchor: middle; }}
-      .layer-rail, .layer-cities, .layer-scenario {{ transition: opacity .25s ease; }}
+      .layer-rail, .layer-cities, .layer-day-night {{ transition: opacity .25s ease; }}
+      .layer-day-night {{ opacity: 0; pointer-events: none; }}
+      .night-band {{ fill: url(#nightCycleGradient); opacity: .9; }}
+      .terminator-line {{ fill: none; stroke: rgba(248,215,127,.82); stroke-width: 7; stroke-linecap: round; opacity: .78; filter: url(#capitalGlow); }}
+      .night-light {{ fill: #ffe48a; opacity: .86; filter: url(#nightLightGlow); }}
       svg[data-active-layer="political"] .territory {{ opacity: .9; }}
       svg[data-active-layer="political"] .layer-rail {{ opacity: .28; }}
       svg[data-active-layer="political"] .layer-cities {{ opacity: .42; }}
-      svg[data-active-layer="political"] .layer-scenario {{ opacity: .28; }}
+      svg[data-active-layer="political"] .layer-day-night {{ opacity: 0; }}
       svg[data-active-layer="rail"] .territory {{ opacity: .48; }}
       svg[data-active-layer="rail"] .layer-rail {{ opacity: 1; }}
       svg[data-active-layer="rail"] .rail-line {{ opacity: .92; stroke-width: 2.7; }}
       svg[data-active-layer="rail"] .layer-cities {{ opacity: .5; }}
-      svg[data-active-layer="rail"] .layer-scenario {{ opacity: .22; }}
+      svg[data-active-layer="rail"] .layer-day-night {{ opacity: 0; }}
       svg[data-active-layer="cities"] .territory {{ opacity: .52; }}
       svg[data-active-layer="cities"] .layer-rail {{ opacity: .3; }}
       svg[data-active-layer="cities"] .layer-cities {{ opacity: 1; }}
       svg[data-active-layer="cities"] .capital circle {{ opacity: .95; }}
       svg[data-active-layer="cities"] .capital text {{ opacity: 1; }}
-      svg[data-active-layer="cities"] .layer-scenario {{ opacity: .26; }}
-      svg[data-active-layer="scenario"] .territory {{ opacity: .4; }}
-      svg[data-active-layer="scenario"] .territory--focus {{ opacity: 1; stroke-width: 2; }}
-      svg[data-active-layer="scenario"] .layer-rail {{ opacity: .22; }}
-      svg[data-active-layer="scenario"] .layer-cities {{ opacity: .76; }}
-      svg[data-active-layer="scenario"] .layer-scenario {{ opacity: 1; }}
+      svg[data-active-layer="cities"] .layer-day-night {{ opacity: 0; }}
+      svg[data-active-layer="day-night"] .territory {{ opacity: .64; }}
+      svg[data-active-layer="day-night"] .territory--focus {{ opacity: .9; }}
+      svg[data-active-layer="day-night"] .layer-rail {{ opacity: .46; }}
+      svg[data-active-layer="day-night"] .layer-cities {{ opacity: .78; }}
+      svg[data-active-layer="day-night"] .capital circle {{ opacity: .62; }}
+      svg[data-active-layer="day-night"] .capital text {{ opacity: .52; }}
+      svg[data-active-layer="day-night"] .layer-day-night {{ opacity: 1; }}
     </style>
   </defs>
   <rect width="{canvas.width}" height="{canvas.height}" rx="28" fill="url(#seaGlow)" />
@@ -495,8 +526,8 @@ def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rai
   <g class="layer layer-cities" data-layer="cities">
 {capital_nodes(capitals)}
   </g>
-  <g class="layer layer-scenario" data-layer="scenario">
-{scenario_nodes(capitals)}
+  <g class="layer layer-day-night" data-layer="day-night">
+{day_night_nodes(canvas, capitals)}
   </g>
   </g>
 </svg>
@@ -565,7 +596,7 @@ def build_metadata(
         "rail_selected_by_shard": dict(sorted(rail_selected_by_shard.items())),
         "territory_tags": territory_tags,
         "capital_tags": capital_tags,
-        "focus_tags": sorted(tag for tag in SCENARIO_FOCUS_TAGS if tag in territory_tags),
+        "focus_tags": sorted(tag for tag in SHOWCASE_FOCUS_TAGS if tag in territory_tags),
         "layers": list(SHOWCASE_LAYERS),
     }
 

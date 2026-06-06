@@ -6,6 +6,7 @@ import gzip
 import hashlib
 import json
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from tools import build_landing_europe_1936_showcase, build_pages_dist
@@ -53,11 +54,17 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn("<svg", text)
                 self.assertIn("viewBox", text)
                 self.assertIn("<path", text)
+                ET.fromstring(text)
                 size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
                 self.assertLess(asset.stat().st_size, size_limit)
                 if asset_name == "europe-1936-showcase.svg":
                     self.assertIn('data-showcase-viewport="true"', text)
+                    self.assertIn('data-layer="day-night"', text)
+                    self.assertIn("nightCycleGradient", text)
+                    self.assertIn("terminator-line", text)
+                    self.assertIn("animateTransform", text)
                     self.assertNotIn("data-showcase-viewport transform=", text)
+                    self.assertNotIn('data-layer="scenario"', text)
 
     def test_landing_europe_1936_showcase_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "europe-1936-showcase.json"
@@ -81,7 +88,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             expected_rail_sources.add(manifest["paths"]["full"]["railways"])
 
         self.assertEqual(payload["scenario_id"], "hoi4_1936")
-        self.assertEqual([layer["id"] for layer in payload["layers"]], ["political", "rail", "cities", "scenario"])
+        self.assertEqual([layer["id"] for layer in payload["layers"]], ["political", "rail", "cities", "day-night"])
         self.assertEqual(payload["projection"]["name"], "lambert_azimuthal_equal_area")
         self.assertEqual(payload["projection"]["center_lon"], 10.0)
         self.assertEqual(payload["projection"]["center_lat"], 52.0)
@@ -122,6 +129,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             build_landing_europe_1936_showcase.SHOWCASE_METADATA = tmp_root / "europe-1936-showcase.json"
             try:
                 build_landing_europe_1936_showcase.build_showcase()
+                ET.fromstring(build_landing_europe_1936_showcase.SHOWCASE_SVG.read_text(encoding="utf-8"))
                 self.assertEqual(
                     build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
                     (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
@@ -261,7 +269,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-showcase-layer-tab="political"',
             'data-showcase-layer-tab="rail"',
             'data-showcase-layer-tab="cities"',
-            'data-showcase-layer-tab="scenario"',
+            'data-showcase-layer-tab="day-night"',
             'data-i18n="showcaseLayerPoliticalTitle"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
@@ -307,7 +315,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerPoliticalTitle",
             "showcaseLayerRailTitle",
             "showcaseLayerCitiesTitle",
-            "showcaseLayerScenarioTitle",
+            "showcaseLayerDayNightTitle",
             "initShowcaseLayers",
             "SHOWCASE_METADATA_URL",
             "getShowcaseLayerIds",
@@ -371,6 +379,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertNotIn("data-showcase-view-action", html)
         self.assertNotIn("SHOWCASE_VIEW_PAN_STEP", app_js)
         self.assertNotIn(".showcase-map__controls", styles_css)
+        self.assertNotIn('data-showcase-layer-tab="scenario"', html)
         self.assertRegex(
             styles_css,
             re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
@@ -403,7 +412,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
-            "showcaseLayerScenarioTitle:",
+            "showcaseLayerDayNightTitle:",
             "templateModernAlt:",
             "updatesTitle:",
         ):
@@ -429,7 +438,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
-            "showcaseLayerScenarioTitle:",
+            "showcaseLayerDayNightTitle:",
             "templateModernAlt:",
             "updatesTitle:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
@@ -503,6 +512,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-showcase-root',
             'data-showcase-object',
             'data-showcase-layer-tab="political"',
+            'data-showcase-layer-tab="rail"',
+            'data-showcase-layer-tab="cities"',
+            'data-showcase-layer-tab="day-night"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
             'data-preview-image="transport"',
@@ -529,6 +541,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         self.assertNotIn('class="hero__metrics"', html)
         self.assertNotIn('data-i18n-aria-label="heroMetricsLabel"', html)
+        self.assertNotIn('data-showcase-layer-tab="scenario"', html)
 
     def test_dist_app_js_keeps_landing_i18n_contract(self) -> None:
         if not DIST_APP_JS.exists():
@@ -546,7 +559,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerPoliticalTitle",
             "showcaseLayerRailTitle",
             "showcaseLayerCitiesTitle",
-            "showcaseLayerScenarioTitle",
+            "showcaseLayerDayNightTitle",
             "initShowcaseLayers",
             "initShowcaseView",
             "SHOWCASE_VIEW_SCALES",

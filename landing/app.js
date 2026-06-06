@@ -75,7 +75,7 @@ const translations = {
     showcaseLayerPolitical: "Political",
     showcaseLayerRail: "Rail",
     showcaseLayerCities: "Cities",
-    showcaseLayerScenario: "Scenario",
+    showcaseLayerDayNight: "Day-Night",
     showcaseLayerPoliticalBadge: "HOI4 1936 Europe",
     showcaseLayerPoliticalTitle:
       "Political ownership comes from the 1936 scenario data.",
@@ -89,10 +89,10 @@ const translations = {
     showcaseLayerCitiesTitle: "Capitals make the scenario readable at a glance.",
     showcaseLayerCitiesBody:
       "City markers use the HOI4 1936 capital hints table, so Berlin, Paris, London, Warsaw, Rome, and other anchors stay tied to scenario data.",
-    showcaseLayerScenarioBadge: "Scenario focus",
-    showcaseLayerScenarioTitle: "Scenario markers highlight the countries that shape the 1936 frame.",
-    showcaseLayerScenarioBody:
-      "Focus markers make the political surface easier to read before a visitor opens the full editor.",
+    showcaseLayerDayNightBadge: "Day-night cycle",
+    showcaseLayerDayNightTitle: "A moving day-night pass makes context layers feel alive.",
+    showcaseLayerDayNightBody:
+      "The overlay combines the Europe scenario map with animated night shade and capital lights, echoing the night-light context used elsewhere in the product.",
     showcaseMeta:
       "Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail data.",
     previewEyebrow: "Live product preview",
@@ -389,7 +389,7 @@ const translations = {
     showcaseLayerPolitical: "政治",
     showcaseLayerRail: "铁路",
     showcaseLayerCities: "城市",
-    showcaseLayerScenario: "场景",
+    showcaseLayerDayNight: "昼夜",
     showcaseLayerPoliticalBadge: "HOI4 1936 欧洲",
     showcaseLayerPoliticalTitle: "政治归属来自 1936 场景数据。",
     showcaseLayerPoliticalBody: "欧洲地块颜色来自仓库中的 HOI4 1936 归属表和国家配色。",
@@ -399,9 +399,9 @@ const translations = {
     showcaseLayerCitiesBadge: "首都锚点",
     showcaseLayerCitiesTitle: "首都点让场景一眼可读。",
     showcaseLayerCitiesBody: "城市标记使用 HOI4 1936 首都提示表，让柏林、巴黎、伦敦、华沙、罗马等锚点对应真实场景数据。",
-    showcaseLayerScenarioBadge: "场景焦点",
-    showcaseLayerScenarioTitle: "场景标记突出 1936 框架里的关键国家。",
-    showcaseLayerScenarioBody: "焦点标记让访客进入完整编辑器之前，就能先看懂政治地图的主线。",
+    showcaseLayerDayNightBadge: "昼夜循环",
+    showcaseLayerDayNightTitle: "昼夜变化让上下文图层更有生命感。",
+    showcaseLayerDayNightBody: "这一层把欧洲场景地图、移动夜色和首都光点组合起来，对应产品里的夜光上下文能力。",
     showcaseMeta: "由 HOI4 1936 归属、欧洲拓扑、首都提示和欧洲铁路数据生成。",
     previewEyebrow: "产品预览",
     previewTitle: "进入编辑器之前，先预览真实交通图层。",
@@ -594,10 +594,10 @@ const SHOWCASE_LAYER_COPY_KEYS = {
     title: "showcaseLayerCitiesTitle",
     body: "showcaseLayerCitiesBody",
   },
-  scenario: {
-    badge: "showcaseLayerScenarioBadge",
-    title: "showcaseLayerScenarioTitle",
-    body: "showcaseLayerScenarioBody",
+  "day-night": {
+    badge: "showcaseLayerDayNightBadge",
+    title: "showcaseLayerDayNightTitle",
+    body: "showcaseLayerDayNightBody",
   },
 };
 const SHOWCASE_METADATA_URL = "./assets/europe-1936-showcase.json";

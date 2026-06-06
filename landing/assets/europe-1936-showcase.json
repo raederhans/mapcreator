@@ -141,8 +141,8 @@
       "label": "capital anchors"
     },
     {
-      "id": "scenario",
-      "label": "scenario focus countries"
+      "id": "day-night",
+      "label": "day-night cycle"
     }
   ]
 }
