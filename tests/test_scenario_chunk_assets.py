@@ -779,6 +779,8 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
             scenario_dir = Path(tmp_dir) / "tno_1962"
             scenario_dir.mkdir(parents=True, exist_ok=True)
 
+            # 这个 fixture 锁住 coarse LOD 的核心合同：manifest 指标来自最终写盘
+            # payload，属性白名单和几何简化一起接受测试约束。
             feature_collection = {
                 "type": "FeatureCollection",
                 "features": [

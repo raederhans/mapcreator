@@ -687,6 +687,8 @@ def _round_feature_geometry(feature: dict[str, Any], *, decimals: int) -> dict[s
 def _simplify_political_coarse_geometry(geometry: dict[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(geometry, dict):
         return geometry
+    # coarse political chunk 是首屏必读资源；这里只压缩几何和坐标精度，
+    # LOD 优化只影响表现成本，语义仍由源 topology 和属性决定。
     try:
         geom = shape(geometry)
     except Exception:
@@ -986,6 +988,8 @@ def _build_chunk_payloads_for_feature_collection(
                 chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
                 lod_diagnostics = None
                 if layer_key == "political" and spec["lod"] == "coarse":
+                    # LOD diagnostics 必须围绕最终写盘 payload 计算；这样 manifest
+                    # 的 byte/hash/coord 预算和浏览器真实读取的 coarse 文件一致。
                     source_lod_summary = _summarize_payload_geometry_cost(chunk_payload)
                     source_lod_summary["byte_size"] = _minified_json_byte_size(chunk_payload)
                     chunk_payload = _optimize_political_coarse_payload(chunk_payload)
@@ -1065,6 +1069,8 @@ def _build_political_chunk_payloads(
     lod_layers: dict[str, list[dict[str, Any]]] = defaultdict(list)
     owners_by_feature_id = _load_owner_map(scenario_dir)
 
+    # coarse 使用 startup/runtime 中可渲染的全局集合，detail 再按 owner 拆分；
+    # 这样首屏能快速显示整体政治面，缩放后再加载国家级细节。
     startup_feature_collection = _topology_object_to_feature_collection(startup_topology_payload, "political")
     runtime_feature_collection = _topology_object_to_feature_collection(runtime_topology_payload, "political")
     coarse_feature_collection = _resolve_political_coarse_feature_collection(
@@ -1254,6 +1260,8 @@ def build_and_write_scenario_chunk_assets(
         owners_payload = json.loads(owners_payload_path.read_text(encoding="utf-8"))
         if isinstance(owners_payload, dict) and isinstance(owners_payload.get("owners"), dict):
             owners_by_feature_id = owners_payload["owners"]
+    # opening owner borders 跟 chunk manifest 同批生成；topology 和 owners.by_feature
+    # 由上游生成链路提供，startup 与浏览器端只消费已生成 mesh。
     opening_owner_borders = _build_opening_owner_border_mesh(
         runtime_topology_payload,
         owners_by_feature_id,

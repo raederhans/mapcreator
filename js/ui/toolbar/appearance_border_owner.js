@@ -11,6 +11,8 @@ function ensureBorderStyleConfig(runtimeState, key, defaults, { clamp }) {
   if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
     runtimeState.styleConfig = {};
   }
+  // styleConfig 是项目保存和 renderer 读取的同一份真源；defaults 里的范围和
+  // precision 只服务 UI clamp/display，可保存配置只保留真实绘制字段。
   const source = runtimeState.styleConfig[key] && typeof runtimeState.styleConfig[key] === "object"
     ? runtimeState.styleConfig[key]
     : {};
@@ -203,6 +205,8 @@ export function createAppearanceBorderOwner({
       });
       nodes.internal.autoColorInput.dataset.borderBound = "true";
     }
+    // 内部边界颜色有 auto/manual 两层语义：用户手动改色时立刻转为 manual，
+    // 让 renderer 后续按保存值绘制，并停止国家色动态推导。
     bindColorInput(nodes.internal.colorInput, "internalBorders", "internal-border-color", () => {
       syncBorderConfig("internalBorders").colorMode = "manual";
       if (nodes.internal.autoColorInput) nodes.internal.autoColorInput.checked = false;

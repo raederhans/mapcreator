@@ -14,6 +14,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
         renderer_imports = renderer_content.replace('"', "'")
 
+        # 这个静态合同锁的是“map_renderer 只保留编排壳，idle pass 细节归 owner”。
+        # 后续拆分 render pass 时应改 owner 入口，让长函数维持在 owner 内。
         self.assertIn(
             "import { createRenderPipelinePassesOwner } from './renderer/render_pipeline_passes.js';",
             renderer_imports,
