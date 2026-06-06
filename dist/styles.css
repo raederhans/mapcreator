@@ -734,6 +734,57 @@ a.button {
   color: rgba(255, 255, 255, 0.72);
 }
 
+.showcase-section__copy {
+  display: grid;
+  align-content: center;
+}
+
+.showcase-layer-panel {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.showcase-layer-panel h3 {
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.showcase-layer-panel p {
+  margin: 0;
+}
+
+.showcase-layer-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.showcase-layer-tabs button {
+  height: 44px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.showcase-layer-tabs button[aria-selected="true"] {
+  border-color: rgba(248, 215, 127, 0.72);
+  background: #f8d77f;
+  color: #07111f;
+}
+
 .showcase-map {
   position: relative;
   margin: 0;
@@ -743,11 +794,33 @@ a.button {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
 }
 
+.showcase-map__object,
 .showcase-map img {
+  display: block;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 98 / 62;
   min-height: 360px;
+  border: 0;
   object-fit: cover;
+}
+
+.showcase-map figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 14px;
+  background: rgba(7, 17, 31, 0.82);
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.showcase-map figcaption a {
+  color: #f8d77f;
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .work-card__copy {
@@ -1272,6 +1345,11 @@ a.button {
   text-transform: uppercase;
 }
 
+.status-badge--dark {
+  background: rgba(248, 215, 127, 0.14);
+  color: #f8d77f;
+}
+
 .section--closing {
   padding-bottom: 52px;
 }
@@ -1446,6 +1524,14 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
 
   .showcase-map img {
     min-height: 260px;
+  }
+
+  .showcase-map__object {
+    min-height: 260px;
+  }
+
+  .showcase-layer-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero h1 {

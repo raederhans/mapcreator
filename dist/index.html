@@ -226,14 +226,31 @@
           </div>
         </section>
 
-        <section id="showcase" class="section showcase-section section--dark">
+        <section id="showcase" class="section showcase-section section--dark" data-showcase-root data-showcase-layer="political">
           <div class="showcase-section__copy" data-reveal>
             <p class="eyebrow eyebrow--dark" data-i18n="showcaseEyebrow">Cartography showcase</p>
             <h2 data-i18n="showcaseTitle">A scenario page should look like it already knows how maps behave.</h2>
-            <p data-i18n="showcaseBody">Scenario Forge presents political borders, routes, cities, and terrain together so the map reads like a finished geography-first scene.</p>
+            <p data-i18n="showcaseBody">This Europe view is generated from the same scenario, topology, capital, and rail data that power the map workbench.</p>
+            <div class="showcase-layer-panel" aria-live="polite">
+              <span class="status-badge status-badge--dark" data-showcase-layer-badge data-i18n="showcaseLayerPoliticalBadge">HOI4 1936 Europe</span>
+              <h3 data-showcase-layer-title data-i18n="showcaseLayerPoliticalTitle">Political ownership comes from the 1936 scenario data.</h3>
+              <p data-showcase-layer-body data-i18n="showcaseLayerPoliticalBody">The map colors European territory through Scenario Forge's HOI4 1936 ownership table and country palette.</p>
+            </div>
+            <div class="showcase-layer-tabs" role="tablist" aria-label="Europe 1936 showcase layers" data-i18n-aria-label="showcaseLayerTabsLabel">
+              <button type="button" role="tab" aria-selected="true" data-showcase-layer-tab="political" data-i18n="showcaseLayerPolitical">Political</button>
+              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-showcase-layer-tab="rail" data-i18n="showcaseLayerRail">Rail</button>
+              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-showcase-layer-tab="cities" data-i18n="showcaseLayerCities">Cities</button>
+              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-showcase-layer-tab="scenario" data-i18n="showcaseLayerScenario">Scenario</button>
+            </div>
           </div>
           <figure class="showcase-map" data-reveal>
-            <img src="./assets/showcase-final-map.svg" alt="Scenario Forge generated final map showcase." data-i18n-alt="showcaseAlt" loading="lazy" width="560" height="360" />
+            <object class="showcase-map__object" type="image/svg+xml" data="./assets/europe-1936-showcase.svg" aria-label="Europe 1936 generated scenario showcase map" data-i18n-aria-label="showcaseMapLabel" data-showcase-object width="980" height="620">
+              <img src="./assets/europe-1936-showcase.svg" alt="Europe 1936 generated scenario showcase map." data-i18n-alt="showcaseAlt" loading="lazy" width="980" height="620" />
+            </object>
+            <figcaption>
+              <span data-i18n="showcaseMeta">Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail preview data.</span>
+              <a href="./assets/europe-1936-showcase.json" target="_blank" rel="noreferrer" data-i18n="showcaseMetaLink">View layer data</a>
+            </figcaption>
           </figure>
         </section>
 

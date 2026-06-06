@@ -36,6 +36,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for asset_name in (
             "hero-cartography.svg",
             "showcase-final-map.svg",
+            "europe-1936-showcase.svg",
             "japan-preview-transport.svg",
             "japan-preview-cities.svg",
             "japan-preview-terrain.svg",
@@ -53,6 +54,21 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn("viewBox", text)
                 self.assertIn("<path", text)
                 self.assertLess(asset.stat().st_size, 220_000)
+
+    def test_landing_europe_1936_showcase_metadata_uses_checked_in_sources(self) -> None:
+        metadata_path = LANDING_ASSETS / "europe-1936-showcase.json"
+        self.assertTrue(metadata_path.exists(), "Europe 1936 showcase metadata should be checked in")
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload["scenario_id"], "hoi4_1936")
+        self.assertEqual([layer["id"] for layer in payload["layers"]], ["political", "rail", "cities", "scenario"])
+        self.assertIn("data/scenarios/hoi4_1936/manifest.json", payload["sources"])
+        self.assertIn("data/scenarios/hoi4_1936/runtime_topology.topo.json", payload["sources"])
+        self.assertIn("data/scenarios/hoi4_1936/owners.by_feature.json", payload["sources"])
+        self.assertIn("data/scenarios/hoi4_1936/capital_hints.json", payload["sources"])
+        self.assertIn("data/transport_layers/global_rail/catalog.json", payload["sources"])
+        self.assertGreaterEqual(payload["counts"]["political_features"], 6000)
+        self.assertGreaterEqual(payload["counts"]["capitals"], 12)
+        self.assertGreaterEqual(payload["counts"]["rail_lines_selected"], 60)
 
     def test_pages_dist_generated_text_writes_use_lf(self) -> None:
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
@@ -169,6 +185,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'href="https://data-portal.networkrail.co.uk/"',
             'href="https://www.data.gov.uk/dataset/naptan"',
             'data-i18n="showcaseEyebrow"',
+            './assets/europe-1936-showcase.svg',
+            './assets/europe-1936-showcase.json',
+            'data-showcase-root',
+            'data-showcase-object',
+            'data-showcase-layer-tab="political"',
+            'data-showcase-layer-tab="rail"',
+            'data-showcase-layer-tab="cities"',
+            'data-showcase-layer-tab="scenario"',
+            'data-i18n="showcaseLayerPoliticalTitle"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
             'data-preview-image="transport"',
@@ -210,6 +235,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "statsLabel",
             "sourcesEyebrow",
             "showcaseEyebrow",
+            "showcaseLayerPoliticalTitle",
+            "showcaseLayerRailTitle",
+            "showcaseLayerCitiesTitle",
+            "showcaseLayerScenarioTitle",
+            "initShowcaseLayers",
+            "setShowcaseSvgLayer",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -242,6 +273,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("height: 46px", styles_css)
         self.assertIn("height: 44px", styles_css)
         self.assertIn(".hero-cartography", styles_css)
+        self.assertIn(".showcase-layer-tabs", styles_css)
+        self.assertIn("[data-showcase-object]", app_js)
+        self.assertIn("height: 44px", styles_css)
+        self.assertIn(".showcase-map__object", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
         self.assertIn(".showcase-section", styles_css)
         self.assertRegex(
@@ -273,6 +308,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "roadmapTwoTitle:",
             "templatesTitle:",
             "showcaseTitle:",
+            "showcaseLayerPoliticalTitle:",
+            "showcaseLayerRailTitle:",
+            "showcaseLayerCitiesTitle:",
+            "showcaseLayerScenarioTitle:",
             "templateModernAlt:",
             "updatesTitle:",
         ):
@@ -295,6 +334,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "ctaBody:",
             "templatesTitle:",
             "showcaseTitle:",
+            "showcaseLayerPoliticalTitle:",
+            "showcaseLayerRailTitle:",
+            "showcaseLayerCitiesTitle:",
+            "showcaseLayerScenarioTitle:",
             "templateModernAlt:",
             "updatesTitle:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
@@ -364,6 +407,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-stat-value="21338"',
             'data-i18n="sourcesEyebrow"',
             'data-i18n="showcaseEyebrow"',
+            './assets/europe-1936-showcase.svg',
+            './assets/europe-1936-showcase.json',
+            'data-showcase-root',
+            'data-showcase-object',
+            'data-showcase-layer-tab="political"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
             'data-preview-image="transport"',
@@ -404,6 +452,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "statsLabel",
             "sourcesEyebrow",
             "showcaseEyebrow",
+            "showcaseLayerPoliticalTitle",
+            "showcaseLayerRailTitle",
+            "showcaseLayerCitiesTitle",
+            "showcaseLayerScenarioTitle",
+            "initShowcaseLayers",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -435,6 +488,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
+        self.assertIn(".showcase-layer-tabs", styles_css)
+        self.assertIn(".showcase-map__object", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
         self.assertIn(".showcase-section", styles_css)
         self.assertRegex(
@@ -491,6 +546,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
         expected_landing_asset_paths = (
             "assets/hero-cartography.svg",
             "assets/showcase-final-map.svg",
+            "assets/europe-1936-showcase.svg",
+            "assets/europe-1936-showcase.json",
             "assets/japan-preview-transport.svg",
             "assets/japan-preview-cities.svg",
             "assets/japan-preview-terrain.svg",

@@ -115,6 +115,7 @@
 - archive 里保留可复用的计划、上下文、任务闭环；空目录和纯残留目录直接清理。
 - 根目录文档如果声称已有 canonical archive 副本，先验证 archive 目标真实存在。
 - 多 worktree 审计中，所有补丁和留档写入都要用目标 worktree 的绝对路径复核一次，避免把执行文档或修复误写到父 checkout。
+- 由真实拓扑生成首页静态 SVG 前，先对裁剪目标执行 `make_valid` 这类确定性几何修复；invalid polygon 会让展示资产生成在 intersection 阶段失败。
 
 ### 旧 worktree 只移植合同
 - 从旧 worktree 抢救功能时，先对照当前 main 的既有回归测试。

@@ -68,8 +68,34 @@ const translations = {
     showcaseTitle:
       "A scenario page should look like it already knows how maps behave.",
     showcaseBody:
-      "Scenario Forge presents political borders, routes, cities, and terrain together so the map reads like a finished geography-first scene.",
-    showcaseAlt: "Scenario Forge generated final map showcase.",
+      "This Europe view is generated from the same scenario, topology, capital, and rail data that power the map workbench.",
+    showcaseAlt: "Europe 1936 generated scenario showcase map.",
+    showcaseMapLabel: "Europe 1936 generated scenario showcase map",
+    showcaseLayerTabsLabel: "Europe 1936 showcase layers",
+    showcaseLayerPolitical: "Political",
+    showcaseLayerRail: "Rail",
+    showcaseLayerCities: "Cities",
+    showcaseLayerScenario: "Scenario",
+    showcaseLayerPoliticalBadge: "HOI4 1936 Europe",
+    showcaseLayerPoliticalTitle:
+      "Political ownership comes from the 1936 scenario data.",
+    showcaseLayerPoliticalBody:
+      "The map colors European territory through Scenario Forge's HOI4 1936 ownership table and country palette.",
+    showcaseLayerRailBadge: "Europe rail preview",
+    showcaseLayerRailTitle: "Rail corridors come from the global rail preview shards.",
+    showcaseLayerRailBody:
+      "The rail layer selects visible European preview lines from the OpenStreetMap-derived transport package.",
+    showcaseLayerCitiesBadge: "Capital anchors",
+    showcaseLayerCitiesTitle: "Capitals make the scenario readable at a glance.",
+    showcaseLayerCitiesBody:
+      "City markers use the HOI4 1936 capital hints table, so Berlin, Paris, London, Warsaw, Rome, and other anchors stay tied to scenario data.",
+    showcaseLayerScenarioBadge: "Scenario focus",
+    showcaseLayerScenarioTitle: "Scenario markers highlight the countries that shape the 1936 frame.",
+    showcaseLayerScenarioBody:
+      "Focus markers make the political surface easier to read before a visitor opens the full editor.",
+    showcaseMeta:
+      "Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail preview data.",
+    showcaseMetaLink: "View layer data",
     previewEyebrow: "Live product preview",
     previewTitle: "Preview real transport layers before opening the editor.",
     previewBody:
@@ -357,8 +383,28 @@ const translations = {
     workThreeBody: "减少视觉噪音，理清图层关系，再导出一张更像最终稿的地图。",
     showcaseEyebrow: "制图展示",
     showcaseTitle: "场景页面应该一眼看起来就懂地图。",
-    showcaseBody: "Scenario Forge 会把政治边界、路线、城市和地形放在同一张图里，让场景从地理空间开始变得清楚。",
-    showcaseAlt: "Scenario Forge 生成式最终地图展示。",
+    showcaseBody: "这张欧洲视图由场景、拓扑、首都和铁路数据生成，和地图工作台使用同一批数据来源。",
+    showcaseAlt: "欧洲 1936 场景展示地图。",
+    showcaseMapLabel: "欧洲 1936 场景展示地图",
+    showcaseLayerTabsLabel: "欧洲 1936 展示图层",
+    showcaseLayerPolitical: "政治",
+    showcaseLayerRail: "铁路",
+    showcaseLayerCities: "城市",
+    showcaseLayerScenario: "场景",
+    showcaseLayerPoliticalBadge: "HOI4 1936 欧洲",
+    showcaseLayerPoliticalTitle: "政治归属来自 1936 场景数据。",
+    showcaseLayerPoliticalBody: "欧洲地块颜色来自仓库中的 HOI4 1936 归属表和国家配色。",
+    showcaseLayerRailBadge: "欧洲铁路预览",
+    showcaseLayerRailTitle: "铁路走廊来自 global rail 预览分片。",
+    showcaseLayerRailBody: "铁路图层选取仓库中 OpenStreetMap 衍生交通包里的欧洲预览线路。",
+    showcaseLayerCitiesBadge: "首都锚点",
+    showcaseLayerCitiesTitle: "首都点让场景一眼可读。",
+    showcaseLayerCitiesBody: "城市标记使用 HOI4 1936 首都提示表，让柏林、巴黎、伦敦、华沙、罗马等锚点对应真实场景数据。",
+    showcaseLayerScenarioBadge: "场景焦点",
+    showcaseLayerScenarioTitle: "场景标记突出 1936 框架里的关键国家。",
+    showcaseLayerScenarioBody: "焦点标记让访客进入完整编辑器之前，就能先看懂政治地图的主线。",
+    showcaseMeta: "由 HOI4 1936 归属、欧洲拓扑、首都提示和欧洲铁路预览数据生成。",
+    showcaseMetaLink: "查看图层数据",
     previewEyebrow: "产品预览",
     previewTitle: "进入编辑器之前，先预览真实交通图层。",
     previewBody: "日本视图可以在道路、铁路、城市、地形和夜光之间切换，让用户先看到地图能表达什么。",
@@ -534,6 +580,29 @@ const translations = {
   },
 };
 
+const SHOWCASE_LAYER_COPY_KEYS = {
+  political: {
+    badge: "showcaseLayerPoliticalBadge",
+    title: "showcaseLayerPoliticalTitle",
+    body: "showcaseLayerPoliticalBody",
+  },
+  rail: {
+    badge: "showcaseLayerRailBadge",
+    title: "showcaseLayerRailTitle",
+    body: "showcaseLayerRailBody",
+  },
+  cities: {
+    badge: "showcaseLayerCitiesBadge",
+    title: "showcaseLayerCitiesTitle",
+    body: "showcaseLayerCitiesBody",
+  },
+  scenario: {
+    badge: "showcaseLayerScenarioBadge",
+    title: "showcaseLayerScenarioTitle",
+    body: "showcaseLayerScenarioBody",
+  },
+};
+
 function getStoredLanguage() {
   try {
     const value = String(globalThis.localStorage?.getItem(STORAGE_KEY) || "").trim().toLowerCase();
@@ -582,6 +651,7 @@ function applyLanguage(language) {
   if (ogTitle) ogTitle.setAttribute("content", copy.metaTitle);
   if (twitterTitle) twitterTitle.setAttribute("content", copy.metaTitle);
   formatMetricNumbers(language);
+  updateShowcaseLayerCopy(language);
 
   try {
     globalThis.localStorage?.setItem(STORAGE_KEY, language);
@@ -699,6 +769,77 @@ function initTopbarState() {
   globalThis.addEventListener("scroll", update, { passive: true });
 }
 
+function getActiveLanguage() {
+  return document.documentElement.lang === "zh-CN" ? "zh" : "en";
+}
+
+function setShowcaseSvgLayer(root) {
+  const objectNode = root.querySelector("[data-showcase-object]");
+  if (!objectNode?.contentDocument) return;
+  const svg = objectNode.contentDocument.querySelector("svg");
+  if (!svg) return;
+  svg.setAttribute("data-active-layer", root.dataset.showcaseLayer || "political");
+}
+
+function updateShowcaseLayerCopy(language = getActiveLanguage()) {
+  const root = document.querySelector("[data-showcase-root]");
+  if (!root) return;
+  const layer = root.dataset.showcaseLayer || "political";
+  const keys = SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political;
+  const copy = translations[language] || translations.en;
+  const badge = root.querySelector("[data-showcase-layer-badge]");
+  const title = root.querySelector("[data-showcase-layer-title]");
+  const body = root.querySelector("[data-showcase-layer-body]");
+  if (badge) badge.textContent = copy[keys.badge];
+  if (title) title.textContent = copy[keys.title];
+  if (body) body.textContent = copy[keys.body];
+}
+
+function initShowcaseLayers() {
+  const root = document.querySelector("[data-showcase-root]");
+  if (!root) return;
+
+  const tabs = Array.from(root.querySelectorAll("[data-showcase-layer-tab]"));
+  if (!tabs.length) return;
+
+  const selectLayer = (tab, shouldFocus = false) => {
+    const layer = tab.getAttribute("data-showcase-layer-tab") || "political";
+    root.dataset.showcaseLayer = layer;
+
+    tabs.forEach((item) => {
+      const active = item === tab;
+      item.setAttribute("aria-selected", active ? "true" : "false");
+      item.setAttribute("tabindex", active ? "0" : "-1");
+    });
+
+    updateShowcaseLayerCopy();
+    setShowcaseSvgLayer(root);
+    if (shouldFocus) tab.focus();
+  };
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => selectLayer(tab));
+    tab.addEventListener("keydown", (event) => {
+      const key = event.key;
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(key)) return;
+      event.preventDefault();
+
+      let nextIndex = index;
+      if (key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+      if (key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+      if (key === "Home") nextIndex = 0;
+      if (key === "End") nextIndex = tabs.length - 1;
+
+      selectLayer(tabs[nextIndex], true);
+    });
+  });
+
+  const objectNode = root.querySelector("[data-showcase-object]");
+  objectNode?.addEventListener("load", () => setShowcaseSvgLayer(root));
+  updateShowcaseLayerCopy();
+  setShowcaseSvgLayer(root);
+}
+
 function initPreviewTabs() {
   const root = document.querySelector("[data-preview-root]");
   if (!root) return;
@@ -752,6 +893,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
   initPreviewTabs();
+  initShowcaseLayers();
   initHeroMap();
   initTopbarState();
   initMetricCountUp();
